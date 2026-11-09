@@ -56,6 +56,15 @@ export async function bewaarRegistratieUitdaging(userId: string, r: RegistratieU
   await redis.set(registratieSleutel(userId), JSON.stringify(r), "EX", UITDAGING_SECONDEN);
 }
 
+/** Wis een openstaande registratie-challenge (best effort: hij verloopt anders vanzelf na 5 minuten). */
+export async function wisRegistratieUitdaging(userId: string): Promise<void> {
+  try {
+    await redis.del(registratieSleutel(userId));
+  } catch {
+    /* verloopt vanzelf */
+  }
+}
+
 /** Haal de registratie-challenge van deze gebruiker op en wis hem in dezelfde stap. */
 export async function pakRegistratieUitdaging(userId: string): Promise<Opgehaald<RegistratieUitdaging>> {
   let ruw: string | null;

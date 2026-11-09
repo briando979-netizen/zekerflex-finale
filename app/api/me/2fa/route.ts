@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import { withAuth } from "@/lib/auth/handlers";
 import { AppError } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { meldPasskeysNaTweestaps } from "@/lib/auth/passkey/beheer";
 import {
   beginTwoFactorSetup,
   confirmTwoFactorSetup,
@@ -40,6 +41,8 @@ export const POST = withAuth(async (req, { principal }) => {
   if (body.action === "confirm") {
     const r = await confirmTwoFactorSetup(principal.userId, body.code);
     if (!r.ok) throw AppError.validation("Die code klopt niet. Controleer of de tijd op je telefoon goed staat en probeer de nieuwste code.");
+    // passkeys blijven staan (ze vragen altijd vingerafdruk, gezicht of pincode), maar de gebruiker krijgt een mail welke
+    await meldPasskeysNaTweestaps(principal.userId);
     return NextResponse.json({ enabled: true, recoveryCodes: r.recoveryCodes });
   }
   if (body.action === "recovery") {

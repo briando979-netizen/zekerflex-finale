@@ -37,6 +37,14 @@ export interface PasskeyTexts {
   refused: string;
   tooMany: string;
   down: string;
+  mailIntro: string;
+  mailSent: string;
+  mailCode: string;
+  sendCode: string;
+  resend: string;
+  mailWrong: string;
+  mailExpired: string;
+  mailFailed: string;
 }
 
 export const PASSKEY_NL: PasskeyTexts = {
@@ -73,4 +81,12 @@ export const PASSKEY_NL: PasskeyTexts = {
   refused: "Dit toestel kon niet als passkey worden toegevoegd.",
   tooMany: "Te veel pogingen. Wacht een kwartier en probeer het dan opnieuw.",
   down: "Een passkey toevoegen lukt nu even niet. Probeer het later opnieuw.",
+  mailIntro: "Je account heeft geen wachtwoord. We sturen een code naar je e-mailadres om te bevestigen dat jij het bent.",
+  mailSent: "We hebben een code naar je e-mailadres gestuurd. Hij is 15 minuten geldig.",
+  mailCode: "Code uit de e-mail",
+  sendCode: "Stuur code",
+  resend: "Nieuwe code sturen",
+  mailWrong: "Die code klopt niet. Gebruik de code uit de nieuwste e-mail.",
+  mailExpired: "Er is geen geldige code (meer). Vraag een nieuwe code aan.",
+  mailFailed: "De code kon niet worden verstuurd. Probeer het later opnieuw.",
 };

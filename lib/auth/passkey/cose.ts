@@ -6,7 +6,7 @@ import { alsMap, leesCborGeheel, type CborWaarde } from "@/lib/auth/passkey/cbor
 // Drie algoritmes, de gangbare van passkeys en beveiligingssleutels:
 //   -7   ES256  EC2, P-256, ECDSA met SHA-256 (handtekening in DER, zoals WebAuthn hem geeft)
 //   -8   EdDSA  OKP, Ed25519
-//   -257 RS256  RSA, PKCS#1 v1.5 met SHA-256 (Windows Hello)
+//   -257 RS256  RSA, PKCS#1 v1.5 met SHA-256 (Windows Hello); modulus 2048–4096 bits, exponent 65537
 // Een sleutel waarvan het type, de curve of de lengte niet bij het algoritme
 // past, wordt geweigerd.
 // ---------------------------------------------------------------------------
@@ -40,6 +40,14 @@ export class CoseFout extends Error {
 }
 
 const b64u = (b: Buffer) => b.toString("base64url");
+const EXPONENT_65537 = Buffer.from([0x01, 0x00, 0x01]);
+
+/** Een groot getal als bytes, zonder nullen vooraan (COSE hoort ze niet te hebben, maar zo telt de lengte eerlijk). */
+function zonderVoorloopNullen(b: Buffer): Buffer {
+  let i = 0;
+  while (i < b.length - 1 && b[i] === 0) i++;
+  return b.subarray(i);
+}
 
 function bytes(m: Map<number | string, CborWaarde>, k: number, wat: string): Buffer {
   const v = m.get(k);
@@ -75,9 +83,10 @@ export function coseNaarSleutel(cose: Buffer | Map<number | string, CborWaarde>)
     }
     if (alg === RS256) {
       if (kty !== KTY_RSA) throw new CoseFout("RS256 vraagt een RSA-sleutel");
-      const n = bytes(m, RSA_N, "n");
-      const e = bytes(m, RSA_E, "e");
-      if (n.length < 256) throw new CoseFout("RSA-sleutel is korter dan 2048 bits");
+      const n = zonderVoorloopNullen(bytes(m, RSA_N, "n"));
+      const e = zonderVoorloopNullen(bytes(m, RSA_E, "e"));
+      if (n.length < 256 || n.length > 512) throw new CoseFout("RSA-modulus moet 2048 tot 4096 bits zijn");
+      if (!e.equals(EXPONENT_65537)) throw new CoseFout("RSA-exponent moet 65537 zijn");
       return { alg, sleutel: createPublicKey({ key: { kty: "RSA", n: b64u(n), e: b64u(e) }, format: "jwk" }) };
     }
   } catch (err) {

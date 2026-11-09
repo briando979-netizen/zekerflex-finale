@@ -37,6 +37,7 @@ export const ERASABLE_KV_PREFIXES = [
   "notif-dismissed:",
   "onboarding-reminder:",
   "os:",
+  "passkey-toevoegen:",
   "passport:public:",
   "prefs:",
   "profile-user:",

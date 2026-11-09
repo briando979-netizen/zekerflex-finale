@@ -35,6 +35,10 @@ vi.mock("@/lib/auth/password", () => ({
   isBreached: (...a: unknown[]) => isBreached(...a),
 }));
 
+// Na een herstel gaan alle passkeys weg (lib/auth/passkey/beheer.ts, daar getest).
+const wisPasskeysNaHerstel = vi.fn().mockResolvedValue(0);
+vi.mock("@/lib/auth/passkey/beheer", () => ({ wisPasskeysNaHerstel: (...a: unknown[]) => wisPasskeysNaHerstel(...a) }));
+
 import { completePasswordReset } from "@/lib/auth/password-reset";
 
 const validToken = () => tokenFindUnique.mockResolvedValue({ expiresAt: new Date(Date.now() + 60_000) });
@@ -53,6 +57,8 @@ describe("completePasswordReset", () => {
 
     expect(result.ok).toBe(true);
     expect(clearLoginFailures).toHaveBeenCalledWith("jan.vanlummel@gmail.com");
+    // wie zijn account terugpakt, raakt ook een passkey kwijt die een ander er bij zette
+    expect(wisPasskeysNaHerstel).toHaveBeenCalledWith("u1");
   });
 
   it("does not touch the throttle when the token is invalid or expired", async () => {
@@ -63,6 +69,7 @@ describe("completePasswordReset", () => {
     expect(result.ok).toBe(false);
     expect(tokenDelete).not.toHaveBeenCalled();
     expect(clearLoginFailures).not.toHaveBeenCalled();
+    expect(wisPasskeysNaHerstel).not.toHaveBeenCalled();
   });
 
   it("does not touch the throttle when the new password is too short", async () => {

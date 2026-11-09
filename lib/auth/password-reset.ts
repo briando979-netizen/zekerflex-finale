@@ -8,6 +8,7 @@ import { sendMail, passwordResetEmail } from "@/lib/mail";
 import { fixedWindow, privateRateLimitIdentifier } from "@/lib/rate-limit";
 import { clearLoginFailures } from "@/lib/auth/login-throttle";
 import { isBreached, scorePassword } from "@/lib/auth/password";
+import { wisPasskeysNaHerstel } from "@/lib/auth/passkey/beheer";
 
 // ---------------------------------------------------------------------------
 // Password reset. Tokens live in Postgres (PasswordResetToken), isolated from
@@ -141,6 +142,9 @@ export async function completePasswordReset(token: string, newPassword: string):
     targetType: "user",
     targetId: userId,
   });
+  // Wie zijn account terugpakt, moet ook een passkey kwijt die een ander er bij
+  // heeft gezet: alle passkeys weg, met audit en mail (lib/auth/passkey/beheer.ts).
+  await wisPasskeysNaHerstel(userId);
   logger.info("password reset completed", { userId });
   return { ok: true };
 }

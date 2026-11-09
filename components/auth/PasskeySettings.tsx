@@ -17,6 +17,7 @@ interface Status {
   beschikbaar: boolean;
   vraagtWachtwoord: boolean;
   vraagtCode: boolean;
+  vraagtMailcode: boolean;
   passkeys: Rij[];
 }
 
@@ -32,9 +33,16 @@ const CODE_TEKST: Record<string, TekstSleutel> = {
   PASSKEY_GEWEIGERD: "refused",
   TE_VAAK: "tooMany",
   RATE_LIMITED: "tooMany",
+  INLOG_GEBLOKKEERD: "tooMany",
   PASSKEY_STORING: "down",
   PASSKEY_NIET_HIER: "notHere",
+  PASSKEY_MAILCODE_ONGELDIG: "mailWrong",
+  PASSKEY_MAILCODE_VERLOPEN: "mailExpired",
+  PASSKEY_MAIL_MISLUKT: "mailFailed",
 };
+
+/** De server stuurde de code per mail: geen fout, maar de volgende stap. */
+const MAILCODE_GESTUURD = "PASSKEY_MAILCODE_GESTUURD";
 
 async function post(body: unknown): Promise<{ ok: boolean; data: Record<string, unknown> }> {
   const r = await fetch("/api/me/passkeys", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
@@ -52,6 +60,8 @@ export function PasskeySettings({ texts: t = PASSKEY_NL }: { texts?: PasskeyText
   const [naam, setNaam] = useState("");
   const [wachtwoord, setWachtwoord] = useState("");
   const [code, setCode] = useState("");
+  const [mailcode, setMailcode] = useState("");
+  const [mailVerstuurd, setMailVerstuurd] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [melding, setMelding] = useState<string | null>(null);
@@ -67,8 +77,9 @@ export function PasskeySettings({ texts: t = PASSKEY_NL }: { texts?: PasskeyText
     void load();
   }, [load]);
 
+  const foutCode = (d: Record<string, unknown>) => (d.error as { code?: unknown } | undefined)?.code;
   const serverFout = (d: Record<string, unknown>) => {
-    const c = (d.error as { code?: unknown } | undefined)?.code;
+    const c = foutCode(d);
     const sleutel = typeof c === "string" && Object.hasOwn(CODE_TEKST, c) ? CODE_TEKST[c] : undefined;
     return sleutel ? t[sleutel] : t.genericError;
   };
@@ -77,13 +88,40 @@ export function PasskeySettings({ texts: t = PASSKEY_NL }: { texts?: PasskeyText
     setMode("idle");
     setWachtwoord("");
     setCode("");
+    setMailcode("");
+    setMailVerstuurd(false);
   };
 
-  const toevoegen = async () => {
+  // zonder wachtwoord: eerst (of opnieuw) een code per mail
+  const stuurCode = async () => {
     setBusy(true);
     setError(null);
     setMelding(null);
-    const begin = await post({ action: "begin", ...(wachtwoord ? { wachtwoord } : {}), ...(code.trim() ? { code: code.trim() } : {}) });
+    const r = await post({ action: "begin" });
+    setBusy(false);
+    if (!r.ok && foutCode(r.data) === MAILCODE_GESTUURD) {
+      setMailVerstuurd(true);
+      setMailcode("");
+      setMelding(t.mailSent);
+      return;
+    }
+    setError(serverFout(r.data));
+  };
+
+  const toevoegen = async () => {
+    if (status?.vraagtMailcode && !mailVerstuurd) {
+      await stuurCode();
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setMelding(null);
+    const begin = await post({
+      action: "begin",
+      ...(wachtwoord ? { wachtwoord } : {}),
+      ...(code.trim() ? { code: code.trim() } : {}),
+      ...(mailcode.trim() ? { mailcode: mailcode.trim() } : {}),
+    });
     if (!begin.ok) {
       setBusy(false);
       setError(serverFout(begin.data));
@@ -99,6 +137,9 @@ export function PasskeySettings({ texts: t = PASSKEY_NL }: { texts?: PasskeyText
       setBusy(false);
       setMode("bevestigen");
       setCode("");
+      // de mailcode is gebruikt: voor een nieuwe poging is een nieuwe nodig
+      setMailcode("");
+      setMailVerstuurd(false);
       const n = foutNaam(err);
       setError(n === "NotAllowedError" || n === "AbortError" ? t.cancelled : n === "InvalidStateError" ? t.exists : t.genericError);
       return;
@@ -108,6 +149,8 @@ export function PasskeySettings({ texts: t = PASSKEY_NL }: { texts?: PasskeyText
     if (!klaar.ok) {
       setMode("bevestigen");
       setCode("");
+      setMailcode("");
+      setMailVerstuurd(false);
       setError(serverFout(klaar.data));
       return;
     }
@@ -211,14 +254,26 @@ export function PasskeySettings({ texts: t = PASSKEY_NL }: { texts?: PasskeyText
             <span className="field-label">{t.nameLabel}</span>
             <input value={naam} onChange={(e) => setNaam(e.target.value)} maxLength={NAAM_MAX} required className="field-input" autoComplete="off" />
           </label>
-          {(status.vraagtWachtwoord || status.vraagtCode) && <p className="text-sm text-neutralx-600">{t.confirmIntro}</p>}
+          {(status.vraagtWachtwoord || status.vraagtCode || status.vraagtMailcode) && <p className="text-sm text-neutralx-600">{t.confirmIntro}</p>}
+          {status.vraagtMailcode && !mailVerstuurd && <p className="text-sm text-neutralx-600">{t.mailIntro}</p>}
+          {status.vraagtMailcode && mailVerstuurd && (
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="block">
+                <span className="field-label">{t.mailCode}</span>
+                <input value={mailcode} onChange={(e) => setMailcode(e.target.value)} required inputMode="numeric" autoComplete="one-time-code" maxLength={6} className="field-input w-40 text-center font-mono tracking-widest" />
+              </label>
+              <button type="button" disabled={busy} className="btn-ghost text-sm disabled:opacity-50" onClick={() => void stuurCode()}>
+                {t.resend}
+              </button>
+            </div>
+          )}
           {status.vraagtWachtwoord && (
             <label className="block">
               <span className="field-label">{t.password}</span>
               <input type="password" value={wachtwoord} onChange={(e) => setWachtwoord(e.target.value)} required autoComplete="current-password" className="field-input" />
             </label>
           )}
-          {status.vraagtCode && (
+          {status.vraagtCode && (!status.vraagtMailcode || mailVerstuurd) && (
             <label className="block">
               <span className="field-label">{t.code}</span>
               <input value={code} onChange={(e) => setCode(e.target.value)} required inputMode="numeric" autoComplete="one-time-code" maxLength={20} className="field-input w-44 text-center font-mono" />
@@ -227,7 +282,7 @@ export function PasskeySettings({ texts: t = PASSKEY_NL }: { texts?: PasskeyText
           {mode === "toestel" && <p className="text-sm font-medium text-ink">{t.deviceStep}</p>}
           <div className="flex flex-wrap gap-2">
             <button type="submit" disabled={busy || !naam.trim()} className="btn-primary text-sm disabled:opacity-50">
-              {busy ? t.busy : t.next}
+              {busy ? t.busy : status.vraagtMailcode && !mailVerstuurd ? t.sendCode : t.next}
             </button>
             <button type="button" disabled={busy} className="btn-ghost text-sm disabled:opacity-50" onClick={stoppen}>
               {t.cancel}

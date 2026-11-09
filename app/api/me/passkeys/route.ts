@@ -15,8 +15,13 @@ export const GET = withAuth(async (_req, { principal }) =>
 );
 
 const schema = z.discriminatedUnion("action", [
-  // opnieuw bevestigen (wachtwoord en/of 2FA-code), dan de opties voor het toestel
-  z.object({ action: z.literal("begin"), wachtwoord: z.string().max(200).optional(), code: z.string().trim().max(20).optional() }),
+  // opnieuw bevestigen (wachtwoord of mailcode, plus de 2FA-code als die aan staat), dan de opties voor het toestel
+  z.object({
+    action: z.literal("begin"),
+    wachtwoord: z.string().max(200).optional(),
+    code: z.string().trim().max(20).optional(),
+    mailcode: z.string().trim().max(20).optional(),
+  }),
   z.object({ action: z.literal("finish"), naam: z.string().max(NAAM_MAX * 4), credential: registratieJson }),
   z.object({ action: z.literal("remove"), id: z.string().min(1).max(40) }),
 ]);
@@ -26,7 +31,7 @@ export const POST = withAuth(async (req, { principal }) => {
   const body = schema.parse(await req.json().catch(() => ({})));
   try {
     if (body.action === "begin") {
-      const publicKey = await beginRegistratie(principal.userId, { wachtwoord: body.wachtwoord, code: body.code });
+      const publicKey = await beginRegistratie(principal.userId, { wachtwoord: body.wachtwoord, code: body.code, mailcode: body.mailcode });
       return NextResponse.json({ publicKey }, { headers: { "Cache-Control": "no-store" } });
     }
     if (body.action === "finish") {

@@ -5,7 +5,6 @@ import { recordAudit } from "@/lib/audit";
 import { recordLoginFailure } from "@/lib/metrics";
 import { clientIp } from "@/lib/http/request";
 import { fixedWindow } from "@/lib/rate-limit";
-import { hasTwoFactor } from "@/lib/auth/two-factor";
 import { checkLoginAllowed, clearLoginFailures, registerLoginFailure, MAX_FAILURES } from "@/lib/auth/login-throttle";
 import { PasskeyFout } from "@/lib/auth/passkey/fout";
 import { inlogJson, vanB64u } from "@/lib/auth/passkey/json";
@@ -25,13 +24,15 @@ import { verifieerInlog } from "@/lib/auth/passkey/webauthn";
 // Redis-storing), mislukte pogingen tellen mee, audit, lastLoginAt; en de
 // sessie is precies dezelfde (zelfde jwt.encode, "ingelogd blijven" inbegrepen).
 //
-// Tweestapsverificatie: een passkey met UV-vlag (vingerafdruk, gezicht of
-// pincode op het toestel) is zelf al twee factoren — iets wat je hebt (het
-// toestel met de geheime sleutel) en iets wat je bent of weet — en werkt
-// alleen op zekerflex.com, dus een nepsite kan hem niet afvangen. Staat 2FA
-// aan, dan is die UV-vlag verplicht; zonder UV wordt de inlog geweigerd en
-// log je in met wachtwoord + code. Een passkey toevoegen vraagt bij 2FA ook de
-// code (lib/auth/passkey/beheer.ts), dus 2FA is nergens te omzeilen.
+// Tweestapsverificatie: de UV-vlag (vingerafdruk, gezicht of pincode op het
+// toestel) is ALTIJD verplicht, in de opties ("required") en hier op de server.
+// Een passkey is dan zelf twee factoren — iets wat je hebt (het toestel met de
+// geheime sleutel) en iets wat je bent of weet — en werkt alleen op
+// zekerflex.com, dus een nepsite kan hem niet afvangen. Daarom vraagt een
+// passkey-inlog geen 2FA-code. Een losse sleutel zonder pincode volstaat niet.
+// Een passkey toevoegen vraagt bij 2FA de code (lib/auth/passkey/beheer.ts), dus
+// via passkeys is 2FA niet te omzeilen. Let op: inloggen met Google controleert
+// 2FA níét (bestaand gedrag in lib/auth/nextauth.ts, buiten passkeys).
 // ---------------------------------------------------------------------------
 
 /**
@@ -41,13 +42,15 @@ import { verifieerInlog } from "@/lib/auth/passkey/webauthn";
  */
 export const START_LIMIET = { max: 60, seconden: 10 * 60 };
 export const EINDE_LIMIET = { max: 30, seconden: 10 * 60 };
+/** Bovengrens voor het antwoord van de browser, vóór JSON.parse (een echt antwoord is een paar kB). */
+export const MAX_ANTWOORD = 100_000;
 
 /** De opties voor navigator.credentials.get (JSON-vorm, base64url). */
 export interface InlogOpties {
   challenge: string;
   rpId: string;
   timeout: number;
-  userVerification: "preferred";
+  userVerification: "required";
   allowCredentials: never[];
 }
 
@@ -68,7 +71,7 @@ export async function startPasskeyInlog(ip: string): Promise<{ opties: InlogOpti
   }
   return {
     ceremonieId,
-    opties: { challenge, rpId: bron.rpId, timeout: UITDAGING_SECONDEN * 1000, userVerification: "preferred", allowCredentials: [] },
+    opties: { challenge, rpId: bron.rpId, timeout: UITDAGING_SECONDEN * 1000, userVerification: "required", allowCredentials: [] },
   };
 }
 
@@ -81,7 +84,7 @@ export type PasskeyInlogCode =
   | "passkey_mislukt" // kapot verzoek of geweigerde controle
   | "passkey_verlopen" // challenge weg: te lang gewacht of al gebruikt
   | "passkey_onbekend" // deze passkey kennen we niet (meer)
-  | "passkey_uv" // 2FA staat aan, maar het toestel bevestigde niet met vingerafdruk/gezicht/pincode
+  | "passkey_uv" // het toestel bevestigde niet met vingerafdruk, gezicht of pincode (altijd verplicht)
   | "passkey_storing" // challenge kon niet worden gelezen: nooit doorlaten
   | "passkey_te_vaak" // aanvraaglimiet per IP
   | "locked"; // zelfde inlogslot als het wachtwoord
@@ -113,9 +116,11 @@ export async function authorizePasskey(raw: Partial<Record<string, unknown>>, re
   if (opgehaald.status === "weg") return { ok: false, code: "passkey_verlopen" };
   const challenge = opgehaald.waarde;
 
+  const response = typeof raw.response === "string" ? raw.response : "";
+  if (response.length === 0 || response.length > MAX_ANTWOORD) return { ok: false, code: "passkey_mislukt" };
   let json: unknown;
   try {
-    json = JSON.parse(typeof raw.response === "string" ? raw.response : "");
+    json = JSON.parse(response);
   } catch {
     return { ok: false, code: "passkey_mislukt" };
   }
@@ -156,8 +161,6 @@ export async function authorizePasskey(raw: Partial<Record<string, unknown>>, re
     return { ok: false, code: "locked" };
   }
 
-  // 2FA aan → de passkey moet zelf ook de tweede factor zijn (UV)
-  const tweestaps = await hasTwoFactor(user.id).catch(() => true);
   const uit = verifieerInlog(
     {
       clientDataJSON: vanB64u(c.response.clientDataJSON),
@@ -166,7 +169,7 @@ export async function authorizePasskey(raw: Partial<Record<string, unknown>>, re
       userHandle: c.response.userHandle ? vanB64u(c.response.userHandle) : null,
     },
     { publicKey: Buffer.from(passkey.publicKey), algorithm: passkey.algorithm, signCount: Number(passkey.signCount), userHandle: passkey.userHandle },
-    { challenge, origin: bron.origin, rpId: bron.rpId, uvVerplicht: tweestaps },
+    { challenge, origin: bron.origin, rpId: bron.rpId, uvVerplicht: true },
   );
 
   if (!uit.ok) {

@@ -136,7 +136,7 @@ afterEach(() => vi.clearAllMocks());
 describe("begin: challenge", () => {
   it("geeft opties voor zekerflex.com en bewaart de challenge 5 minuten in Redis", async () => {
     const { opties, ceremonieId } = await startPasskeyInlog("203.0.113.9");
-    expect(opties).toMatchObject({ rpId: RP, userVerification: "preferred", allowCredentials: [], timeout: 300_000 });
+    expect(opties).toMatchObject({ rpId: RP, userVerification: "required", allowCredentials: [], timeout: 300_000 });
     expect(opties.challenge).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(h.state.redis.get(`zf:passkey:inlog:${ceremonieId}`)).toBe(opties.challenge);
   });
@@ -245,17 +245,24 @@ describe("einde: authorizePasskey", () => {
     expect(await log(cookie, meldAan(toestel, { rpId: RP, origin: ORIGIN, challenge: opties.challenge }))).toEqual({ ok: false, code: "passkey_mislukt" });
   });
 
-  it("tweestapsverificatie aan: zonder UV geweigerd, met UV ingelogd (2FA wordt niet omzeild)", async () => {
-    h.state.tweestaps = true;
+  it.each([false, true])("UV is altijd verplicht (2FA aan: %s): een losse sleutel zonder pincode volstaat niet", async (tweestaps) => {
+    h.state.tweestaps = tweestaps;
     let b = await begin();
     expect(await log(b.cookie, meldAan(toestel, { rpId: RP, origin: ORIGIN, challenge: b.opties.challenge, vlaggen: { uv: false } }))).toEqual({ ok: false, code: "passkey_uv" });
+    expect(h.state.audits.some((a) => a.action === "auth.login.succeeded")).toBe(false);
     b = await begin();
     expect((await log(b.cookie, meldAan(toestel, { rpId: RP, origin: ORIGIN, challenge: b.opties.challenge }))).ok).toBe(true);
   });
 
-  it("tweestapsverificatie uit: UV naar keuze", async () => {
+  it("een te groot antwoord wordt geweigerd vóór JSON.parse (en de challenge is verbruikt)", async () => {
     const b = await begin();
-    expect((await log(b.cookie, meldAan(toestel, { rpId: RP, origin: ORIGIN, challenge: b.opties.challenge, vlaggen: { uv: false } }))).ok).toBe(true);
+    const groot = JSON.stringify({ x: "a".repeat(100_001) });
+    const parse = vi.spyOn(JSON, "parse");
+    expect(await authorizePasskey({ response: groot }, verzoek(b.cookie), NU)).toEqual({ ok: false, code: "passkey_mislukt" });
+    expect(parse).not.toHaveBeenCalledWith(groot);
+    parse.mockRestore();
+    expect(h.state.redis.size).toBe(0);
+    expect(h.state.findUnique).toBe(0);
   });
 
   it("zelfde inlogslot als het wachtwoord", async () => {

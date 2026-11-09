@@ -232,6 +232,20 @@ describe("CBOR-lezer", () => {
 });
 
 describe("COSE-sleutel", () => {
+  it("RSA: modulus 2048–4096 bits en exponent precies 65537", () => {
+    const echt = nieuwToestel("rs256");
+    expect(coseNaarSleutel(echt.cose).alg).toBe(-257);
+    const rsa = (n: Buffer, e: Buffer) => cbor(new Map<number, Cbor>([[1, 3], [3, -257], [-1, n], [-2, e]]));
+    const { publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048, publicExponent: 3 });
+    const jwk = publicKey.export({ format: "jwk" });
+    const n = Buffer.from(jwk.n!, "base64url");
+    expect(() => coseNaarSleutel(rsa(n, Buffer.from([3])))).toThrow(/65537/);
+    expect(() => coseNaarSleutel(rsa(n.subarray(0, 128), Buffer.from([1, 0, 1])))).toThrow(/2048 tot 4096/);
+    expect(() => coseNaarSleutel(rsa(Buffer.concat([n, n, Buffer.alloc(1, 1)]), Buffer.from([1, 0, 1])))).toThrow(/2048 tot 4096/);
+    // een nul vooraan telt niet mee in de lengte
+    expect(() => coseNaarSleutel(rsa(Buffer.concat([Buffer.alloc(1), n.subarray(0, 200)]), Buffer.from([1, 0, 1])))).toThrow(/2048 tot 4096/);
+  });
+
   it("weigert een P-256-punt dat niet op de curve ligt", () => {
     const k = cbor(new Map<number, Cbor>([[1, 2], [3, -7], [-1, 1], [-2, Buffer.alloc(32, 1)], [-3, Buffer.alloc(32, 2)]]));
     expect(() => coseNaarSleutel(k)).toThrow();
