@@ -67,7 +67,44 @@ function splits(tokens: string[]): Delen {
   return { voorletters, namen };
 }
 
+/** Letters van een naam, gesorteerd: hoofdletters, accenten, spaties, koppeltekens en volgorde vallen weg. */
+function lettersVan(tokens: string[]): string {
+  return tokens.join("").split("").sort().join("");
+}
+
+/**
+ * Is dit dezelfde naam, alleen anders geschreven? "El Bouti" = "Elbouti" = "EL-BOUTI",
+ * "Jan de Vries" = "Vries, Jan de" = "Jan Vries". Een andere achternaam of voornaam is
+ * een ander mens en blijft dus niet gelijk. Voor het document van de ID-controle:
+ * Stripe controleert document en selfie, deze regel controleert dat het bij het account hoort.
+ */
+export function naamGelijk(a: string, b: string): boolean {
+  const ta = woorden(normaliseer(a));
+  const tb = woorden(normaliseer(b));
+  if (ta.length === 0 || tb.length === 0) return false;
+  if (lettersVan(ta) === lettersVan(tb)) return true;
+  const zonder = (t: string[]) => t.filter((w) => !TUSSENVOEGSELS.has(w));
+  const za = zonder(ta);
+  const zb = zonder(tb);
+  return za.length > 0 && zb.length > 0 && lettersVan(za) === lettersVan(zb);
+}
+
+/**
+ * De achternaam van de bank is aaneen of met spatie geschreven ("B. El Bouti" tegenover
+ * "Bilal Elbouti"): plak de woorden zonder voorletters aan elkaar en zoek ze in het profiel.
+ */
+function plakPast(profielTokens: string[], bankHouder: string): boolean {
+  const bankTokens = woorden(bankHouder);
+  const isVoorletters = (t: string) => t.length === 1 || (t.length <= 3 && !/[aeiouy]/.test(t));
+  const bankPlak = bankTokens.filter((t) => !isVoorletters(t)).join("");
+  if (bankPlak.length < 4 || !profielTokens.join("").includes(bankPlak)) return false;
+  const bankVoorletters = bankTokens.filter((t) => t.length === 1);
+  if (bankVoorletters.length === 0) return true;
+  return bankVoorletters.some((v) => profielTokens.some((t) => t.startsWith(v)));
+}
+
 function houderPast(profielTokens: string[], bankHouder: string): boolean {
+  if (plakPast(profielTokens, bankHouder)) return true;
   const bank = splits(woorden(bankHouder));
   const profiel = profielTokens.filter((t) => !TUSSENVOEGSELS.has(t));
   const profielNamen = new Set(profiel.filter((t) => t.length >= 2));
