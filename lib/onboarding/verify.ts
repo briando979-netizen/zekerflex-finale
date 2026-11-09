@@ -623,8 +623,11 @@ export async function submitFreelancerOnboarding(
   // Uit de MRZ op de foto; van de chip alleen als die echt is (dan gaat het toch naar
   // een mens, want de chip vervangt de foto-MRZ nooit). Alleen de categorie gaat mee in
   // de uitslag; de nationaliteit en de geboortedatum worden niet bewaard.
-  const werkrecht = mrzGeldig ? werkrechtUitMrz(mrz) : chip?.echt ? chip.werkrecht : null;
-  const leeftijd = mrzGeldig ? leeftijdsgroep(mrz.geboortedatum, amsterdamDayKey(new Date())) : chip?.echt ? chip.leeftijd : null;
+  // Werkrecht en leeftijd van de chip alleen als die chip bij dít account hoort (chipOk: echt én
+  // nummer en naam kloppen), nooit van een willekeurige echte chip: anders geeft een eigen rijbewijs
+  // plus de chip van een ander diens werkrecht (review N5).
+  const werkrecht = mrzGeldig ? werkrechtUitMrz(mrz) : chipOk && chip ? chip.werkrecht : null;
+  const leeftijd = mrzGeldig ? leeftijdsgroep(mrz.geboortedatum, amsterdamDayKey(new Date())) : chipOk && chip ? chip.leeftijd : null;
   if (werkrecht) checks.push({ label: "Recht om te werken in Nederland", ok: werkrecht === "vrij", detail: WERKRECHT_TEKST[werkrecht] });
   if (leeftijd) checks.push({ label: "Leeftijd", ok: leeftijd === "volwassen", detail: LEEFTIJD_TEKST[leeftijd] });
 
@@ -700,8 +703,8 @@ export async function submitFreelancerOnboarding(
     mrzOk &&
     // werkrecht (ook onbekend, review N2), leeftijd en een dubbel document beslist altijd een mens
     werkrecht === "vrij" &&
-    leeftijd !== "minderjarig" &&
-    leeftijd !== "te-jong" &&
+    // alleen een vastgestelde volwassen leeftijd; onbekend beslist een mens (review N7)
+    leeftijd === "volwassen" &&
     !elders &&
     !chipFotoVerschil &&
     !zegelElders &&

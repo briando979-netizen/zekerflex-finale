@@ -395,6 +395,17 @@ describe("submitFreelancerOnboarding — three-capture flow", () => {
       expect(result.outcome).toBe("in_review");
     });
 
+    it("review N5: eigen rijbewijs plus de echte chip van een ander geeft nooit diens werkrecht", async () => {
+      userFindUnique.mockResolvedValue(jan);
+      runVisionReview.mockResolvedValueOnce(VISION_OK);
+      chipLezing.mockResolvedValueOnce({ ...CHIP_JAN, nummerKlopt: false, naamOpChip: { achternaam: "DEVRIES", voornamen: "PIET" } });
+      const result = await submitFreelancerOnboarding({ ...BASE_INPUT, documentType: "DRIVERS_LICENSE", documentNumber: "1234567890", files: files() });
+      expect(result.outcome).toBe("in_review");
+      const ivArg = ivCreate.mock.calls[0]![0] as { data: { rawPayload: { werkrecht?: unknown; leeftijd?: unknown } } };
+      expect(ivArg.data.rawPayload.werkrecht ?? null).toBeNull();
+      expect(ivArg.data.rawPayload.leeftijd ?? null).toBeNull();
+    });
+
     it("review N3: dezelfde hash bij een andere documentsoort, en geen gewone SHA-256", async () => {
       const { createHash } = await import("node:crypto");
       userFindUnique.mockResolvedValue(jan);
