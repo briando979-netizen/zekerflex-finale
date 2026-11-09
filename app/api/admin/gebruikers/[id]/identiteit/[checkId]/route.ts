@@ -47,6 +47,9 @@ export const POST = withAdminAccess<{ id: string; checkId: string }>(
           await tx.complianceDocument.create({
             data: { userId: check.userId, kind: ComplianceDocKind.ID, uploadId: voorkant, status: ComplianceDocStatus.APPROVED },
           });
+        } else {
+          // eerder goedgekeurd en nu toch afgewezen: de voorkant weer weg bij de documenten
+          await tx.complianceDocument.deleteMany({ where: { userId: check.userId, uploadId: voorkant } });
         }
       } else if (check.documentType !== "DRIVERS_LICENSE") {
         await tx.complianceDocument.updateMany({

@@ -119,7 +119,8 @@ describe("POST /api/admin/gebruikers/[id]/identiteit/[checkId]", () => {
 
     expect((await POST(req("reject"), ctx)).status).toBe(200);
     expect(complianceDocumentCreate).not.toHaveBeenCalled();
-    expect(complianceDocumentDeleteMany).not.toHaveBeenCalled();
+    // (ook na een eerdere goedkeuring) alleen die voorkant weg, geen ander document
+    expect(complianceDocumentDeleteMany).toHaveBeenCalledWith({ where: { userId: "u1", uploadId: "up_voor" } });
     expect(complianceDocumentUpdateMany).not.toHaveBeenCalled();
   });
 
