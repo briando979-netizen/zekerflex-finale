@@ -68,7 +68,12 @@ export interface OnboardingResult {
   kvkValid: boolean;
   outcome: "verified" | "in_review" | "rejected";
   companyName: string | null;
-  checks: { label: string; ok: boolean; detail: string }[];
+  /**
+   * De controles. `intern` (review N4): alleen voor de beoordelaar (rawPayload), nooit
+   * terug naar de werker: "al gebruikt bij een ander account" verraadt anders of
+   * iemand met dat document op ZekerFlex staat.
+   */
+  checks: { label: string; ok: boolean; detail: string; intern?: boolean }[];
   reasons: string[];
   summary: string;
 }
@@ -607,6 +612,7 @@ export async function submitFreelancerOnboarding(
     });
     checks.push({
       label: "Chipgegevens niet eerder bij een ander account gebruikt",
+      intern: true,
       ok: !zegelElders,
       detail: zegelElders ? "Dezelfde chipgegevens zijn al bij een ander account ingestuurd. Een medewerker kijkt mee." : "Niet eerder gezien",
     });
@@ -642,6 +648,7 @@ export async function submitFreelancerOnboarding(
     .catch(() => null);
   checks.push({
     label: "Document niet al gebruikt door een ander account",
+    intern: true,
     ok: !elders,
     detail: elders ? "Dit document is al gebruikt bij een ander account. Een medewerker kijkt mee." : "Dit document hoort bij geen ander account",
   });
@@ -829,8 +836,10 @@ export async function submitFreelancerOnboarding(
     });
   }
 
+  // naar de werker alleen de openbare controles (review N4); intern blijft in rawPayload en de audit
+  const openbaar = checks.filter((c) => !c.intern);
   const reasons = [
-    ...checks.filter((c) => !c.ok).map((c) => c.detail),
+    ...openbaar.filter((c) => !c.ok).map((c) => c.detail),
     ...ai.reasons,
   ];
 
@@ -839,7 +848,7 @@ export async function submitFreelancerOnboarding(
     kvkValid,
     outcome,
     companyName,
-    checks,
+    checks: openbaar,
     reasons: [...new Set(reasons)],
     // bij "in behandeling" een vaste, eerlijke tekst: de AI-samenvatting kan "alles klopt" zeggen terwijl een mens nog kijkt
     summary:
