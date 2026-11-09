@@ -15,6 +15,8 @@ import { recordEngagement } from "@/lib/engagement/events";
 import { ensureModelAgreement } from "@/lib/agreements/model-agreement";
 import { myOfferForShift } from "@/lib/offers/store";
 import { lockShiftSeats } from "@/lib/shifts/seat-lock";
+import { isTestklus } from "@/lib/shifts/testklus";
+import { testklusOntvangers } from "@/lib/shifts/testklus-db";
 import { findOverlappingShift, overlapMessageSelf } from "@/lib/shifts/worker-overlap";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 
@@ -200,7 +202,7 @@ export async function dispatchNextWave(shiftId: string): Promise<number> {
         select: {
           title: true,
           hourlyRateCents: true,
-          branch: { select: { name: true, city: true } },
+          branch: { select: { name: true, city: true, tenantId: true, tenant: { select: { name: true } } } },
         },
       }),
       prisma.freelancerProfile.findMany({
@@ -216,12 +218,21 @@ export async function dispatchNextWave(shiftId: string): Promise<number> {
     ]);
     const windowById = new Map(contactWindows.map((w) => [w.id, w]));
 
+    // Een testklus nooit naar echte werkers, ook niet uit een wachtrij van vóór
+    // die regel of uit de roosterplanner (lib/shifts/testklus-db.ts). Wie eruit
+    // valt, houdt een stil voorstel (SCORED): geen push, geen mail.
+    let golf = candidates;
+    if (isTestklus({ title: shift.title, bedrijf: shift.branch.tenant.name })) {
+      const intern = new Set((await testklusOntvangers(shift.branch.tenantId)).map((o) => o.freelancerId));
+      golf = candidates.filter((c) => intern.has(c.freelancerId));
+    }
+
     const nextWave = state.wave + 1;
     const expiresAt = new Date(Date.now() + state.offerTtlMinutes * 60_000);
     let dispatched = 0;
     let pushSuppressed = 0;
 
-    for (const cand of candidates) {
+    for (const cand of golf) {
       const updated = await prisma.shiftMatch.updateMany({
         where: {
           shiftId,

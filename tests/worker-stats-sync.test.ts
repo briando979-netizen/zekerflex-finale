@@ -6,6 +6,8 @@ const timesheetGroupBy = vi.fn();
 const matchGroupBy = vi.fn();
 const assignmentFindMany = vi.fn();
 const timesheetFindMany = vi.fn();
+// Geen testklussen, tenzij een test ze zelf opgeeft (lib/shifts/testklus-db.ts).
+const shiftFindMany = vi.fn(async (..._a: unknown[]): Promise<unknown[]> => []);
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     freelancerProfile: {
@@ -18,6 +20,7 @@ vi.mock("@/lib/prisma", () => ({
     },
     shiftMatch: { groupBy: (...a: unknown[]) => matchGroupBy(...a) },
     shiftAssignment: { findMany: (...a: unknown[]) => assignmentFindMany(...a) },
+    shift: { findMany: (...a: unknown[]) => shiftFindMany(...a) },
   },
 }));
 
@@ -155,5 +158,23 @@ describe("syncWorkerStats", () => {
     expect(mw.notifiedAt).toEqual({ not: null });
     expect(mw.status.in).toEqual(["ACCEPTED", "DECLINED", "EXPIRED"]);
     expect(mw.createdAt.gte.toISOString()).toBe("2025-11-03T10:00:00.000Z");
+    expect(mw.shiftId).toBeUndefined(); // geen testklussen: geen extra filter
+  });
+
+  it("telt voorstellen voor een testklus niet mee in de acceptatie", async () => {
+    profileFindMany.mockResolvedValue([]);
+    timesheetGroupBy.mockResolvedValue([]);
+    matchGroupBy.mockResolvedValue([]);
+    assignmentFindMany.mockResolvedValue([]);
+    shiftFindMany.mockResolvedValueOnce([
+      { id: "s-test", title: "Orderpicker", branch: { tenant: { name: "Test bedrijven" } } },
+      { id: "s-titel", title: "Bediening (testklus)", branch: { tenant: { name: "Bakkerij Jansen" } } },
+      { id: "s-echt", title: "Testmonteur", branch: { tenant: { name: "Volvo" } } }, // "test" in de titel, toch echt werk
+    ]);
+
+    await syncWorkerStats(NOW);
+    const sw = shiftFindMany.mock.calls[0]![0] as { where: { startsAt: { gte: Date } } };
+    expect(sw.where.startsAt.gte.toISOString()).toBe("2025-11-03T10:00:00.000Z");
+    expect(matchGroupBy.mock.calls[0]![0].where.shiftId).toEqual({ notIn: ["s-test", "s-titel"] });
   });
 });
