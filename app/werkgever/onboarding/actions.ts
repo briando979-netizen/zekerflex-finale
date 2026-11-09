@@ -53,9 +53,11 @@ export interface EmployerOnboardingState {
   kvkValid?: boolean;
   /** KVK klopt, maar ZekerFlex controleert met de hand of de aanmelder bij het bedrijf hoort */
   inControle?: boolean;
+  /** een bedrijf buiten Nederland: geen KVK, een beheerder keurt het goed */
+  buitenlands?: boolean;
   reasons?: string[];
   /** wat er ingevuld was: na een fout blijft het staan (het formulier wordt na een server-actie teruggezet) */
-  values?: { kvkNumber: string; branchName: string; addressLine: string; postalCode: string; houseNumber: string };
+  values?: { land: string; kvkNumber: string; btwNummer: string; registratieNummer: string; branchName: string; addressLine: string; postalCode: string; houseNumber: string };
 }
 
 export async function employerOnboardingAction(
@@ -70,14 +72,17 @@ export async function employerOnboardingAction(
   if (!tenantId) return { error: "Geen organisatie gevonden voor je account.", done: false };
 
   const values = {
+    land: String(formData.get("land") ?? "NL").slice(0, 2),
     kvkNumber: String(formData.get("kvkNumber") ?? "").slice(0, 20),
+    btwNummer: String(formData.get("btwNummer") ?? "").slice(0, 24),
+    registratieNummer: String(formData.get("registratieNummer") ?? "").slice(0, 40),
     branchName: String(formData.get("branchName") ?? "").slice(0, 120),
     addressLine: String(formData.get("addressLine") ?? "").slice(0, 160),
     postalCode: String(formData.get("postalCode") ?? "").slice(0, 12),
     houseNumber: String(formData.get("houseNumber") ?? "").slice(0, 12),
   };
   const parsed = employerOnboardingSchema.safeParse({
-    kvkNumber: formData.get("kvkNumber"),
+    ...values,
     branchName: formData.get("branchName"),
     addressLine: formData.get("addressLine"),
     postalCode: formData.get("postalCode"),
@@ -93,9 +98,11 @@ export async function employerOnboardingAction(
     // Een KVK-nummer dat niet klopt is geen afgeronde stap: het formulier blijft open
     // met de reden (4 nov 2026: de stap kreeg een groen vinkje bij een verzonnen nummer).
     if (!res.kvkValid) {
-      const reden = res.reasons[0] ?? "We konden dit KVK-nummer niet bevestigen in het Handelsregister.";
+      const reden = res.reasons[0] ?? (res.buitenlands ? "We konden je bedrijfsgegevens niet bevestigen." : "We konden dit KVK-nummer niet bevestigen in het Handelsregister.");
       return {
-        error: `${reden} Controleer het nummer (8 cijfers, bijvoorbeeld op je KVK-uittreksel) en probeer het opnieuw; je vestiging is al opgeslagen.`,
+        error: res.buitenlands
+          ? `${reden} Controleer je gegevens en probeer het opnieuw; je vestiging is al opgeslagen.`
+          : `${reden} Controleer het nummer (8 cijfers, bijvoorbeeld op je KVK-uittreksel) en probeer het opnieuw; je vestiging is al opgeslagen.`,
         done: false,
         reasons: res.reasons,
         values,
@@ -107,6 +114,7 @@ export async function employerOnboardingAction(
       companyName: res.companyName,
       kvkValid: res.kvkValid,
       inControle: res.inControle,
+      buitenlands: res.buitenlands,
       reasons: res.reasons,
     };
   } catch (err) {

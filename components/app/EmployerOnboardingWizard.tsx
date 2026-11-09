@@ -11,6 +11,7 @@ import {
 } from "@/app/werkgever/onboarding/actions";
 import { useT } from "@/components/i18n/I18nProvider";
 import { nl, fmt } from "@/lib/i18n/dictionaries";
+import { BUITEN_LANDEN, EU_LANDEN, landSoort } from "@/lib/onboarding/buitenland";
 
 type StepKey = "org" | "adres" | "profiel" | "foto" | "email" | "klaar";
 
@@ -64,6 +65,8 @@ export function EmployerOnboardingWizard({
     /** na opnieuw laden: is het bedrijf goedgekeurd, of nog in controle bij ZekerFlex? */
     verified?: boolean | undefined;
     inControle?: boolean | undefined;
+    /** het bedrijf zit buiten Nederland: geen KVK, een beheerder keurt het goed */
+    buitenlands?: boolean | undefined;
     companyName?: string | undefined;
   };
 }) {
@@ -73,8 +76,10 @@ export function EmployerOnboardingWizard({
   const [kvkState, kvkFormAction] = useFormState<EmployerOnboardingState, FormData>(employerOnboardingAction, {
     error: null,
     done: initial.kvkDone,
-    ...(initial.kvkDone ? { kvkValid: Boolean(initial.verified || initial.inControle), inControle: Boolean(initial.inControle), companyName: initial.companyName ?? null } : {}),
+    ...(initial.kvkDone ? { kvkValid: Boolean(initial.verified || initial.inControle), inControle: Boolean(initial.inControle), buitenlands: Boolean(initial.buitenlands), companyName: initial.companyName ?? null } : {}),
   });
+  const [land, setLand] = useState("NL");
+  const soort = landSoort(land) ?? "NL";
 
   const [orgSaved, setOrgSaved] = useState(Boolean(initial.answers.role || initial.answers.sector));
   const [coverDone, setCoverDone] = useState(Boolean(initial.coverStepDone));
@@ -168,7 +173,7 @@ export function EmployerOnboardingWizard({
           <div className="space-y-3">
             {/* groen = goedgekeurd, amber = wacht op ZekerFlex of op een geldig KVK-nummer (één kleur = één betekenis) */}
             <p role="status" className={`rounded-lg px-3 py-2.5 text-sm ${kvkState.kvkValid && !kvkState.inControle ? "bg-ok/10 text-ok" : "bg-warn/10 text-warn"}`}>
-              {fmt(kvkState.kvkValid ? (kvkState.inControle ? o.kvkInControle : o.kvkVerified) : o.kvkSaved, {
+              {fmt(kvkState.kvkValid ? (kvkState.inControle ? (kvkState.buitenlands ? o.kvkInControleForeign : o.kvkInControle) : o.kvkVerified) : o.kvkSaved, {
                 name: kvkState.companyName ?? nl.shell.orgFallback,
               })}
             </p>
@@ -187,10 +192,39 @@ export function EmployerOnboardingWizard({
           <form action={kvkFormAction} className="space-y-4">
             {kvkState.error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{kvkState.error}</p>}
             <label className="block">
-              <span className="field-label">{o.kvkNumber}</span>
-              <input name="kvkNumber" required inputMode="numeric" placeholder="12345678" defaultValue={kvkState.values?.kvkNumber ?? initial.kvkPrefill ?? ""} className="field-input" />
-              <span className="mt-1 block text-xs text-neutralx-400">{o.kvkHint}</span>
+              <span className="field-label">{o.country}</span>
+              <select name="land" value={land} onChange={(e) => setLand(e.target.value)} className="field-input">
+                <option value="NL">Nederland</option>
+                <optgroup label={o.countryEu}>
+                  {EU_LANDEN.map((l) => <option key={l.code} value={l.code}>{l.naam}</option>)}
+                </optgroup>
+                <optgroup label={o.countryOther}>
+                  {BUITEN_LANDEN.map((l) => <option key={l.code} value={l.code}>{l.naam}</option>)}
+                </optgroup>
+              </select>
             </label>
+            {soort === "NL" && (
+              <label className="block">
+                <span className="field-label">{o.kvkNumber}</span>
+                <input name="kvkNumber" required inputMode="numeric" placeholder="12345678" defaultValue={kvkState.values?.kvkNumber ?? initial.kvkPrefill ?? ""} className="field-input" />
+                <span className="mt-1 block text-xs text-neutralx-400">{o.kvkHint}</span>
+              </label>
+            )}
+            {soort === "EU" && (
+              <label className="block">
+                <span className="field-label">{o.vatNumber}</span>
+                <input name="btwNummer" required autoCapitalize="characters" placeholder="DE123456789" defaultValue={kvkState.values?.btwNummer ?? ""} className="field-input" />
+                <span className="mt-1 block text-xs text-neutralx-400">{o.vatHint}</span>
+              </label>
+            )}
+            {soort === "BUITEN" && (
+              <label className="block">
+                <span className="field-label">{o.regNumber}</span>
+                <input name="registratieNummer" required defaultValue={kvkState.values?.registratieNummer ?? ""} className="field-input" />
+                <span className="mt-1 block text-xs text-neutralx-400">{o.regHint}</span>
+              </label>
+            )}
+            {soort !== "NL" && <p className="text-xs text-neutralx-600">{o.foreignWorkplace}</p>}
             <label className="block">
               <span className="field-label">{o.branchName}</span>
               <input name="branchName" required placeholder={o.branchNamePh} defaultValue={kvkState.values?.branchName ?? ""} className="field-input" />
