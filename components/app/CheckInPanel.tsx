@@ -5,12 +5,20 @@ import { useRouter } from "next/navigation";
 import { useFT } from "@/components/i18n/useFT";
 import type { FreelancerDict } from "@/lib/i18n/freelancer";
 import { AutoCheckin } from "@/components/app/AutoCheckin";
+import { WACHTRIJ_GEBEURTENIS, bewaarTik, laadTikken, nieuwId, uitkomstVan, type BewaardeTik } from "@/lib/checkin/wachtrij";
+import { meldWachtrij, verstuurBewaard, weigerTekst, type WachtrijMelding } from "@/lib/checkin/verzenden";
+import { INCHECK_VOOR_MS, UITCHECK_NA_MS } from "@/lib/timesheets/offline";
 
 // ---------------------------------------------------------------------------
 // GPS check-in / check-out on the klus location. Posts to the existing
 // /api/timesheets/:id/gps ingestion (geofenced against the branch, fraud
 // signals, sets actualStart/actualEnd). While checked in and the page is
 // open, a heartbeat every 10 minutes keeps the trail honest.
+//
+// Zonder bereik (kelder, koelcel, festivalterrein): komt een in- of uitcheck
+// niet aan, dan bewaart de telefoon hem met het tijdstip en de plek van het
+// tikken (lib/checkin/wachtrij.ts) en verstuurt hem later vanzelf
+// (BewaardeTikken in de layout). Een gewone weigering (4xx) wordt niet bewaard.
 // ---------------------------------------------------------------------------
 
 type Ev = "CHECK_IN" | "HEARTBEAT" | "CHECK_OUT";
@@ -39,46 +47,110 @@ function position(c: FreelancerDict["checkin"]): Promise<GeolocationPosition> {
   });
 }
 
-export function CheckInPanel(props: { timesheetId: string; scheduledStart: string; scheduledEnd: string; actualStart: string | null; actualEnd: string | null; branchName: string }) {
+export function CheckInPanel(props: { userId: string; timesheetId: string; scheduledStart: string; scheduledEnd: string; actualStart: string | null; actualEnd: string | null; branchName: string }) {
   const router = useRouter();
   const ft = useFT();
   const c = ft.checkin;
   // Dutch time: rendered on the UTC server first, and the shift runs in NL.
   const time = (d: string) => new Date(d).toLocaleTimeString(ft.intl, { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" });
   const [busy, setBusy] = useState<Ev | null>(null);
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string; wacht?: boolean } | null>(null);
+  // bevestigd door de server
   const [inAt, setInAt] = useState(props.actualStart);
   const [outAt, setOutAt] = useState(props.actualEnd);
+  // bewaard op dit toestel, nog niet aangekomen (pas na het laden gelezen: zelfde HTML als de server)
+  const [wacht, setWacht] = useState<BewaardeTik[]>([]);
   const beat = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { userId, timesheetId, branchName } = props;
+
+  const wachtIn = wacht.find((t) => t.type === "CHECK_IN");
+  const wachtUit = wacht.find((t) => t.type === "CHECK_OUT");
+  const shownIn = inAt ?? wachtIn?.tikOp ?? null;
+  const shownOut = outAt ?? wachtUit?.tikOp ?? null;
 
   const now = Date.now();
   const start = new Date(props.scheduledStart).getTime();
   const end = new Date(props.scheduledEnd).getTime();
-  const inWindow = now >= start - 60 * 60_000 && now <= end + 6 * 60 * 60_000; // from 1h before until 6h after
+  const inWindow = now >= start - INCHECK_VOOR_MS && now <= end + UITCHECK_NA_MS; // from 1h before until 6h after
+
+  // de bewaarde tikken van dit urenbriefje, en wat er van aankomt of geweigerd wordt
+  useEffect(() => {
+    const lees = () => setWacht(laadTikken(userId).filter((t) => t.timesheetId === timesheetId));
+    lees();
+    const tijd = (d: string) => new Date(d).toLocaleTimeString(ft.intl, { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" });
+    const opMelding = (e: Event) => {
+      const d = (e as CustomEvent<WachtrijMelding>).detail;
+      if (!d || d.userId !== userId) return;
+      lees();
+      const mijn = d.uitslagen.filter((u) => u.tik.timesheetId === timesheetId);
+      for (const u of mijn) {
+        const inn = u.tik.type === "CHECK_IN";
+        if (u.uitkomst === "aangekomen" && u.antwoord) {
+          const at = (inn ? u.antwoord.actualStart : u.antwoord.actualEnd) ?? u.antwoord.recordedAt ?? u.tik.tikOp;
+          if (inn) setInAt(at);
+          else setOutAt(at);
+          const t = tijd(u.antwoord.recordedAt ?? u.tik.tikOp);
+          const aangekomen = (inn ? c.arrivedIn : c.arrivedOut)(t);
+          const text = u.antwoord.withinGeofence ? aangekomen : `${aangekomen} ${c.offSite(Math.round(u.antwoord.distanceToBranchMeters), branchName)}.`;
+          setMsg({ ok: u.antwoord.withinGeofence, text });
+        } else {
+          setMsg({ ok: false, text: (inn ? c.refusedIn : c.refusedOut)(tijd(u.tik.tikOp), weigerTekst(c, u)) });
+        }
+      }
+      if (mijn.some((u) => u.uitkomst === "aangekomen")) router.refresh();
+    };
+    window.addEventListener(WACHTRIJ_GEBEURTENIS, opMelding);
+    return () => window.removeEventListener(WACHTRIJ_GEBEURTENIS, opMelding);
+  }, [userId, timesheetId, branchName, ft.intl, c, router]);
+
+  /** Niet aangekomen (geen bereik, server even weg): op het toestel bewaren en later versturen. */
+  function bewaar(tik: BewaardeTik) {
+    if (!bewaarTik(userId, tik)) {
+      setMsg({ ok: false, text: c.notSaved });
+      return;
+    }
+    setWacht((vorig) => [...vorig.filter((t) => t.id !== tik.id), tik]);
+    setMsg({ ok: false, wacht: true, text: (tik.type === "CHECK_IN" ? c.savedIn : c.savedOut)(time(tik.tikOp)) });
+    meldWachtrij(userId);
+    // misschien is er alweer bereik (of wachtte er al iets: dan gaat deze erachteraan)
+    void verstuurBewaard(userId);
+  }
 
   async function send(type: Ev, quiet = false) {
     if (!quiet) {
       setBusy(type);
       setMsg(null);
     }
+    // het moment van tikken, en een eigen id: twee keer versturen telt op de server één keer
+    const tikOp = new Date().toISOString();
+    const id = nieuwId();
     try {
       const pos = await position(c);
-      const res = await fetch(`/api/timesheets/${props.timesheetId}/gps`, {
+      const plek = {
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        accuracyMeters: Math.min(10_000, Math.round(pos.coords.accuracy)),
+        deviceHash: deviceHash(),
+      };
+      const tik: BewaardeTik | null = type === "HEARTBEAT" ? null : { id, timesheetId, type, tikOp, ...plek };
+      // wacht er nog iets op bereik, dan deze erachter: de volgorde van in- en uitchecken blijft kloppen
+      if (tik && laadTikken(userId).length > 0) {
+        bewaar(tik);
+        return;
+      }
+      const res = await fetch(`/api/timesheets/${timesheetId}/gps`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type,
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          accuracyMeters: Math.min(10_000, Math.round(pos.coords.accuracy)),
-          deviceHash: deviceHash(),
-          recordedAt: new Date().toISOString(),
-        }),
-      });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d?.error?.message ?? c.failed);
+        body: JSON.stringify({ type, ...plek, recordedAt: tikOp, ...(tik ? { clientId: id } : {}) }),
+      }).catch(() => null);
+      if (tik && uitkomstVan(res ? res.status : null) === "opnieuw") {
+        bewaar(tik);
+        return;
+      }
+      const d = res ? await res.json().catch(() => ({})) : {};
+      if (!res || !res.ok) throw new Error(d?.error?.message ?? c.failed);
       if (quiet) return;
-      const where = d.withinGeofence ? c.onSite(Math.round(d.distanceToBranchMeters)) : c.offSite(Math.round(d.distanceToBranchMeters), props.branchName);
+      const where = d.withinGeofence ? c.onSite(Math.round(d.distanceToBranchMeters)) : c.offSite(Math.round(d.distanceToBranchMeters), branchName);
       if (type === "CHECK_IN") setInAt(d.actualStart ?? d.recordedAt);
       if (type === "CHECK_OUT") setOutAt(d.actualEnd ?? d.recordedAt);
       setMsg({ ok: d.withinGeofence, text: (type === "CHECK_IN" ? c.checkedIn : c.checkedOut)(time(d.recordedAt), where) });
@@ -90,50 +162,57 @@ export function CheckInPanel(props: { timesheetId: string; scheduledStart: strin
     }
   }
 
-  // Heartbeat while checked in and not yet out.
+  // Heartbeat while checked in (confirmed by the server) and not yet out.
+  const heartbeat = Boolean(inAt && !shownOut && wacht.length === 0);
   useEffect(() => {
-    if (inAt && !outAt) {
+    if (heartbeat) {
       beat.current = setInterval(() => void send("HEARTBEAT", true), 10 * 60_000);
       return () => {
         if (beat.current) clearInterval(beat.current);
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inAt, outAt]);
+  }, [heartbeat]);
 
-  if (!inWindow && !inAt) return null;
+  if (!inWindow && !shownIn) return null;
 
   return (
     <div className="card space-y-3 p-5">
       <div className="flex items-center gap-3">
-        <span className={`grid h-11 w-11 place-items-center rounded-full text-xl ${inAt && !outAt ? "animate-pulse bg-ok/15" : "bg-paper-soft"}`}>📍</span>
+        <span className={`grid h-11 w-11 place-items-center rounded-full text-xl ${shownIn && !shownOut ? "animate-pulse bg-ok/15" : "bg-paper-soft"}`}>📍</span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold text-ink">{outAt ? c.doneToday : inAt ? c.youAreIn : c.title}</span>
+          <span className="block text-sm font-semibold text-ink">{shownOut ? c.doneToday : shownIn ? c.youAreIn : c.title}</span>
           <span className="block text-xs text-neutralx-500">
-            {inAt ? c.inAt(time(inAt)) : c.planned(time(props.scheduledStart), time(props.scheduledEnd))}
-            {outAt ? c.outAt(time(outAt)) : ""}
+            {shownIn ? c.inAt(time(shownIn)) : c.planned(time(props.scheduledStart), time(props.scheduledEnd))}
+            {!inAt && wachtIn ? ` (${c.pendingTag})` : ""}
+            {shownOut ? c.outAt(time(shownOut)) : ""}
+            {!outAt && wachtUit ? ` (${c.pendingTag})` : ""}
           </span>
         </span>
       </div>
-      {!outAt && (
+      {!shownOut && (
         <button
           type="button"
           disabled={busy !== null}
-          onClick={() => send(inAt ? "CHECK_OUT" : "CHECK_IN")}
-          className={`w-full rounded-xl py-3 text-base font-semibold text-white disabled:opacity-60 ${inAt ? "bg-ink" : "bg-brand-500"}`}
+          onClick={() => void send(shownIn ? "CHECK_OUT" : "CHECK_IN")}
+          className={`w-full rounded-xl py-3 text-base font-semibold text-white disabled:opacity-60 ${shownIn ? "bg-ink" : "bg-brand-500"}`}
         >
-          {busy ? c.locating : inAt ? c.checkOut : c.checkIn}
+          {busy ? c.locating : shownIn ? c.checkOut : c.checkIn}
         </button>
       )}
-      {msg && <p className={`text-sm ${msg.ok ? "text-ok" : "text-warn"}`}>{msg.text}</p>}
+      {msg && (
+        <p role={msg.ok || msg.wacht ? "status" : "alert"} className={`text-sm ${msg.ok ? "text-ok" : "text-warn"}`}>
+          {msg.text}
+        </p>
+      )}
       <p className="text-xs text-neutralx-400">{c.privacy}</p>
       {/* automatisch op de geofence, QR-code of Bluetooth-baken (lib/checkin) */}
       <AutoCheckin
         timesheetId={props.timesheetId}
         scheduledStart={props.scheduledStart}
         scheduledEnd={props.scheduledEnd}
-        inAt={inAt}
-        outAt={outAt}
+        inAt={shownIn}
+        outAt={shownOut}
         onEvent={(type, at, ok, text) => {
           if (type === "CHECK_IN") setInAt(at);
           else setOutAt(at);

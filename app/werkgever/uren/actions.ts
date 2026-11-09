@@ -86,7 +86,7 @@ export async function approveCleanTimesheetsAction(timesheetIds: string[]): Prom
         breakMinutes: true,
         billableMinutes: true,
         freelancerId: true,
-        gpsEvents: { select: { type: true, mocked: true, withinGeofence: true, distanceToBranchMeters: true, recordedAt: true } },
+        gpsEvents: { select: { type: true, mocked: true, withinGeofence: true, distanceToBranchMeters: true, recordedAt: true, bron: true, ontvangenOp: true } },
       },
     });
     // in de volgorde van het scherm

@@ -12,6 +12,7 @@ import { inAndroidApp } from "@/lib/app-mode-server";
 import { IbanHoldBanner } from "@/components/app/IbanHoldBanner";
 import { OpbouwfaseBalk } from "@/components/app/OpbouwfaseBalk";
 import { AppOpenPing } from "@/components/app/AppOpenPing";
+import { BewaardeTikken } from "@/components/app/BewaardeTikken";
 import { ViewAsBanner } from "@/components/admin/ViewAsBanner";
 import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
@@ -43,6 +44,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         canSwitchToEmployer={hasRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "DISPUTE_MANAGER", "PLATFORM_ADMIN")}
       >
         <IbanHoldBanner userId={principal.userId} />
+        {/* in- en uitchecks die zonder bereik zijn bewaard: versturen zodra het kan (lib/checkin/wachtrij.ts) */}
+        <BewaardeTikken userId={principal.userId} />
         <OpbouwfaseBalk soort="werker" />
         {children}
         <ChatDock />

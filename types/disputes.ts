@@ -13,6 +13,8 @@ export interface GpsEventDto {
   distanceToBranchMeters: number;
   withinGeofence: boolean;
   mocked: boolean;
+  /** zonder bereik vastgelegd (bron "offline"): wanneer de server het ontving, anders null */
+  ontvangenOp: string | null;
 }
 
 export interface DisputeDto {

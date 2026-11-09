@@ -19,6 +19,12 @@ const bodySchema = z.object({
   deviceHash: z.string().min(8).max(128),
   mocked: z.boolean().optional(),
   recordedAt: z.string().datetime().optional(),
+  /** eigen id van de telefoon per tik (crypto.randomUUID): dubbel versturen telt één keer */
+  clientId: z.string().regex(/^[A-Za-z0-9-]{8,64}$/).optional(),
+  /** zonder bereik bewaard op de telefoon; recordedAt is dan het moment van tikken */
+  offline: z.boolean().optional(),
+  /** bij offline: de klok van de telefoon bij het versturen */
+  verzondenOp: z.string().datetime().optional(),
 });
 
 /**
@@ -27,6 +33,9 @@ const bodySchema = z.object({
  * A freelancer records a GPS check-in / heartbeat / check-out for their own
  * (draft) timesheet. Each event is geofenced against the branch and stored;
  * CHECK_IN sets `actualStart`, CHECK_OUT sets `actualEnd` + billable minutes.
+ * `offline: true`: een tik die zonder bereik op de telefoon is bewaard
+ * (lib/timesheets/offline.ts); buiten de grenzen 422 met `details.reden`.
+ * Hetzelfde `clientId` nog eens: 200 met het bestaande event (`dubbel`).
  */
 export async function POST(request: Request, props: { params: Promise<{ timesheetId: string }> }): Promise<NextResponse> {
   const params = await props.params;
@@ -58,9 +67,12 @@ export async function POST(request: Request, props: { params: Promise<{ timeshee
       deviceHash: body.deviceHash,
       ...(body.mocked !== undefined ? { mocked: body.mocked } : {}),
       ...(body.recordedAt ? { recordedAt: new Date(body.recordedAt) } : {}),
+      ...(body.clientId ? { clientId: body.clientId } : {}),
+      ...(body.offline ? { bron: "offline" as const } : {}),
+      ...(body.offline && body.verzondenOp ? { verzondenOp: new Date(body.verzondenOp) } : {}),
     });
 
-    return NextResponse.json(result, { status: 201 });
+    return NextResponse.json(result, { status: result.dubbel ? 200 : 201 });
   } catch (err) {
     const { status, body } = toErrorBody(err);
     if (status >= 500) log.error("gps event failed", { error: (err as Error).message });
