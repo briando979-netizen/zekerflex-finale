@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { bannerWeerTonen, PUSH_BANNER_NL, type PushBannerTexts } from "@/components/app/push-banner-texts";
 
 type State = "loading" | "unsupported" | "ios-install" | "unconfigured" | "off" | "on" | "denied" | "busy";
 
@@ -86,7 +87,8 @@ function inStandaloneApp(): boolean {
   }
 }
 
-export function PushToggle({ variant = "card" }: { variant?: "card" | "banner" }) {
+/** texts: alleen voor de banner; de werker-app geeft eigen teksten in vijf talen mee */
+export function PushToggle({ variant = "card", texts = PUSH_BANNER_NL }: { variant?: "card" | "banner"; texts?: PushBannerTexts }) {
   const [state, setState] = useState<State>("loading");
   const [vapidKey, setVapidKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +100,7 @@ export function PushToggle({ variant = "card" }: { variant?: "card" | "banner" }
     let cancelled = false;
     setApp(inStandaloneApp());
     try {
-      setDismissed(window.localStorage.getItem(DISMISS_KEY) === "1");
+      setDismissed(!bannerWeerTonen(window.localStorage.getItem(DISMISS_KEY), Date.now()));
     } catch {
       /* storage blocked — show the banner */
     }
@@ -206,7 +208,7 @@ export function PushToggle({ variant = "card" }: { variant?: "card" | "banner" }
   const dismiss = () => {
     setDismissed(true);
     try {
-      window.localStorage.setItem(DISMISS_KEY, "1");
+      window.localStorage.setItem(DISMISS_KEY, String(Date.now())); // na 14 dagen komt hij terug
     } catch {
       /* not remembered — fine */
     }
@@ -218,9 +220,7 @@ export function PushToggle({ variant = "card" }: { variant?: "card" | "banner" }
       <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-brand-100 bg-brand-50 px-4 py-2.5 text-sm">
         <span aria-hidden className="text-lg">🔔</span>
         <span className="min-w-0 flex-1 text-neutralx-700">
-          {state === "ios-install"
-            ? "Op iPhone krijg je meldingen pas als ZekerFlex op je beginscherm staat: tik op Deel → Zet op beginscherm en open het daarvandaan."
-            : "Zet meldingen aan, dan krijg je een seintje bij een dienst die begint, een oproep of een nieuw bericht — ook als ZekerFlex dicht is."}
+          {state === "ios-install" ? texts.ios : texts.aanzetten}
           {error && <span role="alert" className="ml-1 text-crit">{error}</span>}
         </span>
         {state !== "ios-install" && (
@@ -230,10 +230,10 @@ export function PushToggle({ variant = "card" }: { variant?: "card" | "banner" }
             disabled={state === "busy"}
             className="rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
           >
-            {state === "busy" ? "Bezig…" : "Meldingen aanzetten"}
+            {state === "busy" ? texts.bezig : texts.knop}
           </button>
         )}
-        <button type="button" onClick={dismiss} className="text-neutralx-400 hover:text-ink" aria-label="Niet nu">
+        <button type="button" onClick={dismiss} className="text-neutralx-400 hover:text-ink" aria-label={texts.nietNu}>
           ✕
         </button>
       </div>

@@ -151,7 +151,7 @@ export function FreelancerShell({
         }`}
       >
         <div className={focused ? "" : "mx-auto max-w-3xl"}>
-          {!focused && !pathname.startsWith("/dashboard/berichten") && <PushToggle variant="banner" />}
+          {!focused && !pathname.startsWith("/dashboard/berichten") && <PushToggle variant="banner" texts={ft.pushBanner} />}
           {children}
         </div>
       </main>
