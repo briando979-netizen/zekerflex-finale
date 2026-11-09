@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { getStripeOverview, type MoneyAmount, type StripeOverview } from "@/lib/billing/stripe-overview";
@@ -91,7 +92,13 @@ export default async function AdminStripePage() {
         title="Stripe"
         subtitle="Saldo, betalingen, uitbetalingen en geschillen, rechtstreeks uit je Stripe-account."
         meta={<Pill tone={o.livemode ? "ok" : "warn"}>{o.livemode ? "Live" : "Testmodus"}</Pill>}
-        actions={<AutoRefresh fetchedAt={o.fetchedAt} />}
+        actions={
+          <>
+            <Link href="/admin/stripe/klanten" className="a-button text-xs">Klanten</Link>
+            <Link href="/admin/stripe/werkbank" className="a-button text-xs">Werkbank</Link>
+            <AutoRefresh fetchedAt={o.fetchedAt} />
+          </>
+        }
       />
 
       {o.errors.length > 0 && (
