@@ -87,8 +87,12 @@ export async function POST(request: Request): Promise<NextResponse> {
       return typeof v === "string" && v.trim() ? v : undefined;
     };
 
+    // Route 0: "bewaar en ga later verder" — alleen het basisdeel (bedrijf, thuisbasis, IBAN) opslaan.
+    // Er wordt niets verifieerd of goedgekeurd: reageren op klussen blijft wachten op de identiteit
+    // (lib/fiscal/eligibility.ts, kycStatus), dit voorkomt alleen dat iemand alles opnieuw invult.
+    const bewaren = form.get("identityMethod") === "bewaren";
     // Route 1: identity via Stripe — save the rest now, then send the user to Stripe.
-    if (form.get("identityMethod") === "stripe" && (await stripeIdentityAvailable())) {
+    if (bewaren || (form.get("identityMethod") === "stripe" && (await stripeIdentityAvailable()))) {
       const base = baseSchema.safeParse({
         kvkNumber: str("kvkNumber"),
         vatNumber: str("vatNumber"),
@@ -111,6 +115,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         payoutIban: base.data.payoutIban,
         ibanCode: base.data.ibanCode,
       });
+      if (bewaren) return NextResponse.json({ opgeslagen: true, checks: saved.checks }, { status: 200 });
       const redirectUrl = await startStripeIdentity(principal.userId, principal.email);
       return NextResponse.json({ redirectUrl, checks: saved.checks }, { status: 200 });
     }

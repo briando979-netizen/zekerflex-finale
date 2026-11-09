@@ -7,6 +7,7 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { submitEmployerOnboarding, employerOnboardingSchema } from "@/lib/onboarding/employer";
 import { getOrgProfileExtra, saveOrgProfileExtra } from "@/lib/profile/store";
 import { AppError } from "@/lib/errors";
+import { controleerVestiging, type VestigingFouten } from "@/lib/onboarding/vestiging";
 
 const profileSchema = z.object({
   role: z.string().trim().max(60).optional(),
@@ -56,6 +57,8 @@ export interface EmployerOnboardingState {
   /** een bedrijf buiten Nederland: geen KVK, een beheerder keurt het goed */
   buitenlands?: boolean;
   reasons?: string[];
+  /** per veld een melding in gewoon Nederlands (lib/onboarding/vestiging.ts) */
+  fieldErrors?: VestigingFouten;
   /** wat er ingevuld was: na een fout blijft het staan (het formulier wordt na een server-actie teruggezet) */
   values?: { land: string; kvkNumber: string; btwNummer: string; registratieNummer: string; branchName: string; addressLine: string; postalCode: string; houseNumber: string };
 }
@@ -81,6 +84,9 @@ export async function employerOnboardingAction(
     postalCode: String(formData.get("postalCode") ?? "").slice(0, 12),
     houseNumber: String(formData.get("houseNumber") ?? "").slice(0, 12),
   };
+  const fieldErrors = controleerVestiging(values);
+  const eerste = Object.values(fieldErrors)[0];
+  if (eerste) return { error: eerste, done: false, values, fieldErrors };
   const parsed = employerOnboardingSchema.safeParse({
     ...values,
     branchName: formData.get("branchName"),

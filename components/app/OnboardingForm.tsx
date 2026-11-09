@@ -10,6 +10,7 @@ import { ibanCodeBericht, isIbanCodeFout } from "@/lib/fiscal/iban-code-teksten"
 import { AUTH_DICTS, fill, type AuthDict } from "@/lib/i18n/auth";
 import { DocumentLezing, leesDocumentFoto, type Lezing } from "@/components/app/DocumentLezing";
 import { IdScan, type ScanAfronden, type ScanAfrondenOverdracht, type ScanUitslag } from "@/components/app/IdScan";
+import { controleerVeld, type VeldSleutel } from "@/lib/onboarding/velden";
 
 interface Check {
   label: string;
@@ -53,6 +54,16 @@ async function compressImage(file: File): Promise<File> {
   } catch {
     return file;
   }
+}
+
+/** Foutmelding bij één veld (role="alert", gekoppeld via aria-describedby). */
+function VeldFout({ veld, tekst }: { veld: VeldSleutel; tekst: string | undefined }) {
+  if (!tekst) return null;
+  return (
+    <span id={`fout-${veld}`} role="alert" className="mt-1 block text-xs font-medium text-crit">
+      {tekst}
+    </span>
+  );
 }
 
 /** One photo — front, back, or selfie. Camera OR gallery (no forced camera);
@@ -155,11 +166,14 @@ export function OnboardingForm({
   defaultName,
   requireKvk = true,
   stripeIdentity = false,
+  initial,
 }: {
   defaultName: string;
   requireKvk?: boolean;
   /** Stripe Identity is switched on: offer the Stripe camera flow (recommended) */
   stripeIdentity?: boolean;
+  /** Eerder opgeslagen gegevens: iemand die later terugkomt, begint niet opnieuw. */
+  initial?: { kvkNumber?: string; vatNumber?: string; postalCode?: string; payoutIban?: string };
 }) {
   const t = AUTH_DICTS[useI18n().locale].onb;
   const ft = useFT();
@@ -168,7 +182,10 @@ export function OnboardingForm({
   const [ibanCode, setIbanCode] = useState("");
   const [codeMelding, setCodeMelding] = useState<string | null>(null);
   const zonderCode = useRef(false); // "Stuur code": opnieuw versturen zonder de oude code
-  const [biz, setBiz] = useState<"kvk" | "vat">("kvk");
+  const [biz, setBiz] = useState<"kvk" | "vat">(initial?.vatNumber && !initial.kvkNumber ? "vat" : "kvk");
+  // per veld een foutmelding (role="alert"); gecontroleerd bij het verlaten van het veld en bij het versturen
+  const [fouten, setFouten] = useState<Partial<Record<VeldSleutel, VeldSleutel>>>({});
+  const [bewaard, setBewaard] = useState<string | null>(null);
   // drie manieren: Stripe (als dat aanstaat), de ID-scan van ZekerFlex, of zelf foto's uploaden
   const [method, setMethod] = useState<"stripe" | "zekerflex" | "upload">(stripeIdentity ? "stripe" : "zekerflex");
   const [scanOpen, setScanOpen] = useState(false);
@@ -187,6 +204,80 @@ export function OnboardingForm({
 
   /** De MRZ staat bij een ID-kaart op de achterkant, bij een paspoort op de pasfotozijde; een rijbewijs heeft er geen. */
   const mrzFoto = (soort: DocKey): PhotoKey | null => (soort === "PASSPORT" ? "documentFront" : soort === "ID_CARD" ? "documentBack" : null);
+
+  const veldFout = (k: VeldSleutel): string | undefined => (fouten[k] ? t.err[k] : undefined);
+  const veldAttrs = (k: VeldSleutel) => (fouten[k] ? { "aria-invalid": true as const, "aria-describedby": `fout-${k}` } : {});
+
+  function controleerEen(k: VeldSleutel, waarde: string) {
+    const f = controleerVeld(k, waarde);
+    setFouten((o) => {
+      const n = { ...o };
+      if (f) n[k] = f;
+      else delete n[k];
+      return n;
+    });
+  }
+
+  /** Controleer de velden die bij deze actie horen; leeg KVK/btw mag bij "later verder". */
+  function valideer(form: FormData, opties: { documenten: boolean; bedrijfOptioneel: boolean }): boolean {
+    const w = (n: string) => String(form.get(n) ?? "");
+    const lijst: [VeldSleutel, string][] = [["iban", w("payoutIban")]];
+    // het NL-postcodeformaat geldt alleen in Nederland; een adres in het buitenland controleert ThuisbasisVelden zelf
+    if ((w("country") || "NL") === "NL") lijst.unshift(["postal", w("postalCode")]);
+    if (requireKvk) {
+      const waarde = biz === "kvk" ? w("kvkNumber") : w("vatNumber");
+      if (waarde.trim() || !opties.bedrijfOptioneel) lijst.push([biz, waarde]);
+    }
+    if (opties.documenten) {
+      lijst.push(["docNumber", w("documentNumber")], ["expiry", w("documentExpiry")], ["name", w("nameOnDocument")]);
+    }
+    const nieuw: Partial<Record<VeldSleutel, VeldSleutel>> = {};
+    for (const [k, v] of lijst) {
+      const f = controleerVeld(k, v);
+      if (f) nieuw[k] = f;
+    }
+    setFouten(nieuw);
+    if (Object.keys(nieuw).length > 0) {
+      setError(t.err.fix);
+      return false;
+    }
+    return true;
+  }
+
+  async function bewaarVoorLater() {
+    const form = formRef.current;
+    if (busy || !form) return;
+    setBewaard(null);
+    const bron = new FormData(form);
+    if (!valideer(bron, { documenten: false, bedrijfOptioneel: true })) return;
+    const body = new FormData();
+    for (const k of ["kvkNumber", "vatNumber", "postalCode", "houseNumber", "payoutIban", "ibanCode"]) {
+      const v = bron.get(k);
+      if (typeof v === "string" && v.trim()) body.set(k, v);
+    }
+    if (zonderCode.current) body.delete("ibanCode");
+    zonderCode.current = false;
+    body.set("identityMethod", "bewaren");
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/onboarding", { method: "POST", body });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok && isIbanCodeFout(res.status, data?.error?.code)) {
+        setIbanCode("");
+        setCodeMelding(ibanCodeBericht(data.error.code, ft.ibanCode, data.error.message));
+      } else if (!res.ok) {
+        setError(data?.error?.message ?? t.later.failed);
+      } else {
+        setBewaard(t.later.saved);
+        router.refresh();
+      }
+    } catch {
+      setError(t.offline);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   function zetVeld(name: string, value: string) {
     const el = formRef.current?.elements.namedItem(name);
@@ -274,6 +365,9 @@ export function OnboardingForm({
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (busy) return;
+    setBewaard(null);
+    if (!valideer(new FormData(e.currentTarget), { documenten: method === "upload", bedrijfOptioneel: false })) return;
+    setError(null);
     if (method === "zekerflex") {
       setError(null);
       scanResult.current = null;
@@ -406,9 +500,12 @@ export function OnboardingForm({
   }
 
   return (
-    <form ref={formRef} onSubmit={onSubmit} className="space-y-8">
+    <form ref={formRef} onSubmit={onSubmit} noValidate className="space-y-8">
       {error && (
         <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{error}</p>
+      )}
+      {bewaard && (
+        <p role="status" className="rounded-lg bg-ok/10 px-3 py-2.5 text-sm text-ok">{bewaard}</p>
       )}
 
       {requireKvk && (
@@ -437,13 +534,39 @@ export function OnboardingForm({
           {biz === "kvk" ? (
             <label className="block">
               <span className="field-label">{t.kvkLabel}</span>
-              <input key="kvk" name="kvkNumber" required inputMode="numeric" placeholder="12345678" className="field-input" />
+              <input
+                key="kvk"
+                name="kvkNumber"
+                required
+                aria-required="true"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="12345678"
+                defaultValue={initial?.kvkNumber ?? ""}
+                onBlur={(e) => controleerEen("kvk", e.target.value)}
+                {...veldAttrs("kvk")}
+                className="field-input"
+              />
+              <VeldFout veld="kvk" tekst={veldFout("kvk")} />
               <span className="mt-1 block text-xs text-neutralx-400">{t.kvkHint}</span>
             </label>
           ) : (
             <label className="block">
               <span className="field-label">{t.vatLabel}</span>
-              <input key="vat" name="vatNumber" required placeholder="PL1234567890" autoCapitalize="characters" className="field-input" />
+              <input
+                key="vat"
+                name="vatNumber"
+                required
+                aria-required="true"
+                placeholder="PL1234567890"
+                autoCapitalize="characters"
+                autoComplete="off"
+                defaultValue={initial?.vatNumber ?? ""}
+                onBlur={(e) => controleerEen("vat", e.target.value)}
+                {...veldAttrs("vat")}
+                className="field-input"
+              />
+              <VeldFout veld="vat" tekst={veldFout("vat")} />
               <span className="mt-1 block text-xs text-neutralx-400">{t.vatHint}</span>
             </label>
           )}
@@ -463,7 +586,20 @@ export function OnboardingForm({
         <ThuisbasisVelden postcodeLabel={t.postal} />
         <label className="block">
           <span className="field-label">{t.iban}</span>
-          <input name="payoutIban" required placeholder="NL00 BANK 0000 0000 00" className="field-input" />
+          <input
+            name="payoutIban"
+            required
+            aria-required="true"
+            placeholder="NL00 BANK 0000 0000 00"
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            defaultValue={initial?.payoutIban ?? ""}
+            onBlur={(e) => controleerEen("iban", e.target.value)}
+            {...veldAttrs("iban")}
+            className="field-input"
+          />
+          <VeldFout veld="iban" tekst={veldFout("iban")} />
         </label>
         {codeMelding && (
           <IbanCodeVeld
@@ -523,7 +659,19 @@ export function OnboardingForm({
           </label>
           <label className="block">
             <span className="field-label">{t.docNumber}</span>
-            <input name="documentNumber" required placeholder="SPECI2014" className="field-input" />
+            <input
+              name="documentNumber"
+              required
+              aria-required="true"
+              placeholder="SPECI2014"
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              onBlur={(e) => controleerEen("docNumber", e.target.value)}
+              {...veldAttrs("docNumber")}
+              className="field-input"
+            />
+            <VeldFout veld="docNumber" tekst={veldFout("docNumber")} />
           </label>
           {docType === "DRIVERS_LICENSE" && (
             // een rijbewijs mag voor het account; voor betaald werk volgt nog een ID (lib/werkrecht)
@@ -533,11 +681,31 @@ export function OnboardingForm({
           )}
           <label className="block">
             <span className="field-label">{t.validUntil}</span>
-            <input type="date" name="documentExpiry" required className="field-input" />
+            <input
+              type="date"
+              name="documentExpiry"
+              required
+              aria-required="true"
+              autoComplete="off"
+              onBlur={(e) => controleerEen("expiry", e.target.value)}
+              {...veldAttrs("expiry")}
+              className="field-input"
+            />
+            <VeldFout veld="expiry" tekst={veldFout("expiry")} />
           </label>
           <label className="block">
             <span className="field-label">{t.nameOnDoc}</span>
-            <input name="nameOnDocument" required defaultValue={defaultName} className="field-input" />
+            <input
+              name="nameOnDocument"
+              required
+              aria-required="true"
+              autoComplete="name"
+              defaultValue={defaultName}
+              onBlur={(e) => controleerEen("name", e.target.value)}
+              {...veldAttrs("name")}
+              className="field-input"
+            />
+            <VeldFout veld="name" tekst={veldFout("name")} />
           </label>
         </div>
 
@@ -557,6 +725,12 @@ export function OnboardingForm({
       <button type="submit" disabled={busy} className="btn-trust w-full">
         {busy ? (method === "stripe" ? t.toStripe : t.checkingBusy) : method === "zekerflex" ? t.scan.starten : t.submit}
       </button>
+      <div className="border-t border-hair pt-4">
+        <button type="button" onClick={() => void bewaarVoorLater()} disabled={busy} className="btn-ghost w-full sm:w-auto">
+          {busy ? t.later.busy : t.later.button}
+        </button>
+        <p className="mt-2 text-xs leading-relaxed text-neutralx-500">{t.later.hint}</p>
+      </div>
       <p className="text-xs leading-relaxed text-neutralx-400">
         {method === "stripe" ? t.stripeNote : t.uploadNote}
       </p>

@@ -108,6 +108,19 @@ export default async function VerificatiePage() {
 
   const isUitzend = invoiceModeFor(fiscal) === "payroll";
 
+  // eerder bewaarde gegevens (bewaar en ga later verder): iemand begint niet opnieuw. Het KVK-nummer
+  // van een profiel zonder bedrijf is een plaatshouder ("pending-…", "vat-…") en blijft dus leeg.
+  const bewaard = await prisma.freelancerProfile.findUnique({
+    where: { userId: principal.userId },
+    select: { kvkNumber: true, vatNumber: true, homePostalCode: true, payoutIban: true },
+  });
+  const initial = {
+    ...(bewaard?.kvkNumber && /^\d+$/.test(bewaard.kvkNumber) ? { kvkNumber: bewaard.kvkNumber } : {}),
+    ...(bewaard?.vatNumber ? { vatNumber: bewaard.vatNumber } : {}),
+    ...(bewaard?.homePostalCode ? { postalCode: bewaard.homePostalCode } : {}),
+    ...(bewaard?.payoutIban || fiscal.iban ? { payoutIban: bewaard?.payoutIban ?? fiscal.iban ?? "" } : {}),
+  };
+
   const reasons =
     lastCheck && typeof lastCheck.rawPayload === "object" && lastCheck.rawPayload !== null
       ? ((lastCheck.rawPayload as Record<string, unknown>).ai as { reasons?: string[] } | undefined)?.reasons ?? []
@@ -162,7 +175,7 @@ export default async function VerificatiePage() {
 
       <div className="card trust-card relative overflow-hidden p-6">
         <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-trust via-[#A78BFA] to-trust" aria-hidden />
-        <OnboardingForm defaultName={principal.fullName} requireKvk={!isUitzend} stripeIdentity={stripeId} />
+        <OnboardingForm defaultName={principal.fullName} requireKvk={!isUitzend} stripeIdentity={stripeId} initial={initial} />
       </div>
 
       {!stripeId && (

@@ -13,6 +13,7 @@ import { KvkZoeker } from "@/components/kvk/KvkZoeker";
 import { useT } from "@/components/i18n/I18nProvider";
 import { nl, fmt } from "@/lib/i18n/dictionaries";
 import { BUITEN_LANDEN, EU_LANDEN, landSoort } from "@/lib/onboarding/buitenland";
+import { controleerVestigingVeld, type VestigingVeld } from "@/lib/onboarding/vestiging";
 
 type StepKey = "org" | "adres" | "profiel" | "foto" | "email" | "klaar";
 
@@ -39,6 +40,16 @@ function Dot({ done, active }: { done: boolean; active?: boolean }) {
       }`}
     >
       {done ? "✓" : active ? "●" : ""}
+    </span>
+  );
+}
+
+/** Melding bij één vestigingsveld (role="alert", gekoppeld via aria-describedby). */
+function VeldMelding({ veld, tekst }: { veld: VestigingVeld; tekst: string | null | undefined }) {
+  if (!tekst) return null;
+  return (
+    <span id={`vestiging-${veld}-fout`} role="alert" className="mt-1 block text-xs font-medium text-crit">
+      {tekst}
     </span>
   );
 }
@@ -87,6 +98,14 @@ export function EmployerOnboardingWizard({
 
   const [orgSaved, setOrgSaved] = useState(Boolean(initial.answers.role || initial.answers.sector));
   const [coverDone, setCoverDone] = useState(Boolean(initial.coverStepDone));
+  // meldingen per vestigingsveld: eerst wat de browser bij het verlaten van een veld vond, anders wat de server teruggaf
+  const [vestFout, setVestFout] = useState<Partial<Record<VestigingVeld, string | null>>>({});
+  const vestMelding = (k: VestigingVeld): string | null | undefined => (k in vestFout ? vestFout[k] : kvkState.fieldErrors?.[k]);
+  const vestAttrs = (k: VestigingVeld) => (vestMelding(k) ? { "aria-invalid": true as const, "aria-describedby": `vestiging-${k}-fout` } : {});
+  const vestBlur = (k: VestigingVeld) => (e: React.FocusEvent<HTMLInputElement>) => {
+    const m = controleerVestigingVeld(k, e.target.value);
+    setVestFout((o) => ({ ...o, [k]: m }));
+  };
 
   const done: Record<StepKey, boolean> = {
     org: orgSaved,
@@ -236,20 +255,24 @@ export function EmployerOnboardingWizard({
             {soort !== "NL" && <p className="text-xs text-neutralx-600">{o.foreignWorkplace}</p>}
             <label className="block">
               <span className="field-label">{o.branchName}</span>
-              <input name="branchName" required placeholder={o.branchNamePh} defaultValue={kvkState.values?.branchName ?? ""} className="field-input" />
+              <input name="branchName" required aria-required="true" autoComplete="organization" placeholder={o.branchNamePh} defaultValue={kvkState.values?.branchName ?? ""} onBlur={vestBlur("branchName")} {...vestAttrs("branchName")} className="field-input" />
+              <VeldMelding veld="branchName" tekst={vestMelding("branchName")} />
             </label>
             <label className="block">
               <span className="field-label">{o.address}</span>
-              <input name="addressLine" required placeholder={o.addressPh} defaultValue={kvkState.values?.addressLine ?? ""} className="field-input" />
+              <input name="addressLine" required aria-required="true" autoComplete="street-address" placeholder={o.addressPh} defaultValue={kvkState.values?.addressLine ?? ""} onBlur={vestBlur("addressLine")} {...vestAttrs("addressLine")} className="field-input" />
+              <VeldMelding veld="addressLine" tekst={vestMelding("addressLine")} />
             </label>
             <div className="grid grid-cols-[1fr_110px] gap-3">
               <label className="block">
                 <span className="field-label">{o.postal}</span>
-                <input name="postalCode" required placeholder="1012 AB" defaultValue={kvkState.values?.postalCode ?? ""} className="field-input" />
+                <input name="postalCode" required aria-required="true" autoComplete="postal-code" placeholder="1012 AB" defaultValue={kvkState.values?.postalCode ?? ""} onBlur={vestBlur("postalCode")} {...vestAttrs("postalCode")} className="field-input" />
+                <VeldMelding veld="postalCode" tekst={vestMelding("postalCode")} />
               </label>
               <label className="block">
                 <span className="field-label">{o.houseNr}</span>
-                <input name="houseNumber" required placeholder="10" defaultValue={kvkState.values?.houseNumber ?? ""} className="field-input" />
+                <input name="houseNumber" required aria-required="true" autoComplete="off" placeholder="10" defaultValue={kvkState.values?.houseNumber ?? ""} onBlur={vestBlur("houseNumber")} {...vestAttrs("houseNumber")} className="field-input" />
+                <VeldMelding veld="houseNumber" tekst={vestMelding("houseNumber")} />
               </label>
             </div>
             <div className="flex justify-end pt-1">
@@ -330,7 +353,7 @@ export function EmployerOnboardingWizard({
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [kvkState, pending, orgSaved, coverDone, initial, o],
+    [kvkState, pending, orgSaved, coverDone, initial, o, vestFout],
   );
 
   return (
