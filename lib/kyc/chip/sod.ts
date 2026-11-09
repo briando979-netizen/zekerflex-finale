@@ -150,6 +150,32 @@ function handtekeningKlopt(sod: Sod, cert: X509Certificate): boolean {
   return cryptoVerify(h.hash, data, cert.publicKey, h.waarde);
 }
 
+/**
+ * De sleutelaanduidingen van een certificaat: AKI (welke sleutel tekende mij,
+ * 2.5.29.35, [0] keyIdentifier) en SKI (mijn eigen sleutel, 2.5.29.14). Alleen
+ * als de DS precies de SKI van een CSCA noemt, weten we zeker dat het om die
+ * sleutel gaat (review M5). Ontbreekt iets of is het onleesbaar: null.
+ */
+export function sleutelIds(cert: X509Certificate): { aki: Buffer | null; ski: Buffer | null } {
+  const uit: { aki: Buffer | null; ski: Buffer | null } = { aki: null, ski: null };
+  try {
+    const tbs = kind(leesEen(cert.raw), 0, TAG.SEQUENCE);
+    const ext = kinderen(tbs).find((k) => k.tag === 0xa3);
+    if (!ext) return uit;
+    for (const e of kinderen(kind(ext, 0, TAG.SEQUENCE))) {
+      const delen = kinderen(e);
+      const id = oid(delen[0]!);
+      const waarde = delen[delen.length - 1];
+      if (!waarde || waarde.tag !== TAG.OCTET_STRING) continue;
+      if (id === "2.5.29.14") uit.ski = leesEen(waarde.waarde).waarde;
+      if (id === "2.5.29.35") uit.aki = kinderen(leesEen(waarde.waarde)).find((k) => k.tag === 0x80)?.waarde ?? null;
+    }
+  } catch {
+    // onleesbare uitbreiding: geen zekerheid
+  }
+  return uit;
+}
+
 /** Het land uit het onderwerp van een certificaat ("C=NL"). */
 export function landVan(cert: X509Certificate): string | null {
   return /(?:^|\n)C=([A-Z]{2,3})(?:\n|$)/.exec(cert.subject)?.[1] ?? null;
@@ -167,6 +193,8 @@ export interface SodControle {
   /** het DS-certificaat en de CSCA die hem uitgaf zijn op dit moment geldig */
   geldigOk: boolean;
   land: string | null;
+  /** het certificaat van de ondertekenaar, zodat een medewerker het kan nakijken (review M4) */
+  ds: { uitgever: string; onderwerp: string; serie: string; sha256: string } | null;
   fouten: string[];
 }
 
@@ -175,7 +203,7 @@ export interface SodControle {
  * gelezen, met tag en lengte) tegen het SOD, en het SOD tegen de CSCA's.
  */
 export function controleerSod(sodBytes: Buffer, groepen: Record<number, Buffer>, csca: X509Certificate[], nu: Date = new Date()): SodControle {
-  const uit: SodControle = { gelezen: false, hashesOk: false, handtekeningOk: false, ketenOk: null, geldigOk: false, land: null, fouten: [] };
+  const uit: SodControle = { gelezen: false, hashesOk: false, handtekeningOk: false, ketenOk: null, geldigOk: false, land: null, ds: null, fouten: [] };
   let sod: Sod;
   try {
     sod = leesSod(sodBytes);
@@ -205,6 +233,7 @@ export function controleerSod(sodBytes: Buffer, groepen: Record<number, Buffer>,
     return uit;
   }
   uit.land = landVan(ds);
+  uit.ds = { uitgever: ds.issuer.replace(/\n/g, ", "), onderwerp: ds.subject.replace(/\n/g, ", "), serie: ds.serialNumber, sha256: ds.fingerprint256 };
   try {
     uit.handtekeningOk = handtekeningKlopt(sod, ds);
   } catch (err) {
@@ -222,17 +251,30 @@ export function controleerSod(sodBytes: Buffer, groepen: Record<number, Buffer>,
   });
   if (kandidaten.length === 0) {
     uit.ketenOk = null;
-    uit.fouten.push(`Geen vertrouwd overheidscertificaat (CSCA) bekend voor ${uit.land ?? "dit land"}`);
+    uit.fouten.push(`Niet gecontroleerd: geen vertrouwd overheidscertificaat (CSCA) bekend voor ${uit.land ?? "dit land"}`);
   } else {
-    const uitgever = kandidaten.find((c) => {
+    // M5: "vals" alleen als het zeker is (de DS noemt precies de SKI van deze CSCA en
+    // de handtekening klopt niet); een uitzondering of ontbrekende aanduiding = onbeslist
+    let uitgever: X509Certificate | undefined;
+    let zekerVals = false;
+    const { aki } = sleutelIds(ds);
+    for (const c of kandidaten) {
+      let ok: boolean | null;
       try {
-        return ds.verify(c.publicKey);
+        ok = ds.verify(c.publicKey);
       } catch {
-        return false;
+        ok = null;
       }
-    });
-    uit.ketenOk = uitgever !== undefined;
-    if (!uitgever) uit.fouten.push("De ondertekenaar is niet door de overheid van dit land uitgegeven");
+      if (ok === true) {
+        uitgever = c;
+        break;
+      }
+      const { ski } = sleutelIds(c);
+      if (ok === false && aki && ski && aki.equals(ski)) zekerVals = true;
+    }
+    uit.ketenOk = uitgever ? true : zekerVals ? false : null;
+    if (uit.ketenOk === false) uit.fouten.push("De ondertekenaar is niet door de overheid van dit land uitgegeven");
+    if (uit.ketenOk === null) uit.fouten.push("Niet gecontroleerd: de keten naar de overheid was niet zeker vast te stellen");
     // 4. geldigheid nu, van de ondertekenaar en van de CSCA die hem uitgaf
     if (uitgever) {
       uit.geldigOk = geldigOp(ds, nu) && geldigOp(uitgever, nu);

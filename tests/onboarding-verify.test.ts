@@ -10,6 +10,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // ---------------------------------------------------------------------------
 
 const userFindUnique = vi.fn();
+/** zoekt een ander account met hetzelfde document (documentNumberHash) of hetzelfde chipzegel (rawPayload.chip.sodHash) */
+const ivFindFirst = vi.fn().mockResolvedValue(null);
 const userUpdate = vi.fn();
 const freelancerProfileUpdate = vi.fn().mockResolvedValue({});
 // No existing payoutIban by default — these tests aren't about IBAN changes,
@@ -32,6 +34,7 @@ const txn = vi.fn(async (fn: (tx: unknown) => unknown) =>
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     user: { findUnique: (...a: unknown[]) => userFindUnique(...a) },
+    identityVerification: { findFirst: (...a: unknown[]) => ivFindFirst(...a) },
     freelancerProfile: {
       update: (...a: unknown[]) => freelancerProfileUpdate(...a),
       findUnique: (...a: unknown[]) => freelancerProfileFindUnique(...a),
@@ -104,7 +107,11 @@ const CHIP_JAN = {
   geldigOk: true,
   land: "NL",
   nummerKlopt: true,
-  naamOpChip: "Jan Jansen",
+  naamOpChip: { achternaam: "JANSEN", voornamen: "JAN" },
+  sodHash: "zegel-van-jan",
+  ds: null,
+  werkrecht: "vrij",
+  leeftijd: "volwassen",
   documentnummer: "SPECI2014",
   vervaldatum: "2030-01-01",
   fouten: [],
@@ -291,10 +298,76 @@ describe("submitFreelancerOnboarding — three-capture flow", () => {
       userFindUnique.mockResolvedValue(jan);
       runVisionReview.mockResolvedValueOnce(VISION_OK);
       leesMrzVanFoto.mockResolvedValue({ uitslag: null, pogingen: 8, ms: 900 });
-      chipLezing.mockResolvedValueOnce({ ...CHIP_JAN, naamOpChip: "Piet Pietersen" });
+      chipLezing.mockResolvedValueOnce({ ...CHIP_JAN, naamOpChip: { achternaam: "PIETERSEN", voornamen: "PIET" } });
       const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
       leesMrzVanFoto.mockResolvedValue({ uitslag: MRZ_JAN, pogingen: 1, ms: 5 });
       expect(result.outcome).toBe("in_review");
+    });
+
+    it("review H1: de chip van V met de foto's en selfie van A wordt nooit automatisch V", async () => {
+      // account op naam van V (Jan Jansen), getypt nummer van V, chip van V echt …
+      userFindUnique.mockResolvedValue(jan);
+      runVisionReview.mockResolvedValueOnce(VISION_OK); // … en A's eigen selfie past bij A's eigen kaart
+      leesMrzVanFoto.mockResolvedValueOnce({ uitslag: { ...MRZ_JAN, documentnummer: "AAA111222", achternaam: "PIETERS", voornamen: "PIET" }, pogingen: 1, ms: 5 });
+      chipLezing.mockResolvedValueOnce(CHIP_JAN);
+      const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
+      expect(result.outcome).not.toBe("verified");
+      const chipCheck = result.checks.find((c) => c.label.startsWith("Chip van het document"));
+      expect(chipCheck?.ok).toBe(false);
+      expect(chipCheck?.detail).toContain("ander document of een andere persoon");
+    });
+
+    it("review M3: een gedeelde achternaam is niet genoeg (Piet Jansen op het account van Jan Jansen)", async () => {
+      userFindUnique.mockResolvedValue(jan);
+      runVisionReview.mockResolvedValueOnce(VISION_OK);
+      leesMrzVanFoto.mockResolvedValueOnce({ uitslag: { ...MRZ_JAN, voornamen: "PIET" }, pogingen: 1, ms: 5 });
+      const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
+      expect(result.outcome).toBe("in_review");
+      expect(result.checks.find((c) => c.label.startsWith("Naam op het document"))?.ok).toBe(false);
+    });
+
+    it("review H3: hetzelfde chipzegel al bij een ander account: een mens kijkt", async () => {
+      userFindUnique.mockResolvedValue(jan);
+      runVisionReview.mockResolvedValueOnce(VISION_OK);
+      chipLezing.mockResolvedValueOnce(CHIP_JAN);
+      ivFindFirst.mockImplementation(async (a: { where: Record<string, unknown> }) => ("rawPayload" in a.where ? { id: "iv_ander" } : null));
+      const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
+      ivFindFirst.mockResolvedValue(null);
+      expect(result.outcome).toBe("in_review");
+      expect(result.checks.find((c) => c.label.startsWith("Chipgegevens niet eerder"))?.ok).toBe(false);
+    });
+
+    it("hetzelfde document al bij een ander account: een mens kijkt", async () => {
+      userFindUnique.mockResolvedValue(jan);
+      runVisionReview.mockResolvedValueOnce(VISION_OK);
+      ivFindFirst.mockImplementation(async (a: { where: Record<string, unknown> }) => ("documentNumberHash" in a.where ? { id: "iv_ander" } : null));
+      const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
+      ivFindFirst.mockResolvedValue(null);
+      expect(result.outcome).toBe("in_review");
+      expect(result.checks.find((c) => c.label.startsWith("Document niet al gebruikt"))?.ok).toBe(false);
+    });
+
+    it("nationaliteit buiten de EU/EER: werkvergunning of verblijfsdocument, een mens kijkt", async () => {
+      userFindUnique.mockResolvedValue(jan);
+      runVisionReview.mockResolvedValueOnce(VISION_OK);
+      leesMrzVanFoto.mockResolvedValueOnce({ uitslag: { ...MRZ_JAN, nationaliteit: "UKR" }, pogingen: 1, ms: 5 });
+      const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
+      expect(result.outcome).toBe("in_review");
+      expect(result.checks.find((c) => c.label.startsWith("Recht om te werken"))?.ok).toBe(false);
+      const ivArg = ivCreate.mock.calls[0]![0] as { data: { rawPayload: Record<string, unknown> } };
+      expect(ivArg.data.rawPayload.werkrecht).toBe("controle");
+      expect(JSON.stringify(ivArg.data.rawPayload)).not.toContain("UKR"); // alleen de categorie
+    });
+
+    it("minderjarig: een mens kijkt, en de geboortedatum wordt niet bewaard", async () => {
+      userFindUnique.mockResolvedValue(jan);
+      runVisionReview.mockResolvedValueOnce(VISION_OK);
+      leesMrzVanFoto.mockResolvedValueOnce({ uitslag: { ...MRZ_JAN, geboortedatum: "2010-01-01" }, pogingen: 1, ms: 5 });
+      const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
+      expect(result.outcome).toBe("in_review");
+      const ivArg = ivCreate.mock.calls[0]![0] as { data: { rawPayload: Record<string, unknown> } };
+      expect(["minderjarig", "te-jong"]).toContain(ivArg.data.rawPayload.leeftijd);
+      expect(JSON.stringify(ivArg.data.rawPayload)).not.toContain("2010-01-01");
     });
 
     it("een rijbewijs heeft geen MRZ: daar wordt niets gelezen", async () => {

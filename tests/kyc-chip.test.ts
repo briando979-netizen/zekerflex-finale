@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { createHash, generateKeyPairSync, sign, X509Certificate, type KeyObject } from "node:crypto";
 import { controleerChip, mrzUitDg1 } from "@/lib/kyc/chip/chip";
 import { certificatenUit } from "@/lib/kyc/chip/csca";
+import { DerFout, leesEen } from "@/lib/kyc/chip/der";
+import { sleutelIds } from "@/lib/kyc/chip/sod";
 import { controleCijfer } from "@/lib/kyc/mrz";
 
 // vaste "vandaag": geen tijdbom (AGENTS.md)
@@ -65,18 +67,36 @@ function sleutel(soort: "ec" | "rsa" = "ec"): Sleutel {
 }
 const algId = (soort: "ec" | "rsa") => (soort === "ec" ? seq(oid("1.2.840.10045.4.3.2")) : seq(oid("1.2.840.113549.1.1.11"), tlv(0x05, Buffer.alloc(0))));
 
-function certificaat(o: { onderwerp: Buffer; uitgever: Buffer; sleutel: Sleutel; door: Sleutel; serie: number; tot?: string }) {
+/** De sleutelaanduiding (SKI) van een sleutel: hier gewoon de SHA-1 van de publieke sleutel. */
+const sleutelId = (k: Sleutel) => createHash("sha1").update(k.publicKey.export({ type: "spki", format: "der" })).digest();
+
+function certificaat(o: { onderwerp: Buffer; uitgever: Buffer; sleutel: Sleutel; door: Sleutel; serie: number; van?: string; tot?: string; ski?: Buffer; aki?: Buffer }) {
   const spki = o.sleutel.publicKey.export({ type: "spki", format: "der" });
-  const tbs = seq(ctx(0, int(2)), int(o.serie), algId(o.door.soort), o.uitgever, seq(tijd("260101000000Z"), tijd(o.tot ?? "360101000000Z")), o.onderwerp, spki);
+  const ext: Buffer[] = [];
+  if (o.ski) ext.push(seq(oid("2.5.29.14"), octet(octet(o.ski))));
+  if (o.aki) ext.push(seq(oid("2.5.29.35"), octet(seq(tlv(0x80, o.aki)))));
+  const tbs = seq(
+    ctx(0, int(2)),
+    int(o.serie),
+    algId(o.door.soort),
+    o.uitgever,
+    seq(tijd(o.van ?? "260101000000Z"), tijd(o.tot ?? "360101000000Z")),
+    o.onderwerp,
+    spki,
+    ...(ext.length ? [ctx(3, seq(...ext))] : []),
+  );
   const der = seq(tbs, algId(o.door.soort), bits(sign("sha256", tbs, o.door.privateKey)));
   return { der, x509: new X509Certificate(der) };
 }
 
 /** Het SOD: de hashes van de datagroepen, ondertekend door de DS (met signedAttrs, zoals echte documenten). */
-function maakSod(o: { groepen: Record<number, Buffer>; ondertekenaar: Sleutel; dsCert: Buffer }): Buffer {
+function maakSod(o: { groepen: Record<number, Buffer>; ondertekenaar: Sleutel; dsCert: Buffer; vervalsLds?: Record<number, Buffer> }): Buffer {
   const h = (b: Buffer) => createHash("sha256").update(b).digest();
-  const lds = seq(int(0), seq(oid(SHA256)), seq(...Object.entries(o.groepen).map(([n, b]) => seq(int(Number(n)), octet(h(b))))));
-  const attrs = [seq(oid("1.2.840.113549.1.9.3"), set(oid(LDS))), seq(oid("1.2.840.113549.1.9.4"), set(octet(h(lds))))];
+  const ldsVan = (g: Record<number, Buffer>) => seq(int(0), seq(oid(SHA256)), seq(...Object.entries(g).map(([n, b]) => seq(int(Number(n)), octet(h(b))))));
+  const echtLds = ldsVan(o.groepen);
+  // vervalsLds: een ander LDS in het zegel, maar de handtekening (messageDigest) van het echte
+  const lds = o.vervalsLds ? ldsVan(o.vervalsLds) : echtLds;
+  const attrs = [seq(oid("1.2.840.113549.1.9.3"), set(oid(LDS))), seq(oid("1.2.840.113549.1.9.4"), set(octet(h(echtLds))))];
   const handtekening = sign("sha256", set(...attrs), o.ondertekenaar.privateKey);
   const signerInfo = seq(int(1), seq(naam("UT", "CSCA Proefland"), int(2)), seq(oid(SHA256)), ctx(0, ...attrs), algId(o.ondertekenaar.soort), octet(handtekening));
   const signedData = seq(int(3), set(seq(oid(SHA256))), seq(oid(LDS), ctx(0, octet(lds))), ctx(0, o.dsCert), set(signerInfo));
@@ -98,9 +118,9 @@ const DG1 = tlv(0x61, tlv(0x5f1f, Buffer.from(kaartMrz(), "latin1")));
 const DG2 = tlv(0x75, Buffer.from("pasfoto-op-de-chip ".repeat(40), "latin1"));
 
 const cscaSleutel = sleutel();
-const CSCA = certificaat({ onderwerp: naam("UT", "CSCA Proefland"), uitgever: naam("UT", "CSCA Proefland"), sleutel: cscaSleutel, door: cscaSleutel, serie: 1 });
+const CSCA = certificaat({ onderwerp: naam("UT", "CSCA Proefland"), uitgever: naam("UT", "CSCA Proefland"), sleutel: cscaSleutel, door: cscaSleutel, serie: 1, ski: sleutelId(cscaSleutel) });
 const dsSleutel = sleutel();
-const DS = certificaat({ onderwerp: naam("UT", "DS Proefland"), uitgever: naam("UT", "CSCA Proefland"), sleutel: dsSleutel, door: cscaSleutel, serie: 2 });
+const DS = certificaat({ onderwerp: naam("UT", "DS Proefland"), uitgever: naam("UT", "CSCA Proefland"), sleutel: dsSleutel, door: cscaSleutel, serie: 2, aki: sleutelId(cscaSleutel) });
 const SOD = maakSod({ groepen: { 1: DG1, 2: DG2 }, ondertekenaar: dsSleutel, dsCert: DS.der });
 
 describe("chip: passieve authenticatie", () => {
@@ -129,18 +149,65 @@ describe("chip: passieve authenticatie", () => {
     expect(u.echt).toBe(false);
   });
 
-  it("een zelfgemaakte 'overheid' met dezelfde naam: de keten klopt niet", () => {
+  it("een zelfgemaakte 'overheid' die de sleutel van de echte noemt: zeker vals (review M5)", () => {
     const nepSleutel = sleutel();
-    const nepCsca = certificaat({ onderwerp: naam("UT", "CSCA Proefland"), uitgever: naam("UT", "CSCA Proefland"), sleutel: nepSleutel, door: nepSleutel, serie: 1 });
     const nepDsSleutel = sleutel();
-    const nepDs = certificaat({ onderwerp: naam("UT", "DS Proefland"), uitgever: naam("UT", "CSCA Proefland"), sleutel: nepDsSleutel, door: nepSleutel, serie: 2 });
+    // de nep-DS noemt in AKI precies de SKI van de echte CSCA, maar is door de nep-sleutel getekend
+    const nepDs = certificaat({ onderwerp: naam("UT", "DS Proefland"), uitgever: naam("UT", "CSCA Proefland"), sleutel: nepDsSleutel, door: nepSleutel, serie: 2, aki: sleutelId(cscaSleutel) });
     const nepSod = maakSod({ groepen: { 1: DG1, 2: DG2 }, ondertekenaar: nepDsSleutel, dsCert: nepDs.der });
-    // vertrouwd is alleen de echte CSCA
     const u = controleerChip({ dg1: DG1, dg2: DG2, sod: nepSod }, [CSCA.x509], NU);
     expect(u.handtekeningOk).toBe(true); // de vervalser ondertekende netjes met zijn eigen sleutel…
-    expect(u.ketenOk).toBe(false); // …maar zijn ondertekenaar komt niet van de echte overheid
+    expect(u.ketenOk).toBe(false); // …maar zijn ondertekenaar komt zeker niet van de echte overheid
     expect(u.echt).toBe(false);
-    void nepCsca;
+  });
+
+  it("een 'overheid' met dezelfde naam zonder sleutelaanduiding: niet gecontroleerd, nooit echt (review M5)", () => {
+    const nepSleutel = sleutel();
+    const nepDsSleutel = sleutel();
+    const nepDs = certificaat({ onderwerp: naam("UT", "DS Proefland"), uitgever: naam("UT", "CSCA Proefland"), sleutel: nepDsSleutel, door: nepSleutel, serie: 2 });
+    const nepSod = maakSod({ groepen: { 1: DG1 }, ondertekenaar: nepDsSleutel, dsCert: nepDs.der });
+    const u = controleerChip({ dg1: DG1, sod: nepSod }, [CSCA.x509], NU);
+    expect(u.ketenOk).toBeNull();
+    expect(u.echt).toBe(false);
+    expect(u.fouten.join(" ")).toContain("Niet gecontroleerd");
+  });
+
+  it("een vervalst LDS met de handtekening van het echte (messageDigest klopt niet)", () => {
+    const valseDg1 = tlv(0x61, tlv(0x5f1f, Buffer.from(kaartMrz().replace("BRIANDO", "BRIANDA"), "latin1")));
+    // het zegel bevat de hash van de valse DG1, maar de handtekening is die over het echte LDS
+    const sod = maakSod({ groepen: { 1: DG1 }, vervalsLds: { 1: valseDg1 }, ondertekenaar: dsSleutel, dsCert: DS.der });
+    const u = controleerChip({ dg1: valseDg1, sod }, [CSCA.x509], NU);
+    expect(u.hashesOk).toBe(true); // de valse DG1 past bij het valse LDS…
+    expect(u.handtekeningOk).toBe(false); // …maar de handtekening hoort niet bij dat LDS
+    expect(u.echt).toBe(false);
+  });
+
+  it("een DS-certificaat dat nog niet geldig is: niet echt", () => {
+    const d = sleutel();
+    const ds = certificaat({ onderwerp: naam("UT", "DS Proefland"), uitgever: naam("UT", "CSCA Proefland"), sleutel: d, door: cscaSleutel, serie: 3, van: "270101000000Z", aki: sleutelId(cscaSleutel) });
+    const sod = maakSod({ groepen: { 1: DG1 }, ondertekenaar: d, dsCert: ds.der });
+    const u = controleerChip({ dg1: DG1, sod }, [CSCA.x509], NU);
+    expect(u.ketenOk).toBe(true);
+    expect(u.geldigOk).toBe(false);
+    expect(u.echt).toBe(false);
+  });
+
+  it("een verlopen document op de chip is nooit echt (review M1)", () => {
+    const u = controleerChip({ dg1: DG1, sod: maakSod({ groepen: { 1: DG1 }, ondertekenaar: dsSleutel, dsCert: DS.der }) }, [CSCA.x509], new Date("2035-01-01T12:00:00+01:00"));
+    expect(u.mrz?.verlopen).toBe(true);
+    expect(u.echt).toBe(false);
+  });
+
+  it("bewaart de gegevens van het DS-certificaat voor de beoordelaar (review M4)", () => {
+    const u = controleerChip({ dg1: DG1, dg2: DG2, sod: SOD }, [CSCA.x509], NU);
+    expect(u.ds?.sha256).toBe(DS.x509.fingerprint256);
+    expect(u.ds?.uitgever).toContain("CSCA Proefland");
+    expect(u.ds?.serie).toBe(DS.x509.serialNumber);
+  });
+
+  it("leest AKI en SKI uit de certificaten", () => {
+    expect(sleutelIds(CSCA.x509).ski?.equals(sleutelId(cscaSleutel))).toBe(true);
+    expect(sleutelIds(DS.x509).aki?.equals(sleutelId(cscaSleutel))).toBe(true);
   });
 
   it("een SOD ondertekend met een andere sleutel dan het meegestuurde certificaat", () => {
@@ -178,6 +245,24 @@ describe("chip: passieve authenticatie", () => {
     expect(u.gelezen).toBe(false);
     expect(u.echt).toBe(false);
     expect(u.fouten.length).toBeGreaterThan(0);
+  });
+});
+
+describe("chip: DER-randgevallen", () => {
+  it("weigert een onbepaalde lengte, een te lange lengte, afgekapte gegevens en rommel erachter", () => {
+    expect(() => leesEen(Buffer.from([0x30, 0x80, 0x00, 0x00]))).toThrow(DerFout); // onbepaalde lengte (geen DER)
+    expect(() => leesEen(Buffer.from([0x30, 0x85, 0, 0, 0, 0, 1]))).toThrow(DerFout); // lengte van 5 bytes
+    expect(() => leesEen(Buffer.from([0x30, 0x05, 0x02, 0x01]))).toThrow(DerFout); // afgekapt
+    expect(() => leesEen(Buffer.from([0x02, 0x01, 0x05, 0xff]))).toThrow(DerFout); // rommel na het element
+    expect(() => leesEen(Buffer.alloc(0))).toThrow(DerFout);
+    expect(() => leesEen(Buffer.from([0x5f]))).toThrow(DerFout); // meerbytes-tag zonder einde
+  });
+
+  it("leest meerbytes-tags en lange lengtes", () => {
+    const groot = tlv(0x5f1f, Buffer.alloc(300, 0x41));
+    const t = leesEen(groot);
+    expect(t.tag).toBe(0x5f1f);
+    expect(t.waarde.length).toBe(300);
   });
 });
 

@@ -19,12 +19,15 @@
 // Sleutels met het userId erin (AVG: ERASABLE_KV_PREFIXES in lib/privacy/user-kv.ts).
 // ---------------------------------------------------------------------------
 
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
+import { prisma } from "@/lib/prisma";
 import type { X509Certificate } from "node:crypto";
 import { kvDelete, kvDeleteStale, kvGet, kvListKeys, kvSet } from "@/lib/storage/kv";
 import { openSecret, sealSecret } from "@/lib/security/sealed-secret";
 import { controleerChip } from "@/lib/kyc/chip/chip";
-import { naamVoluit, zelfdeNummer, type MrzUitslag } from "@/lib/kyc/mrz";
+import { zelfdeNummer, type MrzUitslag } from "@/lib/kyc/mrz";
+import { leeftijdsgroep, werkrechtVan, type Leeftijdsgroep, type Werkrecht } from "@/lib/kyc/werkrecht";
+import { amsterdamDayKey } from "@/lib/time/amsterdam";
 
 export const MRZ_PREFIX = "mrz-lezing:";
 export const SESSIE_PREFIX = "chip-sessie:";
@@ -59,10 +62,18 @@ export interface ChipLezing {
   land: string | null;
   /** het nummer op de chip is hetzelfde als op het gescande document */
   nummerKlopt: boolean;
-  /** de naam zoals op de chip (de verificatie vergelijkt hem met het account) */
-  naamOpChip: string | null;
+  /** de naam zoals op de chip, als delen (de verificatie vergelijkt achternaam + eerste voornaam met het account) */
+  naamOpChip: { achternaam: string; voornamen: string } | null;
+  /** hash van het zegel: hetzelfde zegel bij een ander account = hergebruikte chipgegevens (review H3) */
+  sodHash: string;
+  /** het certificaat van de ondertekenaar, voor de beoordelaar (review M4) */
+  ds: { uitgever: string; onderwerp: string; serie: string; sha256: string } | null;
   documentnummer: string | null;
   vervaldatum: string | null;
+  /** uit de nationaliteit op de chip: vrij werken (EU/EER/CH) of een document nodig */
+  werkrecht: Werkrecht | null;
+  /** uit de geboortedatum op de chip; de datum zelf wordt niet bewaard */
+  leeftijd: Leeftijdsgroep | null;
   fouten: string[];
 }
 
@@ -135,11 +146,23 @@ async function sessieVan(code: string, nu: Date): Promise<{ sleutel: string; ses
 }
 
 /** Stap 3a: de app haalt de sleutel voor de chip op (hooguit een paar keer: opnieuw tegen de telefoon houden mag). */
-export async function chipSleutel(code: string, nu: Date = new Date()): Promise<{ documentnummer: string; geboortedatum: string; vervaldatum: string } | null> {
+/** "Briando van Essen" → "Briando v. E.": genoeg om je eigen account te herkennen, niet om iemand te ontmaskeren. */
+export function maskeerNaam(naam: string): string {
+  const [eerste = "", ...rest] = naam.trim().split(/\s+/);
+  return [eerste, ...rest.map((w) => `${w.charAt(0)}.`)].join(" ").trim();
+}
+
+/**
+ * Stap 3a: de app haalt de sleutel voor de chip op (hooguit een paar keer). Met de
+ * gemaskeerde accountnaam: de app laat bevestigen dat het om jouw account gaat,
+ * zodat een vreemde site je niet met zijn eigen code de chip laat lezen (review M2).
+ */
+export async function chipSleutel(code: string, nu: Date = new Date()): Promise<{ documentnummer: string; geboortedatum: string; vervaldatum: string; naam: string } | null> {
   const s = await sessieVan(code, nu);
   if (!s || s.sessie.gebruikt >= MAX_SLEUTEL) return null;
   await bewaar(s.sleutel, { ...s.sessie, gebruikt: s.sessie.gebruikt + 1 });
-  return { documentnummer: s.sessie.nummer, geboortedatum: kort(s.sessie.geboren), vervaldatum: kort(s.sessie.verval) };
+  const user = await prisma.user.findUnique({ where: { id: s.sessie.userId }, select: { fullName: true } }).catch(() => null);
+  return { documentnummer: s.sessie.nummer, geboortedatum: kort(s.sessie.geboren), vervaldatum: kort(s.sessie.verval), naam: maskeerNaam(user?.fullName ?? "") };
 }
 
 /** Stap 3b + 4: de chipbestanden controleren en alleen de uitslag bewaren. De code is daarna op. */
@@ -161,9 +184,13 @@ export async function rondChipAf(
     geldigOk: u.geldigOk,
     land: u.land,
     nummerKlopt: Boolean(u.mrz?.geldig && zelfdeNummer(u.mrz.documentnummer, s.sessie.nummer)),
-    naamOpChip: u.mrz ? naamVoluit(u.mrz) : null,
+    naamOpChip: u.mrz ? { achternaam: u.mrz.achternaam, voornamen: u.mrz.voornamen } : null,
+    sodHash: createHash("sha256").update(bestanden.sod).digest("hex").slice(0, 48),
+    ds: u.ds,
     documentnummer: u.mrz?.geldig ? u.mrz.documentnummer : null,
     vervaldatum: u.mrz?.geldig ? u.mrz.vervaldatum : null,
+    werkrecht: u.mrz?.geldig ? werkrechtVan(u.mrz.nationaliteit) : null,
+    leeftijd: u.mrz?.geldig ? leeftijdsgroep(u.mrz.geboortedatum, amsterdamDayKey(nu)) : null,
     fouten: u.fouten,
   };
   await bewaar(`${LEZING_PREFIX}${s.sessie.userId}`, lezing);
@@ -183,11 +210,14 @@ export async function wisChipGegevens(userId: string): Promise<void> {
   await Promise.all([kvDelete(`${LEZING_PREFIX}${userId}`), kvDelete(`${MRZ_PREFIX}${userId}`), ...sessies.map((k) => kvDelete(k))]).catch(() => undefined);
 }
 
-/** Een korte, eerlijke tekst voor de app en het scherm. */
+/**
+ * Een korte, eerlijke tekst voor de app en het scherm (review H3/M4): "door de
+ * overheid ondertekend" zegt iets over de gegevens, niet over wie de kaart vasthoudt.
+ */
 export function chipTekst(l: ChipLezing): string {
-  if (l.echt && l.nummerKlopt) return "Je chip is gelezen en echt bevonden: de gegevens zijn door de overheid ondertekend.";
-  if (l.echt && !l.nummerKlopt) return "De chip is echt, maar hoort bij een ander document dan je net hebt gescand.";
+  if (l.echt && l.nummerKlopt) return "De gegevens op je chip zijn door de overheid ondertekend en horen bij het document dat je scande.";
+  if (l.echt && !l.nummerKlopt) return "De chip is door de overheid ondertekend, maar hoort bij een ander document dan je scande.";
   if (!l.hashesOk && l.handtekeningOk) return "De gegevens op de chip wijken af van het zegel. Een medewerker kijkt mee.";
-  if (l.ketenOk === null && l.handtekeningOk && l.hashesOk) return "Je chip is gelezen en het zegel klopt. De laatste controle (het certificaat van de overheid) doet een medewerker.";
-  return "De chip kon niet als echt worden bevestigd. Een medewerker kijkt mee.";
+  if (l.ketenOk === null && l.handtekeningOk && l.hashesOk) return "Je chip is gelezen. Of het zegel van de overheid is, is nog niet gecontroleerd; dat doet een medewerker.";
+  return "De chip kon niet worden bevestigd. Een medewerker kijkt mee.";
 }
