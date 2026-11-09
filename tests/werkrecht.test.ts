@@ -92,7 +92,7 @@ describe("landen", () => {
 // --- opslag en de controle vóór een dienst ----------------------------------
 
 const h = vi.hoisted(() => ({
-  rij: null as Record<string, unknown> | null,
+  rij: null as object | null,
   idCheck: null as { id: string } | null,
   opgeslagen: [] as unknown[],
   updates: [] as unknown[],
