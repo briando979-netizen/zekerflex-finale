@@ -104,6 +104,17 @@ describe("maakAccountMetKvk", () => {
     expect(s.accounts.create.mock.calls[1]?.[0]).toEqual(gegevens);
   });
 
+  it("weigert Stripe het bedrijfsblok om de rechtsvorm, dan ook opnieuw zonder", async () => {
+    db.fout = false;
+    db.reg = reg;
+    const s = nepStripe(async (p) => {
+      if (p.company) throw Object.assign(new Error("business_type required"), { type: "StripeInvalidRequestError", param: "business_type" });
+      return { id: "acct_4" };
+    });
+    expect((await maakAccountMetKvk(s, gegevens, "t1")).id).toBe("acct_4");
+    expect(s.accounts.create).toHaveBeenCalledTimes(2);
+  });
+
   it("een andere fout gaat gewoon door (geen tweede account)", async () => {
     db.fout = false;
     db.reg = reg;

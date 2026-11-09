@@ -48,11 +48,15 @@ export async function stripeBedrijfVan(tenantId: string): Promise<Stripe.Account
   return stripeBedrijf(t?.companyRegistration);
 }
 
-/** Stripe weigerde een van de vooraf ingevulde bedrijfsvelden (en niets anders). */
+/**
+ * Stripe weigerde een van de vooraf ingevulde bedrijfsvelden (en niets anders). Ook
+ * business_type: Stripe kan een ingevuld company-blok weigeren zolang de rechtsvorm
+ * nog niet gekozen is, en die laten we juist aan de ondernemer.
+ */
 export function isBedrijfsveldFout(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const e = err as { type?: unknown; param?: unknown };
-  return e.type === "StripeInvalidRequestError" && typeof e.param === "string" && e.param.startsWith("company");
+  return e.type === "StripeInvalidRequestError" && typeof e.param === "string" && (e.param.startsWith("company") || e.param.startsWith("business_type"));
 }
 
 /** Maakt het Connect-account met de KvK-gegevens erin; weigert Stripe die, dan zonder. */
