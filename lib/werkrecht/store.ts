@@ -110,6 +110,20 @@ export async function werkrechtVoorWerk(userId: string, land = "NL", nu = new Da
   return { ok: reden === null, reden };
 }
 
+const KANDIDAAT_ZONDER_WERKRECHT =
+  "Deze kandidaat heeft het recht om in Nederland te werken nog niet aangetoond (verklaring en document bij Verificatie).";
+
+/**
+ * De poort op elke plek waar iemand op een dienst komt (reageren en aannemen lopen via
+ * payoutEligibility; daarnaast een aanbod aannemen, automatisch inplannen en overnemen).
+ * Gooit 412 met de reden; `voorWerkgever` geeft de tekst over de kandidaat in plaats van "je".
+ */
+export async function eisWerkrecht(userId: string, opts: { voorWerkgever?: boolean } = {}): Promise<void> {
+  const w = await werkrechtVoorWerk(userId, "NL");
+  if (w.ok) return;
+  throw AppError.precondition(opts.voorWerkgever ? KANDIDAAT_ZONDER_WERKRECHT : (w.reden ?? KANDIDAAT_ZONDER_WERKRECHT));
+}
+
 /** De werker vinkt de verklaring aan voor een land (of opnieuw, bij een nieuwe versie). */
 export async function verklaar(userId: string, land: string, nu = new Date()): Promise<void> {
   await prisma.workRight.upsert({
@@ -172,7 +186,7 @@ export async function bewijsOpslaan(
   alertOwnerLater({
     key: `werkrecht:${userId}:${land}`,
     title: `Document voor werken in ${landNaam(land, "nl")} wacht op je: ${user?.fullName ?? "een werker"}`,
-    detail: "Bekijk het document en keur goed of af bij de gebruiker (Recht om te werken). Pas daarna kan hij betaalde diensten aannemen.",
+    detail: "Bekijk het document en keur goed of af bij de gebruiker (Recht om te werken). Pas daarna kan de werker betaalde diensten aannemen.",
     severity: "warning",
     url: `/admin/gebruikers/${userId}`,
   });

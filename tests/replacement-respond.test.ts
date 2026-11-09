@@ -13,6 +13,15 @@ const h = vi.hoisted(() => ({
   viaUitzendbureau: false,
   werkvorm: "zzp" as string,
   aanbiedingen: [] as string[],
+  werkrechtFout: null as string | null,
+}));
+
+vi.mock("@/lib/werkrecht/store", () => ({
+  eisWerkrecht: async () => {
+    if (!h.werkrechtFout) return;
+    const { AppError } = await import("@/lib/errors");
+    throw AppError.precondition(h.werkrechtFout);
+  },
 }));
 
 vi.mock("@/lib/auth", () => ({ requirePrincipal: async () => ({ userId: "u-1", fullName: "Sanne de Vries" }) }));
@@ -51,6 +60,7 @@ beforeEach(() => {
   h.profiel = PROFIEL;
   h.viaUitzendbureau = false;
   h.werkvorm = "zzp";
+  h.werkrechtFout = null;
   h.aanbiedingen.length = 0;
 });
 
@@ -85,6 +95,15 @@ describe("POST /api/me/replacement/respond", () => {
     expect(res.status).toBe(412);
     const body = (await res.json()) as { error: { message: string } };
     expect(body.error.message).toBe("Je kunt pas een klus overnemen als je volledig geverifieerd bent.");
+    expect(h.aanbiedingen).toEqual([]);
+  });
+
+  it("zonder recht om te werken in Nederland: niet overnemen, met de reden (lib/werkrecht)", async () => {
+    h.werkrechtFout = "Vink bij Verificatie de verklaring aan dat je in Nederland mag werken.";
+    const res = await bied();
+    expect(res.status).toBe(412);
+    const body = (await res.json()) as { error: { message: string } };
+    expect(body.error.message).toContain("in Nederland mag werken");
     expect(h.aanbiedingen).toEqual([]);
   });
 

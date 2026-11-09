@@ -14,6 +14,15 @@ const h = vi.hoisted(() => ({
   werkvorm: "zzp" as string,
   pushes: [] as { ids: string[]; push: { title: string; body: string } }[],
   tasks: [] as Promise<unknown>[],
+  werkrechtFout: null as string | null,
+}));
+
+vi.mock("@/lib/werkrecht/store", () => ({
+  eisWerkrecht: async () => {
+    if (!h.werkrechtFout) return;
+    const { AppError } = await import("@/lib/errors");
+    throw AppError.precondition(h.werkrechtFout);
+  },
 }));
 
 const REQ = {
@@ -95,6 +104,7 @@ beforeEach(() => {
   h.profiel = NL_ZZP;
   h.viaUitzendbureau = false;
   h.werkvorm = "zzp";
+  h.werkrechtFout = null;
   h.pushes.length = 0;
   h.tasks.length = 0;
 });
@@ -149,6 +159,13 @@ describe("reassignAssignment: wie mag de klus overnemen", () => {
     h.profiel = { ...NL_ZZP, kvkValid: false };
     const err = await kies().catch((e: unknown) => e as Error);
     expect((err as Error).message).toBe("Deze kandidaat is niet volledig geverifieerd.");
+  });
+
+  it("zonder recht om te werken in Nederland: niet overnemen, zonder pushes (lib/werkrecht)", async () => {
+    h.werkrechtFout = "Deze kandidaat heeft het recht om in Nederland te werken nog niet aangetoond.";
+    const err = await kies().catch((e: unknown) => e as Error);
+    expect((err as Error).message).toContain("recht om in Nederland te werken");
+    expect(h.pushes).toHaveLength(0);
   });
 
   it("een zzp'er uit het buitenland met een geldig EU-btw-nummer mag een gewone klus overnemen", async () => {

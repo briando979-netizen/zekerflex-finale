@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { lockShiftSeats } from "@/lib/shifts/seat-lock";
 import { findOverlappingShift, overlapMessageOther, overlapWhen } from "@/lib/shifts/worker-overlap";
 import { isMatchEligibleWorker } from "@/lib/matching/geschikt";
+import { eisWerkrecht } from "@/lib/werkrecht/store";
 import { sendUserPush } from "@/lib/notifications/push";
 import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { pushWhen } from "@/lib/i18n/worker-push";
@@ -87,6 +88,8 @@ export async function reassignAssignment(input: ReassignInput): Promise<Reassign
         : "Deze kandidaat is niet volledig geverifieerd.",
     );
   }
+  // en het recht om in Nederland te werken (lib/werkrecht), zoals bij reageren en aannemen
+  await eisWerkrecht(input.substituteUserId, { voorWerkgever: true });
   if (substitute.isBlacklisted) throw AppError.precondition("Deze kandidaat kan geen diensten aannemen.");
   if (substitute.matchingBlockedUntil && substitute.matchingBlockedUntil.getTime() > Date.now()) {
     throw AppError.precondition("Matching voor deze kandidaat is tijdelijk beperkt.");

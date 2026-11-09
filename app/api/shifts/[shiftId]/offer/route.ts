@@ -7,6 +7,7 @@ import { logger } from "@/lib/logger";
 import { recordOfferResponse } from "@/lib/notifications/dispatcher";
 import { pushShiftTaken } from "@/lib/notifications/employer-push";
 import { runAfter } from "@/lib/run-after";
+import { eisWerkrecht } from "@/lib/werkrecht/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,6 +39,8 @@ export async function POST(request: Request, props: { params: Promise<{ shiftId:
     });
     if (!profile) throw AppError.forbidden("Je hebt nog geen werkersprofiel. Maak eerst je profiel af.");
 
+    // aannemen pas met recht om te werken (lib/werkrecht); afslaan mag altijd
+    if (decision === "ACCEPTED") await eisWerkrecht(principal.userId);
     const result = await recordOfferResponse(shiftId, profile.id, decision);
     if (decision === "ACCEPTED") runAfter(() => pushShiftTaken(shiftId, principal.fullName));
     return NextResponse.json(result, { status: 200 });

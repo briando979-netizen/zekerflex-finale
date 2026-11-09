@@ -10,6 +10,7 @@ import {
 } from "@/lib/replacements/store";
 import { findOverlappingShift, overlapMessageSelf } from "@/lib/shifts/worker-overlap";
 import { isMatchEligibleWorker } from "@/lib/matching/geschikt";
+import { eisWerkrecht } from "@/lib/werkrecht/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,6 +68,8 @@ export async function POST(request: Request): Promise<NextResponse> {
           : "Je kunt pas een klus overnemen als je volledig geverifieerd bent.",
       );
     }
+    // en het recht om in Nederland te werken (lib/werkrecht), zoals bij reageren en aannemen
+    await eisWerkrecht(principal.userId);
 
     const clash = await prisma.shiftAssignment.findUnique({
       where: { shiftId_freelancerId: { shiftId, freelancerId: profile.id } },
