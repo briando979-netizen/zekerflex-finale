@@ -7,7 +7,8 @@
 //   2. de website vraagt een eenmalige code (POST /api/onboarding/chip/start)
 //      en opent daarmee de app (ChipActivity). Geen MRZ-gegevens in een adres.
 //   3. de app haalt met die code de sleutel op (POST /api/chip/sleutel), leest
-//      de chip en stuurt DG1, DG2 en het SOD terug (POST /api/chip/klaar).
+//      de chip en stuurt DG1 en het SOD terug (POST /api/chip/klaar). De pasfoto
+//      (DG2) leest de app niet en neemt de server niet aan.
 //   4. de server controleert alles (lib/kyc/chip/chip.ts) en bewaart alleen de
 //      uitslag, 60 minuten; de verificatie (lib/onboarding/verify.ts) neemt die mee.
 // Nooit bewaard: de pasfoto (DG2), het BSN, de ruwe chipbestanden.
@@ -168,7 +169,7 @@ export async function chipSleutel(code: string, nu: Date = new Date()): Promise<
 /** Stap 3b + 4: de chipbestanden controleren en alleen de uitslag bewaren. De code is daarna op. */
 export async function rondChipAf(
   code: string,
-  bestanden: { dg1: Buffer; dg2?: Buffer; sod: Buffer },
+  bestanden: { dg1: Buffer; sod: Buffer },
   csca: X509Certificate[],
   nu: Date = new Date(),
 ): Promise<ChipLezing | null> {
