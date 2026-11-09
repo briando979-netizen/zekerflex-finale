@@ -148,6 +148,8 @@ const APP_ALLOWED = [
   "/shop", "/kennis", "/offline", "/studio",
   // inchecken op locatie: de korte link op de NFC-sticker en het scherm bij de ingang (lib/incheck)
   "/i", "/terminal",
+  // "verder op je telefoon": de QR-code van de ID-scan opent deze pagina, ook als de app op de telefoon staat
+  "/id-scan",
 ];
 
 function isAppLaunch(req: NextRequest): boolean {

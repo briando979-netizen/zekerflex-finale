@@ -8,7 +8,7 @@ import { IbanCodeVeld } from "@/components/app/IbanCodeVeld";
 import { ibanCodeBericht, isIbanCodeFout } from "@/lib/fiscal/iban-code-teksten";
 import { AUTH_DICTS, fill, type AuthDict } from "@/lib/i18n/auth";
 import { DocumentLezing, leesDocumentFoto, type Lezing } from "@/components/app/DocumentLezing";
-import { IdScan, type ScanAfronden, type ScanUitslag } from "@/components/app/IdScan";
+import { IdScan, type ScanAfronden, type ScanAfrondenOverdracht, type ScanUitslag } from "@/components/app/IdScan";
 
 interface Check {
   label: string;
@@ -221,6 +221,23 @@ export function OnboardingForm({
       const res = await fetch("/api/onboarding", { method: "POST", body });
       const data = await res.json().catch(() => ({}));
       if (res.status === 413) return { ok: false, fout: t.tooBig };
+      if (!res.ok) return { ok: false, fout: (data?.error?.message as string | undefined) ?? t.failed };
+      scanResult.current = data as Result;
+      return { ok: true, uitslag: data as Result };
+    } catch {
+      return { ok: false, fout: t.scan.mislukt };
+    }
+  };
+
+  /** "Verder op je telefoon": het formulier gaat mee, de foto's en documentgegevens haalt de server van de telefoon. */
+  const afrondenViaTelefoon: ScanAfrondenOverdracht = async () => {
+    const form = formRef.current;
+    if (!form) return { ok: false, fout: t.failed };
+    const body = new FormData(form);
+    body.set("overdracht", "1");
+    try {
+      const res = await fetch("/api/onboarding", { method: "POST", body });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) return { ok: false, fout: (data?.error?.message as string | undefined) ?? t.failed };
       scanResult.current = data as Result;
       return { ok: true, uitslag: data as Result };
@@ -530,7 +547,7 @@ export function OnboardingForm({
       <p className="text-xs leading-relaxed text-neutralx-400">
         {method === "stripe" ? t.stripeNote : t.uploadNote}
       </p>
-      {scanOpen && <IdScan t={t} naam={defaultName} onAfronden={afrondenViaScan} onSluiten={sluitScan} />}
+      {scanOpen && <IdScan t={t} naam={defaultName} onAfronden={afrondenViaScan} onAfrondenOverdracht={afrondenViaTelefoon} onSluiten={sluitScan} />}
     </form>
   );
 }

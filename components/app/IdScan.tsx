@@ -35,10 +35,20 @@ export interface ScanUitslag {
   reasons: string[];
 }
 
-export type ScanAfronden = (g: ScanGegevens) => Promise<{ ok: true; uitslag: ScanUitslag } | { ok: false; fout: string }>;
+/** Afronden: op de laptop de uitslag; op de telefoon (na een QR-code) alleen "overgedragen". */
+export type ScanAfronden = (g: ScanGegevens) => Promise<{ ok: true; uitslag: ScanUitslag } | { ok: true; overgedragen: true } | { ok: false; fout: string }>;
+/** De laptop rondt af met de foto's die de telefoon instuurde (lib/kyc/overdracht.ts). */
+export type ScanAfrondenOverdracht = () => Promise<{ ok: true; uitslag: ScanUitslag } | { ok: false; fout: string }>;
+
+/** De stand van "verder op je telefoon" op de laptop. */
+interface TelefoonStand {
+  status: "maken" | "wacht" | "geopend" | "ontvangen" | "verlopen" | "fout";
+  qr?: string;
+  tekst?: string;
+}
 
 type T = AuthDict["onb"];
-type Stap = "start" | "soort" | "voor" | "achter" | "chip" | "selfie" | "gegevens" | "bezig" | "klaar";
+type Stap = "start" | "telefoon" | "soort" | "voor" | "achter" | "chip" | "selfie" | "gegevens" | "bezig" | "klaar";
 
 /** De chipstap (alleen in de Android-app vanaf 1.0.4): de app leest de chip via NFC (lib/kyc/chip). */
 interface ChipStand {
@@ -191,12 +201,24 @@ export function IdScan({
   naam,
   onAfronden,
   onSluiten,
+  modus = "laptop",
+  overdracht,
+  groet,
+  onAfrondenOverdracht,
 }: {
   t: T;
   /** de accountnaam: standaard voor "naam zoals op document" */
   naam: string;
   onAfronden: ScanAfronden;
   onSluiten: (uitslag: ScanUitslag | null) => void;
+  /** "telefoon": geopend via de QR-code op de laptop (/id-scan), niet ingelogd */
+  modus?: "laptop" | "telefoon";
+  /** de eenmalige code van de QR-code (alleen op de telefoon) */
+  overdracht?: string;
+  /** voornaam voor "Hoi …" op de telefoon */
+  groet?: string;
+  /** laptop: met de foto's van de telefoon afronden; zonder dit geen QR-knop */
+  onAfrondenOverdracht?: ScanAfrondenOverdracht;
 }) {
   const s = t.scan;
   const [stap, setStap] = useState<Stap>("start");
@@ -210,11 +232,82 @@ export function IdScan({
   const [kanChip, setKanChip] = useState(false);
   const [chip, setChip] = useState<ChipStand | null>(null);
   const [naChip, setNaChip] = useState<Stap>("selfie");
+  const [overgedragen, setOvergedragen] = useState(false);
+  const [kanTelefoon, setKanTelefoon] = useState(false);
+  const [tel, setTel] = useState<TelefoonStand | null>(null);
+
+  // "verder op je telefoon" alleen op een computer (muis of touchpad), niet op een telefoon of tablet
+  useEffect(() => {
+    setKanTelefoon(modus === "laptop" && Boolean(onAfrondenOverdracht) && window.matchMedia("(pointer: fine)").matches);
+  }, [modus, onAfrondenOverdracht]);
+
+  /** Laptop: een eenmalige code vragen en als QR-code tonen (de code staat na de #, dus nooit in een serverlog). */
+  async function maakQr() {
+    setTel({ status: "maken" });
+    try {
+      const res = await fetch("/api/onboarding/overdracht", { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as { code?: string; error?: { message?: string } };
+      if (!res.ok || typeof data.code !== "string") {
+        setTel({ status: "fout", tekst: data.error?.message ?? s.mislukt });
+        return;
+      }
+      const QRCode = (await import("qrcode")).default;
+      const qr = await QRCode.toDataURL(`${window.location.origin}/id-scan#${data.code}`, { margin: 1, width: 260 });
+      setTel({ status: "wacht", qr });
+    } catch {
+      setTel({ status: "fout", tekst: s.mislukt });
+    }
+  }
+
+  useEffect(() => {
+    if (stap === "telefoon" && tel === null) void maakQr();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- alleen bij het openen van de stap
+  }, [stap, tel]);
+
+  /** Laptop: de telefoon is klaar; afronden met de foto's die hij instuurde. */
+  async function rondTelefoonAf() {
+    if (!onAfrondenOverdracht) return;
+    setStap("bezig");
+    const r = await onAfrondenOverdracht();
+    if (r.ok) {
+      setUitslag(r.uitslag);
+      setStap("klaar");
+    } else {
+      setTel({ status: "fout", tekst: r.fout });
+      setStap("telefoon");
+    }
+  }
+
+  // laptop: elke 2 s kijken of de telefoon de link opende en of hij klaar is
+  const telWacht = stap === "telefoon" && (tel?.status === "wacht" || tel?.status === "geopend");
+  useEffect(() => {
+    if (!telWacht) return;
+    let stop = false;
+    const kijk = async () => {
+      const res = await fetch("/api/onboarding/overdracht", { cache: "no-store" }).catch(() => null);
+      const data = res?.ok ? ((await res.json().catch(() => null)) as { overdracht?: { status?: string } | null } | null) : null;
+      const st = data?.overdracht?.status;
+      if (stop || !st) return;
+      if (st === "geopend") setTel((v0) => (v0 && v0.status !== "geopend" ? { ...v0, status: "geopend" } : v0));
+      else if (st === "verlopen") setTel({ status: "verlopen" });
+      else if (st === "klaar") {
+        stop = true;
+        setTel((v0) => (v0 ? { ...v0, status: "ontvangen" } : v0));
+        void rondTelefoonAf();
+      }
+    };
+    const id = setInterval(() => void kijk(), 2000);
+    return () => {
+      stop = true;
+      clearInterval(id);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- rondTelefoonAf hoort bij deze ronde
+  }, [telWacht]);
 
   // alleen een app die de chip kan lezen (lib/app-mode.ts): de website en oudere apps slaan de stap over
   useEffect(() => {
-    setKanChip(cookieStringIsApp(document.cookie) && cookieStringHasChip(document.cookie));
-  }, []);
+    setKanChip(modus === "laptop" && cookieStringIsApp(document.cookie) && cookieStringHasChip(document.cookie));
+  }, [modus]);
 
   // terug uit de app: elke 2 s (alleen als dit scherm zichtbaar is) kijken of er een nieuwe uitslag is
   const wachtOp = chip?.status === "wacht" ? (chip.vorige ?? "") : null;
@@ -317,7 +410,11 @@ export function IdScan({
       back: f.achter,
       selfie: f.selfie,
     });
-    if (r.ok) {
+    if (r.ok && "overgedragen" in r) {
+      // telefoon: de foto's staan klaar, de laptop rondt af
+      setOvergedragen(true);
+      setStap("klaar");
+    } else if (r.ok) {
       setUitslag(r.uitslag);
       setStap("klaar");
     } else {
@@ -352,7 +449,7 @@ export function IdScan({
     }
     // de kant met de code: meteen lezen en laten zien wat er staat
     setLezing({ status: "bezig" });
-    const l = await leesDocumentFoto(voorbeeld.file, t);
+    const l = await leesDocumentFoto(voorbeeld.file, t, overdracht);
     setLezing(l);
     if (goedGelezen(l)) {
       setGegevens((g) => ({ nummer: l.documentnummer ?? g.nummer, datum: l.vervaldatum ?? g.datum, naam: l.naam ?? g.naam }));
@@ -384,6 +481,9 @@ export function IdScan({
           <div className="flex-1 px-5 py-6">
             {stap === "start" && (
               <>
+                {groet !== undefined && (
+                  <p className="mb-2 text-center text-sm text-neutralx-500">{s.telHallo.replace("{naam}", groet || "")}</p>
+                )}
                 <h2 className="text-center font-display text-xl font-bold text-ink">{s.titel}</h2>
                 <ul className="mt-6 space-y-5">
                   {s.punten.map((p, i) => (
@@ -401,9 +501,55 @@ export function IdScan({
                 <button type="button" onClick={() => setStap("soort")} className="btn-primary mt-6 w-full">
                   {s.akkoord}
                 </button>
+                {kanTelefoon && (
+                  <button type="button" onClick={() => setStap("telefoon")} className="btn-ghost mt-2 w-full">
+                    {s.telefoonOptie}
+                  </button>
+                )}
                 <button type="button" onClick={() => onSluiten(null)} className="btn-ghost mt-2 w-full">
                   {s.annuleren}
                 </button>
+              </>
+            )}
+
+            {stap === "telefoon" && (
+              <>
+                <h2 className="font-display text-lg font-bold text-ink">{s.telefoonTitel}</h2>
+                <p className="mt-1 text-sm leading-relaxed text-neutralx-500">{s.telefoonUitleg}</p>
+                <div className="mt-6 grid min-h-[268px] place-items-center">
+                  {tel?.qr && (tel.status === "wacht" || tel.status === "geopend") ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={tel.qr} alt={s.telefoonTitel} width={260} height={260} className="rounded-xl border border-hair" />
+                  ) : tel?.status === "maken" || tel?.status === "ontvangen" ? (
+                    <span aria-hidden className="h-10 w-10 animate-spin rounded-full border-4 border-hair border-t-brand-600" />
+                  ) : null}
+                </div>
+                <p role="status" className="mt-4 text-center text-sm text-ink-soft">
+                  {tel?.status === "geopend"
+                    ? s.telefoonVerbonden
+                    : tel?.status === "ontvangen"
+                      ? s.telefoonOntvangen
+                      : tel?.status === "verlopen"
+                        ? s.telefoonVerlopen
+                        : tel?.status === "wacht"
+                          ? s.telefoonWacht
+                          : ""}
+                </p>
+                {tel?.status === "fout" && (
+                  <p role="alert" className="mt-3 rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">
+                    {tel.tekst ?? s.mislukt}
+                  </p>
+                )}
+                <div className="mt-6 grid gap-2">
+                  {(tel?.status === "verlopen" || tel?.status === "fout") && (
+                    <button type="button" onClick={() => void maakQr()} className="btn-primary w-full">
+                      {s.nieuweCode}
+                    </button>
+                  )}
+                  <button type="button" onClick={() => setStap("soort")} className="btn-ghost w-full">
+                    {s.ofHier}
+                  </button>
+                </div>
               </>
             )}
 
@@ -570,7 +716,7 @@ export function IdScan({
                   </label>
                 </div>
                 <button type="button" disabled={!gegevensOk} onClick={() => void afronden(fotos, gegevens)} className="btn-primary mt-6 w-full">
-                  {s.afronden}
+                  {modus === "telefoon" ? s.telVersturen : s.afronden}
                 </button>
               </>
             )}
@@ -580,6 +726,16 @@ export function IdScan({
                 <span aria-hidden className="h-10 w-10 animate-spin rounded-full border-4 border-hair border-t-brand-600" />
                 <p className="mt-5 font-display text-lg font-bold text-ink">{s.bezig}</p>
                 <p className="mt-1 text-sm text-neutralx-500">{s.bezigUitleg}</p>
+              </div>
+            )}
+
+            {stap === "klaar" && overgedragen && (
+              <div className="py-10 text-center">
+                <span aria-hidden className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-ok text-2xl text-white">
+                  ✓
+                </span>
+                <h2 className="mt-4 font-display text-xl font-bold text-ink">{s.telKlaarTitel}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-ink-soft">{s.telKlaarUitleg}</p>
               </div>
             )}
 

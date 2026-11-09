@@ -7,6 +7,7 @@ import { logger } from "@/lib/logger";
 import { saveFreelancerBase, submitFreelancerOnboarding, type DocKind } from "@/lib/onboarding/verify";
 import { ibanBevestigingAntwoord } from "@/lib/fiscal/iban-bevestiging";
 import { startStripeIdentity, stripeIdentityAvailable } from "@/lib/kyc/stripe-identity";
+import { overdrachtGegevens, pakOverdracht } from "@/lib/kyc/overdracht";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -103,6 +104,14 @@ export async function POST(request: Request): Promise<NextResponse> {
       return NextResponse.json({ redirectUrl, checks: saved.checks }, { status: 200 });
     }
 
+    // "Verder op je telefoon" (lib/kyc/overdracht.ts): de documentgegevens en foto's
+    // komen van de telefoon. Eerst het formulier controleren, pas daarna de foto's
+    // ophalen (en daarmee de tijdelijke kopie wissen): een tikfout kost geen foto's.
+    const viaTelefoon = form.get("overdracht") === "1";
+    const telefoon = viaTelefoon ? await overdrachtGegevens(principal.userId) : null;
+    if (viaTelefoon && !telefoon) {
+      throw AppError.conflict("De foto's van je telefoon zijn niet (meer) beschikbaar. Maak een nieuwe QR-code en scan opnieuw.");
+    }
     const parsed = fieldsSchema.safeParse({
       kvkNumber: str("kvkNumber"),
       vatNumber: str("vatNumber"),
@@ -110,10 +119,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       houseNumber: str("houseNumber"),
       payoutIban: form.get("payoutIban"),
       ibanCode: str("ibanCode"),
-      documentType: form.get("documentType"),
-      documentNumber: form.get("documentNumber"),
-      documentExpiry: form.get("documentExpiry"),
-      nameOnDocument: form.get("nameOnDocument"),
+      documentType: telefoon ? telefoon.soort : form.get("documentType"),
+      documentNumber: telefoon ? telefoon.gegevens.nummer : form.get("documentNumber"),
+      documentExpiry: telefoon ? telefoon.gegevens.datum : form.get("documentExpiry"),
+      nameOnDocument: telefoon ? telefoon.gegevens.naam : form.get("nameOnDocument"),
     });
     if (!parsed.success) {
       throw AppError.validation(
@@ -126,11 +135,20 @@ export async function POST(request: Request): Promise<NextResponse> {
     // the freelancer never has to come back for a second, duplicate upload
     // (submitFreelancerOnboarding also satisfies the compliance "id" slot
     // from the front image, see lib/onboarding/verify.ts).
-    const [documentFront, documentBack, selfie] = await Promise.all([
-      readImage(form, "documentFront", "de voorkant van je document"),
-      readImage(form, "documentBack", "de achterkant van je document"),
-      readImage(form, "selfie", "een selfie"),
-    ]);
+    let documentFront: Awaited<ReturnType<typeof readImage>>;
+    let documentBack: Awaited<ReturnType<typeof readImage>>;
+    let selfie: Awaited<ReturnType<typeof readImage>>;
+    if (viaTelefoon) {
+      const opgehaald = await pakOverdracht(principal.userId);
+      if (!opgehaald) throw AppError.conflict("De foto's van je telefoon zijn niet (meer) beschikbaar. Maak een nieuwe QR-code en scan opnieuw.");
+      ({ voor: documentFront, achter: documentBack, selfie } = opgehaald);
+    } else {
+      [documentFront, documentBack, selfie] = await Promise.all([
+        readImage(form, "documentFront", "de voorkant van je document"),
+        readImage(form, "documentBack", "de achterkant van je document"),
+        readImage(form, "selfie", "een selfie"),
+      ]);
+    }
 
     const result = await submitFreelancerOnboarding({
       userId: principal.userId,
