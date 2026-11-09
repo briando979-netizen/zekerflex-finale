@@ -131,11 +131,19 @@ describe("Stripe Identity webhook", () => {
     expect(db.idv[0]).toMatchObject({ status: "VERIFIED", documentType: "PASSPORT", decisionStatus: "verified" });
   });
 
-  it("verified but another name on the document → stays PENDING for manual review", async () => {
+  it("verified with another name on the document → toch VERIFIED, verschil staat in het auditlog", async () => {
     db.retrieve.mockResolvedValue({ verified_outputs: { first_name: "Piet", last_name: "Jansen" }, last_verification_report: null });
     await handleStripeIdentityEvent(ev("identity.verification_session.verified"));
-    expect(db.users.get("user1")!.kycStatus).toBe("PENDING");
-    expect(db.idv[0]!.decisionStatus).toBe("name_mismatch");
+    expect(db.users.get("user1")!.kycStatus).toBe("VERIFIED");
+    expect(db.idv[0]).toMatchObject({ status: "VERIFIED", decisionStatus: "verified" });
+    expect((db.idv[0]!.rawPayload as { nameOk: boolean }).nameOk).toBe(false);
+    expect(db.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "kyc.stripe_name_differs", severity: "info" }));
+  });
+
+  it("verified zonder leesbare naam → ook VERIFIED", async () => {
+    db.retrieve.mockResolvedValue({ verified_outputs: null, last_verification_report: null });
+    await handleStripeIdentityEvent(ev("identity.verification_session.verified"));
+    expect(db.users.get("user1")!.kycStatus).toBe("VERIFIED");
   });
 
   it("requires_input stores the reason for the verification page", async () => {
