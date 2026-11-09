@@ -34,15 +34,21 @@ export async function mayPublish(p: Principal, tenantId: string): Promise<boolea
 
 /** What we already know about the company, to fill in the first step. */
 export async function companyDefaults(tenantId: string, p: Principal): Promise<Company> {
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: tenantId },
-    select: {
-      name: true,
-      kvkNumber: true,
-      companyRegistration: { select: { kvkNumber: true, tradeName: true, street: true, houseNumber: true, postalCode: true, city: true } },
-      branches: { select: { addressLine: true, postalCode: true, city: true }, take: 1, orderBy: { createdAt: "asc" } },
-    },
-  });
+  const [tenant, user] = await Promise.all([
+    prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: {
+        name: true,
+        kvkNumber: true,
+        companyRegistration: { select: { kvkNumber: true, tradeName: true, street: true, houseNumber: true, postalCode: true, city: true } },
+        branches: { select: { addressLine: true, postalCode: true, city: true }, take: 1, orderBy: { createdAt: "asc" } },
+      },
+    }),
+    prisma.user.findUnique({
+      where: { id: p.userId },
+      select: { phone: true },
+    }),
+  ]);
   const reg = tenant?.companyRegistration;
   const branch = tenant?.branches[0];
   return {
@@ -51,7 +57,7 @@ export async function companyDefaults(tenantId: string, p: Principal): Promise<C
     straat: reg?.street ? [reg.street, reg.houseNumber].filter(Boolean).join(" ") : (branch?.addressLine ?? ""),
     postcode: reg?.postalCode ?? branch?.postalCode ?? "",
     plaats: reg?.city ?? branch?.city ?? "",
-    telefoon: "",
+    telefoon: user?.phone || "",
     email: p.email,
   };
 }
