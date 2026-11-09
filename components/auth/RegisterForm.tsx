@@ -79,6 +79,8 @@ export function RegisterForm({
         if (!res.ok) return;
         const d = await res.json();
         if (controller.signal.aborted) return;
+        // KVK-dienst even bezet: geen lijst, gewoon zelf invullen
+        if (d.bezet) return;
         setKvkConfigured(d.configured !== false);
         setKvkResults(Array.isArray(d.results) ? d.results : []);
         setKvkOpen(true);
