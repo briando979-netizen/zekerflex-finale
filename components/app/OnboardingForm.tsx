@@ -146,6 +146,72 @@ function CameraIcon() {
 }
 
 type PhotoKey = "documentFront" | "documentBack" | "selfie";
+type DocKey = "PASSPORT" | "ID_CARD" | "DRIVERS_LICENSE";
+
+/** Wat /api/onboarding/document-lezen van de foto las (lib/kyc/mrz-lezen.ts voorScherm). */
+interface Lezing {
+  status: "bezig" | "klaar" | "fout";
+  gevonden?: boolean;
+  geldig?: boolean;
+  verlopen?: boolean;
+  documentnummer?: string | null;
+  vervaldatum?: string | null;
+  naam?: string;
+  melding?: string;
+}
+
+const datumNl = (iso: string) => {
+  const [j, m, d] = iso.split("-");
+  return `${d}-${m}-${j}`;
+};
+const titel = (s: string) => s.toLowerCase().replace(/(^|[\s-])(\S)/g, (_m, voor: string, l: string) => voor + l.toUpperCase());
+
+/** Laat direct zien wat er van het document gelezen is: goed, verlopen, of opnieuw fotograferen. */
+function DocumentLezing({ lezing, t }: { lezing: Lezing; t: AuthDict["onb"] }) {
+  if (lezing.status === "bezig") {
+    return <p className="rounded-lg bg-paper-soft px-3 py-2.5 text-xs text-neutralx-600">{t.lezenBezig}</p>;
+  }
+  if (lezing.status === "fout" || !lezing.gevonden || !lezing.geldig) {
+    return (
+      <p className="rounded-lg border border-warn/30 bg-warn/5 px-3 py-2.5 text-xs leading-relaxed text-ink-soft">
+        {lezing.melding ?? t.lezenOnzeker}
+      </p>
+    );
+  }
+  if (lezing.verlopen && lezing.vervaldatum) {
+    return (
+      <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">
+        {fill(t.lezenVerlopen, { datum: datumNl(lezing.vervaldatum) })}
+      </p>
+    );
+  }
+  return (
+    <div className="rounded-lg border border-ok/30 bg-ok/5 px-3 py-2.5">
+      <p className="text-sm font-semibold text-ink">✓ {t.lezenGoed}</p>
+      <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
+        {lezing.naam && (
+          <>
+            <dt className="text-neutralx-500">{t.lezenNaam}</dt>
+            <dd className="text-ink">{lezing.naam}</dd>
+          </>
+        )}
+        {lezing.documentnummer && (
+          <>
+            <dt className="text-neutralx-500">{t.lezenNummer}</dt>
+            <dd className="font-mono text-ink">{lezing.documentnummer}</dd>
+          </>
+        )}
+        {lezing.vervaldatum && (
+          <>
+            <dt className="text-neutralx-500">{t.lezenGeldig}</dt>
+            <dd className="text-ink">{datumNl(lezing.vervaldatum)}</dd>
+          </>
+        )}
+      </dl>
+      <p className="mt-1.5 text-xs text-neutralx-500">{t.lezenCijfers}</p>
+    </div>
+  );
+}
 
 export function OnboardingForm({
   defaultName,
@@ -173,6 +239,66 @@ export function OnboardingForm({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [attempt, setAttempt] = useState(0); // bump to remount + clear the 3 capture slots
+  const [docType, setDocType] = useState<DocKey>("ID_CARD");
+  const [lezing, setLezing] = useState<Lezing | null>(null);
+  const lezingNr = useRef(0); // een oud antwoord mag een nieuwer niet overschrijven
+
+  /** De MRZ staat bij een ID-kaart op de achterkant, bij een paspoort op de pasfotozijde; een rijbewijs heeft er geen. */
+  const mrzFoto = (soort: DocKey): PhotoKey | null => (soort === "PASSPORT" ? "documentFront" : soort === "ID_CARD" ? "documentBack" : null);
+
+  function zetVeld(name: string, value: string) {
+    const el = formRef.current?.elements.namedItem(name);
+    if (el instanceof HTMLInputElement) el.value = value;
+  }
+
+  async function leesDocument(file: File) {
+    const nr = ++lezingNr.current;
+    setLezing({ status: "bezig" });
+    try {
+      const body = new FormData();
+      body.set("foto", file);
+      const res = await fetch("/api/onboarding/document-lezen", { method: "POST", body });
+      const data = await res.json().catch(() => ({}));
+      if (nr !== lezingNr.current) return;
+      if (!res.ok) {
+        setLezing({ status: "fout", melding: (data?.error?.message as string | undefined) ?? t.lezenOnzeker });
+        return;
+      }
+      const naam = [data.voornamen, data.achternaam].filter(Boolean).map((s: string) => titel(s)).join(" ");
+      setLezing({
+        status: "klaar",
+        gevonden: Boolean(data.gevonden),
+        geldig: Boolean(data.geldig),
+        verlopen: Boolean(data.verlopen),
+        documentnummer: (data.documentnummer as string | null) ?? null,
+        vervaldatum: (data.vervaldatum as string | null) ?? null,
+        ...(naam ? { naam } : {}),
+      });
+      // goed gelezen en niet verlopen: nummer en datum van het document zelf invullen
+      if (data.geldig && !data.verlopen) {
+        if (data.documentnummer) zetVeld("documentNumber", data.documentnummer as string);
+        if (data.vervaldatum) zetVeld("documentExpiry", data.vervaldatum as string);
+        if (data.soort === "PASSPORT" || data.soort === "ID_CARD") setDocType(data.soort);
+      }
+    } catch {
+      if (nr === lezingNr.current) setLezing({ status: "fout", melding: t.lezenOnzeker });
+    }
+  }
+
+  function kiesFoto(k: PhotoKey, f: File) {
+    photos.current[k] = f;
+    setMissing((m) => m.filter((x) => x !== k));
+    if (mrzFoto(docType) === k) void leesDocument(f);
+  }
+
+  function kiesSoort(soort: DocKey) {
+    setDocType(soort);
+    lezingNr.current++;
+    const k = mrzFoto(soort);
+    const f = k ? photos.current[k] : undefined;
+    if (f) void leesDocument(f);
+    else setLezing(null);
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -271,6 +397,8 @@ export function OnboardingForm({
                 formRef.current?.reset();
                 photos.current = {};
                 setMissing([]);
+                setLezing(null);
+                lezingNr.current++;
                 setAttempt((a) => a + 1);
               }}
               className="btn-primary"
@@ -406,7 +534,7 @@ export function OnboardingForm({
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="field-label">{t.docType}</span>
-            <select name="documentType" required defaultValue="ID_CARD" className="field-input">
+            <select name="documentType" required value={docType} onChange={(e) => kiesSoort(e.target.value as DocKey)} className="field-input">
               {Object.entries(t.docs).map(([v, l]) => (
                 <option key={v} value={v}>{l}</option>
               ))}
@@ -430,10 +558,11 @@ export function OnboardingForm({
           {t.photosInfo}
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
-          <CaptureSlot t={t} label={t.front[0]} hint={t.front[1]} missing={missing.includes("documentFront")} onPick={(f) => { photos.current.documentFront = f; setMissing((m) => m.filter((x) => x !== "documentFront")); }} />
-          <CaptureSlot t={t} label={t.back[0]} hint={t.back[1]} missing={missing.includes("documentBack")} onPick={(f) => { photos.current.documentBack = f; setMissing((m) => m.filter((x) => x !== "documentBack")); }} />
-          <CaptureSlot t={t} label={t.selfie[0]} hint={t.selfie[1]} round missing={missing.includes("selfie")} onPick={(f) => { photos.current.selfie = f; setMissing((m) => m.filter((x) => x !== "selfie")); }} />
+          <CaptureSlot t={t} label={t.front[0]} hint={t.front[1]} missing={missing.includes("documentFront")} onPick={(f) => kiesFoto("documentFront", f)} />
+          <CaptureSlot t={t} label={t.back[0]} hint={t.back[1]} missing={missing.includes("documentBack")} onPick={(f) => kiesFoto("documentBack", f)} />
+          <CaptureSlot t={t} label={t.selfie[0]} hint={t.selfie[1]} round missing={missing.includes("selfie")} onPick={(f) => kiesFoto("selfie", f)} />
         </div>
+        {lezing && <DocumentLezing lezing={lezing} t={t} />}
         </>
         )}
       </fieldset>

@@ -213,6 +213,15 @@ export interface AuthDict {
     retry: string;
     help: string;
     toDashboard: string;
+    /** de MRZ vooraf lezen (app/api/onboarding/document-lezen) */
+    lezenBezig: string;
+    lezenGoed: string;
+    lezenNaam: string;
+    lezenNummer: string;
+    lezenGeldig: string;
+    lezenCijfers: string;
+    lezenVerlopen: string;
+    lezenOnzeker: string;
   };
 }
 
@@ -423,6 +432,14 @@ const nl: AuthDict = {
     retry: "Gegevens aanpassen en opnieuw proberen",
     help: "Hulp nodig? support@zekerflex.com",
     toDashboard: "Naar mijn dashboard",
+    lezenBezig: "We lezen de code op je document…",
+    lezenGoed: "Gelezen van je document",
+    lezenNaam: "Naam",
+    lezenNummer: "Documentnummer",
+    lezenGeldig: "Geldig tot",
+    lezenCijfers: "De controlecijfers kloppen. We hebben het nummer en de datum voor je ingevuld.",
+    lezenVerlopen: "Volgens de code op je document is het verlopen op {datum}. Gebruik een geldig paspoort of geldige ID-kaart.",
+    lezenOnzeker: "We konden de code onderop je document niet zeker lezen. Maak de foto opnieuw: recht van boven, de hele kaart in beeld, zonder glans. Je kunt ook gewoon versturen: dan kijkt een medewerker mee.",
   },
 };
 
@@ -633,6 +650,14 @@ const en: AuthDict = {
     retry: "Edit details and try again",
     help: "Need help? support@zekerflex.com",
     toDashboard: "Go to my dashboard",
+    lezenBezig: "Reading the code on your document…",
+    lezenGoed: "Read from your document",
+    lezenNaam: "Name",
+    lezenNummer: "Document number",
+    lezenGeldig: "Valid until",
+    lezenCijfers: "The check digits match. We filled in the number and date for you.",
+    lezenVerlopen: "According to the code on your document, it expired on {datum}. Please use a valid passport or ID card.",
+    lezenOnzeker: "We couldn't reliably read the code at the bottom of your document. Take the photo again: straight from above, the whole card in view, no glare. You can also just submit: then a staff member will check it.",
   },
 };
 
@@ -843,6 +868,14 @@ const pl: AuthDict = {
     retry: "Popraw dane i spróbuj ponownie",
     help: "Potrzebujesz pomocy? support@zekerflex.com",
     toDashboard: "Przejdź do panelu",
+    lezenBezig: "Odczytujemy kod z Twojego dokumentu…",
+    lezenGoed: "Odczytano z Twojego dokumentu",
+    lezenNaam: "Imię i nazwisko",
+    lezenNummer: "Numer dokumentu",
+    lezenGeldig: "Ważny do",
+    lezenCijfers: "Cyfry kontrolne się zgadzają. Uzupełniliśmy za Ciebie numer i datę.",
+    lezenVerlopen: "Według kodu na Twoim dokumencie jego ważność wygasła {datum}. Użyj ważnego paszportu lub dowodu osobistego.",
+    lezenOnzeker: "Nie udało się pewnie odczytać kodu na dole dokumentu. Zrób zdjęcie ponownie: prosto z góry, cała karta w kadrze, bez odblasków. Możesz też po prostu wysłać: wtedy sprawdzi to pracownik.",
   },
 };
 
@@ -1053,6 +1086,14 @@ const ro: AuthDict = {
     retry: "Modifică datele și încearcă din nou",
     help: "Ai nevoie de ajutor? support@zekerflex.com",
     toDashboard: "Mergi la panoul meu",
+    lezenBezig: "Citim codul de pe documentul tău…",
+    lezenGoed: "Citit de pe documentul tău",
+    lezenNaam: "Nume",
+    lezenNummer: "Numărul documentului",
+    lezenGeldig: "Valabil până la",
+    lezenCijfers: "Cifrele de control se potrivesc. Am completat numărul și data pentru tine.",
+    lezenVerlopen: "Conform codului de pe document, acesta a expirat pe {datum}. Folosește un pașaport sau o carte de identitate valabilă.",
+    lezenOnzeker: "Nu am putut citi sigur codul din partea de jos a documentului. Fă din nou fotografia: drept de sus, cu tot cardul în cadru, fără reflexii. Poți și să trimiți direct: atunci verifică un angajat.",
   },
 };
 
@@ -1263,6 +1304,14 @@ const uk: AuthDict = {
     retry: "Змінити дані та спробувати ще раз",
     help: "Потрібна допомога? support@zekerflex.com",
     toDashboard: "До мого кабінету",
+    lezenBezig: "Зчитуємо код з вашого документа…",
+    lezenGoed: "Зчитано з вашого документа",
+    lezenNaam: "Ім'я",
+    lezenNummer: "Номер документа",
+    lezenGeldig: "Дійсний до",
+    lezenCijfers: "Контрольні цифри збігаються. Ми заповнили номер і дату за вас.",
+    lezenVerlopen: "За кодом на вашому документі термін його дії закінчився {datum}. Використайте дійсний паспорт або ID-картку.",
+    lezenOnzeker: "Не вдалося надійно зчитати код унизу документа. Сфотографуйте ще раз: рівно згори, уся картка в кадрі, без відблисків. Можна також просто надіслати: тоді перевірить працівник.",
   },
 };
 

@@ -11,7 +11,7 @@
 import path from "node:path";
 import { access, mkdir, rename, writeFile } from "node:fs/promises";
 import sharp from "sharp";
-import { createWorker, type Worker } from "tesseract.js";
+import { createWorker, PSM, type Worker } from "tesseract.js";
 import { AppError } from "@/lib/errors";
 
 export const OCR_TALEN = ["nld", "eng"] as const;
@@ -30,13 +30,15 @@ export interface OcrUitkomst {
 
 interface Staat {
   worker: Promise<Worker> | null;
+  /** aparte worker voor de MRZ van paspoort/ID-kaart (lib/kyc/mrz-lezen.ts): alleen A–Z 0–9 <, geen woordenboek */
+  mrz?: Promise<Worker> | null;
   keten: Promise<unknown>;
   timer: ReturnType<typeof setTimeout> | null;
   talen: Promise<void> | null;
 }
 
 const g = globalThis as unknown as { __zfOcr?: Staat };
-const staat = (): Staat => (g.__zfOcr ??= { worker: null, keten: Promise.resolve(), timer: null, talen: null });
+const staat = (): Staat => (g.__zfOcr ??= { worker: null, mrz: null, keten: Promise.resolve(), timer: null, talen: null });
 
 const bestaat = (p: string) =>
   access(p).then(
@@ -92,14 +94,48 @@ async function worker(): Promise<Worker> {
   return s.worker;
 }
 
+const MRZ_TEKENS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<";
+
+async function mrzWorker(): Promise<Worker> {
+  const s = staat();
+  if (!s.mrz) {
+    s.mrz = (async () => {
+      await zorgVoorTalen();
+      // zonder woordenboek: een MRZ bestaat niet uit woorden, en "verbeteren" naar woorden maakt hem kapot
+      const w = await createWorker(
+        "eng",
+        1,
+        {
+          langPath: OCR_DATA_DIR,
+          cachePath: OCR_DATA_DIR,
+          gzip: false,
+          errorHandler: () => {
+            s.mrz = null;
+          },
+        },
+        { load_system_dawg: "0", load_freq_dawg: "0" },
+      );
+      await w.setParameters({ tessedit_char_whitelist: MRZ_TEKENS, tessedit_pageseg_mode: PSM.SINGLE_BLOCK });
+      return w;
+    })().catch((err: unknown) => {
+      s.mrz = null;
+      throw err;
+    });
+  }
+  return s.mrz;
+}
+
 function planStop(): void {
   const s = staat();
   if (s.timer) clearTimeout(s.timer);
   const timer = setTimeout(() => {
     const w = s.worker;
+    const m = s.mrz;
     s.worker = null;
+    s.mrz = null;
     s.timer = null;
     void w?.then((x) => x.terminate()).catch(() => undefined);
+    void m?.then((x) => x.terminate()).catch(() => undefined);
   }, STIL_MS);
   // de timer mag het proces nooit wakker houden
   timer.unref();
@@ -148,6 +184,30 @@ export async function leesTekst(bytes: Buffer): Promise<OcrUitkomst> {
     return { ...uit, ms: Date.now() - t0 };
   } catch (err) {
     s.worker = null;
+    throw AppError.upstream(`OCR mislukt: ${err instanceof Error ? err.message : String(err)}`);
+  } finally {
+    planStop();
+  }
+}
+
+/**
+ * Leest een al voorbewerkte uitsnede (PNG) met de MRZ-worker. Loopt in dezelfde
+ * wachtrij als leesTekst: nooit twee zware OCR-klussen tegelijk op de server.
+ */
+export async function leesMrzTekst(png: Buffer): Promise<OcrUitkomst> {
+  const t0 = Date.now();
+  const s = staat();
+  const klus = s.keten.then(async () => {
+    const w = await mrzWorker();
+    const { data } = await w.recognize(png);
+    return { tekst: data.text, vertrouwen: Math.round(data.confidence) };
+  });
+  s.keten = klus.catch(() => undefined);
+  try {
+    const uit = await klus;
+    return { ...uit, ms: Date.now() - t0 };
+  } catch (err) {
+    s.mrz = null;
     throw AppError.upstream(`OCR mislukt: ${err instanceof Error ? err.message : String(err)}`);
   } finally {
     planStop();

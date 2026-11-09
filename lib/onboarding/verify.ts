@@ -10,6 +10,8 @@ import { geocodePostcode } from "@/lib/integrations/pdok";
 import { registerFreelancerCompany } from "@/lib/company/registration";
 import { storeUpload } from "@/lib/storage/local";
 import { runVisionReview } from "@/lib/kyc/vision";
+import { leesMrzVanFoto } from "@/lib/kyc/mrz-lezen";
+import { naamVoluit, zelfdeNummer, type MrzUitslag } from "@/lib/kyc/mrz";
 import { consumeVerifiedWalletAttempt } from "@/lib/kyc/wallet";
 import { flagIbanChanged } from "@/lib/compliance/documents";
 import { eisIbanBevestiging } from "@/lib/fiscal/iban-bevestiging";
@@ -357,6 +359,33 @@ export async function saveFreelancerBase(input: {
   return ensureFreelancerBase({ ...input, existingProfileId: user.freelancerProfile?.id });
 }
 
+/**
+ * Leest de MRZ van het document zelf (lib/kyc/mrz-lezen.ts): bij een ID-kaart op
+ * de achterkant, bij een paspoort op de pasfotopagina; heeft iemand voor- en
+ * achterkant verwisseld, dan proberen we de andere foto. Een rijbewijs heeft
+ * geen MRZ. Faalt de OCR, dan is er gewoon geen MRZ-uitslag (nooit een blokkade).
+ */
+async function leesDocumentMrz(input: OnboardingInput): Promise<MrzUitslag | null> {
+  if (input.documentType === "DRIVERS_LICENSE") return null;
+  const volgorde = input.documentType === "PASSPORT" ? [input.files.front, input.files.back] : [input.files.back, input.files.front];
+  let beste: MrzUitslag | null = null;
+  for (const foto of volgorde) {
+    try {
+      const { uitslag } = await leesMrzVanFoto(foto.bytes);
+      if (uitslag?.geldig) return uitslag;
+      beste ??= uitslag;
+    } catch (err) {
+      logger.warn("mrz lezen mislukt", { error: (err as Error).message });
+    }
+  }
+  return beste;
+}
+
+const datumNl = (iso: string) => {
+  const [j, m, d] = iso.split("-");
+  return `${d}-${m}-${j}`;
+};
+
 export async function submitFreelancerOnboarding(
   input: OnboardingInput,
 ): Promise<OnboardingResult> {
@@ -425,22 +454,23 @@ export async function submitFreelancerOnboarding(
     detail: numOk ? "Formaat correct" : "Het documentnummer heeft niet het verwachte formaat",
   });
 
-  const expiry = new Date(input.documentExpiry);
-  const expiryOk =
+  let expiry = new Date(input.documentExpiry);
+  let expiryOk =
     !Number.isNaN(expiry.getTime()) &&
     expiry.getTime() > Date.now() &&
     expiry.getTime() < Date.now() + 16 * 365 * 24 * 3600 * 1000;
-  checks.push({
+  const expiryCheck = {
     label: "Geldigheid document",
     ok: expiryOk,
     detail: expiryOk
       ? `Geldig tot ${expiry.toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}`
       : "Het document lijkt verlopen of de datum is ongeldig",
-  });
+  };
+  checks.push(expiryCheck);
 
-  // --- AI authenticity review (text-only) + vision review (photo content),
-  // run together since both are independent local-LLM calls ----------------
-  const [ai, vision] = await Promise.all([
+  // --- AI authenticity review (text-only) + vision review (photo content) +
+  // de MRZ van het document zelf, tegelijk: drie onafhankelijke controles ------
+  const [ai, vision, mrz] = await Promise.all([
     aiAuthenticityReview({
       accountName: user.fullName,
       nameOnDocument: input.nameOnDocument,
@@ -458,7 +488,47 @@ export async function submitFreelancerOnboarding(
       deterministic: checks,
     }),
     runVisionReview(input.files),
+    leesDocumentMrz(input),
   ]);
+
+  // --- MRZ: wat het document zelf zegt, met controlecijfers (lib/kyc/mrz.ts) ---
+  // Geldig = nummer, geboortedatum en vervaldatum hebben elk een kloppend
+  // controlecijfer: dat is hard bewijs en gaat vóór wat iemand intypte.
+  const mrzGeldig = mrz?.geldig === true;
+  const mrzNummerOk = mrzGeldig && zelfdeNummer(mrz.documentnummer, input.documentNumber);
+  const mrzNaamOk = mrzGeldig && (nameSimilarity(user.fullName, naamVoluit(mrz)) >= 0.5 || (companyName ? nameSimilarity(companyName, naamVoluit(mrz)) >= 0.5 : false));
+  if (input.documentType !== "DRIVERS_LICENSE") {
+    checks.push({
+      label: "Code op het document gelezen (MRZ)",
+      ok: mrzGeldig,
+      detail: mrzGeldig
+        ? `Controlecijfers kloppen${mrz.vervaldatum ? ` · geldig tot ${datumNl(mrz.vervaldatum)}` : ""}`
+        : mrz
+          ? "De code onderop het document is niet zeker gelezen. Een medewerker kijkt mee."
+          : "De code onderop het document is niet gevonden. Maak de foto recht van boven, zonder glans. Een medewerker kijkt mee.",
+    });
+  }
+  if (mrzGeldig) {
+    checks.push({
+      label: "Documentnummer komt overeen met het document",
+      ok: mrzNummerOk,
+      detail: mrzNummerOk ? "Het getypte nummer staat ook op het document" : "Het getypte documentnummer wijkt af van het nummer op het document",
+    });
+    checks.push({
+      label: "Naam op het document komt overeen met je account",
+      ok: mrzNaamOk,
+      detail: mrzNaamOk ? "Gelezen van het document zelf" : "De naam op het document wijkt af van je accountnaam",
+    });
+    // de vervaldatum van het document zelf gaat vóór de getypte datum
+    if (mrz.vervaldatum) {
+      expiry = new Date(mrz.vervaldatum);
+      expiryOk = !mrz.verlopen;
+      expiryCheck.ok = expiryOk;
+      expiryCheck.detail = mrz.verlopen
+        ? `Volgens de code op het document is het verlopen op ${datumNl(mrz.vervaldatum)}. Gebruik een geldig document.`
+        : `Geldig tot ${datumNl(mrz.vervaldatum)} (gelezen van het document)`;
+    }
+  }
 
   if (vision.available && vision.document) {
     checks.push({
@@ -528,12 +598,16 @@ export async function submitFreelancerOnboarding(
     vision.document.plausible &&
     vision.face.samePerson &&
     vision.face.looksLive;
+  // en de code op het document zelf moet kloppen met wat er getypt is en met het
+  // account (een rijbewijs heeft geen MRZ; daar blijft het zoals het was)
+  const mrzOk = input.documentType === "DRIVERS_LICENSE" || (mrzGeldig && mrzNummerOk && mrzNaamOk);
   const autoApprove =
     !hardFail &&
     (skipKvk || kvkValid) &&
     nameOk &&
     numOk &&
     expiryOk &&
+    mrzOk &&
     ai.verdict === "approved" &&
     ai.confidence >= 0.65 &&
     visionOk;
@@ -578,6 +652,10 @@ export async function submitFreelancerOnboarding(
             ai,
             vision,
             checks,
+            // alleen de uitslag van de MRZ: geen nummer, naam, geboortedatum of BSN
+            mrz: mrz
+              ? { geldig: mrz.geldig, volledig: mrz.volledig, soort: mrz.soort, land: mrz.land, verlopen: mrz.verlopen, vervaldatum: mrz.vervaldatum, nummerKlopt: mrzNummerOk, naamKlopt: mrzNaamOk }
+              : null,
             uploadIds: { front: storedFront.id, back: storedBack.id, selfie: storedSelfie.id },
             fileSha256: stored.sha256,
           }),
@@ -617,7 +695,7 @@ export async function submitFreelancerOnboarding(
     summary: `Zelf-verificatie ${user.fullName}: ${outcome} (KVK ${kvkValid ? "geldig" : "niet geldig"})`,
     targetType: "user",
     targetId: user.id,
-    metadata: { outcome, kvkValid, aiVerdict: ai.verdict, aiConfidence: ai.confidence, beeldcontrole: vision.available },
+    metadata: { outcome, kvkValid, aiVerdict: ai.verdict, aiConfidence: ai.confidence, beeldcontrole: vision.available, mrzGeldig },
   });
 
   // Een mens moet kijken: zonder melding blijft iemand onzichtbaar hangen (4 nov 2026).

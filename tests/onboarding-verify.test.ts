@@ -68,6 +68,26 @@ vi.mock("@/lib/storage/local", () => ({
 const runVisionReview = vi.fn().mockResolvedValue({ available: false, document: null, face: null, model: null });
 vi.mock("@/lib/kyc/vision", () => ({ runVisionReview: (...a: unknown[]) => runVisionReview(...a) }));
 
+/** de code op het document (MRZ), standaard: hoort bij Jan Jansen en SPECI2014, geldig tot 2030 */
+const MRZ_JAN = {
+  formaat: "TD1",
+  soort: "ID_CARD",
+  land: "NLD",
+  documentnummer: "SPECI2014",
+  nationaliteit: "NLD",
+  geboortedatum: "1990-01-01",
+  vervaldatum: "2030-01-01",
+  geslacht: "M",
+  achternaam: "JANSEN",
+  voornamen: "JAN",
+  controles: { documentnummer: true, geboortedatum: true, vervaldatum: true, totaal: true },
+  geldig: true,
+  volledig: true,
+  verlopen: false,
+};
+const leesMrzVanFoto = vi.fn().mockResolvedValue({ uitslag: MRZ_JAN, pogingen: 1, ms: 5 });
+vi.mock("@/lib/kyc/mrz-lezen", () => ({ leesMrzVanFoto: (...a: unknown[]) => leesMrzVanFoto(...a) }));
+
 const alertOwnerLater = vi.fn();
 vi.mock("@/lib/ops/alert", () => ({ alertOwnerLater: (...a: unknown[]) => alertOwnerLater(...a) }));
 
@@ -166,6 +186,66 @@ describe("submitFreelancerOnboarding — three-capture flow", () => {
     // The identity-verification row references all three uploads.
     const ivArg = ivCreate.mock.calls[0]![0] as { data: { rawPayload: { uploadIds: Record<string, string> } } };
     expect(ivArg.data.rawPayload.uploadIds).toEqual({ front: "up_1", back: "up_2", selfie: "up_3" });
+  });
+
+  describe("de code op het document zelf (MRZ)", () => {
+    const jan = { id: "usr_1", fullName: "Jan Jansen", kycStatus: "PENDING", freelancerProfile: { id: "fp_1" } };
+    const files = () => ({ front: image("front.jpg"), back: image("back.jpg"), selfie: image("selfie.jpg") });
+
+    it("leest bij een ID-kaart eerst de achterkant", async () => {
+      userFindUnique.mockResolvedValue(jan);
+      const f = files();
+      await submitFreelancerOnboarding({ ...BASE_INPUT, files: f });
+      expect(leesMrzVanFoto.mock.calls[0]![0]).toBe(f.back.bytes);
+    });
+
+    it("wijst af als het document volgens de MRZ verlopen is, ook als er een geldige datum is getypt", async () => {
+      userFindUnique.mockResolvedValue(jan);
+      runVisionReview.mockResolvedValueOnce(VISION_OK);
+      leesMrzVanFoto.mockResolvedValueOnce({ uitslag: { ...MRZ_JAN, vervaldatum: "2024-02-03", verlopen: true }, pogingen: 1, ms: 5 });
+      const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
+      expect(result.outcome).toBe("rejected");
+      expect(result.reasons.join(" ")).toContain("verlopen op 03-02-2024");
+    });
+
+    it("een getypt nummer dat afwijkt van het document: een mens kijkt mee, ook als de beeldcontrole goed is", async () => {
+      userFindUnique.mockResolvedValue(jan);
+      runVisionReview.mockResolvedValueOnce(VISION_OK);
+      leesMrzVanFoto.mockResolvedValueOnce({ uitslag: { ...MRZ_JAN, documentnummer: "XYZ987654" }, pogingen: 1, ms: 5 });
+      const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
+      expect(result.outcome).toBe("in_review");
+      expect(result.checks.find((c) => c.label.startsWith("Documentnummer komt overeen"))?.ok).toBe(false);
+    });
+
+    it("geen MRZ gevonden: nooit afgewezen, maar ook niet automatisch goedgekeurd", async () => {
+      userFindUnique.mockResolvedValue(jan);
+      runVisionReview.mockResolvedValueOnce(VISION_OK);
+      leesMrzVanFoto.mockResolvedValue({ uitslag: null, pogingen: 8, ms: 900 });
+      const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
+      leesMrzVanFoto.mockResolvedValue({ uitslag: MRZ_JAN, pogingen: 1, ms: 5 });
+      expect(result.outcome).toBe("in_review");
+      expect(alertOwnerLater).toHaveBeenCalled();
+    });
+
+    it("de vervaldatum van het document gaat vóór de getypte, en er wordt geen nummer, naam of BSN bewaard", async () => {
+      userFindUnique.mockResolvedValue(jan);
+      runVisionReview.mockResolvedValueOnce(VISION_OK);
+      leesMrzVanFoto.mockResolvedValueOnce({ uitslag: { ...MRZ_JAN, vervaldatum: "2031-05-06" }, pogingen: 1, ms: 5 });
+      await submitFreelancerOnboarding({ ...BASE_INPUT, files: files() });
+      const ivArg = ivCreate.mock.calls[0]![0] as { data: { expiresAt: Date; rawPayload: { mrz: Record<string, unknown> } } };
+      expect(ivArg.data.expiresAt.toISOString().slice(0, 10)).toBe("2031-05-06");
+      expect(ivArg.data.rawPayload.mrz).toMatchObject({ geldig: true, nummerKlopt: true, naamKlopt: true });
+      const opgeslagen = JSON.stringify(ivArg.data.rawPayload.mrz);
+      expect(opgeslagen).not.toContain("SPECI2014");
+      expect(opgeslagen).not.toContain("JANSEN");
+      expect(opgeslagen).not.toContain("1990-01-01");
+    });
+
+    it("een rijbewijs heeft geen MRZ: daar wordt niets gelezen", async () => {
+      userFindUnique.mockResolvedValue(jan);
+      await submitFreelancerOnboarding({ ...BASE_INPUT, documentType: "DRIVERS_LICENSE", documentNumber: "1234567890", files: files() });
+      expect(leesMrzVanFoto).not.toHaveBeenCalled();
+    });
   });
 
   it("does NOT auto-fill the compliance doc for a driver's license — that slot only accepts passport/ID card", async () => {
