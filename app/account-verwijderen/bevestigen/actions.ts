@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { confirmAccountDeletion } from "@/lib/privacy/deletion-request";
+import { isVertrekreden } from "@/lib/privacy/vertrekredenen";
 
 export interface ConfirmDeletionState {
   error: string | null;
@@ -29,7 +30,9 @@ export async function confirmAccountDeletionAction(
     return { error: 'Typ precies "VERWIJDEREN" om te bevestigen.' };
   }
 
-  const res = await confirmAccountDeletion(parsed.data.token);
+  // vrijwillig: alleen een waarde uit de vaste lijst telt, de rest valt weg
+  const reden = formData.get("reden");
+  const res = await confirmAccountDeletion(parsed.data.token, isVertrekreden(reden) ? reden : undefined);
   if (!res.ok) return { error: res.reason ?? "Verwijderen mislukt." };
 
   redirect("/account-verwijderen/voltooid");

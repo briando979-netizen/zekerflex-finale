@@ -6,6 +6,7 @@ import { recordAudit } from "@/lib/audit";
 import { sendMail, accountDeletionEmail } from "@/lib/mail";
 import { fixedWindow, privateRateLimitIdentifier } from "@/lib/rate-limit";
 import { anonymizeUser, type ErasureReport } from "@/lib/privacy/anonymize";
+import type { Vertrekreden } from "@/lib/privacy/vertrekredenen";
 
 // ---------------------------------------------------------------------------
 // Self-service account deletion without being logged in — the Google Play
@@ -79,11 +80,11 @@ export interface ConfirmDeletionResult {
   report?: ErasureReport;
 }
 
-export async function confirmAccountDeletion(token: string): Promise<ConfirmDeletionResult> {
+export async function confirmAccountDeletion(token: string, vertrekreden?: Vertrekreden): Promise<ConfirmDeletionResult> {
   const userId = await consume(token);
   if (!userId) {
     return { ok: false, reason: "Deze link is verlopen of al gebruikt. Vraag een nieuwe aan." };
   }
-  const report = await anonymizeUser(userId, { reason: "zelf verwijderd via publieke aanvraag" });
+  const report = await anonymizeUser(userId, { reason: "zelf verwijderd via publieke aanvraag", vertrekreden });
   return { ok: true, report };
 }

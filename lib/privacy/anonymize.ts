@@ -58,7 +58,8 @@ export async function isErased(userId: string): Promise<boolean> {
 
 export async function anonymizeUser(
   userId: string,
-  opts: { actorUserId?: string | null; reason?: string } = {},
+  /** vertrekreden: de vrijwillige keuze uit lib/privacy/vertrekredenen.ts (geen vrije tekst) */
+  opts: { actorUserId?: string | null; reason?: string; vertrekreden?: string | undefined } = {},
 ): Promise<ErasureReport> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -251,7 +252,7 @@ export async function anonymizeUser(
     }`,
     targetType: "user",
     targetId: userId,
-    metadata: { cleared },
+    metadata: { cleared, ...(opts.vertrekreden ? { vertrekreden: opts.vertrekreden } : {}) },
   });
   recordUserErased();
 

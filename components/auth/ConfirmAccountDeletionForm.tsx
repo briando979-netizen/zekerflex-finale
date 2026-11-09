@@ -6,6 +6,7 @@ import {
   confirmAccountDeletionAction,
   type ConfirmDeletionState,
 } from "@/app/account-verwijderen/bevestigen/actions";
+import { VERTREKREDENEN } from "@/lib/privacy/vertrekredenen";
 
 const initial: ConfirmDeletionState = { error: null };
 
@@ -26,6 +27,19 @@ export function ConfirmAccountDeletionForm({ token }: { token: string }) {
     <form action={action} className="space-y-4">
       <input type="hidden" name="token" value={token} />
       {state.error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{state.error}</p>}
+
+      <label className="block">
+        <span className="field-label">Waarom ga je weg? (niet verplicht)</span>
+        <select name="reden" defaultValue="" className="field-input">
+          <option value="">Zeg ik liever niet</option>
+          {VERTREKREDENEN.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.label}
+            </option>
+          ))}
+        </select>
+        <span className="mt-1 block text-xs text-neutralx-500">Dit helpt ons ZekerFlex beter te maken. We bewaren alleen deze keuze, niet wie je bent.</span>
+      </label>
 
       <label className="block">
         <span className="field-label">

@@ -8,7 +8,7 @@ const LIST_LIMIT = 2000;
 
 export type PersonKind = "flexwerker" | "opdrachtgever" | "beheerder" | "overig";
 
-function kindOf(roles: string[]): PersonKind {
+export function kindOf(roles: string[]): PersonKind {
   if (roles.includes("PLATFORM_ADMIN") || roles.includes("SALES")) return "beheerder";
   if (roles.includes("HQ_ADMIN") || roles.includes("LOCAL_MANAGER") || roles.includes("DISPUTE_MANAGER")) return "opdrachtgever";
   if (roles.includes("FREELANCER")) return "flexwerker";
