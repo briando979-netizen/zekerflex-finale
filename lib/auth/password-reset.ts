@@ -51,7 +51,12 @@ export async function requestPasswordReset(rawEmail: string, ip = "local"): Prom
 
   const link = `${env.APP_BASE_URL.replace(/\/+$/, "")}/wachtwoord-herstellen?token=${token}`;
   const tpl = passwordResetEmail(user.fullName, link);
-  const res = await sendMail({ ...tpl, to: user.email }).catch(() => null);
+  const res = await sendMail({ ...tpl, to: user.email }).catch((err: unknown) => {
+    logger.warn("wachtwoordherstel: mail versturen mislukt", { userId: user.id, error: (err as Error).message });
+    return null;
+  });
+  // Geen melding aan de aanvrager: die mag niet merken of een adres bestaat. Alleen in het log.
+  if (res && !res.delivered) logger.warn("wachtwoordherstel: mail niet afgeleverd", { userId: user.id, transport: res.transport });
 
   await recordAudit({
     category: "SECURITY",

@@ -27,7 +27,18 @@ export async function POST(request: Request): Promise<NextResponse> {
       throw AppError.validation("Controleer de ingevulde gegevens", parsed.error.flatten());
     }
     const account = await registerAccount(parsed.data);
-    await sendVerificationEmail(account.userId, account.email, parsed.data.fullName).catch(() => undefined);
+    let verificatieMailVerstuurd = true;
+    try {
+      const mail = await sendVerificationEmail(account.userId, account.email, parsed.data.fullName);
+      // Een wachttijd (sent: false) is geen fout: er ging net al een mail uit.
+      if (mail.sent && !mail.delivered) {
+        verificatieMailVerstuurd = false;
+        log.warn("verificatiemail niet afgeleverd", { userId: account.userId, transport: mail.transport });
+      }
+    } catch (err) {
+      verificatieMailVerstuurd = false;
+      log.warn("verificatiemail versturen mislukt", { userId: account.userId, error: (err as Error).message });
+    }
     // Doorverwijzen: /r/<code> left a cookie — remember who invited this user.
     const ref = request.headers
       .get("cookie")
@@ -36,7 +47,14 @@ export async function POST(request: Request): Promise<NextResponse> {
       .find((c) => c.startsWith(`${REF_COOKIE}=`))
       ?.slice(REF_COOKIE.length + 1);
     await recordReferral(account.userId, ref ? decodeURIComponent(ref) : null).catch(() => undefined);
-    return NextResponse.json({ ok: true, ...account }, { status: 201 });
+    return NextResponse.json(
+      {
+        ok: true,
+        ...account,
+        ...(verificatieMailVerstuurd ? {} : { waarschuwing: "Je account is aangemaakt, maar de bevestigingsmail kon niet worden verstuurd. Vraag op de volgende pagina een nieuwe mail aan." }),
+      },
+      { status: 201 },
+    );
   } catch (err) {
     const { status, body } = toErrorBody(err);
     if (status >= 500) log.error("register failed", { error: (err as Error).message });

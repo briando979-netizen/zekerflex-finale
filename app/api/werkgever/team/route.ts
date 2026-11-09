@@ -5,6 +5,7 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 import { sendMail, teamInvitedEmail } from "@/lib/mail";
 import { INVITABLE_ROLES, createTeamInvite, listPendingTeamInvites, teamInviteUrl } from "@/lib/team/invite";
 
@@ -95,7 +96,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
 
     const mail = teamInvitedEmail(tenant.name, principal.fullName, teamInviteUrl(token));
-    await sendMail({ ...mail, to: email }).catch(() => undefined);
+    const mailRes = await sendMail({ ...mail, to: email }).catch((err: unknown) => {
+      logger.warn("teamuitnodiging: mail versturen mislukt", { userId: principal.userId, tenantId, error: (err as Error).message });
+      return null;
+    });
+    const mailVerstuurd = Boolean(mailRes?.delivered);
+    if (mailRes && !mailRes.delivered) logger.warn("teamuitnodiging: mail niet afgeleverd", { userId: principal.userId, tenantId, transport: mailRes.transport });
 
     await recordAudit({
       category: "COMPANY",
@@ -108,7 +114,13 @@ export async function POST(request: Request): Promise<NextResponse> {
       metadata: { tenantId, role: parsed.data.role, branchIds: parsed.data.branchIds ?? [] },
     });
 
-    return NextResponse.json({ invite: { id: record.id, email: record.email, role: record.role } }, { status: 201 });
+    return NextResponse.json(
+      {
+        invite: { id: record.id, email: record.email, role: record.role },
+        ...(mailVerstuurd ? {} : { waarschuwing: "De uitnodiging is aangemaakt, maar de mail kon niet worden afgeleverd. Stuur de uitnodiging opnieuw of geef de persoon de link zelf." }),
+      },
+      { status: 201 },
+    );
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });

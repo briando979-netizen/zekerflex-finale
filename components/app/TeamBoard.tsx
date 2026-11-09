@@ -78,6 +78,8 @@ export function TeamBoard({ canManage }: { canManage: boolean }) {
       if (!res.ok) throw new Error(data?.error?.message ?? "Uitnodigen mislukt");
       resetForm();
       await refresh();
+      // De uitnodiging staat er wel, maar de mail kwam niet aan: eerlijk melden.
+      if (typeof data?.waarschuwing === "string") setErr(data.waarschuwing);
     } catch (e) {
       setErr((e as Error).message);
     } finally {

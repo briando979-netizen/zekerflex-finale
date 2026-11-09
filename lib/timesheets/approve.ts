@@ -438,13 +438,13 @@ async function approveTimesheetInner(
       timesheetId: ts.id,
       billableMinutes,
       track: "invoice",
-    }).catch(() => undefined);
+    }).catch((err) => logger.warn("webhook-aflevering mislukt", { event: "timesheet.approved", tenantId: ts.branch.tenantId, error: (err as Error).message }));
     void dispatchWebhook("invoice.issued", ts.branch.tenantId, {
       invoiceId: persisted.platformFeeInvoice.id,
       number: persisted.platformFeeInvoice.number,
       type: "PLATFORM_FEE",
       totalCents: persisted.billing.platformFeeInvoice.totalCents,
-    }).catch(() => undefined);
+    }).catch((err) => logger.warn("webhook-aflevering mislukt", { event: "invoice.issued", tenantId: ts.branch.tenantId, error: (err as Error).message }));
 
     // nothing to pay (free company): no "new invoice" mail
     if (persisted.billing.platformFeeInvoice.totalCents > 0) {
@@ -670,13 +670,13 @@ async function approveViaPayroll(args: {
     timesheetId: ts.id,
     billableMinutes,
     track: "payroll",
-  }).catch(() => undefined);
+  }).catch((err) => logger.warn("webhook-aflevering mislukt", { event: "timesheet.approved", tenantId: ts.branch.tenantId, error: (err as Error).message }));
   void dispatchWebhook("invoice.issued", ts.branch.tenantId, {
     invoiceId: uitzendInvoice.id,
     number: uitzendInvoice.number,
     type: "UITZEND_FEE",
     totalCents: uitzendInvoice.totalCents,
-  }).catch(() => undefined);
+  }).catch((err) => logger.warn("webhook-aflevering mislukt", { event: "invoice.issued", tenantId: ts.branch.tenantId, error: (err as Error).message }));
 
   await notifyInvoiceIssued({
     tenantId: ts.branch.tenantId,

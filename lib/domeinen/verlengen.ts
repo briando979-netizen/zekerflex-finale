@@ -175,7 +175,7 @@ export async function domeinFactuurBetaald(invoiceId: string): Promise<void> {
   if (rec?.invoiceId !== inv.id) return; // de factuur van het eerste jaar, of een oude periode
   await kvSet(verlengdKey(inv.id), { op: new Date().toISOString() });
   await kvDelete(herinneringKey(inv.id)).catch(() => undefined);
-  await recordAudit({ category: "BILLING", action: "domein.verlengd", actorLabel: "integration:stripe", summary: `${b.domein} verlengd (factuur ${inv.number} betaald)`, targetType: "domein-bestelling", targetId: b.id }).catch(() => undefined);
+  await recordAudit({ category: "BILLING", action: "domein.verlengd", actorLabel: "integration:stripe", summary: `${b.domein} verlengd (factuur ${inv.number} betaald)`, targetType: "domein-bestelling", targetId: b.id }).catch((err: unknown) => logger.warn("domein verlengd: auditregel schrijven mislukt", { bestellingId: b.id, error: (err as Error).message }));
 
   if (b.status === "OPGEZEGD") {
     // te laat betaald: de betaling dekt het volgende jaar, maar de opzegging moet worden

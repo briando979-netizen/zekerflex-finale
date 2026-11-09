@@ -1,12 +1,22 @@
 import { createHmac, randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { decryptWebhookSecret } from "@/lib/webhooks/crypto";
+import { logger } from "@/lib/logger";
 import { postToChatHook } from "@/lib/integrations/employer-links";
 
 export type WebhookEventType = "shift.matched" | "freelancer.checked_in" | "timesheet.approved" | "dispute.opened" | "invoice.issued";
 
 function signature(secret: string, timestamp: string, body: string): string {
   return createHmac("sha256", secret).update(`${timestamp}.${body}`).digest("hex");
+}
+
+/** Alleen de host van een klant-URL: het pad of de querystring kan een geheim bevatten. */
+export function hostVan(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return "onbekend";
+  }
 }
 
 export async function dispatchWebhook(eventType: WebhookEventType, tenantId: string, payload: Record<string, unknown>): Promise<void> {
@@ -30,6 +40,6 @@ export async function dispatchWebhook(eventType: WebhookEventType, tenantId: str
         if (attempt < 5) await new Promise((resolve) => setTimeout(resolve, 2 ** attempt * 1000));
       }
     }
-    if (lastError) console.warn(`[webhook] delivery failed after retries: ${subscription.url}`);
+    if (lastError) logger.warn("webhook-aflevering definitief mislukt", { host: hostVan(subscription.url), event: eventType, subscriptionId: subscription.id });
   }
 }

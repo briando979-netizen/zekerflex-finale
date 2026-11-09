@@ -120,7 +120,7 @@ export async function executePayout(paymentId: string, opts: { speed: PayoutSpee
     if (result.status === PaymentStatus.SETTLED) await prisma.timesheet.update({ where: { id: ts.id }, data: { status: TimesheetStatus.PAID } });
     return { status: result.status, providerRef: result.providerRef };
   } catch (err) {
-    const message = err instanceof AppError ? err.message : "Payout error";
+    const message = err instanceof AppError ? err.message : "Uitbetaling mislukt door een onverwachte fout";
     await prisma.payment.update({ where: { id: payment.id }, data: { status: PaymentStatus.FAILED, failureCode: message.slice(0, 120) } });
     alertOwnerLater({
       key: `payout:${payment.id}`,
@@ -167,7 +167,11 @@ export async function runScheduledPayouts(now = new Date(), deadline = Date.now(
     if (!page.length) break;
     after = page.at(-1)!.key;
     for (const { key, value } of page) {
-      const r = await executePayout(key.slice("payout-scheduled:".length), { speed: value.speed, feeCents: value.feeCents }).catch(() => ({ status: PaymentStatus.FAILED, providerRef: null }));
+      const r = await executePayout(key.slice("payout-scheduled:".length), { speed: value.speed, feeCents: value.feeCents }).catch((err: unknown) => {
+        // Fout vóór de eigen afhandeling (betaling niet gevonden, geen urenbriefje, bestemming opvragen): anders blijft hij onzichtbaar.
+        logger.error("geplande uitbetaling mislukt vóór verwerking", { paymentId: key.slice("payout-scheduled:".length), error: (err as Error).message });
+        return { status: PaymentStatus.FAILED, providerRef: null };
+      });
       if (r.status === PaymentStatus.FAILED) failed++;
       else {
         paid++;
