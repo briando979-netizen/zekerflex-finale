@@ -105,7 +105,7 @@ export function WerkerStartWizard({
               >
                 <Dot done={done[k]} active={isOpen} />
                 <span className="flex-1">{label[k]}</span>
-                {k === "kind" && kind && <span className="text-xs font-normal text-neutralx-500">{t.chosen.replace("{kind}", t.kinds[kind][0])}</span>}
+                {k === "kind" && kind && <span className="text-xs font-normal text-neutralx-500">{t.chosen.replace("{kind}", t.kinds[kind][0] ?? "")}</span>}
               </button>
 
               {isOpen && k === "kind" && (
