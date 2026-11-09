@@ -42,9 +42,16 @@ export type ScanAfrondenOverdracht = () => Promise<{ ok: true; uitslag: ScanUits
 
 /** De stand van "verder op je telefoon" op de laptop. */
 interface TelefoonStand {
-  status: "maken" | "wacht" | "geopend" | "ontvangen" | "verlopen" | "fout";
+  /** "controle": de telefoon leverde in; eerst nakijken, pas dan versturen (review H2) */
+  status: "maken" | "wacht" | "geopend" | "controle" | "ontvangen" | "verlopen" | "geweigerd" | "fout";
   qr?: string;
   tekst?: string;
+  /** een ander toestel probeerde de code ook te openen */
+  anderToestel?: boolean;
+  /** wat er binnenkwam (geen volledig documentnummer) */
+  voorbeeld?: { soort: string; naam: string; nummer: string; datum: string };
+  /** om de foto's na een nieuwe inlevering opnieuw te laden */
+  ronde?: number;
 }
 
 type T = AuthDict["onb"];
@@ -213,8 +220,8 @@ export function IdScan({
   onSluiten: (uitslag: ScanUitslag | null) => void;
   /** "telefoon": geopend via de QR-code op de laptop (/id-scan), niet ingelogd */
   modus?: "laptop" | "telefoon";
-  /** de eenmalige code van de QR-code (alleen op de telefoon) */
-  overdracht?: string;
+  /** de eenmalige code van de QR-code en het toesteltoken van deze telefoon (alleen op de telefoon) */
+  overdracht?: { code: string; toestel: string };
   /** voornaam voor "Hoi …" op de telefoon */
   groet?: string;
   /** laptop: met de foto's van de telefoon afronden; zonder dit geen QR-knop */
@@ -264,9 +271,10 @@ export function IdScan({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- alleen bij het openen van de stap
   }, [stap, tel]);
 
-  /** Laptop: de telefoon is klaar; afronden met de foto's die hij instuurde. */
+  /** Laptop: de werker keurde goed wat de telefoon instuurde; nu pas afronden (review H2). */
   async function rondTelefoonAf() {
     if (!onAfrondenOverdracht) return;
+    setTel((v0) => (v0 ? { ...v0, status: "ontvangen" } : v0));
     setStap("bezig");
     const r = await onAfrondenOverdracht();
     if (r.ok) {
@@ -278,22 +286,43 @@ export function IdScan({
     }
   }
 
-  // laptop: elke 2 s kijken of de telefoon de link opende en of hij klaar is
+  /** Laptop: "klopt niet": alles van de telefoon weg en een nieuwe QR-code. */
+  async function kloptNiet() {
+    await fetch("/api/onboarding/overdracht", { method: "DELETE" }).catch(() => null);
+    setTel(null);
+  }
+
+  // laptop: elke 2 s kijken of de telefoon de link opende, of een ander toestel het probeerde,
+  // en of hij klaar is. Bij "klaar" niet meteen versturen: eerst laat de laptop zien wat er kwam.
   const telWacht = stap === "telefoon" && (tel?.status === "wacht" || tel?.status === "geopend");
   useEffect(() => {
     if (!telWacht) return;
     let stop = false;
     const kijk = async () => {
       const res = await fetch("/api/onboarding/overdracht", { cache: "no-store" }).catch(() => null);
-      const data = res?.ok ? ((await res.json().catch(() => null)) as { overdracht?: { status?: string } | null } | null) : null;
+      const data = res?.ok
+        ? ((await res.json().catch(() => null)) as {
+            overdracht?: { status?: string; anderToestel?: boolean } | null;
+            voorbeeld?: TelefoonStand["voorbeeld"] | null;
+          } | null)
+        : null;
       const st = data?.overdracht?.status;
       if (stop || !st) return;
-      if (st === "geopend") setTel((v0) => (v0 && v0.status !== "geopend" ? { ...v0, status: "geopend" } : v0));
+      const ander = data?.overdracht?.anderToestel === true;
+      if (st === "geopend") setTel((v0) => (v0 && (v0.status !== "geopend" || v0.anderToestel !== ander) ? { ...v0, status: "geopend", anderToestel: ander } : v0));
       else if (st === "verlopen") setTel({ status: "verlopen" });
-      else if (st === "klaar") {
+      else if (st === "geweigerd") {
         stop = true;
-        setTel((v0) => (v0 ? { ...v0, status: "ontvangen" } : v0));
-        void rondTelefoonAf();
+        setTel({ status: "geweigerd" });
+      } else if (st === "klaar") {
+        stop = true;
+        setTel((v0) => ({
+          ...(v0 ?? {}),
+          status: "controle",
+          anderToestel: ander,
+          ronde: Date.now(),
+          ...(data?.voorbeeld ? { voorbeeld: data.voorbeeld } : {}),
+        }));
       }
     };
     const id = setInterval(() => void kijk(), 2000);
@@ -301,7 +330,6 @@ export function IdScan({
       stop = true;
       clearInterval(id);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- rondTelefoonAf hoort bij deze ronde
   }, [telWacht]);
 
   // alleen een app die de chip kan lezen (lib/app-mode.ts): de website en oudere apps slaan de stap over
@@ -512,10 +540,56 @@ export function IdScan({
               </>
             )}
 
-            {stap === "telefoon" && (
+            {stap === "telefoon" && tel?.status === "controle" && (
+              <>
+                {/* eerst nakijken wat de telefoon instuurde; pas dan versturen (review H2) */}
+                <h2 className="font-display text-lg font-bold text-ink">{s.telefoonControle}</h2>
+                {tel.anderToestel && (
+                  <p role="alert" className="mt-3 rounded-lg border border-warn/40 bg-warn/10 px-3 py-2.5 text-sm text-ink">
+                    {s.telefoonAnderToestel}
+                  </p>
+                )}
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  {(["voor", "achter", "selfie"] as const).map((f) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={f}
+                      src={`/api/onboarding/overdracht?foto=${f}&r=${tel.ronde ?? 0}`}
+                      alt=""
+                      className="aspect-[3/4] w-full rounded-lg border border-hair object-cover"
+                    />
+                  ))}
+                </div>
+                {tel.voorbeeld && (
+                  <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+                    <dt className="text-neutralx-500">{s.telefoonNaam}</dt>
+                    <dd className="font-medium text-ink">{tel.voorbeeld.naam}</dd>
+                    <dt className="text-neutralx-500">{s.telefoonNummer}</dt>
+                    <dd className="font-medium text-ink">{tel.voorbeeld.nummer}</dd>
+                    <dt className="text-neutralx-500">{s.telefoonGeldigTot}</dt>
+                    <dd className="font-medium text-ink">{tel.voorbeeld.datum.split("-").reverse().join("-")}</dd>
+                  </dl>
+                )}
+                <div className="mt-6 grid gap-2">
+                  <button type="button" onClick={() => void rondTelefoonAf()} className="btn-primary w-full">
+                    {s.telefoonKlopt}
+                  </button>
+                  <button type="button" onClick={() => void kloptNiet()} className="btn-ghost w-full">
+                    {s.telefoonKloptNiet}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {stap === "telefoon" && tel?.status !== "controle" && (
               <>
                 <h2 className="font-display text-lg font-bold text-ink">{s.telefoonTitel}</h2>
                 <p className="mt-1 text-sm leading-relaxed text-neutralx-500">{s.telefoonUitleg}</p>
+                {tel?.anderToestel && (
+                  <p role="alert" className="mt-3 rounded-lg border border-warn/40 bg-warn/10 px-3 py-2.5 text-sm text-ink">
+                    {s.telefoonAnderToestel}
+                  </p>
+                )}
                 <div className="mt-6 grid min-h-[268px] place-items-center">
                   {tel?.qr && (tel.status === "wacht" || tel.status === "geopend") ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -531,9 +605,11 @@ export function IdScan({
                       ? s.telefoonOntvangen
                       : tel?.status === "verlopen"
                         ? s.telefoonVerlopen
-                        : tel?.status === "wacht"
-                          ? s.telefoonWacht
-                          : ""}
+                        : tel?.status === "geweigerd"
+                          ? s.telefoonGeweigerd
+                          : tel?.status === "wacht"
+                            ? s.telefoonWacht
+                            : ""}
                 </p>
                 {tel?.status === "fout" && (
                   <p role="alert" className="mt-3 rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">
@@ -541,7 +617,7 @@ export function IdScan({
                   </p>
                 )}
                 <div className="mt-6 grid gap-2">
-                  {(tel?.status === "verlopen" || tel?.status === "fout") && (
+                  {(tel?.status === "verlopen" || tel?.status === "fout" || tel?.status === "geweigerd") && (
                     <button type="button" onClick={() => void maakQr()} className="btn-primary w-full">
                       {s.nieuweCode}
                     </button>

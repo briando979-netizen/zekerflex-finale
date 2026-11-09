@@ -48,11 +48,15 @@ export const goedGelezen = (l: Lezing | null): boolean => Boolean(l && l.status 
  * Stuurt één foto naar de server en geeft terug wat er gelezen is. Gooit nooit.
  * Met `overdracht` (de telefoon na een QR-code, niet ingelogd) via /api/id-overdracht/lezen.
  */
-export async function leesDocumentFoto(file: File, t: AuthDict["onb"], overdracht?: string): Promise<Lezing> {
+export async function leesDocumentFoto(file: File, t: AuthDict["onb"], overdracht?: { code: string; toestel: string }): Promise<Lezing> {
   try {
     const body = new FormData();
     body.set("foto", file);
-    if (overdracht) body.set("code", overdracht);
+    if (overdracht) {
+      body.set("code", overdracht.code);
+      // alleen het toestel dat de link als eerste opende (lib/kyc/overdracht.ts)
+      body.set("toestel", overdracht.toestel);
+    }
     const res = await fetch(overdracht ? "/api/id-overdracht/lezen" : "/api/onboarding/document-lezen", { method: "POST", body });
     const data = (await res.json().catch(() => ({}))) as Antwoord;
     if (!res.ok) return { status: "fout", melding: data.error?.message ?? t.lezenOnzeker };

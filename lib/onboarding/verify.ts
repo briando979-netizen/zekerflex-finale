@@ -62,6 +62,12 @@ export interface OnboardingInput {
   documentExpiry: string; // yyyy-mm-dd
   nameOnDocument: string;
   files: { front: CapturedImage; back: CapturedImage; selfie: CapturedImage };
+  /**
+   * De foto's kwamen van een tweede toestel ("verder op je telefoon", lib/kyc/overdracht.ts).
+   * Dan beslist altijd een mens: een doorgestuurde link kan anders iemands eigen ID en selfie
+   * aan een vreemd account koppelen (review H1).
+   */
+  viaTweedeToestel?: boolean | undefined;
 }
 
 export interface OnboardingResult {
@@ -632,6 +638,13 @@ export async function submitFreelancerOnboarding(
   const leeftijd = mrzGeldig ? leeftijdsgroep(mrz.geboortedatum, amsterdamDayKey(new Date())) : null;
   if (werkrecht) checks.push({ label: "Recht om te werken in Nederland", ok: werkrecht === "vrij", detail: WERKRECHT_TEKST[werkrecht] });
   if (leeftijd) checks.push({ label: "Leeftijd", ok: leeftijd === "volwassen", detail: LEEFTIJD_TEKST[leeftijd] });
+  if (input.viaTweedeToestel) {
+    checks.push({
+      label: "Ingestuurd vanaf je telefoon",
+      ok: false,
+      detail: "Je foto's kwamen via je telefoon binnen. Een medewerker kijkt mee voordat je verificatie rond is.",
+    });
+  }
 
   // hetzelfde document (HMAC over het nummer, review N3) bij een ander account: een mens kijkt
   const docHash = documentHash(input.documentNumber);
@@ -707,6 +720,8 @@ export async function submitFreelancerOnboarding(
     werkrecht === "vrij" &&
     // alleen een vastgestelde volwassen leeftijd; onbekend beslist een mens (review N7)
     leeftijd === "volwassen" &&
+    // foto's van een tweede toestel: altijd een mens (review H1, lib/kyc/overdracht.ts)
+    !input.viaTweedeToestel &&
     !elders &&
     !chipFotoVerschil &&
     !zegelElders &&

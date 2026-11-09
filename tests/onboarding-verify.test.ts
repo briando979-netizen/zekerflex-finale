@@ -186,6 +186,23 @@ describe("submitFreelancerOnboarding — three-capture flow", () => {
     expect(complianceCreate).not.toHaveBeenCalled();
   });
 
+  it("review H1 (telefoon): dezelfde goede aanvraag via een tweede toestel gaat nooit automatisch door", async () => {
+    userFindUnique.mockResolvedValue({
+      id: "usr_1",
+      fullName: "Jan Jansen",
+      kycStatus: "PENDING",
+      freelancerProfile: { id: "fp_1" },
+    });
+    runVisionReview.mockResolvedValueOnce(VISION_OK);
+    const result = await submitFreelancerOnboarding({
+      ...BASE_INPUT,
+      files: { front: image("front.jpg"), back: image("back.jpg"), selfie: image("selfie.jpg") },
+      viaTweedeToestel: true,
+    });
+    expect(result.outcome).toBe("in_review");
+    expect(result.checks.some((c) => c.label === "Ingestuurd vanaf je telefoon" && !c.ok)).toBe(true);
+  });
+
   it("stores all three photos and auto-fills the compliance ID doc from the front photo", async () => {
     userFindUnique.mockResolvedValue({
       id: "usr_1",
