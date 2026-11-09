@@ -35,6 +35,7 @@ export const FLAG_REGISTRY: FlagDef[] = [
   { key: "netwerk-pakketten", label: "Verbinding: wifi, VPN en 5G", description: "De netwerkpakketten in het werkgever-menu (Wifi en VPN) en hun API. Uit = het onderdeel is weg; bestaande instellingen blijven bewaard.", default: true },
   { key: "locatie-modules", label: "Op locatie: portofoon, toegang, kluis, printen", description: "De vier Op locatie-modules in het werkgever-menu, de werker-app en hun API (lib/locatie). Uit = het onderdeel is weg; instellingen, kentekens en de kluis blijven bewaard.", default: true },
   { key: "opbouwfase-melding", label: "Melding 'nog in de opbouwfase'", description: "Balk bovenaan /dashboard en /werkgever: nog niet officieel live, testklussen, gegevens veilig, ideeën welkom. Zet uit bij de officiële start.", default: true },
+  { key: "onboarding-onderhoud", label: "Melding 'we verbeteren de aanmelding'", description: "Melding in de start van werkers en werkgevers: we verbeteren de onboarding, dingen kunnen haperen, wacht even tot je bericht krijgt; testklussen; begin volgend jaar online. Zet uit zodra de onboarding weer soepel werkt.", default: true },
 ];
 
 export interface FlagOverride {

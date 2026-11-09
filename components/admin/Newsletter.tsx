@@ -90,6 +90,32 @@ Bedankt dat je met ons meebouwt!
 
 Het ZekerFlex-team`,
   },
+  {
+    // 10 nov, op verzoek van de eigenaar: we verbeteren de onboarding, even wachten tot we een bericht sturen
+    label: "Onboarding wordt verbeterd: even wachten",
+    subject: "ZekerFlex: we verbeteren de aanmelding, even geduld",
+    body: `Hoi,
+
+We zijn bezig met het verbeteren van de onboarding: je aanmelding en het uploaden van je gegevens. Daardoor kan het tijdelijk haperen en kunnen dingen niet goed gelezen worden.
+
+Wil je soepel en snel je gegevens uploaden, en daarna op klussen reageren en geld verdienen? Wacht dan even met de onboarding. Je krijgt van ons een bericht zodra we klaar zijn.
+
+Let op: ZekerFlex is nog volop in ontwikkeling. De klussen die je ziet zijn testklussen: geen echt werk, je hoeft er niet heen en er hoort geen betaling bij. Begin volgend jaar gaan we online. Je kunt alvast proeven en bekijken hoe het er straks uitziet.
+
+Bedankt voor je begrip!
+
+Het ZekerFlex-team
+
+---
+
+English: We are improving the onboarding (sign-up and uploading your details), so things may stall or not be read correctly for a while. Please wait a little with the onboarding: we will send you a message as soon as we are done. ZekerFlex is still in full development and the jobs you see are test jobs. We go online early next year. Thank you for your understanding!
+
+Polski: Ulepszamy proces rejestracji i przesyłania danych, więc przez jakiś czas może on działać z zakłóceniami albo niektóre rzeczy mogą nie zostać poprawnie odczytane. Poczekaj chwilę z rejestracją: dostaniesz od nas wiadomość, gdy skończymy. ZekerFlex jest nadal w pełnym rozwoju, a zlecenia, które widzisz, to zlecenia testowe. Na początku przyszłego roku wystartujemy online. Dziękujemy za wyrozumiałość!
+
+Română: Îmbunătățim procesul de înscriere și de încărcare a datelor, așa că poate funcționa temporar cu probleme sau unele lucruri pot să nu fie citite corect. Așteaptă puțin cu înscrierea: vei primi un mesaj de la noi de îndată ce terminăm. ZekerFlex este încă în plină dezvoltare, iar joburile pe care le vezi sunt joburi de test. Pornim online la începutul anului viitor. Mulțumim pentru înțelegere!
+
+Українською: Ми покращуємо реєстрацію та завантаження даних, тому деякий час вона може працювати з перебоями, а деякі дані можуть читатися неправильно. Трохи зачекайте з реєстрацією: ви отримаєте від нас повідомлення, щойно ми закінчимо. ZekerFlex ще перебуває в активній розробці, а завдання, які ви бачите, — тестові. На початку наступного року ми запустимося онлайн. Дякуємо за розуміння!`,
+  },
 ];
 
 const STATUS: Record<Sub["status"], { label: string; tone: Tone }> = {

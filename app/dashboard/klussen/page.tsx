@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { WelcomeBack } from "@/components/app/WelcomeBack";
+import { OnboardingOnderhoudBalk } from "@/components/app/OnboardingOnderhoudBalk";
 import { TodayStrip } from "@/components/app/TodayStrip";
 import { MilestoneCelebration } from "@/components/app/MilestoneCelebration";
 import { WerkerStartWizard } from "@/components/app/WerkerStartWizard";
@@ -67,6 +68,7 @@ export default async function KlussenPage(
       />
       <WilReagerenNudge />
       {/* ook ná een compleet profiel: zonder recht om te werken geen betaalde klus (lib/werkrecht) */}
+      {(!overview.profileComplete || !werkrecht.ok) && <OnboardingOnderhoudBalk soort="werker" />}
       {(!overview.profileComplete || !werkrecht.ok) && (
         <WerkerStartWizard
           workerKind={fiscal.workerKind}

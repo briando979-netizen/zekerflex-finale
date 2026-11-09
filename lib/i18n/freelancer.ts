@@ -66,6 +66,11 @@ const nl = {
     meer: "Lees meer",
     sluit: "Melding sluiten",
   },
+  onderhoud: {
+    titel: "We verbeteren de aanmelding",
+    tekst:
+      "We zijn bezig met het verbeteren van de onboarding. Daardoor kan het tijdelijk haperen en kunnen dingen niet goed gelezen worden. Wil je soepel en snel je gegevens uploaden en daarna op klussen reageren? Wacht dan even met de onboarding: je krijgt een bericht zodra we klaar zijn. ZekerFlex is nog volop in ontwikkeling en de klussen die je ziet zijn testklussen. Begin volgend jaar gaan we online; je kunt alvast proeven hoe het er straks uitziet. Bedankt voor je begrip!",
+  },
   date: { wd: ["zo", "ma", "di", "wo", "do", "vr", "za"], mon: ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"] },
   cat: { retail: "Retail", horeca: "Horeca", logistiek: "Logistiek", schoonmaak: "Schoonmaak", evenement: "Evenement", zorg: "Zorg", kantoor: "Kantoor", bouw: "Bouw & techniek", productie: "Productie & industrie", promotie: "Promotie & sales", beveiliging: "Beveiliging", kinderopvang: "Kinderopvang & onderwijs", auto: "Auto & fiets", agrarisch: "Land- & tuinbouw", algemeen: "Algemeen", overig: "Overig" },
   // pushbanner (components/app/PushToggle.tsx): waarom aanzetten, iPhone-uitleg
@@ -1113,6 +1118,11 @@ const en: FreelancerDict = {
     meer: "Read more",
     sluit: "Close message",
   },
+  onderhoud: {
+    titel: "We are improving the sign-up",
+    tekst:
+      "We are working on improving the onboarding. Because of that it may stall for a while and some things may not be read correctly. Do you want to upload your details smoothly and quickly and then respond to jobs? Then please wait a little with the onboarding: we will send you a message as soon as we are done. ZekerFlex is still in full development and the jobs you see are test jobs. We go online early next year; you can already get a taste of what it will look like. Thank you for your understanding!",
+  },
   date: { wd: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], mon: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] },
   cat: { retail: "Retail", horeca: "Hospitality", logistiek: "Logistics", schoonmaak: "Cleaning", evenement: "Events", zorg: "Care", kantoor: "Office", bouw: "Construction & technical", productie: "Production & industry", promotie: "Promotion & sales", beveiliging: "Security", kinderopvang: "Childcare & education", auto: "Cars & bikes", agrarisch: "Agriculture & horticulture", algemeen: "General", overig: "Other" },
   // pushbanner (components/app/PushToggle.tsx): waarom aanzetten, iPhone-uitleg
@@ -2155,6 +2165,11 @@ const pl: FreelancerDict = {
       "Dziękujemy, że jesteś z nami od początku! To, co widzisz, naprawdę działa, ale jeszcze oficjalnie nie wystartowaliśmy. Niektóre zlecenia to zlecenia testowe, które przygotowaliśmy sami: to nie jest prawdziwa praca, nie musisz tam jechać i nie ma za nie wynagrodzenia. Twoje dane są bezpieczne i nie musisz niczego usuwać. Wypróbuj wszystko i podziel się z nami swoimi pomysłami.",
     meer: "Czytaj więcej",
     sluit: "Zamknij komunikat",
+  },
+  onderhoud: {
+    titel: "Ulepszamy rejestrację",
+    tekst:
+      "Pracujemy nad ulepszeniem procesu rejestracji. Dlatego może on chwilowo działać z zakłóceniami, a niektóre rzeczy mogą nie zostać poprawnie odczytane. Chcesz sprawnie i szybko przesłać swoje dane, a potem odpowiadać na zlecenia? Poczekaj więc chwilę z rejestracją: dostaniesz wiadomość, gdy skończymy. ZekerFlex jest nadal w pełnym rozwoju, a zlecenia, które widzisz, to zlecenia testowe. Na początku przyszłego roku wystartujemy online; już teraz możesz zobaczyć, jak to będzie wyglądać. Dziękujemy za wyrozumiałość!",
   },
   date: { wd: ["nd", "pn", "wt", "śr", "cz", "pt", "sb"], mon: ["sty", "lut", "mar", "kwi", "maj", "cze", "lip", "sie", "wrz", "paź", "lis", "gru"] },
   cat: { retail: "Handel", horeca: "Gastronomia", logistiek: "Logistyka", schoonmaak: "Sprzątanie", evenement: "Wydarzenia", zorg: "Opieka", kantoor: "Biuro", bouw: "Budowa i technika", productie: "Produkcja i przemysł", promotie: "Promocja i sprzedaż", beveiliging: "Ochrona", kinderopvang: "Opieka nad dziećmi i edukacja", auto: "Samochody i rowery", agrarisch: "Rolnictwo i ogrodnictwo", algemeen: "Ogólne", overig: "Inne" },
@@ -3199,6 +3214,11 @@ const ro: FreelancerDict = {
     meer: "Citește mai mult",
     sluit: "Închide mesajul",
   },
+  onderhoud: {
+    titel: "Îmbunătățim înscrierea",
+    tekst:
+      "Lucrăm la îmbunătățirea procesului de înscriere. De aceea poate funcționa temporar cu probleme și unele lucruri pot să nu fie citite corect. Vrei să îți încarci datele fluent și rapid și apoi să răspunzi la joburi? Așteaptă puțin cu înscrierea: vei primi un mesaj de îndată ce terminăm. ZekerFlex este încă în plină dezvoltare, iar joburile pe care le vezi sunt joburi de test. Pornim online la începutul anului viitor; poți încerca de pe acum cum va arăta. Mulțumim pentru înțelegere!",
+  },
   date: { wd: ["dum", "lun", "mar", "mie", "joi", "vin", "sâm"], mon: ["ian", "feb", "mar", "apr", "mai", "iun", "iul", "aug", "sep", "oct", "nov", "dec"] },
   cat: { retail: "Comerț", horeca: "Horeca", logistiek: "Logistică", schoonmaak: "Curățenie", evenement: "Evenimente", zorg: "Îngrijire", kantoor: "Birou", bouw: "Construcții și tehnică", productie: "Producție și industrie", promotie: "Promovare și vânzări", beveiliging: "Pază", kinderopvang: "Îngrijirea copiilor și educație", auto: "Auto și biciclete", agrarisch: "Agricultură și horticultură", algemeen: "General", overig: "Altele" },
   // pushbanner (components/app/PushToggle.tsx): waarom aanzetten, iPhone-uitleg
@@ -4241,6 +4261,11 @@ const uk: FreelancerDict = {
       "Дякуємо, що ви з нами від самого початку! Усе, що ви бачите, справді працює, але ми ще офіційно не запустилися. Деякі завдання — тестові, ми створили їх самі: це не справжня робота, туди не потрібно їхати і оплати за них немає. Ваші дані в безпеці, і нічого видаляти не потрібно. Спокійно пробуйте все й діліться з нами своїми ідеями.",
     meer: "Детальніше",
     sluit: "Закрити повідомлення",
+  },
+  onderhoud: {
+    titel: "Ми покращуємо реєстрацію",
+    tekst:
+      "Ми працюємо над покращенням реєстрації. Через це вона може тимчасово працювати з перебоями, а деякі дані можуть читатися неправильно. Хочете швидко й без проблем завантажити свої дані, а потім відгукуватися на завдання? Тоді трохи зачекайте з реєстрацією: ви отримаєте повідомлення, щойно ми закінчимо. ZekerFlex ще перебуває в активній розробці, а завдання, які ви бачите, — тестові. На початку наступного року ми запустимося онлайн; вже зараз ви можете спробувати, як це виглядатиме. Дякуємо за розуміння!",
   },
   date: { wd: ["нд", "пн", "вт", "ср", "чт", "пт", "сб"], mon: ["січ", "лют", "бер", "квіт", "трав", "черв", "лип", "серп", "вер", "жовт", "лист", "груд"] },
   cat: { retail: "Торгівля", horeca: "Ресторани й готелі", logistiek: "Логістика", schoonmaak: "Прибирання", evenement: "Події", zorg: "Догляд", kantoor: "Офіс", bouw: "Будівництво й техніка", productie: "Виробництво й промисловість", promotie: "Промоція та продажі", beveiliging: "Охорона", kinderopvang: "Догляд за дітьми й освіта", auto: "Авто й велосипеди", agrarisch: "Сільське господарство й садівництво", algemeen: "Загальне", overig: "Інше" },

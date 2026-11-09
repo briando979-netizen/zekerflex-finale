@@ -6,6 +6,7 @@ import { resolveEmployerScope, getEmployerOverview } from "@/lib/dashboard/emplo
 import { pendingEmployerReviews } from "@/lib/reviews/pending";
 import { isEmployerOnboarded } from "@/lib/onboarding/employer";
 import { tenantVerification } from "@/lib/company/verified";
+import { OnboardingOnderhoudBalk } from "@/components/app/OnboardingOnderhoudBalk";
 import { prisma } from "@/lib/prisma";
 import { getOrgProfileExtra, type OrgProfileExtra } from "@/lib/profile/store";
 import { recentThreads } from "@/lib/messaging/recent";
@@ -133,6 +134,7 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
           </p>
         </div>
       )}
+      {showWizard && <OnboardingOnderhoudBalk soort="werkgever" />}
       {showWizard ? (
         <section className="mb-12">
           <p className="eyebrow mb-2">{t.start.eyebrow}</p>
