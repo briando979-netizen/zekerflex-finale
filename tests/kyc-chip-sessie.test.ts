@@ -15,8 +15,9 @@ vi.mock("@/lib/storage/kv", () => ({
   },
 }));
 vi.mock("@/lib/env", () => ({ env: { AUTH_SECRET: "proef-geheim-voor-de-chipsessie-test-0123456789" } }));
+vi.mock("@/lib/prisma", () => ({ prisma: { user: { findUnique: async () => ({ fullName: "Briando van Essen" }) } } }));
 
-import { bewaarMrzVoorChip, chipLezing, chipSleutel, chipTekst, rondChipAf, ruimChipOp, startChipSessie, wisChipGegevens } from "@/lib/kyc/chip/sessie";
+import { bewaarMrzVoorChip, chipLezing, chipSleutel, chipTekst, maskeerNaam, rondChipAf, ruimChipOp, startChipSessie, wisChipGegevens } from "@/lib/kyc/chip/sessie";
 import { appKanChipLezen } from "@/lib/app-mode";
 import type { MrzUitslag } from "@/lib/kyc/mrz";
 
@@ -57,9 +58,16 @@ describe("chip lezen: de koppeling website → app → server", () => {
     const code = (await startChipSessie("usr_1", NU))!;
     expect(code).toMatch(/^usr_1\.[A-Za-z0-9_-]{32}$/);
     for (let i = 0; i < 5; i++) {
-      expect(await chipSleutel(code, NU)).toEqual({ documentnummer: "IXA12B3C4", geboortedatum: "030616", vervaldatum: "340312" });
+      // met de gemaskeerde accountnaam: de app laat bevestigen dat het jouw account is (review M2)
+      expect(await chipSleutel(code, NU)).toEqual({ documentnummer: "IXA12B3C4", geboortedatum: "030616", vervaldatum: "340312", naam: "Briando v. E." });
     }
     expect(await chipSleutel(code, NU)).toBeNull();
+  });
+
+  it("maskeert de accountnaam: herkenbaar voor jezelf, niet voor een ander (review M2)", () => {
+    expect(maskeerNaam("Briando van Essen")).toBe("Briando v. E.");
+    expect(maskeerNaam("Jan")).toBe("Jan");
+    expect(maskeerNaam("")).toBe("");
   });
 
   it("een code verloopt na tien minuten, en een verzonnen code werkt nooit", async () => {

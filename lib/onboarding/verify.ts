@@ -11,8 +11,11 @@ import { registerFreelancerCompany } from "@/lib/company/registration";
 import { storeUpload } from "@/lib/storage/local";
 import { runVisionReview } from "@/lib/kyc/vision";
 import { leesMrzVanFoto } from "@/lib/kyc/mrz-lezen";
-import { naamVoluit, zelfdeNummer, type MrzUitslag } from "@/lib/kyc/mrz";
+import { zelfdeNummer, type MrzUitslag } from "@/lib/kyc/mrz";
+import { documentNaamPast } from "@/lib/kyc/document-naam";
 import { chipLezing, wisChipGegevens } from "@/lib/kyc/chip/sessie";
+import { LEEFTIJD_TEKST, WERKRECHT_TEKST, leeftijdsgroep, werkrechtVan } from "@/lib/kyc/werkrecht";
+import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { consumeVerifiedWalletAttempt } from "@/lib/kyc/wallet";
 import { flagIbanChanged } from "@/lib/compliance/documents";
 import { eisIbanBevestiging } from "@/lib/fiscal/iban-bevestiging";
@@ -500,7 +503,8 @@ export async function submitFreelancerOnboarding(
   // controlecijfer: dat is hard bewijs en gaat vóór wat iemand intypte.
   const mrzGeldig = mrz?.geldig === true;
   const mrzNummerOk = mrzGeldig && zelfdeNummer(mrz.documentnummer, input.documentNumber);
-  const mrzNaamOk = mrzGeldig && (nameSimilarity(user.fullName, naamVoluit(mrz)) >= 0.5 || (companyName ? nameSimilarity(companyName, naamVoluit(mrz)) >= 0.5 : false));
+  // (review M3) achternaam exact + eerste voornaam; "Jan Jansen" is niet "Piet Jansen"
+  const mrzNaamOk = mrzGeldig && documentNaamPast(user.fullName, mrz);
   if (input.documentType !== "DRIVERS_LICENSE") {
     checks.push({
       label: "Code op het document gelezen (MRZ)",
@@ -561,32 +565,86 @@ export async function submitFreelancerOnboarding(
   }
 
   // --- de chip van het document (NFC via de app, passieve authenticatie) ---
-  // Echt = de gegevens staan zo op een chip die een vertrouwde overheid ondertekende.
-  const chipNummerOk = Boolean(chip?.documentnummer && zelfdeNummer(chip.documentnummer, input.documentNumber));
-  const chipNaamOk = Boolean(
-    chip?.naamOpChip &&
-      (nameSimilarity(user.fullName, chip.naamOpChip) >= 0.5 || (companyName ? nameSimilarity(companyName, chip.naamOpChip) >= 0.5 : false)),
-  );
+  // "Echt" = de gegevens zijn door een vertrouwde overheid ondertekend. Dat zegt
+  // niet dat wie ze instuurt de kaart vasthoudt (review H3): de chip vervangt de
+  // MRZ op de foto alleen als die onleesbaar is, en zijn beide gelezen, dan moeten
+  // nummer en naam van chip en foto gelijk zijn (review H1).
+  const chipNummerOk = Boolean(chip?.nummerKlopt && chip.documentnummer && zelfdeNummer(chip.documentnummer, input.documentNumber));
+  const chipNaamOk = Boolean(chip?.naamOpChip && documentNaamPast(user.fullName, chip.naamOpChip));
   const chipOk = Boolean(chip?.echt && chipNummerOk && chipNaamOk);
-  // een nette handtekening van een ondertekenaar die NIET van de echte overheid komt: vervalst
+  // H1: chip en foto-MRZ horen bij een ander document of een andere persoon
+  const chipFotoVerschil = Boolean(
+    mrzGeldig &&
+      chip?.documentnummer &&
+      chip.naamOpChip &&
+      (!zelfdeNummer(chip.documentnummer, mrz.documentnummer) || !documentNaamPast(`${mrz.voornamen} ${mrz.achternaam}`, chip.naamOpChip)),
+  );
+  // een nette handtekening van een ondertekenaar die zeker NIET van de overheid komt (M5): vervalst
   const chipVals = Boolean(chip && chip.handtekeningOk && chip.ketenOk === false);
+  // H3: hetzelfde zegel al bij een ander account = hergebruikte chipgegevens
+  const zegelElders = chip
+    ? await prisma.identityVerification
+        .findFirst({ where: { userId: { not: user.id }, rawPayload: { path: ["chip", "sodHash"], equals: chip.sodHash } }, select: { id: true } })
+        .catch(() => null)
+    : null;
   if (chip) {
     checks.push({
       label: "Chip van het document gelezen (NFC)",
-      ok: chipOk,
-      detail: chipOk
-        ? `Echt bevonden: ondertekend door de overheid${chip.land ? ` (${chip.land})` : ""}; nummer en naam kloppen`
-        : chipVals
-          ? "De chip is niet door de overheid van dit land ondertekend"
-          : chip.echt && !chipNummerOk
-            ? "De chip is echt, maar hoort bij een ander documentnummer dan opgegeven"
-            : chip.echt && !chipNaamOk
-              ? "De chip is echt, maar de naam erop wijkt af van je account"
-              : chip.ketenOk === null && chip.handtekeningOk && chip.hashesOk
-                ? "Het zegel van de chip klopt; het overheidscertificaat controleert een medewerker"
-                : "De chip kon niet als echt worden bevestigd. Een medewerker kijkt mee.",
+      ok: chipOk && !chipFotoVerschil,
+      detail: chipFotoVerschil
+        ? "De chip hoort bij een ander document of een andere persoon dan de foto's. Een medewerker kijkt mee."
+        : chipOk
+          ? `Door de overheid ondertekend${chip.land ? ` (${chip.land})` : ""}; nummer en naam kloppen. Dit zegt niet dat jij de kaart vasthoudt: daarvoor zijn de foto's en de selfie.`
+          : chipVals
+            ? "De chip is niet door de overheid van dit land ondertekend"
+            : chip.echt && !chipNummerOk
+              ? "De chip is door de overheid ondertekend, maar hoort bij een ander documentnummer dan opgegeven"
+              : chip.echt && !chipNaamOk
+                ? "De chip is door de overheid ondertekend, maar de naam erop wijkt af van je account"
+                : chip.ketenOk === null && chip.handtekeningOk && chip.hashesOk
+                  ? "Niet gecontroleerd: het zegel is gelezen, maar of het van de overheid is, controleert een medewerker"
+                  : "De chip kon niet worden bevestigd. Een medewerker kijkt mee.",
+    });
+    checks.push({
+      label: "Chipgegevens niet eerder bij een ander account gebruikt",
+      ok: !zegelElders,
+      detail: zegelElders ? "Dezelfde chipgegevens zijn al bij een ander account ingestuurd. Een medewerker kijkt mee." : "Niet eerder gezien",
     });
   }
+  // M1: is de foto-MRZ onleesbaar, dan telt de vervaldatum van een echte chip
+  if (!mrzGeldig && chipOk && chip?.vervaldatum) {
+    expiry = new Date(chip.vervaldatum);
+    expiryOk = chip.vervaldatum >= amsterdamDayKey(new Date());
+    expiryCheck.ok = expiryOk;
+    expiryCheck.detail = expiryOk
+      ? `Geldig tot ${datumNl(chip.vervaldatum)} (gelezen van de chip)`
+      : `Volgens de chip is het document verlopen op ${datumNl(chip.vervaldatum)}. Gebruik een geldig document.`;
+  }
+
+  // --- automatisch: werkrecht, leeftijd, hetzelfde document elders ---------
+  // Uit de MRZ op de foto, anders van de chip. Alleen de categorie gaat mee in
+  // de uitslag; de nationaliteit en de geboortedatum worden niet bewaard.
+  const werkrecht = mrzGeldig ? werkrechtVan(mrz.nationaliteit) : (chip?.werkrecht ?? null);
+  const leeftijd = mrzGeldig ? leeftijdsgroep(mrz.geboortedatum, amsterdamDayKey(new Date())) : (chip?.leeftijd ?? null);
+  if (werkrecht) checks.push({ label: "Recht om te werken in Nederland", ok: werkrecht === "vrij", detail: WERKRECHT_TEKST[werkrecht] });
+  if (leeftijd) checks.push({ label: "Leeftijd", ok: leeftijd === "volwassen", detail: LEEFTIJD_TEKST[leeftijd] });
+
+  // hetzelfde document (zelfde soort + nummer, als hash) bij een ander account: een mens kijkt
+  const docHash = createHash("sha256")
+    .update(`${input.documentType}:${input.documentNumber.trim().toUpperCase()}`)
+    .digest("hex")
+    .slice(0, 48);
+  const elders = await prisma.identityVerification
+    .findFirst({
+      where: { documentNumberHash: docHash, userId: { not: user.id }, status: { in: [KycStatus.VERIFIED, KycStatus.PENDING] } },
+      select: { id: true },
+    })
+    .catch(() => null);
+  checks.push({
+    label: "Document niet al gebruikt door een ander account",
+    ok: !elders,
+    detail: elders ? "Dit document is al gebruikt bij een ander account. Een medewerker kijkt mee." : "Dit document hoort bij geen ander account",
+  });
 
   // --- store the three photos (on the box's own disk) -----------------
   const [storedFront, storedBack, storedSelfie] = await Promise.all([
@@ -633,8 +691,9 @@ export async function submitFreelancerOnboarding(
     vision.face.looksLive;
   // en de code op het document zelf moet kloppen met wat er getypt is en met het
   // account (een rijbewijs heeft geen MRZ; daar blijft het zoals het was)
-  // (een echte chip met het juiste nummer en de juiste naam is nog sterker dan de MRZ op de foto)
-  const mrzOk = input.documentType === "DRIVERS_LICENSE" || (mrzGeldig && mrzNummerOk && mrzNaamOk) || chipOk;
+  // (review H1) een echte chip vervangt de foto-MRZ alleen als die onleesbaar is, en mag er nooit mee botsen
+  const mrzOk =
+    input.documentType === "DRIVERS_LICENSE" || (mrzGeldig && mrzNummerOk && mrzNaamOk && !chipFotoVerschil) || (!mrzGeldig && chipOk);
   const autoApprove =
     !hardFail &&
     (skipKvk || kvkValid) &&
@@ -642,6 +701,13 @@ export async function submitFreelancerOnboarding(
     numOk &&
     expiryOk &&
     mrzOk &&
+    // werkrecht, leeftijd en een dubbel document beslist altijd een mens
+    werkrecht !== "controle" &&
+    leeftijd !== "minderjarig" &&
+    leeftijd !== "te-jong" &&
+    !elders &&
+    !chipFotoVerschil &&
+    !zegelElders &&
     ai.verdict === "approved" &&
     ai.confidence >= 0.65 &&
     visionOk;
@@ -657,11 +723,6 @@ export async function submitFreelancerOnboarding(
       : outcome === "rejected"
         ? KycStatus.REJECTED
         : KycStatus.PENDING;
-
-  const docHash = createHash("sha256")
-    .update(`${input.documentType}:${input.documentNumber.trim().toUpperCase()}`)
-    .digest("hex")
-    .slice(0, 48);
 
   await prisma.$transaction(async (tx) => {
     await tx.identityVerification.create({
@@ -690,9 +751,27 @@ export async function submitFreelancerOnboarding(
             mrz: mrz
               ? { geldig: mrz.geldig, volledig: mrz.volledig, soort: mrz.soort, land: mrz.land, verlopen: mrz.verlopen, vervaldatum: mrz.vervaldatum, nummerKlopt: mrzNummerOk, naamKlopt: mrzNaamOk }
               : null,
+            // de automatische controles: alleen de categorie
+            werkrecht,
+            leeftijd,
+            dubbelDocument: Boolean(elders),
             // alleen de uitslag van de chip: geen nummer, naam, pasfoto of BSN
             chip: chip
-              ? { echt: chip.echt, hashesOk: chip.hashesOk, handtekeningOk: chip.handtekeningOk, ketenOk: chip.ketenOk, geldigOk: chip.geldigOk, land: chip.land, nummerKlopt: chipNummerOk, naamKlopt: chipNaamOk }
+              ? {
+                  echt: chip.echt,
+                  hashesOk: chip.hashesOk,
+                  handtekeningOk: chip.handtekeningOk,
+                  ketenOk: chip.ketenOk,
+                  geldigOk: chip.geldigOk,
+                  land: chip.land,
+                  nummerKlopt: chipNummerOk,
+                  naamKlopt: chipNaamOk,
+                  andersDanFoto: chipFotoVerschil,
+                  elders: Boolean(zegelElders),
+                  // om hergebruik bij een ander account te zien, en voor de beoordelaar (review H3/M4)
+                  sodHash: chip.sodHash,
+                  ds: chip.ds,
+                }
               : null,
             uploadIds: { front: storedFront.id, back: storedBack.id, selfie: storedSelfie.id },
             fileSha256: stored.sha256,

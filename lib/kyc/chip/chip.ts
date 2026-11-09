@@ -32,7 +32,12 @@ export function mrzUitDg1(dg1: Buffer): { formaat: MrzFormaat; regels: string[] 
 export interface ChipUitslag extends SodControle {
   /** de MRZ zoals op de chip (met controlecijfers); het BSN-veld zit er al niet meer in */
   mrz: MrzUitslag | null;
-  /** alles klopt: hashes, handtekening, keten naar een vertrouwde CSCA, certificaten geldig, en een geldige MRZ */
+  /**
+   * Alles klopt: hashes, handtekening, keten naar een vertrouwde CSCA, certificaten
+   * geldig, een geldige MRZ en een niet verlopen document. Let op (review H3):
+   * "echt" zegt dat de gegevens door de overheid zijn ondertekend, niet dat wie ze
+   * instuurt de kaart ook vasthoudt (geen actieve authenticatie).
+   */
   echt: boolean;
 }
 
@@ -42,5 +47,5 @@ export function controleerChip(d: { dg1: Buffer; dg2?: Buffer; sod: Buffer }, cs
   const gevonden = mrzUitDg1(d.dg1);
   const mrz = gevonden ? leesMrz(gevonden.formaat, gevonden.regels, nu) : null;
   if (!mrz) sod.fouten.push("De gegevens op de chip (DG1) zijn niet te lezen");
-  return { ...sod, mrz, echt: sod.hashesOk && sod.handtekeningOk && sod.ketenOk === true && sod.geldigOk && mrz?.geldig === true };
+  return { ...sod, mrz, echt: sod.hashesOk && sod.handtekeningOk && sod.ketenOk === true && sod.geldigOk && mrz?.geldig === true && !mrz.verlopen };
 }
