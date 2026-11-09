@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getPrincipal, hasRole } from "@/lib/auth";
+import { inIosApp } from "@/lib/app-mode-server";
+import { IosAppProvider } from "@/components/app/useInIosApp";
 
 export const dynamic = "force-dynamic";
 
@@ -19,5 +21,6 @@ export default async function StudioLayout({ children }: { children: ReactNode }
   if (!principal) redirect("/login?callbackUrl=/studio");
   if (!hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN")) redirect("/werkgever");
   if (!principal.emailVerifiedAt && !hasRole(principal, "PLATFORM_ADMIN")) redirect("/verifieer-email");
-  return <>{children}</>;
+  // iPhone-app: geen domeinnamen bestellen (NietInIphone), al bij de eerste weergave
+  return <IosAppProvider ios={await inIosApp()}>{children}</IosAppProvider>;
 }
