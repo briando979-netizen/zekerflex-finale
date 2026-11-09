@@ -50,8 +50,23 @@ Het Xcode-project wordt gemaakt uit `project.yml` met XcodeGen, op een Mac in de
   - `ASC_ISSUER_ID`;
   - `APPLE_TEAM_ID`.
 
-Ondertekenen gaat automatisch met de sleutel van App Store Connect: Apple maakt de certificaten
-zelf aan, en in git staat niets geheims. De build gaat rechtstreeks naar TestFlight.
+Ondertekenen, één keer instellen, in deze volgorde:
+
+1. **App-ID** `com.zekerflex.app`, met Push Notifications, NFC Tag Reading en Associated Domains
+   aan. Claude maakt het aan met de API-sleutel. Dit moet vóór het profiel: een profiel van vóór
+   die rechten mist ze, en dan faalt het ondertekenen.
+2. **In Codemagic: een Apple Distribution-certificaat.** Ga naar Teams → Code signing identities
+   → iOS certificates → Generate certificate, via de integratie "ZekerFlex".
+3. **Een App Store-profiel** voor `com.zekerflex.app` met dat certificaat. Claude maakt het aan
+   met de API-sleutel, of je doet het in Codemagic → iOS provisioning profiles → Fetch profiles.
+
+Daarna ondertekent Codemagic elke build zelf (`ios_signing` in codemagic.yaml). In git staat
+niets geheims. De build gaat rechtstreeks naar TestFlight.
+
+Apple neemt sinds 28 april 2026 alleen builds met Xcode 26 en de iOS 26 SDK aan. Codemagic
+gebruikt `xcode: latest`; het GitHub-recept staat op `macos-26`. Gebruik één bouwplek: de
+buildnummers van Codemagic (`$BUILD_NUMBER`) en van GitHub (zelf ingevuld) lopen anders niet
+op elkaar door.
 
 ## Op de server (sleutels, owner-todo "ios-app")
 

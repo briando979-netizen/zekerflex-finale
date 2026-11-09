@@ -67,10 +67,14 @@ final class ChipLezer: NSObject, WKScriptMessageHandler {
                 let s = try await self.haalSleutel(code)
                 guard await self.bevestig(naam: s.naam ?? "?") else { return }
                 let sleutel = Self.mrzSleutel(nummer: s.documentnummer, geboren: s.geboortedatum, verval: s.vervaldatum)
+                // skipCA: geen chipauthenticatie (DG14); de server gebruikt alleen DG1 en het SOD.
+                // De tekst-closure roept de bibliotheek aan vanaf een andere draad: @Sendable.
                 let paspoort = try await self.lezer.readPassport(
                     mrzKey: sleutel,
                     tags: [.COM, .DG1, .SOD],
-                    customDisplayMessage: { bericht in Self.bericht(bericht) }
+                    skipSecureElements: true,
+                    skipCA: true,
+                    customDisplayMessage: { @Sendable bericht in Self.bericht(bericht) }
                 )
                 guard let dg1 = paspoort.dataGroupsRead[.DG1]?.data, let sod = paspoort.dataGroupsRead[.SOD]?.data,
                       !dg1.isEmpty, !sod.isEmpty else { throw ChipFout.lezen }
@@ -80,13 +84,8 @@ final class ChipLezer: NSObject, WKScriptMessageHandler {
                 self.meld(fout.tekst)
             } catch {
                 // zelf gestopt: niets melden. Verkeerde sleutel: de MRZ opnieuw scannen.
-                let omschrijving = String(describing: error)
-                if omschrijving.contains("UserCanceled") || omschrijving.contains("userCanceled") { return }
-                if omschrijving.contains("InvalidMRZKey") || omschrijving.contains("PACE") {
-                    self.meld(ChipFout.sleutel.tekst)
-                } else {
-                    self.meld(ChipFout.lezen.tekst)
-                }
+                if Self.zelfGestopt(error) { return }
+                self.meld(Self.verkeerdeSleutel(error) ? ChipFout.sleutel.tekst : ChipFout.lezen.tekst)
             }
         }
     }
@@ -141,7 +140,8 @@ final class ChipLezer: NSObject, WKScriptMessageHandler {
             let a = UIAlertController(title: ZekerFlex.tekst("chip_titel"), message: vraag, preferredStyle: .alert)
             a.addAction(UIAlertAction(title: ZekerFlex.tekst("chip_bevestig_nee"), style: .cancel) { _ in klaar.resume(returning: false) })
             a.addAction(UIAlertAction(title: ZekerFlex.tekst("chip_bevestig_ja"), style: .default) { _ in klaar.resume(returning: true) })
-            vc.toon(a)
+            // lukt tonen niet (er sluit net een ander scherm): dan niet lezen, en nooit blijven hangen
+            if !vc.toon(a) { klaar.resume(returning: false) }
         }
     }
 
@@ -160,9 +160,25 @@ final class ChipLezer: NSObject, WKScriptMessageHandler {
             return ZekerFlex.tekst("chip_uitleg")
         case .successfulRead:
             return ZekerFlex.tekst("chip_controleren")
+        case .error(let fout):
+            // het NFC-venster sluit met een fout: meteen de juiste uitleg, niet "niet bewegen…"
+            return ZekerFlex.tekst(verkeerdeSleutel(fout) ? "chip_fout_sleutel" : "chip_fout_lezen")
         default:
             return ZekerFlex.tekst("chip_lezen")
         }
+    }
+
+    /// Zelf op "Annuleren" getikt in het NFC-venster (NFCPassportReaderError.UserCanceled).
+    nonisolated static func zelfGestopt(_ fout: Error) -> Bool {
+        String(describing: fout).contains("UserCanceled")
+    }
+
+    /// De chip opent niet met deze gegevens: InvalidMRZKey (status 6300), of BAC die de chip
+    /// weigert met "Security status not satisfied" (6982). PACE valt in de bibliotheek zelf al
+    /// terug op BAC, dus dat komt hier niet langs.
+    nonisolated static func verkeerdeSleutel(_ fout: Error) -> Bool {
+        let s = String(describing: fout)
+        return s.contains("InvalidMRZKey") || s.contains("Security status not satisfied")
     }
 
     // MARK: - de sleutel voor de chip (MRZ-gegevens met hun controlecijfers, ICAO 9303)

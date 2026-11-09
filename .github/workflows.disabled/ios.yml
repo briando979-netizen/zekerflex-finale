@@ -2,6 +2,10 @@
 # GitHub. Staat in workflows.disabled zolang GitHub Actions uit staat (README hier);
 # de eerste keuze is codemagic.yaml. Alleen met de hand starten (Actions → iOS-app →
 # Run workflow), met een buildnummer dat hoger is dan het vorige. Zie ios-app/README.md.
+# NIET GETEST: automatisch ondertekenen bij het archiveren vraagt een ontwikkelprofiel, en
+# Xcode maakt dat alleen als er een iPhone (UDID) bij het team geregistreerd staat. Codemagic
+# (codemagic.yaml) ondertekent met een distributieprofiel en is daarom de weg.
+# Apple neemt sinds 28 april 2026 alleen builds met Xcode 26 / de iOS 26 SDK aan: macos-26.
 # Nodig als repository-secrets: ASC_KEY_P8 (inhoud van het .p8-bestand van App Store
 # Connect), ASC_KEY_ID, ASC_ISSUER_ID en APPLE_TEAM_ID. Ondertekenen gaat automatisch
 # met die sleutel (Apple maakt de certificaten zelf aan); er staat niets geheims in git.
@@ -19,7 +23,7 @@ permissions:
 
 jobs:
   bouw:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 45
     defaults:
       run:

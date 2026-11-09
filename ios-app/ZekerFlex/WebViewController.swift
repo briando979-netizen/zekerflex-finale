@@ -1,4 +1,5 @@
 import CoreNFC
+import QuickLook
 import SafariServices
 import UIKit
 import UserNotifications
@@ -7,7 +8,9 @@ import WebKit
 /// De site in app-modus: /start?utm_source=ios zet de app-cookies (middleware.ts), daarna
 /// blijft alles van zekerflex.com in deze webview. Andere soorten links (tel:, mailto:,
 /// WhatsApp) gaan naar het systeem, een nieuw venster (target=_blank) naar Safari.
-final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
+/// Downloads (loonstrook, agenda-bestand) gaan met de eigen sessie en openen in een voorbeeld
+/// met deelknop.
+final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, QLPreviewControllerDataSource {
     static let host = "zekerflex.com"
 
     private var webView: WKWebView!
@@ -17,6 +20,9 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
     private var laatsteToken: String?
     private var lichteBalk = true
     private var themaWacht: NSKeyValueObservation?
+    private var adresWacht: NSKeyValueObservation?
+    private var downloads: [ObjectIdentifier: URL] = [:]
+    private var voorbeeldBestand: URL?
     private lazy var chip = ChipLezer(vc: self)
 
     /// Start altijd via /start (zet de app-cookies); chip=1 alleen als deze iPhone NFC kan lezen.
@@ -92,6 +98,14 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
             let kleur = wv.themeColor
             Task { @MainActor in self?.volgKleur(kleur) }
         }
+        // Next.js wisselt van pagina zonder te herladen (bijv. direct na het inloggen): dan komt er
+        // geen didFinish, dus ook op een ander adres kijken of we om meldingen kunnen vragen
+        adresWacht = webView.observe(\.url, options: [.new]) { [weak self] _, _ in
+            Task { @MainActor in
+                self?.vraagMeldingenAlsIngelogd()
+                self?.stuurTokenAlsIngelogd()
+            }
+        }
 
         bouwOffline()
         NotificationCenter.default.addObserver(self, selector: #selector(tokenBinnen), name: .zfApnsToken, object: nil)
@@ -112,7 +126,8 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         }
         switch url.scheme?.lowercased() ?? "" {
         case "https", "http", "about", "blob", "data":
-            decisionHandler(.allow)
+            // <a download>: als bestand binnenhalen, niet als pagina
+            decisionHandler(navigationAction.shouldPerformDownload ? .download : .allow)
         default:
             // tel:, mailto:, sms:, whatsapp:, maps: … naar het systeem
             UIApplication.shared.open(url)
@@ -121,13 +136,64 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
-        // een agenda-bestand (.ics): Safari biedt "zet in je agenda" aan
-        if navigationResponse.response.mimeType == "text/calendar", let url = navigationResponse.response.url {
-            toon(SFSafariViewController(url: url))
-            decisionHandler(.cancel)
+        // een bijlage (Content-Disposition: attachment), een agenda-bestand (.ics) of iets wat
+        // de webview niet kan tonen: downloaden met de eigen sessie en daarna een voorbeeld tonen
+        let antwoord = navigationResponse.response as? HTTPURLResponse
+        let bijlage = (antwoord?.value(forHTTPHeaderField: "Content-Disposition") ?? "").lowercased().hasPrefix("attachment")
+        if bijlage || navigationResponse.response.mimeType == "text/calendar" || !navigationResponse.canShowMIMEType {
+            decisionHandler(.download)
             return
         }
         decisionHandler(.allow)
+    }
+
+    func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
+        download.delegate = self
+    }
+
+    func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) {
+        download.delegate = self
+    }
+
+    // MARK: - downloads
+
+    func download(_ download: WKDownload, decideDestinationUsing response: URLResponse, suggestedFilename: String, completionHandler: @escaping (URL?) -> Void) {
+        // in een eigen tijdelijke map (iOS ruimt die zelf op); geen mappen in de naam
+        let map = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(at: map, withIntermediateDirectories: true)
+        } catch {
+            completionHandler(nil)
+            return
+        }
+        let naam = suggestedFilename.replacingOccurrences(of: "/", with: "-").trimmingCharacters(in: .whitespaces)
+        let doel = map.appendingPathComponent(naam.isEmpty ? "bestand" : naam)
+        downloads[ObjectIdentifier(download)] = doel
+        completionHandler(doel)
+    }
+
+    func downloadDidFinish(_ download: WKDownload) {
+        guard let bestand = downloads.removeValue(forKey: ObjectIdentifier(download)) else { return }
+        voorbeeldBestand = bestand
+        if QLPreviewController.canPreview(bestand as NSURL) {
+            let voorbeeld = QLPreviewController()
+            voorbeeld.dataSource = self
+            toon(voorbeeld)
+        } else {
+            toon(UIActivityViewController(activityItems: [bestand], applicationActivities: nil))
+        }
+    }
+
+    func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
+        downloads.removeValue(forKey: ObjectIdentifier(download))
+    }
+
+    func numberOfPreviewItems(in controller: QLPreviewController) -> Int {
+        voorbeeldBestand == nil ? 0 : 1
+    }
+
+    func previewController(_ controller: QLPreviewController, previewItemAt index: Int) -> QLPreviewItem {
+        (voorbeeldBestand ?? FileManager.default.temporaryDirectory) as NSURL
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -172,17 +238,20 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         return nil
     }
 
+    // Kan een melding van de pagina niet getoond worden (er sluit net een ander scherm), dan
+    // meteen antwoorden: WebKit laat de app vallen als zo'n antwoord nooit komt.
+
     func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
         let a = UIAlertController(title: nil, message: message, preferredStyle: .alert)
         a.addAction(UIAlertAction(title: tekst("ok"), style: .default) { _ in completionHandler() })
-        toon(a)
+        if !toon(a) { completionHandler() }
     }
 
     func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
         let a = UIAlertController(title: nil, message: message, preferredStyle: .alert)
         a.addAction(UIAlertAction(title: tekst("annuleren"), style: .cancel) { _ in completionHandler(false) })
         a.addAction(UIAlertAction(title: tekst("ok"), style: .default) { _ in completionHandler(true) })
-        toon(a)
+        if !toon(a) { completionHandler(false) }
     }
 
     func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String?) -> Void) {
@@ -190,7 +259,7 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         a.addTextField { $0.text = defaultText }
         a.addAction(UIAlertAction(title: tekst("annuleren"), style: .cancel) { _ in completionHandler(nil) })
         a.addAction(UIAlertAction(title: tekst("ok"), style: .default) { _ in completionHandler(a.textFields?.first?.text) })
-        toon(a)
+        if !toon(a) { completionHandler(nil) }
     }
 
     /// Camera en microfoon (videobellen, de ID-scan) alleen voor zekerflex.com zelf.
@@ -294,10 +363,17 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         ])
     }
 
-    /// Iets tonen bovenop wat er al open is (een melding terwijl Safari open staat).
-    func toon(_ vc: UIViewController) {
+    /// Iets tonen bovenop wat er al open is (een melding terwijl Safari open staat). Geeft false
+    /// als dat nu niet kan (een scherm gaat net open of dicht): dan moet de aanroeper zelf antwoorden.
+    @discardableResult
+    func toon(_ vc: UIViewController) -> Bool {
         var boven: UIViewController = self
-        while let volgende = boven.presentedViewController { boven = volgende }
+        while let volgende = boven.presentedViewController {
+            if volgende.isBeingDismissed { return false }
+            boven = volgende
+        }
+        guard boven.viewIfLoaded?.window != nil, !boven.isBeingPresented else { return false }
         boven.present(vc, animated: true)
+        return true
     }
 }

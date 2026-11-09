@@ -12,7 +12,8 @@ packages:
   NFCPassportReader:
     # leest de chip van een paspoort of ID-kaart (ICAO 9303, BAC/PACE); MIT-licentie
     url: https://github.com/AndyQ/NFCPassportReader
-    from: 2.0.0
+    # vast op de versie waarvan de API is nagekeken (readPassport, NFCViewDisplayMessage, fouten)
+    exactVersion: 2.3.3
 targets:
   ZekerFlex:
     type: application
