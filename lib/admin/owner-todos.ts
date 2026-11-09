@@ -584,9 +584,9 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       how: [
         "Wacht met uploaden tot Claude meldt dat de servercode van het chiplezen live staat (die geeft de naam bij 'Ben jij dit?'). Zonder die code toont de app een vraagteken in plaats van de naam.",
         "Het bestand staat op je bureaublad: ZekerFlex-app-1.0.5.aab (versiecode 6, ondertekend met dezelfde sleutel als de vorige versies). Hetzelfde bestand staat in de map android-twa als ZekerFlex-1.0.5-v6.aab.",
-        "Ga naar play.google.com/console → ZekerFlex → Testen → Gesloten testen → je testtrack → Nieuwe release maken, en sleep het bestand erin.",
-        "Releasenotitie: 'Nieuw: lees de chip van je ID-kaart of paspoort met je telefoon. De app werkt nu ook goed op tablets en liggend.' Dan Opslaan → Release beoordelen → Uitrollen naar gesloten test. NFC is geen gevoelige toestemming, er is geen extra verklaring nodig.",
-        "Werkt het op je telefoon: Productie → Nieuwe release → Toevoegen uit bibliotheek → versie 6.",
+        "Zet hem eerst alleen bij Interne tests (alleen voor jou): play.google.com/console → ZekerFlex → Testen → Interne tests → Nieuwe release maken, en sleep het bestand erin.",
+        "Releasenotitie: 'Nieuw: lees de chip van je ID-kaart of paspoort met je telefoon. De app werkt nu ook goed op tablets en liggend.' Dan Opslaan → Release beoordelen → Uitrollen. NFC is geen gevoelige toestemming, er is geen extra verklaring nodig.",
+        "Productie (of Gesloten testen voor andere testers) pas als Claude meldt dat de chipcontrole op de server helemaal klaar is: Productie → Nieuwe release → Toevoegen uit bibliotheek → versie 6.",
         "Kan een melding over 'verouderde API's' blijven staan? Die komt uit een onderdeel van Google zelf (androidbrowserhelper), niet uit onze code, en houdt de release niet tegen.",
         "Wil je dat Claude een volgende versie zelf uploadt: koppel Google Play (taak 'Google Play koppelen', Admin → Google Play) en geef dat serviceaccount in Play Console bij Gebruikers en rechten toegang tot ZekerFlex met het recht om releases te beheren.",
         "Vink deze taak af zodra de release in Google Play live staat.",
