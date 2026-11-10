@@ -72,6 +72,7 @@ describe("bewaarde klussen op het apparaat", () => {
     expect(feed).toContain("window.addEventListener(SAVED_EVENT, load)");
 
     expect(read("components/app/ShiftCard.tsx")).toContain("labels={{ save: c.save, unsave: c.unsave }}");
-    expect(read("app/dashboard/klussen/[shiftId]/page.tsx")).toContain("labels={{ save: ft.card.save, unsave: ft.card.unsave }}");
+    // op de dienstpagina is het hartje bovenin sinds 10 nov (eigenaar) "opdrachtgever als favoriet", met een bevestiging
+    expect(read("app/dashboard/klussen/[shiftId]/page.tsx")).toContain('<FollowEmployerButton variant="hart"');
   });
 });
