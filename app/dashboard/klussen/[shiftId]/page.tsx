@@ -10,7 +10,6 @@ import { reviewSummary } from "@/lib/reviews/store";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { ShiftActions } from "@/components/app/ShiftActions";
 import { ReplacementTakeoverButton } from "@/components/app/ReplacementTakeoverButton";
-import { SaveShiftHeart } from "@/components/app/SaveShiftHeart";
 import { ShiftMenu } from "@/components/app/ShiftMenu";
 import { MessageEmployerButton } from "@/components/app/MessageEmployerButton";
 import { ShiftMap } from "@/components/app/ShiftMap";
@@ -32,6 +31,8 @@ import { isFollowing } from "@/lib/worker/follows";
 import { marketStats, rateVsMarket } from "@/lib/pricing/advice";
 import { reageerStap } from "@/lib/onboarding/laat-weten";
 import { FollowEmployerButton } from "@/components/app/FollowEmployerButton";
+import { UurloonInfo } from "@/components/app/UurloonInfo";
+import { uurloonOpbouw } from "@/lib/payroll/uurloon-opbouw";
 import { amsterdamWeek, findOverlappingShift, MAX_WEEK_HOURS, restViolation, weekHoursWith } from "@/lib/shifts/worker-overlap";
 
 export const dynamic = "force-dynamic";
@@ -323,7 +324,8 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           ←
         </Link>
         <div className="absolute right-4 top-4 flex items-center gap-2">
-          <SaveShiftHeart shiftId={s.id} labels={{ save: ft.card.save, unsave: ft.card.unsave }} />
+          {/* het hartje bovenin = opdrachtgever als favoriet (melding bij elke nieuwe dienst), met een bevestiging */}
+          <FollowEmployerButton variant="hart" tenantId={s.clientTenantId} name={s.clientName || s.branch} initialFollowing={followsClient} />
           <ShiftMenu employerName={s.branch} shiftTitle={s.title} />
         </div>
       </div>
@@ -419,7 +421,12 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
               {ft.card.freelance}
             </span>
           )}
-          <span className="num font-display text-xl font-bold text-ink">{moneyExact(s.hourlyRateCents)}</span>
+          <span className="flex items-center gap-2">
+            <span className="num font-display text-xl font-bold text-ink">{moneyExact(s.hourlyRateCents)}</span>
+            {agencyTerms && (
+              <UurloonInfo opbouw={uurloonOpbouw({ hourlyRateCents: s.hourlyRateCents, birthDate: fiscal.birthDate, op: start })} />
+            )}
+          </span>
         </div>
         {vsMarket !== null && (
           <p className={`mt-1 text-right text-xs font-medium ${vsMarket >= 5 ? "text-brand-600" : "text-neutralx-500"}`} title={ft.rate.note}>
