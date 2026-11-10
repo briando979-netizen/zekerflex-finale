@@ -9,7 +9,8 @@ const WERKGEVER = {
 };
 
 /**
- * Melding boven de start van werkers en werkgevers zolang de onboarding wordt verbeterd. Geen
+ * Melding boven de start van werkgevers zolang de onboarding wordt verbeterd (bij werkers weg sinds
+ * 10 nov, eigenaar: de werker-app heeft het hulpcentrum achter het vraagteken). Geen
  * blokkade: wie wil, kan doorgaan. Uit te zetten zonder uitrol met de flag "onboarding-onderhoud"
  * (Admin → Systeem), zodra het weer soepel werkt.
  */

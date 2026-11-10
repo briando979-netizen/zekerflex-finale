@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { WelcomeBack } from "@/components/app/WelcomeBack";
-import { OnboardingOnderhoudBalk } from "@/components/app/OnboardingOnderhoudBalk";
 import { TodayStrip } from "@/components/app/TodayStrip";
 import { MilestoneCelebration } from "@/components/app/MilestoneCelebration";
 import { WerkerStartWizard } from "@/components/app/WerkerStartWizard";
@@ -91,7 +90,7 @@ export default async function KlussenPage(
         </Link>
       )}
       {/* het recht om te werken zit niet meer in de start (10 nov); aannemen vraagt het wel (lib/werkrecht) */}
-      {!overview.profileComplete && <OnboardingOnderhoudBalk soort="werker" />}
+      {/* de melding "we verbeteren de aanmelding" staat niet meer bij werkers (10 nov, eigenaar); werkgevers: flag onboarding-onderhoud */}
       {!overview.profileComplete && (
         <WerkerStartWizard
           workerKind={fiscal.workerKind}

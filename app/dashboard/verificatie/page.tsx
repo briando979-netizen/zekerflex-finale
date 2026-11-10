@@ -2,7 +2,6 @@ import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
 import { PageHeader, Panel, StatusPill } from "@/components/app/ui";
-import { OnboardingOnderhoudBalk } from "@/components/app/OnboardingOnderhoudBalk";
 import { OnboardingForm } from "@/components/app/OnboardingForm";
 import { WalletVerifyButton } from "@/components/app/WalletVerifyButton";
 import { ComplianceDocsPanel } from "@/components/app/ComplianceDocsPanel";
@@ -151,8 +150,6 @@ export default async function VerificatiePage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <OnboardingOnderhoudBalk soort="werker" />
-
       {lastCheck && (
         <div className="mb-6 card p-4 text-sm">
           <div className="flex items-center gap-2">
