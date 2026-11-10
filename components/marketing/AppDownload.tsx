@@ -8,6 +8,8 @@ import { featureEnabled } from "@/lib/flags";
 // the badge says "testversie" and the block below explains how to get on it.
 const PLAY_TEST_URL = "https://play.google.com/apps/testing/com.zekerflex.app";
 // De iPhone-app staat als testversie in TestFlight; elke iPhone kan meedoen via deze openbare link.
+// Goedgekeurd door Apple op 10 nov 2026 (versie 1.0); de knop staat achter de vlag `iphone-appstore` tot de pagina openbaar is.
+const APPSTORE_URL = "https://apps.apple.com/nl/app/zekerflex/id6832775836";
 const TESTFLIGHT_URL = "https://testflight.apple.com/join/2QKhAHn8";
 // Zoals bij Android: een tik opent de mail van de bezoeker, al ingevuld, naar info@ met "tester worden".
 const IPHONE_MAILTO = `mailto:${CONTACTS.general}?subject=${encodeURIComponent("Tester worden: zet me op de lijst (iPhone)")}&body=${encodeURIComponent("Hallo ZekerFlex, ik wil de iPhone-app testen. Zet me alsjeblieft op de testerslijst.\n\nMijn Apple-ID (het e-mailadres waarmee ik op mijn iPhone in de App Store ben ingelogd):\n\n")}`;
@@ -35,20 +37,32 @@ function PlayBadgeTest() {
   );
 }
 
-function AppleBadgeTest({ live }: { live: boolean }) {
+function AppleBadgeTest({ live, store }: { live: boolean; store: boolean }) {
   const inhoud = (
     <>
       <svg width="20" height="22" viewBox="0 0 24 24" aria-hidden fill="currentColor">
         <path d="M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.8-3.5.8-.7 0-1.8-.8-3-.8-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2.1-1.1 2.8-2.2.9-1.3 1.3-2.5 1.3-2.6 0 0-2.5-1-2.5-3.8ZM14.2 5.9c.6-.8 1.1-1.8.9-2.9-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-1 2.8 1 .1 2.1-.5 2.8-1.3Z" />
       </svg>
       <span className="text-left leading-tight">
-        <span className="block text-[10px] uppercase tracking-wide text-brand-mint">{live ? "Testversie · iPhone" : "Tester worden · iPhone"}</span>
-        <span className="block text-sm font-bold">{live ? "TestFlight" : "App Store"}</span>
+        <span className="block text-[10px] uppercase tracking-wide text-brand-mint">{store ? "Download in de" : live ? "Testversie · iPhone" : "Tester worden · iPhone"}</span>
+        <span className="block text-sm font-bold">{store ? "App Store" : live ? "TestFlight" : "App Store"}</span>
       </span>
     </>
   );
   // De testlink neemt pas testers aan als Apple de beta heeft goedgekeurd (vlag `iphone-testflight`):
   // tot dan een mailknop "tester worden" naar info@ (zoals bij Android) en een uitleg.
+  if (store) {
+    return (
+      <a
+        href={APPSTORE_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-3 rounded-xl border border-white/20 bg-white/[0.06] px-4 py-2.5 text-white transition hover:bg-white/[0.12]"
+      >
+        {inhoud}
+      </a>
+    );
+  }
   return live ? (
     <a
       href={TESTFLIGHT_URL}
@@ -215,6 +229,8 @@ function TelefoonVoorbeeld() {
 export async function AppDownload({ standalone = false }: { standalone?: boolean }) {
   // vlag `iphone-testflight` (standaard uit): de knop komt pas als de testlink testers aanneemt
   const iphone = await featureEnabled("iphone-testflight").catch(() => false);
+  // vlag `iphone-appstore` (standaard uit): de echte App Store-knop, zodra de pagina openbaar is
+  const appStore = await featureEnabled("iphone-appstore").catch(() => false);
   return (
     <section id="app" className={`scroll-mt-24 ${standalone ? "" : "hero-ink"} text-white`}>
       <div className={`shell ${standalone ? "py-4" : "py-20 md:py-24"}`}>
@@ -230,17 +246,17 @@ export async function AppDownload({ standalone = false }: { standalone?: boolean
             </p>
             <div className="mt-7 flex flex-wrap items-start gap-3">
               <InstallAppButton />
-              <AppleBadgeTest live={iphone} />
+              <AppleBadgeTest live={iphone} store={appStore} />
               <PlayBadgeTest />
             </div>
             {standalone ? (
               <>
-                <IphoneNotice live={iphone} />
+                {!appStore && <IphoneNotice live={iphone} />}
                 <TestNotice />
               </>
             ) : (
               <p className="mt-3 text-xs text-white/65">
-                iPhone- en Android-app in testfase —{" "}
+                {appStore ? "Android-app in testfase" : "iPhone- en Android-app in testfase"} —{" "}
                 <Link href="/app" className="underline hover:text-white/80">
                   zo doe je mee
                 </Link>
