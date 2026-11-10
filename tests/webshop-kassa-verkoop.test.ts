@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // "winkel", meteen afgerond en betaald; de prijzen komen van de winkel (nooit van de browser),
 // varianten en voorraad worden gecontroleerd, de btw volgt de winkel, en de voorraad gaat omlaag.
 
-const h = vi.hoisted(() => ({ kv: new Map<string, unknown>(), opgeslagen: [] as unknown[] }));
+const h = vi.hoisted(() => ({ kv: new Map<string, unknown>(), opgeslagen: [] as unknown[], vers: null as unknown }));
 
 vi.mock("@/lib/prisma", () => ({ prisma: {} }));
 vi.mock("@/lib/storage/kv", () => ({
@@ -15,7 +15,8 @@ vi.mock("@/lib/storage/kv", () => ({
 }));
 vi.mock("@/lib/sites/store", () => ({
   saveWinkel: async (_id: string, w: unknown) => (h.opgeslagen.push(w), {}),
-  getSite: async () => null,
+  // de winkel zoals hij nu is (verkoopInWinkel leest hem opnieuw vóór het verlagen van de voorraad)
+  getSite: async () => h.vers,
 }));
 
 import { kassaConcept, kassaDag, bonVanVerkoop, bonOpmaak } from "@/lib/sites/kassa";
@@ -81,6 +82,17 @@ describe("kassaConcept", () => {
 describe("verkoopInWinkel", () => {
   const site = { id: "s1", winkel: winkel({ btw: { inclusief: true, standaard: 21, kor: false } }), bedrijf: { naam: "Jk test shop", straat: "Dorpsstraat 1", postcode: "1234 AB", plaats: "Ergens", telefoon: "0612345678" } } as unknown as SiteDoc;
   const nu = new Date("2026-11-10T15:00:00+01:00");
+  beforeEach(() => {
+    h.vers = site;
+  });
+
+  it("verlaagt de voorraad van de winkel zoals hij nu is, niet van een oudere kopie", async () => {
+    // intussen kwam er voorraad bij (of verkocht de webshop iets): die stand telt
+    h.vers = { ...site, winkel: { ...site.winkel, producten: site.winkel!.producten.map((p) => (p.id === "hoodie" ? { ...p, voorraad: 5 } : p)) } };
+    h.opgeslagen.length = 0;
+    await verkoopInWinkel(site, kassaVerkoopSchema.parse({ regels: [{ productId: "hoodie", variant: "S", aantal: 1 }], methode: "pin" }), nu);
+    expect((h.opgeslagen[0] as Winkel).producten.find((p) => p.id === "hoodie")?.voorraad).toBe(4);
+  });
 
   it("bewaart een afgeronde, betaalde bestelling met kanaal winkel, verlaagt de voorraad en geeft de bon", async () => {
     const invoer = kassaVerkoopSchema.parse({ regels: [{ productId: "hoodie", variant: "M", aantal: 2 }, { los: "Reparatie", prijsCents: 750, aantal: 1 }], methode: "contant", ontvangenCents: 10_000 });
@@ -102,7 +114,8 @@ describe("verkoopInWinkel", () => {
     const { bestelling } = await verkoopInWinkel(site, invoer, nu);
     expect(bestelling.totaalCents).toBe(1495);
     expect(bestelling.kassa).toEqual({ methode: "pin" });
-    expect(h.opgeslagen).toHaveLength(1);
+    // de pet houdt geen voorraad bij: de winkel hoeft dan niet opnieuw opgeslagen te worden (net als in de webshop)
+    expect(h.opgeslagen).toHaveLength(0);
   });
 });
 

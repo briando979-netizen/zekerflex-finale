@@ -3,7 +3,7 @@ import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { bestellingenVan, bewaarBestelling, type SiteBestelling } from "@/lib/sites/bestellingen";
 import { KASSA_MAX_LOS_CENTS, KASSA_MAX_REGELS, bonVanVerkoop, kassaConcept, kassaDag, wisselgeld, type KassaBon, type KassaDag } from "@/lib/sites/kassa";
-import { saveWinkel } from "@/lib/sites/store";
+import { getSite, saveWinkel } from "@/lib/sites/store";
 import { LEGE_WINKEL, type SiteDoc } from "@/lib/sites/types";
 import { verlaagVoorraad } from "@/lib/sites/winkel";
 
@@ -43,8 +43,13 @@ export async function verkoopInWinkel(site: SiteDoc, invoer: KassaVerkoopInvoer,
   }
 
   const bestelling = await bewaarBestelling(site.id, concept, now, { status: "afgerond", betaaldAt: now.toISOString(), kanaal: "winkel", kassa });
-  // de voorraad omlaag, net als bij een bestelling in de webshop; een fout hier maakt de verkoop niet ongedaan
-  await saveWinkel(site.id, verlaagVoorraad(w, concept.regels)).catch((err) => logger.warn("kassa: voorraad niet verlaagd", { siteId: site.id, err: String(err) }));
+  // de voorraad omlaag, net als bij een bestelling in de webshop (lib/sites/bestellingen.ts): de winkel zoals hij
+  // nu is opnieuw lezen, zodat een webshopbestelling of een instelling van net niet wordt overschreven.
+  // Een fout hier maakt de verkoop niet ongedaan.
+  if (concept.regels.some((r) => w.producten.find((p) => p.id === r.productId)?.voorraad != null)) {
+    const vers = await getSite(site.id).catch(() => null);
+    if (vers?.winkel) await saveWinkel(site.id, verlaagVoorraad(vers.winkel, concept.regels)).catch((err) => logger.warn("kassa: voorraad niet verlaagd", { siteId: site.id, err: String(err) }));
+  }
 
   return { bestelling, bon: bonVanVerkoop({ ...bestelling, kassa }, site.bedrijf) };
 }
