@@ -142,7 +142,7 @@ function next(
 // /?app=0 leaves app mode.
 // ---------------------------------------------------------------------------
 const APP_ALLOWED = [
-  "/start", "/login", "/register", "/wachtwoord-vergeten", "/wachtwoord-herstellen", "/verifieer-email",
+  "/start", "/welkom", "/login", "/register", "/wachtwoord-vergeten", "/wachtwoord-herstellen", "/verifieer-email",
   "/dashboard", "/werkgever", "/admin", "/sales", "/berichten", "/betaal", "/betaalverzoek", "/kyc", "/r", "/uitnodiging",
   "/account-verwijderen", "/gegevens-verwijderen", "/privacy", "/voorwaarden", "/cookiebeleid", "/mail", "/nieuwsbrief/afmelden",
   "/shop", "/kennis", "/offline", "/studio",

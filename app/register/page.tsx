@@ -6,7 +6,8 @@ import { RegisterForm } from "@/components/auth/RegisterForm";
 import { RegisterBewaard } from "@/components/auth/RegisterBewaard";
 import { getLocale } from "@/lib/i18n/server";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
-import { inIosApp } from "@/lib/app-mode-server";
+import { inAndroidApp, inIosApp } from "@/lib/app-mode-server";
+import { WELKOM_DICTS } from "@/lib/i18n/welkom";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Account aanmaken" };
@@ -42,6 +43,7 @@ export default async function RegisterPage(
     <AuthShell
       image="/marketing/auth-login.jpg"
       locale={locale}
+      mobile={{ ...WELKOM_DICTS[locale].registerHero, back: WELKOM_DICTS[locale].back, backHref: (await inAndroidApp()) ? "/welkom" : "/" }}
       title={t.title}
       subtitle={t.subtitle}
       footer={

@@ -7,7 +7,8 @@ import { LoginForm } from "@/components/auth/LoginForm";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { getLocale } from "@/lib/i18n/server";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
-import { inIosApp } from "@/lib/app-mode-server";
+import { inAndroidApp, inIosApp } from "@/lib/app-mode-server";
+import { WELKOM_DICTS } from "@/lib/i18n/welkom";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Inloggen" };
@@ -36,6 +37,7 @@ export default async function LoginPage(
     <AuthShell
       image="/marketing/auth-login.jpg"
       locale={locale}
+      mobile={{ ...WELKOM_DICTS[locale].loginHero, back: WELKOM_DICTS[locale].back, backHref: (await inAndroidApp()) ? "/welkom" : "/" }}
       title={t.title}
       subtitle={t.subtitle}
       footer={
