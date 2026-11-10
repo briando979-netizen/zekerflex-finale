@@ -60,7 +60,7 @@ Zie je "app niet beschikbaar"? Dan staat je adres nog niet op de lijst. Probeer 
 
 Onze vraag aan jou: houd de app minstens 14 dagen geïnstalleerd en gebruik hem af en toe. Zie je iets wat niet werkt of beter kan? Antwoord gewoon op deze mail.
 
-Heb je een iPhone? De iOS-versie volgt later. Tot die tijd werkt alles via zekerflex.com.
+Heb je een iPhone? Daarvoor is er ook een testversie: installeer de gratis app TestFlight uit de App Store en open deze link op je iPhone: https://testflight.apple.com/join/2QKhAHn8
 
 Bedankt dat je ons helpt!
 
@@ -143,6 +143,38 @@ Polski: Skończyliśmy ulepszać rejestrację. Możesz teraz znów sprawnie i sz
 Română: Am terminat de îmbunătățit înscrierea. Acum îți poți încărca din nou datele fluent și rapid. Autentifică-te pe https://zekerflex.com și parcurge pașii de sus din „Găsește-ți jobul”. ZekerFlex este încă în dezvoltare, iar joburile pe care le vezi sunt joburi de test. Pornim online la începutul anului viitor. Mulțumim pentru răbdare!
 
 Українською: Ми завершили покращення реєстрації. Тепер ви знову можете швидко й без проблем завантажити свої дані. Увійдіть на https://zekerflex.com і пройдіть кроки вгорі сторінки «Знайди роботу». ZekerFlex ще в розробці, а завдання, які ви бачите, — тестові. На початку наступного року ми запустимося онлайн. Дякуємо за терпіння!`,
+  },
+  {
+    // 10 nov, op verzoek van de eigenaar: de iPhone-app staat als testversie in TestFlight (ios-app/).
+    // Pas versturen als Apple de testversie heeft goedgekeurd: tot dan zegt de link "neemt geen testers aan".
+    label: "iPhone-app (testversie) staat klaar",
+    subject: "ZekerFlex nu ook op je iPhone 📱 (testversie)",
+    body: `Hoi,
+
+Goed nieuws: ZekerFlex is er nu ook voor de iPhone, als testversie via TestFlight van Apple.
+
+In de app vind je klussen bij jou in de buurt, reageer je met één tik, check je in op locatie, schrijf je je uren en volg je je uitbetalingen. Nieuw: je kunt je identiteit laten controleren door de chip van je ID-kaart of paspoort met je iPhone te lezen. En je krijgt een melding zodra er iets voor je klaarstaat.
+
+Zo installeer je hem:
+1. Installeer de gratis app TestFlight uit de App Store.
+2. Open deze link op je iPhone: https://testflight.apple.com/join/2QKhAHn8
+3. Tik op "Accepteer" en daarna op "Installeer".
+
+Heb je Android? Daarvoor staat ook een testversie klaar: https://zekerflex.com/app
+
+Let op: het is een testversie, dus er kan af en toe iets haperen. ZekerFlex is nog in opbouw: de klussen die je nu ziet zijn testklussen, je hoeft er niet heen en er hoort geen betaling bij. Zie je iets wat niet werkt of beter kan? Stuur je feedback vanuit TestFlight of antwoord op deze mail.
+
+Het ZekerFlex-team
+
+---
+
+English: Good news: ZekerFlex is now also available for iPhone, as a test version via Apple's TestFlight. 1. Install the free TestFlight app from the App Store. 2. Open this link on your iPhone: https://testflight.apple.com/join/2QKhAHn8 3. Tap "Accept" and then "Install". It is a test version, so something may not work now and then; the jobs you see now are test jobs. Feedback? Just reply to this email.
+
+Polski: Dobra wiadomość: ZekerFlex jest teraz dostępny także na iPhone'a, jako wersja testowa w TestFlight od Apple. 1. Zainstaluj bezpłatną aplikację TestFlight z App Store. 2. Otwórz ten link na iPhonie: https://testflight.apple.com/join/2QKhAHn8 3. Stuknij „Akceptuj”, a potem „Zainstaluj”. To wersja testowa, więc czasem coś może nie działać; zlecenia, które teraz widzisz, są testowe. Masz uwagi? Po prostu odpowiedz na tę wiadomość.
+
+Română: Vești bune: ZekerFlex este acum disponibil și pentru iPhone, ca versiune de test prin TestFlight de la Apple. 1. Instalează aplicația gratuită TestFlight din App Store. 2. Deschide acest link pe iPhone: https://testflight.apple.com/join/2QKhAHn8 3. Atinge „Acceptă” și apoi „Instalează”. Este o versiune de test, așa că uneori ceva poate să nu meargă; joburile pe care le vezi acum sunt joburi de test. Ai sugestii? Răspunde la acest e-mail.
+
+Українською: Гарна новина: ZekerFlex тепер доступний і для iPhone — як тестова версія через TestFlight від Apple. 1. Встановіть безкоштовний застосунок TestFlight з App Store. 2. Відкрийте це посилання на iPhone: https://testflight.apple.com/join/2QKhAHn8 3. Натисніть «Прийняти», а потім «Встановити». Це тестова версія, тож іноді щось може не працювати; завдання, які ви зараз бачите, — тестові. Маєте відгук? Просто відповідайте на цей лист.`,
   },
 ];
 

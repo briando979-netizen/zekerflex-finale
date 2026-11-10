@@ -35,13 +35,14 @@ export default function PrivacyPage() {
         ]}
       />
       <LegalSection
-        heading="De ZekerFlex-app voor Android"
-        body="De app (Google Play, pakket com.zekerflex.app) opent het ZekerFlex-platform; het verzamelt dezelfde gegevens als de website en niets extra's op de achtergrond. De app vraagt alleen om toestemming op het moment dat je een functie gebruikt, en je kunt elke toestemming weigeren of later intrekken in de instellingen van je telefoon:"
+        heading="De ZekerFlex-app voor Android en iPhone"
+        body="De apps (Android via Google Play, pakket com.zekerflex.app; iPhone via TestFlight en de App Store, bundel com.zekerflex.app) openen het ZekerFlex-platform; ze verzamelen dezelfde gegevens als de website en niets extra's op de achtergrond. De app vraagt alleen om toestemming op het moment dat je een functie gebruikt, en je kunt elke toestemming weigeren of later intrekken in de instellingen van je telefoon:"
         list={[
           "Camera — om je identiteitsbewijs, selfie of certificaat te fotograferen tijdens verificatie. Foto's worden alleen geüpload als jij ze verstuurt.",
           "Locatie — om in en uit te checken op een klus (GPS-check) en klussen bij jou in de buurt te tonen. Alleen tijdens gebruik, nooit op de achtergrond.",
           "Meldingen — voor nieuwe klussen, chatberichten, oproepen en goedgekeurde uren.",
           "Microfoon — alleen als je een spraak- of video-oproep start in de chat.",
+          "NFC — alleen als je tijdens je verificatie de chip van je ID-kaart of paspoort leest. De app leest alleen de gegevens uit de chip (naam, documentnummer, datums) en het echtheidszegel, nooit de pasfoto; we bewaren alleen de uitkomst van de controle.",
         ]}
       />
       <LegalSection
