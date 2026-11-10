@@ -119,9 +119,10 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   }));
   const missingRequiredCert = certList.find((c) => c.required && !c.have) ?? null;
   const uitzendbureauBlocked = s.viaUitzendbureau && !isPayroll;
-  // Uitzendvoorwaarden (loonstrook, vast loon) zodra de klus via het uitzendbureau
-  // loopt of de werker uitzendkracht is; het label volgt de klus, net als ShiftCard.
-  const agencyTerms = isPayroll || s.viaUitzendbureau;
+  // Uitzendvoorwaarden (loonstrook, vast loon) alleen als de klus via het uitzendbureau loopt;
+  // het label volgt de klus, net als ShiftCard.
+  // 10 nov (eigenaar): alleen bij een uitzendklus, niet bij elke klus van een uitzendkracht
+  const agencyTerms = s.viaUitzendbureau;
 
   // Cancellation deadline: 24h before the shift starts.
   const cancelDeadline = new Date(start.getTime() - 24 * 3_600_000);
