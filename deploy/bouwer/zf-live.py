@@ -5,8 +5,8 @@ Admin → ZekerFlex AI → "Live zetten" legt een verzoek in de database (KV-sle
 bouwer:live:verzoek). Deze dienst pakt het op en doet wat anders een ssh-sessie
 deed, zonder Claude:
 
-  1. de nieuwste main ophalen (eigen git-kopie): eerst bij onze eigen Git-server
-     (Forgejo), met GitHub als reserve; bij een verschil wint de nieuwste
+  1. de nieuwste main ophalen (eigen git-kopie): van GitHub, en als GitHub niet te
+     bereiken is van onze eigen Git-server (Forgejo, een privé spiegel)
   2. controleren: staat de live versie op main? zijn er database-wijzigingen?
      Database-wijzigingen alleen met akkoord op precies die migraties, en pas
      na een geslaagde proef op de echte database in BEGIN … ROLLBACK.
@@ -122,9 +122,9 @@ def git(*args: str, timeout: int = 300) -> str:
 
 
 # ---- waar de code vandaan komt ------------------------------------------------------
-# Eerst onze eigen Git-server, met GitHub als reserve. Er wordt nog naar GitHub gepusht
-# en de spiegel loopt tot 10 minuten achter: voor main halen we bij allebei op en
-# kiezen we de nieuwste; ligt er één plat, dan de andere. Het token gaat via een
+# GitHub en onze eigen Git-server (een privé spiegel van GitHub). Voor main wint GitHub
+# altijd zolang hij bereikbaar is (wat live gaat, vertrouwt nooit op de spiegel; review
+# 6d); valt GitHub weg, dan gaat het via Forgejo. Het token gaat via een
 # credential helper uit de omgeving van alleen dat git-proces: nooit in een URL, een
 # opdrachtregel of het log.
 
@@ -170,8 +170,14 @@ def kloon_bron() -> str:
     raise RuntimeError("git clone mislukt bij allebei: " + " | ".join(fouten))
 
 
-def haal_main() -> tuple[str, str, list[str]]:
-    """Main bij Forgejo en GitHub; geeft (sha van de nieuwste, bron, meldingen)."""
+def haal_main() -> tuple[str, str, list[str], bool]:
+    """Main ophalen; geeft (sha, bron, meldingen, afwijking).
+
+    Wat live gaat, vertrouwt nooit op de spiegel zolang GitHub te bereiken is (review
+    6d): een pull-spiegel loopt nooit vóór op GitHub; doet hij dat toch, dan heeft
+    iemand in Forgejo geschreven. GitHub bereikbaar: altijd GitHub, en wijkt Forgejo
+    af zonder gewoon achter te lopen, dan een waarschuwing. GitHub onbereikbaar: Forgejo.
+    """
     gevonden: dict[str, str] = {}
     meldingen: list[str] = []
     for bron, url in BRONNEN:
@@ -183,12 +189,20 @@ def haal_main() -> tuple[str, str, list[str]]:
     f, g = gevonden.get("forgejo"), gevonden.get("github")
     if not f and not g:
         raise RuntimeError("Main is niet op te halen: onze eigen Git-server en GitHub zijn allebei niet bereikbaar. " + " | ".join(meldingen))
-    sha, bron = (f, "forgejo") if f else (g, "github")
-    # de spiegel loopt achter (of ze lopen uit elkaar): dan wint GitHub, waar gepusht wordt
-    if f and g and f != g and run(["git", "-C", SRC, "merge-base", "--is-ancestor", g, f], timeout=30)[0] != 0:
+    afwijking = False
+    if g:
         sha, bron = g, "github"
+        if f and f != g and run(["git", "-C", SRC, "merge-base", "--is-ancestor", f, g], timeout=30)[0] != 0:
+            afwijking = True
+            meldingen.append(
+                f"LET OP: onze eigen Git-server wijkt af van GitHub ({f[:10]} tegenover {g[:10]}) en loopt niet gewoon achter: "
+                "niet gebruikt. Kijk of iemand in Forgejo heeft geschreven."
+            )
+    else:
+        sha, bron = f, "forgejo"
+        meldingen.append("GitHub is niet bereikbaar: main via onze eigen Git-server")
     git("update-ref", "refs/remotes/origin/main", sha)
-    return sha, bron, meldingen
+    return sha, bron, meldingen, afwijking
 
 
 class Uitrol:
@@ -303,12 +317,15 @@ class Uitrol:
         self.stap("Nieuwste versie ophalen (eigen Git-server, GitHub als reserve)")
         if not os.path.isdir(os.path.join(SRC, ".git")):
             self.schrijf(f"eerste kopie via {BRON_NAAM[kloon_bron()]}")
-        doel, bron, meldingen = haal_main()
+        doel, bron, meldingen, afwijking = haal_main()
         for m in meldingen:
             self.schrijf(m)
         onderwerp = git("log", "-1", "--format=%s", doel)
         self.zet(doel=doel, doelOnderwerp=onderwerp)
-        self.schrijf(f"doel: {doel[:10]} {onderwerp} (via {BRON_NAAM[bron]})")
+        if afwijking:
+            # zichtbaar in de status van de live-zetter (Admin), niet alleen in het log
+            self.zet(waarschuwing="Onze eigen Git-server wijkt af van GitHub en loopt niet gewoon achter; hij is niet gebruikt. Kijk of iemand in Forgejo heeft geschreven.")
+        self.schrijf(f"doel: {doel[:10]} {onderwerp} (via {'onze eigen Git-server, GitHub onbereikbaar' if bron == 'forgejo' else 'GitHub'})")
 
         live = self.live_sha()
         forceer = bool(self.v.get("forceer"))

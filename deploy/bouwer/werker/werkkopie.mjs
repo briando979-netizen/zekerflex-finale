@@ -15,10 +15,11 @@ export const GITHUB_URL = `https://github.com/${GITHUB_REPO}.git`;
 const MAX_UIT = 2_000_000;
 
 // ---------------------------------------------------------------------------
-// Waar de code vandaan komt: eerst onze eigen Git-server (Forgejo, deploy/forgejo),
-// met GitHub als reserve. Er wordt nog naar GitHub gepusht en de spiegel loopt tot
-// 10 minuten achter, dus voor "main" halen we bij allebei op en kiezen we de
-// nieuwste; ligt er één plat, dan de andere. "origin" blijft GitHub: daar pusht en
+// Waar de code vandaan komt: GitHub en onze eigen Git-server (Forgejo, deploy/forgejo),
+// een privé spiegel van GitHub. Voor "main" wint GitHub altijd zolang hij bereikbaar is
+// (wat live gaat, vertrouwt nooit op de spiegel; review 6d); valt GitHub weg, dan gaat
+// het via Forgejo. Een losse vastlegging mag eerst bij Forgejo (git controleert de
+// inhoud via de sha). "origin" blijft GitHub: daar pusht en
 // rebaset server.mjs. Het leestoken (alleen lezen, gebruiker bouwer-lezen) staat
 // alleen in BOUWER_FORGEJO_TOKEN en gaat via een credential helper naar git: nooit
 // in een URL of log, en nooit naar processen die door de AI gewijzigde code draaien.
@@ -68,9 +69,14 @@ export async function kloon(doelMap, cwd, diepte, log) {
 const isVoorouder = async (cwd, a, b) => (await sh("git", ["merge-base", "--is-ancestor", a, b], { cwd, timeout: 30_000 })).code === 0;
 
 /**
- * Haalt main bij Forgejo en GitHub en zet refs/remotes/origin/main op de nieuwste.
- * Loopt de spiegel achter (Forgejo is een voorouder van GitHub), dan wint GitHub;
- * lopen ze uit elkaar, dan ook GitHub (daar wordt gepusht). Geeft { sha, bron }.
+ * Haalt main en zet refs/remotes/origin/main. Wat live gaat, vertrouwt nooit op de
+ * spiegel zolang GitHub te bereiken is (review 6d): een pull-spiegel loopt nooit vóór
+ * op GitHub; doet hij dat toch, dan heeft iemand in Forgejo geschreven (een beheerder,
+ * of een gekaapt account achter de openbare inlogpagina).
+ *   - GitHub bereikbaar: altijd GitHub. Wijkt Forgejo af en loopt hij niet gewoon
+ *     achter (Forgejo geen voorouder van GitHub): een waarschuwing, Forgejo niet gebruikt.
+ *   - GitHub onbereikbaar: Forgejo, met een duidelijke regel.
+ * Geeft { sha, bron, afwijking }.
  */
 export async function haalMain(cwd, diepte, log) {
   const gevonden = {};
@@ -82,15 +88,24 @@ export async function haalMain(cwd, diepte, log) {
   const f = gevonden.forgejo;
   const g = gevonden.github;
   if (!f && !g) throw new Error("Main is niet op te halen: onze eigen Git-server en GitHub zijn allebei niet bereikbaar");
-  let sha = f ?? g;
-  let bron = f ? "forgejo" : "github";
-  if (f && g && f !== g && !(await isVoorouder(cwd, g, f))) {
+  let sha;
+  let bron;
+  let afwijking = false;
+  if (g) {
     sha = g;
     bron = "github";
+    if (f && f !== g && !(await isVoorouder(cwd, f, g))) {
+      afwijking = true;
+      log?.("warn", `Onze eigen Git-server wijkt af van GitHub (${f.slice(0, 7)} tegenover ${g.slice(0, 7)}) en loopt niet gewoon achter: niet gebruikt. Kijk of iemand in Forgejo heeft geschreven.`);
+    }
+  } else {
+    sha = f;
+    bron = "forgejo";
+    log?.("warn", "GitHub is niet bereikbaar: main via onze eigen Git-server");
   }
   await sh("git", ["update-ref", "refs/remotes/origin/main", sha], { cwd, timeout: 30_000 });
-  log?.("info", `Main ${sha.slice(0, 7)} via ${BRON_NAAM[bron]}`);
-  return { sha, bron };
+  log?.("info", `Main ${sha.slice(0, 7)} via ${bron === "forgejo" ? "onze eigen Git-server (GitHub onbereikbaar)" : "GitHub"}`);
+  return { sha, bron, afwijking };
 }
 
 /** Eén vastlegging ophalen: eerst Forgejo, anders GitHub. Geeft de bron. */

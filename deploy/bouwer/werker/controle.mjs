@@ -74,7 +74,7 @@ async function kent(sha) {
   return (await sh("git", ["cat-file", "-e", `${sha}^{commit}`], { cwd: REPO, timeout: 30_000 })).code === 0;
 }
 
-/** "main" → de nieuwste (eigen Git-server of GitHub); anders een sha (zo nodig gericht opgehaald). Geeft de volledige sha. */
+/** "main" → de nieuwste main (GitHub, of onze eigen Git-server als GitHub weg is); anders een sha (zo nodig gericht opgehaald). Geeft de volledige sha. */
 async function losOp(doel, log) {
   const main = await haalMain(REPO, 300, log);
   if (doel === "main" || doel === "origin/main") return main.sha;
