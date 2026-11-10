@@ -79,6 +79,11 @@ export interface WerkrechtUitslag {
  * bewijs er al ("wacht"), en hoeft een Nederlander zijn paspoort niet nog eens te uploaden.
  */
 export function werkrechtUitslag(land: string, rij: WerkrechtRij | null, idVrij: boolean, nu: Date, idInBehandeling = false): WerkrechtUitslag {
+  // Een paspoort of ID-kaart uit de EU/EER/CH uit de eigen ID-controle is genoeg: vrij werken in die
+  // landen, dus geen verklaring en geen extra document (10 nov, eigenaar: "met een Nederlands
+  // document of ID-kaart hoef je geen recht om te werken").
+  if (VRIJ_VERKEER.has(land) && idVrij) return { stand: "ok", via: "id" };
+  if (VRIJ_VERKEER.has(land) && idInBehandeling) return { stand: "wacht", via: null };
   if (!rij?.declaredAt || rij.declaration !== VERKLARING_VERSIE) return { stand: "verklaring-nodig", via: null };
   if (rij.uploadId && rij.status === "APPROVED") {
     if (rij.validUntil && rij.validUntil.getTime() < nu.getTime()) {

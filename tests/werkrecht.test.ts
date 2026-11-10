@@ -21,9 +21,17 @@ function rij(over: Partial<WerkrechtRij> = {}): WerkrechtRij {
 }
 
 describe("werkrechtUitslag", () => {
-  it("zonder (of met een oude) verklaring: eerst aanvinken, ook met een EU-paspoort", () => {
-    expect(werkrechtUitslag("NL", null, true, NU).stand).toBe("verklaring-nodig");
-    expect(werkrechtUitslag("NL", rij({ declaration: "2020-01-01" }), true, NU).stand).toBe("verklaring-nodig");
+  it("zonder (of met een oude) verklaring: eerst aanvinken", () => {
+    expect(werkrechtUitslag("NL", null, false, NU).stand).toBe("verklaring-nodig");
+    expect(werkrechtUitslag("NL", rij({ declaration: "2020-01-01" }), false, NU).stand).toBe("verklaring-nodig");
+  });
+
+  it("met een EU/EER/CH-paspoort of -ID-kaart uit de ID-controle: geen verklaring nodig (binnen de EU/EER/CH)", () => {
+    expect(werkrechtUitslag("NL", null, true, NU)).toEqual({ stand: "ok", via: "id" });
+    expect(werkrechtUitslag("DE", null, true, NU)).toEqual({ stand: "ok", via: "id" });
+    expect(werkrechtUitslag("NL", null, false, NU, true)).toEqual({ stand: "wacht", via: null });
+    // buiten de EU blijven verklaring en document nodig
+    expect(werkrechtUitslag("GB", null, true, NU).stand).toBe("verklaring-nodig");
   });
 
   it("EU/EER/CH-document uit de ID-controle is het bewijs binnen de EU/EER/CH, niet daarbuiten", () => {
@@ -52,7 +60,7 @@ describe("werkrechtUitslag", () => {
     expect(werkrechtUitslag("NL", rij(), false, NU, true)).toEqual({ stand: "wacht", via: null });
     expect(werkrechtUitslag("DE", rij(), false, NU, true).stand).toBe("wacht");
     expect(werkrechtUitslag("GB", rij(), false, NU, true).stand).toBe("bewijs-nodig");
-    expect(werkrechtUitslag("NL", null, false, NU, true).stand).toBe("verklaring-nodig");
+    expect(werkrechtUitslag("GB", null, false, NU, true).stand).toBe("verklaring-nodig");
   });
 
   it("een status zonder upload (document weg) telt niet als bewijs", () => {

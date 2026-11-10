@@ -101,7 +101,7 @@ function LandKaart({ l, t, locale, onLanden }: { l: Land; t: T; locale: string; 
         <span className={`text-xs font-medium ${TOON[l.stand]}`}>{t.stand[l.stand]}</span>
       </div>
 
-      {!l.verklaard ? (
+      {l.idBewijs ? null : !l.verklaard ? (
         <div className="mt-3">
           <label htmlFor={vinkId} className="flex items-start gap-2.5 text-sm leading-relaxed text-neutralx-600">
             <input id={vinkId} type="checkbox" checked={vink} onChange={(e) => setVink(e.target.checked)} className="mt-1 h-4 w-4 flex-shrink-0" />
@@ -115,7 +115,8 @@ function LandKaart({ l, t, locale, onLanden }: { l: Land; t: T; locale: string; 
         <p className="mt-2 text-xs text-neutralx-500">✓ {t.verklaard}</p>
       )}
 
-      {l.verklaard && l.idBewijs && <p className="mt-2 text-sm text-neutralx-600">{t.bewijsEu}</p>}
+      {/* EU/EER/CH-document uit de ID-controle: geen verklaring en niets te uploaden */}
+      {l.idBewijs && <p className="mt-2 text-sm text-neutralx-600">{t.bewijsEu}</p>}
 
       {l.document && !l.idBewijs && (
         <p className="mt-2 text-xs text-neutralx-500">
