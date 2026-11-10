@@ -14,6 +14,7 @@ import { bestelKey, isBestelId } from "@/lib/sites/bestelling-lezen";
 import { claimKorting, geefKortingVrij, kortingGebruik } from "@/lib/sites/korting-gebruik";
 import { BETAAL_NAAM } from "@/lib/sites/winkel-betalen";
 import { kortingVoorCode } from "@/lib/sites/winkel-korting";
+import type { KassaMethode } from "@/lib/sites/kassa";
 
 // ---------------------------------------------------------------------------
 // Bestellingen uit de winkel van een klantsite (lib/sites/winkel.ts).
@@ -39,6 +40,10 @@ export interface SiteBestelling extends Bestelconcept {
   status: BestelStatus;
   /** wanneer de winkel de betaling binnen zag (Webshop → Bestellingen); leeg = nog niet betaald */
   betaaldAt?: string | null | undefined;
+  /** "winkel" = verkocht in de eigen winkel met de kassa (Webshop → Op locatie, lib/sites/kassa.ts); leeg = de webshop */
+  kanaal?: "winkel" | undefined;
+  /** bij een verkoop in de winkel: hoe er betaald is */
+  kassa?: { methode: KassaMethode; ontvangenCents?: number | undefined; wisselgeldCents?: number | undefined } | undefined;
 }
 
 const prefix = (siteId: string) => `site-bestelling:${siteId}:`;
@@ -54,8 +59,14 @@ export function nieuweBestelling(c: Bestelconcept, now = new Date()): SiteBestel
   return { ...c, id: `o${now.getTime().toString(36)}${randomBytes(4).toString("hex")}`, nr: bestelnummer(), at: now.toISOString(), status: "nieuw" };
 }
 
-export async function bewaarBestelling(siteId: string, c: Bestelconcept, now = new Date()): Promise<SiteBestelling> {
-  const rec = nieuweBestelling(c, now);
+export async function bewaarBestelling(
+  siteId: string,
+  c: Bestelconcept,
+  now = new Date(),
+  /** bv. een verkoop in de winkel: meteen afgerond en betaald (lib/sites/kassa-server.ts) */
+  extra: Partial<Pick<SiteBestelling, "status" | "betaaldAt" | "kanaal" | "kassa">> = {},
+): Promise<SiteBestelling> {
+  const rec: SiteBestelling = { ...nieuweBestelling(c, now), ...extra };
   await kvSet(bestelKey(siteId, rec.id), rec);
   return rec;
 }

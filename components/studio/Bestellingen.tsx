@@ -44,7 +44,9 @@ const lang = new Intl.DateTimeFormat("nl-NL", { weekday: "long", day: "numeric",
 const dagSleutel = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Europe/Amsterdam" });
 
 /** De verzendmethode zoals de klant hem koos; bestellingen van vóór 10 nov 2026 zeggen alleen afhalen of bezorgen. */
-const levering = (b: SiteBestelling) => b.verzending?.naam ?? (b.invoer.levering === "bezorgen" ? "Bezorgen" : "Afhalen");
+// een verkoop met de kassa in de eigen winkel (Webshop → Op locatie): geen verzending, wel hoe er betaald is
+const levering = (b: SiteBestelling) =>
+  b.kanaal === "winkel" ? `In de winkel · ${b.kassa?.methode === "pin" ? "pin" : "contant"}` : (b.verzending?.naam ?? (b.invoer.levering === "bezorgen" ? "Bezorgen" : "Afhalen"));
 
 /** Een overboeking die nog niet binnen is (een geannuleerde bestelling hoeft niet meer betaald te worden). */
 const wachtOpBetaling = (b: SiteBestelling) => b.betaalmethode === "overboeking" && !b.betaaldAt && b.status !== "geannuleerd" && b.totaalCents > 0;
@@ -401,6 +403,7 @@ function Paneel({
           </h2>
           <p className="mt-0.5 text-xs text-[#616161] first-letter:uppercase">{lang.format(new Date(b.at))}</p>
         </div>
+        {b.kanaal === "winkel" && <Pill>{levering(b)}</Pill>}
         <Pill tone={STATUS[b.status].tone}>{STATUS[b.status].label}</Pill>
         <button type="button" onClick={onSluit} aria-label="Bestelling sluiten" className="-mr-2 -mt-1 grid h-8 w-8 flex-shrink-0 place-items-center rounded-lg text-[#616161] hover:bg-black/5">
           <IX />

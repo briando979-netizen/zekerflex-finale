@@ -1,6 +1,7 @@
-import type { SiteProduct } from "@/lib/sites/types";
-import { euro, maxBestelbaar } from "@/lib/sites/winkel";
-import { amsterdamParts } from "@/lib/time/amsterdam";
+import type { SiteProduct, Winkel } from "@/lib/sites/types";
+import { LEGE_INVOER, euro, isUitverkocht, maxBestelbaar, type BestelRegel, type Bestelconcept } from "@/lib/sites/winkel";
+import { KOR_TEKST, btwInstellingVan, btwLabel, btwOverzicht, tariefVan, type BtwOverzicht } from "@/lib/sites/winkel-btw";
+import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Webshop → Op locatie: de kassa voor verkopen in de eigen winkel (components/studio/Kassa.tsx).
@@ -126,6 +127,8 @@ export interface KassaBon {
   /** bij contant */
   ontvangenCents?: number | undefined;
   wisselgeldCents?: number | undefined;
+  /** de btw zoals de webshop hem rekent (lib/sites/winkel-btw.ts); leeg = de winkel heeft geen btw ingesteld */
+  btw?: BtwOverzicht | undefined;
 }
 
 /** Datum en tijd op de bon, in Nederlandse tijd (de server staat op UTC). */
@@ -160,7 +163,7 @@ export function bonOpmaak(bon: KassaBon, kolommen = 32): BonOpmaak {
   regels.push(tweeKolommen(`Bon ${bon.nr}`, bonTijd(bon.op), kolommen));
   regels.push("-".repeat(kolommen));
   for (const r of bon.regels) {
-    const naam = r.variant ? `${r.naam} (${r.variant})` : r.naam;
+    const naam = r.variant && !r.naam.endsWith(`(${r.variant})`) ? `${r.naam} (${r.variant})` : r.naam;
     if (r.aantal === 1) regels.push(tweeKolommen(naam, euro(r.prijsCents), kolommen));
     else {
       regels.push(knip(naam, kolommen));
@@ -168,6 +171,8 @@ export function bonOpmaak(bon: KassaBon, kolommen = 32): BonOpmaak {
     }
   }
   regels.push("-".repeat(kolommen));
+  // bij prijzen exclusief btw komt de btw vóór het totaal erbij; inclusief staat hij eronder ("waarvan")
+  if (bon.btw && !bon.btw.kor && !bon.btw.inclusief) for (const b of bon.btw.regels) regels.push(tweeKolommen(btwLabel(b, false), euro(b.btwCents), kolommen));
   regels.push(tweeKolommen("Totaal", euro(bon.totaalCents), kolommen));
   if (bon.methode === "contant") {
     regels.push(tweeKolommen("Contant", euro(bon.ontvangenCents ?? bon.totaalCents), kolommen));
@@ -175,5 +180,152 @@ export function bonOpmaak(bon: KassaBon, kolommen = 32): BonOpmaak {
   } else {
     regels.push(tweeKolommen("Pin", euro(bon.totaalCents), kolommen));
   }
-  return { kop, regels, voet: ["Bedankt en tot ziens!"] };
+  if (bon.btw && !bon.btw.kor && bon.btw.inclusief && bon.btw.regels.length) {
+    regels.push("");
+    for (const b of bon.btw.regels) regels.push(tweeKolommen(btwLabel(b, true), euro(b.btwCents), kolommen));
+  }
+  const voet = bon.btw?.kor ? [...ombreek(KOR_TEKST, kolommen), "Bedankt en tot ziens!"] : ["Bedankt en tot ziens!"];
+  return { kop, regels, voet };
+}
+
+/** Een zin over regels van hoogstens `kolommen` tekens, op spaties. */
+function ombreek(zin: string, kolommen: number): string[] {
+  const uit: string[] = [];
+  let regel = "";
+  for (const woord of zin.split(/\s+/)) {
+    if (!regel) regel = woord;
+    else if (regel.length + 1 + woord.length <= kolommen) regel += ` ${woord}`;
+    else {
+      uit.push(regel);
+      regel = woord;
+    }
+  }
+  if (regel) uit.push(regel);
+  return uit.map((r) => knip(r, kolommen));
+}
+
+/* ─────────────── op de server: van mandje naar bestelling ─────────────── */
+
+/** Wat de kassa naar de server stuurt: een product (met variant) of een los bedrag. Prijzen van producten komen nooit van de browser. */
+export type KassaInvoerRegel = { productId: string; variant: string; aantal: number } | { los: string; prijsCents: number; aantal: number };
+
+/** De naam van een verkoop in de winkel bij Bestellingen (er is geen klant met naam of adres). */
+export const KASSA_KLANT = "Verkoop in de winkel";
+
+/**
+ * Een verkoop in de winkel als bestelling, met de prijzen, varianten, voorraad en btw van de winkel
+ * zelf (zoals berekenBestelling in lib/sites/winkel.ts, maar zonder klant, verzending of korting, en
+ * ook voor producten die niet online staan). Alle varianten van één product tellen samen voor de voorraad.
+ */
+export function kassaConcept(w: Winkel, invoer: readonly KassaInvoerRegel[]): { concept: Bestelconcept; fouten: [] } | { concept: null; fouten: string[] } {
+  const fouten: string[] = [];
+  const btwStand = btwInstellingVan(w);
+  const regels: BestelRegel[] = [];
+  const perProduct = new Map<string, number>();
+  if (!invoer.length) return { concept: null, fouten: ["Het mandje is leeg."] };
+  if (invoer.length > KASSA_MAX_REGELS) return { concept: null, fouten: ["Het mandje is te vol. Reken in twee keer af."] };
+
+  for (const r of invoer) {
+    if (!Number.isInteger(r.aantal) || r.aantal < 1 || r.aantal > 99) {
+      fouten.push("Een aantal moet tussen 1 en 99 liggen.");
+      continue;
+    }
+    if ("los" in r) {
+      const naam = r.los.trim().slice(0, 80) || "Los bedrag";
+      if (!Number.isInteger(r.prijsCents) || r.prijsCents <= 0 || r.prijsCents > KASSA_MAX_LOS_CENTS) {
+        fouten.push(`Het bedrag van "${naam}" klopt niet.`);
+        continue;
+      }
+      regels.push({ productId: "", naam, prijsCents: r.prijsCents, aantal: r.aantal, totaalCents: r.prijsCents * r.aantal, ...(btwStand ? { btw: btwStand.standaard } : {}) });
+      continue;
+    }
+    const p = w.producten.find((x) => x.id === r.productId);
+    if (!p) {
+      fouten.push("Een product in het mandje bestaat niet meer. Haal het weg en probeer opnieuw.");
+      continue;
+    }
+    if (isUitverkocht(p)) {
+      fouten.push(`${p.naam} is uitverkocht.`);
+      continue;
+    }
+    const opties = p.opties ?? [];
+    const gekozen = r.variant ? r.variant.split(", ") : [];
+    if (gekozen.length !== opties.length || opties.some((o, i) => !o.waarden.includes(gekozen[i] ?? ""))) {
+      fouten.push(opties.length ? `Kies opnieuw de ${opties.map((o) => o.naam.toLowerCase()).join(" en ")} van ${p.naam}.` : `${p.naam} heeft geen keuzes.`);
+      continue;
+    }
+    perProduct.set(p.id, (perProduct.get(p.id) ?? 0) + r.aantal);
+    const variant = opties.length ? gekozen.join(", ") : undefined;
+    regels.push({
+      productId: p.id,
+      naam: variant ? `${p.naam} (${variant})` : p.naam,
+      ...(variant ? { variant } : {}),
+      prijsCents: p.prijsCents,
+      aantal: r.aantal,
+      totaalCents: p.prijsCents * r.aantal,
+      ...(btwStand ? { btw: tariefVan(p, btwStand) } : {}),
+    });
+  }
+  for (const [id, aantal] of perProduct) {
+    const p = w.producten.find((x) => x.id === id);
+    if (p && p.voorraad != null && aantal > p.voorraad) fouten.push(`Van ${p.naam} ${p.voorraad === 1 ? "is er nog 1" : `zijn er nog ${p.voorraad}`}.`);
+  }
+  if (fouten.length) return { concept: null, fouten };
+
+  const subtotaalCents = regels.reduce((s, r) => s + r.totaalCents, 0);
+  const btw = btwStand ? btwOverzicht(btwStand, regels.map((r) => ({ cents: r.totaalCents, tarief: r.btw ?? btwStand.standaard })), 0) : undefined;
+  const btwErbij = btw && !btw.inclusief && !btw.kor ? btw.totaalCents : 0;
+  return {
+    concept: {
+      regels,
+      subtotaalCents,
+      bezorgkostenCents: 0,
+      totaalCents: subtotaalCents + btwErbij,
+      invoer: { ...LEGE_INVOER, naam: KASSA_KLANT },
+      ...(btw ? { btw } : {}),
+    },
+    fouten: [],
+  };
+}
+
+/** De bon van een verkoop in de winkel, uit de bewaarde bestelling. */
+export function bonVanVerkoop(
+  b: Pick<Bestelconcept, "regels" | "totaalCents" | "btw"> & { nr: string; at: string; kassa: { methode: KassaMethode; ontvangenCents?: number | undefined; wisselgeldCents?: number | undefined } },
+  bedrijf: { naam: string; straat?: string; postcode?: string; plaats?: string; telefoon?: string },
+): KassaBon {
+  const adres = [bedrijf.straat, [bedrijf.postcode, bedrijf.plaats].filter(Boolean).join(" ")].filter((s) => s?.trim()).join(", ");
+  return {
+    nr: b.nr,
+    op: b.at,
+    winkel: { naam: bedrijf.naam || "Onze winkel", ...(adres ? { adres } : {}), ...(bedrijf.telefoon ? { telefoon: bedrijf.telefoon } : {}) },
+    regels: b.regels.map((r, i) => ({ sleutel: String(i), productId: r.productId || null, naam: r.naam, ...(r.variant ? { variant: r.variant } : {}), prijsCents: r.prijsCents, aantal: r.aantal })),
+    totaalCents: b.totaalCents,
+    methode: b.kassa.methode,
+    ...(b.kassa.methode === "contant" ? { ontvangenCents: b.kassa.ontvangenCents ?? b.totaalCents, wisselgeldCents: b.kassa.wisselgeldCents ?? 0 } : {}),
+    ...(b.btw ? { btw: b.btw } : {}),
+  };
+}
+
+export interface KassaDag {
+  aantal: number;
+  totaalCents: number;
+  contantCents: number;
+  pinCents: number;
+}
+
+/** Wat er vandaag (Nederlandse dag) in de winkel is verkocht, per betaalwijze; geannuleerde verkopen tellen niet. */
+export function kassaDag(
+  verkopen: readonly { at: string; status: string; totaalCents: number; kanaal?: string | undefined; kassa?: { methode: KassaMethode } | undefined }[],
+  nu: Date,
+): KassaDag {
+  const dag = amsterdamDayKey(nu);
+  const uit: KassaDag = { aantal: 0, totaalCents: 0, contantCents: 0, pinCents: 0 };
+  for (const v of verkopen) {
+    if (v.kanaal !== "winkel" || !v.kassa || v.status === "geannuleerd" || amsterdamDayKey(new Date(v.at)) !== dag) continue;
+    uit.aantal += 1;
+    uit.totaalCents += v.totaalCents;
+    if (v.kassa.methode === "contant") uit.contantCents += v.totaalCents;
+    else uit.pinCents += v.totaalCents;
+  }
+  return uit;
 }

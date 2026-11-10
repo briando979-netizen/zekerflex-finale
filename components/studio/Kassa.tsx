@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { foutVan, useStudio } from "@/components/studio/context";
 import { Card, Empty, IImage, IPin, IPlus, ISearch, IX, PageHead, btn, input } from "@/components/studio/ui";
 import { BluetoothPrint } from "@/components/locatie/BluetoothPrint";
@@ -17,6 +17,7 @@ import {
   wisselgeld,
   zetAantal,
   type KassaBon,
+  type KassaDag,
   type KassaMethode,
   type KassaUitslag,
   type Mandje,
@@ -131,6 +132,17 @@ export default function Kassa() {
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [bon, setBon] = useState<KassaBon | null>(null);
+  const [vandaag, setVandaag] = useState<KassaDag | null>(null);
+  const mandjeRef = useRef<HTMLDivElement>(null);
+
+  // het dagtotaal per betaalwijze (voor het tellen van de kas aan het eind van de dag)
+  const laadVandaag = useCallback(async () => {
+    const res = await fetch(api("/kassa"), { cache: "no-store" }).catch(() => null);
+    if (res?.ok) setVandaag(((await res.json()) as { vandaag: KassaDag }).vandaag);
+  }, [api]);
+  useEffect(() => {
+    void laadVandaag();
+  }, [laadVandaag]);
 
   const media = useMemo(() => new Map((site?.media ?? []).map((m) => [m.id, m])), [site?.media]);
   const producten = winkel.producten;
@@ -173,8 +185,9 @@ export default function Kassa() {
     }).catch(() => null);
     setBezig(false);
     if (!res?.ok) return setFout(await foutVan(res, "Afronden lukte niet. Er is niets afgeboekt; probeer het opnieuw."));
-    const d = (await res.json()) as { bon: KassaBon };
+    const d = (await res.json()) as { bon: KassaBon; vandaag?: KassaDag | null };
     setBon(d.bon);
+    if (d.vandaag) setVandaag(d.vandaag);
     setStap("bon");
     setMandje([]);
     setOntvangen("");
@@ -202,7 +215,16 @@ export default function Kassa() {
 
   return (
     <>
-      <PageHead title="Op locatie" sub="Verkopen in je eigen winkel, met dezelfde producten en voorraad als je webshop." />
+      <PageHead title="Op locatie" sub="Verkopen in je eigen winkel, met dezelfde producten en voorraad als je webshop. Elke verkoop staat ook bij Bestellingen." />
+      {vandaag && vandaag.aantal > 0 && (
+        <p className="mb-3 rounded-xl border border-[#e3e3e3] bg-white px-4 py-2.5 text-sm text-[#303030]">
+          <span className="font-semibold">Vandaag in de winkel:</span> {vandaag.aantal} {vandaag.aantal === 1 ? "verkoop" : "verkopen"} · {euro(vandaag.totaalCents)}
+          <span className="text-[#616161]">
+            {" "}
+            (contant {euro(vandaag.contantCents)} · pin {euro(vandaag.pinCents)})
+          </span>
+        </p>
+      )}
       {fout && (
         <p role="alert" className="mb-3 rounded-xl bg-[#fed1d7] px-4 py-2.5 text-sm text-[#8e0b21]">
           {fout}
@@ -211,7 +233,10 @@ export default function Kassa() {
 
       {stap === "bon" && bon ? (
         <Card title="Verkoop afgerond">
-          <pre className="mx-auto w-fit max-w-full overflow-x-auto rounded-xl border border-[#e3e3e3] bg-[#fafafa] p-4 font-mono text-[12px] leading-snug text-[#1a1a1a]">
+          <pre
+            className="mx-auto w-fit max-w-full overflow-x-auto rounded-xl border border-[#e3e3e3] bg-[#fafafa] p-4 text-[12px] leading-snug text-[#1a1a1a]"
+            style={{ fontFamily: "var(--font-mono, ui-monospace), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" }}
+          >
             {(() => {
               const o = bonOpmaak(bon, 32);
               return [...o.kop, "", ...o.regels, "", ...o.voet].join("\n");
@@ -228,7 +253,7 @@ export default function Kassa() {
           </div>
         </Card>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className={`grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] ${stap === "kiezen" && mandje.length ? "pb-20 lg:pb-0" : ""}`}>
           {/* producten */}
           <div className="min-w-0">
             <div className="relative mb-3">
@@ -264,7 +289,7 @@ export default function Kassa() {
           </div>
 
           {/* mandje en afrekenen */}
-          <div className="lg:sticky lg:top-4 lg:self-start">
+          <div ref={mandjeRef} className="scroll-mt-4 lg:sticky lg:top-4 lg:self-start">
             <Card title={stap === "afrekenen" ? "Afrekenen" : `Mandje${mandje.length ? ` · ${aantalStuks(mandje)}` : ""}`}>
               {stap === "kiezen" ? (
                 <>
@@ -299,11 +324,16 @@ export default function Kassa() {
                     <label className="sr-only" htmlFor="kassa-los-naam">
                       Omschrijving los bedrag
                     </label>
-                    <input id="kassa-los-naam" value={los.naam} onChange={(e) => setLos((l) => ({ ...l, naam: e.target.value }))} placeholder="Los bedrag" maxLength={80} className={`${input} min-w-0 flex-1`} />
+                    {/* de breedte op een wikkel: de veldstijl zet zelf w-full */}
+                    <span className="min-w-0 flex-1">
+                      <input id="kassa-los-naam" value={los.naam} onChange={(e) => setLos((l) => ({ ...l, naam: e.target.value }))} placeholder="Los bedrag" maxLength={80} className={input} />
+                    </span>
                     <label className="sr-only" htmlFor="kassa-los-bedrag">
                       Bedrag
                     </label>
-                    <input id="kassa-los-bedrag" value={los.bedrag} onChange={(e) => setLos((l) => ({ ...l, bedrag: e.target.value }))} placeholder="€ 0,00" inputMode="decimal" className={`${input} w-24`} />
+                    <span className="w-24 flex-shrink-0">
+                      <input id="kassa-los-bedrag" value={los.bedrag} onChange={(e) => setLos((l) => ({ ...l, bedrag: e.target.value }))} placeholder="€ 0,00" inputMode="decimal" className={input} />
+                    </span>
                     <button type="submit" aria-label="Los bedrag toevoegen" className={btn.secondary}>
                       <IPlus width={16} height={16} />
                     </button>
@@ -374,6 +404,21 @@ export default function Kassa() {
               )}
             </Card>
           </div>
+        </div>
+      )}
+
+      {/* op een telefoon staat het mandje onder alle producten: een balk onderin brengt je erheen */}
+      {stap === "kiezen" && mandje.length > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#e3e3e3] bg-white/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur lg:hidden">
+          <button
+            type="button"
+            onClick={() => {
+              mandjeRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+            className={`${btn.primary} w-full py-3 text-base`}
+          >
+            Mandje · {aantalStuks(mandje)} · {euro(totaal)}
+          </button>
         </div>
       )}
 
