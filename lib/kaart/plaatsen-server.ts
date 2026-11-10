@@ -13,7 +13,7 @@ const BEWAAR_MS = 10 * 60_000;
 const MAX = 300;
 const TEGELIJK = 4;
 
-const g = globalThis as unknown as { __zfKaartPlaatsen?: { tot: number; plaatsen: Plaats[] } };
+const g = globalThis as unknown as { __zfKaartPlaatsen?: { tot: number; plaatsen: Plaats[] } | undefined };
 
 /** Na een goedkeuring: de lijst meteen opnieuw maken in plaats van tien minuten te wachten. */
 export function wisPlaatsenGeheugen(): void {
