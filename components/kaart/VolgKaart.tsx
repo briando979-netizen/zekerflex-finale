@@ -56,7 +56,20 @@ function spijkerElement(): HTMLDivElement {
   return el;
 }
 
-export function VolgKaart({ bestemming, positie, className = "" }: { bestemming: Punt; positie: Punt | null; className?: string }) {
+export function VolgKaart({
+  bestemming,
+  positie,
+  className = "",
+  interactief = true,
+  zoom = 14,
+}: {
+  bestemming: Punt;
+  positie: Punt | null;
+  className?: string;
+  /** false: een vaste kaart zonder slepen en zoomen, zoals op een kaartje in een lijst (scrollen blijft scrollen) */
+  interactief?: boolean;
+  zoom?: number;
+}) {
   const houder = useRef<HTMLDivElement>(null);
   const kaart = useRef<MlMap | null>(null);
   const bus = useRef<{ marker: Marker; draai: (g: number) => void } | null>(null);
@@ -78,13 +91,14 @@ export function VolgKaart({ bestemming, positie, className = "" }: { bestemming:
           container: houder.current,
           style: kaartStijl(window.location.origin, "licht", false),
           center: [bestemming.lon, bestemming.lat],
-          zoom: 14,
+          zoom,
           minZoom: 5,
           maxZoom: 19,
+          interactive: interactief,
           attributionControl: { compact: true },
         });
         kaart.current = map;
-        map.addControl(new mod.NavigationControl({ showCompass: false }), "top-right");
+        if (interactief) map.addControl(new mod.NavigationControl({ showCompass: false }), "top-right");
         new mod.Marker({ element: spijkerElement(), anchor: "bottom" }).setLngLat([bestemming.lon, bestemming.lat]).addTo(map);
         map.on("load", () => {
           map.addSource("route", { type: "geojson", data: { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: [] } } });
