@@ -42,7 +42,7 @@ export default function PrivacyPage() {
           "Locatie — om in en uit te checken op een klus (GPS-check) en klussen bij jou in de buurt te tonen. Alleen tijdens gebruik, nooit op de achtergrond.",
           "Meldingen — voor nieuwe klussen, chatberichten, oproepen en goedgekeurde uren.",
           "Microfoon — alleen als je een spraak- of video-oproep start in de chat.",
-          "NFC — alleen als je tijdens je verificatie de chip van je ID-kaart of paspoort leest. De app leest alleen de gegevens uit de chip (naam, documentnummer, datums) en het echtheidszegel, nooit de pasfoto; we bewaren alleen de uitkomst van de controle.",
+          "NFC — alleen als je tijdens je verificatie de chip van je ID-kaart of paspoort leest. De app leest dan de gegevens die ook in de leesregels onderaan je document staan (naam, documentnummer, nationaliteit, geboortedatum, geslacht en vervaldatum; bij een Nederlands document ook het BSN) en het echtheidszegel, nooit de pasfoto. We gebruiken die gegevens alleen voor de controle, wissen ze daarna en bewaren alleen de uitkomst; het BSN slaan we nooit op.",
         ]}
       />
       <LegalSection
