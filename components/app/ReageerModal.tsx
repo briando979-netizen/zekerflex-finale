@@ -7,6 +7,8 @@ import { useToast } from "@/components/ui/Toast";
 import { counterOfferAction } from "@/app/dashboard/klussen/actions";
 import { moneyExact } from "@/components/app/ui";
 import { useFT } from "@/components/i18n/useFT";
+import { ReageerBlokSheet } from "@/components/app/ReageerBlokSheet";
+import type { ReageerStap } from "@/lib/onboarding/laat-weten";
 
 export interface OtherShiftOption {
   id: string;
@@ -36,6 +38,7 @@ export function ReageerButton({
   label,
   full = false,
   fixedRate = false,
+  blokkade = null,
 }: {
   shiftId: string;
   listedRateCents: number;
@@ -52,6 +55,8 @@ export function ReageerButton({
   full?: boolean;
   /** uitzendkracht: works for the listed (CAO) wage — no counter-offer */
   fixedRate?: boolean;
+  /** de reden van de server waarom de werker nog niet mag reageren: dan opent de knop een uitleg-sheet */
+  blokkade?: { reden: string; stap: ReageerStap } | null;
 }) {
   const [open, setOpen] = useState(false);
   const ft = useFT();
@@ -61,17 +66,18 @@ export function ReageerButton({
       <div className={full ? "flex flex-col gap-1" : "flex flex-col items-end gap-1"}>
         <button
           type="button"
-          disabled={disabled}
+          disabled={disabled && !blokkade}
           onClick={() => setOpen(true)}
           className={`btn-primary text-sm disabled:opacity-50 ${full ? "w-full py-2.5" : "px-4 py-2"}`}
         >
           {label ?? ft.apply.button}
         </button>
-        {notReadyReason && (
+        {notReadyReason && !blokkade && (
           <span className="max-w-[240px] text-right text-[11px] leading-snug text-neutralx-400">{notReadyReason}</span>
         )}
       </div>
-      {open && (
+      {open && blokkade && <ReageerBlokSheet reden={blokkade.reden} stap={blokkade.stap} onClose={() => setOpen(false)} />}
+      {open && !blokkade && (
         <Modal
           shiftId={shiftId}
           listedRateCents={listedRateCents}

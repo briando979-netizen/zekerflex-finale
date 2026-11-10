@@ -4,25 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFT } from "@/components/i18n/useFT";
+import { aantalOpen, nogStappenTekst, tijdlijnStappen, volgendeStap, type TijdlijnSleutel } from "@/lib/onboarding/laat-weten";
 import { BRANCHE_OPTIES, brancheSamenvatting, type BrancheKeuze } from "@/lib/shifts/branche-keuze";
 
 type Kind = "zzp" | "flexwerker" | "uitzendkracht";
-type StepKey = "kind" | "branches" | "email" | "verify" | "werkrecht";
+type StepKey = TijdlijnSleutel;
 
 const KINDS: Kind[] = ["zzp", "flexwerker", "uitzendkracht"];
-
-function Dot({ done, active }: { done: boolean; active: boolean }) {
-  return (
-    <span
-      className={`grid h-5 w-5 flex-shrink-0 place-items-center rounded-full border text-[10px] ${
-        done ? "border-brand-500 bg-brand-500 text-white" : active ? "border-brand-500 text-brand-500" : "border-hairstrong text-neutralx-400"
-      }`}
-      aria-hidden
-    >
-      {done ? "✓" : active ? "●" : ""}
-    </span>
-  );
-}
 
 /**
  * De start van een nieuwe werker, zoals de start van een werkgever: eerst kiezen welke richting
@@ -63,8 +51,9 @@ export function WerkerStartWizard({
 
   const done: Record<StepKey, boolean> = { kind: kind !== null, branches: keuze !== null, email: emailVerified, verify: profileComplete, werkrecht: werkrechtOk };
   const ORDER: StepKey[] = ["kind", "branches", "email", "verify", "werkrecht"];
-  const first = ORDER.find((k) => !done[k]);
+  const first = volgendeStap(done);
   const [open, setOpen] = useState<StepKey>(first ?? "verify");
+  const [gesloten, setGesloten] = useState(false);
   const completed = ORDER.filter((k) => done[k]).length;
   const pct = Math.round((completed / ORDER.length) * 100);
   const label: Record<StepKey, string> = { kind: t.kindStep, branches: t.brancheStep, email: t.emailStep, verify: t.verifyStep, werkrecht: t.werkrechtStep };
@@ -135,137 +124,164 @@ export function WerkerStartWizard({
     }
   }
 
+  const aantal = aantalOpen(done);
+  const stappen = tijdlijnStappen(done);
+
+  // Eén uitleg per stap: de bestaande teksten (vijf talen), niets nieuws verzonnen.
+  const uitleg: Record<StepKey, string> = { kind: t.kindHint, branches: t.brancheHint, email: t.emailBody, verify: t.verifyBody, werkrecht: t.werkrechtBody };
+  const actie = (k: StepKey): { href: string; tekst: string } | null =>
+    k === "email" ? { href: "/verifieer-email", tekst: t.emailCta }
+    : k === "verify" ? { href: "/dashboard/verificatie", tekst: t.verifyCta }
+    : k === "werkrecht" ? { href: "/dashboard/verificatie#werkrecht", tekst: t.werkrechtCta }
+    : null;
+
+  if (gesloten) return null;
+
   return (
-    <section className="card mb-6 overflow-hidden p-0" aria-labelledby="werker-start-titel">
-      <div className="border-b border-hair p-5">
-        <p className="eyebrow mb-1">{t.eyebrow}</p>
-        <h2 id="werker-start-titel" className="font-display text-xl font-bold leading-tight text-ink">{kind === null ? t.title : t.titleRest}</h2>
-        <div className="mt-3 flex items-center gap-3">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-hair" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-            <div className="h-full rounded-full bg-brand-500 transition-all" style={{ width: `${pct}%` }} />
-          </div>
-          <span className="text-xs text-neutralx-500">{t.progress.replace("{done}", String(completed)).replace("{total}", String(ORDER.length))}</span>
+    <section className="mb-6 overflow-hidden rounded-2xl border border-hair bg-white shadow-sm" aria-labelledby="werker-start-titel">
+      <div className="relative bg-gradient-to-br from-brand-700 via-brand-700 to-brand-500 px-5 pb-8 pt-5 text-white">
+        {!poort && (
+          <button
+            type="button"
+            onClick={() => setGesloten(true)}
+            aria-label={t.sluiten}
+            className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full text-xl leading-none text-white/80 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          >
+            <span aria-hidden>×</span>
+          </button>
+        )}
+        <p className="text-xs font-semibold uppercase tracking-wide text-white/70">{t.eyebrow}</p>
+        <h2 id="werker-start-titel" className="mt-1 pr-10 font-display text-2xl font-bold leading-tight">{t.laatWeten}</h2>
+        <p className="mt-1 text-sm text-white/85" role="status">{nogStappenTekst(aantal, t)}</p>
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/20" role="progressbar" aria-label={t.progress.replace("{done}", String(completed)).replace("{total}", String(ORDER.length))} aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+          <div className="h-full rounded-full bg-white transition-all" style={{ width: `${pct}%` }} />
         </div>
       </div>
 
-      <ol>
-        {ORDER.map((k) => {
-          const isOpen = open === k;
+      <ol className="relative -mt-4 rounded-t-2xl bg-white px-4 pb-2 pt-5">
+        {stappen.map(({ key: k, stand }, i) => {
+          const isOpen = stand === "actief" || (stand === "klaar" && open === k);
+          const uitgeschakeld = stand === "volgende";
+          const a = actie(k);
+          const laatste = i === stappen.length - 1;
           return (
-            <li key={k} className="border-b border-hair last:border-b-0">
-              <button
-                type="button"
-                onClick={() => setOpen(k)}
-                aria-expanded={isOpen}
-                className="flex w-full items-center gap-3 px-5 py-3 text-left text-sm font-semibold text-ink"
+            <li key={k} className="relative flex gap-3 pb-4">
+              {!laatste && <span className={`absolute bottom-0 left-[13px] top-7 w-0.5 ${stand === "klaar" ? "bg-ok/40" : "bg-hair"}`} aria-hidden />}
+              <span
+                className={`relative z-10 mt-1 grid h-7 w-7 flex-shrink-0 place-items-center rounded-full text-xs font-bold ${
+                  stand === "klaar" ? "bg-ok text-white" : stand === "actief" ? "bg-brand-500 text-white ring-4 ring-brand-100" : "bg-hair text-neutralx-500"
+                }`}
+                aria-hidden
               >
-                <Dot done={done[k]} active={isOpen} />
-                <span className="flex-1">{label[k]}</span>
-                {k === "kind" && kind && <span className="text-xs font-normal text-neutralx-500">{t.chosen.replace("{kind}", t.kinds[kind][0] ?? "")}</span>}
-                {k === "branches" && keuze && (
-                  <span className="max-w-[55%] truncate text-xs font-normal text-neutralx-500">
+                {stand === "klaar" ? "✓" : i + 1}
+              </span>
+              <div
+                className={`min-w-0 flex-1 rounded-xl border p-4 ${
+                  stand === "actief" ? "border-brand-500/40 bg-white shadow-sm" : stand === "klaar" ? "border-hair bg-white" : "border-hair bg-paper-soft"
+                }`}
+                aria-current={stand === "actief" ? "step" : undefined}
+              >
+                <button
+                  type="button"
+                  onClick={() => setOpen(open === k ? (first ?? "verify") : k)}
+                  aria-expanded={isOpen}
+                  disabled={stand !== "klaar"}
+                  className={`flex w-full items-center gap-2 text-left text-sm font-semibold disabled:cursor-default ${uitgeschakeld ? "text-neutralx-500" : "text-ink"}`}
+                >
+                  <span className="flex-1">{label[k]}</span>
+                  {stand === "klaar" && <span className="text-xs font-normal text-ok">{t.klaarLabel}</span>}
+                </button>
+                {k === "kind" && kind && !isOpen && <p className="mt-0.5 text-xs text-neutralx-500">{t.chosen.replace("{kind}", t.kinds[kind][0] ?? "")}</p>}
+                {k === "branches" && keuze && !isOpen && (
+                  <p className="mt-0.5 truncate text-xs text-neutralx-500">
                     {t.brancheChosen.replace("{namen}", brancheSamenvatting(keuze, t.alleBranches, t.brancheEn, t.brancheAndere))}
-                  </span>
+                  </p>
                 )}
-              </button>
+                {stand !== "klaar" && k !== "kind" && k !== "branches" && <p className={`mt-1 text-xs leading-snug ${uitgeschakeld ? "text-neutralx-400" : "text-neutralx-600"}`}>{uitleg[k]}</p>}
+                {uitgeschakeld && <p className="mt-2 text-xs text-neutralx-400">{t.eerstDit}</p>}
+                {stand === "actief" && a && (
+                  <Link href={a.href} className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand-600 underline underline-offset-4 hover:text-brand-700">
+                    {a.tekst} <span aria-hidden>›</span>
+                  </Link>
+                )}
 
-              {isOpen && k === "kind" && (
-                <div className="space-y-3 px-5 pb-5">
-                  <p className="text-xs text-neutralx-500">{t.kindHint}</p>
-                  <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label={t.kindStep}>
-                    {KINDS.map((opt) => {
-                      const on = pick === opt;
-                      const locked = kind !== null && kind !== opt;
-                      return (
-                        <button
-                          key={opt}
-                          type="button"
-                          role="radio"
-                          aria-checked={on}
-                          disabled={locked}
-                          onClick={() => setPick(opt)}
-                          className={`rounded-xl border p-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:opacity-50 ${
-                            on ? "border-brand-500 bg-brand-50" : "border-hairstrong hover:border-brand-500"
-                          }`}
-                        >
-                          <span className="block text-sm font-semibold text-ink">{t.kinds[opt][0]}</span>
-                          <span className="mt-1 block text-xs leading-snug text-neutralx-500">{t.kinds[opt][1]}</span>
-                        </button>
-                      );
-                    })}
+                {isOpen && k === "kind" && (
+                  <div className="mt-3 space-y-3">
+                    <p className="text-xs text-neutralx-500">{t.kindHint}</p>
+                    <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label={t.kindStep}>
+                      {KINDS.map((opt) => {
+                        const on = pick === opt;
+                        const locked = kind !== null && kind !== opt;
+                        return (
+                          <button
+                            key={opt}
+                            type="button"
+                            role="radio"
+                            aria-checked={on}
+                            disabled={locked}
+                            onClick={() => setPick(opt)}
+                            className={`rounded-xl border p-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:opacity-50 ${
+                              on ? "border-brand-500 bg-brand-50" : "border-hairstrong hover:border-brand-500"
+                            }`}
+                          >
+                            <span className="block text-sm font-semibold text-ink">{t.kinds[opt][0]}</span>
+                            <span className="mt-1 block text-xs leading-snug text-neutralx-500">{t.kinds[opt][1]}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{error}</p>}
+                    {kind === null && (
+                      <button type="button" onClick={save} disabled={!pick || busy} className="btn-primary text-sm disabled:opacity-50">
+                        {busy ? t.saving : t.pick}
+                      </button>
+                    )}
                   </div>
-                  {error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{error}</p>}
-                  {kind === null && (
-                    <button type="button" onClick={save} disabled={!pick || busy} className="btn-primary text-sm disabled:opacity-50">
-                      {busy ? t.saving : t.pick}
-                    </button>
-                  )}
-                </div>
-              )}
+                )}
 
-              {isOpen && k === "branches" && (
-                <div className="space-y-3 px-5 pb-5">
-                  <p className="text-xs text-neutralx-500">{t.brancheHint}</p>
-                  <div className="flex flex-wrap gap-2" role="group" aria-label={t.brancheStep}>
-                    <button
-                      type="button"
-                      aria-pressed={alleGekozen}
-                      onClick={() => setGekozen(alleGekozen ? new Set() : new Set(BRANCHE_OPTIES.map((o) => o.key)))}
-                      className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
-                        alleGekozen ? "border-brand-500 bg-brand-500 text-white" : "border-hairstrong text-ink hover:border-brand-500"
-                      }`}
-                    >
-                      {t.alleBranches}
+                {isOpen && k === "branches" && (
+                  <div className="mt-3 space-y-3">
+                    <p className="text-xs text-neutralx-500">{t.brancheHint}</p>
+                    <div className="flex flex-wrap gap-2" role="group" aria-label={t.brancheStep}>
+                      <button
+                        type="button"
+                        aria-pressed={alleGekozen}
+                        onClick={() => setGekozen(alleGekozen ? new Set() : new Set(BRANCHE_OPTIES.map((o) => o.key)))}
+                        className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
+                          alleGekozen ? "border-brand-500 bg-brand-500 text-white" : "border-hairstrong text-ink hover:border-brand-500"
+                        }`}
+                      >
+                        {t.alleBranches}
+                      </button>
+                      {BRANCHE_OPTIES.map((o) => {
+                        const aan = gekozen.has(o.key);
+                        return (
+                          <button
+                            key={o.key}
+                            type="button"
+                            aria-pressed={aan}
+                            onClick={() => wissel(o.key)}
+                            className={`rounded-full border px-3 py-1.5 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
+                              aan ? "border-brand-500 bg-brand-50 font-semibold text-ink" : "border-hairstrong text-neutralx-700 hover:border-brand-500"
+                            }`}
+                          >
+                            {o.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {brancheFout && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{brancheFout}</p>}
+                    <button type="button" onClick={() => void bewaarBranches()} disabled={brancheBusy} className="btn-primary text-sm disabled:opacity-50">
+                      {brancheBusy ? t.saving : t.pick}
                     </button>
-                    {BRANCHE_OPTIES.map((o) => {
-                      const aan = gekozen.has(o.key);
-                      return (
-                        <button
-                          key={o.key}
-                          type="button"
-                          aria-pressed={aan}
-                          onClick={() => wissel(o.key)}
-                          className={`rounded-full border px-3 py-1.5 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
-                            aan ? "border-brand-500 bg-brand-50 font-semibold text-ink" : "border-hairstrong text-neutralx-700 hover:border-brand-500"
-                          }`}
-                        >
-                          {o.label}
-                        </button>
-                      );
-                    })}
                   </div>
-                  {brancheFout && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{brancheFout}</p>}
-                  <button type="button" onClick={() => void bewaarBranches()} disabled={brancheBusy} className="btn-primary text-sm disabled:opacity-50">
-                    {brancheBusy ? t.saving : t.pick}
-                  </button>
-                </div>
-              )}
-
-              {isOpen && k === "email" && (
-                <div className="space-y-3 px-5 pb-5">
-                  <p className="text-sm text-neutralx-600">{t.emailBody}</p>
-                  {!emailVerified && <Link href="/verifieer-email" className="btn-primary inline-block text-sm">{t.emailCta}</Link>}
-                </div>
-              )}
-
-              {isOpen && k === "verify" && (
-                <div className="space-y-3 px-5 pb-5">
-                  <p className="text-sm text-neutralx-600">{t.verifyBody}</p>
-                  <Link href="/dashboard/verificatie" className="btn-primary inline-block text-sm">{t.verifyCta}</Link>
-                </div>
-              )}
-
-              {isOpen && k === "werkrecht" && (
-                <div className="space-y-3 px-5 pb-5">
-                  <p className="text-sm text-neutralx-600">{t.werkrechtBody}</p>
-                  {!werkrechtOk && <Link href="/dashboard/verificatie#werkrecht" className="btn-primary inline-block text-sm">{t.werkrechtCta}</Link>}
-                </div>
-              )}
+                )}
+              </div>
             </li>
           );
         })}
       </ol>
-      {!poort && <p className="bg-paper-soft px-5 py-2.5 text-xs text-neutralx-500">{t.browse}</p>}
+      <p className="border-t border-hair bg-paper-soft px-5 py-3 text-center text-xs text-neutralx-500">{poort ? t.afsluiting : t.browse}</p>
     </section>
   );
 }

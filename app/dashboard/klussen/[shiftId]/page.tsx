@@ -31,6 +31,7 @@ import { cleanBranchLabel } from "@/lib/shifts/place-label";
 import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
 import { isFollowing } from "@/lib/worker/follows";
 import { marketStats, rateVsMarket } from "@/lib/pricing/advice";
+import { reageerStap } from "@/lib/onboarding/laat-weten";
 import { FollowEmployerButton } from "@/components/app/FollowEmployerButton";
 import { amsterdamWeek, findOverlappingShift, MAX_WEEK_HOURS, restViolation, weekHoursWith } from "@/lib/shifts/worker-overlap";
 
@@ -181,8 +182,9 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
     return `${WD[p.weekday]} ${p.day} ${MON[p.month - 1]}. ${hhmm(d)}`;
   };
   const applyDisabled = !s.canApply || Boolean(overlap) || Boolean(missingRequiredCert) || uitzendbureauBlocked;
+  const applyBlockReasonText = !s.canApply && s.blockReason ? translateBlockReason(s.blockReason, ft) : null;
   const applyBlockReason = !s.canApply
-    ? s.blockReason && translateBlockReason(s.blockReason, ft)
+    ? applyBlockReasonText
     : overlap
       ? D.blockOverlap(overlap.title, whenOf(overlap))
       : uitzendbureauBlocked
@@ -190,6 +192,8 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
         : missingRequiredCert
           ? D.blockCert(missingRequiredCert.label)
           : null;
+  // Nog niet mogen reageren door de aanmelding (de server beslist, s.blockReason): de knop opent dan een uitleg-sheet
+  const applyBlokkade = !s.canApply && applyBlockReasonText ? { reden: applyBlockReasonText, stap: reageerStap(s.blockReason) } : null;
   let assigned: {
     assignmentId: string;
     confirmedAt: string | null;
@@ -805,6 +809,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                 }))}
                 disabled={applyDisabled}
                 notReadyReason={applyBlockReason}
+                blokkade={applyBlokkade}
                 full
                 fixedRate={agencyTerms}
               />
