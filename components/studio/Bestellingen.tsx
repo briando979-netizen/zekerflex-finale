@@ -6,12 +6,15 @@ import { foutVan } from "@/components/studio/context";
 import { STATUS } from "@/components/studio/Overzicht";
 import { Card, Empty, IReceipt, ISearch, IX, PageHead, Pill, btn, input } from "@/components/studio/ui";
 import { euro } from "@/lib/sites/winkel";
+import { somRegels } from "@/lib/sites/bestel-som";
+import { BETAAL_NAAM, toonIban } from "@/lib/sites/winkel-betalen";
 import type { BestelStatus, SiteBestelling } from "@/lib/sites/bestellingen";
 
 // ---------------------------------------------------------------------------
 // Websitestudio → Bestellingen: alle bestellingen uit de eigen webshop, te
 // filteren op status en te zoeken op nummer of naam. Een bestelling openen toont
-// de producten, de klant en de levering, en zet de status een stap verder.
+// de producten met korting, verzending en btw, de klant, de verzending en de
+// betaling, zet de status een stap verder en markeert een betaling als binnen.
 // ?open=<id> opent een bestelling meteen (het Overzicht linkt zo).
 // Data: GET/PATCH /api/werkgever/sites/bestellingen (lib/sites/bestellingen.ts).
 // ---------------------------------------------------------------------------
@@ -40,13 +43,17 @@ const kort = new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "short", 
 const lang = new Intl.DateTimeFormat("nl-NL", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" });
 const dagSleutel = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Europe/Amsterdam" });
 
-const levering = (b: SiteBestelling) => (b.invoer.levering === "bezorgen" ? "Bezorgen" : "Afhalen");
+/** De verzendmethode zoals de klant hem koos; bestellingen van vóór 10 nov 2026 zeggen alleen afhalen of bezorgen. */
+const levering = (b: SiteBestelling) => b.verzending?.naam ?? (b.invoer.levering === "bezorgen" ? "Bezorgen" : "Afhalen");
+
+/** Een overboeking die nog niet binnen is (een geannuleerde bestelling hoeft niet meer betaald te worden). */
+const wachtOpBetaling = (b: SiteBestelling) => b.betaalmethode === "overboeking" && !b.betaaldAt && b.status !== "geannuleerd" && b.totaalCents > 0;
 
 /** Puntkomma's en een BOM, zodat Excel het Nederlands opent; geen formules uit klantinvoer. */
 function naarCsv(rows: SiteBestelling[]): string {
   const cel = (v: string) => `"${(/^[=+\-@\t\r]/.test(v) ? `'${v}` : v).replace(/"/g, '""')}"`;
   const bedrag = (c: number) => (c / 100).toFixed(2).replace(".", ",");
-  const kop = ["Bestelnummer", "Datum", "Status", "Naam", "E-mail", "Telefoon", "Levering", "Adres", "Producten", "Subtotaal", "Bezorgkosten", "Totaal", "Opmerking"];
+  const kop = ["Bestelnummer", "Datum", "Status", "Naam", "E-mail", "Telefoon", "Levering", "Adres", "Producten", "Subtotaal", "Kortingscode", "Korting", "Bezorgkosten", "Btw", "Totaal", "Betaalmethode", "Betaald", "Opmerking"];
   const regels = rows.map((b) => {
     const i = b.invoer;
     return [
@@ -57,11 +64,16 @@ function naarCsv(rows: SiteBestelling[]): string {
       i.email,
       i.telefoon,
       levering(b),
-      i.levering === "bezorgen" ? `${i.straat}, ${i.postcode} ${i.plaats}` : "",
+      i.levering === "bezorgen" ? `${i.straat}, ${i.postcode} ${i.plaats}${b.verzending?.land && b.verzending.land !== "Nederland" ? `, ${b.verzending.land}` : ""}` : "",
       b.regels.map((r) => `${r.aantal} × ${r.naam}`).join(", "),
       bedrag(b.subtotaalCents),
+      b.korting?.code ?? "",
+      b.korting ? bedrag(b.korting.cents) : "",
       bedrag(b.bezorgkostenCents),
+      b.btw && !b.btw.kor ? bedrag(b.btw.totaalCents) : "",
       bedrag(b.totaalCents),
+      b.betaalmethode ? BETAAL_NAAM[b.betaalmethode] : "",
+      b.betaaldAt ? kort.format(new Date(b.betaaldAt)) : "",
       i.opmerking,
     ];
   });
@@ -151,6 +163,17 @@ export default function Bestellingen() {
     setBusy(false);
     if (!res?.ok) return setActieFout(await foutVan(res, "De status wijzigen lukte niet. Probeer het opnieuw."));
     // de serverversie overnemen, niet alleen het veld lokaal bijwerken
+    const { bestelling } = (await res.json()) as { bestelling: SiteBestelling };
+    setLijst((l) => l?.map((x) => (x.id === bestelling.id ? bestelling : x)) ?? l);
+  };
+
+  const zetBetaald = async (b: SiteBestelling, betaald: boolean) => {
+    if (busy) return;
+    setBusy(true);
+    setActieFout(null);
+    const res = await fetch(API, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: b.id, betaald }) }).catch(() => null);
+    setBusy(false);
+    if (!res?.ok) return setActieFout(await foutVan(res, "Opslaan lukte niet. Probeer het opnieuw."));
     const { bestelling } = (await res.json()) as { bestelling: SiteBestelling };
     setLijst((l) => l?.map((x) => (x.id === bestelling.id ? bestelling : x)) ?? l);
   };
@@ -278,6 +301,7 @@ export default function Bestellingen() {
                           <span className="flex flex-wrap items-center gap-2">
                             <span className="font-semibold text-[#1a1a1a]">#{b.nr}</span>
                             <Pill tone={STATUS[b.status].tone}>{STATUS[b.status].label}</Pill>
+                            {wachtOpBetaling(b) && <Pill tone="warn">Wacht op betaling</Pill>}
                           </span>
                           <span className="mt-0.5 block truncate text-sm text-[#303030]">
                             {b.invoer.naam} · {levering(b)}
@@ -324,7 +348,10 @@ export default function Bestellingen() {
                         {!geopend && <td className="whitespace-nowrap px-4 py-3 text-[#616161]">{levering(b)}</td>}
                         <td className="whitespace-nowrap px-4 py-3 text-right font-semibold text-[#1a1a1a]">{euro(b.totaalCents)}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-right">
-                          <Pill tone={STATUS[b.status].tone}>{STATUS[b.status].label}</Pill>
+                          <span className="inline-flex flex-wrap justify-end gap-1">
+                            {wachtOpBetaling(b) && <Pill tone="warn">Wacht op betaling</Pill>}
+                            <Pill tone={STATUS[b.status].tone}>{STATUS[b.status].label}</Pill>
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -336,7 +363,7 @@ export default function Bestellingen() {
 
           {geopend && (
             <div ref={paneelRef} className="mt-4 scroll-mt-20 xl:sticky xl:top-20 xl:mt-0 xl:max-h-[calc(100dvh-6rem)] xl:overflow-y-auto">
-              <Paneel b={geopend} busy={busy} fout={actieFout} kopRef={kopRef} onStatus={(s) => void zetStatus(geopend, s)} onSluit={sluit} />
+              <Paneel b={geopend} busy={busy} fout={actieFout} kopRef={kopRef} onStatus={(s) => void zetStatus(geopend, s)} onBetaald={(v) => void zetBetaald(geopend, v)} onSluit={sluit} />
             </div>
           )}
         </div>
@@ -351,6 +378,7 @@ function Paneel({
   fout,
   kopRef,
   onStatus,
+  onBetaald,
   onSluit,
 }: {
   b: SiteBestelling;
@@ -358,6 +386,7 @@ function Paneel({
   fout: string | null;
   kopRef: RefObject<HTMLHeadingElement>;
   onStatus: (s: BestelStatus) => void;
+  onBetaald: (betaald: boolean) => void;
   onSluit: () => void;
 }) {
   const i = b.invoer;
@@ -419,21 +448,21 @@ function Paneel({
             </li>
           ))}
         </ul>
+        {/* dezelfde optelling als de klant zag (lib/sites/bestel-som.ts) */}
         <dl className="mt-3 space-y-1 border-t border-[#f1f1f1] pt-3 text-sm">
-          <div className="flex justify-between gap-3">
-            <dt className="text-[#616161]">Subtotaal</dt>
-            <dd>{euro(b.subtotaalCents)}</dd>
-          </div>
-          {i.levering === "bezorgen" && (
-            <div className="flex justify-between gap-3">
-              <dt className="text-[#616161]">Bezorgkosten</dt>
-              <dd>{b.bezorgkostenCents ? euro(b.bezorgkostenCents) : "Gratis"}</dd>
-            </div>
+          {somRegels(b).map((r, n) =>
+            r.soort === "noot" ? (
+              <div key={n} className="text-xs text-[#616161]">
+                <dt className="sr-only">Btw</dt>
+                <dd>{r.label}</dd>
+              </div>
+            ) : (
+              <div key={n} className={`flex justify-between gap-3 ${r.soort === "totaal" ? "font-semibold text-[#1a1a1a]" : r.soort === "klein" ? "text-xs text-[#616161]" : ""}`}>
+                <dt className={r.soort === "totaal" || r.soort === "klein" ? "" : "text-[#616161]"}>{r.label}</dt>
+                <dd className="flex-shrink-0">{r.bedrag}</dd>
+              </div>
+            ),
           )}
-          <div className="flex justify-between gap-3 font-semibold text-[#1a1a1a]">
-            <dt>Totaal</dt>
-            <dd>{euro(b.totaalCents)}</dd>
-          </div>
         </dl>
       </div>
 
@@ -452,6 +481,25 @@ function Paneel({
         )}
       </div>
 
+      {b.betaalmethode && (
+        <div className="border-b border-[#ebebeb] px-5 py-4 text-sm">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-[#616161]">Betaling</h3>
+          <p className="mt-2 flex flex-wrap items-center gap-2 font-medium text-[#1a1a1a]">
+            {BETAAL_NAAM[b.betaalmethode]}
+            {b.betaaldAt ? <Pill tone="ok">Betaald</Pill> : wachtOpBetaling(b) ? <Pill tone="warn">Wacht op betaling</Pill> : <Pill>Nog niet betaald</Pill>}
+          </p>
+          {b.betaalmethode === "overboeking" && b.rekening && (
+            <p className="mt-1 break-words text-xs text-[#616161]">
+              {euro(b.totaalCents)} naar {toonIban(b.rekening.iban)}, omschrijving {b.nr}
+            </p>
+          )}
+          {b.betaaldAt && <p className="mt-1 text-xs text-[#616161]">Gemarkeerd als betaald op {kort.format(new Date(b.betaaldAt))}.</p>}
+          <button type="button" onClick={() => onBetaald(!b.betaaldAt)} disabled={busy} aria-pressed={Boolean(b.betaaldAt)} className={`${b.betaaldAt ? btn.secondary : btn.primary} mt-3 w-full`}>
+            {busy ? "Bezig…" : b.betaaldAt ? "Toch nog niet betaald" : "Markeer als betaald"}
+          </button>
+        </div>
+      )}
+
       <div className="px-5 py-4 text-sm">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-[#616161]">{levering(b)}</h3>
         {i.levering === "bezorgen" ? (
@@ -459,10 +507,17 @@ function Paneel({
             {i.straat}
             <br />
             {i.postcode} {i.plaats}
+            {b.verzending?.land && b.verzending.land !== "Nederland" && (
+              <>
+                <br />
+                {b.verzending.land}
+              </>
+            )}
           </p>
         ) : (
-          <p className="mt-2 text-[#616161]">De klant haalt de bestelling bij je af.</p>
+          <p className="mt-2 text-[#616161]">{b.verzending?.adres ? `De klant haalt de bestelling af bij ${b.verzending.adres}.` : "De klant haalt de bestelling bij je af."}</p>
         )}
+        {b.verzending?.levertijd && <p className="mt-1 text-xs text-[#616161]">{b.verzending.soort === "afhalen" ? b.verzending.levertijd : `Levertijd: ${b.verzending.levertijd}`}</p>}
         {i.opmerking && (
           <>
             <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#616161]">Opmerking van de klant</h3>
