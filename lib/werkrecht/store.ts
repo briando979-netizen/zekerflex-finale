@@ -45,18 +45,23 @@ export interface WerkrechtLand {
  * land, lib/kyc/werkrecht.ts), nooit een rijbewijs, en het document is nog niet verlopen.
  */
 export async function idVrij(userId: string, nu = new Date()): Promise<boolean> {
-  const check = await prisma.identityVerification.findFirst({
+  return (await idStand(userId, nu)).vrij;
+}
+
+/** Als idVrij, plus of zo'n controle nog bij een medewerker ligt (status PENDING). */
+export async function idStand(userId: string, nu = new Date()): Promise<{ vrij: boolean; inBehandeling: boolean }> {
+  const checks = await prisma.identityVerification.findMany({
     where: {
       userId,
       provider: "AI_LOCAL",
-      status: "VERIFIED",
+      status: { in: ["VERIFIED", "PENDING"] },
       documentType: { not: "DRIVERS_LICENSE" },
       rawPayload: { path: ["werkrecht"], equals: "vrij" },
       OR: [{ expiresAt: null }, { expiresAt: { gt: nu } }],
     },
-    select: { id: true },
+    select: { status: true },
   });
-  return Boolean(check);
+  return { vrij: checks.some((c) => c.status === "VERIFIED"), inBehandeling: checks.some((c) => c.status === "PENDING") };
 }
 
 type Rij = Awaited<ReturnType<typeof rijen>>[number];
@@ -69,15 +74,16 @@ function rijen(userId: string) {
   });
 }
 
-function naarLand(land: string, rij: Rij | null, vrij: boolean, nu: Date): WerkrechtLand {
-  const u = werkrechtUitslag(land, rij, vrij, nu);
+function naarLand(land: string, rij: Rij | null, id: { vrij: boolean; inBehandeling: boolean }, nu: Date): WerkrechtLand {
+  const u = werkrechtUitslag(land, rij, id.vrij, nu, id.inBehandeling);
   return {
     id: rij?.id ?? null,
     land,
     stand: u.stand,
     via: u.via,
     verklaard: Boolean(rij?.declaredAt && rij.declaration === VERKLARING_VERSIE),
-    idBewijs: vrij && VRIJ_VERKEER.has(land),
+    // ook terwijl de ID-controle nog bij een medewerker ligt: dan is dat paspoort het bewijs
+    idBewijs: (id.vrij || id.inBehandeling) && VRIJ_VERKEER.has(land),
     document:
       rij?.uploadId && rij.status
         ? {
@@ -94,18 +100,18 @@ function naarLand(land: string, rij: Rij | null, vrij: boolean, nu: Date): Werkr
 
 /** Alle landen van een werker; Nederland staat er altijd bij, als eerste. */
 export async function werkrechtOverzicht(userId: string, nu = new Date()): Promise<WerkrechtLand[]> {
-  const [lijst, vrij] = await Promise.all([rijen(userId), idVrij(userId, nu)]);
+  const [lijst, id] = await Promise.all([rijen(userId), idStand(userId, nu)]);
   const nl = lijst.find((r) => r.country === "NL") ?? null;
-  return [naarLand("NL", nl, vrij, nu), ...lijst.filter((r) => r.country !== "NL").map((r) => naarLand(r.country, r, vrij, nu))];
+  return [naarLand("NL", nl, id, nu), ...lijst.filter((r) => r.country !== "NL").map((r) => naarLand(r.country, r, id, nu))];
 }
 
 /** De controle vóór een (betaalde) dienst in een land. */
 export async function werkrechtVoorWerk(userId: string, land = "NL", nu = new Date()): Promise<{ ok: boolean; reden: string | null }> {
   const [rij, vrij] = await Promise.all([
     prisma.workRight.findUnique({ where: { userId_country: { userId, country: land } }, include: { upload: { select: { filename: true } } } }),
-    idVrij(userId, nu),
+    idStand(userId, nu),
   ]);
-  const { stand } = werkrechtUitslag(land, rij, vrij, nu);
+  const { stand } = werkrechtUitslag(land, rij, vrij.vrij, nu, vrij.inBehandeling);
   const reden = werkrechtReden(stand, landNaam(land, "nl"));
   return { ok: reden === null, reden };
 }

@@ -1,0 +1,53 @@
+import { prisma } from "@/lib/prisma";
+import { getFiscal, isComplete as isFiscalComplete, invoiceModeFor } from "@/lib/fiscal/store";
+import { activeUitzendContract } from "@/lib/agreements/uitzend-contract";
+import { getBrancheKeuze } from "@/lib/worker/branche-store";
+import { werkrechtOverzicht } from "@/lib/werkrecht/store";
+import { werkerOnboardingKlaar, type WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
+import type { BrancheKeuze } from "@/lib/shifts/branche-keuze";
+
+// De feiten voor de poort van de werker-app (lib/onboarding/werker-poort.ts), in één keer
+// voor de layout van /dashboard. Een storing in een bron mag de app niet dichtgooien: die
+// stap telt dan als ingevuld (de controles vóór werk staan los hiervan, lib/fiscal/eligibility.ts).
+
+export interface WerkerPoortStand extends WerkerPoortFeiten {
+  klaar: boolean;
+  workerKind: "zzp" | "flexwerker" | "uitzendkracht" | null;
+  brancheKeuze: BrancheKeuze | null;
+}
+
+export async function werkerPoortStand(userId: string): Promise<WerkerPoortStand> {
+  const [fiscal, profiel, user, inBehandeling, brancheKeuze, werkrecht] = await Promise.all([
+    getFiscal(userId),
+    prisma.freelancerProfile.findUnique({ where: { userId }, select: { kvkValid: true, kvkNumber: true, payoutIban: true, homePostalCode: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { kycStatus: true } }),
+    // ingestuurd en in behandeling: niet een Stripe-sessie die alleen geopend is (die zet al PENDING)
+    prisma.identityVerification.findFirst({
+      where: { userId, status: "PENDING", OR: [{ provider: { not: "STRIPE_IDENTITY" } }, { decisionStatus: "processing" }] },
+      select: { id: true },
+    }),
+    getBrancheKeuze(userId).catch(() => ({ alle: true, branches: [] }) as BrancheKeuze),
+    werkrechtOverzicht(userId).catch(() => null),
+  ]);
+  const uitzend = invoiceModeFor(fiscal) === "payroll";
+  const contract = uitzend ? Boolean(await activeUitzendContract(userId).catch(() => true)) : true;
+  const feiten: WerkerPoortFeiten = {
+    soortGekozen: Boolean(fiscal.workerKind),
+    branchesGekozen: brancheKeuze !== null,
+    gegevensIngevuld:
+      isFiscalComplete(fiscal) &&
+      // ingevuld, niet per se al bevestigd: een KVK-nummer van 8 cijfers telt (bij een storing van de
+      // KVK-koppeling mag niemand hier vastlopen); vóór betaald werk wordt het opnieuw gecontroleerd
+      (uitzend ? contract : Boolean(profiel?.kvkValid || /^\d{8}$/.test(profiel?.kvkNumber ?? "") || fiscal.vatValid || fiscal.korApplies)) &&
+      Boolean(profiel && (profiel.payoutIban || fiscal.iban) && profiel.homePostalCode),
+    identiteitIngestuurd: user?.kycStatus === "VERIFIED" || (user?.kycStatus === "PENDING" && Boolean(inBehandeling)),
+    // Nederland staat altijd vooraan (lib/werkrecht/store.ts); een storing telt niet als "niet ingevuld"
+    werkrechtIngevuld: werkrecht === null || werkrecht[0]?.stand === "ok" || werkrecht[0]?.stand === "wacht",
+  };
+  return {
+    ...feiten,
+    klaar: werkerOnboardingKlaar(feiten),
+    workerKind: fiscal.workerKind ?? null,
+    brancheKeuze,
+  };
+}

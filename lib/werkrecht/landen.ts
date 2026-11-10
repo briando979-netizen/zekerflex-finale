@@ -75,8 +75,10 @@ export interface WerkrechtUitslag {
 /**
  * De stand voor één land. `idVrij` = de laatste goedgekeurde eigen ID-controle las
  * een EU/EER/CH-paspoort of -ID-kaart (werkrecht "vrij" uit de MRZ).
+ * `idInBehandeling` = zo'n controle is ingestuurd en wacht op een medewerker: dan is het
+ * bewijs er al ("wacht"), en hoeft een Nederlander zijn paspoort niet nog eens te uploaden.
  */
-export function werkrechtUitslag(land: string, rij: WerkrechtRij | null, idVrij: boolean, nu: Date): WerkrechtUitslag {
+export function werkrechtUitslag(land: string, rij: WerkrechtRij | null, idVrij: boolean, nu: Date, idInBehandeling = false): WerkrechtUitslag {
   if (!rij?.declaredAt || rij.declaration !== VERKLARING_VERSIE) return { stand: "verklaring-nodig", via: null };
   if (rij.uploadId && rij.status === "APPROVED") {
     if (rij.validUntil && rij.validUntil.getTime() < nu.getTime()) {
@@ -86,6 +88,7 @@ export function werkrechtUitslag(land: string, rij: WerkrechtRij | null, idVrij:
     return { stand: "ok", via: "document" };
   }
   if (idVrij && VRIJ_VERKEER.has(land)) return { stand: "ok", via: "id" };
+  if (idInBehandeling && VRIJ_VERKEER.has(land)) return { stand: "wacht", via: null };
   if (rij.uploadId && rij.status === "UPLOADED") return { stand: "wacht", via: null };
   if (rij.uploadId && rij.status === "REJECTED") return { stand: "afgewezen", via: null };
   return { stand: "bewijs-nodig", via: null };

@@ -76,8 +76,11 @@ export function FreelancerShell({
   theme,
   inApp = false,
   canSwitchToEmployer = false,
+  onboarding = false,
   children,
 }: {
+  /** de onboarding is nog niet ingevuld (lib/onboarding/werker-poort.ts): alleen Start en Account */
+  onboarding?: boolean;
   userName: string;
   /** Eigen profielfoto — toont in de Account-tab i.p.v. het poppetje-icoon. */
   avatarUrl?: string | null;
@@ -88,7 +91,11 @@ export function FreelancerShell({
   children: ReactNode;
 }) {
   useLocaleSync();
-  const tabs = inApp || !BANK_AAN ? TABS.filter((t) => t.key !== "bank") : TABS;
+  const tabs = onboarding
+    ? TABS.filter((t) => t.key === "discover" || t.key === "account")
+    : inApp || !BANK_AAN
+      ? TABS.filter((t) => t.key !== "bank")
+      : TABS;
   const pathname = usePathname();
   const ft = useFT();
   const isActive = (href: string) =>

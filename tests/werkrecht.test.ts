@@ -48,6 +48,13 @@ describe("werkrechtUitslag", () => {
     expect(werkrechtUitslag("NL", verlopen, true, NU)).toEqual({ stand: "ok", via: "id" });
   });
 
+  it("een EU-document dat nog bij een medewerker ligt: \"wacht\" binnen de EU, niets uploaden; daarbuiten een document", () => {
+    expect(werkrechtUitslag("NL", rij(), false, NU, true)).toEqual({ stand: "wacht", via: null });
+    expect(werkrechtUitslag("DE", rij(), false, NU, true).stand).toBe("wacht");
+    expect(werkrechtUitslag("GB", rij(), false, NU, true).stand).toBe("bewijs-nodig");
+    expect(werkrechtUitslag("NL", null, false, NU, true).stand).toBe("verklaring-nodig");
+  });
+
   it("een status zonder upload (document weg) telt niet als bewijs", () => {
     expect(werkrechtUitslag("GB", rij({ uploadId: null, status: "APPROVED", validUntil: MORGEN }), false, NU).stand).toBe("bewijs-nodig");
   });
@@ -94,6 +101,7 @@ describe("landen", () => {
 const h = vi.hoisted(() => ({
   rij: null as object | null,
   idCheck: null as { id: string } | null,
+  idStatus: "VERIFIED" as "VERIFIED" | "PENDING",
   opgeslagen: [] as unknown[],
   updates: [] as unknown[],
 }));
@@ -107,7 +115,7 @@ vi.mock("@/lib/prisma", () => ({
         return {};
       },
     },
-    identityVerification: { findFirst: async () => h.idCheck },
+    identityVerification: { findMany: async () => (h.idCheck ? [{ status: h.idStatus }] : []) },
     user: { findUnique: async () => ({ fullName: "Test Werker" }) },
   },
 }));
@@ -127,6 +135,7 @@ describe("werkrecht-opslag", () => {
   beforeEach(() => {
     h.rij = null;
     h.idCheck = null;
+    h.idStatus = "VERIFIED";
     h.opgeslagen = [];
     h.updates = [];
   });
@@ -140,6 +149,12 @@ describe("werkrecht-opslag", () => {
     h.rij = rij();
     h.idCheck = { id: "iv1" };
     expect(await werkrechtVoorWerk("u1", "NL", NU)).toEqual({ ok: true, reden: null });
+
+    // dezelfde controle nog in behandeling: ingestuurd, maar nog niet aan het werk
+    h.idStatus = "PENDING";
+    const wacht = await werkrechtVoorWerk("u1", "NL", NU);
+    expect(wacht.ok).toBe(false);
+    expect(wacht.reden).toContain("nagekeken");
   });
 
   it("uploaden kan pas na de verklaring, met een geldige datum die niet voorbij is", async () => {

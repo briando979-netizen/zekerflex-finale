@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { AUTH_DICTS, type AuthDict } from "@/lib/i18n/auth";
 import { WERK_LANDEN, landNaam, type WerkrechtStand } from "@/lib/werkrecht/landen";
@@ -45,6 +46,7 @@ async function stuur(url: string, init: RequestInit, fout: string): Promise<Land
 }
 
 function LandKaart({ l, t, locale, onLanden }: { l: Land; t: T; locale: string; onLanden: (x: Land[]) => void }) {
+  const router = useRouter();
   const naam = landNaam(l.land, locale);
   const vinkId = useId();
   const datumId = useId();
@@ -60,6 +62,8 @@ function LandKaart({ l, t, locale, onLanden }: { l: Land; t: T; locale: string; 
     setFout(null);
     try {
       onLanden(await werk());
+      // de poort van de app (lib/onboarding/werker-poort.ts) leest dit in de layout: opnieuw laden
+      router.refresh();
     } catch (e) {
       setFout((e as Error).message || t.fout);
     } finally {

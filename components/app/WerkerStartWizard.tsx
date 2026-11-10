@@ -36,7 +36,10 @@ export function WerkerStartWizard({
   profileComplete,
   werkrechtOk,
   brancheKeuze,
+  poort = false,
 }: {
+  /** in de poort (lib/onboarding/werker-poort.ts): de rest van de app is nog dicht */
+  poort?: boolean;
   /** de branches die de werker al koos, of null */
   brancheKeuze: BrancheKeuze | null;
   workerKind: Kind | null;
@@ -262,7 +265,7 @@ export function WerkerStartWizard({
           );
         })}
       </ol>
-      <p className="bg-paper-soft px-5 py-2.5 text-xs text-neutralx-500">{t.browse}</p>
+      {!poort && <p className="bg-paper-soft px-5 py-2.5 text-xs text-neutralx-500">{t.browse}</p>}
     </section>
   );
 }

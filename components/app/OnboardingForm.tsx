@@ -344,7 +344,8 @@ export function OnboardingForm({
     const r = scanResult.current;
     if (!uitslag || !r) return;
     setResult(r);
-    if (r.outcome === "verified") setTimeout(() => router.refresh(), 1500);
+    // ook bij "in behandeling": de poort van de app (lib/onboarding/werker-poort.ts) gaat dan open
+    if (r.outcome !== "rejected") setTimeout(() => router.refresh(), 1500);
   }
 
   function kiesFoto(k: PhotoKey, f: File) {
@@ -415,7 +416,7 @@ export function OnboardingForm({
         return;
       } else {
         setResult(data as Result);
-        if (data.outcome === "verified") setTimeout(() => router.refresh(), 1500);
+        if (data.outcome !== "rejected") setTimeout(() => router.refresh(), 1500);
       }
     } catch {
       setError(t.offline);

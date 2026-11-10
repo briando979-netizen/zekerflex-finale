@@ -11,7 +11,10 @@ import { clientDict, getLocale } from "@/lib/i18n/server";
 import { inAndroidApp, inIosApp } from "@/lib/app-mode-server";
 import { IosAppProvider } from "@/components/app/useInIosApp";
 import { IbanHoldBanner } from "@/components/app/IbanHoldBanner";
-import { OpbouwfaseBalk } from "@/components/app/OpbouwfaseBalk";
+import { OnboardingPoort } from "@/components/app/OnboardingPoort";
+import { WerkerOnboardingScherm } from "@/components/app/WerkerOnboardingScherm";
+import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
+import { isReservedTestAddress } from "@/lib/mail";
 import { AppOpenPing } from "@/components/app/AppOpenPing";
 import { BewaardeTikken } from "@/components/app/BewaardeTikken";
 import { ViewAsBanner } from "@/components/admin/ViewAsBanner";
@@ -30,6 +33,12 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const locale = await getLocale();
   const [avatars, birthday] = await Promise.all([getUserAvatars([principal.userId]), birthdayToday(principal.userId).catch(() => false)]);
   const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
+  // eerst de onboarding helemaal invullen, dan de rest (lib/onboarding/werker-poort.ts); een storing gooit de app niet dicht
+  // Testaccounts (.test/.example, alleen door ons aangemaakt; zelf aanmelden kan niet, de mail komt nooit aan)
+  // vallen erbuiten: de beoordelaar van Apple en Google kan geen echte ID-controle doen. Aannemen
+  // blijft voor hen dicht (lib/fiscal/eligibility.ts).
+  const poort = isReservedTestAddress(principal.email) ? null : await werkerPoortStand(principal.userId).catch(() => null);
+  const onboardingKlaar = poort?.klaar ?? true;
 
   return (
     <IosAppProvider ios={await inIosApp()}>
@@ -44,12 +53,15 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         theme={theme}
         inApp={await inAndroidApp()}
         canSwitchToEmployer={hasRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "DISPUTE_MANAGER", "PLATFORM_ADMIN")}
+        onboarding={!onboardingKlaar}
       >
         <IbanHoldBanner userId={principal.userId} />
         {/* in- en uitchecks die zonder bereik zijn bewaard: versturen zodra het kan (lib/checkin/wachtrij.ts) */}
         <BewaardeTikken userId={principal.userId} />
-        <OpbouwfaseBalk soort="werker" />
-        {children}
+        {/* de opbouwfase-balk staat niet meer bij werkers (10 nov, eigenaar); de welkomstmail vertelt het al */}
+        <OnboardingPoort klaar={onboardingKlaar} start={poort && !onboardingKlaar ? <WerkerOnboardingScherm stand={poort} /> : null}>
+          {children}
+        </OnboardingPoort>
         <ChatDock />
         <AppOpenPing />
         {birthday && <SeasonalLoader theme="verjaardag" naam={principal.fullName.split(" ")[0] ?? null} />}
