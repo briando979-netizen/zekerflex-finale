@@ -23,6 +23,7 @@ describe("isStaleDeployment", () => {
       'Failed to find Server Action "abc". This request might be from an older or newer deployment.',
       "Loading chunk 123 failed.",
       "Loading CSS chunk 45 failed.",
+      "An unexpected response was received from the server.",
     ]) {
       expect(isStaleDeployment({ message })).toBe(true);
     }
