@@ -10,6 +10,7 @@ import { laadKaartMotor } from "@/components/kaart/motor";
 // De kaart waarop de klant de ZekerFlex-bus ziet rijden: onze eigen kaart (lib/kaart/stijl.ts), het
 // adres als speld, de bus als oranje auto met een richting, en een stippellijn ertussen. De bus
 // schuift soepel naar elke nieuwe positie. Geen eigen gegevens in de kaart zelf, alleen twee punten.
+// Op de kluspagina (components/app/ShiftMap.tsx) tekent dezelfde kaart de route van huis naar de klus.
 // ---------------------------------------------------------------------------
 
 type Punt = { lat: number; lon: number };
@@ -62,6 +63,7 @@ export function VolgKaart({
   className = "",
   interactief = true,
   zoom = 14,
+  routeLijn,
 }: {
   bestemming: Punt;
   positie: Punt | null;
@@ -69,6 +71,12 @@ export function VolgKaart({
   /** false: een vaste kaart zonder slepen en zoomen, zoals op een kaartje in een lijst (scrollen blijft scrollen) */
   interactief?: boolean;
   zoom?: number;
+  /**
+   * Een geplande route naar de bestemming ([lon, lat], bijv. van huis naar de klus, lib/geo/route.ts):
+   * een doorgetrokken lijn in de kleur van ZekerFlex over dezelfde bron "route", en de kaart past zich
+   * erop aan. null = (nog) geen route; weglaten = deze kaart toont geen geplande route.
+   */
+  routeLijn?: [number, number][] | null | undefined;
 }) {
   const houder = useRef<HTMLDivElement>(null);
   const kaart = useRef<MlMap | null>(null);
@@ -76,6 +84,7 @@ export function VolgKaart({
   const vorig = useRef<Punt | null>(null);
   const animatie = useRef<number | null>(null);
   const ml = useRef<typeof import("maplibre-gl") | null>(null);
+  const routeGetoond = useRef(false);
   const [klaar, setKlaar] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
 
@@ -168,6 +177,35 @@ export function VolgKaart({
     const grenzen = new mod.LngLatBounds([positie.lon, positie.lat], [positie.lon, positie.lat]).extend([bestemming.lon, bestemming.lat]);
     map.fitBounds(grenzen, { padding: { top: 70, bottom: 70, left: 50, right: 50 }, maxZoom: 16, duration: 900 });
   }, [positie, bestemming.lat, bestemming.lon, klaar]);
+
+  // een geplande route (na het effect hierboven, dat de bron leegmaakt zolang er geen bus is)
+  useEffect(() => {
+    const map = kaart.current;
+    const mod = ml.current;
+    if (routeLijn === undefined || positie || !map || !mod || !klaar) return;
+    const bron = map.getSource("route") as import("maplibre-gl").GeoJSONSource | undefined;
+    if (!bron) return;
+    if (!map.getLayer("route-plan")) {
+      const layout = { "line-cap": "round", "line-join": "round", visibility: "none" } as const;
+      map.addLayer({ id: "route-plan-rand", type: "line", source: "route", layout, paint: { "line-color": "#ffffff", "line-width": 7 } });
+      map.addLayer({ id: "route-plan", type: "line", source: "route", layout, paint: { "line-color": "#0E5C4A", "line-width": 4.5 } });
+    }
+    const punten = routeLijn && routeLijn.length > 1 ? routeLijn : null;
+    const eerste = punten?.[0];
+    map.setLayoutProperty("route", "visibility", punten ? "none" : "visible");
+    map.setLayoutProperty("route-plan-rand", "visibility", punten ? "visible" : "none");
+    map.setLayoutProperty("route-plan", "visibility", punten ? "visible" : "none");
+    bron.setData({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: punten ?? [] } });
+    if (!punten || !eerste) {
+      // alleen terug naar de bestemming als er net nog een route stond; anders blijft het beeld zoals het was
+      if (routeGetoond.current) map.easeTo({ center: [bestemming.lon, bestemming.lat], zoom, duration: 600 });
+      routeGetoond.current = false;
+      return;
+    }
+    routeGetoond.current = true;
+    const grenzen = punten.reduce((g, p) => g.extend(p), new mod.LngLatBounds(eerste, eerste)).extend([bestemming.lon, bestemming.lat]);
+    map.fitBounds(grenzen, { padding: { top: 30, bottom: 36, left: 30, right: 30 }, maxZoom: 15, duration: 700 });
+  }, [routeLijn, positie, bestemming.lat, bestemming.lon, klaar, zoom]);
 
   return (
     <div className={`relative overflow-hidden rounded-2xl bg-paper-soft ${className}`}>

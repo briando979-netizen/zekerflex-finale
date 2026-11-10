@@ -13,9 +13,11 @@ import { ReplacementTakeoverButton } from "@/components/app/ReplacementTakeoverB
 import { ShiftMenu } from "@/components/app/ShiftMenu";
 import { MessageEmployerButton } from "@/components/app/MessageEmployerButton";
 import { ShiftMap } from "@/components/app/ShiftMap";
+import { KlusRoute } from "@/components/app/KlusRoute";
 import { ReageerButton } from "@/components/app/ReageerModal";
 import { shiftCategory } from "@/lib/shifts/category";
-import { MODE_ORDER } from "@/lib/geo/travel-modes";
+import { MODE_ORDER, type TravelModeKey } from "@/lib/geo/travel-modes";
+import type { RouteModus } from "@/lib/geo/route-core";
 import { money, moneyExact } from "@/components/app/ui";
 import { localStamp, type CalendarEvent } from "@/lib/calendar/links";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
@@ -40,6 +42,8 @@ export const dynamic = "force-dynamic";
 // Dutch wall-clock times — this page renders on the server, which runs in UTC.
 const hhmm = (d: Date | string) => amsterdamClock(d);
 const MODE_EMOJI: Record<string, string> = { driving: "🚗", transit: "🚆", walking: "🚶", bicycling: "🚲" };
+// De routeplanner kent geen OV: is dat het snelst, dan begint de route met de auto.
+const ROUTE_BEGIN: Record<TravelModeKey, RouteModus> = { driving: "auto", transit: "auto", bicycling: "fiets", walking: "lopen" };
 
 
 export default async function ShiftDetailPage(props: { params: Promise<{ shiftId: string }> }) {
@@ -461,9 +465,25 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           ))}
         </div>
 
-        {/* Map */}
+        {/* Map — met een thuisbasis ook de echte route ernaartoe (onze eigen routeplanner, achteraf geladen;
+            zonder routeplanner blijft de schatting staan). De thuisbasis gaat niet mee naar de browser. */}
         <div className="mt-5">
-          <ShiftMap lat={s.branchLat} lng={s.branchLng} height={180} label={`${s.address}, ${s.city}`} />
+          {s.travel ? (
+            <KlusRoute
+              klusId={s.id}
+              lat={s.branchLat}
+              lng={s.branchLng}
+              label={`${s.address}, ${s.city}`}
+              schatting={{
+                auto: { minutes: s.travel.byMode.driving.minutes, km: s.travel.byMode.driving.distanceKm },
+                fiets: { minutes: s.travel.byMode.bicycling.minutes, km: s.travel.byMode.bicycling.distanceKm },
+                lopen: { minutes: s.travel.byMode.walking.minutes, km: s.travel.byMode.walking.distanceKm },
+              }}
+              begin={ROUTE_BEGIN[s.travel.fastest.mode]}
+            />
+          ) : (
+            <ShiftMap lat={s.branchLat} lng={s.branchLng} height={180} label={`${s.address}, ${s.city}`} />
+          )}
         </div>
 
         {/* Travel — needs a saved home base (set during onboarding's postcode
