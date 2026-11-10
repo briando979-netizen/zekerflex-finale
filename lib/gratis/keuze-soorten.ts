@@ -35,7 +35,7 @@ export const KEUZE_UITLEG: KeuzeUitleg[] = [
     id: "reistijd",
     naam: "Reistijd en afstand",
     gevolg:
-      "Eigen: wij rekenen het zelf uit (zo'n 10 tot 20% naast Google, ruim genoeg om op reisafstand te matchen) en er gaat geen adres naar buiten.",
+      "Eigen: onze eigen routeplanner rekent de echte route uit (auto, fiets, lopen); voor het OV en als die er even niet is, rekenen wij het zelf uit (zo'n 10 tot 20% naast Google, ruim genoeg om op reisafstand te matchen). Er gaat geen adres naar buiten.",
   },
   {
     id: "sales-bedrijven",

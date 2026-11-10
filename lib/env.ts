@@ -298,6 +298,11 @@ const schema = z.object({
   // ingebouwde oplosser in TypeScript, die hetzelfde antwoordformaat geeft.
   PLANNER_URL: z.string().url().optional(),
 
+  // ---- Routeplanner (lib/geo/route.ts) ---------------------------------------
+  // Onze eigen Valhalla-server (deploy/route, dienst "routes"): echte routes voor
+  // auto, fiets en lopen. Leeg, of de dienst draait niet = onze eigen schatting.
+  ROUTE_BASE_URL: z.string().url().optional(),
+
   // ---- Foutopsporing en prestaties (lib/ops/apm) ------------------------------
   // Sentry-compatibele DSN van een eigen GlitchTip (infra/docker/docker-compose
   // .observability.yml). Leeg = alleen het eigen foutenlogboek.
