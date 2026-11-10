@@ -16,8 +16,14 @@
 #                        voor de live-zetter, en als BOUWER_FORGEJO_TOKEN in
 #                        .env.production voor de Bouwer (eerst een kopie). Daarna:
 #                        up -d --no-deps bouwer, zodat de Bouwer het token ziet.
+#   --github-token       de spiegel haalt GitHub voortaan op met het leestoken uit
+#                        /root/github-lezen.token (nodig zodra de repo privé is).
+#                        Forgejo kan de inloggegevens van een bestaande spiegel niet via
+#                        de API wijzigen, dus de spiegel wordt opnieuw gemaakt; zolang
+#                        valt de uitrol vanzelf terug op GitHub. Ook zonder deze optie
+#                        gebruikt een nieuwe spiegel het token als het bestand er is.
 #
-# Gebruik op de VPS:  bash ~/zekerflex/deploy/forgejo/inrichten.sh [--eigenaar <e-mail>] [--lezer]
+# Gebruik op de VPS:  bash ~/zekerflex/deploy/forgejo/inrichten.sh [--eigenaar <e-mail>] [--lezer] [--github-token]
 # ---------------------------------------------------------------------------
 set -euo pipefail
 cd ~/zekerflex
@@ -25,15 +31,18 @@ F=zekerflex-forgejo-1
 GEHEIM=.forgejo-beheer
 EIGENAAR_BESTAND=/root/forgejo-eigenaar.txt
 LEZER_BESTAND=/root/forgejo-lezen.token
+GITHUB_BESTAND=/root/github-lezen.token
 BRON=https://github.com/briando979-netizen/zekerflex-finale.git
 fj() { sudo docker exec -u git "$F" forgejo "$@"; }
 
 EIGENAAR=""
 LEZER=0
+GITHUB_TOKEN=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --eigenaar) EIGENAAR="${2:-}"; shift 2 ;;
     --lezer) LEZER=1; shift ;;
+    --github-token) GITHUB_TOKEN=1; shift ;;
     *) echo "onbekende optie: $1"; exit 2 ;;
   esac
 done
@@ -81,10 +90,35 @@ else
   echo "organisatie: $(status -X POST "$API/orgs" -d '{"username":"zekerflex","full_name":"ZekerFlex","visibility":"private"}')"
 fi
 
-if [ "$(status "$API/repos/zekerflex/zekerflex-finale")" = 200 ]; then
+# De spiegel maken. Staat er een GitHub-leestoken (/root/github-lezen.token), dan met
+# inloggegevens (x-access-token + het token): nodig zodra de repo privé is. Het token gaat
+# via een tijdelijk JSON-bestand van root (600) naar curl, nooit als argument.
+maak_spiegel() {
+  local body
+  body=$(sudo mktemp)
+  sudo chmod 600 "$body"
+  if sudo test -s "$GITHUB_BESTAND"; then
+    sudo sh -c 'tok=$(tr -d "[:space:]" < "$1"); printf "{\"clone_addr\":\"%s\",\"auth_username\":\"x-access-token\",\"auth_password\":\"%s\",\"repo_owner\":\"zekerflex\",\"repo_name\":\"zekerflex-finale\",\"mirror\":true,\"mirror_interval\":\"10m\",\"private\":true,\"service\":\"git\",\"description\":\"Spiegel van GitHub, elke 10 minuten bijgewerkt\"}" "$2" "$tok" > "$3"' _ "$GITHUB_BESTAND" "$BRON" "$body"
+    echo "spiegel (met GitHub-leestoken): $(status --max-time 900 -X POST "$API/repos/migrate" --data @"$body")"
+  else
+    printf '{"clone_addr":"%s","repo_owner":"zekerflex","repo_name":"zekerflex-finale","mirror":true,"mirror_interval":"10m","private":true,"service":"git","description":"Spiegel van GitHub, elke 10 minuten bijgewerkt"}' "$BRON" | sudo tee "$body" > /dev/null
+    echo "spiegel (zonder token, openbare repo): $(status --max-time 900 -X POST "$API/repos/migrate" --data @"$body")"
+  fi
+  sudo rm -f "$body"
+}
+
+if [ "$GITHUB_TOKEN" = 1 ]; then
+  sudo test -s "$GITHUB_BESTAND" || { echo "github-token: $GITHUB_BESTAND ontbreekt (eerst neerzetten, root 600)"; exit 1; }
+  # Forgejo kan de inloggegevens van een bestaande spiegel niet via de API wijzigen: opnieuw maken.
+  # Zolang de spiegel er niet is, halen de live-zetter en de controle alles bij GitHub.
+  if [ "$(status "$API/repos/zekerflex/zekerflex-finale")" = 200 ]; then
+    echo "oude spiegel weg: $(status -X DELETE "$API/repos/zekerflex/zekerflex-finale")"
+  fi
+  maak_spiegel
+elif [ "$(status "$API/repos/zekerflex/zekerflex-finale")" = 200 ]; then
   echo "spiegel: bestaat al"
 else
-  echo "spiegel: $(status --max-time 900 -X POST "$API/repos/migrate" -d "{\"clone_addr\":\"$BRON\",\"repo_owner\":\"zekerflex\",\"repo_name\":\"zekerflex-finale\",\"mirror\":true,\"mirror_interval\":\"10m\",\"private\":true,\"service\":\"git\",\"description\":\"Spiegel van GitHub, elke 10 minuten bijgewerkt\"}")"
+  maak_spiegel
 fi
 
 if [ -n "$EIGENAAR" ]; then

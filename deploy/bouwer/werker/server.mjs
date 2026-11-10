@@ -21,7 +21,7 @@ import http from "node:http";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import { GITHUB_REPO, REPO_DIR, WERK, controleer, gewijzigdeBestanden, huidigeDiff, nieuweWerkkopie, sh } from "./werkkopie.mjs";
+import { GITHUB_REPO, REPO_DIR, WERK, bronOpties, controleer, gewijzigdeBestanden, huidigeDiff, nieuweWerkkopie, sh } from "./werkkopie.mjs";
 import { controleTekst, draai, systeemPrompt } from "./agent.mjs";
 import { startVoorbeeld, startVoorbeeldProxy, stopVoorbeeld, voorbeeldStand } from "./voorbeeld.mjs";
 import { controleerVastlegging, lijstUitslagen, samenvattingControle, uitslagVan } from "./controle.mjs";
@@ -247,7 +247,8 @@ async function goedkeuren(taak, { door, githubToken }) {
     if (!voor) throw new Error("Er zijn geen wijzigingen om live te zetten");
 
     for (let poging = 0; poging < 2; poging++) {
-      const opgehaald = await git(["fetch", "--depth", "200", "origin", "main"]);
+      // met het leestoken (als de repo op GitHub privé is); de push hieronder heeft zijn eigen token
+      const opgehaald = await git([...bronOpties("github"), "fetch", "--depth", "200", "origin", "main"]);
       if (opgehaald.code !== 0) throw new Error(`ophalen mislukt: ${opgehaald.uit.slice(-300)}`);
       const rebase = await git(["rebase", "origin/main"]);
       if (rebase.code !== 0) {

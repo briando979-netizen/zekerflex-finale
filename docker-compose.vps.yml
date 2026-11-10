@@ -381,6 +381,9 @@ services:
       # de code eerst daar ophalen, GitHub als reserve. Nooit naar door de AI gewijzigde
       # code (omgevingZonderSleutel in werkkopie.mjs).
       BOUWER_FORGEJO_TOKEN: ${BOUWER_FORGEJO_TOKEN:-}
+      # Leestoken voor GitHub (fine-grained: alleen deze repo, Contents read-only), nodig
+      # zodra de repo privé is; zonder: anoniem. Ook gefilterd in omgevingZonderSleutel.
+      BOUWER_GITHUB_LEES_TOKEN: ${GITHUB_LEES_TOKEN:-}
       # Live voorbeeld (deploy/bouwer/werker/voorbeeld.mjs): next dev op de werkkopie,
       # met alleen demogegevens in een eigen database, via Caddy op dit adres.
       BOUWER_VOORBEELD_DB: postgresql://voorbeeld:voorbeeld@bouwer-db:5432/voorbeeld

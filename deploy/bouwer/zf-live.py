@@ -44,6 +44,9 @@ REPO = os.environ.get("ZF_REPO", "https://github.com/briando979-netizen/zekerfle
 # (gebruiker bouwer-lezen, alleen lezen) staat alleen in een bestand van root (600).
 FORGEJO = os.environ.get("ZF_FORGEJO_REPO", "https://git.37-97-226-24.sslip.io/zekerflex/zekerflex-finale.git")
 FORGEJO_TOKEN_BESTAND = os.environ.get("ZF_FORGEJO_TOKEN_BESTAND", "/root/forgejo-lezen.token")
+# Leestoken voor GitHub (fine-grained: alleen deze repo, Contents read-only), nodig zodra
+# de repo privé is; ook alleen in een bestand van root (600). Zonder bestand: anoniem.
+GITHUB_TOKEN_BESTAND = os.environ.get("ZF_GITHUB_TOKEN_BESTAND", "/root/github-lezen.token")
 PG =os.environ.get("ZF_PG_CONTAINER", "zekerflex-postgres-1")
 APP = os.environ.get("ZF_APP_CONTAINER", "zekerflex-app-1")
 BOUWER = os.environ.get("ZF_BOUWER_CONTAINER", "zekerflex-bouwer-1")
@@ -130,28 +133,42 @@ def git(*args: str, timeout: int = 300) -> str:
 
 BRONNEN = (("forgejo", FORGEJO), ("github", REPO))
 BRON_NAAM = {"forgejo": "onze eigen Git-server", "github": "GitHub"}
+# per bron: tokenbestand (root, 600), naam van de omgevingsvariabele voor de helper en gebruikersnaam
+BRON_LOGIN = {
+    "forgejo": (FORGEJO_TOKEN_BESTAND, "ZF_FORGEJO_TOKEN", "bouwer-lezen"),
+    "github": (GITHUB_TOKEN_BESTAND, "ZF_GITHUB_TOKEN", "x-access-token"),
+}
 
 
-def forgejo_token() -> str | None:
+def lees_token(bestand: str) -> str | None:
     try:
-        r = subprocess.run(["sudo", "-n", "cat", FORGEJO_TOKEN_BESTAND], capture_output=True, text=True, timeout=10)
+        r = subprocess.run(["sudo", "-n", "cat", bestand], capture_output=True, text=True, timeout=10)
     except (OSError, subprocess.TimeoutExpired):
         return None
     t = r.stdout.strip() if r.returncode == 0 else ""
     return t or None
 
 
+def forgejo_token() -> str | None:
+    return lees_token(FORGEJO_TOKEN_BESTAND)
+
+
 def bron_git(bron: str, url: str, args: list[str], cwd: str | None, timeout: int) -> tuple[int, str]:
+    """git voor een bron, met het leestoken via een credential helper als dat er is (anders anoniem).
+
+    In de opdracht staat alleen de naam van de omgevingsvariabele; het token zelf zit
+    alleen in de omgeving van dit ene git-proces."""
     env = dict(os.environ, GIT_TERMINAL_PROMPT="0")
     opties: list[str] = []
-    if bron == "forgejo":
-        token = forgejo_token()
+    login = BRON_LOGIN.get(bron)
+    host = re.match(r"https://[^/]+", url)
+    if login and host:
+        bestand, naam, gebruiker = login
+        token = lees_token(bestand)
         if token:
-            host = re.match(r"https://[^/]+", url)
-            if host:
-                env["ZF_FORGEJO_TOKEN"] = token
-                helper = "!f() { if [ \"$1\" = get ]; then printf 'username=bouwer-lezen\\npassword=%s\\n' \"$ZF_FORGEJO_TOKEN\"; fi; }; f"
-                opties = ["-c", f"credential.{host.group(0)}.helper=", "-c", f"credential.{host.group(0)}.helper={helper}"]
+            env[naam] = token
+            helper = f"!f() {{ if [ \"$1\" = get ]; then printf 'username={gebruiker}\\npassword=%s\\n' \"${naam}\"; fi; }}; f"
+            opties = ["-c", f"credential.{host.group(0)}.helper=", "-c", f"credential.{host.group(0)}.helper={helper}"]
     return run(["git", *opties, *args], cwd=cwd, timeout=timeout, env=env)
 
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseVersie } from "@/lib/bouwer/versie";
-import { agentLeeft, isBezig, migratiesUitBestanden, type LiveStatus } from "@/lib/bouwer/live";
+import { agentLeeft, githubKoppen, isBezig, migratiesUitBestanden, type LiveStatus } from "@/lib/bouwer/live";
 
 const SHA = "0123456789abcdef0123456789abcdef01234567";
 
@@ -64,5 +64,19 @@ describe("isBezig", () => {
   it("een afgeronde uitrol blokkeert niet", () => {
     expect(isBezig({ ...basis, staat: "klaar" }, now)).toBe(false);
     expect(isBezig(null, now)).toBe(false);
+  });
+});
+
+// Is de repo op GitHub privé, dan kan het paneel Live zetten alleen met het leestoken.
+describe("githubKoppen", () => {
+  it("stuurt het leestoken als Bearer mee als het er is", () => {
+    expect(githubKoppen("github_pat_proef").Authorization).toBe("Bearer github_pat_proef");
+    expect(githubKoppen(" github_pat_proef ").Authorization).toBe("Bearer github_pat_proef");
+  });
+
+  it("blijft anoniem zonder token, zoals bij een openbare repo", () => {
+    expect(githubKoppen(undefined)).not.toHaveProperty("Authorization");
+    expect(githubKoppen("   ")).not.toHaveProperty("Authorization");
+    expect(githubKoppen(undefined)["User-Agent"]).toBe("zekerflex-live-zetten");
   });
 });

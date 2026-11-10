@@ -172,9 +172,23 @@ export async function commitsTussen(van: string, tot: string): Promise<Commit[]>
 let ghCache: { key: string; at: number; data: GithubOverzicht } | null = null;
 const GH_TTL_MS = 60_000;
 
+/**
+ * Kopregels voor de GitHub-API. Is de repo privé, dan kan het alleen met het leestoken
+ * (GITHUB_LEES_TOKEN: fine-grained, alleen deze repo, Contents read-only). Nooit loggen;
+ * zonder token anoniem, zoals bij een openbare repo.
+ */
+export function githubKoppen(token = process.env.GITHUB_LEES_TOKEN): Record<string, string> {
+  const t = token?.trim();
+  return {
+    Accept: "application/vnd.github+json",
+    "User-Agent": "zekerflex-live-zetten",
+    ...(t ? { Authorization: `Bearer ${t}` } : {}),
+  };
+}
+
 async function gh<T>(pad: string): Promise<T> {
   const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}${pad}`, {
-    headers: { Accept: "application/vnd.github+json", "User-Agent": "zekerflex-live-zetten" },
+    headers: githubKoppen(),
     cache: "no-store",
     signal: AbortSignal.timeout(8000),
   });

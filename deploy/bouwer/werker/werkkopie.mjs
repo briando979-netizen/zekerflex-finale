@@ -20,9 +20,12 @@ const MAX_UIT = 2_000_000;
 // (wat live gaat, vertrouwt nooit op de spiegel; review 6d); valt GitHub weg, dan gaat
 // het via Forgejo. Een losse vastlegging mag eerst bij Forgejo (git controleert de
 // inhoud via de sha). "origin" blijft GitHub: daar pusht en
-// rebaset server.mjs. Het leestoken (alleen lezen, gebruiker bouwer-lezen) staat
-// alleen in BOUWER_FORGEJO_TOKEN en gaat via een credential helper naar git: nooit
-// in een URL of log, en nooit naar processen die door de AI gewijzigde code draaien.
+// rebaset server.mjs. De leestokens (alleen lezen) staan alleen in de omgeving:
+// BOUWER_FORGEJO_TOKEN (gebruiker bouwer-lezen) en BOUWER_GITHUB_LEES_TOKEN (een
+// fine-grained token, alleen deze repo, Contents read-only; nodig zodra de repo op
+// GitHub privé is). Ze gaan via een credential helper naar git: nooit in een URL, log
+// of .git/config, en nooit naar processen die door de AI gewijzigde code draaien.
+// Zonder token: anoniem, zoals bij een openbare repo.
 // ---------------------------------------------------------------------------
 export const FORGEJO_URL = process.env.BOUWER_FORGEJO_URL || "https://git.37-97-226-24.sslip.io/zekerflex/zekerflex-finale.git";
 const BRONNEN = [
@@ -30,24 +33,34 @@ const BRONNEN = [
   ["github", GITHUB_URL],
 ];
 const BRON_NAAM = { forgejo: "onze eigen Git-server", github: "GitHub" };
+/** Per bron: de omgevingsvariabele met het leestoken en de gebruikersnaam die erbij hoort. */
+const BRON_LOGIN = {
+  forgejo: { url: FORGEJO_URL, env: "BOUWER_FORGEJO_TOKEN", gebruiker: "bouwer-lezen" },
+  github: { url: GITHUB_URL, env: "BOUWER_GITHUB_LEES_TOKEN", gebruiker: "x-access-token" },
+};
 
 /** De geheimen die nooit naar door de AI gewijzigde code mogen. */
-const SLEUTELS = new Set(["BOUWER_TOKEN", "BOUWER_FORGEJO_TOKEN"]);
+const SLEUTELS = new Set(["BOUWER_TOKEN", "BOUWER_FORGEJO_TOKEN", "BOUWER_GITHUB_LEES_TOKEN"]);
 
 /** De omgeving zonder sleutels: voor processen die door de AI gewijzigde code draaien. */
 export function omgevingZonderSleutel() {
   return Object.fromEntries(Object.entries(process.env).filter(([k]) => !SLEUTELS.has(k)));
 }
 
-/** git-opties voor een bron: bij Forgejo de credential helper (het token komt uit de omgeving, niet uit de opdrachtregel). */
-function bronOpties(bron) {
-  if (bron !== "forgejo" || !process.env.BOUWER_FORGEJO_TOKEN) return [];
-  const host = new URL(FORGEJO_URL).origin;
+/**
+ * git-opties voor een bron: de credential helper voor die host. In de opdracht staat
+ * alleen de NAAM van de omgevingsvariabele; het token zelf leest de helper uit de
+ * omgeving van dat ene git-proces. Zonder token: geen opties (anoniem).
+ */
+export function bronOpties(bron) {
+  const b = BRON_LOGIN[bron];
+  if (!b || !process.env[b.env]) return [];
+  const host = new URL(b.url).origin;
   return [
     "-c",
     `credential.${host}.helper=`,
     "-c",
-    `credential.${host}.helper=!f() { if [ "$1" = get ]; then printf 'username=bouwer-lezen\\npassword=%s\\n' "$BOUWER_FORGEJO_TOKEN"; fi; }; f`,
+    `credential.${host}.helper=!f() { if [ "$1" = get ]; then printf 'username=${b.gebruiker}\\npassword=%s\\n' "$${b.env}"; fi; }; f`,
   ];
 }
 
