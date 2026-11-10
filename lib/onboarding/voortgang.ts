@@ -79,8 +79,8 @@ export function werkerStappen(f: WerkerFeiten): Stap<WerkerStapSleutel>[] {
   );
   stappen.push(
     { key: "identiteit", done: f.identiteitGeverifieerd, href: "/dashboard/verificatie", minuten: 4 },
+    // 10 nov (eigenaar): geen "Meldingen aanzetten"-tip meer in de profiel-af-kaart (sleutel "push" blijft in het type voor de teksten)
     { key: "bank", done: f.bankEnThuis, href: "/dashboard/verificatie", minuten: 2 },
-    { key: "push", done: f.heeftPush, href: "/dashboard/account", minuten: 1, optioneel: true },
   );
   return stappen;
 }

@@ -83,9 +83,6 @@ export default async function VerificatiePage() {
                 <Link href="/dashboard/klussen" className="btn-primary">{klaar.jobs}</Link>
                 <Link href="/dashboard/profiel" className="btn-ghost">{klaar.profile}</Link>
                 <Link href="/dashboard/beschikbaarheid" className="btn-ghost">{klaar.availability}</Link>
-                {!o.stappen.find((st) => st.key === "push")?.done && (
-                  <Link href="/dashboard/account" className="btn-ghost">{klaar.push}</Link>
-                )}
               </div>
             </div>
           </Panel>

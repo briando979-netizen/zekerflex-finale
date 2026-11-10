@@ -46,19 +46,14 @@ describe("werker-voortgang", () => {
     expect(werkerStappen(leeg).map((s) => s.key)).toContain("kvk");
   });
 
-  it("alles klaar behalve de push-tip: verplicht klaar, tip blijft open", () => {
+  it("alles klaar: niets meer open, en geen meldingen-tip", () => {
     const v = berekenVoortgang(werkerStappen(alles));
     expect(v.klaar).toBe(true);
     expect(v.pct).toBe(100);
     expect(v.minutenOpen).toBe(0);
-    expect(v.open.map((s) => s.key)).toEqual(["push"]);
-    expect(v.volgende?.key).toBe("push");
-  });
-
-  it("volledig klaar: niets meer open", () => {
-    const v = berekenVoortgang(werkerStappen({ ...alles, heeftPush: true }));
     expect(v.open).toEqual([]);
     expect(v.volgende).toBeNull();
+    expect(werkerStappen(alles).map((s) => s.key)).not.toContain("push");
   });
 
   it("minuten tellen alleen open verplichte stappen", () => {
