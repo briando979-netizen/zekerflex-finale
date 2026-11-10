@@ -6,6 +6,7 @@ import { MODULES, zetModule, type ModuleSleutel } from "@/lib/horeca/modules";
 import { schoneAllergenen } from "@/lib/horeca/allergenen";
 import { STANDAARD_TIJDEN, type Openingstijden } from "@/lib/horeca/tijden";
 import type { OptieGroep } from "@/lib/horeca/opties";
+import { soortUitSbi, type Soort } from "@/lib/horeca/soorten";
 
 // ---------------------------------------------------------------------------
 // Opslag van het horeca-pakket. Elke functie krijgt de zaak mee en controleert
@@ -41,8 +42,23 @@ async function vrijeSlug(naam: string): Promise<string> {
   throw AppError.conflict("Kies een andere naam: deze bestaat al vaak.");
 }
 
+/** De soort zaak volgens de KvK-inschrijving van het bedrijf (lib/horeca/soorten.ts), om het aanzetten voor in te vullen; anders null. */
+export async function soortUitKvk(tenantId: string): Promise<Soort | null> {
+  const t = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { companyRegistration: { select: { sbiCodes: true, activities: true } } } });
+  const reg = t?.companyRegistration;
+  if (!reg) return null;
+  // de hoofdactiviteit eerst (activities: [{ sbiCode, description, isMain }], lib/integrations/kvkbase.ts)
+  const hoofd = Array.isArray(reg.activities)
+    ? reg.activities.flatMap((a) => (a && typeof a === "object" && !Array.isArray(a) && a.isMain === true && typeof a.sbiCode === "string" ? [a.sbiCode] : []))
+    : [];
+  return soortUitSbi([...hoofd, ...reg.sbiCodes]);
+}
+
 /** Het pakket aanzetten: de zaak plus een voorbeeldkaart. Bestaat hij al, dan die. */
-export async function maakZaak(tenantId: string, g: { naam: string; soort: string; plaats: string; telefoon: string; email: string }): Promise<HorecaZaak> {
+export async function maakZaak(
+  tenantId: string,
+  g: { naam: string; soort: string; plaats: string; adres: string; telefoon: string; email: string; kvk: string },
+): Promise<HorecaZaak> {
   const bestaat = await zaakVanTenant(tenantId);
   if (bestaat) return bestaat;
   const slug = await vrijeSlug(g.naam);

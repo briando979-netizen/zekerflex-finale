@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { BeheerWeergave } from "@/lib/rijschool/weergave";
 import type { BeheerActie } from "@/lib/rijschool/schema";
 import { foutVan, stuur } from "@/components/rijschool/api";
@@ -18,58 +18,53 @@ import { BerichtenTab } from "@/components/rijschool/beheer/BerichtenTab";
 import { voorvertoning } from "@/lib/rijschool/berichten-lijst";
 import { euro } from "@/lib/payroll/format";
 import { LEERLING_STATUS_LABEL } from "@/lib/rijschool/format";
+import { RIJSCHOOL_TABS, isRijschoolTab, type RijschoolTab } from "@/lib/rijschool/tabs";
+import type { AanzetVoorstel } from "@/lib/sites/aanzet-voorstel";
 
 // ---------------------------------------------------------------------------
 // Het beheer van het rijschool-pakket (/werkgever/rijschool): aanzetten,
 // overzicht, agenda, leerlingen, berichten, betalingen, team en auto's,
 // pakketten, website, instellingen en de app. Alle wijzigingen gaan via één eindpunt
-// (PATCH /api/rijschool/beheer) dat de nieuwe stand terugstuurt.
+// (PATCH /api/rijschool/beheer) dat de nieuwe stand terugstuurt. De tabbladen staan
+// in lib/rijschool/tabs.ts; elk is ook een onderdeel in het menu
+// (/werkgever/rijschool?tab=<id>), dus het tabblad volgt het adres.
 // ---------------------------------------------------------------------------
-
-type TabId = "overzicht" | "agenda" | "leerlingen" | "berichten" | "betalingen" | "team" | "pakketten" | "website" | "instellingen" | "app";
-
-const TABS: { id: TabId; label: string }[] = [
-  { id: "overzicht", label: "Overzicht" },
-  { id: "agenda", label: "Agenda" },
-  { id: "leerlingen", label: "Leerlingen" },
-  { id: "berichten", label: "Berichten" },
-  { id: "betalingen", label: "Betalingen" },
-  { id: "team", label: "Instructeurs en auto's" },
-  { id: "pakketten", label: "Pakketten en prijzen" },
-  { id: "website", label: "Website" },
-  { id: "instellingen", label: "Instellingen" },
-  { id: "app", label: "App" },
-];
 
 export type Doe = (actie: BeheerActie) => Promise<Record<string, unknown>>;
 
-interface Voorstel {
-  naam: string;
-  plaats: string;
-  telefoon: string;
-  email: string;
-}
-
 export function RijschoolBeheer() {
   const router = useRouter();
+  const pad = usePathname();
+  const zoek = useSearchParams();
+  const gevraagd = zoek.get("tab");
+  const leerlingUitAdres = zoek.get("leerling");
   const [data, setData] = useState<BeheerWeergave | null>(null);
-  const [voorstel, setVoorstel] = useState<Voorstel | null>(null);
+  const [voorstel, setVoorstel] = useState<AanzetVoorstel | null>(null);
   const [fout, setFout] = useState<string | null>(null);
-  const [tab, setTab] = useState<TabId>("overzicht");
+  const [tab, setTab] = useState<RijschoolTab>(isRijschoolTab(gevraagd) ? gevraagd : "overzicht");
   const [leerlingFocus, setLeerlingFocus] = useState<string | null>(null);
   const [gesprekFocus, setGesprekFocus] = useState<string | null>(null);
 
   useEffect(() => {
-    stuur<({ aan: true } & BeheerWeergave) | { aan: false; voorstel: Voorstel }>("/api/rijschool/beheer")
+    stuur<({ aan: true } & BeheerWeergave) | { aan: false; voorstel: AanzetVoorstel }>("/api/rijschool/beheer")
       .then((r) => (r.aan ? setData(r) : setVoorstel(r.voorstel)))
       .catch((e) => setFout(foutVan(e)));
-    // ?tab=betalingen (bijv. terug van Stripe): meteen dat tabblad
-    const gevraagd = new URLSearchParams(window.location.search).get("tab");
-    if (gevraagd && TABS.some((t) => t.id === gevraagd)) setTab(gevraagd as TabId);
-    // ?tab=berichten&leerling=<id> (link in de mail bij een nieuw bericht): meteen dat gesprek
-    const leerling = new URLSearchParams(window.location.search).get("leerling");
-    if (gevraagd === "berichten" && leerling) setGesprekFocus(leerling);
   }, []);
+  // ?tab=betalingen (uit het menu, of terug van Stripe): dat tabblad, ook als alleen ?tab=
+  // verandert (dan blijft dit scherm staan); zonder ?tab= het overzicht.
+  // ?tab=berichten&leerling=<id> (link in de mail bij een nieuw bericht): meteen dat gesprek
+  useEffect(() => {
+    setTab(isRijschoolTab(gevraagd) ? gevraagd : "overzicht");
+    if (gevraagd === "berichten" && leerlingUitAdres) setGesprekFocus(leerlingUitAdres);
+  }, [gevraagd, leerlingUitAdres]);
+  // een tabblad kiezen zet het ook in het adres, zodat het menu het goede onderdeel aanwijst
+  const kies = useCallback(
+    (t: RijschoolTab) => {
+      setTab(t);
+      router.replace(t === "overzicht" ? pad : `${pad}?tab=${t}`, { scroll: false });
+    },
+    [router, pad],
+  );
 
   const doe: Doe = useCallback(async (actie) => {
     const r = await stuur<BeheerWeergave & Record<string, unknown>>("/api/rijschool/beheer", "PATCH", actie);
@@ -96,14 +91,14 @@ export function RijschoolBeheer() {
   const r = data.rijschool;
   const openLeerling = (id: string) => {
     setLeerlingFocus(id);
-    setTab("leerlingen");
+    kies("leerlingen");
   };
   const openGesprek = (id: string) => {
     setGesprekFocus(id);
-    setTab("berichten");
+    kies("berichten");
   };
   const ongelezen = data.gesprekken.reduce((s, g) => s + g.ongelezen, 0);
-  const tabs = TABS.map((t) => (t.id === "berichten" && ongelezen > 0 ? { ...t, label: `Berichten (${ongelezen})` } : t));
+  const tabs = RIJSCHOOL_TABS.map((t) => (t.id === "berichten" && ongelezen > 0 ? { ...t, label: `Berichten (${ongelezen})` } : t));
 
   return (
     <div className="space-y-5">
@@ -130,9 +125,9 @@ export function RijschoolBeheer() {
         </div>
       </section>
 
-      <Tabs tabs={tabs} actief={tab} onKies={setTab} label="Onderdelen van het rijschool-pakket" />
+      <Tabs tabs={tabs} actief={tab} onKies={kies} label="Onderdelen van het rijschool-pakket" />
 
-      {tab === "overzicht" && <Overzicht data={data} naarTab={setTab} openLeerling={openLeerling} openGesprek={openGesprek} />}
+      {tab === "overzicht" && <Overzicht data={data} naarTab={kies} openLeerling={openLeerling} openGesprek={openGesprek} />}
       {tab === "agenda" && <AgendaTab data={data} doe={doe} />}
       {tab === "leerlingen" && <LeerlingenTab data={data} doe={doe} focus={leerlingFocus} onFocus={setLeerlingFocus} openGesprek={openGesprek} />}
       {tab === "berichten" && <BerichtenTab data={data} doe={doe} focus={gesprekFocus} onFocus={setGesprekFocus} />}
@@ -146,18 +141,19 @@ export function RijschoolBeheer() {
   );
 }
 
-function Aanzetten({ voorstel, onAan }: { voorstel: Voorstel; onAan: (d: BeheerWeergave) => void }) {
+function Aanzetten({ voorstel, onAan }: { voorstel: AanzetVoorstel; onAan: (d: BeheerWeergave) => void }) {
+  // vooraf ingevuld met wat het bedrijf ons al gaf (lib/sites/aanzet-voorstel.ts)
   const [v, setV] = useState(voorstel);
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
-  const zet = (k: keyof Voorstel) => (e: React.ChangeEvent<HTMLInputElement>) => setV({ ...v, [k]: e.target.value });
+  const zet = (k: keyof AanzetVoorstel) => (e: React.ChangeEvent<HTMLInputElement>) => setV({ ...v, [k]: e.target.value });
 
   async function aan(e: React.FormEvent) {
     e.preventDefault();
     setBezig(true);
     setFout(null);
     try {
-      onAan(await stuur<BeheerWeergave>("/api/rijschool/beheer", "POST", v));
+      onAan(await stuur<BeheerWeergave>("/api/rijschool/beheer", "POST", { ...v, kvk: v.kvk.replace(/\D/g, "") }));
     } catch (err) {
       setFout(foutVan(err));
     } finally {
@@ -183,18 +179,27 @@ function Aanzetten({ voorstel, onAan }: { voorstel: Voorstel; onAan: (d: BeheerW
           </li>
         ))}
       </ul>
-      <form onSubmit={aan} className="mt-6 grid gap-4 sm:grid-cols-2">
+      <p className="mt-4 text-sm leading-relaxed text-neutralx-600">We hebben alvast ingevuld wat we van je bedrijf weten. Klopt iets niet, pas het dan hier aan.</p>
+      <form onSubmit={aan} className="mt-4 grid gap-4 sm:grid-cols-2">
         <Veld label="Naam van de rijschool">
           <input className="field-input" value={v.naam} onChange={zet("naam")} required minLength={2} maxLength={100} />
         </Veld>
         <Veld label="Plaats">
           <input className="field-input" value={v.plaats} onChange={zet("plaats")} maxLength={80} />
         </Veld>
+        <div className="sm:col-span-2">
+          <Veld label="Adres (straat, huisnummer, postcode)">
+            <input className="field-input" value={v.adres} onChange={zet("adres")} maxLength={160} />
+          </Veld>
+        </div>
         <Veld label="Telefoon">
           <input className="field-input" type="tel" value={v.telefoon} onChange={zet("telefoon")} maxLength={30} />
         </Veld>
         <Veld label="E-mail voor leerlingen">
           <input className="field-input" type="email" value={v.email} onChange={zet("email")} maxLength={200} />
+        </Veld>
+        <Veld label="KVK-nummer">
+          <input className="field-input" inputMode="numeric" value={v.kvk} onChange={zet("kvk")} maxLength={8} />
         </Veld>
         <div className="sm:col-span-2">
           <Melding fout={fout} />
@@ -217,7 +222,7 @@ function Overzicht({
   openGesprek,
 }: {
   data: BeheerWeergave;
-  naarTab: (t: TabId) => void;
+  naarTab: (t: RijschoolTab) => void;
   openLeerling: (id: string) => void;
   openGesprek: (id: string) => void;
 }) {
@@ -229,7 +234,7 @@ function Overzicht({
   maandStart.setUTCDate(1);
   const dezeMaand = data.betalingen.filter((b) => b.status === "BETAALD" && b.betaaldOm && new Date(b.betaaldOm) >= maandStart).reduce((s, b) => s + b.bedragCent, 0);
 
-  const stappen: { klaar: boolean; tekst: string; tab: TabId }[] = [
+  const stappen: { klaar: boolean; tekst: string; tab: RijschoolTab }[] = [
     { klaar: data.producten.length > 0, tekst: "Controleer je pakketten en prijzen (het zijn voorbeeldprijzen)", tab: "pakketten" },
     { klaar: data.instructeurs.some((i) => i.werktijden.length > 0), tekst: "Zet de werktijden van je instructeurs goed", tab: "team" },
     { klaar: data.voertuigen.length > 0, tekst: "Voeg je lesauto toe", tab: "team" },

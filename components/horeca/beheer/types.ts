@@ -1,5 +1,7 @@
 import type { ZaakWeergave } from "@/lib/horeca/weergave";
 import type { ReserveerInstellingen } from "@/lib/horeca/reserveren";
+import type { AanzetVoorstel } from "@/lib/sites/aanzet-voorstel";
+import type { Soort } from "@/lib/horeca/soorten";
 
 // Wat /api/horeca/beheer teruggeeft, zoals de browser het ziet.
 
@@ -48,7 +50,10 @@ export interface BeheerData {
   kassa: { btwNummer: string; voettekst: string };
 }
 
-export type Antwoord = BeheerData | { aan: false; voorstel: { naam: string; plaats: string; telefoon: string; email: string } };
+/** Nog niet aan: wat we al van het bedrijf weten, voor de eerste stap (de soort uit de KvK-inschrijving, of null). */
+export type Voorstel = AanzetVoorstel & { soort: Soort | null };
+
+export type Antwoord = BeheerData | { aan: false; voorstel: Voorstel };
 
 /** Eén actie naar de server; geeft true als het lukte (de data is dan al ververst). */
 export type Doe = (actie: Record<string, unknown>, ok?: string) => Promise<boolean>;

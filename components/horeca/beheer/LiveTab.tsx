@@ -14,6 +14,7 @@ import { OPROEP_LANG, tijdTot } from "@/components/horeca/live/teksten";
 import { minTekst } from "@/components/horeca/live/stijl";
 import { isAan, type DashboardData } from "@/components/horeca/live/types";
 import type { BeheerData, Doe } from "@/components/horeca/beheer/types";
+import type { BeheerTab } from "@/lib/horeca/tabs";
 
 // ---------------------------------------------------------------------------
 // Het live-dashboard van de zaak (tabblad Live): de kerncijfers van vandaag,
@@ -24,7 +25,7 @@ import type { BeheerData, Doe } from "@/components/horeca/beheer/types";
 // ---------------------------------------------------------------------------
 
 const API = "/api/horeca/beheer";
-export type BeheerTab = "overzicht" | "reserveringen" | "bestellingen" | "tafels" | "kassa" | "taken" | "cijfers" | "menukaart" | "schermen" | "modules" | "gegevens";
+export type { BeheerTab } from "@/lib/horeca/tabs";
 
 function Kpi({ label, waarde, uitleg, toon = "neutraal" }: { label: string; waarde: string; uitleg?: string; toon?: "neutraal" | "geld" | "let-op" | "probleem" | "goed" }) {
   const kleur = { neutraal: "text-ink", geld: "text-money-ink", "let-op": "text-warn", probleem: "text-crit", goed: "text-ok" }[toon];

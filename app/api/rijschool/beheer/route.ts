@@ -5,6 +5,7 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { aanzettenSchema, beheerActieSchema, lees, type BeheerActie } from "@/lib/rijschool/schema";
 import { beheerContext, eisBeheer } from "@/lib/rijschool/toegang";
 import { companyDefaults } from "@/lib/sites/access";
+import { aanzetVoorstel } from "@/lib/sites/aanzet-voorstel";
 import {
   bevestigLes,
   corrigeerTegoed,
@@ -44,8 +45,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   try {
     const { p, tenantId, rijschool } = await beheerContext();
     if (!rijschool) {
-      const d = await companyDefaults(tenantId, p);
-      return NextResponse.json({ aan: false, voorstel: { naam: d.naam, plaats: d.plaats, telefoon: d.telefoon, email: d.email } });
+      return NextResponse.json({ aan: false, voorstel: aanzetVoorstel(await companyDefaults(tenantId, p)) });
     }
     const url = new URL(request.url);
     const metLeerling = url.searchParams.get("berichten");

@@ -2,6 +2,7 @@ import { after, NextResponse } from "next/server";
 import { bevestigingGast, verstuur } from "@/lib/horeca/mail";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { companyDefaults } from "@/lib/sites/access";
+import { aanzetVoorstel } from "@/lib/sites/aanzet-voorstel";
 import { zelfdeHerkomst } from "@/lib/rijschool/herkomst";
 import { aanzettenSchema, beheerActieSchema, lees, LIVE_ACTIES, liveActieSchema, takenActieSchema, TAKEN_ACTIES, uitbetaalSchema } from "@/lib/horeca/schema";
 import { bewaarLijst, lijstenOp, maakVoorbeeldlijsten, registratie, verwijderLijst, vinkAf, vinkUit } from "@/lib/horeca/takenlijsten";
@@ -13,6 +14,7 @@ import {
   bewaarItem,
   maakZaak,
   menukaart,
+  soortUitKvk,
   verwijderCategorie,
   verwijderItem,
   werkGegevensBij,
@@ -62,8 +64,9 @@ export async function GET(request: Request): Promise<NextResponse> {
   try {
     const { p, tenantId, zaak } = await beheerContext();
     if (!zaak) {
-      const d = await companyDefaults(tenantId, p);
-      return NextResponse.json({ aan: false, voorstel: { naam: d.naam, plaats: d.plaats, telefoon: d.telefoon, email: d.email } });
+      // de eerste stap vooraf ingevuld met wat het bedrijf ons al gaf (lib/sites/aanzet-voorstel.ts)
+      const [d, soort] = await Promise.all([companyDefaults(tenantId, p), soortUitKvk(tenantId)]);
+      return NextResponse.json({ aan: false, voorstel: { ...aanzetVoorstel(d), soort } });
     }
     const q = new URL(request.url).searchParams;
     // ?alleen=live → het live-dashboard (zaal, cijfers van vandaag, oproepen, takenlijsten, schermen)

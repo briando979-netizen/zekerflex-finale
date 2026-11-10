@@ -35,8 +35,10 @@ export const aanzettenSchema = z.object({
   naam: tekst(80).pipe(z.string().min(2, "Vul de naam van de zaak in.")),
   soort: z.enum(SOORTEN),
   plaats: tekst(80).default(""),
+  adres: tekst(160).default(""),
   telefoon: tekst(40).default(""),
   email: z.union([z.literal(""), z.string().trim().email().max(200)]).default(""),
+  kvk: tekst(20).default(""),
 });
 
 export const beheerActieSchema = z.discriminatedUnion("actie", [

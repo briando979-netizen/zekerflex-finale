@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { foutVan, stuur } from "@/components/rijschool/api";
 import { Melding, Tabs, Veld } from "@/components/rijschool/ui";
 import { SOORTEN, SOORT_LABEL, soortLabel } from "@/lib/horeca/soorten";
@@ -12,44 +13,31 @@ import { TafelsTab } from "@/components/horeca/beheer/TafelsTab";
 import { ReserveringenTab } from "@/components/horeca/beheer/ReserveringenTab";
 import { TakenTab } from "@/components/horeca/beheer/TakenTab";
 import { CijfersTab } from "@/components/horeca/beheer/CijfersTab";
-import { LiveTab, type BeheerTab } from "@/components/horeca/beheer/LiveTab";
+import { LiveTab } from "@/components/horeca/beheer/LiveTab";
 import { SchermenTab } from "@/components/horeca/beheer/SchermenTab";
 import { KassaTab } from "@/components/horeca/beheer/KassaTab";
-import type { Antwoord, Doe } from "@/components/horeca/beheer/types";
+import type { Antwoord, Doe, Voorstel } from "@/components/horeca/beheer/types";
+import { horecaTabs, type BeheerTab } from "@/lib/horeca/tabs";
 
 // ---------------------------------------------------------------------------
 // Het beheer van het horeca-pakket (/werkgever/horeca): aanzetten, het
 // live-dashboard, de modules (reserveren, bestellen, takenlijsten, cijfers),
 // menukaart, schermen, modules & abonnement, gegevens & openingstijden. Elke
 // wijziging is één POST naar /api/horeca/beheer, die alles ververst teruggeeft.
+// De tabbladen staan in lib/horeca/tabs.ts; elk is ook een onderdeel in het menu
+// (/werkgever/horeca?tab=<id>), dus het tabblad volgt het adres.
 // ---------------------------------------------------------------------------
 
 const API = "/api/horeca/beheer";
-type Tab = BeheerTab;
-/** De tabbladen; die van een module alleen als die module aan staat. */
-const tabsVoor = (modules: string[]): { id: Tab; label: string }[] => [
-  { id: "overzicht", label: "Live" },
-  ...(modules.includes("reserveren") ? [{ id: "reserveringen" as const, label: "Reserveringen" }] : []),
-  ...(modules.includes("bestellen")
-    ? [
-        { id: "bestellingen" as const, label: "Bestellingen" },
-        { id: "tafels" as const, label: "Tafels & QR" },
-      ]
-    : []),
-  ...(modules.includes("kassa") ? [{ id: "kassa" as const, label: "Kassa" }] : []),
-  ...(modules.includes("taken") ? [{ id: "taken" as const, label: "Takenlijsten" }] : []),
-  ...(modules.includes("bestellen") || modules.includes("reserveren") ? [{ id: "cijfers" as const, label: "Cijfers" }] : []),
-  { id: "menukaart", label: "Menukaart" },
-  { id: "schermen", label: "Schermen" },
-  { id: "modules", label: "Modules & abonnement" },
-  { id: "gegevens", label: "Gegevens & openingstijden" },
-];
 
 export function HorecaBeheer() {
+  const router = useRouter();
+  const pad = usePathname();
+  const gevraagd = useSearchParams().get("tab");
   const [data, setData] = useState<Antwoord | null>(null);
   const [fout, setFout] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("overzicht");
+  const [tab, setTab] = useState<BeheerTab>("overzicht");
 
   const laad = useCallback(async () => {
     try {
@@ -66,15 +54,23 @@ export function HorecaBeheer() {
   useEffect(() => {
     if (tab === "menukaart") void laad();
   }, [tab, laad]);
-  // ?tab=reserveringen (bijv. vanaf een tegel op /werkgever): na het laden één keer
-  // dat tabblad openen, als het er is (een module-tabblad alleen als de module aan staat)
-  const tabUitLink = useRef(false);
+  // ?tab=reserveringen (uit het menu, een tegel op /werkgever of terug van Stripe): dat tabblad,
+  // ook als alleen ?tab= verandert (dan blijft dit scherm staan); zonder ?tab= het live-overzicht.
+  // Pas na het laden: een module-tabblad alleen als de module aan staat.
+  const modules = data?.aan ? data.zaak.modules.join(",") : null;
   useEffect(() => {
-    if (tabUitLink.current || !data?.aan) return;
-    tabUitLink.current = true;
-    const gevraagd = new URLSearchParams(window.location.search).get("tab");
-    if (gevraagd && tabsVoor(data.zaak.modules).some((t) => t.id === gevraagd)) setTab(gevraagd as Tab);
-  }, [data]);
+    if (modules === null) return;
+    const bestaat = horecaTabs(modules.split(",")).find((t) => t.id === gevraagd);
+    setTab(bestaat ? bestaat.id : "overzicht");
+  }, [gevraagd, modules]);
+  // een tabblad kiezen zet het ook in het adres, zodat het menu het goede onderdeel aanwijst
+  const kies = useCallback(
+    (t: BeheerTab) => {
+      setTab(t);
+      router.replace(t === "overzicht" ? pad : `${pad}?tab=${t}`, { scroll: false });
+    },
+    [router, pad],
+  );
 
   const doe: Doe = async (actie, okTekst) => {
     setFout(null);
@@ -118,10 +114,10 @@ export function HorecaBeheer() {
         </div>
       </section>
 
-      <Tabs tabs={tabsVoor(z.modules)} actief={tab} onKies={setTab} label="Horeca-beheer" />
+      <Tabs tabs={horecaTabs(z.modules)} actief={tab} onKies={kies} label="Horeca-beheer" />
       <Melding fout={fout} ok={ok} />
 
-      {tab === "overzicht" && <LiveTab data={data} doe={doe} naar={setTab} />}
+      {tab === "overzicht" && <LiveTab data={data} doe={doe} naar={kies} />}
       {tab === "reserveringen" && z.modules.includes("reserveren") && <ReserveringenTab data={data} doe={doe} />}
       {tab === "bestellingen" && z.modules.includes("bestellen") && <BestellingenTab data={data} doe={doe} />}
       {tab === "tafels" && z.modules.includes("bestellen") && <TafelsTab data={data} doe={doe} />}
@@ -136,8 +132,9 @@ export function HorecaBeheer() {
   );
 }
 
-function Aanzetten({ voorstel, doe, fout }: { voorstel: { naam: string; plaats: string; telefoon: string; email: string }; doe: Doe; fout: string | null }) {
-  const [v, setV] = useState({ ...voorstel, soort: "restaurant" as string });
+function Aanzetten({ voorstel, doe, fout }: { voorstel: Voorstel; doe: Doe; fout: string | null }) {
+  // vooraf ingevuld met wat het bedrijf ons al gaf; zonder soort uit de KvK-inschrijving een restaurant
+  const [v, setV] = useState({ ...voorstel, soort: (voorstel.soort ?? "restaurant") as string });
   const [bezig, setBezig] = useState(false);
   const zet = (k: keyof typeof v) => (e: { target: { value: string } }) => setV((x) => ({ ...x, [k]: e.target.value }));
   async function aan(e: FormEvent) {
@@ -153,6 +150,7 @@ function Aanzetten({ voorstel, doe, fout }: { voorstel: { naam: string; plaats: 
       <p className="mt-2 text-sm leading-relaxed text-neutralx-600">
         Een eigen website met menukaart, en daarna stap voor stap modules erbij: reserveren, bestellen aan tafel met een QR-code, een keukenscherm, afrekenen en takenlijsten.
       </p>
+      <p className="mt-2 text-sm leading-relaxed text-neutralx-600">We hebben alvast ingevuld wat we van je bedrijf weten. Klopt iets niet, pas het dan hier aan.</p>
       <form onSubmit={(e) => void aan(e)} className="mt-6 grid gap-4 sm:grid-cols-2">
         <Veld label="Naam van de zaak">
           <input className="field-input" value={v.naam} onChange={zet("naam")} required minLength={2} maxLength={80} />
@@ -166,6 +164,9 @@ function Aanzetten({ voorstel, doe, fout }: { voorstel: { naam: string; plaats: 
             ))}
           </select>
         </Veld>
+        <Veld label="Adres">
+          <input className="field-input" value={v.adres} onChange={zet("adres")} maxLength={160} placeholder="Straat 1, 1234 AB" />
+        </Veld>
         <Veld label="Plaats">
           <input className="field-input" value={v.plaats} onChange={zet("plaats")} maxLength={80} />
         </Veld>
@@ -174,6 +175,9 @@ function Aanzetten({ voorstel, doe, fout }: { voorstel: { naam: string; plaats: 
         </Veld>
         <Veld label="E-mail voor gasten">
           <input className="field-input" type="email" value={v.email} onChange={zet("email")} maxLength={200} />
+        </Veld>
+        <Veld label="KVK-nummer">
+          <input className="field-input" value={v.kvk} onChange={zet("kvk")} maxLength={20} inputMode="numeric" />
         </Veld>
         <div className="sm:col-span-2">
           <Melding fout={fout} />

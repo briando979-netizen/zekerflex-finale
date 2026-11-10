@@ -48,7 +48,7 @@ async function vrijeSlug(naam: string): Promise<string> {
 export async function maakRijschool(
   tenantId: string,
   eigenaar: { naam: string; email: string },
-  input: { naam: string; plaats: string; telefoon: string; email: string },
+  input: { naam: string; plaats: string; adres: string; telefoon: string; email: string; kvk: string },
 ): Promise<Rijschool> {
   if (await rijschoolVanTenant(tenantId)) throw AppError.conflict("Het rijschool-pakket staat al aan.");
   const slug = await vrijeSlug(input.naam);
@@ -58,8 +58,10 @@ export async function maakRijschool(
       slug,
       naam: input.naam,
       plaats: input.plaats,
+      adres: input.adres,
       telefoon: input.telefoon,
       email: input.email || eigenaar.email,
+      kvk: input.kvk,
       producten: { createMany: { data: VOORBEELD_PRODUCTEN } },
       instructeurs: {
         create: {

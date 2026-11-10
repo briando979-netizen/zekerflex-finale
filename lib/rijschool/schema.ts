@@ -51,11 +51,15 @@ const datumOfLeeg = z.union([datum, z.literal("")]);
 const tijdVeld = z.string().refine(isTijd, "Kies een tijd.");
 const id = z.string().min(1).max(40);
 
+const kvk = z.string().regex(/^(\d{8})?$/, "Een KVK-nummer heeft 8 cijfers.");
+
 export const aanzettenSchema = z.object({
   naam,
   plaats: tekst(80),
+  adres: tekst(160).default(""),
   telefoon,
   email: z.union([email, z.literal("")]),
+  kvk: kvk.default(""),
 });
 
 export const instellingenSchema = z.object({
@@ -64,7 +68,7 @@ export const instellingenSchema = z.object({
   adres: tekst(160),
   telefoon,
   email: z.union([email, z.literal("")]),
-  kvk: z.string().regex(/^(\d{8})?$/, "Een KVK-nummer heeft 8 cijfers."),
+  kvk,
   kleur,
   accent: kleur,
   lesMinuten: z.number().int().min(30).max(180),
