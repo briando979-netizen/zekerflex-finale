@@ -440,13 +440,7 @@ export function HulpCentrum({
 
           {/* tabbladen onderaan */}
           <nav aria-label={t.titel} className="flex flex-shrink-0 border-t border-hair">
-            {(
-              [
-                ["home", t.tabs.home, <IHuis key="h" />],
-                ["hulp", t.tabs.hulp, <IHelp key="v" />],
-                ["nieuws", t.tabs.nieuws, <IMegafoon key="n" />],
-              ] as const
-            ).map(([id, label, icoon]) => {
+            {(["home", "hulp", "nieuws"] as const).map((id) => {
               const actief = tab === id;
               return (
                 <button
@@ -458,8 +452,8 @@ export function HulpCentrum({
                     actief ? "text-brand-600" : "text-neutralx-400 hover:text-neutralx-600"
                   }`}
                 >
-                  {icoon}
-                  {label}
+                  {id === "home" ? <IHuis /> : id === "hulp" ? <IHelp /> : <IMegafoon />}
+                  {t.tabs[id]}
                   {id === "nieuws" && ongezien && (
                     <span aria-hidden className="absolute right-[calc(50%-1rem)] top-2 h-2 w-2 rounded-full bg-brand-mint" />
                   )}
