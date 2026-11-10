@@ -129,6 +129,27 @@ const nl: HulpTeksten = {
   ],
   nieuwsItems: [
     {
+      id: "2026-11-10-hulpcentrum",
+      dag: "2026-11-10",
+      datum: "10 november 2026",
+      titel: "Hulp achter het vraagteken",
+      tekst: "Bovenin de app staat nu een vraagteken: veelgestelde vragen, chat met ons, feedback geven en dit nieuws, op één plek.",
+    },
+    {
+      id: "2026-11-10-eigen-taal",
+      dag: "2026-11-10",
+      datum: "10 november 2026",
+      titel: "Nieuwe klussen in je eigen taal",
+      tekst: "Het bericht over een nieuwe klus die bij je past, komt nu in de taal die je in de app hebt gekozen, net als je andere meldingen.",
+    },
+    {
+      id: "2026-11-10-bedrijfsnaam",
+      dag: "2026-11-10",
+      datum: "10 november 2026",
+      titel: "De naam van het bedrijf bij elke klus",
+      tekst: "Bij elke klus en in je meldingen zie je nu voor welk bedrijf je werkt, ook als de klus op een los adres is.",
+    },
+    {
       id: "2026-11-09-zonder-bereik",
       dag: "2026-11-09",
       datum: "9 november 2026",
@@ -275,6 +296,27 @@ const en: HulpTeksten = {
     },
   ],
   nieuwsItems: [
+    {
+      id: "2026-11-10-hulpcentrum",
+      dag: "2026-11-10",
+      datum: "10 November 2026",
+      titel: "Help behind the question mark",
+      tekst: "At the top of the app there is now a question mark: frequently asked questions, chat with us, give feedback and this news, all in one place.",
+    },
+    {
+      id: "2026-11-10-eigen-taal",
+      dag: "2026-11-10",
+      datum: "10 November 2026",
+      titel: "New jobs in your own language",
+      tekst: "The message about a new job that suits you now arrives in the language you chose in the app, just like your other notifications.",
+    },
+    {
+      id: "2026-11-10-bedrijfsnaam",
+      dag: "2026-11-10",
+      datum: "10 November 2026",
+      titel: "The company name with every job",
+      tekst: "With every job and in your notifications you now see which company you work for, even when the job is at a one-off address.",
+    },
     {
       id: "2026-11-09-zonder-bereik",
       dag: "2026-11-09",
@@ -423,6 +465,27 @@ const pl: HulpTeksten = {
   ],
   nieuwsItems: [
     {
+      id: "2026-11-10-hulpcentrum",
+      dag: "2026-11-10",
+      datum: "10 listopada 2026",
+      titel: "Pomoc pod znakiem zapytania",
+      tekst: "U góry aplikacji jest teraz znak zapytania: najczęstsze pytania, czat z nami, opinie i te nowości w jednym miejscu.",
+    },
+    {
+      id: "2026-11-10-eigen-taal",
+      dag: "2026-11-10",
+      datum: "10 listopada 2026",
+      titel: "Nowe zlecenia w Twoim języku",
+      tekst: "Wiadomość o nowym zleceniu dla Ciebie przychodzi teraz w języku wybranym w aplikacji, tak jak inne powiadomienia.",
+    },
+    {
+      id: "2026-11-10-bedrijfsnaam",
+      dag: "2026-11-10",
+      datum: "10 listopada 2026",
+      titel: "Nazwa firmy przy każdym zleceniu",
+      tekst: "Przy każdym zleceniu i w powiadomieniach widzisz teraz, dla jakiej firmy pracujesz, także gdy zlecenie jest pod jednorazowym adresem.",
+    },
+    {
       id: "2026-11-09-zonder-bereik",
       dag: "2026-11-09",
       datum: "9 listopada 2026",
@@ -570,6 +633,27 @@ const ro: HulpTeksten = {
   ],
   nieuwsItems: [
     {
+      id: "2026-11-10-hulpcentrum",
+      dag: "2026-11-10",
+      datum: "10 noiembrie 2026",
+      titel: "Ajutor sub semnul întrebării",
+      tekst: "Sus în aplicație există acum un semn de întrebare: întrebări frecvente, chat cu noi, păreri și aceste noutăți, într-un singur loc.",
+    },
+    {
+      id: "2026-11-10-eigen-taal",
+      dag: "2026-11-10",
+      datum: "10 noiembrie 2026",
+      titel: "Joburi noi în limba ta",
+      tekst: "Mesajul despre un job nou potrivit pentru tine vine acum în limba aleasă în aplicație, ca și celelalte notificări.",
+    },
+    {
+      id: "2026-11-10-bedrijfsnaam",
+      dag: "2026-11-10",
+      datum: "10 noiembrie 2026",
+      titel: "Numele firmei la fiecare job",
+      tekst: "La fiecare job și în notificări vezi acum pentru ce firmă lucrezi, chiar și când jobul este la o adresă ocazională.",
+    },
+    {
       id: "2026-11-09-zonder-bereik",
       dag: "2026-11-09",
       datum: "9 noiembrie 2026",
@@ -716,6 +800,27 @@ const uk: HulpTeksten = {
     },
   ],
   nieuwsItems: [
+    {
+      id: "2026-11-10-hulpcentrum",
+      dag: "2026-11-10",
+      datum: "10 листопада 2026",
+      titel: "Допомога під знаком питання",
+      tekst: "Угорі застосунку тепер є знак питання: часті запитання, чат із нами, відгуки та ці новини в одному місці.",
+    },
+    {
+      id: "2026-11-10-eigen-taal",
+      dag: "2026-11-10",
+      datum: "10 листопада 2026",
+      titel: "Нові роботи вашою мовою",
+      tekst: "Повідомлення про нову роботу, яка вам підходить, тепер приходить мовою, яку ви обрали в застосунку, як і інші сповіщення.",
+    },
+    {
+      id: "2026-11-10-bedrijfsnaam",
+      dag: "2026-11-10",
+      datum: "10 листопада 2026",
+      titel: "Назва компанії біля кожної роботи",
+      tekst: "Біля кожної роботи та в сповіщеннях ви тепер бачите, на яку компанію працюєте, навіть якщо робота за разовою адресою.",
+    },
     {
       id: "2026-11-09-zonder-bereik",
       dag: "2026-11-09",
