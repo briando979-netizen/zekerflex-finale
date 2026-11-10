@@ -4,7 +4,10 @@
 # de server heeft. Elke nacht om BACKUP_AT (UTC):
 #   1. pg_dump (eigen formaat, gecomprimeerd) naar /backups/db/, met daarnaast de
 #      sha256 en het aantal rijen per tabel op dat moment (voor de hersteltest)
-#   2. het opslagvolume (uploads) als tar.gz naar /backups/storage/
+#   2. het opslagvolume (uploads) als tar.gz naar /backups/storage/, en de eigen
+#      Git-server (Forgejo, /forgejo) als tar.gz naar /backups/forgejo/: eerst een
+#      momentopname van de SQLite-database (sqlite3 .backup, als de gebruiker van
+#      Forgejo), dan de repositories en de rest
 #   3. proef-terugzetting van de dump in een wegwerp-database: bewijst dat de
 #      back-up echt terug te zetten is, en telt tabellen + gebruikers
 #   4. met BACKUP_PASSPHRASE: een versleutelde kopie (.enc, AES-256) van dump en
@@ -37,9 +40,11 @@ OFFSITE_USER="${BACKUP_OFFSITE_USER:-}"
 OFFSITE_PASS="${BACKUP_OFFSITE_PASS:-}"
 CHECK_DB=zf_restore_check
 SSH_OPTS=(-i /offsite/id_ed25519 -o UserKnownHostsFile=/offsite/known_hosts -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=20)
+# de gebruiker van Forgejo in zijn container (USER_UID in docker-compose.vps.yml)
+FJ_UID="${FORGEJO_UID:-1000}"
 
-mkdir -p "$DIR/db" "$DIR/storage"
-chmod 755 "$DIR" "$DIR/db" "$DIR/storage"
+mkdir -p "$DIR/db" "$DIR/storage" "$DIR/forgejo"
+chmod 755 "$DIR" "$DIR/db" "$DIR/storage" "$DIR/forgejo"
 
 # foutmeldingen gaan als tekst in JSON: alleen veilige tekens, kort
 clean() { printf '%s' "$1" | tr '\n' ' ' | tr -cd 'A-Za-z0-9 ._:/()=-' | cut -c1-300; }
@@ -49,6 +54,40 @@ jsonstr() { printf '"%s"' "$(clean "$1")"; }
 
 prune() { # map patroon
   ls -1t "$1"/$2 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm -f
+}
+
+# De eigen Git-server (Forgejo) als één archief. De database is SQLite met een WAL:
+# het losse bestand kan midden in een schrijfactie zitten, dus eerst een
+# momentopname via sqlite3 .backup (de juiste weg terwijl Forgejo draait). Die draait
+# als de gebruiker van Forgejo: zo komt er nooit een bestand van root in zijn map
+# (dan zou Forgejo zijn eigen database niet meer kunnen schrijven). Daarna de rest,
+# zonder de losse database-bestanden en wat elke minuut verandert (log, wachtrij,
+# tmp). tar meldt 1 als een bestand tijdens het lezen veranderde (een spiegel die
+# net bijwerkt); dat is geen fout, 2 wel. Twee stappen: de uitsluiting van
+# ./gitea/gitea.db zou anders ook de momentopname treffen (zelfde naam), dus eerst
+# de map zonder, dan de momentopname erbij (tar rf), en pas daarna comprimeren.
+forgejo_archief() { # doel (.tar.gz) → 0 = gelukt
+  local doel="$1" tmp rc ok=1
+  : > /tmp/fj.err
+  tmp=$(mktemp -d) || return 1
+  mkdir "$tmp/gitea" && chown -R "$FJ_UID:$FJ_UID" "$tmp" || { rm -rf "$tmp"; return 1; }
+  if ! setpriv --reuid="$FJ_UID" --regid="$FJ_UID" --clear-groups sqlite3 /forgejo/gitea/gitea.db ".backup '$tmp/gitea/gitea.db'" 2>>/tmp/fj.err; then
+    rm -rf "$tmp"; return 1
+  fi
+  if [ "$(sqlite3 "$tmp/gitea/gitea.db" 'PRAGMA integrity_check' 2>>/tmp/fj.err)" != ok ]; then
+    echo "momentopname van de database niet in orde" >> /tmp/fj.err
+    rm -rf "$tmp"; return 1
+  fi
+  tar cf "$doel.tar" -C /forgejo \
+    --exclude=./gitea/gitea.db --exclude=./gitea/gitea.db-wal --exclude=./gitea/gitea.db-shm \
+    --exclude=./gitea/log --exclude=./gitea/queues --exclude=./gitea/tmp \
+    . 2>>/tmp/fj.err
+  rc=$?
+  if [ "$rc" -le 1 ] && tar rf "$doel.tar" -C "$tmp" ./gitea/gitea.db 2>>/tmp/fj.err && gzip -6 -c "$doel.tar" > "$doel" 2>>/tmp/fj.err; then
+    ok=0
+  fi
+  rm -rf "$tmp" "$doel.tar"
+  return "$ok"
 }
 
 # Rijen per tabel (public), gesorteerd: "tabel<TAB>aantal". Voor de hersteltest.
@@ -97,7 +136,7 @@ offsite_prune() {
   case "$OFFSITE" in
     scp://*)
       local rest="${OFFSITE#scp://}" host="${rest%%/*}" pad="/${rest#*/}"
-      ssh "${SSH_OPTS[@]}" "$host" "cd '$pad' 2>/dev/null && ls -1t zekerflex-*.dump.enc storage-*.tar.gz.enc 2>/dev/null | awk -v k=$KEEP 'BEGIN{a=0;b=0} /^zekerflex-/{a++; if(a>k) print} /^storage-/{b++; if(b>k) print}' | xargs -r rm -f" 2>/dev/null ;;
+      ssh "${SSH_OPTS[@]}" "$host" "cd '$pad' 2>/dev/null && ls -1t zekerflex-*.dump.enc storage-*.tar.gz.enc forgejo-*.tar.gz.enc 2>/dev/null | awk -v k=$KEEP 'BEGIN{a=0;b=0;c=0} /^zekerflex-/{a++; if(a>k) print} /^storage-/{b++; if(b>k) print} /^forgejo-/{c++; if(c>k) print}' | xargs -r rm -f" 2>/dev/null ;;
     *) : ;; # WebDAV: opruimen laten we aan de opslag zelf (quota/levenscyclus)
   esac
 }
@@ -106,7 +145,7 @@ offsite_prune() {
 # De nachtelijke back-up
 # ---------------------------------------------------------------------------
 run_backup() {
-  local start ts file sfile err="" bytes=0 sbytes=0 restore_ok=false tables=0 users=0 live=0 ok=false
+  local start ts file sfile ffile="" err="" bytes=0 sbytes=0 fbytes=0 restore_ok=false tables=0 users=0 live=0 ok=false
   local encrypted=false off_ok=false off_err="" off_target=""
   start=$(date +%s)
   ts=$(date -u +%Y%m%d-%H%M)
@@ -142,6 +181,20 @@ run_backup() {
     sfile=""
   fi
 
+  # de eigen Git-server (Forgejo): alleen als zijn volume er is
+  if [ -f /forgejo/gitea/gitea.db ]; then
+    ffile="forgejo-$ts.tar.gz"
+    if forgejo_archief "$DIR/forgejo/$ffile.part"; then
+      mv -f "$DIR/forgejo/$ffile.part" "$DIR/forgejo/$ffile"
+      chown "$OWNER" "$DIR/forgejo/$ffile" && chmod 600 "$DIR/forgejo/$ffile"
+      fbytes=$(stat -c %s "$DIR/forgejo/$ffile")
+    else
+      [ -n "$err" ] || err="forgejo: $(head -c 200 /tmp/fj.err)"
+      rm -f "$DIR/forgejo/$ffile.part"
+      ffile=""
+    fi
+  fi
+
   if [ -n "$file" ]; then
     dropdb --if-exists "$CHECK_DB" 2>/dev/null
     if createdb "$CHECK_DB" 2>/tmp/restore.err &&
@@ -159,7 +212,7 @@ run_backup() {
 
   # versleutelde kopie (alleen met een wachtwoordzin), daarna buiten de server
   if [ -n "$PASS" ] && [ -n "$file" ]; then
-    if versleutel "$DIR/db/$file" "$DIR/db/$file.enc" && { [ -z "$sfile" ] || versleutel "$DIR/storage/$sfile" "$DIR/storage/$sfile.enc"; }; then
+    if versleutel "$DIR/db/$file" "$DIR/db/$file.enc" && { [ -z "$sfile" ] || versleutel "$DIR/storage/$sfile" "$DIR/storage/$sfile.enc"; } && { [ -z "$ffile" ] || versleutel "$DIR/forgejo/$ffile" "$DIR/forgejo/$ffile.enc"; }; then
       encrypted=true
     else
       [ -n "$err" ] || err="versleutelen: $(head -c 200 /tmp/enc.err)"
@@ -169,7 +222,7 @@ run_backup() {
     off_target="${OFFSITE%%\?*}"
     if [ "$encrypted" != true ]; then
       off_err="geen BACKUP_PASSPHRASE: onversleuteld gaat er niets naar buiten"
-    elif offsite_put "$DIR/db/$file.enc" && { [ -z "$sfile" ] || offsite_put "$DIR/storage/$sfile.enc"; }; then
+    elif offsite_put "$DIR/db/$file.enc" && { [ -z "$sfile" ] || offsite_put "$DIR/storage/$sfile.enc"; } && { [ -z "$ffile" ] || offsite_put "$DIR/forgejo/$ffile.enc"; }; then
       off_ok=true
       offsite_prune
     else
@@ -183,17 +236,19 @@ run_backup() {
   prune "$DIR/db" "*.dump.enc"
   prune "$DIR/storage" "*.tar.gz"
   prune "$DIR/storage" "*.tar.gz.enc"
+  prune "$DIR/forgejo" "*.tar.gz"
+  prune "$DIR/forgejo" "*.tar.gz.enc"
   # hulpbestanden zonder dump: weg
   for h in "$DIR"/db/*.sha256 "$DIR"/db/*.counts; do
     [ -e "$h" ] || continue
     [ -e "${h%.*}" ] || rm -f "$h"
   done
-  rm -f "$DIR"/db/*.part "$DIR"/storage/*.part
+  rm -f "$DIR"/db/*.part "$DIR"/storage/*.part "$DIR"/forgejo/*.part "$DIR"/forgejo/*.part.tar
 
   local kept tmp="$DIR/.status.json.tmp"
   kept=$(ls -1 "$DIR"/db/*.dump 2>/dev/null | wc -l)
   cat > "$tmp" <<EOF
-{"at":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","ok":$ok,"file":"$file","bytes":$bytes,"storageFile":"$sfile","storageBytes":$sbytes,"seconds":$(( $(date +%s) - start )),"restore":{"ok":$restore_ok,"tables":$tables,"users":$users,"liveUsers":$live},"kept":$kept,"encrypted":$encrypted,"offsite":{"configured":$([ -n "$OFFSITE" ] && echo true || echo false),"target":$(jsonstr "$off_target"),"ok":$off_ok,"error":$(jsonstr "$off_err")},"error":$(jsonstr "$err")}
+{"at":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","ok":$ok,"file":"$file","bytes":$bytes,"storageFile":"$sfile","storageBytes":$sbytes,"forgejoFile":"$ffile","forgejoBytes":$fbytes,"seconds":$(( $(date +%s) - start )),"restore":{"ok":$restore_ok,"tables":$tables,"users":$users,"liveUsers":$live},"kept":$kept,"encrypted":$encrypted,"offsite":{"configured":$([ -n "$OFFSITE" ] && echo true || echo false),"target":$(jsonstr "$off_target"),"ok":$off_ok,"error":$(jsonstr "$off_err")},"error":$(jsonstr "$err")}
 EOF
   chmod 644 "$tmp" && mv -f "$tmp" "$DIR/status.json"
   echo "[zf-backup] klaar: ok=$ok bestand=$file ($bytes bytes) terugzetten=$restore_ok tabellen=$tables versleuteld=$encrypted buiten=$off_ok"
@@ -206,6 +261,7 @@ run_verify() {
   local start file="" err="" ok=false sha_ok=false list_ok=false restore_ok=false tables=0
   local mismatches="[]" missing=0 afwijkend=0 vergeleken=0 storage_ok=false storage_files=0 sfile=""
   local enc_state="none" off_state="none" off_bytes=0 expected=0
+  local fj_ok=false fj_file="" fj_repos=0 fj_tmp
   start=$(date +%s)
   file=$(ls -1t "$DIR"/db/*.dump 2>/dev/null | head -1)
   [ -n "$file" ] && file=$(basename "$file")
@@ -257,6 +313,22 @@ run_verify() {
     else
       storage_ok=true # geen uploads-map (bv. lokaal)
     fi
+    # 4b. de eigen Git-server: archief leesbaar, database heel, repositories aanwezig
+    fj_file=$(ls -1t "$DIR"/forgejo/*.tar.gz 2>/dev/null | head -1)
+    if [ -n "$fj_file" ]; then
+      fj_file=$(basename "$fj_file")
+      fj_tmp=$(mktemp -d)
+      : > /tmp/fj.err
+      if tar -xzf "$DIR/forgejo/$fj_file" -C "$fj_tmp" ./gitea/gitea.db 2>>/tmp/fj.err &&
+        [ "$(sqlite3 "$fj_tmp/gitea/gitea.db" 'PRAGMA integrity_check' 2>>/tmp/fj.err)" = ok ]; then
+        fj_repos=$(num "$(tar -tzf "$DIR/forgejo/$fj_file" 2>/dev/null | grep -c '\.git/HEAD$')")
+        [ "$fj_repos" -gt 0 ] && fj_ok=true || echo "geen repositories in het archief" >> /tmp/fj.err
+      fi
+      [ "$fj_ok" = true ] || { [ -n "$err" ] || err="forgejo-archief niet in orde: $(head -c 160 /tmp/fj.err)"; }
+      rm -rf "$fj_tmp"
+    else
+      fj_ok=true # (nog) geen eigen Git-server
+    fi
     # 5. de versleutelde kopie: ontcijferen moet precies het origineel geven
     if [ -f "$DIR/db/$file.enc" ]; then
       if [ -z "$PASS" ]; then enc_state="no-passphrase"
@@ -275,15 +347,15 @@ run_verify() {
       off_state="no-encrypted-copy"
     fi
   fi
-  [ -z "$err" ] && [ "$restore_ok" = true ] && [ "$sha_ok" = true ] && [ "$storage_ok" = true ] && [ "$enc_state" != failed ] && ok=true
+  [ -z "$err" ] && [ "$restore_ok" = true ] && [ "$sha_ok" = true ] && [ "$storage_ok" = true ] && [ "$fj_ok" = true ] && [ "$enc_state" != failed ] && ok=true
 
   local regel tmp="$DIR/.verify.json.tmp"
-  regel=$(printf '{"at":"%s","ok":%s,"file":%s,"seconds":%d,"shaOk":%s,"listOk":%s,"restoreOk":%s,"tables":%d,"compared":%d,"missing":%d,"mismatched":%d,"mismatches":%s,"storage":{"ok":%s,"file":%s,"files":%d},"encrypted":"%s","offsite":"%s","error":%s}' \
-    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$ok" "$(jsonstr "$file")" $(( $(date +%s) - start )) "$sha_ok" "$list_ok" "$restore_ok" "$tables" "$vergeleken" "$missing" "$afwijkend" "$mismatches" "$storage_ok" "$(jsonstr "$sfile")" "$storage_files" "$enc_state" "$off_state" "$(jsonstr "$err")")
+  regel=$(printf '{"at":"%s","ok":%s,"file":%s,"seconds":%d,"shaOk":%s,"listOk":%s,"restoreOk":%s,"tables":%d,"compared":%d,"missing":%d,"mismatched":%d,"mismatches":%s,"storage":{"ok":%s,"file":%s,"files":%d},"forgejo":{"ok":%s,"file":%s,"repos":%d},"encrypted":"%s","offsite":"%s","error":%s}' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$ok" "$(jsonstr "$file")" $(( $(date +%s) - start )) "$sha_ok" "$list_ok" "$restore_ok" "$tables" "$vergeleken" "$missing" "$afwijkend" "$mismatches" "$storage_ok" "$(jsonstr "$sfile")" "$storage_files" "$fj_ok" "$(jsonstr "$fj_file")" "$fj_repos" "$enc_state" "$off_state" "$(jsonstr "$err")")
   printf '%s\n' "$regel" > "$tmp" && chmod 644 "$tmp" && mv -f "$tmp" "$DIR/verify.json"
   # geschiedenis: de laatste 60 hersteltests
   { [ -f "$DIR/verificaties.jsonl" ] && tail -n 59 "$DIR/verificaties.jsonl"; printf '%s\n' "$regel"; } > "$DIR/.verificaties.tmp" && chmod 644 "$DIR/.verificaties.tmp" && mv -f "$DIR/.verificaties.tmp" "$DIR/verificaties.jsonl"
-  echo "[zf-backup] hersteltest klaar: ok=$ok tabellen=$tables vergeleken=$vergeleken afwijkend=$afwijkend ontbrekend=$missing uploads=$storage_ok versleuteld=$enc_state buiten=$off_state ${err:+fout=$err}"
+  echo "[zf-backup] hersteltest klaar: ok=$ok tabellen=$tables vergeleken=$vergeleken afwijkend=$afwijkend ontbrekend=$missing uploads=$storage_ok forgejo=$fj_ok versleuteld=$enc_state buiten=$off_state ${err:+fout=$err}"
 }
 
 seconds_until_next() {

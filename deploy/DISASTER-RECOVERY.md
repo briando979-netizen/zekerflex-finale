@@ -54,6 +54,19 @@ sudo $C up -d app cron
 curl -fsS https://zekerflex.com/api/health
 ```
 
+**De eigen Git-server (Forgejo) terugzetten.** Het archief in `backups/forgejo/` bevat
+een momentopname van de database (`gitea/gitea.db`, gemaakt met sqlite3 `.backup`),
+de repositories en de instellingen. Zolang GitHub er ook is, is de code zelf daar
+ook nog; de spiegel haalt hem binnen 10 minuten weer op.
+```bash
+cd ~/zekerflex
+C="docker compose -f docker-compose.vps.yml --env-file .env.production"
+sudo $C stop forgejo
+sudo docker run --rm -v zekerflex_forgejo-data:/data -v "$PWD/backups/forgejo:/b:ro" alpine \
+  sh -c 'rm -f /data/gitea/gitea.db-wal /data/gitea/gitea.db-shm && tar xzf /b/forgejo-20261111-0230.tar.gz -C /data && chown -R 1000:1000 /data/gitea /data/git'
+sudo $C up -d forgejo
+```
+
 **Kopie buiten de server.** De back-ups staan op dezelfde schijf als de database:
 ze beschermen tegen fouten en per ongeluk wissen, niet tegen het verlies van de
 hele VPS. Haal ze regelmatig naar een andere plek, bijvoorbeeld vanaf je eigen

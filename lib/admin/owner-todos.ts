@@ -595,6 +595,21 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("app-105"),
     },
     {
+      id: "forgejo-inloggen",
+      group: "Beheer & veiligheid",
+      title: "Inloggen op je eigen Git-server (Forgejo) en je wachtwoord kiezen",
+      why: "ZekerFlex heeft een eigen GitHub op de eigen server: een kopie van alle code die elke 10 minuten bijwerkt, gratis en zonder GitHub nodig te hebben. Alleen accounts die Claude aanmaakt kunnen erin; niemand kan zich zelf aanmelden.",
+      how: [
+        "Ga naar git.37-97-226-24.sslip.io en log in met gebruiker 'eigenaar'.",
+        "Het eenmalige wachtwoord staat op de server in /root/forgejo-eigenaar.txt. Lezen: TransIP-controlepaneel → je VPS → Console, inloggen en dan: sudo cat /root/forgejo-eigenaar.txt. Claude gaf het je op 10 november ook in de chat.",
+        "Bij de eerste keer inloggen kies je een nieuw wachtwoord; zet dat in je wachtwoordmanager.",
+        "Wis daarna het bestand, in dezelfde console: sudo rm /root/forgejo-eigenaar.txt.",
+        "Je code staat onder zekerflex → zekerflex-finale. Vink deze taak af als je bent ingelogd en het bestand weg is.",
+      ],
+      auto: false,
+      ...m("forgejo-inloggen"),
+    },
+    {
       id: "ios-app",
       group: "Vindbaarheid & app",
       title: "ZekerFlex in de App Store (iPhone): Apple-ontwikkelaarsaccount en sleutels",

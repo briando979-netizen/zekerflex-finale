@@ -77,6 +77,18 @@ describe("hersteltest beoordelen", () => {
     const r = evaluateVerification(parseVerifyStatus({ ...verifyGood, ok: false, restoreOk: false, shaOk: false, error: "" }), NOW);
     expect(r.reasons).toEqual(["De back-up kon niet worden teruggezet."]);
   });
+
+  it("de eigen Git-server (Forgejo): een kapot archief is een probleem, een test van vóór Forgejo niet", () => {
+    const goed = parseVerifyStatus({ ...verifyGood, forgejo: { ok: true, file: "forgejo-20261111-0230.tar.gz", repos: 1 } });
+    expect(goed?.forgejo).toEqual({ ok: true, file: "forgejo-20261111-0230.tar.gz", repos: 1 });
+    expect(evaluateVerification(goed, NOW).state).toBe("ok");
+    const kapot = evaluateVerification(parseVerifyStatus({ ...verifyGood, ok: false, forgejo: { ok: false, file: "forgejo-20261111-0230.tar.gz", repos: 0 } }), NOW);
+    expect(kapot.state).toBe("failed");
+    expect(kapot.reasons[0]).toContain("eigen Git-server");
+    expect(parseVerifyStatus(verifyGood)?.forgejo).toBeUndefined();
+    expect(parseBackupStatus({ at: hoursAgo(1), forgejoFile: "forgejo-20261111-0230.tar.gz", forgejoBytes: 1234 })?.forgejoBytes).toBe(1234);
+    expect(parseBackupStatus({ at: hoursAgo(1) })?.forgejoFile).toBeUndefined();
+  });
 });
 
 describe("back-up beoordelen", () => {

@@ -27,6 +27,9 @@ export interface BackupStatus {
   bytes: number;
   storageFile: string;
   storageBytes: number;
+  /** de eigen Git-server (Forgejo); ontbreekt bij een status van vóór Forgejo */
+  forgejoFile?: string;
+  forgejoBytes?: number;
   seconds: number;
   restore: { ok: boolean; tables: number; users: number; liveUsers: number };
   kept: number;
@@ -53,6 +56,8 @@ export interface VerifyStatus {
   mismatched: number;
   mismatches: { table: string; expected: number; got: number | null }[];
   storage: { ok: boolean; file: string; files: number };
+  /** de eigen Git-server (Forgejo): archief leesbaar, database heel, repositories; ontbreekt bij een test van vóór Forgejo */
+  forgejo?: { ok: boolean; file: string; repos: number };
   /** none = geen versleutelde kopie; no-passphrase = kopie er wel, sleutel niet bekend */
   encrypted: "none" | "ok" | "failed" | "no-passphrase";
   /** none = niet ingesteld */
@@ -106,6 +111,7 @@ export function parseBackupStatus(raw: unknown): BackupStatus | null {
     bytes: num(o.bytes),
     storageFile: str(o.storageFile),
     storageBytes: num(o.storageBytes),
+    ...(typeof o.forgejoFile === "string" ? { forgejoFile: o.forgejoFile, forgejoBytes: num(o.forgejoBytes) } : {}),
     seconds: num(o.seconds),
     restore: { ok: r.ok === true, tables: num(r.tables), users: num(r.users), liveUsers: num(r.liveUsers) },
     kept: num(o.kept),
@@ -122,6 +128,7 @@ export function parseVerifyStatus(raw: unknown): VerifyStatus | null {
   const o = raw as Record<string, unknown> | null;
   if (!o || typeof o !== "object" || typeof o.at !== "string" || Number.isNaN(Date.parse(o.at))) return null;
   const st = (o.storage ?? {}) as Record<string, unknown>;
+  const fj = o.forgejo && typeof o.forgejo === "object" ? (o.forgejo as Record<string, unknown>) : null;
   const mismatches = Array.isArray(o.mismatches)
     ? o.mismatches.flatMap((m) => {
         const x = (m ?? {}) as Record<string, unknown>;
@@ -142,6 +149,7 @@ export function parseVerifyStatus(raw: unknown): VerifyStatus | null {
     mismatched: num(o.mismatched),
     mismatches: mismatches.slice(0, 50),
     storage: { ok: st.ok === true, file: str(st.file), files: num(st.files) },
+    ...(fj ? { forgejo: { ok: fj.ok === true, file: str(fj.file), repos: num(fj.repos) } } : {}),
     encrypted: ENC_STATES.has(str(o.encrypted)) ? (str(o.encrypted) as VerifyStatus["encrypted"]) : "none",
     offsite: OFF_STATES.has(str(o.offsite)) ? (str(o.offsite) as VerifyStatus["offsite"]) : "none",
     error: str(o.error),
@@ -158,6 +166,7 @@ export function evaluateVerification(status: VerifyStatus | null, now = Date.now
     if (status.missing > 0) reasons.push(`${status.missing} ${status.missing === 1 ? "tabel ontbreekt" : "tabellen ontbreken"} na het terugzetten.`);
     if (status.mismatched - status.missing > 0) reasons.push(`${status.mismatched - status.missing} ${status.mismatched - status.missing === 1 ? "tabel heeft" : "tabellen hebben"} na het terugzetten een ander aantal rijen dan bij de back-up.`);
     if (!status.storage.ok) reasons.push("Het archief met uploads is niet compleet te lezen.");
+    if (status.forgejo && !status.forgejo.ok) reasons.push("Het archief van de eigen Git-server (Forgejo) is niet in orde: de database of de repositories ontbreken of zijn beschadigd.");
     if (status.encrypted === "failed") reasons.push("De versleutelde kopie is niet te ontcijferen met de huidige wachtwoordzin.");
     if (status.offsite === "missing") reasons.push("De kopie buiten de server ontbreekt.");
     if (status.offsite === "size-mismatch") reasons.push("De kopie buiten de server is niet even groot als het origineel.");

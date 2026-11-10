@@ -165,6 +165,10 @@ services:
       - ./deploy/backup/entrypoint.sh:/backup.sh:ro
       - ./backups:/backups
       - app-storage:/storage:ro
+      # de eigen Git-server (Forgejo). Niet alleen-lezen: de momentopname van zijn
+      # SQLite-database (WAL) moet het gedeelde -shm-bestand kunnen gebruiken; dat
+      # gebeurt als zijn eigen gebruiker (uid 1000), nooit als root (entrypoint.sh).
+      - forgejo-data:/forgejo
       # ssh-sleutel + known_hosts voor scp naar een eigen reserveserver (alleen-lezen)
       - ./offsite:/offsite:ro
     entrypoint: ["bash", "/backup.sh"]
