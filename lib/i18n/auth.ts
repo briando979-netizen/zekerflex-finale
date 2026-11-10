@@ -1,4 +1,5 @@
 import type { Locale } from "@/lib/i18n/config";
+import { SCAN_EXTRA, type ScanExtra } from "@/lib/i18n/scan-extra";
 
 // ---------------------------------------------------------------------------
 // Sign-up, log-in, e-mail confirmation and the verification form in all five
@@ -271,6 +272,7 @@ export interface AuthDict {
       titel: string;
       punten: [string, string, string];
       privacy: string;
+      extra: ScanExtra;
       akkoord: string;
       annuleren: string;
       kiesSoort: string;
@@ -632,6 +634,7 @@ const nl: AuthDict = {
         "Je foto's worden versleuteld bewaard en alleen voor deze verificatie gebruikt. Je BSN slaan we nooit op. Je kunt je gegevens altijd laten verwijderen.",
       ],
       privacy: "Privacybeleid",
+      extra: SCAN_EXTRA.nl,
       akkoord: "Akkoord en doorgaan",
       annuleren: "Annuleren",
       kiesSoort: "Welk document gebruik je?",
@@ -989,6 +992,7 @@ const en: AuthDict = {
         "Your photos are stored encrypted and only used for this verification. We never store your BSN. You can always have your data deleted.",
       ],
       privacy: "Privacy policy",
+      extra: SCAN_EXTRA.en,
       akkoord: "Agree and continue",
       annuleren: "Cancel",
       kiesSoort: "Which document are you using?",
@@ -1346,6 +1350,7 @@ const pl: AuthDict = {
         "Twoje zdjęcia są przechowywane w formie zaszyfrowanej i używane tylko do tej weryfikacji. Nigdy nie zapisujemy Twojego numeru BSN. Zawsze możesz poprosić o usunięcie danych.",
       ],
       privacy: "Polityka prywatności",
+      extra: SCAN_EXTRA.pl,
       akkoord: "Zgadzam się i dalej",
       annuleren: "Anuluj",
       kiesSoort: "Jakiego dokumentu używasz?",
@@ -1703,6 +1708,7 @@ const ro: AuthDict = {
         "Fotografiile tale sunt păstrate criptat și folosite doar pentru această verificare. Nu salvăm niciodată BSN-ul tău. Poți oricând cere ștergerea datelor.",
       ],
       privacy: "Politica de confidențialitate",
+      extra: SCAN_EXTRA.ro,
       akkoord: "Sunt de acord și continui",
       annuleren: "Anulează",
       kiesSoort: "Ce document folosești?",
@@ -2060,6 +2066,7 @@ const uk: AuthDict = {
         "Ваші фото зберігаються в зашифрованому вигляді й використовуються лише для цієї перевірки. Ми ніколи не зберігаємо ваш BSN. Ви завжди можете попросити видалити ваші дані.",
       ],
       privacy: "Політика конфіденційності",
+      extra: SCAN_EXTRA.uk,
       akkoord: "Погоджуюся й продовжую",
       annuleren: "Скасувати",
       kiesSoort: "Який документ ви використовуєте?",

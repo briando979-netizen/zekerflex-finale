@@ -1,4 +1,5 @@
 import type { Locale } from "@/lib/i18n/config";
+import { WIE_TEKSTEN } from "@/lib/i18n/wie-ben-jij";
 
 // ---------------------------------------------------------------------------
 // Freelancer app (/dashboard) dictionary — kept separate from the employer
@@ -130,6 +131,7 @@ const nl = {
     mailFailed: "De code kon niet worden verstuurd. Probeer het later opnieuw.",
   },
   /** Land en woonplaats bij de thuisbasis (components/app/ThuisbasisVelden.tsx). */
+  wie: WIE_TEKSTEN.nl,
   thuisbasis: {
     land: "Land",
     plaats: "Woonplaats",
@@ -1358,6 +1360,7 @@ const en: FreelancerDict = {
     mailFailed: "The code could not be sent. Please try again later.",
   },
   /** Land en woonplaats bij de thuisbasis (components/app/ThuisbasisVelden.tsx). */
+  wie: WIE_TEKSTEN.en,
   thuisbasis: {
     land: "Country",
     plaats: "Town or city",
@@ -2581,6 +2584,7 @@ const pl: FreelancerDict = {
     mailFailed: "Nie udało się wysłać kodu. Spróbuj ponownie później.",
   },
   /** Land en woonplaats bij de thuisbasis (components/app/ThuisbasisVelden.tsx). */
+  wie: WIE_TEKSTEN.pl,
   thuisbasis: {
     land: "Kraj",
     plaats: "Miejscowość",
@@ -3804,6 +3808,7 @@ const ro: FreelancerDict = {
     mailFailed: "Codul nu a putut fi trimis. Încearcă din nou mai târziu.",
   },
   /** Land en woonplaats bij de thuisbasis (components/app/ThuisbasisVelden.tsx). */
+  wie: WIE_TEKSTEN.ro,
   thuisbasis: {
     land: "Țara",
     plaats: "Localitatea",
@@ -5027,6 +5032,7 @@ const uk: FreelancerDict = {
     mailFailed: "Не вдалося надіслати код. Спробуй ще раз пізніше.",
   },
   /** Land en woonplaats bij de thuisbasis (components/app/ThuisbasisVelden.tsx). */
+  wie: WIE_TEKSTEN.uk,
   thuisbasis: {
     land: "Країна",
     plaats: "Населений пункт",

@@ -7,7 +7,11 @@ import { useFT } from "@/components/i18n/useFT";
 import { ThuisbasisVelden, controleerThuisbasisVooraf, useThuisbasisFout } from "@/components/app/ThuisbasisVelden";
 import { AUTH_DICTS, fill, type AuthDict } from "@/lib/i18n/auth";
 import { DocumentLezing, leesDocumentFoto, type Lezing } from "@/components/app/DocumentLezing";
-import { IdScan, type ScanAfronden, type ScanAfrondenOverdracht, type ScanUitslag } from "@/components/app/IdScan";
+import { IdScan, type ScanAfronden, type ScanAfrondenOverdracht, type ScanRoute, type ScanUitslag } from "@/components/app/IdScan";
+import { WieBenJijKop } from "@/components/app/WieBenJijKop";
+import { WieBenJijPersoon, type PersoonStand } from "@/components/app/WieBenJijPersoon";
+import { IdKeuzeKaarten } from "@/components/app/WieBenJijIdKaarten";
+import { stappenVoor, voegNaam, type WieStap } from "@/lib/onboarding/wie-ben-jij";
 import { controleerVeld, type VeldSleutel } from "@/lib/onboarding/velden";
 
 interface Check {
@@ -165,7 +169,19 @@ export function OnboardingForm({
   requireKvk = true,
   stripeIdentity = false,
   initial,
+  persoon,
+  beginStap,
+  idKlaar = false,
+  kanSluiten = true,
 }: {
+  /** stap 1 ("Hey! Wie ben jij?"): wat er al bewaard is */
+  persoon: PersoonStand;
+  /** de stap waar deze werker verdergaat */
+  beginStap: WieStap;
+  /** de identiteit is al bevestigd: dan geen ID-check meer */
+  idKlaar?: boolean;
+  /** de verplichte poort (lib/onboarding/werker-poort.ts) mag niet gesloten worden */
+  kanSluiten?: boolean;
   defaultName: string;
   requireKvk?: boolean;
   /** Stripe Identity is switched on: offer the Stripe camera flow (recommended) */
@@ -180,9 +196,15 @@ export function OnboardingForm({
   // per veld een foutmelding (role="alert"); gecontroleerd bij het verlaten van het veld en bij het versturen
   const [fouten, setFouten] = useState<Partial<Record<VeldSleutel, VeldSleutel>>>({});
   const [bewaard, setBewaard] = useState<string | null>(null);
-  // drie manieren: Stripe (als dat aanstaat), de ID-scan van ZekerFlex, of zelf foto's uploaden
-  const [method, setMethod] = useState<"stripe" | "zekerflex" | "upload">(stripeIdentity ? "stripe" : "zekerflex");
+  const w = ft.wie;
+  const [stap, setStap] = useState<WieStap>(beginStap);
+  const [persoonNu, setPersoonNu] = useState<PersoonStand>(persoon);
+  // twee routes in de eigen ID-scan (Nederlands of buitenlands document); daarnaast Stripe (als dat aanstaat) en zelf foto's uploaden
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [route, setRoute] = useState<ScanRoute>("nl");
   const [scanOpen, setScanOpen] = useState(false);
+  const naamNu = voegNaam(persoonNu.voornaam, persoonNu.achternaam) || defaultName;
+  const stappen = stappenVoor({ idKlaar });
   const scanResult = useRef<Result | null>(null);
   const photos = useRef<Partial<Record<PhotoKey, File>>>({});
   const [missing, setMissing] = useState<PhotoKey[]>([]);
@@ -238,12 +260,13 @@ export function OnboardingForm({
     return true;
   }
 
-  async function bewaarVoorLater() {
+  /** "Verder" in stap 2 (strikt: het bedrijf is nodig) of "bewaar en ga later verder"; slaat het basisdeel op en doet dan `daarna`. */
+  async function bewaarVoorLater(opties: { strikt?: boolean; daarna?: () => void } = {}) {
     const form = formRef.current;
     if (busy || !form) return;
     setBewaard(null);
     const bron = new FormData(form);
-    if (!valideer(bron, { documenten: false, bedrijfOptioneel: true })) return;
+    if (!valideer(bron, { documenten: false, bedrijfOptioneel: !opties.strikt })) return;
     const body = new FormData();
     for (const k of ["kvkNumber", "vatNumber", "postalCode", "city", "country", "houseNumber"]) {
       const v = bron.get(k);
@@ -257,6 +280,8 @@ export function OnboardingForm({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(thuisbasisFout(data) ?? data?.error?.message ?? t.later.failed);
+      } else if (opties.daarna) {
+        opties.daarna();
       } else {
         setBewaard(t.later.saved);
         router.refresh();
@@ -352,29 +377,35 @@ export function OnboardingForm({
     else setLezing(null);
   }
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (busy) return;
+  /** Een van de twee routes van de ID-scan starten (eerst de velden van stap 2 en het buitenlandse adres controleren). */
+  async function startScan(r: ScanRoute) {
+    const form = formRef.current;
+    if (busy || !form) return;
     setBewaard(null);
-    if (!valideer(new FormData(e.currentTarget), { documenten: method === "upload", bedrijfOptioneel: false })) return;
+    if (!valideer(new FormData(form), { documenten: false, bedrijfOptioneel: false })) return;
     setError(null);
-    if (method === "zekerflex") {
-      setError(null);
-      scanResult.current = null;
-      // een adres in het buitenland eerst controleren: anders blijkt pas ná de scan dat OSM het niet kent
-      const formulier = e.currentTarget;
-      setBusy(true);
-      const fout = await controleerThuisbasisVooraf(formulier, thuisbasisFout, t.failed);
-      setBusy(false);
-      if (fout) {
-        setError(fout);
-        return;
-      }
-      setScanOpen(true);
+    scanResult.current = null;
+    // een adres in het buitenland eerst controleren: anders blijkt pas ná de scan dat OSM het niet kent
+    setBusy(true);
+    const fout = await controleerThuisbasisVooraf(form, thuisbasisFout, t.failed);
+    setBusy(false);
+    if (fout) {
+      setError(fout);
       return;
     }
-    const body = new FormData(e.currentTarget);
-    if (method === "upload") {
+    setRoute(r);
+    setScanOpen(true);
+  }
+
+  /** Stripe of zelf foto's uploaden: versturen naar dezelfde route als altijd. */
+  async function verstuur(m: "stripe" | "upload") {
+    const form = formRef.current;
+    if (busy || !form) return;
+    setBewaard(null);
+    if (!valideer(new FormData(form), { documenten: m === "upload", bedrijfOptioneel: false })) return;
+    setError(null);
+    const body = new FormData(form);
+    if (m === "upload") {
       const absent = (["documentFront", "documentBack", "selfie"] as PhotoKey[]).filter((k) => !photos.current[k]);
       setMissing(absent);
       if (absent.length) {
@@ -407,6 +438,25 @@ export function OnboardingForm({
     } finally {
       setBusy(false);
     }
+  }
+
+  /** Enter in een veld: in stap 2 is dat "Verder", bij het uploaden "Foto's insturen". */
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (stap === "woon") void naVolgende();
+    else if (stap === "id" && uploadOpen) void verstuur("upload");
+  }
+
+  function naVolgende() {
+    return bewaarVoorLater({ strikt: true, daarna: () => (stappen.includes("id") ? setStap("id") : router.refresh()) });
+  }
+
+  function terug() {
+    const i = stappen.indexOf(stap);
+    if (i > 0) {
+      setError(null);
+      setStap(stappen[i - 1] ?? "persoon");
+    } else router.push("/dashboard");
   }
 
   if (result) {
@@ -484,211 +534,242 @@ export function OnboardingForm({
     );
   }
 
+  const kopTitel = stap === "persoon" ? w.persoon.kop : stap === "woon" ? (requireKvk ? w.woon.kopBedrijf : w.woon.kop) : w.id.kop;
+  const kopUitleg = stap === "persoon" ? w.persoon.uitleg : undefined;
+  const uploadSoorten = Object.entries(t.docs).filter(([v]) => v !== "DRIVERS_LICENSE");
+
   return (
-    <form ref={formRef} onSubmit={onSubmit} noValidate className="space-y-8">
-      {error && (
-        <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{error}</p>
-      )}
-      {bewaard && (
-        <p role="status" className="rounded-lg bg-ok/10 px-3 py-2.5 text-sm text-ok">{bewaard}</p>
-      )}
-
-      {requireKvk && (
-        <fieldset className="space-y-4">
-          <legend className="text-sm font-semibold text-ink">1. {t.business}</legend>
-          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t.regKind}>
-            {(
-              [
-                ["kvk", ...t.kvk],
-                ["vat", ...t.vat],
-              ] as const
-            ).map(([k, title, sub]) => (
-              <button
-                key={k}
-                type="button"
-                role="radio"
-                aria-checked={biz === k}
-                onClick={() => setBiz(k)}
-                className={`rounded-xl border px-3 py-2.5 text-left ${biz === k ? "border-brand-500 bg-brand-50" : "border-hairstrong"}`}
-              >
-                <span className="block text-sm font-semibold text-ink">{title}</span>
-                <span className="block text-xs text-neutralx-500">{sub}</span>
-              </button>
-            ))}
-          </div>
-          {biz === "kvk" ? (
-            <label className="block">
-              <span className="field-label">{t.kvkLabel}</span>
-              <input
-                key="kvk"
-                name="kvkNumber"
-                required
-                aria-required="true"
-                inputMode="numeric"
-                autoComplete="off"
-                placeholder="12345678"
-                defaultValue={initial?.kvkNumber ?? ""}
-                onBlur={(e) => controleerEen("kvk", e.target.value)}
-                {...veldAttrs("kvk")}
-                className="field-input"
-              />
-              <VeldFout veld="kvk" tekst={veldFout("kvk")} />
-              <span className="mt-1 block text-xs text-neutralx-400">{t.kvkHint}</span>
-            </label>
-          ) : (
-            <label className="block">
-              <span className="field-label">{t.vatLabel}</span>
-              <input
-                key="vat"
-                name="vatNumber"
-                required
-                aria-required="true"
-                placeholder="PL1234567890"
-                autoCapitalize="characters"
-                autoComplete="off"
-                defaultValue={initial?.vatNumber ?? ""}
-                onBlur={(e) => controleerEen("vat", e.target.value)}
-                {...veldAttrs("vat")}
-                className="field-input"
-              />
-              <VeldFout veld="vat" tekst={veldFout("vat")} />
-              <span className="mt-1 block text-xs text-neutralx-400">{t.vatHint}</span>
-            </label>
-          )}
-        </fieldset>
-      )}
-
-      {!requireKvk && (
-        <p className="rounded-lg border border-hair bg-paper-soft px-3 py-2.5 text-xs leading-relaxed text-neutralx-500">
-          {t.uitzendNote}
-        </p>
-      )}
-
-      <fieldset className="space-y-4">
-        <legend className="text-sm font-semibold text-ink">
-          {requireKvk ? "2." : "1."} {t.home}
-        </legend>
-        <ThuisbasisVelden postcodeLabel={t.postal} begin={initial?.postalCode} fout={fouten.postal ? ft.thuisbasis.kiesAdres : undefined} />
-      </fieldset>
-
-      <fieldset className="space-y-4" key={attempt}>
-        <legend className="text-sm font-semibold text-ink">
-          {requireKvk ? "3." : "2."} {t.identity}
-        </legend>
-        <div className={`grid gap-2 ${stripeIdentity ? "sm:grid-cols-3" : "sm:grid-cols-2"}`} role="radiogroup" aria-label={t.howIdentity}>
-          {(
-            [
-              ...(stripeIdentity ? [["stripe", ...t.stripe] as const] : []),
-              ["zekerflex", ...t.scan.optie] as const,
-              ["upload", ...t.upload] as const,
-            ]
-          ).map(([k, title, sub]) => (
-            <button
-              key={k}
-              type="button"
-              role="radio"
-              aria-checked={method === k}
-              onClick={() => setMethod(k)}
-              className={`rounded-xl border px-3 py-2.5 text-left ${method === k ? "border-brand-500 bg-brand-50" : "border-hairstrong"}`}
-            >
-              <span className="block text-sm font-semibold text-ink">{title}</span>
-              <span className="block text-xs text-neutralx-500">{sub}</span>
-            </button>
-          ))}
-        </div>
-        {method === "stripe" || method === "zekerflex" ? (
-          <p className="rounded-lg bg-paper-soft px-3 py-2.5 text-xs leading-relaxed text-neutralx-600">
-            {method === "stripe" ? t.stripeInfo : t.scan.info}
-          </p>
-        ) : (
-        <>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block">
-            <span className="field-label">{t.docType}</span>
-            <select name="documentType" required value={docType} onChange={(e) => kiesSoort(e.target.value as DocKey)} className="field-input">
-              {Object.entries(t.docs).map(([v, l]) => (
-                <option key={v} value={v}>{l}</option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <span className="field-label">{t.docNumber}</span>
-            <input
-              name="documentNumber"
-              required
-              aria-required="true"
-              placeholder="SPECI2014"
-              autoComplete="off"
-              autoCapitalize="characters"
-              spellCheck={false}
-              onBlur={(e) => controleerEen("docNumber", e.target.value)}
-              {...veldAttrs("docNumber")}
-              className="field-input"
-            />
-            <VeldFout veld="docNumber" tekst={veldFout("docNumber")} />
-          </label>
-          {docType === "DRIVERS_LICENSE" && (
-            // een rijbewijs mag voor het account; voor betaald werk volgt nog een ID (lib/werkrecht)
-            <p role="note" className="rounded-xl border border-warn/40 bg-warn/10 px-4 py-3 text-sm leading-relaxed text-ink sm:col-span-2">
-              {t.scan.rijbewijsUitleg}
-            </p>
-          )}
-          <label className="block">
-            <span className="field-label">{t.validUntil}</span>
-            <input
-              type="date"
-              name="documentExpiry"
-              required
-              aria-required="true"
-              autoComplete="off"
-              onBlur={(e) => controleerEen("expiry", e.target.value)}
-              {...veldAttrs("expiry")}
-              className="field-input"
-            />
-            <VeldFout veld="expiry" tekst={veldFout("expiry")} />
-          </label>
-          <label className="block">
-            <span className="field-label">{t.nameOnDoc}</span>
-            <input
-              name="nameOnDocument"
-              required
-              aria-required="true"
-              autoComplete="name"
-              defaultValue={defaultName}
-              onBlur={(e) => controleerEen("name", e.target.value)}
-              {...veldAttrs("name")}
-              className="field-input"
-            />
-            <VeldFout veld="name" tekst={veldFout("name")} />
-          </label>
-        </div>
-
-        <p className="text-xs leading-relaxed text-neutralx-500">
-          {t.photosInfo}
-        </p>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <CaptureSlot t={t} label={t.front[0]} hint={t.front[1]} missing={missing.includes("documentFront")} onPick={(f) => kiesFoto("documentFront", f)} />
-          <CaptureSlot t={t} label={t.back[0]} hint={t.back[1]} missing={missing.includes("documentBack")} onPick={(f) => kiesFoto("documentBack", f)} />
-          <CaptureSlot t={t} label={t.selfie[0]} hint={t.selfie[1]} round missing={missing.includes("selfie")} onPick={(f) => kiesFoto("selfie", f)} />
-        </div>
-        {lezing && <DocumentLezing lezing={lezing} t={t} />}
-        </>
+    <section className="mx-auto w-full max-w-xl overflow-hidden rounded-2xl border border-hair bg-white shadow-sm">
+      <WieBenJijKop
+        titel={kopTitel}
+        uitleg={kopUitleg}
+        aantal={stappen.length}
+        huidig={Math.max(0, stappen.indexOf(stap))}
+        teksten={w}
+        onTerug={terug}
+        onSluit={kanSluiten ? () => router.push("/dashboard") : undefined}
+      />
+      <div className="relative -mt-5 rounded-t-3xl bg-white px-5 pb-6 pt-6">
+        {stap === "persoon" && (
+          <WieBenJijPersoon
+            begin={persoonNu}
+            onKlaar={(stand) => {
+              setPersoonNu(stand);
+              setStap("woon");
+            }}
+          />
         )}
-      </fieldset>
 
-      <button type="submit" disabled={busy} className="btn-trust w-full">
-        {busy ? (method === "stripe" ? t.toStripe : t.checkingBusy) : method === "zekerflex" ? t.scan.starten : t.submit}
-      </button>
-      <div className="border-t border-hair pt-4">
-        <button type="button" onClick={() => void bewaarVoorLater()} disabled={busy} className="btn-ghost w-full sm:w-auto">
-          {busy ? t.later.busy : t.later.button}
-        </button>
-        <p className="mt-2 text-xs leading-relaxed text-neutralx-500">{t.later.hint}</p>
+        <form ref={formRef} onSubmit={onSubmit} noValidate className={`space-y-6 ${stap === "persoon" ? "hidden" : ""}`}>
+          {error && (
+            <p role="alert" className="rounded-xl bg-crit/10 px-3 py-2.5 text-sm text-crit">{error}</p>
+          )}
+          {bewaard && (
+            <p role="status" className="rounded-xl bg-ok/10 px-3 py-2.5 text-sm text-ok">{bewaard}</p>
+          )}
+
+          {/* stap 2: het bedrijf (zzp, flexwerker) en waar je woont; blijft in de pagina staan zodat de velden hun waarde houden */}
+          <div hidden={stap !== "woon"} className="space-y-6">
+            {requireKvk && (
+              <fieldset className="space-y-4">
+                <legend className="text-sm font-semibold text-ink">{t.business}</legend>
+                <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t.regKind}>
+                  {(
+                    [
+                      ["kvk", ...t.kvk],
+                      ["vat", ...t.vat],
+                    ] as const
+                  ).map(([k, title, sub]) => (
+                    <button
+                      key={k}
+                      type="button"
+                      role="radio"
+                      aria-checked={biz === k}
+                      onClick={() => setBiz(k)}
+                      className={`rounded-xl border px-3 py-2.5 text-left ${biz === k ? "border-brand-500 bg-brand-50" : "border-hairstrong"}`}
+                    >
+                      <span className="block text-sm font-semibold text-ink">{title}</span>
+                      <span className="block text-xs text-neutralx-500">{sub}</span>
+                    </button>
+                  ))}
+                </div>
+                {biz === "kvk" ? (
+                  <label className="block">
+                    <span className="field-label">{t.kvkLabel}</span>
+                    <input
+                      key="kvk"
+                      name="kvkNumber"
+                      required
+                      aria-required="true"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      placeholder="12345678"
+                      defaultValue={initial?.kvkNumber ?? ""}
+                      onBlur={(e) => controleerEen("kvk", e.target.value)}
+                      {...veldAttrs("kvk")}
+                      className="field-input"
+                    />
+                    <VeldFout veld="kvk" tekst={veldFout("kvk")} />
+                    <span className="mt-1 block text-xs text-neutralx-400">{t.kvkHint}</span>
+                  </label>
+                ) : (
+                  <label className="block">
+                    <span className="field-label">{t.vatLabel}</span>
+                    <input
+                      key="vat"
+                      name="vatNumber"
+                      required
+                      aria-required="true"
+                      placeholder="PL1234567890"
+                      autoCapitalize="characters"
+                      autoComplete="off"
+                      defaultValue={initial?.vatNumber ?? ""}
+                      onBlur={(e) => controleerEen("vat", e.target.value)}
+                      {...veldAttrs("vat")}
+                      className="field-input"
+                    />
+                    <VeldFout veld="vat" tekst={veldFout("vat")} />
+                    <span className="mt-1 block text-xs text-neutralx-400">{t.vatHint}</span>
+                  </label>
+                )}
+              </fieldset>
+            )}
+
+            {!requireKvk && (
+              <p className="rounded-lg border border-hair bg-paper-soft px-3 py-2.5 text-xs leading-relaxed text-neutralx-500">
+                {t.uitzendNote}
+              </p>
+            )}
+
+            <fieldset className="space-y-4">
+              <legend className="text-sm font-semibold text-ink">{t.home}</legend>
+              <ThuisbasisVelden postcodeLabel={t.postal} begin={initial?.postalCode} fout={fouten.postal ? ft.thuisbasis.kiesAdres : undefined} />
+            </fieldset>
+
+            <button type="button" onClick={() => void naVolgende()} disabled={busy} className="btn-primary w-full">
+              {busy ? t.later.busy : stappen.includes("id") ? w.woon.verder : w.woon.opslaanKlaar}
+            </button>
+            <div className="border-t border-hair pt-4">
+              <button type="button" onClick={() => void bewaarVoorLater()} disabled={busy} className="btn-ghost w-full sm:w-auto">
+                {busy ? t.later.busy : t.later.button}
+              </button>
+              <p className="mt-2 text-xs leading-relaxed text-neutralx-500">{t.later.hint}</p>
+            </div>
+          </div>
+
+          {/* stap 3: de ID-check */}
+          <div hidden={stap !== "id"} className="space-y-5" key={attempt}>
+            <IdKeuzeKaarten
+              w={w.id}
+              busy={busy}
+              onStart={(r) => void startScan(r)}
+              anders={
+                <div className="rounded-2xl border border-hair bg-paper-soft p-4">
+                  <p className="text-sm font-semibold text-ink">{w.id.anders}</p>
+                  <div className="mt-3 grid gap-2">
+                    {stripeIdentity && (
+                      <button
+                        type="button"
+                        onClick={() => void verstuur("stripe")}
+                        disabled={busy}
+                        className="rounded-xl border border-hairstrong bg-white px-3 py-2.5 text-left hover:border-brand-500 disabled:opacity-60"
+                      >
+                        <span className="block text-sm font-semibold text-ink">{t.stripe[0]}</span>
+                        <span className="block text-xs text-neutralx-500">{t.stripe[1]}</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setUploadOpen((o) => !o)}
+                      aria-expanded={uploadOpen}
+                      className="rounded-xl border border-hairstrong bg-white px-3 py-2.5 text-left hover:border-brand-500"
+                    >
+                      <span className="block text-sm font-semibold text-ink">{t.upload[0]}</span>
+                      <span className="block text-xs text-neutralx-500">{t.upload[1]}</span>
+                    </button>
+                  </div>
+                  {uploadOpen && (
+                    <div className="mt-4 space-y-4">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="block">
+                          <span className="field-label">{t.docType}</span>
+                          <select name="documentType" required value={docType} onChange={(e) => kiesSoort(e.target.value as DocKey)} className="field-input">
+                            {uploadSoorten.map(([v, l]) => (
+                              <option key={v} value={v}>{l}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="block">
+                          <span className="field-label">{t.docNumber}</span>
+                          <input
+                            name="documentNumber"
+                            required
+                            aria-required="true"
+                            placeholder="SPECI2014"
+                            autoComplete="off"
+                            autoCapitalize="characters"
+                            spellCheck={false}
+                            onBlur={(e) => controleerEen("docNumber", e.target.value)}
+                            {...veldAttrs("docNumber")}
+                            className="field-input"
+                          />
+                          <VeldFout veld="docNumber" tekst={veldFout("docNumber")} />
+                        </label>
+                        <label className="block">
+                          <span className="field-label">{t.validUntil}</span>
+                          <input
+                            type="date"
+                            name="documentExpiry"
+                            required
+                            aria-required="true"
+                            autoComplete="off"
+                            onBlur={(e) => controleerEen("expiry", e.target.value)}
+                            {...veldAttrs("expiry")}
+                            className="field-input"
+                          />
+                          <VeldFout veld="expiry" tekst={veldFout("expiry")} />
+                        </label>
+                        <label className="block">
+                          <span className="field-label">{t.nameOnDoc}</span>
+                          <input
+                            name="nameOnDocument"
+                            required
+                            aria-required="true"
+                            autoComplete="name"
+                            defaultValue={naamNu}
+                            onBlur={(e) => controleerEen("name", e.target.value)}
+                            {...veldAttrs("name")}
+                            className="field-input"
+                          />
+                          <VeldFout veld="name" tekst={veldFout("name")} />
+                        </label>
+                      </div>
+                      <p className="text-xs leading-relaxed text-neutralx-500">{t.photosInfo}</p>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <CaptureSlot t={t} label={t.front[0]} hint={t.front[1]} missing={missing.includes("documentFront")} onPick={(f) => kiesFoto("documentFront", f)} />
+                        <CaptureSlot t={t} label={t.back[0]} hint={t.back[1]} missing={missing.includes("documentBack")} onPick={(f) => kiesFoto("documentBack", f)} />
+                        <CaptureSlot t={t} label={t.selfie[0]} hint={t.selfie[1]} round missing={missing.includes("selfie")} onPick={(f) => kiesFoto("selfie", f)} />
+                      </div>
+                      {lezing && <DocumentLezing lezing={lezing} t={t} />}
+                      <button type="button" onClick={() => void verstuur("upload")} disabled={busy} className="btn-trust w-full">
+                        {busy ? t.checkingBusy : t.submit}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              }
+            />
+            <div className="border-t border-hair pt-4">
+              <button type="button" onClick={() => void bewaarVoorLater()} disabled={busy} className="btn-ghost w-full sm:w-auto">
+                {busy ? t.later.busy : t.later.button}
+              </button>
+              <p className="mt-2 text-xs leading-relaxed text-neutralx-500">{t.later.hint}</p>
+            </div>
+            <p className="text-xs leading-relaxed text-neutralx-400">{uploadOpen ? t.uploadNote : t.stripeNote}</p>
+          </div>
+        </form>
+        {scanOpen && <IdScan t={t} naam={naamNu} route={route} onAfronden={afrondenViaScan} onAfrondenOverdracht={afrondenViaTelefoon} onSluiten={sluitScan} />}
       </div>
-      <p className="text-xs leading-relaxed text-neutralx-400">
-        {method === "stripe" ? t.stripeNote : t.uploadNote}
-      </p>
-      {scanOpen && <IdScan t={t} naam={defaultName} onAfronden={afrondenViaScan} onAfrondenOverdracht={afrondenViaTelefoon} onSluiten={sluitScan} />}
-    </form>
+    </section>
   );
 }

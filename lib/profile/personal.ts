@@ -25,7 +25,7 @@ export const NAAM_VAST_BERICHT =
  * gekaapt account zijn naam aanpassen aan de rekening van een ander en zo de naamcontrole omzeilen.
  * Een andere schrijfwijze van dezelfde naam (naamGelijk) blijft vrij.
  */
-async function naamIsVast(userId: string, kycStatus: string | undefined): Promise<boolean> {
+export async function naamIsVast(userId: string, kycStatus: string | undefined): Promise<boolean> {
   if (kycStatus === "VERIFIED") return true;
   try {
     const { getBankLogin } = await import("@/lib/kyc/bank-login");

@@ -17,6 +17,10 @@ import { attemptLabel, waitForStripe } from "@/lib/kyc/stripe-status";
 import { StripeIdentityWacht } from "@/components/app/StripeIdentityWacht";
 import { WerkrechtPanel } from "@/components/app/WerkrechtPanel";
 import { werkrechtVoorWerk } from "@/lib/werkrecht/store";
+import { leesWieBenJij } from "@/lib/onboarding/wie-ben-jij-opslag";
+import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
+import { beginStap } from "@/lib/onboarding/wie-ben-jij";
+import { isReservedTestAddress } from "@/lib/mail";
 
 export const dynamic = "force-dynamic";
 
@@ -114,6 +118,17 @@ export default async function VerificatiePage() {
     where: { userId: principal.userId },
     select: { kvkNumber: true, vatNumber: true, homePostalCode: true },
   });
+  // stap 1 ("Hey! Wie ben jij?") en waar deze werker verdergaat; de poort mag niet gesloten worden
+  const [persoon, poort, gebruiker] = await Promise.all([
+    leesWieBenJij(principal.userId),
+    isReservedTestAddress(principal.email) ? Promise.resolve(null) : werkerPoortStand(principal.userId).catch(() => null),
+    prisma.user.findUnique({ where: { id: principal.userId }, select: { kycStatus: true } }),
+  ]);
+  const idKlaar = gebruiker?.kycStatus === "VERIFIED";
+  const woonKlaar =
+    Boolean(bewaard?.homePostalCode) &&
+    (isUitzend || Boolean(bewaard?.kvkNumber && /^\d+$/.test(bewaard.kvkNumber)) || Boolean(bewaard?.vatNumber));
+  const begin = beginStap({ persoonKlaar: persoon.klaar, woonKlaar, idKlaar });
   const initial = {
     ...(bewaard?.kvkNumber && /^\d+$/.test(bewaard.kvkNumber) ? { kvkNumber: bewaard.kvkNumber } : {}),
     ...(bewaard?.vatNumber ? { vatNumber: bewaard.vatNumber } : {}),
@@ -133,16 +148,7 @@ export default async function VerificatiePage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <BackLink fallbackHref="/dashboard/account" label={pt.back} />
       <OnboardingOnderhoudBalk soort="werker" />
-      <PageHeader
-        title={pt.title}
-        subtitle={
-          isUitzend
-            ? pt.subUitzend
-            : pt.subWorker
-        }
-      />
 
       {lastCheck && (
         <div className="mb-6 card p-4 text-sm">
@@ -172,10 +178,16 @@ export default async function VerificatiePage() {
         </div>
       )}
 
-      <div className="card trust-card relative overflow-hidden p-6">
-        <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-trust via-[#A78BFA] to-trust" aria-hidden />
-        <OnboardingForm defaultName={principal.fullName} requireKvk={!isUitzend} stripeIdentity={stripeId} initial={initial} />
-      </div>
+      <OnboardingForm
+        defaultName={principal.fullName}
+        requireKvk={!isUitzend}
+        stripeIdentity={stripeId}
+        initial={initial}
+        persoon={persoon}
+        beginStap={begin}
+        idKlaar={idKlaar}
+        kanSluiten={poort?.klaar ?? true}
+      />
 
       {!stripeId && (
         <div className="mt-4">

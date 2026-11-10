@@ -54,6 +54,8 @@ export const ERASABLE_KV_PREFIXES = [
   "user-birthday:",
   "verdiendoel:",
   "volgt:",
+  // opleidingsniveau en studierichting uit "Wie ben jij?" (lib/onboarding/wie-ben-jij-opslag.ts)
+  "werker-opleiding:",
   "wa-chat:",
   "wa-contacts:",
   "wa-msgs:",

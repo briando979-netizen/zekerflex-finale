@@ -4,7 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { Portal } from "@/components/chat/Portal";
 import { type AuthDict } from "@/lib/i18n/auth";
 import { DocumentLezing, goedGelezen, leesDocumentFoto, type Lezing } from "@/components/app/DocumentLezing";
+import { useDialog } from "@/components/app/useDialog";
 import { cookieStringHasChip, cookieStringIsApp } from "@/lib/app-mode";
+import { useI18n } from "@/components/i18n/I18nProvider";
+import { AuthLanguage } from "@/components/auth/AuthLanguage";
+import { AUTH_DICTS } from "@/lib/i18n/auth";
+import { EuIntro, EuToestemming, NlIntro, TipsSheet } from "@/components/app/ScanRouteSchermen";
 
 // ---------------------------------------------------------------------------
 // ID-scan van ZekerFlex (9 nov 2026): een eigen omgeving zoals die van Stripe.
@@ -55,7 +60,7 @@ interface TelefoonStand {
 }
 
 type T = AuthDict["onb"];
-type Stap = "start" | "telefoon" | "soort" | "voor" | "achter" | "chip" | "selfie" | "gegevens" | "bezig" | "klaar";
+type Stap = "start" | "toestemming" | "telefoon" | "soort" | "voor" | "achter" | "chip" | "selfie" | "gegevens" | "bezig" | "klaar";
 
 /** De chipstap (alleen in de Android-app vanaf 1.0.4): de app leest de chip via NFC (lib/kyc/chip). */
 interface ChipStand {
@@ -92,8 +97,11 @@ type Fotos = Partial<Record<FotoStap, File>>;
 
 const STAP_NR: Partial<Record<Stap, number>> = { soort: 1, voor: 2, achter: 3, selfie: 4 };
 
+/** De twee routes van de ID-check: een Nederlands document, of een paspoort/ID-kaart uit de EU/EER of Zwitserland. */
+export type ScanRoute = "nl" | "eu";
+
 /** Waar "Vorige stap" naartoe gaat. Niet vanaf de chip, het wachtscherm en de uitslag: dat is na of tijdens het versturen. */
-const VORIGE: Partial<Record<Stap, Stap>> = { telefoon: "start", soort: "start", voor: "soort", achter: "voor", selfie: "achter", gegevens: "selfie" };
+const VORIGE: Partial<Record<Stap, Stap>> = { toestemming: "start", telefoon: "start", soort: "start", voor: "soort", achter: "voor", selfie: "achter", gegevens: "selfie" };
 
 function Icoon({ n }: { n: number }) {
   const pad =
@@ -109,13 +117,63 @@ function Icoon({ n }: { n: number }) {
   );
 }
 
+/** Eigen illustratie voor "Bijna klaar": een telefoon met een vinkje en wat vormen eromheen, zonder tekst. */
+function BijnaKlaarBeeld() {
+  return (
+    <svg width="132" height="132" viewBox="0 0 132 132" fill="none" aria-hidden className="mx-auto">
+      <circle cx="66" cy="66" r="60" className="fill-brand-50" />
+      <rect x="40" y="22" width="52" height="88" rx="9" fill="#0B3B3A" />
+      <rect x="45" y="32" width="42" height="64" rx="3" fill="#ffffff" />
+      <circle cx="66" cy="64" r="15" fill="#0E8F6B" />
+      <path d="M59 64l5 5 9-10" stroke="#ffffff" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="58" y="102" width="16" height="3" rx="1.5" fill="#ffffff" fillOpacity="0.5" />
+      <circle cx="24" cy="36" r="5" fill="#4FE0A0" />
+      <circle cx="110" cy="92" r="6" fill="#0E8F6B" fillOpacity="0.5" />
+      <rect x="100" y="28" width="12" height="12" rx="3" transform="rotate(20 106 34)" fill="#4FE0A0" fillOpacity="0.6" />
+      <path d="M18 88l6 6M24 88l-6 6" stroke="#0E8F6B" strokeWidth="2.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** "Kies de achtercamera": een toestel met meer dan een achtercamera; de beste staat vooraf gekozen. */
+function CameraKeuze({ x, apparaten, keuze, onKies, onSluit }: { x: T["scan"]["extra"]; apparaten: { id: string; label: string }[]; keuze: string | null; onKies: (id: string) => void; onSluit: () => void }) {
+  const ref = useDialog(true, onSluit);
+  return (
+    <div className="absolute inset-0 z-10 flex items-end bg-black/50">
+      <div ref={ref} role="dialog" aria-modal="true" aria-labelledby="scan-cam-titel" className="w-full rounded-t-2xl bg-white px-4 pb-4 pt-4 text-left">
+        <h3 id="scan-cam-titel" className="font-display text-base font-bold text-ink">{x.kiesCamera}</h3>
+        <div role="radiogroup" aria-labelledby="scan-cam-titel" className="mt-3 grid gap-2">
+          {apparaten.map((a) => (
+            <label key={a.id} className={`flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 text-sm text-ink ${keuze === a.id ? "border-brand-500 bg-brand-50" : "border-hairstrong"}`}>
+              <input type="radio" name="achtercamera" checked={keuze === a.id} onChange={() => onKies(a.id)} className="accent-brand-600" />
+              {a.label}
+            </label>
+          ))}
+        </div>
+        <button type="button" onClick={onSluit} className="btn-primary mt-4 w-full">
+          {x.doorgaan}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** Live camera met een kader (kaart of ovaal) en een uitweg naar de camera-app. */
-function Camera({ facing, vorm, t, onFoto }: { facing: "environment" | "user"; vorm: "kaart" | "ovaal"; t: T; onFoto: (f: File) => void }) {
+function Camera({ facing, vorm, t, onFoto, rond = false, eu = false }: { facing: "environment" | "user"; vorm: "kaart" | "ovaal"; t: T; onFoto: (f: File) => void; rond?: boolean; eu?: boolean }) {
   const video = useRef<HTMLVideoElement>(null);
   const bestand = useRef<HTMLInputElement>(null);
+  const x = t.scan.extra;
   const [stand, setStand] = useState<"laden" | "aan" | "geen">("laden");
+  // buitenlandse route: de camera start pas na een tik, met uitleg over de handmatige opname, en bij meer achtercamera's een keuze
+  const [gestart, setGestart] = useState(!eu);
+  const [uitleg, setUitleg] = useState(false);
+  const [apparaten, setApparaten] = useState<{ id: string; label: string }[]>([]);
+  const [keuze, setKeuze] = useState<string | null>(null);
+  const [kiesOpen, setKiesOpen] = useState(false);
+  const gevraagd = useRef(false);
 
   useEffect(() => {
+    if (!gestart) return;
     let stream: MediaStream | null = null;
     let weg = false;
     void (async () => {
@@ -125,7 +183,7 @@ function Camera({ facing, vorm, t, onFoto }: { facing: "environment" | "user"; v
           audio: false,
           // zo scherp als de camera kan: de kleine letters van de code onderop het document (MRZ) vragen veel pixels;
           // een toestel dat minder kan, geeft vanzelf het hoogste wat het heeft
-          video: { facingMode: { ideal: facing }, width: { ideal: 3840 }, height: { ideal: 2160 } },
+          video: { ...(keuze ? { deviceId: { exact: keuze } } : { facingMode: { ideal: facing } }), width: { ideal: 3840 }, height: { ideal: 2160 } },
         });
         if (weg) {
           s.getTracks().forEach((tr) => tr.stop());
@@ -137,6 +195,17 @@ function Camera({ facing, vorm, t, onFoto }: { facing: "environment" | "user"; v
         v.srcObject = s;
         await v.play().catch(() => undefined);
         setStand("aan");
+        // meerdere achtercamera's (groothoek, tele): laat kiezen, met de gewone hoofdcamera vooraf gekozen
+        if (eu && facing === "environment" && !gevraagd.current) {
+          gevraagd.current = true;
+          const lijst = (await navigator.mediaDevices.enumerateDevices().catch(() => [])).filter((d) => d.kind === "videoinput" && !/front|user|selfie|voor/i.test(d.label));
+          if (lijst.length > 1 && !weg) {
+            const beste = lijst.find((d) => !/wide|ultra|tele|zoom|macro|groot/i.test(d.label)) ?? lijst[0];
+            setApparaten(lijst.map((d, i) => ({ id: d.deviceId, label: d.label || t.scan.extra.cameraNr.replace("{n}", String(i + 1)) })));
+            setKeuze(beste?.deviceId ?? null);
+            setKiesOpen(true);
+          }
+        }
       } catch {
         if (!weg) setStand("geen");
       }
@@ -146,7 +215,8 @@ function Camera({ facing, vorm, t, onFoto }: { facing: "environment" | "user"; v
       weg = true;
       stream?.getTracks().forEach((tr) => tr.stop());
     };
-  }, [facing]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- alleen bij een andere camera of de start
+  }, [facing, gestart, keuze]);
 
   function vastleggen() {
     const v = video.current;
@@ -176,12 +246,46 @@ function Camera({ facing, vorm, t, onFoto }: { facing: "environment" | "user"; v
         {stand === "geen" && (
           <p className="absolute inset-0 grid place-items-center px-6 text-center text-sm leading-relaxed text-white">{t.scan.geenCamera}</p>
         )}
+        {eu && !gestart && (
+          <button
+            type="button"
+            onClick={() => {
+              setGestart(true);
+              setUitleg(true);
+            }}
+            className="absolute inset-0 grid place-items-center bg-black/60 px-6 text-center text-lg font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-white"
+          >
+            {x.tikStart}
+          </button>
+        )}
+        {eu && uitleg && stand === "aan" && !kiesOpen && (
+          <div role="status" className="absolute inset-x-4 bottom-4 rounded-xl bg-white px-4 py-3 text-left shadow-lift">
+            <p className="text-sm font-semibold text-ink">{x.handmatigKop}</p>
+            <p className="mt-1 text-sm text-ink-soft">{x.handmatigTekst}</p>
+            <button type="button" onClick={() => setUitleg(false)} className="btn-primary mt-3 w-full">
+              {x.doorgaan}
+            </button>
+          </div>
+        )}
+        {kiesOpen && <CameraKeuze x={x} apparaten={apparaten} keuze={keuze} onKies={setKeuze} onSluit={() => setKiesOpen(false)} />}
       </div>
       <div className="mt-4 grid gap-2">
         {stand !== "geen" && (
-          <button type="button" onClick={vastleggen} disabled={stand !== "aan"} className="btn-primary w-full">
-            {t.scan.maakFoto}
-          </button>
+          rond ? (
+            <button
+              type="button"
+              onClick={vastleggen}
+              disabled={stand !== "aan"}
+              aria-label={eu ? x.vastleggen : t.scan.maakFoto}
+              className="mx-auto grid h-16 w-16 place-items-center rounded-full border-4 border-brand-600 bg-white p-1 disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
+            >
+              <span aria-hidden className="block h-full w-full rounded-full bg-brand-600" />
+            </button>
+          ) : (
+            <button type="button" onClick={vastleggen} disabled={stand !== "aan"} className="btn-primary w-full">
+              {t.scan.maakFoto}
+            </button>
+          )
         )}
         <button
           type="button"
@@ -217,7 +321,10 @@ export function IdScan({
   overdracht,
   groet,
   onAfrondenOverdracht,
+  route,
 }: {
+  /** met een route: eigen introductie, cameravraag vooraf, alleen paspoort of ID-kaart, en bij een paspoort geen achterkant */
+  route?: ScanRoute;
   t: T;
   /** de accountnaam: standaard voor "naam zoals op document" */
   naam: string;
@@ -247,6 +354,18 @@ export function IdScan({
   const [overgedragen, setOvergedragen] = useState(false);
   const [kanTelefoon, setKanTelefoon] = useState(false);
   const [tel, setTel] = useState<TelefoonStand | null>(null);
+  const [bijna, setBijna] = useState(false);
+  const [camVraag, setCamVraag] = useState<"" | "bezig" | "geweigerd">("");
+  // een paspoort heeft geen achterkant: in een route slaan we die stap over (de server wil twee beelden, dus de fotopagina dient ook als tweede)
+  const zonderAchter = route !== undefined && soort === "PASSPORT";
+  const { locale } = useI18n();
+  const [tipsOpen, setTipsOpen] = useState(false);
+  const vorigeVan = (st: Stap): Stap | undefined => {
+    if (route && st === "soort") return "toestemming";
+    if (route && st === "selfie" && zonderAchter) return "voor";
+    if (route && st === "gegevens" && zonderAchter) return "selfie";
+    return VORIGE[st];
+  };
 
   // "verder op je telefoon" alleen op een computer (muis of touchpad), niet op een telefoon of tablet
   useEffect(() => {
@@ -429,7 +548,7 @@ export function IdScan({
 
   // een stap terug, zolang er nog niets is verstuurd: de foto's blijven bewaard, dus je hoeft niet alles over te doen
   function terug() {
-    const vorige = VORIGE[stap];
+    const vorige = vorigeVan(stap);
     if (!vorige) return;
     setFout(null);
     setVoorbeeld(null);
@@ -451,6 +570,20 @@ export function IdScan({
     setGegevens({ nummer: "", datum: "", naam });
     setChip(null);
     setStap("voor");
+  }
+
+  /** De browservraag om de camera pas na de uitleg: lukt het, dan gaat de stroom door; geweigerd geeft een melding en een uitweg. */
+  async function vraagCamera() {
+    setCamVraag("bezig");
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error("geen camera");
+      const st = await navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+      st.getTracks().forEach((tr) => tr.stop());
+      setCamVraag("");
+      setStap("soort");
+    } catch {
+      setCamVraag("geweigerd");
+    }
   }
 
   async function afronden(f: Fotos, g: typeof gegevens) {
@@ -484,11 +617,14 @@ export function IdScan({
     setVoorbeeld(null);
     // in de app met NFC: na een goed gelezen MRZ eerst de chip (de MRZ is de sleutel)
     if (kanChip && k === mrzKant && goedGelezen(lezing) && chip === null) {
-      setNaChip(k === "voor" ? "achter" : "selfie");
+      setNaChip(k === "voor" && !zonderAchter ? "achter" : "selfie");
       setStap("chip");
       return;
     }
-    if (k === "voor") setStap("achter");
+    if (k === "voor" && zonderAchter) {
+      setFotos((f) => (alle.voor ? { ...f, achter: alle.voor } : f));
+      setStap("selfie");
+    } else if (k === "voor") setStap("achter");
     else if (k === "achter") setStap("selfie");
     else if (handmatig) setStap("gegevens");
     else void afronden(alle, gegevens);
@@ -514,51 +650,76 @@ export function IdScan({
 
   const gelezenHier = fotoStap !== null && fotoStap === mrzKant && voorbeeld !== null && lezing !== null;
   const nr = STAP_NR[stap];
+  const donker = route !== undefined && fotoStap !== null;
+  // voortgangsbalk van de buitenlandse route: de echte stap waar iemand nu is, van zeven
+  const EU_STAP: Partial<Record<Stap, number>> = { start: 1, toestemming: 2, soort: 3, voor: 4, achter: 5, chip: 5, selfie: 6, gegevens: 6, bezig: 7, klaar: 7 };
+  const euStap = route === "eu" ? (EU_STAP[stap] ?? 1) : 0;
   const gegevensOk = gegevens.nummer.trim().length >= 4 && /^\d{4}-\d{2}-\d{2}$/.test(gegevens.datum) && gegevens.naam.trim().length >= 2;
 
   return (
     <Portal>
       <div role="dialog" aria-modal="true" aria-label={s.titel} className="fixed inset-0 z-[200] flex items-stretch justify-center bg-black/60 sm:items-center">
         <div className="relative flex h-full w-full flex-col overflow-y-auto bg-white sm:h-auto sm:max-h-[92vh] sm:max-w-md sm:rounded-2xl sm:shadow-2xl">
-          <div className="sticky top-0 z-10 flex items-center justify-between border-b border-hair bg-white px-5 py-3">
-            {VORIGE[stap] ? (
+          <div className={`sticky top-0 z-10 flex items-center justify-between border-b px-5 py-3 ${donker ? "border-transparent bg-[linear-gradient(165deg,#0B3B3A_0%,#0E5C4A_100%)] text-white" : "border-hair bg-white"}`}>
+            {vorigeVan(stap) ? (
               <button
                 type="button"
                 onClick={terug}
-                className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-sm font-semibold text-brand-600 hover:bg-paper-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${donker ? "text-white hover:bg-white/10 focus-visible:outline-white" : "text-brand-600 hover:bg-paper-soft focus-visible:outline-brand-500"}`}
               >
                 <span aria-hidden>‹</span> {s.vorige}
               </button>
             ) : (
-              <span className="font-display text-sm font-bold text-ink">ZekerFlex</span>
+              route === "eu" ? (
+              <AuthLanguage locale={locale} label={AUTH_DICTS[locale].lang} />
+            ) : (
+              <span className={`font-display text-sm font-bold ${donker ? "text-white" : "text-ink"}`}>ZekerFlex</span>
+            )
             )}
-            {nr !== undefined && <span className="text-xs text-neutralx-500">{s.stap.replace("{n}", String(nr)).replace("{totaal}", "4")}</span>}
+            {nr !== undefined && <span className={`text-xs ${donker ? "text-white/80" : "text-neutralx-500"}`}>{s.stap.replace("{n}", String(nr)).replace("{totaal}", "4")}</span>}
             <button
               type="button"
               onClick={() => onSluiten(stap === "klaar" ? uitslag : null)}
               disabled={stap === "bezig"}
               aria-label={s.sluiten}
-              className="grid h-8 w-8 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft disabled:opacity-40"
+              className={`grid h-8 w-8 place-items-center rounded-full disabled:opacity-40 ${donker ? "text-white hover:bg-white/10" : "text-neutralx-500 hover:bg-paper-soft"}`}
             >
               ✕
             </button>
           </div>
 
+          {route === "eu" && (
+            <div className="h-1.5 bg-hair" role="progressbar" aria-label={s.stap.replace("{n}", String(euStap)).replace("{totaal}", "7")} aria-valuemin={0} aria-valuemax={7} aria-valuenow={euStap}>
+              <div className="h-full bg-brand-600 transition-all" style={{ width: `${Math.round((euStap / 7) * 100)}%` }} />
+            </div>
+          )}
+
           <div className="flex-1 px-5 py-6">
-            {stap === "start" && (
+            {stap === "start" && route === "nl" && <NlIntro x={s.extra} privacy={s.privacy} annuleren={s.annuleren} onStart={() => setStap("toestemming")} onAnnuleer={() => onSluiten(null)} />}
+            {stap === "start" && route === "eu" && <EuIntro x={s.extra} annuleren={s.annuleren} onStart={() => setStap("toestemming")} onAnnuleer={() => onSluiten(null)} />}
+            {stap === "start" && !route && (
               <>
                 {groet !== undefined && (
                   <p className="mb-2 text-center text-sm text-neutralx-500">{s.telHallo.replace("{naam}", groet || "")}</p>
                 )}
                 <h2 className="text-center font-display text-xl font-bold text-ink">{s.titel}</h2>
                 <ul className="mt-6 space-y-5">
-                  {s.punten.map((p, i) => (
-                    <li key={i} className="flex gap-3 text-sm leading-relaxed text-ink-soft">
-                      <Icoon n={i} />
-                      <span>{p}</span>
-                    </li>
-                  ))}
-                </ul>
+                    {s.punten.map((p, i) => (
+                      <li key={i} className="flex gap-3 text-sm leading-relaxed text-ink-soft">
+                        <Icoon n={i} />
+                        <span>{p}</span>
+                      </li>
+                    ))}
+                  </ul>
+                {/* tips voor een goede foto: donkere ondergrond, genoeg licht, alle gegevens zichtbaar */}
+                <div className="mt-6 rounded-xl border border-ok/30 bg-ok/5 px-4 py-3">
+                  <p className="text-sm font-semibold text-ink">{s.extra.tipsKop}</p>
+                  <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-ink-soft">
+                    {s.extra.tips.map((tip) => (
+                      <li key={tip}>{tip}</li>
+                    ))}
+                  </ul>
+                </div>
                 {/* NFC-optie zichtbaar maken: in de app na de foto van de codekant, in de browser alleen een uitleg */}
                 <p className="mt-5 rounded-lg border border-trust/30 bg-trust/10 px-3 py-2.5 text-sm leading-relaxed text-ink">
                   {kanChip ? (
@@ -589,6 +750,42 @@ export function IdScan({
                   {s.annuleren}
                 </button>
               </>
+            )}
+
+            {stap === "toestemming" && route === "eu" && <EuToestemming x={s.extra} privacy={s.privacy} onAkkoord={() => setTipsOpen(true)} />}
+            {tipsOpen && (
+              <TipsSheet
+                x={s.extra}
+                onSluit={() => {
+                  setTipsOpen(false);
+                  setStap("soort");
+                }}
+              />
+            )}
+
+            {stap === "toestemming" && route === "nl" && (
+              <div className="text-center">
+                <span aria-hidden className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-brand-50 text-brand-600">
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+                    <path d="M4 7h3l1.5-2h7L17 7h3a1 1 0 011 1v11a1 1 0 01-1 1H4a1 1 0 01-1-1V8a1 1 0 011-1zM12 16.4a3.4 3.4 0 100-6.8 3.4 3.4 0 000 6.8z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <h2 className="mt-4 font-display text-xl font-bold text-ink">{s.extra.toestemmingTitel}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-ink-soft">{s.extra.toestemmingUitleg}</p>
+                {camVraag === "geweigerd" && (
+                  <p role="alert" className="mt-4 rounded-lg bg-crit/10 px-3 py-2.5 text-left text-sm text-crit">
+                    {s.extra.toestemmingGeweigerd}
+                  </p>
+                )}
+                <button type="button" onClick={() => void vraagCamera()} disabled={camVraag === "bezig"} className="btn-primary mt-6 w-full">
+                  {camVraag === "bezig" ? s.extra.toestemmingBezig : s.extra.toestemmingKnop}
+                </button>
+                {camVraag === "geweigerd" && (
+                  <button type="button" onClick={() => setStap("soort")} className="btn-ghost mt-2 w-full">
+                    {s.extra.toestemmingZonder}
+                  </button>
+                )}
+              </div>
             )}
 
             {stap === "telefoon" && tel?.status === "controle" && (
@@ -683,9 +880,17 @@ export function IdScan({
 
             {stap === "soort" && (
               <>
-                <h2 className="font-display text-lg font-bold text-ink">{s.kiesSoort}</h2>
+                {route === "eu" ? (
+                  <>
+                    <h2 className="font-display text-lg font-bold text-ink">{s.extra.fotosKop}</h2>
+                    <p className="mt-1 text-sm leading-relaxed text-neutralx-500">{s.extra.fotosTekst}</p>
+                    <p className="mt-3 text-sm font-semibold text-ink">{s.kiesSoort}</p>
+                  </>
+                ) : (
+                  <h2 className="font-display text-lg font-bold text-ink">{s.kiesSoort}</h2>
+                )}
                 <div className="mt-5 grid gap-3">
-                  {(["ID_CARD", "PASSPORT", "DRIVERS_LICENSE"] as const).map((d) => (
+                  {(route ? (["ID_CARD", "PASSPORT"] as const) : (["ID_CARD", "PASSPORT", "DRIVERS_LICENSE"] as const)).map((d) => (
                     <button
                       key={d}
                       type="button"
@@ -702,10 +907,14 @@ export function IdScan({
 
             {fotoStap && (
               <>
-                <h2 className="font-display text-lg font-bold text-ink">
-                  {fotoStap === "voor" ? s.voor[soort] : fotoStap === "achter" ? s.achter[soort] : s.selfie}
-                </h2>
-                <p className="mt-1 text-sm text-neutralx-500">{fotoStap === "selfie" ? s.selfieUitleg : s.kader}</p>
+                <div className={route ? "-mx-5 -mt-6 mb-1 bg-[linear-gradient(165deg,#0B3B3A_0%,#0E5C4A_100%)] px-5 pb-5 pt-4 text-white" : ""}>
+                  <h2 className={`font-display text-lg font-bold ${route ? "text-white" : "text-ink"}`}>
+                    {route && fotoStap === "achter" ? s.extra.draaiOm : fotoStap === "voor" ? s.voor[soort] : fotoStap === "achter" ? s.achter[soort] : s.selfie}
+                  </h2>
+                  <p className={`mt-1 text-sm ${route ? "text-white/85" : "text-neutralx-500"}`}>
+                    {fotoStap === "selfie" ? (route ? s.extra.ovaal : s.selfieUitleg) : s.kader}
+                  </p>
+                </div>
                 {soort === "DRIVERS_LICENSE" && fotoStap === "voor" && (
                   // een rijbewijs mag voor het account; voor betaald werk volgt nog een ID (lib/werkrecht)
                   <p role="note" className="mt-3 rounded-xl border border-warn/40 bg-warn/10 px-4 py-3 text-sm leading-relaxed text-ink">
@@ -762,12 +971,20 @@ export function IdScan({
                       key={fotoStap}
                       facing={fotoStap === "selfie" ? "user" : "environment"}
                       vorm={fotoStap === "selfie" ? "ovaal" : "kaart"}
+                      rond={route !== undefined}
+                      eu={route === "eu"}
                       t={t}
                       onFoto={(f) => setVoorbeeld({ file: f, url: URL.createObjectURL(f) })}
                     />
                   )}
                 </div>
               </>
+            )}
+
+            {route && fotoStap && !voorbeeld && fotoStap !== "selfie" && (
+              <p className="mt-5 rounded-lg bg-paper-soft px-3 py-2.5 text-xs leading-relaxed text-ink-soft">
+                <span className="font-semibold text-ink">{s.extra.docsKop}</span> {route === "nl" ? s.extra.docsNl : s.extra.docsEu}
+              </p>
             )}
 
             {stap === "chip" && (
@@ -858,8 +1075,21 @@ export function IdScan({
             {stap === "bezig" && (
               <div className="grid place-items-center py-16 text-center" role="status">
                 <span aria-hidden className="h-10 w-10 animate-spin rounded-full border-4 border-hair border-t-brand-600" />
-                <p className="mt-5 font-display text-lg font-bold text-ink">{s.bezig}</p>
+                <p className="mt-5 font-display text-lg font-bold text-ink">{route ? s.extra.procKop : s.bezig}</p>
                 <p className="mt-1 text-sm text-neutralx-500">{s.bezigUitleg}</p>
+                {route && (
+                  // alleen wat echt is gebeurd: het document is al gelezen (of met de hand ingevuld); de rest wacht op het antwoord van de server
+                  <ul className="mt-6 space-y-2 text-left text-sm text-ink-soft">
+                    <li className="flex items-center gap-2">
+                      <span aria-hidden className="grid h-5 w-5 place-items-center rounded-full bg-ok text-[11px] text-white">✓</span>
+                      {goedGelezen(lezing) ? s.extra.procGelezen : s.extra.procHandmatig}
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span aria-hidden className="h-5 w-5 animate-spin rounded-full border-2 border-hair border-t-brand-600" />
+                      {s.extra.procVersturen}
+                    </li>
+                  </ul>
+                )}
               </div>
             )}
 
@@ -873,7 +1103,45 @@ export function IdScan({
               </div>
             )}
 
-            {stap === "klaar" && uitslag && (
+            {stap === "klaar" && uitslag && route && uitslag.outcome !== "rejected" && !bijna && (
+              <div className="py-6 text-center">
+                <span aria-hidden className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-ok text-2xl text-white">
+                  ✓
+                </span>
+                <h2 className="mt-4 font-display text-xl font-bold text-ink">{s.extra.bedankTitel}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-ink-soft">{s.extra.bedankTekst}</p>
+                <ul className="mt-5 space-y-2 text-left text-sm text-ink-soft">
+                  <li className="flex items-center gap-2">
+                    <span aria-hidden className="grid h-5 w-5 place-items-center rounded-full bg-ok text-[11px] text-white">✓</span>
+                    {s.extra.procKlaar}
+                  </li>
+                </ul>
+                <button type="button" onClick={() => setBijna(true)} className="btn-primary mt-8 w-full">
+                  {s.volgende}
+                </button>
+              </div>
+            )}
+
+            {stap === "klaar" && uitslag && route && uitslag.outcome !== "rejected" && bijna && (
+              <div className="py-6 text-center">
+                <BijnaKlaarBeeld />
+                <h2 className="mt-4 font-display text-xl font-bold text-ink">{s.extra.bijnaTitel}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-ink-soft">{s.extra.bijnaTekst}</p>
+                {/* een gewone link: volledige paginalading, dus de poort en de status zijn vers */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSluiten(uitslag);
+                    window.location.assign("/dashboard/klussen");
+                  }}
+                  className="btn-primary mt-8 w-full"
+                >
+                  {s.extra.bijnaKnop}
+                </button>
+              </div>
+            )}
+
+            {stap === "klaar" && uitslag && !(route && uitslag.outcome !== "rejected") && (
               <div className="py-6 text-center">
                 <span
                   aria-hidden
