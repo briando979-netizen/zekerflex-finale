@@ -113,7 +113,7 @@ export async function zetStatus(id: string, naar: InstallatieStatus, nu = new Da
 }
 
 /** De telefoon van de monteur meldt waar hij is. Alleen onderweg; te snel achter elkaar wordt genegeerd. */
-export async function zetPositie(id: string, p: { lat: number; lon: number; nauwkeurigheid?: number }, nu = new Date()): Promise<Afspraak> {
+export async function zetPositie(id: string, p: { lat: number; lon: number; nauwkeurigheid?: number | undefined }, nu = new Date()): Promise<Afspraak> {
   const a = await leesAfspraak(id);
   if (!a) throw AppError.notFound("Deze afspraak bestaat niet meer.");
   if (a.status !== "onderweg") return a;
