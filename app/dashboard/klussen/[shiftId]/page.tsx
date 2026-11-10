@@ -575,15 +575,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           <div className="mt-4 whitespace-pre-line text-sm leading-relaxed text-neutralx-700">{s.description}</div>
         )}
 
-        {s.extraInfo && (
-          <section className="mt-5 rounded-xl border border-hair bg-paper-soft px-4 py-3">
-            <h2 className="text-sm font-semibold text-ink">
-              <span aria-hidden>ℹ️ </span>
-              {ft.card.extraInfo}
-            </h2>
-            <p className="mt-1 whitespace-pre-line break-words text-sm leading-relaxed text-neutralx-700">{s.extraInfo}</p>
-          </section>
-        )}
+        {/* "Extra informatie" staat nergens meer in de werker-app (10 nov, eigenaar) */}
 
         {(gear.length > 0 || certList.length > 0) && (
           <section className="mt-8 border-t border-hair pt-5">

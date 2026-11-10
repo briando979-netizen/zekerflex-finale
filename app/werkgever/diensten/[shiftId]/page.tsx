@@ -287,7 +287,7 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
         </Panel>
       </div>
 
-      {(s.description || s.dresscode || s.extraInfo) && (
+      {(s.description || s.dresscode) && (
         <div className="mt-6">
           <Panel title="Over de klus">
             <div className="space-y-4 px-5 py-4 text-sm">
@@ -296,12 +296,6 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
                 <div>
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-neutralx-500">👕 Kledingvoorschriften</h3>
                   <p className="mt-1 whitespace-pre-line text-ink-soft">{s.dresscode}</p>
-                </div>
-              )}
-              {s.extraInfo && (
-                <div>
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-neutralx-500">ℹ️ Extra informatie</h3>
-                  <p className="mt-1 whitespace-pre-line break-words text-ink-soft">{s.extraInfo}</p>
                 </div>
               )}
               {["DRAFT", "OPEN", "MATCHING", "PARTIALLY_FILLED"].includes(s.status) && (

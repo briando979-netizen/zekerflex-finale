@@ -95,7 +95,8 @@ export function NewShiftForm({
   const [title, setTitle] = useState(init?.title ?? "");
   const [description, setDescription] = useState(init?.description ?? "");
   const [dresscode, setDresscode] = useState(init?.dresscode ?? "");
-  const [extraInfo, setExtraInfo] = useState(init?.extraInfo ?? "");
+  // het veld voor extra informatie is weg (10 nov, eigenaar: nergens meer bij de klus); een bestaande waarde blijft bij bewerken bewaard
+  const [extraInfo] = useState(init?.extraInfo ?? "");
   const [writing, setWriting] = useState(false);
   const [writeNote, setWriteNote] = useState<string | null>(null);
   const [forecast, setForecast] = useState<{
@@ -438,21 +439,6 @@ export function NewShiftForm({
           />
         </label>
 
-        <label className="block">
-          <span className="field-label">
-            Extra informatie <span className="text-neutralx-400">(optioneel)</span>
-          </span>
-          <textarea
-            name="extraInfo"
-            rows={3}
-            maxLength={1000}
-            value={extraInfo}
-            onChange={(e) => setExtraInfo(e.target.value)}
-            placeholder="Bijv. meld je bij de receptie, parkeren achter het gebouw, vraag naar Sanne, neem je ID mee…"
-            className="field-input"
-          />
-          <span className="mt-1 block text-xs text-neutralx-500">Staat bij de klus, zodat de kracht precies weet wat er verwacht wordt.</span>
-        </label>
 
         {!edit && (
         <label className="flex items-start gap-3 rounded-xl border border-hairstrong bg-paper-soft px-4 py-3">
