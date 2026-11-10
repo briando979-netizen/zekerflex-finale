@@ -95,10 +95,10 @@ function LandKaart({ l, t, locale, onLanden }: { l: Land; t: T; locale: string; 
   const ok = l.stand === "ok";
 
   return (
-    <div className={`rounded-xl border p-4 ${ok ? "border-ok/40 bg-ok/5" : "border-hairstrong"}`}>
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-ink">{naam}</p>
-        <span className={`text-xs font-medium ${TOON[l.stand]}`}>{t.stand[l.stand]}</span>
+    <div className={`rounded-xl border p-3 sm:p-4 ${ok ? "border-ok/40 bg-ok/5" : "border-hairstrong"}`}>
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+        <p className="min-w-0 break-words text-sm font-semibold text-ink">{naam}</p>
+        <span className={`flex-shrink-0 text-xs font-medium ${TOON[l.stand]}`}>{t.stand[l.stand]}</span>
       </div>
 
       {l.idBewijs ? null : !l.verklaard ? (
@@ -107,7 +107,7 @@ function LandKaart({ l, t, locale, onLanden }: { l: Land; t: T; locale: string; 
             <input id={vinkId} type="checkbox" checked={vink} onChange={(e) => setVink(e.target.checked)} className="mt-1 h-4 w-4 flex-shrink-0" />
             <span>{t.verklaring.replace("{land}", naam)}</span>
           </label>
-          <button type="button" disabled={!vink || bezig} onClick={() => void verklaar()} className="btn-primary mt-3 disabled:opacity-50">
+          <button type="button" disabled={!vink || bezig} onClick={() => void verklaar()} className="btn-primary mt-3 w-full disabled:opacity-50 sm:w-auto">
             {t.verklaringKnop}
           </button>
         </div>
@@ -137,9 +137,9 @@ function LandKaart({ l, t, locale, onLanden }: { l: Land; t: T; locale: string; 
           </div>
           <div className="grid gap-1">
             <label htmlFor={datumId} className="field-label">{t.geldigTot}</label>
-            <input id={datumId} type="date" value={geldigTot} onChange={(e) => setGeldigTot(e.target.value)} className="field-input max-w-[12rem]" />
+            <input id={datumId} type="date" value={geldigTot} onChange={(e) => setGeldigTot(e.target.value)} className="field-input w-full sm:max-w-[12rem]" />
           </div>
-          <button type="button" disabled={bezig || !geldigTot} onClick={upload} className="btn-primary disabled:opacity-50">
+          <button type="button" disabled={bezig || !geldigTot} onClick={upload} className="btn-primary w-full disabled:opacity-50 sm:w-auto">
             {bezig ? t.uploading : l.document ? t.vervang : t.upload}
           </button>
         </div>
@@ -214,8 +214,8 @@ export function WerkrechtPanel() {
             {t.anderLand}
           </label>
           <p className="mt-1 text-xs text-neutralx-500">{t.verklaring.replace("{land}", nieuw ? landNaam(nieuw, locale) : "…")}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <select id={kiesId} value={nieuw} onChange={(e) => setNieuw(e.target.value)} className="field-input max-w-[16rem]">
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <select id={kiesId} value={nieuw} onChange={(e) => setNieuw(e.target.value)} className="field-input !mt-0 w-full sm:max-w-[16rem]">
               <option value="">{t.kiesLand}</option>
               {keuze.map(({ c, naam }) => (
                 <option key={c} value={c}>
@@ -223,7 +223,7 @@ export function WerkrechtPanel() {
                 </option>
               ))}
             </select>
-            <button type="button" disabled={!nieuw || bezig} onClick={() => void voegToe()} className="btn-primary disabled:opacity-50">
+            <button type="button" disabled={!nieuw || bezig} onClick={() => void voegToe()} className="btn-primary w-full disabled:opacity-50 sm:w-auto">
               {t.toevoegen}
             </button>
           </div>
