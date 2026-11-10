@@ -211,7 +211,7 @@ export const GRATIS_DIENSTEN: GratisDienst[] = [
     naam: "Code bewaren",
     waarvoor: "De broncode van ZekerFlex; de server haalt er bij elke uitrol de code op",
     nu: "GitHub: code bewaren is gratis. GitHub Actions (het enige wat geld kost) staat sinds 10 november helemaal uit, dus er komt geen rekening meer.",
-    eigen: "Forgejo op onze eigen server (git.37-97-226-24.sslip.io): een eigen GitHub, gratis en open source. Eerst een kopie die elke 10 minuten bijwerkt; daarna kan de uitrol de code bij ons zelf ophalen en is GitHub alleen nog een reservekopie.",
+    eigen: "Forgejo op onze eigen server (git.37-97-226-24.sslip.io): een eigen GitHub, gratis en open source. Een kopie die elke 10 minuten bijwerkt. De live-zetter en de controle halen de code eerst daar op, met GitHub als reserve (bij een verschil wint de nieuwste); valt GitHub weg, dan gaat de uitrol gewoon door.",
     status: "gratis",
   },
 ];

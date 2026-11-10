@@ -5,7 +5,8 @@ Admin → ZekerFlex AI → "Live zetten" legt een verzoek in de database (KV-sle
 bouwer:live:verzoek). Deze dienst pakt het op en doet wat anders een ssh-sessie
 deed, zonder Claude:
 
-  1. de nieuwste GitHub-main ophalen (eigen git-kopie, openbare repo)
+  1. de nieuwste main ophalen (eigen git-kopie): eerst bij onze eigen Git-server
+     (Forgejo), met GitHub als reserve; bij een verschil wint de nieuwste
   2. controleren: staat de live versie op main? zijn er database-wijzigingen?
      Database-wijzigingen alleen met akkoord op precies die migraties, en pas
      na een geslaagde proef op de echte database in BEGIN … ROLLBACK.
@@ -28,6 +29,7 @@ import fcntl
 import json
 import os
 import re
+import shutil
 import socket
 import subprocess
 import sys
@@ -38,7 +40,11 @@ from datetime import datetime, timezone
 ZF_DIR = os.environ.get("ZF_DIR", os.path.expanduser("~/zekerflex"))
 SRC = os.environ.get("ZF_SRC", os.path.expanduser("~/.zf-bron"))
 REPO = os.environ.get("ZF_REPO", "https://github.com/briando979-netizen/zekerflex-finale.git")
-PG = os.environ.get("ZF_PG_CONTAINER", "zekerflex-postgres-1")
+# Onze eigen Git-server (deploy/forgejo): een privé spiegel van GitHub. Het leestoken
+# (gebruiker bouwer-lezen, alleen lezen) staat alleen in een bestand van root (600).
+FORGEJO = os.environ.get("ZF_FORGEJO_REPO", "https://git.37-97-226-24.sslip.io/zekerflex/zekerflex-finale.git")
+FORGEJO_TOKEN_BESTAND = os.environ.get("ZF_FORGEJO_TOKEN_BESTAND", "/root/forgejo-lezen.token")
+PG =os.environ.get("ZF_PG_CONTAINER", "zekerflex-postgres-1")
 APP = os.environ.get("ZF_APP_CONTAINER", "zekerflex-app-1")
 BOUWER = os.environ.get("ZF_BOUWER_CONTAINER", "zekerflex-bouwer-1")
 LOGBESTAND = "/tmp/zf-live.log"
@@ -113,6 +119,76 @@ def git(*args: str, timeout: int = 300) -> str:
     if code != 0:
         raise RuntimeError(f"git {' '.join(args[:2])}: {out[-300:]}")
     return out
+
+
+# ---- waar de code vandaan komt ------------------------------------------------------
+# Eerst onze eigen Git-server, met GitHub als reserve. Er wordt nog naar GitHub gepusht
+# en de spiegel loopt tot 10 minuten achter: voor main halen we bij allebei op en
+# kiezen we de nieuwste; ligt er één plat, dan de andere. Het token gaat via een
+# credential helper uit de omgeving van alleen dat git-proces: nooit in een URL, een
+# opdrachtregel of het log.
+
+BRONNEN = (("forgejo", FORGEJO), ("github", REPO))
+BRON_NAAM = {"forgejo": "onze eigen Git-server", "github": "GitHub"}
+
+
+def forgejo_token() -> str | None:
+    try:
+        r = subprocess.run(["sudo", "-n", "cat", FORGEJO_TOKEN_BESTAND], capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    t = r.stdout.strip() if r.returncode == 0 else ""
+    return t or None
+
+
+def bron_git(bron: str, url: str, args: list[str], cwd: str | None, timeout: int) -> tuple[int, str]:
+    env = dict(os.environ, GIT_TERMINAL_PROMPT="0")
+    opties: list[str] = []
+    if bron == "forgejo":
+        token = forgejo_token()
+        if token:
+            host = re.match(r"https://[^/]+", url)
+            if host:
+                env["ZF_FORGEJO_TOKEN"] = token
+                helper = "!f() { if [ \"$1\" = get ]; then printf 'username=bouwer-lezen\\npassword=%s\\n' \"$ZF_FORGEJO_TOKEN\"; fi; }; f"
+                opties = ["-c", f"credential.{host.group(0)}.helper=", "-c", f"credential.{host.group(0)}.helper={helper}"]
+    return run(["git", *opties, *args], cwd=cwd, timeout=timeout, env=env)
+
+
+def kloon_bron() -> str:
+    """Eerste keer klonen: eerst Forgejo, anders GitHub. origin wijst daarna altijd naar GitHub."""
+    fouten = []
+    for bron, url in BRONNEN:
+        # een half gelukte kloon van de vorige poging weg; alleen onze eigen map zonder .git
+        if SRC.endswith(".zf-bron") and os.path.isdir(SRC) and not os.path.isdir(os.path.join(SRC, ".git")):
+            shutil.rmtree(SRC, ignore_errors=True)
+        code, out = bron_git(bron, url, ["clone", "-q", "--depth", "300", "--branch", "main", url, SRC], None, 900)
+        if code == 0:
+            run(["git", "-C", SRC, "remote", "set-url", "origin", REPO], timeout=30)
+            return bron
+        fouten.append(f"{BRON_NAAM[bron]}: {out[-160:]}")
+    raise RuntimeError("git clone mislukt bij allebei: " + " | ".join(fouten))
+
+
+def haal_main() -> tuple[str, str, list[str]]:
+    """Main bij Forgejo en GitHub; geeft (sha van de nieuwste, bron, meldingen)."""
+    gevonden: dict[str, str] = {}
+    meldingen: list[str] = []
+    for bron, url in BRONNEN:
+        code, out = bron_git(bron, url, ["-C", SRC, "fetch", "-q", "--depth", "300", url, f"+refs/heads/main:refs/remotes/{bron}/main"], None, 600)
+        if code == 0:
+            gevonden[bron] = git("rev-parse", f"refs/remotes/{bron}/main")
+        else:
+            meldingen.append(f"main ophalen bij {BRON_NAAM[bron]} mislukte: {out[-160:]}")
+    f, g = gevonden.get("forgejo"), gevonden.get("github")
+    if not f and not g:
+        raise RuntimeError("Main is niet op te halen: onze eigen Git-server en GitHub zijn allebei niet bereikbaar. " + " | ".join(meldingen))
+    sha, bron = (f, "forgejo") if f else (g, "github")
+    # de spiegel loopt achter (of ze lopen uit elkaar): dan wint GitHub, waar gepusht wordt
+    if f and g and f != g and run(["git", "-C", SRC, "merge-base", "--is-ancestor", g, f], timeout=30)[0] != 0:
+        sha, bron = g, "github"
+    git("update-ref", "refs/remotes/origin/main", sha)
+    return sha, bron, meldingen
 
 
 class Uitrol:
@@ -224,16 +300,15 @@ class Uitrol:
         return eerste if re.fullmatch(r"[0-9a-f]{40}", eerste) else None
 
     def uitrollen(self) -> None:
-        self.stap("Nieuwste versie ophalen van GitHub")
+        self.stap("Nieuwste versie ophalen (eigen Git-server, GitHub als reserve)")
         if not os.path.isdir(os.path.join(SRC, ".git")):
-            code, out = run(["git", "clone", "--depth", "300", "--branch", "main", REPO, SRC], timeout=900)
-            if code != 0:
-                raise RuntimeError(f"git clone mislukt: {out[-300:]}")
-        git("fetch", "--depth", "300", "origin", "main")
-        doel = git("rev-parse", "FETCH_HEAD")
+            self.schrijf(f"eerste kopie via {BRON_NAAM[kloon_bron()]}")
+        doel, bron, meldingen = haal_main()
+        for m in meldingen:
+            self.schrijf(m)
         onderwerp = git("log", "-1", "--format=%s", doel)
         self.zet(doel=doel, doelOnderwerp=onderwerp)
-        self.schrijf(f"doel: {doel[:10]} {onderwerp}")
+        self.schrijf(f"doel: {doel[:10]} {onderwerp} (via {BRON_NAAM[bron]})")
 
         live = self.live_sha()
         forceer = bool(self.v.get("forceer"))

@@ -7,20 +7,36 @@
 #   2. organisatie "zekerflex" (privé);
 #   3. spiegel van github.com/briando979-netizen/zekerflex-finale (privé, elke
 #      10 minuten bijgewerkt door Forgejo zelf).
-# Met `--eigenaar <e-mail>` komt er ook een account "eigenaar" bij, met een
-# eenmalig wachtwoord dat bij de eerste keer inloggen gewijzigd moet worden.
+# Opties:
+#   --eigenaar <e-mail>  ook een account "eigenaar", met een eenmalig wachtwoord in
+#                        /root/forgejo-eigenaar.txt (bij de eerste keer wijzigen);
+#   --lezer              het leesaccount voor de uitrol (fase 2): "bouwer-lezen" in
+#                        een team dat alleen mag lezen, met een token (alleen
+#                        read:repository) in /root/forgejo-lezen.token (root, 600)
+#                        voor de live-zetter, en als BOUWER_FORGEJO_TOKEN in
+#                        .env.production voor de Bouwer (eerst een kopie). Daarna:
+#                        up -d --no-deps bouwer, zodat de Bouwer het token ziet.
 #
-# Gebruik op de VPS:  bash ~/zekerflex/deploy/forgejo/inrichten.sh [--eigenaar <e-mail>]
-# Fase 2 (later): de live-zetter, controle en werkkopie halen de code hier op,
-# met GitHub als reserve; dan hoort forgejo-data ook in de back-up.
+# Gebruik op de VPS:  bash ~/zekerflex/deploy/forgejo/inrichten.sh [--eigenaar <e-mail>] [--lezer]
 # ---------------------------------------------------------------------------
 set -euo pipefail
 cd ~/zekerflex
 F=zekerflex-forgejo-1
 GEHEIM=.forgejo-beheer
 EIGENAAR_BESTAND=/root/forgejo-eigenaar.txt
+LEZER_BESTAND=/root/forgejo-lezen.token
 BRON=https://github.com/briando979-netizen/zekerflex-finale.git
 fj() { sudo docker exec -u git "$F" forgejo "$@"; }
+
+EIGENAAR=""
+LEZER=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --eigenaar) EIGENAAR="${2:-}"; shift 2 ;;
+    --lezer) LEZER=1; shift ;;
+    *) echo "onbekende optie: $1"; exit 2 ;;
+  esac
+done
 
 sudo docker inspect "$F" > /dev/null 2>&1 || { echo "forgejo draait niet (eerst uitrollen)"; exit 2; }
 
@@ -31,7 +47,9 @@ if ! sudo test -s "$GEHEIM"; then
 fi
 ww=$(sudo sed -n 's/^wachtwoord=//p' "$GEHEIM")
 
-if fj admin user list --admin | awk 'NR > 1 { print $2 }' | grep -qx zekerflex-beheer; then
+gebruiker_bestaat() { fj admin user list | awk 'NR > 1 { print $2 }' | grep -qx "$1"; }
+
+if gebruiker_bestaat zekerflex-beheer; then
   echo "beheerder: bestaat al"
 else
   fj admin user create --admin --username zekerflex-beheer --email beheer@zekerflex.test --password "$ww" --must-change-password=false > /dev/null
@@ -69,18 +87,55 @@ else
   echo "spiegel: $(status --max-time 900 -X POST "$API/repos/migrate" -d "{\"clone_addr\":\"$BRON\",\"repo_owner\":\"zekerflex\",\"repo_name\":\"zekerflex-finale\",\"mirror\":true,\"mirror_interval\":\"10m\",\"private\":true,\"service\":\"git\",\"description\":\"Spiegel van GitHub, elke 10 minuten bijgewerkt\"}")"
 fi
 
-if [ "${1:-}" = "--eigenaar" ] && [ -n "${2:-}" ]; then
-  if fj admin user list | awk 'NR > 1 { print $2 }' | grep -qx eigenaar; then
+if [ -n "$EIGENAAR" ]; then
+  if gebruiker_bestaat eigenaar; then
     echo "eigenaar: bestaat al"
   else
     ew=$(openssl rand -hex 8)
-    fj admin user create --admin --username eigenaar --email "$2" --password "$ew" --must-change-password=true > /dev/null
+    fj admin user create --admin --username eigenaar --email "$EIGENAAR" --password "$ew" --must-change-password=true > /dev/null
     # nooit afdrukken (dan staat het in het transcript): naar een bestand van root
     printf 'gebruiker=eigenaar\neenmalig-wachtwoord=%s\n(bij de eerste keer inloggen wijzigen)\n' "$ew" | sudo tee "$EIGENAAR_BESTAND" > /dev/null
     sudo chown root:root "$EIGENAAR_BESTAND"
     sudo chmod 600 "$EIGENAAR_BESTAND"
     echo "eigenaar: aangemaakt; het eenmalige wachtwoord staat in $EIGENAAR_BESTAND (alleen root)"
   fi
+fi
+
+if [ "$LEZER" = 1 ]; then
+  if gebruiker_bestaat bouwer-lezen; then
+    echo "lezer: bestaat al"
+  else
+    # willekeurig wachtwoord dat niemand kent (de CLI drukt het af: weggegooid); inloggen gaat alleen met het token
+    fj admin user create --username bouwer-lezen --email bouwer-lezen@zekerflex.test --random-password --must-change-password=false > /dev/null
+    echo "lezer: aangemaakt"
+  fi
+  # team "lezen": alleen lezen, alle repositories van de organisatie
+  team=$(api "$API/orgs/zekerflex/teams" | python3 -c 'import json,sys; print(next((t["id"] for t in json.load(sys.stdin) if t.get("name") == "lezen"), ""))')
+  if [ -z "$team" ]; then
+    team=$(api -X POST "$API/orgs/zekerflex/teams" -d '{"name":"lezen","description":"Alleen lezen (uitrol en controle)","permission":"read","includes_all_repositories":true,"units":["repo.code"]}' | python3 -c 'import json,sys; print(json.load(sys.stdin).get("id", ""))')
+    echo "team lezen: aangemaakt"
+  else
+    echo "team lezen: bestaat al"
+  fi
+  [ -n "$team" ] || { echo "team lezen: niet gevonden of aangemaakt"; exit 1; }
+  echo "lid van team lezen: $(status -X PUT "$API/teams/$team/members/bouwer-lezen")"
+
+  if sudo test -s "$LEZER_BESTAND"; then
+    echo "token: bestaat al ($LEZER_BESTAND)"
+  else
+    fj admin user generate-access-token --username bouwer-lezen --token-name uitrol --scopes read:repository --raw | sudo tee "$LEZER_BESTAND" > /dev/null
+    sudo chown root:root "$LEZER_BESTAND"
+    sudo chmod 600 "$LEZER_BESTAND"
+    sudo test -s "$LEZER_BESTAND" || { echo "token: aanmaken mislukt"; exit 1; }
+    echo "token: aangemaakt in $LEZER_BESTAND (alleen root)"
+  fi
+
+  # Ook voor de Bouwer-container: BOUWER_FORGEJO_TOKEN in .env.production (eerst een
+  # kopie; eigenaar en rechten blijven gelijk). Het token gaat via een variabele in een
+  # root-shell, nooit als argument op de opdrachtregel.
+  sudo cp -p .env.production ".env.production.voor-forgejo-lezer-$(date +%Y%m%d%H%M%S)"
+  sudo sh -c 'tok=$(cat "$1"); grep -v "^BOUWER_FORGEJO_TOKEN=" .env.production > .env.production.nieuw; printf "BOUWER_FORGEJO_TOKEN=%s\n" "$tok" >> .env.production.nieuw; chown --reference=.env.production .env.production.nieuw; chmod --reference=.env.production .env.production.nieuw; mv .env.production.nieuw .env.production' _ "$LEZER_BESTAND"
+  echo ".env.production: BOUWER_FORGEJO_TOKEN staat er ($(sudo grep -c '^BOUWER_FORGEJO_TOKEN=' .env.production) regel); de Bouwer ziet hem na up -d --no-deps bouwer"
 fi
 
 api "$API/repos/zekerflex/zekerflex-finale" | grep -o '"mirror":[a-z]*\|"mirror_updated":"[^"]*"\|"size":[0-9]*' | tr '\n' ' '

@@ -1,5 +1,6 @@
 // De controle vóór het live zetten: de eigen "CI" van ZekerFlex, op de eigen server.
-// Een tweede, losse git-kopie van GitHub main in /werk/controle/repo (met eigen
+// Een tweede, losse git-kopie van main in /werk/controle/repo (eerst van onze eigen
+// Git-server, met GitHub als reserve: haalMain/haalVastlegging in werkkopie.mjs; met eigen
 // node_modules), waarop voor één vastlegging de gouden regels uit AGENTS.md draaien:
 // TypeScript op het hele project, eslint op de gewijzigde bestanden en de bestaande
 // tests die die bestanden raken (vitest related, op de demodatabase van het voorbeeld).
@@ -18,13 +19,12 @@ import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { GITHUB_REPO, WERK, geefZwaarSlotVrij, sh, testOmgeving, verkrijgZwaarSlot, wachtOpUitrol } from "./werkkopie.mjs";
+import { WERK, geefZwaarSlotVrij, haalMain, haalVastlegging, kloon, sh, testOmgeving, verkrijgZwaarSlot, wachtOpUitrol } from "./werkkopie.mjs";
 
 export const CONTROLE_DIR = path.join(WERK, "controle");
 const REPO = path.join(CONTROLE_DIR, "repo");
 const UITSLAGEN = path.join(CONTROLE_DIR, "uitslagen");
 const LAATSTE = path.join(CONTROLE_DIR, "laatste.sha");
-const REPO_URL = `https://github.com/${GITHUB_REPO}.git`;
 const BEWAAR = 60;
 // meer gewijzigde bestanden dan dit (bv. een grote hernoeming): dan alleen tsc
 const MAX_LINT = 250;
@@ -45,8 +45,7 @@ async function zorgVoorKloon(log) {
   if (await bestaat(path.join(REPO, ".git"))) return;
   log("info", "Eerste keer: eigen kopie van de codebase voor de controle ophalen");
   await fs.mkdir(CONTROLE_DIR, { recursive: true });
-  const r = await sh("git", ["clone", "--depth", "300", "--branch", "main", REPO_URL, REPO], { cwd: CONTROLE_DIR, timeout: 900_000 });
-  if (r.code !== 0) throw new Error(`git clone mislukt: ${r.uit.trim().slice(-400)}`);
+  await kloon(REPO, CONTROLE_DIR, 300, log);
 }
 
 /** npm ci + prisma generate, alleen als package-lock.json of het databaseschema veranderde (zoals de werkkopie). */
@@ -75,12 +74,15 @@ async function kent(sha) {
   return (await sh("git", ["cat-file", "-e", `${sha}^{commit}`], { cwd: REPO, timeout: 30_000 })).code === 0;
 }
 
-/** "main" → de nieuwste op GitHub; anders een sha (zo nodig gericht opgehaald). Geeft de volledige sha. */
-async function losOp(doel) {
-  await git(["fetch", "-q", "--depth", "300", "origin", "main"], { timeout: 600_000 });
-  if (doel === "main" || doel === "origin/main") return git(["rev-parse", "origin/main"]);
+/** "main" → de nieuwste (eigen Git-server of GitHub); anders een sha (zo nodig gericht opgehaald). Geeft de volledige sha. */
+async function losOp(doel, log) {
+  const main = await haalMain(REPO, 300, log);
+  if (doel === "main" || doel === "origin/main") return main.sha;
   if (!isSha(doel)) throw new Error(`Onbekende vastlegging: ${doel}`);
-  if (!(await kent(doel))) await git(["fetch", "-q", "--depth", "300", "origin", doel], { timeout: 600_000 });
+  if (!(await kent(doel))) {
+    const bron = await haalVastlegging(REPO, doel, 300);
+    log?.("info", `${doel.slice(0, 7)} opgehaald via ${bron === "forgejo" ? "onze eigen Git-server" : "GitHub"}`);
+  }
   return git(["rev-parse", `${doel}^{commit}`]);
 }
 
@@ -128,7 +130,7 @@ async function bewaarUitslag(u) {
  */
 export async function controleerVastlegging({ doel = "main", vanaf = null, wacht = true, opnieuw = false, door = "onbekend", log = () => {} }) {
   await zorgVoorKloon(log);
-  const sha = await losOp(doel);
+  const sha = await losOp(doel, log);
   if (!opnieuw) {
     const bekend = await uitslagVan(sha);
     if (bekend) {

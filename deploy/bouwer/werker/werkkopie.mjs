@@ -11,12 +11,95 @@ import path from "node:path";
 export const WERK = process.env.BOUWER_WERK || "/werk";
 export const REPO_DIR = path.join(WERK, "repo");
 export const GITHUB_REPO = process.env.BOUWER_GITHUB_REPO || "briando979-netizen/zekerflex-finale";
-const REPO_URL = `https://github.com/${GITHUB_REPO}.git`;
+export const GITHUB_URL = `https://github.com/${GITHUB_REPO}.git`;
 const MAX_UIT = 2_000_000;
 
-/** De omgeving zonder BOUWER_TOKEN: voor processen die door de AI gewijzigde code draaien. */
+// ---------------------------------------------------------------------------
+// Waar de code vandaan komt: eerst onze eigen Git-server (Forgejo, deploy/forgejo),
+// met GitHub als reserve. Er wordt nog naar GitHub gepusht en de spiegel loopt tot
+// 10 minuten achter, dus voor "main" halen we bij allebei op en kiezen we de
+// nieuwste; ligt er één plat, dan de andere. "origin" blijft GitHub: daar pusht en
+// rebaset server.mjs. Het leestoken (alleen lezen, gebruiker bouwer-lezen) staat
+// alleen in BOUWER_FORGEJO_TOKEN en gaat via een credential helper naar git: nooit
+// in een URL of log, en nooit naar processen die door de AI gewijzigde code draaien.
+// ---------------------------------------------------------------------------
+export const FORGEJO_URL = process.env.BOUWER_FORGEJO_URL || "https://git.37-97-226-24.sslip.io/zekerflex/zekerflex-finale.git";
+const BRONNEN = [
+  ["forgejo", FORGEJO_URL],
+  ["github", GITHUB_URL],
+];
+const BRON_NAAM = { forgejo: "onze eigen Git-server", github: "GitHub" };
+
+/** De geheimen die nooit naar door de AI gewijzigde code mogen. */
+const SLEUTELS = new Set(["BOUWER_TOKEN", "BOUWER_FORGEJO_TOKEN"]);
+
+/** De omgeving zonder sleutels: voor processen die door de AI gewijzigde code draaien. */
 export function omgevingZonderSleutel() {
-  return Object.fromEntries(Object.entries(process.env).filter(([k]) => k !== "BOUWER_TOKEN"));
+  return Object.fromEntries(Object.entries(process.env).filter(([k]) => !SLEUTELS.has(k)));
+}
+
+/** git-opties voor een bron: bij Forgejo de credential helper (het token komt uit de omgeving, niet uit de opdrachtregel). */
+function bronOpties(bron) {
+  if (bron !== "forgejo" || !process.env.BOUWER_FORGEJO_TOKEN) return [];
+  const host = new URL(FORGEJO_URL).origin;
+  return [
+    "-c",
+    `credential.${host}.helper=`,
+    "-c",
+    `credential.${host}.helper=!f() { if [ "$1" = get ]; then printf 'username=bouwer-lezen\\npassword=%s\\n' "$BOUWER_FORGEJO_TOKEN"; fi; }; f`,
+  ];
+}
+
+/** Eerste keer klonen: eerst Forgejo, anders GitHub. Daarna wijst origin altijd naar GitHub. */
+export async function kloon(doelMap, cwd, diepte, log) {
+  for (const [bron, url] of BRONNEN) {
+    await fs.rm(doelMap, { recursive: true, force: true });
+    const r = await sh("git", [...bronOpties(bron), "clone", "-q", "--depth", String(diepte), "--branch", "main", url, doelMap], { cwd, timeout: 900_000 });
+    if (r.code === 0) {
+      await sh("git", ["remote", "set-url", "origin", GITHUB_URL], { cwd: doelMap, timeout: 30_000 });
+      log?.("info", `Codebase opgehaald bij ${BRON_NAAM[bron]}`);
+      return bron;
+    }
+    log?.("warn", `Klonen bij ${BRON_NAAM[bron]} mislukte: ${r.uit.trim().slice(-160)}`);
+  }
+  throw new Error("De codebase is niet op te halen: onze eigen Git-server en GitHub zijn allebei niet bereikbaar");
+}
+
+const isVoorouder = async (cwd, a, b) => (await sh("git", ["merge-base", "--is-ancestor", a, b], { cwd, timeout: 30_000 })).code === 0;
+
+/**
+ * Haalt main bij Forgejo en GitHub en zet refs/remotes/origin/main op de nieuwste.
+ * Loopt de spiegel achter (Forgejo is een voorouder van GitHub), dan wint GitHub;
+ * lopen ze uit elkaar, dan ook GitHub (daar wordt gepusht). Geeft { sha, bron }.
+ */
+export async function haalMain(cwd, diepte, log) {
+  const gevonden = {};
+  for (const [bron, url] of BRONNEN) {
+    const r = await sh("git", [...bronOpties(bron), "fetch", "-q", "--depth", String(diepte), url, `+refs/heads/main:refs/remotes/${bron}/main`], { cwd, timeout: 600_000 });
+    if (r.code === 0) gevonden[bron] = (await sh("git", ["rev-parse", `refs/remotes/${bron}/main`], { cwd, timeout: 30_000 })).uit.trim();
+    else log?.("warn", `Main ophalen bij ${BRON_NAAM[bron]} mislukte: ${r.uit.trim().slice(-160)}`);
+  }
+  const f = gevonden.forgejo;
+  const g = gevonden.github;
+  if (!f && !g) throw new Error("Main is niet op te halen: onze eigen Git-server en GitHub zijn allebei niet bereikbaar");
+  let sha = f ?? g;
+  let bron = f ? "forgejo" : "github";
+  if (f && g && f !== g && !(await isVoorouder(cwd, g, f))) {
+    sha = g;
+    bron = "github";
+  }
+  await sh("git", ["update-ref", "refs/remotes/origin/main", sha], { cwd, timeout: 30_000 });
+  log?.("info", `Main ${sha.slice(0, 7)} via ${BRON_NAAM[bron]}`);
+  return { sha, bron };
+}
+
+/** Eén vastlegging ophalen: eerst Forgejo, anders GitHub. Geeft de bron. */
+export async function haalVastlegging(cwd, sha, diepte) {
+  for (const [bron, url] of BRONNEN) {
+    const r = await sh("git", [...bronOpties(bron), "fetch", "-q", "--depth", String(diepte), url, sha], { cwd, timeout: 600_000 });
+    if (r.code === 0) return bron;
+  }
+  throw new Error(`Vastlegging ${sha} niet gevonden bij onze eigen Git-server of GitHub`);
 }
 
 /** Draai een commando; geeft code + (afgekapte) uitvoer, gooit nooit. */
@@ -73,15 +156,15 @@ export async function wachtOpUitrol(log) {
 
 async function zorgVoorKloon(log) {
   if (await bestaat(path.join(REPO_DIR, ".git"))) return;
-  log("info", "Eerste keer: de codebase ophalen van GitHub");
+  log("info", "Eerste keer: de codebase ophalen (eigen Git-server, GitHub als reserve)");
   await fs.mkdir(WERK, { recursive: true });
-  await git(["clone", "--depth", "200", "--branch", "main", REPO_URL, REPO_DIR], { cwd: WERK, timeout: 900_000 });
+  await kloon(REPO_DIR, WERK, 200, log);
 }
 
 /** Verse branch bouwer/<id> op de nieuwste main; eerste keer klonen. */
 export async function nieuweWerkkopie(id, log) {
   await zorgVoorKloon(log);
-  await git(["fetch", "--depth", "200", "origin", "main"]);
+  await haalMain(REPO_DIR, 200, log);
   await git(["checkout", "-f", "-B", `bouwer/${id}`, "origin/main"]);
   await git(["clean", "-fd"]);
   const basis = await git(["rev-parse", "HEAD"]);
@@ -93,7 +176,7 @@ export async function nieuweWerkkopie(id, log) {
 /** De werkkopie op de nieuwste main, zonder eigen branch: voor het voorbeeld van wat er live gaat. */
 export async function werkkopieOpMain(log) {
   await zorgVoorKloon(log);
-  await git(["fetch", "--depth", "200", "origin", "main"]);
+  await haalMain(REPO_DIR, 200, log);
   await git(["checkout", "-q", "-f", "--detach", "origin/main"]);
   await git(["clean", "-fdq"]);
   const sha = await git(["rev-parse", "HEAD"]);
