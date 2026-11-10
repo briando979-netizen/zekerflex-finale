@@ -101,6 +101,8 @@ export function VolgKaart({
         if (interactief) map.addControl(new mod.NavigationControl({ showCompass: false }), "top-right");
         new mod.Marker({ element: spijkerElement(), anchor: "bottom" }).setLngLat([bestemming.lon, bestemming.lat]).addTo(map);
         map.on("load", () => {
+          // MapLibre klapt de bronvermelding pas in na slepen; een vaste kaart wordt nooit versleept (de ⓘ opent hem)
+          if (!interactief) houder.current?.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show");
           map.addSource("route", { type: "geojson", data: { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: [] } } });
           map.addLayer({ id: "route", type: "line", source: "route", layout: { "line-cap": "round" }, paint: { "line-color": "#FF5F1F", "line-width": 4, "line-dasharray": [1.5, 1.5] } });
           setKlaar(true);
