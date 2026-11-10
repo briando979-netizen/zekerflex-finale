@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { foutVan, useStudio } from "@/components/studio/context";
 import { Card, Empty, IExternal, IImage, ITag, IX, PageHead, Pill, btn, input } from "@/components/studio/ui";
-import { slugify, type Media, type SiteProduct } from "@/lib/sites/types";
+import { BTW_TARIEVEN, slugify, type Media, type SiteProduct } from "@/lib/sites/types";
 import { MAX_OPTIES, categorieen, euro, leesBedrag, productSlug } from "@/lib/sites/winkel";
 
 // ---------------------------------------------------------------------------
 // Websitestudio → één product: titel en omschrijving, foto's (slepen, kiezen,
 // hoofdfoto, volgorde), prijs met "was"-prijs, hoe het in Google staat, status,
-// voorraad en categorie. Een balk bovenaan bewaart of verwerpt; opslaan zet het
+// voorraad, categorie en (als de webshop btw toont) het btw-tarief. Een balk bovenaan bewaart of verwerpt; opslaan zet het
 // meteen live. "nieuw" maakt een nieuw product.
 // ---------------------------------------------------------------------------
 
@@ -102,6 +102,9 @@ export default function ProductEditor({ id }: { id: string }) {
   };
 
   const korting = prijsCents != null && wasCents != null && wasCents > prijsCents ? Math.round((1 - prijsCents / wasCents) * 100) : null;
+  // btw (Webshop → Betalen): het label van de prijs volgt de winkel; een eigen tarief alleen als er btw is (en geen KOR)
+  const btw = winkel.btw;
+  const prijsLabel = btw?.kor ? "Prijs" : btw && !btw.inclusief ? "Prijs (excl. btw)" : "Prijs (incl. btw)";
   const adres = data?.address ?? "";
   const live = Boolean(site.liveBuild) && !nieuw && basis.zichtbaar;
 
@@ -181,7 +184,7 @@ export default function ProductEditor({ id }: { id: string }) {
           <Card title="Prijs">
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-[#303030]">Prijs (incl. btw)</span>
+                <span className="mb-1 block text-sm font-medium text-[#303030]">{prijsLabel}</span>
                 <span className="relative block">
                   <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#707070]">€</span>
                   <input className={`${input} pl-7`} inputMode="decimal" value={prijs} placeholder="0,00" onChange={(e) => { setPrijs(e.target.value); setOpgeslagen(false); }} aria-invalid={prijs !== "" && prijsCents == null} />
@@ -196,6 +199,21 @@ export default function ProductEditor({ id }: { id: string }) {
               </label>
             </div>
             {korting != null && <p className="mt-3 text-sm text-[#0c5132]">Klanten zien <s className="text-[#707070]">{euro(wasCents ?? 0)}</s> <strong>{euro(prijsCents ?? 0)}</strong>: {korting}% korting.</p>}
+            {btw && !btw.kor && (
+              <label className="mt-4 block sm:max-w-xs">
+                <span className="mb-1 block text-sm font-medium text-[#303030]">Btw-tarief</span>
+                <select
+                  className={input}
+                  value={p.btw ?? ""}
+                  onChange={(e) => zet({ btw: BTW_TARIEVEN.find((t) => String(t) === e.target.value) })}
+                >
+                  <option value="">Standaard van je webshop ({btw.standaard}%)</option>
+                  <option value="21">21% (hoog tarief)</option>
+                  <option value="9">9% (laag tarief, bijvoorbeeld eten en boeken)</option>
+                  <option value="0">0%</option>
+                </select>
+              </label>
+            )}
           </Card>
 
           <Card title="Zo staat het in Google">

@@ -1,5 +1,5 @@
-import { Card, Empty, ICard, PageHead } from "@/components/studio/ui";
+import Betalen from "@/components/studio/Betalen";
 
 export default function StudioBetalenPage() {
-  return (<><PageHead title="Betalen" /><Card><Empty icon={<ICard />} title="Binnenkort" text="Online betalen in je webshop komt eraan." /></Card></>);
+  return <Betalen />;
 }

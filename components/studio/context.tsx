@@ -1,12 +1,12 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { LEGE_WINKEL, type Company, type Media, type SiteDoc, type SiteSoort, type Theme, type Winkel } from "@/lib/sites/types";
+import { LEGE_WINKEL, type BetaalInstelling, type BtwInstelling, type Company, type Media, type SiteDoc, type SiteSoort, type Theme, type Winkel } from "@/lib/sites/types";
 
 // ---------------------------------------------------------------------------
 // Websitestudio: één bron voor de site van het bedrijf (GET /api/werkgever/sites)
 // en de manieren om hem te wijzigen. De winkel gaat apart en staat meteen live
-// (PUT …/sites/winkel); pagina's, stijl en bedrijfsgegevens gaan via het gewone
+// (PUT …/sites/winkel, of alleen een deel met PATCH); pagina's, stijl en bedrijfsgegevens gaan via het gewone
 // opslaan (PUT …/sites) en worden zichtbaar na Publiceren.
 // ---------------------------------------------------------------------------
 
@@ -17,6 +17,12 @@ export const apiUrl = (soort: SiteSoort, pad = "", query = ""): string => `${API
 
 /** De voorvoegsels van de twee werkruimtes. */
 export const STUDIO_BASE: Record<SiteSoort, string> = { website: "/studio/website", webshop: "/studio/webshop" };
+
+/**
+ * Een deel van de winkel om op te slaan (Webshop → Kortingen, Verzending, Betalen, Instellingen): nooit de
+ * producten, zodat de voorraad die bestellingen intussen verlaagden blijft staan. null haalt btw of betalen weg.
+ */
+export type WinkelDeel = Partial<Omit<Winkel, "producten" | "btw" | "betalen">> & { btw?: BtwInstelling | null; betalen?: BetaalInstelling | null };
 
 export interface StudioData {
   site: SiteDoc | null;
@@ -39,6 +45,8 @@ interface Studio {
   reload: () => Promise<void>;
   /** de winkel opslaan (meteen live); geeft een foutzin of null */
   saveWinkel: (w: Winkel) => Promise<string | null>;
+  /** alleen een deel van de winkel opslaan (meteen live); de server voegt het samen met de winkel zoals hij nu is */
+  saveWinkelDeel: (deel: WinkelDeel) => Promise<string | null>;
   /** stijl en/of bedrijfsgegevens opslaan (zichtbaar na Publiceren) */
   saveSite: (patch: { theme?: Theme; bedrijf?: Company }) => Promise<string | null>;
   publish: () => Promise<string | null>;
@@ -88,6 +96,16 @@ export function StudioProvider({ soort, children }: { soort: SiteSoort; children
     [setSite],
   );
 
+  const saveWinkelDeel = useCallback(
+    async (deel: WinkelDeel) => {
+      const res = await fetch(`${API}/winkel`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deel }) }).catch(() => null);
+      if (!res?.ok) return foutVan(res, "Opslaan lukte niet.");
+      setSite(((await res.json()) as { site: SiteDoc }).site);
+      return null;
+    },
+    [setSite],
+  );
+
   const saveSite = useCallback(
     async (patch: { theme?: Theme; bedrijf?: Company }) => {
       const site = data?.site;
@@ -123,13 +141,14 @@ export function StudioProvider({ soort, children }: { soort: SiteSoort; children
       error,
       reload,
       saveWinkel,
+      saveWinkelDeel,
       saveSite,
       publish,
       addMedia,
       unpublished: Boolean(site && (!site.liveBuild || (laatste && site.updatedAt > laatste))),
       winkel: site?.winkel ?? LEGE_WINKEL,
     };
-  }, [soort, api, data, error, reload, saveWinkel, saveSite, publish, addMedia]);
+  }, [soort, api, data, error, reload, saveWinkel, saveWinkelDeel, saveSite, publish, addMedia]);
 
   return <StudioContext.Provider value={value}>{children}</StudioContext.Provider>;
 }

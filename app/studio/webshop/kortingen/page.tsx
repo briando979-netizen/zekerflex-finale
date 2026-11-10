@@ -1,5 +1,5 @@
-import { Card, Empty, IPercent, PageHead } from "@/components/studio/ui";
+import Kortingen from "@/components/studio/Kortingen";
 
 export default function StudioKortingenPage() {
-  return (<><PageHead title="Kortingen" /><Card><Empty icon={<IPercent />} title="Binnenkort" text="Kortingscodes en acties voor je webshop komen eraan." /></Card></>);
+  return <Kortingen />;
 }

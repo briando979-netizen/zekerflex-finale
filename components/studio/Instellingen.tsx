@@ -1,30 +1,30 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-import { useStudio } from "@/components/studio/context";
+import { useStudio, type WinkelDeel } from "@/components/studio/context";
 import { Domein } from "@/components/studio/Domein";
 import { Card, IExternal, PageHead, btn, input } from "@/components/studio/ui";
 import type { Company, Winkel } from "@/lib/sites/types";
-import { leesBedrag } from "@/lib/sites/winkel";
+import { BETAAL_NAAM, betaalOpties } from "@/lib/sites/winkel-betalen";
+import { actieveVerzendmethoden } from "@/lib/sites/winkel-verzending";
 import { DomeinZoeker } from "@/components/domeinen/DomeinZoeker";
 import { NietInIphone } from "@/components/app/NietInIphone";
 
 // ---------------------------------------------------------------------------
-// Websitestudio → Instellingen: hoe bestellen en bezorgen werkt (meteen live),
+// Websitestudio → Instellingen: of online bestellen aan staat (meteen live; verzending en betalen hebben een eigen pagina),
 // de bedrijfsgegevens op de website (na Publiceren) en het webadres.
 // ---------------------------------------------------------------------------
 
-const bedrag = (c: number | null) => (c == null ? "" : (c / 100).toFixed(2).replace(".", ","));
-
 export default function Instellingen() {
-  const { data, winkel, saveWinkel, saveSite, soort, reload } = useStudio();
+  const { data, winkel, saveWinkelDeel, saveSite, soort, reload } = useStudio();
   const site = data!.site!;
   const shop = soort === "webshop";
   return (
     <>
-      <PageHead title="Instellingen" sub={shop ? "Bestellen, bezorgen en je bedrijfsgegevens." : "Je bedrijfsgegevens en je webadres."} />
+      <PageHead title="Instellingen" sub={shop ? "Online bestellen, je bedrijfsgegevens en je webadres." : "Je bedrijfsgegevens en je webadres."} />
       <div className="space-y-4">
-        {shop && <WinkelInstellingen winkel={winkel} onSave={saveWinkel} />}
+        {shop && <WinkelInstellingen winkel={winkel} onSave={saveWinkelDeel} />}
         <Bedrijf bedrijf={site.bedrijf} onSave={(bedrijf) => saveSite({ bedrijf })} soort={soort} />
         <Card title="Webadres">
           <p className="text-sm text-[#303030]">
@@ -63,61 +63,48 @@ function Melding({ m }: { m: { ok: boolean; text: string } | null }) {
   return <p role={m.ok ? "status" : "alert"} className={`text-sm font-medium ${m.ok ? "text-[#0c5132]" : "text-[#b42318]"}`}>{m.text}</p>;
 }
 
-function WinkelInstellingen({ winkel, onSave }: { winkel: Winkel; onSave: (w: Winkel) => Promise<string | null> }) {
-  const [w, setW] = useState(winkel);
-  const [kosten, setKosten] = useState(bedrag(winkel.levering.bezorgkostenCents));
-  const [gratis, setGratis] = useState(bedrag(winkel.levering.gratisVanafCents));
+function WinkelInstellingen({ winkel, onSave }: { winkel: Winkel; onSave: (deel: WinkelDeel) => Promise<string | null> }) {
+  const [bestellen, setBestellen] = useState(winkel.bestellen);
   const [bezig, setBezig] = useState(false);
   const [m, setM] = useState<{ ok: boolean; text: string } | null>(null);
+  const methoden = actieveVerzendmethoden(winkel);
+  const betaal = betaalOpties(winkel);
   const opslaan = async () => {
-    const k = kosten.trim() ? leesBedrag(kosten) : 0;
-    const g = gratis.trim() ? leesBedrag(gratis) : null;
-    if (k == null || (gratis.trim() && g == null)) return setM({ ok: false, text: "Vul geldige bedragen in, bijvoorbeeld 3,95." });
-    if (w.bestellen && !w.levering.afhalen && !w.levering.bezorgen) return setM({ ok: false, text: "Kies afhalen, bezorgen of allebei." });
+    if (bestellen && !methoden.length) return setM({ ok: false, text: "Zet eerst bij Verzending minstens één manier van afhalen of bezorgen aan." });
     setBezig(true);
-    const fout = await onSave({ ...w, levering: { ...w.levering, bezorgkostenCents: k, gratisVanafCents: g } });
+    // alleen dit ene veld: de producten en hun voorraad blijven zoals ze op de server staan
+    const fout = await onSave({ bestellen });
     setBezig(false);
     setM(fout ? { ok: false, text: fout } : { ok: true, text: "Opgeslagen en meteen online." });
   };
   return (
-    <Card title="Bestellen en bezorgen" actions={<span className="text-xs text-[#707070]">meteen online</span>}>
+    <Card title="Bestellen" actions={<span className="text-xs text-[#707070]">meteen online</span>}>
       <div className="space-y-4">
         <label className="flex items-start gap-3">
-          <input type="checkbox" checked={w.bestellen} onChange={(e) => setW({ ...w, bestellen: e.target.checked })} className="mt-0.5 h-4 w-4 accent-[#1a1a1a]" />
+          <input type="checkbox" checked={bestellen} onChange={(e) => setBestellen(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#1a1a1a]" />
           <span>
             <span className="block text-sm font-semibold text-[#1a1a1a]">Klanten kunnen online bestellen</span>
             <span className="block text-sm text-[#616161]">Op elke productpagina staat een bestelknop; je krijgt elke bestelling per mail en in Bestellingen.</span>
           </span>
         </label>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="flex items-center gap-3 rounded-xl border border-[#ebebeb] p-3">
-            <input type="checkbox" checked={w.levering.afhalen} onChange={(e) => setW({ ...w, levering: { ...w.levering, afhalen: e.target.checked } })} className="h-4 w-4 accent-[#1a1a1a]" />
-            <span className="text-sm font-semibold text-[#1a1a1a]">Afhalen</span>
-          </label>
-          <label className="flex items-center gap-3 rounded-xl border border-[#ebebeb] p-3">
-            <input type="checkbox" checked={w.levering.bezorgen} onChange={(e) => setW({ ...w, levering: { ...w.levering, bezorgen: e.target.checked } })} className="h-4 w-4 accent-[#1a1a1a]" />
-            <span className="text-sm font-semibold text-[#1a1a1a]">Bezorgen</span>
-          </label>
-        </div>
-        {w.levering.bezorgen && (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-[#303030]">Bezorgkosten</span>
-              <input className={input} inputMode="decimal" value={kosten} placeholder="0,00 = gratis" onChange={(e) => setKosten(e.target.value)} />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-[#303030]">Gratis bezorgen vanaf</span>
-              <input className={input} inputMode="decimal" value={gratis} placeholder="leeg = nooit gratis" onChange={(e) => setGratis(e.target.value)} />
-            </label>
+        <dl className="grid gap-3 text-sm sm:grid-cols-2">
+          <div className="rounded-xl border border-[#ebebeb] p-3">
+            <dt className="font-semibold text-[#1a1a1a]">Verzending</dt>
+            <dd className="mt-0.5 text-[#616161]">{methoden.length ? methoden.map((x) => x.naam).join(", ") : "Nog niets aan"}</dd>
+            <dd className="mt-1">
+              <Link href="/studio/webshop/verzending" className="font-semibold text-[#005bd3] hover:underline">Verzending instellen</Link>
+            </dd>
           </div>
-        )}
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-[#303030]">Hoe betalen klanten?</span>
-          <textarea className={`${input} min-h-[80px]`} maxLength={600} value={w.betaalTekst} onChange={(e) => setW({ ...w, betaalTekst: e.target.value })} />
-          <span className="mt-1 block text-xs text-[#707070]">Dit staat bij elke bestelling. Online betalen met iDEAL komt eraan; tot dan regel je het zelf (bij afhalen, bezorgen of op factuur).</span>
-        </label>
+          <div className="rounded-xl border border-[#ebebeb] p-3">
+            <dt className="font-semibold text-[#1a1a1a]">Betalen</dt>
+            <dd className="mt-0.5 text-[#616161]">{betaal.length ? betaal.map((x) => BETAAL_NAAM[x]).join(", ") : "Alleen je uitleg bij betalen"}</dd>
+            <dd className="mt-1">
+              <Link href="/studio/webshop/betalen" className="font-semibold text-[#005bd3] hover:underline">Betalen en btw instellen</Link>
+            </dd>
+          </div>
+        </dl>
         <div className="flex flex-wrap items-center gap-3">
-          <button type="button" disabled={bezig} onClick={() => void opslaan()} className={btn.primary}>{bezig ? "Opslaan…" : "Opslaan"}</button>
+          <button type="button" disabled={bezig || bestellen === winkel.bestellen} onClick={() => void opslaan()} className={btn.primary}>{bezig ? "Opslaan…" : "Opslaan"}</button>
           <Melding m={m} />
         </div>
       </div>

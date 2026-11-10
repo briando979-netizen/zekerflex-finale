@@ -1,5 +1,5 @@
-import { Card, Empty, ITruck, PageHead } from "@/components/studio/ui";
+import Verzending from "@/components/studio/Verzending";
 
 export default function StudioVerzendingPage() {
-  return (<><PageHead title="Verzending" /><Card><Empty icon={<ITruck />} title="Binnenkort" text="Verzendtarieven en bezorgopties voor je webshop komen eraan." /></Card></>);
+  return <Verzending />;
 }

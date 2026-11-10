@@ -142,33 +142,45 @@ const betalenSchema = z.object({
 /** VAT on orders (lib/sites/types.ts BtwInstelling). */
 const btwSchema = z.object({ inclusief: z.boolean(), standaard: z.union([z.literal(21), z.literal(9), z.literal(0)]), kor: z.boolean() });
 
-export const winkelSchema = z
-  .object({
-    producten: z.array(productSchema).max(300),
-    bestellen: z.boolean(),
-    levering: z.object({ afhalen: z.boolean(), bezorgen: z.boolean(), bezorgkostenCents: cents, gratisVanafCents: cents.nullable() }),
-    betaalTekst: z.string().trim().max(600),
-    verzendmethoden: z.array(verzendmethodeSchema).max(12).optional(),
-    kortingscodes: z.array(kortingscodeSchema).max(200).optional(),
-    betalen: betalenSchema.optional(),
-    btw: btwSchema.optional(),
-  })
-  .superRefine((w, ctx) => {
-    const slugs = w.producten.map((p) => p.slug);
-    if (new Set(slugs).size !== slugs.length) ctx.addIssue({ code: "custom", message: "Twee producten hebben hetzelfde webadres." });
-    if (new Set(w.producten.map((p) => p.id)).size !== w.producten.length) ctx.addIssue({ code: "custom", message: "Een product staat er twee keer in." });
-    if (w.bestellen && !verzendmethodenVan(w).some((m) => m.actief)) {
-      ctx.addIssue({ code: "custom", message: w.verzendmethoden ? "Zet minstens één verzendmethode aan, of zet online bestellen uit." : "Kies of klanten hun bestelling afhalen, laten bezorgen of allebei." });
-    }
-    if (w.verzendmethoden && new Set(w.verzendmethoden.map((m) => m.id)).size !== w.verzendmethoden.length) ctx.addIssue({ code: "custom", message: "Een verzendmethode staat er twee keer in." });
-    const codes = (w.kortingscodes ?? []).map((k) => k.code);
-    const dubbel = codes.find((c, i) => codes.indexOf(c) !== i);
-    if (dubbel) ctx.addIssue({ code: "custom", message: `De kortingscode ${dubbel} staat er twee keer in.` });
-    else if (new Set((w.kortingscodes ?? []).map((k) => k.id)).size !== codes.length) ctx.addIssue({ code: "custom", message: "Een kortingscode staat er twee keer in." });
-    if (w.betalen?.methoden.includes("overboeking") && !(ibanGeldig(w.betalen.iban) && w.betalen.tenaamstelling)) {
-      ctx.addIssue({ code: "custom", message: "Vul voor betalen per overboeking een geldig IBAN en de naam van de rekening in." });
-    }
-  });
+/** The fields of a shop, before the checks across fields. */
+const winkelVelden = z.object({
+  producten: z.array(productSchema).max(300),
+  bestellen: z.boolean(),
+  levering: z.object({ afhalen: z.boolean(), bezorgen: z.boolean(), bezorgkostenCents: cents, gratisVanafCents: cents.nullable() }),
+  betaalTekst: z.string().trim().max(600),
+  verzendmethoden: z.array(verzendmethodeSchema).max(12).optional(),
+  kortingscodes: z.array(kortingscodeSchema).max(200).optional(),
+  betalen: betalenSchema.optional(),
+  btw: btwSchema.optional(),
+});
+
+export const winkelSchema = winkelVelden.superRefine((w, ctx) => {
+  const slugs = w.producten.map((p) => p.slug);
+  if (new Set(slugs).size !== slugs.length) ctx.addIssue({ code: "custom", message: "Twee producten hebben hetzelfde webadres." });
+  if (new Set(w.producten.map((p) => p.id)).size !== w.producten.length) ctx.addIssue({ code: "custom", message: "Een product staat er twee keer in." });
+  if (w.bestellen && !verzendmethodenVan(w).some((m) => m.actief)) {
+    ctx.addIssue({ code: "custom", message: w.verzendmethoden ? "Zet minstens één verzendmethode aan, of zet online bestellen uit." : "Kies of klanten hun bestelling afhalen, laten bezorgen of allebei." });
+  }
+  if (w.verzendmethoden && new Set(w.verzendmethoden.map((m) => m.id)).size !== w.verzendmethoden.length) ctx.addIssue({ code: "custom", message: "Een verzendmethode staat er twee keer in." });
+  const codes = (w.kortingscodes ?? []).map((k) => k.code);
+  const dubbel = codes.find((c, i) => codes.indexOf(c) !== i);
+  if (dubbel) ctx.addIssue({ code: "custom", message: `De kortingscode ${dubbel} staat er twee keer in.` });
+  else if (new Set((w.kortingscodes ?? []).map((k) => k.id)).size !== codes.length) ctx.addIssue({ code: "custom", message: "Een kortingscode staat er twee keer in." });
+  if (w.betalen?.methoden.includes("overboeking") && !(ibanGeldig(w.betalen.iban) && w.betalen.tenaamstelling)) {
+    ctx.addIssue({ code: "custom", message: "Vul voor betalen per overboeking een geldig IBAN en de naam van de rekening in." });
+  }
+});
+
+/**
+ * One part of the shop (Webshop → Kortingen, Verzending, Betalen, Instellingen): everything except the
+ * products, so a page that has been open for a while never overwrites stock that orders lowered meanwhile.
+ * btw or betalen null = remove the setting. The server merges it with the shop and checks the whole.
+ */
+export const winkelDeelSchema = winkelVelden
+  .omit({ producten: true })
+  .partial()
+  .extend({ btw: btwSchema.nullable().optional(), betalen: betalenSchema.nullable().optional() })
+  .strict();
 
 const page = z.object({
   id: z.string().max(40),
