@@ -176,6 +176,38 @@ Română: Vești bune: ZekerFlex este acum disponibil și pentru iPhone, ca vers
 
 Українською: Гарна новина: ZekerFlex тепер доступний і для iPhone — як тестова версія через TestFlight від Apple. 1. Встановіть безкоштовний застосунок TestFlight з App Store. 2. Відкрийте це посилання на iPhone: https://testflight.apple.com/join/2QKhAHn8 3. Натисніть «Прийняти», а потім «Встановити». Це тестова версія, тож іноді щось може не працювати; завдання, які ви зараз бачите, — тестові. Маєте відгук? Просто відповідайте на цей лист.`,
   },
+  {
+    // 11 nov: versie 1.0 is door Apple goedgekeurd (READY_FOR_SALE). Pas versturen als de App Store-pagina
+    // openbaar is (vlag iphone-appstore aan; open de link eerst zelf op een iPhone).
+    label: "iPhone-app staat in de App Store",
+    subject: "ZekerFlex staat nu in de App Store 📱",
+    body: `Hoi,
+
+Goed nieuws: de ZekerFlex-app voor iPhone staat nu in de App Store. Gratis te downloaden: https://apps.apple.com/nl/app/zekerflex/id6832775836
+
+In de app vind je klussen bij jou in de buurt, reageer je met één tik, check je in op locatie, schrijf je je uren en volg je je uitbetalingen. Je kunt je identiteit laten controleren door de chip van je ID-kaart of paspoort met je iPhone te lezen, en je krijgt een melding zodra er iets voor je klaarstaat.
+
+Zo begin je:
+1. Open de link hierboven op je iPhone, of zoek in de App Store op "ZekerFlex".
+2. Tik op "Download" (het wolkje).
+3. Log in met hetzelfde e-mailadres en wachtwoord als op zekerflex.com.
+
+Heb je Android? Daarvoor staat een testversie klaar: https://zekerflex.com/app
+
+Let op: ZekerFlex is nog in opbouw. De klussen die je nu ziet zijn testklussen: je hoeft er niet heen en er hoort geen betaling bij. Zie je iets wat niet werkt of beter kan? Antwoord gewoon op deze mail.
+
+Het ZekerFlex-team
+
+---
+
+English: Good news: the ZekerFlex app for iPhone is now in the App Store, free to download: https://apps.apple.com/nl/app/zekerflex/id6832775836 Open the link on your iPhone (or search the App Store for "ZekerFlex"), tap Download and sign in with the same email and password as on zekerflex.com. ZekerFlex is still being built; the jobs you see now are test jobs. Feedback? Just reply to this email.
+
+Polski: Dobra wiadomość: aplikacja ZekerFlex na iPhone'a jest już w App Store, do pobrania za darmo: https://apps.apple.com/nl/app/zekerflex/id6832775836 Otwórz link na iPhonie (albo wyszukaj „ZekerFlex” w App Store), stuknij „Pobierz” i zaloguj się tym samym e-mailem i hasłem co na zekerflex.com. ZekerFlex jest jeszcze w budowie; zlecenia, które teraz widzisz, są testowe. Masz uwagi? Po prostu odpowiedz na tę wiadomość.
+
+Română: Vești bune: aplicația ZekerFlex pentru iPhone este acum în App Store, gratuită: https://apps.apple.com/nl/app/zekerflex/id6832775836 Deschide linkul pe iPhone (sau caută „ZekerFlex” în App Store), atinge „Obține” și conectează-te cu același e-mail și aceeași parolă ca pe zekerflex.com. ZekerFlex este încă în construcție; joburile pe care le vezi acum sunt joburi de test. Ai sugestii? Răspunde la acest e-mail.
+
+Українською: Гарна новина: застосунок ZekerFlex для iPhone тепер є в App Store, безкоштовно: https://apps.apple.com/nl/app/zekerflex/id6832775836 Відкрийте посилання на iPhone (або знайдіть «ZekerFlex» в App Store), натисніть «Завантажити» та увійдіть з тією ж електронною поштою й паролем, що й на zekerflex.com. ZekerFlex ще розбудовується; завдання, які ви зараз бачите, — тестові. Маєте відгук? Просто відповідайте на цей лист.`,
+  },
 ];
 
 const STATUS: Record<Sub["status"], { label: string; tone: Tone }> = {
