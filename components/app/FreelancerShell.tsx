@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
+import { HulpCentrum } from "@/components/app/HulpCentrum";
+import type { HulpTeksten } from "@/lib/hulp/hulpjes";
 import { ICompass, IBriefcase, IClock, IChat, IUser, ISearch, IWallet } from "@/components/app/icons";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import type { Theme } from "@/lib/theme/config";
@@ -76,8 +78,14 @@ export function FreelancerShell({
   inApp = false,
   canSwitchToEmployer = false,
   onboarding = false,
+  hulp,
+  handleidingen = null,
   children,
 }: {
+  /** het hulpcentrum achter het vraagteken, in de taal van de werker (lib/hulp/teksten.ts) */
+  hulp?: HulpTeksten;
+  /** adres van de handleidingen (Outline); null = niet ingesteld */
+  handleidingen?: string | null;
   /** de onboarding is nog niet ingevuld (lib/onboarding/werker-poort.ts): alleen Start en Account */
   onboarding?: boolean;
   userName: string;
@@ -134,13 +142,15 @@ export function FreelancerShell({
               theme={theme}
               className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink"
             />
+            {/* op een telefoon niet: daar is Ontdekken (hetzelfde adres) de eerste tab, en het vraagteken heeft de plek nodig */}
             <Link
               href="/dashboard/klussen"
               aria-label={ft.nav.search}
-              className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink"
+              className="hidden h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink sm:grid"
             >
               <ISearch />
             </Link>
+            {hulp && <HulpCentrum t={hulp} handleidingen={handleidingen} onboarding={onboarding} />}
             <NotificationsBell />
           </div>
           {/* in de kopbalk (een landmark), niet los onderaan de pagina */}

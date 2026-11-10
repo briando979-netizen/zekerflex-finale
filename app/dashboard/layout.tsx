@@ -20,6 +20,9 @@ import { BewaardeTikken } from "@/components/app/BewaardeTikken";
 import { ViewAsBanner } from "@/components/admin/ViewAsBanner";
 import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
+import { hulpTeksten } from "@/lib/hulp/teksten";
+import { kennisbankIngesteld } from "@/lib/kennisbank/outline";
+import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +54,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         inApp={await inAndroidApp()}
         canSwitchToEmployer={hasRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "DISPUTE_MANAGER", "PLATFORM_ADMIN")}
         onboarding={!onboardingKlaar}
+        // het vraagteken: alleen de teksten in de taal van de werker gaan mee (lib/hulp/teksten.ts)
+        hulp={hulpTeksten(locale)}
+        handleidingen={kennisbankIngesteld() ? `${outlinePubliekeUrl()}/` : null}
       >
         <IbanHoldBanner userId={principal.userId} />
         {/* in- en uitchecks die zonder bereik zijn bewaard: versturen zodra het kan (lib/checkin/wachtrij.ts) */}

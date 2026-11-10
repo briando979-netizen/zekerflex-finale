@@ -679,6 +679,23 @@ export function InboxPage({
     }
   };
 
+  // ?support=1 komt uit het hulpcentrum van de werker-app (components/app/HulpCentrum.tsx):
+  // meteen het gesprek met Support, één keer, en daarna uit de adresbalk (herladen opent het niet opnieuw)
+  const supportUitAdres = useRef(false);
+  const startSupportRef = useRef(startSupport);
+  useEffect(() => {
+    startSupportRef.current = startSupport;
+  });
+  useEffect(() => {
+    if (!me || supportUitAdres.current) return;
+    const adres = new URL(window.location.href);
+    if (adres.searchParams.get("support") !== "1") return;
+    supportUitAdres.current = true;
+    adres.searchParams.delete("support");
+    window.history.replaceState(window.history.state, "", `${adres.pathname}${adres.search}`);
+    void startSupportRef.current();
+  }, [me]);
+
   // The layout's ChatDock owns calls (ringing, the call screen); this only asks it to dial.
   const startCall = (mode: "audio" | "video" | "screen") => {
     if (!activeThread || activeThread.kind !== "direct") return;
