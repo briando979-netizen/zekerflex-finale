@@ -1,6 +1,7 @@
 "use client";
 
 import "maplibre-gl/dist/maplibre-gl.css";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GeoJSONSource, Map as MlMap, Marker } from "maplibre-gl";
 import { GEBOUWEN_3D, KAART_STIJLEN, kaartStijl, NL_GRENZEN, type KaartStijl } from "@/lib/kaart/stijl";
@@ -480,9 +481,9 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
             <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-full bg-[#FF5F1F] ring-2 ring-white" />
             Oranje stip: een bedrijf van ZekerFlex. Tik op een plek voor meer.
           </p>
-          <a href="/werkgever/kaart" className="mt-1 inline-block text-[0.7rem] font-semibold text-neutralx-600 underline underline-offset-2">
+          <Link href="/werkgever/kaart" className="mt-1 inline-block text-[0.7rem] font-semibold text-neutralx-600 underline underline-offset-2">
             Zet je eigen bedrijf op de kaart
-          </a>
+          </Link>
         </div>
 
         {modus === "meten" && (
