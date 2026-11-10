@@ -137,6 +137,15 @@ export const GRATIS_DIENSTEN: GratisDienst[] = [
     env: ["IMAGE_BASE_URL", "IMAGE_API_KEY"],
   },
   {
+    id: "gezicht",
+    naam: "Gezichtsvergelijking bij de ID-controle",
+    waarvoor: "De pasfoto op het document tegen de selfie, bij het verifiëren van een werker (lib/kyc/gezicht)",
+    nu: "Draait in de app zelf, op de processor van onze server; er gaat geen foto naar een andere partij",
+    eigen: "Twee open modellen van OpenCV Zoo: YuNet (MIT) vindt het gezicht, SFace (Apache 2.0) vergelijkt. Samen 39 MB, met een vaste hash. Eenmalig op de server zetten met deploy/scripts/gezichtsmodellen-ophalen.sh; zonder dat haalt de app ze bij het eerste gebruik zelf van github.com/opencv/opencv_zoo. Kost niets.",
+    status: "gratis",
+    env: ["GEZICHT_DATA_DIR"],
+  },
+  {
     id: "meldingen",
     naam: "Meldingen op de telefoon",
     waarvoor: "Push naar werkers, werkgevers en beheer",
