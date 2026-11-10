@@ -13,6 +13,23 @@ export interface PushBannerTexts {
   nietNu: string;
 }
 
+/** Teksten van de stap "Meldingen aanzetten" (variant "stap", /dashboard/eerste-indruk): vijf talen in lib/i18n/freelancer.ts. */
+export interface PushStapTexts {
+  knop: string;
+  bezig: string;
+  /** meldingen staan aan */
+  ok: string;
+  /** iPhone zonder beginscherm-app */
+  ios: string;
+  /** eerder geweigerd in de browser */
+  geweigerd: string;
+  /** eerder geweigerd in de geïnstalleerde app */
+  geweigerdApp: string;
+  /** de browser of de server kan geen meldingen */
+  nietMogelijk: string;
+  fout: string;
+}
+
 export const PUSH_BANNER_NL: PushBannerTexts = {
   aanzetten: "Zet meldingen aan, dan krijg je een seintje bij een dienst die begint, een oproep of een nieuw bericht — ook als ZekerFlex dicht is.",
   ios: "Op iPhone krijg je meldingen pas als ZekerFlex op je beginscherm staat: tik op Deel → Zet op beginscherm en open het daarvandaan.",
