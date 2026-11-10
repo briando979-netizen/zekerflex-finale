@@ -11,7 +11,12 @@ import type { SiteSoort } from "@/lib/sites/types";
  * lijst als het bedrijf de studio voor het eerst opent. Zonder sessie of bij een storing: geen
  * wisselaar (null); de studio werkt dan gewoon door.
  */
-export async function studioStand(soort: SiteSoort): Promise<DashboardStand | null> {
+export interface StudioStand extends DashboardStand {
+  /** de browser had dit dashboard al open (cookie); anders zet de studio het alsnog (StudioShell) */
+  cookieGoed: boolean;
+}
+
+export async function studioStand(soort: SiteSoort): Promise<StudioStand | null> {
   try {
     const principal = await getPrincipal();
     if (!principal) return null;
@@ -21,6 +26,7 @@ export async function studioStand(soort: SiteSoort): Promise<DashboardStand | nu
       actief: soort,
       dashboards: WERKRUIMTES.filter((d) => d === soort || w.dashboards.includes(d)),
       kanToevoegen: hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN"),
+      cookieGoed: w.soort === soort,
     };
   } catch {
     return null;

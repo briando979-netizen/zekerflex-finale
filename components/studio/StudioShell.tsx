@@ -81,7 +81,7 @@ const ELDERS: { href: string; label: string }[] = [
 ];
 
 /** `dashboards`: de stand van de wisselaar (lib/sites/studio-stand.ts); null = geen wisselaar. */
-export function StudioShell({ soort, dashboards, children }: { soort: SiteSoort; dashboards: DashboardStand | null; children: ReactNode }) {
+export function StudioShell({ soort, dashboards, children }: { soort: SiteSoort; dashboards: (DashboardStand & { cookieGoed?: boolean }) | null; children: ReactNode }) {
   return (
     <StudioProvider soort={soort}>
       <Shell dashboards={dashboards}>{children}</Shell>
@@ -89,9 +89,20 @@ export function StudioShell({ soort, dashboards, children }: { soort: SiteSoort;
   );
 }
 
-function Shell({ dashboards, children }: { dashboards: DashboardStand | null; children: ReactNode }) {
+function Shell({ dashboards, children }: { dashboards: (DashboardStand & { cookieGoed?: boolean }) | null; children: ReactNode }) {
   const { soort, base } = useStudio();
   const path = usePathname() ?? base;
+  // Rechtstreeks in de studio (bladwijzer, link): dan ook dit dashboard openzetten, zodat
+  // Facturen, Mail en /werkgever daarna het menu van de website of webshop tonen.
+  const zetOpen = dashboards !== null && dashboards.cookieGoed === false;
+  useEffect(() => {
+    if (!zetOpen) return;
+    void fetch("/api/werkgever/dashboard/wissel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ soort }),
+    }).catch(() => undefined);
+  }, [zetOpen, soort]);
   // het telefoonmenu hoort bij één pagina: na een klik op een onderdeel is het vanzelf dicht
   const [menuOp, setMenuOp] = useState<string | null>(null);
   const menu = menuOp === path;
