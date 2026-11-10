@@ -104,6 +104,46 @@ function VariantKiezer({ product, onKlaar, onSluit }: { product: SiteProduct; on
   );
 }
 
+/** De bon naar de klant mailen; het adres komt niet bij de verkoop of in een klantenlijst (alleen in de verzendlijst van de mail). */
+function BonMailen({ url, bestellingId }: { url: string; bestellingId: string }) {
+  const [email, setEmail] = useState("");
+  const [bezig, setBezig] = useState(false);
+  const [melding, setMelding] = useState<{ ok: boolean; tekst: string } | null>(null);
+  const stuur = async (e: FormEvent) => {
+    e.preventDefault();
+    const adres = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(adres)) return setMelding({ ok: false, tekst: "Vul een geldig e-mailadres in." });
+    setBezig(true);
+    setMelding(null);
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: bestellingId, email: adres }) }).catch(() => null);
+    setBezig(false);
+    if (!res?.ok) return setMelding({ ok: false, tekst: await foutVan(res, "Mailen lukte niet. Probeer het zo nog eens.") });
+    setEmail("");
+    setMelding({ ok: true, tekst: `De bon is verstuurd naar ${adres}.` });
+  };
+  return (
+    <form onSubmit={stuur} className="mx-auto mt-4 max-w-md border-t border-[#ececec] pt-4">
+      <label htmlFor="kassa-bon-mail" className="text-xs font-semibold text-[#616161]">
+        Bon mailen naar de klant
+      </label>
+      <div className="mt-1 flex gap-2">
+        <span className="min-w-0 flex-1">
+          <input id="kassa-bon-mail" type="email" inputMode="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="klant@voorbeeld.nl" maxLength={254} className={input} />
+        </span>
+        <button type="submit" disabled={bezig || !email.trim()} className={btn.secondary}>
+          {bezig ? "Versturen…" : "Mail de bon"}
+        </button>
+      </div>
+      {melding && (
+        <p role={melding.ok ? "status" : "alert"} className={`mt-2 text-sm ${melding.ok ? "text-[#0e5c4a]" : "text-[#8e0b21]"}`}>
+          {melding.tekst}
+        </p>
+      )}
+      <p className="mt-1 text-xs text-[#8a8a8a]">Het adres gebruiken we alleen voor deze mail; het komt niet bij de verkoop of in een klantenlijst.</p>
+    </form>
+  );
+}
+
 /** De bon in een eigen venster afdrukken: werkt met elke printer van de computer of de iPhone (AirPrint). */
 function drukAf(bon: KassaBon): void {
   const { kop, regels, voet } = bonOpmaak(bon, 32);
@@ -132,6 +172,7 @@ export default function Kassa() {
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [bon, setBon] = useState<KassaBon | null>(null);
+  const [bonId, setBonId] = useState<string | null>(null);
   const [vandaag, setVandaag] = useState<KassaDag | null>(null);
   const mandjeRef = useRef<HTMLDivElement>(null);
 
@@ -185,8 +226,9 @@ export default function Kassa() {
     }).catch(() => null);
     setBezig(false);
     if (!res?.ok) return setFout(await foutVan(res, "Afronden lukte niet. Er is niets afgeboekt; probeer het opnieuw."));
-    const d = (await res.json()) as { bon: KassaBon; vandaag?: KassaDag | null };
+    const d = (await res.json()) as { bon: KassaBon; bestelling?: { id: string }; vandaag?: KassaDag | null };
     setBon(d.bon);
+    setBonId(d.bestelling?.id ?? null);
     if (d.vandaag) setVandaag(d.vandaag);
     setStap("bon");
     setMandje([]);
@@ -196,6 +238,7 @@ export default function Kassa() {
 
   const nieuweVerkoop = () => {
     setBon(null);
+    setBonId(null);
     setStap("kiezen");
     setMethode("contant");
     setFout(null);
@@ -251,6 +294,7 @@ export default function Kassa() {
               Nieuwe verkoop
             </button>
           </div>
+          {bonId && <BonMailen key={bonId} url={api("/kassa/bon")} bestellingId={bonId} />}
         </Card>
       ) : (
         <div className={`grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] ${stap === "kiezen" && mandje.length ? "pb-20 lg:pb-0" : ""}`}>
