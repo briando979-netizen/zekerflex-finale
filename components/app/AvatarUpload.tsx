@@ -10,6 +10,8 @@ export interface AvatarUploadTexts {
   remove: string;
   hint: string;
   error: string;
+  /** knop "Foto maken" (camera van de telefoon); alleen in de grote variant */
+  camera?: string;
 }
 
 /** Vierkant bijsnijden rond het midden (max 800 px, JPEG) vóór het uploaden; lukt dat niet (bijv. HEIC), dan gaat het origineel mee. */
@@ -61,6 +63,7 @@ export function AvatarUpload({
   const [bust, setBust] = useState(0);
   const [err, setErr] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
 
   const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
 
@@ -108,6 +111,21 @@ export function AvatarUpload({
     />
   );
 
+  const cameraInvoer = (
+    <input
+      ref={cameraRef}
+      type="file"
+      accept="image/*"
+      capture="user"
+      hidden
+      onChange={(e) => {
+        const f = e.target.files?.[0];
+        if (f) void upload(f);
+        e.target.value = "";
+      }}
+    />
+  );
+
   if (groot) {
     return (
       <div className="flex flex-col items-center">
@@ -137,6 +155,11 @@ export function AvatarUpload({
           </button>
         </div>
         {busy && <p className="mt-2 text-xs text-neutralx-500" aria-live="polite">{tx.busy}</p>}
+        {tx.camera && !busy && (
+          <button type="button" onClick={() => cameraRef.current?.click()} className="btn-ghost mt-4 text-sm">
+            {tx.camera}
+          </button>
+        )}
         {hasAvatar && !busy && (
           <button type="button" onClick={remove} className="mt-3 text-sm text-neutralx-500 underline hover:text-crit">
             {tx.remove}
@@ -145,6 +168,7 @@ export function AvatarUpload({
         <p className="mt-1 text-center text-xs text-neutralx-400">{tx.hint}</p>
         {err && <p role="alert" className="mt-1 text-xs text-crit">{err}</p>}
         {invoer}
+        {cameraInvoer}
       </div>
     );
   }

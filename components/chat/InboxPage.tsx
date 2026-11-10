@@ -28,7 +28,6 @@ import {
 import { Composer, type OutgoingMessage } from "./Composer";
 import { UserCard } from "./UserCard";
 import { PeoplePicker, CommunityCreateModal, CommunityManageModal, ChatSettingsModal } from "./modals";
-import { PushToggle } from "@/components/app/PushToggle";
 import { SwipeRow, ThreadMenuSheet, PinModal, type MenuAction } from "./ThreadMenu";
 import { ChatSettingsPanel, readLook, type ChatLook } from "./ChatSettingsPanel";
 import { Portal } from "./Portal";
@@ -727,7 +726,6 @@ export function InboxPage({
     // tab bar on a phone (the banner used to come on top of the chat height).
     <div className={`flex ${mobileHeight} min-h-[26rem] flex-col gap-3 ${desktopHeight}`}>
     <div className="flex-shrink-0 empty:hidden">
-      <PushToggle variant="banner" />
     </div>
     <div className="chat-surface relative grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] overflow-hidden rounded-2xl border border-hair bg-white shadow-card md:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
       {/* ─── left pane ─── */}

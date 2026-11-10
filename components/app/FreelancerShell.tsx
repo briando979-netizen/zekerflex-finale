@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
-import { PushToggle } from "@/components/app/PushToggle";
 import { ICompass, IBriefcase, IClock, IChat, IUser, ISearch, IWallet } from "@/components/app/icons";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import type { Theme } from "@/lib/theme/config";
@@ -158,7 +157,6 @@ export function FreelancerShell({
         }`}
       >
         <div className={focused ? "" : "mx-auto max-w-3xl"}>
-          {!focused && !pathname.startsWith("/dashboard/berichten") && <PushToggle variant="banner" texts={ft.pushBanner} />}
           {children}
         </div>
       </main>

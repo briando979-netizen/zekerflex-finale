@@ -80,16 +80,11 @@ export function EersteIndrukScherm({
                   name={naam}
                   initialHasAvatar={fotoStart}
                   onChange={setHeeftFoto}
-                  texts={{ upload: t.foto.upload, change: t.foto.change, busy: t.foto.busy, remove: t.foto.remove, hint: t.foto.hint, error: t.foto.error }}
+                  texts={{ upload: t.foto.upload, change: t.foto.change, busy: t.foto.busy, remove: t.foto.remove, hint: t.foto.hint, error: t.foto.error, camera: t.foto.camera }}
                 />
               </div>
               {heeftFoto && (
                 <button type="button" onClick={() => setStap("ervaring")} className="btn-primary mt-8 block w-full py-3.5 text-center text-base">
-                  {t.foto.next}
-                </button>
-              )}
-              {!heeftFoto && (
-                <button type="button" onClick={() => setStap("ervaring")} className="mt-8 block w-full py-2 text-center text-sm font-medium text-neutralx-500 underline hover:text-ink">
                   {t.foto.next}
                 </button>
               )}

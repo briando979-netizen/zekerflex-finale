@@ -1201,6 +1201,7 @@ const nl = {
       hint: "JPG, PNG of WebP, maximaal 8 MB.",
       error: "Uploaden mislukt. Probeer het nog eens.",
       next: "Volgende",
+      camera: "Foto maken",
     },
     ervaring: {
       title: "Wat is je werkervaring?",
@@ -2430,6 +2431,7 @@ const en: FreelancerDict = {
       hint: "JPG, PNG or WebP, up to 8 MB.",
       error: "Upload failed. Please try again.",
       next: "Next",
+      camera: "Take a photo",
     },
     ervaring: {
       title: "What is your work experience?",
@@ -3657,6 +3659,7 @@ const pl: FreelancerDict = {
       hint: "JPG, PNG lub WebP, maks. 8 MB.",
       error: "Przesyłanie nie powiodło się. Spróbuj ponownie.",
       next: "Dalej",
+      camera: "Zrób zdjęcie",
     },
     ervaring: {
       title: "Jakie jest Twoje doświadczenie zawodowe?",
@@ -4884,6 +4887,7 @@ const ro: FreelancerDict = {
       hint: "JPG, PNG sau WebP, maximum 8 MB.",
       error: "Încărcarea a eșuat. Încearcă din nou.",
       next: "Înainte",
+      camera: "Fă o poză",
     },
     ervaring: {
       title: "Care este experiența ta de muncă?",
@@ -6111,6 +6115,7 @@ const uk: FreelancerDict = {
       hint: "JPG, PNG або WebP, до 8 МБ.",
       error: "Не вдалося завантажити. Спробуйте ще раз.",
       next: "Далі",
+      camera: "Зробити фото",
     },
     ervaring: {
       title: "Який у вас досвід роботи?",
