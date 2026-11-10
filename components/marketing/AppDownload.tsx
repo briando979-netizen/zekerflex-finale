@@ -6,6 +6,8 @@ import { CONTACTS } from "@/lib/seo";
 // public. The test link only works for Gmail addresses on the tester list, so
 // the badge says "testversie" and the block below explains how to get on it.
 const PLAY_TEST_URL = "https://play.google.com/apps/testing/com.zekerflex.app";
+// De iPhone-app staat als testversie in TestFlight; elke iPhone kan meedoen via deze openbare link.
+const TESTFLIGHT_URL = "https://testflight.apple.com/join/2QKhAHn8";
 const TESTER_MAILTO = `mailto:${CONTACTS.support}?subject=${encodeURIComponent("Ik wil de ZekerFlex-app testen")}&body=${encodeURIComponent("Mijn Gmail-adres (zoals in de Play Store op mijn telefoon):\n\n")}`;
 
 function PlayBadgeTest() {
@@ -27,6 +29,47 @@ function PlayBadgeTest() {
         <span className="block text-sm font-bold">Google Play</span>
       </span>
     </a>
+  );
+}
+
+function AppleBadgeTest() {
+  return (
+    <a
+      href={TESTFLIGHT_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-3 rounded-xl border border-white/20 bg-white/[0.06] px-4 py-2.5 text-white transition hover:bg-white/[0.12]"
+    >
+      <svg width="20" height="22" viewBox="0 0 24 24" aria-hidden fill="currentColor">
+        <path d="M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.8-3.5.8-.7 0-1.8-.8-3-.8-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2.1-1.1 2.8-2.2.9-1.3 1.3-2.5 1.3-2.6 0 0-2.5-1-2.5-3.8ZM14.2 5.9c.6-.8 1.1-1.8.9-2.9-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-1 2.8 1 .1 2.1-.5 2.8-1.3Z" />
+      </svg>
+      <span className="text-left leading-tight">
+        <span className="block text-[10px] uppercase tracking-wide text-brand-mint">Testversie · iPhone</span>
+        <span className="block text-sm font-bold">TestFlight</span>
+      </span>
+    </a>
+  );
+}
+
+function IphoneNotice() {
+  return (
+    <div className="mt-6 max-w-md rounded-xl border border-brand-mint/30 bg-brand-mint/[0.06] p-4 text-sm text-white/80">
+      <p className="font-semibold text-white">De iPhone-app is in testfase</p>
+      <p className="mt-1">
+        Je kunt hem nu al op je iPhone zetten via TestFlight, de testdienst van Apple. Het is nog een testversie: er kan af en toe
+        iets haperen.
+      </p>
+      <ol className="mt-3 list-decimal space-y-1 pl-5 text-white/75">
+        <li>Installeer de gratis app TestFlight uit de App Store.</li>
+        <li>
+          Open op je iPhone{" "}
+          <a href={TESTFLIGHT_URL} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-mint underline">
+            de testlink
+          </a>{" "}
+          en tik op <em>Accepteren</em> en dan <em>Installeren</em>.
+        </li>
+      </ol>
+    </div>
   );
 }
 
@@ -77,13 +120,17 @@ export function AppDownload({ standalone = false }: { standalone?: boolean }) {
             </p>
             <div className="mt-7 flex flex-wrap items-start gap-3">
               <InstallAppButton />
+              <AppleBadgeTest />
               <PlayBadgeTest />
             </div>
             {standalone ? (
-              <TestNotice />
+              <>
+                <IphoneNotice />
+                <TestNotice />
+              </>
             ) : (
               <p className="mt-3 text-xs text-white/65">
-                Android-app in testfase —{" "}
+                iPhone- en Android-app in testfase —{" "}
                 <Link href="/app" className="underline hover:text-white/80">
                   zo doe je mee
                 </Link>
