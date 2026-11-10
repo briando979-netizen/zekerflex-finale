@@ -42,6 +42,8 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/terminal/abc123-sleutel",
     "/api/installatie/abc123def456.sleutel", // klant en monteur volgen een installatie met de code in het adres
     "/api/installatie/abc123def456.sleutel/positie",
+    "/api/kaart/zoek", // ZekerFlex Kaart: adres zoeken (PDOK), IP-begrensd
+    "/api/kaart/route", // ZekerFlex Kaart: route plannen via onze eigen routeplanner, IP-begrensd
     "/api/chip/sleutel", // the Android app opens the ID chip with a one-time code
     "/api/chip/klaar",
     "/api/id-overdracht/open", // the phone (not logged in) continues the ID scan with a one-time code

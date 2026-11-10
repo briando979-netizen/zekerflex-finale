@@ -45,7 +45,7 @@ const PUBLIC_PREFIXES = [
   "/api/rekentools", // "stuur mij de uitkomst" op de openbare rekentools: IP-begrensd, verborgen anti-botveld, toestemming verplicht; rekent zelf opnieuw (lib/rekentools/uitkomst.ts)
   "/api/klus-plaatsen", // /klus-plaatsen: de openbare voorpagina van een bedrijf lezen om de klus in te vullen; IP- en dagbegrenzing, alleen openbare adressen, niets bewaard (app/api/klus-plaatsen/website)
   "/api/media/youtube", // eigen kopie van een YouTube-voorbeeldplaatje (klik-om-af-te-spelen video); alleen YouTube-ids, één vaste host, IP-begrensd
-  "/api/kaart", // ZekerFlex Kaart: adres zoeken (PDOK, IP-begrensd) en luchtfoto-tegels (PDOK, alleen NL); alleen lezen, geen gegevens van gebruikers
+  "/api/kaart", // ZekerFlex Kaart: adres zoeken (PDOK, IP-begrensd), luchtfoto-tegels (PDOK, alleen NL) en route plannen (onze eigen routeplanner, IP-begrensd, alleen NL, niets bewaard); alleen lezen, geen gegevens van gebruikers
   "/api/domeinen", // domeinnaam zoeken (alleen lezen, vaste RDAP-adressen) en aanvragen (toestemming verplicht, alleen van de eigen site); beide IP-begrensd (lib/domeinen)
   "/api/horeca/site", // horecasite: bestellen via de QR-code op tafel (IP-begrensd, tafelcode verplicht) en de bestelling volgen; elke route controleert zelf (lib/horeca). Het beheer (/api/horeca/beheer) blijft achter de ZekerFlex-login
   "/api/oidc", // "Inloggen met ZekerFlex" (lib/oidc): authorize eist zelf een sessie (anders naar /login), token en userinfo zijn voor de dienst (client-geheim / toegangstoken), jwks is openbaar
