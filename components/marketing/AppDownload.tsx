@@ -189,6 +189,14 @@ function TelefoonVoorbeeld() {
               </div>
               <span className="h-2 w-2 rounded-full bg-brand-mint" />
             </div>
+            <div className="flex items-center gap-2.5 rounded-xl bg-white/[0.07] p-2">
+              <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-mint/20 text-sm">🕒</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[10.5px] font-semibold text-white">Uren indienen</p>
+                <p className="text-[9px] text-white/60">Na je dienst, in een paar tikken</p>
+              </div>
+              <span className="h-2 w-2 rounded-full bg-white/25" />
+            </div>
           </div>
 
           {/* onderbalk */}
