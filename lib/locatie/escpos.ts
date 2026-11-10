@@ -34,7 +34,8 @@ export function naarBytes(tekst: string): number[] {
   return out;
 }
 
-class Schrijver {
+/** Bouwt ESC/POS-bytes regel voor regel; ook gebruikt voor de kassabon (lib/sites/kassa-escpos.ts). */
+export class Schrijver {
   private bytes: number[] = [];
   init(): this {
     this.bytes.push(ESC, 0x40); // reset

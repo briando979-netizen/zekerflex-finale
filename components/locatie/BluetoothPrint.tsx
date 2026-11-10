@@ -20,7 +20,19 @@ interface BluetoothLike {
 
 export const bluetoothBeschikbaar = (): boolean => typeof navigator !== "undefined" && "bluetooth" in navigator;
 
-export function BluetoothPrint({ inhoud, onKlaar, className = "" }: { inhoud: LabelInhoud; onKlaar?: (printer: string) => void; className?: string }) {
+export function BluetoothPrint({
+  inhoud,
+  maakBytes,
+  onKlaar,
+  className = "",
+}: {
+  /** een label of incheckbon (lib/locatie/modules.ts) */
+  inhoud?: LabelInhoud;
+  /** of eigen bytes voor deze rolbreedte, bv. een kassabon (lib/sites/kassa-escpos.ts) */
+  maakBytes?: (rol: Rolbreedte) => Uint8Array;
+  onKlaar?: (printer: string) => void;
+  className?: string;
+}) {
   const [rol, setRol] = useState<Rolbreedte>(58);
   const [bezig, setBezig] = useState(false);
   const [melding, setMelding] = useState<string | null>(null);
@@ -55,7 +67,8 @@ export function BluetoothPrint({ inhoud, onKlaar, className = "" }: { inhoud: La
         }
       }
       if (!kenmerk) throw new Error("Deze printer heeft geen bekend printkanaal.");
-      const bytes = labelNaarEscPos(inhoud, { rol, snijden: true });
+      const bytes = maakBytes ? maakBytes(rol) : inhoud ? labelNaarEscPos(inhoud, { rol, snijden: true }) : null;
+      if (!bytes) throw new Error("Er is niets om te printen.");
       for (const brok of inBrokken(bytes)) {
         const view = new Uint8Array(brok) as Uint8Array<ArrayBuffer>;
         if (kenmerk.writeValueWithoutResponse) await kenmerk.writeValueWithoutResponse(view);
