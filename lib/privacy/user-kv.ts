@@ -66,6 +66,8 @@ export const ERASABLE_KV_PREFIXES = [
   // werkervaring (lib/werker/ervaring-store.ts) en de eenmalige melding "ID geverifieerd" (lib/onboarding/id-geverifieerd.ts)
   "werker-ervaring:",
   "werker-id-melding:",
+  // de mail "aanmelding compleet" (lib/onboarding/aanmelding-compleet.ts): open en gemeld
+  "werker-aanmelding:",
   "werker-taal:",
 ] as const;
 

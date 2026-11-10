@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { idGeverifieerdEmail, isReservedTestAddress, sendMail } from "@/lib/mail";
 import { sendLocalizedPush } from "@/lib/notifications/localized-push";
+import { kanReagerenOpKlussen } from "@/lib/onboarding/kan-reageren";
 
 // ---------------------------------------------------------------------------
 // De melding aan een werker zodra zijn ID geverifieerd is (11 nov 2026): een push in zijn
@@ -19,6 +20,11 @@ import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 
 const sleutel = (userId: string) => `werker-id-melding:${userId}`;
 
+/** Wat de ID-melding van deze werker al zei (null = nog niet verstuurd). Voor lib/onboarding/aanmelding-compleet.ts. */
+export async function idMeldingStand(userId: string): Promise<{ at: string; kanReageren?: boolean } | null> {
+  return kvGet<{ at: string; kanReageren?: boolean }>(sleutel(userId));
+}
+
 export type IdMeldingUitslag =
   | { verstuurd: true; push: number; mail: boolean }
   | { verstuurd: false; reden: "al-gemeld" | "geen-werker" | "niet-geverifieerd" | "fout" };
@@ -33,8 +39,12 @@ export async function meldIdGeverifieerd(userId: string, now = new Date()): Prom
     if (!user || user.disabledAt || !user.memberships.some((m) => m.role === "FREELANCER")) return { verstuurd: false, reden: "geen-werker" };
     if (user.kycStatus !== "VERIFIED") return { verstuurd: false, reden: "niet-geverifieerd" };
 
+    // kan de werker nu al echt reageren (start ingevuld, IBAN, …)? Dan zegt de mail dat, zoals bij "aanmelding
+    // compleet" (lib/onboarding/aanmelding-compleet.ts), die hierop let om niet twee keer hetzelfde te sturen
+    const reageren = await kanReagerenOpKlussen(userId, now);
+
     // eerst de markering, dan versturen: liever één melding te weinig dan er twee
-    await kvSet(sleutel(userId), { at: now.toISOString() });
+    await kvSet(sleutel(userId), { at: now.toISOString(), kanReageren: reageren.ok });
 
     const push = await sendLocalizedPush([userId], (t) => ({
       title: t.idOkTitle,
@@ -49,7 +59,7 @@ export async function meldIdGeverifieerd(userId: string, now = new Date()): Prom
     // een testaccount (.test/.example/…) krijgt geen echte mail
     let mail = false;
     if (!isReservedTestAddress(user.email)) {
-      const r = await sendMail({ ...idGeverifieerdEmail(user.fullName, env.APP_BASE_URL), to: user.email }).catch(() => null);
+      const r = await sendMail({ ...idGeverifieerdEmail(user.fullName, env.APP_BASE_URL, reageren.ok), to: user.email }).catch(() => null);
       mail = Boolean(r?.delivered);
     }
     return { verstuurd: true, push, mail };

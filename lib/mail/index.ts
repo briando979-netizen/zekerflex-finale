@@ -569,30 +569,93 @@ export function onboardingReminderEmail(
 }
 
 /**
- * Het ID van een werker is geverifieerd (lib/onboarding/id-geverifieerd.ts). We zeggen alleen wat
- * voor het ID geldt; of hij al kan reageren hangt ook van de rest van zijn aanmelding af.
- * Valt onder "Tips" (kind "onboarding"): afmelden kan onderaan.
+ * Het ID van een werker is geverifieerd (lib/onboarding/id-geverifieerd.ts). "Je kunt vanaf nu
+ * reageren" alleen als dat echt zo is (lib/onboarding/kan-reageren.ts); anders zeggen we alleen wat
+ * voor het ID geldt. Valt onder "Tips" (kind "onboarding"): afmelden kan onderaan.
  */
-export function idGeverifieerdEmail(fullName: string, appUrl: string): MailInput {
+export function idGeverifieerdEmail(fullName: string, appUrl: string, kanReageren = false): MailInput {
   const first = fullName.split(" ")[0] || fullName;
   const href = `${appUrl.replace(/\/+$/, "")}/dashboard/eerste-indruk`;
   const subject = "Je ID is geverifieerd";
+  const stand = kanReageren
+    ? "Je kunt vanaf nu reageren op klussen."
+    : "Je kunt op klussen reageren zodra de rest van je aanmelding klopt.";
   return {
     to: "",
     subject,
     kind: "onboarding",
     text: `Hoi ${first},
 
-Je ID is geverifieerd. Je kunt op klussen reageren zodra de rest van je aanmelding klopt.
+Je ID is geverifieerd. ${stand}
 
 Met een duidelijke profielfoto en je werkervaring kunnen opdrachtgevers je beter inschatten. Beide stappen zijn optioneel en kosten een paar minuten: ${href}`,
     html: shell(
       subject,
       `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${escapeHtml(first)}, je ID is geverifieerd.</p>
-       <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Je kunt op klussen reageren zodra de rest van je aanmelding klopt.</p>
+       <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">${stand}</p>
        <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#3C4A42">Met een duidelijke profielfoto en je werkervaring kunnen opdrachtgevers je beter inschatten. Beide stappen zijn optioneel en kosten een paar minuten.</p>
        <p style="margin:0">${button(href, "Maak een goede eerste indruk")}</p>`,
-      "Je kunt op klussen reageren zodra de rest van je aanmelding klopt.",
+      stand,
+    ),
+  };
+}
+
+export type AanmeldingCompleetSoort = "kan-reageren" | "nog-iets" | "id-in-controle";
+
+/**
+ * De werker heeft alle stappen van de start ingevuld (lib/onboarding/aanmelding-compleet.ts). Eén
+ * mail, die zegt hoe het ervoor staat: meteen reageren, nog één ding (de reden uit
+ * lib/fiscal/eligibility.ts, bijv. het IBAN), of we controleren nog het ID (dan volgt de mail
+ * "Je ID is geverifieerd"). Over de eigen account: altijd bezorgd (geen optionele categorie).
+ */
+export function aanmeldingCompleetEmail(input: {
+  fullName: string;
+  appUrl: string;
+  soort: AanmeldingCompleetSoort;
+  /** bij "nog-iets": wat er nog ontbreekt, in gewone taal */
+  reden?: string | null;
+}): MailInput {
+  const first = input.fullName.split(" ")[0] || input.fullName;
+  const basis = input.appUrl.replace(/\/+$/, "");
+  const klussen = `${basis}/dashboard/klussen`;
+  const subject =
+    input.soort === "kan-reageren"
+      ? "Je aanmelding is compleet: je kunt reageren op klussen"
+      : input.soort === "nog-iets"
+        ? "Je aanmelding is compleet: nog één ding"
+        : "We hebben je gegevens ontvangen";
+  const alineas =
+    input.soort === "kan-reageren"
+      ? ["Je gegevens zijn compleet en je ID is geverifieerd.", "Je kunt vanaf nu reageren op klussen."]
+      : input.soort === "nog-iets"
+        ? [
+            "Je gegevens zijn compleet en je ID is geverifieerd.",
+            input.reden ? `Nog één ding voordat je kunt reageren op klussen: ${input.reden}` : "Nog één ding voordat je kunt reageren op klussen: open de app, daar zie je wat er nog nodig is.",
+          ]
+        : [
+            "Bedankt, je aanmelding is compleet.",
+            "We controleren nu je ID. Zodra dat klaar is, krijg je van ons een mail. Je kunt alvast rondkijken welke klussen er zijn.",
+          ];
+  const knop = input.soort === "kan-reageren" ? "Bekijk de klussen" : input.soort === "nog-iets" ? "Open ZekerFlex" : "Kijk alvast rond";
+  const tip = "Met een duidelijke profielfoto en je werkervaring kiezen opdrachtgevers sneller voor jou.";
+  return {
+    to: "",
+    subject,
+    kind: "aanmelding-compleet",
+    text: `Hoi ${first},
+
+${alineas.join("\n\n")}
+
+${tip}
+
+${klussen}`,
+    html: shell(
+      subject,
+      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${escapeHtml(first)},</p>
+       ${alineas.map((a) => `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">${escapeHtml(a)}</p>`).join("\n       ")}
+       <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#3C4A42">${escapeHtml(tip)}</p>
+       <p style="margin:0">${button(klussen, knop)}</p>`,
+      alineas[alineas.length - 1] ?? subject,
     ),
   };
 }
