@@ -10,6 +10,7 @@ const ALLES: WerkerPoortFeiten = {
   identiteitIngestuurd: true,
   werkrechtIngevuld: true,
   tweestapAan: true,
+  fotoGezet: true,
 };
 
 describe("werkerOnboardingKlaar", () => {
@@ -47,6 +48,7 @@ const h = vi.hoisted(() => ({
   werkrecht: [{ land: "NL", stand: "verklaring-nodig" }] as { land: string; stand: string }[] | null,
   tweestap: false,
   passkeys: 0,
+  foto: true as boolean,
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -64,6 +66,7 @@ vi.mock("@/lib/fiscal/store", () => ({
 }));
 vi.mock("@/lib/agreements/uitzend-contract", () => ({ activeUitzendContract: async () => null }));
 vi.mock("@/lib/worker/branche-store", () => ({ getBrancheKeuze: async () => h.branches }));
+vi.mock("@/lib/profile/store", () => ({ getUserProfileExtra: async () => (h.foto ? { avatarUploadId: "up1" } : {}) }));
 vi.mock("@/lib/auth/two-factor", () => ({ hasTwoFactor: async () => h.tweestap }));
 vi.mock("@/lib/werkrecht/store", () => ({
   werkrechtOverzicht: async () => {
@@ -82,6 +85,15 @@ describe("werkerPoortStand", () => {
     h.werkrecht = [{ land: "NL", stand: "wacht" }];
     h.tweestap = true;
     h.passkeys = 0;
+    h.foto = true;
+  });
+
+  it("zonder profielfoto: niet klaar", async () => {
+    const { werkerPoortStand } = await import("@/lib/onboarding/werker-poort-server");
+    h.foto = false;
+    const s = await werkerPoortStand("u1");
+    expect(s.fotoGezet).toBe(false);
+    expect(s.klaar).toBe(false);
   });
 
   it("zonder tweestapsverificatie en zonder passkey: niet klaar; een passkey telt ook", async () => {

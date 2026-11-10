@@ -19,6 +19,9 @@ const nl = {
     emailStep: "Bevestig je e-mailadres",
     gegevensStep: "Wie ben jij?",
     identiteitStep: "ID-check",
+    fotoStep: "Profielfoto",
+    fotoBody: "Een foto van jezelf: opdrachtgevers zien die als je reageert op een klus. Maak er nu een of kies er een uit je galerij.",
+    fotoCta: "Foto toevoegen",
     kindHint: "Dit bepaalt hoe je betaald wordt en wat we nog van je vragen. Je kunt het later aanpassen onder Fiscaal.",
     kinds: {
       zzp: ["ZZP'er", "Je werkt voor jezelf en factureert zelf. Je hebt een KVK-nummer of een EU-btw-nummer."],
@@ -1252,6 +1255,9 @@ const en: FreelancerDict = {
     emailStep: "Confirm your e-mail address",
     gegevensStep: "Who are you?",
     identiteitStep: "ID check",
+    fotoStep: "Profile photo",
+    fotoBody: "A photo of yourself: clients see it when you respond to a job. Take one now or pick one from your gallery.",
+    fotoCta: "Add a photo",
     kindHint: "This decides how you get paid and what else we ask of you. You can change it later under Tax.",
     kinds: {
       zzp: ["Self-employed (ZZP)", "You work for yourself and invoice yourself. You have a Dutch KVK number or an EU VAT number."],
@@ -2480,6 +2486,9 @@ const pl: FreelancerDict = {
     emailStep: "Potwierdź adres e-mail",
     gegevensStep: "Kim jesteś?",
     identiteitStep: "Weryfikacja dowodu",
+    fotoStep: "Zdjęcie profilowe",
+    fotoBody: "Twoje zdjęcie: zleceniodawcy widzą je, gdy odpowiadasz na zlecenie. Zrób je teraz lub wybierz z galerii.",
+    fotoCta: "Dodaj zdjęcie",
     kindHint: "Od tego zależy, jak dostajesz wypłatę i o co jeszcze zapytamy. Możesz to później zmienić w sekcji Podatki.",
     kinds: {
       zzp: ["Samozatrudniony (ZZP)", "Pracujesz na własny rachunek i sam wystawiasz faktury. Masz holenderski numer KVK lub numer VAT UE."],
@@ -3708,6 +3717,9 @@ const ro: FreelancerDict = {
     emailStep: "Confirmă adresa de e-mail",
     gegevensStep: "Cine ești?",
     identiteitStep: "Verificarea actului",
+    fotoStep: "Poză de profil",
+    fotoBody: "O poză cu tine: clienții o văd când răspunzi la o lucrare. Fă una acum sau alege una din galerie.",
+    fotoCta: "Adaugă o poză",
     kindHint: "Asta stabilește cum ești plătit și ce îți mai cerem. Poți schimba mai târziu la Fiscal.",
     kinds: {
       zzp: ["PFA (ZZP)", "Lucrezi pe cont propriu și emiți singur facturile. Ai un număr KVK olandez sau un cod de TVA din UE."],
@@ -4936,6 +4948,9 @@ const uk: FreelancerDict = {
     emailStep: "Підтвердь електронну адресу",
     gegevensStep: "Хто ти?",
     identiteitStep: "Перевірка документа",
+    fotoStep: "Фото профілю",
+    fotoBody: "Твоє фото: замовники бачать його, коли ти відгукуєшся на роботу. Зроби його зараз або обери з галереї.",
+    fotoCta: "Додати фото",
     kindHint: "Від цього залежить, як ти отримуєш оплату і що ми ще попросимо. Згодом можна змінити в розділі «Податки».",
     kinds: {
       zzp: ["Самозайнятий (ZZP)", "Ти працюєш на себе і сам виставляєш рахунки. У тебе є нідерландський номер KVK або номер ПДВ ЄС."],

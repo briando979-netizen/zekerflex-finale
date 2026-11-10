@@ -5,11 +5,11 @@
 // de server (lib/fiscal/eligibility.ts, lib/werkrecht).
 // ---------------------------------------------------------------------------
 
-export type TijdlijnSleutel = "kind" | "branches" | "email" | "gegevens" | "identiteit" | "werkrecht" | "tweestap";
+export type TijdlijnSleutel = "kind" | "branches" | "email" | "gegevens" | "identiteit" | "foto" | "werkrecht" | "tweestap";
 
 // "werkrecht" staat sinds 10 nov niet meer in de start (eigenaar): het recht om te werken wordt vóór de
 // eerste betaalde klus gevraagd (lib/fiscal/eligibility.ts); met een EU-ID gaat het vanzelf.
-export const TIJDLIJN_VOLGORDE: TijdlijnSleutel[] = ["kind", "branches", "email", "gegevens", "identiteit", "tweestap"];
+export const TIJDLIJN_VOLGORDE: TijdlijnSleutel[] = ["kind", "branches", "email", "gegevens", "identiteit", "foto", "tweestap"];
 
 export type TijdlijnKlaar = Record<TijdlijnSleutel, boolean>;
 

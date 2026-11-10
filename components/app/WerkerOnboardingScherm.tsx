@@ -22,6 +22,7 @@ export async function WerkerOnboardingScherm({ stand }: { stand: WerkerPoortStan
         identiteitIngestuurd={stand.identiteitIngestuurd}
         werkrechtOk={stand.werkrechtIngevuld}
         tweestapAan={stand.tweestapAan}
+        fotoGezet={stand.fotoGezet}
         brancheKeuze={stand.brancheKeuze}
       />
     </div>

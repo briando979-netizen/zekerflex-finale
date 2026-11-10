@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requirePrincipal } from "@/lib/auth";
 import { isReservedTestAddress } from "@/lib/mail";
 import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
+import { werkerOnboardingKlaar } from "@/lib/onboarding/werker-poort";
 import { eersteIndrukVoor } from "@/lib/onboarding/eerste-indruk-server";
 import { EersteIndrukScherm } from "@/components/app/EersteIndrukScherm";
 import { amsterdamParts } from "@/lib/time/amsterdam";
@@ -18,7 +19,8 @@ export default async function EersteIndrukPage(props: { searchParams: Promise<{ 
   const principal = await requirePrincipal();
   if (!isReservedTestAddress(principal.email)) {
     const poort = await werkerPoortStand(principal.userId).catch(() => null);
-    if (poort && !poort.klaar) redirect("/dashboard/verificatie");
+    // de foto zelf is hier juist de open stap, dus die telt niet mee voor het terugsturen
+    if (poort && !werkerOnboardingKlaar({ ...poort, fotoGezet: true })) redirect("/dashboard/verificatie");
   }
   const stand = await eersteIndrukVoor(principal.userId);
   const ervaringOpen = stand.stappen.some((s) => s.id === "ervaring" && s.status !== "klaar");

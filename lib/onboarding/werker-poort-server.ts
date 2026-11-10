@@ -5,6 +5,7 @@ import { getBrancheKeuze } from "@/lib/worker/branche-store";
 import { werkrechtOverzicht } from "@/lib/werkrecht/store";
 import { werkerOnboardingKlaar, type WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
 import { hasTwoFactor } from "@/lib/auth/two-factor";
+import { getUserProfileExtra } from "@/lib/profile/store";
 import type { BrancheKeuze } from "@/lib/shifts/branche-keuze";
 
 // De feiten voor de poort van de werker-app (lib/onboarding/werker-poort.ts), in één keer
@@ -18,7 +19,7 @@ export interface WerkerPoortStand extends WerkerPoortFeiten {
 }
 
 export async function werkerPoortStand(userId: string): Promise<WerkerPoortStand> {
-  const [fiscal, profiel, user, inBehandeling, brancheKeuze, werkrecht, tweestap, passkeys] = await Promise.all([
+  const [fiscal, profiel, user, inBehandeling, brancheKeuze, werkrecht, tweestap, passkeys, extra] = await Promise.all([
     getFiscal(userId),
     prisma.freelancerProfile.findUnique({ where: { userId }, select: { kvkValid: true, kvkNumber: true, payoutIban: true, homePostalCode: true } }),
     prisma.user.findUnique({ where: { id: userId }, select: { kycStatus: true } }),
@@ -32,6 +33,8 @@ export async function werkerPoortStand(userId: string): Promise<WerkerPoortStand
     // een storing telt als "aan": de poort mag de app niet dichtgooien
     hasTwoFactor(userId).catch(() => true),
     prisma.passkey.count({ where: { userId } }).catch(() => 0),
+    // een storing telt als "foto gezet": de poort mag de app niet dichtgooien
+    getUserProfileExtra(userId).catch(() => null),
   ]);
   const uitzend = invoiceModeFor(fiscal) === "payroll";
   const contract = uitzend ? Boolean(await activeUitzendContract(userId).catch(() => true)) : true;
@@ -50,6 +53,7 @@ export async function werkerPoortStand(userId: string): Promise<WerkerPoortStand
     werkrechtIngevuld: werkrecht === null || werkrecht[0]?.stand === "ok" || werkrecht[0]?.stand === "wacht",
     // tweestapsverificatie met een app, of een passkey (vingerafdruk/gezicht): allebei tweestaps
     tweestapAan: tweestap || passkeys > 0,
+    fotoGezet: extra === null || Boolean(extra.avatarUploadId),
   };
   return {
     ...feiten,

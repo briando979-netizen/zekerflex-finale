@@ -2,20 +2,20 @@ import { describe, expect, it } from "vitest";
 import { aantalOpen, nogStappenTekst, reageerStap, reageerStapHref, TIJDLIJN_VOLGORDE, tijdlijnStappen, volgendeStap, type TijdlijnKlaar } from "@/lib/onboarding/laat-weten";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 
-const alles: TijdlijnKlaar = { kind: true, branches: true, email: true, gegevens: true, identiteit: true, werkrecht: true, tweestap: true };
+const alles: TijdlijnKlaar = { kind: true, branches: true, email: true, gegevens: true, identiteit: true, foto: true, werkrecht: true, tweestap: true };
 
 describe("tijdlijn van de werker-start", () => {
   it("telt open stappen en kiest de eerste als actief", () => {
     const k = { ...alles, identiteit: false, tweestap: false };
     expect(aantalOpen(k)).toBe(2);
     expect(volgendeStap(k)).toBe("identiteit");
-    expect(tijdlijnStappen(k).map((s) => s.stand)).toEqual(["klaar", "klaar", "klaar", "klaar", "actief", "volgende"]);
+    expect(tijdlijnStappen(k).map((s) => s.stand)).toEqual(["klaar", "klaar", "klaar", "klaar", "actief", "klaar", "volgende"]);
   });
   it("gegevens en ID-check zijn twee aparte stappen, in die volgorde", () => {
     // het recht om te werken zit sinds 10 nov niet meer in de start
-    expect(TIJDLIJN_VOLGORDE).toEqual(["kind", "branches", "email", "gegevens", "identiteit", "tweestap"]);
+    expect(TIJDLIJN_VOLGORDE).toEqual(["kind", "branches", "email", "gegevens", "identiteit", "foto", "tweestap"]);
     const k = { ...alles, gegevens: false, identiteit: false };
-    expect(tijdlijnStappen(k).map((s) => s.stand)).toEqual(["klaar", "klaar", "klaar", "actief", "volgende", "klaar"]);
+    expect(tijdlijnStappen(k).map((s) => s.stand)).toEqual(["klaar", "klaar", "klaar", "actief", "volgende", "klaar", "klaar"]);
     expect(volgendeStap({ ...alles, identiteit: false })).toBe("identiteit");
   });
   it("alles klaar: geen volgende stap", () => {

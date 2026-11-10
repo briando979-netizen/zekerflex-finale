@@ -4,6 +4,7 @@ import { deleteUpload, readUpload, storeUpload } from "@/lib/storage/local";
 import { sniffAndVerifyUploadType } from "@/lib/storage/validate";
 import { amsterdamDayKey, amsterdamToUtc } from "@/lib/time/amsterdam";
 import { alertOwnerLater } from "@/lib/ops/alert";
+import { featureEnabled } from "@/lib/flags";
 import {
   VERKLARING_VERSIE,
   VRIJ_VERKEER,
@@ -106,7 +107,14 @@ export async function werkrechtOverzicht(userId: string, nu = new Date()): Promi
 }
 
 /** De controle vóór een (betaalde) dienst in een land. */
+/** Eist het platform het recht om te werken vóór een klus? Een storing in de vlag telt als uit: niemand loopt vast. */
+export async function werkrechtEisAan(): Promise<boolean> {
+  return featureEnabled("werkrecht-eis").catch(() => false);
+}
+
 export async function werkrechtVoorWerk(userId: string, land = "NL", nu = new Date()): Promise<{ ok: boolean; reden: string | null }> {
+  // vlag `werkrecht-eis` (standaard uit sinds 10 nov, eigenaar): zonder die vlag wordt niets gevraagd of geblokkeerd
+  if (!(await werkrechtEisAan())) return { ok: true, reden: null };
   const [rij, vrij] = await Promise.all([
     prisma.workRight.findUnique({ where: { userId_country: { userId, country: land } }, include: { upload: { select: { filename: true } } } }),
     idStand(userId, nu),

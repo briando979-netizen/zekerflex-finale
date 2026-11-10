@@ -26,6 +26,7 @@ export function WerkerStartWizard({
   identiteitIngestuurd,
   werkrechtOk,
   tweestapAan = true,
+  fotoGezet = true,
   brancheKeuze,
   poort = false,
 }: {
@@ -44,6 +45,8 @@ export function WerkerStartWizard({
   werkrechtOk: boolean;
   /** tweestapsverificatie of passkey aan (lib/onboarding/werker-poort.ts); na de poort altijd waar */
   tweestapAan?: boolean;
+  /** profielfoto geüpload (poortfeit); na de poort altijd waar */
+  fotoGezet?: boolean;
 }) {
   const t = useFT().start;
   const router = useRouter();
@@ -58,14 +61,14 @@ export function WerkerStartWizard({
   const [brancheBusy, setBrancheBusy] = useState(false);
   const [brancheFout, setBrancheFout] = useState<string | null>(null);
 
-  const done: Record<StepKey, boolean> = { kind: kind !== null, branches: keuze !== null, email: emailVerified, gegevens: gegevensIngevuld ?? profileComplete, identiteit: identiteitIngestuurd ?? profileComplete, werkrecht: werkrechtOk, tweestap: tweestapAan };
+  const done: Record<StepKey, boolean> = { kind: kind !== null, branches: keuze !== null, email: emailVerified, gegevens: gegevensIngevuld ?? profileComplete, identiteit: identiteitIngestuurd ?? profileComplete, foto: fotoGezet, werkrecht: werkrechtOk, tweestap: tweestapAan };
   const ORDER = TIJDLIJN_VOLGORDE;
   const first = volgendeStap(done);
   const [open, setOpen] = useState<StepKey>(first ?? "gegevens");
   const [gesloten, setGesloten] = useState(false);
   const completed = ORDER.filter((k) => done[k]).length;
   const pct = Math.round((completed / ORDER.length) * 100);
-  const label: Record<StepKey, string> = { kind: t.kindStep, branches: t.brancheStep, email: t.emailStep, gegevens: t.gegevensStep, identiteit: t.identiteitStep, werkrecht: t.werkrechtStep, tweestap: t.tweestapStep };
+  const label: Record<StepKey, string> = { kind: t.kindStep, branches: t.brancheStep, email: t.emailStep, gegevens: t.gegevensStep, identiteit: t.identiteitStep, foto: t.fotoStep, werkrecht: t.werkrechtStep, tweestap: t.tweestapStep };
 
   function wissel(sleutel: string) {
     setBrancheFout(null);
@@ -139,11 +142,12 @@ export function WerkerStartWizard({
   const stappen = tijdlijnStappen(done);
 
   // Eén uitleg per stap: de bestaande teksten (vijf talen), niets nieuws verzonnen.
-  const uitleg: Record<StepKey, string> = { kind: t.kindHint, branches: t.brancheHint, email: t.emailBody, gegevens: t.gegevensBody, identiteit: t.identiteitBody, werkrecht: t.werkrechtBody, tweestap: t.tweestapBody };
+  const uitleg: Record<StepKey, string> = { kind: t.kindHint, branches: t.brancheHint, email: t.emailBody, gegevens: t.gegevensBody, identiteit: t.identiteitBody, foto: t.fotoBody, werkrecht: t.werkrechtBody, tweestap: t.tweestapBody };
   const actie = (k: StepKey): { href: string; tekst: string } | null =>
     k === "email" ? { href: "/verifieer-email", tekst: t.emailCta }
     : k === "gegevens" ? { href: "/dashboard/verificatie", tekst: t.gegevensCta }
     : k === "identiteit" ? { href: "/dashboard/verificatie", tekst: t.identiteitCta }
+    : k === "foto" ? { href: "/dashboard/eerste-indruk?stap=foto", tekst: t.fotoCta }
     : k === "werkrecht" ? { href: "/dashboard/verificatie#werkrecht", tekst: t.werkrechtCta }
     : k === "tweestap" ? { href: "/dashboard/account/beveiliging", tekst: t.tweestapCta }
     : null;

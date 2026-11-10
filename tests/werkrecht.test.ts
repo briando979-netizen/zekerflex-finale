@@ -136,6 +136,7 @@ vi.mock("@/lib/storage/local", () => ({
   readUpload: async () => ({ bytes: Buffer.alloc(0), filename: "x", mimeType: "image/png" }),
 }));
 vi.mock("@/lib/ops/alert", () => ({ alertOwnerLater: () => undefined }));
+vi.mock("@/lib/flags", () => ({ featureEnabled: async () => true }));
 
 const PNG = Buffer.from("89504e470d0a1a0a0000000d49484452", "hex");
 

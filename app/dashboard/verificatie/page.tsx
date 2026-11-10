@@ -16,7 +16,7 @@ import { AUTH_DICTS } from "@/lib/i18n/auth";
 import { attemptLabel, waitForStripe } from "@/lib/kyc/stripe-status";
 import { StripeIdentityWacht } from "@/components/app/StripeIdentityWacht";
 import { WerkrechtPanel } from "@/components/app/WerkrechtPanel";
-import { werkrechtVoorWerk } from "@/lib/werkrecht/store";
+import { werkrechtVoorWerk, werkrechtEisAan } from "@/lib/werkrecht/store";
 import { leesWieBenJij } from "@/lib/onboarding/wie-ben-jij-opslag";
 import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
 import { beginStap } from "@/lib/onboarding/wie-ben-jij";
@@ -30,7 +30,7 @@ export default async function VerificatiePage() {
   const klaar = (await getFreelancerDict()).profielAf.klaar;
   // back from Stripe (or webhook not configured): fetch the result before rendering
   await syncStripeIdentity(principal.userId);
-  const [o, lastCheck, fiscal, werkrecht] = await Promise.all([
+  const [o, lastCheck, fiscal, werkrecht, werkrechtVragen] = await Promise.all([
     getFreelancerOverview(principal.userId),
     prisma.identityVerification.findFirst({
       where: { userId: principal.userId },
@@ -39,6 +39,7 @@ export default async function VerificatiePage() {
     }),
     getFiscal(principal.userId),
     werkrechtVoorWerk(principal.userId, "NL"),
+    werkrechtEisAan(),
   ]);
 
   if (o.profileComplete) {
@@ -64,13 +65,15 @@ export default async function VerificatiePage() {
           </div>
         </Panel>
 
-        <div id="werkrecht" className="mt-6 scroll-mt-20">
-          <Panel title={pt.werkrecht.title}>
-            <div className="p-5">
-              <WerkrechtPanel />
-            </div>
-          </Panel>
-        </div>
+        {werkrechtVragen && (
+          <div id="werkrecht" className="mt-6 scroll-mt-20">
+            <Panel title={pt.werkrecht.title}>
+              <div className="p-5">
+                <WerkrechtPanel />
+              </div>
+            </Panel>
+          </div>
+        )}
 
         <div className="mt-6">
           <Panel title={klaar.nextTitle}>
@@ -203,12 +206,14 @@ export default async function VerificatiePage() {
         </div>
       </div>
 
-      <div id="werkrecht" className="mt-6 card scroll-mt-20 p-6">
-        <h2 className="font-display text-base font-bold text-ink">{pt.werkrecht.title}</h2>
-        <div className="mt-3">
-          <WerkrechtPanel />
+      {werkrechtVragen && (
+        <div id="werkrecht" className="mt-6 card scroll-mt-20 p-6">
+          <h2 className="font-display text-base font-bold text-ink">{pt.werkrecht.title}</h2>
+          <div className="mt-3">
+            <WerkrechtPanel />
+          </div>
         </div>
-      </div>
+      )}
 
       {fiscal.workerKind === "uitzendkracht" && (
         <div className="mt-6 card p-6">

@@ -22,12 +22,14 @@ export interface WerkerPoortFeiten {
   werkrechtIngevuld: boolean;
   /** tweestapsverificatie aan (app met codes) of een passkey (10 nov, eigenaar) */
   tweestapAan: boolean;
+  /** een profielfoto geüpload (10 nov, eigenaar: een echte stap van de onboarding) */
+  fotoGezet: boolean;
 }
 
 export function werkerOnboardingKlaar(f: WerkerPoortFeiten): boolean {
   // het recht om te werken hoort sinds 10 nov niet meer bij de onboarding (eigenaar); het blijft verplicht
   // vóór de eerste betaalde klus (payoutEligibility, eisWerkrecht)
-  return f.soortGekozen && f.branchesGekozen && f.gegevensIngevuld && f.identiteitIngestuurd && f.tweestapAan;
+  return f.soortGekozen && f.branchesGekozen && f.gegevensIngevuld && f.identiteitIngestuurd && f.fotoGezet && f.tweestapAan;
 }
 
 /**
@@ -35,7 +37,7 @@ export function werkerOnboardingKlaar(f: WerkerPoortFeiten): boolean {
  * de stappen invult (Verificatie, Fiscaal) en je account (uitloggen, taal, account
  * verwijderen). Al het andere toont de start.
  */
-const TOEGESTAAN = ["/dashboard/verificatie", "/dashboard/fiscaal", "/dashboard/account"];
+const TOEGESTAAN = ["/dashboard/verificatie", "/dashboard/fiscaal", "/dashboard/account", "/dashboard/eerste-indruk"];
 
 export function toegestaanTijdensOnboarding(pad: string | null | undefined): boolean {
   const p = (pad ?? "").replace(/\/+$/, "");
