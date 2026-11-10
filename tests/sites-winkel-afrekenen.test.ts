@@ -188,6 +188,8 @@ describe("afrekenen: de pagina's", () => {
     expect(html).toContain(`<dt>Bedrag</dt><dd>€ 19,00</dd>`);
     expect(html).toContain('<figure class="betaal-qr"><svg aria-label="qr"></svg>');
     expect(html).not.toContain("Sanne");
+    // de standaardzin "bij het afhalen of bij de bezorging" zou de gekozen overboeking tegenspreken
+    expect(html).not.toContain("Je betaalt bij het afhalen of bij de bezorging");
     const afhalen = renderWinkelPagina(site(winkel()), { soort: "besteld", nr: "K7M3Q2", info: { bestelling: { ...bestelling, betaalmethode: "afhalen" }, qr: null } }, opts) ?? "";
     expect(afhalen).toContain("je betaalt € 19,00 bij het afhalen.");
   });

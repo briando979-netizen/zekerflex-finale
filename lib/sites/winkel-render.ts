@@ -1,5 +1,5 @@
 import { ldJson } from "@/lib/seo/json-ld";
-import type { BlockProps, SiteProduct, Verzendmethode, Winkel } from "@/lib/sites/types";
+import { LEGE_WINKEL, type BlockProps, type SiteProduct, type Verzendmethode, type Winkel } from "@/lib/sites/types";
 import { categorieen, euro, isUitverkocht, maxBestelbaar, regelSleutels, zichtbareProducten, type BestelInvoer, type BestelOverzicht, type Bestelconcept } from "@/lib/sites/winkel";
 import { somRegels } from "@/lib/sites/bestel-som";
 import { BETAAL_NAAM, BETAAL_UITLEG, betaalOpties, betaalPast, toonIban } from "@/lib/sites/winkel-betalen";
@@ -232,6 +232,14 @@ function methodeDetail(ctx: WinkelCtx, m: Verzendmethode): string {
   return [m.soort === "afhalen" ? m.adres.trim() || ctx.bedrijfAdres : "", m.levertijd.trim()].filter(Boolean).join(" · ");
 }
 
+/**
+ * De betaaltekst van de winkel. Met een gekozen betaalmethode zegt die al hoe het werkt; de standaardtekst
+ * ("bij het afhalen of bij de bezorging") zou dan iets anders beweren, dus die vervalt. Een eigen tekst blijft staan.
+ */
+function betaalTekst(ctx: WinkelCtx, w: Winkel, metMethode: boolean): string {
+  return metMethode && w.betaalTekst.trim() === LEGE_WINKEL.betaalTekst ? "" : ctx.paras(w.betaalTekst);
+}
+
 /** De optelling onder de productregels (lib/sites/bestel-som.ts): korting, verzending, btw en totaal. */
 function somTabel(ctx: WinkelCtx, c: BestelOverzicht): string {
   const { esc } = ctx;
@@ -365,7 +373,7 @@ export function controlePaginaBody(ctx: WinkelCtx, w: Winkel, c: Bestelconcept, 
     .join("");
   const waar = verzendZin(ctx, c);
   const betaal = c.betaalmethode ? `<p><strong>Betalen:</strong> ${ctx.esc(BETAAL_NAAM[c.betaalmethode])}. ${ctx.esc(BETAAL_UITLEG[c.betaalmethode])}</p>` : "";
-  return `<section><div class="wrap narrow"><h1>Klopt je bestelling?</h1>${somTabel(ctx, c)}<p>${waar}${vz?.levertijd ? ` <span class="small">(${ctx.esc(vz.levertijd)})</span>` : ""}<br>${ctx.esc(i.naam)} · ${ctx.esc(i.email)} · ${ctx.esc(i.telefoon)}</p>${i.opmerking ? `<p class="small">Opmerking: ${ctx.esc(i.opmerking)}</p>` : ""}${betaal}${ctx.paras(w.betaalTekst)}${ctx.inert ? `<p class="small"><strong>Dit is een voorbeeld:</strong> er wordt niets besteld of verstuurd.</p>` : ""}<form class="contact order" method="post" action="${ctx.esc(ctx.preview ? "#" : `${ctx.root}_zf/bestelling`)}">${verborgen}<label class="hp" aria-hidden="true">Laat leeg<input name="website" tabindex="-1" autocomplete="off"></label><p class="acts-row"><button class="btn" type="submit" name="stap" value="plaats">Bestelling plaatsen</button> <button class="btn ghost" type="submit" name="stap" value="wijzig">Wijzigen</button></p></form></div></section>`;
+  return `<section><div class="wrap narrow"><h1>Klopt je bestelling?</h1>${somTabel(ctx, c)}<p>${waar}${vz?.levertijd ? ` <span class="small">(${ctx.esc(vz.levertijd)})</span>` : ""}<br>${ctx.esc(i.naam)} · ${ctx.esc(i.email)} · ${ctx.esc(i.telefoon)}</p>${i.opmerking ? `<p class="small">Opmerking: ${ctx.esc(i.opmerking)}</p>` : ""}${betaal}${betaalTekst(ctx, w, Boolean(c.betaalmethode))}${ctx.inert ? `<p class="small"><strong>Dit is een voorbeeld:</strong> er wordt niets besteld of verstuurd.</p>` : ""}<form class="contact order" method="post" action="${ctx.esc(ctx.preview ? "#" : `${ctx.root}_zf/bestelling`)}">${verborgen}<label class="hp" aria-hidden="true">Laat leeg<input name="website" tabindex="-1" autocomplete="off"></label><p class="acts-row"><button class="btn" type="submit" name="stap" value="plaats">Bestelling plaatsen</button> <button class="btn ghost" type="submit" name="stap" value="wijzig">Wijzigen</button></p></form></div></section>`;
 }
 
 /** Waar de bestelling heen gaat of waar hij klaarligt, in één zin (zonder punt). */
@@ -408,7 +416,7 @@ export function besteldPaginaBody(ctx: WinkelCtx, w: Winkel, nr: string, voorbee
   }
   const b = info?.bestelling;
   const overzicht = b ? `${betaalUitleg(ctx, b, nr, info.qr)}<h2 class="bkop">Je bestelling</h2>${somTabel(ctx, b)}` : "";
-  return `<section><div class="wrap narrow"><div role="status"><h1>Bedankt voor je bestelling</h1>${nr ? `<p>Je bestelnummer is <strong>${ctx.esc(nr)}</strong>.</p>` : ""}</div>${overzicht}${ctx.paras(w.betaalTekst)}<p>${ctx.esc(ctx.bedrijfNaam)} heeft je bestelling ontvangen en neemt contact met je op als er iets niet klopt.</p><p><a class="btn" href="${ctx.esc(pad(ctx, "winkel"))}">Verder winkelen</a></p></div></section>`;
+  return `<section><div class="wrap narrow"><div role="status"><h1>Bedankt voor je bestelling</h1>${nr ? `<p>Je bestelnummer is <strong>${ctx.esc(nr)}</strong>.</p>` : ""}</div>${overzicht}${betaalTekst(ctx, w, Boolean(b?.betaalmethode))}<p>${ctx.esc(ctx.bedrijfNaam)} heeft je bestelling ontvangen en neemt contact met je op als er iets niet klopt.</p><p><a class="btn" href="${ctx.esc(pad(ctx, "winkel"))}">Verder winkelen</a></p></div></section>`;
 }
 
 /** De opmaak van de winkel, achter de basisopmaak van de site; premium krijgt de kaarten en prijs van de huisstijl. */
@@ -459,7 +467,7 @@ form.wfilter label.wcheck{display:flex;align-items:center;gap:10px;font-weight:5
 .mkort .orow{gap:12px}.mkort .orow>span:last-of-type{font-weight:700;white-space:nowrap}
 .pbtw{font-size:.78em;font-weight:500;color:var(--mute)}.vkeuzes{display:grid;gap:10px}form.order label.vkeuze{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:2px 12px;align-items:start;padding:13px 16px;border:1px solid var(--line);border-radius:12px;background:#fff;font-weight:400;cursor:pointer}form.order .vkeuze input{width:auto;margin:4px 0 0;padding:0;accent-color:var(--k)}.vkeuze .vnaam{font-weight:700;min-width:0;overflow-wrap:anywhere}.vkeuze .vprijs{font-weight:600;text-align:right}.vkeuze small{grid-column:2/-1;color:var(--mute);font-size:.88rem;line-height:1.45}.vkeuze:has(input:checked){border-color:var(--k);box-shadow:0 0 0 1px var(--k)}.vkeuze:has(input:focus-visible){outline:3px solid var(--a);outline-offset:2px}@media (max-width:440px){form.order label.vkeuze{grid-template-columns:auto minmax(0,1fr)}.vkeuze .vprijs{grid-column:2;text-align:left}}
 form.order .osel{width:100%;min-width:0;font:inherit;font-weight:400;padding:12px 14px;border:1px solid #cfd4da;border-radius:10px;background:#fff;color:var(--ink)}
-table.sum tfoot tr.sklein td,table.sum tfoot tr.snoot td{font-weight:400;font-size:.92rem;color:var(--mute);padding:4px 0}table.sum tfoot tr+tr.sklein td,table.sum tfoot tr.snoot td{border-bottom:0}
+table.sum th+td{text-align:right}table.sum tfoot tr.sklein td,table.sum tfoot tr.snoot td{font-weight:400;font-size:.92rem;color:var(--mute);padding:4px 0}table.sum tfoot tr+tr.sklein td,table.sum tfoot tr.snoot td{border-bottom:0}
 .betaal{margin:8px 0 28px;padding:22px;border:1px solid var(--line);border-radius:var(--r);background:#fff}.betaal h2{margin:0 0 8px;font-size:1.3rem}.betaal-grid{display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px 28px;margin:16px 0}.betaal-gegevens{flex:1 1 240px;display:grid;gap:10px;margin:0;min-width:0}.betaal-gegevens div{display:grid;gap:2px}.betaal-gegevens dt{font-size:.82rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}.betaal-gegevens dd{margin:0;font-size:1.12rem;font-weight:700;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
 .betaal-qr{margin:0;display:grid;justify-items:center;gap:6px}.betaal-qr svg{width:200px;height:200px;max-width:100%;border:1px solid var(--line);border-radius:12px}.betaal-qr figcaption{font-size:.85rem;color:var(--mute)}.bbetaal{padding:14px 18px;border-radius:12px;background:var(--soft)}.bkop{margin:24px 0 8px;font-size:1.2rem}
 .mandlink{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;color:inherit;font-weight:700;font-size:.92rem;text-decoration:none}.mandlink svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}.mandlink b{display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--a);color:var(--a-t);font-size:.78rem}.mandlink:hover{background:rgba(127,127,127,.12)}@media (max-width:480px){.mandlink .mtekst{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.mandlink{padding:8px 6px}}@media (max-width:400px){.acts:has(.mandlink) .cta-top{display:none}}@media (max-width:640px){.pcard h3{overflow-wrap:anywhere;hyphens:auto}}`;

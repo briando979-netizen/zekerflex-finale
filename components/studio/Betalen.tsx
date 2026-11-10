@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useStudio } from "@/components/studio/context";
 import { OpslaanBalk, Veld, veldProps } from "@/components/studio/WinkelVelden";
 import { Card, PageHead, Pill, btn, input } from "@/components/studio/ui";
-import { BTW_TARIEVEN, type BetaalMethode, type BtwTarief } from "@/lib/sites/types";
+import { BTW_TARIEVEN, LEGE_WINKEL, type BetaalMethode, type BtwTarief } from "@/lib/sites/types";
 import { euro } from "@/lib/sites/euro";
 import { BETAAL_METHODEN, BETAAL_NAAM, betaalPast, ibanGeldig, schoonIban, toonIban } from "@/lib/sites/winkel-betalen";
 import { STANDAARD_BTW, btwIn } from "@/lib/sites/winkel-btw";
@@ -45,7 +45,8 @@ export default function Betalen() {
     methoden: winkel.betalen?.methoden ?? [],
     iban: winkel.betalen ? toonIban(winkel.betalen.iban) : "",
     naam: winkel.betalen?.tenaamstelling ?? "",
-    tekst: winkel.betaalTekst,
+    // de standaardtekst ("bij het afhalen of bij de bezorging") niet als eigen uitleg tonen: die vervalt bij een betaalmethode
+    tekst: winkel.betaalTekst.trim() === LEGE_WINKEL.betaalTekst ? "" : winkel.betaalTekst,
     btwAan: Boolean(winkel.btw),
     inclusief: (winkel.btw ?? STANDAARD_BTW).inclusief,
     standaard: (winkel.btw ?? STANDAARD_BTW).standaard,
@@ -85,7 +86,9 @@ export default function Betalen() {
     const betalen = s.methoden.length || s.iban.trim() || s.naam.trim() ? { methoden: BETAAL_METHODEN.filter((m) => s.methoden.includes(m)), iban: schoonIban(s.iban), tenaamstelling: s.naam.trim() } : null;
     const btw = s.btwAan ? { inclusief: s.kor ? true : s.inclusief, standaard: s.standaard, kor: s.kor } : null;
     setBezig(true);
-    const fout = await saveWinkelDeel({ betalen, btw, betaalTekst: s.tekst.trim() });
+    // zonder betaalmethode en zonder eigen uitleg blijft de standaardtekst staan, zoals tot nu toe
+    const betaalTekst = s.tekst.trim() || (betalen?.methoden.length ? "" : LEGE_WINKEL.betaalTekst);
+    const fout = await saveWinkelDeel({ betalen, btw, betaalTekst });
     setBezig(false);
     if (fout) return setBalkFout(fout);
     const nieuw = { ...s, iban: betalen ? toonIban(betalen.iban) : "", naam: s.naam.trim(), tekst: s.tekst.trim() };
@@ -151,7 +154,7 @@ export default function Betalen() {
               );
             })}
           </ul>
-          {s.methoden.length === 0 && <p className="mt-3 text-sm text-[#616161]">Zonder betaalmethode kiezen klanten niets en zien ze alleen je uitleg hieronder, zoals tot nu toe.</p>}
+          {s.methoden.length === 0 && <p className="mt-3 text-sm text-[#616161]">Zonder betaalmethode kiezen klanten niets en zien ze alleen je uitleg hieronder (of, als die leeg is, de standaardzin dat ze betalen bij het afhalen of de bezorging), zoals tot nu toe.</p>}
           {mist("bezorgen") && (
             <p role="alert" className="mt-3 rounded-lg bg-[#ffeb78] px-3 py-2 text-sm text-[#4f4700]">
               Wie laat bezorgen, kan nu met geen enkele methode betalen. Zet Overboeking of Contant bij bezorgen aan.
