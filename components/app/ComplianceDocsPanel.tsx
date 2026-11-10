@@ -1,7 +1,11 @@
 "use client";
 
+import { IbanCodeVeld } from "@/components/app/IbanCodeVeld";
 import { useI18n } from "@/components/i18n/I18nProvider";
-import { AUTH_DICTS, type AuthDict } from "@/lib/i18n/auth";
+import { useFT } from "@/components/i18n/useFT";
+import { AUTH_DICTS, fill, type AuthDict } from "@/lib/i18n/auth";
+import { ibanCodeBericht, isIbanCodeFout } from "@/lib/fiscal/iban-code-teksten";
+import { ibanKlopt } from "@/lib/onboarding/velden";
 import { useEffect, useRef, useState } from "react";
 
 interface Doc {
@@ -14,6 +18,142 @@ interface Doc {
 interface Data {
   docs: Doc[];
   status: { idOk: boolean; bankOk: boolean; complete: boolean };
+  /** Laatste vier cijfers van het IBAN dat nu bij ons staat; het hele nummer komt nooit terug. */
+  ibanLast4?: string | null;
+}
+
+/**
+ * Eerste stap van "Bankrekening bevestigen": het rekeningnummer. Het wordt maar op
+ * deze ene plek gevraagd (niet meer in het onboardingformulier of bij Uitzenden).
+ * Het slaat op via /api/me/uitzend, net als het uitzendpaneel eerder deed, met
+ * dezelfde bevestigingscode (mail of verificatie-app) bij een gewijzigd nummer.
+ */
+function IbanStap({ t, ibanLast4, onSaved }: { t: AuthDict["page"]; ibanLast4: string | null; onSaved: () => void }) {
+  const ft = useFT();
+  const [bewerken, setBewerken] = useState(false);
+  const [iban, setIban] = useState("");
+  const [bezig, setBezig] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
+  // Een gewijzigd IBAN vraagt een code (mail of verificatie-app): het veld verschijnt na de eerste 423.
+  const [code, setCode] = useState("");
+  const [codeMelding, setCodeMelding] = useState<string | null>(null);
+
+  const toonVeld = bewerken || !ibanLast4;
+
+  async function opslaan(metCode = true) {
+    if (!ibanKlopt(iban)) {
+      setFout(t.ibanInvalid);
+      return;
+    }
+    setBezig(true);
+    setFout(null);
+    try {
+      const r = await fetch("/api/me/uitzend", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ iban, ...(metCode && code.trim() ? { ibanCode: code.trim() } : {}) }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok) {
+        setCodeMelding(null);
+        setCode("");
+        setIban("");
+        setBewerken(false);
+        onSaved();
+      } else if (isIbanCodeFout(r.status, d?.error?.code)) {
+        setCode("");
+        setCodeMelding(ibanCodeBericht(d.error.code, ft.ibanCode, d.error.message));
+      } else {
+        setFout(typeof d?.error?.message === "string" ? d.error.message : t.ibanFailed);
+      }
+    } catch {
+      setFout(t.ibanFailed);
+    } finally {
+      setBezig(false);
+    }
+  }
+
+  return (
+    <div className={`rounded-xl border p-4 ${ibanLast4 && !bewerken ? "border-ok/40 bg-ok/5" : "border-hairstrong"}`}>
+      {toonVeld ? (
+        <>
+          <label htmlFor="rekeningnummer-stap" className="text-sm font-semibold text-ink">
+            {t.ibanLabel} <span className="text-crit">*</span>
+          </label>
+          <p id="rekeningnummer-uitleg" className="mt-1 text-xs text-neutralx-500">
+            {t.ibanWhy}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <input
+              id="rekeningnummer-stap"
+              value={iban}
+              onChange={(e) => setIban(e.target.value.toUpperCase())}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void opslaan();
+                }
+              }}
+              placeholder="NL00 BANK 0000 0000 00"
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              aria-describedby="rekeningnummer-uitleg"
+              aria-invalid={fout ? true : undefined}
+              className="field-input min-w-0 flex-1 font-mono"
+            />
+            <button type="button" onClick={() => void opslaan()} disabled={bezig || iban.trim().length < 15} className="btn-primary text-sm disabled:opacity-50">
+              {bezig ? t.ibanSaving : t.ibanSave}
+            </button>
+            {bewerken && (
+              <button
+                type="button"
+                onClick={() => {
+                  setBewerken(false);
+                  setFout(null);
+                  setCodeMelding(null);
+                  setIban("");
+                }}
+                className="btn-ghost text-sm"
+              >
+                {t.ibanCancel}
+              </button>
+            )}
+          </div>
+          {codeMelding && (
+            <div className="mt-3">
+              <IbanCodeVeld
+                texts={ft.ibanCode}
+                melding={codeMelding}
+                value={code}
+                onChange={setCode}
+                onResend={() => {
+                  setCode("");
+                  void opslaan(false);
+                }}
+                busy={bezig}
+              />
+            </div>
+          )}
+          {fout && (
+            <p role="alert" className="mt-2 text-xs text-crit">
+              {fout}
+            </p>
+          )}
+        </>
+      ) : (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-ink">
+            <span className="font-semibold">{t.ibanLabel}</span>
+            <span className="mt-0.5 block text-xs text-neutralx-600">{fill(t.ibanEndsOn, { last4: ibanLast4 ?? "" })}</span>
+          </p>
+          <button type="button" onClick={() => setBewerken(true)} className="btn-ghost flex-shrink-0 text-sm">
+            {t.ibanChange}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 
@@ -119,11 +259,14 @@ function BankLoginSlot({
   t,
   bankDoc,
   bankOk,
+  heeftIban,
   onChanged,
 }: {
   t: AuthDict["page"];
   bankDoc: Doc | undefined;
   bankOk: boolean;
+  /** Er staat een rekeningnummer: pas dan kunnen we het met de bank vergelijken. */
+  heeftIban: boolean;
   onChanged: () => void;
 }) {
   const [enabled, setEnabled] = useState<boolean | null>(null);
@@ -174,11 +317,7 @@ function BankLoginSlot({
       const r = await fetch("/api/me/bank-verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // The IBAN typed in the verification form on this page, if it isn't saved yet.
-        body: JSON.stringify({
-          action: "start",
-          iban: document.querySelector<HTMLInputElement>('input[name="payoutIban"]')?.value || undefined,
-        }),
+        body: JSON.stringify({ action: "start" }),
       });
       const d = await r.json().catch(() => ({}));
       if (r.ok && d.url) {
@@ -218,10 +357,11 @@ function BankLoginSlot({
             </p>
           )}
           {!bankOk && (
-            <button type="button" onClick={() => void start()} disabled={busy || enabled === null} className="btn-primary mt-3 w-full text-sm disabled:opacity-50">
+            <button type="button" onClick={() => void start()} disabled={busy || enabled === null || !heeftIban} className="btn-primary mt-3 w-full text-sm disabled:opacity-50">
               {busy ? t.bankLoginBusy : t.bankLoginButton}
             </button>
           )}
+          {!bankOk && !heeftIban && <p className="mt-2 text-xs text-neutralx-500">{t.ibanFirst}</p>}
         </>
       )}
       {note && <p className="mt-2 text-xs text-neutralx-600">{note}</p>}
@@ -289,7 +429,8 @@ export function ComplianceDocsPanel({ idInForm = false }: { idInForm?: boolean }
             onUploaded={load}
           />
         )}
-        <BankLoginSlot t={t} bankDoc={bankDoc} bankOk={d.status.bankOk} onChanged={load} />
+        <IbanStap t={t} ibanLast4={d.ibanLast4 ?? null} onSaved={load} />
+        <BankLoginSlot t={t} bankDoc={bankDoc} bankOk={d.status.bankOk} heeftIban={Boolean(d.ibanLast4)} onChanged={load} />
       </div>
       <p className="text-xs text-neutralx-400">
         {t.other}

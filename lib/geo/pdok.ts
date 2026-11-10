@@ -20,6 +20,11 @@ const BASIS = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/free";
 const HOST = new URL(BASIS).host;
 /** Alleen soorten waar een werkplek op kan liggen. */
 const SOORTEN = "type:(adres OR weg OR woonplaats)";
+/** Alleen adressen: die hebben altijd een postcode (thuisbasis van een werker). */
+const ALLEEN_ADRESSEN = "type:adres";
+const BASIS_OMGEKEERD = "https://api.pdok.nl/bzk/locatieserver/search/v3_1/reverse";
+/** Een coördinaat van een telefoon is op tientallen meters nauwkeurig; verder dan dit is geen "dit adres". */
+const OMGEKEERD_STRAAL_M = 250;
 const VELDEN = "weergavenaam,type,centroide_ll,postcode,woonplaatsnaam,straatnaam";
 const TIJDSLIMIET_MS = 4_000;
 /** Een gevonden punt verschuift niet meer; een dag bewaren is ruim genoeg. */
@@ -115,11 +120,13 @@ export function wisPdokGeheugen(): void {
  * beste treffers terug. Niets gevonden, een storing of een time-out geeft een
  * lege lijst — dit is nooit een harde fout, de aanroeper beslist zelf.
  */
-export async function zoekPlekken(zoekterm: string, aantal = 5): Promise<PdokPlek[]> {
+export async function zoekPlekken(zoekterm: string, aantal = 5, opties: { alleenAdressen?: boolean } = {}): Promise<PdokPlek[]> {
   const q = zoekterm.trim().replace(/\s+/g, " ");
   if (q.length < 2) return [];
   const rijen = Math.min(Math.max(1, Math.trunc(aantal)), 10);
-  const sleutel = `${rijen}|${q.toLowerCase()}`;
+  const adressen = opties.alleenAdressen === true;
+  // Zonder opties blijft de sleutel zoals hij was (bestaande tests en aanroepers).
+  const sleutel = `${adressen ? "a|" : ""}${rijen}|${q.toLowerCase()}`;
 
   const bekend = uitGeheugen(sleutel);
   if (bekend) return bekend;
@@ -128,7 +135,7 @@ export async function zoekPlekken(zoekterm: string, aantal = 5): Promise<PdokPle
   try {
     const url = new URL(BASIS);
     url.searchParams.set("q", q);
-    url.searchParams.set("fq", SOORTEN);
+    url.searchParams.set("fq", adressen ? ALLEEN_ADRESSEN : SOORTEN);
     url.searchParams.set("rows", String(rijen));
     url.searchParams.set("fl", VELDEN);
 
@@ -158,5 +165,43 @@ export async function zoekPlekken(zoekterm: string, aantal = 5): Promise<PdokPle
  */
 export async function zoekCoordinaat(zoekterm: string): Promise<PdokPlek | null> {
   const plekken = await zoekPlekken(zoekterm, 1);
+  return plekken[0] ?? null;
+}
+
+/**
+ * Het dichtstbijzijnde adres bij een coordinaat (de knop "Gebruik mijn huidige
+ * locatie"), of null als er binnen een paar honderd meter geen adres ligt
+ * (buiten Nederland, in een veld) of PDOK niet antwoordt. De coordinaat wordt
+ * op vier decimalen (ongeveer 10 m) afgerond voor het geheugen en nooit gelogd:
+ * dat is een plek waar iemand staat, dus een persoonsgegeven.
+ */
+export async function adresBijCoordinaat(lat: number, lon: number): Promise<PdokPlek | null> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  const sleutel = `o|${lat.toFixed(4)}|${lon.toFixed(4)}`;
+  const bekend = uitGeheugen(sleutel);
+  if (bekend) return bekend[0] ?? null;
+
+  let plekken: PdokPlek[] = [];
+  try {
+    const url = new URL(BASIS_OMGEKEERD);
+    url.searchParams.set("lat", lat.toFixed(5));
+    url.searchParams.set("lon", lon.toFixed(5));
+    url.searchParams.set("type", "adres");
+    url.searchParams.set("rows", "1");
+    url.searchParams.set("distance", String(OMGEKEERD_STRAAL_M));
+    url.searchParams.set("fl", VELDEN);
+
+    const res = await fetch(url, { signal: AbortSignal.timeout(TIJDSLIMIET_MS) });
+    if (!res.ok) {
+      logger.warn("pdok omgekeerd zoeken gaf een fout", { host: HOST, status: res.status });
+      return null;
+    }
+    plekken = leesPdokPlekken(await res.json());
+  } catch (err) {
+    logger.warn("pdok omgekeerd zoeken niet bereikbaar", { host: HOST, error: (err as Error).message });
+    return null;
+  }
+
+  inGeheugen(sleutel, plekken);
   return plekken[0] ?? null;
 }

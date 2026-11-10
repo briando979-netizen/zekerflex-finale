@@ -33,7 +33,7 @@ vi.mock("@/lib/prisma", () => ({
           : { id: "u1", fullName: "Jan Jansen", freelancerProfile: heeftProfiel ? { id: "p1" } : null },
     },
     freelancerProfile: {
-      findUnique: async () => ({ payoutIban: profielIban }),
+      findUnique: async () => (heeftProfiel ? { payoutIban: profielIban } : null),
       update: (...a: unknown[]) => (profielUpdate as (...x: unknown[]) => unknown)(...a),
     },
   },
@@ -265,6 +265,86 @@ describe("onboarding: wallet-route", () => {
     expect(fout).not.toBeInstanceOf(IbanBevestigingFout);
     expect(mails).toHaveLength(0);
     expect(walletConsume).toHaveBeenCalledTimes(1);
+  });
+});
+
+/** De data van de n-de update van het profiel. */
+function profielData(n = 0): Record<string, unknown> | undefined {
+  return (profielUpdate.mock.calls as unknown as { data: Record<string, unknown> }[][])[n]?.[0]?.data;
+}
+
+describe("het IBAN staat op één plek: PUT /api/me/uitzend schrijft ook het profiel", () => {
+  it("een eerste IBAN komt in de fiscale gegevens én op het profiel (daar leest de uitbetaling het)", async () => {
+    const res = await putUitzend({ iban: "nl02 abna 0123 4567 89" });
+    expect(res.status).toBe(200);
+    expect(profielData()).toEqual({ payoutIban: NIEUW });
+  });
+
+  it("een gewijzigd IBAN zet ook de aanhouding op het profiel", async () => {
+    fiscalIban = OUD;
+    profielIban = OUD;
+    await putUitzend({ iban: NIEUW });
+    const res = await putUitzend({ iban: NIEUW, ibanCode: codeUitMail() });
+    expect(res.status).toBe(200);
+    expect(profielData()).toEqual({ payoutIban: NIEUW, payoutIbanPendingVerification: true });
+  });
+
+  it("een IBAN dat alleen op het profiel staat (oude onboarding) telt als bestaand: wijzigen vraagt een code", async () => {
+    fiscalIban = null;
+    profielIban = OUD;
+    const res = await putUitzend({ iban: NIEUW });
+    expect(res.status).toBe(423);
+    expect(profielUpdate).not.toHaveBeenCalled();
+    expect(setFiscalMock).not.toHaveBeenCalled();
+  });
+
+  it("zonder profiel (nog niet ingeschreven) wordt alleen de fiscale kant bewaard", async () => {
+    heeftProfiel = false;
+    const res = await putUitzend({ iban: NIEUW });
+    expect(res.status).toBe(200);
+    expect(setFiscalMock).toHaveBeenCalledTimes(1);
+    expect(profielUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe("onboarding zonder IBAN (het wordt bij Bankrekening bevestigen gevraagd)", () => {
+  it("saveFreelancerBase zonder IBAN vraagt geen code en laat een bestaand IBAN staan", async () => {
+    profielIban = OUD;
+    await expect(saveFreelancerBase({ ...basis })).resolves.toBeDefined();
+    expect(mails).toHaveLength(0);
+    expect(profielUpdate).toHaveBeenCalledTimes(1);
+    expect(profielData()).not.toHaveProperty("payoutIban");
+    expect(profielData()).toMatchObject({ homePostalCode: "1012AB" });
+  });
+
+  it("een leeg IBAN telt als geen IBAN", async () => {
+    profielIban = OUD;
+    await expect(saveFreelancerBase({ ...basis, payoutIban: "  " })).resolves.toBeDefined();
+    expect(profielData()).not.toHaveProperty("payoutIban");
+  });
+
+  it("een profiel zonder IBAN neemt het IBAN uit de fiscale gegevens over", async () => {
+    profielIban = null;
+    fiscalIban = OUD;
+    await saveFreelancerBase({ ...basis });
+    expect(profielData()).toMatchObject({ payoutIban: OUD });
+    expect(mails).toHaveLength(0);
+  });
+
+  it("de wallet-route zonder IBAN vraagt geen bevestiging en verbruikt de verificatie", async () => {
+    profielIban = OUD;
+    const fout = await submitFreelancerOnboardingViaWallet({ userId: "u1", attemptId: "a1", kvkNumber: "", postalCode: "1012 AB" }).catch((e: unknown) => e);
+    expect(fout).not.toBeInstanceOf(IbanBevestigingFout);
+    expect(mails).toHaveLength(0);
+    expect(walletConsume).toHaveBeenCalledTimes(1);
+    expect(profielData()).not.toHaveProperty("payoutIban");
+  });
+
+  it("met een IBAN blijft de wijzigingscontrole gewoon werken (wallet)", async () => {
+    profielIban = OUD;
+    const fout = await submitFreelancerOnboardingViaWallet({ userId: "u1", attemptId: "a1", kvkNumber: "", postalCode: "1012 AB", payoutIban: NIEUW }).catch((e: unknown) => e);
+    expect(ibanBevestigingAntwoord(fout)).toMatchObject({ status: 423 });
+    expect(walletConsume).not.toHaveBeenCalled();
   });
 });
 

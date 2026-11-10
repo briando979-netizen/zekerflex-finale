@@ -112,13 +112,12 @@ export default async function VerificatiePage() {
   // van een profiel zonder bedrijf is een plaatshouder ("pending-…", "vat-…") en blijft dus leeg.
   const bewaard = await prisma.freelancerProfile.findUnique({
     where: { userId: principal.userId },
-    select: { kvkNumber: true, vatNumber: true, homePostalCode: true, payoutIban: true },
+    select: { kvkNumber: true, vatNumber: true, homePostalCode: true },
   });
   const initial = {
     ...(bewaard?.kvkNumber && /^\d+$/.test(bewaard.kvkNumber) ? { kvkNumber: bewaard.kvkNumber } : {}),
     ...(bewaard?.vatNumber ? { vatNumber: bewaard.vatNumber } : {}),
     ...(bewaard?.homePostalCode ? { postalCode: bewaard.homePostalCode } : {}),
-    ...(bewaard?.payoutIban || fiscal.iban ? { payoutIban: bewaard?.payoutIban ?? fiscal.iban ?? "" } : {}),
   };
 
   const reasons =

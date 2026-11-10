@@ -104,6 +104,7 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/werkgever/claims/claim_1",
     "/api/timesheets/ts_1/submit",
     "/api/people/search",
+    "/api/geo/reverse", // het dichtstbijzijnde adres bij een punt: alleen met een sessie
     "/api/geo/search", // note: /api/geo/tile also requires a session; only geo isn't prefixed publicly here
     "/api/calls/incoming",
     "/api/sites/domein-check/extra", // exact match only

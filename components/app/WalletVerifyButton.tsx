@@ -4,9 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { useFT } from "@/components/i18n/useFT";
-import { IbanCodeVeld } from "@/components/app/IbanCodeVeld";
 import { ThuisbasisVelden, useThuisbasisFout } from "@/components/app/ThuisbasisVelden";
-import { ibanCodeBericht, isIbanCodeFout } from "@/lib/fiscal/iban-code-teksten";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
 
 interface WalletCheck {
@@ -47,15 +45,11 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
   const router = useRouter();
   const pt = AUTH_DICTS[useI18n().locale].page;
   const ft = useFT();
-  // Een gewijzigd IBAN vraagt een code (mail of verificatie-app): het veld verschijnt na de eerste 423.
-  const [ibanCode, setIbanCode] = useState("");
-  const [codeMelding, setCodeMelding] = useState<string | null>(null);
   // adres in het buitenland niet gevonden: het formulier blijft staan, met de melding erin
   const [adresFout, setAdresFout] = useState<string | null>(null);
   const thuisbasisFout = useThuisbasisFout();
   const [saving, setSaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
-  const zonderCode = useRef(false); // "Stuur code": opnieuw versturen zonder de oude code
   const [stage, setStage] = useState<Stage>({ kind: "checking" });
 
   useEffect(() => {
@@ -95,9 +89,12 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
   }
 
   async function submit(attemptId: string, form: FormData): Promise<void> {
-    const ibanCodeWaarde = zonderCode.current ? "" : String(form.get("ibanCode") ?? "").trim();
-    zonderCode.current = false;
-    // Geen stage-wissel: het formulier blijft staan, zodat een codeveld de ingevulde gegevens niet wist.
+    // een Nederlands adres kiest de werker uit de lijst: zonder postcode is er niets om in te sturen
+    if ((String(form.get("country") ?? "NL") || "NL") === "NL" && !String(form.get("postalCode") ?? "").trim()) {
+      setAdresFout(ft.thuisbasis.kiesAdres);
+      return;
+    }
+    // Geen stage-wissel: het formulier blijft staan, zodat een adresmelding de ingevulde gegevens niet wist.
     setSaving(true);
     try {
       const res = await fetch("/api/onboarding/wallet/submit", {
@@ -109,17 +106,9 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
           postalCode: form.get("postalCode"),
           country: form.get("country") || undefined,
           city: form.get("city") || undefined,
-          payoutIban: form.get("payoutIban"),
-          ...(ibanCodeWaarde ? { ibanCode: ibanCodeWaarde } : {}),
         }),
       });
       const data = await res.json();
-      if (!res.ok && isIbanCodeFout(res.status, data?.error?.code)) {
-        // De wallet-verificatie is nog niet verbruikt: het formulier blijft, met een codeveld.
-        setIbanCode("");
-        setCodeMelding(ibanCodeBericht(data.error.code, ft.ibanCode, data.error.message));
-        return;
-      }
       const adres = res.ok ? null : thuisbasisFout(data);
       setAdresFout(adres);
       if (adres) return; // de wallet-uitslag is nog niet verbruikt (de route controleert het adres eerst)
@@ -218,24 +207,6 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
           </label>
         )}
         <ThuisbasisVelden postcodeLabel="Postcode" />
-        <label className="block">
-          <span className="field-label">IBAN voor uitbetalingen</span>
-          <input name="payoutIban" required placeholder="NL00 BANK 0000 0000 00" className="field-input" />
-        </label>
-        {codeMelding && (
-          <IbanCodeVeld
-            name="ibanCode"
-            texts={ft.ibanCode}
-            melding={codeMelding}
-            value={ibanCode}
-            onChange={setIbanCode}
-            onResend={() => {
-              zonderCode.current = true;
-              formRef.current?.requestSubmit();
-            }}
-            busy={saving}
-          />
-        )}
         {adresFout && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{adresFout}</p>}
         <button type="submit" disabled={saving} className="btn-primary w-full">
           Verificatie afronden

@@ -21,6 +21,7 @@ import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { consumeVerifiedWalletAttempt } from "@/lib/kyc/wallet";
 import { flagIbanChanged } from "@/lib/compliance/documents";
 import { eisIbanBevestiging } from "@/lib/fiscal/iban-bevestiging";
+import { schoonIban } from "@/lib/onboarding/velden";
 import { alertOwnerLater } from "@/lib/ops/alert";
 
 // ---------------------------------------------------------------------------
@@ -59,7 +60,7 @@ export interface OnboardingInput {
   /** woonplaats, alleen nodig voor een thuisbasis in het buitenland */
   city?: string | undefined;
   houseNumber?: string | undefined;
-  payoutIban: string;
+  payoutIban?: string | undefined;
   /** Bevestigingscode bij een gewijzigd IBAN (mail of 2FA). */
   ibanCode?: string | undefined;
   documentType: DocKind;
@@ -227,6 +228,16 @@ interface FreelancerBaseResult {
   companyStatus: string;
 }
 
+/** Het IBAN uit de fiscale gegevens (waar "Bankrekening bevestigen" het ook bewaart), of null. */
+async function ibanUitFiscaal(userId: string): Promise<string | null> {
+  try {
+    const { getFiscal } = await import("@/lib/fiscal/store");
+    return schoonIban((await getFiscal(userId)).iban);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Geocode + create/update the FreelancerProfile + (optional) KVK check —
  * shared by both the photo-capture and digital-wallet onboarding paths,
@@ -244,7 +255,7 @@ async function ensureFreelancerBase(input: {
   /** woonplaats, alleen nodig voor een thuisbasis in het buitenland */
   city?: string | undefined;
   houseNumber?: string | undefined;
-  payoutIban: string;
+  payoutIban?: string | undefined;
   ibanCode?: string | undefined;
   /** De IBAN-bevestiging is al gevraagd (de code is eenmalig: niet nog eens controleren). */
   ibanAlBevestigd?: boolean | undefined;
@@ -278,14 +289,19 @@ async function ensureFreelancerBase(input: {
   const vatFields = vat
     ? { vatNumber: vat.vatNumber, vatValid: vat.status === "valid", country: vat.countryCode === "EL" ? "GR" : vat.countryCode === "XI" ? "GB" : vat.countryCode }
     : {};
+  const cleanIban = schoonIban(input.payoutIban);
   let freelancerProfileId = input.existingProfileId;
   if (!freelancerProfileId) {
+    // Het IBAN kan al bij "Bankrekening bevestigen" zijn ingevuld, voordat dit profiel bestond:
+    // de uitbetaling leest het van het profiel, dus nemen we het hier over.
+    const startIban = cleanIban ?? (await ibanUitFiscaal(input.userId));
     const created = await prisma.freelancerProfile.create({
       data: {
         userId: input.userId,
         ...vatFields,
         kvkNumber: cleanKvk || (vat ? `vat-${vat.vatNumber}` : `pending-${input.userId.slice(0, 8)}`),
-        payoutIban: input.payoutIban.replace(/\s+/g, "").toUpperCase(),
+        // zonder IBAN (het wordt bij "Bankrekening bevestigen" gevraagd) blijft het veld leeg
+        ...(startIban ? { payoutIban: startIban } : {}),
         homeLatitude: geo.latitude,
         homeLongitude: geo.longitude,
         homePostalCode: geo.postalCode,
@@ -294,23 +310,31 @@ async function ensureFreelancerBase(input: {
     });
     freelancerProfileId = created.id;
   } else {
-    const cleanIban = input.payoutIban.replace(/\s+/g, "").toUpperCase();
-    const existing = await prisma.freelancerProfile.findUnique({
-      where: { id: freelancerProfileId },
-      select: { payoutIban: true },
-    });
-    // Een gewijzigd bestaand IBAN vraagt een tweede bewijs (mailcode of 2FA), net als
-    // in /api/me/fiscal; een eerste IBAN blijft vrij. Vóór elke schrijfactie; gooit
-    // IbanBevestigingFout (423) die de route teruggeeft.
-    if (!input.ibanAlBevestigd) await eisIbanBevestiging(input.userId, existing?.payoutIban, cleanIban, input.ibanCode);
-    // Only a CHANGE to an already-set IBAN needs re-verification — the first
-    // time this profile ever gets one (fresh onboarding) is not a "change".
-    const ibanChanged = Boolean(existing?.payoutIban) && existing!.payoutIban !== cleanIban;
+    // Zonder IBAN verandert er niets aan het bestaande rekeningnummer: dat staat bij
+    // "Bankrekening bevestigen" en komt hier niet meer langs.
+    let ibanChanged = false;
+    let schrijfIban = cleanIban;
+    if (cleanIban) {
+      const existing = await prisma.freelancerProfile.findUnique({
+        where: { id: freelancerProfileId },
+        select: { payoutIban: true },
+      });
+      // Een gewijzigd bestaand IBAN vraagt een tweede bewijs (mailcode of 2FA), net als
+      // in /api/me/fiscal; een eerste IBAN blijft vrij. Vóór elke schrijfactie; gooit
+      // IbanBevestigingFout (423) die de route teruggeeft.
+      if (!input.ibanAlBevestigd) await eisIbanBevestiging(input.userId, existing?.payoutIban, cleanIban, input.ibanCode);
+      // Only a CHANGE to an already-set IBAN needs re-verification — the first
+      // time this profile ever gets one (fresh onboarding) is not a "change".
+      ibanChanged = Boolean(existing?.payoutIban) && existing!.payoutIban !== cleanIban;
+    } else {
+      const bestaand = await prisma.freelancerProfile.findUnique({ where: { id: freelancerProfileId }, select: { payoutIban: true } });
+      if (!bestaand?.payoutIban) schrijfIban = await ibanUitFiscaal(input.userId);
+    }
     await prisma.freelancerProfile.update({
       where: { id: freelancerProfileId },
       data: {
         ...vatFields,
-        payoutIban: cleanIban,
+        ...(schrijfIban ? { payoutIban: schrijfIban } : {}),
         homeLatitude: geo.latitude,
         homeLongitude: geo.longitude,
         homePostalCode: geo.postalCode,
@@ -393,7 +417,7 @@ export async function saveFreelancerBase(input: {
   /** woonplaats, alleen nodig voor een thuisbasis in het buitenland */
   city?: string | undefined;
   houseNumber?: string | undefined;
-  payoutIban: string;
+  payoutIban?: string | undefined;
   ibanCode?: string | undefined;
 }): Promise<FreelancerBaseResult> {
   const user = await prisma.user.findUnique({ where: { id: input.userId }, select: { freelancerProfile: { select: { id: true } } } });
@@ -954,7 +978,7 @@ export interface WalletOnboardingInput {
   /** woonplaats, alleen nodig voor een thuisbasis in het buitenland */
   city?: string | undefined;
   houseNumber?: string | undefined;
-  payoutIban: string;
+  payoutIban?: string | undefined;
   ibanCode?: string | undefined;
 }
 
@@ -977,9 +1001,10 @@ export async function submitFreelancerOnboardingViaWallet(
 
   // De IBAN-bevestiging eerst, vóór het eenmalige wallet-resultaat verbruikt wordt: een
   // 423 mag de verificatie niet laten vervallen. De code is eenmalig, dus alleen hier.
-  if (user.freelancerProfile) {
+  const nieuwIban = schoonIban(input.payoutIban);
+  if (user.freelancerProfile && nieuwIban) {
     const huidig = await prisma.freelancerProfile.findUnique({ where: { id: user.freelancerProfile.id }, select: { payoutIban: true } });
-    await eisIbanBevestiging(user.id, huidig?.payoutIban, input.payoutIban.replace(/\s+/g, "").toUpperCase(), input.ibanCode);
+    await eisIbanBevestiging(user.id, huidig?.payoutIban, nieuwIban, input.ibanCode);
   }
 
   const claims = await consumeVerifiedWalletAttempt(input.userId, input.attemptId);

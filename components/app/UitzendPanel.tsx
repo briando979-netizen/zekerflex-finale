@@ -2,9 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { UitzendContractCard } from "@/components/app/UitzendContractCard";
-import { IbanCodeVeld } from "@/components/app/IbanCodeVeld";
-import { useFT } from "@/components/i18n/useFT";
-import { ibanCodeBericht, isIbanCodeFout } from "@/lib/fiscal/iban-code-teksten";
 
 interface Status {
   weeksWorked: number;
@@ -28,34 +25,15 @@ interface Fiscal {
   bsnLast4: string | null;
 }
 
-// MOD-97 IBAN checksum, mirrors lib/billing/sepa.ts for a live hint.
-function ibanLooksValid(raw: string): boolean {
-  const v = raw.replace(/\s+/g, "").toUpperCase();
-  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(v)) return false;
-  const re = (v.slice(4) + v.slice(0, 4)).replace(/[A-Z]/g, (c) => String(c.charCodeAt(0) - 55));
-  let rem = 0;
-  for (const ch of re) rem = (rem * 10 + Number(ch)) % 97;
-  return rem === 1;
-}
-
 export function UitzendPanel() {
   const [s, setS] = useState<Status | null>(null);
   const [f, setF] = useState<Fiscal | null>(null);
-  const [iban, setIban] = useState("");
-  const [savingIban, setSavingIban] = useState(false);
-  const ft = useFT();
-  // Een gewijzigd IBAN vraagt een code (mail of verificatie-app): het veld verschijnt na de eerste 423.
-  const [ibanCode, setIbanCode] = useState("");
-  const [codeMelding, setCodeMelding] = useState<string | null>(null);
-  const [ibanFout, setIbanFout] = useState<string | null>(null);
-
   const load = () =>
     fetch("/api/me/uitzend", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
         setS(d.status);
         setF(d.fiscal);
-        setIban(d.fiscal?.iban ?? "");
       })
       .catch(() => undefined);
   useEffect(() => {
@@ -72,34 +50,6 @@ export function UitzendPanel() {
       body: JSON.stringify({ loonheffingskorting: next }),
     });
   };
-
-  const saveIban = async (metCode = true) => {
-    setSavingIban(true);
-    setIbanFout(null);
-    try {
-      const r = await fetch("/api/me/uitzend", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ iban, ...(metCode && ibanCode.trim() ? { ibanCode: ibanCode.trim() } : {}) }),
-      });
-      const d = await r.json().catch(() => ({}));
-      if (r.ok) {
-        setCodeMelding(null);
-        setIbanCode("");
-        setF((p) => (p ? { ...p, iban: d.iban, ibanValid: d.ibanValid, ibanPendingVerification: d.ibanPendingVerification } : p));
-      } else if (isIbanCodeFout(r.status, d?.error?.code)) {
-        setCodeMelding(ibanCodeBericht(d.error.code, ft.ibanCode, d.error.message));
-      } else {
-        setIbanFout(typeof d?.error?.message === "string" ? d.error.message : null);
-      }
-    } catch {
-      // netwerkfout: geen melding, de knop is weer beschikbaar
-    } finally {
-      setSavingIban(false);
-    }
-  };
-
-  const ibanHint = iban.length >= 15 ? (ibanLooksValid(iban) ? "geldig" : "checksum klopt niet") : "";
 
   const contractBlock = (
     <div>
@@ -180,64 +130,10 @@ export function UitzendPanel() {
         </span>
       </label>
 
-      {/* IBAN + controle */}
-      <div>
-        <p className="field-label">Rekeningnummer (IBAN)</p>
-        <p className="mt-0.5 text-xs text-neutralx-500">
-          We controleren dit met de checksum én je geüploade bankafschrift.
-        </p>
-        <div className="mt-2 flex flex-wrap items-end gap-2">
-          <input
-            value={iban}
-            onChange={(e) => setIban(e.target.value.toUpperCase())}
-            placeholder="NL00 BANK 0000 0000 00"
-            className="field-input flex-1 font-mono"
-          />
-          <button type="button" onClick={() => void saveIban()} disabled={savingIban} className="btn-ghost">
-            {savingIban ? "Opslaan…" : "Opslaan"}
-          </button>
-        </div>
-        {codeMelding && (
-          <div className="mt-3">
-            <IbanCodeVeld
-              texts={ft.ibanCode}
-              melding={codeMelding}
-              value={ibanCode}
-              onChange={setIbanCode}
-              onResend={() => {
-                setIbanCode("");
-                void saveIban(false);
-              }}
-              busy={savingIban}
-            />
-          </div>
-        )}
-        {ibanFout && (
-          <p role="alert" className="mt-2 text-xs text-crit">
-            {ibanFout}
-          </p>
-        )}
-        <p className="mt-1 text-xs">
-          {ibanHint && (
-            <span className={ibanLooksValid(iban) ? "text-ok" : "text-crit"}>{ibanHint}</span>
-          )}
-          {f.ibanValid && !ibanHint && f.ibanPendingVerification && (
-            <span className="text-warn">checksum klopt, maar wacht op een nieuw bankafschrift (zie hieronder)</span>
-          )}
-          {f.ibanValid && !ibanHint && !f.ibanPendingVerification && (
-            <span className="text-ok">opgeslagen IBAN is gecontroleerd ✓</span>
-          )}
-        </p>
-        {f.ibanPendingVerification && (
-          <p className="mt-2 rounded-lg bg-warn/10 px-3 py-2 text-xs text-ink">
-            Je hebt je rekeningnummer gewijzigd. Uitbetalingen worden aangehouden totdat je hieronder een nieuw
-            bankafschrift uploadt waarop je naam én dit rekeningnummer staan.
-          </p>
-        )}
-        {f.bsnLast4 && (
-          <p className="mt-2 text-xs text-neutralx-400">BSN bekend (eindigt op {f.bsnLast4}) — nooit onversleuteld opgeslagen.</p>
-        )}
-      </div>
+      {/* Het rekeningnummer vul je in bij "Bankrekening bevestigen" (hierboven op deze pagina). */}
+      {f.bsnLast4 && (
+        <p className="text-xs text-neutralx-400">BSN bekend (eindigt op {f.bsnLast4}) — nooit onversleuteld opgeslagen.</p>
+      )}
     </div>
   );
 }

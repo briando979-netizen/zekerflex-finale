@@ -2,18 +2,26 @@ import { NextResponse } from "next/server";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { docStatus, listDocs, storeDoc, type DocKind } from "@/lib/compliance/documents";
+import { currentPayoutIban } from "@/lib/kyc/bank-login";
+import { ibanLaatste4 } from "@/lib/onboarding/velden";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/me/documents — my verification documents + completeness.
+// GET /api/me/documents — my verification documents + completeness, plus the last
+// four digits of my payout IBAN (the "Bankrekening bevestigen" panel shows those;
+// the full number never leaves the server).
 export async function GET(): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
-    const [docs, status] = await Promise.all([listDocs(p.userId), docStatus(p.userId)]);
-    return NextResponse.json({ docs, status });
+    const [docs, status, iban] = await Promise.all([
+      listDocs(p.userId),
+      docStatus(p.userId),
+      currentPayoutIban(p.userId).catch(() => null),
+    ]);
+    return NextResponse.json({ docs, status, ibanLast4: ibanLaatste4(iban) });
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });

@@ -13,9 +13,11 @@ export async function GET(request: Request): Promise<NextResponse> {
   try {
     await requirePrincipal();
     const q = (new URL(request.url).searchParams.get("q") ?? "").trim();
-    const plekken = await zoekPlekken(q, 6);
+    // ?soort=adres: alleen adressen (met postcode), voor de thuisbasis van een werker
+    const alleenAdressen = new URL(request.url).searchParams.get("soort") === "adres";
+    const plekken = await zoekPlekken(q, 6, { alleenAdressen });
     return NextResponse.json({
-      results: plekken.map((p) => ({ label: p.naam, lat: p.lat, lng: p.lon })),
+      results: plekken.map((p) => ({ label: p.naam, lat: p.lat, lng: p.lon, postcode: p.postcode, plaats: p.plaats, soort: p.soort })),
     });
   } catch {
     return NextResponse.json({ results: [] });

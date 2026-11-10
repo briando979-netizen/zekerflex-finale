@@ -19,6 +19,18 @@ export function ibanKlopt(iban: string): boolean {
   return rest === 1;
 }
 
+/** Een ingetypt IBAN zonder spaties en in hoofdletters; leeg of afwezig geeft null (bijvoorbeeld: bij de onboarding wordt het IBAN niet meer gevraagd). */
+export function schoonIban(raw: string | null | undefined): string | null {
+  const s = (raw ?? "").replace(/\s+/g, "").toUpperCase();
+  return s ? s : null;
+}
+
+/** De laatste vier tekens van een IBAN voor in beeld ("NL91 ABNA 0417 1643 00" geeft "4300"); te kort geeft null. */
+export function ibanLaatste4(raw: string | null | undefined): string | null {
+  const s = schoonIban(raw);
+  return s && s.length >= 8 ? s.slice(-4) : null;
+}
+
 /** Sleutel van de foutmelding, of null als het veld goed is. `nu` voor testbaarheid. */
 export function controleerVeld(veld: VeldSleutel, waarde: string, nu: Date = new Date()): VeldSleutel | null {
   const v = waarde.trim();

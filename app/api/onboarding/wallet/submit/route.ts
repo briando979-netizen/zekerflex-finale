@@ -15,7 +15,8 @@ const bodySchema = z.object({
   kvkNumber: z.string().trim().max(20).optional(),
   ...thuisbasisVelden,
   houseNumber: z.string().trim().max(12).optional(),
-  payoutIban: z.string().trim().min(15).max(34),
+  /** Optioneel: het IBAN wordt bij "Bankrekening bevestigen" gevraagd, niet meer in de onboarding. Zonder blijft een bestaand IBAN staan. */
+  payoutIban: z.string().trim().min(15).max(34).optional(),
   /** Bevestigingscode bij een gewijzigd IBAN (mail of 2FA). */
   ibanCode: z.string().trim().max(32).optional(),
 }).superRefine(controleerThuisbasis);

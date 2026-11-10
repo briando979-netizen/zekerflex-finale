@@ -25,7 +25,8 @@ const baseSchema = z.object({
   vatNumber: z.string().trim().max(20).optional(),
   ...thuisbasisVelden,
   houseNumber: z.string().trim().max(12).optional(),
-  payoutIban: z.string().trim().min(15).max(34),
+  /** Optioneel: het IBAN wordt bij "Bankrekening bevestigen" gevraagd, niet meer in de onboarding. Zonder blijft een bestaand IBAN staan. */
+  payoutIban: z.string().trim().min(15).max(34).optional(),
   /** Bevestigingscode bij een gewijzigd IBAN (mail of 2FA). */
   ibanCode: z.string().trim().max(32).optional(),
 }).superRefine(controleerThuisbasis);
@@ -36,7 +37,8 @@ const fieldsSchema = z.object({
   vatNumber: z.string().trim().max(20).optional(),
   ...thuisbasisVelden,
   houseNumber: z.string().trim().max(12).optional(),
-  payoutIban: z.string().trim().min(15).max(34),
+  /** Optioneel: het IBAN wordt bij "Bankrekening bevestigen" gevraagd, niet meer in de onboarding. Zonder blijft een bestaand IBAN staan. */
+  payoutIban: z.string().trim().min(15).max(34).optional(),
   ibanCode: z.string().trim().max(32).optional(),
   documentType: z.enum(["PASSPORT", "ID_CARD", "DRIVERS_LICENSE"]),
   documentNumber: z.string().trim().min(4).max(20),
@@ -100,7 +102,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         country: str("country"),
         city: str("city"),
         houseNumber: str("houseNumber"),
-        payoutIban: form.get("payoutIban"),
+        payoutIban: str("payoutIban"),
         ibanCode: str("ibanCode"),
       });
       if (!base.success) throw AppError.validation(base.error.issues[0]?.message ?? "Controleer de ingevulde gegevens");
@@ -138,7 +140,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       country: str("country"),
       city: str("city"),
       houseNumber: str("houseNumber"),
-      payoutIban: form.get("payoutIban"),
+      payoutIban: str("payoutIban"),
       ibanCode: str("ibanCode"),
       documentType: telefoon ? telefoon.soort : form.get("documentType"),
       documentNumber: telefoon ? telefoon.gegevens.nummer : form.get("documentNumber"),

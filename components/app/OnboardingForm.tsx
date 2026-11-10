@@ -4,9 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { useFT } from "@/components/i18n/useFT";
-import { IbanCodeVeld } from "@/components/app/IbanCodeVeld";
 import { ThuisbasisVelden, controleerThuisbasisVooraf, useThuisbasisFout } from "@/components/app/ThuisbasisVelden";
-import { ibanCodeBericht, isIbanCodeFout } from "@/lib/fiscal/iban-code-teksten";
 import { AUTH_DICTS, fill, type AuthDict } from "@/lib/i18n/auth";
 import { DocumentLezing, leesDocumentFoto, type Lezing } from "@/components/app/DocumentLezing";
 import { IdScan, type ScanAfronden, type ScanAfrondenOverdracht, type ScanUitslag } from "@/components/app/IdScan";
@@ -173,15 +171,11 @@ export function OnboardingForm({
   /** Stripe Identity is switched on: offer the Stripe camera flow (recommended) */
   stripeIdentity?: boolean;
   /** Eerder opgeslagen gegevens: iemand die later terugkomt, begint niet opnieuw. */
-  initial?: { kvkNumber?: string; vatNumber?: string; postalCode?: string; payoutIban?: string };
+  initial?: { kvkNumber?: string; vatNumber?: string; postalCode?: string };
 }) {
   const t = AUTH_DICTS[useI18n().locale].onb;
   const ft = useFT();
   const thuisbasisFout = useThuisbasisFout();
-  // Een gewijzigd IBAN vraagt een code (mail of verificatie-app): het veld verschijnt na de eerste 423.
-  const [ibanCode, setIbanCode] = useState("");
-  const [codeMelding, setCodeMelding] = useState<string | null>(null);
-  const zonderCode = useRef(false); // "Stuur code": opnieuw versturen zonder de oude code
   const [biz, setBiz] = useState<"kvk" | "vat">(initial?.vatNumber && !initial.kvkNumber ? "vat" : "kvk");
   // per veld een foutmelding (role="alert"); gecontroleerd bij het verlaten van het veld en bij het versturen
   const [fouten, setFouten] = useState<Partial<Record<VeldSleutel, VeldSleutel>>>({});
@@ -221,8 +215,8 @@ export function OnboardingForm({
   /** Controleer de velden die bij deze actie horen; leeg KVK/btw mag bij "later verder". */
   function valideer(form: FormData, opties: { documenten: boolean; bedrijfOptioneel: boolean }): boolean {
     const w = (n: string) => String(form.get(n) ?? "");
-    const lijst: [VeldSleutel, string][] = [["iban", w("payoutIban")]];
-    // het NL-postcodeformaat geldt alleen in Nederland; een adres in het buitenland controleert ThuisbasisVelden zelf
+    const lijst: [VeldSleutel, string][] = [];
+    // in Nederland komt de postcode uit het gekozen adres (ThuisbasisVelden); een adres in het buitenland controleert ThuisbasisVelden zelf
     if ((w("country") || "NL") === "NL") lijst.unshift(["postal", w("postalCode")]);
     if (requireKvk) {
       const waarde = biz === "kvk" ? w("kvkNumber") : w("vatNumber");
@@ -251,23 +245,18 @@ export function OnboardingForm({
     const bron = new FormData(form);
     if (!valideer(bron, { documenten: false, bedrijfOptioneel: true })) return;
     const body = new FormData();
-    for (const k of ["kvkNumber", "vatNumber", "postalCode", "houseNumber", "payoutIban", "ibanCode"]) {
+    for (const k of ["kvkNumber", "vatNumber", "postalCode", "city", "country", "houseNumber"]) {
       const v = bron.get(k);
       if (typeof v === "string" && v.trim()) body.set(k, v);
     }
-    if (zonderCode.current) body.delete("ibanCode");
-    zonderCode.current = false;
     body.set("identityMethod", "bewaren");
     setBusy(true);
     setError(null);
     try {
       const res = await fetch("/api/onboarding", { method: "POST", body });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok && isIbanCodeFout(res.status, data?.error?.code)) {
-        setIbanCode("");
-        setCodeMelding(ibanCodeBericht(data.error.code, ft.ibanCode, data.error.message));
-      } else if (!res.ok) {
-        setError(data?.error?.message ?? t.later.failed);
+      if (!res.ok) {
+        setError(thuisbasisFout(data) ?? data?.error?.message ?? t.later.failed);
       } else {
         setBewaard(t.later.saved);
         router.refresh();
@@ -385,8 +374,6 @@ export function OnboardingForm({
       return;
     }
     const body = new FormData(e.currentTarget);
-    if (zonderCode.current) body.delete("ibanCode");
-    zonderCode.current = false;
     if (method === "upload") {
       const absent = (["documentFront", "documentBack", "selfie"] as PhotoKey[]).filter((k) => !photos.current[k]);
       setMissing(absent);
@@ -406,9 +393,6 @@ export function OnboardingForm({
       const data = await res.json().catch(() => ({}));
       if (res.status === 413) {
         setError(t.tooBig);
-      } else if (!res.ok && isIbanCodeFout(res.status, data?.error?.code)) {
-        setIbanCode("");
-        setCodeMelding(ibanCodeBericht(data.error.code, ft.ibanCode, data.error.message));
       } else if (!res.ok) {
         setError(thuisbasisFout(data) ?? data?.error?.message ?? t.failed);
       } else if (data.redirectUrl) {
@@ -584,38 +568,7 @@ export function OnboardingForm({
         <legend className="text-sm font-semibold text-ink">
           {requireKvk ? "2." : "1."} {t.home}
         </legend>
-        <ThuisbasisVelden postcodeLabel={t.postal} />
-        <label className="block">
-          <span className="field-label">{t.iban}</span>
-          <input
-            name="payoutIban"
-            required
-            aria-required="true"
-            placeholder="NL00 BANK 0000 0000 00"
-            autoComplete="off"
-            autoCapitalize="characters"
-            spellCheck={false}
-            defaultValue={initial?.payoutIban ?? ""}
-            onBlur={(e) => controleerEen("iban", e.target.value)}
-            {...veldAttrs("iban")}
-            className="field-input"
-          />
-          <VeldFout veld="iban" tekst={veldFout("iban")} />
-        </label>
-        {codeMelding && (
-          <IbanCodeVeld
-            name="ibanCode"
-            texts={ft.ibanCode}
-            melding={codeMelding}
-            value={ibanCode}
-            onChange={setIbanCode}
-            onResend={() => {
-              zonderCode.current = true;
-              formRef.current?.requestSubmit();
-            }}
-            busy={busy}
-          />
-        )}
+        <ThuisbasisVelden postcodeLabel={t.postal} begin={initial?.postalCode} fout={fouten.postal ? ft.thuisbasis.kiesAdres : undefined} />
       </fieldset>
 
       <fieldset className="space-y-4" key={attempt}>

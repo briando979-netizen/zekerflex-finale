@@ -53,12 +53,22 @@ export async function PUT(request: Request): Promise<NextResponse> {
     const patch: Partial<FiscalProfile> = {};
     let ibanChanged = false;
     if (input.loonheffingskorting !== undefined) patch.loonheffingskorting = input.loonheffingskorting;
+    // Het profiel van een zzp'er of flexwerker: daar leest de uitbetaling het IBAN (lib/timesheets/approve.ts).
+    // Het IBAN staat op één plek in te vullen (Verificatie, "Bankrekening bevestigen") en komt hier
+    // in beide bronnen: de fiscale gegevens en het profiel.
+    let profielIban: string | null = null;
+    let heeftProfiel = false;
     if (input.iban !== undefined) {
       const clean = input.iban.replace(/\s+/g, "").toUpperCase();
       const before = await getFiscal(p.userId);
+      const profiel = await prisma.freelancerProfile.findUnique({ where: { userId: p.userId }, select: { payoutIban: true } });
+      heeftProfiel = Boolean(profiel);
+      profielIban = profiel?.payoutIban ?? null;
       // Only a CHANGE to an already-set IBAN needs re-verification — the
-      // first time a worker ever sets one (onboarding) is not a "change".
-      ibanChanged = Boolean(before.iban) && before.iban !== clean;
+      // first time a worker ever sets one is not a "change". Een IBAN dat al op het
+      // profiel staat (vanuit de oude onboarding) telt ook als "al ingesteld".
+      const huidig = profielIban || before.iban;
+      ibanChanged = Boolean(huidig) && huidig !== clean;
       // Een gewijzigd rekeningnummer vraagt een tweede bewijs (mailcode of 2FA), net
       // als in /api/me/fiscal. Zonder bevestiging wordt er niets opgeslagen: 423 met
       // een eigen code (nooit 403: CrowdSec). Een eerste IBAN blijft vrij.
@@ -76,13 +86,14 @@ export async function PUT(request: Request): Promise<NextResponse> {
       if (ibanChanged) patch.ibanPendingVerification = true;
     }
     const saved = await setFiscal(p.userId, patch);
-    if (ibanChanged) {
-      await Promise.all([
-        invalidateBankDoc(p.userId).catch(() => undefined),
-        prisma.freelancerProfile
-          .update({ where: { userId: p.userId }, data: { payoutIbanPendingVerification: true } })
-          .catch(() => undefined),
-      ]);
+    if (ibanChanged) await invalidateBankDoc(p.userId).catch(() => undefined);
+    if (input.iban !== undefined && heeftProfiel && saved.iban && (ibanChanged || profielIban !== saved.iban)) {
+      await prisma.freelancerProfile
+        .update({
+          where: { userId: p.userId },
+          data: { payoutIban: saved.iban, ...(ibanChanged ? { payoutIbanPendingVerification: true } : {}) },
+        })
+        .catch(() => undefined);
     }
     return NextResponse.json({
       loonheffingskorting: saved.loonheffingskorting,
