@@ -559,6 +559,19 @@ export function IdScan({
                     </li>
                   ))}
                 </ul>
+                {/* NFC-optie zichtbaar maken: in de app na de foto van de codekant, in de browser alleen een uitleg */}
+                <p className="mt-5 rounded-lg border border-trust/30 bg-trust/10 px-3 py-2.5 text-sm leading-relaxed text-ink">
+                  {kanChip ? (
+                    s.chipAppHint
+                  ) : (
+                    <>
+                      {s.chipWebHint}{" "}
+                      <a href="/app" target="_blank" rel="noopener" className="font-semibold underline">
+                        {s.chipWebLink}
+                      </a>
+                    </>
+                  )}
+                </p>
                 <p className="mt-6 text-center text-xs">
                   <a href="/privacy" target="_blank" rel="noopener" className="text-neutralx-500 underline">
                     {s.privacy}

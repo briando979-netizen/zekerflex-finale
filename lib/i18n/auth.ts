@@ -300,6 +300,9 @@ export interface AuthDict {
       chipEcht: string;
       chipNietEcht: string;
       chipFout: string;
+      chipAppHint: string;
+      chipWebHint: string;
+      chipWebLink: string;
       chipOverslaan: string;
       /** verder op je telefoon (QR, lib/kyc/overdracht.ts) */
       telefoonOptie: string;
@@ -646,6 +649,9 @@ const nl: AuthDict = {
       chipEcht: "De gegevens op je chip zijn door de overheid ondertekend en horen bij het document dat je scande.",
       chipNietEcht: "We konden de chip niet volledig als echt bevestigen. Een medewerker kijkt mee; je kunt gewoon verder.",
       chipFout: "Het chip lezen is niet gelukt. Probeer het opnieuw of sla het over.",
+      chipAppHint: "Heeft je ID-kaart of paspoort een chip? Na de foto van de kant met de code lees je de chip met NFC: sneller en veiliger.",
+      chipWebHint: "Je ID scannen met NFC kan alleen in de ZekerFlex-app voor iPhone of Android.",
+      chipWebLink: "Download de app",
       chipOverslaan: "Overslaan",
       telefoonOptie: "Verder op je telefoon",
       telefoonTitel: "Scan de QR-code met je telefoon",
@@ -990,6 +996,9 @@ const en: AuthDict = {
       chipEcht: "The data on your chip is signed by the government and belongs to the document you scanned.",
       chipNietEcht: "We couldn't fully confirm the chip as genuine. A staff member will check; you can just continue.",
       chipFout: "Reading the chip didn't work. Try again or skip it.",
+      chipAppHint: "Does your ID card or passport have a chip? After the photo of the side with the code, you read the chip with NFC: faster and safer.",
+      chipWebHint: "Scanning your ID with NFC only works in the ZekerFlex app for iPhone or Android.",
+      chipWebLink: "Get the app",
       chipOverslaan: "Skip",
       telefoonOptie: "Continue on your phone",
       telefoonTitel: "Scan the QR code with your phone",
@@ -1334,6 +1343,9 @@ const pl: AuthDict = {
       chipEcht: "Dane w chipie są podpisane przez państwo i należą do zeskanowanego dokumentu.",
       chipNietEcht: "Nie udało się w pełni potwierdzić autentyczności chipu. Sprawdzi to pracownik; możesz kontynuować.",
       chipFout: "Nie udało się odczytać chipu. Spróbuj ponownie albo pomiń.",
+      chipAppHint: "Czy Twój dowód osobisty lub paszport ma chip? Po zdjęciu strony z kodem odczytasz chip przez NFC: szybciej i bezpieczniej.",
+      chipWebHint: "Skanowanie dokumentu przez NFC działa tylko w aplikacji ZekerFlex na iPhone'a lub Androida.",
+      chipWebLink: "Pobierz aplikację",
       chipOverslaan: "Pomiń",
       telefoonOptie: "Kontynuuj na telefonie",
       telefoonTitel: "Zeskanuj kod QR telefonem",
@@ -1678,6 +1690,9 @@ const ro: AuthDict = {
       chipEcht: "Datele de pe cip sunt semnate de stat și aparțin documentului scanat.",
       chipNietEcht: "Nu am putut confirma complet autenticitatea cipului. Verifică un angajat; poți continua.",
       chipFout: "Citirea cipului nu a reușit. Încearcă din nou sau sari peste.",
+      chipAppHint: "Are cartea ta de identitate sau pașaportul un cip? După poza părții cu codul, citești cipul prin NFC: mai rapid și mai sigur.",
+      chipWebHint: "Scanarea actului prin NFC funcționează doar în aplicația ZekerFlex pentru iPhone sau Android.",
+      chipWebLink: "Descarcă aplicația",
       chipOverslaan: "Sari peste",
       telefoonOptie: "Continuă pe telefon",
       telefoonTitel: "Scanează codul QR cu telefonul",
@@ -2022,6 +2037,9 @@ const uk: AuthDict = {
       chipEcht: "Дані на чипі підписані державою й належать до документа, який ви відсканували.",
       chipNietEcht: "Не вдалося повністю підтвердити справжність чипа. Перевірить працівник; можна продовжувати.",
       chipFout: "Не вдалося зчитати чип. Спробуйте ще раз або пропустіть.",
+      chipAppHint: "Чи є в твоєму ID чи паспорті чип? Після фото сторони з кодом ти зчитуєш чип через NFC: швидше й безпечніше.",
+      chipWebHint: "Сканування документа через NFC працює лише в застосунку ZekerFlex для iPhone або Android.",
+      chipWebLink: "Завантажити застосунок",
       chipOverslaan: "Пропустити",
       telefoonOptie: "Продовжити на телефоні",
       telefoonTitel: "Відскануйте QR-код телефоном",
