@@ -634,7 +634,7 @@ const nl: AuthDict = {
       titel: "Je identiteit verifiëren met ZekerFlex",
       punten: [
         "Je maakt een foto van je ID-kaart, paspoort of rijbewijs en daarna een selfie, zodat we zien dat jij het bent.",
-        "We lezen de code op je document en vergelijken je selfie met je pasfoto. Dat gebeurt op de eigen server van ZekerFlex, niet bij een andere partij.",
+        "We lezen de code op je document en vergelijken je selfie met je pasfoto. Dat gebeurt op de eigen server van ZekerFlex, niet bij een andere partij. We maken en bewaren geen gezichtsprofiel: van de vergelijking bewaren we alleen de uitkomst, naast de foto's die een medewerker kan bekijken. Is het niet zeker genoeg, dan kijkt een medewerker mee.",
         "Je foto's worden versleuteld bewaard en alleen voor deze verificatie gebruikt. Je BSN slaan we nooit op. Je kunt je gegevens altijd laten verwijderen.",
       ],
       privacy: "Privacybeleid",
@@ -994,7 +994,7 @@ const en: AuthDict = {
       titel: "Verify your identity with ZekerFlex",
       punten: [
         "You take a photo of your ID card, passport or driving licence and then a selfie, so we can see it's you.",
-        "We read the code on your document and compare your selfie with your photo. This happens on ZekerFlex's own server, not at another company.",
+        "We read the code on your document and compare your selfie with your photo. This happens on ZekerFlex's own server, not at another company. We do not create or keep a face profile: of the comparison we only keep the result, next to the photos a staff member can view. If it is not certain enough, a staff member takes a look.",
         "Your photos are stored encrypted and only used for this verification. We never store your BSN. You can always have your data deleted.",
       ],
       privacy: "Privacy policy",
@@ -1354,7 +1354,7 @@ const pl: AuthDict = {
       titel: "Potwierdź swoją tożsamość w ZekerFlex",
       punten: [
         "Robisz zdjęcie dowodu osobistego, paszportu lub prawa jazdy, a potem selfie, żebyśmy widzieli, że to Ty.",
-        "Odczytujemy kod z dokumentu i porównujemy selfie ze zdjęciem w dokumencie. Dzieje się to na własnym serwerze ZekerFlex, a nie w innej firmie.",
+        "Odczytujemy kod z dokumentu i porównujemy selfie ze zdjęciem w dokumencie. Dzieje się to na własnym serwerze ZekerFlex, a nie w innej firmie. Nie tworzymy ani nie przechowujemy profilu twarzy: z porównania zachowujemy tylko wynik, obok zdjęć, które może obejrzeć pracownik. Jeśli wynik nie jest dość pewny, sprawdzi to pracownik.",
         "Twoje zdjęcia są przechowywane w formie zaszyfrowanej i używane tylko do tej weryfikacji. Nigdy nie zapisujemy Twojego numeru BSN. Zawsze możesz poprosić o usunięcie danych.",
       ],
       privacy: "Polityka prywatności",
@@ -1714,7 +1714,7 @@ const ro: AuthDict = {
       titel: "Verifică-ți identitatea cu ZekerFlex",
       punten: [
         "Faci o fotografie a cărții de identitate, a pașaportului sau a permisului de conducere și apoi un selfie, ca să vedem că ești tu.",
-        "Citim codul de pe document și comparăm selfie-ul cu fotografia din act. Asta se întâmplă pe serverul propriu ZekerFlex, nu la altă firmă.",
+        "Citim codul de pe document și comparăm selfie-ul cu fotografia din act. Asta se întâmplă pe serverul propriu ZekerFlex, nu la altă firmă. Nu creăm și nu păstrăm un profil al feței: din comparație păstrăm doar rezultatul, alături de fotografiile pe care le poate vedea un coleg. Dacă nu este destul de sigur, se uită un coleg.",
         "Fotografiile tale sunt păstrate criptat și folosite doar pentru această verificare. Nu salvăm niciodată BSN-ul tău. Poți oricând cere ștergerea datelor.",
       ],
       privacy: "Politica de confidențialitate",
@@ -2074,7 +2074,7 @@ const uk: AuthDict = {
       titel: "Підтвердьте свою особу в ZekerFlex",
       punten: [
         "Ви фотографуєте ID-картку, паспорт або посвідчення водія, а потім робите селфі, щоб ми бачили, що це ви.",
-        "Ми зчитуємо код на документі й порівнюємо селфі з фото в документі. Це відбувається на власному сервері ZekerFlex, а не в іншій компанії.",
+        "Ми зчитуємо код на документі й порівнюємо селфі з фото в документі. Це відбувається на власному сервері ZekerFlex, а не в іншій компанії. Ми не створюємо й не зберігаємо профіль обличчя: з порівняння зберігаємо лише результат, поряд із фото, які може переглянути співробітник. Якщо результат недостатньо певний, перевірить співробітник.",
         "Ваші фото зберігаються в зашифрованому вигляді й використовуються лише для цієї перевірки. Ми ніколи не зберігаємо ваш BSN. Ви завжди можете попросити видалити ваші дані.",
       ],
       privacy: "Політика конфіденційності",

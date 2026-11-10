@@ -10,6 +10,8 @@ import { geocodeThuisbasis } from "@/lib/geo/thuisbasis";
 import { registerFreelancerCompany } from "@/lib/company/registration";
 import { storeUpload } from "@/lib/storage/local";
 import { runVisionReview } from "@/lib/kyc/vision";
+import { gezichtControle } from "@/lib/kyc/gezicht/controle";
+import { featureEnabled } from "@/lib/flags";
 import { leesMrzVanFoto } from "@/lib/kyc/mrz-lezen";
 import { zelfdeNummer, type MrzUitslag } from "@/lib/kyc/mrz";
 import { documentNaamPast } from "@/lib/kyc/document-naam";
@@ -541,7 +543,7 @@ export async function submitFreelancerOnboarding(
   // --- AI authenticity review (text-only) + vision review (photo content) +
   // de MRZ van het document zelf, tegelijk: drie onafhankelijke controles ------
   // (volgorde van de destructuring = volgorde van de beloften)
-  const [ai, vision, mrz, chip] = await Promise.all([
+  const [ai, vision, mrz, chip, gezicht, gezichtAuto] = await Promise.all([
     aiAuthenticityReview({
       accountName: user.fullName,
       nameOnDocument: input.nameOnDocument,
@@ -562,6 +564,11 @@ export async function submitFreelancerOnboarding(
     leesDocumentMrz(input),
     // de chip, als die net met de app is gelezen (NFC, lib/kyc/chip); een storing blokkeert nooit
     chipLezing(user.id).catch(() => null),
+    // de pasfoto op het document tegen de selfie, met een eigen gezichtsmodel op deze server (lib/kyc/gezicht);
+    // een storing geeft nooit een afwijzing, alleen "een medewerker kijkt mee"
+    gezichtControle(front.bytes, input.files.selfie.bytes),
+    // automatisch goedkeuren op het gezicht kan de eigenaar uitzetten (Admin → Beheer → Functies)
+    featureEnabled("id-gezicht-automatisch").catch(() => true),
   ]);
 
   // --- MRZ: wat het document zelf zegt, met controlecijfers (lib/kyc/mrz.ts) ---
@@ -627,6 +634,20 @@ export async function submitFreelancerOnboarding(
       detail: vision.face.looksLive
         ? "Ziet eruit als een rechtstreekse foto van een persoon"
         : vision.face.concerns[0] ?? "De selfie lijkt mogelijk een foto van een foto of scherm",
+    });
+  }
+  // --- het gezicht: de pasfoto op het document tegen de selfie (eigen model, lib/kyc/gezicht) ---
+  checks.push({
+    label: "Gezicht komt overeen met de pasfoto op het document (gezichtscontrole)",
+    ok: gezicht.oordeel === "zelfde",
+    detail: gezicht.reden,
+  });
+  if (gezicht.score !== null) {
+    checks.push({
+      label: "Gezichtsgelijkenis (score)",
+      intern: true,
+      ok: true,
+      detail: `${Math.round(gezicht.score * 100)}% (zeker vanaf 50%, aannemelijk vanaf 36%). Er wordt geen gezichtsprofiel bewaard, alleen deze score.`,
     });
   }
 
@@ -787,13 +808,23 @@ export async function submitFreelancerOnboarding(
   // Zonder beeldcontrole (LLM_VISION_MODEL niet gezet, of het model reageert niet)
   // ziet de tekst-AI alleen ingetypte velden: dan beoordeelt een mens de foto's
   // (in_review), nooit automatisch "geverifieerd" (4 nov 2026).
+  // Sinds 11 nov kijkt ook het eigen gezichtsmodel (lib/kyc/gezicht) naar de foto's: de pasfoto op de
+  // voorkant tegen de selfie, met een strenge drempel. Dat telt alleen voor een paspoort of ID-kaart: de
+  // code op het document (MRZ, met controlecijfers) is dan het bewijs dat het document zelf klopt, en
+  // een rijbewijs heeft geen code, dus daar beslist nog steeds een mens.
+  const gezichtOk = gezichtAuto && gezicht.oordeel === "zelfde" && input.documentType !== "DRIVERS_LICENSE" && mrzGeldig;
   const visionOk =
-    vision.available &&
-    vision.document !== null &&
-    vision.face !== null &&
-    vision.document.plausible &&
-    vision.face.samePerson &&
-    vision.face.looksLive;
+    (vision.available &&
+      vision.document !== null &&
+      vision.face !== null &&
+      vision.document.plausible &&
+      vision.face.samePerson &&
+      vision.face.looksLive) ||
+    gezichtOk;
+  // De tekst-AI ziet alleen de ingetypte velden (geen foto's). Is hij niet bereikbaar (time-out, confidence 0), dan
+  // blokkeert dat het gezichtspad niet; zegt hij zelf "bekijk handmatig" of "afgewezen", dan blijft dat wel gelden.
+  const aiNietBeschikbaar = ai.verdict === "needs_review" && ai.confidence === 0;
+  const aiOk = (ai.verdict === "approved" && ai.confidence >= 0.65) || (gezichtOk && aiNietBeschikbaar);
   // en de code op het document zelf moet kloppen met wat er getypt is en met het
   // account (een rijbewijs heeft geen MRZ; daar blijft het zoals het was)
   // (review H1) een chip vervangt de foto-MRZ nooit: een onleesbare MRZ gaat naar een mens, ook met een chip
@@ -817,8 +848,7 @@ export async function submitFreelancerOnboarding(
     !elders &&
     !chipFotoVerschil &&
     !zegelElders &&
-    ai.verdict === "approved" &&
-    ai.confidence >= 0.65 &&
+    aiOk &&
     visionOk;
 
   const outcome: OnboardingResult["outcome"] = hardFail
@@ -849,11 +879,14 @@ export async function submitFreelancerOnboarding(
         // a passive spoof heuristic, not a certified biometric liveness score —
         // see lib/kyc/vision.ts.
         livenessScore: vision.face?.livenessConfidence ?? null,
-        faceMatchScore: vision.face?.faceMatchConfidence ?? null,
+        // de score van het eigen gezichtsmodel (cosinus 0–1) gaat vóór die van het beeldmodel; een score, geen gezichtsgegevens
+        faceMatchScore: gezicht.score ?? vision.face?.faceMatchConfidence ?? null,
         rawPayload: JSON.parse(
           JSON.stringify({
             outcome,
             ai,
+            // alleen de uitslag: oordeel, score en of de controle kon draaien (geen kenmerken, geen foto)
+            gezicht: { oordeel: gezicht.oordeel, score: gezicht.score, technisch: gezicht.technisch, automatisch: gezichtOk, ms: gezicht.ms },
             // zonder het documentnummer en de vervaldatum die het beeldmodel las
             vision: vision.document ? { ...vision, document: { ...vision.document, documentNumber: null, expiryDate: null } } : vision,
             checks,
@@ -943,7 +976,7 @@ export async function submitFreelancerOnboarding(
     alertOwnerLater({
       key: `kyc-beoordeling:${user.id}`,
       title: `ID-controle wacht op je: ${user.fullName}`,
-      detail: `${user.fullName} heeft zelf foto's van een identiteitsbewijs geüpload. ${vision.available ? "De beeldcontrole was niet overtuigend." : "Er is geen automatische beeldcontrole, dus bekijk de foto's zelf."}${redenTekst(checks)} Keur goed of af bij de gebruiker.`,
+      detail: `${user.fullName} heeft zelf foto's van een identiteitsbewijs geüpload. ${gezicht.beschikbaar ? `De gezichtscontrole gaf ${gezicht.score !== null ? `${Math.round(gezicht.score * 100)}%` : "geen score"}: ${gezicht.reden}` : vision.available ? "De beeldcontrole was niet overtuigend." : `De gezichtscontrole kon niet beslissen (${gezicht.reden}); bekijk de foto's zelf.`}${redenTekst(checks)} Keur goed of af bij de gebruiker.`,
       severity: "warning",
       url: `/admin/gebruikers/${user.id}`,
     });

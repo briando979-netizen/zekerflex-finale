@@ -8,6 +8,9 @@ FROM node:24-bookworm-slim AS deps
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
+# onnxruntime-node (gezichtscontrole, lib/kyc/gezicht) haalt bij het installeren op Linux standaard ook het
+# GPU-pakket op (honderden MB, de build liep daarop vast); wij rekenen op de processor en slaan dat over.
+ENV ONNXRUNTIME_NODE_INSTALL=skip
 RUN npm ci
 
 # ---- build ------------------------------------------------------------------
