@@ -5,7 +5,10 @@ const m = vi.hoisted(() => ({
   setFiscal: vi.fn(),
   grants: [{ role: "FREELANCER" }] as { role: string }[],
   loggedIn: true,
+  kyc: "NOT_STARTED" as string,
 }));
+
+vi.mock("@/lib/prisma", () => ({ prisma: { user: { findUnique: async () => ({ kycStatus: m.kyc }) } } }));
 
 vi.mock("@/lib/auth", async () => {
   const { AppError } = await import("@/lib/errors");
@@ -33,6 +36,7 @@ beforeEach(() => {
   m.fiscal = { workerKind: null };
   m.grants = [{ role: "FREELANCER" }];
   m.loggedIn = true;
+  m.kyc = "NOT_STARTED";
   m.setFiscal.mockImplementation(async (_id: string, patch: { workerKind: "zzp" | "flexwerker" | "uitzendkracht" }) => ({ workerKind: patch.workerKind }));
 });
 
@@ -52,11 +56,23 @@ describe("POST /api/me/richting", () => {
     expect(m.setFiscal).not.toHaveBeenCalled();
   });
 
-  it("overschrijft een eerdere keuze nooit: 409 met uitleg", async () => {
+  it("laat een eerdere keuze wijzigen zolang er nog niets is ingediend", async () => {
     m.fiscal = { workerKind: "zzp" };
+    m.kyc = "NOT_STARTED";
     const res = await POST(verzoek({ workerKind: "uitzendkracht" }));
-    expect(res.status).toBe(409);
-    expect(JSON.stringify(await res.json())).toMatch(/Fiscaal/);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ workerKind: "uitzendkracht" });
+    expect(m.setFiscal).toHaveBeenCalledWith("u1", { workerKind: "uitzendkracht" });
+  });
+
+  it("zet de richting vast zodra de identiteitscontrole is gestart: 409 met uitleg", async () => {
+    m.fiscal = { workerKind: "zzp" };
+    for (const kyc of ["PENDING", "VERIFIED", "REJECTED"]) {
+      m.kyc = kyc;
+      const res = await POST(verzoek({ workerKind: "uitzendkracht" }));
+      expect(res.status, kyc).toBe(409);
+      expect(JSON.stringify(await res.json())).toMatch(/Fiscaal/);
+    }
     expect(m.setFiscal).not.toHaveBeenCalled();
   });
 

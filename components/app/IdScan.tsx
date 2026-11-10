@@ -92,6 +92,9 @@ type Fotos = Partial<Record<FotoStap, File>>;
 
 const STAP_NR: Partial<Record<Stap, number>> = { soort: 1, voor: 2, achter: 3, selfie: 4 };
 
+/** Waar "Vorige stap" naartoe gaat. Niet vanaf de chip, het wachtscherm en de uitslag: dat is na of tijdens het versturen. */
+const VORIGE: Partial<Record<Stap, Stap>> = { telefoon: "start", soort: "start", voor: "soort", achter: "voor", selfie: "achter", gegevens: "selfie" };
+
 function Icoon({ n }: { n: number }) {
   const pad =
     n === 0
@@ -424,6 +427,22 @@ export function IdScan({
   const fotoStap: FotoStap | null = stap === "voor" || stap === "achter" || stap === "selfie" ? stap : null;
   const handmatig = soort === "DRIVERS_LICENSE" || !goedGelezen(lezing);
 
+  // een stap terug, zolang er nog niets is verstuurd: de foto's blijven bewaard, dus je hoeft niet alles over te doen
+  function terug() {
+    const vorige = VORIGE[stap];
+    if (!vorige) return;
+    setFout(null);
+    setVoorbeeld(null);
+    // naar een kant waar al een foto van is: die eerst tonen, in plaats van de camera
+    if (vorige === "voor" || vorige === "achter" || vorige === "selfie") {
+      const f = fotos[vorige];
+      if (f) setVoorbeeld({ file: f, url: URL.createObjectURL(f) });
+    }
+    // de code op het document wordt opnieuw gelezen zodra je de foto weer gebruikt
+    if (vorige === mrzKant || stap === mrzKant) setLezing(null);
+    setStap(vorige);
+  }
+
   function kiesSoort(d: DocSoort) {
     setSoort(d);
     setFotos({});
@@ -502,7 +521,17 @@ export function IdScan({
       <div role="dialog" aria-modal="true" aria-label={s.titel} className="fixed inset-0 z-[200] flex items-stretch justify-center bg-black/60 sm:items-center">
         <div className="relative flex h-full w-full flex-col overflow-y-auto bg-white sm:h-auto sm:max-h-[92vh] sm:max-w-md sm:rounded-2xl sm:shadow-2xl">
           <div className="sticky top-0 z-10 flex items-center justify-between border-b border-hair bg-white px-5 py-3">
-            <span className="font-display text-sm font-bold text-ink">ZekerFlex</span>
+            {VORIGE[stap] ? (
+              <button
+                type="button"
+                onClick={terug}
+                className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-sm font-semibold text-brand-600 hover:bg-paper-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
+              >
+                <span aria-hidden>‹</span> {s.vorige}
+              </button>
+            ) : (
+              <span className="font-display text-sm font-bold text-ink">ZekerFlex</span>
+            )}
             {nr !== undefined && <span className="text-xs text-neutralx-500">{s.stap.replace("{n}", String(nr)).replace("{totaal}", "4")}</span>}
             <button
               type="button"

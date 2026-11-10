@@ -114,8 +114,10 @@ export function WerkerStartWizard({
         setError(typeof msg === "string" ? msg : t.saveError);
         return;
       }
+      const eerder = kind;
       setKind(pick);
-      setOpen(keuze === null ? "branches" : emailVerified ? "verify" : "email");
+      // een eerste keuze brengt je naar de volgende stap; een wijziging laat je waar je was
+      if (eerder === null) setOpen(keuze === null ? "branches" : emailVerified ? "verify" : "email");
       router.refresh();
     } catch {
       setError(t.saveError);
@@ -211,16 +213,17 @@ export function WerkerStartWizard({
                     <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label={t.kindStep}>
                       {KINDS.map((opt) => {
                         const on = pick === opt;
-                        const locked = kind !== null && kind !== opt;
                         return (
                           <button
                             key={opt}
                             type="button"
                             role="radio"
                             aria-checked={on}
-                            disabled={locked}
-                            onClick={() => setPick(opt)}
-                            className={`rounded-xl border p-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:opacity-50 ${
+                            onClick={() => {
+                              setError(null);
+                              setPick(opt);
+                            }}
+                            className={`rounded-xl border p-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
                               on ? "border-brand-500 bg-brand-50" : "border-hairstrong hover:border-brand-500"
                             }`}
                           >
@@ -231,7 +234,7 @@ export function WerkerStartWizard({
                       })}
                     </div>
                     {error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{error}</p>}
-                    {kind === null && (
+                    {(kind === null || pick !== kind) && (
                       <button type="button" onClick={save} disabled={!pick || busy} className="btn-primary text-sm disabled:opacity-50">
                         {busy ? t.saving : t.pick}
                       </button>

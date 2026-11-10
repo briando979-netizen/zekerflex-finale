@@ -289,6 +289,8 @@ export interface AuthDict {
       review: string;
       af: string;
       terug: string;
+      /** knop linksboven in de scan: een stap terug, vóór het versturen */
+      vorige: string;
       sluiten: string;
       mislukt: string;
       chipTitel: string;
@@ -634,6 +636,7 @@ const nl: AuthDict = {
       review: "We bekijken je aanvraag",
       af: "Verificatie niet gelukt",
       terug: "Terug naar ZekerFlex",
+      vorige: "Vorige stap",
       sluiten: "Sluiten",
       mislukt: "Versturen is niet gelukt. Controleer je verbinding en probeer het opnieuw.",
       chipTitel: "Lees de chip van je document",
@@ -977,6 +980,7 @@ const en: AuthDict = {
       review: "We're reviewing your application",
       af: "Verification failed",
       terug: "Back to ZekerFlex",
+      vorige: "Previous step",
       sluiten: "Close",
       mislukt: "Sending failed. Check your connection and try again.",
       chipTitel: "Read the chip in your document",
@@ -1320,6 +1324,7 @@ const pl: AuthDict = {
       review: "Sprawdzamy Twój wniosek",
       af: "Weryfikacja nie powiodła się",
       terug: "Wróć do ZekerFlex",
+      vorige: "Poprzedni krok",
       sluiten: "Zamknij",
       mislukt: "Nie udało się wysłać. Sprawdź połączenie i spróbuj ponownie.",
       chipTitel: "Odczytaj chip w dokumencie",
@@ -1663,6 +1668,7 @@ const ro: AuthDict = {
       review: "Analizăm cererea ta",
       af: "Verificarea nu a reușit",
       terug: "Înapoi la ZekerFlex",
+      vorige: "Pasul anterior",
       sluiten: "Închide",
       mislukt: "Trimiterea nu a reușit. Verifică conexiunea și încearcă din nou.",
       chipTitel: "Citește cipul documentului",
@@ -2006,6 +2012,7 @@ const uk: AuthDict = {
       review: "Ми розглядаємо вашу заявку",
       af: "Перевірка не вдалася",
       terug: "Назад до ZekerFlex",
+      vorige: "Попередній крок",
       sluiten: "Закрити",
       mislukt: "Не вдалося надіслати. Перевірте з'єднання й спробуйте ще раз.",
       chipTitel: "Зчитайте чип документа",
