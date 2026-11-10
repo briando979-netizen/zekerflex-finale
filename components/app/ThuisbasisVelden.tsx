@@ -17,6 +17,8 @@ export function ThuisbasisVelden({ postcodeLabel }: { postcodeLabel: string }) {
   const { locale } = useI18n();
   const t = useFT().thuisbasis;
   const [land, setLand] = useState<string>("NL");
+  // Nederland is de standaard: de landkeuze blijft verborgen tot iemand zegt dat hij elders woont.
+  const [toonLand, setToonLand] = useState(false);
 
   // Landnamen in de taal van de app (Intl.DisplayNames), in de vaste volgorde van
   // THUISLANDEN (Nederland, dan de buurlanden). Niet op naam sorteren: Node en de
@@ -26,16 +28,25 @@ export function ThuisbasisVelden({ postcodeLabel }: { postcodeLabel: string }) {
   const buitenland = land !== "NL";
   return (
     <>
-      <label className="block">
-        <span className="field-label">{t.land}</span>
-        <select name="country" value={land} onChange={(e) => setLand(e.target.value)} autoComplete="country" className="field-input">
-          {landen.map((l) => (
-            <option key={l.code} value={l.code} suppressHydrationWarning>
-              {l.naam}
-            </option>
-          ))}
-        </select>
-      </label>
+      {toonLand || buitenland ? (
+        <label className="block">
+          <span className="field-label">{t.land}</span>
+          <select name="country" value={land} onChange={(e) => setLand(e.target.value)} autoComplete="country" className="field-input">
+            {landen.map((l) => (
+              <option key={l.code} value={l.code} suppressHydrationWarning>
+                {l.naam}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        <>
+          <input type="hidden" name="country" value="NL" />
+          <button type="button" onClick={() => setToonLand(true)} className="block text-left text-xs text-neutralx-500 underline">
+            {t.nietNL}
+          </button>
+        </>
+      )}
       {/* Postcode alone places you for travel-distance matching — no house number needed. */}
       <label className="block">
         <span className="field-label">{postcodeLabel}</span>
