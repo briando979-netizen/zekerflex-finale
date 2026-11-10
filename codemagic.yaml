@@ -1,7 +1,7 @@
 # De iPhone-app bouwen op een Mac van Codemagic (gratis tot 500 minuten per maand), als
 # alternatief voor .github/workflows/ios.yml. Zie ios-app/README.md.
-# In Codemagic: Team → Integrations → App Store Connect → sleutel "ZekerFlex" toevoegen
-# (het .p8-bestand, Key ID en Issuer ID). ios_signing gebruikt alleen een certificaat en
+# In Codemagic: Settings → Integrations → Developer Portal → sleutel "zekerflex" (zo heet hij,
+# met kleine letters; Key ID JB339NP4WP). ios_signing gebruikt alleen een certificaat en
 # profiel die al in Codemagic staan (Code signing identities): de volgorde staat in
 # ios-app/README.md. Daarna deze workflow met de hand starten. xcode: latest = Xcode 26+,
 # wat Apple sinds 28 april 2026 eist.
@@ -11,7 +11,8 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 45
     integrations:
-      app_store_connect: ZekerFlex
+      # de naam van de sleutel in Codemagic, letterlijk
+      app_store_connect: zekerflex
     environment:
       xcode: latest
       ios_signing:
@@ -37,4 +38,6 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
+        # alleen uploaden: dan staat hij in TestFlight voor het eigen team (interne testers),
+        # zonder beoordeling door Apple. Externe testers pas later (vraagt testinformatie).
+        submit_to_testflight: false
