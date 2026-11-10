@@ -5,9 +5,9 @@
 // de server (lib/fiscal/eligibility.ts, lib/werkrecht).
 // ---------------------------------------------------------------------------
 
-export type TijdlijnSleutel = "kind" | "branches" | "email" | "verify" | "werkrecht" | "tweestap";
+export type TijdlijnSleutel = "kind" | "branches" | "email" | "gegevens" | "identiteit" | "werkrecht" | "tweestap";
 
-export const TIJDLIJN_VOLGORDE: TijdlijnSleutel[] = ["kind", "branches", "email", "verify", "werkrecht", "tweestap"];
+export const TIJDLIJN_VOLGORDE: TijdlijnSleutel[] = ["kind", "branches", "email", "gegevens", "identiteit", "werkrecht", "tweestap"];
 
 export type TijdlijnKlaar = Record<TijdlijnSleutel, boolean>;
 
@@ -56,5 +56,5 @@ export function reageerStap(reden: string | null | undefined): ReageerStap {
 }
 
 export function reageerStapHref(stap: ReageerStap): string {
-  return stap === "werkrecht" ? "/dashboard/verificatie#werkrecht" : "/dashboard/verificatie";
+  return stap === "werkrecht" ? "/dashboard/verificatie#werkrecht" : "/dashboard/verificatie"; // gegevens en identiteit staan allebei op het stappenscherm
 }

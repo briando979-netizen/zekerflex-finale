@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFT } from "@/components/i18n/useFT";
-import { aantalOpen, nogStappenTekst, tijdlijnStappen, volgendeStap, type TijdlijnSleutel } from "@/lib/onboarding/laat-weten";
+import { TIJDLIJN_VOLGORDE, aantalOpen, nogStappenTekst, tijdlijnStappen, volgendeStap, type TijdlijnSleutel } from "@/lib/onboarding/laat-weten";
 import { BRANCHE_OPTIES, brancheSamenvatting, type BrancheKeuze } from "@/lib/shifts/branche-keuze";
 
 type Kind = "zzp" | "flexwerker" | "uitzendkracht";
@@ -22,6 +22,8 @@ export function WerkerStartWizard({
   workerKind,
   emailVerified,
   profileComplete,
+  gegevensIngevuld,
+  identiteitIngestuurd,
   werkrechtOk,
   tweestapAan = true,
   brancheKeuze,
@@ -34,6 +36,10 @@ export function WerkerStartWizard({
   workerKind: Kind | null;
   emailVerified: boolean;
   profileComplete: boolean;
+  /** de gegevens van de werker zijn ingevuld (poortfeit); zonder: de oude profileComplete */
+  gegevensIngevuld?: boolean;
+  /** de ID-controle is ingestuurd of geverifieerd (poortfeit); zonder: de oude profileComplete */
+  identiteitIngestuurd?: boolean;
   /** recht om te werken in Nederland in orde (lib/werkrecht): verklaring + bewijs */
   werkrechtOk: boolean;
   /** tweestapsverificatie of passkey aan (lib/onboarding/werker-poort.ts); na de poort altijd waar */
@@ -52,14 +58,14 @@ export function WerkerStartWizard({
   const [brancheBusy, setBrancheBusy] = useState(false);
   const [brancheFout, setBrancheFout] = useState<string | null>(null);
 
-  const done: Record<StepKey, boolean> = { kind: kind !== null, branches: keuze !== null, email: emailVerified, verify: profileComplete, werkrecht: werkrechtOk, tweestap: tweestapAan };
-  const ORDER: StepKey[] = ["kind", "branches", "email", "verify", "werkrecht", "tweestap"];
+  const done: Record<StepKey, boolean> = { kind: kind !== null, branches: keuze !== null, email: emailVerified, gegevens: gegevensIngevuld ?? profileComplete, identiteit: identiteitIngestuurd ?? profileComplete, werkrecht: werkrechtOk, tweestap: tweestapAan };
+  const ORDER = TIJDLIJN_VOLGORDE;
   const first = volgendeStap(done);
-  const [open, setOpen] = useState<StepKey>(first ?? "verify");
+  const [open, setOpen] = useState<StepKey>(first ?? "gegevens");
   const [gesloten, setGesloten] = useState(false);
   const completed = ORDER.filter((k) => done[k]).length;
   const pct = Math.round((completed / ORDER.length) * 100);
-  const label: Record<StepKey, string> = { kind: t.kindStep, branches: t.brancheStep, email: t.emailStep, verify: t.verifyStep, werkrecht: t.werkrechtStep, tweestap: t.tweestapStep };
+  const label: Record<StepKey, string> = { kind: t.kindStep, branches: t.brancheStep, email: t.emailStep, gegevens: t.gegevensStep, identiteit: t.identiteitStep, werkrecht: t.werkrechtStep, tweestap: t.tweestapStep };
 
   function wissel(sleutel: string) {
     setBrancheFout(null);
@@ -92,7 +98,7 @@ export function WerkerStartWizard({
         return;
       }
       setKeuze((d as { keuze: BrancheKeuze }).keuze);
-      setOpen(emailVerified ? "verify" : "email");
+      setOpen(emailVerified ? "gegevens" : "email");
       router.refresh();
     } catch {
       setBrancheFout(t.saveError);
@@ -120,7 +126,7 @@ export function WerkerStartWizard({
       const eerder = kind;
       setKind(pick);
       // een eerste keuze brengt je naar de volgende stap; een wijziging laat je waar je was
-      if (eerder === null) setOpen(keuze === null ? "branches" : emailVerified ? "verify" : "email");
+      if (eerder === null) setOpen(keuze === null ? "branches" : emailVerified ? "gegevens" : "email");
       router.refresh();
     } catch {
       setError(t.saveError);
@@ -133,10 +139,11 @@ export function WerkerStartWizard({
   const stappen = tijdlijnStappen(done);
 
   // Eén uitleg per stap: de bestaande teksten (vijf talen), niets nieuws verzonnen.
-  const uitleg: Record<StepKey, string> = { kind: t.kindHint, branches: t.brancheHint, email: t.emailBody, verify: t.verifyBody, werkrecht: t.werkrechtBody, tweestap: t.tweestapBody };
+  const uitleg: Record<StepKey, string> = { kind: t.kindHint, branches: t.brancheHint, email: t.emailBody, gegevens: t.gegevensBody, identiteit: t.identiteitBody, werkrecht: t.werkrechtBody, tweestap: t.tweestapBody };
   const actie = (k: StepKey): { href: string; tekst: string } | null =>
     k === "email" ? { href: "/verifieer-email", tekst: t.emailCta }
-    : k === "verify" ? { href: "/dashboard/verificatie", tekst: t.verifyCta }
+    : k === "gegevens" ? { href: "/dashboard/verificatie", tekst: t.gegevensCta }
+    : k === "identiteit" ? { href: "/dashboard/verificatie", tekst: t.identiteitCta }
     : k === "werkrecht" ? { href: "/dashboard/verificatie#werkrecht", tekst: t.werkrechtCta }
     : k === "tweestap" ? { href: "/dashboard/account/beveiliging", tekst: t.tweestapCta }
     : null;
@@ -189,7 +196,7 @@ export function WerkerStartWizard({
               >
                 <button
                   type="button"
-                  onClick={() => setOpen(open === k ? (first ?? "verify") : k)}
+                  onClick={() => setOpen(open === k ? (first ?? "gegevens") : k)}
                   aria-expanded={isOpen}
                   disabled={stand !== "klaar"}
                   className={`flex w-full items-center gap-2 text-left text-sm font-semibold disabled:cursor-default ${uitgeschakeld ? "text-neutralx-500" : "text-ink"}`}

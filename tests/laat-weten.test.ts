@@ -1,15 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { aantalOpen, nogStappenTekst, reageerStap, reageerStapHref, tijdlijnStappen, volgendeStap, type TijdlijnKlaar } from "@/lib/onboarding/laat-weten";
+import { aantalOpen, nogStappenTekst, reageerStap, reageerStapHref, TIJDLIJN_VOLGORDE, tijdlijnStappen, volgendeStap, type TijdlijnKlaar } from "@/lib/onboarding/laat-weten";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 
-const alles: TijdlijnKlaar = { kind: true, branches: true, email: true, verify: true, werkrecht: true, tweestap: true };
+const alles: TijdlijnKlaar = { kind: true, branches: true, email: true, gegevens: true, identiteit: true, werkrecht: true, tweestap: true };
 
 describe("tijdlijn van de werker-start", () => {
   it("telt open stappen en kiest de eerste als actief", () => {
-    const k = { ...alles, verify: false, werkrecht: false };
+    const k = { ...alles, identiteit: false, werkrecht: false };
     expect(aantalOpen(k)).toBe(2);
-    expect(volgendeStap(k)).toBe("verify");
-    expect(tijdlijnStappen(k).map((s) => s.stand)).toEqual(["klaar", "klaar", "klaar", "actief", "volgende", "klaar"]);
+    expect(volgendeStap(k)).toBe("identiteit");
+    expect(tijdlijnStappen(k).map((s) => s.stand)).toEqual(["klaar", "klaar", "klaar", "klaar", "actief", "volgende", "klaar"]);
+  });
+  it("gegevens en ID-check zijn twee aparte stappen, in die volgorde", () => {
+    expect(TIJDLIJN_VOLGORDE).toEqual(["kind", "branches", "email", "gegevens", "identiteit", "werkrecht", "tweestap"]);
+    const k = { ...alles, gegevens: false, identiteit: false };
+    expect(tijdlijnStappen(k).map((s) => s.stand)).toEqual(["klaar", "klaar", "klaar", "actief", "volgende", "klaar", "klaar"]);
+    expect(volgendeStap({ ...alles, identiteit: false })).toBe("identiteit");
   });
   it("alles klaar: geen volgende stap", () => {
     expect(aantalOpen(alles)).toBe(0);
@@ -40,7 +46,7 @@ describe("teksten in vijf talen", () => {
       expect(nogStappenTekst(3, t)).toContain("3");
       expect(nogStappenTekst(1, t)).not.toContain("{n}");
       expect(nogStappenTekst(0, t)).toBe(t.alleKlaar);
-      for (const s of [t.laatWeten, t.sluiten, t.afsluiting, t.klaarLabel, t.eerstDit]) expect(s.length).toBeGreaterThan(1);
+      for (const s of [t.gegevensStep, t.gegevensBody, t.gegevensCta, t.identiteitStep, t.identiteitBody, t.identiteitCta, t.laatWeten, t.sluiten, t.afsluiting, t.klaarLabel, t.eerstDit]) expect(s.length).toBeGreaterThan(1);
       for (const s of Object.values(d.loc)) expect(String(s).length).toBeGreaterThan(1);
       for (const s of Object.values(d.reageerBlok)) expect(String(s).length).toBeGreaterThan(1);
     });

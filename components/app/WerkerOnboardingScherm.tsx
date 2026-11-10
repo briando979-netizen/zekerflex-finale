@@ -18,6 +18,8 @@ export async function WerkerOnboardingScherm({ stand }: { stand: WerkerPoortStan
         workerKind={stand.workerKind}
         emailVerified
         profileComplete={stand.gegevensIngevuld && stand.identiteitIngestuurd}
+        gegevensIngevuld={stand.gegevensIngevuld}
+        identiteitIngestuurd={stand.identiteitIngestuurd}
         werkrechtOk={stand.werkrechtIngevuld}
         tweestapAan={stand.tweestapAan}
         brancheKeuze={stand.brancheKeuze}
