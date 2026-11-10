@@ -138,12 +138,7 @@ export function ShiftCard({
           {shift.travel ? ` · ${shift.travel.distanceKm} km` : ""}
         </p>
 
-        {shift.extraInfo && (
-          <p className="mt-2 line-clamp-2 rounded-lg bg-paper-soft px-2.5 py-1.5 text-xs leading-snug text-neutralx-700">
-            <span aria-hidden>ℹ️ </span>
-            <span className="font-semibold">{c.extraInfo}:</span> {shift.extraInfo}
-          </p>
-        )}
+        {/* extra informatie staat alleen bij de klus zelf, niet op de kaart (10 nov, eigenaar) */}
 
         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
           {/* testklus van ons eigen testbedrijf: geen echt werk (lib/shifts/testklus.ts) */}

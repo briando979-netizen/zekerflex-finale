@@ -451,7 +451,7 @@ export function NewShiftForm({
             placeholder="Bijv. meld je bij de receptie, parkeren achter het gebouw, vraag naar Sanne, neem je ID mee…"
             className="field-input"
           />
-          <span className="mt-1 block text-xs text-neutralx-500">Staat op de klus-kaart en bij de klus, zodat de kracht precies weet wat er verwacht wordt.</span>
+          <span className="mt-1 block text-xs text-neutralx-500">Staat bij de klus, zodat de kracht precies weet wat er verwacht wordt.</span>
         </label>
 
         {!edit && (
@@ -648,12 +648,6 @@ export function NewShiftForm({
               <Row k={`Totaal (${totalDays} dagen)`} v={`€ ${((grossPerSeat * totalDays) / 100).toFixed(0)}`} highlight />
             )}
           </div>
-          {extraInfo.trim() && (
-            <p className="mx-4 mb-4 line-clamp-3 rounded-lg bg-paper-soft px-2.5 py-1.5 text-xs leading-snug text-neutralx-700">
-              <span aria-hidden>ℹ️ </span>
-              <span className="font-semibold">Extra informatie:</span> {extraInfo.trim()}
-            </p>
-          )}
         </article>
         {primaryDay && !edit && <p className="mt-2 text-[11px] text-neutralx-500">Wordt automatisch gematcht zodra je uitzet.</p>}
 
