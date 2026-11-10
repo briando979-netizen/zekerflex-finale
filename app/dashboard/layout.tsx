@@ -15,6 +15,8 @@ import { OnboardingPoort } from "@/components/app/OnboardingPoort";
 import { WerkerOnboardingScherm } from "@/components/app/WerkerOnboardingScherm";
 import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
 import { isReservedTestAddress } from "@/lib/mail";
+import { meldAanmeldingCompleet, noteerAanmeldingOpen } from "@/lib/onboarding/aanmelding-compleet";
+import { runAfter } from "@/lib/run-after";
 import { AppOpenPing } from "@/components/app/AppOpenPing";
 import { BewaardeTikken } from "@/components/app/BewaardeTikken";
 import { ViewAsBanner } from "@/components/admin/ViewAsBanner";
@@ -42,6 +44,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   // blijft voor hen dicht (lib/fiscal/eligibility.ts).
   const poort = isReservedTestAddress(principal.email) ? null : await werkerPoortStand(principal.userId).catch(() => null);
   const onboardingKlaar = poort?.klaar ?? true;
+  // de mail "aanmelding compleet" zodra de start af is (eenmalig, alleen na een open start); na de pagina
+  if (poort) {
+    const userId = principal.userId;
+    runAfter(() => (poort.klaar ? meldAanmeldingCompleet(userId) : noteerAanmeldingOpen(userId)));
+  }
 
   return (
     <IosAppProvider ios={await inIosApp()}>
