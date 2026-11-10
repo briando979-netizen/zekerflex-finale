@@ -6,6 +6,7 @@ import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { setFiscal } from "@/lib/fiscal/store";
 import { landSoort, normaliseerLand } from "@/lib/onboarding/buitenland";
+import { WERKRUIMTES } from "@/lib/werkgever/werkruimte";
 
 const PLATFORM_TENANT_ID = "org_platform";
 
@@ -34,6 +35,8 @@ export const registerSchema = z
       .optional(),
     /** For type=freelancer: the worker form (drives the fiscal onboarding). */
     workerKind: z.enum(["zzp", "flexwerker", "uitzendkracht"]).optional(),
+    /** For type=bedrijf: het dashboard waarmee het bedrijf begint (lib/werkgever/werkruimte.ts). Zonder: personeel. */
+    dashboard: z.enum(WERKRUIMTES, { message: "Kies waarvoor je ZekerFlex gebruikt." }).optional(),
   })
   .refine((d) => d.passwordConfirm === undefined || d.password === d.passwordConfirm, {
     message: "De wachtwoorden komen niet overeen.",
@@ -63,7 +66,7 @@ export async function registerAccount(input: RegisterInput): Promise<RegisteredA
 
   const passwordHash = await bcrypt.hash(input.password, 10);
 
-  const userId = await prisma.$transaction(async (tx) => {
+  const { userId, tenantId } = await prisma.$transaction(async (tx): Promise<{ userId: string; tenantId: string | null }> => {
     if (input.type === "freelancer") {
       const user = await tx.user.create({
         data: {
@@ -75,7 +78,7 @@ export async function registerAccount(input: RegisterInput): Promise<RegisteredA
         },
         select: { id: true },
       });
-      return user.id;
+      return { userId: user.id, tenantId: null };
     }
 
     // Een bedrijf buiten Nederland heeft geen KVK-nummer: land onthouden, de rest vult de onboarding aan.
@@ -104,8 +107,18 @@ export async function registerAccount(input: RegisterInput): Promise<RegisteredA
       },
       select: { id: true },
     });
-    return user.id;
+    return { userId: user.id, tenantId: tenant.id };
   });
+
+  // Het dashboard waarmee het bedrijf opent (website, webshop, rijschool, horeca of personeel). Een storing
+  // in KV mag het aanmelden nooit laten mislukken: dan opent het bedrijf in het dashboard personeel.
+  // Los ingeladen, zoals de funnel hieronder: ook een fout bij het inladen valt dan binnen de catch.
+  const dashboard = tenantId ? (input.dashboard ?? "personeel") : null;
+  if (tenantId && dashboard) {
+    await import("@/lib/werkgever/werkruimte-server")
+      .then(({ voegDashboardToe }) => voegDashboardToe(tenantId, dashboard))
+      .catch(() => undefined);
+  }
 
   await recordAudit({
     category: "AUTH",
@@ -115,7 +128,7 @@ export async function registerAccount(input: RegisterInput): Promise<RegisteredA
     summary: `Nieuw ${input.type}-account aangemaakt: ${email}`,
     targetType: "user",
     targetId: userId,
-    metadata: { type: input.type },
+    metadata: { type: input.type, ...(dashboard ? { dashboard } : {}) },
   });
 
   // Save the chosen worker form before registration returns so onboarding can read it.

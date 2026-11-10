@@ -12,6 +12,7 @@ import { AUTH_DICTS } from "@/lib/i18n/auth";
 import type { Locale } from "@/lib/i18n/config";
 import { BUITEN_LANDEN, EU_LANDEN } from "@/lib/onboarding/buitenland";
 import { emailDomein, isGratisMail } from "@/lib/company/eigendom";
+import { WERKRUIMTES, WERKRUIMTE_INFO, type Werkruimte } from "@/lib/werkgever/werkruimte";
 
 const initial: RegisterState = { error: null };
 
@@ -41,6 +42,7 @@ export function RegisterForm({
   defaultType,
   defaultWorkerKind,
   prefill,
+  defaultDashboard,
   googleEnabled,
   appleEnabled = false,
 }: {
@@ -48,6 +50,8 @@ export function RegisterForm({
   defaultType: "freelancer" | "bedrijf";
   defaultWorkerKind?: "zzp" | "flexwerker" | "uitzendkracht";
   prefill?: { company?: string; kvk?: string; email?: string; name?: string };
+  /** /register?dashboard=<soort>: de bezoeker koos al een product (webshop, rijschool, …) */
+  defaultDashboard?: Werkruimte;
   googleEnabled: boolean;
   /** inloggen met Apple staat aan (lib/auth/apple.ts) */
   appleEnabled?: boolean;
@@ -66,6 +70,8 @@ export function RegisterForm({
   const [land, setLand] = useState("NL");
   const nederlands = land === "NL";
   const [kvkViaZoeker, setKvkViaZoeker] = useState(false);
+  // Het dashboard waarmee het bedrijf begint (lib/werkgever/werkruimte.ts); later voegt het er een toe.
+  const [dashboard, setDashboard] = useState<Werkruimte>(defaultDashboard ?? "personeel");
 
   // ---- email availability -------------------------------------------
   const [email, setEmail] = useState(prefill?.email ?? "");
@@ -194,9 +200,10 @@ export function RegisterForm({
   }
 
   // Een gratis adres (gmail, hotmail, …) zegt niets over een bedrijf: dan staat de bezoeker onder werknemer,
-  // tenzij hij zelf "personeel zoeken" koos.
+  // tenzij hij zelf "personeel zoeken" koos of via een product (webshop, rijschool, …) kwam: een kleine
+  // webwinkel gebruikt vaak gewoon gmail.
   const gratisMail = isGratisMail(emailDomein(email));
-  const [bedrijfGekozen, setBedrijfGekozen] = useState(false);
+  const [bedrijfGekozen, setBedrijfGekozen] = useState(defaultDashboard !== undefined);
   const [naarWerk, setNaarWerk] = useState(false);
   useEffect(() => {
     if (gratisMail && type === "bedrijf" && !bedrijfGekozen) {
@@ -206,6 +213,7 @@ export function RegisterForm({
   }, [gratisMail, type, bedrijfGekozen]);
 
   const match = pw.length > 0 && pw === pw2;
+  const sociaal = type === "freelancer";
   const canSubmit =
     (emailState === "free" || emailState === "unavailable") &&
     match &&
@@ -249,24 +257,48 @@ export function RegisterForm({
         </p>
       )}
 
-      {appleEnabled && (
+      {/* Google en Apple maken altijd een werkersaccount (lib/auth/nextauth.ts): niet voor een bedrijf */}
+      {sociaal && appleEnabled && (
         <form action={appleLoginAction}>
           <input type="hidden" name="callbackUrl" value="/start" />
           <AppleButton label={t.apple} />
         </form>
       )}
-      {googleEnabled && (
+      {sociaal && googleEnabled && (
         <form action={googleLoginAction} className={appleEnabled ? "mt-3" : ""}>
           <input type="hidden" name="callbackUrl" value="/start" />
           <GoogleButton label={t.google} />
         </form>
       )}
-      {(googleEnabled || appleEnabled) && <AuthDivider label={or} />}
+      {sociaal && (googleEnabled || appleEnabled) && <AuthDivider label={or} />}
 
       <form action={formAction} className="space-y-4">
         <input type="hidden" name="type" value={type} />
         {type === "freelancer" && defaultWorkerKind && <input type="hidden" name="workerKind" value={defaultWorkerKind} />}
         {type === "bedrijf" && <input type="hidden" name="kvkNumber" value={kvk} />}
+
+        {type === "bedrijf" && (
+          <fieldset>
+            <legend className="field-label">Waarvoor gebruik je ZekerFlex?</legend>
+            <div className="mt-1.5 space-y-2">
+              {WERKRUIMTES.map((w) => (
+                <label
+                  key={w}
+                  className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 transition ${
+                    dashboard === w ? "border-brand-500 bg-brand-50" : "border-hair hover:border-brand-500"
+                  }`}
+                >
+                  <input type="radio" name="dashboard" value={w} required checked={dashboard === w} onChange={() => setDashboard(w)} className="mt-1 accent-brand-600" />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-ink">{WERKRUIMTE_INFO[w].naam}</span>
+                    <span className="block text-xs text-neutralx-600">{WERKRUIMTE_INFO[w].uitleg}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="mt-1.5 text-xs text-neutralx-500">Je krijgt een eigen dashboard voor wat je kiest; later voeg je er makkelijk een toe.</p>
+          </fieldset>
+        )}
 
         {type === "bedrijf" && (
           <label className="block">

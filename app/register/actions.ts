@@ -27,6 +27,7 @@ export async function registerAction(
     kvkNumber: formData.get("kvkNumber") || undefined,
     land: formData.get("land") || undefined,
     workerKind: formData.get("workerKind") || undefined,
+    dashboard: formData.get("dashboard") || undefined,
   });
 
   if (!parsed.success) {

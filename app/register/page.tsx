@@ -9,17 +9,21 @@ import { getLocale } from "@/lib/i18n/server";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
 import { inAndroidApp, inIosApp } from "@/lib/app-mode-server";
 import { WELKOM_DICTS } from "@/lib/i18n/welkom";
+import { AANMELDEN_PER_DASHBOARD, dashboardUitParam } from "@/lib/auth/aanmelden-dashboard";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Account aanmaken" };
 
 export default async function RegisterPage(
   props: {
-    searchParams: Promise<{ type?: string; company?: string; kvk?: string; email?: string; name?: string }>;
+    searchParams: Promise<{ type?: string; company?: string; kvk?: string; email?: string; name?: string; dashboard?: string }>;
   }
 ) {
   const searchParams = await props.searchParams;
-  const defaultType = searchParams.type === "bedrijf" ? "bedrijf" : "freelancer";
+  // Aanmelden voor één product (/aanbod/webshop, …): altijd als bedrijf, met dat dashboard al gekozen.
+  const dashboard = dashboardUitParam(searchParams.dashboard);
+  const product = dashboard ? AANMELDEN_PER_DASHBOARD[dashboard] : null;
+  const defaultType = searchParams.type === "bedrijf" || dashboard ? "bedrijf" : "freelancer";
   const defaultWorkerKind =
     searchParams.type === "uitzendkracht" || searchParams.type === "zzp" || searchParams.type === "flexwerker"
       ? searchParams.type
@@ -46,9 +50,15 @@ export default async function RegisterPage(
     <AuthShell
       image="/marketing/auth-login.jpg"
       locale={locale}
-      mobile={{ ...WELKOM_DICTS[locale].registerHero, back: WELKOM_DICTS[locale].back, backHref: (await inAndroidApp()) ? "/welkom" : "/" }}
-      title={t.title}
-      subtitle={t.subtitle}
+      mobile={{
+        ...WELKOM_DICTS[locale].registerHero,
+        // de productpagina's zijn Nederlands, hun aanmelding dus ook
+        ...(product ? { title: product.titel, subtitle: product.uitleg } : {}),
+        back: WELKOM_DICTS[locale].back,
+        backHref: (await inAndroidApp()) ? "/welkom" : "/",
+      }}
+      title={product?.titel ?? t.title}
+      subtitle={product?.uitleg ?? t.subtitle}
       footer={
         <>
           {t.haveAccount}{" "}
@@ -64,6 +74,7 @@ export default async function RegisterPage(
         defaultType={defaultType}
         {...(defaultWorkerKind ? { defaultWorkerKind } : {})}
         {...(prefill ? { prefill } : {})}
+        {...(dashboard ? { defaultDashboard: dashboard } : {})}
         googleEnabled={googleEnabled}
         appleEnabled={appleEnabled}
       />

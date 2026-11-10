@@ -7,6 +7,8 @@
 // lib/pricing/tiers.ts); anders "op aanvraag". Iets wat nog op een sleutel of
 // keuze van de eigenaar wacht, staat op "binnenkort".
 
+import type { Werkruimte } from "@/lib/werkgever/werkruimte";
+
 export type PijlerSleutel = "personeel" | "online" | "branche" | "geld";
 
 export interface Pijler {
@@ -75,6 +77,8 @@ export const PIJLERS: Pijler[] = [
 ];
 
 const AANMELDEN = { label: "Gratis account aanmaken", href: "/register?type=bedrijf" };
+/** Een product met een eigen dashboard: aanmelden opent meteen dat dashboard (lib/auth/aanmelden-dashboard.ts). */
+const aanmeldenVoor = (soort: Exclude<Werkruimte, "personeel">) => ({ label: AANMELDEN.label, href: `/register?type=bedrijf&dashboard=${soort}` });
 const DEMO = { label: "Vraag een demo aan", href: "/demo" };
 
 export const AANBOD: AanbodItem[] = [
@@ -402,7 +406,7 @@ export const AANBOD: AanbodItem[] = [
     ],
     voorWie: "Ondernemers die een betere website willen zonder gedoe",
     status: "beschikbaar",
-    start: AANMELDEN,
+    start: aanmeldenVoor("website"),
     zoekwoorden: ["website laten bouwen", "website laten maken", "website voor mijn bedrijf", "websitebouwer", "website zonder cookies"],
   },
   {
@@ -422,7 +426,7 @@ export const AANBOD: AanbodItem[] = [
     ],
     voorWie: "Ondernemers die producten online willen verkopen",
     status: "beschikbaar",
-    start: AANMELDEN,
+    start: aanmeldenVoor("webshop"),
     zoekwoorden: ["webshop openen", "eigen webwinkel starten", "webshop beginnen", "webwinkel laten maken"],
   },
   {
@@ -529,7 +533,7 @@ export const AANBOD: AanbodItem[] = [
     voorWie: "Restaurants, cafés, lunchrooms en strandtenten",
     prijs: "Abonnement per module",
     status: "beschikbaar",
-    start: AANMELDEN,
+    start: aanmeldenVoor("horeca"),
     zoekwoorden: ["horeca software", "reserveringssysteem restaurant", "qr bestellen", "haccp takenlijst", "kassasysteem horeca"],
   },
   {
@@ -547,7 +551,7 @@ export const AANBOD: AanbodItem[] = [
     ],
     voorWie: "Rijscholen en zelfstandige instructeurs",
     status: "beschikbaar",
-    start: AANMELDEN,
+    start: aanmeldenVoor("rijschool"),
     zoekwoorden: ["rijschool software", "rijschool planning", "rijschool app", "lesplanner rijschool"],
   },
 
