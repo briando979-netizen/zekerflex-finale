@@ -5,6 +5,7 @@ import { sniffAndVerifyUploadType } from "@/lib/storage/validate";
 import { AppError } from "@/lib/errors";
 import { getFiscal, setFiscal } from "@/lib/fiscal/store";
 import { bankLoginProvesIban, clearBankLogin } from "@/lib/kyc/bank-login";
+import { KOR_BEVESTIGING } from "@/lib/fiscal/kor";
 
 // ---------------------------------------------------------------------------
 // Verplichte verificatiedocumenten per account: identiteitsbewijs +
@@ -96,7 +97,7 @@ export async function docStatus(userId: string): Promise<{ idOk: boolean; bankOk
 export async function storeDoc(
   userId: string,
   kind: DocKind,
-  input: { filename: string; mimeType: string; bytes: Buffer },
+  input: { filename: string; mimeType: string; bytes: Buffer; note?: string },
 ): Promise<ComplianceDoc> {
   if (input.bytes.length === 0) throw AppError.validation("Leeg bestand");
   if (input.bytes.length > MAX_BYTES) throw AppError.validation("Bestand te groot (max 12 MB)");
@@ -119,7 +120,7 @@ export async function storeDoc(
   }
 
   const row = await prisma.complianceDocument.create({
-    data: { userId, kind: dbKind, uploadId: stored.id },
+    data: { userId, kind: dbKind, uploadId: stored.id, ...(input.note ? { note: input.note } : {}) },
     include: { upload: { select: { filename: true, mimeType: true, sizeBytes: true } } },
   });
 
@@ -199,7 +200,7 @@ export async function setDocStatus(
 ): Promise<ComplianceDoc | null> {
   const row = await prisma.complianceDocument.findFirst({
     where: { id: docId.replace(/[^a-z0-9-]/gi, ""), userId },
-    select: { id: true, kind: true },
+    select: { id: true, kind: true, note: true },
   });
   if (!row) return null;
   const updated = await prisma.complianceDocument.update({
@@ -217,6 +218,14 @@ export async function setDocStatus(
         .catch(() => undefined),
       setFiscal(userId, { ibanPendingVerification: true }).catch(() => undefined),
     ]).catch(() => undefined);
+  }
+  // De bevestiging van de Belastingdienst voor de KOR (lib/fiscal/kor.ts): goedgekeurd = de KOR gaat aan.
+  if (row.note === KOR_BEVESTIGING && status === "approved") {
+    const fiscal = await getFiscal(userId);
+    await setFiscal(userId, {
+      korApplies: true,
+      ...(fiscal.korAanvraag ? { korAanvraag: { ...fiscal.korAanvraag, stand: "bevestigd" as const } } : {}),
+    });
   }
   return toDoc(updated);
 }

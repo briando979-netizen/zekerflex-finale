@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import type { FiscalProfile, WorkerKind } from "@/lib/fiscal/store";
+import { KorHulp } from "@/components/app/KorHulp";
+import { useFT } from "@/components/i18n/useFT";
 
 const KINDS: { k: WorkerKind; label: string; blurb: string }[] = [
   { k: "zzp", label: "ZZP'er", blurb: "Eigen onderneming met KVK-inschrijving en btw-nummer. Facturatie via reverse billing." },
@@ -24,7 +26,13 @@ export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; d
   const [vatNumber, setVatNumber] = useState(initial.vatNumber ?? "");
   const [vatRequested, setVatRequested] = useState(initial.vatRequested);
   const [kvkNumber, setKvkNumber] = useState(initial.kvkNumber ?? "");
-  const [kor, setKor] = useState(initial.korApplies);
+  // KOR: al (bevestigd), nog niet maar wel aanvragen (KorHulp), of geen
+  const [korKeuze, setKorKeuze] = useState<"heb" | "aanvragen" | "geen">(
+    initial.korApplies ? "heb" : initial.korAanvraag ? "aanvragen" : "geen",
+  );
+  const kor = korKeuze === "heb";
+  const korIngediend = initial.korAanvraag?.stand === "ingediend";
+  const tk = useFT().kor;
   const [bsn, setBsn] = useState("");
   const [lhk, setLhk] = useState(initial.loonheffingskorting);
   const [iban, setIban] = useState(initial.iban ?? "");
@@ -87,7 +95,7 @@ export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; d
   if (kind === "zzp" && !(vatNumber.trim() || (vatRequested && kvkNumber.trim()))) {
     missing.push("je btw-nummer (of je KVK-nummer plus ‘btw aangevraagd’)");
   }
-  if (kind === "flexwerker" && !(vatNumber.trim() || kor || vatRequested)) {
+  if (kind === "flexwerker" && !(vatNumber.trim() || kor || vatRequested || korIngediend)) {
     missing.push("een btw-nummer, óf vink de kleineondernemersregeling of ‘btw aangevraagd’ aan");
   }
   if (kind === "uitzendkracht" && !(hasBsnOnFile || bsn.trim())) {
@@ -164,10 +172,16 @@ export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; d
               <b>kleineondernemersregeling (KOR)</b> gebruiken en factureer je zonder btw. Een btw-nummer vraag je gratis aan
               bij de Belastingdienst (aangifte omzetbelasting) — meestal binnen 5 werkdagen.
             </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={kor} onChange={(e) => setKor(e.target.checked)} />
-              Ik gebruik de kleineondernemersregeling (factureren zonder btw)
-            </label>
+            <fieldset className="grid gap-2 text-sm">
+              <legend className="sr-only">Kleineondernemersregeling (KOR)</legend>
+              {(["heb", "aanvragen", "geen"] as const).map((k) => (
+                <label key={k} className="flex items-start gap-2">
+                  <input type="radio" name="kor" checked={korKeuze === k} onChange={() => setKorKeuze(k)} className="mt-1" />
+                  {k === "heb" ? tk.keuzeHeb : k === "aanvragen" ? tk.keuzeAanvragen : tk.keuzeGeen}
+                </label>
+              ))}
+            </fieldset>
+            {korKeuze === "aanvragen" && <KorHulp initial={initial.korAanvraag ?? null} />}
             {!kor && (
               <>
                 <Field label="Btw-nummer" hint="Optioneel — wordt gevalideerd als je het invult.">

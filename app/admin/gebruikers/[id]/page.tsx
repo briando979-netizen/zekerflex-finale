@@ -329,7 +329,7 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                         )}
                       </a>
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium" style={{ color: "var(--a-text)" }}>{DOC_KIND_LABEL[d.kind]}</p>
+                        <p className="font-medium" style={{ color: "var(--a-text)" }}>{d.note === "kor-bevestiging" ? "KOR-bevestiging (goedkeuren zet de KOR aan)" : DOC_KIND_LABEL[d.kind]}</p>
                         <p className="truncate text-xs" style={{ color: "var(--a-mute)" }}>
                           {dateTimeNl(d.uploadedAt)}, {fileSize(d.sizeBytes)}
                           {d.note ? `, ${d.note}` : ""}
@@ -338,7 +338,7 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                       </div>
                       <div className="flex flex-shrink-0 flex-col items-end gap-2">
                         <Pill tone={DOC_STATUS_TONE[d.status]}>{DOC_STATUS_LABEL[d.status]}</Pill>
-                        {d.kind === "bank" && d.status === "uploaded" && <ComplianceDocActions userId={user.id} docId={d.id} />}
+                        {(d.kind === "bank" || d.note === "kor-bevestiging") && d.status === "uploaded" && <ComplianceDocActions userId={user.id} docId={d.id} />}
                         {d.kind === "id" && <span className="text-xs" style={{ color: "var(--a-mute)" }}>via Identiteitscontroles</span>}
                       </div>
                     </li>

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { kvGet, kvListEntries, kvSet } from "@/lib/storage/kv";
+import type { KorAanvraag } from "@/lib/fiscal/kor";
 
 // ---------------------------------------------------------------------------
 // Fiscal / BTW profile per worker — Postgres-backed (KeyValueStore, key
@@ -34,6 +35,8 @@ export interface FiscalProfile {
 
   // Kleineondernemersregeling
   korApplies: boolean;
+  /** KOR aangevraagd via de KOR-hulp (lib/fiscal/kor.ts); korApplies gaat pas aan na de bevestiging */
+  korAanvraag?: KorAanvraag | null;
 
   // Payroll (uitzendkracht)
   bsnLast4: string | null;
@@ -65,6 +68,7 @@ export const EMPTY_FISCAL: FiscalProfile = {
   vatRequested: false,
   kvkNumber: null,
   korApplies: false,
+  korAanvraag: null,
   bsnLast4: null,
   bsnHash: null,
   loonheffingskorting: true,
@@ -97,7 +101,8 @@ export function isComplete(f: FiscalProfile): boolean {
   if (!f.workerKind) return false;
   if (!f.iban) return false;
   if (f.workerKind === "zzp") return f.vatValid || (f.vatRequested && Boolean(f.kvkNumber));
-  if (f.workerKind === "flexwerker") return f.vatValid || f.korApplies || f.vatRequested;
+  // een ingediende KOR-melding telt als ingevuld (zoals "btw aangevraagd"); de KOR zelf geldt pas na de bevestiging
+  if (f.workerKind === "flexwerker") return f.vatValid || f.korApplies || f.vatRequested || f.korAanvraag?.stand === "ingediend";
   if (f.workerKind === "uitzendkracht") return Boolean(f.bsnHash);
   return false;
 }
