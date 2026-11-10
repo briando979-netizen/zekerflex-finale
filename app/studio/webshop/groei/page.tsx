@@ -1,5 +1,5 @@
-import { Card, Empty, ITrend, PageHead } from "@/components/studio/ui";
+import Groei from "@/components/studio/Groei";
 
 export default function StudioGroeiPage() {
-  return (<><PageHead title="Groei" /><Card><Empty icon={<ITrend />} title="Binnenkort" text="Hulpmiddelen om je webshop te laten groeien komen eraan." /></Card></>);
+  return <Groei />;
 }

@@ -12,6 +12,7 @@ import { gereserveerdPagina, reserveerStaat } from "@/lib/sites/reserveringen-op
 import { LEGE_INVOER, MAX_PER_PRODUCT, isBestelnummer, zichtbareProducten } from "@/lib/sites/winkel";
 import { leesMand, mandCookie, mandMetProducten, mandNaarInvoer, voegToe, zetAantal } from "@/lib/sites/mand";
 import { leesFilter } from "@/lib/sites/winkel-filter";
+import { FEED_PAD, heeftFeed, productFeed } from "@/lib/sites/productfeed";
 import { readMedia, storeContactMessage, type LiveSite } from "@/lib/sites/store";
 import { recordSiteView } from "@/lib/sites/stats";
 import { classifyVisit, visitHeadersOf } from "@/lib/sites/stats-shared";
@@ -114,9 +115,16 @@ export async function serveSitePath(live: LiveSite, path: string[], given: Serve
   }
   if (first === "sitemap.xml" && !second) return new Response(renderSitemap(snapshot, opts), { headers: siteHeaders("application/xml; charset=utf-8", "public, max-age=300", opts) });
   if (first === "robots.txt" && !second) return new Response(renderRobots(opts), { headers: siteHeaders("text/plain; charset=utf-8", "public, max-age=300", opts) });
+  // Google Shopping (lib/sites/productfeed.ts): de producten voor Merchant Center, zelf nooit in de zoekresultaten
+  if (first === FEED_PAD && !second) {
+    if (!heeftFeed(snapshot)) return siteText("Deze website heeft geen productfeed.", 404, opts);
+    return new Response(productFeed(snapshot, opts).xml, { headers: siteHeaders("application/xml; charset=utf-8", "public, max-age=900", { ...opts, noindex: true }) });
+  }
   // the shop (lib/sites/winkel-render.ts): a product page counts as "p/<slug>" in the visitor figures
   if (first === "p" && second && rest.length === 0) {
-    const doc = renderWinkelPagina(snapshot, { soort: "product", slug: second }, opts);
+    // ?gemeld=1: net aangemeld voor "mail me als het er weer is" (lib/sites/voorraadmelding-opslag.ts)
+    const gemeld = new URL(request?.url ?? "http://zf/").searchParams.get("gemeld") === "1";
+    const doc = renderWinkelPagina(snapshot, { soort: "product", slug: second, gemeld }, opts);
     if (doc) {
       count({ slug: `p/${second}` });
       return html(doc);

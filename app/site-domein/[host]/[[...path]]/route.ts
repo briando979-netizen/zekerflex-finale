@@ -4,6 +4,7 @@ import { handleSiteContact, serveSitePath, siteText, type ServeOptions } from "@
 import { handleSiteOrder } from "@/lib/sites/bestellingen";
 import { handleSiteReservering } from "@/lib/sites/reserveringen";
 import { handleSiteChat } from "@/lib/sitechat/site-pagina";
+import { handleVoorraadMelding } from "@/lib/sites/voorraadmelding-opslag";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,7 +50,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ hos
   const host = hostOf(request, param);
   if (!host) return new Response("Niet gevonden", { status: 404 });
   const doel = path.join("/");
-  if (doel !== "_zf/contact" && doel !== "_zf/bestelling" && doel !== "_zf/chat" && doel !== "_zf/reservering") return new Response("Niet toegestaan", { status: 405 });
+  if (doel !== "_zf/contact" && doel !== "_zf/bestelling" && doel !== "_zf/chat" && doel !== "_zf/reservering" && doel !== "_zf/voorraadmelding") return new Response("Niet toegestaan", { status: 405 });
   const found = await siteForHost(host).catch(() => null);
   if (!found) return notLinked(host);
   // the chat (lib/sitechat/site-pagina.ts)
@@ -58,5 +59,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ hos
   if (doel === "_zf/bestelling") return handleSiteOrder(request, found.live, { ...optsFor(found.primary), root: "/", version: found.live.buildId, besteld: "/besteld", address: `https://${found.primary}` });
   // reserving a table (lib/sites/reserveringen.ts)
   if (doel === "_zf/reservering") return handleSiteReservering(request, found.live, { ...optsFor(found.primary), root: "/", version: found.live.buildId, gereserveerd: "/gereserveerd", address: `https://${found.primary}` });
+  // "mail me als het er weer is" (lib/sites/voorraadmelding-opslag.ts)
+  if (doel === "_zf/voorraadmelding") return handleVoorraadMelding(request, found.live, { ...optsFor(found.primary), root: "/" });
   return handleSiteContact(request, found.live, { ...optsFor(found.primary), thanks: "/bedankt", address: `https://${found.primary}` });
 }

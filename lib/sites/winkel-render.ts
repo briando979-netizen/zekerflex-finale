@@ -100,7 +100,19 @@ function keuzeVelden(ctx: WinkelCtx, p: SiteProduct, naam: (i: number) => string
     .join("");
 }
 
-export function productPaginaBody(ctx: WinkelCtx, w: Winkel, p: SiteProduct, meta: { url: string; beeld: string | null; seo: boolean }): string {
+/**
+ * "Mail me als het er weer is" op een uitverkocht product: een gewoon formulier naar …/_zf/voorraadmelding
+ * (lib/sites/voorraadmelding-opslag.ts), zonder script. Na het aanmelden (?gemeld=1) de bevestiging.
+ */
+function voorraadMeldingBlok(ctx: WinkelCtx, p: SiteProduct, gemeld: boolean): string {
+  if (gemeld) return `<p class="mmelding" id="vm" role="status">Gelukt: we mailen je één keer zodra ${ctx.esc(p.naam)} er weer is.</p>`;
+  const dicht = ctx.preview || ctx.inert;
+  const uit = dicht ? " disabled" : "";
+  const uitleg = ctx.inert ? "Dit is een voorbeeld: er wordt niets bewaard of verstuurd." : "Je krijgt één mail als het er weer is; daarna wissen we je e-mailadres. Komt het niet terug, dan wissen we het na een half jaar.";
+  return `<form class="contact" method="post" action="${ctx.esc(dicht ? "#" : `${ctx.root}_zf/voorraadmelding`)}"><input type="hidden" name="p" value="${ctx.esc(p.id)}"><label for="vm-email">Mail me als het er weer is<input id="vm-email" name="email" type="email" required maxlength="200" autocomplete="email" placeholder="jouw@e-mailadres.nl"${uit}></label><label class="hp" aria-hidden="true">Laat leeg<input name="website" tabindex="-1" autocomplete="off"></label><p style="margin:0"><button class="btn" type="submit"${uit}>Houd me op de hoogte</button></p><p class="small">${uitleg}</p></form>`;
+}
+
+export function productPaginaBody(ctx: WinkelCtx, w: Winkel, p: SiteProduct, meta: { url: string; beeld: string | null; seo: boolean; gemeld?: boolean | undefined }): string {
   const fotos = p.fotos.map((f, i) => ctx.img(f, i === 0 ? "(min-width: 900px) 55vw, 100vw" : "(min-width: 900px) 14vw, 25vw", i === 0)).filter(Boolean);
   const galerij = fotos.length ? `<div class="pgal">${fotos.join("")}</div>` : `<div class="pgal"><span class="pimg">${foto(ctx, p, "100vw")}</span></div>`;
   // een div met de rol van nav: de menu-opmaak van de site (nav a als blok, licht in premium) hoort hier niet
@@ -108,7 +120,7 @@ export function productPaginaBody(ctx: WinkelCtx, w: Winkel, p: SiteProduct, met
   const weinig = p.voorraad != null && p.voorraad > 0 && p.voorraad <= 5 ? `<p class="pstock">Nog ${p.voorraad} op voorraad</p>` : "";
   // in de winkelmand (lib/sites/mand.ts): een gewoon formulier naar …/mand, ook op een voorbeeld (daar wordt niets besteld)
   const bestel = isUitverkocht(p)
-    ? `<p class="psold big">Uitverkocht</p><p><a class="btn" href="${ctx.esc(ctx.href("contact"))}">Vraag wanneer het er weer is</a></p>`
+    ? `<p class="psold big">Uitverkocht</p>${voorraadMeldingBlok(ctx, p, meta.gemeld === true)}`
     : w.bestellen
       ? `${weinig}<form class="buy" method="get" action="${ctx.esc(pad(ctx, "mand"))}"><input type="hidden" name="voeg" value="${ctx.esc(p.id)}">${keuzeVelden(ctx, p, (i) => `o${i}`, [], " required")}<span class="buy-row"><label for="aantal">Aantal</label><input id="aantal" name="aantal" type="number" inputmode="numeric" min="1" max="${maxBestelbaar(p)}" value="1"><button class="btn" type="submit">In winkelmand</button></span></form>${ctx.inert ? `<p class="small">Dit is een voorbeeld: je kunt alles proberen, maar er wordt niets besteld.</p>` : ""}`
       : `${weinig}<p><a class="btn" href="${ctx.esc(ctx.href("contact"))}">Neem contact op om te bestellen</a></p>`;

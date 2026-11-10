@@ -802,7 +802,7 @@ export function renderFunctiesPagina(site: RenderableSite, opts: RenderOptions &
 
 /** A page of the site's shop: a product, the overview, the order form, the check before ordering, the thank-you page. */
 export type WinkelPagina =
-  | { soort: "product"; slug: string }
+  | { soort: "product"; slug: string; gemeld?: boolean | undefined }
   | { soort: "winkel"; filter?: WinkelFilter | undefined }
   | { soort: "bestellen"; invoer?: BestelInvoer | undefined; fouten?: string[] | undefined; vanMand?: boolean | undefined }
   | { soort: "controle"; concept: Bestelconcept; vanMand?: boolean | undefined }
@@ -821,7 +821,7 @@ export function renderWinkelPagina(site: RenderableSite, w: WinkelPagina, opts: 
       if (!p) return null;
       const m = p.fotos[0] ? ctx.media.get(p.fotos[0]) : undefined;
       const page: Page = { id: `product-${p.id}`, slug: `p/${p.slug}`, titel: p.naam, seoTitel: `${p.naam} | ${naam}`.slice(0, 70), seoOmschrijving: (p.korteTekst || p.omschrijving).replace(/\s+/g, " ").slice(0, 160), blocks: [] };
-      const meta = { url: `${opts.origin}${opts.root}p/${p.slug}`, beeld: m ? `${opts.origin}${opts.root}media/${m.file}` : null, seo: !ctx.voorbeeld && !ctx.voorstel };
+      const meta = { url: `${opts.origin}${opts.root}p/${p.slug}`, beeld: m ? `${opts.origin}${opts.root}media/${m.file}` : null, seo: !ctx.voorbeeld && !ctx.voorstel, gemeld: w.gemeld };
       return htmlDoc(ctx, page, productPaginaBody(wc, ctx.winkel, p, meta), opts, css, m?.id ?? null);
     }
     case "winkel":

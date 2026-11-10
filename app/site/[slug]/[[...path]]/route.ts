@@ -10,6 +10,7 @@ import { liveSiteBySlug } from "@/lib/sites/store";
 import { handleSiteOrder } from "@/lib/sites/bestellingen";
 import { handleSiteReservering } from "@/lib/sites/reserveringen";
 import { handleSiteChat } from "@/lib/sitechat/site-pagina";
+import { handleVoorraadMelding } from "@/lib/sites/voorraadmelding-opslag";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export const dynamic = "force-dynamic";
 // company's own domain is active (lib/sites/domain.ts), visitors and search
 // engines are sent there instead.
 // POST /site/<naam>/_zf/contact — the contact form; _zf/bestelling — the shop's order form; _zf/chat — the chat;
-// _zf/reservering — reserving a table.
+// _zf/reservering — reserving a table; _zf/voorraadmelding — "mail me als het er weer is" on a sold-out product.
 // ---------------------------------------------------------------------------
 
 const ORIGIN = new URL(env.APP_BASE_URL).origin;
@@ -45,7 +46,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
 export async function POST(request: Request, { params }: { params: Promise<{ slug: string; path?: string[] }> }): Promise<Response> {
   const { slug, path = [] } = await params;
   const doel = path.join("/");
-  if (doel !== "_zf/contact" && doel !== "_zf/bestelling" && doel !== "_zf/chat" && doel !== "_zf/reservering") return new Response("Niet toegestaan", { status: 405 });
+  if (doel !== "_zf/contact" && doel !== "_zf/bestelling" && doel !== "_zf/chat" && doel !== "_zf/reservering" && doel !== "_zf/voorraadmelding") return new Response("Niet toegestaan", { status: 405 });
   const live = await liveSiteBySlug(slug).catch(() => null);
   if (!live) return siteText("Deze website bestaat niet (meer).", 404, BASE);
   // the chat (lib/sitechat/site-pagina.ts): a question, "speak to someone" or an appointment request
@@ -54,5 +55,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   if (doel === "_zf/bestelling") return handleSiteOrder(request, live, { ...BASE, root: `/site/${slug}/`, version: live.buildId, besteld: `/site/${slug}/besteld`, address: `${ORIGIN}/site/${slug}` });
   // reserving a table (lib/sites/reserveringen.ts)
   if (doel === "_zf/reservering") return handleSiteReservering(request, live, { ...BASE, root: `/site/${slug}/`, version: live.buildId, gereserveerd: `/site/${slug}/gereserveerd`, address: `${ORIGIN}/site/${slug}` });
+  // "mail me als het er weer is" (lib/sites/voorraadmelding-opslag.ts)
+  if (doel === "_zf/voorraadmelding") return handleVoorraadMelding(request, live, { ...BASE, root: `/site/${slug}/` });
   return handleSiteContact(request, live, { ...BASE, thanks: `/site/${slug}/bedankt`, address: `${ORIGIN}/site/${slug}` });
 }
