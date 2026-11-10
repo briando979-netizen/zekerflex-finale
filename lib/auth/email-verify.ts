@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
 import { sendMail, verificationEmail, welcomeEmail } from "@/lib/mail";
 import { getFiscal } from "@/lib/fiscal/store";
+import { featureEnabled } from "@/lib/flags";
 import { mintToken, consumeToken, consumeCode, latestVerification } from "@/lib/mail/store";
 import { fixedWindow, privateRateLimitIdentifier } from "@/lib/rate-limit";
 
@@ -87,7 +88,8 @@ export async function sendWelcome(user: { id: string; email: string; fullName: s
   try {
     const freelancer = user.memberships.some((m) => m.role === "FREELANCER");
     const workerKind = freelancer ? ((await getFiscal(user.id).catch(() => null))?.workerKind ?? undefined) : undefined;
-    const tpl = welcomeEmail(user.fullName, freelancer ? "freelancer" : "bedrijf", env.APP_BASE_URL, workerKind);
+    const ontwikkelingsnotitie = await featureEnabled("welkom-ontwikkelingsnotitie");
+    const tpl = welcomeEmail(user.fullName, freelancer ? "freelancer" : "bedrijf", env.APP_BASE_URL, workerKind, { ontwikkelingsnotitie });
     await sendMail({ ...tpl, to: user.email });
   } catch (err) {
     logger.warn("welcome mail failed", { userId: user.id, error: (err as Error).message });

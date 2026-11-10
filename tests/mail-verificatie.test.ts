@@ -58,6 +58,21 @@ describe("welcomeEmail en onboardingReminderEmail", () => {
     expect(w.html).toContain("https://zekerflex.com/login");
   });
 
+  it("met de ontwikkelingsnotitie leest een nieuwe gebruiker dat de klussen testklussen zijn, in vijf talen", () => {
+    const w = welcomeEmail("Sam", "freelancer", "https://zekerflex.com", "zzp", { ontwikkelingsnotitie: true });
+    for (const stuk of ["testklussen", "Begin volgend jaar", "English:", "Polski:", "Română:", "Українською:"]) {
+      expect(w.text).toContain(stuk);
+    }
+    expect(w.html).toContain("testklussen");
+    expect(w.html).toContain("Українською");
+  });
+
+  it("zonder de notitie (standaard) staat er niets over testklussen in de welkomstmail", () => {
+    const w = welcomeEmail("Sam", "freelancer", "https://zekerflex.com", "zzp");
+    expect(w.text).not.toContain("testklussen");
+    expect(w.html).not.toContain("testklussen");
+  });
+
   it("geen verwijzing naar de Sovereign Box meer in de voettekst", () => {
     expect(welcomeEmail("Sam", "freelancer", "https://zekerflex.com").html).not.toMatch(/Sovereign/);
   });

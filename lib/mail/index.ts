@@ -465,11 +465,22 @@ Heb je geen account bij ZekerFlex aangemaakt? Dan hoef je niets te doen: zonder 
   };
 }
 
+/** Uitleg voor nieuwe gebruikers zolang ZekerFlex nog niet officieel online is (vlag welkom-ontwikkelingsnotitie). */
+const ONTWIKKELING_NL =
+  "ZekerFlex is nog in ontwikkeling. De klussen die je ziet zijn testklussen: geen echt werk, je hoeft er niet heen en er hoort geen betaling bij. Begin volgend jaar gaan we online. Je kunt nu al proeven en bekijken hoe het er straks uitziet.";
+const ONTWIKKELING_TALEN: { taal: string; tekst: string }[] = [
+  { taal: "English", tekst: "ZekerFlex is still in development and the jobs you see are test jobs: no real work, no payment. We go online early next year." },
+  { taal: "Polski", tekst: "ZekerFlex jest nadal w rozwoju, a zlecenia, które widzisz, to zlecenia testowe: bez prawdziwej pracy i bez płatności. Na początku przyszłego roku wystartujemy online." },
+  { taal: "Română", tekst: "ZekerFlex este încă în dezvoltare, iar joburile pe care le vezi sunt joburi de test: fără muncă reală și fără plată. Pornim online la începutul anului viitor." },
+  { taal: "Українською", tekst: "ZekerFlex ще в розробці, а завдання, які ви бачите, — тестові: без справжньої роботи й без оплати. Ми запускаємося онлайн на початку наступного року." },
+];
+
 export function welcomeEmail(
   fullName: string,
   type: "freelancer" | "bedrijf",
   appUrl: string,
   workerKind?: "zzp" | "flexwerker" | "uitzendkracht",
+  opties: { ontwikkelingsnotitie?: boolean } = {},
 ): MailInput {
   const first = fullName.split(" ")[0] || fullName;
   const base = appUrl.replace(/\/+$/, "");
@@ -479,6 +490,12 @@ export function welcomeEmail(
       : workerKind === "uitzendkracht"
         ? "Rond je verificatie af (identiteit + rekeningnummer — geen KVK nodig) en bekijk de eerste klussen die bij je passen."
         : "Rond je verificatie af (KVK of btw-nummer + identiteit) en bekijk de eerste klussen die bij je passen.";
+  const notitie = opties.ontwikkelingsnotitie === true;
+  const notitieTekst = notitie ? `\n\nGoed om te weten: ${ONTWIKKELING_NL}\n\n${ONTWIKKELING_TALEN.map((t) => `${t.taal}: ${t.tekst}`).join("\n")}` : "";
+  const notitieHtml = notitie
+    ? `<p style="margin:16px 0 0;padding:12px 14px;border-radius:8px;background:#F4F1E8;font-size:14px;line-height:1.6;color:#3C4A42"><strong>Goed om te weten:</strong> ${escapeHtml(ONTWIKKELING_NL)}</p>
+       ${ONTWIKKELING_TALEN.map((t) => `<p style="margin:8px 0 0;font-size:12px;line-height:1.5;color:#667469"><strong>${escapeHtml(t.taal)}:</strong> ${escapeHtml(t.tekst)}</p>`).join("")}`
+    : "";
   return {
     to: "",
     subject: "Welkom bij ZekerFlex",
@@ -489,7 +506,7 @@ Je e-mailadres is bevestigd en je ZekerFlex-account is klaar.
 
 Volgende stap: ${next}
 
-Inloggen: ${base}/login
+Inloggen: ${base}/login${notitieTekst}
 
 Vragen? Mail support@zekerflex.com.`,
     html: shell(
@@ -497,6 +514,7 @@ Vragen? Mail support@zekerflex.com.`,
       `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${escapeHtml(first)}, je e-mailadres is bevestigd en je account is klaar. Fijn dat je er bent.</p>
        <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42"><strong>Volgende stap:</strong> ${next}</p>
        <p style="margin:0">${button(`${base}/login`, "Naar ZekerFlex")}</p>
+       ${notitieHtml}
        <p style="margin:20px 0 0;font-size:12px;color:#667469">Vragen? Mail support@zekerflex.com.</p>`,
       "Je account is klaar. Dit is je volgende stap.",
     ),
