@@ -45,6 +45,9 @@ export interface MarketplaceShift {
   title: string;
   description: string | null;
   branch: string;
+  /** naam van het bedrijf (tenant): staat boven de titel op de kaart en de klus, niet de vestiging
+   *  (die heet bij een losse adres "Eenmalige locatie — …"; 10 nov, eigenaar) */
+  company: string;
   city: string;
   branchLat: number;
   branchLng: number;
@@ -356,6 +359,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
         description: s.description,
         extraInfo: s.extraInfo,
         branch: s.branch.name,
+        company: s.branch.tenant.name,
         city: s.branch.city,
         branchLat: s.branch.latitude,
         branchLng: s.branch.longitude,
@@ -571,6 +575,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
       description: row.description,
       extraInfo: row.extraInfo,
       branch: row.branch.name,
+      company: row.branch.tenant.name,
       city: row.branch.city,
       branchLat: row.branch.latitude,
       branchLng: row.branch.longitude,
@@ -621,7 +626,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
     agreement,
     agreementType,
     clientTenantId: row.branch.tenantId,
-    clientName: row.branch.name,
+    clientName: row.branch.tenant.name,
     seriesDays: seriesDays.length > 1 ? seriesDays : [],
   };
 }

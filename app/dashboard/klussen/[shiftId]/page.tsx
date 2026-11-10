@@ -27,7 +27,6 @@ import { validCertTypes, CERT_TYPES } from "@/lib/certificates/store";
 import { getFreelancerDict } from "@/lib/i18n/server";
 import { translateBlockReason, type FreelancerDict } from "@/lib/i18n/freelancer";
 import { inAndroidApp } from "@/lib/app-mode-server";
-import { cleanBranchLabel } from "@/lib/shifts/place-label";
 import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
 import { isFollowing } from "@/lib/worker/follows";
 import { marketStats, rateVsMarket } from "@/lib/pricing/advice";
@@ -296,12 +295,12 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   const timeLabel = `${hhmm(s.startsAt)} - ${hhmm(s.endsAt)}`;
 
   const calendarEvent: CalendarEvent = {
-    title: `${s.title} — ${s.branch}`,
+    title: `${s.title} — ${s.company}`,
     startLocal: localStamp(s.startsAt),
     endLocal: localStamp(s.endsAt),
     location: [s.branch, s.address, `${s.postalCode ?? ""} ${s.city}`.trim()].filter(Boolean).join(", "),
     description:
-      `Je klus via ZekerFlex bij ${s.branch}.\n` +
+      `Je klus via ZekerFlex bij ${s.company}.\n` +
       `Uurtarief ${moneyExact(s.hourlyRateCents)}.\n` +
       (s.skill ? `Functie: ${s.skill}\n` : "") +
       (s.breakMinutes > 0 ? `Pauze: ${s.breakMinutes} minuten\n` : "Geen pauze\n") +
@@ -388,7 +387,8 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
             {ft.card.testklusUitleg}
           </p>
         )}
-        <p className="text-sm font-semibold text-brand-600">{cleanBranchLabel(s.branch)}</p>
+        {/* de bedrijfsnaam, niet de vestiging ("Eenmalige locatie — adres"); het adres staat bij de kaart hieronder */}
+        <p className="text-sm font-semibold text-brand-600">{s.company}</p>
         <h1 className="mt-1 font-display text-2xl font-bold leading-tight text-ink">{s.title}</h1>
 
         <p className="mt-2 flex flex-wrap items-center gap-x-2 text-sm text-neutralx-500">
@@ -661,7 +661,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
         {/* Over de opdrachtgever */}
         <section className="mt-8 border-t border-hair pt-5">
           <div className="flex items-start justify-between gap-3">
-            <h2 className="font-display text-base font-bold text-ink">{D.about(s.branch)}</h2>
+            <h2 className="font-display text-base font-bold text-ink">{D.about(s.company)}</h2>
             <FollowEmployerButton tenantId={s.clientTenantId} name={s.clientName || s.branch} initialFollowing={followsClient} />
           </div>
           {orgReviews.count > 0 && (
@@ -685,7 +685,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
               rel="noopener noreferrer"
               className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 underline"
             >
-              {D.website(s.branch)}
+              {D.website(s.company)}
             </a>
           )}
 
@@ -696,10 +696,10 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           </div>
 
           <Link
-            href={`/dashboard/klussen?employer=${encodeURIComponent(s.branch)}`}
+            href={`/dashboard/klussen?employer=${encodeURIComponent(s.company)}`}
             className="mt-4 block rounded-xl border border-hairstrong px-4 py-3 text-center text-sm font-semibold text-ink hover:bg-paper-soft"
           >
-            {D.allJobsOf(s.branch)}
+            {D.allJobsOf(s.company)}
           </Link>
         </section>
 
@@ -726,7 +726,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={oc.photo} alt="" className="h-28 w-full object-cover" />
                     <div className="p-3">
-                      <p className="text-xs font-semibold text-brand-600">{cleanBranchLabel(o.branch.name)}</p>
+                      <p className="text-xs font-semibold text-brand-600">{s.company}</p>
                       <p className="mt-0.5 line-clamp-2 text-sm font-bold leading-snug text-ink">{o.title}</p>
                       <p className="mt-1 text-[11px] text-neutralx-400">
                         {WD[odp.weekday]} {odp.day} {MON[odp.month - 1]}. · {hhmm(o.startsAt)} · {o.branch.city}

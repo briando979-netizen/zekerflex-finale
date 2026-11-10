@@ -5,7 +5,6 @@ import { shiftCategory } from "@/lib/shifts/category";
 import { money, moneyExact } from "@/components/app/ui";
 import { SaveShiftHeart } from "@/components/app/SaveShiftHeart";
 import { WebOnly } from "@/components/app/WebOnly";
-import { cleanBranchLabel } from "@/lib/shifts/place-label";
 import { FREELANCER_DICTS, type FreelancerDict } from "@/lib/i18n/freelancer";
 import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
 
@@ -120,7 +119,8 @@ export function ShiftCard({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={shift.companyLogoUrl} alt="" loading="lazy" decoding="async" className="h-5 w-5 flex-shrink-0 rounded-full bg-[#ffffff] object-contain ring-1 ring-hair" />
             )}
-            <span className="truncate">{cleanBranchLabel(shift.branch)}</span>
+            {/* de bedrijfsnaam, niet de vestiging ("Eenmalige locatie — adres"); waar het is, staat eronder */}
+            <span className="truncate">{shift.company}</span>
             {shift.companyRating && (
               <span className="flex flex-shrink-0 items-center gap-0.5 rounded-full bg-money-soft px-1.5 py-0.5 text-[11px] font-bold text-money-ink" title={`${shift.companyRating.count}`}>
                 ★ {shift.companyRating.average.toFixed(1).replace(".", ",")}

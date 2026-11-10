@@ -101,6 +101,7 @@ export function toShift(row: ShiftRow, home: { lat: number; lng: number } | null
     title: row.title,
     description: row.description,
     branch: row.branch.name,
+    company: row.branch.tenant.name,
     city: row.branch.city,
     branchLat: row.branch.latitude,
     branchLng: row.branch.longitude,

@@ -220,7 +220,7 @@ export function MarketplaceView({
   const filtered = useMemo(() => {
     let out = shifts.filter((s) => {
       if (hidden.has(s.branch)) return false;
-      if (q && !`${s.title} ${s.branch} ${s.city}`.toLowerCase().includes(q.toLowerCase())) return false;
+      if (q && !`${s.title} ${s.company} ${s.branch} ${s.city}`.toLowerCase().includes(q.toLowerCase())) return false;
       if (minRate && s.hourlyRateCents < minRate * 100) return false;
       if (loc && loc.maxKm < 60 && haversineKm(loc, { lat: s.branchLat, lng: s.branchLng }) > loc.maxKm) return false;
       if (dayparts.size && !dayparts.has(s.daypart)) return false;
