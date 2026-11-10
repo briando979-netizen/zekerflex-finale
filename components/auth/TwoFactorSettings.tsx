@@ -3,6 +3,7 @@
 import { copyText } from "@/lib/clipboard";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { TWO_FACTOR_NL, type TwoFactorTexts } from "@/components/auth/two-factor-texts";
 
 interface Status {
@@ -20,6 +21,7 @@ const errMsg = (d: Record<string, unknown>, fallback: string) => ((d.error as { 
 
 /** Two-step verification: turn on (scan QR → confirm code → save recovery codes), regenerate codes, turn off. */
 export function TwoFactorSettings({ recommended = false, texts: t = TWO_FACTOR_NL }: { recommended?: boolean; texts?: TwoFactorTexts }) {
+  const router = useRouter();
   const [status, setStatus] = useState<Status | null>(null);
   const [setup, setSetup] = useState<{ secret: string; otpauth: string; qrSvg: string } | null>(null);
   const [codes, setCodes] = useState<string[] | null>(null);
@@ -114,6 +116,8 @@ export function TwoFactorSettings({ recommended = false, texts: t = TWO_FACTOR_N
               setSetup(null);
               setCode("");
               setCodes(d.recoveryCodes as string[]);
+              // de poort van de werker-app (lib/onboarding/werker-poort.ts) leest dit in de layout
+              router.refresh();
             });
           }}
         >

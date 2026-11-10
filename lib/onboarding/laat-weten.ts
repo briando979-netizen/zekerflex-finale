@@ -5,9 +5,9 @@
 // de server (lib/fiscal/eligibility.ts, lib/werkrecht).
 // ---------------------------------------------------------------------------
 
-export type TijdlijnSleutel = "kind" | "branches" | "email" | "verify" | "werkrecht";
+export type TijdlijnSleutel = "kind" | "branches" | "email" | "verify" | "werkrecht" | "tweestap";
 
-export const TIJDLIJN_VOLGORDE: TijdlijnSleutel[] = ["kind", "branches", "email", "verify", "werkrecht"];
+export const TIJDLIJN_VOLGORDE: TijdlijnSleutel[] = ["kind", "branches", "email", "verify", "werkrecht", "tweestap"];
 
 export type TijdlijnKlaar = Record<TijdlijnSleutel, boolean>;
 

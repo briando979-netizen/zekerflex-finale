@@ -20,10 +20,12 @@ export interface WerkerPoortFeiten {
   identiteitIngestuurd: boolean;
   /** verklaring aangevinkt en bewijs ingestuurd of goedgekeurd (lib/werkrecht: stand "ok" of "wacht") */
   werkrechtIngevuld: boolean;
+  /** tweestapsverificatie aan (app met codes) of een passkey (10 nov, eigenaar) */
+  tweestapAan: boolean;
 }
 
 export function werkerOnboardingKlaar(f: WerkerPoortFeiten): boolean {
-  return f.soortGekozen && f.branchesGekozen && f.gegevensIngevuld && f.identiteitIngestuurd && f.werkrechtIngevuld;
+  return f.soortGekozen && f.branchesGekozen && f.gegevensIngevuld && f.identiteitIngestuurd && f.werkrechtIngevuld && f.tweestapAan;
 }
 
 /**

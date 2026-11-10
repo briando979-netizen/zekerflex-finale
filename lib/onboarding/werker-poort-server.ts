@@ -4,6 +4,7 @@ import { activeUitzendContract } from "@/lib/agreements/uitzend-contract";
 import { getBrancheKeuze } from "@/lib/worker/branche-store";
 import { werkrechtOverzicht } from "@/lib/werkrecht/store";
 import { werkerOnboardingKlaar, type WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
+import { hasTwoFactor } from "@/lib/auth/two-factor";
 import type { BrancheKeuze } from "@/lib/shifts/branche-keuze";
 
 // De feiten voor de poort van de werker-app (lib/onboarding/werker-poort.ts), in één keer
@@ -17,7 +18,7 @@ export interface WerkerPoortStand extends WerkerPoortFeiten {
 }
 
 export async function werkerPoortStand(userId: string): Promise<WerkerPoortStand> {
-  const [fiscal, profiel, user, inBehandeling, brancheKeuze, werkrecht] = await Promise.all([
+  const [fiscal, profiel, user, inBehandeling, brancheKeuze, werkrecht, tweestap, passkeys] = await Promise.all([
     getFiscal(userId),
     prisma.freelancerProfile.findUnique({ where: { userId }, select: { kvkValid: true, kvkNumber: true, payoutIban: true, homePostalCode: true } }),
     prisma.user.findUnique({ where: { id: userId }, select: { kycStatus: true } }),
@@ -28,6 +29,9 @@ export async function werkerPoortStand(userId: string): Promise<WerkerPoortStand
     }),
     getBrancheKeuze(userId).catch(() => ({ alle: true, branches: [] }) as BrancheKeuze),
     werkrechtOverzicht(userId).catch(() => null),
+    // een storing telt als "aan": de poort mag de app niet dichtgooien
+    hasTwoFactor(userId).catch(() => true),
+    prisma.passkey.count({ where: { userId } }).catch(() => 0),
   ]);
   const uitzend = invoiceModeFor(fiscal) === "payroll";
   const contract = uitzend ? Boolean(await activeUitzendContract(userId).catch(() => true)) : true;
@@ -43,6 +47,8 @@ export async function werkerPoortStand(userId: string): Promise<WerkerPoortStand
     identiteitIngestuurd: user?.kycStatus === "VERIFIED" || (user?.kycStatus === "PENDING" && Boolean(inBehandeling)),
     // Nederland staat altijd vooraan (lib/werkrecht/store.ts); een storing telt niet als "niet ingevuld"
     werkrechtIngevuld: werkrecht === null || werkrecht[0]?.stand === "ok" || werkrecht[0]?.stand === "wacht",
+    // tweestapsverificatie met een app, of een passkey (vingerafdruk/gezicht): allebei tweestaps
+    tweestapAan: tweestap || passkeys > 0,
   };
   return {
     ...feiten,

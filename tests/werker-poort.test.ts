@@ -9,6 +9,7 @@ const ALLES: WerkerPoortFeiten = {
   gegevensIngevuld: true,
   identiteitIngestuurd: true,
   werkrechtIngevuld: true,
+  tweestapAan: true,
 };
 
 describe("werkerOnboardingKlaar", () => {
@@ -43,6 +44,8 @@ const h = vi.hoisted(() => ({
   inBehandeling: null as { id: string } | null,
   branches: null as { alle: boolean; branches: string[] } | null,
   werkrecht: [{ land: "NL", stand: "verklaring-nodig" }] as { land: string; stand: string }[] | null,
+  tweestap: false,
+  passkeys: 0,
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -50,6 +53,7 @@ vi.mock("@/lib/prisma", () => ({
     freelancerProfile: { findUnique: async () => h.profiel },
     user: { findUnique: async () => ({ kycStatus: h.kyc }) },
     identityVerification: { findFirst: async () => h.inBehandeling },
+    passkey: { count: async () => h.passkeys },
   },
 }));
 vi.mock("@/lib/fiscal/store", () => ({
@@ -59,6 +63,7 @@ vi.mock("@/lib/fiscal/store", () => ({
 }));
 vi.mock("@/lib/agreements/uitzend-contract", () => ({ activeUitzendContract: async () => null }));
 vi.mock("@/lib/worker/branche-store", () => ({ getBrancheKeuze: async () => h.branches }));
+vi.mock("@/lib/auth/two-factor", () => ({ hasTwoFactor: async () => h.tweestap }));
 vi.mock("@/lib/werkrecht/store", () => ({
   werkrechtOverzicht: async () => {
     if (h.werkrecht === null) throw new Error("storing");
@@ -74,6 +79,16 @@ describe("werkerPoortStand", () => {
     h.inBehandeling = { id: "iv1" };
     h.branches = { alle: true, branches: [] };
     h.werkrecht = [{ land: "NL", stand: "wacht" }];
+    h.tweestap = true;
+    h.passkeys = 0;
+  });
+
+  it("zonder tweestapsverificatie en zonder passkey: niet klaar; een passkey telt ook", async () => {
+    const { werkerPoortStand } = await import("@/lib/onboarding/werker-poort-server");
+    h.tweestap = false;
+    expect((await werkerPoortStand("u1")).klaar).toBe(false);
+    h.passkeys = 1;
+    expect((await werkerPoortStand("u1")).klaar).toBe(true);
   });
 
   it("alles ingevuld en in behandeling: klaar (goedkeuren hoeft niet om de app te zien)", async () => {

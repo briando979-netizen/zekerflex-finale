@@ -23,6 +23,7 @@ export function WerkerStartWizard({
   emailVerified,
   profileComplete,
   werkrechtOk,
+  tweestapAan = true,
   brancheKeuze,
   poort = false,
 }: {
@@ -35,6 +36,8 @@ export function WerkerStartWizard({
   profileComplete: boolean;
   /** recht om te werken in Nederland in orde (lib/werkrecht): verklaring + bewijs */
   werkrechtOk: boolean;
+  /** tweestapsverificatie of passkey aan (lib/onboarding/werker-poort.ts); na de poort altijd waar */
+  tweestapAan?: boolean;
 }) {
   const t = useFT().start;
   const router = useRouter();
@@ -49,14 +52,14 @@ export function WerkerStartWizard({
   const [brancheBusy, setBrancheBusy] = useState(false);
   const [brancheFout, setBrancheFout] = useState<string | null>(null);
 
-  const done: Record<StepKey, boolean> = { kind: kind !== null, branches: keuze !== null, email: emailVerified, verify: profileComplete, werkrecht: werkrechtOk };
-  const ORDER: StepKey[] = ["kind", "branches", "email", "verify", "werkrecht"];
+  const done: Record<StepKey, boolean> = { kind: kind !== null, branches: keuze !== null, email: emailVerified, verify: profileComplete, werkrecht: werkrechtOk, tweestap: tweestapAan };
+  const ORDER: StepKey[] = ["kind", "branches", "email", "verify", "werkrecht", "tweestap"];
   const first = volgendeStap(done);
   const [open, setOpen] = useState<StepKey>(first ?? "verify");
   const [gesloten, setGesloten] = useState(false);
   const completed = ORDER.filter((k) => done[k]).length;
   const pct = Math.round((completed / ORDER.length) * 100);
-  const label: Record<StepKey, string> = { kind: t.kindStep, branches: t.brancheStep, email: t.emailStep, verify: t.verifyStep, werkrecht: t.werkrechtStep };
+  const label: Record<StepKey, string> = { kind: t.kindStep, branches: t.brancheStep, email: t.emailStep, verify: t.verifyStep, werkrecht: t.werkrechtStep, tweestap: t.tweestapStep };
 
   function wissel(sleutel: string) {
     setBrancheFout(null);
@@ -130,11 +133,12 @@ export function WerkerStartWizard({
   const stappen = tijdlijnStappen(done);
 
   // Eén uitleg per stap: de bestaande teksten (vijf talen), niets nieuws verzonnen.
-  const uitleg: Record<StepKey, string> = { kind: t.kindHint, branches: t.brancheHint, email: t.emailBody, verify: t.verifyBody, werkrecht: t.werkrechtBody };
+  const uitleg: Record<StepKey, string> = { kind: t.kindHint, branches: t.brancheHint, email: t.emailBody, verify: t.verifyBody, werkrecht: t.werkrechtBody, tweestap: t.tweestapBody };
   const actie = (k: StepKey): { href: string; tekst: string } | null =>
     k === "email" ? { href: "/verifieer-email", tekst: t.emailCta }
     : k === "verify" ? { href: "/dashboard/verificatie", tekst: t.verifyCta }
     : k === "werkrecht" ? { href: "/dashboard/verificatie#werkrecht", tekst: t.werkrechtCta }
+    : k === "tweestap" ? { href: "/dashboard/account/beveiliging", tekst: t.tweestapCta }
     : null;
 
   if (gesloten) return null;

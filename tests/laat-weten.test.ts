@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 import { aantalOpen, nogStappenTekst, reageerStap, reageerStapHref, tijdlijnStappen, volgendeStap, type TijdlijnKlaar } from "@/lib/onboarding/laat-weten";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 
-const alles: TijdlijnKlaar = { kind: true, branches: true, email: true, verify: true, werkrecht: true };
+const alles: TijdlijnKlaar = { kind: true, branches: true, email: true, verify: true, werkrecht: true, tweestap: true };
 
 describe("tijdlijn van de werker-start", () => {
   it("telt open stappen en kiest de eerste als actief", () => {
     const k = { ...alles, verify: false, werkrecht: false };
     expect(aantalOpen(k)).toBe(2);
     expect(volgendeStap(k)).toBe("verify");
-    expect(tijdlijnStappen(k).map((s) => s.stand)).toEqual(["klaar", "klaar", "klaar", "actief", "volgende"]);
+    expect(tijdlijnStappen(k).map((s) => s.stand)).toEqual(["klaar", "klaar", "klaar", "actief", "volgende", "klaar"]);
   });
   it("alles klaar: geen volgende stap", () => {
     expect(aantalOpen(alles)).toBe(0);

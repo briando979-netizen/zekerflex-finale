@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { PASSKEY_NL, type PasskeyTexts } from "@/components/auth/passkey-texts";
 import { foutNaam, kanPasskeys, naarAanmaakOpties, registratieNaarJson, type AanmaakOptiesJson } from "@/lib/auth/passkey/browser";
 import { NAAM_MAX, raadToestelNaam } from "@/lib/auth/passkey/naam";
@@ -54,6 +55,7 @@ const datum = (iso: string, locale: string) => new Date(iso).toLocaleDateString(
 
 /** Passkeys van het eigen account: lijst, toevoegen (opnieuw bevestigen → toestel) en verwijderen. */
 export function PasskeySettings({ texts: t = PASSKEY_NL }: { texts?: PasskeyTexts }) {
+  const router = useRouter();
   const [status, setStatus] = useState<Status | null>(null);
   const [kan, setKan] = useState<boolean | null>(null);
   const [mode, setMode] = useState<"idle" | "bevestigen" | "toestel">("idle");
@@ -158,6 +160,8 @@ export function PasskeySettings({ texts: t = PASSKEY_NL }: { texts?: PasskeyText
     setStatus((s) => (s ? { ...s, passkeys: klaar.data.passkeys as Rij[] } : s));
     stoppen();
     setMelding(t.added);
+    // de poort van de werker-app (tweestap of passkey) leest dit in de layout
+    router.refresh();
   };
 
   const verwijderen = async (id: string) => {
