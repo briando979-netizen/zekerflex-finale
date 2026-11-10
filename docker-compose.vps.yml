@@ -53,6 +53,9 @@ services:
       WHISPER_MODEL: ${WHISPER_MODEL:-Systran/faster-whisper-small}
       # ZekerFlex Kaart leest zijn data alleen via deze variabele (zie app/kaart-data)
       KAART_DATA_DIR: /app/kaart-data
+      # Eigen routeplanner (dienst "routes" hieronder, lib/geo/route.ts). Draait hij niet,
+      # dan rekent de app de reistijd zelf uit en zegt de kaart dat hij even weg is.
+      ROUTE_BASE_URL: ${ROUTE_BASE_URL:-http://routes:8002}
       # Rapportages (lib/bi): Metabase op het interne netwerk; het publieke adres via Caddy
       METABASE_URL: ${METABASE_URL:-http://metabase:3000}
       METABASE_PUBLIC_URL: ${METABASE_PUBLIC_URL:-https://${METABASE_HOST:-bi.37-97-226-24.sslip.io}}
@@ -73,7 +76,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
-    networks: [internal, bouwer-toegang, bronnen]
+    networks: [internal, bouwer-toegang, bronnen, route]
     # Geen `ports:` — alles loopt via Caddy.
 
   caddy:
@@ -559,6 +562,48 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
+  # Routeplanner (lib/geo/route.ts): Valhalla met de wegen van Nederland uit
+  # OpenStreetMap. Echte routes voor auto, fiets en lopen, met de afslagen in het
+  # Nederlands: de Route op ZekerFlex Kaart, de route van huis naar een klus en de
+  # reistijd in de matching. De tegels (±3 GB) bouwt deploy/route/haal-route.sh in
+  # ./route-data/actief (niet in git, niet in de image); deze dienst serveert ze
+  # alleen en bouwt of downloadt zelf nooit iets. Profiel "routes": een gewone
+  # `up -d` start hem niet, want zonder tegels blijft hij herstarten; vps-update.sh
+  # start hem pas als de tegels er zijn. Zonder deze dienst rekent de app de
+  # reistijd zelf uit. Eigen netwerk zonder internet: alleen de app praat ermee
+  # (http://routes:8002). Draait als de gebruiker van de server (uid 1000), niet als root.
+  routes:
+    image: ghcr.io/valhalla/valhalla-scripted:3.9.1
+    restart: unless-stopped
+    profiles: [routes]
+    user: "${ROUTE_UID:-1000}:${ROUTE_GID:-1000}"
+    environment:
+      use_tiles_ignore_pbf: "True"
+      force_rebuild: "False"
+      build_admins: "False"
+      build_time_zones: "False"
+      build_elevation: "False"
+      build_transit: "False"
+      build_tar: "True"
+      use_default_speeds_config: "False"
+      serve_tiles: "True"
+      server_threads: "2"
+    volumes:
+      - ./route-data/actief:/custom_files
+    mem_limit: 2g
+    cpus: 2
+    oom_score_adj: 300
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8002/status > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    networks: [route]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
   # Eigen Git-server: Forgejo, een "eigen GitHub" (gratis, open source; lib/gratis/
   # diensten.ts → code). Fase 1: een spiegel van de GitHub-repo die elke 10 minuten
   # bijwerkt, zodat de code ook op onze eigen server staat; inrichten met
@@ -602,6 +647,10 @@ networks:
   # de app en de browser-werker; de werker zit bewust niet op internal
   bronnen:
     driver: bridge
+  # de app en de routeplanner; zonder internet (de tegels staan al op schijf)
+  route:
+    driver: bridge
+    internal: true
   # alleen de Bouwer en zijn voorbeeld-database/-redis; geen internet
   bouwer:
     driver: bridge

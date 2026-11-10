@@ -59,6 +59,11 @@ for i in 1 2 3; do
     sudo $C up -d app backup coturn freeradius headscale metabase outline crowdsec whisper forgejo
     # de browser-werker (deploy/scraper): eigen image, gecacht; een mislukte build laat de oude draaien
     sudo $C build -q scraper > /dev/null 2>&1 && sudo $C up -d scraper || echo "scraper: image bouwen mislukt, de oude blijft (of hij staat nog uit)"
+    # de routeplanner (deploy/route): pas als zijn tegels gebouwd zijn (haal-route.sh); zonder
+    # tegels zou hij blijven herstarten. Mislukt het, dan rekent de app de reistijd zelf uit.
+    if [ -s route-data/actief/valhalla_tiles.tar ]; then
+      sudo $C up -d routes || echo "routes: starten mislukt, de app rekent de reistijd zelf uit"
+    fi
     # coturn leest zijn opstartscript via een bind-mount en tar vervangt dat bestand
     # (nieuwe inode): alleen bij een gewijzigd script opnieuw aanmaken. Niet altijd,
     # want lopende gesprekken via de relay vallen dan even weg.

@@ -83,3 +83,5 @@ tunnel.out
 
 # ZekerFlex Kaart: tegels en lettertypes (±2 GB), alleen op de server (deploy/kaart/haal-kaart.sh)
 /kaart-data/
+# Routeplanner: wegen van Nederland en de tegels van Valhalla (±4 GB), alleen op de server (deploy/route/haal-route.sh)
+/route-data/
