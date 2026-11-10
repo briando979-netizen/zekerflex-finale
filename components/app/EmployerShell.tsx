@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { logoutAction } from "@/lib/auth/actions";
 import { LogoGlyph } from "@/components/brand/Logo";
@@ -14,6 +14,7 @@ import { fmt } from "@/lib/i18n/dictionaries";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import type { Theme } from "@/lib/theme/config";
 import { DashboardWisselaar, type DashboardStand } from "@/components/app/werkruimte/DashboardWisselaar";
+import { dashboardVanPad } from "@/lib/werkgever/werkruimte";
 
 // ---------------------------------------------------------------------------
 // Employer workspace shell — its own chrome (org name + rating in the topbar,
@@ -70,6 +71,7 @@ export function EmployerShell({
   const t = useT();
   const pathname = usePathname();
   const zoek = useSearchParams();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
@@ -82,6 +84,24 @@ export function EmployerShell({
       /* ignore */
     }
   }, []);
+
+  // Een adres van een ander dashboard dat het bedrijf heeft (bijv. een link in een mail naar
+  // /werkgever/rijschool terwijl personeel open is): dat dashboard openen, zodat het menu klopt.
+  const actief = dashboards?.actief;
+  const lijst = dashboards?.dashboards.join(",") ?? "";
+  useEffect(() => {
+    const hoort = dashboardVanPad(pathname);
+    if (!actief || !hoort || hoort === actief || !lijst.split(",").includes(hoort)) return;
+    void fetch("/api/werkgever/dashboard/wissel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ soort: hoort }),
+    })
+      .then((r) => {
+        if (r.ok) router.refresh();
+      })
+      .catch(() => undefined);
+  }, [pathname, actief, lijst, router]);
 
   // Touch devices (iPad) have no hover, so onMouseLeave never fires to close
   // the menu — close on any tap/click outside it instead.

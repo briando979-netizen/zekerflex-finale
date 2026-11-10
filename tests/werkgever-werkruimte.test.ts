@@ -4,6 +4,7 @@ import {
   PERSONEEL_SLEUTELS,
   WERKRUIMTES,
   bepaalWerkruimte,
+  dashboardVanPad,
   dashboardsVan,
   leesKeuze,
   menuVoor,
@@ -91,6 +92,15 @@ describe("leesKeuze en voegToe", () => {
 
   it("elk dashboard begint in zijn eigen omgeving", () => {
     expect(WERKRUIMTES.map(thuisVan)).toEqual(["/werkgever", "/werkgever/rijschool", "/werkgever/horeca", "/studio/website", "/studio/webshop"]);
+  });
+
+  it("een adres uit een mail opent het dashboard waar het bij hoort", () => {
+    expect(dashboardVanPad("/werkgever/rijschool")).toBe("rijschool");
+    expect(dashboardVanPad("/werkgever/horeca/menukaart")).toBe("horeca");
+    expect(dashboardVanPad("/werkgever/uren")).toBe("personeel");
+    expect(dashboardVanPad("/werkgever/diensten/abc")).toBe("personeel");
+    // past bij elk dashboard
+    for (const pad of ["/werkgever", "/werkgever/mail", "/werkgever/facturen", "/werkgever/bedrijf", "/werkgever/urenoverzicht"]) expect(dashboardVanPad(pad), pad).toBeNull();
   });
 });
 

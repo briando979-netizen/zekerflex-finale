@@ -47,6 +47,22 @@ export function thuisVan(soort: Werkruimte): string {
   }
 }
 
+/** Adressen die bij het dashboard personeel horen (klussen, uren, …). */
+const PERSONEEL_PADEN = ["/werkgever/diensten", "/werkgever/kalender", "/werkgever/planner", "/werkgever/favorieten", "/werkgever/geblokkeerd", "/werkgever/uren", "/werkgever/inchecken", "/werkgever/compliance", "/werkgever/overeenkomsten"];
+
+/**
+ * Bij welk dashboard een adres hoort, of null als het bij elk dashboard past (mail, facturen, …).
+ * Opent iemand zo'n adres vanuit een mail of melding terwijl een ander dashboard open is, dan
+ * wisselt de werkgever-app mee (components/app/EmployerShell.tsx).
+ */
+export function dashboardVanPad(pad: string): Werkruimte | null {
+  const onder = (basis: string) => pad === basis || pad.startsWith(`${basis}/`);
+  if (onder("/werkgever/rijschool")) return "rijschool";
+  if (onder("/werkgever/horeca")) return "horeca";
+  if (PERSONEEL_PADEN.some(onder)) return "personeel";
+  return null;
+}
+
 /** Wat het bedrijf zelf koos. */
 export interface WerkruimteKeuze {
   /** het dashboard waarmee het bedrijf standaard opent */
