@@ -9,6 +9,7 @@ import { featureEnabled } from "@/lib/flags";
 const PLAY_TEST_URL = "https://play.google.com/apps/testing/com.zekerflex.app";
 // De iPhone-app staat als testversie in TestFlight; elke iPhone kan meedoen via deze openbare link.
 const TESTFLIGHT_URL = "https://testflight.apple.com/join/2QKhAHn8";
+const IPHONE_MAILTO = `mailto:${CONTACTS.support}?subject=${encodeURIComponent("Ik wil de ZekerFlex-app op mijn iPhone testen")}&body=${encodeURIComponent("Mijn Apple-ID (het e-mailadres waarmee ik op mijn iPhone in de App Store ben ingelogd):\n\n")}`;
 const TESTER_MAILTO = `mailto:${CONTACTS.support}?subject=${encodeURIComponent("Ik wil de ZekerFlex-app testen")}&body=${encodeURIComponent("Mijn Gmail-adres (zoals in de Play Store op mijn telefoon):\n\n")}`;
 
 function PlayBadgeTest() {
@@ -33,26 +34,50 @@ function PlayBadgeTest() {
   );
 }
 
-function AppleBadgeTest() {
-  return (
+function AppleBadgeTest({ live }: { live: boolean }) {
+  const inhoud = (
+    <>
+      <svg width="20" height="22" viewBox="0 0 24 24" aria-hidden fill="currentColor">
+        <path d="M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.8-3.5.8-.7 0-1.8-.8-3-.8-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2.1-1.1 2.8-2.2.9-1.3 1.3-2.5 1.3-2.6 0 0-2.5-1-2.5-3.8ZM14.2 5.9c.6-.8 1.1-1.8.9-2.9-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-1 2.8 1 .1 2.1-.5 2.8-1.3Z" />
+      </svg>
+      <span className="text-left leading-tight">
+        <span className="block text-[10px] uppercase tracking-wide text-brand-mint">{live ? "Testversie · iPhone" : "Binnenkort · iPhone"}</span>
+        <span className="block text-sm font-bold">{live ? "TestFlight" : "App Store"}</span>
+      </span>
+    </>
+  );
+  // De testlink neemt pas testers aan als Apple de beta heeft goedgekeurd (vlag `iphone-testflight`):
+  // tot dan een badge zonder link, en een uitleg hoe je op de lijst komt.
+  return live ? (
     <a
       href={TESTFLIGHT_URL}
       target="_blank"
       rel="noopener noreferrer"
       className="flex items-center gap-3 rounded-xl border border-white/20 bg-white/[0.06] px-4 py-2.5 text-white transition hover:bg-white/[0.12]"
     >
-      <svg width="20" height="22" viewBox="0 0 24 24" aria-hidden fill="currentColor">
-        <path d="M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.8-3.5.8-.7 0-1.8-.8-3-.8-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2.1-1.1 2.8-2.2.9-1.3 1.3-2.5 1.3-2.6 0 0-2.5-1-2.5-3.8ZM14.2 5.9c.6-.8 1.1-1.8.9-2.9-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-1 2.8 1 .1 2.1-.5 2.8-1.3Z" />
-      </svg>
-      <span className="text-left leading-tight">
-        <span className="block text-[10px] uppercase tracking-wide text-brand-mint">Testversie · iPhone</span>
-        <span className="block text-sm font-bold">TestFlight</span>
-      </span>
+      {inhoud}
     </a>
+  ) : (
+    <div className="flex items-center gap-3 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2.5 text-white/80">{inhoud}</div>
   );
 }
 
-function IphoneNotice() {
+function IphoneNotice({ live }: { live: boolean }) {
+  if (!live) {
+    return (
+      <div className="mt-6 max-w-md rounded-xl border border-brand-mint/30 bg-brand-mint/[0.06] p-4 text-sm text-white/80">
+        <p className="font-semibold text-white">De iPhone-app komt eraan</p>
+        <p className="mt-1">
+          De testversie voor de iPhone wacht op goedkeuring van Apple. Zodra die er is, kun je hem installeren via TestFlight.{" "}
+          <a href={IPHONE_MAILTO} className="font-semibold text-brand-mint underline">
+            Stuur ons je Apple-ID
+          </a>{" "}
+          (het e-mailadres waarmee je op je iPhone in de App Store bent ingelogd), dan zetten we je op de testerslijst en krijg je bericht
+          van Apple zodra je mee kunt doen.
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="mt-6 max-w-md rounded-xl border border-brand-mint/30 bg-brand-mint/[0.06] p-4 text-sm text-white/80">
       <p className="font-semibold text-white">De iPhone-app is in testfase</p>
@@ -123,17 +148,17 @@ export async function AppDownload({ standalone = false }: { standalone?: boolean
             </p>
             <div className="mt-7 flex flex-wrap items-start gap-3">
               <InstallAppButton />
-              {iphone && <AppleBadgeTest />}
+              <AppleBadgeTest live={iphone} />
               <PlayBadgeTest />
             </div>
             {standalone ? (
               <>
-                {iphone && <IphoneNotice />}
+                <IphoneNotice live={iphone} />
                 <TestNotice />
               </>
             ) : (
               <p className="mt-3 text-xs text-white/65">
-                {iphone ? "iPhone- en Android-app" : "Android-app"} in testfase —{" "}
+                iPhone- en Android-app in testfase —{" "}
                 <Link href="/app" className="underline hover:text-white/80">
                   zo doe je mee
                 </Link>
