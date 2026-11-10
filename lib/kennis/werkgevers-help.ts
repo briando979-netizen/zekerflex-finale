@@ -79,7 +79,7 @@ export const WERKGEVER_HELP_GROUPS: DbaGroup[] = [
         points: [
           "Titel: het eerste wat een kracht ziet. Vermeld de rol en de locatie, maak het pakkend.",
           "Beschrijving: wat je zoekt, de taken (met opsommingstekens), vaardigheden en kledingvoorschriften. Kort en concreet, geen jargon. Noem wat de dienst aantrekkelijk maakt.",
-          "Extra informatie: gegevens die alleen zichtbaar zijn voor de gekozen kracht, zoals een ontmoetingspunt.",
+          "Ontmoetingspunt, parkeren of wat de kracht mee moet nemen: zet het in de beschrijving, of stuur het de gekozen kracht in de chat.",
           "Branche, rol en vaardigheden: kies uit de lijst; mis je iets, zet het in de beschrijving.",
           "Annuleringstermijn: 24, 48 of 72 uur, 1 of 2 weken. Binnen die termijn kun je een gekozen kracht niet zonder gevolgen opzeggen.",
           "Meerdere dagen: selecteer de data in de kalender. Andere tijden op een dag? Klik op de groene plus voor een extra dienst en pas de tijden aan.",
@@ -132,7 +132,7 @@ export const WERKGEVER_HELP_GROUPS: DbaGroup[] = [
         points: [
           "Sjabloon: we kunnen een aanpasbaar sjabloon voor je maken — vraag ernaar via de support-chat.",
           "Verantwoordelijkheid: je bent zelf verantwoordelijk voor deze documenten; ZekerFlex is dat niet. We treden wel op als een kracht onze gebruiksvoorwaarden overtreedt.",
-          "Toevoegen: zet je document bij de 'extra informatie' van de dienst of deel het rechtstreeks met de kracht.",
+          "Toevoegen: noem het in de beschrijving van de dienst en deel het document rechtstreeks met de kracht in de chat.",
         ],
       },
     ],
