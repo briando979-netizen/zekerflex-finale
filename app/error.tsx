@@ -3,9 +3,12 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { isStaleDeployment } from "@/lib/ops/stale-deployment";
+import { useNaarInlogAlsUitgelogd } from "@/components/ops/useNaarInlogAlsUitgelogd";
 
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const stale = isStaleDeployment(error);
+  // sessie net verlopen op een pagina achter een inlog: naar het inlogscherm, niet "Er ging iets mis"
+  const uitgelogd = useNaarInlogAlsUitgelogd(!stale);
 
   useEffect(() => {
     console.error(error);
@@ -53,9 +56,11 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
         <p className="font-mono text-xs font-semibold uppercase tracking-[0.22em] text-warn">Er ging iets mis</p>
         <h1 className="mt-3 text-3xl font-bold text-ink sm:text-4xl">Sorry, dit onderdeel haperde even</h1>
         <p className="mt-4 text-base leading-relaxed text-neutralx-500">
-          {stale
-            ? "Er is net een update uitgebracht. We vernieuwen de pagina even voor je…"
-            : "We hebben de fout gelogd. Probeer het opnieuw — meestal is het zo weer opgelost."}
+          {uitgelogd
+            ? "Je bent uitgelogd. We brengen je naar het inlogscherm…"
+            : stale
+              ? "Er is net een update uitgebracht. We vernieuwen de pagina even voor je…"
+              : "We hebben de fout gelogd. Probeer het opnieuw — meestal is het zo weer opgelost."}
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <button

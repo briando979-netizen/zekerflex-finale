@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { useNaarInlogAlsUitgelogd } from "@/components/ops/useNaarInlogAlsUitgelogd";
 
 // Foutgrens voor het beheer: valt één beheerpagina om, dan blijft de
 // beheeromgeving (menu, bovenbalk) staan en zie je hier wat er is, met een knop
@@ -9,6 +10,8 @@ import { useEffect } from "react";
 // was je de hele beheeromgeving kwijt. De fout gaat net als daar naar het
 // foutenlogboek (Admin → Systeem → Foutmeldingen).
 export default function AdminError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  // sessie net verlopen: naar het inlogscherm met terugkeer (lib/ops/uitgelogd.ts)
+  const uitgelogd = useNaarInlogAlsUitgelogd();
   useEffect(() => {
     console.error(error);
     try {
@@ -32,7 +35,7 @@ export default function AdminError({ error, reset }: { error: Error & { digest?:
   return (
     <div role="alert" className="mx-auto my-10 max-w-xl rounded-2xl border border-crit/30 bg-crit/5 p-6">
       <p className="text-xs font-semibold uppercase tracking-wide text-crit">Dit onderdeel haperde</p>
-      <h1 className="mt-2 text-xl font-bold text-ink">De pagina kon niet worden geladen</h1>
+      <h1 className="mt-2 text-xl font-bold text-ink">{uitgelogd ? "Je bent uitgelogd" : "De pagina kon niet worden geladen"}</h1>
       <p className="mt-2 text-sm text-neutralx-700">
         De fout is in het foutenlogboek gezet (Systeem → Foutmeldingen). Probeer het opnieuw; blijft het misgaan, kijk dan daar wat er staat.
       </p>
