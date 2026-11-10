@@ -155,6 +155,14 @@ export const GRATIS_DIENSTEN: GratisDienst[] = [
     env: ["SMTP_HOST"],
   },
   {
+    id: "sociale-media",
+    naam: "Facebook en Instagram (Meta)",
+    waarvoor: "Goedgekeurde berichten van Sociale media (Admin → Sales & groei) zelf plaatsen op de eigen Facebook-pagina en het eigen Instagram-account",
+    nu: "De Meta Graph API met een paginatoken van onszelf (app in ontwikkelmodus, geen goedkeuring en geen kosten voor de eigen pagina). Het token staat versleuteld in de database; zonder token niets, dan staat de tekst klaar voor een mens.",
+    eigen: "Er is niets te vervangen en niets dat geld kost: zonder koppeling plaatst een mens het bericht zelf met de knoppen bij het bericht. LinkedIn, TikTok, YouTube, X en Google staan er bewust niet in: die gaan altijd met de hand (hun koppeling vraagt een eigen goedkeuring of betaling).",
+    status: "gratis",
+  },
+  {
     id: "betalen",
     naam: "Betalen en uitbetalen",
     waarvoor: "Afrekenen, uitbetalen, incasso, kaarten",
