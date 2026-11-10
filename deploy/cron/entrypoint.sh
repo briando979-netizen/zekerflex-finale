@@ -56,6 +56,8 @@ cat > /etc/crontabs/root <<EOF
 20 * * * * wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/bronnen/tick"
 # elke 10 min: AI-opdrachten van de video-editor op de achtergrond afwerken (antwoordt meteen)
 */10 * * * * wget -q -O /dev/null -T 30 "$H" "$APP/api/internal/video/wachtrij"
+# elke 10 min: goedgekeurde berichten voor sociale media plaatsen en, als de autopilot aan staat, een week klaarzetten (lib/social/publiceer.ts)
+*/10 * * * * wget -q -O /dev/null -T 280 "$H" "$APP/api/internal/social/tick"
 # elke 10 min: de nieuwste GitHub main alvast controleren in de Bouwer (tsc, eslint, tests; antwoordt meteen)
 */10 * * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/controles/tick"
 EOF

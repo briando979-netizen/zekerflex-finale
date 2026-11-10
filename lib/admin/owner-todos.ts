@@ -504,6 +504,19 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("socials"),
     },
     {
+      id: "social-meta",
+      group: "Vindbaarheid & app",
+      title: "Facebook en Instagram koppelen (Admin → Sales & groei → Sociale media)",
+      why: "Zonder koppeling zet ZekerFlex berichten voor sociale media alleen klaar en plaats jij ze zelf. Met een paginatoken van Meta (gratis, geen goedkeuring nodig voor je eigen pagina) plaatst ZekerFlex goedgekeurde berichten zelf op Facebook en Instagram.",
+      how: [
+        "Maak een Facebook-bedrijfspagina en zet het Instagram-account om naar zakelijk, gekoppeld aan die pagina.",
+        "Maak op developers.facebook.com een app (blijft in ontwikkelmodus) en voeg jezelf toe als beheerder.",
+        "Maak in de Graph API Explorer een paginatoken met pages_manage_posts, pages_read_engagement en instagram_content_publish, en plak dat bij Sociale media → Kanalen.",
+      ],
+      auto: false,
+      ...m("social-meta"),
+    },
+    {
       id: "videos",
       group: "Vindbaarheid & app",
       title: "Uitlegvideo's plaatsen",
