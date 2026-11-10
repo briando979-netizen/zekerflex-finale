@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import { DashboardWisselaar, type DashboardStand } from "@/components/app/werkruimte/DashboardWisselaar";
 import { StudioProvider, useStudio } from "@/components/studio/context";
 import WebshopStart from "@/components/studio/WebshopStart";
 import { ICalendar, ICard, ICoins, IExternal, IHome, ILayout, IMenu, IPalette, IPercent, IPin, IReceipt, ISparkle, ITrend, ISettings, IStore, ITag, ITruck, IUsers, IX, Pill, btn } from "@/components/studio/ui";
@@ -10,9 +11,11 @@ import type { SiteSoort } from "@/lib/sites/types";
 
 // ---------------------------------------------------------------------------
 // De studio heeft twee aparte werkruimtes: /studio/website (Website bouwen) en
-// /studio/webshop (Webshop openen). Elk met een eigen zijmenu en eigen topbalk;
-// bovenin wissel je tussen de twee. Boven: titel, wisselknop, "Bekijk" en
-// Publiceren; links: de onderdelen; op de telefoon klapt het menu uit.
+// /studio/webshop (Webshop openen), elk een eigen dashboard met een eigen zijmenu
+// en eigen topbalk. Boven: titel, de knop naar de andere (als het bedrijf die
+// heeft), "Bekijk" en Publiceren; links: de wisselaar naar de andere dashboards
+// van het bedrijf (lib/werkgever/werkruimte.ts), de onderdelen en wat buiten de
+// studio staat (facturen, bedrijfsgegevens, mail); op de telefoon klapt het menu uit.
 // Gegevens: components/studio/context.tsx (per soort een eigen site).
 // ---------------------------------------------------------------------------
 
@@ -70,15 +73,23 @@ const TITEL: Record<SiteSoort, string> = { website: "Website", webshop: "Webshop
 
 const isActive = (path: string, href: string) => (href === WEBSITE || href === WEBSHOP ? path === href : path === href || path.startsWith(`${href}/`));
 
-export function StudioShell({ soort, children }: { soort: SiteSoort; children: ReactNode }) {
+// Wat buiten de studio staat, in de gewone werkgever-omgeving.
+const ELDERS: { href: string; label: string }[] = [
+  { href: "/werkgever/facturen", label: "Facturen" },
+  { href: "/werkgever/bedrijf", label: "Bedrijfsgegevens" },
+  { href: "/werkgever/mail", label: "Mail" },
+];
+
+/** `dashboards`: de stand van de wisselaar (lib/sites/studio-stand.ts); null = geen wisselaar. */
+export function StudioShell({ soort, dashboards, children }: { soort: SiteSoort; dashboards: DashboardStand | null; children: ReactNode }) {
   return (
     <StudioProvider soort={soort}>
-      <Shell>{children}</Shell>
+      <Shell dashboards={dashboards}>{children}</Shell>
     </StudioProvider>
   );
 }
 
-function Shell({ children }: { children: ReactNode }) {
+function Shell({ dashboards, children }: { dashboards: DashboardStand | null; children: ReactNode }) {
   const { soort, base } = useStudio();
   const path = usePathname() ?? base;
   // het telefoonmenu hoort bij één pagina: na een klik op een onderdeel is het vanzelf dicht
@@ -87,11 +98,12 @@ function Shell({ children }: { children: ReactNode }) {
   const wide = path.startsWith(`${WEBSITE}/bouwer`);
   return (
     <div className="min-h-dvh bg-[#f1f1f1] text-[#303030]">
-      <TopBar onMenu={() => setMenuOp((m) => (m === path ? null : path))} menu={menu} />
+      <TopBar onMenu={() => setMenuOp((m) => (m === path ? null : path))} menu={menu} dashboards={dashboards} />
       <div className="flex">
-        {/* een div, geen aside: de nav erin is het (benoemde) landmark */}
-        <div className={`${menu ? "fixed inset-x-0 top-14 z-30 block max-h-[calc(100dvh-3.5rem)] overflow-y-auto border-b border-[#e3e3e3] shadow-lg" : "hidden"} w-full bg-[#ebebeb] md:sticky md:top-14 md:block md:h-[calc(100dvh-3.5rem)] md:w-60 md:flex-shrink-0 md:overflow-y-auto md:border-0 md:shadow-none`}>
-          <SideNav path={path} soort={soort} />
+        {/* een div, geen aside: de nav erin is het (benoemde) landmark. Vanaf md scrolt alleen de nav,
+            zodat het menu van de wisselaar (breder dan de balk) over de pagina kan vallen */}
+        <div className={`${menu ? "fixed inset-x-0 top-14 z-30 block max-h-[calc(100dvh-3.5rem)] overflow-y-auto border-b border-[#e3e3e3] shadow-lg" : "hidden"} w-full bg-[#ebebeb] md:sticky md:top-14 md:z-20 md:flex md:h-[calc(100dvh-3.5rem)] md:w-60 md:flex-shrink-0 md:flex-col md:overflow-visible md:border-0 md:shadow-none`}>
+          <SideNav path={path} soort={soort} dashboards={dashboards} />
         </div>
         <main id="studio-inhoud" className={`min-w-0 flex-1 px-4 py-6 sm:px-6 ${wide ? "" : "lg:px-10"}`}>
           <div className={wide ? "" : "mx-auto max-w-[1100px]"}>
@@ -105,7 +117,7 @@ function Shell({ children }: { children: ReactNode }) {
 
 const focus = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70";
 
-function TopBar({ onMenu, menu }: { onMenu: () => void; menu: boolean }) {
+function TopBar({ onMenu, menu, dashboards }: { onMenu: () => void; menu: boolean; dashboards: DashboardStand | null }) {
   const { data, unpublished, publish, soort } = useStudio();
   const inBouwer = (usePathname() ?? "").startsWith(`${WEBSITE}/bouwer`);
   const [busy, setBusy] = useState(false);
@@ -113,6 +125,8 @@ function TopBar({ onMenu, menu }: { onMenu: () => void; menu: boolean }) {
   const site = data?.site;
   const live = Boolean(site?.liveBuild);
   const ander: SiteSoort = soort === "webshop" ? "website" : "webshop";
+  // alleen als het bedrijf dat dashboard al heeft; toevoegen gaat via de wisselaar
+  const naarAnder = dashboards?.dashboards.includes(ander) ?? false;
   const doPublish = async () => {
     setBusy(true);
     const fout = await publish();
@@ -129,10 +143,12 @@ function TopBar({ onMenu, menu }: { onMenu: () => void; menu: boolean }) {
         <span className="grid h-7 w-7 place-items-center rounded-lg bg-white text-sm font-black text-[#1a1a1a]">Z</span>
         <span className="hidden sm:inline">{TITEL[soort]}</span>
       </Link>
-      <Link href={`/studio/${ander}`} className={`rounded-lg border border-white/25 px-2.5 py-1 text-xs font-semibold text-white/90 hover:bg-white/10 ${focus}`}>
-        <span className="sm:hidden">{TITEL[ander]}</span>
-        <span className="hidden sm:inline">Naar {TITEL[ander].toLowerCase()}</span>
-      </Link>
+      {naarAnder && (
+        <Link href={`/studio/${ander}`} className={`rounded-lg border border-white/25 px-2.5 py-1 text-xs font-semibold text-white/90 hover:bg-white/10 ${focus}`}>
+          <span className="sm:hidden">{TITEL[ander]}</span>
+          <span className="hidden sm:inline">Naar {TITEL[ander].toLowerCase()}</span>
+        </Link>
+      )}
       {site && <span className="hidden min-w-0 truncate text-sm text-white/70 lg:inline">· {site.bedrijf.naam}</span>}
       <div className="ml-auto flex items-center gap-2">
         {melding && (
@@ -174,7 +190,7 @@ function NavLink({ n, path, badge }: { n: NavItem; path: string; badge?: number 
   );
 }
 
-function SideNav({ path, soort }: { path: string; soort: SiteSoort }) {
+function SideNav({ path, soort, dashboards }: { path: string; soort: SiteSoort; dashboards: DashboardStand | null }) {
   const { data, api } = useStudio();
   const [nieuw, setNieuw] = useState(0);
   const heeftSite = Boolean(data?.site);
@@ -189,27 +205,39 @@ function SideNav({ path, soort }: { path: string; soort: SiteSoort }) {
   }, [heeftSite, shop, path, api]);
   const nav = NAV[soort];
   return (
-    <nav aria-label={shop ? "Webshop" : "Website"} className="flex h-full flex-col p-2">
-      <ul className="space-y-0.5">
-        {nav.hoofd.map((n) => (
-          <NavLink key={n.href} n={n} path={path} {...(n.href === `${WEBSHOP}/bestellingen` ? { badge: nieuw } : {})} />
-        ))}
-      </ul>
-      {nav.extra && (
-        <>
-          <p className="mb-1 mt-4 px-3 text-[11px] font-semibold uppercase tracking-wider text-[#707070]">{nav.extra.kop}</p>
-          <ul className="space-y-0.5">
-            {nav.extra.items.map((n) => (
-              <NavLink key={n.href} n={n} path={path} />
-            ))}
-          </ul>
-        </>
+    <>
+      {/* bovenaan, net als in de werkgever-app: het menu van de wisselaar klapt naar beneden open */}
+      {dashboards && (
+        <div className="px-2 pt-2">
+          <DashboardWisselaar stand={dashboards} donker />
+        </div>
       )}
-      <div className="mt-auto space-y-1 border-t border-black/10 px-3 pt-3">
-        <Link href="/studio" className="block text-xs font-semibold text-[#616161] hover:text-[#1a1a1a]">Alle ZekerFlex Sites</Link>
-        <Link href="/werkgever" className="block text-xs font-semibold text-[#616161] hover:text-[#1a1a1a]">← Terug naar ZekerFlex</Link>
-      </div>
-    </nav>
+      <nav aria-label={shop ? "Webshop" : "Website"} className="flex min-h-0 flex-1 flex-col p-2 md:overflow-y-auto">
+        <ul className="space-y-0.5">
+          {nav.hoofd.map((n) => (
+            <NavLink key={n.href} n={n} path={path} {...(n.href === `${WEBSHOP}/bestellingen` ? { badge: nieuw } : {})} />
+          ))}
+        </ul>
+        {nav.extra && (
+          <>
+            <p className="mb-1 mt-4 px-3 text-[11px] font-semibold uppercase tracking-wider text-[#707070]">{nav.extra.kop}</p>
+            <ul className="space-y-0.5">
+              {nav.extra.items.map((n) => (
+                <NavLink key={n.href} n={n} path={path} />
+              ))}
+            </ul>
+          </>
+        )}
+        {/* buiten de studio, in de gewone werkgever-omgeving */}
+        <ul className="mt-auto space-y-1 border-t border-black/10 px-3 pb-1 pt-3">
+          {ELDERS.map((l) => (
+            <li key={l.href}>
+              <Link href={l.href} className="block text-xs font-semibold text-[#616161] hover:text-[#1a1a1a]">{l.label}</Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </>
   );
 }
 

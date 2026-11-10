@@ -10,6 +10,7 @@ import type { SiteDoc, SiteSoort } from "@/lib/sites/types";
 // ---------------------------------------------------------------------------
 // /studio: "Wat wil je doen?" De twee producten van ZekerFlex Sites naast
 // elkaar: Website bouwen en Webshop openen, elk met de stand en één knop.
+// Elke studio heeft de wisselaar naar de andere dashboards van het bedrijf.
 // ---------------------------------------------------------------------------
 
 interface Stand {
@@ -40,7 +41,8 @@ export default function Kiezer() {
       <header className="flex h-14 items-center gap-3 bg-[#1a1a1a] px-3 text-white sm:px-4">
         <span className="grid h-7 w-7 place-items-center rounded-lg bg-white text-sm font-black text-[#1a1a1a]">Z</span>
         <span className="font-semibold tracking-tight">ZekerFlex Sites</span>
-        <Link href="/werkgever" className="ml-auto rounded-lg px-3 py-1.5 text-sm font-semibold text-white/90 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70">← Terug naar ZekerFlex</Link>
+        {/* geen "terug naar ZekerFlex": /werkgever stuurt wie het dashboard website of webshop open heeft
+            meteen terug naar de studio. Naar een ander dashboard wissel je in de studio zelf. */}
       </header>
       <main className="mx-auto max-w-[980px] px-4 py-10 sm:px-6 sm:py-14">
         <h1 className="text-2xl font-bold tracking-tight text-[#1a1a1a] sm:text-3xl">Wat wil je doen?</h1>

@@ -32,9 +32,31 @@ export async function mayPublish(p: Principal, tenantId: string): Promise<boolea
   return (await freeAccess(p)) || isUnlocked(await getManagedWebsite(tenantId));
 }
 
-/** What we already know about the company, to fill in the first step. */
+/**
+ * Het vrije adres van een rijschool of horecazaak ("Dorpsstraat 1a, 1234 AB Utrecht") in de velden
+ * van een site. Zonder postcode is het deel tot de eerste komma de straat; niets wordt verzonnen.
+ */
+function splitsAdres(adres: string): { straat: string; postcode: string; plaats: string } {
+  const tekst = adres.trim();
+  const pc = /\b(\d{4})\s?([A-Za-z]{2})\b/.exec(tekst);
+  if (!pc) return { straat: (tekst.split(",")[0] ?? "").trim(), postcode: "", plaats: "" };
+  const schoon = (s: string) => s.replace(/^[\s,]+|[\s,]+$/g, "");
+  return {
+    straat: schoon(tekst.slice(0, pc.index)),
+    postcode: `${pc[1] ?? ""} ${(pc[2] ?? "").toUpperCase()}`,
+    plaats: schoon(tekst.slice(pc.index + pc[0].length)),
+  };
+}
+
+/**
+ * What we already know about the company, to fill in the first step: the registration and the first
+ * branch, the phone of whoever starts it, and as a last resort what the company already entered for
+ * its driving school or restaurant (another dashboard, lib/werkgever/werkruimte.ts). Only empty fields
+ * are filled from there.
+ */
 export async function companyDefaults(tenantId: string, p: Principal): Promise<Company> {
-  const [tenant, user] = await Promise.all([
+  const pakketVelden = { kvk: true, adres: true, plaats: true, telefoon: true } as const;
+  const [tenant, user, rijschool, horeca] = await Promise.all([
     prisma.tenant.findUnique({
       where: { id: tenantId },
       select: {
@@ -48,16 +70,21 @@ export async function companyDefaults(tenantId: string, p: Principal): Promise<C
       where: { id: p.userId },
       select: { phone: true },
     }),
+    // los en foutbestendig: zonder rijschool of zaak (of bij een storing) blijft het bij het bovenstaande
+    prisma.rijschool.findUnique({ where: { tenantId }, select: pakketVelden }).catch(() => null),
+    prisma.horecaZaak.findUnique({ where: { tenantId }, select: pakketVelden }).catch(() => null),
   ]);
   const reg = tenant?.companyRegistration;
   const branch = tenant?.branches[0];
+  const pakket = (veld: "kvk" | "plaats" | "telefoon") => rijschool?.[veld]?.trim() || horeca?.[veld]?.trim() || "";
+  const pakketAdres = splitsAdres(rijschool?.adres || horeca?.adres || "");
   return {
     naam: reg?.tradeName || tenant?.name || "",
-    kvk: (reg?.kvkNumber ?? tenant?.kvkNumber ?? "").replace(/\D/g, "").slice(0, 8),
-    straat: reg?.street ? [reg.street, reg.houseNumber].filter(Boolean).join(" ") : (branch?.addressLine ?? ""),
-    postcode: reg?.postalCode ?? branch?.postalCode ?? "",
-    plaats: reg?.city ?? branch?.city ?? "",
-    telefoon: user?.phone || "",
+    kvk: (reg?.kvkNumber || tenant?.kvkNumber || pakket("kvk")).replace(/\D/g, "").slice(0, 8),
+    straat: (reg?.street ? [reg.street, reg.houseNumber].filter(Boolean).join(" ") : "") || branch?.addressLine || pakketAdres.straat,
+    postcode: reg?.postalCode || branch?.postalCode || pakketAdres.postcode,
+    plaats: reg?.city || branch?.city || pakket("plaats") || pakketAdres.plaats,
+    telefoon: user?.phone || pakket("telefoon"),
     email: p.email,
   };
 }
