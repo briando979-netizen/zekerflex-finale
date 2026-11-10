@@ -394,27 +394,31 @@ export interface PakketTotaal {
   /** totaal verkoop excl. btw van de regels waarvan de prijs bekend is */
   verkoopCent: number;
   inkoopCent: number;
-  /** apparaten zonder bekende prijs: het totaal is dan nog niet compleet */
+  /** apparaten zonder verkoopprijs: het totaal is dan nog niet compleet */
   zonderPrijs: string[];
+  /** er zit een apparaat in waarvan de inkoop nog niet bekend is: de marge van het pakket klopt dan niet */
+  inkoopOnvolledig: boolean;
 }
 
 export function pakketTotaal(p: Pakket, inst: Instellingen, items: HardwareItem[] = HARDWARE): PakketTotaal {
   let verkoopCent = 0;
   let inkoopCent = 0;
+  let inkoopOnvolledig = false;
   const zonderPrijs: string[] = [];
   for (const r of p.regels) {
     const item = items.find((i) => i.id === r.item);
     if (!item) continue;
     const v = verkoopCentVan(item, inst);
-    const k = inkoopVoorRekenen(item);
-    if (v === null || k === null) {
+    if (v === null) {
       zonderPrijs.push(item.naam);
       continue;
     }
     verkoopCent += v * r.aantal;
-    inkoopCent += k * r.aantal;
+    const k = inkoopVoorRekenen(item);
+    if (k === null) inkoopOnvolledig = true;
+    else inkoopCent += k * r.aantal;
   }
-  return { verkoopCent, inkoopCent, zonderPrijs };
+  return { verkoopCent, inkoopCent, zonderPrijs, inkoopOnvolledig };
 }
 
 export const OEM_FEITEN = {

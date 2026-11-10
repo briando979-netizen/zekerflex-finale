@@ -62,6 +62,7 @@ const PUBLIC_PREFIXES = [
   "/api/agent/horeca", // AI-assistenten reserveren een tafel: alleen zaken die online staan met reserveren aan, dezelfde controle onder een slot als de eigen site, IP- en per-gast-begrensd; bekijken/annuleren alleen met de ondertekende annuleerlink (lib/horeca/agent-server.ts)
   "/api/id-overdracht", // "verder op je telefoon": de telefoon (niet ingelogd) opent, laat lezen en levert de foto's in met een eenmalige code van 20 min (in de body, IP-begrensd; lib/kyc/overdracht.ts). Starten en de stand bekijken (/api/onboarding/overdracht) blijft achter de login
   "/api/chip", // de Android-app leest de chip van paspoort/ID-kaart: sleutel ophalen en uitslag sturen met een eenmalige code (10 min, in de body, IP-begrensd; lib/kyc/chip/sessie.ts). Starten en de uitslag bekijken (/api/onboarding/chip) blijft achter de login
+  "/api/installatie", // een klant volgt de monteur en de monteur zet zijn stap en positie: de code in het adres (id plus handtekening per rol, lib/installatie/store.ts) is de sleutel, IP- en per-afspraak-begrensd, nooit gelogd. Afspraken maken en beheren (/api/admin/installaties) blijft achter de login
   "/api/terminal", // het incheckscherm bij de ingang (tablet zonder login): de sleutel in het adres is het bewijs, alleen als hash bewaard, IP-begrensd (lib/incheck/store.ts)
 ] as const;
 
