@@ -59,6 +59,8 @@ export const ERASABLE_KV_PREFIXES = [
   "wa-msgs:",
   "werker-agenda:",
   "werker-agenda-taal:",
+  // de branches die een werker bij de start koos (lib/worker/branche-store.ts)
+  "werker-branches:",
   "werker-taal:",
 ] as const;
 

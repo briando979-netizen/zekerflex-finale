@@ -109,6 +109,9 @@ export const nl = {
     stepEmailHint: "Bevestig je contactadres",
     stepKlaar: "Klaar om te starten",
     orgIntro: "Voordat je je eerste klus kunt plaatsen, hebben we nog wat extra informatie over je bedrijf nodig.",
+    orgBranches: "Voor welke branches zoek je mensen?",
+    orgBranchesHint: "Kies er één of meer, of alle branches. Zo laten we je bij een nieuwe klus de passende kandidaten zien.",
+    orgAllBranches: "Alle branches",
     selectAnswer: "Selecteer een antwoord",
     selects: {
       role: {

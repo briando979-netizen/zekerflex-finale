@@ -13,6 +13,7 @@ import { KvkZoeker } from "@/components/kvk/KvkZoeker";
 import { useT } from "@/components/i18n/I18nProvider";
 import { nl, fmt } from "@/lib/i18n/dictionaries";
 import { BUITEN_LANDEN, EU_LANDEN, landSoort } from "@/lib/onboarding/buitenland";
+import { BRANCHE_OPTIES, type BrancheKeuze } from "@/lib/shifts/branche-keuze";
 import { controleerVestigingVeld, type VestigingVeld } from "@/lib/onboarding/vestiging";
 
 type StepKey = "org" | "adres" | "profiel" | "foto" | "email" | "klaar";
@@ -76,6 +77,8 @@ export function EmployerOnboardingWizard({
     kvkPrefill?: string | undefined;
     /** het land van het bedrijf (ISO), uit de aanmelding */
     landPrefill?: string | undefined;
+    /** de branches waarvoor het bedrijf al mensen zoekt, of null */
+    brancheKeuze?: BrancheKeuze | null | undefined;
     /** na opnieuw laden: is het bedrijf goedgekeurd, of nog in controle bij ZekerFlex? */
     verified?: boolean | undefined;
     inControle?: boolean | undefined;
@@ -97,6 +100,18 @@ export function EmployerOnboardingWizard({
   const soort = landSoort(land) ?? "NL";
 
   const [orgSaved, setOrgSaved] = useState(Boolean(initial.answers.role || initial.answers.sector));
+  // branches waarvoor het bedrijf mensen zoekt: één of meer, of alle
+  const [werkBranches, setWerkBranches] = useState<Set<string>>(
+    new Set(initial.brancheKeuze?.alle ? BRANCHE_OPTIES.map((b) => b.key) : (initial.brancheKeuze?.branches ?? [])),
+  );
+  const alleWerkBranches = werkBranches.size === BRANCHE_OPTIES.length;
+  const wisselBranche = (k: string) =>
+    setWerkBranches((vorig) => {
+      const volgend = new Set(vorig);
+      if (volgend.has(k)) volgend.delete(k);
+      else volgend.add(k);
+      return volgend;
+    });
   const [coverDone, setCoverDone] = useState(Boolean(initial.coverStepDone));
   // meldingen per vestigingsveld: eerst wat de browser bij het verlaten van een veld vond, anders wat de server teruggaf
   const [vestFout, setVestFout] = useState<Partial<Record<VestigingVeld, string | null>>>({});
@@ -181,6 +196,40 @@ export function EmployerOnboardingWizard({
                 </label>
               );
             })}
+            <div>
+              <span className="field-label" id="org-branches-label">{o.orgBranches}</span>
+              <p className="mt-0.5 text-xs text-neutralx-500">{o.orgBranchesHint}</p>
+              <input type="hidden" name="branches" value={[...werkBranches].join(",")} />
+              <input type="hidden" name="alleBranches" value={alleWerkBranches ? "1" : ""} />
+              <div className="mt-2 flex flex-wrap gap-2" role="group" aria-labelledby="org-branches-label">
+                <button
+                  type="button"
+                  aria-pressed={alleWerkBranches}
+                  onClick={() => setWerkBranches(alleWerkBranches ? new Set() : new Set(BRANCHE_OPTIES.map((b) => b.key)))}
+                  className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
+                    alleWerkBranches ? "border-brand-500 bg-brand-500 text-white" : "border-hairstrong text-ink hover:border-brand-500"
+                  }`}
+                >
+                  {o.orgAllBranches}
+                </button>
+                {BRANCHE_OPTIES.map((b) => {
+                  const aan = werkBranches.has(b.key);
+                  return (
+                    <button
+                      key={b.key}
+                      type="button"
+                      aria-pressed={aan}
+                      onClick={() => wisselBranche(b.key)}
+                      className={`rounded-full border px-3 py-1.5 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
+                        aan ? "border-brand-500 bg-brand-50 font-semibold text-ink" : "border-hairstrong text-neutralx-700 hover:border-brand-500"
+                      }`}
+                    >
+                      {b.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             <div className="flex justify-end pt-1">
               <button type="submit" disabled={pending} className="btn-primary text-sm disabled:opacity-60">
                 {pending ? o.busy : o.nextStep}
@@ -353,7 +402,7 @@ export function EmployerOnboardingWizard({
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [kvkState, pending, orgSaved, coverDone, initial, o, vestFout],
+    [kvkState, pending, orgSaved, coverDone, initial, o, vestFout, werkBranches],
   );
 
   return (

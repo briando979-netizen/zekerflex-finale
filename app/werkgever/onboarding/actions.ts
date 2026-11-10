@@ -8,6 +8,7 @@ import { submitEmployerOnboarding, employerOnboardingSchema } from "@/lib/onboar
 import { getOrgProfileExtra, saveOrgProfileExtra } from "@/lib/profile/store";
 import { AppError } from "@/lib/errors";
 import { controleerVestiging, type VestigingFouten } from "@/lib/onboarding/vestiging";
+import { maakBrancheKeuze } from "@/lib/shifts/branche-keuze";
 
 const profileSchema = z.object({
   role: z.string().trim().max(60).optional(),
@@ -15,6 +16,9 @@ const profileSchema = z.object({
   shortageFrequency: z.string().trim().max(60).optional(),
   urgency: z.string().trim().max(60).optional(),
   priorPlatform: z.string().trim().max(60).optional(),
+  /** gekozen branches, komma-gescheiden ("horeca,retail"), en "1" als alle branches zijn gekozen */
+  branches: z.string().trim().max(400).optional(),
+  alleBranches: z.enum(["1", ""]).optional(),
   profileStepDone: z.enum(["1", ""]).optional(),
   coverStepDone: z.enum(["1", ""]).optional(),
 });
@@ -31,9 +35,14 @@ export async function saveOnboardingProfileAction(formData: FormData): Promise<{
   if (!p.success) return { ok: false };
 
   const cur = await getOrgProfileExtra(tenantId);
+  // alleen als er een branche-keuze meekomt (de org-stap), niet bij de andere stappen
+  const keuze = p.data.branches !== undefined || p.data.alleBranches !== undefined
+    ? maakBrancheKeuze({ alle: p.data.alleBranches === "1", branches: (p.data.branches ?? "").split(",").filter(Boolean) })
+    : null;
   await saveOrgProfileExtra(tenantId, {
     onboarding: {
       ...cur.onboarding,
+      ...(keuze ? { branches: keuze.branches, alleBranches: keuze.alle } : {}),
       ...(p.data.role ? { role: p.data.role } : {}),
       ...(p.data.sector ? { sector: p.data.sector } : {}),
       ...(p.data.shortageFrequency ? { shortageFrequency: p.data.shortageFrequency } : {}),

@@ -107,7 +107,10 @@ export function MarketplaceView({
   blockReason = null,
   defaultMinRateCents,
   defaultMaxTravel,
+  defaultBranches = [],
 }: {
+  /** de branches die de werker bij de start koos: het filter staat er standaard op (en kan weg) */
+  defaultBranches?: ShiftCategoryKey[];
   shifts: MarketplaceShift[];
   home: { lat: number; lng: number } | null;
   homeLabel?: string | null;
@@ -129,7 +132,7 @@ export function MarketplaceView({
   const [minRate, setMinRate] = useState<number>(defaultMinRateCents ? Math.round(defaultMinRateCents / 100) : 0);
   const [dayparts, setDayparts] = useState<Set<string>>(new Set());
   // Branches (sectors) — multi-select over the full list, not just what happens to be on screen.
-  const [branches, setBranches] = useState<Set<ShiftCategoryKey>>(new Set());
+  const [branches, setBranches] = useState<Set<ShiftCategoryKey>>(new Set(defaultBranches));
   const [quick, setQuick] = useState<Set<string>>(new Set());
   const [dates, setDates] = useState<Set<string>>(new Set());
   const [openChip, setOpenChip] = useState<string | null>(null);

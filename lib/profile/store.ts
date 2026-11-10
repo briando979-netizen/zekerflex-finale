@@ -32,6 +32,9 @@ export interface OrgProfileExtra {
     shortageFrequency?: string;
     urgency?: string;
     priorPlatform?: string;
+    /** de branches waarvoor het bedrijf mensen zoekt (lib/shifts/branche-keuze.ts); leeg met alleBranches = alle */
+    branches?: string[];
+    alleBranches?: boolean;
     profileStepDone?: boolean;
     coverStepDone?: boolean;
     completedAt?: string;

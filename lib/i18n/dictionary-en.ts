@@ -106,6 +106,9 @@ export const en: Dict = {
     stepEmailHint: "Confirm your contact address",
     stepKlaar: "Ready to start",
     orgIntro: "Before you can post your first job, we need a bit more information about your company.",
+    orgBranches: "Which industries are you hiring for?",
+    orgBranchesHint: "Choose one or more, or all industries. That way we show you the right candidates when you post a job.",
+    orgAllBranches: "All industries",
     selectAnswer: "Select an answer",
     selects: {
       role: {

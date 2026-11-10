@@ -18,6 +18,8 @@ import { WilReagerenNudge } from "@/components/app/WilReagerenNudge";
 import { getFreelancerDict } from "@/lib/i18n/server";
 import { translateBlockReason } from "@/lib/i18n/freelancer";
 import { alleenTestklussen } from "@/lib/shifts/testklus";
+import { getBrancheKeuze } from "@/lib/worker/branche-store";
+import { standaardFilter } from "@/lib/shifts/branche-keuze";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,8 @@ export default async function KlussenPage(
   const m = await getMarketplace(principal.userId);
   const t = await getFreelancerDict();
   const initialQuery = typeof searchParams.employer === "string" ? searchParams.employer : "";
+  // de branches die de werker bij de start koos (of alle): daarop staat de lijst standaard gefilterd
+  const brancheKeuze = await getBrancheKeuze(principal.userId).catch(() => null);
 
   const [fiscal, today, completed, overview, werkrecht] = await Promise.all([
     getFiscal(principal.userId),
@@ -76,6 +80,7 @@ export default async function KlussenPage(
           emailVerified={Boolean(principal.emailVerifiedAt)}
           profileComplete={overview.profileComplete}
           werkrechtOk={werkrecht.ok}
+          brancheKeuze={brancheKeuze}
         />
       )}
       {/* de profiel-af-kaart staat er niet naast de startwizard: die dekt dezelfde open stappen */}
@@ -137,6 +142,7 @@ export default async function KlussenPage(
           home={m.home}
           homeLabel={m.homeLabel}
           initialQuery={initialQuery}
+          defaultBranches={standaardFilter(brancheKeuze)}
           canApply={m.canApply}
           blockReason={m.blockReason}
           defaultMinRateCents={m.prefs.minHourlyRateCents}

@@ -10,6 +10,7 @@ import { WERKGEVER_KAART, WERKGEVER_STAPPEN } from "@/lib/onboarding/werkgever-t
 import { OnboardingProgress } from "@/components/app/OnboardingProgress";
 import { tenantVerification } from "@/lib/company/verified";
 import { OnboardingOnderhoudBalk } from "@/components/app/OnboardingOnderhoudBalk";
+import { maakBrancheKeuze } from "@/lib/shifts/branche-keuze";
 import { prisma } from "@/lib/prisma";
 import { getOrgProfileExtra, type OrgProfileExtra } from "@/lib/profile/store";
 import { recentThreads } from "@/lib/messaging/recent";
@@ -171,6 +172,7 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
                 coverStepDone: Boolean(ob.coverStepDone),
                 kvkPrefill: tenantKvk?.kvkNumber ?? undefined,
                 landPrefill: tenantKvk?.country ?? undefined,
+                brancheKeuze: maakBrancheKeuze({ alle: ob.alleBranches, branches: ob.branches }),
                 verified: companyVerified,
                 inControle,
                 buitenlands: Boolean(verificatie.buitenlands),
