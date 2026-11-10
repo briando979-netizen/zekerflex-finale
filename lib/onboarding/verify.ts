@@ -567,8 +567,9 @@ export async function submitFreelancerOnboarding(
     // de pasfoto op het document tegen de selfie, met een eigen gezichtsmodel op deze server (lib/kyc/gezicht);
     // een storing geeft nooit een afwijzing, alleen "een medewerker kijkt mee"
     gezichtControle(front.bytes, input.files.selfie.bytes),
-    // automatisch goedkeuren op het gezicht kan de eigenaar uitzetten (Admin → Beheer → Functies)
-    featureEnabled("id-gezicht-automatisch").catch(() => true),
+    // automatisch goedkeuren op het gezicht staat standaard uit; de eigenaar zet het aan na een meting (Admin → Beheer → Functies).
+    // Bij een storing in de vlag: uit. De score wordt altijd bewaard en getoond.
+    featureEnabled("id-gezicht-automatisch").catch(() => false),
   ]);
 
   // --- MRZ: wat het document zelf zegt, met controlecijfers (lib/kyc/mrz.ts) ---
