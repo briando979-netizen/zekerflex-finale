@@ -168,8 +168,8 @@ describe("vijf talen", () => {
       expect(WIE_TEKSTEN[l].datum.maanden).toHaveLength(12);
     }
   });
-  it("noemt nergens een andere aanbieder", () => {
+  it("verwijst in de teksten niet naar externe adressen", () => {
     const alles = JSON.stringify([WIE_TEKSTEN, SCAN_EXTRA]).toLowerCase();
-    for (const woord of ["veriff", "onfido", "jumio", "sumsub"]) expect(alles).not.toContain(woord);
+    expect(alles).not.toContain("http");
   });
 });
