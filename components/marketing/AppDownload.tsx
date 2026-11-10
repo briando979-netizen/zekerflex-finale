@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { InstallAppButton } from "@/components/marketing/InstallAppButton";
 import { CONTACTS } from "@/lib/seo";
+import { featureEnabled } from "@/lib/flags";
 
 // The Android app (com.zekerflex.app) is in Google Play testing, not yet
 // public. The test link only works for Gmail addresses on the tester list, so
@@ -104,7 +105,9 @@ function TestNotice() {
   );
 }
 
-export function AppDownload({ standalone = false }: { standalone?: boolean }) {
+export async function AppDownload({ standalone = false }: { standalone?: boolean }) {
+  // vlag `iphone-testflight` (standaard uit): de knop komt pas als de testlink testers aanneemt
+  const iphone = await featureEnabled("iphone-testflight").catch(() => false);
   return (
     <section id="app" className={`scroll-mt-24 ${standalone ? "" : "hero-ink"} text-white`}>
       <div className={`shell ${standalone ? "py-4" : "py-20 md:py-24"}`}>
@@ -120,17 +123,17 @@ export function AppDownload({ standalone = false }: { standalone?: boolean }) {
             </p>
             <div className="mt-7 flex flex-wrap items-start gap-3">
               <InstallAppButton />
-              <AppleBadgeTest />
+              {iphone && <AppleBadgeTest />}
               <PlayBadgeTest />
             </div>
             {standalone ? (
               <>
-                <IphoneNotice />
+                {iphone && <IphoneNotice />}
                 <TestNotice />
               </>
             ) : (
               <p className="mt-3 text-xs text-white/65">
-                iPhone- en Android-app in testfase —{" "}
+                {iphone ? "iPhone- en Android-app" : "Android-app"} in testfase —{" "}
                 <Link href="/app" className="underline hover:text-white/80">
                   zo doe je mee
                 </Link>
