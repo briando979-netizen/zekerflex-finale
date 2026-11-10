@@ -1,5 +1,6 @@
-import { createPrivateKey, sign, type KeyObject } from "node:crypto";
+import { createPrivateKey, type KeyObject } from "node:crypto";
 import { connect, constants, type ClientHttp2Session } from "node:http2";
+import { es256Jwt, leesP8 } from "@/lib/apple/sleutel";
 import { logger } from "@/lib/logger";
 import { kvGet, kvListEntries, kvSet } from "@/lib/storage/kv";
 
@@ -36,13 +37,7 @@ interface Toestellen {
   tokens: { token: string; op: string }[];
 }
 
-/** Het .p8-bestand mag als PEM (met echte of geschreven \n) of als base64 in de omgeving staan. */
-export function leesP8(waarde: string): string {
-  const s = waarde.trim();
-  if (s.includes("BEGIN PRIVATE KEY")) return s.replace(/\\n/g, "\n");
-  const pem = Buffer.from(s, "base64").toString("utf8");
-  return pem.includes("BEGIN PRIVATE KEY") ? pem : "";
-}
+export { leesP8 };
 
 let cache: { bron: string; config: ApnsConfig | null } | null = null;
 
@@ -73,14 +68,9 @@ export function apnsConfig(omgeving: NodeJS.ProcessEnv = process.env): ApnsConfi
 
 export const isApnsEnabled = (): boolean => apnsConfig() !== null;
 
-const b64url = (b: Buffer | string) => Buffer.from(b).toString("base64url");
-
 /** Het provider-token voor Apple: een JWT met ES256, getekend met de .p8-sleutel. */
 export function apnsJwt(c: ApnsConfig, nu: Date = new Date()): string {
-  const kop = b64url(JSON.stringify({ alg: "ES256", kid: c.keyId }));
-  const inhoud = b64url(JSON.stringify({ iss: c.teamId, iat: Math.floor(nu.getTime() / 1000) }));
-  const handtekening = sign("sha256", Buffer.from(`${kop}.${inhoud}`), { key: c.sleutel, dsaEncoding: "ieee-p1363" });
-  return `${kop}.${inhoud}.${b64url(handtekening)}`;
+  return es256Jwt(c.sleutel, c.keyId, { iss: c.teamId, iat: Math.floor(nu.getTime() / 1000) });
 }
 
 let jwtCache: { sleutel: string; jwt: string; tot: number } | null = null;

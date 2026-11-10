@@ -30,8 +30,9 @@ Android, plus `zf_app_ios` (`lib/app-mode.ts`). In de iPhone-app:
 
   Betalen voor werk (facturen van klussen), de shop (fysieke spullen), horecagasten en rijlessen
   mag gewoon.
-- **Geen "inloggen met Google"** (4.8: anders moet "inloggen met Apple" ernaast). E-mail met
-  wachtwoord en passkeys blijven.
+- **Geen "inloggen met Google"**: Google weigert inloggen in een ingebouwde webview
+  ("disallowed_useragent"). Wel "inloggen met Apple" (`lib/auth/apple.ts`, aan zodra de sleutel
+  op de server staat; owner-todo `apple-inloggen`), e-mail met wachtwoord en passkeys.
 - **Hetzelfde als op Android:** de bank- en geldfuncties zijn verborgen.
 
 ## Bouwen (zonder eigen Mac)

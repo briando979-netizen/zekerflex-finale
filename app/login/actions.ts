@@ -5,6 +5,7 @@ import { AuthError } from "next-auth";
 import { z } from "zod";
 import { env } from "@/lib/env";
 import { signIn } from "@/lib/auth/nextauth";
+import { appleConfig } from "@/lib/auth/apple";
 import { mintLoginChallenge, openLoginChallenge } from "@/lib/auth/two-factor";
 
 const schema = z.object({
@@ -140,6 +141,12 @@ export async function googleLoginAction(formData: FormData): Promise<void> {
     (formData.get("callbackUrl") as string) || undefined,
   );
   await signIn("google", { redirectTo: callbackUrl });
+}
+
+/** Inloggen met Apple (lib/auth/apple.ts): net als Google een doorverwijzing; Apple POST daarna terug. */
+export async function appleLoginAction(formData: FormData): Promise<void> {
+  if (!appleConfig()) redirect("/login?error=Configuration");
+  await signIn("apple", { redirectTo: safeCallback((formData.get("callbackUrl") as string) || undefined) });
 }
 
 /** Only allow same-origin relative callback paths. */

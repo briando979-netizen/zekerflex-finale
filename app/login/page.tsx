@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { env } from "@/lib/env";
+import { appleConfig } from "@/lib/auth/apple";
 import { opPasskeyHost, passkeyBron } from "@/lib/auth/passkey/omgeving";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { AuthShell } from "@/components/auth/AuthShell";
@@ -25,7 +26,9 @@ export default async function LoginPage(
   }
 ) {
   const searchParams = await props.searchParams;
-  // niet in de iPhone-app: Apple eist dan ook "inloggen met Apple" (App Store 4.8, lib/app-mode.ts)
+  const appleEnabled = appleConfig() !== null;
+  // Niet in de iPhone-app: Google weigert inloggen in een ingebouwde webview (WKWebView,
+  // "disallowed_useragent"). Apple werkt daar wel en is dan de enige aanbieder (App Store 4.8).
   const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) && !(await inIosApp());
   // passkeys alleen op de vaste host uit APP_BASE_URL (niet op sslip-/voorbeeldadressen)
   const bron = passkeyBron(env.APP_BASE_URL);
@@ -53,6 +56,7 @@ export default async function LoginPage(
         locale={locale}
         callbackUrl={safePath(searchParams.callbackUrl)}
         googleEnabled={googleEnabled}
+        appleEnabled={appleEnabled}
         passkeyEnabled={passkeyEnabled}
         {...(searchParams.error ? { errorCode: searchParams.error } : {})}
         {...(searchParams.reset ? { justReset: true } : {})}

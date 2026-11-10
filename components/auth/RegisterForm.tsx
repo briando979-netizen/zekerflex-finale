@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
 import { registerAction, type RegisterState } from "@/app/register/actions";
-import { googleLoginAction } from "@/app/login/actions";
+import { appleLoginAction, googleLoginAction } from "@/app/login/actions";
 import { GoogleButton, AuthDivider } from "@/components/auth/GoogleButton";
+import { AppleButton } from "@/components/auth/AppleButton";
 import { KvkZoeker } from "@/components/kvk/KvkZoeker";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
 import type { Locale } from "@/lib/i18n/config";
@@ -41,12 +42,15 @@ export function RegisterForm({
   defaultWorkerKind,
   prefill,
   googleEnabled,
+  appleEnabled = false,
 }: {
   locale?: Locale;
   defaultType: "freelancer" | "bedrijf";
   defaultWorkerKind?: "zzp" | "flexwerker" | "uitzendkracht";
   prefill?: { company?: string; kvk?: string; email?: string; name?: string };
   googleEnabled: boolean;
+  /** inloggen met Apple staat aan (lib/auth/apple.ts) */
+  appleEnabled?: boolean;
 }) {
   const t = AUTH_DICTS[locale].register;
   const or = AUTH_DICTS[locale].shell.or;
@@ -245,15 +249,19 @@ export function RegisterForm({
         </p>
       )}
 
-      {googleEnabled && (
-        <>
-          <form action={googleLoginAction}>
-            <input type="hidden" name="callbackUrl" value="/start" />
-            <GoogleButton label={t.google} />
-          </form>
-          <AuthDivider label={or} />
-        </>
+      {appleEnabled && (
+        <form action={appleLoginAction}>
+          <input type="hidden" name="callbackUrl" value="/start" />
+          <AppleButton label={t.apple} />
+        </form>
       )}
+      {googleEnabled && (
+        <form action={googleLoginAction} className={appleEnabled ? "mt-3" : ""}>
+          <input type="hidden" name="callbackUrl" value="/start" />
+          <GoogleButton label={t.google} />
+        </form>
+      )}
+      {(googleEnabled || appleEnabled) && <AuthDivider label={or} />}
 
       <form action={formAction} className="space-y-4">
         <input type="hidden" name="type" value={type} />

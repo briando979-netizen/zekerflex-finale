@@ -20,6 +20,7 @@ import { geminiBeeldGelukt, geminiSlot } from "@/lib/ai/gemini-media";
 import { platformPartij } from "@/lib/efactuur/instellingen";
 import { BANK_AAN } from "@/lib/app-mode";
 import { cscaStand } from "@/lib/kyc/chip/csca";
+import { appleConfig } from "@/lib/auth/apple";
 
 /** Bij taken die alleen voor ZekerFlex Bank nodig waren. */
 const BANK_UIT = "niet meer nodig: ZekerFlex Bank staat uit (7 nov)";
@@ -624,6 +625,23 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ],
       auto: false,
       ...m("ios-app"),
+    },
+    {
+      id: "apple-inloggen",
+      group: "Vindbaarheid & app",
+      title: "Inloggen met Apple aanzetten (site en iPhone-app)",
+      why: "Met de knop 'Inloggen met Apple' maakt iemand met een iPhone in twee tikken een account, zonder wachtwoord. In de iPhone-app is het de enige snelle inlog: Google weigert inloggen in een app-venster. De knop staat klaar en verschijnt vanzelf zodra de sleutel op de server staat.",
+      how: [
+        "Ga naar developer.apple.com → Certificates, Identifiers & Profiles → Identifiers en open het App ID com.zekerflex.app. Vink 'Sign in with Apple' aan (Enable as a primary App ID) en klik op Save.",
+        "Klik bij Identifiers op + → Services IDs → Continue. Beschrijving: ZekerFlex web, Identifier: com.zekerflex.web → Continue → Register.",
+        "Open com.zekerflex.web, vink 'Sign in with Apple' aan en klik op Configure. Primary App ID: com.zekerflex.app. Domains and Subdomains: zekerflex.com. Return URLs: https://zekerflex.com/api/auth/callback/apple. Klik op Next, Done, Continue en Save.",
+        "Ga naar Keys → + . Naam: zekerflex inloggen. Vink 'Sign in with Apple' aan, klik op Configure, kies com.zekerflex.app en klik op Save → Continue → Register. Download het .p8-bestand (dat kan maar één keer) en noteer de Key ID.",
+        "Zet het .p8-bestand in de map Documenten\\apple-sleutels op je pc, niet in de chat. Claude zet het met de Services ID en de Key ID op de server (APPLE_SIWA_SERVICES_ID, APPLE_SIWA_KEY_ID, APPLE_SIWA_KEY_P8).",
+        "Zodat mail aankomt bij wie 'Verberg mijn e-mailadres' kiest: ga naar Services → Sign in with Apple for Email Communication → Configure en voeg het domein zekerflex.com en het adres noreply@zekerflex.com toe. Anders stuurt Apple onze mail niet door.",
+        "Deze taak vinkt zichzelf af zodra de sleutel op de server staat en klopt; na de volgende uitrol staat de knop op /login en /register.",
+      ],
+      auto: true,
+      done: appleConfig() !== null,
     },
     {
       id: "play-rijschool-apps",

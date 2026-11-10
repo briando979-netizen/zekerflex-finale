@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useFormState, useFormStatus } from "react-dom";
-import { loginAction, googleLoginAction, type LoginState } from "@/app/login/actions";
+import { loginAction, googleLoginAction, appleLoginAction, type LoginState } from "@/app/login/actions";
 import { GoogleButton, AuthDivider } from "@/components/auth/GoogleButton";
+import { AppleButton } from "@/components/auth/AppleButton";
 import { PasskeyLogin } from "@/components/auth/PasskeyLogin";
 import { AUTH_DICTS, fill } from "@/lib/i18n/auth";
 import type { Locale } from "@/lib/i18n/config";
@@ -14,7 +15,8 @@ const initial: LoginState = { error: null };
 const ERROR_COPY: Record<string, string> = {
   AccessDenied: "Dit Google-account is niet gekoppeld aan een ZekerFlex-account.",
   OAuthAccountNotLinked: "Dit e-mailadres is al met een andere inlogmethode geregistreerd.",
-  Configuration: "Google-login is niet geconfigureerd.",
+  Configuration: "Inloggen via Google of Apple lukte niet. Probeer het opnieuw of log in met je e-mailadres.",
+  AppleLogin: "Apple gaf geen bevestigd e-mailadres door. Probeer het opnieuw of log in met je e-mailadres.",
   Verification: "De verificatielink is verlopen of al gebruikt.",
 };
 
@@ -47,6 +49,7 @@ export function LoginForm({
   locale = "nl",
   callbackUrl,
   googleEnabled,
+  appleEnabled = false,
   passkeyEnabled = false,
   errorCode,
   justReset,
@@ -54,6 +57,8 @@ export function LoginForm({
   locale?: Locale;
   callbackUrl: string;
   googleEnabled: boolean;
+  /** inloggen met Apple staat aan (lib/auth/apple.ts) */
+  appleEnabled?: boolean;
   /** passkeys gelden op deze host (lib/auth/passkey/omgeving.ts); de knop zelf verschijnt alleen als de browser het kan */
   passkeyEnabled?: boolean;
   errorCode?: string;
@@ -65,6 +70,7 @@ export function LoginForm({
   const t = AUTH_DICTS[locale].login;
   const or = AUTH_DICTS[locale].shell.or;
   const banner = state.error ?? (errorCode ? (ERROR_COPY[errorCode] ?? t.failed) : null);
+  const oauth = googleEnabled || appleEnabled;
 
   if (state.needsCode && state.challenge) {
     return (
@@ -112,8 +118,14 @@ export function LoginForm({
       )}
       {banner && <p role="alert" className="mb-4 rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{banner}</p>}
 
+      {appleEnabled && (
+        <form action={appleLoginAction}>
+          <input type="hidden" name="callbackUrl" value={callbackUrl} />
+          <AppleButton label={t.apple} />
+        </form>
+      )}
       {googleEnabled && (
-        <form action={googleLoginAction}>
+        <form action={googleLoginAction} className={appleEnabled ? "mt-3" : ""}>
           <input type="hidden" name="callbackUrl" value={callbackUrl} />
           <GoogleButton label={t.google} />
         </form>
@@ -123,11 +135,11 @@ export function LoginForm({
           texts={t.passkey}
           callbackUrl={callbackUrl}
           remember={remember}
-          className={googleEnabled ? "mt-3" : ""}
-          {...(googleEnabled ? {} : { divider: or })}
+          className={oauth ? "mt-3" : ""}
+          {...(oauth ? {} : { divider: or })}
         />
       )}
-      {googleEnabled && <AuthDivider label={or} />}
+      {oauth && <AuthDivider label={or} />}
 
       <form action={formAction} className="space-y-4">
         <input type="hidden" name="callbackUrl" value={callbackUrl} />

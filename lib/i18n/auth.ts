@@ -24,6 +24,7 @@ export interface AuthDict {
     submit: string;
     busy: string;
     google: string;
+    apple: string;
     trouble: string;
     contact: string;
     resetDone: string;
@@ -57,6 +58,7 @@ export interface AuthDict {
     seekWork: string;
     seekPeople: string;
     google: string;
+    apple: string;
     workForm: string;
     kinds: { zzp: [string, string]; flexwerker: [string, string]; uitzendkracht: [string, string] };
     yourName: string;
@@ -372,6 +374,7 @@ const nl: AuthDict = {
     submit: "Inloggen",
     busy: "Bezig…",
     google: "Inloggen met Google",
+    apple: "Inloggen met Apple",
     trouble: "Problemen met inloggen?",
     contact: "Neem contact op met support",
     resetDone: "Je wachtwoord is aangepast. Log in met je nieuwe wachtwoord.",
@@ -402,6 +405,7 @@ const nl: AuthDict = {
     seekWork: "Ik zoek werk",
     seekPeople: "Ik zoek mensen",
     google: "Maak account met Google",
+    apple: "Maak account met Apple",
     workForm: "Je werkvorm",
     kinds: { zzp: ["ZZP'er", "KVK of EU-btw-nummer"], flexwerker: ["Flexwerker", "Btw optioneel / KOR"], uitzendkracht: ["Uitzendkracht", "Geen KVK nodig"] },
     yourName: "Jouw naam",
@@ -730,6 +734,7 @@ const en: AuthDict = {
     submit: "Log in",
     busy: "Working…",
     google: "Log in with Google",
+    apple: "Sign in with Apple",
     trouble: "Trouble logging in?",
     contact: "Contact support",
     resetDone: "Your password has been changed. Log in with your new password.",
@@ -760,6 +765,7 @@ const en: AuthDict = {
     seekWork: "I'm looking for work",
     seekPeople: "I'm looking for people",
     google: "Sign up with Google",
+    apple: "Sign up with Apple",
     workForm: "How you work",
     kinds: { zzp: ["Self-employed", "Dutch KVK or EU VAT number"], flexwerker: ["Flex worker", "VAT optional"], uitzendkracht: ["Agency worker", "No KVK needed"] },
     yourName: "Your name",
@@ -1088,6 +1094,7 @@ const pl: AuthDict = {
     submit: "Zaloguj się",
     busy: "Chwileczkę…",
     google: "Zaloguj się przez Google",
+    apple: "Zaloguj się przez Apple",
     trouble: "Problem z logowaniem?",
     contact: "Skontaktuj się z pomocą",
     resetDone: "Hasło zostało zmienione. Zaloguj się nowym hasłem.",
@@ -1118,6 +1125,7 @@ const pl: AuthDict = {
     seekWork: "Szukam pracy",
     seekPeople: "Szukam ludzi",
     google: "Załóż konto przez Google",
+    apple: "Załóż konto przez Apple",
     workForm: "Forma pracy",
     kinds: { zzp: ["Samozatrudniony", "KVK lub unijny NIP (VAT)"], flexwerker: ["Pracownik elastyczny", "VAT opcjonalnie"], uitzendkracht: ["Pracownik agencyjny", "Bez KVK"] },
     yourName: "Twoje imię i nazwisko",
@@ -1446,6 +1454,7 @@ const ro: AuthDict = {
     submit: "Conectare",
     busy: "Se procesează…",
     google: "Conectare cu Google",
+    apple: "Conectare cu Apple",
     trouble: "Probleme la conectare?",
     contact: "Contactează asistența",
     resetDone: "Parola a fost schimbată. Conectează-te cu parola nouă.",
@@ -1476,6 +1485,7 @@ const ro: AuthDict = {
     seekWork: "Caut de lucru",
     seekPeople: "Caut oameni",
     google: "Creează cont cu Google",
+    apple: "Creează cont cu Apple",
     workForm: "Forma de muncă",
     kinds: { zzp: ["PFA / independent", "KVK sau cod TVA UE"], flexwerker: ["Lucrător flexibil", "TVA opțional"], uitzendkracht: ["Lucrător prin agenție", "Fără KVK"] },
     yourName: "Numele tău",
@@ -1804,6 +1814,7 @@ const uk: AuthDict = {
     submit: "Увійти",
     busy: "Зачекай…",
     google: "Увійти через Google",
+    apple: "Увійти через Apple",
     trouble: "Проблеми зі входом?",
     contact: "Зв'яжися з підтримкою",
     resetDone: "Пароль змінено. Увійди з новим паролем.",
@@ -1834,6 +1845,7 @@ const uk: AuthDict = {
     seekWork: "Шукаю роботу",
     seekPeople: "Шукаю людей",
     google: "Створити акаунт через Google",
+    apple: "Створити акаунт через Apple",
     workForm: "Форма роботи",
     kinds: { zzp: ["ФОП / самозайнятий", "KVK або номер ПДВ ЄС"], flexwerker: ["Гнучкий працівник", "ПДВ необов'язково"], uitzendkracht: ["Через агенцію", "KVK не потрібен"] },
     yourName: "Твоє ім'я",

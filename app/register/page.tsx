@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { env } from "@/lib/env";
+import { appleConfig } from "@/lib/auth/apple";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { RegisterForm } from "@/components/auth/RegisterForm";
 import { RegisterBewaard } from "@/components/auth/RegisterBewaard";
@@ -34,7 +35,9 @@ export default async function RegisterPage(
           ...(name ? { name } : {}),
         }
       : undefined;
-  // niet in de iPhone-app: Apple eist dan ook "inloggen met Apple" (App Store 4.8, lib/app-mode.ts)
+  const appleEnabled = appleConfig() !== null;
+  // Niet in de iPhone-app: Google weigert inloggen in een ingebouwde webview (WKWebView,
+  // "disallowed_useragent"). Apple werkt daar wel en is dan de enige aanbieder (App Store 4.8).
   const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) && !(await inIosApp());
   const locale = await getLocale();
   const t = AUTH_DICTS[locale].register;
@@ -62,6 +65,7 @@ export default async function RegisterPage(
         {...(defaultWorkerKind ? { defaultWorkerKind } : {})}
         {...(prefill ? { prefill } : {})}
         googleEnabled={googleEnabled}
+        appleEnabled={appleEnabled}
       />
     </AuthShell>
   );

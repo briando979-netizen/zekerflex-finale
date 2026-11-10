@@ -31,6 +31,10 @@ vi.mock("next-auth/providers/credentials", () => ({
 vi.mock("next-auth/providers/google", () => ({
   default: (config: Record<string, unknown>) => ({ id: "google", type: "oidc", ...config }),
 }));
+// zoals de echte: de config blijft als `options` bewaard (dus de getter van clientSecret ook)
+vi.mock("next-auth/providers/apple", () => ({
+  default: (config: Record<string, unknown>) => ({ id: "apple", type: "oidc", options: config }),
+}));
 
 const userFindFirst = vi.fn();
 const userUpdate = vi.fn();
@@ -336,5 +340,92 @@ describe("callbacks.signIn — Google gate", () => {
       sendVerificationEmail.mockRejectedValue(new Error("smtp weg"));
       expect(await nieuw()).toBe(true);
     });
+  });
+});
+
+describe("callbacks.signIn — Apple", () => {
+  const signIn = () => authOptions.callbacks!.signIn!;
+  const apple = (profile: Record<string, unknown>, user: Record<string, unknown> = {}) =>
+    signIn()({ account: { provider: "apple" } as any, profile: { sub: "001234.abc", ...profile } as any, user: user as any } as any);
+
+  it("koppelt op e-mail aan een bestaand account (email_verified als tekst)", async () => {
+    userFindFirst.mockResolvedValue({ id: "usr_1", fullName: "Jan", email: "jan@icloud.com" });
+    userUpdate.mockResolvedValue({});
+    expect(await apple({ email: "Jan@iCloud.com", email_verified: "true" })).toBe(true);
+    expect(userFindFirst.mock.calls[0]![0].where.email).toBe("jan@icloud.com");
+    expect(userCreate).not.toHaveBeenCalled();
+    expect(recordAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "auth.login.succeeded", summary: "Inloggen geslaagd via Apple: jan@icloud.com", metadata: { provider: "apple", provisioned: false } }),
+    );
+  });
+
+  it("weigert een adres dat Apple zelf onbevestigd noemt, en een aanmelding zonder adres", async () => {
+    expect(await apple({ email: "x@icloud.com", email_verified: "false" })).toBe("/login?error=AppleLogin");
+    expect(await apple({ email_verified: "true" })).toBe("/login?error=AppleLogin");
+    expect(userFindFirst).not.toHaveBeenCalled();
+  });
+
+  describe("nieuw account", () => {
+    beforeEach(() => {
+      userFindFirst.mockReset();
+      userFindFirst.mockResolvedValueOnce(null).mockResolvedValue({ id: "usr_new", fullName: "x", email: "x" });
+      userCreate.mockResolvedValue({ id: "usr_new" });
+      userUpdate.mockResolvedValue({});
+    });
+
+    it("de eerste keer: de naam van Apple en dezelfde bevestigingsmail als bij Google", async () => {
+      const res = await apple({ email: "nina@icloud.com", email_verified: true, user: { name: { firstName: "Nina", lastName: "de Vries" } } });
+      expect(res).toBe(true);
+      const data = userCreate.mock.calls[0]![0].data;
+      expect(data).toMatchObject({ email: "nina@icloud.com", fullName: "Nina de Vries", memberships: { create: { role: "FREELANCER" } } });
+      expect(data).not.toHaveProperty("emailVerifiedAt");
+      expect(sendVerificationEmail).toHaveBeenCalledWith("usr_new", "nina@icloud.com", "Nina de Vries");
+      expect(recordAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "auth.register.oauth", metadata: { provider: "apple", provisioned: true } }));
+    });
+
+    it("een privé-adres van Apple is een eigen adres: meteen bevestigd, geen code die kan blijven hangen", async () => {
+      const res = await apple({ email: "x7k2abc@privaterelay.appleid.com", email_verified: "true" }, { name: null });
+      expect(res).toBe(true);
+      const data = userCreate.mock.calls[0]![0].data;
+      expect(data.email).toBe("x7k2abc@privaterelay.appleid.com");
+      expect(data.fullName).toBe("Nieuwe gebruiker");
+      expect(data.emailVerifiedAt).toBeInstanceOf(Date);
+      expect(sendVerificationEmail).not.toHaveBeenCalled();
+      expect(sendWelcomeToUser).toHaveBeenCalledWith("usr_new");
+    });
+  });
+});
+
+describe("Apple-provider", () => {
+  const SLEUTELS = ["APPLE_SIWA_SERVICES_ID", "APPLE_TEAM_ID", "APPLE_SIWA_KEY_ID", "APPLE_SIWA_KEY_P8"] as const;
+  const isApple = (p: any) => (typeof p === "function" ? p() : p).id === "apple";
+
+  it("zonder config is Apple uit en blijven de andere aanbieders gelijk", () => {
+    expect((authOptions.providers as any[]).some(isApple)).toBe(false);
+    expect((authOptions.providers as any[]).some((p) => (typeof p === "function" ? p() : p).id === "credentials")).toBe(true);
+  });
+
+  it("met config: aan, met een vers geheim en een naam die nooit het e-mailadres is", async () => {
+    const { generateKeyPairSync } = await import("node:crypto");
+    const pem = generateKeyPairSync("ec", { namedCurve: "prime256v1" }).privateKey.export({ type: "pkcs8", format: "pem" }).toString();
+    const oud = Object.fromEntries(SLEUTELS.map((k) => [k, process.env[k]]));
+    Object.assign(process.env, { APPLE_SIWA_SERVICES_ID: "com.zekerflex.web", APPLE_TEAM_ID: "SZ985SQP65", APPLE_SIWA_KEY_ID: "KEY1234567", APPLE_SIWA_KEY_P8: pem });
+    try {
+      vi.resetModules();
+      const { authOptions: metApple } = await import("@/lib/auth/nextauth");
+      const provider = (metApple.providers as any[]).find(isApple);
+      expect(provider).toBeTruthy();
+      const opties = provider.options;
+      expect(opties.clientId).toBe("com.zekerflex.web");
+      const inhoud = JSON.parse(Buffer.from(String(opties.clientSecret).split(".")[1]!, "base64url").toString());
+      expect(inhoud).toMatchObject({ iss: "SZ985SQP65", sub: "com.zekerflex.web", aud: "https://appleid.apple.com" });
+      expect(opties.profile({ sub: "001.abc", email: "x@privaterelay.appleid.com" })).toEqual({ id: "001.abc", name: null, email: "x@privaterelay.appleid.com", image: null });
+      expect(opties.profile({ sub: "001.abc", email: "n@icloud.com", user: { name: { firstName: "Nina", lastName: "Bos" } } }).name).toBe("Nina Bos");
+    } finally {
+      for (const k of SLEUTELS) {
+        if (oud[k] === undefined) delete process.env[k];
+        else process.env[k] = oud[k];
+      }
+    }
   });
 });

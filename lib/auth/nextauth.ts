@@ -1,6 +1,7 @@
 import NextAuth, { CredentialsSignin, type NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
+import Apple from "next-auth/providers/apple";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -25,6 +26,7 @@ import {
   type RoleGrant,
 } from "@/lib/auth/session";
 import { INSPECT_SESSION_SECONDS } from "@/lib/auth/inspect";
+import { appleConfig, appleMailBevestigd, appleNaam, huidigAppleGeheim, isAppleRelay } from "@/lib/auth/apple";
 
 const credentialsSchema = z.union([
   z.object({ email: z.string().email(), password: z.string().min(1), remember: z.string().optional() }),
@@ -78,23 +80,33 @@ interface DbAccount {
  */
 const PLATFORM_TENANT_ID = "org_platform";
 
+type OAuthProvider = "google" | "apple";
+const PROVIDER_NAAM: Record<OAuthProvider, string> = { google: "Google", apple: "Apple" };
+
 /**
- * First Google login with an unknown (but Google-verified) e-mail: create a
- * freelancer account on the spot so the user lands straight in onboarding.
- * Vlag `google-verificatiemail` (standaard aan): het account krijgt dan dezelfde
- * bevestigingsmail (link + code) als bij een gewone aanmelding en geldt pas als
- * bevestigd na de code; /start stuurt het intussen naar /verifieer-email. Uit:
- * Google heeft het adres al bevestigd, dus `emailVerifiedAt` staat meteen.
+ * First Google or Apple login with an unknown (but provider-verified) e-mail:
+ * create a freelancer account on the spot so the user lands straight in onboarding.
+ * Vlag `google-verificatiemail` (standaard aan, geldt voor Google en Apple): het
+ * account krijgt dan dezelfde bevestigingsmail (link + code) als bij een gewone
+ * aanmelding en geldt pas als bevestigd na de code; /start stuurt het intussen naar
+ * /verifieer-email. Uit: de aanbieder heeft het adres al bevestigd, dus
+ * `emailVerifiedAt` staat meteen. Een privé-adres van Apple ("Verberg mijn
+ * e-mailadres") geldt altijd meteen als bevestigd: Apple stuurt alleen mail door van
+ * afzenders die bij Apple zijn aangemeld (owner-todo "apple-inloggen"), dus een
+ * code kan daar blijven hangen.
  */
-async function autoProvisionFromGoogle(
+async function autoProvisionFromOAuth(
+  provider: OAuthProvider,
   rawEmail: string,
   name: string | null | undefined,
 ): Promise<string | null> {
   const email = rawEmail.toLowerCase().trim();
   if (!email) return null;
-  const verifyByMail = await featureEnabled("google-verificatiemail");
+  const relay = provider === "apple" && isAppleRelay(email);
+  const verifyByMail = !relay && (await featureEnabled("google-verificatiemail"));
   try {
-    const fullName = (name ?? email.split("@")[0] ?? "Nieuwe gebruiker").slice(0, 120);
+    // een privé-adres van Apple is een willekeurige reeks: dan geen naam daaruit (de start vraagt hem)
+    const fullName = (name ?? (relay ? "Nieuwe gebruiker" : email.split("@")[0]) ?? "Nieuwe gebruiker").slice(0, 120);
     const user = await prisma.user.create({
       data: {
         email,
@@ -104,22 +116,22 @@ async function autoProvisionFromGoogle(
       },
       select: { id: true },
     });
-    logger.info("auto-provisioned freelancer from google login", { userId: user.id, verifyByMail });
+    logger.info("auto-provisioned freelancer from oauth login", { userId: user.id, provider, verifyByMail });
     // Mail is best-effort: faalt hij, dan vraagt de gebruiker op /verifieer-email zelf een nieuwe code aan.
     try {
       const { sendVerificationEmail, sendWelcomeToUser } = await import("@/lib/auth/email-verify");
       if (verifyByMail) {
         const mail = await sendVerificationEmail(user.id, email, fullName);
-        if (mail.sent && !mail.delivered) logger.warn("verificatiemail (Google) niet afgeleverd", { userId: user.id, transport: mail.transport });
+        if (mail.sent && !mail.delivered) logger.warn(`verificatiemail (${PROVIDER_NAAM[provider]}) niet afgeleverd`, { userId: user.id, transport: mail.transport });
       } else {
         await sendWelcomeToUser(user.id);
       }
     } catch (err) {
-      logger.warn("mail na Google-aanmelding mislukt", { userId: user.id, error: (err as Error).message });
+      logger.warn(`mail na ${PROVIDER_NAAM[provider]}-aanmelding mislukt`, { userId: user.id, error: (err as Error).message });
     }
     return user.id;
   } catch (err) {
-    logger.error("google auto-provision failed", { email, error: (err as Error).message });
+    logger.error("oauth auto-provision failed", { provider, email, error: (err as Error).message });
     return null;
   }
 }
@@ -141,6 +153,26 @@ async function resolveDbAccount(rawEmail: string): Promise<DbAccount | null> {
 }
 
 const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+// zonder volledige config (lib/auth/apple.ts) is Apple uit en verandert er niets
+const apple = appleConfig();
+
+// Apple stuurt de aanmelding terug als POST vanaf appleid.apple.com (response_mode=form_post):
+// een cross-site POST, en daarbij stuurt de browser geen cookies met SameSite=Lax mee. Dan
+// faalt de controle op state/nonce en weet NextAuth niet meer waarheen. Deze kortlevende
+// cookies staan in productie daarom op SameSite=None (altijd met Secure); de sessie zelf
+// blijft Lax. Namen zoals NextAuth ze zelf kiest achter https (__Secure-), zodat een
+// aanmelding die tijdens een uitrol loopt gewoon doorgaat.
+const PROD = env.NODE_ENV === "production";
+const terugPostCookie = (naam: string, maxAge?: number) => ({
+  name: `${PROD ? "__Secure-" : ""}authjs.${naam}`,
+  options: {
+    httpOnly: true,
+    sameSite: PROD ? ("none" as const) : ("lax" as const),
+    path: "/",
+    secure: PROD,
+    ...(maxAge ? { maxAge } : {}),
+  },
+});
 
 /**
  * The full NextAuth v5 config. Exported (not just handed straight to
@@ -167,6 +199,10 @@ export const authOptions: NextAuthConfig = {
         secure: env.NODE_ENV === "production",
       },
     },
+    state: terugPostCookie("state", 15 * 60),
+    nonce: terugPostCookie("nonce", 15 * 60),
+    pkceCodeVerifier: terugPostCookie("pkce.code_verifier", 15 * 60),
+    callbackUrl: terugPostCookie("callback-url"),
   },
   // Mint / read the exact jose HS256 tokens the Edge middleware understands.
   jwt: {
@@ -330,27 +366,47 @@ export const authOptions: NextAuthConfig = {
           }),
         ]
       : []),
+    ...(apple
+      ? [
+          Apple({
+            clientId: apple.servicesId,
+            // Een getter: NextAuth leest de provider bij elke aanvraag opnieuw in
+            // (parseProviders), dus het geheim vernieuwt zichzelf zonder herstart.
+            get clientSecret() {
+              return huidigAppleGeheim(apple);
+            },
+            // Apple stuurt de naam alleen de eerste keer mee; daarna null (nooit het e-mailadres als naam)
+            profile(p) {
+              return { id: p.sub, name: appleNaam(p.user), email: p.email ?? null, image: null };
+            },
+          }),
+        ]
+      : []),
   ],
   callbacks: {
     /**
      * Gatekeeper. Credentials and passkey logins are already validated in `authorize`.
-     * A Google login is only accepted when the (verified) e-mail belongs to an
-     * existing, enabled ZekerFlex account — we do not auto-provision here.
+     * A Google or Apple login binds to the ZekerFlex account with the same (verified)
+     * e-mail; an unknown address gets a new freelancer account (autoProvisionFromOAuth).
+     * Apple: email_verified kan de tekst "true" zijn, en een privé-adres
+     * (@privaterelay.appleid.com) is een eigen, geldig adres.
      */
     async signIn({ account, profile, user }) {
       if (!account || account.provider === "credentials" || account.provider === "passkey") return true;
 
-      if (account.provider === "google") {
-        const verifiedClaim = (
-          profile as { email_verified?: boolean } | null | undefined
-        )?.email_verified;
-        if (verifiedClaim === false) return false;
+      if (account.provider === "google" || account.provider === "apple") {
+        const provider: OAuthProvider = account.provider;
+        const claims = profile as { email?: unknown; email_verified?: unknown; name?: unknown; user?: unknown } | null | undefined;
+        if (provider === "google" && claims?.email_verified === false) return false;
+        if (provider === "apple" && appleMailBevestigd(claims?.email_verified) === false) return "/login?error=AppleLogin";
 
-        const email = (profile?.email ?? user.email ?? "").toString();
+        const email = String(claims?.email ?? user.email ?? "");
+        if (provider === "apple" && !email.trim()) return "/login?error=AppleLogin";
+        const name = provider === "apple" ? (appleNaam(claims?.user) ?? user.name) : (profile?.name ?? user.name);
         let dbAccount = await resolveDbAccount(email);
         let provisioned = false;
         if (!dbAccount) {
-          const newId = await autoProvisionFromGoogle(email, profile?.name ?? user.name);
+          const newId = await autoProvisionFromOAuth(provider, email, name);
           if (!newId) return "/login?error=Configuration";
           dbAccount = await resolveDbAccount(email);
           provisioned = true;
@@ -365,10 +421,10 @@ export const authOptions: NextAuthConfig = {
           action: provisioned ? "auth.register.oauth" : "auth.login.succeeded",
           actorUserId: dbAccount.id,
           actorLabel: "user",
-          summary: `${provisioned ? "Nieuw account via" : "Inloggen geslaagd via"} Google: ${dbAccount.email}`,
+          summary: `${provisioned ? "Nieuw account via" : "Inloggen geslaagd via"} ${PROVIDER_NAAM[provider]}: ${dbAccount.email}`,
           targetType: "user",
           targetId: dbAccount.id,
-          metadata: { provider: "google", provisioned },
+          metadata: { provider, provisioned },
         });
         return true;
       }
