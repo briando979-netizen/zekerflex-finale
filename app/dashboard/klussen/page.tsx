@@ -20,6 +20,7 @@ import { getBrancheKeuze } from "@/lib/worker/branche-store";
 import { standaardFilter } from "@/lib/shifts/branche-keuze";
 import { EersteIndrukMelding } from "@/components/app/EersteIndrukMelding";
 import { eersteIndrukVoor } from "@/lib/onboarding/eerste-indruk-server";
+import { inIosApp } from "@/lib/app-mode-server";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,8 @@ export default async function KlussenPage(
   ]);
   const birthday = isBirthdayToday(fiscal.birthDate);
   // deze pagina is alleen voorbij de poort te zien (layout), dus de kaart hoeft die niet opnieuw te controleren
-  const eersteIndruk = await eersteIndrukVoor(principal.userId).catch(() => null);
+  // in de iPhone-app vraagt de app zelf om meldingen: daar telt die stap als klaar
+  const eersteIndruk = await eersteIndrukVoor(principal.userId, { iosApp: await inIosApp() }).catch(() => null);
   const greetLabels = {
     morning: t.greet.morning,
     afternoon: t.greet.afternoon,

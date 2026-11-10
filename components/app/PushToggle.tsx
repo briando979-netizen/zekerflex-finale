@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { bannerWeerTonen, PUSH_BANNER_NL, type PushBannerTexts } from "@/components/app/push-banner-texts";
+import { bannerWeerTonen, PUSH_BANNER_NL, type PushBannerTexts, type PushStapTexts } from "@/components/app/push-banner-texts";
 import { useInIosApp } from "@/components/app/useInIosApp";
 
 type State = "loading" | "unsupported" | "ios-install" | "unconfigured" | "off" | "on" | "denied" | "busy";
@@ -88,8 +88,22 @@ function inStandaloneApp(): boolean {
   }
 }
 
-/** texts: alleen voor de banner; de werker-app geeft eigen teksten in vijf talen mee */
-export function PushToggle({ variant = "card", texts = PUSH_BANNER_NL }: { variant?: "card" | "banner"; texts?: PushBannerTexts }) {
+/**
+ * texts: alleen voor de banner; de werker-app geeft eigen teksten in vijf talen mee.
+ * variant "stap": de grote knop in "Maak een goede eerste indruk", met stapTexts (vijf talen) en
+ * onAan zodra meldingen aanstaan.
+ */
+export function PushToggle({
+  variant = "card",
+  texts = PUSH_BANNER_NL,
+  stapTexts,
+  onAan,
+}: {
+  variant?: "card" | "banner" | "stap";
+  texts?: PushBannerTexts;
+  stapTexts?: PushStapTexts;
+  onAan?: () => void;
+}) {
   const [state, setState] = useState<State>("loading");
   const [vapidKey, setVapidKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -163,12 +177,13 @@ export function PushToggle({ variant = "card", texts = PUSH_BANNER_NL }: { varia
       });
       if (!res.ok) throw new Error(`server ${res.status}`);
       setState("on");
+      onAan?.();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "onbekend";
       setError(`Aanzetten lukte niet (${msg}). Probeer het opnieuw.`);
       setState("off");
     }
-  }, [vapidKey]);
+  }, [vapidKey, onAan]);
 
   const disable = useCallback(async () => {
     setError(null);
@@ -220,6 +235,33 @@ export function PushToggle({ variant = "card", texts = PUSH_BANNER_NL }: { varia
   // lib/notifications/push/apns.ts). Web Push werkt in een WKWebView niet: hier dus niets, ook geen
   // "zet op je beginscherm" (anders een knop die niets doet, reden voor afkeur door Apple).
   if (ios !== false) return null;
+
+  if (variant === "stap" && stapTexts) {
+    const t = stapTexts;
+    if (state === "loading") return <p className="text-sm text-neutralx-500" aria-busy="true">…</p>;
+    if (state === "on") {
+      return (
+        <p role="status" className="rounded-xl bg-brand-50 px-4 py-3 text-sm font-semibold text-brand-600">
+          ✓ {t.ok}
+        </p>
+      );
+    }
+    if (state === "ios-install") return <p className="rounded-xl border border-hair bg-white px-4 py-3 text-sm leading-relaxed text-neutralx-700">{t.ios}</p>;
+    if (state === "unsupported" || state === "unconfigured") return <p className="rounded-xl border border-hair bg-white px-4 py-3 text-sm leading-relaxed text-neutralx-700">{t.nietMogelijk}</p>;
+    if (state === "denied") return <p className="rounded-xl border border-warn/40 bg-warn/10 px-4 py-3 text-sm leading-relaxed text-neutralx-700">{app ? t.geweigerdApp : t.geweigerd}</p>;
+    return (
+      <div>
+        <button type="button" onClick={enable} disabled={state === "busy"} className="btn-primary block w-full py-3.5 text-center text-base disabled:opacity-60">
+          {state === "busy" ? t.bezig : t.knop}
+        </button>
+        {error && (
+          <p role="alert" className="mt-2 text-sm text-crit">
+            {t.fout}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   if (variant === "banner") {
     if (dismissed || !(state === "off" || state === "busy" || state === "ios-install")) return null;

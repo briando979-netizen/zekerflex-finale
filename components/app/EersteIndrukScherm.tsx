@@ -4,15 +4,17 @@ import { useId, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AvatarUpload } from "@/components/app/AvatarUpload";
+import { PushToggle } from "@/components/app/PushToggle";
 import { useFT } from "@/components/i18n/useFT";
 import { BEDRIJF_MAX, ERVARING_EERSTE_JAAR, FUNCTIE_MAX, OMSCHRIJVING_MAX } from "@/lib/werker/ervaring";
 
 /**
  * "Maak een goede eerste indruk" (/dashboard/eerste-indruk): per stap een volledig scherm met een
  * donkere kop (terugknop, twee voortgangsstreepjes, sluitknop) en een wit paneel eronder.
- * Stap 1: profielfoto (1a leeg, 1b zodra er een foto is). Stap 2: werkervaring. Beide zijn
- * optioneel en blokkeren nooit het reageren op klussen; na "Opslaan" gaat de werker naar
- * /dashboard/klussen (daar staat de melding, alleen als reageren echt kan).
+ * Stap 1: profielfoto (1a leeg, 1b zodra er een foto is). Stap 2: werkervaring. Stap 3: meldingen
+ * aanzetten (alleen als die nog niet aankomen; 10 nov: 4 van de 51 werkers kregen pushmeldingen).
+ * Alle stappen zijn optioneel en blokkeren nooit het reageren op klussen; aan het eind gaat de
+ * werker naar /dashboard/klussen (daar staat de melding, alleen als reageren echt kan).
  * De kop heeft eigen kleuren (zoals het mobiele loginscherm); datums zijn maand + jaar in
  * twee keuzelijsten (werkt in elke browser en met een schermlezer).
  */
@@ -20,6 +22,7 @@ export function EersteIndrukScherm({
   userId,
   naam,
   heeftFoto: fotoStart,
+  meldingenOpen = false,
   start,
   huidigJaar,
   huidigeMaand,
@@ -27,21 +30,26 @@ export function EersteIndrukScherm({
   userId: string;
   naam: string;
   heeftFoto: boolean;
-  start: "foto" | "ervaring";
+  /** meldingen komen nog niet aan: dan volgt na de werkervaring stap 3 */
+  meldingenOpen?: boolean;
+  start: "foto" | "ervaring" | "meldingen";
   huidigJaar: number;
   huidigeMaand: number;
 }) {
   const t = useFT().eersteIndruk;
-  const [stap, setStap] = useState<"foto" | "ervaring">(start);
+  const router = useRouter();
+  const [stap, setStap] = useState<"foto" | "ervaring" | "meldingen">(start);
   const [heeftFoto, setHeeftFoto] = useState(fotoStart);
+  const [meldingenAan, setMeldingenAan] = useState(false);
 
-  const nr = stap === "foto" ? 1 : 2;
+  const nr = stap === "foto" ? 1 : stap === "ervaring" ? 2 : 3;
+  const naarKlussen = () => router.push("/dashboard/klussen?eerste=1");
   return (
     <div className="-mx-4 -mt-4 sm:mx-0 sm:mt-0 sm:overflow-hidden sm:rounded-3xl">
       <header className="bg-[linear-gradient(165deg,#0B3B3A_0%,#0E5C4A_55%,#0C0E12_100%)] px-6 pb-14 pt-5 text-white">
         <div className="flex items-center justify-between gap-3">
-          {stap === "ervaring" ? (
-            <button type="button" onClick={() => setStap("foto")} aria-label={t.back} className="grid h-10 w-10 place-items-center rounded-full bg-white/10 hover:bg-white/20">
+          {stap !== "foto" ? (
+            <button type="button" onClick={() => setStap(stap === "meldingen" ? "ervaring" : "foto")} aria-label={t.back} className="grid h-10 w-10 place-items-center rounded-full bg-white/10 hover:bg-white/20">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
                 <path d="M15 5l-7 7 7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -56,6 +64,7 @@ export function EersteIndrukScherm({
           <div className="flex flex-1 justify-center gap-2" role="img" aria-label={t.stap(nr)}>
             <span className={`h-1.5 w-12 rounded-full ${nr === 1 ? "bg-brand-mint" : "bg-white/25"}`} />
             <span className={`h-1.5 w-12 rounded-full ${nr === 2 ? "bg-brand-mint" : "bg-white/25"}`} />
+            <span className={`h-1.5 w-12 rounded-full ${nr === 3 ? "bg-brand-mint" : "bg-white/25"}`} />
           </div>
           <Link href="/dashboard/klussen" aria-label={t.close} className="grid h-10 w-10 place-items-center rounded-full bg-white/10 hover:bg-white/20">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -64,7 +73,7 @@ export function EersteIndrukScherm({
           </Link>
         </div>
         <h1 className="mt-6 font-display text-3xl font-bold leading-tight">
-          {stap === "foto" ? (heeftFoto ? t.foto.titleOk : t.foto.title) : t.ervaring.title}
+          {stap === "foto" ? (heeftFoto ? t.foto.titleOk : t.foto.title) : stap === "ervaring" ? t.ervaring.title : meldingenAan ? t.meldingen.titleOk : t.meldingen.title}
         </h1>
       </header>
 
@@ -90,7 +99,19 @@ export function EersteIndrukScherm({
               )}
             </div>
           ) : (
-            <ErvaringFormulier huidigJaar={huidigJaar} huidigeMaand={huidigeMaand} />
+            stap === "ervaring" ? (
+            <ErvaringFormulier huidigJaar={huidigJaar} huidigeMaand={huidigeMaand} naOpslaan={meldingenOpen ? () => setStap("meldingen") : naarKlussen} />
+            ) : (
+              <div>
+                <p className="text-sm leading-relaxed text-neutralx-700">{t.meldingen.body}</p>
+                <div className="mt-8">
+                  <PushToggle variant="stap" stapTexts={t.meldingen} onAan={() => setMeldingenAan(true)} />
+                </div>
+                <button type="button" onClick={naarKlussen} className={`${meldingenAan ? "btn-primary" : "btn-ghost"} mt-6 block w-full py-3.5 text-center text-base`}>
+                  {meldingenAan ? t.meldingen.verder : t.meldingen.later}
+                </button>
+              </div>
+            )
           )}
         </div>
       </section>
@@ -99,10 +120,9 @@ export function EersteIndrukScherm({
 }
 
 /** Stap 2: één werkervaring (of "Ik heb geen werkervaring"); de server controleert alles opnieuw. */
-function ErvaringFormulier({ huidigJaar, huidigeMaand }: { huidigJaar: number; huidigeMaand: number }) {
+function ErvaringFormulier({ huidigJaar, huidigeMaand, naOpslaan }: { huidigJaar: number; huidigeMaand: number; naOpslaan: () => void }) {
   const t = useFT().eersteIndruk;
   const e = t.ervaring;
-  const router = useRouter();
   const id = useId();
   const [geen, setGeen] = useState(false);
   const [functie, setFunctie] = useState("");
@@ -161,7 +181,7 @@ function ErvaringFormulier({ huidigJaar, huidigeMaand }: { huidigJaar: number; h
         return;
       }
       // door naar de klussen: daar staat de melding (alleen als reageren echt kan)
-      router.push("/dashboard/klussen?eerste=1");
+      naOpslaan();
     } catch {
       setAlgemeen(e.error);
     } finally {
