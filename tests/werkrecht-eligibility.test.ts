@@ -26,7 +26,7 @@ vi.mock("@/lib/werkrecht/store", () => ({
 describe("payoutEligibility + recht om te werken", () => {
   beforeEach(() => {
     h.fiscal = {};
-    h.profiel = { kvkValid: true, vatValid: false, payoutIban: null };
+    h.profiel = { kvkValid: true, vatValid: false, payoutIban: "NL00TEST0000000000" };
     h.werkrecht = { ok: true, reden: null };
     h.gevraagd = [];
   });
@@ -44,6 +44,15 @@ describe("payoutEligibility + recht om te werken", () => {
 
     h.fiscal = { workerKind: "uitzendkracht", bsnHash: "x", iban: "NL00" };
     expect(await payoutEligibility("u1")).toEqual({ ok: false, track: "payroll", reason: "Upload je document" });
+  });
+
+  it("zonder IBAN: niet ok, met de reden die naar de bankstap wijst (het IBAN zit niet meer in de onboarding)", async () => {
+    const { payoutEligibility } = await import("@/lib/fiscal/eligibility");
+    h.profiel = { kvkValid: true, vatValid: false, payoutIban: null };
+    const uit = await payoutEligibility("u1");
+    expect(uit.ok).toBe(false);
+    expect(uit.reason).toContain("IBAN");
+    expect(h.gevraagd).toEqual([]);
   });
 
   it("eerst de fiscale eis: zonder KVK/KOR die melding, het werkrecht wordt dan niet gevraagd", async () => {

@@ -107,6 +107,15 @@ export function isComplete(f: FiscalProfile): boolean {
   return false;
 }
 
+/**
+ * De fiscale gegevens ingevuld, zonder het IBAN: voor de poort van de werker-app
+ * (lib/onboarding/werker-poort-server.ts). Het IBAN komt sinds 10 nov pas vóór de eerste
+ * betaalde klus (lib/fiscal/eligibility.ts); isComplete blijft het wel eisen.
+ */
+export function fiscaalIngevuld(f: FiscalProfile): boolean {
+  return isComplete({ ...f, iban: f.iban ?? "(later)" });
+}
+
 export function invoiceModeFor(f: FiscalProfile): InvoiceMode {
   if (f.invoiceMode) return f.invoiceMode;
   if (f.workerKind === "uitzendkracht") return "payroll";

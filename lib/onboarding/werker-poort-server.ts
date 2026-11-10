@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getFiscal, isComplete as isFiscalComplete, invoiceModeFor } from "@/lib/fiscal/store";
+import { getFiscal, fiscaalIngevuld, invoiceModeFor } from "@/lib/fiscal/store";
 import { activeUitzendContract } from "@/lib/agreements/uitzend-contract";
 import { getBrancheKeuze } from "@/lib/worker/branche-store";
 import { werkrechtOverzicht } from "@/lib/werkrecht/store";
@@ -39,11 +39,12 @@ export async function werkerPoortStand(userId: string): Promise<WerkerPoortStand
     soortGekozen: Boolean(fiscal.workerKind),
     branchesGekozen: brancheKeuze !== null,
     gegevensIngevuld:
-      isFiscalComplete(fiscal) &&
+      fiscaalIngevuld(fiscal) &&
       // ingevuld, niet per se al bevestigd: een KVK-nummer van 8 cijfers telt (bij een storing van de
       // KVK-koppeling mag niemand hier vastlopen); vóór betaald werk wordt het opnieuw gecontroleerd
       (uitzend ? contract : Boolean(profiel?.kvkValid || /^\d{8}$/.test(profiel?.kvkNumber ?? "") || fiscal.vatValid || fiscal.korApplies)) &&
-      Boolean(profiel && (profiel.payoutIban || fiscal.iban) && profiel.homePostalCode),
+      // het IBAN niet meer hier (10 nov, eigenaar): dat komt vóór de eerste betaalde klus (eligibility)
+      Boolean(profiel?.homePostalCode),
     identiteitIngestuurd: user?.kycStatus === "VERIFIED" || (user?.kycStatus === "PENDING" && Boolean(inBehandeling)),
     // Nederland staat altijd vooraan (lib/werkrecht/store.ts); een storing telt niet als "niet ingevuld"
     werkrechtIngevuld: werkrecht === null || werkrecht[0]?.stand === "ok" || werkrecht[0]?.stand === "wacht",

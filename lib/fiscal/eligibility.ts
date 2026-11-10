@@ -59,11 +59,12 @@ async function fiscalEligibility(userId: string): Promise<PayoutEligibility> {
   }
 
   const ok = Boolean(profile?.kvkValid || profile?.vatValid || fiscal.vatValid || fiscal.korApplies);
-  return {
-    ok,
-    track,
-    reason: ok
-      ? null
-      : "Je hebt nog geen geldig KVK-nummer of KOR. Maak er een aan om op deze klussen te reageren.",
-  };
+  if (!ok) {
+    return { ok, track, reason: "Je hebt nog geen geldig KVK-nummer of KOR. Maak er een aan om op deze klussen te reageren." };
+  }
+  // Het IBAN zit sinds 10 nov niet meer in de onboarding: zonder rekeningnummer kunnen we niet uitbetalen
+  if (!(profile?.payoutIban || fiscal.iban)) {
+    return { ok: false, track, reason: "Vul je rekeningnummer (IBAN) in bij Verificatie → Bankrekening bevestigen om op klussen te reageren." };
+  }
+  return { ok: true, track, reason: null };
 }

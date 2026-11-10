@@ -58,7 +58,7 @@ vi.mock("@/lib/prisma", () => ({
 }));
 vi.mock("@/lib/fiscal/store", () => ({
   getFiscal: async () => h.fiscal,
-  isComplete: (f: Record<string, unknown>) => Boolean(f.workerKind),
+  fiscaalIngevuld: (f: Record<string, unknown>) => Boolean(f.workerKind),
   invoiceModeFor: (f: Record<string, unknown>) => (f.workerKind === "uitzendkracht" ? "payroll" : "invoice"),
 }));
 vi.mock("@/lib/agreements/uitzend-contract", () => ({ activeUitzendContract: async () => null }));
@@ -94,6 +94,13 @@ describe("werkerPoortStand", () => {
   it("alles ingevuld en in behandeling: klaar (goedkeuren hoeft niet om de app te zien)", async () => {
     const { werkerPoortStand } = await import("@/lib/onboarding/werker-poort-server");
     expect((await werkerPoortStand("u1")).klaar).toBe(true);
+  });
+
+  it("geen IBAN nodig voor de poort (dat komt vóór de eerste betaalde klus)", async () => {
+    const { werkerPoortStand } = await import("@/lib/onboarding/werker-poort-server");
+    h.fiscal = { workerKind: "zzp" };
+    h.profiel = { ...h.profiel, payoutIban: null };
+    expect((await werkerPoortStand("u1")).gegevensIngevuld).toBe(true);
   });
 
   it("een KVK-nummer van 8 cijfers telt ook als de KVK-koppeling het (nog) niet bevestigde", async () => {
