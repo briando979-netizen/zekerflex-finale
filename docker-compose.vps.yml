@@ -102,7 +102,8 @@ services:
       - caddy-logs:/var/log/caddy
     depends_on:
       app: { condition: service_started }
-    networks: [internal, bouwer-toegang]
+    # git: de eigen Git-server (Forgejo) zit alleen op dat netwerk
+    networks: [internal, bouwer-toegang, git]
 
   postgres:
     image: postgres:18.6-bookworm
@@ -546,6 +547,43 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
+  # Eigen Git-server: Forgejo, een "eigen GitHub" (gratis, open source; lib/gratis/
+  # diensten.ts → code). Fase 1: een spiegel van de GitHub-repo die elke 10 minuten
+  # bijwerkt, zodat de code ook op onze eigen server staat; inrichten met
+  # deploy/forgejo/inrichten.sh. Registreren staat uit en alles is alleen zichtbaar na
+  # inloggen. SQLite in het eigen volume (geen extra database), geen SSH naar buiten
+  # (git gaat via https), geen Actions. Eigen netwerk "git" met alleen Caddy erbij:
+  # een openbare inlogpagina hoort niet naast Postgres en Redis.
+  forgejo:
+    image: codeberg.org/forgejo/forgejo:17.0.1
+    restart: unless-stopped
+    environment:
+      USER_UID: "1000"
+      USER_GID: "1000"
+      FORGEJO__server__ROOT_URL: https://${FORGEJO_HOST:-git.37-97-226-24.sslip.io}/
+      FORGEJO__server__DOMAIN: ${FORGEJO_HOST:-git.37-97-226-24.sslip.io}
+      FORGEJO__server__HTTP_PORT: "3000"
+      FORGEJO__server__DISABLE_SSH: "true"
+      FORGEJO__server__OFFLINE_MODE: "true"
+      FORGEJO__database__DB_TYPE: sqlite3
+      FORGEJO__security__INSTALL_LOCK: "true"
+      FORGEJO__service__DISABLE_REGISTRATION: "true"
+      FORGEJO__service__REQUIRE_SIGNIN_VIEW: "true"
+      FORGEJO__openid__ENABLE_OPENID_SIGNIN: "false"
+      FORGEJO__openid__ENABLE_OPENID_SIGNUP: "false"
+      FORGEJO__repository__DEFAULT_PRIVATE: private
+      FORGEJO__mirror__DEFAULT_INTERVAL: 10m
+      FORGEJO__actions__ENABLED: "false"
+      FORGEJO__log__LEVEL: Warn
+    volumes:
+      - forgejo-data:/data
+    mem_limit: 512m
+    cpus: 1
+    networks: [git]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
 networks:
   internal:
     driver: bridge
@@ -561,8 +599,12 @@ networks:
   # kunnen zo niet bij de echte database of Redis (die heeft geen wachtwoord).
   bouwer-toegang:
     driver: bridge
+  # Forgejo (eigen Git-server) en Caddy; met internet voor de spiegel, zonder Postgres/Redis
+  git:
+    driver: bridge
 
 volumes:
+  forgejo-data:
   outline-data:
   app-storage:
   site-backups:

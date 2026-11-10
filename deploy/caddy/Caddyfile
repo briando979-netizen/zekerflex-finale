@@ -170,6 +170,18 @@ vpn.zekerflex.com {
 	}
 }
 
+# Eigen Git-server: Forgejo (docker-compose.vps.yml, deploy/forgejo). Standaard een
+# sslip.io-naam; met een A-record kan FORGEJO_HOST git.zekerflex.com worden. Met het
+# toegangslog, zodat CrowdSec ook deze inlogpagina bewaakt.
+{$FORGEJO_HOST:git.37-97-226-24.sslip.io} {
+	import toegangslog
+	encode zstd gzip
+	reverse_proxy forgejo:3000 {
+		header_up -X-ZF-Site-Host
+		header_up -X-ZF-Voorstel
+	}
+}
+
 # Websites van klanten op hun eigen domein. Alles op zo'n domein gaat naar die
 # website en nooit naar de app zelf: met deze kop stuurt de middleware het
 # verzoek naar /site-domein/<domein>/… (middleware.ts, customerSite).
