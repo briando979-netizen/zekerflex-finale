@@ -159,6 +159,8 @@ export interface SiteProduct {
   opties?: ProductOptie[] | undefined;
   /** copied from the ZekerFlex webshop (ShopProduct id), so the builder can show where it came from */
   bron?: { zekerflex: string } | undefined;
+  /** btw-tarief van dit product; ontbreekt = het standaardtarief van de winkel (Winkel.btw) */
+  btw?: BtwTarief | undefined;
 }
 
 export interface ProductOptie {
@@ -166,14 +168,86 @@ export interface ProductOptie {
   waarden: string[];
 }
 
+/** Btw-tarieven in Nederland, in procenten: hoog, laag en nul. */
+export type BtwTarief = 21 | 9 | 0;
+export const BTW_TARIEVEN: BtwTarief[] = [21, 9, 0];
+
+/** Waar een bezorgmethode naartoe gaat: alleen Nederland, de EU, of ook daarbuiten. */
+export type VerzendGebied = "nl" | "eu" | "overal";
+
+/** Een manier om de bestelling te krijgen (Webshop → Verzending; regels: lib/sites/winkel-verzending.ts). */
+export interface Verzendmethode {
+  id: string;
+  soort: "afhalen" | "bezorgen";
+  /** wat de klant ziet: "PostNL pakket", "Afhalen in de winkel" */
+  naam: string;
+  /** in centen, zoals de winkel rekent (inclusief of exclusief btw, Winkel.btw) */
+  prijsCents: number;
+  /** vanaf dit bedrag aan producten (na korting) gratis; null = nooit gratis */
+  gratisVanafCents: number | null;
+  /** alleen bij bezorgen */
+  gebied: VerzendGebied;
+  /** alleen bij afhalen: waar; leeg = het adres van het bedrijf */
+  adres: string;
+  /** "1 tot 2 werkdagen"; leeg = niet tonen */
+  levertijd: string;
+  actief: boolean;
+}
+
+/** Een kortingscode die klanten bij het bestellen invullen (regels: lib/sites/winkel-korting.ts). */
+export interface Kortingscode {
+  id: string;
+  /** hoofdletters, cijfers en streepjes: "ZOMER10" */
+  code: string;
+  soort: "procent" | "bedrag";
+  /** procent: 1 tot 100; bedrag: in centen */
+  waarde: number;
+  /** pas vanaf dit bedrag aan producten; null = altijd */
+  minimumCents: number | null;
+  /** de laatste dag waarop de code werkt (JJJJ-MM-DD, Nederlandse tijd); null = geen einde */
+  totEnMet: string | null;
+  /** hoe vaak de code in totaal gebruikt mag worden; null = onbeperkt */
+  maxGebruik: number | null;
+  actief: boolean;
+}
+
+/** Betalen zonder betaalprovider: bij het afhalen, per overboeking, of contant aan de bezorger. */
+export type BetaalMethode = "afhalen" | "overboeking" | "rembours";
+
+/** Hoe klanten betalen (Webshop → Betalen; regels: lib/sites/winkel-betalen.ts). */
+export interface BetaalInstelling {
+  methoden: BetaalMethode[];
+  /** voor overboeking */
+  iban: string;
+  tenaamstelling: string;
+}
+
+/** Btw op bestellingen (Webshop → Betalen; regels: lib/sites/winkel-btw.ts). */
+export interface BtwInstelling {
+  /** de prijzen zijn inclusief btw (standaard); uit = exclusief, de btw komt er bij het afrekenen bij */
+  inclusief: boolean;
+  /** het tarief van producten zonder eigen tarief */
+  standaard: BtwTarief;
+  /** kleineondernemersregeling: geen btw rekenen of tonen */
+  kor: boolean;
+}
+
 /** A site's shop: products and how ordering works (no online payment yet: the company settles it). */
 export interface Winkel {
   producten: SiteProduct[];
   /** the order form (/bestellen) is open */
   bestellen: boolean;
+  /** afhalen en één bezorging; met `verzendmethoden` volgt het die lijst (lib/sites/winkel-verzending.ts leveringVan) */
   levering: { afhalen: boolean; bezorgen: boolean; bezorgkostenCents: number; gratisVanafCents: number | null };
   /** how paying works, shown with every order ("Je betaalt bij het afhalen, contant of met pin.") */
   betaalTekst: string;
+  /** de verzendmethoden; ontbreekt = afhalen en bezorgen uit `levering`, zoals vóór 10 nov 2026 */
+  verzendmethoden?: Verzendmethode[] | undefined;
+  kortingscodes?: Kortingscode[] | undefined;
+  /** de betaalmethoden waaruit de klant kiest; ontbreekt = alleen de betaaltekst */
+  betalen?: BetaalInstelling | undefined;
+  /** ontbreekt = geen btw op de bestelling (de winkel heeft het nog niet ingesteld, dus nergens een tarief verzinnen) */
+  btw?: BtwInstelling | undefined;
 }
 
 export const LEGE_WINKEL: Winkel = {
