@@ -18,7 +18,8 @@ const nextConfig = {
   // ssh2 laadt optionele native modules (cpu-features, sshcrypto) die webpack niet moet bundelen.
   // tesseract.js (eigen OCR, lib/ocr/engine.ts) start een worker-thread uit zijn
   // eigen map en laadt wasm: niet bundelen, als gewoon pakket laten.
-  serverExternalPackages: ["ioredis", "ssh2", "tesseract.js", "tesseract.js-core"],
+  // onnxruntime-node (gezichtscontrole, lib/kyc/gezicht) is een native pakket met een .node-bestand: ook niet bundelen.
+  serverExternalPackages: ["ioredis", "ssh2", "tesseract.js", "tesseract.js-core", "onnxruntime-node", "onnxruntime-common"],
   // The RAG brain reads lib/rag/knowledge/*.md at runtime (lib/rag/corpus.ts) —
   // ship them with every server function, not only the routes that import them.
   // De OCR-worker en zijn hulppakketten worden via new Worker(pad) geladen, wat
@@ -38,6 +39,12 @@ const nextConfig = {
       "./node_modules/regenerator-runtime/**/*",
       "./node_modules/wasm-feature-detect/**/*",
       "./node_modules/zlibjs/**/*",
+      // onnxruntime-node kiest zijn .node-bestand met een berekend pad, dat de tracer niet ziet. Het pakket weegt
+      // 294 MB omdat alle platformen erin zitten; alleen de JavaScript en de Linux x64-bestanden gaan mee.
+      "./node_modules/onnxruntime-node/package.json",
+      "./node_modules/onnxruntime-node/dist/**/*",
+      "./node_modules/onnxruntime-node/bin/napi-v6/linux/x64/**/*",
+      "./node_modules/onnxruntime-common/**/*",
     ],
   },
   experimental: {

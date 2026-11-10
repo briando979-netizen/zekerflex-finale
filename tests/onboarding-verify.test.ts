@@ -71,6 +71,14 @@ vi.mock("@/lib/storage/local", () => ({
 const runVisionReview = vi.fn().mockResolvedValue({ available: false, document: null, face: null, model: null });
 vi.mock("@/lib/kyc/vision", () => ({ runVisionReview: (...a: unknown[]) => runVisionReview(...a) }));
 
+/** het eigen gezichtsmodel (lib/kyc/gezicht): standaard "kon niet draaien", dus een mens beslist */
+const GEZICHT_NIET = { beschikbaar: false, oordeel: "onbruikbaar", score: null, reden: "De automatische gezichtscontrole was niet beschikbaar. Een medewerker kijkt mee.", technisch: true, ms: 1 };
+const GEZICHT_ZELFDE = { beschikbaar: true, oordeel: "zelfde", score: 0.72, reden: "Het gezicht op de selfie komt overeen met de pasfoto op het document.", technisch: false, ms: 90 };
+const gezichtControle = vi.fn().mockResolvedValue(GEZICHT_NIET);
+vi.mock("@/lib/kyc/gezicht/controle", () => ({ gezichtControle: (...a: unknown[]) => gezichtControle(...a) }));
+const featureEnabled = vi.fn().mockResolvedValue(true);
+vi.mock("@/lib/flags", () => ({ featureEnabled: (...a: unknown[]) => featureEnabled(...a) }));
+
 /** de code op het document (MRZ), standaard: hoort bij Jan Jansen en SPECI2014, geldig tot 2030 */
 const MRZ_JAN = {
   formaat: "TD1",
@@ -647,6 +655,110 @@ describe("submitFreelancerOnboarding — vision review (photo content)", () => {
 
     expect(result.outcome).toBe("in_review");
     expect(result.checks.some((c) => c.label.includes("beeldcontrole"))).toBe(false);
+  });
+});
+
+describe("submitFreelancerOnboarding — gezichtscontrole met het eigen model (11 nov)", () => {
+  const GEBRUIKER = { id: "usr_1", fullName: "Jan Jansen", kycStatus: "PENDING", freelancerProfile: { id: "fp_1" } };
+  const FOTOS = { front: image("front.jpg"), back: image("back.jpg"), selfie: image("selfie.jpg") };
+  /** de tekst-AI is niet bereikbaar (time-out): vertrouwen 0 */
+  const aiUit = async () => {
+    const { chatJson } = await import("@/lib/ai/client");
+    vi.mocked(chatJson).mockRejectedValueOnce(new Error("LLM request timed out after 8000ms"));
+  };
+
+  it("een sterke match met een kloppende MRZ keurt zelf goed, ook als de tekst-AI niet bereikbaar is", async () => {
+    userFindUnique.mockResolvedValue(GEBRUIKER);
+    gezichtControle.mockResolvedValueOnce(GEZICHT_ZELFDE);
+    await aiUit();
+    const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: FOTOS });
+    expect(result.outcome).toBe("verified");
+    expect(alertOwnerLater).not.toHaveBeenCalled();
+    // alleen de score wordt bewaard
+    const data = (ivCreate.mock.calls[0]![0] as { data: { faceMatchScore: number; rawPayload: { gezicht: { oordeel: string; score: number; automatisch: boolean } } } }).data;
+    expect(data.faceMatchScore).toBe(0.72);
+    expect(data.rawPayload.gezicht).toMatchObject({ oordeel: "zelfde", score: 0.72, automatisch: true });
+    expect(JSON.stringify(data.rawPayload)).not.toMatch(/kenmerk|embedding/i);
+  });
+
+  it("zegt de tekst-AI zelf 'bekijk handmatig' (vertrouwen boven 0), dan blijft dat gelden", async () => {
+    userFindUnique.mockResolvedValue(GEBRUIKER);
+    gezichtControle.mockResolvedValueOnce(GEZICHT_ZELFDE);
+    const { chatJson } = await import("@/lib/ai/client");
+    vi.mocked(chatJson).mockResolvedValueOnce({ verdict: "needs_review", confidence: 0.4, reasons: ["twijfel"], summary: "" });
+    const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: FOTOS });
+    expect(result.outcome).toBe("in_review");
+  });
+
+  it("aannemelijk maar niet zeker (twijfel) gaat naar een mens, met de score voor de medewerker", async () => {
+    userFindUnique.mockResolvedValue(GEBRUIKER);
+    gezichtControle.mockResolvedValueOnce({ ...GEZICHT_ZELFDE, oordeel: "twijfel", score: 0.43, reden: "Het gezicht lijkt op de pasfoto, maar niet zeker genoeg. Een medewerker kijkt mee." });
+    await aiUit();
+    const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: FOTOS });
+    expect(result.outcome).toBe("in_review");
+    expect(result.checks.find((c) => c.label.includes("gezichtscontrole"))?.ok).toBe(false);
+    // de score is alleen voor medewerkers: de werker ziet hem niet, het opgeslagen dossier wel
+    expect(result.checks.some((c) => c.label === "Gezichtsgelijkenis (score)")).toBe(false);
+    const opgeslagen = (ivCreate.mock.calls[0]![0] as { data: { rawPayload: { checks: { label: string; intern?: boolean; detail: string }[] } } }).data.rawPayload.checks;
+    const score = opgeslagen.find((c) => c.label === "Gezichtsgelijkenis (score)");
+    expect(score?.intern).toBe(true);
+    expect(score?.detail).toContain("43%");
+  });
+
+  it("een ander gezicht wijst niet af (de drempels zijn nog niet gemeten op echte pasfoto's) maar gaat naar een mens", async () => {
+    userFindUnique.mockResolvedValue(GEBRUIKER);
+    gezichtControle.mockResolvedValueOnce({ ...GEZICHT_ZELFDE, oordeel: "anders", score: 0.12, reden: "Het gezicht op de selfie lijkt niet op de pasfoto op het document. Een medewerker kijkt mee." });
+    await aiUit();
+    const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: FOTOS });
+    expect(result.outcome).toBe("in_review");
+  });
+
+  it("de controle kon niet draaien (technische storing): een mens beslist, nooit een afwijzing", async () => {
+    userFindUnique.mockResolvedValue(GEBRUIKER);
+    await aiUit();
+    const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: FOTOS });
+    expect(result.outcome).toBe("in_review");
+  });
+
+  it("een rijbewijs heeft geen code op het document: ook bij een sterke match beslist een mens", async () => {
+    userFindUnique.mockResolvedValue(GEBRUIKER);
+    gezichtControle.mockResolvedValueOnce(GEZICHT_ZELFDE);
+    await aiUit();
+    const result = await submitFreelancerOnboarding({ ...BASE_INPUT, documentType: "DRIVERS_LICENSE", files: FOTOS });
+    expect(result.outcome).toBe("in_review");
+  });
+
+  it("zonder kloppende MRZ keurt een sterke match niet zelf goed", async () => {
+    userFindUnique.mockResolvedValue(GEBRUIKER);
+    gezichtControle.mockResolvedValueOnce(GEZICHT_ZELFDE);
+    // de code wordt van elke foto gelezen: voor deze aanvraag nergens gevonden, daarna weer de standaard
+    leesMrzVanFoto.mockResolvedValue({ uitslag: null, pogingen: 1, ms: 5 });
+    try {
+      await aiUit();
+      const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: FOTOS });
+      expect(result.outcome).toBe("in_review");
+    } finally {
+      leesMrzVanFoto.mockResolvedValue({ uitslag: MRZ_JAN, pogingen: 1, ms: 5 });
+    }
+  });
+
+  it("de eigenaar kan automatisch goedkeuren op het gezicht uitzetten: de score blijft, een mens beslist", async () => {
+    userFindUnique.mockResolvedValue(GEBRUIKER);
+    gezichtControle.mockResolvedValueOnce(GEZICHT_ZELFDE);
+    featureEnabled.mockResolvedValueOnce(false);
+    await aiUit();
+    const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: FOTOS });
+    expect(result.outcome).toBe("in_review");
+    const data = (ivCreate.mock.calls[0]![0] as { data: { faceMatchScore: number } }).data;
+    expect(data.faceMatchScore).toBe(0.72);
+  });
+
+  it("foto's via een tweede toestel blijven altijd bij een mens, ook met een sterke match", async () => {
+    userFindUnique.mockResolvedValue(GEBRUIKER);
+    gezichtControle.mockResolvedValueOnce(GEZICHT_ZELFDE);
+    await aiUit();
+    const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: FOTOS, viaTweedeToestel: true });
+    expect(result.outcome).toBe("in_review");
   });
 });
 
