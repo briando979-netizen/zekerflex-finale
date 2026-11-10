@@ -7,7 +7,9 @@
 
 export type TijdlijnSleutel = "kind" | "branches" | "email" | "gegevens" | "identiteit" | "werkrecht" | "tweestap";
 
-export const TIJDLIJN_VOLGORDE: TijdlijnSleutel[] = ["kind", "branches", "email", "gegevens", "identiteit", "werkrecht", "tweestap"];
+// "werkrecht" staat sinds 10 nov niet meer in de start (eigenaar): het recht om te werken wordt vóór de
+// eerste betaalde klus gevraagd (lib/fiscal/eligibility.ts); met een EU-ID gaat het vanzelf.
+export const TIJDLIJN_VOLGORDE: TijdlijnSleutel[] = ["kind", "branches", "email", "gegevens", "identiteit", "tweestap"];
 
 export type TijdlijnKlaar = Record<TijdlijnSleutel, boolean>;
 

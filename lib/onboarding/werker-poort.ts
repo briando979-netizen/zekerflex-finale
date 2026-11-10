@@ -25,7 +25,9 @@ export interface WerkerPoortFeiten {
 }
 
 export function werkerOnboardingKlaar(f: WerkerPoortFeiten): boolean {
-  return f.soortGekozen && f.branchesGekozen && f.gegevensIngevuld && f.identiteitIngestuurd && f.werkrechtIngevuld && f.tweestapAan;
+  // het recht om te werken hoort sinds 10 nov niet meer bij de onboarding (eigenaar); het blijft verplicht
+  // vóór de eerste betaalde klus (payoutEligibility, eisWerkrecht)
+  return f.soortGekozen && f.branchesGekozen && f.gegevensIngevuld && f.identiteitIngestuurd && f.tweestapAan;
 }
 
 /**

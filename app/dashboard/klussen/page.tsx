@@ -10,7 +10,6 @@ import { getMarketplace } from "@/lib/dashboard/marketplace";
 import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
 import { todaysShifts, completedKlussenCount } from "@/lib/dashboard/today";
 import { getFiscal } from "@/lib/fiscal/store";
-import { werkrechtVoorWerk } from "@/lib/werkrecht/store";
 import { isBirthdayToday } from "@/lib/birthday";
 import { StatusPill } from "@/components/app/ui";
 import { MarketplaceView } from "@/components/app/MarketplaceView";
@@ -38,12 +37,11 @@ export default async function KlussenPage(
   // de branches die de werker bij de start koos (of alle): daarop staat de lijst standaard gefilterd
   const brancheKeuze = await getBrancheKeuze(principal.userId).catch(() => null);
 
-  const [fiscal, today, completed, overview, werkrecht] = await Promise.all([
+  const [fiscal, today, completed, overview] = await Promise.all([
     getFiscal(principal.userId),
     todaysShifts(principal.userId),
     completedKlussenCount(principal.userId),
     getFreelancerOverview(principal.userId),
-    werkrechtVoorWerk(principal.userId, "NL"),
   ]);
   const birthday = isBirthdayToday(fiscal.birthDate);
   // deze pagina is alleen voorbij de poort te zien (layout), dus de kaart hoeft die niet opnieuw te controleren
@@ -92,19 +90,19 @@ export default async function KlussenPage(
           <span className="mt-2 inline-block text-sm font-semibold text-brand-600">{t.eersteIndruk.card.open} ›</span>
         </Link>
       )}
-      {/* ook ná een compleet profiel: zonder recht om te werken geen betaalde klus (lib/werkrecht) */}
-      {(!overview.profileComplete || !werkrecht.ok) && <OnboardingOnderhoudBalk soort="werker" />}
-      {(!overview.profileComplete || !werkrecht.ok) && (
+      {/* het recht om te werken zit niet meer in de start (10 nov); aannemen vraagt het wel (lib/werkrecht) */}
+      {!overview.profileComplete && <OnboardingOnderhoudBalk soort="werker" />}
+      {!overview.profileComplete && (
         <WerkerStartWizard
           workerKind={fiscal.workerKind}
           emailVerified={Boolean(principal.emailVerifiedAt)}
           profileComplete={overview.profileComplete}
-          werkrechtOk={werkrecht.ok}
+          werkrechtOk
           brancheKeuze={brancheKeuze}
         />
       )}
       {/* de profiel-af-kaart staat er niet naast de startwizard: die dekt dezelfde open stappen */}
-      {overview.profileComplete && werkrecht.ok && (
+      {overview.profileComplete && (
         <OnboardingProgress voortgang={overview.voortgang} steps={t.profielAf.steps} texts={t.profielAf} />
       )}
       <div className="mb-5 flex items-end justify-between gap-3">

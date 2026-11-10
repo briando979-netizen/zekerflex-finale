@@ -16,7 +16,8 @@ describe("werkerOnboardingKlaar", () => {
   it("alleen klaar als elke stap is ingevuld", () => {
     expect(werkerOnboardingKlaar(ALLES)).toBe(true);
     for (const k of Object.keys(ALLES) as (keyof WerkerPoortFeiten)[]) {
-      expect(werkerOnboardingKlaar({ ...ALLES, [k]: false })).toBe(false);
+      // het recht om te werken hoort niet meer bij de onboarding (10 nov): dat telt vóór de eerste betaalde klus
+      expect(werkerOnboardingKlaar({ ...ALLES, [k]: false })).toBe(k === "werkrechtIngevuld");
     }
   });
 });
@@ -118,13 +119,13 @@ describe("werkerPoortStand", () => {
     expect(s.klaar).toBe(false);
   });
 
-  it("nog geen branches of geen verklaring: niet klaar", async () => {
+  it("nog geen branches: niet klaar; zonder recht om te werken wél (dat komt vóór de eerste klus)", async () => {
     const { werkerPoortStand } = await import("@/lib/onboarding/werker-poort-server");
     h.branches = null;
     expect((await werkerPoortStand("u1")).klaar).toBe(false);
     h.branches = { alle: true, branches: [] };
     h.werkrecht = [{ land: "NL", stand: "bewijs-nodig" }];
-    expect((await werkerPoortStand("u1")).klaar).toBe(false);
+    expect((await werkerPoortStand("u1")).klaar).toBe(true);
   });
 
   it("een storing bij het werkrecht gooit de app niet dicht", async () => {
