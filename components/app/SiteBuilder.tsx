@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import { blockSummary, renderPage } from "@/lib/sites/render";
-import { BLOCK_LABELS, isHexColor, newBlock, pageSlug, type Block, type BlockType, type Company, type Media, type Page, type SiteDoc, type Theme } from "@/lib/sites/types";
+import { BLOCK_LABELS, isHexColor, newBlock, type Block, type BlockType, type Company, type Media, type Page, type SiteDoc, type SiteSoort, type Theme } from "@/lib/sites/types";
 import SiteStats from "@/components/app/SiteStats";
 import { categorieen } from "@/lib/sites/winkel";
+import { MAX_PAGINAS, beginPaginaId, bouwerUrl, nieuweSlug } from "@/lib/sites/paginabouwer";
+import { WETTELIJKE_PAGINAS, metStandaardPagina, paginaIsLeeg, type WettelijkeSlug } from "@/lib/sites/winkel-check";
 import { DAGEN } from "@/lib/horeca/tijden";
 import { DomeinZoeker } from "@/components/domeinen/DomeinZoeker";
 import { NietInIphone } from "@/components/app/NietInIphone";
@@ -17,6 +19,8 @@ import { NietInIphone } from "@/components/app/NietInIphone";
 // (lib/sites/render.ts). Photos come from an upload or from any web address,
 // which the server fetches once and stores here (img-src stays 'self').
 // Changes save automatically; visitors see them after "Publiceren".
+// The same builder edits the company's webshop (Studio → Webshop → Pagina's),
+// which is a site of its own: then every call carries `?soort=webshop`.
 // ---------------------------------------------------------------------------
 
 interface Data {
@@ -36,20 +40,30 @@ interface Message {
   bericht: string;
 }
 
-const RESERVED = ["privacy", "bedankt", "media", "assets", "_zf", "sitemap", "robots", "p", "winkel", "bestellen", "besteld"];
 const nid = (p: string) => `${p}${Math.random().toString(36).slice(2, 10)}`;
 
 /**
  * Where the builder saves: a company's own site, or (Admin → Websitevoorstellen) a
  * design proposal. The base serves GET/PUT, with "/publish" and "/media" under it.
  * A proposal has no messages, no own domain and no "offline" (withdraw it instead).
+ * `soort`: the company's website or its webshop (each its own site); every call
+ * carries it as `?soort=` (lib/sites/paginabouwer.ts bouwerUrl). null = the API's
+ * own choice (the website, or the proposal).
  */
 interface BuilderApi {
   base: string;
   proposal: boolean;
+  soort: SiteSoort | null;
 }
-const BuilderApiContext = createContext<BuilderApi>({ base: "/api/werkgever/sites", proposal: false });
+const BuilderApiContext = createContext<BuilderApi>({ base: "/api/werkgever/sites", proposal: false, soort: null });
 const useBuilderApi = () => useContext(BuilderApiContext);
+/** The address of one of the builder's API routes, for the site it edits. */
+function useApiUrl(): (pad?: string, query?: string) => string {
+  const { base, soort } = useBuilderApi();
+  return useCallback((pad = "", query = "") => bouwerUrl(base, pad, soort, query), [base, soort]);
+}
+/** How the builder names the site it edits. */
+const useWoord = (): "website" | "webshop" => (useBuilderApi().soort === "webshop" ? "webshop" : "website");
 /** The builder's own photo route (img-src 'self'); the preview and the pickers load photos through it. */
 function useMediaUrl(): (file: string) => string {
   const { base } = useBuilderApi();
@@ -71,25 +85,32 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-export function SiteBuilder({ origin, apiBase = "/api/werkgever/sites", proposal = false }: { origin: string; apiBase?: string; proposal?: boolean }) {
-  const api = useMemo(() => ({ base: apiBase, proposal }), [apiBase, proposal]);
+/** Where the builder opens: `beginPagina` = the address of a page ("home" for the home page), `beginTab` = the first tab. */
+interface Begin {
+  beginPagina?: string | undefined;
+  beginTab?: "blokken" | "paginas" | undefined;
+}
+
+export function SiteBuilder({ origin, apiBase = "/api/werkgever/sites", proposal = false, soort = null, beginPagina, beginTab }: { origin: string; apiBase?: string; proposal?: boolean; soort?: SiteSoort | null } & Begin) {
+  const api = useMemo(() => ({ base: apiBase, proposal, soort }), [apiBase, proposal, soort]);
   return (
     <BuilderApiContext.Provider value={api}>
-      <Builder origin={origin} />
+      <Builder origin={origin} beginPagina={beginPagina} beginTab={beginTab} />
     </BuilderApiContext.Provider>
   );
 }
 
-function Builder({ origin }: { origin: string }) {
-  const { base } = useBuilderApi();
+function Builder({ origin, beginPagina, beginTab }: { origin: string } & Begin) {
+  const url = useApiUrl();
+  const woord = useWoord();
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch(base, { cache: "no-store" }).catch(() => null);
-    if (!res?.ok) return setError(await errorText(res, "De websitebouwer kon niet laden."));
+    const res = await fetch(url(), { cache: "no-store" }).catch(() => null);
+    if (!res?.ok) return setError(await errorText(res, woord === "webshop" ? "De pagina's van je webshop konden niet laden." : "De websitebouwer kon niet laden."));
     setData((await res.json()) as Data);
-  }, [base]);
+  }, [url, woord]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -97,7 +118,7 @@ function Builder({ origin }: { origin: string }) {
   if (error) return <p role="alert" className="card p-6 text-sm text-crit">{error}</p>;
   if (!data) return <div className="card h-40 animate-pulse" />;
   if (!data.site) return <StartWizard data={data} onCreated={(site, address) => setData({ ...data, site, address })} />;
-  return <Editor data={data} site={data.site} origin={origin} onSite={(site) => setData({ ...data, site })} />;
+  return <Editor data={data} site={data.site} origin={origin} onSite={(site) => setData({ ...data, site })} beginPagina={beginPagina} beginTab={beginTab} />;
 }
 
 // ---- start: pick a sector, check the company details ------------------------
@@ -107,12 +128,12 @@ function StartWizard({ data, onCreated }: { data: Data; onCreated: (site: SiteDo
   const [bedrijf, setBedrijf] = useState<Company>(data.defaults);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { base } = useBuilderApi();
+  const url = useApiUrl();
 
   const create = async () => {
     setBusy(true);
     setError(null);
-    const res = await fetch(base, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ templateId, bedrijf }) }).catch(() => null);
+    const res = await fetch(url(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ templateId, bedrijf }) }).catch(() => null);
     setBusy(false);
     if (!res?.ok) return setError(await errorText(res, "Maken lukte niet."));
     const d = await res.json();
@@ -251,18 +272,22 @@ function ScaledPreview({ html, title, device, gekozen, onKies }: { html: string;
   );
 }
 
-function Editor({ data, site: initial, origin, onSite }: { data: Data; site: SiteDoc; origin: string; onSite: (s: SiteDoc) => void }) {
+function Editor({ data, site: initial, origin, onSite, beginPagina, beginTab }: { data: Data; site: SiteDoc; origin: string; onSite: (s: SiteDoc) => void } & Begin) {
   const [site, setSite] = useState<SiteDoc>(initial);
-  const [pageId, setPageId] = useState(initial.pages[0]?.id ?? "");
+  const begin = beginPaginaId(initial.pages, beginPagina);
+  const [pageId, setPageId] = useState(begin ?? initial.pages[0]?.id ?? "");
   const [blockId, setBlockId] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("blokken");
+  // a page from a link (?pagina=) opens on its blocks; one that is not there (yet) on the list of pages
+  const [tab, setTab] = useState<Tab>(begin ? "blokken" : beginPagina !== undefined ? "paginas" : (beginTab ?? "blokken"));
   const [device, setDevice] = useState<(typeof DEVICES)[number]["id"]>("computer");
   const [save, setSave] = useState<{ state: "opgeslagen" | "wijzigingen" | "bezig" | "fout"; text?: string }>({ state: "opgeslagen" });
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [address, setAddress] = useState(data.address);
   const dirty = useRef(false);
-  const { base, proposal } = useBuilderApi();
+  const { proposal, soort } = useBuilderApi();
+  const url = useApiUrl();
+  const woord = useWoord();
   const mediaUrl = useMediaUrl();
 
   const page = site.pages.find((p) => p.id === pageId) ?? site.pages[0]!;
@@ -279,7 +304,7 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
     const timer = setTimeout(async () => {
       dirty.current = false;
       setSave({ state: "bezig" });
-      const res = await fetch(base, {
+      const res = await fetch(url(), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         // the shop is saved by the Websitestudio itself (/api/werkgever/sites/winkel), never from here
@@ -289,7 +314,7 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
       setSave({ state: "opgeslagen" });
     }, 1200);
     return () => clearTimeout(timer);
-  }, [site, base]);
+  }, [site, url]);
 
   const updatePage = (fn: (p: Page) => Page) => change((s) => ({ ...s, pages: s.pages.map((p) => (p.id === page.id ? fn(p) : p)) }));
   const updateBlock = (id: string, fn: (b: Block) => Block) => updatePage((p) => ({ ...p, blocks: p.blocks.map((b) => (b.id === id ? fn(b) : b)) }));
@@ -297,26 +322,27 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
   const html = useMemo(() => renderPage(site, page, { root: "/", origin, preview: { mediaUrl } }), [site, page, origin, mediaUrl]);
 
   const publish = async (action: "publiceer" | "terug" | "offline", buildId?: string) => {
-    if (action === "offline" && !window.confirm("De website offline halen? Bezoekers zien dan een melding dat hij niet bestaat. Je kunt hem later weer publiceren.")) return;
+    if (action === "offline" && !window.confirm(`De ${woord} offline halen? Bezoekers zien dan een melding dat hij niet bestaat. Je kunt hem later weer publiceren.`)) return;
     setBusy(true);
     setNotice(null);
-    const res = await fetch(`${base}/publish`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...(buildId ? { buildId } : {}) }) }).catch(() => null);
+    const res = await fetch(url("/publish"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...(buildId ? { buildId } : {}) }) }).catch(() => null);
     setBusy(false);
     if (!res?.ok) return setNotice({ ok: false, text: await errorText(res, "Dat lukte niet.") });
     const next = (await res.json()).site as SiteDoc;
     setSite((s) => ({ ...s, liveBuild: next.liveBuild, builds: next.builds }));
     onSite(next);
-    const done = proposal ? "Het voorstel is bijgewerkt: de voorstelsite toont nu deze versie." : "Je website staat online.";
-    setNotice({ ok: true, text: action === "publiceer" ? done : action === "terug" ? "De gekozen versie staat weer online." : "Je website staat offline." });
+    const done = proposal ? "Het voorstel is bijgewerkt: de voorstelsite toont nu deze versie." : `Je ${woord} staat online.`;
+    setNotice({ ok: true, text: action === "publiceer" ? done : action === "terug" ? "De gekozen versie staat weer online." : `Je ${woord} staat offline.` });
   };
 
   const live = Boolean(site.liveBuild);
-  const tabs = proposal ? TABS.filter((t) => t.id !== "berichten" && t.id !== "bezoekers" && t.id !== "domein") : TABS;
+  // the webshop's own domain is under Webshop → Instellingen (components/studio/Domein.tsx)
+  const tabs = proposal ? TABS.filter((t) => t.id !== "berichten" && t.id !== "bezoekers" && t.id !== "domein") : soort === "webshop" ? TABS.filter((t) => t.id !== "domein") : TABS;
   return (
     <div className="space-y-4">
       <header className="card flex flex-wrap items-center gap-3 p-4">
         <div className="min-w-0 flex-1">
-          <p className="eyebrow">{proposal ? "Websitevoorstel aanpassen" : "Website bouwen"}</p>
+          <p className="eyebrow">{proposal ? "Websitevoorstel aanpassen" : woord === "webshop" ? "Pagina's van je webshop" : "Website bouwen"}</p>
           <h1 className="truncate font-display text-xl font-bold text-ink">{site.bedrijf.naam}</h1>
           <p className="truncate text-xs text-neutralx-500">
             {live && address ? (
@@ -360,7 +386,7 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
             {tab === "bedrijf" && <CompanyTab bedrijf={site.bedrijf} onChange={(bedrijf) => change((s) => ({ ...s, bedrijf }))} />}
             {tab === "fotos" && <PhotosTab site={site} onMedia={(media) => setSite((s) => ({ ...s, media: [...s.media, media] }))} onAlt={(id, alt) => change((s) => ({ ...s, media: s.media.map((m) => (m.id === id ? { ...m, alt } : m)) }))} />}
             {tab === "berichten" && <MessagesTab />}
-            {tab === "bezoekers" && <SiteStats published={Boolean(site.liveBuild)} />}
+            {tab === "bezoekers" && <SiteStats published={Boolean(site.liveBuild)} soort={soort} />}
             {tab === "domein" && <DomainTab canPublish={data.canPublish} onAddress={(own) => setAddress(own ?? `${origin}/site/${site.slug}`)} />}
           </div>
           {site.builds.length > 0 && (
@@ -377,7 +403,7 @@ function Editor({ data, site: initial, origin, onSite }: { data: Data; site: Sit
                 ))}
               </ul>
               {live && !proposal && (
-                <button type="button" onClick={() => void publish("offline")} className="mt-3 text-xs font-semibold text-crit hover:underline">Website offline halen</button>
+                <button type="button" onClick={() => void publish("offline")} className="mt-3 text-xs font-semibold text-crit hover:underline">{woord === "webshop" ? "Webshop" : "Website"} offline halen</button>
               )}
             </details>
           )}
@@ -499,17 +525,11 @@ function BlocksTab({ page, selected, onSelect, updatePage }: { page: Page; selec
 
 function PagesTab({ site, current, onSelect, change }: { site: SiteDoc; current: string; onSelect: (id: string) => void; change: (fn: (s: SiteDoc) => SiteDoc) => void }) {
   const [titel, setTitel] = useState("");
-  const slugFor = (t: string) => {
-    let base = pageSlug(t) || "pagina";
-    if (RESERVED.includes(base)) base = `${base}-info`;
-    let slug = base;
-    for (let n = 2; site.pages.some((p) => p.slug === slug); n++) slug = `${base}-${n}`;
-    return slug;
-  };
+  const shop = useWoord() === "webshop";
   const add = () => {
     const t = titel.trim().slice(0, 40);
     if (!t) return;
-    const page: Page = { id: nid("p"), slug: slugFor(t), titel: t, seoTitel: `${t} | ${site.bedrijf.naam}`.slice(0, 70), seoOmschrijving: "", blocks: [newBlock("tekst", nid("b"))] };
+    const page: Page = { id: nid("p"), slug: nieuweSlug(t, site.pages.map((p) => p.slug)), titel: t, seoTitel: `${t} | ${site.bedrijf.naam}`.slice(0, 70), seoOmschrijving: "", blocks: [newBlock("tekst", nid("b"))] };
     change((s) => ({ ...s, pages: [...s.pages, page] }));
     onSelect(page.id);
     setTitel("");
@@ -517,6 +537,7 @@ function PagesTab({ site, current, onSelect, change }: { site: SiteDoc; current:
   const edit = (id: string, patch: Partial<Page>) => change((s) => ({ ...s, pages: s.pages.map((p) => (p.id === id ? { ...p, ...patch } : p)) }));
   return (
     <div className="space-y-3">
+      {shop && <WettelijkePaginas site={site} onSelect={onSelect} change={change} />}
       <ul className="space-y-1.5">
         {site.pages.map((p, i) => (
           <li key={p.id} className={`rounded-lg border p-2 ${p.id === current ? "border-brand-600 bg-brand-50" : "border-hair"}`}>
@@ -535,17 +556,72 @@ function PagesTab({ site, current, onSelect, change }: { site: SiteDoc; current:
                 <Field label="Naam in het menu"><input className="field-input" value={p.titel} maxLength={40} onChange={(e) => edit(p.id, { titel: e.target.value })} /></Field>
                 <Field label="Titel in Google (max. 70 tekens)"><input className="field-input" value={p.seoTitel} maxLength={70} onChange={(e) => edit(p.id, { seoTitel: e.target.value })} /></Field>
                 <Field label="Omschrijving in Google (max. 170 tekens)"><textarea className="field-input" rows={3} value={p.seoOmschrijving} maxLength={170} onChange={(e) => edit(p.id, { seoOmschrijving: e.target.value })} /></Field>
+                {p.slug !== "" && (
+                  <label className="flex items-start gap-2 text-sm text-neutralx-700">
+                    <input type="checkbox" checked={p.menu !== false} onChange={(e) => edit(p.id, { menu: e.target.checked })} className="mt-0.5 h-4 w-4 flex-shrink-0 accent-brand-600" />
+                    <span>In het menu en onderaan elke pagina</span>
+                  </label>
+                )}
+                {p.menu === false && (
+                  <p className={`text-xs ${shop && Object.hasOwn(WETTELIJKE_PAGINAS, p.slug) ? "text-warn" : "text-neutralx-500"}`}>
+                    {shop && Object.hasOwn(WETTELIJKE_PAGINAS, p.slug)
+                      ? "Klanten moeten deze pagina vóór het bestellen kunnen vinden. Zet hem terug in het menu."
+                      : "De pagina blijft bestaan, maar staat niet meer in het menu. Je bereikt hem nog via een knop die ernaar linkt."}
+                  </p>
+                )}
               </div>
             )}
           </li>
         ))}
       </ul>
-      {site.pages.length < 12 && (
+      {site.pages.length < MAX_PAGINAS ? (
         <div className="flex gap-2">
-          <input className="field-input !mt-0" placeholder="Nieuwe pagina, bv. Vacatures" value={titel} maxLength={40} onChange={(e) => setTitel(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} />
+          <input className="field-input !mt-0" aria-label="Naam van de nieuwe pagina" placeholder={shop ? "Nieuwe pagina, bv. Maattabel" : "Nieuwe pagina, bv. Vacatures"} value={titel} maxLength={40} onChange={(e) => setTitel(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} />
           <button type="button" onClick={add} className="btn-ghost flex-shrink-0 text-sm">Toevoegen</button>
         </div>
+      ) : (
+        <p className="text-xs text-neutralx-500">Je {shop ? "webshop" : "website"} heeft {MAX_PAGINAS} pagina&apos;s, het maximum. Verwijder er een om een nieuwe toe te voegen.</p>
       )}
+    </div>
+  );
+}
+
+/**
+ * Webshop: the pages every Dutch web shop should have (lib/sites/winkel-check.ts). A missing or empty one
+ * gets the standard text of a new web shop, with today's company details, as in Webshop → Slim.
+ */
+function WettelijkePaginas({ site, onSelect, change }: { site: SiteDoc; onSelect: (id: string) => void; change: (fn: (s: SiteDoc) => SiteDoc) => void }) {
+  const open = (Object.keys(WETTELIJKE_PAGINAS) as WettelijkeSlug[]).filter((slug) => {
+    const p = site.pages.find((x) => x.slug === slug);
+    return !p || paginaIsLeeg(p);
+  });
+  if (!open.length) return null;
+  const vul = (slug: WettelijkeSlug) => {
+    const pages = metStandaardPagina(site.pages, slug, site.bedrijf, () => nid("b"));
+    if (!pages) return;
+    change((s) => ({ ...s, pages }));
+    const pagina = pages.find((p) => p.slug === slug);
+    if (pagina) onSelect(pagina.id);
+  };
+  return (
+    <div className="rounded-lg border border-hair bg-paper-soft p-2.5">
+      <p className="text-sm font-semibold text-ink">Wat de wet vraagt</p>
+      <p className="mt-0.5 text-xs text-neutralx-600">Een klant moet vóór het bestellen kunnen lezen hoe verzenden en retourneren werkt, en wat je voorwaarden zijn.</p>
+      <ul className="mt-2 space-y-2">
+        {open.map((slug) => {
+          const bestaat = site.pages.some((p) => p.slug === slug);
+          return (
+            <li key={slug} className="flex flex-wrap items-center justify-between gap-2">
+              <span className="min-w-0 text-xs text-neutralx-700">
+                {WETTELIJKE_PAGINAS[slug]}: {bestaat ? "nog leeg" : "ontbreekt"}
+              </span>
+              <button type="button" disabled={!bestaat && site.pages.length >= MAX_PAGINAS} onClick={() => vul(slug)} className="btn-ghost flex-shrink-0 text-xs disabled:opacity-50">
+                {bestaat ? "Standaardtekst invullen" : "Standaardpagina toevoegen"}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
@@ -661,11 +737,11 @@ function CompanyTab({ bedrijf, onChange }: { bedrijf: Company; onChange: (c: Com
 function usePhotoAdd(onMedia: (m: Media) => void) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { base } = useBuilderApi();
+  const url = useApiUrl();
   const send = async (init: RequestInit, failed: string): Promise<Media | null> => {
     setBusy(true);
     setError(null);
-    const res = await fetch(`${base}/media`, { method: "POST", ...init }).catch(() => null);
+    const res = await fetch(url("/media"), { method: "POST", ...init }).catch(() => null);
     setBusy(false);
     if (!res?.ok) {
       setError(await errorText(res, failed));
@@ -751,14 +827,16 @@ function PhotosTab({ site, onMedia, onAlt }: { site: SiteDoc; onMedia: (m: Media
 
 function MessagesTab() {
   const [messages, setMessages] = useState<Message[] | null>(null);
+  const url = useApiUrl();
+  const woord = useWoord();
   useEffect(() => {
-    fetch("/api/werkgever/sites/publish", { cache: "no-store" })
+    fetch(url("/publish"), { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : { messages: [] }))
       .then((d) => setMessages(d.messages))
       .catch(() => setMessages([]));
-  }, []);
+  }, [url]);
   if (!messages) return <p className="text-sm text-neutralx-500">Laden…</p>;
-  if (messages.length === 0) return <p className="text-sm text-neutralx-500">Nog geen berichten via je website. Ze komen hier binnen en worden ook naar je e-mailadres gestuurd.</p>;
+  if (messages.length === 0) return <p className="text-sm text-neutralx-500">Nog geen berichten via je {woord}. Ze komen hier binnen en worden ook naar je e-mailadres gestuurd.</p>;
   return (
     <ul className="space-y-2">
       {messages.map((m) => (
@@ -1034,6 +1112,9 @@ function ItemsEditor<T extends Record<string, string | number | null | undefined
 
 function BlockEditor({ block, site, onChange, onClose, onMedia }: { block: Block; site: SiteDoc; onChange: (b: Block) => void; onClose: () => void; onMedia: (m: Media) => void }) {
   const mediaUrl = useMediaUrl();
+  const woord = useWoord();
+  // on the webshop the products are under Producten in the studio's menu
+  const productenWaar = woord === "webshop" ? "onder Producten" : "in het tabblad Winkel";
   const kop = (
     <Field label="Kop">
       <input className="field-input" value={(block.props as { kop: string }).kop} maxLength={160} onChange={(e) => onChange({ ...block, props: { ...block.props, kop: e.target.value } } as Block)} />
@@ -1103,7 +1184,7 @@ function BlockEditor({ block, site, onChange, onClose, onMedia }: { block: Block
         <>
           {kop}
           <ItemsEditor items={block.props.items} max={8} blank={{ titel: "Nieuwe stap", tekst: "Korte uitleg." }} fields={[{ key: "titel", label: "Stap" }, { key: "tekst", label: "Uitleg", area: true }]} onChange={(items) => onChange({ ...block, props: { ...block.props, items } })} />
-          <p className="text-xs text-neutralx-500">De stappen worden op de website vanzelf genummerd, in deze volgorde.</p>
+          <p className="text-xs text-neutralx-500">De stappen worden op de {woord} vanzelf genummerd, in deze volgorde.</p>
         </>
       );
       break;
@@ -1190,7 +1271,7 @@ function BlockEditor({ block, site, onChange, onClose, onMedia }: { block: Block
               onChange={(e) => onChange({ ...block, props: { ...block.props, aantal: Math.max(1, Math.min(12, Math.round(Number(e.target.value)) || 1)) } })}
             />
           </Field>
-          <p className="text-xs text-neutralx-500">Op je website staan hier vanzelf je open diensten op ZekerFlex, met een knop om te reageren. In dit voorbeeld zie je twee voorbeelddiensten.</p>
+          <p className="text-xs text-neutralx-500">Op je {woord} staan hier vanzelf je open diensten op ZekerFlex, met een knop om te reageren. In dit voorbeeld zie je twee voorbeelddiensten.</p>
         </>
       );
       break;
@@ -1211,7 +1292,7 @@ function BlockEditor({ block, site, onChange, onClose, onMedia }: { block: Block
           <Field label="Hoeveel tonen (1 tot 48)">
             <input className="field-input" type="number" min={1} max={48} value={block.props.aantal} onChange={(e) => onChange({ ...block, props: { ...block.props, aantal: Math.max(1, Math.min(48, Math.round(Number(e.target.value)) || 1)) } })} />
           </Field>
-          <p className="text-xs text-neutralx-500">De producten zelf beheer je in het tabblad Winkel. Zijn er meer dan je toont, dan komt er een knop naar de hele winkel.</p>
+          <p className="text-xs text-neutralx-500">De producten zelf beheer je {productenWaar}. Zijn er meer dan je toont, dan komt er een knop naar de hele winkel.</p>
         </>
       );
       break;
@@ -1236,7 +1317,7 @@ function BlockEditor({ block, site, onChange, onClose, onMedia }: { block: Block
             <input type="checkbox" checked={block.props.fotoLinks} onChange={(e) => onChange({ ...block, props: { ...block.props, fotoLinks: e.target.checked } })} className="h-4 w-4 accent-brand-600" />
             Foto links van de tekst
           </label>
-          {producten.length === 0 && <p className="text-xs text-neutralx-500">Voeg eerst een product toe in het tabblad Winkel.</p>}
+          {producten.length === 0 && <p className="text-xs text-neutralx-500">Voeg eerst een product toe {productenWaar}.</p>}
         </>
       );
       break;

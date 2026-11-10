@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { SOURCE_LABEL, type SiteStats as Stats } from "@/lib/sites/stats-shared";
+import { bouwerUrl } from "@/lib/sites/paginabouwer";
+import type { SiteSoort } from "@/lib/sites/types";
 
 // ---------------------------------------------------------------------------
 // Tabblad "Bezoekers" in de websitebouwer: hoe vaak de pagina's van de eigen
-// website bekeken worden en waar bezoekers vandaan komen (lib/sites/stats.ts).
+// website (of webshop) bekeken worden en waar bezoekers vandaan komen (lib/sites/stats.ts).
 // Eén reeks in de merkkleur; in het donkere thema een lichtere stap, want het
 // donkergroen haalt op de donkere kaart geen 3:1. Elke staaf is een knop met
 // dezelfde uitleg bij hover en focus, en de tabel eronder heeft alle getallen.
@@ -68,16 +70,18 @@ function niceMax(max: number): number {
   return Math.max(1, Math.round(nice * step));
 }
 
-export default function SiteStats({ published }: { published: boolean }) {
+/** `soort`: the company's website or its webshop (each its own site and figures); null = the website. */
+export default function SiteStats({ published, soort = null }: { published: boolean; soort?: SiteSoort | null }) {
   const [range, setRange] = useState<Range>(30);
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [active, setActive] = useState<number | null>(null);
+  const woord = soort === "webshop" ? "webshop" : "website";
 
   useEffect(() => {
     let stop = false;
-    fetch(`/api/werkgever/sites/stats?dagen=${range}`, { cache: "no-store" })
+    fetch(bouwerUrl("/api/werkgever/sites", "/stats", soort, `dagen=${range}`), { cache: "no-store" })
       .then(async (r) => {
         const d = (await r.json().catch(() => null)) as (Data & { error?: { message?: string } }) | null;
         if (stop) return;
@@ -91,7 +95,7 @@ export default function SiteStats({ published }: { published: boolean }) {
     return () => {
       stop = true;
     };
-  }, [range]);
+  }, [range, soort]);
 
   const pick = (r: Range) => {
     if (r === range) return;
@@ -113,7 +117,7 @@ export default function SiteStats({ published }: { published: boolean }) {
           </button>
         ))}
       </div>
-      {!published && <p className="text-sm text-neutralx-500">Je website staat nog niet online. Zodra hij online staat, zie je hier hoeveel mensen hem bekijken en waar ze vandaan komen.</p>}
+      {!published && <p className="text-sm text-neutralx-500">Je {woord} staat nog niet online. Zodra hij online staat, zie je hier hoeveel mensen hem bekijken en waar ze vandaan komen.</p>}
       {error && <p role="alert" className="text-sm text-crit">{error}</p>}
       {!s && !error && <p className="text-sm text-neutralx-500">Laden…</p>}
       {s && (
@@ -124,7 +128,7 @@ export default function SiteStats({ published }: { published: boolean }) {
             <Tile label="Op telefoon" value={s.views ? `${Math.round((s.mobile / s.views) * 100)}%` : "–"} />
           </dl>
           {s.views === 0 ? (
-            <p className="text-sm text-neutralx-500">Nog geen bezoekers in deze periode. Elke keer dat iemand een pagina van je website opent, telt hier mee.</p>
+            <p className="text-sm text-neutralx-500">Nog geen bezoekers in deze periode. Elke keer dat iemand een pagina van je {woord} opent, telt hier mee.</p>
           ) : (
             <>
               <BarChart cols={cols} active={active} onActive={setActive} perWeek={s.days.length > 31} />
@@ -154,7 +158,7 @@ export default function SiteStats({ published }: { published: boolean }) {
             </>
           )}
           <p className="text-xs leading-relaxed text-neutralx-400">
-            Geteld zonder cookies en zonder iets over je bezoekers te bewaren. Een binnenkomst is elke keer dat iemand je website opent; klikken binnen je website tellen als bekeken pagina&apos;s. Zoekmachines en andere robots tellen niet mee.
+            Geteld zonder cookies en zonder iets over je bezoekers te bewaren. Een binnenkomst is elke keer dat iemand je {woord} opent; klikken binnen je {woord} tellen als bekeken pagina&apos;s. Zoekmachines en andere robots tellen niet mee.
           </p>
         </div>
       )}

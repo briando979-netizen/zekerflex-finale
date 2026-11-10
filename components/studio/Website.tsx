@@ -4,11 +4,14 @@ import { useEffect } from "react";
 import { SiteBuilder } from "@/components/app/SiteBuilder";
 import { useStudio } from "@/components/studio/context";
 
-// Websitestudio → Website: de pagina's en blokken, met de bouwer over de volle
-// breedte. Die bewaart en publiceert zelf; na het verlaten haalt de studio de
-// nieuwe stand op (Overzicht, Publiceren in de bovenbalk).
-export default function Website({ origin }: { origin: string }) {
-  const { reload } = useStudio();
+// Studio → Website → Bouwer en Webshop → Pagina's: de pagina's en blokken, met de
+// bouwer over de volle breedte, op de site van deze werkruimte (de soort uit de
+// StudioProvider, zodat elke aanroep `?soort=` meekrijgt). De bouwer bewaart en
+// publiceert zelf; na het verlaten haalt de studio de nieuwe stand op (Overzicht,
+// Publiceren in de bovenbalk). `pagina`: het adres van de pagina om mee te beginnen.
+export default function Website({ origin, pagina }: { origin: string; pagina?: string | undefined }) {
+  const { reload, soort } = useStudio();
   useEffect(() => () => void reload(), [reload]);
-  return <SiteBuilder origin={origin} />;
+  // de webshop begint bij de lijst met pagina's (het menu-item heet Pagina's); de website bij de blokken
+  return <SiteBuilder origin={origin} soort={soort} beginPagina={pagina} beginTab={soort === "webshop" ? "paginas" : "blokken"} />;
 }

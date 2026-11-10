@@ -7,6 +7,7 @@ import { DashboardWisselaar, type DashboardStand } from "@/components/app/werkru
 import { StudioProvider, useStudio } from "@/components/studio/context";
 import WebshopStart from "@/components/studio/WebshopStart";
 import { ICalendar, ICard, ICoins, IExternal, IHome, ILayout, IMenu, IPalette, IPercent, IPin, IReceipt, ISparkle, ITrend, ISettings, IStore, ITag, ITruck, IUsers, IX, Pill, btn } from "@/components/studio/ui";
+import { isPaginaBouwer } from "@/lib/sites/paginabouwer";
 import type { SiteSoort } from "@/lib/sites/types";
 
 // ---------------------------------------------------------------------------
@@ -50,6 +51,7 @@ const NAV: Record<SiteSoort, { hoofd: NavItem[]; extra?: { kop: string; items: N
       { href: `${WEBSHOP}/slim`, label: "Slim", icon: <ISparkle /> },
       { href: `${WEBSHOP}/groei`, label: "Groei", icon: <ITrend /> },
       { href: `${WEBSHOP}/kassa`, label: "Op locatie", icon: <IPin /> },
+      { href: `${WEBSHOP}/paginas`, label: "Pagina's", icon: <ILayout /> },
       { href: `${WEBSHOP}/ontwerp`, label: "Ontwerp", icon: <IPalette /> },
       { href: `${WEBSHOP}/instellingen`, label: "Instellingen", icon: <ISettings /> },
     ],
@@ -106,7 +108,8 @@ function Shell({ dashboards, children }: { dashboards: (DashboardStand & { cooki
   // het telefoonmenu hoort bij één pagina: na een klik op een onderdeel is het vanzelf dicht
   const [menuOp, setMenuOp] = useState<string | null>(null);
   const menu = menuOp === path;
-  const wide = path.startsWith(`${WEBSITE}/bouwer`);
+  // de paginabouwer (Website → Bouwer, Webshop → Pagina's) heeft de volle breedte nodig
+  const wide = isPaginaBouwer(path);
   return (
     <div className="min-h-dvh bg-[#f1f1f1] text-[#303030]">
       <TopBar onMenu={() => setMenuOp((m) => (m === path ? null : path))} menu={menu} dashboards={dashboards} />
@@ -130,7 +133,7 @@ const focus = "focus-visible:outline-none focus-visible:ring-2 focus-visible:rin
 
 function TopBar({ onMenu, menu, dashboards }: { onMenu: () => void; menu: boolean; dashboards: DashboardStand | null }) {
   const { data, unpublished, publish, soort } = useStudio();
-  const inBouwer = (usePathname() ?? "").startsWith(`${WEBSITE}/bouwer`);
+  const inBouwer = isPaginaBouwer(usePathname() ?? "");
   const [busy, setBusy] = useState(false);
   const [melding, setMelding] = useState<{ ok: boolean; text: string } | null>(null);
   const site = data?.site;
@@ -173,7 +176,7 @@ function TopBar({ onMenu, menu, dashboards }: { onMenu: () => void; menu: boolea
             Bekijk {soort === "webshop" ? "webshop" : "website"} <IExternal width={15} height={15} />
           </a>
         )}
-        {/* in de paginabouwer zit een eigen publiceerknop */}
+        {/* in de paginabouwer (website en webshop) zit een eigen publiceerknop */}
         {site && data?.canPublish && !inBouwer && (
           <button type="button" disabled={busy || (!unpublished && live)} onClick={() => void doPublish()} className={`rounded-xl bg-white px-3 py-1.5 text-sm font-semibold text-[#1a1a1a] hover:bg-white/90 disabled:opacity-40 ${focus}`}>
             {busy ? "Bezig…" : live ? (unpublished ? "Wijzigingen publiceren" : "Gepubliceerd") : "Publiceren"}

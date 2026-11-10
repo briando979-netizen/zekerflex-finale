@@ -56,6 +56,7 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/studio/webshop/klanten","file":"app/studio/webshop/klanten/page.tsx","area":"Account & overig","dynamic":false},
   {"route":"/studio/webshop/kortingen","file":"app/studio/webshop/kortingen/page.tsx","area":"Account & overig","dynamic":false},
   {"route":"/studio/webshop/ontwerp","file":"app/studio/webshop/ontwerp/page.tsx","area":"Account & overig","dynamic":false},
+  {"route":"/studio/webshop/paginas","file":"app/studio/webshop/paginas/page.tsx","area":"Account & overig","dynamic":false},
   {"route":"/studio/webshop/producten","file":"app/studio/webshop/producten/page.tsx","area":"Account & overig","dynamic":false},
   {"route":"/studio/webshop/producten/[id]","file":"app/studio/webshop/producten/[id]/page.tsx","area":"Account & overig","dynamic":true},
   {"route":"/studio/webshop/slim","file":"app/studio/webshop/slim/page.tsx","area":"Account & overig","dynamic":false},
