@@ -6,6 +6,7 @@ import type { GeoJSONSource, Map as MlMap, Marker } from "maplibre-gl";
 import { GEBOUWEN_3D, KAART_STIJLEN, kaartStijl, NL_GRENZEN, type KaartStijl } from "@/lib/kaart/stijl";
 import { afstandTekst, bewaarPunt, duurTekst, gpx, lijnLengte, ritStand, type Punt, type RitPunt, type ZoekResultaat } from "@/lib/kaart/geo";
 import { laadKaartMotor } from "@/components/kaart/motor";
+import { osmSoortNl, plaatsenGeoJson, veiligeLink, type Plaats } from "@/lib/kaart/plaatsen";
 
 // ---------------------------------------------------------------------------
 // ZekerFlex Kaart: een eigen kaart van Nederland (zelf gehoste OpenStreetMap-
@@ -30,6 +31,33 @@ const NL_TEKSTEN: Record<string, string> = {
   "AttributionControl.MapFeedback": "Kaartfout melden",
 };
 
+/** De inhoud van het kaartje bij een plek. Alleen tekst en één eigen link: nooit HTML van buiten in de pagina. */
+function plekInhoud(titel: string, soort: string, regels: string[], link?: { href: string; tekst: string }): HTMLElement {
+  const el = document.createElement("div");
+  el.style.fontFamily = "inherit";
+  const kop = document.createElement("p");
+  kop.textContent = titel;
+  kop.style.cssText = "margin:0;font-weight:700;font-size:14px;color:#111827";
+  const sub = document.createElement("p");
+  sub.textContent = soort;
+  sub.style.cssText = "margin:2px 0 0;font-size:12px;color:#6b7280";
+  el.append(kop, sub);
+  for (const r of regels.filter(Boolean)) {
+    const p = document.createElement("p");
+    p.textContent = r;
+    p.style.cssText = "margin:4px 0 0;font-size:12px;color:#374151";
+    el.append(p);
+  }
+  if (link) {
+    const a = document.createElement("a");
+    a.href = link.href;
+    a.textContent = link.tekst;
+    a.style.cssText = "display:inline-block;margin-top:8px;font-size:12px;font-weight:700;color:#C2410C;text-decoration:underline";
+    el.append(a);
+  }
+  return el;
+}
+
 const lijn = (punten: Punt[]) => ({ type: "Feature" as const, properties: {}, geometry: { type: "LineString" as const, coordinates: punten.length > 1 ? punten : [] } });
 const puntenGeo = (punten: Punt[]) => ({
   type: "FeatureCollection" as const,
@@ -45,6 +73,8 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
   const zoekMarker = useRef<Marker | null>(null);
   const wakker = useRef<{ release: () => Promise<void> } | null>(null);
   const gekozen = useRef("");
+  /** de bedrijven van ZekerFlex op de kaart (oranje stippen) */
+  const plaatsen = useRef<Plaats[]>([]);
 
   const [klaar, setKlaar] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
@@ -79,6 +109,18 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
       map.addLayer({ id: "meten", type: "line", source: "meten", paint: { "line-color": "#1D4E89", "line-width": 3, "line-dasharray": [2, 1.5] } });
       map.addLayer({ id: "meetpunten", type: "circle", source: "meetpunten", paint: { "circle-radius": 6, "circle-color": "#ffffff", "circle-stroke-color": "#1D4E89", "circle-stroke-width": 3 } });
     }
+    if (!map.getSource("zf-bedrijven")) {
+      map.addSource("zf-bedrijven", { type: "geojson", data: plaatsenGeoJson(plaatsen.current) });
+      map.addLayer({ id: "zf-bedrijven-stip", type: "circle", source: "zf-bedrijven", paint: { "circle-radius": 8, "circle-color": "#FF5F1F", "circle-stroke-color": "#ffffff", "circle-stroke-width": 2 } });
+      map.addLayer({
+        id: "zf-bedrijven-naam",
+        type: "symbol",
+        source: "zf-bedrijven",
+        minzoom: 13,
+        layout: { "text-field": "{naam}", "text-font": ["Noto Sans Medium"], "text-size": 12, "text-offset": [0, 1.2], "text-anchor": "top", "text-optional": true },
+        paint: { "text-color": "#1f2937", "text-halo-color": "#ffffff", "text-halo-width": 1.5 },
+      });
+    }
     if (map.getLayer(GEBOUWEN_3D)) map.setLayoutProperty(GEBOUWEN_3D, "visibility", s.drie ? "visible" : "none");
   }, []);
 
@@ -108,7 +150,32 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
         map.on("style.load", () => eigenLagen(map));
         map.on("load", () => setKlaar(true));
         map.on("click", (e) => {
-          if (stand.current.modus === "meten") setMeetPunten((m) => [...m, [e.lngLat.lng, e.lngLat.lat]]);
+          if (stand.current.modus === "meten") {
+            setMeetPunten((m) => [...m, [e.lngLat.lng, e.lngLat.lat]]);
+            return;
+          }
+          // eerst een bedrijf van ZekerFlex (oranje stip), anders een plek uit de kaartgegevens
+          const eigen = map.getLayer("zf-bedrijven-stip") ? map.queryRenderedFeatures(e.point, { layers: ["zf-bedrijven-stip"] })[0] : undefined;
+          if (eigen && typeof eigen.properties?.naam === "string") {
+            const p = eigen.properties as { naam: string; soort?: string; adres?: string; plaats?: string; link?: string };
+            const href = veiligeLink(p.link);
+            new mod.Popup({ closeButton: true, maxWidth: "260px", offset: 12 })
+              .setLngLat(e.lngLat)
+              .setDOMContent(plekInhoud(p.naam, `${p.soort ?? "Bedrijf"} · ZekerFlex`, [[p.adres, p.plaats].filter(Boolean).join(", ")], href ? { href, tekst: "Bekijk de website, reserveer of bestel ›" } : undefined))
+              .addTo(map);
+            return;
+          }
+          const poiLagen = (map.getStyle().layers ?? [])
+            .filter((l) => (l as { "source-layer"?: string })["source-layer"] === "pois")
+            .map((l) => l.id);
+          const poi = poiLagen.length ? map.queryRenderedFeatures(e.point, { layers: poiLagen })[0] : undefined;
+          const naam = poi?.properties?.name;
+          if (poi && typeof naam === "string" && naam) {
+            new mod.Popup({ closeButton: true, maxWidth: "260px", offset: 12 })
+              .setLngLat(e.lngLat)
+              .setDOMContent(plekInhoud(naam, osmSoortNl(poi.properties?.kind), [], undefined))
+              .addTo(map);
+          }
         });
         map.on("dragstart", () => setVolgen(false));
       } catch (err) {
@@ -123,6 +190,21 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
       kaart.current = null;
     };
   }, [eigenLagen]);
+
+  // de bedrijven van ZekerFlex (oranje stippen), zodra de kaart er is
+  useEffect(() => {
+    if (!klaar) return;
+    const ctl = new AbortController();
+    void fetch("/api/kaart/plaatsen", { signal: ctl.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { plaatsen?: Plaats[] } | null) => {
+        if (!d || !Array.isArray(d.plaatsen)) return;
+        plaatsen.current = d.plaatsen;
+        (kaart.current?.getSource("zf-bedrijven") as GeoJSONSource | undefined)?.setData(plaatsenGeoJson(d.plaatsen));
+      })
+      .catch(() => undefined);
+    return () => ctl.abort();
+  }, [klaar]);
 
   // op een smal scherm begint het gereedschap ingeklapt, zodat de kaart te zien is
   useEffect(() => {
@@ -382,6 +464,10 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
               {melding}
             </p>
           )}
+          <p className="mt-2 flex items-center gap-1.5 text-[0.7rem] text-neutralx-500">
+            <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-full bg-[#FF5F1F] ring-2 ring-white" />
+            Oranje stip: een bedrijf van ZekerFlex. Tik op een plek voor meer.
+          </p>
         </div>
 
         {modus === "meten" && (
