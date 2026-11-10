@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isGereserveerdeSlug, MAX_PAGINAS } from "@/lib/sites/paginabouwer";
 import { ibanGeldig } from "@/lib/sites/winkel-betalen";
 import { CODE_PATROON } from "@/lib/sites/winkel-korting";
 import { verzendmethodenVan } from "@/lib/sites/winkel-verzending";
@@ -219,7 +220,7 @@ export const siteSaveSchema = z
   .object({
     theme: themeSchema,
     bedrijf: companySchema,
-    pages: z.array(page).min(1).max(12),
+    pages: z.array(page).min(1).max(MAX_PAGINAS),
     /** alt texts of existing photos (the photos themselves are added via upload/import) */
     altTexts: z.record(z.string().regex(/^m[a-z0-9]{6,20}$/), z.string().trim().max(200)).optional(),
     /** the site's shop (lib/sites/winkel.ts); absent = leave it as it is */
@@ -229,7 +230,7 @@ export const siteSaveSchema = z
     const slugs = v.pages.map((p) => p.slug);
     if (!slugs.includes("")) ctx.addIssue({ code: "custom", message: "Er moet een homepagina zijn." });
     if (new Set(slugs).size !== slugs.length) ctx.addIssue({ code: "custom", message: "Twee pagina's hebben hetzelfde webadres." });
-    if (slugs.some((s) => ["privacy", "bedankt", "media", "assets", "_zf", "sitemap", "robots", "p", "winkel", "bestellen", "besteld", "mand", "reserveren", "gereserveerd", "wat-kan-deze-site"].includes(s))) {
+    if (slugs.some(isGereserveerdeSlug)) {
       ctx.addIssue({ code: "custom", message: "Dit webadres voor een pagina is gereserveerd." });
     }
   });
