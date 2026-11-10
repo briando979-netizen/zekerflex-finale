@@ -9,8 +9,10 @@ import { KANAAL_IDS, kanaalDef } from "@/lib/social/kanalen";
 import { SLOT_UREN, kanaalIdSchema, komendeWerkdagen, postInvoerSchema, type AutopilotInstelling, type SocialPost } from "@/lib/social/model";
 import { MetaFout, controleerToken } from "@/lib/social/meta";
 import { verwerkBerichten } from "@/lib/social/publiceer";
+import { slaReactieOver, synchroniseerReacties, verstuurAntwoord } from "@/lib/social/reacties";
+import { beeldAdres, kiesBeeld } from "@/lib/social/beelden";
 import { socialOverzicht } from "@/lib/social/overzicht";
-import { schrijfPosts } from "@/lib/social/schrijf";
+import { alleenVeilig, schrijfPosts } from "@/lib/social/schrijf";
 import { deletePost, getAutopilot, getPost, metaToken, nieuwId, savePost, setAutopilot, setKanaalConfig, setMeta, wisMeta } from "@/lib/social/store";
 
 export const runtime = "nodejs";
@@ -54,7 +56,11 @@ const invoer = z.discriminatedUnion("actie", [
     doelgroep,
     kanalen: z.array(kanaal).min(1).max(KANAAL_IDS.length),
     zelfPlaatsen: z.boolean(),
+    autoReageren: z.boolean(),
   }),
+  z.object({ actie: z.literal("reactie-verstuur"), id: z.string().max(90), tekst: z.string().trim().min(2, "Schrijf eerst een antwoord.").max(1000) }),
+  z.object({ actie: z.literal("reactie-overslaan"), id: z.string().max(90) }),
+  z.object({ actie: z.literal("reacties-ophalen") }),
   z.object({
     actie: z.literal("campagne"),
     doelgroep,
@@ -211,16 +217,41 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
         doelgroep: input.doelgroep,
         kanalen: input.kanalen,
         zelfPlaatsen: input.zelfPlaatsen,
+        autoReageren: input.autoReageren,
         // opnieuw aanzetten of aanpassen: vandaag meteen weer mee laten doen
         laatsteRun: input.aan && nu.aan ? nu.laatsteRun : null,
       };
       await setAutopilot(a);
-      await audit("social.autopilot.updated", `Autopilot ${a.aan ? "aan" : "uit"} (${a.perWeek} per week${a.zelfPlaatsen ? ", plaatst zelf" : ", jij keurt goed"})`);
+      await audit("social.autopilot.updated", `Autopilot ${a.aan ? "aan" : "uit"} (${a.perWeek} per week${a.zelfPlaatsen ? ", plaatst zelf" : ", jij keurt goed"}${a.autoReageren ? ", reageert zelf" : ""})`);
       return NextResponse.json({ ok: true });
     }
 
+    case "reactie-verstuur": {
+      try {
+        await verstuurAntwoord(input.id, input.tekst);
+      } catch (e) {
+        if (e instanceof MetaFout) throw AppError.validation(e.message);
+        throw e;
+      }
+      await audit("social.reply.sent", "Antwoord op een reactie verstuurd", input.id);
+      return NextResponse.json({ ok: true });
+    }
+
+    case "reactie-overslaan": {
+      await slaReactieOver(input.id);
+      return NextResponse.json({ ok: true });
+    }
+
+    case "reacties-ophalen": {
+      if (!(await metaToken())) throw AppError.precondition("Koppel eerst Meta (tabblad Kanalen), dan haalt ZekerFlex de reacties op.");
+      const r = await synchroniseerReacties();
+      return NextResponse.json(r);
+    }
+
     case "campagne": {
-      const { posts, bron } = await schrijfPosts({ doelgroep: input.doelgroep, invalshoek: input.invalshoek, aantal: input.aantal });
+      const geschreven = await schrijfPosts({ doelgroep: input.doelgroep, invalshoek: input.invalshoek, aantal: input.aantal });
+      const bron = geschreven.bron;
+      const { posts } = alleenVeilig(geschreven.posts, input.doelgroep, input.aantal);
       const t = amsterdamParts(new Date());
       const dagen = komendeWerkdagen({ year: t.year, month: t.month, day: t.day }, posts.length);
       const campagne = nieuwId();
@@ -234,7 +265,7 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
           tekst: g.tekst,
           hashtags: g.hashtags,
           kanalen: input.kanalen,
-          beeldUrl: null,
+          beeldUrl: beeldAdres(kiesBeeld(`${g.tekst} ${g.beeldIdee} ${input.invalshoek}`, input.doelgroep, i).pad, SITE.url),
           beeldIdee: g.beeldIdee,
           link: SITE.url,
           plan: amsterdamToUtc(dag.year, dag.month, dag.day, slot.uur, slot.minuut).toISOString(),

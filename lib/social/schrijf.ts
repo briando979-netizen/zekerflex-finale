@@ -4,8 +4,9 @@ import { FACTS } from "@/lib/ads/generate";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { tekst } from "@/lib/orchestration/antwoord";
-import { SITE } from "@/lib/seo";
+import { CONTACTS, SITE } from "@/lib/seo";
 import type { Doelgroep } from "@/lib/social/model";
+import { beoordeelTekst } from "@/lib/social/veilig";
 
 // ---------------------------------------------------------------------------
 // Berichten schrijven voor sociale media. Het model krijgt dezelfde vaste FEITEN als de
@@ -135,6 +136,69 @@ export function leesPosts(antwoord: unknown): GeschrevenPost[] {
     if (r.success && r.data.tekst.trim().length >= 20) uit.push({ tekst: r.data.tekst.trim(), hashtags: r.data.hashtags.slice(0, 10), beeldIdee: r.data.beeldIdee.trim() });
   }
   return uit;
+}
+
+// --- een antwoord op een reactie ------------------------------------------------------------------
+
+export interface AntwoordVoorstel {
+  antwoord: string;
+  /** waarom een mens dit moet lezen, of null als het een gewone vraag of een compliment is */
+  mensNodig: string | null;
+  bron: "model" | "sjabloon";
+}
+
+const siteNaam = () => SITE.url.replace(/^https?:\/\//, "");
+
+/** Een veilige standaardzin als het model er niet is; die gaat nooit vanzelf weg (bron "sjabloon"). */
+export function standaardAntwoord(): string {
+  return `Bedankt voor je reactie! Meer weten? Kijk op ${siteNaam()} of mail naar ${CONTACTS.general}.`;
+}
+
+const antwoordSchema = z.object({
+  antwoord: tekst(400),
+  mensNodig: z.preprocess((v) => v === true || v === "true", z.boolean()).catch(false),
+});
+
+export async function schrijfAntwoord(input: { kanaal: "facebook" | "instagram"; van: string; tekst: string; bericht: string }): Promise<AntwoordVoorstel> {
+  if (llmConfigProblem()) return { antwoord: standaardAntwoord(), mensNodig: "Het AI-model is niet bereikbaar: lees en verstuur zelf.", bron: "sjabloon" };
+  try {
+    const system =
+      `Je beheert het account van ${SITE.name} op ${input.kanaal === "facebook" ? "Facebook" : "Instagram"} en antwoordt op reacties in gewoon, warm, kort Nederlands (1 tot 2 zinnen, hooguit 1 emoji).\n\n` +
+      `FEITEN (gebruik ALLEEN deze, verzin niets, geen prijzen, kortingen of beloftes die er niet staan):\n${FACTS}\n\n` +
+      `Regels: noem geen persoonlijke gegevens; heb je het antwoord niet in de feiten, verwijs dan naar ${CONTACTS.general} of ${siteNaam()}. ` +
+      `Zet "mensNodig" op true bij een klacht, een juridische of privacyvraag, een vraag waarvan je het antwoord niet zeker weet, of een reactie die boos of ironisch is.\n\n` +
+      `Antwoord UITSLUITEND met JSON: {"antwoord": string, "mensNodig": boolean}.`;
+    const user = `Bericht van ons (begin): ${input.bericht || "(onbekend)"}\nReactie van ${input.van}: ${input.tekst.slice(0, 500)}`;
+    const raw = await chatJson<unknown>({
+      purpose: "social-reactie",
+      temperature: 0.4,
+      maxTokens: 300,
+      retry: false,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+    });
+    const r = antwoordSchema.parse(raw);
+    if (r.antwoord.trim().length < 5) throw new Error("leeg antwoord");
+    return { antwoord: r.antwoord.trim(), mensNodig: r.mensNodig ? "Het model wil dat een mens dit leest." : null, bron: "model" };
+  } catch (e) {
+    logger.warn("social: antwoord schrijven mislukt", { error: (e as Error).message });
+    return { antwoord: standaardAntwoord(), mensNodig: "Het AI-model gaf geen bruikbaar antwoord: lees en verstuur zelf.", bron: "sjabloon" };
+  }
+}
+
+/**
+ * Houdt alleen de berichten over die door het vangnet komen (lib/social/veilig.ts) en vult aan met
+ * vaste, gecontroleerde teksten tot er `aantal` zijn. Geeft ook terug hoeveel er zijn afgekeurd.
+ */
+export function alleenVeilig(posts: GeschrevenPost[], doelgroep: Doelgroep, aantal: number): { posts: GeschrevenPost[]; afgekeurd: number } {
+  const goed = posts.filter((p) => beoordeelTekst(p.tekst).veilig);
+  const afgekeurd = posts.length - goed.length;
+  if (goed.length >= aantal) return { posts: goed.slice(0, aantal), afgekeurd };
+  const gebruikt = new Set(goed.map((p) => p.tekst));
+  const vast = sjabloonPosts(doelgroep, SJABLONEN.length).filter((p) => !gebruikt.has(p.tekst));
+  return { posts: [...goed, ...vast].slice(0, aantal), afgekeurd };
 }
 
 export async function schrijfPosts(input: { doelgroep: Doelgroep; invalshoek?: string; aantal: number }): Promise<SchrijfUitslag> {

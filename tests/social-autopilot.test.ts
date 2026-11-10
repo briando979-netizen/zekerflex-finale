@@ -14,7 +14,9 @@ vi.mock("@/lib/social/schrijf", () => ({
     bron: "sjabloon",
     posts: Array.from({ length: aantal }, (_, i) => ({ tekst: `Testbericht nummer ${i + 1} van de autopilot`, hashtags: ["flexwerk"], beeldIdee: "beeld" })),
   })),
+  alleenVeilig: (posts: unknown[], _d: string, aantal: number) => ({ posts: posts.slice(0, aantal), afgekeurd: 0 }),
 }));
+vi.mock("@/lib/social/reacties", () => ({ synchroniseerReacties: async () => ({ nieuw: 0, automatisch: 0, wachtOpMens: 0, fout: null }) }));
 vi.mock("@/lib/social/store", () => ({
   getAutopilot: async () => opslag.inst,
   setAutopilot: async (a: unknown) => {
@@ -55,24 +57,31 @@ beforeEach(() => {
 
 describe("autopilot", () => {
   it("doet niets zolang hij uit staat", async () => {
+    zet({ aan: false });
     const r = await autopilotRonde(NU);
     expect(r).toEqual({ gemaakt: 0, reden: "uit" });
     expect(opslag.posts).toHaveLength(0);
   });
 
+  it("staat standaard aan, met zelf plaatsen en zelf reageren (eigenaar, 10 nov)", () => {
+    expect(STANDAARD_AUTOPILOT).toMatchObject({ aan: true, zelfPlaatsen: true, autoReageren: true });
+  });
+
   it("zet berichten klaar op werkdagen, als concept (niet goedgekeurd) en meldt het de beheerders", async () => {
-    zet({ aan: true, perWeek: 3 });
+    zet({ aan: true, perWeek: 3, zelfPlaatsen: false });
     const r = await autopilotRonde(NU);
     expect(r.gemaakt).toBe(3);
     const posts = opslag.posts as SocialPost[];
     expect(posts.every((p) => p.goedgekeurd === false && p.bron === "autopilot")).toBe(true);
+    // elk bericht krijgt een eigen foto, zodat ook Instagram vanzelf kan plaatsen
+    expect(posts.every((p) => /^https?:\/\/.+\.jpg$/.test(p.beeldUrl ?? ""))).toBe(true);
     // woensdag 11, donderdag 12 en vrijdag 13 nov, op 08:30, 12:15 en 17:30 Nederlandse tijd
     expect(posts.map((p) => p.plan).sort()).toEqual(["2026-11-11T07:30:00.000Z", "2026-11-12T11:15:00.000Z", "2026-11-13T16:30:00.000Z"]);
     expect(opslag.pushes).toEqual(["Sociale media: berichten om goed te keuren"]);
   });
 
   it("draait per dag één keer en vult alleen aan wat ontbreekt", async () => {
-    zet({ aan: true, perWeek: 3 });
+    zet({ aan: true, perWeek: 3, zelfPlaatsen: false });
     await autopilotRonde(NU);
     expect((await autopilotRonde(NU)).reden).toBe("vandaag al gedaan");
     // de volgende ochtend (vóór het eerste bericht van 08:30) liggen er nog 3 in de komende week: niets bijmaken

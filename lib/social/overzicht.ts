@@ -1,8 +1,8 @@
 import { llmConfigProblem } from "@/lib/ai/client";
 import { prisma } from "@/lib/prisma";
 import { KANALEN, kanaalVanReferrer, type KanaalDef, type KanaalId } from "@/lib/social/kanalen";
-import { postStatus, type AutopilotInstelling, type KanaalConfig, type PostStatus, type SocialPost } from "@/lib/social/model";
-import { getAutopilot, getKanaalConfigs, getMetaStatus, listPosts, type MetaStatus } from "@/lib/social/store";
+import { postStatus, type AutopilotInstelling, type KanaalConfig, type PostStatus, type Reactie, type SocialPost } from "@/lib/social/model";
+import { getAutopilot, getKanaalConfigs, getMetaStatus, listPosts, listReacties, type MetaStatus } from "@/lib/social/store";
 
 // ---------------------------------------------------------------------------
 // Alles wat het scherm van Sociale media nodig heeft, in één keer. Alleen echte cijfers: berichten
@@ -30,10 +30,11 @@ export interface SocialOverzicht {
   nu: string;
   kanalen: KanaalKaart[];
   posts: PostRegel[];
+  reacties: Reactie[];
   meta: MetaStatus;
   autopilot: AutopilotInstelling;
   modelBeschikbaar: boolean;
-  kpi: { concepten: number; gepland: number; tePlaatsen: number; geplaatst30d: number; mislukt: number; bezoeken30d: number };
+  kpi: { concepten: number; gepland: number; tePlaatsen: number; geplaatst30d: number; mislukt: number; bezoeken30d: number; reactiesOpen: number };
 }
 
 async function bezoekenPerKanaal(nu: Date): Promise<Map<KanaalId, number>> {
@@ -56,9 +57,10 @@ async function bezoekenPerKanaal(nu: Date): Promise<Map<KanaalId, number>> {
 }
 
 export async function socialOverzicht(nu: Date = new Date()): Promise<SocialOverzicht> {
-  const [configs, posts, meta, autopilot, bezoeken] = await Promise.all([
+  const [configs, posts, reacties, meta, autopilot, bezoeken] = await Promise.all([
     getKanaalConfigs(),
     listPosts(),
+    listReacties(100).catch(() => []),
     getMetaStatus(),
     getAutopilot(),
     bezoekenPerKanaal(nu),
@@ -99,6 +101,7 @@ export async function socialOverzicht(nu: Date = new Date()): Promise<SocialOver
     nu: nu.toISOString(),
     kanalen,
     posts: regels.slice(0, 200),
+    reacties,
     meta,
     autopilot,
     modelBeschikbaar: !llmConfigProblem(),
@@ -109,6 +112,7 @@ export async function socialOverzicht(nu: Date = new Date()): Promise<SocialOver
       geplaatst30d,
       mislukt: regels.filter((p) => p.status === "mislukt").length,
       bezoeken30d: [...bezoeken.values()].reduce((a, b) => a + b, 0),
+      reactiesOpen: reacties.filter((r) => r.status === "nieuw").length,
     },
   };
 }

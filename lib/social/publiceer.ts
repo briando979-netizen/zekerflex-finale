@@ -10,7 +10,9 @@ import {
   type KanaalUitslag,
   type SocialPost,
 } from "@/lib/social/model";
-import { schrijfPosts } from "@/lib/social/schrijf";
+import { beeldAdres, kiesBeeld } from "@/lib/social/beelden";
+import { synchroniseerReacties } from "@/lib/social/reacties";
+import { alleenVeilig, schrijfPosts } from "@/lib/social/schrijf";
 import { getAutopilot, listPosts, metaToken, nieuwId, savePost, setAutopilot } from "@/lib/social/store";
 
 // ---------------------------------------------------------------------------
@@ -96,7 +98,9 @@ export async function autopilotRonde(nu: Date = new Date()): Promise<{ gemaakt: 
     return { gemaakt: 0, reden: "er liggen al genoeg berichten" };
   }
 
-  const { posts } = await schrijfPosts({ doelgroep: inst.doelgroep, aantal: nodig });
+  // eerst schrijven, dan door het vangnet (veilig.ts): wat niet door komt wordt een vaste, gecontroleerde tekst
+  const geschreven = await schrijfPosts({ doelgroep: inst.doelgroep, aantal: nodig });
+  const { posts } = alleenVeilig(geschreven.posts, inst.doelgroep, nodig);
   const t = amsterdamParts(nu);
   const dagen = komendeWerkdagen({ year: t.year, month: t.month, day: t.day }, Math.max(nodig, 1));
   let gemaakt = 0;
@@ -109,7 +113,8 @@ export async function autopilotRonde(nu: Date = new Date()): Promise<{ gemaakt: 
       tekst: g.tekst,
       hashtags: g.hashtags,
       kanalen: inst.kanalen,
-      beeldUrl: null,
+      // een eigen foto die bij het onderwerp past, zodat ook Instagram vanzelf kan plaatsen
+      beeldUrl: beeldAdres(kiesBeeld(`${g.tekst} ${g.beeldIdee}`, inst.doelgroep, i + bestaand.length).pad, SITE.url),
       beeldIdee: g.beeldIdee,
       link: SITE.url,
       plan: amsterdamToUtc(dag.year, dag.month, dag.day, slot.uur, slot.minuut).toISOString(),
@@ -130,11 +135,20 @@ export async function autopilotRonde(nu: Date = new Date()): Promise<{ gemaakt: 
   return { gemaakt, reden: "gemaakt" };
 }
 
-export async function socialTick(nu: Date = new Date()): Promise<{ berichten: Awaited<ReturnType<typeof verwerkBerichten>>; autopilot: Awaited<ReturnType<typeof autopilotRonde>> }> {
+export async function socialTick(nu: Date = new Date()): Promise<{
+  berichten: Awaited<ReturnType<typeof verwerkBerichten>>;
+  autopilot: Awaited<ReturnType<typeof autopilotRonde>>;
+  reacties: Awaited<ReturnType<typeof synchroniseerReacties>> | null;
+}> {
   const berichten = await verwerkBerichten(nu);
   const autopilot = await autopilotRonde(nu).catch((e) => {
     logger.warn("social: autopilot mislukte", { error: (e as Error).message });
     return { gemaakt: 0, reden: "fout" };
   });
-  return { berichten, autopilot };
+  // reacties lezen en (veilige) antwoorden sturen; een fout hier mag het plaatsen niet tegenhouden
+  const reacties = await synchroniseerReacties(nu).catch((e) => {
+    logger.warn("social: reacties synchroniseren mislukte", { error: (e as Error).message });
+    return null;
+  });
+  return { berichten, autopilot, reacties };
 }

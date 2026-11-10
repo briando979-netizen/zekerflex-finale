@@ -6,6 +6,7 @@ import {
   STANDAARD_AUTOPILOT,
   type AutopilotInstelling,
   type KanaalConfig,
+  type Reactie,
   type SocialPost,
 } from "@/lib/social/model";
 
@@ -19,6 +20,7 @@ const K_POST = "social:post:";
 const K_KANAAL = "social:kanaal:";
 const K_AUTOPILOT = "social:autopilot";
 const K_META = "social:meta";
+const K_REACTIE = "social:reactie:";
 const SEAL = "social-meta";
 
 export const schoonId = (id: string) => id.replace(/[^a-z0-9-]/gi, "").slice(0, 40);
@@ -48,6 +50,24 @@ export async function deletePost(id: string): Promise<void> {
 }
 
 // --- kanalen ---------------------------------------------------------------------
+
+// --- reacties ----------------------------------------------------------------------
+
+/** Id's van Meta bevatten een underscore; die blijft staan. */
+export const reactieSleutel = (kanaal: string, extId: string) => `${kanaal}-${extId}`.replace(/[^a-z0-9_-]/gi, "").slice(0, 80);
+
+export async function getReactie(id: string): Promise<Reactie | null> {
+  return kvGet<Reactie>(K_REACTIE + id.replace(/[^a-z0-9_-]/gi, "").slice(0, 80));
+}
+
+export async function saveReactie(r: Reactie): Promise<void> {
+  await kvSet(K_REACTIE + r.id, r);
+}
+
+export async function listReacties(limit = 300): Promise<Reactie[]> {
+  const rijen = await kvListValues<Reactie>(K_REACTIE, limit);
+  return rijen.sort((a, b) => (a.at < b.at ? 1 : -1));
+}
 
 function standaardConfig(id: KanaalId): KanaalConfig {
   return { profielUrl: kanaalDef(id)?.standaardProfiel ?? "", bevestigd: false, notitie: "" };

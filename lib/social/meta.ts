@@ -107,3 +107,97 @@ export async function plaatsOpInstagram(
   const r = await graph<{ id?: string }>(`/${ig}/media_publish`, v.token, { method: "POST", body: { creation_id: container.id } });
   return r.id ?? "";
 }
+
+// --- reacties lezen en beantwoorden ("praten met ze") ---------------------------------------------
+// Dezelfde paginatoken; voor het lezen en beantwoorden van reacties heeft hij de rechten
+// pages_read_engagement, pages_manage_engagement (Facebook) en instagram_manage_comments (Instagram)
+// nodig. Ontbreken die, dan zegt Meta dat en laat ZekerFlex de reacties met rust.
+
+export interface GelezenReactie {
+  extId: string;
+  van: string;
+  /** id van de schrijver (Facebook) of de gebruikersnaam (Instagram), om onze eigen reacties over te slaan */
+  vanId: string;
+  tekst: string;
+  at: string;
+  bericht: string;
+  /** er staat al een antwoord onder (van ons of van iemand anders) */
+  heeftAntwoord: boolean;
+}
+
+const tekstVan = (v: unknown): string => (typeof v === "string" ? v : "");
+
+interface FbReactieRij {
+  id?: string;
+  message?: string;
+  created_time?: string;
+  from?: { id?: string; name?: string };
+  comment_count?: number;
+}
+interface IgReactieRij {
+  id?: string;
+  text?: string;
+  timestamp?: string;
+  username?: string;
+  replies?: { data?: unknown[] };
+}
+
+/** De nieuwste reacties onder de laatste berichten van de Facebook-pagina. */
+export async function haalReactiesFacebook(v: { token: string; pageId: string }): Promise<GelezenReactie[]> {
+  const r = await graph<{ data?: { id?: string; message?: string; comments?: { data?: FbReactieRij[] } }[] }>(
+    `/${encodeURIComponent(v.pageId)}/posts?fields=id,message,comments.limit(25){id,message,created_time,from{id,name},comment_count}&limit=8`,
+    v.token,
+  );
+  const uit: GelezenReactie[] = [];
+  for (const post of r.data ?? []) {
+    for (const c of post.comments?.data ?? []) {
+      if (!c.id || !tekstVan(c.message).trim()) continue;
+      uit.push({
+        extId: c.id,
+        van: c.from?.name ?? "Iemand",
+        vanId: c.from?.id ?? "",
+        tekst: tekstVan(c.message).trim(),
+        at: c.created_time ?? new Date().toISOString(),
+        bericht: tekstVan(post.message).slice(0, 120),
+        heeftAntwoord: (c.comment_count ?? 0) > 0,
+      });
+    }
+  }
+  return uit;
+}
+
+/** De nieuwste reacties onder de laatste Instagram-berichten. */
+export async function haalReactiesInstagram(v: { token: string; igUserId: string }): Promise<GelezenReactie[]> {
+  const r = await graph<{ data?: { id?: string; caption?: string; comments?: { data?: IgReactieRij[] } }[] }>(
+    `/${encodeURIComponent(v.igUserId)}/media?fields=id,caption,comments.limit(25){id,text,timestamp,username,replies{id}}&limit=8`,
+    v.token,
+  );
+  const uit: GelezenReactie[] = [];
+  for (const m of r.data ?? []) {
+    for (const c of m.comments?.data ?? []) {
+      if (!c.id || !tekstVan(c.text).trim()) continue;
+      uit.push({
+        extId: c.id,
+        van: c.username ? `@${c.username}` : "Iemand",
+        vanId: c.username ?? "",
+        tekst: tekstVan(c.text).trim(),
+        at: c.timestamp ?? new Date().toISOString(),
+        bericht: tekstVan(m.caption).slice(0, 120),
+        heeftAntwoord: (c.replies?.data ?? []).length > 0,
+      });
+    }
+  }
+  return uit;
+}
+
+/** Antwoordt op een Facebook-reactie. */
+export async function antwoordFacebook(token: string, commentId: string, tekst: string): Promise<string> {
+  const r = await graph<{ id?: string }>(`/${encodeURIComponent(commentId)}/comments`, token, { method: "POST", body: { message: tekst } });
+  return r.id ?? "";
+}
+
+/** Antwoordt op een Instagram-reactie. */
+export async function antwoordInstagram(token: string, commentId: string, tekst: string): Promise<string> {
+  const r = await graph<{ id?: string }>(`/${encodeURIComponent(commentId)}/replies`, token, { method: "POST", body: { message: tekst } });
+  return r.id ?? "";
+}

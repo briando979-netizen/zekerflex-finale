@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Empty, KpiStrip, Notice, PageHead, Panel, Pill, type Tone } from "@/components/admin/kit";
+import { BEELDEN } from "@/lib/social/beelden";
 import { KANALEN, deelLink, plaatsAdres, tekstVoorKanaal, type KanaalId } from "@/lib/social/kanalen";
 import { amsterdamLocalInput } from "@/lib/time/amsterdam";
 import type { KanaalKaart, PostRegel, SocialOverzicht } from "@/lib/social/overzicht";
-import type { Doelgroep, PostStatus } from "@/lib/social/model";
+import type { Doelgroep, PostStatus, Reactie } from "@/lib/social/model";
 
 // ---------------------------------------------------------------------------
 // Admin → Sales & groei → Sociale media. Eén scherm met vijf tabbladen: Overzicht, Berichten,
@@ -15,10 +16,11 @@ import type { Doelgroep, PostStatus } from "@/lib/social/model";
 // Meta het token echt accepteerde. Wat niet kan (nog), staat er eerlijk bij.
 // ---------------------------------------------------------------------------
 
-type Tab = "overzicht" | "berichten" | "kanalen" | "campagne" | "autopilot";
+type Tab = "overzicht" | "berichten" | "reacties" | "kanalen" | "campagne" | "autopilot";
 const TABS: { id: Tab; label: string }[] = [
   { id: "overzicht", label: "Overzicht" },
   { id: "berichten", label: "Berichten" },
+  { id: "reacties", label: "Reacties" },
   { id: "kanalen", label: "Kanalen" },
   { id: "campagne", label: "Campagne" },
   { id: "autopilot", label: "Autopilot" },
@@ -104,6 +106,7 @@ export function SocialHub() {
           >
             {t.label}
             {t.id === "berichten" && o && o.kpi.tePlaatsen + o.kpi.mislukt > 0 ? ` · ${o.kpi.tePlaatsen + o.kpi.mislukt}` : ""}
+            {t.id === "reacties" && o && o.kpi.reactiesOpen > 0 ? ` · ${o.kpi.reactiesOpen}` : ""}
           </button>
         ))}
       </div>
@@ -116,6 +119,7 @@ export function SocialHub() {
         <>
           {tab === "overzicht" && <OverzichtTab o={o} naarBerichten={naarBerichten} naarTab={setTab} laad={laad} />}
           {tab === "berichten" && <BerichtenTab o={o} bewerk={bewerk} setBewerk={setBewerk} laad={laad} />}
+          {tab === "reacties" && <ReactiesTab o={o} laad={laad} />}
           {tab === "kanalen" && <KanalenTab o={o} laad={laad} />}
           {tab === "campagne" && <CampagneTab o={o} laad={laad} naarBerichten={() => naarBerichten(null)} />}
           {tab === "autopilot" && <AutopilotTab o={o} laad={laad} />}
@@ -154,12 +158,24 @@ function OverzichtTab({ o, naarBerichten, naarTab, laad }: { o: SocialOverzicht;
         ]}
       />
 
-      {(aandacht.length > 0 || teKeuren.length > 0) && (
+      {(aandacht.length > 0 || teKeuren.length > 0 || o.kpi.reactiesOpen > 0) && (
         <Panel title="Aan de beurt" subtitle="Wat op jou wacht">
           <ul className="divide-y" style={{ borderColor: "var(--a-border)" }}>
             {aandacht.map((p) => (
               <RegelKort key={p.id} p={p} onOpen={() => naarBerichten(p)} />
             ))}
+            {o.kpi.reactiesOpen > 0 && (
+              <li className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium" style={{ color: "var(--a-text)" }}>
+                    {o.kpi.reactiesOpen} reactie{o.kpi.reactiesOpen === 1 ? "" : "s"} wacht{o.kpi.reactiesOpen === 1 ? "" : "en"} op een antwoord
+                  </p>
+                  <p className="mt-0.5 text-xs" style={{ color: "var(--a-mute)" }}>Op Facebook of Instagram: klachten en lastige vragen laat de autopilot voor jou liggen.</p>
+                </div>
+                <Pill tone="warn">Reactie</Pill>
+                <button type="button" className="a-button" onClick={() => naarTab("reacties")}>Bekijk</button>
+              </li>
+            )}
             {teKeuren.length > 0 && (
               <li className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div className="min-w-0 flex-1">
@@ -226,8 +242,8 @@ function OverzichtTab({ o, naarBerichten, naarTab, laad }: { o: SocialOverzicht;
       <Panel title="Wat nog niet kan" subtitle="Eerlijk, zodat je weet waar je aan toe bent">
         <ul className="list-disc space-y-1.5 pl-5 text-sm" style={{ color: "var(--a-mute)" }}>
           <li>Automatisch plaatsen kan alleen op Facebook en Instagram (met de Meta-koppeling). LinkedIn, TikTok, YouTube, X en Google geven die toegang pas na een eigen goedkeuring of tegen betaling; daar zet ZekerFlex de tekst klaar en plaats jij met één klik.</li>
-          <li>Reageren op reacties en berichten van volgers (&quot;praten met ze&quot;) volgt in een volgende ronde: daarvoor vraagt Meta aparte rechten.</li>
-          <li>Een foto of video maken en meesturen kan nog niet vanuit dit scherm: plak het adres van een beeld bij het bericht (Instagram heeft altijd een beeld nodig). Beelden maak je in de Studio of de Video-editor.</li>
+          <li>Praten met ze (reacties lezen en beantwoorden) werkt alleen op Facebook en Instagram, met dezelfde Meta-koppeling en extra rechten op het token. Privéberichten (DM&apos;s) volgen nog: die vragen een aparte machtiging van Meta.</li>
+          <li>Het scherm maakt zelf geen foto&apos;s of video&apos;s: de autopilot kiest een eigen foto die bij het onderwerp past, en bij een eigen bericht kies je er een uit de lijst of plak je een adres. Video&apos;s maak je in de Video-editor.</li>
         </ul>
         <div className="mt-3 flex flex-wrap gap-2">
           <Link className="a-button" href="/admin/studio">Studio</Link>
@@ -426,8 +442,21 @@ function BerichtenTab({ o, bewerk, setBewerk, laad }: { o: SocialOverzicht; bewe
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium" style={{ color: "var(--a-mute)" }} htmlFor="s-beeld">Beeld (adres met https://)</label>
+              <label className="block text-xs font-medium" style={{ color: "var(--a-mute)" }} htmlFor="s-beeld">Beeld (kies een eigen foto of plak een https-adres)</label>
+              <select
+                aria-label="Kies een eigen foto"
+                className="a-input mb-1.5"
+                value={BEELDEN.some((b) => f.beeldUrl.endsWith(b.pad)) ? (BEELDEN.find((b) => f.beeldUrl.endsWith(b.pad))?.pad ?? "") : ""}
+                onChange={(e) => zet("beeldUrl", e.target.value ? `${window.location.origin}${e.target.value}` : "")}
+              >
+                <option value="">Geen eigen foto gekozen</option>
+                {BEELDEN.map((b) => <option key={b.pad} value={b.pad}>{b.label}</option>)}
+              </select>
               <input id="s-beeld" className="a-input" value={f.beeldUrl} onChange={(e) => zet("beeldUrl", e.target.value)} placeholder="https://…" />
+              {f.beeldUrl && /^https:\/\//.test(f.beeldUrl) && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={f.beeldUrl} alt="Gekozen beeld" className="mt-1.5 h-20 w-auto rounded-md border" style={{ borderColor: "var(--a-border)" }} />
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium" style={{ color: "var(--a-mute)" }} htmlFor="s-link">Link naar de site</label>
@@ -551,6 +580,125 @@ function PostKaart({ p, onBewerk, doe }: { p: PostRegel; onBewerk: () => void; d
   );
 }
 
+// --- Reacties (praten met ze) ---------------------------------------------------------------------
+
+function ReactiesTab({ o, laad }: { o: SocialOverzicht; laad: () => Promise<void> }) {
+  const [filter, setFilter] = useState<"nieuw" | "alle">("nieuw");
+  const [busy, setBusy] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+
+  const ophalen = async () => {
+    setBusy(true);
+    setFout(null);
+    setOk(null);
+    try {
+      const r = await api<{ nieuw: number; automatisch: number; wachtOpMens: number; fout: string | null }>({ actie: "reacties-ophalen" });
+      await laad();
+      setOk(`${r.nieuw} nieuwe reactie${r.nieuw === 1 ? "" : "s"} opgehaald, ${r.automatisch} zelf beantwoord, ${r.wachtOpMens} wacht${r.wachtOpMens === 1 ? "" : "en"} op jou.${r.fout ? ` Let op: ${r.fout}` : ""}`);
+    } catch (e) {
+      setFout((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const lijst = o.reacties.filter((r) => filter === "alle" || r.status === "nieuw");
+  const zelfBeantwoord = o.reacties.filter((r) => r.automatisch && r.status === "beantwoord").length;
+
+  return (
+    <div className="space-y-4">
+      <KpiStrip
+        items={[
+          { label: "Wachten op jou", value: String(o.kpi.reactiesOpen), tone: o.kpi.reactiesOpen > 0 ? "warn" : "neutral" },
+          { label: "Zelf beantwoord", value: String(zelfBeantwoord), hint: "door de autopilot" },
+          { label: "Reacties bewaard", value: String(o.reacties.length) },
+        ]}
+      />
+      {!o.meta.verbonden && (
+        <Notice tone="warn">
+          Meta is nog niet gekoppeld, dus er worden nog geen reacties opgehaald. Koppel het token bij Kanalen (met ook de rechten pages_read_engagement, pages_manage_engagement en instagram_manage_comments).
+        </Notice>
+      )}
+      <Panel
+        title="Reacties op Facebook en Instagram"
+        subtitle="De AI stelt een antwoord voor. Gewone reacties beantwoordt de autopilot zelf (als dat aan staat); jij leest de rest."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <select aria-label="Filter" className="a-input w-auto" value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)}>
+              <option value="nieuw">Wacht op jou</option>
+              <option value="alle">Alle</option>
+            </select>
+            <button type="button" className="a-button" disabled={busy || !o.meta.verbonden} onClick={() => void ophalen()}>{busy ? "Haalt op…" : "Nu ophalen"}</button>
+          </div>
+        }
+      >
+        {fout && <Notice tone="crit" role="alert">{fout}</Notice>}
+        {ok && <Notice tone="ok">{ok}</Notice>}
+        {lijst.length === 0 ? (
+          <Empty title={filter === "nieuw" ? "Niets dat op jou wacht" : "Nog geen reacties"} body="Nieuwe reacties verschijnen hier zodra Meta gekoppeld is; elke 10 minuten kijkt ZekerFlex of er iets nieuws is." />
+        ) : (
+          <ul className="space-y-3">
+            {lijst.map((r) => (
+              <ReactieKaart key={r.id} r={r} laad={laad} />
+            ))}
+          </ul>
+        )}
+      </Panel>
+    </div>
+  );
+}
+
+function ReactieKaart({ r, laad }: { r: Reactie; laad: () => Promise<void> }) {
+  const [tekst, setTekst] = useState(r.concept);
+  const [busy, setBusy] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
+  const doe = async (body: unknown) => {
+    setBusy(true);
+    setFout(null);
+    try {
+      await api(body);
+      await laad();
+    } catch (e) {
+      setFout((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <li className="rounded-xl border p-3.5" style={{ borderColor: "var(--a-border)" }}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs" style={{ color: "var(--a-mute)" }}>
+          <b style={{ color: "var(--a-text)" }}>{r.van}</b> op {r.kanaal === "facebook" ? "Facebook" : "Instagram"} · {tijd(r.at)}
+        </p>
+        <Pill tone={r.status === "beantwoord" ? "ok" : r.status === "overgeslagen" ? "neutral" : "warn"}>
+          {r.status === "beantwoord" ? (r.automatisch ? "Zelf beantwoord" : "Beantwoord") : r.status === "overgeslagen" ? "Overgeslagen" : "Wacht op jou"}
+        </Pill>
+      </div>
+      {r.bericht && <p className="mt-1 truncate text-xs" style={{ color: "var(--a-dim)" }}>Onder: {r.bericht}</p>}
+      <p className="mt-2 whitespace-pre-wrap text-sm" style={{ color: "var(--a-text)" }}>{r.tekst}</p>
+      {r.status === "beantwoord" ? (
+        <p className="mt-2 rounded-lg p-2.5 text-sm" style={{ background: "var(--a-elev)", color: "var(--a-text)" }}>
+          <span className="block text-xs" style={{ color: "var(--a-mute)" }}>Ons antwoord</span>
+          {r.antwoord}
+        </p>
+      ) : r.status === "nieuw" ? (
+        <div className="mt-2 space-y-2">
+          {r.mensNodig && <p className="text-xs font-medium" style={{ color: "var(--a-warn)" }}>{r.mensNodig}</p>}
+          {r.fout && <p className="text-xs" style={{ color: "var(--a-crit)" }}>{r.fout}</p>}
+          <label className="sr-only" htmlFor={`antw-${r.id}`}>Antwoord</label>
+          <textarea id={`antw-${r.id}`} className="a-input min-h-[4.5rem]" value={tekst} onChange={(e) => setTekst(e.target.value)} />
+          {fout && <Notice tone="crit" role="alert">{fout}</Notice>}
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="a-button a-button-primary" disabled={busy} onClick={() => void doe({ actie: "reactie-verstuur", id: r.id, tekst })}>{busy ? "Bezig…" : "Verstuur antwoord"}</button>
+            <button type="button" className="a-button" disabled={busy} onClick={() => void doe({ actie: "reactie-overslaan", id: r.id })}>Overslaan</button>
+          </div>
+        </div>
+      ) : null}
+    </li>
+  );
+}
+
 // --- Kanalen ------------------------------------------------------------------------------------
 
 function KanalenTab({ o, laad }: { o: SocialOverzicht; laad: () => Promise<void> }) {
@@ -608,7 +756,7 @@ function MetaPaneel({ o, laad }: { o: SocialOverzicht; laad: () => Promise<void>
           <ol className="list-decimal space-y-1 pl-5 text-sm" style={{ color: "var(--a-mute)" }}>
             <li>Maak een Facebook-bedrijfspagina en zet het Instagram-account om naar zakelijk (gratis), gekoppeld aan die pagina.</li>
             <li>Maak op developers.facebook.com een app (gratis, blijft in ontwikkelmodus) en voeg jezelf toe als beheerder.</li>
-            <li>Maak in de Graph API Explorer een paginatoken met de rechten pages_manage_posts, pages_read_engagement en instagram_content_publish, en maak er een langlopend token van.</li>
+            <li>Maak in de Graph API Explorer een paginatoken met de rechten pages_manage_posts, pages_read_engagement, pages_manage_engagement, instagram_content_publish en instagram_manage_comments (de laatste twee voor reacties), en maak er een langlopend token van.</li>
             <li>Plak dat token hieronder. ZekerFlex vraagt Meta meteen of het klopt voordat het wordt bewaard.</li>
           </ol>
           <label className="block text-xs font-medium" style={{ color: "var(--a-mute)" }} htmlFor="meta-token">Paginatoken</label>
@@ -766,6 +914,7 @@ function AutopilotTab({ o, laad }: { o: SocialOverzicht; laad: () => Promise<voi
   const [doelgroep, setDoelgroep] = useState<Doelgroep>(a.doelgroep);
   const [kanalen, setKanalen] = useState<KanaalId[]>(a.kanalen);
   const [zelf, setZelf] = useState(a.zelfPlaatsen);
+  const [reageer, setReageer] = useState(a.autoReageren);
   const [busy, setBusy] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
@@ -775,7 +924,7 @@ function AutopilotTab({ o, laad }: { o: SocialOverzicht; laad: () => Promise<voi
     setFout(null);
     setOk(false);
     try {
-      await api({ actie: "autopilot", aan, perWeek, doelgroep, kanalen, zelfPlaatsen: zelf });
+      await api({ actie: "autopilot", aan, perWeek, doelgroep, kanalen, zelfPlaatsen: zelf, autoReageren: reageer });
       await laad();
       setOk(true);
     } catch (e) {
@@ -825,7 +974,14 @@ function AutopilotTab({ o, laad }: { o: SocialOverzicht; laad: () => Promise<voi
             <input type="checkbox" className="mt-1" checked={zelf} onChange={(e) => setZelf(e.target.checked)} />
             <span>
               De autopilot mag zelf plaatsen, zonder dat ik de berichten eerst goedkeur
-              <span className="block text-xs" style={{ color: "var(--a-warn)" }}>Standaard uit. Aan = berichten van de AI gaan op de ingestelde tijd weg zonder dat jij ze las.</span>
+              <span className="block text-xs" style={{ color: "var(--a-warn)" }}>Aan = berichten van de AI gaan op de ingestelde tijd weg zonder dat jij ze las. Een vangnet houdt bedragen, kortingen, garanties en alles over de gestopte bank tegen: zo&apos;n bericht wordt een vaste, gecontroleerde tekst.</span>
+            </span>
+          </label>
+          <label className="flex items-start gap-2 text-sm" style={{ color: "var(--a-text)" }}>
+            <input type="checkbox" className="mt-1" checked={reageer} onChange={(e) => setReageer(e.target.checked)} />
+            <span>
+              De autopilot mag zelf antwoorden op gewone reacties (Facebook en Instagram)
+              <span className="block text-xs" style={{ color: "var(--a-mute)" }}>Alleen reacties van de laatste 48 uur, hooguit 5 per ronde. Klachten, juridische of privacyvragen en alles waar het model twijfelt blijven voor jou liggen, met een melding. Werkt pas met de Meta-koppeling.</span>
             </span>
           </label>
           {fout && <Notice tone="crit" role="alert">{fout}</Notice>}
@@ -837,7 +993,8 @@ function AutopilotTab({ o, laad }: { o: SocialOverzicht; laad: () => Promise<voi
         <ul className="list-disc space-y-1.5 pl-5 text-sm" style={{ color: "var(--a-mute)" }}>
           <li>Elke 10 minuten kijkt ZekerFlex of er een goedgekeurd bericht aan de beurt is en plaatst dat (Facebook en Instagram) of zet het voor jou klaar (de rest, met een melding op je telefoon).</li>
           <li>Staat de autopilot aan en liggen er voor de komende 7 dagen minder berichten dan je instelde, dan schrijft hij de ontbrekende. Ze komen op werkdagen om 08:30, 12:15 en 17:30.</li>
-          <li>Hij gebruikt alleen vaste feiten en wat er deze week echt openstaat aan klussen. Zonder open klussen noemt hij er geen.</li>
+          <li>Hij gebruikt alleen vaste feiten en wat er deze week echt openstaat aan klussen. Zonder open klussen noemt hij er geen. Bij elk bericht kiest hij een eigen foto die bij het onderwerp past, zodat ook Instagram vanzelf kan plaatsen.</li>
+          <li>Elke ronde leest hij ook de nieuwe reacties op Facebook en Instagram en beantwoordt wat veilig is (zie het tabblad Reacties).</li>
           <li>{o.modelBeschikbaar ? "Het AI-model is bereikbaar." : "Het AI-model is nu niet bereikbaar: dan gebruikt de autopilot vaste, gecontroleerde teksten."}</li>
           <li>Elke wijziging staat in het auditspoor.</li>
         </ul>

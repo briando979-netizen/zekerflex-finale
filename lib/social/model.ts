@@ -106,19 +106,49 @@ export interface AutopilotInstelling {
   perWeek: number;
   doelgroep: Doelgroep;
   kanalen: KanaalId[];
-  /** opt-in: de berichten van de autopilot gaan zonder tweede controle weg (standaard uit: een mens keurt goed) */
+  /** de berichten van de autopilot gaan zonder tweede controle weg (10 nov, eigenaar: aan; een vangnet in veilig.ts houdt verkeerde beloftes tegen) */
   zelfPlaatsen: boolean;
+  /** de autopilot antwoordt zelf op gewone reacties op Facebook en Instagram; klachten en lastige vragen blijven voor een mens */
+  autoReageren: boolean;
   laatsteRun: string | null;
 }
 
+// 10 nov (eigenaar): "alles mag van de auto" en "autopilot aanzetten": standaard aan, mag zelf plaatsen
+// en zelf reageren. Alles blijft in het beheer uit te zetten.
 export const STANDAARD_AUTOPILOT: AutopilotInstelling = {
-  aan: false,
-  perWeek: 3,
+  aan: true,
+  perWeek: 5,
   doelgroep: "algemeen",
   kanalen: ["instagram", "facebook", "linkedin"],
-  zelfPlaatsen: false,
+  zelfPlaatsen: true,
+  autoReageren: true,
   laatsteRun: null,
 };
+
+// --- reacties (praten met ze) -----------------------------------------------------------
+
+export type ReactieKanaal = "facebook" | "instagram";
+
+export interface Reactie {
+  id: string;
+  kanaal: ReactieKanaal;
+  /** id van de reactie bij het platform */
+  extId: string;
+  van: string;
+  tekst: string;
+  /** begin van het bericht waaronder de reactie staat */
+  bericht: string;
+  at: string;
+  status: "nieuw" | "beantwoord" | "overgeslagen";
+  /** voorstel voor een antwoord (door het model of een vaste zin) */
+  concept: string;
+  /** waarom een mens ernaar moet kijken, als dat zo is */
+  mensNodig: string | null;
+  antwoord?: string;
+  antwoordAt?: string;
+  automatisch?: boolean;
+  fout?: string;
+}
 
 // --- slots voor een week ------------------------------------------------------
 

@@ -511,7 +511,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       how: [
         "Maak een Facebook-bedrijfspagina en zet het Instagram-account om naar zakelijk, gekoppeld aan die pagina.",
         "Maak op developers.facebook.com een app (blijft in ontwikkelmodus) en voeg jezelf toe als beheerder.",
-        "Maak in de Graph API Explorer een paginatoken met pages_manage_posts, pages_read_engagement en instagram_content_publish, en plak dat bij Sociale media → Kanalen.",
+        "Maak in de Graph API Explorer een paginatoken met pages_manage_posts, pages_read_engagement, pages_manage_engagement, instagram_content_publish en instagram_manage_comments, en plak dat bij Sociale media → Kanalen. Zet daarna in dat scherm de autopilot aan (staat standaard aan) en kijk bij Reacties of er iets binnenkomt.",
       ],
       auto: false,
       ...m("social-meta"),
