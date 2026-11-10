@@ -87,6 +87,7 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/netwerk", label: "Verbinding (wifi, VPN, 5G)" },
       { href: "/admin/op-locatie", label: "Op locatie (portofoon, toegang, kluis, printen)" },
       { href: "/admin/hardware", label: "Hardware (kassa, printers, schermen)" },
+      { href: "/admin/installaties", label: "Installaties (monteur volgen)" },
       { href: "/admin/recruiter", label: "AI-recruiter" },
       { href: "/admin/ads", label: "Advertenties" },
       { href: "/admin/nieuwsbrief", label: "Nieuwsbrief" },

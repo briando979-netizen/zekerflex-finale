@@ -159,7 +159,7 @@ export default async function HardwarePagina() {
           {PAKKETTEN.map((p) => {
             const t = pakketTotaal(p, inst);
             const inclusief = Math.round(t.verkoopCent * BTW);
-            const marge = margeVanVerkoop(t.verkoopCent, t.inkoopCent);
+            const marge = t.inkoopOnvolledig ? null : margeVanVerkoop(t.verkoopCent, t.inkoopCent);
             return (
               <section key={p.id} className="rounded-xl p-4" style={{ border: "1px solid var(--a-border)" }}>
                 <h3 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>{p.naam}</h3>
@@ -174,7 +174,7 @@ export default async function HardwarePagina() {
                   <div className="flex justify-between"><dt style={{ color: "var(--a-mute)" }}>Hardware (excl. btw)</dt><dd className="num font-medium" style={{ color: "var(--a-text)" }}>{euroExact(t.verkoopCent)}</dd></div>
                   <div className="flex justify-between"><dt style={{ color: "var(--a-mute)" }}>Hardware (incl. btw)</dt><dd className="num">{euroExact(inclusief)}</dd></div>
                   <div className="flex justify-between"><dt style={{ color: "var(--a-mute)" }}>Installatie (excl. btw)</dt><dd className="num">{inst.installatieCent === null ? "nog vast te stellen" : euroExact(inst.installatieCent)}</dd></div>
-                  <div className="flex justify-between"><dt style={{ color: "var(--a-mute)" }}>Inkoop</dt><dd className="num">{euroExact(t.inkoopCent)}{marge !== null ? `, marge ${marge}%` : ""}</dd></div>
+                  <div className="flex justify-between"><dt style={{ color: "var(--a-mute)" }}>Inkoop</dt><dd className="num">{t.inkoopOnvolledig ? "nog niet compleet" : `${euroExact(t.inkoopCent)}${marge !== null ? `, marge ${marge}%` : ""}`}</dd></div>
                 </dl>
                 {t.zonderPrijs.length > 0 && (
                   <p className="mt-2 text-xs" style={{ color: "var(--a-warn-ink)" }}>Nog niet meegeteld (geen prijs): {[...new Set(t.zonderPrijs)].join(", ")}.</p>
