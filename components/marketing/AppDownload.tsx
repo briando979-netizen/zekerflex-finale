@@ -9,7 +9,8 @@ import { featureEnabled } from "@/lib/flags";
 const PLAY_TEST_URL = "https://play.google.com/apps/testing/com.zekerflex.app";
 // De iPhone-app staat als testversie in TestFlight; elke iPhone kan meedoen via deze openbare link.
 const TESTFLIGHT_URL = "https://testflight.apple.com/join/2QKhAHn8";
-const IPHONE_MAILTO = `mailto:${CONTACTS.support}?subject=${encodeURIComponent("Ik wil de ZekerFlex-app op mijn iPhone testen")}&body=${encodeURIComponent("Mijn Apple-ID (het e-mailadres waarmee ik op mijn iPhone in de App Store ben ingelogd):\n\n")}`;
+// Zoals bij Android: een tik opent de mail van de bezoeker, al ingevuld, naar info@ met "tester worden".
+const IPHONE_MAILTO = `mailto:${CONTACTS.general}?subject=${encodeURIComponent("Tester worden: zet me op de lijst (iPhone)")}&body=${encodeURIComponent("Hallo ZekerFlex, ik wil de iPhone-app testen. Zet me alsjeblieft op de testerslijst.\n\nMijn Apple-ID (het e-mailadres waarmee ik op mijn iPhone in de App Store ben ingelogd):\n\n")}`;
 const TESTER_MAILTO = `mailto:${CONTACTS.support}?subject=${encodeURIComponent("Ik wil de ZekerFlex-app testen")}&body=${encodeURIComponent("Mijn Gmail-adres (zoals in de Play Store op mijn telefoon):\n\n")}`;
 
 function PlayBadgeTest() {
@@ -41,13 +42,13 @@ function AppleBadgeTest({ live }: { live: boolean }) {
         <path d="M16.4 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.8-3.5.8-.7 0-1.8-.8-3-.8-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7c1.3 0 2.1-1.1 2.8-2.2.9-1.3 1.3-2.5 1.3-2.6 0 0-2.5-1-2.5-3.8ZM14.2 5.9c.6-.8 1.1-1.8.9-2.9-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-1 2.8 1 .1 2.1-.5 2.8-1.3Z" />
       </svg>
       <span className="text-left leading-tight">
-        <span className="block text-[10px] uppercase tracking-wide text-brand-mint">{live ? "Testversie · iPhone" : "Binnenkort · iPhone"}</span>
+        <span className="block text-[10px] uppercase tracking-wide text-brand-mint">{live ? "Testversie · iPhone" : "Tester worden · iPhone"}</span>
         <span className="block text-sm font-bold">{live ? "TestFlight" : "App Store"}</span>
       </span>
     </>
   );
   // De testlink neemt pas testers aan als Apple de beta heeft goedgekeurd (vlag `iphone-testflight`):
-  // tot dan een badge zonder link, en een uitleg hoe je op de lijst komt.
+  // tot dan een mailknop "tester worden" naar info@ (zoals bij Android) en een uitleg.
   return live ? (
     <a
       href={TESTFLIGHT_URL}
@@ -58,7 +59,12 @@ function AppleBadgeTest({ live }: { live: boolean }) {
       {inhoud}
     </a>
   ) : (
-    <div className="flex items-center gap-3 rounded-xl border border-white/15 bg-white/[0.04] px-4 py-2.5 text-white/80">{inhoud}</div>
+    <a
+      href={IPHONE_MAILTO}
+      className="flex items-center gap-3 rounded-xl border border-white/20 bg-white/[0.06] px-4 py-2.5 text-white transition hover:bg-white/[0.12]"
+    >
+      {inhoud}
+    </a>
   );
 }
 
@@ -68,12 +74,12 @@ function IphoneNotice({ live }: { live: boolean }) {
       <div className="mt-6 max-w-md rounded-xl border border-brand-mint/30 bg-brand-mint/[0.06] p-4 text-sm text-white/80">
         <p className="font-semibold text-white">De iPhone-app komt eraan</p>
         <p className="mt-1">
-          De testversie voor de iPhone wacht op goedkeuring van Apple. Zodra die er is, kun je hem installeren via TestFlight.{" "}
+          De testversie voor de iPhone wacht op goedkeuring van Apple. Tik op{" "}
           <a href={IPHONE_MAILTO} className="font-semibold text-brand-mint underline">
-            Stuur ons je Apple-ID
-          </a>{" "}
-          (het e-mailadres waarmee je op je iPhone in de App Store bent ingelogd), dan zetten we je op de testerslijst en krijg je bericht
-          van Apple zodra je mee kunt doen.
+            Tester worden
+          </a>
+          : je mailprogramma opent met een ingevulde mail aan ons. Verstuur die (met het e-mailadres waarmee je op je iPhone in de App Store bent
+          ingelogd), dan zetten we je op de testerslijst en krijg je bericht van Apple zodra je mee kunt doen.
         </p>
       </div>
     );
