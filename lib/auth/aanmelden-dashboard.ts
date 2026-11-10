@@ -18,7 +18,7 @@ export const AANMELDEN_PER_DASHBOARD: Record<Werkruimte, { titel: string; uitleg
   },
   horeca: {
     titel: "Start met je zaak",
-    uitleg: "Maak je account aan; daarna zet je je zaak aan met een eigen website en menukaart, en kies je de modules die je nodig hebt.",
+    uitleg: "Maak je account aan; daarna zet je je zaak aan met je menukaart en een eigen pagina voor je gasten, en kies je de modules die je nodig hebt.",
   },
   website: {
     titel: "Start je website",
