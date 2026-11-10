@@ -7,6 +7,9 @@ import {
   sendWebPush,
 } from "@/lib/notifications/push/web-push";
 import { isApnsEnabled, sendApnsToUsers } from "@/lib/notifications/push/apns";
+import { WORKER_PUSH, type WorkerPushTexts } from "@/lib/i18n/worker-push";
+import { userLocale } from "@/lib/i18n/worker-locale";
+import type { Locale } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------
 // Push fan-out.
@@ -24,8 +27,8 @@ import { isApnsEnabled, sendApnsToUsers } from "@/lib/notifications/push/apns";
 export interface ShiftOfferPush {
   freelancerId: string;
   shiftId: string;
-  title: string;
-  body: string;
+  /** titel en tekst in de app-taal van de werker (lib/i18n/worker-push.ts: offerTitle, offerBody) */
+  teksten: (t: WorkerPushTexts, locale: Locale) => { title: string; body: string };
   data: Record<string, string>;
 }
 
@@ -82,7 +85,13 @@ async function fanOut(subs: StoredSubscription[], payload: string, ttlSeconds: n
 }
 
 export async function sendShiftOffer(offer: ShiftOfferPush): Promise<boolean> {
-  const notification = { title: offer.title, body: offer.body };
+  // de werker: voor de taal van de melding (AGENTS.md: push aan een werker in zijn app-taal) en voor
+  // de iPhone-app (APNs staat per account, niet per profiel); zonder bekende taal Nederlands
+  const profiel = await prisma.freelancerProfile
+    .findUnique({ where: { id: offer.freelancerId }, select: { userId: true } })
+    .catch(() => null);
+  const locale: Locale = profiel ? await userLocale(profiel.userId).catch((): Locale => "nl") : "nl";
+  const notification = offer.teksten(WORKER_PUSH[locale], locale);
   const data = { ...offer.data, type: "SHIFT_OFFER", shiftId: offer.shiftId };
 
   const subs = isWebPushEnabled()
@@ -97,9 +106,6 @@ export async function sendShiftOffer(offer: ShiftOfferPush): Promise<boolean> {
 
   // de iPhone-app (APNs): de apparaatcodes staan per account, niet per profiel
   if (isApnsEnabled()) {
-    const profiel = await prisma.freelancerProfile
-      .findUnique({ where: { id: offer.freelancerId }, select: { userId: true } })
-      .catch(() => null);
     if (profiel) {
       delivered += await sendApnsToUsers([profiel.userId], {
         ...notification,
@@ -109,8 +115,10 @@ export async function sendShiftOffer(offer: ShiftOfferPush): Promise<boolean> {
     }
   }
 
+  // geen apparaat bereikt: de dispatcher stuurt dan een mail (lib/notifications/klus-mail.ts) en
+  // waarschuwt zelf als die mislukt; dit is dus geen fout (was 46× "warn" in het foutenlogboek)
   if (delivered === 0) {
-    logger.warn("shift offer not delivered on any channel", {
+    logger.info("shift offer not delivered by push", {
       freelancerId: offer.freelancerId,
       shiftId: offer.shiftId,
       webPushSubs: subs.length,

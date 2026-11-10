@@ -7,6 +7,7 @@ import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { resolveShiftContact } from "@/lib/messaging/contacts";
 import { offerEmployerClaim } from "@/lib/claims/store";
 import { NO_SHOW_GRACE_MINUTES, NO_SHOW_RELIABILITY_PENALTY } from "@/lib/claims/policy";
+import { plekVoorWerker } from "@/lib/shifts/place-label";
 
 // ---------------------------------------------------------------------------
 // Finds shift assignments whose shift started more than NO_SHOW_GRACE_MINUTES
@@ -43,7 +44,7 @@ export async function sweepNoShows(): Promise<NoShowSweepResult> {
           endsAt: true,
           breakMinutes: true,
           hourlyRateCents: true,
-          branch: { select: { name: true, tenantId: true } },
+          branch: { select: { name: true, tenantId: true, tenant: { select: { name: true } } } },
         },
       },
       timesheet: { select: { id: true } },
@@ -102,7 +103,8 @@ export async function sweepNoShows(): Promise<NoShowSweepResult> {
       // Tell the worker straight away: "no check-in" can also mean "forgot to check in".
       await sendLocalizedPush([a.freelancer.userId], (t) => ({
         title: t.noShowTitle(a.shift.title),
-        body: t.noShowBody(a.shift.title, a.shift.branch.name),
+        // bij een los adres de bedrijfsnaam, niet "Eenmalige locatie — adres" (lib/shifts/place-label.ts)
+        body: t.noShowBody(a.shift.title, plekVoorWerker(a.shift.branch.name, a.shift.branch.tenant.name)),
         data: { type: "SHIFT", url: `/dashboard/klussen/${a.shift.id}`, tag: `noshow-${a.id}` },
         ttlSeconds: 86_400,
       })).catch(() => 0);

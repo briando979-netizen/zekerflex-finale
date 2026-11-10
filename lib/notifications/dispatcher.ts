@@ -19,6 +19,8 @@ import { isTestklus } from "@/lib/shifts/testklus";
 import { testklusOntvangers } from "@/lib/shifts/testklus-db";
 import { findOverlappingShift, overlapMessageSelf } from "@/lib/shifts/worker-overlap";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
+import { plekVoorWerker } from "@/lib/shifts/place-label";
+import { pushRate } from "@/lib/i18n/worker-push";
 
 // ---------------------------------------------------------------------------
 // Realtime notification dispatcher
@@ -267,10 +269,11 @@ export async function dispatchNextWave(shiftId: string): Promise<number> {
       const bereikt = await sendShiftOffer({
         freelancerId: cand.freelancerId,
         shiftId,
-        title: `Nieuwe shift: ${shift.title}`,
-        body: `${shift.branch.name}, ${shift.branch.city} · €${(
-          shift.hourlyRateCents / 100
-        ).toFixed(2)}/u · ~${cand.travelMinutes} min reizen`,
+        // in de app-taal van de werker, en bij een los adres de bedrijfsnaam (lib/shifts/place-label.ts)
+        teksten: (t) => ({
+          title: t.offerTitle(shift.title),
+          body: t.offerBody(plekVoorWerker(shift.branch.name, shift.branch.tenant.name), shift.branch.city, pushRate(t, shift.hourlyRateCents), cand.travelMinutes),
+        }),
         data: {
           score: cand.score.toFixed(3),
           wave: String(nextWave),

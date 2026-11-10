@@ -74,6 +74,9 @@ export interface WorkerPushTexts {
   /** ID geverifieerd (lib/onboarding/id-geverifieerd.ts): alleen wat voor het ID geldt */
   idOkTitle: string;
   idOkBody: string;
+  /** een klusvoorstel van de matching (lib/notifications/dispatcher.ts): titel, en plek · stad · tarief · reistijd */
+  offerTitle: (title: string) => string;
+  offerBody: (plek: string, stad: string, tarief: string, minuten: number) => string;
 }
 
 export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
@@ -138,6 +141,8 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     werkrechtAfBody: (l, r) => `Werken in ${l}: ${r} Upload een nieuw document bij Verificatie.`,
     idOkTitle: "Je ID is geverifieerd",
     idOkBody: "Je kunt op klussen reageren zodra de rest van je aanmelding klopt. Een duidelijke foto en je werkervaring helpen opdrachtgevers je te kiezen.",
+    offerTitle: (t) => `Nieuwe klus: ${t}`,
+    offerBody: (p, c, r, m) => `${p}, ${c} · ${r} · ±${m} min reizen`,
   },
   en: {
     hours: "hours",
@@ -200,6 +205,8 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     werkrechtAfBody: (l, r) => `Working in ${l}: ${r} Upload a new document under Verification.`,
     idOkTitle: "Your ID has been verified",
     idOkBody: "You can respond to jobs as soon as the rest of your sign-up is in order. A clear photo and your work experience help clients choose you.",
+    offerTitle: (t) => `New job: ${t}`,
+    offerBody: (p, c, r, m) => `${p}, ${c} · ${r} · ~${m} min travel`,
   },
   pl: {
     hours: "godz.",
@@ -262,6 +269,8 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     werkrechtAfBody: (l, r) => `Praca w kraju ${l}: ${r} Prześlij nowy dokument w sekcji Weryfikacja.`,
     idOkTitle: "Twój dokument został zweryfikowany",
     idOkBody: "Możesz odpowiadać na zlecenia, gdy reszta Twojej rejestracji będzie w porządku. Wyraźne zdjęcie i doświadczenie zawodowe pomagają zleceniodawcom Cię wybrać.",
+    offerTitle: (t) => `Nowe zlecenie: ${t}`,
+    offerBody: (p, c, r, m) => `${p}, ${c} · ${r} · ok. ${m} min dojazdu`,
   },
   ro: {
     hours: "ore",
@@ -324,6 +333,8 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     werkrechtAfBody: (l, r) => `Munca în ${l}: ${r} Încarcă un document nou la Verificare.`,
     idOkTitle: "Actul tău de identitate a fost verificat",
     idOkBody: "Poți răspunde la lucrări imediat ce restul înregistrării tale este în regulă. O fotografie clară și experiența ta de muncă îi ajută pe clienți să te aleagă.",
+    offerTitle: (t) => `Job nou: ${t}`,
+    offerBody: (p, c, r, m) => `${p}, ${c} · ${r} · ~${m} min de drum`,
   },
   uk: {
     hours: "год",
@@ -386,6 +397,8 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     werkrechtAfBody: (l, r) => `Робота в країні ${l}: ${r} Завантажте новий документ у розділі «Перевірка».`,
     idOkTitle: "Ваш документ перевірено",
     idOkBody: "Ви зможете відгукуватися на роботу, щойно решта вашої реєстрації буде в порядку. Чітке фото та досвід роботи допомагають замовникам вибрати вас.",
+    offerTitle: (t) => `Нова робота: ${t}`,
+    offerBody: (p, c, r, m) => `${p}, ${c} · ${r} · ~${m} хв у дорозі`,
   },
 };
 

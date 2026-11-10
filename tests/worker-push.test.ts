@@ -35,7 +35,7 @@ function row(id: string, startsInMs: number, assignedAgoMs: number) {
     id,
     acceptedAt: new Date(now.getTime() - assignedAgoMs),
     freelancer: { userId: `u-${id}` },
-    shift: { id: `s-${id}`, title: "Bediening", startsAt: new Date(now.getTime() + startsInMs), branch: { name: "Grand Café" } },
+    shift: { id: `s-${id}`, title: "Bediening", startsAt: new Date(now.getTime() + startsInMs), branch: { name: "Grand Café", tenant: { name: "Grand Café BV" } } },
   };
 }
 

@@ -6,6 +6,7 @@ import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { pushDay, type WorkerPushTexts } from "@/lib/i18n/worker-push";
 import type { Locale } from "@/lib/i18n/config";
 import { ruimVerlopenReactiesOp } from "@/lib/offers/expire";
+import { plekVoorWerker } from "@/lib/shifts/place-label";
 
 // ---------------------------------------------------------------------------
 // Push notifications for werknemers (app + web). Each one is sent at most
@@ -43,8 +44,11 @@ interface Row {
   id: string;
   acceptedAt: Date;
   freelancer: { userId: string };
-  shift: { id: string; title: string; startsAt: Date; branch: { name: string } };
+  shift: { id: string; title: string; startsAt: Date; branch: { name: string; tenant: { name: string } } };
 }
+
+/** "bij X": bij een klus op een los adres de bedrijfsnaam, niet "Eenmalige locatie — adres" (lib/shifts/place-label.ts). */
+const plek = (r: Row): string => plekVoorWerker(r.shift.branch.name, r.shift.branch.tenant.name);
 
 /** One push in the worker's own app language (lib/i18n/worker-push.ts); Dutch when none is stored. */
 async function send(
@@ -64,7 +68,7 @@ const whenFor = (locale: Locale, d: Date) => (locale === "nl" ? `${dayFmt.format
 async function selectedPushes(now: Date): Promise<number> {
   const rows: Row[] = await prisma.shiftAssignment.findMany({
     where: { cancelledAt: null, acceptedAt: { gte: new Date(now.getTime() - 6 * H) }, shift: { startsAt: { gt: now } } },
-    select: { id: true, acceptedAt: true, freelancer: { select: { userId: true } }, shift: { select: { id: true, title: true, startsAt: true, branch: { select: { name: true } } } } },
+    select: { id: true, acceptedAt: true, freelancer: { select: { userId: true } }, shift: { select: { id: true, title: true, startsAt: true, branch: { select: { name: true, tenant: { select: { name: true } } } } } } },
     take: 500,
   });
   let n = 0;
@@ -72,7 +76,7 @@ async function selectedPushes(now: Date): Promise<number> {
     if (!(await claim("selected", a.id))) continue;
     await send(
       a.freelancer.userId,
-      (t, locale) => ({ title: t.selectedTitle, body: t.selectedBody(a.shift.title, a.shift.branch.name, whenFor(locale, a.shift.startsAt)) }),
+      (t, locale) => ({ title: t.selectedTitle, body: t.selectedBody(a.shift.title, plek(a), whenFor(locale, a.shift.startsAt)) }),
       a.shift.id,
       `selected-${a.id}`,
       24 * 3600,
@@ -83,9 +87,9 @@ async function selectedPushes(now: Date): Promise<number> {
 }
 
 const REMINDERS = [
-  { kind: "day", before: 24 * H, window: 10 * H, title: (t: WorkerPushTexts) => t.dayTitle, body: (t: WorkerPushTexts, r: Row) => t.dayBody(r.shift.title, r.shift.branch.name, timeFmt.format(r.shift.startsAt)) },
-  { kind: "soon", before: 2 * H, window: 90 * 60_000, title: (t: WorkerPushTexts) => t.soonTitle, body: (t: WorkerPushTexts, r: Row) => t.soonBody(r.shift.title, r.shift.branch.name, timeFmt.format(r.shift.startsAt)) },
-  { kind: "start", before: 0, window: 30 * 60_000, title: (t: WorkerPushTexts) => t.startTitle, body: (t: WorkerPushTexts, r: Row) => t.startBody(r.shift.title, r.shift.branch.name) },
+  { kind: "day", before: 24 * H, window: 10 * H, title: (t: WorkerPushTexts) => t.dayTitle, body: (t: WorkerPushTexts, r: Row) => t.dayBody(r.shift.title, plek(r), timeFmt.format(r.shift.startsAt)) },
+  { kind: "soon", before: 2 * H, window: 90 * 60_000, title: (t: WorkerPushTexts) => t.soonTitle, body: (t: WorkerPushTexts, r: Row) => t.soonBody(r.shift.title, plek(r), timeFmt.format(r.shift.startsAt)) },
+  { kind: "start", before: 0, window: 30 * 60_000, title: (t: WorkerPushTexts) => t.startTitle, body: (t: WorkerPushTexts, r: Row) => t.startBody(r.shift.title, plek(r)) },
 ] as const;
 
 /** Reminders before/at the start of upcoming klussen. */
@@ -95,7 +99,7 @@ async function reminderPushes(now: Date): Promise<number> {
       cancelledAt: null,
       shift: { status: { notIn: ["CANCELLED", "COMPLETED", "DRAFT"] }, startsAt: { gt: new Date(now.getTime() - 30 * 60_000), lt: new Date(now.getTime() + 25 * H) } },
     },
-    select: { id: true, acceptedAt: true, freelancer: { select: { userId: true } }, shift: { select: { id: true, title: true, startsAt: true, branch: { select: { name: true } } } } },
+    select: { id: true, acceptedAt: true, freelancer: { select: { userId: true } }, shift: { select: { id: true, title: true, startsAt: true, branch: { select: { name: true, tenant: { select: { name: true } } } } } } },
     take: 2000,
   });
   let n = 0;
