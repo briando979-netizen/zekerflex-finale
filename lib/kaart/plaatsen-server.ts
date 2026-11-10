@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { zoekCoordinaat } from "@/lib/geo/pdok";
 import { logger } from "@/lib/logger";
 import { horecaSoortNl, type Plaats } from "@/lib/kaart/plaatsen";
+import { plekSoortNl } from "@/lib/kaart/aanmelden";
+import { goedgekeurdeAanmeldingen } from "@/lib/kaart/aanmelden-store";
 
 // De bedrijven van ZekerFlex op de kaart: horecazaken waarvan de eigenaar de website openbaar heeft gezet
 // (HorecaZaak.online). Het adres wordt bij PDOK opgezocht (gratis, Nederlands; PDOK heeft zelf een geheugen)
@@ -12,6 +14,11 @@ const MAX = 300;
 const TEGELIJK = 4;
 
 const g = globalThis as unknown as { __zfKaartPlaatsen?: { tot: number; plaatsen: Plaats[] } };
+
+/** Na een goedkeuring: de lijst meteen opnieuw maken in plaats van tien minuten te wachten. */
+export function wisPlaatsenGeheugen(): void {
+  g.__zfKaartPlaatsen = undefined;
+}
 
 export async function zekerFlexPlaatsen(nu = Date.now()): Promise<Plaats[]> {
   const bewaard = g.__zfKaartPlaatsen;
@@ -42,6 +49,15 @@ export async function zekerFlexPlaatsen(nu = Date.now()): Promise<Plaats[]> {
       }),
     );
     for (const p of uit) if (p) plaatsen.push(p);
+  }
+
+  // bedrijven die zichzelf aanmeldden en door de beheerder zijn goedgekeurd
+  try {
+    for (const a of await goedgekeurdeAanmeldingen()) {
+      plaatsen.push({ id: `aanmelding-${a.tenantId}`, naam: a.naam, soort: plekSoortNl(a.soort), adres: a.adres, plaats: a.plaats, lat: a.lat, lon: a.lon, link: "", website: a.website, omschrijving: a.omschrijving, telefoon: a.telefoon });
+    }
+  } catch (err) {
+    logger.warn("kaart aanmeldingen lezen mislukt", { error: (err as Error).message });
   }
 
   g.__zfKaartPlaatsen = { tot: nu + BEWAAR_MS, plaatsen };

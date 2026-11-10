@@ -7,6 +7,7 @@ import { GEBOUWEN_3D, KAART_STIJLEN, kaartStijl, NL_GRENZEN, type KaartStijl } f
 import { afstandTekst, bewaarPunt, duurTekst, gpx, lijnLengte, ritStand, type Punt, type RitPunt, type ZoekResultaat } from "@/lib/kaart/geo";
 import { laadKaartMotor } from "@/components/kaart/motor";
 import { osmSoortNl, plaatsenGeoJson, veiligeLink, type Plaats } from "@/lib/kaart/plaatsen";
+import { schoneTelefoon, schoneWebsite } from "@/lib/kaart/aanmelden";
 
 // ---------------------------------------------------------------------------
 // ZekerFlex Kaart: een eigen kaart van Nederland (zelf gehoste OpenStreetMap-
@@ -32,7 +33,7 @@ const NL_TEKSTEN: Record<string, string> = {
 };
 
 /** De inhoud van het kaartje bij een plek. Alleen tekst en één eigen link: nooit HTML van buiten in de pagina. */
-function plekInhoud(titel: string, soort: string, regels: string[], link?: { href: string; tekst: string }): HTMLElement {
+function plekInhoud(titel: string, soort: string, regels: string[], links: { href: string; tekst: string; extern?: boolean }[] = []): HTMLElement {
   const el = document.createElement("div");
   el.style.fontFamily = "inherit";
   const kop = document.createElement("p");
@@ -48,11 +49,15 @@ function plekInhoud(titel: string, soort: string, regels: string[], link?: { hre
     p.style.cssText = "margin:4px 0 0;font-size:12px;color:#374151";
     el.append(p);
   }
-  if (link) {
+  for (const link of links) {
     const a = document.createElement("a");
     a.href = link.href;
     a.textContent = link.tekst;
-    a.style.cssText = "display:inline-block;margin-top:8px;font-size:12px;font-weight:700;color:#C2410C;text-decoration:underline";
+    if (link.extern) {
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+    }
+    a.style.cssText = "display:block;margin-top:8px;font-size:12px;font-weight:700;color:#C2410C;text-decoration:underline";
     el.append(a);
   }
   return el;
@@ -157,11 +162,18 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
           // eerst een bedrijf van ZekerFlex (oranje stip), anders een plek uit de kaartgegevens
           const eigen = map.getLayer("zf-bedrijven-stip") ? map.queryRenderedFeatures(e.point, { layers: ["zf-bedrijven-stip"] })[0] : undefined;
           if (eigen && typeof eigen.properties?.naam === "string") {
-            const p = eigen.properties as { naam: string; soort?: string; adres?: string; plaats?: string; link?: string };
+            const p = eigen.properties as { naam: string; soort?: string; adres?: string; plaats?: string; link?: string; website?: string; omschrijving?: string; telefoon?: string };
             const href = veiligeLink(p.link);
+            const site = schoneWebsite(p.website);
+            const tel = schoneTelefoon(p.telefoon);
+            const links = [
+              ...(href ? [{ href, tekst: "Bekijk de website, reserveer of bestel ›" }] : []),
+              ...(site ? [{ href: site, tekst: "Website van het bedrijf ›", extern: true }] : []),
+              ...(tel ? [{ href: `tel:${tel.replace(/[^\d+]/g, "")}`, tekst: `Bel ${tel}` }] : []),
+            ];
             new mod.Popup({ closeButton: true, maxWidth: "260px", offset: 12 })
               .setLngLat(e.lngLat)
-              .setDOMContent(plekInhoud(p.naam, `${p.soort ?? "Bedrijf"} · ZekerFlex`, [[p.adres, p.plaats].filter(Boolean).join(", ")], href ? { href, tekst: "Bekijk de website, reserveer of bestel ›" } : undefined))
+              .setDOMContent(plekInhoud(p.naam, `${p.soort ?? "Bedrijf"} · ZekerFlex`, [[p.adres, p.plaats].filter(Boolean).join(", "), p.omschrijving ?? ""], links))
               .addTo(map);
             return;
           }
@@ -173,7 +185,7 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
           if (poi && typeof naam === "string" && naam) {
             new mod.Popup({ closeButton: true, maxWidth: "260px", offset: 12 })
               .setLngLat(e.lngLat)
-              .setDOMContent(plekInhoud(naam, osmSoortNl(poi.properties?.kind), [], undefined))
+              .setDOMContent(plekInhoud(naam, osmSoortNl(poi.properties?.kind), []))
               .addTo(map);
           }
         });
@@ -468,6 +480,9 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
             <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-full bg-[#FF5F1F] ring-2 ring-white" />
             Oranje stip: een bedrijf van ZekerFlex. Tik op een plek voor meer.
           </p>
+          <a href="/werkgever/kaart" className="mt-1 inline-block text-[0.7rem] font-semibold text-neutralx-600 underline underline-offset-2">
+            Zet je eigen bedrijf op de kaart
+          </a>
         </div>
 
         {modus === "meten" && (

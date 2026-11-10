@@ -17,6 +17,7 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 vi.mock("@/lib/geo/pdok", () => ({ zoekCoordinaat: m.zoek }));
+vi.mock("@/lib/storage/kv", () => ({ kvListEntries: async () => [], kvGet: async () => null, kvSet: async () => undefined }));
 vi.mock("@/lib/logger", () => ({ logger: { warn: () => undefined, info: () => undefined, error: () => undefined } }));
 
 import { horecaSoortNl, osmSoortNl, plaatsenGeoJson, veiligeLink, type Plaats } from "@/lib/kaart/plaatsen";

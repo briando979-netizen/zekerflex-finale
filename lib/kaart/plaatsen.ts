@@ -16,6 +16,10 @@ export interface Plaats {
   lon: number;
   /** de eigen openbare site van het bedrijf, op ZekerFlex */
   link: string;
+  /** bedrijven die zichzelf aanmeldden (en door de beheerder zijn goedgekeurd): eigen website, omschrijving en een openbaar nummer */
+  website?: string | undefined;
+  omschrijving?: string | undefined;
+  telefoon?: string | undefined;
 }
 
 const HORECA_SOORT: Record<string, string> = {
@@ -100,7 +104,7 @@ export function osmSoortNl(kind: unknown): string {
 
 export interface PlaatsGeoJson {
   type: "FeatureCollection";
-  features: { type: "Feature"; properties: { id: string; naam: string; soort: string; adres: string; plaats: string; link: string }; geometry: { type: "Point"; coordinates: [number, number] } }[];
+  features: { type: "Feature"; properties: { id: string; naam: string; soort: string; adres: string; plaats: string; link: string; website: string; omschrijving: string; telefoon: string }; geometry: { type: "Point"; coordinates: [number, number] } }[];
 }
 
 /** De plekken als GeoJSON voor de kaart. Plekken zonder geldige plek vallen weg. */
@@ -111,7 +115,7 @@ export function plaatsenGeoJson(plaatsen: Plaats[]): PlaatsGeoJson {
       .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon) && Math.abs(p.lat) <= 90 && Math.abs(p.lon) <= 180)
       .map((p) => ({
         type: "Feature" as const,
-        properties: { id: p.id, naam: p.naam, soort: p.soort, adres: p.adres, plaats: p.plaats, link: p.link },
+        properties: { id: p.id, naam: p.naam, soort: p.soort, adres: p.adres, plaats: p.plaats, link: p.link, website: p.website ?? "", omschrijving: p.omschrijving ?? "", telefoon: p.telefoon ?? "" },
         geometry: { type: "Point" as const, coordinates: [p.lon, p.lat] as [number, number] },
       })),
   };
