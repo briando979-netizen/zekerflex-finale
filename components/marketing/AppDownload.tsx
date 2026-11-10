@@ -136,6 +136,74 @@ function TestNotice() {
   );
 }
 
+/** Een telefoon met een voorbeeld van het klussenscherm (eigen foto's uit public/welkom, zie CREDITS.md). Alleen sfeer, geen echte klus. */
+function TelefoonVoorbeeld() {
+  return (
+    <div className="relative mx-auto w-[min(270px,70%)]" aria-hidden>
+      {/* gloed achter de telefoon */}
+      <span className="pointer-events-none absolute -inset-10 -z-10 rounded-full bg-brand-mint/15 blur-3xl" />
+      {/* zijknoppen */}
+      <span className="absolute -left-[3px] top-24 h-8 w-[3px] rounded-l bg-white/25" />
+      <span className="absolute -left-[3px] top-36 h-14 w-[3px] rounded-l bg-white/25" />
+      <span className="absolute -right-[3px] top-32 h-20 w-[3px] rounded-r bg-white/25" />
+      <div className="rounded-[2.6rem] border border-white/20 bg-gradient-to-b from-white/[0.14] to-white/[0.04] p-[7px] shadow-[0_30px_80px_-20px_rgba(0,0,0,0.8)]">
+        <div className="relative aspect-[9/19] overflow-hidden rounded-[2.1rem] bg-[#0C0E12]">
+          {/* statusbalk + eiland */}
+          <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-6 pt-2.5 text-[9px] font-semibold text-white">
+            <span>9:41</span>
+            <span className="h-4 w-16 rounded-full bg-black" />
+            <span className="tracking-tight">●●●</span>
+          </div>
+
+          {/* hoofdkaart met foto */}
+          <div className="relative h-[54%] w-full">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/welkom/slide-1.webp" alt="" loading="lazy" className="h-full w-full object-cover object-[50%_25%]" />
+            <span className="absolute inset-0 bg-gradient-to-t from-[#0C0E12] via-[#0C0E12]/30 to-black/25" />
+            <div className="absolute inset-x-3 bottom-3">
+              <span className="inline-flex items-center gap-1 rounded-full bg-brand-mint px-2 py-0.5 text-[9px] font-bold text-ink">
+                <span className="h-1.5 w-1.5 rounded-full bg-ink" />
+                Gematcht in 6 min
+              </span>
+              <p className="mt-1.5 font-display text-[15px] font-bold leading-tight text-white">Horeca-medewerker</p>
+              <p className="text-[10px] text-white/70">Vakkenvuller · Amsterdam-West</p>
+            </div>
+          </div>
+
+          {/* lijst met klussen */}
+          <div className="space-y-2 px-3 pt-3">
+            <div className="flex items-center gap-2.5 rounded-xl bg-white/[0.07] p-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/welkom/slide-2.webp" alt="" loading="lazy" className="h-9 w-9 rounded-lg object-cover object-[50%_20%]" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[10.5px] font-semibold text-white">Magazijn · Utrecht</p>
+                <p className="text-[9px] text-white/60">Morgen · 07:00 - 15:30</p>
+              </div>
+              <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-brand-mint">Reageer</span>
+            </div>
+            <div className="flex items-center gap-2.5 rounded-xl bg-white/[0.07] p-2">
+              <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-mint/20 text-sm">📍</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[10.5px] font-semibold text-white">Inchecken op locatie</p>
+                <p className="text-[9px] text-white/60">Automatisch via je telefoon</p>
+              </div>
+              <span className="h-2 w-2 rounded-full bg-brand-mint" />
+            </div>
+          </div>
+
+          {/* onderbalk */}
+          <div className="absolute inset-x-0 bottom-0 z-10 flex items-center justify-around border-t border-white/10 bg-[#0C0E12]/95 px-4 pb-3 pt-2 text-[8px] text-white/50">
+            <span className="text-brand-mint">● Klussen</span>
+            <span>Agenda</span>
+            <span>Berichten</span>
+            <span>Uren</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export async function AppDownload({ standalone = false }: { standalone?: boolean }) {
   // vlag `iphone-testflight` (standaard uit): de knop komt pas als de testlink testers aanneemt
   const iphone = await featureEnabled("iphone-testflight").catch(() => false);
@@ -180,19 +248,7 @@ export async function AppDownload({ standalone = false }: { standalone?: boolean
             </p>
           </div>
 
-          <div className="mx-auto w-[min(240px,60%)]">
-            <div className="aspect-[9/19] rounded-[2rem] border border-white/12 bg-gradient-to-b from-white/[0.08] to-transparent p-2">
-              <div className="flex h-full flex-col items-center justify-center rounded-[1.6rem] bg-[#0C0E12] text-center">
-                <span className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-mint text-lg font-black text-ink">
-                  ZF
-                </span>
-                <p className="mt-4 px-6 font-display text-sm font-semibold text-white/80">
-                  Gematcht in 6 min
-                </p>
-                <p className="mt-1 px-6 text-xs text-white/60">Vakkenvuller · Amsterdam-West</p>
-              </div>
-            </div>
-          </div>
+          <TelefoonVoorbeeld />
         </div>
       </div>
     </section>
