@@ -195,7 +195,9 @@ export async function runOrchestrationCycle(
           { role: "user", content: JSON.stringify(snapshot) },
         ],
         temperature: 0.1,
-        maxTokens: 1200,
+        // 1200 was te krap: een goede ronde (9 bevindingen) is al ±1200 tokens, en een
+        // langere werd afgekapt tot onleesbare JSON (9 en 10 nov: de hele ronde mislukt)
+        maxTokens: 4000,
       }),
     );
     // Geen bruikbaar antwoord (geen object, of helemaal leeg): dan maken we er

@@ -15,7 +15,8 @@ vi.mock("@/lib/storage/kv", async (importOriginal) => ({
   kvSet: async () => undefined,
 }));
 
-import { _resetLlmBreaker, chat, extractJson, gratisTimeout } from "@/lib/ai/client";
+import { _resetLlmBreaker, chat, chatJson, extractJson, gratisTimeout } from "@/lib/ai/client";
+import { logger } from "@/lib/logger";
 
 function mockFetch(impl: (url: string, init: RequestInit) => Response | Promise<Response>) {
   const fn = vi.fn(impl);
@@ -134,6 +135,29 @@ describe("extractJson", () => {
 
   it("throws on a reply with no JSON", () => {
     expect(() => extractJson("no json here")).toThrow();
+  });
+});
+
+describe("chatJson met een afgekapt antwoord", () => {
+  it("meldt in het log dat het antwoord is afgekapt, zonder de inhoud", async () => {
+    const warn = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
+    mockFetch(
+      () =>
+        new Response(
+          JSON.stringify({
+            model: "llama3.1:8b",
+            choices: [{ message: { content: '{"summary":"geheim","findings":[{"title":"hal' }, finish_reason: "length" }],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+    );
+    await expect(
+      chatJson({ messages: [{ role: "user", content: "hi" }], purpose: "orchestration", maxTokens: 4000 }),
+    ).rejects.toThrow(/onleesbare JSON/);
+    const log = warn.mock.calls.find(([m]) => m === "llm json onleesbaar");
+    expect(log?.[1]).toEqual({ purpose: "orchestration", finishReason: "length", tekens: 45, maxTokens: 4000 });
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("geheim");
+    warn.mockRestore();
   });
 });
 

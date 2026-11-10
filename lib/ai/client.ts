@@ -390,8 +390,20 @@ export function extractJson<T>(text: string): T {
 }
 
 export async function chatJson<T>(opts: Omit<ChatOptions, "json">): Promise<T> {
-  const { text } = await chat({ ...opts, json: true });
-  return extractJson<T>(text);
+  const { text, raw } = await chat({ ...opts, json: true });
+  try {
+    return extractJson<T>(text);
+  } catch (err) {
+    // Alleen de vorm, nooit de inhoud: "length" = afgekapt door maxTokens, anders echt scheef.
+    const finishReason = (raw as { choices?: { finish_reason?: unknown }[] } | null)?.choices?.[0]?.finish_reason;
+    logger.warn("llm json onleesbaar", {
+      purpose: opts.purpose ?? "chat",
+      finishReason: typeof finishReason === "string" ? finishReason : "onbekend",
+      tekens: text.length,
+      maxTokens: opts.maxTokens ?? null,
+    });
+    throw err;
+  }
 }
 
 /** The small/fast model for greetings + short chat; falls back to the main model. */
