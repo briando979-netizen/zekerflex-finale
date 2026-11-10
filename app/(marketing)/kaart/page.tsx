@@ -16,7 +16,8 @@ const FUNCTIES = [
   { titel: "Luchtfoto", tekst: "De actuele luchtfoto van Nederland (Beeldmateriaal Nederland, PDOK), met straatnamen erover." },
   { titel: "Adres zoeken", tekst: "Elk Nederlands adres, elke straat, postcode en plaats, uit de officiële basisregistratie (PDOK)." },
   { titel: "GPS en volgen", tekst: "Je eigen plek op de kaart, en de kaart die met je meebeweegt als je rijdt of loopt." },
-  { titel: "Ritten opnemen", tekst: "Neem een rit op met afstand, tijd en snelheid, en neem hem mee als GPX naar elke routeplanner of sportapp." },
+  { titel: "Route plannen", tekst: "Van je eigen plek of een adres naar waar je moet zijn, met de auto, de fiets of lopend. Met de reistijd, de afstand en elke afslag in het Nederlands, uitgerekend op onze eigen server." },
+  { titel: "Ritten opnemen", tekst:"Neem een rit op met afstand, tijd en snelheid, en neem hem mee als GPX naar elke routeplanner of sportapp." },
   { titel: "Meten", tekst: "Tik punten op de kaart en zie meteen de afstand: voor een route, een terrein of een kavel." },
   { titel: "Licht, donker en deelbaar", tekst: "Kies een lichte of donkere kaart. Het adres in je browser onthoudt de plek, zodat je een kaartbeeld kunt delen." },
 ];

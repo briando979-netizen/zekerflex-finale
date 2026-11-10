@@ -7,19 +7,33 @@ import type { GeoJSONSource, Map as MlMap, Marker } from "maplibre-gl";
 import { GEBOUWEN_3D, KAART_STIJLEN, kaartStijl, NL_GRENZEN, type KaartStijl } from "@/lib/kaart/stijl";
 import { afstandTekst, bewaarPunt, duurTekst, gpx, lijnLengte, ritStand, type Punt, type RitPunt, type ZoekResultaat } from "@/lib/kaart/geo";
 import { laadKaartMotor } from "@/components/kaart/motor";
+import { PlekZoeker } from "@/components/kaart/PlekZoeker";
 import { osmSoortNl, plaatsenGeoJson, veiligeLink, type Plaats } from "@/lib/kaart/plaatsen";
 import { schoneTelefoon, schoneWebsite } from "@/lib/kaart/aanmelden";
+import { ROUTE_MODI, ROUTE_MODUS_LABEL, type Route, type RouteModus } from "@/lib/geo/route-core";
 
 // ---------------------------------------------------------------------------
 // ZekerFlex Kaart: een eigen kaart van Nederland (zelf gehoste OpenStreetMap-
 // tegels, lib/kaart/stijl.ts) met 3D-gebouwen, luchtfoto, adres zoeken (PDOK),
 // je eigen plek en volgen, een rit opnemen met afstand, tijd en snelheid (GPX
-// om mee te nemen) en meten op de kaart. MapLibre wordt pas in de browser
+// om mee te nemen), meten op de kaart en een route plannen (auto, fiets, lopen)
+// met onze eigen routeplanner (/api/kaart/route). MapLibre wordt pas in de browser
 // geladen; de worker krijgt een eigen adres op onze site (CSP: worker-src 'self').
 // ---------------------------------------------------------------------------
 
-type Modus = "kijken" | "meten";
+type Modus = "kijken" | "meten" | "route";
 type Positie = { lon: number; lat: number; nauwkeurigheid: number };
+type RoutePlek = { lat: number; lon: number; naam: string };
+type RouteUitslag =
+  | { soort: "route"; route: Route; modus: RouteModus }
+  | { soort: "melding"; fout: string; schatting: { meters: number; seconds: number } | null };
+
+/** De routelijn in de kleur van ZekerFlex: diep groenblauw op de lichte kaart, mint op donker en luchtfoto. */
+const ROUTE_KLEUR: Record<KaartStijl, { lijn: string; rand: string }> = {
+  licht: { lijn: "#0E5C4A", rand: "#ffffff" },
+  donker: { lijn: "#4FE0A0", rand: "#0b1f1a" },
+  luchtfoto: { lijn: "#4FE0A0", rand: "#0b1f1a" },
+};
 
 const RIT_OPSLAG = "zf-kaart-rit";
 
@@ -77,6 +91,8 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
   const watchId = useRef<number | null>(null);
   const plekMarker = useRef<Marker | null>(null);
   const zoekMarker = useRef<Marker | null>(null);
+  const vanMarker = useRef<Marker | null>(null);
+  const naarMarker = useRef<Marker | null>(null);
   const wakker = useRef<{ release: () => Promise<void> } | null>(null);
   const gekozen = useRef("");
   /** de bedrijven van ZekerFlex op de kaart (oranje stippen) */
@@ -96,14 +112,31 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
   const [zoek, setZoek] = useState("");
   const [resultaten, setResultaten] = useState<ZoekResultaat[]>([]);
   const [paneelOpen, setPaneelOpen] = useState(true);
+  const [routeVan, setRouteVan] = useState<RoutePlek | null>(null);
+  const [routeNaar, setRouteNaar] = useState<RoutePlek | null>(null);
+  const [vervoer, setVervoer] = useState<RouteModus>("auto");
+  const [routeUitslag, setRouteUitslag] = useState<RouteUitslag | null>(null);
+  const [routeBezig, setRouteBezig] = useState(false);
+  const [routeMelding, setRouteMelding] = useState<string | null>(null);
+  /** draait de routeplanner? null = nog niet gevraagd */
+  const [routeplanner, setRouteplanner] = useState<boolean | null>(null);
+
+  const routeLijn: Punt[] = routeUitslag?.soort === "route" ? routeUitslag.route.lijn : [];
 
   // de nieuwste waarden voor de kaart- en GPS-gebeurtenissen
-  const stand = useRef({ stijl, drie, modus, meetPunten, volgen, opnemen, rit });
-  stand.current = { stijl, drie, modus, meetPunten, volgen, opnemen, rit };
+  const stand = useRef({ stijl, drie, modus, meetPunten, volgen, opnemen, rit, routeLijn });
+  stand.current = { stijl, drie, modus, meetPunten, volgen, opnemen, rit, routeLijn };
 
-  /** Onze eigen lagen (rit, meting) na elke stijlwissel opnieuw erbij. */
+  /** Onze eigen lagen (route, rit, meting) na elke stijlwissel opnieuw erbij. */
   const eigenLagen = useCallback((map: MlMap) => {
     const s = stand.current;
+    if (!map.getSource("routeplan")) {
+      // eerst de route, zodat een opgenomen rit en de bedrijven erboven liggen
+      const kleur = ROUTE_KLEUR[s.stijl];
+      map.addSource("routeplan", { type: "geojson", data: lijn(s.routeLijn) });
+      map.addLayer({ id: "routeplan-rand", type: "line", source: "routeplan", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": kleur.rand, "line-width": 9 } });
+      map.addLayer({ id: "routeplan-lijn", type: "line", source: "routeplan", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": kleur.lijn, "line-width": 5.5 } });
+    }
     if (!map.getSource("rit")) {
       map.addSource("rit", { type: "geojson", data: lijn(s.rit.map((p) => [p.lon, p.lat])) });
       map.addLayer({ id: "rit-rand", type: "line", source: "rit", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#ffffff", "line-width": 8 } });
@@ -158,6 +191,10 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
         map.on("click", (e) => {
           if (stand.current.modus === "meten") {
             setMeetPunten((m) => [...m, [e.lngLat.lng, e.lngLat.lat]]);
+            return;
+          }
+          if (stand.current.modus === "route") {
+            setRouteNaar({ lat: e.lngLat.lat, lon: e.lngLat.lng, naam: "Gekozen plek op de kaart" });
             return;
           }
           // eerst een bedrijf van ZekerFlex (oranje stip), anders een plek uit de kaartgegevens
@@ -257,6 +294,104 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
     (kaart.current?.getSource("rit") as GeoJSONSource | undefined)?.setData(lijn(rit.map((p) => [p.lon, p.lat])));
   }, [rit]);
 
+  // ---- route --------------------------------------------------------------
+
+  // draait de routeplanner? Eén keer vragen zodra je de Route opent
+  useEffect(() => {
+    if (modus !== "route" || routeplanner !== null) return;
+    const ctl = new AbortController();
+    fetch("/api/kaart/route", { signal: ctl.signal })
+      .then((r) => r.json())
+      .then((d: { beschikbaar?: boolean }) => setRouteplanner(Boolean(d.beschikbaar)))
+      .catch(() => undefined);
+    return () => ctl.abort();
+  }, [modus, routeplanner]);
+
+  // de route zelf, zodra van en naar er zijn (en opnieuw bij een andere vervoerswijze)
+  useEffect(() => {
+    if (!routeVan || !routeNaar) {
+      setRouteUitslag(null);
+      setRouteBezig(false);
+      return;
+    }
+    const ctl = new AbortController();
+    const modusNu = vervoer;
+    setRouteBezig(true);
+    const t = setTimeout(() => {
+      fetch("/api/kaart/route", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ van: { lat: routeVan.lat, lon: routeVan.lon }, naar: { lat: routeNaar.lat, lon: routeNaar.lon }, modus: modusNu }),
+        signal: ctl.signal,
+      })
+        .then(async (r) => {
+          const d = (await r.json().catch(() => ({}))) as {
+            route?: Route | null;
+            fout?: string;
+            schatting?: { meters: number; seconds: number };
+            error?: { message?: string };
+          };
+          if (r.ok && d.route) setRouteUitslag({ soort: "route", route: d.route, modus: modusNu });
+          else
+            setRouteUitslag({
+              soort: "melding",
+              fout: d.fout ?? d.error?.message ?? "De route kon niet worden berekend. Probeer het opnieuw.",
+              schatting: d.schatting ?? null,
+            });
+        })
+        .catch(() => {
+          if (!ctl.signal.aborted) setRouteUitslag({ soort: "melding", fout: "Geen verbinding met de routeplanner. Controleer je internet en probeer het opnieuw.", schatting: null });
+        })
+        .finally(() => {
+          if (!ctl.signal.aborted) setRouteBezig(false);
+        });
+    }, 150);
+    return () => {
+      clearTimeout(t);
+      ctl.abort();
+    };
+  }, [routeVan, routeNaar, vervoer]);
+
+  // de lijn naar de kaart, en de hele route in beeld (naast het paneel)
+  useEffect(() => {
+    const punten = routeUitslag?.soort === "route" ? routeUitslag.route.lijn : [];
+    const map = kaart.current;
+    const mod = ml.current;
+    (map?.getSource("routeplan") as GeoJSONSource | undefined)?.setData(lijn(punten));
+    const eerste = punten[0];
+    if (!map || !mod || !eerste || punten.length < 2) return;
+    const grenzen = punten.reduce((g, p) => g.extend(p), new mod.LngLatBounds(eerste, eerste));
+    const breed = window.innerWidth >= 640;
+    setVolgen(false);
+    map.fitBounds(grenzen, { padding: breed ? { top: 60, bottom: 60, left: 400, right: 70 } : { top: 40, bottom: 40, left: 30, right: 60 }, maxZoom: 16, duration: 900 });
+  }, [routeUitslag]);
+
+  // speld op het vertrekpunt en de bestemming
+  useEffect(() => {
+    const map = kaart.current;
+    const mod = ml.current;
+    vanMarker.current?.remove();
+    vanMarker.current = null;
+    if (!map || !mod || !klaar || !routeVan) return;
+    const el = document.createElement("div");
+    el.setAttribute("role", "img");
+    el.setAttribute("aria-label", "Vertrekpunt");
+    el.style.cssText = `width:20px;height:20px;border-radius:9999px;background:#ffffff;border:5px solid ${ROUTE_KLEUR.licht.lijn};box-shadow:0 1px 4px rgba(0,0,0,0.35)`;
+    vanMarker.current = new mod.Marker({ element: el }).setLngLat([routeVan.lon, routeVan.lat]).addTo(map);
+  }, [routeVan, klaar]);
+
+  useEffect(() => {
+    const map = kaart.current;
+    const mod = ml.current;
+    naarMarker.current?.remove();
+    naarMarker.current = null;
+    if (!map || !mod || !klaar || !routeNaar) return;
+    const m = new mod.Marker({ color: ROUTE_KLEUR.licht.lijn }).setLngLat([routeNaar.lon, routeNaar.lat]).addTo(map);
+    m.getElement().setAttribute("role", "img");
+    m.getElement().setAttribute("aria-label", "Bestemming");
+    naarMarker.current = m;
+  }, [routeNaar, klaar]);
+
   // ---- GPS ----------------------------------------------------------------
 
   const opPositie = useCallback((pos: GeolocationPosition) => {
@@ -349,6 +484,53 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
 
+  /** Je eigen plek als vertrekpunt (de plek blijft in je browser; alleen de routevraag gaat naar onze server). */
+  function mijnPlekAlsVan() {
+    setRouteMelding(null);
+    if (!("geolocation" in navigator)) {
+      setRouteMelding("Je browser geeft geen locatie door. Zoek het vertrekpunt dan op.");
+      return;
+    }
+    if (positie) {
+      setRouteVan({ lat: positie.lat, lon: positie.lon, naam: "Mijn plek" });
+      return;
+    }
+    setRouteMelding("Je plek wordt gezocht…");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        opPositie(pos);
+        setRouteMelding(null);
+        setRouteVan({ lat: pos.coords.latitude, lon: pos.coords.longitude, naam: "Mijn plek" });
+      },
+      (err) =>
+        setRouteMelding(
+          err.code === err.PERMISSION_DENIED
+            ? "Je hebt geen toestemming gegeven voor je locatie. Zet die aan in je browser, of zoek het vertrekpunt op."
+            : "Je locatie is nu niet te bepalen. Zoek het vertrekpunt dan op.",
+        ),
+      { enableHighAccuracy: true, maximumAge: 10_000, timeout: 20_000 },
+    );
+  }
+
+  function routeKnop() {
+    const aanZetten = modus !== "route";
+    setModus(aanZetten ? "route" : "kijken");
+    // op een telefoon het gewone gereedschap inklappen, dan past de route eronder
+    if (aanZetten && window.innerWidth < 640) setPaneelOpen(false);
+  }
+
+  function omdraaien() {
+    setRouteVan(routeNaar);
+    setRouteNaar(routeVan);
+  }
+
+  function wisRoute() {
+    setRouteVan(null);
+    setRouteNaar(null);
+    setRouteUitslag(null);
+    setRouteMelding(null);
+  }
+
   // ---- zoeken -------------------------------------------------------------
 
   useEffect(() => {
@@ -401,9 +583,9 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
         </div>
       )}
 
-      {/* gereedschap */}
-      <div className="absolute left-3 top-3 z-10 w-[min(22rem,calc(100%-4.5rem))] space-y-2">
-        <div className="rounded-2xl bg-white/95 p-3 shadow-xl ring-1 ring-black/5 backdrop-blur">
+      {/* gereedschap: de kolom loopt tot onderaan (de route scrollt erin), maar alleen de kaarten erin vangen tikken */}
+      <div className="pointer-events-none absolute bottom-3 left-3 top-3 z-10 flex w-[min(22rem,calc(100%-4.5rem))] flex-col gap-2">
+        <div className="pointer-events-auto flex-shrink-0 rounded-2xl bg-white/95 p-3 shadow-xl ring-1 ring-black/5 backdrop-blur">
           <div className="relative">
             <label htmlFor="kaart-zoek" className="sr-only">
               Zoek een adres, straat of plaats
@@ -467,6 +649,9 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
               >
                 Meten
               </button>
+              <button type="button" aria-pressed={modus === "route"} onClick={routeKnop} className={`${knop} ${modus === "route" ? aan : uit}`}>
+                Route
+              </button>
               <button type="button" aria-pressed={opnemen} onClick={() => void ritKnop()} className={`${knop} ${opnemen ? "bg-red-600 text-white ring-red-600" : uit}`}>
                 {opnemen ? "Stop rit" : "Rit opnemen"}
               </button>
@@ -487,7 +672,7 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
         </div>
 
         {modus === "meten" && (
-          <div className="rounded-2xl bg-white/95 p-3 text-sm shadow-xl ring-1 ring-black/5">
+          <div className="pointer-events-auto flex-shrink-0 rounded-2xl bg-white/95 p-3 text-sm shadow-xl ring-1 ring-black/5">
             <p className="font-semibold">{meetPunten.length < 2 ? "Tik op de kaart om punten te zetten" : `Afstand: ${afstandTekst(meetLengte)}`}</p>
             {meetPunten.length > 0 && (
               <button type="button" className="mt-1 text-xs font-semibold underline underline-offset-2" onClick={() => setMeetPunten([])}>
@@ -495,6 +680,107 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
               </button>
             )}
           </div>
+        )}
+
+        {modus === "route" && (
+          // geen backdrop-blur: die maakt een eigen laag en zou de zoekresultaten van het grote zoekveld bedekken
+          <section aria-label="Route plannen" className="pointer-events-auto min-h-0 space-y-2.5 overflow-y-auto rounded-2xl bg-white/95 p-3 text-sm shadow-xl ring-1 ring-black/5">
+            <PlekZoeker
+              id="route-van"
+              label="Van"
+              waarde={routeVan?.naam ?? ""}
+              placeholder="Zoek een adres of plaats"
+              onKies={(r) => {
+                setRouteMelding(null);
+                setRouteVan({ lat: r.lat, lon: r.lon, naam: r.naam });
+              }}
+              extra={
+                <button type="button" onClick={mijnPlekAlsVan} className="text-xs font-semibold text-brand-700 underline-offset-2 hover:underline">
+                  Mijn plek
+                </button>
+              }
+            />
+            <PlekZoeker
+              id="route-naar"
+              label="Naar"
+              waarde={routeNaar?.naam ?? ""}
+              placeholder="Zoek een adres, of tik op de kaart"
+              onKies={(r) => setRouteNaar({ lat: r.lat, lon: r.lon, naam: r.naam })}
+              extra={
+                routeVan || routeNaar ? (
+                  <button type="button" onClick={omdraaien} className="text-xs font-semibold text-brand-700 underline-offset-2 hover:underline">
+                    Omdraaien
+                  </button>
+                ) : undefined
+              }
+            />
+            <div role="group" aria-label="Vervoer" className="flex gap-1.5">
+              {ROUTE_MODI.map((m) => (
+                <button key={m} type="button" aria-pressed={vervoer === m} onClick={() => setVervoer(m)} className={`${knop} flex-1 ${vervoer === m ? aan : uit}`}>
+                  {ROUTE_MODUS_LABEL[m]}
+                </button>
+              ))}
+            </div>
+
+            {routeplanner === false && (
+              <p className="text-xs text-neutralx-600">De routeplanner staat nu niet aan. Je krijgt dan onze schatting van de reistijd, zonder de route zelf.</p>
+            )}
+            {routeMelding && (
+              <p role="alert" className="text-xs text-neutralx-700">
+                {routeMelding}
+              </p>
+            )}
+            {(!routeVan || !routeNaar) && (
+              <p className="text-xs text-neutralx-500">
+                {!routeVan ? "Kies waar je vertrekt: zoek een adres of tik op Mijn plek." : "Kies je bestemming: zoek een adres of tik op de kaart."}
+              </p>
+            )}
+            {routeBezig && (
+              <p role="status" className="text-xs text-neutralx-500">
+                Route berekenen…
+              </p>
+            )}
+
+            {!routeBezig && routeUitslag?.soort === "route" && (
+              <div role="status" aria-live="polite">
+                <p className="num font-display text-lg font-bold">
+                  {duurTekst(routeUitslag.route.seconds)} · {afstandTekst(routeUitslag.route.meters)}
+                </p>
+                <p className="text-xs text-neutralx-500">{ROUTE_MODUS_LABEL[routeUitslag.modus]}, over de weg</p>
+                {routeUitslag.route.stappen.length > 0 && (
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-xs font-semibold">Routebeschrijving ({routeUitslag.route.stappen.length} stappen)</summary>
+                    <ol className="mt-1.5 max-h-56 space-y-1.5 overflow-y-auto pr-1">
+                      {routeUitslag.route.stappen.map((s, i) => (
+                        <li key={`${i}-${s.tekst}`} className="flex justify-between gap-2 text-xs">
+                          <span className="min-w-0">
+                            {i + 1}. {s.tekst}
+                          </span>
+                          {s.meters > 0 && <span className="num flex-shrink-0 text-neutralx-500">{afstandTekst(s.meters)}</span>}
+                        </li>
+                      ))}
+                    </ol>
+                  </details>
+                )}
+              </div>
+            )}
+            {!routeBezig && routeUitslag?.soort === "melding" && (
+              <div role="alert" className="rounded-xl bg-paper-soft p-2.5 text-xs text-ink">
+                <p>{routeUitslag.fout}</p>
+                {routeUitslag.schatting && (
+                  <p className="mt-1 font-semibold">
+                    Schatting: ongeveer {duurTekst(routeUitslag.schatting.seconds)} · {afstandTekst(routeUitslag.schatting.meters)}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {(routeVan || routeNaar) && (
+              <button type="button" className="text-xs font-semibold underline underline-offset-2" onClick={wisRoute}>
+                Route wissen
+              </button>
+            )}
+          </section>
         )}
       </div>
 
