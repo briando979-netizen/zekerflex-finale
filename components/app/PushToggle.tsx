@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { bannerWeerTonen, PUSH_BANNER_NL, type PushBannerTexts } from "@/components/app/push-banner-texts";
+import { useInIosApp } from "@/components/app/useInIosApp";
 
 type State = "loading" | "unsupported" | "ios-install" | "unconfigured" | "off" | "on" | "denied" | "busy";
 
@@ -95,6 +96,7 @@ export function PushToggle({ variant = "card", texts = PUSH_BANNER_NL }: { varia
   const [dismissed, setDismissed] = useState(false);
   const [app, setApp] = useState(false);
   const [testMsg, setTestMsg] = useState<string | null>(null);
+  const ios = useInIosApp();
 
   useEffect(() => {
     let cancelled = false;
@@ -213,6 +215,11 @@ export function PushToggle({ variant = "card", texts = PUSH_BANNER_NL }: { varia
       /* not remembered — fine */
     }
   };
+
+  // De iPhone-app (ios-app/) vraagt zelf om toestemming en ontvangt meldingen via Apple (APNs,
+  // lib/notifications/push/apns.ts). Web Push werkt in een WKWebView niet: hier dus niets, ook geen
+  // "zet op je beginscherm" (anders een knop die niets doet, reden voor afkeur door Apple).
+  if (ios !== false) return null;
 
   if (variant === "banner") {
     if (dismissed || !(state === "off" || state === "busy" || state === "ios-install")) return null;
