@@ -173,7 +173,6 @@ export async function schrijfAntwoord(input: { kanaal: "facebook" | "instagram";
       purpose: "social-reactie",
       temperature: 0.4,
       maxTokens: 300,
-      retry: false,
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
@@ -220,7 +219,6 @@ export async function schrijfPosts(input: { doelgroep: Doelgroep; invalshoek?: s
       purpose: "social-post",
       temperature: 0.8,
       maxTokens: 1500,
-      retry: false,
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
