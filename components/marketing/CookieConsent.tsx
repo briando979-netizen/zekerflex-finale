@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cookieStringIsApp } from "@/lib/app-mode";
 
 const COOKIE_NAME = "zf_cookie_consent";
 
@@ -47,10 +49,19 @@ export function CookieConsent() {
   const [showDetails, setShowDetails] = useState(false);
   const [locale, setLocale] = useState<CopyLocale>("nl");
   const c = COPY[locale];
+  const pad = usePathname();
 
   useEffect(() => {
     setLocale(readLocale());
-    if (!readConsentCookie()) setVisible(true);
+    // Niet vanzelf op de welkomstpagina van de app en niet in de app zelf: daar bedekt hij de knoppen
+    // "Account aanmaken" en "Inloggen". We plaatsen alleen functionele cookies (zie hieronder), dus er
+    // valt niets te kiezen; het cookiebeleid blijft bereikbaar en "instellingen" opent hem nog steeds.
+    const inApp = cookieStringIsApp(document.cookie);
+    const opWelkom = pad === "/welkom" || (pad ?? "").startsWith("/welkom/");
+    setVisible(!readConsentCookie() && !inApp && !opWelkom);
+  }, [pad]);
+
+  useEffect(() => {
     const reopen = () => {
       setShowDetails(true);
       setVisible(true);
