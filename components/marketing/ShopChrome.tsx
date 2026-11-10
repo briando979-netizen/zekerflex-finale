@@ -195,7 +195,7 @@ function ShopOmlijsting({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-white font-sans text-ink">
-      <a href="#shop-inhoud" className="sr-only z-[60] rounded-md bg-white px-4 py-2 text-[14px] font-semibold text-ink focus:not-sr-only focus:fixed focus:left-3 focus:top-3">
+      <a href="#shop-inhoud" className="sr-only z-[60] rounded-md bg-white px-4 py-2 text-[14px] font-semibold text-ink focus-visible:not-sr-only focus-visible:fixed focus-visible:left-3 focus-visible:top-3">
         {t.shop.skipToContent}
       </a>
 
