@@ -47,9 +47,12 @@ export function WerkruimteKiezer({
         const body = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
         throw new Error(body?.error?.message ?? "Opslaan lukte niet. Probeer het opnieuw.");
       }
+      const antwoord = (await res.json().catch(() => null)) as { ga?: string } | null;
       setOpen(false);
-      setKlaar(`Opgeslagen: je menu en startscherm zijn nu ingericht voor ${WERKRUIMTE_INFO[soort].naam.toLowerCase()}.`);
-      router.refresh();
+      setKlaar(`Opgeslagen: we openen je dashboard ${WERKRUIMTE_INFO[soort].naam.toLowerCase()}.`);
+      // elk dashboard heeft een eigen omgeving (lib/werkgever/werkruimte.ts thuisVan); volledig laden voor het nieuwe menu
+      if (antwoord?.ga) window.location.assign(antwoord.ga);
+      else router.refresh();
     } catch (e) {
       setFout(e instanceof Error ? e.message : "Opslaan lukte niet. Probeer het opnieuw.");
     } finally {
@@ -86,7 +89,7 @@ export function WerkruimteKiezer({
         {alsVraag ? "Waar gebruik je ZekerFlex voor?" : "Wat voor bedrijf ben je?"}
       </h2>
       <p className="mt-1 text-sm text-neutralx-600">
-        Je menu en startscherm passen zich aan. Alle functies blijven bereikbaar en je kunt dit altijd wijzigen.
+        Je krijgt een eigen dashboard voor wat je kiest. Later voeg je er een toe of wissel je via “Dashboard” bovenaan het menu.
       </p>
       <fieldset className="mt-4">
         <legend className="sr-only">Soort bedrijf</legend>
@@ -118,7 +121,7 @@ export function WerkruimteKiezer({
               aria-describedby={personeelVast ? `${id}-vast` : undefined}
               className="mt-0.5 accent-brand-600"
             />
-            <span>Ik huur ook personeel in via ZekerFlex (klussen, inplannen, uren en facturen in het menu)</span>
+            <span>Ik huur ook personeel in via ZekerFlex (dan krijg je ook het dashboard Personeel inhuren)</span>
           </label>
           {personeelVast && (
             <p id={`${id}-vast`} className="ml-6 mt-1 text-xs text-neutralx-500">

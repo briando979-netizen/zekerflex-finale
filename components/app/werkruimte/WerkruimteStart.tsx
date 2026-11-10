@@ -4,7 +4,6 @@ import { WelcomeBack } from "@/components/app/WelcomeBack";
 import { KlusConceptNudge } from "@/components/app/KlusConceptNudge";
 import { KpiCard, PageHeader, Panel, money } from "@/components/app/ui";
 import { TegelRaster, type Tegel } from "@/components/app/werkruimte/Tegels";
-import { WerkruimteKiezer } from "@/components/app/werkruimte/WerkruimteKiezer";
 import { getEmployerOverview } from "@/lib/dashboard/employer";
 import { isTenantVerified } from "@/lib/company/verified";
 import { rijschoolKerncijfers } from "@/lib/rijschool/kerncijfers";
@@ -17,7 +16,7 @@ import { BANK_AAN } from "@/lib/app-mode";
 // Het startscherm van /werkgever voor een rijschool, horecazaak of wie alleen een
 // website of webshop heeft (lib/werkgever/werkruimte.ts). Bovenaan het eigen
 // vak met kerncijfers en een tegel per onderdeel, daaronder de rest van de
-// werkruimte, dan personeel inhuren en de keuze "wat voor bedrijf ben je?".
+// werkruimte en dan personeel inhuren. Wisselen van dashboard: de wisselaar in de zijbalk.
 // Een bedrijf dat personeel inhuurt houdt het gewone dashboard (app/werkgever/page.tsx).
 // ---------------------------------------------------------------------------
 
@@ -34,11 +33,9 @@ const meervoud = (n: number, een: string, meer: string) => `${n} ${n === 1 ? een
 export function WerkruimteStart({
   w,
   inApp,
-  kanKiezen,
   studio,
-  voorbeeld = false,
   ...basis
-}: Basis & { w: WerkruimteContext; inApp: boolean; kanKiezen: boolean; studio: boolean; /** ?voorbeeld=: alleen bekijken, geen keuze tonen */ voorbeeld?: boolean }) {
+}: Basis & { w: WerkruimteContext; inApp: boolean; studio: boolean }) {
   return (
     <>
       {w.soort === "rijschool" ? <RijschoolVak {...basis} /> : w.soort === "horeca" ? <HorecaVak {...basis} /> : <WebsiteVak {...basis} studio={studio} />}
@@ -49,7 +46,6 @@ export function WerkruimteStart({
         </Panel>
       </div>
       <PersoneelVak principal={basis.principal} tenantId={basis.tenantId} ookPersoneel={w.ookPersoneel} />
-      {!voorbeeld && <WerkruimteKiezer huidig={w.soort} ookPersoneel={w.ookPersoneel} personeelVast={w.heeftKlussen} kanKiezen={kanKiezen} />}
     </>
   );
 }

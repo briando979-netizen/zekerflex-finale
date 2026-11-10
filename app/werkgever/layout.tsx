@@ -17,7 +17,8 @@ import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { ChatDock } from "@/components/chat/ChatDock";
 import { SeasonalLoader } from "@/components/seasons/SeasonalLoader";
 import { birthdayToday } from "@/lib/seasons/settings";
-import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IGlobe, IPhone, ICar, IStar, IList, IPin } from "@/components/app/icons";
+import type { ReactElement } from "react";
+import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IGlobe, IPhone, ICar, IStar, IList, IPin, IUsers, IImage, ISettings, IActivity } from "@/components/app/icons";
 import type { NavItem } from "@/components/app/AppShell";
 import { menuVoor, SECTIE_NAAM, type MenuSectie, type MenuSleutel } from "@/lib/werkgever/werkruimte";
 import { werkruimteVan } from "@/lib/werkgever/werkruimte-server";
@@ -26,6 +27,30 @@ import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
 import { featureEnabled } from "@/lib/flags";
 
 export const dynamic = "force-dynamic";
+
+/** Een eigen icoon per tabblad van het rijschool- en horecabeheer in het menu. */
+const TAB_ICOON: Record<string, ReactElement> = {
+  overzicht: <IGrid />,
+  agenda: <ICalendar />,
+  leerlingen: <IUsers />,
+  berichten: <IChat />,
+  betalingen: <IWallet />,
+  team: <ICar />,
+  pakketten: <IList />,
+  website: <IGlobe />,
+  instellingen: <ISettings />,
+  app: <IPhone />,
+  reserveringen: <ICalendar />,
+  bestellingen: <IList />,
+  tafels: <IGrid />,
+  kassa: <IWallet />,
+  taken: <IClock />,
+  cijfers: <IActivity />,
+  menukaart: <IDoc />,
+  schermen: <IImage />,
+  modules: <IStar />,
+  gegevens: <ISettings />,
+};
 
 export default async function WerkgeverLayout({ children }: { children: ReactNode }) {
   const principal = await getPrincipal();
@@ -55,7 +80,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     tenantId ? reviewSummary("company", tenantId) : Promise.resolve(null),
     getUserAvatars([principal.userId]),
     birthdayToday(principal.userId).catch(() => false),
-    // rijschool, horeca, website of personeel: bepaalt de volgorde en indeling van het menu (lib/werkgever/werkruimte.ts)
+    // het open dashboard (personeel, rijschool, horeca, website, webshop) bepaalt het menu (lib/werkgever/werkruimte.ts)
     werkruimteVan(tenantId),
   ]);
   const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
@@ -63,10 +88,10 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
   // elk onderdeel één keer; de werkruimte kiest welke en in welke volgorde
   const onderdelen: Record<MenuSleutel, Omit<NavItem, "section">> = {
     start: { href: "/werkgever", label: t.nav.start, icon: <IRocket /> },
-    rijschool: { href: "/werkgever/rijschool", label: "Rijschool", icon: <ICar /> },
-    horeca: { href: "/werkgever/horeca", label: "Horeca", icon: <IList /> },
-    studio: { href: "/studio", label: "Website en webshop", icon: <IGlobe /> },
-    inhuren: { href: "/werkgever/diensten/nieuw", label: "Klus plaatsen", icon: <IBriefcase /> },
+    rijschool: { href: "/werkgever/rijschool", label: "Rijschool inrichten", icon: <ICar /> },
+    horeca: { href: "/werkgever/horeca", label: "Zaak inrichten", icon: <IList /> },
+    studio: { href: "/studio/website", label: "Website bouwen", icon: <IGlobe /> },
+    winkel: { href: "/studio/webshop", label: "Webshop", icon: <IGlobe /> },
     klussen: { href: "/werkgever/diensten", label: t.nav.klussen, icon: <IBriefcase /> },
     kalender: { href: "/werkgever/kalender", label: t.nav.kalender, icon: <ICalendar /> },
     planner: { href: "/werkgever/planner", label: "Roosterplanner", icon: <ICalendar /> },
@@ -98,18 +123,25 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
   // de Op locatie-modules (portofoon, toegang, kluis, printen) ook (lib/locatie)
   const locatieAan = await featureEnabled("locatie-modules", { userId: principal.userId });
   const sectieNaam = (s: MenuSectie) => (s === "beheer" ? t.nav.beheer : SECTIE_NAAM[s]);
+  // de beheerder: studio, rijschool- en horecabeheer, dashboards toevoegen
+  const beheerder = hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN");
   const nav: NavItem[] = menuVoor(werkruimte.soort, {
-    ookPersoneel: werkruimte.ookPersoneel,
     heeftRijschool: werkruimte.heeftRijschool,
     heeftHoreca: werkruimte.heeftHoreca,
+    horecaModules: werkruimte.horecaModules,
     inApp,
     // de studio eist HQ_ADMIN of PLATFORM_ADMIN (app/studio/layout.tsx)
-    studio: hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN"),
+    studio: beheerder,
   })
     .filter(({ sleutel }) => sleutel !== "netwerk" || netwerkAan)
     .filter(({ sleutel }) => sleutel !== "kennisbank" || kennisbankIngesteld())
     .filter(({ sleutel }) => sleutel !== "locatie" || locatieAan)
-    .map(({ sleutel, sectie }) => ({ ...onderdelen[sleutel], ...(sectie ? { section: sectieNaam(sectie) } : {}) }));
+    .map(({ sleutel, sectie, tab }) => ({
+      ...onderdelen[sleutel],
+      // een tabblad van het rijschool- of horecabeheer als eigen onderdeel (lib/rijschool/tabs.ts, lib/horeca/tabs.ts)
+      ...(tab ? { href: `${onderdelen[sleutel].href}?tab=${tab.id}`, label: tab.label, icon: TAB_ICOON[tab.id] ?? onderdelen[sleutel].icon } : {}),
+      ...(sectie ? { section: sectieNaam(sectie) } : {}),
+    }));
 
   return (
     <IosAppProvider ios={ios}>
@@ -125,6 +157,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
         userMeta={principal.email}
         avatarUrl={avatarUrl}
         canSwitchToFreelancer={hasRole(principal, "FREELANCER")}
+        dashboards={{ actief: werkruimte.soort, dashboards: werkruimte.dashboards, kanToevoegen: beheerder }}
       >
         <OpbouwfaseBalk soort="werkgever" />
         {children}

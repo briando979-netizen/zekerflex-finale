@@ -36,7 +36,8 @@ import { werkruimteVan } from "@/lib/werkgever/werkruimte-server";
 import { WerkruimteStart } from "@/components/app/werkruimte/WerkruimteStart";
 import { WerkruimteKiezer } from "@/components/app/werkruimte/WerkruimteKiezer";
 import { VoorbeeldBalk } from "@/components/app/werkruimte/VoorbeeldBalk";
-import { isWerkruimte } from "@/lib/werkgever/werkruimte";
+import { isWerkruimte, thuisVan } from "@/lib/werkgever/werkruimte";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -53,15 +54,18 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
   const w = voorbeeldSoort ? { ...echt, soort: voorbeeldSoort } : echt;
   const kanKiezen = hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN");
   if (w.soort !== "personeel") {
+    // elk dashboard heeft een eigen omgeving: de studio (website, webshop) of het rijschool- of
+    // horecabeheer, met daar de eigen start. Die zijn voor de beheerder; een collega ziet hier het startscherm.
+    if (!voorbeeldSoort && kanKiezen) redirect(thuisVan(w.soort));
     return (
       <>
         {voorbeeldSoort && <VoorbeeldBalk soort={voorbeeldSoort} />}
-        <WerkruimteStart w={w} principal={principal} tenantId={tenantId} greet={t.greet} inApp={inApp} kanKiezen={kanKiezen} studio={kanKiezen} voorbeeld={Boolean(voorbeeldSoort)} />
+        <WerkruimteStart w={w} principal={principal} tenantId={tenantId} greet={t.greet} inApp={inApp} studio={kanKiezen} />
       </>
     );
   }
   // een nieuw bedrijf dat nog niets gebruikt: eerst de vraag waarvoor
-  const nieuwBedrijf = !voorbeeldSoort && kanKiezen && !w.gekozen && !w.heeftKlussen && !w.heeftRijschool && !w.heeftHoreca && !w.heeftSite;
+  const nieuwBedrijf = !voorbeeldSoort && kanKiezen && !w.gekozen && !w.heeftKlussen && !w.heeftRijschool && !w.heeftHoreca && !w.heeftSite && !w.heeftWebshop;
 
   const [kvkDone, extra, o, threads, verificatie, pendingReviews, followers, tenantKvk] = await Promise.all([
     isEmployerOnboarded(scope.tenantIds),
@@ -364,8 +368,7 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
       </div>
       </>
       )}
-
-      {!nieuwBedrijf && !voorbeeldSoort && <WerkruimteKiezer huidig={w.soort} ookPersoneel={w.ookPersoneel} personeelVast={w.heeftKlussen} kanKiezen={kanKiezen} />}
+      {/* wisselen of een dashboard toevoegen: de wisselaar bovenaan de zijbalk (components/app/werkruimte/DashboardWisselaar.tsx) */}
     </>
   );
 }

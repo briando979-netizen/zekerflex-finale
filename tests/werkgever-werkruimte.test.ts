@@ -1,70 +1,108 @@
 import { describe, expect, it } from "vitest";
 import {
+  PAKKET_SLEUTELS,
   PERSONEEL_SLEUTELS,
   WERKRUIMTES,
   bepaalWerkruimte,
+  dashboardsVan,
   leesKeuze,
   menuVoor,
+  thuisVan,
+  voegToe,
   type MenuOpties,
+  type Werkruimte,
   type WerkruimteFeiten,
+  type WerkruimteKeuze,
 } from "@/lib/werkgever/werkruimte";
+import { RIJSCHOOL_TABS } from "@/lib/rijschool/tabs";
+import { horecaTabs } from "@/lib/horeca/tabs";
+
+// De dashboards van een bedrijf (10 nov 2026, eigenaar): personeel, rijschool, horeca, website en webshop,
+// elk met een eigen menu; het gewone werkgeversdashboard houdt alleen personeel inhuren.
 
 const geen: WerkruimteFeiten = { keuze: null, heeftRijschool: false, heeftHoreca: false, heeftSite: false, heeftKlussen: false };
-const opties: MenuOpties = { ookPersoneel: true, heeftRijschool: false, heeftHoreca: false, inApp: false, studio: true };
-const sleutels = (soort: Parameters<typeof menuVoor>[0], o: Partial<MenuOpties> = {}) => menuVoor(soort, { ...opties, ...o }).map((p) => p.sleutel);
+const opties: MenuOpties = { heeftRijschool: true, heeftHoreca: true, horecaModules: [], inApp: false, studio: true };
+const sleutels = (soort: Werkruimte, o: Partial<MenuOpties> = {}) => menuVoor(soort, { ...opties, ...o }).map((p) => p.sleutel);
+const keuze = (soort: Werkruimte, dashboards: Werkruimte[] = [], ookPersoneel = false): WerkruimteKeuze => ({ soort, ookPersoneel, dashboards, at: "2026-11-10T10:00:00.000Z" });
 
 describe("bepaalWerkruimte zonder keuze", () => {
-  it("leidt de soort af uit wat het bedrijf al gebruikt", () => {
-    expect(bepaalWerkruimte(geen)).toEqual({ soort: "personeel", ookPersoneel: true, gekozen: false });
-    expect(bepaalWerkruimte({ ...geen, heeftRijschool: true })).toEqual({ soort: "rijschool", ookPersoneel: false, gekozen: false });
+  it("leidt het dashboard af uit wat het bedrijf al gebruikt", () => {
+    expect(bepaalWerkruimte(geen)).toEqual({ soort: "personeel", ookPersoneel: true, gekozen: false, dashboards: ["personeel"] });
+    expect(bepaalWerkruimte({ ...geen, heeftRijschool: true })).toEqual({ soort: "rijschool", ookPersoneel: false, gekozen: false, dashboards: ["rijschool"] });
     expect(bepaalWerkruimte({ ...geen, heeftHoreca: true }).soort).toBe("horeca");
     expect(bepaalWerkruimte({ ...geen, heeftSite: true }).soort).toBe("website");
+    expect(bepaalWerkruimte({ ...geen, heeftWebshop: true }).soort).toBe("webshop");
+    expect(bepaalWerkruimte({ ...geen, heeftSite: true, heeftWebshop: true }).dashboards).toEqual(["website", "webshop"]);
   });
 
-  it("een bedrijf met klussen en een website blijft het gewone dashboard houden", () => {
-    expect(bepaalWerkruimte({ ...geen, heeftSite: true, heeftKlussen: true }).soort).toBe("personeel");
+  it("een bedrijf met klussen en een website opent met personeel en heeft allebei", () => {
+    const stand = bepaalWerkruimte({ ...geen, heeftSite: true, heeftKlussen: true });
+    expect(stand.soort).toBe("personeel");
+    expect(stand.dashboards).toEqual(["personeel", "website"]);
   });
 
-  it("wie klussen heeft of de horeca-module personeel gebruikt, houdt alle personeelsfuncties", () => {
-    expect(bepaalWerkruimte({ ...geen, heeftRijschool: true, heeftKlussen: true }).ookPersoneel).toBe(true);
+  it("wie klussen heeft of de horeca-module personeel gebruikt, houdt het dashboard personeel", () => {
+    expect(bepaalWerkruimte({ ...geen, heeftRijschool: true, heeftKlussen: true }).dashboards).toEqual(["personeel", "rijschool"]);
     expect(bepaalWerkruimte({ ...geen, heeftHoreca: true, personeelModule: true }).ookPersoneel).toBe(true);
     expect(bepaalWerkruimte({ ...geen, heeftHoreca: true }).ookPersoneel).toBe(false);
   });
 });
 
-describe("bepaalWerkruimte met een keuze", () => {
-  const keuze = (soort: (typeof WERKRUIMTES)[number], ookPersoneel = false) => ({ soort, ookPersoneel, at: "2026-11-04T10:00:00.000Z" });
-
+describe("bepaalWerkruimte met een keuze en een open dashboard", () => {
   it("de keuze van het bedrijf wint van wat we afleiden", () => {
-    expect(bepaalWerkruimte({ ...geen, heeftRijschool: true, keuze: keuze("website") })).toEqual({ soort: "website", ookPersoneel: false, gekozen: true });
-    expect(bepaalWerkruimte({ ...geen, keuze: keuze("horeca", true) }).ookPersoneel).toBe(true);
+    expect(bepaalWerkruimte({ ...geen, heeftRijschool: true, keuze: keuze("webshop") })).toEqual({
+      soort: "webshop",
+      ookPersoneel: false,
+      gekozen: true,
+      dashboards: ["rijschool", "webshop"],
+    });
+    expect(bepaalWerkruimte({ ...geen, keuze: keuze("horeca", [], true) }).dashboards).toEqual(["personeel", "horeca"]);
   });
 
-  it("personeel uitzetten verbergt niets voor wie al klussen heeft", () => {
-    expect(bepaalWerkruimte({ ...geen, heeftKlussen: true, keuze: keuze("rijschool", false) }).ookPersoneel).toBe(true);
-    expect(bepaalWerkruimte({ ...geen, keuze: keuze("personeel", false) }).ookPersoneel).toBe(true);
+  it("het dashboard dat deze browser open had, telt alleen als het bedrijf het heeft", () => {
+    const f: WerkruimteFeiten = { ...geen, heeftKlussen: true, keuze: keuze("rijschool", ["personeel", "rijschool"]) };
+    expect(bepaalWerkruimte(f, "personeel").soort).toBe("personeel");
+    expect(bepaalWerkruimte(f, "webshop").soort).toBe("rijschool");
+    expect(bepaalWerkruimte(f, null).soort).toBe("rijschool");
+    // zonder keuze: het gewenste dashboard als het bedrijf het gebruikt
+    expect(bepaalWerkruimte({ ...geen, heeftKlussen: true, heeftSite: true }, "website").soort).toBe("website");
+  });
+
+  it("niets wat iemand gebruikt, verdwijnt uit de wisselaar", () => {
+    const f: WerkruimteFeiten = { keuze: keuze("website"), heeftRijschool: true, heeftHoreca: true, heeftSite: false, heeftWebshop: true, heeftKlussen: true };
+    expect(dashboardsVan(f)).toEqual(["personeel", "rijschool", "horeca", "website", "webshop"]);
   });
 });
 
-describe("leesKeuze", () => {
-  it("accepteert alleen een bekende soort", () => {
-    expect(leesKeuze({ soort: "rijschool", ookPersoneel: true, at: "x" })).toEqual({ soort: "rijschool", ookPersoneel: true, at: "x" });
+describe("leesKeuze en voegToe", () => {
+  it("accepteert alleen bekende dashboards", () => {
+    expect(leesKeuze({ soort: "rijschool", ookPersoneel: true, at: "x" })).toEqual({ soort: "rijschool", ookPersoneel: true, dashboards: [], at: "x" });
+    expect(leesKeuze({ soort: "webshop", dashboards: ["kapper", "website", "webshop", "website"] })).toEqual({ soort: "webshop", ookPersoneel: false, dashboards: ["website", "webshop"], at: "" });
     expect(leesKeuze({ soort: "kapper" })).toBeNull();
     expect(leesKeuze("rijschool")).toBeNull();
     expect(leesKeuze(null)).toBeNull();
-    expect(leesKeuze({ soort: "website", ookPersoneel: "ja" })).toEqual({ soort: "website", ookPersoneel: false, at: "" });
+  });
+
+  it("een dashboard toevoegen houdt de bestaande en maakt het nieuwe het standaarddashboard", () => {
+    expect(voegToe(null, "webshop", "t")).toEqual({ soort: "webshop", ookPersoneel: false, dashboards: ["webshop"], at: "t" });
+    const oud = keuze("rijschool", ["rijschool"], true);
+    expect(voegToe(oud, "horeca", "t")).toEqual({ soort: "horeca", ookPersoneel: true, dashboards: ["personeel", "rijschool", "horeca"], at: "t" });
+  });
+
+  it("elk dashboard begint in zijn eigen omgeving", () => {
+    expect(WERKRUIMTES.map(thuisVan)).toEqual(["/werkgever", "/werkgever/rijschool", "/werkgever/horeca", "/studio/website", "/studio/webshop"]);
   });
 });
 
 describe("menuVoor", () => {
-  it("het gewone menu blijft precies zoals het was", () => {
+  it("het dashboard personeel heeft alleen personeel inhuren, zonder de andere pakketten", () => {
     expect(menuVoor("personeel", opties)).toEqual([
       { sleutel: "start" },
       { sleutel: "klussen" },
       { sleutel: "kalender" },
       { sleutel: "planner" },
       { sleutel: "agenda" },
-      // ZekerFlex Bank staat uit (lib/app-mode.ts, BANK_AAN): geen "bank" meer
+      // ZekerFlex Bank staat uit (lib/app-mode.ts, BANK_AAN): geen "bank"
       { sleutel: "favorieten" },
       { sleutel: "berichten" },
       { sleutel: "assistent" },
@@ -74,61 +112,53 @@ describe("menuVoor", () => {
       { sleutel: "uren", sectie: "beheer" },
       { sleutel: "inchecken", sectie: "beheer" },
       { sleutel: "facturen", sectie: "beheer" },
-      // rapportages (Metabase, lib/bi) hoort bij de administratie, direct na de facturen
       { sleutel: "rapportages", sectie: "beheer" },
       { sleutel: "compliance", sectie: "beheer" },
       { sleutel: "overeenkomsten", sectie: "beheer" },
       { sleutel: "bedrijf", sectie: "beheer" },
-      { sleutel: "website", sectie: "beheer" },
       { sleutel: "telefonie", sectie: "beheer" },
       { sleutel: "reviews", sectie: "beheer" },
       { sleutel: "netwerk", sectie: "beheer" },
       { sleutel: "locatie", sectie: "beheer" },
-      // de kennisbank (Outline, lib/kennisbank): handleidingen, altijd als laatste
       { sleutel: "kennisbank", sectie: "beheer" },
     ]);
-    // pakketten die aanstaan direct na de start, zoals voorheen (horeca vóór rijschool)
-    expect(sleutels("personeel", { heeftRijschool: true, heeftHoreca: true }).slice(0, 4)).toEqual(["start", "horeca", "rijschool", "klussen"]);
-    expect(sleutels("personeel", { inApp: true })).not.toContain("bank");
-    // de bank staat voor iedereen uit, ook op de website
-    for (const soort of ["personeel", "rijschool", "horeca", "website"] as const) expect(sleutels(soort, {})).not.toContain("bank");
+    // ook met een rijschool en een horecazaak: die staan in hun eigen dashboard
+    for (const s of PAKKET_SLEUTELS) expect(sleutels("personeel"), `personeel bevat ${s}`).not.toContain(s);
+    for (const soort of WERKRUIMTES) expect(sleutels(soort, { inApp: true })).not.toContain("bank");
   });
 
-  it("elke werkruimte zet het eigen onderdeel direct na de start", () => {
-    expect(sleutels("rijschool")[1]).toBe("rijschool");
-    expect(sleutels("horeca")[1]).toBe("horeca");
-    expect(sleutels("website")[1]).toBe("studio");
-    expect(sleutels("website", { studio: false })[1]).toBe("website");
+  it("de andere dashboards hebben geen personeelsfuncties", () => {
+    for (const soort of ["rijschool", "horeca", "website", "webshop"] as const) {
+      for (const s of PERSONEEL_SLEUTELS) expect(sleutels(soort), `${soort} bevat ${s}`).not.toContain(s);
+      // wel contact en administratie
+      for (const s of ["mail", "whatsapp", "telefonie", "reviews", "facturen", "bedrijf"] as const) expect(sleutels(soort), `${soort} mist ${s}`).toContain(s);
+    }
   });
 
-  it("met personeel blijft elke functie van het gewone menu bereikbaar, zonder dubbele", () => {
-    const gewoon = sleutels("personeel");
+  it("rijschool: elk tabblad van het beheer is een eigen onderdeel; nog niet ingericht: één ingang", () => {
+    const menu = menuVoor("rijschool", opties).filter((p) => p.sleutel === "rijschool");
+    expect(menu.map((p) => p.tab?.id)).toEqual(RIJSCHOOL_TABS.map((t) => t.id));
+    expect(menuVoor("rijschool", { ...opties, heeftRijschool: false }).filter((p) => p.sleutel === "rijschool")).toEqual([{ sleutel: "rijschool" }]);
+  });
+
+  it("horeca: de tabbladen volgen de modules die aan staan", () => {
+    const tabs = (modules: string[]) => menuVoor("horeca", { ...opties, horecaModules: modules }).flatMap((p) => (p.sleutel === "horeca" && p.tab ? [p.tab.id] : []));
+    expect(tabs([])).toEqual(horecaTabs([]).map((t) => t.id));
+    expect(tabs(["reserveren", "bestellen"])).toEqual(expect.arrayContaining(["reserveringen", "bestellingen", "tafels", "cijfers"]));
+    expect(tabs([])).not.toContain("reserveringen");
+    expect(menuVoor("horeca", { ...opties, heeftHoreca: false }).filter((p) => p.sleutel === "horeca")).toEqual([{ sleutel: "horeca" }]);
+  });
+
+  it("website en webshop openen de eigen studio; zonder studio-recht de start", () => {
+    expect(sleutels("website")[0]).toBe("studio");
+    expect(sleutels("webshop")[0]).toBe("winkel");
+    expect(sleutels("website", { studio: false })[0]).toBe("start");
+  });
+
+  it("geen dubbele onderdelen in een menu", () => {
     for (const soort of WERKRUIMTES) {
-      for (const studio of [true, false]) {
-        const menu = sleutels(soort, { studio });
-        expect(new Set(menu).size, `${soort} dubbel`).toBe(menu.length);
-        expect(menu[0]).toBe("start");
-        for (const s of gewoon) expect(menu, `${soort} mist ${s}`).toContain(s);
-      }
+      const adressen = menuVoor(soort, { ...opties, horecaModules: ["reserveren", "bestellen", "kassa", "taken"] }).map((p) => `${p.sleutel}?${p.tab?.id ?? ""}`);
+      expect(new Set(adressen).size, `${soort} dubbel`).toBe(adressen.length);
     }
-  });
-
-  it("zonder personeel staat er één ingang om een klus te plaatsen", () => {
-    for (const soort of ["rijschool", "horeca", "website"] as const) {
-      const menu = menuVoor(soort, { ...opties, ookPersoneel: false });
-      for (const s of PERSONEEL_SLEUTELS) expect(menu.map((p) => p.sleutel)).not.toContain(s);
-      expect(menu.filter((p) => p.sleutel === "inhuren")).toEqual([{ sleutel: "inhuren", sectie: "personeel" }]);
-      // de rest (contact, website, administratie) blijft
-      for (const s of ["berichten", "mail", "whatsapp", "agenda", "website", "reviews", "telefonie", "netwerk", "facturen", "bedrijf"] as const) {
-        expect(menu.map((p) => p.sleutel), `${soort} mist ${s}`).toContain(s);
-      }
-    }
-  });
-
-  it("een tweede pakket dat aanstaat blijft in het menu", () => {
-    expect(sleutels("rijschool", { heeftHoreca: true })).toContain("horeca");
-    expect(sleutels("horeca", { heeftRijschool: true })).toContain("rijschool");
-    expect(sleutels("website", { heeftRijschool: true, heeftHoreca: true })).toEqual(expect.arrayContaining(["rijschool", "horeca"]));
-    expect(sleutels("rijschool", { inApp: true })).not.toContain("bank");
   });
 });

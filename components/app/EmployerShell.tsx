@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { logoutAction } from "@/lib/auth/actions";
 import { LogoGlyph } from "@/components/brand/Logo";
@@ -13,6 +13,7 @@ import { EMPLOYER_LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config"
 import { fmt } from "@/lib/i18n/dictionaries";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import type { Theme } from "@/lib/theme/config";
+import { DashboardWisselaar, type DashboardStand } from "@/components/app/werkruimte/DashboardWisselaar";
 
 // ---------------------------------------------------------------------------
 // Employer workspace shell — its own chrome (org name + rating in the topbar,
@@ -45,10 +46,13 @@ export function EmployerShell({
   userMeta,
   avatarUrl,
   canSwitchToFreelancer = false,
+  dashboards,
   helpHref = "/kennis/werkgevers",
   settingsHref = "/werkgever/instellingen",
   children,
 }: {
+  /** de dashboards van het bedrijf (lib/werkgever/werkruimte.ts): de wisselaar bovenaan de zijbalk */
+  dashboards?: DashboardStand;
   nav: NavItem[];
   locale: Locale;
   theme: Theme;
@@ -65,6 +69,7 @@ export function EmployerShell({
 }) {
   const t = useT();
   const pathname = usePathname();
+  const zoek = useSearchParams();
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
@@ -101,9 +106,16 @@ export function EmployerShell({
     });
   }
 
-  const isActive = (href: string) =>
-    pathname === href || (href !== "/werkgever" && pathname.startsWith(href + "/")) ||
-    (href === "/werkgever" && pathname === "/werkgever");
+  const isActive = (href: string) => {
+    // een tabblad van het rijschool- of horecabeheer (/werkgever/rijschool?tab=agenda); geen tab = overzicht
+    const [pad, query] = href.split("?");
+    if (query) {
+      const tab = new URLSearchParams(query).get("tab");
+      return pathname === pad && (zoek?.get("tab") ?? "overzicht") === tab;
+    }
+    return pathname === href || (href !== "/werkgever" && pathname.startsWith(href + "/")) ||
+      (href === "/werkgever" && pathname === "/werkgever");
+  };
   const current = nav.find((n) => isActive(n.href));
 
   const groups: { section: string | null; items: NavItem[] }[] = [];
@@ -134,6 +146,12 @@ export function EmployerShell({
           </span>
           {!collapsed && <p className="font-display text-sm font-bold">ZekerFlex</p>}
         </div>
+
+        {dashboards && (
+          <div className={`border-b border-hair py-2.5 ${collapsed ? "px-2" : "px-3"}`}>
+            <DashboardWisselaar stand={dashboards} ingeklapt={collapsed} />
+          </div>
+        )}
 
         <button
           type="button"
