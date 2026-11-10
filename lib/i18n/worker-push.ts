@@ -71,6 +71,9 @@ export interface WorkerPushTexts {
   werkrechtOkBody: (land: string) => string;
   werkrechtAfTitle: string;
   werkrechtAfBody: (land: string, reden: string) => string;
+  /** ID geverifieerd (lib/onboarding/id-geverifieerd.ts): alleen wat voor het ID geldt */
+  idOkTitle: string;
+  idOkBody: string;
 }
 
 export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
@@ -133,6 +136,8 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     werkrechtOkBody: (l) => `Je mag via ZekerFlex werken in ${l}. Je kunt diensten aannemen.`,
     werkrechtAfTitle: "Je document is afgewezen",
     werkrechtAfBody: (l, r) => `Werken in ${l}: ${r} Upload een nieuw document bij Verificatie.`,
+    idOkTitle: "Je ID is geverifieerd",
+    idOkBody: "Je kunt op klussen reageren zodra de rest van je aanmelding klopt. Een duidelijke foto en je werkervaring helpen opdrachtgevers je te kiezen.",
   },
   en: {
     hours: "hours",
@@ -193,6 +198,8 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     werkrechtOkBody: (l) => `You may work in ${l} through ZekerFlex. You can now accept shifts.`,
     werkrechtAfTitle: "Your document was rejected",
     werkrechtAfBody: (l, r) => `Working in ${l}: ${r} Upload a new document under Verification.`,
+    idOkTitle: "Your ID has been verified",
+    idOkBody: "You can respond to jobs as soon as the rest of your sign-up is in order. A clear photo and your work experience help clients choose you.",
   },
   pl: {
     hours: "godz.",
@@ -253,6 +260,8 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     werkrechtOkBody: (l) => `Możesz pracować przez ZekerFlex w kraju: ${l}. Możesz już przyjmować zlecenia.`,
     werkrechtAfTitle: "Twój dokument został odrzucony",
     werkrechtAfBody: (l, r) => `Praca w kraju ${l}: ${r} Prześlij nowy dokument w sekcji Weryfikacja.`,
+    idOkTitle: "Twój dokument został zweryfikowany",
+    idOkBody: "Możesz odpowiadać na zlecenia, gdy reszta Twojej rejestracji będzie w porządku. Wyraźne zdjęcie i doświadczenie zawodowe pomagają zleceniodawcom Cię wybrać.",
   },
   ro: {
     hours: "ore",
@@ -313,6 +322,8 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     werkrechtOkBody: (l) => `Poți lucra prin ZekerFlex în ${l}. Acum poți accepta ture.`,
     werkrechtAfTitle: "Documentul tău a fost respins",
     werkrechtAfBody: (l, r) => `Munca în ${l}: ${r} Încarcă un document nou la Verificare.`,
+    idOkTitle: "Actul tău de identitate a fost verificat",
+    idOkBody: "Poți răspunde la lucrări imediat ce restul înregistrării tale este în regulă. O fotografie clară și experiența ta de muncă îi ajută pe clienți să te aleagă.",
   },
   uk: {
     hours: "год",
@@ -373,6 +384,8 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     werkrechtOkBody: (l) => `Ви можете працювати через ZekerFlex у країні: ${l}. Тепер ви можете приймати зміни.`,
     werkrechtAfTitle: "Ваш документ відхилено",
     werkrechtAfBody: (l, r) => `Робота в країні ${l}: ${r} Завантажте новий документ у розділі «Перевірка».`,
+    idOkTitle: "Ваш документ перевірено",
+    idOkBody: "Ви зможете відгукуватися на роботу, щойно решта вашої реєстрації буде в порядку. Чітке фото та досвід роботи допомагають замовникам вибрати вас.",
   },
 };
 

@@ -23,6 +23,8 @@ import { flagIbanChanged } from "@/lib/compliance/documents";
 import { eisIbanBevestiging } from "@/lib/fiscal/iban-bevestiging";
 import { schoonIban } from "@/lib/onboarding/velden";
 import { alertOwnerLater } from "@/lib/ops/alert";
+import { runAfter } from "@/lib/run-after";
+import { meldIdGeverifieerd } from "@/lib/onboarding/id-geverifieerd";
 
 // ---------------------------------------------------------------------------
 // Self-serve freelancer onboarding verification.
@@ -933,6 +935,9 @@ export async function submitFreelancerOnboarding(
   // na elke verificatie: de chipuitslag, de MRZ-sleutel en alle chipsessies weg (ook zonder chip)
   await wisChipGegevens(user.id).catch(() => undefined);
 
+  // ID geverifieerd: de werker hoort het meteen (eenmalig, lib/onboarding/id-geverifieerd.ts)
+  if (outcome === "verified") runAfter(() => meldIdGeverifieerd(user.id));
+
   // Een mens moet kijken: zonder melding blijft iemand onzichtbaar hangen (4 nov 2026).
   if (outcome === "in_review") {
     alertOwnerLater({
@@ -1106,6 +1111,8 @@ export async function submitFreelancerOnboardingViaWallet(
     targetId: user.id,
     metadata: { outcome, kvkValid },
   });
+
+  if (outcome === "verified") runAfter(() => meldIdGeverifieerd(user.id));
 
   const reasons = checks.filter((c) => !c.ok).map((c) => c.detail);
 

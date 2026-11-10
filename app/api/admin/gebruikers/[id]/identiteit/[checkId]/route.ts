@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { withAdminAccess } from "@/lib/auth/handlers";
+import { runAfter } from "@/lib/run-after";
+import { meldIdGeverifieerd } from "@/lib/onboarding/id-geverifieerd";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,6 +71,9 @@ export const POST = withAdminAccess<{ id: string; checkId: string }>(
       targetType: "user",
       targetId: check.userId,
     });
+
+    // goedgekeurd in de beoordeling: de werker hoort het (eenmalig, lib/onboarding/id-geverifieerd.ts)
+    if (decision === "approve") runAfter(() => meldIdGeverifieerd(check.userId));
 
     return NextResponse.json({ ok: true, status: newStatus });
   },

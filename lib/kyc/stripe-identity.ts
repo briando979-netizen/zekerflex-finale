@@ -10,6 +10,8 @@ import { nameSimilarity } from "@/lib/onboarding/verify";
 import { naamGelijk } from "@/lib/kyc/naam-match";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { alertOwnerLater } from "@/lib/ops/alert";
+import { runAfter } from "@/lib/run-after";
+import { meldIdGeverifieerd } from "@/lib/onboarding/id-geverifieerd";
 
 // ---------------------------------------------------------------------------
 // ID verification via Stripe Identity: Stripe's own camera flow on the phone
@@ -142,6 +144,7 @@ async function applySession(s: Stripe.Identity.VerificationSession, outcome: str
       },
     });
     if (user.kycStatus !== KycStatus.REJECTED) await prisma.user.update({ where: { id: user.id }, data: { kycStatus: status } });
+    if (nameOk && user.kycStatus !== KycStatus.REJECTED) runAfter(() => meldIdGeverifieerd(user.id));
     await recordAudit({
       category: "KYC",
       action: nameOk ? "kyc.stripe_verified" : "kyc.stripe_name_mismatch",

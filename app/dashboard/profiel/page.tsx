@@ -8,6 +8,8 @@ import { getUserProfileExtra } from "@/lib/profile/store";
 import { getProfileStats } from "@/lib/dashboard/profile-stats";
 import { PageHeader, Panel, StatusPill } from "@/components/app/ui";
 import { AvatarUpload } from "@/components/app/AvatarUpload";
+import { ErvaringLijst } from "@/components/app/ErvaringLijst";
+import { getErvaring } from "@/lib/werker/ervaring-store";
 import { UitzendContractCard } from "@/components/app/UitzendContractCard";
 import { listCertificates } from "@/lib/certificates/store";
 import { mailPrefsView } from "@/lib/mail/prefs";
@@ -50,6 +52,7 @@ export default async function ProfielPage() {
     }),
     getFiscal(principal.userId),
   ]);
+  const ervaring = await getErvaring(principal.userId).catch(() => ({ items: [], geen: false }));
   const [profileExtra, stats, mailPrefs, certs] = await Promise.all([
     getUserProfileExtra(principal.userId),
     getProfileStats(principal.userId),
@@ -222,6 +225,10 @@ export default async function ProfielPage() {
             </div>
           </Panel>
         )}
+
+        <Panel title="Werkervaring">
+          <ErvaringLijst start={ervaring.items} />
+        </Panel>
 
         <Panel title="Certificaten">
           <div className="px-5 py-4 text-sm">

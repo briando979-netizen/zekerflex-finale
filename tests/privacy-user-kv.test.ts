@@ -28,6 +28,13 @@ describe("redactSecrets", () => {
   });
 });
 
+describe("werkervaring en ID-melding", () => {
+  it("staan in de lijst die bij verwijderen wordt gewist", () => {
+    expect(ERASABLE_KV_PREFIXES).toContain("werker-ervaring:");
+    expect(ERASABLE_KV_PREFIXES).toContain("werker-id-melding:");
+  });
+});
+
 describe("keyBelongsTo", () => {
   it("telt alleen de userId als los segment", () => {
     expect(keyBelongsTo("ritten:u1", "u1")).toBe(true);

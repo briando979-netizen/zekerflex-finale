@@ -569,6 +569,35 @@ export function onboardingReminderEmail(
 }
 
 /**
+ * Het ID van een werker is geverifieerd (lib/onboarding/id-geverifieerd.ts). We zeggen alleen wat
+ * voor het ID geldt; of hij al kan reageren hangt ook van de rest van zijn aanmelding af.
+ * Valt onder "Tips" (kind "onboarding"): afmelden kan onderaan.
+ */
+export function idGeverifieerdEmail(fullName: string, appUrl: string): MailInput {
+  const first = fullName.split(" ")[0] || fullName;
+  const href = `${appUrl.replace(/\/+$/, "")}/dashboard/eerste-indruk`;
+  const subject = "Je ID is geverifieerd";
+  return {
+    to: "",
+    subject,
+    kind: "onboarding",
+    text: `Hoi ${first},
+
+Je ID is geverifieerd. Je kunt op klussen reageren zodra de rest van je aanmelding klopt.
+
+Met een duidelijke profielfoto en je werkervaring kunnen opdrachtgevers je beter inschatten. Beide stappen zijn optioneel en kosten een paar minuten: ${href}`,
+    html: shell(
+      subject,
+      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${escapeHtml(first)}, je ID is geverifieerd.</p>
+       <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Je kunt op klussen reageren zodra de rest van je aanmelding klopt.</p>
+       <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#3C4A42">Met een duidelijke profielfoto en je werkervaring kunnen opdrachtgevers je beter inschatten. Beide stappen zijn optioneel en kosten een paar minuten.</p>
+       <p style="margin:0">${button(href, "Maak een goede eerste indruk")}</p>`,
+      "Je kunt op klussen reageren zodra de rest van je aanmelding klopt.",
+    ),
+  };
+}
+
+/**
  * Een klus die bij een werker past, voor wie het voorstel niet via een pushmelding
  * aankwam (lib/notifications/klus-mail.ts). Valt onder "Nieuwe klussen die bij je
  * passen" (klus-alerts): afmelden kan onderaan. Titel, vestiging en plaats komen

@@ -20,12 +20,14 @@ import { translateBlockReason } from "@/lib/i18n/freelancer";
 import { alleenTestklussen } from "@/lib/shifts/testklus";
 import { getBrancheKeuze } from "@/lib/worker/branche-store";
 import { standaardFilter } from "@/lib/shifts/branche-keuze";
+import { EersteIndrukMelding } from "@/components/app/EersteIndrukMelding";
+import { eersteIndrukVoor } from "@/lib/onboarding/eerste-indruk-server";
 
 export const dynamic = "force-dynamic";
 
 export default async function KlussenPage(
   props: {
-    searchParams: Promise<{ employer?: string }>;
+    searchParams: Promise<{ employer?: string; eerste?: string }>;
   }
 ) {
   const searchParams = await props.searchParams;
@@ -44,6 +46,8 @@ export default async function KlussenPage(
     werkrechtVoorWerk(principal.userId, "NL"),
   ]);
   const birthday = isBirthdayToday(fiscal.birthDate);
+  // deze pagina is alleen voorbij de poort te zien (layout), dus de kaart hoeft die niet opnieuw te controleren
+  const eersteIndruk = await eersteIndrukVoor(principal.userId).catch(() => null);
   const greetLabels = {
     morning: t.greet.morning,
     afternoon: t.greet.afternoon,
@@ -72,6 +76,22 @@ export default async function KlussenPage(
         labels={{ todayLabel: t.greet.todayLabel, todayAt: t.greet.todayAt, todayAtPlace: t.greet.todayAtPlace }}
       />
       <WilReagerenNudge />
+      {/* na "Opslaan" in /dashboard/eerste-indruk: alleen het goede nieuws als reageren echt kan (m.canApply), anders eerlijk wat er nog mist */}
+      {searchParams.eerste === "1" && (
+        <EersteIndrukMelding
+          goed={m.canApply}
+          sluiten={t.eersteIndruk.melding.close}
+          tekst={m.canApply ? t.eersteIndruk.melding.klaar : `${t.eersteIndruk.melding.nogNiet}${m.blockReason ? ` ${translateBlockReason(m.blockReason, t)}` : ""}`}
+        />
+      )}
+      {/* de optionele stappen na de ID-controle (profielfoto, werkervaring): alleen zolang er nog een open staat; de poort zelf blijft ongemoeid */}
+      {eersteIndruk && eersteIndruk.open > 0 && searchParams.eerste !== "1" && (
+        <Link href="/dashboard/eerste-indruk" className="card mb-5 block p-4 hover:border-brand-500/40">
+          <p className="font-display text-base font-bold text-ink">{t.eersteIndruk.card.title}</p>
+          <p className="mt-1 text-sm text-neutralx-600">{t.eersteIndruk.card.body(eersteIndruk.open)}</p>
+          <span className="mt-2 inline-block text-sm font-semibold text-brand-600">{t.eersteIndruk.card.open} ›</span>
+        </Link>
+      )}
       {/* ook ná een compleet profiel: zonder recht om te werken geen betaalde klus (lib/werkrecht) */}
       {(!overview.profileComplete || !werkrecht.ok) && <OnboardingOnderhoudBalk soort="werker" />}
       {(!overview.profileComplete || !werkrecht.ok) && (

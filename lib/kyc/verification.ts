@@ -4,6 +4,8 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
+import { runAfter } from "@/lib/run-after";
+import { meldIdGeverifieerd } from "@/lib/onboarding/id-geverifieerd";
 import {
   createSession,
   getDecision,
@@ -205,6 +207,8 @@ export async function applyDiditDecision(
     }
     return next;
   });
+
+  if (decision.kyc === KycStatus.VERIFIED && kycStatus === KycStatus.VERIFIED) runAfter(() => meldIdGeverifieerd(rec.userId));
 
   logger.info("kyc decision applied", {
     sessionId: input.sessionId,
