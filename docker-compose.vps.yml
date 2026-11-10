@@ -88,6 +88,7 @@ services:
       BOUWER_VOORBEELD_HOST: ${BOUWER_VOORBEELD_HOST:-voorbeeld.37-97-226-24.sslip.io}
       METABASE_HOST: ${METABASE_HOST:-bi.37-97-226-24.sslip.io}
       OUTLINE_HOST: ${OUTLINE_HOST:-kennis.37-97-226-24.sslip.io}
+      FORGEJO_HOST: ${FORGEJO_HOST:-git.37-97-226-24.sslip.io}
     ports:
       - "80:80"
       - "443:443"

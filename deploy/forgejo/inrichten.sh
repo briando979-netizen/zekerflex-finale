@@ -18,6 +18,7 @@ set -euo pipefail
 cd ~/zekerflex
 F=zekerflex-forgejo-1
 GEHEIM=.forgejo-beheer
+EIGENAAR_BESTAND=/root/forgejo-eigenaar.txt
 BRON=https://github.com/briando979-netizen/zekerflex-finale.git
 fj() { sudo docker exec -u git "$F" forgejo "$@"; }
 
@@ -38,14 +39,17 @@ else
 fi
 
 # De API via het adres van de container (de host kan bij het git-netwerk), met het
-# wachtwoord in een tijdelijk netrc-bestand: zo staat het niet in de procestabel.
+# wachtwoord in een tijdelijk netrc-bestand van root (600): zo staat het niet in de
+# procestabel en kan alleen root het lezen. Daarom draait curl hier met sudo.
 IP=$(sudo docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$F")
 API="http://$IP:3000/api/v1"
-NETRC=$(mktemp)
-chmod 600 "$NETRC"
-trap 'rm -f "$NETRC"' EXIT
-printf 'machine %s login zekerflex-beheer password %s\n' "$IP" "$ww" > "$NETRC"
-api() { curl -sS --netrc-file "$NETRC" -H 'content-type: application/json' "$@"; }
+NETRC=$(sudo mktemp)
+trap 'sudo rm -f "$NETRC"' EXIT
+sudo chown root:root "$NETRC"
+sudo chmod 600 "$NETRC"
+printf 'machine %s login zekerflex-beheer password %s\n' "$IP" "$ww" | sudo tee "$NETRC" > /dev/null
+[ "$(sudo stat -c '%U %a' "$NETRC")" = "root 600" ] || { echo "netrc is niet van root/600"; exit 1; }
+api() { sudo curl -sS --netrc-file "$NETRC" -H 'content-type: application/json' "$@"; }
 status() { api -o /dev/null -w '%{http_code}' "$@" || true; }
 
 for _ in $(seq 1 30); do
@@ -71,7 +75,11 @@ if [ "${1:-}" = "--eigenaar" ] && [ -n "${2:-}" ]; then
   else
     ew=$(openssl rand -hex 8)
     fj admin user create --admin --username eigenaar --email "$2" --password "$ew" --must-change-password=true > /dev/null
-    echo "eigenaar: aangemaakt; eenmalig wachtwoord (bij de eerste keer inloggen wijzigen): $ew"
+    # nooit afdrukken (dan staat het in het transcript): naar een bestand van root
+    printf 'gebruiker=eigenaar\neenmalig-wachtwoord=%s\n(bij de eerste keer inloggen wijzigen)\n' "$ew" | sudo tee "$EIGENAAR_BESTAND" > /dev/null
+    sudo chown root:root "$EIGENAAR_BESTAND"
+    sudo chmod 600 "$EIGENAAR_BESTAND"
+    echo "eigenaar: aangemaakt; het eenmalige wachtwoord staat in $EIGENAAR_BESTAND (alleen root)"
   fi
 fi
 
