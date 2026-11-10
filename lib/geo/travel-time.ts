@@ -8,6 +8,8 @@ import {
   type DistanceMatrixLeg,
 } from "@/lib/integrations/google-maps";
 import { schatAlleWijzen, schatTussenPunten } from "@/lib/geo/eigen-afstand";
+import { planRoute, routeAan } from "@/lib/geo/route";
+import type { RouteModus } from "@/lib/geo/route-core";
 import type { GeoPoint, TravelEstimate } from "@/types/matching";
 import type { TravelMode } from "@prisma/client";
 
@@ -54,15 +56,55 @@ function eigenEstimates(
   }));
 }
 
+/** Welke vervoerswijzen onze routeplanner kent; het OV niet (daar is een dienstregeling voor nodig). */
+const ROUTE_MODUS: Partial<Record<TravelMode, RouteModus>> = {
+  DRIVING: "auto",
+  BICYCLING: "fiets",
+  WALKING: "lopen",
+};
+
+/**
+ * Onze eigen bron: eerst de routeplanner op onze eigen server (een echte route
+ * over de weg), anders de rekenregel. Per vervoerswijze apart: valt de
+ * routeplanner weg of is er geen weg, dan blijft voor die wijze de schatting staan.
+ */
+async function eigenMetRoute(
+  origin: GeoPoint,
+  destination: GeoPoint,
+  modes: TravelMode[],
+  bron: "eigen" | "terugval",
+): Promise<TravelEstimate[]> {
+  const schattingen = eigenEstimates(origin, destination, modes, bron);
+  if (!routeAan()) return schattingen;
+  const van = { lat: origin.latitude, lon: origin.longitude };
+  const naar = { lat: destination.latitude, lon: destination.longitude };
+  return Promise.all(
+    schattingen.map(async (schatting) => {
+      const modus = ROUTE_MODUS[schatting.mode];
+      if (!modus) return schatting;
+      const route = await planRoute(van, naar, modus, { stappen: false });
+      if (!route) return schatting;
+      return {
+        mode: schatting.mode,
+        durationMinutes: Math.max(1, Math.round(route.seconds / 60)),
+        distanceMeters: route.meters,
+        approximate: false,
+        bron: "eigen" as const,
+      };
+    }),
+  );
+}
+
 /**
  * Estimate door-to-door travel for each requested mode. Results are cached in
  * Redis keyed by rounded coordinates + arrival hour so a matching run over
  * hundreds of freelancers does not hammer the routing quota.
  *
- * Welke bron: eerst onze eigen rekenregel zodra "alles gratis" aanstaat of er
- * geen Google-sleutel is; anders Google, en valt die weg (storing, quotum, geen
- * route) dan rekenen we het alsnog zelf uit. Er komt dus altijd een schatting
- * terug — de matching mag hier nooit op stilvallen.
+ * Welke bron: onze eigen bron zodra "alles gratis" aanstaat of er geen
+ * Google-sleutel is (eerst onze routeplanner, anders de rekenregel); anders
+ * Google, en valt die weg (storing, quotum, geen route) dan doen we het alsnog
+ * zelf. Er komt dus altijd een schatting terug — de matching mag hier nooit op
+ * stilvallen.
  */
 export async function estimateTravel(
   origin: GeoPoint,
@@ -73,8 +115,8 @@ export async function estimateTravel(
   const round = (n: number) => Math.round(n * 1000) / 1000; // ~110m grid
   const hourBucket = new Date(arrivalAt);
   hourBucket.setMinutes(0, 0, 0);
-  // v2: schattingen dragen hun bron (eigen of terugval); oude zonder bron niet meer gebruiken
-  const key = `travel:v2:${round(origin.latitude)},${round(origin.longitude)}->${round(
+  // v3: een eigen rit kan nu een echte route zijn (routeplanner); de oude schattingen niet meer gebruiken
+  const key = `travel:v3:${round(origin.latitude)},${round(origin.longitude)}->${round(
     destination.latitude,
   )},${round(destination.longitude)}:${hourBucket.toISOString()}:${modes.sort().join(",")}`;
 
@@ -83,7 +125,7 @@ export async function estimateTravel(
     await Promise.all([primeGratis(), primeKeuzes()]);
     if (eigenRekenen()) {
       void recordRoutingOutcome("eigen");
-      return eigenEstimates(origin, destination, modes, "eigen");
+      return eigenMetRoute(origin, destination, modes, "eigen");
     }
 
     let matrix: Map<TravelMode, DistanceMatrixLeg | null>;
@@ -99,7 +141,7 @@ export async function estimateTravel(
         error: (err as Error).message,
       });
       void recordRoutingOutcome("fallback");
-      return eigenEstimates(origin, destination, modes, "terugval");
+      return eigenMetRoute(origin, destination, modes, "terugval");
     }
 
     void recordRoutingOutcome("live");
