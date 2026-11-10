@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useStudio } from "@/components/studio/context";
 import { AanDeSlag, Bezoekgrafiek, groet, useEigenDomein, useStats, wanneer, type Taak } from "@/components/studio/OverzichtDelen";
 import { Card, IExternal, PageHead, Pill, Stat, btn } from "@/components/studio/ui";
+import { paginaBouwerHref } from "@/lib/sites/paginabouwer";
 import { euro, zichtbareProducten } from "@/lib/sites/winkel";
 import type { SiteBestelling } from "@/lib/sites/bestellingen";
 
@@ -60,7 +61,7 @@ export default function Overzicht() {
     { klaar: actief > 0, tekst: "Voeg je eerste product toe", href: `${B}/producten` },
     { klaar: winkel.bestellen && (winkel.levering.afhalen || winkel.levering.bezorgen) && winkel.betaalTekst.trim().length > 0, tekst: "Stel verzending en betalen in", href: `${B}/verzending` },
     { klaar: Boolean(b.naam.trim() && b.kvk.trim() && b.email.trim() && b.straat.trim() && b.postcode.trim() && b.plaats.trim()), tekst: "Vul je bedrijfsgegevens aan (naam, KVK, adres, e-mail)", href: `${B}/instellingen` },
-    { klaar: wettelijk && Boolean(site.liveBuild), tekst: "Loop de wettelijke pagina's na (verzenden, retourneren, voorwaarden)", href: `/studio/website/bouwer` },
+    { klaar: wettelijk && Boolean(site.liveBuild), tekst: "Loop de wettelijke pagina's na (verzenden, retourneren, voorwaarden)", href: paginaBouwerHref("webshop") },
     { klaar: Boolean(site.liveBuild), tekst: "Zet je webshop online (Publiceren)", href: B },
     { klaar: eigenDomein === true, tekst: "Koppel je eigen domeinnaam (mag later)", href: `${B}/instellingen` },
   ];

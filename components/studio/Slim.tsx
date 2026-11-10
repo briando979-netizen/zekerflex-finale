@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { foutVan, useStudio } from "@/components/studio/context";
 import { Card, ICheck, ISparkle, PageHead, Pill, btn, input } from "@/components/studio/ui";
+import { paginaBouwerHref } from "@/lib/sites/paginabouwer";
 import { KORTE_TEKST_MAX, MAX_PER_RONDE, productTekstInvoer, teControleren, zonderGoedeTekst } from "@/lib/sites/producttekst";
 import { GROEP_LABEL, WETTELIJKE_PAGINAS, metStandaardPagina, winkelCheck, type CheckActie, type CheckPunt, type WettelijkeSlug } from "@/lib/sites/winkel-check";
 
@@ -57,7 +58,8 @@ function Winkelcheck({ onSchrijf }: { onSchrijf: () => void }) {
   const site = data!.site!;
   const check = useMemo(() => winkelCheck({ site, unpublished, canPublish: Boolean(data?.canPublish) }), [site, unpublished, data?.canPublish]);
   const [bezig, setBezig] = useState<string | null>(null);
-  const [melding, setMelding] = useState<{ ok: boolean; text: string } | null>(null);
+  // `pagina`: net toegevoegd, met een link om hem in Webshop → Pagina's na te lopen
+  const [melding, setMelding] = useState<{ ok: boolean; text: string; pagina?: WettelijkeSlug } | null>(null);
   const problemen = check.punten.filter((p) => p.status === "probleem").length;
   const letOp = check.punten.length - problemen;
   const kleur = check.score >= 90 ? "bg-[#29845a]" : check.score >= 60 ? "bg-[#e5a50a]" : "bg-[#d72c0d]";
@@ -74,7 +76,7 @@ function Winkelcheck({ onSchrijf }: { onSchrijf: () => void }) {
     }
     await reload();
     setBezig(null);
-    setMelding({ ok: true, text: `De pagina ${WETTELIJKE_PAGINAS[slug]} staat erin, met dezelfde standaardtekst als een nieuwe webshop. Klik bovenaan op Publiceren om hem online te zetten.` });
+    setMelding({ ok: true, text: `De pagina ${WETTELIJKE_PAGINAS[slug]} staat erin, met dezelfde standaardtekst als een nieuwe webshop. Klik bovenaan op Publiceren om hem online te zetten.`, pagina: slug });
   };
   const doePubliceren = async () => {
     setMelding(null);
@@ -110,6 +112,12 @@ function Winkelcheck({ onSchrijf }: { onSchrijf: () => void }) {
       {melding && (
         <p role={melding.ok ? "status" : "alert"} className={`mt-4 rounded-xl px-4 py-2.5 text-sm ${melding.ok ? "bg-[#cdfed4] text-[#014b1a]" : "bg-[#fed1d7] text-[#8e0b21]"}`}>
           {melding.text}
+          {melding.pagina && (
+            <>
+              {" "}
+              <Link href={paginaBouwerHref("webshop", melding.pagina)} className="font-semibold underline">Lees hem na en pas hem aan</Link>
+            </>
+          )}
         </p>
       )}
 
@@ -183,6 +191,11 @@ function Punt({ punt, bezig, onDoe, bedrijfOnvolledig }: { punt: CheckPunt; bezi
               {a.soort === "producttekst" && <ISparkle width={16} height={16} />}
               {knopBezig ? "Bezig…" : a.label}
             </button>
+          )}
+          {a.soort === "pagina" && (
+            <p className="mt-1.5 text-xs text-[#707070]">
+              Liever een eigen tekst? <Link href={paginaBouwerHref("webshop", a.slug)} className="font-semibold text-[#005bd3] hover:underline">Schrijf hem zelf bij Pagina&apos;s</Link>
+            </p>
           )}
           {a.soort === "pagina" && a.slug === "voorwaarden" && bedrijfOnvolledig && (
             <p className="mt-1.5 text-xs text-[#707070]">
