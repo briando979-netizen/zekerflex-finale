@@ -217,6 +217,7 @@ export async function runMatchingForShift(
       where: { id: shiftId },
       include: {
         branch: { include: { tenant: { select: { name: true } } } },
+        requiredSkill: { select: { name: true } },
         assignments: { where: { cancelledAt: null }, select: { id: true } },
       },
     });
@@ -264,7 +265,8 @@ export async function runMatchingForShift(
     });
     // The worker's own settings (min rate, available dayparts, max travel): no offer outside them.
     const prefsByUser = await loadWorkerPrefs(loaded.map((c) => c.userId)).catch(() => new Map<string, Partial<WorkerPrefs>>());
-    const pool = loaded.filter((c) => prefsAllowShift(prefsByUser.get(c.userId), shift));
+    const shiftVoorPrefs = { startsAt: shift.startsAt, hourlyRateCents: shift.hourlyRateCents, title: shift.title, skill: shift.requiredSkill?.name ?? null };
+    const pool = loaded.filter((c) => prefsAllowShift(prefsByUser.get(c.userId), shiftVoorPrefs));
     log.info("candidate pool loaded", { size: pool.length, outsidePrefs: loaded.length - pool.length });
 
     const scored = await Promise.all(
