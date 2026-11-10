@@ -1,4 +1,6 @@
 import type { Block, SiteDoc } from "@/lib/sites/types";
+import { BETAAL_NAAM, betaalOpties } from "@/lib/sites/winkel-betalen";
+import { actieveVerzendmethoden } from "@/lib/sites/winkel-verzending";
 import type { Kennis } from "@/lib/sitechat/antwoord";
 import type { Fragment } from "@/lib/sitechat/regels";
 
@@ -88,13 +90,19 @@ export function siteKennis(s: Pick<SiteDoc, "bedrijf" | "pages" | "winkel">): Ke
     ),
   }));
   if (producten.length && s.winkel) {
-    const l = s.winkel.levering;
+    // de verzend- en betaalmethoden zoals de winkel ze aanbiedt (lib/sites/winkel-verzending.ts, winkel-betalen.ts)
+    const methoden = actieveVerzendmethoden(s.winkel);
+    const betalen = betaalOpties(s.winkel);
     winkel.push({
       titel: "Webwinkel: bestellen, bezorgen en betalen",
       tekst: regel(
         s.winkel.bestellen ? "Bestellen kan via de webwinkel op deze website." : "Online bestellen staat nu uit.",
-        l.afhalen && "Afhalen kan.",
-        l.bezorgen && `Bezorgen kan${l.bezorgkostenCents ? ` voor ${euro(l.bezorgkostenCents)}` : ""}${l.gratisVanafCents ? `, gratis vanaf ${euro(l.gratisVanafCents)}` : ""}.`,
+        ...methoden.map((m) =>
+          m.soort === "afhalen"
+            ? `${m.naam.trim().toLowerCase() === "afhalen" ? "Afhalen kan" : `Afhalen kan (${m.naam})`}${m.adres.trim() ? ` bij ${m.adres.trim()}` : ""}${m.prijsCents ? ` voor ${euro(m.prijsCents)}` : ""}.`
+            : `${m.naam.trim().toLowerCase() === "bezorgen" ? "Bezorgen kan" : `Bezorgen met ${m.naam} kan`}${m.prijsCents ? ` voor ${euro(m.prijsCents)}` : " gratis"}${m.prijsCents && m.gratisVanafCents ? `, gratis vanaf ${euro(m.gratisVanafCents)}` : ""}${m.gebied === "nl" ? "" : m.gebied === "eu" ? ", in de hele EU" : ", ook buiten de EU"}${m.levertijd.trim() ? ` (${m.levertijd.trim()})` : ""}.`,
+        ),
+        betalen.length > 0 && `Betalen kan met: ${betalen.map((b) => BETAAL_NAAM[b].toLowerCase()).join(", ")}. Online betalen met iDEAL kan nog niet.`,
         s.winkel.betaalTekst,
       ),
     });

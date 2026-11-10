@@ -3,6 +3,7 @@ import { belevingBlok, belevingCss, metKicker, paginaKop, type BelevingCtx } fro
 import { functiesVoorBezoekers, functiesVoorJou, type Functie } from "@/lib/sites/wat-kan-deze-site";
 import { BLOCK_LABELS, isHexColor, type Block, type Company, type Media, type Page, type SiteDoc, type SiteProposalMark, type SiteVacancy, type Theme, type Winkel } from "@/lib/sites/types";
 import { winkelVan, zichtbareProducten, type BestelInvoer, type Bestelconcept } from "@/lib/sites/winkel";
+import { prijzenExclBtw } from "@/lib/sites/winkel-btw";
 import { nuInNL, reserveerBlokVan } from "@/lib/sites/reserveren";
 import type { MandRegelInfo } from "@/lib/sites/mand";
 import { extraBlokHtml, extraCss } from "@/lib/sites/extra-blokken-render";
@@ -19,6 +20,7 @@ import {
   renderUitgelichtBlok,
   winkelCss,
   winkelPaginaBody,
+  type BesteldInfo,
   type WinkelCtx,
 } from "@/lib/sites/winkel-render";
 
@@ -67,8 +69,8 @@ function paras(text: string): string {
     .join("");
 }
 
-/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px; 7: the beleving style, 4 Nov 2026; 8: order-form headings inside their card; 9: beleving photo tiles, panel and hours card; 10: beleving page header; 11: the chat link and the chat page, 4 Nov 2026; 12: beleving photo tiles two by two on phones; 13: the "wat kan deze site" page; 14: a long name in the beleving header fits on a phone; 15: reserving a table; 16: the shopping cart, shop filters and a cart in the header; 17: the 3D burger, only on a site with one (after the style, so no style overrules it), 4 Nov 2026; 18: the builder's new blocks and block settings, 6 Nov 2026). */
-const CSS_REV = 18;
+/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px; 7: the beleving style, 4 Nov 2026; 8: order-form headings inside their card; 9: beleving photo tiles, panel and hours card; 10: beleving page header; 11: the chat link and the chat page, 4 Nov 2026; 12: beleving photo tiles two by two on phones; 13: the "wat kan deze site" page; 14: a long name in the beleving header fits on a phone; 15: reserving a table; 16: the shopping cart, shop filters and a cart in the header; 17: the 3D burger, only on a site with one (after the style, so no style overrules it), 4 Nov 2026; 18: the builder's new blocks and block settings, 6 Nov 2026; 19: choosing shipping and payment at checkout, VAT rows and the transfer details with a payment QR code, 10 Nov 2026). */
+const CSS_REV = 19;
 
 /**
  * The chat link (bottom right, above the WhatsApp button when there is one) and the chat page
@@ -360,6 +362,8 @@ function winkelCtx(ctx: Ctx): WinkelCtx {
     inert: ctx.voorbeeld || Boolean(ctx.voorstel),
     premium: ctx.premium,
     bedrijfNaam: ctx.bedrijf.naam,
+    bedrijfAdres: [ctx.bedrijf.straat.trim(), `${ctx.bedrijf.postcode.trim()} ${ctx.bedrijf.plaats.trim()}`.trim()].filter(Boolean).join(", "),
+    exclBtw: prijzenExclBtw(ctx.winkel),
     esc,
     paras,
     img: (id, sizes, eager) => img(ctx, id, sizes, eager),
@@ -806,7 +810,7 @@ export type WinkelPagina =
   | { soort: "winkel"; filter?: WinkelFilter | undefined }
   | { soort: "bestellen"; invoer?: BestelInvoer | undefined; fouten?: string[] | undefined; vanMand?: boolean | undefined }
   | { soort: "controle"; concept: Bestelconcept; vanMand?: boolean | undefined }
-  | { soort: "besteld"; nr: string; voorbeeld?: boolean | undefined }
+  | { soort: "besteld"; nr: string; voorbeeld?: boolean | undefined; info?: BesteldInfo | null | undefined }
   | { soort: "mand"; mand: { regels: MandRegelInfo[]; subtotaalCents: number; aantal: number }; melding: string };
 
 /** A shop page as a full HTML document; null when the product does not exist (or is hidden). */
@@ -831,7 +835,7 @@ export function renderWinkelPagina(site: RenderableSite, w: WinkelPagina, opts: 
     case "controle":
       return htmlDoc(ctx, fixedPage("controle", "bestellen", `Klopt je bestelling? | ${naam}`), controlePaginaBody(wc, ctx.winkel, w.concept, w.vanMand), opts, css);
     case "besteld":
-      return htmlDoc(ctx, fixedPage("besteld", "besteld", `Bedankt voor je bestelling | ${naam}`), besteldPaginaBody(wc, ctx.winkel, w.nr, w.voorbeeld), opts, css);
+      return htmlDoc(ctx, fixedPage("besteld", "besteld", `Bedankt voor je bestelling | ${naam}`), besteldPaginaBody(wc, ctx.winkel, w.nr, w.voorbeeld, w.info ?? null), opts, css);
     case "mand":
       return htmlDoc(ctx, fixedPage("mand", "mand", `Winkelmand | ${naam}`), mandPaginaBody(wc, ctx.winkel, w.mand, w.melding), opts, css);
   }

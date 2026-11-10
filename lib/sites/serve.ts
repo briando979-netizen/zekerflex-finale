@@ -14,6 +14,8 @@ import { leesMand, mandCookie, mandMetProducten, mandNaarInvoer, voegToe, zetAan
 import { leesFilter } from "@/lib/sites/winkel-filter";
 import { FEED_PAD, heeftFeed, productFeed } from "@/lib/sites/productfeed";
 import { readMedia, storeContactMessage, type LiveSite } from "@/lib/sites/store";
+import { besteldOverzicht } from "@/lib/sites/bestelling-lezen";
+import { epcQrSvg } from "@/lib/sites/betaal-qr";
 import { recordSiteView } from "@/lib/sites/stats";
 import { classifyVisit, visitHeadersOf } from "@/lib/sites/stats-shared";
 import { siteVacancies, vacancyCount } from "@/lib/sites/vacancies";
@@ -184,7 +186,12 @@ export async function serveSitePath(live: LiveSite, path: string[], given: Serve
       const nr = q.get("nr") ?? "";
       // an example or proposal stores nothing: it shows what the confirmation looks like
       const voorbeeld = q.get("voorbeeld") === "1" && Boolean(snapshot.voorbeeld || snapshot.voorstel);
-      return new Response(renderWinkelPagina(snapshot, { soort: "besteld", nr: isBestelnummer(nr) ? nr : "", voorbeeld }, opts), { headers: siteHeaders("text/html; charset=utf-8", "no-store", opts) });
+      // na het plaatsen (?nr=&b=): bedrag, verzending en hoe te betalen, zonder gegevens van de klant (lib/sites/bestelling-lezen.ts)
+      const bestelling = !voorbeeld && isBestelnummer(nr) ? await besteldOverzicht(siteId, nr, q.get("b") ?? "").catch(() => null) : null;
+      const r = bestelling?.betaalmethode === "overboeking" && bestelling.totaalCents > 0 ? bestelling.rekening : undefined;
+      const qr = r ? epcQrSvg({ iban: r.iban, naam: r.naam, bedragCents: bestelling?.totaalCents ?? 0, omschrijving: nr }) : null;
+      const info = bestelling ? { bestelling, qr } : null;
+      return new Response(renderWinkelPagina(snapshot, { soort: "besteld", nr: isBestelnummer(nr) ? nr : "", voorbeeld, info }, opts), { headers: siteHeaders("text/html; charset=utf-8", "no-store", opts) });
     }
     // reserving a table (lib/sites/reserveren.ts): the free times are live, so never cached
     if (first === "reserveren" || first === "gereserveerd") {

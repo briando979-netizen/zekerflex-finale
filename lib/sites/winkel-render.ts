@@ -1,6 +1,9 @@
 import { ldJson } from "@/lib/seo/json-ld";
-import type { BlockProps, SiteProduct, Winkel } from "@/lib/sites/types";
-import { categorieen, euro, isUitverkocht, maxBestelbaar, regelSleutels, zichtbareProducten, type BestelInvoer, type Bestelconcept } from "@/lib/sites/winkel";
+import type { BlockProps, SiteProduct, Verzendmethode, Winkel } from "@/lib/sites/types";
+import { categorieen, euro, isUitverkocht, maxBestelbaar, regelSleutels, zichtbareProducten, type BestelInvoer, type BestelOverzicht, type Bestelconcept } from "@/lib/sites/winkel";
+import { somRegels } from "@/lib/sites/bestel-som";
+import { BETAAL_NAAM, BETAAL_UITLEG, betaalOpties, betaalPast, toonIban } from "@/lib/sites/winkel-betalen";
+import { ANDER_LAND, EU_LANDEN, actieveVerzendmethoden, landKeuze, prijsTekst } from "@/lib/sites/winkel-verzending";
 import { GEEN_FILTER, SORTERINGEN, actieveFilters, filterProducten, filterQuery, heeftFilter, productenTekst, type WinkelFilter } from "@/lib/sites/winkel-filter";
 import type { MandRegelInfo } from "@/lib/sites/mand";
 
@@ -21,6 +24,10 @@ export interface WinkelCtx {
   inert: boolean;
   premium: boolean;
   bedrijfNaam: string;
+  /** het adres van het bedrijf op één regel ("Dorpsstraat 1, 1234 AB Zonnedorp"); leeg als het er niet is */
+  bedrijfAdres: string;
+  /** de prijzen van de winkel zijn exclusief btw (lib/sites/winkel-btw.ts) */
+  exclBtw: boolean;
   esc: (s: unknown) => string;
   paras: (t: string) => string;
   img: (id: string | null, sizes: string, eager?: boolean) => string;
@@ -35,7 +42,7 @@ const ankerVan = (categorie: string) => `cat-${categorie.toLowerCase().replace(/
 
 function prijs(ctx: WinkelCtx, p: SiteProduct): string {
   const oud = p.oudePrijsCents && p.oudePrijsCents > p.prijsCents ? `<s aria-label="Was ${ctx.esc(euro(p.oudePrijsCents))}">${ctx.esc(euro(p.oudePrijsCents))}</s> ` : "";
-  return `${oud}${ctx.esc(euro(p.prijsCents))}`;
+  return `${oud}${ctx.esc(euro(p.prijsCents))}${ctx.exclBtw ? `<span class="pbtw"> excl. btw</span>` : ""}`;
 }
 
 function foto(ctx: WinkelCtx, p: SiteProduct, sizes: string, eager = false): string {
@@ -69,7 +76,7 @@ export function renderUitgelichtBlok(ctx: WinkelCtx, w: Winkel, p: BlockProps["u
 }
 
 /** Schema.org Product, zodat zoekmachines prijs en voorraad kunnen tonen. */
-function productLd(p: SiteProduct, url: string, beeld: string | null, verkoper: string): string {
+function productLd(p: SiteProduct, url: string, beeld: string | null, verkoper: string, exclBtw: boolean): string {
   const data = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -82,6 +89,7 @@ function productLd(p: SiteProduct, url: string, beeld: string | null, verkoper: 
       price: (p.prijsCents / 100).toFixed(2),
       priceCurrency: "EUR",
       availability: isUitverkocht(p) ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+      ...(exclBtw ? { priceSpecification: { "@type": "PriceSpecification", price: (p.prijsCents / 100).toFixed(2), priceCurrency: "EUR", valueAddedTaxIncluded: false } } : {}),
       url,
       seller: { "@type": "Organization", name: verkoper },
     },
@@ -124,7 +132,7 @@ export function productPaginaBody(ctx: WinkelCtx, w: Winkel, p: SiteProduct, met
     : w.bestellen
       ? `${weinig}<form class="buy" method="get" action="${ctx.esc(pad(ctx, "mand"))}"><input type="hidden" name="voeg" value="${ctx.esc(p.id)}">${keuzeVelden(ctx, p, (i) => `o${i}`, [], " required")}<span class="buy-row"><label for="aantal">Aantal</label><input id="aantal" name="aantal" type="number" inputmode="numeric" min="1" max="${maxBestelbaar(p)}" value="1"><button class="btn" type="submit">In winkelmand</button></span></form>${ctx.inert ? `<p class="small">Dit is een voorbeeld: je kunt alles proberen, maar er wordt niets besteld.</p>` : ""}`
       : `${weinig}<p><a class="btn" href="${ctx.esc(ctx.href("contact"))}">Neem contact op om te bestellen</a></p>`;
-  return `<section><div class="wrap">${kruimel}<div class="product"><div>${galerij}</div><div class="pinfo">${p.categorie ? `<p class="pcat">${ctx.esc(p.categorie)}</p>` : ""}<h1>${ctx.esc(p.naam)}</h1><p class="pprice big">${prijs(ctx, p)}</p>${p.korteTekst ? `<p class="lead">${ctx.esc(p.korteTekst)}</p>` : ""}${bestel}<div class="pdesc"><h2 class="pdesc-kop">Over dit product</h2>${ctx.paras(p.omschrijving)}</div></div></div></div></section>${meta.seo ? productLd(p, meta.url, meta.beeld, ctx.bedrijfNaam) : ""}`;
+  return `<section><div class="wrap">${kruimel}<div class="product"><div>${galerij}</div><div class="pinfo">${p.categorie ? `<p class="pcat">${ctx.esc(p.categorie)}</p>` : ""}<h1>${ctx.esc(p.naam)}</h1><p class="pprice big">${prijs(ctx, p)}</p>${p.korteTekst ? `<p class="lead">${ctx.esc(p.korteTekst)}</p>` : ""}${bestel}<div class="pdesc"><h2 class="pdesc-kop">Over dit product</h2>${ctx.paras(p.omschrijving)}</div></div></div></div></section>${meta.seo ? productLd(p, meta.url, meta.beeld, ctx.bedrijfNaam, ctx.exclBtw) : ""}`;
 }
 
 /**
@@ -195,22 +203,48 @@ export function mandPaginaBody(ctx: WinkelCtx, w: Winkel, mand: { regels: MandRe
       return `<li class="mregel${r.probleem ? " mprob" : ""}"><a class="mfoto" href="${naar}" tabindex="-1" aria-hidden="true">${foto(ctx, r.product, "96px")}</a><div class="minfo"><h2><a href="${naar}">${esc(r.product.naam)}</a></h2>${r.variant ? `<p class="mvar">${esc(r.variant)}</p>` : ""}<p class="mstuk">${prijs(ctx, r.product)} per stuk</p>${r.probleem ? `<p class="mfout">${esc(r.probleem)}</p>` : ""}<div class="macties"><form method="get" action="${esc(pad(ctx, "mand"))}"><input type="hidden" name="zet" value="${r.index}"><label for="${id}">Aantal</label><input id="${id}" name="aantal" type="number" inputmode="numeric" min="0" max="${maxBestelbaar(r.product) || 99}" value="${r.aantal}"><button class="btn mknop" type="submit">Bijwerken<span class="vh">: ${esc(r.product.naam)}</span></button></form><form method="get" action="${esc(pad(ctx, "mand"))}"><input type="hidden" name="weg" value="${r.index}"><button class="mweg" type="submit">Verwijderen<span class="vh">: ${esc(r.product.naam)}</span></button></form></div></div><p class="mtotaal">${esc(euro(r.totaalCents))}</p></li>`;
     })
     .join("");
-  const l = w.levering;
-  const tegoed = l.bezorgen && l.gratisVanafCents != null && l.bezorgkostenCents > 0 ? l.gratisVanafCents - mand.subtotaalCents : null;
-  const bezorg = l.bezorgen
-    ? tegoed !== null && tegoed > 0
-      ? `Nog ${esc(euro(tegoed))} tot gratis bezorgen.`
-      : tegoed !== null
-        ? "Je bestelling wordt gratis bezorgd."
-        : l.bezorgkostenCents
-          ? `Bezorgen kost ${esc(euro(l.bezorgkostenCents))}${l.afhalen ? "; afhalen is gratis" : ""}.`
-          : "Bezorgen is gratis."
-    : "Je haalt je bestelling bij ons af.";
+  const bezorg = esc(mandVerzendTekst(w, mand.subtotaalCents));
   const kan = mand.regels.some((r) => !r.probleem);
   const n = mand.aantal === 1 ? "1 artikel" : `${mand.aantal} artikelen`;
-  return `<section><div class="wrap"><h1>Winkelmand</h1>${meld}<div class="mgrid"><ul class="mlijst" role="list">${regels}</ul><div class="msom"><h2>Overzicht</h2><dl><div><dt>Subtotaal (${n})</dt><dd>${esc(euro(mand.subtotaalCents))}</dd></div></dl><p class="small">${bezorg}</p>${
+  return `<section><div class="wrap"><h1>Winkelmand</h1>${meld}<div class="mgrid"><ul class="mlijst" role="list">${regels}</ul><div class="msom"><h2>Overzicht</h2><dl><div><dt>Subtotaal (${n}${ctx.exclBtw ? ", excl. btw" : ""})</dt><dd>${esc(euro(mand.subtotaalCents))}</dd></div></dl><p class="small">${bezorg}</p>${
     kan ? `<p><a class="btn mafreken" href="${esc(pad(ctx, "bestellen"))}">Afrekenen</a></p>` : `<p class="small">Pas eerst de regels met een melding aan.</p>`
   }<p class="mverder"><a href="${esc(pad(ctx, "winkel"))}">Verder winkelen</a></p>${ctx.inert ? `<p class="small">Dit is een voorbeeld: er wordt niets besteld.</p>` : ""}</div></div></div></section>`;
+}
+
+/**
+ * Wat de winkelmand over verzenden zegt, met de goedkoopste bezorging: hoeveel er nog bij moet voor
+ * gratis bezorgen, of wat het kost. Zonder bezorging: afhalen.
+ */
+export function mandVerzendTekst(w: Winkel, subtotaalCents: number): string {
+  const methoden = actieveVerzendmethoden(w);
+  const bezorg = methoden.filter((m) => m.soort === "bezorgen");
+  if (!bezorg.length) return "Je haalt je bestelling bij ons af.";
+  if (bezorg.some((m) => m.prijsCents <= 0)) return "Bezorgen is gratis.";
+  const grens = Math.min(...bezorg.map((m) => m.gratisVanafCents ?? Infinity));
+  if (Number.isFinite(grens)) return grens > subtotaalCents ? `Nog ${euro(grens - subtotaalCents)} tot gratis bezorgen.` : "Je bestelling wordt gratis bezorgd.";
+  const goedkoopst = Math.min(...bezorg.map((m) => m.prijsCents));
+  const afhalenGratis = methoden.some((m) => m.soort === "afhalen" && m.prijsCents <= 0);
+  return `Bezorgen kost ${bezorg.length > 1 ? "vanaf " : ""}${euro(goedkoopst)}${afhalenGratis ? "; afhalen is gratis" : ""}.`;
+}
+
+/** Onder de naam van een verzendmethode: het afhaaladres (of dat van het bedrijf) en de levertijd. */
+function methodeDetail(ctx: WinkelCtx, m: Verzendmethode): string {
+  return [m.soort === "afhalen" ? m.adres.trim() || ctx.bedrijfAdres : "", m.levertijd.trim()].filter(Boolean).join(" · ");
+}
+
+/** De optelling onder de productregels (lib/sites/bestel-som.ts): korting, verzending, btw en totaal. */
+function somTabel(ctx: WinkelCtx, c: BestelOverzicht): string {
+  const { esc } = ctx;
+  const rijen = somRegels(c);
+  const t = rijen.findIndex((r) => r.soort === "totaal");
+  const rij = (r: (typeof rijen)[number]) =>
+    r.soort === "noot"
+      ? `<tr class="snoot"><td colspan="2">${esc(r.label)}</td></tr>`
+      : r.soort === "totaal"
+        ? `<tr><th scope="row">${esc(r.label)}</th><td>${esc(r.bedrag)}</td></tr>`
+        : `<tr${r.soort === "klein" ? ' class="sklein"' : ""}><td>${esc(r.label)}</td><td>${esc(r.bedrag)}</td></tr>`;
+  const regels = c.regels.map((r) => `<tr><td>${r.aantal} × ${esc(r.naam)}</td><td>${esc(euro(r.totaalCents))}</td></tr>`).join("");
+  return `<table class="sum"><tbody>${regels}${rijen.slice(0, t).map(rij).join("")}</tbody><tfoot>${rijen.slice(t).map(rij).join("")}</tfoot></table>`;
 }
 
 /** De regels van een bestelling uit het formulier (ook meer maten of kleuren van één product), voor het overzicht uit de mand. */
@@ -254,26 +288,59 @@ export function bestelPaginaBody(ctx: WinkelCtx, w: Winkel, opts: { invoer?: Bes
     : cats.length
     ? [...cats.map((c) => `<h2 class="ocat">${ctx.esc(c)}</h2><ul class="olist" role="list">${producten.filter((p) => p.categorie === c).map(rij).join("")}</ul>`), producten.some((p) => !p.categorie) ? `<h2 class="ocat">Overig</h2><ul class="olist" role="list">${producten.filter((p) => !p.categorie).map(rij).join("")}</ul>` : ""].join("")
     : `<ul class="olist" role="list">${producten.map(rij).join("")}</ul>`;
-  const l = w.levering;
-  const bezorgUitleg = l.bezorgen
-    ? ` (${l.bezorgkostenCents ? `${euro(l.bezorgkostenCents)} bezorgkosten` : "gratis"}${l.gratisVanafCents != null && l.bezorgkostenCents ? `, gratis vanaf ${euro(l.gratisVanafCents)}` : ""})`
+  const { esc } = ctx;
+  // verzenden: een keuze als er meer methoden zijn, anders één zin; een formulier van vóór de keuze kiest op `levering`
+  const methoden = actieveVerzendmethoden(w);
+  const gekozen = methoden.find((m) => m.id === v?.verzend) ?? methoden.find((m) => m.soort === v?.levering) ?? methoden[0];
+  const kanAfhalen = methoden.some((m) => m.soort === "afhalen");
+  const kanBezorgen = methoden.some((m) => m.soort === "bezorgen");
+  const keuzeRij = (naam: string, waarde: string, aan: boolean, titel: string, prijs: string, detail: string) =>
+    `<label class="vkeuze"><input type="radio" name="${naam}" value="${esc(waarde)}"${aan ? " checked" : ""}><span class="vnaam">${esc(titel)}</span>${prijs ? `<span class="vprijs">${esc(prijs)}</span>` : ""}${detail ? `<small>${esc(detail)}</small>` : ""}</label>`;
+  let levering = "";
+  if (methoden.length > 1) {
+    levering = `<fieldset><legend>Verzending</legend><div class="vkeuzes">${methoden.map((m) => keuzeRij("verzend", m.id, m === gekozen, m.naam, prijsTekst(m), methodeDetail(ctx, m))).join("")}</div></fieldset>`;
+  } else if (gekozen) {
+    const detail = methodeDetail(ctx, gekozen);
+    levering = `<input type="hidden" name="verzend" value="${esc(gekozen.id)}"><p class="small">${
+      gekozen.soort === "afhalen" ? `Je haalt je bestelling bij ons af${detail ? ` (${esc(detail)})` : ""}.` : `${esc(gekozen.naam)}: ${esc(prijsTekst(gekozen).toLowerCase())}${gekozen.levertijd.trim() ? ` (${esc(gekozen.levertijd.trim())})` : ""}.`
+    }</p>`;
+  }
+  // het land alleen als de winkel ook buiten Nederland bezorgt
+  const gebied = landKeuze(methoden);
+  const land = (v?.land ?? "").toUpperCase();
+  const landVeld =
+    gebied === "nl"
+      ? ""
+      : `<label>Land<select class="osel" name="land" autocomplete="country">${EU_LANDEN.map((l) => `<option value="${l.code}"${l.code === (land || "NL") ? " selected" : ""}>${esc(l.naam)}</option>`).join("")}${gebied === "overal" ? `<option value="${ANDER_LAND}"${land === ANDER_LAND ? " selected" : ""}>Ander land (buiten de EU)</option>` : ""}</select></label>${
+          gebied === "overal" ? veld(ctx, "landAnders", "Welk land? (alleen bij een ander land)", v?.landAnders ?? "", ' maxlength="60"') : ""
+        }`;
+  const adres = kanBezorgen
+    ? `<fieldset><legend>Bezorgadres${kanAfhalen ? " (alleen bij bezorgen)" : ""}</legend>${veld(ctx, "straat", "Straat en huisnummer", v?.straat ?? "", ' maxlength="120" autocomplete="street-address"')}${veld(ctx, "postcode", "Postcode", v?.postcode ?? "", ' maxlength="10" autocomplete="postal-code"')}${veld(ctx, "plaats", "Plaats", v?.plaats ?? "", ' maxlength="80" autocomplete="address-level2"')}${landVeld}</fieldset>`
     : "";
-  const levering =
-    l.afhalen && l.bezorgen
-      ? `<fieldset><legend>Afhalen of bezorgen</legend><label class="radio"><input type="radio" name="levering" value="afhalen"${v?.levering !== "bezorgen" ? " checked" : ""}> Ik haal het af</label><label class="radio"><input type="radio" name="levering" value="bezorgen"${v?.levering === "bezorgen" ? " checked" : ""}> Bezorgen${ctx.esc(bezorgUitleg)}</label></fieldset>`
-      : `<input type="hidden" name="levering" value="${l.bezorgen ? "bezorgen" : "afhalen"}"><p class="small">${l.bezorgen ? `We bezorgen je bestelling${ctx.esc(bezorgUitleg)}.` : "Je haalt je bestelling bij ons af."}</p>`;
-  const adres = l.bezorgen
-    ? `<fieldset><legend>Bezorgadres${l.afhalen ? " (alleen bij bezorgen)" : ""}</legend>${veld(ctx, "straat", "Straat en huisnummer", v?.straat ?? "", ' maxlength="120" autocomplete="street-address"')}${veld(ctx, "postcode", "Postcode", v?.postcode ?? "", ' maxlength="10" autocomplete="postal-code"')}${veld(ctx, "plaats", "Plaats", v?.plaats ?? "", ' maxlength="80" autocomplete="address-level2"')}</fieldset>`
+  // betalen: alleen wat bij minstens één verzendmethode past
+  const betaal = betaalOpties(w).filter((b) => methoden.some((m) => betaalPast(b, m.soort)));
+  const betaalGekozen = betaal.find((b) => b === v?.betaalmethode) ?? betaal[0];
+  const betalen =
+    betaal.length > 1
+      ? `<fieldset><legend>Betalen</legend><div class="vkeuzes">${betaal.map((b) => keuzeRij("betaalmethode", b, b === betaalGekozen, BETAAL_NAAM[b], "", BETAAL_UITLEG[b])).join("")}</div></fieldset>`
+      : betaalGekozen
+        ? `<input type="hidden" name="betaalmethode" value="${betaalGekozen}"><p class="small"><strong>Betalen:</strong> ${esc(BETAAL_NAAM[betaalGekozen])}. ${esc(BETAAL_UITLEG[betaalGekozen])}</p>`
+        : "";
+  // een kortingscode alleen als de winkel er een heeft die aan staat
+  const korting = (w.kortingscodes ?? []).some((k) => k.actief)
+    ? `<label>Kortingscode (mag leeg)<input name="kortingscode" value="${esc(v?.kortingscode ?? "")}" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>`
     : "";
+  const exclNoot = ctx.exclBtw ? `<p class="small">Alle prijzen zijn exclusief btw. De btw komt erbij in het overzicht van je bestelling.</p>` : "";
   const fouten = opts.fouten?.length ? `<div class="alert" role="alert"><p><strong>Nog even kijken:</strong></p><ul>${opts.fouten.map((f) => `<li>${ctx.esc(f)}</li>`).join("")}</ul></div>` : "";
   const note = ctx.inert ? `<p class="small"><strong>Dit is een voorbeeld:</strong> je kunt alles proberen, maar er wordt niets besteld of verstuurd.</p>` : `<p class="small">We gebruiken je gegevens alleen voor je bestelling. Lees de <a href="${ctx.esc(ctx.href("privacy"))}">privacyverklaring</a>.</p>`;
   // op de computer: links de producten, rechts (meeschuivend) levering, gegevens en de knop
-  return `<section><div class="wrap"><h1>Bestellen</h1>${fouten}<form class="contact order" method="post" action="${ctx.esc(ctx.preview ? "#" : `${ctx.root}_zf/bestelling`)}"><input type="hidden" name="stap" value="controle"><div class="ocols"><div><fieldset><legend>${mandLijst ? "Je bestelling" : "Wat wil je bestellen?"}</legend>${lijst}</fieldset></div><div class="oside">${levering}<fieldset><legend>Je gegevens</legend>${veld(ctx, "naam", "Naam", v?.naam ?? "", ' required maxlength="100" autocomplete="name"')}${veld(ctx, "email", "E-mailadres", v?.email ?? "", ' type="email" required maxlength="200" autocomplete="email"')}${veld(ctx, "telefoon", "Telefoon", v?.telefoon ?? "", ' type="tel" required maxlength="30" autocomplete="tel"')}</fieldset>${adres}<label>Opmerking (mag leeg)<textarea name="opmerking" maxlength="1000">${ctx.esc(v?.opmerking ?? "")}</textarea></label><label class="hp" aria-hidden="true">Laat leeg<input name="website" tabindex="-1" autocomplete="off"></label>${note}<p style="margin:0"><button class="btn" type="submit">Bekijk je bestelling</button></p></div></div></form></div></section>`;
+  return `<section><div class="wrap"><h1>Bestellen</h1>${fouten}<form class="contact order" method="post" action="${ctx.esc(ctx.preview ? "#" : `${ctx.root}_zf/bestelling`)}"><input type="hidden" name="stap" value="controle"><div class="ocols"><div><fieldset><legend>${mandLijst ? "Je bestelling" : "Wat wil je bestellen?"}</legend>${lijst}</fieldset></div><div class="oside">${levering}<fieldset><legend>Je gegevens</legend>${veld(ctx, "naam", "Naam", v?.naam ?? "", ' required maxlength="100" autocomplete="name"')}${veld(ctx, "email", "E-mailadres", v?.email ?? "", ' type="email" required maxlength="200" autocomplete="email"')}${veld(ctx, "telefoon", "Telefoon", v?.telefoon ?? "", ' type="tel" required maxlength="30" autocomplete="tel"')}</fieldset>${adres}${betalen}${korting}<label>Opmerking (mag leeg)<textarea name="opmerking" maxlength="1000">${ctx.esc(v?.opmerking ?? "")}</textarea></label><label class="hp" aria-hidden="true">Laat leeg<input name="website" tabindex="-1" autocomplete="off"></label>${exclNoot}${note}<p style="margin:0"><button class="btn" type="submit">Bekijk je bestelling</button></p></div></div></form></div></section>`;
 }
 
 /** Stap 2: het overzicht met totaal; dezelfde gegevens gaan verborgen mee naar "plaatsen" of terug naar "wijzigen". */
 export function controlePaginaBody(ctx: WinkelCtx, w: Winkel, c: Bestelconcept, vanMand = false): string {
   const i = c.invoer;
+  const vz = c.verzending;
   const verborgen = [
     ...(vanMand ? [["bron", "mand"] as const] : []),
     ...Object.entries(i.aantallen).map(([id, n]) => [`n_${id}`, String(n)] as const),
@@ -287,20 +354,61 @@ export function controlePaginaBody(ctx: WinkelCtx, w: Winkel, c: Bestelconcept, 
     ["postcode", i.postcode],
     ["plaats", i.plaats],
     ["opmerking", i.opmerking],
+    // de keuzes gaan mee; de bedragen rekent de server bij "plaatsen" opnieuw uit
+    ["verzend", i.verzend ?? ""],
+    ["land", i.land ?? ""],
+    ["landAnders", i.landAnders ?? ""],
+    ["betaalmethode", i.betaalmethode ?? ""],
+    ["kortingscode", i.kortingscode ?? ""],
   ]
     .map(([n, v]) => `<input type="hidden" name="${ctx.esc(n)}" value="${ctx.esc(v)}">`)
     .join("");
-  const regels = c.regels.map((r) => `<tr><td>${r.aantal} × ${ctx.esc(r.naam)}</td><td>${ctx.esc(euro(r.totaalCents))}</td></tr>`).join("");
-  const kosten = i.levering === "bezorgen" ? `<tr><td>Bezorgkosten</td><td>${c.bezorgkostenCents ? ctx.esc(euro(c.bezorgkostenCents)) : "gratis"}</td></tr>` : "";
-  const waar = i.levering === "bezorgen" ? `Bezorgen op ${[i.straat, `${i.postcode} ${i.plaats}`.trim()].map(ctx.esc).join(", ")}` : "Je haalt de bestelling af";
-  return `<section><div class="wrap narrow"><h1>Klopt je bestelling?</h1><table class="sum"><tbody>${regels}${kosten}</tbody><tfoot><tr><th scope="row">Totaal</th><td>${ctx.esc(euro(c.totaalCents))}</td></tr></tfoot></table><p>${waar}.<br>${ctx.esc(i.naam)} · ${ctx.esc(i.email)} · ${ctx.esc(i.telefoon)}</p>${i.opmerking ? `<p class="small">Opmerking: ${ctx.esc(i.opmerking)}</p>` : ""}${ctx.paras(w.betaalTekst)}${ctx.inert ? `<p class="small"><strong>Dit is een voorbeeld:</strong> er wordt niets besteld of verstuurd.</p>` : ""}<form class="contact order" method="post" action="${ctx.esc(ctx.preview ? "#" : `${ctx.root}_zf/bestelling`)}">${verborgen}<label class="hp" aria-hidden="true">Laat leeg<input name="website" tabindex="-1" autocomplete="off"></label><p class="acts-row"><button class="btn" type="submit" name="stap" value="plaats">Bestelling plaatsen</button> <button class="btn ghost" type="submit" name="stap" value="wijzig">Wijzigen</button></p></form></div></section>`;
+  const waar = verzendZin(ctx, c);
+  const betaal = c.betaalmethode ? `<p><strong>Betalen:</strong> ${ctx.esc(BETAAL_NAAM[c.betaalmethode])}. ${ctx.esc(BETAAL_UITLEG[c.betaalmethode])}</p>` : "";
+  return `<section><div class="wrap narrow"><h1>Klopt je bestelling?</h1>${somTabel(ctx, c)}<p>${waar}${vz?.levertijd ? ` <span class="small">(${ctx.esc(vz.levertijd)})</span>` : ""}<br>${ctx.esc(i.naam)} · ${ctx.esc(i.email)} · ${ctx.esc(i.telefoon)}</p>${i.opmerking ? `<p class="small">Opmerking: ${ctx.esc(i.opmerking)}</p>` : ""}${betaal}${ctx.paras(w.betaalTekst)}${ctx.inert ? `<p class="small"><strong>Dit is een voorbeeld:</strong> er wordt niets besteld of verstuurd.</p>` : ""}<form class="contact order" method="post" action="${ctx.esc(ctx.preview ? "#" : `${ctx.root}_zf/bestelling`)}">${verborgen}<label class="hp" aria-hidden="true">Laat leeg<input name="website" tabindex="-1" autocomplete="off"></label><p class="acts-row"><button class="btn" type="submit" name="stap" value="plaats">Bestelling plaatsen</button> <button class="btn ghost" type="submit" name="stap" value="wijzig">Wijzigen</button></p></form></div></section>`;
 }
 
-export function besteldPaginaBody(ctx: WinkelCtx, w: Winkel, nr: string, voorbeeld = false): string {
+/** Waar de bestelling heen gaat of waar hij klaarligt, in één zin (zonder punt). */
+function verzendZin(ctx: WinkelCtx, c: Bestelconcept): string {
+  const i = c.invoer;
+  const vz = c.verzending;
+  if (i.levering === "bezorgen") {
+    const land = vz?.land && vz.land !== "Nederland" ? vz.land : "";
+    const naam = vz && vz.naam.trim().toLowerCase() !== "bezorgen" ? `${ctx.esc(vz.naam)}: b` : "B";
+    return `${naam}ezorgen op ${[i.straat, `${i.postcode} ${i.plaats}`.trim(), land].filter(Boolean).map(ctx.esc).join(", ")}.`;
+  }
+  const waar = vz ? vz.adres || ctx.bedrijfAdres : "";
+  return `Je haalt de bestelling af${waar ? ` bij ${ctx.esc(waar)}` : ""}.`;
+}
+
+/** Wat de bedankpagina van een geplaatste bestelling extra toont (lib/sites/serve.ts zoekt hem op). */
+export interface BesteldInfo {
+  bestelling: BestelOverzicht;
+  /** de betaal-QR-code als SVG (lib/sites/betaal-qr.ts), alleen bij overboeking */
+  qr: string | null;
+}
+
+/** Hoe en wat de klant betaalt; bij overboeking de rekening, het bedrag, het bestelnummer als omschrijving en de QR-code. */
+function betaalUitleg(ctx: WinkelCtx, b: BestelOverzicht, nr: string, qr: string | null): string {
+  const { esc } = ctx;
+  const bedrag = esc(euro(b.totaalCents));
+  if (b.betaalmethode === "afhalen") return `<p class="bbetaal"><strong>Betalen:</strong> je betaalt ${bedrag} bij het afhalen.</p>`;
+  if (b.betaalmethode === "rembours") return `<p class="bbetaal"><strong>Betalen:</strong> je betaalt ${bedrag} contant aan de bezorger.</p>`;
+  if (b.betaalmethode !== "overboeking" || !b.rekening) return "";
+  if (b.totaalCents <= 0) return `<p class="bbetaal"><strong>Betalen:</strong> je hoeft niets te betalen.</p>`;
+  const rij = (dt: string, dd: string) => `<div><dt>${dt}</dt><dd>${dd}</dd></div>`;
+  return `<div class="betaal"><h2>Zo betaal je</h2><p>Maak het bedrag over naar de rekening hieronder, met je bestelnummer als omschrijving. Dan weet ${esc(ctx.bedrijfNaam)} dat de betaling bij jouw bestelling hoort.</p><div class="betaal-grid"><dl class="betaal-gegevens">${rij("Bedrag", bedrag)}${rij("IBAN", esc(toonIban(b.rekening.iban)))}${rij("Ten name van", esc(b.rekening.naam))}${rij("Omschrijving", esc(nr))}</dl>${
+    qr ? `<figure class="betaal-qr">${qr}<figcaption>Betaal-QR-code</figcaption></figure>` : ""
+  }</div>${qr ? `<p class="small">Op een computer: scan de code met de app van je bank, als die betaal-QR-codes kent; dan staan bedrag, rekening en omschrijving er meteen in. Op je telefoon: neem de gegevens over in je bank-app.</p>` : ""}</div>`;
+}
+
+export function besteldPaginaBody(ctx: WinkelCtx, w: Winkel, nr: string, voorbeeld = false, info: BesteldInfo | null = null): string {
   if (voorbeeld) {
     return `<section><div class="wrap narrow"><div role="status"><h1>Zo ziet je bevestiging eruit</h1></div><p class="mvoorbeeld"><strong>Dit is een voorbeeld:</strong> er is niets besteld en niets verstuurd. In je eigen webshop komt een bestelling meteen binnen in de Websitestudio, krijg je er een mail van, en zakt de voorraad vanzelf.</p><p><a class="btn" href="${ctx.esc(pad(ctx, "winkel"))}">Verder winkelen</a></p></div></section>`;
   }
-  return `<section><div class="wrap narrow"><div role="status"><h1>Bedankt voor je bestelling</h1>${nr ? `<p>Je bestelnummer is <strong>${ctx.esc(nr)}</strong>.</p>` : ""}</div>${ctx.paras(w.betaalTekst)}<p>${ctx.esc(ctx.bedrijfNaam)} heeft je bestelling ontvangen en neemt contact met je op als er iets niet klopt.</p><p><a class="btn" href="${ctx.esc(pad(ctx, "winkel"))}">Verder winkelen</a></p></div></section>`;
+  const b = info?.bestelling;
+  const overzicht = b ? `${betaalUitleg(ctx, b, nr, info.qr)}<h2 class="bkop">Je bestelling</h2>${somTabel(ctx, b)}` : "";
+  return `<section><div class="wrap narrow"><div role="status"><h1>Bedankt voor je bestelling</h1>${nr ? `<p>Je bestelnummer is <strong>${ctx.esc(nr)}</strong>.</p>` : ""}</div>${overzicht}${ctx.paras(w.betaalTekst)}<p>${ctx.esc(ctx.bedrijfNaam)} heeft je bestelling ontvangen en neemt contact met je op als er iets niet klopt.</p><p><a class="btn" href="${ctx.esc(pad(ctx, "winkel"))}">Verder winkelen</a></p></div></section>`;
 }
 
 /** De opmaak van de winkel, achter de basisopmaak van de site; premium krijgt de kaarten en prijs van de huisstijl. */
@@ -349,10 +457,16 @@ form.wfilter label.wcheck{display:flex;align-items:center;gap:10px;font-weight:5
 @media (max-width:520px){.mregel{grid-template-columns:64px minmax(0,1fr)}.mfoto .pimg,.mfoto img,.mfoto .ph{width:64px;height:64px}.mtotaal{grid-column:2}}
 .msom{padding:22px;border:1px solid var(--line);border-radius:var(--r);background:#fff}.msom h2{margin:0 0 12px;font-size:1.2rem}.msom dl{margin:0}.msom dl div{display:flex;justify-content:space-between;gap:12px;font-weight:700;font-size:1.1rem}.msom dd{margin:0}.mafreken{display:block;text-align:center}.mverder{margin:0;text-align:center}
 .mkort .orow{gap:12px}.mkort .orow>span:last-of-type{font-weight:700;white-space:nowrap}
+.pbtw{font-size:.78em;font-weight:500;color:var(--mute)}.vkeuzes{display:grid;gap:10px}form.order label.vkeuze{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:2px 12px;align-items:start;padding:13px 16px;border:1px solid var(--line);border-radius:12px;background:#fff;font-weight:400;cursor:pointer}form.order .vkeuze input{width:auto;margin:4px 0 0;padding:0;accent-color:var(--k)}.vkeuze .vnaam{font-weight:700;min-width:0;overflow-wrap:anywhere}.vkeuze .vprijs{font-weight:600;text-align:right}.vkeuze small{grid-column:2/-1;color:var(--mute);font-size:.88rem;line-height:1.45}.vkeuze:has(input:checked){border-color:var(--k);box-shadow:0 0 0 1px var(--k)}.vkeuze:has(input:focus-visible){outline:3px solid var(--a);outline-offset:2px}@media (max-width:440px){form.order label.vkeuze{grid-template-columns:auto minmax(0,1fr)}.vkeuze .vprijs{grid-column:2;text-align:left}}
+form.order .osel{width:100%;min-width:0;font:inherit;font-weight:400;padding:12px 14px;border:1px solid #cfd4da;border-radius:10px;background:#fff;color:var(--ink)}
+table.sum tfoot tr.sklein td,table.sum tfoot tr.snoot td{font-weight:400;font-size:.92rem;color:var(--mute);padding:4px 0}table.sum tfoot tr+tr.sklein td,table.sum tfoot tr.snoot td{border-bottom:0}
+.betaal{margin:8px 0 28px;padding:22px;border:1px solid var(--line);border-radius:var(--r);background:#fff}.betaal h2{margin:0 0 8px;font-size:1.3rem}.betaal-grid{display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px 28px;margin:16px 0}.betaal-gegevens{flex:1 1 240px;display:grid;gap:10px;margin:0;min-width:0}.betaal-gegevens div{display:grid;gap:2px}.betaal-gegevens dt{font-size:.82rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}.betaal-gegevens dd{margin:0;font-size:1.12rem;font-weight:700;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.betaal-qr{margin:0;display:grid;justify-items:center;gap:6px}.betaal-qr svg{width:200px;height:200px;max-width:100%;border:1px solid var(--line);border-radius:12px}.betaal-qr figcaption{font-size:.85rem;color:var(--mute)}.bbetaal{padding:14px 18px;border-radius:12px;background:var(--soft)}.bkop{margin:24px 0 8px;font-size:1.2rem}
 .mandlink{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;color:inherit;font-weight:700;font-size:.92rem;text-decoration:none}.mandlink svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}.mandlink b{display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--a);color:var(--a-t);font-size:.78rem}.mandlink:hover{background:rgba(127,127,127,.12)}@media (max-width:480px){.mandlink .mtekst{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.mandlink{padding:8px 6px}}@media (max-width:400px){.acts:has(.mandlink) .cta-top{display:none}}@media (max-width:640px){.pcard h3{overflow-wrap:anywhere;hyphens:auto}}`;
   const prem = `.pcard{border:0;border-radius:28px;box-shadow:0 1px 2px rgba(10,18,14,.05),0 14px 34px rgba(10,18,14,.08)}.pcard:hover{box-shadow:0 2px 4px rgba(10,18,14,.06),0 24px 48px rgba(10,18,14,.14)}.pbody{padding:22px 26px 28px}@media (max-width:640px){.pcard{border-radius:18px}.pbody{padding:12px 12px 16px}}
 .pprice{color:var(--a-d)}.pgal img,.pgal .pimg,.feat .pimg{border-radius:28px}.chips a{border-color:rgba(10,18,14,.14)}.chips a:hover{border-color:var(--a-d)}
 form.order fieldset{border:0;border-radius:24px;padding:24px 26px 28px;box-shadow:0 1px 2px rgba(10,18,14,.05),0 14px 34px rgba(10,18,14,.08)}.btn.ghost{color:var(--night);border-color:rgba(10,18,14,.2)}
+.betaal{border:0;border-radius:24px;box-shadow:0 1px 2px rgba(10,18,14,.05),0 14px 34px rgba(10,18,14,.08)}form.order label.vkeuze{border-color:rgba(10,18,14,.14)}
 form.wfilter,.msom{border:0;border-radius:24px;box-shadow:0 1px 2px rgba(10,18,14,.05),0 14px 34px rgba(10,18,14,.08)}.chips a[aria-current]{background:var(--night);border-color:var(--night);color:var(--cream)}form.wfilter .wcheck input{accent-color:var(--night)}.wf-toggle:focus-visible+.wf-knop{outline-color:var(--a-d)}.wf-knop{border-color:rgba(10,18,14,.14)}
 .mandlink{color:var(--cream)}.mandlink b{background:var(--sun);color:var(--night)}.mandlink:hover{background:rgba(255,255,255,.1)}header .mandlink:focus-visible{outline-color:var(--sun)}`;
   return premium ? `${basis}\n${prem}` : basis;
