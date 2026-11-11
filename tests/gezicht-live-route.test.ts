@@ -20,8 +20,8 @@ vi.mock("@/lib/logger", () => ({ logger: { error: (...a: unknown[]) => logError(
 import { POST } from "@/app/api/onboarding/gezicht-live/route";
 
 const BEELD = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
-const verzoek = (body: Uint8Array = BEELD, type = "image/jpeg", extra: Record<string, string> = {}) =>
-  new Request("http://localhost/api/onboarding/gezicht-live", { method: "POST", headers: { "Content-Type": type, ...extra }, body });
+const verzoek = (body: Uint8Array<ArrayBuffer> = BEELD, type = "image/jpeg") =>
+  new Request("http://localhost/api/onboarding/gezicht-live", { method: "POST", headers: { "Content-Type": type }, body });
 
 afterEach(() => vi.resetAllMocks());
 
