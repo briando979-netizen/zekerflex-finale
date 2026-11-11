@@ -89,3 +89,18 @@ describe("de routes en het scherm", () => {
     expect(lees("components/admin/IdentityCheckActions.tsx")).toMatch(/role="alert"/);
   });
 });
+
+describe("de gezichtscontrole in beeld", () => {
+  it("oordeel en percentage uit rawPayload.gezicht, anders uit de kolom faceMatchScore", () => {
+    const w = idControleWeergave("AI_LOCAL", { gezicht: { oordeel: "zelfde", score: 0.6234, technisch: false, automatisch: true, ms: 420 } });
+    expect(w.gezicht).toEqual({ oordeel: "zelfde persoon", procent: 62, technisch: false, automatisch: true });
+    expect(idControleWeergave("AI_LOCAL", { gezicht: { oordeel: "onbruikbaar", score: null, technisch: true, automatisch: false } }).gezicht).toEqual({
+      oordeel: "niet te meten (foto onbruikbaar)",
+      procent: null,
+      technisch: true,
+      automatisch: false,
+    });
+    expect(idControleWeergave("AI_LOCAL", {}, null, 0.41).gezicht?.procent).toBe(41);
+    expect(idControleWeergave("AI_LOCAL", {}).gezicht).toBeNull();
+  });
+});

@@ -344,7 +344,7 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
               <ul>
                 {user.identityChecks.map((c) => {
                   const status = CHECK_STATUS[c.status] ?? { label: c.status, tone: "warn" as const };
-                  const w = idControleWeergave(c.provider, c.rawPayload, c.sessionId);
+                  const w = idControleWeergave(c.provider, c.rawPayload, c.sessionId, c.faceMatchScore);
                   return (
                     <li key={c.id} className="space-y-3 px-4 py-3.5 text-[0.8125rem] sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
                       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -393,8 +393,16 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                           ))}
                         </ul>
                       )}
-                      {(w.ai || w.beeld.samenvatting.length > 0 || w.mrz.length > 0 || w.chip.length > 0 || w.overig.length > 0) && (
+                      {(w.gezicht || w.ai || w.beeld.samenvatting.length > 0 || w.mrz.length > 0 || w.chip.length > 0 || w.overig.length > 0) && (
                         <div className="space-y-1 text-xs" style={{ color: "var(--a-dim)" }}>
+                          {w.gezicht && (
+                            <p>
+                              Gezicht (pasfoto tegen selfie): <strong>{w.gezicht.oordeel}</strong>
+                              {w.gezicht.procent != null ? ` (${w.gezicht.procent}%)` : ""}
+                              {w.gezicht.technisch ? " · de gezichtscontrole kon niet draaien" : ""}
+                              {w.gezicht.automatisch ? " · deze controle keurde zelf goed" : ""}
+                            </p>
+                          )}
                           {w.ai && (
                             <p>
                               Automatische beoordeling: <strong>{w.ai.oordeel}</strong>

@@ -41,7 +41,16 @@ export interface IdControleWeergave {
   overig: string[];
   /** Stripe Identity: de sessie (de foto's staan bij Stripe) */
   stripe: { sessieId: string; naamOpDocument: string | null; naamKlopt: boolean | null; reden: string | null } | null;
+  /** de eigen gezichtscontrole (lib/kyc/gezicht, b3): pasfoto op het document tegen de selfie */
+  gezicht: { oordeel: string; procent: number | null; technisch: boolean; automatisch: boolean } | null;
 }
+
+const GEZICHT_OORDEEL: Record<string, string> = {
+  zelfde: "zelfde persoon",
+  twijfel: "twijfel",
+  anders: "lijkt een ander persoon",
+  onbruikbaar: "niet te meten (foto onbruikbaar)",
+};
 
 const obj = (v: unknown): Record<string, unknown> | null => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
 const tekst = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim().slice(0, 300) : null);
@@ -51,7 +60,7 @@ const OORDEEL: Record<string, string> = { approved: "goedgekeurd", needs_review:
 const WERKRECHT: Record<string, string> = { vrij: "mag vrij werken (EU/EER/CH)", vergunning: "heeft een werkvergunning nodig", onbekend: "onbekend" };
 const LEEFTIJD: Record<string, string> = { volwassen: "18 jaar of ouder", minderjarig: "jonger dan 18", onbekend: "onbekend" };
 
-export function idControleWeergave(provider: string, rawPayload: unknown, sessionId: string | null = null): IdControleWeergave {
+export function idControleWeergave(provider: string, rawPayload: unknown, sessionId: string | null = null, faceMatchScore: number | null = null): IdControleWeergave {
   const p = obj(rawPayload) ?? {};
   const ids = obj(p.uploadIds) ?? {};
   const fotos = (["front", "back", "selfie"] as const).filter((k) => typeof ids[k] === "string" && (ids[k] as string).length > 0);
@@ -143,7 +152,20 @@ export function idControleWeergave(provider: string, rawPayload: unknown, sessio
         }
       : null;
 
-  return { fotos, regels, ai, beeld: { aan: v?.available === true, samenvatting }, mrz, chip, overig, stripe };
+  // rawPayload.gezicht = { oordeel, score (cosinus 0-1), technisch, automatisch, ms }; anders de kolom faceMatchScore
+  const g = obj(p.gezicht);
+  const score = typeof g?.score === "number" ? g.score : typeof faceMatchScore === "number" ? faceMatchScore : null;
+  const gezicht =
+    g || score != null
+      ? {
+          oordeel: g ? (GEZICHT_OORDEEL[String(g.oordeel)] ?? String(g.oordeel ?? "onbekend")) : "score bekend",
+          procent: score != null ? Math.round(score * 100) : null,
+          technisch: g?.technisch === true,
+          automatisch: g?.automatisch === true,
+        }
+      : null;
+
+  return { fotos, regels, ai, beeld: { aan: v?.available === true, samenvatting }, mrz, chip, overig, stripe, gezicht };
 }
 
 /** De foto-upload van een controle, of null (geen eigen controle, of al opgeruimd na 30 dagen). */
