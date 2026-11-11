@@ -124,7 +124,7 @@ export function BoekFlow({ slug, bedrijfsnaam, diensten, medewerkers, vanDag, to
           {klok(klaar.start)} uur · {klaar.duurMin} minuten
         </p>
         {klaar.metEmail ? (
-          <p className="mt-3 text-xs text-neutralx-500">We sturen je een bevestiging per e-mail met een link om te annuleren.</p>
+          <p className="mt-3 text-xs text-neutralx-500">Je krijgt meestal binnen enkele minuten een bevestiging per e-mail, met een link om te annuleren. Komt er niets, noteer dan de tijd en neem contact op met {klaar.bedrijfsnaam}.</p>
         ) : (
           <p className="mt-3 text-xs text-neutralx-500">Je krijgt geen bevestiging per e-mail; noteer de tijd en bel {klaar.bedrijfsnaam} om te verzetten of te annuleren.</p>
         )}

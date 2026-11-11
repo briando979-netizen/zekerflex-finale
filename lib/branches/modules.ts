@@ -62,7 +62,6 @@ export const MODULES: readonly BrancheModule[] = [
   klaar("horeca-beheer", "branche", "Horeca-beheer", "Reserveringen, menukaart, bestellen met QR, kassa, keukenscherm en takenlijsten.", "/werkgever/horeca"),
   klaar("rijschool-beheer", "branche", "Rijschool-beheer", "Lesagenda, leerlingen, betalingen, pakketten, instructeurs en je eigen app.", "/werkgever/rijschool"),
   klaar("kassa-winkel", "branche", "Kassa in de winkel", "Contant of pin afrekenen; een verkoop aan de balie is dezelfde bestelling als online.", "/studio/webshop"),
-  // gepland
   // klaar sinds 11 nov: lib/afspraken (boekpagina /boeken/<adres>, agenda, klantenkaart)
   klaar("afspraken", "klanten", "Afspraken boeken", "Klanten boeken online een tijd bij een medewerker; jij ziet de agenda per persoon.", "/werkgever/afspraken"),
   klaar("klantenkaart", "klanten", "Klantenkaart", "Per klant de geschiedenis en je eigen notities, met de mogelijkheid een klant te wissen.", "/werkgever/klanten"),
@@ -71,9 +70,10 @@ export const MODULES: readonly BrancheModule[] = [
   klaar("voorraad", "plek", "Voorraad", "Wat er ligt, wat bijna op is, een logboek van elke wijziging en een bestellijst per leverancier.", "/werkgever/voorraad"),
   klaar("werkbonnen", "branche", "Werkbonnen en opdrachten", "Een opdracht met klant, planning, uren en materialen, met een afdrukbare werkbon.", "/werkgever/werkbonnen"),
   klaar("checklists", "branche", "Checklists en rondes", "Vaste taken per locatie of ronde, door personeel zonder account in te vullen, met een overzicht van wat gemist is.", "/werkgever/checklists"),
-  gepland("lidmaatschappen", "branche", "Lidmaatschappen", "Abonnementen en strippenkaarten van je klanten, met automatische incasso."),
-  gepland("ritten", "branche", "Ritten en voertuigen", "Ritten plannen, voertuigen en chauffeurs koppelen, uren per rit."),
-  gepland("kamers", "branche", "Kamers en verblijven", "Kamers, beschikbaarheid en boekingen op één kalender."),
+  // klaar sinds 11 nov: lib/lidmaatschappen, lib/ritten, lib/kamers (elk met eigen tests en een schone controle)
+  klaar("lidmaatschappen", "branche", "Lidmaatschappen", "Leden, abonnementen en strippenkaarten met bezoeken; betalen en incasso gaan nog buiten ZekerFlex.", "/werkgever/lidmaatschappen"),
+  klaar("ritten", "branche", "Ritten en voertuigen", "Ritten plannen met voertuig en chauffeur, met de uren per rit en een melding als de APK bijna verloopt; zonder GPS.", "/werkgever/ritten"),
+  klaar("kamers", "branche", "Kamers en verblijven", "Kamers, boekingen en bezetting op één kalender, met in- en uitchecken en schoonmaakstatus; gasten boeken niet zelf online.", "/werkgever/kamers"),
   gepland("dossier", "branche", "Dossier", "Een beveiligd dossier per cliënt; zware regels, dus pas na de eerste branches.", "Eerst een jurist: het zijn gezondheidsgegevens (bijzondere persoonsgegevens, AVG artikel 9)."),
 ];
 

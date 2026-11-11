@@ -7,6 +7,7 @@ const m = vi.hoisted(() => ({
   melding: vi.fn(),
   limiet: vi.fn(),
   waarschuw: vi.fn(),
+  info: vi.fn(),
   gate: { ok: true } as { ok: boolean; status?: number; message?: string },
   cron: vi.fn(),
   verified: true,
@@ -50,7 +51,7 @@ vi.mock("@/lib/storage/kv", () => ({
   },
 }));
 vi.mock("@/lib/env", () => ({ env: { APP_BASE_URL: "https://app.zekerflex.test/" } }));
-vi.mock("@/lib/logger", () => ({ logger: { warn: (...a: unknown[]) => m.waarschuw(...a), info: vi.fn(), error: vi.fn() } }));
+vi.mock("@/lib/logger", () => ({ logger: { warn: (...a: unknown[]) => m.waarschuw(...a), info: (...a: unknown[]) => m.info(...a), error: vi.fn() } }));
 vi.mock("@/lib/mail", () => ({
   sendMail: (...a: unknown[]) => m.mail(...a),
   escapeHtml: (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"),
@@ -94,6 +95,7 @@ beforeEach(async () => {
   m.melding.mockReset().mockResolvedValue(undefined);
   m.limiet.mockReset().mockResolvedValue(undefined);
   m.waarschuw.mockReset();
+  m.info.mockReset();
   m.cron.mockReset();
   m.gate = { ok: true };
   m.verified = true;
@@ -352,12 +354,14 @@ describe("rem op misbruik: verificatie en plafonds", () => {
     expect(m.mail).toHaveBeenCalledTimes(2);
     expect(teller(orgSleutel(nu))).toBe(200);
     m.waarschuw.mockClear();
+    m.info.mockClear();
     await stuurBevestiging("t1", metAdres(adres(3)), i, nu); // 201e
     expect(m.mail).toHaveBeenCalledTimes(2);
     expect(teller(orgSleutel(nu))).toBe(200);
-    // één logregel, zonder adres
-    expect(m.waarschuw).toHaveBeenCalledTimes(1);
-    expect(JSON.stringify(m.waarschuw.mock.calls)).not.toMatch(/voorbeeld|klant3/);
+    // één logregel, zonder adres, op info: een bereikt plafond is geen storing en hoort niet in het foutenlogboek
+    expect(m.info).toHaveBeenCalledTimes(1);
+    expect(m.waarschuw).not.toHaveBeenCalled();
+    expect(JSON.stringify(m.info.mock.calls)).not.toMatch(/voorbeeld|klant3/);
     // een andere organisatie heeft zijn eigen teller
     await stuurBevestiging("t2", metAdres(adres(4), FAR, "t2"), i, nu);
     expect(m.mail).toHaveBeenCalledTimes(3);
@@ -441,6 +445,8 @@ describe("rem op misbruik: verificatie en plafonds", () => {
     expect(await stuurHerinnering("t1", metAdres(adres(2)), i, nu)).toBe("mislukt");
     expect(m.mail).not.toHaveBeenCalled();
     expect(tokKeys()).toEqual([]);
+    // een stuk teller is wél een storing: warn, dus in het foutenlogboek
+    expect(m.waarschuw).toHaveBeenCalled();
     // ook als alleen schrijven niet lukt; en er blijft geen halve teller achter
     m.tellerKapot = "set";
     await stuurBevestiging("t1", metAdres(adres(3)), i, nu);

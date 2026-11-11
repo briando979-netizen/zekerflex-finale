@@ -149,8 +149,13 @@ async function stuur(tenantId: string, soort: KlantMailSoort, a: Afspraak, i: In
     // 2. de plafonds (per organisatie en per ontvanger), vóór er een link gemaakt of iets verstuurd wordt
     const r = await reserveerMail(tenantId, a.klant.email, nu);
     if (!r.ok) {
-      logger.warn("afspraakmail niet verstuurd", { tenantId, soort, reden: r.reden });
-      return r.reden === "storing" ? "mislukt" : "overgeslagen";
+      // een bereikt plafond is beleid, geen fout (info komt niet in het foutenlogboek); alleen een stuk teller is een storing (warn)
+      if (r.reden === "storing") {
+        logger.warn("afspraakmail niet verstuurd", { tenantId, soort, reden: r.reden });
+        return "mislukt";
+      }
+      logger.info("afspraakmail niet verstuurd: plafond bereikt", { tenantId, soort, reden: r.reden });
+      return "overgeslagen";
     }
     geef = r.geef;
     let link: string;

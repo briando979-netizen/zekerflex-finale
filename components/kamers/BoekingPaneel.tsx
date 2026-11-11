@@ -266,7 +266,7 @@ export function BoekingPaneel({ kamers, begin, vandaag, opgeslagen, sluit }: Pro
             {begin ? "Wijzigingen bewaren" : "Boeking maken"}
           </button>
           <button type="button" className={knopKlein} onClick={sluit}>
-            Annuleren
+            Terug
           </button>
         </div>
       </form>
