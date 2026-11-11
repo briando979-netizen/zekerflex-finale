@@ -61,8 +61,9 @@ export const MODULES: readonly BrancheModule[] = [
   klaar("rijschool-beheer", "branche", "Rijschool-beheer", "Lesagenda, leerlingen, betalingen, pakketten, instructeurs en je eigen app.", "/werkgever/rijschool"),
   klaar("kassa-winkel", "branche", "Kassa in de winkel", "Contant of pin afrekenen; een verkoop aan de balie is dezelfde bestelling als online.", "/studio/webshop"),
   // gepland
-  gepland("afspraken", "klanten", "Afspraken boeken", "Klanten boeken online een tijd bij een medewerker; jij ziet de agenda per persoon."),
-  gepland("klantenkaart", "klanten", "Klantenkaart", "Per klant de geschiedenis, notities en een herinnering vooraf."),
+  // klaar sinds 11 nov: lib/afspraken (boekpagina /boeken/<adres>, agenda, klantenkaart)
+  klaar("afspraken", "klanten", "Afspraken boeken", "Klanten boeken online een tijd bij een medewerker; jij ziet de agenda per persoon.", "/werkgever/afspraken"),
+  klaar("klantenkaart", "klanten", "Klantenkaart", "Per klant de geschiedenis en je eigen notities, met de mogelijkheid een klant te wissen.", "/werkgever/klanten"),
   gepland("offertes", "geld", "Offertes", "Een offerte maken, versturen en na akkoord omzetten in een opdracht."),
   gepland("voorraad", "plek", "Voorraad", "Wat er ligt, wat bijna op is, en bestellen bij de leverancier."),
   gepland("werkbonnen", "branche", "Werkbonnen en opdrachten", "Een opdracht met adres, planning, foto's, handtekening en uren, die een factuur wordt."),

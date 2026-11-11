@@ -87,8 +87,8 @@ describe("branches", () => {
     const kapper = brancheVan("kapper-schoonheid")!;
     const d = dekkingVan(kapper);
     expect(d.totaal).toBe(10);
-    expect(d.klaar).toBe(7); // afspraken, klantenkaart en voorraad ontbreken
-    expect(d.procent).toBe(70);
+    expect(d.klaar).toBe(9); // alleen voorraad ontbreekt nog; afspraken en de klantenkaart staan sinds 11 nov
+    expect(d.procent).toBe(90);
     // het gemiddelde ligt tussen de laagste en de hoogste
     const alle = BRANCHES.map((b) => dekkingVan(b).procent);
     expect(gemiddeldeDekking()).toBeGreaterThanOrEqual(Math.min(...alle));
@@ -100,6 +100,10 @@ describe("branches", () => {
     const uren = horeca.find((k) => k.koppeling.id === "uren-facturen");
     expect(uren?.werkt).toBe(true);
     expect(horeca.some((k) => k.koppeling.id === "werkbonnen-uren")).toBe(false);
+    // afspraken en de klantenkaart zijn allebei klaar: die koppeling werkt in de kapper-branche
+    const kapper = koppelingenVan(brancheVan("kapper-schoonheid")!);
+    expect(kapper.find((k) => k.koppeling.id === "afspraken-klantenkaart")?.werkt).toBe(true);
+    expect(kapper.find((k) => k.koppeling.id === "afspraken-berichten")?.werkt).toBe(true);
     const bouw = koppelingenVan(brancheVan("bouw-installatie")!);
     expect(bouw.find((k) => k.koppeling.id === "werkbonnen-uren")?.werkt).toBe(false);
     expect(bouw.find((k) => k.koppeling.id === "offertes-werkbonnen")?.werkt).toBe(false);
@@ -128,12 +132,15 @@ describe("bouwvolgorde", () => {
   it("zet de module die de meeste branches helpt bovenaan", () => {
     const aantallen = volgorde.map((s) => s.branches.length);
     expect(aantallen).toEqual([...aantallen].sort((a, b) => b - a));
-    // afspraken helpt kapper, sport en zorg; werkbonnen helpt bouw en schoonmaak; dossier alleen de zorg
+    // afspraken en klantenkaart staan er inmiddels; voorraad helpt winkel, kapper en bouw; werkbonnen bouw en schoonmaak; dossier alleen de zorg
     const per = Object.fromEntries(volgorde.map((s) => [s.module.sleutel, s.branches.length]));
-    expect(per.afspraken).toBe(3);
+    expect(per.afspraken).toBeUndefined();
+    expect(per.klantenkaart).toBeUndefined();
+    expect(per.voorraad).toBe(3);
     expect(per.werkbonnen).toBe(2);
     expect(per.dossier).toBe(1);
-    expect(volgorde.findIndex((s) => s.module.sleutel === "afspraken")).toBeLessThan(volgorde.findIndex((s) => s.module.sleutel === "dossier"));
+    expect(volgorde[0]!.module.sleutel).toBe("voorraad");
+    expect(volgorde.findIndex((s) => s.module.sleutel === "werkbonnen")).toBeLessThan(volgorde.findIndex((s) => s.module.sleutel === "dossier"));
   });
 
   it("de winst is de dekking die de branches samen erbij krijgen, in procentpunten", () => {

@@ -42,6 +42,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/terminal/abc123-sleutel",
     "/api/installatie/abc123def456.sleutel", // klant en monteur volgen een installatie met de code in het adres
     "/api/installatie/abc123def456.sleutel/positie",
+    "/api/boeken/kapper-jan", // boekpagina van een bedrijf: vrije tijden en boeken, IP-begrensd
     "/api/kaart/zoek", // ZekerFlex Kaart: adres zoeken (PDOK), IP-begrensd
     "/api/kaart/route", // ZekerFlex Kaart: route plannen via onze eigen routeplanner, IP-begrensd
     "/api/chip/sleutel", // the Android app opens the ID chip with a one-time code
@@ -122,6 +123,10 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/horeca/bonnen", // only /api/horeca/bon itself is public, not a lookalike prefix
     "/api/agent", // only the horeca booking API is public, not every agent route
     "/api/agent/horecabeheer", // not a lookalike prefix
+    "/api/werkgever/afspraken", // het afsprakenbeheer van een bedrijf: alleen met een sessie
+    "/api/werkgever/afspraken/2026-11-12~abcdef12",
+    "/api/werkgever/klanten", // de klanten van een bedrijf (persoonsgegevens van derden): alleen met een sessie
+    "/api/boekenlijst", // alleen /api/boeken/<adres> is openbaar, geen lookalike
   ];
   it.each(cases)("%s is not public", (path) => {
     expect(isPublicApiRoute(path)).toBe(false);
