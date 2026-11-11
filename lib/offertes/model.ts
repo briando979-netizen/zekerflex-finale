@@ -256,10 +256,14 @@ export function reageer(o: Offerte, keuze: "geaccepteerd" | "afgewezen", naam: s
   return goed({ ...o, status: keuze, reactie: { keuze, naam: schoon, reden: schoneTekst(reden, 500, true), op: nu.toISOString() }, gewijzigdOp: nu.toISOString() });
 }
 
-/** Een kopie als nieuw concept: nieuw id en nummer, 30 dagen geldig, geen link en geen reactie. */
+/**
+ * Een kopie als nieuw concept: nieuw id en nummer, 30 dagen geldig, geen link en geen reactie. Zijn de klantgegevens van het
+ * origineel gewist (recht op vergetelheid), dan blijven ze ook in de kopie leeg: wissen mag nooit via een kopie terugkomen.
+ */
 export function kopie(o: Offerte, id: string, nummer: string, nu: Date): Offerte {
   return {
     ...inhoudVan(o),
+    ...(o.klantGewist ? { klant: { naam: "", email: "", telefoon: "", adres: "" } } : {}),
     geldigTot: standaardGeldigTot(nu),
     id,
     nummer,

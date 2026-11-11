@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { aantalMet } from "@/lib/tekst/aantal";
 
 // Het invulformulier van een checklist: per taak "gedaan" of "niet gedaan" (met een opmerking), je naam en een notitie.
 // Het wordt gebruikt op de openbare invulpagina (/checklist/<sleutel>, op een telefoon, vaak met een trage verbinding)
@@ -177,7 +178,7 @@ export function ChecklistInvullen({
         <h2 className="mt-2 font-display text-xl font-bold text-ink">{klaar.compleet ? "Alles gedaan, bedankt!" : "Ingestuurd, bedankt"}</h2>
         <p className="mt-1 text-sm text-neutralx-600">
           {klaar.dubbel ? "Deze checklist was al ingestuurd; er is niets dubbel opgeslagen. " : ""}
-          {klaar.aantalGedaan} van {klaar.aantalTaken} taken gedaan, genoteerd om {klok(klaar.tijdstip)} uur.
+          {klaar.aantalGedaan} van {aantalMet(klaar.aantalTaken, "taak", "taken")} gedaan, genoteerd om {klok(klaar.tijdstip)} uur.
           {klaar.compleet ? "" : " De taken die niet gedaan zijn, ziet je werkgever met jouw opmerking."}
         </p>
         <button type="button" onClick={opnieuw} className="mt-4 min-h-12 rounded-xl border border-hairstrong px-5 py-3 text-base font-semibold text-ink">
@@ -197,7 +198,7 @@ export function ChecklistInvullen({
       </div>
 
       <p className="text-sm text-neutralx-600" aria-live="polite">
-        {beantwoord} van {taken.length} taken beantwoord
+        {beantwoord} van {aantalMet(taken.length, "taak", "taken")} beantwoord
       </p>
 
       <ul className="space-y-3">
