@@ -20,6 +20,7 @@ import { geminiBeeldGelukt, geminiSlot } from "@/lib/ai/gemini-media";
 import { platformPartij } from "@/lib/efactuur/instellingen";
 import { BANK_AAN } from "@/lib/app-mode";
 import { cscaStand } from "@/lib/kyc/chip/csca";
+import { stripeFotoSleutelInfo } from "@/lib/kyc/stripe-fotos";
 import { appleConfig } from "@/lib/auth/apple";
 
 /** Bij taken die alleen voor ZekerFlex Bank nodig waren. */
@@ -198,6 +199,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   const [beeldGelukt, beeldSlot] = await Promise.all([geminiBeeldGelukt(), geminiSlot("beeld")]);
   // de overheidscertificaten voor het chiplezen (lib/kyc/chip/csca.ts)
   const csca = await cscaStand().catch(() => null);
+  // de beperkte Stripe-sleutel voor de foto's van Stripe-controles (lib/kyc/stripe-fotos.ts)
+  const stripeFotoSleutel = await stripeFotoSleutelInfo().catch(() => null);
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
   return [
@@ -935,6 +938,21 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       how: ["Stripe-dashboard (dashboard.stripe.com) → zoek 'Identity' → klik 'Aan de slag' en rond de activering af. Dit is de enige verplichte stap: daarna zien freelancers vanzelf 'Snel via Stripe' op de verificatiepagina.", "Aanrader: Stripe → Developers → Webhooks → je ZekerFlex-webhook → voeg identity.verification_session.verified, .requires_input en .canceled toe. Dan wordt de uitslag ook verwerkt als iemand de pagina niet terug opent.", "Werkt het nog niet? De optie verbergt zich 6 uur nadat Stripe een poging weigerde — probeer het daarna opnieuw. Uitzetten kan altijd: vraag Claude om STRIPE_IDENTITY_ENABLED op false te zetten."],
       auto: false,
       ...m("stripe-identity"),
+    },
+    {
+      id: "stripe-identity-fotos",
+      group: "Beheer & veiligheid",
+      title: "Foto's van Stripe-controles in het beheer zien (beperkte Stripe-sleutel)",
+      why: "De meeste werkers verifiëren zich via Stripe. Hun voorkant, achterkant en selfie staan dan bij Stripe, en Stripe geeft die alleen aan een aparte, beperkte sleutel. Zonder die sleutel zie je in Admin → Gebruikers bij zo'n werker geen ID-foto's en geen selfie in het rondje bovenaan.",
+      how: [
+        "Stripe-dashboard → Ontwikkelaars → API-sleutels → 'Beperkte sleutel maken' (dashboard.stripe.com/apikeys/create), in de live-modus.",
+        "Rechten: Identity Verification Results op Lezen, Recent Detailed Verification Results op Lezen en Files op Schrijven. De rest blijft op Geen.",
+        "Ook controles van langer dan 48 uur geleden zien: bij de sleutel 'IP-beperkingen beheren' → 37.97.226.24 (onze server), daarna ook All Detailed Verification Results op Lezen.",
+        "Open in Admin → Gebruikers een werker die via Stripe is gecontroleerd, klik bij Identiteitscontroles op 'Instellen' en plak de sleutel (rk_live_…). Hij wordt eerst bij Stripe gecontroleerd en daarna verzegeld bewaard. Deze taak vinkt zichzelf dan af.",
+      ],
+      auto: true,
+      done: stripeFotoSleutel !== null,
+      ...(stripeFotoSleutel ? { doneNote: `sleutel eindigt op ${stripeFotoSleutel.eind}, gezet door ${stripeFotoSleutel.door}` } : {}),
     },
     {
       id: "alert-push",

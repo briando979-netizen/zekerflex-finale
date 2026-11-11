@@ -7,6 +7,9 @@ import { Avatar, Empty, Feed, InfoList, KpiStrip, PageHead, Panel, Pill, type To
 import { Chart } from "@/components/admin/kit-client";
 import { UserActions } from "@/components/admin/UserActions";
 import { IdentityCheckActions } from "@/components/admin/IdentityCheckActions";
+import { IdFoto, KopFoto } from "@/components/admin/IdFoto";
+import { StripeFotoSleutel } from "@/components/admin/StripeFotoSleutel";
+import { stripeFotoSleutelInfo } from "@/lib/kyc/stripe-fotos";
 import { KycOverride } from "@/components/admin/KycOverride";
 import { InspectLinkPanel } from "@/components/admin/InspectLinkPanel";
 import { ChooseViewAsAccount } from "@/components/admin/ViewAsControls";
@@ -22,7 +25,7 @@ import { getFiscal } from "@/lib/fiscal/store";
 import { kvGet } from "@/lib/storage/kv";
 import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
-import { FOTO_SOORTEN, PROVIDER_LABEL, idControleWeergave, stripeSessieUrl } from "@/lib/admin/kyc-weergave";
+import { FOTO_SOORTEN, PROVIDER_LABEL, fotoUploadId, idControleWeergave, stripeSessieUrl, type FotoSoort } from "@/lib/admin/kyc-weergave";
 
 export const dynamic = "force-dynamic";
 
@@ -91,6 +94,9 @@ function fileSize(bytes: number): string {
   return bytes >= 1_000_000 ? `${(bytes / 1_000_000).toFixed(1)} MB` : `${Math.round(bytes / 1000)} kB`;
 }
 
+// Stripe-pogingen met een rapport (en dus foto's); "started"/"processing"/"canceled" hebben er geen
+const STRIPE_MET_RAPPORT = new Set(["verified", "name_mismatch", "requires_input"]);
+
 export default async function GebruikerDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const principal = await getPrincipal();
@@ -143,8 +149,9 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
   const kyc = KYC[user.kycStatus] ?? { label: `Identiteit: ${user.kycStatus}`, tone: "neutral" as const };
   const profile = user.freelancerProfile;
   // de profielfoto (KV profile-user:<id>) en de laatste in- en uitchecks met plek (GpsEvent)
-  const [avatars, checkins] = await Promise.all([
+  const [avatars, stripeSleutel, checkins] = await Promise.all([
     getUserAvatars([user.id]).catch(() => ({}) as Record<string, string>),
+    stripeFotoSleutelInfo().catch(() => null),
     profile
       ? prisma.gpsEvent
           .findMany({
@@ -169,6 +176,17 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
       : Promise.resolve([]),
   ]);
   const fotoUrl = avatarUrlFor(user.id, Boolean(avatars[user.id]));
+  // Stripe-controles: de foto's staan bij Stripe en komen via de beperkte sleutel (lib/kyc/stripe-fotos.ts)
+  const stripeFotosVan = (c: (typeof user.identityChecks)[number]) =>
+    c.provider === "STRIPE_IDENTITY" && Boolean(stripeSleutel) && Boolean(c.sessionId) && STRIPE_MET_RAPPORT.has(c.decisionStatus ?? "");
+  const fotosVan = (c: (typeof user.identityChecks)[number]): FotoSoort[] =>
+    stripeFotosVan(c)
+      ? FOTO_SOORTEN.map((f) => f.id).filter((f) => !(f === "back" && c.documentType === "PASSPORT"))
+      : idControleWeergave(c.provider, c.rawPayload).fotos;
+  // geen profielfoto: dan de selfie van de nieuwste (liefst goedgekeurde) ID-controle
+  const metSelfie = user.identityChecks.filter((c) => (stripeFotosVan(c) ? true : Boolean(fotoUploadId(c.rawPayload, "selfie"))));
+  const selfieCheck = fotoUrl ? null : (metSelfie.find((c) => c.status === "VERIFIED") ?? metSelfie[0] ?? null);
+  const kopSelfie = selfieCheck ? `/api/admin/gebruikers/${user.id}/identiteit/${selfieCheck.id}/beeld?welk=selfie` : null;
   const kaartLink = (lat: number, lng: number) => `https://www.openstreetmap.org/?mlat=${lat.toFixed(5)}&mlon=${lng.toFixed(5)}#map=16/${lat.toFixed(5)}/${lng.toFixed(5)}`;
   const onbStatus = onboarding ? vastStatus(onboarding, new Date()) : null;
   const onbStappen = onboarding ? stappenVan(onboarding.doelgroep) : [];
@@ -192,11 +210,11 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-4">
           {fotoUrl ? (
-            <a href={fotoUrl} target="_blank" rel="noopener noreferrer" title="Profielfoto op ware grootte">
-              <Avatar name={user.fullName} size={72} src={fotoUrl} />
-            </a>
+            <KopFoto src={fotoUrl} naam={user.fullName} titel="Profielfoto op ware grootte" />
+          ) : kopSelfie ? (
+            <KopFoto src={kopSelfie} naam={user.fullName} titel="Selfie van de ID-controle (er is geen profielfoto)" />
           ) : (
-            <Avatar name={user.fullName} size={56} />
+            <Avatar name={user.fullName} size={72} />
           )}
           <div className="min-w-0">
             <h1 className="text-[1.5rem] font-semibold leading-tight tracking-tight sm:text-[1.625rem]" style={{ color: "var(--a-text)" }}>{user.fullName}</h1>
@@ -206,6 +224,15 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
               <Pill tone={user.emailVerifiedAt ? "ok" : "warn"}>{user.emailVerifiedAt ? "E-mail bevestigd" : "E-mail niet bevestigd"}</Pill>
               <Pill tone={kyc.tone}>{kyc.label}</Pill>
             </div>
+            {!fotoUrl && (
+              <p className="mt-1.5 text-xs" style={{ color: "var(--a-mute)" }}>
+                {kopSelfie
+                  ? "Geen profielfoto: de foto is de selfie van de ID-controle."
+                  : user.identityChecks.some((c) => c.provider === "STRIPE_IDENTITY") && !stripeSleutel
+                    ? "Geen profielfoto. De selfie van de ID-controle staat bij Stripe: zet bij Identiteitscontroles de Stripe-sleutel, dan staat hij hier."
+                    : "Nog geen profielfoto."}
+              </p>
+            )}
           </div>
         </div>
         {!isDeleted && <UserActions userId={user.id} blocked={Boolean(user.disabledAt)} />}
@@ -338,6 +365,11 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
 
           <Panel flush title="Identiteitscontroles">
             {!isDeleted && <KycOverride userId={user.id} status={user.kycStatus} />}
+            {user.identityChecks.some((c) => c.provider === "STRIPE_IDENTITY") && (
+              <div className="px-4 pb-3 sm:px-5">
+                <StripeFotoSleutel begin={stripeSleutel} />
+              </div>
+            )}
             {user.identityChecks.length === 0 ? (
               <Empty title="Geen controles" body="Er is nog geen identiteitscontrole gestart." />
             ) : (
@@ -345,6 +377,7 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                 {user.identityChecks.map((c) => {
                   const status = CHECK_STATUS[c.status] ?? { label: c.status, tone: "warn" as const };
                   const w = idControleWeergave(c.provider, c.rawPayload, c.sessionId, c.faceMatchScore);
+                  const fotos = fotosVan(c);
                   return (
                     <li key={c.id} className="space-y-3 px-4 py-3.5 text-[0.8125rem] sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
                       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -359,18 +392,11 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                         </div>
                         <Pill tone={status.tone}>{status.label}</Pill>
                       </div>
-                      {w.fotos.length > 0 && (
+                      {fotos.length > 0 && (
                         <div className="grid grid-cols-3 gap-2">
-                          {FOTO_SOORTEN.filter((f) => w.fotos.includes(f.id)).map((f) => {
-                            const src = `/api/admin/gebruikers/${user.id}/identiteit/${c.id}/beeld?welk=${f.id}`;
-                            return (
-                              <a key={f.id} href={src} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg" style={{ border: "1px solid var(--a-border)" }} title={`${f.label} op ware grootte`}>
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={src} alt={f.label} loading="lazy" className="aspect-[4/3] w-full object-cover" style={{ background: "var(--a-elev)" }} />
-                                <span className="block px-2 py-1 text-[11px] font-medium" style={{ color: "var(--a-dim)" }}>{f.label}</span>
-                              </a>
-                            );
-                          })}
+                          {FOTO_SOORTEN.filter((f) => fotos.includes(f.id)).map((f) => (
+                            <IdFoto key={f.id} src={`/api/admin/gebruikers/${user.id}/identiteit/${c.id}/beeld?welk=${f.id}`} label={f.label} />
+                          ))}
                         </div>
                       )}
                       {c.provider === "AI_LOCAL" && w.fotos.length === 0 && (
@@ -380,8 +406,12 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                         <p className="text-xs" style={{ color: "var(--a-dim)" }}>
                           {w.stripe.naamOpDocument ? `Naam op document: ${w.stripe.naamOpDocument}${w.stripe.naamKlopt === false ? " (klopt niet met het account)" : w.stripe.naamKlopt ? " (klopt)" : ""}. ` : ""}
                           {w.stripe.reden ? `Reden: ${w.stripe.reden}. ` : ""}
-                          De foto&apos;s van voor- en achterkant en de selfie staan bij Stripe:{" "}
-                          <a href={stripeSessieUrl(w.stripe.sessieId)} target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: "var(--a-accent-ink)" }}>bekijken in Stripe →</a>
+                          {fotos.length > 0
+                            ? "De foto's komen rechtstreeks van Stripe en worden bij ons niet bewaard. "
+                            : stripeSleutel
+                              ? "Bij deze poging heeft Stripe geen foto's (niet afgerond). "
+                              : "De foto's van voor- en achterkant en de selfie staan bij Stripe (zet hierboven de sleutel om ze hier te zien). "}
+                          <a href={stripeSessieUrl(w.stripe.sessieId)} target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: "var(--a-accent-ink)" }}>Open in Stripe →</a>
                         </p>
                       )}
                       {w.regels.length > 0 && (
