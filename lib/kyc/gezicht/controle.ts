@@ -11,7 +11,7 @@ import { logger } from "@/lib/logger";
 import { draaiBeeld, gezichtsKenmerk, leesBeeld, vindGezichten, type Beeld } from "@/lib/kyc/gezicht/motor";
 import { grootste } from "@/lib/kyc/gezicht/detector";
 import { cosinus, kwaliteitsProbleem, oordeelOverScore, type GemetenGezicht, type GezichtUitslag } from "@/lib/kyc/gezicht/vergelijk";
-import { BEWEGING_NIET_AANGELEVERD, BEWEGING_NIET_BEOORDEELD, beoordeelBeweging, type BewegingUitslag } from "@/lib/kyc/gezicht/beweging";
+import { BEWEGING_NIET_AANGELEVERD, BEWEGING_NIET_BEOORDEELD, BEWEGING_ZELFDE_FOTO, beoordeelBeweging, type BewegingUitslag } from "@/lib/kyc/gezicht/beweging";
 
 export interface GezichtControle extends GezichtUitslag {
   /** de bewegingscontrole met de tweede selfie (hoofd gedraaid), apart van de pasfoto-vergelijking */
@@ -44,8 +44,10 @@ async function zoekPasfoto(beeld: Beeld): Promise<{ meting: GemetenGezicht | nul
  * De tweede selfie (hoofd gedraaid) tegen de eerste: draaide het hoofd echt, en is het dezelfde persoon?
  * Een storing hier verandert nooit de uitslag van de pasfoto-vergelijking: dan is alleen de beweging niet beoordeeld.
  */
-async function bewegingVan(eerste: { meting: GemetenGezicht; kenmerk: Float32Array }, tweede: Uint8Array | undefined): Promise<BewegingUitslag> {
+async function bewegingVan(eerste: { meting: GemetenGezicht; kenmerk: Float32Array; bytes: Uint8Array }, tweede: Uint8Array | undefined): Promise<BewegingUitslag> {
   if (!tweede) return BEWEGING_NIET_AANGELEVERD;
+  // twee keer hetzelfde bestand (bijv. uit de galerij): geen beweging, en dat zeggen we ook zo
+  if (Buffer.from(eerste.bytes).equals(Buffer.from(tweede))) return BEWEGING_ZELFDE_FOTO;
   try {
     const t = await leesBeeld(tweede).then(meet);
     const kt = t.meting ? await gezichtsKenmerk(t.beeld, t.meting.gezicht) : null;
@@ -69,7 +71,7 @@ export async function gezichtControle(pasfoto: Uint8Array, selfie: Uint8Array, s
     if (!kp || !ks) {
       return { beschikbaar: false, oordeel: "onbruikbaar", score: null, reden: "Het gezicht was niet goed genoeg te vergelijken. Een medewerker kijkt mee.", technisch: false, ms: Date.now() - start, beweging: BEWEGING_NIET_BEOORDEELD };
     }
-    const beweging = await bewegingVan({ meting: s.meting, kenmerk: ks }, selfie2);
+    const beweging = await bewegingVan({ meting: s.meting, kenmerk: ks, bytes: selfie }, selfie2);
     return { ...oordeelOverScore(cosinus(kp, ks)), technisch: false, ms: Date.now() - start, beweging };
   } catch (err) {
     logger.warn("gezichtscontrole kon niet draaien, een medewerker beslist", { error: (err as Error).message });

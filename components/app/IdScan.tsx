@@ -10,6 +10,7 @@ import { useI18n } from "@/components/i18n/I18nProvider";
 import { AuthLanguage } from "@/components/auth/AuthLanguage";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
 import { EuIntro, EuToestemming, NlIntro, TipsSheet } from "@/components/app/ScanRouteSchermen";
+import { BEWEGING, bewegingVoldoet, draaiAanwijzing, rechtAanwijzing, type LiveAanwijzing, type LiveMeting } from "@/lib/kyc/gezicht/beweging";
 
 // ---------------------------------------------------------------------------
 // ID-scan van ZekerFlex (9 nov 2026): een eigen omgeving zoals die van Stripe.
@@ -160,12 +161,92 @@ function CameraKeuze({ x, apparaten, keuze, onKies, onSluit }: { x: T["scan"]["e
   );
 }
 
-/** Live camera met een kader (kaart of ovaal) en een uitweg naar de camera-app. */
-function Camera({ facing, vorm, t, onFoto, rond = false, eu = false }: { facing: "environment" | "user"; vorm: "kaart" | "ovaal"; t: T; onFoto: (f: File) => void; rond?: boolean; eu?: boolean }) {
+/** Een klein beeld (hooguit 640 pixels, zoals de detector het ziet) van de camera of van een foto, voor het live meten. */
+async function kleinBeeld(bron: HTMLVideoElement | Blob): Promise<Blob | null> {
+  try {
+    const bm = bron instanceof Blob ? await createImageBitmap(bron) : null;
+    const w = bm ? bm.width : (bron as HTMLVideoElement).videoWidth;
+    const h = bm ? bm.height : (bron as HTMLVideoElement).videoHeight;
+    if (!w || !h) return null;
+    const schaal = Math.min(1, 640 / Math.max(w, h));
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(w * schaal));
+    c.height = Math.max(1, Math.round(h * schaal));
+    c.getContext("2d")?.drawImage(bm ?? (bron as HTMLVideoElement), 0, 0, c.width, c.height);
+    bm?.close();
+    return await new Promise<Blob | null>((klaar) => c.toBlob((b) => klaar(b), "image/jpeg", 0.8));
+  } catch {
+    return null;
+  }
+}
+
+type LiveAntwoord = { status: "ok"; meting: LiveMeting | null } | { status: "fout" } | { status: "stop" };
+
+/** De server meet het gezicht (alleen getallen terug, er wordt niets bewaard). "stop": niet opnieuw proberen (uitgelogd, te vaak, ander account). */
+async function meetGezicht(bron: HTMLVideoElement | Blob): Promise<LiveAntwoord> {
+  const beeld = await kleinBeeld(bron);
+  if (!beeld) return { status: "fout" };
+  try {
+    const res = await fetch("/api/onboarding/gezicht-live", { method: "POST", headers: { "Content-Type": "image/jpeg" }, body: beeld });
+    if (res.status === 401 || res.status === 423 || res.status === 429) return { status: "stop" };
+    if (!res.ok) return { status: "fout" };
+    const data = (await res.json().catch(() => ({}))) as { meting?: LiveMeting | null };
+    return { status: "ok", meting: data.meting ?? null };
+  } catch {
+    return { status: "fout" };
+  }
+}
+
+/** Een foto op volle grootte van wat de camera nu ziet. */
+function fotoVanVideo(v: HTMLVideoElement, naam: string): Promise<File | null> {
+  if (!v.videoWidth) return Promise.resolve(null);
+  const c = document.createElement("canvas");
+  c.width = v.videoWidth;
+  c.height = v.videoHeight;
+  c.getContext("2d")?.drawImage(v, 0, 0, c.width, c.height);
+  return new Promise((klaar) => c.toBlob((b) => klaar(b ? new File([b], `${naam}-${Date.now()}.jpg`, { type: "image/jpeg" }) : null), "image/jpeg", 0.9));
+}
+
+/**
+ * Live camera met een kader (kaart of ovaal) en een uitweg naar de camera-app. Met `live` meet de server het gezicht
+ * mee: bij de selfie ("recht") een aanwijzing; bij de tweede selfie ("draai", tegen `referentie`, de eerste selfie)
+ * maakt de camera de foto vanzelf zodra het hoofd goed staat. Wie zelf op de knop drukt, kijkt weer naar het scherm;
+ * daarom telt de knop daar eerst af. Valt het meten weg, dan blijft die knop gewoon werken.
+ */
+function Camera({
+  facing,
+  vorm,
+  t,
+  onFoto,
+  rond = false,
+  eu = false,
+  live,
+  referentie = null,
+}: {
+  facing: "environment" | "user";
+  vorm: "kaart" | "ovaal";
+  t: T;
+  onFoto: (f: File) => void;
+  rond?: boolean;
+  eu?: boolean;
+  live?: "recht" | "draai" | undefined;
+  referentie?: LiveMeting | null;
+}) {
   const video = useRef<HTMLVideoElement>(null);
   const bestand = useRef<HTMLInputElement>(null);
   const x = t.scan.extra;
+  const l = t.scan.live;
   const [stand, setStand] = useState<"laden" | "aan" | "geen">("laden");
+  // de camera gaat uit zolang het tabblad verborgen is, en weer aan als je terugkomt
+  const [zichtbaar, setZichtbaar] = useState(true);
+  const [aanwijzing, setAanwijzing] = useState<{ a: LiveAanwijzing; voortgang: number } | null>(null);
+  const [liveUit, setLiveUit] = useState(false);
+  const [aftel, setAftel] = useState<number | null>(null);
+  const afteller = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const opFoto = useRef(onFoto);
+  useEffect(() => {
+    opFoto.current = onFoto;
+  });
   // buitenlandse route: de camera start pas na een tik, met uitleg over de handmatige opname, en bij meer achtercamera's een keuze
   const [gestart, setGestart] = useState(!eu);
   const [uitleg, setUitleg] = useState(false);
@@ -175,7 +256,21 @@ function Camera({ facing, vorm, t, onFoto, rond = false, eu = false }: { facing:
   const gevraagd = useRef(false);
 
   useEffect(() => {
+    const kijk = () => setZichtbaar(document.visibilityState !== "hidden");
+    kijk();
+    document.addEventListener("visibilitychange", kijk);
+    return () => {
+      document.removeEventListener("visibilitychange", kijk);
+      if (afteller.current) clearTimeout(afteller.current);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!gestart) return;
+    if (!zichtbaar) {
+      setStand("laden");
+      return;
+    }
     let stream: MediaStream | null = null;
     let weg = false;
     void (async () => {
@@ -217,20 +312,104 @@ function Camera({ facing, vorm, t, onFoto, rond = false, eu = false }: { facing:
       weg = true;
       stream?.getTracks().forEach((tr) => tr.stop());
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- alleen bij een andere camera of de start
-  }, [facing, gestart, keuze]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- alleen bij een andere camera, de start of een verborgen tabblad
+  }, [facing, gestart, keuze, zichtbaar]);
+
+  // live meten: ongeveer twee beelden per seconde naar de server, alleen getallen terug
+  useEffect(() => {
+    if (!live || stand !== "aan" || liveUit || !zichtbaar) return;
+    if (live === "draai" && !referentie) return;
+    let weg = false;
+    let fouten = 0;
+    void (async () => {
+      while (!weg) {
+        const begin = Date.now();
+        const v = video.current;
+        if (v?.videoWidth) {
+          const r = await meetGezicht(v);
+          if (weg) return;
+          if (r.status === "stop") {
+            setLiveUit(true);
+            return;
+          }
+          if (r.status === "fout") {
+            fouten += 1;
+            if (fouten >= 3) {
+              setLiveUit(true);
+              return;
+            }
+          } else {
+            fouten = 0;
+            if (live === "recht") setAanwijzing({ a: rechtAanwijzing(r.meting), voortgang: 0 });
+            else if (referentie) {
+              const d = draaiAanwijzing(referentie, r.meting);
+              setAanwijzing({ a: d.aanwijzing, voortgang: d.voortgang });
+              if (d.aanwijzing === "goed") {
+                // de foto op volle grootte, nog een keer gemeten met de regels van de server; haalt hij die niet, dan meten we door
+                const foto = await fotoVanVideo(v, vorm);
+                if (weg) return;
+                const na = foto ? await meetGezicht(foto) : null;
+                if (weg) return;
+                if (foto && na?.status === "ok" && bewegingVoldoet(referentie, na.meting)) {
+                  opFoto.current(foto);
+                  return;
+                }
+              }
+            }
+          }
+        }
+        const rust = 400 - (Date.now() - begin);
+        if (rust > 0) await new Promise((klaar) => setTimeout(klaar, rust));
+      }
+    })();
+    return () => {
+      weg = true;
+    };
+  }, [live, stand, liveUit, zichtbaar, referentie, vorm]);
 
   function vastleggen() {
     const v = video.current;
-    if (!v || !v.videoWidth) return;
-    const c = document.createElement("canvas");
-    c.width = v.videoWidth;
-    c.height = v.videoHeight;
-    c.getContext("2d")?.drawImage(v, 0, 0, c.width, c.height);
-    c.toBlob((b) => {
-      if (b) onFoto(new File([b], `${vorm}-${Date.now()}.jpg`, { type: "image/jpeg" }));
-    }, "image/jpeg", 0.9);
+    if (!v) return;
+    void fotoVanVideo(v, vorm).then((f) => {
+      if (f) opFoto.current(f);
+    });
   }
+
+  /** De knop bij de tweede selfie: eerst drie tellen, zodat je je hoofd kunt draaien zonder naar de knop te kijken. */
+  function aftellen() {
+    if (aftel !== null) return;
+    let n = 3;
+    setAftel(n);
+    const tik = () => {
+      n -= 1;
+      if (n <= 0) {
+        afteller.current = null;
+        setAftel(null);
+        vastleggen();
+        return;
+      }
+      setAftel(n);
+      afteller.current = setTimeout(tik, 1000);
+    };
+    afteller.current = setTimeout(tik, 1000);
+  }
+
+  const liveTekst = (a: LiveAanwijzing): string =>
+    a === "geen-gezicht"
+      ? l.geenGezicht
+      : a === "een-gezicht"
+        ? l.eenGezicht
+        : a === "dichterbij"
+          ? l.dichterbij
+          : a === "recht"
+            ? l.recht
+            : a === "draai"
+              ? l.draai
+              : a === "te-ver"
+                ? l.teVer
+                : live === "draai"
+                  ? l.goedDraai
+                  : l.goedRecht;
 
   return (
     <div className="relative">
@@ -269,11 +448,32 @@ function Camera({ facing, vorm, t, onFoto, rond = false, eu = false }: { facing:
             </button>
           </div>
         )}
+        {stand === "aan" && aftel !== null && (
+          <p aria-live="assertive" className="pointer-events-none absolute inset-x-4 top-4 rounded-xl bg-black/70 px-4 py-3 text-center text-base font-semibold text-white">
+            {l.aftellen.replace("{n}", String(aftel))}
+          </p>
+        )}
+        {stand === "aan" && live && !liveUit && aanwijzing && !(eu && uitleg) && !kiesOpen && (
+          <div className="pointer-events-none absolute inset-x-4 bottom-4">
+            <p role="status" aria-live="polite" className={`rounded-full px-4 py-2 text-center text-sm font-semibold text-white ${aanwijzing.a === "goed" ? "bg-ok" : "bg-black/70"}`}>
+              {liveTekst(aanwijzing.a)}
+            </p>
+            {live === "draai" && (
+              <div aria-hidden className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/30">
+                <div className="h-full rounded-full bg-ok transition-[width] duration-300" style={{ width: `${Math.round(aanwijzing.voortgang * 100)}%` }} />
+              </div>
+            )}
+          </div>
+        )}
         {kiesOpen && <CameraKeuze x={x} apparaten={apparaten} keuze={keuze} onKies={setKeuze} onSluit={() => setKiesOpen(false)} />}
       </div>
       <div className="mt-4 grid gap-2">
         {stand !== "geen" && (
-          rond ? (
+          live === "draai" ? (
+            <button type="button" onClick={aftellen} disabled={stand !== "aan" || aftel !== null} className="btn-primary w-full">
+              {l.aftelKnop}
+            </button>
+          ) : rond ? (
             <button
               type="button"
               onClick={vastleggen}
@@ -358,6 +558,10 @@ export function IdScan({
   const [tel, setTel] = useState<TelefoonStand | null>(null);
   const [bijna, setBijna] = useState(false);
   const [camVraag, setCamVraag] = useState<"" | "bezig" | "geweigerd">("");
+  // de eerste selfie, gemeten: het vertrekpunt voor de tweede (het gedraaide hoofd); null = niet gemeten, dan alleen de knop
+  const [selfieRef, setSelfieRef] = useState<LiveMeting | null>(null);
+  const [liveFout, setLiveFout] = useState<string | null>(null);
+  const [meten, setMeten] = useState(false);
   // een paspoort heeft geen achterkant: in een route slaan we die stap over (de server wil twee beelden, dus de fotopagina dient ook als tweede)
   const zonderAchter = route !== undefined && soort === "PASSPORT";
   const { locale } = useI18n();
@@ -556,6 +760,7 @@ export function IdScan({
     const vorige = vorigeVan(stap);
     if (!vorige) return;
     setFout(null);
+    setLiveFout(null);
     setVoorbeeld(null);
     // naar een kant waar al een foto van is: die eerst tonen, in plaats van de camera
     if (vorige === "voor" || vorige === "achter" || vorige === "selfie" || vorige === "beweging") {
@@ -642,6 +847,22 @@ export function IdScan({
     const k = fotoStap;
     const alle = { ...fotos, [k]: voorbeeld.file };
     setFotos(alle);
+    if (k === "selfie" && metBeweging) {
+      // de selfie meten als vertrekpunt voor de tweede; kijkt hij niet recht of is er geen gezicht, dan meteen opnieuw
+      // (anders komt de werker pas na het versturen te weten dat de bewegingscontrole niet te meten was)
+      setMeten(true);
+      const r = await meetGezicht(voorbeeld.file);
+      setMeten(false);
+      if (r.status === "ok" && !r.meting) {
+        setLiveFout(s.live.geenGezichtFoto);
+        return;
+      }
+      if (r.status === "ok" && r.meting && Math.abs(r.meting.draaiing) > BEWEGING.rechtMax) {
+        setLiveFout(s.live.nietRecht);
+        return;
+      }
+      setSelfieRef(r.status === "ok" ? r.meting : null);
+    }
     if (k !== mrzKant) {
       verder(k, alle);
       return;
@@ -938,10 +1159,29 @@ export function IdScan({
                           <DocumentLezing lezing={lezing} t={t} />
                         </div>
                       )}
+                      {liveFout && fotoStap === "selfie" && (
+                        <p role="alert" className="mt-3 rounded-xl border border-warn/40 bg-warn/10 px-4 py-3 text-sm leading-relaxed text-ink">
+                          {liveFout}
+                        </p>
+                      )}
                       <div className="mt-4 grid gap-2">
-                        {!gelezenHier && (
-                          <button type="button" onClick={() => void gebruik()} className="btn-primary w-full">
+                        {!gelezenHier && !liveFout && (
+                          <button type="button" onClick={() => void gebruik()} disabled={meten} className="btn-primary w-full">
                             {s.gebruik}
+                          </button>
+                        )}
+                        {liveFout && fotoStap === "selfie" && (
+                          // de meting kan zich vergissen: dan toch door, zonder vertrekpunt (de tweede selfie gaat dan met de knop)
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLiveFout(null);
+                              setSelfieRef(null);
+                              verder("selfie", { ...fotos, selfie: voorbeeld.file });
+                            }}
+                            className="btn-ghost w-full order-last"
+                          >
+                            {s.toch}
                           </button>
                         )}
                         {gelezenHier && lezing.status !== "bezig" && goedGelezen(lezing) && (
@@ -964,6 +1204,7 @@ export function IdScan({
                             type="button"
                             onClick={() => {
                               setVoorbeeld(null);
+                              setLiveFout(null);
                               if (gelezenHier) setLezing(null);
                             }}
                             className="btn-ghost w-full"
@@ -981,7 +1222,13 @@ export function IdScan({
                       rond={route !== undefined}
                       eu={route === "eu"}
                       t={t}
-                      onFoto={(f) => setVoorbeeld({ file: f, url: URL.createObjectURL(f) })}
+                      // live meten alleen ingelogd (niet op de telefoon via de QR-code: daar beslist toch een medewerker)
+                      live={metBeweging && fotoStap === "selfie" ? "recht" : metBeweging && fotoStap === "beweging" ? "draai" : undefined}
+                      referentie={selfieRef}
+                      onFoto={(f) => {
+                        setLiveFout(null);
+                        setVoorbeeld({ file: f, url: URL.createObjectURL(f) });
+                      }}
                     />
                   )}
                 </div>
