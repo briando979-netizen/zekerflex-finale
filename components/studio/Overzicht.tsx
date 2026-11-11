@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useStudio } from "@/components/studio/context";
 import { AanDeSlag, Bezoekgrafiek, groet, useEigenDomein, useStats, wanneer, type Taak } from "@/components/studio/OverzichtDelen";
-import { Card, IExternal, PageHead, Pill, Stat, btn } from "@/components/studio/ui";
+import { Card, IExternal, IGrid, PageHead, Pill, Stat, btn } from "@/components/studio/ui";
 import { paginaBouwerHref } from "@/lib/sites/paginabouwer";
 import { euro, zichtbareProducten } from "@/lib/sites/winkel";
 import type { SiteBestelling } from "@/lib/sites/bestellingen";
@@ -118,6 +118,17 @@ export default function Overzicht() {
           )}
         </Card>
       </div>
+
+      <Card className="mt-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-[#f1f1f1] text-[#303030]"><IGrid width={22} height={22} /></span>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-semibold text-[#1a1a1a]">Ander ontwerp voor je webshop?</h2>
+            <p className="mt-0.5 text-sm text-[#616161]">Bekijk alle ontwerpen met een voorbeeld en wissel met één klik. Je producten, bestellingen en teksten blijven staan.</p>
+          </div>
+          <Link href={`${B}/ontwerpen`} className={btn.secondary}>Bekijk de ontwerpen</Link>
+        </div>
+      </Card>
     </>
   );
 }

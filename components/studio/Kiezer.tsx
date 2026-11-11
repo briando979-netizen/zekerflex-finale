@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { apiUrl } from "@/components/studio/context";
-import { IArrowRight, IExternal, ILayout, IStore, Pill, btn } from "@/components/studio/ui";
+import { IArrowRight, IExternal, IGrid, ILayout, IStore, Pill, btn } from "@/components/studio/ui";
 import { zichtbareProducten } from "@/lib/sites/winkel";
 import type { SiteDoc, SiteSoort } from "@/lib/sites/types";
 
@@ -70,6 +70,17 @@ export default function Kiezer() {
             }}
           />
         </div>
+        <section aria-labelledby="kies-ontwerpen" className="mt-4 flex flex-wrap items-center gap-4 rounded-3xl border border-[#e3e3e3] bg-white p-6">
+          <span className="grid h-12 w-12 flex-shrink-0 place-items-center rounded-2xl bg-[#f1f1f1] text-[#303030]"><IGrid width={24} height={24} /></span>
+          <div className="min-w-0 flex-1">
+            <h2 id="kies-ontwerpen" className="text-base font-bold tracking-tight text-[#1a1a1a]">Eerst de ontwerpen bekijken?</h2>
+            <p className="mt-1 text-sm text-[#616161]">Elk ontwerp met een voorbeeld om rond te klikken. Kies er een om mee te beginnen, of wissel later van ontwerp.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/studio/website/ontwerpen" className={btn.secondary}>Ontwerpen voor een website</Link>
+            <Link href="/studio/webshop/ontwerpen" className={btn.secondary}>Ontwerpen voor een webshop</Link>
+          </div>
+        </section>
       </main>
     </div>
   );

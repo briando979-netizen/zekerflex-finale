@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useStudio } from "@/components/studio/context";
 import { Card, PageHead, btn, input } from "@/components/studio/ui";
@@ -27,7 +28,7 @@ const LETTERS: { id: Theme["lettertype"]; naam: string }[] = [
 ];
 
 export default function Ontwerp({ origin }: { origin: string }) {
-  const { data, saveSite } = useStudio();
+  const { data, saveSite, base } = useStudio();
   const site = data!.site!;
   const [theme, setTheme] = useState<Theme>(site.theme);
   const [bezig, setBezig] = useState(false);
@@ -58,6 +59,7 @@ export default function Ontwerp({ origin }: { origin: string }) {
         sub="Hoe je website eruitziet. Rechts zie je het meteen."
         actions={
           <>
+            {!gewijzigd && <Link href={`${base}/ontwerpen`} className={btn.secondary}>Kies een ander ontwerp</Link>}
             {gewijzigd && <button type="button" onClick={() => setTheme(site.theme)} className={btn.secondary}>Verwerpen</button>}
             <button type="button" disabled={!gewijzigd || bezig} onClick={() => void opslaan()} className={btn.primary}>{bezig ? "Opslaan…" : "Opslaan"}</button>
           </>

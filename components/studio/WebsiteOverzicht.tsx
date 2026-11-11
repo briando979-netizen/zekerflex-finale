@@ -54,6 +54,7 @@ export default function WebsiteOverzicht() {
         <Card title="Snel naar">
           <ul className="space-y-1 text-sm">
             <li><Link href={`${B}/bouwer`} className="font-semibold text-[#005bd3] hover:underline">Pagina&apos;s en blokken aanpassen</Link></li>
+            <li><Link href={`${B}/ontwerpen`} className="font-semibold text-[#005bd3] hover:underline">Alle ontwerpen bekijken en wisselen</Link></li>
             <li><Link href={`${B}/ontwerp`} className="font-semibold text-[#005bd3] hover:underline">Stijl, kleuren en logo</Link></li>
             <li><Link href={`${B}/reserveringen`} className="font-semibold text-[#005bd3] hover:underline">Reserveringen bekijken</Link></li>
           </ul>
