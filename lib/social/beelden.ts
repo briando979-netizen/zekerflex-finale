@@ -6,6 +6,8 @@
 // neemt alleen JPEG aan, met een beeldverhouding tussen 4:5 en 1,91:1).
 // ---------------------------------------------------------------------------
 
+import { FOTOS, FOTOTHEMA_NAAM, fotoPad } from "@/lib/marketing/fotos";
+
 export interface Beeld {
   /** pad onder public/, met een slash vooraan */
   pad: string;
@@ -15,7 +17,7 @@ export interface Beeld {
   doelgroep: "werkgever" | "freelancer" | "beide";
 }
 
-export const BEELDEN: readonly Beeld[] = [
+const BASIS: readonly Beeld[] = [
   { pad: "/shifts/horeca.jpg", label: "Horeca", trefwoorden: ["horeca", "restaurant", "café", "cafe", "bar", "keuken", "bediening", "kok", "gast"], doelgroep: "beide" },
   { pad: "/shifts/retail.jpg", label: "Retail en winkel", trefwoorden: ["retail", "winkel", "supermarkt", "kassa", "vakkenvullen", "filiaal"], doelgroep: "beide" },
   { pad: "/shifts/logistiek.jpg", label: "Logistiek en magazijn", trefwoorden: ["logistiek", "magazijn", "pakket", "distributie", "orderpicker", "heftruck"], doelgroep: "beide" },
@@ -37,6 +39,12 @@ export const BEELDEN: readonly Beeld[] = [
   { pad: "/aanbod/spoedoproep.jpg", label: "Spoedoproep", trefwoorden: ["spoed", "uitval", "ziek", "last minute", "direct"], doelgroep: "werkgever" },
   { pad: "/aanbod/certificaten-in-een-foto.jpg", label: "Certificaten", trefwoorden: ["certificaat", "certificaten", "diploma", "vca"], doelgroep: "freelancer" },
   { pad: "/aanbod/bedrijfscheck.jpg", label: "Bedrijfscheck", trefwoorden: ["kvk", "btw", "bedrijfscheck", "dba"], doelgroep: "werkgever" },
+];
+
+/** Alles wat in de fotobibliotheek (lib/marketing/fotos.ts) staat, naast de bestaande foto's hierboven. */
+export const BEELDEN: readonly Beeld[] = [
+  ...BASIS,
+  ...FOTOS.map((f): Beeld => ({ pad: fotoPad(f), label: `${FOTOTHEMA_NAAM[f.thema]}: ${f.alt}`, trefwoorden: f.trefwoorden, doelgroep: "beide" })),
 ];
 
 /** Standaardfoto per doelgroep, voor een bericht zonder herkenbaar onderwerp. */
