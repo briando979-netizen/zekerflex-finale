@@ -52,7 +52,7 @@ export default function WerkHomePage() {
           fill
           priority
           sizes="100vw"
-          className="-z-20 object-cover object-[72%_22%] md:object-[70%_35%]"
+          className="-z-20 object-cover object-[72%_22%] md:object-[70%_12%]"
         />
         {/* telefoon: de foto boven, de tekst eronder op donker; groter scherm: de tekst links op donker, de foto rechts */}
         <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-t from-[#0C0E12] from-45% via-[#0C0E12]/80 to-[#0C0E12]/10 md:bg-gradient-to-r md:from-[#0C0E12] md:from-25% md:via-[#0C0E12]/80 md:to-transparent" />
