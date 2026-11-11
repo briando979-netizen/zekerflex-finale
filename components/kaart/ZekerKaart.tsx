@@ -21,6 +21,9 @@ import { ROUTE_MODI, ROUTE_MODUS_LABEL, type Route, type RouteModus } from "@/li
 // geladen; de worker krijgt een eigen adres op onze site (CSP: worker-src 'self').
 // ---------------------------------------------------------------------------
 
+/** Het antwoord van /api/kaart/plek: gegevens van OpenStreetMap bij een bedrijf op de kaart. */
+type PlekDetails = { adres?: string | null; telefoon?: string | null; website?: string | null; uren?: string[]; kaartUrl?: string };
+
 type Modus = "kijken" | "meten" | "route";
 type Positie = { lon: number; lat: number; nauwkeurigheid: number };
 type RoutePlek = { lat: number; lon: number; naam: string };
@@ -221,10 +224,36 @@ export function ZekerKaart({ className = "" }: { className?: string }) {
           const poi = poiLagen.length ? map.queryRenderedFeatures(e.point, { layers: poiLagen })[0] : undefined;
           const naam = poi?.properties?.name;
           if (poi && typeof naam === "string" && naam) {
-            new mod.Popup({ closeButton: true, maxWidth: "260px", offset: 12 })
+            const soort = osmSoortNl(poi.properties?.kind);
+            const popup = new mod.Popup({ closeButton: true, maxWidth: "260px", offset: 12 })
               .setLngLat(e.lngLat)
-              .setDOMContent(plekInhoud(naam, osmSoortNl(poi.properties?.kind), []))
+              .setDOMContent(plekInhoud(naam, soort, ["Gegevens ophalen…"]))
               .addTo(map);
+            // openingstijden, telefoon en website uit OpenStreetMap; lukt dat niet, dan blijft het kaartje met alleen naam en soort
+            const q = new URLSearchParams({ lat: e.lngLat.lat.toFixed(6), lng: e.lngLat.lng.toFixed(6), naam });
+            void fetch(`/api/kaart/plek?${q}`)
+              .then((r) => (r.ok ? r.json() : null))
+              .then((d: { plek?: PlekDetails | null } | null) => {
+                const p = d?.plek;
+                if (!p) return popup.setDOMContent(plekInhoud(naam, soort, []));
+                const site = schoneWebsite(p.website ?? "");
+                const tel = schoneTelefoon(p.telefoon ?? "");
+                // alleen een link naar een object op openstreetmap.org, nooit een adres dat de server of een derde doorgeeft
+                const osm = typeof p.kaartUrl === "string" && /^https:\/\/www\.openstreetmap\.org\/(node|way|relation)\/\d{1,12}$/.test(p.kaartUrl) ? p.kaartUrl : "";
+                popup.setDOMContent(
+                  plekInhoud(
+                    naam,
+                    soort,
+                    [p.adres ?? "", ...(Array.isArray(p.uren) && p.uren.length ? ["Openingstijden:", ...p.uren] : [])],
+                    [
+                      ...(site ? [{ href: site, tekst: "Website van het bedrijf ›", extern: true }] : []),
+                      ...(tel ? [{ href: `tel:${tel.replace(/[^\d+]/g, "")}`, tekst: `Bel ${tel}` }] : []),
+                      ...(osm ? [{ href: osm, tekst: "Gegevens van OpenStreetMap-bijdragers (ODbL) ›", extern: true }] : []),
+                    ],
+                  ),
+                );
+              })
+              .catch(() => popup.setDOMContent(plekInhoud(naam, soort, [])));
           }
         });
         map.on("dragstart", () => setVolgen(false));

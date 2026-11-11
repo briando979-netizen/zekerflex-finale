@@ -153,6 +153,51 @@ describe("bedrijven in de buurt via Overpass", () => {
   });
 });
 
+describe("het bedrijf op een kaartpunt (osmPlekBijPunt)", () => {
+  const dichtbij = { type: "node", id: 11, lat: 52.09072, lon: 5.12145, tags: { name: "Bakkerij Jansen", shop: "bakery", opening_hours: "Mo-Fr 08:00-17:00", phone: "+31 30 123 4567", website: "https://bakkerijjansen.nl" } };
+  const verder = { type: "node", id: 22, lat: 52.09100, lon: 5.12300, tags: { name: "Bakkerij Jansen", shop: "bakery" } };
+
+  it("zoekt op precies de naam binnen 75 meter en pakt de dichtstbijzijnde", async () => {
+    haal.mockResolvedValueOnce(antwoord({ elements: [verder, dichtbij] }));
+    const p = await import("@/lib/integrations/osm-plaatsen").then((m) => m.osmPlekBijPunt({ lat: 52.0907, lng: 5.1214, naam: "Bakkerij Jansen" }));
+    expect(p).toMatchObject({ naam: "Bakkerij Jansen", telefoon: "+31301234567", website: "https://bakkerijjansen.nl/", openingstijden: "Mo-Fr 08:00-17:00" });
+    expect(p?.id).toBe("osmplaats-node-000000000011");
+    const body = decodeURIComponent(String((haal.mock.calls[0]?.[1] as { body: string }).body));
+    expect(body).toContain('nwr["name"="Bakkerij Jansen"](around:75,52.090700,5.121400)');
+  });
+
+  it("haalt aanhalingstekens en backslashes uit de naam, zodat niemand de vraag kan oprekken", async () => {
+    haal.mockResolvedValueOnce(antwoord({ elements: [] }));
+    const { osmPlekBijPunt } = await import("@/lib/integrations/osm-plaatsen");
+    await osmPlekBijPunt({ lat: 52, lng: 5, naam: 'X"];out meta;//\\' });
+    const body = decodeURIComponent(String((haal.mock.calls[0]?.[1] as { body: string }).body));
+    const naamDeel = body.split('["name"="')[1]?.split('"](around')[0] ?? "";
+    expect(naamDeel).not.toMatch(/["\\]/);
+  });
+
+  it("geeft null zonder vraag bij een te korte naam of onzinnige punten, en null als niets past", async () => {
+    const { osmPlekBijPunt } = await import("@/lib/integrations/osm-plaatsen");
+    expect(await osmPlekBijPunt({ lat: 52, lng: 5, naam: " " })).toBeNull();
+    expect(await osmPlekBijPunt({ lat: Number.NaN, lng: 5, naam: "Bakker" })).toBeNull();
+    expect(haal).not.toHaveBeenCalled();
+    haal.mockResolvedValueOnce(antwoord({ elements: [] }));
+    expect(await osmPlekBijPunt({ lat: 52.5, lng: 5.5, naam: "Onbekend Bedrijf" })).toBeNull();
+  });
+
+  it("onthoudt een antwoord, ook 'niets gevonden', maar een storing wordt niet onthouden", async () => {
+    const { osmPlekBijPunt } = await import("@/lib/integrations/osm-plaatsen");
+    haal.mockResolvedValueOnce(antwoord({ elements: [] }));
+    expect(await osmPlekBijPunt({ lat: 52.3, lng: 4.9, naam: "Leeg Café" })).toBeNull();
+    expect(await osmPlekBijPunt({ lat: 52.3, lng: 4.9, naam: "Leeg Café" })).toBeNull();
+    expect(haal).toHaveBeenCalledTimes(1);
+    haal.mockResolvedValueOnce(antwoord({}, false));
+    expect(await osmPlekBijPunt({ lat: 52.4, lng: 4.8, naam: "Storing Café" })).toBeNull();
+    haal.mockResolvedValueOnce(antwoord({ elements: [{ ...dichtbij, lat: 52.4, lon: 4.8, tags: { name: "Storing Café" } }] }));
+    expect((await osmPlekBijPunt({ lat: 52.4, lng: 4.8, naam: "Storing Café" }))?.naam).toBe("Storing Café");
+    // de snelheidsrem van Overpass laat elke echte aanvraag twee seconden na de vorige beginnen
+  }, 20_000);
+});
+
 describe("id's van OSM-objecten", () => {
   it("zijn lang genoeg om als place-id door te geven en zijn weer terug te lezen", () => {
     const id = osmPlaatsId("node", 2449097266);

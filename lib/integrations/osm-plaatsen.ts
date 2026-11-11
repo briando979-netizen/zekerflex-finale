@@ -438,6 +438,46 @@ export async function osmBedrijvenInBuurt(vraag: OsmBuurtVraag): Promise<OsmPlaa
   return bewaar(lijst);
 }
 
+const afstandM = (a: { lat: number; lng: number }, b: { lat: number; lng: number }): number => {
+  const rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad;
+  const dLng = (b.lng - a.lng) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6_371_000 * Math.asin(Math.min(1, Math.sqrt(h)));
+};
+
+export interface OsmPlekVraag {
+  lat: number;
+  lng: number;
+  /** de naam zoals de kaart hem toont */
+  naam: string;
+}
+
+/**
+ * Het bedrijf op een kaartpunt, gevonden op naam en afstand: de kaartgegevens zelf kennen alleen een naam en
+ * een soort, dus zoeken we bij OpenStreetMap het object met precies die naam binnen 75 meter. Zo krijgt het
+ * kaartje openingstijden, telefoon en website, zonder iets van een andere partij over te nemen. Geen
+ * gokwerk: geen passende naam binnen 75 meter betekent `null`.
+ */
+export async function osmPlekBijPunt(vraag: OsmPlekVraag): Promise<OsmPlaats | null> {
+  const lat = nummer(vraag.lat);
+  const lng = nummer(vraag.lng);
+  // aanhalingstekens, backslashes en stuurtekens gaan niet de Overpass-opdracht in
+  const naam = vraag.naam.replace(/[\u0000-\u001f\u007f"\\]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+  if (lat === null || lng === null || naam.length < 2) return null;
+  const sleutel = `plek:${lat.toFixed(4)},${lng.toFixed(4)}:${naam.toLowerCase()}`;
+  const bewaard = uitCache<{ plek: OsmPlaats | null }>(sleutel);
+  if (bewaard) return bewaard.plek;
+  const opdracht = `[out:json][timeout:15];nwr["name"="${naam}"](around:75,${lat.toFixed(6)},${lng.toFixed(6)});out center tags 5;`;
+  const data = await vraagJson("overpass", OVERPASS, OVERPASS_PAUZE_MS, `data=${encodeURIComponent(opdracht)}`);
+  if (data === null) return null; // storing: niets bewaren, de volgende klik probeert het opnieuw
+  const elementen = obj(data).elements;
+  const lijst = (Array.isArray(elementen) ? elementen : []).map((e) => uitOverpass(obj(e))).filter((p): p is OsmPlaats => p !== null && p.locatie !== null);
+  const dichtbij = [...lijst].sort((a, b) => afstandM({ lat, lng }, a.locatie!) - afstandM({ lat, lng }, b.locatie!))[0] ?? null;
+  naarCache(sleutel, { plek: dichtbij });
+  return dichtbij;
+}
+
 const kaleHost = (host: string): string => host.toLowerCase().replace(/^www\./, "");
 
 /** Het bedrijf uit een lijst dat bij deze website hoort, zodat we nooit een naamgenoot pakken. */
