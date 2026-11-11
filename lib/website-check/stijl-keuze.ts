@@ -7,6 +7,7 @@ import { THEME_PRESETS, type Theme } from "@/lib/sites/types";
 // ---------------------------------------------------------------------------
 
 export const STIJL_KEUZES: { id: NonNullable<Theme["stijl"]>; naam: string; uitleg: string }[] = [
+  { id: "diepte", naam: "3D", uitleg: "Je vliegt door je eigen foto's naar binnen; koppen en kaarten springen in echte 3D naar voren als je scrolt." },
   { id: "beleving", naam: "Beleving", uitleg: "Zoals schwarzwald.zekerflex.com: schuine foto's en een band met je aanbod." },
   { id: "premium", naam: "Premium", uitleg: "Donker en groot, met één grote foto." },
   { id: "luxe", naam: "Luxe", uitleg: "Veel ruimte en fijne lijnen. Rustig en chic." },

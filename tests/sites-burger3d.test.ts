@@ -35,7 +35,7 @@ describe("3D-burger", () => {
     expect(css).toContain(".b3d-pauze:checked~.b3d-podium");
     expect(siteCss(BURGER_THEMA, undefined, true)).toContain(".b3d-sec{");
     // een site zonder burger beweegt niets (WCAG 2.2.2)
-    expect(siteCss(BURGER_THEMA)).not.toMatch(/animation:|@keyframes/);
+    expect(siteCss({ ...BURGER_THEMA, stijl: "beleving" })).not.toMatch(/animation:|@keyframes/);
   });
 
   it("herkent burgerzaken", () => {

@@ -63,7 +63,8 @@ export function proposalTheme(brand: string | null, template: SectorTemplate, lo
   void template;
   const own = brand && isHexColor(brand) ? brand : null;
   const dark = own !== null && textOn(own) === "#ffffff";
-  return { kleur: dark ? own : SCHWARZWALD_GROEN, accent: own && !dark ? own : SCHWARZWALD_ORANJE, lettertype: "modern", hoeken: "rond", stijl: "beleving", logo };
+  // sinds 11 nov 2026 in 3D (beleving met een echte 3D-ruimte, lib/sites/diepte-render.ts); de klant kiest daarna zelf
+  return { kleur: dark ? own : SCHWARZWALD_GROEN, accent: own && !dark ? own : SCHWARZWALD_ORANJE, lettertype: "modern", hoeken: "rond", stijl: "diepte", logo };
 }
 
 const THREE_DIGIT_AREAS = new Set(["010", "013", "015", "020", "023", "024", "026", "030", "033", "035", "036", "038", "040", "043", "045", "046", "050", "053", "055", "058", "070", "071", "072", "073", "074", "075", "076", "077", "078", "079", "085", "088", "097"]);

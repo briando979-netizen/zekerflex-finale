@@ -300,8 +300,10 @@ export interface Theme {
    * an opening in two columns with tilted photos, a band with the offer, labels above headings,
    * big numbered steps, reviews on a dark band, a closing band in the accent. The default for new
    * sites and proposals since 4 Nov 2026; sites in premium keep premium.
+   * "diepte" ("3D"): beleving with real 3D while scrolling (lib/sites/diepte-render.ts). The default
+   * for sites from the website check and for proposals since 11 Nov 2026; existing sites keep theirs.
    */
-  stijl?: "standaard" | "luxe" | "premium" | "beleving" | undefined;
+  stijl?: "standaard" | "luxe" | "premium" | "beleving" | "diepte" | undefined;
   /** media id of a photo of this site shown as the logo in the header; the name as text when absent */
   logo?: string | null | undefined;
 }

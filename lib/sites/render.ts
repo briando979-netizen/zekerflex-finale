@@ -1,5 +1,6 @@
 import { ldJson } from "@/lib/seo/json-ld";
 import { belevingBlok, belevingCss, metKicker, paginaKop, type BelevingCtx } from "@/lib/sites/beleving-render";
+import { diepteBlok, diepteCss } from "@/lib/sites/diepte-render";
 import { functiesVoorBezoekers, functiesVoorJou, type Functie } from "@/lib/sites/wat-kan-deze-site";
 import { BLOCK_LABELS, isHexColor, type Block, type Company, type Media, type Page, type SiteDoc, type SiteProposalMark, type SiteVacancy, type Theme, type Winkel } from "@/lib/sites/types";
 import { winkelVan, zichtbareProducten, type BestelInvoer, type Bestelconcept } from "@/lib/sites/winkel";
@@ -69,8 +70,8 @@ function paras(text: string): string {
     .join("");
 }
 
-/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px; 7: the beleving style, 4 Nov 2026; 8: order-form headings inside their card; 9: beleving photo tiles, panel and hours card; 10: beleving page header; 11: the chat link and the chat page, 4 Nov 2026; 12: beleving photo tiles two by two on phones; 13: the "wat kan deze site" page; 14: a long name in the beleving header fits on a phone; 15: reserving a table; 16: the shopping cart, shop filters and a cart in the header; 17: the 3D burger, only on a site with one (after the style, so no style overrules it), 4 Nov 2026; 18: the builder's new blocks and block settings, 6 Nov 2026; 19: choosing shipping and payment at checkout, VAT rows and the transfer details with a payment QR code, 10 Nov 2026). */
-const CSS_REV = 19;
+/** Raise when siteCss gains rules a published site needs (2: the shop; 3: two products per row on phones; 4: .vh for the invisible h1; 5: size/colour choices and stock; 6: order page on 320px; 7: the beleving style, 4 Nov 2026; 8: order-form headings inside their card; 9: beleving photo tiles, panel and hours card; 10: beleving page header; 11: the chat link and the chat page, 4 Nov 2026; 12: beleving photo tiles two by two on phones; 13: the "wat kan deze site" page; 14: a long name in the beleving header fits on a phone; 15: reserving a table; 16: the shopping cart, shop filters and a cart in the header; 17: the 3D burger, only on a site with one (after the style, so no style overrules it), 4 Nov 2026; 18: the builder's new blocks and block settings, 6 Nov 2026; 19: choosing shipping and payment at checkout, VAT rows and the transfer details with a payment QR code, 10 Nov 2026; 20: the 3D style, 11 Nov 2026). */
+const CSS_REV = 20;
 
 /**
  * The chat link (bottom right, above the WhatsApp button when there is one) and the chat page
@@ -230,6 +231,11 @@ function belevingStijl(kleur: string, accent: string): string {
   return belevingCss(t, accent, textOn(accent) === "#ffffff" ? CREAM : t.night, DISPLAY, TEXT, contrast(accent, t.night) >= 4.5 ? accent : SUN);
 }
 
+/** 3D on top of beleving (lib/sites/diepte-render.ts): the depth, the flight through the photos and what moves while scrolling. */
+function diepteStijl(kleur: string, accent: string): string {
+  return diepteCss(premiumTokens(kleur, accent), accent, DISPLAY, TEXT);
+}
+
 /** The "luxe" style on top of the base: room, thin gold lines, uppercase small navigation, a tall opening photo. */
 function luxeCss(serif: boolean): string {
   const kop = serif ? `h1,h2,h3,.logo{font-family:${LUXE_SERIF};font-weight:500}blockquote p{font-family:${LUXE_SERIF};font-size:1.2rem;line-height:1.6}` : "h1,h2,h3{font-weight:600}";
@@ -258,8 +264,11 @@ export function siteCss(theme: Theme, fontBase = "fonts/", metBurger = false): s
   const f = FONTS[theme.lettertype] ?? FONTS.modern;
   const r = theme.hoeken === "strak" ? "4px" : "16px";
   // beleving (lib/sites/beleving-render.ts) is premium met de opbouw van schwarzwald.zekerflex.com erbovenop
-  const premium = theme.stijl === "premium" || theme.stijl === "beleving";
-  const luxe = theme.stijl === "luxe" ? `\n${luxeCss(theme.lettertype === "klassiek")}` : premium ? `\n${premiumCss(kleur, accent, fontBase)}${theme.stijl === "beleving" ? belevingStijl(kleur, accent) : ""}` : "";
+  // diepte ("3D", lib/sites/diepte-render.ts) is beleving met een echte 3D-ruimte erbij
+  const diepte = theme.stijl === "diepte";
+  const beleving = theme.stijl === "beleving" || diepte;
+  const premium = theme.stijl === "premium" || beleving;
+  const luxe = theme.stijl === "luxe" ? `\n${luxeCss(theme.lettertype === "klassiek")}` : premium ? `\n${premiumCss(kleur, accent, fontBase)}${beleving ? belevingStijl(kleur, accent) : ""}${diepte ? diepteStijl(kleur, accent) : ""}` : "";
   // de winkel (lib/sites/winkel-render.ts) staat tussen de basis en de stijl, zodat luxe/premium hem kunnen bijstellen
   const winkel = `\n${winkelCss(premium)}\n${reserveerCss(premium)}`;
   return `:root{--k:${kleur};--k-t:${textOn(kleur)};--a:${accent};--a-t:${textOn(accent)};--r:${r};--ink:#16191d;--mute:#5b6470;--line:#e6e8eb;--soft:#f5f6f4}
@@ -346,8 +355,10 @@ interface Ctx {
   origin: string;
   /** the premium house style: a label above the opening heading, a bar with phone/e-mail, a button in the header, a full footer */
   premium: boolean;
-  /** the "beleving" style: premium laid out like schwarzwald.zekerflex.com (lib/sites/beleving-render.ts) */
+  /** the "beleving" style: premium laid out like schwarzwald.zekerflex.com (lib/sites/beleving-render.ts); also true for 3D */
   beleving: boolean;
+  /** the "3D" style (stijl "diepte"): beleving with real 3D (lib/sites/diepte-render.ts) */
+  diepte: boolean;
   /** the site's shop (an empty one when it has none) */
   winkel: Winkel;
   /** items in this visitor's cart; undefined = no cart link in the header */
@@ -700,8 +711,9 @@ function context(site: RenderableSite, opts: RenderOptions): Ctx {
     logo: site.theme.logo ? media.get(site.theme.logo) : undefined,
     vacatures: opts.vacatures,
     origin: opts.origin,
-    premium: site.theme.stijl === "premium" || site.theme.stijl === "beleving",
-    beleving: site.theme.stijl === "beleving",
+    premium: site.theme.stijl === "premium" || site.theme.stijl === "beleving" || site.theme.stijl === "diepte",
+    beleving: site.theme.stijl === "beleving" || site.theme.stijl === "diepte",
+    diepte: site.theme.stijl === "diepte",
     winkel: winkelVan(site),
     mandAantal: opts.mandAantal,
   };
@@ -727,7 +739,8 @@ function belevingHtml(b: Block, i: number, ctx: Ctx, page: Page): string {
     galleryClass,
   };
   const alt = (i + 1) % 2 === 1 ? ' class="alt"' : "";
-  return belevingBlok(b, alt, bc) ?? metKicker(renderBlock(b, i + 1, ctx), b, bc);
+  // 3D: the opening, the ring of photos, the steps and the closing band have their own layout; the rest is beleving
+  return (ctx.diepte ? diepteBlok(b, alt, bc) : null) ?? belevingBlok(b, alt, bc) ?? metKicker(renderBlock(b, i + 1, ctx), b, bc);
 }
 
 /** The inline CSS (only used in the builder's preview, on zekerflex.com) takes the fonts from the app's own /fonts/. */

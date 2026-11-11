@@ -54,7 +54,8 @@ export const pexelsUrl = (id: number) => `https://images.pexels.com/photos/${id}
 
 const PLAATS = "Zonnedorp";
 const bedrijf = (naam: string): Company => ({ naam, kvk: "", straat: "", postcode: "", plaats: PLAATS, telefoon: "", email: "" });
-const stijl = (kleur: string, accent: string): Theme => ({ kleur, accent, lettertype: "modern", hoeken: "rond", stijl: "beleving" });
+// de voorbeeldsites laten de 3D-stijl zien (lib/sites/diepte-render.ts, 11 nov 2026)
+const stijl = (kleur: string, accent: string): Theme => ({ kleur, accent, lettertype: "modern", hoeken: "rond", stijl: "diepte" });
 
 export const BRANCHE_VOORBEELDEN: BrancheVoorbeeld[] = [
   {

@@ -15,7 +15,7 @@ import { newBlock, slugify, type Block, type BlockProps, type BlockType, type Co
 export const BURGER_SLUG = "burgerbar-vuur";
 
 export const BURGER_BEDRIJF: Company = { naam: "Burgerbar Vuur", kvk: "", straat: "", postcode: "", plaats: "Zonnedorp", telefoon: "", email: "" };
-export const BURGER_THEMA: Theme = { kleur: "#2B1A12", accent: "#FF7A1A", lettertype: "modern", hoeken: "rond", stijl: "beleving" };
+export const BURGER_THEMA: Theme = { kleur: "#2B1A12", accent: "#FF7A1A", lettertype: "modern", hoeken: "rond", stijl: "diepte" };
 
 /** De foto's (nummers op Pexels) met hun beschrijving. */
 export const BURGER_FOTOS = {
