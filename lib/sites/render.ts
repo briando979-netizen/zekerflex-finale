@@ -36,7 +36,7 @@ import {
 // ---------------------------------------------------------------------------
 
 /** What rendering needs: the site being edited or a published snapshot. */
-export type RenderableSite = Pick<SiteDoc, "pages" | "media" | "theme" | "bedrijf" | "voorbeeld" | "voorstel" | "winkel">;
+export type RenderableSite = Pick<SiteDoc, "pages" | "media" | "theme" | "bedrijf" | "voorbeeld" | "voorstel" | "winkel" | "soort">;
 
 export interface RenderOptions {
   /** absolute path of the site root, ending in "/": "/site/bakker/" or "/" */
@@ -345,6 +345,8 @@ interface Ctx {
   bedrijf: Company;
   /** an example site: a banner, an inert contact form, no business data for search engines */
   voorbeeld: boolean;
+  /** a webshop (SiteDoc.soort): on an example (lib/sites/winkel-voorbeelden.ts) the banner and the tour speak of a webshop */
+  webshop: boolean;
   /** a design proposal to a company: the same, with a banner that it is not their official site */
   voorstel: SiteProposalMark | null;
   /** the photo shown as logo in the header */
@@ -682,7 +684,9 @@ function htmlDoc(ctx: Ctx, page: Page, body: string, opts: RenderOptions, css: s
   const bar = ctx.voorstel
     ? `<aside class="demo-bar" aria-label="Over deze website">Ontwerpvoorstel van ZekerFlex voor ${naam}. Dit is niet de officiële website van ${naam}. ${tour}${officieel ? ` · <a href="${esc(href(ctx, `https://${officieel}`))}" rel="noopener">Naar de huidige site</a>` : ""}</aside>`
     : ctx.voorbeeld
-      ? `<aside class="demo-bar" aria-label="Over deze website">Dit is een voorbeeldwebsite, gemaakt met de websitebouwer van ZekerFlex. ${naam} bestaat niet. ${tour} · <a href="${esc(ctx.preview ? "#" : `${ctx.origin}/werkgever/website/bouwer`)}">Maak je eigen website</a></aside>`
+      ? ctx.webshop
+        ? `<aside class="demo-bar" aria-label="Over deze webshop">Dit is een voorbeeldwebshop, gemaakt met Webshop openen van ZekerFlex. ${naam} bestaat niet: je kunt alles proberen, maar er wordt niets besteld. ${tour} · <a href="${esc(ctx.preview ? "#" : `${ctx.origin}/aanbod/webshop`)}">Open je eigen webshop</a></aside>`
+        : `<aside class="demo-bar" aria-label="Over deze website">Dit is een voorbeeldwebsite, gemaakt met de websitebouwer van ZekerFlex. ${naam} bestaat niet. ${tour} · <a href="${esc(ctx.preview ? "#" : `${ctx.origin}/werkgever/website/bouwer`)}">Maak je eigen website</a></aside>`
       : "";
   return `<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="description" content="${esc(page.seoOmschrijving)}">${robots}<link rel="canonical" href="${esc(url)}"><meta property="og:type" content="website"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(page.seoOmschrijving)}"><meta property="og:url" content="${esc(url)}">${ogImage ? `<meta property="og:image" content="${esc(ogImage)}">` : ""}<link rel="icon" href="${favicon}">${styles}${business}</head><body><a class="skip" href="#inhoud">Naar de inhoud</a>${bar}${header(ctx, page)}<main id="inhoud">${body}</main>${footer(ctx)}${whatsappButton(ctx)}${opts.chat ? chatLink(ctx) : ""}</body></html>`;
 }
@@ -707,6 +711,7 @@ function context(site: RenderableSite, opts: RenderOptions): Ctx {
     preview: Boolean(opts.preview),
     bedrijf: site.bedrijf,
     voorbeeld: Boolean(site.voorbeeld),
+    webshop: site.soort === "webshop",
     voorstel: site.voorstel ?? null,
     logo: site.theme.logo ? media.get(site.theme.logo) : undefined,
     vacatures: opts.vacatures,
@@ -805,14 +810,21 @@ export function renderFunctiesPagina(site: RenderableSite, opts: RenderOptions &
     `<ul class="cards fn" role="list">${lijst
       .map((f) => `<li class="card"><h3>${esc(f.titel)}</h3>${paras(f.tekst)}${f.link ? `<p class="probeer"><a href="${esc(link(f.link))}">Probeer het<span class="vh">: ${esc(f.titel.toLowerCase())}</span></a></p>` : ""}</li>`)
       .join("")}</ul>`;
-  const kop = `${bel ? `<section class="pagekop"><div class="wrap"><p class="kicker">Rondleiding</p>` : `<section class="hero"><div class="wrap">`}<h1>Wat deze site voor ${naam} doet</h1><p>${ctx.voorstel ? `Een nieuwe website voor ${naam}, gemaakt door ZekerFlex van jullie eigen teksten en foto's.` : `Een voorbeeld van wat de websites van ZekerFlex kunnen. ${naam} bestaat niet.`} Hieronder wat bezoekers ermee kunnen, en wat je zelf krijgt achter de login.</p></div></section>`;
+  const kop = `${bel ? `<section class="pagekop"><div class="wrap"><p class="kicker">Rondleiding</p>` : `<section class="hero"><div class="wrap">`}<h1>Wat deze site voor ${naam} doet</h1><p>${ctx.voorstel ? `Een nieuwe website voor ${naam}, gemaakt door ZekerFlex van jullie eigen teksten en foto's.` : `Een voorbeeld van wat de ${ctx.webshop ? "webshops" : "websites"} van ZekerFlex kunnen. ${naam} bestaat niet.`} Hieronder wat bezoekers ermee kunnen, en wat je zelf krijgt achter de login.</p></div></section>`;
   const bezoekers = `<section><div class="wrap"><p class="kicker">Voor je bezoekers</p><h2>Zelf regelen, wanneer het hen uitkomt</h2>${kaarten(functiesVoorBezoekers(site, { chat: opts.chat }))}</div></section>`;
   const jij = `<section class="alt"><div class="wrap"><p class="kicker">Voor jou</p><h2>Het beheer achter de login</h2>${kaarten(functiesVoorJou(site))}</div></section>`;
   const terug = esc(ctx.preview ? "#" : homeHref(opts.root));
   const acties = ctx.voorstel
     ? `<a class="btn${bel ? " dark" : ""}" href="mailto:info@zekerflex.com">Mail ZekerFlex</a><a class="btn line" href="${terug}">Terug naar de site</a>`
-    : `<a class="btn${bel ? " dark" : ""}" href="${esc(ctx.preview ? "#" : `${ctx.origin}/website-check`)}">Laat er gratis een maken</a><a class="btn line" href="${esc(ctx.preview ? "#" : `${ctx.origin}/werkgever/website/bouwer`)}">Maak hem zelf</a>`;
-  const slot = `<section class="band${bel ? " bel" : ""}"><div class="wrap"><h2>${ctx.voorstel ? "Wil je deze website?" : "Zo'n website voor jouw bedrijf?"}</h2>${paras(ctx.voorstel ? "ZekerFlex zet hem op je eigen adres, met je eigen teksten en foto's, en houdt hem daarna bij." : "Vul het adres van je huidige website in, dan maken we er gratis een nieuwe van. Of bouw hem zelf.")}<p class="band-acts">${acties}</p></div></section>`;
+    : ctx.webshop
+      ? `<a class="btn${bel ? " dark" : ""}" href="${esc(ctx.preview ? "#" : `${ctx.origin}/aanbod/webshop`)}">Open je eigen webshop</a><a class="btn line" href="${terug}">Terug naar de winkel</a>`
+      : `<a class="btn${bel ? " dark" : ""}" href="${esc(ctx.preview ? "#" : `${ctx.origin}/website-check`)}">Laat er gratis een maken</a><a class="btn line" href="${esc(ctx.preview ? "#" : `${ctx.origin}/werkgever/website/bouwer`)}">Maak hem zelf</a>`;
+  const slotTekst = ctx.voorstel
+    ? "ZekerFlex zet hem op je eigen adres, met je eigen teksten en foto's, en houdt hem daarna bij."
+    : ctx.webshop
+      ? "Kies een ontwerp, zet je producten erin en stel verzenden, betalen en kortingen in. De pagina's over verzenden en voorwaarden staan als begin al klaar."
+      : "Vul het adres van je huidige website in, dan maken we er gratis een nieuwe van. Of bouw hem zelf.";
+  const slot = `<section class="band${bel ? " bel" : ""}"><div class="wrap"><h2>${ctx.voorstel ? "Wil je deze website?" : ctx.webshop ? "Zo'n webshop voor jouw bedrijf?" : "Zo'n website voor jouw bedrijf?"}</h2>${paras(slotTekst)}<p class="band-acts">${acties}</p></div></section>`;
   const page = fixedPage("functies", "wat-kan-deze-site", `Wat kan deze site | ${site.bedrijf.naam}`);
   return htmlDoc(ctx, page, kop + bezoekers + jij + slot, opts, siteCss(site.theme, PREVIEW_FONTS));
 }
