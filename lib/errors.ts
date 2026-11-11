@@ -13,6 +13,7 @@ export type ErrorCode =
   | "PAYMENT_FAILED"
   | "RATE_LIMITED"
   | "NAAM_VASTGEZET"
+  | "ALLEEN_BEHEERDER"
   | "UPSTREAM_UNAVAILABLE"
   | "INTERNAL";
 
@@ -68,6 +69,10 @@ export class AppError extends Error {
   /** 423: de naam is met een identiteitsbewijs of bank-inlog bevestigd en staat vast (geen 403: CrowdSec). */
   static naamVastgezet(message: string) {
     return new AppError("NAAM_VASTGEZET", message, 423);
+  }
+  /** 423: een lid van de organisatie zonder beheerdersrol (geen 403: CrowdSec telt een reeks 403's als inbraakpoging). */
+  static alleenBeheerder(message: string) {
+    return new AppError("ALLEEN_BEHEERDER", message, 423);
   }
   static upstream(message: string) {
     return new AppError("UPSTREAM_UNAVAILABLE", message, 503);
