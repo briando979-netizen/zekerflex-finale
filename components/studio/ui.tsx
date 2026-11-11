@@ -115,3 +115,9 @@ export const ITrend = (p: P) => (<svg {...base(p)}><path d="M3 17l6-6 4 4 8-8" /
 export const IPin = (p: P) => (<svg {...base(p)}><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21Z" /><circle cx="12" cy="9.5" r="2.5" /></svg>);
 export const IGrid = (p: P) => (<svg {...base(p)}><rect x="3" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" /><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" /><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" /></svg>);
 export const IArrowRight = (p: P) => (<svg {...base(p)}><path d="M5 12h14M12 5l7 7-7 7" /></svg>);
+export const IBuilding = (p: P) => (<svg {...base(p)}><path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16" /><path d="M16 9h2a2 2 0 0 1 2 2v10" /><path d="M3 21h18M8 7h4M8 11h4M8 15h4" /></svg>);
+export const IDoc = (p: P) => (<svg {...base(p)}><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" /><path d="M14 3v5h5M9 13h6M9 17h4" /></svg>);
+export const IMail = (p: P) => (<svg {...base(p)}><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="m4 7 8 6 8-6" /></svg>);
+export const IUser = (p: P) => (<svg {...base(p)}><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></svg>);
+export const ITeam = (p: P) => (<svg {...base(p)}><circle cx="8" cy="9" r="3" /><circle cx="16.5" cy="9" r="2.5" /><path d="M2.5 20a5.5 5.5 0 0 1 11 0M14 14.6a4.8 4.8 0 0 1 7.5 4.4" /></svg>);
+export const ILogout = (p: P) => (<svg {...base(p)}><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" /><path d="M10 17l-5-5 5-5M5 12h11" /></svg>);

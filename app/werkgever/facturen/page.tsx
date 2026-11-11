@@ -1,4 +1,5 @@
 import { requirePrincipal } from "@/lib/auth";
+import { naarStudioAccount } from "@/lib/studio/account-server";
 import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getOrgProfileExtra } from "@/lib/profile/store";
@@ -14,6 +15,8 @@ export const dynamic = "force-dynamic";
 export default async function WerkgeverFacturenPage() {
   const iv = (await getDict()).invoices;
   const principal = await requirePrincipal();
+  // dashboard website of webshop open: het account staat in de studio (lib/studio/account.ts)
+  await naarStudioAccount(principal, "facturen");
   const scope = await resolveEmployerScope(principal);
   const billing = scope.tenantIds[0] ? await getOrgProfileExtra(scope.tenantIds[0]) : {};
 

@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { logoutAction } from "@/lib/auth/actions";
+import { ACCOUNT_ONDERDELEN, initialen, isAccountPad, studioAccountAdres, type AccountOnderdeel } from "@/lib/studio/account";
 import { DashboardWisselaar, type DashboardStand } from "@/components/app/werkruimte/DashboardWisselaar";
 import { StudioProvider, useStudio } from "@/components/studio/context";
 import WebshopStart from "@/components/studio/WebshopStart";
-import { ICalendar, ICard, ICoins, IExternal, IGrid, IHome, ILayout, IMenu, IPalette, IPercent, IPin, IReceipt, ISparkle, ITrend, ISettings, IStore, ITag, ITruck, IUsers, IX, Pill, btn } from "@/components/studio/ui";
+import { IBuilding, ICalendar, ICard, ICoins, IDoc, IExternal, IGrid, IHome, ILayout, ILogout, IMail, IMenu, IPalette, IPercent, IPin, IReceipt, ISparkle, ITeam, ITrend, ISettings, IStore, ITag, ITruck, IUser, IUsers, IX, Pill, btn } from "@/components/studio/ui";
 import { isPaginaBouwer } from "@/lib/sites/paginabouwer";
 import type { SiteSoort } from "@/lib/sites/types";
 
@@ -15,8 +17,9 @@ import type { SiteSoort } from "@/lib/sites/types";
 // /studio/webshop (Webshop openen), elk een eigen dashboard met een eigen zijmenu
 // en eigen topbalk. Boven: titel, de knop naar de andere (als het bedrijf die
 // heeft), "Bekijk" en Publiceren; links: de wisselaar naar de andere dashboards
-// van het bedrijf (lib/werkgever/werkruimte.ts), de onderdelen en wat buiten de
-// studio staat (facturen, bedrijfsgegevens, mail); op de telefoon klapt het menu uit.
+// van het bedrijf (lib/werkgever/werkruimte.ts), de onderdelen en het account (bedrijf,
+// facturen, team, mail, mijn account: lib/studio/account.ts, alles binnen de studio, niets in
+// het werkgeversdashboard); rechtsboven de accountknop; op de telefoon klapt het menu uit.
 // Gegevens: components/studio/context.tsx (per soort een eigen site).
 // ---------------------------------------------------------------------------
 
@@ -78,23 +81,30 @@ const TITEL: Record<SiteSoort, string> = { website: "Website", webshop: "Webshop
 
 const isActive = (path: string, href: string) => (href === WEBSITE || href === WEBSHOP ? path === href : path === href || path.startsWith(`${href}/`));
 
-// Wat buiten de studio staat, in de gewone werkgever-omgeving.
-const ELDERS: { href: string; label: string }[] = [
-  { href: "/werkgever/facturen", label: "Facturen" },
-  { href: "/werkgever/bedrijf", label: "Bedrijfsgegevens" },
-  { href: "/werkgever/mail", label: "Mail" },
-];
+// Het account, binnen de studio (eigenaar 11 nov: "apart, niet in het dashboard van een werkgever").
+const ACCOUNT_ICOON: Record<AccountOnderdeel, ReactNode> = {
+  bedrijf: <IBuilding />,
+  facturen: <IDoc />,
+  team: <ITeam />,
+  mail: <IMail />,
+  account: <IUser />,
+};
 
-/** `dashboards`: de stand van de wisselaar (lib/sites/studio-stand.ts); null = geen wisselaar. */
-export function StudioShell({ soort, dashboards, children }: { soort: SiteSoort; dashboards: (DashboardStand & { cookieGoed?: boolean }) | null; children: ReactNode }) {
+export interface StudioGebruiker {
+  naam: string;
+  email: string;
+}
+
+/** `dashboards`: de stand van de wisselaar (lib/sites/studio-stand.ts); null = geen wisselaar. `gebruiker`: voor de accountknop. */
+export function StudioShell({ soort, dashboards, gebruiker = null, children }: { soort: SiteSoort; dashboards: (DashboardStand & { cookieGoed?: boolean }) | null; gebruiker?: StudioGebruiker | null; children: ReactNode }) {
   return (
     <StudioProvider soort={soort}>
-      <Shell dashboards={dashboards}>{children}</Shell>
+      <Shell dashboards={dashboards} gebruiker={gebruiker}>{children}</Shell>
     </StudioProvider>
   );
 }
 
-function Shell({ dashboards, children }: { dashboards: (DashboardStand & { cookieGoed?: boolean }) | null; children: ReactNode }) {
+function Shell({ dashboards, gebruiker, children }: { dashboards: (DashboardStand & { cookieGoed?: boolean }) | null; gebruiker: StudioGebruiker | null; children: ReactNode }) {
   const { soort, base } = useStudio();
   const path = usePathname() ?? base;
   // Rechtstreeks in de studio (bladwijzer, link): dan ook dit dashboard openzetten, zodat
@@ -115,7 +125,7 @@ function Shell({ dashboards, children }: { dashboards: (DashboardStand & { cooki
   const wide = isPaginaBouwer(path);
   return (
     <div className="min-h-dvh bg-[#f1f1f1] text-[#303030]">
-      <TopBar onMenu={() => setMenuOp((m) => (m === path ? null : path))} menu={menu} dashboards={dashboards} />
+      <TopBar onMenu={() => setMenuOp((m) => (m === path ? null : path))} menu={menu} dashboards={dashboards} gebruiker={gebruiker} />
       <div className="flex">
         {/* een div, geen aside: de nav erin is het (benoemde) landmark. Vanaf md scrolt alleen de nav,
             zodat het menu van de wisselaar (breder dan de balk) over de pagina kan vallen */}
@@ -134,7 +144,7 @@ function Shell({ dashboards, children }: { dashboards: (DashboardStand & { cooki
 
 const focus = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70";
 
-function TopBar({ onMenu, menu, dashboards }: { onMenu: () => void; menu: boolean; dashboards: DashboardStand | null }) {
+function TopBar({ onMenu, menu, dashboards, gebruiker }: { onMenu: () => void; menu: boolean; dashboards: DashboardStand | null; gebruiker: StudioGebruiker | null }) {
   const { data, unpublished, publish, soort } = useStudio();
   const inBouwer = isPaginaBouwer(usePathname() ?? "");
   const [busy, setBusy] = useState(false);
@@ -185,8 +195,72 @@ function TopBar({ onMenu, menu, dashboards }: { onMenu: () => void; menu: boolea
             {busy ? "Bezig…" : live ? (unpublished ? "Wijzigingen publiceren" : "Gepubliceerd") : "Publiceren"}
           </button>
         )}
+        {gebruiker && <AccountKnop gebruiker={gebruiker} soort={soort} />}
       </div>
     </header>
+  );
+}
+
+/** Rechtsboven: wie er is ingelogd, het account en uitloggen. */
+function AccountKnop({ gebruiker, soort }: { gebruiker: StudioGebruiker; soort: SiteSoort }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const path = usePathname();
+  // dicht bij een klik ernaast, met Escape, en na het wisselen van pagina
+  useEffect(() => {
+    if (!open) return;
+    const klik = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const toets = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", klik);
+    document.addEventListener("keydown", toets);
+    return () => {
+      document.removeEventListener("mousedown", klik);
+      document.removeEventListener("keydown", toets);
+    };
+  }, [open]);
+  useEffect(() => {
+    setOpen(false);
+  }, [path]);
+  const item = "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-semibold text-[#303030] hover:bg-[#f1f1f1]";
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={`Account van ${gebruiker.naam}`}
+        className={`grid h-8 w-8 place-items-center rounded-full bg-white/15 text-xs font-bold text-white hover:bg-white/25 ${focus}`}
+      >
+        {initialen(gebruiker.naam)}
+      </button>
+      {open && (
+        <div role="menu" className="absolute right-0 top-10 z-50 w-64 rounded-2xl border border-[#e3e3e3] bg-white p-1.5 text-[#303030] shadow-[0_12px_32px_-12px_rgba(0,0,0,.35)]">
+          <div className="px-2.5 pb-2 pt-1.5">
+            <p className="truncate text-sm font-semibold text-[#1a1a1a]">{gebruiker.naam}</p>
+            <p className="truncate text-xs text-[#707070]">{gebruiker.email}</p>
+          </div>
+          <div className="border-t border-[#ebebeb] pt-1">
+            {ACCOUNT_ONDERDELEN.map((o) => (
+              <Link key={o.pad} role="menuitem" href={studioAccountAdres(soort, o.pad)} className={item}>
+                <span className="text-[#616161]">{ACCOUNT_ICOON[o.pad]}</span>
+                {o.label}
+              </Link>
+            ))}
+          </div>
+          <form action={logoutAction} className="mt-1 border-t border-[#ebebeb] pt-1">
+            <button type="submit" role="menuitem" className={`${item} w-full text-[#b42318] hover:bg-[#fff5f5]`}>
+              <ILogout />
+              Uitloggen
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -245,14 +319,15 @@ function SideNav({ path, soort, dashboards }: { path: string; soort: SiteSoort; 
             </ul>
           </>
         )}
-        {/* buiten de studio, in de gewone werkgever-omgeving */}
-        <ul className="mt-auto space-y-1 border-t border-black/10 px-3 pb-1 pt-3">
-          {ELDERS.map((l) => (
-            <li key={l.href}>
-              <Link href={l.href} className="block text-xs font-semibold text-[#616161] hover:text-[#1a1a1a]">{l.label}</Link>
-            </li>
-          ))}
-        </ul>
+        {/* het account: in de studio zelf, niet in het werkgeversdashboard (lib/studio/account.ts) */}
+        <div className="mt-auto border-t border-black/10 pt-3">
+          <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-[#707070]">Account</p>
+          <ul className="space-y-0.5">
+            {ACCOUNT_ONDERDELEN.map((o) => (
+              <NavLink key={o.pad} n={{ href: studioAccountAdres(soort, o.pad), label: o.label, icon: ACCOUNT_ICOON[o.pad] }} path={path} />
+            ))}
+          </ul>
+        </div>
       </nav>
     </>
   );
@@ -261,6 +336,8 @@ function SideNav({ path, soort, dashboards }: { path: string; soort: SiteSoort; 
 /** Zonder eigen site eerst de start (de webshop-start of de bouwer); verder de pagina zelf. */
 function Body({ path, children }: { path: string; children: ReactNode }) {
   const { data, error, soort, base } = useStudio();
+  // het account werkt ook zonder site, en wacht niet op de gegevens van de site
+  if (isAccountPad(path)) return <>{children}</>;
   if (error) return <p role="alert" className="rounded-2xl bg-[#fed1d7] p-5 text-sm text-[#8e0b21]">{error}</p>;
   if (!data) return <div className="space-y-3" aria-busy="true" aria-label="Laden"><div className="h-10 w-48 animate-pulse rounded-xl bg-white/70" /><div className="h-48 animate-pulse rounded-2xl bg-white/70" /></div>;
   if (!data.site && !ZONDER_SITE[soort].some((p) => path.startsWith(p))) {

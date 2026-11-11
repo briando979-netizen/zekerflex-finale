@@ -1,4 +1,5 @@
 import { requirePrincipal, hasRole } from "@/lib/auth";
+import { naarStudioAccount } from "@/lib/studio/account-server";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { PageHeader, Panel } from "@/components/app/ui";
 import { TeamBoard } from "@/components/app/TeamBoard";
@@ -7,6 +8,8 @@ export const dynamic = "force-dynamic";
 
 export default async function TeamPage() {
   const principal = await requirePrincipal();
+  // dashboard website of webshop open: het account staat in de studio (lib/studio/account.ts)
+  await naarStudioAccount(principal, "team");
   await resolveEmployerScope(principal);
   const canManage = hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN");
 

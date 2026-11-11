@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requirePrincipal } from "@/lib/auth";
+import { naarStudioAccount } from "@/lib/studio/account-server";
 import { prisma } from "@/lib/prisma";
 import { logoutAction } from "@/lib/auth/actions";
 import { PageHeader, Panel } from "@/components/app/ui";
@@ -14,6 +15,8 @@ export const dynamic = "force-dynamic";
 
 export default async function WerkgeverAccountPage() {
   const principal = await requirePrincipal();
+  // dashboard website of webshop open: het account staat in de studio (lib/studio/account.ts)
+  await naarStudioAccount(principal, "account");
   const [user, birthday] = await Promise.all([
     prisma.user.findUnique({
       where: { id: principal.userId },
