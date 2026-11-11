@@ -20,6 +20,9 @@ import { OnboardingActies } from "@/components/admin/OnboardingActies";
 import { isOnboardingAudit, stappenVan, tijdlijn, vastStatus } from "@/lib/admin/onboarding-model";
 import { getFiscal } from "@/lib/fiscal/store";
 import { kvGet } from "@/lib/storage/kv";
+import { getUserAvatars } from "@/lib/profile/store";
+import { avatarUrlFor } from "@/lib/profile/card";
+import { FOTO_SOORTEN, PROVIDER_LABEL, idControleWeergave, stripeSessieUrl } from "@/lib/admin/kyc-weergave";
 
 export const dynamic = "force-dynamic";
 
@@ -100,7 +103,7 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
     include: {
       memberships: { include: { tenant: { select: { id: true, name: true } } } },
       freelancerProfile: true,
-      identityChecks: { orderBy: { createdAt: "desc" }, take: 3 },
+      identityChecks: { orderBy: { createdAt: "desc" }, take: 10 },
     },
   });
 
@@ -139,6 +142,34 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
   const isDeleted = user.email.endsWith("@verwijderd.zekerflex.invalid");
   const kyc = KYC[user.kycStatus] ?? { label: `Identiteit: ${user.kycStatus}`, tone: "neutral" as const };
   const profile = user.freelancerProfile;
+  // de profielfoto (KV profile-user:<id>) en de laatste in- en uitchecks met plek (GpsEvent)
+  const [avatars, checkins] = await Promise.all([
+    getUserAvatars([user.id]).catch(() => ({}) as Record<string, string>),
+    profile
+      ? prisma.gpsEvent
+          .findMany({
+            where: { timesheet: { freelancerId: profile.id } },
+            orderBy: { recordedAt: "desc" },
+            take: 12,
+            select: {
+              id: true,
+              type: true,
+              recordedAt: true,
+              latitude: true,
+              longitude: true,
+              accuracyMeters: true,
+              distanceToBranchMeters: true,
+              withinGeofence: true,
+              mocked: true,
+              bron: true,
+              timesheet: { select: { assignment: { select: { shift: { select: { title: true, branch: { select: { name: true } } } } } } } },
+            },
+          })
+          .catch(() => [])
+      : Promise.resolve([]),
+  ]);
+  const fotoUrl = avatarUrlFor(user.id, Boolean(avatars[user.id]));
+  const kaartLink = (lat: number, lng: number) => `https://www.openstreetmap.org/?mlat=${lat.toFixed(5)}&mlon=${lng.toFixed(5)}#map=16/${lat.toFixed(5)}/${lng.toFixed(5)}`;
   const onbStatus = onboarding ? vastStatus(onboarding, new Date()) : null;
   const onbStappen = onboarding ? stappenVan(onboarding.doelgroep) : [];
   const onbTijdlijn = onboarding
@@ -160,7 +191,13 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
 
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-4">
-          <Avatar name={user.fullName} size={56} />
+          {fotoUrl ? (
+            <a href={fotoUrl} target="_blank" rel="noopener noreferrer" title="Profielfoto op ware grootte">
+              <Avatar name={user.fullName} size={72} src={fotoUrl} />
+            </a>
+          ) : (
+            <Avatar name={user.fullName} size={56} />
+          )}
           <div className="min-w-0">
             <h1 className="text-[1.5rem] font-semibold leading-tight tracking-tight sm:text-[1.625rem]" style={{ color: "var(--a-text)" }}>{user.fullName}</h1>
             <p className="mt-0.5 break-all text-sm" style={{ color: "var(--a-mute)" }}>{user.email}{user.phone ? `, ${user.phone}` : ""}</p>
@@ -266,9 +303,22 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                   ? [
                       { label: "KVK", value: profile.kvkNumber ? `${profile.kvkNumber}${profile.kvkValid ? ", gecontroleerd" : ", niet gecontroleerd"}` : "—" },
                       { label: "IBAN", value: profile.payoutIban ?? "—" },
+                      {
+                        label: "Thuisbasis",
+                        value:
+                          profile.homeLatitude != null && profile.homeLongitude != null ? (
+                            <a href={kaartLink(profile.homeLatitude, profile.homeLongitude)} target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: "var(--a-accent-ink)" }}>
+                              {profile.homePostalCode ?? "plek"} · {profile.homeLatitude.toFixed(4)}, {profile.homeLongitude.toFixed(4)} · kaart →
+                            </a>
+                          ) : (
+                            (profile.homePostalCode ?? "—")
+                          ),
+                      },
                       { label: "Fiscale gegevens", value: <Link href="/admin/fiscaal" className="hover:underline" style={{ color: "var(--a-accent-ink)" }}>Openen →</Link> },
                     ]
                   : []),
+                { label: "Profielfoto", value: fotoUrl ? <a href={fotoUrl} target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: "var(--a-accent-ink)" }}>Bekijken →</a> : "Nog geen" },
+                { label: "Alle gegevens", value: <a href={`/api/admin/gebruikers/${user.id}/export`} className="hover:underline" style={{ color: "var(--a-accent-ink)" }}>Downloaden (JSON) →</a> },
               ]}
             />
           </Panel>
@@ -294,19 +344,108 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
               <ul>
                 {user.identityChecks.map((c) => {
                   const status = CHECK_STATUS[c.status] ?? { label: c.status, tone: "warn" as const };
+                  const w = idControleWeergave(c.provider, c.rawPayload, c.sessionId);
                   return (
-                    <li key={c.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-[0.8125rem] sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
-                      <span style={{ color: "var(--a-dim)" }}>{CHECK_PROVIDER_LABEL[c.provider] ?? c.provider}</span>
-                      <span className="flex items-center gap-3">
+                    <li key={c.id} className="space-y-3 px-4 py-3.5 text-[0.8125rem] sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium" style={{ color: "var(--a-text)" }}>{PROVIDER_LABEL[c.provider] ?? CHECK_PROVIDER_LABEL[c.provider] ?? c.provider}</p>
+                          <p className="text-xs" style={{ color: "var(--a-mute)" }}>
+                            {dateTimeNl(c.createdAt)}
+                            {c.documentType ? ` · ${c.documentType === "PASSPORT" ? "paspoort" : c.documentType === "ID_CARD" ? "ID-kaart" : c.documentType === "DRIVERS_LICENSE" ? "rijbewijs" : c.documentType}` : ""}
+                            {c.expiresAt ? ` · geldig tot ${dateNl(c.expiresAt)}` : ""}
+                            {c.decisionStatus ? ` · ${c.decisionStatus}` : ""}
+                          </p>
+                        </div>
                         <Pill tone={status.tone}>{status.label}</Pill>
-                        {c.status === "PENDING" && <IdentityCheckActions userId={user.id} checkId={c.id} />}
-                      </span>
+                      </div>
+                      {w.fotos.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2">
+                          {FOTO_SOORTEN.filter((f) => w.fotos.includes(f.id)).map((f) => {
+                            const src = `/api/admin/gebruikers/${user.id}/identiteit/${c.id}/beeld?welk=${f.id}`;
+                            return (
+                              <a key={f.id} href={src} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg" style={{ border: "1px solid var(--a-border)" }} title={`${f.label} op ware grootte`}>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={src} alt={f.label} loading="lazy" className="aspect-[4/3] w-full object-cover" style={{ background: "var(--a-elev)" }} />
+                                <span className="block px-2 py-1 text-[11px] font-medium" style={{ color: "var(--a-dim)" }}>{f.label}</span>
+                              </a>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {c.provider === "AI_LOCAL" && w.fotos.length === 0 && (
+                        <p className="text-xs" style={{ color: "var(--a-mute)" }}>De foto&apos;s van deze controle zijn er niet meer (na 30 dagen opgeruimd).</p>
+                      )}
+                      {w.stripe && (
+                        <p className="text-xs" style={{ color: "var(--a-dim)" }}>
+                          {w.stripe.naamOpDocument ? `Naam op document: ${w.stripe.naamOpDocument}${w.stripe.naamKlopt === false ? " (klopt niet met het account)" : w.stripe.naamKlopt ? " (klopt)" : ""}. ` : ""}
+                          {w.stripe.reden ? `Reden: ${w.stripe.reden}. ` : ""}
+                          De foto&apos;s van voor- en achterkant en de selfie staan bij Stripe:{" "}
+                          <a href={stripeSessieUrl(w.stripe.sessieId)} target="_blank" rel="noopener noreferrer" className="hover:underline" style={{ color: "var(--a-accent-ink)" }}>bekijken in Stripe →</a>
+                        </p>
+                      )}
+                      {w.regels.length > 0 && (
+                        <ul className="space-y-0.5 text-xs">
+                          {w.regels.map((r, i) => (
+                            <li key={i} style={{ color: r.ok ? "var(--a-dim)" : "var(--a-crit, #b91c1c)" }}>
+                              {r.ok ? "✓" : "✗"} {r.label}{r.detail ? `: ${r.detail}` : ""}{r.intern ? " (alleen voor jou)" : ""}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {(w.ai || w.beeld.samenvatting.length > 0 || w.mrz.length > 0 || w.chip.length > 0 || w.overig.length > 0) && (
+                        <div className="space-y-1 text-xs" style={{ color: "var(--a-dim)" }}>
+                          {w.ai && (
+                            <p>
+                              Automatische beoordeling: <strong>{w.ai.oordeel}</strong>
+                              {w.ai.zekerheid != null ? ` (zekerheid ${Math.round(w.ai.zekerheid * 100)}%)` : ""}
+                              {w.ai.redenen.length ? `: ${w.ai.redenen.join("; ")}` : ""}
+                            </p>
+                          )}
+                          {w.beeld.samenvatting.length > 0 && <p>Beeld: {w.beeld.samenvatting.join(" · ")}</p>}
+                          {w.mrz.length > 0 && <p>MRZ: {w.mrz.join(", ")}</p>}
+                          {w.chip.length > 0 && <p>Chip: {w.chip.join(", ")}</p>}
+                          {w.overig.map((o, i) => (
+                            <p key={i}>{o}</p>
+                          ))}
+                        </div>
+                      )}
+                      {c.status === "PENDING" && <IdentityCheckActions userId={user.id} checkId={c.id} />}
                     </li>
                   );
                 })}
               </ul>
             )}
           </Panel>
+
+          {profile && (
+            <Panel flush title="In- en uitchecks" subtitle="De laatste 12, met plek">
+              {checkins.length === 0 ? (
+                <Empty title="Nog geen check-ins" body="Zodra deze werker op een klus in- of uitcheckt, staat hier waar en wanneer." />
+              ) : (
+                <ul>
+                  {checkins.map((g) => (
+                    <li key={g.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-[0.8125rem] sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
+                      <span className="min-w-0">
+                        <span className="block font-medium" style={{ color: "var(--a-text)" }}>
+                          {g.type === "CHECK_IN" ? "Ingecheckt" : g.type === "CHECK_OUT" ? "Uitgecheckt" : "Positie tijdens de dienst"} · {dateTimeNl(g.recordedAt)}
+                        </span>
+                        <span className="block text-xs" style={{ color: "var(--a-mute)" }}>
+                          {g.timesheet.assignment.shift.title} · {g.timesheet.assignment.shift.branch.name}
+                          {g.bron ? ` · via ${g.bron}` : ""}
+                        </span>
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <Pill tone={g.withinGeofence ? "ok" : "warn"}>{g.withinGeofence ? "Op locatie" : `${Math.round(g.distanceToBranchMeters)} m ernaast`}</Pill>
+                        {g.mocked && <Pill tone="crit">Nep-locatie</Pill>}
+                        <a href={kaartLink(g.latitude, g.longitude)} target="_blank" rel="noopener noreferrer" className="text-xs hover:underline" style={{ color: "var(--a-accent-ink)" }}>kaart →</a>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
+          )}
 
           <Panel flush title="Documenten">
             {docs.length === 0 ? (

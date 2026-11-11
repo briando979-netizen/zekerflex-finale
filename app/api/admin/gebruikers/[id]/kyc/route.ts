@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { KycStatus } from "@prisma/client";
+import { ComplianceDocKind, ComplianceDocStatus, KycStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
@@ -43,6 +43,16 @@ export const POST = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (r
           decisionStatus: `Handmatig door ${principal.email}${reason ? `: ${reason}` : ""}`.slice(0, 300),
           ...(decision === "approve" ? { verifiedAt: new Date() } : {}),
         },
+      });
+      // een openstaande eigen controle (foto's) en het ID-document niet laten hangen: anders bleef
+      // "In behandeling" met knoppen staan, en zette "Afwijzen" daar later de werker weer op afgewezen
+      await tx.identityVerification.updateMany({
+        where: { userId: user.id, provider: "AI_LOCAL", status: KycStatus.PENDING },
+        data: { status, ...(decision === "approve" ? { verifiedAt: new Date() } : {}) },
+      });
+      await tx.complianceDocument.updateMany({
+        where: { userId: user.id, kind: ComplianceDocKind.ID, status: ComplianceDocStatus.UPLOADED },
+        data: { status: decision === "approve" ? ComplianceDocStatus.APPROVED : ComplianceDocStatus.REJECTED },
       });
     }
   });

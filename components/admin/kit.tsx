@@ -119,7 +119,12 @@ export function Empty({ title, body, action }: { title: string; body?: ReactNode
   );
 }
 
-export function Avatar({ name, size = 32 }: { name: string; size?: number }) {
+/** Initialen, of de profielfoto als die er is (src: /api/profile/<userId>/avatar, lib/profile/card.ts avatarUrlFor). */
+export function Avatar({ name, size = 32, src = null }: { name: string; size?: number; src?: string | null }) {
+  if (src) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt="" loading="lazy" decoding="async" className="flex-shrink-0 rounded-full object-cover" style={{ width: size, height: size, background: "var(--a-elev)" }} />;
+  }
   const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
   return (
     <span className="grid flex-shrink-0 place-items-center rounded-full font-semibold" style={{ width: size, height: size, fontSize: size * 0.34, background: "var(--a-elev)", color: "var(--a-dim)" }} aria-hidden>
@@ -129,10 +134,10 @@ export function Avatar({ name, size = 32 }: { name: string; size?: number }) {
 }
 
 /** Naam met tweede regel, zoals in tabellen. */
-export function NameCell({ name, sub, href }: { name: string; sub?: ReactNode; href?: string }) {
+export function NameCell({ name, sub, href, fotoUrl = null }: { name: string; sub?: ReactNode; href?: string; fotoUrl?: string | null }) {
   return (
     <span className="flex min-w-0 items-center gap-3">
-      <Avatar name={name} />
+      <Avatar name={name} src={fotoUrl} />
       <span className="min-w-0">
         {href ? (
           <Link href={href} className="block truncate font-medium hover:underline" style={{ color: "var(--a-text)" }}>{name}</Link>

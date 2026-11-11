@@ -6,6 +6,8 @@ import { ERASED_EMAIL_DOMAIN } from "@/lib/privacy/anonymize";
 import { count, dateNl, percentOf, timeAgoNl } from "@/lib/admin/format";
 import { Funnel, KpiStrip, NameCell, PageHead, Panel, PeriodTabs, Pill, StackBar, type Tone } from "@/components/admin/kit";
 import { Chart, DataTable, type TableRow } from "@/components/admin/kit-client";
+import { getUserAvatars } from "@/lib/profile/store";
+import { avatarUrlFor } from "@/lib/profile/card";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +47,8 @@ export default async function GebruikersPage(props: { searchParams: Promise<{ pe
   const period = resolvePeriod(periode);
   const [d, weg] = await Promise.all([usersInsights(period), verwijderdeAccounts(period)]);
   const isVerwijderd = (email: string) => email.endsWith(`@${ERASED_EMAIL_DOMAIN}`);
+  // profielfoto's in de lijst (KV profile-user:<id>); een storing geeft gewoon initialen
+  const avatars = await getUserAvatars(d.rows.map((u) => u.id)).catch(() => ({}) as Record<string, string>);
 
   const rows: TableRow[] = d.rows.map((u) => {
     const role = u.memberships.map((m) => `${ROLE_LABEL[m.role] ?? m.role}${m.tenant.type === "PLATFORM" ? "" : ` · ${m.tenant.name}`}`).join(", ") || "Geen rol";
@@ -57,7 +61,7 @@ export default async function GebruikersPage(props: { searchParams: Promise<{ pe
       search: `${u.fullName} ${u.email} ${u.phone ?? ""} ${role}`,
       filters: { kind: u.kind, kyc: u.kycStatus, status },
       cells: {
-        name: <NameCell name={u.fullName} sub={u.email} href={`/admin/gebruikers/${u.id}`} />,
+        name: <NameCell name={u.fullName} sub={u.email} href={`/admin/gebruikers/${u.id}`} fotoUrl={avatarUrlFor(u.id, Boolean(avatars[u.id]))} />,
         role: <span className="block max-w-[16rem] truncate" title={role}>{role}</span>,
         kyc: <Pill tone={kyc.tone}>{kyc.label}</Pill>,
         last: u.lastLoginAt ? timeAgoNl(u.lastLoginAt) : "Nooit",
