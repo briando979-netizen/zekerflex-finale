@@ -301,7 +301,7 @@ export function diepteCss(t: DiepteTokens, accent: string, display: string, text
 @supports (color:color-mix(in srgb,red 50%,blue)){.d3-kopblok .d3-echo{color:color-mix(in srgb,${diep} calc(100% - var(--e)*7%),${diepst})}}
 .d3-tekst>p{margin:28px 0 0;max-width:34rem;font-size:1.125rem;line-height:1.65;color:rgba(255,246,234,.85)}
 .d3-open .hero-acts{margin-top:32px}.d3-open .btn{padding:16px 28px;box-shadow:0 14px 40px -12px rgba(${a},.8)}.d3-open .btn.ghost{box-shadow:none}.d3-open :focus-visible{outline-color:var(--sun)}
-.d3-hint{display:none;position:absolute;left:0;right:0;bottom:20px;margin:0;justify-content:center;gap:10px;font:700 .75rem/1 ${text};letter-spacing:.22em;text-transform:uppercase;color:rgba(255,246,234,.75)}.d3-hint::after{content:"↓";letter-spacing:0}
+.d3-hint{display:none;position:absolute;left:0;right:0;bottom:20px;margin:0;justify-content:center;gap:10px;font:700 .75rem/1 ${text};letter-spacing:.22em;text-transform:uppercase;color:rgba(255,246,234,.75)}.d3-hint::after{content:"↓";letter-spacing:0}@media (max-width:759px){.d3-hint{justify-content:flex-start;padding-left:20px}}
 .d3-ringsec{position:relative;overflow:hidden;padding:96px 0 48px;background:radial-gradient(60% 40% at 50% 85%,rgba(${a},.28),rgba(${a},0) 70%),var(--night);color:var(--cream)}.d3-ringsec h2{color:#fff}.d3-ringsec .kicker{color:var(--sun)}
 .d3-podium{--rw:clamp(170px,22vw,290px);position:relative;display:grid;place-items:center;height:calc(var(--rw)*2.1 + 80px);perspective:1300px;perspective-origin:50% 15%}
 .d3-ring{position:relative;width:var(--rw);aspect-ratio:3/4;transform-style:preserve-3d;transform:rotateX(-12deg) rotateY(-16deg)}
