@@ -164,7 +164,7 @@ describe("klantenkaart", () => {
     const [k, ...rest] = await klantenLijst(T, NU);
     expect(rest).toEqual([]);
     expect(k).toMatchObject({ naam: "Piet Jansen", aantal: 2, geweest: 1, notitie: "Wil graag een korte baard." });
-    expect((await afsprakenVanKlant(T, sleutel)).map((x) => x.start[8] + x.start[9])).toEqual(["13", "12"]);
+    expect((await afsprakenVanKlant(T, sleutel)).map((x) => x.start.slice(8, 10))).toEqual(["13", "12"]);
   });
 
   it("een lege notitie wist hem", async () => {
