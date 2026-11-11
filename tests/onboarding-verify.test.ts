@@ -705,6 +705,22 @@ describe("submitFreelancerOnboarding — gezichtscontrole met het eigen model (1
     expect(wisReeks).toHaveBeenCalledWith("usr_1");
   });
 
+  it("een testaccount (.test, .example) dat in behandeling komt, stuurt de eigenaar geen melding; een echt account wel", async () => {
+    const twijfel = { ...GEZICHT_ZELFDE, oordeel: "twijfel", score: 0.4 };
+    for (const email of ["zf-idlive@zekerflex.test", "iemand@voorbeeld.example"]) {
+      userFindUnique.mockResolvedValueOnce({ ...GEBRUIKER, email });
+      gezichtControle.mockResolvedValueOnce(twijfel);
+      await aiUit();
+      expect((await submitFreelancerOnboarding({ ...BASE_INPUT, files: FOTOS })).outcome).toBe("in_review");
+    }
+    expect(alertOwnerLater).not.toHaveBeenCalled();
+    userFindUnique.mockResolvedValueOnce({ ...GEBRUIKER, email: "jan@jansen.nl" });
+    gezichtControle.mockResolvedValueOnce(twijfel);
+    await aiUit();
+    expect((await submitFreelancerOnboarding({ ...BASE_INPUT, files: FOTOS })).outcome).toBe("in_review");
+    expect(alertOwnerLater).toHaveBeenCalledWith(expect.objectContaining({ key: "kyc-beoordeling:usr_1" }));
+  });
+
   it("de live reeks: een storing bij lezen of wissen houdt de verificatie niet tegen", async () => {
     userFindUnique.mockResolvedValue(GEBRUIKER);
     gezichtControle.mockResolvedValueOnce(GEZICHT_ZELFDE);

@@ -7,6 +7,7 @@ import { readSentMessage, saveSentMessage, type SentRecord } from "@/lib/mail/st
 import { EMAIL_LOGO_PNG_BASE64 } from "@/lib/mail/logo";
 import { categoryBySlug, isAutomatedKind, isOptionalCategory, mailCategoryForKind } from "@/lib/mail/categories";
 import { getMailPrefs, mailAllowed } from "@/lib/mail/prefs";
+import { isReservedTestAddress } from "@/lib/mail/test-adres";
 
 // ---- brand logo (inline CID image in every HTML mail) ------------------------
 const LOGO_CID = "zekerflex-logo";
@@ -58,10 +59,8 @@ export interface MailResult {
   suppressed?: string;
 }
 
-/** An address on a domain reserved for tests and documentation, which no mail server delivers. */
-export function isReservedTestAddress(address: string): boolean {
-  return /@(?:[^@\s]+\.)?(?:[^@\s.]+)\.(test|example|invalid|localhost)$/i.test(address.trim()) || /@localhost$/i.test(address.trim());
-}
+// An address on a domain reserved for tests and documentation (pure, in its own file so code without the mail stack can use it).
+export { isReservedTestAddress };
 
 export function smtpConfigured(): boolean {
   return Boolean(env.SMTP_HOST && env.SMTP_HOST.trim());

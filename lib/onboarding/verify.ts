@@ -13,6 +13,7 @@ import { runVisionReview } from "@/lib/kyc/vision";
 import { gezichtControle } from "@/lib/kyc/gezicht/controle";
 import { GEZICHT_DREMPEL } from "@/lib/kyc/gezicht/vergelijk";
 import { reeksSamenvatting, wisReeks } from "@/lib/kyc/gezicht/reeks-opslag";
+import { isReservedTestAddress } from "@/lib/mail/test-adres";
 import { featureEnabled } from "@/lib/flags";
 import { leesMrzVanFoto } from "@/lib/kyc/mrz-lezen";
 import { zelfdeNummer, type MrzUitslag } from "@/lib/kyc/mrz";
@@ -464,7 +465,7 @@ export async function submitFreelancerOnboarding(
 ): Promise<OnboardingResult> {
   const user = await prisma.user.findUnique({
     where: { id: input.userId },
-    select: { id: true, fullName: true, kycStatus: true, freelancerProfile: { select: { id: true } } },
+    select: { id: true, fullName: true, email: true, kycStatus: true, freelancerProfile: { select: { id: true } } },
   });
   if (!user) throw AppError.notFound("Account niet gevonden");
 
@@ -1005,7 +1006,9 @@ export async function submitFreelancerOnboarding(
   if (outcome === "verified") runAfter(() => meldIdGeverifieerd(user.id));
 
   // Een mens moet kijken: zonder melding blijft iemand onzichtbaar hangen (4 nov 2026).
-  if (outcome === "in_review") {
+  // Niet voor een testaccount (.test, .example, ...): die melding gaat anders echt naar de eigenaar (AGENTS.md).
+  const testAccount = typeof user.email === "string" && isReservedTestAddress(user.email);
+  if (outcome === "in_review" && !testAccount) {
     alertOwnerLater({
       key: `kyc-beoordeling:${user.id}`,
       title: `ID-controle wacht op je: ${user.fullName}`,
