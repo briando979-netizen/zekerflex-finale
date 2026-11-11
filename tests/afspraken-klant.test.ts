@@ -45,7 +45,7 @@ vi.mock("@/lib/metrics", () => ({ recordCronRun: (...a: unknown[]) => m.cron(...
 import * as publiek from "@/app/api/boeken/[slug]/route";
 import * as annuleer from "@/app/api/boeken/[slug]/afspraak/route";
 import * as cron from "@/app/api/internal/afspraken/herinneringen/route";
-import { ANNULEER_STANDAARD, annuleerBezwaar, beginInstellingen, controleerInstellingen, datumTijdLang, heeftPersoon, herinneringDue, zonderPersoon, type Afspraak } from "@/lib/afspraken/model";
+import { ANNULEER_STANDAARD, annuleerBezwaar, beginInstellingen, controleerInstellingen, datumTijdLang, heeftPersoon, herinneringDue, herinneringGewenst, zonderPersoon, type Afspraak } from "@/lib/afspraken/model";
 import { icsVoorAfspraak, klantMail, stuurBevestiging } from "@/lib/afspraken/mail";
 import { stuurHerinneringen } from "@/lib/afspraken/herinneringen";
 import { wisVerlopenAfspraken } from "@/lib/afspraken/bewaren";
@@ -254,6 +254,65 @@ describe("bevestiging bij het boeken", () => {
   });
 });
 
+describe("herinnering alleen bij een boeking van meer dan 24 uur van tevoren", () => {
+  const uren = (iso: string, n: number) => new Date(new Date(iso).getTime() - n * 3_600_000).toISOString();
+  const rijen = () => [...m.kv.keys()].filter((k) => k.startsWith("afspraken:rem:"));
+  /** Boekt (de bevestiging) en geeft terug of er een herinnering is gepland. */
+  const bevestig = async (start: string, gemaaktOp: string): Promise<boolean> => {
+    m.kv.clear();
+    await bewaarInstellingen("t1", i);
+    m.mail.mockClear();
+    const a = zetAfspraak(start, { gemaaktOp }, "t1", false);
+    await stuurBevestiging("t1", a, i, new Date(gemaaktOp));
+    expect(m.mail).toHaveBeenCalledTimes(1); // de bevestiging gaat altijd
+    return rijen().length === 1;
+  };
+
+  it("de grens: precies 24 uur telt niet, een minuut meer wel", () => {
+    const start = "2026-11-13T08:00:00.000Z";
+    expect(herinneringGewenst({ start, gemaaktOp: uren(start, 3) })).toBe(false);
+    expect(herinneringGewenst({ start, gemaaktOp: uren(start, 24) })).toBe(false);
+    expect(herinneringGewenst({ start, gemaaktOp: "2026-11-12T07:59:00.000Z" })).toBe(true);
+    expect(herinneringGewenst({ start, gemaaktOp: uren(start, 72) })).toBe(true);
+  });
+
+  it("3 uur vóór de start: bevestiging ja, herinnering nee (ook niet via de cron)", async () => {
+    const start = "2026-11-13T08:00:00.000Z";
+    expect(await bevestig(start, uren(start, 3))).toBe(false);
+    expect(await stuurHerinneringen({ now: new Date(uren(start, 2)) })).toMatchObject({ verstuurd: 0 });
+    expect(m.mail).toHaveBeenCalledTimes(1);
+  });
+
+  it("3 dagen vóór de start: bevestiging én herinnering, elk één keer", async () => {
+    const start = "2026-11-16T08:00:00.000Z";
+    expect(await bevestig(start, uren(start, 72))).toBe(true);
+    expect(await stuurHerinneringen({ now: new Date(uren(start, 24)) })).toMatchObject({ verstuurd: 1 });
+    expect(m.mail).toHaveBeenCalledTimes(2);
+  });
+
+  it("precies 24 uur vóór de start: alleen de bevestiging; 24 uur en een minuut: beide", async () => {
+    const start = "2026-11-16T08:00:00.000Z";
+    expect(await bevestig(start, uren(start, 24))).toBe(false);
+    expect(await bevestig(start, "2026-11-15T07:59:00.000Z")).toBe(true);
+  });
+
+  it("een bestaande regel in het rijtje van een korte boeking wordt opgeruimd zonder mail", async () => {
+    const start = "2026-11-13T08:00:00.000Z";
+    const a = zetAfspraak(start, { gemaaktOp: uren(start, 3) });
+    expect(await stuurHerinneringen({ now: new Date(uren(start, 2)) })).toMatchObject({ verstuurd: 0, opgeruimd: 1 });
+    expect(m.mail).not.toHaveBeenCalled();
+    expect(m.kv.has(`afspraken:rem:t1:${a.id}`)).toBe(false);
+  });
+
+  it("rond de omschakeling telt het echte etmaal: wintertijd (25 okt 2026) en zomertijd (28 mrt 2027)", async () => {
+    // zondag 09:00 Nederlandse tijd na de omschakeling; gemaakt op zaterdag op dezelfde klokkentijd is echt 25 uur (winter) of 23 uur (zomer)
+    expect(await bevestig("2026-10-25T08:00:00.000Z", "2026-10-24T07:00:00.000Z")).toBe(true); // 25 uur
+    expect(await bevestig("2026-10-25T08:00:00.000Z", "2026-10-24T08:00:00.000Z")).toBe(false); // precies 24 uur
+    expect(await bevestig("2027-03-28T07:00:00.000Z", "2027-03-27T08:00:00.000Z")).toBe(false); // zaterdag 09:00 = 23 uur
+    expect(await bevestig("2027-03-28T07:00:00.000Z", "2027-03-27T06:59:00.000Z")).toBe(true); // 24 uur en 1 minuut
+  });
+});
+
 describe("annuleren door de klant: POST /api/boeken/<slug>/afspraak", () => {
   const annuleerMet = (token: string, over: Record<string, unknown> = {}, s = "kapper-jan") => annuleer.POST(json("POST", `/api/boeken/${s}/afspraak`, { token, ...over }), slug(s));
   const nieuweBoeking = async (over: Record<string, unknown> = {}) => {
@@ -278,7 +337,12 @@ describe("annuleren door de klant: POST /api/boeken/<slug>/afspraak", () => {
     expect((m.mail.mock.calls[0]![0] as { text: string }).text).toContain("https://app.zekerflex.test/boeken/kapper-jan");
     const na = await lees(await publiek.GET(json("GET", `/api/boeken/kapper-jan?dienst=${i.diensten[0]!.id}&dag=2026-11-12`), slug()));
     expect(na.tijden).toContain("2026-11-12T08:00:00.000Z");
-    // de herinnering is mee weggehaald
+  });
+
+  it("annuleren haalt ook de geplande herinnering weg", async () => {
+    const token = await nieuweBoeking({ start: "2026-11-16T08:00:00.000Z" });
+    expect([...m.kv.keys()].some((k) => k.startsWith("afspraken:rem:"))).toBe(true);
+    expect((await annuleerMet(token)).status).toBe(200);
     expect([...m.kv.keys()].some((k) => k.startsWith("afspraken:rem:"))).toBe(false);
   });
 
@@ -469,7 +533,7 @@ describe("herinneringen (cron, elk uur)", () => {
 
   it("rond de overgang naar wintertijd telt het echte etmaal, niet de klokkentijd", async () => {
     // zondag 25 oktober 2026 09:00 Nederlandse tijd = 08:00Z (de klok ging die nacht een uur terug)
-    const a = zetAfspraak("2026-10-25T08:00:00.000Z");
+    const a = zetAfspraak("2026-10-25T08:00:00.000Z", { gemaaktOp: "2026-10-01T10:00:00.000Z" });
     expect(await stuurHerinneringen({ now: new Date("2026-10-24T07:59:00Z") })).toMatchObject({ verstuurd: 0 }); // zaterdag 09:59 zomertijd: 24 uur en 1 minuut
     expect(await stuurHerinneringen({ now: new Date("2026-10-24T08:00:00Z") })).toMatchObject({ verstuurd: 1 });
     expect((m.mail.mock.calls[0]![0] as { text: string }).text).toContain("zondag 25 oktober 2026 om 09:00");
@@ -478,7 +542,7 @@ describe("herinneringen (cron, elk uur)", () => {
 
   it("rond de overgang naar zomertijd ook", async () => {
     // zondag 28 maart 2027 09:00 Nederlandse (zomer)tijd = 07:00Z
-    zetAfspraak("2027-03-28T07:00:00.000Z");
+    zetAfspraak("2027-03-28T07:00:00.000Z", { gemaaktOp: "2027-03-01T10:00:00.000Z" });
     expect(await stuurHerinneringen({ now: new Date("2027-03-27T06:59:00Z") })).toMatchObject({ verstuurd: 0 });
     expect(await stuurHerinneringen({ now: new Date("2027-03-27T07:00:00Z") })).toMatchObject({ verstuurd: 1 });
     expect((m.mail.mock.calls[0]![0] as { text: string }).text).toContain("zondag 28 maart 2027 om 09:00");
@@ -511,7 +575,7 @@ describe("herinneringen (cron, elk uur)", () => {
 
 describe("wissen maakt de link dood (AVG)", () => {
   const metLink = async () => {
-    await boekOnline();
+    await boekOnline({ start: "2026-11-16T08:00:00.000Z" }); // ver genoeg weg voor een herinnering: dan is er ook een rijtje om te wissen
     const [, token] = linkUitMail();
     expect(await afspraakVanLink("kapper-jan", token)).not.toBeNull();
     return token;

@@ -546,7 +546,7 @@ function InstellingenFormulier({ begin, nieuw, bewaard }: { begin: Instellingen;
         </label>
         <label className="flex items-start gap-2 text-sm text-ink">
           <input type="checkbox" checked={i.herinneringAan !== false} onChange={(e) => wijzig((x) => ({ ...x, herinneringAan: e.target.checked }))} className="mt-1" />
-          <span>Stuur de klant 24 uur van tevoren een herinnering (alleen als hij een e-mailadres invulde)</span>
+          <span>Stuur de klant 24 uur van tevoren een herinnering (alleen als hij een e-mailadres invulde en meer dan 24 uur van tevoren boekte)</span>
         </label>
       </section>
 

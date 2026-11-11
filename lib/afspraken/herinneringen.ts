@@ -1,6 +1,6 @@
 import { logger } from "@/lib/logger";
 import { kvFindDue } from "@/lib/storage/kv";
-import { HERINNERING_VOORAF_MS, herinneringDue, type Instellingen } from "@/lib/afspraken/model";
+import { HERINNERING_VOORAF_MS, herinneringDue, herinneringGewenst, type Instellingen } from "@/lib/afspraken/model";
 import { stuurHerinnering } from "@/lib/afspraken/mail";
 import { VOORVOEGSEL_REM, leesAfspraak, leesInstellingen, wisHerinneringRij, zetHerinneringVlag, type HerinneringRij } from "@/lib/afspraken/store";
 
@@ -49,8 +49,9 @@ export async function stuurHerinneringen(opts: { now?: Date; dryRun?: boolean } 
         instellingen.set(tenantId, i);
       }
       const a = i ? await leesAfspraak(tenantId, id) : null;
-      if (!i || !a || a.status !== "bevestigd" || !a.klant.email || a.herinneringVerstuurd === true || new Date(a.start).getTime() <= now.getTime()) {
-        // niets (meer) te herinneren: een verstreken, geannuleerde, gewiste of al herinnerde afspraak
+      if (!i || !a || a.status !== "bevestigd" || !a.klant.email || a.herinneringVerstuurd === true || !herinneringGewenst(a) || new Date(a.start).getTime() <= now.getTime()) {
+        // niets (meer) te herinneren: een verstreken, geannuleerde, gewiste of al herinnerde afspraak, of een kort van tevoren
+        // gemaakte (de bevestiging is dan genoeg; ook bestaande regels in het rijtje worden zo opgeruimd)
         if (!dryRun) await wisHerinneringRij(tenantId, id);
         uit.opgeruimd += 1;
         continue;
