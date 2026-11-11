@@ -33,6 +33,9 @@ export function Reveal({
       setShown(true);
       return;
     }
+    // 11 nov (eigenaar): geen lege vlakken tijdens het scrollen. Een blok verschijnt al als het nog een
+    // heel scherm onder het beeld ligt (rootMargin 100%), en altijd na 2,5 s, ook als de waarnemer niets
+    // meldt (snel scrollen, een volledige schermafdruk, afdrukken).
     const io = new IntersectionObserver(
       ([entry]) => {
         if (!entry) return;
@@ -43,10 +46,19 @@ export function Reveal({
           setShown(false);
         }
       },
-      { threshold: 0.15, rootMargin: "0px 0px -8% 0px" },
+      { threshold: 0, rootMargin: "0px 0px 100% 0px" },
     );
     io.observe(el);
-    return () => io.disconnect();
+    const vangnet = once
+      ? window.setTimeout(() => {
+          setShown(true);
+          io.disconnect();
+        }, 2500)
+      : 0;
+    return () => {
+      io.disconnect();
+      window.clearTimeout(vangnet);
+    };
   }, [once]);
 
   return (
