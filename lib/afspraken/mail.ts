@@ -2,7 +2,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { escapeHtml, sendMail } from "@/lib/mail";
 import { vouw } from "@/lib/voorstel/ics-bestand";
-import { annuleerTotMinVan, datumTijdLang, type Afspraak, type Instellingen } from "@/lib/afspraken/model";
+import { annuleerTotMinVan, datumTijdLang, herinneringGewenst, type Afspraak, type Instellingen } from "@/lib/afspraken/model";
 import { geefAnnuleerToken, planHerinnering, trekTokenIn } from "@/lib/afspraken/store";
 
 // ---------------------------------------------------------------------------
@@ -152,9 +152,10 @@ async function stuur(tenantId: string, soort: KlantMailSoort, a: Afspraak, i: In
 export async function stuurBevestiging(tenantId: string, a: Afspraak, i: Instellingen, nu: Date = new Date()): Promise<void> {
   try {
     if (a.bron !== "online" || !a.klant.email) return;
-    // altijd in het rijtje: de cron kijkt pas bij het versturen of het bedrijf herinneringen aan heeft, zodat een bedrijf
-    // dat het later aanzet ook voor bestaande afspraken herinnert
-    await planHerinnering(tenantId, a);
+    // in het rijtje (de cron kijkt pas bij het versturen of het bedrijf herinneringen aan heeft, zodat een bedrijf dat
+    // het later aanzet ook voor bestaande afspraken herinnert), maar niet bij een boeking van 24 uur of minder van
+    // tevoren: dan is de bevestiging genoeg
+    if (herinneringGewenst(a)) await planHerinnering(tenantId, a);
     await stuur(tenantId, "bevestiging", a, i, nu);
   } catch (err) {
     logger.warn("afspraakbevestiging mislukt", { tenantId, fout: (err as Error).name });

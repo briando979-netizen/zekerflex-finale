@@ -123,9 +123,15 @@ export function annuleerBezwaar(a: Pick<Afspraak, "status" | "start">, i: Pick<I
   return null;
 }
 
-/** Hoort deze afspraak nu een herinnering te krijgen? Alleen bevestigd, met e-mailadres, nog niet gestuurd, binnen 24 uur vóór de start (en nog niet begonnen). */
+/**
+ * Krijgt deze afspraak ooit een herinnering? Alleen als hij MEER dan 24 uur vóór de start gemaakt is (precies 24 uur
+ * telt niet mee): bij een kortere boeking is de bevestiging de herinnering, anders komen er twee mails kort achter elkaar.
+ */
+export const herinneringGewenst = (a: Pick<Afspraak, "start" | "gemaaktOp">): boolean => new Date(a.start).getTime() - new Date(a.gemaaktOp).getTime() > HERINNERING_VOORAF_MS;
+
+/** Hoort deze afspraak nu een herinnering te krijgen? Alleen bevestigd, met e-mailadres, nog niet gestuurd, binnen 24 uur vóór de start (en nog niet begonnen), en lang genoeg van tevoren gemaakt (herinneringGewenst). */
 export function herinneringDue(a: Afspraak, i: Pick<Instellingen, "herinneringAan">, nu: Date): boolean {
-  if (a.status !== "bevestigd" || !a.klant.email || a.herinneringVerstuurd === true || !herinneringAanVan(i)) return false;
+  if (a.status !== "bevestigd" || !a.klant.email || a.herinneringVerstuurd === true || !herinneringAanVan(i) || !herinneringGewenst(a)) return false;
   const start = new Date(a.start).getTime();
   return start > nu.getTime() && start - nu.getTime() <= HERINNERING_VOORAF_MS;
 }
