@@ -23,7 +23,8 @@ import { winkelVoorbeeldFotos, winkelVoorbeeldPaginas, winkelVoorbeeldThema, win
 // ---------------------------------------------------------------------------
 
 /** 1: zes voorbeeldwebshops, één per ontwerp (11 nov 2026). */
-const VERSIE = 1;
+// 2: de riem van Linnen & Wol kreeg een andere foto (de vorige is bij Pexels verdwenen)
+const VERSIE = 2;
 const BY = { userId: "system", name: "ZekerFlex (voorbeeld)" };
 const tenantVan = (v: WinkelVoorbeeld) => `voorbeeld:winkel-${v.id}`;
 const STATE = (v: WinkelVoorbeeld) => `site-voorbeeld:winkel-${v.id}`;

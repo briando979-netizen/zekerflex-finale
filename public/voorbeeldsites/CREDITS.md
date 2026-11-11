@@ -46,7 +46,7 @@ op Pexels. Licentie van alle foto's: Pexels License (vrij commercieel, geen verm
 | Linnen & Wol | witte sneakers op een houten vloer | Pexels, foto 7193626 | karola-g |
 | Linnen & Wol | bruine leren handtas | Pexels, foto 10919291 | mimfathi |
 | Linnen & Wol | zijden sjaal met grafisch patroon | Pexels, foto 36455708 | dauphotographer |
-| Linnen & Wol | leren riemen in vier kleuren | Pexels, foto 31367060 | shivam |
+| Linnen & Wol | bruine leren riem met koperen gesp | Pexels, foto 6654763 | cottonbro studio |
 | Linnen & Wol | gebreide mutsen in aardetinten | Pexels, foto 33258846 | aj-collins-artistry-1772576281 |
 | De Smaakschuur (eten) | opening: croissants, jam en een koffiepot | Pexels, foto 3850382 | readymade |
 | De Smaakschuur | over ons: zak koffiebonen in een koffiezaak | Pexels, foto 7541875 | bacho-nadiradze-2944810 |

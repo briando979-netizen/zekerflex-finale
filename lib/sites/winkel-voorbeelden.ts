@@ -389,7 +389,7 @@ export const WINKEL_VOORBEELDEN: WinkelVoorbeeld[] = [
         prijsCents: 3995,
         korteTekst: "Volnerf leer met een eenvoudige gesp",
         omschrijving: "Een riem van stevig volnerf leer, 3,5 cm breed, met een eenvoudige metalen gesp.\n\nKies de maat van je broek: bij maat 90 is de riem van de gesp tot het middelste gaatje 90 cm.",
-        foto: { pexels: 31367060, alt: "Leren riemen in zwart, grijs, bruin en cognac naast elkaar" },
+        foto: { pexels: 6654763, alt: "Bruine leren riem met een koperen gesp, in twee handen" },
         opties: [maten("85 cm", "90 cm", "95 cm", "100 cm", "105 cm"), kleuren("Zwart", "Cognac", "Grijs")],
       },
       {
