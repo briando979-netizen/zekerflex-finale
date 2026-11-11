@@ -103,7 +103,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       ),
       hoe: (
       <section id="hoe-het-werkt" className="relative scroll-mt-24 bg-paper">
-        <div className="shell-4k py-10 md:py-14 lg:py-16">
+        <div className="shell-4k py-8 md:py-10 lg:py-12">
           <Reveal>
             <p className="eyebrow" data-cms-key="how.eyebrow">{t("how.eyebrow")}</p>
             <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold" data-cms-key="how.title">
@@ -170,7 +170,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       ),
       werkvormen: (
       <section className="relative bg-paper-soft">
-        <div className="shell-4k py-10 md:py-14 lg:py-16">
+        <div className="shell-4k py-8 md:py-10 lg:py-12">
           <Reveal>
             <p className="eyebrow" data-cms-key="work.eyebrow">{t("work.eyebrow")}</p>
             <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold" data-cms-key="work.title">
@@ -242,7 +242,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       cijfers: (
       <section className="relative isolate overflow-hidden bg-[#0C0E12] text-white">
         <div className="aurora opacity-70" aria-hidden />
-        <div className="shell-4k relative py-10 md:py-14 lg:py-16">
+        <div className="shell-4k relative py-8 md:py-10 lg:py-12">
           <div className="grid gap-10 sm:grid-cols-2 sm:gap-14 lg:grid-cols-4">
             {/* de grote cijfers staan vast (bedragen: lib/pricing/tiers.ts); de regel eronder is een tekst */}
             {[
@@ -263,7 +263,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       ),
       functies: (
       <section className="relative bg-paper-soft">
-        <div className="shell-4k py-10 md:py-14 lg:py-16">
+        <div className="shell-4k py-8 md:py-10 lg:py-12">
           <Reveal>
             <p className="eyebrow" data-cms-key="feat.eyebrow">{t("feat.eyebrow")}</p>
             <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold" data-cms-key="feat.title">
@@ -314,7 +314,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       citaat: (
       <section className="relative isolate overflow-hidden bg-[#0C0E12] text-white">
         <div className="aurora opacity-60" aria-hidden />
-        <div className="shell-4k relative py-10 md:py-14 lg:py-16">
+        <div className="shell-4k relative py-8 md:py-10 lg:py-12">
           <Reveal className="mx-auto max-w-4xl text-center">
             <figure>
               <blockquote className="text-balance font-display text-[clamp(1.5rem,1.1rem+1.6vw,2.6rem)] font-semibold leading-snug">
@@ -350,7 +350,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       oproep: (
       <section className="relative isolate overflow-hidden hero-ink text-white">
         <div className="aurora" aria-hidden />
-        <div className="shell-4k relative py-10 md:py-14 lg:py-16">
+        <div className="shell-4k relative py-8 md:py-10 lg:py-12">
           <Reveal className="flex flex-col items-start justify-between gap-10 lg:flex-row lg:items-center">
             <div className="max-w-2xl">
               <h2 className="fluid-h2 text-balance font-display font-bold" data-cms-key="cta.title">{t("cta.title")}</h2>

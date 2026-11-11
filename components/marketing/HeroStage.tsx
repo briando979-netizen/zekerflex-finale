@@ -68,19 +68,19 @@ export function HeroStage({
   return (
     <section className="relative isolate overflow-hidden hero-ink text-white">
       <div className="aurora" aria-hidden />
-      <div className="shell-4k relative grid items-center gap-8 py-8 sm:py-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12 lg:py-12">
+      <div className="shell-4k relative grid items-center gap-6 py-6 sm:py-8 lg:grid-cols-[1.2fr_0.8fr] lg:gap-10 lg:py-8">
         <div className="reveal" data-shown="true">
           <p className="eyebrow text-brand-mint" data-cms-key="hero.eyebrow">{c.eyebrow}</p>
-          <h1 className="fluid-hero mt-4 text-balance font-display font-bold">
+          <h1 className="fluid-hero mt-3 text-balance font-display font-bold">
             <span data-cms-key="hero.titleLine1">{c.titleLine1}</span>
             <br />
             <span className="bg-gradient-to-r from-brand-mint to-[#8FF0C4] bg-clip-text text-transparent" data-cms-key="hero.titleLine2">
               {c.titleLine2}
             </span>
           </h1>
-          <p className="fluid-lead mt-5 max-w-xl text-white/70" data-cms-key="hero.lead" data-cms-ml="1">{c.lead}</p>
+          <p className="fluid-lead mt-3 max-w-xl text-white/70" data-cms-key="hero.lead" data-cms-ml="1">{c.lead}</p>
           {/* twee duidelijke keuzes; op de telefoon onder elkaar over de hele breedte */}
-          <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
+          <div className="mt-5 grid gap-3 sm:flex sm:flex-wrap">
             <Link href="/register" className="btn-mint text-base" data-cms-key="hero.ctaPrimary">
               {c.ctaPrimary}
             </Link>
@@ -110,7 +110,7 @@ export function HeroStage({
           </div>
         </div>
 
-        <div className="relative lg:ml-auto lg:w-full lg:max-w-[26rem] xl:max-w-[30rem]">
+        <div className="relative lg:ml-auto lg:w-full lg:max-w-[20rem] xl:max-w-[24rem]">
           <div ref={artRef} className="relative will-change-transform">
             {photo}
           </div>
