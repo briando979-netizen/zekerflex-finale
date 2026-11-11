@@ -50,7 +50,7 @@ export interface OntwerpKaart {
 }
 
 /** De namen van de stijlen zoals Studio → Ontwerp ze noemt. */
-export const STIJL_NAMEN: Record<OntwerpThema["stijl"], string> = { beleving: "Beleving", premium: "Premium", luxe: "Luxe", standaard: "Eenvoudig" };
+export const STIJL_NAMEN: Record<OntwerpThema["stijl"], string> = { diepte: "3D", beleving: "Beleving", premium: "Premium", luxe: "Luxe", standaard: "Eenvoudig" };
 
 /** De kaart van een ontwerp; `metVoorbeeld`: het voorbeeld bestaat (lib/sites/ontwerpen-server.ts). */
 export function kaartVan(o: Ontwerp, metVoorbeeld: boolean): OntwerpKaart {
