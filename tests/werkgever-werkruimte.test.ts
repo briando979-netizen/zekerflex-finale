@@ -22,7 +22,7 @@ import { horecaTabs } from "@/lib/horeca/tabs";
 // elk met een eigen menu; het gewone werkgeversdashboard houdt alleen personeel inhuren.
 
 const geen: WerkruimteFeiten = { keuze: null, heeftRijschool: false, heeftHoreca: false, heeftSite: false, heeftKlussen: false };
-const opties: MenuOpties = { heeftRijschool: true, heeftHoreca: true, horecaModules: [], inApp: false, studio: true };
+const opties: MenuOpties = { heeftAfspraken: false, heeftRijschool: true, heeftHoreca: true, horecaModules: [], inApp: false, studio: true };
 const sleutels = (soort: Werkruimte, o: Partial<MenuOpties> = {}) => menuVoor(soort, { ...opties, ...o }).map((p) => p.sleutel);
 const keuze = (soort: Werkruimte, dashboards: Werkruimte[] = [], ookPersoneel = false): WerkruimteKeuze => ({ soort, ookPersoneel, dashboards, at: "2026-11-10T10:00:00.000Z" });
 
@@ -136,6 +136,33 @@ describe("menuVoor", () => {
     // ook met een rijschool en een horecazaak: die staan in hun eigen dashboard
     for (const s of PAKKET_SLEUTELS) expect(sleutels("personeel"), `personeel bevat ${s}`).not.toContain(s);
     for (const soort of WERKRUIMTES) expect(sleutels(soort, { inApp: true })).not.toContain("bank");
+  });
+
+  it("Afspraken en Klantenkaart staan alleen in het menu als het bedrijf afspraken heeft ingericht", () => {
+    for (const soort of WERKRUIMTES) {
+      expect(sleutels(soort, { heeftAfspraken: false }), `${soort} zonder afspraken`).not.toContain("afspraken");
+      expect(sleutels(soort, { heeftAfspraken: false }), `${soort} zonder afspraken`).not.toContain("klanten");
+      expect(sleutels(soort, { heeftAfspraken: true }), `${soort} met afspraken`).toEqual(expect.arrayContaining(["afspraken", "klanten"]));
+    }
+  });
+
+  it("in het personeelsmenu staan ze in het hoofddeel direct na agenda, niet in Beheer", () => {
+    const menu = menuVoor("personeel", { ...opties, heeftAfspraken: true });
+    const na = menu.findIndex((p) => p.sleutel === "agenda");
+    expect(menu[na + 1]).toEqual({ sleutel: "afspraken" });
+    expect(menu[na + 2]).toEqual({ sleutel: "klanten" });
+    expect(menu.filter((p) => p.sleutel === "afspraken" || p.sleutel === "klanten").every((p) => p.sectie === undefined)).toBe(true);
+  });
+
+  it("bij rijschool, horeca, website en webshop staan ze bovenaan de groep klanten, vóór mail", () => {
+    for (const soort of ["rijschool", "horeca", "website", "webshop"] as const) {
+      const groep = menuVoor(soort, { ...opties, heeftAfspraken: true }).filter((p) => p.sectie === "klanten").map((p) => p.sleutel);
+      expect(groep.slice(0, 3), soort).toEqual(["afspraken", "klanten", "mail"]);
+    }
+  });
+
+  it("de menu-items en de bestaande pagina's blijven bij elk dashboard passen", () => {
+    for (const pad of ["/werkgever/afspraken", "/werkgever/klanten"]) expect(dashboardVanPad(pad), pad).toBeNull();
   });
 
   it("de andere dashboards hebben geen personeelsfuncties", () => {

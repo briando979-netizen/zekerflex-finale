@@ -25,6 +25,7 @@ import { werkruimteVan } from "@/lib/werkgever/werkruimte-server";
 import { kennisbankIngesteld } from "@/lib/kennisbank/outline";
 import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
 import { featureEnabled } from "@/lib/flags";
+import { heeftAfspraken } from "@/lib/afspraken/in-menu";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +74,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
 
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
-  const [tenant, rating, avatars, birthday, werkruimte] = await Promise.all([
+  const [tenant, rating, avatars, birthday, werkruimte, metAfspraken] = await Promise.all([
     tenantId
       ? prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } })
       : Promise.resolve(null),
@@ -82,6 +83,8 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     birthdayToday(principal.userId).catch(() => false),
     // het open dashboard (personeel, rijschool, horeca, website, webshop) bepaalt het menu (lib/werkgever/werkruimte.ts)
     werkruimteVan(tenantId),
+    // staat Afspraken in het menu? Alleen als het bedrijf het heeft ingericht; een storing geeft false
+    heeftAfspraken(tenantId),
   ]);
   const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
 
@@ -119,6 +122,9 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     locatie: { href: "/werkgever/op-locatie", label: "Op locatie", icon: <IGrid /> },
     // per soort bedrijf een dashboard met alles wat erbij hoort (lib/branches)
     branche: { href: "/werkgever/branche", label: "Jouw branche", icon: <IList /> },
+    // alleen in het menu als het bedrijf afspraken heeft ingericht (lib/afspraken/in-menu.ts); "Klantenkaart", want horeca en rijschool hebben al een groep "Klanten en contact"
+    afspraken: { href: "/werkgever/afspraken", label: "Afspraken", icon: <ICalendar /> },
+    klanten: { href: "/werkgever/klanten", label: "Klantenkaart", icon: <IUsers /> },
   };
   // de netwerkpakketten zijn zonder uitrol uit te zetten (Admin → Systeem → Schakelaars)
   const netwerkAan = await featureEnabled("netwerk-pakketten", { userId: principal.userId });
@@ -128,6 +134,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
   // de beheerder: studio, rijschool- en horecabeheer, dashboards toevoegen
   const beheerder = hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN");
   const nav: NavItem[] = menuVoor(werkruimte.soort, {
+    heeftAfspraken: metAfspraken,
     heeftRijschool: werkruimte.heeftRijschool,
     heeftHoreca: werkruimte.heeftHoreca,
     horecaModules: werkruimte.horecaModules,

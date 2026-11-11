@@ -183,7 +183,9 @@ export type MenuSleutel =
   | "kennisbank"
   | "assistent"
   | "locatie"
-  | "branche";
+  | "branche"
+  | "afspraken"
+  | "klanten";
 
 export type MenuSectie = "beheer" | "klanten" | "administratie" | "rijschool" | "horeca";
 
@@ -202,6 +204,8 @@ export interface MenuPlek {
 }
 
 export interface MenuOpties {
+  /** het bedrijf heeft afspraken ingericht (lib/afspraken/in-menu.ts): dan staan Afspraken en Klantenkaart in het menu, anders niet */
+  heeftAfspraken: boolean;
   /** de rijschool is ingericht (anders alleen de ingang om hem in te richten) */
   heeftRijschool: boolean;
   /** de horecazaak is ingericht */
@@ -226,12 +230,14 @@ const plek = (sectie?: MenuSectie) => (sleutel: MenuSleutel): MenuPlek => (secti
 export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
   // ZekerFlex Bank staat uit (lib/app-mode.ts, BANK_AAN)
   const bank: MenuSleutel[] = o.inApp || !BANK_AAN ? [] : ["bank"];
+  // Afspraken en de Klantenkaart staan er alleen als het bedrijf afspraken heeft ingericht (anders is de ingang de tegel in Jouw branche)
+  const afspraken: MenuSleutel[] = o.heeftAfspraken ? ["afspraken", "klanten"] : [];
   switch (soort) {
     case "personeel":
       // het gewone werkgeversmenu, zonder de onderdelen van de andere dashboards
       return [
         { sleutel: "start" },
-        ...(["klussen", "kalender", "planner", "agenda", ...bank, "favorieten", "berichten", "assistent", "mail", "whatsapp", "geblokkeerd"] as MenuSleutel[]).map(plek()),
+        ...(["klussen", "kalender", "planner", "agenda", ...afspraken, ...bank, "favorieten", "berichten", "assistent", "mail", "whatsapp", "geblokkeerd"] as MenuSleutel[]).map(plek()),
         ...(["uren", "inchecken", "facturen", "rapportages", "compliance", "overeenkomsten", "bedrijf", "telefonie", "reviews", "netwerk", "locatie", "branche", "kennisbank"] as MenuSleutel[]).map(plek("beheer")),
       ];
     case "rijschool":
@@ -240,7 +246,7 @@ export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
         ...(o.heeftRijschool
           ? RIJSCHOOL_TABS.map((tab): MenuPlek => ({ sleutel: "rijschool", tab }))
           : [{ sleutel: "rijschool" as const }]),
-        ...(["mail", "whatsapp", "telefonie", "reviews"] as MenuSleutel[]).map(plek("klanten")),
+        ...([...afspraken, "mail", "whatsapp", "telefonie", "reviews"] as MenuSleutel[]).map(plek("klanten")),
         ...(["facturen", "rapportages", ...bank, "bedrijf", "branche", "kennisbank"] as MenuSleutel[]).map(plek("administratie")),
       ];
     case "horeca":
@@ -248,7 +254,7 @@ export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
         ...(o.heeftHoreca
           ? horecaTabs(o.horecaModules ?? []).map((tab): MenuPlek => ({ sleutel: "horeca", tab }))
           : [{ sleutel: "horeca" as const }]),
-        ...(["mail", "whatsapp", "telefonie", "reviews", "netwerk", "locatie"] as MenuSleutel[]).map(plek("klanten")),
+        ...([...afspraken, "mail", "whatsapp", "telefonie", "reviews", "netwerk", "locatie"] as MenuSleutel[]).map(plek("klanten")),
         ...(["facturen", "rapportages", ...bank, "bedrijf", "branche", "kennisbank"] as MenuSleutel[]).map(plek("administratie")),
       ];
     default:
@@ -256,7 +262,7 @@ export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
       return [
         ...(o.studio ? [{ sleutel: soort === "webshop" ? ("winkel" as const) : ("studio" as const) }] : [{ sleutel: "start" as const }]),
         { sleutel: "website" },
-        ...(["mail", "whatsapp", "telefonie", "reviews"] as MenuSleutel[]).map(plek("klanten")),
+        ...([...afspraken, "mail", "whatsapp", "telefonie", "reviews"] as MenuSleutel[]).map(plek("klanten")),
         ...(["facturen", "rapportages", ...bank, "bedrijf", "branche", "kennisbank"] as MenuSleutel[]).map(plek("administratie")),
       ];
   }
