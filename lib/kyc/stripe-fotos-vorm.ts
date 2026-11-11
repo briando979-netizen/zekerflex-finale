@@ -17,6 +17,7 @@ const bestand = (v: unknown): string | null => (typeof v === "string" && /^file_
 export function stripeBestandId(rapport: unknown, welk: FotoSoort): string | null {
   const r = obj(rapport);
   if (welk === "selfie") return bestand(obj(r?.selfie)?.selfie);
+  if (welk === "selfie2") return null; // alleen bij de eigen controle
   const files = obj(r?.document)?.files;
   if (!Array.isArray(files)) return null;
   return bestand(files[welk === "front" ? 0 : 1]);

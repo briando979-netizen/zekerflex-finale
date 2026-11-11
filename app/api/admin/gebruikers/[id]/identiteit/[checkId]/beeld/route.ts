@@ -10,7 +10,8 @@ import { stripeIdFoto } from "@/lib/kyc/stripe-fotos";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const welkSchema = z.enum(["front", "back", "selfie"]);
+const welkSchema = z.enum(["front", "back", "selfie", "selfie2"]);
+const WELK_LABEL = { front: "voorkant", back: "achterkant", selfie: "selfie", selfie2: "tweede selfie (hoofd gedraaid)" } as const;
 
 // GET /api/admin/gebruikers/<id>/identiteit/<checkId>/beeld?welk=front|back|selfie — een foto van een
 // eigen ID-controle (lib/onboarding/verify.ts zet de upload-id's in rawPayload.uploadIds) voor de
@@ -44,7 +45,7 @@ export const GET = withAdminAccess<{ id: string; checkId: string }>(["PLATFORM_A
     severity: "info",
     actorUserId: principal.userId,
     actorLabel: "user",
-    summary: `${principal.email} bekeek de ${welk === "front" ? "voorkant" : welk === "back" ? "achterkant" : "selfie"} van een identiteitscontrole`,
+    summary: `${principal.email} bekeek de ${WELK_LABEL[welk]} van een identiteitscontrole`,
     targetType: "user",
     targetId: params.id,
     metadata: { checkId: check.id, welk, bron: check.provider === "STRIPE_IDENTITY" ? "stripe" : "eigen" },

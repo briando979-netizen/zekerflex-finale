@@ -7,11 +7,13 @@
 // (app/api/admin/gebruikers/[id]/identiteit/[checkId]/beeld).
 // ---------------------------------------------------------------------------
 
-export type FotoSoort = "front" | "back" | "selfie";
+/** selfie2: de tweede selfie met een gedraaid hoofd (bewegingscontrole van b3, lib/kyc/gezicht/beweging.ts) */
+export type FotoSoort = "front" | "back" | "selfie" | "selfie2";
 export const FOTO_SOORTEN: { id: FotoSoort; label: string }[] = [
   { id: "front", label: "Voorkant" },
   { id: "back", label: "Achterkant" },
   { id: "selfie", label: "Selfie" },
+  { id: "selfie2", label: "Selfie, hoofd gedraaid" },
 ];
 
 export const PROVIDER_LABEL: Record<string, string> = {
@@ -42,7 +44,7 @@ export interface IdControleWeergave {
   /** Stripe Identity: de sessie (de foto's staan bij Stripe) */
   stripe: { sessieId: string; naamOpDocument: string | null; naamKlopt: boolean | null; reden: string | null } | null;
   /** de eigen gezichtscontrole (lib/kyc/gezicht, b3): pasfoto op het document tegen de selfie */
-  gezicht: { oordeel: string; procent: number | null; technisch: boolean; automatisch: boolean } | null;
+  gezicht: { oordeel: string; procent: number | null; technisch: boolean; automatisch: boolean; beweging: string | null } | null;
 }
 
 const GEZICHT_OORDEEL: Record<string, string> = {
@@ -50,6 +52,19 @@ const GEZICHT_OORDEEL: Record<string, string> = {
   twijfel: "twijfel",
   anders: "lijkt een ander persoon",
   onbruikbaar: "niet te meten (foto onbruikbaar)",
+};
+
+// rawPayload.gezicht.beweging.oordeel: draaide het hoofd echt op de tweede selfie (tegen een foto of scherm als selfie)
+const BEWEGING_OORDEEL: Record<string, string> = {
+  ok: "hoofd echt gedraaid",
+  "niet-gedraaid": "hoofd niet gedraaid (mogelijk een foto of scherm)",
+  onnatuurlijk: "onnatuurlijke draai",
+  "niet-recht": "eerste selfie niet recht van voren",
+  "andere-persoon": "tweede selfie lijkt een ander persoon",
+  "geen-gezicht": "geen gezicht op de tweede selfie",
+  "te-onzeker": "te onzeker om te beoordelen",
+  "niet-aangeleverd": "geen tweede selfie meegestuurd",
+  "niet-beoordeeld": "niet beoordeeld",
 };
 
 const obj = (v: unknown): Record<string, unknown> | null => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
@@ -63,7 +78,7 @@ const LEEFTIJD: Record<string, string> = { volwassen: "18 jaar of ouder", minder
 export function idControleWeergave(provider: string, rawPayload: unknown, sessionId: string | null = null, faceMatchScore: number | null = null): IdControleWeergave {
   const p = obj(rawPayload) ?? {};
   const ids = obj(p.uploadIds) ?? {};
-  const fotos = (["front", "back", "selfie"] as const).filter((k) => typeof ids[k] === "string" && (ids[k] as string).length > 0);
+  const fotos = (["front", "back", "selfie", "selfie2"] as const).filter((k) => typeof ids[k] === "string" && (ids[k] as string).length > 0);
 
   const regels: ControleRegel[] = Array.isArray(p.checks)
     ? (p.checks as unknown[]).flatMap((c) => {
@@ -152,8 +167,10 @@ export function idControleWeergave(provider: string, rawPayload: unknown, sessio
         }
       : null;
 
-  // rawPayload.gezicht = { oordeel, score (cosinus 0-1), technisch, automatisch, ms }; anders de kolom faceMatchScore
+  // rawPayload.gezicht = { oordeel, score (cosinus 0-1), technisch, automatisch, ms, beweging: { oordeel, verschil } }; anders de kolom faceMatchScore
   const g = obj(p.gezicht);
+  const bw = obj(g?.beweging);
+  const bwVerschil = typeof bw?.verschil === "number" ? ` (draai ${Math.round(bw.verschil * 100)}%)` : "";
   const score = typeof g?.score === "number" ? g.score : typeof faceMatchScore === "number" ? faceMatchScore : null;
   const gezicht =
     g || score != null
@@ -162,6 +179,7 @@ export function idControleWeergave(provider: string, rawPayload: unknown, sessio
           procent: score != null ? Math.round(score * 100) : null,
           technisch: g?.technisch === true,
           automatisch: g?.automatisch === true,
+          beweging: bw ? `${BEWEGING_OORDEEL[String(bw.oordeel)] ?? String(bw.oordeel ?? "onbekend")}${bw.oordeel === "ok" || bw.oordeel === "niet-gedraaid" || bw.oordeel === "onnatuurlijk" ? bwVerschil : ""}` : null,
         }
       : null;
 

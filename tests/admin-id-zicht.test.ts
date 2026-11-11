@@ -93,14 +93,29 @@ describe("de routes en het scherm", () => {
 describe("de gezichtscontrole in beeld", () => {
   it("oordeel en percentage uit rawPayload.gezicht, anders uit de kolom faceMatchScore", () => {
     const w = idControleWeergave("AI_LOCAL", { gezicht: { oordeel: "zelfde", score: 0.6234, technisch: false, automatisch: true, ms: 420 } });
-    expect(w.gezicht).toEqual({ oordeel: "zelfde persoon", procent: 62, technisch: false, automatisch: true });
+    expect(w.gezicht).toEqual({ oordeel: "zelfde persoon", procent: 62, technisch: false, automatisch: true, beweging: null });
     expect(idControleWeergave("AI_LOCAL", { gezicht: { oordeel: "onbruikbaar", score: null, technisch: true, automatisch: false } }).gezicht).toEqual({
       oordeel: "niet te meten (foto onbruikbaar)",
       procent: null,
       technisch: true,
       automatisch: false,
+      beweging: null,
     });
     expect(idControleWeergave("AI_LOCAL", {}, null, 0.41).gezicht?.procent).toBe(41);
     expect(idControleWeergave("AI_LOCAL", {}).gezicht).toBeNull();
+  });
+
+  it("de bewegingscontrole (tweede selfie met gedraaid hoofd): oordeel, draai en de foto zelf", () => {
+    const w = idControleWeergave("AI_LOCAL", {
+      uploadIds: { front: "a", back: "b", selfie: "c", selfie2: "d" },
+      gezicht: { oordeel: "zelfde", score: 0.7, technisch: false, automatisch: true, beweging: { oordeel: "ok", verschil: 0.27 } },
+    });
+    expect(w.fotos).toEqual(["front", "back", "selfie", "selfie2"]);
+    expect(w.gezicht?.beweging).toBe("hoofd echt gedraaid (draai 27%)");
+    expect(fotoUploadId({ uploadIds: { selfie2: "d" } }, "selfie2")).toBe("d");
+    const nep = idControleWeergave("AI_LOCAL", { gezicht: { oordeel: "zelfde", score: 0.8, beweging: { oordeel: "niet-gedraaid", verschil: 0.03 } } });
+    expect(nep.gezicht?.beweging).toBe("hoofd niet gedraaid (mogelijk een foto of scherm) (draai 3%)");
+    expect(idControleWeergave("AI_LOCAL", { gezicht: { oordeel: "zelfde", beweging: { oordeel: "niet-aangeleverd", verschil: null } } }).gezicht?.beweging).toBe("geen tweede selfie meegestuurd");
+    expect(lees("app/api/admin/gebruikers/[id]/identiteit/[checkId]/beeld/route.ts")).toMatch(/z\.enum\(\["front", "back", "selfie", "selfie2"\]\)/);
   });
 });

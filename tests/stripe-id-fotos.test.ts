@@ -47,6 +47,7 @@ describe("welk Stripe-bestand bij welke foto", () => {
     expect(stripeBestandId(rapport, "front")).toBe("file_voor1");
     expect(stripeBestandId(rapport, "back")).toBe("file_achter2");
     expect(stripeBestandId(rapport, "selfie")).toBe("file_gezicht3");
+    expect(stripeBestandId(rapport, "selfie2")).toBeNull(); // de tweede selfie bestaat alleen bij de eigen controle
   });
 
   it("een paspoort heeft geen achterkant; zonder rechten of rapport: niets", () => {

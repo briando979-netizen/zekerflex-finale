@@ -181,7 +181,7 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
     c.provider === "STRIPE_IDENTITY" && Boolean(stripeSleutel) && Boolean(c.sessionId) && STRIPE_MET_RAPPORT.has(c.decisionStatus ?? "");
   const fotosVan = (c: (typeof user.identityChecks)[number]): FotoSoort[] =>
     stripeFotosVan(c)
-      ? FOTO_SOORTEN.map((f) => f.id).filter((f) => !(f === "back" && c.documentType === "PASSPORT"))
+      ? FOTO_SOORTEN.map((f) => f.id).filter((f) => f !== "selfie2" && !(f === "back" && c.documentType === "PASSPORT"))
       : idControleWeergave(c.provider, c.rawPayload).fotos;
   // geen profielfoto: dan de selfie van de nieuwste (liefst goedgekeurde) ID-controle
   const metSelfie = user.identityChecks.filter((c) => (stripeFotosVan(c) ? true : Boolean(fotoUploadId(c.rawPayload, "selfie"))));
@@ -393,7 +393,7 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                         <Pill tone={status.tone}>{status.label}</Pill>
                       </div>
                       {fotos.length > 0 && (
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className={`grid gap-2 ${fotos.length > 3 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
                           {FOTO_SOORTEN.filter((f) => fotos.includes(f.id)).map((f) => (
                             <IdFoto key={f.id} src={`/api/admin/gebruikers/${user.id}/identiteit/${c.id}/beeld?welk=${f.id}`} label={f.label} />
                           ))}
@@ -431,6 +431,11 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                               {w.gezicht.procent != null ? ` (${w.gezicht.procent}%)` : ""}
                               {w.gezicht.technisch ? " · de gezichtscontrole kon niet draaien" : ""}
                               {w.gezicht.automatisch ? " · deze controle keurde zelf goed" : ""}
+                            </p>
+                          )}
+                          {w.gezicht?.beweging && (
+                            <p>
+                              Beweging (tweede selfie): <strong>{w.gezicht.beweging}</strong>
                             </p>
                           )}
                           {w.ai && (
