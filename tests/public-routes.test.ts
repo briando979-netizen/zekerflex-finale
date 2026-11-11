@@ -81,6 +81,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/agent/horeca/de-zaak/beschikbaarheid", // free times for a day
     "/api/agent/horeca/de-zaak/reserveringen", // book a table (rate-limited, same capacity check as the own site)
     "/api/agent/horeca/reserveringen/token", // view or cancel with the signed cancel link
+    "/api/checklist/abcdefghijklmnopqrstuvwxyz012345", // personeel zonder account vult een checklist in; de sleutel in het adres is het bewijs
   ];
   it.each(cases)("%s is public", (path) => {
     expect(isPublicApiRoute(path)).toBe(true);
@@ -132,6 +133,10 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/werkgever/offertes/o0123456789ab",
     "/api/offertes", // alleen /api/offerte-link/<token> is openbaar
     "/api/offerte-linkje", // geen lookalike
+    "/api/werkgever/checklists", // het checklistbeheer van een bedrijf: alleen met een sessie
+    "/api/werkgever/checklists/uitvoeringen", // wie wat deed (namen van personeel): alleen met een sessie
+    "/api/werkgever/checklists/uitvoerders",
+    "/api/checklists", // alleen /api/checklist/<sleutel> is openbaar, geen lookalike
   ];
   it.each(cases)("%s is not public", (path) => {
     expect(isPublicApiRoute(path)).toBe(false);

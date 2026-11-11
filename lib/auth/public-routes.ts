@@ -66,6 +66,7 @@ const PUBLIC_PREFIXES = [
   "/api/boeken", // de boekpagina van een bedrijf (kapper, salon, praktijk …): vrije tijden lezen en een afspraak boeken; per boekadres een eigen pagina, IP-begrensd, verborgen botveld en toestemming verplicht; alleen wat een klant nodig heeft, nooit de afspraken of klanten van het bedrijf (lib/afspraken). Het beheer (/api/werkgever/afspraken en /api/werkgever/klanten) blijft achter de login
   "/api/terminal", // het incheckscherm bij de ingang (tablet zonder login): de sleutel in het adres is het bewijs, alleen als hash bewaard, IP-begrensd (lib/incheck/store.ts)
   "/api/offerte-link", // een klant bekijkt een offerte en accepteert of wijst af: de geheime link (32 tekens, alleen als hash bewaard) is de sleutel, IP-begrensd, verborgen botveld, alleen wat de klant zelf mag zien (lib/offertes). Het beheer (/api/werkgever/offertes) blijft achter de login
+  "/api/checklist", // personeel zonder account vult een checklist in (schoonmaak, horeca, hotel): de sleutel in het adres is het bewijs, alleen als hash bewaard en intrekbaar, IP- en per-link-begrensd, verborgen botveld; geeft alleen de taken van dat ene sjabloon (lib/checklists). Het beheer (/api/werkgever/checklists) blijft achter de login
 ] as const;
 
 const PUBLIC_EXACT = new Set<string>([
