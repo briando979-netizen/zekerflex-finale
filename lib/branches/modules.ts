@@ -83,34 +83,40 @@ export interface Koppeling {
   naar: string;
   /** wat de koppeling voor het bedrijf doet, gewone zinnen */
   wat: string;
+  /**
+   * Is de koppeling zelf gebouwd? Beide kanten klaar is niet genoeg: dat twee modules bestaan, betekent niet dat ze
+   * elkaar iets doorgeven. Pas op true als je het in de code kunt aanwijzen; dit is wat een klant als "werkt al" leest.
+   */
+  gebouwd: boolean;
 }
 
+const koppel = (id: string, van: string, naar: string, wat: string, gebouwd: boolean): Koppeling => ({ id, van, naar, wat, gebouwd });
+
 /**
- * Hoe de modules aan elkaar hangen. Alleen wat echt zo werkt, of (bij een gepland uiteinde) wat het ontwerp is.
- * Of een koppeling al werkt, volgt uit de status van beide kanten: zie koppelingWerkt().
+ * Hoe de modules aan elkaar hangen. Of een koppeling werkt, zie koppelingWerkt(): gebouwd én beide kanten klaar.
  */
 export const KOPPELINGEN: readonly Koppeling[] = [
-  { id: "flexwerk-rooster", van: "flexwerk", naar: "rooster", wat: "Een aangenomen klus staat op het rooster." },
-  { id: "rooster-inchecken", van: "rooster", naar: "inchecken", wat: "Wie op het rooster staat, checkt op de plek in." },
-  { id: "inchecken-uren", van: "inchecken", naar: "uren", wat: "Een check-in wordt een urenstaat om goed te keuren." },
-  { id: "uren-facturen", van: "uren", naar: "facturen", wat: "Goedgekeurde uren worden vanzelf een factuur." },
-  { id: "certificaten-flexwerk", van: "certificaten", naar: "flexwerk", wat: "Bij het zoeken van werkers telt mee wie het juiste certificaat heeft." },
-  { id: "horeca-flexwerk", van: "horeca-beheer", naar: "flexwerk", wat: "Personeel via ZekerFlex staat als onderdeel in je zaak." },
-  { id: "horeca-kaart", van: "horeca-beheer", naar: "kaart", wat: "Een zaak met een openbare site staat als stip op de kaart." },
-  { id: "rijschool-website", van: "rijschool-beheer", naar: "website", wat: "De site van de rijschool wordt in het beheer ingericht." },
-  { id: "webshop-kassa", van: "webshop", naar: "kassa-winkel", wat: "Een verkoop aan de balie is dezelfde bestelling als een online bestelling." },
-  // ontwerp: werkt zodra de gebouwde en geplande kant er allebei zijn
-  { id: "afspraken-klantenkaart", van: "afspraken", naar: "klantenkaart", wat: "Elke afspraak komt op de kaart van de klant." },
-  { id: "afspraken-berichten", van: "afspraken", naar: "berichten", wat: "Een herinnering of verzetten gaat via de chat." },
-  { id: "offertes-werkbonnen", van: "offertes", naar: "werkbonnen", wat: "Een geaccepteerde offerte wordt een werkbon." },
-  { id: "werkbonnen-uren", van: "werkbonnen", naar: "uren", wat: "De uren op een werkbon worden uren om goed te keuren." },
-  { id: "werkbonnen-facturen", van: "werkbonnen", naar: "facturen", wat: "Een afgeronde werkbon wordt een factuur." },
-  { id: "lidmaatschappen-facturen", van: "lidmaatschappen", naar: "facturen", wat: "Een abonnement van een klant wordt elke periode een factuur." },
-  { id: "voorraad-webshop", van: "voorraad", naar: "webshop", wat: "Wat uitverkocht is, kan niet meer besteld worden." },
-  { id: "ritten-uren", van: "ritten", naar: "uren", wat: "De tijd van een rit wordt het urenstaatje van de chauffeur." },
+  koppel("flexwerk-rooster", "flexwerk", "rooster", "Een aangenomen klus staat op het rooster.", true),
+  koppel("rooster-inchecken", "rooster", "inchecken", "Wie op het rooster staat, checkt op de plek in.", true),
+  koppel("inchecken-uren", "inchecken", "uren", "Een check-in wordt een urenstaat om goed te keuren.", true),
+  koppel("uren-facturen", "uren", "facturen", "Goedgekeurde uren worden vanzelf een factuur.", true),
+  koppel("certificaten-flexwerk", "certificaten", "flexwerk", "Bij het zoeken van werkers telt mee wie het juiste certificaat heeft.", true),
+  koppel("horeca-flexwerk", "horeca-beheer", "flexwerk", "Personeel via ZekerFlex staat als onderdeel in je zaak.", true),
+  koppel("horeca-kaart", "horeca-beheer", "kaart", "Een zaak met een openbare site staat als stip op de kaart.", true),
+  koppel("rijschool-website", "rijschool-beheer", "website", "De site van de rijschool wordt in het beheer ingericht.", true),
+  koppel("webshop-kassa", "webshop", "kassa-winkel", "Een verkoop aan de balie is dezelfde bestelling als een online bestelling.", true),
+  koppel("afspraken-klantenkaart", "afspraken", "klantenkaart", "Elke afspraak komt op de kaart van de klant.", true),
+  // ontwerp: nog niet gebouwd, ook niet waar beide kanten er al zijn
+  koppel("afspraken-berichten", "afspraken", "berichten", "Een herinnering of verzetten gaat via de chat.", false),
+  koppel("offertes-werkbonnen", "offertes", "werkbonnen", "Een geaccepteerde offerte wordt een werkbon.", false),
+  koppel("werkbonnen-uren", "werkbonnen", "uren", "De uren op een werkbon worden uren om goed te keuren.", false),
+  koppel("werkbonnen-facturen", "werkbonnen", "facturen", "Een afgeronde werkbon wordt een factuur.", false),
+  koppel("lidmaatschappen-facturen", "lidmaatschappen", "facturen", "Een abonnement van een klant wordt elke periode een factuur.", false),
+  koppel("voorraad-webshop", "voorraad", "webshop", "Wat uitverkocht is, kan niet meer besteld worden.", false),
+  koppel("ritten-uren", "ritten", "uren", "De tijd van een rit wordt het urenstaatje van de chauffeur.", false),
 ];
 
-/** Een koppeling werkt pas als beide kanten klaar zijn. */
+/** Een koppeling werkt als hij zelf gebouwd is én beide kanten klaar zijn. */
 export function koppelingWerkt(k: Koppeling): boolean {
-  return moduleVan(k.van)?.status === "klaar" && moduleVan(k.naar)?.status === "klaar";
+  return k.gebouwd && moduleVan(k.van)?.status === "klaar" && moduleVan(k.naar)?.status === "klaar";
 }

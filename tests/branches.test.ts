@@ -55,6 +55,14 @@ describe("koppelingen", () => {
     }
   });
 
+  it("een koppeling waarvan beide kanten klaar zijn maar die zelf niet gebouwd is, werkt niet (nooit meer claimen dan er is)", () => {
+    const ongebouwd = KOPPELINGEN.filter((k) => !k.gebouwd);
+    expect(ongebouwd.length).toBeGreaterThan(0);
+    for (const k of ongebouwd) expect(koppelingWerkt(k), k.id).toBe(false);
+    // een gebouwde koppeling waarvan een kant nog gepland is, werkt ook niet
+    for (const k of KOPPELINGEN.filter((x) => x.gebouwd)) expect(["klaar"], k.id).toContain(moduleVan(k.van)?.status);
+  });
+
   it("werkt pas als beide kanten klaar zijn", () => {
     const uren = KOPPELINGEN.find((k) => k.id === "uren-facturen")!;
     const werkbon = KOPPELINGEN.find((k) => k.id === "werkbonnen-uren")!;
@@ -103,7 +111,8 @@ describe("branches", () => {
     // afspraken en de klantenkaart zijn allebei klaar: die koppeling werkt in de kapper-branche
     const kapper = koppelingenVan(brancheVan("kapper-schoonheid")!);
     expect(kapper.find((k) => k.koppeling.id === "afspraken-klantenkaart")?.werkt).toBe(true);
-    expect(kapper.find((k) => k.koppeling.id === "afspraken-berichten")?.werkt).toBe(true);
+    // beide kanten zijn klaar, maar de koppeling zelf (herinneringen via de chat) is niet gebouwd: dus werkt hij niet
+    expect(kapper.find((k) => k.koppeling.id === "afspraken-berichten")?.werkt).toBe(false);
     const bouw = koppelingenVan(brancheVan("bouw-installatie")!);
     expect(bouw.find((k) => k.koppeling.id === "werkbonnen-uren")?.werkt).toBe(false);
     expect(bouw.find((k) => k.koppeling.id === "offertes-werkbonnen")?.werkt).toBe(false);
