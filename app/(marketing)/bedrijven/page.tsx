@@ -16,6 +16,7 @@ import { FaqList } from "@/components/marketing/primitives";
 import { Marquee } from "@/components/marketing/Marquee";
 import { BranchShowcase } from "@/components/marketing/BranchShowcase";
 import { AanbodKiezer } from "@/components/marketing/AanbodKiezer";
+import { BedrijvenVoordeur } from "@/components/marketing/BedrijvenVoordeur";
 import { env } from "@/lib/env";
 import { AppDownload } from "@/components/marketing/AppDownload";
 import { faqJsonLd, serviceJsonLd, SITE } from "@/lib/seo";
@@ -96,6 +97,8 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
       </section>
 
       ),
+      // voordeur: wat wil je doen?
+      voordeur: <BedrijvenVoordeur />,
       // aanbod: waar ben je naar op zoek?
       aanbod: (
       <AanbodKiezer />

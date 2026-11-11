@@ -9,6 +9,7 @@ import { normalizeBlok, type Blok } from "@/lib/ontwerp/paginas";
 // ---------------------------------------------------------------------------
 
 export const HOME_SECTIES = [
+  { id: "voordeur", naam: "Wat wil je doen?", uitleg: "Vijf tegels met foto: personeel, website, webshop, horeca of rijschool" },
   { id: "vertrouwen", naam: "Vertrouwensbalk", uitleg: "KVK, KYC, SEPA en de lopende band met voordelen" },
   { id: "aanbod", naam: "Waar ben je naar op zoek?", uitleg: "De keuze tussen personeel, software, website en meer" },
   { id: "branches", naam: "Branches", uitleg: "Horeca, logistiek, retail … met tarieven" },
@@ -61,7 +62,8 @@ export function normalizeHomeIndeling(raw: unknown): HomeIndeling {
   const bekend = new Set<string>([...IDS, ...eigen.map(eigenSleutel)]);
   const volgorde: HomeItem[] = [];
   for (const v of Array.isArray(r.volgorde) ? r.volgorde : []) if (typeof v === "string" && bekend.has(v) && !volgorde.includes(v as HomeItem)) volgorde.push(v as HomeItem);
-  for (const id of [...IDS, ...eigen.map(eigenSleutel)]) if (!volgorde.includes(id)) volgorde.push(id);
+  // een nieuw vast blok komt achteraan, behalve de voordeur: die hoort bovenaan ook bij een eigen volgorde
+  for (const id of [...IDS, ...eigen.map(eigenSleutel)]) if (!volgorde.includes(id)) (id === "voordeur" ? volgorde.unshift(id) : volgorde.push(id));
   const ruwVerborgen = Array.isArray(r.verborgen) ? r.verborgen : [];
   const verborgen = volgorde.filter((id) => ruwVerborgen.includes(id));
   return { volgorde, verborgen, eigen };

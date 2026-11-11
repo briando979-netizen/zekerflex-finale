@@ -45,3 +45,4 @@ Een foto toevoegen: bestand hier neerzetten, een regel in `fotos.ts` en een rege
 | `app-telefoon-warm.jpg` | app | Pexels #30677594 — https://www.pexels.com/photo/30677594/ |
 | `zorg-bewoners.jpg` | zorg | Pexels #18429308 — https://www.pexels.com/photo/18429308/ |
 | `zorg-patient.jpg` | zorg | Pexels #18459702 — https://www.pexels.com/photo/18459702/ |
+| `rijschool-achter-het-stuur.jpg` | rijschool | Pexels #6816982 — https://www.pexels.com/photo/6816982/ |

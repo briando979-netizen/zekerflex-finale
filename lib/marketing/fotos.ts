@@ -7,7 +7,7 @@
 // bestand bestaat, een JPEG is en in CREDITS.md staat.
 // ---------------------------------------------------------------------------
 
-export type FotoThema = "horeca" | "logistiek" | "bezorgen" | "retail" | "team" | "jong" | "app" | "zorg";
+export type FotoThema = "horeca" | "logistiek" | "bezorgen" | "retail" | "team" | "jong" | "app" | "zorg" | "rijschool";
 
 export interface Foto {
   /** bestandsnaam zonder map en zonder .jpg */
@@ -34,6 +34,7 @@ export const FOTOTHEMA_NAAM: Record<FotoThema, string> = {
   jong: "Jong en energiek",
   app: "De app",
   zorg: "Zorg",
+  rijschool: "Rijschool",
 };
 
 export const FOTOS: readonly Foto[] = [
@@ -71,6 +72,7 @@ export const FOTOS: readonly Foto[] = [
   { slug: "app-telefoon-lacht", thema: "app", pexels: 3756618, alt: "Een vrouw toont lachend een telefoon, het scherm is leeg", trefwoorden: ["app", "telefoon", "klus"] },
   { slug: "app-telefoon-oranje", thema: "app", pexels: 3767404, alt: "Een vrouw in een oranje trui kijkt lachend op haar telefoon tegen een groene muur", trefwoorden: ["app", "telefoon", "melding"] },
   { slug: "app-telefoon-warm", thema: "app", pexels: 30677594, alt: "Een vrouw zwaait vrolijk met haar telefoon tegen een warme achtergrond", trefwoorden: ["app", "telefoon", "uitbetaald"] },
+  { slug: "rijschool-achter-het-stuur", thema: "rijschool", pexels: 6816982, alt: "Een jonge vrouw in een rode jas zit lachend achter het stuur van een auto", trefwoorden: ["rijschool", "rijles", "rijbewijs", "auto", "leerling"] },
   { slug: "zorg-bewoners", thema: "zorg", pexels: 18429308, alt: "Een zorgmedewerker buigt vriendelijk naar bewoners aan tafel", trefwoorden: ["zorg", "verpleeg", "bewoners"] },
   { slug: "zorg-patient", thema: "zorg", pexels: 18459702, alt: "Een zorgmedewerker praat met een patiënt in een lichte kamer", trefwoorden: ["zorg", "thuiszorg", "patiënt", "verpleeg"] },
 ];

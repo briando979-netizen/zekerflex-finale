@@ -10,8 +10,8 @@ describe("homepage-indeling uit de Site-ontwerper", () => {
     expect(zichtbareSecties(undefined)).toEqual(ALLE);
     expect(zichtbareSecties(standaardHomeIndeling())).toEqual(ALLE);
     expect(isStandaardHomeIndeling(standaardHomeIndeling())).toBe(true);
-    // dezelfde volgorde als op de pagina vóór de ontwerper
-    expect(ALLE).toEqual(["vertrouwen", "aanbod", "branches", "hoe", "freelancers", "bedrijven", "werkvormen", "cijfers", "functies", "zekerheid", "citaat", "vragen", "app", "oproep"]);
+    // dezelfde volgorde als op de pagina vóór de ontwerper, met sinds 11 nov de voordeur "Wat wil je doen?" vooraan
+    expect(ALLE).toEqual(["voordeur", "vertrouwen", "aanbod", "branches", "hoe", "freelancers", "bedrijven", "werkvormen", "cijfers", "functies", "zekerheid", "citaat", "vragen", "app", "oproep"]);
   });
 
   it("verbergt en verplaatst", () => {
@@ -26,7 +26,9 @@ describe("homepage-indeling uit de Site-ontwerper", () => {
 
   it("onbekende en dubbele blokken vallen weg, ontbrekende komen achteraan", () => {
     const n = normalizeHomeIndeling({ volgorde: ["oproep", "onbekend", "oproep", 7], verborgen: ["onbekend", "faq", "vragen"] });
-    expect(n.volgorde[0]).toBe("oproep");
+    // de voordeur staat ook bij een eigen volgorde vooraan; daarna volgt wat de eigenaar koos
+    expect(n.volgorde[0]).toBe("voordeur");
+    expect(n.volgorde[1]).toBe("oproep");
     expect(n.volgorde.length).toBe(ALLE.length);
     expect(new Set(n.volgorde).size).toBe(ALLE.length);
     expect(n.verborgen).toEqual(["vragen"]);
