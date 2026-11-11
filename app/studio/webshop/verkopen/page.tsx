@@ -57,7 +57,7 @@ export default async function StudioVerkopenPage() {
               : "Alleen bedrijven met een gecontroleerd KVK-nummer verkopen in de ZekerFlex-shop. Zo weten kopers bij wie ze kopen."}
           </p>
           {!stand.inControle && (
-            <Link href="/werkgever" className={`${btn.primary} mt-4`}>
+            <Link href="/studio/webshop/bedrijf" className={`${btn.primary} mt-4`}>
               Bedrijf verifiëren
             </Link>
           )}

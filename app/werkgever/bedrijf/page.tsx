@@ -1,4 +1,5 @@
 import { requirePrincipal } from "@/lib/auth";
+import { naarStudioAccount } from "@/lib/studio/account-server";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { prisma } from "@/lib/prisma";
 import { getOrgProfileExtra } from "@/lib/profile/store";
@@ -27,6 +28,8 @@ function Stars({ n }: { n: number }) {
 export default async function WerkgeverBedrijfPage() {
   const c = (await getDict()).company;
   const principal = await requirePrincipal();
+  // dashboard website of webshop open: het account staat in de studio (lib/studio/account.ts)
+  await naarStudioAccount(principal, "bedrijf");
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
 
