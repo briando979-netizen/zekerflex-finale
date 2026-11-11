@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useStudio } from "@/components/studio/context";
 import { Card, ICheck, IChevron } from "@/components/studio/ui";
 import type { SiteStats } from "@/lib/sites/stats-shared";
+import { AAN_DE_SLAG_STAPPEN, type AdsStap } from "@/lib/onboarding/aan-de-slag";
 
 // ---------------------------------------------------------------------------
 // Gedeelde stukken van de twee overzichten (webshop en website): de groet, de
@@ -44,6 +45,9 @@ export function useEigenDomein(): boolean | null {
   }, [api]);
   return actief;
 }
+
+/** Een stap uit de gedeelde lijst (lib/onboarding/aan-de-slag.ts) als regel van de studio-lijst. */
+export const taakVan = (s: AdsStap): Taak => ({ klaar: s.done, tekst: AAN_DE_SLAG_STAPPEN[s.key].title, href: s.href });
 
 export interface Taak {
   klaar: boolean;

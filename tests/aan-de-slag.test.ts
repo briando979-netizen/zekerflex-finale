@@ -7,6 +7,7 @@ import {
   AAN_DE_SLAG_STAPPEN,
   horecaStappen,
   rijschoolStappen,
+  tabVanHref,
   webshopStappen,
   websiteStappen,
   type AanDeSlagSleutel,
@@ -15,23 +16,18 @@ import { berekenVoortgang } from "@/lib/onboarding/voortgang";
 import { isRijschoolTab } from "@/lib/rijschool/tabs";
 import { beoordeelTekst } from "@/lib/social/veilig";
 
-const pagina = (href: string) => {
-  const pad = href.split("?")[0] ?? href;
-  return existsSync(join(process.cwd(), "app", ...pad.split("/").filter(Boolean), "page.tsx"));
-};
-const tab = (href: string) => new URLSearchParams(href.split("?")[1] ?? "").get("tab");
+const pagina = (href: string) => existsSync(join(process.cwd(), "app", ...(href.split("?")[0] ?? "").split("/").filter(Boolean), "page.tsx"));
 
 const alle = () => [
-  ...websiteStappen({ aangemaakt: false, online: false, eigenDomein: false, bezoekers7d: 0 }),
-  ...webshopStappen({ aangemaakt: false, producten: 0, online: false, betalenKlaar: false, verzendingKlaar: false }),
-  ...horecaStappen({ menuItems: 0, tafels: 0, modules: ["bestellen", "reserveren"], online: false }),
-  ...rijschoolStappen({ leerlingenActief: 0, lessenKomendeWeek: 0, online: false, instructeurs: 0, pakketten: 0 }),
+  ...websiteStappen({ paginas: 1, logo: false, contactKlaar: false, online: false, eigenDomein: false }),
+  ...webshopStappen({ actieveProducten: 0, verzendingBetalenKlaar: false, bedrijfsgegevensKlaar: false, wettelijkePaginas: false, online: false, eigenDomein: false }),
+  ...horecaStappen({ menuItems: 0, adresEnTelefoon: false, modules: ["bestellen"], tafels: 0, apparaten: 0, online: false }),
+  ...rijschoolStappen({ pakketten: 0, werktijden: false, voertuigen: 0, kvkEnAdres: false, werkgebied: false, online: false }),
 ];
 
-describe("Aan de slag per product", () => {
-  it("elke stap heeft een titel en uitleg in gewoon Nederlands, en elke sleutel is gebruikt", () => {
-    const gebruikt = new Set<AanDeSlagSleutel>(alle().map((s) => s.key));
-    expect([...gebruikt].sort()).toEqual((Object.keys(AAN_DE_SLAG_STAPPEN) as AanDeSlagSleutel[]).sort());
+describe("Aan de slag: één lijst per dashboard", () => {
+  it("elke sleutel wordt gebruikt en heeft een titel en uitleg in gewoon Nederlands zonder verkeerde beloftes", () => {
+    expect(alle().map((s) => s.key).sort()).toEqual((Object.keys(AAN_DE_SLAG_STAPPEN) as AanDeSlagSleutel[]).sort());
     for (const [sleutel, t] of Object.entries(AAN_DE_SLAG_STAPPEN)) {
       expect(t.title.length, sleutel).toBeGreaterThan(8);
       expect(t.why.length, sleutel).toBeGreaterThan(30);
@@ -40,53 +36,75 @@ describe("Aan de slag per product", () => {
     for (const k of Object.values(AAN_DE_SLAG_KAART)) expect(k.title.startsWith("Aan de slag")).toBe(true);
   });
 
-  it("elke stap verwijst naar een bestaand scherm (en een bestaand tabblad)", () => {
+  it("elke stap verwijst naar een bestaand scherm en een bestaand tabblad", () => {
     for (const s of alle()) {
       expect(pagina(s.href), `${s.key}: ${s.href}`).toBe(true);
-      const t = tab(s.href);
+      const t = tabVanHref(s.href);
       if (s.href.startsWith("/werkgever/rijschool")) expect(isRijschoolTab(t), `${s.key}: ${t}`).toBe(true);
       if (s.href.startsWith("/werkgever/horeca")) expect(horecaTabs(["bestellen", "reserveren"]).some((x) => x.id === t), `${s.key}: ${t}`).toBe(true);
     }
+    expect(tabVanHref("/studio/website/bouwer")).toBeNull();
+    expect(tabVanHref("/werkgever/horeca?tab=menukaart")).toBe("menukaart");
   });
 
-  it("website: ontwerp gekozen en online telt, het eigen domein en de eerste bezoekers zijn tips", () => {
-    const v = berekenVoortgang(websiteStappen({ aangemaakt: true, online: false, eigenDomein: false, bezoekers7d: 0 }));
-    expect(v).toMatchObject({ done: 1, total: 2, klaar: false });
-    expect(v.volgende?.key).toBe("website-online");
-    const klaar = berekenVoortgang(websiteStappen({ aangemaakt: true, online: true, eigenDomein: false, bezoekers7d: 0 }));
-    expect(klaar.klaar).toBe(true);
-    expect(klaar.open.map((s) => s.key)).toEqual(["website-domein", "website-bezoek"]);
+  it("website: dezelfde vijf stappen en voorwaarden als het studio-overzicht (pagina's meer dan één, logo, contact, online, domein)", () => {
+    const s = websiteStappen({ paginas: 2, logo: true, contactKlaar: false, online: false, eigenDomein: false });
+    expect(s.map((x) => [x.key, x.done])).toEqual([
+      ["website-paginas", true],
+      ["website-logo", true],
+      ["website-contact", false],
+      ["website-online", false],
+      ["website-domein", false],
+    ]);
+    expect(websiteStappen({ paginas: 1, online: true }).find((x) => x.key === "website-paginas")?.done).toBe(false);
+    // eigen domein onbekend (nog aan het laden): geen stap
+    expect(websiteStappen({ paginas: 3, logo: true, contactKlaar: true, online: true, eigenDomein: null }).map((x) => x.key)).not.toContain("website-domein");
   });
 
-  it("een stap waarvan het feit onbekend is verschijnt niet (liever geen stap dan een eeuwig open stap)", () => {
-    const keys = webshopStappen({ aangemaakt: true, producten: 2, online: false }).map((s) => s.key);
-    expect(keys).toEqual(["webshop-ontwerp", "webshop-producten", "webshop-online"]);
-    expect(rijschoolStappen({ leerlingenActief: 0, lessenKomendeWeek: 0, online: false }).map((s) => s.key)).toEqual(["rijschool-leerlingen", "rijschool-agenda", "rijschool-online"]);
-    expect(websiteStappen({ aangemaakt: true, online: true }).map((s) => s.key)).toEqual(["website-ontwerp", "website-online"]);
+  it("webshop: zes stappen zoals het studio-overzicht; wettelijke pagina's tellen pas bij een online winkel", () => {
+    const basis = { actieveProducten: 3, verzendingBetalenKlaar: true, bedrijfsgegevensKlaar: true, wettelijkePaginas: true, eigenDomein: false } as const;
+    expect(webshopStappen({ ...basis, online: false }).map((x) => [x.key, x.done])).toEqual([
+      ["webshop-product", true],
+      ["webshop-verzending", true],
+      ["webshop-bedrijf", true],
+      ["webshop-wettelijk", false],
+      ["webshop-online", false],
+      ["webshop-domein", false],
+    ]);
+    expect(webshopStappen({ ...basis, online: true }).find((x) => x.key === "webshop-wettelijk")?.done).toBe(true);
+    expect(webshopStappen({ ...basis, actieveProducten: 0, online: false })[0]?.done).toBe(false);
   });
 
-  it("webshop: eerst producten, dan betalen en verzending, en pas dan online", () => {
-    const keys = webshopStappen({ aangemaakt: true, producten: 0, online: false, betalenKlaar: false, verzendingKlaar: false }).map((s) => s.key);
-    expect(keys).toEqual(["webshop-ontwerp", "webshop-producten", "webshop-betalen", "webshop-verzending", "webshop-online"]);
-    const v = berekenVoortgang(webshopStappen({ aangemaakt: true, producten: 3, online: false, betalenKlaar: true, verzendingKlaar: false }));
-    expect(v.volgende?.key).toBe("webshop-verzending");
-    expect(v.pct).toBe(60);
+  it("horeca: tafels zijn klaar als de module bestellen uit staat (zoals het live-tabblad); modules en schermen eigen stappen", () => {
+    const zonder = horecaStappen({ menuItems: 5, adresEnTelefoon: true, modules: ["reserveren"], tafels: 0, apparaten: 0, online: false });
+    expect(zonder.find((x) => x.key === "horeca-tafels")?.done).toBe(true);
+    const met = horecaStappen({ menuItems: 5, adresEnTelefoon: true, modules: ["bestellen"], tafels: 0, apparaten: 0, online: false });
+    expect(met.find((x) => x.key === "horeca-tafels")?.done).toBe(false);
+    expect(met.map((x) => x.key)).toEqual(["horeca-menukaart", "horeca-gegevens", "horeca-modules", "horeca-tafels", "horeca-scherm", "horeca-online"]);
+    expect(horecaStappen({ menuItems: 0, modules: [], online: false }).find((x) => x.key === "horeca-modules")?.done).toBe(false);
   });
 
-  it("horeca: tafels en QR alleen als de module bestellen aan staat; modules is een tip", () => {
-    expect(horecaStappen({ menuItems: 4, tafels: 0, modules: ["reserveren"], online: true }).map((s) => s.key)).toEqual(["horeca-menukaart", "horeca-modules", "horeca-online"]);
-    const met = horecaStappen({ menuItems: 4, tafels: 0, modules: ["bestellen"], online: true });
-    expect(met.map((s) => s.key)).toEqual(["horeca-menukaart", "horeca-tafels", "horeca-modules", "horeca-online"]);
-    expect(berekenVoortgang(met).volgende?.key).toBe("horeca-tafels");
-    expect(horecaStappen({ menuItems: 0, tafels: 0, modules: [], online: false }).find((s) => s.key === "horeca-modules")?.optioneel).toBe(true);
+  it("rijschool: zes stappen zoals het overzicht van het beheer", () => {
+    const s = rijschoolStappen({ pakketten: 2, werktijden: true, voertuigen: 0, kvkEnAdres: true, werkgebied: false, online: false });
+    expect(s.map((x) => [x.key, x.done])).toEqual([
+      ["rijschool-pakketten", true],
+      ["rijschool-werktijden", true],
+      ["rijschool-auto", false],
+      ["rijschool-gegevens", true],
+      ["rijschool-werkgebied", false],
+      ["rijschool-online", false],
+    ]);
   });
 
-  it("rijschool: volgorde van instructeurs tot online, en alles klaar = klaar", () => {
-    const klaar = berekenVoortgang(rijschoolStappen({ leerlingenActief: 5, lessenKomendeWeek: 12, online: true, instructeurs: 2, pakketten: 3 }));
-    expect(klaar).toMatchObject({ klaar: true, pct: 100 });
-    expect(klaar.open).toEqual([]);
-    const begin = berekenVoortgang(rijschoolStappen({ leerlingenActief: 0, lessenKomendeWeek: 0, online: false, instructeurs: 0, pakketten: 0 }));
-    expect(begin.volgende?.key).toBe("rijschool-team");
-    expect(begin.total).toBe(5);
+  it("een scherm dat maar een deel kent (het startscherm) krijgt alleen de stappen die het kan afvinken", () => {
+    expect(horecaStappen({ menuItems: 2, modules: ["bestellen"], tafels: 0, online: true }).map((x) => x.key)).toEqual(["horeca-menukaart", "horeca-modules", "horeca-tafels", "horeca-online"]);
+    expect(rijschoolStappen({ online: true }).map((x) => x.key)).toEqual(["rijschool-online"]);
+    expect(webshopStappen({ actieveProducten: 0, online: false }).map((x) => x.key)).toEqual(["webshop-product", "webshop-online"]);
+  });
+
+  it("past in de gedeelde voortgangskaart: optionele stappen tellen niet mee", () => {
+    const v = berekenVoortgang(websiteStappen({ paginas: 2, logo: true, contactKlaar: true, online: true, eigenDomein: false }));
+    expect(v).toMatchObject({ klaar: true, done: 4, total: 4 });
+    expect(v.open.map((s) => s.key)).toEqual(["website-domein"]);
   });
 });

@@ -2,6 +2,9 @@ import Link from "next/link";
 import type { Principal } from "@/lib/auth";
 import { WelcomeBack } from "@/components/app/WelcomeBack";
 import { KlusConceptNudge } from "@/components/app/KlusConceptNudge";
+import { OnboardingProgress } from "@/components/app/OnboardingProgress";
+import { AAN_DE_SLAG_KAART, AAN_DE_SLAG_STAPPEN, horecaStappen } from "@/lib/onboarding/aan-de-slag";
+import { berekenVoortgang } from "@/lib/onboarding/voortgang";
 import { KpiCard, PageHeader, Panel, money } from "@/components/app/ui";
 import { TegelRaster, type Tegel } from "@/components/app/werkruimte/Tegels";
 import { getEmployerOverview } from "@/lib/dashboard/employer";
@@ -221,6 +224,12 @@ async function HorecaVak(b: Basis) {
             </Link>
           </div>
         }
+      />
+      {/* dezelfde stappen als het live-tabblad van het horecabeheer (lib/onboarding/aan-de-slag.ts); het startscherm kent alleen wat de cijfers geven, de rest verschijnt in het beheer zelf */}
+      <OnboardingProgress
+        voortgang={berekenVoortgang(horecaStappen({ menuItems: h.menuItems, modules: h.modules, tafels: h.tafels, online: h.online }))}
+        steps={AAN_DE_SLAG_STAPPEN}
+        texts={AAN_DE_SLAG_KAART.horeca}
       />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {aan("reserveren") && <KpiCard label="Reserveringen vandaag" value={String(h.reserveringenVandaag)} hint={meervoud(h.gastenVandaag, "gast", "gasten")} />}

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useStudio } from "@/components/studio/context";
-import { AanDeSlag, Bezoekgrafiek, groet, useEigenDomein, useStats, type Taak } from "@/components/studio/OverzichtDelen";
+import { AanDeSlag, Bezoekgrafiek, groet, taakVan, useEigenDomein, useStats, type Taak } from "@/components/studio/OverzichtDelen";
 import { Card, IExternal, PageHead, Pill, Stat, btn } from "@/components/studio/ui";
+import { websiteStappen } from "@/lib/onboarding/aan-de-slag";
 
 // ---------------------------------------------------------------------------
 // Studio → Website → Overzicht: de "Aan de slag"-lijst, de bezoekers en de
@@ -18,13 +19,14 @@ export default function WebsiteOverzicht() {
   const stats = useStats();
   const eigenDomein = useEigenDomein();
   const b = site.bedrijf;
-  const taken: Taak[] = [
-    { klaar: site.pages.length > 1, tekst: "Vul je pagina's met eigen teksten en foto's", href: `${B}/bouwer` },
-    { klaar: Boolean(site.theme.logo), tekst: "Voeg je logo toe", href: `${B}/ontwerp` },
-    { klaar: Boolean(b.naam.trim() && b.email.trim() && b.telefoon.trim()), tekst: "Vul je contactgegevens in (naam, e-mail, telefoon)", href: `${B}/instellingen` },
-    { klaar: Boolean(site.liveBuild), tekst: "Zet je website online (Publiceren)", href: `${B}/bouwer` },
-    { klaar: eigenDomein === true, tekst: "Koppel je eigen domeinnaam (mag later)", href: `${B}/instellingen` },
-  ];
+  // de stappen en hun voorwaarden staan in lib/onboarding/aan-de-slag.ts (één lijst per dashboard)
+  const taken: Taak[] = websiteStappen({
+    paginas: site.pages.length,
+    logo: Boolean(site.theme.logo),
+    contactKlaar: Boolean(b.naam.trim() && b.email.trim() && b.telefoon.trim()),
+    online: Boolean(site.liveBuild),
+    eigenDomein: eigenDomein === true,
+  }).map(taakVan);
   return (
     <>
       <PageHead

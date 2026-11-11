@@ -5,6 +5,7 @@ import Link from "next/link";
 import { foutVan, stuur } from "@/components/rijschool/api";
 import { Melding } from "@/components/rijschool/ui";
 import { euro } from "@/lib/horeca/weergave";
+import { AAN_DE_SLAG_STAPPEN, horecaStappen, tabVanHref } from "@/lib/onboarding/aan-de-slag";
 import { MOMENT_LABEL, type Moment } from "@/lib/horeca/taken";
 import { LET_OP_MIN, STAAT_LABEL, TE_LANG_MIN, type TafelLive } from "@/lib/horeca/zaal";
 import { amsterdamClock } from "@/lib/time/amsterdam";
@@ -56,14 +57,15 @@ export function LiveTab({ data, doe, naar }: { data: BeheerData; doe: Doe; naar:
     }
   }
 
-  const stappen: { klaar: boolean; tekst: string; tab: BeheerTab }[] = [
-    { klaar: data.items.length > 0, tekst: "Menukaart vullen (de voorbeelden mag je aanpassen of weghalen)", tab: "menukaart" },
-    { klaar: Boolean(z.adres && z.telefoon), tekst: "Adres, telefoon en openingstijden invullen", tab: "gegevens" },
-    { klaar: z.modules.length > 0, tekst: "Modules kiezen die jullie willen gebruiken", tab: "modules" },
-    { klaar: data.tafels.length > 0 || !z.modules.includes("bestellen"), tekst: "Tafels aanmaken en de QR-codes printen", tab: "tafels" },
-    { klaar: (d?.apparaten.length ?? 0) > 0, tekst: "Een scherm koppelen (keuken, bar of handheld)", tab: "schermen" },
-    { klaar: z.online, tekst: "De site online zetten (bovenaan)", tab: "overzicht" },
-  ];
+  // de stappen en hun voorwaarden staan in lib/onboarding/aan-de-slag.ts (één lijst per dashboard)
+  const stappen: { klaar: boolean; tekst: string; tab: BeheerTab }[] = horecaStappen({
+    menuItems: data.items.length,
+    adresEnTelefoon: Boolean(z.adres && z.telefoon),
+    modules: z.modules,
+    tafels: data.tafels.length,
+    apparaten: d?.apparaten.length ?? 0,
+    online: z.online,
+  }).map((s) => ({ klaar: s.done, tekst: AAN_DE_SLAG_STAPPEN[s.key].title, tab: (tabVanHref(s.href) ?? "overzicht") as BeheerTab }));
   const open = stappen.filter((s) => !s.klaar);
 
   if (!d) {

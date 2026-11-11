@@ -19,6 +19,7 @@ import { voorvertoning } from "@/lib/rijschool/berichten-lijst";
 import { euro } from "@/lib/payroll/format";
 import { LEERLING_STATUS_LABEL } from "@/lib/rijschool/format";
 import { RIJSCHOOL_TABS, isRijschoolTab, type RijschoolTab } from "@/lib/rijschool/tabs";
+import { AAN_DE_SLAG_STAPPEN, rijschoolStappen, tabVanHref } from "@/lib/onboarding/aan-de-slag";
 import type { AanzetVoorstel } from "@/lib/sites/aanzet-voorstel";
 
 // ---------------------------------------------------------------------------
@@ -234,14 +235,15 @@ function Overzicht({
   maandStart.setUTCDate(1);
   const dezeMaand = data.betalingen.filter((b) => b.status === "BETAALD" && b.betaaldOm && new Date(b.betaaldOm) >= maandStart).reduce((s, b) => s + b.bedragCent, 0);
 
-  const stappen: { klaar: boolean; tekst: string; tab: RijschoolTab }[] = [
-    { klaar: data.producten.length > 0, tekst: "Controleer je pakketten en prijzen (het zijn voorbeeldprijzen)", tab: "pakketten" },
-    { klaar: data.instructeurs.some((i) => i.werktijden.length > 0), tekst: "Zet de werktijden van je instructeurs goed", tab: "team" },
-    { klaar: data.voertuigen.length > 0, tekst: "Voeg je lesauto toe", tab: "team" },
-    { klaar: data.rijschool.kvk !== "" && data.rijschool.adres !== "", tekst: "Vul je adres en KVK-nummer in (verplicht op je website)", tab: "instellingen" },
-    { klaar: data.website.werkgebied.length > 0, tekst: "Vul je werkgebied en teksten in", tab: "website" },
-    { klaar: data.rijschool.online, tekst: "Zet je website online", tab: "instellingen" },
-  ];
+  // de stappen en hun voorwaarden staan in lib/onboarding/aan-de-slag.ts (één lijst per dashboard)
+  const stappen: { klaar: boolean; tekst: string; tab: RijschoolTab }[] = rijschoolStappen({
+    pakketten: data.producten.length,
+    werktijden: data.instructeurs.some((i) => i.werktijden.length > 0),
+    voertuigen: data.voertuigen.length,
+    kvkEnAdres: data.rijschool.kvk !== "" && data.rijschool.adres !== "",
+    werkgebied: data.website.werkgebied.length > 0,
+    online: data.rijschool.online,
+  }).map((s) => ({ klaar: s.done, tekst: AAN_DE_SLAG_STAPPEN[s.key].title, tab: (isRijschoolTab(tabVanHref(s.href)) ? tabVanHref(s.href) : "overzicht") as RijschoolTab }));
 
   return (
     <div className="grid gap-5 lg:grid-cols-3">

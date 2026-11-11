@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useStudio } from "@/components/studio/context";
-import { AanDeSlag, Bezoekgrafiek, groet, useEigenDomein, useStats, wanneer, type Taak } from "@/components/studio/OverzichtDelen";
+import { AanDeSlag, Bezoekgrafiek, groet, taakVan, useEigenDomein, useStats, wanneer, type Taak } from "@/components/studio/OverzichtDelen";
 import { Card, IExternal, IGrid, PageHead, Pill, Stat, btn } from "@/components/studio/ui";
-import { paginaBouwerHref } from "@/lib/sites/paginabouwer";
+import { webshopStappen } from "@/lib/onboarding/aan-de-slag";
 import { euro, zichtbareProducten } from "@/lib/sites/winkel";
 import type { SiteBestelling } from "@/lib/sites/bestellingen";
 
@@ -57,14 +57,15 @@ export default function Overzicht() {
   const actief = zichtbareProducten(winkel).length;
   const b = site.bedrijf;
   const wettelijk = ["verzenden-en-retourneren", "voorwaarden"].every((slug) => site.pages.some((p) => p.slug === slug));
-  const taken: Taak[] = [
-    { klaar: actief > 0, tekst: "Voeg je eerste product toe", href: `${B}/producten` },
-    { klaar: winkel.bestellen && (winkel.levering.afhalen || winkel.levering.bezorgen) && winkel.betaalTekst.trim().length > 0, tekst: "Stel verzending en betalen in", href: `${B}/verzending` },
-    { klaar: Boolean(b.naam.trim() && b.kvk.trim() && b.email.trim() && b.straat.trim() && b.postcode.trim() && b.plaats.trim()), tekst: "Vul je bedrijfsgegevens aan (naam, KVK, adres, e-mail)", href: `${B}/instellingen` },
-    { klaar: wettelijk && Boolean(site.liveBuild), tekst: "Loop de wettelijke pagina's na (verzenden, retourneren, voorwaarden)", href: paginaBouwerHref("webshop") },
-    { klaar: Boolean(site.liveBuild), tekst: "Zet je webshop online (Publiceren)", href: B },
-    { klaar: eigenDomein === true, tekst: "Koppel je eigen domeinnaam (mag later)", href: `${B}/instellingen` },
-  ];
+  // de stappen en hun voorwaarden staan in lib/onboarding/aan-de-slag.ts (één lijst per dashboard)
+  const taken: Taak[] = webshopStappen({
+    actieveProducten: actief,
+    verzendingBetalenKlaar: winkel.bestellen && (winkel.levering.afhalen || winkel.levering.bezorgen) && winkel.betaalTekst.trim().length > 0,
+    bedrijfsgegevensKlaar: Boolean(b.naam.trim() && b.kvk.trim() && b.email.trim() && b.straat.trim() && b.postcode.trim() && b.plaats.trim()),
+    wettelijkePaginas: wettelijk,
+    online: Boolean(site.liveBuild),
+    eigenDomein: eigenDomein === true,
+  }).map(taakVan);
 
   return (
     <>
