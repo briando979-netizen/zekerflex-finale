@@ -2,7 +2,7 @@ import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { kvFindDue, kvSet } from "@/lib/storage/kv";
 import { bewaarGrens, heeftPersoon, zonderPersoon, type Afspraak } from "@/lib/afspraken/model";
-import { wisAfsprakenVanOrganisatie } from "@/lib/afspraken/store";
+import { wisAfsprakenVanOrganisatie, wisToegang } from "@/lib/afspraken/store";
 
 // ---------------------------------------------------------------------------
 // Bewaartermijn van klantgegevens in afspraken (AVG art. 5(1)(e)): twee jaar na de afspraak gaan naam, telefoon, e-mail
@@ -31,7 +31,12 @@ export async function wisVerlopenAfspraken(opts: { now?: Date; dryRun?: boolean 
     const rijen = await kvFindDue<Afspraak>("afspraken:item:", "start", grens, na, PAGINA);
     for (const r of rijen) {
       if (!heeftPersoon(r.value)) continue;
-      if (!opts.dryRun) await kvSet(r.key, zonderPersoon(r.value));
+      if (!opts.dryRun) {
+        await kvSet(r.key, zonderPersoon(r.value));
+        // de annuleerlinks horen bij de klantgegevens: ook die zijn dan weg ("afspraken:item:<organisatie>:<dag>~<id>")
+        const tenantId = r.key.slice("afspraken:item:".length).split(":")[0] ?? "";
+        if (tenantId) await wisToegang(tenantId, r.value);
+      }
       gewist += 1;
     }
     const laatste = rijen[rijen.length - 1];

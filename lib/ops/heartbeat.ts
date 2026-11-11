@@ -49,6 +49,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "website-check-opruimen", label: "Verlopen voorbeeldsites van de website-check opruimen", maxAgeHours: 26 },
   { job: "sitechat-opruimen", label: "Websitechats na 90 dagen stilte wissen", maxAgeHours: 26 },
   { job: "afspraken-bewaartermijn", label: "Afspraken: klantgegevens na 2 jaar wissen", maxAgeHours: 26 },
+  // elk uur: herinneringen aan klanten met een online afspraak (lib/afspraken/herinneringen.ts)
+  { job: "afspraken-herinneringen", label: "Afspraken: herinneringen aan klanten", maxAgeHours: 3 },
   { job: "rijschool-herinneringen", label: "Rijschool: lesherinneringen", maxAgeHours: 26 },
   // elke 30 min (draait ook als de automatische reparaties uit staan; dan doet hij niets)
   { job: "bouwer-auto", label: "Bouwer: automatische reparaties", maxAgeHours: 2 },
