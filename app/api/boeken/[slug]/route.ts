@@ -3,7 +3,9 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
-import { DAG_SLEUTEL, controleerKlant, laatsteDag, schoneTekst, vrijeTijden } from "@/lib/afspraken/model";
+import { runAfter } from "@/lib/run-after";
+import { DAG_SLEUTEL, controleerKlant, laatsteDag, openDagen, schoneTekst, vrijeTijden } from "@/lib/afspraken/model";
+import { meldBedrijf } from "@/lib/afspraken/melding";
 import { afsprakenVanDag, boek, openInstellingenVanSlug } from "@/lib/afspraken/store";
 import { leesJson } from "@/lib/afspraken/toegang";
 
@@ -41,6 +43,8 @@ export async function GET(request: Request, ctx: { params: Promise<{ slug: strin
         bedrijfsnaam: i.bedrijfsnaam,
         diensten: i.diensten.map((d) => ({ id: d.id, naam: d.naam, duurMin: d.duurMin, prijsCent: d.prijsCent })),
         medewerkers: i.medewerkers.map((m) => ({ id: m.id, naam: m.naam })),
+        // weekdagnummers (0 = zondag) met minstens één tijdvak; de andere dagen zijn gesloten en niet te kiezen
+        openDagen: openDagen(i),
         vanDag: amsterdamDayKey(nu),
         totDag: laatsteDag(nu, i.maxDagenVooruit),
       },
@@ -83,6 +87,8 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
       medewerkerId = vrij.medewerkerId;
     }
     const a = await boek(open.tenantId, i, { dienstId, medewerkerId, start, klant: klant.waarde, opmerking: schoneTekst(o.opmerking, 300), bron: "online" }, nu);
+    // het bedrijf hoort het meteen (push, anders een mail); na het antwoord, en een mislukte melding raakt het boeken nooit
+    runAfter(() => meldBedrijf(open.tenantId, a, "geboekt"));
     return NextResponse.json({ afspraak: { bevestigd: true, bedrijfsnaam: i.bedrijfsnaam, dienstNaam: a.dienstNaam, medewerkerNaam: a.medewerkerNaam, start: a.start, eind: a.eind, duurMin: a.duurMin } });
   } catch (err) {
     const { status, body } = toErrorBody(err);

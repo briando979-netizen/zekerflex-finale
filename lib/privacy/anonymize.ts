@@ -7,6 +7,7 @@ import { erasableNow, RETENTION_RULES } from "@/lib/privacy/retention";
 import { erasableKvWhere } from "@/lib/privacy/user-kv";
 import { wisPersoonUitLocatie } from "@/lib/locatie/avg";
 import { overdrachtUploads } from "@/lib/kyc/overdracht";
+import { wisVerlatenOrganisaties } from "@/lib/afspraken/bewaren";
 
 // ---------------------------------------------------------------------------
 // Account erasure (AVG art. 17).
@@ -271,6 +272,16 @@ export async function anonymizeUser(
     })
     .catch((err) =>
       logger.warn("erasure: op-locatie wissen mislukt", { error: (err as Error).message }),
+    );
+
+  // Afspraken en klantnotities van een bedrijf (lib/afspraken) horen bij de organisatie, niet bij deze gebruiker: ze gaan
+  // alleen weg als dit de laatste actieve beheerder van die organisatie was. Best effort, zoals hierboven.
+  await wisVerlatenOrganisaties(userId)
+    .then((t) => {
+      if (t.length > 0) cleared.afspraken_organisaties = t.length;
+    })
+    .catch((err) =>
+      logger.warn("erasure: afspraken van organisatie wissen mislukt", { error: (err as Error).message }),
     );
 
   await recordAudit({

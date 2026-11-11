@@ -242,6 +242,11 @@ export function weekdagVan(dag: string): number | null {
   return datum.getUTCFullYear() === j && datum.getUTCMonth() === mnd - 1 && datum.getUTCDate() === d ? datum.getUTCDay() : null;
 }
 
+/** De weekdagnummers (0 = zondag) waarop het bedrijf minstens één tijdvak heeft; de andere dagen zijn gesloten. */
+export function openDagen(i: Pick<Instellingen, "uren">): number[] {
+  return [0, 1, 2, 3, 4, 5, 6].filter((d) => (i.uren[d]?.length ?? 0) > 0);
+}
+
 /** De laatste dag die een klant mag boeken, als dagsleutel. */
 export function laatsteDag(nu: Date, dagenVooruit: number): string {
   const p = amsterdamParts(nu);
@@ -364,3 +369,17 @@ export function klantenUit(afspraken: readonly Afspraak[], notities: ReadonlyMap
   for (const [sleutel, notitie] of notities) if (!per.has(sleutel)) per.set(sleutel, { sleutel, naam: "", telefoon: "", email: "", notitie, aantal: 0, geweest: 0, nietGekomen: 0, laatste: null, volgende: null });
   return [...per.values()].filter((k) => k.naam || k.notitie).sort((a, b) => a.naam.localeCompare(b.naam, "nl"));
 }
+
+// --- bewaartermijn (AVG) -------------------------------------------------------
+
+/** Zo lang bewaart een afspraak de gegevens van de klant (naam, telefoon, e-mail, opmerking): 2 jaar na de afspraak. */
+export const BEWAARTERMIJN_DAGEN = 730;
+
+/** Afspraken die vóór dit moment begonnen, hebben hun bewaartermijn gehad. */
+export const bewaarGrens = (nu: Date): Date => new Date(nu.getTime() - BEWAARTERMIJN_DAGEN * 86_400_000);
+
+/** De afspraak zonder persoonsgegevens: dienst, tijd en status blijven, zodat de agenda en de cijfers van het bedrijf kloppen. */
+export const zonderPersoon = (a: Afspraak): Afspraak => ({ ...a, klant: { naam: "Verwijderd", telefoon: "", email: "" }, opmerking: "" });
+
+/** Heeft deze afspraak nog persoonsgegevens? Een al gewiste regel hoeft niet opnieuw geschreven te worden. */
+export const heeftPersoon = (a: Afspraak): boolean => a.klant.naam !== "Verwijderd" || a.klant.telefoon !== "" || a.klant.email !== "" || a.opmerking !== "";

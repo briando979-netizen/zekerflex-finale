@@ -10,16 +10,17 @@ export const dynamic = "force-dynamic";
 /** Een klantsleutel zoals klantSleutel() hem maakt: "e-<e-mailadres>" of "t-<cijfers>". Alles anders is geen klant. */
 const geldigeSleutel = (s: unknown): s is string => typeof s === "string" && s.length <= 140 && /^(e-[^\s@]+@[^\s@]+\.[^\s@]{2,}|t-\d{6,16})$/.test(s);
 
-/** GET /api/werkgever/klanten: de klantenkaarten; met ?klant=<sleutel> ook de afspraken van die klant. */
+/** GET /api/werkgever/klanten: { klanten, afgekapt }; met ?klant=<sleutel> in plaats daarvan { afspraken, afgekapt } van die klant. */
 export async function GET(request: Request): Promise<NextResponse> {
   try {
     const { tenantId } = await eigenOrganisatie();
     const klant = new URL(request.url).searchParams.get("klant");
     if (klant !== null) {
       if (!geldigeSleutel(klant)) throw AppError.notFound("Deze klant bestaat niet (meer).");
-      return NextResponse.json({ afspraken: await afsprakenVanKlant(tenantId, klant) });
+      return NextResponse.json(await afsprakenVanKlant(tenantId, klant));
     }
-    return NextResponse.json({ klanten: await klantenLijst(tenantId) });
+    // `afgekapt: true` = er zijn meer afspraken dan in één lijst passen; het scherm zegt dat de lijst niet compleet is
+    return NextResponse.json(await klantenLijst(tenantId));
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });

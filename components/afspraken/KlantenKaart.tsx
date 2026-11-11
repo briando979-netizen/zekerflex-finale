@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { STATUS_NAAM, type Afspraak, type KlantKaart } from "@/lib/afspraken/model";
+import { ALLEEN_BEHEERDER, ALLEEN_BEHEERDER_TEKST, LIJST_AFGEKAPT_TEKST } from "@/lib/afspraken/teksten";
 
 // De klantenkaart: alle klanten die een afspraak hebben gemaakt, met geschiedenis en een eigen notitie. Een klant kan hier
 // helemaal gewist worden (naam, nummer, adres en notitie overal weg).
@@ -16,15 +17,22 @@ export function KlantenOverzicht() {
   const [zoek, setZoek] = useState("");
   const [gekozen, setGekozen] = useState<string | null>(null);
   const [fout, setFout] = useState<string | null>(null);
+  const [alleenBeheerder, setAlleenBeheerder] = useState(false);
+  const [afgekapt, setAfgekapt] = useState(false);
 
   const laad = useCallback(async () => {
     try {
       const res = await fetch("/api/werkgever/klanten", { cache: "no-store" });
-      const d = (await res.json().catch(() => null)) as { klanten?: KlantKaart[]; error?: { message?: string } } | null;
+      const d = (await res.json().catch(() => null)) as { klanten?: KlantKaart[]; afgekapt?: boolean; error?: { code?: string; message?: string } } | null;
+      if (res.status === 423 && d?.error?.code === ALLEEN_BEHEERDER) {
+        setAlleenBeheerder(true);
+        return;
+      }
       if (!res.ok || !d?.klanten) {
         setFout(d?.error?.message ?? "De klanten konden niet worden geladen.");
         return;
       }
+      setAfgekapt(d.afgekapt === true);
       setKlanten(d.klanten);
     } catch {
       setFout("De klanten konden niet worden geladen. Controleer je verbinding.");
@@ -41,6 +49,13 @@ export function KlantenOverzicht() {
   }, [klanten, zoek]);
   const open = klanten?.find((k) => k.sleutel === gekozen) ?? null;
 
+  if (alleenBeheerder) {
+    return (
+      <p role="status" className="rounded-xl bg-paper-soft px-4 py-4 text-sm text-neutralx-600">
+        {ALLEEN_BEHEERDER_TEKST}
+      </p>
+    );
+  }
   if (fout && !klanten) {
     return (
       <p role="alert" className="rounded-xl bg-crit/10 px-4 py-3 text-sm text-crit">
@@ -52,6 +67,11 @@ export function KlantenOverzicht() {
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+      {afgekapt && (
+        <p role="status" className="rounded-xl bg-paper-soft px-4 py-3 text-sm text-neutralx-600 lg:col-span-2">
+          {LIJST_AFGEKAPT_TEKST}
+        </p>
+      )}
       <div>
         <label className="block">
           <span className="field-label">Zoek een klant</span>
@@ -98,6 +118,7 @@ export function KlantenOverzicht() {
 
 function KlantDetail({ klant, klaar, bewaard }: { klant: KlantKaart; klaar: () => void; bewaard: () => void }) {
   const [afspraken, setAfspraken] = useState<Afspraak[] | null>(null);
+  const [geschiedenisAfgekapt, setGeschiedenisAfgekapt] = useState(false);
   const [notitie, setNotitie] = useState(klant.notitie);
   const [gelukt, setGelukt] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
@@ -107,7 +128,10 @@ function KlantDetail({ klant, klaar, bewaard }: { klant: KlantKaart; klaar: () =
     const ctl = new AbortController();
     void fetch(`/api/werkgever/klanten?klant=${encodeURIComponent(klant.sleutel)}`, { cache: "no-store", signal: ctl.signal })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d: { afspraken?: Afspraak[] } | null) => setAfspraken(d?.afspraken ?? []))
+      .then((d: { afspraken?: Afspraak[]; afgekapt?: boolean } | null) => {
+        setAfspraken(d?.afspraken ?? []);
+        setGeschiedenisAfgekapt(d?.afgekapt === true);
+      })
       .catch(() => undefined);
     return () => ctl.abort();
   }, [klant.sleutel]);
@@ -177,6 +201,7 @@ function KlantDetail({ klant, klaar, bewaard }: { klant: KlantKaart; klaar: () =
         <h3 id="geschiedenis" className="text-sm font-bold text-ink">
           Geschiedenis
         </h3>
+        {geschiedenisAfgekapt && <p className="mt-1 text-xs text-neutralx-600">{LIJST_AFGEKAPT_TEKST}</p>}
         {afspraken === null ? (
           <p className="mt-1 text-sm text-neutralx-500">Laden…</p>
         ) : afspraken.length === 0 ? (

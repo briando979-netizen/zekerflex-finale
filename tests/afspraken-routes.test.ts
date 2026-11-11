@@ -6,6 +6,7 @@ const m = vi.hoisted(() => ({
   ingelogd: true,
   limiet: vi.fn(),
   audit: vi.fn(),
+  melding: vi.fn(),
 }));
 
 vi.mock("@/lib/storage/kv", () => ({
@@ -14,7 +15,16 @@ vi.mock("@/lib/storage/kv", () => ({
   kvDelete: async (k: string) => void m.kv.delete(k),
   kvListValues: async (p: string, limit: number) => [...m.kv].filter(([k]) => k.startsWith(p)).slice(0, limit).map(([, v]) => structuredClone(v)),
   kvListEntries: async (p: string, limit: number) => [...m.kv].filter(([k]) => k.startsWith(p)).slice(0, limit).map(([key, v]) => ({ key, value: structuredClone(v) })),
+  kvFindDue: async (p: string, veld: string, grens: string, na = "", limit = 500) =>
+    [...m.kv]
+      .filter(([k, v]) => k.startsWith(p) && k > na && String((v as Record<string, unknown>)[veld]) <= grens)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .slice(0, limit)
+      .map(([key, v]) => ({ key, value: structuredClone(v) })),
+  kvDeleteStale: async () => 0,
 }));
+// de melding aan het bedrijf (push/mail) heeft eigen tests; hier alleen: wordt hij aangeroepen, en breekt hij het boeken niet
+vi.mock("@/lib/afspraken/melding", () => ({ meldBedrijf: (...a: unknown[]) => m.melding(...a) }));
 vi.mock("@/lib/auth", async () => {
   const { AppError } = await import("@/lib/errors");
   return {
@@ -54,7 +64,8 @@ beforeEach(async () => {
   m.ingelogd = true;
   m.limiet.mockReset().mockResolvedValue(undefined);
   m.audit.mockReset().mockResolvedValue(undefined);
-  i = { ...beginInstellingen("Kapper Jan", nieuwId), actief: true };
+  m.melding.mockReset().mockResolvedValue(undefined);
+  i ={ ...beginInstellingen("Kapper Jan", nieuwId), actief: true };
   await bewaarInstellingen("t1", i);
 });
 afterEach(() => vi.useRealTimers());
@@ -71,8 +82,18 @@ describe("openbare boekpagina: GET /api/boeken/<slug>", () => {
     expect(b.diensten[0]).toEqual({ id: i.diensten[0]!.id, naam: "Afspraak", duurMin: 30, prijsCent: null });
     expect(b.medewerkers).toHaveLength(1);
     expect(b.vanDag).toBe("2026-11-12");
-    expect(Object.keys(b).sort()).toEqual(["bedrijfsnaam", "diensten", "medewerkers", "totDag", "vanDag"]);
+    expect(Object.keys(b).sort()).toEqual(["bedrijfsnaam", "diensten", "medewerkers", "openDagen", "totDag", "vanDag"]);
     expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("openDagen zijn de weekdagen (0 = zondag) met minstens één tijdvak; gesloten dagen staan er niet in", async () => {
+    // beginopzet: ma t/m vr open, za en zo dicht
+    const b = await lees(await publiek.GET(json("GET", "/api/boeken/kapper-jan"), slug()));
+    expect(b.openDagen).toEqual(i.uren.map((v, d) => (v.length > 0 ? d : -1)).filter((d) => d >= 0));
+    expect(b.openDagen).not.toContain(0);
+    const alleenDinsdag = i.uren.map((_, d) => (d === 2 ? [{ van: "09:00", tot: "12:00" }] : []));
+    await bewaarInstellingen("t1", { ...i, uren: alleenDinsdag });
+    expect((await lees(await publiek.GET(json("GET", "/api/boeken/kapper-jan"), slug()))).openDagen).toEqual([2]);
   });
 
   it("een boekadres dat niet bestaat of dicht staat geeft 404, met dezelfde tekst", async () => {
@@ -107,10 +128,33 @@ describe("openbare boekpagina: POST /api/boeken/<slug>", () => {
     const b = await lees(res);
     expect(b.afspraak).toMatchObject({ bevestigd: true, bedrijfsnaam: "Kapper Jan", dienstNaam: "Afspraak", start: "2026-11-12T08:00:00.000Z", eind: "2026-11-12T08:30:00.000Z" });
     expect(JSON.stringify(b)).not.toMatch(/Piet|voorbeeld\.nl|0612|2026-11-12~/);
+    // het bedrijf krijgt een melding, met de afspraak (de melding zelf is getest in afspraken-melding.test.ts)
+    expect(m.melding).toHaveBeenCalledTimes(1);
+    expect(m.melding).toHaveBeenCalledWith("t1", expect.objectContaining({ dienstNaam: "Afspraak", start: "2026-11-12T08:00:00.000Z", bron: "online" }), "geboekt");
     // en het staat nu in het beheer
     const lijst = await lees(await beheer.GET(json("GET", "/api/werkgever/afspraken?van=2026-11-12&tot=2026-11-12")));
     expect(lijst.afspraken).toHaveLength(1);
     expect(lijst.afspraken[0].klant.naam).toBe("Piet Jansen");
+  });
+
+  it("een melding die faalt (of nooit klaar komt) laat het boeken niet falen of wachten", async () => {
+    m.melding.mockRejectedValueOnce(new Error("push stuk"));
+    const stuk = await publiek.POST(json("POST", "/api/boeken/kapper-jan", boekBody()), slug());
+    expect(stuk.status).toBe(200);
+    m.melding.mockReturnValueOnce(new Promise(() => undefined)); // blijft hangen
+    const hangt = await publiek.POST(json("POST", "/api/boeken/kapper-jan", boekBody({ start: "2026-11-12T09:00:00.000Z", klant: { naam: "Els Klant", telefoon: "", email: "els@voorbeeld.nl" } })), slug());
+    expect(hangt.status).toBe(200);
+    expect(m.melding).toHaveBeenCalledTimes(2);
+  });
+
+  it("geen melding als er niets geboekt is (bot, fout of net bezet)", async () => {
+    await publiek.POST(json("POST", "/api/boeken/kapper-jan", boekBody({ website: "https://spam.example" })), slug());
+    await publiek.POST(json("POST", "/api/boeken/kapper-jan", boekBody({ toestemming: false })), slug());
+    await publiek.POST(json("POST", "/api/boeken/kapper-jan", boekBody()), slug());
+    m.melding.mockClear();
+    const dubbel = await publiek.POST(json("POST", "/api/boeken/kapper-jan", boekBody({ klant: { naam: "Els", telefoon: "", email: "els@voorbeeld.nl" } })), slug());
+    expect(dubbel.status).toBe(409);
+    expect(m.melding).not.toHaveBeenCalled();
   });
 
   it("dezelfde tijd twee keer: de tweede krijgt 409 met een gewone zin", async () => {
@@ -163,14 +207,19 @@ describe("openbare boekpagina: POST /api/boeken/<slug>", () => {
 });
 
 describe("beheer: /api/werkgever/afspraken", () => {
-  it("zonder inlog 401, en een gewoon medewerker zonder beheerdersrol 403", async () => {
+  it("zonder inlog 401, en een teamlid zonder beheerdersrol 423 met een eigen code en een uitleg (geen 403: CrowdSec)", async () => {
     m.ingelogd = false;
     expect((await beheer.GET(json("GET", "/api/werkgever/afspraken"))).status).toBe(401);
     m.ingelogd = true;
     m.admin = false;
-    expect((await beheer.GET(json("GET", "/api/werkgever/afspraken"))).status).toBe(403);
-    expect((await beheer.PUT(json("PUT", "/api/werkgever/afspraken", i))).status).toBe(403);
-    expect((await klanten.GET(json("GET", "/api/werkgever/klanten"))).status).toBe(403);
+    const geen = [await beheer.GET(json("GET", "/api/werkgever/afspraken")), await beheer.PUT(json("PUT", "/api/werkgever/afspraken", i)), await beheer.POST(json("POST", "/api/werkgever/afspraken", {})), await klanten.GET(json("GET", "/api/werkgever/klanten")), await klanten.DELETE(json("DELETE", "/api/werkgever/klanten?klant=e-a@b.nl"))];
+    for (const res of geen) {
+      expect(res.status).toBe(423);
+      const e = (await lees(res)).error;
+      expect(e.code).toBe("ALLEEN_BEHEERDER");
+      expect(e.message).toMatch(/Alleen de beheerder van je organisatie/);
+    }
+    expect(m.kv.size).toBe(1 + 1); // alleen de instellingen en het boekadres van de beforeEach: niets gelezen of geschreven
   });
 
   it("GET zonder instellingen geeft een beginopzet met de bedrijfsnaam, nog niet bewaard", async () => {
