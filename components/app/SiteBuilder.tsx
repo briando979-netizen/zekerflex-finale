@@ -1340,7 +1340,15 @@ function BlockEditor({ block, site, onChange, onClose, onMedia }: { block: Block
           <ItemsEditor items={p.lagen} max={7} blank={{ titel: "Nieuwe laag", tekst: "" }} fields={[{ key: "titel", label: "Naam" }, { key: "tekst", label: "Uitleg (mag leeg)", area: true }]} onChange={(lagen) => set({ lagen })} />
           <Field label="Tekst op de knop (leeg = geen knop)"><input className="field-input" value={p.knop} maxLength={200} onChange={(e) => set({ knop: e.target.value })} /></Field>
           <LinkField value={p.knopLink} site={site} onChange={(v) => set({ knopLink: v })} />
-          <p className="text-xs text-neutralx-500">De burger is een tekening in 3D: brioche, sla, cheddar, vlees, tomaat, ui en bodem. Bij het scrollen zweven de lagen uit elkaar en vallen ze samen. De namen hierboven staan ernaast; heb je minder dan zeven lagen, dan houdt de rest de standaardnaam.</p>
+          <label className="flex items-center gap-2 text-sm text-neutralx-700">
+            <input type="checkbox" checked={p.echt === true} onChange={(e) => set({ echt: e.target.checked })} className="h-4 w-4 accent-brand-600" />
+            Echte foto van een burger (aanbevolen)
+          </label>
+          <p className="text-xs text-neutralx-500">
+            {p.echt
+              ? "De burger is een echte foto: bol, kaas, vlees, tomaat, ui, sla en de onderkant op een plank. Bij het scrollen zweven de lagen uit elkaar en vallen ze samen. De namen hierboven staan ernaast, in die volgorde; heb je minder dan zeven lagen, dan houdt de rest de standaardnaam."
+              : "De burger is een tekening in 3D: brioche, sla, cheddar, vlees, tomaat, ui en bodem. Bij het scrollen zweven de lagen uit elkaar en vallen ze samen. De namen hierboven staan ernaast; heb je minder dan zeven lagen, dan houdt de rest de standaardnaam."}
+          </p>
         </>
       );
       break;

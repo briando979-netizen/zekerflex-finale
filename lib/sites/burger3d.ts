@@ -13,6 +13,11 @@ import type { BlockProps, Item } from "@/lib/sites/types";
 // - stoom en gloeiende vonken als bij een houtskoolgrill;
 // - een pauzeknop (WCAG 2.2.2), en wie minder beweging wil (systeeminstelling)
 //   ziet hem stil en half open, met de namen erbij.
+// Sinds 11 nov 2026 kan het ook echt (`echt`, de standaard voor nieuwe blokken):
+// de eigenaar vond de tekening een animatie, geen burger. Dan zijn de lagen
+// uitgeknipt uit één foto van een burger waarvan alles los boven elkaar zweeft
+// (public/sites/burger/, met CREDITS.md). Dezelfde beweging, maar met echte
+// pixels; de site haalt ze van zichzelf op (assets/burger/, lib/sites/serve.ts).
 // Puur: HTML en CSS; de opmaak van de site (render.ts) zet het blok neer.
 // ---------------------------------------------------------------------------
 
@@ -28,6 +33,39 @@ export const STANDAARD_LAGEN: Item[] = [
   { titel: "Rode ui", tekst: "Dun gesneden, voor een frisse beet." },
   { titel: "Geroosterde bodem", tekst: "Van dezelfde brioche, kort op de plaat." },
 ];
+
+/** De zeven lagen van de echte burger, in de volgorde van de foto (de namen past de zaak zelf aan). */
+export const STANDAARD_FOTO_LAGEN: Item[] = [
+  { titel: "Sesambol", tekst: "Elke ochtend vers gebakken, licht en luchtig." },
+  { titel: "Cheddar", tekst: "Smelt over het vlees, net van de grill." },
+  { titel: "Rundvlees, 180 gram", tekst: "Vers gedraaid, op houtskool gegrild." },
+  { titel: "Tomaat", tekst: "Rijp en sappig, in dikke plakken." },
+  { titel: "Ui", tekst: "In ringen, voor een frisse beet." },
+  { titel: "Krulsla", tekst: "Koud en knapperig." },
+  { titel: "Onderkant", tekst: "Van dezelfde bol, kort op de plaat." },
+];
+
+/**
+ * Waar elke laag in de foto staat (px in de foto van 1200 breed), hoeveel hij zakt om op de laag
+ * eronder te liggen (`samen`), en zijn diepte en kanteling als de burger uit elkaar is.
+ */
+const FOTO_LAGEN = [
+  { bestand: "bol.webp", x: 392, y: 62, w: 344, h: 190, samen: 540, z: 70, rz: -3 },
+  { bestand: "kaas.webp", x: 359, y: 290, w: 434, h: 160, samen: 442, z: 50, rz: 2 },
+  { bestand: "vlees.webp", x: 383, y: 481, w: 378, h: 208, samen: 341, z: 30, rz: -1.5 },
+  { bestand: "tomaat.webp", x: 365, y: 717, w: 427, h: 162, samen: 253, z: 10, rz: 2 },
+  { bestand: "ui.webp", x: 422, y: 935, w: 292, h: 138, samen: 127, z: -10, rz: -2 },
+  { bestand: "sla.webp", x: 243, y: 1107, w: 692, h: 287, samen: 20, z: -30, rz: 1 },
+  { bestand: "bodem.webp", x: 20, y: 1335, w: 1032, h: 263, samen: 0, z: -50, rz: 0 },
+] as const;
+/** De bestanden die een site mag uitleveren (lib/sites/serve.ts). */
+export const BURGER_FOTO_BESTANDEN: readonly string[] = FOTO_LAGEN.map((l) => l.bestand);
+/** Het stuk van de foto dat de burger beslaat: vanaf links 180 px, 840 breed, vanaf boven 150 px; dat is 400 eenheden breed. */
+const FOTO = { links: 180, boven: 150, eenheid: 400 / 840 };
+/** Uit elkaar staan de lagen op 80% van de afstand op de foto (anders wordt hij te hoog). */
+const UIT_ELKAAR = 0.8;
+/** Waar de namen naast de burger staan (eenheden), net rechts van de sla. */
+const LABEL_X = 365;
 
 /** Of de site het blok heeft: alleen dan komt de opmaak (met beweging) in het stijlblad; een gewone site beweegt niets. */
 export const heeftBurger = (pages: { blocks: { type: string }[] }[]) => pages.some((p) => p.blocks.some((b) => b.type === "burger3d"));
@@ -117,27 +155,45 @@ const VONKEN: [number, number, number][] = [
   [8, 6.5, 0], [17, 8, 2.1], [26, 7, 4.4], [35, 9, 1.2], [44, 6, 3.3], [53, 8.5, 0.6], [62, 7.5, 5], [71, 6.8, 2.8], [80, 9.2, 1.7], [89, 7.2, 4], [94, 8, 0.3], [12, 9.5, 5.5],
 ];
 
-/** Het blok als HTML. `id` maakt de pauzeknop uniek; `esc`/`paras`/`href` komen van de site (render.ts). */
+/** De lagen van de echte burger, in dezelfde eenheden (1/400 van de breedte) en met dezelfde beweging als de tekening. */
+function fotoLagen(namen: Item[], esc: (s: unknown) => string, adres: (bestand: string) => string): string {
+  const e = (n: number) => r2(n * FOTO.eenheid);
+  return FOTO_LAGEN.map((l, i) => {
+    const titel = namen[i]?.titel ?? "";
+    const stijl = `--x:${e(l.x - FOTO.links)};--y:${e(l.y + l.samen - FOTO.boven)};--w:${e(l.w)};--ex:${e(-l.samen * UIT_ELKAAR)};--z:${l.z};--rz:${l.rz}deg;--i:${i};--lab:${LABEL_X};z-index:${FOTO_LAGEN.length - i}`;
+    return `<div class="b3d-laag" style="${stijl}"><img src="${esc(adres(l.bestand))}" alt="" width="${l.w}" height="${l.h}" loading="lazy" decoding="async"><span class="b3d-lbl" aria-hidden="true"><b>${i + 1}</b>${esc(titel)}</span></div>`;
+  }).join("");
+}
+
+/**
+ * Het blok als HTML. `id` maakt de pauzeknop uniek; `esc`/`paras`/`href` komen van de site (render.ts),
+ * `asset` geeft het adres van een foto van de echte burger (op een gepubliceerde site assets/burger/…).
+ */
 export function burgerBlokHtml(
   b: BurgerBlok,
-  ctx: { esc: (s: unknown) => string; paras: (t: string) => string; href: (raw: string) => string },
+  ctx: { esc: (s: unknown) => string; paras: (t: string) => string; href: (raw: string) => string; asset?: (bestand: string) => string },
   id: string,
 ): string {
   const { esc } = ctx;
-  const namen = LAGEN().map((_, i) => b.lagen[i] ?? STANDAARD_LAGEN[i]!);
-  const lagen = LAGEN()
-    .map((l, i) => {
-      const naam = namen[i]!;
-      return `<div class="b3d-laag ${l.klasse}" style="--x:${l.x};--y:${l.y};--w:${l.w};--ex:${l.ex};--z:${l.z};--rz:${l.rz}deg;--i:${i}">${l.svg}<span class="b3d-lbl" aria-hidden="true"><b>${i + 1}</b>${esc(naam.titel)}</span></div>`;
-    })
-    .join("");
+  const echt = b.echt === true;
+  const namen = (echt ? STANDAARD_FOTO_LAGEN : STANDAARD_LAGEN).map((s, i) => b.lagen[i] ?? s);
+  const lagen = echt
+    ? fotoLagen(namen, esc, ctx.asset ?? ((bestand) => `/sites/burger/${bestand}`))
+    : LAGEN()
+        .map((l, i) => {
+          const naam = namen[i]!;
+          return `<div class="b3d-laag ${l.klasse}" style="--x:${l.x};--y:${l.y};--w:${l.w};--ex:${l.ex};--z:${l.z};--rz:${l.rz}deg;--i:${i}">${l.svg}<span class="b3d-lbl" aria-hidden="true"><b>${i + 1}</b>${esc(naam.titel)}</span></div>`;
+        })
+        .join("");
   const vonken = VONKEN.map(([l, d, v]) => `<i style="--l:${l}%;--d:${d}s;--v:${v}s"></i>`).join("");
   const stoom = `<svg class="b3d-stoom" viewBox="0 0 400 120" aria-hidden="true" focusable="false"><g fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round"><path d="M150,110 C130,80 170,60 150,30"/><path d="M200,114 C180,84 220,62 200,24"/><path d="M250,110 C230,80 270,60 250,30"/></g></svg>`;
-  const beschrijving = `Een hamburger die laag voor laag in elkaar valt: ${namen.map((n) => n.titel.toLowerCase()).join(", ")}.`;
+  const beschrijving = `${echt ? "Een foto van een hamburger" : "Een hamburger"} die laag voor laag in elkaar valt: ${namen.map((n) => n.titel.toLowerCase()).join(", ")}.`;
+  // de echte burger heeft zijn eigen schaduw (de plank) en geen getekende stoom
+  const burger = echt ? `<div class="b3d-burger b3d-echt">${lagen}</div>` : `<div class="b3d-burger">${stoom}${lagen}<div class="b3d-schaduw"></div></div>`;
   const lijst = `<ol class="b3d-lijst" role="list">${namen.map((n, i) => `<li><b aria-hidden="true">${i + 1}</b><span><strong>${esc(n.titel)}</strong>${n.tekst ? ` <span>${esc(n.tekst)}</span>` : ""}</span></li>`).join("")}</ol>`;
   const knop = b.knop ? `<p class="b3d-knop"><a class="btn" href="${esc(ctx.href(b.knopLink))}">${esc(b.knop)}</a></p>` : "";
   const pauze = `b3d-p-${id.replace(/[^a-z0-9-]/gi, "")}`;
-  return `<section class="b3d-sec"><div class="b3d-gloed" aria-hidden="true"></div><div class="b3d-vonken" aria-hidden="true">${vonken}</div><div class="wrap b3d-grid"><div class="b3d-tekst"><h2>${esc(b.kop)}</h2>${b.tekst ? ctx.paras(b.tekst) : ""}${lijst}${knop}</div><div class="b3d-kant"><input type="checkbox" id="${pauze}" class="b3d-pauze"><div class="b3d-podium" role="img" aria-label="${esc(beschrijving)}"><div class="b3d-burger">${stoom}${lagen}<div class="b3d-schaduw"></div></div></div><label for="${pauze}" class="b3d-pauzeknop"><span class="b3d-p-aan">Beweging pauzeren</span><span class="b3d-p-uit">Beweging hervatten</span></label></div></div></section>`;
+  return `<section class="b3d-sec"><div class="b3d-gloed" aria-hidden="true"></div><div class="b3d-vonken" aria-hidden="true">${vonken}</div><div class="wrap b3d-grid"><div class="b3d-tekst"><h2>${esc(b.kop)}</h2>${b.tekst ? ctx.paras(b.tekst) : ""}${lijst}${knop}</div><div class="b3d-kant"><input type="checkbox" id="${pauze}" class="b3d-pauze"><div class="b3d-podium" role="img" aria-label="${esc(beschrijving)}">${burger}</div><label for="${pauze}" class="b3d-pauzeknop"><span class="b3d-p-aan">Beweging pauzeren</span><span class="b3d-p-uit">Beweging hervatten</span></label></div></div></section>`;
 }
 
 /** De opmaak; los van de stijl van de site (een donkere grill-sfeer), met de accentkleur van de site voor de nummers. */
@@ -169,5 +225,7 @@ export function burgerCss(): string {
 @keyframes b3d-samen{from{--uit:1}to{--uit:0}}@keyframes b3d-adem{0%,15%{--uit:0}85%,100%{--uit:1}}
 .b3d-pauze:checked~.b3d-podium,.b3d-pauze:checked~.b3d-podium *{animation-play-state:paused}.b3d-kant:has(.b3d-pauze:checked)~*,.b3d-sec:has(.b3d-pauze:checked) .b3d-vonken i{animation-play-state:paused}
 @media (prefers-reduced-motion:reduce){.b3d-podium,.b3d-burger,.b3d-burger *,.b3d-vonken i{animation:none!important}.b3d-podium{--uit:.6}.b3d-burger{transform:rotateX(12deg) rotateY(-10deg)}.b3d-vonken,.b3d-stoom,.b3d-pauze,.b3d-pauzeknop{display:none}}
-@media (max-width:1023px){.b3d-kant{order:-1}}@media (max-width:640px){.b3d-sec{padding:64px 0}}`;
+@media (max-width:1023px){.b3d-kant{order:-1}}@media (max-width:640px){.b3d-sec{padding:64px 0}}
+.b3d-echt{aspect-ratio:400/690;animation-name:b3d-draai-echt}@keyframes b3d-draai-echt{from{transform:rotateX(10deg) rotateY(-6deg)}to{transform:rotateX(8deg) rotateY(6deg)}}
+.b3d-laag img{display:block;width:100%;height:auto}.b3d-echt .b3d-lbl{left:calc((var(--lab) - var(--x))*.25cqi + 14px);top:38%}`;
 }

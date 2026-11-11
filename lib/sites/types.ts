@@ -99,7 +99,15 @@ export interface BlockProps {
     maxGasten: number;
   };
   /** a burger in 3D whose layers float apart and fall together while scrolling (lib/sites/burger3d.ts); `lagen` names the seven layers, top first */
-  burger3d: { kop: string; tekst: string; lagen: Item[]; knop: string; knopLink: string };
+  burger3d: {
+    kop: string;
+    tekst: string;
+    lagen: Item[];
+    knop: string;
+    knopLink: string;
+    /** true: de lagen komen uit een echte foto (public/sites/burger/) in plaats van de tekening; standaard voor nieuwe blokken sinds 11 nov 2026 */
+    echt?: boolean | undefined;
+  };
   /** price list / packages: 1-4 columns */
   prijzen: { kop: string; tekst: string; items: PrijsPakket[] };
   /** team members: photo, name, function */
@@ -495,14 +503,16 @@ export function newBlock(type: BlockType, id: string): Block {
         props: {
           kop: "Laag voor laag de lekkerste burger",
           tekst: "Alles vers, alles met de hand. Zo bouwen we hem op.",
+          // de echte burger (een foto, lib/sites/burger3d.ts), met de lagen in de volgorde van de foto
+          echt: true,
           lagen: [
-            { titel: "Brioche met sesam", tekst: "Elke ochtend vers gebakken, licht zoet en luchtig." },
-            { titel: "Knapperige sla", tekst: "Ijsbergsla, koud en fris." },
-            { titel: "Belegen cheddar", tekst: "Gesmolten over het vlees, net van de grill." },
+            { titel: "Sesambol", tekst: "Elke ochtend vers gebakken, licht en luchtig." },
+            { titel: "Cheddar", tekst: "Smelt over het vlees, net van de grill." },
             { titel: "Rundvlees, 180 gram", tekst: "Vers gedraaid, op houtskool gegrild." },
             { titel: "Tomaat", tekst: "Rijp en sappig, in dikke plakken." },
-            { titel: "Rode ui", tekst: "Dun gesneden, voor een frisse beet." },
-            { titel: "Geroosterde bodem", tekst: "Van dezelfde brioche, kort op de plaat." },
+            { titel: "Ui", tekst: "In ringen, voor een frisse beet." },
+            { titel: "Krulsla", tekst: "Koud en knapperig." },
+            { titel: "Onderkant", tekst: "Van dezelfde bol, kort op de plaat." },
           ],
           knop: "Bekijk het menu",
           knopLink: "winkel",
