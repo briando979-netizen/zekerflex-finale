@@ -21,6 +21,7 @@ import { platformPartij } from "@/lib/efactuur/instellingen";
 import { BANK_AAN } from "@/lib/app-mode";
 import { cscaStand } from "@/lib/kyc/chip/csca";
 import { stripeFotoSleutelInfo } from "@/lib/kyc/stripe-fotos";
+import { actieveWeigering } from "@/lib/kyc/stripe-weigering";
 import { appleConfig } from "@/lib/auth/apple";
 
 /** Bij taken die alleen voor ZekerFlex Bank nodig waren. */
@@ -201,6 +202,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   const csca = await cscaStand().catch(() => null);
   // de beperkte Stripe-sleutel voor de foto's van Stripe-controles (lib/kyc/stripe-fotos.ts)
   const stripeFotoSleutel = await stripeFotoSleutelInfo().catch(() => null);
+  // weigerde Stripe Identity voor het hele account (lib/kyc/stripe-weigering.ts)? Dan staat ZekerFlex het 24 uur uit
+  const stripeWeigering = await actieveWeigering().catch(() => null);
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
   return [
@@ -938,6 +941,24 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       how: ["Stripe-dashboard (dashboard.stripe.com) → zoek 'Identity' → klik 'Aan de slag' en rond de activering af. Dit is de enige verplichte stap: daarna zien freelancers vanzelf 'Snel via Stripe' op de verificatiepagina.", "Aanrader: Stripe → Developers → Webhooks → je ZekerFlex-webhook → voeg identity.verification_session.verified, .requires_input en .canceled toe. Dan wordt de uitslag ook verwerkt als iemand de pagina niet terug opent.", "Werkt het nog niet? De optie verbergt zich 6 uur nadat Stripe een poging weigerde — probeer het daarna opnieuw. Uitzetten kan altijd: vraag Claude om STRIPE_IDENTITY_ENABLED op false te zetten."],
       auto: false,
       ...m("stripe-identity"),
+    },
+    {
+      id: "stripe-identity-account",
+      group: "Geld & bank",
+      title: "Stripe weigert de ID-controle via Stripe (Stripe Identity) voor het live account",
+      why: stripeWeigering
+        ? `Stripe zei op ${new Date(stripeWeigering.op).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", dateStyle: "short", timeStyle: "short" })}: "${stripeWeigering.melding}". Werkers kunnen hun ID dan niet via Stripe laten controleren, en de uitslag van lopende Stripe-controles komt niet binnen. ZekerFlex verbergt de knop 'Snel via Stripe' en probeert het 24 uur niet opnieuw; werkers gebruiken intussen de eigen ID-scan van ZekerFlex.`
+        : "Weigert Stripe de ID-controle voor het hele account (bijvoorbeeld omdat Identity niet aanstaat voor het live account van de stichting, of het account beperkt is), dan verschijnt deze taak met de melding van Stripe. ZekerFlex stopt dan 24 uur met proberen.",
+      how: [
+        "Log in op dashboard.stripe.com met het live account (de stichting) en kijk bovenaan en bij Instellingen of Stripe een melding geeft: account beperkt, gegevens nodig, of Identity niet geactiveerd.",
+        "Staat Identity niet aan: zoek in het dashboard 'Identity' en rond de activering af. Vraagt Stripe om gegevens of documenten: vul die aan.",
+        "Kom je er niet uit: neem contact op met Stripe (support.stripe.com/contact) en geef de melding hierboven door.",
+        "Wil je de ID-controle via Stripe niet meer gebruiken: zeg het tegen Claude, die zet STRIPE_IDENTITY_ENABLED op false. De eigen ID-scan van ZekerFlex blijft gewoon werken.",
+        "Deze taak vinkt zichzelf af zodra Stripe 24 uur niet meer heeft geweigerd (na 24 uur probeert ZekerFlex het opnieuw).",
+      ],
+      auto: true,
+      done: stripeWeigering === null,
+      ...(stripeWeigering ? {} : { doneNote: "Stripe weigerde de afgelopen 24 uur niet" }),
     },
     {
       id: "stripe-identity-fotos",

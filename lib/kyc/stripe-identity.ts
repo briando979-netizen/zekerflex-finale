@@ -12,6 +12,7 @@ import { kvGet, kvSet } from "@/lib/storage/kv";
 import { alertOwnerLater } from "@/lib/ops/alert";
 import { runAfter } from "@/lib/run-after";
 import { meldIdGeverifieerd } from "@/lib/onboarding/id-geverifieerd";
+import { actieveWeigering, isAccountWeigering, zetWeigering } from "@/lib/kyc/stripe-weigering";
 
 // ---------------------------------------------------------------------------
 // ID verification via Stripe Identity: Stripe's own camera flow on the phone
@@ -27,6 +28,17 @@ import { meldIdGeverifieerd } from "@/lib/onboarding/id-geverifieerd";
 export const PROVIDER = "STRIPE_IDENTITY";
 const UNAVAILABLE_KEY = "stripe-identity:unavailable-until";
 const UNAVAILABLE_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * Stripe weigert Identity voor het hele account (lib/kyc/stripe-weigering.ts): 24 uur niet meer proberen (geen sync,
+ * de knop verborgen), één waarschuwing in het logboek, en de taak in Admin → Te doen gaat open.
+ */
+async function weigerEenDag(err: unknown): Promise<void> {
+  const melding = (err as Error).message ?? String(err);
+  const w = await zetWeigering(melding);
+  await kvSet(UNAVAILABLE_KEY, w.tot).catch(() => undefined);
+  logger.warn("stripe identity: het Stripe-account weigert Identity, 24 uur uit (Admin → Te doen)", { error: w.melding });
+}
 
 export function stripeIdentityEnabled(): boolean {
   return Boolean(env.STRIPE_SECRET_KEY) && process.env.STRIPE_IDENTITY_ENABLED !== "false";
@@ -53,9 +65,12 @@ export async function startStripeIdentity(userId: string, email: string): Promis
       return_url: `${base}/dashboard/verificatie?identity=terug`,
     });
   } catch (err) {
-    logger.error("stripe identity session failed", { error: (err as Error).message });
-    // e.g. Identity not activated on this Stripe account: stop offering it for a while
-    await kvSet(UNAVAILABLE_KEY, new Date(Date.now() + UNAVAILABLE_MS).toISOString()).catch(() => undefined);
+    if (isAccountWeigering(err)) await weigerEenDag(err).catch(() => undefined);
+    else {
+      logger.error("stripe identity session failed", { error: (err as Error).message });
+      // e.g. a passing outage: stop offering it for a while
+      await kvSet(UNAVAILABLE_KEY, new Date(Date.now() + UNAVAILABLE_MS).toISOString()).catch(() => undefined);
+    }
     throw AppError.upstream("Verifiëren via Stripe lukt nu niet. Kies 'Zelf foto's uploaden' of probeer het later opnieuw.");
   }
   await prisma.identityVerification.create({
@@ -79,6 +94,8 @@ export async function handleStripeIdentityEvent(event: Stripe.Event): Promise<vo
  */
 export async function syncStripeIdentity(userId: string): Promise<void> {
   if (!stripeIdentityEnabled()) return;
+  // Stripe weigerde het account onlangs: niet bij elk bezoek opnieuw proberen (en het logboek niet vullen)
+  if (await actieveWeigering().catch(() => null)) return;
   const row = await prisma.identityVerification.findFirst({
     where: { userId, provider: PROVIDER, decisionStatus: { in: ["started", "processing"] } },
     orderBy: { createdAt: "desc" },
@@ -92,7 +109,8 @@ export async function syncStripeIdentity(userId: string): Promise<void> {
       await prisma.identityVerification.updateMany({ where: { sessionId: s.id, decisionStatus: "started" }, data: { decisionStatus: "processing" } });
     }
   } catch (err) {
-    logger.warn("stripe identity sync failed", { error: (err as Error).message });
+    if (isAccountWeigering(err)) await weigerEenDag(err).catch(() => undefined);
+    else logger.warn("stripe identity sync failed", { error: (err as Error).message });
   }
 }
 

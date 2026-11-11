@@ -80,6 +80,19 @@ describe("websitevoorstellen versturen", () => {
 });
 
 describe("owner to-do list", () => {
+  it("Stripe Identity geweigerd voor het account: de taak gaat open met de melding van Stripe, en daarna weer dicht", async () => {
+    expect((await byId())["stripe-identity-account"]).toMatchObject({ done: true, auto: true });
+    kv.set("stripe-identity:account-geweigerd", { tot: new Date(Date.now() + 3_600_000).toISOString(), op: "2026-11-11T19:38:24.000Z", melding: "This account is unable to perform this action." });
+    const open = (await byId())["stripe-identity-account"];
+    expect(open).toMatchObject({ done: false, auto: true, group: "Geld & bank" });
+    expect(open?.why).toContain("This account is unable to perform this action.");
+    expect(open?.why).toContain("eigen ID-scan");
+    // verlopen (na 24 uur): weer dicht, ZekerFlex probeert het opnieuw
+    kv.set("stripe-identity:account-geweigerd", { tot: new Date(Date.now() - 1000).toISOString(), op: "2026-11-11T19:38:24.000Z", melding: "x" });
+    expect((await byId())["stripe-identity-account"]?.done).toBe(true);
+    kv.delete("stripe-identity:account-geweigerd");
+  });
+
   it("checks configuration automatically", async () => {
     const t = await byId();
     expect(t.sepa!.done).toBe(true);
