@@ -167,6 +167,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     let documentFront: Awaited<ReturnType<typeof readImage>>;
     let documentBack: Awaited<ReturnType<typeof readImage>>;
     let selfie: Awaited<ReturnType<typeof readImage>>;
+    // de tweede selfie met een gedraaid hoofd (bewegingscontrole): alleen uit de scan op de laptop, niet via de telefoon en niet verplicht
+    let selfie2: Awaited<ReturnType<typeof readImage>> | undefined;
     let telefoonNet: string | null = null;
     if (viaTelefoon) {
       const opgehaald = await pakOverdracht(principal.userId);
@@ -178,6 +180,8 @@ export async function POST(request: Request): Promise<NextResponse> {
         readImage(form, "documentBack", "de achterkant van je document"),
         readImage(form, "selfie", "een selfie"),
       ]);
+      const tweede = form.get("selfie2");
+      if (tweede instanceof File && tweede.size > 0) selfie2 = await readImage(form, "selfie2", "de tweede selfie");
     }
 
     const result = await submitFreelancerOnboarding({
@@ -194,7 +198,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       documentNumber: parsed.data.documentNumber,
       documentExpiry: parsed.data.documentExpiry,
       nameOnDocument: parsed.data.nameOnDocument,
-      files: { front: documentFront, back: documentBack, selfie },
+      files: { front: documentFront, back: documentBack, selfie, ...(selfie2 ? { selfie2 } : {}) },
       ...(viaTelefoon || merk.viaTelefoon ? { viaTweedeToestel: true } : {}),
       // voor de beoordelaar (intern): zelfde netwerk als de telefoon, eerdere "niet mijn account"
       ...(viaTelefoon || merk.viaTelefoon || merk.geweigerd > 0

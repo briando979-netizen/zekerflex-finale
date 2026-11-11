@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DETECTOR_GROOTTE, grootste, leesDetectorUitvoer, nms, pasInVierkant, terugNaarBeeld, type DetectorUitvoer, type Gezicht } from "@/lib/kyc/gezicht/detector";
 import { DOEL_PUNTEN, UITGELIJND, lijnUit, schatGelijkvormig } from "@/lib/kyc/gezicht/uitlijnen";
+import { BEWEGING, BEWEGING_NIET_AANGELEVERD, BEWEGING_NIET_BEOORDEELD, beoordeelBeweging, oogVerhouding } from "@/lib/kyc/gezicht/beweging";
 import { GEZICHT_DREMPEL, KWALITEIT, cosinus, draaiing, kwaliteitsProbleem, meerdereGezichten, oordeelOverScore, type GemetenGezicht } from "@/lib/kyc/gezicht/vergelijk";
 
 // Pure rekenstukken van de gezichtscontrole (lib/kyc/gezicht). De modellen zelf (YuNet, SFace) staan in
@@ -144,6 +145,87 @@ describe("uitlijnen", () => {
 
   it("onbruikbare punten geven null in plaats van een fout", () => {
     expect(lijnUit(new Uint8Array(30), 10, 1, new Array(5).fill({ x: 1, y: 1 }))).toBeNull();
+  });
+});
+
+describe("bewegingscontrole (beoordeelBeweging)", () => {
+  const punten = (nx: number): Gezicht["punten"] => [
+    { x: 40, y: 50 },
+    { x: 80, y: 50 },
+    { x: nx, y: 75 },
+    { x: 45, y: 100 },
+    { x: 75, y: 100 },
+  ];
+  const gez = (nx: number, over: Partial<Gezicht> = {}): GemetenGezicht => {
+    const g: Gezicht = { x: 20, y: 20, breedte: 200, hoogte: 220, punten: punten(nx), score: 0.95, ...over };
+    return { gezicht: g, alle: [g] };
+  };
+  const recht = gez(60); // draaiing 0
+
+  it("een hoofd dat een kwartslag draaide, van dezelfde persoon, is in orde (naar links én naar rechts)", () => {
+    expect(beoordeelBeweging(recht, gez(70), 0.6).oordeel).toBe("ok"); // draaiing 0,25
+    expect(beoordeelBeweging(recht, gez(50), 0.6).oordeel).toBe("ok"); // draaiing −0,25
+    expect(beoordeelBeweging(recht, gez(70), 0.6).verschil).toBeCloseTo(0.25, 6);
+  });
+
+  it("een plat beeld (foto of scherm) dat kantelt houdt dezelfde verhouding en telt dus niet als draaien", () => {
+    // alle punten horizontaal samengeknepen rond het midden: neus en ogen schalen mee, de verhouding blijft 0
+    const plat = gez(60);
+    const samen = plat.gezicht.punten.map((p) => ({ x: 60 + (p.x - 60) * 0.6, y: p.y })) as Gezicht["punten"];
+    const gekanteld = gez(60, { punten: samen });
+    expect(draaiing(gekanteld.gezicht)).toBeCloseTo(0, 6);
+    const u = beoordeelBeweging(recht, gekanteld, 0.9);
+    expect(u.oordeel).toBe("niet-gedraaid");
+    expect(u.reden).toMatch(/kwartslag/);
+  });
+
+  it("een steil platgedrukt beeld met een schijndraaiing wordt afgewezen: de oogafstand krimpt veel meer dan bij een echt hoofd", () => {
+    // gemeten: een steil gekanteld plat beeld kan de draaiing tot ±0,4 laten springen; de ogen komen dan ver naar elkaar toe
+    const platgedrukt = gez(70, { punten: [{ x: 48, y: 50 }, { x: 72, y: 50 }, { x: 70, y: 75 }, { x: 52, y: 100 }, { x: 68, y: 100 }] });
+    expect(draaiing(platgedrukt.gezicht)).toBeGreaterThan(0.4); // zou als draai tellen...
+    const u = beoordeelBeweging(recht, platgedrukt, 0.9);
+    expect(u.oordeel).toBe("onnatuurlijk"); // ...maar de oogafstand is tot 0,6 gekrompen
+    expect(u.reden).toMatch(/platgedrukt/);
+    expect(oogVerhouding(platgedrukt.gezicht) / oogVerhouding(recht.gezicht)).toBeCloseTo(0.6, 6);
+  });
+
+  it("een echte kwartslag (oogafstand ~0,88 van de eerste) blijft in orde", () => {
+    // zoals gemeten bij een echt gedraaid portret: oogratio 0,88 en een draaiing van −0,01 naar −0,25
+    const echt = gez(50, { punten: [{ x: 43, y: 50 }, { x: 77, y: 50 }, { x: 50, y: 75 }, { x: 46, y: 100 }, { x: 74, y: 100 }] });
+    const u = beoordeelBeweging(recht, echt, 0.7);
+    expect(oogVerhouding(echt.gezicht) / oogVerhouding(recht.gezicht)).toBeCloseTo(0.85, 6);
+    expect(u.oordeel).toBe("ok");
+  });
+
+  it("een kleine draai onder de drempel is niet genoeg", () => {
+    expect(beoordeelBeweging(recht, gez(64), 0.9).oordeel).toBe("niet-gedraaid"); // 0,10
+    expect(beoordeelBeweging(recht, gez(67.4), 0.9).oordeel).toBe("ok"); // 0,185
+  });
+
+  it("de eerste selfie moet bijna recht zijn, anders is 'draaien' niet te meten", () => {
+    expect(beoordeelBeweging(gez(66), gez(76), 0.9).oordeel).toBe("niet-recht"); // 0,15 bij de eerste
+    expect(beoordeelBeweging(gez(64), gez(74), 0.9).oordeel).toBe("ok"); // 0,10 bij de eerste, verschil 0,25
+  });
+
+  it("twee selfies van verschillende personen zijn geen bewegingsbewijs", () => {
+    expect(beoordeelBeweging(recht, gez(70), 0.2).oordeel).toBe("andere-persoon");
+    expect(beoordeelBeweging(recht, gez(70), null).oordeel).toBe("andere-persoon");
+    expect(beoordeelBeweging(recht, gez(70), BEWEGING.zelfdePersoon).oordeel).toBe("ok");
+  });
+
+  it("geen gezicht, een onzeker of een tweede gezicht op de gedraaide selfie wordt afgewezen met een duidelijke reden", () => {
+    expect(beoordeelBeweging(recht, null, null)).toMatchObject({ oordeel: "geen-gezicht", verschil: null });
+    expect(beoordeelBeweging(recht, gez(70, { score: BEWEGING.minScore - 0.01 }), 0.9).oordeel).toBe("te-onzeker");
+    expect(beoordeelBeweging(recht, gez(70, { breedte: BEWEGING.minBreedte - 1 }), 0.9).oordeel).toBe("te-onzeker");
+    const hoofd = gez(70).gezicht;
+    const naast: Gezicht = { ...hoofd, x: 400, score: 0.9 };
+    expect(beoordeelBeweging(recht, { gezicht: hoofd, alle: [hoofd, naast] }, 0.9).oordeel).toBe("te-onzeker");
+  });
+
+  it("de vaste uitslagen voor 'niet aangeleverd' en 'niet beoordeeld' zijn gewoon Nederlands en tellen niet als ok", () => {
+    expect(BEWEGING_NIET_AANGELEVERD.oordeel).toBe("niet-aangeleverd");
+    expect(BEWEGING_NIET_BEOORDEELD.oordeel).toBe("niet-beoordeeld");
+    expect(BEWEGING_NIET_AANGELEVERD.reden).toMatch(/medewerker/);
   });
 });
 

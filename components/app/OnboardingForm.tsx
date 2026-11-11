@@ -324,6 +324,8 @@ export function OnboardingForm({
     body.set("documentFront", g.front);
     body.set("documentBack", g.back);
     body.set("selfie", g.selfie);
+    // de tweede selfie met een gedraaid hoofd (bewegingscontrole): zonder die foto beslist altijd een medewerker
+    if (g.selfie2) body.set("selfie2", g.selfie2);
     try {
       const res = await fetch("/api/onboarding", { method: "POST", body });
       const data = await res.json().catch(() => ({}));

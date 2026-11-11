@@ -71,7 +71,8 @@ export interface OnboardingInput {
   documentNumber: string;
   documentExpiry: string; // yyyy-mm-dd
   nameOnDocument: string;
-  files: { front: CapturedImage; back: CapturedImage; selfie: CapturedImage };
+  /** `selfie2`: de tweede selfie met een gedraaid hoofd (bewegingscontrole, lib/kyc/gezicht/beweging.ts); zonder die foto keurt de gezichtscontrole nooit zelf goed */
+  files: { front: CapturedImage; back: CapturedImage; selfie: CapturedImage; selfie2?: CapturedImage | undefined };
   /**
    * De foto's kwamen van een tweede toestel ("verder op je telefoon", lib/kyc/overdracht.ts).
    * Dan beslist altijd een mens: een doorgestuurde link kan anders iemands eigen ID en selfie
@@ -566,7 +567,7 @@ export async function submitFreelancerOnboarding(
     chipLezing(user.id).catch(() => null),
     // de pasfoto op het document tegen de selfie, met een eigen gezichtsmodel op deze server (lib/kyc/gezicht);
     // een storing geeft nooit een afwijzing, alleen "een medewerker kijkt mee"
-    gezichtControle(front.bytes, input.files.selfie.bytes),
+    gezichtControle(front.bytes, input.files.selfie.bytes, input.files.selfie2 && imageOk(input.files.selfie2) ? input.files.selfie2.bytes : undefined),
     // automatisch goedkeuren op het gezicht staat standaard uit; de eigenaar zet het aan na een meting (Admin → Beheer → Functies).
     // Bij een storing in de vlag: uit. De score wordt altijd bewaard en getoond.
     featureEnabled("id-gezicht-automatisch").catch(() => false),
@@ -651,6 +652,12 @@ export async function submitFreelancerOnboarding(
       detail: `${Math.round(gezicht.score * 100)}% (zeker vanaf 50%, aannemelijk vanaf 36%). Er wordt geen gezichtsprofiel bewaard, alleen deze score.`,
     });
   }
+  // --- de beweging: een tweede selfie met een gedraaid hoofd, tegen een foto of scherm als selfie (lib/kyc/gezicht/beweging.ts) ---
+  checks.push({
+    label: "Hoofd gedraaid op de tweede selfie (bewegingscontrole)",
+    ok: gezicht.beweging.oordeel === "ok",
+    detail: gezicht.beweging.reden,
+  });
 
   // --- de chip van het document (NFC via de app, passieve authenticatie) ---
   // "Echt" = de gegevens zijn door een vertrouwde overheid ondertekend. Dat zegt
@@ -789,6 +796,10 @@ export async function submitFreelancerOnboarding(
       uploadedById: user.id,
     }),
   ]);
+  // de tweede selfie (gedraaid hoofd) bewaren we ook, zodat een medewerker de beweging zelf kan zien
+  const storedSelfie2 = input.files.selfie2 && imageOk(input.files.selfie2)
+    ? await storeUpload({ filename: input.files.selfie2.filename, mimeType: input.files.selfie2.mimeType, bytes: input.files.selfie2.bytes, uploadedById: user.id })
+    : null;
   // Kept for the doc-number hash below, unaffected by the rename.
   const stored = storedFront;
 
@@ -813,7 +824,10 @@ export async function submitFreelancerOnboarding(
   // voorkant tegen de selfie, met een strenge drempel. Dat telt alleen voor een paspoort of ID-kaart: de
   // code op het document (MRZ, met controlecijfers) is dan het bewijs dat het document zelf klopt, en
   // een rijbewijs heeft geen code, dus daar beslist nog steeds een mens.
-  const gezichtOk = gezichtAuto && gezicht.oordeel === "zelfde" && input.documentType !== "DRIVERS_LICENSE" && mrzGeldig;
+  // Sinds de bewegingscontrole telt het ook alleen met een tweede selfie waarop het hoofd echt gedraaid is: een
+  // selfie uit de galerij, van een foto of van een scherm komt daar niet doorheen, en ook niet een scan zonder die stap.
+  const gezichtOk =
+    gezichtAuto && gezicht.oordeel === "zelfde" && gezicht.beweging.oordeel === "ok" && input.documentType !== "DRIVERS_LICENSE" && mrzGeldig;
   const visionOk =
     (vision.available &&
       vision.document !== null &&
@@ -887,7 +901,14 @@ export async function submitFreelancerOnboarding(
             outcome,
             ai,
             // alleen de uitslag: oordeel, score en of de controle kon draaien (geen kenmerken, geen foto)
-            gezicht: { oordeel: gezicht.oordeel, score: gezicht.score, technisch: gezicht.technisch, automatisch: gezichtOk, ms: gezicht.ms },
+            gezicht: {
+              oordeel: gezicht.oordeel,
+              score: gezicht.score,
+              technisch: gezicht.technisch,
+              automatisch: gezichtOk,
+              ms: gezicht.ms,
+              beweging: { oordeel: gezicht.beweging.oordeel, verschil: gezicht.beweging.verschil },
+            },
             // zonder het documentnummer en de vervaldatum die het beeldmodel las
             vision: vision.document ? { ...vision, document: { ...vision.document, documentNumber: null, expiryDate: null } } : vision,
             checks,
@@ -917,7 +938,7 @@ export async function submitFreelancerOnboarding(
                   ds: chip.ds,
                 }
               : null,
-            uploadIds: { front: storedFront.id, back: storedBack.id, selfie: storedSelfie.id },
+            uploadIds: { front: storedFront.id, back: storedBack.id, selfie: storedSelfie.id, ...(storedSelfie2 ? { selfie2: storedSelfie2.id } : {}) },
             // de beoordelingsroute zet de voorkant pas bij goedkeuring bij de documenten (review 2, H1-bis)
             viaTweedeToestel: Boolean(input.viaTweedeToestel),
             fileSha256: stored.sha256,

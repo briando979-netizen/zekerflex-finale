@@ -286,6 +286,9 @@ export interface AuthDict {
       kader: string;
       selfie: string;
       selfieUitleg: string;
+      /** de tweede selfie, met een gedraaid hoofd (bewegingscontrole) */
+      beweging: string;
+      bewegingUitleg: string;
       maakFoto: string;
       opnieuw: string;
       gebruik: string;
@@ -649,6 +652,8 @@ const nl: AuthDict = {
       kader: "Houd je document in het kader: recht van boven, scherp en zonder glans.",
       selfie: "Maak een selfie",
       selfieUitleg: "Kijk recht in de camera, met je gezicht in het ovaal. Geen pet of zonnebril.",
+      beweging: "Draai je hoofd",
+      bewegingUitleg: "Nog één selfie, zodat we zien dat je echt voor de camera zit. Draai je hoofd een kwartslag naar links of naar rechts, houd je gezicht in het ovaal en maak de foto.",
       maakFoto: "Foto maken",
       opnieuw: "Opnieuw",
       gebruik: "Deze gebruiken",
@@ -1009,6 +1014,8 @@ const en: AuthDict = {
       kader: "Keep your document inside the frame: straight from above, sharp and without glare.",
       selfie: "Take a selfie",
       selfieUitleg: "Look straight into the camera with your face in the oval. No cap or sunglasses.",
+      beweging: "Turn your head",
+      bewegingUitleg: "One more selfie, so we can see you are really in front of the camera. Turn your head a quarter turn to the left or to the right, keep your face in the oval and take the photo.",
       maakFoto: "Take photo",
       opnieuw: "Retake",
       gebruik: "Use this one",
@@ -1369,6 +1376,8 @@ const pl: AuthDict = {
       kader: "Trzymaj dokument w ramce: prosto z góry, ostro i bez odblasków.",
       selfie: "Zrób selfie",
       selfieUitleg: "Patrz prosto w aparat, z twarzą w owalu. Bez czapki i okularów przeciwsłonecznych.",
+      beweging: "Obróć głowę",
+      bewegingUitleg: "Jeszcze jedno selfie, abyśmy widzieli, że naprawdę stoisz przed aparatem. Obróć głowę o ćwierć obrotu w lewo lub w prawo, zachowaj twarz w owalu i zrób zdjęcie.",
       maakFoto: "Zrób zdjęcie",
       opnieuw: "Ponownie",
       gebruik: "Użyj tego",
@@ -1729,6 +1738,8 @@ const ro: AuthDict = {
       kader: "Ține documentul în cadru: drept de sus, clar și fără reflexii.",
       selfie: "Fă un selfie",
       selfieUitleg: "Privește drept în cameră, cu fața în oval. Fără șapcă sau ochelari de soare.",
+      beweging: "Întoarce capul",
+      bewegingUitleg: "Încă un selfie, ca să vedem că ești cu adevărat în fața camerei. Întoarce capul un sfert de rotație spre stânga sau spre dreapta, ține fața în oval și fă poza.",
       maakFoto: "Fă fotografia",
       opnieuw: "Din nou",
       gebruik: "Folosește-o",
@@ -2089,6 +2100,8 @@ const uk: AuthDict = {
       kader: "Тримайте документ у рамці: рівно згори, чітко й без відблисків.",
       selfie: "Зробіть селфі",
       selfieUitleg: "Дивіться прямо в камеру, обличчя в овалі. Без кепки й сонцезахисних окулярів.",
+      beweging: "Поверніть голову",
+      bewegingUitleg: "Ще одне селфі, щоб ми бачили, що ви справді перед камерою. Поверніть голову на чверть оберту ліворуч або праворуч, тримайте обличчя в овалі й зробіть фото.",
       maakFoto: "Зробити фото",
       opnieuw: "Ще раз",
       gebruik: "Використати це",

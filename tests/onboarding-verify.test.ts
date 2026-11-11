@@ -72,8 +72,10 @@ const runVisionReview = vi.fn().mockResolvedValue({ available: false, document: 
 vi.mock("@/lib/kyc/vision", () => ({ runVisionReview: (...a: unknown[]) => runVisionReview(...a) }));
 
 /** het eigen gezichtsmodel (lib/kyc/gezicht): standaard "kon niet draaien", dus een mens beslist */
-const GEZICHT_NIET = { beschikbaar: false, oordeel: "onbruikbaar", score: null, reden: "De automatische gezichtscontrole was niet beschikbaar. Een medewerker kijkt mee.", technisch: true, ms: 1 };
-const GEZICHT_ZELFDE = { beschikbaar: true, oordeel: "zelfde", score: 0.72, reden: "Het gezicht op de selfie komt overeen met de pasfoto op het document.", technisch: false, ms: 90 };
+const BEWEGING_NIET = { oordeel: "niet-beoordeeld", verschil: null, reden: "De bewegingscontrole is niet uitgevoerd. Een medewerker kijkt mee." };
+const BEWEGING_OK = { oordeel: "ok", verschil: 0.31, reden: "Het hoofd draaide echt tussen de twee selfies." };
+const GEZICHT_NIET = { beschikbaar: false, oordeel: "onbruikbaar", score: null, reden: "De automatische gezichtscontrole was niet beschikbaar. Een medewerker kijkt mee.", technisch: true, ms: 1, beweging: BEWEGING_NIET };
+const GEZICHT_ZELFDE = { beschikbaar: true, oordeel: "zelfde", score: 0.72, reden: "Het gezicht op de selfie komt overeen met de pasfoto op het document.", technisch: false, ms: 90, beweging: BEWEGING_OK };
 const gezichtControle = vi.fn().mockResolvedValue(GEZICHT_NIET);
 vi.mock("@/lib/kyc/gezicht/controle", () => ({ gezichtControle: (...a: unknown[]) => gezichtControle(...a) }));
 const featureEnabled = vi.fn().mockResolvedValue(true);
@@ -751,6 +753,50 @@ describe("submitFreelancerOnboarding — gezichtscontrole met het eigen model (1
     expect(result.outcome).toBe("in_review");
     const data = (ivCreate.mock.calls[0]![0] as { data: { faceMatchScore: number } }).data;
     expect(data.faceMatchScore).toBe(0.72);
+  });
+
+  it("zonder tweede selfie (gedraaid hoofd) keurt een sterke match niet zelf goed: een selfie uit de galerij komt er niet doorheen", async () => {
+    userFindUnique.mockResolvedValue(GEBRUIKER);
+    gezichtControle.mockResolvedValueOnce({ ...GEZICHT_ZELFDE, beweging: { oordeel: "niet-aangeleverd", verschil: null, reden: "Er is geen tweede selfie met een gedraaid hoofd. Een medewerker kijkt mee." } });
+    await aiUit();
+    const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: FOTOS });
+    expect(result.outcome).toBe("in_review");
+    expect(result.checks.find((c) => c.label.includes("bewegingscontrole"))?.ok).toBe(false);
+  });
+
+  it("een hoofd dat niet draaide (foto of scherm als selfie) gaat naar een mens, ook bij een sterke match", async () => {
+    userFindUnique.mockResolvedValue(GEBRUIKER);
+    gezichtControle.mockResolvedValueOnce({ ...GEZICHT_ZELFDE, beweging: { oordeel: "niet-gedraaid", verschil: 0.02, reden: "Je hoofd was op de tweede selfie niet duidelijk gedraaid." } });
+    await aiUit();
+    const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: { ...FOTOS, selfie2: image("selfie2.jpg") } });
+    expect(result.outcome).toBe("in_review");
+    const data = (ivCreate.mock.calls[0]![0] as { data: { rawPayload: { gezicht: { automatisch: boolean; beweging: { oordeel: string; verschil: number } } } } }).data;
+    expect(data.rawPayload.gezicht.automatisch).toBe(false);
+    expect(data.rawPayload.gezicht.beweging).toEqual({ oordeel: "niet-gedraaid", verschil: 0.02 });
+  });
+
+  it("met een echt gedraaid hoofd keurt hij zelf goed, geeft de tweede selfie door en bewaart hem naast de andere foto's", async () => {
+    userFindUnique.mockResolvedValue(GEBRUIKER);
+    gezichtControle.mockResolvedValueOnce(GEZICHT_ZELFDE);
+    await aiUit();
+    const selfie2 = image("selfie2.jpg");
+    const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: { ...FOTOS, selfie2 } });
+    expect(result.outcome).toBe("verified");
+    // de controle kreeg de bytes van de tweede selfie als derde argument
+    expect(gezichtControle.mock.calls[0]?.[2]).toBe(selfie2.bytes);
+    const payload = (ivCreate.mock.calls[0]![0] as { data: { rawPayload: { uploadIds: Record<string, string>; gezicht: { beweging: { oordeel: string } } } } }).data.rawPayload;
+    expect(Object.keys(payload.uploadIds).sort()).toEqual(["back", "front", "selfie", "selfie2"]);
+    expect(payload.gezicht.beweging.oordeel).toBe("ok");
+  });
+
+  it("een tweede selfie die te klein is (geen echte foto) telt als niet aangeleverd en wordt niet doorgegeven", async () => {
+    userFindUnique.mockResolvedValue(GEBRUIKER);
+    gezichtControle.mockResolvedValueOnce(GEZICHT_ZELFDE);
+    await aiUit();
+    await submitFreelancerOnboarding({ ...BASE_INPUT, files: { ...FOTOS, selfie2: image("selfie2.jpg", 100) } });
+    expect(gezichtControle.mock.calls[0]?.[2]).toBeUndefined();
+    const ids = (ivCreate.mock.calls[0]![0] as { data: { rawPayload: { uploadIds: Record<string, string> } } }).data.rawPayload.uploadIds;
+    expect(ids.selfie2).toBeUndefined();
   });
 
   it("foto's via een tweede toestel blijven altijd bij een mens, ook met een sterke match", async () => {
