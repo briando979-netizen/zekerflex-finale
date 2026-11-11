@@ -95,8 +95,12 @@ describe("branches", () => {
     const kapper = brancheVan("kapper-schoonheid")!;
     const d = dekkingVan(kapper);
     expect(d.totaal).toBe(10);
-    expect(d.klaar).toBe(9); // alleen voorraad ontbreekt nog; afspraken en de klantenkaart staan sinds 11 nov
-    expect(d.procent).toBe(90);
+    expect(d.klaar).toBe(10); // afspraken, klantenkaart en voorraad staan sinds 11 nov
+    expect(d.procent).toBe(100);
+    // ook de bouw, schoonmaak en winkel hebben nu alles van hun lijst (werkbonnen, offertes, checklists en voorraad staan)
+    for (const s of ["bouw-installatie", "schoonmaak", "winkel"]) expect(dekkingVan(brancheVan(s)!).procent, s).toBe(100);
+    // wat nog ontbreekt: ritten (transport), kamers (hotel), lidmaatschappen (sport) en het dossier (zorg)
+    for (const s of ["transport-logistiek", "hotel-verblijf", "sport-fitness", "zorgpraktijk"]) expect(dekkingVan(brancheVan(s)!).procent, s).toBeLessThan(100);
     // het gemiddelde ligt tussen de laagste en de hoogste
     const alle = BRANCHES.map((b) => dekkingVan(b).procent);
     expect(gemiddeldeDekking()).toBeGreaterThanOrEqual(Math.min(...alle));
@@ -138,18 +142,18 @@ describe("bouwvolgorde", () => {
     }
   });
 
-  it("zet de module die de meeste branches helpt bovenaan", () => {
-    const aantallen = volgorde.map((s) => s.branches.length);
-    expect(aantallen).toEqual([...aantallen].sort((a, b) => b - a));
-    // afspraken en klantenkaart staan er inmiddels; voorraad helpt winkel, kapper en bouw; werkbonnen bouw en schoonmaak; dossier alleen de zorg
-    const per = Object.fromEntries(volgorde.map((s) => [s.module.sleutel, s.branches.length]));
-    expect(per.afspraken).toBeUndefined();
-    expect(per.klantenkaart).toBeUndefined();
-    expect(per.voorraad).toBe(3);
-    expect(per.werkbonnen).toBe(2);
-    expect(per.dossier).toBe(1);
-    expect(volgorde[0]!.module.sleutel).toBe("voorraad");
-    expect(volgorde.findIndex((s) => s.module.sleutel === "werkbonnen")).toBeLessThan(volgorde.findIndex((s) => s.module.sleutel === "dossier"));
+  it("wat gebouwd is, staat er niet meer in; wat overblijft is ritten, kamers, lidmaatschappen en het dossier", () => {
+    const sleutels = volgorde.map((s) => s.module.sleutel);
+    for (const klaar of ["afspraken", "klantenkaart", "voorraad", "werkbonnen", "offertes", "checklists"]) expect(sleutels, klaar).not.toContain(klaar);
+    expect([...sleutels].sort()).toEqual(["dossier", "kamers", "lidmaatschappen", "ritten"]);
+  });
+
+  it("een geblokkeerd onderdeel (het dossier: eerst een jurist) staat onderaan, ook al helpt het evenveel branches", () => {
+    const dossier = volgorde.find((s) => s.module.sleutel === "dossier")!;
+    expect(dossier.module.blokkade).toMatch(/jurist/);
+    expect(volgorde.at(-1)!.module.sleutel).toBe("dossier");
+    // de rest: bij gelijk aantal branches wint de grootste dekkingswinst (ritten 11, kamers en lidmaatschappen 10 procentpunten)
+    expect(volgorde.slice(0, 3).map((s) => s.module.sleutel)).toEqual(["ritten", "kamers", "lidmaatschappen"]);
   });
 
   it("de winst is de dekking die de branches samen erbij krijgen, in procentpunten", () => {

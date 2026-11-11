@@ -146,7 +146,8 @@ export function bouwvolgorde(): BouwStap[] {
       return { module, branches, winst: Math.round(winst) };
     })
     .filter((s) => s.branches.length > 0)
-    .sort((a, b) => b.branches.length - a.branches.length || b.winst - a.winst || a.module.sleutel.localeCompare(b.module.sleutel));
+    // een geblokkeerd onderdeel (bv. een juridische vraag) staat onderaan, hoe veel branches het ook helpt
+    .sort((a, b) => Number(Boolean(a.module.blokkade)) - Number(Boolean(b.module.blokkade)) || b.branches.length - a.branches.length || b.winst - a.winst || a.module.sleutel.localeCompare(b.module.sleutel));
 }
 
 /** Het gemiddelde van de dekking over alle branches. */

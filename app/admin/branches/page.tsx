@@ -103,6 +103,12 @@ export default async function BranchesBeheer() {
                     <span style={{ color: "var(--a-text)", fontWeight: 600 }}>{s.module.naam}</span>
                     <br />
                     <span style={{ color: "var(--a-mute)" }}>{s.module.wat}</span>
+                    {s.module.blokkade && (
+                      <>
+                        <br />
+                        <Pill tone="warn">wacht</Pill> <span style={{ color: "var(--a-dim)" }}>{s.module.blokkade}</span>
+                      </>
+                    )}
                   </td>
                   <td style={{ ...cel, color: "var(--a-dim)" }}>
                     {s.branches.length}: {s.branches.map((b) => b.naam).join(", ")}

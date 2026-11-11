@@ -30,10 +30,12 @@ export interface BrancheModule {
   status: ModuleStatus;
   /** de pagina waar het bedrijf ermee werkt; alleen bij "klaar" */
   href: string | null;
+  /** waarom een gepland onderdeel nog niet gebouwd wordt (bijvoorbeeld een juridische vraag): dan staat het onderaan de bouwvolgorde */
+  blokkade?: string | undefined;
 }
 
 const klaar = (sleutel: string, groep: ModuleGroep, naam: string, wat: string, href: string): BrancheModule => ({ sleutel, groep, naam, wat, status: "klaar", href });
-const gepland = (sleutel: string, groep: ModuleGroep, naam: string, wat: string): BrancheModule => ({ sleutel, groep, naam, wat, status: "gepland", href: null });
+const gepland = (sleutel: string, groep: ModuleGroep, naam: string, wat: string, blokkade?: string): BrancheModule => ({ sleutel, groep, naam, wat, status: "gepland", href: null, ...(blokkade ? { blokkade } : {}) });
 
 export const MODULES: readonly BrancheModule[] = [
   // personeel
@@ -64,14 +66,15 @@ export const MODULES: readonly BrancheModule[] = [
   // klaar sinds 11 nov: lib/afspraken (boekpagina /boeken/<adres>, agenda, klantenkaart)
   klaar("afspraken", "klanten", "Afspraken boeken", "Klanten boeken online een tijd bij een medewerker; jij ziet de agenda per persoon.", "/werkgever/afspraken"),
   klaar("klantenkaart", "klanten", "Klantenkaart", "Per klant de geschiedenis en je eigen notities, met de mogelijkheid een klant te wissen.", "/werkgever/klanten"),
-  gepland("offertes", "geld", "Offertes", "Een offerte maken, versturen en na akkoord omzetten in een opdracht."),
-  gepland("voorraad", "plek", "Voorraad", "Wat er ligt, wat bijna op is, en bestellen bij de leverancier."),
-  gepland("werkbonnen", "branche", "Werkbonnen en opdrachten", "Een opdracht met adres, planning, foto's, handtekening en uren, die een factuur wordt."),
-  gepland("checklists", "branche", "Checklists en rondes", "Vaste taken per locatie of ronde, met bewijs dat ze gedaan zijn."),
+  // klaar sinds 11 nov (gebouwd door een vloot agenten, elk met eigen tests en een schone controle): zie lib/voorraad, lib/werkbonnen, lib/offertes, lib/checklists
+  klaar("offertes", "geld", "Offertes", "Een offerte maken, een link delen en de klant laten akkoord gaan of afwijzen; zonder e-mail, je stuurt de link zelf.", "/werkgever/offertes"),
+  klaar("voorraad", "plek", "Voorraad", "Wat er ligt, wat bijna op is, een logboek van elke wijziging en een bestellijst per leverancier.", "/werkgever/voorraad"),
+  klaar("werkbonnen", "branche", "Werkbonnen en opdrachten", "Een opdracht met klant, planning, uren en materialen, met een afdrukbare werkbon.", "/werkgever/werkbonnen"),
+  klaar("checklists", "branche", "Checklists en rondes", "Vaste taken per locatie of ronde, door personeel zonder account in te vullen, met een overzicht van wat gemist is.", "/werkgever/checklists"),
   gepland("lidmaatschappen", "branche", "Lidmaatschappen", "Abonnementen en strippenkaarten van je klanten, met automatische incasso."),
   gepland("ritten", "branche", "Ritten en voertuigen", "Ritten plannen, voertuigen en chauffeurs koppelen, uren per rit."),
   gepland("kamers", "branche", "Kamers en verblijven", "Kamers, beschikbaarheid en boekingen op één kalender."),
-  gepland("dossier", "branche", "Dossier", "Een beveiligd dossier per cliënt; zware regels, dus pas na de eerste branches."),
+  gepland("dossier", "branche", "Dossier", "Een beveiligd dossier per cliënt; zware regels, dus pas na de eerste branches.", "Eerst een jurist: het zijn gezondheidsgegevens (bijzondere persoonsgegevens, AVG artikel 9)."),
 ];
 
 const PER_SLEUTEL = new Map(MODULES.map((m) => [m.sleutel, m]));

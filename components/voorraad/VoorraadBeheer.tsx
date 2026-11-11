@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { bestelTekst, bestellijst, eenheidTekst, filterEnSorteer, isBijnaOp, isOp, nlGetal, voorraadWaarde, type Artikel, type VoorraadFilter, type VoorraadSortering } from "@/lib/voorraad/model";
+import { bestelStand, bestelTekst, bestellijst, eenheidTekst, filterEnSorteer, isBijnaOp, isOp, nlGetal, voorraadWaarde, type Artikel, type VoorraadFilter, type VoorraadSortering } from "@/lib/voorraad/model";
 import { ArtikelFormulier } from "@/components/voorraad/ArtikelFormulier";
 import { leesFout } from "@/components/voorraad/fout";
 import { ArtikelDetail } from "@/components/voorraad/ArtikelDetail";
@@ -137,7 +137,7 @@ export function VoorraadBeheer() {
                 <ul className="mt-1 space-y-0.5 text-sm text-neutralx-600">
                   {g.regels.map(({ artikel: a, tekort }) => (
                     <li key={a.id}>
-                      {a.naam}: nu {nlGetal(a.aantal)}, minimum {nlGetal(a.minimum)}, tekort {nlGetal(tekort)} {eenheidTekst(a.eenheid, tekort)}
+                      {a.naam}: {bestelStand(a, tekort)}
                     </li>
                   ))}
                 </ul>

@@ -256,12 +256,21 @@ export const nlGetal = (n: number): string => String(rond3(n)).replace(".", ",")
 
 export const eenheidTekst = (e: Eenheid, n: number): string => (e === "stuk" ? (n === 1 ? "stuk" : "stuks") : e === "doos" ? (n === 1 ? "doos" : "dozen") : e === "set" ? (n === 1 ? "set" : "sets") : e);
 
+/**
+ * De stand van een artikel op de bestellijst: "nu 3, minimum 3, op het minimum" als er niets aan het minimum ontbreekt,
+ * anders "nu 2, minimum 10, tekort 8 stuks". ("tekort 0 stuks" las vreemd.) Eén functie, voor het scherm én de kopieerbare tekst.
+ */
+export function bestelStand(a: Artikel, tekort: number): string {
+  const vast = `nu ${nlGetal(a.aantal)}, minimum ${nlGetal(a.minimum)}`;
+  return tekort <= 0 ? `${vast}, op het minimum` : `${vast}, tekort ${nlGetal(tekort)} ${eenheidTekst(a.eenheid, tekort)}`;
+}
+
 /** De bestellijst als gewone tekst, per leverancier, om te kopiëren in een mail of app. */
 export function bestelTekst(groepen: readonly BestelGroep[]): string {
   if (groepen.length === 0) return "Niets te bestellen.";
   return groepen
     .map((g) => {
-      const regels = g.regels.map(({ artikel: a, tekort }) => `- ${a.naam}${a.sku ? ` (${a.sku})` : ""}: nu ${nlGetal(a.aantal)}, minimum ${nlGetal(a.minimum)}, tekort ${nlGetal(tekort)} ${eenheidTekst(a.eenheid, tekort)}`);
+      const regels = g.regels.map(({ artikel: a, tekort }) => `- ${a.naam}${a.sku ? ` (${a.sku})` : ""}: ${bestelStand(a, tekort)}`);
       return `${g.leverancier}\n${regels.join("\n")}`;
     })
     .join("\n\n");

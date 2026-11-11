@@ -168,7 +168,7 @@ describe("bestellijst", () => {
     expect(g[1]!.regels[0]!.tekort).toBe(0);
   });
   it("maakt kopieerbare tekst", () => {
-    expect(bestelTekst(bestellijst(lijst))).toBe("Bouwmarkt\n- Schroeven (S-1): nu 2, minimum 10, tekort 8 stuks\n\nLeverancier onbekend\n- Kit: nu 1, minimum 1, tekort 0 stuks");
+    expect(bestelTekst(bestellijst(lijst))).toBe("Bouwmarkt\n- Schroeven (S-1): nu 2, minimum 10, tekort 8 stuks\n\nLeverancier onbekend\n- Kit: nu 1, minimum 1, op het minimum");
     expect(bestelTekst([])).toBe("Niets te bestellen.");
   });
 });
