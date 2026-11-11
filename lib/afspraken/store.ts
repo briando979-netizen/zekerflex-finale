@@ -5,12 +5,16 @@
 //   afspraken:item:<tenantId>:<dag>~<id>       één afspraak; de dag staat in de sleutel, een dag is zo in één keer op te halen
 //   afspraken:klant:<tenantId>:<sleutel>       de notitie bij een klant
 // Gegevens van klanten van een bedrijf (naam, telefoon, e-mail) zijn gegevens van derden: een bedrijf kan een klant
-// helemaal laten wissen (verwijderKlant), en de boekpagina zegt vooraf waar de gegevens heen gaan.
+// helemaal laten wissen (verwijderKlant), na 2 jaar worden ze vanzelf gewist (lib/afspraken/bewaren.ts) en de boekpagina
+// zegt vooraf waar de gegevens heen gaan.
+// Deze sleutels horen van een organisatie, niet van één gebruiker: daarom staan ze bewust NIET in ERASABLE_KV_PREFIXES
+// (lib/privacy/user-kv.ts, dat wist per gebruiker bij het sluiten van een account). Ze gaan weg met de organisatie
+// (wisAfsprakenVanOrganisatie, aangeroepen vanuit anonymizeUser als de laatste beheerder vertrekt).
 // ---------------------------------------------------------------------------
 
 import { randomBytes } from "node:crypto";
 import { AppError } from "@/lib/errors";
-import { kvDelete, kvGet, kvListEntries, kvListValues, kvSet } from "@/lib/storage/kv";
+import { kvDelete, kvDeleteStale, kvFindDue, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import {
   AFSPRAAK_ID,
@@ -21,6 +25,7 @@ import {
   klantSleutel,
   klantenUit,
   schoneTekst,
+  zonderPersoon,
   type Afspraak,
   type AfspraakStatus,
   type Instellingen,
@@ -28,7 +33,33 @@ import {
   type KlantKaart,
 } from "@/lib/afspraken/model";
 
-const MAX_AFSPRAKEN = 5_000;
+/** Zoveel afspraken (of notities) leest een volledige lijst hooguit; bij meer meldt het scherm dat de lijst niet compleet is. */
+export const MAX_LIJST = 50_000;
+/** Het hoogste aantal dagen in één agenda-opvraag (de route begrenst op 62 dagen na de eerste: 63 dagen). */
+const MAX_DAGEN = 63;
+const PAGINA = 500;
+
+/**
+ * Alle rijen onder een voorvoegsel, in pagina's van 500 op sleutel (dus stabiel, ook als er tussendoor iets wordt
+ * geschreven). `veld`/`grens` is een filter dat altijd waar moet zijn voor een geldige rij (kvFindDue is het enige
+ * pagineren dat de opslag kent). Stopt bij `max` rijen en zegt dan eerlijk of er nog meer waren: nooit stil iets weglaten.
+ */
+export async function alleRijen<T>(voorvoegsel: string, veld: string, grens: string, max: number = MAX_LIJST): Promise<{ rijen: { key: string; value: T }[]; afgekapt: boolean }> {
+  const rijen: { key: string; value: T }[] = [];
+  let na = "";
+  for (;;) {
+    const vraag = Math.min(PAGINA, max - rijen.length);
+    if (vraag <= 0) {
+      const meer = await kvFindDue<T>(voorvoegsel, veld, grens, na, 1);
+      return { rijen, afgekapt: meer.length > 0 };
+    }
+    const pagina = await kvFindDue<T>(voorvoegsel, veld, grens, na, vraag);
+    rijen.push(...pagina);
+    const laatste = pagina[pagina.length - 1];
+    if (pagina.length < vraag || !laatste) return { rijen, afgekapt: false };
+    na = laatste.key;
+  }
+}
 
 /** Een kort willekeurig id voor een dienst of medewerker (hex, 8 tekens). */
 export const nieuwId = (): string => randomBytes(4).toString("hex");
@@ -74,11 +105,30 @@ export async function afsprakenVanDag(tenantId: string, dag: string): Promise<Af
   return kvListValues<Afspraak>(`${voorvoegselItems(tenantId)}${dag}~`, 500);
 }
 
-/** Alle afspraken tussen twee dagen (allebei inbegrepen), op tijd. */
+/**
+ * Alle afspraken tussen twee dagen (allebei inbegrepen), op tijd. De dagen worden één voor één opgehaald (de dag staat in
+ * de sleutel), zodat een drukke zaak met veel afspraken buiten de gevraagde week er niets van merkt. Hooguit 63 dagen.
+ */
 export async function afsprakenTussen(tenantId: string, vanDag: string, totDag: string): Promise<Afspraak[]> {
-  if (!DAG_SLEUTEL.test(vanDag) || !DAG_SLEUTEL.test(totDag)) return [];
-  const alle = await kvListValues<Afspraak>(voorvoegselItems(tenantId), MAX_AFSPRAKEN);
-  return alle.filter((a) => a.id.slice(0, 10) >= vanDag && a.id.slice(0, 10) <= totDag).sort((a, b) => a.start.localeCompare(b.start));
+  if (!DAG_SLEUTEL.test(vanDag) || !DAG_SLEUTEL.test(totDag) || totDag < vanDag) return [];
+  const [j, m, d] = vanDag.split("-").map(Number) as [number, number, number];
+  const dagen: string[] = [];
+  for (let n = 0; n < MAX_DAGEN; n += 1) {
+    const dag = new Date(Date.UTC(j, m - 1, d + n)).toISOString().slice(0, 10);
+    if (dag > totDag) break;
+    dagen.push(dag);
+  }
+  const uit: Afspraak[] = [];
+  for (let i = 0; i < dagen.length; i += 7) {
+    const week = await Promise.all(dagen.slice(i, i + 7).map((dag) => afsprakenVanDag(tenantId, dag)));
+    for (const dag of week) uit.push(...dag);
+  }
+  return uit.sort((a, b) => a.start.localeCompare(b.start));
+}
+
+/** Alle afspraken van een organisatie met hun sleutel (in pagina's, met een eerlijke melding als de grens bereikt is). */
+async function alleAfspraken(tenantId: string, max: number = MAX_LIJST) {
+  return alleRijen<Afspraak>(voorvoegselItems(tenantId), "gemaaktOp", "9999", max);
 }
 
 export interface BoekInvoer {
@@ -155,20 +205,25 @@ interface Notitie {
   notitie: string;
 }
 
-export async function notitiesVan(tenantId: string): Promise<Map<string, string>> {
-  const lijst = await kvListEntries<Notitie>(`afspraken:klant:${tenantId}:`, 2_000);
-  return new Map(lijst.map((e) => [e.value.sleutel, e.value.notitie]));
+export async function notitiesVan(tenantId: string): Promise<{ notities: Map<string, string>; afgekapt: boolean }> {
+  // sleutels beginnen met "e-" of "t-": elke geldige notitie is kleiner dan "zzzz"
+  const { rijen, afgekapt } = await alleRijen<Notitie>(`afspraken:klant:${tenantId}:`, "sleutel", "zzzz");
+  return { notities: new Map(rijen.map((e) => [e.value.sleutel, e.value.notitie])), afgekapt };
 }
 
-export async function klantenLijst(tenantId: string, nu: Date = new Date()): Promise<KlantKaart[]> {
-  const [afspraken, notities] = await Promise.all([kvListValues<Afspraak>(voorvoegselItems(tenantId), MAX_AFSPRAKEN), notitiesVan(tenantId)]);
-  return klantenUit(afspraken, notities, nu);
+/**
+ * Alle klanten met hun geschiedenis in cijfers. `afgekapt`: er zijn meer afspraken (of notities) dan er in één lijst
+ * passen; de lijst is dan niet compleet en het scherm moet dat zeggen.
+ */
+export async function klantenLijst(tenantId: string, nu: Date = new Date()): Promise<{ klanten: KlantKaart[]; afgekapt: boolean }> {
+  const [afspraken, notities] = await Promise.all([alleAfspraken(tenantId), notitiesVan(tenantId)]);
+  return { klanten: klantenUit(afspraken.rijen.map((r) => r.value), notities.notities, nu), afgekapt: afspraken.afgekapt || notities.afgekapt };
 }
 
-/** Alle afspraken van één klant, de nieuwste eerst. */
-export async function afsprakenVanKlant(tenantId: string, sleutel: string): Promise<Afspraak[]> {
-  const alle = await kvListValues<Afspraak>(voorvoegselItems(tenantId), MAX_AFSPRAKEN);
-  return alle.filter((a) => klantSleutel(a.klant) === sleutel).sort((a, b) => b.start.localeCompare(a.start));
+/** Alle afspraken van één klant, de nieuwste eerst. `afgekapt`: zie klantenLijst. */
+export async function afsprakenVanKlant(tenantId: string, sleutel: string): Promise<{ afspraken: Afspraak[]; afgekapt: boolean }> {
+  const { rijen, afgekapt } = await alleAfspraken(tenantId);
+  return { afspraken: rijen.map((r) => r.value).filter((a) => klantSleutel(a.klant) === sleutel).sort((a, b) => b.start.localeCompare(a.start)), afgekapt };
 }
 
 export async function bewaarNotitie(tenantId: string, sleutel: string, notitie: string): Promise<void> {
@@ -181,15 +236,39 @@ export async function bewaarNotitie(tenantId: string, sleutel: string, notitie: 
 }
 
 /**
+ * Alles van een organisatie wissen: de instellingen, het boekadres, alle afspraken en alle klantnotities. Voor als de
+ * organisatie niet meer bestaat (de laatste beheerder is gewist): de klanten van dat bedrijf hebben dan niemand meer
+ * die verantwoordelijk is voor hun gegevens. Geeft terug hoeveel rijen er weg zijn.
+ */
+export async function wisAfsprakenVanOrganisatie(tenantId: string, nu: Date = new Date()): Promise<number> {
+  // een echt organisatie-id: zo kan een leeg of vreemd id nooit een te breed voorvoegsel worden
+  if (!/^[A-Za-z0-9_-]{6,64}$/.test(tenantId)) throw AppError.validation("Dit is geen geldige organisatie.");
+  const tot = new Date(nu.getTime() + 60_000);
+  let aantal = 0;
+  aantal += await kvDeleteStale(voorvoegselItems(tenantId), tot);
+  aantal += await kvDeleteStale(`afspraken:klant:${tenantId}:`, tot);
+  const i = await leesInstellingen(tenantId);
+  if (i) {
+    const van = await kvGet<{ tenantId: string }>(sleutelSlug(i.slug));
+    if (van?.tenantId === tenantId) await kvDelete(sleutelSlug(i.slug));
+    await kvDelete(sleutelInst(tenantId));
+    aantal += 1;
+  }
+  return aantal;
+}
+
+/**
  * Een klant helemaal wissen (recht op vergetelheid): de notitie weg en alle persoonsgegevens uit zijn afspraken. De
  * afspraken zelf blijven als lege regel bestaan (dienst, tijd, status), zodat de agenda en de cijfers van het bedrijf kloppen.
  */
 export async function verwijderKlant(tenantId: string, sleutel: string): Promise<number> {
-  const alle = await kvListEntries<Afspraak>(voorvoegselItems(tenantId), MAX_AFSPRAKEN);
+  // wissen moet compleet zijn: een veel hogere grens, en bij nog meer liever een fout dan stil gegevens laten staan
+  const { rijen, afgekapt } = await alleAfspraken(tenantId, MAX_LIJST * 4);
+  if (afgekapt) throw AppError.conflict("Er zijn te veel afspraken om deze klant in één keer te wissen. Neem contact op met ZekerFlex.");
   let aantal = 0;
-  for (const e of alle) {
+  for (const e of rijen) {
     if (klantSleutel(e.value.klant) !== sleutel) continue;
-    await kvSet(e.key, { ...e.value, klant: { naam: "Verwijderd", telefoon: "", email: "" }, opmerking: "" } satisfies Afspraak);
+    await kvSet(e.key, zonderPersoon(e.value));
     aantal += 1;
   }
   await kvDelete(sleutelKlant(tenantId, sleutel));

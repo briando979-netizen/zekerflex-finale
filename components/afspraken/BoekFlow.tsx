@@ -33,7 +33,7 @@ const plusDagen = (dag: string, n: number) => new Date(dagDatum(dag).getTime() +
 
 type Stap = "dienst" | "tijd" | "gegevens" | "klaar";
 
-export function BoekFlow({ slug, bedrijfsnaam, diensten, medewerkers, vanDag, totDag }: { slug: string; bedrijfsnaam: string; diensten: DienstInfo[]; medewerkers: MedewerkerInfo[]; vanDag: string; totDag: string }) {
+export function BoekFlow({ slug, bedrijfsnaam, diensten, medewerkers, vanDag, totDag, openDagen }: { slug: string; bedrijfsnaam: string; diensten: DienstInfo[]; medewerkers: MedewerkerInfo[]; vanDag: string; totDag: string; openDagen: number[] }) {
   const [stap, setStap] = useState<Stap>("dienst");
   const [dienst, setDienst] = useState<DienstInfo | null>(diensten.length === 1 ? (diensten[0] ?? null) : null);
   const [medewerker, setMedewerker] = useState("");
@@ -192,13 +192,24 @@ export function BoekFlow({ slug, bedrijfsnaam, diensten, medewerkers, vanDag, to
               ‹
             </button>
             <ul className="grid flex-1 grid-cols-7 gap-1" aria-label="Dagen">
-              {dagen.map((d) => (
-                <li key={d}>
-                  <button type="button" onClick={() => setDag(d)} aria-pressed={dag === d} className={`w-full rounded-lg border px-1 py-2 text-center text-xs ${dag === d ? "border-brand-600 bg-brand-50 font-semibold text-ink" : "border-hairstrong text-neutralx-600 hover:border-brand-500"}`}>
-                    {dagKort(d)}
-                  </button>
-                </li>
-              ))}
+              {dagen.map((d) => {
+                // een dag waarop het bedrijf nooit open is (bijvoorbeeld zondag), is niet te kiezen
+                const gesloten = !openDagen.includes(dagDatum(d).getUTCDay());
+                return (
+                  <li key={d}>
+                    <button
+                      type="button"
+                      onClick={() => setDag(d)}
+                      disabled={gesloten}
+                      aria-pressed={dag === d}
+                      {...(gesloten ? { "aria-label": `${dagKort(d)}, gesloten` } : {})}
+                      className={`w-full rounded-lg border px-1 py-2 text-center text-xs ${gesloten ? "border-hair text-neutralx-500 opacity-50" : dag === d ? "border-brand-600 bg-brand-50 font-semibold text-ink" : "border-hairstrong text-neutralx-600 hover:border-brand-500"}`}
+                    >
+                      {dagKort(d)}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
             <button type="button" className="btn-ghost px-3 py-2 text-sm disabled:opacity-40" disabled={plusDagen(begin, 7) > totDag} onClick={() => setBegin((b) => plusDagen(b, 7))} aria-label="Latere dagen">
               ›

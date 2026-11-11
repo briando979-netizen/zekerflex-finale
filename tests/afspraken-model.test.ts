@@ -8,6 +8,7 @@ import {
   klantSleutel,
   klantenUit,
   laatsteDag,
+  openDagen,
   schoneEmail,
   schoneTelefoon,
   slugUit,
@@ -38,6 +39,18 @@ const afspraak = (over: Partial<Afspraak> & Pick<Afspraak, "start" | "eind" | "m
   bron: "online",
   gemaaktOp: "2026-11-10T10:00:00Z",
   ...over,
+});
+
+describe("openDagen", () => {
+  it("geeft de weekdagnummers (0 = zondag) met minstens één tijdvak; een lege dag is gesloten", () => {
+    const vak = [{ van: "09:00", tot: "17:00" }];
+    expect(openDagen({ uren: [[], vak, vak, [], vak, vak, []] })).toEqual([1, 2, 4, 5]);
+    expect(openDagen({ uren: [] })).toEqual([]);
+    expect(openDagen({ uren: [vak, [], [], [], [], [], vak] })).toEqual([0, 6]);
+  });
+  it("de beginopzet is op zondag gesloten", () => {
+    expect(openDagen(basis())).not.toContain(0);
+  });
 });
 
 describe("tijden en slugs", () => {

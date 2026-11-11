@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
-import { laatsteDag } from "@/lib/afspraken/model";
+import { laatsteDag, openDagen } from "@/lib/afspraken/model";
 import { openInstellingenVanSlug } from "@/lib/afspraken/store";
 import { BoekFlow } from "@/components/afspraken/BoekFlow";
 
@@ -35,6 +35,7 @@ export default async function BoekPagina({ params }: Props) {
           medewerkers={i.medewerkers.map((m) => ({ id: m.id, naam: m.naam }))}
           vanDag={amsterdamDayKey(nu)}
           totDag={laatsteDag(nu, i.maxDagenVooruit)}
+          openDagen={openDagen(i)}
         />
         <p className="mt-6 text-center text-xs text-neutralx-500">Afspraken via ZekerFlex namens {i.bedrijfsnaam}. Je gegevens gaan alleen naar dit bedrijf.</p>
       </div>

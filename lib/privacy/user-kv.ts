@@ -11,6 +11,9 @@ import { prisma } from "@/lib/prisma";
 //     Bewust een lijst en geen "alles met je userId": fiscale gegevens,
 //     contracten en geldzaken (fiscal:, uitzend-contracts:, factoring-terms:,
 //     advance-request:, bank-…) vallen onder een wettelijke bewaartermijn.
+//     Sleutels die van een organisatie zijn en niet van één gebruiker staan hier
+//     bewust niet (bijv. afspraken: met de klanten van een bedrijf, lib/afspraken):
+//     die gaan weg met de organisatie, niet met één account.
 // ---------------------------------------------------------------------------
 
 /** Sleutels (prefix + userId) die bij een verwijderverzoek direct weg mogen. */

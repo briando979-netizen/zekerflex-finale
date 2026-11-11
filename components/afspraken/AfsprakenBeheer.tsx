@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { STATUS_NAAM, WEEKDAG_NAAM, WEEK_VOLGORDE, STAPPEN, type Afspraak, type AfspraakStatus, type Instellingen, type Tijdvak } from "@/lib/afspraken/model";
+import { ALLEEN_BEHEERDER, ALLEEN_BEHEERDER_TEKST } from "@/lib/afspraken/teksten";
 
 // Het afsprakenbeheer van een bedrijf: de agenda van de week en de instellingen. Alle tijden zijn Nederlandse tijd.
 
@@ -39,13 +40,18 @@ export function AfsprakenBeheer() {
   const [lading, setLading] = useState<Lading | null>(null);
   const [van, setVan] = useState<string | null>(null);
   const [fout, setFout] = useState<string | null>(null);
+  const [alleenBeheerder, setAlleenBeheerder] = useState(false);
 
   const laad = useCallback(async (v: string | null) => {
     setFout(null);
     const q = v ? `?van=${v}&tot=${plusDagen(v, 6)}` : "";
     try {
       const res = await fetch(`/api/werkgever/afspraken${q}`, { cache: "no-store" });
-      const d = (await res.json().catch(() => null)) as (Lading & { error?: { message?: string } }) | null;
+      const d = (await res.json().catch(() => null)) as (Lading & { error?: { code?: string; message?: string } }) | null;
+      if (res.status === 423 && d?.error?.code === ALLEEN_BEHEERDER) {
+        setAlleenBeheerder(true);
+        return;
+      }
       if (!res.ok || !d?.instellingen) {
         setFout(d?.error?.message ?? "De agenda kon niet worden geladen. Vernieuw de pagina.");
         return;
@@ -62,6 +68,13 @@ export function AfsprakenBeheer() {
     void laad(null);
   }, [laad]);
 
+  if (alleenBeheerder) {
+    return (
+      <p role="status" className="rounded-xl bg-paper-soft px-4 py-4 text-sm text-neutralx-600">
+        {ALLEEN_BEHEERDER_TEKST}
+      </p>
+    );
+  }
   if (!lading) {
     return fout ? (
       <p role="alert" className="rounded-xl bg-crit/10 px-4 py-3 text-sm text-crit">
