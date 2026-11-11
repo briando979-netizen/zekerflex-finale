@@ -19,7 +19,7 @@ import sharp from "sharp";
 import type * as Ort from "onnxruntime-node";
 import { AppError } from "@/lib/errors";
 import { DETECTOR_GROOTTE, leesDetectorUitvoer, pasInVierkant, terugNaarBeeld, type DetectorUitvoer, type Gezicht } from "@/lib/kyc/gezicht/detector";
-import { lijnUit, UITGELIJND } from "@/lib/kyc/gezicht/uitlijnen";
+import { lijnUit, naarGrijs, UITGELIJND } from "@/lib/kyc/gezicht/uitlijnen";
 
 export const GEZICHT_DATA_DIR = process.env.GEZICHT_DATA_DIR || path.join(process.cwd(), "storage", "gezicht");
 
@@ -166,10 +166,14 @@ export async function vindGezichten(beeld: Beeld): Promise<Gezicht[]> {
   });
 }
 
-/** De 128 kenmerken van één gezicht (SFace), of `null` als het gezicht niet uit te lijnen was. */
+/**
+ * De 128 kenmerken van één gezicht (SFace), of `null` als het gezicht niet uit te lijnen was. Het gezicht wordt
+ * eerst grijs gemaakt (naarGrijs): de pasfoto op een document is meestal grijs, de selfie in kleur.
+ */
 export async function gezichtsKenmerk(beeld: Beeld, gezicht: Gezicht): Promise<Float32Array | null> {
-  const uitgelijnd = lijnUit(beeld.rgb, beeld.breedte, beeld.hoogte, gezicht.punten);
-  if (!uitgelijnd) return null;
+  const kleur = lijnUit(beeld.rgb, beeld.breedte, beeld.hoogte, gezicht.punten);
+  if (!kleur) return null;
+  const uitgelijnd = naarGrijs(kleur);
   return inRij(async () => {
     const { ort, herkenner } = await sessies();
     const vlak = UITGELIJND * UITGELIJND;

@@ -1,7 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { DETECTOR_GROOTTE, grootste, leesDetectorUitvoer, nms, pasInVierkant, terugNaarBeeld, type DetectorUitvoer, type Gezicht } from "@/lib/kyc/gezicht/detector";
-import { DOEL_PUNTEN, UITGELIJND, lijnUit, schatGelijkvormig } from "@/lib/kyc/gezicht/uitlijnen";
-import { BEWEGING, BEWEGING_NIET_AANGELEVERD, BEWEGING_NIET_BEOORDEELD, beoordeelBeweging, oogVerhouding } from "@/lib/kyc/gezicht/beweging";
+import { DOEL_PUNTEN, UITGELIJND, lijnUit, naarGrijs, schatGelijkvormig } from "@/lib/kyc/gezicht/uitlijnen";
+import {
+  BEWEGING,
+  BEWEGING_NIET_AANGELEVERD,
+  BEWEGING_NIET_BEOORDEELD,
+  BEWEGING_ZELFDE_FOTO,
+  LIVE,
+  beoordeelBeweging,
+  bewegingVoldoet,
+  draaiAanwijzing,
+  liveMeting,
+  oogVerhouding,
+  rechtAanwijzing,
+  type LiveMeting,
+} from "@/lib/kyc/gezicht/beweging";
 import { GEZICHT_DREMPEL, KWALITEIT, cosinus, draaiing, kwaliteitsProbleem, meerdereGezichten, oordeelOverScore, type GemetenGezicht } from "@/lib/kyc/gezicht/vergelijk";
 
 // Pure rekenstukken van de gezichtscontrole (lib/kyc/gezicht). De modellen zelf (YuNet, SFace) staan in
@@ -176,7 +189,14 @@ describe("bewegingscontrole (beoordeelBeweging)", () => {
     expect(draaiing(gekanteld.gezicht)).toBeCloseTo(0, 6);
     const u = beoordeelBeweging(recht, gekanteld, 0.9);
     expect(u.oordeel).toBe("niet-gedraaid");
-    expect(u.reden).toMatch(/kwartslag/);
+    // geen "kwartslag" meer: dan draaiden echte mensen te ver (11 nov gemeten)
+    expect(u.reden).toMatch(/klein stukje opzij/);
+    expect(u.reden).not.toMatch(/kwartslag/);
+  });
+
+  it("twee keer dezelfde foto als selfie is geen beweging, met een eigen reden", () => {
+    expect(BEWEGING_ZELFDE_FOTO).toMatchObject({ oordeel: "niet-gedraaid", verschil: 0 });
+    expect(BEWEGING_ZELFDE_FOTO.reden).toMatch(/dezelfde foto/);
   });
 
   it("een steil platgedrukt beeld met een schijndraaiing wordt afgewezen: de oogafstand krimpt veel meer dan bij een echt hoofd", () => {
@@ -240,17 +260,33 @@ describe("beslissing over twee gezichten", () => {
   const gez = (over: Partial<Gezicht> = {}): Gezicht => ({ x: 20, y: 20, breedte: 200, hoogte: 220, punten: punten(60), score: 0.95, ...over });
   const meting = (g: Gezicht, alle: Gezicht[] = [g]): GemetenGezicht => ({ gezicht: g, alle });
 
-  it("de drempels: zeker vanaf 0,5, aannemelijk vanaf 0,363, daaronder een ander gezicht", () => {
-    expect(GEZICHT_DREMPEL.zeker).toBe(0.5);
+  it("de drempels: zeker vanaf 0,42, aannemelijk vanaf 0,363, daaronder een ander gezicht", () => {
+    expect(GEZICHT_DREMPEL.zeker).toBe(0.42);
     expect(GEZICHT_DREMPEL.mogelijk).toBe(0.363);
     expect(oordeelOverScore(0.72)).toMatchObject({ beschikbaar: true, oordeel: "zelfde", score: 0.72 });
-    expect(oordeelOverScore(0.5).oordeel).toBe("zelfde");
-    expect(oordeelOverScore(0.499).oordeel).toBe("twijfel");
+    expect(oordeelOverScore(0.42).oordeel).toBe("zelfde");
+    expect(oordeelOverScore(0.419).oordeel).toBe("twijfel");
     expect(oordeelOverScore(0.363).oordeel).toBe("twijfel");
     expect(oordeelOverScore(0.362).oordeel).toBe("anders");
     // een negatieve cosinus wordt een score van 0, en boven 1 wordt 1
     expect(oordeelOverScore(-0.3).score).toBe(0);
     expect(oordeelOverScore(1.2).score).toBe(1);
+  });
+
+  it("de drempel past bij de meting op de echte controles van 11 nov 2026 (grijs vergeleken)", () => {
+    // pasfoto tegen selfie van dezelfde persoon, ID-scan (drie door een medewerker goedgekeurd, een vierde nog in behandeling)
+    const zelfdeScan = [0.483, 0.474, 0.496, 0.476, 0.496, 0.681];
+    // oudere losse uploads van dezelfde persoon: te zwak om zelf goed te keuren, een medewerker kijkt
+    const zelfdeOud = [0.299, 0.235, 0.329];
+    // de hoogste score van een pasfoto tegen de selfie van een ander (64 paren)
+    const anderHoogst = 0.212;
+    for (const s of zelfdeScan) expect(oordeelOverScore(s).oordeel, String(s)).toBe("zelfde");
+    for (const s of zelfdeOud) expect(oordeelOverScore(s).oordeel, String(s)).not.toBe("zelfde");
+    expect(oordeelOverScore(anderHoogst).oordeel).toBe("anders");
+    // ruim 0,2 marge tussen de drempel en het hoogst gemeten andere gezicht
+    expect(GEZICHT_DREMPEL.zeker - anderHoogst).toBeGreaterThanOrEqual(0.2);
+    // en nog steeds strenger dan de waarde die OpenCV zelf noemt voor "dezelfde persoon"
+    expect(GEZICHT_DREMPEL.zeker).toBeGreaterThan(GEZICHT_DREMPEL.mogelijk);
   });
 
   it("elke reden is gewoon Nederlands en zegt wat de gebruiker kan doen", () => {
@@ -293,5 +329,100 @@ describe("beslissing over twee gezichten", () => {
     // ogen op één plek: geen deling door nul
     const plat = new Array(5).fill({ x: 10, y: 10 }) as Gezicht["punten"];
     expect(draaiing(gez({ punten: plat }))).toBe(0);
+  });
+});
+
+describe("grijs vergelijken (naarGrijs)", () => {
+  it("zet elke pixel om naar zijn helderheid, in alle drie de kanalen, zonder de lengte te veranderen", () => {
+    const uit = naarGrijs(Uint8Array.from([255, 0, 0, 0, 255, 0, 0, 0, 255, 10, 20, 30]));
+    expect(Array.from(uit)).toEqual([76, 76, 76, 150, 150, 150, 29, 29, 29, 18, 18, 18]);
+    expect(naarGrijs(new Uint8Array(UITGELIJND * UITGELIJND * 3)).length).toBe(UITGELIJND * UITGELIJND * 3);
+  });
+});
+
+describe("live aanwijzingen bij de selfies (LIVE)", () => {
+  const punten = (nx: number, oogL = 40, oogR = 80): Gezicht["punten"] => [
+    { x: oogL, y: 50 },
+    { x: oogR, y: 50 },
+    { x: nx, y: 75 },
+    { x: 45, y: 100 },
+    { x: 75, y: 100 },
+  ];
+  const gez = (nx: number, over: Partial<Gezicht> = {}): GemetenGezicht => {
+    const g: Gezicht = { x: 20, y: 20, breedte: 200, hoogte: 220, punten: punten(nx), score: 0.95, ...over };
+    return { gezicht: g, alle: [g] };
+  };
+  const meet = (m: GemetenGezicht): LiveMeting => liveMeting(m.gezicht, m.alle, 640);
+  const goed: LiveMeting = { draaiing: 0, oog: 0.2, breedteDeel: 0.4, score: 0.95, meerdere: false };
+
+  it("de doelzone van het scherm is strenger dan de regels van de server, zodat een foto die net anders valt nog doorkomt", () => {
+    expect(LIVE.rechtMax).toBeLessThan(BEWEGING.rechtMax);
+    expect(LIVE.draaiVanaf).toBeGreaterThan(BEWEGING.minVerschil);
+    expect(LIVE.minOog).toBeGreaterThan(BEWEGING.minOogverhouding);
+    expect(LIVE.minScore).toBeGreaterThanOrEqual(KWALITEIT.scoreSelfie);
+  });
+
+  it("liveMeting geeft de draaiing, de oogverhouding en hoe groot het gezicht in beeld is", () => {
+    const m = meet(gez(70));
+    expect(m.draaiing).toBeCloseTo(0.25, 6);
+    expect(m.oog).toBeCloseTo(40 / 220, 6);
+    expect(m.breedteDeel).toBeCloseTo(200 / 640, 6);
+    expect(m.meerdere).toBe(false);
+    expect(liveMeting(gez(70).gezicht, [], 0).breedteDeel).toBe(0);
+  });
+
+  it("de eerste selfie: recht in de camera, groot genoeg en alleen", () => {
+    expect(rechtAanwijzing(goed)).toBe("goed");
+    expect(rechtAanwijzing(null)).toBe("geen-gezicht");
+    expect(rechtAanwijzing({ ...goed, score: 0.6 })).toBe("geen-gezicht");
+    expect(rechtAanwijzing({ ...goed, meerdere: true })).toBe("een-gezicht");
+    expect(rechtAanwijzing({ ...goed, breedteDeel: 0.1 })).toBe("dichterbij");
+    expect(rechtAanwijzing({ ...goed, draaiing: -0.1 })).toBe("recht");
+  });
+
+  it("de tweede selfie, met de gemeten gevallen van 11 nov: te ver, nauwelijks, en een goede draai", () => {
+    const ref: LiveMeting = { ...goed, draaiing: 0.014, oog: 0.2 };
+    // verschil 0,69 en de oogafstand op 0,65: zo ver dat het voor de server "platgedrukt" was
+    expect(draaiAanwijzing(ref, { ...ref, draaiing: 0.702, oog: 0.2 * 0.654 }).aanwijzing).toBe("te-ver");
+    // 0,04: nauwelijks gedraaid (de knop ingedrukt en weer naar het scherm gekeken)
+    const weinig = draaiAanwijzing({ ...ref, draaiing: 0.021 }, { ...ref, draaiing: -0.016, oog: 0.2 * 0.972 });
+    expect(weinig.aanwijzing).toBe("draai");
+    expect(weinig.voortgang).toBeCloseTo(0.037 / LIVE.draaiVanaf, 3);
+    expect(draaiAanwijzing(ref, { ...ref, draaiing: 0.3, oog: 0.2 * 0.9 })).toEqual({ aanwijzing: "goed", voortgang: 1 });
+    // een ver gedraaid hoofd maakt de detector onzeker: dat is "te ver", niet "geen gezicht"
+    expect(draaiAanwijzing(ref, { ...ref, draaiing: 0.35, score: 0.5 }).aanwijzing).toBe("te-ver");
+    expect(draaiAanwijzing(ref, { ...ref, draaiing: 0.05, score: 0.5 }).aanwijzing).toBe("geen-gezicht");
+    expect(draaiAanwijzing(ref, { ...ref, meerdere: true }).aanwijzing).toBe("een-gezicht");
+    expect(draaiAanwijzing(ref, null).aanwijzing).toBe("geen-gezicht");
+  });
+
+  it("wat het scherm 'goed' noemt, haalt ook de regels van de server", () => {
+    for (const r of [-0.08, 0, 0.05, 0.08]) {
+      for (const d of [-0.6, -0.4, -0.3, -0.24, 0.24, 0.3, 0.45]) {
+        for (const k of [0.8, 0.9, 1]) {
+          const ref: LiveMeting = { ...goed, draaiing: r };
+          const nu: LiveMeting = { ...goed, draaiing: r + d, oog: goed.oog * k };
+          if (draaiAanwijzing(ref, nu).aanwijzing === "goed") expect(bewegingVoldoet(ref, nu), `${r} ${d} ${k}`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it("bewegingVoldoet zegt hetzelfde als de server over de vorm van de draai (beoordeelBeweging)", () => {
+    const recht = gez(60);
+    const gevallen: GemetenGezicht[] = [
+      gez(64), // 0,10: te weinig
+      gez(67.4), // 0,185: net genoeg
+      gez(70), // 0,25
+      gez(50), // −0,25
+      gez(70, { punten: [{ x: 48, y: 50 }, { x: 72, y: 50 }, { x: 70, y: 75 }, { x: 52, y: 100 }, { x: 68, y: 100 }] }), // platgedrukt
+      gez(70, { score: 0.6 }), // onzeker
+    ];
+    for (const g of gevallen) {
+      const server = beoordeelBeweging(recht, g, 0.9).oordeel === "ok";
+      expect(bewegingVoldoet(meet(recht), meet(g)), JSON.stringify(g.gezicht.punten[2])).toBe(server);
+    }
+    // de eerste selfie niet recht: de server meet dan geen beweging, het scherm ook niet
+    expect(bewegingVoldoet(meet(gez(66)), meet(gez(76)))).toBe(false);
   });
 });

@@ -106,3 +106,20 @@ export function lijnUit(rgb: Uint8Array, breedte: number, hoogte: number, punten
   }
   return uit;
 }
+
+/**
+ * Maakt een RGB-gezicht grijs (helderheid volgens ITU-R BT.601, in alle drie de kanalen). De pasfoto op een
+ * paspoort of ID-kaart is meestal grijs in het document gelaserd, de selfie is in kleur: door beide grijs te
+ * vergelijken telt de kleur niet meer mee. Gemeten op de echte controles van 11 nov 2026 (6 personen, 9
+ * pogingen): dezelfde persoon scoorde tot 0,05 hoger, andere personen tegen elkaar bleven op hooguit 0,21.
+ */
+export function naarGrijs(rgb: Uint8Array): Uint8Array {
+  const uit = new Uint8Array(rgb.length);
+  for (let i = 0; i + 2 < rgb.length; i += 3) {
+    const y = Math.round(0.299 * (rgb[i] ?? 0) + 0.587 * (rgb[i + 1] ?? 0) + 0.114 * (rgb[i + 2] ?? 0));
+    uit[i] = y;
+    uit[i + 1] = y;
+    uit[i + 2] = y;
+  }
+  return uit;
+}

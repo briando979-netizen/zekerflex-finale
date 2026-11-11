@@ -289,6 +289,23 @@ export interface AuthDict {
       /** de tweede selfie, met een gedraaid hoofd (bewegingscontrole) */
       beweging: string;
       bewegingUitleg: string;
+      /** live aanwijzingen terwijl de camera het gezicht meet (lib/kyc/gezicht/beweging.ts, LIVE) */
+      live: {
+        geenGezicht: string;
+        eenGezicht: string;
+        dichterbij: string;
+        recht: string;
+        goedRecht: string;
+        draai: string;
+        goedDraai: string;
+        teVer: string;
+        /** zonder live meten: de foto na een korte aftelling, zodat je niet naar de knop hoeft te kijken */
+        aftelKnop: string;
+        /** {n} = de seconden die nog over zijn */
+        aftellen: string;
+        nietRecht: string;
+        geenGezichtFoto: string;
+      };
       maakFoto: string;
       opnieuw: string;
       gebruik: string;
@@ -653,7 +670,21 @@ const nl: AuthDict = {
       selfie: "Maak een selfie",
       selfieUitleg: "Kijk recht in de camera, met je gezicht in het ovaal. Geen pet of zonnebril.",
       beweging: "Draai je hoofd",
-      bewegingUitleg: "Nog één selfie, zodat we zien dat je echt voor de camera zit. Draai je hoofd een kwartslag naar links of naar rechts, houd je gezicht in het ovaal en maak de foto.",
+      bewegingUitleg: "Nog één selfie, zodat we zien dat je echt voor de camera zit. Draai je hoofd langzaam een klein stukje opzij, naar links of naar rechts. De camera maakt de foto vanzelf zodra het goed is.",
+      live: {
+        geenGezicht: "Houd je gezicht in het ovaal",
+        eenGezicht: "Zorg dat alleen jij in beeld bent",
+        dichterbij: "Kom iets dichterbij",
+        recht: "Kijk recht in de camera",
+        goedRecht: "Goed zo, maak de foto",
+        draai: "Draai je hoofd langzaam een klein stukje opzij",
+        goedDraai: "Goed zo, even stilhouden",
+        teVer: "Iets minder ver draaien",
+        aftelKnop: "Start, dan draai ik mijn hoofd",
+        aftellen: "Draai je hoofd een klein stukje opzij … {n}",
+        nietRecht: "Op deze selfie kijk je niet recht in de camera. Maak hem opnieuw en kijk recht vooruit.",
+        geenGezichtFoto: "Op deze selfie is geen gezicht te zien. Maak hem opnieuw, met je gezicht in het ovaal.",
+      },
       maakFoto: "Foto maken",
       opnieuw: "Opnieuw",
       gebruik: "Deze gebruiken",
@@ -1015,7 +1046,21 @@ const en: AuthDict = {
       selfie: "Take a selfie",
       selfieUitleg: "Look straight into the camera with your face in the oval. No cap or sunglasses.",
       beweging: "Turn your head",
-      bewegingUitleg: "One more selfie, so we can see you are really in front of the camera. Turn your head a quarter turn to the left or to the right, keep your face in the oval and take the photo.",
+      bewegingUitleg: "One more selfie, so we can see you are really in front of the camera. Slowly turn your head a little to the side, to the left or to the right. The camera takes the photo by itself as soon as it is right.",
+      live: {
+        geenGezicht: "Keep your face in the oval",
+        eenGezicht: "Make sure only you are in the picture",
+        dichterbij: "Come a little closer",
+        recht: "Look straight into the camera",
+        goedRecht: "Good, take the photo",
+        draai: "Slowly turn your head a little to the side",
+        goedDraai: "Good, hold still",
+        teVer: "Turn a little less far",
+        aftelKnop: "Start, then I turn my head",
+        aftellen: "Turn your head a little to the side … {n}",
+        nietRecht: "On this selfie you are not looking straight into the camera. Take it again and look straight ahead.",
+        geenGezichtFoto: "No face can be seen on this selfie. Take it again, with your face in the oval.",
+      },
       maakFoto: "Take photo",
       opnieuw: "Retake",
       gebruik: "Use this one",
@@ -1377,7 +1422,21 @@ const pl: AuthDict = {
       selfie: "Zrób selfie",
       selfieUitleg: "Patrz prosto w aparat, z twarzą w owalu. Bez czapki i okularów przeciwsłonecznych.",
       beweging: "Obróć głowę",
-      bewegingUitleg: "Jeszcze jedno selfie, abyśmy widzieli, że naprawdę stoisz przed aparatem. Obróć głowę o ćwierć obrotu w lewo lub w prawo, zachowaj twarz w owalu i zrób zdjęcie.",
+      bewegingUitleg: "Jeszcze jedno selfie, abyśmy widzieli, że naprawdę jesteś przed aparatem. Powoli obróć głowę trochę w bok, w lewo lub w prawo. Aparat sam zrobi zdjęcie, gdy będzie dobrze.",
+      live: {
+        geenGezicht: "Trzymaj twarz w owalu",
+        eenGezicht: "Upewnij się, że w kadrze jesteś tylko ty",
+        dichterbij: "Podejdź trochę bliżej",
+        recht: "Patrz prosto w aparat",
+        goedRecht: "Dobrze, zrób zdjęcie",
+        draai: "Powoli obróć głowę trochę w bok",
+        goedDraai: "Dobrze, nie ruszaj się",
+        teVer: "Obróć głowę trochę mniej",
+        aftelKnop: "Start, potem obracam głowę",
+        aftellen: "Obróć głowę trochę w bok … {n}",
+        nietRecht: "Na tym selfie nie patrzysz prosto w aparat. Zrób je ponownie i patrz prosto przed siebie.",
+        geenGezichtFoto: "Na tym selfie nie widać twarzy. Zrób je ponownie, z twarzą w owalu.",
+      },
       maakFoto: "Zrób zdjęcie",
       opnieuw: "Ponownie",
       gebruik: "Użyj tego",
@@ -1739,7 +1798,21 @@ const ro: AuthDict = {
       selfie: "Fă un selfie",
       selfieUitleg: "Privește drept în cameră, cu fața în oval. Fără șapcă sau ochelari de soare.",
       beweging: "Întoarce capul",
-      bewegingUitleg: "Încă un selfie, ca să vedem că ești cu adevărat în fața camerei. Întoarce capul un sfert de rotație spre stânga sau spre dreapta, ține fața în oval și fă poza.",
+      bewegingUitleg: "Încă un selfie, ca să vedem că ești cu adevărat în fața camerei. Întoarce încet capul puțin într-o parte, spre stânga sau spre dreapta. Camera face singură poza imediat ce este bine.",
+      live: {
+        geenGezicht: "Ține fața în oval",
+        eenGezicht: "Asigură-te că doar tu ești în imagine",
+        dichterbij: "Vino puțin mai aproape",
+        recht: "Privește drept în cameră",
+        goedRecht: "Bine, fă poza",
+        draai: "Întoarce încet capul puțin într-o parte",
+        goedDraai: "Bine, stai nemișcat",
+        teVer: "Întoarce capul ceva mai puțin",
+        aftelKnop: "Start, apoi întorc capul",
+        aftellen: "Întoarce capul puțin într-o parte … {n}",
+        nietRecht: "Pe acest selfie nu privești drept în cameră. Fă-l din nou și privește drept înainte.",
+        geenGezichtFoto: "Pe acest selfie nu se vede nicio față. Fă-l din nou, cu fața în oval.",
+      },
       maakFoto: "Fă fotografia",
       opnieuw: "Din nou",
       gebruik: "Folosește-o",
@@ -2101,7 +2174,21 @@ const uk: AuthDict = {
       selfie: "Зробіть селфі",
       selfieUitleg: "Дивіться прямо в камеру, обличчя в овалі. Без кепки й сонцезахисних окулярів.",
       beweging: "Поверніть голову",
-      bewegingUitleg: "Ще одне селфі, щоб ми бачили, що ви справді перед камерою. Поверніть голову на чверть оберту ліворуч або праворуч, тримайте обличчя в овалі й зробіть фото.",
+      bewegingUitleg: "Ще одне селфі, щоб ми бачили, що ви справді перед камерою. Повільно поверніть голову трохи вбік, ліворуч або праворуч. Камера сама зробить фото, щойно все буде добре.",
+      live: {
+        geenGezicht: "Тримайте обличчя в овалі",
+        eenGezicht: "Переконайтеся, що в кадрі тільки ви",
+        dichterbij: "Підійдіть трохи ближче",
+        recht: "Дивіться прямо в камеру",
+        goedRecht: "Добре, зробіть фото",
+        draai: "Повільно поверніть голову трохи вбік",
+        goedDraai: "Добре, не рухайтеся",
+        teVer: "Поверніть голову трохи менше",
+        aftelKnop: "Старт, потім я поверну голову",
+        aftellen: "Поверніть голову трохи вбік … {n}",
+        nietRecht: "На цьому селфі ви не дивитеся прямо в камеру. Зробіть його ще раз і дивіться прямо.",
+        geenGezichtFoto: "На цьому селфі не видно обличчя. Зробіть його ще раз, з обличчям в овалі.",
+      },
       maakFoto: "Зробити фото",
       opnieuw: "Ще раз",
       gebruik: "Використати це",

@@ -32,11 +32,19 @@ export function cosinus(a: ArrayLike<number>, b: ArrayLike<number>): number {
 
 /**
  * Drempels op de cosinus. 0,363 is de waarde die OpenCV bij SFace noemt voor "dezelfde persoon".
- * Voor automatisch goedkeuren eisen we veel meer: een pasfoto is klein, oud en vaak glanzend.
+ * Voor automatisch goedkeuren eisen we meer: een pasfoto is klein, oud en vaak glanzend.
+ *
+ * Bijgesteld op 11 nov 2026 van 0,50 naar 0,42, na een meting op de echte controles (op de server, alleen
+ * getallen; 6 personen, 9 pogingen, gezichten grijs vergeleken). De pasfoto tegen de selfie van dezelfde
+ * persoon: 0,47–0,50 bij de drie personen van de ID-scan die een medewerker goedkeurde, 0,68 bij een vierde
+ * (nog in behandeling), 0,24–0,33 bij oudere losse uploads. Een pasfoto tegen de selfie van een ander (64
+ * paren): gemiddeld 0,02, hoogstens 0,21. Met 0,50 haalde één van de zes de gezichtscontrole, met 0,42 vier
+ * van de zes; de marge naar andere personen blijft ruim 0,2. Zelf goedkeuren vraagt daarnaast altijd een
+ * paspoort of ID-kaart met een kloppende MRZ en een echte hoofddraai (lib/onboarding/verify.ts).
  */
 export const GEZICHT_DREMPEL = {
   /** vanaf hier: dezelfde persoon, zeker genoeg om zonder mens door te gaan */
-  zeker: 0.5,
+  zeker: 0.42,
   /** vanaf hier: aannemelijk dezelfde persoon, maar een mens kijkt mee */
   mogelijk: 0.363,
 } as const;

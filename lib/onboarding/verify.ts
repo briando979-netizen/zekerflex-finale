@@ -11,6 +11,7 @@ import { registerFreelancerCompany } from "@/lib/company/registration";
 import { storeUpload } from "@/lib/storage/local";
 import { runVisionReview } from "@/lib/kyc/vision";
 import { gezichtControle } from "@/lib/kyc/gezicht/controle";
+import { GEZICHT_DREMPEL } from "@/lib/kyc/gezicht/vergelijk";
 import { featureEnabled } from "@/lib/flags";
 import { leesMrzVanFoto } from "@/lib/kyc/mrz-lezen";
 import { zelfdeNummer, type MrzUitslag } from "@/lib/kyc/mrz";
@@ -649,7 +650,7 @@ export async function submitFreelancerOnboarding(
       label: "Gezichtsgelijkenis (score)",
       intern: true,
       ok: true,
-      detail: `${Math.round(gezicht.score * 100)}% (zeker vanaf 50%, aannemelijk vanaf 36%). Er wordt geen gezichtsprofiel bewaard, alleen deze score.`,
+      detail: `${Math.round(gezicht.score * 100)}% (zeker vanaf ${Math.round(GEZICHT_DREMPEL.zeker * 100)}%, aannemelijk vanaf ${Math.round(GEZICHT_DREMPEL.mogelijk * 100)}%). Er wordt geen gezichtsprofiel bewaard, alleen deze score.`,
     });
   }
   // --- de beweging: een tweede selfie met een gedraaid hoofd, tegen een foto of scherm als selfie (lib/kyc/gezicht/beweging.ts) ---
@@ -907,6 +908,8 @@ export async function submitFreelancerOnboarding(
               technisch: gezicht.technisch,
               automatisch: gezichtOk,
               ms: gezicht.ms,
+              // sinds 11 nov 2026 grijs vergeleken, drempel 0,42 (lib/kyc/gezicht/vergelijk.ts): zo blijven oude en nieuwe scores uit elkaar te houden
+              grijs: true,
               beweging: { oordeel: gezicht.beweging.oordeel, verschil: gezicht.beweging.verschil },
             },
             // zonder het documentnummer en de vervaldatum die het beeldmodel las
