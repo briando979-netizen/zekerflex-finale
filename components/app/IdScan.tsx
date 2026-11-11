@@ -32,6 +32,8 @@ export interface ScanGegevens {
   front: File;
   back: File;
   selfie: File;
+  /** de tweede selfie met een gedraaid hoofd (bewegingscontrole); alleen op de laptop, zonder die foto beslist altijd een medewerker */
+  selfie2?: File | undefined;
 }
 
 export interface ScanUitslag {
@@ -60,7 +62,7 @@ interface TelefoonStand {
 }
 
 type T = AuthDict["onb"];
-type Stap = "start" | "toestemming" | "telefoon" | "soort" | "voor" | "achter" | "chip" | "selfie" | "gegevens" | "bezig" | "klaar";
+type Stap = "start" | "toestemming" | "telefoon" | "soort" | "voor" | "achter" | "chip" | "selfie" | "beweging" | "gegevens" | "bezig" | "klaar";
 
 /** De chipstap (alleen in de Android-app vanaf 1.0.4): de app leest de chip via NFC (lib/kyc/chip). */
 interface ChipStand {
@@ -92,16 +94,16 @@ async function laatsteChip(): Promise<{ op: string; echt: boolean; nummerKlopt: 
   const data = (await res.json().catch(() => null)) as { lezing?: { op: string; echt: boolean; nummerKlopt: boolean } | null } | null;
   return data?.lezing ?? null;
 }
-type FotoStap = "voor" | "achter" | "selfie";
+type FotoStap = "voor" | "achter" | "selfie" | "beweging";
 type Fotos = Partial<Record<FotoStap, File>>;
 
-const STAP_NR: Partial<Record<Stap, number>> = { soort: 1, voor: 2, achter: 3, selfie: 4 };
+const STAP_NR: Partial<Record<Stap, number>> = { soort: 1, voor: 2, achter: 3, selfie: 4, beweging: 4 };
 
 /** De twee routes van de ID-check: een Nederlands document, of een paspoort/ID-kaart uit de EU/EER of Zwitserland. */
 export type ScanRoute = "nl" | "eu";
 
 /** Waar "Vorige stap" naartoe gaat. Niet vanaf de chip, het wachtscherm en de uitslag: dat is na of tijdens het versturen. */
-const VORIGE: Partial<Record<Stap, Stap>> = { toestemming: "start", telefoon: "start", soort: "start", voor: "soort", achter: "voor", selfie: "achter", gegevens: "selfie" };
+const VORIGE: Partial<Record<Stap, Stap>> = { toestemming: "start", telefoon: "start", soort: "start", voor: "soort", achter: "voor", selfie: "achter", beweging: "selfie", gegevens: "selfie" };
 
 function Icoon({ n }: { n: number }) {
   const pad =
@@ -360,9 +362,12 @@ export function IdScan({
   const zonderAchter = route !== undefined && soort === "PASSPORT";
   const { locale } = useI18n();
   const [tipsOpen, setTipsOpen] = useState(false);
+  // de bewegingscontrole (tweede selfie met een gedraaid hoofd) alleen op de laptop: de telefoon stuurt de foto's door en daar beslist altijd een medewerker
+  const metBeweging = modus !== "telefoon";
   const vorigeVan = (st: Stap): Stap | undefined => {
     if (route && st === "soort") return "toestemming";
     if (route && st === "selfie" && zonderAchter) return "voor";
+    if (st === "gegevens" && metBeweging) return "beweging";
     if (route && st === "gegevens" && zonderAchter) return "selfie";
     return VORIGE[st];
   };
@@ -543,7 +548,7 @@ export function IdScan({
 
   // aan welke kant staat de code (MRZ): ID-kaart achter, paspoort voor, rijbewijs geen
   const mrzKant: FotoStap | null = soort === "PASSPORT" ? "voor" : soort === "ID_CARD" ? "achter" : null;
-  const fotoStap: FotoStap | null = stap === "voor" || stap === "achter" || stap === "selfie" ? stap : null;
+  const fotoStap: FotoStap | null = stap === "voor" || stap === "achter" || stap === "selfie" || stap === "beweging" ? stap : null;
   const handmatig = soort === "DRIVERS_LICENSE" || !goedGelezen(lezing);
 
   // een stap terug, zolang er nog niets is verstuurd: de foto's blijven bewaard, dus je hoeft niet alles over te doen
@@ -553,7 +558,7 @@ export function IdScan({
     setFout(null);
     setVoorbeeld(null);
     // naar een kant waar al een foto van is: die eerst tonen, in plaats van de camera
-    if (vorige === "voor" || vorige === "achter" || vorige === "selfie") {
+    if (vorige === "voor" || vorige === "achter" || vorige === "selfie" || vorige === "beweging") {
       const f = fotos[vorige];
       if (f) setVoorbeeld({ file: f, url: URL.createObjectURL(f) });
     }
@@ -598,6 +603,7 @@ export function IdScan({
       front: f.voor,
       back: f.achter,
       selfie: f.selfie,
+      ...(metBeweging && f.beweging ? { selfie2: f.beweging } : {}),
     });
     if (r.ok && "overgedragen" in r) {
       // telefoon: de foto's staan klaar, de laptop rondt af
@@ -626,6 +632,7 @@ export function IdScan({
       setStap("selfie");
     } else if (k === "voor") setStap("achter");
     else if (k === "achter") setStap("selfie");
+    else if (k === "selfie" && metBeweging) setStap("beweging");
     else if (handmatig) setStap("gegevens");
     else void afronden(alle, gegevens);
   }
@@ -652,7 +659,7 @@ export function IdScan({
   const nr = STAP_NR[stap];
   const donker = route !== undefined && fotoStap !== null;
   // voortgangsbalk van de buitenlandse route: de echte stap waar iemand nu is, van zeven
-  const EU_STAP: Partial<Record<Stap, number>> = { start: 1, toestemming: 2, soort: 3, voor: 4, achter: 5, chip: 5, selfie: 6, gegevens: 6, bezig: 7, klaar: 7 };
+  const EU_STAP: Partial<Record<Stap, number>> = { start: 1, toestemming: 2, soort: 3, voor: 4, achter: 5, chip: 5, selfie: 6, beweging: 6, gegevens: 6, bezig: 7, klaar: 7 };
   const euStap = route === "eu" ? (EU_STAP[stap] ?? 1) : 0;
   const gegevensOk = gegevens.nummer.trim().length >= 4 && /^\d{4}-\d{2}-\d{2}$/.test(gegevens.datum) && gegevens.naam.trim().length >= 2;
 
@@ -909,10 +916,10 @@ export function IdScan({
               <>
                 <div className={route ? "-mx-5 -mt-6 mb-1 bg-[linear-gradient(165deg,#0B3B3A_0%,#0E5C4A_100%)] px-5 pb-5 pt-4 text-white" : ""}>
                   <h2 className={`font-display text-lg font-bold ${route ? "text-white" : "text-ink"}`}>
-                    {route && fotoStap === "achter" ? s.extra.draaiOm : fotoStap === "voor" ? s.voor[soort] : fotoStap === "achter" ? s.achter[soort] : s.selfie}
+                    {route && fotoStap === "achter" ? s.extra.draaiOm : fotoStap === "voor" ? s.voor[soort] : fotoStap === "achter" ? s.achter[soort] : fotoStap === "beweging" ? s.beweging : s.selfie}
                   </h2>
                   <p className={`mt-1 text-sm ${route ? "text-white/85" : "text-neutralx-500"}`}>
-                    {fotoStap === "selfie" ? (route ? s.extra.ovaal : s.selfieUitleg) : s.kader}
+                    {fotoStap === "beweging" ? s.bewegingUitleg : fotoStap === "selfie" ? (route ? s.extra.ovaal : s.selfieUitleg) : s.kader}
                   </p>
                 </div>
                 {soort === "DRIVERS_LICENSE" && fotoStap === "voor" && (
@@ -969,8 +976,8 @@ export function IdScan({
                   ) : (
                     <Camera
                       key={fotoStap}
-                      facing={fotoStap === "selfie" ? "user" : "environment"}
-                      vorm={fotoStap === "selfie" ? "ovaal" : "kaart"}
+                      facing={fotoStap === "selfie" || fotoStap === "beweging" ? "user" : "environment"}
+                      vorm={fotoStap === "selfie" || fotoStap === "beweging" ? "ovaal" : "kaart"}
                       rond={route !== undefined}
                       eu={route === "eu"}
                       t={t}
@@ -981,7 +988,7 @@ export function IdScan({
               </>
             )}
 
-            {route && fotoStap && !voorbeeld && fotoStap !== "selfie" && (
+            {route && fotoStap && !voorbeeld && fotoStap !== "selfie" && fotoStap !== "beweging" && (
               <p className="mt-5 rounded-lg bg-paper-soft px-3 py-2.5 text-xs leading-relaxed text-ink-soft">
                 <span className="font-semibold text-ink">{s.extra.docsKop}</span> {route === "nl" ? s.extra.docsNl : s.extra.docsEu}
               </p>

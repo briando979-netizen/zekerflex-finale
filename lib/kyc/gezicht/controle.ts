@@ -11,8 +11,11 @@ import { logger } from "@/lib/logger";
 import { draaiBeeld, gezichtsKenmerk, leesBeeld, vindGezichten, type Beeld } from "@/lib/kyc/gezicht/motor";
 import { grootste } from "@/lib/kyc/gezicht/detector";
 import { cosinus, kwaliteitsProbleem, oordeelOverScore, type GemetenGezicht, type GezichtUitslag } from "@/lib/kyc/gezicht/vergelijk";
+import { BEWEGING_NIET_AANGELEVERD, BEWEGING_NIET_BEOORDEELD, beoordeelBeweging, type BewegingUitslag } from "@/lib/kyc/gezicht/beweging";
 
 export interface GezichtControle extends GezichtUitslag {
+  /** de bewegingscontrole met de tweede selfie (hoofd gedraaid), apart van de pasfoto-vergelijking */
+  beweging: BewegingUitslag;
   /** de controle kon niet draaien (model, geheugen, onleesbaar bestand); geen oordeel over de persoon */
   technisch: boolean;
   /** hoeveel milliseconden de controle duurde, voor het beheer */
@@ -37,21 +40,39 @@ async function zoekPasfoto(beeld: Beeld): Promise<{ meting: GemetenGezicht | nul
   return { meting: null, beeld };
 }
 
-export async function gezichtControle(pasfoto: Uint8Array, selfie: Uint8Array): Promise<GezichtControle> {
+/**
+ * De tweede selfie (hoofd gedraaid) tegen de eerste: draaide het hoofd echt, en is het dezelfde persoon?
+ * Een storing hier verandert nooit de uitslag van de pasfoto-vergelijking: dan is alleen de beweging niet beoordeeld.
+ */
+async function bewegingVan(eerste: { meting: GemetenGezicht; kenmerk: Float32Array }, tweede: Uint8Array | undefined): Promise<BewegingUitslag> {
+  if (!tweede) return BEWEGING_NIET_AANGELEVERD;
+  try {
+    const t = await leesBeeld(tweede).then(meet);
+    const kt = t.meting ? await gezichtsKenmerk(t.beeld, t.meting.gezicht) : null;
+    return beoordeelBeweging(eerste.meting, t.meting, kt ? cosinus(eerste.kenmerk, kt) : null);
+  } catch (err) {
+    logger.warn("bewegingscontrole kon niet draaien, een medewerker beslist", { error: (err as Error).message });
+    return BEWEGING_NIET_BEOORDEELD;
+  }
+}
+
+/** `selfie2`: de tweede selfie met een gedraaid hoofd (bewegingscontrole); zonder die foto keurt de controle nooit zelf goed. */
+export async function gezichtControle(pasfoto: Uint8Array, selfie: Uint8Array, selfie2?: Uint8Array): Promise<GezichtControle> {
   const start = Date.now();
   try {
     const [p, s] = await Promise.all([leesBeeld(pasfoto).then(zoekPasfoto), leesBeeld(selfie).then(meet)]);
     const probleem = kwaliteitsProbleem(p.meting, s.meting);
-    if (probleem) return { ...probleem, technisch: false, ms: Date.now() - start };
+    if (probleem) return { ...probleem, technisch: false, ms: Date.now() - start, beweging: BEWEGING_NIET_BEOORDEELD };
     if (!p.meting || !s.meting) throw new Error("gezicht ontbreekt zonder kwaliteitsmelding");
     const kp = await gezichtsKenmerk(p.beeld, p.meting.gezicht);
     const ks = await gezichtsKenmerk(s.beeld, s.meting.gezicht);
     if (!kp || !ks) {
-      return { beschikbaar: false, oordeel: "onbruikbaar", score: null, reden: "Het gezicht was niet goed genoeg te vergelijken. Een medewerker kijkt mee.", technisch: false, ms: Date.now() - start };
+      return { beschikbaar: false, oordeel: "onbruikbaar", score: null, reden: "Het gezicht was niet goed genoeg te vergelijken. Een medewerker kijkt mee.", technisch: false, ms: Date.now() - start, beweging: BEWEGING_NIET_BEOORDEELD };
     }
-    return { ...oordeelOverScore(cosinus(kp, ks)), technisch: false, ms: Date.now() - start };
+    const beweging = await bewegingVan({ meting: s.meting, kenmerk: ks }, selfie2);
+    return { ...oordeelOverScore(cosinus(kp, ks)), technisch: false, ms: Date.now() - start, beweging };
   } catch (err) {
     logger.warn("gezichtscontrole kon niet draaien, een medewerker beslist", { error: (err as Error).message });
-    return { beschikbaar: false, oordeel: "onbruikbaar", score: null, reden: "De automatische gezichtscontrole was niet beschikbaar. Een medewerker kijkt mee.", technisch: true, ms: Date.now() - start };
+    return { beschikbaar: false, oordeel: "onbruikbaar", score: null, reden: "De automatische gezichtscontrole was niet beschikbaar. Een medewerker kijkt mee.", technisch: true, ms: Date.now() - start, beweging: BEWEGING_NIET_BEOORDEELD };
   }
 }
