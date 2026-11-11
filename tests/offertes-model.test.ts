@@ -238,6 +238,22 @@ describe("statusovergangen", () => {
     expect(k.regels).toEqual(bron.regels);
   });
 
+  it("een kopie neemt de klantgegevens mee als het origineel niet gewist is", () => {
+    const k = kopie(verstuurd(), "o999999999999", "OF-2026-0002", NU);
+    expect(k.klant).toEqual(verstuurd().klant);
+    expect(k.klant.naam).toBe("Piet Jansen");
+    expect(k.klantGewist).toBeUndefined();
+  });
+
+  it("een kopie van een offerte met gewiste klantgegevens houdt die leeg (ook na klantWissen van een beantwoorde offerte)", () => {
+    const gewist = klantWissen(verstuurd({ status: "geaccepteerd", reactie: { keuze: "geaccepteerd", naam: "Piet Jansen", reden: "", op: NU.toISOString() } }), NU);
+    const k = kopie(gewist, "o999999999999", "OF-2026-0002", NU);
+    expect(k.klant).toEqual({ naam: "", email: "", telefoon: "", adres: "" });
+    expect(k.klantGewist).toBeUndefined();
+    expect(k.titel).toBe("Dakkapel");
+    expect(JSON.stringify(k)).not.toMatch(/Piet|voorbeeld|Dorpsstraat|1234 AB|06 1234|Verwijderd/);
+  });
+
   it("klantgegevens wissen: naam, adres, mail en telefoon weg, ook de naam in de reactie; bedragen blijven", () => {
     const o = verstuurd({ status: "geaccepteerd", reactie: { keuze: "geaccepteerd", naam: "Piet Jansen", reden: "", op: NU.toISOString() } });
     const w = klantWissen(o, NU);

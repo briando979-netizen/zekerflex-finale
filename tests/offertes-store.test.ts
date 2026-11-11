@@ -284,4 +284,14 @@ describe("kopie en klantgegevens wissen", () => {
     expect(JSON.stringify([...m.kv])).not.toMatch(/Piet|voorbeeld|Dorpsstraat|06 1234/);
     expect(w.regels).toHaveLength(1);
   });
+
+  it("een kopie van een offerte met gewiste klantgegevens neemt ze niet over; zonder wissen wel", async () => {
+    const o = await maakOfferte(T, inhoud(), NU);
+    expect((await kopieerOfferte(T, o.id, NU)).klant.naam).toBe("Piet Jansen");
+    await verstuurOfferte(T, o.id, "Bouw BV", NU);
+    await wisKlant(T, o.id, NU);
+    const k = await kopieerOfferte(T, o.id, NU);
+    expect(k.klant).toEqual({ naam: "", email: "", telefoon: "", adres: "" });
+    expect(JSON.stringify(await leesOfferte(T, k.id))).not.toMatch(/Piet|voorbeeld|Dorpsstraat|06 1234|Verwijderd/);
+  });
 });

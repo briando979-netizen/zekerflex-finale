@@ -5,6 +5,7 @@ import { bestelStand, bestelTekst, bestellijst, eenheidTekst, filterEnSorteer, i
 import { ArtikelFormulier } from "@/components/voorraad/ArtikelFormulier";
 import { leesFout } from "@/components/voorraad/fout";
 import { ArtikelDetail } from "@/components/voorraad/ArtikelDetail";
+import { aantalMet } from "@/lib/tekst/aantal";
 
 // Het voorraadbeheer van een bedrijf: overzicht, bijna-op-kaart met bestellijst, snelle +/- knoppen en per artikel het logboek.
 
@@ -105,7 +106,7 @@ export function VoorraadBeheer() {
           <p className="mt-1 text-2xl font-bold text-ink">{euro(waarde.totaalCent)}</p>
           {waarde.zonderPrijs > 0 && (
             <p className="mt-1 text-xs text-neutralx-600">
-              Niet meegerekend: {waarde.zonderPrijs} {waarde.zonderPrijs === 1 ? "artikel" : "artikelen"} zonder kostprijs.
+              Niet meegerekend: {aantalMet(waarde.zonderPrijs, "artikel", "artikelen")} zonder kostprijs.
             </p>
           )}
         </div>
@@ -119,7 +120,7 @@ export function VoorraadBeheer() {
         <section aria-labelledby="bijna-kop" className="rounded-xl border border-hair bg-brand-50 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 id="bijna-kop" className="font-display text-base font-bold text-ink">
-              Bijna op: {aantalBijna} {aantalBijna === 1 ? "artikel" : "artikelen"}
+              Bijna op: {aantalMet(aantalBijna, "artikel", "artikelen")}
             </h2>
             <button type="button" className={knopKlein} onClick={() => void kopieer(bestelTekst(groepen), "alles")}>
               {gekopieerd === "alles" ? "Gekopieerd" : "Kopieer bestellijst"}

@@ -40,7 +40,24 @@ export function OfferteWeergave({ o }: { o: WeergaveGegevens }) {
 
       {o.inleiding && <p className="mt-4 whitespace-pre-line text-neutralx-600">{o.inleiding}</p>}
 
-      <div className="mt-4 overflow-x-auto">
+      {/* Smal scherm (onder 768 px): per regel een kaartje, zodat Prijs, Btw en Bedrag zonder zijwaarts vegen in beeld staan.
+          Op brede schermen en bij het afdrukken blijft het de volledige tabel. */}
+      <ul className="mt-4 border-t border-hair md:hidden print:hidden" aria-label="Regels van de offerte">
+        {o.regels.map((r, n) => (
+          <li key={n} className="flex items-start justify-between gap-3 border-b border-hair py-3">
+            <div className="min-w-0">
+              <p className="break-words font-medium text-ink">{r.omschrijving}</p>
+              <p className="mt-0.5 text-xs text-neutralx-600">
+                {aantalTekst(r.aantal)} {r.eenheid} × {euro(r.prijsCent)} · {r.btw}% btw
+              </p>
+            </div>
+            <p className="shrink-0 font-semibold text-ink">{euro(t.regelCent[n] ?? 0)}</p>
+          </li>
+        ))}
+        {o.regels.length === 0 && <li className="border-b border-hair py-4 text-center text-neutralx-500">Nog geen regels.</li>}
+      </ul>
+
+      <div className="mt-4 hidden overflow-x-auto md:block print:block">
         <table className="w-full min-w-[34rem] border-collapse text-left">
           <thead>
             <tr className="border-b border-hairstrong">

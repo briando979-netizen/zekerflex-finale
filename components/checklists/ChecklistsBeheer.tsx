@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { HERHALING_NAAM, MAX_TAKEN, WEEKDAG_NAAM, WEEK_VOLGORDE, herhalingTekst, plusDagen, type HerhalingSoort, type Overzicht, type OverzichtRij, type Sjabloon, type Uitvoering } from "@/lib/checklists/model";
 import { ChecklistInvullen } from "@/components/checklists/ChecklistInvullen";
+import { aantalMet } from "@/lib/tekst/aantal";
 
 // Het checklistbeheer van een bedrijf: overzicht (wat gedaan en gemist is), de checklists zelf met hun invullink,
 // de geschiedenis en de gegevens van uitvoerders. Alle tijden zijn Nederlandse tijd.
@@ -105,7 +106,7 @@ export function ChecklistsBeheer() {
         )}
         {tab === "checklists" && <ChecklistsTab sjablonen={lading.sjablonen} ververs={ververs} />}
         {tab === "geschiedenis" && <GeschiedenisTab sjablonen={lading.sjablonen} vandaag={lading.vandaag} ververs={ververs} />}
-        {tab === "privacy" && <PrivacyTab />}
+        {tab === "privacy" && <PrivacyTab ververs={ververs} />}
       </div>
     </div>
   );
@@ -126,7 +127,7 @@ function UitvoeringKaart({ u, sjabloon, ververs }: { u: Uitvoering; sjabloon: Sj
         <span className="text-xs text-neutralx-500">{dagTijd(u.tijdstip)}</span>
       </div>
       <p className={`mt-0.5 text-sm ${u.compleet ? "text-ok" : "text-crit"}`}>
-        {u.compleet ? "Alles gedaan" : `${nietGedaan} van ${u.taken.length} taken niet gedaan`}
+        {u.compleet ? "Alles gedaan" : `${nietGedaan} van ${aantalMet(u.taken.length, "taak", "taken")} niet gedaan`}
         {u.correctieVan ? " · correctie op een eerdere uitvoering" : ""}
         {u.bron === "beheer" ? " · door het bedrijf ingevuld" : ""}
       </p>
@@ -358,7 +359,7 @@ function ChecklistsTab({ sjablonen, ververs }: { sjablonen: SjabloonB[]; ververs
                 {s.naam}
                 {s.actief ? "" : " (gearchiveerd)"}
               </span>
-              <span className="text-xs text-neutralx-500">{s.taken.length} taken</span>
+              <span className="text-xs text-neutralx-500">{aantalMet(s.taken.length, "taak", "taken")}</span>
             </div>
             <p className="mt-0.5 text-sm text-neutralx-600">{[s.locatie, herhalingTekst(s.herhaling)].filter(Boolean).join(" · ")}</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -650,7 +651,7 @@ function GeschiedenisTab({ sjablonen, vandaag, ververs }: { sjablonen: SjabloonB
 
 // --- gegevens van personeel ---------------------------------------------------------
 
-function PrivacyTab() {
+function PrivacyTab({ ververs }: { ververs: () => void }) {
   const [namen, setNamen] = useState<{ naam: string; aantal: number }[] | null>(null);
   const [zeker, setZeker] = useState<string | null>(null);
   const [fout, setFout] = useState<string | null>(null);
@@ -671,8 +672,10 @@ function PrivacyTab() {
     const r = await api<{ gewist: number }>("/api/werkgever/checklists/uitvoerders", { method: "DELETE", body: JSON.stringify({ naam }) });
     setZeker(null);
     if (!r.ok) return setFout(r.fout);
-    setBericht(`Gewist: de naam is in ${r.data.gewist} uitvoeringen vervangen door "Verwijderd".`);
+    setBericht(`Gewist: de naam is in ${aantalMet(r.data.gewist, "uitvoering", "uitvoeringen")} vervangen door "Verwijderd".`);
     void laad();
+    // het Overzicht van de ouder toont de naam ook: dat meteen opnieuw laden
+    ververs();
   }
 
   return (
@@ -696,7 +699,7 @@ function PrivacyTab() {
           {namen.map((n) => (
             <li key={n.naam} className={`${kaart} flex flex-wrap items-center justify-between gap-2`}>
               <span className="text-sm text-ink">
-                <span className="font-semibold">{n.naam}</span> · {n.aantal} {n.aantal === 1 ? "uitvoering" : "uitvoeringen"}
+                <span className="font-semibold">{n.naam}</span> · {aantalMet(n.aantal, "uitvoering", "uitvoeringen")}
               </span>
               {zeker === n.naam ? (
                 <span className="flex items-center gap-1.5">

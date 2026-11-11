@@ -11,6 +11,7 @@ import { recentNotes } from "@/lib/bank/notify";
 import { getDismissed, notifSignature } from "@/lib/notifications/dismissed";
 import { REACTIE_MARGE_MS } from "@/lib/offers/verval";
 import { BANK_AAN } from "@/lib/app-mode";
+import { afsprakenBelVoor } from "@/lib/afspraken/bel";
 
 // ---------------------------------------------------------------------------
 // Per-account notification feed. Derived, read-only, no storage of its own —
@@ -261,6 +262,16 @@ export async function getNotifications(principal: Principal): Promise<Notificati
           urgent: inH <= 24,
         });
       }
+    }
+  }
+
+  // ── nieuwe online afspraken (alleen de beheerder, net als de afsprakenpagina en de push/mail) ──
+  if (hasRole(principal, "HQ_ADMIN") && !admin) {
+    try {
+      const tenantId = (await resolveEmployerScope(principal)).tenantIds[0];
+      if (tenantId) out.push(...(await afsprakenBelVoor(tenantId, new Date(now))));
+    } catch {
+      /* ignore: de bel werkt ook zonder afspraken */
     }
   }
 
