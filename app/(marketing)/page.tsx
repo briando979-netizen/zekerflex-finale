@@ -103,7 +103,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       ),
       hoe: (
       <section id="hoe-het-werkt" className="relative scroll-mt-24 bg-paper">
-        <div className="shell-4k py-16 md:py-28 lg:py-36">
+        <div className="shell-4k py-10 md:py-14 lg:py-16">
           <Reveal>
             <p className="eyebrow" data-cms-key="how.eyebrow">{t("how.eyebrow")}</p>
             <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold" data-cms-key="how.title">
@@ -170,7 +170,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       ),
       werkvormen: (
       <section className="relative bg-paper-soft">
-        <div className="shell-4k py-16 md:py-28 lg:py-36">
+        <div className="shell-4k py-10 md:py-14 lg:py-16">
           <Reveal>
             <p className="eyebrow" data-cms-key="work.eyebrow">{t("work.eyebrow")}</p>
             <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold" data-cms-key="work.title">
@@ -242,7 +242,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       cijfers: (
       <section className="relative isolate overflow-hidden bg-[#0C0E12] text-white">
         <div className="aurora opacity-70" aria-hidden />
-        <div className="shell-4k relative py-16 md:py-24 lg:py-32">
+        <div className="shell-4k relative py-10 md:py-14 lg:py-16">
           <div className="grid gap-10 sm:grid-cols-2 sm:gap-14 lg:grid-cols-4">
             {/* de grote cijfers staan vast (bedragen: lib/pricing/tiers.ts); de regel eronder is een tekst */}
             {[
@@ -263,7 +263,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       ),
       functies: (
       <section className="relative bg-paper-soft">
-        <div className="shell-4k py-16 md:py-28 lg:py-36">
+        <div className="shell-4k py-10 md:py-14 lg:py-16">
           <Reveal>
             <p className="eyebrow" data-cms-key="feat.eyebrow">{t("feat.eyebrow")}</p>
             <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold" data-cms-key="feat.title">
@@ -287,7 +287,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       ),
       zekerheid: (
       <section className="relative bg-paper">
-        <div className="shell-4k grid gap-10 py-16 md:gap-16 md:py-28 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:py-36">
+        <div className="shell-4k grid gap-10 py-10 md:gap-10 md:py-14 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:py-16">
           <Reveal>
             <p className="eyebrow" data-cms-key="comp.eyebrow">{t("comp.eyebrow")}</p>
             <h2 className="fluid-h2 mt-4 text-balance font-display font-bold" data-cms-key="comp.title">
@@ -314,7 +314,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       citaat: (
       <section className="relative isolate overflow-hidden bg-[#0C0E12] text-white">
         <div className="aurora opacity-60" aria-hidden />
-        <div className="shell-4k relative py-16 md:py-28 lg:py-36">
+        <div className="shell-4k relative py-10 md:py-14 lg:py-16">
           <Reveal className="mx-auto max-w-4xl text-center">
             <figure>
               <blockquote className="text-balance font-display text-[clamp(1.5rem,1.1rem+1.6vw,2.6rem)] font-semibold leading-snug">
@@ -331,7 +331,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       ),
       vragen: (
       <section className="relative bg-paper-soft">
-        <div className="shell-4k grid gap-8 py-16 md:gap-14 md:py-28 lg:grid-cols-[0.8fr_1.2fr] lg:py-36">
+        <div className="shell-4k grid gap-8 py-10 md:gap-10 md:py-14 lg:grid-cols-[0.8fr_1.2fr] lg:py-16">
           <Reveal>
             <p className="eyebrow" data-cms-key="faq.eyebrow">{t("faq.eyebrow")}</p>
             <h2 className="fluid-h2 mt-4 font-display font-bold" data-cms-key="faq.title">{t("faq.title")}</h2>
@@ -350,7 +350,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       oproep: (
       <section className="relative isolate overflow-hidden hero-ink text-white">
         <div className="aurora" aria-hidden />
-        <div className="shell-4k relative py-16 md:py-28 lg:py-36">
+        <div className="shell-4k relative py-10 md:py-14 lg:py-16">
           <Reveal className="flex flex-col items-start justify-between gap-10 lg:flex-row lg:items-center">
             <div className="max-w-2xl">
               <h2 className="fluid-h2 text-balance font-display font-bold" data-cms-key="cta.title">{t("cta.title")}</h2>
@@ -446,7 +446,7 @@ function ShowcaseSplit({
     <section className={`relative isolate overflow-hidden ${dark ? "hero-ink text-white" : "bg-paper"}`}>
       {dark && <div className="aurora opacity-50" aria-hidden />}
       <div
-        className={`shell-4k relative grid items-center gap-10 py-16 md:gap-14 md:py-28 lg:py-36 lg:gap-24 ${
+        className={`shell-4k relative grid items-center gap-10 py-10 md:gap-10 md:py-14 lg:py-16 lg:gap-12 ${
           reverse ? "lg:grid-cols-[0.95fr_1.05fr]" : "lg:grid-cols-[1.05fr_0.95fr]"
         }`}
       >

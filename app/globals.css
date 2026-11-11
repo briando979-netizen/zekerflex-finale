@@ -236,21 +236,21 @@ body {
 
 /* Fluid type — caps out so it never explodes on an 8K panel. */
 .fluid-hero {
-  font-size: clamp(2.75rem, 1.6rem + 5.2vw, 6.75rem);
+  font-size: clamp(2rem, 1.2rem + 2.6vw, 3.5rem);
   line-height: 1.02;
   letter-spacing: -0.025em;
 }
 .fluid-h2 {
-  font-size: clamp(1.9rem, 1.2rem + 2.6vw, 3.75rem);
+  font-size: clamp(1.5rem, 1rem + 1.4vw, 2.25rem);
   line-height: 1.08;
   letter-spacing: -0.02em;
 }
 .fluid-lead {
-  font-size: clamp(1.05rem, 0.95rem + 0.6vw, 1.5rem);
+  font-size: clamp(0.95rem, 0.9rem + 0.25vw, 1.125rem);
   line-height: 1.6;
 }
 .fluid-stat {
-  font-size: clamp(2.5rem, 1.4rem + 4vw, 5.5rem);
+  font-size: clamp(2rem, 1.2rem + 2.2vw, 3.25rem);
   line-height: 1;
   letter-spacing: -0.03em;
 }

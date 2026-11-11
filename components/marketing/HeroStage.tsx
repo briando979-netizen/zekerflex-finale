@@ -68,19 +68,19 @@ export function HeroStage({
   return (
     <section className="relative isolate overflow-hidden hero-ink text-white">
       <div className="aurora" aria-hidden />
-      <div className="shell-4k relative grid min-h-[92vh] items-center gap-12 py-12 sm:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:py-28 2xl:min-h-[88vh]">
+      <div className="shell-4k relative grid items-center gap-8 py-8 sm:py-12 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12 lg:py-12">
         <div className="reveal" data-shown="true">
           <p className="eyebrow text-brand-mint" data-cms-key="hero.eyebrow">{c.eyebrow}</p>
-          <h1 className="fluid-hero mt-5 text-balance font-display font-bold">
+          <h1 className="fluid-hero mt-4 text-balance font-display font-bold">
             <span data-cms-key="hero.titleLine1">{c.titleLine1}</span>
             <br />
             <span className="bg-gradient-to-r from-brand-mint to-[#8FF0C4] bg-clip-text text-transparent" data-cms-key="hero.titleLine2">
               {c.titleLine2}
             </span>
           </h1>
-          <p className="fluid-lead mt-7 max-w-xl text-white/70" data-cms-key="hero.lead" data-cms-ml="1">{c.lead}</p>
+          <p className="fluid-lead mt-5 max-w-xl text-white/70" data-cms-key="hero.lead" data-cms-ml="1">{c.lead}</p>
           {/* twee duidelijke keuzes; op de telefoon onder elkaar over de hele breedte */}
-          <div className="mt-8 grid gap-3 sm:mt-10 sm:flex sm:flex-wrap">
+          <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
             <Link href="/register" className="btn-mint text-base" data-cms-key="hero.ctaPrimary">
               {c.ctaPrimary}
             </Link>
@@ -101,7 +101,7 @@ export function HeroStage({
               </Link>
             ))}
           </nav>
-          <div className="mt-8 hidden flex-wrap items-center gap-x-7 gap-y-2 text-sm text-white/65 sm:flex">
+          <div className="mt-6 hidden flex-wrap items-center gap-x-7 gap-y-2 text-sm text-white/65 sm:flex">
             {["Werk bij jou in de buurt", "Personeel als het druk is", "Software voor jouw zaak"].map((t) => (
               <span key={t} className="flex items-center gap-2">
                 <Tick /> {t}
@@ -110,7 +110,7 @@ export function HeroStage({
           </div>
         </div>
 
-        <div className="relative">
+        <div className="relative lg:ml-auto lg:w-full lg:max-w-[26rem] xl:max-w-[30rem]">
           <div ref={artRef} className="relative will-change-transform">
             {photo}
           </div>
