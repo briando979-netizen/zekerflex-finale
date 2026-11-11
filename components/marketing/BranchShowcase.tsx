@@ -65,7 +65,7 @@ function Card({ b, minRateCents }: { b: Branch; minRateCents: number }) {
 export function BranchShowcase({ minRateCents }: { minRateCents: number }) {
   return (
     <section className="relative bg-paper-soft">
-      <div className="shell-4k py-16 md:py-28 lg:py-36">
+      <div className="shell-4k py-8 md:py-10 lg:py-12">
         <Reveal>
           <p className="eyebrow">Branches</p>
           <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold">

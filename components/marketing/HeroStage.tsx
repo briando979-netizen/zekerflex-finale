@@ -110,7 +110,7 @@ export function HeroStage({
           </div>
         </div>
 
-        <div className="relative lg:ml-auto lg:w-full lg:max-w-[20rem] xl:max-w-[24rem]">
+        <div className="relative lg:ml-auto lg:w-full lg:max-w-[15rem] xl:max-w-[17rem]">
           <div ref={artRef} className="relative will-change-transform">
             {photo}
           </div>

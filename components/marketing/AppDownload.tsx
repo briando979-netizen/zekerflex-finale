@@ -233,11 +233,11 @@ export async function AppDownload({ standalone = false }: { standalone?: boolean
   const appStore = await featureEnabled("iphone-appstore").catch(() => false);
   return (
     <section id="app" className={`scroll-mt-24 ${standalone ? "" : "hero-ink"} text-white`}>
-      <div className={`shell ${standalone ? "py-4" : "py-20 md:py-24"}`}>
+      <div className={`shell ${standalone ? "py-4" : "py-8 md:py-10"}`}>
         <div className="grid items-center gap-10 md:grid-cols-[1.1fr_0.9fr]">
           <div>
             <p className="eyebrow text-brand-mint">De app</p>
-            <h2 className="mt-3 max-w-md text-balance font-display text-3xl font-bold leading-tight md:text-4xl">
+            <h2 className="mt-2 max-w-md text-balance font-display text-2xl font-bold leading-tight md:text-[1.75rem]">
               Neem ZekerFlex mee in je zak
             </h2>
             <p className="mt-4 max-w-md text-white/70">

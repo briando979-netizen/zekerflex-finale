@@ -16,7 +16,7 @@ export function Section({
     tone === "ink" ? "hero-ink text-white" : tone === "soft" ? "bg-paper-soft" : "bg-paper";
   return (
     <section id={id} className={`${bg} ${className} ${id ? "scroll-mt-24" : ""}`}>
-      <div className="shell py-20 md:py-28">{children}</div>
+      <div className="shell py-10 md:py-12">{children}</div>
     </section>
   );
 }
@@ -74,7 +74,7 @@ export function Stat({
   return (
     <div>
       <div
-        className={`num font-display text-3xl font-bold md:text-4xl ${
+        className={`num font-display text-2xl font-bold md:text-3xl ${
           invert ? "text-brand-mint" : "text-brand-500"
         }`}
       >
@@ -107,10 +107,10 @@ export function CtaBand({
 }) {
   return (
     <section className="hero-ink text-white">
-      <div className="shell py-20 md:py-24">
+      <div className="shell py-10 md:py-12">
         <div className="flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
           <div className="max-w-xl">
-            <h2 className="text-balance font-display text-3xl font-bold leading-tight md:text-4xl" data-cms-key={cms?.title}>
+            <h2 className="text-balance font-display text-2xl font-bold leading-tight md:text-[1.75rem]" data-cms-key={cms?.title}>
               {title}
             </h2>
             <p className="mt-3 text-lg text-white/65" data-cms-key={cms?.body}>{body}</p>

@@ -7,19 +7,19 @@ import { AANBOD, aanbodHref, PIJLERS, WERK_ZOEKEN } from "@/lib/marketing/aanbod
 export function AanbodKiezer({ id = "aanbod", titel = "Waar ben je naar op zoek?" }: { id?: string; titel?: string }) {
   return (
     <section id={id} aria-labelledby={`${id}-titel`} className="relative scroll-mt-24 bg-paper">
-      <div className="shell-4k py-16 md:py-24">
+      <div className="shell-4k py-8 md:py-10">
         <div className="max-w-2xl">
           <p className="eyebrow">Alles onder één dak</p>
-          <h2 id={`${id}-titel`} className="mt-3 text-balance font-display text-3xl font-bold leading-tight tracking-tight text-ink md:text-[2.6rem]">
+          <h2 id={`${id}-titel`} className="mt-2 text-balance font-display text-2xl font-bold leading-tight tracking-tight text-ink md:text-[1.75rem]">
             {titel}
           </h2>
-          <p className="mt-4 text-lg leading-relaxed text-neutralx-600">
+          <p className="mt-3 text-base leading-relaxed text-neutralx-600">
             ZekerFlex begon met flexwerk en is uitgegroeid tot één plek voor je hele bedrijf: personeel, je website en klanten,
             software voor jouw branche en je geldzaken. Met één account voor alles.
           </p>
         </div>
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           {PIJLERS.map((p) => {
             const items = AANBOD.filter((a) => a.pijler === p.sleutel);
             return (
