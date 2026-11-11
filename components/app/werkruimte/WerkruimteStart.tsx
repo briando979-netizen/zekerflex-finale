@@ -266,8 +266,7 @@ async function WebsiteVak(b: Basis & { studio: boolean }) {
         { href: "/werkgever/website", titel: "Eigen domein en beheer", uitleg: "Je eigen webadres koppelen en je website laten beheren." },
       ]
     : [
-        { href: "/werkgever/website/bouwer", titel: "Website bewerken", uitleg: "Pagina's, teksten, foto's en je webshop." },
-        { href: "/werkgever/website", titel: "Website-beheer", uitleg: "Je eigen webadres en het beheer van je website." },
+        { href: "/werkgever/website", titel: "Website-beheer", uitleg: "Je eigen webadres en het beheer van je website. Bewerken kan de beheerder van je bedrijf." },
       ];
   return (
     <>
@@ -283,8 +282,8 @@ async function WebsiteVak(b: Basis & { studio: boolean }) {
                 Bekijk website
               </a>
             )}
-            <Link href={b.studio ? "/studio" : "/werkgever/website/bouwer"} className="btn-primary">
-              {b.studio ? "Open de studio" : "Website bewerken"}
+            <Link href={b.studio ? "/studio" : "/werkgever/website"} className="btn-primary">
+              {b.studio ? "Open de studio" : "Website-beheer"}
             </Link>
           </div>
         }

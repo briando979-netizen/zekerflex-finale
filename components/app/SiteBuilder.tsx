@@ -877,6 +877,7 @@ interface DomainState {
 }
 
 function DomainTab({ canPublish, onAddress }: { canPublish: boolean; onAddress: (ownDomain: string | null) => void }) {
+  const bouwerApi = useBuilderApi();
   const [state, setState] = useState<{ domein: DomainState | null; records: DnsRecordRow[] } | null>(null);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -954,7 +955,7 @@ function DomainTab({ canPublish, onAddress }: { canPublish: boolean; onAddress: 
           <details className="rounded-lg border border-hair p-3">
             <summary className="cursor-pointer font-semibold text-ink">Nog geen domeinnaam? Zoek en bestel er één</summary>
             <div className="mt-3">
-              <DomeinZoeker terugNaar="/werkgever/website/bouwer" smal onGekoppeld={() => void herlaad()} />
+              <DomeinZoeker terugNaar={bouwerApi.soort === "webshop" ? "/studio/webshop/paginas" : "/studio/website/bouwer"} smal onGekoppeld={() => void herlaad()} />
             </div>
           </details>
         </NietInIphone>

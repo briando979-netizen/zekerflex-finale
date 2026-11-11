@@ -1,10 +1,12 @@
-import { env } from "@/lib/env";
-import { SiteBuilder } from "@/components/app/SiteBuilder";
+import { redirect } from "next/navigation";
+import { bouwerDoorstuurPad } from "@/lib/sites/bouwer-doorsturen";
 
 export const dynamic = "force-dynamic";
 
-// Website bouwen: toegang (werkgever-rollen) zit in app/werkgever/layout.tsx; wie
-// mag bouwen en publiceren regelt lib/sites/access.ts in de API.
-export default function WebsiteBouwerPage() {
-  return <SiteBuilder origin={new URL(env.APP_BASE_URL).origin} />;
+// Eén site-bouwer (masterplan Fase 0): de bouwer voor website en webshop is die van de studio. Deze oude
+// ingang stuurt door, met alles wat een oude link of een betaalpagina nog meegeeft (?ontwerp=,
+// ?bestelling=gelukt&domein=…). Wie geen beheerder is, komt via de studio terug op /werkgever (die laat
+// alleen de beheerder bouwen; de API deed dat al).
+export default async function WebsiteBouwerPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  redirect(bouwerDoorstuurPad(await searchParams));
 }
