@@ -26,6 +26,11 @@
 # bestand op het gedeelde volume caddy-logs, waar de crowdsec-container meeleest.
 # Privacy: cookies, sleutels en de querystring (daar staan getekende links in) komen
 # er niet in, en na zeven dagen is een bestand weg. Alleen voor beveiliging.
+# Ook een geheime code in het pad (/offerte/<token>, /review/<token>, /betaal/<token>,
+# agendafeeds, /terminal/<sleutel> …) komt er niet in: elk padstuk van 20 tekens of meer
+# uit [A-Za-z0-9_-] wordt leeg ("/review/"). Korte paden (/wp-login.php, /.env) blijven
+# staan, zodat CrowdSec scanners blijft herkennen. Eén regexp, want caddy kent per veld
+# maar één filter; "$1" houdt de schuine streep, de querystring valt weg.
 (toegangslog) {
 	log {
 		output file /var/log/caddy/toegang.log {
@@ -49,7 +54,7 @@
 				request>headers>X-Signature-Simple delete
 				request>headers>X-Twilio-Signature delete
 				resp_headers>Set-Cookie delete
-				request>uri regexp "\?.*$" ""
+				request>uri regexp "(/)[A-Za-z0-9_-]{20,}|\?.*$" "$1"
 			}
 		}
 	}
