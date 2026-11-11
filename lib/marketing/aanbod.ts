@@ -39,6 +39,8 @@ export interface AanbodItem {
   pagina?: string;
   /** de knop om te beginnen */
   start: { label: string; href: string };
+  /** een tweede knop naar voorbeelden om eerst rond te kijken (bv. /voorbeeldsites) */
+  voorbeelden?: { label: string; href: string };
   /** zoekwoorden voor de eigen pagina */
   zoekwoorden?: string[];
   /** foto in public/aanbod (bron en licentie in public/aanbod/CREDITS.md) */
@@ -407,6 +409,7 @@ export const AANBOD: AanbodItem[] = [
     voorWie: "Ondernemers die een betere website willen zonder gedoe",
     status: "beschikbaar",
     start: aanmeldenVoor("website"),
+    voorbeelden: { label: "Bekijk voorbeeldwebsites", href: "/voorbeeldsites" },
     zoekwoorden: ["website laten bouwen", "website laten maken", "website voor mijn bedrijf", "websitebouwer", "website zonder cookies"],
   },
   {
@@ -427,6 +430,7 @@ export const AANBOD: AanbodItem[] = [
     voorWie: "Ondernemers die producten online willen verkopen",
     status: "beschikbaar",
     start: aanmeldenVoor("webshop"),
+    voorbeelden: { label: "Bekijk voorbeelden met webshop", href: "/voorbeeldsites" },
     zoekwoorden: ["webshop openen", "eigen webwinkel starten", "webshop beginnen", "webwinkel laten maken"],
   },
   {

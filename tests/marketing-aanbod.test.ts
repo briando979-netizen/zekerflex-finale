@@ -26,7 +26,10 @@ describe("aanbod (lib/marketing/aanbod.ts)", () => {
     for (const a of AANBOD) {
       if (a.pagina) expect(paginaBestaat(a.pagina), `${a.naam} → ${a.pagina}`).toBe(true);
       expect(paginaBestaat(a.start.href), `${a.naam} start → ${a.start.href}`).toBe(true);
+      if (a.voorbeelden) expect(paginaBestaat(a.voorbeelden.href), `${a.naam} voorbeelden → ${a.voorbeelden.href}`).toBe(true);
     }
+    // website en webshop: eerst rondkijken op de voorbeeldsites
+    for (const slug of ["website", "webshop"]) expect(aanbodVan(slug)?.voorbeelden?.href, slug).toBe("/voorbeeldsites");
     for (const w of WERK_ZOEKEN) expect(paginaBestaat(w.href), w.href).toBe(true);
   });
 

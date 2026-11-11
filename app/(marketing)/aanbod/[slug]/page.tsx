@@ -69,6 +69,11 @@ export default async function AanbodItemPagina({ params }: { params: Promise<{ s
               <Link href={a.start.href} className="btn-mint">
                 {a.start.label}
               </Link>
+              {a.voorbeelden && (
+                <Link href={a.voorbeelden.href} className="btn-ghost-invert">
+                  {a.voorbeelden.label}
+                </Link>
+              )}
               {a.start.href !== "/demo" && (
                 <Link href="/demo" className="btn-ghost-invert">
                   Vraag een demo aan
