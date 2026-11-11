@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { HERO_KEUZES, HERO_KEUZE_VOLGORDE, type HeroKeuze } from "@/lib/marketing/hero-keuze";
 
 /**
  * Immersive homepage hero. Dark aurora backdrop, fluid headline, a real photo
@@ -40,6 +41,10 @@ export function HeroStage({
       if (v !== undefined && v !== "") c[k] = v;
     }
   }
+  // De schakelaar bovenaan: zonder keuze de tekst van nu (en aanpasbaar in de Site-ontwerper), na een tik de tekst voor die bezoeker.
+  const [keuze, setKeuze] = useState<HeroKeuze | null>(null);
+  const v = keuze ? HERO_KEUZES[keuze] : null;
+  const cms = (key: string) => (v ? {} : { "data-cms-key": key });
   const artRef = useRef<HTMLDivElement | null>(null);
   const glassRef = useRef<HTMLDivElement | null>(null);
   const cueRef = useRef<HTMLDivElement | null>(null);
@@ -70,22 +75,38 @@ export function HeroStage({
       <div className="aurora" aria-hidden />
       <div className="shell-4k relative grid min-h-[92vh] items-center gap-12 py-12 sm:py-24 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:py-28 2xl:min-h-[88vh]">
         <div className="reveal" data-shown="true">
-          <p className="eyebrow text-brand-mint" data-cms-key="hero.eyebrow">{c.eyebrow}</p>
+          {/* keuzeschakelaar: boven de bovenregel; tik nog eens op de gekozen knop om terug te gaan */}
+          <div role="group" aria-label="Wat zoek je?" className="mb-6 flex w-full rounded-full bg-white/10 p-1 sm:inline-flex sm:w-auto">
+            {HERO_KEUZE_VOLGORDE.map((k) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={keuze === k}
+                onClick={() => setKeuze((nu) => (nu === k ? null : k))}
+                className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition sm:flex-none sm:px-5 ${
+                  keuze === k ? "bg-brand-mint text-ink" : "text-white/80 hover:text-white"
+                }`}
+              >
+                {HERO_KEUZES[k].knop}
+              </button>
+            ))}
+          </div>
+          <p className="eyebrow text-brand-mint" {...cms("hero.eyebrow")}>{v ? v.eyebrow : c.eyebrow}</p>
           <h1 className="fluid-hero mt-5 text-balance font-display font-bold">
-            <span data-cms-key="hero.titleLine1">{c.titleLine1}</span>
+            <span {...cms("hero.titleLine1")}>{v ? v.titleLine1 : c.titleLine1}</span>
             <br />
-            <span className="bg-gradient-to-r from-brand-mint to-[#8FF0C4] bg-clip-text text-transparent" data-cms-key="hero.titleLine2">
-              {c.titleLine2}
+            <span className="bg-gradient-to-r from-brand-mint to-[#8FF0C4] bg-clip-text text-transparent" {...cms("hero.titleLine2")}>
+              {v ? v.titleLine2 : c.titleLine2}
             </span>
           </h1>
-          <p className="fluid-lead mt-7 max-w-xl text-white/70" data-cms-key="hero.lead" data-cms-ml="1">{c.lead}</p>
+          <p className="fluid-lead mt-7 max-w-xl text-white/70" {...(v ? {} : { "data-cms-key": "hero.lead", "data-cms-ml": "1" })}>{v ? v.lead : c.lead}</p>
           {/* twee duidelijke keuzes; op de telefoon onder elkaar over de hele breedte */}
           <div className="mt-8 grid gap-3 sm:mt-10 sm:flex sm:flex-wrap">
-            <Link href="/register" className="btn-mint text-base" data-cms-key="hero.ctaPrimary">
-              {c.ctaPrimary}
+            <Link href={v ? v.ctaPrimary.href : "/register"} className="btn-mint text-base" {...cms("hero.ctaPrimary")}>
+              {v ? v.ctaPrimary.label : c.ctaPrimary}
             </Link>
-            <Link href="/voor-bedrijven" className="btn-ghost-invert text-base" data-cms-key="hero.ctaSecondary">
-              {c.ctaSecondary}
+            <Link href={v ? v.ctaSecondary.href : "/voor-bedrijven"} className="btn-ghost-invert text-base" {...cms("hero.ctaSecondary")}>
+              {v ? v.ctaSecondary.label : c.ctaSecondary}
             </Link>
           </div>
           {/* snelle acties: in één tik naar wat de meeste bezoekers komen doen */}
@@ -102,7 +123,7 @@ export function HeroStage({
             ))}
           </nav>
           <div className="mt-8 hidden flex-wrap items-center gap-x-7 gap-y-2 text-sm text-white/65 sm:flex">
-            {["Werk bij jou in de buurt", "Personeel als het druk is", "Software voor jouw zaak"].map((t) => (
+            {(v ? v.punten : ["Werk bij jou in de buurt", "Personeel als het druk is", "Software voor jouw zaak"]).map((t) => (
               <span key={t} className="flex items-center gap-2">
                 <Tick /> {t}
               </span>
