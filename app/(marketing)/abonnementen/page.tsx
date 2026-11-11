@@ -5,7 +5,7 @@ import { SaasPlans } from "@/components/marketing/SaasPlans";
 
 const title = "Abonnementen — ZekerFlex voor bedrijven";
 const description =
-  "Gratis starten en alleen €3,50 per gewerkt uur, of een maandabonnement (Pro/Business) dat AI-recruiter, snelle uitbetaling, uitzend (ABU/StiPP) en de bank ontsluit. Geen opstartkosten, maandelijks opzegbaar.";
+  "Gratis starten en alleen €3,50 per gewerkt uur, of een maandabonnement (Pro/Business) dat AI-recruiter, snelle uitbetaling en uitzend (ABU/StiPP) ontsluit. Geen opstartkosten, maandelijks opzegbaar.";
 
 export const metadata: Metadata = {
   title,
@@ -29,7 +29,7 @@ export default function AbonnementenPage() {
           <p className="eyebrow text-brand-mint">Abonnementen</p>
           <h1 className="mt-4 font-display text-4xl font-bold md:text-6xl">Kies wat bij je past</h1>
           <p className="mt-6 max-w-xl text-lg text-white/70">
-            Gratis beginnen kan altijd. Wil je sneller werven en uitbetalen, uitzenden met ABU/StiPP of de bank gebruiken? Zet een
+            Gratis beginnen kan altijd. Wil je sneller werven en uitbetalen of uitzenden met ABU/StiPP? Zet een
             maandabonnement erbij — maandelijks opzegbaar, geen opstartkosten.
           </p>
         </div>
