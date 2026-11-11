@@ -85,22 +85,26 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** Where the builder opens: `beginPagina` = the address of a page ("home" for the home page), `beginTab` = the first tab. */
+/**
+ * Where the builder opens: `beginPagina` = the address of a page ("home" for the home page), `beginTab` = the first tab.
+ * `beginOntwerp`: a design chosen in Studio → Ontwerpen; a new site starts with it (and its exact style).
+ */
 interface Begin {
   beginPagina?: string | undefined;
   beginTab?: "blokken" | "paginas" | undefined;
+  beginOntwerp?: string | undefined;
 }
 
-export function SiteBuilder({ origin, apiBase = "/api/werkgever/sites", proposal = false, soort = null, beginPagina, beginTab }: { origin: string; apiBase?: string; proposal?: boolean; soort?: SiteSoort | null } & Begin) {
+export function SiteBuilder({ origin, apiBase = "/api/werkgever/sites", proposal = false, soort = null, beginPagina, beginTab, beginOntwerp }: { origin: string; apiBase?: string; proposal?: boolean; soort?: SiteSoort | null } & Begin) {
   const api = useMemo(() => ({ base: apiBase, proposal, soort }), [apiBase, proposal, soort]);
   return (
     <BuilderApiContext.Provider value={api}>
-      <Builder origin={origin} beginPagina={beginPagina} beginTab={beginTab} />
+      <Builder origin={origin} beginPagina={beginPagina} beginTab={beginTab} beginOntwerp={beginOntwerp} />
     </BuilderApiContext.Provider>
   );
 }
 
-function Builder({ origin, beginPagina, beginTab }: { origin: string } & Begin) {
+function Builder({ origin, beginPagina, beginTab, beginOntwerp }: { origin: string } & Begin) {
   const url = useApiUrl();
   const woord = useWoord();
   const [data, setData] = useState<Data | null>(null);
@@ -117,14 +121,16 @@ function Builder({ origin, beginPagina, beginTab }: { origin: string } & Begin) 
 
   if (error) return <p role="alert" className="card p-6 text-sm text-crit">{error}</p>;
   if (!data) return <div className="card h-40 animate-pulse" />;
-  if (!data.site) return <StartWizard data={data} onCreated={(site, address) => setData({ ...data, site, address })} />;
+  if (!data.site) return <StartWizard data={data} beginOntwerp={beginOntwerp} onCreated={(site, address) => setData({ ...data, site, address })} />;
   return <Editor data={data} site={data.site} origin={origin} onSite={(site) => setData({ ...data, site })} beginPagina={beginPagina} beginTab={beginTab} />;
 }
 
 // ---- start: pick a sector, check the company details ------------------------
 
-function StartWizard({ data, onCreated }: { data: Data; onCreated: (site: SiteDoc, address: string) => void }) {
-  const [templateId, setTemplateId] = useState(data.templates[0]?.id ?? "algemeen");
+function StartWizard({ data, beginOntwerp, onCreated }: { data: Data; beginOntwerp?: string | undefined; onCreated: (site: SiteDoc, address: string) => void }) {
+  // chosen in Studio → Ontwerpen: then the site starts exactly in the style of that design's example
+  const uitGalerij = beginOntwerp && data.templates.some((t) => t.id === beginOntwerp) ? beginOntwerp : null;
+  const [templateId, setTemplateId] = useState(uitGalerij ?? data.templates[0]?.id ?? "algemeen");
   const [bedrijf, setBedrijf] = useState<Company>(data.defaults);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -133,7 +139,7 @@ function StartWizard({ data, onCreated }: { data: Data; onCreated: (site: SiteDo
   const create = async () => {
     setBusy(true);
     setError(null);
-    const res = await fetch(url(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ templateId, bedrijf }) }).catch(() => null);
+    const res = await fetch(url(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ templateId, bedrijf, ...(templateId === uitGalerij ? { ontwerp: true } : {}) }) }).catch(() => null);
     setBusy(false);
     if (!res?.ok) return setError(await errorText(res, "Maken lukte niet."));
     const d = await res.json();

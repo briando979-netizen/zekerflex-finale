@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { API, foutVan, useStudio } from "@/components/studio/context";
 import { Card, btn, input } from "@/components/studio/ui";
@@ -8,7 +10,8 @@ import type { Company } from "@/lib/sites/types";
 // ---------------------------------------------------------------------------
 // Webshop openen, stap voor stap: kies een startpunt, controleer je
 // bedrijfsgegevens en maak de webshop aan (POST /api/werkgever/sites?soort=webshop).
-// Daarna staan de eerste pagina's en de wettelijke teksten klaar.
+// Daarna staan de eerste pagina's en de wettelijke teksten klaar. Vanuit Studio →
+// Ontwerpen (`?ontwerp=<id>`) staat dat ontwerp al gekozen.
 // ---------------------------------------------------------------------------
 
 const VELDEN: { key: keyof Company; label: string; type?: string; max: number; breed?: boolean; hint?: string }[] = [
@@ -22,9 +25,12 @@ const VELDEN: { key: keyof Company; label: string; type?: string; max: number; b
 ];
 
 export default function WebshopStart() {
-  const { data, reload } = useStudio();
+  const { data, reload, base } = useStudio();
   const templates = data?.templates ?? [];
-  const [templateId, setTemplateId] = useState(templates[0]?.id ?? "algemeen");
+  // gekozen in Ontwerpen: dan begint de webshop precies in de stijl van dat ontwerp
+  const gekozen = useSearchParams()?.get("ontwerp") ?? null;
+  const uitGalerij = gekozen !== null && templates.some((t) => t.id === gekozen) ? gekozen : null;
+  const [templateId, setTemplateId] = useState(uitGalerij ?? templates[0]?.id ?? "algemeen");
   const [bedrijf, setBedrijf] = useState<Company>(data?.defaults ?? { naam: "", kvk: "", straat: "", postcode: "", plaats: "", telefoon: "", email: "" });
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
@@ -32,7 +38,7 @@ export default function WebshopStart() {
   const maak = async () => {
     setBezig(true);
     setFout(null);
-    const res = await fetch(`${API}?soort=webshop`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ templateId, bedrijf }) }).catch(() => null);
+    const res = await fetch(`${API}?soort=webshop`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ templateId, bedrijf, ...(templateId === uitGalerij ? { ontwerp: true } : {}) }) }).catch(() => null);
     if (!res?.ok) {
       setBezig(false);
       return setFout(await foutVan(res, "Maken lukte niet. Probeer het opnieuw."));
@@ -49,7 +55,7 @@ export default function WebshopStart() {
         <p className="mt-3 max-w-xl text-white/75">Producten, bestellingen, klanten, kortingen en verzending in één plek. Kies hieronder een startpunt; je kunt alles daarna aanpassen.</p>
       </section>
 
-      <Card title="1. Kies een startpunt">
+      <Card title="1. Kies een startpunt" actions={<Link href={`${base}/ontwerpen`} className="text-sm font-semibold text-[#005bd3] hover:underline">Bekijk alle ontwerpen met voorbeeld</Link>}>
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {templates.map((t) => (
             <li key={t.id}>

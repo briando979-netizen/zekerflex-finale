@@ -240,4 +240,6 @@ export const createSchema = z.object({
   /** website bouwen (standaard) of webshop openen */
   soort: z.enum(["website", "webshop"]).optional(),
   bedrijf: companySchema,
+  /** gekozen in Studio → Ontwerpen: de stijl precies zoals het voorbeeld (lib/sites/ontwerpen.ts) */
+  ontwerp: z.boolean().optional(),
 });

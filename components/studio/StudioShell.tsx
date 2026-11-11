@@ -6,7 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { DashboardWisselaar, type DashboardStand } from "@/components/app/werkruimte/DashboardWisselaar";
 import { StudioProvider, useStudio } from "@/components/studio/context";
 import WebshopStart from "@/components/studio/WebshopStart";
-import { ICalendar, ICard, ICoins, IExternal, IHome, ILayout, IMenu, IPalette, IPercent, IPin, IReceipt, ISparkle, ITrend, ISettings, IStore, ITag, ITruck, IUsers, IX, Pill, btn } from "@/components/studio/ui";
+import { ICalendar, ICard, ICoins, IExternal, IGrid, IHome, ILayout, IMenu, IPalette, IPercent, IPin, IReceipt, ISparkle, ITrend, ISettings, IStore, ITag, ITruck, IUsers, IX, Pill, btn } from "@/components/studio/ui";
 import { isPaginaBouwer } from "@/lib/sites/paginabouwer";
 import type { SiteSoort } from "@/lib/sites/types";
 
@@ -34,6 +34,7 @@ const NAV: Record<SiteSoort, { hoofd: NavItem[]; extra?: { kop: string; items: N
     hoofd: [
       { href: WEBSITE, label: "Overzicht", icon: <IHome /> },
       { href: `${WEBSITE}/bouwer`, label: "Bouwer", icon: <ILayout /> },
+      { href: `${WEBSITE}/ontwerpen`, label: "Ontwerpen", icon: <IGrid /> },
       { href: `${WEBSITE}/ontwerp`, label: "Ontwerp", icon: <IPalette /> },
       { href: `${WEBSITE}/reserveringen`, label: "Reserveringen", icon: <ICalendar /> },
       { href: `${WEBSITE}/instellingen`, label: "Instellingen", icon: <ISettings /> },
@@ -52,6 +53,7 @@ const NAV: Record<SiteSoort, { hoofd: NavItem[]; extra?: { kop: string; items: N
       { href: `${WEBSHOP}/groei`, label: "Groei", icon: <ITrend /> },
       { href: `${WEBSHOP}/kassa`, label: "Op locatie", icon: <IPin /> },
       { href: `${WEBSHOP}/paginas`, label: "Pagina's", icon: <ILayout /> },
+      { href: `${WEBSHOP}/ontwerpen`, label: "Ontwerpen", icon: <IGrid /> },
       { href: `${WEBSHOP}/ontwerp`, label: "Ontwerp", icon: <IPalette /> },
       { href: `${WEBSHOP}/instellingen`, label: "Instellingen", icon: <ISettings /> },
     ],
@@ -65,10 +67,11 @@ const NAV: Record<SiteSoort, { hoofd: NavItem[]; extra?: { kop: string; items: N
   },
 };
 
-// Deze onderdelen werken ook zonder eigen site (de ZekerFlex-shop, en de bouwer die de site zelf maakt).
+// Deze onderdelen werken ook zonder eigen site (de ZekerFlex-shop, de bouwer die de site zelf maakt,
+// en de ontwerpen: daar kies je er een om mee te beginnen).
 const ZONDER_SITE: Record<SiteSoort, string[]> = {
-  website: [`${WEBSITE}/bouwer`],
-  webshop: [`${WEBSHOP}/verkopen`, `${WEBSHOP}/verdienen`],
+  website: [`${WEBSITE}/bouwer`, `${WEBSITE}/ontwerpen`],
+  webshop: [`${WEBSHOP}/verkopen`, `${WEBSHOP}/verdienen`, `${WEBSHOP}/ontwerpen`],
 };
 
 const TITEL: Record<SiteSoort, string> = { website: "Website", webshop: "Webshop" };
@@ -267,7 +270,10 @@ function Body({ path, children }: { path: string; children: ReactNode }) {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/60">Website bouwen</p>
         <h1 className="mx-auto mt-3 max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">Je eigen website, in een paar minuten</h1>
         <p className="mx-auto mt-3 max-w-xl text-white/75">Kies een ontwerp voor je branche en controleer je gegevens. Daarna pas je teksten, foto&apos;s en stijl aan en zet je hem online.</p>
-        <Link href={`${base}/bouwer`} className={`${btn.secondary} mt-7 border-0`}>Begin met je website</Link>
+        <div className="mt-7 flex flex-wrap justify-center gap-3">
+          <Link href={`${base}/bouwer`} className={`${btn.secondary} border-0`}>Begin met je website</Link>
+          <Link href={`${base}/ontwerpen`} className="inline-flex items-center rounded-xl border border-white/30 px-3.5 py-2 text-sm font-semibold text-white hover:bg-white/10">Bekijk eerst de ontwerpen</Link>
+        </div>
       </section>
     );
   }

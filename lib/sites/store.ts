@@ -10,6 +10,7 @@ import { kvDelete, kvGet, kvListKeys, kvListValues, kvSet } from "@/lib/storage/
 import type { CleanImage } from "@/lib/media/clean-image";
 import { LEGE_WINKEL, SECTOR_TEMPLATES, pagesFromTemplate, slugify, type Media, type SiteDoc, type SiteDomain, type SiteProposalMark, type SiteSoort } from "@/lib/sites/types";
 import { webshopPages, webshopTemplate } from "@/lib/sites/webshop-templates";
+import { ontwerpVoor } from "@/lib/sites/ontwerpen";
 import type { createSchema, siteSaveSchema } from "@/lib/sites/schema";
 
 // ---------------------------------------------------------------------------
@@ -98,6 +99,8 @@ export async function createSite(tenantId: string, by: { userId: string; name: s
   const id = rid("s");
   const slug = await claimSlug(input.bedrijf.naam, id);
   const now = new Date().toISOString();
+  // chosen in Studio → Ontwerpen: the style exactly as its example shows it
+  const gekozen = input.ontwerp ? ontwerpVoor(soort, input.templateId) : null;
   const site: SiteDoc = {
     id,
     tenantId,
@@ -105,7 +108,7 @@ export async function createSite(tenantId: string, by: { userId: string; name: s
     slug,
     // the house style for every new site: premium since 3 Nov 2026, beleving (exactly like schwarzwald.zekerflex.com) since 4 Nov; existing sites keep theirs.
     // A webshop starts in premium (white product cards on cream); the company can switch in Ontwerp.
-    theme: { kleur: template.theme.kleur, accent: template.theme.accent, lettertype: "modern", hoeken: "rond", stijl: soort === "webshop" ? "premium" : "beleving" },
+    theme: gekozen ? { ...gekozen.thema } : { kleur: template.theme.kleur, accent: template.theme.accent, lettertype: "modern", hoeken: "rond", stijl: soort === "webshop" ? "premium" : "beleving" },
     bedrijf: input.bedrijf,
     pages: soort === "webshop" ? webshopPages(shopTemplate, input.bedrijf, () => rid("b", 8)) : pagesFromTemplate(template as (typeof SECTOR_TEMPLATES)[number], input.bedrijf, () => rid("b", 8)),
     ...(soort === "webshop" ? { winkel: LEGE_WINKEL } : {}),
