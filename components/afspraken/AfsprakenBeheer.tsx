@@ -26,6 +26,8 @@ interface Lading {
   vandaag: string;
   van: string;
   tot: string;
+  /** mailt het bedrijf zijn klanten (alleen als het geverifieerd is) */
+  mailAan?: boolean;
   afspraken: Afspraak[];
 }
 
@@ -104,7 +106,7 @@ export function AfsprakenBeheer() {
         {tab === "agenda" ? (
           <Agenda lading={lading} van={van ?? lading.van} setVan={(v) => void laad(v)} ververs={() => void laad(van)} setFout={setFout} />
         ) : (
-          <InstellingenFormulier begin={lading.instellingen} nieuw={lading.nieuw} bewaard={(i) => setLading({ ...lading, instellingen: i, nieuw: false })} />
+          <InstellingenFormulier begin={lading.instellingen} nieuw={lading.nieuw} mailAan={lading.mailAan !== false}bewaard={(i) => setLading({ ...lading, instellingen: i, nieuw: false })} />
         )}
       </div>
     </div>
@@ -339,7 +341,7 @@ function NieuweAfspraak({ i, klaar }: { i: Instellingen; klaar: () => void }) {
 
 // --- instellingen ------------------------------------------------------------
 
-function InstellingenFormulier({ begin, nieuw, bewaard }: { begin: Instellingen; nieuw: boolean; bewaard: (i: Instellingen) => void }) {
+function InstellingenFormulier({ begin, nieuw, mailAan, bewaard }: { begin: Instellingen; nieuw: boolean; mailAan: boolean; bewaard: (i: Instellingen) => void }) {
   const [i, setI] = useState<Instellingen>(begin);
   const [prijzen, setPrijzen] = useState<string[]>(begin.diensten.map((d) => euroVeld(d.prijsCent)));
   const [bezig, setBezig] = useState(false);
@@ -534,6 +536,11 @@ function InstellingenFormulier({ begin, nieuw, bewaard }: { begin: Instellingen;
       <section className={`${kaart} space-y-3`}>
         <h2 className="font-display text-base font-bold text-ink">Mail aan je klanten</h2>
         <p className="text-sm text-neutralx-600">Een klant die online boekt en een e-mailadres invult, krijgt een bevestiging met een link om zelf te annuleren.</p>
+        {!mailAan && (
+          <p role="note" className="rounded-xl bg-paper-soft px-4 py-3 text-sm text-ink">
+            Mail aan klanten gaat aan zodra je bedrijf geverifieerd is.
+          </p>
+        )}
         <label className="block sm:max-w-xs">
           <span className="field-label">Annuleren kan tot</span>
           <select value={i.annuleerTotMin ?? ANNULEER_STANDAARD} onChange={(e) => wijzig((x) => ({ ...x, annuleerTotMin: Number(e.target.value) }))} className="field-input">

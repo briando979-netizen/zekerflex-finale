@@ -4,6 +4,7 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { amsterdamDayKey, parseAmsterdamLocal } from "@/lib/time/amsterdam";
 import { DAG_SLEUTEL, beginInstellingen, controleerInstellingen, laatsteDag, schoneEmail, schoneTelefoon, schoneTekst } from "@/lib/afspraken/model";
+import { magKlantMailen } from "@/lib/afspraken/mail";
 import { afsprakenTussen, bewaarInstellingen, boek, leesInstellingen, nieuwId } from "@/lib/afspraken/store";
 import { eigenOrganisatie, leesJson } from "@/lib/afspraken/toegang";
 import { prisma } from "@/lib/prisma";
@@ -33,7 +34,8 @@ export async function GET(request: Request): Promise<NextResponse> {
       instellingen = beginInstellingen(tenant?.name ?? "Mijn bedrijf", nieuwId);
       nieuw = true;
     }
-    return NextResponse.json({ instellingen, nieuw, vandaag, van, tot, afspraken: await afsprakenTussen(tenantId, van, tot) });
+    // mailt dit bedrijf zijn klanten al? Alleen een geverifieerd bedrijf (het scherm legt het uit)
+    return NextResponse.json({ instellingen, nieuw, vandaag, van, tot, mailAan: await magKlantMailen(tenantId), afspraken: await afsprakenTussen(tenantId, van, tot) });
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });

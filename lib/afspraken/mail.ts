@@ -1,7 +1,9 @@
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { escapeHtml, sendMail } from "@/lib/mail";
+import { isTenantVerified } from "@/lib/company/verified";
 import { vouw } from "@/lib/voorstel/ics-bestand";
+import { reserveerMail } from "@/lib/afspraken/mail-limiet";
 import { annuleerTotMinVan, datumTijdLang, herinneringGewenst, type Afspraak, type Instellingen } from "@/lib/afspraken/model";
 import { geefAnnuleerToken, planHerinnering, trekTokenIn } from "@/lib/afspraken/store";
 
@@ -109,16 +111,58 @@ export function icsVoorAfspraak(a: Afspraak, bedrijfsnaam: string, nu: Date): st
 }
 
 /** Mailt een afspraak met zijn eigen, nieuwe annuleerlink. Geeft terug of de mail is weggegaan. Gooit nooit. */
-async function stuur(tenantId: string, soort: KlantMailSoort, a: Afspraak, i: Instellingen, nu: Date): Promise<boolean> {
+/**
+ * "ok": de mail is weggegaan. "overgeslagen": hij mag niet (geen e-mailadres, bedrijf niet geverifieerd, plafond bereikt):
+ * opnieuw proberen heeft geen zin. "mislukt": hij had gemoeten maar het lukte niet (mail, opslag of controle stuk): later nog eens.
+ */
+export type MailUitslag = "ok" | "overgeslagen" | "mislukt";
+
+/**
+ * Mag dit bedrijf klanten mailen? Alleen een geverifieerd bedrijf (dezelfde poort als elders: lib/company/verified.ts).
+ * Een ongeverifieerd bedrijf kan zonder account-controle een boekpagina met een eigen tekst openzetten en dan mails
+ * namens ons domein laten sturen. FAIL-CLOSED: een controle die stukgaat telt als "nee".
+ */
+export async function magKlantMailen(tenantId: string): Promise<boolean> {
   try {
-    if (!a.klant.email) return false;
+    return await isTenantVerified(tenantId);
+  } catch (err) {
+    logger.warn("verificatiecontrole voor afspraakmail mislukt", { tenantId, fout: (err as Error).name });
+    return false;
+  }
+}
+
+/** `geverifieerd`: de aanroeper heeft dat net al gecontroleerd (bevestiging), dan niet nog eens. */
+async function stuur(tenantId: string, soort: KlantMailSoort, a: Afspraak, i: Instellingen, nu: Date, geverifieerd?: boolean): Promise<MailUitslag> {
+  let geef: (() => Promise<void>) | null = null;
+  try {
+    if (!a.klant.email) return "overgeslagen";
+    // 1. alleen een geverifieerd bedrijf mailt klanten; zonder dat ook geen annuleerlink
+    if (geverifieerd === undefined) {
+      try {
+        geverifieerd = await isTenantVerified(tenantId);
+      } catch (err) {
+        logger.warn("verificatiecontrole voor afspraakmail mislukt", { tenantId, fout: (err as Error).name });
+        return "mislukt";
+      }
+    }
+    if (!geverifieerd) return "overgeslagen";
+    // 2. de plafonds (per organisatie en per ontvanger), vóór er een link gemaakt of iets verstuurd wordt
+    const r = await reserveerMail(tenantId, a.klant.email, nu);
+    if (!r.ok) {
+      logger.warn("afspraakmail niet verstuurd", { tenantId, soort, reden: r.reden });
+      return r.reden === "storing" ? "mislukt" : "overgeslagen";
+    }
+    geef = r.geef;
     let link: string;
     let token: string | null = null;
     if (soort === "geannuleerd") {
       link = boekUrl(i.slug);
     } else {
       token = await geefAnnuleerToken(tenantId, a.id);
-      if (!token) return false;
+      if (!token) {
+        await geef();
+        return "overgeslagen";
+      }
       link = annuleerUrl(i.slug, token);
     }
     const m = klantMail(soort, a, i, link);
@@ -138,10 +182,12 @@ async function stuur(tenantId: string, soort: KlantMailSoort, a: Afspraak, i: In
       if (token) await trekTokenIn(tenantId, a.id, token).catch(() => undefined);
       throw err;
     }
-    return true;
+    return "ok";
   } catch (err) {
+    // de mail ging niet weg: de reservering terug, zodat hij niet meetelt
+    if (geef) await geef();
     logger.warn("afspraakmail aan klant mislukt", { tenantId, soort, fout: (err as Error).name });
-    return false;
+    return "mislukt";
   }
 }
 
@@ -152,18 +198,20 @@ async function stuur(tenantId: string, soort: KlantMailSoort, a: Afspraak, i: In
 export async function stuurBevestiging(tenantId: string, a: Afspraak, i: Instellingen, nu: Date = new Date()): Promise<void> {
   try {
     if (a.bron !== "online" || !a.klant.email) return;
+    // een ongeverifieerd bedrijf mailt niet: geen bevestiging, geen herinnering (ook niet later, met terugwerkende kracht) en geen link
+    if (!(await magKlantMailen(tenantId))) return;
     // in het rijtje (de cron kijkt pas bij het versturen of het bedrijf herinneringen aan heeft, zodat een bedrijf dat
     // het later aanzet ook voor bestaande afspraken herinnert), maar niet bij een boeking van 24 uur of minder van
     // tevoren: dan is de bevestiging genoeg
     if (herinneringGewenst(a)) await planHerinnering(tenantId, a);
-    await stuur(tenantId, "bevestiging", a, i, nu);
+    await stuur(tenantId, "bevestiging", a, i, nu, true);
   } catch (err) {
     logger.warn("afspraakbevestiging mislukt", { tenantId, fout: (err as Error).name });
   }
 }
 
-/** De herinnering. True als de mail is weggegaan. Gooit nooit. */
-export const stuurHerinnering = (tenantId: string, a: Afspraak, i: Instellingen, nu: Date = new Date()): Promise<boolean> => stuur(tenantId, "herinnering", a, i, nu);
+/** De herinnering (met dezelfde controles op verificatie en plafonds). Gooit nooit. */
+export const stuurHerinnering = (tenantId: string, a: Afspraak, i: Instellingen, nu: Date = new Date()): Promise<MailUitslag> => stuur(tenantId, "herinnering", a, i, nu);
 
 /** De bevestiging dat de klant zelf geannuleerd heeft (met een link om opnieuw te boeken). Gooit nooit. */
 export async function stuurAnnulering(tenantId: string, a: Afspraak, i: Instellingen, nu: Date = new Date()): Promise<void> {

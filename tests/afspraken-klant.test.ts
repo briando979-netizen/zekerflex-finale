@@ -9,11 +9,28 @@ const m = vi.hoisted(() => ({
   waarschuw: vi.fn(),
   gate: { ok: true } as { ok: boolean; status?: number; message?: string },
   cron: vi.fn(),
+  verified: true,
+  verifiedKapot: false,
+  /** "get", "set" of null: de tellers van het mailplafond zijn stuk */
+  tellerKapot: null as "get" | "set" | null,
+  stale: vi.fn(),
 }));
 
+vi.mock("@/lib/company/verified", () => ({
+  isTenantVerified: async () => {
+    if (m.verifiedKapot) throw new Error("database weg");
+    return m.verified;
+  },
+}));
 vi.mock("@/lib/storage/kv", () => ({
-  kvGet: async (k: string) => (m.kv.has(k) ? structuredClone(m.kv.get(k)) : null),
-  kvSet: async (k: string, v: unknown) => void m.kv.set(k, structuredClone(v)),
+  kvGet: async (k: string) => {
+    if (m.tellerKapot === "get" && k.startsWith("afspraken:mail")) throw new Error("opslag weg");
+    return m.kv.has(k) ? structuredClone(m.kv.get(k)) : null;
+  },
+  kvSet: async (k: string, v: unknown) => {
+    if (m.tellerKapot === "set" && k.startsWith("afspraken:mail")) throw new Error("opslag weg");
+    m.kv.set(k, structuredClone(v));
+  },
   kvDelete: async (k: string) => void m.kv.delete(k),
   kvListValues: async (p: string, limit: number) => [...m.kv].filter(([k]) => k.startsWith(p)).slice(0, limit).map(([, v]) => structuredClone(v)),
   kvListEntries: async (p: string, limit: number) => [...m.kv].filter(([k]) => k.startsWith(p)).slice(0, limit).map(([key, v]) => ({ key, value: structuredClone(v) })),
@@ -23,7 +40,10 @@ vi.mock("@/lib/storage/kv", () => ({
       .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
       .slice(0, limit)
       .map(([key, v]) => ({ key, value: structuredClone(v) })),
-  kvDeleteStale: async (p: string) => {
+  kvDeleteStale: async (p: string, before?: Date) => {
+    m.stale(p, before);
+    // de dagtellers: alleen vastleggen met welke grens gewist wordt (de datum van een rij kent deze nep-opslag niet)
+    if (p.startsWith("afspraken:mail")) return 0;
     let n = 0;
     for (const k of [...m.kv.keys()]) if (k.startsWith(p)) (m.kv.delete(k), (n += 1));
     return n;
@@ -46,7 +66,9 @@ import * as publiek from "@/app/api/boeken/[slug]/route";
 import * as annuleer from "@/app/api/boeken/[slug]/afspraak/route";
 import * as cron from "@/app/api/internal/afspraken/herinneringen/route";
 import { ANNULEER_STANDAARD, annuleerBezwaar, beginInstellingen, controleerInstellingen, datumTijdLang, heeftPersoon, herinneringDue, herinneringGewenst, zonderPersoon, type Afspraak } from "@/lib/afspraken/model";
-import { icsVoorAfspraak, klantMail, stuurBevestiging } from "@/lib/afspraken/mail";
+import { icsVoorAfspraak, klantMail, stuurAnnulering, stuurBevestiging, stuurHerinnering } from "@/lib/afspraken/mail";
+import { adresHash } from "@/lib/afspraken/mail-limiet";
+import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { stuurHerinneringen } from "@/lib/afspraken/herinneringen";
 import { wisVerlopenAfspraken } from "@/lib/afspraken/bewaren";
 import { afspraakVanLink, bewaarInstellingen, leesAfspraak, nieuwId, verwijderKlant, wisAfsprakenVanOrganisatie } from "@/lib/afspraken/store";
@@ -74,6 +96,10 @@ beforeEach(async () => {
   m.waarschuw.mockReset();
   m.cron.mockReset();
   m.gate = { ok: true };
+  m.verified = true;
+  m.verifiedKapot = false;
+  m.tellerKapot = null;
+  m.stale.mockReset();
   i = { ...beginInstellingen("Kapper Jan", nieuwId), actief: true };
   await bewaarInstellingen("t1", i);
 });
@@ -251,6 +277,214 @@ describe("bevestiging bij het boeken", () => {
     const a = zetAfspraak("2026-11-13T08:00:00.000Z", { bron: "balie" }, "t1", false);
     await stuurBevestiging("t1", a, i, NU);
     expect(m.mail).not.toHaveBeenCalled();
+  });
+});
+
+describe("rem op misbruik: verificatie en plafonds", () => {
+  const FAR = "2026-11-16T08:00:00.000Z";
+  const adres = (n: number) => `klant${n}@voorbeeld.nl`;
+  const metAdres = (email: string, start = FAR, tenant = "t1") => zetAfspraak(start, { klant: { ...klant, email } }, tenant, false);
+  const orgSleutel = (nu: Date, tenant = "t1") => `afspraken:mailorg:${tenant}:${amsterdamDayKey(nu)}`;
+  const teller = (k: string) => (m.kv.get(k) as { n: number } | undefined)?.n ?? 0;
+  const tokKeys = () => [...m.kv.keys()].filter((k) => k.startsWith("afspraken:tok:"));
+  const adrKeys = () => [...m.kv.keys()].filter((k) => k.startsWith("afspraken:mailadr:"));
+
+  it("ongeverifieerd: boeken lukt en het bedrijf hoort het, maar geen mail, geen link en geen herinnering", async () => {
+    m.verified = false;
+    await boekOnline({ start: FAR });
+    expect(afspraakVanDag()).toHaveLength(1);
+    expect(m.melding).toHaveBeenCalledWith("t1", expect.objectContaining({ status: "bevestigd" }), "geboekt");
+    expect(m.mail).not.toHaveBeenCalled();
+    expect(afspraakVanDag()[0]!.tokenHashes).toBeUndefined();
+    expect(tokKeys()).toEqual([]);
+    expect([...m.kv.keys()].some((k) => k.startsWith("afspraken:rem:") || k.startsWith("afspraken:mail"))).toBe(false);
+  });
+
+  it("geverifieerd: wel mail en link; een bedrijf dat later geverifieerd wordt mailt vanaf dan, zonder terugwerkende kracht", async () => {
+    m.verified = false;
+    await boekOnline({ start: FAR });
+    m.verified = true;
+    await klaar();
+    // de oude afspraak krijgt niets, ook niet via de herinneringscron
+    expect(await stuurHerinneringen({ now: new Date("2026-11-15T08:00:00Z") })).toMatchObject({ verstuurd: 0 });
+    expect(m.mail).not.toHaveBeenCalled();
+    await boekOnline({ start: "2026-11-16T09:00:00.000Z", klant: { naam: "Els Klant", telefoon: "", email: "els@voorbeeld.nl" } });
+    expect(m.mail).toHaveBeenCalledTimes(1);
+    expect(tokKeys()).toHaveLength(1);
+    expect(await stuurHerinneringen({ now: new Date("2026-11-15T09:00:00Z") })).toMatchObject({ verstuurd: 1 });
+    expect(m.mail).toHaveBeenCalledTimes(2);
+  });
+
+  it("een controle die stukgaat telt als niet geverifieerd (fail-closed)", async () => {
+    m.verifiedKapot = true;
+    await boekOnline({ start: FAR });
+    expect(m.mail).not.toHaveBeenCalled();
+    expect(tokKeys()).toEqual([]);
+  });
+
+  it("de herinneringscron respecteert de verificatie: niet meer geverifieerd = geen mail, geen nieuwe poging", async () => {
+    await boekOnline({ start: FAR });
+    m.mail.mockClear();
+    m.verified = false;
+    expect(await stuurHerinneringen({ now: new Date("2026-11-15T08:00:00Z") })).toMatchObject({ verstuurd: 0, overgeslagen: 1, mislukt: 0 });
+    expect(m.mail).not.toHaveBeenCalled();
+    expect(afspraakVanDag()[0]!.herinneringVerstuurd).toBeUndefined();
+    m.verified = true;
+    expect(await stuurHerinneringen({ now: new Date("2026-11-15T09:00:00Z") })).toMatchObject({ verstuurd: 0, overgeslagen: 0 });
+    expect(m.mail).not.toHaveBeenCalled();
+  });
+
+  it("de annuleringsbevestiging heeft dezelfde poort", async () => {
+    await boekOnline({ start: FAR });
+    const token = linkUitMail()[1];
+    m.verified = false;
+    m.mail.mockClear();
+    expect((await annuleer.POST(json("POST", "/api/boeken/kapper-jan/afspraak", { token }), slug())).status).toBe(200);
+    await klaar();
+    expect(m.mail).not.toHaveBeenCalled();
+  });
+
+  it("plafond per organisatie: 199 is nog ruimte, de 200e mag, de 201e niet, en niets komt in een wachtrij", async () => {
+    const nu = new Date("2026-11-12T10:00:00Z");
+    m.kv.set(orgSleutel(nu), { n: 198 });
+    await stuurBevestiging("t1", metAdres(adres(1)), i, nu); // 199e
+    await stuurBevestiging("t1", metAdres(adres(2)), i, nu); // 200e
+    expect(m.mail).toHaveBeenCalledTimes(2);
+    expect(teller(orgSleutel(nu))).toBe(200);
+    m.waarschuw.mockClear();
+    await stuurBevestiging("t1", metAdres(adres(3)), i, nu); // 201e
+    expect(m.mail).toHaveBeenCalledTimes(2);
+    expect(teller(orgSleutel(nu))).toBe(200);
+    // één logregel, zonder adres
+    expect(m.waarschuw).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(m.waarschuw.mock.calls)).not.toMatch(/voorbeeld|klant3/);
+    // een andere organisatie heeft zijn eigen teller
+    await stuurBevestiging("t2", metAdres(adres(4), FAR, "t2"), i, nu);
+    expect(m.mail).toHaveBeenCalledTimes(3);
+    // en een geweigerde mail maakte geen link
+    expect(tokKeys().filter((k) => k.startsWith("afspraken:tok:t1:"))).toHaveLength(2);
+  });
+
+  it("het plafond geldt samen voor bevestiging, herinnering en annulering", async () => {
+    const nu = new Date("2026-11-12T10:00:00Z");
+    m.kv.set(orgSleutel(nu), { n: 198 });
+    const a = metAdres(adres(1));
+    await stuurBevestiging("t1", a, i, nu);
+    expect(await stuurHerinnering("t1", a, i, nu)).toBe("ok"); // 200e
+    expect(await stuurHerinnering("t1", a, i, nu)).toBe("overgeslagen");
+    await stuurAnnulering("t1", a, i, nu);
+    expect(m.mail).toHaveBeenCalledTimes(2);
+  });
+
+  it("de dag erna gaat het plafond weer open: middernacht Nederlandse tijd, ook bij beide omschakelingen", async () => {
+    // [laatste minuut van de dag, eerste minuut van de volgende dag], in UTC
+    const grenzen: [string, string][] = [
+      ["2026-11-12T22:59:00Z", "2026-11-12T23:00:00Z"], // winter: 23:59 en 00:00
+      ["2026-07-14T21:59:00Z", "2026-07-14T22:00:00Z"], // zomer
+      ["2026-10-24T21:59:00Z", "2026-10-24T22:00:00Z"], // de avond voor de wintertijd-nacht
+      ["2026-10-25T22:59:00Z", "2026-10-25T23:00:00Z"], // einde van de lange dag (25 uur)
+      ["2027-03-27T22:59:00Z", "2027-03-27T23:00:00Z"], // de avond voor de zomertijd-nacht
+      ["2027-03-28T21:59:00Z", "2027-03-28T22:00:00Z"], // einde van de korte dag (23 uur)
+    ];
+    for (const [laat, vroeg] of grenzen) {
+      m.kv.clear();
+      m.mail.mockClear();
+      m.kv.set(orgSleutel(new Date(laat)), { n: 200 });
+      await stuurBevestiging("t1", metAdres(adres(1)), i, new Date(laat));
+      expect(m.mail, laat).not.toHaveBeenCalled(); // nog dezelfde dag: vol
+      await stuurBevestiging("t1", metAdres(adres(1)), i, new Date(vroeg));
+      expect(m.mail, vroeg).toHaveBeenCalledTimes(1); // nieuwe dag: weer open
+    }
+  });
+
+  it("plafond per ontvanger over organisaties heen: 5 mails oké, de 6e niet; de dag erna weer", async () => {
+    const nu = new Date("2026-11-12T10:00:00Z");
+    const zelfde = "Piet.Jansen@Voorbeeld.nl"; // hoofdletters tellen niet: één adres
+    for (let n = 0; n < 5; n += 1) await stuurBevestiging(n % 2 ? "t2" : "t1", metAdres(zelfde, FAR, n % 2 ? "t2" : "t1"), i, nu);
+    expect(m.mail).toHaveBeenCalledTimes(5);
+    await stuurBevestiging("t2", metAdres("piet.jansen@voorbeeld.nl", FAR, "t2"), i, nu);
+    await stuurBevestiging("t1", metAdres(zelfde), i, nu);
+    expect(m.mail).toHaveBeenCalledTimes(5);
+    // een ander adres is er geen last van
+    await stuurBevestiging("t1", metAdres(adres(9)), i, nu);
+    expect(m.mail).toHaveBeenCalledTimes(6);
+    await stuurBevestiging("t1", metAdres(zelfde), i, new Date("2026-11-13T10:00:00Z"));
+    expect(m.mail).toHaveBeenCalledTimes(7);
+  });
+
+  it("het adres staat nooit in een sleutel of waarde: alleen een hash, met de dag erin", async () => {
+    const nu = new Date("2026-11-12T10:00:00Z");
+    await stuurBevestiging("t1", metAdres("geheim.adres@voorbeeld.nl"), i, nu);
+    const sleutels = adrKeys();
+    expect(sleutels).toHaveLength(1);
+    expect(sleutels[0]).toMatch(/^afspraken:mailadr:2026-11-12:[A-Za-z0-9_-]{43}$/);
+    const alles = JSON.stringify([...m.kv].filter(([k]) => k.startsWith("afspraken:mail")));
+    expect(alles).not.toMatch(/geheim|voorbeeld/i);
+    expect(sleutels[0]).toContain(adresHash("GEHEIM.adres@voorbeeld.nl "));
+  });
+
+  it("een mail die mislukt telt niet mee: de reservering gaat terug", async () => {
+    const nu = new Date("2026-11-12T10:00:00Z");
+    m.mail.mockRejectedValueOnce(new Error("smtp stuk"));
+    await stuurBevestiging("t1", metAdres(adres(1)), i, nu);
+    expect(teller(orgSleutel(nu))).toBe(0);
+    expect(teller(adrKeys()[0]!)).toBe(0);
+    await stuurBevestiging("t1", metAdres(adres(1)), i, nu);
+    expect(teller(orgSleutel(nu))).toBe(1);
+    expect(teller(adrKeys()[0]!)).toBe(1);
+  });
+
+  it("fail-closed: een teller die niet te lezen is geeft geen mail en geen link, voor beide plafonds", async () => {
+    const nu = new Date("2026-11-12T10:00:00Z");
+    m.tellerKapot = "get";
+    await stuurBevestiging("t1", metAdres(adres(1)), i, nu);
+    expect(await stuurHerinnering("t1", metAdres(adres(2)), i, nu)).toBe("mislukt");
+    expect(m.mail).not.toHaveBeenCalled();
+    expect(tokKeys()).toEqual([]);
+    // ook als alleen schrijven niet lukt; en er blijft geen halve teller achter
+    m.tellerKapot = "set";
+    await stuurBevestiging("t1", metAdres(adres(3)), i, nu);
+    expect(m.mail).not.toHaveBeenCalled();
+    expect(tokKeys()).toEqual([]);
+    m.tellerKapot = null;
+    expect(teller(orgSleutel(nu))).toBe(0);
+    // en een boeking via de route slaagt gewoon
+    m.tellerKapot = "get";
+    const res = await publiek.POST(json("POST", "/api/boeken/kapper-jan", boekBody()), slug());
+    expect(res.status).toBe(200);
+    await klaar();
+    expect(m.mail).not.toHaveBeenCalled();
+  });
+
+  it("de herinneringscron respecteert de plafonds: niet opnieuw proberen, en ruimt oude dagtellers op", async () => {
+    await boekOnline({ start: FAR });
+    m.mail.mockClear();
+    const nu = new Date("2026-11-15T08:00:00Z");
+    m.kv.set(orgSleutel(nu), { n: 200 });
+    expect(await stuurHerinneringen({ now: nu })).toMatchObject({ verstuurd: 0, overgeslagen: 1 });
+    expect(m.mail).not.toHaveBeenCalled();
+    expect(await stuurHerinneringen({ now: new Date("2026-11-15T09:00:00Z") })).toMatchObject({ verstuurd: 0, overgeslagen: 0, mislukt: 0 });
+    // ontvangersplafond (de organisatieteller staat weer leeg, zodat alleen dit plafond meespeelt)
+    m.kv.delete(orgSleutel(nu));
+    await boekOnline({ start: "2026-11-16T09:00:00.000Z", klant: { naam: "Els", telefoon: "", email: "els@voorbeeld.nl" } });
+    m.mail.mockClear();
+    m.kv.set(`afspraken:mailadr:2026-11-15:${adresHash("els@voorbeeld.nl")}`, { n: 5 });
+    expect(await stuurHerinneringen({ now: new Date("2026-11-15T09:00:00Z") })).toMatchObject({ verstuurd: 0, overgeslagen: 1 });
+    expect(m.mail).not.toHaveBeenCalled();
+    // opruimen: tellers ouder dan twee dagen
+    const voorvoegsels = m.stale.mock.calls.map((c) => c[0]);
+    expect(voorvoegsels).toEqual(expect.arrayContaining(["afspraken:mailorg:", "afspraken:mailadr:"]));
+    expect((m.stale.mock.calls[0]![1] as Date).toISOString()).toBe("2026-11-13T08:00:00.000Z");
+  });
+
+  it("de cron slaat bij een stuk plafond-opslag niets over zonder te mailen: gewoon mislukt, opnieuw proberen", async () => {
+    await boekOnline({ start: FAR });
+    m.mail.mockClear();
+    m.tellerKapot = "get";
+    expect(await stuurHerinneringen({ now: new Date("2026-11-15T08:00:00Z") })).toMatchObject({ verstuurd: 0, mislukt: 1 });
+    expect(m.mail).not.toHaveBeenCalled();
+    m.tellerKapot = null;
+    expect(await stuurHerinneringen({ now: new Date("2026-11-15T09:00:00Z") })).toMatchObject({ verstuurd: 1 });
   });
 });
 

@@ -2,6 +2,7 @@ import { logger } from "@/lib/logger";
 import { kvFindDue } from "@/lib/storage/kv";
 import { HERINNERING_VOORAF_MS, herinneringDue, herinneringGewenst, type Instellingen } from "@/lib/afspraken/model";
 import { stuurHerinnering } from "@/lib/afspraken/mail";
+import { ruimMailTellersOp } from "@/lib/afspraken/mail-limiet";
 import { VOORVOEGSEL_REM, leesAfspraak, leesInstellingen, wisHerinneringRij, zetHerinneringVlag, type HerinneringRij } from "@/lib/afspraken/store";
 
 // ---------------------------------------------------------------------------
@@ -21,6 +22,8 @@ export interface HerinneringUitslag {
   verstuurd: number;
   /** de mail mislukte; het volgende uur nog een poging */
   mislukt: number;
+  /** de mail mocht niet (bedrijf niet geverifieerd, of een dagplafond bereikt): geen nieuwe poging */
+  overgeslagen: number;
   /** regels uit het wachtrijtje die niets meer te herinneren hadden (geannuleerd, begonnen, gewist, bedrijf zet het uit) en zijn opgeruimd */
   opgeruimd: number;
   afgekapt: boolean;
@@ -31,9 +34,11 @@ export async function stuurHerinneringen(opts: { now?: Date; dryRun?: boolean } 
   const dryRun = opts.dryRun === true;
   const grens = new Date(now.getTime() + HERINNERING_VOORAF_MS).toISOString();
   const instellingen = new Map<string, Instellingen | null>();
-  const uit: HerinneringUitslag = { verstuurd: 0, mislukt: 0, opgeruimd: 0, afgekapt: false };
+  const uit: HerinneringUitslag = { verstuurd: 0, mislukt: 0, overgeslagen: 0, opgeruimd: 0, afgekapt: false };
   let verwerkt = 0;
   let na = "";
+  // de dagtellers van het mailplafond van eerdere dagen opruimen: de enige uurlijkse taak van dit onderdeel
+  if (!dryRun) await ruimMailTellersOp(now);
   for (;;) {
     const rijen = await kvFindDue<HerinneringRij>(VOORVOEGSEL_REM, "start", grens, na, PAGINA);
     for (const r of rijen) {
@@ -65,10 +70,15 @@ export async function stuurHerinneringen(opts: { now?: Date; dryRun?: boolean } 
       // eerst de vlag, dan de mail: twee rondes tegelijk sturen zo nooit allebei
       const geclaimd = await zetHerinneringVlag(tenantId, id, true);
       if (!geclaimd) continue; // een andere ronde was je voor
-      const ok = await stuurHerinnering(tenantId, geclaimd, i, now);
-      if (ok) {
+      const uitslag = await stuurHerinnering(tenantId, geclaimd, i, now);
+      if (uitslag === "ok") {
         uit.verstuurd += 1;
         await wisHerinneringRij(tenantId, id);
+      } else if (uitslag === "overgeslagen") {
+        // bedrijf niet (meer) geverifieerd of een plafond bereikt: niet opnieuw proberen (ook niet de rest van de dag)
+        await zetHerinneringVlag(tenantId, id, false);
+        await wisHerinneringRij(tenantId, id);
+        uit.overgeslagen += 1;
       } else {
         await zetHerinneringVlag(tenantId, id, false);
         uit.mislukt += 1;

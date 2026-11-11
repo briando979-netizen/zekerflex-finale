@@ -5,7 +5,7 @@ import { clientIp } from "@/lib/http/request";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { runAfter } from "@/lib/run-after";
 import { DAG_SLEUTEL, controleerKlant, laatsteDag, openDagen, schoneTekst, vrijeTijden } from "@/lib/afspraken/model";
-import { stuurBevestiging } from "@/lib/afspraken/mail";
+import { magKlantMailen, stuurBevestiging } from "@/lib/afspraken/mail";
 import { meldBedrijf } from "@/lib/afspraken/melding";
 import { afsprakenVanDag, boek, openInstellingenVanSlug } from "@/lib/afspraken/store";
 import { leesJson } from "@/lib/afspraken/toegang";
@@ -92,8 +92,10 @@ export async function POST(request: Request, ctx: { params: Promise<{ slug: stri
     runAfter(() => meldBedrijf(open.tenantId, a, "geboekt"));
     // en de klant krijgt een bevestiging met een link om te annuleren, alleen als hij een e-mailadres invulde (het
     // toestemmingsvinkje dekt "mij daarover te bereiken"); het antwoord hieronder bevat de link nooit
-    if (a.klant.email) runAfter(() => stuurBevestiging(open.tenantId, a, i, nu));
-    return NextResponse.json({ afspraak: { bevestigd: true, bedrijfsnaam: i.bedrijfsnaam, dienstNaam: a.dienstNaam, medewerkerNaam: a.medewerkerNaam, start: a.start, eind: a.eind, duurMin: a.duurMin } });
+    // en alleen als het bedrijf geverifieerd is (anders geen mail, geen link: ZekerFlex is geen relais voor een onbekend bedrijf)
+    const mailBevestiging = a.klant.email !== "" && (await magKlantMailen(open.tenantId));
+    if (mailBevestiging) runAfter(() => stuurBevestiging(open.tenantId, a, i, nu));
+    return NextResponse.json({ afspraak: { bevestigd: true, bedrijfsnaam: i.bedrijfsnaam, dienstNaam: a.dienstNaam, medewerkerNaam: a.medewerkerNaam, start: a.start, eind: a.eind, duurMin: a.duurMin, mailBevestiging } });
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });
