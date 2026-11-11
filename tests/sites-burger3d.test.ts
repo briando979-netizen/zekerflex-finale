@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { burgerBlokHtml, burgerCss, isBurgerZaak, STANDAARD_LAGEN } from "@/lib/sites/burger3d";
+import { BURGER_FOTO_BESTANDEN, burgerBlokHtml, burgerCss, isBurgerZaak, STANDAARD_FOTO_LAGEN, STANDAARD_LAGEN } from "@/lib/sites/burger3d";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { BURGER_BEDRIJF, BURGER_THEMA, burgerPaginas, burgerWinkel } from "@/lib/sites/burger-voorbeeld";
 import { renderPage, siteCss } from "@/lib/sites/render";
 import { siteSaveSchema } from "@/lib/sites/schema";
@@ -16,7 +18,8 @@ const ctx = { esc, paras: (t: string) => `<p>${esc(t)}</p>`, href: (raw: string)
 describe("3D-burger", () => {
   it("tekent zeven lagen met namen, een beschrijving voor schermlezers en een pauzeknop, zonder scripts", () => {
     const b = newBlock("burger3d", "b1").props as BlockProps["burger3d"];
-    const html = burgerBlokHtml({ ...b, lagen: [{ titel: "Brioche <XL>", tekst: "" }] }, ctx, "b1");
+    // de tekening: een blok van vóór 11 nov (zonder `echt`)
+    const html = burgerBlokHtml({ ...b, echt: false, lagen: [{ titel: "Brioche <XL>", tekst: "" }] }, ctx, "b1");
     expect(html.match(/class="b3d-laag /g)).toHaveLength(7);
     expect(html).toContain("Brioche &#60;XL&#62;");
     expect(html).toContain(STANDAARD_LAGEN[3]!.titel);
@@ -24,6 +27,21 @@ describe("3D-burger", () => {
     expect(html).toContain('<input type="checkbox" id="b3d-p-b1" class="b3d-pauze">');
     expect(html).toContain('<label for="b3d-p-b1" class="b3d-pauzeknop">');
     expect(html).not.toMatch(/<script|<video|<iframe/);
+  });
+
+  it("is sinds 11 nov een echte foto: zeven uitgeknipte lagen van de site zelf, in de volgorde van de foto", () => {
+    const b = newBlock("burger3d", "b2").props as BlockProps["burger3d"];
+    expect(b.echt).toBe(true);
+    expect(b.lagen.map((l) => l.titel)).toEqual(STANDAARD_FOTO_LAGEN.map((l) => l.titel));
+    const html = burgerBlokHtml(b, { ...ctx, asset: (f) => `/site/vuur/assets/burger/${f}` }, "b2");
+    expect(html).toContain('<div class="b3d-burger b3d-echt">');
+    expect(html.match(/<img src="\/site\/vuur\/assets\/burger\/[a-z]+\.webp" alt=""/g)).toHaveLength(7);
+    expect(html).toMatch(/aria-label="Een foto van een hamburger die laag voor laag in elkaar valt: sesambol, cheddar, rundvlees/);
+    expect(html).not.toContain("b3d-stoom");
+    expect(html).not.toMatch(/<script|<video|<iframe|pexels/);
+    // elk bestand bestaat, met de herkomst erbij
+    for (const f of BURGER_FOTO_BESTANDEN) expect(existsSync(join(process.cwd(), "public", "sites", "burger", f)), f).toBe(true);
+    expect(existsSync(join(process.cwd(), "public", "sites", "burger", "CREDITS.md"))).toBe(true);
   });
 
   it("beweegt bij scrollen, ademt waar dat niet kan, en staat stil voor wie minder beweging wil", () => {
@@ -76,6 +94,8 @@ describe("voorbeeldsite Burgerbar Vuur", () => {
     const html = renderPage(site, pages[0]!, { root: "/site/burgerbar-vuur/", origin: "https://zekerflex.com", mandAantal: 0 });
     expect(html).toContain("Burgerbar Vuur bestaat niet");
     expect(html).toContain('class="b3d-sec"');
+    // de echte burger, van de site zelf
+    expect(html).toContain('<img src="/site/burgerbar-vuur/assets/burger/bol.webp"');
     expect(html).toContain('<a class="mandlink" href="/site/burgerbar-vuur/mand">');
     expect(html).not.toMatch(/tel:|mailto:/);
     const titels = functiesVoorBezoekers(site).map((f) => f.titel);

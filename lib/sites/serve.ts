@@ -7,7 +7,7 @@ import { enforceRateLimit, privateRateLimitIdentifier } from "@/lib/rate-limit";
 import { siteHostCsp } from "@/lib/security/csp";
 import { SITE_FONT_FILES, renderFunctiesPagina, renderPage, renderReserveerPagina, renderRobots, renderSitemap, renderSystemPage, renderWinkelPagina, siteCss, type RenderOptions } from "@/lib/sites/render";
 import { reserveerBlokVan } from "@/lib/sites/reserveren";
-import { heeftBurger } from "@/lib/sites/burger3d";
+import { BURGER_FOTO_BESTANDEN, heeftBurger } from "@/lib/sites/burger3d";
 import { gereserveerdPagina, reserveerStaat } from "@/lib/sites/reserveringen-opslag";
 import { LEGE_INVOER, MAX_PER_PRODUCT, isBestelnummer, zichtbareProducten } from "@/lib/sites/winkel";
 import { leesMand, mandCookie, mandMetProducten, mandNaarInvoer, voegToe, zetAantal } from "@/lib/sites/mand";
@@ -104,6 +104,17 @@ export async function serveSitePath(live: LiveSite, path: string[], given: Serve
       const body = await readFile(join(process.cwd(), "public", "fonts", file));
       // a sandboxed page has an opaque origin, so its fonts load cross-origin and need CORS
       return new Response(new Uint8Array(body), { headers: { ...siteHeaders("font/woff2", "public, max-age=31536000, immutable", opts), "Access-Control-Allow-Origin": "*" } });
+    } catch {
+      return siteText("Dit bestand bestaat niet.", 404, opts);
+    }
+  }
+  // the real burger's layers (lib/sites/burger3d.ts), from our own public/sites/burger: only the known files
+  if (first === "assets" && second === "burger" && rest.length === 1) {
+    const file = rest[0] ?? "";
+    if (!BURGER_FOTO_BESTANDEN.includes(file)) return siteText("Dit bestand bestaat niet.", 404, opts);
+    try {
+      const body = await readFile(join(process.cwd(), "public", "sites", "burger", file));
+      return new Response(new Uint8Array(body), { headers: siteHeaders("image/webp", "public, max-age=31536000, immutable", opts) });
     } catch {
       return siteText("Dit bestand bestaat niet.", 404, opts);
     }

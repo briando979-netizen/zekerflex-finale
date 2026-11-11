@@ -46,7 +46,7 @@ const block = z.discriminatedUnion("type", [
   z.object({ ...basis, type: z.literal("usps"), props: z.object({ kop, items: z.array(z.object({ titel: short, tekst })).max(8) }) }),
   z.object({ ...basis, type: z.literal("producten"), props: z.object({ kop, tekst, categorie: z.string().trim().max(60), aantal: z.number().int().min(1).max(48) }) }),
   z.object({ ...basis, type: z.literal("uitgelicht"), props: z.object({ productId: z.string().regex(/^$|^p[a-z0-9]{6,20}$/), kop, tekst, fotoLinks: z.boolean() }) }),
-  z.object({ ...basis, type: z.literal("burger3d"), props: z.object({ kop, tekst, lagen: z.array(z.object({ titel: short, tekst: z.string().trim().max(300) })).max(7), knop: short, knopLink: link }) }),
+  z.object({ ...basis, type: z.literal("burger3d"), props: z.object({ kop, tekst, lagen: z.array(z.object({ titel: short, tekst: z.string().trim().max(300) })).max(7), knop: short, knopLink: link, echt: z.boolean().optional() }) }),
   z.object({
     ...basis,
     type: z.literal("reserveren"),

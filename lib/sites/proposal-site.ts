@@ -241,7 +241,9 @@ export function proposalPages(c: Company, t: SectorTemplate, f: ProposalFacts, p
       ? block("burger3d", {
           kop: "Laag voor laag",
           tekst: "",
-          lagen: ["Broodje", "Sla", "Kaas", "Burger", "Tomaat", "Ui", "Bodem"].map((titel) => ({ titel, tekst: "" })),
+          // de echte burger (een foto); de namen in de volgorde van de foto
+          echt: true,
+          lagen: ["Broodje", "Kaas", "Burger", "Tomaat", "Ui", "Sla", "Onderkant"].map((titel) => ({ titel, tekst: "" })),
           knop: reserveer ? "Reserveer een tafel" : "Neem contact op",
           knopLink: reserveer ? "reserveren" : "contact",
         })

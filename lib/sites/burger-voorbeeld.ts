@@ -1,4 +1,4 @@
-import { STANDAARD_LAGEN } from "@/lib/sites/burger3d";
+import { STANDAARD_FOTO_LAGEN } from "@/lib/sites/burger3d";
 import { newBlock, slugify, type Block, type BlockProps, type BlockType, type Company, type Page, type SiteProduct, type Theme, type Winkel } from "@/lib/sites/types";
 
 // ---------------------------------------------------------------------------
@@ -83,7 +83,9 @@ export function burgerPaginas(foto: (k: BurgerFoto) => string | null): Page[] {
     block("burger3d", {
       kop: "Laag voor laag de lekkerste burger.",
       tekst: "Scroll rustig verder en zie hoe de Vuur Classic in elkaar valt. Alles vers, alles met de hand, en het vlees op houtskool.",
-      lagen: STANDAARD_LAGEN,
+      // de echte burger: een foto waarvan de lagen los zweven (11 nov 2026)
+      echt: true,
+      lagen: STANDAARD_FOTO_LAGEN,
       knop: "Bestel de Vuur Classic",
       knopLink: "winkel",
     });
