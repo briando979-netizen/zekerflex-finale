@@ -9,16 +9,16 @@ import type { SiteSoort } from "@/lib/sites/types";
 //  - website: de voorbeeldsite per branche maakt zich aan bij het eerste bezoek
 //    (lib/sites/branche-demo.ts). Een vrij adres wordt dus het voorbeeld; heeft een
 //    echt bedrijf het adres, dan is er geen voorbeeld;
-//  - webshop: de voorbeeldwinkels (lib/sites/winkel-voorbeelden.ts) alleen als er op
-//    dat adres al een voorbeeld online staat.
+//  - webshop: de voorbeeldwinkels (lib/sites/winkel-voorbeelden.ts, winkel-demo.ts) maken
+//    zich ook aan bij het eerste bezoek; dezelfde regel als bij de website.
 // ---------------------------------------------------------------------------
 
 async function voorbeeldBestaat(o: Ontwerp): Promise<boolean> {
   if (!o.voorbeeldSlug) return false;
   const site = await siteBySlug(o.voorbeeldSlug);
   const isVoorbeeld = Boolean(site && (site.voorbeeld || site.tenantId.startsWith("voorbeeld")));
-  if (o.soort === "website") return !site || isVoorbeeld;
-  return isVoorbeeld && Boolean(site?.liveBuild);
+  // een vrij adres wordt bij het eerste bezoek het voorbeeld (branche-demo.ts, winkel-demo.ts)
+  return !site || isVoorbeeld;
 }
 
 export async function galerijVoor(soort: SiteSoort): Promise<OntwerpKaart[]> {
