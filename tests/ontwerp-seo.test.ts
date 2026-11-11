@@ -17,8 +17,9 @@ describe("SEO van de vaste pagina's (Site-ontwerper)", () => {
 
   it("zonder eigen versie precies de metadata van vóór de ontwerper", async () => {
     const TITLE = "ZekerFlex — freelance werk & klussen in heel Nederland | flexwerk, zzp en uitzendwerk";
+    // sinds 11 nov 2026 is de homepagina voor werkzoekenden; de omschrijving noemt geen bedrijfsprijs meer (die staat bij /bedrijven)
     const DESCRIPTION =
-      "Het Nederlandse platform voor freelance werk, flexwerk en uitzendwerk. Vind klussen op basis van vak en reistijd, kies je uitbetaalsnelheid en werk met afspraken en Wet DBA-risicosignalering. Bedrijven betalen € 3,50 per gewerkt uur, zonder abonnement.";
+      "Vind flexwerk en klussen bij jou in de buurt. Je ziet vooraf wat je verdient, checkt in met je telefoon en krijgt je geld op je eigen rekening. Zzp'er of zonder KVK via ons uitzendbureau. Meedoen is gratis.";
     expect(await seoMetadata("/", { keywords: ["a"] })).toEqual({ title: { absolute: TITLE }, description: DESCRIPTION, keywords: ["a"], ...canonical("/", { title: TITLE, description: DESCRIPTION }) });
     expect(await seoMetadata("/prijzen", { keywords: ["b"] })).toEqual({
       title: "Prijzen — € 3,50 per gewerkt uur, gratis voor freelancers",
@@ -27,6 +28,10 @@ describe("SEO van de vaste pagina's (Site-ontwerper)", () => {
       keywords: ["b"],
       ...canonical("/prijzen"),
     });
+    // de vorige homepagina, nu voor bedrijven
+    const bv = await seoMetadata("/bedrijven");
+    expect(bv.title).toBe("Personeel, website en software voor je bedrijf");
+    expect(bv.description).toContain("€ 3,50 per gewerkt uur");
   });
 
   it("met een eigen versie de nieuwe titel en omschrijving, ook voor OpenGraph; leeg veld = standaard", async () => {

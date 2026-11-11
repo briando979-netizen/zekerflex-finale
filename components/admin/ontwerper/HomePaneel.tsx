@@ -42,7 +42,8 @@ export function HomePaneel({ onVoorbeeldPad, onVernieuw }: { onVoorbeeldPad: (pa
 
   // het voorbeeld toont de homepage met het concept zolang dit tabblad open is
   useEffect(() => {
-    onVoorbeeldPad("/?concept=1");
+    // de indeling hoort bij de homepagina voor bedrijven (sinds 11 nov 2026 op /bedrijven)
+    onVoorbeeldPad("/bedrijven?concept=1");
     return () => onVoorbeeldPad(null);
   }, [onVoorbeeldPad]);
 

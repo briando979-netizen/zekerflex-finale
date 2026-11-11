@@ -35,6 +35,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     // Pillars
     entry("/", 1, "weekly"),
+    entry("/bedrijven", 0.9, "weekly"),
     entry("/voor-freelancers", 0.9, "monthly"),
     entry("/uitzendbureau", 0.9, "weekly"),
     entry("/voor-bedrijven", 0.9, "monthly"),

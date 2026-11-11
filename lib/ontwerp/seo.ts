@@ -16,11 +16,18 @@ export const SEO_ACHTERVOEGSEL = " · ZekerFlex";
 
 export const SEO_STANDAARD = {
   "/": {
-    naam: "Homepage",
+    naam: "Homepage (werkzoekenden)",
     titel: "ZekerFlex — freelance werk & klussen in heel Nederland | flexwerk, zzp en uitzendwerk",
     omschrijving:
-      "Het Nederlandse platform voor freelance werk, flexwerk en uitzendwerk. Vind klussen op basis van vak en reistijd, kies je uitbetaalsnelheid en werk met afspraken en Wet DBA-risicosignalering. Bedrijven betalen € 3,50 per gewerkt uur, zonder abonnement.",
+      "Vind flexwerk en klussen bij jou in de buurt. Je ziet vooraf wat je verdient, checkt in met je telefoon en krijgt je geld op je eigen rekening. Zzp'er of zonder KVK via ons uitzendbureau. Meedoen is gratis.",
     absoluut: true,
+  },
+  "/bedrijven": {
+    naam: "Homepage voor bedrijven",
+    titel: "Personeel, website en software voor je bedrijf",
+    omschrijving:
+      "Eén plek voor je hele bedrijf: flexwerkers, uitzendkrachten en zzp'ers inhuren, een eigen website en software voor jouw branche. Personeel kost € 3,50 per gewerkt uur, zonder abonnement.",
+    absoluut: false,
   },
   "/voor-bedrijven": {
     naam: "Voor bedrijven",

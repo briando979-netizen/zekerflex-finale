@@ -83,11 +83,13 @@ export function SiteHeader({ hoofdmenu = null }: { hoofdmenu?: Hoofdmenu | null 
   const toggleMenu = (key: string) => setMenu((m) => (m === key ? null : key));
 
   // URL wins; otherwise the last explicit choice; default werknemers.
-  const audience: Audience = pathname.startsWith("/voor-bedrijven")
-    ? "bedrijven"
-    : pathname.startsWith("/voor-freelancers")
-      ? "werknemers"
-      : stored ?? "werknemers";
+  // Since 11 Nov 2026 the home (/) is the workers' page and /bedrijven the companies' one.
+  const audience: Audience =
+    pathname.startsWith("/voor-bedrijven") || pathname === "/bedrijven"
+      ? "bedrijven"
+      : pathname.startsWith("/voor-freelancers") || pathname === "/"
+        ? "werknemers"
+        : stored ?? "werknemers";
 
   const pick = useCallback((a: Audience) => {
     setStored(a);
@@ -205,7 +207,7 @@ export function SiteHeader({ hoofdmenu = null }: { hoofdmenu?: Hoofdmenu | null 
         {/* audience toggle */}
         <div className="ml-auto hidden items-center rounded-full border border-white/15 bg-white/[0.06] p-1 min-[1600px]:flex">
           <Link
-            href="/voor-freelancers"
+            href="/"
             onClick={() => pick("werknemers")}
             className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
               audience === "werknemers" ? "bg-white/[0.12] text-white" : "text-white/65 hover:text-white/80"
@@ -214,7 +216,7 @@ export function SiteHeader({ hoofdmenu = null }: { hoofdmenu?: Hoofdmenu | null 
             Werknemers
           </Link>
           <Link
-            href="/voor-bedrijven"
+            href="/bedrijven"
             onClick={() => pick("bedrijven")}
             className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
               audience === "bedrijven" ? "bg-white/[0.12] text-white" : "text-white/65 hover:text-white/80"
