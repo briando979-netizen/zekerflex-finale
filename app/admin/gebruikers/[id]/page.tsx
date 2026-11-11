@@ -438,6 +438,12 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                               Beweging (tweede selfie): <strong>{w.gezicht.beweging}</strong>
                             </p>
                           )}
+                          {w.gezicht?.reeks && (
+                            // alleen ter informatie (lib/kyc/gezicht/reeks.ts): nog geen poort
+                            <p>
+                              Live draai: <strong>{w.gezicht.reeks}</strong>
+                            </p>
+                          )}
                           {w.ai && (
                             <p>
                               Automatische beoordeling: <strong>{w.ai.oordeel}</strong>

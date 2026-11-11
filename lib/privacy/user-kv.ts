@@ -34,6 +34,8 @@ export const ERASABLE_KV_PREFIXES = [
   "chip-sessie:",
   "companion:ctx:",
   "contacts:",
+  // de live reeks van de selfies tijdens de ID-scan, alleen getallen (lib/kyc/gezicht/reeks-opslag.ts)
+  "gezicht-live:",
   "id-overdracht:",
   "id-overdracht-merk:",
   "id-overdracht-ander:",

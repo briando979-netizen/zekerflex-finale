@@ -127,6 +127,15 @@ const CHIP_JAN = {
   fouten: [],
 };
 
+/** de live reeks van de selfies (lib/kyc/gezicht/reeks.ts): standaard een echte draai met tussenstanden */
+const REEKS_ECHT = { beelden: 14, tussenstanden: 2, ms: 1600, draai: 0.28 };
+const reeksSamenvatting = vi.fn().mockResolvedValue(REEKS_ECHT);
+const wisReeks = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/lib/kyc/gezicht/reeks-opslag", () => ({
+  reeksSamenvatting: (...a: unknown[]) => reeksSamenvatting(...a),
+  wisReeks: (...a: unknown[]) => wisReeks(...a),
+}));
+
 const alertOwnerLater = vi.fn();
 vi.mock("@/lib/ops/alert", () => ({ alertOwnerLater: (...a: unknown[]) => alertOwnerLater(...a) }));
 
@@ -681,6 +690,31 @@ describe("submitFreelancerOnboarding — gezichtscontrole met het eigen model (1
     expect(data.faceMatchScore).toBe(0.72);
     expect(data.rawPayload.gezicht).toMatchObject({ oordeel: "zelfde", score: 0.72, automatisch: true });
     expect(JSON.stringify(data.rawPayload)).not.toMatch(/kenmerk|embedding/i);
+  });
+
+  it("de live reeks: alleen de samenvatting bij de controle, daarna gewist; nog geen poort (ook een sprong keurt goed)", async () => {
+    userFindUnique.mockResolvedValue(GEBRUIKER);
+    gezichtControle.mockResolvedValueOnce(GEZICHT_ZELFDE);
+    reeksSamenvatting.mockResolvedValueOnce({ beelden: 5, tussenstanden: 0, ms: 800, draai: 0.28 });
+    await aiUit();
+    const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: FOTOS });
+    expect(result.outcome).toBe("verified");
+    const data = (ivCreate.mock.calls[0]![0] as { data: { rawPayload: { gezicht: { reeks?: unknown } } } }).data;
+    expect(data.rawPayload.gezicht.reeks).toEqual({ beelden: 5, tussenstanden: 0, ms: 800, draai: 0.28 });
+    expect(reeksSamenvatting).toHaveBeenCalledWith("usr_1");
+    expect(wisReeks).toHaveBeenCalledWith("usr_1");
+  });
+
+  it("de live reeks: een storing bij lezen of wissen houdt de verificatie niet tegen", async () => {
+    userFindUnique.mockResolvedValue(GEBRUIKER);
+    gezichtControle.mockResolvedValueOnce(GEZICHT_ZELFDE);
+    reeksSamenvatting.mockRejectedValueOnce(new Error("kv weg"));
+    wisReeks.mockRejectedValueOnce(new Error("kv weg"));
+    await aiUit();
+    const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: FOTOS });
+    expect(result.outcome).toBe("verified");
+    const data = (ivCreate.mock.calls[0]![0] as { data: { rawPayload: { gezicht: Record<string, unknown> } } }).data;
+    expect("reeks" in data.rawPayload.gezicht).toBe(false);
   });
 
   it("zegt de tekst-AI zelf 'bekijk handmatig' (vertrouwen boven 0), dan blijft dat gelden", async () => {

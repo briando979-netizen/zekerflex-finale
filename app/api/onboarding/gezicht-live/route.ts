@@ -4,6 +4,7 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { meetLive } from "@/lib/kyc/gezicht/live";
+import { bewaarLiveMeting } from "@/lib/kyc/gezicht/reeks-opslag";
 
 // ---------------------------------------------------------------------------
 // POST /api/onboarding/gezicht-live — de camera van de ID-scan stuurt een klein beeld (hooguit 640 pixels) en
@@ -44,6 +45,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (bytes.length === 0 || bytes.length > MAX_BYTES) throw AppError.validation("Het beeld is leeg of te groot voor live meten.");
 
     const meting = await meetLive(bytes);
+    // alleen de getallen bewaren, voor de reeks bij de controle (lib/kyc/gezicht/reeks.ts); een storing telt niet
+    if (meting) await bewaarLiveMeting(principal.userId, meting).catch(() => undefined);
     return NextResponse.json({ meting }, { status: 200, headers: { "Cache-Control": "no-store" } });
   } catch (err) {
     const { status, body, headers } = toErrorBody(err);

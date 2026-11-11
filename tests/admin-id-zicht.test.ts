@@ -93,13 +93,14 @@ describe("de routes en het scherm", () => {
 describe("de gezichtscontrole in beeld", () => {
   it("oordeel en percentage uit rawPayload.gezicht, anders uit de kolom faceMatchScore", () => {
     const w = idControleWeergave("AI_LOCAL", { gezicht: { oordeel: "zelfde", score: 0.6234, technisch: false, automatisch: true, ms: 420 } });
-    expect(w.gezicht).toEqual({ oordeel: "zelfde persoon", procent: 62, technisch: false, automatisch: true, beweging: null });
+    expect(w.gezicht).toEqual({ oordeel: "zelfde persoon", procent: 62, technisch: false, automatisch: true, beweging: null, reeks: null });
     expect(idControleWeergave("AI_LOCAL", { gezicht: { oordeel: "onbruikbaar", score: null, technisch: true, automatisch: false } }).gezicht).toEqual({
       oordeel: "niet te meten (foto onbruikbaar)",
       procent: null,
       technisch: true,
       automatisch: false,
       beweging: null,
+      reeks: null,
     });
     expect(idControleWeergave("AI_LOCAL", {}, null, 0.41).gezicht?.procent).toBe(41);
     expect(idControleWeergave("AI_LOCAL", {}).gezicht).toBeNull();
@@ -116,6 +117,15 @@ describe("de gezichtscontrole in beeld", () => {
     const nep = idControleWeergave("AI_LOCAL", { gezicht: { oordeel: "zelfde", score: 0.8, beweging: { oordeel: "niet-gedraaid", verschil: 0.03 } } });
     expect(nep.gezicht?.beweging).toBe("hoofd niet gedraaid (mogelijk een foto of scherm) (draai 3%)");
     expect(idControleWeergave("AI_LOCAL", { gezicht: { oordeel: "zelfde", beweging: { oordeel: "niet-aangeleverd", verschil: null } } }).gezicht?.beweging).toBe("geen tweede selfie meegestuurd");
+    // de live reeks (alleen ter informatie): tussenstanden, een sprong, of niets gezien
+    const met = (reeks: unknown) => idControleWeergave("AI_LOCAL", { gezicht: { oordeel: "zelfde", score: 0.6, reeks } }).gezicht?.reeks;
+    expect(met({ beelden: 14, tussenstanden: 2, ms: 1250, draai: 0.28 })).toBe("2 tussenstanden in 1,3 s (14 beelden): het hoofd draaide geleidelijk");
+    expect(met({ beelden: 9, tussenstanden: 1, ms: 800, draai: -0.3 })).toBe("1 tussenstand in 0,8 s (9 beelden): het hoofd draaide geleidelijk");
+    expect(met({ beelden: 12, tussenstanden: 0, ms: 410, draai: 0.32 })).toMatch(/^draai in één sprong, zonder tussenstand \(0,4 s, 12 beelden\): mogelijk twee losse foto's/);
+    expect(met({ beelden: 1, tussenstanden: 0, ms: null, draai: null })).toBe("geen draai live gezien (1 beeld)");
+    expect(met(undefined)).toBeNull();
+    expect(met("rommel")).toBeNull();
+    expect(lees("app/admin/gebruikers/[id]/page.tsx")).toContain("w.gezicht.reeks");
     expect(lees("app/api/admin/gebruikers/[id]/identiteit/[checkId]/beeld/route.ts")).toMatch(/z\.enum\(\["front", "back", "selfie", "selfie2"\]\)/);
   });
 });

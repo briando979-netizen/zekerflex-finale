@@ -44,7 +44,22 @@ export interface IdControleWeergave {
   /** Stripe Identity: de sessie (de foto's staan bij Stripe) */
   stripe: { sessieId: string; naamOpDocument: string | null; naamKlopt: boolean | null; reden: string | null } | null;
   /** de eigen gezichtscontrole (lib/kyc/gezicht, b3): pasfoto op het document tegen de selfie */
-  gezicht: { oordeel: string; procent: number | null; technisch: boolean; automatisch: boolean; beweging: string | null } | null;
+  gezicht: { oordeel: string; procent: number | null; technisch: boolean; automatisch: boolean; beweging: string | null; reeks: string | null } | null;
+}
+
+/**
+ * rawPayload.gezicht.reeks (lib/kyc/gezicht/reeks.ts): wat de server live zag tijdens de tweede selfie. Voorlopig
+ * alleen ter informatie: tussenstanden wijzen op een echte draai, een sprong zonder tussenstand op twee losse foto's
+ * (of iemand die heel snel draaide, of een aftelknop zonder live meten).
+ */
+export function reeksTekst(v: unknown): string | null {
+  const r = obj(v);
+  if (!r || typeof r.beelden !== "number") return null;
+  const beelden = `${r.beelden} ${r.beelden === 1 ? "beeld" : "beelden"}`;
+  if (typeof r.draai !== "number" || typeof r.ms !== "number" || typeof r.tussenstanden !== "number") return `geen draai live gezien (${beelden})`;
+  const sec = String(Math.round(r.ms / 100) / 10).replace(".", ",");
+  if (r.tussenstanden === 0) return `draai in één sprong, zonder tussenstand (${sec} s, ${beelden}): mogelijk twee losse foto's, of heel snel gedraaid`;
+  return `${r.tussenstanden} ${r.tussenstanden === 1 ? "tussenstand" : "tussenstanden"} in ${sec} s (${beelden}): het hoofd draaide geleidelijk`;
 }
 
 const GEZICHT_OORDEEL: Record<string, string> = {
@@ -180,6 +195,7 @@ export function idControleWeergave(provider: string, rawPayload: unknown, sessio
           technisch: g?.technisch === true,
           automatisch: g?.automatisch === true,
           beweging: bw ? `${BEWEGING_OORDEEL[String(bw.oordeel)] ?? String(bw.oordeel ?? "onbekend")}${bw.oordeel === "ok" || bw.oordeel === "niet-gedraaid" || bw.oordeel === "onnatuurlijk" ? bwVerschil : ""}` : null,
+          reeks: reeksTekst(g?.reeks),
         }
       : null;
 

@@ -16,6 +16,8 @@ const meetLive = vi.fn();
 vi.mock("@/lib/kyc/gezicht/live", () => ({ meetLive: (...a: unknown[]) => meetLive(...a) }));
 const logError = vi.fn();
 vi.mock("@/lib/logger", () => ({ logger: { error: (...a: unknown[]) => logError(...a), warn: vi.fn(), info: vi.fn() } }));
+const bewaarLiveMeting = vi.fn();
+vi.mock("@/lib/kyc/gezicht/reeks-opslag", () => ({ bewaarLiveMeting: async (...a: unknown[]) => bewaarLiveMeting(...a) }));
 
 import { POST } from "@/app/api/onboarding/gezicht-live/route";
 
@@ -53,6 +55,19 @@ describe("POST /api/onboarding/gezicht-live", () => {
     expect(await res.json()).toEqual({ meting });
     expect(enforceRateLimit).toHaveBeenCalledWith(expect.objectContaining({ name: "gezicht-live", identifier: "u1" }));
     expect(Array.from(meetLive.mock.calls[0]![0] as Uint8Array)).toEqual(Array.from(BEELD));
+    // alleen de getallen gaan naar de reeks (lib/kyc/gezicht/reeks.ts), nooit het beeld
+    expect(bewaarLiveMeting).toHaveBeenCalledWith("u1", meting);
+  });
+
+  it("een storing bij het bewaren van de reeks houdt het live meten niet tegen", async () => {
+    requirePrincipal.mockResolvedValue({ userId: "u1" });
+    hasRole.mockReturnValue(true);
+    const meting = { draaiing: 0.3, oog: 0.18, breedteDeel: 0.4, score: 0.9, meerdere: false };
+    meetLive.mockResolvedValue(meting);
+    bewaarLiveMeting.mockRejectedValue(new Error("kv weg"));
+    const res = await POST(verzoek());
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ meting });
   });
 
   it("geen gezicht in beeld: meting null", async () => {
@@ -61,6 +76,7 @@ describe("POST /api/onboarding/gezicht-live", () => {
     meetLive.mockResolvedValue(null);
     const res = await POST(verzoek());
     expect(await res.json()).toEqual({ meting: null });
+    expect(bewaarLiveMeting).not.toHaveBeenCalled();
   });
 
   it("een verkeerd soort bestand of een te groot beeld wordt geweigerd zonder te meten", async () => {

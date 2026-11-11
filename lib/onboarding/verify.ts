@@ -12,6 +12,7 @@ import { storeUpload } from "@/lib/storage/local";
 import { runVisionReview } from "@/lib/kyc/vision";
 import { gezichtControle } from "@/lib/kyc/gezicht/controle";
 import { GEZICHT_DREMPEL } from "@/lib/kyc/gezicht/vergelijk";
+import { reeksSamenvatting, wisReeks } from "@/lib/kyc/gezicht/reeks-opslag";
 import { featureEnabled } from "@/lib/flags";
 import { leesMrzVanFoto } from "@/lib/kyc/mrz-lezen";
 import { zelfdeNummer, type MrzUitslag } from "@/lib/kyc/mrz";
@@ -573,6 +574,9 @@ export async function submitFreelancerOnboarding(
     // Bij een storing in de vlag: uit. De score wordt altijd bewaard en getoond.
     featureEnabled("id-gezicht-automatisch").catch(() => false),
   ]);
+  // de live reeks van de selfies (lib/kyc/gezicht/reeks.ts): zag de server het hoofd met tussenstanden draaien?
+  // Voorlopig alleen meten, geen poort; een storing telt als "niet gemeten".
+  const reeks = await reeksSamenvatting(user.id).catch(() => null);
 
   // --- MRZ: wat het document zelf zegt, met controlecijfers (lib/kyc/mrz.ts) ---
   // Geldig = nummer, geboortedatum en vervaldatum hebben elk een kloppend
@@ -911,6 +915,8 @@ export async function submitFreelancerOnboarding(
               // sinds 11 nov 2026 grijs vergeleken, drempel 0,42 (lib/kyc/gezicht/vergelijk.ts): zo blijven oude en nieuwe scores uit elkaar te houden
               grijs: true,
               beweging: { oordeel: gezicht.beweging.oordeel, verschil: gezicht.beweging.verschil },
+              // alleen de samenvatting (beelden, tussenstanden, ms, draai); de metingen zelf worden hieronder gewist
+              ...(reeks ? { reeks } : {}),
             },
             // zonder het documentnummer en de vervaldatum die het beeldmodel las
             vision: vision.document ? { ...vision, document: { ...vision.document, documentNumber: null, expiryDate: null } } : vision,
@@ -992,6 +998,8 @@ export async function submitFreelancerOnboarding(
 
   // na elke verificatie: de chipuitslag, de MRZ-sleutel en alle chipsessies weg (ook zonder chip)
   await wisChipGegevens(user.id).catch(() => undefined);
+  // en de live reeks: samengevat in de controle, de metingen zelf hoeven niet te blijven
+  await wisReeks(user.id).catch(() => undefined);
 
   // ID geverifieerd: de werker hoort het meteen (eenmalig, lib/onboarding/id-geverifieerd.ts)
   if (outcome === "verified") runAfter(() => meldIdGeverifieerd(user.id));

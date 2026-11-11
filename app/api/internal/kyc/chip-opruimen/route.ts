@@ -4,6 +4,7 @@ import { recordCronRun } from "@/lib/metrics";
 import { logger } from "@/lib/logger";
 import { ruimChipOp } from "@/lib/kyc/chip/sessie";
 import { ruimOverdrachtOp } from "@/lib/kyc/overdracht";
+import { ruimLiveReeksOp } from "@/lib/kyc/gezicht/reeks-opslag";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,14 +12,16 @@ export const dynamic = "force-dynamic";
 // Cron (elke 15 min): de verzegelde chipgegevens van de ID-controle (MRZ-sleutel,
 // chipsessies, uitslagen) echt wissen als ze te oud zijn. KV kent geen
 // verlooptijd, dus zonder deze taak bleven ze staan. Ook achtergebleven
-// overdrachten naar de telefoon (lib/kyc/overdracht.ts), met hun foto's. Eigen shared-secret auth.
+// overdrachten naar de telefoon (lib/kyc/overdracht.ts), met hun foto's, en live reeksen van de
+// selfies van een afgebroken scan (lib/kyc/gezicht/reeks-opslag.ts). Eigen shared-secret auth.
 async function handle(request: Request): Promise<NextResponse> {
   const gate = checkInternalToken(request);
   if (!gate.ok) {
     return NextResponse.json({ error: { code: "UNAUTHENTICATED", message: gate.message } }, { status: gate.status });
   }
   try {
-    const gewist = (await ruimChipOp()) + (await ruimOverdrachtOp());
+    // de reeksen zijn alleen getallen: een fout daar mag het wissen van de chipgegevens niet tegenhouden
+    const gewist = (await ruimChipOp()) + (await ruimOverdrachtOp()) + (await ruimLiveReeksOp().catch(() => 0));
     recordCronRun("chip-opruimen", true);
     return NextResponse.json({ gewist });
   } catch (err) {
