@@ -12,15 +12,18 @@
 // (wisAfsprakenVanOrganisatie, aangeroepen vanuit anonymizeUser als de laatste beheerder vertrekt).
 // ---------------------------------------------------------------------------
 
-import { randomBytes } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import { AppError } from "@/lib/errors";
 import { kvDelete, kvDeleteStale, kvFindDue, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import {
   AFSPRAAK_ID,
   DAG_SLEUTEL,
+  SLUG as SLUG_VORM,
+  annuleerBezwaar,
   bezet,
   eindVan,
+  heeftPersoon,
   isVrij,
   klantSleutel,
   klantenUit,
@@ -28,6 +31,7 @@ import {
   zonderPersoon,
   type Afspraak,
   type AfspraakStatus,
+  type AnnuleerBezwaar,
   type Instellingen,
   type Klant,
   type KlantKaart,
@@ -198,6 +202,121 @@ export async function zetStatus(tenantId: string, id: string, status: AfspraakSt
   return nieuw;
 }
 
+// --- annuleerlink en herinnering (de klant zelf) -------------------------------
+
+/** De geheime link: 32 willekeurige tekens (192 bits), alleen te zien op het moment dat hij gemaakt wordt. */
+export const nieuweToken = (): string => randomBytes(24).toString("base64url");
+export const TOKEN_VORM = /^[A-Za-z0-9_-]{24,64}$/;
+const geheim = (): string => process.env.AUTH_SECRET ?? "dev-secret";
+/** De link wordt alleen als hash bewaard (HMAC met het geheim van de server): wie de opslag leest, kan er niets mee. */
+export const tokenHash = (token: string): string => createHmac("sha256", geheim()).update(`afspraak-token:${token}`).digest("base64url");
+
+// afspraken:tok:<tenantId>:<hash>   {id}                 van een link naar zijn afspraak
+// afspraken:rem:<tenantId>:<id>     {tenantId, id, start} wacht op een herinnering; zo hoeft de cron niet alle afspraken door
+const voorvoegselTok = (t: string) => `afspraken:tok:${t}:`;
+const voorvoegselRem = (t: string) => `afspraken:rem:${t}:`;
+const sleutelRem = (t: string, id: string) => `${voorvoegselRem(t)}${id}`;
+export const VOORVOEGSEL_REM = "afspraken:rem:";
+/** Het wachtrijtje van de herinneringen. */
+export interface HerinneringRij {
+  tenantId: string;
+  id: string;
+  start: string;
+}
+
+/**
+ * Maakt een nieuwe geheime annuleerlink voor deze afspraak en geeft de token terug (nergens bewaard behalve als hash).
+ * Null als de afspraak niet (meer) bestaat of zijn gegevens gewist zijn. Elke link blijft geldig (bevestiging en
+ * herinnering hebben er elk een); er worden er hooguit 4 bewaard.
+ */
+export async function geefAnnuleerToken(tenantId: string, id: string): Promise<string | null> {
+  const a = await leesAfspraak(tenantId, id);
+  if (!a || !heeftPersoon(a)) return null;
+  const token = nieuweToken();
+  const hash = tokenHash(token);
+  await kvSet(`${voorvoegselTok(tenantId)}${hash}`, { id });
+  await kvSet(sleutelItem(tenantId, id), { ...a, tokenHashes: [...(a.tokenHashes ?? []), hash].slice(-4) } satisfies Afspraak);
+  return token;
+}
+
+/** Trekt een link in die net gemaakt is maar waarvan de mail niet wegging (anders hoopt elke mislukte poging een nieuwe link op). */
+export async function trekTokenIn(tenantId: string, id: string, token: string): Promise<void> {
+  const hash = tokenHash(token);
+  await kvDelete(`${voorvoegselTok(tenantId)}${hash}`);
+  const a = await leesAfspraak(tenantId, id);
+  if (a?.tokenHashes?.includes(hash)) await kvSet(sleutelItem(tenantId, id), { ...a, tokenHashes: a.tokenHashes.filter((h) => h !== hash) } satisfies Afspraak);
+}
+
+/**
+ * Claimt de herinnering van een afspraak: zet de vlag alleen als hij nog niet stond, op de versie die nu in de opslag staat.
+ * Geeft die afspraak terug, of null als de herinnering al gestuurd is (of de afspraak weg is). Met `aan: false` haalt hij
+ * de vlag weer weg (de mail mislukte).
+ */
+export async function zetHerinneringVlag(tenantId: string, id: string, aan: boolean): Promise<Afspraak | null> {
+  const a = await leesAfspraak(tenantId, id);
+  if (!a) return null;
+  if (aan && a.herinneringVerstuurd === true) return null;
+  const { herinneringVerstuurd: _oud, ...rest } = a;
+  void _oud;
+  const nieuw: Afspraak = aan ? { ...rest, herinneringVerstuurd: true } : rest;
+  await kvSet(sleutelItem(tenantId, id), nieuw);
+  return nieuw;
+}
+
+/** Zet de afspraak in het wachtrijtje voor zijn herinnering. */
+export async function planHerinnering(tenantId: string, a: Afspraak): Promise<void> {
+  await kvSet(sleutelRem(tenantId, a.id), { tenantId, id: a.id, start: a.start } satisfies HerinneringRij);
+}
+export async function wisHerinneringRij(tenantId: string, id: string): Promise<void> {
+  await kvDelete(sleutelRem(tenantId, id));
+}
+
+/** Haalt de links en het wachtrijtje van een afspraak weg (bij wissen van de klant of na de bewaartermijn). */
+export async function wisToegang(tenantId: string, a: Pick<Afspraak, "id" | "tokenHashes">): Promise<void> {
+  for (const h of a.tokenHashes ?? []) await kvDelete(`${voorvoegselTok(tenantId)}${h}`);
+  await wisHerinneringRij(tenantId, a.id);
+}
+
+export interface AfspraakVanLink {
+  tenantId: string;
+  instellingen: Instellingen;
+  afspraak: Afspraak;
+}
+
+/**
+ * De afspraak bij een link, of null: onbekend, verkeerde vorm, ander bedrijf, gewist. Altijd hetzelfde "niets", zodat een
+ * bezoeker nooit kan zien waarom. De boekpagina hoeft niet open te staan: ook als het bedrijf online boeken uitzet, kan
+ * een klant zijn bestaande afspraak nog annuleren.
+ */
+export async function afspraakVanLink(slug: string, token: string): Promise<AfspraakVanLink | null> {
+  if (typeof token !== "string" || !TOKEN_VORM.test(token) || !SLUG_VORM.test(slug)) return null;
+  const eigenaar = await kvGet<{ tenantId: string }>(sleutelSlug(slug));
+  if (!eigenaar) return null;
+  const instellingen = await leesInstellingen(eigenaar.tenantId);
+  if (!instellingen || instellingen.slug !== slug) return null;
+  const hash = tokenHash(token);
+  const rij = await kvGet<{ id: string }>(`${voorvoegselTok(eigenaar.tenantId)}${hash}`);
+  if (!rij) return null;
+  const afspraak = await leesAfspraak(eigenaar.tenantId, rij.id);
+  // de hash moet ook echt bij de afspraak staan: een gewiste afspraak (zonderPersoon) heeft hem niet meer
+  if (!afspraak || !(afspraak.tokenHashes ?? []).includes(hash)) return null;
+  return { tenantId: eigenaar.tenantId, instellingen, afspraak };
+}
+
+export type AnnuleerUitslag = { uitslag: "geannuleerd"; tenantId: string; afspraak: Afspraak; instellingen: Instellingen } | { uitslag: "geweigerd"; reden: AnnuleerBezwaar; instellingen: Instellingen } | { uitslag: "onbekend" };
+
+/** Annuleert met de link van de klant, als de regels het toelaten. De tijd komt vrij (een geannuleerde afspraak telt niet als bezet). */
+export async function annuleerMetLink(slug: string, token: string, nu: Date = new Date()): Promise<AnnuleerUitslag> {
+  const gevonden = await afspraakVanLink(slug, token);
+  if (!gevonden) return { uitslag: "onbekend" };
+  const { tenantId, instellingen, afspraak } = gevonden;
+  const reden = annuleerBezwaar(afspraak, instellingen, nu);
+  if (reden) return { uitslag: "geweigerd", reden, instellingen };
+  const nieuw = await zetStatus(tenantId, afspraak.id, "geannuleerd");
+  await wisHerinneringRij(tenantId, afspraak.id);
+  return { uitslag: "geannuleerd", tenantId, afspraak: nieuw, instellingen };
+}
+
 // --- klantenkaart ------------------------------------------------------------
 
 interface Notitie {
@@ -247,6 +366,8 @@ export async function wisAfsprakenVanOrganisatie(tenantId: string, nu: Date = ne
   let aantal = 0;
   aantal += await kvDeleteStale(voorvoegselItems(tenantId), tot);
   aantal += await kvDeleteStale(`afspraken:klant:${tenantId}:`, tot);
+  aantal += await kvDeleteStale(voorvoegselTok(tenantId), tot);
+  aantal += await kvDeleteStale(voorvoegselRem(tenantId), tot);
   const i = await leesInstellingen(tenantId);
   if (i) {
     const van = await kvGet<{ tenantId: string }>(sleutelSlug(i.slug));
@@ -269,6 +390,8 @@ export async function verwijderKlant(tenantId: string, sleutel: string): Promise
   for (const e of rijen) {
     if (klantSleutel(e.value.klant) !== sleutel) continue;
     await kvSet(e.key, zonderPersoon(e.value));
+    // en de annuleerlinks en het herinneringsrijtje van deze klant: de mail van vroeger geeft niets meer te zien
+    await wisToegang(tenantId, e.value);
     aantal += 1;
   }
   await kvDelete(sleutelKlant(tenantId, sleutel));

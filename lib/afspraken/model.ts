@@ -5,7 +5,7 @@
 // server draait in UTC, een tijd als "09:30" is dus altijd een wandkloktijd in Amsterdam, ook rond de zomertijd.
 // ---------------------------------------------------------------------------
 
-import { amsterdamDayKey, amsterdamParts, amsterdamToUtc } from "@/lib/time/amsterdam";
+import { amsterdamClock, amsterdamDayKey, amsterdamParts, amsterdamToUtc } from "@/lib/time/amsterdam";
 
 export const WEEKDAG_NAAM = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"] as const;
 /** De volgorde waarin een week in Nederland loopt: maandag eerst. Waarden zijn weekdagnummers (0 = zondag). */
@@ -47,7 +47,18 @@ export interface Instellingen {
   voorlopMin: number;
   /** hoeveel dagen vooruit een klant kan boeken */
   maxDagenVooruit: number;
+  /** tot zoveel minuten vóór de start mag een klant zelf annuleren (via de link in zijn mail); ontbreekt bij oudere instellingen: ANNULEER_STANDAARD */
+  annuleerTotMin?: number;
+  /** stuurt het bedrijf klanten met een e-mailadres 24 uur van tevoren een herinnering? Ontbreekt bij oudere instellingen: aan */
+  herinneringAan?: boolean;
 }
+
+/** Standaard: een klant kan tot 2 uur voor de start zelf annuleren. */
+export const ANNULEER_STANDAARD = 120;
+export const annuleerTotMinVan = (i: Pick<Instellingen, "annuleerTotMin">): number => i.annuleerTotMin ?? ANNULEER_STANDAARD;
+export const herinneringAanVan = (i: Pick<Instellingen, "herinneringAan">): boolean => i.herinneringAan !== false;
+/** De herinnering gaat zo lang voor de start weg. */
+export const HERINNERING_VOORAF_MS = 24 * 3_600_000;
 
 export type AfspraakStatus = "bevestigd" | "geweest" | "niet-gekomen" | "geannuleerd";
 export const STATUS_NAAM: Record<AfspraakStatus, string> = {
@@ -82,6 +93,41 @@ export interface Afspraak {
   status: AfspraakStatus;
   bron: "online" | "balie";
   gemaaktOp: string;
+  /**
+   * Alleen de hashes van de geheime annuleerlinks (bevestiging en herinnering krijgen elk een eigen link); de links zelf
+   * staan nergens, alleen in de mail aan de klant. Hoort bij de persoonsgegevens: zonderPersoon haalt ze weg, dan is de link dood.
+   */
+  tokenHashes?: string[];
+  /** de herinnering is verstuurd (of wordt net verstuurd): nooit twee herinneringen */
+  herinneringVerstuurd?: boolean;
+}
+
+const MAAND_NAAM = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
+
+/** "donderdag 12 november 2026 om 09:00" in Nederlandse tijd, op elke server hetzelfde (mail en pagina voor de klant). */
+export function datumTijdLang(iso: string): string {
+  const d = new Date(iso);
+  const p = amsterdamParts(d);
+  return `${WEEKDAG_NAAM[p.weekday] ?? ""} ${p.day} ${MAAND_NAAM[p.month - 1] ?? ""} ${p.year} om ${amsterdamClock(d)}`;
+}
+
+/** Waarom een klant niet (meer) kan annuleren, of null als het kan. */
+export type AnnuleerBezwaar = "al-geannuleerd" | "verstreken" | "te-laat";
+
+/** Mag de klant deze afspraak nu zelf annuleren? Pure regel, voor de pagina en de route. */
+export function annuleerBezwaar(a: Pick<Afspraak, "status" | "start">, i: Pick<Instellingen, "annuleerTotMin">, nu: Date): AnnuleerBezwaar | null {
+  if (a.status === "geannuleerd") return "al-geannuleerd";
+  const start = new Date(a.start).getTime();
+  if (a.status !== "bevestigd" || start <= nu.getTime()) return "verstreken";
+  if (start - nu.getTime() < annuleerTotMinVan(i) * 60_000) return "te-laat";
+  return null;
+}
+
+/** Hoort deze afspraak nu een herinnering te krijgen? Alleen bevestigd, met e-mailadres, nog niet gestuurd, binnen 24 uur vóór de start (en nog niet begonnen). */
+export function herinneringDue(a: Afspraak, i: Pick<Instellingen, "herinneringAan">, nu: Date): boolean {
+  if (a.status !== "bevestigd" || !a.klant.email || a.herinneringVerstuurd === true || !herinneringAanVan(i)) return false;
+  const start = new Date(a.start).getTime();
+  return start > nu.getTime() && start - nu.getTime() <= HERINNERING_VOORAF_MS;
 }
 
 export const AFSPRAAK_ID = /^\d{4}-\d{2}-\d{2}~[a-z0-9]{6,12}$/;
@@ -201,7 +247,12 @@ export function controleerInstellingen(invoer: unknown, nieuwId: () => string): 
   const maxDagenVooruit = Number(o.maxDagenVooruit);
   if (!Number.isInteger(maxDagenVooruit) || maxDagenVooruit < 1 || maxDagenVooruit > 365) return { ok: false, fout: "Het aantal dagen vooruit moet tussen 1 en 365 liggen." };
 
-  return { ok: true, waarde: { slug, actief: o.actief === true, bedrijfsnaam, diensten, medewerkers, uren, stapMin, voorlopMin, maxDagenVooruit } };
+  // bestaande opzetten (en oude schermen) sturen deze velden niet mee: dan de standaard
+  const annuleerTotMin = o.annuleerTotMin === undefined || o.annuleerTotMin === null ? ANNULEER_STANDAARD : Number(o.annuleerTotMin);
+  if (!Number.isInteger(annuleerTotMin) || annuleerTotMin < 0 || annuleerTotMin > 10_080) return { ok: false, fout: "De tijd tot wanneer een klant kan annuleren moet tussen 0 minuten en een week liggen." };
+  const herinneringAan = o.herinneringAan !== false;
+
+  return { ok: true, waarde: { slug, actief: o.actief === true, bedrijfsnaam, diensten, medewerkers, uren, stapMin, voorlopMin, maxDagenVooruit, annuleerTotMin, herinneringAan } };
 }
 
 /** Een nette beginstand: ma–vr 09:00–17:00, zo'n 30 minuten per afspraak, een dienst en jijzelf als medewerker. */
@@ -217,6 +268,8 @@ export function beginInstellingen(bedrijfsnaam: string, nieuwId: () => string): 
     stapMin: 30,
     voorlopMin: 60,
     maxDagenVooruit: 60,
+    annuleerTotMin: ANNULEER_STANDAARD,
+    herinneringAan: true,
   };
 }
 
@@ -378,8 +431,17 @@ export const BEWAARTERMIJN_DAGEN = 730;
 /** Afspraken die vóór dit moment begonnen, hebben hun bewaartermijn gehad. */
 export const bewaarGrens = (nu: Date): Date => new Date(nu.getTime() - BEWAARTERMIJN_DAGEN * 86_400_000);
 
-/** De afspraak zonder persoonsgegevens: dienst, tijd en status blijven, zodat de agenda en de cijfers van het bedrijf kloppen. */
-export const zonderPersoon = (a: Afspraak): Afspraak => ({ ...a, klant: { naam: "Verwijderd", telefoon: "", email: "" }, opmerking: "" });
+/**
+ * De afspraak zonder persoonsgegevens: dienst, tijd en status blijven, zodat de agenda en de cijfers van het bedrijf kloppen.
+ * Ook de hashes van de annuleerlinks en de mailvlag gaan weg: wie gewist is, kan via een oude mail niets meer zien of
+ * doen, en de afspraak hoort niet meer bij een e-mailadres.
+ */
+export const zonderPersoon = (a: Afspraak): Afspraak => {
+  const { tokenHashes: _links, herinneringVerstuurd: _vlag, ...rest } = a;
+  void _links;
+  void _vlag;
+  return { ...rest, klant: { naam: "Verwijderd", telefoon: "", email: "" }, opmerking: "" };
+};
 
-/** Heeft deze afspraak nog persoonsgegevens? Een al gewiste regel hoeft niet opnieuw geschreven te worden. */
-export const heeftPersoon = (a: Afspraak): boolean => a.klant.naam !== "Verwijderd" || a.klant.telefoon !== "" || a.klant.email !== "" || a.opmerking !== "";
+/** Heeft deze afspraak nog persoonsgegevens (of annuleerlinks)? Een al gewiste regel hoeft niet opnieuw geschreven te worden. */
+export const heeftPersoon = (a: Afspraak): boolean => a.klant.naam !== "Verwijderd" || a.klant.telefoon !== "" || a.klant.email !== "" || a.opmerking !== "" || (a.tokenHashes?.length ?? 0) > 0 || a.herinneringVerstuurd !== undefined;

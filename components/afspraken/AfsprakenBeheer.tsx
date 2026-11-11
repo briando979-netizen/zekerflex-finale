@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { STATUS_NAAM, WEEKDAG_NAAM, WEEK_VOLGORDE, STAPPEN, type Afspraak, type AfspraakStatus, type Instellingen, type Tijdvak } from "@/lib/afspraken/model";
+import { ANNULEER_STANDAARD, STATUS_NAAM, WEEKDAG_NAAM, WEEK_VOLGORDE, STAPPEN, type Afspraak, type AfspraakStatus, type Instellingen, type Tijdvak } from "@/lib/afspraken/model";
 import { ALLEEN_BEHEERDER, ALLEEN_BEHEERDER_TEKST } from "@/lib/afspraken/teksten";
 
 // Het afsprakenbeheer van een bedrijf: de agenda van de week en de instellingen. Alle tijden zijn Nederlandse tijd.
@@ -30,6 +30,7 @@ interface Lading {
 }
 
 const VOORLOOP = [0, 30, 60, 120, 240, 720, 1440, 2880];
+const ANNULEER = [0, 60, 120, 240, 720, 1440, 2880];
 const voorloopTekst = (m: number) => (m === 0 ? "Geen" : m < 60 ? `${m} minuten` : m < 1440 ? `${m / 60} uur` : `${m / 1440} dag${m === 1440 ? "" : "en"}`);
 
 const kaart = "rounded-xl border border-hair bg-white p-4";
@@ -527,6 +528,25 @@ function InstellingenFormulier({ begin, nieuw, bewaard }: { begin: Instellingen;
         <label className="block">
           <span className="field-label">Hoeveel dagen vooruit</span>
           <input type="number" min={1} max={365} value={i.maxDagenVooruit} onChange={(e) => wijzig((x) => ({ ...x, maxDagenVooruit: Number(e.target.value) }))} className="field-input" />
+        </label>
+      </section>
+
+      <section className={`${kaart} space-y-3`}>
+        <h2 className="font-display text-base font-bold text-ink">Mail aan je klanten</h2>
+        <p className="text-sm text-neutralx-600">Een klant die online boekt en een e-mailadres invult, krijgt een bevestiging met een link om zelf te annuleren.</p>
+        <label className="block sm:max-w-xs">
+          <span className="field-label">Annuleren kan tot</span>
+          <select value={i.annuleerTotMin ?? ANNULEER_STANDAARD} onChange={(e) => wijzig((x) => ({ ...x, annuleerTotMin: Number(e.target.value) }))} className="field-input">
+            {(ANNULEER.includes(i.annuleerTotMin ?? ANNULEER_STANDAARD) ? ANNULEER : [...ANNULEER, i.annuleerTotMin ?? ANNULEER_STANDAARD].sort((a, b) => a - b)).map((v) => (
+              <option key={v} value={v}>
+                {v === 0 ? "het moment dat de afspraak begint" : `${voorloopTekst(v)} van tevoren`}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-start gap-2 text-sm text-ink">
+          <input type="checkbox" checked={i.herinneringAan !== false} onChange={(e) => wijzig((x) => ({ ...x, herinneringAan: e.target.checked }))} className="mt-1" />
+          <span>Stuur de klant 24 uur van tevoren een herinnering (alleen als hij een e-mailadres invulde)</span>
         </label>
       </section>
 

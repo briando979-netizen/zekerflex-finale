@@ -7,6 +7,7 @@ const m = vi.hoisted(() => ({
   limiet: vi.fn(),
   audit: vi.fn(),
   melding: vi.fn(),
+  bevestiging: vi.fn(),
 }));
 
 vi.mock("@/lib/storage/kv", () => ({
@@ -25,6 +26,8 @@ vi.mock("@/lib/storage/kv", () => ({
 }));
 // de melding aan het bedrijf (push/mail) heeft eigen tests; hier alleen: wordt hij aangeroepen, en breekt hij het boeken niet
 vi.mock("@/lib/afspraken/melding", () => ({ meldBedrijf: (...a: unknown[]) => m.melding(...a) }));
+// de mail aan de klant heeft eigen tests (afspraken-klant.test.ts); hier alleen: wordt hij aangeroepen, en breekt hij het boeken niet
+vi.mock("@/lib/afspraken/mail", () => ({ stuurBevestiging: (...a: unknown[]) => m.bevestiging(...a), stuurAnnulering: vi.fn() }));
 vi.mock("@/lib/auth", async () => {
   const { AppError } = await import("@/lib/errors");
   return {
@@ -65,6 +68,7 @@ beforeEach(async () => {
   m.limiet.mockReset().mockResolvedValue(undefined);
   m.audit.mockReset().mockResolvedValue(undefined);
   m.melding.mockReset().mockResolvedValue(undefined);
+  m.bevestiging.mockReset().mockResolvedValue(undefined);
   i ={ ...beginInstellingen("Kapper Jan", nieuwId), actief: true };
   await bewaarInstellingen("t1", i);
 });
@@ -145,6 +149,34 @@ describe("openbare boekpagina: POST /api/boeken/<slug>", () => {
     const hangt = await publiek.POST(json("POST", "/api/boeken/kapper-jan", boekBody({ start: "2026-11-12T09:00:00.000Z", klant: { naam: "Els Klant", telefoon: "", email: "els@voorbeeld.nl" } })), slug());
     expect(hangt.status).toBe(200);
     expect(m.melding).toHaveBeenCalledTimes(2);
+  });
+
+  it("de klant krijgt een bevestiging alleen als hij een e-mailadres invulde, en het antwoord bevat nooit een link of id", async () => {
+    const met = await publiek.POST(json("POST", "/api/boeken/kapper-jan", boekBody()), slug());
+    expect(m.bevestiging).toHaveBeenCalledTimes(1);
+    expect(m.bevestiging).toHaveBeenCalledWith("t1", expect.objectContaining({ bron: "online", klant: expect.objectContaining({ email: "piet@voorbeeld.nl" }) }), expect.objectContaining({ slug: "kapper-jan" }), expect.any(Date));
+    expect(JSON.stringify(await lees(met))).not.toMatch(/token|annuleer|2026-11-12~/i);
+    m.bevestiging.mockClear();
+    const zonder = await publiek.POST(json("POST", "/api/boeken/kapper-jan", boekBody({ start: "2026-11-12T09:00:00.000Z", klant: { naam: "Els Klant", telefoon: "06 1234 5678", email: "" } })), slug());
+    expect(zonder.status).toBe(200);
+    expect(m.bevestiging).not.toHaveBeenCalled();
+  });
+
+  it("een bevestiging die faalt (of nooit klaar komt) laat het boeken niet falen of wachten", async () => {
+    m.bevestiging.mockRejectedValueOnce(new Error("smtp stuk"));
+    expect((await publiek.POST(json("POST", "/api/boeken/kapper-jan", boekBody()), slug())).status).toBe(200);
+    m.bevestiging.mockReturnValueOnce(new Promise(() => undefined));
+    expect((await publiek.POST(json("POST", "/api/boeken/kapper-jan", boekBody({ start: "2026-11-12T09:00:00.000Z" })), slug())).status).toBe(200);
+    expect(m.bevestiging).toHaveBeenCalledTimes(2);
+  });
+
+  it("geen bevestiging als er niets geboekt is (bot, geen toestemming, net bezet)", async () => {
+    await publiek.POST(json("POST", "/api/boeken/kapper-jan", boekBody({ website: "https://spam.example" })), slug());
+    await publiek.POST(json("POST", "/api/boeken/kapper-jan", boekBody({ toestemming: false })), slug());
+    await publiek.POST(json("POST", "/api/boeken/kapper-jan", boekBody()), slug());
+    m.bevestiging.mockClear();
+    expect((await publiek.POST(json("POST", "/api/boeken/kapper-jan", boekBody()), slug())).status).toBe(409);
+    expect(m.bevestiging).not.toHaveBeenCalled();
   });
 
   it("geen melding als er niets geboekt is (bot, fout of net bezet)", async () => {

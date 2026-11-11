@@ -21,6 +21,8 @@ interface Bevestiging {
   medewerkerNaam: string;
   start: string;
   duurMin: number;
+  /** heeft de klant een e-mailadres ingevuld (dan komt er een bevestiging met een annuleerlink) */
+  metEmail: boolean;
 }
 
 const euro = (c: number) => `€ ${(c / 100).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -83,7 +85,7 @@ export function BoekFlow({ slug, bedrijfsnaam, diensten, medewerkers, vanDag, to
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dienstId: dienst.id, medewerkerId: medewerker, start: tijd, klant: { naam, telefoon, email }, opmerking, toestemming, website }),
       });
-      const d = (await res.json().catch(() => null)) as { afspraak?: Bevestiging & { bevestigd?: boolean }; error?: { message?: string } } | null;
+      const d = (await res.json().catch(() => null)) as { afspraak?: Omit<Bevestiging, "metEmail"> & { bevestigd?: boolean }; error?: { message?: string } } | null;
       if (!res.ok || !d?.afspraak) {
         setFout(d?.error?.message ?? "Boeken lukte niet. Probeer het opnieuw.");
         // net bezet: terug naar de tijden, zodat de klant meteen een andere kiest
@@ -94,7 +96,9 @@ export function BoekFlow({ slug, bedrijfsnaam, diensten, medewerkers, vanDag, to
         }
         return;
       }
-      setKlaar(d.afspraak.bedrijfsnaam ? d.afspraak : { bedrijfsnaam, dienstNaam: dienst.naam, medewerkerNaam: "", start: tijd, duurMin: dienst.duurMin });
+      // wat er met e-mail gebeurt weet het scherm zelf: de server stuurt alleen een mail als er een adres is ingevuld
+      const metEmail = email.trim() !== "";
+      setKlaar(d.afspraak.bedrijfsnaam ? { ...d.afspraak, metEmail } : { bedrijfsnaam, dienstNaam: dienst.naam, medewerkerNaam: "", start: tijd, duurMin: dienst.duurMin, metEmail });
       setStap("klaar");
     } catch {
       setFout("Boeken lukte niet. Controleer je verbinding en probeer het opnieuw.");
@@ -119,7 +123,11 @@ export function BoekFlow({ slug, bedrijfsnaam, diensten, medewerkers, vanDag, to
           <br />
           {klok(klaar.start)} uur · {klaar.duurMin} minuten
         </p>
-        <p className="mt-3 text-xs text-neutralx-500">Je krijgt hier geen bevestiging per e-mail. Noteer de tijd, en bel {klaar.bedrijfsnaam} als je wilt verzetten of annuleren.</p>
+        {klaar.metEmail ? (
+          <p className="mt-3 text-xs text-neutralx-500">We sturen je een bevestiging per e-mail met een link om te annuleren.</p>
+        ) : (
+          <p className="mt-3 text-xs text-neutralx-500">Je krijgt geen e-mail. Noteer de tijd, en bel {klaar.bedrijfsnaam} om te verzetten of te annuleren.</p>
+        )}
       </div>
     );
   }
