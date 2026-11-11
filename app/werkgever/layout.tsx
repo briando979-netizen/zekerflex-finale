@@ -117,6 +117,8 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     // de kennisbank staat op een eigen adres (Outline); inloggen gaat vanzelf met het ZekerFlex-account
     kennisbank: { href: `${outlinePubliekeUrl()}/`, label: "Handleidingen", icon: <IDoc /> },
     locatie: { href: "/werkgever/op-locatie", label: "Op locatie", icon: <IGrid /> },
+    // per soort bedrijf een dashboard met alles wat erbij hoort (lib/branches)
+    branche: { href: "/werkgever/branche", label: "Jouw branche", icon: <IList /> },
   };
   // de netwerkpakketten zijn zonder uitrol uit te zetten (Admin → Systeem → Schakelaars)
   const netwerkAan = await featureEnabled("netwerk-pakketten", { userId: principal.userId });

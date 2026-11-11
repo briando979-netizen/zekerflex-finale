@@ -130,6 +130,7 @@ describe("menuVoor", () => {
       { sleutel: "reviews", sectie: "beheer" },
       { sleutel: "netwerk", sectie: "beheer" },
       { sleutel: "locatie", sectie: "beheer" },
+      { sleutel: "branche", sectie: "beheer" },
       { sleutel: "kennisbank", sectie: "beheer" },
     ]);
     // ook met een rijschool en een horecazaak: die staan in hun eigen dashboard
