@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { kvFindDue, kvSet } from "@/lib/storage/kv";
 import { bewaarGrens, heeftPersoon, zonderPersoon, type Afspraak } from "@/lib/afspraken/model";
 import { wisAfsprakenVanOrganisatie, wisToegang } from "@/lib/afspraken/store";
+import { wisOrganisatieGegevens } from "@/lib/privacy/org-wissen";
 
 // ---------------------------------------------------------------------------
 // Bewaartermijn van klantgegevens in afspraken (AVG art. 5(1)(e)): twee jaar na de afspraak gaan naam, telefoon, e-mail
@@ -58,8 +59,10 @@ export async function wisVerlatenOrganisaties(userId: string): Promise<string[]>
     const anderen = await prisma.membership.count({ where: { tenantId, userId: { not: userId }, user: { disabledAt: null } } });
     if (anderen > 0) continue;
     await wisAfsprakenVanOrganisatie(tenantId);
+    // en de gegevens van alle andere modules (werkbonnen, offertes, voorraad, …): het register in lib/privacy/org-kv.ts
+    await wisOrganisatieGegevens(tenantId);
     gewist.push(tenantId);
   }
-  if (gewist.length > 0) logger.info("afspraken van verlaten organisaties gewist", { organisaties: gewist.length });
+  if (gewist.length > 0) logger.info("gegevens van verlaten organisaties gewist", { organisaties: gewist.length });
   return gewist;
 }

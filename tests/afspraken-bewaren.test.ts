@@ -12,6 +12,7 @@ vi.mock("@/lib/storage/kv", () => ({
   kvSet: async (k: string, v: unknown) => void m.kv.set(k, structuredClone(v)),
   kvDelete: async (k: string) => void m.kv.delete(k),
   kvListValues: async (p: string, limit: number) => [...m.kv].filter(([k]) => k.startsWith(p)).slice(0, limit).map(([, v]) => structuredClone(v)),
+  kvListEntries: async (p: string, limit: number) => [...m.kv].filter(([k]) => k.startsWith(p)).slice(0, limit).map(([key, v]) => ({ key, value: structuredClone(v) })),
   kvFindDue: async (p: string, veld: string, grens: string, na = "", limit = 500) =>
     [...m.kv]
       .filter(([k, v]) => k.startsWith(p) && k > na && String((v as Record<string, unknown>)[veld]) <= grens)

@@ -13,7 +13,7 @@ import { prisma } from "@/lib/prisma";
 //     advance-request:, bank-…) vallen onder een wettelijke bewaartermijn.
 //     Sleutels die van een organisatie zijn en niet van één gebruiker staan hier
 //     bewust niet (bijv. afspraken: met de klanten van een bedrijf, lib/afspraken):
-//     die gaan weg met de organisatie, niet met één account.
+//     die gaan weg met de organisatie, niet met één account (register: lib/privacy/org-kv.ts, wissen: org-wissen.ts).
 // ---------------------------------------------------------------------------
 
 /** Sleutels (prefix + userId) die bij een verwijderverzoek direct weg mogen. */
