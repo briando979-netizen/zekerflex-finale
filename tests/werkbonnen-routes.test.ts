@@ -71,7 +71,7 @@ describe("toegang", () => {
     for (const r of antwoorden) {
       expect(r.status).toBe(423);
       const b = await lees(r);
-      expect(b.error.code).toBe("WERKBONNEN_ALLEEN_BEHEERDER");
+      expect(b.error.code).toBe("ALLEEN_BEHEERDER");
       expect(b.error.message).toMatch(/beheerder/);
     }
   });

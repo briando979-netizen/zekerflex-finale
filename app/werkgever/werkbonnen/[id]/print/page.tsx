@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { requirePrincipal } from "@/lib/auth";
 import { PrintKnoppen } from "@/components/werkbonnen/PrintKnoppen";
-import { WerkbonToegangFout, eigenOrganisatie } from "@/lib/werkbonnen/toegang";
+import { AppError } from "@/lib/errors";
+import { eigenOrganisatie } from "@/lib/werkbonnen/toegang";
 import { STATUS_NAAM, adresRegel, euroTekst, regelTotaalCent, totalen, urenTekst } from "@/lib/werkbonnen/model";
 import { leesBon } from "@/lib/werkbonnen/store";
 
@@ -29,7 +30,7 @@ export default async function WerkbonPrintPagina({ params }: { params: Promise<{
   try {
     tenantId = (await eigenOrganisatie()).tenantId;
   } catch (err) {
-    if (err instanceof WerkbonToegangFout) {
+    if (err instanceof AppError && err.code === "ALLEEN_BEHEERDER") {
       return (
         <p role="alert" className="mx-auto max-w-xl rounded-xl bg-paper-soft px-4 py-3 text-sm text-ink">
           {err.message}
