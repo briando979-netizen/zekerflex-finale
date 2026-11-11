@@ -44,13 +44,14 @@ describe("voorbeeldsites per branche", () => {
     expect(v.bedrijf.telefoon).toBe("");
     expect(v.bedrijf.email).toBe("");
     for (const p of s.pages) for (const b of p.blocks) if (b.type === "reviews") expect(b.props.kop).toContain("(voorbeeld)");
-    expect(v.theme.stijl).toBe("beleving");
+    expect(v.theme.stijl).toBe("diepte");
   });
 
   it.each(BRANCHE_VOORBEELDEN.map((v) => [v.id, v] as const))("%s: een complete site zoals Schwarzwald, met de balk en de rondleiding", (_, v) => {
     const s = site(v);
     const home = renderPage(s, s.pages[0]!, opts);
-    for (const bit of ['class="hero bel"', 'class="ticker"', 'class="tegels"', 'class="paneel"', 'class="steps bel"', 'class="rev"', 'class="uren-kaart"', 'class="band bel"', "Bekijk wat deze site kan"]) {
+    // sinds 11 nov in 3D: de opening is een vlucht door de foto's (lib/sites/diepte-render.ts), de afsluiter heeft 3D-letters
+    for (const bit of ['class="d3-open"', 'class="ticker"', 'class="tegels"', 'class="paneel"', 'class="steps bel"', 'class="rev"', 'class="uren-kaart"', 'class="band bel', "Bekijk wat deze site kan"]) {
       expect(home, bit).toContain(bit);
     }
     const tour = renderFunctiesPagina(s, opts)!;

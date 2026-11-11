@@ -15,8 +15,8 @@ import { BURGER_BEDRIJF, BURGER_FOTOS, BURGER_SLUG, BURGER_THEMA, burgerFotoUrl,
 //   KV "site-voorbeeld-slot:burger" — één bouwer tegelijk
 // ---------------------------------------------------------------------------
 
-/** 1: 3D-burger, menu als webshop met winkelmand, reserveren (4 nov 2026). */
-const VERSIE = 1;
+/** 1: 3D-burger, menu als webshop met winkelmand, reserveren (4 nov 2026); 2: de 3D-stijl (11 nov 2026). */
+const VERSIE = 2;
 const TENANT = "voorbeeld:burger";
 const STATE = "site-voorbeeld:burger";
 const SLOT = "site-voorbeeld-slot:burger";

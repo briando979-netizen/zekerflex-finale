@@ -631,7 +631,8 @@ function StyleTab({ theme, presets, media, onTheme }: { theme: Theme; presets: D
   return (
     <div className="space-y-4 text-sm">
       <Field label="Stijl">
-        <select className="field-input" value={theme.stijl ?? "standaard"} onChange={(e) => onTheme({ ...theme, stijl: e.target.value === "luxe" || e.target.value === "premium" || e.target.value === "beleving" ? e.target.value : "standaard" })}>
+        <select className="field-input" value={theme.stijl ?? "standaard"} onChange={(e) => onTheme({ ...theme, stijl: e.target.value === "luxe" || e.target.value === "premium" || e.target.value === "beleving" || e.target.value === "diepte" ? e.target.value : "standaard" })}>
+          <option value="diepte">3D (je foto&apos;s en koppen komen in 3D op je af als je scrolt)</option>
           <option value="beleving">Beleving (schuine foto&apos;s, band met je aanbod, grote koppen)</option>
           <option value="premium">Premium (donkere opening, grote koppen, ronde knoppen)</option>
           <option value="standaard">Standaard (licht en vriendelijk)</option>
