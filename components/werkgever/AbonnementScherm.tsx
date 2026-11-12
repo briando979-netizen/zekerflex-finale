@@ -9,6 +9,9 @@ import { REGEL_OP_WEBSITE } from "@/lib/abonnement/overzicht";
 // In de Android- en iPhone-app staat hier nooit een koopknop (Play en Apple hebben eigen betaalregels
 // voor digitale abonnementen): alleen het overzicht en de regel dat je het op zekerflex.com regelt.
 
+// Snelle uitbetaling en factoring zijn in de app verborgen (lib/app-mode.ts): ook de regel in een plankaart.
+const APP_VERBORGEN = /uitbetaling|factoring|voorschot|bank/i;
+
 export function AbonnementScherm({ huidig, plannen, groepen, inApp }: { huidig: HuidigAbonnement; plannen: PlanRegel[]; groepen: UitbreidingGroep[]; inApp: boolean }) {
   const [bezig, setBezig] = useState<string | null>(null);
   const [fout, setFout] = useState<string | null>(null);
@@ -78,7 +81,7 @@ export function AbonnementScherm({ huidig, plannen, groepen, inApp }: { huidig: 
               <p className="mt-1 text-lg font-bold text-money-ink">{p.prijs}</p>
               <p className="mt-2 text-sm text-neutralx-600">{p.tagline}</p>
               <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-ink">
-                {p.punten.map((t) => (
+                {p.punten.filter((t) => !inApp || !APP_VERBORGEN.test(t)).map((t) => (
                   <li key={t}>{t}</li>
                 ))}
               </ul>
@@ -89,7 +92,7 @@ export function AbonnementScherm({ huidig, plannen, groepen, inApp }: { huidig: 
                   </button>
                 )}
                 {!inApp && p.actie === "contact" && (
-                  <a className="btn-secondary block w-full text-center" href="mailto:sales@zekerflex.com?subject=Abonnement%20op%20maat">
+                  <a className="btn-ghost block w-full text-center" href="mailto:sales@zekerflex.com?subject=Abonnement%20op%20maat">
                     Neem contact op
                   </a>
                 )}
