@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { apmSnapshot, meetQuery, meetVerzoek, percentiel, queryVorm, resetApm, routeLabel } from "@/lib/ops/apm";
+import { apmSnapshot, BEKEND_TRAAG_MAX_MS, meetQuery, meetVerzoek, percentiel, queryVorm, resetApm, routeLabel, trageQueryNiveau } from "@/lib/ops/apm";
 import { gebeurtenisVan, parseDsn, stuurNaarGlitchtip } from "@/lib/ops/glitchtip";
 import type { ErrorGroup } from "@/lib/ops/error-journal";
 
@@ -42,6 +42,23 @@ describe("meetVerzoek / apmSnapshot", () => {
   it("houdt alleen de laatste 200 duren per route bij", () => {
     for (let i = 0; i < 300; i++) meetVerzoek("GET /a", i, 200);
     expect(apmSnapshot().routes[0]?.p95Ms).toBe(Math.ceil(0.95 * 200) - 1 + 100);
+  });
+});
+
+describe("trageQueryNiveau", () => {
+  // zoals op prod (12 nov): de RAG-zoekquery, 1,5–1,8 s
+  const rag = `SELECT "public"."RagChunk"."id", "public"."RagChunk"."sourceType"::text, "public"."RagChunk"."title" FROM "public"."RagChunk" WHERE 1=1`;
+
+  it("de bekende RAG-query onder de drempel is info, erboven blijft het een waarschuwing", () => {
+    expect(trageQueryNiveau(1_720, rag)).toBe("info");
+    expect(trageQueryNiveau(BEKEND_TRAAG_MAX_MS - 1, rag)).toBe("info");
+    expect(trageQueryNiveau(BEKEND_TRAAG_MAX_MS, rag)).toBe("warn");
+  });
+
+  it("elke andere trage query blijft een waarschuwing, ook als hij RagChunk met iets anders samenvoegt", () => {
+    expect(trageQueryNiveau(1_720, `SELECT "public"."Shift"."id" FROM "public"."Shift"`)).toBe("warn");
+    expect(trageQueryNiveau(1_720, `SELECT "public"."RagChunk"."id" FROM "public"."RagChunk" JOIN "public"."User" ON 1=1`)).toBe("warn");
+    expect(trageQueryNiveau(1_720, `DELETE FROM "public"."RagChunk" WHERE "sourceRef" = $1`)).toBe("warn");
   });
 });
 

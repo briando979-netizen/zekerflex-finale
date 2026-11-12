@@ -129,6 +129,18 @@ export function queryVorm(sql: string): string {
   return `${soort} ${tabellen.slice(0, 4).join(", ")}${tabellen.length > 4 ? " …" : ""}${joins ? ` (${joins} join${joins === 1 ? "" : "s"})` : ""}`.trim();
 }
 
+// Trage query's die we kennen en bewust laten staan. De RAG-zoekquery leest alle stukjes kennis (RagChunk) in en
+// rekent in JS; gemeten 12 nov: alle 23 meldingen sinds 9 nov waren deze, 1,5–1,8 s, en een index helpt pas boven
+// ±20k stukjes. Die komen als info in het log, niet als waarschuwing in het foutenlogboek, zodat dat alleen nieuwe
+// dingen toont. Boven BEKEND_TRAAG_MAX_MS blijft het een waarschuwing: dan is er toch iets veranderd.
+const BEKEND_TRAAG = new Set(["SELECT RagChunk"]);
+export const BEKEND_TRAAG_MAX_MS = 5_000;
+
+/** Op welk niveau een trage query in het log komt: "info" voor een bekende onder de drempel, anders "warn". */
+export function trageQueryNiveau(ms: number, sql: string): "info" | "warn" {
+  return ms < BEKEND_TRAAG_MAX_MS && BEKEND_TRAAG.has(queryVorm(sql)) ? "info" : "warn";
+}
+
 export interface ApmSnapshot {
   sinds: string;
   laatsteUur: { verzoeken: number; fouten: number; gemMs: number };

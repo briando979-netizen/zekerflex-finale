@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { env } from "@/lib/env";
-import { meetQuery } from "@/lib/ops/apm";
+import { meetQuery, trageQueryNiveau } from "@/lib/ops/apm";
 import { metrics } from "@/lib/metrics/registry";
 import { logger } from "@/lib/logger";
 
@@ -33,7 +33,8 @@ function maakClient() {
   client.$on("query", (e) => {
     try {
       metrics().dbQueryDuration.observe(e.duration / 1000);
-      if (meetQuery(e.duration, e.query, env.APM_SLOW_QUERY_MS)) logger.warn("trage databasequery", { ms: e.duration, query: e.query.slice(0, 160) });
+      // een bekende trage query (lib/ops/apm.ts) onder de drempel alleen als info, buiten het foutenlogboek
+      if (meetQuery(e.duration, e.query, env.APM_SLOW_QUERY_MS)) logger[trageQueryNiveau(e.duration, e.query)]("trage databasequery", { ms: e.duration, query: e.query.slice(0, 160) });
     } catch {
       // meten mag een query nooit in de weg zitten
     }
