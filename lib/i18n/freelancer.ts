@@ -1,5 +1,6 @@
 import type { Locale } from "@/lib/i18n/config";
 import { WIE_TEKSTEN } from "@/lib/i18n/wie-ben-jij";
+import { NOTIFICATIONS_NL } from "@/components/app/notifications-texts";
 import { MILESTONE_NL } from "@/lib/worker/milestone-teksten";
 
 // ---------------------------------------------------------------------------
@@ -84,6 +85,7 @@ const nl = {
     mailPrefs: "E-mailvoorkeuren", mailUitleg: "Kies welke optionele e-mail je ontvangt. Belangrijke e-mail (verificatie, wachtwoord, facturen, loonstroken) staat hier niet bij — die krijg je altijd.",
   },
   milestones: MILESTONE_NL,
+  meldingen: NOTIFICATIONS_NL,
   start: {
     eyebrow: "Jouw start",
     title: "Welkom! Kies eerst welke richting je op wilt.",
@@ -1475,6 +1477,12 @@ const en: FreelancerDict = {
       impact: "Put this amount aside in your Tax pot so you don't get surprises. ZekerFlex already calculates the VAT per invoice for you.",
     },
   },
+  meldingen: {
+    bell: "Notifications", close: "Close", all: "All", markAllRead: "Mark all as read",
+    groups: { klussen: "About your jobs", geld: "Hours & payouts", berichten: "Messages", account: "Account" },
+    sections: { today: "Today", yesterday: "Yesterday", earlier: "Earlier" },
+    empty: "Nothing new — you're up to date.", emptyTab: "No notifications in this tab.", open: "Open", read: "Read",
+  },
   start: {
     eyebrow: "Your start",
     title: "Welcome! First choose which direction you want to take.",
@@ -2860,6 +2868,12 @@ const pl: FreelancerDict = {
       detailVoorbij: "VAT za Q{q} ({range}) zgłaszasz w urzędzie skarbowym przed {datum}. Kwota oszacowana z Twoich faktur self-billing.",
       impact: "Odłóż tę kwotę w skarbonce podatkowej, żeby uniknąć niespodzianek. ZekerFlex już liczy VAT dla każdej faktury za Ciebie.",
     },
+  },
+  meldingen: {
+    bell: "Powiadomienia", close: "Zamknij", all: "Wszystkie", markAllRead: "Oznacz wszystko jako przeczytane",
+    groups: { klussen: "O Twoich zleceniach", geld: "Godziny i wypłaty", berichten: "Wiadomości", account: "Konto" },
+    sections: { today: "Dzisiaj", yesterday: "Wczoraj", earlier: "Wcześniej" },
+    empty: "Nic nowego — jesteś na bieżąco.", emptyTab: "Brak powiadomień w tej karcie.", open: "Otwórz", read: "Przeczytane",
   },
   start: {
     eyebrow: "Twój start",
@@ -4247,6 +4261,12 @@ const ro: FreelancerDict = {
       impact: "Pune această sumă deoparte în fondul tău fiscal ca să nu ai surprize. ZekerFlex calculează deja TVA-ul pentru fiecare factură în locul tău.",
     },
   },
+  meldingen: {
+    bell: "Notificări", close: "Închide", all: "Toate", markAllRead: "Marchează tot ca citit",
+    groups: { klussen: "Despre joburile tale", geld: "Ore și plăți", berichten: "Mesaje", account: "Cont" },
+    sections: { today: "Astăzi", yesterday: "Ieri", earlier: "Mai devreme" },
+    empty: "Nimic nou — ești la zi.", emptyTab: "Nicio notificare în această filă.", open: "Deschide", read: "Citit",
+  },
   start: {
     eyebrow: "Startul tău",
     title: "Bun venit! Alege mai întâi în ce direcție vrei să mergi.",
@@ -5632,6 +5652,12 @@ const uk: FreelancerDict = {
       detailVoorbij: "ПДВ за Q{q} ({range}) ти подаєш у податкову до {datum}. Суму оцінено за твоїми рахунками self-billing.",
       impact: "Відклади цю суму в податковій скарбничці, щоб не було сюрпризів. ZekerFlex уже розраховує ПДВ по кожному рахунку за тебе.",
     },
+  },
+  meldingen: {
+    bell: "Сповіщення", close: "Закрити", all: "Усі", markAllRead: "Позначити все прочитаним",
+    groups: { klussen: "Про твої роботи", geld: "Години й виплати", berichten: "Повідомлення", account: "Акаунт" },
+    sections: { today: "Сьогодні", yesterday: "Вчора", earlier: "Раніше" },
+    empty: "Нічого нового — ти в курсі.", emptyTab: "У цій вкладці немає сповіщень.", open: "Відкрити", read: "Прочитано",
   },
   start: {
     eyebrow: "Твій старт",
