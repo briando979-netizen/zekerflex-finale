@@ -23,6 +23,9 @@ export class AppError extends Error {
   readonly status: number;
   readonly code: ErrorCode;
   readonly details?: unknown;
+  /** vaste sleutel van de melding (lib/i18n/fouten.ts), zodat de werker-app hem in zijn eigen taal toont; de message blijft Nederlands */
+  sleutel?: string;
+  sleutelParams?: Record<string, string | number>;
 
   constructor(
     code: ErrorCode,
@@ -35,6 +38,13 @@ export class AppError extends Error {
     this.code = code;
     this.status = status;
     this.details = details;
+  }
+
+  /** Geeft de fout een sleutel (en eventuele plaatshouders) mee voor de vertaling; verandert niets aan status of message. */
+  metSleutel(sleutel: string, params?: Record<string, string | number>): this {
+    this.sleutel = sleutel;
+    if (params) this.sleutelParams = params;
+    return this;
   }
 
   static unauthenticated(message = "Je bent niet (meer) ingelogd. Log opnieuw in.") {
@@ -104,7 +114,7 @@ export class AppError extends Error {
 }
 
 export interface ErrorBody {
-  error: { code: ErrorCode; message: string; details?: unknown };
+  error: { code: ErrorCode; message: string; details?: unknown; sleutel?: string; params?: Record<string, string | number> };
 }
 
 interface ZodLikeError {
@@ -142,7 +152,15 @@ export function toErrorBody(err: unknown, opts: { logged?: boolean } = {}): {
   if (err instanceof AppError) {
     return {
       status: err.status,
-      body: { error: { code: err.code, message: err.message, details: err.details } },
+      body: {
+        error: {
+          code: err.code,
+          message: err.message,
+          details: err.details,
+          ...(err.sleutel ? { sleutel: err.sleutel } : {}),
+          ...(err.sleutelParams ? { params: err.sleutelParams } : {}),
+        },
+      },
       headers: err.headers,
     };
   }
@@ -154,6 +172,7 @@ export function toErrorBody(err: unknown, opts: { logged?: boolean } = {}): {
           code: "VALIDATION_FAILED",
           message: "Niet alle gegevens zijn goed ingevuld. Controleer je invoer.",
           details: err.flatten ? err.flatten() : err.issues,
+          sleutel: "common.invoer",
         },
       },
       headers: {},
@@ -168,7 +187,7 @@ export function toErrorBody(err: unknown, opts: { logged?: boolean } = {}): {
   }
   return {
     status: 500,
-    body: { error: { code: "INTERNAL", message: "Er ging iets mis aan onze kant. Probeer het later opnieuw." } },
+    body: { error: { code: "INTERNAL", message: "Er ging iets mis aan onze kant. Probeer het later opnieuw.", sleutel: "common.intern" } },
     headers: {},
   };
 }

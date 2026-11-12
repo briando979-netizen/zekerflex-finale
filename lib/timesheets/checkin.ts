@@ -163,7 +163,7 @@ export async function recordGpsEvent(
       : undefined;
     if (earlier) {
       if (earlier.type !== input.type) {
-        throw AppError.conflict("Deze registratie hoort bij een andere actie.");
+        throw AppError.conflict("Deze registratie hoort bij een andere actie.").metSleutel("checkin.andereActie");
       }
       return { kind: "dubbel" as const, earlier, fresh };
     }
@@ -178,13 +178,13 @@ export async function recordGpsEvent(
     const hasCheckOut = events.some((e) => e.type === GpsEventType.CHECK_OUT);
 
     if (input.type === GpsEventType.CHECK_IN && hasCheckIn) {
-      throw AppError.conflict("Je bent al ingecheckt voor deze dienst.");
+      throw AppError.conflict("Je bent al ingecheckt voor deze dienst.").metSleutel("checkin.alIn");
     }
     if (input.type !== GpsEventType.CHECK_IN && !hasCheckIn) {
-      throw AppError.precondition("Check eerst in voordat je uitcheckt.");
+      throw AppError.precondition("Check eerst in voordat je uitcheckt.").metSleutel("checkin.eerstIn");
     }
     if (input.type === GpsEventType.CHECK_OUT && hasCheckOut) {
-      throw AppError.conflict("Je bent al uitgecheckt voor deze dienst.");
+      throw AppError.conflict("Je bent al uitgecheckt voor deze dienst.").metSleutel("checkin.alUit");
     }
 
     let recordedAt: Date;

@@ -42,9 +42,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       throw AppError.validation("Verstuur de foto als multipart/form-data");
     });
     const foto = form.get("foto");
-    if (!(foto instanceof File) || foto.size === 0) throw AppError.validation("Kies een foto van je document.");
-    if (foto.size > MAX_BYTES) throw AppError.validation("De foto is te groot (max 12 MB).");
-    if (!TOEGESTAAN.has(foto.type.toLowerCase())) throw AppError.validation("Gebruik een JPG-, PNG- of WebP-foto.");
+    if (!(foto instanceof File) || foto.size === 0) throw AppError.validation("Kies een foto van je document.").metSleutel("doc.kiesFoto");
+    if (foto.size > MAX_BYTES) throw AppError.validation("De foto is te groot (max 12 MB).").metSleutel("doc.tegroot");
+    if (!TOEGESTAAN.has(foto.type.toLowerCase())) throw AppError.validation("Gebruik een JPG-, PNG- of WebP-foto.").metSleutel("doc.formaat");
 
     const gelezen = await leesMrzVanFoto(Buffer.from(await foto.arrayBuffer()));
     // goed gelezen in de chip-app: verzegeld bewaren als sleutel om de chip te openen (lib/kyc/chip/sessie.ts)

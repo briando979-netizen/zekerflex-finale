@@ -54,7 +54,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
     requireRole(principal, "FREELANCER");
     const input = schema.parse(
       await request.json().catch(() => {
-        throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
+        throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.").metSleutel("common.verzoek");
       }),
     );
 
@@ -105,12 +105,12 @@ export async function PUT(request: Request): Promise<NextResponse> {
     // retyping it.
     if (input.workerKind === "uitzendkracht") {
       if (input.bsn) {
-        if (!validBsn(input.bsn)) throw AppError.validation("Dit BSN klopt niet (elfproef mislukt).");
+        if (!validBsn(input.bsn)) throw AppError.validation("Dit BSN klopt niet (elfproef mislukt).").metSleutel("fiscal.bsnFout");
         const { hash, last4 } = hashBsn(input.bsn);
         patch.bsnHash = hash;
         patch.bsnLast4 = last4;
       } else if (!before.bsnHash) {
-        throw AppError.validation("Voor verloning als uitzendkracht is je BSN nodig.");
+        throw AppError.validation("Voor verloning als uitzendkracht is je BSN nodig.").metSleutel("fiscal.bsnNodig");
       }
     }
 

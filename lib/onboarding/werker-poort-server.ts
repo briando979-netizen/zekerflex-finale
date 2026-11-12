@@ -85,5 +85,5 @@ export async function onboardingKlaarVoorReageren(userId: string): Promise<boole
 
 /** Gooit 412 met ONBOARDING_EERST als de onboarding nog niet af is (geen 403: CrowdSec). */
 export async function eisOnboardingVoorReageren(userId: string): Promise<void> {
-  if (!(await onboardingKlaarVoorReageren(userId))) throw AppError.precondition(ONBOARDING_EERST);
+  if (!(await onboardingKlaarVoorReageren(userId))) throw AppError.precondition(ONBOARDING_EERST).metSleutel("onboarding.eerst");
 }

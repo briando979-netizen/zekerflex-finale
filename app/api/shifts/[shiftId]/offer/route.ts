@@ -30,7 +30,7 @@ export async function POST(request: Request, props: { params: Promise<{ shiftId:
     const { shiftId } = paramsSchema.parse(params);
     const { decision } = bodySchema.parse(
       await request.json().catch(() => {
-        throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
+        throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.").metSleutel("common.verzoek");
       }),
     );
 
@@ -38,7 +38,7 @@ export async function POST(request: Request, props: { params: Promise<{ shiftId:
       where: { userId: principal.userId },
       select: { id: true },
     });
-    if (!profile) throw AppError.forbidden("Je hebt nog geen werkersprofiel. Maak eerst je profiel af.");
+    if (!profile) throw AppError.forbidden("Je hebt nog geen werkersprofiel. Maak eerst je profiel af.").metSleutel("offer.geenProfiel");
 
     // aannemen pas met recht om te werken (lib/werkrecht); afslaan mag altijd
     if (decision === "ACCEPTED") {

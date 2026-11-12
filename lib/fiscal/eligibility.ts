@@ -19,6 +19,8 @@ export interface PayoutEligibility {
   track: "invoice" | "payroll";
   /** null when ok; otherwise a message safe to show the freelancer */
   reason: string | null;
+  /** sleutel van de melding voor de vertaling in de werker-app (lib/i18n/fouten.ts); alleen bij sommige redenen */
+  sleutel?: string;
 }
 
 export async function payoutEligibility(userId: string): Promise<PayoutEligibility> {
@@ -46,6 +48,7 @@ async function fiscalEligibility(userId: string): Promise<PayoutEligibility> {
         ok: false,
         track,
         reason: "Rond je uitzend-gegevens af (BSN en rekeningnummer) om op klussen te reageren.",
+        sleutel: "elig.uitzendGegevens",
       };
     }
     const contract = await activeUitzendContract(userId);
@@ -55,16 +58,17 @@ async function fiscalEligibility(userId: string): Promise<PayoutEligibility> {
       reason: contract
         ? null
         : "Onderteken eerst je uitzendovereenkomst bij Verificatie om op klussen te reageren.",
+      ...(contract ? {} : { sleutel: "elig.contract" }),
     };
   }
 
   const ok = Boolean(profile?.kvkValid || profile?.vatValid || fiscal.vatValid || fiscal.korApplies);
   if (!ok) {
-    return { ok, track, reason: "Je hebt nog geen geldig KVK-nummer of KOR. Maak er een aan om op deze klussen te reageren." };
+    return { ok, track, reason: "Je hebt nog geen geldig KVK-nummer of KOR. Maak er een aan om op deze klussen te reageren.", sleutel: "elig.kvk" };
   }
   // Het IBAN zit sinds 10 nov niet meer in de onboarding: zonder rekeningnummer kunnen we niet uitbetalen
   if (!(profile?.payoutIban || fiscal.iban)) {
-    return { ok: false, track, reason: "Vul je rekeningnummer (IBAN) in bij Verificatie → Bankrekening bevestigen om op klussen te reageren." };
+    return { ok: false, track, reason: "Vul je rekeningnummer (IBAN) in bij Verificatie → Bankrekening bevestigen om op klussen te reageren.", sleutel: "elig.iban" };
   }
   return { ok: true, track, reason: null };
 }

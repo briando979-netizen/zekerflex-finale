@@ -8,7 +8,7 @@ import { recordOfferResponse } from "@/lib/notifications/dispatcher";
 import { isBlockedByAny } from "@/lib/employer/relations";
 import { payoutEligibility } from "@/lib/fiscal/eligibility";
 import { isInvitedToPoolOnlyShift } from "@/lib/pools/store";
-import { findOverlappingShift, overlapMessageSelf } from "@/lib/shifts/worker-overlap";
+import { findOverlappingShift, overlapMessageSelf, overlapParams } from "@/lib/shifts/worker-overlap";
 
 // ---------------------------------------------------------------------------
 // Marketplace self-apply: a verified freelancer browses OPEN shifts and takes
@@ -47,15 +47,20 @@ export async function applyToShift(
       user: { select: { kycStatus: true } },
     },
   });
-  if (!profile) throw AppError.forbidden("Rond eerst je verificatie af.");
+  if (!profile) throw AppError.forbidden("Rond eerst je verificatie af.").metSleutel("apply.verificatie");
   if (profile.user.kycStatus !== "VERIFIED") {
-    throw AppError.precondition("Je kunt pas diensten aannemen als je identiteit is geverifieerd.");
+    throw AppError.precondition("Je kunt pas diensten aannemen als je identiteit is geverifieerd.").metSleutel("apply.identiteit");
   }
   const eligible = await payoutEligibility(userId);
-  if (!eligible.ok) throw AppError.precondition(eligible.reason ?? "Je kunt nog geen diensten aannemen.");
-  if (profile.isBlacklisted) throw AppError.forbidden("Je account kan momenteel geen diensten aannemen.");
+  if (!eligible.ok) {
+    const fout = AppError.precondition(eligible.reason ?? "Je kunt nog geen diensten aannemen.");
+    // een eigen reden zonder sleutel (bv. het recht om te werken) blijft Nederlands; de algemene melding krijgt de sleutel
+    const sleutel = eligible.reason ? eligible.sleutel : "apply.nietKlaar";
+    throw sleutel ? fout.metSleutel(sleutel) : fout;
+  }
+  if (profile.isBlacklisted) throw AppError.forbidden("Je account kan momenteel geen diensten aannemen.").metSleutel("apply.geblokkeerd");
   if (profile.matchingBlockedUntil && profile.matchingBlockedUntil.getTime() > Date.now()) {
-    throw AppError.precondition("Matching is tijdelijk beperkt vanwege Wet DBA-signalen.");
+    throw AppError.precondition("Matching is tijdelijk beperkt vanwege Wet DBA-signalen.").metSleutel("apply.dba");
   }
 
   const shift = await prisma.shift.findUnique({
@@ -72,32 +77,32 @@ export async function applyToShift(
       _count: { select: { assignments: { where: { cancelledAt: null } } } },
     },
   });
-  if (!shift) throw AppError.notFound("Deze dienst bestaat niet meer.");
+  if (!shift) throw AppError.notFound("Deze dienst bestaat niet meer.").metSleutel("apply.bestaatNiet");
   if (shift.viaUitzendbureau && eligible.track !== "payroll") {
-    throw AppError.forbidden("Deze klus is alleen voor uitzendkrachten via het ZekerFlex-uitzendbureau.");
+    throw AppError.forbidden("Deze klus is alleen voor uitzendkrachten via het ZekerFlex-uitzendbureau.").metSleutel("apply.uitzendOnly");
   }
   if (await isBlockedByAny([shift.branch.tenantId], userId)) {
-    throw AppError.forbidden("Deze opdrachtgever neemt op dit moment geen aanmeldingen van je aan.");
+    throw AppError.forbidden("Deze opdrachtgever neemt op dit moment geen aanmeldingen van je aan.").metSleutel("apply.opdrachtgeverWeigert");
   }
   if (shift.visibility === "POOL_ONLY" && !(await isInvitedToPoolOnlyShift(shiftId, userId))) {
-    throw AppError.forbidden("Deze dienst is nog niet open voor aanmeldingen.");
+    throw AppError.forbidden("Deze dienst is nog niet open voor aanmeldingen.").metSleutel("apply.nietOpen");
   }
   if (!OPEN_STATUSES.includes(shift.status as (typeof OPEN_STATUSES)[number])) {
-    throw AppError.conflict("Deze dienst neemt geen aanmeldingen meer aan.");
+    throw AppError.conflict("Deze dienst neemt geen aanmeldingen meer aan.").metSleutel("apply.geenAanmeldingen");
   }
   if (shift.startsAt.getTime() + LATE_ACCEPT_GRACE_MS < Date.now()) {
-    throw AppError.conflict("Deze dienst is al meer dan 2 uur geleden begonnen — aanmelden kan niet meer.");
+    throw AppError.conflict("Deze dienst is al meer dan 2 uur geleden begonnen — aanmelden kan niet meer.").metSleutel("apply.begonnen");
   }
-  if (shift._count.assignments >= shift.positions) throw AppError.conflict("Deze dienst is al vol.");
+  if (shift._count.assignments >= shift.positions) throw AppError.conflict("Deze dienst is al vol.").metSleutel("apply.vol");
 
   const already = await prisma.shiftAssignment.findUnique({
     where: { shiftId_freelancerId: { shiftId, freelancerId: profile.id } },
     select: { id: true, cancelledAt: true },
   });
-  if (already && !already.cancelledAt) throw AppError.conflict("Je hebt deze dienst al aangenomen.");
+  if (already && !already.cancelledAt) throw AppError.conflict("Je hebt deze dienst al aangenomen.").metSleutel("apply.alAangenomen");
   // Eerst hier (vóór de reactie wordt vastgelegd); recordOfferResponse controleert nog eens binnen de transactie.
   const overlap = await findOverlappingShift(prisma, profile.id, { shiftId, startsAt: shift.startsAt, endsAt: shift.endsAt });
-  if (overlap) throw AppError.conflict(overlapMessageSelf(overlap));
+  if (overlap) throw AppError.conflict(overlapMessageSelf(overlap)).metSleutel("apply.overlap", overlapParams(overlap));
 
   const distanceMeters = Math.round(
     haversineMeters(
