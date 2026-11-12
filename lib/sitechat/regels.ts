@@ -1,3 +1,5 @@
+import { GRATIS_PROMPT_BUDGET, PER_BERICHT_TOKENS, laatsteBinnenBudget, schatTokens } from "@/lib/ai/prompt-budget";
+
 // ---------------------------------------------------------------------------
 // Websitechat voor sites die op ZekerFlex draaien: een AI-assistent die
 // antwoordt met de gegevens van het bedrijf, en een medewerker die kan
@@ -134,6 +136,34 @@ export function kiesFragmenten(vraag: string, fragmenten: readonly Fragment[], m
     .slice(0, max)
     .map((x) => x.f);
   return [...vast, ...rest];
+}
+
+/**
+ * Het eigen model (alles gratis) leest maar 2048 tokens (lib/ai/prompt-budget.ts): het systeemdeel met zoveel
+ * fragmenten als passen (in de volgorde van kiesFragmenten, beste eerst; vaste fragmenten voorop) en de nieuwste
+ * berichten die nog passen (hoogstens een kwart van het budget). Niets wordt afgekapt: wat niet past, gaat er heel uit.
+ */
+export function sitechatBinnenBudget<B extends { tekst: string }>(
+  o: { bedrijf: string; omschrijving: string; regels?: readonly string[] },
+  fragmenten: readonly Fragment[],
+  historie: readonly B[],
+  budget: number = GRATIS_PROMPT_BUDGET,
+): { systeem: string; historie: B[] } {
+  const bericht = (b: B) => schatTokens(b.tekst.slice(0, 1500)) + PER_BERICHT_TOKENS;
+  // de laatste vraag gaat altijd mee; daarvoor de nieuwste berichten tot een kwart van het budget
+  const laatste = historie.slice(-1);
+  const eerder = laatsteBinnenBudget(historie.slice(0, -1), bericht, Math.floor(budget / 4));
+  const gesprek = [...eerder, ...laatste];
+  let over = budget - gesprek.reduce((s, b) => s + bericht(b), 0) - schatTokens(bouwSysteem(o, [])) - PER_BERICHT_TOKENS;
+  const gekozen: Fragment[] = [];
+  for (const f of fragmenten) {
+    const t = schatTokens(`\n## ${f.titel}\n${f.tekst}\n`);
+    if (t <= over) {
+      gekozen.push(f);
+      over -= t;
+    }
+  }
+  return { systeem: bouwSysteem(o, gekozen), historie: gesprek };
 }
 
 export function bouwSysteem(o: { bedrijf: string; omschrijving: string; regels?: readonly string[] }, fragmenten: readonly Fragment[]): string {

@@ -3,7 +3,8 @@ import { fixedWindow } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import { inspectPrompt } from "@/lib/security/prompt-guard";
 import { voegBerichtToe } from "@/lib/sitechat/gesprek";
-import { aiMagAntwoorden, antwoordZonderModel, bouwSysteem, kiesFragmenten, type Fragment } from "@/lib/sitechat/regels";
+import { aiMagAntwoorden, antwoordZonderModel, bouwSysteem, kiesFragmenten, sitechatBinnenBudget, type Fragment } from "@/lib/sitechat/regels";
+import { gratisAan } from "@/lib/ai/gratis";
 
 // ---------------------------------------------------------------------------
 // Het antwoord van de assistent, met hetzelfde taalmodel als de chat op de
@@ -91,6 +92,9 @@ export async function chatAntwoord(v: ChatVerzoek, kennis: () => Promise<Kennis>
   if (llmConfigProblem()) return stroom(terugval, terugval, bewaar);
 
   try {
+    const site = { bedrijf: k.bedrijf, omschrijving: k.omschrijving, ...(k.regels ? { regels: k.regels } : {}) };
+    // het eigen model (alles gratis) leest maar 2048 tokens: zoveel fragmenten en berichten als passen
+    const p = gratisAan() ? sitechatBinnenBudget(site, fragmenten, v.berichten.slice(-10)) : { systeem: bouwSysteem(site, fragmenten), historie: v.berichten.slice(-10) };
     const gen = chatStream({
       purpose: "public-chat",
       model: fastModel(),
@@ -98,8 +102,8 @@ export async function chatAntwoord(v: ChatVerzoek, kennis: () => Promise<Kennis>
       maxTokens: 320,
       retry: false,
       messages: [
-        { role: "system", content: bouwSysteem({ bedrijf: k.bedrijf, omschrijving: k.omschrijving, ...(k.regels ? { regels: k.regels } : {}) }, fragmenten) },
-        ...v.berichten.slice(-10).map((b) => ({ role: b.rol === "gast" ? ("user" as const) : ("assistant" as const), content: b.tekst.slice(0, 1500) })),
+        { role: "system", content: p.systeem },
+        ...p.historie.map((b) => ({ role: b.rol === "gast" ? ("user" as const) : ("assistant" as const), content: b.tekst.slice(0, 1500) })),
       ],
     });
     return stroom(gen, terugval, bewaar);
@@ -140,6 +144,8 @@ export async function chatAntwoordTekst(
   await ensureAiNode().catch(() => undefined);
   if (llmConfigProblem()) return bewaar(terugval);
   try {
+    const site = { bedrijf: k.bedrijf, omschrijving: k.omschrijving, ...(k.regels ? { regels: k.regels } : {}) };
+    const p = gratisAan() ? sitechatBinnenBudget(site, fragmenten, historie) : { systeem: bouwSysteem(site, fragmenten), historie };
     const r = await chat({
       purpose: "public-chat",
       model: fastModel(),
@@ -149,8 +155,8 @@ export async function chatAntwoordTekst(
       timeoutMs: 25_000,
       interactief: true,
       messages: [
-        { role: "system", content: bouwSysteem({ bedrijf: k.bedrijf, omschrijving: k.omschrijving, ...(k.regels ? { regels: k.regels } : {}) }, fragmenten) },
-        ...historie.map((b) => ({ role: b.rol === "gast" ? ("user" as const) : ("assistant" as const), content: b.tekst.slice(0, 1500) })),
+        { role: "system", content: p.systeem },
+        ...p.historie.map((b) => ({ role: b.rol === "gast" ? ("user" as const) : ("assistant" as const), content: b.tekst.slice(0, 1500) })),
       ],
     });
     return bewaar(r.text.trim() || terugval);
