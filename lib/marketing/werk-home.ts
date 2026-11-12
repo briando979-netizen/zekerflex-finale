@@ -21,7 +21,9 @@ export const WERK_HERO = {
   knop: "Maak gratis je profiel",
   knop2: "Bekijk klussen",
   punten: ["Gratis voor werkers", "Klaar in een paar minuten", "In vijf talen"],
-  fotoAlt: "Een lachende serveerster aan het werk in een café",
+  /** een staande foto: op de telefoon bovenaan, op een groter scherm als strook rechts (12 nov 2026, eigenaar: "een blonde dame, student ofzo") */
+  foto: "/werk/hero-barista.jpg",
+  fotoAlt: "Een lachende jonge barista met een koffiekan achter de bar",
 } as const;
 
 export interface WerkGroep {

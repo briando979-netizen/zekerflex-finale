@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { BEDRIJVEN_HOME, WERK_AANMELDEN, WERK_FAQ, WERK_GROEPEN, WERK_HERO, WERK_SLOT, WERK_STAPPEN, WERK_VOORDELEN, werkFaqJsonLd } from "@/lib/marketing/werk-home";
 import { SEO_STANDAARD } from "@/lib/ontwerp/seo";
@@ -32,7 +32,10 @@ describe("homepagina voor werkzoekenden", () => {
     expect(SEO_STANDAARD["/"].omschrijving).not.toContain("3,50");
     expect(SEO_STANDAARD["/bedrijven"].omschrijving).toContain("€ 3,50");
     for (const g of WERK_GROEPEN) expect(existsSync(join(process.cwd(), "public", g.foto)), g.foto).toBe(true);
-    expect(existsSync(join(process.cwd(), "public", "werk", "hero.jpg"))).toBe(true);
+    expect(existsSync(join(process.cwd(), "public", WERK_HERO.foto))).toBe(true);
+    // elke foto in public/werk staat in CREDITS.md (herkomst en licentie)
+    const credits = readFileSync(join(process.cwd(), "public", "werk", "CREDITS.md"), "utf8");
+    for (const f of [WERK_HERO.foto, ...WERK_GROEPEN.map((g) => g.foto)]) expect(credits, f).toContain(f.split("/").pop());
     expect(existsSync(join(process.cwd(), "public", "werk", "CREDITS.md"))).toBe(true);
   });
 

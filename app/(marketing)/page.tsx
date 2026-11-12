@@ -46,18 +46,21 @@ export default function WerkHomePage() {
 
       {/* ───────────────────────────────────────────────── opening */}
       <section className="relative isolate overflow-hidden bg-[#0C0E12] text-white">
-        <Image
-          src="/werk/hero.jpg"
-          alt={WERK_HERO.fotoAlt}
-          fill
-          priority
-          sizes="100vw"
-          className="-z-20 object-cover object-[72%_22%] md:object-[70%_12%]"
-        />
-        {/* telefoon: de foto boven, de tekst eronder op donker; groter scherm: de tekst links op donker, de foto rechts */}
-        <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-t from-[#0C0E12] from-45% via-[#0C0E12]/80 to-[#0C0E12]/10 md:bg-gradient-to-r md:from-[#0C0E12] md:from-25% md:via-[#0C0E12]/80 md:to-transparent" />
+        {/* telefoon: de foto als vlak bovenaan, de tekst eronder op donker; groter scherm: de tekst links op donker, de foto als strook
+            rechts (een staande foto: zo blijft het gezicht heel en dichtbij genoeg) */}
+        <div className="absolute inset-x-0 top-0 -z-10 h-[22rem] md:inset-y-0 md:left-auto md:h-auto md:w-[40%]">
+          <Image
+            src={WERK_HERO.foto}
+            alt={WERK_HERO.fotoAlt}
+            fill
+            priority
+            sizes="(min-width: 768px) 40vw, 100vw"
+            className="object-cover object-[50%_18%] md:object-[50%_28%]"
+          />
+          <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#0C0E12] via-[#0C0E12]/30 via-40% to-transparent md:bg-gradient-to-r md:via-[#0C0E12]/40 md:via-25% md:to-50%" />
+        </div>
         <div className="shell-4k relative pb-8 pt-[15rem] md:py-14 lg:py-16">
-          <div className="max-w-xl">
+          <div className="max-w-xl md:max-w-sm lg:max-w-xl">
             <Link
               href={BEDRIJVEN_HOME}
               className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white/80 backdrop-blur transition hover:bg-white/15"
