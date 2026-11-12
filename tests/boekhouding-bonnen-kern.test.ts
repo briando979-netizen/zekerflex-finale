@@ -8,6 +8,7 @@ import {
   isBonnetjesMail,
   isEigenAfzender,
   mailSleutel,
+  ARC_MAX_I,
   authservLijst,
   parseAuthenticationResults,
   parseKop,
@@ -350,6 +351,16 @@ describe("ARC-Authentication-Results (TransIP)", () => {
     expect(parseAuthenticationResults(arc(`i=3; scott201; ${ok}`, `i=3; vervalst.example; ${ok}`), IDS).spf).toBeNull();
     // geen lijst gegeven: ARC wordt niet vertrouwd
     expect(parseAuthenticationResults(arc(`i=1; scott201; ${ok}`)).spf).toBeNull();
+  });
+
+  it("een vervalser met i=50 (het maximum van ARC, daar kan onze server niets bovenop zetten) of i=4 telt nooit", () => {
+    expect(ARC_MAX_I).toBe(3);
+    const vervalst = (i: number) => arc(`i=1; scott201; spf=fail; dkim=none`, `i=${i}; scott201; ${ok}`);
+    expect(parseAuthenticationResults(vervalst(50), IDS)).toEqual({ spf: null, dkim: null, dkimDomein: null });
+    expect(parseAuthenticationResults(vervalst(4), IDS)).toEqual({ spf: null, dkim: null, dkimDomein: null });
+    expect(spfDkimGeslaagd(parseAuthenticationResults(vervalst(50), IDS), "factuur@hetzner.com")).toBe(false);
+    // de gemeten gevallen: direct (i=1) en via het alias (i=2), en de grens zelf (i=3)
+    for (const i of [1, 2, 3]) expect(parseAuthenticationResults(arc(`i=${i}; scott202; ${ok}`), IDS).spf, `i=${i}`).toBe("pass");
   });
 
   it("een gewone regel van een vertrouwde server gaat vóór ARC; zonder die regel valt het terug op ARC", () => {

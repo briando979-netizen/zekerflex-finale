@@ -95,6 +95,13 @@ export function authservLijst(extra?: string | null): string[] {
   return [...uit];
 }
 
+/**
+ * Hoogste ARC-nummer (i) dat we vertrouwen. Gemeten op de echte postbus: direct i=1, via het alias i=2. ARC stopt bij
+ * i=50 (RFC 8617): een vervalser die zelf "i=50; scott201; spf=pass ..." meestuurt staat anders bovenaan, want onze
+ * server kan er geen i=51 meer bij zetten. Een hogere i dan dit telt dus niet.
+ */
+export const ARC_MAX_I = 3;
+
 const authservId = (regel: string): string => (regel.split(";")[0] ?? "").trim().split(/\s+/)[0]?.toLowerCase() ?? "";
 
 function leesUitslagen(delen: readonly string[]): Authenticatie {
@@ -119,7 +126,8 @@ function leesUitslagen(delen: readonly string[]): Authenticatie {
 /**
  * De uitslagen uit de ARC-Authentication-Results ("i=1; scott201; spf=pass ...") met de HOOGSTE i, alleen als die regel
  * van een vertrouwde server komt. TransIP zet SPF en DKIM hier neer (niet in Authentication-Results). Een nagemaakte
- * regel van de afzender zit er altijd onder (lagere i: onze server zet er daarna zijn eigen bij). Staan er twee regels
+ * regel van de afzender zit er altijd onder (lagere i: onze server zet er daarna zijn eigen bij), tenzij die i=50 meestuurt
+ * (zie ARC_MAX_I): een hoogste i boven ARC_MAX_I telt nooit. Staan er twee regels
  * met dezelfde hoogste i en is er één niet vertrouwd, dan telt niets.
  */
 function arcUitslagen(kop: Kopregels, toegestaan: ReadonlySet<string>): readonly string[] | null {
@@ -132,6 +140,7 @@ function arcUitslagen(kop: Kopregels, toegestaan: ReadonlySet<string>): readonly
   });
   if (regels.length === 0) return null;
   const hoogste = Math.max(...regels.map((r) => r.i));
+  if (hoogste > ARC_MAX_I) return null;
   const top = regels.filter((r) => r.i === hoogste);
   if (top.some((r) => !toegestaan.has(r.id))) return null;
   return top[0]?.methoden ?? null;
