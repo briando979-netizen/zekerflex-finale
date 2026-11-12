@@ -343,8 +343,6 @@ export interface AuthDict {
       chipNietEcht: string;
       chipFout: string;
       chipAppHint: string;
-      chipWebHint: string;
-      chipWebLink: string;
       chipOverslaan: string;
       /** de chip vooraf noemen (alleen in de app die hem leest) en de uitleg in stappen (13 nov 2026) */
       chipVooraf: string;
@@ -734,8 +732,6 @@ const nl: AuthDict = {
       chipNietEcht: "We konden de chip niet volledig als echt bevestigen. Een medewerker kijkt mee; je kunt gewoon verder.",
       chipFout: "Het lezen van de chip lukte niet. Haal het hoesje eraf, schuif langzaam over de achterkant van je telefoon en houd stil zodra hij trilt. Probeer het opnieuw.",
       chipAppHint: "Heeft je ID-kaart of paspoort een chip? Na de foto van de kant met de code lees je de chip met NFC: sneller en veiliger.",
-      chipWebHint: "Je ID scannen met NFC kan alleen in de ZekerFlex-app voor iPhone of Android.",
-      chipWebLink: "Download de app",
       chipOverslaan: "Zonder chip verder",
       chipVooraf: "We lezen ook de chip van je document: sneller en veiliger. Dat duurt ongeveer 10 seconden.",
       chipStap1: "Haal je telefoon uit het hoesje.",
@@ -1122,8 +1118,6 @@ const en: AuthDict = {
       chipNietEcht: "We couldn't fully confirm the chip as genuine. A staff member will check; you can just continue.",
       chipFout: "Reading the chip didn't work. Take off the case, slide slowly over the back of your phone and hold still as soon as it vibrates. Try again.",
       chipAppHint: "Does your ID card or passport have a chip? After the photo of the side with the code, you read the chip with NFC: faster and safer.",
-      chipWebHint: "Scanning your ID with NFC only works in the ZekerFlex app for iPhone or Android.",
-      chipWebLink: "Get the app",
       chipOverslaan: "Continue without chip",
       chipVooraf: "We also read the chip in your document: faster and safer. It takes about 10 seconds.",
       chipStap1: "Take your phone out of its case.",
@@ -1510,8 +1504,6 @@ const pl: AuthDict = {
       chipNietEcht: "Nie udało się w pełni potwierdzić autentyczności chipu. Sprawdzi to pracownik; możesz kontynuować.",
       chipFout: "Nie udało się odczytać chipu. Zdejmij etui, przesuwaj powoli po tylnej części telefonu i zatrzymaj się, gdy zawibruje. Spróbuj ponownie.",
       chipAppHint: "Czy Twój dowód osobisty lub paszport ma chip? Po zdjęciu strony z kodem odczytasz chip przez NFC: szybciej i bezpieczniej.",
-      chipWebHint: "Skanowanie dokumentu przez NFC działa tylko w aplikacji ZekerFlex na iPhone'a lub Androida.",
-      chipWebLink: "Pobierz aplikację",
       chipOverslaan: "Dalej bez chipu",
       chipVooraf: "Odczytamy też chip Twojego dokumentu: szybciej i bezpieczniej. To trwa około 10 sekund.",
       chipStap1: "Wyjmij telefon z etui.",
@@ -1898,8 +1890,6 @@ const ro: AuthDict = {
       chipNietEcht: "Nu am putut confirma complet autenticitatea cipului. Verifică un angajat; poți continua.",
       chipFout: "Citirea cipului nu a reușit. Scoate husa, glisează încet pe spatele telefonului și ține nemișcat imediat ce vibrează. Încearcă din nou.",
       chipAppHint: "Are cartea ta de identitate sau pașaportul un cip? După poza părții cu codul, citești cipul prin NFC: mai rapid și mai sigur.",
-      chipWebHint: "Scanarea actului prin NFC funcționează doar în aplicația ZekerFlex pentru iPhone sau Android.",
-      chipWebLink: "Descarcă aplicația",
       chipOverslaan: "Continuă fără cip",
       chipVooraf: "Citim și cipul documentului tău: mai rapid și mai sigur. Durează aproximativ 10 secunde.",
       chipStap1: "Scoate telefonul din husă.",
@@ -2286,8 +2276,6 @@ const uk: AuthDict = {
       chipNietEcht: "Не вдалося повністю підтвердити справжність чипа. Перевірить працівник; можна продовжувати.",
       chipFout: "Не вдалося зчитати чип. Зніміть чохол, повільно проведіть по задній панелі телефона й тримайте нерухомо, щойно він завібрує. Спробуйте ще раз.",
       chipAppHint: "Чи є в твоєму ID чи паспорті чип? Після фото сторони з кодом ти зчитуєш чип через NFC: швидше й безпечніше.",
-      chipWebHint: "Сканування документа через NFC працює лише в застосунку ZekerFlex для iPhone або Android.",
-      chipWebLink: "Завантажити застосунок",
       chipOverslaan: "Далі без чипа",
       chipVooraf: "Ми також зчитаємо чип вашого документа: швидше й безпечніше. Це триває близько 10 секунд.",
       chipStap1: "Вийміть телефон із чохла.",

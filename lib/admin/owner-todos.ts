@@ -625,6 +625,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
         "Productie (of Gesloten testen voor andere testers) pas als Claude meldt dat de chipcontrole op de server helemaal klaar is: Productie → Nieuwe release → Toevoegen uit bibliotheek → versie 6.",
         "Kan een melding over 'verouderde API's' blijven staan? Die komt uit een onderdeel van Google zelf (androidbrowserhelper), niet uit onze code, en houdt de release niet tegen.",
         "Wil je dat Claude een volgende versie zelf uploadt: koppel Google Play (taak 'Google Play koppelen', Admin → Google Play) en geef dat serviceaccount in Play Console bij Gebruikers en rechten toegang tot ZekerFlex met het recht om releases te beheren.",
+        "Staat de app openbaar in de Play Store (Productie)? Laat het Claude weten: dan kan in de ID-scan in een Android-browser de regel 'Met de ZekerFlex-app voor Android gaat het sneller via de chip van je document' terug, met een link naar de app. Tot dan beloven we die chip in de browser niet (13 nov).",
         "Vink deze taak af zodra de release in Google Play live staat.",
       ],
       auto: false,
