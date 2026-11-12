@@ -6,7 +6,7 @@ import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 // Het scherm "Werkvorm & fiscale gegevens" en het uitzendpaneel in de werker-app zijn vijftalig; Nederlands blijft woord voor woord wat er stond.
 
 const TALEN = ["nl", "en", "pl", "ro", "uk"] as const;
-const SECTIES = ["fiscaalForm", "uitzendPanel"] as const;
+const SECTIES = ["fiscaalForm", "uitzendPanel", "restTaal"] as const;
 const bron = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8").split("\r\n").join("\n");
 const plaats = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]!).sort().join(",");
 
