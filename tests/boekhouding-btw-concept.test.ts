@@ -24,12 +24,11 @@ vi.mock("@/lib/prisma", () => {
     boekBon: { findMany: async () => m.bonBoekingen },
     boekBtwPeriode: {
       upsert: async ({ create }: Rij) => {
-        let p = m.perioden.find((x) => x.administratieId === create.administratieId && x.jaar === create.jaar && x.kwartaal === create.kwartaal);
-        if (!p) {
-          p = { id: `per${m.perioden.length + 1}`, ...create };
-          m.perioden.push(p);
-        }
-        return { id: p.id };
+        const bestaand = m.perioden.find((x) => x.administratieId === create.administratieId && x.jaar === create.jaar && x.kwartaal === create.kwartaal);
+        if (bestaand) return { id: bestaand.id };
+        const nieuw: Rij = { id: `per${m.perioden.length + 1}`, ...create };
+        m.perioden.push(nieuw);
+        return { id: nieuw.id };
       },
       findUnique: async ({ where }: Rij) => {
         const k = where.administratieId_jaar_kwartaal;
