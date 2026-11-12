@@ -5,7 +5,7 @@ import { reviewSummary } from "@/lib/reviews/store";
 import { levelFor } from "@/lib/rewards/levels";
 import { LATE_CANCEL_RELIABILITY_PENALTY, NO_SHOW_RELIABILITY_PENALTY } from "@/lib/claims/policy";
 import { kvGet, kvSet } from "@/lib/storage/kv";
-import { sendUserPush } from "@/lib/notifications/push";
+import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { testklusIds } from "@/lib/shifts/testklus-db";
 
 // ---------------------------------------------------------------------------
@@ -107,20 +107,14 @@ export interface StatsSyncResult {
   badgeDown: number;
 }
 
-const BADGE_PUSH: Partial<Record<BadgeLevel, { title: string; body: string }>> = {
-  SILVER: { title: "🥈 Je bent nu Zilver", body: "Opdrachtgevers zien je zilveren badge en je krijgt een klein voordeel in de matching." },
-  GOLD: { title: "🥇 Je bent nu Goud", body: "Voorrang in de matching: je komt eerder in beeld bij nieuwe diensten." },
-  PLATINUM: { title: "💎 Je bent nu Platina", body: "De hoogste badge, met de meeste voorrang in de matching. Knap werk!" },
-};
-
 /** Eén felicitatie per niveau, ooit: zakt iemand en stijgt hij weer, dan geen tweede push. */
 async function congratulate(userId: string, level: BadgeLevel): Promise<void> {
-  const msg = BADGE_PUSH[level];
-  if (!msg) return;
+  // de felicitatie staat in WORKER_PUSH (lib/i18n/worker-push.ts), in de app-taal van de werker; Brons krijgt er geen
+  if (level !== "SILVER" && level !== "GOLD" && level !== "PLATINUM") return;
   const key = `badge-push:${userId}:${level}`;
   if (await kvGet(key)) return;
   await kvSet(key, { at: new Date().toISOString() });
-  await sendUserPush([userId], { ...msg, data: { type: "REWARD", url: "/dashboard/account", tag: `badge-${level}` }, ttlSeconds: 3 * 24 * 3600 });
+  await sendLocalizedPush([userId], (t) => ({ ...t.badge[level], data: { type: "REWARD", url: "/dashboard/account", tag: `badge-${level}` }, ttlSeconds: 3 * 24 * 3600 }));
 }
 
 export async function syncWorkerStats(now = new Date()): Promise<StatsSyncResult> {

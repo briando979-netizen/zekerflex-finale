@@ -77,6 +77,37 @@ export interface WorkerPushTexts {
   /** een klusvoorstel van de matching (lib/notifications/dispatcher.ts): titel, en plek · stad · tarief · reistijd */
   offerTitle: (title: string) => string;
   offerBody: (plek: string, stad: string, tarief: string, minuten: number) => string;
+  /** administratie-mijlpalen (lib/worker/milestone-push.ts); bij btw en KOR volgt de mijlpaaltekst in dezelfde taal */
+  msBtwTitle: string;
+  msUrenTitle: string;
+  msUrenBody: string;
+  msSpreidingTitle: string;
+  msSpreidingBody: (headline: string) => string;
+  msKorTitle: string;
+  /** badge omhoog (lib/worker/stats-sync.ts) */
+  badge: Record<"SILVER" | "GOLD" | "PLATINUM", { title: string; body: string }>;
+  /** bedrijf geverifieerd: bevestig je klus (lib/company/verified.ts) */
+  verifiedTitle: string;
+  verifiedBody: (company: string, title: string) => string;
+  /** uren invullen (lib/autopilot/actions.ts) */
+  hoursReminderTitle: string;
+  hoursReminderBody: (title: string, branch: string, time: string) => string;
+  /** uitbetaling geblokkeerd door een onvolledig profiel (lib/timesheets/approve.ts) */
+  payoutIncompleteTitle: string;
+  payoutIncompleteBody: (reason: "iban" | "dest" | "pending") => string;
+  /** kentekenherkenning bij de slagboom (lib/locatie/toegang.ts) */
+  welcomeTitle: (venue: string) => string;
+  welcomeBody: (plate: string) => string;
+  /** testmelding (app/api/me/push/test) */
+  testTitle: string;
+  testBody: string;
+  /** chat en bellen (lib/messaging/notify.ts) */
+  callTitle: (name: string, video: boolean) => string;
+  callBody: string;
+  missedTitle: (name: string) => string;
+  missedVideoBody: string;
+  missedBody: string;
+  newMessage: string;
 }
 
 export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
@@ -143,6 +174,34 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     idOkBody: "Je kunt op klussen reageren zodra de rest van je aanmelding klopt. Een duidelijke foto en je werkervaring helpen opdrachtgevers je te kiezen.",
     offerTitle: (t) => `Nieuwe klus: ${t}`,
     offerBody: (p, c, r, m) => `${p}, ${c} · ${r} · ±${m} min reizen`,
+    msBtwTitle: "🧾 Btw-aangifte bijna",
+    msUrenTitle: "⏱️ 1.225 uur gehaald!",
+    msUrenBody: "Je hebt het urencriterium gehaald — je komt in aanmerking voor de zelfstandigenaftrek. Bekijk wat dat voor je betekent.",
+    msSpreidingTitle: "⚖️ Let op je spreiding over opdrachtgevers",
+    msSpreidingBody: (h) => `Je omzet: ${h}. Werk ook voor andere opdrachtgevers, zodat je in lijn blijft met de Wet DBA.`,
+    msKorTitle: "📊 Let op je KOR-grens",
+    badge: {
+      SILVER: { title: "🥈 Je bent nu Zilver", body: "Opdrachtgevers zien je zilveren badge en je krijgt een klein voordeel in de matching." },
+      GOLD: { title: "🥇 Je bent nu Goud", body: "Voorrang in de matching: je komt eerder in beeld bij nieuwe diensten." },
+      PLATINUM: { title: "💎 Je bent nu Platina", body: "De hoogste badge, met de meeste voorrang in de matching. Knap werk!" },
+    },
+    verifiedTitle: "Bedrijf geverifieerd — bevestig je klus",
+    verifiedBody: (c, t) => `${c} is goedgekeurd. Tik op "Aannemen" bij "${t}" om ingepland te worden.`,
+    hoursReminderTitle: "🕒 Vul je uren in",
+    hoursReminderBody: (t, b, tm) => `${t} bij ${b} (${tm}) — dien je uren in, dan kan de uitbetaling starten.`,
+    payoutIncompleteTitle: "Vul je gegevens aan om uitbetaald te worden",
+    payoutIncompleteBody: (r) =>
+      `Je uren kunnen nog niet goedgekeurd en uitbetaald worden: ${r === "iban" ? "er staat nog geen geldig rekeningnummer (IBAN) op je profiel." : r === "dest" ? "er is nog geen uitbetaalbestemming op je profiel ingesteld." : "je rekeningnummer is recent gewijzigd en nog niet geverifieerd."} Vul je profiel 100% in (o.a. je bankrekening/IBAN).`,
+    welcomeTitle: (v) => `👋 Welkom bij ${v}`,
+    welcomeBody: (p) => `Je kenteken ${p} is herkend, de slagboom gaat open. Vergeet niet in te checken in de app.`,
+    testTitle: "🔔 Testmelding van ZekerFlex",
+    testBody: "Top — je meldingen werken. Zo krijg je straks een seintje bij een dienst die begint.",
+    callTitle: (n, v) => (v ? `📹 ${n} belt je (video)` : `📞 ${n} belt je`),
+    callBody: "Tik om op te nemen in ZekerFlex.",
+    missedTitle: (n) => `Gemiste oproep van ${n}`,
+    missedVideoBody: "📹 Videogesprek — tik om terug te bellen.",
+    missedBody: "📞 Tik om terug te bellen.",
+    newMessage: "Nieuw bericht",
   },
   en: {
     hours: "hours",
@@ -207,6 +266,34 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     idOkBody: "You can respond to jobs as soon as the rest of your sign-up is in order. A clear photo and your work experience help clients choose you.",
     offerTitle: (t) => `New job: ${t}`,
     offerBody: (p, c, r, m) => `${p}, ${c} · ${r} · ~${m} min travel`,
+    msBtwTitle: "🧾 VAT return due soon",
+    msUrenTitle: "⏱️ 1,225 hours reached!",
+    msUrenBody: "You've reached the hours criterion — you qualify for the self-employed deduction. See what that means for you.",
+    msSpreidingTitle: "⚖️ Mind your spread across clients",
+    msSpreidingBody: (h) => `Your revenue: ${h}. Work for other clients too, so you stay in line with the Wet DBA.`,
+    msKorTitle: "📊 Mind your KOR limit",
+    badge: {
+      SILVER: { title: "🥈 You're now Silver", body: "Clients see your silver badge and you get a small advantage in matching." },
+      GOLD: { title: "🥇 You're now Gold", body: "Priority in matching: you show up sooner for new shifts." },
+      PLATINUM: { title: "💎 You're now Platinum", body: "The highest badge, with the most priority in matching. Great work!" },
+    },
+    verifiedTitle: "Company verified — confirm your job",
+    verifiedBody: (c, t) => `${c} has been approved. Tap "Accept" on "${t}" to get scheduled.`,
+    hoursReminderTitle: "🕒 Fill in your hours",
+    hoursReminderBody: (t, b, tm) => `${t} at ${b} (${tm}) — submit your hours so the payout can start.`,
+    payoutIncompleteTitle: "Complete your details to get paid",
+    payoutIncompleteBody: (r) =>
+      `Your hours can't be approved and paid yet: ${r === "iban" ? "there is no valid bank account (IBAN) on your profile yet." : r === "dest" ? "no payout destination is set on your profile yet." : "your bank account was changed recently and isn't verified yet."} Complete your profile 100% (including your bank account/IBAN).`,
+    welcomeTitle: (v) => `👋 Welcome to ${v}`,
+    welcomeBody: (p) => `Your licence plate ${p} was recognised, the barrier is opening. Don't forget to check in in the app.`,
+    testTitle: "🔔 Test notification from ZekerFlex",
+    testBody: "Great — your notifications work. This is how you'll be alerted when a shift is about to start.",
+    callTitle: (n, v) => (v ? `📹 ${n} is calling you (video)` : `📞 ${n} is calling you`),
+    callBody: "Tap to answer in ZekerFlex.",
+    missedTitle: (n) => `Missed call from ${n}`,
+    missedVideoBody: "📹 Video call — tap to call back.",
+    missedBody: "📞 Tap to call back.",
+    newMessage: "New message",
   },
   pl: {
     hours: "godz.",
@@ -271,6 +358,34 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     idOkBody: "Możesz odpowiadać na zlecenia, gdy reszta Twojej rejestracji będzie w porządku. Wyraźne zdjęcie i doświadczenie zawodowe pomagają zleceniodawcom Cię wybrać.",
     offerTitle: (t) => `Nowe zlecenie: ${t}`,
     offerBody: (p, c, r, m) => `${p}, ${c} · ${r} · ok. ${m} min dojazdu`,
+    msBtwTitle: "🧾 Zbliża się deklaracja VAT",
+    msUrenTitle: "⏱️ Osiągnięto 1225 godzin!",
+    msUrenBody: "Kryterium godzin zostało spełnione — kwalifikujesz się do ulgi dla samozatrudnionych. Zobacz, co to dla Ciebie oznacza.",
+    msSpreidingTitle: "⚖️ Uwaga na rozłożenie zleceniodawców",
+    msSpreidingBody: (h) => `Twój obrót: ${h}. Pracuj też dla innych zleceniodawców, aby zachować zgodność z Wet DBA.`,
+    msKorTitle: "📊 Uwaga na limit KOR",
+    badge: {
+      SILVER: { title: "🥈 Masz teraz Srebro", body: "Zleceniodawcy widzą Twoją srebrną odznakę, a Ty zyskujesz małą przewagę w dopasowaniu." },
+      GOLD: { title: "🥇 Masz teraz Złoto", body: "Pierwszeństwo w dopasowaniu: szybciej pojawiasz się przy nowych zleceniach." },
+      PLATINUM: { title: "💎 Masz teraz Platynę", body: "Najwyższa odznaka z największym pierwszeństwem w dopasowaniu. Świetna robota!" },
+    },
+    verifiedTitle: "Firma zweryfikowana — potwierdź zlecenie",
+    verifiedBody: (c, t) => `${c} została zatwierdzona. Stuknij „Przyjmij” przy „${t}”, aby trafić do grafiku.`,
+    hoursReminderTitle: "🕒 Uzupełnij godziny",
+    hoursReminderBody: (t, b, tm) => `${t} w ${b} (${tm}) — wyślij godziny, aby wypłata mogła ruszyć.`,
+    payoutIncompleteTitle: "Uzupełnij dane, aby dostać wypłatę",
+    payoutIncompleteBody: (r) =>
+      `Twoje godziny nie mogą jeszcze zostać zatwierdzone i wypłacone: ${r === "iban" ? "w Twoim profilu nie ma jeszcze prawidłowego numeru konta (IBAN)." : r === "dest" ? "w Twoim profilu nie ustawiono jeszcze miejsca wypłaty." : "Twój numer konta został niedawno zmieniony i nie jest jeszcze zweryfikowany."} Uzupełnij profil w 100% (m.in. konto bankowe/IBAN).`,
+    welcomeTitle: (v) => `👋 Witamy w ${v}`,
+    welcomeBody: (p) => `Twoja tablica ${p} została rozpoznana, szlaban się otwiera. Pamiętaj, aby zameldować się w aplikacji.`,
+    testTitle: "🔔 Powiadomienie testowe od ZekerFlex",
+    testBody: "Świetnie — powiadomienia działają. Tak dostaniesz sygnał, gdy zlecenie się zaczyna.",
+    callTitle: (n, v) => (v ? `📹 ${n} dzwoni do Ciebie (wideo)` : `📞 ${n} dzwoni do Ciebie`),
+    callBody: "Stuknij, aby odebrać w ZekerFlex.",
+    missedTitle: (n) => `Nieodebrane połączenie od ${n}`,
+    missedVideoBody: "📹 Rozmowa wideo — stuknij, aby oddzwonić.",
+    missedBody: "📞 Stuknij, aby oddzwonić.",
+    newMessage: "Nowa wiadomość",
   },
   ro: {
     hours: "ore",
@@ -335,6 +450,34 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     idOkBody: "Poți răspunde la lucrări imediat ce restul înregistrării tale este în regulă. O fotografie clară și experiența ta de muncă îi ajută pe clienți să te aleagă.",
     offerTitle: (t) => `Job nou: ${t}`,
     offerBody: (p, c, r, m) => `${p}, ${c} · ${r} · ~${m} min de drum`,
+    msBtwTitle: "🧾 Declarația de TVA se apropie",
+    msUrenTitle: "⏱️ Ai atins 1.225 de ore!",
+    msUrenBody: "Ai atins criteriul orelor — te califici pentru deducerea pentru persoane independente. Vezi ce înseamnă asta pentru tine.",
+    msSpreidingTitle: "⚖️ Atenție la distribuția între clienți",
+    msSpreidingBody: (h) => `Veniturile tale: ${h}. Lucrează și pentru alți clienți, ca să rămâi în linie cu Wet DBA.`,
+    msKorTitle: "📊 Atenție la limita KOR",
+    badge: {
+      SILVER: { title: "🥈 Acum ești Argint", body: "Clienții îți văd insigna de argint și primești un mic avantaj în potrivire." },
+      GOLD: { title: "🥇 Acum ești Aur", body: "Prioritate în potrivire: apari mai devreme la turele noi." },
+      PLATINUM: { title: "💎 Acum ești Platină", body: "Cea mai înaltă insignă, cu cea mai mare prioritate în potrivire. Muncă excelentă!" },
+    },
+    verifiedTitle: "Companie verificată — confirmă jobul",
+    verifiedBody: (c, t) => `${c} a fost aprobată. Atinge „Acceptă” la „${t}” ca să fii programat.`,
+    hoursReminderTitle: "🕒 Completează-ți orele",
+    hoursReminderBody: (t, b, tm) => `${t} la ${b} (${tm}) — trimite-ți orele ca plata să poată începe.`,
+    payoutIncompleteTitle: "Completează-ți datele ca să fii plătit",
+    payoutIncompleteBody: (r) =>
+      `Orele tale nu pot fi încă aprobate și plătite: ${r === "iban" ? "nu există încă un cont bancar (IBAN) valid în profilul tău." : r === "dest" ? "nu este setată încă o destinație de plată în profilul tău." : "contul tău bancar a fost modificat recent și nu este încă verificat."} Completează-ți profilul 100% (inclusiv contul bancar/IBAN).`,
+    welcomeTitle: (v) => `👋 Bun venit la ${v}`,
+    welcomeBody: (p) => `Numărul tău de înmatriculare ${p} a fost recunoscut, bariera se deschide. Nu uita să faci check-in în aplicație.`,
+    testTitle: "🔔 Notificare de test de la ZekerFlex",
+    testBody: "Super — notificările tale funcționează. Așa vei fi anunțat când începe o tură.",
+    callTitle: (n, v) => (v ? `📹 ${n} te sună (video)` : `📞 ${n} te sună`),
+    callBody: "Atinge pentru a răspunde în ZekerFlex.",
+    missedTitle: (n) => `Apel pierdut de la ${n}`,
+    missedVideoBody: "📹 Apel video — atinge pentru a suna înapoi.",
+    missedBody: "📞 Atinge pentru a suna înapoi.",
+    newMessage: "Mesaj nou",
   },
   uk: {
     hours: "год",
@@ -399,6 +542,34 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     idOkBody: "Ви зможете відгукуватися на роботу, щойно решта вашої реєстрації буде в порядку. Чітке фото та досвід роботи допомагають замовникам вибрати вас.",
     offerTitle: (t) => `Нова робота: ${t}`,
     offerBody: (p, c, r, m) => `${p}, ${c} · ${r} · ~${m} хв у дорозі`,
+    msBtwTitle: "🧾 Скоро декларація з ПДВ",
+    msUrenTitle: "⏱️ Досягнуто 1225 годин!",
+    msUrenBody: "Критерій годин виконано — ти маєш право на відрахування для самозайнятих. Подивись, що це означає для тебе.",
+    msSpreidingTitle: "⚖️ Зверни увагу на розподіл між замовниками",
+    msSpreidingBody: (h) => `Твоя виручка: ${h}. Працюй і на інших замовників, щоб залишатися в межах Wet DBA.`,
+    msKorTitle: "📊 Зверни увагу на межу KOR",
+    badge: {
+      SILVER: { title: "🥈 Тепер у тебе Срібло", body: "Замовники бачать твій срібний бейдж, а ти отримуєш невелику перевагу в підборі." },
+      GOLD: { title: "🥇 Тепер у тебе Золото", body: "Пріоритет у підборі: ти раніше з’являєшся біля нових змін." },
+      PLATINUM: { title: "💎 Тепер у тебе Платина", body: "Найвищий бейдж з найбільшим пріоритетом у підборі. Чудова робота!" },
+    },
+    verifiedTitle: "Компанію верифіковано — підтверди роботу",
+    verifiedBody: (c, t) => `${c} схвалено. Натисни «Прийняти» біля «${t}», щоб потрапити в графік.`,
+    hoursReminderTitle: "🕒 Заповни свої години",
+    hoursReminderBody: (t, b, tm) => `${t} у ${b} (${tm}) — подай години, щоб виплата могла стартувати.`,
+    payoutIncompleteTitle: "Доповни дані, щоб отримати виплату",
+    payoutIncompleteBody: (r) =>
+      `Твої години ще не можна схвалити й виплатити: ${r === "iban" ? "у твоєму профілі ще немає чинного номера рахунку (IBAN)." : r === "dest" ? "у твоєму профілі ще не вказано місце виплати." : "номер твого рахунку нещодавно змінено й ще не верифіковано."} Заповни профіль на 100% (зокрема банківський рахунок/IBAN).`,
+    welcomeTitle: (v) => `👋 Ласкаво просимо до ${v}`,
+    welcomeBody: (p) => `Твій номерний знак ${p} розпізнано, шлагбаум відкривається. Не забудь зареєструвати прихід у застосунку.`,
+    testTitle: "🔔 Тестове сповіщення від ZekerFlex",
+    testBody: "Чудово — твої сповіщення працюють. Так ти отримаєш сигнал, коли зміна починається.",
+    callTitle: (n, v) => (v ? `📹 ${n} телефонує тобі (відео)` : `📞 ${n} телефонує тобі`),
+    callBody: "Натисни, щоб відповісти в ZekerFlex.",
+    missedTitle: (n) => `Пропущений дзвінок від ${n}`,
+    missedVideoBody: "📹 Відеодзвінок — натисни, щоб передзвонити.",
+    missedBody: "📞 Натисни, щоб передзвонити.",
+    newMessage: "Нове повідомлення",
   },
 };
 
