@@ -22,6 +22,7 @@ const PLEK: Record<string, string> = {
   offer: "app/api/shifts/[shiftId]/offer/route.ts",
   fiscal: "app/api/me/fiscal/route.ts",
   payout: "app/api/me/payout/route.ts",
+  stripe: "app/api/me/payout/stripe-connect/route.ts",
   checkin: "lib/timesheets/checkin.ts",
   doc: "app/api/onboarding/document-lezen/route.ts",
   common: "lib/errors.ts",
