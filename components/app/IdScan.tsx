@@ -528,7 +528,7 @@ function Camera({
               setAanwijzing({ a: teller > 0 ? "stil" : selfieAanwijzing(r.meting), voortgang: Math.min(1, teller / SELFIE_LIVE.goedeBeelden) });
               if (teller >= SELFIE_LIVE.goedeBeelden) {
                 // de foto op volle grootte nog een keer gemeten; haalt hij het niet, dan meten we door
-                const foto = await fotoVanVideo(v, vorm);
+                const foto = await fotoVanVideo(v, `${vorm}-auto`);
                 if (weg) return;
                 const na = foto ? await meetGezicht(foto) : null;
                 if (weg) return;
@@ -543,7 +543,7 @@ function Camera({
               setAanwijzing({ a: d.aanwijzing, voortgang: d.voortgang });
               if (d.aanwijzing === "goed") {
                 // de foto op volle grootte, nog een keer gemeten met de regels van de server; haalt hij die niet, dan meten we door
-                const foto = await fotoVanVideo(v, vorm);
+                const foto = await fotoVanVideo(v, `${vorm}-auto`);
                 if (weg) return;
                 const na = foto ? await meetGezicht(foto) : null;
                 if (weg) return;
@@ -612,7 +612,7 @@ function Camera({
               const a = serverAanwijzing(docSoort, kant, r.meting);
               setDocHint(a);
               if (a === "goed" && groot) {
-                const foto = await fotoVanCanvas(groot, vorm);
+                const foto = await fotoVanCanvas(groot, `${vorm}-auto`);
                 if (weg) return;
                 if (foto) {
                   opFoto.current(foto);
@@ -634,7 +634,8 @@ function Camera({
   function vastleggen() {
     const v = video.current;
     if (!v) return;
-    void fotoVanVideo(v, vorm).then((f) => {
+    // de werker drukte zelf: "-knop" in de naam (lib/kyc/foto-bron.ts), voor de meting en Beheer; verder hetzelfde
+    void fotoVanVideo(v, `${vorm}-knop`).then((f) => {
       if (f) opFoto.current(f);
     });
   }
