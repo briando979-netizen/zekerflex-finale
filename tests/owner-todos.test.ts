@@ -128,7 +128,24 @@ describe("owner to-do list", () => {
     for (const x of manual) await setManualDone(x.id, true, "Brian");
     const after = await byId();
     expect(manual.filter((x) => !after[x.id]!.done).map((x) => x.id)).toEqual([]);
-    expect(manual.map((x) => x.id)).toEqual(expect.arrayContaining(["stripe-identity", "github-billing", "play-store-app", "vacaturefeed", "google-business"]));
+    expect(manual.map((x) => x.id)).toEqual(expect.arrayContaining(["stripe-identity", "play-store-app", "vacaturefeed", "google-business"]));
+  });
+
+  it("geen taak meer om GitHub te betalen: Actions staan bewust uit (9 nov), de controle draait op de eigen server", async () => {
+    const ids = (await ownerTodos()).map((x) => x.id);
+    expect(ids).not.toContain("github-billing");
+  });
+
+  it("AVG-opschoning: vinkt zichzelf af op de hartslag van de nachtelijke run, niet met de hand", async () => {
+    expect((await byId())["avg-bewaartermijn"]).toMatchObject({ auto: true, done: false, doneNote: "nog geen run gezien" });
+    kv.set("cron-heartbeat:retention-sweep", { at: new Date(Date.now() - 3 * 3_600_000).toISOString(), ok: true });
+    const t = (await byId())["avg-bewaartermijn"]!;
+    expect(t.done).toBe(true);
+    expect(t.doneNote).toMatch(/^laatst gedraaid op /);
+    kv.set("cron-heartbeat:retention-sweep", { at: new Date(Date.now() - 3 * 3_600_000).toISOString(), ok: false });
+    expect((await byId())["avg-bewaartermijn"]).toMatchObject({ done: false, doneNote: expect.stringMatching(/^laatste run mislukt op /) });
+    kv.set("cron-heartbeat:retention-sweep", { at: new Date(Date.now() - 30 * 3_600_000).toISOString(), ok: true });
+    expect((await byId())["avg-bewaartermijn"]!.done).toBe(false); // ouder dan de 26 uur van de bewaking
   });
 
   it("sends the owner to the own server, not to Vercel, for settings", async () => {

@@ -24,6 +24,7 @@ import { stripeFotoSleutelInfo } from "@/lib/kyc/stripe-fotos";
 import { actieveWeigering } from "@/lib/kyc/stripe-weigering";
 import { accountStand } from "@/lib/billing/stripe-betalen";
 import { appleConfig } from "@/lib/auth/apple";
+import { cronHeartbeats } from "@/lib/ops/heartbeat";
 
 /** Bij taken die alleen voor ZekerFlex Bank nodig waren. */
 const BANK_UIT = "niet meer nodig: ZekerFlex Bank staat uit (7 nov)";
@@ -208,6 +209,9 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   // het live Stripe-account: kan het betalingen ontvangen en uitbetalen (elke 15 min gemeten, lib/billing/stripe-betalen.ts)?
   const stripeStand = await accountStand().catch(() => null);
   const stripeDicht = stripeStand !== null && (!stripeStand.betalen || !stripeStand.uitbetalen);
+  // de nachtelijke AVG-opschoning (cron 03:40): gelukt binnen de grens van de bewaking (lib/ops/heartbeat.ts)?
+  const avgOpschoning = (await cronHeartbeats().catch(() => [])).find((h) => h.job === "retention-sweep") ?? null;
+  const avgOk = Boolean(avgOpschoning?.lastRunAt && avgOpschoning.lastRunOk && !avgOpschoning.stale);
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
   return [
@@ -444,14 +448,20 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     {
       id: "avg-bewaartermijn",
       group: "Juridisch",
-      title: "AVG: de dagelijkse opschoning van oude gegevens aanzetten? (staat nu uit)",
-      why: "De opschoning die gegevens na hun bewaartermijn weghaalt of inkort, staat nergens in de planning. De bewaarregels uit de privacyverklaring worden dus niet afgedwongen. Een proef op 3 nov telde alleen en veranderde niets. Volgens die proef zou de eerste echte run 2 KYC-dossiers inkorten: de ruwe gegevens en scores gaan weg, de uitslag van de controle blijft. Dat is niet terug te draaien, daarom staat hij niet vanzelf aan.",
+      title: "AVG: elke nacht oude gegevens opschonen (bewaartermijnen)",
+      why: avgOk
+        ? "De opschoning draait elke nacht om 03:40 en haalt gegevens na hun bewaartermijn weg of kort ze in, zoals de privacyverklaring belooft (onder meer selfies van de ID-controle na 30 dagen, oude GPS-punten en verlopen resetcodes). Deze taak vinkt zichzelf af zolang dat lukt."
+        : "De opschoning hoort elke nacht om 03:40 te draaien en haalt gegevens na hun bewaartermijn weg of kort ze in, zoals de privacyverklaring belooft. ZekerFlex zag het afgelopen etmaal geen geslaagde run, dus de bewaarregels worden nu niet afgedwongen.",
       how: [
-        "Aangeraden: dagelijks laten draaien, zoals de andere geplande taken.",
-        "Zeg het tegen Claude; die zet hem in de planning en controleert de eerste run.",
+        "Kijk in Admin → Systeem → Taken bij 'AVG-bewaartermijnen (opruimen)' wanneer hij laatst draaide en of dat lukte.",
+        "Draait hij niet of mislukt hij: zeg het tegen Claude; die zoekt het uit in het foutenlogboek en de cron-container.",
+        "Deze taak vinkt zichzelf af zodra de nachtelijke run weer lukt.",
       ],
-      auto: false,
-      ...m("avg-bewaartermijn"),
+      auto: true,
+      done: avgOk,
+      doneNote: avgOpschoning?.lastRunAt
+        ? `${avgOpschoning.lastRunOk ? "laatst gedraaid" : "laatste run mislukt"} op ${new Date(avgOpschoning.lastRunAt).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", dateStyle: "short", timeStyle: "short" })}`
+        : "nog geen run gezien",
     },
     {
       id: "terms-review",
@@ -898,19 +908,6 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       how: ["Open Admin → Verloning en bekijk de loonrondes van vóór 2 november.", "Begint of eindigt een dienst rond 22:00, 06:00 of middernacht? Vraag Claude dan om die strook opnieuw te berekenen. Anders kun je dit afvinken."],
       auto: false,
       ...m("payslips-utc"),
-    },
-    {
-      id: "github-billing",
-      group: "Beheer & veiligheid",
-      title: "GitHub-account ontgrendelen (betaalprobleem) — anders draaien de automatische tests en de uptime-bewaking niet",
-      why: "Bij elke push test GitHub nu automatisch aanmelden, verificatie, reageren en facturen, en elke 10 minuten wordt gecontroleerd of de site bereikbaar is. GitHub weigert die taken te starten: 'your account is locked due to a billing issue'.",
-      how: [
-        "Ga naar github.com → Settings → Billing and plans en los de betaalmelding op (vaak een verlopen kaart of een openstaande factuur).",
-        "Kijk daarna bij de repository onder Actions: de run 'CI' moet groen worden.",
-        "Optioneel, push op je telefoon bij storing: installeer de app 'ntfy', abonneer je op een eigen geheime naam (bijv. zekerflex-alarm-8k2q) en zet die naam als repository-secret NTFY_TOPIC (Settings → Secrets and variables → Actions).",
-      ],
-      auto: false,
-      ...m("github-billing"),
     },
     {
       id: "smtp",
