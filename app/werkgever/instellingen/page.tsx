@@ -60,6 +60,7 @@ export default async function InstellingenPage() {
 
   const facturatie: Card[] = [
     { title: s.cInvoiceT, sub: s.cInvoiceS, href: "/werkgever/facturen", icon: <IDoc /> },
+    { title: "Abonnement en uitbreidingen", sub: "Wat je nu hebt en wat je erbij kunt nemen", href: "/werkgever/abonnement", icon: <IGrid /> },
   ];
 
   const account: Card[] = [
