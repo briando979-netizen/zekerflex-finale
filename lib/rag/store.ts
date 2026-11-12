@@ -80,6 +80,7 @@ export async function upsertChunk(input: UpsertChunkInput): Promise<void> {
       indexedAt: new Date(),
     },
   });
+  leegRagCache();
 }
 
 /** Replace every chunk for a source type (or a sourceRef prefix within it). */
@@ -102,6 +103,7 @@ export async function replaceSource(
   const drop = stale.filter((s) => !keepHashes.has(s.contentHash)).map((s) => s.id);
   if (drop.length > 0) {
     await prisma.ragChunk.deleteMany({ where: { id: { in: drop } } });
+    leegRagCache();
   }
 
   for (const c of chunks) {
@@ -125,29 +127,74 @@ export interface SearchOptions {
   minScore?: number;
 }
 
+// ---------------------------------------------------------------------------
+// Kandidaten in het geheugen (12 nov 2026). Gemeten: elke zoekvraag laadde alle ±2.000 stukken mét vector (19 MB) uit
+// Postgres, 1,5–2 s per keer, en dat was de "trage databasequery" in het foutenlogboek. Nu één kopie per vectordimensie
+// in globalThis (Next bundelt routes apart, AGENTS.md), hooguit 10 minuten oud en meteen leeg na elke schrijfactie in
+// dit proces (upsertChunk/replaceSource; de reindex-cron draait in de app zelf). Filter op soort, volgorde (indexedAt
+// aflopend) en het maximum (RAG_MAX_CHUNKS) gebeuren daarna in JS, dus de uitkomst is dezelfde als met de query per
+// zoekvraag. Boven CACHE_MAX_RIJEN geen cache (geheugen): dan de oude query, en is pgvector de weg.
+// ---------------------------------------------------------------------------
+
+const CACHE_MS = 10 * 60 * 1000;
+const CACHE_MAX_RIJEN = 20_000;
+
+type Kandidaat = { id: string; sourceType: RagSourceType; sourceRef: string; title: string; content: string; embedding: number[] };
+type CacheRegel = { at: number; rijen: Kandidaat[] | null; laden: Promise<Kandidaat[] | null> | null };
+const cacheGlobaal = globalThis as typeof globalThis & { __zfRagKandidaten?: Map<number, CacheRegel> };
+const cacheMap = (): Map<number, CacheRegel> => (cacheGlobaal.__zfRagKandidaten ??= new Map());
+
+const KANDIDAAT_VELDEN = { id: true, sourceType: true, sourceRef: true, title: true, content: true, embedding: true } as const;
+
+/** Leeg de kandidaten in het geheugen (na een schrijfactie; tests). */
+export function leegRagCache(): void {
+  cacheMap().clear();
+}
+
+/** Alle kandidaten van deze dimensie, nieuwste eerst, uit het geheugen of één keer uit Postgres; null = te veel voor de cache. */
+async function kandidatenVoor(dim: number, nu: number): Promise<Kandidaat[] | null> {
+  const map = cacheMap();
+  const bestaand = map.get(dim);
+  if (bestaand?.rijen && nu - bestaand.at < CACHE_MS) return bestaand.rijen;
+  if (bestaand?.laden) return bestaand.laden;
+  const laden = prisma.ragChunk
+    .findMany({ where: { embedDim: dim }, orderBy: { indexedAt: "desc" }, select: KANDIDAAT_VELDEN })
+    .then((rijen) => (rijen.length > CACHE_MAX_RIJEN ? null : rijen));
+  const regel: CacheRegel = { at: nu, rijen: null, laden };
+  map.set(dim, regel);
+  try {
+    const rijen = await laden;
+    // tussendoor geleegd (schrijfactie tijdens het laden)? Dan deze, mogelijk oude, rijen niet bewaren
+    if (map.get(dim) === regel) {
+      if (rijen) map.set(dim, { at: nu, rijen, laden: null });
+      else map.delete(dim);
+    }
+    return rijen;
+  } catch (err) {
+    if (map.get(dim) === regel) map.delete(dim);
+    throw err;
+  }
+}
+
 export async function search(
   queryVector: number[],
   opts: SearchOptions = {},
 ): Promise<SearchHit[]> {
   const limit = Math.max(1, Math.min(opts.limit ?? 6, 25));
-  const rows = await prisma.ragChunk.findMany({
-    where: {
-      embedDim: queryVector.length,
-      ...(opts.sourceTypes && opts.sourceTypes.length > 0
-        ? { sourceType: { in: opts.sourceTypes } }
-        : {}),
-    },
-    orderBy: { indexedAt: "desc" },
-    take: env.RAG_MAX_CHUNKS,
-    select: {
-      id: true,
-      sourceType: true,
-      sourceRef: true,
-      title: true,
-      content: true,
-      embedding: true,
-    },
-  });
+  const soorten = opts.sourceTypes && opts.sourceTypes.length > 0 ? new Set(opts.sourceTypes) : null;
+  const alle = await kandidatenVoor(queryVector.length, Date.now());
+  const rows =
+    alle !== null
+      ? (soorten ? alle.filter((r) => soorten.has(r.sourceType)) : alle).slice(0, env.RAG_MAX_CHUNKS)
+      : await prisma.ragChunk.findMany({
+          where: {
+            embedDim: queryVector.length,
+            ...(soorten ? { sourceType: { in: [...soorten] } } : {}),
+          },
+          orderBy: { indexedAt: "desc" },
+          take: env.RAG_MAX_CHUNKS,
+          select: KANDIDAAT_VELDEN,
+        });
 
   const scored = rows
     .map((r) => ({
