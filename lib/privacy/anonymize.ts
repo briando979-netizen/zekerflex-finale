@@ -7,6 +7,8 @@ import { erasableNow, RETENTION_RULES } from "@/lib/privacy/retention";
 import { erasableKvWhere } from "@/lib/privacy/user-kv";
 import { wisChatlogVan } from "@/lib/learn/store";
 import { wisPersoonUitLocatie } from "@/lib/locatie/avg";
+import { wisBankrekeningVan } from "@/lib/privacy/bank-wissen";
+import { ERASED_EMAIL_DOMAIN } from "@/lib/privacy/gewist";
 import { overdrachtUploads } from "@/lib/kyc/overdracht";
 import { wisVerlatenOrganisaties } from "@/lib/afspraken/bewaren";
 
@@ -22,7 +24,7 @@ import { wisVerlatenOrganisaties } from "@/lib/afspraken/bewaren";
 // Idempotent: a second call is a no-op. Never throws on a missing sub-record.
 // ---------------------------------------------------------------------------
 
-export const ERASED_EMAIL_DOMAIN = "verwijderd.zekerflex.invalid";
+export { ERASED_EMAIL_DOMAIN };
 const REDACTION = "[verwijderd]";
 
 export interface ErasureReport {
@@ -272,6 +274,13 @@ export async function anonymizeUser(
       if (n > 0) cleared.chatlog = n;
     })
     .catch((err) => logger.warn("erasure: chatlog wissen mislukt", { error: (err as Error).message }));
+
+  // De ZekerFlex-bankrekening (lib/privacy/bank-wissen.ts): leeg = weg, met boekingen = naam en IBAN eruit, bevroren
+  await wisBankrekeningVan(userId)
+    .then((u) => {
+      if (u !== "geen") cleared.bank_account = 1;
+    })
+    .catch((err) => logger.warn("erasure: bankrekening wissen mislukt", { error: (err as Error).message }));
 
   // Op locatie (kentekens, logregels, het kenteken van de werker): best effort, het wissen houdt niet op een fout
   await wisPersoonUitLocatie(userId)

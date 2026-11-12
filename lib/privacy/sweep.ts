@@ -7,6 +7,7 @@ import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { deleteUpload } from "@/lib/storage/local";
 import { isOpgeschoond, kycOpschonen, kycUploadIds } from "@/lib/privacy/kyc-fotos";
 import { ruimChatlogOp } from "@/lib/learn/store";
+import { ruimWeesrekeningenOp } from "@/lib/privacy/bank-wissen";
 
 // ---------------------------------------------------------------------------
 // Retention sweep.
@@ -159,6 +160,13 @@ export async function runRetentionSweep(
     for (const id of selfiesWeg) await deleteUpload(id).catch(() => (mislukt += 1));
     if (mislukt > 0) logger.warn("retention sweep: kyc-selfies niet gewist", { mislukt });
   }
+
+  // Bankrekeningen van een gewist of verdwenen account met nog een naam of IBAN erin (lib/privacy/bank-wissen.ts,
+  // gemeten 12 nov: 8 stuks). Een storing laat de rest van de sweep doorlopen.
+  cleared.bank_wezen = await ruimWeesrekeningenOp({ dryRun, nu: now }).catch((err) => {
+    logger.warn("retention sweep: bankrekeningen niet opgeruimd", { soort: err instanceof Error ? err.name : "onbekend" });
+    return 0;
+  });
 
   const result: SweepResult = {
     ranAt: now.toISOString(),
