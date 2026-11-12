@@ -1,3 +1,4 @@
+import { formDataBegrensd } from "@/lib/http/body-grens";
 import { randomBytes } from "node:crypto";
 import { logger } from "@/lib/logger";
 import { sendMail } from "@/lib/mail";
@@ -139,7 +140,13 @@ export function bestelMail(c: Bestelconcept, nr: string, adres: string, afhaalAd
 export async function handleSiteOrder(request: Request, live: LiveSite, opts: ServeOptions & { besteld: string; address: string }): Promise<Response> {
   const html = (doc: string | null, status = 200) => (doc ? new Response(doc, { status, headers: siteHeaders("text/html; charset=utf-8", "no-store", opts) }) : siteText("Deze pagina bestaat niet.", 404, opts));
 
-  const form = await request.formData().catch(() => null);
+  // vóór het lezen (12 nov): een ruime limiet per IP voor álle stappen (controle en wijzig hadden er geen) en een grens
+  try {
+    await enforceRateLimit({ name: "site-bestelling-ip", identifier: privateRateLimitIdentifier(clientIp(request)), limit: 120, windowSeconds: 600, message: "Te veel verzoeken." });
+  } catch {
+    return siteText("Te veel verzoeken. Probeer het over een paar minuten opnieuw.", 429, opts);
+  }
+  const form = await formDataBegrensd(request, 64_000).catch(() => null);
   if (!form) return siteText("Ongeldig formulier.", 400, opts);
   // honeypot: mensen vullen het verborgen veld nooit in, bots wel: doe alsof het lukte
   if (String(form.get("website") ?? "").trim()) return new Response(null, { status: 303, headers: { Location: opts.besteld } });

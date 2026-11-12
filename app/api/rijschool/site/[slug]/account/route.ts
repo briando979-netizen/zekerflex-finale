@@ -1,3 +1,4 @@
+import { jsonBegrensd } from "@/lib/http/body-grens";
 import { NextResponse } from "next/server";
 import { toErrorBody } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
@@ -16,7 +17,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   try {
     eisZelfdeHerkomst(request);
     const r = await siteRijschool((await params).slug);
-    const a = lees(accountActieSchema, await request.json().catch(() => ({})));
+    // vóór het lezen (12 nov): een ruime limiet per IP voor elke actie (ook uitloggen), en een begrensde body
+    await enforceRateLimit({ name: "rijschool-account-ip", identifier: clientIp(request), limit: 120, windowSeconds: 600 });
+    const gelezen = await jsonBegrensd(request, 16_000);
+    const a = lees(accountActieSchema, gelezen.ok ? gelezen.waarde : {});
     if (a.actie === "uitloggen") {
       await uitloggen();
       return NextResponse.json({ ok: true });

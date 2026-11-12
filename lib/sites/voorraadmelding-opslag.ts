@@ -1,3 +1,4 @@
+import { formDataBegrensd } from "@/lib/http/body-grens";
 import { createHash } from "node:crypto";
 import { logger } from "@/lib/logger";
 import { sendMail } from "@/lib/mail";
@@ -106,7 +107,8 @@ export async function handleVoorraadMelding(request: Request, live: LiveSite, op
   } catch {
     return siteText("Te veel aanmeldingen in korte tijd. Probeer het later opnieuw.", 429, opts);
   }
-  const form = await request.formData().catch(() => null);
+  // een tekstformulier: begrensd ingelezen (12 nov), de server laat anders tot 25 MB door
+  const form = await formDataBegrensd(request, 64_000).catch(() => null);
   if (!form) return siteText("Ongeldig formulier.", 400, opts);
   const p = zichtbareProducten(winkelVan(live.snapshot)).find((x) => x.id === String(form.get("p") ?? ""));
   if (!p) return terug("winkel");

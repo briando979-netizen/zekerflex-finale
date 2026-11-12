@@ -1,3 +1,4 @@
+import { formDataBegrensd } from "@/lib/http/body-grens";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { logger } from "@/lib/logger";
@@ -237,7 +238,8 @@ export async function handleSiteContact(request: Request, live: LiveSite, opts: 
     return siteText("Te veel berichten in korte tijd. Probeer het later opnieuw.", 429, opts);
   }
 
-  const form = await request.formData().catch(() => null);
+  // een tekstformulier: begrensd ingelezen (12 nov), de server laat anders tot 25 MB door
+  const form = await formDataBegrensd(request, 64_000).catch(() => null);
   if (!form) return siteText("Ongeldig formulier.", 400, opts);
   // honeypot: people never fill the hidden field, bots do — pretend all went well
   if (clip(form.get("website"), 200)) return thanks;
