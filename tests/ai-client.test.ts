@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // These tests exercise the HTTP client + retry logic only - bypass the
@@ -172,5 +174,27 @@ describe("wachttijd met het eigen model (alles gratis)", () => {
     expect(gratisTimeout(8_000, true)).toBe(8_000);
     expect(gratisTimeout(15_000, true)).toBe(15_000);
     expect(gratisTimeout(30_000, false)).toBe(30_000);
+  });
+
+  it("een mens die live wacht (interactief) krijgt nooit drie keer zo lang, ook niet bij alles gratis (12 nov: 90 s op de assistent)", () => {
+    expect(gratisTimeout(30_000, true, true)).toBe(30_000);
+    expect(gratisTimeout(45_000, true, true)).toBe(45_000);
+    expect(gratisTimeout(30_000, false, true)).toBe(30_000);
+    expect(gratisTimeout(8_000, true, true)).toBe(8_000);
+    // zonder de vlag blijft het zoals het was
+    expect(gratisTimeout(30_000, true, false)).toBe(90_000);
+  });
+
+  it("de plekken waar een mens live wacht, zetten de vlag; achtergrondtaken niet", () => {
+    const lees = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8");
+    expect(lees("lib/brain/index.ts")).toMatch(/purpose: "brain",[\s\S]{0,200}interactief: true/);
+    expect(lees("lib/jarvis/core.ts")).toMatch(/purpose: "jarvis-chat",\s*interactief: true/);
+    expect(lees("lib/jarvis/core.ts")).toMatch(/purpose: "jarvis-report",\s*interactief: true/);
+    expect(lees("lib/sitechat/antwoord.ts")).toMatch(/timeoutMs: 25_000,\s*interactief: true/);
+    expect(lees("lib/chat/assist.ts")).toMatch(/timeoutMs: 20_000,\s*interactief: true/);
+    expect(lees("lib/companion/index.ts")).toMatch(/purpose: "companion",\s*interactief: true/);
+    for (const achtergrond of ["lib/orchestration/core.ts", "lib/boekhouding/bonnen/uitlezen.ts", "lib/review-scan/analyse.ts"]) {
+      expect(lees(achtergrond), achtergrond).not.toMatch(/interactief: true/);
+    }
   });
 });

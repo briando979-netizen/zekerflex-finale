@@ -147,6 +147,7 @@ export async function chatAntwoordTekst(
       maxTokens: 320,
       retry: false,
       timeoutMs: 25_000,
+      interactief: true,
       messages: [
         { role: "system", content: bouwSysteem({ bedrijf: k.bedrijf, omschrijving: k.omschrijving, ...(k.regels ? { regels: k.regels } : {}) }, fragmenten) },
         ...historie.map((b) => ({ role: b.rol === "gast" ? ("user" as const) : ("assistant" as const), content: b.tekst.slice(0, 1500) })),
