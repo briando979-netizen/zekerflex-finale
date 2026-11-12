@@ -1,4 +1,5 @@
 import type { Locale } from "@/lib/i18n/config";
+import { vulIn } from "@/lib/i18n/vul-in";
 
 // ---------------------------------------------------------------------------
 // Teksten van de Op locatie-schermen in de werker-app (/dashboard): Nederlands
@@ -294,13 +295,8 @@ export const locatieTeksten = (locale: Locale): LocatieTeksten => LOCATIE_TEKSTE
 // doorgeven ("Functions cannot be passed directly to Client Components" — dan
 // valt de hele pagina om). Invullen doet de client met deze twee hulpjes.
 
-/** "{naam} praat" + {naam: "Sam"} → "Sam praat". */
-export function vulIn(sjabloon: string, waarden: Record<string, string | number>): string {
-  return sjabloon.replace(/\{(\w+)\}/gu, (heel, sleutel: string) => {
-    const waarde = waarden[sleutel];
-    return waarde === undefined ? heel : String(waarde);
-  });
-}
+/** "{naam} praat" + {naam: "Sam"} → "Sam praat" (staat in lib/i18n/vul-in.ts, zodat een client-bestand er geen teksten bij krijgt). */
+export { vulIn };
 
 export interface Aantalstekst {
   een: string;

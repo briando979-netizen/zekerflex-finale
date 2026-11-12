@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useFT } from "@/components/i18n/useFT";
+import { vulIn } from "@/lib/i18n/vul-in";
 
 interface MyReview {
   rating: number;
@@ -21,6 +23,7 @@ export function CompanyReviewInline({
   tenantId: string;
   shiftId: string;
 }) {
+  const t = useFT().los.review;
   const [mine, setMine] = useState<MyReview | null | undefined>(undefined);
 
   const load = useCallback(async () => {
@@ -46,16 +49,16 @@ export function CompanyReviewInline({
   return (
     <div className="rounded-lg border border-hair bg-paper-soft/60 p-3">
       <div className="flex items-center gap-2">
-        <span className="text-amber-500" aria-label={`${mine.rating} van 5 sterren`}>
+        <span className="text-amber-500" aria-label={vulIn(t.sterren, { n: mine.rating })}>
           {"★★★★★".slice(0, mine.rating)}
           <span className="text-neutralx-400">{"★★★★★".slice(mine.rating)}</span>
         </span>
-        <span className="text-[11px] font-medium text-neutralx-400">Jouw review</span>
+        <span className="text-[11px] font-medium text-neutralx-400">{t.jouw}</span>
       </div>
       {mine.text ? (
         <p className="mt-1.5 text-sm leading-relaxed text-neutralx-700">“{mine.text}”</p>
       ) : (
-        <p className="mt-1.5 text-xs text-neutralx-400">Je gaf alleen een cijfer, geen toelichting.</p>
+        <p className="mt-1.5 text-xs text-neutralx-400">{t.alleenCijfer}</p>
       )}
     </div>
   );
