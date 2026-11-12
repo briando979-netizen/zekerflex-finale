@@ -1,5 +1,5 @@
 import { logger } from "@/lib/logger";
-import { sendUserPush } from "@/lib/notifications/push";
+import { sendMixedPush } from "@/lib/notifications/localized-push";
 import { platformAdminIds, userDirectory } from "@/lib/messaging/contacts";
 import { visibleUsers } from "@/lib/messaging/presence";
 import { getChatPrefs, isMuted } from "@/lib/messaging/thread-prefs";
@@ -39,12 +39,13 @@ export async function notifyIncomingCall(
   if (callees.length === 0) return;
   try {
     const name = await nameOf(callerId);
-    await sendUserPush(callees, {
-      title: mode === "video" ? `📹 ${name} belt je (video)` : `📞 ${name} belt je`,
-      body: "Tik om op te nemen in ZekerFlex.",
+    // een werker leest dit in zijn app-taal; een opdrachtgever in het Nederlands (sendMixedPush)
+    await sendMixedPush(callees, (t) => ({
+      title: t.callTitle(name, mode === "video"),
+      body: t.callBody,
       data: { type: "CALL", url: chatUrl(thread.id), tag: `call-${callId}` },
       ttlSeconds: RING_TTL_SEC,
-    });
+    }));
   } catch (err) {
     logger.warn("incoming-call push failed", { threadId: thread.id, error: (err as Error).message });
   }
@@ -60,13 +61,13 @@ export async function notifyMissedCall(
   if (callees.length === 0) return;
   try {
     const name = await nameOf(callerId);
-    await sendUserPush(callees, {
-      title: `Gemiste oproep van ${name}`,
-      body: mode === "video" ? "📹 Videogesprek — tik om terug te bellen." : "📞 Tik om terug te bellen.",
+    await sendMixedPush(callees, (t) => ({
+      title: t.missedTitle(name),
+      body: mode === "video" ? t.missedVideoBody : t.missedBody,
       // Same tag as the ringing notification, so it replaces it on the device.
       data: { type: "CALL_MISSED", url: chatUrl(thread.id), tag: `call-${callId}` },
       ttlSeconds: MISSED_TTL_SEC,
-    });
+    }));
   } catch (err) {
     logger.warn("missed-call push failed", { threadId: thread.id, error: (err as Error).message });
   }
@@ -106,8 +107,8 @@ export async function notifyNewMessage(thread: ChatThread, msg: ChatMessage): Pr
     const withPreview = targets.filter((id) => !noPreview.has(id));
     const withoutPreview = targets.filter((id) => noPreview.has(id));
     const data = { type: "CHAT", url: chatUrl(thread.id), tag: `thread-${thread.id}` };
-    if (withPreview.length) await sendUserPush(withPreview, { title, body: previewText(msg).slice(0, 140) || "Nieuw bericht", data, ttlSeconds: CHAT_TTL_SEC });
-    if (withoutPreview.length) await sendUserPush(withoutPreview, { title, body: "Nieuw bericht", data, ttlSeconds: CHAT_TTL_SEC });
+    if (withPreview.length) await sendMixedPush(withPreview, (t) => ({ title, body: previewText(msg).slice(0, 140) || t.newMessage, data, ttlSeconds: CHAT_TTL_SEC }));
+    if (withoutPreview.length) await sendMixedPush(withoutPreview, (t) => ({ title, body: t.newMessage, data, ttlSeconds: CHAT_TTL_SEC }));
   } catch (err) {
     logger.warn("chat push failed", { threadId: thread.id, error: (err as Error).message });
   }

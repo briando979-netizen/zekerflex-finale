@@ -5,6 +5,7 @@ import { kvAppend, kvDelete, kvFindByField, kvGet, kvSet } from "@/lib/storage/k
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { sendUserPush } from "@/lib/notifications/push";
+import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { amsterdamClock } from "@/lib/time/amsterdam";
 import {
   MARGE_NA_MS,
@@ -293,12 +294,13 @@ async function meld(tenantId: string, branchId: string, event: ToegangEvent, ins
     if (ids.length) await sendUserPush(ids, { title: kop, body, data: { type: "SHIFT", url: "/werkgever/op-locatie?tab=toegang", tag: `toegang-${branchId}` }, ttlSeconds: 3600 });
   }
   if (instel.meldWerker && event.besluit.open && event.besluit.userId) {
-    await sendUserPush([event.besluit.userId], {
-      title: `👋 Welkom bij ${vestiging}`,
-      body: `Je kenteken ${plaat} is herkend, de slagboom gaat open. Vergeet niet in te checken in de app.`,
+    // aan een werker: in zijn app-taal (WORKER_PUSH)
+    await sendLocalizedPush([event.besluit.userId], (t) => ({
+      title: t.welcomeTitle(vestiging),
+      body: t.welcomeBody(plaat),
       data: { type: "SHIFT", url: rooster?.shiftId ? `/dashboard/klussen/${rooster.shiftId}` : "/dashboard/klussen", tag: `welkom-${branchId}` },
       ttlSeconds: 900,
-    });
+    }));
   }
 }
 

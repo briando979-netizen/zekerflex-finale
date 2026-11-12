@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { principalForUser } from "@/lib/auth";
 import { sendUserPush } from "@/lib/notifications/push";
+import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { runMatchingForShift } from "@/lib/matching/engine";
 import { approveTimesheet } from "@/lib/timesheets/approve";
 import { fraudForTimesheet } from "@/lib/fraud/timesheet";
@@ -140,12 +141,13 @@ export const ACTIONS: AutopilotAction[] = [
       const done = await alreadyDone("uren-invullen", rows.map((r) => r.id));
       const todo = rows.filter((r) => !done.has(r.id)).slice(0, 300);
       for (const r of todo) {
-        await sendUserPush([r.freelancer.userId], {
-          title: "🕒 Vul je uren in",
-          body: `${r.shift.title} bij ${r.shift.branch.name} (${timeFmt.format(r.shift.startsAt)}) — dien je uren in, dan kan de uitbetaling starten.`,
+        // aan een werker: in zijn app-taal (WORKER_PUSH)
+        await sendLocalizedPush([r.freelancer.userId], (t) => ({
+          title: t.hoursReminderTitle,
+          body: t.hoursReminderBody(r.shift.title, r.shift.branch.name, timeFmt.format(r.shift.startsAt)),
           data: { type: "TIMESHEET", url: "/dashboard/uren", tag: `uren-${r.id}` },
           ttlSeconds: 86_400,
-        }).catch(() => 0);
+        })).catch(() => 0);
       }
       await markDone("uren-invullen", todo.map((r) => r.id));
       return { count: todo.length, summary: `${todo.length} werknemer(s) herinnerd aan uren invullen` };

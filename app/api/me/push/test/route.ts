@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePrincipal } from "@/lib/auth";
 import { jsonError } from "@/lib/http/errors";
-import { sendUserPush } from "@/lib/notifications/push";
+import { sendMixedPush } from "@/lib/notifications/localized-push";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,12 +12,13 @@ export const dynamic = "force-dynamic";
 export async function POST(): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
-    const delivered = await sendUserPush([p.userId], {
-      title: "🔔 Testmelding van ZekerFlex",
-      body: "Top — je meldingen werken. Zo krijg je straks een seintje bij een dienst die begint.",
+    // een werker krijgt de testmelding in zijn app-taal, een opdrachtgever in het Nederlands
+    const delivered = await sendMixedPush([p.userId], (t) => ({
+      title: t.testTitle,
+      body: t.testBody,
       data: { type: "TEST", url: "/dashboard", tag: "zf-test" },
       ttlSeconds: 120,
-    });
+    }));
     return NextResponse.json({ ok: true, delivered });
   } catch (err) {
     return jsonError(err);

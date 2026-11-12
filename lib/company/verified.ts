@@ -121,15 +121,16 @@ export async function notifyPendingReactions(tenantId: string): Promise<number> 
       take: 200,
     });
     if (matches.length === 0) return 0;
-    const { sendUserPush } = await import("@/lib/notifications/push");
+    const { sendLocalizedPush } = await import("@/lib/notifications/localized-push");
     let told = 0;
     for (const m of matches) {
-      told += (await sendUserPush([m.freelancer.userId], {
-        title: "Bedrijf geverifieerd — bevestig je klus",
-        body: `${m.shift.branch.tenant.name} is goedgekeurd. Tik op "Aannemen" bij "${m.shift.title}" om ingepland te worden.`,
+      // in de app-taal van de werker (WORKER_PUSH)
+      told += (await sendLocalizedPush([m.freelancer.userId], (t) => ({
+        title: t.verifiedTitle,
+        body: t.verifiedBody(m.shift.branch.tenant.name, m.shift.title),
         data: { type: "shift", url: `/dashboard/klussen/${m.shift.id}`, tag: `verified-${m.shift.id}` },
         ttlSeconds: 6 * 60 * 60,
-      }).catch(() => 0)) > 0 ? 1 : 0;
+      })).catch(() => 0)) > 0 ? 1 : 0;
     }
     return told;
   } catch (err) {
