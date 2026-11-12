@@ -67,6 +67,13 @@ describe("wanneer uren indienen open is", () => {
     expect(urenIndienenOpen({ scheduledEnd: EIND, actualEnd: null }, EIND.getTime())).toBe(true);
     expect(urenIndienenOpen({ scheduledEnd: EIND, actualEnd: new Date("2026-11-12T14:00:00+01:00") }, new Date("2026-11-12T14:05:00+01:00").getTime())).toBe(true);
   });
+
+  it("een nachtdienst over middernacht: pas na de eindtijd de volgende ochtend", () => {
+    const nachtEind = new Date("2026-11-13T06:00:00+01:00"); // 22:00 tot 06:00
+    expect(urenIndienenOpen({ scheduledEnd: nachtEind, actualEnd: null }, new Date("2026-11-12T23:30:00+01:00").getTime())).toBe(false);
+    expect(urenIndienenOpen({ scheduledEnd: nachtEind, actualEnd: null }, new Date("2026-11-13T00:30:00+01:00").getTime())).toBe(false);
+    expect(urenIndienenOpen({ scheduledEnd: nachtEind, actualEnd: null }, new Date("2026-11-13T06:01:00+01:00").getTime())).toBe(true);
+  });
 });
 
 describe("POST /api/timesheets/:id/submit", () => {
