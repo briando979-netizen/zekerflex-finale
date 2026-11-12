@@ -808,11 +808,14 @@ body {
 /* Doorzichtig papier werd een licht waas over donker; bg-hair (rasterlijnen van de kalender) fel lichtgrijs. */
 .app-scope[data-theme="dark"] .bg-paper-soft\/50 { background-color: rgba(11, 13, 17, 0.5) !important; }
 .app-scope[data-theme="dark"] .bg-paper-soft\/60 { background-color: rgba(11, 13, 17, 0.6) !important; }
+.app-scope[data-theme="dark"] .bg-paper-soft\/40 { background-color: rgba(11, 13, 17, 0.4) !important; }
+.app-scope[data-theme="dark"] .bg-paper-soft\/95 { background-color: rgba(11, 13, 17, 0.95) !important; }
 .app-scope[data-theme="dark"] .bg-hair { background-color: var(--app-edge) !important; }
 .app-scope[data-theme="dark"] .bg-hairstrong { background-color: var(--app-edge-strong) !important; }
 .app-scope[data-theme="dark"] .bg-white { background-color: var(--app-card) !important; }
 /* Translucent header/sheet surfaces (bg-white/NN) — same dark card colour at the same alpha. */
 .app-scope[data-theme="dark"] .bg-white\/15 { background-color: rgba(21,24,30,0.15) !important; }
+.app-scope[data-theme="dark"] .bg-white\/55 { background-color: rgba(21,24,30,0.55) !important; }
 .app-scope[data-theme="dark"] .bg-white\/60 { background-color: rgba(21,24,30,0.6) !important; }
 .app-scope[data-theme="dark"] .bg-white\/70 { background-color: rgba(21,24,30,0.7) !important; }
 .app-scope[data-theme="dark"] .bg-white\/75 { background-color: rgba(21,24,30,0.75) !important; }
@@ -885,11 +888,20 @@ body {
 .app-scope[data-theme="dark"] .text-brand-700 { color: rgb(var(--brand-mint-rgb)) !important; }
 .app-scope[data-theme="dark"] .bg-brand-50,
 .app-scope[data-theme="dark"] .bg-brand-100 { background-color: rgb(var(--brand-mint-rgb) / 0.12) !important; }
+/* Dezelfde mint-tint met een dekking: bg-brand-50/40 tot /60 bleef in het donker een lichtmint vlak (over de kaart een
+   middengrijs, 2:1 met de tekst erop; o.a. het ondertekenblok van de uitzendovereenkomst, contrastmeting 13 nov). */
+.app-scope[data-theme="dark"] .bg-brand-50\/40 { background-color: rgb(var(--brand-mint-rgb) / 0.05) !important; }
+.app-scope[data-theme="dark"] .bg-brand-50\/50 { background-color: rgb(var(--brand-mint-rgb) / 0.06) !important; }
+.app-scope[data-theme="dark"] .bg-brand-50\/60 { background-color: rgb(var(--brand-mint-rgb) / 0.07) !important; }
 .app-scope[data-theme="dark"] .text-neutralx-700,
 .app-scope[data-theme="dark"] .text-neutralx-800 { color: var(--app-fg) !important; }
 .app-scope[data-theme="dark"] .bg-brand-mint,
 .app-scope[data-theme="dark"] .bg-brand-mint.text-ink,
 .app-scope[data-theme="dark"] .bg-brand-mint .text-ink { color: #0C0E12 !important; }
+/* Het prijslabel op de klussenkaart (ShiftCard): text-ink op goud (bg-money-bright) blijft donker. Anders werd het in het
+   donker bijna wit op goud, contrast 1,5:1 (contrastmeting werker-app 13 nov). */
+.app-scope[data-theme="dark"] .bg-money-bright.text-ink,
+.app-scope[data-theme="dark"] .bg-money-bright .text-ink { color: #0C0E12 !important; }
 
 /* Betekeniskleuren in het donker: ok/warn/plan haalden op de donkere kaart ±3,5:1, crit 2,75:1 en
    de -ink-tinten ±2:1 (kleine tekst vraagt 4,5:1). Zelfde betekenis, de lichte tint van het donkere
