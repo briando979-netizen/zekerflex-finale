@@ -14,6 +14,8 @@ import { AddressAutocomplete, type PickedAddress } from "@/components/app/Addres
 import { FairPayMeter } from "@/components/app/FairPayMeter";
 import { CONCEPT_KEY, parseConcept, toShiftFormValues } from "@/lib/klusconcept/concept";
 import { SjabloonGalerij } from "@/components/app/SjabloonGalerij";
+import { useI18n, useT } from "@/components/i18n/I18nProvider";
+import { fmt } from "@/lib/i18n/dictionaries";
 
 const initial: NewShiftState = { error: null };
 
@@ -28,18 +30,17 @@ interface OwnTemplate {
 
 function Submit({ days, blocked }: { days: number; blocked?: boolean }) {
   const { pending } = useFormStatus();
+  const n = useT().newShiftForm;
   return (
     <button type="submit" disabled={pending || blocked} className="btn-primary w-full disabled:opacity-50">
       {pending
-        ? "Bezig met uitzetten…"
+        ? n.bezigUitzetten
         : days > 1
-          ? `Zet ${days} diensten uit & match`
-          : "Dienst uitzetten & matchen"}
+          ? fmt(n.zetUit, { n: days })
+          : n.uitzetten}
     </button>
   );
 }
-
-const WD = ["zo", "ma", "di", "wo", "do", "vr", "za"];
 
 /** An existing klus opened for editing: same form, saved with updateShiftAction. */
 export interface ShiftEdit {
@@ -79,6 +80,11 @@ export function NewShiftForm({
   edit?: ShiftEdit;
 }) {
   const router = useRouter();
+  const { locale, t: dict } = useI18n();
+  const n = dict.newShiftForm;
+  const loc = locale === "nl" ? "nl-NL" : "en-GB";
+  const komma = (s: string) => (locale === "nl" ? s.replace(".", ",") : s);
+  const WD = n.weekdagen.split(",");
   const init = edit?.initial;
   const [editBusy, setEditBusy] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -191,7 +197,7 @@ export function NewShiftForm({
     setBeeldBezig(false);
     if (!res?.ok) {
       const d = res ? await res.json().catch(() => ({})) : {};
-      setBeeldFout(d?.error?.message ?? "Opslaan lukte niet. Probeer het opnieuw.");
+      setBeeldFout(d?.error?.message ?? n.opslaanMislukt);
       return;
     }
     setUseLogo(((await res.json()) as { useLogo: boolean }).useLogo);
@@ -214,7 +220,7 @@ export function NewShiftForm({
       breakMinutes: Number(breakMin) || 0,
       hourlyRateCents,
       positions: Number(positions) || 1,
-    }).catch(() => ({ ok: false, message: "Opslaan lukte niet. Probeer het opnieuw." }));
+    }).catch(() => ({ ok: false, message: n.opslaanMislukt }));
     setEditBusy(false);
     if (!res.ok) {
       setEditError(res.message);
@@ -252,7 +258,7 @@ export function NewShiftForm({
   const primaryDay = startsAt ? startsAt.slice(0, 10) : "";
   const dayOptions = useMemo(() => extraDayOptions(startsAt ? startsAt.slice(0, 10) : amsterdamDayKey(new Date())), [startsAt]);
 
-  const plek = edit ? edit.locatie : oneOff ? adHocAddress?.label ?? "Eenmalige locatie" : branches[0]?.name ?? "Vestiging";
+  const plek = edit ? edit.locatie : oneOff ? adHocAddress?.label ?? n.eenmaligeLocatie : branches[0]?.name ?? n.vestigingNaam;
 
   return (
     // grid-cols-1 + minmax(0,…): anders wordt de kolom zo breed als de rij branche-knoppen van de galerij (4 nov: pagina 2552px breed)
@@ -261,13 +267,12 @@ export function NewShiftForm({
         {(editError ?? state.error) && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">{editError ?? state.error}</p>}
         {edit && edit.assignedCount > 0 && (
           <p role="status" className="rounded-lg bg-warn/10 px-3 py-2.5 text-sm text-neutralx-700">
-            {edit.assignedCount === 1 ? "Er is al 1 kracht ingepland." : `Er zijn al ${edit.assignedCount} krachten ingepland.`} Zij krijgen een
-            bericht over je wijziging, en een nieuwe tijd mag niet botsen met hun andere klussen.
+            {edit.assignedCount === 1 ? n.ingeplandEen : fmt(n.ingeplandMeer, { n: edit.assignedCount })} {n.ingeplandNa}
           </p>
         )}
         {fromWebsite && (
           <p role="status" className="rounded-lg bg-brand-50 px-3 py-2.5 text-sm text-brand-700">
-            We hebben de klus die je op de website samenstelde al ingevuld. Kies je vestiging en controleer de gegevens voordat je hem uitzet.
+            {n.vanWebsite}
           </p>
         )}
 
@@ -283,7 +288,7 @@ export function NewShiftForm({
         {ownTemplates.length > 0 && (
           <div>
             <p className="field-label mb-2">
-              Jouw templates <span className="text-neutralx-400">(beheer je op /werkgever/templates)</span>
+              {n.eigenTemplates} <span className="text-neutralx-400">{n.eigenTemplatesHint}</span>
             </p>
             <div className="flex flex-wrap gap-2">
               {ownTemplates.map((t) => (
@@ -306,9 +311,9 @@ export function NewShiftForm({
 
         {edit ? (
           <div>
-            <p className="field-label">Locatie</p>
+            <p className="field-label">{n.locatie}</p>
             <p className="rounded-xl border border-hair bg-paper-soft px-3 py-2.5 text-sm text-ink">{edit.locatie}</p>
-            <p className="mt-1 text-xs text-neutralx-500">De locatie verandert niet meer na het plaatsen. Andere locatie nodig? Zet een nieuwe klus uit.</p>
+            <p className="mt-1 text-xs text-neutralx-500">{n.locatieVast}</p>
           </div>
         ) : (
         <div>
@@ -319,14 +324,14 @@ export function NewShiftForm({
               onChange={(e) => setOneOff(e.target.checked)}
               className="accent-brand-500"
             />
-            Eenmalige locatie (bijv. een demo op afstand) — geen vaste vestiging
+            {n.eenmaligLabel}
           </label>
 
           {!oneOff ? (
             <label className="mt-2 block">
-              <span className="field-label">Vestiging</span>
+              <span className="field-label">{n.vestiging}</span>
               <select name="branchId" required className="field-input">
-                {branches.length === 0 && <option value="">Geen vestiging beschikbaar</option>}
+                {branches.length === 0 && <option value="">{n.geenVestiging}</option>}
                 {branches.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.name} — {b.city}
@@ -334,7 +339,7 @@ export function NewShiftForm({
                 ))}
               </select>
               <span className="mt-1 block text-xs text-neutralx-400">
-                Vestigingen beheer je op{" "}
+                {n.vestigingenBeheer}{" "}
                 <Link href="/werkgever/locaties" className="font-medium text-brand-600 hover:underline">
                   /werkgever/locaties
                 </Link>
@@ -344,12 +349,12 @@ export function NewShiftForm({
           ) : (
             <div className="mt-2 space-y-3">
               <label className="block">
-                <span className="field-label">Adres</span>
-                <AddressAutocomplete value={adHocAddress} onPick={setAdHocAddress} placeholder="Zoek adres…" />
+                <span className="field-label">{n.adres}</span>
+                <AddressAutocomplete value={adHocAddress} onPick={setAdHocAddress} placeholder={n.zoekAdres} />
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
-                  <span className="field-label">Postcode</span>
+                  <span className="field-label">{n.postcode}</span>
                   <input
                     value={adHocPostalCode}
                     onChange={(e) => setAdHocPostalCode(e.target.value)}
@@ -357,7 +362,7 @@ export function NewShiftForm({
                   />
                 </label>
                 <label className="block">
-                  <span className="field-label">Plaats</span>
+                  <span className="field-label">{n.plaats}</span>
                   <input value={adHocCity} onChange={(e) => setAdHocCity(e.target.value)} className="field-input" />
                 </label>
               </div>
@@ -372,19 +377,19 @@ export function NewShiftForm({
         )}
 
         <label className="block">
-          <span className="field-label">Titel van de dienst</span>
-          <input name="title" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Bijv. Vakkenvuller avonddienst" className="field-input" />
+          <span className="field-label">{n.titel}</span>
+          <input name="title" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder={n.titelPlaceholder} className="field-input" />
         </label>
 
         <div>
           <div className="flex items-end justify-between gap-2">
             <label htmlFor="shift-description" className="field-label">
-              Omschrijving <span className="text-neutralx-400">(optioneel)</span>
+              {n.omschrijving} <span className="text-neutralx-400">{n.optioneel}</span>
             </label>
             <button
               type="button"
               disabled={writing || title.trim().length < 3}
-              title={title.trim().length < 3 ? "Vul eerst een titel in" : undefined}
+              title={title.trim().length < 3 ? n.eerstTitel : undefined}
               onClick={async (e) => {
                 const fd = new FormData(e.currentTarget.form ?? undefined);
                 setWriting(true);
@@ -406,10 +411,10 @@ export function NewShiftForm({
                     }),
                   });
                   const d = await r.json();
-                  if (!r.ok) throw new Error(d?.error?.message ?? d?.message ?? "Schrijven mislukt");
+                  if (!r.ok) throw new Error(d?.error?.message ?? d?.message ?? n.schrijvenMislukt);
                   setDescription(d.description);
                   if (!dresscode.trim()) setDresscode(d.dresscode);
-                  setWriteNote(d.mode === "model" ? "Geschreven door de AI — pas aan waar nodig." : "Concept op basis van je titel — pas aan waar nodig.");
+                  setWriteNote(d.mode === "model" ? n.doorAi : n.conceptTitel);
                 } catch (err) {
                   setWriteNote((err as Error).message);
                 } finally {
@@ -418,7 +423,7 @@ export function NewShiftForm({
               }}
               className="mb-1 rounded-full border border-hair bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 hover:bg-brand-100 disabled:opacity-50"
             >
-              {writing ? "Schrijven…" : description.trim() ? "✨ Verbeter tekst" : "✨ Schrijf voor mij"}
+              {writing ? n.schrijven : description.trim() ? n.verbeter : n.schrijfVoorMij}
             </button>
           </div>
           <textarea id="shift-description" name="description" rows={description.length > 160 ? 7 : 3} value={description} onChange={(e) => setDescription(e.target.value)} className="field-input" />
@@ -427,14 +432,14 @@ export function NewShiftForm({
 
         <label className="block">
           <span className="field-label">
-            Kledingvoorschriften <span className="text-neutralx-400">(optioneel)</span>
+            {n.kleding} <span className="text-neutralx-400">{n.optioneel}</span>
           </span>
           <textarea
             name="dresscode"
             rows={2}
             value={dresscode}
             onChange={(e) => setDresscode(e.target.value)}
-            placeholder="Bijv. veiligheidsschoenen verplicht, geen sieraden, bedrijfskleding wordt verstrekt…"
+            placeholder={n.kledingPlaceholder}
             className="field-input"
           />
         </label>
@@ -444,10 +449,9 @@ export function NewShiftForm({
         <label className="flex items-start gap-3 rounded-xl border border-hairstrong bg-paper-soft px-4 py-3">
           <input type="checkbox" name="viaUitzendbureau" value="on" className="mt-0.5 h-4 w-4 accent-brand-500" />
           <span>
-            <span className="block text-sm font-semibold text-ink">Via het ZekerFlex-uitzendbureau</span>
+            <span className="block text-sm font-semibold text-ink">{n.uitzendbureau}</span>
             <span className="block text-xs text-neutralx-500">
-              Alleen uitzendkrachten (loon via ZekerFlex) kunnen hierop reageren — zzp&apos;ers en flexwerkers zien de
-              klus wel staan, maar kunnen er niet op reageren.
+              {n.uitzendbureauUitleg}
             </span>
           </span>
         </label>
@@ -455,23 +459,23 @@ export function NewShiftForm({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
-            <span className="field-label">Start</span>
+            <span className="field-label">{n.start}</span>
             <input type="datetime-local" name="startsAt" required value={startsAt} onChange={(e) => setStartsAt(e.target.value)} className="field-input" />
           </label>
           <label className="block">
-            <span className="field-label">Einde</span>
+            <span className="field-label">{n.einde}</span>
             <input type="datetime-local" name="endsAt" required value={endsAt} onChange={(e) => setEndsAt(e.target.value)} className="field-input" />
           </label>
           <label className="block">
-            <span className="field-label">Pauze (minuten)</span>
+            <span className="field-label">{n.pauze}</span>
             <input type="number" name="breakMinutes" min={0} max={240} value={breakMin} onChange={(e) => setBreakMin(e.target.value)} className="field-input" />
           </label>
           <label className="block">
-            <span className="field-label">Aantal plekken</span>
+            <span className="field-label">{n.plekken}</span>
             <input type="number" name="positions" min={1} max={50} value={positions} onChange={(e) => setPositions(e.target.value)} className="field-input" />
           </label>
           <label className="block sm:col-span-2">
-            <span className="field-label">Uurtarief (€ bruto)</span>
+            <span className="field-label">{n.uurtarief}</span>
             <input
               type="number"
               step="0.10"
@@ -485,12 +489,11 @@ export function NewShiftForm({
               className="field-input"
             />
             <span className="mt-1 block text-xs text-neutralx-400">
-              Minimum € {minRateEuro.toFixed(2).replace(".", ",")} per uur. ZekerFlex rekent daarnaast
-              € 3,50 platformkosten per gewerkt uur — dat komt hierbovenop.
+              {fmt(n.minimumTekst, { min: komma(minRateEuro.toFixed(2)) })}
             </span>
             {hourlyRateCents > 0 && hourlyRateCents < minRateCents && (
               <span className="mt-1 block text-xs font-medium text-crit">
-                Het uurtarief moet minimaal € {minRateEuro.toFixed(2).replace(".", ",")} zijn.
+                {fmt(n.minimumFout, { min: komma(minRateEuro.toFixed(2)) })}
               </span>
             )}
           </label>
@@ -512,12 +515,12 @@ export function NewShiftForm({
         <div className="rounded-xl border border-hair bg-paper-soft/50 p-4">
           <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-ink">
             <input type="checkbox" checked={multi} onChange={(e) => setMulti(e.target.checked)} className="accent-brand-500" />
-            Meerdere dagen (zelfde tijd)
+            {n.meerdereDagen}
           </label>
           {multi && (
             <>
               <p className="mt-2 text-xs text-neutralx-500">
-                {startsAt ? "Kies extra dagen — de kracht kan zich per dag of voor alles aanmelden." : "Vul eerst een starttijd in."}
+                {startsAt ? n.kiesDagen : n.eerstStart}
               </p>
               {startsAt && (
                 <div className="mt-3 grid grid-cols-3 gap-1.5 sm:grid-cols-4">
@@ -548,19 +551,18 @@ export function NewShiftForm({
         {!edit && pools.length > 0 && (
           <label className="block">
             <span className="field-label">
-              Eerst privé uitnodigen <span className="text-neutralx-400">(optioneel)</span>
+              {n.poolKop} <span className="text-neutralx-400">{n.optioneel}</span>
             </span>
             <select name="poolId" value={poolId} onChange={(e) => setPoolId(e.target.value)} className="field-input">
-              <option value="">Direct op de open markt</option>
+              <option value="">{n.poolOpen}</option>
               {pools.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} ({p.memberCount} {p.memberCount === 1 ? "lid" : "leden"})
+                  {fmt(p.memberCount === 1 ? n.poolLid : n.poolLeden, { naam: p.name, n: p.memberCount })}
                 </option>
               ))}
             </select>
             <span className="mt-1 block text-xs text-neutralx-400">
-              Alleen deze pool ziet en kan reageren op de dienst. Je zet &apos;m later zelf op de open markt — dat
-              gebeurt niet automatisch.
+              {n.poolUitleg}
             </span>
           </label>
         )}
@@ -568,10 +570,10 @@ export function NewShiftForm({
         {edit ? (
           <div className="flex flex-col gap-2 sm:flex-row">
             <button type="submit" disabled={editBusy || hourlyRateCents < minRateCents} className="btn-primary flex-1 disabled:opacity-50">
-              {editBusy ? "Bezig met opslaan…" : "Wijzigingen opslaan"}
+              {editBusy ? n.bezigOpslaan : n.wijzigingenOpslaan}
             </button>
             <Link href={`/werkgever/diensten/${edit.shiftId}`} className="btn-ghost text-center">
-              Annuleren
+              {n.annuleren}
             </Link>
           </div>
         ) : (
@@ -581,7 +583,7 @@ export function NewShiftForm({
 
       {/* live preview */}
       <div className="lg:sticky lg:top-24 lg:self-start">
-        <p className="field-label mb-2">Voorbeeld</p>
+        <p className="field-label mb-2">{n.voorbeeld}</p>
         <article className="overflow-hidden rounded-2xl border border-hair bg-white shadow-card">
           <div className="relative aspect-[16/9]">
             {useLogo && beeld.logoUrl ? (
@@ -602,51 +604,51 @@ export function NewShiftForm({
             </span>
             {totalDays > 1 && (
               <span className="absolute right-3 top-3 rounded-full bg-brand-500/90 px-2 py-1 text-[11px] font-bold text-white">
-                {totalDays} dagen
+                {fmt(n.dagen, { n: totalDays })}
               </span>
             )}
             {!(useLogo && beeld.logoUrl) && (
               <div className="absolute inset-x-3 bottom-3 text-white">
-                <p className="truncate font-display text-lg font-bold drop-shadow">{title || "Titel van de dienst"}</p>
+                <p className="truncate font-display text-lg font-bold drop-shadow">{title || n.titelFallback}</p>
                 <p className="truncate text-xs text-white/80">
                   {plek}
-                  {startsAt ? ` · ${new Date(startsAt).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}
+                  {startsAt ? ` · ${new Date(startsAt).toLocaleString(loc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}
                 </p>
               </div>
             )}
           </div>
           {useLogo && beeld.logoUrl && (
             <div className="border-b border-hair px-4 pb-3 pt-3">
-              <p className="truncate font-display text-lg font-bold text-ink">{title || "Titel van de dienst"}</p>
+              <p className="truncate font-display text-lg font-bold text-ink">{title || n.titelFallback}</p>
               <p className="truncate text-xs text-neutralx-500">
                 {plek}
-                {startsAt ? ` · ${new Date(startsAt).toLocaleString("nl-NL", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}
+                {startsAt ? ` · ${new Date(startsAt).toLocaleString(loc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}
               </p>
             </div>
           )}
           <div className="space-y-2 p-4 text-sm">
-            <Row k="Uurtarief" v={`€ ${(hourlyRateCents / 100).toFixed(2).replace(".", ",")}/u`} />
-            <Row k="Duur" v={hours ? `${hours} u${Number(breakMin) ? ` · ${breakMin}m pauze` : ""}` : "—"} />
-            <Row k="Plekken" v={`${positions} per dag`} />
-            <Row k="Bruto per plek" v={grossPerSeat ? `€ ${(grossPerSeat / 100).toFixed(0)}` : "—"} highlight />
-            <Row k="Platformkosten" v={hours ? `€ ${(Number(hours) * 3.5).toFixed(2).replace(".", ",")} (€ 3,50/u)` : "—"} />
+            <Row k={n.rijTarief} v={fmt(n.perUur, { bedrag: komma((hourlyRateCents / 100).toFixed(2)) })} />
+            <Row k={n.rijDuur} v={hours ? `${fmt(n.duurUren, { u: hours })}${Number(breakMin) ? fmt(n.duurPauze, { m: breakMin }) : ""}` : "—"} />
+            <Row k={n.rijPlekken} v={fmt(n.plekkenPerDag, { n: positions })} />
+            <Row k={n.rijBruto} v={grossPerSeat ? `€ ${(grossPerSeat / 100).toFixed(0)}` : "—"} highlight />
+            <Row k={n.rijPlatform} v={hours ? fmt(n.platformWaarde, { bedrag: komma((Number(hours) * 3.5).toFixed(2)) }) : "—"} />
             {totalDays > 1 && (
-              <Row k={`Totaal (${totalDays} dagen)`} v={`€ ${((grossPerSeat * totalDays) / 100).toFixed(0)}`} highlight />
+              <Row k={fmt(n.rijTotaal, { n: totalDays })} v={`€ ${((grossPerSeat * totalDays) / 100).toFixed(0)}`} highlight />
             )}
           </div>
         </article>
-        {primaryDay && !edit && <p className="mt-2 text-[11px] text-neutralx-500">Wordt automatisch gematcht zodra je uitzet.</p>}
+        {primaryDay && !edit && <p className="mt-2 text-[11px] text-neutralx-500">{n.gematcht}</p>}
 
         <fieldset className="mt-4 min-w-0 rounded-xl border border-hair bg-white p-3">
-          <legend className="px-1 text-xs font-semibold text-ink">Beeld op je klussen</legend>
+          <legend className="px-1 text-xs font-semibold text-ink">{n.beeldKop}</legend>
           {beeld.logoUrl ? (
             <>
               <div className="grid grid-cols-2 gap-2">
-                <BeeldKeuze actief={!useLogo} disabled={beeldBezig || !beeld.canChange} onClick={() => void kiesBeeld(false)} label="Foto van de branche">
+                <BeeldKeuze actief={!useLogo} disabled={beeldBezig || !beeld.canChange} onClick={() => void kiesBeeld(false)} label={n.beeldFoto}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={cat.photo} alt="" className="h-full w-full object-cover" />
                 </BeeldKeuze>
-                <BeeldKeuze actief={useLogo} disabled={beeldBezig || !beeld.canChange} onClick={() => void kiesBeeld(true)} label="Ons logo">
+                <BeeldKeuze actief={useLogo} disabled={beeldBezig || !beeld.canChange} onClick={() => void kiesBeeld(true)} label={n.beeldLogo}>
                   <span className="flex h-full w-full items-center justify-center bg-[#ffffff] p-2">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={beeld.logoUrl} alt="" className="max-h-full max-w-full object-contain" />
@@ -654,14 +656,14 @@ export function NewShiftForm({
                 </BeeldKeuze>
               </div>
               <p className="mt-2 text-[11px] text-neutralx-500">
-                {beeld.canChange ? "Geldt voor al je klussen. Je logo staat ook klein naast je bedrijfsnaam." : "Alleen een beheerder van je organisatie kan dit wijzigen."}
+                {beeld.canChange ? n.beeldGeldt : n.beeldBeheerder}
               </p>
             </>
           ) : (
             <p className="text-xs text-neutralx-600">
-              Je klussen tonen een foto van de branche. Wil je je eigen logo erop?{" "}
+              {n.beeldGeenLogo}{" "}
               <Link href="/werkgever/bedrijf" className="font-semibold text-brand-600 underline underline-offset-2">
-                Upload je logo bij Bedrijf
+                {n.beeldUpload}
               </Link>
               .
             </p>

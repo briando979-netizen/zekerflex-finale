@@ -3,10 +3,12 @@ import { naarStudioAccount } from "@/lib/studio/account-server";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { PageHeader, Panel } from "@/components/app/ui";
 import { TeamBoard } from "@/components/app/TeamBoard";
+import { getDict } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function TeamPage() {
+  const k = (await getDict()).teamPagina;
   const principal = await requirePrincipal();
   // dashboard website of webshop open: het account staat in de studio (lib/studio/account.ts)
   await naarStudioAccount(principal, "team");
@@ -16,17 +18,13 @@ export default async function TeamPage() {
   return (
     <>
       <PageHeader
-        title="Team"
-        subtitle="Beheer wie er namens je organisatie bij ZekerFlex kan — als beheerder, lokale manager van specifieke vestigingen, of geschillenbeheerder."
+        title={k.titel}
+        subtitle={k.subtitel}
       />
 
       <Panel
-        title="Teamleden"
-        subtitle={
-          canManage
-            ? "Nodig collega's uit en beheer hun rol en vestigingen."
-            : "Alleen een beheerder (HQ_ADMIN) kan teamleden uitnodigen of verwijderen."
-        }
+        title={k.paneel}
+        subtitle={canManage ? k.subBeheer : k.subGeenBeheer}
       >
         <div className="p-5">
           <TeamBoard canManage={canManage} />
