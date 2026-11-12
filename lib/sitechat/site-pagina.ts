@@ -1,3 +1,4 @@
+import { formDataBegrensd } from "@/lib/http/body-grens";
 import { randomBytes } from "node:crypto";
 import { clientIp } from "@/lib/http/request";
 import { logger } from "@/lib/logger";
@@ -150,7 +151,13 @@ export async function handleSiteChat(request: Request, live: LiveSite, opts: Sit
   if (live.snapshot.voorstel) return tekst("Dit is een ontwerpvoorstel: de chat verstuurt niets.", 403, opts);
   if (!(await magChatten(live))) return tekst("De chat staat op deze website uit.", 404, opts);
 
-  const form = await request.formData().catch(() => null);
+  // vóór het lezen (12 nov): een ruime limiet per IP (de echte limiet hieronder komt na het lezen) en een grens
+  try {
+    await enforceRateLimit({ name: "site-chat-ip-voor", identifier: privateRateLimitIdentifier(clientIp(request)), limit: 60, windowSeconds: 600, message: "Te veel berichten." });
+  } catch {
+    return tekst("Te veel berichten. Probeer het over een paar minuten opnieuw.", 429, opts);
+  }
+  const form = await formDataBegrensd(request, 32_000).catch(() => null);
   if (!form) return tekst("Ongeldig formulier.", 400, opts);
   const g = veld(form, "g", 64);
   const id = isGesprekId(g) ? g : nieuwId();

@@ -1,3 +1,5 @@
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { jsonBegrensd } from "@/lib/http/body-grens";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
@@ -38,7 +40,10 @@ const dag = (datum: string) => new Intl.DateTimeFormat("nl-NL", { weekday: "long
 async function handlePOST(request: Request): Promise<Response> {
   try {
     eisZelfdeHerkomst(request);
-    const parsed = schema.safeParse(await request.json().catch(() => null));
+    // vóór het lezen (12 nov): een ruime limiet per IP voor elke actie, en een begrensde body
+    await enforceRateLimit({ name: "schwarzwald-chat-ip", identifier: clientIp(request), limit: 120, windowSeconds: 600 });
+    const gelezen = await jsonBegrensd(request, 16_000);
+    const parsed = schema.safeParse(gelezen.ok ? gelezen.waarde : null);
     if (!parsed.success) throw AppError.validation("Ongeldig chatbericht.");
     const d = parsed.data;
     const account = (await huidigAccount().catch(() => null))?.email;

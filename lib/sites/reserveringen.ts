@@ -1,3 +1,4 @@
+import { formDataBegrensd } from "@/lib/http/body-grens";
 import { logger } from "@/lib/logger";
 import { sendMail } from "@/lib/mail";
 import { clientIp } from "@/lib/http/request";
@@ -67,7 +68,8 @@ export async function handleSiteReservering(request: Request, live: LiveSite, op
   } catch {
     return siteText("Te veel reserveringen in korte tijd. Probeer het later opnieuw, of bel de zaak.", 429, opts);
   }
-  const form = await request.formData().catch(() => null);
+  // een tekstformulier: begrensd ingelezen (12 nov), de server laat anders tot 25 MB door
+  const form = await formDataBegrensd(request, 64_000).catch(() => null);
   if (!form) return siteText("Ongeldig formulier.", 400, opts);
   // honeypot: mensen vullen het verborgen veld nooit in, bots wel: doe alsof het lukte
   if (String(form.get("website") ?? "").trim()) return new Response(null, { status: 303, headers: { Location: opts.gereserveerd } });
