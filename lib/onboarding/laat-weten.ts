@@ -38,10 +38,22 @@ export function volgendeStap(klaar: TijdlijnKlaar): TijdlijnSleutel | null {
   return TIJDLIJN_VOLGORDE.find((k) => !klaar[k]) ?? null;
 }
 
-/** "Nog maar {n} stappen te gaan": de tekst met plaatshouder, enkelvoud of meervoud. */
-export function nogStappenTekst(n: number, t: { nogEen: string; nogMeer: string; alleKlaar: string }): string {
+/**
+ * "Nog maar {n} stappen te gaan": de tekst met plaatshouder, enkelvoud of meervoud. Pools en Oekraïens hebben voor
+ * 2-4 (en 22-24, …) een eigen vorm ("4 kroki", niet "4 kroków"): die staat in nogMeerFew en volgt Intl.PluralRules.
+ */
+export function nogStappenTekst(n: number, t: { nogEen: string; nogMeer: string; nogMeerFew?: string; alleKlaar: string }, taal?: string): string {
   if (n <= 0) return t.alleKlaar;
-  return n === 1 ? t.nogEen : t.nogMeer.replace("{n}", String(n));
+  if (n === 1) return t.nogEen;
+  let vorm = t.nogMeer;
+  if (t.nogMeerFew && taal) {
+    try {
+      if (new Intl.PluralRules(taal).select(n) === "few") vorm = t.nogMeerFew;
+    } catch {
+      // onbekende taalcode: de gewone meervoudsvorm
+    }
+  }
+  return vorm.replace("{n}", String(n));
 }
 
 export type ReageerStap = "identiteit" | "werkrecht" | "gegevens" | "anders";

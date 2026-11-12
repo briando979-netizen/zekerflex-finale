@@ -62,6 +62,8 @@ export function WerkerStartWizard({
   const [brancheBusy, setBrancheBusy] = useState(false);
   const [brancheFout, setBrancheFout] = useState<string | null>(null);
 
+  // na de ID-check staat de richting vast in de start; wijzigen kan dan onder Fiscaal (app/api/me/richting)
+  const richtingVast = Boolean(identiteitIngestuurd ?? profileComplete);
   const done: Record<StepKey, boolean> = { kind: kind !== null, branches: keuze !== null, email: emailVerified, gegevens: gegevensIngevuld ?? profileComplete, identiteit: identiteitIngestuurd ?? profileComplete, foto: fotoGezet, werkrecht: werkrechtOk, tweestap: tweestapAan };
   const ORDER = TIJDLIJN_VOLGORDE;
   const first = volgendeStap(done);
@@ -170,7 +172,7 @@ export function WerkerStartWizard({
         )}
         <p className="text-xs font-semibold uppercase tracking-wide text-white/70">{t.eyebrow}</p>
         <h2 id="werker-start-titel" className="mt-1 pr-10 font-display text-2xl font-bold leading-tight">{t.laatWeten}</h2>
-        <p className="mt-1 text-sm text-white/85" role="status">{nogStappenTekst(aantal, t)}</p>
+        <p className="mt-1 text-sm text-white/85" role="status">{nogStappenTekst(aantal, t, ft.intl)}</p>
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/20" role="progressbar" aria-label={t.progress.replace("{done}", String(completed)).replace("{total}", String(ORDER.length))} aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
           <div className="h-full rounded-full bg-white transition-all" style={{ width: `${pct}%` }} />
         </div>
@@ -209,10 +211,26 @@ export function WerkerStartWizard({
                   <span className="flex-1">{label[k]}</span>
                   {stand === "klaar" && <span className="text-xs font-normal text-ok">{t.klaarLabel}</span>}
                 </button>
-                {k === "kind" && kind && !isOpen && <p className="mt-0.5 text-xs text-neutralx-500">{t.chosen.replace("{kind}", t.kinds[kind][0] ?? "")}</p>}
+                {k === "kind" && kind && !isOpen && (
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-neutralx-500">
+                    <span>{t.chosen.replace("{kind}", t.kinds[kind][0] ?? "")}</span>
+                    {richtingVast ? (
+                      <Link href="/dashboard/fiscaal" className="font-semibold text-brand-600 underline underline-offset-2">
+                        {t.wijzig}
+                      </Link>
+                    ) : (
+                      <button type="button" onClick={() => setOpen("kind")} className="font-semibold text-brand-600 underline underline-offset-2">
+                        {t.wijzig}
+                      </button>
+                    )}
+                  </p>
+                )}
                 {k === "branches" && keuze && !isOpen && (
-                  <p className="mt-0.5 truncate text-xs text-neutralx-500">
-                    {t.brancheChosen.replace("{namen}", brancheSamenvatting(keuze, t.alleBranches, t.brancheEn, t.brancheAndere))}
+                  <p className="mt-0.5 flex items-center gap-x-2 text-xs text-neutralx-500">
+                    <span className="min-w-0 truncate">{t.brancheChosen.replace("{namen}", brancheSamenvatting(keuze, t.alleBranches, t.brancheEn, t.brancheAndere, (b) => ft.cat[b]))}</span>
+                    <button type="button" onClick={() => setOpen("branches")} className="flex-shrink-0 font-semibold text-brand-600 underline underline-offset-2">
+                      {t.wijzig}
+                    </button>
                   </p>
                 )}
                 {stand !== "klaar" && k !== "kind" && k !== "branches" && <p className={`mt-1 text-xs leading-snug ${uitgeschakeld ? "text-neutralx-400" : "text-neutralx-600"}`}>{uitleg[k]}</p>}
@@ -250,11 +268,20 @@ export function WerkerStartWizard({
                       })}
                     </div>
                     {error && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{error}</p>}
-                    {(kind === null || pick !== kind) && (
-                      <button type="button" onClick={save} disabled={!pick || busy} className="btn-primary text-sm disabled:opacity-50">
-                        {busy ? t.saving : t.pick}
-                      </button>
-                    )}
+                    {(kind === null || pick !== kind) &&
+                      (richtingVast && kind !== null ? (
+                        // de server staat een andere richting na de ID-check alleen onder Fiscaal toe (api/me/richting)
+                        <p className="text-xs leading-snug text-neutralx-600">
+                          {t.richtingVast}{" "}
+                          <Link href="/dashboard/fiscaal" className="font-semibold text-brand-600 underline underline-offset-2">
+                            {t.naarFiscaal}
+                          </Link>
+                        </p>
+                      ) : (
+                        <button type="button" onClick={save} disabled={!pick || busy} className="btn-primary text-sm disabled:opacity-50">
+                          {busy ? t.saving : t.pick}
+                        </button>
+                      ))}
                   </div>
                 )}
 
@@ -284,7 +311,7 @@ export function WerkerStartWizard({
                               aan ? "border-brand-500 bg-brand-50 font-semibold text-ink" : "border-hairstrong text-neutralx-700 hover:border-brand-500"
                             }`}
                           >
-                            {o.label}
+                            {ft.cat[o.key] ?? o.label}
                           </button>
                         );
                       })}

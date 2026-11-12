@@ -40,10 +40,16 @@ export function standaardFilter(keuze: BrancheKeuze | null): ShiftCategoryKey[] 
 }
 
 /** "Alle branches", "Horeca", "Horeca en Retail", "Horeca, Retail en 2 andere". */
-export function brancheSamenvatting(keuze: BrancheKeuze | null, alleTekst: string, enTekst: string, andereTekst: string): string {
+export function brancheSamenvatting(
+  keuze: BrancheKeuze | null,
+  alleTekst: string,
+  enTekst: string,
+  andereTekst: string,
+  naam?: (k: ShiftCategoryKey) => string | undefined,
+): string {
   if (!keuze) return "";
   if (keuze.alle) return alleTekst;
-  const namen = keuze.branches.map((k) => BRANCHE_OPTIES.find((o) => o.key === k)?.label ?? k);
+  const namen = keuze.branches.map((k) => naam?.(k) ?? BRANCHE_OPTIES.find((o) => o.key === k)?.label ?? k);
   if (namen.length <= 2) return namen.join(` ${enTekst} `);
   return `${namen.slice(0, 2).join(", ")} ${enTekst} ${andereTekst.replace("{n}", String(namen.length - 2))}`;
 }

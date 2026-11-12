@@ -71,6 +71,12 @@ describe("branche-keuze (puur)", () => {
     expect(t({ alle: false, branches: ["retail", "horeca", "logistiek", "bouw"] })).toBe("Retail, Horeca en 2 andere");
     expect(t(null)).toBe("");
   });
+
+  it("de namen in de taal van de werker, met de Nederlandse als terugval", () => {
+    const pl: Record<string, string> = { horeca: "Gastronomia", retail: "Handel" };
+    expect(brancheSamenvatting({ alle: false, branches: ["retail", "horeca"] }, "Wszystkie", "i", "{n} inne", (k) => pl[k])).toBe("Handel i Gastronomia");
+    expect(brancheSamenvatting({ alle: false, branches: ["logistiek"] }, "Wszystkie", "i", "{n} inne", (k) => pl[k])).toBe("Logistiek");
+  });
 });
 
 describe("/api/me/branches", () => {
