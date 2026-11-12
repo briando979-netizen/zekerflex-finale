@@ -13,21 +13,22 @@ vi.mock("@/lib/storage/kv", () => ({
   },
 }));
 
-import { REM_DUUR_MS, REM_KV_SLEUTEL, REM_NA, aiReviewOverslaan, aiReviewUitslag, laadAiReviewRem, resetAiReviewRem } from "@/lib/onboarding/ai-review-rem";
+import { REM_DUUR_MS, REM_KV_SLEUTEL, REM_NA, aiReviewOverslaan, aiReviewUitslag, laadAiReviewRem, remOpgeslagen, resetAiReviewRem } from "@/lib/onboarding/ai-review-rem";
 
 // De rem op de tekst-AI van de eigen ID-controle (12 nov 2026): gemeten 0 van 14 antwoorden sinds 9 nov, dus elke
 // werker wachtte 8 s voor niets. Drie keer geen antwoord → 6 uur overslaan; daarna één poging.
 
 const NU = Date.parse("2026-11-12T15:00:00+01:00");
 
-beforeEach(() => {
+beforeEach(async () => {
+  await remOpgeslagen(); // niets van een vorige test mag nog binnenkomen
   resetAiReviewRem();
   kv.rijen.clear();
   kv.stuk = false;
 });
 
-/** de stand gaat los (fire-and-forget) naar de database: even wachten tot die er staat */
-const naDatabase = () => new Promise((klaar) => setTimeout(klaar, 0));
+/** de stand gaat na elkaar (zonder wachten) naar de database: wachten tot de laatste er staat */
+const naDatabase = () => remOpgeslagen();
 
 describe("de rem overleeft een uitrol (12 nov: na elke uitrol wachtte elke werker weer 8 s)", () => {
   it("dicht vóór de uitrol blijft dicht erna", async () => {
