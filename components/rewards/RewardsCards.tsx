@@ -5,6 +5,8 @@ import { copyText } from "@/lib/clipboard";
 import { useEffect, useState } from "react";
 import { useInAndroidApp } from "@/components/app/useInAndroidApp";
 import { BANK_AAN } from "@/lib/app-mode";
+import { LEVEL_KAART_NL, UITNODIGING_NL, type LevelKaartTeksten, type UitnodigingTeksten } from "@/lib/rewards/kaart-teksten";
+import { vulIn } from "@/lib/i18n/vul-in";
 
 interface Level {
   id: string;
@@ -35,7 +37,7 @@ interface Payload {
   referral: { code: string; link: string; invited: number; rewarded: number; earnedCents: number; rewards: { referrerCents: number; newUserCents: number } };
 }
 
-const euro = (c: number) => new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(c / 100);
+const euro = (c: number, locale = "nl-NL") => new Intl.NumberFormat(locale, { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(c / 100);
 
 let cache: Promise<Payload | null> | null = null;
 function useRewards() {
@@ -56,8 +58,9 @@ const BANK_BADGES = new Set(["banker", "saver", "card"]);
 // ZekerFlex Bank staat ook op de website uit (BANK_AAN): dan gaan ze daar ook weg.
 const appPerks = (perks: string[], inApp: boolean) => (inApp || !BANK_AAN ? perks.filter((p) => !BANK_PERK.test(p)) : perks);
 
-/** Level, progress to the next one, perks and badges (freelancers). */
-export function LevelCard() {
+/** Level, progress to the next one, perks and badges (freelancers). `texts`: de werker-app geeft de taal van de werker mee. */
+export function LevelCard({ texts = LEVEL_KAART_NL }: { texts?: LevelKaartTeksten } = {}) {
+  const k = texts;
   const data = useRewards();
   const inApp = useInAndroidApp() !== false;
   const [open, setOpen] = useState(false);
@@ -70,9 +73,9 @@ export function LevelCard() {
         <div className="flex items-center gap-3">
           <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/15 text-3xl">{s.level.emoji}</span>
           <span className="min-w-0 flex-1">
-            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-white/60">Jouw level</span>
+            <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-white/60">{k.jouwLevel}</span>
             <span className="block font-display text-2xl font-bold">{s.level.name}</span>
-            <span className="block text-xs text-white/70">{s.xp.toLocaleString("nl-NL")} XP</span>
+            <span className="block text-xs text-white/70">{s.xp.toLocaleString(k.locale)} XP</span>
           </span>
         </div>
         {s.next && (
@@ -81,14 +84,14 @@ export function LevelCard() {
               <div className="h-full rounded-full bg-gradient-to-r from-brand-mint to-white" style={{ width: `${s.progressPct}%` }} />
             </div>
             <p className="mt-1 text-xs text-white/70">
-              Nog {(s.next.minXp - s.xp).toLocaleString("nl-NL")} XP tot {s.next.emoji} {s.next.name}
+              {vulIn(k.nogTot, { n: (s.next.minXp - s.xp).toLocaleString(k.locale), volgende: `${s.next.emoji} ${s.next.name}` })}
             </p>
           </div>
         )}
       </div>
       <div className="space-y-4 p-5">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-neutralx-500">Jouw voordelen</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutralx-500">{k.jouwVoordelen}</p>
           <ul className="mt-2 space-y-1 text-sm text-ink">
             {appPerks(s.level.perks, inApp).map((p) => (
               <li key={p}>✓ {p}</li>
@@ -97,7 +100,7 @@ export function LevelCard() {
         </div>
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-neutralx-500">
-            Badges ({badges.filter((b) => b.earned).length}/{badges.length})
+            {k.badges} ({badges.filter((b) => b.earned).length}/{badges.length})
           </p>
           <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-8">
             {badges.map((b) => (
@@ -109,7 +112,7 @@ export function LevelCard() {
           </div>
         </div>
         <button type="button" onClick={() => setOpen(!open)} className="text-xs font-semibold text-brand-600 hover:underline">
-          {open ? "Verberg alle levels" : "Bekijk alle levels"}
+          {open ? k.verberg : k.bekijk}
         </button>
         {open && (
           <ul className="divide-y divide-hair rounded-xl border border-hair text-sm">
@@ -118,7 +121,7 @@ export function LevelCard() {
                 <span className="text-xl">{l.emoji}</span>
                 <span className="min-w-0 flex-1">
                   <span className="block font-semibold text-ink">
-                    {l.name} <span className="text-xs font-normal text-neutralx-400">vanaf {l.minXp.toLocaleString("nl-NL")} XP</span>
+                    {l.name} <span className="text-xs font-normal text-neutralx-400">{vulIn(k.vanaf, { n: l.minXp.toLocaleString(k.locale) })}</span>
                   </span>
                   <span className="block text-xs text-neutralx-500">{appPerks(l.perks, inApp).join(" · ")}</span>
                 </span>
@@ -127,7 +130,7 @@ export function LevelCard() {
           </ul>
         )}
         <p className="text-[11px] text-neutralx-400">
-          XP: 100 per afgeronde klus, 25 per review, 500 extra bij 4,8+ gemiddeld{inApp || !BANK_AAN ? "." : ", plus bonussen voor ZekerFlex Bank, potjes en een pas."}
+          {k.xpUitleg}{inApp || !BANK_AAN ? k.xpEinde : k.xpBank}
         </p>
       </div>
     </div>
@@ -197,7 +200,8 @@ export function BusinessLevelCard() {
  * offering cash rewards in the Android app gives it an 18+ Play/IARC rating,
  * and freelancers can be 16–17 (lib/app-mode.ts).
  */
-export function ReferralCard() {
+export function ReferralCard({ texts = UITNODIGING_NL }: { texts?: UitnodigingTeksten } = {}) {
+  const k = texts;
   const data = useRewards();
   const inApp = useInAndroidApp();
   const [copied, setCopied] = useState(false);
@@ -205,7 +209,7 @@ export function ReferralCard() {
   if (!data || inApp !== false || !BANK_AAN) return null;
   const r = data.referral;
   async function share() {
-    const text = `Werk en verdien via ZekerFlex — met je eigen gratis bankrekening. Meld je aan met mijn link en krijg ${euro(r.rewards.newUserCents)} welkomstbonus: ${r.link}`;
+    const text = vulIn(k.deelTekst, { bedrag: euro(r.rewards.newUserCents, k.locale), link: r.link });
     try {
       if (navigator.share) await navigator.share({ title: "ZekerFlex", text, url: r.link });
       else {
@@ -222,16 +226,16 @@ export function ReferralCard() {
       <span className="text-4xl">🎁</span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold text-ink">
-          Nodig iemand uit, krijg {euro(r.rewards.referrerCents)}
+          {vulIn(k.titel, { bedrag: euro(r.rewards.referrerCents, k.locale) })}
         </span>
         <span className="block text-xs text-neutralx-500">
-          Zij krijgen {euro(r.rewards.newUserCents)} welkomstbonus. Uitbetaald op je ZekerFlex Bank zodra hun eerste klus is afgerond.
-          {r.invited > 0 && ` Al ${r.invited} uitgenodigd · ${euro(r.earnedCents)} verdiend.`}
+          {vulIn(k.uitleg, { bedrag: euro(r.rewards.newUserCents, k.locale) })}
+          {r.invited > 0 && vulIn(k.uitgenodigd, { n: r.invited, bedrag: euro(r.earnedCents, k.locale) })}
         </span>
         <span className="mt-1 block font-mono text-xs text-neutralx-600">{r.link.replace(/^https?:\/\//, "")}</span>
       </span>
       <button type="button" onClick={share} className="btn-primary text-sm">
-        {copied ? "Link gekopieerd ✓" : "Deel je link"}
+        {copied ? k.gekopieerd : k.knop}
       </button>
     </div>
   );

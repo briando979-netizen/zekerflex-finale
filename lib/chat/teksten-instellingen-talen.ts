@@ -1,7 +1,9 @@
 // Machine-assisted translations: native-speaker review recommended.
 import type { InstellingenTeksten } from "./teksten-instellingen";
+import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 
 export const INSTELLINGEN_EN: InstellingenTeksten = {
+  pushKaart: FREELANCER_DICTS.en.accountDelen.push,
   statusPlaceholder: "Your status, e.g. 'Available from Monday'",
   account: "Account",
   accountSub: "Security, details, delete account",
@@ -90,6 +92,7 @@ export const INSTELLINGEN_EN: InstellingenTeksten = {
 };
 
 export const INSTELLINGEN_PL: InstellingenTeksten = {
+  pushKaart: FREELANCER_DICTS.pl.accountDelen.push,
   statusPlaceholder: "Twój status, np. „Dostępny od poniedziałku”",
   account: "Konto",
   accountSub: "Bezpieczeństwo, dane, usuwanie konta",
@@ -178,6 +181,7 @@ export const INSTELLINGEN_PL: InstellingenTeksten = {
 };
 
 export const INSTELLINGEN_RO: InstellingenTeksten = {
+  pushKaart: FREELANCER_DICTS.ro.accountDelen.push,
   statusPlaceholder: "Starea ta, ex. „Disponibil din luni”",
   account: "Cont",
   accountSub: "Securitate, date, ștergerea contului",
@@ -266,6 +270,7 @@ export const INSTELLINGEN_RO: InstellingenTeksten = {
 };
 
 export const INSTELLINGEN_UK: InstellingenTeksten = {
+  pushKaart: FREELANCER_DICTS.uk.accountDelen.push,
   statusPlaceholder: "Твій статус, напр. «Доступний з понеділка»",
   account: "Обліковий запис",
   accountSub: "Безпека, дані, видалення облікового запису",

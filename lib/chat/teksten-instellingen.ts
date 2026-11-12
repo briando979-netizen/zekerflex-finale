@@ -1,6 +1,10 @@
 // Teksten van components/chat/ChatSettingsPanel.tsx (chatinstellingen in pagina's). Nederlandse bron;
 // de vertalingen staan in teksten-instellingen-talen.ts. Plaatshouders vult vulIn (lib/i18n/vul-in.ts).
+import { PUSH_KAART_NL } from "@/lib/account/teksten";
+
 export const INSTELLINGEN_NL = {
+  /** de pushkaart (components/app/PushToggle.tsx) in de chat-instellingen; zelfde teksten als in het Account */
+  pushKaart: PUSH_KAART_NL,
   statusPlaceholder: "Je status, bijv. 'Beschikbaar vanaf maandag'",
   account: "Account",
   accountSub: "Beveiliging, gegevens, account verwijderen",
