@@ -258,6 +258,9 @@ export function NewShiftForm({
   const primaryDay = startsAt ? startsAt.slice(0, 10) : "";
   const dayOptions = useMemo(() => extraDayOptions(startsAt ? startsAt.slice(0, 10) : amsterdamDayKey(new Date())), [startsAt]);
 
+  // de waarde van een datetime-local is al de tijd in Nederland ("2026-11-05T09:00"): laat hem zo zien, in welke zone de browser ook staat
+  const tijdTekst = (v: string) => new Date(`${v}Z`).toLocaleString(loc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
+
   const plek = edit ? edit.locatie : oneOff ? adHocAddress?.label ?? n.eenmaligeLocatie : branches[0]?.name ?? n.vestigingNaam;
 
   return (
@@ -612,7 +615,7 @@ export function NewShiftForm({
                 <p className="truncate font-display text-lg font-bold drop-shadow">{title || n.titelFallback}</p>
                 <p className="truncate text-xs text-white/80">
                   {plek}
-                  {startsAt ? ` · ${new Date(startsAt).toLocaleString(loc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}
+                  {startsAt ? ` · ${tijdTekst(startsAt)}` : ""}
                 </p>
               </div>
             )}
@@ -622,7 +625,7 @@ export function NewShiftForm({
               <p className="truncate font-display text-lg font-bold text-ink">{title || n.titelFallback}</p>
               <p className="truncate text-xs text-neutralx-500">
                 {plek}
-                {startsAt ? ` · ${new Date(startsAt).toLocaleString(loc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}
+                {startsAt ? ` · ${tijdTekst(startsAt)}` : ""}
               </p>
             </div>
           )}
