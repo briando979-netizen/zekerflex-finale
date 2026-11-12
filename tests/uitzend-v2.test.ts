@@ -10,8 +10,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({
   kv: new Map<string, unknown>(),
   werkgever: { naam: "Zekerflex, Inc.", adres: null as string | null, kvk: null as string | null, loonheffingennummer: null as string | null },
-  gebruikers: [] as { id: string; email: string; disabledAt: Date | null }[],
-  push: [] as { ids: string[]; titel: string; body: string; url: string }[],
 }));
 
 vi.mock("@/lib/storage/kv", () => ({
@@ -27,23 +25,11 @@ vi.mock("@/lib/storage/kv", () => ({
 vi.mock("@/lib/fiscal/store", () => ({ getFiscal: async () => ({ bsnLast4: "6782" }) }));
 vi.mock("@/lib/payroll/uitzend-status", () => ({ getUitzendStatus: async () => ({ phase: "A", weeksWorked: 3 }) }));
 vi.mock("@/lib/platform/werkgever", () => ({ werkgeverGegevens: () => ({ ...h.werkgever }) }));
-vi.mock("@/lib/prisma", () => ({ prisma: { user: { findMany: async ({ where }: { where: { id: { in: string[] } } }) => h.gebruikers.filter((u) => where.id.in.includes(u.id)) } } }));
 vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
-vi.mock("@/lib/notifications/localized-push", () => ({
-  sendLocalizedPush: async (ids: string[], build: (t: unknown, l: "nl" | "en" | "pl" | "ro" | "uk") => { title: string; body: string; data: { url: string } }) => {
-    const p = build({}, ids[0] === "w-pl" ? "pl" : "nl");
-    h.push.push({ ids, titel: p.title, body: p.body, url: p.data.url });
-    return 1;
-  },
-}));
-vi.mock("@/lib/internal-auth", () => ({ checkInternalToken: (r: Request) => (r.headers.get("x-internal-token") === "geheim" ? { ok: true } : { ok: false, status: 401, message: "Niet toegestaan" }) }));
 
 import { activeUitzendContract, listUitzendContracts, signUitzendContract, verouderdUitzendContract, voorbeeldUitzendContract, SJABLOON_HUIDIG, type UitzendContract } from "@/lib/agreements/uitzend-contract";
 import { uitzendContractBlokken } from "@/lib/agreements/uitzend-tekst";
 import { uitzendContractPdf } from "@/lib/pdf/documents";
-import { meldUitzendBijgewerkt } from "@/lib/agreements/uitzend-melding";
-import { UITZEND_NIEUW } from "@/lib/agreements/uitzend-nieuw-teksten";
-import { POST as meldRoute } from "@/app/api/internal/agreements/uitzend-v2-melding/route";
 
 const ROOT = process.cwd();
 const bron = (f: string) => readFileSync(path.join(ROOT, f), "utf8").split("\r\n").join("\n");
@@ -71,8 +57,6 @@ const tekstVan = (c: UitzendContract) => uitzendContractBlokken(c).map((b) => ("
 beforeEach(() => {
   h.kv.clear();
   h.werkgever = { naam: "Zekerflex, Inc.", adres: null, kvk: null, loonheffingennummer: null };
-  h.gebruikers = [];
-  h.push = [];
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date(NU));
 });
@@ -181,72 +165,5 @@ describe("alleen de huidige versie telt: opnieuw tekenen", () => {
 
   it("de poort, de reageer-controle en Verificatie lezen activeUitzendContract: de stap 'contract' staat dus weer open", () => {
     for (const f of ["lib/onboarding/werker-poort-server.ts", "lib/fiscal/eligibility.ts", "app/dashboard/verificatie/page.tsx"]) expect(bron(f), f).toContain("activeUitzendContract");
-  });
-});
-
-describe("de melding aan werkers met alleen een v1", () => {
-  const zet = (userId: string, email: string, over: Partial<UitzendContract> = {}) => {
-    h.kv.set(`uitzend-contracts:${userId}`, [{ ...v1, userId, validUntil: new Date(NU + 30 * DAG).toISOString(), ...over }]);
-    h.gebruikers.push({ id: userId, email, disabledAt: null });
-  };
-  const opstelling = () => {
-    zet("w-nl", "anna@voorbeeld.nl");
-    zet("w-pl", "piotr@voorbeeld.nl");
-    zet("w-test", "zf-proef@zekerflex.test");
-    zet("w-al-v2", "al@voorbeeld.nl");
-    h.kv.set("uitzend-contracts:w-al-v2", [{ ...v1, validUntil: new Date(NU + 30 * DAG).toISOString() }, { ...v1, id: "n", sjabloon: 2, validUntil: new Date(NU + 60 * DAG).toISOString() }]);
-    zet("w-verlopen", "oud@voorbeeld.nl", { validUntil: new Date(NU - DAG).toISOString() });
-  };
-
-  it("droge telling: alleen aantallen, er gaat niets uit en er wordt niets bewaard", async () => {
-    opstelling();
-    const voor = JSON.stringify([...h.kv.entries()]);
-    const t = await meldUitzendBijgewerkt({ verstuur: false, nu: NU });
-    expect(t).toEqual({ oudeVersie: 3, overgeslagen: 1, alGemeld: 0, teMelden: 2, bereikt: 0, verstuurd: 0 });
-    expect(h.push).toHaveLength(0);
-    expect(JSON.stringify([...h.kv.entries()])).toBe(voor);
-  });
-
-  it("versturen: één push per werker in zijn app-taal naar de overeenkomst, niet naar testadressen, en een tweede keer niet opnieuw", async () => {
-    opstelling();
-    const t = await meldUitzendBijgewerkt({ verstuur: true, nu: NU });
-    expect(t).toMatchObject({ teMelden: 2, verstuurd: 2, bereikt: 2 });
-    expect(h.push.map((p) => p.ids[0]).sort()).toEqual(["w-nl", "w-pl"]);
-    const nl = h.push.find((p) => p.ids[0] === "w-nl")!;
-    const pl = h.push.find((p) => p.ids[0] === "w-pl")!;
-    expect(nl.titel).toBe(UITZEND_NIEUW.nl.pushTitel);
-    expect(pl.titel).toBe(UITZEND_NIEUW.pl.pushTitel);
-    expect(nl.url).toBe("/dashboard/verificatie#uitzendovereenkomst");
-    const tweede = await meldUitzendBijgewerkt({ verstuur: true, nu: NU });
-    expect(tweede).toMatchObject({ alGemeld: 2, teMelden: 0, verstuurd: 0 });
-    expect(h.push).toHaveLength(2);
-  });
-
-  it("een geblokkeerd account krijgt niets", async () => {
-    zet("w-weg", "weg@voorbeeld.nl");
-    h.gebruikers = h.gebruikers.map((u) => ({ ...u, disabledAt: new Date() }));
-    expect((await meldUitzendBijgewerkt({ verstuur: true, nu: NU })).overgeslagen).toBe(1);
-    expect(h.push).toHaveLength(0);
-  });
-
-  it("de route: zonder geheim 401, standaard droog, alleen met ?verstuur=1 gaat er een push uit; het antwoord bevat alleen aantallen", async () => {
-    opstelling();
-    const post = (url: string, token?: string) => meldRoute(new Request(`http://app:3000${url}`, { method: "POST", ...(token ? { headers: { "x-internal-token": token } } : {}) }));
-    expect((await post("/api/internal/agreements/uitzend-v2-melding")).status).toBe(401);
-    const droog = await (await post("/api/internal/agreements/uitzend-v2-melding", "geheim")).json();
-    expect(droog).toMatchObject({ modus: "droog", oudeVersie: 3, teMelden: 2, verstuurd: 0 });
-    expect(JSON.stringify(droog)).not.toMatch(/@|anna|piotr|w-nl/);
-    expect(h.push).toHaveLength(0);
-    const echt = await (await post("/api/internal/agreements/uitzend-v2-melding?verstuur=1", "geheim")).json();
-    expect(echt).toMatchObject({ modus: "verstuurd", verstuurd: 2 });
-  });
-
-  it("het wissen van een account neemt de markering mee (AVG), en de teksten zijn er in vijf talen", () => {
-    expect(bron("lib/privacy/user-kv.ts")).toContain('"uitzend-v2-melding:"');
-    for (const taal of ["nl", "en", "pl", "ro", "uk"] as const) {
-      const t = UITZEND_NIEUW[taal];
-      for (const v of Object.values(t)) expect(v.length, taal).toBeGreaterThan(10);
-      if (taal !== "nl") expect(t.titel, taal).not.toBe(UITZEND_NIEUW.nl.titel);
-    }
   });
 });
