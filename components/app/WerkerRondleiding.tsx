@@ -11,6 +11,9 @@ import {
   type RondleidingStand,
 } from "@/lib/onboarding/rondleiding";
 
+/** de dimlaag rond de plek (live gemeten: 55% was op een lichte pagina nauwelijks te zien) */
+const DIM = "rgba(10, 12, 16, 0.7)";
+
 /** De plek die bij een stap hoort (data-rondleiding), als die zichtbaar is. */
 function zoekPlek(stap: string): DOMRect | null {
   for (const el of document.querySelectorAll<HTMLElement>(`[data-rondleiding="${stap}"]`)) {
@@ -112,14 +115,24 @@ export function WerkerRondleiding() {
 
   return (
     <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-labelledby={titelId}>
+      {/* Live gemeten (12 nov, 390 px): een ring-klasse zet zelf een box-shadow en botste met de dimlaag, en 55% donker
+          was nauwelijks te zien. Daarom een outline in de merkkleur en 70% donker, allebei als inline-stijl. */}
       {plek ? (
         <div
           aria-hidden
-          className="pointer-events-none fixed rounded-xl ring-4 ring-brand-500 transition-all duration-200"
-          style={{ left: plek.left - 6, top: plek.top - 6, width: plek.width + 12, height: plek.height + 12, boxShadow: "0 0 0 9999px rgba(10,12,16,0.55)" }}
+          className="pointer-events-none fixed rounded-xl transition-all duration-200"
+          style={{
+            left: plek.left - 6,
+            top: plek.top - 6,
+            width: plek.width + 12,
+            height: plek.height + 12,
+            outline: `3px solid rgb(var(--brand-500-rgb))`,
+            outlineOffset: 2,
+            boxShadow: `0 0 0 9999px ${DIM}`,
+          }}
         />
       ) : (
-        <div aria-hidden className="fixed inset-0 bg-[rgba(10,12,16,0.55)]" />
+        <div aria-hidden className="fixed inset-0" style={{ background: DIM }} />
       )}
       <div className="fixed inset-x-4 mx-auto max-w-sm rounded-2xl border border-hair bg-white p-5 shadow-lift" style={kaartStijl}>
         <p className="text-xs font-semibold uppercase tracking-wide text-neutralx-500">
