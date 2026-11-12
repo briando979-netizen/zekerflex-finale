@@ -4,8 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // en wat we loggen bevat geen tokens of e-mailadressen.
 
 const h = vi.hoisted(() => ({
-  fixedWindow: vi.fn(async () => ({ ok: true })),
-  enforceRateLimit: vi.fn(async () => undefined),
+  fixedWindow: vi.fn(async (..._a: unknown[]) => ({ ok: true })),
+  enforceRateLimit: vi.fn(async (..._a: unknown[]) => undefined),
   recordVisitEvent: vi.fn(async () => undefined),
   trackEvents: vi.fn(async () => ({ accepted: 1 })),
   schermContext: vi.fn(),
