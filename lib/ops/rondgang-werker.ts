@@ -3,6 +3,7 @@ import { env } from "@/lib/env";
 import { prisma } from "@/lib/prisma";
 import { isReservedTestAddress } from "@/lib/mail/test-adres";
 import { setFiscal } from "@/lib/fiscal/store";
+import { SESSION_COOKIE } from "@/lib/auth/session";
 import { beoordeel, type RondgangProbleem } from "@/lib/ops/rondgang-regels";
 
 // ---------------------------------------------------------------------------
@@ -105,8 +106,8 @@ async function meldAan(intern: string, email: string, wachtwoord: string, jar: J
     signal: AbortSignal.timeout(15_000),
   });
   neemCookies(res, jar);
-  // NextAuth zet de sessie in authjs.session-token (in productie met __Secure-ervoor)
-  return [...jar.keys()].some((k) => /authjs\.session-token$/.test(k));
+  // de sessiecookie zoals lib/auth/session.ts hem noemt (in productie __Secure-zekerflex.session; live gemeten 12 nov)
+  return jar.has(SESSION_COOKIE);
 }
 
 /** Haalt één werkerpagina op (zonder redirects te volgen naar buiten). */

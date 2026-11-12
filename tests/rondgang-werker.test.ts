@@ -17,6 +17,7 @@ const setFiscal = vi.fn();
 vi.mock("@/lib/fiscal/store", () => ({ setFiscal: (...a: unknown[]) => setFiscal(...a) }));
 
 import { APP_PAGES } from "@/lib/dev/app-pages.generated";
+import { SESSION_COOKIE } from "@/lib/auth/session";
 import { RONDGANG_WERKER_STANDAARD, WERKER_PAGINAS, draaiWerkerRondgang, redirectPad, zorgVoorRondgangWerker } from "@/lib/ops/rondgang-werker";
 
 const GEHEIM = "sessie-waarde-die-nergens-mag-staan";
@@ -99,7 +100,7 @@ describe("draaiWerkerRondgang", () => {
       if (url.endsWith("/api/auth/csrf")) return antwoord(200, JSON.stringify({ csrfToken: "c1" }), {}, ["__Host-authjs.csrf-token=csrf; Path=/"]);
       if (url.endsWith("/api/auth/callback/credentials")) {
         expect(init?.method).toBe("POST");
-        return antwoord(302, "", { location: "https://zekerflex.com/dashboard/klussen" }, sessie ? [`__Secure-authjs.session-token=${GEHEIM}; Path=/; HttpOnly; Secure`] : []);
+        return antwoord(302, "", { location: "https://zekerflex.com/dashboard/klussen" }, sessie ? [`${SESSION_COOKIE}=${GEHEIM}; Path=/; HttpOnly; Secure`] : ["__Secure-authjs.callback-url=x; Path=/"]);
       }
       // werkerpagina's: alleen GET, met de sessie en de koppen zoals Caddy
       expect(init?.method ?? "GET").toBe("GET");
@@ -153,7 +154,7 @@ describe("draaiWerkerRondgang", () => {
     klaarAccount();
     fetchMock.mockImplementation(async (url: string) => {
       if (url.endsWith("/api/auth/csrf")) return antwoord(200, JSON.stringify({ csrfToken: "c1" }));
-      if (url.endsWith("/api/auth/callback/credentials")) return antwoord(302, "", { location: "/dashboard" }, [`authjs.session-token=${GEHEIM}`]);
+      if (url.endsWith("/api/auth/callback/credentials")) return antwoord(302, "", { location: "/dashboard" }, [`${SESSION_COOKIE}=${GEHEIM}`]);
       return antwoord(403, "nee", { "content-type": "text/html" });
     });
     const uit = await draaiWerkerRondgang(1, "http://app:3000");
