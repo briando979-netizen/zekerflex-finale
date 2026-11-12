@@ -10,6 +10,7 @@ const h = vi.hoisted(() => ({
   pushes: [] as { ids: string[]; push: { title: string; body: string } }[],
   blocked: false,
   payroll: false,
+  talen: new Map<string, string>(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -21,6 +22,7 @@ vi.mock("@/lib/prisma", () => ({
 vi.mock("@/lib/notifications/push", () => ({
   sendUserPush: async (ids: string[], push: { title: string; body: string }) => (h.pushes.push({ ids, push }), 1),
 }));
+vi.mock("@/lib/i18n/worker-locale", () => ({ userLocales: async (ids: string[]) => new Map(ids.map((i) => [i, h.talen.get(i) ?? "nl"])) }));
 vi.mock("@/lib/employer/relations", () => ({ isBlockedByAny: async () => h.blocked }));
 vi.mock("@/lib/fiscal/store", () => ({
   getFiscal: async () => ({}),
@@ -56,6 +58,7 @@ describe("alertMatches", () => {
 describe("notifyJobAlerts", () => {
   beforeEach(() => {
     h.pushes.length = 0;
+    h.talen.clear();
     h.blocked = false;
     h.payroll = false;
     h.shifts = [
@@ -83,6 +86,22 @@ describe("notifyJobAlerts", () => {
     expect(h.pushes[0]?.ids).toEqual(["u1"]);
     expect(h.pushes[0]?.push.title).toBe("🔔 Horeca Amsterdam");
     expect(h.pushes[0]?.push.body).toContain("Bediening restaurant");
+  });
+
+  it("de melding komt in de app-taal van de werker (WORKER_PUSH via sendLocalizedPush), ook als het alle talen zijn", async () => {
+    // do 5 nov 2099 19:00 in Nederland: de dag staat in de taal van de werker
+    const dagen: Record<string, string> = {};
+    for (const taal of ["nl", "en", "pl", "ro", "uk"]) {
+      h.pushes.length = 0;
+      h.talen.set("u1", taal);
+      await notifyJobAlerts(["s1"]);
+      expect(h.pushes, taal).toHaveLength(1);
+      dagen[taal] = h.pushes[0]!.push.body;
+    }
+    // elke taal geeft een eigen tekst (de dag en het uurtarief), en de eigen zoekopdracht blijft de titel
+    expect(new Set(Object.values(dagen)).size).toBe(5);
+    expect(dagen.pl).toContain("/godz");
+    expect(h.pushes[0]!.push.title).toBe("🔔 Horeca Amsterdam");
   });
 
   it("niet bij een opdrachtgever die de werker blokkeerde, en uitzenddiensten alleen voor uitzendkrachten", async () => {
