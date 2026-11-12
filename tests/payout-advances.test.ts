@@ -5,14 +5,19 @@ const m = vi.hoisted(() => ({
   create: vi.fn(),
   updateMany: vi.fn(),
   sepa: vi.fn(),
+  sepaAan: true,
+  stripeDicht: false,
+  warn: vi.fn(),
 }));
 
 vi.mock("@/lib/env", () => ({ env: { ADVANCE_FEE_RATE: 0.03, ADVANCE_MAX_RATE_OF_PENDING: 0.8, PAYROLL_ADVANCE_RATE_OF_GROSS: 0.5 } }));
-vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() } }));
+vi.mock("@/lib/logger", () => ({ logger: { error: vi.fn(), info: vi.fn(), warn: (...a: unknown[]) => m.warn(...a) } }));
+vi.mock("@/lib/billing/stripe-betalen", () => ({ betalenUit: async () => (m.stripeDicht ? { tot: "x", op: "x", melding: "charges_enabled=false" } : null) }));
 vi.mock("@/lib/billing/sepa", () => ({
   // echte controlegetal-vorm is hier niet nodig; de routes zelf testen we elders
   isValidIban: (s: string) => /^NL\d{2}[A-Z]{4}\d{10}$/.test(s),
   triggerInstantPayout: (...a: unknown[]) => m.sepa(...a),
+  directeSepaIngericht: () => m.sepaAan,
 }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -41,6 +46,9 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-11-09T10:00:00+01:00"));
   m.rows = [];
+  m.sepaAan = true;
+  m.stripeDicht = false;
+  m.warn.mockReset();
   m.sepa.mockReset().mockResolvedValue({ status: "SUBMITTED", providerRef: "sepa_1" });
 });
 afterEach(() => {
@@ -125,11 +133,27 @@ describe("createPayrollAdvance", () => {
     expect(a?.note).toMatch(/niet op je loon ingehouden/);
   });
 
-  it("zonder geldig IBAN en zonder Stripe-rekening: geen uitbetaling, wel een FAILED-regel met uitleg", async () => {
+  it("zonder geldig IBAN en zonder Stripe-rekening: geen voorschot en geen regel (alleen wat echt kan, 12 nov)", async () => {
     const a = await createPayrollAdvance({ ...base, creditorIban: "NL00BAD" });
+    expect(a).toBeNull();
     expect(m.sepa).not.toHaveBeenCalled();
-    expect(a).toMatchObject({ status: "requested", payoutStatus: "FAILED" });
-    expect(a?.note).toMatch(/Geen geldig IBAN/);
+    expect(m.create).not.toHaveBeenCalled();
+  });
+
+  it("directe SEPA niet ingericht en geen Stripe-rekening: geen voorschot, geen FAILED-regel en geen waarschuwing", async () => {
+    m.sepaAan = false;
+    const a = await createPayrollAdvance(base);
+    expect(a).toBeNull();
+    expect(m.sepa).not.toHaveBeenCalled();
+    expect(m.create).not.toHaveBeenCalled();
+    expect(m.warn).not.toHaveBeenCalled();
+  });
+
+  it("een Stripe-rekening, maar het Stripe-account betaalt niet uit (stripe:betalen-uit): ook geen voorschot", async () => {
+    m.sepaAan = false;
+    m.stripeDicht = true;
+    expect(await createPayrollAdvance({ ...base, creditorIban: null, stripeConnectedAccountId: "acct_1" })).toBeNull();
+    expect(m.create).not.toHaveBeenCalled();
   });
 
   it("met een gekoppelde Stripe-rekening kan het ook zonder IBAN", async () => {
