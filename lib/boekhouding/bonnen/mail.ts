@@ -35,7 +35,8 @@ export interface BonnetjesMailInvoer {
   /** had de mail een html-deel (alleen om te melden dat een html-mail zonder bijlage geen bon is) */
   heeftHtml: boolean;
   /** het authserv-id van onze eigen mailserver (de eerste term van Authentication-Results); zonder telt de bovenste regel */
-  vertrouwdeServer?: string | undefined;
+  /** authserv-id's van onze mailserver (zie authservLijst); zonder lijst telt alleen de bovenste Authentication-Results */
+  vertrouwdeServers?: readonly string[] | undefined;
   alias?: string | undefined;
   /** voor tests; standaard de lijst uit KV */
   eigenAfzenders?: readonly string[] | undefined;
@@ -63,7 +64,7 @@ export async function verwerkBonnetjesMail(m: BonnetjesMailInvoer): Promise<Bonn
 
   const afzender = afzenderAdres(kop);
   const lijst = m.eigenAfzenders ?? (await leesEigenAfzenders());
-  const auth = parseAuthenticationResults(kop, m.vertrouwdeServer);
+  const auth = parseAuthenticationResults(kop, m.vertrouwdeServers);
   const afzenderOpLijst = isEigenAfzender(afzender, lijst);
   const geslaagd = spfDkimGeslaagd(auth, afzender);
   const bonKop: BonKop = {
@@ -107,6 +108,12 @@ export async function verwerkBonnetjesMail(m: BonnetjesMailInvoer): Promise<Bonn
   return { soort: "verwerkt", bonnen, overgeslagen };
 }
 
+/**
+ * TransIP weigert LOGIN bij veel inlogs vlak na elkaar: elke opdracht hieronder opent een eigen verbinding. Gemeten op de
+ * echte postbus: met 1,5 s ertussen lukten alle 30 mails.
+ */
+export const IMAP_PAUZE_MS = 1500;
+
 const LAATSTE_UID_SLEUTEL = "boekhouding:bonmail:laatste-uid";
 
 export interface PostvakUitkomst {
@@ -123,10 +130,12 @@ export interface PostvakUitkomst {
 export async function leesPostvakVoorBonnetjes(
   cfg: ImapConfig,
   administratieId: string,
-  opties: { limiet?: number; vertrouwdeServer?: string; now?: Date } = {},
+  opties: { limiet?: number; vertrouwdeServers?: readonly string[]; pauzeMs?: number; now?: Date } = {},
 ): Promise<PostvakUitkomst> {
   const limiet = Math.min(Math.max(Math.trunc(opties.limiet ?? 10), 1), 30);
   const uit: PostvakUitkomst = { bekeken: 0, bonnetjes: 0, bonnen: 0 };
+  const pauzeMs = Math.max(opties.pauzeMs ?? IMAP_PAUZE_MS, 0);
+  const rustig = () => (pauzeMs > 0 ? new Promise<void>((klaar) => setTimeout(klaar, pauzeMs)) : Promise.resolve());
   const lijst = await fetchInboxList(cfg, 30);
   const staat = await kvGet<{ uid: number }>(LAATSTE_UID_SLEUTEL);
   const vers = lijst.filter((x) => x.uid > (staat?.uid ?? 0)).sort((a, b) => a.uid - b.uid).slice(0, limiet);
@@ -134,8 +143,10 @@ export async function leesPostvakVoorBonnetjes(
   try {
     for (const x of vers) {
       uit.bekeken += 1;
+      await rustig();
       const kop = await fetchKop(cfg, x.uid);
       if (kop && isBonnetjesMail(parseKop(kop))) {
+        await rustig();
         const data = await fetchBijlagen(cfg, x.uid);
         if (data) {
           const r = await verwerkBonnetjesMail({
@@ -143,7 +154,7 @@ export async function leesPostvakVoorBonnetjes(
             kop: data.kop,
             bijlagen: data.bijlagen,
             heeftHtml: data.heeftHtml,
-            vertrouwdeServer: opties.vertrouwdeServer,
+            vertrouwdeServers: opties.vertrouwdeServers,
             now: opties.now,
           });
           if (r.soort !== "geen-bonnetje") uit.bonnetjes += 1;

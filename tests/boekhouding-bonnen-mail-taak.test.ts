@@ -19,7 +19,7 @@ vi.mock("@/lib/internal-auth", () => ({ checkInternalToken: m.gate }));
 vi.mock("@/lib/env", () => ({ env: { BONNEN_AUTHSERV_ID: " mx.zekerflex.com " } }));
 vi.mock("@/lib/boekhouding/bonnen/mail", () => ({ leesPostvakVoorBonnetjes: m.lees }));
 
-const { draaiBonnenMail, MAX_MAILS_PER_RUN } = await import("@/lib/boekhouding/bonnen/mail-taak");
+const { draaiBonnenMail, MAX_MAILS_PER_RUN, IMAP_WACHT_S } = await import("@/lib/boekhouding/bonnen/mail-taak");
 const route = await import("@/app/api/internal/boekhouding/bonnen-mail/route");
 
 const CFG = { host: "imap.test", port: 993, secure: true, user: "u", pass: "p" };
@@ -52,12 +52,14 @@ describe("draaiBonnenMail", () => {
   });
 
   it("leest met een begrensd aantal mails en een eigen IMAP-wachttijd", async () => {
-    const r = await draaiBonnenMail(deps({ vertrouwdeServer: "mx.zekerflex.com" }));
+    const r = await draaiBonnenMail(deps({ vertrouwdeServers: ["scott201", "scott202"] }));
     expect(r).toMatchObject({ status: "gelukt", ok: true, uitslag: { bonnen: 1 } });
     const [cfg, id, opties] = m.lees.mock.calls[0]!;
     expect(id).toBe("adm1");
-    expect(opties).toEqual({ limiet: MAX_MAILS_PER_RUN, vertrouwdeServer: "mx.zekerflex.com" });
-    expect(cfg.timeout).toBeGreaterThan(0);
+    expect(opties).toEqual({ limiet: MAX_MAILS_PER_RUN, vertrouwdeServers: ["scott201", "scott202"] });
+    // ImapConfig.timeout is in SECONDEN (imap.ts rekent met * 1000): 20_000 gaf 5,5 uur
+    expect(cfg.timeout).toBe(IMAP_WACHT_S);
+    expect(cfg.timeout).toBeLessThanOrEqual(60);
   });
 
   it("meldt een ontbrekende mailbox of administratie in het foutenlogboek", async () => {
@@ -104,7 +106,7 @@ describe("route /api/internal/boekhouding/bonnen-mail", () => {
     const res = await aanroep();
     expect(res.status).toBe(200);
     expect((await res.json()).uitslag).toEqual({ bekeken: 2, bonnetjes: 1, bonnen: 1 });
-    expect(m.lees.mock.calls[0]![2]).toMatchObject({ vertrouwdeServer: "mx.zekerflex.com" });
+    expect(m.lees.mock.calls[0]![2]).toMatchObject({ vertrouwdeServers: ["scott201", "scott202", "mx.zekerflex.com"] });
     expect(m.recordCronRun).toHaveBeenCalledWith("boekhouding-bonnen-mail", true);
   });
 

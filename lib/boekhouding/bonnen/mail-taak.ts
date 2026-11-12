@@ -13,9 +13,9 @@ import type { PostvakUitkomst } from "./mail";
 export const BONNEN_MAIL_FLAG = "boekhouding-bonnen-mail";
 export const BONNEN_MAIL_JOB = "boekhouding-bonnen-mail";
 export const MAX_MAILS_PER_RUN = 10;
-export const TIJDSGRENS_MS = 60_000;
-/** Zo lang wacht de IMAP-verbinding op een antwoord voor hij opgeeft (de harde grens hierboven geldt voor de hele run). */
-export const IMAP_WACHT_MS = 20_000;
+export const TIJDSGRENS_MS = 80_000; // de route mag 90 s duren (maxDuration); de pauzes tussen de inlogs (IMAP_PAUZE_MS) tellen mee
+/** Zo lang wacht de IMAP-verbinding op een antwoord voor hij opgeeft, in SECONDEN (ImapConfig.timeout; de harde grens hierboven geldt voor de hele run). */
+export const IMAP_WACHT_S = 20;
 
 export type TaakUitkomst =
   | { status: "uit" }
@@ -29,8 +29,9 @@ export interface TaakAfhankelijkheden {
   imapConfig: () => ImapConfig | null;
   /** het id van de echte, actieve administratie waar bonnen in komen */
   administratieId: () => Promise<string | null>;
-  lees: (cfg: ImapConfig, administratieId: string, opties: { limiet: number; vertrouwdeServer?: string }) => Promise<PostvakUitkomst>;
-  vertrouwdeServer?: string | undefined;
+  lees: (cfg: ImapConfig, administratieId: string, opties: { limiet: number; vertrouwdeServers?: readonly string[] }) => Promise<PostvakUitkomst>;
+  /** authserv-id's die we vertrouwen (authservLijst) */
+  vertrouwdeServers?: readonly string[] | undefined;
   tijdsgrensMs?: number | undefined;
 }
 
@@ -55,9 +56,9 @@ export async function draaiBonnenMail(d: TaakAfhankelijkheden): Promise<TaakUitk
     const wacht = new Promise<typeof TIMEOUT>((resolve) => {
       timer = setTimeout(() => resolve(TIMEOUT), d.tijdsgrensMs ?? TIJDSGRENS_MS);
     });
-    const run = d.lees({ ...cfg, timeout: IMAP_WACHT_MS }, administratieId, {
+    const run = d.lees({ ...cfg, timeout: IMAP_WACHT_S }, administratieId, {
       limiet: MAX_MAILS_PER_RUN,
-      ...(d.vertrouwdeServer ? { vertrouwdeServer: d.vertrouwdeServer } : {}),
+      ...(d.vertrouwdeServers?.length ? { vertrouwdeServers: d.vertrouwdeServers } : {}),
     });
     // een run die na de tijdsgrens alsnog faalt mag geen onafgehandelde fout geven
     run.catch(() => undefined);

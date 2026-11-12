@@ -8,6 +8,7 @@ import {
   isBonnetjesMail,
   isEigenAfzender,
   mailSleutel,
+  authservLijst,
   parseAuthenticationResults,
   parseKop,
   spfDkimGeslaagd,
@@ -311,6 +312,56 @@ describe("Authentication-Results", () => {
     expect(parseAuthenticationResults(k).spf).toBe("fail");
     expect(parseAuthenticationResults(k, "mx.transip.nl").dkim).toBe("none");
     expect(parseAuthenticationResults(ar("vervalst.example; spf=pass; dkim=pass header.d=a.nl"), "mx.transip.nl").spf).toBeNull();
+  });
+});
+
+describe("ARC-Authentication-Results (TransIP)", () => {
+  const arc = (...regels: string[]) => parseKop(regels.map((r) => `ARC-Authentication-Results: ${r}`).join("\r\n"));
+  const ok = "spf=pass smtp.mailfrom=hetzner.com; dkim=pass header.d=hetzner.com";
+  const IDS = authservLijst();
+
+  it("de vaste lijst heeft scott201 en scott202; BONNEN_AUTHSERV_ID voegt toe", () => {
+    expect(IDS).toEqual(["scott201", "scott202"]);
+    expect(authservLijst(" Mx.Extra.nl, scott201 ")).toEqual(["scott201", "scott202", "mx.extra.nl"]);
+  });
+
+  it("SPF en DKIM uit de ARC-regel van de eigen server tellen, ook zonder gewone Authentication-Results", () => {
+    const a = parseAuthenticationResults(arc(`i=1; scott201; ${ok}`), IDS);
+    expect(a).toEqual({ spf: "pass", dkim: "pass", dkimDomein: "hetzner.com" });
+    expect(spfDkimGeslaagd(a, "factuur@hetzner.com")).toBe(true);
+    expect(spfDkimGeslaagd(parseAuthenticationResults(arc(`i=1; scott202; ${ok}`), IDS), "factuur@hetzner.com")).toBe(true);
+  });
+
+  it("met een alias zijn er twee sets: de hoogste i telt", () => {
+    const a = parseAuthenticationResults(arc("i=1; scott201; spf=fail; dkim=none", `i=2; scott202; ${ok}`), IDS);
+    expect(spfDkimGeslaagd(a, "factuur@hetzner.com")).toBe(true);
+    const b = parseAuthenticationResults(arc(`i=1; scott201; ${ok}`, "i=2; scott202; spf=fail; dkim=pass header.d=hetzner.com"), IDS);
+    expect(b.spf).toBe("fail");
+    expect(spfDkimGeslaagd(b, "factuur@hetzner.com")).toBe(false);
+  });
+
+  it("een nagemaakte regel van de afzender telt nooit: lagere i, of een ander authserv-id", () => {
+    // de afzender zet er zelf een neer; onze server zet er daarna zijn eigen boven (hogere i) met de echte uitslag
+    const k = arc(`i=1; scott201; ${ok}`, "i=2; scott201; spf=fail; dkim=none");
+    expect(parseAuthenticationResults(k, IDS).spf).toBe("fail");
+    // hoogste i is van een onbekende server: niets telt, ook niet de nette regel eronder
+    expect(parseAuthenticationResults(arc(`i=1; scott201; ${ok}`, `i=2; vervalst.example; ${ok}`), IDS)).toEqual({ spf: null, dkim: null, dkimDomein: null });
+    // twee regels met dezelfde hoogste i en één onbekend: niets telt
+    expect(parseAuthenticationResults(arc(`i=3; scott201; ${ok}`, `i=3; vervalst.example; ${ok}`), IDS).spf).toBeNull();
+    // geen lijst gegeven: ARC wordt niet vertrouwd
+    expect(parseAuthenticationResults(arc(`i=1; scott201; ${ok}`)).spf).toBeNull();
+  });
+
+  it("een gewone regel van een vertrouwde server gaat vóór ARC; zonder die regel valt het terug op ARC", () => {
+    const k = parseKop(["Authentication-Results: scott201; spf=pass; dkim=pass header.d=hetzner.com", "ARC-Authentication-Results: i=1; scott201; spf=fail; dkim=none"].join("\r\n"));
+    expect(parseAuthenticationResults(k, IDS).spf).toBe("pass");
+    const vals = parseKop(["Authentication-Results: vervalst.example; spf=pass; dkim=pass header.d=hetzner.com", "ARC-Authentication-Results: i=1; scott201; spf=fail; dkim=none"].join("\r\n"));
+    expect(parseAuthenticationResults(vals, IDS).spf).toBe("fail");
+  });
+
+  it("een kapotte ARC-regel (zonder i of zonder authserv-id) levert niets op", () => {
+    expect(parseAuthenticationResults(arc(`scott201; ${ok}`), IDS).spf).toBeNull();
+    expect(parseAuthenticationResults(arc(`i=1; ${ok}`), IDS).spf).toBeNull();
   });
 });
 

@@ -49,7 +49,7 @@ FLAG_REGISTRY.push({
   key: "boekhouding-bonnen-mail",
   label: "Boekhouding: bonnetjes per mail verwerken",
   description:
-    "Aan = elke 10 minuten wordt de Postvak (bonnetjes@zekerflex.com, een alias van info@) gelezen en worden bijlagen als bon in de echte administratie gezet; wat niet zeker klopt komt bij Beheer, Boekhouding, even kijken. Zet dit pas aan na een echte testmail: stel eerst BONNEN_AUTHSERV_ID in en controleer de lijst eigen afzenders. Uit (standaard) = er wordt geen mail gelezen.",
+    "Aan = elke 10 minuten wordt de Postvak (bonnetjes@zekerflex.com, een alias van info@) gelezen en worden bijlagen als bon in de echte administratie gezet; wat niet zeker klopt komt bij Beheer, Boekhouding, even kijken. Zet dit pas aan na een echte testmail: controleer de lijst eigen afzenders (de TransIP-servers scott201 en scott202 worden al vertrouwd; BONNEN_AUTHSERV_ID voegt er eventueel een toe). Uit (standaard) = er wordt geen mail gelezen.",
   default: false,
 });
 
