@@ -221,7 +221,8 @@ export function KlusConcept({
   }
 
   return (
-    <div className="space-y-8">
+    // meetcodes voor de eigen analytics (lib/analytics/label-privacy.ts): alleen codes, nooit wat iemand intypt
+    <div className="space-y-8" data-track-ctx="stap=klus-concept">
       <form onSubmit={readSite} className="rounded-3xl border border-hair bg-white p-5 shadow-sm md:p-6" noValidate>
         <label className="block" htmlFor="klus-site">
           <span className="block font-display text-lg font-semibold text-ink">Heb je een website? Dan maken we je klus op maat.</span>
@@ -232,6 +233,7 @@ export function KlusConcept({
         <div className="mt-3 flex flex-col gap-3 sm:flex-row">
           <input
             id="klus-site"
+            data-track="klus-website"
             type="text"
             inputMode="url"
             autoComplete="url"
@@ -273,7 +275,7 @@ export function KlusConcept({
             </div>
             <label className="block sm:col-span-2">
               <span className="block text-sm font-medium text-ink">Functie</span>
-              <select value={tpl} onChange={(e) => pickTemplate(e.target.value)} className={`mt-1.5 ${field}`}>
+              <select data-track="klus-functie" value={tpl} onChange={(e) => pickTemplate(e.target.value)} className={`mt-1.5 ${field}`}>
                 {groepen.map((g) => (
                   <optgroup key={g.key} label={g.label}>
                     {g.items.map((t) => (
@@ -301,7 +303,7 @@ export function KlusConcept({
           <Groep title="Waar en wanneer?">
             <label className="block">
               <span className="block text-sm font-medium text-ink">Plaats</span>
-              <input value={city} onChange={(e) => setCity(e.target.value)} list="klus-steden" maxLength={80} autoComplete="address-level2" placeholder="Bijv. Utrecht" className={`mt-1.5 ${field}`} />
+              <input data-track="klus-plaats" value={city} onChange={(e) => setCity(e.target.value)} list="klus-steden" maxLength={80} autoComplete="address-level2" placeholder="Bijv. Utrecht" className={`mt-1.5 ${field}`} />
               <datalist id="klus-steden">
                 {cities.map((c) => (
                   <option key={c.name} value={c.name} />
@@ -310,15 +312,15 @@ export function KlusConcept({
             </label>
             <label className="block">
               <span className="block text-sm font-medium text-ink">Datum</span>
-              <input type="date" value={date} min={today || undefined} onChange={(e) => setDate(e.target.value)} className={`mt-1.5 ${field}`} />
+              <input type="date" data-track="klus-datum" value={date} min={today || undefined} onChange={(e) => setDate(e.target.value)} className={`mt-1.5 ${field}`} />
             </label>
             <label className="block">
               <span className="block text-sm font-medium text-ink">Van</span>
-              <input type="time" value={start} onChange={(e) => setStart(e.target.value)} className={`mt-1.5 ${field}`} />
+              <input type="time" data-track="klus-tijd" value={start} onChange={(e) => setStart(e.target.value)} className={`mt-1.5 ${field}`} />
             </label>
             <label className="block">
               <span className="block text-sm font-medium text-ink">Tot</span>
-              <input type="time" value={end} onChange={(e) => setEnd(e.target.value)} className={`mt-1.5 ${field}`} />
+              <input type="time" data-track="klus-tijd" value={end} onChange={(e) => setEnd(e.target.value)} className={`mt-1.5 ${field}`} />
             </label>
             <label className="block">
               <span className="block text-sm font-medium text-ink">Pauze</span>
@@ -370,7 +372,7 @@ export function KlusConcept({
             </p>
           ) : null}
 
-          <button type="button" onClick={save} disabled={!ready || saving} className="btn-primary mt-6 w-full disabled:opacity-50">
+          <button type="button" data-track="klus-plaatsknop" onClick={save} disabled={!ready || saving} className="btn-primary mt-6 w-full disabled:opacity-50">
             {saving ? "Even geduld…" : employer ? "Zet deze klus klaar in je account" : "Plaats deze klus met een gratis account"}
           </button>
           <p className="mt-3 text-xs leading-relaxed text-neutralx-500">

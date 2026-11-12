@@ -59,7 +59,8 @@ export type WerkgeverPagina = (typeof WERKGEVER_PAGINAS)[number];
  * De hoofdknop op die pagina's, zoals de klikteksten binnenkomen (12 nov gemeten): "Organisatie aanmelden",
  * "Gratis klus plaatsen", "Plaats deze klus", "Zet deze klus klaar", "Vraag een demo aan", "Demo aanvragen".
  */
-export const HOOFDKNOP = /organisatie aanmelden|klus plaatsen|plaats (deze|een|je|jouw) klus|zet deze klus klaar|demo aan(vragen)?|vraag een demo/i;
+// sinds 12 nov heeft de plaatsknop op /klus-plaatsen de code klus-plaatsknop (data-track) in plaats van de knoptekst
+export const HOOFDKNOP = /organisatie aanmelden|klus plaatsen|plaats (deze|een|je|jouw) klus|zet deze klus klaar|demo aan(vragen)?|vraag een demo|^klus-plaatsknop$/i;
 
 export interface BezoekRij {
   type: "PAGEVIEW" | "CLICK";

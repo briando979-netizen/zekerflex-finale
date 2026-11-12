@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { bewaarLabel, isBeheerPad, leesTrackCtx } from "@/lib/analytics/label-privacy";
+import { bewaarLabel, eersteFocus, isBeheerPad, leesTrackCtx } from "@/lib/analytics/label-privacy";
 
 // ---------------------------------------------------------------------------
 // Sovereign analytics beacon. Cookie-free: the session id is a random string
@@ -63,6 +63,9 @@ function flush(useBeacon = false) {
     /* ignore */
   }
 }
+
+/** Velden waarvan de focus deze sessie al geteld is (pad|code); zie eersteFocus. */
+const gezienFocus = new Set<string>();
 
 function enqueue(e: QueuedEvent) {
   queue.push(e);
@@ -144,6 +147,8 @@ export function AnalyticsBeacon() {
         "[data-track], button, a",
       );
       if (!el) return;
+      // een klik in een invoerveld telt niet als klik: de focus hieronder telt hem (één keer per veld per sessie)
+      if (el.matches("input, select, textarea")) return;
       const pad = location.pathname;
       // op /admin en /studio alleen een data-track-code (daar staan namen in de rijen); elders de knoptekst, maar een
       // bestandsnaam, e-mailadres, IBAN of telefoonnummer wordt vervangen (lib/analytics/label-privacy.ts)
@@ -154,6 +159,17 @@ export function AnalyticsBeacon() {
       // context van het scherm, alleen vaste sleutels met codes (bijv. de ID-scan: stap, reden van "Opnieuw")
       const ctx = leesTrackCtx(el.closest<HTMLElement>("[data-track-ctx]")?.getAttribute("data-track-ctx"));
       enqueue({ type: "CLICK", path: pad, ...(label ? { label } : {}), ...(ctx ? { meta: { ctx } } : {}) });
+    };
+    // Een veld met data-track-code aangeraakt: één keer per veld per sessie (lib/analytics/label-privacy.ts, eersteFocus),
+    // als INTERACTION met alleen de code als label. Nooit de waarde van het veld.
+    const onFocus = (ev: FocusEvent) => {
+      const veld = (ev.target as HTMLElement | null)?.closest<HTMLElement>("input[data-track], select[data-track], textarea[data-track]");
+      if (!veld) return;
+      const pad = location.pathname;
+      const code = veld.getAttribute("data-track");
+      if (!eersteFocus(gezienFocus, pad, code)) return;
+      const ctx = leesTrackCtx(veld.closest<HTMLElement>("[data-track-ctx]")?.getAttribute("data-track-ctx"));
+      enqueue({ type: "INTERACTION", path: pad, label: code!, ...(ctx ? { meta: { ctx } } : {}) });
     };
     const onHide = () => flush(true);
     const onVisibility = () => {
@@ -173,11 +189,13 @@ export function AnalyticsBeacon() {
       if (document.visibilityState === "visible") ping("beat", { ms: takeVisible() });
     }, 15_000);
     document.addEventListener("click", onClick, { capture: true });
+    document.addEventListener("focusin", onFocus, { capture: true });
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", onLeave);
     return () => {
       clearInterval(beat);
       document.removeEventListener("click", onClick, { capture: true });
+      document.removeEventListener("focusin", onFocus, { capture: true });
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pagehide", onLeave);
     };

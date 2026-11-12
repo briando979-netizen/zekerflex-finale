@@ -75,3 +75,21 @@ export function maakTrackCtx(velden: Partial<Record<TrackCtxSleutel, string | nu
   const schoon = schoonTrackCtx(Object.fromEntries(Object.entries(velden).map(([k, v]) => [k, v === null || v === undefined ? "" : String(v).toLowerCase()])));
   return schoon ? Object.entries(schoon).map(([k, v]) => `${k}=${v}`).join(";") : "";
 }
+
+/** Is dit een code zoals data-track hoort te zijn ([a-z0-9-], hooguit 60 tekens)? */
+export function isTrackCode(v: string | null | undefined): v is string {
+  return typeof v === "string" && CODE.test(v);
+}
+
+/**
+ * Een focus op een veld met een data-track-code telt één keer per veld per sessie (12 nov: meten of een gast het eerste
+ * veld van /klus-plaatsen aanraakt, zonder dat het aantal events oploopt). Geeft true als deze focus nog niet geteld
+ * was, en onthoudt hem in `gezien`. Nooit de ingevulde waarde: alleen pad en code.
+ */
+export function eersteFocus(gezien: Set<string>, pad: string, code: string | null | undefined): boolean {
+  if (!isTrackCode(code)) return false;
+  const sleutel = `${pad}|${code}`;
+  if (gezien.has(sleutel)) return false;
+  gezien.add(sleutel);
+  return true;
+}
