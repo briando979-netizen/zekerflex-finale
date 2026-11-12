@@ -3,9 +3,8 @@ import { logger } from "@/lib/logger";
 import type { JobAlert, UserPrefs } from "@/lib/prefs/store";
 import { shiftCategory } from "@/lib/shifts/category";
 import { amsterdamParts } from "@/lib/time/amsterdam";
-import { userLocales } from "@/lib/i18n/worker-locale";
-import { WORKER_PUSH, pushDay, pushRate } from "@/lib/i18n/worker-push";
-import { sendUserPush } from "@/lib/notifications/push";
+import { pushDay, pushRate } from "@/lib/i18n/worker-push";
+import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { prefsAllowShift } from "@/lib/matching/worker-prefs";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { isBlockedByAny } from "@/lib/employer/relations";
@@ -80,7 +79,6 @@ export async function notifyJobAlerts(shiftIds: string[], now = new Date()): Pro
     WHERE key LIKE 'prefs:%' AND jsonb_typeof(value->'jobAlerts') = 'array' AND jsonb_array_length(value->'jobAlerts') > 0
     LIMIT 5000`;
 
-  const locales = await userLocales(rows.map((r) => r.key.slice("prefs:".length)));
   let notified = 0;
   for (const row of rows) {
     const userId = row.key.slice("prefs:".length);
@@ -100,14 +98,14 @@ export async function notifyJobAlerts(shiftIds: string[], now = new Date()): Pro
       break;
     }
     if (!hit) continue;
-    const locale = locales.get(userId) ?? "nl";
-    const t = WORKER_PUSH[locale];
-    await sendUserPush([userId], {
-      title: `🔔 ${hit.label}`,
-      body: `${hit.s.title} · ${pushDay(locale, hit.s.startsAt)} · ${hit.s.branch.city} · ${pushRate(t, hit.s.hourlyRateCents)}`.slice(0, 180),
-      data: { type: "SHIFT_OFFER", url: `/dashboard/klussen/${hit.s.id}`, tag: `alert-${hit.s.id}` },
+    // altijd in de app-taal van de werker (sendLocalizedPush groepeert per taal, WORKER_PUSH); de titel is de eigen zoekopdracht van de werker
+    const gevonden = hit;
+    await sendLocalizedPush([userId], (t, locale) => ({
+      title: `🔔 ${gevonden.label}`,
+      body: `${gevonden.s.title} · ${pushDay(locale, gevonden.s.startsAt)} · ${gevonden.s.branch.city} · ${pushRate(t, gevonden.s.hourlyRateCents)}`.slice(0, 180),
+      data: { type: "SHIFT_OFFER", url: `/dashboard/klussen/${gevonden.s.id}`, tag: `alert-${gevonden.s.id}` },
       ttlSeconds: 12 * 3600,
-    }).catch((err) => logger.warn("job alert push failed", { error: (err as Error).message }));
+    })).catch((err) => logger.warn("job alert push failed", { error: (err as Error).message }));
     notified += 1;
   }
   return { notified };
