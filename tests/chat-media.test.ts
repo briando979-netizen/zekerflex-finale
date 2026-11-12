@@ -24,7 +24,8 @@ vi.mock("@/lib/storage/local", () => ({
 }));
 vi.mock("@/lib/messaging/store", () => ({ getMessages: async (threadId: string) => messages.get(threadId) ?? [] }));
 
-import { cleanPhoto, isAllowedChatMime, opensInline, ownChatUpload, PHOTO_MAX_PX, readChatMedia, storeChatMedia } from "@/lib/messaging/media";
+import { cleanPhoto, opensInline, ownChatUpload, PHOTO_MAX_PX, readChatMedia, storeChatMedia } from "@/lib/messaging/media";
+import { chatOpslagType } from "@/lib/messaging/bijlage";
 import { buildContentSecurityPolicy } from "@/lib/security/csp";
 
 beforeEach(() => {
@@ -40,10 +41,10 @@ const jpegWithGps = () =>
     .toBuffer();
 
 describe("chatbijlagen", () => {
-  it("weigert SVG (kan script bevatten) en laat gewone foto's, spraak en pdf toe", () => {
-    expect(isAllowedChatMime("image/svg+xml")).toBe(false);
-    expect(isAllowedChatMime("text/html")).toBe(false);
-    for (const ok of ["image/jpeg", "image/png", "image/heic", "audio/webm;codecs=opus", "application/pdf"]) expect(isAllowedChatMime(ok)).toBe(true);
+  it("elk type mag (12 nov): SVG en HTML (kunnen script bevatten) worden een gewoon bestand, foto's, spraak en pdf blijven", () => {
+    expect(chatOpslagType("image/svg+xml")).toBe("application/octet-stream");
+    expect(chatOpslagType("text/html")).toBe("application/octet-stream");
+    for (const ok of ["image/jpeg", "image/png", "image/heic", "audio/webm;codecs=opus", "application/pdf"]) expect(chatOpslagType(ok)).toBe(ok);
   });
 
   it("haalt de locatie uit een foto en maakt hem niet groter dan nodig", async () => {
@@ -64,7 +65,14 @@ describe("chatbijlagen", () => {
     expect(await ownChatUpload(stored.mediaId, "t2", "u1")).toBeNull(); // ander gesprek
     expect(await ownChatUpload(stored.mediaId, "t1", "u2")).toBeNull(); // andere gebruiker
     expect(await ownChatUpload("upl_van_een_id_foto", "t1", "u1")).toBeNull(); // upload van elders
-    await expect(storeChatMedia("t1", "u1", { filename: "x.svg", mimeType: "image/svg+xml", bytes: Buffer.from("<svg/>") })).rejects.toThrow(/niet toegestaan/);
+    // een SVG mag, maar als gewoon bestand: nooit als beeld of pagina in de browser
+    const svg = await storeChatMedia("t1", "u1", { filename: "x.svg", mimeType: "image/svg+xml", bytes: Buffer.from("<svg/>") });
+    expect(svg.mimeType).toBe("application/octet-stream");
+    expect(opensInline(svg.mimeType)).toBe(false);
+    // een programma mag ook (de chat waarschuwt erbij), als download
+    const exe = await storeChatMedia("t1", "u1", { filename: "setup.exe", mimeType: "application/x-msdownload", bytes: Buffer.from("MZ") });
+    expect(exe.mimeType).toBe("application/x-msdownload");
+    expect(opensInline(exe.mimeType)).toBe(false);
   });
 
   it("geeft een bestand alleen via een gesprek waarin het getoond wordt", async () => {
