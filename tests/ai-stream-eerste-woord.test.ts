@@ -31,7 +31,9 @@ vi.mock("@/lib/env", async (importOriginal) => {
   };
 });
 
-import { _resetLlmBreaker, chatStream } from "@/lib/ai/client";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { EERSTE_WOORD_GRATIS_MS, EERSTE_WOORD_MS, _resetLlmBreaker, chatStream, eersteWoordGrens } from "@/lib/ai/client";
 
 const regel = (tekst: string) => `data: ${JSON.stringify({ choices: [{ delta: { content: tekst } }] })}\n`;
 
@@ -71,6 +73,20 @@ beforeEach(() => _resetLlmBreaker());
 afterEach(() => {
   vi.unstubAllGlobals();
   _resetLlmBreaker();
+});
+
+describe("de grens per stand van alles gratis", () => {
+  it("eigen model: het gemeten maximum (30,6 s) plus de helft, nooit onder 30 s; Gemini: 20 s", () => {
+    expect(eersteWoordGrens(true)).toBe(EERSTE_WOORD_GRATIS_MS);
+    expect(EERSTE_WOORD_GRATIS_MS).toBeGreaterThanOrEqual(Math.max(30_000, 30_600 * 1.5));
+    expect(eersteWoordGrens(false)).toBe(EERSTE_WOORD_MS);
+    expect(EERSTE_WOORD_MS).toBe(20_000);
+  });
+
+  it("chatStream kiest de grens met gratisAan(), zoals timeoutFor; een eigen eersteWoordMs gaat voor", () => {
+    const bron = readFileSync(path.join(process.cwd(), "lib/ai/client.ts"), "utf8");
+    expect(bron).toMatch(/const grens = opts\.eersteWoordMs \?\? eersteWoordGrens\(gratisAan\(\)\);/);
+  });
 });
 
 describe("stream: grens tot het eerste woord", () => {
