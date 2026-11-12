@@ -17,6 +17,9 @@ describe("kennisbank van de accountant", () => {
     expect(zoekKennis("Hoeveel is de Delaware franchise tax met 10 miljoen aandelen?")[0]?.regel.id).toBe("de-franchise-methodes");
     expect(zoekKennis("Wat is Form 5472 en wat is de boete?")[0]?.regel.id).toBe("irs-5472");
     expect(zoekKennis("Moet ik me inschrijven bij de KvK als buitenlandse rechtspersoon?")[0]?.regel.id).toBe("nl-kvk");
+    expect(zoekKennis("Wanneer moet ik me aanmelden voor de Wtta overgangsregeling?")[0]?.regel.id).toBe("nl-wtta");
+    expect(zoekKennis("Hoe hoog is de waarborgsom voor de toelating?")[0]?.regel.id).toBe("nl-wtta-waarborgsom");
+    expect(zoekKennis("Ben ik als bestuurder hoofdelijk aansprakelijk, formeel buitenlandse vennootschap?")[0]?.regel.id).toBe("nl-wfbv");
   });
 
   it("weet het niet bij een vraag zonder bron en verzint dan niets", () => {
@@ -45,8 +48,8 @@ describe("controle van het modelantwoord", () => {
 });
 
 describe("structuurcheck", () => {
-  it("heeft de zeven punten en verwijst naar bestaande bronregels", () => {
-    expect(STRUCTUUR.map((p) => p.id)).toEqual(["kvk", "btw", "fiscaal", "83b", "ein", "bank", "stripe"]);
+  it("heeft de tien punten en verwijst naar bestaande bronregels", () => {
+    expect(STRUCTUUR.map((p) => p.id)).toEqual(["kvk", "wfbv", "wtta", "waadi", "btw", "fiscaal", "83b", "ein", "bank", "stripe"]);
     for (const p of STRUCTUUR) if (p.bronId) expect(KENNIS.some((r) => r.id === p.bronId), p.id).toBe(true);
   });
   it("neemt alleen geldige opgeslagen statussen over", () => {
@@ -55,6 +58,18 @@ describe("structuurcheck", () => {
     expect(t.btw).toBe("open");
     expect(t["83b"]).toBe("bezig");
     expect(Object.keys(t).length).toBe(STRUCTUUR.length);
+  });
+  it("de Wtta-melding heeft 31 december 2026 als uiterste dag", () => {
+    expect(STRUCTUUR.find((p) => p.id === "wtta")?.uiterlijk).toBe("2026-12-31");
+    expect(dagenTot("2026-12-31", new Date("2026-11-12T12:00:00+01:00"))).toBe(50);
+  });
+  it("gelezen bronnen van een algemene site zijn de precieze pagina, niet de voorpagina", () => {
+    const algemeen = new Set(["www.kvk.nl", "www.belastingdienst.nl", "www.irs.gov", "corp.delaware.gov", "wetten.overheid.nl", "www.rijksoverheid.nl"]);
+    for (const r of KENNIS) {
+      if (r.zekerheid !== "gelezen" || !r.bron.url.startsWith("http")) continue;
+      const u = new URL(r.bron.url);
+      if (algemeen.has(u.host)) expect(u.pathname.length, r.id).toBeGreaterThan(1);
+    }
   });
   it("telt dagen tot de 83(b)-datum met een vaste klok", () => {
     expect(dagenTot("2026-12-09", new Date("2026-11-12T12:00:00+01:00"))).toBe(28);

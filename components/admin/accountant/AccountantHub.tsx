@@ -185,7 +185,7 @@ function Delaware() {
           <p className="mt-2 text-xs">Dit bedrag zet Delaware vaak op de rekening.</p>
         </Panel>
         <Panel title="Assumed par value capital-methode" actions={u.apvcMethode ? <Pill tone={u.gunstigste === "apvc" ? "ok" : "neutral"}>{usd(u.apvcMethode.belasting)}</Pill> : <Pill>Niet te berekenen</Pill>}>
-          {u.apvcMethode ? <ul className="list-disc space-y-1 pl-5 text-sm">{u.apvcMethode.uitleg.map((t) => <li key={t}>{t}</li>)}</ul> : <p className="text-sm">Vul het aantal uitgegeven aandelen in.</p>}
+          {u.apvcMethode ? <ul className="list-disc space-y-1 pl-5 text-sm">{u.apvcMethode.uitleg.map((t) => <li key={t}>{t}</li>)}</ul> : <p className="text-sm">{u.apvcNiet}</p>}
         </Panel>
       </div>
       <Panel title="Wat je betaalt">
