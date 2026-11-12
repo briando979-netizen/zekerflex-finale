@@ -1,3 +1,4 @@
+import { emailHash } from "@/lib/auth/email-hash";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -150,7 +151,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       summary: `Shopbestelling ${order.id} aangemaakt, wacht op betaling (${money(totalCents)}, ${lines.length} regel(s))`,
       targetType: "shop-order",
       targetId: order.id,
-      metadata: { email: d.email, totalCents, lines: lines.length },
+      // geen e-mailadres in het auditlog: dat is een hashketen die bij AVG-wissen niet mee kan (12 nov); de hash koppelt
+      // de regel nog aan de bestelling, het adres zelf staat in de bestelling
+      metadata: { emailHash: emailHash(d.email), totalCents, lines: lines.length },
     });
 
     // Via een partnerlink: de vergoeding vastleggen (lib/shop/partner.ts). Mag de
