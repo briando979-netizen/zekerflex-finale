@@ -249,7 +249,7 @@ export interface AuthDict {
     stripeNote: string;
     uploadNote: string;
     /** "bewaar en ga later verder" onderaan het verificatieformulier */
-    later: { button: string; busy: string; saved: string; hint: string; failed: string };
+    later: { button: string; busy: string; saved: string; hint: string; failed: string; /** "Opslaan" in stap 2 als de ID al af is */ savedKlaar: string };
     /** foutmelding per veld (lib/onboarding/velden.ts) */
     err: { postal: string; iban: string; kvk: string; vat: string; docNumber: string; expiry: string; name: string; fix: string };
     result: string;
@@ -623,7 +623,7 @@ const nl: AuthDict = {
     checkingBusy: "Bezig met controleren…",
     stripeNote: "De ID-controle gebeurt door Stripe (onze betaalpartner), die je gegevens beveiligd verwerkt. ZekerFlex krijgt alleen de uitslag en je naam zoals op het document.",
     uploadNote: "Je foto's worden versleuteld bewaard door ZekerFlex en alleen gebruikt voor deze verificatie. Je hoeft je ID nergens anders nog een keer te uploaden.",
-    later: { button: "Bewaar en ga later verder", busy: "Bewaren…", saved: "Bewaard. Je kunt later precies hier verder gaan; je identiteit moet nog wel bevestigd worden voordat je op klussen kunt reageren.", hint: "Nog geen ID bij de hand? Bewaar wat je hebt ingevuld en kom later terug.", failed: "Bewaren is niet gelukt. Controleer de velden en probeer het opnieuw." },
+    later: { button: "Bewaar en ga later verder", busy: "Bewaren…", saved: "Bewaard. Je kunt later precies hier verder gaan; je identiteit moet nog wel bevestigd worden voordat je op klussen kunt reageren.", hint: "Nog geen ID bij de hand? Bewaar wat je hebt ingevuld en kom later terug.", failed: "Bewaren is niet gelukt. Controleer de velden en probeer het opnieuw.", savedKlaar: "Opgeslagen. Bovenaan deze pagina zie je wat er nog mist." },
     err: {
       postal: "Vul een geldige postcode in, bijvoorbeeld 1012 AB.",
       iban: "Dit IBAN klopt niet. Controleer het rekeningnummer.",
@@ -1002,7 +1002,7 @@ const en: AuthDict = {
     checkingBusy: "Checking…",
     stripeNote: "The ID check is done by Stripe (our payment partner), which processes your data securely. ZekerFlex only receives the result and your name as on the document.",
     uploadNote: "Your photos are stored encrypted by ZekerFlex and used only for this verification. You don't need to upload your ID anywhere else.",
-    later: { button: "Save and continue later", busy: "Saving…", saved: "Saved. You can pick up exactly here later; your identity still has to be confirmed before you can apply for jobs.", hint: "No ID at hand? Save what you filled in and come back later.", failed: "Saving failed. Check the fields and try again." },
+    later: { button: "Save and continue later", busy: "Saving…", saved: "Saved. You can pick up exactly here later; your identity still has to be confirmed before you can apply for jobs.", hint: "No ID at hand? Save what you filled in and come back later.", failed: "Saving failed. Check the fields and try again.", savedKlaar: "Saved. At the top of this page you can see what is still missing." },
     err: {
       postal: "Enter a valid postcode, for example 1012 AB.",
       iban: "This IBAN is not valid. Check the account number.",
@@ -1381,7 +1381,7 @@ const pl: AuthDict = {
     checkingBusy: "Sprawdzanie…",
     stripeNote: "Weryfikację dokumentu przeprowadza Stripe (nasz partner płatniczy), który bezpiecznie przetwarza Twoje dane. ZekerFlex otrzymuje tylko wynik i imię oraz nazwisko z dokumentu.",
     uploadNote: "Twoje zdjęcia są przechowywane przez ZekerFlex w formie zaszyfrowanej i używane tylko do tej weryfikacji. Nie musisz nigdzie indziej ponownie przesyłać dokumentu.",
-    later: { button: "Zapisz i dokończ później", busy: "Zapisywanie…", saved: "Zapisano. Możesz wrócić dokładnie tutaj później; tożsamość nadal musi zostać potwierdzona, zanim będziesz mógł reagować na zlecenia.", hint: "Nie masz dokumentu pod ręką? Zapisz, co wpisano, i wróć później.", failed: "Zapisanie się nie udało. Sprawdź pola i spróbuj ponownie." },
+    later: { button: "Zapisz i dokończ później", busy: "Zapisywanie…", saved: "Zapisano. Możesz wrócić dokładnie tutaj później; tożsamość nadal musi zostać potwierdzona, zanim będziesz mógł reagować na zlecenia.", hint: "Nie masz dokumentu pod ręką? Zapisz, co wpisano, i wróć później.", failed: "Zapisanie się nie udało. Sprawdź pola i spróbuj ponownie.", savedKlaar: "Zapisano. Na górze tej strony widzisz, czego jeszcze brakuje." },
     err: {
       postal: "Podaj prawidłowy kod pocztowy, na przykład 1012 AB.",
       iban: "Ten IBAN jest nieprawidłowy. Sprawdź numer konta.",
@@ -1760,7 +1760,7 @@ const ro: AuthDict = {
     checkingBusy: "Se verifică…",
     stripeNote: "Verificarea actului este făcută de Stripe (partenerul nostru de plăți), care îți prelucrează datele în siguranță. ZekerFlex primește doar rezultatul și numele de pe document.",
     uploadNote: "Fotografiile tale sunt păstrate criptat de ZekerFlex și folosite doar pentru această verificare. Nu trebuie să încarci actul nicăieri altundeva.",
-    later: { button: "Salvează și continuă mai târziu", busy: "Se salvează…", saved: "Salvat. Poți continua exact de aici mai târziu; identitatea trebuie totuși confirmată înainte să poți aplica la lucrări.", hint: "Nu ai actul la îndemână? Salvează ce ai completat și revino mai târziu.", failed: "Salvarea nu a reușit. Verifică câmpurile și încearcă din nou." },
+    later: { button: "Salvează și continuă mai târziu", busy: "Se salvează…", saved: "Salvat. Poți continua exact de aici mai târziu; identitatea trebuie totuși confirmată înainte să poți aplica la lucrări.", hint: "Nu ai actul la îndemână? Salvează ce ai completat și revino mai târziu.", failed: "Salvarea nu a reușit. Verifică câmpurile și încearcă din nou.", savedKlaar: "Salvat. În partea de sus a acestei pagini vezi ce mai lipsește." },
     err: {
       postal: "Introdu un cod poștal valid, de exemplu 1012 AB.",
       iban: "Acest IBAN nu este valid. Verifică numărul contului.",
@@ -2139,7 +2139,7 @@ const uk: AuthDict = {
     checkingBusy: "Перевіряємо…",
     stripeNote: "Перевірку документа виконує Stripe (наш платіжний партнер), який безпечно обробляє твої дані. ZekerFlex отримує лише результат і ім'я з документа.",
     uploadNote: "Твої фото зберігаються ZekerFlex у зашифрованому вигляді й використовуються лише для цієї перевірки. Більше ніде не потрібно завантажувати документ.",
-    later: { button: "Зберегти й продовжити пізніше", busy: "Збереження…", saved: "Збережено. Ви зможете продовжити саме звідси пізніше; особу все одно потрібно підтвердити, перш ніж відгукуватися на роботи.", hint: "Немає документа під рукою? Збережіть уже введене й поверніться пізніше.", failed: "Не вдалося зберегти. Перевірте поля й спробуйте ще раз." },
+    later: { button: "Зберегти й продовжити пізніше", busy: "Збереження…", saved: "Збережено. Ви зможете продовжити саме звідси пізніше; особу все одно потрібно підтвердити, перш ніж відгукуватися на роботи.", hint: "Немає документа під рукою? Збережіть уже введене й поверніться пізніше.", failed: "Не вдалося зберегти. Перевірте поля й спробуйте ще раз.", savedKlaar: "Збережено. Угорі цієї сторінки видно, чого ще бракує." },
     err: {
       postal: "Введіть дійсний поштовий індекс, наприклад 1012 AB.",
       iban: "Цей IBAN недійсний. Перевірте номер рахунку.",

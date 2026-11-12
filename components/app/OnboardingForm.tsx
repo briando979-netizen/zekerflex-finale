@@ -222,6 +222,12 @@ export function OnboardingForm({
   // de vraag vóór het insturen: "Weet je zeker dat je alles hebt ingevuld?" (eigen dialoog, geen window.confirm)
   const [bevestig, setBevestig] = useState<{ m: "stripe" | "upload"; rijen: OverzichtRij[] } | null>(null);
   const lezingNr = useRef(0); // een oud antwoord mag een nieuwer niet overschrijven
+  // Een fout of "opgeslagen" staat bovenaan het formulier, de knoppen onderaan: in beeld brengen, anders lijkt er op de
+  // telefoon niets te gebeuren (12 nov: in 15 van 43 sessies op Verificatie 3+ keer "Opslaan" achter elkaar).
+  const meldingRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (error || bewaard) meldingRef.current?.scrollIntoView({ block: "center" });
+  }, [error, bewaard]);
 
   /** De MRZ staat bij een ID-kaart op de achterkant, bij een paspoort op de pasfotozijde; een rijbewijs heeft er geen. */
   const mrzFoto = (soort: DocKey): PhotoKey | null => (soort === "PASSPORT" ? "documentFront" : soort === "ID_CARD" ? "documentBack" : null);
@@ -483,7 +489,18 @@ export function OnboardingForm({
   }
 
   function naVolgende() {
-    return bewaarVoorLater({ strikt: true, daarna: () => (stappen.includes("id") ? setStap("id") : router.refresh()) });
+    return bewaarVoorLater({
+      strikt: true,
+      // ID al af: dan is dit "Opslaan"; laat zien dat het gelukt is (vroeger alleen een stille refresh)
+      daarna: () => {
+        if (stappen.includes("id")) {
+          setStap("id");
+        } else {
+          setBewaard(t.later.savedKlaar);
+          router.refresh();
+        }
+      },
+    });
   }
 
   function terug() {
@@ -629,11 +646,11 @@ export function OnboardingForm({
         </OnderSheet>
 
         <form ref={formRef} onSubmit={onSubmit} noValidate className={`space-y-6 ${stap === "persoon" ? "hidden" : ""}`}>
-          {error && (
-            <p role="alert" className="rounded-xl bg-crit/10 px-3 py-2.5 text-sm text-crit">{error}</p>
-          )}
-          {bewaard && (
-            <p role="status" className="rounded-xl bg-ok/10 px-3 py-2.5 text-sm text-ok">{bewaard}</p>
+          {(error || bewaard) && (
+            <div ref={meldingRef} className="space-y-2">
+              {error && <p role="alert" className="rounded-xl bg-crit/10 px-3 py-2.5 text-sm text-crit">{error}</p>}
+              {bewaard && <p role="status" className="rounded-xl bg-ok/10 px-3 py-2.5 text-sm text-ok">{bewaard}</p>}
+            </div>
           )}
 
           {/* stap 2: het bedrijf (zzp, flexwerker) en waar je woont; blijft in de pagina staan zodat de velden hun waarde houden */}
