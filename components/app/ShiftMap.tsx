@@ -32,7 +32,8 @@ export function ShiftMap({
   /** de route van huis naar deze plek ([lon, lat]); null = nog geen, weglaten = geen route op deze kaart */
   routeLijn?: [number, number][] | null | undefined;
 }) {
-  const t = useFT().los.kaart;
+  const ft = useFT();
+  const t = ft.los.kaart;
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return (
       <div className="grid place-items-center rounded-xl border border-hair bg-paper-soft text-xs text-neutralx-400" style={{ height }}>
@@ -42,7 +43,7 @@ export function ShiftMap({
   }
   return (
     <div className="relative overflow-hidden rounded-xl border border-hair" style={{ height }}>
-      <VolgKaart bestemming={{ lat, lon: lng }} positie={null} interactief={false} zoom={zoom} routeLijn={routeLijn} className="h-full w-full rounded-none" />
+      <VolgKaart bestemming={{ lat, lon: lng }} positie={null} interactief={false} zoom={zoom} routeLijn={routeLijn} teksten={{ webgl: ft.restTaal.kaartWebgl, laden: ft.restTaal.kaartLaden }} className="h-full w-full rounded-none" />
       {label && (
         <div className="pointer-events-none absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-ink/65 to-transparent px-3 pb-1.5 pt-7 text-xs font-semibold text-white">
           {label}

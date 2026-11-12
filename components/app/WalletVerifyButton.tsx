@@ -45,6 +45,7 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
   const router = useRouter();
   const pt = AUTH_DICTS[useI18n().locale].page;
   const ft = useFT();
+  const rt = ft.restTaal;
   // adres in het buitenland niet gevonden: het formulier blijft staan, met de melding erin
   const [adresFout, setAdresFout] = useState<string | null>(null);
   const thuisbasisFout = useThuisbasisFout();
@@ -73,18 +74,18 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
         body: JSON.stringify({ attemptId: startData.attemptId, credentials }),
       });
       const outcome = await verifyRes.json();
-      if (!verifyRes.ok) throw new Error(outcome?.error?.message ?? "Verificatie mislukt");
+      if (!verifyRes.ok) throw new Error(outcome?.error?.message ?? rt.walletMislukt);
       if (!outcome.ok) {
         setStage({
           kind: "error",
-          message: outcome.reason ?? "De digitale ID kon niet worden bevestigd.",
+          message: outcome.reason ?? rt.walletNietBevestigd,
           checks: outcome.checks,
         });
         return;
       }
       setStage({ kind: "claims", attemptId: startData.attemptId, claims: outcome.claims, checks: outcome.checks });
     } catch (e) {
-      setStage({ kind: "error", message: (e as Error).message || "Kon geen digitale ID ophalen." });
+      setStage({ kind: "error", message: (e as Error).message || rt.walletGeenId });
     }
   }
 
@@ -113,13 +114,13 @@ export function WalletVerifyButton({ requireKvk = true }: { requireKvk?: boolean
       setAdresFout(adres);
       if (adres) return; // de wallet-uitslag is nog niet verbruikt (de route controleert het adres eerst)
       if (!res.ok) {
-        setStage({ kind: "error", message: data?.error?.message ?? "Opslaan is mislukt." });
+        setStage({ kind: "error", message: data?.error?.message ?? rt.walletOpslaanMislukt });
         return;
       }
       setStage({ kind: "result", result: data });
       if (data.outcome === "verified") setTimeout(() => router.refresh(), 1500);
     } catch {
-      setStage({ kind: "error", message: "Kon de gegevens niet opslaan. Controleer je verbinding." });
+      setStage({ kind: "error", message: rt.walletVerbinding });
     } finally {
       setSaving(false);
     }

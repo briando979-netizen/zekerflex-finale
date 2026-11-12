@@ -15,6 +15,10 @@ import { laadKaartMotor } from "@/components/kaart/motor";
 
 type Punt = { lat: number; lon: number };
 
+/** De foutteksten; Nederlands is de standaard, de werker-app geeft zijn eigen taal mee. */
+export type KaartTeksten = { webgl: string; laden: string };
+const KAART_NL: KaartTeksten = { webgl: "Je browser kan de kaart niet tekenen (WebGL staat uit).", laden: "De kaart kon niet laden." };
+
 function richting(van: Punt, naar: Punt): number {
   const r = (g: number) => (g * Math.PI) / 180;
   const y = Math.sin(r(naar.lon - van.lon)) * Math.cos(r(naar.lat));
@@ -64,6 +68,7 @@ export function VolgKaart({
   interactief = true,
   zoom = 14,
   routeLijn,
+  teksten = KAART_NL,
 }: {
   bestemming: Punt;
   positie: Punt | null;
@@ -77,7 +82,10 @@ export function VolgKaart({
    * erop aan. null = (nog) geen route; weglaten = deze kaart toont geen geplande route.
    */
   routeLijn?: [number, number][] | null | undefined;
+  teksten?: KaartTeksten;
 }) {
+  const tekstenRef = useRef(teksten);
+  tekstenRef.current = teksten;
   const houder = useRef<HTMLDivElement>(null);
   const kaart = useRef<MlMap | null>(null);
   const bus = useRef<{ marker: Marker; draai: (g: number) => void } | null>(null);
@@ -117,7 +125,7 @@ export function VolgKaart({
           setKlaar(true);
         });
       } catch (err) {
-        setFout(err instanceof Error && /webgl/i.test(err.message) ? "Je browser kan de kaart niet tekenen (WebGL staat uit)." : "De kaart kon niet laden.");
+        setFout(err instanceof Error && /webgl/i.test(err.message) ? tekstenRef.current.webgl : tekstenRef.current.laden);
       }
     })();
     return () => {

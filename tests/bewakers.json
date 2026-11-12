@@ -14,6 +14,7 @@
     "tests/regex-safari.test.ts",
     "tests/sitechat-regels.test.ts",
     "tests/voorstel-indoor-regels.test.ts",
-    "tests/voorstel-sollicitatie-regels.test.ts"
+    "tests/voorstel-sollicitatie-regels.test.ts",
+    "tests/werker-taal-bewaker.test.ts"
   ]
 }
