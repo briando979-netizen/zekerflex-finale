@@ -8,6 +8,7 @@ import { onthoudAanmeldTaal } from "@/lib/i18n/aanmeld-taal";
 import { isBreached, scorePassword } from "@/lib/auth/password";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { bezorgingMislukt } from "@/lib/mail/test-adres";
 
 export interface RegisterState {
   error: string | null;
@@ -58,7 +59,7 @@ export async function registerAction(
     // de taal die de werker zelf koos (cookie), onthouden voor zijn mails en pushes; nooit een gok, nooit overschrijven
     await onthoudAanmeldTaal(account.userId, parsed.data.type);
     const mail = await sendVerificationEmail(account.userId, account.email, parsed.data.fullName);
-    if (mail.sent && !mail.delivered) logger.warn("verificatiemail niet afgeleverd", { userId: account.userId, transport: mail.transport });
+    if (mail.sent && bezorgingMislukt(mail)) logger.warn("verificatiemail niet afgeleverd", { userId: account.userId, transport: mail.transport });
   } catch (err) {
     logger.warn("verificatiemail versturen mislukt", { userId: account.userId, error: (err as Error).message });
   }

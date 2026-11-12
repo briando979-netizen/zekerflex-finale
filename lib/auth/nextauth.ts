@@ -27,6 +27,7 @@ import {
   type RoleGrant,
 } from "@/lib/auth/session";
 import { INSPECT_SESSION_SECONDS } from "@/lib/auth/inspect";
+import { bezorgingMislukt } from "@/lib/mail/test-adres";
 import { appleConfig, appleMailBevestigd, appleNaam, huidigAppleGeheim, isAppleRelay } from "@/lib/auth/apple";
 
 const credentialsSchema = z.union([
@@ -123,7 +124,7 @@ async function autoProvisionFromOAuth(
       const { sendVerificationEmail, sendWelcomeToUser } = await import("@/lib/auth/email-verify");
       if (verifyByMail) {
         const mail = await sendVerificationEmail(user.id, email, fullName);
-        if (mail.sent && !mail.delivered) logger.warn(`verificatiemail (${PROVIDER_NAAM[provider]}) niet afgeleverd`, { userId: user.id, transport: mail.transport });
+        if (mail.sent && bezorgingMislukt(mail)) logger.warn(`verificatiemail (${PROVIDER_NAAM[provider]}) niet afgeleverd`, { userId: user.id, transport: mail.transport });
       } else {
         await sendWelcomeToUser(user.id);
       }

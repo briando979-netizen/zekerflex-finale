@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/lib/audit";
 import { logger } from "@/lib/logger";
 import { sendMail, teamInvitedEmail } from "@/lib/mail";
+import { bezorgingMislukt } from "@/lib/mail/test-adres";
 import { INVITABLE_ROLES, createTeamInvite, listPendingTeamInvites, teamInviteUrl } from "@/lib/team/invite";
 
 export const runtime = "nodejs";
@@ -101,7 +102,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       return null;
     });
     const mailVerstuurd = Boolean(mailRes?.delivered);
-    if (mailRes && !mailRes.delivered) logger.warn("teamuitnodiging: mail niet afgeleverd", { userId: principal.userId, tenantId, transport: mailRes.transport });
+    if (bezorgingMislukt(mailRes)) logger.warn("teamuitnodiging: mail niet afgeleverd", { userId: principal.userId, tenantId, transport: mailRes.transport });
 
     await recordAudit({
       category: "COMPANY",

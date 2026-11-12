@@ -8,6 +8,7 @@ import { recordReferral, REF_COOKIE } from "@/lib/rewards/referral";
 import { throttleIp } from "@/lib/security/ip-throttle";
 import { verifyCaptcha } from "@/lib/security/captcha";
 import { clientIp } from "@/lib/http/request";
+import { bezorgingMislukt } from "@/lib/mail/test-adres";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,7 +37,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       // Een wachttijd (sent: false) is geen fout: er ging net al een mail uit.
       if (mail.sent && !mail.delivered) {
         verificatieMailVerstuurd = false;
-        log.warn("verificatiemail niet afgeleverd", { userId: account.userId, transport: mail.transport });
+        // alleen een echte mislukking in het logboek; een testadres blijft bewust in de eigen postbus
+        if (bezorgingMislukt(mail)) log.warn("verificatiemail niet afgeleverd", { userId: account.userId, transport: mail.transport });
       }
     } catch (err) {
       verificatieMailVerstuurd = false;
