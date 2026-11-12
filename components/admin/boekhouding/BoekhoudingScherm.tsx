@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PageHead } from "@/components/admin/kit";
 import { AfzendersTab } from "./AfzendersTab";
+import { BankTab } from "./BankTab";
 import { BonnenTab } from "./BonnenTab";
 import { BtwTab } from "./BtwTab";
 import { ExportTab } from "./ExportTab";
@@ -13,10 +14,11 @@ import { OverzichtTab } from "./OverzichtTab";
 // Afzenders. De data komt uit /api/admin/boekhouding; hier alleen de indeling.
 // ---------------------------------------------------------------------------
 
-type Tab = "overzicht" | "bonnen" | "afzenders" | "btw" | "export";
+type Tab = "overzicht" | "bonnen" | "bank" | "afzenders" | "btw" | "export";
 const TABS: { id: Tab; label: string }[] = [
   { id: "overzicht", label: "Overzicht" },
   { id: "bonnen", label: "Bonnen: even kijken" },
+  { id: "bank", label: "Bank" },
   { id: "btw", label: "Btw" },
   { id: "export", label: "Voor de accountant" },
   { id: "afzenders", label: "Afzenders" },
@@ -43,6 +45,7 @@ export function BoekhoudingScherm() {
       </div>
       {tab === "overzicht" && <OverzichtTab />}
       {tab === "bonnen" && <BonnenTab />}
+      {tab === "bank" && <BankTab />}
       {tab === "btw" && <BtwTab />}
       {tab === "export" && <ExportTab />}
       {tab === "afzenders" && <AfzendersTab />}
