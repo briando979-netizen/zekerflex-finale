@@ -124,7 +124,7 @@ async function autoProvisionFromOAuth(
       const { sendVerificationEmail, sendWelcomeToUser } = await import("@/lib/auth/email-verify");
       if (verifyByMail) {
         const mail = await sendVerificationEmail(user.id, email, fullName);
-        if (mail.sent && bezorgingMislukt(mail)) logger.warn(`verificatiemail (${PROVIDER_NAAM[provider]}) niet afgeleverd`, { userId: user.id, transport: mail.transport });
+        if (mail.sent && bezorgingMislukt(mail, email)) logger.warn(`verificatiemail (${PROVIDER_NAAM[provider]}) niet afgeleverd`, { userId: user.id, transport: mail.transport });
       } else {
         await sendWelcomeToUser(user.id);
       }

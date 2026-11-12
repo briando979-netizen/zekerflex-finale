@@ -38,7 +38,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       if (mail.sent && !mail.delivered) {
         verificatieMailVerstuurd = false;
         // alleen een echte mislukking in het logboek; een testadres blijft bewust in de eigen postbus
-        if (bezorgingMislukt(mail)) log.warn("verificatiemail niet afgeleverd", { userId: account.userId, transport: mail.transport });
+        if (bezorgingMislukt(mail, account.email)) log.warn("verificatiemail niet afgeleverd", { userId: account.userId, transport: mail.transport });
       }
     } catch (err) {
       verificatieMailVerstuurd = false;

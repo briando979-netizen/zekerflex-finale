@@ -102,7 +102,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       return null;
     });
     const mailVerstuurd = Boolean(mailRes?.delivered);
-    if (bezorgingMislukt(mailRes)) logger.warn("teamuitnodiging: mail niet afgeleverd", { userId: principal.userId, tenantId, transport: mailRes.transport });
+    if (bezorgingMislukt(mailRes, email)) logger.warn("teamuitnodiging: mail niet afgeleverd", { userId: principal.userId, tenantId, transport: mailRes.transport });
 
     await recordAudit({
       category: "COMPANY",

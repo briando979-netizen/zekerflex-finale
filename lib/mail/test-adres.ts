@@ -8,10 +8,11 @@ export function isReservedTestAddress(address: string): boolean {
 }
 
 /**
- * Ging een bezorging echt mis? Alleen als de mailserver het probeerde (transport "smtp") en het niet lukte. Een testadres
- * of een afmelding blijft bewust in de eigen postbus (transport "mailbox"): dat is geen fout voor het foutenlogboek
- * (12 nov: elke aanmelding met een .test-adres gaf "verificatiemail niet afgeleverd").
+ * Ging een bezorging echt mis? Niet bezorgd is een fout voor het foutenlogboek, behalve bij een testadres (dat gaat bewust
+ * nooit naar de mailserver; 12 nov gaf elke aanmelding met een .test-adres "verificatiemail niet afgeleverd") en bij een
+ * afmelding. Let op: zonder SMTP-instellingen blijft ook een echte mail in de eigen postbus; die moet juist wél gemeld worden.
  */
-export function bezorgingMislukt<T extends { delivered: boolean; transport: "smtp" | "mailbox" }>(r: T | null | undefined): r is T {
-  return Boolean(r && r.transport === "smtp" && !r.delivered);
+export function bezorgingMislukt<T extends { delivered: boolean; suppressed?: string | undefined }>(r: T | null | undefined, aan: string): r is T {
+  if (!r || r.delivered || r.suppressed) return false;
+  return !isReservedTestAddress(aan);
 }

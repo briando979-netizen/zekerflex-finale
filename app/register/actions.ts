@@ -59,7 +59,7 @@ export async function registerAction(
     // de taal die de werker zelf koos (cookie), onthouden voor zijn mails en pushes; nooit een gok, nooit overschrijven
     await onthoudAanmeldTaal(account.userId, parsed.data.type);
     const mail = await sendVerificationEmail(account.userId, account.email, parsed.data.fullName);
-    if (mail.sent && bezorgingMislukt(mail)) logger.warn("verificatiemail niet afgeleverd", { userId: account.userId, transport: mail.transport });
+    if (mail.sent && bezorgingMislukt(mail, account.email)) logger.warn("verificatiemail niet afgeleverd", { userId: account.userId, transport: mail.transport });
   } catch (err) {
     logger.warn("verificatiemail versturen mislukt", { userId: account.userId, error: (err as Error).message });
   }

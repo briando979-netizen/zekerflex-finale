@@ -7,12 +7,23 @@ import { bezorgingMislukt } from "@/lib/mail/test-adres";
 // het foutenlogboek (gezien bij de route van een nieuw bedrijf).
 
 describe("bezorgingMislukt", () => {
-  it("alleen als de mailserver het probeerde en het niet lukte", () => {
-    expect(bezorgingMislukt({ delivered: false, transport: "smtp" })).toBe(true);
-    expect(bezorgingMislukt({ delivered: true, transport: "smtp" })).toBe(false);
-    expect(bezorgingMislukt({ delivered: false, transport: "mailbox" })).toBe(false);
-    expect(bezorgingMislukt(null)).toBe(false);
-    expect(bezorgingMislukt(undefined)).toBe(false);
+  const ECHT = "iemand@bedrijf.nl";
+  const TEST = "ondernemertest-1@zekerflex.test";
+
+  it("een testadres in de eigen postbus is geen fout", () => {
+    expect(bezorgingMislukt({ delivered: false, transport: "mailbox" }, TEST)).toBe(false);
+  });
+
+  it("een echt adres dat niet bezorgd is, is wél een fout: ook zonder SMTP-instellingen (transport mailbox)", () => {
+    expect(bezorgingMislukt({ delivered: false, transport: "mailbox" }, ECHT)).toBe(true);
+    expect(bezorgingMislukt({ delivered: false, transport: "smtp" }, ECHT)).toBe(true);
+  });
+
+  it("bezorgd, afgemeld of geen resultaat: geen fout", () => {
+    expect(bezorgingMislukt({ delivered: true, transport: "smtp" }, ECHT)).toBe(false);
+    expect(bezorgingMislukt({ delivered: false, transport: "mailbox", suppressed: "afgemeld voor \"Nieuws\"" }, ECHT)).toBe(false);
+    expect(bezorgingMislukt(null, ECHT)).toBe(false);
+    expect(bezorgingMislukt(undefined, ECHT)).toBe(false);
   });
 
   it.each(["app/register/actions.ts", "app/api/register/route.ts", "lib/auth/nextauth.ts", "app/api/werkgever/team/route.ts"])(
