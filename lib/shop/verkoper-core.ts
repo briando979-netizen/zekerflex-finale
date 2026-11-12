@@ -29,7 +29,7 @@ export const PRODUCT_STATUS_LABEL: Record<ProductStatus, string> = {
   afgewezen: "Afgewezen",
   gepauzeerd: "Gepauzeerd",
 };
-export const isProductStatus = (s: unknown): s is ProductStatus => typeof s === "string" && s in PRODUCT_STATUS_LABEL;
+export const isProductStatus = (s: unknown): s is ProductStatus => typeof s === "string" && Object.hasOwn(PRODUCT_STATUS_LABEL, s);
 
 /** Alleen een goedgekeurd product staat in de shop; gepauzeerd, afgewezen of in beoordeling niet. */
 export const zichtbaarInShop = (status: ProductStatus) => status === "goedgekeurd";

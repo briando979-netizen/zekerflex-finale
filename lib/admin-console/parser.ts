@@ -87,7 +87,7 @@ export async function parseIntent(question: string): Promise<ParsedIntent> {
     };
   }
   const quick = quickIntent(question);
-  if (quick && quick.kind === "query" && quick.name in QUERIES) return quick;
+  if (quick && quick.kind === "query" && Object.hasOwn(QUERIES, quick.name)) return quick;
   const raw = await chatJson<unknown>({
     purpose: "admin-console",
     messages: [

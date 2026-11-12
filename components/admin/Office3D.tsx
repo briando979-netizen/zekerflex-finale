@@ -242,7 +242,7 @@ export function Office3D() {
         onTourEnd: () => setTouring(false),
         ...(thema && isThemeId(thema) && thema !== "verjaardag" ? { theme: thema } : {}),
         ...(seizoen === "lente" || seizoen === "zomer" || seizoen === "herfst" || seizoen === "winter" ? { season: seizoen } : {}),
-        ...(weer && weer in WEATHER_NL ? { weather: weer as keyof typeof WEATHER_NL } : {}),
+        ...(weer && Object.hasOwn(WEATHER_NL, weer) ? { weather: weer as keyof typeof WEATHER_NL } : {}),
       });
       city.current = handle;
       if (lastData.current) handle.setData(lastData.current);

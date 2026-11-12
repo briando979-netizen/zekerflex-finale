@@ -23,7 +23,7 @@ export async function GET(): Promise<NextResponse> {
 }
 
 const fields = z.object({
-  type: z.string().refine((t): t is CertType => t in CERT_TYPES, "Onbekend type"),
+  type: z.string().refine((t): t is CertType => Object.hasOwn(CERT_TYPES, t), "Onbekend type"),
   customLabel: z.string().trim().max(80).optional(),
   number: z.string().trim().max(40).optional(),
   issuedOn: z.string().regex(DATE).optional(),

@@ -47,12 +47,12 @@ export const DEFAULT_PREFS: PayoutPrefs = { speed: "standard", updatedAt: new Da
 export async function getPayoutPrefs(userId: string): Promise<PayoutPrefs> {
   const row = await prisma.payoutPreference.findUnique({ where: { userId } });
   if (!row) return { ...DEFAULT_PREFS };
-  const speed: PayoutSpeed = row.speed in PAYOUT_SPEEDS ? (row.speed as PayoutSpeed) : "standard";
+  const speed: PayoutSpeed = Object.hasOwn(PAYOUT_SPEEDS, row.speed) ? (row.speed as PayoutSpeed) : "standard";
   return { speed, updatedAt: row.updatedAt.toISOString() };
 }
 
 export async function setPayoutSpeed(userId: string, speed: PayoutSpeed): Promise<PayoutPrefs> {
-  if (!(speed in PAYOUT_SPEEDS)) throw new Error("onbekende uitbetaalsnelheid");
+  if (!Object.hasOwn(PAYOUT_SPEEDS, speed)) throw new Error("onbekende uitbetaalsnelheid");
   const row = await prisma.payoutPreference.upsert({
     where: { userId },
     create: { userId, speed },

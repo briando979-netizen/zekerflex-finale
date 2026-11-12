@@ -65,7 +65,7 @@ export interface KluisInvoer {
 export async function zetKluisItem(tenantId: string, input: KluisInvoer, door: { userId: string; naam: string }): Promise<KluisItemMeta> {
   const titel = input.titel.trim().slice(0, 80);
   if (!titel) throw AppError.validation("Geef het item een titel, bijvoorbeeld 'Wifi personeel'.");
-  if (!(input.soort in KLUIS_SOORT_LABEL)) throw AppError.validation("Onbekende soort.");
+  if (!Object.hasOwn(KLUIS_SOORT_LABEL, input.soort)) throw AppError.validation("Onbekende soort.");
   const alles = await lees(tenantId);
   const bestaand = input.id ? alles.find((i) => i.id === input.id) : undefined;
   if (input.id && !bestaand) throw AppError.notFound("Item niet gevonden.");

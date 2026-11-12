@@ -16,7 +16,7 @@ export const OS_ACHTERGRONDEN = {
 } as const;
 
 export type OsAchtergrond = keyof typeof OS_ACHTERGRONDEN;
-export const isAchtergrond = (v: unknown): v is OsAchtergrond => typeof v === "string" && v in OS_ACHTERGRONDEN;
+export const isAchtergrond = (v: unknown): v is OsAchtergrond => typeof v === "string" && Object.hasOwn(OS_ACHTERGRONDEN, v);
 
 export interface OsInstellingen {
   /** app-id's op het bureaublad, in volgorde */

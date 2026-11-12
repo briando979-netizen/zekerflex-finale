@@ -393,7 +393,7 @@ function VertalingEditor({ pagina, taal, onBijgewerkt, onVoorbeeld }: { pagina: 
 }
 
 function Talenbalk({ pagina, taal, onKies, onBijgewerkt, bewaarEerst }: { pagina: Pagina; taal: Taal | null; onKies: (t: Taal | null) => void; onBijgewerkt: (p: Pagina) => void; bewaarEerst: () => Promise<void> }) {
-  const bestaand = (Object.keys(pagina.vertalingen ?? {}) as Taal[]).filter((t) => t in TALEN);
+  const bestaand = (Object.keys(pagina.vertalingen ?? {}) as Taal[]).filter((t) => Object.hasOwn(TALEN, t));
   const vrij = (Object.keys(TALEN) as Taal[]).filter((t) => !bestaand.includes(t));
   const [nieuw, setNieuw] = useState<Taal | "">("");
   const [bezig, setBezig] = useState<Taal | null>(null);

@@ -46,7 +46,7 @@ export function normalizeBalk(raw: unknown): Balk {
     tekst,
     linkTekst: link ? schoon(r.linkTekst, 40) : "",
     link,
-    kleur: typeof r.kleur === "string" && r.kleur in BALK_KLEUREN ? (r.kleur as BalkKleur) : "merk",
+    kleur: typeof r.kleur === "string" && Object.hasOwn(BALK_KLEUREN, r.kleur) ? (r.kleur as BalkKleur) : "merk",
     vanaf: dag(r.vanaf),
     tot: dag(r.tot),
     sluitbaar: r.sluitbaar !== false,
