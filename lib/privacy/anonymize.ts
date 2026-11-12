@@ -5,6 +5,7 @@ import { recordUserErased } from "@/lib/metrics";
 import { deleteUpload } from "@/lib/storage/local";
 import { erasableNow, RETENTION_RULES } from "@/lib/privacy/retention";
 import { erasableKvWhere } from "@/lib/privacy/user-kv";
+import { wisChatlogVan } from "@/lib/learn/store";
 import { wisPersoonUitLocatie } from "@/lib/locatie/avg";
 import { overdrachtUploads } from "@/lib/kyc/overdracht";
 import { wisVerlatenOrganisaties } from "@/lib/afspraken/bewaren";
@@ -264,6 +265,13 @@ export async function anonymizeUser(
       }),
     );
   }
+
+  // De vragen en antwoorden van deze gebruiker in de leerlijsten van de assistenten (learn-log:*, learn-rated:*): best effort
+  await wisChatlogVan(userId)
+    .then((n) => {
+      if (n > 0) cleared.chatlog = n;
+    })
+    .catch((err) => logger.warn("erasure: chatlog wissen mislukt", { error: (err as Error).message }));
 
   // Op locatie (kentekens, logregels, het kenteken van de werker): best effort, het wissen houdt niet op een fout
   await wisPersoonUitLocatie(userId)

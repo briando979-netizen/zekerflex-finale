@@ -6,6 +6,7 @@ import { retentionCutoff } from "@/lib/privacy/retention";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { deleteUpload } from "@/lib/storage/local";
 import { isOpgeschoond, kycOpschonen, kycUploadIds } from "@/lib/privacy/kyc-fotos";
+import { ruimChatlogOp } from "@/lib/learn/store";
 
 // ---------------------------------------------------------------------------
 // Retention sweep.
@@ -107,6 +108,13 @@ export async function runRetentionSweep(
           where: { occurredAt: { lt: engagementCut } },
         })
       ).count;
+
+  // De leerlijsten van de assistenten (lib/learn/store.ts): vragen en beoordelingen na 90 dagen weg. Een storing in de opslag
+  // laat de rest van de sweep gewoon doorlopen.
+  cleared.chatlog = await ruimChatlogOp(now, dryRun).catch((err) => {
+    logger.warn("retention sweep: chatlog opruimen mislukt", { error: (err as Error).message });
+    return 0;
+  });
 
   cleared.password_reset_tokens = dryRun
     ? await prisma.passwordResetToken.count({ where: { expiresAt: { lt: now } } })
