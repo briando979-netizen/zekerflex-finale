@@ -41,6 +41,9 @@ const schema = z.object({
   // deploy/scripts/env-aanvullen.sh. Zonder wachtwoord slaat de rondgang de werkerpagina's over.
   RONDGANG_WERKER_EMAIL: z.string().email().optional(),
   RONDGANG_WERKER_PASS: z.string().min(16).optional(),
+  // de vaste .test-werkgever van de nachtelijke rondgang (lib/ops/rondgang-werkgever.ts); het account maakt een mens aan
+  RONDGANG_WERKGEVER_EMAIL: z.string().email().optional(),
+  RONDGANG_WERKGEVER_PASS: z.string().min(16).optional(),
 
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1).default("redis://localhost:6379"),

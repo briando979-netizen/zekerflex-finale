@@ -10,11 +10,12 @@
 #   OIDC_OUTLINE_SECRET    het wachtwoord waarmee Outline bij ZekerFlex inlogt (OIDC)
 #   METABASE_ADMIN_PASSWORD de beheerder die ZekerFlex in Metabase aanmaakt (lib/bi)
 #   RONDGANG_WERKER_PASS   de vaste .test-werker van de nachtelijke rondgang (lib/ops/rondgang-werker.ts)
+#   RONDGANG_WERKGEVER_PASS  de vaste .test-werkgever van de nachtelijke rondgang (lib/ops/rondgang-werkgever.ts)
 set -eu
 ENV_BESTAND="${1:-.env.production}"
 [ -f "$ENV_BESTAND" ] || { echo "env-aanvullen: $ENV_BESTAND ontbreekt"; exit 0; }
 toegevoegd=0
-for naam in SCRAPER_TOKEN OUTLINE_SECRET_KEY OUTLINE_UTILS_SECRET OIDC_OUTLINE_SECRET METABASE_ADMIN_PASSWORD RONDGANG_WERKER_PASS; do
+for naam in SCRAPER_TOKEN OUTLINE_SECRET_KEY OUTLINE_UTILS_SECRET OIDC_OUTLINE_SECRET METABASE_ADMIN_PASSWORD RONDGANG_WERKER_PASS RONDGANG_WERKGEVER_PASS; do
   if ! grep -q "^${naam}=" "$ENV_BESTAND"; then
     # altijd op een nieuwe regel, ook als het bestand niet met een regeleinde eindigt
     [ -z "$(tail -c1 "$ENV_BESTAND")" ] || printf '\n' >> "$ENV_BESTAND"
