@@ -34,7 +34,7 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
-import { recordServerEvent, trackEvents } from "@/lib/analytics/track";
+import { heleTekens, recordServerEvent, trackEvents } from "@/lib/analytics/track";
 import { liveTraffic, trafficSummary } from "@/lib/analytics/report";
 
 afterEach(() => {
@@ -43,6 +43,22 @@ afterEach(() => {
 });
 
 describe("trackEvents", () => {
+  it("een doormidden geknipte emoji breekt de batch niet meer (foutenlogboek 10 nov: unexpected end of hex escape)", async () => {
+    const half = "Klik \uD83D"; // eerste helft van een emoji, zoals een slice in de browser achterlaat
+    expect(heleTekens(half)).toBe("Klik ");
+    expect(heleTekens("los \uDE00 eind")).toBe("los  eind");
+    expect(heleTekens("hele 😀 blijft")).toBe("hele 😀 blijft");
+    expect(heleTekens("nul\u0000teken")).toBe("nulteken");
+    // een label van 201 tekens met een emoji op de grens: de slice laat geen halve emoji achter
+    const grens = `${"a".repeat(199)}😀`;
+    await trackEvents([{ type: "CLICK", path: `/x${half}`, label: grens, meta: { [`k${half}`]: [half, { diep: half }], n: 3 } }], { sessionId: "sess-emoji" });
+    const row = createMany.mock.calls[0]![0].data[0];
+    expect(row.path).toBe("/xKlik ");
+    expect(row.label).toBe("a".repeat(199));
+    expect(row.meta).toEqual({ "kKlik ": ["Klik ", { diep: "Klik " }], n: 3 });
+    expect(JSON.stringify(createMany.mock.calls[0]![0])).not.toMatch(/\\ud83d"/i);
+  });
+
   it("normalises path + referrer host and hashes the UA", async () => {
     const res = await trackEvents(
       [

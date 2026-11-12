@@ -226,6 +226,8 @@ describe("waar de meldingen vandaan komen", () => {
     j.recordRequestError(Object.assign(new Error("NEXT_REDIRECT"), { digest: "NEXT_REDIRECT;replace;/login;307;" }), { method: "GET" }, { routePath: "/werkgever", routeType: "render" });
     j.recordRequestError(Object.assign(new Error("NEXT_HTTP_ERROR_FALLBACK;404"), { digest: "NEXT_HTTP_ERROR_FALLBACK;404" }), { method: "GET" }, { routePath: "/klussen/[id]", routeType: "render" });
     j.recordRequestError(Object.assign(new Error("Cannot read properties of undefined (reading 'naam')"), { digest: "2938475610" }), { method: "GET" }, { routePath: "/review/[token]", routeType: "render" });
+    // uitgelogd tijdens het laden (12 nov, /dashboard/profiel): het foutscherm stuurt naar het inloggen, geen storing
+    j.recordRequestError(Object.assign(new Error("Je bent niet (meer) ingelogd. Log opnieuw in."), { code: "UNAUTHENTICATED", digest: "2526001685" }), { method: "GET" }, { routePath: "/dashboard/profiel", routeType: "render" });
     await j.flushJournal();
     const groups = await j.listErrorGroups();
     expect(groups).toHaveLength(1);
