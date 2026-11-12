@@ -74,7 +74,7 @@ export async function zorgVoorRondgangWerker(email: string, wachtwoord: string):
   return { id: bestaand.id };
 }
 
-type Jar = Map<string, string>;
+export type Jar = Map<string, string>;
 
 function neemCookies(res: Response, jar: Jar): void {
   const lijst = typeof res.headers.getSetCookie === "function" ? res.headers.getSetCookie() : [];
@@ -87,22 +87,22 @@ function neemCookies(res: Response, jar: Jar): void {
 
 const cookieKop = (jar: Jar): string => [...jar].map(([k, v]) => `${k}=${v}`).join("; ");
 
-function kop(): Record<string, string> {
+function kop(wie = "werker"): Record<string, string> {
   const host = new URL(env.APP_BASE_URL).host;
-  return { "x-forwarded-host": host, "x-forwarded-proto": "https", "user-agent": "ZekerFlex-rondgang/1.0 (eigen controle, werker)" };
+  return { "x-forwarded-host": host, "x-forwarded-proto": "https", "user-agent": `ZekerFlex-rondgang/1.0 (eigen controle, ${wie})` };
 }
 
-/** Meldt de werker aan via de gewone NextAuth-route; true = er is een sessiecookie. Logt en bewaart niets. */
-async function meldAan(intern: string, email: string, wachtwoord: string, jar: Jar): Promise<boolean> {
-  const csrf = await fetch(`${intern}/api/auth/csrf`, { headers: kop(), cache: "no-store", signal: AbortSignal.timeout(15_000) });
+/** Meldt het account aan via de gewone NextAuth-route; true = er is een sessiecookie. Logt en bewaart niets. Ook voor de werkgever (rondgang-werkgever.ts). */
+export async function meldAan(intern: string, email: string, wachtwoord: string, jar: Jar, terugPad = "/dashboard/klussen", wie = "werker"): Promise<boolean> {
+  const csrf = await fetch(`${intern}/api/auth/csrf`, { headers: kop(wie), cache: "no-store", signal: AbortSignal.timeout(15_000) });
   neemCookies(csrf, jar);
   const csrfToken = ((await csrf.json().catch(() => ({}))) as { csrfToken?: unknown }).csrfToken;
   if (typeof csrfToken !== "string") return false;
   const res = await fetch(`${intern}/api/auth/callback/credentials`, {
     method: "POST",
     redirect: "manual",
-    headers: { ...kop(), "content-type": "application/x-www-form-urlencoded", cookie: cookieKop(jar) },
-    body: new URLSearchParams({ csrfToken, email, password: wachtwoord, callbackUrl: `${env.APP_BASE_URL.replace(/\/+$/, "")}/dashboard/klussen` }),
+    headers: { ...kop(wie), "content-type": "application/x-www-form-urlencoded", cookie: cookieKop(jar) },
+    body: new URLSearchParams({ csrfToken, email, password: wachtwoord, callbackUrl: `${env.APP_BASE_URL.replace(/\/+$/, "")}${terugPad}` }),
     signal: AbortSignal.timeout(15_000),
   });
   neemCookies(res, jar);
@@ -110,11 +110,11 @@ async function meldAan(intern: string, email: string, wachtwoord: string, jar: J
   return jar.has(SESSION_COOKIE);
 }
 
-/** Haalt één werkerpagina op (zonder redirects te volgen naar buiten). */
-async function haalWerker(intern: string, route: string, jar: Jar): Promise<{ status: number | null; body: string; contentType: string; naar: string | null }> {
+/** Haalt één ingelogde pagina op (zonder redirects te volgen naar buiten). Ook voor de werkgever. */
+export async function haalWerker(intern: string, route: string, jar: Jar, wie = "werker"): Promise<{ status: number | null; body: string; contentType: string; naar: string | null }> {
   try {
     const res = await fetch(`${intern}${route}`, {
-      headers: { ...kop(), cookie: cookieKop(jar), accept: "text/html" },
+      headers: { ...kop(wie), cookie: cookieKop(jar), accept: "text/html" },
       redirect: "manual",
       cache: "no-store",
       signal: AbortSignal.timeout(25_000),

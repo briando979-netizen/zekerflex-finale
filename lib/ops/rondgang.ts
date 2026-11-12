@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { beoordeel, type RondgangProbleem } from "@/lib/ops/rondgang-regels";
 import { draaiWerkerRondgang, type WerkerRondgang } from "@/lib/ops/rondgang-werker";
+import { draaiWerkgeverRondgang, type WerkgeverRondgang } from "@/lib/ops/rondgang-werkgever";
 
 export { beoordeel, type RondgangProbleem };
 
@@ -27,6 +28,8 @@ export interface RondgangUitslag {
   problemen: RondgangProbleem[];
   /** het werkerdeel (lib/ops/rondgang-werker.ts); de problemen daarvan staan ook in `problemen` (route /dashboard/…) */
   werker?: { ingelogd: boolean; paginas: number; overgeslagen?: string };
+  /** het werkgeversdeel (lib/ops/rondgang-werkgever.ts); de problemen daarvan staan ook in `problemen` (route /werkgever/…) */
+  werkgever?: { ingelogd: boolean; paginas: number; overgeslagen?: string };
 }
 
 export const KV_RONDGANG = "rondgang:laatste";
@@ -82,8 +85,11 @@ export async function draaiRondgang(basis = env.APP_BASE_URL, gelijktijdig = 3):
   // de werkerpagina's als een vaste .test-werker (een storing hier laat de rest van de rondgang staan)
   const w: WerkerRondgang = await draaiWerkerRondgang(gelijktijdig).catch(() => ({ ingelogd: false, paginas: 0, overgeslagen: "werkerdeel mislukt", problemen: [] }));
   for (const p of w.problemen) journal("error", "werkerpagina kapot", { route: p.route, status: p.status, reason: p.reden });
-  const alle = [...problemen, ...w.problemen];
-  const totaal = routes.length + w.paginas;
+  // en de werkgeverspagina's als een vaste .test-werkgever (zelfde aanpak; een storing laat de rest staan)
+  const wg: WerkgeverRondgang = await draaiWerkgeverRondgang(gelijktijdig).catch(() => ({ ingelogd: false, paginas: 0, overgeslagen: "werkgeversdeel mislukt", problemen: [] }));
+  for (const p of wg.problemen) journal("error", "werkgeverpagina kapot", { route: p.route, status: p.status, reason: p.reden });
+  const alle = [...problemen, ...w.problemen, ...wg.problemen];
+  const totaal = routes.length + w.paginas + wg.paginas;
   const uitslag: RondgangUitslag = {
     at: new Date().toISOString(),
     totaal,
@@ -91,6 +97,7 @@ export async function draaiRondgang(basis = env.APP_BASE_URL, gelijktijdig = 3):
     ms: Date.now() - t0,
     problemen: alle,
     werker: { ingelogd: w.ingelogd, paginas: w.paginas, ...(w.overgeslagen ? { overgeslagen: w.overgeslagen } : {}) },
+    werkgever: { ingelogd: wg.ingelogd, paginas: wg.paginas, ...(wg.overgeslagen ? { overgeslagen: wg.overgeslagen } : {}) },
   };
   await kvSet(KV_RONDGANG, uitslag).catch(() => undefined);
   logger.info("rondgang klaar", { totaal: uitslag.totaal, problemen: problemen.length, ms: uitslag.ms });
