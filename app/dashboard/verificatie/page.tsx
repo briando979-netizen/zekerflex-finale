@@ -230,7 +230,7 @@ export default async function VerificatiePage() {
       )}
 
       {fiscal.workerKind === "uitzendkracht" && (
-        <div id="uitzendovereenkomst" className="mt-6 card scroll-mt-20 p-6">
+        <div id="uitzendovereenkomst" tabIndex={-1} className="mt-6 card scroll-mt-20 p-6 focus:outline-none">
           <h2 className="font-display text-base font-bold text-ink">Uitzenden — verloning, StiPP & loonheffing</h2>
           <div className="mt-4">
             <UitzendPanel />

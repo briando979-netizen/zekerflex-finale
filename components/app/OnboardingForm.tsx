@@ -595,10 +595,10 @@ export function OnboardingForm({
           />
         )}
 
-        <OnderSheet open={bevestig !== null} titelId="bevestig-insturen-titel" titel={ft.bevestig.titel} onSluit={() => setBevestig(null)}>
+        <OnderSheet open={bevestig !== null} titelId="bevestig-insturen-titel" beschrijvingId="bevestig-insturen-uitleg" titel={ft.bevestig.titel} onSluit={() => setBevestig(null)}>
           {bevestig && (
             <div className="overflow-y-auto px-6 pb-6">
-              <p className="text-center text-sm leading-relaxed text-neutralx-600">{ft.bevestig.uitleg}</p>
+              <p id="bevestig-insturen-uitleg" className="text-center text-sm leading-relaxed text-neutralx-600">{ft.bevestig.uitleg}</p>
               <dl className="mt-4 divide-y divide-hair rounded-xl border border-hair text-sm">
                 {bevestig.rijen.map(([label, waarde]) => (
                   <div key={label} className="flex items-start justify-between gap-3 px-3 py-2">
@@ -608,7 +608,7 @@ export function OnboardingForm({
                 ))}
               </dl>
               <div className="mt-5 flex gap-2">
-                <button type="button" onClick={() => setBevestig(null)} className="btn-ghost flex-1">
+                <button type="button" onClick={() => setBevestig(null)} className="btn-ghost min-h-[44px] flex-1">
                   {ft.bevestig.terug}
                 </button>
                 <button
@@ -619,7 +619,7 @@ export function OnboardingForm({
                     setBevestig(null);
                     void verstuur(m, true);
                   }}
-                  className="btn-trust flex-1 disabled:opacity-60"
+                  className="btn-trust min-h-[44px] flex-1 disabled:opacity-60"
                 >
                   {ft.bevestig.ja}
                 </button>

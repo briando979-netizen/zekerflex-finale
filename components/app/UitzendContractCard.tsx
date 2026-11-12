@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useFT } from "@/components/i18n/useFT";
 import { vulIn } from "@/lib/i18n/vul-in";
 import type { ContractTekst } from "@/lib/agreements/uitzend-tekst";
@@ -26,13 +26,13 @@ type T = FreelancerDict["uitzendContract"];
 type Datum = (s: string) => string;
 
 /** De volledige tekst, leesbaar op het scherm. Een eigen scrollgebied dat met het toetsenbord te bereiken is. */
-function TekstPaneel({ data, t, bindend }: { data: ContractTekst; t: T; bindend: boolean }) {
+function TekstPaneel({ id, data, t, bindend }: { id: string; data: ContractTekst; t: T; bindend: boolean }) {
   return (
-    <div role="region" aria-label={t.tekstLabel} lang="nl" tabIndex={0} className="mt-3 max-h-80 overflow-y-auto rounded-lg border border-hair bg-white p-3 text-xs leading-relaxed text-ink">
+    <div id={id} role="region" aria-label={t.tekstLabel} lang="nl" tabIndex={0} className="mt-3 max-h-80 overflow-y-auto rounded-lg border border-hair bg-white p-3 text-xs leading-relaxed text-ink">
       {bindend && <p className="mb-2 rounded-md bg-paper-soft p-2 font-semibold">{t.bindend}</p>}
-      {data.voorbeeld && <p className="mb-1 text-[11px] font-semibold text-warn">{t.voorbeeldKop}</p>}
+      {data.voorbeeld && <p className="mb-1 text-xs font-semibold text-warn">{t.voorbeeldKop}</p>}
       <p className="font-display text-sm font-bold">{data.titel}</p>
-      <p className="mb-2 text-[11px] text-neutralx-500">{data.referentie}</p>
+      <p className="mb-2 text-xs text-neutralx-500">{data.referentie}</p>
       {data.blokken.map((b, i) =>
         b.soort === "kop" ? (
           <h3 key={i} className="mt-3 text-xs font-bold uppercase tracking-wide">{b.tekst}</h3>
@@ -44,7 +44,7 @@ function TekstPaneel({ data, t, bindend }: { data: ContractTekst; t: T; bindend:
         ) : b.soort === "alinea" ? (
           <p key={i} className="mt-1">{b.tekst}</p>
         ) : b.soort === "klein" ? (
-          <p key={i} className="mt-2 text-[11px] text-neutralx-500">{b.tekst}</p>
+          <p key={i} className="mt-2 text-xs text-neutralx-500">{b.tekst}</p>
         ) : null,
       )}
     </div>
@@ -64,7 +64,7 @@ function Kernpunten({ data, t, fmt, bindend }: { data: ContractTekst; t: T; fmt:
         <li>{t.kernOpzeggen}</li>
         <li>{t.kernPensioen}</li>
       </ul>
-      {bindend && <p className="mt-2 text-[11px] font-semibold text-neutralx-600">{t.bindend}</p>}
+      {bindend && <p className="mt-2 text-xs font-semibold text-neutralx-600">{t.bindend}</p>}
     </div>
   );
 }
@@ -77,6 +77,8 @@ function LeesEnTeken({ t, fmt, bindend, busy, err, knop, onTekenen }: { t: T; fm
   const [open, setOpen] = useState(false);
   const [geopend, setGeopend] = useState(false);
   const [gelezen, setGelezen] = useState(false);
+  const paneelId = useId();
+  const hintId = useId();
 
   useEffect(() => {
     let weg = false;
@@ -97,7 +99,7 @@ function LeesEnTeken({ t, fmt, bindend, busy, err, knop, onTekenen }: { t: T; fm
 
   return (
     <div>
-      {data === null && <p className="mt-3 text-xs text-neutralx-500">{t.tekstLaden}</p>}
+      {data === null && <p role="status" className="mt-3 text-xs text-neutralx-500">{t.tekstLaden}</p>}
       {data === "fout" && <p role="alert" className="mt-3 text-xs text-crit">{t.tekstFout}</p>}
       {data && data !== "fout" && <Kernpunten data={data} t={t} fmt={fmt} bindend={bindend} />}
 
@@ -106,34 +108,35 @@ function LeesEnTeken({ t, fmt, bindend, busy, err, knop, onTekenen }: { t: T; fm
           <button
             type="button"
             aria-expanded={open}
+            aria-controls={paneelId}
             onClick={() => {
               setOpen((v) => !v);
               setGeopend(true);
             }}
-            className="btn-ghost px-3 py-1.5 text-xs"
+            className="btn-ghost min-h-[44px] px-3 py-1.5 text-xs"
           >
             {open ? t.verberg : t.lees}
           </button>
         )}
         {/* de pdf openen telt ook als lezen (en is de weg als het scherm de tekst niet kan laden) */}
-        <a href={PDF_VOORBEELD} target="_blank" rel="noopener noreferrer" onClick={() => setGeopend(true)} className="text-xs font-semibold text-brand-600 underline">
+        <a href={PDF_VOORBEELD} target="_blank" rel="noopener noreferrer" onClick={() => setGeopend(true)} className="inline-flex min-h-[44px] items-center text-xs font-semibold text-brand-600 underline">
           {t.pdfOpen}
         </a>
-        <a href={`${PDF_VOORBEELD}&download=1`} download onClick={() => setGeopend(true)} className="text-xs font-semibold text-brand-600 underline">
+        <a href={`${PDF_VOORBEELD}&download=1`} download onClick={() => setGeopend(true)} className="inline-flex min-h-[44px] items-center text-xs font-semibold text-brand-600 underline">
           {t.pdfDownload}
         </a>
       </div>
 
-      {open && data && data !== "fout" && <TekstPaneel data={data} t={t} bindend={bindend} />}
+      {open && data && data !== "fout" && <TekstPaneel id={paneelId} data={data} t={t} bindend={bindend} />}
 
-      <label className="mt-3 flex items-start gap-2 text-xs text-ink">
-        <input type="checkbox" checked={gelezen} disabled={!geopend} onChange={(e) => setGelezen(e.target.checked)} className="mt-0.5" />
+      <label className="mt-3 flex min-h-[44px] items-center gap-3 text-xs text-ink">
+        <input type="checkbox" checked={gelezen} disabled={!geopend} aria-describedby={geopend ? undefined : hintId} onChange={(e) => setGelezen(e.target.checked)} className="h-5 w-5 flex-shrink-0" />
         <span>{t.gelezen}</span>
       </label>
-      {!geopend && <p className="mt-1 text-[11px] text-neutralx-500">{t.eerstLezen}</p>}
+      {!geopend && <p id={hintId} className="mt-1 text-xs text-neutralx-500">{t.eerstLezen}</p>}
 
       {err && <p role="alert" className="mt-2 text-xs text-crit">{err}</p>}
-      <button type="button" onClick={onTekenen} disabled={busy || !gelezen} className="btn-primary mt-3 px-4 py-2 text-sm disabled:opacity-50">
+      <button type="button" onClick={onTekenen} disabled={busy || !gelezen} className="btn-primary mt-3 min-h-[44px] px-4 py-2 text-sm disabled:opacity-50">
         {busy ? t.bezig : knop}
       </button>
     </div>
@@ -142,6 +145,7 @@ function LeesEnTeken({ t, fmt, bindend, busy, err, knop, onTekenen }: { t: T; fm
 
 /** Na het tekenen: de overeenkomst blijft te lezen en te downloaden. */
 function Teruglezen({ id, t, bindend }: { id: string; t: T; bindend: boolean }) {
+  const paneelId = useId();
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<ContractTekst | "fout" | null>(null);
 
@@ -162,16 +166,16 @@ function Teruglezen({ id, t, bindend }: { id: string; t: T; bindend: boolean }) 
   return (
     <div className="mt-3">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <button type="button" aria-expanded={open} onClick={() => void toggle()} className="btn-ghost px-3 py-1.5 text-xs">
+        <button type="button" aria-expanded={open} aria-controls={paneelId} onClick={() => void toggle()} className="btn-ghost min-h-[44px] px-3 py-1.5 text-xs">
           {open ? t.verberg : t.lees}
         </button>
-        <a href={`/api/me/uitzend/contract/pdf?id=${encodeURIComponent(id)}&download=1`} download className="text-xs font-semibold text-brand-600 underline">
+        <a href={`/api/me/uitzend/contract/pdf?id=${encodeURIComponent(id)}&download=1`} download className="inline-flex min-h-[44px] items-center text-xs font-semibold text-brand-600 underline">
           {t.pdfDownload}
         </a>
       </div>
-      {open && data === null && <p className="mt-2 text-xs text-neutralx-500">{t.tekstLaden}</p>}
+      {open && data === null && <p role="status" className="mt-2 text-xs text-neutralx-500">{t.tekstLaden}</p>}
       {open && data === "fout" && <p role="alert" className="mt-2 text-xs text-crit">{t.tekstFout}</p>}
-      {open && data && data !== "fout" && <TekstPaneel data={data} t={t} bindend={bindend} />}
+      {open && data && data !== "fout" && <TekstPaneel id={paneelId} data={data} t={t} bindend={bindend} />}
     </div>
   );
 }
@@ -185,6 +189,15 @@ export function UitzendContractCard() {
   const [history, setHistory] = useState<Contract[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  // na het tekenen verdwijnt de knop: de focus naar de melding "getekend", die ook wordt voorgelezen
+  const getekendRef = useRef<HTMLParagraphElement>(null);
+  const focusNaTekenen = useRef(false);
+  useEffect(() => {
+    if (active && focusNaTekenen.current) {
+      focusNaTekenen.current = false;
+      getekendRef.current?.focus();
+    }
+  }, [active]);
 
   const load = useCallback(async () => {
     try {
@@ -208,6 +221,7 @@ export function UitzendContractCard() {
       const r = await fetch("/api/me/uitzend/contract", { method: "POST" });
       const d = await r.json();
       if (!r.ok) throw new Error(d?.error?.message ?? t.mislukt);
+      focusNaTekenen.current = true;
       await load();
     } catch (e) {
       setErr((e as Error).message);
@@ -216,7 +230,7 @@ export function UitzendContractCard() {
     }
   }
 
-  if (active === undefined) return <p className="text-xs text-neutralx-400">{t.laden}</p>;
+  if (active === undefined) return <p role="status" className="text-xs text-neutralx-400">{t.laden}</p>;
 
   if (!active) {
     return (
@@ -236,13 +250,13 @@ export function UitzendContractCard() {
     <div className="rounded-xl border border-hair p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-ink">{t.getekend}</p>
+          <p ref={getekendRef} tabIndex={-1} role="status" className="text-sm font-semibold text-ink focus:outline-none">{t.getekend}</p>
           <p className="mt-0.5 text-xs text-neutralx-500">
             {vulIn(t.ref, { ref: active.reference, datum: fmt(active.signedAt) })}
           </p>
         </div>
         <span
-          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
             expired ? "bg-warn/10 text-warn" : "bg-ok/10 text-ok"
           }`}
         >
@@ -263,7 +277,7 @@ export function UitzendContractCard() {
         href="/api/me/uitzend/contract/pdf"
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-3 inline-block text-xs font-semibold text-brand-600 underline"
+        className="mt-3 inline-flex min-h-[44px] items-center text-xs font-semibold text-brand-600 underline"
       >
         {t.bekijk}
       </a>

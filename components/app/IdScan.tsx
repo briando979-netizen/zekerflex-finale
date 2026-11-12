@@ -815,9 +815,9 @@ function FotoMini({ file, label }: { file: File; label: string }) {
     <figure className="text-center">
       {url && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt={label} className="h-20 w-auto rounded-lg border border-hair object-cover" />
+        <img src={url} alt="" className="h-20 w-auto rounded-lg border border-hair object-cover" />
       )}
-      <figcaption className="mt-1 text-[11px] text-neutralx-500">{label}</figcaption>
+      <figcaption className="mt-1 text-xs text-neutralx-500">{label}</figcaption>
     </figure>
   );
 }
@@ -1647,9 +1647,9 @@ export function IdScan({
               </>
             )}
 
-            <OnderSheet open={bevestigFotos !== null} titelId="idscan-bevestig-titel" titel={ft.bevestig.titel} onSluit={() => setBevestigFotos(null)}>
+            <OnderSheet open={bevestigFotos !== null} titelId="idscan-bevestig-titel" beschrijvingId="idscan-bevestig-uitleg" titel={ft.bevestig.titel} onSluit={() => setBevestigFotos(null)}>
                   <div className="overflow-y-auto px-6 pb-6">
-                    <p className="text-center text-sm leading-relaxed text-neutralx-600">{ft.bevestig.uitleg}</p>
+                    <p id="idscan-bevestig-uitleg" className="text-center text-sm leading-relaxed text-neutralx-600">{ft.bevestig.uitleg}</p>
                     {/* soort, naam zoals getypt en geldigheid; het documentnummer en alles uit de MRZ blijven buiten beeld */}
                     <dl className="mt-4 divide-y divide-hair rounded-xl border border-hair text-sm">
                       {bevestigOverzicht({
@@ -1676,7 +1676,7 @@ export function IdScan({
                       {metBeweging && bevestigFotos?.beweging && <FotoMini file={bevestigFotos.beweging} label={t.missingNames.selfie2} />}
                     </div>
                     <div className="mt-5 flex gap-2">
-                      <button type="button" onClick={() => setBevestigFotos(null)} className="btn-ghost flex-1">
+                      <button type="button" onClick={() => setBevestigFotos(null)} className="btn-ghost min-h-[44px] flex-1">
                         {ft.bevestig.terug}
                       </button>
                       <button
@@ -1686,7 +1686,7 @@ export function IdScan({
                           setBevestigFotos(null);
                           if (f) void afronden(f, gegevens);
                         }}
-                        className="btn-trust flex-1"
+                        className="btn-trust min-h-[44px] flex-1"
                       >
                         {ft.bevestig.ja}
                       </button>
