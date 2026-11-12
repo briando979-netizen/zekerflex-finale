@@ -131,6 +131,7 @@ export function SectorHub({ sector: s }: { sector: Sector }) {
       />
       <Section>
         <SectionHead
+          kop="h1"
           eyebrow={`${s.label} · voor bedrijven`}
           title={`${s.label} personeel inhuren, door heel Nederland`}
           intro={`Uitval, no-shows of ${s.peak}? Plaats een klus en ZekerFlex vindt binnen uren betrouwbare ${s.roles} in de buurt. Je betaalt € 3,50 per gewerkt uur, zonder uitzendmarge en zonder abonnement.`}
@@ -218,6 +219,7 @@ export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City 
       />
       <Section>
         <SectionHead
+          kop="h1"
           eyebrow={`${s.label} ${c.name} · voor bedrijven`}
           title={`${s.label} personeel inhuren in ${c.name}`}
           intro={`Een gat in je rooster door uitval of ${s.peak} in ${c.name}? Met ZekerFlex plaats je een klus en vind je binnen uren betrouwbare ${s.roles} — voor € 3,50 per gewerkt uur, zonder uitzendmarge en zonder abonnement.`}
@@ -347,6 +349,7 @@ export function SectorWorkerHub({ sector: s }: { sector: Sector }) {
       />
       <Section>
         <SectionHead
+          kop="h1"
           eyebrow={`Werken in de ${low(s)}`}
           title={`Flexibel werken in de ${low(s)}`}
           intro={`Pak diensten als ${s.roles}, werk wanneer jij wil en word snel uitbetaald — met of zonder KVK. Door heel Nederland.`}
@@ -422,6 +425,7 @@ export function SectorWorkerCity({ sector: s, city: c }: { sector: Sector; city:
       />
       <Section>
         <SectionHead
+          kop="h1"
           eyebrow={`Werken in de ${low(s)} · ${c.name}`}
           title={`Werken in de ${low(s)} in ${c.name}`}
           intro={`Flexibel werken in de ${low(s)} in ${c.name}? Pak diensten als ${s.roles}, werk wanneer jij wil en word snel uitbetaald — met of zonder KVK.`}
