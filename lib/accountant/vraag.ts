@@ -4,13 +4,17 @@ import { logger } from "@/lib/logger";
 import { tekst } from "@/lib/orchestration/antwoord";
 import { zoekKennis } from "@/lib/accountant/kennis";
 import { antwoordUitBronnen, bedragenKloppen, onbekend, type VraagAntwoord } from "@/lib/accountant/antwoord";
+import { herkenCijfervraag } from "@/lib/accountant/cijfervraag";
+import { beantwoordCijfervraag } from "@/lib/accountant/cijfers";
+import { amsterdamDayKey } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Vraagbalk van de AI-accountant. Stap 1: zoek in de kennisbank (lib/accountant/kennis.ts). Niets
 // gevonden: eerlijk "weet ik niet" met een kant-en-klare vraag voor een mens. Wel gevonden: het eigen
 // model (of de reserve, lib/ai) schrijft een kort antwoord UITSLUITEND uit die regels. Noemt het
 // bedragen die niet in de bronnen staan, zegt het zelf dat de bronnen niet volstaan, of is het model
-// er niet: dan komen de bronregels zelf, zonder verzinsels. De boekhouding van b3 is nog niet gekoppeld.
+// er niet: dan komen de bronregels zelf, zonder verzinsels. Een vraag naar de eigen cijfers of termijnen
+// (lib/accountant/cijfervraag.ts) beantwoordt de boekhouding zelf, zonder model.
 // ---------------------------------------------------------------------------
 
 const modelAntwoord = z.object({
@@ -20,6 +24,9 @@ const modelAntwoord = z.object({
 
 export async function beantwoordVraag(vraagRuw: string): Promise<VraagAntwoord> {
   const vraag = vraagRuw.trim().slice(0, 500);
+  // Eerst: gaat het over de eigen cijfers of termijnen? Dan antwoordt de boekhouding zelf, zonder model.
+  const cijfervraag = herkenCijfervraag(vraag, amsterdamDayKey(new Date()));
+  if (cijfervraag) return beantwoordCijfervraag(cijfervraag);
   const hits = zoekKennis(vraag);
   if (hits.length === 0) return onbekend(vraag);
   if (llmConfigProblem()) return antwoordUitBronnen(hits);

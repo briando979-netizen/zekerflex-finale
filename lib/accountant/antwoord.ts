@@ -11,8 +11,8 @@ export interface VraagAntwoord {
   bronnen: { naam: string; url: string; zekerheid: "gelezen" | "laten-bevestigen" }[];
   /** Bij "onbekend": de vraag, klaar om aan een menselijk accountant te sturen. */
   vraagVoorMens?: string;
-  /** Wie het antwoord schreef: het model of de kennisbank zelf (zonder model). */
-  door: "model" | "kennisbank";
+  /** Wie het antwoord schreef: het model, de kennisbank zelf (zonder model) of de eigen boekhouding (cijfervraag). */
+  door: "model" | "kennisbank" | "boekhouding";
 }
 
 export function onbekend(vraag: string): VraagAntwoord {

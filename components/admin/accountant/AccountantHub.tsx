@@ -229,7 +229,7 @@ function Vraag({ vragen, naVraag }: { vragen: { op: string; vraag: string; soort
         </form>
       </Panel>
       {antwoord && (
-        <Panel title={antwoord.soort === "antwoord" ? "Antwoord" : "Dit weet ik niet zeker"} actions={<Pill tone={antwoord.soort === "antwoord" ? "ok" : "warn"}>{antwoord.door === "model" ? "Geschreven uit de bronnen" : "Uit de kennisbank"}</Pill>}>
+        <Panel title={antwoord.soort === "antwoord" ? "Antwoord" : "Dit weet ik niet zeker"} actions={<Pill tone={antwoord.soort === "antwoord" ? "ok" : "warn"}>{antwoord.door === "model" ? "Geschreven uit de bronnen" : antwoord.door === "boekhouding" ? "Uit je eigen boekhouding" : "Uit de kennisbank"}</Pill>}>
           <p className="whitespace-pre-line text-sm">{antwoord.tekst}</p>
           {antwoord.vraagVoorMens && <textarea readOnly className={`${veld} mt-3`} rows={3} value={antwoord.vraagVoorMens} aria-label="Vraag voor een menselijk accountant" />}
           {antwoord.bronnen.length > 0 && (
