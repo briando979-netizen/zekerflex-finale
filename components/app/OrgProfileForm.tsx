@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useT } from "@/components/i18n/I18nProvider";
 
 export function OrgProfileForm({
   tenantId,
@@ -9,6 +10,7 @@ export function OrgProfileForm({
   tenantId: string;
   initial: { websiteUrl?: string; about?: string; hasPhoto: boolean };
 }) {
+  const o = useT().orgForm;
   const [websiteUrl, setWebsiteUrl] = useState(initial.websiteUrl ?? "");
   const [about, setAbout] = useState(initial.about ?? "");
   const [hasPhoto, setHasPhoto] = useState(initial.hasPhoto);
@@ -26,7 +28,7 @@ export function OrgProfileForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ websiteUrl, about }),
       });
-      setMsg(r.ok ? "Opgeslagen" : "Opslaan mislukt");
+      setMsg(r.ok ? o.opgeslagen : o.mislukt);
     } finally {
       setSaving(false);
     }
@@ -45,18 +47,18 @@ export function OrgProfileForm({
   return (
     <div className="space-y-5">
       <div>
-        <p className="field-label">Bedrijfsfoto</p>
+        <p className="field-label">{o.foto}</p>
         <div className="mt-2 flex items-center gap-4">
           <span className="grid h-20 w-32 place-items-center overflow-hidden rounded-lg bg-paper-soft text-xs text-neutralx-400">
             {hasPhoto ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={`/api/orgs/${tenantId}/photo?v=${bust}`} alt="" className="h-full w-full object-cover" />
             ) : (
-              "geen foto"
+              o.geenFoto
             )}
           </span>
           <button type="button" onClick={() => fileRef.current?.click()} className="btn-ghost text-sm">
-            {hasPhoto ? "Wijzig" : "Upload"}
+            {hasPhoto ? o.wijzig : o.upload}
           </button>
           <input
             ref={fileRef}
@@ -72,18 +74,18 @@ export function OrgProfileForm({
       </div>
 
       <label className="block">
-        <span className="field-label">Website</span>
-        <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} className="field-input" placeholder="www.jouwbedrijf.nl" />
+        <span className="field-label">{o.website}</span>
+        <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} className="field-input" placeholder={o.websitePlaceholder} />
       </label>
 
       <label className="block">
-        <span className="field-label">Over het bedrijf</span>
-        <textarea value={about} onChange={(e) => setAbout(e.target.value)} rows={4} className="field-input" placeholder="Vertel freelancers waar je voor staat." />
+        <span className="field-label">{o.over}</span>
+        <textarea value={about} onChange={(e) => setAbout(e.target.value)} rows={4} className="field-input" placeholder={o.overPlaceholder} />
       </label>
 
       <div className="flex items-center gap-3">
         <button type="button" onClick={save} disabled={saving} className="btn-primary">
-          {saving ? "Opslaan…" : "Opslaan"}
+          {saving ? o.bezig : o.opslaan}
         </button>
         {msg && <span className="text-sm text-neutralx-500">{msg}</span>}
       </div>

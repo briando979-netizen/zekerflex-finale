@@ -47,13 +47,11 @@
     "components/app/EmployerMailbox.tsx": 2,
     "components/app/EmployerOnboardingWizard.tsx": 1,
     "components/app/GoogleReviews.tsx": 12,
-    "components/app/InvoicesOverview.tsx": 1,
     "components/app/KaartAanmelding.tsx": 8,
     "components/app/KlusConceptNudge.tsx": 1,
     "components/app/NewShiftForm.tsx": 14,
     "components/app/OnboardingOnderhoudBalk.tsx": 1,
     "components/app/OpbouwfaseBalk.tsx": 1,
-    "components/app/OrgProfileForm.tsx": 1,
     "components/app/PlanPicker.tsx": 2,
     "components/app/PoolsManager.tsx": 3,
     "components/app/ProposeCorrectionButton.tsx": 1,
@@ -140,11 +138,8 @@
     "components/werkgever/AbonnementScherm.tsx": 4,
     "components/werkgever/AutoApproveToggle.tsx": 2,
     "components/werkgever/BakenInstellingen.tsx": 4,
-    "components/werkgever/EfactuurSettings.tsx": 8,
-    "components/werkgever/FastPaySettings.tsx": 7,
     "components/werkgever/IntegrationsHub.tsx": 9,
     "components/werkgever/Planner.tsx": 6,
-    "components/werkgever/VolumeCard.tsx": 1,
     "components/werkgever/WebhooksBoard.tsx": 4
   }
 }

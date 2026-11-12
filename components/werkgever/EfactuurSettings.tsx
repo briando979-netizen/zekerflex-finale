@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useI18n } from "@/components/i18n/I18nProvider";
+import { fmt } from "@/lib/i18n/dictionaries";
 
 // ---------------------------------------------------------------------------
 // Werkgever → Facturen: e-facturatie (UBL / Peppol). Instellingen per bedrijf
@@ -23,14 +25,8 @@ interface View {
   standen: Record<string, Stand>;
 }
 
-export const STAND_LABEL: Record<Stand["status"], { label: string; cls: string }> = {
-  verstuurd: { label: "Verstuurd", cls: "bg-ok/10 text-ok" },
-  klaar: { label: "Klaar om te downloaden", cls: "bg-plan-soft text-plan-ink" },
-  mislukt: { label: "Mislukt", cls: "bg-crit/10 text-crit" },
-  ongeldig: { label: "Gegevens onvolledig", cls: "bg-warn/10 text-warn" },
-};
-
 export function EfactuurSettings() {
+  const e = useI18n().t.efactuurForm;
   const [v, setV] = useState<View | null>(null);
   const [peppolId, setPeppolId] = useState("");
   const [email, setEmail] = useState("");
@@ -54,9 +50,9 @@ export function EfactuurSettings() {
     const r = await fetch("/api/werkgever/efactuur", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
     setBusy(false);
-    if (!r?.ok) return setMsg({ ok: false, text: d?.error?.message ?? "Opslaan lukte niet." });
+    if (!r?.ok) return setMsg({ ok: false, text: d?.error?.message ?? e.opslaanMislukt });
     setV(d as View);
-    setMsg({ ok: true, text: "Opgeslagen." });
+    setMsg({ ok: true, text: e.opgeslagen });
   }
 
   if (!v) return null;
@@ -65,7 +61,9 @@ export function EfactuurSettings() {
   return (
     <div className="space-y-4 p-5">
       <p className="text-sm leading-relaxed text-neutralx-600">
-        Elke factuur van ZekerFlex is ook een <strong>e-factuur</strong>: een UBL-bestand volgens de Europese norm (Peppol BIS 3 / NLCIUS) dat je boekhoudpakket direct inleest, zonder overtypen. Download hem per factuur in de lijst hieronder, of laat hem automatisch naar je pakket sturen.
+        {e.introVoor}
+        <strong>{e.introVet}</strong>
+        {e.introNa}
       </p>
 
       <form
@@ -76,7 +74,7 @@ export function EfactuurSettings() {
         }}
       >
         <label className="block text-sm">
-          <span className="font-medium text-ink">Peppol-adres van je bedrijf</span>
+          <span className="font-medium text-ink">{e.peppolLabel}</span>
           <input
             value={peppolId}
             onChange={(e) => setPeppolId(e.target.value)}
@@ -85,11 +83,11 @@ export function EfactuurSettings() {
             aria-describedby="peppol-uitleg"
           />
           <span id="peppol-uitleg" className="mt-1 block text-xs text-neutralx-500">
-            {v.afgeleidPeppolId ? `Leeg = je KVK- of btw-nummer (${v.afgeleidPeppolId}).` : "Meestal 0106: gevolgd door je KVK-nummer."}
+            {v.afgeleidPeppolId ? fmt(e.peppolLeeg, { id: v.afgeleidPeppolId }) : e.peppolMeestal}
           </span>
         </label>
         <label className="block text-sm">
-          <span className="font-medium text-ink">Mailadres van je boekhoudpakket</span>
+          <span className="font-medium text-ink">{e.mailLabel}</span>
           <input
             type="email"
             value={email}
@@ -99,12 +97,12 @@ export function EfactuurSettings() {
             aria-describedby="email-uitleg"
           />
           <span id="email-uitleg" className="mt-1 block text-xs text-neutralx-500">
-            Het adres waarop je pakket UBL-bijlagen inleest. Leeg = je factuuradres.
+            {e.mailUitleg}
           </span>
         </label>
         <div className="flex items-center gap-3 sm:col-span-2">
           <button type="submit" disabled={busy} className="btn-primary text-sm">
-            Opslaan
+            {e.opslaan}
           </button>
           {msg && (
             <p role={msg.ok ? "status" : "alert"} className={`text-xs ${msg.ok ? "text-ok" : "text-crit"}`}>
@@ -116,17 +114,19 @@ export function EfactuurSettings() {
 
       <label className="flex items-center justify-between gap-3 rounded-xl border border-hair bg-paper-soft/60 px-4 py-3 text-sm">
         <span>
-          <span className="font-medium text-ink">Nieuwe facturen automatisch als e-factuur versturen</span>
+          <span className="font-medium text-ink">{e.autoLabel}</span>
           <span className="mt-0.5 block text-xs text-neutralx-500">
-            {v.peppolNetwerk ? "Via het Peppol-netwerk als je bedrijf daarop bereikbaar is, anders per mail als UBL-bijlage." : "Per mail als UBL-bijlage naar je boekhoudpakket."}
+            {v.peppolNetwerk ? e.autoPeppol : e.autoMail}
           </span>
         </span>
         <input type="checkbox" checked={Boolean(v.instellingen.automatisch)} disabled={busy} onChange={(e) => void save({ automatisch: e.target.checked })} />
       </label>
 
       <p className="text-xs text-neutralx-500">
-        {verstuurd > 0 ? `${verstuurd} ${verstuurd === 1 ? "factuur is" : "facturen zijn"} als e-factuur verstuurd.` : "Nog geen e-facturen verstuurd."}{" "}
-        In de lijst hieronder staat per factuur een knop <strong>UBL</strong> om het bestand te downloaden.
+        {verstuurd > 0 ? fmt(verstuurd === 1 ? e.verstuurdEen : e.verstuurdMeer, { n: verstuurd }) : e.nogGeen}{" "}
+        {e.lijstVoor}
+        <strong>UBL</strong>
+        {e.lijstNa}
       </p>
     </div>
   );

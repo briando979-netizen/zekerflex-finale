@@ -1,6 +1,7 @@
 "use client";
 
 import { copyText } from "@/lib/clipboard";
+import { fmt } from "@/lib/i18n/dictionaries";
 
 import { useMemo, useState } from "react";
 import { PayInvoiceButton } from "@/components/app/PayInvoiceButton";
@@ -57,6 +58,8 @@ type Dict = {
   qrCopied: string;
   qrOpen: string;
   qrClose: string;
+  ublTitel: string;
+  ublAria: string;
 };
 
 const moneyExact = (cents: number) => `€ ${(cents / 100).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -173,8 +176,8 @@ export function InvoicesOverview({ invoices, t }: { invoices: InvoiceRow[]; t: D
                   <a
                     href={`/api/invoices/${i.id}/ubl`}
                     className="ml-2 text-xs font-medium text-brand-600 hover:underline"
-                    title="E-factuur (UBL) voor je boekhoudpakket"
-                    aria-label={`E-factuur UBL — ${i.number}`}
+                    title={t.ublTitel}
+                    aria-label={fmt(t.ublAria, { nr: i.number })}
                   >
                     UBL ↓
                   </a>
