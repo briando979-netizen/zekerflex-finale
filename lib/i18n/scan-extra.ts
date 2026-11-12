@@ -59,6 +59,22 @@ export interface ScanExtra {
   kiesCamera: string;
   cameraNr: string;
   camGeen: string;
+  /** live begeleiding van de camera (lib/kyc/camera-live.ts): aanwijzingen bij het document en de selfie */
+  docLicht: string;
+  docGlans: string;
+  docStil: string;
+  docDichterbij: string;
+  docVerder: string;
+  docCode: string;
+  docZoeken: string;
+  docGoed: string;
+  /** het kaartje dat omdraait tussen voor- en achterkant */
+  omdraaiId: string;
+  omdraaiRijbewijs: string;
+  selfieVerder: string;
+  selfieStil: string;
+  /** onder de camera: de foto gaat vanzelf, de knop blijft als uitweg */
+  vanzelf: string;
 }
 
 export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
@@ -118,6 +134,19 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     kiesCamera: "Kies de achtercamera",
     cameraNr: "Camera {n}",
     camGeen: "Er is geen camera beschikbaar. Gebruik de camera-app van je toestel.",
+    docLicht: "Meer licht nodig",
+    docGlans: "Minder glans: kantel je document een klein beetje",
+    docStil: "Houd hem stil",
+    docDichterbij: "Kom iets dichterbij",
+    docVerder: "Houd de camera iets verder weg",
+    docCode: "Zorg dat de code onderaan scherp in beeld is",
+    docZoeken: "Houd je document in het kader",
+    docGoed: "Goed zo, de foto wordt gemaakt",
+    omdraaiId: "Draai je ID-kaart om",
+    omdraaiRijbewijs: "Draai je rijbewijs om",
+    selfieVerder: "Houd de camera iets verder weg",
+    selfieStil: "Goed zo, even stilhouden",
+    vanzelf: "De foto wordt vanzelf gemaakt zodra alles goed is. Lukt dat niet, druk dan op de knop.",
   },
   en: {
     introTitel: "Confirm your identity",
@@ -175,6 +204,19 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     kiesCamera: "Choose the rear camera",
     cameraNr: "Camera {n}",
     camGeen: "No camera is available. Use the camera app of your device.",
+    docLicht: "More light needed",
+    docGlans: "Less glare: tilt your document a little",
+    docStil: "Hold it still",
+    docDichterbij: "Move a little closer",
+    docVerder: "Hold the camera a little further away",
+    docCode: "Make sure the code at the bottom is sharp and in view",
+    docZoeken: "Keep your document inside the frame",
+    docGoed: "Good, taking the photo",
+    omdraaiId: "Turn your ID card over",
+    omdraaiRijbewijs: "Turn your driving licence over",
+    selfieVerder: "Hold the camera a little further away",
+    selfieStil: "Good, hold still",
+    vanzelf: "The photo is taken automatically once everything is right. If that does not work, press the button.",
   },
   pl: {
     introTitel: "Potwierdź swoją tożsamość",
@@ -232,6 +274,19 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     kiesCamera: "Wybierz tylną kamerę",
     cameraNr: "Kamera {n}",
     camGeen: "Brak dostępnej kamery. Użyj aplikacji aparatu w urządzeniu.",
+    docLicht: "Potrzeba więcej światła",
+    docGlans: "Mniej odblasków: lekko przechyl dokument",
+    docStil: "Trzymaj nieruchomo",
+    docDichterbij: "Podejdź trochę bliżej",
+    docVerder: "Odsuń aparat trochę dalej",
+    docCode: "Kod na dole musi być ostry i widoczny",
+    docZoeken: "Trzymaj dokument w ramce",
+    docGoed: "Dobrze, robimy zdjęcie",
+    omdraaiId: "Odwróć dowód osobisty",
+    omdraaiRijbewijs: "Odwróć prawo jazdy",
+    selfieVerder: "Odsuń aparat trochę dalej",
+    selfieStil: "Dobrze, nie ruszaj się",
+    vanzelf: "Zdjęcie zostanie zrobione automatycznie, gdy wszystko będzie dobrze. Jeśli to nie działa, naciśnij przycisk.",
   },
   ro: {
     introTitel: "Confirmă-ți identitatea",
@@ -289,6 +344,19 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     kiesCamera: "Alege camera din spate",
     cameraNr: "Camera {n}",
     camGeen: "Nu este disponibilă nicio cameră. Folosește aplicația de cameră a dispozitivului.",
+    docLicht: "Este nevoie de mai multă lumină",
+    docGlans: "Mai puține reflexii: înclină puțin documentul",
+    docStil: "Ține-l nemișcat",
+    docDichterbij: "Apropie-te puțin",
+    docVerder: "Ține camera puțin mai departe",
+    docCode: "Codul de jos trebuie să fie clar și vizibil",
+    docZoeken: "Ține documentul în cadru",
+    docGoed: "Bine, se face fotografia",
+    omdraaiId: "Întoarce cartea de identitate",
+    omdraaiRijbewijs: "Întoarce permisul de conducere",
+    selfieVerder: "Ține camera puțin mai departe",
+    selfieStil: "Bine, nu te mișca",
+    vanzelf: "Fotografia se face automat când totul este în regulă. Dacă nu merge, apasă butonul.",
   },
   uk: {
     introTitel: "Підтвердьте свою особу",
@@ -346,5 +414,18 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     kiesCamera: "Виберіть задню камеру",
     cameraNr: "Камера {n}",
     camGeen: "Камера недоступна. Скористайтеся застосунком камери на пристрої.",
+    docLicht: "Потрібно більше світла",
+    docGlans: "Менше відблисків: трохи нахиліть документ",
+    docStil: "Тримайте нерухомо",
+    docDichterbij: "Підійдіть трохи ближче",
+    docVerder: "Тримайте камеру трохи далі",
+    docCode: "Код унизу має бути чітким і в кадрі",
+    docZoeken: "Тримайте документ у рамці",
+    docGoed: "Добре, робимо фото",
+    omdraaiId: "Переверніть ID-картку",
+    omdraaiRijbewijs: "Переверніть посвідчення водія",
+    selfieVerder: "Тримайте камеру трохи далі",
+    selfieStil: "Добре, не рухайтеся",
+    vanzelf: "Фото буде зроблено автоматично, щойно все буде правильно. Якщо не вийде, натисніть кнопку.",
   },
 };

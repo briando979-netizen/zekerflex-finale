@@ -11,7 +11,29 @@ import { AuthLanguage } from "@/components/auth/AuthLanguage";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
 import { EuIntro, EuToestemming, NlIntro, TipsSheet } from "@/components/app/ScanRouteSchermen";
 import { heeftAchterkant } from "@/lib/kyc/document-zijden";
-import { BEWEGING, bewegingVoldoet, draaiAanwijzing, rechtAanwijzing, type LiveAanwijzing, type LiveMeting } from "@/lib/kyc/gezicht/beweging";
+import { BEWEGING, bewegingVoldoet, draaiAanwijzing, type LiveMeting } from "@/lib/kyc/gezicht/beweging";
+import {
+  DOC_LIVE,
+  SELFIE_LIVE,
+  beeldAanwijzing,
+  beweging as beeldVerschil,
+  docKantMeting,
+  grijs,
+  kaderInVideo,
+  kanVanzelf,
+  licht,
+  scherpte,
+  selfieAanwijzing,
+  serverAanwijzing,
+  telSelfie,
+  verklein,
+  type DocAanwijzing,
+  type DocKant,
+  type DocKantMeting,
+  type DocServerMeting,
+  type DocSoortLive,
+  type SelfieAanwijzing,
+} from "@/lib/kyc/camera-live";
 
 // ---------------------------------------------------------------------------
 // ID-scan van ZekerFlex (9 nov 2026): een eigen omgeving zoals die van Stripe.
@@ -200,19 +222,123 @@ async function meetGezicht(bron: HTMLVideoElement | Blob): Promise<LiveAntwoord>
 
 /** Een foto op volle grootte van wat de camera nu ziet. */
 function fotoVanVideo(v: HTMLVideoElement, naam: string): Promise<File | null> {
-  if (!v.videoWidth) return Promise.resolve(null);
+  const c = volBeeld(v);
+  return c ? fotoVanCanvas(c, naam) : Promise.resolve(null);
+}
+
+/** Wat de camera nu ziet, op volle grootte, als canvas. */
+function volBeeld(v: HTMLVideoElement): HTMLCanvasElement | null {
+  if (!v.videoWidth) return null;
   const c = document.createElement("canvas");
   c.width = v.videoWidth;
   c.height = v.videoHeight;
   c.getContext("2d")?.drawImage(v, 0, 0, c.width, c.height);
+  return c;
+}
+
+function fotoVanCanvas(c: HTMLCanvasElement, naam: string): Promise<File | null> {
   return new Promise((klaar) => c.toBlob((b) => klaar(b ? new File([b], `${naam}-${Date.now()}.jpg`, { type: "image/jpeg" }) : null), "image/jpeg", 0.9));
+}
+
+/** Het kader (lib/kyc/camera-live.ts, kaderInVideo) uit een beeld van `bronB` × `bronH`, hooguit `breedte` pixels breed. */
+function kaderUitsnede(bron: HTMLVideoElement | HTMLCanvasElement, bronB: number, bronH: number, breedte: number): HTMLCanvasElement | null {
+  const k = kaderInVideo(bronB, bronH);
+  if (!k) return null;
+  const schaal = Math.min(1, breedte / k.w);
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(k.w * schaal));
+  c.height = Math.max(1, Math.round(k.h * schaal));
+  c.getContext("2d", { willReadFrequently: true })?.drawImage(bron, k.x, k.y, k.w, k.h, 0, 0, c.width, c.height);
+  return c;
+}
+
+/** Het grijze beeld van een canvas (alleen in de browser, voor scherpte, licht en beweging). */
+function grijsVan(c: HTMLCanvasElement): Uint8Array | null {
+  try {
+    const d = c.getContext("2d", { willReadFrequently: true })?.getImageData(0, 0, c.width, c.height).data;
+    return d ? grijs(d, c.width, c.height) : null;
+  } catch {
+    return null;
+  }
+}
+
+type DocAntwoord = { status: "ok"; meting: DocServerMeting } | { status: "fout" } | { status: "stop" };
+
+/** De server meet het kader: is de code leesbaar, hoe groot staat de pasfoto (alleen ja/nee en een getal terug). */
+async function meetDocument(c: HTMLCanvasElement, kant: DocKantMeting): Promise<DocAntwoord> {
+  const beeld = await new Promise<Blob | null>((klaar) => c.toBlob((b) => klaar(b), "image/jpeg", 0.85));
+  if (!beeld) return { status: "fout" };
+  const zoek = [kant.mrz ? "mrz=1" : "", kant.portret ? "portret=1" : ""].filter(Boolean).join("&");
+  try {
+    const res = await fetch(`/api/onboarding/document-live?${zoek}`, { method: "POST", headers: { "Content-Type": "image/jpeg" }, body: beeld });
+    if (res.status === 401 || res.status === 423 || res.status === 429) return { status: "stop" };
+    if (!res.ok) return { status: "fout" };
+    const data = (await res.json().catch(() => ({}))) as { meting?: DocServerMeting };
+    return data.meting ? { status: "ok", meting: data.meting } : { status: "fout" };
+  } catch {
+    return { status: "fout" };
+  }
+}
+
+/** Tussen voor- en achterkant: een kaartje dat omdraait, met de tekst eronder. Zonder animatie bij "minder beweging". */
+function Omdraaien({ tekst }: { tekst: string }) {
+  const kaart = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = kaart.current;
+    if (!el || typeof el.animate !== "function") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const anim = el.animate(
+      [
+        { transform: "rotateY(0deg)" },
+        { transform: "rotateY(0deg)", offset: 0.2 },
+        { transform: "rotateY(180deg)", offset: 0.7 },
+        { transform: "rotateY(180deg)" },
+      ],
+      { duration: 2200, easing: "ease-in-out", fill: "forwards" },
+    );
+    return () => anim.cancel();
+  }, []);
+  const kant = { backfaceVisibility: "hidden" as const, WebkitBackfaceVisibility: "hidden" as const };
+  return (
+    <div role="status" aria-live="polite" className="pointer-events-none absolute inset-0 z-[5] grid place-items-center bg-black/70 px-6 text-center">
+      <div>
+        <div className="mx-auto h-[78px] w-[124px]" style={{ perspective: "600px" }}>
+          <div ref={kaart} className="relative h-full w-full" style={{ transformStyle: "preserve-3d" }}>
+            {/* voorkant: pasfoto en regels */}
+            <div aria-hidden className="absolute inset-0 rounded-lg border-2 border-white bg-white/95 p-2" style={kant}>
+              <div className="flex h-full gap-2">
+                <div className="h-full w-9 rounded bg-brand-100" />
+                <div className="flex-1 space-y-1.5 pt-1">
+                  <div className="h-1.5 w-full rounded bg-neutralx-300" />
+                  <div className="h-1.5 w-3/4 rounded bg-neutralx-300" />
+                  <div className="h-1.5 w-2/3 rounded bg-neutralx-300" />
+                </div>
+              </div>
+            </div>
+            {/* achterkant: de code onderaan */}
+            <div aria-hidden className="absolute inset-0 rounded-lg border-2 border-white bg-white/95 p-2" style={{ ...kant, transform: "rotateY(180deg)" }}>
+              <div className="flex h-full flex-col justify-end gap-1">
+                <div className="h-1.5 w-full rounded bg-neutralx-400" />
+                <div className="h-1.5 w-full rounded bg-neutralx-400" />
+                <div className="h-1.5 w-full rounded bg-neutralx-400" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <p className="mt-4 text-base font-semibold text-white">{tekst}</p>
+      </div>
+    </div>
+  );
 }
 
 /**
  * Live camera met een kader (kaart of ovaal) en een uitweg naar de camera-app. Met `live` meet de server het gezicht
- * mee: bij de selfie ("recht") een aanwijzing; bij de tweede selfie ("draai", tegen `referentie`, de eerste selfie)
- * maakt de camera de foto vanzelf zodra het hoofd goed staat. Wie zelf op de knop drukt, kijkt weer naar het scherm;
- * daarom telt de knop daar eerst af. Valt het meten weg, dan blijft die knop gewoon werken.
+ * mee: bij de selfie ("recht") aanwijzingen en de foto vanzelf zodra je een paar tellen goed en stil in beeld bent;
+ * bij de tweede selfie ("draai", tegen `referentie`, de eerste selfie) de foto vanzelf zodra het hoofd goed staat.
+ * Wie zelf op de knop drukt, kijkt weer naar het scherm; daarom telt de knop daar eerst af. Met `doc` begeleidt de
+ * camera het document (scherp, stil, licht, glans, afstand) en maakt hij de foto vanzelf zodra de code leesbaar is of
+ * de pasfoto goed in het kader staat (lib/kyc/camera-live.ts). Valt het meten weg, dan blijft de knop gewoon werken.
+ * `omdraaien`: eerst even het kaartje dat omdraait (achterkant).
  */
 function Camera({
   facing,
@@ -223,6 +349,8 @@ function Camera({
   eu = false,
   live,
   referentie = null,
+  doc,
+  omdraaien,
 }: {
   facing: "environment" | "user";
   vorm: "kaart" | "ovaal";
@@ -232,6 +360,9 @@ function Camera({
   eu?: boolean;
   live?: "recht" | "draai" | undefined;
   referentie?: LiveMeting | null;
+  /** live begeleiding van het document; `server` = de server mag meten (alleen ingelogd) */
+  doc?: { soort: DocSoortLive; kant: DocKant; server: boolean } | undefined;
+  omdraaien?: string | undefined;
 }) {
   const video = useRef<HTMLVideoElement>(null);
   const bestand = useRef<HTMLInputElement>(null);
@@ -240,8 +371,18 @@ function Camera({
   const [stand, setStand] = useState<"laden" | "aan" | "geen">("laden");
   // de camera gaat uit zolang het tabblad verborgen is, en weer aan als je terugkomt
   const [zichtbaar, setZichtbaar] = useState(true);
-  const [aanwijzing, setAanwijzing] = useState<{ a: LiveAanwijzing; voortgang: number } | null>(null);
+  const [aanwijzing, setAanwijzing] = useState<{ a: SelfieAanwijzing; voortgang: number } | null>(null);
   const [liveUit, setLiveUit] = useState(false);
+  // het document: de aanwijzing van nu, en of de server nog meet (weg = alleen de aanwijzingen van de browser)
+  const [docHint, setDocHint] = useState<DocAanwijzing | null>(null);
+  const [docUit, setDocUit] = useState(false);
+  const [toonOmdraai, setToonOmdraai] = useState(Boolean(omdraaien));
+  const docSoort = doc?.soort;
+  const docKant = doc?.kant;
+  const docServer = doc?.server === true;
+  const docVanzelf = docSoort && docKant ? docServer && kanVanzelf(docKantMeting(docSoort, docKant)) : false;
+  // gaat de foto vanzelf? Dan geen uitleg over de handmatige opname
+  const vanzelfAan = (docVanzelf && !docUit) || (live !== undefined && !liveUit);
   const [aftel, setAftel] = useState<number | null>(null);
   const afteller = useRef<ReturnType<typeof setTimeout> | null>(null);
   const opFoto = useRef(onFoto);
@@ -266,6 +407,13 @@ function Camera({
     };
   }, []);
 
+  // het kaartje dat omdraait staat even in beeld; zolang meet de camera niet (anders legt hij de voorkant nog eens vast)
+  useEffect(() => {
+    if (!toonOmdraai || stand !== "aan") return;
+    const id = setTimeout(() => setToonOmdraai(false), 2600);
+    return () => clearTimeout(id);
+  }, [toonOmdraai, stand]);
+
   useEffect(() => {
     if (!gestart) return;
     if (!zichtbaar) {
@@ -277,12 +425,19 @@ function Camera({
     void (async () => {
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error("geen camera");
-        const s = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          // zo scherp als de camera kan: de kleine letters van de code onderop het document (MRZ) vragen veel pixels;
-          // een toestel dat minder kan, geeft vanzelf het hoogste wat het heeft
-          video: { ...(keuze ? { deviceId: { exact: keuze } } : { facingMode: { ideal: facing } }), width: { ideal: 3840 }, height: { ideal: 2160 } },
-        });
+        const bron = keuze ? { deviceId: { exact: keuze } } : { facingMode: { ideal: facing } };
+        const s = await navigator.mediaDevices
+          .getUserMedia({
+            audio: false,
+            // zo scherp als de camera kan: de kleine letters van de code onderop het document (MRZ) vragen veel pixels;
+            // een toestel dat minder kan, geeft vanzelf het hoogste wat het heeft
+            video: { ...bron, width: { ideal: 3840 }, height: { ideal: 2160 } },
+          })
+          .catch((e: unknown) => {
+            // geweigerd: niet nog eens vragen. Anders (sommige toestellen weigeren de hoge resolutie): nog één keer, eenvoudig
+            if (e instanceof DOMException && (e.name === "NotAllowedError" || e.name === "SecurityError")) throw e;
+            return navigator.mediaDevices.getUserMedia({ audio: false, video: bron });
+          });
         if (weg) {
           s.getTracks().forEach((tr) => tr.stop());
           return;
@@ -322,6 +477,9 @@ function Camera({
     if (live === "draai" && !referentie) return;
     let weg = false;
     let fouten = 0;
+    // de eerste selfie: goede, stille beelden achter elkaar (lib/kyc/camera-live.ts, telSelfie)
+    let teller = 0;
+    let vorige: LiveMeting | null = null;
     void (async () => {
       while (!weg) {
         const begin = Date.now();
@@ -341,8 +499,24 @@ function Camera({
             }
           } else {
             fouten = 0;
-            if (live === "recht") setAanwijzing({ a: rechtAanwijzing(r.meting), voortgang: 0 });
-            else if (referentie) {
+            if (live === "recht") {
+              teller = telSelfie(teller, vorige, r.meting);
+              vorige = r.meting;
+              // goed in beeld: "even stilhouden" met een balkje, en na een paar stille beelden de foto vanzelf
+              setAanwijzing({ a: teller > 0 ? "stil" : selfieAanwijzing(r.meting), voortgang: Math.min(1, teller / SELFIE_LIVE.goedeBeelden) });
+              if (teller >= SELFIE_LIVE.goedeBeelden) {
+                // de foto op volle grootte nog een keer gemeten; haalt hij het niet, dan meten we door
+                const foto = await fotoVanVideo(v, vorm);
+                if (weg) return;
+                const na = foto ? await meetGezicht(foto) : null;
+                if (weg) return;
+                if (foto && na?.status === "ok" && selfieAanwijzing(na.meting) === "goed") {
+                  opFoto.current(foto);
+                  return;
+                }
+                teller = 0;
+              }
+            } else if (referentie) {
               const d = draaiAanwijzing(referentie, r.meting);
               setAanwijzing({ a: d.aanwijzing, voortgang: d.voortgang });
               if (d.aanwijzing === "goed") {
@@ -367,6 +541,73 @@ function Camera({
       weg = true;
     };
   }, [live, stand, liveUit, zichtbaar, referentie, vorm]);
+
+  // het document live: de browser meet ±3 keer per seconde scherpte, licht, glans en beweging op het kader; is het
+  // beeld goed en stil, dan vraagt hij de server of de code leesbaar is of hoe groot de pasfoto staat (hooguit eens per
+  // DOC_LIVE.serverPauze). Bij "goed" gaat juist dát beeld als foto verder.
+  useEffect(() => {
+    if (!docSoort || !docKant || stand !== "aan" || !zichtbaar || toonOmdraai) return;
+    const kant = docKantMeting(docSoort, docKant);
+    const metServer = docServer && kanVanzelf(kant);
+    let serverUit = !metServer;
+    let weg = false;
+    let vorige: Uint8Array | null = null;
+    let stil = 0;
+    let laatsteServer = 0;
+    let fouten = 0;
+    void (async () => {
+      while (!weg) {
+        const begin = Date.now();
+        const v = video.current;
+        const klein = v?.videoWidth ? kaderUitsnede(v, v.videoWidth, v.videoHeight, DOC_LIVE.meetBreedte) : null;
+        const g = klein ? grijsVan(klein) : null;
+        if (v && klein && g) {
+          const dun = verklein(g, klein.width, klein.height, 4);
+          const lv = licht(g);
+          const eigen = beeldAanwijzing({ scherpte: scherpte(g, klein.width, klein.height), gemiddeld: lv.gemiddeld, glans: lv.glans, beweging: beeldVerschil(vorige, dun) });
+          vorige = dun;
+          stil = eigen === null ? stil + 1 : 0;
+          if (eigen) setDocHint(eigen);
+          // niets voor de server te meten (achterkant rijbewijs) of de server is weg: het beeld is goed, de knop doet de rest
+          else if (serverUit) setDocHint(null);
+          else if (stil >= DOC_LIVE.stilBeelden && Date.now() - laatsteServer >= DOC_LIVE.serverPauze) {
+            laatsteServer = Date.now();
+            const groot = volBeeld(v);
+            const uitsnede = groot ? kaderUitsnede(groot, groot.width, groot.height, kant.mrz ? 1400 : 640) : null;
+            const r: DocAntwoord = uitsnede ? await meetDocument(uitsnede, kant) : { status: "fout" };
+            if (weg) return;
+            if (r.status === "stop") {
+              serverUit = true;
+              setDocUit(true);
+            } else if (r.status === "fout") {
+              fouten += 1;
+              if (fouten >= 3) {
+                serverUit = true;
+                setDocUit(true);
+              }
+            } else {
+              fouten = 0;
+              const a = serverAanwijzing(docSoort, kant, r.meting);
+              setDocHint(a);
+              if (a === "goed" && groot) {
+                const foto = await fotoVanCanvas(groot, vorm);
+                if (weg) return;
+                if (foto) {
+                  opFoto.current(foto);
+                  return;
+                }
+              }
+            }
+          }
+        }
+        const rust = 320 - (Date.now() - begin);
+        if (rust > 0) await new Promise((klaar) => setTimeout(klaar, rust));
+      }
+    })();
+    return () => {
+      weg = true;
+    };
+  }, [docSoort, docKant, docServer, stand, zichtbaar, toonOmdraai, vorm]);
 
   function vastleggen() {
     const v = video.current;
@@ -395,22 +636,37 @@ function Camera({
     afteller.current = setTimeout(tik, 1000);
   }
 
-  const liveTekst = (a: LiveAanwijzing): string =>
+  const liveTekst = (a: SelfieAanwijzing): string =>
     a === "geen-gezicht"
       ? l.geenGezicht
       : a === "een-gezicht"
         ? l.eenGezicht
         : a === "dichterbij"
           ? l.dichterbij
-          : a === "recht"
-            ? l.recht
-            : a === "draai"
-              ? l.draai
-              : a === "te-ver"
-                ? l.teVer
-                : live === "draai"
-                  ? l.goedDraai
-                  : l.goedRecht;
+          : a === "verder"
+            ? x.selfieVerder
+            : a === "stil"
+              ? x.selfieStil
+              : a === "recht"
+                ? l.recht
+                : a === "draai"
+                  ? l.draai
+                  : a === "te-ver"
+                    ? l.teVer
+                    : live === "draai"
+                      ? l.goedDraai
+                      : l.goedRecht;
+
+  const DOC_TEKST: Record<DocAanwijzing, string> = {
+    licht: x.docLicht,
+    glans: x.docGlans,
+    stil: x.docStil,
+    dichterbij: x.docDichterbij,
+    verder: x.docVerder,
+    code: x.docCode,
+    zoeken: x.docZoeken,
+    goed: x.docGoed,
+  };
 
   return (
     <div className="relative">
@@ -433,7 +689,8 @@ function Camera({
             type="button"
             onClick={() => {
               setGestart(true);
-              setUitleg(true);
+              // de uitleg "druk op Vastleggen" alleen als de foto niet vanzelf gaat
+              setUitleg(!vanzelfAan);
             }}
             className="absolute inset-0 grid place-items-center bg-black/60 px-6 text-center text-lg font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-white"
           >
@@ -454,12 +711,20 @@ function Camera({
             {l.aftellen.replace("{n}", String(aftel))}
           </p>
         )}
+        {stand === "aan" && toonOmdraai && omdraaien && <Omdraaien tekst={omdraaien} />}
+        {stand === "aan" && doc && docHint && !toonOmdraai && !(eu && uitleg) && !kiesOpen && (
+          <div className="pointer-events-none absolute inset-x-4 bottom-4">
+            <p role="status" aria-live="polite" className={`rounded-full px-4 py-2 text-center text-sm font-semibold text-white ${docHint === "goed" ? "bg-ok" : "bg-black/70"}`}>
+              {DOC_TEKST[docHint]}
+            </p>
+          </div>
+        )}
         {stand === "aan" && live && !liveUit && aanwijzing && !(eu && uitleg) && !kiesOpen && (
           <div className="pointer-events-none absolute inset-x-4 bottom-4">
-            <p role="status" aria-live="polite" className={`rounded-full px-4 py-2 text-center text-sm font-semibold text-white ${aanwijzing.a === "goed" ? "bg-ok" : "bg-black/70"}`}>
+            <p role="status" aria-live="polite" className={`rounded-full px-4 py-2 text-center text-sm font-semibold text-white ${aanwijzing.a === "goed" || aanwijzing.a === "stil" ? "bg-ok" : "bg-black/70"}`}>
               {liveTekst(aanwijzing.a)}
             </p>
-            {live === "draai" && (
+            {(live === "draai" || aanwijzing.voortgang > 0) && (
               <div aria-hidden className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/30">
                 <div className="h-full rounded-full bg-ok transition-[width] duration-300" style={{ width: `${Math.round(aanwijzing.voortgang * 100)}%` }} />
               </div>
@@ -469,6 +734,7 @@ function Camera({
         {kiesOpen && <CameraKeuze x={x} apparaten={apparaten} keuze={keuze} onKies={setKeuze} onSluit={() => setKiesOpen(false)} />}
       </div>
       <div className="mt-4 grid gap-2">
+        {stand === "aan" && vanzelfAan && <p className="text-center text-xs leading-relaxed text-neutralx-500">{x.vanzelf}</p>}
         {stand !== "geen" && (
           live === "draai" ? (
             <button type="button" onClick={aftellen} disabled={stand !== "aan" || aftel !== null} className="btn-primary w-full">
@@ -1229,6 +1495,9 @@ export function IdScan({
                       // live meten alleen ingelogd (niet op de telefoon via de QR-code: daar beslist toch een medewerker)
                       live={metBeweging && fotoStap === "selfie" ? "recht" : metBeweging && fotoStap === "beweging" ? "draai" : undefined}
                       referentie={selfieRef}
+                      // het document live begeleiden; de server meet alleen ingelogd (niet op de telefoon via de QR-code)
+                      doc={fotoStap === "voor" || fotoStap === "achter" ? { soort, kant: fotoStap, server: metBeweging } : undefined}
+                      omdraaien={fotoStap === "achter" && heeftAchterkant(soort) ? (soort === "DRIVERS_LICENSE" ? s.extra.omdraaiRijbewijs : s.extra.omdraaiId) : undefined}
                       onFoto={(f) => {
                         setLiveFout(null);
                         setVoorbeeld({ file: f, url: URL.createObjectURL(f) });
