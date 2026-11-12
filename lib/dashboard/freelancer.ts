@@ -7,7 +7,7 @@ import { werkerStappen, berekenVoortgang, type Stap, type Voortgang, type Werker
 export interface FreelancerOverview {
   hasProfile: boolean;
   profileComplete: boolean;
-  onboarding: { label: string; done: boolean }[];
+  onboarding: { id: "account" | "fiscaal" | "contract" | "kvk" | "kyc" | "thuisbasis"; label: string; done: boolean }[];
   /** dezelfde stappen als sleutels (voor de "maak je profiel af"-kaart, vertaald door de pagina) */
   stappen: Stap<WerkerStapSleutel>[];
   voortgang: Voortgang<WerkerStapSleutel>;
@@ -81,14 +81,14 @@ export async function getFreelancerOverview(userId: string): Promise<FreelancerO
       hasProfile: false,
       profileComplete: false,
       onboarding: [
-        { label: "Account aangemaakt", done: true },
-        { label: "Werkvorm & fiscale gegevens", done: fiscalDone },
+        { id: "account", label: "Account aangemaakt", done: true },
+        { id: "fiscaal", label: "Werkvorm & fiscale gegevens", done: fiscalDone },
         // een uitzendkracht heeft geen KVK of btw nodig: dezelfde stap als met profiel (hieronder)
         isUitzend
-          ? { label: "Uitzendovereenkomst ondertekend", done: uitzendContractSigned }
-          : { label: "KVK/btw gekoppeld en gevalideerd", done: false },
-        { label: "Identiteit geverifieerd (KYC)", done: user?.kycStatus === "VERIFIED" },
-        { label: "Thuisbasis en rekeningnummer ingesteld", done: false },
+          ? { id: "contract", label: "Uitzendovereenkomst ondertekend", done: uitzendContractSigned }
+          : { id: "kvk", label: "KVK/btw gekoppeld en gevalideerd", done: false },
+        { id: "kyc", label: "Identiteit geverifieerd (KYC)", done: user?.kycStatus === "VERIFIED" },
+        { id: "thuisbasis", label: "Thuisbasis en rekeningnummer ingesteld", done: false },
       ],
       stappen,
       voortgang,
@@ -167,13 +167,13 @@ export async function getFreelancerOverview(userId: string): Promise<FreelancerO
       user?.kycStatus === "VERIFIED" &&
       uitzendContractSigned,
     onboarding: [
-      { label: "Account aangemaakt", done: true },
-      { label: "Werkvorm & fiscale gegevens", done: fiscalDone },
+      { id: "account", label: "Account aangemaakt", done: true },
+      { id: "fiscaal", label: "Werkvorm & fiscale gegevens", done: fiscalDone },
       isUitzend
-        ? { label: "Uitzendovereenkomst ondertekend", done: uitzendContractSigned }
-        : { label: "KVK/btw gekoppeld en gevalideerd", done: profile.kvkValid || fiscal.vatValid || fiscal.korApplies },
-      { label: "Identiteit geverifieerd (KYC)", done: user?.kycStatus === "VERIFIED" },
-      { label: "Thuisbasis en rekeningnummer ingesteld", done: Boolean((profile.payoutIban || fiscal.iban) && profile.homePostalCode) },
+        ? { id: "contract", label: "Uitzendovereenkomst ondertekend", done: uitzendContractSigned }
+        : { id: "kvk", label: "KVK/btw gekoppeld en gevalideerd", done: profile.kvkValid || fiscal.vatValid || fiscal.korApplies },
+      { id: "kyc", label: "Identiteit geverifieerd (KYC)", done: user?.kycStatus === "VERIFIED" },
+      { id: "thuisbasis", label: "Thuisbasis en rekeningnummer ingesteld", done: Boolean((profile.payoutIban || fiscal.iban) && profile.homePostalCode) },
     ],
     stappen,
     voortgang,
