@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 // Cron entrypoint: detect no-shows (shift started > grace period ago, never
 // cancelled, never checked in), offer the employer a 50% claim, dent
-// reliability. Runs frequently — a no-show should surface within the hour.
+// reliability. Staat NIET in de cron (keuze eigenaar, lib/claims/no-show-sweep.ts). ?droog=1 telt alleen.
 async function handle(request: Request): Promise<NextResponse> {
   const gate = checkInternalToken(request);
   if (!gate.ok) {
@@ -19,7 +19,10 @@ async function handle(request: Request): Promise<NextResponse> {
     );
   }
   try {
-    const result = await sweepNoShows();
+    const droog = new URL(request.url).searchParams.get("droog") === "1";
+    const result = await sweepNoShows({ droog });
+    // een droge telling is geen run van de taak
+    if (droog) return NextResponse.json({ ok: true, ...result });
     recordCronRun("no-show-sweep", true);
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
