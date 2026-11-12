@@ -70,11 +70,12 @@ describe("de dialoog in het verificatiescherm", () => {
   });
 
   it("verstuurt pas na 'Ja, insturen': eerst het overzicht, dan verstuur(m, true)", () => {
-    expect(form).toContain("async function verstuur(m: \"stripe\" | \"upload\", bevestigd = false)");
+    // sinds 13 nov alleen nog Stripe: de bestandskeuze is weg, de eigen scan heeft een eigen bevestiging (bevestig-idscan)
+    expect(form).toContain("async function verstuur(m: \"stripe\", bevestigd = false)");
     expect(form).toContain("if (!bevestigd) {");
     expect(form).toContain("void verstuur(m, true)");
-    // het overzicht komt na de controle van de velden en foto's, vóór de aanroep naar de server
-    expect(form.indexOf("if (!bevestigd) {")).toBeGreaterThan(form.indexOf("setMissing(absent)"));
+    // het overzicht komt na de controle van de velden, vóór de aanroep naar de server
+    expect(form.indexOf("if (!bevestigd) {")).toBeGreaterThan(form.indexOf("if (!valideer(new FormData(form), { documenten: false"));
     expect(form.indexOf("if (!bevestigd) {")).toBeLessThan(form.indexOf('fetch("/api/onboarding", { method: "POST", body });', form.indexOf("if (!bevestigd) {")));
   });
 

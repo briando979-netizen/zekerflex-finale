@@ -19,7 +19,6 @@ export interface ScanExtra {
   toestemmingKnop: string;
   toestemmingBezig: string;
   toestemmingGeweigerd: string;
-  toestemmingZonder: string;
   docsKop: string;
   docsNl: string;
   docsEu: string;
@@ -75,6 +74,13 @@ export interface ScanExtra {
   selfieStil: string;
   /** onder de camera: de foto gaat vanzelf, de knop blijft als uitweg */
   vanzelf: string;
+  /** automatisch en na ±20 s nog geen foto (13 nov 2026): omschakelen naar zelf */
+  zelfWissel: string;
+  zelfWisselKnop: string;
+  /** automatisch kan hier niet (bijv. de server meet niet): meteen de wissel */
+  autoKanNiet: string;
+  /** de stand "zelf": onder het beeld */
+  zelfModus: string;
 }
 
 export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
@@ -94,7 +100,6 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     toestemmingKnop: "Camera toestaan",
     toestemmingBezig: "Even wachten…",
     toestemmingGeweigerd: "De camera is geweigerd. Zet de camera aan in de instellingen van je browser of app en probeer het opnieuw, of gebruik de camera-app van je toestel.",
-    toestemmingZonder: "Camera-app van mijn toestel gebruiken",
     docsKop: "Geaccepteerde documenten:",
     docsNl: "Nederlands paspoort, ID-kaart of verblijfsvergunning",
     docsEu: "Paspoort of ID-kaart uit een EU/EER-land of Zwitserland",
@@ -146,7 +151,11 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     omdraaiRijbewijs: "Draai je rijbewijs om",
     selfieVerder: "Houd de camera iets verder weg",
     selfieStil: "Goed zo, even stilhouden",
-    vanzelf: "De foto wordt vanzelf gemaakt zodra alles goed is. Lukt dat niet, druk dan op de knop.",
+    vanzelf: "De foto wordt vanzelf gemaakt zodra alles goed is.",
+    zelfWissel: "Lukt het niet vanzelf?",
+    zelfWisselKnop: "Zelf de foto maken",
+    autoKanNiet: "Hier maakt de camera de foto niet vanzelf.",
+    zelfModus: "Zet alles goed in beeld en druk op de knop.",
   },
   en: {
     introTitel: "Confirm your identity",
@@ -164,7 +173,6 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     toestemmingKnop: "Allow camera",
     toestemmingBezig: "One moment…",
     toestemmingGeweigerd: "The camera was refused. Turn the camera on in the settings of your browser or app and try again, or use the camera app of your device.",
-    toestemmingZonder: "Use my device's camera app",
     docsKop: "Accepted documents:",
     docsNl: "Dutch passport, ID card or residence permit",
     docsEu: "Passport or ID card from an EU/EEA country or Switzerland",
@@ -216,7 +224,11 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     omdraaiRijbewijs: "Turn your driving licence over",
     selfieVerder: "Hold the camera a little further away",
     selfieStil: "Good, hold still",
-    vanzelf: "The photo is taken automatically once everything is right. If that does not work, press the button.",
+    vanzelf: "The photo is taken automatically once everything is right.",
+    zelfWissel: "Not working automatically?",
+    zelfWisselKnop: "Take the photo myself",
+    autoKanNiet: "The camera can't take this photo automatically.",
+    zelfModus: "Get everything in view and press the button.",
   },
   pl: {
     introTitel: "Potwierdź swoją tożsamość",
@@ -234,7 +246,6 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     toestemmingKnop: "Zezwól na kamerę",
     toestemmingBezig: "Chwileczkę…",
     toestemmingGeweigerd: "Dostęp do kamery został odrzucony. Włącz kamerę w ustawieniach przeglądarki lub aplikacji i spróbuj ponownie albo użyj aplikacji aparatu w urządzeniu.",
-    toestemmingZonder: "Użyj aplikacji aparatu w moim urządzeniu",
     docsKop: "Akceptowane dokumenty:",
     docsNl: "Holenderski paszport, dowód osobisty lub karta pobytu",
     docsEu: "Paszport lub dowód osobisty z kraju UE/EOG albo ze Szwajcarii",
@@ -286,7 +297,11 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     omdraaiRijbewijs: "Odwróć prawo jazdy",
     selfieVerder: "Odsuń aparat trochę dalej",
     selfieStil: "Dobrze, nie ruszaj się",
-    vanzelf: "Zdjęcie zostanie zrobione automatycznie, gdy wszystko będzie dobrze. Jeśli to nie działa, naciśnij przycisk.",
+    vanzelf: "Zdjęcie zostanie zrobione automatycznie, gdy wszystko będzie dobrze.",
+    zelfWissel: "Nie udaje się automatycznie?",
+    zelfWisselKnop: "Zrób zdjęcie samodzielnie",
+    autoKanNiet: "Tutaj aparat nie zrobi zdjęcia automatycznie.",
+    zelfModus: "Ustaw wszystko w kadrze i naciśnij przycisk.",
   },
   ro: {
     introTitel: "Confirmă-ți identitatea",
@@ -304,7 +319,6 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     toestemmingKnop: "Permite camera",
     toestemmingBezig: "Un moment…",
     toestemmingGeweigerd: "Camera a fost refuzată. Pornește camera din setările browserului sau ale aplicației și încearcă din nou, sau folosește aplicația de cameră a dispozitivului.",
-    toestemmingZonder: "Folosesc aplicația de cameră a dispozitivului",
     docsKop: "Documente acceptate:",
     docsNl: "Pașaport olandez, carte de identitate sau permis de ședere",
     docsEu: "Pașaport sau carte de identitate dintr-o țară UE/SEE sau din Elveția",
@@ -356,7 +370,11 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     omdraaiRijbewijs: "Întoarce permisul de conducere",
     selfieVerder: "Ține camera puțin mai departe",
     selfieStil: "Bine, nu te mișca",
-    vanzelf: "Fotografia se face automat când totul este în regulă. Dacă nu merge, apasă butonul.",
+    vanzelf: "Fotografia se face automat când totul este în regulă.",
+    zelfWissel: "Nu merge automat?",
+    zelfWisselKnop: "Fac eu fotografia",
+    autoKanNiet: "Aici camera nu poate face fotografia automat.",
+    zelfModus: "Încadrează totul bine și apasă butonul.",
   },
   uk: {
     introTitel: "Підтвердьте свою особу",
@@ -374,7 +392,6 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     toestemmingKnop: "Дозволити камеру",
     toestemmingBezig: "Зачекайте…",
     toestemmingGeweigerd: "Доступ до камери відхилено. Увімкніть камеру в налаштуваннях браузера чи застосунку й спробуйте ще раз або скористайтеся застосунком камери на пристрої.",
-    toestemmingZonder: "Використати застосунок камери на моєму пристрої",
     docsKop: "Прийнятні документи:",
     docsNl: "Нідерландський паспорт, ID-картка або посвідка на проживання",
     docsEu: "Паспорт або ID-картка з країни ЄС/ЄЕЗ чи зі Швейцарії",
@@ -426,6 +443,10 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     omdraaiRijbewijs: "Переверніть посвідчення водія",
     selfieVerder: "Тримайте камеру трохи далі",
     selfieStil: "Добре, не рухайтеся",
-    vanzelf: "Фото буде зроблено автоматично, щойно все буде правильно. Якщо не вийде, натисніть кнопку.",
+    vanzelf: "Фото буде зроблено автоматично, щойно все буде правильно.",
+    zelfWissel: "Не виходить автоматично?",
+    zelfWisselKnop: "Зробити фото самостійно",
+    autoKanNiet: "Тут камера не зробить фото автоматично.",
+    zelfModus: "Наведіть усе в кадр і натисніть кнопку.",
   },
 };
