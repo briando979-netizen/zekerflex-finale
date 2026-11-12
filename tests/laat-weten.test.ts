@@ -42,6 +42,23 @@ describe("reageerStap", () => {
   });
 });
 
+describe("meervoud per taal (12 nov: \"Zostało tylko 4 kroków\" is fout Pools)", () => {
+  it("Pools en Oekraïens: 2-4 een eigen vorm, 5 en meer de gewone", () => {
+    const pl = FREELANCER_DICTS.pl.start;
+    expect(nogStappenTekst(4, pl, FREELANCER_DICTS.pl.intl)).toBe("Zostały tylko 4 kroki!");
+    expect(nogStappenTekst(5, pl, FREELANCER_DICTS.pl.intl)).toBe("Zostało tylko 5 kroków!");
+    expect(nogStappenTekst(22, pl, FREELANCER_DICTS.pl.intl)).toBe("Zostały tylko 22 kroki!");
+    const uk = FREELANCER_DICTS.uk.start;
+    expect(nogStappenTekst(3, uk, FREELANCER_DICTS.uk.intl)).toBe("Залишилося лише 3 кроки!");
+    expect(nogStappenTekst(6, uk, FREELANCER_DICTS.uk.intl)).toBe("Залишилося лише 6 кроків!");
+  });
+  it("Nederlands en een onbekende taalcode: gewoon meervoud", () => {
+    const nl = FREELANCER_DICTS.nl.start;
+    expect(nogStappenTekst(3, nl, "nl-NL")).toBe("Nog maar 3 stappen te gaan!");
+    expect(nogStappenTekst(3, FREELANCER_DICTS.pl.start, "xx-onzin-taal-123")).toBe("Zostało tylko 3 kroków!");
+  });
+});
+
 describe("teksten in vijf talen", () => {
   for (const [taal, d] of Object.entries(FREELANCER_DICTS)) {
     it(`${taal}: tijdlijn, locatie en reageer-sheet compleet`, () => {
@@ -49,7 +66,8 @@ describe("teksten in vijf talen", () => {
       expect(nogStappenTekst(3, t)).toContain("3");
       expect(nogStappenTekst(1, t)).not.toContain("{n}");
       expect(nogStappenTekst(0, t)).toBe(t.alleKlaar);
-      for (const s of [t.gegevensStep, t.gegevensBody, t.gegevensCta, t.identiteitStep, t.identiteitBody, t.identiteitCta, t.laatWeten, t.sluiten, t.afsluiting, t.klaarLabel, t.eerstDit]) expect(s.length).toBeGreaterThan(1);
+      for (const s of [t.gegevensStep, t.gegevensBody, t.gegevensCta, t.identiteitStep, t.identiteitBody, t.identiteitCta, t.laatWeten, t.sluiten, t.afsluiting, t.klaarLabel, t.eerstDit, t.wijzig, t.richtingVast, t.naarFiscaal]) expect(s.length).toBeGreaterThan(1);
+      expect(t.nogMeerFew).toContain("{n}");
       for (const s of Object.values(d.loc)) expect(String(s).length).toBeGreaterThan(1);
       for (const s of Object.values(d.reageerBlok)) expect(String(s).length).toBeGreaterThan(1);
     });
