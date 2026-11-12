@@ -18,6 +18,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/webhooks/didit",
     "/api/public/v1/shifts",
     "/api/internal/matching/tick",
+    "/api/internal/boekhouding/bonnen-mail", // cron: bonnetjes uit de Postvak (eigen token via checkInternalToken)
     "/api/health",
     "/api/ready",
     "/api/status",
@@ -109,6 +110,8 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/me/certificates",
     "/api/uploads/upl_1",
     "/api/admin/mail",
+    "/api/admin/boekhouding/bonnen", // de bonnen van de boekhouding: alleen platformbeheerders
+    "/api/admin/boekhouding/bonnen/abc123def456/bestand",
     "/api/werkgever/claims/claim_1",
     "/api/timesheets/ts_1/submit",
     "/api/people/search",
