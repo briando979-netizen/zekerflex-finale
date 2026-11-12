@@ -23,6 +23,8 @@ export interface WieTeksten {
     nlEtiket: string; nlTitel: string; nlUitleg: string; nlPunt: string; nlKnop: string;
     euEtiket: string; euTitel: string; euUitleg: string; euPunt: string; euKnop: string;
     hulp: string; anders: string;
+    /** twee keuzes (12 nov 2026): automatisch met de camera, of zelf foto's maken */
+    autoEtiket: string; autoTitel: string; autoUitleg: string; zelfEtiket: string; zelfTitel: string; zelfUitleg: string; zelfKnop: string;
   };
 }
 
@@ -111,6 +113,13 @@ export const WIE_TEKSTEN: Record<Locale, WieTeksten> = {
       "euUitleg": "Heb je een geldig identiteitsbewijs uit een EU/EER-land of Zwitserland? Gebruik deze optie voor internationale verificatie.",
       "euPunt": "Inclusief Zwitserland.",
       "euKnop": "Start met buitenlands ID",
+      "autoEtiket": "Automatisch · aanbevolen",
+      "autoTitel": "Scan je ID met je camera",
+      "autoUitleg": "De camera leest je paspoort, ID-kaart of verblijfsvergunning en helpt je bij de selfies. Klopt alles, dan ben je meteen geverifieerd.",
+      "zelfEtiket": "Zelf foto's maken",
+      "zelfTitel": "Maak zelf de foto's",
+      "zelfUitleg": "Maak met je camera een foto van je document, een selfie en een selfie met je hoofd een klein stukje opzij. Ook dan controleren we het automatisch.",
+      "zelfKnop": "Zelf foto's maken",
       "hulp": "Hulp nodig?",
       "anders": "Andere manier om te verifiëren"
     }
@@ -199,6 +208,13 @@ export const WIE_TEKSTEN: Record<Locale, WieTeksten> = {
       "euUitleg": "Do you have a valid identity document from an EU/EEA country or Switzerland? Use this option for international verification.",
       "euPunt": "Including Switzerland.",
       "euKnop": "Start with foreign ID",
+      "autoEtiket": "Automatic · recommended",
+      "autoTitel": "Scan your ID with your camera",
+      "autoUitleg": "The camera reads your passport, ID card or residence permit and helps you with the selfies. If everything matches, you're verified right away.",
+      "zelfEtiket": "Take your own photos",
+      "zelfTitel": "Take the photos yourself",
+      "zelfUitleg": "Use your camera to take a photo of your document, a selfie and a selfie with your head turned slightly to the side. We check those automatically too.",
+      "zelfKnop": "Take photos myself",
       "hulp": "Need help?",
       "anders": "Another way to verify"
     }
@@ -287,6 +303,13 @@ export const WIE_TEKSTEN: Record<Locale, WieTeksten> = {
       "euUitleg": "Masz ważny dokument tożsamości z kraju UE/EOG lub ze Szwajcarii? Użyj tej opcji do weryfikacji międzynarodowej.",
       "euPunt": "W tym Szwajcaria.",
       "euKnop": "Zacznij z zagranicznym ID",
+      "autoEtiket": "Automatycznie · polecane",
+      "autoTitel": "Zeskanuj dokument aparatem",
+      "autoUitleg": "Aparat odczyta Twój paszport, dowód osobisty lub dokument pobytowy i pomoże Ci przy selfie. Jeśli wszystko się zgadza, od razu jesteś zweryfikowany.",
+      "zelfEtiket": "Własne zdjęcia",
+      "zelfTitel": "Zrób zdjęcia samodzielnie",
+      "zelfUitleg": "Zrób aparatem zdjęcie dokumentu, selfie i selfie z głową lekko obróconą w bok. Je też sprawdzamy automatycznie.",
+      "zelfKnop": "Zrobię zdjęcia sam",
       "hulp": "Potrzebujesz pomocy?",
       "anders": "Inny sposób weryfikacji"
     }
@@ -375,6 +398,13 @@ export const WIE_TEKSTEN: Record<Locale, WieTeksten> = {
       "euUitleg": "Ai un act de identitate valabil dintr-o țară UE/SEE sau din Elveția? Folosește această opțiune pentru verificare internațională.",
       "euPunt": "Inclusiv Elveția.",
       "euKnop": "Începe cu ID din străinătate",
+      "autoEtiket": "Automat · recomandat",
+      "autoTitel": "Scanează actul cu camera",
+      "autoUitleg": "Camera citește pașaportul, cartea de identitate sau permisul de ședere și te ajută la selfie-uri. Dacă totul se potrivește, ești verificat imediat.",
+      "zelfEtiket": "Poze făcute de tine",
+      "zelfTitel": "Fă singur pozele",
+      "zelfUitleg": "Fă cu camera o poză a documentului, un selfie și un selfie cu capul întors puțin într-o parte. Le verificăm tot automat.",
+      "zelfKnop": "Fac eu pozele",
       "hulp": "Ai nevoie de ajutor?",
       "anders": "Alt mod de verificare"
     }
@@ -463,6 +493,13 @@ export const WIE_TEKSTEN: Record<Locale, WieTeksten> = {
       "euUitleg": "У вас є дійсний документ з країни ЄС/ЄЕЗ або зі Швейцарії? Скористайтеся цим варіантом для міжнародної верифікації.",
       "euPunt": "Включно зі Швейцарією.",
       "euKnop": "Почати з іноземним ID",
+      "autoEtiket": "Автоматично · рекомендовано",
+      "autoTitel": "Скануйте документ камерою",
+      "autoUitleg": "Камера зчитає ваш паспорт, ID-картку або посвідку на проживання й допоможе із селфі. Якщо все збігається, вас одразу верифіковано.",
+      "zelfEtiket": "Власні фото",
+      "zelfTitel": "Зробіть фото самостійно",
+      "zelfUitleg": "Зробіть камерою фото документа, селфі та селфі з головою, трохи поверненою вбік. Їх ми теж перевіряємо автоматично.",
+      "zelfKnop": "Зроблю фото сам",
       "hulp": "Потрібна допомога?",
       "anders": "Інший спосіб верифікації"
     }

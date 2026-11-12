@@ -45,6 +45,10 @@ export interface IdControleWeergave {
   stripe: { sessieId: string; naamOpDocument: string | null; naamKlopt: boolean | null; reden: string | null } | null;
   /** de eigen gezichtscontrole (lib/kyc/gezicht, b3): pasfoto op het document tegen de selfie */
   gezicht: { oordeel: string; procent: number | null; technisch: boolean; automatisch: boolean; beweging: string | null; reeks: string | null } | null;
+  /** waarom de controle niet zelf goedkeurde (lib/onboarding/auto-redenen.ts); leeg = zelf goedgekeurd; null = oudere controle of afgewezen */
+  nietAutomatisch: string[] | null;
+  /** de gegevens van het document: de naam (uit de code of zoals getypt) en het eind van het nummer; nooit BSN of nationaliteit */
+  document: { naam: string | null; uitDeCode: boolean; nummerEind: string | null } | null;
 }
 
 /**
@@ -199,7 +203,11 @@ export function idControleWeergave(provider: string, rawPayload: unknown, sessio
         }
       : null;
 
-  return { fotos, regels, ai, beeld: { aan: v?.available === true, samenvatting }, mrz, chip, overig, stripe, gezicht };
+  const nietAutomatisch = Array.isArray(p.nietAutomatisch) ? (p.nietAutomatisch as unknown[]).map(tekst).filter((x): x is string => Boolean(x)).slice(0, 12) : null;
+  const d = obj(p.document);
+  const document = d ? { naam: tekst(d.naam), uitDeCode: d.uitDeCode === true, nummerEind: tekst(d.nummerEind) } : null;
+
+  return { fotos, regels, ai, beeld: { aan: v?.available === true, samenvatting }, mrz, chip, overig, stripe, gezicht, nietAutomatisch, document };
 }
 
 /** De foto-upload van een controle, of null (geen eigen controle, of al opgeruimd na 30 dagen). */

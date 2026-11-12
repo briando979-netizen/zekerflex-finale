@@ -162,13 +162,12 @@ function CameraIcon() {
   );
 }
 
-type PhotoKey = "documentFront" | "documentBack" | "selfie";
+type PhotoKey = "documentFront" | "documentBack" | "selfie" | "selfie2";
 type DocKey = "PASSPORT" | "ID_CARD" | "DRIVERS_LICENSE";
 
 export function OnboardingForm({
   defaultName,
   requireKvk = true,
-  stripeIdentity = false,
   initial,
   persoon,
   beginStap,
@@ -185,7 +184,7 @@ export function OnboardingForm({
   kanSluiten?: boolean;
   defaultName: string;
   requireKvk?: boolean;
-  /** Stripe Identity is switched on: offer the Stripe camera flow (recommended) */
+  /** Stripe Identity staat aan. Sinds 12 nov 2026 niet meer als keuze getoond (twee keuzes: automatisch of zelf foto's maken); de pagina geeft hem nog door. */
   stripeIdentity?: boolean;
   /** Eerder opgeslagen gegevens: iemand die later terugkomt, begint niet opnieuw. */
   initial?: { kvkNumber?: string; vatNumber?: string; postalCode?: string };
@@ -411,7 +410,8 @@ export function OnboardingForm({
     if (m === "upload") {
       // een paspoort heeft geen achterkant: dan alleen de fotopagina en de selfie (12 nov 2026)
       const paspoort = !heeftAchterkant(docType);
-      const nodig: PhotoKey[] = paspoort ? ["documentFront", "selfie"] : ["documentFront", "documentBack", "selfie"];
+      // en de selfie met een gedraaid hoofd: daarmee kan ook "zelf foto's maken" automatisch worden goedgekeurd (12 nov 2026)
+      const nodig: PhotoKey[] = paspoort ? ["documentFront", "selfie", "selfie2"] : ["documentFront", "documentBack", "selfie", "selfie2"];
       const absent = nodig.filter((k) => !photos.current[k]);
       setMissing(absent);
       if (absent.length) {
@@ -671,31 +671,11 @@ export function OnboardingForm({
               w={w.id}
               busy={busy}
               onStart={(r) => void startScan(r)}
-              anders={
-                <div className="rounded-2xl border border-hair bg-paper-soft p-4">
-                  <p className="text-sm font-semibold text-ink">{w.id.anders}</p>
-                  <div className="mt-3 grid gap-2">
-                    {stripeIdentity && (
-                      <button
-                        type="button"
-                        onClick={() => void verstuur("stripe")}
-                        disabled={busy}
-                        className="rounded-xl border border-hairstrong bg-white px-3 py-2.5 text-left hover:border-brand-500 disabled:opacity-60"
-                      >
-                        <span className="block text-sm font-semibold text-ink">{t.stripe[0]}</span>
-                        <span className="block text-xs text-neutralx-500">{t.stripe[1]}</span>
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setUploadOpen((o) => !o)}
-                      aria-expanded={uploadOpen}
-                      className="rounded-xl border border-hairstrong bg-white px-3 py-2.5 text-left hover:border-brand-500"
-                    >
-                      <span className="block text-sm font-semibold text-ink">{t.upload[0]}</span>
-                      <span className="block text-xs text-neutralx-500">{t.upload[1]}</span>
-                    </button>
-                  </div>
+              zelfOpen={uploadOpen}
+              onZelf={() => setUploadOpen((o) => !o)}
+              zelf={
+                uploadOpen && (
+                <div>
                   {uploadOpen && (
                     <div className="mt-4 space-y-4">
                       <div className="grid gap-3 sm:grid-cols-2">
@@ -753,13 +733,15 @@ export function OnboardingForm({
                         </label>
                       </div>
                       <p className="text-xs leading-relaxed text-neutralx-500">{heeftAchterkant(docType) ? t.photosInfo : t.photosInfoPaspoort}</p>
-                      <div className={`grid gap-3 ${heeftAchterkant(docType) ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+                      <div className={`grid grid-cols-2 gap-3 ${heeftAchterkant(docType) ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
                         <CaptureSlot t={t} label={t.front[0]} hint={t.front[1]} missing={missing.includes("documentFront")} onPick={(f) => kiesFoto("documentFront", f)} />
                         {/* een paspoort heeft geen achterkant */}
                         {heeftAchterkant(docType) && (
                           <CaptureSlot t={t} label={t.back[0]} hint={t.back[1]} missing={missing.includes("documentBack")} onPick={(f) => kiesFoto("documentBack", f)} />
                         )}
                         <CaptureSlot t={t} label={t.selfie[0]} hint={t.selfie[1]} round missing={missing.includes("selfie")} onPick={(f) => kiesFoto("selfie", f)} />
+                        {/* de selfie met een gedraaid hoofd (bewegingscontrole), zoals in de scan */}
+                        <CaptureSlot t={t} label={t.selfie2[0]} hint={t.selfie2[1]} round missing={missing.includes("selfie2")} onPick={(f) => kiesFoto("selfie2", f)} />
                       </div>
                       {lezing && <DocumentLezing lezing={lezing} t={t} />}
                       <button type="button" onClick={() => void verstuur("upload")} disabled={busy} className="btn-trust w-full">
@@ -768,6 +750,7 @@ export function OnboardingForm({
                     </div>
                   )}
                 </div>
+                )
               }
             />
             <div className="border-t border-hair pt-4">
@@ -776,7 +759,7 @@ export function OnboardingForm({
               </button>
               <p className="mt-2 text-xs leading-relaxed text-neutralx-500">{t.later.hint}</p>
             </div>
-            <p className="text-xs leading-relaxed text-neutralx-400">{uploadOpen ? t.uploadNote : t.stripeNote}</p>
+            <p className="text-xs leading-relaxed text-neutralx-400">{t.uploadNote}</p>
           </div>
         </form>
         {scanOpen && <IdScan t={t} naam={naamNu} route={route} onAfronden={afrondenViaScan} onAfrondenOverdracht={afrondenViaTelefoon} onSluiten={sluitScan} />}

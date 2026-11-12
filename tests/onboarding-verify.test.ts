@@ -733,13 +733,31 @@ describe("submitFreelancerOnboarding — gezichtscontrole met het eigen model (1
     expect("reeks" in data.rawPayload.gezicht).toBe(false);
   });
 
-  it("zegt de tekst-AI zelf 'bekijk handmatig' (vertrouwen boven 0), dan blijft dat gelden", async () => {
+  it("zegt de tekst-AI 'bekijk handmatig' terwijl foto's en document alles bevestigen, dan keurt de controle toch zelf goed (12 nov)", async () => {
     userFindUnique.mockResolvedValue(GEBRUIKER);
     gezichtControle.mockResolvedValueOnce(GEZICHT_ZELFDE);
     const { chatJson } = await import("@/lib/ai/client");
     vi.mocked(chatJson).mockResolvedValueOnce({ verdict: "needs_review", confidence: 0.4, reasons: ["twijfel"], summary: "" });
     const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: FOTOS });
+    expect(result.outcome).toBe("verified");
+    const data = (ivCreate.mock.calls[0]![0] as { data: { rawPayload: { nietAutomatisch: string[]; document: Record<string, unknown> } } }).data;
+    expect(data.rawPayload.nietAutomatisch).toEqual([]);
+    // de gegevens van het document voor het beheer: naam van de code, het eind van het nummer, geen BSN of nationaliteit
+    expect(data.rawPayload.document).toMatchObject({ uitDeCode: true });
+    expect(String(data.rawPayload.document.nummerEind)).toHaveLength(3);
+    expect(Object.keys(data.rawPayload.document).sort()).toEqual(["naam", "nummerEind", "uitDeCode"]);
+  });
+
+  it("zegt de tekst-AI uitdrukkelijk 'afgekeurd', dan kijkt een mens (nooit meer een afwijzing door de AI alleen), met de reden erbij", async () => {
+    userFindUnique.mockResolvedValue(GEBRUIKER);
+    gezichtControle.mockResolvedValueOnce(GEZICHT_ZELFDE);
+    const { chatJson } = await import("@/lib/ai/client");
+    vi.mocked(chatJson).mockResolvedValueOnce({ verdict: "rejected", confidence: 0.9, reasons: ["tegenstrijdig"], summary: "" });
+    const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: FOTOS });
     expect(result.outcome).toBe("in_review");
+    const data = (ivCreate.mock.calls[0]![0] as { data: { rawPayload: { nietAutomatisch: string[] } } }).data;
+    expect(data.rawPayload.nietAutomatisch).toEqual(["de automatische beoordeling zag een tegenstrijdigheid in de gegevens"]);
+    expect(alertOwnerLater).toHaveBeenCalledWith(expect.objectContaining({ detail: expect.stringContaining("Niet vanzelf goedgekeurd omdat: de automatische beoordeling zag een tegenstrijdigheid") }));
   });
 
   it("aannemelijk maar niet zeker (twijfel) gaat naar een mens, met de score voor de medewerker", async () => {

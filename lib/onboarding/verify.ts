@@ -12,6 +12,7 @@ import { storeUpload } from "@/lib/storage/local";
 import { runVisionReview } from "@/lib/kyc/vision";
 import { gezichtControle } from "@/lib/kyc/gezicht/controle";
 import { GEZICHT_DREMPEL } from "@/lib/kyc/gezicht/vergelijk";
+import { gezichtBeslist, redenenNietAutomatisch, type AutoFeiten } from "@/lib/onboarding/auto-redenen";
 import { reeksSamenvatting, wisReeks } from "@/lib/kyc/gezicht/reeks-opslag";
 import { isReservedTestAddress } from "@/lib/mail/test-adres";
 import { featureEnabled } from "@/lib/flags";
@@ -816,61 +817,47 @@ export async function submitFreelancerOnboarding(
   // below and lands in "in_review" at worst, same as every other soft signal.
   const visionFaceMismatch =
     vision.available && vision.face !== null && !vision.face.samePerson && vision.face.faceMatchConfidence >= 0.7;
+  // De tekst-AI wijst nooit meer zelf af (12 nov 2026): hij ziet alleen wat iemand typte. Zegt hij "afgekeurd", dan
+  // kijkt een mens (zie redenenNietAutomatisch).
   const hardFail =
     !expiryOk ||
     chipVals ||
-    ai.verdict === "rejected" ||
     companyStatus === "DISSOLVED" ||
     visionFaceMismatch;
-  // Automatisch goedkeuren alleen als iets echt naar de foto's heeft gekeken.
-  // Zonder beeldcontrole (LLM_VISION_MODEL niet gezet, of het model reageert niet)
-  // ziet de tekst-AI alleen ingetypte velden: dan beoordeelt een mens de foto's
-  // (in_review), nooit automatisch "geverifieerd" (4 nov 2026).
-  // Sinds 11 nov kijkt ook het eigen gezichtsmodel (lib/kyc/gezicht) naar de foto's: de pasfoto op de
-  // voorkant tegen de selfie, met een strenge drempel. Dat telt alleen voor een paspoort of ID-kaart: de
-  // code op het document (MRZ, met controlecijfers) is dan het bewijs dat het document zelf klopt, en
-  // een rijbewijs heeft geen code, dus daar beslist nog steeds een mens.
-  // Sinds de bewegingscontrole telt het ook alleen met een tweede selfie waarop het hoofd echt gedraaid is: een
-  // selfie uit de galerij, van een foto of van een scherm komt daar niet doorheen, en ook niet een scan zonder die stap.
-  const gezichtOk =
-    gezichtAuto && gezicht.oordeel === "zelfde" && gezicht.beweging.oordeel === "ok" && input.documentType !== "DRIVERS_LICENSE" && mrzGeldig;
-  const visionOk =
-    (vision.available &&
-      vision.document !== null &&
-      vision.face !== null &&
-      vision.document.plausible &&
-      vision.face.samePerson &&
-      vision.face.looksLive) ||
-    gezichtOk;
-  // De tekst-AI ziet alleen de ingetypte velden (geen foto's). Is hij niet bereikbaar (time-out, confidence 0), dan
-  // blokkeert dat het gezichtspad niet; zegt hij zelf "bekijk handmatig" of "afgewezen", dan blijft dat wel gelden.
-  const aiNietBeschikbaar = ai.verdict === "needs_review" && ai.confidence === 0;
-  const aiOk = (ai.verdict === "approved" && ai.confidence >= 0.65) || (gezichtOk && aiNietBeschikbaar);
-  // en de code op het document zelf moet kloppen met wat er getypt is en met het
-  // account (een rijbewijs heeft geen MRZ; daar blijft het zoals het was)
-  // (review H1) een chip vervangt de foto-MRZ nooit: een onleesbare MRZ gaat naar een mens, ook met een chip
-  const mrzOk =
-    input.documentType === "DRIVERS_LICENSE" || (mrzGeldig && mrzNummerOk && mrzNaamOk && !chipFotoVerschil);
-  const autoApprove =
-    !hardFail &&
-    (skipKvk || kvkValid) &&
-    nameOk &&
-    numOk &&
-    expiryOk &&
-    mrzOk &&
-    // werkrecht (ook onbekend, review N2), leeftijd en een dubbel document beslist altijd een mens
-    werkrecht === "vrij" &&
-    // alleen een vastgestelde volwassen leeftijd; onbekend beslist een mens (review N7)
-    leeftijd === "volwassen" &&
-    // foto's van een tweede toestel: altijd een mens (review H1, lib/kyc/overdracht.ts)
-    !input.viaTweedeToestel &&
-    // een telefoon koos eerder "dit is niet mijn account": ook dan een mens
-    !((input.tweedeToestel?.geweigerd ?? 0) > 0) &&
-    !elders &&
-    !chipFotoVerschil &&
-    !zegelElders &&
-    aiOk &&
-    visionOk;
+  // Automatisch goedkeuren alleen als iets echt naar de foto's heeft gekeken: het eigen gezichtsmodel (pasfoto tegen
+  // selfie, met een echte hoofddraai, alleen bij een paspoort of ID-kaart met een kloppende MRZ) of het oude beeldmodel.
+  // Eén bron voor de beslissing en de uitleg (lib/onboarding/auto-redenen.ts): de redenen staan bij de controle in het
+  // beheer en in de melding aan de eigenaar. Leeg = zelf goedkeuren.
+  const beeldmodelOk = Boolean(
+    vision.available && vision.document !== null && vision.face !== null && vision.document.plausible && vision.face.samePerson && vision.face.looksLive,
+  );
+  const autoFeiten: AutoFeiten = {
+    kvkOk: skipKvk || kvkValid,
+    naamOk: nameOk,
+    nummerFormaatOk: numOk,
+    geldigOk: expiryOk,
+    rijbewijs: input.documentType === "DRIVERS_LICENSE",
+    mrzGeldig,
+    mrzNummerOk,
+    mrzNaamOk,
+    chipFotoVerschil,
+    werkrecht,
+    leeftijd,
+    viaTweedeToestel: Boolean(input.viaTweedeToestel),
+    telefoonGeweigerd: (input.tweedeToestel?.geweigerd ?? 0) > 0,
+    dubbelDocument: Boolean(elders),
+    zegelElders: Boolean(zegelElders),
+    gezichtAutomatischAan: gezichtAuto,
+    gezichtOordeel: gezicht.oordeel,
+    gezichtScore: gezicht.score,
+    bewegingOordeel: gezicht.beweging.oordeel,
+    beeldmodelOk,
+    aiVerdict: ai.verdict,
+    aiZeker: ai.verdict === "approved" && ai.confidence >= 0.65,
+  };
+  const gezichtOk = gezichtBeslist(autoFeiten);
+  const nietAutomatisch = redenenNietAutomatisch(autoFeiten);
+  const autoApprove = !hardFail && nietAutomatisch.length === 0;
 
   const outcome: OnboardingResult["outcome"] = hardFail
     ? "rejected"
@@ -930,6 +917,16 @@ export async function submitFreelancerOnboarding(
             werkrecht,
             leeftijd,
             dubbelDocument: Boolean(elders),
+            // waarom deze controle niet zelf goedkeurde (leeg = zelf goedgekeurd); voor het beheer
+            ...(hardFail ? {} : { nietAutomatisch }),
+            // de gegevens van het document voor het beheer (12 nov 2026, eigenaar: "de gegevens bij de gebruiker zien"):
+            // de naam zoals op het document en de laatste drie tekens van het nummer. Nooit het BSN of het vrije veld van
+            // de MRZ, en (zoals werkrecht/leeftijd) geen nationaliteit of geboortedatum: die staan op de foto zelf.
+            document: {
+              naam: mrzGeldig ? `${mrz.voornamen} ${mrz.achternaam}`.trim() : input.nameOnDocument.trim().slice(0, 120),
+              uitDeCode: mrzGeldig,
+              nummerEind: (mrzGeldig ? mrz.documentnummer : input.documentNumber).trim().slice(-3),
+            },
             // alleen de uitslag van de chip: geen nummer, naam, pasfoto of BSN
             chip: chip
               ? {
@@ -1012,7 +1009,8 @@ export async function submitFreelancerOnboarding(
     alertOwnerLater({
       key: `kyc-beoordeling:${user.id}`,
       title: `ID-controle wacht op je: ${user.fullName}`,
-      detail: `${user.fullName} heeft zelf foto's van een identiteitsbewijs geüpload. ${gezicht.beschikbaar ? `De gezichtscontrole gaf ${gezicht.score !== null ? `${Math.round(gezicht.score * 100)}%` : "geen score"}: ${gezicht.reden}` : vision.available ? "De beeldcontrole was niet overtuigend." : `De gezichtscontrole kon niet beslissen (${gezicht.reden}); bekijk de foto's zelf.`}${redenTekst(checks)} Keur goed of af bij de gebruiker.`,
+      // eerst waarom het niet vanzelf ging (dezelfde lijst als in het beheer), dan de details
+      detail: `${user.fullName} heeft zelf foto's van een identiteitsbewijs geüpload. Niet vanzelf goedgekeurd omdat: ${nietAutomatisch.join("; ") || "een controle faalde"}. ${gezicht.beschikbaar ? `De gezichtscontrole gaf ${gezicht.score !== null ? `${Math.round(gezicht.score * 100)}%` : "geen score"}: ${gezicht.reden}` : vision.available ? "De beeldcontrole was niet overtuigend." : `De gezichtscontrole kon niet beslissen (${gezicht.reden}); bekijk de foto's zelf.`}${redenTekst(checks)} Keur goed of af bij de gebruiker.`,
       severity: "warning",
       url: `/admin/gebruikers/${user.id}`,
     });
