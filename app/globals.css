@@ -915,6 +915,25 @@ body {
 .app-scope[data-theme="dark"] .bg-mintwash\/50,
 .app-scope[data-theme="dark"] .bg-mintwash\/60 { background-color: rgb(var(--brand-mint-rgb) / 0.07) !important; }
 
+/* Tailwind-standaardkleuren in de werker- en werkgeversapp (klussenkaart, agenda, marktplaats, horeca, rijschool):
+   zonder regel bleef donkere tekst donker (amber-700 op de donkere kaart ±2,4:1) en een licht vlak licht. Zelfde
+   betekenis met de lichte tint van het donkere beheerthema: amber wacht, rood probleem, groen doen, violet
+   verificatie, blauw gepland. tests/donker-dekking.test.ts laat een nieuwe zonder regel falen. */
+.app-scope[data-theme="dark"] .text-amber-700,
+.app-scope[data-theme="dark"] .text-amber-800,
+.app-scope[data-theme="dark"] .text-amber-900 { color: #fbbf24 !important; }
+.app-scope[data-theme="dark"] .text-emerald-800 { color: #4ade80 !important; }
+.app-scope[data-theme="dark"] .text-violet-700,
+.app-scope[data-theme="dark"] .text-violet-800 { color: #c4b0fb !important; }
+.app-scope[data-theme="dark"] .text-sky-800 { color: #93b4fb !important; }
+.app-scope[data-theme="dark"] .bg-amber-50 { background-color: rgba(251, 191, 36, 0.13) !important; }
+.app-scope[data-theme="dark"] .bg-red-50 { background-color: rgba(248, 113, 113, 0.14) !important; }
+.app-scope[data-theme="dark"] .bg-emerald-50,
+.app-scope[data-theme="dark"] .bg-emerald-100 { background-color: rgba(74, 222, 128, 0.13) !important; }
+.app-scope[data-theme="dark"] .bg-violet-50,
+.app-scope[data-theme="dark"] .bg-violet-100 { background-color: rgba(167, 139, 250, 0.14) !important; }
+.app-scope[data-theme="dark"] .bg-sky-100 { background-color: rgba(96, 165, 250, 0.14) !important; }
+
 /* Aanwijzen in het donker: hover:bg-paper-soft (±100 rijen en knoppen) maakte het vlak lichtgrijs
    onder lichte tekst, hover:text-ink maakte tekst bijna zwart. Aanwijzen wordt nu een tint lichter. */
 .app-scope[data-theme="dark"] .hover\:bg-paper-soft:hover,
