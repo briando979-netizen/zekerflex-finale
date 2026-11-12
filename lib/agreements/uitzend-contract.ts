@@ -90,3 +90,25 @@ export async function signUitzendContract(
   await kvAppend(key(userId), contract);
   return { contract, created: true };
 }
+
+/**
+ * De overeenkomst zoals hij nu zou worden getekend, om te lezen VÓÓR het tekenen: niets wordt bewaard. Zelfde gegevens
+ * als signUitzendContract (fase en gewerkte weken van nu, drie maanden vanaf nu), met de referentie "VOORBEELD".
+ */
+export async function voorbeeldUitzendContract(userId: string, workerName: string, now: Date = new Date()): Promise<UitzendContract> {
+  const [fiscal, status] = await Promise.all([getFiscal(userId), getUitzendStatus(userId)]);
+  return {
+    id: "voorbeeld",
+    reference: "VOORBEELD",
+    userId,
+    workerName,
+    workerBsnLast4: fiscal.bsnLast4,
+    employerName: EMPLOYER_NAME,
+    employerKvk: EMPLOYER_KVK,
+    signedAt: now.toISOString(),
+    validFrom: now.toISOString(),
+    validUntil: addMonths(now, CONTRACT_MONTHS).toISOString(),
+    phase: status?.phase ?? "A",
+    weeksWorked: status?.weeksWorked ?? 0,
+  };
+}

@@ -5,6 +5,7 @@ import { payUrl } from "@/lib/billing/pay-link";
 import { btwOverzicht, btwTarief } from "@/lib/shop/modus";
 import { zakelijkeRegels } from "@/lib/shop/zakelijk";
 import type { UitzendContract } from "@/lib/agreements/uitzend-contract";
+import { uitzendContractBlokken } from "@/lib/agreements/uitzend-tekst";
 import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
 
 const euro = (c: number) => `EUR ${(c / 100).toFixed(2).replace(".", ",")}`;
@@ -410,88 +411,24 @@ export async function previewAgreementPdf(
  * Uitzendovereenkomst (fase-systeem, ABU-cao) tussen ZekerFlex als formeel
  * werkgever en de uitzendkracht. Elektronisch ondertekend bij het aanmaken.
  */
-export function uitzendContractPdf(c: UitzendContract): { bytes: Buffer; filename: string } {
+export function uitzendContractPdf(c: UitzendContract, opties: { voorbeeld?: boolean } = {}): { bytes: Buffer; filename: string } {
   const pdf = new SimplePdf();
-  pdf.heading("Uitzendovereenkomst", 16);
+  pdf.heading(opties.voorbeeld ? "Uitzendovereenkomst (voorbeeld)" : "Uitzendovereenkomst", 16);
   pdf.line(`Referentie ${c.reference}`, 9.5, { color: [0.05, 0.36, 0.29] });
   pdf.gap(6);
 
-  pdf.section("DE ONDERGETEKENDEN:");
-  pdf.paragraph(
-    `${c.employerName}, kantoorhoudende te Amsterdam${c.employerKvk ? ` (KVK ${c.employerKvk})` : ""}, ` +
-      `als uitzendonderneming en formeel werkgever, hierna "ZekerFlex";`,
-  );
-  pdf.paragraph("en");
-  pdf.paragraph(
-    `${c.workerName}${c.workerBsnLast4 ? `, BSN eindigend op ${c.workerBsnLast4}` : ""}, ` +
-      `hierna "de Uitzendkracht";`,
-  );
-  pdf.paragraph('Hierna gezamenlijk "Partijen".');
-
-  pdf.section("IN AANMERKING NEMENDE DAT:");
-  [
-    "ZekerFlex een uitzendonderneming is die uitzendkrachten ter beschikking stelt aan opdrachtgevers om onder leiding en toezicht van die opdrachtgever werkzaamheden te verrichten;",
-    "de Uitzendkracht zich via het platform van ZekerFlex beschikbaar stelt voor uitzendklussen en wenst te werken op basis van een uitzendovereenkomst;",
-    "Partijen de ABU-cao voor Uitzendkrachten van toepassing verklaren op deze overeenkomst;",
-    "deze overeenkomst een uitzendovereenkomst is in de zin van artikel 7:690 BW.",
-  ].forEach((t, i) => pdf.item(`${i + 1}.`, t));
-
-  pdf.section("Artikel 1 - Aard van de overeenkomst");
-  pdf.item("1.", "De Uitzendkracht treedt in dienst van ZekerFlex en wordt door ZekerFlex ter beschikking gesteld aan opdrachtgevers om onder hun leiding en toezicht werkzaamheden te verrichten.");
-  pdf.item("2.", "Er ontstaat pas een dienstverband voor de duur van een klus zodra de Uitzendkracht via het platform een klus accepteert en de opdrachtgever de Uitzendkracht selecteert. Buiten die klussen om bestaat geen loondoorbetalingsverplichting.");
-  pdf.item("3.", "Op deze overeenkomst is het uitzendbeding van toepassing (fase A): de terbeschikkingstelling en daarmee het dienstverband eindigen van rechtswege wanneer de opdrachtgever de klus beeindigt of de klus is voltooid.");
-
-  pdf.section("Artikel 2 - Duur");
-  pdf.item("1.", `Deze overeenkomst gaat in op ${nlDate(c.validFrom)} en is geldig tot en met ${nlDate(c.validUntil)} (${CONTRACT_MONTHS_LABEL}).`);
-  pdf.item("2.", "Binnen deze periode kan de Uitzendkracht klussen doen voor alle opdrachtgevers op het platform. Om na afloop door te werken, ondertekent de Uitzendkracht een nieuwe uitzendovereenkomst.");
-  pdf.item("3.", `De Uitzendkracht bevindt zich bij ondertekening in fase ${c.phase} van het ABU-fasensysteem (${c.weeksWorked} gewerkte weken). De rechten en zekerheid groeien mee met het aantal gewerkte weken.`);
-
-  pdf.section("Artikel 3 - Arbeidsvoorwaarden en cao");
-  pdf.item("1.", "De inlenersbeloning van de opdrachtgever is van toepassing: de Uitzendkracht ontvangt hetzelfde loon, dezelfde toeslagen en dezelfde kostenvergoedingen als een werknemer in gelijke functie bij de opdrachtgever.");
-  pdf.item("2.", "Voor het overige geldt de ABU-cao voor Uitzendkrachten.");
-
-  pdf.section("Artikel 4 - Loon en reserveringen");
-  pdf.item("1.", "Het loon wordt per kalenderweek berekend en uitbetaald nadat de opdrachtgever de gewerkte uren heeft goedgekeurd. De Uitzendkracht ontvangt elke week een digitale loonstrook.");
-  pdf.item("2.", "Over het loon worden loonheffing en premies ingehouden en afgedragen door ZekerFlex.");
-  pdf.item("3.", "De Uitzendkracht bouwt 8,33% vakantiegeld en circa 10,83% vakantie-uren op; deze reserveringen staan apart op de loonstrook en worden op verzoek uitgekeerd.");
-  pdf.item("4.", "ZekerFlex kan direct na goedkeuring een voorschot op het nettoloon uitbetalen; dit wordt automatisch verrekend met de wekelijkse loonbetaling.");
-
-  pdf.section("Artikel 5 - Pensioen (StiPP)");
-  pdf.item("1.", "Vanaf de negende gewerkte week neemt de Uitzendkracht deel aan de StiPP-basisregeling; na 78 gewerkte weken aan de StiPP-plusregeling. ZekerFlex draagt het werkgeversdeel af.");
-
-  pdf.section("Artikel 6 - Ziekte");
-  pdf.item("1.", "Bij ziekte tijdens een klus meldt de Uitzendkracht zich direct ziek bij ZekerFlex en de opdrachtgever. De Uitzendkracht hoeft zelf geen vervanging te regelen; loondoorbetaling bij ziekte verloopt volgens de cao en de Ziektewet via ZekerFlex.");
-
-  pdf.section("Artikel 7 - Einde van de overeenkomst");
-  pdf.item("1.", "De overeenkomst eindigt van rechtswege op de einddatum genoemd in artikel 2, of eerder wanneer het uitzendbeding in werking treedt (artikel 1 lid 3).");
-  pdf.item("2.", "Buiten een lopende klus kunnen beide Partijen de samenwerking op elk moment beeindigen door dit via het platform kenbaar te maken.");
-
-  pdf.section("Artikel 8 - Overige bepalingen");
-  pdf.item("1.", "De Uitzendkracht kan zich te allen tijde legitimeren met een geldig identiteitsbewijs en beschikt over een geldige verblijfs- en werkvergunning voor Nederland.");
-  pdf.item("2.", "De Gebruiksvoorwaarden van ZekerFlex en het privacybeleid zijn van toepassing.");
-  pdf.item("3.", "Op deze overeenkomst is Nederlands recht van toepassing.");
-
-  pdf.section("Ondertekening");
-  pdf.paragraph(
-    `De Uitzendkracht, ${c.workerName}, heeft deze uitzendovereenkomst elektronisch aanvaard door op ` +
-      `${nlLongTime(c.signedAt)} in de ZekerFlex-app op "Ondertekenen" te klikken.`,
-  );
-  pdf.paragraph(
-    `${c.employerName} heeft deze uitzendovereenkomst op datzelfde moment langs elektronische weg ` +
-      `namens de uitzendonderneming aanvaard.`,
-  );
-  pdf.gap(4);
-  pdf.paragraph(
-    "Partijen zijn deze overeenkomst langs elektronische weg aangegaan; een handgeschreven handtekening is niet vereist. Het hierboven vermelde tijdstip geldt als moment van ondertekening.",
-    9,
-    { color: [0.4, 0.45, 0.42] },
-  );
+  // De tekst staat op één plek (lib/agreements/uitzend-tekst.ts): dezelfde blokken zijn op het scherm te lezen.
+  for (const b of uitzendContractBlokken(c, opties)) {
+    if (b.soort === "kop") pdf.section(b.tekst);
+    else if (b.soort === "alinea") pdf.paragraph(b.tekst);
+    else if (b.soort === "punt") pdf.item(b.nr, b.tekst);
+    else if (b.soort === "ruimte") pdf.gap(4);
+    else pdf.paragraph(b.tekst, 9, { color: [0.4, 0.45, 0.42] });
+  }
 
   const safe = c.reference.replace(/[^a-z0-9-]+/gi, "-");
-  return { bytes: pdf.toBuffer(), filename: `${safe}.pdf` };
+  return { bytes: pdf.toBuffer(), filename: opties.voorbeeld ? "uitzendovereenkomst-voorbeeld.pdf" : `${safe}.pdf` };
 }
-
-const CONTRACT_MONTHS_LABEL = "3 kalendermaanden";
 
 /**
  * A blank ZekerFlex modelovereenkomst addressed to one person — used by
