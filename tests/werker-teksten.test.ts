@@ -25,7 +25,7 @@ function blaadjes(waarde: unknown, pad: string, uit: Map<string, string>): void 
 const plaatshouders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]!).sort().join(",");
 
 // Elke sectie die losse tekst uit een component haalt komt hier bij (de naam in de woordenlijst).
-const SECTIES = ["los", "verzekering", "paspoort", "uitzendContract", "administratie", "vervanging", "profiel", "milestones"] as const;
+const SECTIES = ["los", "verzekering", "paspoort", "uitzendContract", "administratie", "vervanging", "profiel", "milestones", "bevestig"] as const;
 
 // Woorden die in elke taal hetzelfde zijn (leenwoord of "review"): mogen gelijk blijven aan het Nederlands.
 const GELIJK_TOEGESTAAN = new Set(["profiel.modes.reverse-billing", "vervanging.reviewEen", "vervanging.reviewMeer", "milestones.kor.kop"]);
