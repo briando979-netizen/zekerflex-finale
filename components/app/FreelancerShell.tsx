@@ -142,6 +142,7 @@ export function FreelancerShell({
             <LanguageButton />
             <ThemeToggle
               theme={theme}
+              texts={ft.accountDelen.thema}
               className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink"
             />
             {/* op een telefoon niet: daar is Ontdekken (hetzelfde adres) de eerste tab, en het vraagteken heeft de plek nodig */}
