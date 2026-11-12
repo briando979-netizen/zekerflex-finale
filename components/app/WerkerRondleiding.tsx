@@ -141,19 +141,22 @@ export function WerkerRondleiding() {
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{tekst}</p>
         </div>
-        <div className="mt-4 flex items-center gap-2">
-          <button type="button" onClick={sluit} className="btn-ghost min-h-[44px] text-sm">
+        {/* Live gemeten (12 nov, 320 px, NL en UK): drie knoppen naast elkaar waren breder dan de kaart en "Volgende" stak eruit.
+            Nu mag de rij omslaan: Overslaan links, Vorige en Volgende rechts, en op een smal scherm staan die twee onder elkaar. */}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <button type="button" onClick={sluit} className="btn-ghost mr-auto min-h-[44px] text-sm">
             {t.overslaan}
           </button>
-          <span className="flex-1" />
-          {i > 0 && (
-            <button type="button" onClick={() => setI(i - 1)} className="btn-ghost min-h-[44px] text-sm">
-              {t.vorige}
+          <div className="ml-auto flex flex-wrap justify-end gap-2">
+            {i > 0 && (
+              <button type="button" onClick={() => setI(i - 1)} className="btn-ghost min-h-[44px] text-sm">
+                {t.vorige}
+              </button>
+            )}
+            <button ref={knop} type="button" onClick={() => (laatste ? sluit() : setI(i + 1))} className="btn-primary min-h-[44px] text-sm">
+              {laatste ? t.klaar : t.volgende}
             </button>
-          )}
-          <button ref={knop} type="button" onClick={() => (laatste ? sluit() : setI(i + 1))} className="btn-primary min-h-[44px] text-sm">
-            {laatste ? t.klaar : t.volgende}
-          </button>
+          </div>
         </div>
       </div>
     </div>
