@@ -7,6 +7,7 @@ import { KENNIS, kennisBeschrijving } from "@/lib/accountant/kennis";
 import { STRUCTUUR, dagenTot, type StructuurStatus, type StructuurToestand } from "@/lib/accountant/structuur";
 import type { VraagAntwoord } from "@/lib/accountant/antwoord";
 import type { Ernst, MaandcontroleUitslag } from "@/lib/accountant/maandcontrole-kern";
+import type { Jaarconcept } from "@/lib/accountant/jaar-kern";
 
 // ---------------------------------------------------------------------------
 // Admin → Financiën → Accountant: Structuur, Delaware, Vraag en de maandcontrole op de echte
@@ -346,12 +347,93 @@ function Boekhouding() {
         )}
       </Panel>
 
-      <Panel title="Jaarafsluiting en dossier voor een mens">
-        <Empty
-          title="Volgt hierna"
-          body="Een concept van balans en winst- en verliesrekening, het pakket voor Form 1120 en 5472 en één knop die alles klaarzet voor een menselijk accountant. De accountant zet het klaar; een mens tekent en dient in."
-        />
-      </Panel>
+      <Jaar vandaag={data.vandaag} />
     </div>
+  );
+}
+
+const geld = (cents: number, valuta: string) =>
+  `${cents < 0 ? "-" : ""}${valuta === "EUR" ? "€" : valuta === "USD" ? "$" : `${valuta} `} ${(Math.abs(cents) / 100).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+interface JaarData {
+  jaar: number;
+  administraties: { id: string; naam: string; concept: Jaarconcept; vragen: string[] }[];
+}
+
+function Jaar({ vandaag }: { vandaag: string }) {
+  const ditJaar = Number(vandaag.slice(0, 4));
+  const [jaar, setJaar] = useState(ditJaar);
+  const [data, setData] = useState<JaarData | null>(null);
+  const [fout, setFout] = useState<string | null>(null);
+  useEffect(() => {
+    setData(null);
+    void (async () => {
+      try {
+        setData(await api<JaarData>(`/api/admin/accountant/jaar?jaar=${jaar}`));
+        setFout(null);
+      } catch (e) {
+        setFout(e instanceof Error ? e.message : "De jaarcijfers konden niet gelezen worden.");
+      }
+    })();
+  }, [jaar]);
+
+  return (
+    <Panel
+      title="Jaarafsluiting (concept) en dossier voor een mens"
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="text-sm" htmlFor="accountant-jaar">Boekjaar</label>
+          <select id="accountant-jaar" className="rounded-md border px-2 py-1 text-sm" value={jaar} onChange={(e) => setJaar(Number(e.target.value))}>
+            {[ditJaar, ditJaar - 1].map((j) => (
+              <option key={j} value={j}>{j}</option>
+            ))}
+          </select>
+          <a href={`/api/admin/accountant/dossier?jaar=${jaar}`} download className="rounded-md border px-3 py-1 text-sm font-semibold">
+            Dossier downloaden
+          </a>
+        </div>
+      }
+    >
+      {fout && <Notice tone="crit" role="alert">{fout}</Notice>}
+      {!data && !fout && <p className="text-sm">De jaarcijfers worden gelezen…</p>}
+      {data && data.administraties.length === 0 && (
+        <Empty
+          title="Nog geen jaarcijfers"
+          body="Er is nog geen echte administratie. Het dossier kun je toch al downloaden: daarin staan de structuurcheck, de termijnen, de open vragen en de bronnen."
+        />
+      )}
+      {data?.administraties.map((a) => {
+        const c = a.concept;
+        return (
+          <div key={a.id} className="space-y-3 text-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <strong>{a.naam}</strong>
+              <span>
+                {c.van} t/m {c.tot}
+              </span>
+              <Pill tone={c.balans.sluit ? "ok" : "crit"}>{c.balans.sluit ? "Balans sluit" : `Balans sluit niet (${geld(c.balans.verschilCents, c.valuta)})`}</Pill>
+            </div>
+            <ul className="grid gap-1 sm:grid-cols-2">
+              <li>Opbrengsten: <strong>{geld(c.wv.totaalOpbrengsten, c.valuta)}</strong></li>
+              <li>Kosten: <strong>{geld(c.wv.totaalKosten, c.valuta)}</strong></li>
+              <li>Resultaat: <strong>{geld(c.wv.resultaat, c.valuta)}</strong></li>
+              <li>Bezittingen op {c.tot} (Schedule L total assets): <strong>{geld(c.us.totalAssetsCents, c.valuta)}</strong></li>
+            </ul>
+            {c.us.omrekenenNodig && <p className="text-xs">De bedragen staan in {c.valuta}. Voor Form 1120 en Delaware rekent de preparer om naar dollars.</p>}
+            <div>
+              <p className="font-semibold">Open vragen voor de accountant</p>
+              <ol className="list-decimal space-y-1 pl-5">
+                {a.vragen.map((v) => (
+                  <li key={v}>{v}</li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        );
+      })}
+      <p className="mt-3 text-xs">
+        Concept, geen jaarrekening en geen aangifte. Het dossier bevat de conceptbalans, de winst-en-verliesrekening, de cijfers voor Form 1120 en 5472, de open vragen, de structuurcheck, de termijnen en de bronnen. Een mens controleert, tekent en dient in.
+      </p>
+    </Panel>
   );
 }

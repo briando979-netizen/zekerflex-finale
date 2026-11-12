@@ -40,8 +40,14 @@ export async function maandcontroleNu(nu: Date = new Date()): Promise<Maandcontr
     }),
   );
 
+  return { vandaag, administraties: perAdministratie, termijnen: await termijnenNu(nu) };
+}
+
+/** De komende termijnen (lib/boekhouding/deadlines.ts), met "klaar" als ze in Te doen zijn afgevinkt. */
+export async function termijnenNu(nu: Date = new Date()): Promise<TermijnRij[]> {
+  const vandaag = amsterdamDayKey(nu);
   const klaar = await handmatigKlaar().catch(() => new Set<string>());
-  const termijnen = deadlineLijst(nu).map((d): TermijnRij => {
+  return deadlineLijst(nu).map((d): TermijnRij => {
     const dag = amsterdamDayKey(d.datum);
     return {
       sleutel: d.sleutel,
@@ -54,6 +60,4 @@ export async function maandcontroleNu(nu: Date = new Date()): Promise<Maandcontr
       klaar: klaar.has(d.sleutel),
     };
   });
-
-  return { vandaag, administraties: perAdministratie, termijnen };
 }
