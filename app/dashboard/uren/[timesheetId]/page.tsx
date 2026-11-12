@@ -138,9 +138,7 @@ export default async function TimesheetPage(props: { params: Promise<{ timesheet
           scheduledEnd={timesheet.actualEnd ?? timesheet.scheduledEnd}
           breakMinutes={timesheet.breakMinutes}
           status={timesheet.status}
-          clientId={timesheet.branch.tenant.id}
           clientName={timesheet.branch.tenant.name}
-          shiftId={timesheet.assignment?.shiftId}
           payoutSpeed={payoutPrefs.speed}
           payroll={isPayroll}
           hourlyRateCents={timesheet.hourlyRateCents}
