@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { useFT } from "@/components/i18n/useFT";
 import { GeboortedatumSheet } from "@/components/app/DraaiwielDatum";
@@ -45,6 +45,11 @@ export function WieBenJijPersoon({ begin, onKlaar }: { begin: PersoonStand; onKl
   const [busy, setBusy] = useState(false);
   const [datumOpen, setDatumOpen] = useState(false);
   const [opleidingOpen, setOpleidingOpen] = useState(false);
+  // de melding staat bovenaan, de knop onderaan: in beeld brengen, anders lijkt "Opslaan" niets te doen
+  const meldingRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (melding) meldingRef.current?.scrollIntoView({ block: "center" });
+  }, [melding]);
 
   const landnamen = useMemo(() => {
     let namen: Intl.DisplayNames | null = null;
@@ -117,7 +122,7 @@ export function WieBenJijPersoon({ begin, onKlaar }: { begin: PersoonStand; onKl
   return (
     <form onSubmit={(e) => void opslaan(e)} noValidate className="space-y-3">
       {melding && (
-        <p role="alert" className="rounded-xl bg-crit/10 px-3 py-2.5 text-sm text-crit">
+        <p ref={meldingRef} role="alert" className="rounded-xl bg-crit/10 px-3 py-2.5 text-sm text-crit">
           {melding}
         </p>
       )}
