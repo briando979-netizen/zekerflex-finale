@@ -10,7 +10,7 @@ import { datumLang, SOORT_LABEL, tijd } from "@/lib/rijschool/format";
 import { tegoedTekst } from "@/lib/rijschool/tegoed";
 import { plusDagen } from "@/lib/rijschool/planning";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
-import { whatsappNummer } from "@/lib/rijschool/website";
+import { whatsappNummer } from "@/lib/rijschool/whatsapp";
 import { afstandTekst } from "@/lib/kaart/geo";
 import { RouteOpnemen } from "@/components/rijschool/instructeur/RouteOpnemen";
 
