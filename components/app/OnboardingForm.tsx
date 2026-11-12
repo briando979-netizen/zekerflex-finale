@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
@@ -717,6 +718,13 @@ export function OnboardingForm({
                     <span className="mt-1 block text-xs text-neutralx-400">{t.vatHint}</span>
                   </label>
                 )}
+                {/* zonder KVK: de werkvorm Uitzendkracht (13 nov: flexwerker gekozen en dan verrast door de KVK-vraag) */}
+                <p className="text-xs leading-relaxed text-neutralx-500">
+                  {t.geenKvk}{" "}
+                  <Link href="/dashboard/fiscaal" className="font-semibold text-brand-700 underline">
+                    {t.geenKvkLink}
+                  </Link>
+                </p>
               </fieldset>
             )}
 

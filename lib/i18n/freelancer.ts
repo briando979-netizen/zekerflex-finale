@@ -49,7 +49,7 @@ const nl = {
     terug: "Instellingen",
     kinds: {
       zzp: { label: "ZZP'er", blurb: "Eigen onderneming met KVK-inschrijving en btw-nummer. Facturatie via reverse billing." },
-      flexwerker: { label: "Flexwerker", blurb: "Flexibel zelfstandig, vaak met kleineondernemersregeling. Btw optioneel." },
+      flexwerker: { label: "Flexwerker", blurb: "Flexibel zelfstandig met een KVK-nummer, vaak met kleineondernemersregeling. Btw optioneel. Geen KVK? Kies Uitzendkracht." },
       uitzendkracht: { label: "Uitzendkracht", blurb: "Geen eigen onderneming. Verloning loopt via de payroll (loonheffing, BSN)." },
     },
     factuur: {
@@ -231,7 +231,7 @@ const nl = {
     kindHint: "Dit bepaalt hoe je betaald wordt en wat we nog van je vragen. Je kunt het later aanpassen onder Fiscaal.",
     kinds: {
       zzp: ["ZZP'er", "Je werkt voor jezelf en factureert zelf. Je hebt een KVK-nummer of een EU-btw-nummer."],
-      flexwerker: ["Flexwerker", "Je werkt op oproepbasis. Btw is optioneel of je valt onder de KOR."],
+      flexwerker: ["Flexwerker", "Je werkt voor jezelf met een KVK-nummer, vaak onder de KOR (btw optioneel). Geen KVK? Kies dan Uitzendkracht."],
       uitzendkracht: ["Uitzendkracht", "Je werkt in loondienst via ZekerFlex. Geen KVK nodig, wel een BSN."],
     },
     pick: "Verder",
@@ -1583,7 +1583,7 @@ const en: FreelancerDict = {
     terug: "Settings",
     kinds: {
       zzp: { label: "Self-employed (ZZP)", blurb: "Own business with a KVK registration and VAT number. Invoicing via reverse billing." },
-      flexwerker: { label: "Flex worker", blurb: "Flexible freelancer, often under the small-business scheme. VAT optional." },
+      flexwerker: { label: "Flex worker", blurb: "Flexible freelancer with a KVK number, often under the small-business scheme. VAT optional. No KVK? Choose Temp worker." },
       uitzendkracht: { label: "Temp worker", blurb: "No business of your own. Payroll runs through the temp agency (payroll tax, BSN)." },
     },
     factuur: {
@@ -1868,7 +1868,7 @@ const en: FreelancerDict = {
     kindHint: "This decides how you get paid and what else we ask of you. You can change it later under Tax.",
     kinds: {
       zzp: ["Self-employed (ZZP)", "You work for yourself and invoice yourself. You have a Dutch KVK number or an EU VAT number."],
-      flexwerker: ["Flex worker", "You work on call. VAT is optional, or you fall under the small-business scheme (KOR)."],
+      flexwerker: ["Flex worker", "You work for yourself with a KVK number, often under the small-business scheme (KOR, VAT optional). No KVK? Then choose Agency worker."],
       uitzendkracht: ["Agency worker", "You work as an employee through ZekerFlex. No KVK needed, but you do need a BSN."],
     },
     pick: "Continue",
@@ -3265,7 +3265,7 @@ const pl: FreelancerDict = {
     terug: "Ustawienia",
     kinds: {
       zzp: { label: "Samozatrudniony (ZZP)", blurb: "Własna firma z wpisem do KVK i numerem VAT. Fakturowanie przez reverse billing." },
-      flexwerker: { label: "Pracownik elastyczny", blurb: "Elastyczny freelancer, często w ramach zwolnienia dla małych firm. VAT opcjonalnie." },
+      flexwerker: { label: "Pracownik elastyczny", blurb: "Elastyczny freelancer z numerem KVK, często w ramach zwolnienia dla małych firm. VAT opcjonalnie. Nie masz KVK? Wybierz Pracownik tymczasowy." },
       uitzendkracht: { label: "Pracownik tymczasowy", blurb: "Bez własnej firmy. Rozliczenie przez agencję (podatek od wynagrodzeń, BSN)." },
     },
     factuur: {
@@ -3550,7 +3550,7 @@ const pl: FreelancerDict = {
     kindHint: "Od tego zależy, jak dostajesz wypłatę i o co jeszcze zapytamy. Możesz to później zmienić w sekcji Podatki.",
     kinds: {
       zzp: ["Samozatrudniony (ZZP)", "Pracujesz na własny rachunek i sam wystawiasz faktury. Masz holenderski numer KVK lub numer VAT UE."],
-      flexwerker: ["Pracownik elastyczny", "Pracujesz na wezwanie. VAT jest opcjonalny albo korzystasz ze zwolnienia KOR."],
+      flexwerker: ["Pracownik elastyczny", "Pracujesz na własny rachunek z numerem KVK, często w ramach zwolnienia KOR (VAT opcjonalny). Nie masz KVK? Wybierz wtedy Pracownik tymczasowy."],
       uitzendkracht: ["Pracownik tymczasowy", "Pracujesz na etacie przez ZekerFlex. Nie potrzebujesz KVK, ale potrzebujesz numeru BSN."],
     },
     pick: "Dalej",
@@ -4947,7 +4947,7 @@ const ro: FreelancerDict = {
     terug: "Setări",
     kinds: {
       zzp: { label: "Independent (ZZP)", blurb: "Firmă proprie cu înregistrare KVK și număr de TVA. Facturare prin reverse billing." },
-      flexwerker: { label: "Lucrător flexibil", blurb: "Freelancer flexibil, adesea cu regimul întreprinderilor mici. TVA opțional." },
+      flexwerker: { label: "Lucrător flexibil", blurb: "Freelancer flexibil cu număr KVK, adesea cu regimul întreprinderilor mici. TVA opțional. Nu ai KVK? Alege Muncitor temporar." },
       uitzendkracht: { label: "Muncitor temporar", blurb: "Fără firmă proprie. Salarizarea se face prin agenție (impozit pe salarii, BSN)." },
     },
     factuur: {
@@ -5232,7 +5232,7 @@ const ro: FreelancerDict = {
     kindHint: "Asta stabilește cum ești plătit și ce îți mai cerem. Poți schimba mai târziu la Fiscal.",
     kinds: {
       zzp: ["PFA (ZZP)", "Lucrezi pe cont propriu și emiți singur facturile. Ai un număr KVK olandez sau un cod de TVA din UE."],
-      flexwerker: ["Lucrător flexibil", "Lucrezi la cerere. TVA-ul este opțional sau intri sub schema KOR."],
+      flexwerker: ["Lucrător flexibil", "Lucrezi pe cont propriu cu un număr KVK, adesea sub schema KOR (TVA opțional). Nu ai KVK? Alege atunci Lucrător temporar."],
       uitzendkracht: ["Lucrător temporar", "Lucrezi ca angajat prin ZekerFlex. Nu ai nevoie de KVK, dar ai nevoie de un BSN."],
     },
     pick: "Continuă",
@@ -6629,7 +6629,7 @@ const uk: FreelancerDict = {
     terug: "Налаштування",
     kinds: {
       zzp: { label: "Самозайнятий (ZZP)", blurb: "Власна справа з реєстрацією KVK і номером ПДВ. Виставлення рахунків через reverse billing." },
-      flexwerker: { label: "Гнучкий працівник", blurb: "Гнучкий фрілансер, часто за спрощеною системою для малого бізнесу. ПДВ необов'язково." },
+      flexwerker: { label: "Гнучкий працівник", blurb: "Гнучкий фрілансер із номером KVK, часто за спрощеною системою для малого бізнесу. ПДВ необов'язково. Немає KVK? Обери Тимчасовий працівник." },
       uitzendkracht: { label: "Тимчасовий працівник", blurb: "Без власної справи. Зарплата нараховується через агенцію (податок із зарплати, BSN)." },
     },
     factuur: {
@@ -6914,7 +6914,7 @@ const uk: FreelancerDict = {
     kindHint: "Від цього залежить, як ти отримуєш оплату і що ми ще попросимо. Згодом можна змінити в розділі «Податки».",
     kinds: {
       zzp: ["Самозайнятий (ZZP)", "Ти працюєш на себе і сам виставляєш рахунки. У тебе є нідерландський номер KVK або номер ПДВ ЄС."],
-      flexwerker: ["Гнучкий працівник", "Ти працюєш за викликом. ПДВ необов'язковий або ти користуєшся схемою KOR."],
+      flexwerker: ["Гнучкий працівник", "Ти працюєш на себе з номером KVK, часто за схемою KOR (ПДВ необов'язковий). Немає KVK? Тоді обери Тимчасовий працівник."],
       uitzendkracht: ["Тимчасовий працівник", "Ти працюєш за наймом через ZekerFlex. KVK не потрібен, потрібен BSN."],
     },
     pick: "Далі",

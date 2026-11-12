@@ -209,6 +209,9 @@ export interface AuthDict {
     vat: [string, string];
     kvkLabel: string;
     kvkHint: string;
+    /** Bij de KVK-vraag (zzp, flexwerker): zonder KVK kies je Uitzendkracht. */
+    geenKvk: string;
+    geenKvkLink: string;
     vatLabel: string;
     vatHint: string;
     uitzendNote: string;
@@ -586,6 +589,8 @@ const nl: AuthDict = {
     vat: ["Btw-nummer (EU)", "Bijv. uit Polen, Roemenië, België"],
     kvkLabel: "KVK-nummer",
     kvkHint: "We controleren dit live in het Handelsregister.",
+    geenKvk: "Geen KVK-nummer? Kies dan bij je werkvorm ‘Uitzendkracht’: je werkt in loondienst via ZekerFlex en hebt geen KVK nodig.",
+    geenKvkLink: "Werkvorm wijzigen",
     vatLabel: "Btw-nummer (met landcode)",
     vatHint: "We controleren dit live in de EU-database (VIES). Werk je in Nederland als zzp'er zonder KVK? Dan factureer je met je eigen btw-nummer.",
     uitzendNote: "Je werkt als uitzendkracht — je hoeft geen KVK te koppelen. Vul hieronder je thuisbasis en identiteitsbewijs in. Je BSN en loonheffingskorting vul je apart in bij “Uitzenden”.",
@@ -965,6 +970,8 @@ const en: AuthDict = {
     vat: ["VAT number (EU)", "E.g. from Poland, Romania, Belgium"],
     kvkLabel: "KVK number",
     kvkHint: "We check this live in the Dutch Chamber of Commerce register.",
+    geenKvk: "No KVK number? Then choose ‘Agency worker’ as your work type: you are employed through ZekerFlex and need no KVK.",
+    geenKvkLink: "Change work type",
     vatLabel: "VAT number (with country code)",
     vatHint: "We check this live in the EU database (VIES). Self-employed in the Netherlands without a KVK? Then you invoice with your own VAT number.",
     uitzendNote: "You work as an agency worker — no KVK needed. Fill in your home base and ID below. You enter your BSN and payroll tax credit separately under “Agency work”.",
@@ -1344,6 +1351,8 @@ const pl: AuthDict = {
     vat: ["Numer VAT (UE)", "Np. z Polski, Rumunii, Belgii"],
     kvkLabel: "Numer KVK",
     kvkHint: "Sprawdzamy go na żywo w holenderskim rejestrze handlowym.",
+    geenKvk: "Nie masz numeru KVK? Wybierz wtedy formę pracy ‘Pracownik tymczasowy’: pracujesz na etacie przez ZekerFlex i nie potrzebujesz KVK.",
+    geenKvkLink: "Zmień formę pracy",
     vatLabel: "Numer VAT (z kodem kraju)",
     vatHint: "Sprawdzamy go na żywo w unijnej bazie VIES. Pracujesz w Holandii jako samozatrudniony bez KVK? Wtedy wystawiasz faktury na swój własny numer VAT, np. PL1234567890.",
     uitzendNote: "Pracujesz jako pracownik agencyjny — nie potrzebujesz KVK. Poniżej podaj adres i dokument tożsamości. BSN i ulgę podatkową podajesz osobno w części “Uitzenden”.",
@@ -1723,6 +1732,8 @@ const ro: AuthDict = {
     vat: ["Cod TVA (UE)", "De ex. din Polonia, România, Belgia"],
     kvkLabel: "Număr KVK",
     kvkHint: "Îl verificăm în timp real în registrul comerțului din Olanda.",
+    geenKvk: "Nu ai număr KVK? Alege atunci forma de lucru ‘Lucrător temporar’: lucrezi ca angajat prin ZekerFlex și nu ai nevoie de KVK.",
+    geenKvkLink: "Schimbă forma de lucru",
     vatLabel: "Cod TVA (cu codul țării)",
     vatHint: "Îl verificăm în timp real în baza de date UE (VIES). Lucrezi în Olanda ca independent fără KVK? Atunci facturezi cu propriul cod TVA, de ex. RO12345678.",
     uitzendNote: "Lucrezi prin agenție — nu ai nevoie de KVK. Completează mai jos adresa și actul de identitate. BSN-ul și deducerea fiscală le completezi separat la “Uitzenden”.",
@@ -2102,6 +2113,8 @@ const uk: AuthDict = {
     vat: ["Номер ПДВ (ЄС)", "Напр. з Польщі, Румунії, Бельгії"],
     kvkLabel: "Номер KVK",
     kvkHint: "Ми перевіряємо його в реальному часі в торговому реєстрі Нідерландів.",
+    geenKvk: "Немає номера KVK? Тоді обери форму роботи ‘Тимчасовий працівник’: ти працюєш за наймом через ZekerFlex і KVK не потрібен.",
+    geenKvkLink: "Змінити форму роботи",
     vatLabel: "Номер ПДВ (з кодом країни)",
     vatHint: "Ми перевіряємо його в реальному часі в базі ЄС (VIES). Працюєш у Нідерландах як самозайнятий без KVK? Тоді виставляєш рахунки зі своїм номером ПДВ.",
     uitzendNote: "Ти працюєш через агенцію — KVK не потрібен. Нижче вкажи адресу і документ. BSN і податкову пільгу вказуєш окремо в розділі “Uitzenden”.",
