@@ -1166,6 +1166,19 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       done: unsent === 0,
       ...(unsent === null ? { doneNote: "kon de voorstellen nu niet tellen" } : {}),
     },
+    {
+      id: "bonnetjes-alias",
+      group: "Beheer & veiligheid",
+      title: "Alias bonnetjes@zekerflex.com aanmaken (bonnen per mail)",
+      why: "Bonnetjes en inkoopfacturen kunnen per mail naar de boekhouding. Daarvoor stuurt een alias bonnetjes@zekerflex.com alles door naar info@zekerflex.com; ZekerFlex herkent aan het oorspronkelijke adres dat het een bonnetje is. Zonder alias komt zo'n mail gewoon als gewone mail binnen en wordt hij niet als bon gelezen. Alleen mail van afzenders op de lijst eigen afzenders (met geslaagde SPF en DKIM) wordt vanzelf geboekt; al het andere komt bij 'even kijken'.",
+      how: [
+        "Ga bij TransIP naar Domeinen → zekerflex.com → E-mail en maak een alias (doorstuuradres) bonnetjes@zekerflex.com dat doorstuurt naar info@zekerflex.com.",
+        "Stuur een testbonnetje naar bonnetjes@zekerflex.com en kijk of het in de Postvak in van info@ aankomt.",
+        "Het scherm om eigen afzenders te beheren en de bonnen na te kijken komt later; tot die tijd staat de lijst leeg en komt elke bon bij 'even kijken'.",
+      ],
+      auto: false,
+      ...m("bonnetjes-alias"),
+    },
   ];
 }
 

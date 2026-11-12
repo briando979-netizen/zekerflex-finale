@@ -1,0 +1,165 @@
+// ---------------------------------------------------------------------------
+// Bonnen per mail: de pure kern. Een mail is een bonnetje als hij oorspronkelijk aan bonnetjes@zekerflex.com gericht
+// was (To, Cc, Delivered-To of X-Original-To: het alias stuurt door naar info@, dus alleen kijken naar de ontvanger
+// van de mailbox zou niets vinden). Automatisch boeken mag alleen als de afzender op de lijst eigen afzenders staat en
+// SPF en DKIM zijn geslaagd volgens de Authentication-Results die onze eigen mailserver er bovenaan zette.
+// Niets hier gebruikt prisma of kv, en niets logt een adres of inhoud.
+// ---------------------------------------------------------------------------
+
+import { AppError } from "@/lib/errors";
+import { sha256Hex } from "./bestand";
+
+export const BONNETJES_ADRES = "bonnetjes@zekerflex.com";
+
+/** Kopregels als lijst per (kleine-letter) naam; een naam kan meerdere keren voorkomen. Opvolgregels zijn aaneengeplakt. */
+export type Kopregels = Map<string, string[]>;
+
+export function parseKop(kop: string): Kopregels {
+  const uit: Kopregels = new Map();
+  const ontvouwen = kop.replace(/\r?\n[ \t]+/g, " ");
+  for (const regel of ontvouwen.split(/\r?\n/)) {
+    const m = /^([A-Za-z0-9-]+):[ \t]*(.*)$/.exec(regel);
+    if (!m) continue;
+    const naam = m[1]!.toLowerCase();
+    const lijst = uit.get(naam) ?? [];
+    lijst.push(m[2]!.trim());
+    uit.set(naam, lijst);
+  }
+  return uit;
+}
+
+const eerste = (k: Kopregels, naam: string): string | null => k.get(naam)?.[0] ?? null;
+
+/** Alle e-mailadressen in een kopwaarde (`Naam <a@b.nl>, c@d.nl`), kleine letters. */
+export function adressenUit(waarde: string): string[] {
+  const uit: string[] = [];
+  for (const m of waarde.matchAll(/[A-Za-z0-9._%+'-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g)) uit.push(m[0].toLowerCase());
+  return uit;
+}
+
+/** Was deze mail oorspronkelijk (ook) aan het bonnetjes-adres gericht? */
+export function isBonnetjesMail(kop: Kopregels, alias: string = BONNETJES_ADRES): boolean {
+  const doel = alias.toLowerCase();
+  for (const naam of ["to", "cc", "delivered-to", "x-original-to", "envelope-to", "x-envelope-to"]) {
+    for (const waarde of kop.get(naam) ?? []) {
+      if (adressenUit(waarde).includes(doel)) return true;
+    }
+  }
+  return false;
+}
+
+/** Het adres van de afzender (From), kleine letters, of null. */
+export function afzenderAdres(kop: Kopregels): string | null {
+  const from = eerste(kop, "from");
+  return from ? (adressenUit(from)[0] ?? null) : null;
+}
+
+/** Het Message-ID zonder punthaken, of null. */
+export function messageIdUit(kop: Kopregels): string | null {
+  const m = eerste(kop, "message-id");
+  const schoon = m?.replace(/^<|>$/g, "").trim() ?? "";
+  return schoon ? schoon.slice(0, 300) : null;
+}
+
+/**
+ * De sleutel waarmee een mail nooit twee keer wordt verwerkt: de hash van het Message-ID. Mist dat (zeldzaam), dan de
+ * hash van de datum, de afzender en het onderwerp. Nooit het ID zelf of een adres in de opslagsleutel.
+ */
+export function mailSleutel(kop: Kopregels): string {
+  const id = messageIdUit(kop);
+  return sha256Hex(id !== null ? `id:${id}` : `kop:${eerste(kop, "date") ?? ""}|${afzenderAdres(kop) ?? ""}|${eerste(kop, "subject") ?? ""}`);
+}
+
+// ---- Authentication-Results ------------------------------------------------
+
+export type AuthUitslag = "pass" | "fail" | "softfail" | "neutral" | "none" | "temperror" | "permerror" | "policy" | string;
+
+export interface Authenticatie {
+  spf: AuthUitslag | null;
+  /** de uitslag van de eerste DKIM-handtekening die slaagde, anders van de eerste die er was */
+  dkim: AuthUitslag | null;
+  /** het domein (header.d) van een geslaagde DKIM-handtekening, of null */
+  dkimDomein: string | null;
+}
+
+/**
+ * Leest de Authentication-Results (RFC 8601). Alleen de BOVENSTE regel telt (die zette onze eigen mailserver er het
+ * laatst bij; een afzender kan er zelf een onderin zetten). Is `vertrouwdeServer` gegeven (het authserv-id, de eerste
+ * term van de regel), dan telt alleen een regel van die server: zo kan een nagemaakte regel van de afzender nooit
+ * slagen. Geen regel = alles null = niet geslaagd.
+ */
+export function parseAuthenticationResults(kop: Kopregels, vertrouwdeServer?: string): Authenticatie {
+  const leeg: Authenticatie = { spf: null, dkim: null, dkimDomein: null };
+  const regels = kop.get("authentication-results") ?? [];
+  const regel = vertrouwdeServer
+    ? regels.find((r) => (r.split(";")[0] ?? "").trim().split(/\s+/)[0]?.toLowerCase() === vertrouwdeServer.toLowerCase())
+    : regels[0];
+  if (!regel) return leeg;
+  const delen = regel.split(";").slice(1);
+  const uit: Authenticatie = { ...leeg };
+  for (const deel of delen) {
+    const m = /^\s*(spf|dkim)\s*=\s*([a-z]+)/i.exec(deel);
+    if (!m) continue;
+    const methode = m[1]!.toLowerCase();
+    const uitslag = m[2]!.toLowerCase();
+    if (methode === "spf") {
+      if (uit.spf === null || uitslag === "pass") uit.spf = uitslag;
+    } else if (uitslag === "pass" && uit.dkim !== "pass") {
+      uit.dkim = "pass";
+      uit.dkimDomein = /header\.(?:d|i)\s*=\s*"?(?:[^@\s;"]*@)?([A-Za-z0-9.-]+)/i.exec(deel)?.[1]?.toLowerCase() ?? null;
+    } else if (uit.dkim === null) {
+      uit.dkim = uitslag;
+    }
+  }
+  return uit;
+}
+
+/** Hoort dit domein bij (of onder) het domein van de afzender? "mail.hetzner.com" past bij "hetzner.com". */
+function domeinSluitAan(dkimDomein: string, afzenderDomein: string): boolean {
+  return afzenderDomein === dkimDomein || afzenderDomein.endsWith(`.${dkimDomein}`) || dkimDomein.endsWith(`.${afzenderDomein}`);
+}
+
+/**
+ * SPF en DKIM geslaagd, en de DKIM-handtekening hoort bij het domein van de afzender (anders kan iedereen met een eigen
+ * domein een geslaagde handtekening halen en toch een vertrouwd adres in From zetten).
+ */
+export function spfDkimGeslaagd(auth: Authenticatie, afzender: string | null): boolean {
+  if (auth.spf !== "pass" || auth.dkim !== "pass" || auth.dkimDomein === null || afzender === null) return false;
+  const domein = afzender.split("@")[1];
+  return domein !== undefined && domeinSluitAan(auth.dkimDomein, domein);
+}
+
+// ---- lijst eigen afzenders -------------------------------------------------
+
+export const MAX_EIGEN_AFZENDERS = 100;
+const ADRES = /^[a-z0-9._%+'-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
+const DOMEIN = /^@[a-z0-9.-]+\.[a-z]{2,}$/;
+
+/**
+ * Een lijst eigen afzenders controleren en schoonmaken: een volledig adres (factuur@hetzner.com) of een heel domein
+ * (@hetzner.com). Kleine letters, geen dubbelen. Gooit AppError.validation met een Nederlandse tekst.
+ */
+export function valideerEigenAfzenders(invoer: unknown): string[] {
+  if (!Array.isArray(invoer)) throw AppError.validation("De lijst met eigen afzenders moet een lijst zijn.");
+  if (invoer.length > MAX_EIGEN_AFZENDERS) {
+    throw AppError.validation(`De lijst met eigen afzenders mag hooguit ${MAX_EIGEN_AFZENDERS} regels hebben.`);
+  }
+  const uit = new Set<string>();
+  for (const x of invoer) {
+    if (typeof x !== "string") throw AppError.validation("Elke eigen afzender is een e-mailadres of een domein met een apenstaartje ervoor.");
+    const s = x.trim().toLowerCase();
+    if (s.length > 120 || !(ADRES.test(s) || DOMEIN.test(s))) {
+      throw AppError.validation('Een eigen afzender is een e-mailadres (factuur@bedrijf.nl) of een heel domein (@bedrijf.nl).');
+    }
+    uit.add(s);
+  }
+  return [...uit];
+}
+
+/** Staat dit adres op de lijst (als adres of via zijn domein)? Een domein telt exact, niet voor subdomeinen. */
+export function isEigenAfzender(adres: string | null, lijst: readonly string[]): boolean {
+  if (adres === null) return false;
+  const a = adres.toLowerCase();
+  const domein = a.split("@")[1];
+  return lijst.some((x) => x === a || (domein !== undefined && x === `@${domein}`));
+}
