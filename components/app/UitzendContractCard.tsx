@@ -186,6 +186,8 @@ export function UitzendContractCard() {
   const bindend = ft.intl !== "nl-NL";
   const fmt: Datum = (s) => new Date(s).toLocaleDateString(ft.intl, { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
   const [active, setActive] = useState<Contract | null | undefined>(undefined);
+  // een nog geldige overeenkomst in een oudere versie: de werker leest en tekent de nieuwe (de melding komt van de server, in zijn taal)
+  const [nieuw, setNieuw] = useState<{ titel: string; tekst: string } | null>(null);
   const [history, setHistory] = useState<Contract[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -204,6 +206,7 @@ export function UitzendContractCard() {
       const r = await fetch("/api/me/uitzend/contract", { cache: "no-store" });
       const d = await r.json();
       setActive(d.active ?? null);
+      setNieuw(d.nieuw && typeof d.nieuw.titel === "string" ? { titel: d.nieuw.titel, tekst: String(d.nieuw.tekst ?? "") } : null);
       setHistory(Array.isArray(d.history) ? d.history : []);
     } catch {
       setActive(null);
@@ -235,11 +238,27 @@ export function UitzendContractCard() {
   if (!active) {
     return (
       <div className="rounded-xl border border-brand-500/30 bg-brand-50/40 p-4">
+        {nieuw && (
+          <div role="status" className="mb-3 rounded-lg border border-warn/40 bg-warn/10 p-3">
+            <p className="text-sm font-semibold text-ink">{nieuw.titel}</p>
+            <p className="mt-1 text-xs leading-relaxed text-neutralx-700">{nieuw.tekst}</p>
+          </div>
+        )}
         <p className="text-sm font-semibold text-ink">{t.teken}</p>
         <p className="mt-1 text-xs leading-relaxed text-neutralx-600">
           {t.uitleg}
         </p>
         <LeesEnTeken t={t} fmt={fmt} bindend={bindend} busy={busy} err={err} knop={t.ondertekenen} onTekenen={() => void sign()} />
+        {/* de oude versie blijft precies zoals hij getekend is: terug te lezen en te downloaden */}
+        {nieuw && history[0] && (
+          <div className="mt-4 border-t border-hair pt-3">
+            <p className="text-xs font-semibold text-neutralx-500">{t.eerdere}</p>
+            <p className="mt-0.5 text-xs text-neutralx-500">
+              {history[0].reference} · {fmt(history[0].validFrom)} – {fmt(history[0].validUntil)}
+            </p>
+            <Teruglezen id={history[0].id} t={t} bindend={bindend} />
+          </div>
+        )}
       </div>
     );
   }

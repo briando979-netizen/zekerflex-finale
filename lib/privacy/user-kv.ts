@@ -25,6 +25,8 @@ export const ERASABLE_KV_PREFIXES = [
   "agenda-mail-state:",
   "agenda-mail-scan:",
   "auth-2fa:",
+  // de eenmalige melding "uitzendovereenkomst bijgewerkt" (lib/agreements/uitzend-melding.ts)
+  "uitzend-v2-melding:",
   "badge-push:",
   "brain-mem:",
   "chat-bewaard:",

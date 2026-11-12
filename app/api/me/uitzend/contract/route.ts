@@ -6,21 +6,27 @@ import {
   activeUitzendContract,
   listUitzendContracts,
   signUitzendContract,
+  verouderdUitzendContract,
 } from "@/lib/agreements/uitzend-contract";
+import { UITZEND_NIEUW } from "@/lib/agreements/uitzend-nieuw-teksten";
+import { getLocale } from "@/lib/i18n/server";
 import { recordAudit } from "@/lib/audit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// GET /api/me/uitzend/contract — the active contract + history.
+// GET /api/me/uitzend/contract — the active contract + history. `nieuw`: alleen als er nog een geldige overeenkomst in een oudere versie
+// is en geen huidige (de werker moet opnieuw tekenen): de melding in zijn app-taal.
 export async function GET(): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
-    const [active, history] = await Promise.all([
+    const [active, history, verouderd] = await Promise.all([
       activeUitzendContract(p.userId),
       listUitzendContracts(p.userId),
+      verouderdUitzendContract(p.userId),
     ]);
-    return NextResponse.json({ active, history });
+    const nieuw = !active && verouderd ? UITZEND_NIEUW[await getLocale()] : null;
+    return NextResponse.json({ active, history, nieuw: nieuw ? { titel: nieuw.titel, tekst: nieuw.tekst } : null });
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });

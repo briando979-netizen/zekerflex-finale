@@ -14,3 +14,6 @@ export function werkgeverVoorLoonstrook(): WerkgeverGegevens {
   const lhn = env.PLATFORM_LOONHEFFINGENNUMMER?.replace(/\s/g, "").toUpperCase();
   return { naam: p.naam, adres: adres || null, kvk: p.kvk ?? null, loonheffingennummer: lhn || null };
 }
+
+/** Dezelfde gegevens voor de uitzendovereenkomst (sjabloon v2, lib/agreements/uitzend-contract.ts): één bron met de loonstrook. */
+export const werkgeverGegevens = werkgeverVoorLoonstrook;
