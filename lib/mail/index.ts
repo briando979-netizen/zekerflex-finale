@@ -387,7 +387,8 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
     logger.error("mailbox write failed", { error: (e as Error).message }),
   );
 
-  logger.info("mail sent", { to: input.to, kind: rec.kind, delivered, transport, ...(suppressed ? { suppressed } : {}) });
+  // alleen het domein van de ontvanger in het log (12 nov, 86): het adres zelf hoort niet in de docker-logs
+  logger.info("mail sent", { to: ontvangerVoorLog(input.to), kind: rec.kind, delivered, transport, ...(suppressed ? { suppressed } : {}) });
   return { id, delivered, transport, ...(error ? { error } : {}), ...(suppressed ? { suppressed } : {}) };
 }
 
@@ -826,4 +827,16 @@ export function hoursCorrectionProposedEmail(
 /** Voor HTML-mails: elke waarde die van een bezoeker komt hierdoorheen (naam, bedrijf, e-mail, bericht). */
 export function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+/** "…@domein.nl" per ontvanger: genoeg om een bezorgprobleem per domein te zien, zonder het adres zelf. */
+export function ontvangerVoorLog(to: unknown): string {
+  const lijst = Array.isArray(to) ? to : [to];
+  return lijst
+    .map((a) => {
+      const s = String(a ?? "");
+      const at = s.lastIndexOf("@");
+      return at >= 0 ? `…@${s.slice(at + 1).replace(/[>\s,;].*$/, "").toLowerCase()}` : "…";
+    })
+    .join(", ");
 }

@@ -4,6 +4,9 @@ import { z } from "zod";
 import { AnalyticsEventType } from "@prisma/client";
 import { getPrincipal } from "@/lib/auth";
 import { trackEvents } from "@/lib/analytics/track";
+import { fixedWindow } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/http/request";
+import { jsonBegrensd } from "@/lib/http/body-grens";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,8 +27,12 @@ const bodySchema = z.object({
 });
 
 async function handlePOST(request: Request): Promise<NextResponse> {
-  const json = await request.json().catch(() => null);
-  const parsed = bodySchema.safeParse(json);
+  // per IP vóór het lezen (12 nov): de limiet in trackEvents staat op een sessionId dat de browser zelf kiest
+  const perIp = await fixedWindow(`analytics:track:ip:${Math.floor(Date.now() / 60_000)}:${clientIp(request)}`, 600, 90);
+  if (!perIp.ok) return NextResponse.json({ ok: true, accepted: 0 });
+  // hooguit 20 gebeurtenissen van een paar honderd tekens
+  const gelezen = await jsonBegrensd(request, 64_000).catch(() => ({ ok: false as const }));
+  const parsed = bodySchema.safeParse(gelezen.ok ? gelezen.waarde : null);
   if (!parsed.success) {
     return NextResponse.json({ ok: false, accepted: 0 }, { status: 400 });
   }

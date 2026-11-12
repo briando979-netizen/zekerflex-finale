@@ -1,3 +1,6 @@
+import { jsonBegrensd } from "@/lib/http/body-grens";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/http/request";
 import { NextResponse } from "next/server";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { zelfdeHerkomst } from "@/lib/rijschool/herkomst";
@@ -40,7 +43,10 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     if (!(request.headers.get("content-type") ?? "").includes("application/json")) throw AppError.validation("Verwacht JSON.");
     if (!zelfdeHerkomst(request.headers, request.url)) throw AppError.forbidden("Verzoek van een andere website geweigerd.");
-    const body: unknown = await request.json().catch(() => null);
+    // vóór het lezen (12 nov): een limiet per IP (ruim: een zaak heeft meerdere schermen achter één IP) en een grens
+    await enforceRateLimit({ name: "horeca-scherm", identifier: clientIp(request), limit: 1200, windowSeconds: 600 });
+    const gelezen = await jsonBegrensd(request, 64_000);
+    const body: unknown = gelezen.ok ? gelezen.waarde : null;
     const rol = rolUit((body as { rol?: unknown } | null)?.rol);
     const ctx = await schermContext(rol);
     const uit = await voerUit(ctx, rol, lees(schermActieSchema, body));

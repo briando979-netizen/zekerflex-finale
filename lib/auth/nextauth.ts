@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import Apple from "next-auth/providers/apple";
 import bcrypt from "bcryptjs";
+import { emailHash } from "@/lib/auth/email-hash";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
@@ -131,7 +132,7 @@ async function autoProvisionFromOAuth(
     }
     return user.id;
   } catch (err) {
-    logger.error("oauth auto-provision failed", { provider, email, error: (err as Error).message });
+    logger.error("oauth auto-provision failed", { provider, emailHash: emailHash(email), error: (err as Error).message });
     return null;
   }
 }
@@ -256,7 +257,7 @@ export const authOptions: NextAuthConfig = {
 
         const gate = await checkLoginAllowed(email);
         if (!gate.allowed) {
-          logger.warn("login attempt while locked out", { email });
+          logger.warn("login attempt while locked out", { emailHash: emailHash(email) });
           await recordAudit({
             category: "SECURITY",
             action: "auth.login.locked",
@@ -274,7 +275,7 @@ export const authOptions: NextAuthConfig = {
         const registerFailure = async (userId: string | null) => {
           const { failures, locked } = await registerLoginFailure(email);
           recordLoginFailure();
-          logger.warn("failed login attempt", { email, failures, locked });
+          logger.warn("failed login attempt", { emailHash: emailHash(email), failures, locked });
           await recordAudit({
             category: locked ? "SECURITY" : "AUTH",
             action: locked ? "auth.login.locked" : "auth.login.failed",

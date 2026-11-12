@@ -49,7 +49,9 @@ describe("POST /api/client-error", () => {
     const res = await post({ message: NEXT15, url: "https://zekerflex.com/login" });
     expect(res.status).toBe(200);
     // same message as a real crash, so the Bouwer button stays off for this public endpoint
-    expect(logger.warn).toHaveBeenCalledWith("client error boundary", expect.objectContaining({ url: "https://zekerflex.com/login", clientMessage: NEXT15 }));
+    // de melding gaat geschoond het log in (12 nov): lange id's worden <id>; herkennen gebeurt op de ongeschoonde tekst
+    expect(logger.warn).toHaveBeenCalledWith("client error boundary", expect.objectContaining({ url: "https://zekerflex.com/login", clientMessage: expect.stringContaining("was not found on the server") }));
+    expect(JSON.stringify(vi.mocked(logger.warn).mock.calls)).not.toContain("7f3a9c0e1b2d4e5f");
     expect(logger.error).not.toHaveBeenCalled();
   });
 
