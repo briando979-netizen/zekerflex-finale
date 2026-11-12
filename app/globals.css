@@ -776,7 +776,8 @@ body {
   --app-card: #15181E;
   --app-fg: #F2F3F0;
   --app-fg-muted: #9AA3AF;
-  --app-fg-faint: #717784;
+  /* 12 nov: was #717784 (3,96:1 op de kaart, onder de 4,5:1 voor kleine tekst); #8A93A0 haalt 5,7:1 op de kaart, 6,3:1 op de achtergrond en 4,6:1 op de hoverkleur (tests/donker-contrast.test.ts) */
+  --app-fg-faint: #8A93A0;
   --app-edge: #262B33;
   --app-edge-strong: #343A44;
   --app-accent-soft: rgb(var(--brand-mint-rgb) / 0.12);
