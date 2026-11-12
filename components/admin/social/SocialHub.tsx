@@ -685,7 +685,7 @@ function ReactieKaart({ r, laad }: { r: Reactie; laad: () => Promise<void> }) {
       ) : r.status === "nieuw" ? (
         <div className="mt-2 space-y-2">
           {r.mensNodig && <p className="text-xs font-medium" style={{ color: "var(--a-warn)" }}>{r.mensNodig}</p>}
-          {r.fout && <p className="text-xs" style={{ color: "var(--a-crit)" }}>{r.fout}</p>}
+          {r.fout && <p role="alert" className="text-xs" style={{ color: "var(--a-crit)" }}>{r.fout}</p>}
           <label className="sr-only" htmlFor={`antw-${r.id}`}>Antwoord</label>
           <textarea id={`antw-${r.id}`} className="a-input min-h-[4.5rem]" value={tekst} onChange={(e) => setTekst(e.target.value)} />
           {fout && <Notice tone="crit" role="alert">{fout}</Notice>}
