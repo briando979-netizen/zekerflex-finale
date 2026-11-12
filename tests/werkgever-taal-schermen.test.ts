@@ -17,6 +17,10 @@ const SECTIES = [
   "orgForm",
   "newShiftForm",
   "teamPagina",
+  "kandidaatKaart",
+  "claimPaneel",
+  "herhaalKnop",
+  "poolPubliceer",
 ] as const;
 
 const plaats = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]!).sort().join(",");
