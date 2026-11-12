@@ -24,18 +24,22 @@ function blaadjes(waarde: unknown, pad: string, uit: Map<string, string>): void 
 
 const plaatshouders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]!).sort().join(",");
 
-describe("woordenlijst van de werker-app: sectie los", () => {
+// Elke sectie die losse tekst uit een component haalt komt hier bij (de naam in de woordenlijst).
+const SECTIES = ["los", "verzekering", "paspoort", "uitzendContract"] as const;
+
+describe("woordenlijst van de werker-app: omgezette secties", () => {
   const per = Object.fromEntries(
     TALEN.map((t) => {
       const m = new Map<string, string>();
-      blaadjes((FREELANCER_DICTS[t] as unknown as { los: unknown }).los, "los", m);
+      for (const sectie of SECTIES) blaadjes((FREELANCER_DICTS[t] as unknown as Record<string, unknown>)[sectie], sectie, m);
       return [t, m];
     }),
   ) as Record<(typeof TALEN)[number], Map<string, string>>;
 
   it("elke sleutel staat in alle vijf de talen", () => {
     const sleutels = [...per.nl.keys()];
-    expect(sleutels.length).toBeGreaterThan(50);
+    expect(sleutels.length).toBeGreaterThan(120);
+    for (const sectie of SECTIES) expect(sleutels.some((k) => k.startsWith(`${sectie}.`)), sectie).toBe(true);
     for (const t of TALEN) expect([...per[t].keys()].sort(), t).toEqual([...sleutels].sort());
   });
 
@@ -76,15 +80,31 @@ describe("omgezette schermen halen hun tekst uit de woordenlijst", () => {
     "CompanyReviewInline",
     "PickSubstituteButton",
     "ReplacementTakeoverButton",
+    "PassportShare",
+    "UitzendContractCard",
   ];
   for (const naam of bestanden) {
     it(`${naam} gebruikt useFT en heeft geen losse Nederlandse zin meer`, () => {
       const src = readFileSync(path.join(ROOT, "components/app", `${naam}.tsx`), "utf8");
-      expect(src).toMatch(/useFT\(\)\.los\./);
+      expect(src).toMatch(/useFT\(\)(\.\w+)?/);
       // de oude zinnen mogen er niet meer in staan
-      for (const zin of ["Annuleer", "Toon weer", "Laden…", "Kaart niet beschikbaar", "Meer opties", "Jouw review", "Kies als vervanger", "Neem klus over", "Verwijderen mislukt", "Ja, akkoord"]) {
+      for (const zin of ["Kopieer link", "Eerdere overeenkomsten", "Annuleer", "Toon weer", "Laden…", "Kaart niet beschikbaar", "Meer opties", "Jouw review", "Kies als vervanger", "Neem klus over", "Verwijderen mislukt", "Ja, akkoord"]) {
         expect(src, zin).not.toContain(zin);
       }
+    });
+  }
+});
+
+describe("omgezette serverpagina's halen hun tekst uit de woordenlijst", () => {
+  const ROOT = process.cwd();
+  for (const [pagina, oud] of [
+    ["app/dashboard/verzekering/page.tsx", ["Wat is gedekt", "Een schade melden", "Jouw verzekeringsbewijs"]],
+    ["app/dashboard/paspoort/page.tsx", ["Nog geen profiel", "Profiel in opbouw"]],
+  ] as const) {
+    it(`${pagina} gebruikt getFreelancerDict en heeft de oude zinnen niet meer`, () => {
+      const src = readFileSync(path.join(ROOT, pagina), "utf8");
+      expect(src).toContain("getFreelancerDict");
+      for (const zin of oud) expect(src, zin).not.toContain(zin);
     });
   }
 });

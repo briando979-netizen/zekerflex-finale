@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useFT } from "@/components/i18n/useFT";
+import { vulIn } from "@/lib/i18n/vul-in";
 
 interface Contract {
   id: string;
@@ -12,10 +14,10 @@ interface Contract {
   weeksWorked: number;
 }
 
-const fmt = (s: string) =>
-  new Date(s).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
-
 export function UitzendContractCard() {
+  const ft = useFT();
+  const t = ft.uitzendContract;
+  const fmt = (s: string) => new Date(s).toLocaleDateString(ft.intl, { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
   const [active, setActive] = useState<Contract | null | undefined>(undefined);
   const [history, setHistory] = useState<Contract[]>([]);
   const [busy, setBusy] = useState(false);
@@ -42,7 +44,7 @@ export function UitzendContractCard() {
     try {
       const r = await fetch("/api/me/uitzend/contract", { method: "POST" });
       const d = await r.json();
-      if (!r.ok) throw new Error(d?.error?.message ?? "Ondertekenen mislukt");
+      if (!r.ok) throw new Error(d?.error?.message ?? t.mislukt);
       await load();
     } catch (e) {
       setErr((e as Error).message);
@@ -51,17 +53,14 @@ export function UitzendContractCard() {
     }
   }
 
-  if (active === undefined) return <p className="text-xs text-neutralx-400">Laden…</p>;
+  if (active === undefined) return <p className="text-xs text-neutralx-400">{t.laden}</p>;
 
   if (!active) {
     return (
       <div className="rounded-xl border border-brand-500/30 bg-brand-50/40 p-4">
-        <p className="text-sm font-semibold text-ink">Onderteken je uitzendovereenkomst</p>
+        <p className="text-sm font-semibold text-ink">{t.teken}</p>
         <p className="mt-1 text-xs leading-relaxed text-neutralx-600">
-          ZekerFlex is je formele werkgever tijdens uitzendklussen. De uitzendovereenkomst regelt je
-          loon, vakantiegeld, pensioen (StiPP) en het ABU-fasensysteem. Hij is 3 maanden geldig; in
-          die periode kun je alle uitzendklussen doen. Je moet hem ondertekenen voordat je kunt
-          reageren op klussen.
+          {t.uitleg}
         </p>
         {err && <p role="alert" className="mt-2 text-xs text-crit">{err}</p>}
         <button
@@ -70,7 +69,7 @@ export function UitzendContractCard() {
           disabled={busy}
           className="btn-primary mt-3 px-4 py-2 text-sm disabled:opacity-50"
         >
-          {busy ? "Ondertekenen…" : "Ondertekenen"}
+          {busy ? t.bezig : t.ondertekenen}
         </button>
       </div>
     );
@@ -82,9 +81,9 @@ export function UitzendContractCard() {
     <div className="rounded-xl border border-hair p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-ink">Uitzendovereenkomst — getekend ✓</p>
+          <p className="text-sm font-semibold text-ink">{t.getekend}</p>
           <p className="mt-0.5 text-xs text-neutralx-500">
-            {active.reference} · ondertekend op {fmt(active.signedAt)}
+            {vulIn(t.ref, { ref: active.reference, datum: fmt(active.signedAt) })}
           </p>
         </div>
         <span
@@ -92,17 +91,17 @@ export function UitzendContractCard() {
             expired ? "bg-warn/10 text-warn" : "bg-ok/10 text-ok"
           }`}
         >
-          {expired ? "Verlopen" : "Actief"}
+          {expired ? t.verlopen : t.actief}
         </span>
       </div>
       <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-        <dt className="text-neutralx-500">Geldig van</dt>
+        <dt className="text-neutralx-500">{t.geldigVan}</dt>
         <dd className="text-ink">{fmt(active.validFrom)}</dd>
-        <dt className="text-neutralx-500">Geldig tot</dt>
+        <dt className="text-neutralx-500">{t.geldigTot}</dt>
         <dd className="text-ink">{fmt(active.validUntil)}</dd>
-        <dt className="text-neutralx-500">ABU-fase</dt>
+        <dt className="text-neutralx-500">{t.abuFase}</dt>
         <dd className="text-ink">
-          Fase {active.phase} · {active.weeksWorked} weken
+          {vulIn(t.fase, { fase: active.phase, weken: active.weeksWorked })}
         </dd>
       </dl>
       <a
@@ -111,13 +110,13 @@ export function UitzendContractCard() {
         rel="noopener noreferrer"
         className="mt-3 inline-block text-xs font-semibold text-brand-600 underline"
       >
-        Bekijk de overeenkomst (pdf)
+        {t.bekijk}
       </a>
 
       {expired && (
         <div className="mt-3 border-t border-hair pt-3">
           <p className="text-xs text-neutralx-600">
-            Je overeenkomst is verlopen. Onderteken een nieuwe om door te werken.
+            {t.verlopenTekst}
           </p>
           {err && <p role="alert" className="mt-1 text-xs text-crit">{err}</p>}
           <button
@@ -126,14 +125,14 @@ export function UitzendContractCard() {
             disabled={busy}
             className="btn-primary mt-2 px-3 py-1.5 text-xs disabled:opacity-50"
           >
-            {busy ? "Ondertekenen…" : "Nieuwe overeenkomst ondertekenen"}
+            {busy ? t.bezig : t.nieuw}
           </button>
         </div>
       )}
 
       {history.length > 1 && (
         <div className="mt-3 border-t border-hair pt-3">
-          <p className="text-xs font-semibold text-neutralx-500">Eerdere overeenkomsten</p>
+          <p className="text-xs font-semibold text-neutralx-500">{t.eerdere}</p>
           <ul className="mt-1 space-y-1">
             {history
               .filter((h) => h.id !== active.id)
@@ -148,7 +147,7 @@ export function UitzendContractCard() {
                     rel="noopener noreferrer"
                     className="font-medium text-brand-600 underline"
                   >
-                    pdf
+                    {t.pdf}
                   </a>
                 </li>
               ))}

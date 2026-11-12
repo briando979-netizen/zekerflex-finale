@@ -7,14 +7,16 @@ import { passportToken } from "@/lib/passport/token";
 import { isPassportPublic } from "@/lib/passport/share";
 import { qrEncode, qrSvgPath } from "@/lib/qr/encode";
 import { PassportShare } from "@/components/app/PassportShare";
+import { getFreelancerDict } from "@/lib/i18n/server";
+import { vulIn } from "@/lib/i18n/vul-in";
 
 export const dynamic = "force-dynamic";
 
-function Qr({ url, size = 112 }: { url: string; size?: number }) {
+function Qr({ url, label, size = 112 }: { url: string; label: string; size?: number }) {
   const m = qrEncode(url);
   const n = m.length + 8;
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${n} ${n}`} role="img" aria-label="QR-code" shapeRendering="crispEdges">
+    <svg width={size} height={size} viewBox={`0 0 ${n} ${n}`} role="img" aria-label={label} shapeRendering="crispEdges">
       <rect width={n} height={n} fill="#fff" />
       <path d={qrSvgPath(m, 4)} fill="#0C0E12" />
     </svg>
@@ -23,6 +25,7 @@ function Qr({ url, size = 112 }: { url: string; size?: number }) {
 
 export default async function MyPassportPage() {
   const principal = await requirePrincipal();
+  const t = (await getFreelancerDict()).paspoort;
   const passport = await buildPassport(principal.userId);
 
   if (!passport) {
@@ -30,11 +33,11 @@ export default async function MyPassportPage() {
       <>
         <div className="mb-6">
           <Link href="/dashboard/account" className="text-sm font-medium text-neutralx-500 hover:text-brand-600">
-            ← Terug
+            ← {t.back}
           </Link>
         </div>
-        <PageHeader title="Werkpaspoort" subtitle="Je verifieerbare werkprofiel om overal te laten zien." />
-        <EmptyState icon="🪪" title="Nog geen profiel" body="Een werkpaspoort is er zodra je als professional (zzp/flex/uitzend) bent geregistreerd." />
+        <PageHeader title={t.titel} subtitle={t.subtitelLeeg} />
+        <EmptyState icon="🪪" title={t.leegTitel} body={t.leegTekst} />
       </>
     );
   }
@@ -48,13 +51,10 @@ export default async function MyPassportPage() {
     <>
       <div className="mb-6">
         <Link href="/dashboard/account" className="text-sm font-medium text-neutralx-500 hover:text-brand-600">
-          ← Terug
+          ← {t.back}
         </Link>
       </div>
-      <PageHeader
-        title="Werkpaspoort"
-        subtitle="Je verifieerbare werkprofiel: werkhistorie, vaardigheden en certificaten, met een echtheidszegel van ZekerFlex."
-      />
+      <PageHeader title={t.titel} subtitle={t.subtitel} />
 
       <div className="space-y-6">
         {/* preview */}
@@ -63,15 +63,15 @@ export default async function MyPassportPage() {
             <div>
               <p className="font-display text-xl font-bold">{passport.fullName}</p>
               <p className="text-sm text-neutralx-500">
-                {passport.kvkVerified ? `KVK geverifieerd · ${passport.kvkNumber}` : "Profiel in opbouw"}
+                {passport.kvkVerified ? vulIn(t.kvkOk, { nr: passport.kvkNumber ?? "" }) : t.inOpbouw}
               </p>
             </div>
             <span className="pill bg-brand-50 text-brand-700">★ {passport.badgeLevel}</span>
           </div>
           <div className="mt-4 grid grid-cols-3 gap-3 text-center">
-            <Mini value={String(passport.shiftsCompleted)} label="diensten" />
-            <Mini value={`${reliability}%`} label="betrouwbaar" />
-            <Mini value={passport.rating.count > 0 ? `★ ${passport.rating.average}` : "—"} label={`${passport.rating.count} reviews`} />
+            <Mini value={String(passport.shiftsCompleted)} label={t.diensten} />
+            <Mini value={`${reliability}%`} label={t.betrouwbaar} />
+            <Mini value={passport.rating.count > 0 ? `★ ${passport.rating.average}` : "—"} label={vulIn(t.reviews, { n: passport.rating.count })} />
           </div>
           <div className="mt-4 flex flex-wrap gap-2 text-xs">
             {passport.skills.slice(0, 6).map((s) => (
@@ -83,7 +83,7 @@ export default async function MyPassportPage() {
           </div>
         </div>
 
-        <PassportShare initialEnabled={enabled} url={url} token={token} qr={<Qr url={url} />} />
+        <PassportShare initialEnabled={enabled} url={url} token={token} qr={<Qr url={url} label={t.qr} />} />
       </div>
     </>
   );

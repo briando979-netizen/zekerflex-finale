@@ -3,37 +3,28 @@ import { requirePrincipal } from "@/lib/auth";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { PageHeader, Panel } from "@/components/app/ui";
 import { BackLink } from "@/components/app/BackLink";
+import { getFreelancerDict } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
-const COVERED = [
-  ["Bedrijfsaansprakelijkheid", "Schade aan derden of hun eigendommen tijdens je werkzaamheden op een ZekerFlex-dienst."],
-  ["Ongevallen", "Letsel tijdens werk én tijdens woon-werkverkeer op de dienstdag."],
-  ["Rechtsbijstand", "Juridische hulp bij een geschil dat voortkomt uit een via ZekerFlex geaccepteerde dienst."],
-];
-const NOT_COVERED = [
-  "Opzet, grove schuld of werken onder invloed",
-  "Schade buiten de geaccepteerde dienst of aan je eigen materiaal",
-  "Werkzaamheden die niet in de dienstomschrijving stonden",
-];
-
 export default async function VerzekeringPage() {
   const principal = await requirePrincipal();
+  const t = (await getFreelancerDict()).verzekering;
   // zzp-verzekeringen — an uitzendkracht is insured through ZekerFlex as employer.
   if (invoiceModeFor(await getFiscal(principal.userId)) === "payroll") redirect("/dashboard/verloning");
   return (
     <>
-      <BackLink fallbackHref="/dashboard/account" label="Instellingen" />
+      <BackLink fallbackHref="/dashboard/account" label={t.back} />
       <PageHeader
-        title="Verzekering"
-        eyebrow="Automatisch geregeld"
-        subtitle="Zodra je een dienst accepteert, ben je verzekerd via de collectieve dekking van ZekerFlex. Je hoeft zelf niets af te sluiten."
+        title={t.titel}
+        eyebrow={t.eyebrow}
+        subtitle={t.subtitel}
       />
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <Panel title="Wat is gedekt">
+        <Panel title={t.gedekt}>
           <ul className="divide-y divide-hair">
-            {COVERED.map(([title, body]) => (
+            {t.dekking.map(([title, body]) => (
               <li key={title} className="flex gap-3 px-5 py-4">
                 <span className="mt-0.5 grid h-5 w-5 flex-shrink-0 place-items-center rounded-full bg-ok/10 text-ok">✓</span>
                 <div>
@@ -44,9 +35,9 @@ export default async function VerzekeringPage() {
             ))}
           </ul>
           <div className="border-t border-hair px-5 py-4">
-            <p className="mb-2 text-sm font-semibold text-ink">Niet gedekt</p>
+            <p className="mb-2 text-sm font-semibold text-ink">{t.nietGedekt}</p>
             <ul className="space-y-1 text-sm text-neutralx-600">
-              {NOT_COVERED.map((x) => (
+              {t.nietGedektLijst.map((x) => (
                 <li key={x} className="flex gap-2">
                   <span className="text-neutralx-400">–</span>
                   {x}
@@ -57,10 +48,10 @@ export default async function VerzekeringPage() {
         </Panel>
 
         <div className="space-y-6">
-          <Panel title="Jouw verzekeringsbewijs">
+          <Panel title={t.bewijsTitel}>
             <div className="px-5 py-4">
               <p className="text-sm text-neutralx-600">
-                Download een bewijs van dekking, bijvoorbeeld als een opdrachtgever daarom vraagt.
+                {t.bewijsTekst}
               </p>
               <a
                 href="/api/me/insurance"
@@ -68,17 +59,17 @@ export default async function VerzekeringPage() {
                 rel="noopener noreferrer"
                 className="btn-primary mt-3 inline-block"
               >
-                Verzekeringsbewijs (pdf) ↓
+                {t.bewijsKnop}
               </a>
             </div>
           </Panel>
-          <Panel title="Een schade melden">
+          <Panel title={t.schadeTitel}>
             <div className="px-5 py-4 text-sm text-neutralx-600">
-              <p>Meld schade of een ongeval binnen 48 uur via ZekerFlex Support in de chat. Vermeld:</p>
+              <p>{t.schadeTekst}</p>
               <ul className="mt-2 space-y-1">
-                <li>• de dienst en datum</li>
-                <li>• wat er is gebeurd</li>
-                <li>• foto&apos;s en (indien van toepassing) gegevens van betrokkenen</li>
+                {t.schadeLijst.map((x) => (
+                  <li key={x}>• {x}</li>
+                ))}
               </ul>
             </div>
           </Panel>
