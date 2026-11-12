@@ -6,7 +6,10 @@ import { OnboardingForm } from "@/components/app/OnboardingForm";
 import { WalletVerifyButton } from "@/components/app/WalletVerifyButton";
 import { ComplianceDocsPanel } from "@/components/app/ComplianceDocsPanel";
 import { UitzendPanel } from "@/components/app/UitzendPanel";
-import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
+import { getFiscal, invoiceModeFor, fiscaalIngevuld } from "@/lib/fiscal/store";
+import { activeUitzendContract } from "@/lib/agreements/uitzend-contract";
+import { gegevensMist } from "@/lib/onboarding/gegevens-mist";
+import { GegevensMist } from "@/components/app/GegevensMist";
 import { BackLink } from "@/components/app/BackLink";
 import { stripeIdentityAvailable, syncStripeIdentity } from "@/lib/kyc/stripe-identity";
 import { getLocale, getFreelancerDict } from "@/lib/i18n/server";
@@ -116,7 +119,7 @@ export default async function VerificatiePage() {
   // van een profiel zonder bedrijf is een plaatshouder ("pending-…", "vat-…") en blijft dus leeg.
   const bewaard = await prisma.freelancerProfile.findUnique({
     where: { userId: principal.userId },
-    select: { kvkNumber: true, vatNumber: true, homePostalCode: true },
+    select: { kvkNumber: true, vatNumber: true, homePostalCode: true, kvkValid: true },
   });
   // stap 1 ("Hey! Wie ben jij?") en waar deze werker verdergaat; de poort mag niet gesloten worden
   const [persoon, poort, gebruiker] = await Promise.all([
@@ -129,6 +132,18 @@ export default async function VerificatiePage() {
     Boolean(bewaard?.homePostalCode) &&
     (isUitzend || Boolean(bewaard?.kvkNumber && /^\d+$/.test(bewaard.kvkNumber)) || Boolean(bewaard?.vatNumber));
   const begin = beginStap({ persoonKlaar: persoon.klaar, woonKlaar, idKlaar });
+  // wat er nog mist voor "gegevens", per onderdeel (BSN, overeenkomst, btw/KOR, postcode): bovenaan, met de plek om het te doen.
+  // Dezelfde regel als de poort; staat de poort op "ingevuld", dan geen lijst.
+  const mist =
+    poort?.gegevensIngevuld === true
+      ? []
+      : gegevensMist({
+          soort: fiscal.workerKind ?? null,
+          fiscaalIngevuld: fiscaalIngevuld(fiscal),
+          contractGetekend: isUitzend ? Boolean(await activeUitzendContract(principal.userId).catch(() => true)) : true,
+          bedrijfOk: Boolean(bewaard?.kvkValid || /^\d{8}$/.test(bewaard?.kvkNumber ?? "") || fiscal.vatValid || fiscal.korApplies),
+          postcodeOk: Boolean(bewaard?.homePostalCode),
+        });
   const initial = {
     ...(bewaard?.kvkNumber && /^\d+$/.test(bewaard.kvkNumber) ? { kvkNumber: bewaard.kvkNumber } : {}),
     ...(bewaard?.vatNumber ? { vatNumber: bewaard.vatNumber } : {}),
@@ -150,6 +165,8 @@ export default async function VerificatiePage() {
 
   return (
     <div className="mx-auto max-w-2xl">
+      <GegevensMist mist={mist} soort={fiscal.workerKind ?? null} loonheffingskorting={fiscal.loonheffingskorting} />
+
       {lastCheck && (
         <div className="mb-6 card p-4 text-sm">
           <div className="flex items-center gap-2">
@@ -213,7 +230,7 @@ export default async function VerificatiePage() {
       )}
 
       {fiscal.workerKind === "uitzendkracht" && (
-        <div className="mt-6 card p-6">
+        <div id="uitzendovereenkomst" className="mt-6 card scroll-mt-20 p-6">
           <h2 className="font-display text-base font-bold text-ink">Uitzenden — verloning, StiPP & loonheffing</h2>
           <div className="mt-4">
             <UitzendPanel />
