@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/prisma", () => ({ prisma: {} }));
-import { ERASABLE_KV_PREFIXES } from "@/lib/privacy/user-kv";
+import { ERASABLE_KV_PREFIXES, erasableKvWhere } from "@/lib/privacy/user-kv";
 
 // Bewaker (12 nov 2026, AGENTS.md "AVG"): een nieuwe KV-sleutel per gebruiker hoort met zijn voorvoegsel in
 // ERASABLE_KV_PREFIXES (lib/privacy/user-kv.ts), anders ontbreekt hij bij inzage en wissen. Deze test zoekt in lib/, app/
@@ -20,12 +20,12 @@ const BASISLIJN: Record<string, string> = {
   "bank-notify:": "ZekerFlex Bank (staat uit): geldgegevens met bewaartermijn",
   "bank-payout-pref:": "ZekerFlex Bank (staat uit): geldgegevens met bewaartermijn",
   "bank-tax:": "ZekerFlex Bank (staat uit): geldgegevens met bewaartermijn",
-  "bank-login:": "TE BESLISSEN (86): uitslag van de bankcontrole (naam/IBAN), bewaren als KYC-bewijs of wissen",
-  "bank-login-customer:": "TE BESLISSEN (86): Stripe-klant van de bankcontrole",
-  "bank-login-iban:": "TE BESLISSEN (86): IBAN van de bankcontrole",
-  "push-profile:": "TE BESLISSEN (86): teller van de profielherinnering (aantal, laatste keer)",
-  "zfmail:user:": "TE BESLISSEN (86): het adres van iemands ZekerFlex-mailbox",
-  "ref-code-of:": "TE BESLISSEN (86): doorverwijscode (doorverwijzen staat uit met de bank)",
+  // 86 koos op 12 nov "wisbaar", maar tests/privacy-user-kv.test.ts (3 nov) noemt deze vier uitdrukkelijk een bewaarplicht:
+  // eerst dat besluit rechtzetten, dan pas naar ERASABLE_KV_PREFIXES
+  "bank-login:": "bewaard volgens tests/privacy-user-kv.test.ts (3 nov); besluit 86 van 12 nov hangt",
+  "bank-login-customer:": "hoort bij bank-login: (zelfde besluit)",
+  "bank-login-iban:": "hoort bij bank-login: (zelfde besluit)",
+  "ref-code-of:": "bewaard volgens tests/privacy-user-kv.test.ts (3 nov); besluit 86 van 12 nov hangt",
   "fiscal:": "bewaarplicht (fiscale gegevens); zie de uitleg in lib/privacy/user-kv.ts",
   "uitzend-contracts:": "bewaarplicht (contracten)",
   "factoring-terms:": "bewaarplicht (geldzaken)",
@@ -84,6 +84,16 @@ describe("AVG: elke KV-sleutel per gebruiker is wisbaar of staat bewust op de ba
     expect(gezien, "de bewaker vindt geen sleutels meer: zoekt hij op de goede plek?").toBeGreaterThan(50);
     const melding = [...nieuw].map(([v, fs]) => `${v} (${[...fs].join(", ")})`);
     expect(melding, "zet het voorvoegsel in ERASABLE_KV_PREFIXES (lib/privacy/user-kv.ts, na overleg met 86), of op de basislijn hier met een reden").toEqual([]);
+  });
+
+  it("de sleutels van 12 nov (besluit 86) gaan mee bij het wissen, voor precies die gebruiker", () => {
+    for (const voor of ["zfmail:user:", "push-profile:"]) {
+      const waar = erasableKvWhere("usr_avg_1").OR;
+      expect(waar, voor).toContainEqual({ key: { equals: `${voor}usr_avg_1` } });
+      expect(waar, voor).toContainEqual({ key: { startsWith: `${voor}usr_avg_1:` } });
+      // een andere gebruiker zit er niet in
+      expect(JSON.stringify(waar)).not.toContain(`${voor}usr_avg_2`);
+    }
   });
 
   it("de basislijn en de wislijst overlappen niet (een voorvoegsel is wisbaar of bewust niet)", () => {

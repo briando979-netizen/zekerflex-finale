@@ -76,6 +76,11 @@ export const ERASABLE_KV_PREFIXES = [
   // de mail "aanmelding compleet" (lib/onboarding/aanmelding-compleet.ts): open en gemeld
   "werker-aanmelding:",
   "werker-taal:",
+  // 12 nov (tests/kv-avg-bewaker.test.ts, besluit 86): per gebruiker en zonder bewaarplicht.
+  // de teller van de profielherinnering (lib/notifications/worker-push.ts)
+  "push-profile:",
+  // welk ZekerFlex-mailadres bij de gebruiker hoort (lib/mail/zf-accounts.ts)
+  "zfmail:user:",
 ] as const;
 
 /** Hele waarde afschermen: dit zijn (versleutelde) inloggegevens. */
