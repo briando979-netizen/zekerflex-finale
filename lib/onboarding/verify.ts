@@ -31,7 +31,7 @@ import { schoonIban } from "@/lib/onboarding/velden";
 import { alertOwnerLater } from "@/lib/ops/alert";
 import { runAfter } from "@/lib/run-after";
 import { meldIdGeverifieerd } from "@/lib/onboarding/id-geverifieerd";
-import { aiReviewOverslaan, aiReviewUitslag, REM_DUUR_MS, REM_NA } from "@/lib/onboarding/ai-review-rem";
+import { aiReviewOverslaan, aiReviewUitslag, laadAiReviewRem, REM_DUUR_MS, REM_NA } from "@/lib/onboarding/ai-review-rem";
 import { fotoBron } from "@/lib/kyc/foto-bron";
 
 // ---------------------------------------------------------------------------
@@ -197,7 +197,9 @@ Richtlijnen:
     reasons: ["De automatische beoordeling was tijdelijk niet beschikbaar; een controleur kijkt ernaar."],
     summary: "In behandeling — automatische beoordeling niet beschikbaar.",
   };
-  // gaf de AI de laatste keren geen antwoord, dan niet nog eens 8 s wachten (lib/onboarding/ai-review-rem.ts)
+  // gaf de AI de laatste keren geen antwoord, dan niet nog eens 8 s wachten (lib/onboarding/ai-review-rem.ts);
+  // de rem staat ook in de database, anders begint hij na elke uitrol opnieuw
+  await laadAiReviewRem();
   if (aiReviewOverslaan()) return nietBeschikbaar;
 
   try {
