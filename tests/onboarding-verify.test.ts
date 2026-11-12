@@ -693,6 +693,8 @@ describe("submitFreelancerOnboarding — gezichtscontrole met het eigen model (1
     expect(data.faceMatchScore).toBe(0.72);
     expect(data.rawPayload.gezicht).toMatchObject({ oordeel: "zelfde", score: 0.72, automatisch: true });
     expect(JSON.stringify(data.rawPayload)).not.toMatch(/kenmerk|embedding/i);
+    // live camera of bestandskeuze per vak (lib/kyc/foto-bron.ts): deze testfoto's heten front.jpg enz., dus uit bestand
+    expect((data.rawPayload as unknown as { bron: unknown }).bron).toEqual({ front: "bestand", back: "bestand", selfie: "bestand" });
   });
 
   it("de live reeks: alleen de samenvatting bij de controle, daarna gewist; nog geen poort (ook een sprong keurt goed)", async () => {
