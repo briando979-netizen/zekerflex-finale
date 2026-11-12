@@ -33,6 +33,7 @@ import { runAfter } from "@/lib/run-after";
 import { meldIdGeverifieerd } from "@/lib/onboarding/id-geverifieerd";
 import { aiReviewOverslaan, aiReviewUitslag, laadAiReviewRem, REM_DUUR_MS, REM_NA } from "@/lib/onboarding/ai-review-rem";
 import { fotoBron } from "@/lib/kyc/foto-bron";
+import { fotoMaat } from "@/lib/kyc/foto-maat";
 
 // ---------------------------------------------------------------------------
 // Self-serve freelancer onboarding verification.
@@ -821,6 +822,13 @@ export async function submitFreelancerOnboarding(
     : null;
   // Kept for the doc-number hash below, unaffected by the rename.
   const stored = storedFront;
+  // de maat per foto (bij de live camera = de resolutie van de camerastream): alleen breedte en hoogte, om te meten
+  const [maatVoor, maatAchter, maatSelfie, maatSelfie2] = await Promise.all([
+    fotoMaat(input.files.front.bytes),
+    fotoMaat(input.files.back.bytes),
+    fotoMaat(input.files.selfie.bytes),
+    storedSelfie2 && input.files.selfie2 ? fotoMaat(input.files.selfie2.bytes) : Promise.resolve(null),
+  ]);
 
   // --- combined decision -----------------------------------------
   // A confident vision mismatch is a real fraud signal (someone else's ID) —
@@ -966,6 +974,13 @@ export async function submitFreelancerOnboarding(
               back: fotoBron(input.files.back.filename),
               selfie: fotoBron(input.files.selfie.filename),
               ...(storedSelfie2 && input.files.selfie2 ? { selfie2: fotoBron(input.files.selfie2.filename) } : {}),
+            },
+            // de maat per vak (lib/kyc/foto-maat.ts): alleen { breed, hoog }
+            maat: {
+              ...(maatVoor ? { front: maatVoor } : {}),
+              ...(maatAchter ? { back: maatAchter } : {}),
+              ...(maatSelfie ? { selfie: maatSelfie } : {}),
+              ...(maatSelfie2 ? { selfie2: maatSelfie2 } : {}),
             },
             // de beoordelingsroute zet de voorkant pas bij goedkeuring bij de documenten (review 2, H1-bis)
             viaTweedeToestel: Boolean(input.viaTweedeToestel),

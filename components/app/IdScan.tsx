@@ -457,9 +457,15 @@ function Camera({
             video: { ...bron, width: { ideal: 3840 }, height: { ideal: 2160 } },
           })
           .catch((e: unknown) => {
-            // geweigerd: niet nog eens vragen. Anders (sommige toestellen weigeren de hoge resolutie): nog één keer, eenvoudig
+            // geweigerd: niet nog eens vragen. Anders (sommige toestellen weigeren de hoge resolutie): eerst nog Full HD,
+            // pas daarna zonder eisen. Zonder eisen kwam er 1080x2336 uit en las de MRZ van een paspoort niet (12 nov).
             if (e instanceof DOMException && (e.name === "NotAllowedError" || e.name === "SecurityError")) throw e;
-            return navigator.mediaDevices.getUserMedia({ audio: false, video: bron });
+            return navigator.mediaDevices
+              .getUserMedia({ audio: false, video: { ...bron, width: { ideal: 1920 }, height: { ideal: 1080 } } })
+              .catch((e2: unknown) => {
+                if (e2 instanceof DOMException && (e2.name === "NotAllowedError" || e2.name === "SecurityError")) throw e2;
+                return navigator.mediaDevices.getUserMedia({ audio: false, video: bron });
+              });
           });
         if (weg) {
           s.getTracks().forEach((tr) => tr.stop());
