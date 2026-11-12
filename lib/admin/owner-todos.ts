@@ -204,6 +204,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   const csca = await cscaStand().catch(() => null);
   // de beperkte Stripe-sleutel voor de foto's van Stripe-controles (lib/kyc/stripe-fotos.ts)
   const stripeFotoSleutel = await stripeFotoSleutelInfo().catch(() => null);
+  // ZekerFlex Mail-adressen van gewiste accounts (AVG) die bij TransIP nog een mailbox hebben
+  const zfMailOpheffen = await import("@/lib/mail/zf-accounts").then((m) => m.teOpheffenBijTransip()).catch((): string[] => []);
   // weigerde Stripe Identity voor het hele account (lib/kyc/stripe-weigering.ts)? Dan staat ZekerFlex het 24 uur uit
   const stripeWeigering = await actieveWeigering().catch(() => null);
   // het live Stripe-account: kan het betalingen ontvangen en uitbetalen (elke 15 min gemeten, lib/billing/stripe-betalen.ts)?
@@ -985,6 +987,19 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       auto: true,
       done: stripeFotoSleutel !== null,
       ...(stripeFotoSleutel ? { doneNote: `sleutel eindigt op ${stripeFotoSleutel.eind}, gezet door ${stripeFotoSleutel.door}` } : {}),
+    },
+    {
+      id: "zfmail-opheffen",
+      group: "Beheer & veiligheid",
+      title: "ZekerFlex Mail-adres opheffen bij TransIP",
+      why: "Het account van een werkgever met een eigen ZekerFlex-mailadres is gewist (AVG). In ZekerFlex staat de mailbox al op geblokkeerd, zonder naam of herstel-adres, en het adres blijft vergrendeld. De mailbox zelf bestaat bij TransIP nog en kan nog mail ontvangen.",
+      how: [
+        "Log in bij TransIP → Domeinen → zekerflex.com → E-mail.",
+        ...(zfMailOpheffen.length ? [`Hef deze mailbox(en) op: ${zfMailOpheffen.join(", ")}.`] : []),
+        "Laat het adres in ZekerFlex staan zoals het is: zo kan niemand het opnieuw claimen. Deze taak vinkt zichzelf af zodra TransIP de mailbox niet meer heeft.",
+      ],
+      auto: true,
+      done: zfMailOpheffen.length === 0,
     },
     {
       id: "alert-push",
