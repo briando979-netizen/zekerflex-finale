@@ -4,6 +4,7 @@ import { AuthError } from "next-auth";
 import { signIn } from "@/lib/auth/nextauth";
 import { registerAccount, registerSchema } from "@/lib/auth/register";
 import { sendVerificationEmail } from "@/lib/auth/email-verify";
+import { onthoudAanmeldTaal } from "@/lib/i18n/aanmeld-taal";
 import { isBreached, scorePassword } from "@/lib/auth/password";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
@@ -54,6 +55,8 @@ export async function registerAction(
 
   // De gebruiker komt hierna op /verifieer-email, waar hij zelf een nieuwe mail kan aanvragen: alleen loggen.
   try {
+    // de taal die de werker zelf koos (cookie), onthouden voor zijn mails en pushes; nooit een gok, nooit overschrijven
+    await onthoudAanmeldTaal(account.userId, parsed.data.type);
     const mail = await sendVerificationEmail(account.userId, account.email, parsed.data.fullName);
     if (mail.sent && !mail.delivered) logger.warn("verificatiemail niet afgeleverd", { userId: account.userId, transport: mail.transport });
   } catch (err) {

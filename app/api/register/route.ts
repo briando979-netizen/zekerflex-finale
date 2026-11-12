@@ -3,6 +3,7 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { registerAccount, registerSchema } from "@/lib/auth/register";
 import { sendVerificationEmail } from "@/lib/auth/email-verify";
+import { onthoudAanmeldTaal } from "@/lib/i18n/aanmeld-taal";
 import { recordReferral, REF_COOKIE } from "@/lib/rewards/referral";
 import { throttleIp } from "@/lib/security/ip-throttle";
 import { verifyCaptcha } from "@/lib/security/captcha";
@@ -29,6 +30,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     const account = await registerAccount(parsed.data);
     let verificatieMailVerstuurd = true;
     try {
+      // de taal die de werker zelf koos (cookie), onthouden voor zijn mails en pushes; nooit een gok, nooit overschrijven
+      await onthoudAanmeldTaal(account.userId, parsed.data.type);
       const mail = await sendVerificationEmail(account.userId, account.email, parsed.data.fullName);
       // Een wachttijd (sent: false) is geen fout: er ging net al een mail uit.
       if (mail.sent && !mail.delivered) {

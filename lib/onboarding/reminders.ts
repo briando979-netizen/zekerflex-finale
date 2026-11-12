@@ -81,7 +81,7 @@ async function herinneringActie(u: HerinneringUser, stage: number, handmatig = f
     if (mist && mist.length === 0) return null;
     if (mist) {
       const taal = await userLocale(u.id);
-      const h = werkerHerinnering(mist, HERINNERING_TEKSTEN[taal], u.fullName.split(" ")[0] || u.fullName, stap);
+      const h = werkerHerinnering(mist, HERINNERING_TEKSTEN[taal], u.fullName.split(" ")[0] || u.fullName, stap, taal);
       const kind = (await getFiscal(u.id).catch(() => null))?.workerKind === "uitzendkracht" ? "uitzendkracht" : "freelancer";
       return async () => {
         const result = await sendMail({ ...onboardingReminderEmail(u.fullName, kind, env.APP_BASE_URL, stap, undefined, h), to: u.email });

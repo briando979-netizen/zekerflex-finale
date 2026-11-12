@@ -2,7 +2,10 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { kvGet, kvSet } from "@/lib/storage/kv";
-import { aanmeldingCompleetEmail, isReservedTestAddress, sendMail, type AanmeldingCompleetSoort } from "@/lib/mail";
+import { isReservedTestAddress, sendMail } from "@/lib/mail";
+import { aanmeldingCompleetEmailT, type AanmeldingCompleetSoort } from "@/lib/mail/werker/aanmelding-compleet";
+import { mailTaalVoorWerker } from "@/lib/mail/taal";
+import { FOUTEN } from "@/lib/i18n/fouten";
 import { kanReagerenOpKlussen } from "@/lib/onboarding/kan-reageren";
 import { idMeldingStand } from "@/lib/onboarding/id-geverifieerd";
 
@@ -90,8 +93,11 @@ export async function meldAanmeldingCompleet(userId: string, now = new Date()): 
     // een testaccount (.test/.example/…) krijgt geen echte mail
     let mail = false;
     if (!isReservedTestAddress(user.email)) {
+      const taal = await mailTaalVoorWerker(userId);
+      // de reden is Nederlands; met een sleutel (lib/fiscal/eligibility.ts) vertalen we hem naar de taal van de werker
+      const reden = (reageren?.sleutel && taal !== "nl" ? FOUTEN[reageren.sleutel]?.[taal] : undefined) ?? reageren?.reden ?? null;
       const r = await sendMail({
-        ...aanmeldingCompleetEmail({ fullName: user.fullName, appUrl: env.APP_BASE_URL, soort, reden: reageren?.reden ?? null }),
+        ...aanmeldingCompleetEmailT({ fullName: user.fullName, appUrl: env.APP_BASE_URL, soort, reden }, taal),
         to: user.email,
       }).catch(() => null);
       mail = Boolean(r?.delivered);

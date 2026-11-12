@@ -182,6 +182,8 @@ export const HERINNERING_TEKSTEN: Record<Locale, HerinneringTeksten> = {
 };
 
 export interface WerkerHerinnering {
+  /** de taal van de mail (voor het lang-attribuut en de regel onderaan) */
+  taal?: Locale;
   onderwerp: string;
   aanhef: string;
   intro: string;
@@ -196,10 +198,11 @@ export interface WerkerHerinnering {
 }
 
 /** De herinnering in de taal van de werker, voor deze ontbrekende onderdelen; stap 3 of hoger = "laatste herinnering". */
-export function werkerHerinnering(mist: MistStuk[], t: HerinneringTeksten, voornaam: string, stap: number): WerkerHerinnering {
+export function werkerHerinnering(mist: MistStuk[], t: HerinneringTeksten, voornaam: string, stap: number, taal?: Locale): WerkerHerinnering {
   const items = mist.map((m) => ({ tekst: t.stuk[m], href: MIST_HREF[m] }));
   const lijst = items.map((i) => i.tekst).join("; ");
   return {
+    ...(taal ? { taal } : {}),
     onderwerp: stap >= 3 ? t.onderwerpLaatste : t.onderwerp,
     aanhef: vulIn(t.aanhef, { naam: voornaam }),
     intro: t.intro,

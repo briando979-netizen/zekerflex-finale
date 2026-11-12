@@ -3,7 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
-import { sendMail, accountDeletionEmail } from "@/lib/mail";
+import { sendMail } from "@/lib/mail";
+import { mailTaalVoorWerker } from "@/lib/mail/taal";
+import { accountDeletionEmailT } from "@/lib/mail/werker/account-wissen";
 import { fixedWindow, privateRateLimitIdentifier } from "@/lib/rate-limit";
 import { anonymizeUser, type ErasureReport } from "@/lib/privacy/anonymize";
 import type { Vertrekreden } from "@/lib/privacy/vertrekredenen";
@@ -37,7 +39,8 @@ export async function requestAccountDeletion(rawEmail: string): Promise<void> {
   });
 
   const link = `${env.APP_BASE_URL.replace(/\/+$/, "")}/account-verwijderen/bevestigen?token=${token}`;
-  const tpl = accountDeletionEmail(user.fullName, link);
+  const taal = await mailTaalVoorWerker(user.id);
+  const tpl = accountDeletionEmailT(user.fullName, link, taal);
   const res = await sendMail({ ...tpl, to: user.email }).catch(() => null);
 
   await recordAudit({

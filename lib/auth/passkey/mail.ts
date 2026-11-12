@@ -5,8 +5,10 @@ import { logger } from "@/lib/logger";
 import { sendMail } from "@/lib/mail";
 import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
 import { fixedWindow } from "@/lib/rate-limit";
-import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
 import { PasskeyFout } from "@/lib/auth/passkey/fout";
+import { mailTaalVoorWerker } from "@/lib/mail/taal";
+import type { MailTaal } from "@/lib/mail/vorm";
+import { mailTijdstip, passkeyCodeMailT, passkeyMeldingMailT } from "@/lib/mail/werker/passkey";
 
 // ---------------------------------------------------------------------------
 // Mail rond passkeys.
@@ -65,12 +67,9 @@ export async function stuurPasskeyMailcode(userId: string, now = Date.now()): Pr
   const rec: Wachtend = { codeHmac: hmac(userId, code), expiresAt: now + TTL_MS, pogingen: 0 };
   await kvSet(sleutel(userId), rec);
 
-  const res = await sendMail({
-    to: user.email,
-    subject: "Je bevestigingscode voor een nieuwe passkey",
-    kind: "passkey-code",
-    text: `Hoi ${voornaam(user.fullName)},\n\nJe wilt een passkey toevoegen aan je ZekerFlex-account (inloggen met je vingerafdruk, gezicht of pincode). Vul deze code in om dat te bevestigen; hij is 15 minuten geldig:\n\n${code}\n\nHeb jij dit niet gedaan? Negeer deze mail: zonder de code komt er geen passkey bij. Wijzig voor de zekerheid je wachtwoord.`,
-  }).catch(() => null);
+  const taal = await mailTaalVoorWerker(userId);
+  const { subject, text } = passkeyCodeMailT(voornaam(user.fullName), code, taal);
+  const res = await sendMail({ to: user.email, subject, kind: "passkey-code", text }).catch(() => null);
   if (!res?.delivered) {
     await kvDelete(sleutel(userId));
     throw new PasskeyFout("PASSKEY_MAIL_MISLUKT", "De code kon niet worden verstuurd. Probeer het later opnieuw.", 503);
@@ -96,12 +95,9 @@ export async function controleerPasskeyMailcode(userId: string, code: string, no
   await kvDelete(sleutel(userId)); // eenmalig
 }
 
-const MAANDEN = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
-
 /** "9 november 2026 om 15:04" in Nederlandse tijd (de server draait in UTC). */
 export function nlTijdstip(d: Date): string {
-  const p = amsterdamParts(d);
-  return `${p.day} ${MAANDEN[p.month - 1] ?? ""} ${p.year} om ${amsterdamClock(d)}`;
+  return mailTijdstip(d, "nl");
 }
 
 /** Waar beheert deze gebruiker zijn passkeys? Een werker in zijn app, anders in de werkgeversomgeving. */
@@ -119,39 +115,32 @@ export interface PasskeyMelding {
   tijdstip: Date;
 }
 
-/** Onderwerp en tekst van de melding (puur, voor de test). */
-export function passkeyMeldingMail(m: PasskeyMelding, basis: string): { subject: string; text: string } {
+/** Onderwerp en tekst van de melding (puur, voor de test). Standaard Nederlands; een werker krijgt zijn app-taal. */
+export function passkeyMeldingMail(m: PasskeyMelding, basis: string, taal: MailTaal = "nl"): { subject: string; text: string } {
   const schoon = basis.replace(/\/+$/, "");
-  const link = `${schoon}${passkeyAccountPad(m.rollen)}`;
-  const hoi = `Hoi ${voornaam(m.fullName)},\n\n`;
-  const wasJijDitNiet = `\n\nWas jij dit niet? Verwijder de passkey in je account en wijzig je wachtwoord:\n${link}`;
-  const wanneer = nlTijdstip(m.tijdstip);
-  if (m.wat === "herstel") {
-    return {
-      subject: "Je passkeys zijn verwijderd na het herstellen van je wachtwoord",
-      text: `${hoi}Je wachtwoord is opnieuw ingesteld op ${wanneer}. Voor je veiligheid hebben we daarom al je passkeys verwijderd (${m.toestel}). Je kunt ze opnieuw toevoegen in je account:\n${link}\n\nWas jij dit niet? Vraag dan meteen een nieuw wachtwoord aan:\n${schoon}/wachtwoord-vergeten`,
-    };
+  return passkeyMeldingMailT(
+    { wat: m.wat, voornaam: voornaam(m.fullName), toestel: m.toestel, wanneer: mailTijdstip(m.tijdstip, taal), link: `${schoon}${passkeyAccountPad(m.rollen)}`, basis: schoon },
+    taal,
+  );
+}
+
+async function taalVoorAdres(email: string): Promise<MailTaal> {
+  try {
+    const lid = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+    return lid ? await mailTaalVoorWerker(lid.id) : "nl";
+  } catch {
+    return "nl";
   }
-  if (m.wat === "tweestaps") {
-    return {
-      subject: "Tweestapsverificatie staat aan, je passkeys blijven werken",
-      text: `${hoi}Tweestapsverificatie is aangezet op ${wanneer}. Je passkeys blijven werken (${m.toestel}): een passkey vraagt altijd je vingerafdruk, gezicht of pincode en telt daarom zelf als tweestapsverificatie.${wasJijDitNiet}`,
-    };
-  }
-  const zin =
-    m.wat === "toegevoegd"
-      ? `Er is een passkey toegevoegd aan je ZekerFlex-account: ${m.toestel}, op ${wanneer}. Met dit toestel kun je nu inloggen met je vingerafdruk, gezicht of pincode.`
-      : `Er is een passkey verwijderd uit je ZekerFlex-account: ${m.toestel}, op ${wanneer}. Met dit toestel log je weer in met je wachtwoord.`;
-  return {
-    subject: m.wat === "toegevoegd" ? "Er is een passkey toegevoegd aan je account" : "Er is een passkey verwijderd uit je account",
-    text: `${hoi}${zin}${wasJijDitNiet}`,
-  };
 }
 
 /** Stuur de melding; een fout wordt gelogd en verder genegeerd (het toevoegen of verwijderen is al gebeurd). */
 export async function meldPasskeyWijziging(m: PasskeyMelding): Promise<void> {
   try {
-    const { subject, text } = passkeyMeldingMail(m, env.APP_BASE_URL);
+    // alleen een werker (uitsluitend FREELANCER) krijgt de melding in zijn app-taal; het adres is uniek
+    const werker = m.rollen.length > 0 && m.rollen.every((r) => r === "FREELANCER");
+    // een storing in de opzoeking geeft Nederlands: de melding mag nooit wegblijven
+    const taal = werker ? await taalVoorAdres(m.email) : "nl";
+    const { subject, text } = passkeyMeldingMail(m, env.APP_BASE_URL, taal);
     const res = await sendMail({ to: m.email, subject, text, kind: `passkey-${m.wat}` });
     if (!res.delivered) logger.warn("passkey: melding niet bezorgd", { wat: m.wat, error: res.error });
   } catch (err) {

@@ -15,6 +15,15 @@ export async function setUserLocale(userId: string, locale: Locale): Promise<voi
   await kvSet(key(userId), { locale, at: new Date().toISOString() });
 }
 
+/** Is er al een taal bewaard (gekozen) voor deze gebruiker? Dan overschrijven we hem nooit. */
+export async function heeftBewaardeTaal(userId: string): Promise<boolean> {
+  try {
+    return isLocale((await kvGet<{ locale?: unknown }>(key(userId)))?.locale);
+  } catch {
+    return false;
+  }
+}
+
 export async function userLocale(userId: string): Promise<Locale> {
   let row: { locale?: unknown } | null = null;
   try {

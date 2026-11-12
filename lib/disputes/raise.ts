@@ -4,7 +4,9 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
-import { sendMail, hoursCorrectionProposedEmail } from "@/lib/mail";
+import { sendMail } from "@/lib/mail";
+import { hoursCorrectionProposedEmailT } from "@/lib/mail/werker/geschil";
+import { mailTaalVoorWerker } from "@/lib/mail/taal";
 import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { runAfter } from "@/lib/run-after";
 import { assertBranchAccess, type Principal } from "@/lib/auth";
@@ -151,12 +153,13 @@ export async function proposeHoursCorrection(input: {
   const freelancerEmail = ts.freelancer.user.email;
   if (freelancerEmail) {
     const link = `${env.APP_BASE_URL.replace(/\/+$/, "")}/dashboard/uren/${ts.id}`;
-    const tpl = hoursCorrectionProposedEmail(
+    const tpl = hoursCorrectionProposedEmailT(
       ts.freelancer.user.fullName,
       link,
-      ts.assignment?.shift?.title ?? "je dienst",
+      ts.assignment?.shift?.title ?? null,
       ts.billableMinutes / 60,
       input.proposedMinutes / 60,
+      await mailTaalVoorWerker(ts.freelancer.userId),
     );
     await sendMail({ ...tpl, to: freelancerEmail }).catch((err) =>
       logger.warn("hours correction: notify failed", { timesheetId: ts.id, error: (err as Error).message }),

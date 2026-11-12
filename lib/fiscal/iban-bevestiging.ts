@@ -6,6 +6,8 @@ import { sendMail } from "@/lib/mail";
 import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
 import { fixedWindow } from "@/lib/rate-limit";
 import { hasTwoFactor, verifySecondFactor } from "@/lib/auth/two-factor";
+import { mailTaalVoorWerker } from "@/lib/mail/taal";
+import { ibanCodeMailT } from "@/lib/mail/werker/iban-code";
 
 // ---------------------------------------------------------------------------
 // Een ander rekeningnummer voor uitbetalingen vraagt een tweede bewijs: een
@@ -104,12 +106,9 @@ async function stuurCode(userId: string, nieuwIban: string, now: number): Promis
   await kvSet(key(userId), rec);
 
   const first = user.fullName.split(" ")[0] || user.fullName;
-  const res = await sendMail({
-    to: user.email,
-    subject: "Je bevestigingscode voor een nieuw rekeningnummer",
-    kind: "iban-wijziging-code",
-    text: `Hoi ${first},\n\nJe wilt je rekeningnummer voor uitbetalingen wijzigen naar ${gemaskeerd(nieuwIban)}. Vul deze code in om dat te bevestigen; hij is 15 minuten geldig:\n\n${code}\n\nHeb jij dit niet gedaan? Verander dan direct je wachtwoord en negeer deze mail: zonder de code verandert er niets aan je uitbetalingen.`,
-  }).catch(() => null);
+  const taal = await mailTaalVoorWerker(userId);
+  const { subject, text } = ibanCodeMailT(first, gemaskeerd(nieuwIban), code, taal);
+  const res = await sendMail({ to: user.email, subject, kind: "iban-wijziging-code", text }).catch(() => null);
   if (!res?.delivered) {
     await kvDelete(key(userId));
     return nee(503, "IBAN_MAIL_MISLUKT", "De code kon niet worden verstuurd. Probeer het later opnieuw.");

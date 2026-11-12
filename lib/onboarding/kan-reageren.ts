@@ -14,6 +14,8 @@ export interface KanReageren {
   ok: boolean;
   /** wat er nog ontbreekt, in gewone taal (uit lib/fiscal/eligibility.ts); null = onbekend of niets */
   reden: string | null;
+  /** sleutel van de reden voor de vertaling (lib/i18n/fouten.ts), als eligibility die gaf */
+  sleutel?: string;
 }
 
 export async function kanReagerenOpKlussen(userId: string, now = new Date()): Promise<KanReageren> {
@@ -26,7 +28,7 @@ export async function kanReagerenOpKlussen(userId: string, now = new Date()): Pr
     ]);
     if (!user || user.kycStatus !== "VERIFIED" || !profiel) return { ok: false, reden: null };
     if (!poort.klaar) return { ok: false, reden: null };
-    if (!eligibility.ok) return { ok: false, reden: eligibility.reason };
+    if (!eligibility.ok) return { ok: false, reden: eligibility.reason, ...(eligibility.sleutel ? { sleutel: eligibility.sleutel } : {}) };
     if (profiel.isBlacklisted) return { ok: false, reden: null };
     if (profiel.matchingBlockedUntil && profiel.matchingBlockedUntil.getTime() > now.getTime()) return { ok: false, reden: null };
     return { ok: true, reden: null };

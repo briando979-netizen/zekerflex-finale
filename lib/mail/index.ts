@@ -6,7 +6,15 @@ import { sendViaSmtp, type SmtpConfig } from "@/lib/mail/smtp";
 import type { ImapConfig } from "@/lib/mail/imap";
 import { readSentMessage, saveSentMessage, type SentRecord } from "@/lib/mail/store";
 import { EMAIL_LOGO_PNG_BASE64 } from "@/lib/mail/logo";
-import { BRAND, LOGO_CID, button, escapeHtml, shell } from "@/lib/mail/vorm";
+import { BRAND, LOGO_CID, button, escapeHtml, shell, type MailTaal } from "@/lib/mail/vorm";
+import { verificationEmailT } from "@/lib/mail/werker/verificatie";
+import { passwordResetEmailT } from "@/lib/mail/werker/wachtwoord";
+import { accountDeletionEmailT } from "@/lib/mail/werker/account-wissen";
+import { welcomeEmailT } from "@/lib/mail/werker/welkom";
+import { idGeverifieerdEmailT } from "@/lib/mail/werker/id-geverifieerd";
+import { aanmeldingCompleetEmailT, type AanmeldingCompleetSoort } from "@/lib/mail/werker/aanmelding-compleet";
+import { klusVoorstelEmailT } from "@/lib/mail/werker/klusvoorstel";
+import { hoursCorrectionProposedEmailT } from "@/lib/mail/werker/geschil";
 
 export { escapeHtml };
 import { categoryBySlug, isAutomatedKind, isOptionalCategory, mailCategoryForKind } from "@/lib/mail/categories";
@@ -404,50 +412,9 @@ export function mailButton(href: string, label: string): string {
   return button(href, label);
 }
 
-export function verificationEmail(fullName: string, link: string, code?: string): MailInput {
-  const first = fullName.split(" ")[0] || fullName;
-  const e = escapeHtml;
-  const codeText = code ? `\n\nTyp op de bevestigingspagina deze code in: ${code}` : "";
-  const codeHtml = code
-    ? `<p style="margin:0 0 8px;font-size:13px;color:#667469">Liever een code? Typ deze in op de bevestigingspagina:</p>
-       <p style="margin:0 0 20px;font-size:30px;font-weight:700;letter-spacing:6px;color:#0E5C4A;font-family:Consolas,Menlo,monospace">${e(code)}</p>`
-    : "";
-  return {
-    to: "",
-    subject: `Je ZekerFlex-bevestigingscode${code ? `: ${code}` : ""}`,
-    kind: "verification",
-    text: `Hoi ${first},
-
-Bevestig je e-mailadres om je ZekerFlex-account te activeren. Open daarvoor deze link:
-${link}${codeText}
-
-De link en de code zijn 24 uur geldig. Is de link verlopen? Log in op zekerflex.com en vraag op het bevestigingsscherm een nieuwe aan.
-
-Heb je geen account bij ZekerFlex aangemaakt? Dan hoef je niets te doen: zonder bevestiging wordt er niets geactiveerd.`,
-    html: shell(
-      "Bevestig je e-mailadres",
-      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${e(first)}, welkom bij ZekerFlex. Bevestig je e-mailadres om je account te activeren.</p>
-       <p style="margin:0 0 20px">${button(link, "E-mailadres bevestigen")}</p>
-       ${codeHtml}
-       <p style="margin:0;font-size:12px;color:#667469">Werkt de knop niet? Kopieer deze link in je browser:<br><span style="word-break:break-all">${e(link)}</span></p>
-       <p style="margin:16px 0 0;font-size:12px;color:#667469">De link en de code zijn 24 uur geldig. Is de link verlopen? Log in en vraag op het bevestigingsscherm een nieuwe aan.</p>
-       <p style="margin:16px 0 0;font-size:12px;color:#667469">Heb je geen account bij ZekerFlex aangemaakt? Dan hoef je niets te doen: zonder bevestiging wordt er niets geactiveerd.</p>`,
-      code
-        ? `Je code is ${code}. Of klik op de knop om je account te activeren (24 uur geldig).`
-        : "Klik op de knop om je account te activeren (24 uur geldig).",
-    ),
-  };
+export function verificationEmail(fullName: string, link: string, code?: string, taal: MailTaal = "nl"): MailInput {
+  return verificationEmailT(fullName, link, code, taal);
 }
-
-/** Uitleg voor nieuwe gebruikers zolang ZekerFlex nog niet officieel online is (vlag welkom-ontwikkelingsnotitie). */
-const ONTWIKKELING_NL =
-  "ZekerFlex is nog in ontwikkeling. De klussen die je ziet zijn testklussen: geen echt werk, je hoeft er niet heen en er hoort geen betaling bij. Begin volgend jaar gaan we online. Je kunt nu al proeven en bekijken hoe het er straks uitziet.";
-const ONTWIKKELING_TALEN: { taal: string; tekst: string }[] = [
-  { taal: "English", tekst: "ZekerFlex is still in development and the jobs you see are test jobs: no real work, no payment. We go online early next year." },
-  { taal: "Polski", tekst: "ZekerFlex jest nadal w rozwoju, a zlecenia, które widzisz, to zlecenia testowe: bez prawdziwej pracy i bez płatności. Na początku przyszłego roku wystartujemy online." },
-  { taal: "Română", tekst: "ZekerFlex este încă în dezvoltare, iar joburile pe care le vezi sunt joburi de test: fără muncă reală și fără plată. Pornim online la începutul anului viitor." },
-  { taal: "Українською", tekst: "ZekerFlex ще в розробці, а завдання, які ви бачите, — тестові: без справжньої роботи й без оплати. Ми запускаємося онлайн на початку наступного року." },
-];
 
 export function welcomeEmail(
   fullName: string,
@@ -455,44 +422,9 @@ export function welcomeEmail(
   appUrl: string,
   workerKind?: "zzp" | "flexwerker" | "uitzendkracht",
   opties: { ontwikkelingsnotitie?: boolean } = {},
+  taal: MailTaal = "nl",
 ): MailInput {
-  const first = fullName.split(" ")[0] || fullName;
-  const base = appUrl.replace(/\/+$/, "");
-  const next =
-    type === "bedrijf"
-      ? "Rond de onboarding van je organisatie af (KVK + eerste vestiging) en zet je eerste dienst uit."
-      : workerKind === "uitzendkracht"
-        ? "Rond je verificatie af (identiteit + rekeningnummer — geen KVK nodig) en bekijk de eerste klussen die bij je passen."
-        : "Rond je verificatie af (KVK of btw-nummer + identiteit) en bekijk de eerste klussen die bij je passen.";
-  const notitie = opties.ontwikkelingsnotitie === true;
-  const notitieTekst = notitie ? `\n\nGoed om te weten: ${ONTWIKKELING_NL}\n\n${ONTWIKKELING_TALEN.map((t) => `${t.taal}: ${t.tekst}`).join("\n")}` : "";
-  const notitieHtml = notitie
-    ? `<p style="margin:16px 0 0;padding:12px 14px;border-radius:8px;background:#F4F1E8;font-size:14px;line-height:1.6;color:#3C4A42"><strong>Goed om te weten:</strong> ${escapeHtml(ONTWIKKELING_NL)}</p>
-       ${ONTWIKKELING_TALEN.map((t) => `<p style="margin:8px 0 0;font-size:12px;line-height:1.5;color:#667469"><strong>${escapeHtml(t.taal)}:</strong> ${escapeHtml(t.tekst)}</p>`).join("")}`
-    : "";
-  return {
-    to: "",
-    subject: "Welkom bij ZekerFlex",
-    kind: "welcome",
-    text: `Hoi ${first},
-
-Je e-mailadres is bevestigd en je ZekerFlex-account is klaar.
-
-Volgende stap: ${next}
-
-Inloggen: ${base}/login${notitieTekst}
-
-Vragen? Mail support@zekerflex.com.`,
-    html: shell(
-      "Welkom bij ZekerFlex",
-      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${escapeHtml(first)}, je e-mailadres is bevestigd en je account is klaar. Fijn dat je er bent.</p>
-       <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42"><strong>Volgende stap:</strong> ${next}</p>
-       <p style="margin:0">${button(`${base}/login`, "Naar ZekerFlex")}</p>
-       ${notitieHtml}
-       <p style="margin:20px 0 0;font-size:12px;color:#667469">Vragen? Mail support@zekerflex.com.</p>`,
-      "Je account is klaar. Dit is je volgende stap.",
-    ),
-  };
+  return welcomeEmailT(fullName, type, appUrl, workerKind, opties, taal);
 }
 
 /** Reminder for an account that was created but not finished (data / verification). */
@@ -525,6 +457,7 @@ export function onboardingReminderEmail(
        <p style="margin:0">${button(eerste, werker.knop)}</p>
        <p style="margin:20px 0 0;font-size:12px;color:#667469">${escapeHtml(werker.hulp)}</p>`,
         werker.preheader,
+        werker.taal ?? "nl",
       ),
     };
   }
@@ -569,34 +502,11 @@ export function onboardingReminderEmail(
  * reageren" alleen als dat echt zo is (lib/onboarding/kan-reageren.ts); anders zeggen we alleen wat
  * voor het ID geldt. Valt onder "Tips" (kind "onboarding"): afmelden kan onderaan.
  */
-export function idGeverifieerdEmail(fullName: string, appUrl: string, kanReageren = false): MailInput {
-  const first = fullName.split(" ")[0] || fullName;
-  const href = `${appUrl.replace(/\/+$/, "")}/dashboard/eerste-indruk`;
-  const subject = "Je ID is geverifieerd";
-  const stand = kanReageren
-    ? "Je kunt vanaf nu reageren op klussen."
-    : "Je kunt op klussen reageren zodra de rest van je aanmelding klopt.";
-  return {
-    to: "",
-    subject,
-    kind: "onboarding",
-    text: `Hoi ${first},
-
-Je ID is geverifieerd. ${stand}
-
-Met een duidelijke profielfoto en je werkervaring kunnen opdrachtgevers je beter inschatten. Beide stappen zijn optioneel en kosten een paar minuten: ${href}`,
-    html: shell(
-      subject,
-      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${escapeHtml(first)}, je ID is geverifieerd.</p>
-       <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">${stand}</p>
-       <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#3C4A42">Met een duidelijke profielfoto en je werkervaring kunnen opdrachtgevers je beter inschatten. Beide stappen zijn optioneel en kosten een paar minuten.</p>
-       <p style="margin:0">${button(href, "Maak een goede eerste indruk")}</p>`,
-      stand,
-    ),
-  };
+export function idGeverifieerdEmail(fullName: string, appUrl: string, kanReageren = false, taal: MailTaal = "nl"): MailInput {
+  return idGeverifieerdEmailT(fullName, appUrl, kanReageren, taal);
 }
 
-export type AanmeldingCompleetSoort = "kan-reageren" | "nog-iets" | "id-in-controle";
+export type { AanmeldingCompleetSoort };
 
 /**
  * De werker heeft alle stappen van de start ingevuld (lib/onboarding/aanmelding-compleet.ts). Eén
@@ -604,56 +514,8 @@ export type AanmeldingCompleetSoort = "kan-reageren" | "nog-iets" | "id-in-contr
  * lib/fiscal/eligibility.ts, bijv. het IBAN), of we controleren nog het ID (dan volgt de mail
  * "Je ID is geverifieerd"). Over de eigen account: altijd bezorgd (geen optionele categorie).
  */
-export function aanmeldingCompleetEmail(input: {
-  fullName: string;
-  appUrl: string;
-  soort: AanmeldingCompleetSoort;
-  /** bij "nog-iets": wat er nog ontbreekt, in gewone taal */
-  reden?: string | null;
-}): MailInput {
-  const first = input.fullName.split(" ")[0] || input.fullName;
-  const basis = input.appUrl.replace(/\/+$/, "");
-  const klussen = `${basis}/dashboard/klussen`;
-  const subject =
-    input.soort === "kan-reageren"
-      ? "Je aanmelding is compleet: je kunt reageren op klussen"
-      : input.soort === "nog-iets"
-        ? "Je aanmelding is compleet: nog één ding"
-        : "We hebben je gegevens ontvangen";
-  const alineas =
-    input.soort === "kan-reageren"
-      ? ["Je gegevens zijn compleet en je ID is geverifieerd.", "Je kunt vanaf nu reageren op klussen."]
-      : input.soort === "nog-iets"
-        ? [
-            "Je gegevens zijn compleet en je ID is geverifieerd.",
-            input.reden ? `Nog één ding voordat je kunt reageren op klussen: ${input.reden}` : "Nog één ding voordat je kunt reageren op klussen: open de app, daar zie je wat er nog nodig is.",
-          ]
-        : [
-            "Bedankt, je aanmelding is compleet.",
-            "We controleren nu je ID. Zodra dat klaar is, krijg je van ons een mail. Je kunt alvast rondkijken welke klussen er zijn.",
-          ];
-  const knop = input.soort === "kan-reageren" ? "Bekijk de klussen" : input.soort === "nog-iets" ? "Open ZekerFlex" : "Kijk alvast rond";
-  const tip = "Met een duidelijke profielfoto en je werkervaring kiezen opdrachtgevers sneller voor jou.";
-  return {
-    to: "",
-    subject,
-    kind: "aanmelding-compleet",
-    text: `Hoi ${first},
-
-${alineas.join("\n\n")}
-
-${tip}
-
-${klussen}`,
-    html: shell(
-      subject,
-      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${escapeHtml(first)},</p>
-       ${alineas.map((a) => `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">${escapeHtml(a)}</p>`).join("\n       ")}
-       <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#3C4A42">${escapeHtml(tip)}</p>
-       <p style="margin:0">${button(klussen, knop)}</p>`,
-      alineas[alineas.length - 1] ?? subject,
-    ),
-  };
+export function aanmeldingCompleetEmail(input: { fullName: string; appUrl: string; soort: AanmeldingCompleetSoort; reden?: string | null }, taal: MailTaal = "nl"): MailInput {
+  return aanmeldingCompleetEmailT(input, taal);
 }
 
 /**
@@ -662,76 +524,19 @@ ${klussen}`,
  * passen" (klus-alerts): afmelden kan onderaan. Titel, vestiging en plaats komen
  * van de opdrachtgever en gaan dus door escapeHtml.
  */
-export function klusVoorstelEmail(input: {
-  fullName: string;
-  title: string;
-  branch: string;
-  city: string;
-  /** "maandag 10 november, 09:00–17:00" (Nederlandse tijd) */
-  when: string;
-  /** "€ 16,50" */
-  rate: string;
-  travelMinutes: number | null;
-  link: string;
-}): MailInput {
-  const first = input.fullName.split(" ")[0] || input.fullName;
-  const reis = input.travelMinutes && input.travelMinutes > 0 ? `, ongeveer ${input.travelMinutes} minuten reizen` : "";
-  const subject = `Er is een klus voor je: ${input.title} in ${input.city}`;
-  const e = escapeHtml;
-  return {
-    to: "",
-    subject,
-    kind: "klus-alert",
-    text: `Hoi ${first},
-
-Er is een klus die bij je past: ${input.title} bij ${input.branch} in ${input.city}, ${input.when}, ${input.rate} per uur${reis}.
-
-Bekijk hem en reageer: ${input.link}
-
-Wie het eerst reageert, maakt de meeste kans. Wil je dit voortaan op je telefoon zien? Zet in de app meldingen aan.`,
-    html: shell(
-      "Er is een klus voor je",
-      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${e(first)}, er is een klus die bij je past:</p>
-       <p style="margin:0 0 6px;font-size:16px;font-weight:700;color:#17211C">${e(input.title)}</p>
-       <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#3C4A42">${e(input.branch)}, ${e(input.city)}<br>${e(input.when)}<br>${e(input.rate)} per uur${e(reis)}</p>
-       <p style="margin:0">${button(input.link, "Bekijk de klus")}</p>
-       <p style="margin:20px 0 0;font-size:12px;color:#667469">Wie het eerst reageert, maakt de meeste kans. Wil je dit voortaan meteen op je telefoon zien? Zet in de app meldingen aan.</p>`,
-    ),
-  };
+export function klusVoorstelEmail(
+  input: { fullName: string; title: string; branch: string; city: string; when: string; rate: string; travelMinutes: number | null; link: string },
+  taal: MailTaal = "nl",
+): MailInput {
+  return klusVoorstelEmailT(input, taal);
 }
 
-export function passwordResetEmail(fullName: string, link: string): MailInput {
-  const first = fullName.split(" ")[0] || fullName;
-  return {
-    to: "",
-    subject: "Stel je ZekerFlex-wachtwoord opnieuw in",
-    kind: "wachtwoord-reset",
-    text: `Hoi ${first},\n\nJe hebt gevraagd om je wachtwoord opnieuw in te stellen. Klik op de link hieronder; hij is 1 uur geldig.\n\n${link}\n\nHeb je dit niet aangevraagd? Dan kun je deze mail negeren — je wachtwoord blijft ongewijzigd.`,
-    html: shell(
-      "Wachtwoord opnieuw instellen",
-      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${first}, je hebt gevraagd om je wachtwoord opnieuw in te stellen. De link is 1 uur geldig.</p>
-       <p style="margin:0 0 20px">${button(link, "Wachtwoord opnieuw instellen")}</p>
-       <p style="margin:0;font-size:12px;color:#667469">Werkt de knop niet? Kopieer deze link:<br><span style="word-break:break-all">${link}</span></p>
-       <p style="margin:16px 0 0;font-size:12px;color:#667469">Heb je dit niet aangevraagd? Negeer deze mail — je wachtwoord blijft ongewijzigd.</p>`,
-    ),
-  };
+export function passwordResetEmail(fullName: string, link: string, taal: MailTaal = "nl"): MailInput {
+  return passwordResetEmailT(fullName, link, taal);
 }
 
-export function accountDeletionEmail(fullName: string, link: string): MailInput {
-  const first = fullName.split(" ")[0] || fullName;
-  return {
-    to: "",
-    subject: "Bevestig het verwijderen van je ZekerFlex-account",
-    kind: "account-verwijdering-bevestiging",
-    text: `Hoi ${first},\n\nJe hebt gevraagd om je ZekerFlex-account te laten verwijderen. Klik op de link hieronder om dit te bevestigen; hij is 1 uur geldig. Je ziet daar precies welke gegevens meteen verwijderd worden en welke we (deels) moeten bewaren vanwege wettelijke bewaarplicht.\n\n${link}\n\nHeb je dit niet aangevraagd? Dan kun je deze mail negeren — er verandert niets aan je account.`,
-    html: shell(
-      "Account verwijderen bevestigen",
-      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${first}, je hebt gevraagd om je ZekerFlex-account te laten verwijderen. Klik op de knop om dit te bevestigen; de link is 1 uur geldig. Daar zie je precies welke gegevens meteen verwijderd worden en welke we (deels) moeten bewaren vanwege wettelijke bewaarplicht.</p>
-       <p style="margin:0 0 20px">${button(link, "Verwijdering bevestigen")}</p>
-       <p style="margin:0;font-size:12px;color:#667469">Werkt de knop niet? Kopieer deze link:<br><span style="word-break:break-all">${link}</span></p>
-       <p style="margin:16px 0 0;font-size:12px;color:#667469">Heb je dit niet aangevraagd? Negeer deze mail — er verandert niets aan je account.</p>`,
-    ),
-  };
+export function accountDeletionEmail(fullName: string, link: string, taal: MailTaal = "nl"): MailInput {
+  return accountDeletionEmailT(fullName, link, taal);
 }
 
 export function invoiceIssuedEmail(
@@ -778,23 +583,9 @@ export function hoursCorrectionProposedEmail(
   shiftTitle: string,
   claimedHours: number,
   proposedHours: number,
+  taal: MailTaal = "nl",
 ): MailInput {
-  const first = fullName.split(" ")[0] || fullName;
-  const claimed = claimedHours.toFixed(2).replace(".", ",");
-  const proposed = proposedHours.toFixed(2).replace(".", ",");
-  return {
-    to: "",
-    subject: `Voorstel voor correctie van je uren — ${shiftTitle}`,
-    kind: "uren-correctie-voorstel",
-    text: `Hoi ${first},\n\nDe opdrachtgever van "${shiftTitle}" wil je ingediende uren corrigeren: van ${claimed} naar ${proposed} uur. Dit gaat pas door als jij hiermee akkoord gaat.\n\nBekijk het voorstel en reageer:\n${link}\n\nBen je het er niet mee eens? Dan kun je weigeren — het gaat dan naar ZekerFlex voor een onafhankelijke beoordeling.`,
-    html: shell(
-      "Voorstel voor correctie van je uren",
-      `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${first}, de opdrachtgever van <strong>${shiftTitle}</strong> wil je ingediende uren corrigeren: van <strong>${claimed}</strong> naar <strong>${proposed}</strong> uur. Dit gaat pas door als jij hiermee akkoord gaat.</p>
-       <p style="margin:0 0 20px">${button(link, "Bekijk voorstel")}</p>
-       <p style="margin:0;font-size:12px;color:#667469">Werkt de knop niet? Kopieer deze link:<br><span style="word-break:break-all">${link}</span></p>
-       <p style="margin:16px 0 0;font-size:12px;color:#667469">Ben je het er niet mee eens? Dan kun je weigeren — het gaat dan naar ZekerFlex voor een onafhankelijke beoordeling.</p>`,
-    ),
-  };
+  return hoursCorrectionProposedEmailT(fullName, link, shiftTitle, claimedHours, proposedHours, taal);
 }
 
 /** "…@domein.nl" per ontvanger: genoeg om een bezorgprobleem per domein te zien, zonder het adres zelf. */
