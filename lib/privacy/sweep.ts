@@ -8,6 +8,7 @@ import { deleteUpload } from "@/lib/storage/local";
 import { isOpgeschoond, kycOpschonen, kycUploadIds } from "@/lib/privacy/kyc-fotos";
 import { ruimChatlogOp } from "@/lib/learn/store";
 import { ruimWeesrekeningenOp } from "@/lib/privacy/bank-wissen";
+import { ruimBsnVoorstellenOp } from "@/lib/fiscal/bsn-voorstel";
 
 // ---------------------------------------------------------------------------
 // Retention sweep.
@@ -165,6 +166,12 @@ export async function runRetentionSweep(
   // gemeten 12 nov: 8 stuks). Een storing laat de rest van de sweep doorlopen.
   cleared.bank_wezen = await ruimWeesrekeningenOp({ dryRun, nu: now }).catch((err) => {
     logger.warn("retention sweep: bankrekeningen niet opgeruimd", { soort: err instanceof Error ? err.name : "onbekend" });
+    return 0;
+  });
+
+  // Een BSN van het ID dat na 30 dagen nog niet is bevestigd (lib/fiscal/bsn-voorstel.ts); een bevestigd BSN blijft.
+  cleared.bsn_voorstel = await ruimBsnVoorstellenOp(now, dryRun).catch((err) => {
+    logger.warn("retention sweep: bsn-voorstellen niet opgeruimd", { soort: err instanceof Error ? err.name : "onbekend" });
     return 0;
   });
 

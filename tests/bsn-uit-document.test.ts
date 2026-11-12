@@ -83,7 +83,7 @@ describe("BSN van het document (13 nov)", () => {
 
   it("alleen voor een uitzendkracht die nog geen BSN heeft", () => {
     const v = hashBsn(BSN);
-    expect(bsnVoorstelPatch({ workerKind: "uitzendkracht", bsnHash: null }, v)).toEqual({ bsnVoorstelHash: v.hash, bsnVoorstelLast4: "9990" });
+    expect(bsnVoorstelPatch({ workerKind: "uitzendkracht", bsnHash: null }, v, NU)).toEqual({ bsnVoorstelHash: v.hash, bsnVoorstelLast4: "9990", bsnVoorstelAt: NU.toISOString() });
     expect(bsnVoorstelPatch({ workerKind: "zzp", bsnHash: null }, v)).toBeNull();
     expect(bsnVoorstelPatch({ workerKind: "flexwerker", bsnHash: null }, v)).toBeNull();
     expect(bsnVoorstelPatch({ workerKind: null, bsnHash: null }, v)).toBeNull();
