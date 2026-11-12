@@ -70,9 +70,71 @@ function BsnVeld({ loonheffingskorting }: { loonheffingskorting: boolean }) {
   );
 }
 
-export function GegevensMist({ mist, soort, loonheffingskorting }: { mist: GegevensStuk[]; soort: "zzp" | "flexwerker" | "uitzendkracht" | null; loonheffingskorting: boolean }) {
+/**
+ * Het BSN dat van het ID is gelezen (lib/kyc/bsn-uit-document.ts): de werker ziet alleen de laatste 4 en bevestigt het
+ * zelf (AVG: hij weet wat we lazen, en een leesfout valt zo op). "Nee" laat het gewone veld zien.
+ */
+function BsnVoorstelVraag({ laatste4, loonheffingskorting, zelf }: { laatste4: string; loonheffingskorting: boolean; zelf: () => void }) {
+  const router = useRouter();
+  const t = useFT().gegevensMist.bsn;
+  const [busy, setBusy] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
+
+  async function ja() {
+    if (busy) return;
+    setBusy(true);
+    setFout(null);
+    try {
+      const res = await fetch("/api/me/fiscal", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workerKind: "uitzendkracht", bsnVoorstelOk: true, loonheffingskorting }),
+      });
+      const d = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+      if (!res.ok) setFout(d.error?.message ?? t.mislukt);
+      else {
+        router.refresh();
+        document.getElementById("gegevens-mist-kop")?.focus();
+      }
+    } catch {
+      setFout(t.mislukt);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-2">
+      <p className="text-sm text-ink">{vulIn(t.voorstel, { laatste4 })}</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <button type="button" onClick={() => void ja()} disabled={busy} className="btn-primary min-h-[44px] px-4 py-2 text-sm disabled:opacity-50">
+          {busy ? t.bezig : t.voorstelJa}
+        </button>
+        <button type="button" onClick={zelf} disabled={busy} className="btn-ghost min-h-[44px] px-4 py-2 text-sm">
+          {t.voorstelNee}
+        </button>
+      </div>
+      {fout && <p role="alert" className="mt-1.5 text-xs text-crit">{fout}</p>}
+    </div>
+  );
+}
+
+export function GegevensMist({
+  mist,
+  soort,
+  loonheffingskorting,
+  bsnVoorstel = null,
+}: {
+  mist: GegevensStuk[];
+  soort: "zzp" | "flexwerker" | "uitzendkracht" | null;
+  loonheffingskorting: boolean;
+  /** de laatste 4 van het BSN dat van het ID is gelezen, nog niet bevestigd */
+  bsnVoorstel?: string | null;
+}) {
   const t = useFT().gegevensMist;
+  const [zelfInvullen, setZelfInvullen] = useState(false);
   if (mist.length === 0) return null;
+  const vraagVoorstel = Boolean(bsnVoorstel) && !zelfInvullen;
   return (
     <section aria-labelledby="gegevens-mist-kop" className="mb-6 rounded-2xl border border-warn/40 bg-warn/5 p-5">
       <h2 id="gegevens-mist-kop" tabIndex={-1} className="font-display text-base font-bold text-ink focus:outline-none">
@@ -82,9 +144,13 @@ export function GegevensMist({ mist, soort, loonheffingskorting }: { mist: Gegev
       <ul className="mt-4 space-y-4">
         {mist.includes("bsn") && (
           <li>
-            <p className="text-sm font-semibold text-ink">{t.bsn.kop}</p>
+            <p className="text-sm font-semibold text-ink">{vraagVoorstel ? t.bsn.voorstelKop : t.bsn.kop}</p>
             <p className="text-xs text-neutralx-600">{t.bsn.hint}</p>
-            <BsnVeld loonheffingskorting={loonheffingskorting} />
+            {vraagVoorstel && bsnVoorstel ? (
+              <BsnVoorstelVraag laatste4={bsnVoorstel} loonheffingskorting={loonheffingskorting} zelf={() => setZelfInvullen(true)} />
+            ) : (
+              <BsnVeld loonheffingskorting={loonheffingskorting} />
+            )}
           </li>
         )}
         {mist.includes("contract") && (

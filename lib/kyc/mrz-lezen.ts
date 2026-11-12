@@ -7,12 +7,14 @@
 //
 // Privacy: de gelezen tekst bevat het BSN (vrij veld). Hij verlaat deze functie
 // nooit en komt in geen log; terug gaat alleen de uitslag van lib/kyc/mrz.ts,
-// waar het vrije veld al uit is.
+// waar het vrije veld al uit is, en van een Nederlands document een voorstel
+// voor het BSN als hash + laatste 4 (lib/kyc/bsn-uit-document.ts).
 // ---------------------------------------------------------------------------
 
 import sharp from "sharp";
 import { leesMrzTekst } from "@/lib/ocr/engine";
-import { leesMrzUitTekst, type MrzUitslag } from "@/lib/kyc/mrz";
+import { leesMrz, zoekMrz, type MrzUitslag } from "@/lib/kyc/mrz";
+import { bsnVoorstelUitMrz, type BsnVoorstel } from "@/lib/kyc/bsn-uit-document";
 import { kaderInVideo } from "@/lib/kyc/camera-live";
 
 const MAX_PIXELS = 40_000_000;
@@ -23,6 +25,8 @@ const KADER_BREEDTE = 1400;
 export interface MrzLeesUitslag {
   /** de beste lezing, of null als er nergens een MRZ te vinden was */
   uitslag: MrzUitslag | null;
+  /** het BSN van een Nederlands document, alleen als hash + laatste 4 en alleen als alle controles kloppen */
+  bsn: BsnVoorstel | null;
   pogingen: number;
   ms: number;
 }
@@ -94,6 +98,7 @@ const score = (u: MrzUitslag): number => Object.values(u.controles).filter(Boole
 export async function leesMrzVanFoto(bytes: Buffer, nu: Date = new Date()): Promise<MrzLeesUitslag> {
   const t0 = Date.now();
   let beste: MrzUitslag | null = null;
+  let bsn: BsnVoorstel | null = null;
   let pogingen = 0;
   for (const maak of uitsneden(bytes).slice(0, MAX_POGINGEN)) {
     let png: Buffer;
@@ -104,11 +109,15 @@ export async function leesMrzVanFoto(bytes: Buffer, nu: Date = new Date()): Prom
     }
     pogingen++;
     const { tekst } = await leesMrzTekst(png);
-    const u = leesMrzUitTekst(tekst, nu);
-    if (u && (!beste || score(u) > score(beste))) beste = u;
+    const gevonden = zoekMrz(tekst);
+    const u = gevonden ? leesMrz(gevonden.formaat, gevonden.regels, nu) : null;
+    if (gevonden && u && (!beste || score(u) > score(beste))) {
+      beste = u;
+      bsn = bsnVoorstelUitMrz(gevonden.formaat, gevonden.regels, u);
+    }
     if (beste?.geldig) break;
   }
-  return { uitslag: beste, pogingen, ms: Date.now() - t0 };
+  return { uitslag: beste, bsn, pogingen, ms: Date.now() - t0 };
 }
 
 /** Wat de werker en de beheerder te zien krijgen: geen BSN, geen geboortedatum, geen ruwe tekst. */
