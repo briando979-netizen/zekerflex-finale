@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cookieStringIsApp } from "@/lib/app-mode";
@@ -70,6 +70,24 @@ export function CookieConsent() {
     return () => window.removeEventListener(REOPEN_EVENT, reopen);
   }, []);
 
+  // Ruimte onderaan zolang de melding open staat, even hoog als de melding: anders ligt de laatste knop van een
+  // pagina eronder, ook helemaal naar beneden gescrold (12 nov: "Organisatie aanmelden" op /register op een
+  // telefoon van 390×844 was niet aan te tikken zonder eerst de melding weg te klikken).
+  // Niet op ZekerFlex OS (/os): dat bureaublad vult het scherm, ruimte eronder gaf daar alleen een schuifbalk.
+  const opOs = pad === "/os" || (pad ?? "").startsWith("/os/");
+  const laag = useRef<HTMLDivElement>(null);
+  const [ruimte, setRuimte] = useState(0);
+  useEffect(() => {
+    const el = laag.current;
+    if (!visible || !el) return;
+    const meet = () => setRuimte(Math.ceil(el.getBoundingClientRect().height));
+    meet();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(meet);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [visible]);
+
   function dismiss() {
     writeConsentCookie();
     setVisible(false);
@@ -79,9 +97,12 @@ export function CookieConsent() {
   if (!visible) return null;
 
   return (
-    // De laag is schermbreed, de kaart niet: klikken naast de kaart gaan door naar wat eronder ligt
-    // (zoals de chatknop rechtsonder); alleen de kaart zelf vangt ze op.
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[90] px-4 pb-4 sm:px-6">
+    <>
+    {/* de ruimte onderaan (zie hierboven); verdwijnt met de melding */}
+    {!opOs && <div aria-hidden data-cookie-ruimte style={{ height: ruimte }} />}
+    {/* De laag is schermbreed, de kaart niet: klikken naast de kaart gaan door naar wat eronder ligt
+        (zoals de chatknop rechtsonder); alleen de kaart zelf vangt ze op. */}
+    <div ref={laag} className="pointer-events-none fixed inset-x-0 bottom-0 z-[90] px-4 pb-4 sm:px-6">
       <div className="pointer-events-auto mx-auto max-w-2xl rounded-2xl border border-hair bg-white p-5 shadow-lift">
         <p className="text-sm leading-relaxed text-ink">
           {c.body}{" "}
@@ -117,5 +138,6 @@ export function CookieConsent() {
         </div>
       </div>
     </div>
+    </>
   );
 }
