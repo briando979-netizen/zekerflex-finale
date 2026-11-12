@@ -2840,3 +2840,408 @@ model DomeinBestelling {
   @@index([domein])
   @@index([status, verlooptOp])
 }
+
+// ===========================================================================
+// Boekhouding (Beheer -> Boekhouding, strikt PLATFORM_ADMIN) - dubbel boekhouden per administratie.
+// Alle bedragen in centen (Int), nooit Float/Decimal. Boekingen zijn onveranderlijk: corrigeren = tegenboeking.
+// Bewust GEEN relaties naar Invoice/Tenant/User (zoals AuditLog): Invoice verdwijnt bij het verwijderen van
+// een urenstaat (onDelete: Cascade) en een boeking mag nooit meeverdwijnen. De koppeling loopt via bron + bronId.
+// Geen persoonsgegevens in BoekBoeking/BoekRegel (geen naam, e-mail, IBAN, adres): de omschrijving bestaat uit nummers.
+// CHECK-constraints en triggers (sluiten op 0, onveranderlijk, maandvergrendeling, soort ECHT/TEST) staan alleen in de
+// migratie 20261112100000_boekhouding; Prisma kent ze niet.
+// ===========================================================================
+
+enum BoekAdministratieSoort {
+  ECHT // de echte boeken: onveranderlijk, geen uitzondering
+  TEST // proefadministratie: mag door een admin gewist worden (lib/boekhouding/test-wissen.ts)
+}
+
+enum BoekRekeningSoort {
+  ACTIVA // balans, normaal debet
+  PASSIVA // balans (schulden, eigen vermogen), normaal credit
+  OMZET // winst en verlies, normaal credit
+  KOSTEN // winst en verlies, normaal debet
+}
+
+enum BoekDagboek {
+  VERKOOP
+  INKOOP
+  BANK
+  MEMORIAAL
+}
+
+enum BoekBron {
+  FACTUUR // verkoopfactuur uit het platform (bronId = Invoice.id)
+  FACTUUR_BETALING // betaling die de debiteur sluit (bronId = Invoice.id)
+  BON // inkoopbon (bronId = BoekBon.id)
+  BANK // banktransactie (bronId = BoekBankTransactie.id)
+  MEMORIAAL // handmatig, met reden
+  OPENING // openingsbalans
+  TEGENBOEKING // correctie (bronId = "terug:<boekingId>")
+}
+
+enum BoekBtwRichting {
+  VERKOOP
+  INKOOP
+}
+
+enum BoekPeriodeStatus {
+  OPEN
+  VERGRENDELD
+}
+
+enum BoekBonStatus {
+  NIEUW // geupload, nog niet gelezen
+  GELEZEN // OCR + model klaar, voorstel ligt er
+  EVEN_KIJKEN // twijfel: een mens moet kijken
+  GEBOEKT
+  AFGEWEZEN // geen bon / dubbel / niet voor deze administratie
+}
+
+enum BoekAangifteStatus {
+  BEREKEND
+  GOEDGEKEURD // door een mens; legt de maanden van het kwartaal vast
+  INGEDIEND // door een mens elders ingediend; wij dienen nooit zelf in
+  VERVANGEN // een nieuwere versie bestaat
+}
+
+enum BoekBankFormaat {
+  CAMT053
+  MT940
+  CSV
+}
+
+enum BoekBankTransactieStatus {
+  NIEUW
+  GEKOPPELD
+  TWIJFEL
+  GENEGEERD
+}
+
+// Eén juridische entiteit met eigen boeken (nu Zekerflex, Inc.; later meer).
+model BoekAdministratie {
+  id                 String                 @id @default(cuid())
+  naam               String // korte naam in het scherm
+  juridischeNaam     String
+  land               String // ISO-landcode van de vestiging, bv. "US"
+  // ECHT of TEST: na het aanmaken niet meer te wijzigen (trigger). Alleen TEST mag gewist worden.
+  soort              BoekAdministratieSoort @default(ECHT)
+  valuta             String                 @default("EUR") // functionele valuta: alle regelbedragen zijn hierin
+  rgsVersie          String                 @default("3.7") // door accountant te bevestigen
+  btwPlichtig        Boolean                @default(false) // door accountant te bevestigen voor Inc.
+  btwNummer          String?
+  // Platform-tenant waarvan de uitgegeven facturen in deze administratie horen (geen relatie, zie kop).
+  platformTenantId   String?                @unique
+  boekjaarStartMaand Int                    @default(1)
+  actief             Boolean                @default(true)
+
+  rekeningen     BoekRekening[]
+  btwCodes       BoekBtwCode[]
+  boekingen      BoekBoeking[]
+  perioden       BoekPeriode[]
+  volgnummers    BoekVolgnummer[]
+  bonnen         BoekBon[]
+  btwPerioden    BoekBtwPeriode[]
+  bankRekeningen BoekBankRekening[]
+
+  createdAt DateTime @default(now())
+}
+
+// Grootboekrekening per administratie. Eigen nummering is leidend; de RGS-verwijzing is optioneel en wordt door de
+// accountant ingevuld (we verzinnen geen RGS-codes).
+model BoekRekening {
+  id              String            @id @default(cuid())
+  administratieId String
+  nummer          String // eigen rekeningnummer, uniek per administratie
+  rgsCode         String? // RGS-verwijzing, door accountant te bevestigen
+  naam            String
+  soort           BoekRekeningSoort
+  parentId        String?
+  boekbaar        Boolean           @default(true) // alleen bladen krijgen regels; kopjes niet
+  actief          Boolean           @default(true)
+
+  administratie  BoekAdministratie  @relation(fields: [administratieId], references: [id], onDelete: Restrict)
+  parent         BoekRekening?      @relation("BoekRekeningBoom", fields: [parentId], references: [id], onDelete: Restrict)
+  kinderen       BoekRekening[]     @relation("BoekRekeningBoom")
+  regels         BoekRegel[]
+  bankRekeningen BoekBankRekening[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([administratieId, nummer])
+  @@index([administratieId, soort])
+  @@index([parentId])
+}
+
+// Btw-code: tarief + in welke rubriek van de aangifte het hoort. Tarieven in basispunten (2100 = 21%), geen Float.
+model BoekBtwCode {
+  id                String          @id @default(cuid())
+  administratieId   String
+  code              String // bv. "NL21-V"
+  omschrijving      String
+  richting          BoekBtwRichting
+  tariefBasispunten Int
+  // Rubrieken van de NL-aangifte, bv. "1a", "5b"; door accountant te bevestigen. Null = buiten de aangifte.
+  grondslagRubriek  String?
+  btwRubriek        String?
+  geldigVanaf       DateTime        @db.Date
+  geldigTot         DateTime?       @db.Date
+  actief            Boolean         @default(true)
+
+  administratie BoekAdministratie @relation(fields: [administratieId], references: [id], onDelete: Restrict)
+  regels        BoekRegel[]
+  bonnen        BoekBon[]
+
+  @@unique([administratieId, code])
+}
+
+// Boekingsperiode (maand) met vergrendeling: in een vergrendelde maand komt geen nieuwe boeking.
+model BoekPeriode {
+  id              String            @id @default(cuid())
+  administratieId String
+  jaar            Int
+  maand           Int // 1-12
+  status          BoekPeriodeStatus @default(OPEN)
+  vergrendeldOp   DateTime?
+  vergrendeldDoor String? // userId zonder relatie, of "systeem"
+
+  administratie BoekAdministratie @relation(fields: [administratieId], references: [id], onDelete: Restrict)
+
+  @@unique([administratieId, jaar, maand])
+}
+
+// Gapvrij boekstuknummer per (administratie, dagboek, jaar), zoals InvoiceSequence.
+model BoekVolgnummer {
+  id              String      @id @default(cuid())
+  administratieId String
+  dagboek         BoekDagboek
+  jaar            Int
+  lastValue       Int         @default(0)
+
+  administratie BoekAdministratie @relation(fields: [administratieId], references: [id], onDelete: Restrict)
+
+  @@unique([administratieId, dagboek, jaar])
+}
+
+// Onveranderlijk (ECHT): geen UPDATE of DELETE, afgedwongen met triggers in de migratie.
+model BoekBoeking {
+  id              String      @id @default(cuid())
+  administratieId String
+  dagboek         BoekDagboek
+  boekstuk        String // bv. "VK-2026-000012"; uniek per administratie
+  datum           DateTime    @db.Date // boekdag (Amsterdamse dag van de gebeurtenis)
+  // Alleen nummers, nooit naam/e-mail/IBAN/adres (omschrijvingVoor in lib/boekhouding/omschrijving.ts).
+  omschrijving    String
+  bron            BoekBron
+  bronId          String // nooit leeg: idempotentiesleutel samen met bron
+  // Hash van de brongegevens bij het boeken: verandert de bron later, dan zie je dat en boek je tegen.
+  bronHash        String?
+  // Tegenboeking: wijst naar de boeking die hij opheft. Eén boeking kan maar één keer worden opgeheven.
+  keertBoekingId  String?     @unique
+  reden           String? // verplicht bij MEMORIAAL en TEGENBOEKING (afgedwongen in de applicatie); geen persoonsgegevens
+  aangemaaktDoor  String // userId zonder relatie, of "systeem"
+
+  administratie   BoekAdministratie     @relation(fields: [administratieId], references: [id], onDelete: Restrict)
+  keert           BoekBoeking?          @relation("BoekTegen", fields: [keertBoekingId], references: [id], onDelete: Restrict)
+  tegenboeking    BoekBoeking?          @relation("BoekTegen")
+  regels          BoekRegel[]
+  bon             BoekBon?
+  bankTransacties BoekBankTransactie[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([administratieId, bron, bronId])
+  @@unique([administratieId, boekstuk])
+  @@index([administratieId, datum])
+  @@index([bron, bronId])
+}
+
+// Regel van een boeking. Debet en credit in centen van de administratievaluta; precies een van beide is > 0.
+model BoekRegel {
+  id           String  @id @default(cuid())
+  boekingId    String
+  volgorde     Int
+  rekeningId   String
+  debetCents   Int     @default(0)
+  creditCents  Int     @default(0)
+  omschrijving String? // alleen nummers, geen persoonsgegevens
+
+  // Btw: op een omzet-/kostenregel de grondslag (btwBasisCents, positief); op de btw-regel zelf isBtwRegel = true.
+  btwCodeId     String?
+  btwBasisCents Int?
+  isBtwRegel    Boolean @default(false)
+
+  // Open post: dezelfde sleutel op de debiteurregel (factuur) en de betaalregel; saldo per sleutel = nog open.
+  postSleutel String? // bv. "factuur:<invoiceId>"
+
+  // Vreemde valuta (alleen informatief; de sluitregel werkt op de centen hierboven). Koers in miljoenste.
+  origineleValuta String?
+  origineelCents  Int?
+  koersMicro      Int?
+
+  boeking  BoekBoeking  @relation(fields: [boekingId], references: [id], onDelete: Restrict)
+  rekening BoekRekening @relation(fields: [rekeningId], references: [id], onDelete: Restrict)
+  btwCode  BoekBtwCode? @relation(fields: [btwCodeId], references: [id], onDelete: Restrict)
+
+  @@unique([boekingId, volgorde])
+  @@index([rekeningId, boekingId])
+  @@index([postSleutel])
+  @@index([btwCodeId])
+}
+
+// Inkoopbon: bestand op het opslagvolume (storage/boekhouding/...), nooit in public/. 7 jaar bewaren.
+// Wijzigbaar; hier mag de tegenpartij (leverancier) wel staan.
+model BoekBon {
+  id              String        @id @default(cuid())
+  administratieId String
+  status          BoekBonStatus @default(NIEUW)
+
+  bestandPad    String // relatief aan storage/
+  bestandSha256 String // dubbele upload herkennen
+  mimeType      String
+  bytes         Int
+  geuploadDoor  String // userId zonder relatie
+  bewaarTot     DateTime @db.Date // niet verwijderen voor deze datum; termijn door accountant te bevestigen
+
+  ocrTekst     String? @db.Text // kan persoonsgegevens bevatten: valt onder het wissen na de bewaartermijn
+  ocrTekstHash String?
+  // Uitgelezen velden (voorstel van het model; een mens kan ze aanpassen).
+  leverancier        String?
+  leverancierNummer  String? // het factuurnummer op de bon
+  bonDatum           DateTime? @db.Date
+  totaalCents        Int?
+  btwCents           Int?
+  valuta             String?
+  btwCodeId          String?
+  voorstelRekeningId String?
+  // 0-1000 in plaats van Float; onder de drempel (instelbaar) -> EVEN_KIJKEN.
+  zekerheidPromille Int?
+  modelNaam         String?
+  evenKijkenReden   String?
+  afwijsReden       String?
+
+  boekingId String? @unique
+
+  administratie BoekAdministratie @relation(fields: [administratieId], references: [id], onDelete: Restrict)
+  btwCode       BoekBtwCode?      @relation(fields: [btwCodeId], references: [id], onDelete: Restrict)
+  boeking       BoekBoeking?      @relation(fields: [boekingId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([administratieId, bestandSha256])
+  @@index([administratieId, status])
+  @@index([administratieId, leverancier, leverancierNummer])
+}
+
+// Btw-aangifte per kwartaal. Wij berekenen en leggen vast; een mens dient in.
+model BoekBtwPeriode {
+  id              String   @id @default(cuid())
+  administratieId String
+  jaar            Int
+  kwartaal        Int // 1-4
+  vanaf           DateTime @db.Date
+  totEnMet        DateTime @db.Date
+  deadline        DateTime @db.Date // laatste dag voor indienen (eigenaar-todo)
+
+  administratie BoekAdministratie @relation(fields: [administratieId], references: [id], onDelete: Restrict)
+  aangiftes     BoekBtwAangifte[]
+
+  @@unique([administratieId, jaar, kwartaal])
+}
+
+// Onveranderlijke momentopname van de rubrieken; een herberekening is een nieuwe versie.
+model BoekBtwAangifte {
+  id        String             @id @default(cuid())
+  periodeId String
+  versie    Int
+  status    BoekAangifteStatus @default(BEREKEND)
+  // { "1a": { "grondslagCents": 0, "btwCents": 0 }, ... } - alleen centen, gehele getallen.
+  rubrieken Json
+  totaalTeBetalenCents Int // saldo van de aangifte; negatief = terug te vragen
+  snapshotHash         String
+  berekendOp           DateTime  @default(now())
+  goedgekeurdOp        DateTime?
+  goedgekeurdDoor      String? // userId zonder relatie
+  ingediendOp          DateTime?
+  indieningReferentie  String? // bevestiging van de belastingdienst, door de mens ingevuld
+
+  periode BoekBtwPeriode @relation(fields: [periodeId], references: [id], onDelete: Restrict)
+
+  @@unique([periodeId, versie])
+}
+
+// ---- Fase 2: bank ----------------------------------------------------------
+
+model BoekBankRekening {
+  id              String  @id @default(cuid())
+  administratieId String
+  iban            String
+  naam            String
+  valuta          String  @default("EUR")
+  rekeningId      String // de grootboekrekening (bank) waar deze bankrekening op boekt
+  actief          Boolean @default(true)
+
+  administratie BoekAdministratie    @relation(fields: [administratieId], references: [id], onDelete: Restrict)
+  rekening      BoekRekening         @relation(fields: [rekeningId], references: [id], onDelete: Restrict)
+  afschriften   BoekBankAfschrift[]
+  transacties   BoekBankTransactie[]
+
+  @@unique([administratieId, iban])
+}
+
+model BoekBankAfschrift {
+  id              String          @id @default(cuid())
+  bankRekeningId  String
+  formaat         BoekBankFormaat
+  bestandPad      String
+  bestandSha256   String
+  afschriftNummer String?
+  vanaf           DateTime?       @db.Date
+  totEnMet        DateTime?       @db.Date
+  beginSaldoCents Int?
+  eindSaldoCents  Int?
+  geuploadDoor    String
+
+  bankRekening BoekBankRekening     @relation(fields: [bankRekeningId], references: [id], onDelete: Restrict)
+  transacties  BoekBankTransactie[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([bankRekeningId, bestandSha256])
+}
+
+model BoekBankTransactie {
+  id             String                   @id @default(cuid())
+  bankRekeningId String
+  afschriftId    String?
+  status         BoekBankTransactieStatus @default(NIEUW)
+
+  boekdatum    DateTime  @db.Date
+  valutadatum  DateTime? @db.Date
+  bedragCents  Int // met teken: positief = bij, negatief = af
+  valuta       String
+  tegenIban    String? // persoonsgegevens van een derde: niet loggen, niet in het auditspoor
+  tegenNaam    String?
+  omschrijving String?
+  endToEndId   String?
+  // De eigen bankreferentie, anders een hash van datum+bedrag+tegenrekening+omschrijving+volgnummer in het bestand:
+  // dezelfde transactie uit twee afschriften wordt nooit twee keer ingelezen.
+  dedupeSleutel String
+
+  // Voorstel en uitkomst van het koppelen (aan factuur, bon of Stripe-uitbetaling).
+  voorstel           Json?
+  matchScorePromille Int?
+  boekingId          String?
+
+  bankRekening BoekBankRekening   @relation(fields: [bankRekeningId], references: [id], onDelete: Restrict)
+  afschrift    BoekBankAfschrift? @relation(fields: [afschriftId], references: [id], onDelete: Restrict)
+  boeking      BoekBoeking?       @relation(fields: [boekingId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+
+  @@unique([bankRekeningId, dedupeSleutel])
+  @@index([bankRekeningId, status])
+  @@index([boekdatum])
+  @@index([boekingId])
+}
