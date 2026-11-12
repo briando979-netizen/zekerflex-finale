@@ -21,6 +21,7 @@
     "tests/valkuil-bewakers.test.ts",
     "tests/voorstel-indoor-regels.test.ts",
     "tests/voorstel-sollicitatie-regels.test.ts",
+    "tests/werkgever-taal-bewaker.test.ts",
     "tests/werker-taal-bewaker.test.ts"
   ]
 }
