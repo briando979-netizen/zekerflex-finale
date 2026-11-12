@@ -70,15 +70,25 @@ export interface ChatOptions {
    */
   interactief?: boolean;
   /**
-   * Alleen bij een stream: hoe lang hooguit tot het eerste stuk tekst (standaard EERSTE_WOORD_MS). Komt er niets, dan
+   * Alleen bij een stream: hoe lang hooguit tot het eerste stuk tekst (standaard eersteWoordGrens). Komt er niets, dan
    * neemt het reservemodel het over (met dezelfde grens), en anders een fout voor de eigen terugval van de aanroeper.
    * Is het eerste woord binnen, dan loopt de stream door met de ruime totaaltijd.
    */
   eersteWoordMs?: number;
 }
 
-/** Bij een stream hooguit zo lang wachten op het eerste woord (12 nov: een traag eigen model liet mensen minuten wachten). */
-export const EERSTE_WOORD_MS = 30_000;
+/**
+ * Bij een stream hooguit zo lang wachten op het eerste woord. Gemeten 12 nov op prod (gemma3:4b op de CPU, prompts van
+ * 1.050–1.260 tokens zoals de assistent, Jarvis en de sitechat): met het vaste begin al in het geheugen 2–15 s, met een
+ * nieuw begin 16–31 s (max 30,6 s). Dus bij "alles gratis" het maximum plus de helft, afgerond: 50 s. Bij Gemini: 20 s.
+ */
+export const EERSTE_WOORD_GRATIS_MS = 50_000;
+export const EERSTE_WOORD_MS = 20_000;
+
+/** De grens tot het eerste woord voor de huidige stand van "alles gratis" (lib/ai/gratis.ts). */
+export function eersteWoordGrens(gratis: boolean): number {
+  return gratis ? EERSTE_WOORD_GRATIS_MS : EERSTE_WOORD_MS;
+}
 
 interface TokenUsage {
   promptTokens: number;
@@ -472,7 +482,7 @@ export async function* chatStream(
   const llmKey = await getLlmApiKey();
   // Eén poging (hoofdmodel met zijn herhalingen, of het reservemodel): een eigen afbreekknop met twee klokken, de grens
   // tot het eerste woord en de ruime totaaltijd van nu. Het eerste woord zet de eerste klok stil.
-  const grens = opts.eersteWoordMs ?? EERSTE_WOORD_MS;
+  const grens = opts.eersteWoordMs ?? eersteWoordGrens(gratisAan());
   const nieuwePoging = () => {
     const ctl = new AbortController();
     const p = { ctl, teLaat: false, klokken: [] as ReturnType<typeof setTimeout>[] };
