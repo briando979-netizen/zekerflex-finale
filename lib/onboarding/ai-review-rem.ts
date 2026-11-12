@@ -19,7 +19,7 @@ interface RemStaat {
   dichtTot: number;
 }
 
-const g = globalThis as unknown as { __zfKycAiRem?: RemStaat; __zfKycAiRemGeladen?: Promise<void> };
+const g = globalThis as unknown as { __zfKycAiRem?: RemStaat; __zfKycAiRemGeladen?: Promise<void>; __zfKycAiRemSchrijf?: Promise<void> };
 const staat = (): RemStaat => (g.__zfKycAiRem ??= { mislukt: 0, dichtTot: 0 });
 
 /** Niet per gebruiker (één rem voor het hele platform), dus geen AVG-voorvoegsel nodig. */
@@ -44,12 +44,23 @@ export function laadAiReviewRem(): Promise<void> {
   return g.__zfKycAiRemGeladen;
 }
 
-/** De stand naar de database; een storing laat de rem in het geheugen gewoon werken. */
+/**
+ * De stand naar de database, na elkaar (anders kan een oudere stand een nieuwere overschrijven); een storing laat
+ * de rem in het geheugen gewoon werken.
+ */
 function bewaar(): void {
   const s = { ...staat() };
-  void import("@/lib/storage/kv")
-    .then(({ kvSet }) => kvSet(REM_KV_SLEUTEL, s))
+  g.__zfKycAiRemSchrijf = (g.__zfKycAiRemSchrijf ?? Promise.resolve())
+    .then(async () => {
+      const { kvSet } = await import("@/lib/storage/kv");
+      await kvSet(REM_KV_SLEUTEL, s);
+    })
     .catch(() => undefined);
+}
+
+/** Voor tests: klaar zodra de laatste stand in de database staat. */
+export function remOpgeslagen(): Promise<void> {
+  return g.__zfKycAiRemSchrijf ?? Promise.resolve();
 }
 
 /** Nu overslaan? Is de rem net afgelopen, dan mag er één poging door die bij mislukken meteen weer remt. */
