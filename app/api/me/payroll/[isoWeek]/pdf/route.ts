@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server";
 import { requirePrincipal } from "@/lib/auth";
 import { toErrorBody } from "@/lib/errors";
+import { prisma } from "@/lib/prisma";
 import { getPayslip } from "@/lib/payroll/store";
+import { getFiscal } from "@/lib/fiscal/store";
+import { ageOn, minimumHourlyCents } from "@/lib/payroll/cao";
+import { isoWeekRange, parseIsoWeekId } from "@/lib/payroll/week";
+import { loonstrookRegels, tekenRegels, werknemerNummer } from "@/lib/payroll/loonstrook-pdf";
+import { werkgeverVoorLoonstrook } from "@/lib/platform/werkgever";
 import { SimplePdf } from "@/lib/pdf/simple";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const euro = (c: number) => `EUR ${(c / 100).toFixed(2).replace(".", ",")}`;
-
 // GET /api/me/payroll/:isoWeek/pdf — your weekly loonstrook / factuuroverzicht as PDF.
+// Alleen je EIGEN strook: alles wordt opgezocht met de userId van de ingelogde gebruiker; een week zonder eigen strook
+// geeft 404 (ook als een ander er wel een heeft), nooit een 403 (CrowdSec). Het werkgeversblok is op elke strook gelijk
+// (lib/platform/werkgever.ts); het werknemersblok komt alleen uit het eigen account en de eigen fiscale gegevens.
 export async function GET(_req: Request, props: { params: Promise<{ isoWeek: string }> }): Promise<Response> {
   const params = await props.params;
   try {
@@ -17,59 +24,20 @@ export async function GET(_req: Request, props: { params: Promise<{ isoWeek: str
     const slip = await getPayslip(p.userId, params.isoWeek);
     if (!slip) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Geen strook voor deze week" } }, { status: 404 });
 
-    const b = slip.computed.breakdown;
-    const pdf = new SimplePdf();
-    pdf.heading(b.kind === "payroll" ? "Loonstrook" : "Weekoverzicht", 20);
-    pdf.line(`${slip.weekLabel} · ${slip.workerName}`, 11, { color: [0.05, 0.36, 0.29] });
-    pdf.gap(8);
-    pdf.rule();
-
-    pdf.row("Werkvorm", slip.workerKind ?? "—");
-    pdf.row("Gewerkte uren", slip.computed.totalHours.toFixed(2).replace(".", ","));
-    pdf.row("Gewerkte weken (cumulatief)", String(slip.weeksWorked));
-    pdf.gap(6);
-    pdf.rule();
-
-    if (b.kind === "payroll") {
-      if (b.cao && (b.cao.toeslagCents > 0 || b.cao.wmlFloorApplied)) {
-        pdf.row(`Basisloon (${b.cao.caoLabel})`, euro(b.cao.baseCents));
-        if (b.cao.nachtCents > 0) pdf.row("Nachttoeslag", `+ ${euro(b.cao.nachtCents)}`);
-        if (b.cao.weekendCents > 0) pdf.row("Weekendtoeslag", `+ ${euro(b.cao.weekendCents)}`);
-        if (b.cao.feestdagCents > 0) pdf.row("Feestdagtoeslag", `+ ${euro(b.cao.feestdagCents)}`);
-        if (b.cao.overwerkCents > 0) pdf.row("Overwerktoeslag", `+ ${euro(b.cao.overwerkCents)}`);
-        if (b.cao.wmlFloorApplied)
-          pdf.line("Uurtarief automatisch opgehoogd naar het wettelijk minimumloon.", 9);
-      }
-      pdf.row("Brutoloon", euro(b.grossCents));
-      pdf.row("Vakantiegeld (8,33%)", euro(b.holidayAllowanceCents));
-      pdf.row("Reservering vakantie-uren", euro(b.holidayHoursReserveCents));
-      pdf.row("Reservering kort verzuim", euro(b.shortLeaveReserveCents));
-      pdf.row(`Pensioen (StiPP ${b.pensionRegeling}) — jouw deel`, `- ${euro(b.pensionEmployeeCents)}`);
-      pdf.row("Belastbaar loon", euro(b.taxableCents));
-      pdf.row("Loonheffing (indicatief)", `- ${euro(b.wageTaxIndicativeCents)}`);
-      pdf.gap(4);
-      pdf.rule();
-      pdf.row("Netto (indicatief)", euro(b.netIndicativeCents), { bold: true, size: 12 });
-      pdf.gap(10);
-      pdf.line(`ABU-fase: ${b.phase}. Werkgeversdeel pensioen: ${euro(b.pensionEmployerCents)} (niet ingehouden).`, 9);
-    } else {
-      pdf.row("Diensten", euro(b.servicesCents));
-      pdf.row(b.vatRate > 0 ? `Btw (${Math.round(b.vatRate * 100)}%)` : "Btw", euro(b.vatCents));
-      pdf.row("Factuurtotaal", euro(b.invoiceTotalCents));
-      pdf.gap(4);
-      pdf.rule();
-      pdf.row("Uit te betalen aan jou", euro(b.payoutToWorkerCents), { bold: true, size: 12 });
-      pdf.gap(10);
-      pdf.line(
-        `Platformkosten ${euro(b.platformFeeCents)} worden apart aan de opdrachtgever gefactureerd — niet ingehouden op jouw bedrag.`,
-        9,
-      );
-    }
-
-    pdf.gap(16);
-    pdf.line("Automatisch opgesteld door ZekerFlex. Indicatief — geen vervanging voor je jaaropgave.", 8.5, {
-      color: [0.4, 0.45, 0.42],
-    });
+    const [fiscal, profiel] = await Promise.all([
+      getFiscal(p.userId),
+      prisma.freelancerProfile.findUnique({ where: { userId: p.userId }, select: { homePostalCode: true } }),
+    ]);
+    // het minimumloon dat in deze week gold, voor de leeftijd van de werknemer op de maandag
+    const week = parseIsoWeekId(slip.isoWeek);
+    const op = week ? isoWeekRange(week).start : new Date(slip.generatedAt);
+    const regels = loonstrookRegels(
+      slip,
+      werkgeverVoorLoonstrook(),
+      { naam: slip.workerName, nummer: werknemerNummer(p.userId), bsnLaatste4: fiscal.bsnLast4, postcode: profiel?.homePostalCode || null },
+      { loonheffingskorting: fiscal.loonheffingskorting, minimumloonPerUurCents: minimumHourlyCents(ageOn(fiscal.birthDate, op), op) },
+    );
+    const pdf = tekenRegels(new SimplePdf(), regels);
 
     return new Response(new Uint8Array(pdf.toBuffer()), {
       headers: {
