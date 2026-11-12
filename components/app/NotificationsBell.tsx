@@ -14,6 +14,8 @@ interface Item {
   urgent: boolean;
   action?: { type: string; id: string; label: string };
   group?: string;
+  /** handtekening uit de Nederlandse tekst: een vertaalde melding blijft zo weggeklikt */
+  sig?: string;
 }
 
 const SEEN_KEY = "zf-notif-seen";
@@ -115,7 +117,7 @@ export function NotificationsBell({ dark = false, texts: t = NOTIFICATIONS_NL }:
   };
 
   const hide = (ids: string[]) => setHidden((prev) => new Set([...prev, ...ids]));
-  const postDismiss = (list: { id: string; body: string }[]) => {
+  const postDismiss = (list: { id: string; body: string; sig?: string }[]) => {
     if (list.length === 0) return;
     void fetch("/api/me/notifications/dismiss", {
       method: "POST",
@@ -125,11 +127,11 @@ export function NotificationsBell({ dark = false, texts: t = NOTIFICATIONS_NL }:
   };
   const dismiss = (it: Item) => {
     hide([it.id]);
-    postDismiss([{ id: it.id, body: it.body }]);
+    postDismiss([{ id: it.id, body: it.body, ...(it.sig ? { sig: it.sig } : {}) }]);
   };
   const dismissAll = () => {
     hide(visible.map((i) => i.id));
-    postDismiss(visible.map((i) => ({ id: i.id, body: i.body })));
+    postDismiss(visible.map((i) => ({ id: i.id, body: i.body, ...(i.sig ? { sig: i.sig } : {}) })));
   };
   const confirmShift = (it: Item) => {
     if (!it.action) return;

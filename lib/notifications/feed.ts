@@ -12,6 +12,8 @@ import { getDismissed, notifSignature } from "@/lib/notifications/dismissed";
 import { REACTIE_MARGE_MS } from "@/lib/offers/verval";
 import { BANK_AAN } from "@/lib/app-mode";
 import { afsprakenBelVoor } from "@/lib/afspraken/bel";
+import { vulIn } from "@/lib/i18n/vul-in";
+import { MELDING_NL, type MeldingTeksten } from "@/lib/notifications/feed-teksten";
 
 // ---------------------------------------------------------------------------
 // Per-account notification feed. Derived, read-only, no storage of its own —
@@ -30,7 +32,38 @@ export interface NotificationItem {
   action?: { type: "confirm"; id: string; label: string };
   /** thematische categorie voor de tabbladen in de meldingen-weergave */
   group?: "klussen" | "geld" | "berichten" | "account";
+  /**
+   * De handtekening waarmee een weggeklikte melding wordt onthouden (lib/notifications/dismissed.ts): altijd uit de
+   * NEDERLANDSE tekst, ook als de melding in een andere taal wordt getoond. Zo blijft weggeklikt wat al weggeklikt was.
+   */
+  sig?: string;
 }
+
+/**
+ * Een melding voor een werker: de zinnen komen uit MeldingTeksten (zonder: Nederlands). `mk` maakt titel en tekst voor één
+ * taal; de handtekening komt altijd uit de Nederlandse versie. Vrije tekst (klusnaam, chatbericht) gaat er als waarde in en
+ * wordt dus nooit vertaald.
+ */
+function werkerMelding(
+  basis: Omit<NotificationItem, "title" | "body" | "sig" | "action"> & { action?: { type: "confirm"; id: string } },
+  teksten: MeldingTeksten,
+  mk: (n: MeldingTeksten) => { title: string; body: string; actionLabel?: string },
+): NotificationItem {
+  const nl = mk(MELDING_NL);
+  const tekst = teksten === MELDING_NL ? nl : mk(teksten);
+  const { action, ...rest } = basis;
+  return {
+    ...rest,
+    title: tekst.title,
+    body: tekst.body,
+    sig: notifSignature(basis.id, nl.body),
+    ...(action ? { action: { ...action, label: tekst.actionLabel ?? "" } } : {}),
+  };
+}
+
+/** Een tarief in de taal van de werker; in het Nederlands zoals het altijd stond ("18.00"). */
+const tarief = (cents: number, n: MeldingTeksten): string =>
+  n === MELDING_NL ? (cents / 100).toFixed(2) : (cents / 100).toLocaleString(n.intl, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function groupOf(it: NotificationItem): NonNullable<NotificationItem["group"]> {
   if (it.kind === "chat") return "berichten";
@@ -40,7 +73,11 @@ function groupOf(it: NotificationItem): NonNullable<NotificationItem["group"]> {
   return "klussen"; // shift, offer, en klus-acties (confirm, emp:shift)
 }
 
-export async function getNotifications(principal: Principal): Promise<NotificationItem[]> {
+/**
+ * `teksten`: de zinnen voor een werker in zijn app-taal (alleen de werkersmeldingen en de chatmelding van een werker); zonder
+ * teksten Nederlands. Opdrachtgevers en beheer krijgen altijd de Nederlandse meldingen: geef hun geen teksten mee.
+ */
+export async function getNotifications(principal: Principal, teksten: MeldingTeksten = MELDING_NL): Promise<NotificationItem[]> {
   const out: NotificationItem[] = [];
   const now = Date.now();
   const admin = await isPlatformAdmin(principal.userId);
@@ -48,19 +85,29 @@ export async function getNotifications(principal: Principal): Promise<Notificati
   // ── unread chat (everyone) ────────────────────────────────────────
   try {
     const threads = await listThreadsForUser(principal.userId, admin);
-    for (const t of threads.slice(0, 15)) {
-      const msgs = await getMessages(t.id, 100);
-      const unread = unreadForUser(t, msgs, principal.userId);
-      if (unread > 0 && t.lastMessage) {
-        out.push({
-          id: `chat:${t.id}`,
-          kind: "chat",
-          title: t.kind === "support" ? "ZekerFlex Support" : t.meta.subject ?? "Nieuw bericht",
-          body: `${unread} nieuw bericht${unread === 1 ? "" : "en"}: "${t.lastMessage.text.slice(0, 60)}"`,
-          href: admin ? "/admin/berichten" : hasRole(principal, "FREELANCER") ? "/dashboard/berichten" : "/werkgever/berichten",
-          at: t.lastMessage.at,
-          urgent: false,
-        });
+    // alleen een werker leest de zinnen in zijn taal; een opdrachtgever of beheerder houdt het Nederlands
+    const chatTeksten = hasRole(principal, "FREELANCER") && !admin ? teksten : MELDING_NL;
+    for (const thread of threads.slice(0, 15)) {
+      const msgs = await getMessages(thread.id, 100);
+      const unread = unreadForUser(thread, msgs, principal.userId);
+      const last = thread.lastMessage;
+      if (unread > 0 && last) {
+        out.push(
+          werkerMelding(
+            {
+              id: `chat:${thread.id}`,
+              kind: "chat",
+              href: admin ? "/admin/berichten" : hasRole(principal, "FREELANCER") ? "/dashboard/berichten" : "/werkgever/berichten",
+              at: last.at,
+              urgent: false,
+            },
+            chatTeksten,
+            (n) => ({
+              title: thread.kind === "support" ? "ZekerFlex Support" : thread.meta.subject ?? n.chatNieuw,
+              body: vulIn(unread === 1 ? n.chatEen : n.chatMeer, { n: unread, tekst: last.text.slice(0, 60) }),
+            }),
+          ),
+        );
       }
     }
   } catch {
@@ -103,28 +150,23 @@ export async function getNotifications(principal: Principal): Promise<Notificati
         const inH = Math.round((a.shift.startsAt.getTime() - now) / 3600_000);
         const confirmed = Boolean(prefs.confirmations[a.id]);
         if (!confirmed) {
-          out.push({
-            id: `confirm:${a.id}`,
-            kind: "action",
-            title: "Bevestig je komst",
-            body: `${a.shift.title} bij ${a.shift.branch.name} — over ${inH} uur`,
-            href: "/dashboard/diensten",
-            at: new Date(now).toISOString(),
-            urgent: inH <= 24,
-            action: { type: "confirm", id: a.id, label: "Bevestig komst" },
-          });
+          out.push(
+            werkerMelding(
+              { id: `confirm:${a.id}`, kind: "action", href: "/dashboard/diensten", at: new Date(now).toISOString(), urgent: inH <= 24, action: { type: "confirm", id: a.id } },
+              teksten,
+              (n) => ({ title: n.bevestigTitel, body: vulIn(n.bevestigBody, { klus: a.shift.title, bedrijf: a.shift.branch.name, uren: inH }), actionLabel: n.bevestigKnop }),
+            ),
+          );
         }
       }
       for (const t of actionTimesheets) {
-        out.push({
-          id: `ts:${t.id}`,
-          kind: "action",
-          title: t.status === "DISPUTED" ? "Dispuut over je uren" : "Uren in behandeling",
-          body: t.status === "DISPUTED" ? "Er is een dispuut over een urenbriefje." : "Je ingediende uren wachten op goedkeuring.",
-          href: "/dashboard/uitbetalingen",
-          at: t.updatedAt.toISOString(),
-          urgent: t.status === "DISPUTED",
-        });
+        out.push(
+          werkerMelding(
+            { id: `ts:${t.id}`, kind: "action", href: "/dashboard/uitbetalingen", at: t.updatedAt.toISOString(), urgent: t.status === "DISPUTED" },
+            teksten,
+            (n) => (t.status === "DISPUTED" ? { title: n.urenDisputTitel, body: n.urenDisputBody } : { title: n.urenWachtTitel, body: n.urenWachtBody }),
+          ),
+        );
       }
       // Een antwoord op je reactie is een week nieuws; daarna staat het alleen nog in Mijn klussen
       // (zonder grens bleef "Tegenbod geaccepteerd" voor altijd in de bel staan).
@@ -132,65 +174,59 @@ export async function getNotifications(principal: Principal): Promise<Notificati
       for (const o of offers) {
         if (o.status === "accepted" && recent(o.respondedAt)) {
           const tegenbod = o.proposedRateCents !== o.listedRateCents;
-          out.push({
-            id: `offer:${o.id}`,
-            kind: "offer",
-            title: tegenbod ? "Tegenbod geaccepteerd" : "Je bent uitgekozen",
-            body: tegenbod
-              ? `${o.shiftTitle}: je tarief van € ${(o.proposedRateCents / 100).toFixed(2)}/u is akkoord. Je staat ingepland.`
-              : `${o.shiftTitle}: je reactie is geaccepteerd. Je staat ingepland.`,
-            href: `/dashboard/klussen/${o.shiftId}`,
-            at: o.respondedAt ?? o.at,
-            urgent: true,
-          });
+          out.push(
+            werkerMelding(
+              { id: `offer:${o.id}`, kind: "offer", href: `/dashboard/klussen/${o.shiftId}`, at: o.respondedAt ?? o.at, urgent: true },
+              teksten,
+              (n) =>
+                tegenbod
+                  ? { title: n.tegenbodOkTitel, body: vulIn(n.tegenbodOkBody, { klus: o.shiftTitle, tarief: tarief(o.proposedRateCents, n) }) }
+                  : { title: n.uitgekozenTitel, body: vulIn(n.uitgekozenBody, { klus: o.shiftTitle }) },
+            ),
+          );
         } else if (o.status === "declined" && recent(o.respondedAt)) {
           // een gewone reactie (tegen het aangeboden tarief) is geen tegenbod
           const tegenbod = o.proposedRateCents !== o.listedRateCents;
-          out.push({
-            id: `offer:${o.id}`,
-            kind: "offer",
-            title: tegenbod ? "Tegenbod afgewezen" : "Niet uitgekozen",
-            body: tegenbod ? `${o.shiftTitle}: het oorspronkelijke tarief blijft gelden.` : `${o.shiftTitle}: er is iemand anders gekozen. Zoek een andere klus.`,
-            href: tegenbod ? `/dashboard/klussen/${o.shiftId}` : "/dashboard/klussen",
-            at: o.respondedAt ?? o.at,
-            urgent: false,
-          });
+          out.push(
+            werkerMelding(
+              { id: `offer:${o.id}`, kind: "offer", href: tegenbod ? `/dashboard/klussen/${o.shiftId}` : "/dashboard/klussen", at: o.respondedAt ?? o.at, urgent: false },
+              teksten,
+              (n) =>
+                tegenbod
+                  ? { title: n.tegenbodNeeTitel, body: vulIn(n.tegenbodNeeBody, { klus: o.shiftTitle }) }
+                  : { title: n.nietUitgekozenTitel, body: vulIn(n.nietUitgekozenBody, { klus: o.shiftTitle }) },
+            ),
+          );
         } else if (o.status === "expired" && recent(o.respondedAt)) {
           // de klus begon zonder keuze (lib/offers/expire.ts); een week zichtbaar
-          out.push({
-            id: `offer:${o.id}`,
-            kind: "offer",
-            title: "Helaas niet uitgekozen",
-            body: `${o.shiftTitle}: de klus is begonnen zonder dat je gekozen bent. Zoek een andere klus.`,
-            href: "/dashboard/klussen",
-            at: o.respondedAt ?? o.at,
-            urgent: false,
-          });
+          out.push(
+            werkerMelding(
+              { id: `offer:${o.id}`, kind: "offer", href: "/dashboard/klussen", at: o.respondedAt ?? o.at, urgent: false },
+              teksten,
+              (n) => ({ title: n.helaasTitel, body: vulIn(n.helaasBody, { klus: o.shiftTitle }) }),
+            ),
+          );
         }
       }
       for (const m of notChosen) {
         if (!recent((m.respondedAt ?? m.expiresAt ?? m.createdAt).toISOString())) continue;
-        out.push({
-          id: `match:${m.id}`,
-          kind: "shift",
-          title: "Niet uitgekozen",
-          body: `${m.shift.title}: deze klus is niet (meer) voor jou — een ander is gekozen of de reactietijd is verlopen.`,
-          href: "/dashboard/diensten",
-          at: (m.respondedAt ?? m.expiresAt ?? m.createdAt).toISOString(),
-          urgent: false,
-        });
+        out.push(
+          werkerMelding(
+            { id: `match:${m.id}`, kind: "shift", href: "/dashboard/diensten", at: (m.respondedAt ?? m.expiresAt ?? m.createdAt).toISOString(), urgent: false },
+            teksten,
+            (n) => ({ title: n.matchTitel, body: vulIn(n.matchBody, { klus: m.shift.title }) }),
+          ),
+        );
       }
       const myOpenReplacements = replacements.filter((r) => r.userId === principal.userId && r.status === "open");
       for (const r of myOpenReplacements) {
-        out.push({
-          id: `repl:${r.id}`,
-          kind: "shift",
-          title: "Vervanger gezocht",
-          body: `${r.shiftTitle}: je klus staat als "Vervanging" op het platform.`,
-          href: "/dashboard/diensten",
-          at: r.at,
-          urgent: false,
-        });
+        out.push(
+          werkerMelding(
+            { id: `repl:${r.id}`, kind: "shift", href: "/dashboard/diensten", at: r.at, urgent: false },
+            teksten,
+            (n) => ({ title: n.vervangerTitel, body: vulIn(n.vervangerBody, { klus: r.shiftTitle }) }),
+          ),
+        );
       }
     }
   }
@@ -299,8 +335,8 @@ export async function getNotifications(principal: Principal): Promise<Notificati
   // zodat de bel echt 25 zichtbare items kan tonen.
   const dismissed = await getDismissed(principal.userId).catch(() => new Set<string>());
   return out
-    .filter((i) => !dismissed.has(notifSignature(i.id, i.body)))
+    .filter((i) => !dismissed.has(i.sig ?? notifSignature(i.id, i.body)))
     .sort((a, b) => (a.urgent === b.urgent ? (a.at < b.at ? 1 : -1) : a.urgent ? -1 : 1))
     .slice(0, 25)
-    .map((i) => ({ ...i, group: groupOf(i) }));
+    .map((i) => ({ ...i, sig: i.sig ?? notifSignature(i.id, i.body), group: groupOf(i) }));
 }
