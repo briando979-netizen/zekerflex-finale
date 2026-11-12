@@ -7,6 +7,7 @@ import { recordAudit } from "@/lib/audit";
 import { isReservedTestAddress, sendMail } from "@/lib/mail";
 import { CONTACTS } from "@/lib/seo";
 import { ensureStripeCustomer, getStripeClient } from "@/lib/billing/stripe";
+import { eisBetalenAan } from "@/lib/billing/stripe-betalen";
 import { BUNDEL_TLDS, euroPrijs, extensie, metBtw } from "@/lib/domeinen/extensies";
 import { leesDomein } from "@/lib/domeinen/naam";
 import { beschikbaarheid } from "@/lib/domeinen/beschikbaar";
@@ -107,6 +108,7 @@ export async function startBestelling(b: Besteller, invoer: string, terugUrl: (p
     return { soort: "bundel", id: best.id };
   }
 
+  await eisBetalenAan(); // vóór de bestelling wordt vastgelegd: anders blijft er een open bestelling hangen
   const p = metBtw(ext.prijsCent);
   const best = await prisma.domeinBestelling.create({
     data: { ...wie(b), domein, prijsCent: p.exclCent, btwCent: p.btwCent, notitie: `Beschikbaarheid bij bestellen: ${status}.` },

@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
+import { eisBetalenAan } from "@/lib/billing/stripe-betalen";
 
 let client: Stripe | null = null;
 
@@ -39,6 +40,7 @@ export async function createInvoiceCheckoutSession(
   if (input.totalCents <= 0) {
     throw AppError.validation("Het factuurbedrag moet groter dan 0 zijn om te kunnen innen.");
   }
+  await eisBetalenAan();
   const stripe = getStripeClient();
   const baseUrl = env.APP_BASE_URL.replace(/\/$/, "");
 
@@ -86,6 +88,7 @@ export async function createBulkInvoiceCheckoutSession(
   if (input.invoices.some((i) => i.totalCents <= 0)) {
     throw AppError.validation("Het factuurbedrag moet groter dan 0 zijn om te kunnen innen.");
   }
+  await eisBetalenAan();
   const stripe = getStripeClient();
   const baseUrl = env.APP_BASE_URL.replace(/\/$/, "");
   const invoiceIds = input.invoices.map((i) => i.invoiceId);
@@ -132,6 +135,7 @@ export async function createSubscriptionCheckoutSession(
   if (input.priceCentsPerMonth <= 0) {
     throw AppError.validation("De abonnementsprijs moet groter dan 0 zijn om te kunnen innen.");
   }
+  await eisBetalenAan();
   const stripe = getStripeClient();
 
   return stripe.checkout.sessions.create({
@@ -177,6 +181,7 @@ export async function createWebsiteManagementCheckoutSession(
   if (input.priceCentsPerMonth <= 0) {
     throw AppError.validation("De abonnementsprijs moet groter dan 0 zijn om te kunnen innen.");
   }
+  await eisBetalenAan();
   const stripe = getStripeClient();
   const metadata = { managedWebsiteTenantId: input.tenantId, websitePlan: input.plan };
 
@@ -222,6 +227,7 @@ export interface NetwerkCheckoutInput {
  */
 export async function createNetwerkCheckoutSession(input: NetwerkCheckoutInput): Promise<Stripe.Checkout.Session> {
   if (input.unitAmountCents <= 0) throw AppError.validation("De abonnementsprijs moet groter dan 0 zijn om te kunnen innen.");
+  await eisBetalenAan();
   const stripe = getStripeClient();
   const metadata = {
     netwerkTenantId: input.tenantId,
@@ -275,6 +281,7 @@ export interface ShopOrderCheckoutInput {
 export async function createShopOrderCheckoutSession(
   input: ShopOrderCheckoutInput,
 ): Promise<Stripe.Checkout.Session> {
+  await eisBetalenAan();
   const stripe = getStripeClient();
 
   const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = input.lines.map((l) => ({
@@ -431,6 +438,7 @@ export async function createBankRequestSession(input: {
   amountCents: number;
   description: string;
 }): Promise<Stripe.Checkout.Session> {
+  await eisBetalenAan();
   const stripe = getStripeClient();
   const baseUrl = env.APP_BASE_URL.replace(/\/$/, "");
   const metadata = { bankAccountId: input.bankAccountId, bankRequestId: input.requestId };
@@ -466,6 +474,7 @@ export async function createBankTopupSession(input: {
   if (input.amountCents < 500 || input.amountCents > 500_000) {
     throw AppError.validation("Opwaarderen kan van € 5 tot € 5.000");
   }
+  await eisBetalenAan();
   const stripe = getStripeClient();
   const baseUrl = env.APP_BASE_URL.replace(/\/$/, "");
   return stripe.checkout.sessions.create({

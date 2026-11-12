@@ -5,6 +5,7 @@ import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { getStripeClient } from "@/lib/billing/stripe";
+import { eisBetalenAan } from "@/lib/billing/stripe-betalen";
 import { maakAccountMetKvk } from "@/lib/billing/stripe-bedrijf";
 import { IDEAL_KOSTEN_CENT, isTestAdres } from "@/lib/rijschool/betalen";
 import { leesRegels } from "@/lib/horeca/bestellen";
@@ -156,6 +157,7 @@ export async function openRekening(zaakId: string, tafelId: string, db: Db = pri
  */
 export async function startAfrekenen(z: HorecaZaak, tafel: Pick<HorecaTafel, "id" | "naam">, code: string, fooiCent: number, selectie: Selectie[] | null = null): Promise<string> {
   if (!z.stripeAccountId || !(await onlineAfrekenenAan(z))) throw AppError.precondition("Online afrekenen staat bij deze zaak nog niet aan. Vraag de bediening om de rekening.");
+  await eisBetalenAan(); // vóór de betaling wordt vastgelegd en de gerechten worden vastgehouden
 
   // onder een slot per tafel: twee gasten die tegelijk op betalen drukken, kiezen nooit hetzelfde
   const b = await prisma.$transaction(async (tx) => {

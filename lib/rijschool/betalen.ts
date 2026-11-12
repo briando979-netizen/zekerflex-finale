@@ -5,6 +5,7 @@ import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { getStripeClient } from "@/lib/billing/stripe";
+import { eisBetalenAan } from "@/lib/billing/stripe-betalen";
 import { maakAccountMetKvk } from "@/lib/billing/stripe-bedrijf";
 import { betalingOntvangenMail, siteUrl, verstuur } from "@/lib/rijschool/mail";
 
@@ -124,6 +125,7 @@ export async function startIdeal(
   adres: string | null = null,
 ): Promise<string> {
   if (!r.stripeAccountId || !(await onlineBetalenAan(r))) throw AppError.precondition("Online betalen staat nog niet aan bij deze rijschool.");
+  await eisBetalenAan();
   let omschrijving: string;
   let bedragCent: number;
   let metadata: Record<string, string>;

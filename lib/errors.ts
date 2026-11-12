@@ -15,6 +15,7 @@ export type ErrorCode =
   | "NAAM_VASTGEZET"
   | "ALLEEN_BEHEERDER"
   | "ECHT_ONVERANDERLIJK"
+  | "BETALEN_UIT"
   | "UPSTREAM_UNAVAILABLE"
   | "INTERNAL";
 
@@ -74,6 +75,10 @@ export class AppError extends Error {
   /** 423: een lid van de organisatie zonder beheerdersrol (geen 403: CrowdSec telt een reeks 403's als inbraakpoging). */
   static alleenBeheerder(message: string) {
     return new AppError("ALLEEN_BEHEERDER", message, 423);
+  }
+  /** 423: het Stripe-account ontvangt even geen betalingen (lib/billing/stripe-betalen.ts); geen 403: CrowdSec. */
+  static betalenUit(message = "Betalen kan op dit moment even niet. Probeer het later opnieuw of neem contact op.") {
+    return new AppError("BETALEN_UIT", message, 423);
   }
   static upstream(message: string) {
     return new AppError("UPSTREAM_UNAVAILABLE", message, 503);
