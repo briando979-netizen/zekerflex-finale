@@ -31,6 +31,7 @@ import { schoonIban } from "@/lib/onboarding/velden";
 import { alertOwnerLater } from "@/lib/ops/alert";
 import { runAfter } from "@/lib/run-after";
 import { meldIdGeverifieerd } from "@/lib/onboarding/id-geverifieerd";
+import { aiReviewOverslaan, aiReviewUitslag, REM_DUUR_MS, REM_NA } from "@/lib/onboarding/ai-review-rem";
 
 // ---------------------------------------------------------------------------
 // Self-serve freelancer onboarding verification.
@@ -189,6 +190,15 @@ Richtlijnen:
     today: new Date().toISOString().slice(0, 10),
   };
 
+  const nietBeschikbaar: AiVerdict = {
+    verdict: "needs_review",
+    confidence: 0,
+    reasons: ["De automatische beoordeling was tijdelijk niet beschikbaar; een controleur kijkt ernaar."],
+    summary: "In behandeling — automatische beoordeling niet beschikbaar.",
+  };
+  // gaf de AI de laatste keren geen antwoord, dan niet nog eens 8 s wachten (lib/onboarding/ai-review-rem.ts)
+  if (aiReviewOverslaan()) return nietBeschikbaar;
+
   try {
     const verdict = await chatJson<AiVerdict>({
       purpose: "kyc-review",
@@ -206,6 +216,7 @@ Richtlijnen:
         { role: "user", content: JSON.stringify(payload, null, 2) },
       ],
     });
+    aiReviewUitslag(true);
     return {
       verdict: ["approved", "needs_review", "rejected"].includes(verdict.verdict)
         ? verdict.verdict
@@ -215,15 +226,13 @@ Richtlijnen:
       summary: typeof verdict.summary === "string" ? verdict.summary : "",
     };
   } catch (err) {
-    logger.warn("kyc ai review unavailable, deferring to human", {
-      error: (err as Error).message,
-    });
-    return {
-      verdict: "needs_review",
-      confidence: 0,
-      reasons: ["De automatische beoordeling was tijdelijk niet beschikbaar; een controleur kijkt ernaar."],
-      summary: "In behandeling — automatische beoordeling niet beschikbaar.",
-    };
+    // één waarschuwing als de rem dichtgaat, niet bij elke werker (foutenlogboek 12 nov: 12x op een dag)
+    if (aiReviewUitslag(false) === "dicht") {
+      logger.warn(`kyc ai review: ${REM_NA}x geen antwoord, ${REM_DUUR_MS / 3_600_000} uur overgeslagen`, { error: (err as Error).message });
+    } else {
+      logger.info("kyc ai review unavailable, deferring to human", { error: (err as Error).message });
+    }
+    return nietBeschikbaar;
   }
 }
 

@@ -163,6 +163,7 @@ vi.mock("@/lib/kyc/wallet", () => ({
 }));
 
 import { submitFreelancerOnboarding, submitFreelancerOnboardingViaWallet } from "@/lib/onboarding/verify";
+import { resetAiReviewRem } from "@/lib/onboarding/ai-review-rem";
 
 function image(name: string, size = 20_000): { filename: string; mimeType: string; bytes: Buffer } {
   return { filename: name, mimeType: "image/jpeg", bytes: Buffer.alloc(size, 1) };
@@ -181,6 +182,8 @@ const BASE_INPUT = {
 };
 
 afterEach(() => {
+  // de rem op de tekst-AI (lib/onboarding/ai-review-rem.ts) leeft per proces: elke test begint dicht bij nul
+  resetAiReviewRem();
   vi.clearAllMocks();
   uploadCounter = 0;
 });
