@@ -113,6 +113,8 @@ export interface Selection {
 }
 
 export interface QuoteLine {
+  /** welke regel het is, zodat een scherm in een andere taal de eigen tekst kan kiezen: "lijn", "bundel", "nummer", "optie:<id>" */
+  key?: string;
   label: string;
   /** null = prijs op aanvraag */
   cents: number | null;
@@ -149,12 +151,12 @@ export function quote(sel: Selection, p: Pricing = DEFAULT_PRICING): Quote {
   const included = new Set(bundle?.options ?? []);
   const lines: QuoteLine[] = [];
 
-  lines.push(bundle ? { label: `Bundel ${bundle.label} (lijn + ${bundle.options.length} opties)`, cents: p.bundleCents[bundle.id] } : { label: "ZekerFlex-lijn", cents: p.lineCents });
+  lines.push(bundle ? { key: "bundel", label: `Bundel ${bundle.label} (lijn + ${bundle.options.length} opties)`, cents: p.bundleCents[bundle.id] } : { key: "lijn", label: "ZekerFlex-lijn", cents: p.lineCents });
   const numberCents = p.numberCents[sel.kind];
   const type = numberTypeById(sel.kind);
-  if (numberCents === null) lines.push({ label: type?.label ?? "Nummer", cents: null });
-  else if (numberCents > 0) lines.push({ label: type?.label ?? "Nummer", cents: numberCents });
-  for (const o of OPTIONS) if (wanted.has(o.id) && !included.has(o.id)) lines.push({ label: o.label, cents: p.optionCents[o.id] });
+  if (numberCents === null) lines.push({ key: "nummer", label: type?.label ?? "Nummer", cents: null });
+  else if (numberCents > 0) lines.push({ key: "nummer", label: type?.label ?? "Nummer", cents: numberCents });
+  for (const o of OPTIONS) if (wanted.has(o.id) && !included.has(o.id)) lines.push({ key: `optie:${o.id}`, label: o.label, cents: p.optionCents[o.id] });
 
   const current = costWith(bundle, wanted, p);
   let best: { bundle: BundleId | null; cost: number } = { bundle: sel.bundle, cost: current };
