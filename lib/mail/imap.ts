@@ -418,6 +418,8 @@ function walkMime(raw: Buffer): MimePart[] {
 export interface FetchOptions {
   /** false when software reads the mail (agenda scan) rather than the person — it stays unread */
   markSeen?: boolean;
+  /** alleen de kopregels (BODY.PEEK[HEADER]): goedkoop om te zien aan wie een mail oorspronkelijk gericht was */
+  alleenKop?: boolean;
 }
 
 async function fetchRawMessage(cfg: ImapConfig, uid: number, opts: FetchOptions = {}): Promise<Buffer | null> {
@@ -426,7 +428,8 @@ async function fetchRawMessage(cfg: ImapConfig, uid: number, opts: FetchOptions 
   try {
     await command(sock, bs, `LOGIN ${quote(cfg.user)} ${quote(cfg.pass)}`, timeoutMs);
     await command(sock, bs, "SELECT INBOX", timeoutMs);
-    const lines = await command(sock, bs, `UID FETCH ${uid} (BODY.PEEK[])`, timeoutMs);
+    const sectie = opts.alleenKop ? "HEADER" : "";
+    const lines = await command(sock, bs, `UID FETCH ${uid} (BODY.PEEK[${sectie}])`, timeoutMs);
     // .PEEK means the FETCH itself didn't mark \Seen — opening a message in
     // the admin UI should still mark it read, like any real mail client.
     if (opts.markSeen !== false) {
@@ -436,9 +439,10 @@ async function fetchRawMessage(cfg: ImapConfig, uid: number, opts: FetchOptions 
 
     // The literal was inlined as a quoted string by readResponseLine() — pull
     // it back out of the one `* n FETCH (... BODY[] "...")` line.
-    const fetchLine = lines.find((l) => /FETCH/i.test(l) && /BODY\[\]/i.test(l));
+    const sleutel = `BODY[${sectie}]`;
+    const fetchLine = lines.find((l) => /FETCH/i.test(l) && l.toUpperCase().includes(sleutel));
     if (!fetchLine) return null;
-    const pos = { i: fetchLine.indexOf("BODY[]") + "BODY[]".length };
+    const pos = { i: fetchLine.toUpperCase().indexOf(sleutel) + sleutel.length };
     while (fetchLine[pos.i] === " ") pos.i++;
     const value = parseSexp(fetchLine, pos);
     return typeof value === "string" ? Buffer.from(value, "utf8") : null;
@@ -467,6 +471,40 @@ export async function fetchForScan(cfg: ImapConfig, uid: number): Promise<{ text
   return {
     text: bodyText(parts.filter((p) => !isAttachment(p) && !isCalendar(p))),
     calendars: parts.filter(isCalendar).map((p) => decodeBody(p.body, p.encoding).toString("utf8")),
+  };
+}
+
+/** Alleen de kopregels van een mail (ongelezen blijft ongelezen), voor de bonnetjes-herkenning. */
+export async function fetchKop(cfg: ImapConfig, uid: number): Promise<string | null> {
+  const raw = await fetchRawMessage(cfg, uid, { markSeen: false, alleenKop: true });
+  return raw ? raw.toString("utf8") : null;
+}
+
+export interface MailBijlage {
+  filename: string;
+  contentType: string;
+  bytes: Buffer;
+}
+
+/** De kop, de bijlagen (gedecodeerd) en of er een html-deel was; de mail blijft ongelezen. Voor de bonnetjes-verwerking. */
+export async function fetchBijlagen(
+  cfg: ImapConfig,
+  uid: number,
+): Promise<{ kop: string; bijlagen: MailBijlage[]; heeftHtml: boolean } | null> {
+  const raw = await fetchRawMessage(cfg, uid, { markSeen: false });
+  if (!raw) return null;
+  const parts = walkMime(raw);
+  return {
+    kop: splitHeadersBody(raw).headers,
+    heeftHtml: parts.some((p) => p.contentType === "text/html"),
+    bijlagen: parts
+      .map((p, index) => ({ p, index }))
+      .filter(({ p }) => isAttachment(p))
+      .map(({ p, index }) => ({
+        filename: p.filename ?? `bijlage-${index + 1}`,
+        contentType: p.contentType || "application/octet-stream",
+        bytes: decodeBody(p.body, p.encoding),
+      })),
   };
 }
 
