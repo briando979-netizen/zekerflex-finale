@@ -183,7 +183,7 @@ export default async function VerificatiePage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <GegevensMist mist={mist} soort={fiscal.workerKind ?? null} loonheffingskorting={fiscal.loonheffingskorting} />
+      <GegevensMist mist={mist} soort={fiscal.workerKind ?? null} loonheffingskorting={fiscal.loonheffingskorting} bsnVoorstel={fiscal.bsnVoorstelLast4 ?? null} />
 
       {lastCheck && (
         <div className="mb-6 card p-4 text-sm">

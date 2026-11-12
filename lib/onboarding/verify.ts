@@ -17,6 +17,7 @@ import { reeksSamenvatting, wisReeks } from "@/lib/kyc/gezicht/reeks-opslag";
 import { isReservedTestAddress } from "@/lib/mail/test-adres";
 import { featureEnabled } from "@/lib/flags";
 import { leesMrzVanFoto } from "@/lib/kyc/mrz-lezen";
+import type { BsnVoorstel } from "@/lib/kyc/bsn-uit-document";
 import { zelfdeNummer, type MrzUitslag } from "@/lib/kyc/mrz";
 import { documentNaamPast } from "@/lib/kyc/document-naam";
 import { chipLezing, wisChipGegevens } from "@/lib/kyc/chip/sessie";
@@ -453,20 +454,20 @@ export async function saveFreelancerBase(input: {
  * achterkant verwisseld, dan proberen we de andere foto. Een rijbewijs heeft
  * geen MRZ. Faalt de OCR, dan is er gewoon geen MRZ-uitslag (nooit een blokkade).
  */
-async function leesDocumentMrz(input: OnboardingInput): Promise<MrzUitslag | null> {
-  if (input.documentType === "DRIVERS_LICENSE") return null;
+async function leesDocumentMrz(input: OnboardingInput): Promise<{ uitslag: MrzUitslag | null; bsn: BsnVoorstel | null }> {
+  if (input.documentType === "DRIVERS_LICENSE") return { uitslag: null, bsn: null };
   const volgorde = input.documentType === "PASSPORT" ? [input.files.front, input.files.back] : [input.files.back, input.files.front];
   let beste: MrzUitslag | null = null;
   for (const foto of volgorde) {
     try {
-      const { uitslag } = await leesMrzVanFoto(foto.bytes);
-      if (uitslag?.geldig) return uitslag;
+      const { uitslag, bsn } = await leesMrzVanFoto(foto.bytes);
+      if (uitslag?.geldig) return { uitslag, bsn };
       beste ??= uitslag;
     } catch (err) {
       logger.warn("mrz lezen mislukt", { error: (err as Error).message });
     }
   }
-  return beste;
+  return { uitslag: beste, bsn: null };
 }
 
 const datumNl = (iso: string) => {
@@ -561,7 +562,7 @@ export async function submitFreelancerOnboarding(
   // --- AI authenticity review (text-only) + vision review (photo content) +
   // de MRZ van het document zelf, tegelijk: drie onafhankelijke controles ------
   // (volgorde van de destructuring = volgorde van de beloften)
-  const [ai, vision, mrz, chip, gezicht, gezichtAuto] = await Promise.all([
+  const [ai, vision, mrzLezing, chip, gezicht, gezichtAuto] = await Promise.all([
     aiAuthenticityReview({
       accountName: user.fullName,
       nameOnDocument: input.nameOnDocument,
@@ -589,6 +590,7 @@ export async function submitFreelancerOnboarding(
     // Bij een storing in de vlag: uit. De score wordt altijd bewaard en getoond.
     featureEnabled("id-gezicht-automatisch").catch(() => false),
   ]);
+  const mrz = mrzLezing.uitslag;
   // de live reeks van de selfies (lib/kyc/gezicht/reeks.ts): zag de server het hoofd met tussenstanden draaien?
   // Voorlopig alleen meten, geen poort; een storing telt als "niet gemeten".
   const reeks = await reeksSamenvatting(user.id).catch(() => null);
@@ -1034,6 +1036,13 @@ export async function submitFreelancerOnboarding(
   await wisChipGegevens(user.id).catch(() => undefined);
   // en de live reeks: samengevat in de controle, de metingen zelf hoeven niet te blijven
   await wisReeks(user.id).catch(() => undefined);
+
+  // het BSN van het document (lib/kyc/bsn-uit-document.ts) als voorstel: de werker bevestigt het zelf. Alleen bij een
+  // kloppende MRZ op naam van deze werker en niet bij een afgewezen controle; nooit de cijfers, nooit in rawPayload.
+  if (mrzLezing.bsn && outcome !== "rejected" && mrzGeldig && mrzNaamOk) {
+    const { bewaarBsnVoorstel } = await import("@/lib/fiscal/bsn-voorstel");
+    await bewaarBsnVoorstel(user.id, mrzLezing.bsn).catch(() => false);
+  }
 
   // ID geverifieerd: de werker hoort het meteen (eenmalig, lib/onboarding/id-geverifieerd.ts)
   if (outcome === "verified") runAfter(() => meldIdGeverifieerd(user.id));

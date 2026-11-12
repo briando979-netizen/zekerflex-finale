@@ -1,5 +1,5 @@
 import { requirePrincipal } from "@/lib/auth";
-import { getFiscal } from "@/lib/fiscal/store";
+import { getFiscal, fiscaalVoorKlant } from "@/lib/fiscal/store";
 import { PageHeader } from "@/components/app/ui";
 import { FiscalForm } from "@/components/app/FiscalForm";
 import { BackLink } from "@/components/app/BackLink";
@@ -19,7 +19,7 @@ export default async function FiscaalPage() {
         title={f.titel}
         subtitle={f.subtitel}
       />
-      <FiscalForm initial={fiscal} defaultKind={fiscal.workerKind} />
+      <FiscalForm initial={fiscaalVoorKlant(fiscal)} defaultKind={fiscal.workerKind} />
     </div>
   );
 }

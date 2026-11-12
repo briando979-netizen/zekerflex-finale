@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { kvGet, kvListEntries, kvSet } from "@/lib/storage/kv";
 import type { KorAanvraag } from "@/lib/fiscal/kor";
 
@@ -41,6 +40,12 @@ export interface FiscalProfile {
   // Payroll (uitzendkracht)
   bsnLast4: string | null;
   bsnHash: string | null; // sha256 — never store the raw BSN
+  /**
+   * Het BSN zoals gelezen van een Nederlandse ID-kaart of paspoort (lib/kyc/bsn-uit-document.ts), nog niet bevestigd:
+   * alleen de hash en de laatste 4. Pas na "Ja, klopt" van de werker gaat het naar bsnHash/bsnLast4.
+   */
+  bsnVoorstelHash?: string | null;
+  bsnVoorstelLast4?: string | null;
   loonheffingskorting: boolean;
   /** geboortedatum (YYYY-MM-DD) — voor jeugdloon / WML-vloer */
   birthDate: string | null;
@@ -71,6 +76,8 @@ export const EMPTY_FISCAL: FiscalProfile = {
   korAanvraag: null,
   bsnLast4: null,
   bsnHash: null,
+  bsnVoorstelHash: null,
+  bsnVoorstelLast4: null,
   loonheffingskorting: true,
   birthDate: null,
   invoiceMode: null,
@@ -123,33 +130,13 @@ export function invoiceModeFor(f: FiscalProfile): InvoiceMode {
   return "reverse-billing";
 }
 
-/**
- * Alleen de cijfers van een BSN. Een oud BSN (sofinummer) van 8 cijfers krijgt de 0 ervoor, zoals de Belastingdienst
- * het vraagt: zonder die 0 viel het door de elfproef ("klopt niet") terwijl het nummer echt is (13 nov). Al bewaarde
- * hashes veranderen niet: die zijn altijd van 9 cijfers gemaakt.
- */
-export function bsnCijfers(bsn: string): string {
-  const d = bsn.replace(/\D/g, "");
-  return d.length === 8 ? `0${d}` : d;
-}
+export { bsnCijfers, hashBsn, validBsn } from "@/lib/fiscal/bsn";
 
-export function hashBsn(bsn: string): { hash: string; last4: string } {
-  const digits = bsnCijfers(bsn);
-  return { hash: createHash("sha256").update(`bsn:${digits}`).digest("hex"), last4: digits.slice(-4) };
-}
-
-/**
- * Elfproef (BSN check digit): 9x het eerste cijfer + 8x het tweede ... + 2x het achtste - 1x het laatste moet door 11
- * deelbaar zijn. Dit kijkt alleen of het nummer kán bestaan (een tikfout of twee omgedraaide cijfers vallen er bijna
- * altijd door), niet of het van deze persoon is: dat weet alleen de overheid.
- */
-export function validBsn(bsn: string): boolean {
-  const d = bsnCijfers(bsn);
-  if (d.length !== 9 || d === "000000000") return false;
-  let sum = 0;
-  for (let i = 0; i < 8; i++) sum += Number(d[i]) * (9 - i);
-  sum += Number(d[8]) * -1;
-  return sum % 11 === 0;
+/** De fiscale gegevens voor de werker zelf (scherm of API): zonder de hash van het BSN-voorstel, alleen de laatste 4. */
+export function fiscaalVoorKlant(f: FiscalProfile): FiscalProfile {
+  const kopie = { ...f };
+  delete kopie.bsnVoorstelHash;
+  return kopie;
 }
 
 export interface FiscalSummary {
