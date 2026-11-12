@@ -6,6 +6,7 @@ import { phoneSystem, voiceForLang, recogLang, scriptOrDefault, voicemailMessage
 import { isGoodbye, isGreetingOnly, looksLikeVoicemail } from "@/lib/telephony/intents";
 import { chat, fastModel, llmConfigProblem, ensureAiNode } from "@/lib/ai/client";
 import { logger } from "@/lib/logger";
+import { webhookTekst, WEBHOOK_MAX } from "@/lib/http/webhook-lezen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,7 +46,9 @@ const ERR_LINE: Record<Lang, string> = {
 // POST /api/telephony/gather — de gesprekslus in de gekozen taal. Twilio stuurt
 // wat de beller zei (SpeechResult); de AI antwoordt kort en we luisteren opnieuw.
 export async function POST(request: Request): Promise<Response> {
-  const params = readForm(await request.text());
+  const lees = await webhookTekst(request, WEBHOOK_MAX.twilio);
+  if (!lees.ok) return lees.response;
+  const params = readForm(lees.tekst);
   if (!signatureValid(request, params)) return new Response("Forbidden", { status: 403 });
 
   const callId = new URL(request.url).searchParams.get("callId");

@@ -1,6 +1,7 @@
 import { readForm, signatureValid, xmlResponse } from "@/lib/telephony/webhook";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { antwoordOpSpoed } from "@/lib/spoed/oproep";
+import { webhookTekst, WEBHOOK_MAX } from "@/lib/http/webhook-lezen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,7 +12,9 @@ const escapeXml = (s: string) => s.replace(/[<>&'"]/g, (c) => ({ "<": "&lt;", ">
 // antwoord van een kracht op een spoedoproep ("1", "2" of STOP; lib/spoed).
 // Handtekening vereist. Onbekende nummers krijgen geen antwoord.
 export async function POST(request: Request): Promise<Response> {
-  const params = readForm(await request.text());
+  const lees = await webhookTekst(request, WEBHOOK_MAX.twilio);
+  if (!lees.ok) return lees.response;
+  const params = readForm(lees.tekst);
   if (!signatureValid(request, params)) return new Response("Forbidden", { status: 403 });
   const van = params.From ?? "";
   const tekst = params.Body ?? "";

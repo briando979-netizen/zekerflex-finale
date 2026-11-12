@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { verifyWebhook } from "@/lib/integrations/didit";
 import { applyWebhookPayload } from "@/lib/kyc/verification";
 import { claimIdempotency } from "@/lib/redis";
+import { webhookTekst, WEBHOOK_MAX } from "@/lib/http/webhook-lezen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +21,10 @@ export const dynamic = "force-dynamic";
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const log = logger.forRequest(request, { route: "POST /api/webhooks/didit" });
-  const rawBody = await request.text();
+  // begrensd lezen (422 als te groot); de handtekening wordt op precies deze tekst gecontroleerd
+  const lees = await webhookTekst(request, WEBHOOK_MAX.didit);
+  if (!lees.ok) return lees.response;
+  const rawBody = lees.tekst;
 
   let verification: ReturnType<typeof verifyWebhook>;
   try {

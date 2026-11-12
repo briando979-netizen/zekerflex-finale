@@ -3,6 +3,7 @@ import { readForm, signatureValid, xmlResponse } from "@/lib/telephony/webhook";
 import { twiml, sayAndGather, gatherDigits, say, dial, hangupAfter } from "@/lib/telephony/twiml";
 import { getCall, patchCall, addTurn } from "@/lib/telephony/store";
 import { DEPT_MENU, DEPT_OPENING, voiceForLang, recogLang, type Lang } from "@/lib/telephony/scripts";
+import { webhookTekst, WEBHOOK_MAX } from "@/lib/http/webhook-lezen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,7 +14,9 @@ export const dynamic = "force-dynamic";
 //               9 medewerker spreken → doorverbinden · anders de AI-assistent).
 // Daarna gaat het gesprek verder via /gather, in de gekozen taal + stem.
 export async function POST(request: Request): Promise<Response> {
-  const params = readForm(await request.text());
+  const lees = await webhookTekst(request, WEBHOOK_MAX.twilio);
+  if (!lees.ok) return lees.response;
+  const params = readForm(lees.tekst);
   if (!signatureValid(request, params)) return new Response("Forbidden", { status: 403 });
 
   const url = new URL(request.url);
