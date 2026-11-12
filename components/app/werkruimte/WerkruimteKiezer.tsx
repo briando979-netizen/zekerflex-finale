@@ -2,7 +2,9 @@
 
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
-import { WERKRUIMTES, WERKRUIMTE_INFO, type Werkruimte } from "@/lib/werkgever/werkruimte";
+import { WERKRUIMTES, type Werkruimte } from "@/lib/werkgever/werkruimte";
+import { useT } from "@/components/i18n/I18nProvider";
+import { fmt } from "@/lib/i18n/dictionaries";
 
 // "Wat voor bedrijf ben je?" — richt het menu en het startscherm van /werkgever in
 // (POST /api/werkgever/werkruimte). Dicht een regel met "Wijzigen"; open (of als
@@ -26,6 +28,9 @@ export function WerkruimteKiezer({
 }) {
   const router = useRouter();
   const id = useId();
+  const dict = useT();
+  const k = dict.werkruimteKiezer;
+  const info = (w: Werkruimte) => ({ naam: dict.werkruimteInfo[`${w}Naam` as const], uitleg: dict.werkruimteInfo[`${w}Uitleg` as const] });
   const [open, setOpen] = useState(alsVraag);
   const [soort, setSoort] = useState<Werkruimte>(huidig);
   const [personeel, setPersoneel] = useState(ookPersoneel);
@@ -45,16 +50,16 @@ export function WerkruimteKiezer({
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
-        throw new Error(body?.error?.message ?? "Opslaan lukte niet. Probeer het opnieuw.");
+        throw new Error(body?.error?.message ?? k.opslaanMislukt);
       }
       const antwoord = (await res.json().catch(() => null)) as { ga?: string } | null;
       setOpen(false);
-      setKlaar(`Opgeslagen: we openen je dashboard ${WERKRUIMTE_INFO[soort].naam.toLowerCase()}.`);
+      setKlaar(fmt(k.opgeslagen, { soort: info(soort).naam.toLowerCase() }));
       // elk dashboard heeft een eigen omgeving (lib/werkgever/werkruimte.ts thuisVan); volledig laden voor het nieuwe menu
       if (antwoord?.ga) window.location.assign(antwoord.ga);
       else router.refresh();
     } catch (e) {
-      setFout(e instanceof Error ? e.message : "Opslaan lukte niet. Probeer het opnieuw.");
+      setFout(e instanceof Error ? e.message : k.opslaanMislukt);
     } finally {
       setBezig(false);
     }
@@ -62,10 +67,11 @@ export function WerkruimteKiezer({
 
   if (!open) {
     return (
-      <section aria-label="Werkruimte" className="mt-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-hair bg-white px-4 py-3 text-sm text-neutralx-600">
+      <section aria-label={k.label} className="mt-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-hair bg-white px-4 py-3 text-sm text-neutralx-600">
         <p>
-          Je werkruimte is ingericht voor <strong className="text-ink">{WERKRUIMTE_INFO[huidig].naam.toLowerCase()}</strong>
-          {huidig !== "personeel" && ookPersoneel ? " en personeel inhuren" : ""}.
+          {k.ingericht}
+          <strong className="text-ink">{info(huidig).naam.toLowerCase()}</strong>
+          {huidig !== "personeel" && ookPersoneel ? k.enPersoneel : ""}.
           {klaar ? (
             <span role="status" className="ml-1 text-ok">
               {klaar}
@@ -74,10 +80,10 @@ export function WerkruimteKiezer({
         </p>
         {kanKiezen ? (
           <button type="button" onClick={() => setOpen(true)} className="font-semibold text-brand-600 hover:underline">
-            Wijzigen
+            {k.wijzigen}
           </button>
         ) : (
-          <span className="text-xs text-neutralx-500">De beheerder van je bedrijf kan dit wijzigen.</span>
+          <span className="text-xs text-neutralx-500">{k.alleenBeheerder}</span>
         )}
       </section>
     );
@@ -86,13 +92,13 @@ export function WerkruimteKiezer({
   return (
     <section aria-labelledby={`${id}-kop`} className={`${alsVraag ? "mb-8" : "mt-8"} rounded-2xl border border-brand-500/30 bg-white p-5`}>
       <h2 id={`${id}-kop`} className="font-display text-lg font-bold text-ink">
-        {alsVraag ? "Waar gebruik je ZekerFlex voor?" : "Wat voor bedrijf ben je?"}
+        {alsVraag ? k.kopVraag : k.kop}
       </h2>
       <p className="mt-1 text-sm text-neutralx-600">
-        Je krijgt een eigen dashboard voor wat je kiest. Later voeg je er een toe of wissel je via “Dashboard” bovenaan het menu.
+        {k.intro}
       </p>
       <fieldset className="mt-4">
-        <legend className="sr-only">Soort bedrijf</legend>
+        <legend className="sr-only">{k.legend}</legend>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {WERKRUIMTES.map((w) => (
             <label
@@ -103,8 +109,8 @@ export function WerkruimteKiezer({
             >
               <input type="radio" name={`${id}-soort`} value={w} checked={soort === w} onChange={() => setSoort(w)} className="mt-1 accent-brand-600" />
               <span>
-                <span className="block font-semibold text-ink">{WERKRUIMTE_INFO[w].naam}</span>
-                <span className="block text-sm text-neutralx-600">{WERKRUIMTE_INFO[w].uitleg}</span>
+                <span className="block font-semibold text-ink">{info(w).naam}</span>
+                <span className="block text-sm text-neutralx-600">{info(w).uitleg}</span>
               </span>
             </label>
           ))}
@@ -121,11 +127,11 @@ export function WerkruimteKiezer({
               aria-describedby={personeelVast ? `${id}-vast` : undefined}
               className="mt-0.5 accent-brand-600"
             />
-            <span>Ik huur ook personeel in via ZekerFlex (dan krijg je ook het dashboard Personeel inhuren)</span>
+            <span>{k.personeel}</span>
           </label>
           {personeelVast && (
             <p id={`${id}-vast`} className="ml-6 mt-1 text-xs text-neutralx-500">
-              Staat aan omdat je al personeel via ZekerFlex inhuurt.
+              {k.vast}
             </p>
           )}
         </div>
@@ -137,7 +143,7 @@ export function WerkruimteKiezer({
       )}
       <div className="mt-5 flex flex-wrap gap-2">
         <button type="button" onClick={bewaar} disabled={bezig} className="btn-primary">
-          {bezig ? "Bezig…" : alsVraag ? "Zo inrichten" : "Opslaan"}
+          {bezig ? k.bezig : alsVraag ? k.zoInrichten : k.opslaan}
         </button>
         {!alsVraag && (
           <button
@@ -150,7 +156,7 @@ export function WerkruimteKiezer({
             }}
             className="btn-ghost"
           >
-            Annuleren
+            {k.annuleren}
           </button>
         )}
       </div>

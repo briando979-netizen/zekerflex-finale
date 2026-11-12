@@ -43,6 +43,7 @@ export const dynamic = "force-dynamic";
 
 export default async function WerkgeverStartPage({ searchParams }: { searchParams: Promise<{ voorbeeld?: string | string[] }> }) {
   const t = await getDict();
+  const ws = t.werkgeverStart;
   const principal = await requirePrincipal();
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
@@ -102,13 +103,9 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
   // Warme, contextuele subregel bij de groet — wat vraagt nu om aandacht?
   const greetSub =
     o.kpis.toApprove > 0
-      ? o.kpis.toApprove === 1
-        ? "1 urenregistratie wacht op je goedkeuring."
-        : `${o.kpis.toApprove} urenregistraties wachten op je goedkeuring.`
+      ? fmt(o.kpis.toApprove === 1 ? ws.greetKeurEen : ws.greetKeurMeer, { n: o.kpis.toApprove })
       : o.kpis.openShifts > 0
-        ? o.kpis.openShifts === 1
-          ? "1 openstaande dienst wacht op invulling."
-          : `${o.kpis.openShifts} openstaande diensten wachten op invulling.`
+        ? fmt(o.kpis.openShifts === 1 ? ws.greetOpenEen : ws.greetOpenMeer, { n: o.kpis.openShifts })
         : undefined;
 
   return (
@@ -120,24 +117,17 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
       {!startModus && <KlusConceptNudge />}
       {!companyVerified && !startModus && (
         <div className="mb-8 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
-          <p className="font-semibold text-ink">{inControle ? "We controleren je bedrijf" : "Je bedrijf is nog niet geverifieerd"}</p>
+          <p className="font-semibold text-ink">{inControle ? ws.controleTitel : ws.nietGeverifieerd}</p>
           <p className="mt-1">
-            Je kunt alvast één <strong>testklus</strong> plaatsen: die is zichtbaar en freelancers kunnen erop reageren.{" "}
+            {ws.testklusVoor}
+            <strong>{ws.testklusVet}</strong>
+            {ws.testklusNa}{" "}
             {verificatie.buitenlands ? (
-              <>
-                Je bedrijf is aangemeld. Omdat het buiten Nederland zit, controleert ZekerFlex het zelf met de hand, meestal binnen
-                een werkdag, en je krijgt bericht zodra je mensen kunt inplannen.
-              </>
+              <>{ws.buitenland}</>
             ) : inControle ? (
-              <>
-                Je KVK-nummer klopt. We controleren nog of je bij dit bedrijf hoort, meestal binnen een werkdag, en je krijgt bericht
-                zodra je mensen kunt inplannen.
-              </>
+              <>{ws.inControle}</>
             ) : (
-              <>
-                Iemand inplannen kan pas zodra je bedrijf is geverifieerd: vul je KVK-nummer in bij de stap &ldquo;Bedrijf verifiëren&rdquo;
-                op deze pagina. Lukt het niet automatisch? Dan controleert ZekerFlex je bedrijf met de hand, meestal binnen een werkdag.
-              </>
+              <>{ws.kvkNodig}</>
             )}
           </p>
         </div>
@@ -151,7 +141,7 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
           )}
           steps={
             inControle
-              ? { ...WERKGEVER_STAPPEN, verificatie: { title: "Wij controleren je bedrijf", why: "Je KVK-nummer klopt. We controleren of je bij dit bedrijf hoort, meestal binnen een werkdag. Je hoeft niets te doen." } }
+              ? { ...WERKGEVER_STAPPEN, verificatie: { title: ws.stapTitel, why: ws.stapWhy } }
               : WERKGEVER_STAPPEN
           }
           texts={WERKGEVER_KAART}
@@ -218,12 +208,12 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
           <p>
             <span aria-hidden>❤️ </span>
             <span className="font-semibold text-ink">
-              {followers} {followers === 1 ? "werker volgt" : "werkers volgen"} {o.orgName}.
+              {fmt(followers === 1 ? ws.volgtEen : ws.volgtMeer, { n: followers, org: o.orgName })}
             </span>{" "}
-            Zij krijgen meteen een melding zodra je een nieuwe dienst plaatst.
+            {ws.volgtNa}
           </p>
           <Link href="/werkgever/diensten/nieuw" className="text-sm font-semibold text-brand-600 hover:underline">
-            Plaats een dienst →
+            {ws.plaatsDienst}
           </Link>
         </div>
       )}

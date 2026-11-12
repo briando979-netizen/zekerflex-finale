@@ -14,6 +14,8 @@ import { MODULES, MODULE_SLEUTELS } from "@/lib/horeca/modules";
 import { horecaCijfers, websiteCijfers } from "@/lib/werkgever/werkruimte-cijfers";
 import type { WerkruimteContext } from "@/lib/werkgever/werkruimte-server";
 import { BANK_AAN } from "@/lib/app-mode";
+import { getDict } from "@/lib/i18n/server";
+import { fmt, type Dict } from "@/lib/i18n/dictionaries";
 
 // ---------------------------------------------------------------------------
 // Het startscherm van /werkgever voor een rijschool, horecazaak of wie alleen een
@@ -25,30 +27,36 @@ import { BANK_AAN } from "@/lib/app-mode";
 
 type GreetLabels = NonNullable<Parameters<typeof WelcomeBack>[0]["labels"]>;
 
+type WS = Dict["werkruimteStart"];
+
 interface Basis {
   principal: Principal;
   tenantId: string | undefined;
   greet: GreetLabels;
+  d: WS;
 }
 
-const meervoud = (n: number, een: string, meer: string) => `${n} ${n === 1 ? een : meer}`;
+/** "1 nieuwe aanmelding" of "3 nieuwe aanmeldingen": de twee vormen komen uit het woordenboek, met {n} erin. */
+const aantal = (n: number, een: string, meer: string) => fmt(n === 1 ? een : meer, { n });
 
-export function WerkruimteStart({
+export async function WerkruimteStart({
   w,
   inApp,
   studio,
-  ...basis
-}: Basis & { w: WerkruimteContext; inApp: boolean; studio: boolean }) {
+  ...rest
+}: Omit<Basis, "d"> & { w: WerkruimteContext; inApp: boolean; studio: boolean }) {
+  const d = (await getDict()).werkruimteStart;
+  const basis: Basis = { ...rest, d };
   return (
     <>
       {w.soort === "rijschool" ? <RijschoolVak {...basis} /> : w.soort === "horeca" ? <HorecaVak {...basis} /> : <WebsiteVak {...basis} studio={studio} />}
       <KlusConceptNudge />
       <div className="mt-6">
-        <Panel title="Ook in je werkruimte" subtitle="Contact met klanten, reviews en je administratie">
-          <TegelRaster label="Ook in je werkruimte" tegels={extraTegels(inApp)} />
+        <Panel title={d.extraTitel} subtitle={d.extraSub}>
+          <TegelRaster label={d.extraTitel} tegels={extraTegels(inApp, d)} />
         </Panel>
       </div>
-      <PersoneelVak principal={basis.principal} tenantId={basis.tenantId} ookPersoneel={w.ookPersoneel} />
+      <PersoneelVak principal={basis.principal} tenantId={basis.tenantId} ookPersoneel={w.ookPersoneel} d={d} />
     </>
   );
 }
@@ -73,88 +81,89 @@ function Opzetten({ principal, greet, eyebrow, titel, uitleg, href, knop }: Basi
 // --- rijschool ----------------------------------------------------------------
 
 async function RijschoolVak(b: Basis) {
+  const d = b.d;
   const k = b.tenantId ? await rijschoolKerncijfers(b.tenantId).catch(() => null) : null;
   if (!k) {
     return (
       <Opzetten
         {...b}
-        eyebrow="Rijschool"
-        titel="Zet je rijschool aan"
-        uitleg="Je krijgt een eigen rijschoolwebsite met proefles-aanvraag, een lesagenda per instructeur, leerlingen met tegoed en leskaart, en een app voor leerlingen en instructeurs."
+        eyebrow={b.d.rijEyebrow}
+        titel={b.d.rijOpzetTitel}
+        uitleg={b.d.rijOpzetUitleg}
         href="/werkgever/rijschool"
-        knop="Rijschool aanzetten"
+        knop={b.d.rijOpzetKnop}
       />
     );
   }
   const sub =
     k.aanmeldingen > 0
-      ? `${meervoud(k.aanmeldingen, "nieuwe aanmelding wacht", "nieuwe aanmeldingen wachten")} op je.`
+      ? aantal(k.aanmeldingen, d.rijAanmEen, d.rijAanmMeer)
       : k.ongelezenBerichten > 0
-        ? `${meervoud(k.ongelezenBerichten, "nieuw bericht", "nieuwe berichten")} van leerlingen.`
+        ? aantal(k.ongelezenBerichten, d.rijBerEen, d.rijBerMeer)
         : k.lessenVandaag > 0
-          ? `Vandaag ${meervoud(k.lessenVandaag, "les", "lessen")} gepland.`
+          ? aantal(k.lessenVandaag, d.rijLesEen, d.rijLesMeer)
           : undefined;
   const t = (tab: string) => `/werkgever/rijschool?tab=${tab}`;
   const tegels: Tegel[] = [
-    { href: t("agenda"), titel: "Agenda", uitleg: "Lessen plannen en verzetten, per instructeur.", teller: k.lessenVandaag > 0 ? `${k.lessenVandaag} vandaag` : undefined, toon: "ok" },
+    { href: t("agenda"), titel: d.agenda, uitleg: d.rijAgendaUitleg, teller: k.lessenVandaag > 0 ? fmt(d.vandaagTeller, { n: k.lessenVandaag }) : undefined, toon: "ok" },
     {
       href: t("leerlingen"),
-      titel: "Leerlingen",
-      uitleg: "Aanmeldingen, voortgang, leskaart en tegoed.",
-      teller: k.aanmeldingen > 0 ? `${k.aanmeldingen} nieuw` : undefined,
+      titel: d.rijLeerlingen,
+      uitleg: d.rijLeerlingenUitleg,
+      teller: k.aanmeldingen > 0 ? fmt(d.nieuwTeller, { n: k.aanmeldingen }) : undefined,
     },
     {
       href: t("berichten"),
-      titel: "Berichten",
-      uitleg: "Vragen en berichten van je leerlingen.",
-      teller: k.ongelezenBerichten > 0 ? `${k.ongelezenBerichten} nieuw` : undefined,
+      titel: d.berichten,
+      uitleg: d.rijBerichtenUitleg,
+      teller: k.ongelezenBerichten > 0 ? fmt(d.nieuwTeller, { n: k.ongelezenBerichten }) : undefined,
     },
     {
       href: t("betalingen"),
-      titel: "Betalingen",
-      uitleg: "Wat openstaat en wat binnen is.",
-      teller: k.openBetalingen > 0 ? `${k.openBetalingen} open` : undefined,
+      titel: d.rijBetalingen,
+      uitleg: d.rijBetalingenUitleg,
+      teller: k.openBetalingen > 0 ? fmt(d.openTeller, { n: k.openBetalingen }) : undefined,
     },
-    { href: t("team"), titel: "Instructeurs en auto's", uitleg: "Instructeurs, werktijden en lesauto's." },
-    { href: t("pakketten"), titel: "Pakketten en prijzen", uitleg: "Lespakketten en losse lessen." },
-    { href: t("website"), titel: "Website", uitleg: "Teksten, veelgestelde vragen en de foto bovenaan." },
-    { href: t("app"), titel: "App", uitleg: "Je eigen app in Google Play, stap voor stap." },
-    { href: `/rijschool/${k.slug}/instructeur`, titel: "Instructeur-app", uitleg: "De app voor je instructeurs, voor onderweg." },
-    { href: t("instellingen"), titel: "Instellingen", uitleg: "Gegevens, lessen en automatische mails." },
+    { href: t("team"), titel: d.rijTeam, uitleg: d.rijTeamUitleg },
+    { href: t("pakketten"), titel: d.rijPakketten, uitleg: d.rijPakkettenUitleg },
+    { href: t("website"), titel: d.rijWebsite, uitleg: d.rijWebsiteUitleg },
+    { href: t("app"), titel: d.rijApp, uitleg: d.rijAppUitleg },
+    { href: `/rijschool/${k.slug}/instructeur`, titel: d.rijInstructeurApp, uitleg: d.rijInstructeurAppUitleg },
+    { href: t("instellingen"), titel: d.instellingen, uitleg: d.rijInstellingenUitleg },
   ];
   return (
     <>
       <WelcomeBack name={b.principal.fullName} labels={b.greet} {...(sub ? { subtitle: sub } : {})} />
       <PageHeader
-        eyebrow="Rijschool"
+        eyebrow={d.rijEyebrow}
         title={k.naam}
-        subtitle={k.online ? "Je website is online." : "Je website staat nog niet online."}
+        subtitle={k.online ? d.online : d.rijOffline}
         action={
           <div className="flex flex-wrap gap-2">
             <a href={k.siteUrl} target="_blank" rel="noopener" className="btn-ghost">
-              Bekijk website
+              {d.bekijkWebsite}
             </a>
             <Link href={t("agenda")} className="btn-primary">
-              Naar de agenda
+              {d.rijNaarAgenda}
             </Link>
           </div>
         }
       />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <KpiCard label="Lessen vandaag" value={String(k.lessenVandaag)} hint={`${k.lessenKomendeWeek} deze week`} />
-        <KpiCard label="Actieve leerlingen" value={String(k.leerlingenActief)} tone="brand" />
-        <KpiCard label="Nieuwe aanmeldingen" value={String(k.aanmeldingen)} tone={k.aanmeldingen > 0 ? "warn" : "default"} hint="wachten op een eerste les" />
-        <KpiCard label="Tegoed onder nul" value={String(k.tegoedTekort)} tone={k.tegoedTekort > 0 ? "crit" : "default"} hint="leerlingen die moeten bijbetalen" />
+        <KpiCard label={d.rijKpiLessen} value={String(k.lessenVandaag)} hint={fmt(d.rijKpiLessenHint, { n: k.lessenKomendeWeek })} />
+        <KpiCard label={d.rijKpiActief} value={String(k.leerlingenActief)} tone="brand" />
+        <KpiCard label={d.rijKpiAanm} value={String(k.aanmeldingen)} tone={k.aanmeldingen > 0 ? "warn" : "default"} hint={d.rijKpiAanmHint} />
+        <KpiCard label={d.rijKpiTegoed} value={String(k.tegoedTekort)} tone={k.tegoedTekort > 0 ? "crit" : "default"} hint={d.rijKpiTegoedHint} />
         <KpiCard
-          label="Openstaand"
+          label={d.rijKpiOpen}
           value={money(k.openBetalingenCent)}
           tone={k.openBetalingen > 0 ? "warn" : "default"}
-          hint={meervoud(k.openBetalingen, "betaling", "betalingen")}
+          hint={aantal(k.openBetalingen, d.betalingEen, d.betalingMeer)}
         />
       </div>
       <div className="mt-6">
-        <Panel title="Alles voor je rijschool">
-          <TegelRaster label="Onderdelen van je rijschool" tegels={tegels} />
+        <Panel title={d.rijPaneel}>
+          <TegelRaster label={d.rijTegelLabel} tegels={tegels} />
         </Panel>
       </div>
     </>
@@ -164,63 +173,64 @@ async function RijschoolVak(b: Basis) {
 // --- horeca -------------------------------------------------------------------
 
 async function HorecaVak(b: Basis) {
+  const d = b.d;
   const h = b.tenantId ? await horecaCijfers(b.tenantId).catch(() => null) : null;
   if (!h) {
     return (
       <Opzetten
         {...b}
-        eyebrow="Horeca"
-        titel="Zet je horecazaak aan"
-        uitleg="Je krijgt een eigen website met menukaart en openingstijden. Daarna zet je per module aan wat je nodig hebt: reserveren, bestellingen met keukenscherm, bestellen aan tafel met QR en takenlijsten."
+        eyebrow={b.d.horEyebrow}
+        titel={b.d.horOpzetTitel}
+        uitleg={b.d.horOpzetUitleg}
         href="/werkgever/horeca"
-        knop="Horeca aanzetten"
+        knop={b.d.opzetKnopHoreca}
       />
     );
   }
   const aan = (m: string) => h.modules.includes(m);
   const sub =
     h.openBestellingen > 0
-      ? `${meervoud(h.openBestellingen, "bestelling staat", "bestellingen staan")} open.`
+      ? aantal(h.openBestellingen, d.horBestEen, d.horBestMeer)
       : h.reserveringenVandaag > 0
-        ? `Vandaag ${meervoud(h.reserveringenVandaag, "reservering", "reserveringen")}, ${meervoud(h.gastenVandaag, "gast", "gasten")}.`
+        ? fmt(d.horVandaag, { res: aantal(h.reserveringenVandaag, d.reserveringEen, d.reserveringMeer), gasten: aantal(h.gastenVandaag, d.gastEen, d.gastMeer) })
         : undefined;
   const t = (tab: string) => `/werkgever/horeca?tab=${tab}`;
   const uit = MODULE_SLEUTELS.filter((m) => m !== "personeel" && !aan(m) && MODULES[m].klaar).map((m) => MODULES[m].naam);
   const tegels: Tegel[] = [
     ...(aan("reserveren")
-      ? [{ href: t("reserveringen"), titel: "Reserveringen", uitleg: "Het reserveringsboek per dag.", teller: h.reserveringenVandaag > 0 ? `${h.reserveringenVandaag} vandaag` : undefined, toon: "ok" as const }]
+      ? [{ href: t("reserveringen"), titel: d.horReserveringen, uitleg: d.horReserveringenUitleg, teller: h.reserveringenVandaag > 0 ? fmt(d.vandaagTeller, { n: h.reserveringenVandaag }) : undefined, toon: "ok" as const }]
       : []),
     ...(aan("bestellen")
       ? [
-          { href: t("bestellingen"), titel: "Bestellingen", uitleg: "Keuken- en barscherm met de status per bestelling.", teller: h.openBestellingen > 0 ? `${h.openBestellingen} open` : undefined },
-          { href: t("tafels"), titel: "Tafels en QR", uitleg: "Je tafels en de QR-code per tafel." },
+          { href: t("bestellingen"), titel: d.bestellingen, uitleg: d.horBestellingenUitleg, teller: h.openBestellingen > 0 ? fmt(d.openTeller, { n: h.openBestellingen }) : undefined },
+          { href: t("tafels"), titel: d.horTafels, uitleg: d.horTafelsUitleg },
         ]
       : []),
-    ...(aan("qr") ? [{ href: "/werkgever/horeca/qr", titel: "QR-codes printen", uitleg: "Een printvel met de QR-code van elke tafel." }] : []),
-    ...(aan("taken") ? [{ href: t("taken"), titel: "Takenlijsten", uitleg: "Openings-, sluit- en HACCP-lijsten afvinken." }] : []),
+    ...(aan("qr") ? [{ href: "/werkgever/horeca/qr", titel: d.horQr, uitleg: d.horQrUitleg }] : []),
+    ...(aan("taken") ? [{ href: t("taken"), titel: d.horTaken, uitleg: d.horTakenUitleg }] : []),
     {
       href: t("menukaart"),
-      titel: "Menukaart",
-      uitleg: `${meervoud(h.menuItems, "gerecht", "gerechten")} met prijzen en allergenen.`,
-      teller: h.uitverkocht > 0 ? `${h.uitverkocht} uitverkocht` : undefined,
+      titel: d.horMenukaart,
+      uitleg: fmt(d.horMenukaartUitleg, { gerechten: aantal(h.menuItems, d.gerechtEen, d.gerechtMeer) }),
+      teller: h.uitverkocht > 0 ? fmt(d.uitverkochtTeller, { n: h.uitverkocht }) : undefined,
     },
-    { href: t("modules"), titel: "Modules en abonnement", uitleg: uit.length ? `Nog niet aan: ${uit.join(", ")}.` : "Alle modules staan aan." },
-    { href: t("gegevens"), titel: "Gegevens en openingstijden", uitleg: "Adres, contact en wanneer je open bent." },
+    { href: t("modules"), titel: d.horModules, uitleg: uit.length ? fmt(d.horModulesNog, { lijst: uit.join(", ") }) : d.horModulesAlle },
+    { href: t("gegevens"), titel: d.horGegevens, uitleg: d.horGegevensUitleg },
   ];
   return (
     <>
       <WelcomeBack name={b.principal.fullName} labels={b.greet} {...(sub ? { subtitle: sub } : {})} />
       <PageHeader
-        eyebrow="Horeca"
+        eyebrow={d.horEyebrow}
         title={h.naam}
-        subtitle={h.online ? "Je website is online." : "Je website staat nog niet online."}
+        subtitle={h.online ? d.online : d.horOffline}
         action={
           <div className="flex flex-wrap gap-2">
             <a href={`/horeca/${h.slug}`} target="_blank" rel="noopener" className="btn-ghost">
-              Bekijk website
+              {d.bekijkWebsite}
             </a>
             <Link href={aan("reserveren") ? t("reserveringen") : t("menukaart")} className="btn-primary">
-              {aan("reserveren") ? "Naar het reserveringsboek" : "Menukaart bewerken"}
+              {aan("reserveren") ? d.horNaarRes : d.horMenuBewerken}
             </Link>
           </div>
         }
@@ -232,15 +242,15 @@ async function HorecaVak(b: Basis) {
         texts={AAN_DE_SLAG_KAART.horeca}
       />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {aan("reserveren") && <KpiCard label="Reserveringen vandaag" value={String(h.reserveringenVandaag)} hint={meervoud(h.gastenVandaag, "gast", "gasten")} />}
-        {aan("bestellen") && <KpiCard label="Open bestellingen" value={String(h.openBestellingen)} tone={h.openBestellingen > 0 ? "warn" : "default"} />}
-        {aan("bestellen") && <KpiCard label="Besteld vandaag" value={money(h.omzetVandaagCent)} tone="brand" />}
-        <KpiCard label="Menukaart" value={String(h.menuItems)} hint={h.uitverkocht > 0 ? `${h.uitverkocht} uitverkocht` : "gerechten en dranken"} />
-        <KpiCard label="Tafels" value={String(h.tafels)} hint="actief" />
+        {aan("reserveren") && <KpiCard label={d.horKpiRes} value={String(h.reserveringenVandaag)} hint={aantal(h.gastenVandaag, d.gastEen, d.gastMeer)} />}
+        {aan("bestellen") && <KpiCard label={d.horKpiOpen} value={String(h.openBestellingen)} tone={h.openBestellingen > 0 ? "warn" : "default"} />}
+        {aan("bestellen") && <KpiCard label={d.horKpiBesteld} value={money(h.omzetVandaagCent)} tone="brand" />}
+        <KpiCard label={d.horKpiMenu} value={String(h.menuItems)} hint={h.uitverkocht > 0 ? fmt(d.uitverkochtTeller, { n: h.uitverkocht }) : d.horKpiMenuHint} />
+        <KpiCard label={d.horKpiTafels} value={String(h.tafels)} hint={d.horKpiTafelsHint} />
       </div>
       <div className="mt-6">
-        <Panel title="Alles voor je zaak">
-          <TegelRaster label="Onderdelen van je zaak" tegels={tegels} />
+        <Panel title={d.horPaneel}>
+          <TegelRaster label={d.horTegelLabel} tegels={tegels} />
         </Panel>
       </div>
     </>
@@ -250,62 +260,63 @@ async function HorecaVak(b: Basis) {
 // --- website en webshop ---------------------------------------------------------
 
 async function WebsiteVak(b: Basis & { studio: boolean }) {
+  const d = b.d;
   const s = b.tenantId ? await websiteCijfers(b.tenantId).catch(() => null) : null;
   if (!s) {
     return (
       <Opzetten
         {...b}
-        eyebrow="Website en webshop"
-        titel="Maak je website"
-        uitleg="Kies een ontwerp, vul je teksten en foto's in en zet producten in je eigen webshop. Klanten bestellen direct via je website; jij krijgt bij elke bestelling een mail."
+        eyebrow={b.d.webEyebrow}
+        titel={b.d.webOpzetTitel}
+        uitleg={b.d.webOpzetUitleg}
         href={b.studio ? "/studio" : "/werkgever/website"}
-        knop="Begin met je website"
+        knop={b.d.webOpzetKnop}
       />
     );
   }
-  const sub = s.nieuweBestellingen > 0 ? `${meervoud(s.nieuweBestellingen, "nieuwe bestelling wacht", "nieuwe bestellingen wachten")} op je.` : undefined;
+  const sub = s.nieuweBestellingen > 0 ? aantal(s.nieuweBestellingen, d.webBestEen, d.webBestMeer) : undefined;
   const tegels: Tegel[] = b.studio
     ? [
-        { href: "/studio", titel: "Studio-overzicht", uitleg: "Bezoekers, bestellingen en wat er nog te doen is." },
-        { href: "/studio/webshop/producten", titel: "Producten", uitleg: `${meervoud(s.producten, "product", "producten")} in je webshop.` },
-        { href: "/studio/webshop/bestellingen", titel: "Bestellingen", uitleg: "Alles wat klanten in je webshop bestellen.", teller: s.nieuweBestellingen > 0 ? `${s.nieuweBestellingen} nieuw` : undefined },
-        { href: "/studio/website/bouwer", titel: "Pagina's", uitleg: `${meervoud(s.paginas, "pagina", "pagina's")} met teksten en blokken.` },
-        { href: "/studio/webshop/ontwerp", titel: "Ontwerp", uitleg: "Stijl, kleuren, letters en je logo." },
-        { href: "/studio/webshop/instellingen", titel: "Instellingen", uitleg: "Webadres, bestellen en bezorgen, bedrijfsgegevens." },
-        { href: "/werkgever/website", titel: "Eigen domein en beheer", uitleg: "Je eigen webadres koppelen en je website laten beheren." },
+        { href: "/studio", titel: d.webStudio, uitleg: d.webStudioUitleg },
+        { href: "/studio/webshop/producten", titel: d.webProducten, uitleg: fmt(d.webProductenUitleg, { producten: aantal(s.producten, d.productEen, d.productMeer) }) },
+        { href: "/studio/webshop/bestellingen", titel: d.bestellingen, uitleg: d.webBestellingenUitleg, teller: s.nieuweBestellingen > 0 ? fmt(d.nieuwTeller, { n: s.nieuweBestellingen }) : undefined },
+        { href: "/studio/website/bouwer", titel: d.webPaginas, uitleg: fmt(d.webPaginasUitleg, { paginas: aantal(s.paginas, d.paginaEen, d.paginaMeer) }) },
+        { href: "/studio/webshop/ontwerp", titel: d.webOntwerp, uitleg: d.webOntwerpUitleg },
+        { href: "/studio/webshop/instellingen", titel: d.instellingen, uitleg: d.webInstellingenUitleg },
+        { href: "/werkgever/website", titel: d.webDomein, uitleg: d.webDomeinUitleg },
       ]
     : [
-        { href: "/werkgever/website", titel: "Website-beheer", uitleg: "Je eigen webadres en het beheer van je website. Bewerken kan de beheerder van je bedrijf." },
+        { href: "/werkgever/website", titel: d.webBeheer, uitleg: d.webBeheerUitleg },
       ];
   return (
     <>
       <WelcomeBack name={b.principal.fullName} labels={b.greet} {...(sub ? { subtitle: sub } : {})} />
       <PageHeader
-        eyebrow="Website en webshop"
-        title={s.naam || "Je website"}
-        subtitle={s.online ? "Je website is online." : "Je website is nog niet gepubliceerd."}
+        eyebrow={d.webEyebrow}
+        title={s.naam || d.webNaam}
+        subtitle={s.online ? d.online : d.webNietGepubliceerd}
         action={
           <div className="flex flex-wrap gap-2">
             {s.online && (
               <a href={`/site/${s.slug}`} target="_blank" rel="noopener" className="btn-ghost">
-                Bekijk website
+                {d.bekijkWebsite}
               </a>
             )}
             <Link href={b.studio ? "/studio" : "/werkgever/website"} className="btn-primary">
-              {b.studio ? "Open de studio" : "Website-beheer"}
+              {b.studio ? d.webOpenStudio : d.webBeheer}
             </Link>
           </div>
         }
       />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Bezoekers" value={String(s.bezoekers7d)} hint={`laatste 7 dagen · ${s.weergaven7d} weergaven`} />
-        <KpiCard label="Nieuwe bestellingen" value={String(s.nieuweBestellingen)} tone={s.nieuweBestellingen > 0 ? "warn" : "default"} />
-        <KpiCard label="Producten" value={String(s.producten)} tone="brand" />
-        <KpiCard label="Pagina's" value={String(s.paginas)} />
+        <KpiCard label={d.webKpiBezoekers} value={String(s.bezoekers7d)} hint={fmt(d.webKpiBezoekersHint, { n: s.weergaven7d })} />
+        <KpiCard label={d.webKpiBest} value={String(s.nieuweBestellingen)} tone={s.nieuweBestellingen > 0 ? "warn" : "default"} />
+        <KpiCard label={d.webProducten} value={String(s.producten)} tone="brand" />
+        <KpiCard label={d.webPaginas} value={String(s.paginas)} />
       </div>
       <div className="mt-6">
-        <Panel title="Alles voor je website">
-          <TegelRaster label="Onderdelen van je website" tegels={tegels} />
+        <Panel title={d.webPaneel}>
+          <TegelRaster label={d.webTegelLabel} tegels={tegels} />
         </Panel>
       </div>
     </>
@@ -314,31 +325,31 @@ async function WebsiteVak(b: Basis & { studio: boolean }) {
 
 // --- de rest van de werkruimte en personeel ---------------------------------------
 
-function extraTegels(inApp: boolean): Tegel[] {
+function extraTegels(inApp: boolean, d: WS): Tegel[] {
   return [
-    { href: "/werkgever/berichten", titel: "Chat", uitleg: "Gesprekken, bellen en videobellen." },
-    { href: "/werkgever/mail", titel: "Mail", uitleg: "Je zakelijke mail op één plek." },
-    { href: "/werkgever/whatsapp", titel: "WhatsApp", uitleg: "Klantgesprekken via WhatsApp." },
-    { href: "/werkgever/google-reviews", titel: "Google-reviews", uitleg: "Vraag klanten om een review en scan hoe je ervoor staat." },
-    { href: "/werkgever/telefonie", titel: "Telefonie", uitleg: "Een zakelijk nummer en bellen vanuit ZekerFlex." },
-    { href: "/werkgever/netwerk", titel: "Wifi en VPN", uitleg: "Wifi die het rooster volgt, een veilige verbinding op afstand en een eigen 5G-netwerk." },
-    { href: "/werkgever/agenda", titel: "Agenda", uitleg: "Afspraken uit je mail, chat en WhatsApp, vanzelf bij elkaar." },
-    { href: "/werkgever/facturen", titel: "Facturen", uitleg: "Facturen van ZekerFlex." },
-    ...(inApp || !BANK_AAN ? [] : [{ href: "/werkgever/bank", titel: "ZekerFlex Bank", uitleg: "Zakelijke rekening en betalingen." }]),
-    { href: "/werkgever/bedrijf", titel: "Bedrijfsprofiel", uitleg: "Je bedrijfsgegevens en KVK." },
+    { href: "/werkgever/berichten", titel: d.chat, uitleg: d.chatUitleg },
+    { href: "/werkgever/mail", titel: d.mail, uitleg: d.mailUitleg },
+    { href: "/werkgever/whatsapp", titel: d.whatsapp, uitleg: d.whatsappUitleg },
+    { href: "/werkgever/google-reviews", titel: d.reviews, uitleg: d.reviewsUitleg },
+    { href: "/werkgever/telefonie", titel: d.telefonie, uitleg: d.telefonieUitleg },
+    { href: "/werkgever/netwerk", titel: d.netwerk, uitleg: d.netwerkUitleg },
+    { href: "/werkgever/agenda", titel: d.agenda, uitleg: d.agendaUitleg },
+    { href: "/werkgever/facturen", titel: d.facturen, uitleg: d.facturenUitleg },
+    ...(inApp || !BANK_AAN ? [] : [{ href: "/werkgever/bank", titel: d.bank, uitleg: d.bankUitleg }]),
+    { href: "/werkgever/bedrijf", titel: d.bedrijf, uitleg: d.bedrijfUitleg },
   ];
 }
 
-async function PersoneelVak({ principal, tenantId, ookPersoneel }: { principal: Principal; tenantId: string | undefined; ookPersoneel: boolean }) {
+async function PersoneelVak({ principal, tenantId, ookPersoneel, d }: { principal: Principal; tenantId: string | undefined; ookPersoneel: boolean; d: WS }) {
   if (!ookPersoneel) {
     return (
       <section className="mt-6 flex flex-col gap-3 rounded-2xl border border-hair bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-neutralx-600">
-          <h2 className="font-semibold text-ink">Extra handen nodig?</h2>
-          <p className="mt-1">Plaats een klus en huur flexkrachten in voor drukke dagen. Je betaalt alleen voor gewerkte uren.</p>
+          <h2 className="font-semibold text-ink">{d.handenKop}</h2>
+          <p className="mt-1">{d.handenTekst}</p>
         </div>
         <Link href="/werkgever/diensten/nieuw" className="btn-ghost flex-shrink-0 self-start sm:self-auto">
-          Klus plaatsen
+          {d.klusPlaatsen}
         </Link>
       </section>
     );
@@ -347,25 +358,25 @@ async function PersoneelVak({ principal, tenantId, ookPersoneel }: { principal: 
   return (
     <div className="mt-6">
       <Panel
-        title="Personeel inhuren"
-        {...(geverifieerd ? {} : { subtitle: "Je bedrijf is nog niet geverifieerd: je kunt één testklus plaatsen." })}
+        title={d.inhurenTitel}
+        {...(geverifieerd ? {} : { subtitle: d.inhurenNietGeverifieerd })}
         action={
           <Link href="/werkgever/diensten/nieuw" className="text-xs font-semibold text-brand-600 hover:underline">
-            Klus plaatsen
+            {d.klusPlaatsen}
           </Link>
         }
       >
         <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-3">
-          <KpiCard label="Open diensten" value={String(o.kpis.openShifts)} tone={o.kpis.openShifts > 0 ? "warn" : "default"} />
-          <KpiCard label="Uren te keuren" value={String(o.kpis.toApprove)} tone={o.kpis.toApprove > 0 ? "warn" : "default"} />
-          <KpiCard label="Actieve flexkrachten" value={String(o.kpis.activeFreelancers)} />
+          <KpiCard label={d.kpiOpen} value={String(o.kpis.openShifts)} tone={o.kpis.openShifts > 0 ? "warn" : "default"} />
+          <KpiCard label={d.kpiKeuren} value={String(o.kpis.toApprove)} tone={o.kpis.toApprove > 0 ? "warn" : "default"} />
+          <KpiCard label={d.kpiActief} value={String(o.kpis.activeFreelancers)} />
         </div>
         <TegelRaster
-          label="Personeel inhuren"
+          label={d.inhurenTitel}
           tegels={[
-            { href: "/werkgever/diensten", titel: "Klussen", uitleg: "Je diensten en wie er reageerde." },
-            { href: "/werkgever/kalender", titel: "Kalender", uitleg: "Wie wanneer werkt." },
-            { href: "/werkgever/uren", titel: "Uren goedkeuren", uitleg: "Gewerkte uren controleren.", teller: o.kpis.toApprove > 0 ? `${o.kpis.toApprove} te keuren` : undefined },
+            { href: "/werkgever/diensten", titel: d.klussenTitel, uitleg: d.klussenUitleg },
+            { href: "/werkgever/kalender", titel: d.kalenderTitel, uitleg: d.kalenderUitleg },
+            { href: "/werkgever/uren", titel: d.urenTitel, uitleg: d.urenUitleg, teller: o.kpis.toApprove > 0 ? fmt(d.teKeuren, { n: o.kpis.toApprove }) : undefined },
           ]}
         />
       </Panel>
