@@ -176,13 +176,19 @@ describe("wachttijd met het eigen model (alles gratis)", () => {
     expect(gratisTimeout(30_000, false)).toBe(30_000);
   });
 
-  it("een mens die live wacht (interactief) krijgt nooit drie keer zo lang, ook niet bij alles gratis (12 nov: 90 s op de assistent)", () => {
-    expect(gratisTimeout(30_000, true, true)).toBe(30_000);
-    expect(gratisTimeout(45_000, true, true)).toBe(45_000);
-    expect(gratisTimeout(30_000, false, true)).toBe(30_000);
+  it("een mens die live wacht (interactief) met het eigen model: de gemeten 75 s, niet 90 s en niet de te krappe 30 s", () => {
+    expect(gratisTimeout(30_000, true, true)).toBe(75_000);
+    expect(gratisTimeout(45_000, true, true)).toBe(75_000);
+    expect(gratisTimeout(20_000, true, true)).toBe(75_000);
+    // korte aanroepen met een eigen terugval houden hun grens
     expect(gratisTimeout(8_000, true, true)).toBe(8_000);
-    // zonder de vlag blijft het zoals het was
+  });
+
+  it("met Gemini (alles gratis uit) blijft de basis, ook interactief; zonder de vlag blijft het zoals het was", () => {
+    expect(gratisTimeout(30_000, false, true)).toBe(30_000);
+    expect(gratisTimeout(25_000, false, true)).toBe(25_000);
     expect(gratisTimeout(30_000, true, false)).toBe(90_000);
+    expect(gratisTimeout(120_000, true, false)).toBe(180_000);
   });
 
   it("de plekken waar een mens live wacht, zetten de vlag; achtergrondtaken niet", () => {
