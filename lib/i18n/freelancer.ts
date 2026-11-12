@@ -1,5 +1,6 @@
 import type { Locale } from "@/lib/i18n/config";
 import { WIE_TEKSTEN } from "@/lib/i18n/wie-ben-jij";
+import { NOTIFICATIONS_NL } from "@/components/app/notifications-texts";
 import { MILESTONE_NL } from "@/lib/worker/milestone-teksten";
 
 // ---------------------------------------------------------------------------
@@ -88,6 +89,7 @@ const nl = {
     titel: "Weet je zeker dat je alles hebt ingevuld?", uitleg: "Controleer wat je gaat insturen. Klopt alles, dan sturen we het in voor de controle.",
     postcode: "Postcode", fotos: "Foto's", methode: "Manier van controleren", viaStripe: "Via Stripe (je gaat zo door naar Stripe)", terug: "Terug", ja: "Ja, insturen",
   },
+  meldingen: NOTIFICATIONS_NL,
   start: {
     eyebrow: "Jouw start",
     title: "Welkom! Kies eerst welke richting je op wilt.",
@@ -1500,6 +1502,12 @@ const en: FreelancerDict = {
     titel: "Are you sure you've filled in everything?", uitleg: "Check what you're about to submit. If everything is right, we'll send it in for verification.",
     postcode: "Postcode", fotos: "Photos", methode: "Verification method", viaStripe: "Via Stripe (you'll continue to Stripe next)", terug: "Back", ja: "Yes, submit",
   },
+  meldingen: {
+    bell: "Notifications", close: "Close", all: "All", markAllRead: "Mark all as read",
+    groups: { klussen: "About your jobs", geld: "Hours & payouts", berichten: "Messages", account: "Account" },
+    sections: { today: "Today", yesterday: "Yesterday", earlier: "Earlier" },
+    empty: "Nothing new — you're up to date.", emptyTab: "No notifications in this tab.", open: "Open", read: "Read",
+  },
   start: {
     eyebrow: "Your start",
     title: "Welcome! First choose which direction you want to take.",
@@ -2906,6 +2914,12 @@ const pl: FreelancerDict = {
   bevestig: {
     titel: "Czy na pewno wszystko jest wypełnione?", uitleg: "Sprawdź, co zaraz wyślesz. Jeśli wszystko się zgadza, wyślemy to do weryfikacji.",
     postcode: "Kod pocztowy", fotos: "Zdjęcia", methode: "Sposób weryfikacji", viaStripe: "Przez Stripe (zaraz przejdziesz do Stripe)", terug: "Wstecz", ja: "Tak, wyślij",
+  },
+  meldingen: {
+    bell: "Powiadomienia", close: "Zamknij", all: "Wszystkie", markAllRead: "Oznacz wszystko jako przeczytane",
+    groups: { klussen: "O Twoich zleceniach", geld: "Godziny i wypłaty", berichten: "Wiadomości", account: "Konto" },
+    sections: { today: "Dzisiaj", yesterday: "Wczoraj", earlier: "Wcześniej" },
+    empty: "Nic nowego — jesteś na bieżąco.", emptyTab: "Brak powiadomień w tej karcie.", open: "Otwórz", read: "Przeczytane",
   },
   start: {
     eyebrow: "Twój start",
@@ -4314,6 +4328,12 @@ const ro: FreelancerDict = {
     titel: "Ești sigur că ai completat tot?", uitleg: "Verifică ce urmează să trimiți. Dacă totul e corect, trimitem pentru verificare.",
     postcode: "Cod poștal", fotos: "Fotografii", methode: "Metoda de verificare", viaStripe: "Prin Stripe (vei continua imediat la Stripe)", terug: "Înapoi", ja: "Da, trimite",
   },
+  meldingen: {
+    bell: "Notificări", close: "Închide", all: "Toate", markAllRead: "Marchează tot ca citit",
+    groups: { klussen: "Despre joburile tale", geld: "Ore și plăți", berichten: "Mesaje", account: "Cont" },
+    sections: { today: "Astăzi", yesterday: "Ieri", earlier: "Mai devreme" },
+    empty: "Nimic nou — ești la zi.", emptyTab: "Nicio notificare în această filă.", open: "Deschide", read: "Citit",
+  },
   start: {
     eyebrow: "Startul tău",
     title: "Bun venit! Alege mai întâi în ce direcție vrei să mergi.",
@@ -5720,6 +5740,12 @@ const uk: FreelancerDict = {
   bevestig: {
     titel: "Чи все заповнено правильно?", uitleg: "Перевір, що ти зараз надішлеш. Якщо все вірно, ми відправимо це на перевірку.",
     postcode: "Поштовий індекс", fotos: "Фото", methode: "Спосіб перевірки", viaStripe: "Через Stripe (зараз ти перейдеш до Stripe)", terug: "Назад", ja: "Так, надіслати",
+  },
+  meldingen: {
+    bell: "Сповіщення", close: "Закрити", all: "Усі", markAllRead: "Позначити все прочитаним",
+    groups: { klussen: "Про твої роботи", geld: "Години й виплати", berichten: "Повідомлення", account: "Акаунт" },
+    sections: { today: "Сьогодні", yesterday: "Вчора", earlier: "Раніше" },
+    empty: "Нічого нового — ти в курсі.", emptyTab: "У цій вкладці немає сповіщень.", open: "Відкрити", read: "Прочитано",
   },
   start: {
     eyebrow: "Твій старт",

@@ -152,7 +152,7 @@ export function FreelancerShell({
               <ISearch />
             </Link>
             {hulp && <HulpCentrum t={hulp} handleidingen={handleidingen} onboarding={onboarding} />}
-            <NotificationsBell />
+            <NotificationsBell texts={ft.meldingen} />
           </div>
           {/* in de kopbalk (een landmark), niet los onderaan de pagina */}
           <span className="sr-only">Ingelogd als {userName}</span>

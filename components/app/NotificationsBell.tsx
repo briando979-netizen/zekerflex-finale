@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { NOTIFICATIONS_NL, type NotificationsTexts } from "@/components/app/notifications-texts";
 
 interface Item {
   id: string;
@@ -18,13 +19,7 @@ interface Item {
 const SEEN_KEY = "zf-notif-seen";
 
 // Thematische tabbladen (zoals de YoungOnes-meldingenweergave).
-const GROUPS: { id: string; label: string }[] = [
-  { id: "klussen", label: "Over je klussen" },
-  { id: "geld", label: "Uren & uitbetaling" },
-  { id: "berichten", label: "Berichten" },
-  { id: "account", label: "Account" },
-];
-const GROUP_ORDER = GROUPS.map((g) => g.id);
+const GROUP_ORDER: readonly string[] = ["klussen", "geld", "berichten", "account"];
 
 const ICON: Record<string, string> = {
   chat: "💬",
@@ -41,11 +36,7 @@ function dateLabel(iso: string): string {
 }
 
 type Section = "today" | "yesterday" | "earlier";
-const SECTIONS: { id: Section; label: string }[] = [
-  { id: "today", label: "Vandaag" },
-  { id: "yesterday", label: "Gisteren" },
-  { id: "earlier", label: "Eerder" },
-];
+const SECTIONS: { id: Section }[] = [{ id: "today" }, { id: "yesterday" }, { id: "earlier" }];
 function sectionOf(iso: string, now = new Date()): Section {
   const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const t = new Date(iso).getTime();
@@ -54,8 +45,11 @@ function sectionOf(iso: string, now = new Date()): Section {
   return "earlier";
 }
 
-/** Bell + meldingen-weergave. `dark` styles it for the admin surface. */
-export function NotificationsBell({ dark = false }: { dark?: boolean }) {
+/**
+ * Bell + meldingen-weergave. `dark` styles it for the admin surface. `texts`: de teksten van de bel; zonder prop Nederlands
+ * (werkgever en beheer), het werkersdashboard geeft zijn eigen taal mee (components/app/notifications-texts.ts).
+ */
+export function NotificationsBell({ dark = false, texts: t = NOTIFICATIONS_NL }: { dark?: boolean; texts?: NotificationsTexts }) {
   const [items, setItems] = useState<Item[]>([]);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
@@ -207,10 +201,10 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
                 className="rounded-lg px-3 py-1.5 text-xs font-semibold"
                 style={openBtnStyle}
               >
-                Openen
+                {t.open}
               </Link>
               <button type="button" onClick={() => dismiss(it)} className="rounded-lg px-3 py-1.5 text-xs font-medium" style={readBtnStyle}>
-                Gelezen
+                {t.read}
               </button>
             </div>
           </div>
@@ -241,7 +235,7 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
             : "relative grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink"
         }
         style={dark ? { background: "var(--a-elev)", border: "1px solid var(--a-border)", color: "var(--a-text)" } : {}}
-        aria-label="Meldingen"
+        aria-label={t.bell}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
           <path d="M6 16V10a6 6 0 1 1 12 0v6l2 2H4l2-2Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
@@ -261,11 +255,11 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
         >
           {/* Koptekst */}
           <div className="flex items-center gap-3 border-b px-4 py-3" style={{ borderColor: borderCol }}>
-            <span className="text-base font-bold tracking-tight">Meldingen</span>
+            <span className="text-base font-bold tracking-tight">{t.bell}</span>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              aria-label="Sluiten"
+              aria-label={t.close}
               className="ml-auto grid h-8 w-8 place-items-center rounded-lg text-neutralx-400 hover:text-ink"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -277,11 +271,11 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
           {/* Tabbladen (horizontaal scrollbaar) */}
           <div className="flex gap-5 overflow-x-auto border-b px-4" style={{ borderColor: borderCol }}>
             <button type="button" onClick={() => setFilter("all")} className={tabClass(filter === "all")}>
-              Alles{visible.length > 0 ? ` ${visible.length}` : ""}
+              {t.all}{visible.length > 0 ? ` ${visible.length}` : ""}
             </button>
             {groups.map((g) => (
               <button key={g} type="button" onClick={() => setFilter(g)} className={tabClass(filter === g)}>
-                {GROUPS.find((x) => x.id === g)?.label ?? g} {countByGroup[g] ?? 0}
+                {(t.groups as Record<string, string>)[g] ?? g} {countByGroup[g] ?? 0}
               </button>
             ))}
           </div>
@@ -290,7 +284,7 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
           {visible.length > 0 && (
             <div className="flex justify-end border-b px-4 py-2" style={{ borderColor: borderCol }}>
               <button type="button" onClick={dismissAll} className="text-xs font-semibold hover:underline" style={{ color: linkColor }}>
-                Alles als gelezen markeren
+                {t.markAllRead}
               </button>
             </div>
           )}
@@ -299,7 +293,7 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
           <div className="flex-1 overflow-y-auto px-4 pb-[env(safe-area-inset-bottom)]">
             {shown.length === 0 ? (
               <p className="px-1 py-12 text-center text-sm" style={mute}>
-                {visible.length === 0 ? "Niets nieuws — je bent bij." : "Geen meldingen in dit tabblad."}
+                {visible.length === 0 ? t.empty : t.emptyTab}
               </p>
             ) : (
               SECTIONS.map((sec) => {
@@ -308,7 +302,7 @@ export function NotificationsBell({ dark = false }: { dark?: boolean }) {
                 return (
                   <div key={sec.id}>
                     <p className="pb-1 pt-4 text-xs font-semibold uppercase tracking-wide" style={mute}>
-                      {sec.label}
+                      {t.sections[sec.id]}
                     </p>
                     <ul>
                       {its.map((it) => (
