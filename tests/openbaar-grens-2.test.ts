@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // Beveiligingsronde 12 nov 2026 (86), groep 2: de accountroutes van het Schwarzwald-voorstel en van rijscholen lezen
 // een begrensde body, met een ruime limiet per IP vóór het lezen (ook voor acties die er geen hadden).
 
-const h = vi.hoisted(() => ({ enforceRateLimit: vi.fn(async () => undefined), registreer: vi.fn(), inloggen: vi.fn(), siteRijschool: vi.fn(async () => ({ id: "r1" })) }));
+const h = vi.hoisted(() => ({ enforceRateLimit: vi.fn(async (..._a: unknown[]) => undefined), registreer: vi.fn(), inloggen: vi.fn(), siteRijschool: vi.fn(async () => ({ id: "r1" })) }));
 vi.mock("@/lib/rate-limit", () => ({ enforceRateLimit: h.enforceRateLimit, fixedWindow: vi.fn(async () => ({ ok: true })), privateRateLimitIdentifier: (s: string) => s }));
 vi.mock("@/lib/http/request", () => ({ clientIp: () => "198.51.100.4" }));
 vi.mock("@/lib/prisma", () => ({ prisma: {} }));
