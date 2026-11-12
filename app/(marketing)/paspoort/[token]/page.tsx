@@ -94,7 +94,7 @@ export default async function PassportPage(props: { params: Promise<{ token: str
           </div>
 
           {/* stats */}
-          <div className="grid grid-cols-3 divide-x divide-neutralx-200 border-b border-neutralx-200 text-center">
+          <div className="grid grid-cols-3 divide-x divide-hair border-b border-hair text-center">
             <Stat value={String(p.shiftsCompleted)} label="diensten afgerond" />
             <Stat value={`${reliability}%`} label="betrouwbaarheid" />
             <Stat value={String(p.certificates.length)} label="geldige certificaten" />
@@ -139,7 +139,7 @@ export default async function PassportPage(props: { params: Promise<{ token: str
                 <h2 className="font-display text-lg font-semibold">Certificaten</h2>
                 <ul className="mt-3 grid gap-2 sm:grid-cols-2">
                   {p.certificates.map((c, i) => (
-                    <li key={`${c.label}-${i}`} className="flex items-start gap-2.5 rounded-xl border border-neutralx-200 bg-white p-3">
+                    <li key={`${c.label}-${i}`} className="flex items-start gap-2.5 rounded-xl border border-hair bg-white p-3">
                       <span className="mt-0.5 grid h-5 w-5 flex-shrink-0 place-items-center rounded-full bg-brand-50 text-brand-600">✓</span>
                       <span>
                         <span className="block text-sm font-medium">{c.label}</span>
@@ -160,7 +160,7 @@ export default async function PassportPage(props: { params: Promise<{ token: str
                 <h2 className="font-display text-lg font-semibold">Wat opdrachtgevers zeggen</h2>
                 <div className="mt-3 space-y-3">
                   {p.reviews.map((r, i) => (
-                    <figure key={i} className="rounded-xl border border-neutralx-200 bg-white p-4">
+                    <figure key={i} className="rounded-xl border border-hair bg-white p-4">
                       <Stars n={r.rating} />
                       <blockquote className="mt-2 text-sm leading-relaxed text-neutralx-700">&ldquo;{r.text}&rdquo;</blockquote>
                       {r.shiftTitle && <figcaption className="mt-1 text-xs text-neutralx-400">{r.shiftTitle}</figcaption>}

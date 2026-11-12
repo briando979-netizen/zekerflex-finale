@@ -59,7 +59,7 @@ export function EarningsGoalCard({
 
   if (editing || goal === null) {
     return (
-      <form onSubmit={submit} className="rounded-2xl border border-neutralx-200 bg-white p-5">
+      <form onSubmit={submit} className="rounded-2xl border border-hair bg-white p-5">
         <h2 className="font-display text-lg font-semibold">{t.setTitle(monthLabel)}</h2>
         <p className="mt-1 text-sm text-neutralx-600">{t.setBody}</p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -73,7 +73,7 @@ export function EarningsGoalCard({
             placeholder="2000"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            className="w-32 rounded-lg border border-neutralx-200 px-3 py-2 text-sm"
+            className="w-32 rounded-lg border border-hair px-3 py-2 text-sm"
           />
           <button type="submit" disabled={busy} className="btn-primary text-sm disabled:opacity-50">
             {t.save}
@@ -95,7 +95,7 @@ export function EarningsGoalCard({
 
   const p = goalProgress(goal, workedCents, expectedCents);
   return (
-    <div className="rounded-2xl border border-neutralx-200 bg-white p-5">
+    <div className="rounded-2xl border border-hair bg-white p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-lg font-semibold">{t.title(monthLabel, euro(goal))}</h2>

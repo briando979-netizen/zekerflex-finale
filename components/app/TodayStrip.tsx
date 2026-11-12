@@ -17,7 +17,7 @@ export function TodayStrip({
 }) {
   if (shifts.length === 0) return null;
   return (
-    <div className="card mb-5 border-brand-200 bg-brand-50/60 p-4">
+    <div className="card mb-5 border-hair bg-brand-50/60 p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">{labels.todayLabel}</p>
       <ul className="mt-2 space-y-1.5">
         {shifts.map((s) => (

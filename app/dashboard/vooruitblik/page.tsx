@@ -52,7 +52,7 @@ export default async function VooruitblikPage() {
 
       <div className="space-y-6">
         {/* deze maand */}
-        <div className="rounded-2xl border border-neutralx-200 bg-white p-5">
+        <div className="rounded-2xl border border-hair bg-white p-5">
           <p className="text-xs uppercase tracking-wide text-neutralx-400">{t.expected}</p>
           <p className="mt-1 font-display text-4xl font-bold text-brand-600">{euro(forecast.expectedCents)}</p>
 
@@ -94,11 +94,11 @@ export default async function VooruitblikPage() {
             )}
           </div>
         ) : (
-          <div className="rounded-2xl border border-neutralx-200 bg-paper-soft p-5 text-sm text-neutralx-600">{t.payroll}</div>
+          <div className="rounded-2xl border border-hair bg-paper-soft p-5 text-sm text-neutralx-600">{t.payroll}</div>
         )}
 
         {/* trend */}
-        <div className="rounded-2xl border border-neutralx-200 bg-white p-5">
+        <div className="rounded-2xl border border-hair bg-white p-5">
           <h2 className="font-display text-lg font-semibold">{t.trendTitle}</h2>
           <p className="text-xs text-neutralx-500">{t.trendSub}</p>
           <div className="mt-5 flex items-end justify-between gap-2" style={{ height: 140 }}>
@@ -110,7 +110,7 @@ export default async function VooruitblikPage() {
                 <div key={p.ym} className="flex flex-1 flex-col items-center gap-1.5">
                   <span className="text-[10px] font-medium text-neutralx-500">{p.cents > 0 ? euro(p.cents) : ""}</span>
                   <div
-                    className={`w-full rounded-t-md ${isCurrent ? "bg-brand-400" : "bg-brand-500"}`}
+                    className={`w-full rounded-t-md ${isCurrent ? "bg-brand-300" : "bg-brand-500"}`}
                     style={{ height: h }}
                     title={`${label}: ${euro(p.cents)}`}
                   />

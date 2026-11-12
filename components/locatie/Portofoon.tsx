@@ -555,7 +555,7 @@ export function Portofoon({
           aria-pressed={praat}
           aria-label={t.houdIngedrukt}
           className={`mt-3 grid h-44 w-44 place-items-center rounded-full border-8 text-white shadow-lift transition-transform [touch-action:none] active:scale-95 disabled:opacity-50 ${
-            praat ? "scale-105 border-ok/40 bg-ok" : sprekerNaam ? "border-brand-200 bg-brand-500" : "border-brand-100 bg-brand-600"
+            praat ? "scale-105 border-ok/40 bg-ok" : sprekerNaam ? "border-hair bg-brand-500" : "border-brand-100 bg-brand-600"
           }`}
         >
           <span className="flex flex-col items-center gap-1">

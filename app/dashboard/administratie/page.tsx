@@ -12,10 +12,10 @@ import type { FreelancerDict } from "@/lib/i18n/freelancer";
 export const dynamic = "force-dynamic";
 
 const STATUS: Record<string, { ring: string; chip: string; bar: string }> = {
-  ok: { ring: "border-brand-200", chip: "bg-brand-50 text-brand-700", bar: "bg-brand-500" },
+  ok: { ring: "border-hair", chip: "bg-brand-50 text-brand-700", bar: "bg-brand-500" },
   soon: { ring: "border-warn/30", chip: "bg-warn/10 text-warn", bar: "bg-warn" },
   action: { ring: "border-crit/30", chip: "bg-crit/10 text-crit", bar: "bg-crit" },
-  info: { ring: "border-neutralx-200", chip: "bg-neutralx-100 text-neutralx-600", bar: "bg-brand-400" },
+  info: { ring: "border-hair", chip: "bg-neutralx-100 text-neutralx-600", bar: "bg-brand-300" },
 };
 
 type T = FreelancerDict["administratie"];
@@ -97,7 +97,7 @@ export default async function AdministratiePage() {
       </div>
 
       {data.workerKind !== "uitzendkracht" && data.fiscalComplete && (
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-neutralx-200 bg-white p-5">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-hair bg-white p-5">
           <div className="flex items-start gap-3">
             <span className="text-2xl" aria-hidden>🧾</span>
             <div>
@@ -114,7 +114,7 @@ export default async function AdministratiePage() {
                 href={`/api/me/jaaroverzicht?jaar=${y}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={y === year ? "btn-primary text-sm" : "rounded-lg border border-neutralx-200 px-3.5 py-2 text-sm font-semibold text-ink hover:bg-neutralx-50"}
+                className={y === year ? "btn-primary text-sm" : "rounded-lg border border-hair px-3.5 py-2 text-sm font-semibold text-ink hover:bg-neutralx-50"}
               >
                 {vulIn(t.pdf, { jaar: y })}
               </a>

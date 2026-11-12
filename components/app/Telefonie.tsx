@@ -127,7 +127,7 @@ export function Telefonie({
       </header>
 
       {free && (
-        <p className="rounded-xl border border-brand-200 bg-mintwash/50 px-4 py-2.5 text-sm text-brand-800">
+        <p className="rounded-xl border border-hair bg-mintwash/50 px-4 py-2.5 text-sm text-brand-800">
           {tx.gratisAccount}
         </p>
       )}

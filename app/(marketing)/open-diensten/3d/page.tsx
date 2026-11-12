@@ -38,7 +38,7 @@ export default async function OpenShifts3DPage() {
               {map.cities.length === 0 ? (
                 <p className="mt-2 text-sm text-neutralx-500">Nu geen open diensten.</p>
               ) : (
-                <ul className="mt-3 divide-y divide-neutralx-200 overflow-hidden rounded-2xl border border-neutralx-200 bg-white">
+                <ul className="mt-3 divide-y divide-hair overflow-hidden rounded-2xl border border-hair bg-white">
                   {map.cities.slice(0, 10).map((c) => (
                     <li key={c.city} className="flex items-center justify-between px-4 py-2.5 text-sm">
                       <span className="font-medium">{c.city}</span>

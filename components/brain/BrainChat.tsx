@@ -100,7 +100,7 @@ export function BrainChat({ onClose }: { onClose?: () => void }) {
               {m.links && m.links.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {m.links.map((l) => (
-                    <Link key={l.href} href={l.href} onClick={() => onClose?.()} className="rounded-full border border-brand-200 bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-700 hover:bg-brand-100">
+                    <Link key={l.href} href={l.href} onClick={() => onClose?.()} className="rounded-full border border-hair bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-700 hover:bg-brand-100">
                       {l.label} →
                     </Link>
                   ))}

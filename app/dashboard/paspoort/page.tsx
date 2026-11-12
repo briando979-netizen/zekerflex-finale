@@ -58,7 +58,7 @@ export default async function MyPassportPage() {
 
       <div className="space-y-6">
         {/* preview */}
-        <div className="rounded-2xl border border-neutralx-200 bg-white p-5">
+        <div className="rounded-2xl border border-hair bg-white p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="font-display text-xl font-bold">{passport.fullName}</p>

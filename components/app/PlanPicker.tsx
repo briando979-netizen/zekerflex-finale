@@ -58,7 +58,7 @@ export function PlanPicker({
   return (
     <div>
       {free && (
-        <p className="mb-4 rounded-xl border border-brand-200 bg-mintwash/50 px-4 py-2.5 text-sm text-brand-800">
+        <p className="mb-4 rounded-xl border border-hair bg-mintwash/50 px-4 py-2.5 text-sm text-brand-800">
           Gratis voor jouw account: je hebt het hoogste pakket zonder abonnement.
         </p>
       )}

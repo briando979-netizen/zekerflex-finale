@@ -214,7 +214,7 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
       </div>
 
       {followers > 0 && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-neutralx-700">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-hair bg-brand-50 px-4 py-3 text-sm text-neutralx-700">
           <p>
             <span aria-hidden>❤️ </span>
             <span className="font-semibold text-ink">

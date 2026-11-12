@@ -386,7 +386,7 @@ function Modal({
                       setWriting(false);
                     }
                   }}
-                  className="shrink-0 rounded-full border border-brand-200 bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-700 hover:bg-brand-100 disabled:opacity-50"
+                  className="shrink-0 rounded-full border border-hair bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-700 hover:bg-brand-100 disabled:opacity-50"
                 >
                   {writing ? "…" : "✨ Help me"}
                 </button>

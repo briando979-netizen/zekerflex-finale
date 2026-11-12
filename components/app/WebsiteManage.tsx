@@ -155,7 +155,7 @@ export function WebsiteManage({ initial, plans, adminOverride = false }: { initi
       </header>
 
       {adminOverride && (
-        <div className="rounded-xl border border-brand-200 bg-mintwash/50 px-4 py-2.5 text-sm text-brand-800">
+        <div className="rounded-xl border border-hair bg-mintwash/50 px-4 py-2.5 text-sm text-brand-800">
           Gratis voor jouw account: je gebruikt deze functie zonder abonnement.
         </div>
       )}
@@ -194,7 +194,7 @@ function LockedView({
         <div className="pointer-events-none select-none blur-[3px]" aria-hidden>
           <div className="flex items-center justify-between border-b border-hair px-5 py-3">
             <div className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-brand-400" />
+              <span className="h-2.5 w-2.5 rounded-full bg-brand-300" />
               <span className="text-sm font-semibold text-ink">jouwbedrijf.nl</span>
             </div>
             <span className="rounded-full bg-mintwash px-2 py-0.5 text-[11px] font-bold text-brand-700">Live</span>
@@ -285,7 +285,7 @@ function OnboardingForm({
 }) {
   return (
     <form onSubmit={onSubmit} className="space-y-6">
-      <div className="rounded-xl border border-brand-200 bg-mintwash/50 px-4 py-3 text-sm text-brand-800">
+      <div className="rounded-xl border border-hair bg-mintwash/50 px-4 py-3 text-sm text-brand-800">
         ✅ {free ? "Website-beheer staat voor je aan." : "Je abonnement is actief."} Vul hieronder de gegevens van je website in — dan nemen wij het beheer over.
         Alles wat je invult wordt <strong>versleuteld</strong> opgeslagen en is alleen voor ons beheerteam zichtbaar.
         {hasSecrets && " Je opgeslagen toegangsgegevens blijven staan: vul alleen in wat verandert."}

@@ -416,7 +416,7 @@ export function NewShiftForm({
                   setWriting(false);
                 }
               }}
-              className="mb-1 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 hover:bg-brand-100 disabled:opacity-50"
+              className="mb-1 rounded-full border border-hair bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 hover:bg-brand-100 disabled:opacity-50"
             >
               {writing ? "Schrijven…" : description.trim() ? "✨ Verbeter tekst" : "✨ Schrijf voor mij"}
             </button>

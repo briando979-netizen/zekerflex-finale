@@ -147,7 +147,7 @@ export function MileageLog({
     }
   };
 
-  const field = "w-full rounded-lg border border-neutralx-200 px-3 py-2 text-sm";
+  const field = "w-full rounded-lg border border-hair px-3 py-2 text-sm";
 
   return (
     <div className="space-y-6">
@@ -169,7 +169,7 @@ export function MileageLog({
             type="button"
             onClick={() => setAdding((a) => !a)}
             aria-expanded={adding}
-            className="rounded-lg border border-neutralx-200 px-3.5 py-2 text-sm font-semibold text-ink hover:bg-neutralx-50"
+            className="rounded-lg border border-hair px-3.5 py-2 text-sm font-semibold text-ink hover:bg-neutralx-50"
           >
             {t.add}
           </button>
@@ -182,7 +182,7 @@ export function MileageLog({
       </div>
 
       {adding && (
-        <form onSubmit={add} className="grid gap-3 rounded-2xl border border-neutralx-200 bg-white p-5 sm:grid-cols-2">
+        <form onSubmit={add} className="grid gap-3 rounded-2xl border border-hair bg-white p-5 sm:grid-cols-2">
           <p className="text-sm text-neutralx-600 sm:col-span-2">{t.formIntro}</p>
           <label className="text-sm font-medium text-ink">
             {t.date}
@@ -221,19 +221,19 @@ export function MileageLog({
         </p>
       )}
       {notice && (
-        <p role="status" className="rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm text-brand-700">
+        <p role="status" className="rounded-lg border border-hair bg-brand-50 p-3 text-sm text-brand-700">
           {notice}
         </p>
       )}
 
       {trips.length === 0 ? (
-        <div className="rounded-2xl border border-neutralx-200 bg-white px-5 py-12 text-center">
+        <div className="rounded-2xl border border-hair bg-white px-5 py-12 text-center">
           <p className="text-4xl" aria-hidden>🚗</p>
           <p className="mt-3 font-medium text-ink">{t.emptyTitle(year)}</p>
           <p className="mx-auto mt-1 max-w-sm text-sm text-neutralx-500">{t.emptyBody}</p>
         </div>
       ) : (
-        <ul className="divide-y divide-neutralx-100 overflow-hidden rounded-2xl border border-neutralx-200 bg-white">
+        <ul className="divide-y divide-hair overflow-hidden rounded-2xl border border-hair bg-white">
           {trips.map((tr) => {
             const draft = drafts[tr.id];
             const inputId = `km-${tr.id}`;
@@ -261,7 +261,7 @@ export function MileageLog({
                     onKeyDown={(e) => {
                       if (e.key === "Enter") e.currentTarget.blur();
                     }}
-                    className="w-20 rounded-lg border border-neutralx-200 px-2 py-1.5 text-right text-sm tabular-nums disabled:bg-neutralx-100"
+                    className="w-20 rounded-lg border border-hair px-2 py-1.5 text-right text-sm tabular-nums disabled:bg-neutralx-100"
                   />
                   <span className="text-xs text-neutralx-500">km</span>
                   {tr.edited && !tr.excluded && tr.estimatedKm !== null && (
