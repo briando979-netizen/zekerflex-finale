@@ -21,6 +21,8 @@ import { standaardFilter } from "@/lib/shifts/branche-keuze";
 import { EersteIndrukMelding } from "@/components/app/EersteIndrukMelding";
 import { eersteIndrukVoor } from "@/lib/onboarding/eerste-indruk-server";
 import { inIosApp } from "@/lib/app-mode-server";
+import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
+import { isReservedTestAddress } from "@/lib/mail/test-adres";
 
 export const dynamic = "force-dynamic";
 
@@ -44,9 +46,12 @@ export default async function KlussenPage(
     getFreelancerOverview(principal.userId),
   ]);
   const birthday = isBirthdayToday(fiscal.birthDate);
-  // deze pagina is alleen voorbij de poort te zien (layout), dus de kaart hoeft die niet opnieuw te controleren
-  // in de iPhone-app vraagt de app zelf om meldingen: daar telt die stap als klaar
-  const eersteIndruk = await eersteIndrukVoor(principal.userId, { iosApp: await inIosApp() }).catch(() => null);
+  // De app is sinds 12 nov open (eigenaar): wie de onboarding nog niet af heeft, ziet hier de stappen bovenaan en
+  // reageert pas daarna (lib/onboarding/werker-poort-server.ts). Testaccounts en een storing: geen stappen.
+  const poort = isReservedTestAddress(principal.email) ? null : await werkerPoortStand(principal.userId).catch(() => null);
+  const onboardingOpen = poort !== null && !poort.klaar;
+  // de kaart "eerste indruk" pas na de onboarding; in de iPhone-app vraagt de app zelf om meldingen: daar telt die stap als klaar
+  const eersteIndruk = onboardingOpen ? null : await eersteIndrukVoor(principal.userId, { iosApp: await inIosApp() }).catch(() => null);
   const greetLabels = {
     morning: t.greet.morning,
     afternoon: t.greet.afternoon,
@@ -93,17 +98,31 @@ export default async function KlussenPage(
       )}
       {/* het recht om te werken zit niet meer in de start (10 nov); aannemen vraagt het wel (lib/werkrecht) */}
       {/* de melding "we verbeteren de aanmelding" staat niet meer bij werkers (10 nov, eigenaar); werkgevers: flag onboarding-onderhoud */}
-      {!overview.profileComplete && (
+      {poort && onboardingOpen ? (
         <WerkerStartWizard
-          workerKind={fiscal.workerKind}
+          workerKind={poort.workerKind}
           emailVerified={Boolean(principal.emailVerifiedAt)}
-          profileComplete={overview.profileComplete}
+          profileComplete={poort.gegevensIngevuld && poort.identiteitIngestuurd}
+          gegevensIngevuld={poort.gegevensIngevuld}
+          identiteitIngestuurd={poort.identiteitIngestuurd}
           werkrechtOk
-          brancheKeuze={brancheKeuze}
+          tweestapAan={poort.tweestapAan}
+          fotoGezet={poort.fotoGezet}
+          brancheKeuze={poort.brancheKeuze}
         />
+      ) : (
+        !overview.profileComplete && (
+          <WerkerStartWizard
+            workerKind={fiscal.workerKind}
+            emailVerified={Boolean(principal.emailVerifiedAt)}
+            profileComplete={overview.profileComplete}
+            werkrechtOk
+            brancheKeuze={brancheKeuze}
+          />
+        )
       )}
       {/* de profiel-af-kaart staat er niet naast de startwizard: die dekt dezelfde open stappen */}
-      {overview.profileComplete && (
+      {!onboardingOpen && overview.profileComplete && (
         <OnboardingProgress voortgang={overview.voortgang} steps={t.profielAf.steps} texts={t.profielAf} />
       )}
       <div className="mb-5 flex items-end justify-between gap-3">

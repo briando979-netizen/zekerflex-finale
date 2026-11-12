@@ -43,12 +43,13 @@ export function WerkerStartWizard({
   identiteitIngestuurd?: boolean;
   /** recht om te werken in Nederland in orde (lib/werkrecht): verklaring + bewijs */
   werkrechtOk: boolean;
-  /** tweestapsverificatie of passkey aan (lib/onboarding/werker-poort.ts); na de poort altijd waar */
+  /** tweestapsverificatie of passkey aan; sinds 12 nov optioneel: alleen een aanbeveling onder de stappen */
   tweestapAan?: boolean;
   /** profielfoto geüpload (poortfeit); na de poort altijd waar */
   fotoGezet?: boolean;
 }) {
-  const t = useFT().start;
+  const ft = useFT();
+  const t = ft.start;
   const router = useRouter();
   const [kind, setKind] = useState<Kind | null>(workerKind);
   const [pick, setPick] = useState<Kind | null>(workerKind);
@@ -299,6 +300,17 @@ export function WerkerStartWizard({
           );
         })}
       </ol>
+      {!tweestapAan && (
+        <div className="mx-4 mb-4 rounded-xl border border-hair bg-paper-soft p-4">
+          <p className="text-sm font-semibold text-ink">
+            {t.tweestapStep} <span className="font-normal text-neutralx-500">{ft.cert.optional}</span>
+          </p>
+          <p className="mt-1 text-xs leading-snug text-neutralx-600">{t.tweestapBody}</p>
+          <Link href="/dashboard/account/beveiliging" className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-brand-600 underline underline-offset-4 hover:text-brand-700">
+            {t.tweestapCta} <span aria-hidden>›</span>
+          </Link>
+        </div>
+      )}
       <p className="border-t border-hair bg-paper-soft px-5 py-3 text-center text-xs text-neutralx-500">{poort ? t.afsluiting : t.browse}</p>
     </section>
   );

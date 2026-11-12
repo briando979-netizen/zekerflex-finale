@@ -1,3 +1,4 @@
+import { eisOnboardingVoorReageren } from "@/lib/onboarding/werker-poort-server";
 import { isTenantVerified } from "@/lib/company/verified";
 import { MatchStatus, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -32,6 +33,8 @@ export async function applyToShift(
   userId: string,
   shiftId: string,
 ): Promise<ApplyResult> {
+  // eerst de onboarding (12 nov, eigenaar: alles zien, alleen reageren wacht op de onboarding)
+  await eisOnboardingVoorReageren(userId);
   const profile = await prisma.freelancerProfile.findUnique({
     where: { userId },
     select: {

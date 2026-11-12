@@ -7,6 +7,8 @@ import { werkerOnboardingKlaar, type WerkerPoortFeiten } from "@/lib/onboarding/
 import { hasTwoFactor } from "@/lib/auth/two-factor";
 import { getUserProfileExtra } from "@/lib/profile/store";
 import type { BrancheKeuze } from "@/lib/shifts/branche-keuze";
+import { AppError } from "@/lib/errors";
+import { isReservedTestAddress } from "@/lib/mail/test-adres";
 
 // De feiten voor de poort van de werker-app (lib/onboarding/werker-poort.ts), in één keer
 // voor de layout van /dashboard. Een storing in een bron mag de app niet dichtgooien: die
@@ -61,4 +63,27 @@ export async function werkerPoortStand(userId: string): Promise<WerkerPoortStand
     workerKind: fiscal.workerKind ?? null,
     brancheKeuze,
   };
+}
+
+/** De reden die de werker ziet; ook in page.block (lib/i18n/freelancer.ts), zodat hij in zijn app-taal staat. */
+export const ONBOARDING_EERST = "Rond eerst je aanmelding af om op klussen te reageren. Bovenaan deze pagina zie je wat er nog mist.";
+
+/**
+ * Mag deze werker, wat de onboarding betreft, op klussen reageren (12 nov, eigenaar: de app is open, alleen reageren
+ * wacht op de onboarding)? Testaccounts (.test/.example, de beoordelaars van Apple en Google) en een storing: ja. De
+ * echte controles vóór werk (ID geverifieerd, eligibility, werkrecht) staan daar los van en blijven gelden.
+ */
+export async function onboardingKlaarVoorReageren(userId: string): Promise<boolean> {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+    if (!user || isReservedTestAddress(user.email ?? "")) return true;
+    return (await werkerPoortStand(userId)).klaar;
+  } catch {
+    return true;
+  }
+}
+
+/** Gooit 412 met ONBOARDING_EERST als de onboarding nog niet af is (geen 403: CrowdSec). */
+export async function eisOnboardingVoorReageren(userId: string): Promise<void> {
+  if (!(await onboardingKlaarVoorReageren(userId))) throw AppError.precondition(ONBOARDING_EERST);
 }

@@ -329,6 +329,7 @@ const nl = {
     alleenTestTitle: "Nog geen echte klussen bij jou in de buurt",
     alleenTestBody: "ZekerFlex is net begonnen. De klussen hieronder zijn testklussen: daar zit geen werk achter. Maak je profiel af en zet meldingen aan, dan hoor je het als eerste zodra er een echte klus is.",
     block: {
+      onboardingFirst: "Rond eerst je aanmelding af om op klussen te reageren. Bovenaan deze pagina zie je wat er nog mist.",
       verifyFirst: "Rond eerst je verificatie af om diensten aan te nemen.",
       idNotVerified: "Je kunt pas aannemen als je identiteit is geverifieerd.",
       accountBlocked: "Je account kan momenteel geen diensten aannemen.",
@@ -1665,6 +1666,7 @@ const en: FreelancerDict = {
     alleenTestTitle: "No real jobs near you yet",
     alleenTestBody: "ZekerFlex has just started. The jobs below are test jobs: there is no real work behind them. Finish your profile and turn on notifications, and you'll be the first to hear when a real job comes in.",
     block: {
+      onboardingFirst: "Finish signing up first to respond to jobs. At the top of this page you can see what is still missing.",
       verifyFirst: "Complete your verification first to accept shifts.",
       idNotVerified: "You can accept shifts once your identity is verified.",
       accountBlocked: "Your account can't accept shifts at the moment.",
@@ -2996,6 +2998,7 @@ const pl: FreelancerDict = {
     alleenTestTitle: "Na razie brak prawdziwych zleceń w Twojej okolicy",
     alleenTestBody: "ZekerFlex dopiero startuje. Zlecenia poniżej to zlecenia testowe: nie kryje się za nimi prawdziwa praca. Uzupełnij profil i włącz powiadomienia, a jako pierwszy dowiesz się o prawdziwym zleceniu.",
     block: {
+      onboardingFirst: "Najpierw dokończ rejestrację, aby odpowiadać na zlecenia. Na górze tej strony zobaczysz, czego jeszcze brakuje.",
       verifyFirst: "Najpierw dokończ weryfikację, aby przyjmować zmiany.",
       idNotVerified: "Zmiany przyjmiesz po weryfikacji tożsamości.",
       accountBlocked: "Twoje konto nie może obecnie przyjmować zmian.",
@@ -4327,6 +4330,7 @@ const ro: FreelancerDict = {
     alleenTestTitle: "Încă nu sunt joburi reale în zona ta",
     alleenTestBody: "ZekerFlex abia a început. Joburile de mai jos sunt joburi de test: în spatele lor nu există muncă reală. Completează-ți profilul și activează notificările, ca să afli primul când apare un job real.",
     block: {
+      onboardingFirst: "Finalizează mai întâi înregistrarea pentru a răspunde la joburi. În partea de sus a acestei pagini vezi ce mai lipsește.",
       verifyFirst: "Finalizează mai întâi verificarea pentru a accepta ture.",
       idNotVerified: "Poți accepta ture după ce identitatea ta este verificată.",
       accountBlocked: "Contul tău nu poate accepta ture momentan.",
@@ -5658,6 +5662,7 @@ const uk: FreelancerDict = {
     alleenTestTitle: "Поки що немає справжніх робіт поруч із вами",
     alleenTestBody: "ZekerFlex щойно запустився. Роботи нижче — тестові: за ними немає справжньої роботи. Заповніть профіль і ввімкніть сповіщення — і ви першими дізнаєтеся про справжню роботу.",
     block: {
+      onboardingFirst: "Спершу завершіть реєстрацію, щоб відповідати на завдання. Угорі цієї сторінки видно, чого ще бракує.",
       verifyFirst: "Спершу завершіть верифікацію, щоб брати зміни.",
       idNotVerified: "Ви зможете брати зміни після підтвердження особи.",
       accountBlocked: "Ваш акаунт наразі не може брати зміни.",

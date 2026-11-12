@@ -1,3 +1,4 @@
+import { eisOnboardingVoorReageren } from "@/lib/onboarding/werker-poort-server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -40,7 +41,11 @@ export async function POST(request: Request, props: { params: Promise<{ shiftId:
     if (!profile) throw AppError.forbidden("Je hebt nog geen werkersprofiel. Maak eerst je profiel af.");
 
     // aannemen pas met recht om te werken (lib/werkrecht); afslaan mag altijd
-    if (decision === "ACCEPTED") await eisWerkrecht(principal.userId);
+    if (decision === "ACCEPTED") {
+      // eerst de onboarding (12 nov, eigenaar), dan het recht om te werken
+      await eisOnboardingVoorReageren(principal.userId);
+      await eisWerkrecht(principal.userId);
+    }
     const result = await recordOfferResponse(shiftId, profile.id, decision);
     if (decision === "ACCEPTED") runAfter(() => pushShiftTaken(shiftId, principal.fullName));
     return NextResponse.json(result, { status: 200 });
