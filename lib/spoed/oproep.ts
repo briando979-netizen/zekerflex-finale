@@ -11,6 +11,7 @@ import { WORKER_PUSH, pushRate, pushWhen } from "@/lib/i18n/worker-push";
 import { userLocale, userLocales } from "@/lib/i18n/worker-locale";
 import { applyToShift } from "@/lib/matching/apply";
 import { kanalenBeschikbaar, stuurSms, stuurWhatsApp } from "@/lib/spoed/kanalen";
+import { zonderTestwerker } from "@/lib/testwerker/adres";
 import {
   MAX_ONTVANGERS,
   isOpen,
@@ -117,7 +118,7 @@ export async function startSpoedoproep(input: StartInput): Promise<StartUitkomst
   // kandidaten met een thuislocatie, grof rond de vestiging (±0,5° ≈ 55 km)
   const kandidaten = await prisma.freelancerProfile.findMany({
     where: {
-      user: { disabledAt: null },
+      user: { disabledAt: null, ...zonderTestwerker() },
       homeLatitude: { gte: blat - 0.5, lte: blat + 0.5 },
       homeLongitude: { gte: blng - 0.8, lte: blng + 0.8 },
       ...(shift.requiredSkillId ? { skills: { some: { skillId: shift.requiredSkillId } } } : {}),
