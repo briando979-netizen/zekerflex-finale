@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { kvAppend, kvGet } from "@/lib/storage/kv";
+import { kvAppend, kvGet, kvSet } from "@/lib/storage/kv";
+import { schoonPersoonsgegevens } from "@/lib/learn/schoon";
 
 // ---------------------------------------------------------------------------
 // Lightweight "learning" for the local assistants — Postgres-backed
@@ -25,14 +26,21 @@ interface Exchange {
 
 const logKey = (s: Scope) => `learn-log:${s}`;
 const ratedKey = (s: Scope) => `learn-rated:${s}`;
+const SCOPES: readonly Scope[] = ["public", "jarvis", "brain"];
 
-/** Append a Q&A pair; returns its id (used to rate it later). */
+/** Bewaartermijn van een vraag en antwoord in de leerlijsten (lib/privacy/retention.ts, regel "chatlog"). */
+export const CHATLOG_DAGEN = 90;
+
+/**
+ * Append a Q&A pair; returns its id (used to rate it later). E-mailadressen, telefoonnummers, rekeningnummers en BSN's gaan
+ * er vóór het bewaren uit (lib/learn/schoon.ts); de lijst is 90 dagen te bewaren (sweep) en per gebruiker te wissen.
+ */
 export async function logExchange(scope: Scope, e: { q: string; a: string; userId?: string }): Promise<string> {
   const rec: Exchange = {
     id: randomUUID().slice(0, 10),
     at: new Date().toISOString(),
-    q: e.q.slice(0, 1000),
-    a: e.a.slice(0, 2000),
+    q: schoonPersoonsgegevens(e.q).slice(0, 1000),
+    a: schoonPersoonsgegevens(e.a).slice(0, 2000),
     ...(e.userId ? { userId: e.userId } : {}),
   };
   await kvAppend(logKey(scope), rec, 800);
@@ -94,4 +102,47 @@ export async function learnStats(scope: Scope): Promise<{ logged: number; rated:
     topExamples(scope, 50),
   ]);
   return { logged: (log ?? []).length, rated: (rated ?? []).length, examples: ex.length };
+}
+
+/**
+ * AVG-wissen: alle vragen van deze gebruiker uit de leerlijsten, en de beoordelingen van die vragen (een beoordeling heeft zelf
+ * geen userId, dus die vinden we via het id van de vraag). Geeft het aantal gewiste vragen terug.
+ */
+export async function wisChatlogVan(userId: string): Promise<number> {
+  let gewist = 0;
+  for (const scope of SCOPES) {
+    const log = (await kvGet<Exchange[]>(logKey(scope))) ?? [];
+    const van = log.filter((e) => e.userId === userId);
+    if (van.length === 0) continue;
+    const ids = new Set(van.map((e) => e.id));
+    await kvSet(logKey(scope), log.filter((e) => e.userId !== userId));
+    const rated = await kvGet<{ id: string }[]>(ratedKey(scope));
+    if (rated?.some((r) => ids.has(r.id))) await kvSet(ratedKey(scope), rated.filter((r) => !ids.has(r.id)));
+    gewist += van.length;
+  }
+  return gewist;
+}
+
+/**
+ * Bewaartermijn: vragen en beoordelingen ouder dan 90 dagen weg (de nachtelijke sweep, lib/privacy/sweep.ts). Met `dryRun`
+ * alleen tellen. Een regel zonder geldige tijd telt als verlopen: zonder datum valt niet te bewijzen dat hij jonger is.
+ */
+export async function ruimChatlogOp(now: Date, dryRun: boolean): Promise<number> {
+  const grens = now.getTime() - CHATLOG_DAGEN * 24 * 60 * 60 * 1000;
+  const verlopen = (at: unknown) => {
+    const t = typeof at === "string" ? Date.parse(at) : NaN;
+    return !Number.isFinite(t) || t < grens;
+  };
+  let totaal = 0;
+  for (const scope of SCOPES) {
+    for (const key of [logKey(scope), ratedKey(scope)]) {
+      const lijst = (await kvGet<{ at?: unknown }[]>(key)) ?? [];
+      const over = lijst.filter((r) => !verlopen(r.at));
+      const weg = lijst.length - over.length;
+      if (weg === 0) continue;
+      totaal += weg;
+      if (!dryRun) await kvSet(key, over);
+    }
+  }
+  return totaal;
 }

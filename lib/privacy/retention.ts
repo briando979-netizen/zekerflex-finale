@@ -168,6 +168,15 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
     blocksErasure: true,
   },
   {
+    key: "chatlog",
+    label: "Vragen en antwoorden in de assistenten (openbare chat, Jarvis, Brain) en de beoordelingen daarvan",
+    days: 90,
+    anchor: "vraag gesteld",
+    basis: "Alleen om de antwoorden te verbeteren; daarna geen grondslag — dataminimalisatie (art. 5(1)(c) en (e) AVG). E-mailadressen, telefoonnummers, rekeningnummers en BSN's worden al vóór het bewaren weggehaald",
+    onExpiry: "delete",
+    blocksErasure: false,
+  },
+  {
     key: "engagement_events",
     label: "Gedrags-/engagement-events (matching-signalen)",
     days: YEAR,
