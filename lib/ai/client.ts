@@ -64,9 +64,9 @@ export interface ChatOptions {
   stilBijFout?: boolean;
   /**
    * true = er wacht een mens live op dit antwoord (assistent, Jarvis, sitechat, herschrijven): bij "alles gratis" dan
-   * niet drie keer zo lang wachten (gratisTimeout). Gemeten 12 nov: iemand wachtte 90 s op de assistent en kreeg daarna
-   * toch het antwoord uit de regels. Het reservemodel (fallbackTarget) werkt gewoon. Alleen voor chat/chatJson: bij een
-   * stream loopt de wachttijd over het hele antwoord, dus die zou een traag eigen model halverwege afkappen.
+   * niet drie keer zo lang wachten maar de gemeten INTERACTIEF_GRATIS_MS (gratisTimeout). 12 nov: iemand wachtte 90 s op
+   * de assistent en kreeg daarna toch het antwoord uit de regels. Het reservemodel (fallbackTarget) werkt gewoon. Alleen
+   * voor chat/chatJson; een stream heeft een eigen grens tot het eerste woord (eersteWoordMs).
    */
   interactief?: boolean;
   /**
@@ -160,8 +160,17 @@ function timeoutFor(opts: ChatOptions): number {
  * waar een mens live op wacht (interactief, zie ChatOptions).
  */
 export function gratisTimeout(base: number, gratis: boolean, interactief = false): number {
-  return gratis && !interactief && base >= 20_000 ? Math.min(base * 3, 180_000) : base;
+  if (!gratis || base < 20_000) return base;
+  return interactief ? INTERACTIEF_GRATIS_MS : Math.min(base * 3, 180_000);
 }
+
+/**
+ * Wachttijd voor een antwoord waar een mens live op wacht (interactief), met het eigen model. Gemeten 12 nov op prod
+ * (gemma3:4b op de CPU, server druk): de vraag verwerken kost koud 7–42 s (brein 42 s, sitechat 33 s), plus het
+ * schrijven. Koud max × 1,3 komt boven de 75 s, dus de grens van 86: hooguit 75 s. Niet meer de 90 s van vóór 12 nov,
+ * en ook niet de 30 s die te krap bleek.
+ */
+export const INTERACTIEF_GRATIS_MS = 75_000;
 
 function baseUrl(): string {
   // "alles gratis" (Admin → ZekerFlex AI): altijd onze eigen AI-server
