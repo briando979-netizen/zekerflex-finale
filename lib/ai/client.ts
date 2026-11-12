@@ -62,6 +62,13 @@ export interface ChatOptions {
    * uitrol staat het eigen model bewust stil, en alle 8 meldingen "llm chat failed" van 11–12 nov waren die tik.
    */
   stilBijFout?: boolean;
+  /**
+   * true = er wacht een mens live op dit antwoord (assistent, Jarvis, sitechat, herschrijven): bij "alles gratis" dan
+   * niet drie keer zo lang wachten (gratisTimeout). Gemeten 12 nov: iemand wachtte 90 s op de assistent en kreeg daarna
+   * toch het antwoord uit de regels. Het reservemodel (fallbackTarget) werkt gewoon. Alleen voor chat/chatJson: bij een
+   * stream loopt de wachttijd over het hele antwoord, dus die zou een traag eigen model halverwege afkappen.
+   */
+  interactief?: boolean;
 }
 
 interface TokenUsage {
@@ -121,7 +128,7 @@ export function viaRegisteredNode(): boolean {
 function timeoutFor(opts: ChatOptions): number {
   const base = opts.timeoutMs ?? env.LLM_TIMEOUT_MS;
   if (viaRegisteredNode()) return Math.max(base, 120_000);
-  return gratisTimeout(base, gratisAan());
+  return gratisTimeout(base, gratisAan(), opts.interactief === true);
 }
 
 /**
@@ -130,10 +137,11 @@ function timeoutFor(opts: ChatOptions): number {
  * orchestratie en de offerte-analyse, 7 nov). Taken op de achtergrond (≥ 20 s)
  * krijgen drie keer zo lang, hooguit 3 minuten. Korte aanroepen waar iemand op
  * wacht (telefoon, snelle keuzes: 6–15 s) houden hun grens: die hebben een eigen
- * terugval, en een beller kan geen minuten wachten.
+ * terugval, en een beller kan geen minuten wachten. Net zo een langere aanroep
+ * waar een mens live op wacht (interactief, zie ChatOptions).
  */
-export function gratisTimeout(base: number, gratis: boolean): number {
-  return gratis && base >= 20_000 ? Math.min(base * 3, 180_000) : base;
+export function gratisTimeout(base: number, gratis: boolean, interactief = false): number {
+  return gratis && !interactief && base >= 20_000 ? Math.min(base * 3, 180_000) : base;
 }
 
 function baseUrl(): string {

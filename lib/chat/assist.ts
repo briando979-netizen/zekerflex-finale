@@ -73,6 +73,7 @@ export async function rewrite(text: string, style: RewriteStyle): Promise<{ text
       maxTokens: 400,
       retry: false,
       timeoutMs: 20_000,
+      interactief: true,
       messages: [
         { role: "system", content: `${STYLE_PROMPT[style]} Geef alleen de nieuwe tekst terug, zonder uitleg of aanhalingstekens.` },
         { role: "user", content: text.slice(0, 2000) },

@@ -59,6 +59,7 @@ async function structureAnswer(
   try {
     const r = await chat({
       purpose: "jarvis-report",
+      interactief: true,
       messages: [
         { role: "system", content: REPORT_SYSTEM },
         {
@@ -386,6 +387,7 @@ async function runTurn(turnId: string, input: StartTurnInput): Promise<void> {
       ]);
       const res = await chat({
         purpose: "jarvis-chat",
+        interactief: true,
         model: picked.model,
         messages: [
           { role: "system", content: JARVIS_PERSONA },

@@ -189,6 +189,7 @@ export async function answer(raw: string, owner: { userId: string; email: string
     try {
       const r = await chat({
         purpose: "companion",
+        interactief: true,
         temperature: 0.4,
         maxTokens: 300,
         retry: false,

@@ -197,6 +197,8 @@ export async function think(p: Principal, question: string, opts: ThinkOptions =
         maxTokens: 450,
         retry: false,
         timeoutMs: 30_000,
+        // iemand wacht op dit antwoord: bij "alles gratis" niet 90 s, dan liever het regelantwoord (lib/ai/client.ts)
+        interactief: true,
         messages: [
           // CAG: the byte-stable knowledge pack FIRST, so the model server reuses its KV cache for it
           packMessage(role),
