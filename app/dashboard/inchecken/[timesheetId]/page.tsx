@@ -9,7 +9,7 @@ import { MessageEmployerButton } from "@/components/app/MessageEmployerButton";
 import { PageHeader } from "@/components/app/ui";
 import { getFreelancerDict } from "@/lib/i18n/server";
 import { amsterdamClock } from "@/lib/time/amsterdam";
-import { INCHECK_VOOR_MS, UITCHECK_NA_MS } from "@/lib/timesheets/offline";
+import { INCHECK_VOOR_MS } from "@/lib/timesheets/offline";
 import { urenIndienenOpen } from "@/lib/timesheets/indienen";
 import { plekVoorWerker } from "@/lib/shifts/place-label";
 
@@ -44,15 +44,32 @@ export default async function IncheckKlusPage(props: { params: Promise<{ timeshe
 
   const nu = Date.now();
   const start = ts.scheduledStart.getTime();
-  const end = ts.scheduledEnd.getTime();
   const concept = ts.status === "DRAFT";
   const voorVenster = nu < start - INCHECK_VOOR_MS;
-  const naVenster = nu > end + UITCHECK_NA_MS;
   const urenOpen = urenIndienenOpen(ts, nu);
+  // na afloop zonder inchecken heeft de knop geen zin meer; wie nog ingecheckt is, ziet hem wel (uitchecken)
+  const toonPaneel = concept && !voorVenster && !(urenOpen && !ts.actualStart);
   const shift = ts.assignment.shift;
   const plek = plekVoorWerker(ts.branch.name, ts.branch.tenant.name);
   const dag = new Intl.DateTimeFormat(ft.intl, { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Amsterdam" }).format(ts.scheduledStart);
   const tijden = `${amsterdamClock(ts.scheduledStart)} – ${amsterdamClock(ts.scheduledEnd)}`;
+
+  // Uren indienen pas na afloop: daarvóór alleen wanneer het kan
+  const urenBlok = !concept ? (
+    <Link href={`/dashboard/uren/${ts.id}`} className="card flex items-center justify-between p-5 text-sm font-semibold text-ok">
+      <span>{P.handedIn}</span>
+      <span aria-hidden>→</span>
+    </Link>
+  ) : urenOpen ? (
+    <div className="card space-y-3 p-5">
+      <p className="text-sm font-semibold text-warn">{P.hoursNow}</p>
+      <Link href={`/dashboard/uren/${ts.id}`} className="btn-primary block w-full py-3 text-center text-base">
+        {P.hoursBtn}
+      </Link>
+    </div>
+  ) : (
+    <p className="px-1 text-xs text-neutralx-500">{P.hoursLater(amsterdamClock(ts.scheduledEnd))}</p>
+  );
 
   return (
     <div className="mx-auto max-w-xl">
@@ -65,8 +82,9 @@ export default async function IncheckKlusPage(props: { params: Promise<{ timeshe
         {concept && voorVenster && (
           <p className="card p-5 text-sm text-plan-ink">{P.opensAt(amsterdamClock(start - INCHECK_VOOR_MS))}</p>
         )}
-        {concept && naVenster && !ts.actualStart && <p className="card p-5 text-sm text-neutralx-600">{P.closed}</p>}
-        {concept && !voorVenster && (
+        {/* na afloop eerst de uren, daarna (als het nog nodig is) uitchecken */}
+        {urenOpen && urenBlok}
+        {toonPaneel && (
           <CheckInPanel
             userId={principal.userId}
             timesheetId={ts.id}
@@ -77,23 +95,7 @@ export default async function IncheckKlusPage(props: { params: Promise<{ timeshe
             branchName={ts.branch.name}
           />
         )}
-
-        {/* Uren indienen pas na afloop: daarvóór alleen wanneer het kan */}
-        {!concept ? (
-          <Link href={`/dashboard/uren/${ts.id}`} className="card flex items-center justify-between p-5 text-sm font-semibold text-ok">
-            <span>{P.handedIn}</span>
-            <span aria-hidden>→</span>
-          </Link>
-        ) : urenOpen ? (
-          <div className="card space-y-3 p-5">
-            <p className="text-sm font-semibold text-warn">{P.hoursNow}</p>
-            <Link href={`/dashboard/uren/${ts.id}`} className="btn-primary block w-full py-3 text-center text-base">
-              {P.hoursBtn}
-            </Link>
-          </div>
-        ) : (
-          <p className="px-1 text-xs text-neutralx-500">{P.hoursLater(amsterdamClock(ts.scheduledEnd))}</p>
-        )}
+        {!urenOpen && urenBlok}
 
         {/* Kort: waar en wat. De rest (route, reistijd, omschrijving) staat op de kluspagina. */}
         <section className="card overflow-hidden">
