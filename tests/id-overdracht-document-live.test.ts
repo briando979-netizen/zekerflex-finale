@@ -58,6 +58,18 @@ describe("POST /api/id-overdracht/document-live", () => {
     expect(meetDocumentLive).not.toHaveBeenCalled();
   });
 
+  it("een te groot verzoek wordt geweigerd vóór het inlezen en vóór de code wordt bekeken (openbare route)", async () => {
+    const groot = new Request("http://localhost/api/id-overdracht/document-live", {
+      method: "POST",
+      headers: { "content-length": String(50_000_000), "content-type": "multipart/form-data; boundary=x" },
+      body: "x",
+    });
+    const res = await POST(groot);
+    expect(res.status).toBe(422);
+    expect(overdrachtGeldig).not.toHaveBeenCalled();
+    expect(meetDocumentLive).not.toHaveBeenCalled();
+  });
+
   it("een storing logt alleen de soort fout: nooit het beeld of de code", async () => {
     overdrachtGeldig.mockResolvedValue({ userId: "u1" });
     meetDocumentLive.mockRejectedValue(new TypeError("kapot"));

@@ -34,6 +34,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       windowSeconds: 3600,
       message: "De camera heeft vaak gemeten. Maak de foto gewoon met de knop: dan kijken wij mee.",
     });
+    // vóór het inlezen: een openbare route zet een te groot verzoek niet eerst helemaal in het geheugen (de server laat
+    // tot 210 MB door, next.config.mjs). Het formulier is het beeld plus drie korte velden.
+    if (Number(request.headers.get("content-length") ?? "0") > MAX_BYTES + 64_000) {
+      throw AppError.validation("Het beeld is te groot voor live meten.");
+    }
     const form = await request.formData().catch(() => {
       throw AppError.validation("Verstuur het beeld als multipart/form-data");
     });
