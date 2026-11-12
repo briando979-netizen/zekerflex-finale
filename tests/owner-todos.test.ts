@@ -80,6 +80,18 @@ describe("websitevoorstellen versturen", () => {
 });
 
 describe("owner to-do list", () => {
+  it("Stripe ontvangt geen betalingen meer: de taak opent zich met de datum, en vinkt zichzelf af als het weer aan staat", async () => {
+    expect((await byId())["stripe-betalen-uit"]).toMatchObject({ done: true, auto: true });
+    kv.set("stripe:account-stand", { betalen: false, uitbetalen: false, gemeten: "2026-11-12T05:00:00.000Z", uitSinds: "2026-11-11T17:31:05.000Z" });
+    const open = (await byId())["stripe-betalen-uit"];
+    expect(open).toMatchObject({ done: false, auto: true, group: "Geld & bank" });
+    expect(open?.title).toMatch(/^Stripe ontvangt geen betalingen meer sinds 11-11-2026/);
+    expect(open?.why).toMatch(/bankafschrift/);
+    kv.set("stripe:account-stand", { betalen: true, uitbetalen: true, gemeten: "2026-11-12T09:00:00.000Z", uitSinds: null });
+    expect((await byId())["stripe-betalen-uit"]?.done).toBe(true);
+    kv.delete("stripe:account-stand");
+  });
+
   it("Stripe Identity geweigerd voor het account: de taak gaat open met de melding van Stripe, en daarna weer dicht", async () => {
     expect((await byId())["stripe-identity-account"]).toMatchObject({ done: true, auto: true });
     kv.set("stripe-identity:account-geweigerd", { tot: new Date(Date.now() + 3_600_000).toISOString(), op: "2026-11-11T19:38:24.000Z", melding: "This account is unable to perform this action." });

@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { constructWebhookEvent } from "@/lib/billing/stripe";
+import { verwerkAccountStand } from "@/lib/billing/stripe-betalen";
 import { claimIdempotency, releaseIdempotency } from "@/lib/redis";
 import { book } from "@/lib/bank/ledger";
 import { decideAuthorization, releaseHold, settleTransaction, syncCard } from "@/lib/bank/cards";
@@ -526,6 +527,15 @@ async function processStripeEvent(event: Stripe.Event, log: ReturnType<typeof lo
         data: { status: "PAYMENT_FAILED" },
       });
     }
+  }
+
+  // het eigen (platform)account: een event zonder `account` (11 nov 2026: Stripe zette betalen en uitbetalen uit zonder
+  // melding). Slaat het om naar uit, dan meteen een melding aan de eigenaar; per event-id idempotent (lib/billing/stripe-betalen.ts).
+  if (event.type === "account.updated" && !event.account) {
+    const eigen = event.data.object as Stripe.Account;
+    await verwerkAccountStand(Boolean(eigen.charges_enabled), Boolean(eigen.payouts_enabled), `event-${event.id}`).catch((err) =>
+      log.warn("stripe account-stand uit de webhook mislukt", { error: (err as Error).message }),
+    );
   }
 
   if (event.type === "account.updated") {

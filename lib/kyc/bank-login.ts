@@ -4,6 +4,8 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { AppError } from "@/lib/errors";
+import { isBetalenUitFout } from "@/lib/billing/stripe-betalen-stand";
+import { zetBetalenUit } from "@/lib/billing/stripe-betalen";
 import { getStripeClient } from "@/lib/billing/stripe";
 import { getFiscal, setFiscal } from "@/lib/fiscal/store";
 import { isValidIban } from "@/lib/billing/sepa";
@@ -189,6 +191,12 @@ export async function startBankLogin(userId: string, ibanHint?: string): Promise
     if (!session.url) throw new Error("no checkout url");
     return session.url;
   } catch (err) {
+    // het live Stripe-account ontvangt geen betalingen (lib/billing/stripe-betalen.ts): dan een uur niet meer proberen,
+    // het scherm toont meteen het bankafschrift, en één waarschuwing per uur in plaats van een fout per poging
+    if (isBetalenUitFout(err)) {
+      await zetBetalenUit((err as Error).message ?? "betalen uit").catch(() => undefined);
+      throw AppError.upstream("Inloggen bij je bank kan tijdelijk niet. Upload een bankafschrift, dat werkt net zo goed.");
+    }
     logger.error("bank login session failed", { error: (err as Error).message });
     throw AppError.upstream("Inloggen bij je bank lukt nu niet. Upload een bankafschrift of probeer het later opnieuw.");
   }
