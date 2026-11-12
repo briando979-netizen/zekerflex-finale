@@ -64,6 +64,15 @@ FLAG_REGISTRY.push({
   default: false,
 });
 
+// Boekhouding: de nachtelijke ronde (lib/boekhouding/nachtronde.ts); staat bewust uit tot het boeken en koppelen is gecontroleerd.
+FLAG_REGISTRY.push({
+  key: "boekhouding-nachtronde",
+  label: "Boekhouding: nachtelijke ronde",
+  description:
+    "Aan = elke nacht boekt ZekerFlex per echte administratie de nieuwe facturen, koppelt banktransacties die zeker kloppen (twijfel blijft bij even kijken) en rekent het btw-concept opnieuw uit als er boekingen bij kwamen; en de eigenaar krijgt een melding 14, 7 en 2 dagen vóór een deadline en als er langer dan drie dagen werk bij even kijken ligt. Het systeem dient nooit zelf btw in. Zet dit pas aan na een controle van het boeken en koppelen bij Beheer, Boekhouding. Uit (standaard) = er gebeurt niets.",
+  default: false,
+});
+
 export interface FlagOverride {
   /** master switch; undefined = use the registry default */
   enabled?: boolean | undefined;
