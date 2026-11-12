@@ -281,8 +281,11 @@ describe("de testwerker telt niet mee en krijgt geen voorstellen", () => {
     expect(isTestAccount({ email: "ander@werker.nl", rollen: ["FREELANCER"], disabledAt: null, tenantNamen: [] })).toBe(false);
   });
 
-  it("de route voor de uurtaak bestaat en meldt zijn run (de cron komt pas als het adres er is)", () => {
-    const route = readFileSync(path.join(process.cwd(), "app/api/internal/testwerker/reset/route.ts"), "utf8");
+  it("de uurtaak staat ingepland en wordt bewaakt", () => {
+    const lees = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8");
+    expect(lees("deploy/cron/entrypoint.sh")).toMatch(/^5 \* \* \* \* wget .*\/api\/internal\/testwerker\/reset"\r?$/m);
+    expect(lees("lib/ops/heartbeat.ts")).toMatch(/job: "testwerker-reset", label: "[^"]+", maxAgeHours: 3/);
+    const route = lees("app/api/internal/testwerker/reset/route.ts");
     expect(route).toMatch(/checkInternalToken\(request\)/);
     expect(route).toMatch(/recordCronRun\("testwerker-reset", true\)/);
   });

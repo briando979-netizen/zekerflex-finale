@@ -28,6 +28,8 @@ export interface WatchedCron {
 export const WATCHED_CRONS: WatchedCron[] = [
   { job: "matching-tick", label: "Matching", maxAgeHours: 26 },
   { job: "retention-sweep", label: "AVG-bewaartermijnen (opruimen)", maxAgeHours: 26 },
+  // zonder TESTWERKER_EMAIL telt de run als geslaagd ("uit"), dus geen vals alarm
+  { job: "testwerker-reset", label: "Testwerkeraccount elk uur terugzetten", maxAgeHours: 3 },
   { job: "active-hours", label: "Actieve uren herberekenen", maxAgeHours: 26 },
   { job: "orchestration", label: "Orchestratie", maxAgeHours: 26 },
   { job: "rag-reindex", label: "RAG opnieuw indexeren", maxAgeHours: 26 },
