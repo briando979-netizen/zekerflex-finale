@@ -1,4 +1,4 @@
-import type { UitzendContract } from "@/lib/agreements/uitzend-contract";
+import { sjabloonVan, type UitzendContract } from "@/lib/agreements/uitzend-contract";
 
 // ---------------------------------------------------------------------------
 // De tekst van de uitzendovereenkomst als blokken: de ENIGE bron voor zowel de pdf (lib/pdf/documents.ts) als het scherm
@@ -43,12 +43,23 @@ export function uitzendContractBlokken(c: UitzendContract, opties: { voorbeeld?:
   const uit: ContractBlok[] = [];
 
   uit.push(kop("DE ONDERGETEKENDEN:"));
-  uit.push(
-    alinea(
-      `${c.employerName}, kantoorhoudende te Amsterdam${c.employerKvk ? ` (KVK ${c.employerKvk})` : ""}, ` +
-        `als uitzendonderneming en formeel werkgever, hierna "ZekerFlex";`,
-    ),
-  );
+  if ((c.sjabloon ?? 1) < 2) {
+    // v1 (tot 12 nov 2026): precies zoals getekend; een getekende overeenkomst verandert nooit
+    uit.push(
+      alinea(
+        `${c.employerName}, kantoorhoudende te Amsterdam${c.employerKvk ? ` (KVK ${c.employerKvk})` : ""}, ` +
+          `als uitzendonderneming en formeel werkgever, hierna "ZekerFlex";`,
+      ),
+    );
+  } else {
+    // v2: alleen wat echt bekend is (lib/platform/werkgever.ts); geen verzonnen KvK-nummer en geen vaste plaats
+    uit.push(
+      alinea(
+        `${c.employerName}${c.employerAddress ? `, gevestigd te ${c.employerAddress}` : ""}${c.employerKvk ? ` (KVK ${c.employerKvk})` : ""}, ` +
+          `als uitzendonderneming en formeel werkgever, hierna "ZekerFlex";`,
+      ),
+    );
+  }
   uit.push(alinea("en"));
   uit.push(alinea(`${c.workerName}${c.workerBsnLast4 ? `, BSN eindigend op ${c.workerBsnLast4}` : ""}, ` + `hierna "de Uitzendkracht";`));
   uit.push(alinea('Hierna gezamenlijk "Partijen".'));

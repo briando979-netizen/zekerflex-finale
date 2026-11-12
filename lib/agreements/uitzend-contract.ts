@@ -3,7 +3,7 @@ import { getFiscal } from "@/lib/fiscal/store";
 import { getUitzendStatus } from "@/lib/payroll/uitzend-status";
 import { kvAppend, kvGet } from "@/lib/storage/kv";
 import { amsterdamParts } from "@/lib/time/amsterdam";
-import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
+import { werkgeverGegevens } from "@/lib/platform/werkgever";
 
 // ---------------------------------------------------------------------------
 // Uitzendovereenkomst — the temp-work employment contract between ZekerFlex
@@ -16,8 +16,14 @@ import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
 // ---------------------------------------------------------------------------
 
 export const CONTRACT_MONTHS = 3;
-const EMPLOYER_NAME = PLATFORM_NAAM;
-const EMPLOYER_KVK = "00000000";
+
+/**
+ * De versie van de tekst (sjabloon) waarmee een overeenkomst wordt opgemaakt en getekend. Een getekende overeenkomst blijft voor altijd
+ * in de versie waarin hij is getekend: dezelfde tekst, pdf en referentie. v1 (tot 12 nov 2026) had vaste bedrijfsgegevens (een
+ * verzonnen KvK-nummer en "kantoorhoudende te Amsterdam"); v2 neemt de gegevens van de werkgever uit één bron (lib/platform/werkgever.ts)
+ * en laat weg wat niet is ingesteld. Alleen de huidige versie telt als geldig: wie alleen een v1 heeft, tekent opnieuw.
+ */
+export const SJABLOON_HUIDIG = 2;
 
 export interface UitzendContract {
   id: string;
@@ -26,7 +32,12 @@ export interface UitzendContract {
   workerName: string;
   workerBsnLast4: string | null;
   employerName: string;
+  /** v1: "00000000" zoals getekend; v2: het echte KvK-nummer, of "" als er geen is (Zekerflex, Inc. heeft er geen) */
   employerKvk: string;
+  /** v2: het adres van de werkgever zoals ingesteld; ontbreekt als het niet is ingesteld (en bij v1) */
+  employerAddress?: string;
+  /** de sjabloonversie; ontbreekt bij v1 (de overeenkomsten van vóór 12 nov 2026) */
+  sjabloon?: number;
   signedAt: string;
   validFrom: string;
   validUntil: string;
@@ -36,6 +47,17 @@ export interface UitzendContract {
 }
 
 const key = (userId: string) => `uitzend-contracts:${userId}`;
+export const CONTRACTEN_PREFIX = "uitzend-contracts:";
+
+export const sjabloonVan = (c: Pick<UitzendContract, "sjabloon">): number => c.sjabloon ?? 1;
+
+/** De werkgeversgegevens voor een nieuwe overeenkomst (v2): wat niet is ingesteld blijft leeg en valt in de tekst weg. */
+function werkgeverVoorContract(): Pick<UitzendContract, "employerName" | "employerKvk" | "employerAddress"> {
+  const w = werkgeverGegevens();
+  return { employerName: w.naam, employerKvk: w.kvk ?? "", ...(w.adres ? { employerAddress: w.adres } : {}) };
+}
+
+const nogGeldig = (c: Pick<UitzendContract, "validUntil">, nu: number) => new Date(c.validUntil).getTime() > nu;
 
 function addMonths(d: Date, m: number): Date {
   const x = new Date(d);
@@ -48,11 +70,21 @@ export async function listUitzendContracts(userId: string): Promise<UitzendContr
   return [...rows].sort((a, b) => (a.signedAt < b.signedAt ? 1 : -1));
 }
 
-/** The most recent contract that is still within its validity window. */
+/**
+ * The most recent contract that is still within its validity window AND in the current text version. Een overeenkomst in een
+ * oudere versie telt niet meer: de werker leest en tekent de nieuwe (zie verouderdUitzendContract).
+ */
 export async function activeUitzendContract(userId: string): Promise<UitzendContract | null> {
   const now = Date.now();
   const all = await listUitzendContracts(userId);
-  return all.find((c) => new Date(c.validUntil).getTime() > now) ?? null;
+  return all.find((c) => nogGeldig(c, now) && sjabloonVan(c) === SJABLOON_HUIDIG) ?? null;
+}
+
+/** Een nog niet verlopen overeenkomst in een oudere versie, terwijl er geen geldige huidige is: dan moet de werker opnieuw tekenen. */
+export async function verouderdUitzendContract(userId: string, nu: number = Date.now()): Promise<UitzendContract | null> {
+  const all = await listUitzendContracts(userId);
+  if (all.some((c) => nogGeldig(c, nu) && sjabloonVan(c) === SJABLOON_HUIDIG)) return null;
+  return all.find((c) => nogGeldig(c, nu) && sjabloonVan(c) < SJABLOON_HUIDIG) ?? null;
 }
 
 /**
@@ -78,8 +110,8 @@ export async function signUitzendContract(
     userId,
     workerName,
     workerBsnLast4: fiscal.bsnLast4,
-    employerName: EMPLOYER_NAME,
-    employerKvk: EMPLOYER_KVK,
+    ...werkgeverVoorContract(),
+    sjabloon: SJABLOON_HUIDIG,
     signedAt: now.toISOString(),
     validFrom: now.toISOString(),
     validUntil: addMonths(now, CONTRACT_MONTHS).toISOString(),
@@ -103,8 +135,8 @@ export async function voorbeeldUitzendContract(userId: string, workerName: strin
     userId,
     workerName,
     workerBsnLast4: fiscal.bsnLast4,
-    employerName: EMPLOYER_NAME,
-    employerKvk: EMPLOYER_KVK,
+    ...werkgeverVoorContract(),
+    sjabloon: SJABLOON_HUIDIG,
     signedAt: now.toISOString(),
     validFrom: now.toISOString(),
     validUntil: addMonths(now, CONTRACT_MONTHS).toISOString(),
