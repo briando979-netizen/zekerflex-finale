@@ -854,6 +854,8 @@ export async function submitFreelancerOnboarding(
     beeldmodelOk,
     aiVerdict: ai.verdict,
     aiZeker: ai.verdict === "approved" && ai.confidence >= 0.65,
+    // live bewijs van de server: zonder live camerabeelden (zelf gekozen foto's) kijkt een mens (review 73)
+    liveBeelden: reeks?.beelden ?? 0,
   };
   const gezichtOk = gezichtBeslist(autoFeiten);
   const nietAutomatisch = redenenNietAutomatisch(autoFeiten);

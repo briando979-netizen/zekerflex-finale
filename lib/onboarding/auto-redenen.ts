@@ -10,12 +10,18 @@
 //  - het gezicht lijkt niet zeker genoeg op de pasfoto, of het hoofd draaide niet echt (een foto van een foto);
 //  - foto's via "verder op je telefoon" (QR): een doorgestuurde link kan bij een ander uitkomen (review H1);
 //  - geen EU/EER/CH-nationaliteit (Wet arbeid vreemdelingen), of jonger dan 18;
-//  - hetzelfde document of dezelfde chip al bij een ander account.
+//  - hetzelfde document of dezelfde chip al bij een ander account;
+//  - geen live camerabeelden bij de server (review 73, 12 nov): foto's die iemand zelf kiest kunnen bestaande foto's
+//    van een ander zijn (een gestolen paspoort plus twee foto's van de eigenaar van sociale media). Alleen de scan met de
+//    live camera (POST /api/onboarding/gezicht-live, de reeks in lib/kyc/gezicht/reeks.ts) keurt zelf goed.
 // De tekst-AI ziet alleen wat iemand typte: als de foto's en de code op het document alles bevestigen, houdt alleen
 // een uitdrukkelijk "afgekeurd" van die AI de goedkeuring tegen (sinds 12 nov; daarvoor ook "bekijk handmatig").
 // ---------------------------------------------------------------------------
 
 import { GEZICHT_DREMPEL } from "@/lib/kyc/gezicht/vergelijk";
+
+/** Zoveel live camerabeelden moet de server tijdens de selfies gezien hebben (de reeks, laatste half uur). */
+export const MIN_LIVE_BEELDEN = 5;
 
 export interface AutoFeiten {
   kvkOk: boolean;
@@ -43,6 +49,8 @@ export interface AutoFeiten {
   aiVerdict: "approved" | "needs_review" | "rejected";
   /** de tekst-AI keurde goed met genoeg zekerheid (>= 0,65) */
   aiZeker: boolean;
+  /** hoeveel live camerabeelden de server tijdens de selfies zag (de reeks); 0 bij zelf gekozen foto's */
+  liveBeelden: number;
 }
 
 const BEWEGING_TEKST: Record<string, string> = {
@@ -81,6 +89,7 @@ export function redenenNietAutomatisch(f: AutoFeiten): string[] {
   if (f.telefoonGeweigerd) r.push("een telefoon koos 'dit is niet mijn account' voor dit account");
   if (f.dubbelDocument) r.push("dit document is al bij een ander account gebruikt");
   if (f.zegelElders) r.push("deze chip is al bij een ander account gebruikt");
+  if (f.liveBeelden < MIN_LIVE_BEELDEN) r.push("geen live camerabeelden (foto's zelf gekozen, of de live camera viel weg): dan kijkt een medewerker mee");
 
   const gezichtOk = gezichtBeslist(f);
   const fotosOk = f.beeldmodelOk || gezichtOk;
