@@ -139,3 +139,8 @@ export async function triggerInstantPayout(
     acceptedAt: new Date().toISOString(),
   };
 }
+
+/** Is directe SEPA-uitbetaling ingericht (dezelfde voorwaarde als in triggerInstantPayout)? Zonder: niet aanbieden. */
+export function directeSepaIngericht(): boolean {
+  return Boolean(env.SEPA_API_BASE_URL && env.SEPA_API_KEY && env.SEPA_CREDITOR_IBAN);
+}

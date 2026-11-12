@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
-import { isValidIban, triggerInstantPayout } from "@/lib/billing/sepa";
+import { directeSepaIngericht, isValidIban, triggerInstantPayout } from "@/lib/billing/sepa";
+import { betalenUit } from "@/lib/billing/stripe-betalen";
 
 // ---------------------------------------------------------------------------
 // Voorschot (advance against the next payout). Postgres-backed (AdvanceRecord)
@@ -181,6 +182,14 @@ export async function createPayrollAdvance(input: {
   });
   if (existing) return toAdvance(existing);
 
+  // Alleen wat nu echt kan (12 nov, AGENTS.md): zonder uitbetaalroute geen voorschot, dus geen FAILED-regel die de werker
+  // ziet en geen waarschuwing per goedgekeurde urenstaat (gemeten: alle 12 payroll-voorschotten ooit mislukten, 7 op één
+  // middag bij één werker). Een route is Stripe Connect (als het Stripe-account betalingen doet) of ingerichte directe SEPA.
+  const iban = input.creditorIban ?? undefined;
+  const viaStripe = Boolean(input.stripeConnectedAccountId) && !(await betalenUit().catch(() => null));
+  const viaSepa = directeSepaIngericht() && Boolean(iban && isValidIban(iban));
+  if (!viaStripe && !viaSepa) return null;
+
   const feeCents = advanceFee(amountCents);
   const netCents = amountCents - feeCents;
   const id = randomUUID().slice(0, 12);
@@ -190,33 +199,26 @@ export async function createPayrollAdvance(input: {
   let paidAt: Date | null = null;
   let note: string | null = null;
 
-  const iban = input.creditorIban ?? undefined;
-  const canPayout = input.stripeConnectedAccountId || (iban && isValidIban(iban));
-  if (canPayout) {
-    try {
-      const res = await triggerInstantPayout({
-        endToEndId: `ADV-${id}`,
-        amountCents: netCents,
-        currency: "EUR",
-        creditorIban: iban ?? "",
-        creditorName: input.workerName,
-        remittanceInfo: `ZekerFlex voorschot ${input.isoWeek}`,
-        stripeConnectedAccountId: input.stripeConnectedAccountId ?? null,
-      });
-      payoutStatus = res.status;
-      providerRef = res.providerRef;
-      if (res.status === "SETTLED" || res.status === "SUBMITTED") paidAt = new Date();
-    } catch (err) {
-      payoutStatus = "FAILED";
-      note = "De betaalopdracht is mislukt. Dit voorschot wordt niet op je loon ingehouden.";
-      logger.warn("payroll instant advance payout failed", {
-        advanceId: id,
-        error: (err as Error).message,
-      });
-    }
-  } else {
+  try {
+    const res = await triggerInstantPayout({
+      endToEndId: `ADV-${id}`,
+      amountCents: netCents,
+      currency: "EUR",
+      creditorIban: iban ?? "",
+      creditorName: input.workerName,
+      remittanceInfo: `ZekerFlex voorschot ${input.isoWeek}`,
+      stripeConnectedAccountId: input.stripeConnectedAccountId ?? null,
+    });
+    payoutStatus = res.status;
+    providerRef = res.providerRef;
+    if (res.status === "SETTLED" || res.status === "SUBMITTED") paidAt = new Date();
+  } catch (err) {
     payoutStatus = "FAILED";
-    note = "Geen geldig IBAN of gekoppelde Stripe-rekening. Dit voorschot wordt niet op je loon ingehouden.";
+    note = "De betaalopdracht is mislukt. Dit voorschot wordt niet op je loon ingehouden.";
+    logger.warn("payroll instant advance payout failed", {
+      advanceId: id,
+      error: (err as Error).message,
+    });
   }
 
   const row = await prisma.advanceRecord.create({
