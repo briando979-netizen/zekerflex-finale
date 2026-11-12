@@ -37,14 +37,19 @@ export interface FranchiseInvoer {
   uitgegeven: number;
   /** Totale bezittingen (gross assets) per 31 december: "total assets" uit Schedule L van Form 1120. */
   grossAssets: number;
-  /** Nominale waarde (par value) per aandeel in dollars; 0 mag. */
+  /** Nominale waarde (par value) per aandeel in dollars; 0 = geen par value (dan geldt alleen de eerste methode). */
   nominaal: number;
 }
 
+/** Letterlijk uit de bron (frtaxcalc, onder "Authorized Shares Method"), nagelezen 12 nov 2026. */
+export const ZONDER_PAR_REGEL = "For corporations having no par value stock the authorized shares method will always result in the lesser tax.";
+
 export interface FranchiseUitslag {
   autorisatieMethode: { belasting: number; uitleg: string[] };
-  /** null als de invoer niet volstaat (geen uitgegeven aandelen). */
+  /** null als de invoer niet volstaat (geen uitgegeven aandelen) of de aandelen geen par value hebben. */
   apvcMethode: { belasting: number; assumedPar: number; capital: number; uitleg: string[] } | null;
+  /** Waarom de tweede methode niet is berekend, in gewone taal; null = wel berekend. */
+  apvcNiet: string | null;
   /** Gunstigste methode; null als de tweede methode niet te berekenen is. */
   gunstigste: "autorisatie" | "apvc" | "gelijk" | null;
   /** Wat je met de gunstigste methode betaalt, exclusief annual report fee. */
@@ -75,6 +80,9 @@ export function autorisatieBelasting(geautoriseerd: number): number {
  */
 export function apvcBelasting(i: FranchiseInvoer): { belasting: number; assumedPar: number; capital: number } | null {
   if (!(i.uitgegeven > 0)) return null;
+  // Zonder par value rekent Delaware met de authorized shares-methode (ZONDER_PAR_REGEL); met 0 als
+  // nominaal zou de som hieronder ten onrechte op het minimum van $400 uitkomen.
+  if (!(i.nominaal > 0)) return null;
   const assumedPar = Math.round((Math.max(0, i.grossAssets) / i.uitgegeven) * 1e6) / 1e6;
   const capital = afr(Math.max(0, i.geautoriseerd) * Math.max(assumedPar, Math.max(0, i.nominaal)));
   const rauw = capital <= 1_000_000 ? (capital / 1_000_000) * FRANCHISE.perMiljoen : Math.ceil(capital / 1_000_000) * FRANCHISE.perMiljoen;
@@ -114,9 +122,15 @@ export function berekenFranchise(i: FranchiseInvoer): FranchiseUitslag {
     gunstigste = apvc.belasting < auto ? "apvc" : apvc.belasting > auto ? "autorisatie" : "gelijk";
     belasting = Math.min(auto, apvc.belasting);
   }
+  const apvcNiet = apvc
+    ? null
+    : !(i.uitgegeven > 0)
+      ? "Vul het aantal uitgegeven aandelen per 31 december in."
+      : `Zonder par value (nominale waarde) rekent Delaware met de authorized shares-methode: "${ZONDER_PAR_REGEL}" Staat er in de oprichtingsakte wel een par value, vul die dan in.`;
   return {
     autorisatieMethode: { belasting: auto, uitleg: autoUitleg },
     apvcMethode: apvc,
+    apvcNiet,
     gunstigste,
     belasting,
     annualReportFee: FRANCHISE.annualReportFee,
