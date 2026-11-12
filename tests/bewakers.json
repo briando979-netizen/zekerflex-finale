@@ -5,6 +5,7 @@
     "tests/admin-access.test.ts",
     "tests/admin-nav.test.ts",
     "tests/bewakers.test.ts",
+    "tests/chat-taal.test.ts",
     "tests/hulp-centrum.test.ts",
     "tests/i18n-bundle.test.ts",
     "tests/onboarding-onderhoud.test.ts",
