@@ -27,6 +27,7 @@ export interface WatchedCron {
 // Daily jobs get a 26h window (24h + buffer); autopilot runs twice daily.
 export const WATCHED_CRONS: WatchedCron[] = [
   { job: "matching-tick", label: "Matching", maxAgeHours: 26 },
+  { job: "retention-sweep", label: "AVG-bewaartermijnen (opruimen)", maxAgeHours: 26 },
   { job: "active-hours", label: "Actieve uren herberekenen", maxAgeHours: 26 },
   { job: "orchestration", label: "Orchestratie", maxAgeHours: 26 },
   { job: "rag-reindex", label: "RAG opnieuw indexeren", maxAgeHours: 26 },

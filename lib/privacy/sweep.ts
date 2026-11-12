@@ -4,6 +4,8 @@ import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { retentionCutoff } from "@/lib/privacy/retention";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { deleteUpload } from "@/lib/storage/local";
+import { isOpgeschoond, kycOpschonen, kycUploadIds } from "@/lib/privacy/kyc-fotos";
 
 // ---------------------------------------------------------------------------
 // Retention sweep.
@@ -23,6 +25,23 @@ export interface SweepResult {
   dryRun: boolean;
   cleared: Record<string, number>;
   pending: string[];
+}
+
+/**
+ * De upload-id's die nergens anders meer in gebruik zijn: niet als document (ID, bank), werkrecht of certificaat, en
+ * niet als foto van een andere ID-controle dan de controles die nu worden opgeschoond.
+ */
+async function nietEldersGebruikt(ids: string[], behalveControles: Set<string>): Promise<string[]> {
+  const [docs, werkrecht, certs, controles] = await Promise.all([
+    prisma.complianceDocument.findMany({ where: { uploadId: { in: ids } }, select: { uploadId: true } }),
+    prisma.workRight.findMany({ where: { uploadId: { in: ids } }, select: { uploadId: true } }),
+    prisma.certificate.findMany({ where: { uploadId: { in: ids } }, select: { uploadId: true } }),
+    prisma.identityVerification.findMany({ where: { rawPayload: { not: {} } }, select: { id: true, rawPayload: true } }),
+  ]);
+  const inGebruik = new Set<string>();
+  for (const r of [...docs, ...werkrecht, ...certs]) if (r.uploadId) inGebruik.add(r.uploadId);
+  for (const c of controles) if (!behalveControles.has(c.id)) for (const id of kycUploadIds(c.rawPayload)) inGebruik.add(id);
+  return ids.filter((id) => !inGebruik.has(id));
 }
 
 export async function runRetentionSweep(
@@ -97,31 +116,41 @@ export async function runRetentionSweep(
         })
       ).count;
 
-  // KYC: keep the decision, drop the sensitive payload after the window.
+  // KYC: keep the decision, drop the sensitive payload after the window. De selfies (biometrie) gaan mét het bestand
+  // weg; voor- en achterkant blijven gekoppeld (kopie van het identiteitsbewijs, en het wissen van het account vindt
+  // ze zo terug). Vroeger werd rawPayload leeg en bleven alle foto's los en onvindbaar staan (lib/privacy/kyc-fotos.ts).
   const kycCut = retentionCutoff("kyc", now)!;
-  const kycWhere = {
-    updatedAt: { lt: kycCut },
-    OR: [
-      { rawPayload: { not: {} } },
-      { livenessScore: { not: null } },
-      { faceMatchScore: { not: null } },
-      { documentNumberHash: { not: null } },
-    ],
-  };
-  cleared.kyc = dryRun
-    ? await prisma.identityVerification.count({ where: kycWhere })
-    : (
-        await prisma.identityVerification.updateMany({
-          where: kycWhere,
-          data: {
-            rawPayload: {},
-            livenessScore: null,
-            faceMatchScore: null,
-            documentNumberHash: null,
-            documentType: null,
-          },
-        })
-      ).count;
+  const kycRijen = (
+    await prisma.identityVerification.findMany({
+      where: {
+        updatedAt: { lt: kycCut },
+        OR: [
+          { rawPayload: { not: {} } },
+          { livenessScore: { not: null } },
+          { faceMatchScore: { not: null } },
+          { documentNumberHash: { not: null } },
+        ],
+      },
+      select: { id: true, rawPayload: true, livenessScore: true, faceMatchScore: true, documentNumberHash: true },
+    })
+  ).filter((r) => !isOpgeschoond(r.rawPayload) || r.livenessScore !== null || r.faceMatchScore !== null || r.documentNumberHash !== null);
+  const opschonen = kycRijen.map((r) => ({ id: r.id, ...kycOpschonen(r.rawPayload) }));
+  const selfies = [...new Set(opschonen.flatMap((o) => o.selfies))];
+  const selfiesWeg = selfies.length === 0 ? [] : await nietEldersGebruikt(selfies, new Set(opschonen.map((o) => o.id)));
+  cleared.kyc = kycRijen.length;
+  cleared.kyc_selfies = selfiesWeg.length;
+  if (!dryRun) {
+    for (const o of opschonen) {
+      await prisma.identityVerification.update({
+        where: { id: o.id },
+        data: { rawPayload: o.nieuwePayload, livenessScore: null, faceMatchScore: null, documentNumberHash: null, documentType: null },
+      });
+    }
+    // pas na het loskoppelen de bestanden; een mislukte wis komt in het logboek (alleen het aantal, geen id's)
+    let mislukt = 0;
+    for (const id of selfiesWeg) await deleteUpload(id).catch(() => (mislukt += 1));
+    if (mislukt > 0) logger.warn("retention sweep: kyc-selfies niet gewist", { mislukt });
+  }
 
   const result: SweepResult = {
     ranAt: now.toISOString(),

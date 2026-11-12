@@ -16,6 +16,18 @@ export const FOTO_SOORTEN: { id: FotoSoort; label: string }[] = [
   { id: "selfie2", label: "Selfie, hoofd gedraaid" },
 ];
 
+// Stripe-pogingen met een rapport (en dus foto's); "started"/"processing"/"canceled" hebben er geen
+export const STRIPE_MET_RAPPORT = new Set(["verified", "name_mismatch", "requires_input"]);
+
+/**
+ * Een Stripe Identity-sessie zonder uitslag (gestart, bezig of afgebroken): daar valt niets aan goed te keuren. Gemeten
+ * 11 nov: twee keer op "Goedkeuren" bij zo'n sessie gaf een controle "goedgekeurd" die nooit was afgerond, en die telde
+ * daarna als identiteitsbewijs (docStatus). De persoon keur je dan handmatig goed (bovenaan het blok).
+ */
+export function stripeZonderUitslag(provider: string, decisionStatus: string | null): boolean {
+  return provider === "STRIPE_IDENTITY" && !STRIPE_MET_RAPPORT.has(decisionStatus ?? "");
+}
+
 export const PROVIDER_LABEL: Record<string, string> = {
   AI_LOCAL: "Eigen controle (foto's)",
   STRIPE_IDENTITY: "Stripe Identity",

@@ -276,7 +276,6 @@ function BankLoginSlot({
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  const [showUpload, setShowUpload] = useState(Boolean(bankDoc));
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -337,17 +336,13 @@ function BankLoginSlot({
   const fill = (s: string) => s.replace("{name}", result?.verifiedName ?? "").replace("{last4}", result?.ibanLast4 ?? "");
   const verified = result?.status === "verified" && bankOk;
 
-  if (enabled === false) {
-    return <DocSlot t={t} kind="bank" label={t.bankLabel} hint={t.bankHint} doc={bankDoc} onUploaded={onChanged} />;
-  }
-  if (tijdelijkUit && !bankOk) {
+  // Geen bankafschrift of foto van de bankpas meer uploaden (eigenaar, 12 nov): alleen bevestigen via je eigen bank.
+  // Kan dat even niet (geen Stripe, of het live account ontvangt geen betalingen), dan een rustige uitleg en gewoon door.
+  if ((enabled === false || tijdelijkUit) && !bankOk) {
     return (
-      <div className="space-y-2">
-        <p role="status" className="rounded-lg bg-paper-soft px-3 py-2 text-xs leading-relaxed text-ink-soft">
-          {t.bankLoginTijdelijkUit}
-        </p>
-        <DocSlot t={t} kind="bank" label={t.bankLabel} hint={t.bankHint} doc={bankDoc} onUploaded={onChanged} />
-      </div>
+      <p role="status" className="rounded-lg bg-paper-soft px-3 py-2 text-xs leading-relaxed text-ink-soft">
+        {t.bankLoginTijdelijkUit}
+      </p>
     );
   }
 
@@ -379,16 +374,11 @@ function BankLoginSlot({
       )}
       {note && <p className="mt-2 text-xs text-neutralx-600">{note}</p>}
 
-      {!verified && (
-        <div className="mt-3 border-t border-hair pt-3">
-          {showUpload ? (
-            <DocSlot t={t} kind="bank" label={t.bankLabel} hint={t.bankHint} doc={bankDoc} onUploaded={onChanged} />
-          ) : (
-            <button type="button" onClick={() => setShowUpload(true)} className="text-xs font-medium text-neutralx-500 underline hover:text-ink">
-              {t.bankLoginFallback}
-            </button>
-          )}
-        </div>
+      {/* een eerder geupload bankafschrift telt nog gewoon mee; nieuwe uploads kunnen niet meer */}
+      {!verified && bankDoc && bankDoc.status !== "rejected" && (
+        <p className="mt-3 border-t border-hair pt-3 text-xs text-neutralx-600">
+          {t.bankLabel}: {bankDoc.status === "approved" ? t.approved : t.uploaded}
+        </p>
       )}
     </div>
   );

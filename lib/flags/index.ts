@@ -53,6 +53,17 @@ FLAG_REGISTRY.push({
   default: false,
 });
 
+// ID-controle met een digitale ID-wallet (lib/kyc/wallet.ts, components/app/WalletVerifyButton.tsx): nieuwe Chrome op Android
+// kent de Digital Credentials API, dus de kaart stond daar bij iedereen, terwijl vrijwel niemand in Nederland al een ID in een
+// wallet heeft. Gemeten 12 nov: niemand gebruikte hem; de eigenaar vond hem verwarrend.
+FLAG_REGISTRY.push({
+  key: "kyc-wallet",
+  label: "ID-controle: knop Digitale ID-wallet tonen",
+  description:
+    "Aan = op Verificatie staat (alleen in een browser die het kan, zoals nieuwe Chrome op Android) een kaart \"Digitale ID-wallet\" om een digitale ID uit de telefoon te delen in plaats van foto's te maken. Zet dit pas aan als Nederlanders echt een ID in hun wallet hebben (NL-wallet). Uit (standaard) = de kaart is weg; de ID-scan met de camera blijft gewoon.",
+  default: false,
+});
+
 export interface FlagOverride {
   /** master switch; undefined = use the registry default */
   enabled?: boolean | undefined;

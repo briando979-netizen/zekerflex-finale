@@ -25,7 +25,7 @@ import { getFiscal } from "@/lib/fiscal/store";
 import { kvGet } from "@/lib/storage/kv";
 import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
-import { FOTO_SOORTEN, PROVIDER_LABEL, fotoUploadId, idControleWeergave, stripeSessieUrl, type FotoSoort } from "@/lib/admin/kyc-weergave";
+import { FOTO_SOORTEN, PROVIDER_LABEL, STRIPE_MET_RAPPORT, fotoUploadId, idControleWeergave, stripeSessieUrl, stripeZonderUitslag, type FotoSoort } from "@/lib/admin/kyc-weergave";
 import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
 import { poortSamenvatting, poortStappen } from "@/lib/admin/werker-poort-weergave";
 import { isReservedTestAddress } from "@/lib/mail/test-adres";
@@ -97,8 +97,6 @@ function fileSize(bytes: number): string {
   return bytes >= 1_000_000 ? `${(bytes / 1_000_000).toFixed(1)} MB` : `${Math.round(bytes / 1000)} kB`;
 }
 
-// Stripe-pogingen met een rapport (en dus foto's); "started"/"processing"/"canceled" hebben er geen
-const STRIPE_MET_RAPPORT = new Set(["verified", "name_mismatch", "requires_input"]);
 
 export default async function GebruikerDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -190,7 +188,9 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
   const fotosVan = (c: (typeof user.identityChecks)[number]): FotoSoort[] =>
     stripeFotosVan(c)
       ? FOTO_SOORTEN.map((f) => f.id).filter((f) => f !== "selfie2" && !(f === "back" && c.documentType === "PASSPORT"))
-      : idControleWeergave(c.provider, c.rawPayload).fotos;
+      : // een paspoort heeft geen achterkant: sinds 12 nov stuurt de scan de fotopagina als tweede beeld mee (lib/kyc/document-zijden.ts),
+        // en eerder fotografeerden werkers die pagina vaak twee keer; die kopie tonen als "Achterkant" zag eruit als een fout
+        idControleWeergave(c.provider, c.rawPayload).fotos.filter((f) => !(f === "back" && c.documentType === "PASSPORT"));
   // geen profielfoto: dan de selfie van de nieuwste (liefst goedgekeurde) ID-controle
   const metSelfie = user.identityChecks.filter((c) => (stripeFotosVan(c) ? true : Boolean(fotoUploadId(c.rawPayload, "selfie"))));
   const selfieCheck = fotoUrl ? null : (metSelfie.find((c) => c.status === "VERIFIED") ?? metSelfie[0] ?? null);
@@ -520,7 +520,14 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                           ))}
                         </div>
                       )}
-                      {c.status === "PENDING" && <IdentityCheckActions userId={user.id} checkId={c.id} />}
+                      {c.status === "PENDING" &&
+                        (stripeZonderUitslag(c.provider, c.decisionStatus) ? (
+                          <p className="text-xs" style={{ color: "var(--a-mute)" }}>
+                            Deze Stripe-sessie is niet afgerond: er zijn geen foto&apos;s en geen uitslag. Keur de persoon goed of af met de knoppen bovenaan dit blok.
+                          </p>
+                        ) : (
+                          <IdentityCheckActions userId={user.id} checkId={c.id} />
+                        ))}
                     </li>
                   );
                 })}

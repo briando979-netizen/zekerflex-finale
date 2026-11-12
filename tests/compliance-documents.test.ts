@@ -12,6 +12,10 @@ const complianceDocumentFindFirst = vi.fn();
 const complianceDocumentCreate = vi.fn();
 const complianceDocumentUpdate = vi.fn();
 const freelancerProfileUpdate = vi.fn();
+// standaard geen oude documenten; een test kan dat per aanroep zetten
+const complianceDocumentFindMany = vi.fn().mockResolvedValue([]);
+const identityVerificationFindMany = vi.fn().mockResolvedValue([]);
+const deleteUpload = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -20,14 +24,19 @@ vi.mock("@/lib/prisma", () => ({
       findFirst: (...a: unknown[]) => complianceDocumentFindFirst(...a),
       create: (...a: unknown[]) => complianceDocumentCreate(...a),
       update: (...a: unknown[]) => complianceDocumentUpdate(...a),
+      findMany: (...a: unknown[]) => complianceDocumentFindMany(...a),
     },
     freelancerProfile: { update: (...a: unknown[]) => freelancerProfileUpdate(...a) },
+    workRight: { findMany: async () => [] },
+    certificate: { findMany: async () => [] },
+    identityVerification: { findMany: (...a: unknown[]) => identityVerificationFindMany(...a) },
   },
 }));
 
 vi.mock("@/lib/storage/local", () => ({
   storeUpload: vi.fn().mockResolvedValue({ id: "upload1" }),
   readUpload: vi.fn(),
+  deleteUpload: (...a: unknown[]) => deleteUpload(...a),
 }));
 vi.mock("@/lib/storage/validate", () => ({
   sniffAndVerifyUploadType: vi.fn().mockReturnValue("application/pdf"),
@@ -49,7 +58,34 @@ import { getFiscal, setFiscal } from "@/lib/fiscal/store";
 
 afterEach(() => {
   vi.clearAllMocks();
+  complianceDocumentFindMany.mockResolvedValue([]);
+  identityVerificationFindMany.mockResolvedValue([]);
   kv.clear();
+});
+
+describe("vervangen documenten ook echt weg", () => {
+  it("een nieuw bankafschrift gooit het bestand van het oude weg", async () => {
+    // eerst de oude documenten van deze soort, daarna (bij de controle of iets nog in gebruik is) geen
+    complianceDocumentFindMany.mockResolvedValueOnce([{ uploadId: "oud-bank" }]).mockResolvedValueOnce([]);
+    complianceDocumentCreate.mockResolvedValue({ id: "d1", kind: "BANK", status: "UPLOADED", note: null, uploadedAt: new Date(), upload: { filename: "a.pdf", mimeType: "application/pdf", sizeBytes: 3 } });
+    await storeDoc("u1", "bank", { filename: "a.pdf", mimeType: "application/pdf", bytes: Buffer.from("abc") });
+    expect(deleteUpload).toHaveBeenCalledWith("oud-bank");
+  });
+
+  it("niet als een ID-controle het bestand nog als foto gebruikt (de voorkant is ook het ID-document)", async () => {
+    complianceDocumentFindMany.mockResolvedValueOnce([{ uploadId: "voorkant" }]).mockResolvedValueOnce([]);
+    identityVerificationFindMany.mockResolvedValue([{ rawPayload: { uploadIds: { front: "voorkant", selfie: "s" } } }]);
+    complianceDocumentCreate.mockResolvedValue({ id: "d2", kind: "ID", status: "UPLOADED", note: null, uploadedAt: new Date(), upload: { filename: "id.jpg", mimeType: "image/jpeg", sizeBytes: 3 } });
+    await storeDoc("u1", "id", { filename: "id.jpg", mimeType: "image/jpeg", bytes: Buffer.from("abc") });
+    expect(deleteUpload).not.toHaveBeenCalled();
+  });
+
+  it("een vervallen bankafschrift (nieuw IBAN) gaat ook als bestand weg", async () => {
+    complianceDocumentFindMany.mockResolvedValueOnce([{ uploadId: "oud-bank-2" }]).mockResolvedValueOnce([]);
+    complianceDocumentDeleteMany.mockResolvedValue({ count: 1 });
+    await invalidateBankDoc("u1");
+    expect(deleteUpload).toHaveBeenCalledWith("oud-bank-2");
+  });
 });
 
 describe("invalidateBankDoc", () => {

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { ComplianceDocKind, ComplianceDocStatus } from "@prisma/client";
-import { storeUpload, readUpload } from "@/lib/storage/local";
+import { deleteUpload, storeUpload, readUpload } from "@/lib/storage/local";
+import { kycUploadIds } from "@/lib/privacy/kyc-fotos";
 import { sniffAndVerifyUploadType } from "@/lib/storage/validate";
 import { AppError } from "@/lib/errors";
 import { getFiscal, setFiscal } from "@/lib/fiscal/store";
@@ -115,7 +116,9 @@ export async function storeDoc(
 
   const dbKind = KIND_TO_DB[kind];
   // one active doc per kind (except "other") — supersede the previous
+  const vervangen: string[] = [];
   if (dbKind !== ComplianceDocKind.OTHER) {
+    for (const d of await prisma.complianceDocument.findMany({ where: { userId, kind: dbKind }, select: { uploadId: true } })) vervangen.push(d.uploadId);
     await prisma.complianceDocument.deleteMany({ where: { userId, kind: dbKind } });
   }
 
@@ -123,6 +126,7 @@ export async function storeDoc(
     data: { userId, kind: dbKind, uploadId: stored.id, ...(input.note ? { note: input.note } : {}) },
     include: { upload: { select: { filename: true, mimeType: true, sizeBytes: true } } },
   });
+  await wisLosseUploads(userId, vervangen.filter((id) => id !== stored.id));
 
   // A fresh bank document clears the "payout on hold" flag a recent IBAN
   // change set — on both tracks, harmlessly a no-op on whichever doesn't apply.
@@ -139,8 +143,37 @@ export async function storeDoc(
  * until a fresh one is uploaded.
  */
 export async function invalidateBankDoc(userId: string): Promise<void> {
+  const oud = await prisma.complianceDocument.findMany({ where: { userId, kind: ComplianceDocKind.BANK }, select: { uploadId: true } });
   await prisma.complianceDocument.deleteMany({ where: { userId, kind: ComplianceDocKind.BANK } });
+  await wisLosseUploads(
+    userId,
+    oud.map((d) => d.uploadId),
+  );
   await clearBankLogin(userId);
+}
+
+/**
+ * Een vervangen of vervallen document ook echt weggooien (bytes + rij). Vroeger bleef het bestand los staan: nergens
+ * meer te zien, en ook niet gevonden bij het wissen van het account (lib/privacy/anonymize.ts zoekt via de
+ * documenten). Niet wissen wat nog ergens hangt: een ander document, werkrecht, certificaat, of een foto van een
+ * ID-controle (de voorkant is vaak ook het ID-document). Best effort: een mislukte wis houdt het uploaden niet tegen.
+ */
+async function wisLosseUploads(userId: string, ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  try {
+    const [docs, werkrecht, certs, controles] = await Promise.all([
+      prisma.complianceDocument.findMany({ where: { uploadId: { in: ids } }, select: { uploadId: true } }),
+      prisma.workRight.findMany({ where: { uploadId: { in: ids } }, select: { uploadId: true } }),
+      prisma.certificate.findMany({ where: { uploadId: { in: ids } }, select: { uploadId: true } }),
+      prisma.identityVerification.findMany({ where: { userId }, select: { rawPayload: true } }),
+    ]);
+    const inGebruik = new Set<string>();
+    for (const r of [...docs, ...werkrecht, ...certs]) if (r.uploadId) inGebruik.add(r.uploadId);
+    for (const c of controles) for (const id of kycUploadIds(c.rawPayload)) inGebruik.add(id);
+    for (const id of ids) if (!inGebruik.has(id)) await deleteUpload(id).catch(() => undefined);
+  } catch {
+    // het nieuwe document staat er al; een losse oude upload is geen reden om te falen
+  }
 }
 
 /**

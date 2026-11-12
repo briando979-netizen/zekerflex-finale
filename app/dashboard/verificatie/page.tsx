@@ -20,6 +20,7 @@ import { leesWieBenJij } from "@/lib/onboarding/wie-ben-jij-opslag";
 import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
 import { beginStap } from "@/lib/onboarding/wie-ben-jij";
 import { isReservedTestAddress } from "@/lib/mail";
+import { featureEnabled } from "@/lib/flags";
 
 export const dynamic = "force-dynamic";
 
@@ -140,6 +141,8 @@ export default async function VerificatiePage() {
       : [];
 
   const stripeId = await stripeIdentityAvailable();
+  // de knop "Digitale ID-wallet" alleen met de vlag: nieuwe Chrome (Android) toont hem, maar bijna niemand in Nederland heeft een ID in een wallet (lib/kyc/wallet.ts)
+  const walletAan = !stripeId && (await featureEnabled("kyc-wallet").catch(() => false));
   const stripeReason =
     lastCheck?.decisionStatus === "requires_input"
       ? ((lastCheck.rawPayload as { reason?: string } | null)?.reason ?? "onbekende reden")
@@ -186,7 +189,7 @@ export default async function VerificatiePage() {
         kanSluiten={poort?.klaar ?? true}
       />
 
-      {!stripeId && (
+      {walletAan && (
         <div className="mt-4">
           <WalletVerifyButton requireKvk={!isUitzend} />
         </div>

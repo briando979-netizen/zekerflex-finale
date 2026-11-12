@@ -7,6 +7,7 @@ import { recordAudit } from "@/lib/audit";
 import { withAdminAccess } from "@/lib/auth/handlers";
 import { runAfter } from "@/lib/run-after";
 import { meldIdGeverifieerd } from "@/lib/onboarding/id-geverifieerd";
+import { stripeZonderUitslag } from "@/lib/admin/kyc-weergave";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,9 +25,13 @@ export const POST = withAdminAccess<{ id: string; checkId: string }>(
     const { decision } = schema.parse(await request.json().catch(() => ({})));
     const check = await prisma.identityVerification.findFirst({
       where: { id: params.checkId, userId: params.id },
-      select: { id: true, userId: true, documentType: true, rawPayload: true },
+      select: { id: true, userId: true, documentType: true, rawPayload: true, provider: true, decisionStatus: true },
     });
     if (!check) throw AppError.notFound("Controle niet gevonden");
+    // een Stripe-sessie zonder uitslag kan niet "goedgekeurd" worden: die telde daarna als identiteitsbewijs
+    if (stripeZonderUitslag(check.provider, check.decisionStatus)) {
+      throw AppError.validation("Deze Stripe-controle is niet afgerond (geen foto's, geen uitslag). Keur de persoon handmatig goed of af, bovenaan bij Identiteitscontroles.");
+    }
 
     const newStatus = decision === "approve" ? KycStatus.VERIFIED : KycStatus.REJECTED;
 

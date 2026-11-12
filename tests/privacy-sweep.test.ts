@@ -1,6 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const h = vi.hoisted(() => {
+  // drie verlopen controles: een met alle foto's, een al opgeschoond (wordt overgeslagen), een met alleen een score;
+  // plus een nieuwe controle die dezelfde tweede selfie gebruikt als de eerste (die mag dus niet weg)
+  const kycVerlopen = [
+    { id: "iv-1", rawPayload: { uploadIds: { front: "voor-1", back: "achter-1", selfie: "selfie-1", selfie2: "selfie2-1" }, checks: [] }, livenessScore: null, faceMatchScore: 0.5, documentNumberHash: "h" },
+    { id: "iv-2", rawPayload: { opgeschoond: true, uploadIds: { front: "voor-2" } }, livenessScore: null, faceMatchScore: null, documentNumberHash: null },
+    { id: "iv-3", rawPayload: {}, livenessScore: 0.9, faceMatchScore: null, documentNumberHash: null },
+  ];
+  const kycNieuw = { id: "iv-nieuw", rawPayload: { uploadIds: { front: "voor-n", selfie: "selfie2-1" } }, livenessScore: null, faceMatchScore: null, documentNumberHash: null };
+  const gewist: string[] = [];
   const calls: { model: string; op: string; where?: unknown; data?: unknown }[] = [];
   const mk = (model: string, count: number) => ({
     deleteMany: async ({ where }: { where: unknown }) => {
@@ -23,7 +32,20 @@ const h = vi.hoisted(() => {
       deviceFingerprint: mk("deviceFingerprint", 2),
       engagementEvent: mk("engagementEvent", 9),
       passwordResetToken: mk("passwordResetToken", 1),
-      identityVerification: mk("identityVerification", 3),
+      identityVerification: {
+        // met updatedAt in de where: de verlopen controles; zonder: alle controles met foto's (ook nieuwe)
+        findMany: async ({ where }: { where: { updatedAt?: unknown } }) => {
+          calls.push({ model: "identityVerification", op: "findMany", where });
+          return where.updatedAt ? kycVerlopen : [...kycVerlopen, kycNieuw];
+        },
+        update: async ({ where, data }: { where: unknown; data: unknown }) => {
+          calls.push({ model: "identityVerification", op: "update", where, data });
+          return {};
+        },
+      },
+      complianceDocument: { findMany: async () => [{ uploadId: "voor-1" }] },
+      workRight: { findMany: async () => [] },
+      certificate: { findMany: async () => [] },
       rijschoolLes: mk("rijschoolLes", 4),
       rijschoolBericht: mk("rijschoolBericht", 8),
       horecaReservering: mk("horecaReservering", 6),
@@ -37,10 +59,16 @@ const h = vi.hoisted(() => {
       },
     },
     audits: [] as unknown[],
+    gewist,
   };
 });
 
 vi.mock("@/lib/prisma", () => ({ prisma: h.prisma }));
+vi.mock("@/lib/storage/local", () => ({
+  deleteUpload: async (id: string) => {
+    h.gewist.push(id);
+  },
+}));
 vi.mock("@/lib/audit", () => ({
   recordAudit: async (a: unknown) => {
     h.audits.push(a);
@@ -52,6 +80,7 @@ import { runRetentionSweep } from "@/lib/privacy/sweep";
 beforeEach(() => {
   h.calls.length = 0;
   h.audits.length = 0;
+  h.gewist.length = 0;
 });
 afterEach(() => vi.clearAllMocks());
 
@@ -67,7 +96,8 @@ describe("runRetentionSweep", () => {
       device_fingerprint: 2,
       engagement_events: 9,
       password_reset_tokens: 1,
-      kyc: 3,
+      kyc: 2,
+      kyc_selfies: 1,
       rijschool_lesroutes: 4,
       rijschool_berichten: 8,
       horeca_gasten: 13,
@@ -95,9 +125,13 @@ describe("runRetentionSweep", () => {
     expect(bericht?.op).toBe("deleteMany");
     expect((bericht?.where as { createdAt: { lt: Date } }).createdAt.lt.toISOString()).toBe("2024-09-09T00:00:00.000Z");
 
-    const kyc = h.calls.find((c) => c.model === "identityVerification");
-    expect(kyc?.op).toBe("updateMany");
-    expect(kyc?.data).toMatchObject({ rawPayload: {}, livenessScore: null });
+    // KYC: per controle de payload terug tot de koppeling van voor- en achterkant; scores weg
+    const kyc = h.calls.filter((c) => c.model === "identityVerification" && c.op === "update");
+    expect(kyc.map((c) => (c.where as { id: string }).id)).toEqual(["iv-1", "iv-3"]);
+    expect(kyc[0]?.data).toMatchObject({ rawPayload: { opgeschoond: true, uploadIds: { front: "voor-1", back: "achter-1" } }, faceMatchScore: null, documentNumberHash: null });
+    expect(kyc[1]?.data).toMatchObject({ rawPayload: { opgeschoond: true }, livenessScore: null });
+    // alleen de selfie die nergens anders meer hangt; de gedeelde selfie en de documentkanten blijven
+    expect(h.gewist).toEqual(["selfie-1"]);
 
     // gps cutoff is now - 2y
     const gps = h.calls.find((c) => c.model === "gpsEvent");
@@ -110,7 +144,9 @@ describe("runRetentionSweep", () => {
   it("dryRun counts without deleting or auditing", async () => {
     const res = await runRetentionSweep({ now, dryRun: true });
     expect(res.dryRun).toBe(true);
-    expect(h.calls.every((c) => c.op === "count")).toBe(true);
+    expect(h.calls.every((c) => c.op === "count" || c.op === "findMany")).toBe(true);
+    expect(res.cleared).toMatchObject({ kyc: 2, kyc_selfies: 1 });
+    expect(h.gewist).toEqual([]);
     expect(h.audits).toHaveLength(0);
   });
 });

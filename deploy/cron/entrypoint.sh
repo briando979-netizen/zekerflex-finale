@@ -12,6 +12,9 @@ H="--header=x-internal-token: ${INTERNAL_CRON_TOKEN}"
 mkdir -p /etc/crontabs
 cat > /etc/crontabs/root <<EOF
 0 3 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/matching/tick"
+# AVG-bewaartermijnen (lib/privacy/sweep.ts): o.a. selfies van de ID-controle na 30 dagen weg, oude GPS-punten, verlopen resetcodes.
+# Stond sinds de verhuizing naar de VPS nergens ingepland (gemeten 12 nov: ID-gegevens van 14 sep stonden er nog).
+40 3 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/privacy/retention-sweep"
 # Nachtelijke rondgang langs elke openbare pagina; wat kapot is komt in het foutenlogboek (lib/ops/rondgang.ts).
 20 4 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/rondgang"
 0 4 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/active-hours/recompute"
