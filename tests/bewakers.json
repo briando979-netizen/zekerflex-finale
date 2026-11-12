@@ -12,6 +12,7 @@
     "tests/i18n-bundle.test.ts",
     "tests/juridisch-canonical.test.ts",
     "tests/kv-avg-bewaker.test.ts",
+    "tests/log-geheimen.test.ts",
     "tests/marketing-h1.test.ts",
     "tests/onboarding-onderhoud.test.ts",
     "tests/openbare-grens-middleware.test.ts",
