@@ -679,7 +679,7 @@ export function OnboardingForm({
               stripe={
                 stripeIdentity ? (
                   <button type="button" onClick={() => void verstuur("stripe")} disabled={busy} className="text-sm font-semibold text-brand-600 underline underline-offset-4 disabled:opacity-60">
-                    {t.stripe[0]}
+                    {w.id.stripeLink}
                   </button>
                 ) : null
               }
@@ -743,7 +743,7 @@ export function OnboardingForm({
                         </label>
                       </div>
                       <p className="text-xs leading-relaxed text-neutralx-500">{heeftAchterkant(docType) ? t.photosInfo : t.photosInfoPaspoort}</p>
-                      <div className={`grid grid-cols-2 gap-3 ${heeftAchterkant(docType) ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
+                      <div className={`grid gap-3 ${heeftAchterkant(docType) ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
                         <CaptureSlot t={t} label={t.front[0]} hint={t.front[1]} missing={missing.includes("documentFront")} onPick={(f) => kiesFoto("documentFront", f)} />
                         {/* een paspoort heeft geen achterkant */}
                         {heeftAchterkant(docType) && (

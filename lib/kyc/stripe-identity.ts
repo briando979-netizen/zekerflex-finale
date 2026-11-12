@@ -13,6 +13,7 @@ import { alertOwnerLater } from "@/lib/ops/alert";
 import { runAfter } from "@/lib/run-after";
 import { meldIdGeverifieerd } from "@/lib/onboarding/id-geverifieerd";
 import { actieveWeigering, isAccountWeigering, zetWeigering } from "@/lib/kyc/stripe-weigering";
+import { betalenUit } from "@/lib/billing/stripe-betalen";
 
 // ---------------------------------------------------------------------------
 // ID verification via Stripe Identity: Stripe's own camera flow on the phone
@@ -47,6 +48,8 @@ export function stripeIdentityEnabled(): boolean {
 /** Enabled AND not recently refused by Stripe — decides whether the option is shown. */
 export async function stripeIdentityAvailable(): Promise<boolean> {
   if (!stripeIdentityEnabled()) return false;
+  // het hele live account ontvangt geen betalingen (lib/billing/stripe-betalen.ts): dan werkt Identity ook niet
+  if (await betalenUit().catch(() => null)) return false;
   const until = await kvGet<string>(UNAVAILABLE_KEY).catch(() => null);
   return !until || new Date(until).getTime() < Date.now();
 }

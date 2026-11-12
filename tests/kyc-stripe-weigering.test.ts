@@ -92,6 +92,12 @@ describe("syncStripeIdentity bij een weigering van het account", () => {
     expect(await actieveWeigering()).toBeNull();
   });
 
+  it("staat het hele account dicht (stripe:betalen-uit), dan is Stripe Identity ook geen keuze", async () => {
+    expect(await stripeIdentityAvailable()).toBe(true);
+    kvStore.set("stripe:betalen-uit", { tot: new Date(Date.now() + 3_600_000).toISOString(), op: new Date().toISOString(), melding: "charges_enabled=false" });
+    expect(await stripeIdentityAvailable()).toBe(false);
+  });
+
   it("ook het starten van een controle legt de weigering vast", async () => {
     db.create.mockRejectedValue(WEIGERING);
     await expect(startStripeIdentity("u1", "jan@jansen.nl")).rejects.toThrow(/Stripe/);
