@@ -7,6 +7,8 @@
 // (app/api/admin/gebruikers/[id]/identiteit/[checkId]/beeld).
 // ---------------------------------------------------------------------------
 
+import { fotoBronTekst } from "@/lib/kyc/foto-bron";
+
 /** selfie2: de tweede selfie met een gedraaid hoofd (bewegingscontrole van b3, lib/kyc/gezicht/beweging.ts) */
 export type FotoSoort = "front" | "back" | "selfie" | "selfie2";
 export const FOTO_SOORTEN: { id: FotoSoort; label: string }[] = [
@@ -61,6 +63,8 @@ export interface IdControleWeergave {
   nietAutomatisch: string[] | null;
   /** de gegevens van het document: de naam (uit de code of zoals getypt) en het eind van het nummer; nooit BSN of nationaliteit */
   document: { naam: string | null; uitDeCode: boolean; nummerEind: string | null } | null;
+  /** live camera of bestandskeuze per foto (lib/kyc/foto-bron.ts); null = oudere controle */
+  fotoBron: string | null;
 }
 
 /**
@@ -219,7 +223,7 @@ export function idControleWeergave(provider: string, rawPayload: unknown, sessio
   const d = obj(p.document);
   const document = d ? { naam: tekst(d.naam), uitDeCode: d.uitDeCode === true, nummerEind: tekst(d.nummerEind) } : null;
 
-  return { fotos, regels, ai, beeld: { aan: v?.available === true, samenvatting }, mrz, chip, overig, stripe, gezicht, nietAutomatisch, document };
+  return { fotos, regels, ai, beeld: { aan: v?.available === true, samenvatting }, mrz, chip, overig, stripe, gezicht, nietAutomatisch, document, fotoBron: fotoBronTekst(p.bron) };
 }
 
 /** De foto-upload van een controle, of null (geen eigen controle, of al opgeruimd na 30 dagen). */

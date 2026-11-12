@@ -32,6 +32,7 @@ import { alertOwnerLater } from "@/lib/ops/alert";
 import { runAfter } from "@/lib/run-after";
 import { meldIdGeverifieerd } from "@/lib/onboarding/id-geverifieerd";
 import { aiReviewOverslaan, aiReviewUitslag, REM_DUUR_MS, REM_NA } from "@/lib/onboarding/ai-review-rem";
+import { fotoBron } from "@/lib/kyc/foto-bron";
 
 // ---------------------------------------------------------------------------
 // Self-serve freelancer onboarding verification.
@@ -957,6 +958,13 @@ export async function submitFreelancerOnboarding(
                 }
               : null,
             uploadIds: { front: storedFront.id, back: storedBack.id, selfie: storedSelfie.id, ...(storedSelfie2 ? { selfie2: storedSelfie2.id } : {}) },
+            // live camera of bestandskeuze, per vak (lib/kyc/foto-bron.ts): alleen om te meten en te tonen
+            bron: {
+              front: fotoBron(input.files.front.filename),
+              back: fotoBron(input.files.back.filename),
+              selfie: fotoBron(input.files.selfie.filename),
+              ...(storedSelfie2 && input.files.selfie2 ? { selfie2: fotoBron(input.files.selfie2.filename) } : {}),
+            },
             // de beoordelingsroute zet de voorkant pas bij goedkeuring bij de documenten (review 2, H1-bis)
             viaTweedeToestel: Boolean(input.viaTweedeToestel),
             fileSha256: stored.sha256,

@@ -505,6 +505,12 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                               Live draai: <strong>{w.gezicht.reeks}</strong>
                             </p>
                           )}
+                          {w.fotoBron && (
+                            // uit de bestandsnaam van de browser (lib/kyc/foto-bron.ts): alleen ter informatie
+                            <p>
+                              Foto&apos;s: <strong>{w.fotoBron}</strong>
+                            </p>
+                          )}
                           {w.ai && (
                             <p>
                               Automatische beoordeling: <strong>{w.ai.oordeel}</strong>
