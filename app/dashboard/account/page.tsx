@@ -168,7 +168,7 @@ export default async function AccountPage() {
 
       {isUitzend && (
         <div className="mb-4">
-          <ZiekMelden />
+          <ZiekMelden texts={ft.accountDelen.ziek} />
         </div>
       )}
 
@@ -242,7 +242,7 @@ export default async function AccountPage() {
       </div>
 
       <div className="mt-4 space-y-3">
-        <PushToggle />
+        <PushToggle cardTexts={ft.accountDelen.push} />
         <SpoedKanaalToggle />
       </div>
 
@@ -256,7 +256,7 @@ export default async function AccountPage() {
         ))}
 
         <div className="overflow-hidden rounded-2xl border border-hair bg-white shadow-card">
-          <ThemeToggleRow theme={theme} />
+          <ThemeToggleRow theme={theme} texts={ft.accountDelen.thema} />
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-hair bg-white shadow-card">

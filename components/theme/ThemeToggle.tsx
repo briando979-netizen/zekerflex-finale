@@ -1,6 +1,7 @@
 "use client";
 
 import { THEME_COOKIE, THEME_MAX_AGE, type Theme } from "@/lib/theme/config";
+import { THEMA_NL, type ThemaTeksten } from "@/lib/account/teksten";
 
 function setTheme(theme: Theme): void {
   try {
@@ -12,14 +13,14 @@ function setTheme(theme: Theme): void {
 }
 
 /** Sun/moon icon toggle — mirrors the one already proven in components/admin/AdminShell.tsx. */
-export function ThemeToggle({ theme, className = "" }: { theme: Theme; className?: string }) {
+export function ThemeToggle({ theme, className = "", texts = THEMA_NL }: { theme: Theme; className?: string; texts?: ThemaTeksten }) {
   const next: Theme = theme === "dark" ? "light" : "dark";
   return (
     <button
       type="button"
       onClick={() => setTheme(next)}
-      aria-label={theme === "dark" ? "Zet lichte weergave aan" : "Zet donkere weergave aan"}
-      title={theme === "dark" ? "Licht" : "Donker"}
+      aria-label={theme === "dark" ? texts.zetLichtAan : texts.zetDonkerAan}
+      title={theme === "dark" ? texts.licht : texts.donker}
       className={className}
     >
       {theme === "dark" ? (
@@ -37,7 +38,7 @@ export function ThemeToggle({ theme, className = "" }: { theme: Theme; className
 }
 
 /** Row-style variant for a settings list (label + current value + click to toggle). */
-export function ThemeToggleRow({ theme }: { theme: Theme }) {
+export function ThemeToggleRow({ theme, texts = THEMA_NL }: { theme: Theme; texts?: ThemaTeksten }) {
   const next: Theme = theme === "dark" ? "light" : "dark";
   return (
     <button
@@ -45,9 +46,9 @@ export function ThemeToggleRow({ theme }: { theme: Theme }) {
       onClick={() => setTheme(next)}
       className="flex w-full items-center justify-between gap-3 border-b border-hair px-4 py-3.5 text-left text-sm font-medium text-ink last:border-b-0 hover:bg-paper-soft"
     >
-      <span>Weergave</span>
+      <span>{texts.weergave}</span>
       <span className="flex items-center gap-1.5 text-neutralx-400">
-        {theme === "dark" ? "Donker" : "Licht"}
+        {theme === "dark" ? texts.donker : texts.licht}
         <span aria-hidden>›</span>
       </span>
     </button>

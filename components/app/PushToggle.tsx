@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { bannerWeerTonen, PUSH_BANNER_NL, type PushBannerTexts, type PushStapTexts } from "@/components/app/push-banner-texts";
 import { useInIosApp } from "@/components/app/useInIosApp";
+import { PUSH_KAART_NL, type PushKaartTeksten } from "@/lib/account/teksten";
+import { vulIn } from "@/lib/i18n/vul-in";
 import { volgendeStap, ZELF_UIT_KEY } from "@/lib/notifications/push/aanmelding";
 
 type State = "loading" | "unsupported" | "ios-install" | "unconfigured" | "off" | "on" | "denied" | "busy";
@@ -182,13 +184,17 @@ export function PushToggle({
   variant = "card",
   texts = PUSH_BANNER_NL,
   stapTexts,
+  cardTexts = PUSH_KAART_NL,
   onAan,
 }: {
   variant?: "card" | "banner" | "stap";
   texts?: PushBannerTexts;
   stapTexts?: PushStapTexts;
+  /** de kaart (variant card) in de taal van de werker; zonder: Nederlands (werkgever, chat-instellingen) */
+  cardTexts?: PushKaartTeksten;
   onAan?: () => void;
 }) {
+  const k = cardTexts;
   const [state, setState] = useState<State>("loading");
   const [vapidKey, setVapidKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -244,11 +250,11 @@ export function PushToggle({
       setState("on");
       onAan?.();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "onbekend";
-      setError(`Aanzetten lukte niet (${msg}). Probeer het opnieuw.`);
+      const msg = e instanceof Error ? e.message : k.onbekend;
+      setError(vulIn(k.aanzettenMislukt, { melding: msg }));
       setState("off");
     }
-  }, [vapidKey, onAan]);
+  }, [vapidKey, onAan, k]);
 
   const disable = useCallback(async () => {
     setError(null);
@@ -273,21 +279,21 @@ export function PushToggle({
   }, []);
 
   const sendTest = useCallback(async () => {
-    setTestMsg("Versturen…");
+    setTestMsg(k.testVersturen);
     try {
       const r = await fetch("/api/me/push/test", { method: "POST" });
       const d = await r.json().catch(() => ({}));
       setTestMsg(
         r.ok
           ? d.delivered > 0
-            ? `Verstuurd naar ${d.delivered} apparaat/apparaten — zet de app op de achtergrond om 'm te zien.`
-            : "Geen aangemelde apparaten gevonden. Zet meldingen op dit apparaat eerst aan."
-          : "Versturen mislukt.",
+            ? vulIn(k.testVerstuurd, { n: d.delivered })
+            : k.testGeen
+          : k.testMislukt,
       );
     } catch {
-      setTestMsg("Versturen mislukt.");
+      setTestMsg(k.testMislukt);
     }
-  }, []);
+  }, [k]);
 
   const dismiss = () => {
     setDismissed(true);
@@ -363,17 +369,17 @@ export function PushToggle({
     <div className="rounded-xl border border-hair bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-ink">Pushmeldingen</p>
+          <p className="text-sm font-semibold text-ink">{k.titel}</p>
           <p className="mt-0.5 text-xs text-neutralx-500">
             {state === "ios-install"
-              ? "Op iPhone werkt dit zodra ZekerFlex op je beginscherm staat (Deel → Zet op beginscherm)."
-              : "Krijg een melding bij een oproep, een nieuw bericht of een dienst voor jou — ook als ZekerFlex dicht is."}
+              ? k.uitlegIos
+              : k.uitleg}
           </p>
         </div>
         {state === "ios-install" ? null : state === "unconfigured" ? (
-          <span className="shrink-0 text-xs text-neutralx-400">Niet beschikbaar</span>
+          <span className="shrink-0 text-xs text-neutralx-400">{k.nietBeschikbaar}</span>
         ) : state === "denied" ? (
-          <span className="shrink-0 text-xs text-warn">Geblokkeerd in je browser</span>
+          <span className="shrink-0 text-xs text-warn">{k.geblokkeerd}</span>
         ) : (
           <button
             type="button"
@@ -385,7 +391,7 @@ export function PushToggle({
                 : "bg-brand-500 text-white hover:brightness-105"
             }`}
           >
-            {state === "busy" ? "Bezig…" : state === "on" ? "Uitzetten" : "Aanzetten"}
+            {state === "busy" ? k.bezig : state === "on" ? k.uitzetten : k.aanzetten}
           </button>
         )}
       </div>
@@ -396,7 +402,7 @@ export function PushToggle({
             onClick={sendTest}
             className="rounded-lg border border-hairstrong px-3 py-1.5 text-xs font-semibold text-ink hover:bg-paper-soft"
           >
-            Stuur test-melding
+            {k.testKnop}
           </button>
           {testMsg && <span className="text-xs text-neutralx-500">{testMsg}</span>}
         </div>
@@ -404,8 +410,8 @@ export function PushToggle({
       {state === "denied" && (
         <p className="mt-2 text-xs text-neutralx-500">
           {app
-            ? "Meldingen staan uit voor de app. Zet ze aan op je telefoon: Instellingen → Apps → ZekerFlex → Meldingen → toestaan, en open de app opnieuw."
-            : "Je hebt meldingen eerder geweigerd. Zet ze weer aan via het slotje in de adresbalk."}
+            ? k.geweigerdApp
+            : k.geweigerdBrowser}
         </p>
       )}
       {error && <p role="alert" className="mt-2 text-xs text-crit">{error}</p>}
