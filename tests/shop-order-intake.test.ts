@@ -75,6 +75,11 @@ describe("POST /api/shop/orders", () => {
     expect(res.status).toBe(200);
     expect(json.ok).toBe(true);
     expect(json.checkoutUrl).toBe("https://checkout.stripe.com/cs_test_1");
+    // het auditlog (hashketen, niet te wissen) krijgt geen e-mailadres, alleen een korte hash (12 nov)
+    const { recordAudit } = await import("@/lib/audit");
+    const audit = JSON.stringify(vi.mocked(recordAudit).mock.calls);
+    expect(audit).not.toContain("jan@example.nl");
+    expect(audit).toMatch(/"emailHash":"[0-9a-f]{8}"/);
     expect(orderCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
