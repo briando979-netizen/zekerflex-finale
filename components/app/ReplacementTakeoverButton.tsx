@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Portal } from "@/components/chat/Portal";
 import { useToast } from "@/components/ui/Toast";
+import { useFT } from "@/components/i18n/useFT";
 
 /**
  * Marketplace action for a shift whose holder asked for a replacement. Instead
@@ -19,6 +20,7 @@ export function ReplacementTakeoverButton({
   disabled?: boolean;
   notReadyReason?: string | null;
 }) {
+  const t = useFT().los.overnemen;
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
@@ -34,10 +36,10 @@ export function ReplacementTakeoverButton({
         body: JSON.stringify({ shiftId, note: note || undefined }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error?.message ?? "Aanmelden mislukt");
+      if (!res.ok) throw new Error(data?.error?.message ?? t.mislukt);
       setDone(true);
       setOpen(false);
-      toast.success("Je aanbod is verstuurd", "Je krijgt bericht als de kracht jou kiest.");
+      toast.success(t.verstuurd, t.verstuurdTekst);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -46,7 +48,7 @@ export function ReplacementTakeoverButton({
   }
 
   if (done) {
-    return <span className="pill-warn">Aangeboden als vervanger</span>;
+    return <span className="pill-warn">{t.aangeboden}</span>;
   }
 
   const needsVerification = Boolean(
@@ -62,14 +64,14 @@ export function ReplacementTakeoverButton({
           onClick={() => setOpen(true)}
           className="btn-primary px-3 py-1.5 text-xs disabled:opacity-50"
         >
-          Neem klus over
+          {t.knop}
         </button>
         {notReadyReason && (
           <span className="max-w-[220px] text-right text-[11px] leading-snug text-neutralx-400">
             {notReadyReason}{" "}
             {needsVerification && (
               <Link href="/dashboard/verificatie" className="font-medium text-brand-600 hover:underline">
-                Verifiëren →
+                {t.verifieer}
               </Link>
             )}
           </span>
@@ -85,21 +87,20 @@ export function ReplacementTakeoverButton({
               className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-lift"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="font-display text-lg font-bold text-ink">Deze klus overnemen</h2>
+              <h2 className="font-display text-lg font-bold text-ink">{t.titel}</h2>
               <p className="mt-1 text-sm text-neutralx-600">
-                De ingeplande kracht zoekt een vervanger. Meld je aan — diegene kiest wie het
-                overneemt. Pas dan wordt de klus (met modelovereenkomst) van jou.
+                {t.uitleg}
               </p>
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 rows={2}
                 className="field-input mt-3"
-                placeholder="Kort bericht (optioneel) — waarom jij een goede match bent."
+                placeholder={t.bericht}
               />
               <div className="mt-4 flex gap-2">
                 <button type="button" onClick={submit} disabled={busy} className="btn-primary flex-1">
-                  {busy ? "Versturen…" : "Meld me aan"}
+                  {busy ? t.bezig : t.meldAan}
                 </button>
                 <button
                   type="button"
@@ -107,7 +108,7 @@ export function ReplacementTakeoverButton({
                   disabled={busy}
                   className="btn-ghost"
                 >
-                  Annuleer
+                  {t.annuleer}
                 </button>
               </div>
             </div>

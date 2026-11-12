@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useFT } from "@/components/i18n/useFT";
 
 // ---------------------------------------------------------------------------
 // De kaart van één plek (de locatie van een klus), op ZekerFlex Kaart: onze eigen kaart van Nederland
@@ -31,10 +32,11 @@ export function ShiftMap({
   /** de route van huis naar deze plek ([lon, lat]); null = nog geen, weglaten = geen route op deze kaart */
   routeLijn?: [number, number][] | null | undefined;
 }) {
+  const t = useFT().los.kaart;
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return (
       <div className="grid place-items-center rounded-xl border border-hair bg-paper-soft text-xs text-neutralx-400" style={{ height }}>
-        Kaart niet beschikbaar
+        {t.nietBeschikbaar}
       </div>
     );
   }

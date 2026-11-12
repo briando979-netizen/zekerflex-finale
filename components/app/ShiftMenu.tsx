@@ -5,6 +5,8 @@ import { copyText } from "@/lib/clipboard";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
+import { useFT } from "@/components/i18n/useFT";
+import { vulIn } from "@/lib/i18n/vul-in";
 
 const HIDDEN_KEY = "zf-hidden-employers";
 
@@ -39,6 +41,7 @@ export function ShiftMenu({
   employerName: string;
   shiftTitle: string;
 }) {
+  const t = useFT().los.menu;
   const toast = useToast();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -61,7 +64,7 @@ export function ShiftMenu({
         return;
       }
       await copyText(url);
-      toast.success("Link gekopieerd");
+      toast.success(t.gekopieerd);
     } catch {
       /* user cancelled share */
     }
@@ -70,7 +73,7 @@ export function ShiftMenu({
   function hide() {
     setOpen(false);
     hideEmployer(employerName);
-    toast.success(`${employerName} verborgen`, "Je ziet geen klussen meer van deze opdrachtgever.");
+    toast.success(vulIn(t.verborgen, { naam: employerName }), t.verborgenTekst);
     router.push("/dashboard/klussen");
     router.refresh();
   }
@@ -80,7 +83,7 @@ export function ShiftMenu({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label="Meer opties"
+        aria-label={t.meer}
         aria-expanded={open}
         className="grid h-10 w-10 place-items-center rounded-full bg-white/90 text-lg text-ink shadow-card backdrop-blur"
       >
@@ -93,14 +96,14 @@ export function ShiftMenu({
             onClick={hide}
             className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-ink hover:bg-paper-soft"
           >
-            Opdrachtgever verbergen
+            {t.verberg}
           </button>
           <button
             type="button"
             onClick={share}
             className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-ink hover:bg-paper-soft"
           >
-            Deze klus delen
+            {t.deel}
           </button>
         </div>
       )}

@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { Portal } from "@/components/chat/Portal";
+import { useFT } from "@/components/i18n/useFT";
+import { vulIn } from "@/lib/i18n/vul-in";
 
 const euro = (c: number) => `€ ${(c / 100).toFixed(2).replace(".", ",")}`;
 
 export function CancellationClaimButton({ shiftId, shiftTitle }: { shiftId: string; shiftTitle: string }) {
+  const t = useFT().los.claim;
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -32,7 +35,7 @@ export function CancellationClaimButton({ shiftId, shiftTitle }: { shiftId: stri
         body: JSON.stringify({ shiftId, reason }),
       });
       const j = await r.json();
-      if (!r.ok) throw new Error(j?.error?.message ?? "Indienen mislukt");
+      if (!r.ok) throw new Error(j?.error?.message ?? t.mislukt);
       setState({ status: j.claim.status, claimedCents: j.claim.claimedCents });
       setOpen(false);
     } catch (e) {
@@ -45,41 +48,40 @@ export function CancellationClaimButton({ shiftId, shiftTitle }: { shiftId: stri
   if (state) {
     const label =
       state.status === "approved"
-        ? `Claim goedgekeurd — ${state.claimedCents ? euro(state.claimedCents) : "50%"} volgt`
+        ? vulIn(t.goedgekeurd, { bedrag: state.claimedCents ? euro(state.claimedCents) : "50%" })
         : state.status === "rejected"
-          ? "Claim afgewezen"
-          : "Claim ingediend — wacht op opdrachtgever";
+          ? t.afgewezen
+          : t.ingediend;
     return <span className="text-xs font-medium text-neutralx-500">{label}</span>;
   }
 
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} className="rounded-lg bg-ink px-2.5 py-1.5 text-xs font-semibold text-white">
-        50% claimen
+        {t.knop}
       </button>
       {open && (
         <Portal>
           <div className="fixed inset-0 z-[75] flex items-center justify-center bg-ink/40 p-4" onClick={() => setOpen(false)}>
             <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-lift" onClick={(e) => e.stopPropagation()}>
-              <h2 className="font-display text-lg font-bold text-ink">Vergoeding claimen</h2>
+              <h2 className="font-display text-lg font-bold text-ink">{t.titel}</h2>
               <p className="mt-1 text-sm text-neutralx-600">
-                De opdrachtgever heeft “{shiftTitle}” geannuleerd nadat jij was ingepland. Je kunt 50% van de klus claimen.
-                De opdrachtgever beoordeelt je claim.
+                {vulIn(t.uitleg, { titel: shiftTitle })}
               </p>
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
                 className="field-input mt-3"
-                placeholder="Toelichting (optioneel) — bijv. dat je andere klussen hebt afgezegd."
+                placeholder={t.toelichting}
               />
               {err && <p role="alert" className="mt-1 text-xs text-crit">{err}</p>}
               <div className="mt-4 flex gap-2">
                 <button type="button" onClick={submit} disabled={busy} className="btn-primary flex-1">
-                  {busy ? "Indienen…" : "Claim indienen"}
+                  {busy ? t.bezig : t.indienen}
                 </button>
                 <button type="button" onClick={() => setOpen(false)} className="btn-ghost">
-                  Annuleer
+                  {t.annuleer}
                 </button>
               </div>
             </div>

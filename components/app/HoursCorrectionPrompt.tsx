@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useFT } from "@/components/i18n/useFT";
 import { acceptCorrectionAction, rejectCorrectionAction } from "@/app/dashboard/uren/[timesheetId]/actions";
 
 export function HoursCorrectionPrompt({
@@ -16,6 +17,7 @@ export function HoursCorrectionPrompt({
   proposedHours: number;
   reason: string;
 }) {
+  const t = useFT().los.uren;
   const [pending, start] = useTransition();
   const [done, setDone] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,14 +32,15 @@ export function HoursCorrectionPrompt({
 
   return (
     <div className="rounded-2xl border border-warn/40 bg-warn/5 p-5 shadow-card">
-      <p className="text-sm font-semibold text-ink">Voorstel voor correctie van je uren</p>
+      <p className="text-sm font-semibold text-ink">{t.titel}</p>
       <p className="mt-1.5 text-sm text-neutralx-600">
-        De opdrachtgever stelt voor je uren aan te passen van <strong>{claimedHours.toFixed(2)}</strong> naar{" "}
-        <strong>{proposedHours.toFixed(2)}</strong> uur.
+        {t.voorstel.split(/(\{van\}|\{naar\})/u).map((deel, i) =>
+          deel === "{van}" ? <strong key={i}>{claimedHours.toFixed(2)}</strong> : deel === "{naar}" ? <strong key={i}>{proposedHours.toFixed(2)}</strong> : deel,
+        )}
       </p>
       {reason && <p className="mt-1.5 text-xs italic text-neutralx-500">&ldquo;{reason}&rdquo;</p>}
       <p className="mt-2 text-xs text-neutralx-500">
-        Ga je niet akkoord? Dan beoordeelt ZekerFlex dit onafhankelijk.
+        {t.onafhankelijk}
       </p>
       {error && <p role="alert" className="mt-2 text-xs text-crit">{error}</p>}
       <div className="mt-4 flex gap-2">
@@ -54,7 +57,7 @@ export function HoursCorrectionPrompt({
           }
           className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
         >
-          {pending ? "Bezig…" : "Ja, akkoord"}
+          {pending ? t.bezig : t.ja}
         </button>
         <button
           type="button"
@@ -69,7 +72,7 @@ export function HoursCorrectionPrompt({
           }
           className="btn-ghost px-4 py-2 text-sm text-crit disabled:opacity-50"
         >
-          Nee, niet akkoord
+          {t.nee}
         </button>
       </div>
     </div>

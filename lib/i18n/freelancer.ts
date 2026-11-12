@@ -11,6 +11,17 @@ import { WIE_TEKSTEN } from "@/lib/i18n/wie-ben-jij";
 
 const nl = {
   nav: { discover: "Ontdekken", myJobs: "Mijn klussen", hours: "Uren", bank: "Bank", chat: "Chat", account: "Account", findJob: "Vind jouw klus", search: "Zoeken", employerWorkspace: "Werkgeversomgeving" },
+  los: {
+    uren: { titel: "Voorstel voor correctie van je uren", voorstel: "De opdrachtgever stelt voor je uren aan te passen van {van} naar {naar} uur.", onafhankelijk: "Ga je niet akkoord? Dan beoordeelt ZekerFlex dit onafhankelijk.", ja: "Ja, akkoord", nee: "Nee, niet akkoord", bezig: "Bezig…" },
+    menu: { meer: "Meer opties", verberg: "Opdrachtgever verbergen", deel: "Deze klus delen", gekopieerd: "Link gekopieerd", verborgen: "{naam} verborgen", verborgenTekst: "Je ziet geen klussen meer van deze opdrachtgever." },
+    verborgen: { laden: "Laden…", leeg: "Je hebt geen opdrachtgevers verborgen. Verberg er een via het ⋯-menu op een klus.", toon: "Toon weer" },
+    kaart: { nietBeschikbaar: "Kaart niet beschikbaar" },
+    ervaring: { maanden: ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"], nu: "nu", verwijderFout: "Verwijderen mislukt. Probeer het nog eens.", leeg: "Nog geen werkervaring toegevoegd.", verwijder: "Verwijderen", privacy: "Alleen jijzelf ziet dit; opdrachtgevers krijgen je werkervaring (nog) niet te zien.", toevoegen: "Werkervaring toevoegen →" },
+    claim: { goedgekeurd: "Claim goedgekeurd — {bedrag} volgt", afgewezen: "Claim afgewezen", ingediend: "Claim ingediend — wacht op opdrachtgever", knop: "50% claimen", titel: "Vergoeding claimen", uitleg: "De opdrachtgever heeft “{titel}” geannuleerd nadat jij was ingepland. Je kunt 50% van de klus claimen. De opdrachtgever beoordeelt je claim.", toelichting: "Toelichting (optioneel) — bijv. dat je andere klussen hebt afgezegd.", indienen: "Claim indienen", bezig: "Indienen…", annuleer: "Annuleer", mislukt: "Indienen mislukt" },
+    review: { sterren: "{n} van 5 sterren", jouw: "Jouw review", alleenCijfer: "Je gaf alleen een cijfer, geen toelichting." },
+    vervanger: { kies: "Kies als vervanger", neemtOver: "{naam} neemt de klus over", overgedragen: "De dienst is overgedragen en van je lijst gehaald.", titel: "Klus overdragen aan {naam}?", uitleg: "{naam} neemt deze dienst en de bijbehorende modelovereenkomst over. Jij bent er daarna niet meer verantwoordelijk voor. Dit kun je niet ongedaan maken.", ja: "Ja, overdragen", bezig: "Overdragen…", annuleer: "Annuleer", mislukt: "Kiezen mislukt" },
+    overnemen: { aangeboden: "Aangeboden als vervanger", knop: "Neem klus over", verifieer: "Verifiëren →", titel: "Deze klus overnemen", uitleg: "De ingeplande kracht zoekt een vervanger. Meld je aan — diegene kiest wie het overneemt. Pas dan wordt de klus (met modelovereenkomst) van jou.", bericht: "Kort bericht (optioneel) — waarom jij een goede match bent.", meldAan: "Meld me aan", bezig: "Versturen…", annuleer: "Annuleer", mislukt: "Aanmelden mislukt", verstuurd: "Je aanbod is verstuurd", verstuurdTekst: "Je krijgt bericht als de kracht jou kiest." },
+  },
   start: {
     eyebrow: "Jouw start",
     title: "Welkom! Kies eerst welke richting je op wilt.",
@@ -1285,6 +1296,17 @@ export type FreelancerDict = typeof nl;
 
 const en: FreelancerDict = {
   nav: { discover: "Discover", myJobs: "My jobs", hours: "Hours", bank: "Bank", chat: "Chat", account: "Account", findJob: "Find your job", search: "Search", employerWorkspace: "Employer workspace" },
+  los: {
+    uren: { titel: "Proposal to correct your hours", voorstel: "The client proposes changing your hours from {van} to {naar} hours.", onafhankelijk: "Don't agree? Then ZekerFlex will review this independently.", ja: "Yes, I agree", nee: "No, I don't agree", bezig: "Working…" },
+    menu: { meer: "More options", verberg: "Hide client", deel: "Share this job", gekopieerd: "Link copied", verborgen: "{naam} hidden", verborgenTekst: "You won't see jobs from this client any more." },
+    verborgen: { laden: "Loading…", leeg: "You haven't hidden any clients. Hide one via the ⋯ menu on a job.", toon: "Show again" },
+    kaart: { nietBeschikbaar: "Map not available" },
+    ervaring: { maanden: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], nu: "now", verwijderFout: "Deleting failed. Please try again.", leeg: "No work experience added yet.", verwijder: "Delete", privacy: "Only you can see this; clients can't see your work experience (yet).", toevoegen: "Add work experience →" },
+    claim: { goedgekeurd: "Claim approved — {bedrag} to follow", afgewezen: "Claim rejected", ingediend: "Claim submitted — waiting for the client", knop: "Claim 50%", titel: "Claim compensation", uitleg: "The client cancelled “{titel}” after you were scheduled. You can claim 50% of the job. The client will review your claim.", toelichting: "Explanation (optional) — e.g. that you turned down other jobs.", indienen: "Submit claim", bezig: "Submitting…", annuleer: "Cancel", mislukt: "Submitting failed" },
+    review: { sterren: "{n} out of 5 stars", jouw: "Your review", alleenCijfer: "You only gave a rating, no explanation." },
+    vervanger: { kies: "Choose as replacement", neemtOver: "{naam} takes over the job", overgedragen: "The shift has been handed over and removed from your list.", titel: "Hand the job over to {naam}?", uitleg: "{naam} takes over this shift and the related model agreement. You are no longer responsible for it afterwards. This cannot be undone.", ja: "Yes, hand over", bezig: "Handing over…", annuleer: "Cancel", mislukt: "Choosing failed" },
+    overnemen: { aangeboden: "Offered as replacement", knop: "Take over job", verifieer: "Verify →", titel: "Take over this job", uitleg: "The scheduled worker is looking for a replacement. Sign up — they choose who takes over. Only then does the job (with the model agreement) become yours.", bericht: "Short message (optional) — why you're a good match.", meldAan: "Sign me up", bezig: "Sending…", annuleer: "Cancel", mislukt: "Signing up failed", verstuurd: "Your offer has been sent", verstuurdTekst: "You'll get a message if the worker chooses you." },
+  },
   start: {
     eyebrow: "Your start",
     title: "Welcome! First choose which direction you want to take.",
@@ -2554,6 +2576,17 @@ const en: FreelancerDict = {
 
 const pl: FreelancerDict = {
   nav: { discover: "Odkrywaj", myJobs: "Moje zlecenia", hours: "Godziny", bank: "Bank", chat: "Czat", account: "Konto", findJob: "Znajdź pracę", search: "Szukaj", employerWorkspace: "Panel pracodawcy" },
+  los: {
+    uren: { titel: "Propozycja korekty Twoich godzin", voorstel: "Zleceniodawca proponuje zmienić Twoje godziny z {van} na {naar} godz.", onafhankelijk: "Nie zgadzasz się? Wtedy ZekerFlex oceni to niezależnie.", ja: "Tak, zgadzam się", nee: "Nie, nie zgadzam się", bezig: "Chwileczkę…" },
+    menu: { meer: "Więcej opcji", verberg: "Ukryj zleceniodawcę", deel: "Udostępnij to zlecenie", gekopieerd: "Link skopiowany", verborgen: "Ukryto: {naam}", verborgenTekst: "Nie zobaczysz już zleceń od tego zleceniodawcy." },
+    verborgen: { laden: "Ładowanie…", leeg: "Nie masz ukrytych zleceniodawców. Ukryj jednego w menu ⋯ przy zleceniu.", toon: "Pokaż ponownie" },
+    kaart: { nietBeschikbaar: "Mapa niedostępna" },
+    ervaring: { maanden: ["sty", "lut", "mar", "kwi", "maj", "cze", "lip", "sie", "wrz", "paź", "lis", "gru"], nu: "obecnie", verwijderFout: "Usuwanie nie powiodło się. Spróbuj ponownie.", leeg: "Nie dodano jeszcze doświadczenia zawodowego.", verwijder: "Usuń", privacy: "Widzisz to tylko Ty; zleceniodawcy (jeszcze) nie widzą Twojego doświadczenia zawodowego.", toevoegen: "Dodaj doświadczenie zawodowe →" },
+    claim: { goedgekeurd: "Roszczenie zatwierdzone — {bedrag} wkrótce", afgewezen: "Roszczenie odrzucone", ingediend: "Roszczenie złożone — czeka na zleceniodawcę", knop: "Zgłoś 50%", titel: "Zgłoś odszkodowanie", uitleg: "Zleceniodawca anulował „{titel}” po wpisaniu Cię do grafiku. Możesz zgłosić 50% wartości zlecenia. Zleceniodawca rozpatrzy Twoje roszczenie.", toelichting: "Uzasadnienie (opcjonalnie) — np. że z powodu tego zlecenia odpadły Ci inne.", indienen: "Złóż roszczenie", bezig: "Wysyłanie…", annuleer: "Anuluj", mislukt: "Nie udało się złożyć" },
+    review: { sterren: "{n} z 5 gwiazdek", jouw: "Twoja opinia", alleenCijfer: "Wystawiono tylko ocenę, bez komentarza." },
+    vervanger: { kies: "Wybierz jako zastępstwo", neemtOver: "{naam} przejmuje zlecenie", overgedragen: "Zmiana została przekazana i usunięta z Twojej listy.", titel: "Przekazać zlecenie osobie {naam}?", uitleg: "{naam} przejmuje tę zmianę i powiązaną umowę modelową. Potem nie odpowiadasz już za nią. Tego nie można cofnąć.", ja: "Tak, przekaż", bezig: "Przekazywanie…", annuleer: "Anuluj", mislukt: "Wybór nie powiódł się" },
+    overnemen: { aangeboden: "Zgłoszono jako zastępstwo", knop: "Przejmij zlecenie", verifieer: "Zweryfikuj →", titel: "Przejmij to zlecenie", uitleg: "Zaplanowana osoba szuka zastępstwa. Zgłoś się — ona wybiera, kto przejmie zlecenie. Dopiero wtedy zlecenie (z umową modelową) stanie się Twoje.", bericht: "Krótka wiadomość (opcjonalnie) — dlaczego pasujesz.", meldAan: "Zgłaszam się", bezig: "Wysyłanie…", annuleer: "Anuluj", mislukt: "Zgłoszenie nie powiodło się", verstuurd: "Twoja oferta została wysłana", verstuurdTekst: "Dostaniesz wiadomość, jeśli ta osoba wybierze Ciebie." },
+  },
   start: {
     eyebrow: "Twój start",
     title: "Witaj! Najpierw wybierz, w którą stronę chcesz iść.",
@@ -3823,6 +3856,17 @@ const pl: FreelancerDict = {
 
 const ro: FreelancerDict = {
   nav: { discover: "Descoperă", myJobs: "Joburile mele", hours: "Ore", bank: "Bancă", chat: "Chat", account: "Cont", findJob: "Găsește-ți jobul", search: "Caută", employerWorkspace: "Spațiul angajatorului" },
+  los: {
+    uren: { titel: "Propunere de corectare a orelor tale", voorstel: "Clientul propune modificarea orelor tale de la {van} la {naar} ore.", onafhankelijk: "Nu ești de acord? Atunci ZekerFlex evaluează independent.", ja: "Da, sunt de acord", nee: "Nu, nu sunt de acord", bezig: "Se lucrează…" },
+    menu: { meer: "Mai multe opțiuni", verberg: "Ascunde clientul", deel: "Distribuie acest job", gekopieerd: "Link copiat", verborgen: "{naam} ascuns", verborgenTekst: "Nu vei mai vedea joburi de la acest client." },
+    verborgen: { laden: "Se încarcă…", leeg: "Nu ai ascuns niciun client. Ascunde unul din meniul ⋯ de la un job.", toon: "Arată din nou" },
+    kaart: { nietBeschikbaar: "Harta nu este disponibilă" },
+    ervaring: { maanden: ["ian", "feb", "mar", "apr", "mai", "iun", "iul", "aug", "sep", "oct", "nov", "dec"], nu: "prezent", verwijderFout: "Ștergerea nu a reușit. Încearcă din nou.", leeg: "Nicio experiență de lucru adăugată încă.", verwijder: "Șterge", privacy: "Doar tu vezi asta; clienții (încă) nu îți văd experiența de lucru.", toevoegen: "Adaugă experiență de lucru →" },
+    claim: { goedgekeurd: "Cerere aprobată — {bedrag} urmează", afgewezen: "Cerere respinsă", ingediend: "Cerere trimisă — se așteaptă răspunsul clientului", knop: "Cere 50%", titel: "Cere despăgubire", uitleg: "Clientul a anulat „{titel}” după ce jobul îți fusese alocat. Poți cere 50% din job. Clientul îți evaluează cererea.", toelichting: "Explicație (opțional) — de ex. că ai renunțat la alte joburi.", indienen: "Trimite cererea", bezig: "Se trimite…", annuleer: "Anulează", mislukt: "Trimiterea nu a reușit" },
+    review: { sterren: "{n} din 5 stele", jouw: "Recenzia ta", alleenCijfer: "Ai dat doar o notă, fără explicații." },
+    vervanger: { kies: "Alege ca înlocuitor", neemtOver: "{naam} preia jobul", overgedragen: "Tura a fost predată și scoasă din lista ta.", titel: "Predai jobul lui {naam}?", uitleg: "{naam} preia această tură și contractul-model aferent. După aceea nu mai ești responsabil pentru ea. Acest lucru nu poate fi anulat.", ja: "Da, predă", bezig: "Se predă…", annuleer: "Anulează", mislukt: "Alegerea nu a reușit" },
+    overnemen: { aangeboden: "Oferit ca înlocuitor", knop: "Preia jobul", verifieer: "Verifică →", titel: "Preia acest job", uitleg: "Persoana programată caută un înlocuitor. Înscrie-te — ea alege cine preia jobul. Abia atunci jobul (cu contractul-model) devine al tău.", bericht: "Mesaj scurt (opțional) — de ce te potrivești.", meldAan: "Înscrie-mă", bezig: "Se trimite…", annuleer: "Anulează", mislukt: "Înscrierea nu a reușit", verstuurd: "Oferta ta a fost trimisă", verstuurdTekst: "Vei primi un mesaj dacă persoana te alege." },
+  },
   start: {
     eyebrow: "Startul tău",
     title: "Bun venit! Alege mai întâi în ce direcție vrei să mergi.",
@@ -5092,6 +5136,17 @@ const ro: FreelancerDict = {
 
 const uk: FreelancerDict = {
   nav: { discover: "Огляд", myJobs: "Мої роботи", hours: "Години", bank: "Банк", chat: "Чат", account: "Акаунт", findJob: "Знайди роботу", search: "Пошук", employerWorkspace: "Кабінет роботодавця" },
+  los: {
+    uren: { titel: "Пропозиція щодо виправлення твоїх годин", voorstel: "Замовник пропонує змінити твої години з {van} на {naar} год.", onafhankelijk: "Не погоджуєшся? Тоді ZekerFlex розгляне це незалежно.", ja: "Так, погоджуюсь", nee: "Ні, не погоджуюсь", bezig: "Зачекай…" },
+    menu: { meer: "Більше опцій", verberg: "Приховати замовника", deel: "Поділитися цією роботою", gekopieerd: "Посилання скопійовано", verborgen: "{naam} приховано", verborgenTekst: "Ти більше не бачитимеш робіт від цього замовника." },
+    verborgen: { laden: "Завантаження…", leeg: "У тебе немає прихованих замовників. Приховай одного через меню ⋯ біля роботи.", toon: "Показати знову" },
+    kaart: { nietBeschikbaar: "Карта недоступна" },
+    ervaring: { maanden: ["січ", "лют", "бер", "кві", "тра", "чер", "лип", "сер", "вер", "жов", "лис", "гру"], nu: "зараз", verwijderFout: "Не вдалося видалити. Спробуй ще раз.", leeg: "Досвід роботи ще не додано.", verwijder: "Видалити", privacy: "Це бачиш лише ти; замовники (поки що) не бачать твого досвіду роботи.", toevoegen: "Додати досвід роботи →" },
+    claim: { goedgekeurd: "Вимогу схвалено — {bedrag} буде виплачено", afgewezen: "Вимогу відхилено", ingediend: "Вимогу подано — очікуємо на замовника", knop: "Вимагати 50%", titel: "Вимагати компенсацію", uitleg: "Замовник скасував «{titel}» після того, як роботу було за тобою закріплено. Ти можеш вимагати 50% вартості роботи. Замовник розгляне твою вимогу.", toelichting: "Пояснення (необов’язково) — напр., що через це довелося відмовитися від інших робіт.", indienen: "Подати вимогу", bezig: "Надсилання…", annuleer: "Скасувати", mislukt: "Не вдалося подати" },
+    review: { sterren: "{n} з 5 зірок", jouw: "Твій відгук", alleenCijfer: "Залишено лише оцінку, без пояснення." },
+    vervanger: { kies: "Обрати заміною", neemtOver: "{naam} бере роботу", overgedragen: "Зміну передано і прибрано з твого списку.", titel: "Передати роботу {naam}?", uitleg: "{naam} бере цю зміну та відповідний типовий договір. Після цього ти за неї більше не відповідаєш. Це не можна скасувати.", ja: "Так, передати", bezig: "Передаємо…", annuleer: "Скасувати", mislukt: "Не вдалося обрати" },
+    overnemen: { aangeboden: "Запропоновано як заміну", knop: "Взяти роботу", verifieer: "Верифікувати →", titel: "Взяти цю роботу", uitleg: "Запланований працівник шукає заміну. Запишись — він обирає, хто перебере. Лише тоді робота (з типовим договором) стане твоєю.", bericht: "Коротке повідомлення (необов’язково) — чому ти добре підходиш.", meldAan: "Записати мене", bezig: "Надсилання…", annuleer: "Скасувати", mislukt: "Не вдалося записатися", verstuurd: "Твою пропозицію надіслано", verstuurdTekst: "Ти отримаєш повідомлення, якщо працівник обере тебе." },
+  },
   start: {
     eyebrow: "Твій старт",
     title: "Вітаємо! Спершу обери, у якому напрямку хочеш працювати.",
