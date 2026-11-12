@@ -1,0 +1,17 @@
+{
+  "uitleg": "Tests die de hele code doorzoeken. De controle vóór een uitrol (deploy/bouwer/werker/controle.mjs) draait ze altijd, naast vitest related; tests/bewakers.test.ts eist dat elke test die app/, lib/ of components/ doorzoekt hier staat.",
+  "bewakers": [
+    "tests/a11y-alert-roles.test.ts",
+    "tests/admin-access.test.ts",
+    "tests/admin-nav.test.ts",
+    "tests/bewakers.test.ts",
+    "tests/hulp-centrum.test.ts",
+    "tests/i18n-bundle.test.ts",
+    "tests/onboarding-onderhoud.test.ts",
+    "tests/org-kv.test.ts",
+    "tests/regex-safari.test.ts",
+    "tests/sitechat-regels.test.ts",
+    "tests/voorstel-indoor-regels.test.ts",
+    "tests/voorstel-sollicitatie-regels.test.ts"
+  ]
+}

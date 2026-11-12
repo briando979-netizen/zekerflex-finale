@@ -3,7 +3,8 @@
 // Git-server, met GitHub als reserve: haalMain/haalVastlegging in werkkopie.mjs; met eigen
 // node_modules), waarop voor één vastlegging de gouden regels uit AGENTS.md draaien:
 // TypeScript op het hele project, eslint op de gewijzigde bestanden en de bestaande
-// tests die die bestanden raken (vitest related, op de demodatabase van het voorbeeld).
+// tests die die bestanden raken (vitest related, op de demodatabase van het voorbeeld), plus altijd de bewakers:
+// tests die de hele code doorzoeken (tests/bewakers.json, bewakers.mjs), want vitest related ziet die niet.
 // De uitslag staat in /werk/controle/uitslagen/<sha>.json; de nieuwste 60 blijven.
 //
 // Wie roept dit aan?
@@ -20,6 +21,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { WERK, geefZwaarSlotVrij, haalMain, haalVastlegging, kloon, sh, testOmgeving, verkrijgZwaarSlot, wachtOpUitrol } from "./werkkopie.mjs";
+import { gefaaldeBewakers, leesBewakerLijst } from "./bewakers.mjs";
 
 export const CONTROLE_DIR = path.join(WERK, "controle");
 const REPO = path.join(CONTROLE_DIR, "repo");
@@ -176,6 +178,29 @@ export async function controleerVastlegging({ doel = "main", vanaf = null, wacht
       });
       tests = { ok: t.code === 0, uit: staartTekst(t.uit), overgeslagen: null };
     }
+
+    // De bewakers (12 nov: de a11y-bewaker faalde dagen stil op main). Altijd, met een eigen time-out. Een kapotte of
+    // lege lijst houdt niets tegen: dan alleen de tests die bij de wijziging horen, met een melding in het logboek.
+    const { lijst: bewakerLijst, waarschuwing } = leesBewakerLijst(await fs.readFile(path.join(REPO, "tests", "bewakers.json"), "utf8").catch(() => ""));
+    const teDraaien = [];
+    for (const p of bewakerLijst) if (await bestaat(path.join(REPO, p))) teDraaien.push(p);
+    let bewakers = { ok: true, aantal: teDraaien.length, gefaald: [], waarschuwing };
+    if (waarschuwing) log("info", `Let op: ${waarschuwing}; alleen de tests die bij de wijziging horen`);
+    if (teDraaien.length) {
+      log("info", `Bewakers (${teDraaien.length}): tests die de hele code doorzoeken`);
+      const b = await sh("npx", ["vitest", "run", "--passWithNoTests", "--maxWorkers=2", ...teDraaien], {
+        cwd: REPO,
+        env: testOmgeving(),
+        timeout: 300_000,
+        zonderSleutel: true,
+      });
+      const gefaald = b.code === 0 ? [] : gefaaldeBewakers(b.uit, teDraaien);
+      bewakers = { ok: b.code === 0, aantal: teDraaien.length, gefaald, waarschuwing };
+      if (!bewakers.ok) {
+        const namen = gefaald.length ? gefaald.join(", ") : "zie de uitvoer (time-out of opstartfout)";
+        tests = { ok: false, uit: `Bewaker faalt: ${namen}\n${staartTekst(b.uit, 40)}${tests.uit ? `\n\n${tests.uit}` : ""}`, overgeslagen: null };
+      }
+    }
     const klaar = new Date();
     const u = {
       sha,
@@ -187,6 +212,7 @@ export async function controleerVastlegging({ doel = "main", vanaf = null, wacht
       tsc: { ok: tsc.code === 0, uit: kortTekst(tsc.uit) },
       eslint,
       tests,
+      bewakers,
       door,
       begon: begon.toISOString(),
       klaar: klaar.toISOString(),
