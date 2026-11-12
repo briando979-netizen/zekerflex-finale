@@ -126,6 +126,22 @@ describe("de gezichtscontrole in beeld", () => {
     expect(met(undefined)).toBeNull();
     expect(met("rommel")).toBeNull();
     expect(lees("app/admin/gebruikers/[id]/page.tsx")).toContain("w.gezicht.reeks");
+  });
+
+  it("de uitkomst (waarom niet automatisch) en de gegevens van het document", () => {
+    const w = idControleWeergave("AI_LOCAL", {
+      nietAutomatisch: ["het gezicht lijkt 41% op de pasfoto (zeker vanaf 42%)", 7, ""],
+      document: { naam: "JAN JANSEN", uitDeCode: true, nummerEind: "014" },
+    });
+    expect(w.nietAutomatisch).toEqual(["het gezicht lijkt 41% op de pasfoto (zeker vanaf 42%)"]);
+    expect(w.document).toEqual({ naam: "JAN JANSEN", uitDeCode: true, nummerEind: "014" });
+    // zelf goedgekeurd: een lege lijst; een oudere controle: niets
+    expect(idControleWeergave("AI_LOCAL", { nietAutomatisch: [] }).nietAutomatisch).toEqual([]);
+    expect(idControleWeergave("AI_LOCAL", {}).nietAutomatisch).toBeNull();
+    expect(idControleWeergave("AI_LOCAL", {}).document).toBeNull();
+    const pagina = lees("app/admin/gebruikers/[id]/page.tsx");
+    expect(pagina).toContain("Wacht op jou, omdat:");
+    expect(pagina).toContain("automatisch goedgekeurd, alle controles klopten");
     expect(lees("app/api/admin/gebruikers/[id]/identiteit/[checkId]/beeld/route.ts")).toMatch(/z\.enum\(\["front", "back", "selfie", "selfie2"\]\)/);
   });
 });

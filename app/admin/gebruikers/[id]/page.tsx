@@ -421,6 +421,38 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                         </div>
                         <Pill tone={status.tone}>{status.label}</Pill>
                       </div>
+                      {/* de uitkomst in één oogopslag (lib/onboarding/auto-redenen.ts) en de gegevens van het document */}
+                      {((w.nietAutomatisch && (w.nietAutomatisch.length > 0 || c.status === "VERIFIED")) || w.document) && (
+                        <div className="space-y-1 rounded-lg px-3 py-2 text-xs" style={{ background: "var(--a-panel-2)", color: "var(--a-dim)" }}>
+                          {w.nietAutomatisch && w.nietAutomatisch.length === 0 && c.status === "VERIFIED" && (
+                            <p>
+                              <strong style={{ color: "var(--a-text)" }}>Uitkomst:</strong> automatisch goedgekeurd, alle controles klopten.
+                            </p>
+                          )}
+                          {w.nietAutomatisch && w.nietAutomatisch.length > 0 && (
+                            <div>
+                              <p>
+                                <strong style={{ color: "var(--a-text)" }}>
+                                  {c.status === "PENDING" ? "Wacht op jou, omdat:" : "Niet automatisch goedgekeurd, omdat:"}
+                                </strong>
+                              </p>
+                              <ul className="list-disc pl-4">
+                                {w.nietAutomatisch.map((r, i) => (
+                                  <li key={i}>{r}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {w.document && (
+                            <p>
+                              <strong style={{ color: "var(--a-text)" }}>Document:</strong>{" "}
+                              {w.document.naam ? `${w.document.naam} (${w.document.uitDeCode ? "gelezen uit de code op het document" : "zoals getypt"})` : "naam onbekend"}
+                              {w.document.nummerEind ? ` · nummer eindigt op ${w.document.nummerEind}` : ""}
+                              {c.expiresAt ? ` · geldig tot ${dateNl(c.expiresAt)}` : ""}
+                            </p>
+                          )}
+                        </div>
+                      )}
                       {fotos.length > 0 && (
                         <div className={`grid gap-2 ${fotos.length > 3 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
                           {FOTO_SOORTEN.filter((f) => fotos.includes(f.id)).map((f) => (
