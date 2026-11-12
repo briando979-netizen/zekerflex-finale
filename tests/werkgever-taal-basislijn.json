@@ -64,7 +64,6 @@
     "components/app/WebsiteManage.tsx": 33,
     "components/app/WerkgeverApiKeysBoard.tsx": 5,
     "components/app/netwerk/Verbinding.tsx": 22,
-    "components/app/werkruimte/DashboardWisselaar.tsx": 3,
     "components/bank/BankAutoSave.tsx": 2,
     "components/bank/BankCards.tsx": 9,
     "components/bank/BankInsights.tsx": 3,
