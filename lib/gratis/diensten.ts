@@ -233,6 +233,15 @@ export const GRATIS_DIENSTEN: GratisDienst[] = [
     status: "gratis",
   },
   {
+    id: "bankkoppeling",
+    naam: "Bank automatisch ophalen (open banking)",
+    waarvoor: "De bank in de boekhouding: transacties vanzelf binnenhalen in plaats van een afschrift uploaden",
+    nu: "Enable Banking (erkende aanbieder onder PSD2) in de gratis modus voor eigen rekeningen. Let op: de voorwaarden noemen die modus voor evaluatie en eigen gebruik van particulieren; of dat voor Zekerflex, Inc. mag, moet Enable Banking schriftelijk bevestigen. GoCardless Bank Account Data (vroeger Nordigen, gratis) neemt sinds 2026 geen nieuwe aanmeldingen meer aan. Nog niet aangezet.",
+    eigen: "Het afschrift uploaden (CAMT.053 of csv) werkt gewoon en blijft altijd kunnen: het automatisch ophalen valt nooit stil, het scherm meldt het. Een eigen directe koppeling met ABN AMRO of Rabobank (Business Account Insight) kan, maar vraagt een zakelijke rekening met een eigen certificaat (EV) en een contract; ING heeft zo'n weg niet. De koppeling zelf is aanbieder-onafhankelijk (lib/boekhouding/bank/koppeling): de aanbieder is te wisselen zonder de boekhouding aan te raken.",
+    status: "bouwen",
+    env: ["ENABLE_BANKING_APP_ID", "ENABLE_BANKING_PRIVATE_KEY"],
+  },
+  {
     id: "code",
     naam: "Code bewaren",
     waarvoor: "De broncode van ZekerFlex; de server haalt er bij elke uitrol de code op",
