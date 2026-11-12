@@ -44,6 +44,15 @@ export const FLAG_REGISTRY: FlagDef[] = [
   { key: "google-verificatiemail", label: "Verificatiemail ook bij aanmelden met Google of Apple", description: "Aan = een nieuw account dat via Google of Apple wordt gemaakt krijgt dezelfde bevestigingsmail (link + code) als een gewone aanmelding en moet het adres eerst bevestigen. Uit = zo’n account geldt meteen als bevestigd en krijgt een welkomstmail. Een verborgen adres van Apple (@privaterelay.appleid.com) geldt altijd meteen als bevestigd. Bestaande accounts veranderen niet.", default: true },
 ];
 
+// Boekhouding: bonnetjes per mail (lib/boekhouding/bonnen/mail-taak.ts); staat bewust apart omdat hij pas aan mag na een echte testmail.
+FLAG_REGISTRY.push({
+  key: "boekhouding-bonnen-mail",
+  label: "Boekhouding: bonnetjes per mail verwerken",
+  description:
+    "Aan = elke 10 minuten wordt de Postvak (bonnetjes@zekerflex.com, een alias van info@) gelezen en worden bijlagen als bon in de echte administratie gezet; wat niet zeker klopt komt bij Beheer, Boekhouding, even kijken. Zet dit pas aan na een echte testmail: stel eerst BONNEN_AUTHSERV_ID in en controleer de lijst eigen afzenders. Uit (standaard) = er wordt geen mail gelezen.",
+  default: false,
+});
+
 export interface FlagOverride {
   /** master switch; undefined = use the registry default */
   enabled?: boolean | undefined;

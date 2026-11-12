@@ -66,6 +66,8 @@ cat > /etc/crontabs/root <<EOF
 */10 * * * * wget -q -O /dev/null -T 280 "$H" "$APP/api/internal/social/tick"
 # elke 10 min: de nieuwste GitHub main alvast controleren in de Bouwer (tsc, eslint, tests; antwoordt meteen)
 */10 * * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/controles/tick"
+# elke 10 min: bonnetjes (bonnetjes@) uit de Postvak halen en boeken of klaarzetten; doet niets zolang de vlag boekhouding-bonnen-mail uit staat (lib/boekhouding/bonnen/mail-taak.ts)
+*/10 * * * * wget -q -O /dev/null -T 90 "$H" "$APP/api/internal/boekhouding/bonnen-mail"
 EOF
 
 echo "[zf-cron] crontab geïnstalleerd; crond start (UTC). Doel: $APP"
