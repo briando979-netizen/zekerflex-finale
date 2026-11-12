@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { decodeSession, SESSION_COOKIE } from "@/lib/auth/session";
 import { hasAnyRole, matchRouteRule } from "@/lib/auth/rbac";
 import { isPublicApiRoute } from "@/lib/auth/public-routes";
+import { TE_GROOT_ANTWOORD, teGroot } from "@/lib/http/openbare-grens";
 import { buildContentSecurityPolicy, generateNonce, siteHostCsp } from "@/lib/security/csp";
 import { SITE_HOST_HEADER, siteHostFrom } from "@/lib/sites/host-header";
 import { VOORSTEL_HEADER, voorstelPad } from "@/lib/voorstel/subdomein";
@@ -295,6 +296,13 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   if (siteHost !== null) return await customerSite(req, siteHost);
   const voorstel = req.headers.get(VOORSTEL_HEADER);
   if (voorstel !== null) return voorstelSite(req, voorstel);
+
+  // Te groot voor een openbare schrijfroute (12 nov, lib/http/openbare-grens.ts): 413 vóór de route de body leest.
+  // Ingelogde routes en lezen blijven ongemoeid; 413 en geen 403 (CrowdSec).
+  if (teGroot(req.method, req.nextUrl.pathname, req.headers.get("content-length"), isPublicApiRoute(req.nextUrl.pathname))) {
+    // Connection: close, anders leest Node de rest van een grote body toch nog in (86)
+    return NextResponse.json(TE_GROOT_ANTWOORD, { status: 413, headers: { Connection: "close" } });
+  }
 
   // Admin "Bekijk als": outside the admin area, serve as the chosen example
   // account (read-only). /admin and /api/admin keep the admin's own session.

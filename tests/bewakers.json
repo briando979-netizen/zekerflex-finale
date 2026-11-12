@@ -9,6 +9,7 @@
     "tests/hulp-centrum.test.ts",
     "tests/i18n-bundle.test.ts",
     "tests/onboarding-onderhoud.test.ts",
+    "tests/openbare-grens-middleware.test.ts",
     "tests/org-kv.test.ts",
     "tests/regex-safari.test.ts",
     "tests/sitechat-regels.test.ts",
