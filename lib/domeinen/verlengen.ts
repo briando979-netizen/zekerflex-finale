@@ -9,6 +9,7 @@ import { CONTACTS } from "@/lib/seo";
 import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
 import { alertOwnerLater } from "@/lib/ops/alert";
 import { getStripeClient } from "@/lib/billing/stripe";
+import { betalenUit } from "@/lib/billing/stripe-betalen";
 import { payUrl } from "@/lib/billing/pay-link";
 import { cancelDomain, domainInfo, transipConfigured } from "@/lib/mail/hosting/transip";
 import { euroPrijs, extensie } from "@/lib/domeinen/extensies";
@@ -97,6 +98,8 @@ async function betaalmethode(stripe: Stripe, customerId: string, tenantId: strin
 /** Probeer de verlengfactuur af te schrijven. true = afgeschreven of onderweg (SEPA), false = geen betaalmethode of geweigerd. */
 async function probeerIncasso(invoice: Invoice, b: DomeinBestelling): Promise<boolean> {
   if (isTestAdres(b.email)) return false;
+  // het Stripe-account ontvangt even niets: niet proberen, de factuur blijft open en de volgende ronde probeert opnieuw
+  if (await betalenUit().catch(() => null)) return false;
   const tenant = await prisma.tenant.findUnique({ where: { id: b.tenantId }, select: { stripeCustomerId: true } });
   if (!tenant?.stripeCustomerId) return false;
   try {

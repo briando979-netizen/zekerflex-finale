@@ -12,7 +12,7 @@
 import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
 import { logger } from "@/lib/logger";
 import { alertOwnerLater } from "@/lib/ops/alert";
-import { getStripeClient } from "@/lib/billing/stripe";
+import { AppError } from "@/lib/errors";
 import { leesStand, nieuweStand, slaatOmNaarUit, type AccountStand } from "@/lib/billing/stripe-betalen-stand";
 
 export const BETALEN_UIT_KEY = "stripe:betalen-uit";
@@ -67,6 +67,16 @@ export async function verwerkAccountStand(betalen: boolean, uitbetalen: boolean,
 
 /** Elke 15 minuten (cron): het eigen account bij Stripe opvragen. Zonder Stripe-sleutel: niets. */
 export async function meetStripeAccount(nu: Date = new Date()): Promise<AccountStand | null> {
+  // dynamisch: stripe.ts importeert dit bestand (eisBetalenAan), zo ontstaat geen kring
+  const { getStripeClient } = await import("@/lib/billing/stripe");
   const a = await getStripeClient().accounts.retrieveCurrent();
   return verwerkAccountStand(Boolean(a.charges_enabled), Boolean(a.payouts_enabled), `meting-${nu.toISOString().slice(0, 13)}`, nu);
+}
+
+/**
+ * Vóór elke nieuwe Stripe-betaling (Checkout-sessie, PaymentIntent): staat de vlag aan, dan een 423 met code
+ * BETALEN_UIT en rustige tekst, in plaats van een vage 500 uit Stripe. Een storing in de KV laat de betaling door.
+ */
+export async function eisBetalenAan(nu: number = Date.now()): Promise<void> {
+  if (await betalenUit(nu).catch(() => null)) throw AppError.betalenUit();
 }

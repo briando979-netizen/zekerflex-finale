@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { AppError, toErrorBody } from "@/lib/errors";
+import { eisBetalenAan } from "@/lib/billing/stripe-betalen";
 import { getPrincipal, requireRole } from "@/lib/auth";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
@@ -68,6 +69,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (vat && !isBtwNummer(vat)) {
       throw AppError.validation("Dit btw-nummer klopt niet. Een Nederlands btw-nummer ziet eruit als NL123456789B01.");
     }
+
+    await eisBetalenAan(); // vóór de bestelling wordt vastgelegd: geen open bestelling zonder betaalmogelijkheid
 
     const variants = await prisma.shopProductVariant.findMany({
       where: { id: { in: d.items.map((i) => i.variantId) }, product: { active: true } },
@@ -189,6 +192,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     } catch (err) {
       logger.error("shop order checkout session failed", { orderId: order.id, error: (err as Error).message });
       await prisma.shopOrder.update({ where: { id: order.id }, data: { status: "PAYMENT_FAILED" } });
+      if (err instanceof AppError && err.code === "BETALEN_UIT") throw err;
       throw AppError.upstream("Kon geen betaalscherm starten — probeer het zo opnieuw.");
     }
 
