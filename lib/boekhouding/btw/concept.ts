@@ -185,7 +185,7 @@ export async function maakBtwConcept(administratieId: string, jaar: number, kwar
     bonBoekingen: invoer.bonBoekingen,
   });
   const inhoud: BtwConceptInhoud = {
-    formaat: 1,
+    formaat: 2,
     jaar,
     kwartaal,
     van,
@@ -194,6 +194,9 @@ export async function maakBtwConcept(administratieId: string, jaar: number, kwar
     verschuldigdCents: berekening.verschuldigdCents,
     voorbelastingCents: berekening.voorbelastingCents,
     saldoCents: berekening.saldoCents,
+    verschuldigdHeleEuros: berekening.verschuldigdHeleEuros,
+    voorbelastingHeleEuros: berekening.voorbelastingHeleEuros,
+    saldoHeleEuros: berekening.saldoHeleEuros,
     voorbehouden: berekening.voorbehouden,
     meldingen,
   };

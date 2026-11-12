@@ -32,6 +32,11 @@ export interface BtwRubriekRij {
   /** de grondslag zoals die in de aangifte staat: hele euro's, afgerond (zie btw/kern.ts) */
   grondslagEuro: number | null;
   btwCents: number;
+  /**
+   * De btw zoals die in het aangifteformulier staat: hele euro's, afgerond volgens rondBtwAf. Ontbreekt in momentopnames
+   * van voor deze afronding; vul hem dan soepel aan met rubriekenMetHeleEuros.
+   */
+  btwHeleEuros?: number;
   doorAccountantTeBevestigen: boolean;
   /** korte reden, alleen als doorAccountantTeBevestigen waar is */
   reden?: string;
@@ -44,7 +49,7 @@ export interface Voorbehoud {
 
 export interface BtwConceptInhoud {
   /** vorm van deze momentopname; bij een andere opbouw gaat dit getal omhoog */
-  formaat: 1;
+  formaat: 1 | 2;
   jaar: number;
   kwartaal: number;
   van: string;
@@ -53,6 +58,10 @@ export interface BtwConceptInhoud {
   verschuldigdCents: number;
   voorbelastingCents: number;
   saldoCents: number;
+  /** 5a, 5b en 5c in hele euro's (alleen vanaf formaat 2; 5c = 5a minus 5b) */
+  verschuldigdHeleEuros?: number;
+  voorbelastingHeleEuros?: number;
+  saldoHeleEuros?: number;
   voorbehouden: Voorbehoud[];
   meldingen: BtwMelding[];
 }
@@ -102,6 +111,39 @@ export const GRONDSLAG_RUBRIEKEN: readonly string[] = ["1a", "1b", "1c", "1d", "
 export const VERSCHULDIGD_RUBRIEKEN: readonly string[] = ["1a", "1b", "1c", "1d", "2a", "4a", "4b"];
 /** Voorbelasting. */
 export const VOORBELASTING_RUBRIEK = "5b";
+
+const geenMinNul = (n: number): number => (n === 0 ? 0 : n);
+
+/**
+ * De afrondingsregel voor de btw op het aangifteformulier (daar zijn alle bedragen hele euro's): altijd in het EIGEN
+ * VOORDEEL van de ondernemer. Te betalen btw (1a t/m 1d, 2a, 4a, 4b en 5a) gaat naar beneden (630 ct wordt 6 euro, -630 ct
+ * wordt -7 euro), de voorbelasting in 5b naar boven (630 ct wordt 7 euro, -630 ct wordt -6 euro). Rubrieken zonder btw
+ * (1e, 3a, 3b, 3c) hebben geen btw en blijven 0. 5c is geen eigen afronding maar 5a minus 5b (saldoInHeleEuros).
+ * Of dit zo mag, bevestigt een accountant: de rubrieken blijven doorAccountantTeBevestigen.
+ */
+export function rondBtwAf(rubriek: string, centen: number): number {
+  if (VERSCHULDIGD_RUBRIEKEN.includes(rubriek) || rubriek === "5a") return geenMinNul(Math.floor(centen / 100));
+  if (rubriek === VOORBELASTING_RUBRIEK) return geenMinNul(Math.ceil(centen / 100));
+  return geenMinNul(Math.trunc(centen / 100));
+}
+
+/** 5c in hele euro's: het afgeronde 5a min het afgeronde 5b, zodat het formulier optelt. */
+export const saldoInHeleEuros = (verschuldigdHeleEuros: number, voorbelastingHeleEuros: number): number => geenMinNul(verschuldigdHeleEuros - voorbelastingHeleEuros);
+
+/**
+ * Vult btwHeleEuros aan op rijen uit een oude momentopname (zonder dat veld) en maakt 5a en 5c kloppend: 5a is de som van
+ * de afgeronde rubrieken die erin tellen, 5c is 5a min 5b. Een bewaarde waarde blijft staan (behalve 5a en 5c, die volgen).
+ */
+export function rubriekenMetHeleEuros(rijen: readonly BtwRubriekRij[]): (BtwRubriekRij & { btwHeleEuros: number })[] {
+  const eerst = rijen.map((r) => ({ ...r, btwHeleEuros: r.btwHeleEuros ?? rondBtwAf(r.rubriek, r.btwCents) }));
+  const som = eerst.filter((r) => VERSCHULDIGD_RUBRIEKEN.includes(r.rubriek)).reduce((s, r) => s + r.btwHeleEuros, 0);
+  const vb = eerst.find((r) => r.rubriek === VOORBELASTING_RUBRIEK)?.btwHeleEuros ?? 0;
+  return eerst.map((r) => {
+    if (r.rubriek === "5a") return { ...r, btwHeleEuros: geenMinNul(som) };
+    if (r.rubriek === "5c") return { ...r, btwHeleEuros: saldoInHeleEuros(som, vb) };
+    return r;
+  });
+}
 
 export const STATUS_TEKST: Readonly<Record<string, string>> = {
   BEREKEND: "Concept",

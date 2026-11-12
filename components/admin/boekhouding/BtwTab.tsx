@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Empty, Notice, Panel, Pill } from "@/components/admin/kit";
-import type { BtwConceptRij } from "@/lib/boekhouding/btw/labels";
+import { rubriekenMetHeleEuros, type BtwConceptRij } from "@/lib/boekhouding/btw/labels";
 import { ERNST_TEKST, ERNST_TONE, jaarKeuzes, standaardKwartaal } from "@/lib/boekhouding/btw/scherm-kern";
 import { API_BOEKHOUDING, boekApi, jsonInit } from "@/lib/boekhouding/scherm-api";
 import { bedragTekst, dagTekst } from "@/lib/boekhouding/scherm-kern";
@@ -111,6 +111,7 @@ export function BtwTab() {
   };
 
   const c = data?.laatste ?? null;
+  const saldoEuros = c ? (rubriekenMetHeleEuros(c.inhoud.rubrieken).find((r) => r.rubriek === "5c")?.btwHeleEuros ?? Math.trunc(c.saldoCents / 100)) : 0;
   const blokkades = c ? c.inhoud.meldingen.filter((m) => m.ernst === "blokkeert").length : 0;
   const gekozen = administraties.find((a) => a.id === adminId);
 
@@ -189,11 +190,11 @@ export function BtwTab() {
                   <tr style={{ color: "var(--a-mute)" }}>
                     <th scope="col" className="py-2 pr-3">Rubriek</th>
                     <th scope="col" className="py-2 pr-3 text-right">Omzet (hele euro&apos;s)</th>
-                    <th scope="col" className="py-2 text-right">Btw</th>
+                    <th scope="col" className="py-2 text-right">Btw (hele euro&apos;s)</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {c.inhoud.rubrieken.map((r) => (
+                  {rubriekenMetHeleEuros(c.inhoud.rubrieken).map((r) => (
                     <tr key={r.rubriek} className="border-t align-top" style={{ borderColor: "var(--a-border)" }}>
                       <th scope="row" className="py-2 pr-3 font-normal">
                         <span className="font-semibold">{r.rubriek}</span> {r.label}
@@ -203,7 +204,12 @@ export function BtwTab() {
                         )}
                       </th>
                       <td className="whitespace-nowrap py-2 pr-3 text-right tabular-nums">{r.grondslagEuro === null ? "" : veldTekst(r.grondslagEuro)}</td>
-                      <td className="whitespace-nowrap py-2 text-right tabular-nums">{bedragTekst(r.btwCents)}</td>
+                      <td className="whitespace-nowrap py-2 text-right tabular-nums">
+                        {bedragTekst(r.btwHeleEuros * 100)}
+                        {r.btwCents !== r.btwHeleEuros * 100 && (
+                          <span className="block text-xs" style={{ color: "var(--a-mute)" }}>exact: {bedragTekst(r.btwCents)}</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -211,9 +217,9 @@ export function BtwTab() {
             </div>
             <p className="mt-3 text-sm">
               {c.saldoCents >= 0 ? (
-                <>Volgens dit concept moet je <strong>{bedragTekst(c.saldoCents)}</strong> betalen.</>
+                <>Volgens dit concept moet je <strong>{bedragTekst(saldoEuros * 100)}</strong> betalen (exact: {bedragTekst(c.saldoCents)}).</>
               ) : (
-                <>Volgens dit concept krijg je <strong>{bedragTekst(Math.abs(c.saldoCents))}</strong> terug.</>
+                <>Volgens dit concept krijg je <strong>{bedragTekst(Math.abs(saldoEuros) * 100)}</strong> terug (exact: {bedragTekst(Math.abs(c.saldoCents))}).</>
               )}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">

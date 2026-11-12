@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { controleerBtw, heeftBlokkade, type ControleInvoer, type ControleRegel } from "@/lib/boekhouding/btw/controle";
 import { berekenBtw, btwDeadlineDag, conceptNaarCsv, grondslagInEuro } from "@/lib/boekhouding/btw/kern";
-import { RUBRIEK_VOLGORDE } from "@/lib/boekhouding/btw/labels";
+import { RUBRIEK_VOLGORDE, rondBtwAf, rubriekenMetHeleEuros, type BtwRubriekRij } from "@/lib/boekhouding/btw/labels";
 import { jaarKeuzes, standaardKwartaal } from "@/lib/boekhouding/btw/scherm-kern";
 import type { BtwRegel } from "@/lib/boekhouding/lezen-kern";
 
@@ -113,6 +113,81 @@ describe("grondslagInEuro", () => {
   });
 });
 
+describe("rondBtwAf", () => {
+  it("te betalen btw gaat naar beneden, voorbelasting naar boven", () => {
+    expect(rondBtwAf("1a", 630)).toBe(6);
+    expect(rondBtwAf("4b", 699)).toBe(6);
+    expect(rondBtwAf("5a", 630)).toBe(6);
+    expect(rondBtwAf("5b", 630)).toBe(7);
+    expect(rondBtwAf("5b", 601)).toBe(7);
+  });
+
+  it("negatieve bedragen gaan de kant van het eigen voordeel op", () => {
+    expect(rondBtwAf("1a", -630)).toBe(-7);
+    expect(rondBtwAf("5b", -630)).toBe(-6);
+  });
+
+  it("nul blijft nul (nooit -0) en exacte euro's blijven gelijk", () => {
+    for (const rubriek of ["1a", "5a", "5b", "1e"]) {
+      expect(Object.is(rondBtwAf(rubriek, 0), 0)).toBe(true);
+      expect(rondBtwAf(rubriek, 700)).toBe(7);
+      expect(rondBtwAf(rubriek, -700)).toBe(-7);
+    }
+    expect(Object.is(rondBtwAf("5b", -50), 0)).toBe(true);
+  });
+});
+
+describe("btw in hele euro's in berekenBtw", () => {
+  it("rondt per rubriek af, en 5a is de som van de afgeronde rubrieken en 5c is 5a min 5b", () => {
+    const r = berekenBtw([
+      ...verkoopRegels("1a", 100000, 21000),
+      ...verkoopRegels("1b", 50050, 4505),
+      { debetCents: 0, creditCents: 2381, isBtwRegel: false, btwBasisCents: 2381, ...verkoop("4b", "4b") },
+      { debetCents: 0, creditCents: 500, isBtwRegel: true, btwBasisCents: null, ...verkoop("4b", "4b") },
+      { debetCents: 2630, creditCents: 0, isBtwRegel: true, btwBasisCents: null, ...inkoop(null, "5b") },
+    ]);
+    expect(rij(r, "1a").btwHeleEuros).toBe(210);
+    expect(rij(r, "1b").btwHeleEuros).toBe(45);
+    expect(rij(r, "4b").btwHeleEuros).toBe(5);
+    expect(rij(r, "5b").btwHeleEuros).toBe(27);
+    expect(rij(r, "5a").btwHeleEuros).toBe(260);
+    expect(rij(r, "5c").btwHeleEuros).toBe(233);
+    expect(r.verschuldigdHeleEuros).toBe(260);
+    expect(r.voorbelastingHeleEuros).toBe(27);
+    expect(r.saldoHeleEuros).toBe(233);
+    // de exacte centen blijven bewaard en veranderen niet
+    expect(rij(r, "1b").btwCents).toBe(4505);
+    expect(r.saldoCents).toBe(26005 - 2630);
+    const som = (nummers: string[]) => nummers.reduce((s, n) => s + (rij(r, n).btwHeleEuros ?? 0), 0);
+    expect(som(["1a", "1b", "1c", "1d", "2a", "4a", "4b"]) - som(["5b"])).toBe(r.saldoHeleEuros);
+  });
+
+  it("een negatief saldo (terug te vragen) rondt de voorbelasting naar boven af", () => {
+    const r = berekenBtw([{ debetCents: 630, creditCents: 0, isBtwRegel: true, btwBasisCents: null, ...inkoop(null, "5b") }]);
+    expect(rij(r, "5b").btwHeleEuros).toBe(7);
+    expect(r.saldoHeleEuros).toBe(-7);
+    expect(rij(r, "5c").btwHeleEuros).toBe(-7);
+  });
+
+  it("een lege periode geeft overal 0 hele euro's en blijft door een accountant te bevestigen", () => {
+    const r = berekenBtw([]);
+    expect(r.rubrieken.every((x) => x.btwHeleEuros === 0 && x.doorAccountantTeBevestigen)).toBe(true);
+    expect(r.saldoHeleEuros).toBe(0);
+  });
+
+  it("een oude momentopname zonder btwHeleEuros blijft leesbaar en wordt soepel aangevuld", () => {
+    const oud: BtwRubriekRij[] = [
+      { rubriek: "1a", label: "x", uitleg: "", grondslagCents: 100000, grondslagEuro: 1000, btwCents: 630, doorAccountantTeBevestigen: true },
+      { rubriek: "5a", label: "x", uitleg: "", grondslagCents: null, grondslagEuro: null, btwCents: 630, doorAccountantTeBevestigen: true },
+      { rubriek: "5b", label: "x", uitleg: "", grondslagCents: null, grondslagEuro: null, btwCents: 630, doorAccountantTeBevestigen: true },
+      { rubriek: "5c", label: "x", uitleg: "", grondslagCents: null, grondslagEuro: null, btwCents: 0, doorAccountantTeBevestigen: true },
+    ];
+    const nieuw = rubriekenMetHeleEuros(oud);
+    expect(nieuw.map((x) => x.btwHeleEuros)).toEqual([6, 6, 7, -1]);
+    expect(conceptNaarCsv(oud)).toContain(";;-1;0");
+    expect(conceptNaarCsv(oud)).toContain("1a;x;1000;6;630");
+  });
+});
 describe("btwDeadlineDag", () => {
   it("is de laatste dag van de maand na het kwartaal, ook voor een verstreken kwartaal", () => {
     expect(btwDeadlineDag(2026, 1)).toBe("2026-04-30");
@@ -128,15 +203,15 @@ describe("conceptNaarCsv", () => {
     const r = berekenBtw(verkoopRegels("1a", 100000, 21000));
     const csv = conceptNaarCsv(r.rubrieken);
     const regels = csv.replace("﻿", "").split("\r\n");
-    expect(regels[0]).toBe("Rubriek;Omschrijving;Grondslag (hele euro's);Btw (euro)");
-    expect(regels).toContain("1a;Leveringen en diensten, hoog tarief (21%);1000;210,00");
-    expect(regels).toContain("5c;Saldo: te betalen of terug te vragen;;210,00");
+    expect(regels[0]).toBe("Rubriek;Omschrijving;grondslag_euro;btw_euro;btw_cent");
+    expect(regels).toContain("1a;Leveringen en diensten, hoog tarief (21%);1000;210;21000");
+    expect(regels).toContain("5c;Saldo: te betalen of terug te vragen;;210;21000");
     expect(csv).toContain("concept en geen aangifte");
   });
 
   it("zet een negatief saldo met min-teken", () => {
     const r = berekenBtw([{ debetCents: 1234, creditCents: 0, isBtwRegel: true, btwBasisCents: null, ...inkoop(null, "5b") }]);
-    expect(conceptNaarCsv(r.rubrieken)).toContain("5c;Saldo: te betalen of terug te vragen;;-12,34");
+    expect(conceptNaarCsv(r.rubrieken)).toContain("5c;Saldo: te betalen of terug te vragen;;-13;-1234");
   });
 });
 

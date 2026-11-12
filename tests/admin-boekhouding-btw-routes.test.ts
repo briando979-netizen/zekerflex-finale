@@ -125,7 +125,7 @@ describe("/api/admin/boekhouding/btw/[id]/csv", () => {
     expect(res.headers.get("Content-Disposition")).toContain("btw-concept-2026-k1-v2.csv");
     const tekst = await res.text();
     expect(tekst).toContain("Rubriek;Omschrijving");
-    expect(tekst).toContain("1a;Leveringen;100;21,00");
+    expect(tekst).toContain("1a;Leveringen;100;21;2100");
   });
 
   it("een ongeldig id geeft een 422", async () => {
