@@ -56,6 +56,12 @@ export interface ChatOptions {
    * turns an instant ECONNREFUSED into a multi-minute hang for nothing.
    */
   retry?: boolean;
+  /**
+   * true = de aanroeper vangt een mislukking zelf op en meldt hem zelf: dan geen "llm chat failed" op error-niveau
+   * (die komt in het foutenlogboek), alleen een info-regel. Voor de warm-cron (app/api/internal/ai/warm): tijdens een
+   * uitrol staat het eigen model bewust stil, en alle 8 meldingen "llm chat failed" van 11–12 nov waren die tik.
+   */
+  stilBijFout?: boolean;
 }
 
 interface TokenUsage {
@@ -369,7 +375,8 @@ async function chatOnce(opts: ChatOptions): Promise<ChatResult> {
       if ((err as Error).name === "TimeoutError") {
         throw AppError.upstream(`LLM request timed out after ${timeoutMs}ms`);
       }
-      logger.error("llm chat failed", { error: (err as Error).message, host: llmHost() });
+      if (opts.stilBijFout) logger.info("llm chat mislukt, de aanroeper meldt het zelf", { error: (err as Error).message, host: llmHost(), purpose: opts.purpose });
+      else logger.error("llm chat failed", { error: (err as Error).message, host: llmHost() });
       throw unreachable(err);
     }
   });
