@@ -41,7 +41,7 @@ export function AbonnementScherm({ huidig, plannen, groepen, inApp }: { huidig: 
     <div className="space-y-10">
       <header>
         <h1 className="font-display text-2xl font-bold uppercase tracking-tight text-ink">Abonnement en uitbreidingen</h1>
-        <p className="mt-2 max-w-2xl text-sm text-neutralx-600">Hier zie je wat je nu hebt en wat je erbij kunt nemen. Alles wat gratis is, blijft gratis; je betaalt alleen voor wat je zelf aanzet.</p>
+        <p className="mt-2 max-w-2xl text-sm text-neutralx-600">Hier zie je wat je nu hebt en wat je erbij kunt nemen. Je betaalt alleen voor wat je zelf aanzet.</p>
       </header>
 
       {inApp && (
@@ -110,8 +110,8 @@ export function AbonnementScherm({ huidig, plannen, groepen, inApp }: { huidig: 
                 {g.items.map((i) => (
                   <li key={i.slug} className="relative rounded-2xl bg-white p-4 shadow-card">
                     <p className="text-sm font-semibold text-ink">
-                      <Link href={i.href} className="underline-offset-2 hover:underline">{i.naam}</Link>
-                      {!i.beschikbaar && <span className="ml-2 text-xs font-semibold text-warn">Binnenkort</span>}
+                      {inApp ? i.naam : <Link href={i.href} className="underline-offset-2 hover:underline">{i.naam}</Link>}
+                      {!i.beschikbaar && <span className="ml-2 text-xs font-semibold text-neutralx-600">Binnenkort</span>}
                     </p>
                     <p className="mt-1 text-sm text-neutralx-600">{i.kort}</p>
                     <p className="mt-2 text-sm font-semibold text-money-ink">{i.prijs}</p>
