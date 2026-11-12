@@ -1,4 +1,5 @@
 import { isTestklus } from "@/lib/shifts/testklus";
+import { isTestwerker } from "@/lib/testwerker/adres";
 
 // ---------------------------------------------------------------------------
 // Admin → Onboarding: de pure regels. Welke accounts tellen mee, welke stappen
@@ -82,6 +83,8 @@ export function isTestAccount(k: TestKenmerken): boolean {
   if (RESERVED_ADDRESS.test(email) || /@localhost$/.test(email)) return true;
   if (/@(?:[^@\s]+\.)?example\.(com|net|org)$/.test(email)) return true;
   if (/@zekerflex\.(com|nl)$/.test(email)) return true;
+  // het testwerkeraccount van de eigenaar (lib/testwerker/adres.ts): elk uur leeg, telt nooit mee
+  if (isTestwerker(email)) return true;
   if (k.disabledAt) return true;
   if (k.rollen.some((r) => r === "PLATFORM_ADMIN" || r === "SALES")) return true;
   return k.tenantNamen.some((naam) => isTestklus({ title: "", bedrijf: naam }));

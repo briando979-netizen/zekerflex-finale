@@ -4,6 +4,7 @@ import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { haversineMeters } from "@/lib/geo/geofencing";
 import { isMatchEligibleWorker } from "@/lib/matching/engine";
 import { blockedUserIdsForTenants } from "@/lib/employer/relations";
+import { zonderTestwerker } from "@/lib/testwerker/adres";
 
 // ---------------------------------------------------------------------------
 // Geo-targeted push: een dienst die bijna begint maar nog plekken open heeft →
@@ -65,7 +66,7 @@ export async function notifyNearbyOpenShifts(now = new Date(), radiusKm = DEFAUL
     // candidate workers with a home location, roughly near the branch (±0.3° ≈ 33km prefilter)
     const candidates = await prisma.freelancerProfile.findMany({
       where: {
-        user: { disabledAt: null },
+        user: { disabledAt: null, ...zonderTestwerker() },
         homeLatitude: { gte: blat - 0.3, lte: blat + 0.3 },
         homeLongitude: { gte: blng - 0.45, lte: blng + 0.45 },
         ...(shift.requiredSkillId ? { skills: { some: { skillId: shift.requiredSkillId } } } : {}),

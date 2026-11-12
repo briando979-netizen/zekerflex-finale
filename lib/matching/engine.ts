@@ -22,6 +22,7 @@ import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 import { invitedPoolMemberUserIds } from "@/lib/pools/store";
 import { isTestklus } from "@/lib/shifts/testklus";
 import { testklusOntvangers } from "@/lib/shifts/testklus-db";
+import { zonderTestwerker } from "@/lib/testwerker/adres";
 import {
   resolveMatchingConfig,
   scoreCandidateSignals,
@@ -132,7 +133,8 @@ async function loadCandidatePool(shift: {
   const profiles = await prisma.freelancerProfile.findMany({
     where: {
       isBlacklisted: false,
-      user: { kycStatus: "VERIFIED", disabledAt: null },
+      // het testwerkeraccount van de eigenaar krijgt geen voorstellen (lib/testwerker/adres.ts)
+      user: { kycStatus: "VERIFIED", disabledAt: null, ...zonderTestwerker() },
       OR: [
         { matchingBlockedUntil: null },
         { matchingBlockedUntil: { lte: now } },
