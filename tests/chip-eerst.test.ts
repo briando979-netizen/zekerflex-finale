@@ -14,6 +14,9 @@ describe("chip eerst, met uitleg", () => {
     // de oude browserregel staat niet bij de routes (de Android-app is nog niet openbaar)
     const intro = scan.slice(scan.indexOf('{stap === "start" && route === "nl"'), scan.indexOf('{stap === "start" && !route'));
     expect(intro).not.toContain("chipWebHint");
+    // ook niet op het startscherm zonder route (13 nov, 86): iPhone leest geen chip, Android is nog niet openbaar
+    expect(scan).not.toContain("chipWebHint");
+    expect(scan).not.toContain("chipWebLink");
   });
 
   it("geen 'Zonder chip verder' vóór een mislukte poging of 30 s na 'Chip lezen'", () => {
