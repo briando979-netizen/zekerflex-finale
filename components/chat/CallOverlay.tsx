@@ -5,6 +5,8 @@ import { canShareScreen, fmtDuration } from "./shared";
 import { Portal } from "./Portal";
 import { Avatar } from "./Avatar";
 import { makeRingback } from "./ringtone";
+import { useChatTeksten } from "./ChatTekstenContext";
+import { vulIn } from "@/lib/i18n/vul-in";
 
 type Mode = "audio" | "video" | "screen";
 type Role = "caller" | "callee";
@@ -79,6 +81,7 @@ export function CallOverlay({
   avatars: Record<string, string>;
   onEnd: () => void;
 }) {
+  const chat = useChatTeksten();
   const [state, setState] = useState<"ringing" | "connecting" | "live" | "ended" | "failed">(
     role === "caller" ? "ringing" : "connecting",
   );
@@ -401,23 +404,23 @@ export function CallOverlay({
   const canShare = canShareScreen() && (mode === "video" || (mode === "screen" && role === "caller"));
   const status =
     state === "ringing"
-      ? "Overgaan…"
+      ? chat.bel.statusOvergaan
       : state === "connecting"
-        ? "Verbinden…"
+        ? chat.bel.statusVerbinden
         : state === "live"
           ? fmtDuration(secs)
           : state === "ended"
-            ? "Beëindigd"
+            ? chat.bel.statusBeeindigd
             : failReason === "media"
-              ? "Geen microfoon"
-              : "Verbinding mislukt";
+              ? chat.bel.statusGeenMicrofoon
+              : chat.bel.statusMislukt;
 
   const muteButton = (size: string) => (
     <button
       type="button"
       onClick={toggleMute}
       className={`grid ${size} place-items-center rounded-full ${muted ? "bg-white text-ink" : "bg-white/15"}`}
-      aria-label={muted ? "Microfoon aan" : "Microfoon uit"}
+      aria-label={muted ? chat.bel.microfoonAan : chat.bel.microfoonUit}
     >
       {muted ? "🔇" : "🎙️"}
     </button>
@@ -427,7 +430,7 @@ export function CallOverlay({
       type="button"
       onClick={() => cleanup(true)}
       className={`grid ${size} place-items-center rounded-full bg-crit`}
-      aria-label="Ophangen"
+      aria-label={chat.bel.ophangen}
     >
       📵
     </button>
@@ -456,7 +459,7 @@ export function CallOverlay({
             type="button"
             onClick={() => setMinimized(false)}
             className="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-base"
-            aria-label="Groot scherm"
+            aria-label={chat.bel.grootScherm}
           >
             ⤢
           </button>
@@ -473,7 +476,7 @@ export function CallOverlay({
                 onClick={() => setMinimized(true)}
                 className="ml-auto rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold hover:bg-white/20"
               >
-                ↙ Verkleinen en verder chatten
+                {chat.bel.verkleinen}
               </button>
             )}
           </div>
@@ -484,23 +487,21 @@ export function CallOverlay({
                 <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-crit/20 text-3xl">⚠️</div>
                 {failReason === "media" ? (
                   <>
-                    <p className="mt-4 text-base font-semibold">Geen toegang tot je microfoon</p>
+                    <p className="mt-4 text-base font-semibold">{chat.bel.geenToegangTitel}</p>
                     <p className="mt-1.5 max-w-sm text-sm text-white/60">
-                      Sta de microfoon{mode === "video" ? " en camera" : ""} toe in je browser: klik op het slotje naast het
-                      adres, zet het op Toestaan en bel daarna opnieuw.
+                      {mode === "video" ? chat.bel.geenToegangVideo : chat.bel.geenToegangAudio}
                     </p>
                   </>
                 ) : (
                   <>
-                    <p className="mt-4 text-base font-semibold">Kon niet verbinden met {peerName}</p>
+                    <p className="mt-4 text-base font-semibold">{vulIn(chat.bel.verbindenMisluktTitel, { naam: peerName })}</p>
                     <p className="mt-1.5 max-w-sm text-sm text-white/60">
-                      Dit gebeurt meestal als jullie netwerken geen directe verbinding kunnen opzetten. Probeer het
-                      opnieuw, of vraag de ander om via wifi te bellen in plaats van mobiel internet.
+                      {chat.bel.verbindenMisluktUitleg}
                     </p>
                   </>
                 )}
                 <button type="button" onClick={() => { setState("ended"); onEnd(); }} className="btn-primary mt-5">
-                  Sluiten
+                  {chat.bel.sluiten}
                 </button>
               </div>
             </div>
@@ -535,7 +536,7 @@ export function CallOverlay({
                   type="button"
                   onClick={toggleCam}
                   className={`grid h-12 w-12 place-items-center rounded-full text-xl ${camOff ? "bg-white text-ink" : "bg-white/15"}`}
-                  aria-label="Camera"
+                  aria-label={chat.bel.camera}
                 >
                   {camOff ? "📵" : "📷"}
                 </button>
@@ -545,7 +546,7 @@ export function CallOverlay({
                   type="button"
                   onClick={toggleShare}
                   className={`grid h-12 w-12 place-items-center rounded-full text-xl ${sharing ? "bg-brand-mint text-ink" : "bg-white/15"}`}
-                  aria-label={sharing ? "Stop scherm delen" : "Scherm delen"}
+                  aria-label={sharing ? chat.bel.stopSchermDelen : chat.bel.schermDelen}
                 >
                   🖥️
                 </button>

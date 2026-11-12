@@ -9,6 +9,8 @@ import { ZOEK_NL } from "@/lib/chat/teksten-zoek";
 import { KAART_NL } from "@/lib/chat/teksten-kaart";
 import { MODALS_NL } from "@/lib/chat/teksten-modals";
 import { INSTELLINGEN_NL } from "@/lib/chat/teksten-instellingen";
+import { DOCK_NL } from "@/lib/chat/teksten-dock";
+import { BEL_NL } from "@/lib/chat/teksten-bel";
 
 // Alle teksten van de chat (components/chat/: InboxPage en wat daaronder hangt), Nederlandse bron. Puur en klein genoeg voor de
 // browser; de vier vertalingen staan in lib/chat/teksten-talen.ts en gaan alleen via de werker-pagina (server) mee als `texts`.
@@ -25,6 +27,8 @@ export interface ChatTeksten {
   kaart: typeof KAART_NL;
   modals: typeof MODALS_NL;
   instellingen: typeof INSTELLINGEN_NL;
+  dock: typeof DOCK_NL;
+  bel: typeof BEL_NL;
   shared: typeof SHARED_NL;
 }
 
@@ -39,5 +43,7 @@ export const CHAT_NL: ChatTeksten = {
   kaart: KAART_NL,
   modals: MODALS_NL,
   instellingen: INSTELLINGEN_NL,
+  dock: DOCK_NL,
+  bel: BEL_NL,
   shared: SHARED_NL,
 };

@@ -13,6 +13,9 @@ import { UserCard } from "./UserCard";
 import { CallOverlay } from "./CallOverlay";
 import { Portal } from "./Portal";
 import { makeRingtone } from "./ringtone";
+import { ChatTekstenProvider, useChatTeksten } from "./ChatTekstenContext";
+import type { ChatTeksten } from "@/lib/chat/teksten";
+import { vulIn } from "@/lib/i18n/vul-in";
 import {
   dayLabel,
   fmtTime,
@@ -27,7 +30,16 @@ import {
 
 const randId = () => Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
 
-export function ChatDock() {
+export function ChatDock({ texts }: { texts?: ChatTeksten | undefined } = {}) {
+  return (
+    <ChatTekstenProvider texts={texts}>
+      <ChatDockInner />
+    </ChatTekstenProvider>
+  );
+}
+
+function ChatDockInner() {
+  const chat = useChatTeksten();
   const [open, setOpen] = useState(false);
   const [me, setMe] = useState<{ userId: string; name: string; isAdmin: boolean } | null>(null);
   const [threads, setThreads] = useState<ThreadRow[]>([]);
@@ -277,10 +289,10 @@ export function ChatDock() {
 
   const otherOf = (t: ThreadRow) => {
     if (t.kind === "support") return { userId: "support", name: "ZekerFlex Support", role: "support", support: true };
-    if (t.kind === "group") return { userId: t.id, name: t.title || "Community", role: "employer", support: false };
+    if (t.kind === "group") return { userId: t.id, name: t.title || chat.dock.community, role: "employer", support: false };
     const id = t.participants.find((p) => p !== me?.userId) ?? t.participants[0]!;
     const u = dir[id];
-    return { userId: id, name: u?.name ?? "Onbekend", role: u?.role ?? "employer", support: false };
+    return { userId: id, name: u?.name ?? chat.dock.onbekend, role: u?.role ?? "employer", support: false };
   };
   const activeThread = threads.find((t) => t.id === active) ?? null;
 
@@ -312,7 +324,7 @@ export function ChatDock() {
       setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, ...server } : m)));
     } else {
       const d = r ? await r.json().catch(() => ({})) : {};
-      window.alert(d?.error?.message ?? "Bewerken lukte niet. Probeer het opnieuw.");
+      window.alert(d?.error?.message ?? chat.dock.bewerkenMislukt);
       await loadThread(threadId);
     }
   };
@@ -384,7 +396,7 @@ export function ChatDock() {
           type="button"
           onClick={() => setOpen((v) => !v)}
           className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-5 z-[55] flex h-14 w-14 items-center justify-center rounded-full bg-brand-500 text-white shadow-lift transition-transform hover:scale-105 lg:bottom-5"
-          aria-label={open ? "Chat sluiten" : "Chat openen"}
+          aria-label={open ? chat.dock.chatSluiten : chat.dock.chatOpenen}
         >
           {open ? <span className="text-xl">✕</span> : (
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -405,17 +417,17 @@ export function ChatDock() {
             <>
               <div className="flex items-center justify-between border-b border-hair bg-brand-500 px-4 py-3 text-white">
                 <div>
-                  <p className="font-display text-sm font-bold">Berichten</p>
+                  <p className="font-display text-sm font-bold">{chat.dock.berichten}</p>
                   <p className="text-[11px] text-white/70">{me?.name}</p>
                 </div>
-                <button type="button" onClick={startSupport} className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold hover:bg-white/25">+ Support</button>
+                <button type="button" onClick={startSupport} className="rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold hover:bg-white/25">{chat.dock.supportKnop}</button>
               </div>
               <div className="flex-1 overflow-y-auto">
                 {threads.length === 0 ? (
                   <div className="px-5 py-12 text-center text-sm text-neutralx-500">
-                    <p className="font-medium text-ink">Nog geen gesprekken</p>
-                    <p className="mt-1">Chat met een opdrachtgever vanaf een klus, of met ZekerFlex Support.</p>
-                    <button type="button" onClick={startSupport} className="btn-primary mt-4 text-sm">Start met Support</button>
+                    <p className="font-medium text-ink">{chat.dock.nogGeenGesprekken}</p>
+                    <p className="mt-1">{chat.dock.nogGeenGesprekkenUitleg}</p>
+                    <button type="button" onClick={startSupport} className="btn-primary mt-4 text-sm">{chat.dock.startMetSupport}</button>
                   </div>
                 ) : (
                   <ul className="divide-y divide-hair">
@@ -428,11 +440,11 @@ export function ChatDock() {
                             <span className="min-w-0 flex-1">
                               <span className="flex items-center justify-between gap-2">
                                 <span className="truncate text-sm font-semibold text-ink">{o.name}</span>
-                                <span className="flex-shrink-0 text-[10px] text-neutralx-500">{t.lastMessage ? fmtTime(t.lastMessage.at) : ""}</span>
+                                <span className="flex-shrink-0 text-[10px] text-neutralx-500">{t.lastMessage ? fmtTime(t.lastMessage.at, chat.shared) : ""}</span>
                               </span>
                               <span className="flex items-center justify-between gap-2">
                                 <span className="truncate text-xs text-neutralx-500">
-                                  {t.lastMessage ? (t.lastMessage.from === me?.userId ? "Jij: " : "") + t.lastMessage.text : t.shiftTitle ?? "Nieuw gesprek"}
+                                  {t.lastMessage ? (t.lastMessage.from === me?.userId ? chat.dock.jijVoorvoegsel : "") + t.lastMessage.text : t.shiftTitle ?? chat.dock.nieuwGesprek}
                                 </span>
                                 {t.unread > 0 && <span className="grid h-5 min-w-5 flex-shrink-0 place-items-center rounded-full bg-[#25D366] px-1.5 text-[11px] font-bold text-white">{t.unread}</span>}
                               </span>
@@ -448,19 +460,19 @@ export function ChatDock() {
           ) : (
             <>
               <div className="flex items-center gap-2.5 border-b border-black/10 bg-[#008069] px-3 py-2 text-white">
-                <button type="button" onClick={() => { setActive(null); setReplyTo(null); }} aria-label="Terug" className="leading-none"><IconBack className="h-5 w-5" /></button>
+                <button type="button" onClick={() => { setActive(null); setReplyTo(null); }} aria-label={chat.dock.terug} className="leading-none"><IconBack className="h-5 w-5" /></button>
                 <Avatar userId={otherOf(activeThread).userId} name={otherOf(activeThread).name} role={otherOf(activeThread).role} avatars={avatars} size={30} support={otherOf(activeThread).support} />
                 <button type="button" onClick={() => activeThread.kind === "direct" && setCardUser(otherOf(activeThread).userId)} className="min-w-0 flex-1 text-left leading-tight">
                   <p className="truncate text-sm font-semibold">{otherOf(activeThread).name}</p>
                   <p className="truncate text-[11px] text-white/70">
-                    {theirTyping ? "aan het typen…" : activeThread.kind === "direct" ? lastSeenLabel(presence[otherOf(activeThread).userId]) : activeThread.shiftTitle ?? ""}
+                    {theirTyping ? chat.dock.aanHetTypen : activeThread.kind === "direct" ? lastSeenLabel(presence[otherOf(activeThread).userId], undefined, chat.shared) : activeThread.shiftTitle ?? ""}
                   </p>
                 </button>
-                <button type="button" onClick={search.openSearch} aria-label="Zoek in gesprek"><IconSearch className="h-5 w-5" /></button>
+                <button type="button" onClick={search.openSearch} aria-label={chat.dock.zoekInGesprek}><IconSearch className="h-5 w-5" /></button>
                 {activeThread.kind === "direct" && (
                   <>
-                    <button type="button" onClick={() => startCall("video")} aria-label="Videobellen"><IconVideo className="h-5 w-5" /></button>
-                    <button type="button" onClick={() => startCall("audio")} aria-label="Bellen"><IconPhone className="h-5 w-5" /></button>
+                    <button type="button" onClick={() => startCall("video")} aria-label={chat.dock.videobellen}><IconVideo className="h-5 w-5" /></button>
+                    <button type="button" onClick={() => startCall("audio")} aria-label={chat.dock.bellen}><IconPhone className="h-5 w-5" /></button>
                   </>
                 )}
               </div>
@@ -494,7 +506,7 @@ export function ChatDock() {
               >
                 {messages.map((m, i) => {
                   const mine = Boolean(me && m.from === me.userId);
-                  const showDay = i === 0 || dayLabel(messages[i - 1]!.at) !== dayLabel(m.at);
+                  const showDay = i === 0 || dayLabel(messages[i - 1]!.at, undefined, chat.shared) !== dayLabel(m.at, undefined, chat.shared);
                   const showSender = activeThread.kind === "group" || activeThread.kind === "support";
                   const next = messages[i + 1];
                   const lastOfRun = !next || next.from !== m.from || next.kind === "system";
@@ -502,7 +514,7 @@ export function ChatDock() {
                     <div key={m.id} id={`cd-msg-${m.id}`} className={search.activeId === m.id ? "rounded-xl ring-2 ring-brand-400/70" : undefined}>
                       {showDay && (
                         <div className="my-2 flex justify-center">
-                          <span className="rounded-full bg-black/5 px-2.5 py-0.5 text-[10px] font-medium text-neutralx-500">{dayLabel(m.at)}</span>
+                          <span className="rounded-full bg-black/5 px-2.5 py-0.5 text-[10px] font-medium text-neutralx-500">{dayLabel(m.at, undefined, chat.shared)}</span>
                         </div>
                       )}
                       <MessageBubble
@@ -604,16 +616,16 @@ export function ChatDock() {
         <Portal>
           <div
             role="alertdialog"
-            aria-label={`${incoming.fromName} belt je`}
+            aria-label={vulIn(chat.dock.beltJeNaam, { naam: incoming.fromName })}
             className="fixed inset-x-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-[78] mx-auto flex max-w-[28rem] items-center gap-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-lift animate-slide-up-fade"
           >
             <Avatar userId={incoming.fromUserId} name={incoming.fromName} role={incoming.fromRole} avatars={avatars} size={36} />
             <span className="min-w-0 flex-1 text-sm leading-tight">
               <span className="block truncate font-semibold">{incoming.fromName}</span>
-              <span className="block text-xs text-white/60">belt je{incoming.mode === "video" ? " (video)" : incoming.mode === "screen" ? " (scherm delen)" : ""}…</span>
+              <span className="block text-xs text-white/60">{incoming.mode === "video" ? chat.dock.beltJeVideo : incoming.mode === "screen" ? chat.dock.beltJeScherm : chat.dock.beltJe}</span>
             </span>
-            <button type="button" onClick={declineIncoming} className="rounded-full bg-crit px-3 py-1.5 text-sm font-semibold">Weiger</button>
-            <button type="button" onClick={acceptIncoming} className="rounded-full bg-brand-mint px-3 py-1.5 text-sm font-semibold text-ink">Opnemen</button>
+            <button type="button" onClick={declineIncoming} className="rounded-full bg-crit px-3 py-1.5 text-sm font-semibold">{chat.dock.weiger}</button>
+            <button type="button" onClick={acceptIncoming} className="rounded-full bg-brand-mint px-3 py-1.5 text-sm font-semibold text-ink">{chat.dock.opnemen}</button>
           </div>
         </Portal>
       )}

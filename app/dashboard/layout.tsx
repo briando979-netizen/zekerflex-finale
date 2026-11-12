@@ -4,6 +4,7 @@ import { getPrincipal, hasRole } from "@/lib/auth";
 import { getTheme } from "@/lib/theme/server";
 import { FreelancerShell } from "@/components/app/FreelancerShell";
 import { ChatDock } from "@/components/chat/ChatDock";
+import { CHAT_TEKSTEN } from "@/lib/chat/teksten-talen";
 import { SeasonalLoader } from "@/components/seasons/SeasonalLoader";
 import { birthdayToday } from "@/lib/seasons/settings";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
@@ -67,7 +68,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         <BewaardeTikken userId={principal.userId} />
         {/* de opbouwfase-balk staat niet meer bij werkers (10 nov, eigenaar); de welkomstmail vertelt het al */}
         {children}
-        <ChatDock />
+        <ChatDock texts={CHAT_TEKSTEN[locale]} />
         <AppOpenPing />
         {birthday && <SeasonalLoader theme="verjaardag" naam={principal.fullName.split(" ")[0] ?? null} />}
       </FreelancerShell>
