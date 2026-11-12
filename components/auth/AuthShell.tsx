@@ -32,7 +32,7 @@ export function AuthShell({
   const a = AUTH_DICTS[locale ?? "nl"];
   const POINTS = a.shell.points;
   return (
-    <div className="grid min-h-screen lg:grid-cols-[1fr_1.05fr]">
+    <main className="grid min-h-screen lg:grid-cols-[1fr_1.05fr]">
       {/* Brand panel */}
       {image ? (
         <div className="relative hidden overflow-hidden bg-ink lg:block">
@@ -137,6 +137,6 @@ export function AuthShell({
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -226,7 +226,7 @@ function ShopOmlijsting({ children }: { children: ReactNode }) {
           <Link href="/shop" className="flex shrink-0 items-center gap-2" aria-label="ZekerFlex Shop">
             <LogoGlyph size={30} tone="light" />
             <span className="font-display text-[18px] font-extrabold leading-none tracking-tight sm:text-[20px] lg:text-[22px]">
-              ZekerFlex<span className="ml-1 hidden text-brand-mint min-[380px]:inline">shop</span>
+              ZekerFlex{" "}<span className="hidden text-brand-mint min-[380px]:inline">shop</span>
             </span>
           </Link>
           <div className="hidden min-w-0 flex-1 md:block">

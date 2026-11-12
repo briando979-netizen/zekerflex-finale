@@ -111,7 +111,7 @@ export function ShopProductCard({
       </Title>
       {p.variants.length > 1 && <p className="mt-1 text-[12px] text-neutralx-500">{fmt(t.shop.optionsCount, { n: p.variants.length })}</p>}
       {kleuren.length > 1 && (
-        <p className="mt-1.5 flex items-center gap-1" aria-label={fmt(t.shopThuis.kleurenLabel, { kleuren: kleuren.join(", ") })}>
+        <p role="img" className="mt-1.5 flex items-center gap-1" aria-label={fmt(t.shopThuis.kleurenLabel, { kleuren: kleuren.join(", ") })}>
           {kleuren.slice(0, 5).map((k) => (
             <span key={k} title={k} aria-hidden className="h-3.5 w-3.5 rounded-full border border-black/15" style={{ background: kleurHex(k) ?? "#9aa0a6" }} />
           ))}
