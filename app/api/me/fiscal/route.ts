@@ -105,7 +105,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
     // retyping it.
     if (input.workerKind === "uitzendkracht") {
       if (input.bsn) {
-        if (!validBsn(input.bsn)) throw AppError.validation("Dit BSN klopt niet (elfproef mislukt).").metSleutel("fiscal.bsnFout");
+        if (!validBsn(input.bsn)) throw AppError.validation("Dit BSN klopt niet. Controleer de 9 cijfers: je BSN staat op een Nederlands paspoort, ID-kaart of verblijfsdocument, of in de brief van de gemeente.").metSleutel("fiscal.bsnFout");
         const { hash, last4 } = hashBsn(input.bsn);
         patch.bsnHash = hash;
         patch.bsnLast4 = last4;
