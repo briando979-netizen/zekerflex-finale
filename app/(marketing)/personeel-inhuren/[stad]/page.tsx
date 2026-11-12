@@ -79,6 +79,7 @@ export default async function PersoneelInhurenStadPage({ params }: { params: Pro
       />
       <Section>
         <SectionHead
+          kop="h1"
           eyebrow={`${c.name} · voor bedrijven`}
           title={`Personeel inhuren in ${c.name}`}
           intro={`${c.local} Met ZekerFlex plaats je een klus en vind je binnen uren betrouwbare flexkrachten voor ${c.sectors.join(", ")} — voor € 3,50 per gewerkt uur, zonder abonnement.`}

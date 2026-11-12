@@ -69,6 +69,7 @@ export default async function FreelanceWerkStadPage({ params }: { params: Promis
       />
       <Section>
         <SectionHead
+          kop="h1"
           eyebrow={`${c.name} · ${c.province}`}
           title={`Freelance werk in ${c.name}`}
           intro={`${c.local} Op ZekerFlex vind je klussen in ${c.sectors.join(", ")} — reageer direct en kies zelf hoe snel je wordt uitbetaald.`}

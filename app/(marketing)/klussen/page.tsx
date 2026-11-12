@@ -41,6 +41,7 @@ export default async function KlussenPage() {
       />
       <Section>
         <SectionHead
+          kop="h1"
           eyebrow="Open klussen"
           title="Klussen in heel Nederland"
           intro="Freelance werk, flexwerk en uitzendwerk — van één avond in de horeca tot een week orderpicken. Maak gratis een account, reageer en kies per klus hoe snel je wordt uitbetaald."

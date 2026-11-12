@@ -77,7 +77,7 @@ export default async function ReviewCheckPage({ searchParams }: { searchParams: 
           dangerouslySetInnerHTML={{ __html: ldJson([app, breadcrumbJsonLd([["Home", "/"], ["Aanbod", "/aanbod"], ["Review-check", "/review-check"]])]) }}
         />
       )}
-      <SectionHead eyebrow="Gratis review-check" title="Hoe scoort je bedrijf op Google?" intro={DESCRIPTION} />
+      <SectionHead kop="h1" eyebrow="Gratis review-check" title="Hoe scoort je bedrijf op Google?" intro={DESCRIPTION} />
       <div className="mt-8 max-w-4xl">
         <ReviewScan variant="openbaar" initial={initial} initialDealId={log?.dealId ?? null} />
       </div>

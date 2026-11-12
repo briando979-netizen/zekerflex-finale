@@ -56,6 +56,7 @@ export default async function FreelanceWerkPage() {
       />
       <Section>
         <SectionHead
+          kop="h1"
           eyebrow="Freelance werk"
           title="Freelance werk in heel Nederland"
           intro="ZekerFlex verbindt freelancers, flexwerkers en uitzendkrachten met bedrijven door het hele land. Slim gematcht op reistijd en vak, en jij kiest per klus hoe snel je wordt uitbetaald."

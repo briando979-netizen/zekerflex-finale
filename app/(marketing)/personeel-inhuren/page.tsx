@@ -28,6 +28,7 @@ export default function PersoneelInhurenPage() {
       />
       <Section>
         <SectionHead
+          kop="h1"
           eyebrow="Voor bedrijven"
           title="Personeel inhuren, door heel Nederland"
           intro="Plaats een klus en ZekerFlex vindt geverifieerde flexkrachten in de buurt van je locatie — zzp'ers, flexwerkers of uitzendkrachten via het ZekerFlex-uitzendbureau. Je betaalt € 3,50 per gewerkt uur, zonder abonnement."
