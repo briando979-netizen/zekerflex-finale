@@ -3,6 +3,7 @@ import { readForm, signatureValid, xmlResponse } from "@/lib/telephony/webhook";
 import { twiml, say, sayAndGather, gatherDigits } from "@/lib/telephony/twiml";
 import { getCall, createCall, addTurn } from "@/lib/telephony/store";
 import { scriptOrDefault, openingText, LANG_MENU } from "@/lib/telephony/scripts";
+import { webhookTekst, WEBHOOK_MAX } from "@/lib/http/webhook-lezen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,7 +12,9 @@ export const dynamic = "force-dynamic";
 // verbindt. Uitgaand (callId bekend = wij belden) → meteen het script + gesprek.
 // Inkomend (geen callId) → nieuw record + tweetalige TAALKEUZE (IVR). Handtekening vereist.
 export async function POST(request: Request): Promise<Response> {
-  const params = readForm(await request.text());
+  const lees = await webhookTekst(request, WEBHOOK_MAX.twilio);
+  if (!lees.ok) return lees.response;
+  const params = readForm(lees.tekst);
   if (!signatureValid(request, params)) return new Response("Forbidden", { status: 403 });
 
   const base = env.APP_BASE_URL.replace(/\/+$/, "");

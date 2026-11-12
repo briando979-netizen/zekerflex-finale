@@ -31,6 +31,7 @@ import { meldVerkopersBetaald } from "@/lib/shop/verkoper";
 import { zakelijkeRegels } from "@/lib/shop/zakelijk";
 import { maakAgentBestelling } from "@/lib/shop/agent-handel-server";
 import { syncBankLogin } from "@/lib/kyc/bank-login";
+import { webhookTekst, WEBHOOK_MAX } from "@/lib/http/webhook-lezen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -269,7 +270,10 @@ function unverifiedEventSummary(rawBody: string): { eventType?: string; livemode
 
 async function handleStripeWebhook(request: NextRequest): Promise<NextResponse> {
   const log = logger.forRequest(request, { route: "POST /api/webhooks/stripe" });
-  const rawBody = await request.text();
+  // begrensd lezen (422 als te groot); de handtekening wordt op precies deze tekst gecontroleerd
+  const lees = await webhookTekst(request, WEBHOOK_MAX.stripe);
+  if (!lees.ok) return lees.response;
+  const rawBody = lees.tekst;
   const signature = request.headers.get("stripe-signature");
 
   let event: Stripe.Event;

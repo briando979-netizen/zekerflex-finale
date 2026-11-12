@@ -4,6 +4,7 @@ import { z } from "zod";
 import { env } from "@/lib/env";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { antwoordOpSpoed } from "@/lib/spoed/oproep";
+import { webhookTekst, WEBHOOK_MAX } from "@/lib/http/webhook-lezen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +27,15 @@ function sleutelKlopt(request: Request): boolean {
 
 export async function POST(request: Request): Promise<NextResponse> {
   if (!sleutelKlopt(request)) return NextResponse.json({ error: { message: "Niet toegestaan" } }, { status: 403 });
-  const parsed = schema.safeParse(await request.json().catch(() => null));
+  const lees = await webhookTekst(request, WEBHOOK_MAX.whatsapp);
+  if (!lees.ok) return lees.response;
+  let ruw: unknown = null;
+  try {
+    ruw = JSON.parse(lees.tekst);
+  } catch {
+    /* geen JSON: het schema weigert het hieronder */
+  }
+  const parsed = schema.safeParse(ruw);
   if (!parsed.success) return NextResponse.json({ error: { message: "Controleer de gegevens" } }, { status: 422 });
   try {
     await enforceRateLimit({ name: "whatsapp-inkomend", identifier: parsed.data.van, limit: 20, windowSeconds: 600, message: "te veel berichten" });

@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { readForm, signatureValid } from "@/lib/telephony/webhook";
 import { findCallByProviderId, patchCall, type CallStatus } from "@/lib/telephony/store";
 import { captureCallOutcome } from "@/lib/telephony/outcome";
+import { webhookTekst, WEBHOOK_MAX } from "@/lib/http/webhook-lezen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +21,9 @@ function mapStatus(s: string | undefined): CallStatus | null {
 // Uitgaand zit ons id in de URL; inkomend komt via de status-callback van het
 // Twilio-nummer en kennen we het gesprek alleen aan zijn CallSid.
 export async function POST(request: Request): Promise<Response> {
-  const params = readForm(await request.text());
+  const lees = await webhookTekst(request, WEBHOOK_MAX.twilio);
+  if (!lees.ok) return lees.response;
+  const params = readForm(lees.tekst);
   if (!signatureValid(request, params)) return new Response("Forbidden", { status: 403 });
 
   const callId =
