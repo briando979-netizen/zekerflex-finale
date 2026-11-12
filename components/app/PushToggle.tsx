@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { bannerWeerTonen, PUSH_BANNER_NL, type PushBannerTexts, type PushStapTexts } from "@/components/app/push-banner-texts";
 import { useInIosApp } from "@/components/app/useInIosApp";
+import { volgendeStap, ZELF_UIT_KEY } from "@/lib/notifications/push/aanmelding";
 
 type State = "loading" | "unsupported" | "ios-install" | "unconfigured" | "off" | "on" | "denied" | "busy";
 
@@ -34,32 +35,116 @@ const sameKey = (raw: ArrayBuffer | null, want: Uint8Array) => {
 
 let healing: Promise<boolean> | null = null;
 
+/** Heb je meldingen op dit apparaat zelf uitgezet? Onleesbare opslag telt als ja: dan niet stil aanmelden. */
+function zelfUitgezet(): boolean {
+  try {
+    return window.localStorage.getItem(ZELF_UIT_KEY) === "1";
+  } catch {
+    return true;
+  }
+}
+
+function onthoudZelfUit(uit: boolean) {
+  try {
+    if (uit) window.localStorage.setItem(ZELF_UIT_KEY, "1");
+    else window.localStorage.removeItem(ZELF_UIT_KEY);
+  } catch {
+    /* niet onthouden — dan meldt dit apparaat zich niet stil opnieuw aan */
+  }
+}
+
+/** De registratie van de service worker; zonder (nog) geen actieve worker na 10 s: null. */
+async function werker(): Promise<ServiceWorkerRegistration | null> {
+  const wacht = new Promise<null>((klaar) => window.setTimeout(() => klaar(null), 10_000));
+  return Promise.race([navigator.serviceWorker.ready, wacht]);
+}
+
+/** Geeft de aanmelding aan de server. uitgezet = de pushdienst had hem eerder al weggegooid. */
+async function doorgeven(sub: PushSubscription): Promise<{ ok: boolean; uitgezet: boolean }> {
+  const json = sub.toJSON();
+  const res = await fetch("/api/me/push", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }) });
+  const d = (await res.json().catch(() => ({}))) as { uitgezet?: boolean };
+  return { ok: res.ok, uitgezet: d.uitgezet === true };
+}
+
+/** Oude aanmelding weg (bij de server en in de browser), een nieuwe met de huidige sleutel. */
+async function vervang(reg: ServiceWorkerRegistration, oud: PushSubscription, key: ArrayBuffer): Promise<PushSubscription> {
+  await fetch("/api/me/push", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ endpoint: oud.endpoint }) }).catch(() => undefined);
+  await oud.unsubscribe().catch(() => undefined);
+  return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+}
+
 /**
- * Een aanmelding van dit apparaat met een ANDERE VAPID-sleutel (een oude, of
- * die van een ontwikkelserver) ontvangt onze meldingen nooit: de pushdienst
- * weigert ze en de server zet hem uit. Staan meldingen al aan (toestemming
- * gegeven), dan ruilen we hem hier stil om voor een aanmelding met de huidige
- * sleutel. Eén keer per pagina. true = opnieuw aangemeld.
+ * Houdt de pushmelding van dit apparaat werkend, stil en zonder vraag (de toestemming is er al;
+ * lib/notifications/push/aanmelding.ts). Een aanmelding met een ANDERE VAPID-sleutel wordt geruild,
+ * een kwijtgeraakte opnieuw gemaakt, en een goede opnieuw doorgegeven: had de pushdienst die al
+ * weggegooid (de server zette hem uit), dan komt er een nieuwe. Eén keer per pagina.
+ * true = dit apparaat staat aangemeld.
  */
 export function healPushSubscription(vapidKey: string): Promise<boolean> {
   healing ??= (async () => {
     try {
-      if (!("serviceWorker" in navigator) || !("PushManager" in window) || Notification.permission !== "granted") return false;
-      const reg = await navigator.serviceWorker.getRegistration();
-      const existing = await reg?.pushManager.getSubscription();
-      if (!reg || !existing) return false;
+      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return false;
+      if (Notification.permission !== "granted") return false;
+      const reg = await werker();
+      if (!reg) return false;
       const key = urlBase64ToBuffer(vapidKey);
-      if (sameKey(existing.options.applicationServerKey, new Uint8Array(key))) return false;
-      await fetch("/api/me/push", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ endpoint: existing.endpoint }) }).catch(() => undefined);
-      await existing.unsubscribe().catch(() => undefined);
-      const json = (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })).toJSON();
-      const res = await fetch("/api/me/push", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }) });
-      return res.ok;
+      const existing = await reg.pushManager.getSubscription();
+      const stap = volgendeStap({
+        toestemming: Notification.permission,
+        heeftAanmelding: Boolean(existing),
+        zelfdeSleutel: Boolean(existing) && sameKey(existing?.options.applicationServerKey ?? null, new Uint8Array(key)),
+        zelfUitgezet: zelfUitgezet(),
+      });
+      if (stap === "niets") return false;
+      let sub =
+        stap === "aanmelden" || !existing
+          ? await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key })
+          : stap === "vervangen"
+            ? await vervang(reg, existing, key)
+            : existing;
+      let r = await doorgeven(sub);
+      // de pushdienst kende deze aanmelding niet meer: een nieuwe vragen (één keer)
+      if (r.ok && r.uitgezet && stap === "doorgeven") {
+        sub = await vervang(reg, sub, key);
+        r = await doorgeven(sub);
+      }
+      return r.ok;
     } catch {
       return false;
     }
   })();
   return healing;
+}
+
+/**
+ * Meldingen aanzetten op dit apparaat (de knop in PushToggle en in Admin → Systeem): toestemming
+ * vragen, aanmelden met de huidige sleutel (een oude ruilen) en aan de server geven.
+ * Gooit bij een fout; "geweigerd"/"uit" als de browser geen toestemming gaf.
+ */
+export async function meldingenAanzetten(vapidKey: string): Promise<"aan" | "geweigerd" | "uit"> {
+  const perm = await Notification.requestPermission();
+  if (perm !== "granted") return perm === "denied" ? "geweigerd" : "uit";
+  const reg = await navigator.serviceWorker.ready;
+  const appServerKey = urlBase64ToBuffer(vapidKey);
+  let existing = await reg.pushManager.getSubscription();
+  // Een bestaande subscription van een ANDERE (vorige) VAPID-sleutel kan
+  // onze meldingen niet ontvangen — na een sleutelwissel opruimen en
+  // opnieuw aanmelden met de huidige sleutel.
+  if (existing && !sameKey(existing.options.applicationServerKey, new Uint8Array(appServerKey))) {
+    await existing.unsubscribe().catch(() => undefined);
+    existing = null;
+  }
+  let sub = existing ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: appServerKey }));
+  let r = await doorgeven(sub);
+  // de server had deze aanmelding uitgezet (de pushdienst kende hem niet meer): een nieuwe
+  if (r.ok && r.uitgezet && existing) {
+    sub = await vervang(reg, sub, appServerKey);
+    r = await doorgeven(sub);
+  }
+  if (!r.ok) throw new Error("server");
+  onthoudZelfUit(false);
+  return "aan";
 }
 
 /** Onzichtbaar: houdt de pushmelding van dit apparaat op de huidige sleutel, voor schermen zonder PushToggle (zoals het beheer). */
@@ -151,31 +236,11 @@ export function PushToggle({
     setState("busy");
     try {
       if (!vapidKey) throw new Error("geen sleutel");
-      const perm = await Notification.requestPermission();
-      if (perm !== "granted") {
-        setState(perm === "denied" ? "denied" : "off");
+      const uitslag = await meldingenAanzetten(vapidKey);
+      if (uitslag !== "aan") {
+        setState(uitslag === "geweigerd" ? "denied" : "off");
         return;
       }
-      const reg = await navigator.serviceWorker.ready;
-      const appServerKey = urlBase64ToBuffer(vapidKey);
-      let existing = await reg.pushManager.getSubscription();
-      // Een bestaande subscription van een ANDERE (vorige) VAPID-sleutel kan
-      // onze meldingen niet ontvangen — na een sleutelwissel opruimen en
-      // opnieuw aanmelden met de huidige sleutel.
-      if (existing && !sameKey(existing.options.applicationServerKey, new Uint8Array(appServerKey))) {
-        await existing.unsubscribe().catch(() => undefined);
-        existing = null;
-      }
-      const sub =
-        existing ??
-        (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: appServerKey }));
-      const json = sub.toJSON();
-      const res = await fetch("/api/me/push", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
-      });
-      if (!res.ok) throw new Error(`server ${res.status}`);
       setState("on");
       onAan?.();
     } catch (e) {
@@ -199,6 +264,8 @@ export function PushToggle({
         });
         await sub.unsubscribe();
       }
+      // zelf uitgezet: dit apparaat meldt zich dan niet stil opnieuw aan (healPushSubscription)
+      onthoudZelfUit(true);
       setState("off");
     } catch {
       setState("on");

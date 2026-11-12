@@ -35,6 +35,8 @@ const subscribeSchema = z.object({
     p256dh: z.string().min(1).max(200),
     auth: z.string().min(1).max(100),
   }),
+  /** de vorige aanmelding van dit apparaat (pushsubscriptionchange in public/sw.js): die is weg */
+  vorig: z.string().url().max(2000).optional(),
 });
 
 // POST /api/me/push — register (or refresh) a Web Push subscription.
@@ -48,6 +50,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
     const owner = { userId: p.userId, freelancerId: fp?.id ?? null };
     const userAgent = request.headers.get("user-agent")?.slice(0, 300) ?? null;
+    // had de pushdienst deze aanmelding al weggegooid (lib/notifications/push/index.ts zette hem uit)?
+    // Dan vraagt het apparaat een nieuwe aan (healPushSubscription in components/app/PushToggle.tsx).
+    const eerder = await prisma.webPushSubscription.findUnique({ where: { endpoint: body.endpoint }, select: { disabledAt: true } });
 
     await prisma.webPushSubscription.upsert({
       where: { endpoint: body.endpoint },
@@ -67,7 +72,10 @@ export async function POST(request: Request): Promise<NextResponse> {
         userAgent,
       },
     });
-    return NextResponse.json({ ok: true });
+    if (body.vorig && body.vorig !== body.endpoint) {
+      await prisma.webPushSubscription.deleteMany({ where: { endpoint: body.vorig, userId: p.userId } });
+    }
+    return NextResponse.json({ ok: true, uitgezet: Boolean(eerder?.disabledAt) });
   } catch (err) {
     return jsonError(err);
   }

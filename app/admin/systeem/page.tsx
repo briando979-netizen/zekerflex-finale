@@ -22,6 +22,7 @@ import { count, dateTimeNl, percentOf, timeAgoNl } from "@/lib/admin/format";
 import { Empty, InfoList, KpiStrip, Meter, Notice, PageHead, Panel, Pill } from "@/components/admin/kit";
 import { Tabs } from "@/components/admin/kit-client";
 import { OpsAlerts } from "@/components/admin/OpsAlerts";
+import { MeldingenHier } from "@/components/admin/MeldingenHier";
 import { UsagePanel } from "@/components/admin/UsagePanel";
 import { ErrorJournalPanel } from "@/components/admin/ErrorJournalPanel";
 import { listErrorGroups } from "@/lib/ops/error-journal";
@@ -113,6 +114,8 @@ export default async function SysteemPage() {
   const now = new Date();
   const recentErrors = errorGroups.filter((g) => g.level === "error" && now.getTime() - Date.parse(g.lastAt) < 86_400_000).length;
   const channels = pushChannels();
+  // ingesteld, maar geen enkel apparaat van een beheerder neemt onze meldingen aan: knop eronder
+  const pushZonderApparaat = channels.webPush && adminPush === 0;
 
   // "off" = a deliberately optional feature that's simply not switched on —
   // visually distinct from "crit", which means something expected to work is
@@ -141,7 +144,7 @@ export default async function SysteemPage() {
         : adminPush === null
           ? "geconfigureerd"
           : adminPush === 0
-            ? "geen werkend apparaat bij de beheerders: open ZekerFlex op je telefoon of laptop en zet meldingen aan"
+            ? "geen werkend apparaat bij de beheerders"
             : `geconfigureerd, ${adminPush} ${adminPush === 1 ? "apparaat" : "apparaten"} van beheerders`,
     },
     {
@@ -259,6 +262,11 @@ export default async function SysteemPage() {
                         );
                       })}
                     </ul>
+                    {pushZonderApparaat && (
+                      <div className="px-4 py-3 sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
+                        <MeldingenHier />
+                      </div>
+                    )}
                   </Panel>
                   {budget && (
                     <Panel title="AI-budget" subtitle={budget.localInference ? "Vandaag, op het eigen model" : `Vandaag, op ${budget.host}`}>

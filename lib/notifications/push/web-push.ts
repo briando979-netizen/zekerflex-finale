@@ -93,8 +93,16 @@ export async function sendWebPush(
   // made with another VAPID key (an old one, or a dev server's): it can never receive ours again
   const otherKey = !ok && OTHER_KEY.test(why);
   const gone = res.status === 404 || res.status === 410 || otherKey;
-  if (otherKey) logger.info("web push subscription has another VAPID key; disabled", { pushService: pushServiceOf(target.endpoint), status: res.status });
-  else if (!ok && !gone) {
+  // Gemeten 12 nov: de laptop van de eigenaar verloor drie keer binnen een dag zijn aanmelding en
+  // niemand kon zien waarom (404/410 werd niet gelogd). Nu staat elke uitzetting met de reden in het
+  // foutenlogboek; het zijn er een paar per week, dus geen ruis.
+  if (gone) {
+    logger.warn("web push apparaat uitgezet", {
+      pushService: pushServiceOf(target.endpoint),
+      status: res.status,
+      reden: otherKey ? "andere VAPID-sleutel" : why || "pushdienst kent de aanmelding niet meer",
+    });
+  } else if (!ok) {
     logger.warn("web push rejected", {
       pushService: pushServiceOf(target.endpoint),
       status: res.status,
