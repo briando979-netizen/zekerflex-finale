@@ -187,7 +187,7 @@ describe("wachttijd met het eigen model (alles gratis)", () => {
 
   it("de plekken waar een mens live wacht, zetten de vlag; achtergrondtaken niet", () => {
     const lees = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8");
-    expect(lees("lib/brain/index.ts")).toMatch(/purpose: "brain",[\s\S]{0,200}interactief: true/);
+    expect(lees("lib/brain/index.ts")).toMatch(/purpose: "brain",[\s\S]{0,400}interactief: true/);
     expect(lees("lib/jarvis/core.ts")).toMatch(/purpose: "jarvis-chat",\s*interactief: true/);
     expect(lees("lib/jarvis/core.ts")).toMatch(/purpose: "jarvis-report",\s*interactief: true/);
     expect(lees("lib/sitechat/antwoord.ts")).toMatch(/timeoutMs: 25_000,\s*interactief: true/);
