@@ -26,6 +26,7 @@ import { nogStappenTekst } from "@/lib/onboarding/laat-weten";
 import { beginStap } from "@/lib/onboarding/wie-ben-jij";
 import { isReservedTestAddress } from "@/lib/mail";
 import { featureEnabled } from "@/lib/flags";
+import { vulIn } from "@/lib/i18n/vul-in";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,7 @@ export default async function VerificatiePage() {
   const pt = AUTH_DICTS[await getLocale()].page;
   const fd = await getFreelancerDict();
   const klaar = fd.profielAf.klaar;
+  const vt = fd.verificatie;
   // back from Stripe (or webhook not configured): fetch the result before rendering
   await syncStripeIdentity(principal.userId);
   const [o, lastCheck, fiscal, werkrecht, werkrechtVragen] = await Promise.all([
@@ -64,12 +66,12 @@ export default async function VerificatiePage() {
             <Link href="/dashboard/eerste-indruk?stap=foto" className="btn-primary mt-4 inline-flex">{fd.start.fotoCta}</Link>
           </div>
         )}
-        <Panel title="Status">
+        <Panel title={vt.status}>
           <div className="px-5 py-6">
             {volgende !== "klaar" && poortNu ? (
               <StatusPill tone="warn">{nogStappenTekst(openVerplicht(poortNu), fd.start, fd.intl)}</StatusPill>
             ) : werkrecht.ok ? (
-              <StatusPill tone="ok">Geverifieerd — je kunt diensten aannemen</StatusPill>
+              <StatusPill tone="ok">{vt.geverifieerd}</StatusPill>
             ) : (
               <StatusPill tone="warn">{pt.werkrecht.nodig}</StatusPill>
             )}
@@ -77,7 +79,8 @@ export default async function VerificatiePage() {
               {o.onboarding.map((s) => (
                 <li key={s.label} className="flex items-center gap-2.5 text-sm">
                   <span className="grid h-4 w-4 place-items-center rounded-full bg-ok text-[10px] text-white">✓</span>
-                  <span className="text-neutralx-600">{s.label}</span>
+                  {/* de label komt uit lib/dashboard/freelancer.ts (Nederlands, ook elders gelezen); hier vertaald op het id */}
+                  <span className="text-neutralx-600">{Object.hasOwn(vt.stappen, s.id) ? vt.stappen[s.id as keyof typeof vt.stappen] : s.label}</span>
                 </li>
               ))}
             </ul>
@@ -109,7 +112,7 @@ export default async function VerificatiePage() {
         </div>
 
         <div className="mt-6">
-          <Panel title="Verplichte documenten">
+          <Panel title={vt.verplichteDocumenten}>
             <div className="p-5">
               <ComplianceDocsPanel />
             </div>
@@ -118,7 +121,7 @@ export default async function VerificatiePage() {
 
         {fiscal.workerKind === "uitzendkracht" && (
           <div className="mt-6">
-            <Panel title="Uitzenden — verloning, StiPP & loonheffing">
+            <Panel title={vt.uitzenden}>
               <div className="p-5">
                 <UitzendPanel />
               </div>
@@ -176,7 +179,7 @@ export default async function VerificatiePage() {
   const walletAan = !stripeId && (await featureEnabled("kyc-wallet").catch(() => false));
   const stripeReason =
     lastCheck?.decisionStatus === "requires_input"
-      ? ((lastCheck.rawPayload as { reason?: string } | null)?.reason ?? "onbekende reden")
+      ? ((lastCheck.rawPayload as { reason?: string } | null)?.reason ?? vt.onbekendeReden)
       : null;
 
   return (
@@ -198,7 +201,7 @@ export default async function VerificatiePage() {
           {waitForStripe(lastCheck.decisionStatus) && <StripeIdentityWacht text={pt.attempt.checking} />}
           {stripeReason && (
             <p className="mt-2 text-neutralx-600">
-              Stripe kon je ID niet goedkeuren ({stripeReason}). Probeer het opnieuw met goed licht, of kies &ldquo;Zelf foto&apos;s uploaden&rdquo;.
+              {vulIn(vt.stripeAfgekeurd, { reden: stripeReason })}
             </p>
           )}
           {reasons.length > 0 && (
@@ -247,7 +250,7 @@ export default async function VerificatiePage() {
 
       {fiscal.workerKind === "uitzendkracht" && (
         <div id="uitzendovereenkomst" tabIndex={-1} className="mt-6 card scroll-mt-20 p-6 focus:outline-none">
-          <h2 className="font-display text-base font-bold text-ink">Uitzenden — verloning, StiPP & loonheffing</h2>
+          <h2 className="font-display text-base font-bold text-ink">{vt.uitzenden}</h2>
           <div className="mt-4">
             <UitzendPanel />
           </div>
