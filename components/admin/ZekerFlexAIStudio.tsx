@@ -161,7 +161,7 @@ export function ZekerFlexAIStudio({
   // een pushmelding opent meteen het juiste tabblad: /admin/zekerflex-ai?tab=bouwer
   useEffect(() => {
     const gevraagd = new URLSearchParams(window.location.search).get("tab");
-    if (gevraagd && gevraagd in TAB_LABEL) setTab(gevraagd as Tab);
+    if (gevraagd && Object.hasOwn(TAB_LABEL, gevraagd)) setTab(gevraagd as Tab);
   }, []);
 
   useEffect(() => {

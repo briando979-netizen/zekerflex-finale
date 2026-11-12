@@ -176,7 +176,7 @@ export interface AddCertificateInput {
 }
 
 export async function addCertificate(userId: string, input: AddCertificateInput): Promise<Certificate> {
-  if (!(input.type in CERT_TYPES)) throw AppError.validation("Onbekend certificaattype");
+  if (!Object.hasOwn(CERT_TYPES, input.type)) throw AppError.validation("Onbekend certificaattype");
 
   let uploadId: string | undefined;
   let fileName: string | undefined;

@@ -34,7 +34,7 @@ export async function vindEigenPagina(slug: string, taal: Taal | null, concept: 
   if (!basis) return null;
   const inhoud = taal ? vertalingen[taal] : basis;
   if (!inhoud) return null;
-  return { pagina, inhoud, isConcept, talen: (Object.keys(vertalingen) as Taal[]).filter((t) => t in TALEN) };
+  return { pagina, inhoud, isConcept, talen: (Object.keys(vertalingen) as Taal[]).filter((t) => Object.hasOwn(TALEN, t)) };
 }
 
 const pad = (slug: string, taal: Taal | null) => (taal ? `/p/${slug}/${taal}` : `/p/${slug}`);

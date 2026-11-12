@@ -20,7 +20,7 @@ type CopyLocale = keyof typeof COPY;
 function readLocale(): CopyLocale {
   if (typeof document === "undefined") return "nl";
   const v = document.cookie.split("; ").find((c) => c.startsWith("zf_locale="))?.split("=")[1];
-  return v && v in COPY ? (v as CopyLocale) : "nl";
+  return v && Object.hasOwn(COPY, v) ? (v as CopyLocale) : "nl";
 }
 const REOPEN_EVENT = "zf:open-cookie-settings";
 
