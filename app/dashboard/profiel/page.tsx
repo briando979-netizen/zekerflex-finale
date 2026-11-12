@@ -128,7 +128,7 @@ export default async function ProfielPage() {
                 >
                   ✓
                 </span>
-                <span className={s.done ? "text-neutralx-500" : "text-ink"}>{s.label}</span>
+                <span className={s.done ? "text-neutralx-500" : "text-ink"}>{t.stappen[s.id] ?? s.label}</span>
               </li>
             ))}
           </ul>

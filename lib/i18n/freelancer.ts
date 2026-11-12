@@ -1,5 +1,6 @@
 import type { Locale } from "@/lib/i18n/config";
 import { WIE_TEKSTEN } from "@/lib/i18n/wie-ben-jij";
+import { MILESTONE_NL } from "@/lib/worker/milestone-teksten";
 
 // ---------------------------------------------------------------------------
 // Freelancer app (/dashboard) dictionary — kept separate from the employer
@@ -58,6 +59,7 @@ const nl = {
     klussenGedaan: "Klussen gedaan", reviews: "Reviews", afzeggingen: "Afzeggingen", opkomst: "Opkomstpercentage",
   },
   profiel: {
+    stappen: { account: "Account aangemaakt", fiscaal: "Werkvorm & fiscale gegevens", contract: "Uitzendovereenkomst ondertekend", kvk: "KVK/btw gekoppeld en gevalideerd", kyc: "Identiteit geverifieerd (KYC)", thuisbasis: "Thuisbasis en rekeningnummer ingesteld" },
     back: "Instellingen", titel: "Account", subtitel: "Je gegevens, verificatie en uitbetaalinstellingen.", beoordelingen: "{n} beoordelingen", geenBeoordelingen: "nog geen beoordelingen",
     zesMaanden: "Jouw klussen over de laatste 6 maanden", gematcht: "Gematchte klussen", nietVoltooid: "Niet voltooide klussen", vervangingGeregeld: "Vervanging geregeld", opkomst: "Opkomstpercentage laatste 6 maanden:",
     onboarding: "Onboarding", verificatieAfronden: "Verificatie afronden", kvkKoppelen: "KVK koppelen & ID verifiëren",
@@ -73,6 +75,7 @@ const nl = {
     uitbetaling: "Uitbetaling", iban: "IBAN (fallback)", nogNietIngesteld: "Nog niet ingesteld", postcode: "Postcode thuisbasis", tijdzone: "Tijdzone", loonstrokenBekijk: "Bekijk je loonstroken →", uitbetalingenBekijk: "Bekijk uitbetalingen →",
     mailPrefs: "E-mailvoorkeuren", mailUitleg: "Kies welke optionele e-mail je ontvangt. Belangrijke e-mail (verificatie, wachtwoord, facturen, loonstroken) staat hier niet bij — die krijg je altijd.",
   },
+  milestones: MILESTONE_NL,
   start: {
     eyebrow: "Jouw start",
     title: "Welkom! Kies eerst welke richting je op wilt.",
@@ -1394,6 +1397,7 @@ const en: FreelancerDict = {
     klussenGedaan: "Jobs done", reviews: "Reviews", afzeggingen: "Cancellations", opkomst: "Attendance rate",
   },
   profiel: {
+    stappen: { account: "Account created", fiscaal: "Work type & tax details", contract: "Temp agency contract signed", kvk: "KVK/VAT linked and validated", kyc: "Identity verified (KYC)", thuisbasis: "Home base and bank account set" },
     back: "Settings", titel: "Account", subtitel: "Your details, verification and payout settings.", beoordelingen: "{n} reviews", geenBeoordelingen: "no reviews yet",
     zesMaanden: "Your jobs over the last 6 months", gematcht: "Matched jobs", nietVoltooid: "Jobs not completed", vervangingGeregeld: "Replacement arranged", opkomst: "Attendance rate, last 6 months:",
     onboarding: "Onboarding", verificatieAfronden: "Finish verification", kvkKoppelen: "Link KVK & verify ID",
@@ -1408,6 +1412,51 @@ const en: FreelancerDict = {
     certsUitleg: "VCA, BHV, forklift, driving licences. Jobs that require a certificate are released as soon as it is valid.", certsBeheren: "Manage certificates →",
     uitbetaling: "Payout", iban: "IBAN (backup)", nogNietIngesteld: "Not set yet", postcode: "Home base postcode", tijdzone: "Time zone", loonstrokenBekijk: "View your payslips →", uitbetalingenBekijk: "View payouts →",
     mailPrefs: "Email preferences", mailUitleg: "Choose which optional emails you receive. Important emails (verification, password, invoices, payslips) are not listed here — you always get those.",
+  },
+  milestones: {
+    intl: "en-GB", kwartalen: ["Jan–Mar", "Apr–Jun", "Jul–Sep", "Oct–Dec"],
+    spreiding: {
+      titel: "Spread across clients", teWeinig: "Too few hours yet", teWeinigDetail: "Once you've worked more than {uren} hours via ZekerFlex, you'll see here how your revenue is spread across your clients.", kop: "{pct}% with {naam}",
+      actie: "{pct}% of your ZekerFlex revenue over the past year comes from {naam}. Under the Dutch Wet DBA (false self-employment rules), such a strong dependence on one client is a warning sign; ZekerFlex may then limit new shifts with that client.",
+      binnenkort: "{pct}% of your ZekerFlex revenue comes from {naam}. If you also work for other clients, you stay well below the limit of {max}%.",
+      verdeeldEen: "Your revenue is well spread across {n} client; the largest accounts for {pct}%.", verdeeldMeer: "Your revenue is well spread across {n} clients; the largest accounts for {pct}%.",
+      voortgang: "of your revenue with your largest client (limit {max}%)",
+      impact: "Only your ZekerFlex work of the past 12 months counts here; revenue outside ZekerFlex also counts for the Tax Authority. Dependence is one signal: authority, substitutability and how you actually work also count.",
+    },
+    abu: {
+      titel: "Your ABU phase", fase: { A: "Phase A", B: "Phase B", C: "Phase C" },
+      faseVolledig: { A: "Phase A — temp clause, up to 52 weeks worked", B: "Phase B — fixed-term contracts, week 53 to 208", C: "Phase C — permanent contract" },
+      detailEen: "{fase}. You have worked {weken} week and {uren} hours via ZekerFlex.", detailMeer: "{fase}. You have worked {weken} weeks and {uren} hours via ZekerFlex.",
+      impactA: "In phase A you can stop per assignment. The more weeks you work, the more security you build up: after 52 weeks you move to phase B with fixed-term contracts.",
+      impactB: "In phase B you get fixed-term contracts — more security than phase A. After phase B comes phase C: a permanent contract.",
+      impactC: "Phase C: you are entitled to a permanent contract. Maximum security.", voortgang: "towards your next contract block",
+    },
+    stipp: {
+      titel: "StiPP pension", kop: { geen: "No pension accrual yet (starts in week 9)", basis: "Basic scheme", plus: "Plus scheme" },
+      geenEen: "Pension accrual starts automatically in week 9. {n} week to go.", geenMeer: "Pension accrual starts automatically in week 9. {n} weeks to go.",
+      basis: "You are building up pension in the basic scheme. After week 78 you move to the plus scheme (employer contribution) — {n} weeks to go.",
+      plus: "You are in the plus scheme: full accrual with employer contribution.", impact: "You don't need to do anything — ZekerFlex arranges the registration and payments via StiPP automatically.",
+    },
+    belasting: { titel: "Tax", kop: "Arranged automatically", detail: "As a temp worker, payroll tax is already withheld from your pay and paid over by ZekerFlex. You don't need to file a VAT or income tax return for this work." },
+    uren: {
+      titel: "Hours criterion (1,225 hours)", kop: "{uren} / {max} hours", gehaald: "You reached the 1,225 hours this year.",
+      opSchema: "At this pace you will reach around {uren} hours this year — you are on track.", onder: "At this pace you will reach around {uren} hours this year — that is still below the threshold.", voortgang: "worked this year (approved)",
+      impactGehaald: "You qualify for the self-employed deduction (± {bedrag} deduction, indicative) plus the SME profit exemption — together quickly a few hundred euros less tax.",
+      impactNiet: "If you reach 1,225 hours, you are entitled to the self-employed deduction (± {bedrag} deduction, indicative) and the SME profit exemption. Only ZekerFlex hours count here; hours with other clients come on top.",
+    },
+    kor: {
+      titel: "KOR revenue limit (€ 20,000)", kop: "{omzet} / {grens}",
+      over: "You are above this year's KOR limit. You drop out of the small business scheme and must charge VAT and file returns — deregister with the Tax Authority.",
+      bijna: "You are approaching the KOR limit. If you go above it, you drop out of the scheme and start charging VAT.", ruim: "You stay well below the KOR limit — you don't need to charge or declare VAT.",
+      voortgang: "revenue this year (ZekerFlex)", impact: "Above the limit you charge 21% VAT. Your business clients can deduct that VAT, so little changes for them net — but you must file VAT returns from then on (and can deduct your own business VAT).",
+    },
+    btw: {
+      titel: "VAT return Q{q}", kopBedrag: "± {bedrag} to pay", kopGeen: "No VAT yet this quarter",
+      detailEen: "You file your VAT for Q{q} ({range}) with the Tax Authority before {datum} — {n} day left. Amount estimated from your self-billing invoices.",
+      detailMeer: "You file your VAT for Q{q} ({range}) with the Tax Authority before {datum} — {n} days left. Amount estimated from your self-billing invoices.",
+      detailVoorbij: "You file your VAT for Q{q} ({range}) with the Tax Authority before {datum}. Amount estimated from your self-billing invoices.",
+      impact: "Put this amount aside in your Tax pot so you don't get surprises. ZekerFlex already calculates the VAT per invoice for you.",
+    },
   },
   start: {
     eyebrow: "Your start",
@@ -2725,6 +2774,7 @@ const pl: FreelancerDict = {
     klussenGedaan: "Wykonane zlecenia", reviews: "Opinie", afzeggingen: "Rezygnacje", opkomst: "Frekwencja",
   },
   profiel: {
+    stappen: { account: "Konto utworzone", fiscaal: "Forma pracy i dane podatkowe", contract: "Umowa o pracę tymczasową podpisana", kvk: "KVK/VAT połączone i zweryfikowane", kyc: "Tożsamość zweryfikowana (KYC)", thuisbasis: "Miejsce zamieszkania i numer konta ustawione" },
     back: "Ustawienia", titel: "Konto", subtitel: "Twoje dane, weryfikacja i ustawienia wypłat.", beoordelingen: "opinie: {n}", geenBeoordelingen: "brak opinii",
     zesMaanden: "Twoje zlecenia z ostatnich 6 miesięcy", gematcht: "Dopasowane zlecenia", nietVoltooid: "Niezakończone zlecenia", vervangingGeregeld: "Zorganizowane zastępstwa", opkomst: "Frekwencja w ostatnich 6 miesiącach:",
     onboarding: "Wdrożenie", verificatieAfronden: "Dokończ weryfikację", kvkKoppelen: "Połącz KVK i zweryfikuj dokument",
@@ -2739,6 +2789,51 @@ const pl: FreelancerDict = {
     certsUitleg: "VCA, BHV, wózek widłowy, prawa jazdy. Zlecenia wymagające certyfikatu zostaną odblokowane, gdy będzie ważny.", certsBeheren: "Zarządzaj certyfikatami →",
     uitbetaling: "Wypłata", iban: "IBAN (zapasowy)", nogNietIngesteld: "Jeszcze nie ustawiono", postcode: "Kod pocztowy miejsca zamieszkania", tijdzone: "Strefa czasowa", loonstrokenBekijk: "Zobacz swoje odcinki wypłat →", uitbetalingenBekijk: "Zobacz wypłaty →",
     mailPrefs: "Preferencje e-mail", mailUitleg: "Wybierz, które opcjonalne e-maile chcesz dostawać. Ważnych e-maili (weryfikacja, hasło, faktury, odcinki wypłat) tu nie ma — te dostajesz zawsze.",
+  },
+  milestones: {
+    intl: "pl-PL", kwartalen: ["sty–mar", "kwi–cze", "lip–wrz", "paź–gru"],
+    spreiding: {
+      titel: "Rozłożenie między zleceniodawców", teWeinig: "Jeszcze za mało godzin", teWeinigDetail: "Gdy przepracujesz ponad {uren} godz. przez ZekerFlex, zobaczysz tutaj, jak Twój obrót rozkłada się między zleceniodawców.", kop: "{pct}% u {naam}",
+      actie: "{pct}% Twojego obrotu w ZekerFlex z ostatniego roku pochodzi od {naam}. W świetle holenderskiej ustawy Wet DBA tak duże uzależnienie od jednego zleceniodawcy jest sygnałem pozornego samozatrudnienia; ZekerFlex może wtedy ograniczyć nowe zlecenia u tego zleceniodawcy.",
+      binnenkort: "{pct}% Twojego obrotu w ZekerFlex pochodzi od {naam}. Jeśli pracujesz też dla innych zleceniodawców, zostaniesz wyraźnie poniżej limitu {max}%.",
+      verdeeldEen: "Twój obrót jest dobrze rozłożony (zleceniodawcy: {n}); największy odpowiada za {pct}%.", verdeeldMeer: "Twój obrót jest dobrze rozłożony (zleceniodawcy: {n}); największy odpowiada za {pct}%.",
+      voortgang: "Twojego obrotu u największego zleceniodawcy (limit {max}%)",
+      impact: "Liczy się tu tylko Twoja praca w ZekerFlex z ostatnich 12 miesięcy; obrót poza ZekerFlex także liczy się dla urzędu skarbowego. Zależność to jeden sygnał: liczą się też podporządkowanie, zastępowalność i sposób faktycznej pracy.",
+    },
+    abu: {
+      titel: "Twoja faza ABU", fase: { A: "Faza A", B: "Faza B", C: "Faza C" },
+      faseVolledig: { A: "Faza A — klauzula pracy tymczasowej, do 52 przepracowanych tygodni", B: "Faza B — umowy na czas określony, tydzień 53–208", C: "Faza C — umowa na czas nieokreślony" },
+      detailEen: "{fase}. Przepracowane przez ZekerFlex: {weken} tydz. i {uren} godz.", detailMeer: "{fase}. Przepracowane przez ZekerFlex: {weken} tydz. i {uren} godz.",
+      impactA: "W fazie A możesz zakończyć współpracę przy każdym zleceniu. Im więcej tygodni przepracujesz, tym więcej pewności zyskasz: po 52 tygodniach przechodzisz do fazy B z umowami na czas określony.",
+      impactB: "W fazie B dostajesz umowy na czas określony — więcej pewności niż w fazie A. Po fazie B następuje faza C: stała umowa.",
+      impactC: "Faza C: masz prawo do umowy na czas nieokreślony. Maksymalna pewność.", voortgang: "do następnego bloku umowy",
+    },
+    stipp: {
+      titel: "Emerytura StiPP", kop: { geen: "Jeszcze brak odkładania na emeryturę (start w tygodniu 9)", basis: "Plan podstawowy", plus: "Plan plus" },
+      geenEen: "Odkładanie na emeryturę zaczyna się automatycznie w tygodniu 9. Zostało tygodni: {n}.", geenMeer: "Odkładanie na emeryturę zaczyna się automatycznie w tygodniu 9. Zostało tygodni: {n}.",
+      basis: "Odkładasz na emeryturę w planie podstawowym. Po tygodniu 78 przechodzisz do planu plus (wkład pracodawcy) — zostało tygodni: {n}.",
+      plus: "Jesteś w planie plus: pełne odkładanie z wkładem pracodawcy.", impact: "Nie musisz nic robić — ZekerFlex automatycznie załatwia zgłoszenie i odprowadzanie składek przez StiPP.",
+    },
+    belasting: { titel: "Podatek", kop: "Załatwione automatycznie", detail: "Jako pracownik tymczasowy podatek od wynagrodzenia jest potrącany z Twojej pensji i odprowadzany przez ZekerFlex. Nie musisz sam składać zeznania VAT ani podatku dochodowego za tę pracę." },
+    uren: {
+      titel: "Kryterium godzin (1225 godz.)", kop: "{uren} / {max} godz.", gehaald: "Osiągnięto 1225 godzin w tym roku.",
+      opSchema: "W tym tempie osiągniesz w tym roku około {uren} godz. — jesteś zgodnie z planem.", onder: "W tym tempie osiągniesz w tym roku około {uren} godz. — to nadal poniżej progu.", voortgang: "przepracowane w tym roku (zatwierdzone)",
+      impactGehaald: "Kwalifikujesz się do ulgi dla samozatrudnionych (± {bedrag} odliczenia, orientacyjnie) oraz zwolnienia zysku MKB — razem szybko kilkaset euro mniej podatku.",
+      impactNiet: "Jeśli osiągniesz 1225 godzin, masz prawo do ulgi dla samozatrudnionych (± {bedrag} odliczenia, orientacyjnie) i zwolnienia zysku MKB. Liczą się tu tylko godziny w ZekerFlex; godziny u innych zleceniodawców dochodzą do tego.",
+    },
+    kor: {
+      titel: "Limit obrotu KOR (20 000 €)", kop: "{omzet} / {grens}",
+      over: "Przekraczasz tegoroczny limit KOR. Wypadasz ze zwolnienia dla małych firm i musisz naliczać VAT oraz składać zeznania — wyrejestruj się w urzędzie skarbowym.",
+      bijna: "Zbliżasz się do limitu KOR. Jeśli go przekroczysz, wypadasz ze zwolnienia i zaczynasz naliczać VAT.", ruim: "Jesteś wyraźnie poniżej limitu KOR — nie musisz naliczać ani deklarować VAT.",
+      voortgang: "obrót w tym roku (ZekerFlex)", impact: "Powyżej limitu naliczasz 21% VAT. Twoi klienci biznesowi mogą go odliczyć, więc dla nich netto zmienia się niewiele — ale Ty musisz od tej pory składać deklaracje VAT (i możesz odliczać własny VAT firmowy).",
+    },
+    btw: {
+      titel: "Deklaracja VAT Q{q}", kopBedrag: "± {bedrag} do zapłaty", kopGeen: "Jeszcze brak VAT w tym kwartale",
+      detailEen: "VAT za Q{q} ({range}) zgłaszasz w urzędzie skarbowym przed {datum} — dni do terminu: {n}. Kwota oszacowana z Twoich faktur self-billing.",
+      detailMeer: "VAT za Q{q} ({range}) zgłaszasz w urzędzie skarbowym przed {datum} — dni do terminu: {n}. Kwota oszacowana z Twoich faktur self-billing.",
+      detailVoorbij: "VAT za Q{q} ({range}) zgłaszasz w urzędzie skarbowym przed {datum}. Kwota oszacowana z Twoich faktur self-billing.",
+      impact: "Odłóż tę kwotę w skarbonce podatkowej, żeby uniknąć niespodzianek. ZekerFlex już liczy VAT dla każdej faktury za Ciebie.",
+    },
   },
   start: {
     eyebrow: "Twój start",
@@ -4056,6 +4151,7 @@ const ro: FreelancerDict = {
     klussenGedaan: "Joburi făcute", reviews: "Recenzii", afzeggingen: "Anulări", opkomst: "Rata de prezență",
   },
   profiel: {
+    stappen: { account: "Cont creat", fiscaal: "Formă de muncă și date fiscale", contract: "Contract de muncă temporară semnat", kvk: "KVK/TVA legate și validate", kyc: "Identitate verificată (KYC)", thuisbasis: "Baza de acasă și contul bancar setate" },
     back: "Setări", titel: "Cont", subtitel: "Datele tale, verificarea și setările de plată.", beoordelingen: "{n} evaluări", geenBeoordelingen: "încă fără evaluări",
     zesMaanden: "Joburile tale din ultimele 6 luni", gematcht: "Joburi potrivite", nietVoltooid: "Joburi nefinalizate", vervangingGeregeld: "Înlocuiri aranjate", opkomst: "Rata de prezență în ultimele 6 luni:",
     onboarding: "Înscriere", verificatieAfronden: "Finalizează verificarea", kvkKoppelen: "Leagă KVK și verifică actul",
@@ -4070,6 +4166,51 @@ const ro: FreelancerDict = {
     certsUitleg: "VCA, BHV, stivuitor, permise de conducere. Joburile care cer un certificat se deblochează de îndată ce acesta este valid.", certsBeheren: "Gestionează certificatele →",
     uitbetaling: "Plată", iban: "IBAN (de rezervă)", nogNietIngesteld: "Încă nesetat", postcode: "Cod poștal al bazei de acasă", tijdzone: "Fus orar", loonstrokenBekijk: "Vezi fluturașii tăi →", uitbetalingenBekijk: "Vezi plățile →",
     mailPrefs: "Preferințe e-mail", mailUitleg: "Alege ce e-mailuri opționale primești. E-mailurile importante (verificare, parolă, facturi, fluturași) nu sunt aici — pe acelea le primești mereu.",
+  },
+  milestones: {
+    intl: "ro-RO", kwartalen: ["ian–mar", "apr–iun", "iul–sep", "oct–dec"],
+    spreiding: {
+      titel: "Distribuția între clienți", teWeinig: "Încă prea puține ore", teWeinigDetail: "După ce lucrezi peste {uren} ore prin ZekerFlex, vei vedea aici cum sunt distribuite veniturile tale între clienți.", kop: "{pct}% la {naam}",
+      actie: "{pct}% din veniturile tale ZekerFlex din ultimul an provin de la {naam}. Conform legii olandeze Wet DBA, o dependență atât de mare de un singur client este un semnal de fals independent; ZekerFlex poate atunci limita turele noi la acel client.",
+      binnenkort: "{pct}% din veniturile tale ZekerFlex provin de la {naam}. Dacă lucrezi și pentru alți clienți, rămâi clar sub limita de {max}%.",
+      verdeeldEen: "Veniturile tale sunt bine distribuite între {n} client; cel mai mare reprezintă {pct}%.", verdeeldMeer: "Veniturile tale sunt bine distribuite între {n} clienți; cel mai mare reprezintă {pct}%.",
+      voortgang: "din veniturile tale la cel mai mare client (limită {max}%)",
+      impact: "Aici contează doar munca ta prin ZekerFlex din ultimele 12 luni; veniturile din afara ZekerFlex contează și pentru Fisc. Dependența este un singur semnal: contează și autoritatea, înlocuibilitatea și modul în care lucrezi efectiv.",
+    },
+    abu: {
+      titel: "Faza ta ABU", fase: { A: "Faza A", B: "Faza B", C: "Faza C" },
+      faseVolledig: { A: "Faza A — clauza de muncă temporară, până la 52 de săptămâni lucrate", B: "Faza B — contracte pe perioadă determinată, săptămâna 53–208", C: "Faza C — contract pe perioadă nedeterminată" },
+      detailEen: "{fase}. Ai lucrat {weken} săptămână și {uren} ore prin ZekerFlex.", detailMeer: "{fase}. Ai lucrat {weken} săptămâni și {uren} ore prin ZekerFlex.",
+      impactA: "În faza A poți înceta la fiecare misiune. Cu cât lucrezi mai multe săptămâni, cu atât acumulezi mai multă siguranță: după 52 de săptămâni treci la faza B cu contracte pe perioadă determinată.",
+      impactB: "În faza B primești contracte pe perioadă determinată — mai multă siguranță decât în faza A. După faza B urmează faza C: un contract permanent.",
+      impactC: "Faza C: ai dreptul la un contract pe perioadă nedeterminată. Siguranță maximă.", voortgang: "spre următorul bloc de contract",
+    },
+    stipp: {
+      titel: "Pensia StiPP", kop: { geen: "Încă fără acumulare de pensie (începe în săptămâna 9)", basis: "Schema de bază", plus: "Schema plus" },
+      geenEen: "Acumularea pensiei începe automat în săptămâna 9. Mai este {n} săptămână.", geenMeer: "Acumularea pensiei începe automat în săptămâna 9. Mai sunt {n} săptămâni.",
+      basis: "Acumulezi pensie în schema de bază. După săptămâna 78 treci la schema plus (contribuția angajatorului) — mai sunt {n} săptămâni.",
+      plus: "Ești în schema plus: acumulare completă cu contribuția angajatorului.", impact: "Nu trebuie să faci nimic — ZekerFlex se ocupă automat de înscriere și de plata contribuțiilor prin StiPP.",
+    },
+    belasting: { titel: "Impozit", kop: "Rezolvat automat", detail: "Ca muncitor temporar, impozitul pe salariu este deja reținut din salariul tău și virat de ZekerFlex. Nu trebuie să depui singur declarații de TVA sau de impozit pe venit pentru această muncă." },
+    uren: {
+      titel: "Criteriul orelor (1.225 de ore)", kop: "{uren} / {max} ore", gehaald: "Ai atins cele 1.225 de ore anul acesta.",
+      opSchema: "În acest ritm ajungi la aproximativ {uren} ore anul acesta — ești conform planului.", onder: "În acest ritm ajungi la aproximativ {uren} ore anul acesta — asta este încă sub prag.", voortgang: "lucrat anul acesta (aprobat)",
+      impactGehaald: "Te califici pentru deducerea pentru persoane independente (± {bedrag} deducere, orientativ) plus scutirea de profit MKB — împreună, rapid câteva sute de euro mai puțin impozit.",
+      impactNiet: "Dacă atingi 1.225 de ore, ai dreptul la deducerea pentru persoane independente (± {bedrag} deducere, orientativ) și la scutirea de profit MKB. Aici contează doar orele ZekerFlex; orele la alți clienți se adaugă.",
+    },
+    kor: {
+      titel: "Limita de venit KOR (20.000 €)", kop: "{omzet} / {grens}",
+      over: "Ești peste limita KOR din acest an. Ieși din regimul întreprinderilor mici și trebuie să aplici TVA și să depui declarații — dezînregistrează-te la Fisc.",
+      bijna: "Te apropii de limita KOR. Dacă o depășești, ieși din regim și începi să aplici TVA.", ruim: "Rămâi clar sub limita KOR — nu trebuie să aplici sau să declari TVA.",
+      voortgang: "venit anul acesta (ZekerFlex)", impact: "Peste limită aplici 21% TVA. Clienții tăi business pot deduce acest TVA, deci pentru ei se schimbă puțin net — dar tu trebuie de acum să depui declarații de TVA (și poți deduce propriul TVA de afaceri).",
+    },
+    btw: {
+      titel: "Declarația de TVA Q{q}", kopBedrag: "± {bedrag} de plătit", kopGeen: "Încă fără TVA în acest trimestru",
+      detailEen: "Declari TVA-ul pentru Q{q} ({range}) la Fisc înainte de {datum} — mai este {n} zi. Sumă estimată din facturile tale self-billing.",
+      detailMeer: "Declari TVA-ul pentru Q{q} ({range}) la Fisc înainte de {datum} — mai sunt {n} zile. Sumă estimată din facturile tale self-billing.",
+      detailVoorbij: "Declari TVA-ul pentru Q{q} ({range}) la Fisc înainte de {datum}. Sumă estimată din facturile tale self-billing.",
+      impact: "Pune această sumă deoparte în fondul tău fiscal ca să nu ai surprize. ZekerFlex calculează deja TVA-ul pentru fiecare factură în locul tău.",
+    },
   },
   start: {
     eyebrow: "Startul tău",
@@ -5387,6 +5528,7 @@ const uk: FreelancerDict = {
     klussenGedaan: "Виконано робіт", reviews: "Відгуки", afzeggingen: "Скасування", opkomst: "Відсоток явки",
   },
   profiel: {
+    stappen: { account: "Акаунт створено", fiscaal: "Форма роботи та податкові дані", contract: "Договір тимчасової роботи підписано", kvk: "KVK/ПДВ прив’язано та підтверджено", kyc: "Особу верифіковано (KYC)", thuisbasis: "Домашню базу та рахунок налаштовано" },
     back: "Налаштування", titel: "Акаунт", subtitel: "Твої дані, верифікація та налаштування виплат.", beoordelingen: "оцінок: {n}", geenBeoordelingen: "оцінок ще немає",
     zesMaanden: "Твої роботи за останні 6 місяців", gematcht: "Підібрані роботи", nietVoltooid: "Незавершені роботи", vervangingGeregeld: "Організовані заміни", opkomst: "Відсоток явки за останні 6 місяців:",
     onboarding: "Реєстрація", verificatieAfronden: "Завершити верифікацію", kvkKoppelen: "Прив’язати KVK і верифікувати документ",
@@ -5401,6 +5543,51 @@ const uk: FreelancerDict = {
     certsUitleg: "VCA, BHV, навантажувач, водійські права. Роботи, що вимагають сертифікат, відкриваються, щойно він стає дійсним.", certsBeheren: "Керувати сертифікатами →",
     uitbetaling: "Виплата", iban: "IBAN (запасний)", nogNietIngesteld: "Ще не налаштовано", postcode: "Поштовий індекс домашньої бази", tijdzone: "Часовий пояс", loonstrokenBekijk: "Переглянути розрахункові листки →", uitbetalingenBekijk: "Переглянути виплати →",
     mailPrefs: "Налаштування ел. пошти", mailUitleg: "Обери, які необов’язкові листи отримувати. Важливих листів (верифікація, пароль, рахунки, розрахункові листки) тут немає — їх ти отримуєш завжди.",
+  },
+  milestones: {
+    intl: "uk-UA", kwartalen: ["січ–бер", "кві–чер", "лип–вер", "жов–гру"],
+    spreiding: {
+      titel: "Розподіл між замовниками", teWeinig: "Ще замало годин", teWeinigDetail: "Щойно ти відпрацюєш понад {uren} год через ZekerFlex, тут буде видно, як твоя виручка розподілена між замовниками.", kop: "{pct}% у {naam}",
+      actie: "{pct}% твоєї виручки в ZekerFlex за останній рік походить від {naam}. За нідерландським законом Wet DBA така сильна залежність від одного замовника є ознакою удаваного самозайнятого статусу; ZekerFlex тоді може обмежити нові зміни в цього замовника.",
+      binnenkort: "{pct}% твоєї виручки в ZekerFlex походить від {naam}. Якщо ти працюєш і на інших замовників, ти залишаєшся значно нижче межі {max}%.",
+      verdeeldEen: "Твоя виручка добре розподілена між замовниками (їх: {n}); найбільший дає {pct}%.", verdeeldMeer: "Твоя виручка добре розподілена між замовниками (їх: {n}); найбільший дає {pct}%.",
+      voortgang: "твоєї виручки в найбільшого замовника (межа {max}%)",
+      impact: "Тут враховується лише твоя робота через ZekerFlex за останні 12 місяців; виручка поза ZekerFlex також враховується податковою. Залежність — лише один сигнал: також важливі підпорядкування, замінність і те, як ти фактично працюєш.",
+    },
+    abu: {
+      titel: "Твоя фаза ABU", fase: { A: "Фаза A", B: "Фаза B", C: "Фаза C" },
+      faseVolledig: { A: "Фаза A — застереження про тимчасову роботу, до 52 відпрацьованих тижнів", B: "Фаза B — строкові договори, тиждень 53–208", C: "Фаза C — безстроковий договір" },
+      detailEen: "{fase}. Відпрацьовано через ZekerFlex: {weken} тиж. і {uren} год.", detailMeer: "{fase}. Відпрацьовано через ZekerFlex: {weken} тиж. і {uren} год.",
+      impactA: "У фазі A ти можеш припинити роботу за кожним завданням. Чим більше тижнів ти працюєш, тим більше впевненості набуваєш: після 52 тижнів ти переходиш до фази B зі строковими договорами.",
+      impactB: "У фазі B ти отримуєш строкові договори — більше впевненості, ніж у фазі A. Після фази B настає фаза C: постійний договір.",
+      impactC: "Фаза C: ти маєш право на безстроковий договір. Максимальна впевненість.", voortgang: "до наступного блоку договору",
+    },
+    stipp: {
+      titel: "Пенсія StiPP", kop: { geen: "Накопичення пенсії ще не почалося (старт на тижні 9)", basis: "Базова схема", plus: "Схема «плюс»" },
+      geenEen: "Накопичення пенсії починається автоматично на тижні 9. Залишилось тижнів: {n}.", geenMeer: "Накопичення пенсії починається автоматично на тижні 9. Залишилось тижнів: {n}.",
+      basis: "Ти накопичуєш пенсію за базовою схемою. Після тижня 78 ти переходиш на схему «плюс» (внесок роботодавця) — залишилось тижнів: {n}.",
+      plus: "Ти в схемі «плюс»: повне накопичення з внеском роботодавця.", impact: "Тобі нічого не треба робити — ZekerFlex автоматично займається реєстрацією та сплатою внесків через StiPP.",
+    },
+    belasting: { titel: "Податок", kop: "Оформлюється автоматично", detail: "Як тимчасовому працівнику, податок із зарплати вже утримується з твоєї оплати й сплачується ZekerFlex. Тобі не потрібно самому подавати декларацію з ПДВ чи податку на доходи за цю роботу." },
+    uren: {
+      titel: "Критерій годин (1225 год)", kop: "{uren} / {max} год", gehaald: "Цього року досягнуто 1225 годин.",
+      opSchema: "У такому темпі цього року ти відпрацюєш приблизно {uren} год — ти йдеш за планом.", onder: "У такому темпі цього року ти відпрацюєш приблизно {uren} год — це ще нижче межі.", voortgang: "відпрацьовано цього року (схвалено)",
+      impactGehaald: "Ти маєш право на відрахування для самозайнятих (± {bedrag} відрахування, орієнтовно) та звільнення прибутку MKB — разом швидко кілька сотень євро менше податку.",
+      impactNiet: "Якщо ти досягнеш 1225 годин, ти матимеш право на відрахування для самозайнятих (± {bedrag} відрахування, орієнтовно) і звільнення прибутку MKB. Тут враховуються лише години в ZekerFlex; години в інших замовників додаються.",
+    },
+    kor: {
+      titel: "Межа виручки KOR (20 000 €)", kop: "{omzet} / {grens}",
+      over: "Цьогорічну межу KOR перевищено. Ти випадаєш із режиму для малого бізнесу й маєш нараховувати ПДВ та подавати декларації — зніми реєстрацію в податковій.",
+      bijna: "Ти наближаєшся до межі KOR. Якщо перевищиш її, ти випадеш із режиму й почнеш нараховувати ПДВ.", ruim: "Ти значно нижче межі KOR — нараховувати чи декларувати ПДВ не потрібно.",
+      voortgang: "виручка цього року (ZekerFlex)", impact: "Понад межею ти нараховуєш 21% ПДВ. Твої бізнес-клієнти можуть його відняти, тож для них мало що змінюється — але ти маєш відтепер подавати декларації з ПДВ (і можеш відраховувати власний діловий ПДВ).",
+    },
+    btw: {
+      titel: "Декларація з ПДВ Q{q}", kopBedrag: "± {bedrag} до сплати", kopGeen: "Цього кварталу ще немає ПДВ",
+      detailEen: "ПДВ за Q{q} ({range}) ти подаєш у податкову до {datum} — днів до терміну: {n}. Суму оцінено за твоїми рахунками self-billing.",
+      detailMeer: "ПДВ за Q{q} ({range}) ти подаєш у податкову до {datum} — днів до терміну: {n}. Суму оцінено за твоїми рахунками self-billing.",
+      detailVoorbij: "ПДВ за Q{q} ({range}) ти подаєш у податкову до {datum}. Суму оцінено за твоїми рахунками self-billing.",
+      impact: "Відклади цю суму в податковій скарбничці, щоб не було сюрпризів. ZekerFlex уже розраховує ПДВ по кожному рахунку за тебе.",
+    },
   },
   start: {
     eyebrow: "Твій старт",

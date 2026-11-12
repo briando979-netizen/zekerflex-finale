@@ -64,7 +64,7 @@ export default async function AdministratiePage() {
   const principal = await requirePrincipal();
   const ft = await getFreelancerDict();
   const t = ft.administratie;
-  const [data, inApp] = await Promise.all([getWorkerMilestones(principal.userId), inAndroidApp()]);
+  const [data, inApp] = await Promise.all([getWorkerMilestones(principal.userId, new Date(), ft.milestones), inAndroidApp()]);
   const year = currentYear();
 
   if (!data) {
