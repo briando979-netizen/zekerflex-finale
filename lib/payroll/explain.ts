@@ -1,73 +1,85 @@
 import { euro } from "@/lib/payroll/format";
+import { vulIn } from "@/lib/i18n/vul-in";
 import type { PayslipRecord } from "@/lib/payroll/store";
+import { LOONSTROOK_NL, type LoonstrookTeksten } from "@/lib/payroll/loonstrook-teksten";
 
 // ---------------------------------------------------------------------------
 // Loonstrook-uitleg in gewone taal: waarom is je loon precies dit? Puur
 // afgeleid van de al berekende breakdown — geen AI, geen extra data.
+// De zinnen komen uit LoonstrookTeksten (lib/payroll/loonstrook-teksten.ts): zonder teksten Nederlands, het werkersscherm
+// geeft de taal van de werker mee. Bedragen en getallen volgen die taal (t.intl).
 // ---------------------------------------------------------------------------
 
-export function explainPayslip(p: PayslipRecord): string[] {
+/** Het label bij het hoofdbedrag van een loonstrook ("netto (indicatief)", "uit te betalen"), in de taal van de werker. */
+export function loonstrookKop(p: PayslipRecord, t: LoonstrookTeksten = LOONSTROOK_NL): string {
+  const b = p.computed.breakdown;
+  if (b.kind === "payroll") return t.headline.netto;
+  return b.vatRate > 0 ? t.headline.inclBtw : t.headline.uitTeBetalen;
+}
+
+export function explainPayslip(p: PayslipRecord, t: LoonstrookTeksten = LOONSTROOK_NL): string[] {
+  const x = t.uitleg;
+  const eur = (cents: number) => euro(cents, t.intl);
+  const getal = (n: number) => n.toLocaleString(t.intl);
   const b = p.computed.breakdown;
   const lines: string[] = [];
-  const hours = p.computed.totalHours.toLocaleString("nl-NL");
+  const uren = getal(p.computed.totalHours);
   const clients = [...new Set(p.computed.lines.map((l) => l.clientName))];
-  const clientTxt = clients.length === 1 ? `bij ${clients[0]}` : `bij ${clients.length} opdrachtgevers`;
+  const bij = clients.length === 1 ? vulIn(x.bijEen, { naam: clients[0] ?? "" }) : vulIn(x.bijMeer, { n: clients.length });
 
   if (b.kind === "invoice") {
-    lines.push(`Je werkte deze week ${hours} uur ${clientTxt}.`);
+    lines.push(vulIn(x.werkte, { uren, bij }));
     lines.push(
-      `Je dienstbedrag is ${euro(b.servicesCents)}` +
-        (b.vatRate > 0
-          ? `, plus ${Math.round(b.vatRate * 100)}% btw (${euro(b.vatCents)}) — factuurtotaal ${euro(b.invoiceTotalCents)}.`
-          : `. Btw is verlegd of vrijgesteld, dus die zie je niet op de factuur.`),
+      b.vatRate > 0
+        ? vulIn(x.dienstMetBtw, { bedrag: eur(b.servicesCents), pct: Math.round(b.vatRate * 100), btw: eur(b.vatCents), totaal: eur(b.invoiceTotalCents) })
+        : vulIn(x.dienstZonderBtw, { bedrag: eur(b.servicesCents) }),
     );
-    lines.push(
-      `De platformkosten van € 3,50 per gewerkt uur (${euro(b.platformFeeCents)}) worden apart aan de opdrachtgever gefactureerd — die gaan níét van jouw bedrag af.`,
-    );
-    lines.push(`Je ontvangt ${euro(b.payoutToWorkerCents)}. Als zzp'er draag je zelf je inkomstenbelasting en eventueel btw af.`);
+    lines.push(vulIn(x.platform, { bedrag: eur(b.platformFeeCents) }));
+    lines.push(vulIn(x.ontvang, { bedrag: eur(b.payoutToWorkerCents) }));
     return lines;
   }
 
   // payroll
-  lines.push(`Je werkte deze week ${hours} uur ${clientTxt}. Je zit in fase ${b.phase} van het ABU-fasensysteem (${p.weeksWorked} gewerkte weken).`);
+  lines.push(vulIn(x.werkteFase, { uren, bij, fase: b.phase, weken: p.weeksWorked }));
 
   if (b.cao) {
     if (b.cao.wmlFloorApplied) {
-      lines.push(
-        `Je afgesproken uurtarief lag onder het wettelijk minimumloon. Daarom is het automatisch opgehoogd — je basisloon is ${euro(b.cao.baseCents)}.`,
-      );
+      lines.push(vulIn(x.wml, { bedrag: eur(b.cao.baseCents) }));
     } else {
-      lines.push(`Je basisloon (uren × tarief volgens ${b.cao.caoLabel}) is ${euro(b.cao.baseCents)}.`);
+      lines.push(vulIn(x.basis, { cao: b.cao.caoLabel, bedrag: eur(b.cao.baseCents) }));
     }
-    if (b.cao.nachtCents > 0) lines.push(`Voor ${b.cao.nachtHours.toLocaleString("nl-NL")} uur nachtwerk kreeg je ${euro(b.cao.nachtCents)} nachttoeslag bovenop je basisloon.`);
-    if (b.cao.weekendCents > 0) lines.push(`Voor ${b.cao.weekendHours.toLocaleString("nl-NL")} uur in het weekend kreeg je ${euro(b.cao.weekendCents)} weekendtoeslag.`);
-    if (b.cao.feestdagCents > 0) lines.push(`Voor ${b.cao.feestdagHours.toLocaleString("nl-NL")} uur op een feestdag kreeg je ${euro(b.cao.feestdagCents)} feestdagtoeslag.`);
-    if (b.cao.overwerkCents > 0) lines.push(`Voor uren boven de daggrens/weekgrens kreeg je ${euro(b.cao.overwerkCents)} overwerktoeslag.`);
+    if (b.cao.nachtCents > 0) lines.push(vulIn(x.nacht, { uren: getal(b.cao.nachtHours), bedrag: eur(b.cao.nachtCents) }));
+    if (b.cao.weekendCents > 0) lines.push(vulIn(x.weekend, { uren: getal(b.cao.weekendHours), bedrag: eur(b.cao.weekendCents) }));
+    if (b.cao.feestdagCents > 0) lines.push(vulIn(x.feestdag, { uren: getal(b.cao.feestdagHours), bedrag: eur(b.cao.feestdagCents) }));
+    if (b.cao.overwerkCents > 0) lines.push(vulIn(x.overwerk, { bedrag: eur(b.cao.overwerkCents) }));
   }
 
-  lines.push(`Je brutoloon (basis + toeslagen) is ${euro(b.grossCents)}.`);
-  lines.push(
-    `Daarover reserveren we 8,33% vakantiegeld (${euro(b.holidayAllowanceCents)}) en ongeveer 10,83% vakantie-uren (${euro(b.holidayHoursReserveCents)}), plus een kleine reservering voor kort verzuim (${euro(b.shortLeaveReserveCents)}). Die staan apart en keer je uit wanneer je wilt — ze verlagen je weekloon nu niet, ze zijn extra.`,
-  );
+  lines.push(vulIn(x.bruto, { bedrag: eur(b.grossCents) }));
+  lines.push(vulIn(x.reserve, { vg: eur(b.holidayAllowanceCents), vu: eur(b.holidayHoursReserveCents), kv: eur(b.shortLeaveReserveCents) }));
 
   if (b.pensionRegeling === "geen") {
-    lines.push(`Je bouwt nog geen pensioen op — dat begint automatisch vanaf je 9e gewerkte week (StiPP-basisregeling).`);
+    lines.push(x.pensGeen);
   } else {
     lines.push(
-      `Je bouwt pensioen op via StiPP (${b.pensionRegeling}regeling). ZekerFlex legt ${euro(b.pensionEmployerCents)} in als werkgever` +
-        (b.pensionEmployeeCents > 0 ? `; jouw deel van ${euro(b.pensionEmployeeCents)} gaat van je brutoloon af.` : ` — jij betaalt niets mee.`),
+      vulIn(x.pens, {
+        regeling: x.regelingZin[b.pensionRegeling],
+        werkgever: eur(b.pensionEmployerCents),
+        deel: b.pensionEmployeeCents > 0 ? vulIn(x.pensDeelWerknemer, { bedrag: eur(b.pensionEmployeeCents) }) : x.pensDeelGeen,
+      }),
     );
   }
 
-  lines.push(
-    `Van je belastbaar loon (${euro(b.taxableCents)}) gaat ${euro(b.wageTaxIndicativeCents)} indicatieve loonheffing af` +
-      `. Netto houd je deze week ongeveer ${euro(b.netIndicativeCents)} over.`,
-  );
-  lines.push(`De loonheffing is een schatting; de definitieve loonstrook uit de loonaangifte kan iets afwijken door heffingskortingen en toeslagen.`);
+  lines.push(vulIn(x.belasting, { belastbaar: eur(b.taxableCents), heffing: eur(b.wageTaxIndicativeCents), netto: eur(b.netIndicativeCents) }));
+  lines.push(x.schatting);
 
   if (p.advance) {
     lines.push(
-      `Je kreeg al ${euro(p.advance.grossCents)} als voorschot uitbetaald (${p.advance.count}×${p.advance.feeCents > 0 ? `, minus ${euro(p.advance.feeCents)} kosten` : ""}). Dat is hiermee verrekend — er wordt nog ${euro(p.toPayCents)} overgemaakt.`,
+      vulIn(x.voorschot, {
+        bedrag: eur(p.advance.grossCents),
+        n: p.advance.count,
+        kosten: p.advance.feeCents > 0 ? vulIn(x.voorschotKosten, { bedrag: eur(p.advance.feeCents) }) : "",
+        rest: eur(p.toPayCents),
+      }),
     );
   }
 

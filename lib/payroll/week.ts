@@ -1,3 +1,5 @@
+import { vulIn } from "@/lib/i18n/vul-in";
+
 // ISO-8601 week helpers (Monday-based, week 1 = the week containing the first
 // Thursday). Pure, timezone-naive on UTC — good enough for weekly payroll cutoffs.
 
@@ -49,6 +51,14 @@ export function isoWeekRange(w: IsoWeek): { start: Date; end: Date } {
 export function lastCompletedIsoWeek(now = new Date()): IsoWeek {
   const d = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
   return isoWeekOf(d);
+}
+
+/** Zoals isoWeekLabel, maar uit een sjabloon ("week {week} · {van} t/m {tot} {jaar}") in de taal van de werker. */
+export function isoWeekLabelIn(w: IsoWeek, sjabloon: string): string {
+  const { start, end } = isoWeekRange(w);
+  const fmt = (x: Date) => `${String(x.getUTCDate()).padStart(2, "0")}-${String(x.getUTCMonth() + 1).padStart(2, "0")}`;
+  const last = new Date(end.getTime() - 24 * 3600 * 1000);
+  return vulIn(sjabloon, { week: w.week, van: fmt(start), tot: fmt(last), jaar: w.year });
 }
 
 export function isoWeekLabel(w: IsoWeek): string {

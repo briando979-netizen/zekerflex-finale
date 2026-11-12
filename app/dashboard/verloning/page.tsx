@@ -2,6 +2,10 @@ import { requirePrincipal } from "@/lib/auth";
 import { getFiscal } from "@/lib/fiscal/store";
 import { payslipsForUser } from "@/lib/payroll/store";
 import { euro } from "@/lib/payroll/format";
+import { loonstrookKop } from "@/lib/payroll/explain";
+import { parseIsoWeekId } from "@/lib/payroll/week";
+import { getFreelancerDict } from "@/lib/i18n/server";
+import { vulIn } from "@/lib/i18n/vul-in";
 import { PageHeader, Panel, KpiCard } from "@/components/app/ui";
 import { PayslipList } from "@/components/app/PayslipList";
 import { RebuildPayslipsButton } from "@/components/app/RebuildPayslipsButton";
@@ -12,6 +16,9 @@ export const dynamic = "force-dynamic";
 
 export default async function VerloningPage() {
   const principal = await requirePrincipal();
+  const ft = await getFreelancerDict();
+  const t = ft.loonstrook;
+  const eur = (cents: number) => euro(cents, t.intl);
   const [payslips, fiscal] = await Promise.all([
     payslipsForUser(principal.userId),
     getFiscal(principal.userId),
@@ -40,63 +47,63 @@ export default async function VerloningPage() {
 
   return (
     <>
-      <BackLink fallbackHref="/dashboard/account" label="Instellingen" />
+      <BackLink fallbackHref="/dashboard/account" label={t.back} />
       <PageHeader
-        title="Verloning"
-        subtitle={
-          isPayroll
-            ? "Je wekelijkse loonstrook: uren, brutoloon, inhoudingen, reserveringen en je ABU-fase."
-            : "Je wekelijkse factuuroverzicht: dienstbedragen, btw en uitbetalingen."
-        }
+        title={t.titel}
+        subtitle={isPayroll ? t.subPayroll : t.subFactuur}
       />
 
       {!fiscal.completedAt && (
         <div className="mb-6 rounded-xl border border-warn/30 bg-warn/5 p-4 text-sm text-ink-soft">
-          Je werkvorm- en fiscale gegevens zijn nog niet compleet.{" "}
+          {t.onvolledig}{" "}
           <Link href="/dashboard/fiscaal" className="font-semibold text-brand-600 underline">
-            Vul ze aan
+            {t.vulAan}
           </Link>{" "}
-          zodat je verloning klopt.
+          {t.zodat}
         </div>
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <KpiCard
-          label={latest ? `Laatste week (${latest.weekLabel.split("·")[0]?.trim()})` : "Laatste week"}
-          value={latest ? euro(latest.computed.headlineCents) : "—"}
+          label={
+            latest
+              ? vulIn(t.laatsteWeek, { week: vulIn(t.weekKort, { week: parseIsoWeekId(latest.isoWeek)?.week ?? latest.isoWeek }) })
+              : t.laatsteWeekLeeg
+          }
+          value={latest ? eur(latest.computed.headlineCents) : "—"}
           tone="brand"
-          {...(latest ? { hint: latest.computed.headlineLabel } : {})}
+          {...(latest ? { hint: loonstrookKop(latest, t) } : {})}
         />
-        <KpiCard label={`Bruto ${new Date().getUTCFullYear()}`} value={euro(ytdGross)} />
+        <KpiCard label={vulIn(t.bruto, { jaar: new Date().getUTCFullYear() })} value={eur(ytdGross)} />
         {isPayroll ? (
-          <KpiCard label="Reservering vakantie (dit jaar)" value={euro(holidayReserve)} hint="vakantiegeld + vakantie-uren" />
+          <KpiCard label={t.reservering} value={eur(holidayReserve)} hint={t.reserveringHint} />
         ) : (
-          <KpiCard label="Weken verloond" value={String(payslips.length)} />
+          <KpiCard label={t.wekenVerloond} value={String(payslips.length)} />
         )}
       </div>
 
       {isPayroll && latest?.computed.breakdown.kind === "payroll" && (
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          <KpiCard label="ABU-fase" value={latest.computed.breakdown.phase} hint={`${latest.weeksWorked} weken opgebouwd`} />
+          <KpiCard label={t.abuFase} value={latest.computed.breakdown.phase} hint={vulIn(t.wekenOpgebouwd, { n: latest.weeksWorked })} />
           <KpiCard
-            label="Pensioenregeling"
+            label={t.pensioenregeling}
             value={
               latest.computed.breakdown.pensionRegeling === "geen"
-                ? "Nog niet"
-                : `StiPP ${latest.computed.breakdown.pensionRegeling}`
+                ? t.nogNiet
+                : vulIn(t.stipp, { regeling: t.regeling[latest.computed.breakdown.pensionRegeling] })
             }
           />
-          <KpiCard label="Loonheffingskorting" value={fiscal.loonheffingskorting ? "Toegepast" : "Niet toegepast"} />
+          <KpiCard label={t.lhk} value={fiscal.loonheffingskorting ? t.toegepast : t.nietToegepast} />
         </div>
       )}
 
       <div className="mt-8">
         <Panel
-          title="Overzicht per week"
+          title={t.overzicht}
           {...(isPayroll ? { action: <RebuildPayslipsButton /> } : {})}
         >
           <div className="p-4">
-            <PayslipList payslips={payslips} />
+            <PayslipList payslips={payslips} t={t} />
           </div>
         </Panel>
       </div>

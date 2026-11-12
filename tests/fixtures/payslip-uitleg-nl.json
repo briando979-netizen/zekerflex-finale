@@ -1,0 +1,37 @@
+{
+ "PAYROLL_VOL": [
+  "Je werkte deze week 38,5 uur bij 2 opdrachtgevers. Je zit in fase B van het ABU-fasensysteem (12 gewerkte weken).",
+  "Je basisloon (uren × tarief volgens ABU-cao) is € 693,00.",
+  "Voor 4,5 uur nachtwerk kreeg je € 20,00 nachttoeslag bovenop je basisloon.",
+  "Voor 8 uur in het weekend kreeg je € 30,00 weekendtoeslag.",
+  "Voor 2 uur op een feestdag kreeg je € 5,00 feestdagtoeslag.",
+  "Voor uren boven de daggrens/weekgrens kreeg je € 2,00 overwerktoeslag.",
+  "Je brutoloon (basis + toeslagen) is € 750,00.",
+  "Daarover reserveren we 8,33% vakantiegeld (€ 62,48) en ongeveer 10,83% vakantie-uren (€ 81,23), plus een kleine reservering voor kort verzuim (€ 4,50). Die staan apart en keer je uit wanneer je wilt — ze verlagen je weekloon nu niet, ze zijn extra.",
+  "Je bouwt pensioen op via StiPP (plusregeling). ZekerFlex legt € 40,00 in als werkgever; jouw deel van € 20,00 gaat van je brutoloon af.",
+  "Van je belastbaar loon (€ 730,00) gaat € 199,66 indicatieve loonheffing af. Netto houd je deze week ongeveer € 530,34 over.",
+  "De loonheffing is een schatting; de definitieve loonstrook uit de loonaangifte kan iets afwijken door heffingskortingen en toeslagen.",
+  "Je kreeg al € 200,00 als voorschot uitbetaald (2×, minus € 3,00 kosten). Dat is hiermee verrekend — er wordt nog € 330,34 overgemaakt."
+ ],
+ "PAYROLL_WML": [
+  "Je werkte deze week 20 uur bij Acme. Je zit in fase A van het ABU-fasensysteem (3 gewerkte weken).",
+  "Je afgesproken uurtarief lag onder het wettelijk minimumloon. Daarom is het automatisch opgehoogd — je basisloon is € 310,00.",
+  "Je brutoloon (basis + toeslagen) is € 310,00.",
+  "Daarover reserveren we 8,33% vakantiegeld (€ 25,83) en ongeveer 10,83% vakantie-uren (€ 33,57), plus een kleine reservering voor kort verzuim (€ 1,86). Die staan apart en keer je uit wanneer je wilt — ze verlagen je weekloon nu niet, ze zijn extra.",
+  "Je bouwt nog geen pensioen op — dat begint automatisch vanaf je 9e gewerkte week (StiPP-basisregeling).",
+  "Van je belastbaar loon (€ 310,00) gaat € 70,00 indicatieve loonheffing af. Netto houd je deze week ongeveer € 240,00 over.",
+  "De loonheffing is een schatting; de definitieve loonstrook uit de loonaangifte kan iets afwijken door heffingskortingen en toeslagen."
+ ],
+ "FACTUUR_BTW": [
+  "Je werkte deze week 10 uur bij Acme.",
+  "Je dienstbedrag is € 200,00, plus 21% btw (€ 42,00) — factuurtotaal € 242,00.",
+  "De platformkosten van € 3,50 per gewerkt uur (€ 35,00) worden apart aan de opdrachtgever gefactureerd — die gaan níét van jouw bedrag af.",
+  "Je ontvangt € 242,00. Als zzp'er draag je zelf je inkomstenbelasting en eventueel btw af."
+ ],
+ "FACTUUR_ZONDER_BTW": [
+  "Je werkte deze week 10 uur bij Acme.",
+  "Je dienstbedrag is € 200,00. Btw is verlegd of vrijgesteld, dus die zie je niet op de factuur.",
+  "De platformkosten van € 3,50 per gewerkt uur (€ 35,00) worden apart aan de opdrachtgever gefactureerd — die gaan níét van jouw bedrag af.",
+  "Je ontvangt € 200,00. Als zzp'er draag je zelf je inkomstenbelasting en eventueel btw af."
+ ]
+}
