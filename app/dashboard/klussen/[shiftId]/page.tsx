@@ -240,7 +240,18 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   // verschijnt een concept; de ECHTE overeenkomst mét de handtekening van de
   // opdrachtgever pas als je voor deze klus bent uitgekozen.
   const reactedThisShift = s.alreadyApplied || Boolean(s.myOffer && s.myOffer.status !== "withdrawn");
-  const selectedThisShift = Boolean(assigned);
+  // Uitgekozen = een lopende toewijzing, ook als de klus al begonnen of voorbij is
+  // (`assigned` wordt alleen voor komende klussen gevuld; dan stond hier ten onrechte "concept").
+  const selectedThisShift =
+    Boolean(assigned) ||
+    Boolean(
+      myProfile &&
+        s.alreadyApplied &&
+        (await prisma.shiftAssignment.findFirst({
+          where: { shiftId: s.id, freelancerId: myProfile.id, cancelledAt: null },
+          select: { id: true },
+        })),
+    );
   const showAgreement = reactedThisShift || selectedThisShift;
   const showRealAgreement = selectedThisShift && Boolean(s.agreement);
   const agreementHref = showRealAgreement
