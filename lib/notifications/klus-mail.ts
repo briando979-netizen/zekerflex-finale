@@ -2,7 +2,10 @@ import { ShiftStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
-import { klusVoorstelEmail, sendMail } from "@/lib/mail";
+import { sendMail } from "@/lib/mail";
+import { klusVoorstelEmailT } from "@/lib/mail/werker/klusvoorstel";
+import { mailTaalVoorWerker } from "@/lib/mail/taal";
+import { pushWhen } from "@/lib/i18n/worker-push";
 import { fixedWindow } from "@/lib/rate-limit";
 import { isTestklus } from "@/lib/shifts/testklus";
 import { amsterdamClock } from "@/lib/time/amsterdam";
@@ -43,7 +46,7 @@ export async function mailKlusVoorstel(input: {
   const [profiel, shift] = await Promise.all([
     prisma.freelancerProfile.findUnique({
       where: { id: input.freelancerId },
-      select: { user: { select: { email: true, fullName: true, emailVerifiedAt: true, disabledAt: true } } },
+      select: { userId: true, user: { select: { email: true, fullName: true, emailVerifiedAt: true, disabledAt: true } } },
     }),
     prisma.shift.findUnique({
       where: { id: input.shiftId },
@@ -66,16 +69,17 @@ export async function mailKlusVoorstel(input: {
   if (!rem.ok) return "begrensd";
 
   const base = env.APP_BASE_URL.replace(/\/+$/, "");
-  const mail = klusVoorstelEmail({
+  const taal = await mailTaalVoorWerker(profiel.userId);
+  const mail = klusVoorstelEmailT({
     fullName: user.fullName,
     title: shift.title,
     branch: shift.branch.name,
     city: shift.branch.city,
-    when: klusMoment(shift.startsAt, shift.endsAt),
+    when: taal === "nl" ? klusMoment(shift.startsAt, shift.endsAt) : pushWhen(taal, shift),
     rate: klusTarief(shift.hourlyRateCents),
     travelMinutes: input.travelMinutes,
     link: `${base}/dashboard/klussen/${input.shiftId}`,
-  });
+  }, taal);
   try {
     await sendMail({ ...mail, to: user.email });
     return "verstuurd";

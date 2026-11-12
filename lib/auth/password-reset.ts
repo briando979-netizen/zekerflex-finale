@@ -4,7 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
-import { sendMail, passwordResetEmail } from "@/lib/mail";
+import { sendMail } from "@/lib/mail";
+import { mailTaalVoorWerker } from "@/lib/mail/taal";
+import { passwordResetEmailT } from "@/lib/mail/werker/wachtwoord";
 import { fixedWindow, privateRateLimitIdentifier } from "@/lib/rate-limit";
 import { clearLoginFailures } from "@/lib/auth/login-throttle";
 import { isBreached, scorePassword } from "@/lib/auth/password";
@@ -51,7 +53,8 @@ export async function requestPasswordReset(rawEmail: string, ip = "local"): Prom
   });
 
   const link = `${env.APP_BASE_URL.replace(/\/+$/, "")}/wachtwoord-herstellen?token=${token}`;
-  const tpl = passwordResetEmail(user.fullName, link);
+  const taal = await mailTaalVoorWerker(user.id);
+  const tpl = passwordResetEmailT(user.fullName, link, taal);
   const res = await sendMail({ ...tpl, to: user.email }).catch((err: unknown) => {
     logger.warn("wachtwoordherstel: mail versturen mislukt", { userId: user.id, error: (err as Error).message });
     return null;

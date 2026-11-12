@@ -32,16 +32,8 @@ vi.mock("@/lib/auth", () => ({ assertBranchAccess: (...a: unknown[]) => assertBr
 vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
 const sendMail = vi.fn();
-vi.mock("@/lib/mail", () => ({
-  sendMail: (...a: unknown[]) => sendMail(...a),
-  hoursCorrectionProposedEmail: (
-    fullName: string,
-    link: string,
-    shiftTitle: string,
-    claimedHours: number,
-    proposedHours: number,
-  ) => ({ to: "", subject: "x", kind: "uren-correctie-voorstel", text: link, html: link, _args: { fullName, shiftTitle, claimedHours, proposedHours } }),
-}));
+vi.mock("@/lib/mail", () => ({ sendMail: (...a: unknown[]) => sendMail(...a) }));
+vi.mock("@/lib/mail/taal", () => ({ mailTaalVoorWerker: async () => "nl" }));
 
 import { raiseManagerReviewDispute, proposeHoursCorrection } from "@/lib/disputes/raise";
 
@@ -141,7 +133,7 @@ describe("proposeHoursCorrection", () => {
       branch: { tenantId: "tenant1" },
       dispute: null,
       assignment: { shift: { title: "Vakkenvuller" } },
-      freelancer: { user: { fullName: "Jan de Vries", email: "jan@example.nl" } },
+      freelancer: { userId: "w1", user: { fullName: "Jan de Vries", email: "jan@example.nl" } },
       ...over,
     };
   }

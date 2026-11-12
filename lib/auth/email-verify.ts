@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
-import { sendMail, verificationEmail, welcomeEmail } from "@/lib/mail";
+import { sendMail } from "@/lib/mail";
+import { welcomeEmailT } from "@/lib/mail/werker/welkom";
+import { mailTaalVoorWerker } from "@/lib/mail/taal";
+import { verificationEmailT } from "@/lib/mail/werker/verificatie";
 import { getFiscal } from "@/lib/fiscal/store";
 import { featureEnabled } from "@/lib/flags";
 import { mintToken, consumeToken, consumeCode, latestVerification } from "@/lib/mail/store";
@@ -57,7 +60,8 @@ export async function sendVerificationEmail(
   const { token, code } = await mintToken(userId, TOKEN_TTL_SECONDS);
   const link = `${env.APP_BASE_URL}/verifieer-email?token=${token}`;
 
-  const tpl = verificationEmail(fullName, link, code);
+  const taal = await mailTaalVoorWerker(userId);
+  const tpl = verificationEmailT(fullName, link, code, taal);
   const res = await sendMail({ ...tpl, to: email });
 
   return { sent: true, link, code, delivered: res.delivered, transport: res.transport };
@@ -89,7 +93,8 @@ export async function sendWelcome(user: { id: string; email: string; fullName: s
     const freelancer = user.memberships.some((m) => m.role === "FREELANCER");
     const workerKind = freelancer ? ((await getFiscal(user.id).catch(() => null))?.workerKind ?? undefined) : undefined;
     const ontwikkelingsnotitie = await featureEnabled("welkom-ontwikkelingsnotitie");
-    const tpl = welcomeEmail(user.fullName, freelancer ? "freelancer" : "bedrijf", env.APP_BASE_URL, workerKind, { ontwikkelingsnotitie });
+    const taal = await mailTaalVoorWerker(user.id);
+    const tpl = welcomeEmailT(user.fullName, freelancer ? "freelancer" : "bedrijf", env.APP_BASE_URL, workerKind, { ontwikkelingsnotitie }, taal);
     await sendMail({ ...tpl, to: user.email });
   } catch (err) {
     logger.warn("welcome mail failed", { userId: user.id, error: (err as Error).message });

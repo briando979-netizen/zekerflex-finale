@@ -2,7 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { kvGet, kvSet } from "@/lib/storage/kv";
-import { idGeverifieerdEmail, isReservedTestAddress, sendMail } from "@/lib/mail";
+import { isReservedTestAddress, sendMail } from "@/lib/mail";
+import { idGeverifieerdEmailT } from "@/lib/mail/werker/id-geverifieerd";
+import { mailTaalVoorWerker } from "@/lib/mail/taal";
 import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { kanReagerenOpKlussen } from "@/lib/onboarding/kan-reageren";
 
@@ -59,7 +61,8 @@ export async function meldIdGeverifieerd(userId: string, now = new Date()): Prom
     // een testaccount (.test/.example/…) krijgt geen echte mail
     let mail = false;
     if (!isReservedTestAddress(user.email)) {
-      const r = await sendMail({ ...idGeverifieerdEmail(user.fullName, env.APP_BASE_URL, reageren.ok), to: user.email }).catch(() => null);
+      const taal = await mailTaalVoorWerker(userId);
+      const r = await sendMail({ ...idGeverifieerdEmailT(user.fullName, env.APP_BASE_URL, reageren.ok, taal), to: user.email }).catch(() => null);
       mail = Boolean(r?.delivered);
     }
     return { verstuurd: true, push, mail };

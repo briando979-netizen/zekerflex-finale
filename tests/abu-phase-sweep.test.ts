@@ -28,6 +28,7 @@ vi.mock("@/lib/audit", () => ({ recordAudit: (...a: unknown[]) => recordAudit(..
 
 const sendMail = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/lib/mail", () => ({ sendMail: (...a: unknown[]) => sendMail(...a) }));
+vi.mock("@/lib/mail/taal", () => ({ mailTaalVoorWerker: async () => "nl" }));
 
 vi.mock("@/lib/env", () => ({ env: { MAIL_ADMIN: "admin@zekerflex.com" } }));
 

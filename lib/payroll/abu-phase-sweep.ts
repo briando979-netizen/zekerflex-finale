@@ -3,6 +3,8 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { sendMail } from "@/lib/mail";
+import { abuFaseEmailT } from "@/lib/mail/werker/abu-fase";
+import { mailTaalVoorWerker } from "@/lib/mail/taal";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { getUitzendStatus } from "@/lib/payroll/uitzend-status";
 
@@ -90,17 +92,8 @@ export async function sweepAbuPhaseTransitions(): Promise<AbuPhaseSweepResult> {
       });
 
       if (p.user.email) {
-        await sendMail({
-          to: p.user.email,
-          subject: `Je ABU-fase is overgegaan naar fase ${transition.to}`,
-          kind: "abu-fase-overgang",
-          text:
-            `Hoi ${p.user.fullName},\n\n` +
-            `Je bent overgegaan van ABU-fase ${transition.from} naar fase ${transition.to} ` +
-            `(${status.weeksWorked} gewerkte weken). Dit kan gevolgen hebben voor je contractvorm, ` +
-            `opzegtermijn en pensioenopbouw (StiPP).\n\n` +
-            `Bekijk je actuele status op /dashboard/verloning.\n\nZekerFlex`,
-        }).catch(() => undefined);
+        const mail = abuFaseEmailT({ fullName: p.user.fullName, van: transition.from, naar: transition.to, weken: status.weeksWorked }, await mailTaalVoorWerker(p.userId));
+        await sendMail({ ...mail, to: p.user.email }).catch(() => undefined);
       }
 
       await sendMail({
