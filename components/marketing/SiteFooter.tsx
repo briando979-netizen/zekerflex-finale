@@ -4,6 +4,7 @@ import { NewsletterSignup } from "@/components/marketing/NewsletterSignup";
 import { SocialLinks } from "@/components/marketing/SocialLinks";
 import { CookieSettingsButton } from "@/components/marketing/CookieSettingsButton";
 import { STANDAARD_VOETTEKST, type Voettekst } from "@/lib/ontwerp/menu";
+import { BEDRIJF } from "@/lib/marketing/bedrijfsgegevens";
 
 // De kolommen en de zin onder het logo zijn te bewerken in Admin → Site-ontwerper → Menu
 // (lib/ontwerp/menu.ts); zonder eigen versie is het de standaard daar.
@@ -63,6 +64,22 @@ export function SiteFooter({ voettekst = STANDAARD_VOETTEKST }: { voettekst?: Vo
             </ul>
           </div>
         ))}
+      </div>
+
+      {/* officiële bedrijfsgegevens: iedereen kan zelf in het register van Delaware nakijken dat het bedrijf bestaat (lib/marketing/bedrijfsgegevens.ts) */}
+      <div className="border-t border-white/10">
+        <div className="shell py-5 text-xs leading-relaxed text-white/60">
+          <p>
+            <span className="font-semibold text-white/85">{BEDRIJF.naam}</span>, {BEDRIJF.rechtsvorm} · dossiernummer {BEDRIJF.dossiernummer} bij de Delaware Division of Corporations · officieel adres in Delaware: {BEDRIJF.registeredAgent}, {BEDRIJF.registeredAgentAdres}
+          </p>
+          <p className="mt-1">
+            Zelf controleren? Zoek op dossiernummer {BEDRIJF.dossiernummer} in het{" "}
+            <a href={BEDRIJF.registerUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-white">
+              openbare bedrijfsregister van Delaware
+            </a>
+            .
+          </p>
+        </div>
       </div>
 
       <div className="border-t border-white/10">
