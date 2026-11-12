@@ -120,7 +120,7 @@ describe("de aanroepers kiezen de taal van de werker", () => {
   const lees = (p: string) => readFileSync(p, "utf8").split("\r\n").join("\n");
   it("klus-mail", () => {
     const s = lees("lib/notifications/klus-mail.ts");
-    expect(s).toContain("mailTaalVoorWerker(profiel.userId)");
+    expect(s).toContain("mailTaalVoorWerker(profiel?.userId");
     expect(s).toContain("klusVoorstelEmailT(");
     expect(s).not.toContain("klusVoorstelEmail(");
   });

@@ -61,8 +61,7 @@ export async function mailKlusVoorstel(input: {
     }),
   ]);
   const user = profiel?.user;
-  const userId = profiel?.userId;
-  if (!userId || !user?.email || !user.emailVerifiedAt || user.disabledAt) return "geen-adres";
+  if (!user?.email || !user.emailVerifiedAt || user.disabledAt) return "geen-adres";
   if (!shift || !OPEN.includes(shift.status) || shift.startsAt.getTime() <= Date.now()) return "geen-klus";
   if (isTestklus({ title: shift.title, bedrijf: shift.branch.tenant.name })) return "testklus";
 
@@ -70,7 +69,7 @@ export async function mailKlusVoorstel(input: {
   if (!rem.ok) return "begrensd";
 
   const base = env.APP_BASE_URL.replace(/\/+$/, "");
-  const taal = await mailTaalVoorWerker(userId);
+  const taal = await mailTaalVoorWerker(profiel?.userId ?? "");
   const mail = klusVoorstelEmailT({
     fullName: user.fullName,
     title: shift.title,
