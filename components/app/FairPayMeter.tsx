@@ -87,7 +87,7 @@ export function FairPayMeter({
         <button
           type="button"
           onClick={() => onApplySuggested(suggestedRateCents)}
-          className="mt-3 w-full rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-center font-semibold text-brand-700 hover:bg-brand-100"
+          className="mt-3 w-full rounded-lg border border-hair bg-brand-50 px-3 py-1.5 text-center font-semibold text-brand-700 hover:bg-brand-100"
         >
           Verhoog naar {euro(suggestedRateCents)}/u → kans {Math.round(suggestedFillChance * 100)}%
         </button>

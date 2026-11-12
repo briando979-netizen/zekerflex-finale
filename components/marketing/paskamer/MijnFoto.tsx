@@ -93,7 +93,7 @@ export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToe
         ) : stap ? (
           <div className="grid h-full place-items-center text-center">
             <div>
-              <div className="mx-auto h-9 w-9 animate-spin rounded-full border-4 border-brand-200 border-t-brand-500" aria-hidden />
+              <div className="mx-auto h-9 w-9 animate-spin rounded-full border-4 border-hair border-t-brand-500" aria-hidden />
               <p role="status" className="mt-3 text-[14px] font-semibold text-ink">
                 {stap === "laden" ? p.pasFotoLaden : p.pasFotoBezig}
               </p>

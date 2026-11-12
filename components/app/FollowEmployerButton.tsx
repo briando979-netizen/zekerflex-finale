@@ -89,7 +89,7 @@ export function FollowEmployerButton({
       aria-pressed={following}
       aria-label={aria}
       className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-50 ${
-        following ? "border-brand-200 bg-brand-50 text-brand-700" : "border-hairstrong text-ink hover:bg-paper-soft"
+        following ? "border-hair bg-brand-50 text-brand-700" : "border-hairstrong text-ink hover:bg-paper-soft"
       }`}
     >
       <span aria-hidden>{following ? "❤️" : "🤍"}</span>

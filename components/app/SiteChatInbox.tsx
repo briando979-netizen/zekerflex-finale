@@ -229,7 +229,7 @@ export function SiteChatInbox() {
                   ))}
                 </select>
               </label>
-              <ol aria-label="Berichten" className="max-h-[26rem] space-y-3 overflow-y-auto rounded-2xl border border-neutralx-200 p-4">
+              <ol aria-label="Berichten" className="max-h-[26rem] space-y-3 overflow-y-auto rounded-2xl border border-hair p-4">
                 {gesprek.berichten.map((b, i) =>
                   b.rol === "systeem" ? (
                     <li key={i} className="text-center text-xs text-neutralx-600">
@@ -240,7 +240,7 @@ export function SiteChatInbox() {
                       <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-neutralx-600">
                         {b.rol === "gast" ? "Bezoeker" : b.rol === "ai" ? "Assistent" : (b.door ?? "Medewerker")} · {tijd(b.op)}
                       </p>
-                      <p className={`whitespace-pre-line rounded-2xl px-4 py-2.5 text-sm ${b.rol === "gast" ? "border border-neutralx-200 text-ink" : b.rol === "ai" ? "bg-neutralx-100 text-ink" : "bg-ink text-white"}`}>{b.tekst}</p>
+                      <p className={`whitespace-pre-line rounded-2xl px-4 py-2.5 text-sm ${b.rol === "gast" ? "border border-hair text-ink" : b.rol === "ai" ? "bg-neutralx-100 text-ink" : "bg-ink text-white"}`}>{b.tekst}</p>
                     </li>
                   ),
                 )}

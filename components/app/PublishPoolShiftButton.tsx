@@ -25,7 +25,7 @@ export function PublishPoolShiftButton({ shiftId, poolName }: { shiftId: string;
   }
 
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3">
+    <div className="flex items-center gap-2 rounded-xl border border-hair bg-brand-50 px-4 py-3">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-ink">Privé uitgenodigd: pool &ldquo;{poolName}&rdquo;</p>
         <p className="text-xs text-neutralx-500">

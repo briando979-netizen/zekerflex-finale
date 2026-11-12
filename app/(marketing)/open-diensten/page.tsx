@@ -40,7 +40,7 @@ export default async function OpenShiftsPage() {
 
         <div className="mt-12 grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
           {/* kaart */}
-          <div className="rounded-3xl border border-neutralx-200 bg-paper-soft p-6">
+          <div className="rounded-3xl border border-hair bg-paper-soft p-6">
             {hasWork ? (
               <OpenShiftsMap cities={map.cities} />
             ) : (
@@ -53,7 +53,7 @@ export default async function OpenShiftsPage() {
             {hasWork && (
               <>
                 <h2 className="font-display text-xl font-semibold">Open diensten per plaats</h2>
-                <ul className="mt-4 divide-y divide-neutralx-200 overflow-hidden rounded-2xl border border-neutralx-200 bg-white">
+                <ul className="mt-4 divide-y divide-hair overflow-hidden rounded-2xl border border-hair bg-white">
                   {map.cities.slice(0, 14).map((c) => (
                     <li key={c.city} className="flex items-center justify-between gap-4 px-4 py-3">
                       <div className="min-w-0">
