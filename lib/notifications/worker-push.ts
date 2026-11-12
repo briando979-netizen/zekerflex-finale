@@ -45,6 +45,8 @@ interface Row {
   acceptedAt: Date;
   freelancer: { userId: string };
   shift: { id: string; title: string; startsAt: Date; branch: { name: string; tenant: { name: string } } };
+  /** alleen bij de herinneringen: de "check in"-melding opent de incheckpagina van dit urenbriefje */
+  timesheet?: { id: string } | null;
 }
 
 /** "bij X": bij een klus op een los adres de bedrijfsnaam, niet "Eenmalige locatie — adres" (lib/shifts/place-label.ts). */
@@ -57,8 +59,9 @@ async function send(
   shiftId: string,
   tag: string,
   ttlSeconds: number,
+  url: string = shiftUrl(shiftId),
 ): Promise<void> {
-  await sendLocalizedPush([userId], (t, locale) => ({ ...build(t, locale), data: { type: "SHIFT", url: shiftUrl(shiftId), tag }, ttlSeconds }));
+  await sendLocalizedPush([userId], (t, locale) => ({ ...build(t, locale), data: { type: "SHIFT", url, tag }, ttlSeconds }));
 }
 
 /** Dutch keeps the long form ("donderdag 5 november om 09:00"); other languages the short "cz 5/11 09:00". */
@@ -99,7 +102,7 @@ async function reminderPushes(now: Date): Promise<number> {
       cancelledAt: null,
       shift: { status: { notIn: ["CANCELLED", "COMPLETED", "DRAFT"] }, startsAt: { gt: new Date(now.getTime() - 30 * 60_000), lt: new Date(now.getTime() + 25 * H) } },
     },
-    select: { id: true, acceptedAt: true, freelancer: { select: { userId: true } }, shift: { select: { id: true, title: true, startsAt: true, branch: { select: { name: true, tenant: { select: { name: true } } } } } } },
+    select: { id: true, acceptedAt: true, freelancer: { select: { userId: true } }, shift: { select: { id: true, title: true, startsAt: true, branch: { select: { name: true, tenant: { select: { name: true } } } } } }, timesheet: { select: { id: true } } },
     take: 2000,
   });
   let n = 0;
@@ -111,7 +114,9 @@ async function reminderPushes(now: Date): Promise<number> {
     // skip "day" when the assignment was made less than 12h ago — they just got "uitgekozen"
     if (due.kind === "day" && now.getTime() - r.acceptedAt.getTime() < 12 * H) continue;
     if (!(await claim(due.kind, r.id))) continue;
-    await send(r.freelancer.userId, (t) => ({ title: due.title(t), body: due.body(t, r) }), r.shift.id, `${due.kind}-${r.id}`, Math.max(600, Math.round(due.window / 1000)));
+    // bij de start meteen naar inchecken (eigen pagina), anders naar de klus
+    const url = due.kind === "start" && r.timesheet ? `/dashboard/inchecken/${r.timesheet.id}` : shiftUrl(r.shift.id);
+    await send(r.freelancer.userId, (t) => ({ title: due.title(t), body: due.body(t, r) }), r.shift.id, `${due.kind}-${r.id}`, Math.max(600, Math.round(due.window / 1000)), url);
     n += 1;
   }
   return n;

@@ -7,6 +7,7 @@ import { recordAudit } from "@/lib/audit";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { pushHoursSubmitted } from "@/lib/notifications/employer-push";
 import { runAfter } from "@/lib/run-after";
+import { urenIndienenOpen } from "@/lib/timesheets/indienen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,6 +46,8 @@ export async function POST(request: Request, props: { params: Promise<{ timeshee
     const timesheet = await prisma.timesheet.findFirst({ where: { id: params.timesheetId, freelancerId: profile.id }, select: { id: true, status: true, scheduledStart: true, scheduledEnd: true, actualStart: true, actualEnd: true, breakMinutes: true, assignment: { select: { shiftId: true } } } });
     if (!timesheet) throw AppError.notFound("Urenstaat niet gevonden");
     if (timesheet.status !== "DRAFT") throw AppError.precondition(`Deze urenstaat kan niet meer worden ingediend (${timesheet.status})`);
+    // tijdens de klus is er alleen inchecken; de uren pas na de eindtijd of na het uitchecken (lib/timesheets/indienen.ts)
+    if (!urenIndienenOpen(timesheet, Date.now())) throw AppError.precondition("Uren indienen kan pas als de klus voorbij is: na de eindtijd, of eerder als je al bent uitgecheckt.");
     const start = input.actualStart ? new Date(input.actualStart) : timesheet.actualStart ?? timesheet.scheduledStart;
     const end = input.actualEnd ? new Date(input.actualEnd) : timesheet.actualEnd ?? timesheet.scheduledEnd;
     if (end <= start) throw AppError.validation("De eindtijd moet na de starttijd liggen");

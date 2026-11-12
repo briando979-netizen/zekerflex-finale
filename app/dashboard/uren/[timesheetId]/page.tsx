@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requirePrincipal } from "@/lib/auth";
 import { TimesheetSubmitForm } from "@/components/app/TimesheetSubmitForm";
 import { HoursCorrectionPrompt } from "@/components/app/HoursCorrectionPrompt";
-import { CheckInPanel } from "@/components/app/CheckInPanel";
 import { getPayoutDestination } from "@/lib/bank/earnings";
 import { fastPayAvailable, getFastPay, hasAcceptedTerms } from "@/lib/payouts/fastpay";
 import { ShiftCard } from "@/components/app/ShiftCard";
@@ -13,6 +12,8 @@ import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { SHIFT_SELECT, toShift } from "@/lib/dashboard/my-work";
 import { PageHeader, Panel, dateTime, moneyExact } from "@/components/app/ui";
 import { getFreelancerDict } from "@/lib/i18n/server";
+import { urenIndienenOpen } from "@/lib/timesheets/indienen";
+import { UITCHECK_NA_MS } from "@/lib/timesheets/offline";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,11 @@ export default async function TimesheetPage(props: { params: Promise<{ timesheet
     },
   });
   if (!timesheet) notFound();
+  // Tijdens de klus is er alleen inchecken (eigen pagina); de uren pas na afloop (lib/timesheets/indienen.ts).
+  const nu = Date.now();
+  if (timesheet.status === "DRAFT" && !urenIndienenOpen(timesheet, nu)) redirect(`/dashboard/inchecken/${timesheet.id}`);
+  const nogIngecheckt =
+    timesheet.status === "DRAFT" && timesheet.actualStart && !timesheet.actualEnd && nu <= timesheet.scheduledEnd.getTime() + UITCHECK_NA_MS;
 
   const correctionProposal =
     timesheet.dispute &&
@@ -93,16 +99,13 @@ export default async function TimesheetPage(props: { params: Promise<{ timesheet
       )}
       <div className="grid gap-6 md:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-4">
-          {timesheet.status === "DRAFT" && (
-            <CheckInPanel
-              userId={principal.userId}
-              timesheetId={timesheet.id}
-              scheduledStart={timesheet.scheduledStart.toISOString()}
-              scheduledEnd={timesheet.scheduledEnd.toISOString()}
-              actualStart={timesheet.actualStart?.toISOString() ?? null}
-              actualEnd={timesheet.actualEnd?.toISOString() ?? null}
-              branchName={timesheet.branch.name}
-            />
+          {nogIngecheckt && (
+            <div className="card space-y-3 p-5">
+              <p className="text-sm text-warn">{ft.checkinPage.stillIn}</p>
+              <Link href={`/dashboard/inchecken/${timesheet.id}`} className="btn-primary block w-full py-2.5 text-center text-sm">
+                {ft.checkinPage.toCheckin}
+              </Link>
+            </div>
           )}
           {cardShift && (
             <ShiftCard shift={cardShift} t={ft} href={`/dashboard/klussen/${cardShift.id}`} idReminder footerOverride={null} />

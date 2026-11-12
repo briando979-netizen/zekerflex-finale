@@ -62,8 +62,8 @@ export function BakenInchecken(props: { timesheetId: string; shiftId: string; to
       <p role={stand?.ok ? "status" : "alert"} className={`text-sm ${!stand ? "text-neutralx-500" : stand.ok ? "text-ok" : "text-warn"}`}>
         {stand ? stand.text : c.locating}
       </p>
-      <Link href={`/dashboard/uren/${props.timesheetId}`} className="btn-primary inline-block text-sm">
-        {ft.nav.hours}
+      <Link href={`/dashboard/inchecken/${props.timesheetId}`} className="btn-primary inline-block text-sm">
+        {ft.checkinPage.toPage}
       </Link>
     </div>
   );

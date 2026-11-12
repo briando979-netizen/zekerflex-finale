@@ -288,10 +288,10 @@ function ActiveFooter({ item, w }: { item: MyWorkItem; w: W }) {
     );
   }
 
-  // Op de dag van de klus: inchecken/uitchecken heeft voorrang.
+  // Op de dag van de klus: inchecken/uitchecken heeft voorrang (eigen pagina; uren pas na afloop).
   if (item.timesheetId && Date.now() >= startMs - 60 * 60_000 && Date.now() <= endMs) {
     return (
-      <Link href={`/dashboard/uren/${item.timesheetId}`} className="flex items-center justify-between rounded-xl bg-brand-500 px-3 py-2.5 text-sm font-semibold text-white">
+      <Link href={`/dashboard/inchecken/${item.timesheetId}`} className="flex items-center justify-between rounded-xl bg-brand-500 px-3 py-2.5 text-sm font-semibold text-white">
         <span>{w.checkInOut}</span>
         <span aria-hidden>→</span>
       </Link>
