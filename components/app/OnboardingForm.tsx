@@ -14,6 +14,8 @@ import { IdKeuzeKaarten } from "@/components/app/WieBenJijIdKaarten";
 import { stappenVoor, voegNaam, type WieStap } from "@/lib/onboarding/wie-ben-jij";
 import { controleerVeld, type VeldSleutel } from "@/lib/onboarding/velden";
 import { heeftAchterkant } from "@/lib/kyc/document-zijden";
+import { OnderSheet } from "@/components/app/OnderSheet";
+import { bevestigOverzicht, type OverzichtRij } from "@/lib/werker/bevestig-overzicht";
 
 interface Check {
   label: string;
@@ -217,6 +219,8 @@ export function OnboardingForm({
   const [attempt, setAttempt] = useState(0); // bump to remount + clear the 3 capture slots
   const [docType, setDocType] = useState<DocKey>("ID_CARD");
   const [lezing, setLezing] = useState<Lezing | null>(null);
+  // de vraag vóór het insturen: "Weet je zeker dat je alles hebt ingevuld?" (eigen dialoog, geen window.confirm)
+  const [bevestig, setBevestig] = useState<{ m: "stripe" | "upload"; rijen: OverzichtRij[] } | null>(null);
   const lezingNr = useRef(0); // een oud antwoord mag een nieuwer niet overschrijven
 
   /** De MRZ staat bij een ID-kaart op de achterkant, bij een paspoort op de pasfotozijde; een rijbewijs heeft er geen. */
@@ -400,14 +404,18 @@ export function OnboardingForm({
     setScanOpen(true);
   }
 
-  /** Stripe of zelf foto's uploaden: versturen naar dezelfde route als altijd. */
-  async function verstuur(m: "stripe" | "upload") {
+  /**
+   * Stripe of zelf foto's uploaden: versturen naar dezelfde route als altijd. Eerst controleren, dan een overzicht tonen en
+   * vragen of alles is ingevuld; pas na "Ja, insturen" (bevestigd = true) gaat het echt weg.
+   */
+  async function verstuur(m: "stripe" | "upload", bevestigd = false) {
     const form = formRef.current;
     if (busy || !form) return;
     setBewaard(null);
     if (!valideer(new FormData(form), { documenten: m === "upload", bedrijfOptioneel: false })) return;
     setError(null);
     const body = new FormData(form);
+    let fotoNamen: string[] = [];
     if (m === "upload") {
       // een paspoort heeft geen achterkant: dan alleen de fotopagina en de selfie (12 nov 2026)
       const paspoort = !heeftAchterkant(docType);
@@ -421,12 +429,28 @@ export function OnboardingForm({
         setError(fill(t.missing, { list: names.length > 1 ? `${names.slice(0, -1).join(", ")} ${t.and} ${names.at(-1)}` : names[0]! }));
         return;
       }
+      fotoNamen = nodig.map((k) => t.missingNames[k]);
       for (const k of nodig) body.set(k, photos.current[k]!);
       if (photos.current.selfie2) body.set("selfie2", photos.current.selfie2);
       // de server wil twee beelden van het document: bij een paspoort dient de fotopagina ook als tweede (zoals in de ID-scan)
       if (paspoort) body.set("documentBack", photos.current.documentFront!);
     } else {
       body.set("identityMethod", "stripe");
+    }
+    if (!bevestigd) {
+      setBevestig({
+        m,
+        rijen: bevestigOverzicht({
+          methode: m,
+          veld: (n) => String(body.get(n) ?? ""),
+          labels: { naam: t.nameOnDoc, soort: t.docType, nummer: t.docNumber, geldigTot: t.validUntil, kvk: t.kvkLabel, btw: t.vatLabel, postcode: ft.bevestig.postcode, fotos: ft.bevestig.fotos, methode: ft.bevestig.methode },
+          soortNaam: t.docs[docType],
+          bedrijf: requireKvk ? biz : null,
+          fotoNamen,
+          viaStripe: ft.bevestig.viaStripe,
+        }),
+      });
+      return;
     }
     setBusy(true);
     setError(null);
@@ -570,6 +594,39 @@ export function OnboardingForm({
             }}
           />
         )}
+
+        <OnderSheet open={bevestig !== null} titelId="bevestig-insturen-titel" titel={ft.bevestig.titel} onSluit={() => setBevestig(null)}>
+          {bevestig && (
+            <div className="overflow-y-auto px-6 pb-6">
+              <p className="text-center text-sm leading-relaxed text-neutralx-600">{ft.bevestig.uitleg}</p>
+              <dl className="mt-4 divide-y divide-hair rounded-xl border border-hair text-sm">
+                {bevestig.rijen.map(([label, waarde]) => (
+                  <div key={label} className="flex items-start justify-between gap-3 px-3 py-2">
+                    <dt className="text-neutralx-500">{label}</dt>
+                    <dd className="break-words text-right font-medium text-ink">{waarde}</dd>
+                  </div>
+                ))}
+              </dl>
+              <div className="mt-5 flex gap-2">
+                <button type="button" onClick={() => setBevestig(null)} className="btn-ghost flex-1">
+                  {ft.bevestig.terug}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    const m = bevestig.m;
+                    setBevestig(null);
+                    void verstuur(m, true);
+                  }}
+                  className="btn-trust flex-1 disabled:opacity-60"
+                >
+                  {ft.bevestig.ja}
+                </button>
+              </div>
+            </div>
+          )}
+        </OnderSheet>
 
         <form ref={formRef} onSubmit={onSubmit} noValidate className={`space-y-6 ${stap === "persoon" ? "hidden" : ""}`}>
           {error && (

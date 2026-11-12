@@ -76,6 +76,10 @@ const nl = {
     mailPrefs: "E-mailvoorkeuren", mailUitleg: "Kies welke optionele e-mail je ontvangt. Belangrijke e-mail (verificatie, wachtwoord, facturen, loonstroken) staat hier niet bij — die krijg je altijd.",
   },
   milestones: MILESTONE_NL,
+  bevestig: {
+    titel: "Weet je zeker dat je alles hebt ingevuld?", uitleg: "Controleer wat je gaat insturen. Klopt alles, dan sturen we het in voor de controle.",
+    postcode: "Postcode", fotos: "Foto's", methode: "Manier van controleren", viaStripe: "Via Stripe (je gaat zo door naar Stripe)", terug: "Terug", ja: "Ja, insturen",
+  },
   start: {
     eyebrow: "Jouw start",
     title: "Welkom! Kies eerst welke richting je op wilt.",
@@ -1459,6 +1463,10 @@ const en: FreelancerDict = {
       impact: "Put this amount aside in your Tax pot so you don't get surprises. ZekerFlex already calculates the VAT per invoice for you.",
     },
   },
+  bevestig: {
+    titel: "Are you sure you've filled in everything?", uitleg: "Check what you're about to submit. If everything is right, we'll send it in for verification.",
+    postcode: "Postcode", fotos: "Photos", methode: "Verification method", viaStripe: "Via Stripe (you'll continue to Stripe next)", terug: "Back", ja: "Yes, submit",
+  },
   start: {
     eyebrow: "Your start",
     title: "Welcome! First choose which direction you want to take.",
@@ -2836,6 +2844,10 @@ const pl: FreelancerDict = {
       detailVoorbij: "VAT za Q{q} ({range}) zgłaszasz w urzędzie skarbowym przed {datum}. Kwota oszacowana z Twoich faktur self-billing.",
       impact: "Odłóż tę kwotę w skarbonce podatkowej, żeby uniknąć niespodzianek. ZekerFlex już liczy VAT dla każdej faktury za Ciebie.",
     },
+  },
+  bevestig: {
+    titel: "Czy na pewno wszystko jest wypełnione?", uitleg: "Sprawdź, co zaraz wyślesz. Jeśli wszystko się zgadza, wyślemy to do weryfikacji.",
+    postcode: "Kod pocztowy", fotos: "Zdjęcia", methode: "Sposób weryfikacji", viaStripe: "Przez Stripe (zaraz przejdziesz do Stripe)", terug: "Wstecz", ja: "Tak, wyślij",
   },
   start: {
     eyebrow: "Twój start",
@@ -4215,6 +4227,10 @@ const ro: FreelancerDict = {
       impact: "Pune această sumă deoparte în fondul tău fiscal ca să nu ai surprize. ZekerFlex calculează deja TVA-ul pentru fiecare factură în locul tău.",
     },
   },
+  bevestig: {
+    titel: "Ești sigur că ai completat tot?", uitleg: "Verifică ce urmează să trimiți. Dacă totul e corect, trimitem pentru verificare.",
+    postcode: "Cod poștal", fotos: "Fotografii", methode: "Metoda de verificare", viaStripe: "Prin Stripe (vei continua imediat la Stripe)", terug: "Înapoi", ja: "Da, trimite",
+  },
   start: {
     eyebrow: "Startul tău",
     title: "Bun venit! Alege mai întâi în ce direcție vrei să mergi.",
@@ -5592,6 +5608,10 @@ const uk: FreelancerDict = {
       detailVoorbij: "ПДВ за Q{q} ({range}) ти подаєш у податкову до {datum}. Суму оцінено за твоїми рахунками self-billing.",
       impact: "Відклади цю суму в податковій скарбничці, щоб не було сюрпризів. ZekerFlex уже розраховує ПДВ по кожному рахунку за тебе.",
     },
+  },
+  bevestig: {
+    titel: "Чи все заповнено правильно?", uitleg: "Перевір, що ти зараз надішлеш. Якщо все вірно, ми відправимо це на перевірку.",
+    postcode: "Поштовий індекс", fotos: "Фото", methode: "Спосіб перевірки", viaStripe: "Через Stripe (зараз ти перейдеш до Stripe)", terug: "Назад", ja: "Так, надіслати",
   },
   start: {
     eyebrow: "Твій старт",
