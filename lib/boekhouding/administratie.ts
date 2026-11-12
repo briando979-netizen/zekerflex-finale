@@ -20,6 +20,8 @@ export interface NieuweAdministratie {
   juridischeNaam?: string | undefined;
   /** ISO-landcode van de vestiging, standaard NL */
   land?: string | undefined;
+  /** platform-tenant waarvan de facturen in deze administratie horen (hooguit één administratie per tenant) */
+  platformTenantId?: string | undefined;
 }
 
 export interface AangemaakteAdministratie {
@@ -44,7 +46,7 @@ export async function maakAdministratie(invoer: NieuweAdministratie): Promise<Aa
 
   return prisma.$transaction(async (tx) => {
     const administratie = await tx.boekAdministratie.create({
-      data: { naam, juridischeNaam, land, soort, valuta },
+      data: { naam, juridischeNaam, land, soort, valuta, ...(invoer.platformTenantId ? { platformTenantId: invoer.platformTenantId } : {}) },
       select: { id: true },
     });
     const rekeningen = await importeerRekeningschema(tx, administratie.id);
