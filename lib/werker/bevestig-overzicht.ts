@@ -30,6 +30,8 @@ export interface OverzichtInvoer {
   fotoNamen: readonly string[];
   /** "Via Stripe …" */
   viaStripe: string;
+  /** false: het documentnummer niet tonen (de ID-scan: het nummer komt uit de MRZ en blijft buiten beeld); standaard true */
+  nummerTonen?: boolean | undefined;
 }
 
 export type OverzichtRij = readonly [label: string, waarde: string];
@@ -41,7 +43,7 @@ export function bevestigOverzicht(i: OverzichtInvoer): OverzichtRij[] {
   if (i.methode === "upload") {
     rijen.push([i.labels.naam, v("nameOnDocument") || "—"]);
     rijen.push([i.labels.soort, i.soortNaam]);
-    rijen.push([i.labels.nummer, v("documentNumber") || "—"]);
+    if (i.nummerTonen !== false) rijen.push([i.labels.nummer, v("documentNumber") || "—"]);
     rijen.push([i.labels.geldigTot, v("documentExpiry") || "—"]);
     if (i.fotoNamen.length > 0) rijen.push([i.labels.fotos, i.fotoNamen.join(", ")]);
   } else {
