@@ -138,6 +138,11 @@ export function overlapWhen(o: Pick<OverlappingShift, "startsAt" | "endsAt">): s
   return `${WD[p.weekday] ?? ""} ${p.day} ${MON[p.month - 1] ?? ""} ${amsterdamClock(o.startsAt)}–${amsterdamClock(o.endsAt)}`;
 }
 
+/** De plaatshouders van overlapMessageSelf voor de vertaalde melding (lib/i18n/fouten.ts, "apply.overlap"). */
+export function overlapParams(o: OverlappingShift): { titel: string; filiaal: string; wanneer: string } {
+  return { titel: o.title, filiaal: o.branch, wanneer: overlapWhen(o) };
+}
+
 /** Foutmelding voor de werker zelf. */
 export function overlapMessageSelf(o: OverlappingShift): string {
   return `Je staat dan al ingepland: ${o.title} bij ${o.branch} (${overlapWhen(o)}). Twee diensten tegelijk kan niet. Zeg die eerst af als je deze wilt doen.`;

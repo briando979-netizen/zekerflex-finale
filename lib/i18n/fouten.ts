@@ -1,0 +1,75 @@
+import type { Locale } from "@/lib/i18n/config";
+
+// ---------------------------------------------------------------------------
+// Foutmeldingen van de server aan een WERKER, in zijn app-taal (12 nov 2026). Een AppError die een werker vaak tegenkomt
+// draagt een vaste sleutel (`.metSleutel("apply.vol")`, lib/errors.ts); de server stuurt `error.sleutel` (en eventuele
+// `error.params`) mee naast de Nederlandse `error.message`. Alleen de werker-app (FreelancerShell → FoutVertaler) vervangt de
+// tekst door die hieronder; een onbekende sleutel of een andere taal toont gewoon de Nederlandse message. Opdrachtgever en
+// beheer blijven Nederlands. De Nederlandse tekst hier is gelijk aan de tekst op de plek waar de fout ontstaat (een test
+// bewaakt dat). Statuscodes veranderen niet. Plaatshouders {x} vult vulIn (lib/i18n/vul-in.ts).
+// Machine-assisted translations: native-speaker review recommended.
+// ---------------------------------------------------------------------------
+
+type Tekst = Record<Locale, string>;
+
+export const FOUTEN: Record<string, Tekst> = {
+  // — reageren op een klus (lib/matching/apply.ts) —
+  "apply.verificatie": { nl: "Rond eerst je verificatie af.", en: "Finish your verification first.", pl: "Najpierw dokończ weryfikację.", ro: "Mai întâi finalizează verificarea.", uk: "Спершу заверши верифікацію." },
+  "apply.identiteit": { nl: "Je kunt pas diensten aannemen als je identiteit is geverifieerd.", en: "You can only take shifts once your identity is verified.", pl: "Możesz przyjmować zlecenia dopiero po zweryfikowaniu tożsamości.", ro: "Poți accepta ture abia după ce identitatea ta este verificată.", uk: "Ти можеш брати зміни лише після підтвердження особи." },
+  "apply.nietKlaar": { nl: "Je kunt nog geen diensten aannemen.", en: "You cannot take shifts yet.", pl: "Nie możesz jeszcze przyjmować zleceń.", ro: "Nu poți accepta încă ture.", uk: "Ти ще не можеш брати зміни." },
+  "apply.geblokkeerd": { nl: "Je account kan momenteel geen diensten aannemen.", en: "Your account cannot take shifts at the moment.", pl: "Twoje konto nie może teraz przyjmować zleceń.", ro: "Contul tău nu poate accepta ture momentan.", uk: "Твій обліковий запис зараз не може брати зміни." },
+  "apply.dba": { nl: "Matching is tijdelijk beperkt vanwege Wet DBA-signalen.", en: "Matching is temporarily limited because of Wet DBA signals.", pl: "Dopasowywanie jest tymczasowo ograniczone z powodu sygnałów Wet DBA.", ro: "Potrivirea este limitată temporar din cauza semnalelor Wet DBA.", uk: "Підбір тимчасово обмежено через сигнали Wet DBA." },
+  "apply.bestaatNiet": { nl: "Deze dienst bestaat niet meer.", en: "This shift no longer exists.", pl: "To zlecenie już nie istnieje.", ro: "Această tură nu mai există.", uk: "Цієї зміни більше не існує." },
+  "apply.uitzendOnly": { nl: "Deze klus is alleen voor uitzendkrachten via het ZekerFlex-uitzendbureau.", en: "This job is only for temp workers through the ZekerFlex temp agency.", pl: "To zlecenie jest tylko dla pracowników tymczasowych przez agencję ZekerFlex.", ro: "Această lucrare este doar pentru muncitori temporari prin agenția ZekerFlex.", uk: "Ця робота лише для тимчасових працівників через агенцію ZekerFlex." },
+  "apply.opdrachtgeverWeigert": { nl: "Deze opdrachtgever neemt op dit moment geen aanmeldingen van je aan.", en: "This client is not accepting applications from you at the moment.", pl: "Ten zleceniodawca nie przyjmuje teraz Twoich zgłoszeń.", ro: "Acest client nu acceptă momentan candidaturi de la tine.", uk: "Цей замовник зараз не приймає твоїх заявок." },
+  "apply.nietOpen": { nl: "Deze dienst is nog niet open voor aanmeldingen.", en: "This shift is not yet open for applications.", pl: "To zlecenie nie jest jeszcze otwarte na zgłoszenia.", ro: "Această tură nu este încă deschisă pentru candidaturi.", uk: "Ця зміна ще не відкрита для заявок." },
+  "apply.geenAanmeldingen": { nl: "Deze dienst neemt geen aanmeldingen meer aan.", en: "This shift no longer accepts applications.", pl: "To zlecenie nie przyjmuje już zgłoszeń.", ro: "Această tură nu mai acceptă candidaturi.", uk: "Ця зміна більше не приймає заявок." },
+  "apply.begonnen": { nl: "Deze dienst is al meer dan 2 uur geleden begonnen — aanmelden kan niet meer.", en: "This shift started more than 2 hours ago — you can no longer apply.", pl: "To zlecenie zaczęło się ponad 2 godziny temu — nie można się już zgłosić.", ro: "Această tură a început acum mai bine de 2 ore — nu te mai poți înscrie.", uk: "Ця зміна почалася понад 2 години тому — подати заявку вже не можна." },
+  "apply.vol": { nl: "Deze dienst is al vol.", en: "This shift is already full.", pl: "To zlecenie jest już pełne.", ro: "Această tură este deja completă.", uk: "Ця зміна вже заповнена." },
+  "apply.alAangenomen": { nl: "Je hebt deze dienst al aangenomen.", en: "You have already taken this shift.", pl: "Już przyjąłeś to zlecenie.", ro: "Ai acceptat deja această tură.", uk: "Ти вже взяв(-ла) цю зміну." },
+  "apply.overlap": {
+    nl: "Je staat dan al ingepland: {titel} bij {filiaal} ({wanneer}). Twee diensten tegelijk kan niet. Zeg die eerst af als je deze wilt doen.",
+    en: "You are already scheduled then: {titel} at {filiaal} ({wanneer}). Two shifts at the same time is not possible. Cancel that one first if you want to do this one.",
+    pl: "Masz już wtedy zaplanowane: {titel} w {filiaal} ({wanneer}). Dwóch zleceń naraz nie da się wykonać. Najpierw odwołaj tamto, jeśli chcesz wziąć to.",
+    ro: "Ești deja programat atunci: {titel} la {filiaal} ({wanneer}). Două ture în același timp nu se poate. Anulează-o mai întâi pe aceea dacă vrei să o faci pe aceasta.",
+    uk: "У цей час ти вже запланований(-а): {titel} у {filiaal} ({wanneer}). Дві зміни одночасно неможливі. Спершу скасуй ту, якщо хочеш взяти цю.",
+  },
+
+  // — wat er nog mist om te mogen reageren (lib/fiscal/eligibility.ts, lib/onboarding) —
+  "elig.uitzendGegevens": { nl: "Rond je uitzend-gegevens af (BSN en rekeningnummer) om op klussen te reageren.", en: "Finish your temp-work details (BSN and bank account) to apply for jobs.", pl: "Uzupełnij dane pracownika tymczasowego (BSN i numer konta), aby odpowiadać na zlecenia.", ro: "Completează datele de muncitor temporar (BSN și cont bancar) ca să poți aplica la lucrări.", uk: "Заповни дані тимчасового працівника (BSN і рахунок), щоб відгукуватися на роботи." },
+  "elig.contract": { nl: "Onderteken eerst je uitzendovereenkomst bij Verificatie om op klussen te reageren.", en: "Sign your temporary-work agreement under Verification first to apply for jobs.", pl: "Najpierw podpisz umowę o pracę tymczasową w Weryfikacji, aby odpowiadać na zlecenia.", ro: "Semnează mai întâi contractul de muncă temporară la Verificare ca să poți aplica la lucrări.", uk: "Спершу підпиши договір тимчасової роботи у Верифікації, щоб відгукуватися на роботи." },
+  "elig.kvk": { nl: "Je hebt nog geen geldig KVK-nummer of KOR. Maak er een aan om op deze klussen te reageren.", en: "You do not have a valid Chamber of Commerce (KVK) number or KOR yet. Set one up to apply for these jobs.", pl: "Nie masz jeszcze ważnego numeru KVK ani KOR. Załóż go, aby odpowiadać na te zlecenia.", ro: "Nu ai încă un număr KVK valid sau KOR. Obține unul ca să poți aplica la aceste lucrări.", uk: "У тебе ще немає чинного номера KVK або KOR. Оформи його, щоб відгукуватися на ці роботи." },
+  "elig.iban": { nl: "Vul je rekeningnummer (IBAN) in bij Verificatie → Bankrekening bevestigen om op klussen te reageren.", en: "Enter your bank account (IBAN) under Verification → Confirm bank account to apply for jobs.", pl: "Wpisz numer konta (IBAN) w Weryfikacji → Potwierdź konto bankowe, aby odpowiadać na zlecenia.", ro: "Introdu contul bancar (IBAN) la Verificare → Confirmă contul bancar ca să poți aplica la lucrări.", uk: "Введи номер рахунку (IBAN) у Верифікація → Підтвердити банківський рахунок, щоб відгукуватися на роботи." },
+  "onboarding.eerst": { nl: "Rond eerst je aanmelding af om op klussen te reageren. Bovenaan deze pagina zie je wat er nog mist.", en: "Finish your sign-up first to apply for jobs. At the top of this page you can see what is still missing.", pl: "Najpierw dokończ rejestrację, aby odpowiadać na zlecenia. U góry tej strony zobaczysz, czego jeszcze brakuje.", ro: "Finalizează mai întâi înscrierea ca să poți aplica la lucrări. În partea de sus a acestei pagini vezi ce mai lipsește.", uk: "Спершу заверши реєстрацію, щоб відгукуватися на роботи. Угорі цієї сторінки видно, чого ще бракує." },
+  "offer.geenProfiel": { nl: "Je hebt nog geen werkersprofiel. Maak eerst je profiel af.", en: "You do not have a worker profile yet. Finish your profile first.", pl: "Nie masz jeszcze profilu pracownika. Najpierw uzupełnij profil.", ro: "Nu ai încă un profil de lucrător. Finalizează mai întâi profilul.", uk: "У тебе ще немає профілю працівника. Спершу заверши профіль." },
+
+  // — algemeen —
+  "common.verzoek": { nl: "Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.", en: "The request did not arrive properly. Refresh the page and try again.", pl: "Żądanie nie dotarło poprawnie. Odśwież stronę i spróbuj ponownie.", ro: "Solicitarea nu a ajuns corect. Reîmprospătează pagina și încearcă din nou.", uk: "Запит дійшов некоректно. Онови сторінку й спробуй ще раз." },
+  "common.invoer": { nl: "Niet alle gegevens zijn goed ingevuld. Controleer je invoer.", en: "Not all details are filled in correctly. Check your input.", pl: "Nie wszystkie dane są poprawnie wypełnione. Sprawdź wpisane dane.", ro: "Nu toate datele sunt completate corect. Verifică ce ai introdus.", uk: "Не всі дані заповнено правильно. Перевір введене." },
+  "common.intern": { nl: "Er ging iets mis aan onze kant. Probeer het later opnieuw.", en: "Something went wrong on our side. Please try again later.", pl: "Coś poszło nie tak po naszej stronie. Spróbuj ponownie później.", ro: "Ceva nu a mers bine din partea noastră. Încearcă din nou mai târziu.", uk: "Щось пішло не так з нашого боку. Спробуй пізніше." },
+
+  // — gegevens en uitbetaling —
+  "fiscal.bsnFout": { nl: "Dit BSN klopt niet (elfproef mislukt).", en: "This BSN is not correct (check digit failed).", pl: "Ten numer BSN jest nieprawidłowy (weryfikacja nie powiodła się).", ro: "Acest BSN nu este corect (verificarea cifrei de control a eșuat).", uk: "Цей BSN неправильний (перевірка контрольної цифри не пройшла)." },
+  "fiscal.bsnNodig": { nl: "Voor verloning als uitzendkracht is je BSN nodig.", en: "Your BSN is needed for payroll as a temp worker.", pl: "Do rozliczenia jako pracownik tymczasowy potrzebny jest Twój BSN.", ro: "Pentru salarizare ca muncitor temporar ai nevoie de BSN.", uk: "Для нарахування зарплати тимчасовому працівнику потрібен твій BSN." },
+  "payout.voorwaarden": { nl: "Ga eerst akkoord met de voorwaarden voor snelle uitbetaling (overdracht van je vordering).", en: "First agree to the terms for fast payout (transfer of your claim).", pl: "Najpierw zaakceptuj warunki szybkiej wypłaty (cesja Twojej wierzytelności).", ro: "Mai întâi acceptă condițiile pentru plata rapidă (cesiunea creanței tale).", uk: "Спершу погодься з умовами швидкої виплати (передача твоєї вимоги)." },
+  "payout.bezig": { nl: "Er is al een voorschotaanvraag in verwerking. Probeer het over een paar seconden opnieuw.", en: "An advance request is already being processed. Try again in a few seconds.", pl: "Wniosek o zaliczkę jest już przetwarzany. Spróbuj ponownie za kilka sekund.", ro: "O cerere de avans este deja în curs de procesare. Încearcă din nou peste câteva secunde.", uk: "Запит на аванс уже обробляється. Спробуй ще раз за кілька секунд." },
+
+  // — in- en uitchecken (lib/timesheets/checkin.ts) —
+  "checkin.andereActie": { nl: "Deze registratie hoort bij een andere actie.", en: "This registration belongs to a different action.", pl: "Ta rejestracja dotyczy innej czynności.", ro: "Această înregistrare aparține unei alte acțiuni.", uk: "Ця реєстрація належить до іншої дії." },
+  "checkin.alIn": { nl: "Je bent al ingecheckt voor deze dienst.", en: "You are already checked in for this shift.", pl: "Jesteś już zameldowany na tym zleceniu.", ro: "Ești deja înregistrat la intrare pentru această tură.", uk: "Ти вже відмітився(-лася) на початку цієї зміни." },
+  "checkin.eerstIn": { nl: "Check eerst in voordat je uitcheckt.", en: "Check in before you check out.", pl: "Najpierw zamelduj się, zanim się wymeldujesz.", ro: "Înregistrează-te mai întâi la intrare înainte de ieșire.", uk: "Спершу відміться на початку, перш ніж відмічатися в кінці." },
+  "checkin.alUit": { nl: "Je bent al uitgecheckt voor deze dienst.", en: "You are already checked out for this shift.", pl: "Jesteś już wymeldowany z tego zlecenia.", ro: "Ai ieșit deja din această tură.", uk: "Ти вже відмітився(-лася) в кінці цієї зміни." },
+
+  // — ID-foto's (onboarding) —
+  "doc.kiesFoto": { nl: "Kies een foto van je document.", en: "Choose a photo of your document.", pl: "Wybierz zdjęcie swojego dokumentu.", ro: "Alege o fotografie a documentului tău.", uk: "Обери фото свого документа." },
+  "doc.formaat": { nl: "Gebruik een JPG-, PNG- of WebP-foto.", en: "Use a JPG, PNG or WebP photo.", pl: "Użyj zdjęcia JPG, PNG lub WebP.", ro: "Folosește o fotografie JPG, PNG sau WebP.", uk: "Використай фото у форматі JPG, PNG або WebP." },
+  "doc.tegroot": { nl: "De foto is te groot (max 12 MB).", en: "The photo is too large (max 12 MB).", pl: "Zdjęcie jest za duże (maks. 12 MB).", ro: "Fotografia este prea mare (max. 12 MB).", uk: "Фото завелике (макс. 12 МБ)." },
+};
+
+/** De teksten van één taal (sleutel → tekst), voor de werker-app. Nederlands geeft niets: de message is al Nederlands. */
+export function foutenVoor(locale: Locale): Record<string, string> {
+  if (locale === "nl") return {};
+  const uit: Record<string, string> = {};
+  for (const [sleutel, t] of Object.entries(FOUTEN)) uit[sleutel] = t[locale];
+  return uit;
+}

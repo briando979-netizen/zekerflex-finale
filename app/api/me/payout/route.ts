@@ -60,13 +60,13 @@ export async function PUT(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
     const { speed, acceptTerms: accepting } = putSchema.parse(await request.json().catch(() => {
-      throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
+      throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.").metSleutel("common.verzoek");
     }));
     // 1 minuut / 3 dagen = ZekerFlex neemt je vordering over: only with the
     // overdrachtsvoorwaarden accepted (once per terms version, recorded).
     if (speed !== "standard") {
       if (accepting) await acceptTerms(p.userId, clientIp(request), request.headers.get("user-agent") ?? "");
-      else if (!(await hasAcceptedTerms(p.userId))) throw AppError.precondition("Ga eerst akkoord met de voorwaarden voor snelle uitbetaling (overdracht van je vordering).");
+      else if (!(await hasAcceptedTerms(p.userId))) throw AppError.precondition("Ga eerst akkoord met de voorwaarden voor snelle uitbetaling (overdracht van je vordering).").metSleutel("payout.voorwaarden");
     }
     const prefs = await setPayoutSpeed(p.userId, speed);
     return NextResponse.json({ prefs });
@@ -83,7 +83,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
     const { amountCents } = advanceSchema.parse(await request.json().catch(() => {
-      throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
+      throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.").metSleutel("common.verzoek");
     }));
 
     // The cap check (outstandingAdvanceCents vs. maxAdvanceCents) reads then
@@ -92,7 +92,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     // and together exceed the cap. A short per-user claim serializes them.
     const claimed = await claimIdempotency(`advance-request:${p.userId}`, 5);
     if (!claimed) {
-      throw AppError.conflict("Er is al een voorschotaanvraag in verwerking. Probeer het over een paar seconden opnieuw.");
+      throw AppError.conflict("Er is al een voorschotaanvraag in verwerking. Probeer het over een paar seconden opnieuw.").metSleutel("payout.bezig");
     }
 
     // An advance is paid out and settled through ZekerFlex Bank (credited now,

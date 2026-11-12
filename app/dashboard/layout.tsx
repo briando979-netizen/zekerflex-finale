@@ -4,6 +4,8 @@ import { getPrincipal, hasRole } from "@/lib/auth";
 import { getTheme } from "@/lib/theme/server";
 import { FreelancerShell } from "@/components/app/FreelancerShell";
 import { ChatDock } from "@/components/chat/ChatDock";
+import { FoutVertaler } from "@/components/app/FoutVertaler";
+import { foutenVoor } from "@/lib/i18n/fouten";
 import { CHAT_TEKSTEN } from "@/lib/chat/teksten-talen";
 import { SeasonalLoader } from "@/components/seasons/SeasonalLoader";
 import { birthdayToday } from "@/lib/seasons/settings";
@@ -53,6 +55,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     <IosAppProvider ios={await inIosApp()}>
     <I18nProvider locale={locale} t={clientDict(locale)}>
       <ViewAsBanner role="freelancer" />
+      {/* foutmeldingen van de server in de taal van de werker (lib/i18n/fouten.ts); Nederlands geeft niets mee */}
+      <FoutVertaler texts={foutenVoor(locale)} />
       <FreelancerShell
         userName={principal.fullName}
         avatarUrl={avatarUrl}
