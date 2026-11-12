@@ -264,14 +264,30 @@ function grijsVan(c: HTMLCanvasElement): Uint8Array | null {
 
 type DocAntwoord = { status: "ok"; meting: DocServerMeting } | { status: "fout" } | { status: "stop" };
 
-/** De server meet het kader: is de code leesbaar, hoe groot staat de pasfoto (alleen ja/nee en een getal terug). */
-async function meetDocument(c: HTMLCanvasElement, kant: DocKantMeting): Promise<DocAntwoord> {
+/**
+ * De server meet het kader: is de code leesbaar, hoe groot staat de pasfoto (alleen ja/nee en een getal terug). Op de
+ * telefoon via de QR-code (niet ingelogd) gaat het via /api/id-overdracht/document-live, met de eenmalige code en het
+ * toesteltoken in het formulier, nooit in het adres (12 nov 2026).
+ */
+async function meetDocument(c: HTMLCanvasElement, kant: DocKantMeting, overdracht?: { code: string; toestel: string }): Promise<DocAntwoord> {
   const beeld = await new Promise<Blob | null>((klaar) => c.toBlob((b) => klaar(b), "image/jpeg", 0.85));
   if (!beeld) return { status: "fout" };
   const zoek = [kant.mrz ? "mrz=1" : "", kant.portret ? "portret=1" : ""].filter(Boolean).join("&");
   try {
-    const res = await fetch(`/api/onboarding/document-live?${zoek}`, { method: "POST", headers: { "Content-Type": "image/jpeg" }, body: beeld });
-    if (res.status === 401 || res.status === 423 || res.status === 429) return { status: "stop" };
+    let res: Response;
+    if (overdracht) {
+      const form = new FormData();
+      form.set("code", overdracht.code);
+      form.set("toestel", overdracht.toestel);
+      if (kant.mrz) form.set("mrz", "1");
+      if (kant.portret) form.set("portret", "1");
+      form.set("beeld", beeld, "kader.jpg");
+      res = await fetch("/api/id-overdracht/document-live", { method: "POST", body: form });
+    } else {
+      res = await fetch(`/api/onboarding/document-live?${zoek}`, { method: "POST", headers: { "Content-Type": "image/jpeg" }, body: beeld });
+    }
+    // 404 = de link van de QR-code is verlopen; dan alleen nog de knop
+    if (res.status === 401 || res.status === 404 || res.status === 423 || res.status === 429) return { status: "stop" };
     if (!res.ok) return { status: "fout" };
     const data = (await res.json().catch(() => ({}))) as { meting?: DocServerMeting };
     return data.meting ? { status: "ok", meting: data.meting } : { status: "fout" };
@@ -360,8 +376,8 @@ function Camera({
   eu?: boolean;
   live?: "recht" | "draai" | undefined;
   referentie?: LiveMeting | null;
-  /** live begeleiding van het document; `server` = de server mag meten (alleen ingelogd) */
-  doc?: { soort: DocSoortLive; kant: DocKant; server: boolean } | undefined;
+  /** live begeleiding van het document; `server` = de server mag meten (ingelogd, of op de telefoon met de code van de QR-code) */
+  doc?: { soort: DocSoortLive; kant: DocKant; server: boolean; overdracht?: { code: string; toestel: string } | undefined } | undefined;
   omdraaien?: string | undefined;
 }) {
   const video = useRef<HTMLVideoElement>(null);
@@ -380,6 +396,9 @@ function Camera({
   const docSoort = doc?.soort;
   const docKant = doc?.kant;
   const docServer = doc?.server === true;
+  // op de telefoon via de QR-code: de code en het toesteltoken (als tekst, zodat het meten niet bij elke render opnieuw begint)
+  const ovCode = doc?.overdracht?.code;
+  const ovToestel = doc?.overdracht?.toestel;
   const docVanzelf = docSoort && docKant ? docServer && kanVanzelf(docKantMeting(docSoort, docKant)) : false;
   // gaat de foto vanzelf? Dan geen uitleg over de handmatige opname
   const vanzelfAan = (docVanzelf && !docUit) || (live !== undefined && !liveUit);
@@ -574,7 +593,7 @@ function Camera({
             laatsteServer = Date.now();
             const groot = volBeeld(v);
             const uitsnede = groot ? kaderUitsnede(groot, groot.width, groot.height, kant.mrz ? 1400 : 640) : null;
-            const r: DocAntwoord = uitsnede ? await meetDocument(uitsnede, kant) : { status: "fout" };
+            const r: DocAntwoord = uitsnede ? await meetDocument(uitsnede, kant, ovCode && ovToestel ? { code: ovCode, toestel: ovToestel } : undefined) : { status: "fout" };
             if (weg) return;
             if (r.status === "stop") {
               serverUit = true;
@@ -607,7 +626,7 @@ function Camera({
     return () => {
       weg = true;
     };
-  }, [docSoort, docKant, docServer, stand, zichtbaar, toonOmdraai, vorm]);
+  }, [docSoort, docKant, docServer, stand, zichtbaar, toonOmdraai, vorm, ovCode, ovToestel]);
 
   function vastleggen() {
     const v = video.current;
@@ -1495,8 +1514,9 @@ export function IdScan({
                       // live meten alleen ingelogd (niet op de telefoon via de QR-code: daar beslist toch een medewerker)
                       live={metBeweging && fotoStap === "selfie" ? "recht" : metBeweging && fotoStap === "beweging" ? "draai" : undefined}
                       referentie={selfieRef}
-                      // het document live begeleiden; de server meet alleen ingelogd (niet op de telefoon via de QR-code)
-                      doc={fotoStap === "voor" || fotoStap === "achter" ? { soort, kant: fotoStap, server: metBeweging } : undefined}
+                      // het document live begeleiden en vanzelf fotograferen; op de telefoon via de QR-code meet de server met de
+                      // eenmalige code (/api/id-overdracht/document-live). Beslissen doet daar hoe dan ook een mens.
+                      doc={fotoStap === "voor" || fotoStap === "achter" ? { soort, kant: fotoStap, server: metBeweging || Boolean(overdracht), overdracht } : undefined}
                       omdraaien={fotoStap === "achter" && heeftAchterkant(soort) ? (soort === "DRIVERS_LICENSE" ? s.extra.omdraaiRijbewijs : s.extra.omdraaiId) : undefined}
                       onFoto={(f) => {
                         setLiveFout(null);

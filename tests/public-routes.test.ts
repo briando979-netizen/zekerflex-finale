@@ -53,6 +53,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/id-overdracht/open", // the phone (not logged in) continues the ID scan with a one-time code
     "/api/id-overdracht/lezen",
     "/api/id-overdracht/klaar",
+    "/api/id-overdracht/document-live", // de camera op de telefoon meet het kader live (code in de body, IP-begrensd)
     "/api/whatsapp/inkomend",
     "/api/orgs/org_babycare/photo",
     "/api/sites/domein-check", // Caddy's on-demand TLS ask
