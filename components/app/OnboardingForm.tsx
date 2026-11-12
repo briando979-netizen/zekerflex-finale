@@ -13,6 +13,7 @@ import { WieBenJijPersoon, type PersoonStand } from "@/components/app/WieBenJijP
 import { IdKeuzeKaarten } from "@/components/app/WieBenJijIdKaarten";
 import { stappenVoor, voegNaam, type WieStap } from "@/lib/onboarding/wie-ben-jij";
 import { controleerVeld, type VeldSleutel } from "@/lib/onboarding/velden";
+import { heeftAchterkant } from "@/lib/kyc/document-zijden";
 
 interface Check {
   label: string;
@@ -408,14 +409,19 @@ export function OnboardingForm({
     setError(null);
     const body = new FormData(form);
     if (m === "upload") {
-      const absent = (["documentFront", "documentBack", "selfie"] as PhotoKey[]).filter((k) => !photos.current[k]);
+      // een paspoort heeft geen achterkant: dan alleen de fotopagina en de selfie (12 nov 2026)
+      const paspoort = !heeftAchterkant(docType);
+      const nodig: PhotoKey[] = paspoort ? ["documentFront", "selfie"] : ["documentFront", "documentBack", "selfie"];
+      const absent = nodig.filter((k) => !photos.current[k]);
       setMissing(absent);
       if (absent.length) {
         const names = absent.map((k) => t.missingNames[k]);
         setError(fill(t.missing, { list: names.length > 1 ? `${names.slice(0, -1).join(", ")} ${t.and} ${names.at(-1)}` : names[0]! }));
         return;
       }
-      for (const k of Object.keys(photos.current) as PhotoKey[]) body.set(k, photos.current[k]!);
+      for (const k of nodig) body.set(k, photos.current[k]!);
+      // de server wil twee beelden van het document: bij een paspoort dient de fotopagina ook als tweede (zoals in de ID-scan)
+      if (paspoort) body.set("documentBack", photos.current.documentFront!);
     } else {
       body.set("identityMethod", "stripe");
     }
@@ -746,10 +752,13 @@ export function OnboardingForm({
                           <VeldFout veld="name" tekst={veldFout("name")} />
                         </label>
                       </div>
-                      <p className="text-xs leading-relaxed text-neutralx-500">{t.photosInfo}</p>
-                      <div className="grid gap-3 sm:grid-cols-3">
+                      <p className="text-xs leading-relaxed text-neutralx-500">{heeftAchterkant(docType) ? t.photosInfo : t.photosInfoPaspoort}</p>
+                      <div className={`grid gap-3 ${heeftAchterkant(docType) ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
                         <CaptureSlot t={t} label={t.front[0]} hint={t.front[1]} missing={missing.includes("documentFront")} onPick={(f) => kiesFoto("documentFront", f)} />
-                        <CaptureSlot t={t} label={t.back[0]} hint={t.back[1]} missing={missing.includes("documentBack")} onPick={(f) => kiesFoto("documentBack", f)} />
+                        {/* een paspoort heeft geen achterkant */}
+                        {heeftAchterkant(docType) && (
+                          <CaptureSlot t={t} label={t.back[0]} hint={t.back[1]} missing={missing.includes("documentBack")} onPick={(f) => kiesFoto("documentBack", f)} />
+                        )}
                         <CaptureSlot t={t} label={t.selfie[0]} hint={t.selfie[1]} round missing={missing.includes("selfie")} onPick={(f) => kiesFoto("selfie", f)} />
                       </div>
                       {lezing && <DocumentLezing lezing={lezing} t={t} />}

@@ -225,6 +225,8 @@ export interface AuthDict {
     validUntil: string;
     nameOnDoc: string;
     photosInfo: string;
+    /** bij een paspoort: twee foto's, geen achterkant (12 nov 2026) */
+    photosInfoPaspoort: string;
     front: [string, string];
     back: [string, string];
     selfie: [string, string];
@@ -597,6 +599,7 @@ const nl: AuthDict = {
     validUntil: "Geldig tot",
     nameOnDoc: "Naam zoals op document",
     photosInfo: "Drie foto's: de voorkant en achterkant van je document, en een selfie zodat we kunnen zien dat jij het bent. Maak ze met je camera of kies ze uit je galerij. Zorg voor goed licht en scherpe tekst.",
+    photosInfoPaspoort: "Twee foto's: de pasfotopagina van je paspoort (een paspoort heeft geen achterkant nodig) en een selfie zodat we kunnen zien dat jij het bent. Maak ze met je camera of kies ze uit je galerij. Zorg voor goed licht en scherpe tekst.",
     front: ["Voorkant", "Pasfoto-zijde van je document"],
     back: ["Achterkant", "De kant zonder foto"],
     selfie: ["Selfie", "Kijk recht in de camera"],
@@ -973,6 +976,7 @@ const en: AuthDict = {
     validUntil: "Valid until",
     nameOnDoc: "Name as on document",
     photosInfo: "Three photos: the front and back of your document, and a selfie so we can see it's you. Take them with your camera or choose them from your gallery. Make sure there's good light and sharp text.",
+    photosInfoPaspoort: "Two photos: the photo page of your passport (a passport needs no back) and a selfie so we can see it's you. Take them with your camera or choose them from your gallery. Make sure there's good light and sharp text.",
     front: ["Front", "Photo side of your document"],
     back: ["Back", "The side without a photo"],
     selfie: ["Selfie", "Look straight into the camera"],
@@ -1349,6 +1353,7 @@ const pl: AuthDict = {
     validUntil: "Ważny do",
     nameOnDoc: "Imię i nazwisko jak w dokumencie",
     photosInfo: "Trzy zdjęcia: przód i tył dokumentu oraz selfie, abyśmy widzieli, że to Ty. Zrób je aparatem lub wybierz z galerii. Zadbaj o dobre światło i wyraźny tekst.",
+    photosInfoPaspoort: "Dwa zdjęcia: strona paszportu ze zdjęciem (paszport nie wymaga tyłu) i selfie, abyśmy widzieli, że to ty. Zrób je aparatem lub wybierz z galerii. Zadbaj o dobre światło i ostry tekst.",
     front: ["Przód", "Strona dokumentu ze zdjęciem"],
     back: ["Tył", "Strona bez zdjęcia"],
     selfie: ["Selfie", "Patrz prosto w aparat"],
@@ -1725,6 +1730,7 @@ const ro: AuthDict = {
     validUntil: "Valabil până la",
     nameOnDoc: "Numele ca pe document",
     photosInfo: "Trei fotografii: fața și versoul documentului și un selfie, ca să vedem că ești tu. Fă-le cu camera sau alege-le din galerie. Asigură-te că e lumină bună și textul e clar.",
+    photosInfoPaspoort: "Două fotografii: pagina cu fotografia din pașaport (la pașaport nu e nevoie de verso) și un selfie, ca să vedem că ești tu. Fă-le cu camera sau alege-le din galerie. Asigură-te că e lumină bună și textul e clar.",
     front: ["Față", "Partea cu fotografia"],
     back: ["Verso", "Partea fără fotografie"],
     selfie: ["Selfie", "Privește drept în cameră"],
@@ -2101,6 +2107,7 @@ const uk: AuthDict = {
     validUntil: "Дійсний до",
     nameOnDoc: "Ім'я як у документі",
     photosInfo: "Три фото: лицьовий бік і зворот документа та селфі, щоб ми бачили, що це ти. Зроби їх камерою або обери з галереї. Подбай про гарне світло та чіткий текст.",
+    photosInfoPaspoort: "Два фото: сторінка паспорта з фото (зворот паспорта не потрібен) і селфі, щоб ми бачили, що це ви. Зробіть їх камерою або виберіть із галереї. Подбайте про гарне освітлення й чіткий текст.",
     front: ["Лицьовий бік", "Бік документа з фото"],
     back: ["Зворот", "Бік без фото"],
     selfie: ["Селфі", "Дивись прямо в камеру"],

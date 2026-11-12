@@ -10,6 +10,7 @@ import { useI18n } from "@/components/i18n/I18nProvider";
 import { AuthLanguage } from "@/components/auth/AuthLanguage";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
 import { EuIntro, EuToestemming, NlIntro, TipsSheet } from "@/components/app/ScanRouteSchermen";
+import { heeftAchterkant } from "@/lib/kyc/document-zijden";
 import { BEWEGING, bewegingVoldoet, draaiAanwijzing, rechtAanwijzing, type LiveAanwijzing, type LiveMeting } from "@/lib/kyc/gezicht/beweging";
 
 // ---------------------------------------------------------------------------
@@ -562,17 +563,18 @@ export function IdScan({
   const [selfieRef, setSelfieRef] = useState<LiveMeting | null>(null);
   const [liveFout, setLiveFout] = useState<string | null>(null);
   const [meten, setMeten] = useState(false);
-  // een paspoort heeft geen achterkant: in een route slaan we die stap over (de server wil twee beelden, dus de fotopagina dient ook als tweede)
-  const zonderAchter = route !== undefined && soort === "PASSPORT";
+  // een paspoort heeft geen achterkant: die stap slaan we altijd over, ook op de telefoon via de QR-code (12 nov 2026). De server wil
+  // twee beelden, dus de fotopagina dient ook als tweede.
+  const zonderAchter = !heeftAchterkant(soort);
   const { locale } = useI18n();
   const [tipsOpen, setTipsOpen] = useState(false);
   // de bewegingscontrole (tweede selfie met een gedraaid hoofd) alleen op de laptop: de telefoon stuurt de foto's door en daar beslist altijd een medewerker
   const metBeweging = modus !== "telefoon";
   const vorigeVan = (st: Stap): Stap | undefined => {
     if (route && st === "soort") return "toestemming";
-    if (route && st === "selfie" && zonderAchter) return "voor";
+    if (st === "selfie" && zonderAchter) return "voor";
     if (st === "gegevens" && metBeweging) return "beweging";
-    if (route && st === "gegevens" && zonderAchter) return "selfie";
+    if (st === "gegevens" && zonderAchter) return "selfie";
     return VORIGE[st];
   };
 
@@ -877,7 +879,9 @@ export function IdScan({
   }
 
   const gelezenHier = fotoStap !== null && fotoStap === mrzKant && voorbeeld !== null && lezing !== null;
-  const nr = STAP_NR[stap];
+  // bij een paspoort is het een stap minder (geen achterkant)
+  const nr = zonderAchter && (stap === "selfie" || stap === "beweging") ? 3 : STAP_NR[stap];
+  const totaal = zonderAchter ? 3 : 4;
   const donker = route !== undefined && fotoStap !== null;
   // voortgangsbalk van de buitenlandse route: de echte stap waar iemand nu is, van zeven
   const EU_STAP: Partial<Record<Stap, number>> = { start: 1, toestemming: 2, soort: 3, voor: 4, achter: 5, chip: 5, selfie: 6, beweging: 6, gegevens: 6, bezig: 7, klaar: 7 };
@@ -904,7 +908,7 @@ export function IdScan({
               <span className={`font-display text-sm font-bold ${donker ? "text-white" : "text-ink"}`}>ZekerFlex</span>
             )
             )}
-            {nr !== undefined && <span className={`text-xs ${donker ? "text-white/80" : "text-neutralx-500"}`}>{s.stap.replace("{n}", String(nr)).replace("{totaal}", "4")}</span>}
+            {nr !== undefined && <span className={`text-xs ${donker ? "text-white/80" : "text-neutralx-500"}`}>{s.stap.replace("{n}", String(nr)).replace("{totaal}", String(totaal))}</span>}
             <button
               type="button"
               onClick={() => onSluiten(stap === "klaar" ? uitslag : null)}
