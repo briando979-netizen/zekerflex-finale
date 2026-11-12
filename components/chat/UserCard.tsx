@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Avatar } from "./Avatar";
 import { Portal } from "./Portal";
+import { useChatTeksten } from "./ChatTekstenContext";
+import { vulIn } from "@/lib/i18n/vul-in";
 
 interface ReviewItem {
   id: string;
@@ -44,8 +46,9 @@ interface CardData {
 }
 
 function Stars({ n }: { n: number }) {
+  const chat = useChatTeksten();
   return (
-    <span className="text-amber-500" aria-label={`${n} van 5`}>
+    <span className="text-amber-500" aria-label={vulIn(chat.kaart.sterren, { n })}>
       {"★★★★★".slice(0, Math.round(n))}
       <span className="text-neutralx-300">{"★★★★★".slice(Math.round(n))}</span>
     </span>
@@ -63,6 +66,7 @@ export function UserCard({
   onMessage?: (userId: string) => void;
   onCall?: (userId: string, mode: "audio" | "video") => void;
 }) {
+  const chat = useChatTeksten();
   const [data, setData] = useState<CardData | null>(null);
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState(false);
@@ -107,7 +111,7 @@ export function UserCard({
         className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white shadow-lift"
         onClick={(e) => e.stopPropagation()}
       >
-        {err && <p className="p-6 text-sm text-neutralx-500">Kon profiel niet laden.</p>}
+        {err && <p className="p-6 text-sm text-neutralx-500">{chat.kaart.laadFout}</p>}
         {c && (
           <>
             <div className="relative">
@@ -121,7 +125,7 @@ export function UserCard({
                 type="button"
                 onClick={onClose}
                 className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full bg-white/90 text-lg"
-                aria-label="Sluiten"
+                aria-label={chat.kaart.sluiten}
               >
                 ✕
               </button>
@@ -138,7 +142,7 @@ export function UserCard({
                   <>
                     {" · "}
                     <span className={data.presence.online ? "text-ok" : ""}>
-                      {data.presence.online ? "online" : data.presence.label}
+                      {data.presence.online ? chat.kaart.online : data.presence.label}
                     </span>
                   </>
                 )}
@@ -151,12 +155,12 @@ export function UserCard({
               {/* freelancer stats */}
               {c.freelancer && (
                 <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                  <Metric label="Betrouwbaar" value={`${c.freelancer.reliabilityPct}%`} />
+                  <Metric label={chat.kaart.betrouwbaar} value={`${c.freelancer.reliabilityPct}%`} />
                   <Metric
-                    label="Opkomst"
+                    label={chat.kaart.opkomst}
                     value={c.freelancer.attendancePct != null ? `${c.freelancer.attendancePct}%` : "–"}
                   />
-                  <Metric label="Diensten" value={String(c.freelancer.shiftsCompleted)} />
+                  <Metric label={chat.kaart.diensten} value={String(c.freelancer.shiftsCompleted)} />
                 </div>
               )}
 
@@ -177,21 +181,21 @@ export function UserCard({
                 <div className="mt-4 flex flex-wrap gap-2">
                   {onMessage && (
                     <button type="button" onClick={() => onMessage(c.userId)} className="btn-primary text-sm">
-                      Bericht
+                      {chat.kaart.bericht}
                     </button>
                   )}
                   {onCall && c.role !== "admin" && (
                     <>
-                      <button type="button" onClick={() => onCall(c.userId, "audio")} className="btn-ghost text-sm" aria-label="Bellen">
+                      <button type="button" onClick={() => onCall(c.userId, "audio")} className="btn-ghost text-sm" aria-label={chat.kaart.bellen}>
                         📞
                       </button>
-                      <button type="button" onClick={() => onCall(c.userId, "video")} className="btn-ghost text-sm" aria-label="Videobellen">
+                      <button type="button" onClick={() => onCall(c.userId, "video")} className="btn-ghost text-sm" aria-label={chat.kaart.videobellen}>
                         📹
                       </button>
                     </>
                   )}
                   <button type="button" onClick={toggleSave} className="btn-ghost text-sm">
-                    {saved ? "★ Opgeslagen" : "☆ Opslaan"}
+                    {saved ? chat.kaart.opgeslagen : chat.kaart.opslaan}
                   </button>
                 </div>
               )}
@@ -200,12 +204,12 @@ export function UserCard({
               {rev && rev.count > 0 && (
                 <div className="mt-5 border-t border-hair pt-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-ink">Reviews</p>
+                    <p className="text-sm font-semibold text-ink">{chat.kaart.reviews}</p>
                     <p className="text-sm">
                       <Stars n={rev.average} /> <span className="text-neutralx-500">{rev.average} ({rev.count})</span>
                     </p>
                   </div>
-                  <p className="mt-1 text-xs text-neutralx-400">Laatste 6 maanden</p>
+                  <p className="mt-1 text-xs text-neutralx-400">{chat.kaart.laatsteZesMaanden}</p>
                   <ul className="mt-3 space-y-3">
                     {rev.recent.slice(0, 5).map((r) => (
                       <li key={r.id} className="rounded-lg bg-paper-soft p-3">
@@ -221,7 +225,7 @@ export function UserCard({
                 </div>
               )}
               {rev && rev.count === 0 && (
-                <p className="mt-5 border-t border-hair pt-4 text-sm text-neutralx-400">Nog geen reviews.</p>
+                <p className="mt-5 border-t border-hair pt-4 text-sm text-neutralx-400">{chat.kaart.nogGeenReviews}</p>
               )}
             </div>
           </>

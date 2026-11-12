@@ -4,6 +4,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { PushToggle } from "@/components/app/PushToggle";
 import { setLocale, useI18n } from "@/components/i18n/I18nProvider";
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
+import { vulIn } from "@/lib/i18n/vul-in";
+import { useChatTeksten } from "./ChatTekstenContext";
 
 // ---------------------------------------------------------------------------
 // WhatsApp-style chat settings: a list of sections, each opening its own page
@@ -96,6 +98,7 @@ export function ChatSettingsPanel({
   const [note, setNote] = useState<string | null>(null);
   const [newQuick, setNewQuick] = useState("");
   const { locale } = useI18n();
+  const t = useChatTeksten().instellingen;
 
   const loadOverview = () =>
     fetch("/api/inbox/prefs", { cache: "no-store" })
@@ -120,13 +123,13 @@ export function ChatSettingsPanel({
     const next = { ...s, ...patch };
     setS(next);
     const r = await fetch("/api/chat/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
-    setNote(r.ok ? "Opgeslagen." : "Opslaan mislukt.");
+    setNote(r.ok ? t.opgeslagen : t.opslaanMislukt);
     setTimeout(() => setNote(null), 1500);
   };
   const bulk = async (body: Record<string, string>, ok: string) => {
     const r = await fetch("/api/inbox/prefs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const d = await r.json().catch(() => ({}));
-    setNote(r.ok ? ok : (d?.error?.message ?? "Mislukt."));
+    setNote(r.ok ? ok : (d?.error?.message ?? t.mislukt));
     await loadOverview();
     onChanged();
   };
@@ -158,21 +161,21 @@ export function ChatSettingsPanel({
               defaultValue={s?.statusNote ?? ""}
               key={s ? "loaded" : "loading"}
               maxLength={140}
-              placeholder="Je status, bijv. 'Beschikbaar vanaf maandag'"
+              placeholder={t.statusPlaceholder}
               onBlur={(e) => s && e.target.value !== s.statusNote && void save({ statusNote: e.target.value })}
               className="w-full bg-transparent text-xs text-neutralx-500 outline-none placeholder:text-neutralx-300"
             />
           </span>
         </div>
         <div>
-          <Row icon="🔑" title="Account" sub="Beveiliging, gegevens, account verwijderen" onClick={() => setPage("account")} />
-          <Row icon="🔒" title="Privacy" sub="Laatst gezien, leesbevestigingen, geblokkeerd, vergrendelde chats" onClick={() => setPage("privacy")} />
-          <Row icon="💬" title="Chats" sub="Lettergrootte, achtergrond, chatgeschiedenis" onClick={() => setPage("chats")} />
-          <Row icon="🔔" title="Meldingen" sub="Pushmeldingen, berichtvoorbeeld, gedempte chats" onClick={() => setPage("notifications")} />
-          <Row icon="🧰" title="Bedrijfstools" sub="Snelle antwoorden, afwezigheidsbericht, labels" onClick={() => setPage("business")} />
+          <Row icon="🔑" title={t.account} sub={t.accountSub} onClick={() => setPage("account")} />
+          <Row icon="🔒" title={t.privacy} sub={t.privacySub} onClick={() => setPage("privacy")} />
+          <Row icon="💬" title={t.chats} sub={t.chatsSub} onClick={() => setPage("chats")} />
+          <Row icon="🔔" title={t.meldingen} sub={t.meldingenSub} onClick={() => setPage("notifications")} />
+          <Row icon="🧰" title={t.bedrijfstools} sub={t.bedrijfstoolsSub} onClick={() => setPage("business")} />
           <Row
             icon="🌐"
-            title="Taal"
+            title={t.taal}
             right={
               <select value={locale} onChange={(e) => setLocale(e.target.value as Locale)} className="rounded-lg border border-hairstrong bg-white px-2 py-1 text-xs">
                 {LOCALES.map((l) => (
@@ -183,7 +186,7 @@ export function ChatSettingsPanel({
               </select>
             }
           />
-          <Row icon="❓" title="Help" sub="Helpcentrum, contact, privacybeleid" onClick={() => setPage("help")} />
+          <Row icon="❓" title={t.help} sub={t.helpSub} onClick={() => setPage("help")} />
         </div>
         {note && <p className="px-4 py-2 text-xs text-neutralx-500">{note}</p>}
       </div>
@@ -192,12 +195,12 @@ export function ChatSettingsPanel({
   if (page === "account") {
     return (
       <div>
-        {back("Account")}
-        <Row icon="👤" title="Persoonlijke gegevens" onClick={() => (window.location.href = employer ? "/werkgever/bedrijf" : "/dashboard/profiel")} />
-        <Row icon="🛡" title="Tweestapsverificatie" onClick={() => (window.location.href = employer ? "/werkgever/account" : "/dashboard/account/beveiliging")} />
-        <Row icon="🔐" title="Wachtwoord wijzigen" onClick={() => (window.location.href = "/wachtwoord-vergeten")} />
-        <Row icon="📦" title="Download mijn gegevens" sub="Alles wat ZekerFlex van je heeft, als bestand" onClick={() => (window.location.href = "/api/me/gegevens/export")} />
-        <Row icon="🗑" title="Account verwijderen" onClick={() => (window.location.href = "/account-verwijderen")} />
+        {back(t.account)}
+        <Row icon="👤" title={t.persoonlijkeGegevens} onClick={() => (window.location.href = employer ? "/werkgever/bedrijf" : "/dashboard/profiel")} />
+        <Row icon="🛡" title={t.tweestapsverificatie} onClick={() => (window.location.href = employer ? "/werkgever/account" : "/dashboard/account/beveiliging")} />
+        <Row icon="🔐" title={t.wachtwoordWijzigen} onClick={() => (window.location.href = "/wachtwoord-vergeten")} />
+        <Row icon="📦" title={t.downloadGegevens} sub={t.downloadGegevensSub} onClick={() => (window.location.href = "/api/me/gegevens/export")} />
+        <Row icon="🗑" title={t.accountVerwijderen} onClick={() => (window.location.href = "/account-verwijderen")} />
       </div>
     );
   }
@@ -205,25 +208,25 @@ export function ChatSettingsPanel({
   if (page === "privacy")
     return (
       <div>
-        {back("Privacy")}
-        <Head>Wie ziet wat</Head>
-        <Row title="Laatst gezien & online" sub="Uit: niemand ziet of je online bent — en jij ziet het van anderen ook niet" right={<Toggle on={s?.showOnlineStatus ?? true} onChange={(v) => void save({ showOnlineStatus: v })} />} />
-        <Row title="Leesbevestigingen" sub="Uit: je stuurt en ziet geen blauwe vinkjes" right={<Toggle on={s?.showReadReceipts ?? true} onChange={(v) => void save({ showReadReceipts: v })} />} />
-        <Head>Berichten</Head>
-        <Row title="Verdwijnende berichten" sub="Stel per chat in via ⋮ → Verdwijnende berichten (24 uur, 7 dagen of 90 dagen)" />
-        <Row icon="🔒" title={hasPin ? "Chat-pincode wijzigen" : "Chat-pincode instellen"} sub="Nodig voor vergrendelde chats" onClick={onSetPin} />
-        <Head>Geblokkeerde contacten ({blocked.length})</Head>
+        {back(t.privacy)}
+        <Head>{t.wieZietWat}</Head>
+        <Row title={t.laatstGezienOnline} sub={t.laatstGezienOnlineSub} right={<Toggle on={s?.showOnlineStatus ?? true} onChange={(v) => void save({ showOnlineStatus: v })} />} />
+        <Row title={t.leesbevestigingen} sub={t.leesbevestigingenSub} right={<Toggle on={s?.showReadReceipts ?? true} onChange={(v) => void save({ showReadReceipts: v })} />} />
+        <Head>{t.berichten}</Head>
+        <Row title={t.verdwijnendeBerichten} sub={t.verdwijnendeBerichtenSub} />
+        <Row icon="🔒" title={hasPin ? t.pincodeWijzigen : t.pincodeInstellen} sub={t.pincodeSub} onClick={onSetPin} />
+        <Head>{vulIn(t.geblokkeerdeContacten, { aantal: blocked.length })}</Head>
         {blocked.length === 0 ? (
-          <p className="px-4 pb-3 text-xs text-neutralx-500">Je hebt niemand geblokkeerd. Blokkeren doe je in een chat via ⋮ → Blokkeer.</p>
+          <p className="px-4 pb-3 text-xs text-neutralx-500">{t.geenGeblokkeerd}</p>
         ) : (
           blocked.map((uid) => (
             <Row
               key={uid}
               icon="⛔"
-              title={names[uid] ?? "Onbekend"}
+              title={names[uid] ?? t.onbekend}
               right={
                 <button type="button" onClick={() => onUnblock(uid)} className="text-xs font-semibold text-brand-600 underline">
-                  Deblokkeer
+                  {t.deblokkeer}
                 </button>
               }
             />
@@ -235,36 +238,36 @@ export function ChatSettingsPanel({
   if (page === "chats")
     return (
       <div>
-        {back("Chats")}
-        <Head>Weergave</Head>
+        {back(t.chats)}
+        <Head>{t.weergave}</Head>
         <Row
-          title="Lettergrootte"
+          title={t.lettergrootte}
           right={
             <span className="flex gap-1">
               {(["s", "m", "l"] as const).map((f) => (
                 <button key={f} type="button" onClick={() => setLookAndSave({ font: f })} className={`rounded-lg px-2.5 py-1 text-xs ${look.font === f ? "bg-brand-500 text-white" : "bg-paper-soft"}`}>
-                  {f === "s" ? "Klein" : f === "m" ? "Normaal" : "Groot"}
+                  {f === "s" ? t.klein : f === "m" ? t.normaal : t.groot}
                 </button>
               ))}
             </span>
           }
         />
         <Row
-          title="Achtergrond"
+          title={t.achtergrond}
           right={
             <span className="flex gap-1.5">
               {(
                 [
-                  ["dots", "#F4F4F0"],
-                  ["plain", "#FFFFFF"],
-                  ["mint", "#E4F8EF"],
-                  ["dark", "#14161A"],
+                  ["dots", "#F4F4F0", t.achtergrondStippen],
+                  ["plain", "#FFFFFF", t.achtergrondWit],
+                  ["mint", "#E4F8EF", t.achtergrondMint],
+                  ["dark", "#14161A", t.achtergrondDonker],
                 ] as const
-              ).map(([w, c]) => (
+              ).map(([w, c, naam]) => (
                 <button
                   key={w}
                   type="button"
-                  aria-label={w}
+                  aria-label={naam}
                   onClick={() => setLookAndSave({ wallpaper: w })}
                   className={`h-7 w-7 rounded-full border-2 ${look.wallpaper === w ? "border-brand-500" : "border-hair"}`}
                   style={{ background: c }}
@@ -273,9 +276,9 @@ export function ChatSettingsPanel({
             </span>
           }
         />
-        <Head>Chatgeschiedenis</Head>
-        <Row icon="🗄" title="Alle chats archiveren" onClick={() => window.confirm("Alle chats archiveren?") && void bulk({ action: "archive-all" }, "Alle chats gearchiveerd.")} />
-        <Row icon="🧹" title="Alle chats wissen" sub="Alleen voor jou — de anderen houden hun berichten" onClick={() => window.confirm("Alle berichten in al je chats wissen? Dit kan niet ongedaan worden.") && void bulk({ action: "clear-all" }, "Alle chats gewist.")} />
+        <Head>{t.chatgeschiedenis}</Head>
+        <Row icon="🗄" title={t.alleArchiveren} onClick={() => window.confirm(t.alleArchiverenVraag) && void bulk({ action: "archive-all" }, t.alleGearchiveerd)} />
+        <Row icon="🧹" title={t.alleWissen} sub={t.alleWissenSub} onClick={() => window.confirm(t.alleWissenVraag) && void bulk({ action: "clear-all" }, t.alleGewist)} />
         {note && <p className="px-4 py-2 text-xs text-neutralx-500">{note}</p>}
       </div>
     );
@@ -283,16 +286,16 @@ export function ChatSettingsPanel({
   if (page === "notifications")
     return (
       <div>
-        {back("Meldingen")}
+        {back(t.meldingen)}
         <div className="px-4 py-3">
           <PushToggle />
         </div>
-        <Row title="Berichtvoorbeeld tonen" sub="Uit: je melding zegt alleen 'Nieuw bericht'" right={<Toggle on={s?.notificationPreview ?? true} onChange={(v) => void save({ notificationPreview: v })} />} />
-        <Head>Gedempte chats ({overview.muted.length})</Head>
+        <Row title={t.berichtvoorbeeld} sub={t.berichtvoorbeeldSub} right={<Toggle on={s?.notificationPreview ?? true} onChange={(v) => void save({ notificationPreview: v })} />} />
+        <Head>{vulIn(t.gedempteChats, { aantal: overview.muted.length })}</Head>
         {overview.muted.length === 0 ? (
-          <p className="px-4 pb-3 text-xs text-neutralx-500">Geen gedempte chats. Dempen doe je via ⋮ → Dempen.</p>
+          <p className="px-4 pb-3 text-xs text-neutralx-500">{t.geenGedempt}</p>
         ) : (
-          <Row title={`${overview.muted.length} chat(s) gedempt`} right={<button type="button" onClick={() => void bulk({ action: "unmute-all" }, "Dempen opgeheven.")} className="text-xs font-semibold text-brand-600 underline">Alles weer aan</button>} />
+          <Row title={vulIn(t.aantalGedempt, { aantal: overview.muted.length })} right={<button type="button" onClick={() => void bulk({ action: "unmute-all" }, t.dempenOpgeheven)} className="text-xs font-semibold text-brand-600 underline">{t.allesWeerAan}</button>} />
         )}
         {note && <p className="px-4 py-2 text-xs text-neutralx-500">{note}</p>}
       </div>
@@ -301,21 +304,21 @@ export function ChatSettingsPanel({
   if (page === "business")
     return (
       <div>
-        {back("Bedrijfstools")}
-        <Head>Snelle antwoorden</Head>
+        {back(t.bedrijfstools)}
+        <Head>{t.snelleAntwoorden}</Head>
         {(s?.quickReplies ?? []).map((q, i) => (
           <Row
             key={i}
             title={q}
             right={
               <button type="button" onClick={() => s && void save({ quickReplies: s.quickReplies.filter((_, j) => j !== i) })} className="text-xs text-neutralx-400 hover:text-crit">
-                Verwijder
+                {t.verwijder}
               </button>
             }
           />
         ))}
         <div className="flex gap-2 px-4 py-2">
-          <input value={newQuick} onChange={(e) => setNewQuick(e.target.value)} maxLength={200} placeholder="Nieuw snel antwoord" className="field-input flex-1 py-1.5 text-sm" />
+          <input value={newQuick} onChange={(e) => setNewQuick(e.target.value)} maxLength={200} placeholder={t.nieuwSnelAntwoord} className="field-input flex-1 py-1.5 text-sm" />
           <button
             type="button"
             disabled={!newQuick.trim() || !s}
@@ -326,11 +329,11 @@ export function ChatSettingsPanel({
             }}
             className="btn-primary px-3 py-1.5 text-xs disabled:opacity-50"
           >
-            Voeg toe
+            {t.voegToe}
           </button>
         </div>
-        <Head>Afwezigheidsbericht</Head>
-        <Row title="Automatisch antwoorden" sub={s?.autoReply.onlyWhenAway ? "Alleen als je offline bent" : "Altijd"} right={<Toggle on={s?.autoReply.enabled ?? false} onChange={(v) => s && void save({ autoReply: { ...s.autoReply, enabled: v } })} />} />
+        <Head>{t.afwezigheidsbericht}</Head>
+        <Row title={t.automatischAntwoorden} sub={s?.autoReply.onlyWhenAway ? t.alleenOfflineJe : t.altijd} right={<Toggle on={s?.autoReply.enabled ?? false} onChange={(v) => s && void save({ autoReply: { ...s.autoReply, enabled: v } })} />} />
         <div className="px-4 pb-3">
           <textarea
             key={s ? "ar" : "x"}
@@ -342,33 +345,33 @@ export function ChatSettingsPanel({
           />
           <label className="mt-1 flex items-center gap-2 text-xs text-neutralx-600">
             <input type="checkbox" checked={s?.autoReply.onlyWhenAway ?? true} onChange={(e) => s && void save({ autoReply: { ...s.autoReply, onlyWhenAway: e.target.checked } })} className="accent-brand-500" />
-            Alleen als ik offline ben
+            {t.alleenOfflineIk}
           </label>
         </div>
-        <Head>Labels ({overview.labels.length})</Head>
+        <Head>{vulIn(t.labels, { aantal: overview.labels.length })}</Head>
         {overview.labels.length === 0 ? (
-          <p className="px-4 pb-3 text-xs text-neutralx-500">Nog geen labels. Voeg een chat toe aan een lijst via ⋮ → Voeg toe aan lijst.</p>
+          <p className="px-4 pb-3 text-xs text-neutralx-500">{t.geenLabels}</p>
         ) : (
           overview.labels.map((l) => (
             <Row
               key={l.name}
               icon="🏷"
               title={l.name}
-              sub={`${l.count} chat(s)`}
+              sub={vulIn(t.aantalChats, { aantal: l.count })}
               right={
                 <span className="flex gap-3 text-xs">
                   <button
                     type="button"
                     onClick={() => {
-                      const to = window.prompt("Nieuwe naam voor dit label", l.name);
-                      if (to && to.trim() && to !== l.name) void bulk({ action: "list-rename", from: l.name, to }, "Label hernoemd.");
+                      const to = window.prompt(t.hernoemPrompt, l.name);
+                      if (to && to.trim() && to !== l.name) void bulk({ action: "list-rename", from: l.name, to }, t.labelHernoemd);
                     }}
                     className="text-brand-600 underline"
                   >
-                    Hernoem
+                    {t.hernoem}
                   </button>
-                  <button type="button" onClick={() => window.confirm(`Label "${l.name}" verwijderen? De chats blijven bestaan.`) && void bulk({ action: "list-delete", list: l.name }, "Label verwijderd.")} className="text-neutralx-400 hover:text-crit">
-                    Verwijder
+                  <button type="button" onClick={() => window.confirm(vulIn(t.labelVerwijderVraag, { naam: l.name })) && void bulk({ action: "list-delete", list: l.name }, t.labelVerwijderd)} className="text-neutralx-400 hover:text-crit">
+                    {t.verwijder}
                   </button>
                 </span>
               }
@@ -381,11 +384,11 @@ export function ChatSettingsPanel({
 
   return (
     <div>
-      {back("Help")}
-      <Row icon="📚" title="Helpcentrum" sub="Antwoorden op veelgestelde vragen" onClick={() => (window.location.href = employer ? "/kennis/werkgevers" : "/kennis")} />
-      <Row icon="🛟" title="Contact met ZekerFlex Support" onClick={onSupport} />
-      <Row icon="📄" title="Privacybeleid" onClick={() => (window.location.href = "/privacy")} />
-      <Row icon="⚖️" title="Gebruiksvoorwaarden" onClick={() => (window.location.href = "/voorwaarden")} />
+      {back(t.help)}
+      <Row icon="📚" title={t.helpcentrum} sub={t.helpcentrumSub} onClick={() => (window.location.href = employer ? "/kennis/werkgevers" : "/kennis")} />
+      <Row icon="🛟" title={t.contactSupport} onClick={onSupport} />
+      <Row icon="📄" title={t.privacybeleid} onClick={() => (window.location.href = "/privacy")} />
+      <Row icon="⚖️" title={t.gebruiksvoorwaarden} onClick={() => (window.location.href = "/voorwaarden")} />
     </div>
   );
 }

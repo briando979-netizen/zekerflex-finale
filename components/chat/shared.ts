@@ -1,5 +1,7 @@
 // Shared types + helpers for the chat UI (dock + full page).
 
+import { SHARED_NL, type SharedTeksten } from "@/lib/chat/teksten-shared";
+import { vulIn } from "@/lib/i18n/vul-in";
 import { amsterdamClock, amsterdamDayKey, amsterdamParts, amsterdamStartOfDay } from "@/lib/time/amsterdam";
 import type { MessagePoll } from "@/lib/messaging/poll";
 
@@ -119,30 +121,30 @@ export const initials = (n: string) =>
   n.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
 
 // Dutch time, like every time on the platform (the server runs in UTC; lib/time/amsterdam)
-export const fmtTime = (iso: string) =>
-  new Date(iso).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" });
+export const fmtTime = (iso: string, tx: SharedTeksten = SHARED_NL) =>
+  new Date(iso).toLocaleTimeString(tx.locale, { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" });
 
 const TZ = "Europe/Amsterdam";
 
 /** Dagkop in een gesprek: Vandaag, Gisteren, maandag (deze week), 4 november, 4 november 2025. Nederlandse tijd. */
-export function dayLabel(iso: string, now: Date = new Date()): string {
+export function dayLabel(iso: string, now: Date = new Date(), tx: SharedTeksten = SHARED_NL): string {
   const key = amsterdamDayKey(iso);
-  if (key === amsterdamDayKey(now)) return "Vandaag";
-  if (key === amsterdamDayKey(amsterdamStartOfDay(now, -1))) return "Gisteren";
+  if (key === amsterdamDayKey(now)) return tx.vandaag;
+  if (key === amsterdamDayKey(amsterdamStartOfDay(now, -1))) return tx.gisteren;
   const d = new Date(iso);
-  if (d >= amsterdamStartOfDay(now, -6)) return d.toLocaleDateString("nl-NL", { weekday: "long", timeZone: TZ });
+  if (d >= amsterdamStartOfDay(now, -6)) return d.toLocaleDateString(tx.locale, { weekday: "long", timeZone: TZ });
   const sameYear = amsterdamParts(d).year === amsterdamParts(now).year;
-  return d.toLocaleDateString("nl-NL", { day: "numeric", month: "long", ...(sameYear ? {} : { year: "numeric" }), timeZone: TZ });
+  return d.toLocaleDateString(tx.locale, { day: "numeric", month: "long", ...(sameYear ? {} : { year: "numeric" }), timeZone: TZ });
 }
 
 /** Tijd in de gesprekkenlijst, zoals WhatsApp: 14:05, Gisteren, dinsdag, 28-10-26. */
-export function listTime(iso: string, now: Date = new Date()): string {
+export function listTime(iso: string, now: Date = new Date(), tx: SharedTeksten = SHARED_NL): string {
   const key = amsterdamDayKey(iso);
   if (key === amsterdamDayKey(now)) return amsterdamClock(iso);
-  if (key === amsterdamDayKey(amsterdamStartOfDay(now, -1))) return "Gisteren";
+  if (key === amsterdamDayKey(amsterdamStartOfDay(now, -1))) return tx.gisteren;
   const d = new Date(iso);
-  if (d >= amsterdamStartOfDay(now, -6)) return d.toLocaleDateString("nl-NL", { weekday: "long", timeZone: TZ });
-  return d.toLocaleDateString("nl-NL", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: TZ });
+  if (d >= amsterdamStartOfDay(now, -6)) return d.toLocaleDateString(tx.locale, { weekday: "long", timeZone: TZ });
+  return d.toLocaleDateString(tx.locale, { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: TZ });
 }
 
 export function fmtDuration(sec: number): string {
@@ -162,14 +164,14 @@ export function fmtBytes(n: number): string {
   return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
-export function lastSeenLabel(p: Presence | undefined, now: Date = new Date()): string {
+export function lastSeenLabel(p: Presence | undefined, now: Date = new Date(), tx: SharedTeksten = SHARED_NL): string {
   if (!p) return "";
-  if (p.online) return "online";
+  if (p.online) return tx.online;
   if (!p.lastSeen) return "";
   const key = amsterdamDayKey(p.lastSeen);
-  if (key === amsterdamDayKey(now)) return `laatst gezien om ${amsterdamClock(p.lastSeen)}`;
-  if (key === amsterdamDayKey(amsterdamStartOfDay(now, -1))) return `laatst gezien gisteren om ${amsterdamClock(p.lastSeen)}`;
-  return `laatst gezien ${new Date(p.lastSeen).toLocaleDateString("nl-NL", { day: "numeric", month: "short", timeZone: TZ })}`;
+  if (key === amsterdamDayKey(now)) return vulIn(tx.laatstGezienOm, { tijd: amsterdamClock(p.lastSeen) });
+  if (key === amsterdamDayKey(amsterdamStartOfDay(now, -1))) return vulIn(tx.laatstGezienGisteren, { tijd: amsterdamClock(p.lastSeen) });
+  return vulIn(tx.laatstGezien, { datum: new Date(p.lastSeen).toLocaleDateString(tx.locale, { day: "numeric", month: "short", timeZone: TZ }) });
 }
 
 /* ───────────── tekst in een bericht ───────────── */

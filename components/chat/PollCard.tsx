@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useChatTeksten } from "./ChatTekstenContext";
+import { vulIn } from "@/lib/i18n/vul-in";
 import { aantalStemmers, mijnKeuze, tikKeuze, uitslag, type MessagePoll } from "@/lib/messaging/poll";
 
 /** Zoveel namen per keuze; daarna "+n". */
@@ -32,6 +34,7 @@ export function PollCard({
   onVote?: (optionIds: string[]) => void;
   onClose?: () => void;
 }) {
+  const chat = useChatTeksten();
   const [zeker, setZeker] = useState(false);
   if (!poll) {
     return <p className="mt-0.5 font-semibold text-ink">📊 {question}</p>;
@@ -40,14 +43,14 @@ export function PollCard({
   const kanStemmen = !gesloten && !disabled && Boolean(onVote) && Boolean(myUserId);
   const mijn = mijnKeuze(poll, myUserId);
   const totaal = aantalStemmers(poll);
-  const naam = (uid: string) => (uid === myUserId ? "Jij" : (names?.[uid] ?? "Iemand"));
+  const naam = (uid: string) => (uid === myUserId ? chat.poll.jij : (names?.[uid] ?? chat.poll.iemand));
 
   return (
-    <div className="min-w-[14rem] max-w-[20rem]" role="group" aria-label={`Peiling: ${question}`}>
-      <p className="text-[11px] font-medium uppercase tracking-wide text-neutralx-500">📊 Peiling</p>
+    <div className="min-w-[14rem] max-w-[20rem]" role="group" aria-label={vulIn(chat.poll.groepLabel, { vraag: question })}>
+      <p className="text-[11px] font-medium uppercase tracking-wide text-neutralx-500">{chat.poll.kop}</p>
       <p className="mt-0.5 break-words font-semibold text-ink">{question}</p>
       <p className="mb-1.5 text-[11px] text-neutralx-500">
-        {gesloten ? "Gesloten · de uitslag staat vast" : poll.multi ? "Kies één of meer" : "Kies één"}
+        {gesloten ? chat.poll.gesloten : poll.multi ? chat.poll.kiesMeer : chat.poll.kiesEen}
       </p>
       <ul className="space-y-1.5">
         {uitslag(poll).map((o) => {
@@ -94,21 +97,21 @@ export function PollCard({
         })}
       </ul>
       <div className="mt-1.5 flex items-center gap-2 text-[11px] text-neutralx-500">
-        <span>{totaal === 1 ? "1 persoon stemde" : `${totaal} mensen stemden`}</span>
+        <span>{totaal === 1 ? chat.poll.stemdeEen : vulIn(chat.poll.stemdenMeer, { aantal: totaal })}</span>
         {mine && !gesloten && onClose && !disabled && (
           <span className="ml-auto flex items-center gap-1.5">
             {zeker ? (
               <>
                 <button type="button" onClick={() => onClose()} className="rounded-full bg-[#008069] px-2 py-0.5 font-semibold text-white">
-                  Ja, sluiten
+                  {chat.poll.jaSluiten}
                 </button>
                 <button type="button" onClick={() => setZeker(false)} className="rounded-full px-1.5 py-0.5 font-medium text-neutralx-600 hover:bg-black/5">
-                  Nee
+                  {chat.poll.nee}
                 </button>
               </>
             ) : (
               <button type="button" onClick={() => setZeker(true)} className="rounded-full px-1.5 py-0.5 font-medium text-[#008069] hover:bg-black/5">
-                Peiling sluiten
+                {chat.poll.peilingSluiten}
               </button>
             )}
           </span>
