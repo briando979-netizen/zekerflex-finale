@@ -31,6 +31,9 @@ import { PeoplePicker, CommunityCreateModal, CommunityManageModal, ChatSettingsM
 import { SwipeRow, ThreadMenuSheet, PinModal, type MenuAction } from "./ThreadMenu";
 import { ChatSettingsPanel, readLook, type ChatLook } from "./ChatSettingsPanel";
 import { Portal } from "./Portal";
+import { ChatTekstenProvider, useChatTeksten } from "./ChatTekstenContext";
+import { vulIn } from "@/lib/i18n/vul-in";
+import type { ChatTeksten } from "@/lib/chat/teksten";
 import { BrainChat } from "@/components/brain/BrainChat";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { allDrafts, DRAFT_EVENT } from "./drafts";
@@ -63,17 +66,31 @@ const threadQuery = () => (document.visibilityState === "visible" ? "?visible=1"
 /** Both panes side by side (md+): then the newest chat may open by itself. */
 const twoPanes = () => window.matchMedia("(min-width: 768px)").matches;
 
-const TAB_TITLE: Record<Tab, string> = { chats: "Chats", updates: "Updates", calls: "Oproepen", tools: "Tools", settings: "Instellingen" };
-
-export function InboxPage({
-  mobileHeight = "h-[calc(100dvh-12rem)]",
-  desktopHeight = "md:h-[calc(100vh-15rem)]",
-}: {
+interface InboxPageProps {
   /** Tailwind height class below md, where the inbox is one pane at a time (the shell's chrome differs per area) */
   mobileHeight?: string;
   /** Tailwind md: height class — the employer shell has more chrome above the chat than the freelancer app */
   desktopHeight?: string;
-} = {}) {
+  /** Teksten in de taal van de werker; zonder: Nederlands (opdrachtgever, beheer) */
+  texts?: ChatTeksten | undefined;
+}
+
+// De teksten komen uit een context: de inhoud draait daarom binnen de provider.
+export function InboxPage({ texts, ...rest }: InboxPageProps = {}) {
+  return (
+    <ChatTekstenProvider texts={texts}>
+      <InboxPageInner {...rest} />
+    </ChatTekstenProvider>
+  );
+}
+
+function InboxPageInner({
+  mobileHeight = "h-[calc(100dvh-12rem)]",
+  desktopHeight = "md:h-[calc(100vh-15rem)]",
+}: Omit<InboxPageProps, "texts">) {
+  const chat = useChatTeksten();
+  const ib = chat.inbox;
+  const tabTitle: Record<Tab, string> = { chats: ib.tabChats, updates: ib.tabUpdates, calls: ib.tabCalls, tools: ib.tabTools, settings: ib.tabSettings };
   const [me, setMe] = useState<{ userId: string; name: string; isAdmin: boolean } | null>(null);
   // Below md there's room for one pane: the list, or the open conversation (WhatsApp-style).
   const [pane, setPane] = useState<"list" | "conversation">("list");
@@ -187,13 +204,13 @@ export function InboxPage({
       body: JSON.stringify({ threadId, messageId, aan: on }),
     }).catch(() => null);
     const d = r ? await r.json().catch(() => ({})) : {};
-    if (!r?.ok) return say(d?.error?.message ?? "Bewaren lukte niet.", true);
+    if (!r?.ok) return say(d?.error?.message ?? ib.bewarenMislukt, true);
     setSavedPerThread(d.perThread ?? {});
     setSaved((list) => {
       const rest = (list ?? []).filter((b) => !(b.threadId === threadId && b.messageId === messageId));
       return on && d.bewaard ? [d.bewaard as SavedMsg, ...rest] : rest;
     });
-    say(on ? "Bewaard" : "Niet meer bewaard");
+    say(on ? ib.bewaard : ib.nietMeerBewaard);
   };
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -245,9 +262,9 @@ export function InboxPage({
     pendingJump.current = null;
     // after the opening scroll of useStickyScroll
     requestAnimationFrame(() => {
-      if (!jumpTo(j.messageId)) say("Dit bericht staat verder terug in het gesprek.");
+      if (!jumpTo(j.messageId)) say(ib.verderTerug);
     });
-  }, [messages, active, jumpTo, say]);
+  }, [messages, active, jumpTo, say, ib]);
 
   const loadThreads = useCallback(async () => {
     const r = await fetch(`/api/inbox${visibleQuery()}`, { cache: "no-store", headers: pinHeaders() });
@@ -377,7 +394,7 @@ export function InboxPage({
       const r = await fetch(`/api/inbox/${threadId}/export`, { cache: "no-store", headers: pinHeaders() }).catch(() => null);
       if (!r?.ok) {
         const d = await r?.json().catch(() => ({}));
-        say(d?.error?.message ?? "Exporteren lukte niet. Probeer het opnieuw.", true);
+        say(d?.error?.message ?? ib.exporterenMislukt, true);
         return;
       }
       const naam = /filename="([^"]+)"/.exec(r.headers.get("content-disposition") ?? "")?.[1] ?? "ZekerFlex-chat.txt";
@@ -389,13 +406,13 @@ export function InboxPage({
       link.click();
       link.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
-      say("Chat geëxporteerd");
+      say(ib.chatGeexporteerd);
       return;
     }
     const r = await fetch(`/api/inbox/${threadId}/prefs`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(a) });
     if (!r.ok) {
       const d = await r.json().catch(() => ({}));
-      say(d?.error?.message ?? "Dat lukte niet.", true);
+      say(d?.error?.message ?? ib.datLukteNiet, true);
       return;
     }
     if ((a.action === "delete" || a.action === "lock" || a.action === "archive") && active === threadId) {
@@ -403,17 +420,17 @@ export function InboxPage({
       setPane("list");
     }
     const done: Partial<Record<MenuAction["action"], string>> = {
-      archive: "Chat gearchiveerd",
-      unarchive: "Chat uit het archief gehaald",
-      mute: "Chat gedempt",
-      unmute: "Dempen opgeheven",
-      favorite: "Toegevoegd aan favorieten",
-      unfavorite: "Uit favorieten gehaald",
-      lock: "Chat vergrendeld",
-      clear: "Chat gewist",
-      delete: "Chat verwijderd",
-      block: "Geblokkeerd",
-      unblock: "Gedeblokkeerd",
+      archive: ib.gearchiveerdMelding,
+      unarchive: ib.uitArchief,
+      mute: ib.gedempMelding,
+      unmute: ib.dempenOpgeheven,
+      favorite: ib.toegevoegdFavorieten,
+      unfavorite: ib.uitFavorieten,
+      lock: ib.vergrendeld,
+      clear: ib.gewist,
+      delete: ib.verwijderd,
+      block: ib.geblokkeerd,
+      unblock: ib.gedeblokkeerd,
     };
     const msg = done[a.action];
     if (msg) say(msg);
@@ -440,20 +457,20 @@ export function InboxPage({
   const menuThread = menuFor ? (threads.find((t) => t.id === menuFor) ?? null) : null;
 
   const emptyText = q
-    ? `Geen chats gevonden voor “${q}”.`
+    ? vulIn(ib.leegZoek, { zoek: q })
     : threads.length === 0
-      ? "Nog geen gesprekken."
+      ? ib.leegGeen
       : view === "archived"
-        ? "Geen gearchiveerde chats."
+        ? ib.leegArchief
         : view === "locked"
-          ? "Geen vergrendelde chats."
+          ? ib.leegVergrendeld
           : filter === "unread"
-            ? "Je hebt alles gelezen."
+            ? ib.leegGelezen
             : filter === "fav"
-              ? "Nog geen favorieten. Kies ★ in het menu van een chat."
+              ? ib.leegFavorieten
               : filter.startsWith("list:")
-                ? "Deze lijst is nog leeg."
-                : "Geen gesprekken hier.";
+                ? ib.leegLijst
+                : ib.leegHier;
 
   const pingTyping = () => {
     const n = Date.now();
@@ -483,7 +500,7 @@ export function InboxPage({
       setMessages((prev) => prev.map((m) => (m.id === messageId ? { ...m, ...server } : m)));
     } else {
       const d = r ? await r.json().catch(() => ({})) : {};
-      say(d?.error?.message ?? "Bewerken lukte niet. Probeer het opnieuw.", true);
+      say(d?.error?.message ?? ib.bewerkenMislukt, true);
       await loadThread(threadId);
     }
   };
@@ -515,7 +532,7 @@ export function InboxPage({
     if (!r?.ok) {
       // stays in the conversation with a reason and "Opnieuw", instead of a clock that never goes away
       const d = r ? await r.json().catch(() => ({})) : {};
-      const reason: string = d?.error?.message ?? (r ? "er ging iets mis" : "geen verbinding");
+      const reason: string = d?.error?.message ?? (r ? ib.verzendFoutIets : ib.verzendFoutVerbinding);
       setMessages((prev) => prev.map((m) => (m.id === tmpId ? { ...m, pending: false, failed: reason } : m)));
       return;
     }
@@ -544,7 +561,7 @@ export function InboxPage({
       setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, poll: d.poll } : m)));
       return;
     }
-    say(d?.error?.message ?? (r ? "Dat lukte niet. Probeer het opnieuw." : "Geen verbinding. Probeer het opnieuw."), true);
+    say(d?.error?.message ?? (r ? ib.datLukteNietOpnieuw : ib.geenVerbindingOpnieuw), true);
     void loadThread(threadId);
   };
   const votePoll = (msg: Msg, optionIds: string[]) => {
@@ -585,7 +602,7 @@ export function InboxPage({
       body: JSON.stringify({ messageId: msg.id }),
     }).catch(() => null);
     if (!r?.ok) {
-      say("Verwijderen lukte niet.", true);
+      say(ib.verwijderenMislukt, true);
       void loadThread(active);
     }
   };
@@ -600,14 +617,14 @@ export function InboxPage({
       body: JSON.stringify({ fromThreadId: active, messageId: msg.id, toThreadId }),
     }).catch(() => null);
     const to = threads.find((t) => t.id === toThreadId);
-    if (r?.ok) say(`Doorgestuurd naar ${to ? otherOf(to).name : "het gesprek"}`);
-    else say("Doorsturen lukte niet.", true);
+    if (r?.ok) say(vulIn(ib.doorgestuurdNaar, { naam: to ? otherOf(to).name : ib.hetGesprek }));
+    else say(ib.doorsturenMislukt, true);
   };
 
   const togglePin = async (msg: Msg) => {
     if (!active) return;
     const toPin = pinned?.id === msg.id ? null : msg.id;
-    setPinned(toPin ? { id: msg.id, excerpt: msg.text || "bericht" } : null);
+    setPinned(toPin ? { id: msg.id, excerpt: msg.text || ib.bericht } : null);
     try {
       await fetch(`/api/inbox/${active}/pin`, {
         method: "POST",
@@ -644,7 +661,7 @@ export function InboxPage({
       return (d.threadId as string) ?? null;
     }
     const d = await r.json().catch(() => ({}));
-    say(d?.error?.message ?? "Dit gesprek kon niet starten.", true);
+    say(d?.error?.message ?? ib.gesprekStartenMislukt, true);
     return null;
   };
 
@@ -713,12 +730,12 @@ export function InboxPage({
     if (active === b.threadId) {
       setPane("conversation");
       pendingJump.current = null;
-      if (!jumpTo(b.messageId)) say("Dit bericht staat verder terug in het gesprek.");
+      if (!jumpTo(b.messageId)) say(ib.verderTerug);
       return;
     }
     if (!threads.some((t) => t.id === b.threadId)) {
       pendingJump.current = null;
-      say("Dit gesprek staat niet in je lijst (vergrendeld of verwijderd).", true);
+      say(ib.gesprekNietInLijst, true);
       return;
     }
     openThread(b.threadId);
@@ -726,9 +743,9 @@ export function InboxPage({
 
   const headerSub = (() => {
     if (!activeThread) return "";
-    if (activeThread.kind === "group") return `${activeThread.participants.length} leden`;
-    if (activeThread.kind === "support") return "Wij helpen je zo snel mogelijk";
-    return [lastSeenLabel(presence[otherOf(activeThread).userId]), activeThread.shiftTitle].filter(Boolean).join(" · ");
+    if (activeThread.kind === "group") return vulIn(ib.ledenAantal, { aantal: activeThread.participants.length });
+    if (activeThread.kind === "support") return ib.supportSub;
+    return [lastSeenLabel(presence[otherOf(activeThread).userId], undefined, chat.shared), activeThread.shiftTitle].filter(Boolean).join(" · ");
   })();
   const activeOther = activeThread ? otherOf(activeThread) : null;
   const savedHere = active ? (savedPerThread[active] ?? []) : [];
@@ -749,14 +766,14 @@ export function InboxPage({
       <div className={`${pane === "conversation" && activeThread ? "hidden md:flex" : "flex"} min-h-0 flex-col border-hair md:border-r`}>
         <div className="flex items-center gap-2 px-4 pb-2 pt-3">
           {tab === "tools" && toolsView === "saved" ? (
-            <button type="button" onClick={() => setToolsView("main")} className="-ml-2 flex items-center gap-1 rounded-lg px-1 font-display text-lg font-bold text-ink hover:bg-paper-soft" aria-label="Terug naar Tools">
-              <IconBack className="h-5 w-5" /> Bewaarde berichten
+            <button type="button" onClick={() => setToolsView("main")} className="-ml-2 flex items-center gap-1 rounded-lg px-1 font-display text-lg font-bold text-ink hover:bg-paper-soft" aria-label={ib.terugNaarTools}>
+              <IconBack className="h-5 w-5" /> {ib.bewaardeBerichten}
             </button>
           ) : (
-            <h2 className="font-display text-lg font-bold text-ink">{TAB_TITLE[tab]}</h2>
+            <h2 className="font-display text-lg font-bold text-ink">{tabTitle[tab]}</h2>
           )}
           <div className="ml-auto flex items-center gap-1">
-            <button type="button" onClick={() => setPicker("chat")} className={iconBtn} aria-label="Nieuw gesprek" title="Nieuw gesprek">
+            <button type="button" onClick={() => setPicker("chat")} className={iconBtn} aria-label={ib.nieuwGesprek} title={ib.nieuwGesprek}>
               <IconPencil className="h-5 w-5" />
             </button>
           </div>
@@ -772,12 +789,12 @@ export function InboxPage({
                 value={listQuery}
                 onChange={(e) => setListQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Escape" && setListQuery("")}
-                placeholder="Zoek een chat of bericht"
-                aria-label="Zoek in je chats"
+                placeholder={ib.zoekPlaceholder}
+                aria-label={ib.zoekLabel}
                 className="min-w-0 flex-1 bg-transparent text-base text-ink outline-none placeholder:text-neutralx-400 md:text-sm"
               />
               {listQuery && (
-                <button type="button" onClick={() => setListQuery("")} className="grid h-5 w-5 place-items-center rounded-full text-neutralx-400 hover:text-ink" aria-label="Zoekopdracht wissen">
+                <button type="button" onClick={() => setListQuery("")} className="grid h-5 w-5 place-items-center rounded-full text-neutralx-400 hover:text-ink" aria-label={ib.zoekWissen}>
                   <IconClose className="h-3.5 w-3.5" />
                 </button>
               )}
@@ -785,9 +802,9 @@ export function InboxPage({
             {!q && view === "main" && (
               <div className="-mx-3 mt-2 flex gap-1.5 overflow-x-auto px-3 [scrollbar-width:none]">
                 {[
-                  ["all", "Alle"],
-                  ["unread", unreadChats ? `Ongelezen ${unreadChats}` : "Ongelezen"],
-                  ["fav", "Favorieten"],
+                  ["all", ib.filterAlle],
+                  ["unread", unreadChats ? vulIn(ib.filterOngelezenMetAantal, { aantal: unreadChats }) : ib.filterOngelezen],
+                  ["fav", ib.filterFavorieten],
                   ...chatPrefs.lists.map((l) => [`list:${l}`, l]),
                 ].map(([k, label]) => (
                   <button
@@ -820,19 +837,19 @@ export function InboxPage({
                   }}
                   className="flex w-full items-center gap-2 border-b border-hair px-4 py-2.5 text-left text-sm font-semibold text-ink hover:bg-paper-soft"
                 >
-                  <IconBack className="h-4 w-4" /> {view === "archived" ? "Gearchiveerd" : "Vergrendelde chats"}
+                  <IconBack className="h-4 w-4" /> {view === "archived" ? ib.gearchiveerd : ib.vergrendeldeChats}
                 </button>
               )}
               {!q && view === "main" && (
                 <>
                   {chatPrefs.lockedCount > 0 && (
                     <button type="button" onClick={() => setPinAsk({ mode: "unlock" })} className={rowBtn}>
-                      <span className="w-10 text-center" aria-hidden>🔒</span>Vergrendelde chats <span className="ml-auto text-xs text-neutralx-400">{chatPrefs.lockedCount}</span>
+                      <span className="w-10 text-center" aria-hidden>🔒</span>{ib.vergrendeldeChats} <span className="ml-auto text-xs text-neutralx-400">{chatPrefs.lockedCount}</span>
                     </button>
                   )}
                   {archivedCount > 0 && (
                     <button type="button" onClick={() => setView("archived")} className={rowBtn}>
-                      <span className="w-10 text-center" aria-hidden>🗄</span>Gearchiveerd <span className="ml-auto text-xs text-neutralx-400">{archivedCount}</span>
+                      <span className="w-10 text-center" aria-hidden>🗄</span>{ib.gearchiveerd} <span className="ml-auto text-xs text-neutralx-400">{archivedCount}</span>
                     </button>
                   )}
                 </>
@@ -843,10 +860,10 @@ export function InboxPage({
                   {threads.length === 0 && !q && (
                     <div className="mt-4 flex flex-col items-center gap-2">
                       <button type="button" onClick={() => setPicker("chat")} className="btn-primary px-4 py-2 text-sm">
-                        Begin een gesprek
+                        {ib.beginGesprek}
                       </button>
                       <button type="button" onClick={() => void startSupport()} className="text-sm font-semibold text-brand-600 hover:underline">
-                        Chat met ZekerFlex Support
+                        {ib.chatSupport}
                       </button>
                     </div>
                   )}
@@ -871,27 +888,27 @@ export function InboxPage({
                           <span className="zf-row-line min-w-0 flex-1 border-b border-hair py-3 pr-4">
                             <span className="flex items-baseline justify-between gap-2">
                               <span className="truncate text-[15px] font-semibold text-ink md:text-sm">{o.name}</span>
-                              <span className={`flex-shrink-0 text-[11px] ${unread && !t.muted ? "font-semibold text-[#1DA851]" : "text-neutralx-500"}`}>{t.lastMessage ? listTime(t.lastMessage.at) : ""}</span>
+                              <span className={`flex-shrink-0 text-[11px] ${unread && !t.muted ? "font-semibold text-[#1DA851]" : "text-neutralx-500"}`}>{t.lastMessage ? listTime(t.lastMessage.at, undefined, chat.shared) : ""}</span>
                             </span>
                             <span className="mt-0.5 flex items-center justify-between gap-2">
                               <span className={`truncate text-[13px] md:text-xs ${unread ? "font-medium text-neutralx-600" : "text-neutralx-500"}`}>
                                 {drafts[t.id] && t.id !== active ? (
                                   <>
-                                    <span className="font-semibold text-[#1DA851]">Concept: </span>
+                                    <span className="font-semibold text-[#1DA851]">{ib.concept}</span>
                                     {drafts[t.id]}
                                   </>
                                 ) : t.lastMessage ? (
-                                  (t.lastMessage.from === me?.userId ? "Jij: " : "") + t.lastMessage.text
+                                  (t.lastMessage.from === me?.userId ? ib.jijVoorvoegsel : "") + t.lastMessage.text
                                 ) : (
                                   t.shiftTitle ?? "—"
                                 )}
                               </span>
                               <span className="flex flex-shrink-0 items-center gap-1">
-                                {q && t.archived && <span className="rounded bg-paper-soft px-1 text-[10px] text-neutralx-500">archief</span>}
-                                {t.favorite && <span className="text-[11px] text-amber-500" aria-label="favoriet">★</span>}
-                                {t.muted && <span className="text-[11px]" title="Gedempt" aria-label="gedempt">🔕</span>}
+                                {q && t.archived && <span className="rounded bg-paper-soft px-1 text-[10px] text-neutralx-500">{ib.archiefLabel}</span>}
+                                {t.favorite && <span className="text-[11px] text-amber-500" aria-label={ib.favoriet}>★</span>}
+                                {t.muted && <span className="text-[11px]" title={ib.gedemptTitel} aria-label={ib.gedempt}>🔕</span>}
                                 {unread && (
-                                  <span className={`grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px] font-bold text-white ${t.muted ? "bg-neutralx-400" : "bg-[#1DA851]"}`} aria-label={`${t.unread} ongelezen`}>
+                                  <span className={`grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px] font-bold text-white ${t.muted ? "bg-neutralx-400" : "bg-[#1DA851]"}`} aria-label={vulIn(ib.ongelezenAantal, { aantal: t.unread })}>
                                     {t.unread}
                                   </span>
                                 )}
@@ -903,7 +920,7 @@ export function InboxPage({
                           type="button"
                           onClick={() => setMenuFor(t.id)}
                           className="absolute right-2 top-1/2 hidden h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-white text-neutralx-500 shadow-sm hover:text-ink md:group-hover:grid md:focus-visible:grid"
-                          aria-label={`Meer opties voor ${o.name}`}
+                          aria-label={vulIn(ib.meerOptiesVoor, { naam: o.name })}
                         >
                           <IconChevronDown className="h-4 w-4" />
                         </button>
@@ -919,15 +936,15 @@ export function InboxPage({
 
           {tab === "tools" && toolsView === "saved" && (
             <ul className="divide-y divide-hair">
-              {saved === null && <p className="px-5 py-10 text-center text-sm text-neutralx-400">Laden…</p>}
+              {saved === null && <p className="px-5 py-10 text-center text-sm text-neutralx-400">{ib.laden}</p>}
               {saved?.length === 0 && (
                 <p className="px-6 py-12 text-center text-sm text-neutralx-500">
-                  Nog niets bewaard. Houd een bericht ingedrukt (op een computer: ⋯ naast het bericht) en kies <strong>Bewaren</strong>.
+                  {ib.nietsBewaardVoor}<strong>{ib.nietsBewaardKeuze}</strong>{ib.nietsBewaardNa}
                 </p>
               )}
               {saved?.map((b) => {
                 const t = threads.find((x) => x.id === b.threadId);
-                const fromName = b.from === me?.userId ? "Jij" : (dir[b.from]?.name ?? "…");
+                const fromName = b.from === me?.userId ? ib.jij : (dir[b.from]?.name ?? "…");
                 return (
                   <li key={b.threadId + b.messageId} className="flex items-start gap-3 px-4 py-3 hover:bg-paper-soft">
                     <Avatar userId={b.from} name={fromName} role={dir[b.from]?.role ?? "employer"} avatars={avatars} size={36} />
@@ -937,16 +954,16 @@ export function InboxPage({
                           {fromName}
                           {t ? <span className="font-normal text-neutralx-500"> · {otherOf(t).name}</span> : null}
                         </span>
-                        <span className="flex-shrink-0 text-[11px] text-neutralx-500">{listTime(b.at)}</span>
+                        <span className="flex-shrink-0 text-[11px] text-neutralx-500">{listTime(b.at, undefined, chat.shared)}</span>
                       </span>
-                      <span className="mt-0.5 line-clamp-3 block text-[13px] text-neutralx-600">{b.excerpt || "bericht"}</span>
+                      <span className="mt-0.5 line-clamp-3 block text-[13px] text-neutralx-600">{b.excerpt || ib.bericht}</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => void toggleSaved(b.threadId, b.messageId, false)}
                       className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full text-amber-500 hover:bg-black/5"
-                      aria-label="Niet meer bewaren"
-                      title="Niet meer bewaren"
+                      aria-label={ib.nietMeerBewaren}
+                      title={ib.nietMeerBewaren}
                     >
                       ★
                     </button>
@@ -958,12 +975,12 @@ export function InboxPage({
 
           {tab === "tools" && toolsView === "main" && (
             <>
-              <p className={sectionHead}>Tools</p>
+              <p className={sectionHead}>{ib.toolsKop}</p>
               <button type="button" onClick={() => setShowBrain(true)} className={rowBtn}>
                 <span className="w-8 text-center text-lg" aria-hidden>✨</span>
                 <span>
-                  ZekerFlex-assistent
-                  <span className="block text-xs text-neutralx-500">Vraag naar je klussen, uren, uitbetalingen of hoe iets werkt</span>
+                  {ib.assistent}
+                  <span className="block text-xs text-neutralx-500">{ib.assistentUitleg}</span>
                 </span>
               </button>
               <button
@@ -976,29 +993,29 @@ export function InboxPage({
               >
                 <span className="grid w-8 place-items-center text-amber-500" aria-hidden><IconStar className="h-5 w-5" /></span>
                 <span className="flex-1">
-                  Bewaarde berichten
-                  <span className="block text-xs text-neutralx-500">Berichten die je met een ster bewaarde</span>
+                  {ib.bewaardeBerichten}
+                  <span className="block text-xs text-neutralx-500">{ib.bewaardeUitleg}</span>
                 </span>
                 {saved && saved.length > 0 && <span className="text-xs text-neutralx-400">{saved.length}</span>}
               </button>
               <button type="button" onClick={() => setShowSettings(true)} className={rowBtn}>
                 <span className="w-8 text-center text-lg" aria-hidden>⚡</span>
                 <span>
-                  Snelle antwoorden &amp; afwezig-bericht
-                  <span className="block text-xs text-neutralx-500">Vaste antwoorden en een automatisch bericht als je niet bereikbaar bent</span>
+                  {ib.snelleAntwoorden}
+                  <span className="block text-xs text-neutralx-500">{ib.snelleAntwoordenUitleg}</span>
                 </span>
               </button>
               <button type="button" onClick={() => void startSupport()} className={rowBtn}>
                 <span className="w-8 text-center text-lg" aria-hidden>🛟</span>
                 <span>
-                  Chat met ZekerFlex Support
-                  <span className="block text-xs text-neutralx-500">Een vraag over je account, klussen of betalingen</span>
+                  {ib.chatSupport}
+                  <span className="block text-xs text-neutralx-500">{ib.supportUitleg}</span>
                 </span>
               </button>
 
-              <p className={`${sectionHead} border-t border-hair`}>Contacten</p>
+              <p className={`${sectionHead} border-t border-hair`}>{ib.contacten}</p>
               {contacts.length === 0 ? (
-                <p className="px-5 py-6 text-center text-sm text-neutralx-400">Nog geen opgeslagen contacten. Tik op iemands naam in een gesprek om die op te slaan.</p>
+                <p className="px-5 py-6 text-center text-sm text-neutralx-400">{ib.geenContacten}</p>
               ) : (
                 <ul>
                   {contacts.map((c) => {
@@ -1008,7 +1025,7 @@ export function InboxPage({
                         <button type="button" onClick={() => startThreadWith(c.userId)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-paper-soft">
                           <Avatar userId={c.userId} name={u?.name ?? "…"} role={u?.role ?? "employer"} avatars={avatars} size={40} online={presence[c.userId]?.online ?? false} />
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-semibold text-ink">{c.favourite ? "★ " : ""}{u?.name ?? "Onbekend"}</span>
+                            <span className="block truncate text-sm font-semibold text-ink">{c.favourite ? "★ " : ""}{u?.name ?? ib.onbekend}</span>
                             <span className="block truncate text-xs text-neutralx-500">{c.label || u?.meta || ""}</span>
                           </span>
                         </button>
@@ -1019,13 +1036,13 @@ export function InboxPage({
               )}
 
               <div className={`${sectionHead} flex items-center border-t border-hair`}>
-                Communities
+                {ib.communities}
                 <button type="button" onClick={() => setShowCommunityCreate(true)} className="ml-auto rounded-full px-2 py-0.5 text-[11px] font-semibold normal-case tracking-normal text-brand-600 hover:bg-paper-soft">
-                  + Nieuwe community
+                  {ib.nieuweCommunity}
                 </button>
               </div>
               {communities.length === 0 ? (
-                <p className="px-5 py-6 text-center text-sm text-neutralx-400">Maak je eigen community en nodig freelancers uit.</p>
+                <p className="px-5 py-6 text-center text-sm text-neutralx-400">{ib.geenCommunities}</p>
               ) : (
                 <ul>
                   {communities.map((c) => (
@@ -1034,7 +1051,7 @@ export function InboxPage({
                         <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl bg-brand-500 text-sm font-bold text-white">{c.name.slice(0, 2).toUpperCase()}</span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-semibold text-ink">{c.name}</span>
-                          <span className="block truncate text-xs text-neutralx-500">{c.memberCount} leden · {c.myRole === "owner" ? "eigenaar" : c.myRole}</span>
+                          <span className="block truncate text-xs text-neutralx-500">{vulIn(ib.ledenAantal, { aantal: c.memberCount })} · {c.myRole === "owner" ? ib.rolEigenaar : c.myRole}</span>
                         </span>
                       </button>
                     </li>
@@ -1046,8 +1063,8 @@ export function InboxPage({
 
           {tab === "updates" && (
             <ul className="divide-y divide-hair">
-              {updates === null && <p className="px-5 py-10 text-center text-sm text-neutralx-400">Laden…</p>}
-              {updates?.length === 0 && <p className="px-5 py-10 text-center text-sm text-neutralx-400">Geen nieuwe updates. Hier zie je nieuws over je klussen, uren en account.</p>}
+              {updates === null && <p className="px-5 py-10 text-center text-sm text-neutralx-400">{ib.laden}</p>}
+              {updates?.length === 0 && <p className="px-5 py-10 text-center text-sm text-neutralx-400">{ib.geenUpdates}</p>}
               {updates?.map((u) => (
                 <li key={u.id}>
                   <a href={u.href} className="flex gap-3 px-4 py-3 hover:bg-paper-soft">
@@ -1057,7 +1074,7 @@ export function InboxPage({
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center justify-between gap-2">
                         <span className="truncate text-sm font-semibold text-ink">{u.title}</span>
-                        <span className="flex-shrink-0 text-[11px] text-neutralx-500">{listTime(u.at)}</span>
+                        <span className="flex-shrink-0 text-[11px] text-neutralx-500">{listTime(u.at, undefined, chat.shared)}</span>
                       </span>
                       <span className="line-clamp-2 text-xs text-neutralx-500">{u.body}</span>
                     </span>
@@ -1069,8 +1086,8 @@ export function InboxPage({
 
           {tab === "calls" && (
             <ul className="divide-y divide-hair">
-              {calls === null && <p className="px-5 py-10 text-center text-sm text-neutralx-400">Laden…</p>}
-              {calls?.length === 0 && <p className="px-5 py-10 text-center text-sm text-neutralx-400">Nog geen oproepen. Bel iemand vanuit een chat met de telefoon- of videoknop bovenin.</p>}
+              {calls === null && <p className="px-5 py-10 text-center text-sm text-neutralx-400">{ib.laden}</p>}
+              {calls?.length === 0 && <p className="px-5 py-10 text-center text-sm text-neutralx-400">{ib.geenOproepen}</p>}
               {calls?.map((c, i) => {
                 const u = dir[c.peerUserId];
                 const missed = c.status === "missed" || c.status === "declined";
@@ -1082,13 +1099,13 @@ export function InboxPage({
                   <li key={c.threadId + c.at + i} className="flex items-center gap-3 px-4 py-2.5">
                     <Avatar userId={c.peerUserId} name={u?.name ?? "…"} role={u?.role ?? "employer"} avatars={avatars} size={40} />
                     <button type="button" onClick={() => { setTab("chats"); openThread(c.threadId); }} className="min-w-0 flex-1 text-left">
-                      <span className={`block truncate text-sm font-semibold ${missed && !c.outgoing ? "text-crit" : "text-ink"}`}>{u?.name ?? "Onbekend"}</span>
+                      <span className={`block truncate text-sm font-semibold ${missed && !c.outgoing ? "text-crit" : "text-ink"}`}>{u?.name ?? ib.onbekend}</span>
                       <span className="block text-xs text-neutralx-500">
                         <span aria-hidden className={missed && !c.outgoing ? "text-crit" : "text-[#1DA851]"}>{c.outgoing ? "↗" : "↙"}</span>{" "}
-                        {missed ? (c.outgoing ? "Niet opgenomen" : "Gemist") : c.durationSec ? `${Math.floor(c.durationSec / 60)}:${String(c.durationSec % 60).padStart(2, "0")}` : "Beëindigd"} · {dayLabel(c.at)} {fmtTime(c.at)}
+                        {missed ? (c.outgoing ? ib.nietOpgenomen : ib.gemist) : c.durationSec ? `${Math.floor(c.durationSec / 60)}:${String(c.durationSec % 60).padStart(2, "0")}` : ib.beeindigd} · {dayLabel(c.at, undefined, chat.shared)} {fmtTime(c.at, chat.shared)}
                       </span>
                     </button>
-                    <button type="button" onClick={() => ring(c.mode === "video" ? "video" : "audio")} className="grid h-10 w-10 place-items-center rounded-full text-brand-600 hover:bg-paper-soft" aria-label={`${u?.name ?? "Contact"} terugbellen`}>
+                    <button type="button" onClick={() => ring(c.mode === "video" ? "video" : "audio")} className="grid h-10 w-10 place-items-center rounded-full text-brand-600 hover:bg-paper-soft" aria-label={vulIn(ib.terugbellen, { naam: u?.name ?? ib.contact })}>
                       {c.mode === "video" ? <IconVideo className="h-5 w-5" /> : <IconPhone className="h-5 w-5" />}
                     </button>
                   </li>
@@ -1116,14 +1133,14 @@ export function InboxPage({
         </div>
 
         {/* WhatsApp-style bottom bar */}
-        <nav aria-label="Inboxnavigatie" className="grid flex-shrink-0 grid-cols-5 border-t border-hair bg-white">
+        <nav aria-label={ib.navLabel} className="grid flex-shrink-0 grid-cols-5 border-t border-hair bg-white">
           {(
             [
-              ["chats", IconChatBubble, "Chats"],
-              ["updates", IconBell, "Updates"],
-              ["calls", IconPhone, "Oproepen"],
-              ["tools", IconBriefcase, "Tools"],
-              ["settings", IconGear, "Instellingen"],
+              ["chats", IconChatBubble, ib.tabChats],
+              ["updates", IconBell, ib.tabUpdates],
+              ["calls", IconPhone, ib.tabCalls],
+              ["tools", IconBriefcase, ib.tabTools],
+              ["settings", IconGear, ib.tabSettings],
             ] as const
           ).map(([k, Ico, label]) => {
             const badge = k === "chats" ? threads.filter((t) => !t.archived && !t.muted && t.unread > 0).length : 0;
@@ -1137,7 +1154,7 @@ export function InboxPage({
               >
                 <span className={`grid h-7 w-12 place-items-center rounded-full transition-colors ${tab === k ? "bg-brand-50" : ""}`}><Ico className="h-5 w-5" /></span>
                 {label}
-                {badge > 0 && <span className="absolute right-[18%] top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#1DA851] px-1 text-[9px] font-bold text-white" aria-label={`${badge} ongelezen chats`}>{badge}</span>}
+                {badge > 0 && <span className="absolute right-[18%] top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#1DA851] px-1 text-[9px] font-bold text-white" aria-label={vulIn(ib.badgeOngelezenChats, { aantal: badge })}>{badge}</span>}
               </button>
             );
           })}
@@ -1149,9 +1166,9 @@ export function InboxPage({
         <div className="hidden place-items-center bg-paper-soft/40 md:grid">
           <div className="max-w-xs text-center">
             <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-brand-50 text-brand-600" aria-hidden><IconChatBubble className="h-7 w-7" /></span>
-            <p className="mt-3 font-display text-base font-bold text-ink">Kies een gesprek</p>
-            <p className="mt-1 text-sm text-neutralx-500">Of begin een nieuw gesprek met iemand uit je klussen.</p>
-            <button type="button" onClick={() => setPicker("chat")} className="btn-primary mt-4 px-4 py-2 text-sm">Nieuw gesprek</button>
+            <p className="mt-3 font-display text-base font-bold text-ink">{ib.kiesGesprek}</p>
+            <p className="mt-1 text-sm text-neutralx-500">{ib.kiesGesprekUitleg}</p>
+            <button type="button" onClick={() => setPicker("chat")} className="btn-primary mt-4 px-4 py-2 text-sm">{ib.nieuwGesprek}</button>
           </div>
         </div>
       ) : (
@@ -1175,7 +1192,7 @@ export function InboxPage({
         >
           {dragOver && (
             <div className="pointer-events-none absolute inset-2 z-[6] grid place-items-center rounded-2xl border-2 border-dashed border-brand-500 bg-white/85 text-sm font-semibold text-brand-700">
-              Laat los om te versturen
+              {ib.loslaten}
             </div>
           )}
           <div className="flex items-center gap-1 border-b border-hair px-2 py-2 sm:gap-2 sm:px-3">
@@ -1187,7 +1204,7 @@ export function InboxPage({
                 setActive(null);
               }}
               className={`${iconBtn} md:hidden`}
-              aria-label="Terug naar gesprekken"
+              aria-label={ib.terugNaarGesprekken}
             >
               <IconBack className="h-6 w-6" />
             </button>
@@ -1198,34 +1215,34 @@ export function InboxPage({
                 else if (activeThread.kind === "group" && activeThread.communityId) setManageCommunity(activeThread.communityId);
               }}
               className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-1 py-0.5 text-left hover:bg-paper-soft"
-              title={activeThread.kind === "direct" ? "Profiel bekijken" : activeThread.kind === "group" ? "Community beheren" : undefined}
+              title={activeThread.kind === "direct" ? ib.profielBekijken : activeThread.kind === "group" ? ib.communityBeheren : undefined}
             >
               <Avatar userId={activeOther.userId} name={activeOther.name} role={activeOther.role} avatars={avatars} size={38} support={activeOther.support} />
               <span className="min-w-0">
                 <span className="block truncate text-sm font-semibold text-ink">{activeOther.name}</span>
-                <span className={`block truncate text-xs ${typing ? "font-medium text-[#1DA851]" : "text-neutralx-500"}`}>{typing ? "aan het typen…" : headerSub}</span>
+                <span className={`block truncate text-xs ${typing ? "font-medium text-[#1DA851]" : "text-neutralx-500"}`}>{typing ? ib.aanHetTypen : headerSub}</span>
               </span>
             </button>
             <div className="flex flex-shrink-0 items-center">
               {activeThread.kind === "direct" && (
                 <>
-                  <button type="button" onClick={() => startCall("video")} className={iconBtn} aria-label="Videobellen" title="Videobellen"><IconVideo className="h-5 w-5" /></button>
-                  <button type="button" onClick={() => startCall("audio")} className={iconBtn} aria-label="Bellen" title="Bellen"><IconPhone className="h-5 w-5" /></button>
+                  <button type="button" onClick={() => startCall("video")} className={iconBtn} aria-label={ib.videobellen} title={ib.videobellen}><IconVideo className="h-5 w-5" /></button>
+                  <button type="button" onClick={() => startCall("audio")} className={iconBtn} aria-label={ib.bellen} title={ib.bellen}><IconPhone className="h-5 w-5" /></button>
                   {/* the header only renders after the threads load in the browser, so no hydration mismatch */}
                   {canShareScreen() && (
-                    <button type="button" onClick={() => startCall("screen")} className={`${iconBtn} hidden sm:grid`} aria-label="Scherm delen" title="Scherm delen"><IconScreenShare className="h-5 w-5" /></button>
+                    <button type="button" onClick={() => startCall("screen")} className={`${iconBtn} hidden sm:grid`} aria-label={ib.schermDelen} title={ib.schermDelen}><IconScreenShare className="h-5 w-5" /></button>
                   )}
                 </>
               )}
               {activeThread.kind === "group" && activeThread.communityId && (
                 <button type="button" onClick={() => setManageCommunity(activeThread.communityId!)} className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-brand-600 hover:bg-paper-soft">
-                  Beheer
+                  {ib.beheer}
                 </button>
               )}
-              <button type="button" onClick={search.openSearch} className={iconBtn} aria-label="Zoek in gesprek" title="Zoek in gesprek">
+              <button type="button" onClick={search.openSearch} className={iconBtn} aria-label={ib.zoekInGesprek} title={ib.zoekInGesprek}>
                 <IconSearch className="h-5 w-5" />
               </button>
-              <button type="button" onClick={() => setMenuFor(activeThread.id)} className={iconBtn} aria-label="Meer opties" title="Meer opties">
+              <button type="button" onClick={() => setMenuFor(activeThread.id)} className={iconBtn} aria-label={ib.meerOpties} title={ib.meerOpties}>
                 <IconDots className="h-5 w-5" />
               </button>
             </div>
@@ -1284,14 +1301,14 @@ export function InboxPage({
                     <div key={m.id} id={`ip-msg-${m.id}`} className={`${firstOfRun && i > 0 ? "pt-1.5" : ""} rounded-xl transition-shadow ${highlighted ? "ring-2 ring-brand-400/70" : ""}`}>
                       {showDay && (
                         <div className="my-2 flex justify-center">
-                          <span className="rounded-lg bg-white/90 px-2.5 py-1 text-[11px] font-medium text-neutralx-600 shadow-sm">{dayLabel(m.at)}</span>
+                          <span className="rounded-lg bg-white/90 px-2.5 py-1 text-[11px] font-medium text-neutralx-600 shadow-sm">{dayLabel(m.at, undefined, chat.shared)}</span>
                         </div>
                       )}
                       {sticky.dividerId === m.id && (
                         <div className="my-2 flex items-center gap-2" role="separator">
                           <span className="h-px flex-1 bg-black/10" />
                           <span className="rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold text-neutralx-600 shadow-sm">
-                            {unreadAtOpen === 1 ? "1 ongelezen bericht" : `${unreadAtOpen} ongelezen berichten`}
+                            {unreadAtOpen === 1 ? ib.ongelezenEen : vulIn(ib.ongelezenMeer, { aantal: unreadAtOpen })}
                           </span>
                           <span className="h-px flex-1 bg-black/10" />
                         </div>
@@ -1321,7 +1338,7 @@ export function InboxPage({
                         onRetry={retry}
                         onDiscard={discard}
                         onJumpTo={(id) => {
-                          if (!jumpTo(id)) say("Dat bericht staat verder terug in het gesprek.");
+                          if (!jumpTo(id)) say(ib.verderTerugDat);
                         }}
                         onOpenImage={(src, filename) => setViewer({ src, filename })}
                         onNotice={say}
@@ -1338,7 +1355,7 @@ export function InboxPage({
                 })}
                 {typing && (
                   <div className="flex justify-start pt-1">
-                    <div className="rounded-2xl rounded-tl-none bg-white px-3 py-2.5 shadow-sm" aria-label="aan het typen">
+                    <div className="rounded-2xl rounded-tl-none bg-white px-3 py-2.5 shadow-sm" aria-label={ib.aanHetTypen}>
                       <span className="flex gap-1">
                         <Dot /><Dot d="0.15s" /><Dot d="0.3s" />
                       </span>
@@ -1352,8 +1369,8 @@ export function InboxPage({
                 type="button"
                 onClick={() => sticky.toBottom()}
                 className="absolute bottom-3 right-3 z-[3] grid h-10 w-10 place-items-center rounded-full bg-white text-neutralx-600 shadow-lift ring-1 ring-black/5 hover:text-ink"
-                aria-label={sticky.newCount ? `${sticky.newCount} nieuwe berichten, naar beneden` : "Naar het nieuwste bericht"}
-                title="Naar het nieuwste bericht"
+                aria-label={sticky.newCount ? vulIn(ib.naarNieuwsteMeerdere, { aantal: sticky.newCount }) : ib.naarNieuwste}
+                title={ib.naarNieuwste}
               >
                 <IconChevronDown className="h-5 w-5" />
                 {sticky.newCount > 0 && (
@@ -1365,9 +1382,9 @@ export function InboxPage({
 
           {activeThread.kind === "direct" && chatPrefs.blocked.includes(activeOther.userId) ? (
             <div className="flex items-center justify-center gap-3 border-t border-hair px-4 py-3 text-sm text-neutralx-600">
-              Je hebt {activeOther.name} geblokkeerd.
+              {vulIn(ib.geblokkeerdVoor, { naam: activeOther.name })}
               <button type="button" onClick={() => void doAction(activeThread.id, { action: "unblock" })} className="font-semibold text-brand-600 underline">
-                Deblokkeer
+                {ib.deblokkeer}
               </button>
             </div>
           ) : (
@@ -1382,7 +1399,7 @@ export function InboxPage({
             onSend={send}
             onTyping={pingTyping}
             lastIncoming={[...messages].reverse().find((m) => m.from !== me?.userId && m.text)?.text ?? ""}
-            {...(replyTo ? { replyName: replyTo.from === me?.userId ? "jezelf" : (dir[replyTo.from]?.name ?? (activeThread.kind === "support" ? "Support" : activeOther.name)) } : {})}
+            {...(replyTo ? { replyName: replyTo.from === me?.userId ? ib.jezelf : (dir[replyTo.from]?.name ?? (activeThread.kind === "support" ? ib.support : activeOther.name)) } : {})}
             onEditLast={() => {
               const last = [...messages].reverse().find((m) => canEdit(m, me?.userId));
               if (last) {
@@ -1428,8 +1445,8 @@ export function InboxPage({
               body: JSON.stringify({ action: pinAsk.mode === "set" ? "set" : "check", pin }),
             });
             const d = await r.json().catch(() => ({}));
-            if (!r.ok) return d?.error?.message ?? "Dat lukte niet.";
-            if (pinAsk.mode === "unlock" && !d.ok) return "Onjuiste pincode.";
+            if (!r.ok) return d?.error?.message ?? ib.datLukteNiet;
+            if (pinAsk.mode === "unlock" && !d.ok) return ib.onjuistePincode;
             pinRef.current = pin;
             const then = pinAsk.then;
             const unlocking = pinAsk.mode === "unlock";
@@ -1463,7 +1480,7 @@ export function InboxPage({
           }}
         />
       )}
-      {picker === "chat" && <PeoplePicker title="Nieuw gesprek" cta="Bericht" onClose={() => setPicker(null)} onPick={startThreadWith} />}
+      {picker === "chat" && <PeoplePicker title={ib.nieuwGesprek} cta="Bericht" onClose={() => setPicker(null)} onPick={startThreadWith} />}
       {showCommunityCreate && (
         <CommunityCreateModal
           onClose={() => setShowCommunityCreate(false)}

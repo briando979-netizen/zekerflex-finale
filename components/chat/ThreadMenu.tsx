@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Portal } from "./Portal";
+import { useChatTeksten } from "./ChatTekstenContext";
+import { vulIn } from "@/lib/i18n/vul-in";
 
 export interface ThreadFlags {
   archived?: boolean;
@@ -31,6 +33,7 @@ export function SwipeRow({
   onArchive: () => void;
   onMore: () => void;
 }) {
+  const t = useChatTeksten().menu;
   const [dx, setDx] = useState(0);
   const start = useRef<{ x: number; y: number; base: number } | null>(null);
   const horizontal = useRef<boolean | null>(null);
@@ -40,10 +43,10 @@ export function SwipeRow({
       <div className="absolute inset-y-0 right-0 flex" style={{ width: REVEAL }} aria-hidden={dx === 0}>
         {/* dicht = aria-hidden: dan ook niet met Tab bereikbaar */}
         <button type="button" tabIndex={dx === 0 ? -1 : 0} onClick={() => { setDx(0); onMore(); }} className="flex-1 bg-neutralx-400 text-xs font-semibold text-white">
-          ⋯<br />Meer
+          ⋯<br />{t.swipeMore}
         </button>
         <button type="button" tabIndex={dx === 0 ? -1 : 0} onClick={() => { setDx(0); onArchive(); }} className="flex-1 bg-brand-600 text-xs font-semibold text-white">
-          🗄<br />{archived ? "Terugzetten" : "Archiveer"}
+          🗄<br />{archived ? t.swipeUnarchive : t.swipeArchive}
         </button>
       </div>
       <div
@@ -118,6 +121,7 @@ export function ThreadMenuSheet({
   onAction: (a: MenuAction) => void;
   onClose: () => void;
 }) {
+  const t = useChatTeksten().menu;
   const [sub, setSub] = useState<null | "mute" | "list" | "disappear">(null);
   const [newList, setNewList] = useState("");
   const done = (a: MenuAction) => {
@@ -133,77 +137,77 @@ export function ThreadMenuSheet({
   return (
     <Portal>
       <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/40 sm:items-center" onClick={onClose}>
-        <div role="dialog" aria-modal="true" aria-label={`Opties voor ${name}`} className="chat-surface max-h-[85vh] w-full overflow-y-auto rounded-t-2xl bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lift sm:max-w-sm sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+        <div role="dialog" aria-modal="true" aria-label={vulIn(t.optionsFor, { naam: name })} className="chat-surface max-h-[85vh] w-full overflow-y-auto rounded-t-2xl bg-white pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lift sm:max-w-sm sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
           <p className="truncate border-b border-hair px-5 py-3 font-display text-sm font-bold text-ink">{name}</p>
 
           {sub === "mute" ? (
             <>
-              <Item icon="🔕" label="8 uur" onClick={() => done({ action: "mute", hours: 8 })} />
-              <Item icon="🔕" label="1 week" onClick={() => done({ action: "mute", hours: 24 * 7 })} />
-              <Item icon="🔕" label="Altijd" onClick={() => done({ action: "mute", hours: null })} />
+              <Item icon="🔕" label={t.mute8h} onClick={() => done({ action: "mute", hours: 8 })} />
+              <Item icon="🔕" label={t.mute1w} onClick={() => done({ action: "mute", hours: 24 * 7 })} />
+              <Item icon="🔕" label={t.muteAlways} onClick={() => done({ action: "mute", hours: null })} />
               <Item icon="←" label="Terug" onClick={() => setSub(null)} />
             </>
           ) : sub === "disappear" ? (
             <>
-              <p className="px-5 pt-3 text-xs text-neutralx-500">Nieuwe en oude berichten verdwijnen na de gekozen tijd — voor iedereen in deze chat.</p>
-              <Item icon="⏱" label="24 uur" onClick={() => done({ action: "disappear", days: 1 })} />
-              <Item icon="⏱" label="7 dagen" onClick={() => done({ action: "disappear", days: 7 })} />
-              <Item icon="⏱" label="90 dagen" onClick={() => done({ action: "disappear", days: 90 })} />
-              <Item icon="✕" label="Uit" onClick={() => done({ action: "disappear", days: 0 })} />
+              <p className="px-5 pt-3 text-xs text-neutralx-500">{t.disappearInfo}</p>
+              <Item icon="⏱" label={t.disappear24h} onClick={() => done({ action: "disappear", days: 1 })} />
+              <Item icon="⏱" label={t.disappear7d} onClick={() => done({ action: "disappear", days: 7 })} />
+              <Item icon="⏱" label={t.disappear90d} onClick={() => done({ action: "disappear", days: 90 })} />
+              <Item icon="✕" label={t.disappearOff} onClick={() => done({ action: "disappear", days: 0 })} />
               <Item icon="←" label="Terug" onClick={() => setSub(null)} />
             </>
           ) : sub === "list" ? (
             <>
               {lists.map((l) =>
                 flags.lists?.includes(l) ? (
-                  <Item key={l} icon="✓" label={`${l} (verwijder uit lijst)`} onClick={() => done({ action: "list-remove", list: l })} />
+                  <Item key={l} icon="✓" label={vulIn(t.listRemove, { lijst: l })} onClick={() => done({ action: "list-remove", list: l })} />
                 ) : (
                   <Item key={l} icon="＋" label={l} onClick={() => done({ action: "list-add", list: l })} />
                 ),
               )}
               <div className="flex gap-2 px-5 py-2">
-                <input value={newList} onChange={(e) => setNewList(e.target.value)} maxLength={30} placeholder="Nieuwe lijst, bijv. Werk" className="field-input flex-1 py-1.5 text-sm" />
+                <input value={newList} onChange={(e) => setNewList(e.target.value)} maxLength={30} placeholder={t.newListPlaceholder} className="field-input flex-1 py-1.5 text-sm" />
                 <button type="button" disabled={!newList.trim()} onClick={() => done({ action: "list-add", list: newList.trim() })} className="btn-primary px-3 py-1.5 text-xs disabled:opacity-50">
-                  Maak
+                  {t.newListMake}
                 </button>
               </div>
               <Item icon="←" label="Terug" onClick={() => setSub(null)} />
             </>
           ) : (
             <>
-              {flags.muted ? <Item icon="🔔" label="Dempen opheffen" onClick={() => done({ action: "unmute" })} /> : <Item icon="🔕" label="Dempen" onClick={() => setSub("mute")} />}
-              {flags.locked ? <Item icon="🔓" label="Ontgrendel chat" onClick={() => done({ action: "unlock" })} /> : <Item icon="🔒" label="Vergrendel chat" onClick={() => done({ action: "lock" })} />}
-              {flags.favorite ? <Item icon="☆" label="Verwijder uit favorieten" onClick={() => done({ action: "unfavorite" })} /> : <Item icon="★" label="Voeg toe aan favorieten" onClick={() => done({ action: "favorite" })} />}
-              <Item icon="☰" label="Voeg toe aan lijst" onClick={() => setSub("list")} />
-              <Item icon="⏱" label="Verdwijnende berichten" onClick={() => setSub("disappear")} />
-              <Item icon="📤" label="Chat exporteren" onClick={() => done({ action: "export" })} />
-              {flags.archived ? <Item icon="🗄" label="Uit archief halen" onClick={() => done({ action: "unarchive" })} /> : <Item icon="🗄" label="Archiveer chat" onClick={() => done({ action: "archive" })} />}
+              {flags.muted ? <Item icon="🔔" label={t.unmute} onClick={() => done({ action: "unmute" })} /> : <Item icon="🔕" label={t.mute} onClick={() => setSub("mute")} />}
+              {flags.locked ? <Item icon="🔓" label={t.unlockChat} onClick={() => done({ action: "unlock" })} /> : <Item icon="🔒" label={t.lockChat} onClick={() => done({ action: "lock" })} />}
+              {flags.favorite ? <Item icon="☆" label={t.unfavorite} onClick={() => done({ action: "unfavorite" })} /> : <Item icon="★" label={t.favorite} onClick={() => done({ action: "favorite" })} />}
+              <Item icon="☰" label={t.addToList} onClick={() => setSub("list")} />
+              <Item icon="⏱" label={t.disappearing} onClick={() => setSub("disappear")} />
+              <Item icon="📤" label={t.exportChat} onClick={() => done({ action: "export" })} />
+              {flags.archived ? <Item icon="🗄" label={t.unarchiveChat} onClick={() => done({ action: "unarchive" })} /> : <Item icon="🗄" label={t.archiveChat} onClick={() => done({ action: "archive" })} />}
               <Item
                 icon="🧹"
-                label="Wis chat"
+                label={t.clearChat}
                 onClick={() => {
-                  if (window.confirm("Alle berichten in deze chat wissen? Alleen voor jou — de ander houdt ze.")) done({ action: "clear" });
+                  if (window.confirm(t.clearConfirm)) done({ action: "clear" });
                 }}
               />
               {direct &&
                 (blocked ? (
-                  <Item icon="✋" label="Deblokkeer" onClick={() => done({ action: "unblock" })} />
+                  <Item icon="✋" label={t.unblock} onClick={() => done({ action: "unblock" })} />
                 ) : (
                   <Item
                     icon="⛔"
-                    label="Blokkeer"
+                    label={t.block}
                     danger
                     onClick={() => {
-                      if (window.confirm(`${name} blokkeren? Jullie kunnen elkaar dan geen berichten meer sturen.`)) done({ action: "block" });
+                      if (window.confirm(vulIn(t.blockConfirm, { naam: name }))) done({ action: "block" });
                     }}
                   />
                 ))}
               <Item
                 icon="🗑"
-                label="Verwijder chat"
+                label={t.deleteChat}
                 danger
                 onClick={() => {
-                  if (window.confirm("Chat verwijderen? Hij verdwijnt uit je lijst tot er een nieuw bericht komt.")) done({ action: "delete" });
+                  if (window.confirm(t.deleteConfirm)) done({ action: "delete" });
                 }}
               />
             </>
@@ -217,6 +221,7 @@ export function ThreadMenuSheet({
 /* ─────────────────────────────── PIN modal ─────────────────────────────── */
 
 export function PinModal({ mode, onDone, onClose }: { mode: "set" | "unlock"; onDone: (pin: string) => Promise<string | null>; onClose: () => void }) {
+  const t = useChatTeksten().menu;
   const [pin, setPin] = useState("");
   const [pin2, setPin2] = useState("");
   const [err, setErr] = useState<string | null>(null);
@@ -235,15 +240,15 @@ export function PinModal({ mode, onDone, onClose }: { mode: "set" | "unlock"; on
             setBusy(false);
           }}
         >
-          <p className="font-display text-base font-bold text-ink">{mode === "set" ? "Kies een chat-pincode" : "Vergrendelde chats"}</p>
-          <p className="mt-1 text-xs text-neutralx-500">{mode === "set" ? "4 tot 6 cijfers. Je hebt hem nodig om vergrendelde chats te openen." : "Vul je chat-pincode in."}</p>
+          <p className="font-display text-base font-bold text-ink">{mode === "set" ? t.pinSetTitle : t.pinUnlockTitle}</p>
+          <p className="mt-1 text-xs text-neutralx-500">{mode === "set" ? t.pinSetHint : t.pinUnlockHint}</p>
           <input autoFocus type="password" inputMode="numeric" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} className="field-input mt-3 text-center text-lg tracking-[0.5em]" />
           {mode === "set" && (
-            <input type="password" inputMode="numeric" maxLength={6} placeholder="Herhaal" value={pin2} onChange={(e) => setPin2(e.target.value.replace(/\D/g, ""))} className="field-input mt-2 text-center text-lg tracking-[0.5em]" />
+            <input type="password" inputMode="numeric" maxLength={6} placeholder={t.pinRepeat} value={pin2} onChange={(e) => setPin2(e.target.value.replace(/\D/g, ""))} className="field-input mt-2 text-center text-lg tracking-[0.5em]" />
           )}
           {err && <p role="alert" className="mt-2 text-xs text-crit">{err}</p>}
           <button type="submit" disabled={!valid || busy} className="btn-primary mt-4 w-full disabled:opacity-50">
-            {busy ? "…" : mode === "set" ? "Pincode instellen" : "Openen"}
+            {busy ? "…" : mode === "set" ? t.pinSetButton : t.pinOpenButton}
           </button>
         </form>
       </div>

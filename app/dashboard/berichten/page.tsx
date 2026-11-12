@@ -1,6 +1,8 @@
 import { requirePrincipal } from "@/lib/auth";
 import { PageHeader } from "@/components/app/ui";
 import { InboxPage } from "@/components/chat/InboxPage";
+import { CHAT_TEKSTEN } from "@/lib/chat/teksten-talen";
+import { getLocale } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +20,8 @@ export default async function BerichtenPage() {
       </div>
       {/* de kop is op de telefoon verborgen; de pagina houdt een h1 voor schermlezers */}
       <h1 className="sr-only md:hidden">Berichten</h1>
-      <InboxPage />
+      {/* de chat in de taal van de werker; opdrachtgever en beheer geven niets mee en blijven Nederlands */}
+      <InboxPage texts={CHAT_TEKSTEN[await getLocale()]} />
     </>
   );
 }

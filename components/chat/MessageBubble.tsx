@@ -7,6 +7,8 @@ import { IconReply, IconSmiley, IconDots, IconCopy, IconForward, IconPin, IconSt
 import { ActionList, MessageSheet, ReactionRow, type ActionItem } from "./MessageActions";
 import { PollCard } from "./PollCard";
 import { isProgramma } from "@/lib/messaging/bijlage";
+import { useChatTeksten } from "./ChatTekstenContext";
+import { vulIn } from "@/lib/i18n/vul-in";
 
 /** Lang drukken (telefoon) opent het actiepaneel na zoveel ms. */
 const LONG_PRESS_MS = 450;
@@ -14,11 +16,12 @@ const LONG_PRESS_MS = 450;
 const SWIPE_REPLY_PX = 56;
 
 function Ticks({ m }: { m: Msg }) {
-  if (m.failed) return <span className="font-bold text-crit" aria-label="niet verstuurd">!</span>;
-  if (m.pending) return <span aria-label="wordt verstuurd">🕓</span>;
+  const t = useChatTeksten().bubble;
+  if (m.failed) return <span className="font-bold text-crit" aria-label={t.statusNotSent}>!</span>;
+  if (m.pending) return <span aria-label={t.statusSending}>🕓</span>;
   // gelezen = blauw: op de lichtgroene bubbel donkerblauw (5,3:1; #53BDEB haalde 1,9:1), in donker het WhatsApp-blauw
   return (
-    <span className={m.readByOthers ? "text-[#0369A1] [.app-scope[data-theme=dark]_&]:text-[#53BDEB]" : ""} aria-label={m.readByOthers ? "gelezen" : "verstuurd"}>
+    <span className={m.readByOthers ? "text-[#0369A1] [.app-scope[data-theme=dark]_&]:text-[#53BDEB]" : ""} aria-label={m.readByOthers ? t.statusRead : t.statusSent}>
       {m.readByOthers ? "✓✓" : "✓"}
     </span>
   );
@@ -27,6 +30,7 @@ function Ticks({ m }: { m: Msg }) {
 const RATES = [1, 1.5, 2] as const;
 
 function VoiceNote({ src, durationSec }: { src: string; durationSec?: number }) {
+  const t = useChatTeksten().bubble;
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [pos, setPos] = useState(0);
@@ -57,7 +61,7 @@ function VoiceNote({ src, durationSec }: { src: string; durationSec?: number }) 
         type="button"
         onClick={toggle}
         className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full bg-brand-500 text-white"
-        aria-label={playing ? "Pauze" : "Afspelen"}
+        aria-label={playing ? t.pause : t.play}
       >
         {playing ? "❚❚" : "▶"}
       </button>
@@ -69,7 +73,7 @@ function VoiceNote({ src, durationSec }: { src: string; durationSec?: number }) 
             seek((e.clientX - r.left) / r.width);
           }}
           role="slider"
-          aria-label="Positie in spraakbericht"
+          aria-label={t.voicePosition}
           aria-valuemin={0}
           aria-valuemax={Math.round(dur)}
           aria-valuenow={Math.round(pos)}
@@ -82,7 +86,7 @@ function VoiceNote({ src, durationSec }: { src: string; durationSec?: number }) 
           <div className="h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} />
           <span className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-500" style={{ left: `${pct}%` }} aria-hidden />
         </div>
-        <span className="mt-1 block text-[11px] text-neutralx-500">{playing || pos > 0 ? fmtDuration(pos) : dur ? fmtDuration(dur) : "spraak"}</span>
+        <span className="mt-1 block text-[11px] text-neutralx-500">{playing || pos > 0 ? fmtDuration(pos) : dur ? fmtDuration(dur) : t.voiceLabel}</span>
       </div>
       <button
         type="button"
@@ -92,7 +96,7 @@ function VoiceNote({ src, durationSec }: { src: string; durationSec?: number }) 
           if (audioRef.current) audioRef.current.playbackRate = next;
         }}
         className="flex-shrink-0 rounded-full bg-black/[0.06] px-1.5 py-0.5 text-[11px] font-semibold text-neutralx-600"
-        aria-label={`Afspeelsnelheid ${rate}×`}
+        aria-label={vulIn(t.playbackRate, { snelheid: rate })}
       >
         {rate}×
       </button>
@@ -213,11 +217,13 @@ export function MessageBubble({
   const touch = useRef<{ x: number; y: number; timer: ReturnType<typeof setTimeout> | null; horizontal: boolean | null } | null>(null);
   const longPressAt = useRef(0);
   const mediaUrl = m.attachment ? `/api/inbox/${threadId}/media/${m.attachment.mediaId}` : null;
+  const chat = useChatTeksten();
+  const t = chat.bubble;
 
   if (m.deleted) {
     return (
       <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-        <div className="my-1 rounded-2xl bg-black/[0.04] px-3 py-2 text-[0.8em] italic text-neutralx-400">🚫 Dit bericht is verwijderd</div>
+        <div className="my-1 rounded-2xl bg-black/[0.04] px-3 py-2 text-[0.8em] italic text-neutralx-400">{t.deleted}</div>
       </div>
     );
   }
@@ -234,64 +240,64 @@ export function MessageBubble({
     const missed = m.call?.status === "missed" || m.call?.status === "declined";
     const label =
       m.call?.status === "missed"
-        ? "Gemiste oproep"
+        ? t.callMissed
         : m.call?.status === "declined"
-          ? "Oproep geweigerd"
-          : `${m.call?.mode === "video" ? "Videogesprek" : m.call?.mode === "screen" ? "Scherm gedeeld" : "Spraakoproep"} · ${m.call?.durationSec ? fmtDuration(m.call.durationSec) : "0:00"}`;
+          ? t.callDeclined
+          : `${m.call?.mode === "video" ? t.callVideo : m.call?.mode === "screen" ? t.callScreen : t.callVoice} · ${m.call?.durationSec ? fmtDuration(m.call.durationSec) : "0:00"}`;
     const icon = m.call?.mode === "video" ? "📹" : m.call?.mode === "screen" ? "🖥️" : "📞";
     return (
       <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
         <div className={`my-1 flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs shadow-sm ${missed && !mine ? "text-crit" : "text-neutralx-600"}`}>
           <span aria-hidden>{icon}</span>
           {label}
-          <span className="text-neutralx-400">{fmtTime(m.at)}</span>
+          <span className="text-neutralx-400">{fmtTime(m.at, chat.shared)}</span>
         </div>
       </div>
     );
   }
 
   const myReaction = myUserId ? (Object.entries(m.reactions ?? {}).find(([, u]) => u.includes(myUserId))?.[0] ?? null) : null;
-  const preview = m.text || (m.kind === "image" ? "📷 Foto" : m.kind === "voice" ? "🎤 Spraakbericht" : m.kind === "file" ? `📎 ${m.attachment?.filename ?? "Bestand"}` : m.kind === "location" ? "📍 Locatie" : "");
+  const preview = m.text || (m.kind === "image" ? t.previewPhoto : m.kind === "voice" ? t.previewVoice : m.kind === "file" ? `📎 ${m.attachment?.filename ?? t.previewFileFallback}` : m.kind === "location" ? t.previewLocation : "");
 
   const items: ActionItem[] = m.failed
     ? [
-        ...(onRetry ? [{ key: "retry", label: "Opnieuw versturen", icon: "↻", run: () => onRetry(m) }] : []),
-        ...(onDiscard ? [{ key: "discard", label: "Weggooien", icon: <IconTrash className="h-4 w-4" />, danger: true, run: () => onDiscard(m) }] : []),
+        ...(onRetry ? [{ key: "retry", label: t.retrySend, icon: "↻", run: () => onRetry(m) }] : []),
+        ...(onDiscard ? [{ key: "discard", label: t.discard, icon: <IconTrash className="h-4 w-4" />, danger: true, run: () => onDiscard(m) }] : []),
       ]
     : [
-        ...(onReply && !m.pending ? [{ key: "reply", label: "Beantwoorden", icon: <IconReply className="h-4 w-4" />, run: () => onReply(m) }] : []),
+        ...(onReply && !m.pending ? [{ key: "reply", label: t.reply, icon: <IconReply className="h-4 w-4" />, run: () => onReply(m) }] : []),
         ...(m.text
           ? [
               {
                 key: "copy",
-                label: "Kopiëren",
+                label: t.copy,
                 icon: <IconCopy className="h-4 w-4" />,
                 run: () => {
                   void navigator.clipboard?.writeText(m.text).then(
-                    () => onNotice?.("Gekopieerd"),
-                    () => onNotice?.("Kopiëren lukte niet"),
+                    () => onNotice?.(t.copied),
+                    () => onNotice?.(t.copyFailed),
                   );
                 },
               },
             ]
           : []),
-        ...(onForward && !m.pending && m.kind !== "poll" ? [{ key: "fwd", label: "Doorsturen", icon: <IconForward className="h-4 w-4" />, run: () => onForward(m) }] : []),
+        ...(onForward && !m.pending && m.kind !== "poll" ? [{ key: "fwd", label: t.forward, icon: <IconForward className="h-4 w-4" />, run: () => onForward(m) }] : []),
         ...(onPin && !m.pending
-          ? [{ key: "pin", label: pinnedId === m.id ? "Losmaken" : "Vastzetten", icon: <IconPin className="h-4 w-4" />, run: () => onPin(m) }]
+          ? [{ key: "pin", label: pinnedId === m.id ? t.unpin : t.pin, icon: <IconPin className="h-4 w-4" />, run: () => onPin(m) }]
           : []),
         ...(onStar && !m.pending
-          ? [{ key: "star", label: starred ? "Niet meer bewaren" : "Bewaren", icon: <IconStar className="h-4 w-4" />, run: () => onStar(m) }]
+          ? [{ key: "star", label: starred ? t.unstar : t.star, icon: <IconStar className="h-4 w-4" />, run: () => onStar(m) }]
           : []),
-        ...(mine && onEdit && canEdit(m, myUserId) ? [{ key: "edit", label: "Bewerken", icon: <IconPencil className="h-4 w-4" />, run: () => onEdit(m) }] : []),
+        ...(mine && onEdit && canEdit(m, myUserId) ? [{ key: "edit", label: t.edit, icon: <IconPencil className="h-4 w-4" />, run: () => onEdit(m) }] : []),
         ...(mine && onDelete && !m.pending
           ? [
               {
                 key: "del",
-                label: "Verwijderen voor iedereen",
+                label: t.deleteForAll,
                 icon: <IconTrash className="h-4 w-4" />,
                 danger: true,
                 run: () => {
-                  if (window.confirm("Dit bericht voor iedereen verwijderen?")) onDelete(m);
+                  if (window.confirm(t.deleteConfirm)) onDelete(m);
                 },
               },
             ]
@@ -357,18 +363,18 @@ export function MessageBubble({
   const meta = (
     <span className="flex items-center justify-end gap-1 whitespace-nowrap text-[10px] leading-none text-neutralx-500">
       {starred && (
-        <span role="img" aria-label="bewaard" className="text-amber-500">
+        <span role="img" aria-label={t.starred} className="text-amber-500">
           ★
         </span>
       )}
-      {m.auto && <span className="italic">automatisch</span>}
+      {m.auto && <span className="italic">{t.auto}</span>}
       {m.editedAt ? (
         // edited: the time of the edit, the original send time on hover
-        <span title={`Verstuurd om ${fmtTime(m.at)}`}>
-          <span className="italic">bewerkt</span> {fmtTime(m.editedAt)}
+        <span title={vulIn(t.sentAt, { tijd: fmtTime(m.at, chat.shared) })}>
+          <span className="italic">{t.edited}</span> {fmtTime(m.editedAt, chat.shared)}
         </span>
       ) : (
-        fmtTime(m.at)
+        fmtTime(m.at, chat.shared)
       )}
       {mine && <Ticks m={m} />}
     </span>
@@ -385,7 +391,7 @@ export function MessageBubble({
             setMenu(null);
             setPick((v) => (v ? null : direction()));
           }}
-          aria-label="Reageer"
+          aria-label={t.react}
           aria-expanded={pickOpen}
           className="grid h-7 w-7 place-items-center rounded-full text-neutralx-400 hover:bg-black/5 hover:text-brand-600"
         >
@@ -397,7 +403,7 @@ export function MessageBubble({
           type="button"
           onClick={() => onReply(m)}
           className="grid h-7 w-7 place-items-center rounded-full text-neutralx-400 hover:bg-black/5 hover:text-brand-600"
-          aria-label="Beantwoord"
+          aria-label={t.replyShort}
         >
           <IconReply className="h-4 w-4" />
         </button>
@@ -406,7 +412,7 @@ export function MessageBubble({
         <button
           type="button"
           onClick={() => (menu ? setMenu(null) : openMenu())}
-          aria-label="Meer acties"
+          aria-label={t.moreActions}
           aria-haspopup="menu"
           aria-expanded={Boolean(menu)}
           className="grid h-7 w-7 place-items-center rounded-full text-neutralx-400 hover:bg-black/5 hover:text-brand-600"
@@ -496,7 +502,7 @@ export function MessageBubble({
           type="button"
           onClick={() => onAvatarClick?.(m.from)}
           className={`mb-0.5 flex-shrink-0 ${showAvatar ? "" : "invisible"}`}
-          aria-label={senderName ? `Profiel van ${senderName}` : "Profiel"}
+          aria-label={senderName ? vulIn(t.profileOf, { naam: senderName }) : t.profile}
           tabIndex={showAvatar ? 0 : -1}
         >
           <Avatar userId={m.from} name={senderName ?? "?"} {...(senderRole ? { role: senderRole } : {})} avatars={avatars ?? {}} size={26} />
@@ -532,7 +538,7 @@ export function MessageBubble({
             ) : (
               <span className="absolute left-[-8px] top-0 h-[13px] w-2 bg-white [clip-path:polygon(100%_0,100%_100%,0_0)]" aria-hidden />
             )}
-            {m.forwarded && <p className="mb-0.5 flex items-center gap-1 text-[11px] italic text-neutralx-400">↪ Doorgestuurd</p>}
+            {m.forwarded && <p className="mb-0.5 flex items-center gap-1 text-[11px] italic text-neutralx-400">{t.forwarded}</p>}
             {showSender && !mine && senderName && (
               <button
                 type="button"
@@ -548,15 +554,15 @@ export function MessageBubble({
                 type="button"
                 onClick={() => m.replyTo && onJumpTo?.(m.replyTo.id)}
                 className="mb-1 block w-full rounded-md border-l-4 border-brand-500 bg-black/[0.05] px-2 py-1 text-left text-xs text-neutralx-600 hover:bg-black/[0.08]"
-                aria-label={`Ga naar het geciteerde bericht: ${m.replyTo.excerpt || "bericht"}`}
+                aria-label={vulIn(t.goToQuoted, { tekst: m.replyTo.excerpt || t.quoteFallback })}
               >
-                <span className="line-clamp-2">{m.replyTo.excerpt || "bericht"}</span>
+                <span className="line-clamp-2">{m.replyTo.excerpt || t.quoteFallback}</span>
               </button>
             )}
 
             {m.kind === "image" && mediaUrl &&
               (onOpenImage ? (
-                <button type="button" onClick={() => onOpenImage(mediaUrl, m.attachment?.filename ?? "foto")} className="mb-1 block overflow-hidden rounded-lg" aria-label="Foto groot bekijken">
+                <button type="button" onClick={() => onOpenImage(mediaUrl, m.attachment?.filename ?? t.photoName)} className="mb-1 block overflow-hidden rounded-lg" aria-label={t.viewPhoto}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={mediaUrl} alt={m.attachment?.filename ?? ""} loading="lazy" className="max-h-72 min-h-[6rem] min-w-[8rem] bg-black/5 object-cover" />
                 </button>
@@ -576,9 +582,9 @@ export function MessageBubble({
                 <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg bg-brand-500 text-white">📄</span>
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium text-ink">{m.attachment?.filename}</span>
-                  <span className="block text-[11px] text-neutralx-500">{m.attachment ? `${fmtBytes(m.attachment.sizeBytes)} · downloaden` : ""}</span>
+                  <span className="block text-[11px] text-neutralx-500">{m.attachment ? vulIn(t.fileDownload, { grootte: fmtBytes(m.attachment.sizeBytes) }) : ""}</span>
                   {m.attachment && isProgramma(m.attachment.filename) && (
-                    <span className="block text-[11px] font-medium text-ink">⚠️ Dit is een programma. Open het alleen als je de afzender vertrouwt.</span>
+                    <span className="block text-[11px] font-medium text-ink">{t.programWarning}</span>
                   )}
                 </span>
               </a>
@@ -593,9 +599,9 @@ export function MessageBubble({
               >
                 <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg bg-brand-500 text-white">📍</span>
                 <span className="min-w-0">
-                  <span className="block truncate text-sm font-medium text-ink">{m.location.label || "Gedeelde locatie"}</span>
+                  <span className="block truncate text-sm font-medium text-ink">{m.location.label || t.sharedLocation}</span>
                   <span className="block text-[11px] text-neutralx-500">
-                    {m.location.lat.toFixed(4)}, {m.location.lng.toFixed(4)} · open in kaart
+                    {vulIn(t.openInMap, { coords: `${m.location.lat.toFixed(4)}, ${m.location.lng.toFixed(4)}` })}
                   </span>
                 </span>
               </a>
@@ -645,7 +651,7 @@ export function MessageBubble({
                   type="button"
                   onClick={() => onReact?.(m, emoji)}
                   className={`flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[12px] leading-none shadow-sm ring-1 ${reacted ? "bg-brand-50 text-brand-700 ring-brand-300" : "bg-white text-neutralx-600 ring-black/5"}`}
-                  aria-label={`${users.length}× ${emoji}${reacted ? " (jij reageerde, tik om weg te halen)" : ""}`}
+                  aria-label={vulIn(reacted ? t.reactionMine : t.reactionLabel, { aantal: users.length, emoji })}
                 >
                   <span>{emoji}</span>
                   {users.length > 1 && <span>{users.length}</span>}
@@ -657,15 +663,15 @@ export function MessageBubble({
 
         {m.failed && (
           <p role="alert" className="mt-1 flex flex-wrap items-center justify-end gap-x-2 text-[11px] text-crit">
-            <span>Niet verstuurd: {m.failed}</span>
+            <span>{vulIn(t.notSent, { reden: m.failed })}</span>
             {onRetry && (
               <button type="button" onClick={() => onRetry(m)} className="font-semibold underline">
-                Opnieuw
+                {t.retry}
               </button>
             )}
             {onDiscard && (
               <button type="button" onClick={() => onDiscard(m)} className="text-neutralx-500 underline">
-                Weggooien
+                {t.discard}
               </button>
             )}
           </p>

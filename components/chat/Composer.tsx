@@ -5,6 +5,8 @@ import { fmtBytes, fmtDuration, type Msg } from "./shared";
 import { readDraft, writeDraft } from "./drafts";
 import { Portal } from "./Portal";
 import { PollMaker } from "./PollMaker";
+import { useChatTeksten } from "./ChatTekstenContext";
+import { vulIn } from "@/lib/i18n/vul-in";
 import { IconPaperclip, IconMic, IconSend, IconBolt, IconSparkle, IconSmiley, IconClose, IconReply, IconPencil } from "./icons";
 import { isFotoType } from "@/lib/messaging/bijlage";
 
@@ -41,6 +43,7 @@ function AttachPreview({
   onSend: (caption: string) => void;
   onCancel: () => void;
 }) {
+  const chat = useChatTeksten();
   const [caption, setCaption] = useState("");
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
@@ -60,7 +63,7 @@ function AttachPreview({
         <form
           role="dialog"
           aria-modal="true"
-          aria-label={kind === "image" ? "Foto versturen" : "Bestand versturen"}
+          aria-label={kind === "image" ? chat.composer.fotoVersturen : chat.composer.bestandVersturen}
           className="chat-surface flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-lift sm:max-w-md sm:rounded-2xl"
           onClick={(e) => e.stopPropagation()}
           onSubmit={(e) => {
@@ -69,15 +72,15 @@ function AttachPreview({
           }}
         >
           <div className="flex items-center gap-2 border-b border-hair px-4 py-3">
-            <p className="font-display text-sm font-bold text-ink">{kind === "image" ? "Foto versturen" : "Bestand versturen"}</p>
-            <button type="button" onClick={onCancel} className="ml-auto grid h-8 w-8 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft" aria-label="Annuleren">
+            <p className="font-display text-sm font-bold text-ink">{kind === "image" ? chat.composer.fotoVersturen : chat.composer.bestandVersturen}</p>
+            <button type="button" onClick={onCancel} className="ml-auto grid h-8 w-8 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft" aria-label={chat.composer.annuleren}>
               <IconClose className="h-4 w-4" />
             </button>
           </div>
           <div className="grid min-h-0 flex-1 place-items-center bg-[#EFEAE2] p-3">
             {kind === "image" && url ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={url} alt="Voorbeeld van de foto" className="max-h-[55vh] max-w-full rounded-lg object-contain shadow" />
+              <img src={url} alt={chat.composer.voorbeeldFoto} className="max-h-[55vh] max-w-full rounded-lg object-contain shadow" />
             ) : (
               <div className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-sm">
                 <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-500 text-white" aria-hidden>📄</span>
@@ -101,11 +104,11 @@ function AttachPreview({
                   onSend(caption.trim());
                 }
               }}
-              placeholder="Onderschrift toevoegen…"
-              aria-label="Onderschrift"
+              placeholder={chat.composer.onderschriftPlaceholder}
+              aria-label={chat.composer.onderschrift}
               className="max-h-28 min-h-[2.5rem] min-w-0 flex-1 resize-none rounded-[1.4rem] border-0 bg-white px-4 py-2 text-base shadow-sm outline-none md:text-sm"
             />
-            <button type="submit" className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-[#008069] text-white" aria-label="Verstuur">
+            <button type="submit" className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-[#008069] text-white" aria-label={chat.composer.verstuur}>
               <IconSend className="h-5 w-5" />
             </button>
           </div>
@@ -149,6 +152,7 @@ export function Composer({
   droppedFile?: File | null;
   onDropHandled?: () => void;
 }) {
+  const chat = useChatTeksten();
   // what you typed stays as a draft per conversation (drafts.ts)
   const [text, setText] = useState(() => (editing ? editing.text : readDraft(threadId)));
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -202,7 +206,7 @@ export function Composer({
     const r = await fetch("/api/me/chat-assist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "suggest", lastIncoming }) }).catch(() => null);
     const d = r?.ok ? await r.json() : null;
     setAiSuggestions(d?.suggestions ?? []);
-    if (!d?.suggestions?.length) setAiNote(lastIncoming ? "Geen voorstellen gevonden." : "Nog geen bericht om op te antwoorden.");
+    if (!d?.suggestions?.length) setAiNote(lastIncoming ? chat.composer.geenVoorstellen : chat.composer.nogGeenBericht);
     setAiBusy(false);
   }
 
@@ -214,7 +218,7 @@ export function Composer({
     const d = r ? await r.json().catch(() => ({})) : {};
     setAiBusy(false);
     if (d?.text) setText(d.text);
-    else setAiNote(d?.error?.message ?? (typeof d?.error === "string" ? d.error : null) ?? "Herschrijven lukte niet.");
+    else setAiNote(d?.error?.message ?? (typeof d?.error === "string" ? d.error : null) ?? chat.composer.herschrijvenMislukt);
   }
   const [recording, setRecording] = useState(false);
   const [recSecs, setRecSecs] = useState(0);
@@ -244,10 +248,10 @@ export function Composer({
     fd.append("file", file, filename);
     if (durationSec) fd.append("durationSec", String(durationSec));
     const r = await fetch(`/api/inbox/${threadId}/media`, { method: "POST", body: fd }).catch(() => null);
-    if (!r) throw new Error("geen verbinding");
+    if (!r) throw new Error(chat.composer.geenVerbinding);
     if (!r.ok) {
       const d = await r.json().catch(() => null);
-      throw new Error(d?.error?.message ?? "uploaden is mislukt");
+      throw new Error(d?.error?.message ?? chat.composer.uploadenMislukt);
     }
     return (await r.json()).attachment as OutgoingMessage["attachment"];
   }
@@ -283,7 +287,7 @@ export function Composer({
       onClearReply();
     } catch (e) {
       // silently swallowing this made photos look broken ("werkte niet") without any hint why
-      setSendError(`${kind === "image" ? "Foto" : "Bestand"} niet verstuurd: ${(e as Error).message}.`);
+      setSendError(vulIn(kind === "image" ? chat.composer.fotoNietVerstuurd : chat.composer.bestandNietVerstuurd, { fout: (e as Error).message }));
     } finally {
       setBusy(false);
     }
@@ -310,7 +314,7 @@ export function Composer({
     setMenuOpen(false);
     setSendError(null);
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setSendError("Je toestel of browser ondersteunt het delen van locatie niet.");
+      setSendError(chat.composer.locatieNietOndersteund);
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -329,10 +333,10 @@ export function Composer({
       (err) => {
         setSendError(
           err.code === err.PERMISSION_DENIED
-            ? "Geef deze site toegang tot je locatie (tik op het slotje in de adresbalk → Locatie toestaan) en probeer opnieuw."
+            ? chat.composer.locatieGeweigerd
             : err.code === err.TIMEOUT
-              ? "Het bepalen van je locatie duurde te lang. Probeer het opnieuw."
-              : "Je locatie kon niet worden bepaald. Zet locatie/GPS aan en probeer opnieuw.",
+              ? chat.composer.locatieTimeout
+              : chat.composer.locatieOnbekend,
         );
       },
       // lagere nauwkeurigheid + een recente gecachete positie is prima voor delen
@@ -361,7 +365,7 @@ export function Composer({
           const att = await uploadMedia(blob, `spraak-${Date.now()}.webm`, secs);
           if (att) await onSend({ text: "", kind: "voice", attachment: att });
         } catch (e) {
-          setSendError(`Spraakbericht niet verstuurd: ${(e as Error).message}.`);
+          setSendError(vulIn(chat.composer.spraakNietVerstuurd, { fout: (e as Error).message }));
         } finally {
           setBusy(false);
         }
@@ -372,7 +376,7 @@ export function Composer({
       setRecording(true);
       recTimer.current = setInterval(() => setRecSecs((s) => s + 1), 1000);
     } catch {
-      setSendError("Geen toegang tot je microfoon. Sta de microfoon toe in je browser en probeer opnieuw.");
+      setSendError(chat.composer.geenMicrofoon);
     }
   };
 
@@ -404,10 +408,10 @@ export function Composer({
         <div className="flex items-center gap-2 border-b border-hair bg-paper-soft/60 px-3 py-2 text-xs">
           <span className="grid h-6 w-6 flex-shrink-0 place-items-center text-brand-600" aria-hidden><IconPencil className="h-4 w-4" /></span>
           <span className="min-w-0 flex-1 border-l-4 border-brand-500 pl-2">
-            <span className="block font-semibold text-brand-700">Bericht bewerken</span>
+            <span className="block font-semibold text-brand-700">{chat.composer.berichtBewerken}</span>
             <span className="block truncate text-neutralx-600">{editing.text}</span>
           </span>
-          <button type="button" onClick={onCancelEdit} aria-label="Bewerken stoppen" title="Stoppen (Esc)" className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-full text-neutralx-500 hover:bg-black/5">
+          <button type="button" onClick={onCancelEdit} aria-label={chat.composer.bewerkenStoppen} title={chat.composer.stoppenEsc} className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-full text-neutralx-500 hover:bg-black/5">
             <IconClose className="h-4 w-4" />
           </button>
         </div>
@@ -416,12 +420,12 @@ export function Composer({
         <div className="flex items-center gap-2 border-b border-hair bg-paper-soft/60 px-3 py-2 text-xs">
           <span className="grid h-6 w-6 flex-shrink-0 place-items-center text-brand-600" aria-hidden><IconReply className="h-4 w-4" /></span>
           <span className="min-w-0 flex-1 border-l-4 border-brand-500 pl-2">
-            <span className="block font-semibold text-brand-700">{replyName ? `Antwoord aan ${replyName}` : "Antwoord"}</span>
+            <span className="block font-semibold text-brand-700">{replyName ? vulIn(chat.composer.antwoordAan, { naam: replyName }) : chat.composer.antwoord}</span>
             <span className="block truncate text-neutralx-600">
-              {replyTo.text || (replyTo.kind === "image" ? "📷 Foto" : replyTo.kind === "voice" ? "🎤 Spraakbericht" : replyTo.kind === "file" ? "📎 Bestand" : replyTo.kind === "location" ? "📍 Locatie" : "bericht")}
+              {replyTo.text || (replyTo.kind === "image" ? chat.composer.previewFoto : replyTo.kind === "voice" ? chat.composer.previewSpraak : replyTo.kind === "file" ? chat.composer.previewBestand : replyTo.kind === "location" ? chat.composer.previewLocatie : chat.composer.previewBericht)}
             </span>
           </span>
-          <button type="button" onClick={onClearReply} aria-label="Antwoord annuleren" title="Annuleren (Esc)" className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-full text-neutralx-500 hover:bg-black/5">
+          <button type="button" onClick={onClearReply} aria-label={chat.composer.antwoordAnnuleren} title={chat.composer.annulerenEsc} className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-full text-neutralx-500 hover:bg-black/5">
             <IconClose className="h-4 w-4" />
           </button>
         </div>
@@ -430,28 +434,28 @@ export function Composer({
       {aiOpen && (
         <div className="space-y-2 border-b border-hair bg-brand-50/40 p-2 text-xs">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-semibold text-brand-700">✨ AI-hulp</span>
-            {aiBusy && <span className="text-neutralx-500">bezig…</span>}
+            <span className="font-semibold text-brand-700">✨ {chat.composer.aiHulp}</span>
+            {aiBusy && <span className="text-neutralx-500">{chat.composer.bezig}</span>}
             {aiSuggestions.map((s) => (
               <button key={s} type="button" onClick={() => setText(s)} className="rounded-full border border-brand-500/40 bg-white px-2.5 py-1 text-neutralx-700 hover:border-brand-500">
                 {s}
               </button>
             ))}
-            <button type="button" onClick={() => setAiOpen(false)} className="ml-auto grid h-6 w-6 place-items-center rounded-full text-neutralx-500 hover:bg-black/5" aria-label="AI-hulp sluiten">
+            <button type="button" onClick={() => setAiOpen(false)} className="ml-auto grid h-6 w-6 place-items-center rounded-full text-neutralx-500 hover:bg-black/5" aria-label={chat.composer.aiHulpSluiten}>
               <IconClose className="h-3.5 w-3.5" />
             </button>
           </div>
           {text.trim() && (
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-neutralx-500">Mijn tekst:</span>
+              <span className="text-neutralx-500">{chat.composer.mijnTekst}</span>
               {(
                 [
-                  ["vriendelijk", "Vriendelijker"],
-                  ["kort", "Korter"],
-                  ["zakelijk", "Zakelijker"],
-                  ["en", "→ Engels"],
-                  ["pl", "→ Pools"],
-                  ["de", "→ Duits"],
+                  ["vriendelijk", chat.composer.stijlVriendelijk],
+                  ["kort", chat.composer.stijlKort],
+                  ["zakelijk", chat.composer.stijlZakelijk],
+                  ["en", chat.composer.stijlEngels],
+                  ["pl", chat.composer.stijlPools],
+                  ["de", chat.composer.stijlDuits],
                 ] as const
               ).map(([k, l]) => (
                 <button key={k} type="button" disabled={aiBusy} onClick={() => aiRewrite(k)} className="rounded-full border border-hairstrong bg-white px-2.5 py-1 hover:bg-paper-soft disabled:opacity-50">
@@ -467,7 +471,7 @@ export function Composer({
       {sendError && (
         <div role="alert" className="flex items-center gap-2 border-b border-hair bg-crit/10 px-3 py-1.5 text-xs text-crit">
           <span className="min-w-0 flex-1">{sendError}</span>
-          <button type="button" onClick={() => setSendError(null)} className="grid h-6 w-6 place-items-center rounded-full text-neutralx-500 hover:bg-black/5" aria-label="Melding sluiten">
+          <button type="button" onClick={() => setSendError(null)} className="grid h-6 w-6 place-items-center rounded-full text-neutralx-500 hover:bg-black/5" aria-label={chat.composer.meldingSluiten}>
             <IconClose className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -475,7 +479,7 @@ export function Composer({
 
       {showQuick && (
         <div className="flex flex-wrap items-center gap-1.5 border-b border-hair p-2">
-          {quickReplies.length === 0 && <span className="px-1 text-xs text-neutralx-500">Nog geen snelle antwoorden. Maak ze in Tools → Snelle antwoorden.</span>}
+          {quickReplies.length === 0 && <span className="px-1 text-xs text-neutralx-500">{chat.composer.geenSnelleAntwoorden}</span>}
           {quickReplies.map((q) => (
             <button
               key={q}
@@ -497,15 +501,15 @@ export function Composer({
         <div className="flex items-center gap-3 bg-[#F0F2F5] p-3" role="status" aria-live="polite">
           <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-crit" aria-hidden />
           <span className="num font-mono text-sm">{fmtDuration(recSecs)}</span>
-          <span className="text-sm text-neutralx-500">Opnemen…</span>
+          <span className="text-sm text-neutralx-500">{chat.composer.opnemen}</span>
           <button type="button" onClick={() => stopRecording(true)} className="ml-auto rounded-full px-3 py-1.5 text-sm text-crit hover:bg-crit/10">
-            Annuleer
+            {chat.composer.annuleer}
           </button>
           <button
             type="button"
             onClick={() => stopRecording(false)}
             className="grid h-10 w-10 place-items-center rounded-full bg-[#008069] text-white"
-            aria-label="Verstuur spraakbericht"
+            aria-label={chat.composer.verstuurSpraak}
           >
             <IconSend className="h-5 w-5" />
           </button>
@@ -533,13 +537,13 @@ export function Composer({
           )}
           {menuOpen && (
             <div className="absolute bottom-full left-2 z-10 mb-2 w-52 rounded-xl border border-hairstrong bg-white p-1 shadow-lift" role="menu">
-              <MenuItem icon="🖼️" label="Foto" onClick={() => imgRef.current?.click()} />
-              <MenuItem icon="📷" label="Camera" onClick={() => camRef.current?.click()} />
-              <MenuItem icon="📄" label="Document" onClick={() => fileRef.current?.click()} />
-              <MenuItem icon="📍" label="Locatie delen" onClick={shareLocation} />
+              <MenuItem icon="🖼️" label={chat.composer.menuFoto} onClick={() => imgRef.current?.click()} />
+              <MenuItem icon="📷" label={chat.composer.menuCamera} onClick={() => camRef.current?.click()} />
+              <MenuItem icon="📄" label={chat.composer.menuDocument} onClick={() => fileRef.current?.click()} />
+              <MenuItem icon="📍" label={chat.composer.menuLocatie} onClick={shareLocation} />
               <MenuItem
                 icon="📊"
-                label="Peiling"
+                label={chat.composer.menuPeiling}
                 onClick={() => {
                   setMenuOpen(false);
                   setPollOpen(true);
@@ -548,9 +552,9 @@ export function Composer({
             </div>
           )}
           {emojiOpen && (
-            <div className="absolute bottom-full left-2 z-10 mb-2 grid w-[min(20rem,calc(100%-1rem))] grid-cols-8 gap-0.5 rounded-xl border border-hairstrong bg-white p-2 shadow-lift" role="menu" aria-label="Emoji">
+            <div className="absolute bottom-full left-2 z-10 mb-2 grid w-[min(20rem,calc(100%-1rem))] grid-cols-8 gap-0.5 rounded-xl border border-hairstrong bg-white p-2 shadow-lift" role="menu" aria-label={chat.composer.emoji}>
               {EMOJI.map((e) => (
-                <button key={e} type="button" role="menuitem" onClick={() => insertEmoji(e)} className="grid h-9 place-items-center rounded-lg text-xl hover:bg-paper-soft" aria-label={`Emoji ${e}`}>
+                <button key={e} type="button" role="menuitem" onClick={() => insertEmoji(e)} className="grid h-9 place-items-center rounded-lg text-xl hover:bg-paper-soft" aria-label={vulIn(chat.composer.emojiN, { emoji: e })}>
                   {e}
                 </button>
               ))}
@@ -566,7 +570,7 @@ export function Composer({
                   setEmojiOpen((v) => !v);
                 }}
                 className={`${roundBtn} relative z-10 ${emojiOpen ? "text-brand-600" : ""}`}
-                aria-label="Emoji"
+                aria-label={chat.composer.emoji}
                 aria-expanded={emojiOpen}
               >
                 <IconSmiley className="h-5 w-5" />
@@ -603,8 +607,8 @@ export function Composer({
               }}
               rows={1}
               maxLength={4000}
-              placeholder={editing ? "Bewerk je bericht…" : "Typ een bericht"}
-              aria-label="Bericht"
+              placeholder={editing ? chat.composer.placeholderBewerk : chat.composer.placeholderTyp}
+              aria-label={chat.composer.bericht}
               className="max-h-40 min-h-[2.5rem] min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-2 py-2 text-base leading-snug outline-none md:text-sm"
             />
 
@@ -614,9 +618,9 @@ export function Composer({
                   type="button"
                   onClick={() => setShowQuick((v) => !v)}
                   className={`${roundBtn} ${showQuick ? "text-brand-600" : ""}`}
-                  aria-label="Snelle antwoorden"
+                  aria-label={chat.composer.snelleAntwoorden}
                   aria-expanded={showQuick}
-                  title="Snelle antwoorden"
+                  title={chat.composer.snelleAntwoorden}
                 >
                   <IconBolt className="h-5 w-5" />
                 </button>
@@ -628,9 +632,9 @@ export function Composer({
                     if (next) void aiSuggest();
                   }}
                   className={`${roundBtn} ${aiOpen ? "bg-brand-50 text-brand-600" : ""}`}
-                  aria-label="AI-hulp"
+                  aria-label={chat.composer.aiHulp}
                   aria-expanded={aiOpen}
-                  title="AI-hulp: voorstellen en herschrijven"
+                  title={chat.composer.aiHulpTitel}
                 >
                   <IconSparkle className="h-5 w-5" />
                 </button>
@@ -641,9 +645,9 @@ export function Composer({
                     setMenuOpen((v) => !v);
                   }}
                   className={`${roundBtn} relative z-10 ${menuOpen ? "text-brand-600" : ""}`}
-                  aria-label="Bijlage"
+                  aria-label={chat.composer.bijlage}
                   aria-expanded={menuOpen}
-                  title="Foto, camera, document of locatie"
+                  title={chat.composer.bijlageTitel}
                 >
                   <IconPaperclip className="h-5 w-5" />
                 </button>
@@ -656,7 +660,7 @@ export function Composer({
               type="submit"
               disabled={busy || !text.trim()}
               className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-[#008069] text-white transition-transform active:scale-95 disabled:opacity-40"
-              aria-label={editing ? "Bewerking opslaan" : "Verstuur"}
+              aria-label={editing ? chat.composer.bewerkingOpslaan : chat.composer.verstuur}
             >
               {editing ? <span className="text-lg leading-none" aria-hidden>✓</span> : <IconSend className="h-5 w-5" />}
             </button>
@@ -665,7 +669,7 @@ export function Composer({
               type="button"
               onClick={startRecording}
               className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-[#008069] text-white transition-transform active:scale-95"
-              aria-label="Spraakbericht opnemen"
+              aria-label={chat.composer.spraakOpnemen}
             >
               <IconMic className="h-5 w-5" />
             </button>

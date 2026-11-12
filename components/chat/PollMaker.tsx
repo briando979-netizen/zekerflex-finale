@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { maakPeiling, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POLL_OPTION_MAX, POLL_QUESTION_MAX } from "@/lib/messaging/poll";
 import { Portal } from "./Portal";
+import { useChatTeksten } from "./ChatTekstenContext";
+import { vulIn } from "@/lib/i18n/vul-in";
 import { IconClose, IconSend } from "./icons";
 
 /**
@@ -17,6 +19,7 @@ export function PollMaker({
   onSend: (poll: { question: string; options: string[]; multi: boolean }) => void;
   onCancel: () => void;
 }) {
+  const chat = useChatTeksten();
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState<string[]>(["", ""]);
   const [multi, setMulti] = useState(false);
@@ -43,8 +46,8 @@ export function PollMaker({
     if (!p) {
       setFout(
         question.trim()
-          ? `Vul minstens ${POLL_MIN_OPTIONS} verschillende keuzes in.`
-          : "Vul eerst een vraag in.",
+          ? vulIn(chat.poll.foutKeuzes, { min: POLL_MIN_OPTIONS })
+          : chat.poll.foutVraag,
       );
       return;
     }
@@ -67,16 +70,16 @@ export function PollMaker({
         >
           <div className="flex items-center gap-2 border-b border-hair px-4 py-3">
             <p id="peiling-titel" className="font-display text-sm font-bold text-ink">
-              📊 Peiling maken
+              {chat.poll.maken}
             </p>
-            <button type="button" onClick={onCancel} className="ml-auto grid h-8 w-8 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft" aria-label="Annuleren">
+            <button type="button" onClick={onCancel} className="ml-auto grid h-8 w-8 place-items-center rounded-full text-neutralx-500 hover:bg-paper-soft" aria-label={chat.poll.annuleren}>
               <IconClose className="h-4 w-4" />
             </button>
           </div>
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
             <div>
               <label htmlFor="peiling-vraag" className="mb-1 block text-xs font-semibold text-neutralx-600">
-                Vraag
+                {chat.poll.vraag}
               </label>
               <input
                 id="peiling-vraag"
@@ -87,12 +90,12 @@ export function PollMaker({
                   setFout(null);
                   setQuestion(e.target.value);
                 }}
-                placeholder="Bijv. wie kan zaterdag de late dienst?"
+                placeholder={chat.poll.vraagPlaceholder}
                 className="w-full rounded-lg border border-hairstrong px-3 py-2 text-base outline-none focus:border-[#008069] md:text-sm"
               />
             </div>
             <fieldset>
-              <legend className="mb-1 block text-xs font-semibold text-neutralx-600">Keuzes</legend>
+              <legend className="mb-1 block text-xs font-semibold text-neutralx-600">{chat.poll.keuzes}</legend>
               <div className="space-y-1.5">
                 {options.map((o, i) => (
                   <input
@@ -100,17 +103,17 @@ export function PollMaker({
                     value={o}
                     maxLength={POLL_OPTION_MAX}
                     onChange={(e) => zetKeuze(i, e.target.value)}
-                    placeholder={`Keuze ${i + 1}`}
-                    aria-label={`Keuze ${i + 1}`}
+                    placeholder={vulIn(chat.poll.keuzeN, { n: i + 1 })}
+                    aria-label={vulIn(chat.poll.keuzeN, { n: i + 1 })}
                     className="w-full rounded-lg border border-hairstrong px-3 py-2 text-base outline-none focus:border-[#008069] md:text-sm"
                   />
                 ))}
               </div>
-              <p className="mt-1 text-[11px] text-neutralx-500">Hooguit {POLL_MAX_OPTIONS} keuzes; lege velden tellen niet mee.</p>
+              <p className="mt-1 text-[11px] text-neutralx-500">{vulIn(chat.poll.hooguit, { max: POLL_MAX_OPTIONS })}</p>
             </fieldset>
             <label className="flex items-center gap-2 text-sm text-ink">
               <input type="checkbox" checked={multi} onChange={(e) => setMulti(e.target.checked)} className="h-4 w-4 accent-[#008069]" />
-              Meer dan één keuze per persoon toestaan
+              {chat.poll.meerdere}
             </label>
             {fout && (
               <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">
@@ -120,11 +123,11 @@ export function PollMaker({
           </div>
           <div className="flex items-center justify-end gap-2 border-t border-hair bg-[#F0F2F5] p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
             <button type="button" onClick={onCancel} className="rounded-full px-4 py-2 text-sm font-medium text-neutralx-600 hover:bg-black/5">
-              Annuleren
+              {chat.poll.annuleren}
             </button>
             <button type="submit" className="flex items-center gap-1.5 rounded-full bg-[#008069] px-4 py-2 text-sm font-semibold text-white">
               <IconSend className="h-4 w-4" />
-              Versturen
+              {chat.poll.versturen}
             </button>
           </div>
         </form>

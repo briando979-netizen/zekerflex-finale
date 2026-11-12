@@ -5,8 +5,11 @@ import { Avatar } from "./Avatar";
 import { Portal } from "./Portal";
 import type { ChatUser } from "./shared";
 import { PushToggle } from "@/components/app/PushToggle";
+import { useChatTeksten } from "./ChatTekstenContext";
+import { vulIn } from "@/lib/i18n/vul-in";
 
 function Shell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  const chat = useChatTeksten();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
@@ -24,7 +27,7 @@ function Shell({ title, onClose, children }: { title: string; onClose: () => voi
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-display text-lg font-bold text-ink">{title}</h2>
-          <button type="button" onClick={onClose} className="text-lg text-neutralx-400" aria-label="Sluiten">
+          <button type="button" onClick={onClose} className="text-lg text-neutralx-400" aria-label={chat.modals.sluiten}>
             ✕
           </button>
         </div>
@@ -46,6 +49,7 @@ export function PeoplePicker({
   onClose: () => void;
   onPick: (userId: string) => void;
 }) {
+  const chat = useChatTeksten();
   const [q, setQ] = useState("");
   const [people, setPeople] = useState<ChatUser[]>([]);
   const [avatars, setAvatars] = useState<Record<string, string>>({});
@@ -74,11 +78,11 @@ export function PeoplePicker({
         autoFocus
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Zoek op naam…"
-        aria-label="Zoek op naam"
+        placeholder={chat.modals.zoekPlaceholder}
+        aria-label={chat.modals.zoekLabel}
         className="field-input mb-3"
       />
-      {loading && <p className="text-sm text-neutralx-400">Zoeken…</p>}
+      {loading && <p className="text-sm text-neutralx-400">{chat.modals.zoeken}</p>}
       <ul className="space-y-1">
         {people.map((u) => (
           <li key={u.userId}>
@@ -97,7 +101,7 @@ export function PeoplePicker({
           </li>
         ))}
         {!loading && people.length === 0 && (
-          <p className="py-4 text-center text-sm text-neutralx-400">Niemand gevonden.</p>
+          <p className="py-4 text-center text-sm text-neutralx-400">{chat.modals.niemandGevonden}</p>
         )}
       </ul>
     </Shell>
@@ -111,6 +115,7 @@ export function CommunityCreateModal({
   onClose: () => void;
   onCreated: (id: string, threadId: string | null) => void;
 }) {
+  const chat = useChatTeksten();
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const [busy, setBusy] = useState(false);
@@ -134,13 +139,13 @@ export function CommunityCreateModal({
   };
 
   return (
-    <Shell title="Nieuwe community" onClose={onClose}>
-      <label className="field-label">Naam</label>
-      <input value={name} onChange={(e) => setName(e.target.value)} className="field-input mb-3" placeholder="Bijv. Horeca Amsterdam" autoFocus />
-      <label className="field-label">Omschrijving</label>
-      <textarea value={desc} onChange={(e) => setDesc(e.target.value)} className="field-input mb-4" rows={3} placeholder="Waar gaat deze community over?" />
+    <Shell title={chat.modals.nieuweCommunity} onClose={onClose}>
+      <label className="field-label">{chat.modals.naam}</label>
+      <input value={name} onChange={(e) => setName(e.target.value)} className="field-input mb-3" placeholder={chat.modals.naamPlaceholder} autoFocus />
+      <label className="field-label">{chat.modals.omschrijving}</label>
+      <textarea value={desc} onChange={(e) => setDesc(e.target.value)} className="field-input mb-4" rows={3} placeholder={chat.modals.omschrijvingPlaceholder} />
       <button type="button" onClick={create} disabled={busy || name.trim().length < 2} className="btn-primary w-full disabled:opacity-40">
-        Community aanmaken
+        {chat.modals.communityAanmaken}
       </button>
     </Shell>
   );
@@ -169,6 +174,7 @@ export function CommunityManageModal({
   onClose: () => void;
   onChanged: () => void;
 }) {
+  const chat = useChatTeksten();
   const [d, setD] = useState<CommunityDetail | null>(null);
   const [pick, setPick] = useState(false);
 
@@ -202,40 +208,40 @@ export function CommunityManageModal({
   };
 
   if (pick) {
-    return <PeoplePicker title="Uitnodigen" cta="Nodig uit" onClose={() => setPick(false)} onPick={invite} />;
+    return <PeoplePicker title={chat.modals.uitnodigen} cta={chat.modals.nodigUit} onClose={() => setPick(false)} onPick={invite} />;
   }
 
   return (
-    <Shell title={c?.name ?? "Community"} onClose={onClose}>
+    <Shell title={c?.name ?? chat.modals.community} onClose={onClose}>
       {c && (
         <>
           {c.description && <p className="mb-3 text-sm text-neutralx-600">{c.description}</p>}
           {canManage && (
             <button type="button" onClick={() => setPick(true)} className="btn-primary mb-4 w-full text-sm">
-              + Leden uitnodigen
+              {chat.modals.ledenUitnodigen}
             </button>
           )}
-          <p className="field-label">Leden ({c.members.length})</p>
+          <p className="field-label">{vulIn(chat.modals.leden, { aantal: c.members.length })}</p>
           <ul className="mt-1 space-y-1">
             {c.members.map((m) => (
               <li key={m.userId} className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-paper-soft">
                 <Avatar userId={m.userId} name={d.directory[m.userId]?.name ?? "…"} role={d.directory[m.userId]?.role ?? "employer"} avatars={d.avatars} size={32} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm text-ink">{d.directory[m.userId]?.name ?? "Onbekend"}</span>
-                  <span className="block text-xs text-neutralx-400">{m.role === "owner" ? "eigenaar" : m.role}</span>
+                  <span className="block truncate text-sm text-ink">{d.directory[m.userId]?.name ?? chat.modals.onbekend}</span>
+                  <span className="block text-xs text-neutralx-400">{m.role === "owner" ? chat.modals.eigenaar : m.role}</span>
                 </span>
                 {canManage && m.userId !== c.ownerId && (
-                  <button type="button" onClick={() => remove(m.userId)} className="text-xs text-neutralx-400 hover:text-crit">verwijder</button>
+                  <button type="button" onClick={() => remove(m.userId)} className="text-xs text-neutralx-400 hover:text-crit">{chat.modals.verwijder}</button>
                 )}
               </li>
             ))}
           </ul>
           {canManage && c.invites.filter((i) => !i.acceptedAt).length > 0 && (
             <>
-              <p className="field-label mt-4">Openstaande uitnodigingen</p>
+              <p className="field-label mt-4">{chat.modals.openstaandeUitnodigingen}</p>
               <ul className="mt-1 space-y-1 text-sm text-neutralx-500">
                 {c.invites.filter((i) => !i.acceptedAt).map((i) => (
-                  <li key={i.token}>{i.toEmail ?? d.directory[i.toUserId ?? ""]?.name ?? "Uitnodiging"}</li>
+                  <li key={i.token}>{i.toEmail ?? d.directory[i.toUserId ?? ""]?.name ?? chat.modals.uitnodiging}</li>
                 ))}
               </ul>
             </>
@@ -255,6 +261,7 @@ export interface ChatSettings {
 }
 
 export function ChatSettingsModal({ onClose }: { onClose: () => void }) {
+  const chat = useChatTeksten();
   const [s, setS] = useState<ChatSettings | null>(null);
   const [saving, setSaving] = useState(false);
   const [quick, setQuick] = useState("");
@@ -281,25 +288,25 @@ export function ChatSettingsModal({ onClose }: { onClose: () => void }) {
     }
   };
 
-  if (!s) return <Shell title="Chat-instellingen" onClose={onClose}><p className="text-sm text-neutralx-400">Laden…</p></Shell>;
+  if (!s) return <Shell title={chat.modals.chatInstellingen} onClose={onClose}><p className="text-sm text-neutralx-400">{chat.modals.laden}</p></Shell>;
 
   return (
-    <Shell title="Chat-instellingen" onClose={onClose}>
+    <Shell title={chat.modals.chatInstellingen} onClose={onClose}>
       <div className="space-y-5">
         <PushToggle />
         <div>
-          <label className="field-label">Statusbericht</label>
+          <label className="field-label">{chat.modals.statusbericht}</label>
           <input
             value={s.statusNote}
             onChange={(e) => setS({ ...s, statusNote: e.target.value })}
             className="field-input"
-            placeholder="Bijv. Alleen weekenddiensten"
+            placeholder={chat.modals.statusPlaceholder}
             maxLength={140}
           />
         </div>
 
         <div>
-          <p className="field-label">Snelle antwoorden</p>
+          <p className="field-label">{chat.modals.snelleAntwoorden}</p>
           <ul className="mb-2 space-y-1">
             {s.quickReplies.map((q, i) => (
               <li key={i} className="flex items-center gap-2 rounded-lg bg-paper-soft px-2.5 py-1.5 text-sm">
@@ -309,13 +316,13 @@ export function ChatSettingsModal({ onClose }: { onClose: () => void }) {
                   onClick={() => setS({ ...s, quickReplies: s.quickReplies.filter((_, j) => j !== i) })}
                   className="text-xs text-neutralx-400 hover:text-crit"
                 >
-                  verwijder
+                  {chat.modals.verwijder}
                 </button>
               </li>
             ))}
           </ul>
           <div className="flex gap-2">
-            <input value={quick} onChange={(e) => setQuick(e.target.value)} className="field-input flex-1" placeholder="Nieuw snel antwoord" />
+            <input value={quick} onChange={(e) => setQuick(e.target.value)} className="field-input flex-1" placeholder={chat.modals.nieuwSnelAntwoord} />
             <button
               type="button"
               onClick={() => {
@@ -338,7 +345,7 @@ export function ChatSettingsModal({ onClose }: { onClose: () => void }) {
               checked={s.autoReply.enabled}
               onChange={(e) => setS({ ...s, autoReply: { ...s.autoReply, enabled: e.target.checked } })}
             />
-            Automatisch antwoord
+            {chat.modals.automatischAntwoord}
           </label>
           <textarea
             value={s.autoReply.text}
@@ -354,7 +361,7 @@ export function ChatSettingsModal({ onClose }: { onClose: () => void }) {
               onChange={(e) => setS({ ...s, autoReply: { ...s.autoReply, onlyWhenAway: e.target.checked } })}
               disabled={!s.autoReply.enabled}
             />
-            Alleen als ik offline / buiten mijn actieve uren ben
+            {chat.modals.alleenOffline}
           </label>
         </div>
 
@@ -364,7 +371,7 @@ export function ChatSettingsModal({ onClose }: { onClose: () => void }) {
             checked={s.showOnlineStatus}
             onChange={(e) => setS({ ...s, showOnlineStatus: e.target.checked })}
           />
-          Toon mijn online-status en “laatst gezien”
+          {chat.modals.toonOnline}
         </label>
         <label className="flex items-center gap-2 text-sm text-neutralx-700">
           <input
@@ -372,11 +379,11 @@ export function ChatSettingsModal({ onClose }: { onClose: () => void }) {
             checked={s.showReadReceipts}
             onChange={(e) => setS({ ...s, showReadReceipts: e.target.checked })}
           />
-          Toon leesbevestigingen
+          {chat.modals.toonLeesbevestigingen}
         </label>
 
         <button type="button" onClick={save} disabled={saving} className="btn-primary w-full">
-          {saving ? "Opslaan…" : "Opslaan"}
+          {saving ? chat.modals.opslaanBezig : chat.modals.opslaan}
         </button>
       </div>
     </Shell>

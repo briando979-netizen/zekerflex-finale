@@ -1,0 +1,27 @@
+// Teksten van de peiling: PollMaker.tsx (maken) en PollCard.tsx (in de bubbel).
+export const POLL_NL = {
+  maken: "📊 Peiling maken",
+  annuleren: "Annuleren",
+  vraag: "Vraag",
+  vraagPlaceholder: "Bijv. wie kan zaterdag de late dienst?",
+  keuzes: "Keuzes",
+  keuzeN: "Keuze {n}",
+  hooguit: "Hooguit {max} keuzes; lege velden tellen niet mee.",
+  meerdere: "Meer dan één keuze per persoon toestaan",
+  foutKeuzes: "Vul minstens {min} verschillende keuzes in.",
+  foutVraag: "Vul eerst een vraag in.",
+  versturen: "Versturen",
+  groepLabel: "Peiling: {vraag}",
+  kop: "📊 Peiling",
+  gesloten: "Gesloten · de uitslag staat vast",
+  kiesMeer: "Kies één of meer",
+  kiesEen: "Kies één",
+  jij: "Jij",
+  iemand: "Iemand",
+  stemdeEen: "1 persoon stemde",
+  stemdenMeer: "{aantal} mensen stemden",
+  jaSluiten: "Ja, sluiten",
+  nee: "Nee",
+  peilingSluiten: "Peiling sluiten",
+};
+export type PollTeksten = typeof POLL_NL;
