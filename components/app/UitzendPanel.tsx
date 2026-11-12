@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { UitzendContractCard } from "@/components/app/UitzendContractCard";
+import { useFT } from "@/components/i18n/useFT";
+import { vulIn } from "@/lib/i18n/vul-in";
 
 interface Status {
   weeksWorked: number;
@@ -26,6 +28,7 @@ interface Fiscal {
 }
 
 export function UitzendPanel() {
+  const t = useFT().uitzendPanel;
   const [s, setS] = useState<Status | null>(null);
   const [f, setF] = useState<Fiscal | null>(null);
   const load = () =>
@@ -53,7 +56,7 @@ export function UitzendPanel() {
 
   const contractBlock = (
     <div>
-      <p className="field-label">Uitzendovereenkomst</p>
+      <p className="field-label">{t.overeenkomst}</p>
       <div className="mt-2">
         <UitzendContractCard />
       </div>
@@ -68,11 +71,11 @@ export function UitzendPanel() {
 
       {/* ABU phase / contract hours */}
       <div>
-        <p className="field-label">Fase & contracturen (ABU)</p>
+        <p className="field-label">{t.faseKop}</p>
         <div className="mt-2 rounded-xl border border-hair p-4">
-          <p className="font-semibold text-ink">{s.phaseLabel}</p>
+          <p className="font-semibold text-ink">{t.fase[s.phase as "A" | "B" | "C"] ?? s.phaseLabel}</p>
           <p className="mt-1 text-xs text-neutralx-500">
-            {s.weeksWorked} gewerkte weken · {s.hoursWorked} uur totaal
+            {vulIn(t.gewerkt, { weken: s.weeksWorked, uren: s.hoursWorked })}
           </p>
           <div className="mt-3">
             <div className="h-2 w-full overflow-hidden rounded-full bg-paper-soft">
@@ -84,12 +87,12 @@ export function UitzendPanel() {
               />
             </div>
             <p className="mt-1.5 text-xs text-neutralx-500">
-              Nog {s.hoursToNextContract} uur tot je volgende contract ({s.nextContractAtHours} uur).
+              {vulIn(t.nogUren, { uren: s.hoursToNextContract, van: s.nextContractAtHours })}
             </p>
           </div>
           {s.nextContractReady && (
             <p className="mt-3 rounded-lg bg-brand-50 px-3 py-2 text-xs font-medium text-brand-700">
-              🎉 Je volgende contract staat klaar — je ziet het automatisch bij je uitzendbureau-overzicht.
+              {t.volgendeKlaar}
             </p>
           )}
         </div>
@@ -97,18 +100,18 @@ export function UitzendPanel() {
 
       {/* StiPP */}
       <div>
-        <p className="field-label">StiPP pensioen</p>
+        <p className="field-label">{t.stippKop}</p>
         <div className="mt-2 rounded-xl border border-hair p-4">
-          <p className="font-semibold text-ink">{s.stippLabel}</p>
+          <p className="font-semibold text-ink">{t.stipp[s.stipp as "geen" | "basis" | "plus"] ?? s.stippLabel}</p>
           {s.stipp === "geen" && s.weeksToStippBasis > 0 && (
-            <p className="mt-1 text-xs text-neutralx-500">Nog {s.weeksToStippBasis} weken tot de basisregeling.</p>
+            <p className="mt-1 text-xs text-neutralx-500">{vulIn(t.nogWekenBasis, { weken: s.weeksToStippBasis })}</p>
           )}
           {s.stipp === "basis" && s.weeksToStippPlus > 0 && (
-            <p className="mt-1 text-xs text-neutralx-500">Nog {s.weeksToStippPlus} weken tot de plusregeling.</p>
+            <p className="mt-1 text-xs text-neutralx-500">{vulIn(t.nogWekenPlus, { weken: s.weeksToStippPlus })}</p>
           )}
           <ul className="mt-2 space-y-1 text-xs text-neutralx-500">
-            <li>Basisregeling: vanaf 9 gewerkte weken, jouw inleg.</li>
-            <li>Plusregeling: na 78 weken, met werkgeversbijdrage.</li>
+            <li>{t.basisRegel}</li>
+            <li>{t.plusRegel}</li>
           </ul>
         </div>
       </div>
@@ -122,17 +125,17 @@ export function UitzendPanel() {
           className="mt-0.5 accent-brand-500"
         />
         <span>
-          <span className="block font-semibold text-ink">Loonheffingskorting toepassen</span>
+          <span className="block font-semibold text-ink">{t.lhkTitel}</span>
           <span className="mt-0.5 block text-xs text-neutralx-500">
-            Zet dit alleen aan bij je hoofdinkomen. Heb je meerdere werkgevers? Dan bij één.
-            {f.loonheffingskorting ? " Nu: aan." : " Nu: uit."}
+            {t.lhkUitleg}
+            {f.loonheffingskorting ? t.nuAan : t.nuUit}
           </span>
         </span>
       </label>
 
       {/* Het rekeningnummer vul je in bij "Bankrekening bevestigen" (hierboven op deze pagina). */}
       {f.bsnLast4 && (
-        <p className="text-xs text-neutralx-400">BSN bekend (eindigt op {f.bsnLast4}) — nooit onversleuteld opgeslagen.</p>
+        <p className="text-xs text-neutralx-400">{vulIn(t.bsnBekend, { laatste4: f.bsnLast4 })}</p>
       )}
     </div>
   );
