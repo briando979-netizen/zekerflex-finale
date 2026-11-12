@@ -3,6 +3,10 @@ import { APP_PAGES } from "@/lib/dev/app-pages.generated";
 import { journal } from "@/lib/ops/error-journal";
 import { logger } from "@/lib/logger";
 import { kvGet, kvSet } from "@/lib/storage/kv";
+import { beoordeel, type RondgangProbleem } from "@/lib/ops/rondgang-regels";
+import { draaiWerkerRondgang, type WerkerRondgang } from "@/lib/ops/rondgang-werker";
+
+export { beoordeel, type RondgangProbleem };
 
 // ---------------------------------------------------------------------------
 // Nachtelijke rondgang (6 nov 2026): elke openbare, vaste pagina van de site
@@ -10,15 +14,10 @@ import { kvGet, kvSet } from "@/lib/storage/kv";
 // 200 geeft, bijna leeg is of de foutgrens toont, komt als "pagina kapot" in
 // het foutenlogboek (Admin → Systeem → Foutmeldingen). De uitkomst staat in
 // KV `rondgang:laatste`. Draait via de cron (deploy/cron/entrypoint.sh) op
-// /api/internal/rondgang. De pagina's achter de login (dashboard, werkgever,
-// beheer) vallen erbuiten: die vragen een sessie.
+// /api/internal/rondgang. De pagina's achter de login (werkgever, beheer) vallen
+// erbuiten; de belangrijkste werkerpagina's haalt sinds 12 nov een vaste .test-werker
+// op (lib/ops/rondgang-werker.ts), met de gewone aanmelding en intern via de app.
 // ---------------------------------------------------------------------------
-
-export interface RondgangProbleem {
-  route: string;
-  status: number | null;
-  reden: string;
-}
 
 export interface RondgangUitslag {
   at: string;
@@ -26,6 +25,8 @@ export interface RondgangUitslag {
   ok: number;
   ms: number;
   problemen: RondgangProbleem[];
+  /** het werkerdeel (lib/ops/rondgang-werker.ts); de problemen daarvan staan ook in `problemen` (route /dashboard/…) */
+  werker?: { ingelogd: boolean; paginas: number; overgeslagen?: string };
 }
 
 export const KV_RONDGANG = "rondgang:laatste";
@@ -42,25 +43,6 @@ export function openbareRoutes(paginas: readonly { route: string; dynamic: boole
     .filter((r) => !PRIVE.some((p) => r === p || r.startsWith(p.endsWith("/") ? p : `${p}/`)))
     .filter((r) => !OVERSLAAN.has(r))
     .sort();
-}
-
-/** Beoordeelt één antwoord: null = in orde, anders de reden. */
-export function beoordeel(status: number | null, body: string, contentType = "text/html"): string | null {
-  if (status === null) return "geen antwoord";
-  if (status >= 500) return `serverfout ${status}`;
-  if (status === 404) return "pagina bestaat niet (404)";
-  if (status >= 400) return `fout ${status}`;
-  if (!/text\/html/i.test(contentType)) return null;
-  // zonder scripts en stijl: wat overblijft moet een echte pagina zijn
-  const tekst = body
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (/Application error|Sorry, dit onderdeel haperde|De pagina kon niet worden geladen/i.test(tekst)) return "toont de foutgrens";
-  if (tekst.length < 300) return `bijna lege pagina (${tekst.length} tekens)`;
-  return null;
 }
 
 async function haal(url: string): Promise<{ status: number | null; body: string; contentType: string }> {
@@ -95,8 +77,21 @@ export async function draaiRondgang(basis = env.APP_BASE_URL, gelijktijdig = 3):
   };
   await Promise.all(Array.from({ length: Math.max(1, gelijktijdig) }, werker));
   problemen.sort((a, b) => a.route.localeCompare(b.route));
-  const uitslag: RondgangUitslag = { at: new Date().toISOString(), totaal: routes.length, ok: routes.length - problemen.length, ms: Date.now() - t0, problemen };
   for (const p of problemen) journal("error", "pagina kapot", { route: p.route, status: p.status, reason: p.reden });
+
+  // de werkerpagina's als een vaste .test-werker (een storing hier laat de rest van de rondgang staan)
+  const w: WerkerRondgang = await draaiWerkerRondgang(gelijktijdig).catch(() => ({ ingelogd: false, paginas: 0, overgeslagen: "werkerdeel mislukt", problemen: [] }));
+  for (const p of w.problemen) journal("error", "werkerpagina kapot", { route: p.route, status: p.status, reason: p.reden });
+  const alle = [...problemen, ...w.problemen];
+  const totaal = routes.length + w.paginas;
+  const uitslag: RondgangUitslag = {
+    at: new Date().toISOString(),
+    totaal,
+    ok: totaal - alle.length,
+    ms: Date.now() - t0,
+    problemen: alle,
+    werker: { ingelogd: w.ingelogd, paginas: w.paginas, ...(w.overgeslagen ? { overgeslagen: w.overgeslagen } : {}) },
+  };
   await kvSet(KV_RONDGANG, uitslag).catch(() => undefined);
   logger.info("rondgang klaar", { totaal: uitslag.totaal, problemen: problemen.length, ms: uitslag.ms });
   return uitslag;

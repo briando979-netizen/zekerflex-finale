@@ -37,6 +37,10 @@ const schema = z.object({
   // INTERNAL_CRON_TOKEN is accepted too, for a non-Vercel scheduler.
   CRON_SECRET: z.string().min(16).optional(),
   INTERNAL_CRON_TOKEN: z.string().min(16).optional(),
+  // de vaste .test-werker van de nachtelijke rondgang (lib/ops/rondgang-werker.ts); het wachtwoord maakt
+  // deploy/scripts/env-aanvullen.sh. Zonder wachtwoord slaat de rondgang de werkerpagina's over.
+  RONDGANG_WERKER_EMAIL: z.string().email().optional(),
+  RONDGANG_WERKER_PASS: z.string().min(16).optional(),
 
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1).default("redis://localhost:6379"),

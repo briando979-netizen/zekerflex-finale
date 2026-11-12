@@ -6,13 +6,16 @@ import { Empty, Panel, Pill } from "@/components/admin/kit";
 export async function RondgangPanel() {
   const uitslag = await laatsteRondgang().catch(() => null);
   const kapot = uitslag?.problemen.length ?? 0;
+  // het werkerdeel (lib/ops/rondgang-werker.ts): hoeveel werkerpagina's, of waarom overgeslagen
+  const werker = uitslag?.werker;
+  const werkerTekst = !werker ? "" : werker.ingelogd ? ` Daarvan ${werker.paginas} werkerpagina's, als de vaste testwerker.` : ` Werkerpagina's overgeslagen: ${werker.overgeslagen ?? "onbekend"}.`;
   return (
     <Panel
       flush
       title="Rondgang langs de pagina's"
       subtitle={
         uitslag
-          ? `${uitslag.totaal} openbare pagina's opgehaald ${timeAgoNl(uitslag.at)} in ${(uitslag.ms / 1000).toFixed(1)} s. ${kapot === 0 ? "Alles opent netjes." : "Wat kapot is staat ook bij Foutmeldingen."}`
+          ? `${uitslag.totaal} pagina's opgehaald ${timeAgoNl(uitslag.at)} in ${(uitslag.ms / 1000).toFixed(1)} s.${werkerTekst} ${kapot === 0 ? "Alles opent netjes." : "Wat kapot is staat ook bij Foutmeldingen."}`
           : "Elke nacht om 04:20 (UTC) wordt elke openbare pagina één keer opgehaald, zoals een bezoeker dat doet."
       }
       actions={uitslag ? <Pill tone={kapot === 0 ? "ok" : "crit"}>{kapot === 0 ? "Alles in orde" : `${kapot} kapot`}</Pill> : <Pill tone="neutral">Nog niet gedraaid</Pill>}
