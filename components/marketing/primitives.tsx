@@ -27,11 +27,14 @@ export function SectionHead({
   intro,
   invert = false,
   cms,
+  kop: Kop = "h2",
 }: {
   eyebrow?: string;
   title: string;
   intro?: string;
   invert?: boolean;
+  /** "h1" voor de kop bovenaan een pagina (bijv. de sector- en stadspagina's); verder blijft het een h2 */
+  kop?: "h1" | "h2";
   /** tekst-sleutels (lib/content/store.ts): in het voorbeeld van de Site-ontwerper aanklikbaar */
   cms?: { eyebrow?: string; title?: string; intro?: string };
 }) {
@@ -40,14 +43,14 @@ export function SectionHead({
       {eyebrow ? (
         <p className={`eyebrow ${invert ? "text-brand-mint" : ""}`} data-cms-key={cms?.eyebrow}>{eyebrow}</p>
       ) : null}
-      <h2
+      <Kop
         className={`mt-3 text-balance font-display text-3xl font-bold leading-tight tracking-tight md:text-[2.6rem] ${
           invert ? "text-white" : "text-ink"
         }`}
         data-cms-key={cms?.title}
       >
         {title}
-      </h2>
+      </Kop>
       {intro ? (
         <p
           className={`mt-4 text-lg leading-relaxed ${
