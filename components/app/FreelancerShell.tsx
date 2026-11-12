@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
 import { HulpCentrum } from "@/components/app/HulpCentrum";
+import { WerkerRondleiding } from "@/components/app/WerkerRondleiding";
 import type { HulpTeksten } from "@/lib/hulp/hulpjes";
 import { ICompass, IBriefcase, IClock, IChat, IUser, ISearch, IWallet } from "@/components/app/icons";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -185,6 +186,7 @@ export function FreelancerShell({
                 <Link
                   href={t.href}
                   aria-current={active ? "page" : undefined}
+                  data-rondleiding={t.key}
                   className={`flex flex-col items-center gap-0.5 px-0.5 py-2.5 text-[11px] font-medium transition lg:flex-row lg:gap-2 lg:rounded-full lg:px-4 lg:py-2.5 ${
                     active
                       ? "text-brand-600 lg:bg-ink lg:text-white"
@@ -212,6 +214,8 @@ export function FreelancerShell({
         </ul>
       </nav>
       )}
+      {/* de rondleiding door de app: na de eerste sessie één keer, daarna via Hulp (lib/onboarding/rondleiding.ts) */}
+      <WerkerRondleiding />
     </div>
   );
 }
