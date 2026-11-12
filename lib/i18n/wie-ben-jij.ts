@@ -23,8 +23,8 @@ export interface WieTeksten {
     nlEtiket: string; nlTitel: string; nlUitleg: string; nlPunt: string; nlKnop: string;
     euEtiket: string; euTitel: string; euUitleg: string; euPunt: string; euKnop: string;
     hulp: string; anders: string;
-    /** twee keuzes (12 nov 2026): automatisch met de camera, of zelf foto's maken */
-    autoEtiket: string; autoTitel: string; autoUitleg: string; zelfEtiket: string; zelfTitel: string; zelfUitleg: string; zelfKnop: string;
+    /** twee keuzes (13 nov 2026): automatisch met de camera, of dezelfde camera met zelf op de knop drukken */
+    autoEtiket: string; autoTitel: string; autoUitleg: string; zelfEtiket: string; zelfTitel: string; zelfUitleg: string;
     /** klein linkje onder de keuzes, alleen als Stripe Identity werkt */
     stripeLink: string;
   };
@@ -118,10 +118,9 @@ export const WIE_TEKSTEN: Record<Locale, WieTeksten> = {
       "autoEtiket": "Automatisch · aanbevolen",
       "autoTitel": "Scan je ID met je camera",
       "autoUitleg": "De camera leest je paspoort, ID-kaart of verblijfsvergunning en helpt je bij de selfies. Klopt alles, dan ben je meteen geverifieerd.",
-      "zelfEtiket": "Zelf foto's maken",
-      "zelfTitel": "Maak zelf de foto's",
-      "zelfUitleg": "Maak met je camera een foto van je document, een selfie en een selfie met je hoofd een klein stukje opzij. Met zelf gekozen foto's kijkt een medewerker mee; dat duurt iets langer.",
-      "zelfKnop": "Zelf foto's maken",
+      "zelfEtiket": "Handmatig",
+      "zelfTitel": "Zelf de foto maken",
+      "zelfUitleg": "Dezelfde scan met je camera, maar je drukt zelf op de knop als alles goed in beeld is. Fijn als het automatisch niet lukt.",
       "stripeLink": "Of verifieer via Stripe",
       "hulp": "Hulp nodig?",
       "anders": "Andere manier om te verifiëren"
@@ -214,10 +213,9 @@ export const WIE_TEKSTEN: Record<Locale, WieTeksten> = {
       "autoEtiket": "Automatic · recommended",
       "autoTitel": "Scan your ID with your camera",
       "autoUitleg": "The camera reads your passport, ID card or residence permit and helps you with the selfies. If everything matches, you're verified right away.",
-      "zelfEtiket": "Take your own photos",
-      "zelfTitel": "Take the photos yourself",
-      "zelfUitleg": "Use your camera to take a photo of your document, a selfie and a selfie with your head turned slightly to the side. With photos you choose yourself, a staff member takes a look; that takes a little longer.",
-      "zelfKnop": "Take photos myself",
+      "zelfEtiket": "Manual",
+      "zelfTitel": "Take the photo yourself",
+      "zelfUitleg": "The same camera scan, but you press the button yourself once everything is in view. Handy if automatic doesn't work.",
       "stripeLink": "Or verify with Stripe",
       "hulp": "Need help?",
       "anders": "Another way to verify"
@@ -310,10 +308,9 @@ export const WIE_TEKSTEN: Record<Locale, WieTeksten> = {
       "autoEtiket": "Automatycznie · polecane",
       "autoTitel": "Zeskanuj dokument aparatem",
       "autoUitleg": "Aparat odczyta Twój paszport, dowód osobisty lub dokument pobytowy i pomoże Ci przy selfie. Jeśli wszystko się zgadza, od razu jesteś zweryfikowany.",
-      "zelfEtiket": "Własne zdjęcia",
-      "zelfTitel": "Zrób zdjęcia samodzielnie",
-      "zelfUitleg": "Zrób aparatem zdjęcie dokumentu, selfie i selfie z głową lekko obróconą w bok. Zdjęcia wybrane samodzielnie sprawdza pracownik; to trwa trochę dłużej.",
-      "zelfKnop": "Zrobię zdjęcia sam",
+      "zelfEtiket": "Ręcznie",
+      "zelfTitel": "Zrób zdjęcie samodzielnie",
+      "zelfUitleg": "Ten sam skan aparatem, ale sam naciskasz przycisk, gdy wszystko jest dobrze w kadrze. Przydatne, gdy automatycznie się nie udaje.",
       "stripeLink": "Albo zweryfikuj przez Stripe",
       "hulp": "Potrzebujesz pomocy?",
       "anders": "Inny sposób weryfikacji"
@@ -406,10 +403,9 @@ export const WIE_TEKSTEN: Record<Locale, WieTeksten> = {
       "autoEtiket": "Automat · recomandat",
       "autoTitel": "Scanează actul cu camera",
       "autoUitleg": "Camera citește pașaportul, cartea de identitate sau permisul de ședere și te ajută la selfie-uri. Dacă totul se potrivește, ești verificat imediat.",
-      "zelfEtiket": "Poze făcute de tine",
-      "zelfTitel": "Fă singur pozele",
-      "zelfUitleg": "Fă cu camera o poză a documentului, un selfie și un selfie cu capul întors puțin într-o parte. La pozele alese de tine se uită și un angajat; durează puțin mai mult.",
-      "zelfKnop": "Fac eu pozele",
+      "zelfEtiket": "Manual",
+      "zelfTitel": "Fă tu fotografia",
+      "zelfUitleg": "Aceeași scanare cu camera, dar apeși tu butonul când totul este bine încadrat. Util dacă automat nu merge.",
       "stripeLink": "Sau verifică prin Stripe",
       "hulp": "Ai nevoie de ajutor?",
       "anders": "Alt mod de verificare"
@@ -502,10 +498,9 @@ export const WIE_TEKSTEN: Record<Locale, WieTeksten> = {
       "autoEtiket": "Автоматично · рекомендовано",
       "autoTitel": "Скануйте документ камерою",
       "autoUitleg": "Камера зчитає ваш паспорт, ID-картку або посвідку на проживання й допоможе із селфі. Якщо все збігається, вас одразу верифіковано.",
-      "zelfEtiket": "Власні фото",
+      "zelfEtiket": "Вручну",
       "zelfTitel": "Зробіть фото самостійно",
-      "zelfUitleg": "Зробіть камерою фото документа, селфі та селфі з головою, трохи поверненою вбік. Фото, які ви обираєте самі, перевіряє працівник; це трохи довше.",
-      "zelfKnop": "Зроблю фото сам",
+      "zelfUitleg": "Те саме сканування камерою, але ви самі натискаєте кнопку, коли все добре в кадрі. Зручно, якщо автоматично не виходить.",
       "stripeLink": "Або пройдіть перевірку через Stripe",
       "hulp": "Потрібна допомога?",
       "anders": "Інший спосіб верифікації"

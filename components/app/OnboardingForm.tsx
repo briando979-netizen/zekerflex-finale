@@ -6,15 +6,13 @@ import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { useFT } from "@/components/i18n/useFT";
 import { ThuisbasisVelden, controleerThuisbasisVooraf, useThuisbasisFout } from "@/components/app/ThuisbasisVelden";
-import { AUTH_DICTS, fill, type AuthDict } from "@/lib/i18n/auth";
-import { DocumentLezing, leesDocumentFoto, type Lezing } from "@/components/app/DocumentLezing";
-import { IdScan, type ScanAfronden, type ScanAfrondenOverdracht, type ScanRoute, type ScanUitslag } from "@/components/app/IdScan";
+import { AUTH_DICTS, type AuthDict } from "@/lib/i18n/auth";
+import { IdScan, type ScanAfronden, type ScanAfrondenOverdracht, type ScanRoute, type ScanUitslag, type ScanWijze } from "@/components/app/IdScan";
 import { WieBenJijKop } from "@/components/app/WieBenJijKop";
 import { WieBenJijPersoon, type PersoonStand } from "@/components/app/WieBenJijPersoon";
 import { IdKeuzeKaarten } from "@/components/app/WieBenJijIdKaarten";
 import { stappenVoor, voegNaam, type WieStap } from "@/lib/onboarding/wie-ben-jij";
 import { controleerVeld, type VeldSleutel } from "@/lib/onboarding/velden";
-import { heeftAchterkant } from "@/lib/kyc/document-zijden";
 import { OnderSheet } from "@/components/app/OnderSheet";
 import { bevestigOverzicht, type OverzichtRij } from "@/lib/werker/bevestig-overzicht";
 
@@ -32,36 +30,6 @@ interface Result {
   reasons: string[];
 }
 
-/**
- * Shrink a phone photo before upload: max 1600 px, JPEG ~0.82. A 4–8 MB camera
- * photo becomes ~250–400 kB — three of them used to exceed the 4.5 MB request
- * limit on the hosting platform, so the upload silently failed. Falls back to
- * the original file if the browser can't decode it.
- */
-async function compressImage(file: File): Promise<File> {
-  if (!file.type.startsWith("image/") || file.size < 450_000) return file;
-  try {
-    const url = URL.createObjectURL(file);
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const el = new Image();
-      el.onload = () => resolve(el);
-      el.onerror = () => reject(new Error("decode"));
-      el.src = url;
-    });
-    const scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(img.naturalWidth * scale);
-    canvas.height = Math.round(img.naturalHeight * scale);
-    canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
-    URL.revokeObjectURL(url);
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.82));
-    if (!blob || blob.size === 0) return file;
-    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
-  } catch {
-    return file;
-  }
-}
-
 /** Foutmelding bij één veld (role="alert", gekoppeld via aria-describedby). */
 function VeldFout({ veld, tekst }: { veld: VeldSleutel; tekst: string | undefined }) {
   if (!tekst) return null;
@@ -71,102 +39,6 @@ function VeldFout({ veld, tekst }: { veld: VeldSleutel; tekst: string | undefine
     </span>
   );
 }
-
-/** One photo — front, back, or selfie. Camera OR gallery (no forced camera);
- * the (compressed) file is handed to the parent, which checks completeness. */
-function CaptureSlot({
-  label,
-  hint,
-  round = false,
-  missing = false,
-  onPick,
-  t,
-}: {
-  label: string;
-  hint: string;
-  round?: boolean;
-  missing?: boolean;
-  onPick: (file: File) => void;
-  t: AuthDict["onb"];
-}) {
-  const ref = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    return () => {
-      if (preview) URL.revokeObjectURL(preview);
-    };
-  }, [preview]);
-
-  return (
-    <div>
-      <span className="field-label">{label}</span>
-      <button
-        type="button"
-        onClick={() => ref.current?.click()}
-        className={`mt-1.5 flex w-full items-center gap-3 border border-dashed px-3 py-3 text-left transition hover:border-brand-500 ${
-          missing ? "border-crit bg-crit/5" : "border-hairstrong"
-        } ${round ? "rounded-full" : "rounded-lg"}`}
-      >
-        <span
-          className={`grid h-12 w-12 flex-shrink-0 place-items-center overflow-hidden bg-paper-soft ${
-            round ? "rounded-full" : "rounded-md"
-          }`}
-        >
-          {preview ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <CameraIcon />
-          )}
-        </span>
-        <span className="min-w-0">
-          <span className="block text-sm font-semibold text-ink">
-            {busy ? t.processing : preview ? t.replace : t.pick}
-          </span>
-          <span className="block truncate text-xs text-neutralx-400">{hint}</span>
-        </span>
-      </button>
-      <input
-        ref={ref}
-        type="file"
-        accept="image/*"
-        onChange={async (e) => {
-          const f = e.target.files?.[0];
-          if (!f) return;
-          setBusy(true);
-          const small = await compressImage(f);
-          setBusy(false);
-          onPick(small);
-          setPreview((prev) => {
-            if (prev) URL.revokeObjectURL(prev);
-            return URL.createObjectURL(small);
-          });
-        }}
-        className="sr-only"
-        tabIndex={-1}
-      />
-    </div>
-  );
-}
-
-function CameraIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden className="text-neutralx-400">
-      <path
-        d="M4 7h3l1.5-2h7L17 7h3a1 1 0 011 1v11a1 1 0 01-1 1H4a1 1 0 01-1-1V8a1 1 0 011-1z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-      <circle cx="12" cy="13" r="3.4" stroke="currentColor" strokeWidth="1.6" />
-    </svg>
-  );
-}
-
-type PhotoKey = "documentFront" | "documentBack" | "selfie" | "selfie2";
-type DocKey = "PASSPORT" | "ID_CARD" | "DRIVERS_LICENSE";
 
 export function OnboardingForm({
   defaultName,
@@ -203,26 +75,22 @@ export function OnboardingForm({
   const w = ft.wie;
   const [stap, setStap] = useState<WieStap>(beginStap);
   const [persoonNu, setPersoonNu] = useState<PersoonStand>(persoon);
-  // twee routes in de eigen ID-scan (Nederlands of buitenlands document); daarnaast Stripe (als dat aanstaat) en zelf foto's uploaden
-  const [uploadOpen, setUploadOpen] = useState(false);
+  // twee routes in de eigen ID-scan (Nederlands of buitenlands document), elk automatisch of zelf de foto maken; daarnaast
+  // Stripe (als dat aanstaat). Geen bestandskeuze meer (13 nov 2026, eigenaar).
   const [route, setRoute] = useState<ScanRoute>("nl");
+  const [wijze, setWijze] = useState<ScanWijze>("auto");
   const [scanOpen, setScanOpen] = useState(false);
   const naamNu = voegNaam(persoonNu.voornaam, persoonNu.achternaam) || defaultName;
   const stappen = stappenVoor({ idKlaar });
   const scanResult = useRef<Result | null>(null);
-  const photos = useRef<Partial<Record<PhotoKey, File>>>({});
-  const [missing, setMissing] = useState<PhotoKey[]>([]);
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [attempt, setAttempt] = useState(0); // bump to remount + clear the 3 capture slots
-  const [docType, setDocType] = useState<DocKey>("ID_CARD");
-  const [lezing, setLezing] = useState<Lezing | null>(null);
   // de vraag vóór het insturen: "Weet je zeker dat je alles hebt ingevuld?" (eigen dialoog, geen window.confirm)
-  const [bevestig, setBevestig] = useState<{ m: "stripe" | "upload"; rijen: OverzichtRij[] } | null>(null);
-  const lezingNr = useRef(0); // een oud antwoord mag een nieuwer niet overschrijven
+  const [bevestig, setBevestig] = useState<{ m: "stripe"; rijen: OverzichtRij[] } | null>(null);
   // Een fout of "opgeslagen" staat bovenaan het formulier, de knoppen onderaan: in beeld brengen, anders lijkt er op de
   // telefoon niets te gebeuren (12 nov: in 15 van 43 sessies op Verificatie 3+ keer "Opslaan" achter elkaar).
   const meldingRef = useRef<HTMLDivElement>(null);
@@ -230,8 +98,6 @@ export function OnboardingForm({
     if (error || bewaard) meldingRef.current?.scrollIntoView({ block: "center" });
   }, [error, bewaard]);
 
-  /** De MRZ staat bij een ID-kaart op de achterkant, bij een paspoort op de pasfotozijde; een rijbewijs heeft er geen. */
-  const mrzFoto = (soort: DocKey): PhotoKey | null => (soort === "PASSPORT" ? "documentFront" : soort === "ID_CARD" ? "documentBack" : null);
 
   const veldFout = (k: VeldSleutel): string | undefined => (fouten[k] ? t.err[k] : undefined);
   const veldAttrs = (k: VeldSleutel) => (fouten[k] ? { "aria-invalid": true as const, "aria-describedby": `fout-${k}` } : {});
@@ -305,25 +171,6 @@ export function OnboardingForm({
     }
   }
 
-  function zetVeld(name: string, value: string) {
-    const el = formRef.current?.elements.namedItem(name);
-    if (el instanceof HTMLInputElement) el.value = value;
-  }
-
-  async function leesDocument(file: File) {
-    const nr = ++lezingNr.current;
-    setLezing({ status: "bezig" });
-    const l = await leesDocumentFoto(file, t);
-    if (nr !== lezingNr.current) return;
-    setLezing(l);
-    // goed gelezen en niet verlopen: nummer en datum van het document zelf invullen
-    if (l.status === "klaar" && l.geldig && !l.verlopen) {
-      if (l.documentnummer) zetVeld("documentNumber", l.documentnummer);
-      if (l.vervaldatum) zetVeld("documentExpiry", l.vervaldatum);
-      if (l.soort === "PASSPORT" || l.soort === "ID_CARD") setDocType(l.soort);
-    }
-  }
-
   /** De ID-scan levert foto's en documentgegevens; het basisformulier (KVK, postcode, IBAN) komt hier vandaan. */
   const afrondenViaScan: ScanAfronden = async (g) => {
     const form = formRef.current;
@@ -376,23 +223,8 @@ export function OnboardingForm({
     if (r.outcome !== "rejected") setTimeout(() => router.refresh(), 1500);
   }
 
-  function kiesFoto(k: PhotoKey, f: File) {
-    photos.current[k] = f;
-    setMissing((m) => m.filter((x) => x !== k));
-    if (mrzFoto(docType) === k) void leesDocument(f);
-  }
-
-  function kiesSoort(soort: DocKey) {
-    setDocType(soort);
-    lezingNr.current++;
-    const k = mrzFoto(soort);
-    const f = k ? photos.current[k] : undefined;
-    if (f) void leesDocument(f);
-    else setLezing(null);
-  }
-
   /** Een van de twee routes van de ID-scan starten (eerst de velden van stap 2 en het buitenlandse adres controleren). */
-  async function startScan(r: ScanRoute) {
+  async function startScan(r: ScanRoute, wz: ScanWijze) {
     const form = formRef.current;
     if (busy || !form) return;
     setBewaard(null);
@@ -408,42 +240,22 @@ export function OnboardingForm({
       return;
     }
     setRoute(r);
+    setWijze(wz);
     setScanOpen(true);
   }
 
   /**
-   * Stripe of zelf foto's uploaden: versturen naar dezelfde route als altijd. Eerst controleren, dan een overzicht tonen en
-   * vragen of alles is ingevuld; pas na "Ja, insturen" (bevestigd = true) gaat het echt weg.
+   * Stripe: versturen naar dezelfde route als altijd. Eerst controleren, dan een overzicht tonen en vragen of alles is
+   * ingevuld; pas na "Ja, insturen" (bevestigd = true) gaat het echt weg.
    */
-  async function verstuur(m: "stripe" | "upload", bevestigd = false) {
+  async function verstuur(m: "stripe", bevestigd = false) {
     const form = formRef.current;
     if (busy || !form) return;
     setBewaard(null);
-    if (!valideer(new FormData(form), { documenten: m === "upload", bedrijfOptioneel: false })) return;
+    if (!valideer(new FormData(form), { documenten: false, bedrijfOptioneel: false })) return;
     setError(null);
     const body = new FormData(form);
-    let fotoNamen: string[] = [];
-    if (m === "upload") {
-      // een paspoort heeft geen achterkant: dan alleen de fotopagina en de selfie (12 nov 2026)
-      const paspoort = !heeftAchterkant(docType);
-      // de selfie met een gedraaid hoofd is hier niet verplicht: met zelf gekozen foto's kijkt altijd een medewerker mee
-      // (geen live camera; lib/onboarding/auto-redenen.ts), en die foto helpt hem wel
-      const nodig: PhotoKey[] = paspoort ? ["documentFront", "selfie"] : ["documentFront", "documentBack", "selfie"];
-      const absent = nodig.filter((k) => !photos.current[k]);
-      setMissing(absent);
-      if (absent.length) {
-        const names = absent.map((k) => t.missingNames[k]);
-        setError(fill(t.missing, { list: names.length > 1 ? `${names.slice(0, -1).join(", ")} ${t.and} ${names.at(-1)}` : names[0]! }));
-        return;
-      }
-      fotoNamen = nodig.map((k) => t.missingNames[k]);
-      for (const k of nodig) body.set(k, photos.current[k]!);
-      if (photos.current.selfie2) body.set("selfie2", photos.current.selfie2);
-      // de server wil twee beelden van het document: bij een paspoort dient de fotopagina ook als tweede (zoals in de ID-scan)
-      if (paspoort) body.set("documentBack", photos.current.documentFront!);
-    } else {
-      body.set("identityMethod", "stripe");
-    }
+    body.set("identityMethod", "stripe");
     if (!bevestigd) {
       setBevestig({
         m,
@@ -451,9 +263,9 @@ export function OnboardingForm({
           methode: m,
           veld: (n) => String(body.get(n) ?? ""),
           labels: { naam: t.nameOnDoc, soort: t.docType, nummer: t.docNumber, geldigTot: t.validUntil, kvk: t.kvkLabel, btw: t.vatLabel, postcode: ft.bevestig.postcode, fotos: ft.bevestig.fotos, methode: ft.bevestig.methode },
-          soortNaam: t.docs[docType],
+          soortNaam: "",
           bedrijf: requireKvk ? biz : null,
-          fotoNamen,
+          fotoNamen: [],
           viaStripe: ft.bevestig.viaStripe,
         }),
       });
@@ -482,11 +294,10 @@ export function OnboardingForm({
     }
   }
 
-  /** Enter in een veld: in stap 2 is dat "Verder", bij het uploaden "Foto's insturen". */
+  /** Enter in een veld: in stap 2 is dat "Verder". */
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (stap === "woon") void naVolgende();
-    else if (stap === "id" && uploadOpen) void verstuur("upload");
   }
 
   function naVolgende() {
@@ -563,10 +374,6 @@ export function OnboardingForm({
               onClick={() => {
                 setResult(null);
                 formRef.current?.reset();
-                photos.current = {};
-                setMissing([]);
-                setLezing(null);
-                lezingNr.current++;
                 setAttempt((a) => a + 1);
               }}
               className="btn-primary"
@@ -589,7 +396,6 @@ export function OnboardingForm({
 
   const kopTitel = stap === "persoon" ? w.persoon.kop : stap === "woon" ? (requireKvk ? w.woon.kopBedrijf : w.woon.kop) : w.id.kop;
   const kopUitleg = stap === "persoon" ? w.persoon.uitleg : undefined;
-  const uploadSoorten = Object.entries(t.docs).filter(([v]) => v !== "DRIVERS_LICENSE");
 
   return (
     <section className="mx-auto w-full max-w-xl overflow-hidden rounded-2xl border border-hair bg-white shadow-sm">
@@ -755,94 +561,13 @@ export function OnboardingForm({
             <IdKeuzeKaarten
               w={w.id}
               busy={busy}
-              onStart={(r) => void startScan(r)}
-              zelfOpen={uploadOpen}
-              onZelf={() => setUploadOpen((o) => !o)}
+              onStart={(r, wz) => void startScan(r, wz)}
               stripe={
                 stripeIdentity ? (
                   <button type="button" onClick={() => void verstuur("stripe")} disabled={busy} className="text-sm font-semibold text-brand-600 underline underline-offset-4 disabled:opacity-60">
                     {w.id.stripeLink}
                   </button>
                 ) : null
-              }
-              zelf={
-                uploadOpen && (
-                <div>
-                  {uploadOpen && (
-                    <div className="mt-4 space-y-4">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <label className="block">
-                          <span className="field-label">{t.docType}</span>
-                          <select name="documentType" required value={docType} onChange={(e) => kiesSoort(e.target.value as DocKey)} className="field-input">
-                            {uploadSoorten.map(([v, l]) => (
-                              <option key={v} value={v}>{l}</option>
-                            ))}
-                          </select>
-                        </label>
-                        <label className="block">
-                          <span className="field-label">{t.docNumber}</span>
-                          <input
-                            name="documentNumber"
-                            required
-                            aria-required="true"
-                            placeholder="SPECI2014"
-                            autoComplete="off"
-                            autoCapitalize="characters"
-                            spellCheck={false}
-                            onBlur={(e) => controleerEen("docNumber", e.target.value)}
-                            {...veldAttrs("docNumber")}
-                            className="field-input"
-                          />
-                          <VeldFout veld="docNumber" tekst={veldFout("docNumber")} />
-                        </label>
-                        <label className="block">
-                          <span className="field-label">{t.validUntil}</span>
-                          <input
-                            type="date"
-                            name="documentExpiry"
-                            required
-                            aria-required="true"
-                            autoComplete="off"
-                            onBlur={(e) => controleerEen("expiry", e.target.value)}
-                            {...veldAttrs("expiry")}
-                            className="field-input"
-                          />
-                          <VeldFout veld="expiry" tekst={veldFout("expiry")} />
-                        </label>
-                        <label className="block">
-                          <span className="field-label">{t.nameOnDoc}</span>
-                          <input
-                            name="nameOnDocument"
-                            required
-                            aria-required="true"
-                            autoComplete="name"
-                            defaultValue={naamNu}
-                            onBlur={(e) => controleerEen("name", e.target.value)}
-                            {...veldAttrs("name")}
-                            className="field-input"
-                          />
-                          <VeldFout veld="name" tekst={veldFout("name")} />
-                        </label>
-                      </div>
-                      <p className="text-xs leading-relaxed text-neutralx-500">{heeftAchterkant(docType) ? t.photosInfo : t.photosInfoPaspoort}</p>
-                      <div className={`grid gap-3 ${heeftAchterkant(docType) ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
-                        <CaptureSlot t={t} label={t.front[0]} hint={t.front[1]} missing={missing.includes("documentFront")} onPick={(f) => kiesFoto("documentFront", f)} />
-                        {/* een paspoort heeft geen achterkant */}
-                        {heeftAchterkant(docType) && (
-                          <CaptureSlot t={t} label={t.back[0]} hint={t.back[1]} missing={missing.includes("documentBack")} onPick={(f) => kiesFoto("documentBack", f)} />
-                        )}
-                        <CaptureSlot t={t} label={t.selfie[0]} hint={t.selfie[1]} round missing={missing.includes("selfie")} onPick={(f) => kiesFoto("selfie", f)} />
-                        {/* de selfie met een gedraaid hoofd (bewegingscontrole), zoals in de scan */}
-                        <CaptureSlot t={t} label={t.selfie2[0]} hint={t.selfie2[1]} round missing={missing.includes("selfie2")} onPick={(f) => kiesFoto("selfie2", f)} />
-                      </div>
-                      {lezing && <DocumentLezing lezing={lezing} t={t} />}
-                      <button type="button" onClick={() => void verstuur("upload")} disabled={busy} className="btn-trust w-full">
-                        {busy ? t.checkingBusy : t.submit}
-                      </button>
-                    </div>
-                  )}
-                </div>
-                )
               }
             />
             <div className="border-t border-hair pt-4">
@@ -854,7 +579,7 @@ export function OnboardingForm({
             <p className="text-xs leading-relaxed text-neutralx-400">{t.uploadNote}</p>
           </div>
         </form>
-        {scanOpen && <IdScan t={t} naam={naamNu} route={route} onAfronden={afrondenViaScan} onAfrondenOverdracht={afrondenViaTelefoon} onSluiten={sluitScan} />}
+        {scanOpen && <IdScan t={t} naam={naamNu} route={route} wijze={wijze} onAfronden={afrondenViaScan} onAfrondenOverdracht={afrondenViaTelefoon} onSluiten={sluitScan} />}
       </div>
     </section>
   );

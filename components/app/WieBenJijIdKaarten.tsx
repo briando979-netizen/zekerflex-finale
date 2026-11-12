@@ -1,15 +1,15 @@
 "use client";
 
-import type { ReactNode } from "react";
 import type { WieTeksten } from "@/lib/i18n/wie-ben-jij";
-import type { ScanRoute } from "@/components/app/IdScan";
+import type { ScanRoute, ScanWijze } from "@/components/app/IdScan";
+import type { ReactNode } from "react";
 
-// Stap "ID-check": het tipkader en twee keuzes (12 nov 2026, eigenaar: "laat gebruikers twee opties doen: auto of
-// handmatig foto maken"). Beide worden automatisch gecontroleerd met dezelfde regels (lib/onboarding/auto-redenen.ts):
-//  1. Automatisch: de eigen ID-scan van ZekerFlex met de camera (Nederlands of buitenlands document, elk een eigen route).
-//  2. Zelf foto's maken: het formulier met de foto's (`zelf`). Zonder live camera kijkt daar altijd een medewerker mee
-//     (review 73: zelf gekozen foto's kunnen van een ander zijn); het scherm zegt dat eerlijk.
-// Stripe staat als klein linkje onder de keuzes zolang het werkt (`stripe`); weigert het account, dan verdwijnt het.
+// Stap "ID-check": het tipkader en twee keuzes, elk met dezelfde live camera (13 nov 2026, eigenaar: "of je kiest
+// handmatig, of je laat het automatisch doen"; geen bestandskeuze meer):
+//  1. Automatisch: de camera maakt de foto vanzelf zodra alles goed is; er is geen knop.
+//  2. Zelf de foto maken: dezelfde scan met aanwijzingen, maar je drukt zelf op de knop.
+// Beide met een Nederlands of buitenlands document (elk een eigen route) en dezelfde controle
+// (lib/onboarding/auto-redenen.ts). Stripe staat als klein linkje onder de keuzes zolang het werkt (`stripe`).
 // Alleen weergave.
 
 const KNOP_OMRAND =
@@ -19,19 +19,11 @@ export function IdKeuzeKaarten({
   w,
   busy,
   onStart,
-  zelfOpen,
-  onZelf,
-  zelf,
   stripe = null,
 }: {
   w: WieTeksten["id"];
   busy: boolean;
-  onStart: (route: ScanRoute) => void;
-  /** is het formulier "zelf foto's maken" open? */
-  zelfOpen: boolean;
-  onZelf: () => void;
-  /** het formulier met de foto's, als het open is */
-  zelf: ReactNode;
+  onStart: (route: ScanRoute, wijze: ScanWijze) => void;
   /** een klein linkje naar Stripe Identity, alleen als dat werkt */
   stripe?: ReactNode;
 }) {
@@ -49,31 +41,35 @@ export function IdKeuzeKaarten({
       {/* keuze 1: automatisch met de camera */}
       <div className="rounded-2xl border-2 border-brand-600 bg-white p-4">
         <span className="inline-block rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700">{w.autoEtiket}</span>
-        <h3 className="mt-2 font-display text-base font-bold text-ink">{w.autoTitel}</h3>
+        <h3 id="id-keuze-auto" className="mt-2 font-display text-base font-bold text-ink">{w.autoTitel}</h3>
         <p className="mt-1 text-sm leading-relaxed text-neutralx-600">{w.autoUitleg}</p>
         <p className="mt-2 flex items-center gap-2 text-sm text-ink">
           <span aria-hidden className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand-500" />
           {w.nlPunt}
         </p>
-        <div className="mt-4 grid gap-2">
-          <button type="button" onClick={() => onStart("nl")} disabled={busy} className="btn-primary w-full disabled:opacity-60">
+        <div className="mt-4 grid gap-2" role="group" aria-labelledby="id-keuze-auto">
+          <button type="button" onClick={() => onStart("nl", "auto")} disabled={busy} className="btn-primary w-full disabled:opacity-60">
             {w.nlKnop}
           </button>
-          <button type="button" onClick={() => onStart("eu")} disabled={busy} className={KNOP_OMRAND}>
+          <button type="button" onClick={() => onStart("eu", "auto")} disabled={busy} className={KNOP_OMRAND}>
             {w.euKnop}
           </button>
         </div>
       </div>
 
-      {/* keuze 2: zelf de foto's maken (camera of galerij) */}
+      {/* keuze 2: dezelfde scan, maar zelf op de knop drukken */}
       <div className="rounded-2xl border border-hairstrong bg-white p-4">
         <span className="inline-block rounded-full bg-paper-soft px-2.5 py-0.5 text-xs font-semibold text-ink-soft">{w.zelfEtiket}</span>
-        <h3 className="mt-2 font-display text-base font-bold text-ink">{w.zelfTitel}</h3>
+        <h3 id="id-keuze-zelf" className="mt-2 font-display text-base font-bold text-ink">{w.zelfTitel}</h3>
         <p className="mt-1 text-sm leading-relaxed text-neutralx-600">{w.zelfUitleg}</p>
-        <button type="button" onClick={onZelf} aria-expanded={zelfOpen} className={`mt-4 ${KNOP_OMRAND}`}>
-          {w.zelfKnop}
-        </button>
-        {zelf}
+        <div className="mt-4 grid gap-2" role="group" aria-labelledby="id-keuze-zelf">
+          <button type="button" onClick={() => onStart("nl", "zelf")} disabled={busy} className={KNOP_OMRAND}>
+            {w.nlKnop}
+          </button>
+          <button type="button" onClick={() => onStart("eu", "zelf")} disabled={busy} className={KNOP_OMRAND}>
+            {w.euKnop}
+          </button>
+        </div>
       </div>
 
       {stripe && <p className="text-center">{stripe}</p>}
