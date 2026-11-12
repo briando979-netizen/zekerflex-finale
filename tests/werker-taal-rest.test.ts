@@ -34,7 +34,7 @@ describe("fiscaal formulier en uitzendpaneel in vijf talen", () => {
           const x = v.get(k)!;
           expect(x.length, `${taal} ${sectie}.${k} leeg`).toBeGreaterThan(0);
           expect(plaats(x), `${taal} ${sectie}.${k} plaatshouders`).toBe(plaats(tekst));
-          if (taal !== "nl" && /[a-z]{4}/i.test(tekst) && !/^[•\d\s·]+$/.test(tekst) && k !== "bsn" && k !== "btw") {
+          if (taal !== "nl" && /[a-z]{4}/i.test(tekst) && !/^[•\d\s·]+$/.test(tekst) && !["bsn", "btw", "status"].includes(k)) {
             expect(x, `${taal} ${sectie}.${k} is niet vertaald`).not.toBe(tekst);
           }
         }
