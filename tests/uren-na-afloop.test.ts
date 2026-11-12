@@ -7,6 +7,7 @@ const kv = new Map<string, unknown>();
 vi.mock("@/lib/storage/kv", () => ({
   kvGet: async (k: string) => kv.get(k) ?? null,
   kvSet: async (k: string, v: unknown) => void kv.set(k, v),
+  kvAppend: async (k: string, v: unknown) => void kv.set(k, [...((kv.get(k) as unknown[] | undefined) ?? []), v]),
 }));
 const pushes: { userIds: string[]; title: string; url: string | undefined }[] = [];
 vi.mock("@/lib/notifications/push", () => ({
@@ -46,7 +47,7 @@ const START = new Date("2026-11-12T09:00:00+01:00");
 const EIND = new Date("2026-11-12T17:00:00+01:00");
 
 function indienen() {
-  const req = new Request("http://app:3000/api/timesheets/ts-1/submit", { method: "POST", body: JSON.stringify({ breakMinutes: 30 }) });
+  const req = new Request("http://app:3000/api/timesheets/ts-1/submit", { method: "POST", body: JSON.stringify({ breakMinutes: 30, review: { rating: 4 } }) });
   return POST(req, { params: Promise.resolve({ timesheetId: "ts-1" }) });
 }
 
@@ -55,7 +56,7 @@ beforeEach(() => {
   update.mockClear();
   kv.clear();
   pushes.length = 0;
-  timesheet = { id: "ts-1", status: "DRAFT", scheduledStart: START, scheduledEnd: EIND, actualStart: null, actualEnd: null, breakMinutes: 30, assignment: { shiftId: "s-1" } };
+  timesheet = { id: "ts-1", status: "DRAFT", scheduledStart: START, scheduledEnd: EIND, actualStart: null, actualEnd: null, breakMinutes: 30, branch: { tenantId: "tnt-1" }, assignment: { shiftId: "s-1", shift: { title: "Bediening" } } };
 });
 afterEach(() => {
   vi.useRealTimers();

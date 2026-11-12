@@ -5,19 +5,21 @@ import Link from "next/link";
 import { useInAndroidApp } from "@/components/app/useInAndroidApp";
 import { useFT } from "@/components/i18n/useFT";
 import { BANK_AAN } from "@/lib/app-mode";
+import { stappenVolgorde, volgendeStap, vorigeStap, type IndienStap } from "@/lib/timesheets/indien-stappen";
 
 // ---------------------------------------------------------------------------
 // "Uren invullen" as a short guided flow instead of one long form:
 //   1. Heb je deze klus gewerkt?  ja → verder · nee → reden doorgeven
 //   2. Kloppen deze uren?        ja → verder · nee → aanpassen
 //   3. Extra kosten declareren?  (optioneel, alleen als vooraf afgesproken)
-//   4. Beoordeel de opdrachtgever (sterren + optionele tekst)
+//   4. Beoordeel de opdrachtgever: sterren verplicht (geen Overslaan, wens eigenaar 12 nov), tekst optioneel
 //   5. Hoe en hoe snel uitbetalen (niet voor payroll)
-//   6. Overzicht → indienen (review wordt na het indienen opgeslagen)
+//   6. Overzicht → indienen (de beoordeling gaat mee; de server weigert indienen zonder, 422)
+// Terug staat bovenaan elke stap na stap 1 en gaat één voor één terug (lib/timesheets/indien-stappen.ts).
 // ---------------------------------------------------------------------------
 
 type Speed = "instant" | "threeDay" | "standard";
-type Step = "worked" | "notWorked" | "hours" | "extra" | "review" | "payout" | "confirm";
+type Step = IndienStap;
 
 function localValue(date: Date | string) {
   const d = new Date(date);
@@ -32,9 +34,7 @@ export function TimesheetSubmitForm({
   scheduledEnd,
   breakMinutes,
   status,
-  clientId,
   clientName,
-  shiftId,
   payoutSpeed = "standard",
   payroll = false,
   hourlyRateCents = 0,
@@ -48,9 +48,7 @@ export function TimesheetSubmitForm({
   scheduledEnd: Date;
   breakMinutes: number;
   status: string;
-  clientId: string;
   clientName: string;
-  shiftId?: string;
   payoutSpeed?: Speed;
   payroll?: boolean;
   hourlyRateCents?: number;
@@ -99,10 +97,16 @@ export function TimesheetSubmitForm({
   const minutes = Math.max(0, Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60_000) - (Number(breaks) || 0));
   const extraCents = extraOn ? Math.round(Number(extraAmount.replace(",", ".")) * 100) || 0 : 0;
   const grossCents = Math.round((minutes / 60) * hourlyRateCents);
-  const order: Step[] = ["worked", "hours", "extra", "review", ...(payroll ? [] : (["payout"] as Step[])), "confirm"];
+  const order = stappenVolgorde(payroll);
   const idx = order.indexOf(step);
-  const next = () => setStep(order[Math.min(order.length - 1, idx + 1)]!);
-  const back = () => setStep(order[Math.max(0, idx - 1)]!);
+  const next = () => setStep(volgendeStap(order, step));
+  const vorige = vorigeStap(order, step);
+  // alles wat al is ingevuld blijft staan (het zit in de staat van dit formulier); alleen de foutmelding gaat weg
+  const back = () => {
+    if (!vorige) return;
+    setError("");
+    setStep(vorige);
+  };
 
   function validHours(): string | null {
     if (new Date(end) <= new Date(start)) return T.errEndBeforeStart;
@@ -134,17 +138,11 @@ export function TimesheetSubmitForm({
           breakMinutes: Number(breaks) || 0,
           ...(note ? { note } : {}),
           ...(extraCents > 0 ? { extraCostsCents: extraCents, extraCostsNote: extraNote.trim() } : {}),
+          review: { rating, text: reviewText },
         }),
       });
       const d = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(d?.error?.message ?? T.errSubmit);
-      if (rating > 0) {
-        await fetch("/api/reviews", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ subjectType: "company", subjectId: clientId, rating, text: reviewText, ...(shiftId ? { shiftId } : {}) }),
-        }).catch(() => undefined);
-      }
       setDone("submitted");
     } catch (e) {
       setError((e as Error).message);
@@ -220,6 +218,11 @@ export function TimesheetSubmitForm({
           ))}
         </div>
       )}
+      {vorige && (
+        <button type="button" onClick={back} className="mb-3 inline-flex items-center gap-1 text-sm font-medium text-neutralx-500 hover:text-brand-600">
+          <span aria-hidden>←</span> {T.back}
+        </button>
+      )}
 
       {step === "worked" && (
         <>
@@ -244,14 +247,9 @@ export function TimesheetSubmitForm({
           </div>
           <textarea className={`${field} mt-3`} rows={3} maxLength={500} value={notWorkedNote} onChange={(e) => setNotWorkedNote(e.target.value)} placeholder={T.notePlaceholder} />
           {error && <p role="alert" className="mt-2 text-sm text-crit">{error}</p>}
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <button type="button" onClick={() => setStep("worked")} className="rounded-xl border border-hairstrong py-3 font-semibold">
-              {T.back}
-            </button>
-            <button type="button" disabled={!notWorkedReason || busy} onClick={reportNotWorked} className="btn-primary disabled:opacity-50">
-              {busy ? T.sending : T.report}
-            </button>
-          </div>
+          <button type="button" disabled={!notWorkedReason || busy} onClick={reportNotWorked} className="btn-primary mt-4 w-full disabled:opacity-50">
+            {busy ? T.sending : T.report}
+          </button>
         </>
       )}
 
@@ -389,15 +387,11 @@ export function TimesheetSubmitForm({
             ))}
           </div>
           {rating > 0 && <textarea className={`${field} mt-3`} rows={2} maxLength={500} value={reviewText} onChange={(e) => setReviewText(e.target.value)} placeholder={T.reviewPlaceholder} />}
+          {rating === 0 && <p className="mt-2 text-center text-sm font-medium text-warn">{T.reviewRequired}</p>}
           <p className="mt-2 text-center text-xs text-neutralx-500">{T.reviewHint}</p>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <button type="button" onClick={next} className="rounded-xl border border-hairstrong py-3 font-semibold">
-              {T.skip}
-            </button>
-            <button type="button" disabled={rating === 0} onClick={next} className="btn-primary disabled:opacity-50">
-              {T.next}
-            </button>
-          </div>
+          <button type="button" disabled={rating === 0} onClick={next} className="btn-primary mt-4 w-full disabled:opacity-50">
+            {T.next}
+          </button>
         </>
       )}
 
@@ -446,14 +440,9 @@ export function TimesheetSubmitForm({
               <span className="block text-xs text-neutralx-500">{T.ibanBody}</span>
             </button>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <button type="button" onClick={back} className="rounded-xl border border-hairstrong py-3 font-semibold">
-              {T.back}
-            </button>
-            <button type="button" disabled={speed !== "standard" && !termsAccepted && !terms} onClick={next} className="btn-primary disabled:opacity-50">
-              {T.next}
-            </button>
-          </div>
+          <button type="button" disabled={speed !== "standard" && !termsAccepted && !terms} onClick={next} className="btn-primary mt-4 w-full disabled:opacity-50">
+            {T.next}
+          </button>
         </>
       )}
 
@@ -465,18 +454,14 @@ export function TimesheetSubmitForm({
             <Row label={T.worked} value={T.workedValue(hhmm(start), new Date(end).toLocaleTimeString(ft.intl, { hour: "2-digit", minute: "2-digit" }), String(breaks || 0))} />
             <Row label={T.rowHours} value={`${T.hm(Math.floor(minutes / 60), minutes % 60)}${hourlyRateCents ? ` · ${euro(grossCents)} ${T.gross}` : ""}`} />
             {extraCents > 0 && <Row label={T.rowExtra} value={`${euro(extraCents)} — ${extraNote}`} />}
-            <Row label={T.rowReview} value={rating ? "★".repeat(rating) : T.skipped} />
+            <Row label={T.rowReview} value={"★".repeat(rating)} />
             {!payroll && <Row label={T.rowPayout} value={inApp ? SPEEDS[0]!.title : `${SPEEDS.find((s) => s.speed === speed)!.title} · ${toBank ? "ZekerFlex Bank" : T.ownIban}`} />}
           </dl>
+          {payroll && <p className="mt-3 text-xs text-neutralx-500">{T.payrollPayLine}</p>}
           {error && <p role="alert" className="mt-3 text-sm text-crit">{error}</p>}
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <button type="button" onClick={back} className="rounded-xl border border-hairstrong py-3 font-semibold">
-              {T.back}
-            </button>
-            <button type="button" disabled={busy} onClick={submit} className="btn-primary disabled:opacity-60">
-              {busy ? T.submitting : T.submit}
-            </button>
-          </div>
+          <button type="button" disabled={busy} onClick={submit} className="btn-primary mt-4 w-full disabled:opacity-60">
+            {busy ? T.submitting : T.submit}
+          </button>
         </>
       )}
     </section>
