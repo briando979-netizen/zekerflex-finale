@@ -421,6 +421,19 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("stripe-btw"),
     },
     {
+      id: "loonheffingennummer",
+      group: "Geld & bank",
+      title: "Loonheffingennummer op de loonstrook (van de accountant)",
+      why: "Op een loonstrook hoort het loonheffingennummer van de werkgever. ZekerFlex zet het op elke loonstrook zodra het op de server staat; tot dan blijft die regel weg, er wordt niets verzonnen. Zekerflex, Inc. heeft geen KvK-nummer (Delaware), dus dat veld blijft ook weg.",
+      how: [
+        "Vraag de accountant om het loonheffingennummer van Zekerflex, Inc. (bijvoorbeeld 123456789L01), zodra de inschrijving als werkgever bij de Belastingdienst rond is.",
+        "Geef het aan Claude; die zet PLATFORM_LOONHEFFINGENNUMMER op de server. Een adres op de loonstrook kan ook: PLATFORM_STREET, PLATFORM_POSTAL_CODE en PLATFORM_CITY.",
+        "Deze taak vinkt zichzelf af zodra het nummer er staat.",
+      ],
+      auto: true,
+      done: Boolean(env.PLATFORM_LOONHEFFINGENNUMMER?.trim()),
+    },
+    {
       id: "no-show-sweep",
       group: "Geld & bank",
       title: "Automatisch 'niet opgekomen': aan of uit laten? (staat nu uit)",

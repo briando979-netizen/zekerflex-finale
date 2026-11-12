@@ -292,6 +292,8 @@ const schema = z.object({
   PLATFORM_STREET: z.string().optional(),
   PLATFORM_POSTAL_CODE: z.string().optional(),
   PLATFORM_CITY: z.string().optional(),
+  // Loonheffingennummer van de werkgever (van de accountant), op de loonstrook. Leeg = die regel blijft weg.
+  PLATFORM_LOONHEFFINGENNUMMER: z.string().optional(),
   // Peppol-toegangspunt (access point) met een REST-koppeling: leeg = e-facturen
   // gaan per mail (UBL-bijlage) en zijn te downloaden; niet via het Peppol-netwerk.
   PEPPOL_AP_URL: z.string().url().optional(),
