@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { bewaarLabel, isBeheerPad, leesTrackCtx } from "@/lib/analytics/label-privacy";
 
 // ---------------------------------------------------------------------------
 // Sovereign analytics beacon. Cookie-free: the session id is a random string
@@ -143,12 +144,16 @@ export function AnalyticsBeacon() {
         "[data-track], button, a",
       );
       if (!el) return;
-      const label =
-        el.getAttribute("data-track") ||
-        el.getAttribute("aria-label") ||
-        el.textContent?.trim().slice(0, 60) ||
-        el.tagName.toLowerCase();
-      enqueue({ type: "CLICK", path: location.pathname, label });
+      const pad = location.pathname;
+      // op /admin en /studio alleen een data-track-code (daar staan namen in de rijen); elders de knoptekst, maar een
+      // bestandsnaam, e-mailadres, IBAN of telefoonnummer wordt vervangen (lib/analytics/label-privacy.ts)
+      const ruw = isBeheerPad(pad)
+        ? el.getAttribute("data-track")
+        : el.getAttribute("data-track") || el.getAttribute("aria-label") || el.textContent?.trim().slice(0, 60) || el.tagName.toLowerCase();
+      const label = bewaarLabel(pad, ruw);
+      // context van het scherm, alleen vaste sleutels met codes (bijv. de ID-scan: stap, reden van "Opnieuw")
+      const ctx = leesTrackCtx(el.closest<HTMLElement>("[data-track-ctx]")?.getAttribute("data-track-ctx"));
+      enqueue({ type: "CLICK", path: pad, ...(label ? { label } : {}), ...(ctx ? { meta: { ctx } } : {}) });
     };
     const onHide = () => flush(true);
     const onVisibility = () => {

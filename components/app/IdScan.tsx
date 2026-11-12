@@ -13,6 +13,7 @@ import { useI18n } from "@/components/i18n/I18nProvider";
 import { AuthLanguage } from "@/components/auth/AuthLanguage";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
 import { EuIntro, EuToestemming, NlIntro, TipsSheet } from "@/components/app/ScanRouteSchermen";
+import { maakTrackCtx } from "@/lib/analytics/label-privacy";
 import { heeftAchterkant } from "@/lib/kyc/document-zijden";
 import { BEWEGING, bewegingVoldoet, draaiAanwijzing, type LiveMeting } from "@/lib/kyc/gezicht/beweging";
 import {
@@ -874,6 +875,17 @@ export function IdScan({
   const [selfieRef, setSelfieRef] = useState<LiveMeting | null>(null);
   const [liveFout, setLiveFout] = useState<string | null>(null);
   const [meten, setMeten] = useState(false);
+  // voor de eigen analytics (data-track-ctx): hoe vaak per stap een foto werd gemaakt, en staand of liggend scherm
+  const [pogingen, setPogingen] = useState<Partial<Record<Stap, number>>>({});
+  const [scherm, setScherm] = useState<"staand" | "liggend" | null>(null);
+  useEffect(() => {
+    const mq = window.matchMedia?.("(orientation: landscape)");
+    if (!mq) return;
+    const zet = () => setScherm(mq.matches ? "liggend" : "staand");
+    zet();
+    mq.addEventListener?.("change", zet);
+    return () => mq.removeEventListener?.("change", zet);
+  }, []);
   // een paspoort heeft geen achterkant: die stap slaan we altijd over, ook op de telefoon via de QR-code (12 nov 2026). De server wil
   // twee beelden, dus de fotopagina dient ook als tweede.
   const zonderAchter = !heeftAchterkant(soort);
@@ -1192,6 +1204,23 @@ export function IdScan({
   }
 
   const gelezenHier = fotoStap !== null && fotoStap === mrzKant && voorbeeld !== null && lezing !== null;
+  // Context voor de analytics bij elke klik in dit venster (lib/analytics/label-privacy.ts): alleen vaste codes, nooit
+  // tekst uit het beeld of de MRZ. reden = waarom de werker "Opnieuw" ziet (12 nov: een stille werker klikte 4x Opnieuw
+  // zonder dat te meten was).
+  const reden =
+    liveFout === s.live.geenGezichtFoto ? "geen-gezicht"
+    : liveFout === s.live.nietRecht ? "niet-recht"
+    : gelezenHier && lezing.status !== "bezig" ? (goedGelezen(lezing) ? "mrz-ok" : lezing.status === "fout" ? "mrz-fout" : lezing.verlopen ? "verlopen" : "mrz-onzeker")
+    : null;
+  const wijze = voorbeeld ? (/-auto-/.test(voorbeeld.file.name) ? "auto" : /-knop-/.test(voorbeeld.file.name) ? "knop" : "bestand") : null;
+  const trackCtx = maakTrackCtx({
+    stap,
+    kant: fotoStap === "voor" || fotoStap === "achter" ? `${soort.toLowerCase().replace(/_/g, "-")}-${fotoStap}` : fotoStap,
+    stand: scherm,
+    wijze,
+    reden,
+    poging: pogingen[stap] ?? null,
+  });
   // bij een paspoort is het een stap minder (geen achterkant)
   const nr = zonderAchter && (stap === "selfie" || stap === "beweging") ? 3 : STAP_NR[stap];
   const totaal = zonderAchter ? 3 : 4;
@@ -1203,7 +1232,7 @@ export function IdScan({
 
   return (
     <Portal>
-      <div role="dialog" aria-modal="true" aria-label={s.titel} className="fixed inset-0 z-[200] flex items-stretch justify-center bg-black/60 sm:items-center">
+      <div role="dialog" aria-modal="true" aria-label={s.titel} data-track-ctx={trackCtx || undefined} className="fixed inset-0 z-[200] flex items-stretch justify-center bg-black/60 sm:items-center">
         <div className="relative flex h-full w-full flex-col overflow-y-auto bg-white sm:h-auto sm:max-h-[92vh] sm:max-w-md sm:rounded-2xl sm:shadow-2xl">
           <div className={`sticky top-0 z-10 flex items-center justify-between border-b px-5 py-3 ${donker ? "border-transparent bg-[linear-gradient(165deg,#0B3B3A_0%,#0E5C4A_100%)] text-white" : "border-hair bg-white"}`}>
             {vorigeVan(stap) ? (
@@ -1549,6 +1578,7 @@ export function IdScan({
                       onFoto={(f) => {
                         setLiveFout(null);
                         setVoorbeeld({ file: f, url: URL.createObjectURL(f) });
+                        setPogingen((p) => ({ ...p, [stap]: (p[stap] ?? 0) + 1 }));
                       }}
                     />
                   )}

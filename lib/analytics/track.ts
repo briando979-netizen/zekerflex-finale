@@ -3,6 +3,7 @@ import { AnalyticsEventType, type Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { fixedWindow } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
+import { bewaarLabel, schoonTrackCtx } from "@/lib/analytics/label-privacy";
 
 // ---------------------------------------------------------------------------
 // Sovereign analytics ingestion. Local-only: no cookies, no third-party.
@@ -51,6 +52,17 @@ function heleMeta(v: unknown, diepte = 0): unknown {
   return Object.fromEntries(Object.entries(v).map(([k, x]) => [heleTekens(k), heleMeta(x, diepte + 1)]));
 }
 
+/** De meta van de browser: de klikcontext (meta.ctx) alleen met vaste sleutels en codes, de rest zoals hij was. */
+function veiligeMeta(meta: Record<string, unknown> | undefined): Record<string, unknown> {
+  const m = { ...(meta ?? {}) };
+  if ("ctx" in m) {
+    const ctx = schoonTrackCtx(m.ctx);
+    if (ctx) m.ctx = ctx;
+    else delete m.ctx;
+  }
+  return m;
+}
+
 function cleanPath(path: string): string {
   const p = heleTekens(path.trim().slice(0, 512));
   return p.startsWith("/") ? p : `/${p}`;
@@ -80,12 +92,13 @@ export async function trackEvents(
     .map((e) => ({
       type: e.type,
       path: cleanPath(e.path),
-      label: typeof e.label === "string" ? heleTekens(e.label.slice(0, 200)) : null,
+      // ook hier: een oude tab stuurt nog een bestandsnaam of een naam uit een beheerscherm (lib/analytics/label-privacy.ts)
+      label: typeof e.label === "string" ? bewaarLabel(cleanPath(e.path), heleTekens(e.label.slice(0, 200))) : null,
       referrerHost: referrerHost(e.referrer),
       sessionId: heleTekens(ctx.sessionId.slice(0, 64)),
       userId: ctx.userId ?? null,
       uaHash,
-      meta: heleMeta(e.meta ?? {}) as Prisma.InputJsonValue,
+      meta: heleMeta(veiligeMeta(e.meta)) as Prisma.InputJsonValue,
     }));
 
   if (rows.length === 0) return { accepted: 0 };

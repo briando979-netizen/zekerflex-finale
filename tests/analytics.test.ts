@@ -63,7 +63,8 @@ describe("trackEvents", () => {
     const res = await trackEvents(
       [
         { type: "PAGEVIEW", path: "admin/jarvis", referrer: "https://news.ycombinator.com/x" },
-        { type: "CLICK", path: "/admin", label: "Verstuur" },
+        // een gewoon pad: op /admin bewaart de server sinds 12 nov alleen codes (tests/analytics-label-privacy.test.ts)
+        { type: "CLICK", path: "/dashboard", label: "Verstuur" },
       ],
       { sessionId: "sess-abc123", userAgent: "Mozilla/5.0 test" },
     );
