@@ -93,6 +93,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "onboarding-reminders", label: "Mails 'maak je account af'", maxAgeHours: 26 },
   // elke 10 min (/api/internal/boekhouding/bonnen-mail): bonnetjes uit de Postvak; met de vlag uit telt een run als gelukt (hij doet dan niets)
   { job: "boekhouding-bonnen-mail", label: "Boekhouding: bonnetjes per mail", maxAgeHours: 2 },
+  // dagelijks 02:40 UTC (/api/internal/boekhouding/nachtronde): facturen boeken, bank koppelen, btw-concept, deadlinemeldingen; met de vlag uit telt een run als gelukt
+  { job: "boekhouding-nachtronde", label: "Boekhouding: nachtelijke ronde", maxAgeHours: 26 },
   // ai-warm (elke 4 min) staat er bewust NIET in: de route schrijft alleen een hartslag als "alles gratis"
   // aan staat; bij uit komt er geen, en bewaken zou dan vals alarm geven. Tijdens een uitrol schrijft hij
   // wel "gelukt" (uitrolHoudtModelStil), dus een uitrolvenster zou het probleem niet zijn.

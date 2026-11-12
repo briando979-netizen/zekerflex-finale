@@ -68,6 +68,8 @@ cat > /etc/crontabs/root <<EOF
 */10 * * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/controles/tick"
 # elke 10 min: bonnetjes (bonnetjes@) uit de Postvak halen en boeken of klaarzetten; doet niets zolang de vlag boekhouding-bonnen-mail uit staat (lib/boekhouding/bonnen/mail-taak.ts)
 */10 * * * * wget -q -O /dev/null -T 90 "$H" "$APP/api/internal/boekhouding/bonnen-mail"
+# elke nacht 02:40 UTC: facturen boeken, bank koppelen (alleen wat zeker is), btw-concept bijwerken en deadlinemeldingen; doet niets zolang de vlag boekhouding-nachtronde uit staat (lib/boekhouding/nachtronde.ts)
+40 2 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/boekhouding/nachtronde"
 EOF
 
 echo "[zf-cron] crontab geïnstalleerd; crond start (UTC). Doel: $APP"
