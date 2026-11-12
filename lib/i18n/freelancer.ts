@@ -1,5 +1,6 @@
 import type { Locale } from "@/lib/i18n/config";
 import { WIE_TEKSTEN } from "@/lib/i18n/wie-ben-jij";
+import { MELDING_NL } from "@/lib/notifications/feed-teksten";
 import { NOTIFICATIONS_NL } from "@/components/app/notifications-texts";
 import { MILESTONE_NL } from "@/lib/worker/milestone-teksten";
 
@@ -90,6 +91,7 @@ const nl = {
     postcode: "Postcode", fotos: "Foto's", methode: "Manier van controleren", viaStripe: "Via Stripe (je gaat zo door naar Stripe)", terug: "Terug", ja: "Ja, insturen",
   },
   meldingen: NOTIFICATIONS_NL,
+  meldingTeksten: MELDING_NL,
   start: {
     eyebrow: "Jouw start",
     title: "Welkom! Kies eerst welke richting je op wilt.",
@@ -1512,6 +1514,19 @@ const en: FreelancerDict = {
     sections: { today: "Today", yesterday: "Yesterday", earlier: "Earlier" },
     empty: "Nothing new — you're up to date.", emptyTab: "No notifications in this tab.", open: "Open", read: "Read",
   },
+  meldingTeksten: {
+    intl: "en-GB", chatNieuw: "New message", chatEen: '{n} new message: "{tekst}"', chatMeer: '{n} new messages: "{tekst}"',
+    bevestigTitel: "Confirm you're coming", bevestigBody: "{klus} at {bedrijf} — in {uren} hours", bevestigKnop: "Confirm attendance",
+    urenDisputTitel: "Dispute about your hours", urenDisputBody: "There is a dispute about a timesheet.",
+    urenWachtTitel: "Hours being processed", urenWachtBody: "Your submitted hours are waiting for approval.",
+    tegenbodOkTitel: "Counter-offer accepted", tegenbodOkBody: "{klus}: your rate of € {tarief}/h is agreed. You're scheduled.",
+    uitgekozenTitel: "You've been chosen", uitgekozenBody: "{klus}: your response was accepted. You're scheduled.",
+    tegenbodNeeTitel: "Counter-offer declined", tegenbodNeeBody: "{klus}: the original rate still applies.",
+    nietUitgekozenTitel: "Not chosen", nietUitgekozenBody: "{klus}: someone else was chosen. Look for another job.",
+    helaasTitel: "Unfortunately not chosen", helaasBody: "{klus}: the job started without you being chosen. Look for another job.",
+    matchTitel: "Not chosen", matchBody: "{klus}: this job is no longer for you — someone else was chosen or the response time has passed.",
+    vervangerTitel: "Replacement wanted", vervangerBody: '{klus}: your job is listed as "Replacement" on the platform.',
+  },
   start: {
     eyebrow: "Your start",
     title: "Welcome! First choose which direction you want to take.",
@@ -2928,6 +2943,19 @@ const pl: FreelancerDict = {
     groups: { klussen: "O Twoich zleceniach", geld: "Godziny i wypłaty", berichten: "Wiadomości", account: "Konto" },
     sections: { today: "Dzisiaj", yesterday: "Wczoraj", earlier: "Wcześniej" },
     empty: "Nic nowego — jesteś na bieżąco.", emptyTab: "Brak powiadomień w tej karcie.", open: "Otwórz", read: "Przeczytane",
+  },
+  meldingTeksten: {
+    intl: "pl-PL", chatNieuw: "Nowa wiadomość", chatEen: '{n} nowa wiadomość: "{tekst}"', chatMeer: 'Nowe wiadomości: {n}: "{tekst}"',
+    bevestigTitel: "Potwierdź przybycie", bevestigBody: "{klus} w {bedrijf} — za {uren} godz.", bevestigKnop: "Potwierdź przybycie",
+    urenDisputTitel: "Spór o Twoje godziny", urenDisputBody: "Jest spór dotyczący zestawienia godzin.",
+    urenWachtTitel: "Godziny w trakcie sprawdzania", urenWachtBody: "Twoje wysłane godziny czekają na zatwierdzenie.",
+    tegenbodOkTitel: "Kontrpropozycja przyjęta", tegenbodOkBody: "{klus}: Twoja stawka € {tarief}/godz. została zaakceptowana. Jesteś w grafiku.",
+    uitgekozenTitel: "Zostałeś wybrany", uitgekozenBody: "{klus}: Twoje zgłoszenie zostało przyjęte. Jesteś w grafiku.",
+    tegenbodNeeTitel: "Kontrpropozycja odrzucona", tegenbodNeeBody: "{klus}: obowiązuje pierwotna stawka.",
+    nietUitgekozenTitel: "Nie wybrano", nietUitgekozenBody: "{klus}: wybrano kogoś innego. Poszukaj innego zlecenia.",
+    helaasTitel: "Niestety nie wybrano", helaasBody: "{klus}: zlecenie rozpoczęło się bez Twojego wyboru. Poszukaj innego zlecenia.",
+    matchTitel: "Nie wybrano", matchBody: "{klus}: to zlecenie nie jest już dla Ciebie — wybrano kogoś innego lub minął czas na odpowiedź.",
+    vervangerTitel: "Szukamy zastępstwa", vervangerBody: '{klus}: Twoje zlecenie jest na platformie jako „Zastępstwo”.',
   },
   start: {
     eyebrow: "Twój start",
@@ -4346,6 +4374,19 @@ const ro: FreelancerDict = {
     sections: { today: "Astăzi", yesterday: "Ieri", earlier: "Mai devreme" },
     empty: "Nimic nou — ești la zi.", emptyTab: "Nicio notificare în această filă.", open: "Deschide", read: "Citit",
   },
+  meldingTeksten: {
+    intl: "ro-RO", chatNieuw: "Mesaj nou", chatEen: '{n} mesaj nou: "{tekst}"', chatMeer: '{n} mesaje noi: "{tekst}"',
+    bevestigTitel: "Confirmă că vii", bevestigBody: "{klus} la {bedrijf} — peste {uren} ore", bevestigKnop: "Confirmă prezența",
+    urenDisputTitel: "Dispută privind orele tale", urenDisputBody: "Există o dispută privind o foaie de pontaj.",
+    urenWachtTitel: "Ore în curs de verificare", urenWachtBody: "Orele tale trimise așteaptă aprobarea.",
+    tegenbodOkTitel: "Contraofertă acceptată", tegenbodOkBody: "{klus}: tariful tău de € {tarief}/oră este acceptat. Ești programat.",
+    uitgekozenTitel: "Ai fost ales", uitgekozenBody: "{klus}: răspunsul tău a fost acceptat. Ești programat.",
+    tegenbodNeeTitel: "Contraofertă respinsă", tegenbodNeeBody: "{klus}: rămâne valabil tariful inițial.",
+    nietUitgekozenTitel: "Nu ai fost ales", nietUitgekozenBody: "{klus}: a fost ales altcineva. Caută un alt job.",
+    helaasTitel: "Din păcate nu ai fost ales", helaasBody: "{klus}: jobul a început fără să fii ales. Caută un alt job.",
+    matchTitel: "Nu ai fost ales", matchBody: "{klus}: acest job nu mai este pentru tine — a fost ales altcineva sau a expirat timpul de răspuns.",
+    vervangerTitel: "Se caută înlocuitor", vervangerBody: '{klus}: jobul tău apare pe platformă ca „Înlocuire”.',
+  },
   start: {
     eyebrow: "Startul tău",
     title: "Bun venit! Alege mai întâi în ce direcție vrei să mergi.",
@@ -5762,6 +5803,19 @@ const uk: FreelancerDict = {
     groups: { klussen: "Про твої роботи", geld: "Години й виплати", berichten: "Повідомлення", account: "Акаунт" },
     sections: { today: "Сьогодні", yesterday: "Вчора", earlier: "Раніше" },
     empty: "Нічого нового — ти в курсі.", emptyTab: "У цій вкладці немає сповіщень.", open: "Відкрити", read: "Прочитано",
+  },
+  meldingTeksten: {
+    intl: "uk-UA", chatNieuw: "Нове повідомлення", chatEen: '{n} нове повідомлення: "{tekst}"', chatMeer: 'Нових повідомлень: {n}: "{tekst}"',
+    bevestigTitel: "Підтверди свій прихід", bevestigBody: "{klus} у {bedrijf} — через {uren} год", bevestigKnop: "Підтвердити прихід",
+    urenDisputTitel: "Спір щодо твоїх годин", urenDisputBody: "Є спір щодо табеля годин.",
+    urenWachtTitel: "Години в обробці", urenWachtBody: "Твої подані години очікують схвалення.",
+    tegenbodOkTitel: "Зустрічну пропозицію прийнято", tegenbodOkBody: "{klus}: твою ставку € {tarief}/год погоджено. Ти в графіку.",
+    uitgekozenTitel: "Тебе обрано", uitgekozenBody: "{klus}: твою відповідь прийнято. Ти в графіку.",
+    tegenbodNeeTitel: "Зустрічну пропозицію відхилено", tegenbodNeeBody: "{klus}: діє первісна ставка.",
+    nietUitgekozenTitel: "Не обрано", nietUitgekozenBody: "{klus}: обрали когось іншого. Пошукай іншу роботу.",
+    helaasTitel: "На жаль, не обрано", helaasBody: "{klus}: робота почалася без твого вибору. Пошукай іншу роботу.",
+    matchTitel: "Не обрано", matchBody: "{klus}: ця робота вже не для тебе — обрали іншого або минув час для відповіді.",
+    vervangerTitel: "Шукаємо заміну", vervangerBody: '{klus}: твоя робота на платформі позначена як «Заміна».',
   },
   start: {
     eyebrow: "Твій старт",
