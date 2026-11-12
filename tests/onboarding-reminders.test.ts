@@ -9,6 +9,9 @@ const m = vi.hoisted(() => ({
   verified: false,
   inControle: false,
   klus: false,
+  mist: ["identiteit"] as string[] | null,
+  taal: "nl",
+  push: vi.fn(async (..._a: unknown[]) => 1),
 }));
 
 vi.mock("@/lib/env", () => ({ env: { APP_BASE_URL: "https://zf.test" } }));
@@ -23,6 +26,14 @@ vi.mock("@/lib/prisma", () => ({
 vi.mock("@/lib/mail", async (orig) => ({ ...(await orig<typeof import("@/lib/mail")>()), sendMail: m.mail }));
 vi.mock("@/lib/auth/email-verify", () => ({ sendVerificationEmail: m.code }));
 vi.mock("@/lib/fiscal/store", () => ({ getFiscal: async () => ({ workerKind: "zzp" }) }));
+vi.mock("@/lib/onboarding/herinnering-mist", () => ({
+  werkerMist: async () => {
+    if (m.mist === null) throw new Error("bron stuk");
+    return m.mist;
+  },
+}));
+vi.mock("@/lib/i18n/worker-locale", () => ({ userLocale: async () => m.taal }));
+vi.mock("@/lib/notifications/localized-push", () => ({ sendLocalizedPush: m.push }));
 vi.mock("@/lib/onboarding/employer", () => ({ isEmployerOnboarded: async () => m.onboarded }));
 vi.mock("@/lib/company/verified", () => ({
   tenantVerification: async () => ({ verified: m.verified, via: null, inControle: m.inControle }),
@@ -53,6 +64,9 @@ describe("onboarding reminders", () => {
     m.verified = false;
     m.inControle = false;
     m.klus = false;
+    m.mist = ["identiteit"];
+    m.taal = "nl";
+    m.push.mockClear();
   });
 
   it("stages: day 1, 3, 7", () => {
@@ -69,6 +83,7 @@ describe("onboarding reminders", () => {
 
   it("verified freelancer gets nothing", async () => {
     m.users = [user({ kycStatus: "VERIFIED", freelancerProfile: { id: "fp" } })];
+    m.mist = [];
     await runOnboardingReminders(NOW);
     expect(m.mail).not.toHaveBeenCalled();
   });
@@ -112,16 +127,20 @@ describe("onboarding reminders", () => {
     expect(m.mail).not.toHaveBeenCalled();
   });
 
-  it("freelancer with a profile but no verified identity gets the verification-only text", async () => {
+  it("freelancer: de mail noemt alleen wat er mist (hier alleen de ID-scan)", async () => {
     m.users = [user({ freelancerProfile: { id: "fp" } })];
     await runOnboardingReminders(NOW);
-    expect(m.mail.mock.calls[0]![0].text).toMatch(/bevestig je identiteit/);
-    expect(m.mail.mock.calls[0]![0].text).not.toMatch(/thuisbasis/);
+    const tekst = m.mail.mock.calls[0]![0].text;
+    expect(tekst).toMatch(/ID-scan/);
+    expect(tekst).not.toMatch(/thuisbasis|BSN|profielfoto/);
+    expect(tekst).toContain("https://zf.test/dashboard/verificatie");
   });
 
-  it("freelancer who only chose a werkvorm is told that is already done", async () => {
+  it("freelancer: lukt het opzoeken van wat er mist niet, dan gaat de algemene herinnering toch weg", async () => {
+    m.mist = null;
     m.users = [user({})];
     await runOnboardingReminders(NOW);
+    expect(m.mail).toHaveBeenCalledTimes(1);
     expect(m.mail.mock.calls[0]![0].text).toMatch(/werkvorm al gekozen/);
   });
 

@@ -8,6 +8,10 @@ import { getFiscal } from "@/lib/fiscal/store";
 import { isEmployerOnboarded } from "@/lib/onboarding/employer";
 import { tenantVerification } from "@/lib/company/verified";
 import { herinneringReden, herinneringInhoud } from "@/lib/onboarding/voortgang";
+import { werkerMist } from "@/lib/onboarding/herinnering-mist";
+import { HERINNERING_TEKSTEN, werkerHerinnering } from "@/lib/onboarding/herinnering-teksten";
+import { userLocale } from "@/lib/i18n/worker-locale";
+import { isReservedTestAddress } from "@/lib/mail/test-adres";
 
 // ---------------------------------------------------------------------------
 // Reminders for accounts that were created but never finished.
@@ -68,6 +72,33 @@ async function herinneringActie(u: HerinneringUser, stage: number, handmatig = f
     return null;
   }
   if (freelancer) {
+    // 12 nov: precies wat er mist (soort, branches, BSN, overeenkomst, btw/KOR, postcode, ID, foto), in de app-taal van de
+    // werker, met per onderdeel een link. Lukt het opzoeken niet, dan de oude, algemene tekst hieronder (de herinnering mag niet wegblijven).
+    const mist = await werkerMist(u.id).catch((err) => {
+      logger.warn("onboarding reminder: mist niet op te zoeken", { userId: u.id, error: (err as Error).message });
+      return null;
+    });
+    if (mist && mist.length === 0) return null;
+    if (mist) {
+      const taal = await userLocale(u.id);
+      const h = werkerHerinnering(mist, HERINNERING_TEKSTEN[taal], u.fullName.split(" ")[0] || u.fullName, stap);
+      const kind = (await getFiscal(u.id).catch(() => null))?.workerKind === "uitzendkracht" ? "uitzendkracht" : "freelancer";
+      return async () => {
+        const result = await sendMail({ ...onboardingReminderEmail(u.fullName, kind, env.APP_BASE_URL, stap, undefined, h), to: u.email });
+        // ook een push, in dezelfde taal en met dezelfde lijst; nooit voor een testadres, en een storing hier raakt de mail niet
+        const verstuurd = !(result && typeof result === "object" && "sent" in result && result.sent === false);
+        if (verstuurd && !isReservedTestAddress(u.email)) {
+          const { sendLocalizedPush } = await import("@/lib/notifications/localized-push");
+          await sendLocalizedPush([u.id], () => ({
+            title: h.pushTitel,
+            body: h.pushBody,
+            data: { type: "onboarding", url: h.items[0]?.href ?? "/dashboard/verificatie", tag: "onboarding-reminder" },
+            ttlSeconds: 24 * 60 * 60,
+          })).catch(() => 0);
+        }
+        return result;
+      };
+    }
     // eerlijk per toestand: alleen soort gekozen (geen profiel) of profiel zonder bevestigde identiteit
     const reden = herinneringReden({ rol: "werker", emailBevestigd: true, kycVerified: u.kycStatus === "VERIFIED", heeftProfiel: Boolean(u.freelancerProfile) });
     if (!reden || reden === "email") return null;
