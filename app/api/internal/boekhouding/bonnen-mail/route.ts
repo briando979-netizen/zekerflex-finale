@@ -7,6 +7,7 @@ import { logger } from "@/lib/logger";
 import { recordCronRun } from "@/lib/metrics";
 import { prisma } from "@/lib/prisma";
 import { leesPostvakVoorBonnetjes } from "@/lib/boekhouding/bonnen/mail";
+import { authservLijst } from "@/lib/boekhouding/bonnen/mail-kern";
 import { BONNEN_MAIL_FLAG, BONNEN_MAIL_JOB, draaiBonnenMail } from "@/lib/boekhouding/bonnen/mail-taak";
 
 export const runtime = "nodejs";
@@ -30,7 +31,7 @@ async function handle(request: Request): Promise<NextResponse> {
       return a?.id ?? null;
     },
     lees: (cfg, administratieId, opties) => leesPostvakVoorBonnetjes(cfg, administratieId, opties),
-    vertrouwdeServer: env.BONNEN_AUTHSERV_ID?.trim() || undefined,
+    vertrouwdeServers: authservLijst(env.BONNEN_AUTHSERV_ID),
     });
   } catch (e) {
     // bv. de database of de vlag-opslag is weg: niet stil falen

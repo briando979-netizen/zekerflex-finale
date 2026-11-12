@@ -83,20 +83,22 @@ export interface Authenticatie {
 }
 
 /**
- * Leest de Authentication-Results (RFC 8601). Alleen de BOVENSTE regel telt (die zette onze eigen mailserver er het
- * laatst bij; een afzender kan er zelf een onderin zetten). Is `vertrouwdeServer` gegeven (het authserv-id, de eerste
- * term van de regel), dan telt alleen een regel van die server: zo kan een nagemaakte regel van de afzender nooit
- * slagen. Geen regel = alles null = niet geslaagd.
+ * De authserv-id's van onze eigen mailserver (TransIP) die we vertrouwen. Gemeten 12 nov 2026 op de echte postbus:
+ * "scott201" en "scott202" (twee mailservers van TransIP). Een authserv-id uit BONNEN_AUTHSERV_ID (komma of spatie
+ * gescheiden) komt erbij; een afzender kan zelf nooit een id op deze lijst zetten dat boven die van TransIP uitkomt.
  */
-export function parseAuthenticationResults(kop: Kopregels, vertrouwdeServer?: string): Authenticatie {
-  const leeg: Authenticatie = { spf: null, dkim: null, dkimDomein: null };
-  const regels = kop.get("authentication-results") ?? [];
-  const regel = vertrouwdeServer
-    ? regels.find((r) => (r.split(";")[0] ?? "").trim().split(/\s+/)[0]?.toLowerCase() === vertrouwdeServer.toLowerCase())
-    : regels[0];
-  if (!regel) return leeg;
-  const delen = regel.split(";").slice(1);
-  const uit: Authenticatie = { ...leeg };
+export const VASTE_AUTHSERV_IDS: readonly string[] = ["scott201", "scott202"];
+
+export function authservLijst(extra?: string | null): string[] {
+  const uit = new Set<string>(VASTE_AUTHSERV_IDS);
+  for (const t of (extra ?? "").split(/[\s,;]+/)) if (t.trim()) uit.add(t.trim().toLowerCase());
+  return [...uit];
+}
+
+const authservId = (regel: string): string => (regel.split(";")[0] ?? "").trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+
+function leesUitslagen(delen: readonly string[]): Authenticatie {
+  const uit: Authenticatie = { spf: null, dkim: null, dkimDomein: null };
   for (const deel of delen) {
     const m = /^\s*(spf|dkim)\s*=\s*([a-z]+)/i.exec(deel);
     if (!m) continue;
@@ -112,6 +114,43 @@ export function parseAuthenticationResults(kop: Kopregels, vertrouwdeServer?: st
     }
   }
   return uit;
+}
+
+/**
+ * De uitslagen uit de ARC-Authentication-Results ("i=1; scott201; spf=pass ...") met de HOOGSTE i, alleen als die regel
+ * van een vertrouwde server komt. TransIP zet SPF en DKIM hier neer (niet in Authentication-Results). Een nagemaakte
+ * regel van de afzender zit er altijd onder (lagere i: onze server zet er daarna zijn eigen bij). Staan er twee regels
+ * met dezelfde hoogste i en is er één niet vertrouwd, dan telt niets.
+ */
+function arcUitslagen(kop: Kopregels, toegestaan: ReadonlySet<string>): readonly string[] | null {
+  const regels = (kop.get("arc-authentication-results") ?? []).flatMap((r) => {
+    const delen = r.split(";");
+    const i = /^\s*i\s*=\s*(\d+)\s*$/i.exec(delen[0] ?? "");
+    if (!i) return [];
+    const id = (delen[1] ?? "").trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+    return [{ i: Number(i[1]), id, methoden: delen.slice(2) }];
+  });
+  if (regels.length === 0) return null;
+  const hoogste = Math.max(...regels.map((r) => r.i));
+  const top = regels.filter((r) => r.i === hoogste);
+  if (top.some((r) => !toegestaan.has(r.id))) return null;
+  return top[0]?.methoden ?? null;
+}
+
+/**
+ * Leest de Authentication-Results (RFC 8601). Zonder `vertrouwd` telt alleen de BOVENSTE regel. Met een lijst
+ * authserv-id's (de eerste term van de regel) telt alleen een regel van een van die servers: zo kan een nagemaakte regel
+ * van de afzender nooit slagen. Staat er geen gewone regel van een vertrouwde server, dan de ARC-Authentication-Results
+ * met de hoogste i (zie arcUitslagen). Geen regel = alles null = niet geslaagd.
+ */
+export function parseAuthenticationResults(kop: Kopregels, vertrouwd?: string | readonly string[]): Authenticatie {
+  const lijst = (typeof vertrouwd === "string" ? [vertrouwd] : (vertrouwd ?? [])).map((v) => v.trim().toLowerCase()).filter(Boolean);
+  const regels = kop.get("authentication-results") ?? [];
+  const toegestaan = new Set(lijst);
+  const regel = lijst.length ? regels.find((r) => toegestaan.has(authservId(r))) : regels[0];
+  if (regel) return leesUitslagen(regel.split(";").slice(1));
+  if (lijst.length === 0) return leesUitslagen([]);
+  return leesUitslagen(arcUitslagen(kop, toegestaan) ?? []);
 }
 
 /** Hoort dit domein bij (of onder) het domein van de afzender? "mail.hetzner.com" past bij "hetzner.com". */
