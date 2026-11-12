@@ -1,3 +1,5 @@
+import { jsonBegrensd } from "@/lib/http/body-grens";
+import { scrub } from "@/lib/ops/error-journal";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
@@ -31,14 +33,17 @@ export async function POST(request: Request): Promise<NextResponse> {
       windowSeconds: 60,
       message: "Te veel foutmeldingen.",
     });
-    const parsed = schema.safeParse(await request.json().catch(() => ({})));
+    // een foutmelding met stack is hooguit een paar kB (12 nov: grens vóór het lezen)
+    const gelezen = await jsonBegrensd(request, 16_000);
+    const parsed = schema.safeParse(gelezen.ok ? gelezen.waarde : {});
     if (parsed.success) {
+      // ook in de docker-logs geen tokens: query's, fragmenten (#code van de QR-code), lange id's weg (scrub)
       const fields = {
-        clientMessage: parsed.data.message ?? "",
+        clientMessage: scrub(parsed.data.message ?? ""),
         digest: parsed.data.digest ?? "",
-        url: parsed.data.url ?? "",
+        url: scrub(parsed.data.url ?? ""),
         userAgent: parsed.data.userAgent ?? "",
-        stack: (parsed.data.stack ?? "").slice(0, 4000),
+        stack: scrub((parsed.data.stack ?? "").slice(0, 4000)),
       };
       if (isStaleDeployment({ message: parsed.data.message })) logger.warn("client error boundary", fields);
       else logger.error("client error boundary", fields);

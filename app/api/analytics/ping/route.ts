@@ -4,6 +4,8 @@ import { z } from "zod";
 import { getPrincipal } from "@/lib/auth";
 import { recordVisitEvent, sourceOf, type Role } from "@/lib/analytics/live";
 import { fixedWindow } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/http/request";
+import { tekstBegrensd } from "@/lib/http/body-grens";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,9 +36,15 @@ function roleOf(roles: string[]): Role | null {
 async function handlePOST(request: Request): Promise<NextResponse> {
   const ua = request.headers.get("user-agent") ?? "";
   if (BOT.test(ua)) return NextResponse.json({ ok: true });
+  // per IP vóór het lezen (12 nov): de limiet hieronder staat op een id dat de browser zelf kiest. Stil weigeren
+  // (ok zonder te tellen), nooit 403 of 429 op een beacon.
+  const minuut = Math.floor(Date.now() / 60_000);
+  const perIp = await fixedWindow(`analytics:ping:ip:${minuut}:${clientIp(request)}`, 240, 90);
+  if (!perIp.ok) return NextResponse.json({ ok: true });
   let raw: unknown = null;
   try {
-    raw = JSON.parse((await request.text().catch(() => "")) || "null");
+    // een ping is een paar honderd tekens: meer lezen we niet in
+    raw = JSON.parse((await tekstBegrensd(request, 8_000).catch(() => "")) || "null");
   } catch {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
