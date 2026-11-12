@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { IChat, IDoc, IHelp, IList, IMail, IPulse } from "@/components/app/icons";
+import { useFT } from "@/components/i18n/useFT";
+import { RONDLEIDING_START } from "@/lib/onboarding/rondleiding";
 import {
   HULP_NIEUWS_GEZIEN,
   SUPPORT_CHAT,
@@ -162,6 +164,8 @@ export function HulpCentrum({
   const gevonden = useMemo(() => zoekVragen(t.vragen, zoek), [t.vragen, zoek]);
 
   const sluit = () => setOpen(false);
+  // de rondleiding (lib/onboarding/rondleiding.ts) heeft zijn teksten in de woordenlijst van de werker-app
+  const rt = useFT().rondleiding;
   const kiesTab = (nieuw: Tab) => {
     setTab(nieuw);
     setFeedbackOpen(false);
@@ -212,6 +216,7 @@ export function HulpCentrum({
         aria-expanded={open}
         aria-controls={paneelId}
         aria-haspopup="dialog"
+        data-rondleiding="hulp"
         className="relative grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink"
       >
         <IHelp />
@@ -283,6 +288,18 @@ export function HulpCentrum({
                 <li>
                   <button type="button" className={regelKlasse} onClick={() => kiesTab("hulp")}>
                     <Regel icoon={<IList />} titel={t.home.vragen[0]} tekst={t.home.vragen[1]} />
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    className={regelKlasse}
+                    onClick={() => {
+                      sluit();
+                      window.dispatchEvent(new Event(RONDLEIDING_START));
+                    }}
+                  >
+                    <Regel icoon={<IHelp />} titel={rt.opnieuw[0] ?? ""} tekst={rt.opnieuw[1] ?? ""} />
                   </button>
                 </li>
                 {handleidingen && (
