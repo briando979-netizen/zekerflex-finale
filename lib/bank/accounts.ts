@@ -76,11 +76,23 @@ export async function organisationAccount(tenantId: string): Promise<BankAccount
   return openAccount({ ownerType: "TENANT", tenantId, holderName: tenant.name });
 }
 
+const WERKGEVER_ROLLEN: readonly string[] = ["HQ_ADMIN", "LOCAL_MANAGER", "DISPUTE_MANAGER"];
+
+/**
+ * De organisatie waarvan accountForPrincipal de rekening zou nemen, ZONDER een rekening te openen: null voor beheer en
+ * werkers. Voor wie alleen de organisatie wil weten (12 nov: /api/me/rewards opende zo voor elke werker die de
+ * beloningskaart zag een bankrekening met zijn naam, terwijl ZekerFlex Bank uit staat).
+ */
+export function organisatieVanPrincipal(p: Principal): string | null {
+  if (hasRole(p, "PLATFORM_ADMIN")) return null;
+  return p.grants.find((g) => WERKGEVER_ROLLEN.includes(g.role))?.organizationId ?? null;
+}
+
 export async function accountForPrincipal(p: Principal): Promise<AccountContext> {
   if (hasRole(p, "PLATFORM_ADMIN")) {
     return { account: await platformAccount(), canMoveMoney: true, role: "platform" };
   }
-  const employerGrant = p.grants.find((g) => ["HQ_ADMIN", "LOCAL_MANAGER", "DISPUTE_MANAGER"].includes(g.role));
+  const employerGrant = p.grants.find((g) => WERKGEVER_ROLLEN.includes(g.role));
   if (employerGrant) {
     return {
       account: await organisationAccount(employerGrant.organizationId),
