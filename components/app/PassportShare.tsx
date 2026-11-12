@@ -1,6 +1,7 @@
 "use client";
 
 import { copyText } from "@/lib/clipboard";
+import { useFT } from "@/components/i18n/useFT";
 
 import { useState, type ReactNode } from "react";
 
@@ -15,6 +16,7 @@ export function PassportShare({
   token: string;
   qr: ReactNode;
 }) {
+  const t = useFT().paspoort;
   const [enabled, setEnabled] = useState(initialEnabled);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -47,10 +49,9 @@ export function PassportShare({
     <div className="rounded-2xl border border-neutralx-200 bg-white p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="font-display text-lg font-semibold">Deel je werkpaspoort</h2>
+          <h2 className="font-display text-lg font-semibold">{t.deelTitel}</h2>
           <p className="mt-1 text-sm text-neutralx-600">
-            Een openbare, geverifieerde pagina met je werkhistorie, vaardigheden en certificaten — met een echtheidszegel.
-            Jij bepaalt of de link werkt.
+            {t.deelTekst}
           </p>
         </div>
         <button
@@ -58,6 +59,7 @@ export function PassportShare({
           onClick={toggle}
           disabled={busy}
           aria-pressed={enabled}
+          aria-label={t.deelTitel}
           className={`relative h-7 w-12 flex-shrink-0 rounded-full transition disabled:opacity-50 ${enabled ? "bg-brand-500" : "bg-neutralx-300"}`}
         >
           <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${enabled ? "left-[22px]" : "left-0.5"}`} />
@@ -74,25 +76,24 @@ export function PassportShare({
               className="min-w-0 flex-1 rounded-lg border border-neutralx-200 bg-neutralx-50 px-3 py-2 text-sm text-neutralx-700"
             />
             <button type="button" onClick={copy} className="btn-primary text-sm">
-              {copied ? "Gekopieerd ✓" : "Kopieer link"}
+              {copied ? t.gekopieerd : t.kopieer}
             </button>
           </div>
           <div className="flex flex-wrap items-center gap-5">
             <span className="rounded-xl border border-neutralx-200 bg-white p-2">{qr}</span>
             <div className="flex flex-col gap-2 text-sm">
               <a href={url} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-600 hover:underline">
-                Bekijk je openbare paspoort →
+                {t.bekijk}
               </a>
               <a href={`/paspoort/${token}/pdf`} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-600 hover:underline">
-                Download als PDF →
+                {t.pdf}
               </a>
             </div>
           </div>
         </div>
       ) : (
         <p className="mt-4 rounded-lg bg-neutralx-50 p-3 text-sm text-neutralx-500">
-          Je paspoort staat op privé. Zet de schakelaar aan om een deelbare link te krijgen — de link is niet te raden en
-          wordt niet door zoekmachines geïndexeerd.
+          {t.prive}
         </p>
       )}
     </div>
