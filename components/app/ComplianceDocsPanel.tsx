@@ -270,6 +270,8 @@ function BankLoginSlot({
   onChanged: () => void;
 }) {
   const [enabled, setEnabled] = useState<boolean | null>(null);
+  // het live Stripe-account ontvangt even geen betalingen: dan meteen het bankafschrift, met een rustige uitleg
+  const [tijdelijkUit, setTijdelijkUit] = useState(false);
   const [result, setResult] = useState<BankLogin | null>(null);
   const [busy, setBusy] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -284,6 +286,7 @@ function BankLoginSlot({
         .then((r) => r.json())
         .then((d) => {
           setEnabled(Boolean(d.enabled));
+          setTijdelijkUit(d.tijdelijkUit === true);
           setResult(d.result ?? null);
         })
         .catch(() => setEnabled(false));
@@ -336,6 +339,16 @@ function BankLoginSlot({
 
   if (enabled === false) {
     return <DocSlot t={t} kind="bank" label={t.bankLabel} hint={t.bankHint} doc={bankDoc} onUploaded={onChanged} />;
+  }
+  if (tijdelijkUit && !bankOk) {
+    return (
+      <div className="space-y-2">
+        <p role="status" className="rounded-lg bg-paper-soft px-3 py-2 text-xs leading-relaxed text-ink-soft">
+          {t.bankLoginTijdelijkUit}
+        </p>
+        <DocSlot t={t} kind="bank" label={t.bankLabel} hint={t.bankHint} doc={bankDoc} onUploaded={onChanged} />
+      </div>
+    );
   }
 
   return (

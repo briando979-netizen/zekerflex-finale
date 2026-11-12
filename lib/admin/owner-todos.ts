@@ -22,6 +22,7 @@ import { BANK_AAN } from "@/lib/app-mode";
 import { cscaStand } from "@/lib/kyc/chip/csca";
 import { stripeFotoSleutelInfo } from "@/lib/kyc/stripe-fotos";
 import { actieveWeigering } from "@/lib/kyc/stripe-weigering";
+import { accountStand } from "@/lib/billing/stripe-betalen";
 import { appleConfig } from "@/lib/auth/apple";
 
 /** Bij taken die alleen voor ZekerFlex Bank nodig waren. */
@@ -204,6 +205,9 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   const stripeFotoSleutel = await stripeFotoSleutelInfo().catch(() => null);
   // weigerde Stripe Identity voor het hele account (lib/kyc/stripe-weigering.ts)? Dan staat ZekerFlex het 24 uur uit
   const stripeWeigering = await actieveWeigering().catch(() => null);
+  // het live Stripe-account: kan het betalingen ontvangen en uitbetalen (elke 15 min gemeten, lib/billing/stripe-betalen.ts)?
+  const stripeStand = await accountStand().catch(() => null);
+  const stripeDicht = stripeStand !== null && (!stripeStand.betalen || !stripeStand.uitbetalen);
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
   return [
@@ -941,6 +945,25 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       how: ["Stripe-dashboard (dashboard.stripe.com) → zoek 'Identity' → klik 'Aan de slag' en rond de activering af. Dit is de enige verplichte stap: daarna zien freelancers vanzelf 'Snel via Stripe' op de verificatiepagina.", "Aanrader: Stripe → Developers → Webhooks → je ZekerFlex-webhook → voeg identity.verification_session.verified, .requires_input en .canceled toe. Dan wordt de uitslag ook verwerkt als iemand de pagina niet terug opent.", "Werkt het nog niet? De optie verbergt zich 6 uur nadat Stripe een poging weigerde — probeer het daarna opnieuw. Uitzetten kan altijd: vraag Claude om STRIPE_IDENTITY_ENABLED op false te zetten."],
       auto: false,
       ...m("stripe-identity"),
+    },
+    {
+      id: "stripe-betalen-uit",
+      group: "Geld & bank",
+      title: stripeDicht
+        ? `Stripe ontvangt geen betalingen meer${stripeStand?.uitSinds ? ` sinds ${new Date(stripeStand.uitSinds).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", dateStyle: "short", timeStyle: "short" })}` : ""}`
+        : "Stripe-account: betalingen en uitbetalingen staan aan",
+      why: stripeDicht
+        ? `Het live Stripe-account (de stichting) ${!stripeStand?.betalen ? "kan geen betalingen ontvangen" : ""}${!stripeStand?.betalen && !stripeStand?.uitbetalen ? " en " : ""}${!stripeStand?.uitbetalen ? "betaalt niet uit" : ""}. Daardoor werkt inloggen bij de bank (iDEAL) voor werkers niet; ZekerFlex toont hun meteen het bankafschrift. Ook betalingen via Stripe elders (webshop, facturen, abonnementen, domeinen) lukken niet zolang dit zo is.`
+        : "ZekerFlex kijkt elke 15 minuten of het live Stripe-account betalingen kan ontvangen en uitbetalen. Staat dat uit, dan krijg je meteen een melding en opent deze taak zich met wat je moet doen.",
+      how: [
+        "Log in op dashboard.stripe.com met het live account en lees de melding bovenaan (bijvoorbeeld: account onder controle, gegevens of documenten nodig).",
+        "Vul aan wat Stripe vraagt bij Instellingen → Bedrijfsgegevens of bij de melding zelf.",
+        "Staat er geen melding of is het onduidelijk: neem contact op met Stripe (support.stripe.com/contact) en vraag waarom betalingen en uitbetalingen zijn uitgezet.",
+        "Deze taak vinkt zichzelf af zodra ZekerFlex ziet dat betalingen weer aan staan (binnen 15 minuten).",
+      ],
+      auto: true,
+      done: !stripeDicht,
+      ...(stripeStand ? { doneNote: `laatst gemeten ${new Date(stripeStand.gemeten).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", dateStyle: "short", timeStyle: "short" })}` } : {}),
     },
     {
       id: "stripe-identity-account",

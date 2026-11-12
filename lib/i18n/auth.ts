@@ -151,6 +151,8 @@ export interface AuthDict {
     bankLoginNoIban: string;
     bankLoginCancelled: string;
     bankLoginFallback: string;
+    /** het live Stripe-account ontvangt even geen betalingen: meteen het bankafschrift (12 nov 2026) */
+    bankLoginTijdelijkUit: string;
     ibanLabel: string;
     ibanWhy: string;
     ibanSave: string;
@@ -522,6 +524,7 @@ const nl: AuthDict = {
     bankLoginNoIban: "Je bank gaf een rekening eindigend op {last4}, maar in je profiel staat een ander IBAN. Pas je IBAN aan of log in met de juiste rekening.",
     bankLoginCancelled: "Inloggen bij je bank is afgebroken. Probeer het opnieuw wanneer je wilt.",
     bankLoginFallback: "Geen Nederlandse bank? Upload een bankafschrift",
+    bankLoginTijdelijkUit: "Inloggen bij je bank kan tijdelijk niet. Upload een bankafschrift, dat werkt net zo goed.",
     ibanLabel: "Je rekeningnummer (IBAN)",
     ibanWhy: "Eerst je rekeningnummer, daarna log je in bij je bank. We vergelijken je bankgegevens met dit rekeningnummer en betalen je hier ook naartoe.",
     ibanSave: "Opslaan",
@@ -900,6 +903,7 @@ const en: AuthDict = {
     bankLoginNoIban: "Your bank returned an account ending in {last4}, but your profile has a different IBAN. Update your IBAN or log in with the right account.",
     bankLoginCancelled: "Logging in at your bank was cancelled. Try again whenever you like.",
     bankLoginFallback: "No Dutch bank? Upload a bank statement",
+    bankLoginTijdelijkUit: "Logging in at your bank is temporarily unavailable. Upload a bank statement, that works just as well.",
     ibanLabel: "Your account number (IBAN)",
     ibanWhy: "First your account number, then you log in at your bank. We compare your bank details with this account number and pay you into it.",
     ibanSave: "Save",
@@ -1278,6 +1282,7 @@ const pl: AuthDict = {
     bankLoginNoIban: "Bank podał konto kończące się na {last4}, ale w profilu masz inny IBAN. Zmień IBAN albo zaloguj się na właściwe konto.",
     bankLoginCancelled: "Logowanie w banku zostało przerwane. Spróbuj ponownie, kiedy chcesz.",
     bankLoginFallback: "Nie masz holenderskiego banku? Prześlij wyciąg bankowy",
+    bankLoginTijdelijkUit: "Logowanie w banku jest chwilowo niedostępne. Prześlij wyciąg bankowy, to działa równie dobrze.",
     ibanLabel: "Twój numer konta (IBAN)",
     ibanWhy: "Najpierw numer konta, potem logujesz się w banku. Porównujemy dane z banku z tym numerem konta i na niego wypłacamy Ci pieniądze.",
     ibanSave: "Zapisz",
@@ -1656,6 +1661,7 @@ const ro: AuthDict = {
     bankLoginNoIban: "Banca a transmis un cont care se termină în {last4}, dar în profil ai alt IBAN. Actualizează IBAN-ul sau autentifică-te cu contul corect.",
     bankLoginCancelled: "Autentificarea la bancă a fost anulată. Încearcă din nou oricând.",
     bankLoginFallback: "Nu ai bancă olandeză? Încarcă un extras de cont",
+    bankLoginTijdelijkUit: "Autentificarea la bancă nu este disponibilă momentan. Încarcă un extras de cont, funcționează la fel de bine.",
     ibanLabel: "Numărul tău de cont (IBAN)",
     ibanWhy: "Mai întâi numărul contului, apoi te autentifici la banca ta. Comparăm datele băncii cu acest număr de cont și te plătim în el.",
     ibanSave: "Salvează",
@@ -2034,6 +2040,7 @@ const uk: AuthDict = {
     bankLoginNoIban: "Банк передав рахунок, що закінчується на {last4}, але в профілі інший IBAN. Зміни IBAN або увійди з правильним рахунком.",
     bankLoginCancelled: "Вхід у банк скасовано. Спробуй ще раз, коли захочеш.",
     bankLoginFallback: "Немає нідерландського банку? Завантаж виписку",
+    bankLoginTijdelijkUit: "Вхід у банк тимчасово недоступний. Завантаж виписку з банку, це працює так само добре.",
     ibanLabel: "Твій номер рахунку (IBAN)",
     ibanWhy: "Спочатку номер рахунку, потім входиш у свій банк. Ми порівнюємо дані банку з цим номером рахунку і на нього виплачуємо тобі гроші.",
     ibanSave: "Зберегти",

@@ -4,6 +4,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { toErrorBody } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { bankLoginEnabled, getBankLogin, startBankLogin, syncBankLogin } from "@/lib/kyc/bank-login";
+import { betalenUit } from "@/lib/billing/stripe-betalen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,7 +13,9 @@ export const dynamic = "force-dynamic";
 export async function GET(): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
-    return NextResponse.json({ enabled: bankLoginEnabled(), result: await getBankLogin(p.userId) });
+    // het live Stripe-account ontvangt even geen betalingen: het scherm toont dan meteen het bankafschrift (lib/billing/stripe-betalen.ts)
+    const tijdelijkUit = Boolean(await betalenUit().catch(() => null));
+    return NextResponse.json({ enabled: bankLoginEnabled(), tijdelijkUit, result: await getBankLogin(p.userId) });
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });
