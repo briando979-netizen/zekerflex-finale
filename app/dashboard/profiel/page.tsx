@@ -18,18 +18,14 @@ import { StripeConnectPayout } from "@/components/app/StripeConnectPayout";
 import { BackLink } from "@/components/app/BackLink";
 import { PersonalInfoForm } from "@/components/app/PersonalInfoForm";
 import { updatePersonalInfoAction } from "@/app/dashboard/profiel/actions";
+import { getFreelancerDict } from "@/lib/i18n/server";
+import { vulIn } from "@/lib/i18n/vul-in";
 
 export const dynamic = "force-dynamic";
 
-const KIND_LABEL: Record<string, string> = { zzp: "ZZP'er", flexwerker: "Flexwerker", uitzendkracht: "Uitzendkracht" };
-const MODE_LABEL: Record<string, string> = {
-  "reverse-billing": "Reverse billing",
-  "self-invoice": "Zelf-facturatie (KOR)",
-  payroll: "Payroll / verloning",
-};
-
 export default async function ProfielPage() {
   const principal = await requirePrincipal();
+  const t = (await getFreelancerDict()).profiel;
   const [o, profile, user, fiscal] = await Promise.all([
     getFreelancerOverview(principal.userId),
     prisma.freelancerProfile.findUnique({
@@ -66,8 +62,8 @@ export default async function ProfielPage() {
 
   return (
     <>
-      <BackLink fallbackHref="/dashboard/account" label="Instellingen" />
-      <PageHeader title="Account" subtitle="Je gegevens, verificatie en uitbetaalinstellingen." />
+      <BackLink fallbackHref="/dashboard/account" label={t.back} />
+      <PageHeader title={t.titel} subtitle={t.subtitel} />
 
       {/* hero — matches the app's Account overview */}
       <section className="mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-ink to-[#0d1f1a] p-6 text-white">
@@ -90,38 +86,38 @@ export default async function ProfielPage() {
                 <span className="text-white/25">{"★★★★★".slice(stars)}</span>
               </span>
               <span className="text-white/60">
-                {stats.reviews.count > 0 ? `${stats.reviews.count} beoordelingen` : "nog geen beoordelingen"}
+                {stats.reviews.count > 0 ? vulIn(t.beoordelingen, { n: stats.reviews.count }) : t.geenBeoordelingen}
               </span>
             </div>
           </div>
         </div>
 
         <p className="mt-5 text-center text-xs uppercase tracking-wide text-white/40">
-          Jouw klussen over de laatste 6 maanden
+          {t.zesMaanden}
         </p>
         <div className="mt-3 grid grid-cols-3 divide-x divide-white/10 text-center">
           <div>
             <p className="num font-display text-2xl font-bold">{stats.matchedShifts}</p>
-            <p className="text-[11px] text-white/60">Gematchte klussen</p>
+            <p className="text-[11px] text-white/60">{t.gematcht}</p>
           </div>
           <div>
             <p className="num font-display text-2xl font-bold">{stats.notCompleted}</p>
-            <p className="text-[11px] text-white/60">Niet voltooide klussen</p>
+            <p className="text-[11px] text-white/60">{t.nietVoltooid}</p>
           </div>
           <div>
             <p className="num font-display text-2xl font-bold">{stats.replacementsArranged}</p>
-            <p className="text-[11px] text-white/60">Vervanging geregeld</p>
+            <p className="text-[11px] text-white/60">{t.vervangingGeregeld}</p>
           </div>
         </div>
         {stats.attendancePct != null && (
           <p className="mt-4 text-center text-xs text-white/50">
-            Opkomstpercentage laatste 6 maanden: <span className="font-semibold text-white/80">{stats.attendancePct}%</span>
+            {t.opkomst} <span className="font-semibold text-white/80">{stats.attendancePct}%</span>
           </p>
         )}
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Panel title="Onboarding">
+        <Panel title={t.onboarding}>
           <ul className="space-y-3 px-5 py-4">
             {o.onboarding.map((s) => (
               <li key={s.label} className="flex items-center gap-2.5 text-sm">
@@ -139,13 +135,13 @@ export default async function ProfielPage() {
           {!o.profileComplete && (
             <div className="border-t border-hair px-5 py-4">
               <Link href="/dashboard/verificatie" className="btn-primary">
-                {isUitzend ? "Verificatie afronden" : "KVK koppelen & ID verifiëren"}
+                {isUitzend ? t.verificatieAfronden : t.kvkKoppelen}
               </Link>
             </div>
           )}
         </Panel>
 
-        <Panel title="Persoonsgegevens">
+        <Panel title={t.persoon}>
           <div className="border-b border-hair px-5 py-4">
             <AvatarUpload
               userId={principal.userId}
@@ -159,12 +155,12 @@ export default async function ProfielPage() {
             initialPhone={user?.phone ?? ""}
           />
           <dl className="divide-y divide-hair border-t border-hair text-sm">
-            <Field k="E-mail" v={user?.email ?? principal.email} />
+            <Field k={t.email} v={user?.email ?? principal.email} />
             <Field
-              k="Identiteit (KYC)"
+              k={t.kyc}
               v={
                 <StatusPill tone={user?.kycStatus === "VERIFIED" ? "ok" : "warn"}>
-                  {user?.kycStatus === "VERIFIED" ? "Geverifieerd" : (user?.kycStatus ?? "Niet gestart")}
+                  {user?.kycStatus === "VERIFIED" ? t.geverifieerd : (user?.kycStatus ?? t.nietGestart)}
                 </StatusPill>
               }
             />
@@ -172,84 +168,83 @@ export default async function ProfielPage() {
         </Panel>
 
         {isUitzend ? (
-          <Panel title="Werkvorm & verloning">
+          <Panel title={t.werkvormVerloning}>
             <dl className="divide-y divide-hair text-sm">
-              <Field k="Werkvorm" v="Uitzendkracht — ZekerFlex is je werkgever" />
+              <Field k={t.werkvorm} v={t.uitzendkrachtWerkgever} />
               <Field
-                k="BSN"
-                v={fiscal.bsnLast4 ? `bekend (eindigt op ${fiscal.bsnLast4})` : "Nog niet ingevuld"}
+                k={t.bsn}
+                v={fiscal.bsnLast4 ? vulIn(t.bsnBekend, { nr: fiscal.bsnLast4 }) : t.nogNiet}
               />
-              <Field k="Loonheffingskorting" v={fiscal.loonheffingskorting ? "Toegepast" : "Niet toegepast"} />
-              <Field k="Verloning" v="Wekelijkse loonstrook via payroll" />
-              <Field k="Btw / KVK" v="Niet nodig als uitzendkracht" />
+              <Field k={t.lhk} v={fiscal.loonheffingskorting ? t.toegepast : t.nietToegepast} />
+              <Field k={t.verloning} v={t.wekelijks} />
+              <Field k={t.btwKvk} v={t.nietNodig} />
             </dl>
             <div className="flex flex-wrap gap-4 border-t border-hair px-5 py-4 text-sm font-medium text-brand-600">
-              <Link href="/dashboard/verloning">Loonstroken & StiPP →</Link>
-              <Link href="/dashboard/fiscaal">BSN & loonheffing aanpassen →</Link>
+              <Link href="/dashboard/verloning">{t.loonstroken}</Link>
+              <Link href="/dashboard/fiscaal">{t.bsnAanpassen}</Link>
             </div>
           </Panel>
         ) : (
-          <Panel title="Werkvorm & fiscaal">
+          <Panel title={t.werkvormFiscaal}>
             <dl className="divide-y divide-hair text-sm">
-              <Field k="Werkvorm" v={fiscal.workerKind ? KIND_LABEL[fiscal.workerKind] : "Nog niet gekozen"} />
+              <Field k={t.werkvorm} v={fiscal.workerKind ? ((t.kinds as Record<string, string>)[fiscal.workerKind] ?? fiscal.workerKind) : t.nogNietGekozen} />
               <Field
-                k="Btw-nummer"
+                k={t.btwNummer}
                 v={
                   fiscal.vatNumber ? (
                     <>
                       {fiscal.vatNumber}{" "}
-                      <StatusPill tone={fiscal.vatValid ? "ok" : "warn"}>{fiscal.vatValid ? "gevalideerd" : fiscal.vatStatus ?? "open"}</StatusPill>
+                      <StatusPill tone={fiscal.vatValid ? "ok" : "warn"}>{fiscal.vatValid ? t.gevalideerd : fiscal.vatStatus ?? t.open}</StatusPill>
                     </>
                   ) : fiscal.korApplies ? (
-                    "Kleineondernemersregeling"
+                    t.kor
                   ) : (
                     "—"
                   )
                 }
               />
-              <Field k="KVK-nummer" v={fiscal.kvkNumber ?? profile?.kvkNumber ?? "—"} />
-              <Field k="Facturatie" v={MODE_LABEL[invoiceModeFor(fiscal)] ?? invoiceModeFor(fiscal)} />
+              <Field k={t.kvkNummer} v={fiscal.kvkNumber ?? profile?.kvkNumber ?? "—"} />
+              <Field k={t.facturatie} v={(t.modes as Record<string, string>)[invoiceModeFor(fiscal)] ?? invoiceModeFor(fiscal)} />
             </dl>
             <div className="border-t border-hair px-5 py-4">
               <Link href="/dashboard/fiscaal" className="text-sm font-medium text-brand-600">
-                Werkvorm & btw aanpassen →
+                {t.werkvormBtw}
               </Link>
             </div>
           </Panel>
         )}
 
         {isUitzend && (
-          <Panel title="Uitzendovereenkomst">
+          <Panel title={t.uitzendOvereenkomst}>
             <div className="p-5">
               <UitzendContractCard />
             </div>
           </Panel>
         )}
 
-        <Panel title="Werkervaring">
+        <Panel title={t.werkervaring}>
           <ErvaringLijst start={ervaring.items} />
         </Panel>
 
-        <Panel title="Certificaten">
+        <Panel title={t.certificaten}>
           <div className="px-5 py-4 text-sm">
             <p className="text-neutralx-600">
               {certs.length === 0
-                ? "Nog geen certificaten toegevoegd."
-                : `${validCerts} geldig${certs.length > validCerts ? ` · ${certs.length - validCerts} in controle/verlopen` : ""}`}
+                ? t.geenCerts
+                : `${vulIn(t.certsGeldig, { n: validCerts })}${certs.length > validCerts ? vulIn(t.certsControle, { n: certs.length - validCerts }) : ""}`}
             </p>
             <p className="mt-1 text-xs text-neutralx-500">
-              VCA, BHV, heftruck, rijbewijzen. Klussen die een certificaat vragen worden vrijgegeven
-              zodra het geldig is.
+              {t.certsUitleg}
             </p>
           </div>
           <div className="border-t border-hair px-5 py-4">
             <Link href="/dashboard/certificaten" className="text-sm font-medium text-brand-600">
-              Certificaten beheren →
+              {t.certsBeheren}
             </Link>
           </div>
         </Panel>
 
-        <Panel title="Uitbetaling">
+        <Panel title={t.uitbetaling}>
           <div className="border-b border-hair">
             <StripeConnectPayout
               initialConnected={Boolean(profile?.stripeConnectedAccountId)}
@@ -257,22 +252,21 @@ export default async function ProfielPage() {
             />
           </div>
           <dl className="divide-y divide-hair text-sm">
-            <Field k="IBAN (fallback)" v={fiscal.iban ?? profile?.payoutIban ?? "Nog niet ingesteld"} />
-            <Field k="Postcode thuisbasis" v={profile?.homePostalCode ?? "—"} />
-            <Field k="Tijdzone" v={profile?.timezone ?? "Europe/Amsterdam"} />
+            <Field k={t.iban} v={fiscal.iban ?? profile?.payoutIban ?? t.nogNietIngesteld} />
+            <Field k={t.postcode} v={profile?.homePostalCode ?? "—"} />
+            <Field k={t.tijdzone} v={profile?.timezone ?? "Europe/Amsterdam"} />
           </dl>
           <div className="border-t border-hair px-5 py-4">
             <Link href={isUitzend ? "/dashboard/verloning" : "/dashboard/uitbetalingen"} className="text-sm font-medium text-brand-600">
-              {isUitzend ? "Bekijk je loonstroken →" : "Bekijk uitbetalingen →"}
+              {isUitzend ? t.loonstrokenBekijk : t.uitbetalingenBekijk}
             </Link>
           </div>
         </Panel>
 
-        <Panel title="E-mailvoorkeuren">
+        <Panel title={t.mailPrefs}>
           <div className="p-5">
             <p className="mb-4 text-sm text-neutralx-600">
-              Kies welke optionele e-mail je ontvangt. Belangrijke e-mail (verificatie, wachtwoord, facturen,
-              loonstroken) staat hier niet bij — die krijg je altijd.
+              {t.mailUitleg}
             </p>
             <MailPrefsToggles
               token={mailPrefs.token}

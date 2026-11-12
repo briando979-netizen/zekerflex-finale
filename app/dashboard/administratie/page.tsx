@@ -5,22 +5,25 @@ import { getWorkerMilestones, type Milestone } from "@/lib/worker/milestones";
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { currentYear } from "@/lib/worker/mileage";
 import { BANK_AAN } from "@/lib/app-mode";
+import { getFreelancerDict } from "@/lib/i18n/server";
+import { vulIn } from "@/lib/i18n/vul-in";
+import type { FreelancerDict } from "@/lib/i18n/freelancer";
 
 export const dynamic = "force-dynamic";
 
-const STATUS: Record<string, { ring: string; chip: string; bar: string; label: string }> = {
-  ok: { ring: "border-brand-200", chip: "bg-brand-50 text-brand-700", bar: "bg-brand-500", label: "op schema" },
-  soon: { ring: "border-warn/30", chip: "bg-warn/10 text-warn", bar: "bg-warn", label: "binnenkort" },
-  action: { ring: "border-crit/30", chip: "bg-crit/10 text-crit", bar: "bg-crit", label: "actie nodig" },
-  info: { ring: "border-neutralx-200", chip: "bg-neutralx-100 text-neutralx-600", bar: "bg-brand-400", label: "info" },
+const STATUS: Record<string, { ring: string; chip: string; bar: string }> = {
+  ok: { ring: "border-brand-200", chip: "bg-brand-50 text-brand-700", bar: "bg-brand-500" },
+  soon: { ring: "border-warn/30", chip: "bg-warn/10 text-warn", bar: "bg-warn" },
+  action: { ring: "border-crit/30", chip: "bg-crit/10 text-crit", bar: "bg-crit" },
+  info: { ring: "border-neutralx-200", chip: "bg-neutralx-100 text-neutralx-600", bar: "bg-brand-400" },
 };
 
-function euro(cents: number): string {
-  return `€ ${Math.round(cents / 100).toLocaleString("nl-NL")}`;
-}
+type T = FreelancerDict["administratie"];
 
-function Card({ m }: { m: Milestone }) {
+function Card({ m, t, intl }: { m: Milestone; t: T; intl: string }) {
+  const euro = (cents: number) => `€ ${Math.round(cents / 100).toLocaleString(intl)}`;
   const s = STATUS[m.status] ?? STATUS.info!;
+  const label = (t.status as Record<string, string>)[m.status] ?? t.status.info;
   const pct = m.progress ? Math.min(100, Math.round((m.progress.value / m.progress.max) * 100)) : 0;
   return (
     <div className={`rounded-2xl border bg-white p-5 ${s.ring}`}>
@@ -32,7 +35,7 @@ function Card({ m }: { m: Milestone }) {
             <p className="mt-0.5 text-sm font-medium text-ink-soft">{m.headline}</p>
           </div>
         </div>
-        <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${s.chip}`}>{s.label}</span>
+        <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${s.chip}`}>{label}</span>
       </div>
 
       {m.progress && (
@@ -41,7 +44,7 @@ function Card({ m }: { m: Milestone }) {
             <div className={`h-full rounded-full ${s.bar}`} style={{ width: `${Math.max(3, pct)}%` }} />
           </div>
           <p className="mt-1 text-xs text-neutralx-500">
-            {m.progress.unit === "" ? euro(m.progress.value) : `${m.progress.value.toLocaleString("nl-NL")}${m.progress.unit}`} {m.progress.label}
+            {m.progress.unit === "" ? euro(m.progress.value) : `${m.progress.value.toLocaleString(intl)}${m.progress.unit}`} {m.progress.label}
           </p>
         </div>
       )}
@@ -49,7 +52,7 @@ function Card({ m }: { m: Milestone }) {
       <p className="mt-3 text-sm leading-relaxed text-neutralx-600">{m.detail}</p>
       {m.impact && (
         <p className="mt-2 rounded-lg bg-paper-soft p-3 text-xs leading-relaxed text-neutralx-600">
-          <span className="font-semibold text-ink">Wat dit voor jou betekent: </span>
+          <span className="font-semibold text-ink">{t.impact}</span>
           {m.impact}
         </p>
       )}
@@ -59,38 +62,37 @@ function Card({ m }: { m: Milestone }) {
 
 export default async function AdministratiePage() {
   const principal = await requirePrincipal();
+  const ft = await getFreelancerDict();
+  const t = ft.administratie;
   const [data, inApp] = await Promise.all([getWorkerMilestones(principal.userId), inAndroidApp()]);
   const year = currentYear();
 
   if (!data) {
     return (
       <>
-        <Back />
-        <PageHeader title="Je administratie" subtitle="Herinneringen en mijlpalen, zodat jij nergens aan hoeft te denken." />
-        <EmptyState icon="📋" title="Nog geen profiel" body="Deze pagina verschijnt zodra je als professional bent geregistreerd." />
+        <Back t={t} />
+        <PageHeader title={t.titel} subtitle={t.subtitelLeeg} />
+        <EmptyState icon="📋" title={t.leegTitel} body={t.leegTekst} />
       </>
     );
   }
 
   return (
     <>
-      <Back />
-      <PageHeader
-        title="Je administratie, zonder gedoe"
-        subtitle="We houden je uren, omzet en deadlines in de gaten en sturen een melding zodra er iets moet gebeuren."
-      />
+      <Back t={t} />
+      <PageHeader title={t.titelVol} subtitle={t.subtitel} />
 
       {!data.fiscalComplete && (
         <div className="mb-5 rounded-xl border border-warn/30 bg-warn/5 p-4 text-sm text-neutralx-700">
-          Vul eerst je{" "}
-          <Link href="/dashboard/fiscaal" className="font-semibold text-brand-600 hover:underline">werkvorm &amp; fiscale gegevens</Link>{" "}
-          in, dan kunnen we dit precies voor je bijhouden.
+          {t.vulEerst}{" "}
+          <Link href="/dashboard/fiscaal" className="font-semibold text-brand-600 hover:underline">{t.werkvorm}</Link>{" "}
+          {t.vulIn}
         </div>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         {data.milestones.map((m) => (
-          <Card key={m.id} m={m} />
+          <Card key={m.id} m={m} t={t} intl={ft.intl} />
         ))}
       </div>
 
@@ -99,9 +101,9 @@ export default async function AdministratiePage() {
           <div className="flex items-start gap-3">
             <span className="text-2xl" aria-hidden>🧾</span>
             <div>
-              <h2 className="font-display text-base font-semibold">Jaaroverzicht voor je aangifte</h2>
+              <h2 className="font-display text-base font-semibold">{t.jaarTitel}</h2>
               <p className="mt-0.5 text-sm text-neutralx-600">
-                Omzet en btw per kwartaal, je uren, opdrachtgevers en kilometers op één A4. Handig voor jou of je boekhouder.
+                {t.jaarTekst}
               </p>
             </div>
           </div>
@@ -114,7 +116,7 @@ export default async function AdministratiePage() {
                 rel="noopener noreferrer"
                 className={y === year ? "btn-primary text-sm" : "rounded-lg border border-neutralx-200 px-3.5 py-2 text-sm font-semibold text-ink hover:bg-neutralx-50"}
               >
-                {y} (PDF)
+                {vulIn(t.pdf, { jaar: y })}
               </a>
             ))}
           </div>
@@ -124,30 +126,29 @@ export default async function AdministratiePage() {
       <div className="mt-6 flex flex-wrap gap-3 text-sm">
         {!inApp && BANK_AAN && (
           <Link href="/dashboard/bank" className="font-semibold text-brand-600 hover:underline">
-            → Belasting-potje &amp; btw-overzicht
+            {t.potje}
           </Link>
         )}
         <Link href="/dashboard/vooruitblik" className="font-semibold text-brand-600 hover:underline">
-          → Loon-vooruitblik
+          {t.vooruitblik}
         </Link>
         <Link href="/dashboard/ritten" className="font-semibold text-brand-600 hover:underline">
-          → Kilometer-administratie
+          {t.km}
         </Link>
       </div>
 
       <p className="mt-5 text-xs text-neutralx-400">
-        Alle bedragen zijn indicaties/vuistregels en geen belastingadvies. Controleer je definitieve aangifte altijd bij
-        de Belastingdienst of je boekhouder. Alleen je ZekerFlex-werk is hier meegerekend.
+        {t.disclaimer}
       </p>
     </>
   );
 }
 
-function Back() {
+function Back({ t }: { t: T }) {
   return (
     <div className="mb-6">
       <Link href="/dashboard/account" className="text-sm font-medium text-neutralx-500 hover:text-brand-600">
-        ← Terug
+        ← {t.back}
       </Link>
     </div>
   );

@@ -25,7 +25,10 @@ function blaadjes(waarde: unknown, pad: string, uit: Map<string, string>): void 
 const plaatshouders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]!).sort().join(",");
 
 // Elke sectie die losse tekst uit een component haalt komt hier bij (de naam in de woordenlijst).
-const SECTIES = ["los", "verzekering", "paspoort", "uitzendContract"] as const;
+const SECTIES = ["los", "verzekering", "paspoort", "uitzendContract", "administratie", "vervanging", "profiel"] as const;
+
+// Woorden die in elke taal hetzelfde zijn (leenwoord of "review"): mogen gelijk blijven aan het Nederlands.
+const GELIJK_TOEGESTAAN = new Set(["profiel.modes.reverse-billing", "vervanging.reviewEen", "vervanging.reviewMeer"]);
 
 describe("woordenlijst van de werker-app: omgezette secties", () => {
   const per = Object.fromEntries(
@@ -38,7 +41,7 @@ describe("woordenlijst van de werker-app: omgezette secties", () => {
 
   it("elke sleutel staat in alle vijf de talen", () => {
     const sleutels = [...per.nl.keys()];
-    expect(sleutels.length).toBeGreaterThan(120);
+    expect(sleutels.length).toBeGreaterThan(220);
     for (const sectie of SECTIES) expect(sleutels.some((k) => k.startsWith(`${sectie}.`)), sectie).toBe(true);
     for (const t of TALEN) expect([...per[t].keys()].sort(), t).toEqual([...sleutels].sort());
   });
@@ -55,7 +58,7 @@ describe("woordenlijst van de werker-app: omgezette secties", () => {
 
   it("een andere taal is echt vertaald, niet de Nederlandse tekst teruggezet (behalve woorden die gelijk zijn)", () => {
     for (const t of ["en", "pl", "ro", "uk"] as const) {
-      const gelijk = [...per.nl].filter(([pad, nl]) => nl.length > 12 && per[t].get(pad) === nl);
+      const gelijk = [...per.nl].filter(([pad, nl]) => nl.length > 12 && !GELIJK_TOEGESTAAN.has(pad) && per[t].get(pad) === nl);
       expect(gelijk, t).toEqual([]);
     }
   });
@@ -100,6 +103,9 @@ describe("omgezette serverpagina's halen hun tekst uit de woordenlijst", () => {
   for (const [pagina, oud] of [
     ["app/dashboard/verzekering/page.tsx", ["Wat is gedekt", "Een schade melden", "Jouw verzekeringsbewijs"]],
     ["app/dashboard/paspoort/page.tsx", ["Nog geen profiel", "Profiel in opbouw"]],
+    ["app/dashboard/administratie/page.tsx", ["Je administratie, zonder gedoe", "Jaaroverzicht voor je aangifte", "→ Loon-vooruitblik"]],
+    ["app/dashboard/diensten/vervanging/[requestId]/page.tsx", ["Reacties op vervanging", "Opkomstpercentage", "Nog geen reacties"]],
+    ["app/dashboard/profiel/page.tsx", ["Persoonsgegevens", "E-mailvoorkeuren", "Certificaten beheren"]],
   ] as const) {
     it(`${pagina} gebruikt getFreelancerDict en heeft de oude zinnen niet meer`, () => {
       const src = readFileSync(path.join(ROOT, pagina), "utf8");
