@@ -17,7 +17,7 @@ export function eisContentLength(request: Request, max: number): void {
 }
 
 /** De ruwe body, hooguit `max` bytes; daarboven een 422. Ook voor webhooks die de handtekening op de ruwe body controleren. */
-export async function leesBegrensd(request: Request, max: number): Promise<Uint8Array> {
+export async function leesBegrensd(request: Request, max: number): Promise<Uint8Array<ArrayBuffer>> {
   eisContentLength(request, max);
   if (!request.body) return new Uint8Array(0);
   const lezer = request.body.getReader();
