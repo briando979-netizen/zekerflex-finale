@@ -13,9 +13,12 @@
 import sharp from "sharp";
 import { leesMrzTekst } from "@/lib/ocr/engine";
 import { leesMrzUitTekst, type MrzUitslag } from "@/lib/kyc/mrz";
+import { kaderInVideo } from "@/lib/kyc/camera-live";
 
 const MAX_PIXELS = 40_000_000;
-const MAX_POGINGEN = 8;
+const MAX_POGINGEN = 9;
+/** zo breed stuurde de camera het kader naar de live meting (components/app/IdScan.tsx, kaderUitsnede) */
+const KADER_BREEDTE = 1400;
 
 export interface MrzLeesUitslag {
   /** de beste lezing, of null als er nergens een MRZ te vinden was */
@@ -35,6 +38,27 @@ function uitsneden(bytes: Buffer): Uitsnede[] {
   // draai in graden: 180 = ondersteboven, een paar graden = een scheef gehouden telefoon
   const onderkant = async (draai: number, drempel: boolean): Promise<Buffer> => {
     const rechtop = draai ? await (await basis()).rotate(draai, { background: "#ffffff" }).png().toBuffer() : await rechtopEens();
+    return onderkantVan(rechtop, drempel);
+  };
+  // Een foto van de eigen camera is het hele camerabeeld, maar de live meting (lib/kyc/document-live.ts) las alleen het
+  // kader met de kaart (kaderInVideo, hooguit 1400 px breed). Op het hele beeld vond de OCR de code dan soms niet: 12 nov,
+  // een echte poging (staand, 2160x3840): hele foto 0 van 8 pogingen, het kader in 1 poging met alle controlecijfers ok.
+  // Daarom als tweede poging precies wat de camera mat: eerst het kader, dan dezelfde onderkant.
+  const kader = async (): Promise<Buffer> => {
+    const rechtop = await rechtopEens();
+    const meta = await sharp(rechtop).metadata();
+    const breed = meta.width ?? 0;
+    const hoog = meta.height ?? 0;
+    const k = kaderInVideo(breed, hoog);
+    if (!k) throw new Error("leeg beeld");
+    const uitsnede = await sharp(rechtop)
+      .extract({ left: k.x, top: k.y, width: Math.min(k.w, breed - k.x), height: Math.min(k.h, hoog - k.y) })
+      .resize({ width: Math.min(KADER_BREEDTE, k.w) })
+      .png()
+      .toBuffer();
+    return onderkantVan(uitsnede, false);
+  };
+  const onderkantVan = async (rechtop: Buffer, drempel: boolean): Promise<Buffer> => {
     const meta = await sharp(rechtop).metadata();
     const breed = meta.width ?? 0;
     const hoog = meta.height ?? 0;
@@ -52,6 +76,7 @@ function uitsneden(bytes: Buffer): Uitsnede[] {
   // de waarschijnlijkste eerst: een rechte foto is in één poging (< 1 s) gelezen
   return [
     () => onderkant(0, false),
+    kader,
     async () => (await basis()).resize({ width: 2200, withoutEnlargement: false }).grayscale().normalise().sharpen().png().toBuffer(),
     () => onderkant(-2, false),
     () => onderkant(2, false),
