@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useFT } from "@/components/i18n/useFT";
+import { useDialog } from "@/components/app/useDialog";
 import {
   RONDLEIDING_KEY,
   RONDLEIDING_START,
@@ -82,24 +83,19 @@ export function WerkerRondleiding() {
     };
   }, [open, stap]);
 
-  useEffect(() => {
-    if (open) knop.current?.focus();
-  }, [open, i]);
-
   function sluit() {
     stand.current = { ...stand.current, gezien: true };
     bewaar(stand.current);
     setOpen(false);
   }
 
+  // Escape sluit, Tab blijft in de rondleiding (aria-modal zegt dat de rest van de pagina uit is) en de focus keert bij het
+  // sluiten terug naar waar hij vandaan kwam (bv. het vraagteken van Hulp). useDialog zet de focus eerst op het eerste element;
+  // het effect hieronder draait daarna en zet hem op "Volgende", ook bij elke nieuwe stap.
+  const dialoog = useDialog(open, sluit);
   useEffect(() => {
-    if (!open) return;
-    const toets = (e: KeyboardEvent) => {
-      if (e.key === "Escape") sluit();
-    };
-    window.addEventListener("keydown", toets);
-    return () => window.removeEventListener("keydown", toets);
-  });
+    if (open) knop.current?.focus();
+  }, [open, i]);
 
   if (!open) return null;
 
@@ -114,7 +110,7 @@ export function WerkerRondleiding() {
       : { top: `${Math.min(hoogte - 260, plek.bottom + 12)}px` };
 
   return (
-    <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-labelledby={titelId}>
+    <div ref={dialoog} className="fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-labelledby={titelId}>
       {/* Live gemeten (12 nov, 390 px): een ring-klasse zet zelf een box-shadow en botste met de dimlaag, en 55% donker
           was nauwelijks te zien. Daarom een outline in de merkkleur en 70% donker, allebei als inline-stijl. */}
       {plek ? (
@@ -135,24 +131,27 @@ export function WerkerRondleiding() {
         <div aria-hidden className="fixed inset-0" style={{ background: DIM }} />
       )}
       <div className="fixed inset-x-4 mx-auto max-w-sm rounded-2xl border border-hair bg-white p-5 shadow-lift" style={kaartStijl}>
-        <p className="text-xs font-semibold uppercase tracking-wide text-neutralx-500">
-          {t.stap.replace("{n}", String(i + 1)).replace("{m}", String(RONDLEIDING_STAPPEN.length))}
-        </p>
-        <h2 id={titelId} className="mt-1 font-display text-lg font-bold leading-tight text-ink">
-          {titel}
-        </h2>
-        <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{tekst}</p>
+        {/* de focus blijft op "Volgende" staan; de nieuwe stap wordt daarom voorgelezen via deze live-regio */}
+        <div aria-live="polite" aria-atomic="true">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutralx-500">
+            {t.stap.replace("{n}", String(i + 1)).replace("{m}", String(RONDLEIDING_STAPPEN.length))}
+          </p>
+          <h2 id={titelId} className="mt-1 font-display text-lg font-bold leading-tight text-ink">
+            {titel}
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{tekst}</p>
+        </div>
         <div className="mt-4 flex items-center gap-2">
-          <button type="button" onClick={sluit} className="btn-ghost text-sm">
+          <button type="button" onClick={sluit} className="btn-ghost min-h-[44px] text-sm">
             {t.overslaan}
           </button>
           <span className="flex-1" />
           {i > 0 && (
-            <button type="button" onClick={() => setI(i - 1)} className="btn-ghost text-sm">
+            <button type="button" onClick={() => setI(i - 1)} className="btn-ghost min-h-[44px] text-sm">
               {t.vorige}
             </button>
           )}
-          <button ref={knop} type="button" onClick={() => (laatste ? sluit() : setI(i + 1))} className="btn-primary text-sm">
+          <button ref={knop} type="button" onClick={() => (laatste ? sluit() : setI(i + 1))} className="btn-primary min-h-[44px] text-sm">
             {laatste ? t.klaar : t.volgende}
           </button>
         </div>

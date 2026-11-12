@@ -32,7 +32,11 @@ function BsnVeld({ loonheffingskorting }: { loonheffingskorting: boolean }) {
       });
       const d = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
       if (!res.ok) setFout(d.error?.message ?? t.mislukt);
-      else router.refresh();
+      else {
+        router.refresh();
+        // het veld verdwijnt na het opslaan: de focus naar de kop van de lijst, anders valt hij weg en leest een schermlezer niets voor
+        document.getElementById("gegevens-mist-kop")?.focus();
+      }
     } catch {
       setFout(t.mislukt);
     } finally {
@@ -57,7 +61,7 @@ function BsnVeld({ loonheffingskorting }: { loonheffingskorting: boolean }) {
           className="field-input w-44"
           placeholder="123456782"
         />
-        <button type="submit" disabled={busy || !bsn.trim()} className="btn-primary px-4 py-2 text-sm disabled:opacity-50">
+        <button type="submit" disabled={busy || !bsn.trim()} className="btn-primary min-h-[44px] px-4 py-2 text-sm disabled:opacity-50">
           {busy ? t.bezig : t.opslaan}
         </button>
       </div>
@@ -71,7 +75,7 @@ export function GegevensMist({ mist, soort, loonheffingskorting }: { mist: Gegev
   if (mist.length === 0) return null;
   return (
     <section aria-labelledby="gegevens-mist-kop" className="mb-6 rounded-2xl border border-warn/40 bg-warn/5 p-5">
-      <h2 id="gegevens-mist-kop" className="font-display text-base font-bold text-ink">
+      <h2 id="gegevens-mist-kop" tabIndex={-1} className="font-display text-base font-bold text-ink focus:outline-none">
         {vulIn(mist.length === 1 ? t.titelEen : t.titelMeer, { n: mist.length })}
       </h2>
       <p className="mt-1 text-sm text-neutralx-600">{t.uitleg}</p>
@@ -87,14 +91,14 @@ export function GegevensMist({ mist, soort, loonheffingskorting }: { mist: Gegev
           <li>
             <p className="text-sm font-semibold text-ink">{t.contract.kop}</p>
             <p className="text-xs text-neutralx-600">{t.contract.hint}</p>
-            <a href="#uitzendovereenkomst" className="mt-1 inline-block text-sm font-semibold text-brand-600 underline underline-offset-2">{t.contract.knop}</a>
+            <a href="#uitzendovereenkomst" className="mt-1 inline-flex min-h-[44px] items-center text-sm font-semibold text-brand-600 underline underline-offset-2">{t.contract.knop}</a>
           </li>
         )}
         {mist.includes("btw") && (
           <li>
             <p className="text-sm font-semibold text-ink">{t.btw.kop}</p>
             <p className="text-xs text-neutralx-600">{soort === "zzp" ? t.btw.hintZzp : t.btw.hintFlex}</p>
-            <Link href="/dashboard/fiscaal" className="mt-1 inline-block text-sm font-semibold text-brand-600 underline underline-offset-2">{t.btw.knop}</Link>
+            <Link href="/dashboard/fiscaal" className="mt-1 inline-flex min-h-[44px] items-center text-sm font-semibold text-brand-600 underline underline-offset-2">{t.btw.knop}</Link>
           </li>
         )}
         {mist.includes("postcode") && (

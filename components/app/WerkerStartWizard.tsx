@@ -167,7 +167,7 @@ export function WerkerStartWizard({
             type="button"
             onClick={() => setGesloten(true)}
             aria-label={t.sluiten}
-            className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full text-xl leading-none text-white/80 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            className="absolute right-2 top-2 grid h-11 w-11 place-items-center rounded-full text-xl leading-none text-white/80 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           >
             <span aria-hidden>×</span>
           </button>
@@ -203,25 +203,31 @@ export function WerkerStartWizard({
                 }`}
                 aria-current={stand === "actief" ? "step" : undefined}
               >
-                <button
-                  type="button"
-                  onClick={() => setOpen(open === k ? (first ?? "gegevens") : k)}
-                  aria-expanded={isOpen}
-                  disabled={stand !== "klaar"}
-                  className={`flex w-full items-center gap-2 text-left text-sm font-semibold disabled:cursor-default ${uitgeschakeld ? "text-neutralx-500" : "text-ink"}`}
-                >
-                  <span className="flex-1">{label[k]}</span>
-                  {stand === "klaar" && <span className="text-xs font-normal text-ok">{t.klaarLabel}</span>}
-                </button>
+                {/* alleen een afgeronde stap is te openen; de andere titels zijn gewone tekst (een uitgeschakelde knop leest een schermlezer als "niet beschikbaar") */}
+                {stand === "klaar" ? (
+                  <button
+                    type="button"
+                    onClick={() => setOpen(open === k ? (first ?? "gegevens") : k)}
+                    aria-expanded={isOpen}
+                    className="flex min-h-[44px] w-full items-center gap-2 text-left text-sm font-semibold text-ink"
+                  >
+                    <span className="flex-1">{label[k]}</span>
+                    <span className="text-xs font-normal text-ok">{t.klaarLabel}</span>
+                  </button>
+                ) : (
+                  <p className={`flex items-center gap-2 text-sm font-semibold ${uitgeschakeld ? "text-neutralx-500" : "text-ink"}`}>
+                    <span className="flex-1">{label[k]}</span>
+                  </p>
+                )}
                 {k === "kind" && kind && !isOpen && (
                   <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-neutralx-500">
                     <span>{t.chosen.replace("{kind}", t.kinds[kind][0] ?? "")}</span>
                     {richtingVast ? (
-                      <Link href="/dashboard/fiscaal" className="font-semibold text-brand-600 underline underline-offset-2">
+                      <Link href="/dashboard/fiscaal" aria-label={`${t.wijzig}: ${label[k]}`} className="inline-flex min-h-[44px] items-center font-semibold text-brand-600 underline underline-offset-2">
                         {t.wijzig}
                       </Link>
                     ) : (
-                      <button type="button" onClick={() => setOpen("kind")} className="font-semibold text-brand-600 underline underline-offset-2">
+                      <button type="button" onClick={() => setOpen("kind")} aria-label={`${t.wijzig}: ${label[k]}`} className="inline-flex min-h-[44px] items-center font-semibold text-brand-600 underline underline-offset-2">
                         {t.wijzig}
                       </button>
                     )}
@@ -230,7 +236,7 @@ export function WerkerStartWizard({
                 {k === "branches" && keuze && !isOpen && (
                   <p className="mt-0.5 flex items-center gap-x-2 text-xs text-neutralx-500">
                     <span className="min-w-0 truncate">{t.brancheChosen.replace("{namen}", brancheSamenvatting(keuze, t.alleBranches, t.brancheEn, t.brancheAndere, (b) => ft.cat[b]))}</span>
-                    <button type="button" onClick={() => setOpen("branches")} className="flex-shrink-0 font-semibold text-brand-600 underline underline-offset-2">
+                    <button type="button" onClick={() => setOpen("branches")} aria-label={`${t.wijzig}: ${label[k]}`} className="inline-flex min-h-[44px] flex-shrink-0 items-center font-semibold text-brand-600 underline underline-offset-2">
                       {t.wijzig}
                     </button>
                   </p>
@@ -238,7 +244,7 @@ export function WerkerStartWizard({
                 {stand !== "klaar" && k !== "kind" && k !== "branches" && <p className={`mt-1 text-xs leading-snug ${uitgeschakeld ? "text-neutralx-400" : "text-neutralx-600"}`}>{uitleg[k]}</p>}
                 {uitgeschakeld && <p className="mt-2 text-xs text-neutralx-400">{t.eerstDit}</p>}
                 {stand === "actief" && a && (
-                  <Link href={a.href} className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand-600 underline underline-offset-4 hover:text-brand-700">
+                  <Link href={a.href} className="mt-2 inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-brand-600 underline underline-offset-4 hover:text-brand-700">
                     {a.tekst} <span aria-hidden>›</span>
                   </Link>
                 )}
@@ -255,6 +261,19 @@ export function WerkerStartWizard({
                             type="button"
                             role="radio"
                             aria-checked={on}
+                            // keuzerondje met het toetsenbord: één tabstop (de gekozen, of de eerste), pijltjes verplaatsen de keuze
+                            tabIndex={on || (pick === null && opt === KINDS[0]) ? 0 : -1}
+                            onKeyDown={(e) => {
+                              const stap = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+                              if (!stap) return;
+                              e.preventDefault();
+                              const volgende = KINDS[(KINDS.indexOf(opt) + stap + KINDS.length) % KINDS.length];
+                              if (!volgende) return;
+                              setError(null);
+                              setPick(volgende);
+                              const knoppen = e.currentTarget.parentElement?.querySelectorAll<HTMLElement>('[role="radio"]');
+                              knoppen?.[KINDS.indexOf(volgende)]?.focus();
+                            }}
                             onClick={() => {
                               setError(null);
                               setPick(opt);
@@ -275,12 +294,12 @@ export function WerkerStartWizard({
                         // de server staat een andere richting na de ID-check alleen onder Fiscaal toe (api/me/richting)
                         <p className="text-xs leading-snug text-neutralx-600">
                           {t.richtingVast}{" "}
-                          <Link href="/dashboard/fiscaal" className="font-semibold text-brand-600 underline underline-offset-2">
+                          <Link href="/dashboard/fiscaal" className="inline-flex min-h-[44px] items-center font-semibold text-brand-600 underline underline-offset-2">
                             {t.naarFiscaal}
                           </Link>
                         </p>
                       ) : (
-                        <button type="button" onClick={save} disabled={!pick || busy} className="btn-primary text-sm disabled:opacity-50">
+                        <button type="button" onClick={save} disabled={!pick || busy} className="btn-primary min-h-[44px] text-sm disabled:opacity-50">
                           {busy ? t.saving : t.pick}
                         </button>
                       ))}
@@ -295,7 +314,7 @@ export function WerkerStartWizard({
                         type="button"
                         aria-pressed={alleGekozen}
                         onClick={() => setGekozen(alleGekozen ? new Set() : new Set(BRANCHE_OPTIES.map((o) => o.key)))}
-                        className={`rounded-full border px-3 py-1.5 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
+                        className={`min-h-[44px] rounded-full border px-4 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
                           alleGekozen ? "border-brand-500 bg-brand-500 text-white" : "border-hairstrong text-ink hover:border-brand-500"
                         }`}
                       >
@@ -309,7 +328,7 @@ export function WerkerStartWizard({
                             type="button"
                             aria-pressed={aan}
                             onClick={() => wissel(o.key)}
-                            className={`rounded-full border px-3 py-1.5 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
+                            className={`min-h-[44px] rounded-full border px-4 py-2 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
                               aan ? "border-brand-500 bg-brand-50 font-semibold text-ink" : "border-hairstrong text-neutralx-700 hover:border-brand-500"
                             }`}
                           >
@@ -319,7 +338,7 @@ export function WerkerStartWizard({
                       })}
                     </div>
                     {brancheFout && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{brancheFout}</p>}
-                    <button type="button" onClick={() => void bewaarBranches()} disabled={brancheBusy} className="btn-primary text-sm disabled:opacity-50">
+                    <button type="button" onClick={() => void bewaarBranches()} disabled={brancheBusy} className="btn-primary min-h-[44px] text-sm disabled:opacity-50">
                       {brancheBusy ? t.saving : t.pick}
                     </button>
                   </div>
@@ -335,7 +354,7 @@ export function WerkerStartWizard({
             {t.tweestapStep} <span className="font-normal text-neutralx-500">{ft.cert.optional}</span>
           </p>
           <p className="mt-1 text-xs leading-snug text-neutralx-600">{t.tweestapBody}</p>
-          <Link href="/dashboard/account/beveiliging" className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-brand-600 underline underline-offset-4 hover:text-brand-700">
+          <Link href="/dashboard/account/beveiliging" className="mt-1 inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-brand-600 underline underline-offset-4 hover:text-brand-700">
             {t.tweestapCta} <span aria-hidden>›</span>
           </Link>
         </div>
