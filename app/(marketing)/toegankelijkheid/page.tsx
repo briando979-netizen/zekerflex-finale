@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "@/components/marketing/LegalPage";
+import { canonical } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Toegankelijkheid" };
+export const metadata: Metadata = { title: "Toegankelijkheid", ...canonical("/toegankelijkheid", { title: "Toegankelijkheid" }) };
 
 export default function ToegankelijkheidPage() {
   return (

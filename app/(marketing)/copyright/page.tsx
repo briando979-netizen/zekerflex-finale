@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "@/components/marketing/LegalPage";
+import { canonical } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Copyright" };
+export const metadata: Metadata = { title: "Copyright", ...canonical("/copyright", { title: "Copyright" }) };
 
 export default function CopyrightPage() {
   const year = new Date().getFullYear();

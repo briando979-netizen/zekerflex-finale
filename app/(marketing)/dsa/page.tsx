@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "@/components/marketing/LegalPage";
+import { canonical } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Digital Services Act-informatie" };
+export const metadata: Metadata = { title: "Digital Services Act-informatie", ...canonical("/dsa", { title: "Digital Services Act-informatie" }) };
 
 export default function DsaPage() {
   return (
