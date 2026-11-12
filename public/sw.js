@@ -89,11 +89,32 @@ self.addEventListener("notificationclick", (event) => {
   );
 });
 
-// The push service told us the subscription is dead; ask a window to re-subscribe.
+// De pushdienst heeft de aanmelding vervangen of ingetrokken: meteen zelf opnieuw aanmelden en de
+// nieuwe aan de server geven, ook als er geen venster open is (vroeger ging er een bericht naar de
+// vensters, maar daar luisterde niemand naar). De sleutel komt van de oude aanmelding of van de server.
 self.addEventListener("pushsubscriptionchange", (event) => {
   event.waitUntil(
-    self.clients.matchAll({ includeUncontrolled: true }).then((clients) => {
-      clients.forEach((c) => c.postMessage({ type: "pushsubscriptionchange" }));
-    }),
+    (async () => {
+      const oud = event.oldSubscription || null;
+      let nieuw = event.newSubscription || null;
+      if (!nieuw) {
+        let sleutel = oud && oud.options ? oud.options.applicationServerKey : null;
+        if (!sleutel) {
+          const r = await fetch("/api/me/push", { credentials: "same-origin", cache: "no-store" });
+          const d = r.ok ? await r.json() : null;
+          sleutel = d && d.vapidPublicKey ? d.vapidPublicKey : null;
+        }
+        if (!sleutel) return;
+        nieuw = await self.registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: sleutel });
+      }
+      const json = nieuw.toJSON();
+      const vorig = oud && oud.endpoint !== json.endpoint ? { vorig: oud.endpoint } : {};
+      await fetch("/api/me/push", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys, ...vorig }),
+      });
+    })().catch(() => undefined),
   );
 });

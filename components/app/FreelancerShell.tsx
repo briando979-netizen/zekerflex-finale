@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
+import { PushSelfHeal } from "@/components/app/PushToggle";
 import { HulpCentrum } from "@/components/app/HulpCentrum";
 import { WerkerRondleiding } from "@/components/app/WerkerRondleiding";
 import type { HulpTeksten } from "@/lib/hulp/hulpjes";
@@ -153,6 +154,7 @@ export function FreelancerShell({
             </Link>
             {hulp && <HulpCentrum t={hulp} handleidingen={handleidingen} onboarding={onboarding} />}
             <NotificationsBell texts={ft.meldingen} />
+            <PushSelfHeal />
           </div>
           {/* in de kopbalk (een landmark), niet los onderaan de pagina */}
           <span className="sr-only">Ingelogd als {userName}</span>

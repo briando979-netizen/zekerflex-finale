@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { logoutAction } from "@/lib/auth/actions";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
+import { PushSelfHeal } from "@/components/app/PushToggle";
 import { RecentResponseAlert } from "@/components/app/RecentResponseAlert";
 import type { NavItem } from "@/components/app/AppShell";
 import { useT, setLocale } from "@/components/i18n/I18nProvider";
@@ -353,6 +354,7 @@ export function EmployerShell({
             </Link>
 
             <NotificationsBell />
+            <PushSelfHeal />
 
             <div ref={userMenuRef} className="relative">
               <button

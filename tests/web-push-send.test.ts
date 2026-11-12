@@ -111,7 +111,7 @@ describe("sendWebPush", () => {
     warn.mockRestore();
   });
 
-  it("disables a subscription made with another VAPID key (Apple and WNS say so), without a warning", async () => {
+  it("disables a subscription made with another VAPID key (Apple and WNS say so), and says why in the error journal", async () => {
     const { logger } = await import("@/lib/logger");
     const warn = vi.spyOn(logger, "warn").mockImplementation(() => undefined);
     const client = createECDH("prime256v1");
@@ -121,7 +121,8 @@ describe("sendWebPush", () => {
     expect(await sendWebPush(target("https://web.push.apple.com/QGabc"), "{}", { ttlSeconds: 60 })).toEqual({ ok: false, statusCode: 400, gone: true });
     vi.stubGlobal("fetch", vi.fn(async () => new Response("The public key used to sign JWT does not match with the one included in channel Url.", { status: 401 })) as never);
     expect(await sendWebPush(target("https://wns2-am3p.notify.windows.com/w/?token=x"), "{}", { ttlSeconds: 60 })).toEqual({ ok: false, statusCode: 401, gone: true });
-    expect(warn).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith("web push apparaat uitgezet", { pushService: "web.push.apple.com", status: 400, reden: "andere VAPID-sleutel" });
+    expect(warn).toHaveBeenCalledWith("web push apparaat uitgezet", { pushService: "wns2-am3p.notify.windows.com", status: 401, reden: "andere VAPID-sleutel" });
     // any other refusal stays a warning and keeps the subscription
     vi.stubGlobal("fetch", vi.fn(async () => new Response("rate limited", { status: 429 })) as never);
     expect(await sendWebPush(target("https://fcm.googleapis.com/fcm/send/x"), "{}", { ttlSeconds: 60 })).toEqual({ ok: false, statusCode: 429, gone: false });

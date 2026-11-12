@@ -7,6 +7,7 @@ const fpFindUnique = vi.fn();
 const subCount = vi.fn();
 const subUpsert = vi.fn();
 const subDeleteMany = vi.fn();
+const subFindUnique = vi.fn();
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     freelancerProfile: { findUnique: (...a: unknown[]) => fpFindUnique(...a) },
@@ -14,6 +15,7 @@ vi.mock("@/lib/prisma", () => ({
       count: (...a: unknown[]) => subCount(...a),
       upsert: (...a: unknown[]) => subUpsert(...a),
       deleteMany: (...a: unknown[]) => subDeleteMany(...a),
+      findUnique: (...a: unknown[]) => subFindUnique(...a),
     },
   },
 }));
@@ -40,6 +42,7 @@ beforeEach(() => {
   subCount.mockResolvedValue(0);
   subUpsert.mockResolvedValue({});
   subDeleteMany.mockResolvedValue({ count: 1 });
+  subFindUnique.mockResolvedValue(null);
 });
 afterEach(() => vi.clearAllMocks());
 
