@@ -125,13 +125,17 @@ export async function exportUserKv(userId: string): Promise<{ key: string; updat
     orderBy: { key: "asc" },
     take: 5000,
   });
-  return rows
+  const eigen = rows
     .filter((r) => keyBelongsTo(r.key, userId))
     .map((r) => ({
       key: r.key,
       updatedAt: r.updatedAt,
       value: SECRET_KEY_PREFIXES.some((p) => r.key.startsWith(p)) ? HIDDEN : redactSecrets(r.value),
     }));
+  // ZekerFlex Mail staat onder het adres, niet onder de userId (lib/mail/zf-accounts.ts); zonder het wachtwoord.
+  // Dynamisch geladen, zodat de mailmodule (TransIP) niet meekomt in alles wat deze lijst gebruikt.
+  const mail = await import("@/lib/mail/zf-accounts").then((m) => m.zfMailVoorInzage(userId)).catch(() => null);
+  return mail ? [...eigen, { ...mail, value: redactSecrets(mail.value) }] : eigen;
 }
 
 /** Prisma-filter voor de sleutels die een verwijderverzoek meteen wist. */

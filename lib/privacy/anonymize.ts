@@ -134,6 +134,16 @@ export async function anonymizeUser(
     if (wr.uploadId) uploadIds.add(wr.uploadId);
   }
 
+  // ZekerFlex Mail (lib/mail/zf-accounts.ts): vóór de transactie, want die wist zfmail:user:<id> (de weg naar de
+  // mailbox). Geblokkeerd, zonder naam en herstel-adres; opheffen bij TransIP is een eigenaar-taak. Een storing hier
+  // houdt het wissen van het account niet tegen.
+  await import("@/lib/mail/zf-accounts")
+    .then((m) => m.wisZfMailVan(userId))
+    .then((u) => {
+      if (u === "gewist") cleared.zfmail = 1;
+    })
+    .catch((err) => logger.warn("erasure: zekerflex-mail wissen mislukt", { soort: err instanceof Error ? err.name : "onbekend" }));
+
   await prisma.$transaction(async (tx) => {
     await tx.user.update({
       where: { id: userId },

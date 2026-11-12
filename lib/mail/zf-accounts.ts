@@ -205,6 +205,66 @@ export async function createAccount(who: Creator, input: z.infer<typeof createSc
   return account;
 }
 
+// --- AVG (12 nov 2026, besluit 86): de mailbox hangt aan een userId, dus hij is persoonlijk -------------------------------
+
+/** userId van een mailbox waarvan het account is gewist (AVG); het adres blijft vergrendeld. */
+export const ZF_GEWIST = "gewist";
+
+/**
+ * Inzage (art. 15): de mailbox van deze gebruiker, zonder het verzegelde wachtwoord en zonder wat over anderen gaat
+ * (wie in de geschiedenis iets deed, en de notitie van een beheerder). Staat onder het adres, niet onder de userId,
+ * dus exportUserKv vindt hem niet vanzelf.
+ */
+export async function zfMailVoorInzage(userId: string): Promise<{ key: string; updatedAt: Date; value: Record<string, unknown> } | null> {
+  const a = await accountOfUser(userId);
+  if (!a) return null;
+  const { pendingPasswordSealed: _geheim, history, ...rest } = a;
+  void _geheim;
+  return {
+    key: accountKey(a.address),
+    updatedAt: new Date(a.activatedAt ?? a.createdAt),
+    value: { ...rest, history: history.map((h) => ({ at: h.at, what: h.what.split(":")[0] ?? h.what })) },
+  };
+}
+
+/**
+ * Wissen (art. 17, vanuit anonymizeUser): de mailbox geblokkeerd (zoals adminAction "blokkeer", met de koppeling aan de
+ * mailpagina weg), zonder naam, herstel-adres en wachtwoord, userId "gewist", en in de geschiedenis alleen "gewist (AVG)".
+ * Het adres blijft vergrendeld: niemand kan het opnieuw claimen en de mail van de vorige eigenaar krijgen. De mailbox bij
+ * TransIP opheffen is een eigenaar-taak (lib/admin/owner-todos.ts), niet automatisch. Een tweede keer doet niets.
+ */
+export async function wisZfMailVan(userId: string, nu: Date = new Date()): Promise<"geen" | "gewist"> {
+  const address = await kvGet<string>(userKey(userId));
+  if (!address) return "geen";
+  const account = await kvGet<ZfMailAccount>(accountKey(address));
+  if (!account || account.userId === ZF_GEWIST) return "geen";
+  const conn = await getMailboxConnection(userId).catch(() => null);
+  if (conn?.email === account.address) await deleteMailboxConnection(userId);
+  const gewist: ZfMailAccount = {
+    address: account.address,
+    localPart: account.localPart,
+    userId: ZF_GEWIST,
+    tenantId: account.tenantId,
+    displayName: "",
+    status: "geblokkeerd",
+    recoveryEmail: null,
+    createdAt: account.createdAt,
+    activatedAt: account.activatedAt,
+    history: [{ at: nu.toISOString(), what: "gewist (AVG)", by: "systeem" }],
+  };
+  await kvSet(accountKey(address), gewist);
+  await kvDelete(userKey(userId));
+  return "gewist";
+}
+
+/** Adressen van gewiste accounts die bij TransIP nog een mailbox hebben (zonder sleutel of bij een storing: alle gewiste). */
+export async function teOpheffenBijTransip(): Promise<string[]> {
+  const gewist = (await listAccounts()).filter((a) => a.userId === ZF_GEWIST);
+  if (gewist.length === 0) return [];
+  const bij = await takenAtHost().catch(() => null);
+  return gewist.filter((a) => !bij || bij.size === 0 || bij.has(a.localPart.toLowerCase())).map((a) => a.address);
+}
+
 export async function listAccounts(): Promise<ZfMailAccount[]> {
   const all = await kvListValues<ZfMailAccount>("zfmail:account:", 5000);
   return all.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
