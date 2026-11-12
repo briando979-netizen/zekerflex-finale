@@ -34,8 +34,25 @@ function referrerHost(ref: string | undefined): string | null {
   }
 }
 
+/**
+ * Alleen hele tekens: een emoji die door een `slice` (hier of in de browser) doormidden is geknipt, laat een losse
+ * surrogaathelft achter, en daarop weigert Prisma de héle batch ("unexpected end of hex escape", foutenlogboek
+ * 10 nov). Een NUL-teken past niet in Postgres-tekst. Beide gaan eruit; hele paren blijven staan.
+ */
+export function heleTekens(s: string): string {
+  return s.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\uD800-\uDFFF]|\u0000/g, (m) => (m.length === 2 ? m : ""));
+}
+
+/** Zelfde voor elke tekst (sleutel en waarde) in de meta van de browser; diepte begrensd. */
+function heleMeta(v: unknown, diepte = 0): unknown {
+  if (typeof v === "string") return heleTekens(v);
+  if (diepte > 6 || v === null || typeof v !== "object") return v;
+  if (Array.isArray(v)) return v.map((x) => heleMeta(x, diepte + 1));
+  return Object.fromEntries(Object.entries(v).map(([k, x]) => [heleTekens(k), heleMeta(x, diepte + 1)]));
+}
+
 function cleanPath(path: string): string {
-  const p = path.trim().slice(0, 512);
+  const p = heleTekens(path.trim().slice(0, 512));
   return p.startsWith("/") ? p : `/${p}`;
 }
 
@@ -63,12 +80,12 @@ export async function trackEvents(
     .map((e) => ({
       type: e.type,
       path: cleanPath(e.path),
-      label: e.label?.slice(0, 200) ?? null,
+      label: typeof e.label === "string" ? heleTekens(e.label.slice(0, 200)) : null,
       referrerHost: referrerHost(e.referrer),
-      sessionId: ctx.sessionId.slice(0, 64),
+      sessionId: heleTekens(ctx.sessionId.slice(0, 64)),
       userId: ctx.userId ?? null,
       uaHash,
-      meta: (e.meta ?? {}) as Prisma.InputJsonValue,
+      meta: heleMeta(e.meta ?? {}) as Prisma.InputJsonValue,
     }));
 
   if (rows.length === 0) return { accepted: 0 };
@@ -98,9 +115,9 @@ export async function recordServerEvent(input: {
       data: {
         type: input.type ?? AnalyticsEventType.CUSTOM,
         path: cleanPath(input.path),
-        label: input.label.slice(0, 200),
+        label: heleTekens(input.label.slice(0, 200)),
         sessionId: "server",
-        meta: (input.meta ?? {}) as Prisma.InputJsonValue,
+        meta: heleMeta(input.meta ?? {}) as Prisma.InputJsonValue,
       },
     });
   } catch (err) {

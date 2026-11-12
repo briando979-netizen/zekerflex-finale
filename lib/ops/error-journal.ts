@@ -284,6 +284,9 @@ const IGNORED_DIGEST = /^(NEXT_REDIRECT|NEXT_NOT_FOUND|NEXT_HTTP_ERROR_FALLBACK|
 export function recordRequestError(err: unknown, request: { method: string }, context: { routePath: string; routeType: string }): void {
   const digest = typeof (err as { digest?: unknown } | null)?.digest === "string" ? (err as { digest: string }).digest : "";
   if (IGNORED_DIGEST.test(digest)) return;
+  // Uitgelogd tijdens het laden van een pagina: requirePrincipal in de pagina wint soms van de redirect in de
+  // layout. Het foutscherm stuurt dan zelf naar het inloggen (lib/ops/uitgelogd.ts); geen storing (12 nov).
+  if (context.routeType === "render" && (err as { code?: unknown } | null)?.code === "UNAUTHENTICATED") return;
   logger.error(`unhandled ${context.routeType} error`, { route: `${request.method} ${context.routePath}`, error: err, ...(digest ? { digest } : {}) });
 }
 
