@@ -97,6 +97,7 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/onboarding/overdracht", // starting a hand-off to the phone needs the worker's session
     "/api/onboarding/document-lezen",
     "/api/onboarding/gezicht-live", // live face guidance during the ID scan: the worker's session only
+    "/api/onboarding/document-live", // live document guidance (code readable, photo size): the worker's session only
     "/api/locatie/portofoon", // radio channels: session only
     "/api/me/kluis", // a worker's access codes: session only
     "/api/me/passkeys", // passkeys toevoegen/verwijderen: alleen met een sessie (en opnieuw bevestigen)
