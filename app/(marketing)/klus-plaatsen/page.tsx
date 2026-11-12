@@ -68,7 +68,8 @@ export default async function KlusPlaatsenPage(props: { searchParams: Promise<{ 
         }}
       />
       <div className="hero-ink text-white">
-        <div className="shell py-16 md:py-20">
+        {/* op de telefoon een compactere kop (12 nov, meting op 390 px): anders lag het eerste veld onder de cookiemelding */}
+        <div className="shell py-8 md:py-20">
           <p className="eyebrow text-brand-mint">
             <Link href="/voor-bedrijven" className="hover:underline">
               Voor bedrijven
