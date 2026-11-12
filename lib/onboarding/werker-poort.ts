@@ -34,6 +34,23 @@ export function werkerOnboardingKlaar(f: WerkerPoortFeiten): boolean {
   return f.soortGekozen && f.branchesGekozen && f.gegevensIngevuld && f.identiteitIngestuurd && f.fotoGezet;
 }
 
+/** De verplichte stappen (zoals werkerOnboardingKlaar) die nog open staan. */
+export function openVerplicht(f: WerkerPoortFeiten): number {
+  return [f.soortGekozen, f.branchesGekozen, f.gegevensIngevuld, f.identiteitIngestuurd, f.fotoGezet].filter((x) => !x).length;
+}
+
+/**
+ * Wat het klaar-scherm van Verificatie (gegevens en ID af) als volgende stap toont. "foto": alleen de profielfoto mist
+ * nog, dus rechtstreeks naar /dashboard/eerste-indruk?stap=foto. "stappen": er mist nog iets anders (bijv. branches bij
+ * een account van vóór 10 nov); de fotopagina stuurt dan terug naar Verificatie, dus naar de stappen bovenaan Klussen.
+ * Gemeten 12 nov: 6 van de 7 geverifieerde nieuwe werkers zonder foto hadden verder alles ingevuld, kwamen nooit op de
+ * fotopagina en lazen hier "je kunt diensten aannemen".
+ */
+export function volgendeNaVerificatie(f: WerkerPoortFeiten | null): "klaar" | "foto" | "stappen" {
+  if (!f || werkerOnboardingKlaar(f)) return "klaar";
+  return werkerOnboardingKlaar({ ...f, fotoGezet: true }) ? "foto" : "stappen";
+}
+
 /**
  * Wat een werker al mag zien zolang de onboarding niet klaar is: de schermen waar je
  * de stappen invult (Verificatie, Fiscaal) en je account (uitloggen, taal, account

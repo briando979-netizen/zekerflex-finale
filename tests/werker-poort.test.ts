@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { toegestaanTijdensOnboarding, werkerOnboardingKlaar, type WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
+import { openVerplicht, toegestaanTijdensOnboarding, volgendeNaVerificatie, werkerOnboardingKlaar, type WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
 
 // De onboarding van de werker (10 nov 2026). Sinds 12 nov is de app open en wacht alleen reageren op de onboarding;
 // tweestapsverificatie is dan optioneel (eigenaar).
@@ -13,6 +13,29 @@ const ALLES: WerkerPoortFeiten = {
   tweestapAan: true,
   fotoGezet: true,
 };
+
+describe("volgendeNaVerificatie (klaar-scherm van Verificatie)", () => {
+  it("alleen de foto mist: rechtstreeks naar de foto", () => {
+    expect(volgendeNaVerificatie({ ...ALLES, fotoGezet: false })).toBe("foto");
+    expect(volgendeNaVerificatie({ ...ALLES, fotoGezet: false, tweestapAan: false, werkrechtIngevuld: false })).toBe("foto");
+  });
+
+  it("er mist nog iets anders (branches bij een oud account): naar de stappen, niet naar de fotopagina die terugstuurt", () => {
+    expect(volgendeNaVerificatie({ ...ALLES, fotoGezet: false, branchesGekozen: false })).toBe("stappen");
+    expect(volgendeNaVerificatie({ ...ALLES, branchesGekozen: false })).toBe("stappen");
+  });
+
+  it("klaar, een testaccount of een storing (geen feiten): het gewone klaar-scherm", () => {
+    expect(volgendeNaVerificatie(ALLES)).toBe("klaar");
+    expect(volgendeNaVerificatie(null)).toBe("klaar");
+  });
+
+  it("telt alleen de verplichte stappen die open staan", () => {
+    expect(openVerplicht(ALLES)).toBe(0);
+    expect(openVerplicht({ ...ALLES, fotoGezet: false, tweestapAan: false })).toBe(1);
+    expect(openVerplicht({ ...ALLES, fotoGezet: false, branchesGekozen: false })).toBe(2);
+  });
+});
 
 describe("werkerOnboardingKlaar", () => {
   it("alleen klaar als elke verplichte stap is ingevuld", () => {

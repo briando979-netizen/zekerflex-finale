@@ -21,6 +21,8 @@ import { WerkrechtPanel } from "@/components/app/WerkrechtPanel";
 import { werkrechtVoorWerk, werkrechtEisAan } from "@/lib/werkrecht/store";
 import { leesWieBenJij } from "@/lib/onboarding/wie-ben-jij-opslag";
 import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
+import { openVerplicht, volgendeNaVerificatie } from "@/lib/onboarding/werker-poort";
+import { nogStappenTekst } from "@/lib/onboarding/laat-weten";
 import { beginStap } from "@/lib/onboarding/wie-ben-jij";
 import { isReservedTestAddress } from "@/lib/mail";
 import { featureEnabled } from "@/lib/flags";
@@ -30,7 +32,8 @@ export const dynamic = "force-dynamic";
 export default async function VerificatiePage() {
   const principal = await requirePrincipal();
   const pt = AUTH_DICTS[await getLocale()].page;
-  const klaar = (await getFreelancerDict()).profielAf.klaar;
+  const fd = await getFreelancerDict();
+  const klaar = fd.profielAf.klaar;
   // back from Stripe (or webhook not configured): fetch the result before rendering
   await syncStripeIdentity(principal.userId);
   const [o, lastCheck, fiscal, werkrecht, werkrechtVragen] = await Promise.all([
@@ -46,13 +49,26 @@ export default async function VerificatiePage() {
   ]);
 
   if (o.profileComplete) {
+    // Gegevens en ID zijn af, maar reageren vraagt ook de rest van de onboarding (de profielfoto, of branches bij een
+    // oud account): dan niet "je kunt diensten aannemen", maar de volgende stap (lib/onboarding/werker-poort.ts).
+    const poortNu = isReservedTestAddress(principal.email) ? null : await werkerPoortStand(principal.userId).catch(() => null);
+    const volgende = volgendeNaVerificatie(poortNu);
     return (
       <div className="mx-auto max-w-2xl">
         <BackLink fallbackHref="/dashboard/account" label={pt.back} />
         <PageHeader title={pt.doneTitle} subtitle={pt.doneSub} />
+        {volgende === "foto" && (
+          <div className="mb-6 card p-5">
+            <p className="text-sm font-semibold text-ink">{fd.start.fotoStep}</p>
+            <p className="mt-1 text-sm text-neutralx-600">{fd.start.fotoBody}</p>
+            <Link href="/dashboard/eerste-indruk?stap=foto" className="btn-primary mt-4 inline-flex">{fd.start.fotoCta}</Link>
+          </div>
+        )}
         <Panel title="Status">
           <div className="px-5 py-6">
-            {werkrecht.ok ? (
+            {volgende !== "klaar" && poortNu ? (
+              <StatusPill tone="warn">{nogStappenTekst(openVerplicht(poortNu), fd.start, fd.intl)}</StatusPill>
+            ) : werkrecht.ok ? (
               <StatusPill tone="ok">Geverifieerd — je kunt diensten aannemen</StatusPill>
             ) : (
               <StatusPill tone="warn">{pt.werkrecht.nodig}</StatusPill>
