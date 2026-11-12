@@ -60,7 +60,27 @@ export function bsnVoorstelUitRegels(formaat: MrzFormaat, regels: string[], nu: 
 export function bsnVoorstelPatch(
   f: Pick<FiscalProfile, "workerKind" | "bsnHash">,
   voorstel: BsnVoorstel | null,
-): Pick<FiscalProfile, "bsnVoorstelHash" | "bsnVoorstelLast4"> | null {
+  nu: Date = new Date(),
+): Pick<FiscalProfile, "bsnVoorstelHash" | "bsnVoorstelLast4" | "bsnVoorstelAt"> | null {
   if (!voorstel || f.workerKind !== "uitzendkracht" || f.bsnHash) return null;
-  return { bsnVoorstelHash: voorstel.hash, bsnVoorstelLast4: voorstel.last4 };
+  return { bsnVoorstelHash: voorstel.hash, bsnVoorstelLast4: voorstel.last4, bsnVoorstelAt: nu.toISOString() };
+}
+
+// --- het voorstel opruimen ---------------------------------------------------------------------------------------
+// fiscal: valt onder de bewaarplicht van de loonadministratie en blijft bij het wissen van een account staan. Een
+// voorstel dat de werker nooit bevestigde, valt daar niet onder: het gaat weg bij het wissen (lib/privacy/anonymize.ts)
+// en na 30 dagen zonder antwoord (retentieregel bsn_voorstel, lib/privacy/sweep.ts). Een bevestigd BSN blijft staan.
+
+/** Alle velden van het voorstel leeg; de rest van de fiscale gegevens blijft. */
+export const ZONDER_BSN_VOORSTEL = { bsnVoorstelHash: null, bsnVoorstelLast4: null, bsnVoorstelAt: null } as const;
+
+export function heeftBsnVoorstel(f: Partial<Pick<FiscalProfile, "bsnVoorstelHash" | "bsnVoorstelLast4" | "bsnVoorstelAt">>): boolean {
+  return Boolean(f.bsnVoorstelHash || f.bsnVoorstelLast4 || f.bsnVoorstelAt);
+}
+
+/** Is het voorstel van vóór `grens`? Zonder (leesbaar) tijdstip telt het als verlopen. */
+export function bsnVoorstelVerlopen(f: Partial<Pick<FiscalProfile, "bsnVoorstelHash" | "bsnVoorstelLast4" | "bsnVoorstelAt">>, grens: Date): boolean {
+  if (!heeftBsnVoorstel(f)) return false;
+  const t = f.bsnVoorstelAt ? Date.parse(f.bsnVoorstelAt) : Number.NaN;
+  return !Number.isFinite(t) || t < grens.getTime();
 }

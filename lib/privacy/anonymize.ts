@@ -8,6 +8,7 @@ import { erasableKvWhere } from "@/lib/privacy/user-kv";
 import { wisChatlogVan } from "@/lib/learn/store";
 import { wisPersoonUitLocatie } from "@/lib/locatie/avg";
 import { wisBankrekeningVan } from "@/lib/privacy/bank-wissen";
+import { wisBsnVoorstelVan } from "@/lib/fiscal/bsn-voorstel";
 import { ERASED_EMAIL_DOMAIN } from "@/lib/privacy/gewist";
 import { overdrachtUploads } from "@/lib/kyc/overdracht";
 import { wisVerlatenOrganisaties } from "@/lib/afspraken/bewaren";
@@ -291,6 +292,14 @@ export async function anonymizeUser(
       if (u !== "geen") cleared.bank_account = 1;
     })
     .catch((err) => logger.warn("erasure: bankrekening wissen mislukt", { error: (err as Error).message }));
+
+  // Het BSN dat van het ID is gelezen maar nooit bevestigd (lib/kyc/bsn-uit-document.ts): fiscal: blijft (bewaarplicht),
+  // dit voorstel valt daar niet onder. Best effort, zoals hierboven.
+  await wisBsnVoorstelVan(userId)
+    .then((ja) => {
+      if (ja) cleared.bsn_voorstel = 1;
+    })
+    .catch((err) => logger.warn("erasure: bsn-voorstel wissen mislukt", { soort: err instanceof Error ? err.name : "onbekend" }));
 
   // Op locatie (kentekens, logregels, het kenteken van de werker): best effort, het wissen houdt niet op een fout
   await wisPersoonUitLocatie(userId)

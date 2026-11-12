@@ -204,6 +204,15 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
     blocksErasure: false,
   },
   {
+    key: "bsn_voorstel",
+    label: "BSN gelezen van je ID-kaart of paspoort dat je nog niet hebt bevestigd (alleen versleuteld en de laatste 4 cijfers)",
+    days: 30,
+    anchor: "gelezen bij de ID-controle",
+    basis: "Alleen om je het BSN te laten bevestigen voor de verloning; daarna geen grondslag — art. 5(1)(e) AVG. Een bevestigd BSN valt onder de bewaarplicht van de loonadministratie",
+    onExpiry: "delete",
+    blocksErasure: false,
+  },
+  {
     key: "personal_settings",
     label: "Persoonlijke instellingen en notities (agenda, ritten, chat, contacten, AI-geheugen, tweestapsverificatie)",
     days: 0,

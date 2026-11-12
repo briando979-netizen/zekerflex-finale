@@ -123,6 +123,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
       if (patch.bsnHash) {
         patch.bsnVoorstelHash = null;
         patch.bsnVoorstelLast4 = null;
+        patch.bsnVoorstelAt = null;
       }
     }
 

@@ -46,6 +46,8 @@ export interface FiscalProfile {
    */
   bsnVoorstelHash?: string | null;
   bsnVoorstelLast4?: string | null;
+  /** wanneer het voorstel is gelezen (ISO): na 30 dagen zonder antwoord ruimt de retentie-sweep het op */
+  bsnVoorstelAt?: string | null;
   loonheffingskorting: boolean;
   /** geboortedatum (YYYY-MM-DD) — voor jeugdloon / WML-vloer */
   birthDate: string | null;
@@ -78,6 +80,7 @@ export const EMPTY_FISCAL: FiscalProfile = {
   bsnHash: null,
   bsnVoorstelHash: null,
   bsnVoorstelLast4: null,
+  bsnVoorstelAt: null,
   loonheffingskorting: true,
   birthDate: null,
   invoiceMode: null,
@@ -89,6 +92,8 @@ export const EMPTY_FISCAL: FiscalProfile = {
 };
 
 const PREFIX = "fiscal:";
+/** Het KV-voorvoegsel van de fiscale gegevens (voor de opruimronde van het BSN-voorstel, lib/fiscal/bsn-voorstel.ts). */
+export const FISCAL_KV_PREFIX = PREFIX;
 const key = (userId: string) => `${PREFIX}${userId}`;
 
 export async function getFiscal(userId: string): Promise<FiscalProfile> {
