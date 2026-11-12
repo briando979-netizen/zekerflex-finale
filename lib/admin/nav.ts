@@ -57,6 +57,7 @@ export const ADMIN_HUBS: AdminHub[] = [
     icon: "money",
     pages: [
       { href: "/admin/financien", label: "Financiën & winst" },
+      { href: "/admin/accountant", label: "Accountant" },
       { href: "/admin/facturen", label: "Facturen" },
       { href: "/admin/efacturen", label: "E-facturen" },
       { href: "/admin/stripe", label: "Stripe" },
