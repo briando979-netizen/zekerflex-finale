@@ -237,8 +237,8 @@ export default async function AccountPage() {
             <span className="text-trust" aria-hidden>→</span>
           </Link>
         )}
-        <LevelCard />
-        <ReferralCard />
+        <LevelCard texts={ft.rewards.level} />
+        <ReferralCard texts={ft.rewards.uitnodiging} />
       </div>
 
       <div className="mt-4 space-y-3">

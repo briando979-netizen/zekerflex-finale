@@ -293,7 +293,7 @@ export function ChatSettingsModal({ onClose }: { onClose: () => void }) {
   return (
     <Shell title={chat.modals.chatInstellingen} onClose={onClose}>
       <div className="space-y-5">
-        <PushToggle />
+        <PushToggle cardTexts={chat.instellingen.pushKaart} />
         <div>
           <label className="field-label">{chat.modals.statusbericht}</label>
           <input

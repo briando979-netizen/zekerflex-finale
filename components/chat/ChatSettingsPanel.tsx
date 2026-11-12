@@ -288,7 +288,7 @@ export function ChatSettingsPanel({
       <div>
         {back(t.meldingen)}
         <div className="px-4 py-3">
-          <PushToggle />
+          <PushToggle cardTexts={t.pushKaart} />
         </div>
         <Row title={t.berichtvoorbeeld} sub={t.berichtvoorbeeldSub} right={<Toggle on={s?.notificationPreview ?? true} onChange={(v) => void save({ notificationPreview: v })} />} />
         <Head>{vulIn(t.gedempteChats, { aantal: overview.muted.length })}</Head>

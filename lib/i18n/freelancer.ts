@@ -1,5 +1,6 @@
 import type { Locale } from "@/lib/i18n/config";
 import { PUSH_KAART_NL, ZIEK_NL, THEMA_NL } from "@/lib/account/teksten";
+import { LEVEL_KAART_NL, UITNODIGING_NL } from "@/lib/rewards/kaart-teksten";
 import { WIE_TEKSTEN } from "@/lib/i18n/wie-ben-jij";
 import { MELDING_NL } from "@/lib/notifications/feed-teksten";
 import { NOTIFICATIONS_NL } from "@/components/app/notifications-texts";
@@ -376,6 +377,10 @@ const nl = {
     push: PUSH_KAART_NL,
     ziek: ZIEK_NL,
     thema: THEMA_NL,
+  },
+  rewards: {
+    level: LEVEL_KAART_NL,
+    uitnodiging: UITNODIGING_NL,
   },
   rondleiding: {
     stap: "Stap {n} van {m}",
@@ -1929,6 +1934,30 @@ const en: FreelancerDict = {
     },
     thema: { weergave: "Appearance", licht: "Light", donker: "Dark", zetLichtAan: "Switch to light appearance", zetDonkerAan: "Switch to dark appearance" },
   },
+  rewards: {
+    level: {
+      locale: "en-GB",
+      jouwLevel: "Your level",
+      nogTot: "{n} XP to go until {volgende}",
+      jouwVoordelen: "Your benefits",
+      badges: "Badges",
+      verberg: "Hide all levels",
+      bekijk: "View all levels",
+      vanaf: "from {n} XP",
+      xpUitleg: "XP: 100 per completed job, 25 per review, 500 extra for a 4.8+ average",
+      xpBank: ", plus bonuses for ZekerFlex Bank, pots and a card.",
+      xpEinde: ".",
+    },
+    uitnodiging: {
+      locale: "en-GB",
+      titel: "Invite someone, get {bedrag}",
+      uitleg: "They get a {bedrag} welcome bonus. Paid out to your ZekerFlex Bank once their first job is completed.",
+      uitgenodigd: " {n} invited so far · {bedrag} earned.",
+      knop: "Share your link",
+      gekopieerd: "Link copied ✓",
+      deelTekst: "Work and earn via ZekerFlex — with your own free bank account. Sign up with my link and get a {bedrag} welcome bonus: {link}",
+    },
+  },
   rondleiding: {
     stap: "Step {n} of {m}",
     volgende: "Next",
@@ -3474,6 +3503,30 @@ const pl: FreelancerDict = {
       mislukt: "Nie udało się",
     },
     thema: { weergave: "Wygląd", licht: "Jasny", donker: "Ciemny", zetLichtAan: "Włącz jasny wygląd", zetDonkerAan: "Włącz ciemny wygląd" },
+  },
+  rewards: {
+    level: {
+      locale: "pl-PL",
+      jouwLevel: "Twój poziom",
+      nogTot: "Jeszcze {n} XP do {volgende}",
+      jouwVoordelen: "Twoje korzyści",
+      badges: "Odznaki",
+      verberg: "Ukryj wszystkie poziomy",
+      bekijk: "Zobacz wszystkie poziomy",
+      vanaf: "od {n} XP",
+      xpUitleg: "XP: 100 za każde zakończone zlecenie, 25 za opinię, 500 dodatkowo przy średniej 4,8+",
+      xpBank: ", plus bonusy za ZekerFlex Bank, skarbonki i kartę.",
+      xpEinde: ".",
+    },
+    uitnodiging: {
+      locale: "pl-PL",
+      titel: "Zaproś kogoś i otrzymaj {bedrag}",
+      uitleg: "Zaproszona osoba dostaje {bedrag} bonusu powitalnego. Wypłata na Twój ZekerFlex Bank po zakończeniu jej pierwszego zlecenia.",
+      uitgenodigd: " Zaproszono już {n} · zarobiono {bedrag}.",
+      knop: "Udostępnij swój link",
+      gekopieerd: "Link skopiowany ✓",
+      deelTekst: "Pracuj i zarabiaj przez ZekerFlex — z własnym darmowym kontem bankowym. Zarejestruj się z moim linkiem i odbierz {bedrag} bonusu powitalnego: {link}",
+    },
   },
   rondleiding: {
     stap: "Krok {n} z {m}",
@@ -5021,6 +5074,30 @@ const ro: FreelancerDict = {
     },
     thema: { weergave: "Aspect", licht: "Luminos", donker: "Întunecat", zetLichtAan: "Activează aspectul luminos", zetDonkerAan: "Activează aspectul întunecat" },
   },
+  rewards: {
+    level: {
+      locale: "ro-RO",
+      jouwLevel: "Nivelul tău",
+      nogTot: "Încă {n} XP până la {volgende}",
+      jouwVoordelen: "Avantajele tale",
+      badges: "Insigne",
+      verberg: "Ascunde toate nivelurile",
+      bekijk: "Vezi toate nivelurile",
+      vanaf: "de la {n} XP",
+      xpUitleg: "XP: 100 pentru fiecare lucrare finalizată, 25 pentru o recenzie, 500 în plus la o medie de 4,8+",
+      xpBank: ", plus bonusuri pentru ZekerFlex Bank, pușculițe și un card.",
+      xpEinde: ".",
+    },
+    uitnodiging: {
+      locale: "ro-RO",
+      titel: "Invită pe cineva și primești {bedrag}",
+      uitleg: "Persoana invitată primește un bonus de bun venit de {bedrag}. Plătit în ZekerFlex Bank după ce își finalizează prima lucrare.",
+      uitgenodigd: " Deja {n} invitați · {bedrag} câștigați.",
+      knop: "Distribuie linkul tău",
+      gekopieerd: "Link copiat ✓",
+      deelTekst: "Muncește și câștigă prin ZekerFlex — cu propriul cont bancar gratuit. Înscrie-te cu linkul meu și primești un bonus de bun venit de {bedrag}: {link}",
+    },
+  },
   rondleiding: {
     stap: "Pasul {n} din {m}",
     volgende: "Înainte",
@@ -6566,6 +6643,30 @@ const uk: FreelancerDict = {
       mislukt: "Не вдалося",
     },
     thema: { weergave: "Вигляд", licht: "Світлий", donker: "Темний", zetLichtAan: "Увімкнути світлий вигляд", zetDonkerAan: "Увімкнути темний вигляд" },
+  },
+  rewards: {
+    level: {
+      locale: "uk-UA",
+      jouwLevel: "Твій рівень",
+      nogTot: "Ще {n} XP до {volgende}",
+      jouwVoordelen: "Твої переваги",
+      badges: "Значки",
+      verberg: "Сховати всі рівні",
+      bekijk: "Переглянути всі рівні",
+      vanaf: "від {n} XP",
+      xpUitleg: "XP: 100 за кожну виконану роботу, 25 за відгук, ще 500 при середній оцінці 4,8+",
+      xpBank: ", плюс бонуси за ZekerFlex Bank, скарбнички та картку.",
+      xpEinde: ".",
+    },
+    uitnodiging: {
+      locale: "uk-UA",
+      titel: "Запроси когось і отримай {bedrag}",
+      uitleg: "Вони отримають вітальний бонус {bedrag}. Виплата на твій ZekerFlex Bank, щойно буде виконано їхню першу роботу.",
+      uitgenodigd: " Уже запрошено {n} · зароблено {bedrag}.",
+      knop: "Поділитися посиланням",
+      gekopieerd: "Посилання скопійовано ✓",
+      deelTekst: "Працюй і заробляй через ZekerFlex — з власним безкоштовним банківським рахунком. Зареєструйся за моїм посиланням і отримай вітальний бонус {bedrag}: {link}",
+    },
   },
   rondleiding: {
     stap: "Крок {n} з {m}",
