@@ -11,6 +11,7 @@ vi.mock("@/lib/notifications/push", () => ({ sendUserPush: (...a: unknown[]) => 
 vi.mock("@/lib/mail", () => ({ sendMail: (...a: unknown[]) => m.mail(...a) }));
 
 import { alertOwner, recentAlerts } from "@/lib/ops/alert";
+import { logger } from "@/lib/logger";
 
 beforeEach(() => {
   kv.clear();
@@ -19,6 +20,16 @@ beforeEach(() => {
 });
 
 describe("owner alerts", () => {
+  it("een verstuurde melding is geen waarschuwing (anders telt het foutenlogboek hem als fout, 12 nov)", async () => {
+    const warn = vi.spyOn(logger, "warn");
+    const info = vi.spyOn(logger, "info");
+    expect(await alertOwner({ key: "geen-fout", title: "x", detail: "y", severity: "warning" }, Date.parse("2026-11-12T12:00:00Z"))).toBe("sent");
+    expect(warn).not.toHaveBeenCalledWith("owner alert", expect.anything());
+    expect(info).toHaveBeenCalledWith("owner alert", expect.objectContaining({ key: "geen-fout", severity: "warning" }));
+    warn.mockRestore();
+    info.mockRestore();
+  });
+
   it("pushes to every platform admin and mails the admin address", async () => {
     expect(await alertOwner({ key: "payout:p1", title: "Uitbetaling mislukt", detail: "SEPA weigerde", url: "/admin/facturen" })).toBe("sent");
     expect(m.push).toHaveBeenCalledWith(["adm1", "adm2"], expect.objectContaining({ title: "🚨 Uitbetaling mislukt", data: expect.objectContaining({ url: "/admin/facturen" }) }));
