@@ -43,7 +43,8 @@ describe("de teksten", () => {
 
   it("de Nederlandse tekst is gelijk aan de tekst op de plek waar de fout ontstaat, en de sleutel staat daar ook", () => {
     for (const [k, t] of Object.entries(FOUTEN)) {
-      const src = bron(PLEK[k.split(".")[0]!]!);
+      // "common.verzoek" staat in meerdere routes (hier de fiscale route); de twee algemene meldingen in lib/errors.ts
+      const src = bron(k === "common.verzoek" ? "app/api/me/fiscal/route.ts" : PLEK[k.split(".")[0]!]!);
       expect(src, `${k}: sleutel`).toContain(`"${k}"`);
       // met plaatshouders staat de zin in de bron met een invulling; alleen de vaste stukken controleren
       if (!t.nl.includes("{")) expect(src, `${k}: tekst`).toContain(t.nl);
