@@ -106,7 +106,11 @@ describe("BSN van het document (13 nov)", () => {
     expect(begin).toBeGreaterThan(0);
     const raw = verify.slice(begin, eind);
     expect(raw).not.toMatch(/\bbsn\b|mrzLezing|Voorstel/);
-    for (const f of ["lib/kyc/bsn-uit-document.ts", "lib/fiscal/bsn-voorstel.ts", "lib/fiscal/bsn.ts", "lib/kyc/mrz-lezen.ts"]) {
+    // de QR-lezer (stap iii) ook niet: zijn uitkomst gaat alleen naar bewaarBsnVoorstel
+    expect(raw).not.toMatch(/leesBsnUitQr|bsn-qr|jsqr/i);
+    const qrCode = bron("lib/kyc/bsn-qr.ts").replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(qrCode).not.toMatch(/rawPayload|recordAudit|throw /);
+    for (const f of ["lib/kyc/bsn-uit-document.ts", "lib/fiscal/bsn-voorstel.ts", "lib/fiscal/bsn.ts", "lib/kyc/mrz-lezen.ts", "lib/kyc/bsn-qr.ts"]) {
       expect(bron(f), f).not.toMatch(/logger|console\./);
     }
   });

@@ -15,6 +15,15 @@ export async function bewaarBsnVoorstel(userId: string, voorstel: BsnVoorstel | 
   return true;
 }
 
+/**
+ * Heeft een voorstel zin? Alleen bij een uitzendkracht die nog geen BSN heeft (dezelfde regel als bsnVoorstelPatch).
+ * Zo zoekt de QR-lezer (lib/kyc/bsn-qr.ts) alleen als er iets mee te doen is.
+ */
+export async function wilBsnVoorstel(userId: string): Promise<boolean> {
+  const f = await getFiscal(userId);
+  return f.workerKind === "uitzendkracht" && !f.bsnHash;
+}
+
 /** Bij het wissen van een account: het onbevestigde voorstel weg, de rest van fiscal (bewaarplicht) blijft. */
 export async function wisBsnVoorstelVan(userId: string): Promise<boolean> {
   if (!heeftBsnVoorstel(await getFiscal(userId))) return false;

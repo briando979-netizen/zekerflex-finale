@@ -1039,9 +1039,22 @@ export async function submitFreelancerOnboarding(
 
   // het BSN van het document (lib/kyc/bsn-uit-document.ts) als voorstel: de werker bevestigt het zelf. Alleen bij een
   // kloppende MRZ op naam van deze werker en niet bij een afgewezen controle; nooit de cijfers, nooit in rawPayload.
-  if (mrzLezing.bsn && outcome !== "rejected" && mrzGeldig && mrzNaamOk) {
-    const { bewaarBsnVoorstel } = await import("@/lib/fiscal/bsn-voorstel");
-    await bewaarBsnVoorstel(user.id, mrzLezing.bsn).catch(() => false);
+  if (outcome !== "rejected" && mrzGeldig && mrzNaamOk) {
+    if (mrzLezing.bsn) {
+      const { bewaarBsnVoorstel } = await import("@/lib/fiscal/bsn-voorstel");
+      await bewaarBsnVoorstel(user.id, mrzLezing.bsn).catch(() => false);
+    } else if (input.documentType === "ID_CARD" && mrz?.land === "NLD") {
+      // Geen BSN in de MRZ: een ID-kaart van model 2021 of later heeft het in de QR-code op de achterkant
+      // (lib/kyc/bsn-qr.ts). Na het antwoord en met een tijdslimiet: de verificatie wacht er nooit op en een storing
+      // houdt niets tegen. Eerst de achterkant, dan de andere foto (als iemand ze verwisselde).
+      const fotos = [input.files.back.bytes, input.files.front.bytes];
+      runAfter(async () => {
+        const { bewaarBsnVoorstel, wilBsnVoorstel } = await import("@/lib/fiscal/bsn-voorstel");
+        if (!(await wilBsnVoorstel(user.id))) return;
+        const { leesBsnUitQr } = await import("@/lib/kyc/bsn-qr");
+        await bewaarBsnVoorstel(user.id, await leesBsnUitQr(fotos));
+      });
+    }
   }
 
   // ID geverifieerd: de werker hoort het meteen (eenmalig, lib/onboarding/id-geverifieerd.ts)
