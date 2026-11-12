@@ -233,6 +233,16 @@ function nextTag(): string {
   return `z${tagCounter}`;
 }
 
+/**
+ * Het commando zoals het in een foutmelding mag staan. LOGIN (en AUTHENTICATE) draagt de gebruikersnaam en het
+ * wachtwoord: die melding komt in logs en API-antwoorden (Admin → Mailbox, agenda-scan, offerte-sweep), dus daarvan
+ * alleen het woord zelf.
+ */
+export function imapCommandoInMelding(line: string): string {
+  const woord = line.trim().split(/\s+/)[0] ?? "";
+  return /^(LOGIN|AUTHENTICATE)$/i.test(woord) ? woord.toUpperCase() : line;
+}
+
 /** Sends a tagged command and returns every response line up to (and including) the tagged completion. */
 async function command(sock: net.Socket | tls.TLSSocket, bs: ByteStream, line: string, timeoutMs: number): Promise<string[]> {
   const tag = nextTag();
@@ -240,11 +250,11 @@ async function command(sock: net.Socket | tls.TLSSocket, bs: ByteStream, line: s
   const lines: string[] = [];
   const deadline = Date.now() + timeoutMs;
   for (;;) {
-    if (Date.now() > deadline) throw new ImapError(`IMAP command timed out: ${line}`);
+    if (Date.now() > deadline) throw new ImapError(`IMAP command timed out: ${imapCommandoInMelding(line)}`);
     const resp = await bs.readResponseLine();
     lines.push(resp);
     if (resp.startsWith(`${tag} `)) {
-      if (!/^\S+ OK/i.test(resp)) throw new ImapError(`IMAP command failed: ${line} -> ${resp}`);
+      if (!/^\S+ OK/i.test(resp)) throw new ImapError(`IMAP command failed: ${imapCommandoInMelding(line)} -> ${resp}`);
       return lines;
     }
   }
