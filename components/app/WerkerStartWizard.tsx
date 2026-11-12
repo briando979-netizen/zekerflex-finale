@@ -145,7 +145,9 @@ export function WerkerStartWizard({
   const stappen = tijdlijnStappen(done);
 
   // Eén uitleg per stap: de bestaande teksten (vijf talen), niets nieuws verzonnen.
-  const uitleg: Record<StepKey, string> = { kind: t.kindHint, branches: t.brancheHint, email: t.emailBody, gegevens: t.gegevensBody, identiteit: t.identiteitBody, foto: t.fotoBody, werkrecht: t.werkrechtBody, tweestap: t.tweestapBody };
+  // wat "gegevens" per soort echt vraagt (12 nov, meting 52: 19 van 20 nieuwe werkers stonden hier stil; het BSN stond nergens)
+  const gegevensUitleg = kind === "uitzendkracht" ? t.gegevensUitzend : kind === "zzp" ? t.gegevensZzp : kind === "flexwerker" ? t.gegevensFlex : t.gegevensBody;
+  const uitleg: Record<StepKey, string> = { kind: t.kindHint, branches: t.brancheHint, email: t.emailBody, gegevens: gegevensUitleg, identiteit: t.identiteitBody, foto: t.fotoBody, werkrecht: t.werkrechtBody, tweestap: t.tweestapBody };
   const actie = (k: StepKey): { href: string; tekst: string } | null =>
     k === "email" ? { href: "/verifieer-email", tekst: t.emailCta }
     : k === "gegevens" ? { href: "/dashboard/verificatie", tekst: t.gegevensCta }
