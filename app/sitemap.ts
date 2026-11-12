@@ -18,16 +18,18 @@ type Freq = "never" | "always" | "hourly" | "daily" | "weekly" | "monthly" | "ye
 // x-nextjs-cache HIT, lastmod = buildtijd). Nu elke 10 minuten opnieuw, met de echte gegevens.
 export const revalidate = 600;
 
+// lastmod alleen waar we de echte datum kennen (artikel, product, klus, eigen pagina). Zonder datum laten we hem weg:
+// "nu" gaf elke vaste pagina na elke uitrol en elke 10 minuten een nieuwe datum (gemeten 12 nov: 320 van 337 regels
+// op het tijdstip van de uitrol), en een lastmod die altijd verandert negeert Google voor de hele site.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const now = new Date();
   const entry = (
     path: string,
     priority: number,
     changeFrequency: Freq,
-    lastModified: Date | string = now,
+    lastModified?: Date | string | null,
   ): MetadataRoute.Sitemap[number] => ({
     url: `${SITE.url}${path}`,
-    lastModified: typeof lastModified === "string" ? new Date(lastModified) : lastModified,
+    ...(lastModified ? { lastModified: typeof lastModified === "string" ? new Date(lastModified) : lastModified } : {}),
     changeFrequency,
     priority,
   });
@@ -64,9 +66,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...(await paginaLijst().catch(() => []))
       .filter((p) => p.live && !p.live.noindex)
       .flatMap((p) => [
-        entry(`/p/${p.slug}`, 0.6, "weekly", p.gepubliceerd ?? now),
+        entry(`/p/${p.slug}`, 0.6, "weekly", p.gepubliceerd),
         // en de vertalingen (/p/<slug>/<taal>)
-        ...Object.keys(p.liveVertalingen ?? {}).map((t) => entry(`/p/${p.slug}/${t}`, 0.5, "weekly", p.gepubliceerd ?? now)),
+        ...Object.keys(p.liveVertalingen ?? {}).map((t) => entry(`/p/${p.slug}/${t}`, 0.5, "weekly", p.gepubliceerd)),
       ]),
 
     // Producten (ontbundeld) + los aanbod voor bureaus
