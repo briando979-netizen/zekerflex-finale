@@ -705,6 +705,17 @@ describe("submitFreelancerOnboarding — gezichtscontrole met het eigen model (1
     expect(wisReeks).toHaveBeenCalledWith("usr_1");
   });
 
+  it("zelf gekozen foto's (geen live camerabeelden) gaan naar een mens, ook als gezicht en document kloppen (review 73)", async () => {
+    userFindUnique.mockResolvedValue(GEBRUIKER);
+    gezichtControle.mockResolvedValueOnce(GEZICHT_ZELFDE);
+    reeksSamenvatting.mockResolvedValueOnce({ beelden: 0, tussenstanden: 0, ms: null, draai: null });
+    await aiUit();
+    const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: FOTOS });
+    expect(result.outcome).toBe("in_review");
+    const data = (ivCreate.mock.calls[0]![0] as { data: { rawPayload: { nietAutomatisch: string[] } } }).data;
+    expect(data.rawPayload.nietAutomatisch).toEqual(["geen live camerabeelden (foto's zelf gekozen, of de live camera viel weg): dan kijkt een medewerker mee"]);
+  });
+
   it("een testaccount (.test, .example) dat in behandeling komt, stuurt de eigenaar geen melding; een echt account wel", async () => {
     const twijfel = { ...GEZICHT_ZELFDE, oordeel: "twijfel", score: 0.4 };
     for (const email of ["zf-idlive@zekerflex.test", "iemand@voorbeeld.example"]) {
@@ -721,14 +732,14 @@ describe("submitFreelancerOnboarding — gezichtscontrole met het eigen model (1
     expect(alertOwnerLater).toHaveBeenCalledWith(expect.objectContaining({ key: "kyc-beoordeling:usr_1" }));
   });
 
-  it("de live reeks: een storing bij lezen of wissen houdt de verificatie niet tegen", async () => {
+  it("de live reeks: een storing bij lezen of wissen breekt de verificatie niet, maar zonder live bewijs kijkt een mens", async () => {
     userFindUnique.mockResolvedValue(GEBRUIKER);
     gezichtControle.mockResolvedValueOnce(GEZICHT_ZELFDE);
     reeksSamenvatting.mockRejectedValueOnce(new Error("kv weg"));
     wisReeks.mockRejectedValueOnce(new Error("kv weg"));
     await aiUit();
     const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: FOTOS });
-    expect(result.outcome).toBe("verified");
+    expect(result.outcome).toBe("in_review");
     const data = (ivCreate.mock.calls[0]![0] as { data: { rawPayload: { gezicht: Record<string, unknown> } } }).data;
     expect("reeks" in data.rawPayload.gezicht).toBe(false);
   });

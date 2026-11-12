@@ -27,6 +27,7 @@ const ALLES_GOED: AutoFeiten = {
   beeldmodelOk: false,
   aiVerdict: "needs_review",
   aiZeker: false,
+  liveBeelden: 14,
 };
 const met = (over: Partial<AutoFeiten>) => redenenNietAutomatisch({ ...ALLES_GOED, ...over });
 
@@ -52,6 +53,12 @@ describe("redenenNietAutomatisch", () => {
   it("het oude beeldmodel kan het gezichtspad vervangen, maar dan moet de tekst-AI zeker goedkeuren", () => {
     expect(met({ gezichtOordeel: "twijfel", beeldmodelOk: true, aiVerdict: "approved", aiZeker: true })).toEqual([]);
     expect(met({ gezichtOordeel: "twijfel", beeldmodelOk: true })).toEqual(["de automatische beoordeling keurde niet zeker goed"]);
+  });
+
+  it("zonder live camerabeelden (zelf gekozen foto's) kijkt altijd een mens, ook als al het andere klopt (review 73)", () => {
+    expect(met({ liveBeelden: 0 })).toEqual(["geen live camerabeelden (foto's zelf gekozen, of de live camera viel weg): dan kijkt een medewerker mee"]);
+    expect(met({ liveBeelden: 4 })).toHaveLength(1);
+    expect(met({ liveBeelden: 5 })).toEqual([]);
   });
 
   it("wat altijd een mens blijft, elk met een eigen reden", () => {

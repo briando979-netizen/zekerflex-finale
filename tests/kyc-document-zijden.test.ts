@@ -24,7 +24,7 @@ describe("welke kanten van een document", () => {
 
   it("het uploadformulier vraagt bij een paspoort geen achterkant en stuurt de fotopagina twee keer mee", () => {
     const form = lees("components/app/OnboardingForm.tsx");
-    expect(form).toContain('const nodig: PhotoKey[] = paspoort ? ["documentFront", "selfie", "selfie2"] : ["documentFront", "documentBack", "selfie", "selfie2"];');
+    expect(form).toContain('const nodig: PhotoKey[] = paspoort ? ["documentFront", "selfie"] : ["documentFront", "documentBack", "selfie"];');
     expect(form).toContain('if (paspoort) body.set("documentBack", photos.current.documentFront!);');
     expect(form).toContain("{heeftAchterkant(docType) && (");
   });

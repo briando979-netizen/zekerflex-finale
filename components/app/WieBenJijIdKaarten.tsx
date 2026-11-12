@@ -7,8 +7,10 @@ import type { ScanRoute } from "@/components/app/IdScan";
 // Stap "ID-check": het tipkader en twee keuzes (12 nov 2026, eigenaar: "laat gebruikers twee opties doen: auto of
 // handmatig foto maken"). Beide worden automatisch gecontroleerd met dezelfde regels (lib/onboarding/auto-redenen.ts):
 //  1. Automatisch: de eigen ID-scan van ZekerFlex met de camera (Nederlands of buitenlands document, elk een eigen route).
-//  2. Zelf foto's maken: het formulier met de foto's (`zelf`), ook met de selfie met een gedraaid hoofd.
-// Stripe staat hier niet meer bij (het live account weigert Identity en het kost per controle geld). Alleen weergave.
+//  2. Zelf foto's maken: het formulier met de foto's (`zelf`). Zonder live camera kijkt daar altijd een medewerker mee
+//     (review 73: zelf gekozen foto's kunnen van een ander zijn); het scherm zegt dat eerlijk.
+// Stripe staat als klein linkje onder de keuzes zolang het werkt (`stripe`); weigert het account, dan verdwijnt het.
+// Alleen weergave.
 
 const KNOP_OMRAND =
   "w-full rounded-xl border-2 border-brand-600 px-4 py-2.5 text-sm font-semibold text-brand-700 hover:bg-brand-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:opacity-60";
@@ -20,6 +22,7 @@ export function IdKeuzeKaarten({
   zelfOpen,
   onZelf,
   zelf,
+  stripe = null,
 }: {
   w: WieTeksten["id"];
   busy: boolean;
@@ -29,6 +32,8 @@ export function IdKeuzeKaarten({
   onZelf: () => void;
   /** het formulier met de foto's, als het open is */
   zelf: ReactNode;
+  /** een klein linkje naar Stripe Identity, alleen als dat werkt */
+  stripe?: ReactNode;
 }) {
   return (
     <div className="space-y-4">
@@ -71,6 +76,7 @@ export function IdKeuzeKaarten({
         {zelf}
       </div>
 
+      {stripe && <p className="text-center">{stripe}</p>}
       <p className="text-center text-sm">
         <a href="mailto:support@zekerflex.com" className="font-semibold text-brand-600 underline underline-offset-4">
           {w.hulp}

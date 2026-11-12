@@ -168,6 +168,7 @@ type DocKey = "PASSPORT" | "ID_CARD" | "DRIVERS_LICENSE";
 export function OnboardingForm({
   defaultName,
   requireKvk = true,
+  stripeIdentity = false,
   initial,
   persoon,
   beginStap,
@@ -184,7 +185,7 @@ export function OnboardingForm({
   kanSluiten?: boolean;
   defaultName: string;
   requireKvk?: boolean;
-  /** Stripe Identity staat aan. Sinds 12 nov 2026 niet meer als keuze getoond (twee keuzes: automatisch of zelf foto's maken); de pagina geeft hem nog door. */
+  /** Stripe Identity staat aan en weigert niet: dan een klein linkje onder de twee keuzes (12 nov 2026). */
   stripeIdentity?: boolean;
   /** Eerder opgeslagen gegevens: iemand die later terugkomt, begint niet opnieuw. */
   initial?: { kvkNumber?: string; vatNumber?: string; postalCode?: string };
@@ -410,8 +411,9 @@ export function OnboardingForm({
     if (m === "upload") {
       // een paspoort heeft geen achterkant: dan alleen de fotopagina en de selfie (12 nov 2026)
       const paspoort = !heeftAchterkant(docType);
-      // en de selfie met een gedraaid hoofd: daarmee kan ook "zelf foto's maken" automatisch worden goedgekeurd (12 nov 2026)
-      const nodig: PhotoKey[] = paspoort ? ["documentFront", "selfie", "selfie2"] : ["documentFront", "documentBack", "selfie", "selfie2"];
+      // de selfie met een gedraaid hoofd is hier niet verplicht: met zelf gekozen foto's kijkt altijd een medewerker mee
+      // (geen live camera; lib/onboarding/auto-redenen.ts), en die foto helpt hem wel
+      const nodig: PhotoKey[] = paspoort ? ["documentFront", "selfie"] : ["documentFront", "documentBack", "selfie"];
       const absent = nodig.filter((k) => !photos.current[k]);
       setMissing(absent);
       if (absent.length) {
@@ -420,6 +422,7 @@ export function OnboardingForm({
         return;
       }
       for (const k of nodig) body.set(k, photos.current[k]!);
+      if (photos.current.selfie2) body.set("selfie2", photos.current.selfie2);
       // de server wil twee beelden van het document: bij een paspoort dient de fotopagina ook als tweede (zoals in de ID-scan)
       if (paspoort) body.set("documentBack", photos.current.documentFront!);
     } else {
@@ -673,6 +676,13 @@ export function OnboardingForm({
               onStart={(r) => void startScan(r)}
               zelfOpen={uploadOpen}
               onZelf={() => setUploadOpen((o) => !o)}
+              stripe={
+                stripeIdentity ? (
+                  <button type="button" onClick={() => void verstuur("stripe")} disabled={busy} className="text-sm font-semibold text-brand-600 underline underline-offset-4 disabled:opacity-60">
+                    {t.stripe[0]}
+                  </button>
+                ) : null
+              }
               zelf={
                 uploadOpen && (
                 <div>
