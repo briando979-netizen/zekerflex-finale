@@ -26,6 +26,9 @@ import { kvGet } from "@/lib/storage/kv";
 import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
 import { FOTO_SOORTEN, PROVIDER_LABEL, fotoUploadId, idControleWeergave, stripeSessieUrl, type FotoSoort } from "@/lib/admin/kyc-weergave";
+import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
+import { poortSamenvatting, poortStappen } from "@/lib/admin/werker-poort-weergave";
+import { isReservedTestAddress } from "@/lib/mail/test-adres";
 
 export const dynamic = "force-dynamic";
 
@@ -148,6 +151,11 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
   const isDeleted = user.email.endsWith("@verwijderd.zekerflex.invalid");
   const kyc = KYC[user.kycStatus] ?? { label: `Identiteit: ${user.kycStatus}`, tone: "neutral" as const };
   const profile = user.freelancerProfile;
+  // de poort van de werker-app (lib/onboarding/werker-poort.ts): zolang die dicht is, ziet de werker alleen de onboarding.
+  // Een goedgekeurde ID is maar één van de stappen; het blok "Onboarding" hieronder is de trechter, niet de poort.
+  const poortTest = isReservedTestAddress(user.email);
+  const poort = profile && !isDeleted && !poortTest ? await werkerPoortStand(user.id).catch(() => null) : null;
+  const poortLijst = poort ? poortStappen(poort, poort.workerKind) : [];
   // de profielfoto (KV profile-user:<id>) en de laatste in- en uitchecks met plek (GpsEvent)
   const [avatars, stripeSleutel, checkins] = await Promise.all([
     getUserAvatars([user.id]).catch(() => ({}) as Record<string, string>),
@@ -281,6 +289,27 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                   <OnboardingActies userId={user.id} emailBevestigd={Boolean(user.emailVerifiedAt)} bedrijfId={onboarding.doelgroep === "werkgever" && !onboarding.gehaald[4] ? onboarding.tenantId : null} klaar={onbStatus.stap === -1} />
                 </div>
               )}
+
+          {profile && !isDeleted && (
+            <Panel
+              title="Toegang tot de werker-app"
+              subtitle={poortTest ? "Testaccount: geen poort, ziet de hele app" : poort ? poortSamenvatting(poortLijst) : "De stand kon niet worden gelezen"}
+            >
+              {poortLijst.length > 0 && (
+                <ol className="space-y-1.5">
+                  {poortLijst.map((st) => (
+                    <li key={st.key} className="flex items-start justify-between gap-3 text-[0.8125rem]">
+                      <span style={{ color: "var(--a-dim)" }}>
+                        {st.label}
+                        {!st.ok && <span className="mt-0.5 block text-xs">{st.uitleg}</span>}
+                      </span>
+                      <Pill tone={st.ok ? "ok" : "neutral"}>{st.ok ? "Af" : "Open"}</Pill>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </Panel>
+          )}
               <Feed
                 emptyText="Nog niets bekend."
                 items={onbTijdlijn.map((e) => ({ key: e.key, text: e.tekst, meta: e.at ? dateTimeNl(e.at) : e.tone === "warn" ? "Nog niet" : "Tijdstip onbekend", ...(e.tone === "neutral" ? {} : { tone: e.tone }) }))}
