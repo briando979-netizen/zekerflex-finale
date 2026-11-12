@@ -6,18 +6,15 @@ import { useToast } from "@/components/ui/Toast";
 import type { FiscalProfile, WorkerKind } from "@/lib/fiscal/store";
 import { KorHulp } from "@/components/app/KorHulp";
 import { useFT } from "@/components/i18n/useFT";
+import { vulIn } from "@/lib/i18n/vul-in";
+import type { FreelancerDict } from "@/lib/i18n/freelancer";
 
-const KINDS: { k: WorkerKind; label: string; blurb: string }[] = [
-  { k: "zzp", label: "ZZP'er", blurb: "Eigen onderneming met KVK-inschrijving en btw-nummer. Facturatie via reverse billing." },
-  { k: "flexwerker", label: "Flexwerker", blurb: "Flexibel zelfstandig, vaak met kleineondernemersregeling. Btw optioneel." },
-  { k: "uitzendkracht", label: "Uitzendkracht", blurb: "Geen eigen onderneming. Verloning loopt via de payroll (loonheffing, BSN)." },
-];
+/** De tekst van de gekozen facturatiewijze (de sleutel komt van de server: reverse-billing, self-invoice of payroll). */
+function factuurTekst(f: FreelancerDict["fiscaalForm"], modus: string): string {
+  return modus === "reverse-billing" ? f.factuur.reverseBilling : modus === "self-invoice" ? f.factuur.selfInvoice : modus === "payroll" ? f.factuur.payroll : modus;
+}
 
-const INVOICE_LABEL: Record<string, string> = {
-  "reverse-billing": "Reverse billing — ZekerFlex maakt de factuur namens jou op.",
-  "self-invoice": "Zelf-facturatie zonder btw — via de kleineondernemersregeling.",
-  payroll: "Verloning via payroll — je krijgt een loonstrook, geen factuur.",
-};
+const KIND_SLEUTELS: WorkerKind[] = ["zzp", "flexwerker", "uitzendkracht"];
 
 export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; defaultKind: WorkerKind | null }) {
   const router = useRouter();
@@ -32,7 +29,9 @@ export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; d
   );
   const kor = korKeuze === "heb";
   const korIngediend = initial.korAanvraag?.stand === "ingediend";
-  const tk = useFT().kor;
+  const ft = useFT();
+  const tk = ft.kor;
+  const f = ft.fiscaalForm;
   const [bsn, setBsn] = useState("");
   const [lhk, setLhk] = useState(initial.loonheffingskorting);
   const [iban, setIban] = useState(initial.iban ?? "");
@@ -61,21 +60,21 @@ export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; d
       if (!res.ok) {
         // Een gewijzigd IBAN vraagt een bevestigingscode (mail of verificatie-app): toon het codeveld.
         if (res.status === 423 && typeof data?.error?.code === "string" && data.error.code.startsWith("IBAN_")) {
-          setCodeNodig(data.error.message ?? "Vul de bevestigingscode in.");
+          setCodeNodig(data.error.message ?? f.vulCode);
         }
-        toast.error(data?.error?.message ?? "Opslaan mislukt");
+        toast.error(data?.error?.message ?? f.opslaanMislukt);
       } else {
         setCodeNodig(null);
         setIbanCode("");
         setResult(data);
         toast.success(
-          "Fiscale gegevens opgeslagen",
-          data.vatNumber ? (data.vatValid ? "Btw-nummer gevalideerd." : "Btw-nummer opgeslagen (nog niet bevestigd).") : undefined,
+          f.opgeslagen,
+          data.vatNumber ? (data.vatValid ? f.btwGevalideerd : f.btwOpgeslagen) : undefined,
         );
         router.refresh();
       }
     } catch {
-      toast.error("Opslaan mislukt");
+      toast.error(f.opslaanMislukt);
     } finally {
       setBusy(false);
     }
@@ -85,54 +84,53 @@ export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; d
   // en bereken precies wat er nog ontbreekt voor de nieuwe keuze — zodat iemand
   // die overstapt alléén de dingen hoeft in te vullen die écht nodig zijn.
   const savedKind = initial.workerKind;
-  const kindLabel = KINDS.find((x) => x.k === kind)?.label ?? kind;
-  const savedLabel = KINDS.find((x) => x.k === savedKind)?.label ?? savedKind;
+  const kindLabel = f.kinds[kind].label;
+  const savedLabel = savedKind ? f.kinds[savedKind].label : "";
   const switching = Boolean(savedKind) && kind !== savedKind;
   const hasBsnOnFile = Boolean(initial.bsnHash);
 
   const missing: string[] = [];
-  if (!iban.trim()) missing.push("een IBAN voor uitbetaling / verloning");
+  if (!iban.trim()) missing.push(f.mistIban);
   if (kind === "zzp" && !(vatNumber.trim() || (vatRequested && kvkNumber.trim()))) {
-    missing.push("je btw-nummer (of je KVK-nummer plus ‘btw aangevraagd’)");
+    missing.push(f.mistBtwZzp);
   }
   if (kind === "flexwerker" && !(vatNumber.trim() || kor || vatRequested || korIngediend)) {
-    missing.push("een btw-nummer, óf vink de kleineondernemersregeling of ‘btw aangevraagd’ aan");
+    missing.push(f.mistBtwFlex);
   }
   if (kind === "uitzendkracht" && !(hasBsnOnFile || bsn.trim())) {
-    missing.push("je BSN");
+    missing.push(f.mistBsn);
   }
 
   return (
     <div className="space-y-6">
       <section className="card p-6">
-        <h2 className="font-display text-lg font-semibold">1 · Wat is jouw werkvorm?</h2>
+        <h2 className="font-display text-lg font-semibold">{f.stap1}</h2>
         <p className="mt-1 text-sm text-neutralx-500">
-          Van gedachten veranderd? Kies gewoon een andere werkvorm — je kunt direct overstappen. Je andere gegevens blijven
-          bewaard; je vult alleen aan wat de nieuwe werkvorm nog nodig heeft.
+          {f.stap1Uitleg}
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          {KINDS.map((o) => (
+          {KIND_SLEUTELS.map((k) => (
             <button
-              key={o.k}
+              key={k}
               type="button"
-              onClick={() => setKind(o.k)}
+              onClick={() => setKind(k)}
               className={`rounded-xl border p-4 text-left transition ${
-                kind === o.k ? "border-brand-500 bg-brand-50" : "border-hairstrong hover:border-brand-500"
+                kind === k ? "border-brand-500 bg-brand-50" : "border-hairstrong hover:border-brand-500"
               }`}
             >
-              <p className="font-semibold text-ink">{o.label}</p>
-              <p className="mt-1 text-xs leading-relaxed text-neutralx-600">{o.blurb}</p>
+              <p className="font-semibold text-ink">{f.kinds[k].label}</p>
+              <p className="mt-1 text-xs leading-relaxed text-neutralx-600">{f.kinds[k].blurb}</p>
             </button>
           ))}
         </div>
         {switching && (
           <div className="mt-4 rounded-xl border border-brand-300 bg-brand-50 p-4 text-sm">
             <p className="font-semibold text-ink">
-              Je stapt over van {savedLabel} naar {kindLabel}.
+              {vulIn(f.overstap, { van: savedLabel, naar: kindLabel })}
             </p>
             {missing.length > 0 ? (
               <>
-                <p className="mt-1 text-neutralx-700">Vul hieronder nog in:</p>
+                <p className="mt-1 text-neutralx-700">{f.vulNogIn}</p>
                 <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-neutralx-700">
                   {missing.map((m) => (
                     <li key={m}>{m}</li>
@@ -141,25 +139,25 @@ export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; d
               </>
             ) : (
               <p className="mt-1 text-neutralx-700">
-                Je gegevens zijn al compleet voor deze werkvorm — klik op “Overstappen &amp; opslaan”.
+                {f.alCompleet}
               </p>
             )}
             <p className="mt-2 text-xs text-neutralx-500">
-              Je oude gegevens worden niet gewist; je kunt later net zo makkelijk weer terug wisselen.
+              {f.oudeBlijven}
             </p>
           </div>
         )}
       </section>
 
       <section className="card space-y-4 p-6">
-        <h2 className="font-display text-lg font-semibold">2 · Fiscale gegevens</h2>
+        <h2 className="font-display text-lg font-semibold">{f.stap2}</h2>
 
         {kind === "zzp" && (
           <>
-            <Field label="KVK-nummer">
+            <Field label={f.kvk}>
               <input value={kvkNumber} onChange={(e) => setKvkNumber(e.target.value)} placeholder="12345678" className="field-input" />
             </Field>
-            <Field label="Btw-nummer" hint="Wordt live gevalideerd (VIES).">
+            <Field label={f.btw} hint={f.btwHintLive}>
               <input value={vatNumber} onChange={(e) => setVatNumber(e.target.value)} placeholder="NL123456789B01" className="field-input" />
             </Field>
           </>
@@ -168,12 +166,10 @@ export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; d
         {kind === "flexwerker" && (
           <>
             <div className="rounded-lg border border-hair bg-paper-soft p-3 text-xs leading-relaxed text-neutralx-600">
-              Als flexwerker kun je met of zonder btw-nummer werken. Verdien je onder de € 20.000 per jaar, dan kun je de{" "}
-              <b>kleineondernemersregeling (KOR)</b> gebruiken en factureer je zonder btw. Een btw-nummer vraag je gratis aan
-              bij de Belastingdienst (aangifte omzetbelasting) — meestal binnen 5 werkdagen.
+              {f.flexUitleg1} <b>{f.korNaam}</b> {f.flexUitleg2}
             </div>
             <fieldset className="grid gap-2 text-sm">
-              <legend className="sr-only">Kleineondernemersregeling (KOR)</legend>
+              <legend className="sr-only">{f.korLegend}</legend>
               {(["heb", "aanvragen", "geen"] as const).map((k) => (
                 <label key={k} className="flex items-start gap-2">
                   <input type="radio" name="kor" checked={korKeuze === k} onChange={() => setKorKeuze(k)} className="mt-1" />
@@ -184,17 +180,17 @@ export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; d
             {korKeuze === "aanvragen" && <KorHulp initial={initial.korAanvraag ?? null} />}
             {!kor && (
               <>
-                <Field label="Btw-nummer" hint="Optioneel — wordt gevalideerd als je het invult.">
+                <Field label={f.btw} hint={f.btwHintOptioneel}>
                   <input value={vatNumber} onChange={(e) => setVatNumber(e.target.value)} placeholder="NL123456789B01" className="field-input" />
                 </Field>
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={vatRequested} onChange={(e) => setVatRequested(e.target.checked)} />
-                  Ik heb een btw-nummer aangevraagd bij de Belastingdienst
+                  {f.btwAangevraagd}
                 </label>
               </>
             )}
-            <Field label="KVK-nummer" hint="Optioneel voor flexwerkers.">
-              <input value={kvkNumber} onChange={(e) => setKvkNumber(e.target.value)} placeholder="optioneel" className="field-input" />
+            <Field label={f.kvk} hint={f.kvkHintFlex}>
+              <input value={kvkNumber} onChange={(e) => setKvkNumber(e.target.value)} placeholder={f.optioneel} className="field-input" />
             </Field>
           </>
         )}
@@ -202,81 +198,76 @@ export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; d
         {kind === "uitzendkracht" && (
           <>
             <div className="rounded-lg border border-hair bg-paper-soft p-3 text-xs leading-relaxed text-neutralx-600">
-              Je hebt geen btw-nummer nodig. Je uren worden verloond via de payroll: je krijgt een loonstrook, er wordt
-              loonheffing ingehouden en je bouwt vakantiegeld op. Je BSN wordt alleen versleuteld opgeslagen.
+              {f.uitzendUitleg}
             </div>
             <Field
-              label="BSN"
-              hint={
-                hasBsnOnFile
-                  ? `Al op bestand (••••${initial.bsnLast4}). Laat leeg om te behouden, of vul een nieuw BSN in.`
-                  : "9 cijfers — wordt gehasht opgeslagen, nooit als leesbaar nummer."
-              }
+              label={f.bsn}
+              hint={hasBsnOnFile ? vulIn(f.bsnOpBestand, { laatste4: initial.bsnLast4 ?? "" }) : f.bsnHint}
             >
               <input
                 value={bsn}
                 onChange={(e) => setBsn(e.target.value)}
                 inputMode="numeric"
-                placeholder={hasBsnOnFile ? "••••••••• (ongewijzigd)" : "123456782"}
+                placeholder={hasBsnOnFile ? f.bsnOngewijzigd : "123456782"}
                 className="field-input"
               />
             </Field>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={lhk} onChange={(e) => setLhk(e.target.checked)} />
-              Pas de loonheffingskorting toe (meestal aan bij je hoofdinkomen)
+              {f.lhk}
             </label>
           </>
         )}
 
-        <Field label="IBAN voor uitbetaling / verloning">
+        <Field label={f.iban}>
           <input value={iban} onChange={(e) => setIban(e.target.value)} placeholder="NL00 BANK 0000 0000 00" className="field-input" />
         </Field>
         {codeNodig && (
-          <Field label="Bevestigingscode voor je nieuwe IBAN">
+          <Field label={f.ibanCode}>
             <input
               value={ibanCode}
               onChange={(e) => setIbanCode(e.target.value)}
               inputMode="numeric"
               autoComplete="one-time-code"
-              placeholder="Code uit je e-mail of verificatie-app"
+              placeholder={f.ibanCodePlaceholder}
               className="field-input"
             />
-            <p role="alert" className="mt-1 text-xs text-neutralx-600">{codeNodig} Klik daarna nogmaals op Opslaan.</p>
+            <p role="alert" className="mt-1 text-xs text-neutralx-600">{codeNodig} {f.daarnaOpslaan}</p>
           </Field>
         )}
       </section>
 
       {!switching && missing.length > 0 && (
-        <p className="text-xs text-neutralx-500">Nog nodig om compleet te zijn: {missing.join(" · ")}</p>
+        <p className="text-xs text-neutralx-500">{vulIn(f.nogNodig, { lijst: missing.join(" · ") })}</p>
       )}
 
       <button type="button" onClick={submit} disabled={busy} className="btn-primary">
-        {busy ? "Opslaan & valideren…" : switching ? "Overstappen & opslaan" : "Opslaan"}
+        {busy ? f.bezig : switching ? f.overstappen : f.opslaan}
       </button>
 
       {result && result.workerKind && (
         <section className="card p-6">
-          <h2 className="font-display text-base font-semibold">Samenvatting</h2>
+          <h2 className="font-display text-base font-semibold">{f.samenvatting}</h2>
           <dl className="mt-3 divide-y divide-hair text-sm">
-            <Row k="Werkvorm" v={KINDS.find((x) => x.k === result.workerKind)?.label ?? result.workerKind} />
+            <Row k={f.werkvorm} v={f.kinds[result.workerKind].label} />
             {result.vatNumber && (
               <Row
-                k="Btw-nummer"
+                k={f.btw}
                 v={
                   <>
                     {result.vatNumber}{" "}
                     <span className={result.vatValid ? "pill-ok" : "pill-warn"}>
-                      {result.vatValid ? "gevalideerd" : result.vatStatus ?? "niet bevestigd"}
+                      {result.vatValid ? f.gevalideerd : result.vatStatus ?? f.nietBevestigd}
                     </span>
                   </>
                 }
               />
             )}
             {result.workerKind === "uitzendkracht" && result.bsnLast4 && (
-              <Row k="BSN" v={`•••••${result.bsnLast4} (versleuteld opgeslagen)`} />
+              <Row k={f.bsn} v={vulIn(f.bsnVersleuteld, { laatste4: result.bsnLast4 })} />
             )}
-            <Row k="Facturatie / verloning" v={INVOICE_LABEL[result.resolvedInvoiceMode] ?? result.resolvedInvoiceMode} />
-            <Row k="Status" v={result.completedAt ? <span className="pill-ok">Compleet</span> : <span className="pill-warn">Onvolledig</span>} />
+            <Row k={f.facturatie} v={factuurTekst(f, result.resolvedInvoiceMode)} />
+            <Row k={f.status} v={result.completedAt ? <span className="pill-ok">{f.compleet}</span> : <span className="pill-warn">{f.onvolledig}</span>} />
           </dl>
         </section>
       )}
