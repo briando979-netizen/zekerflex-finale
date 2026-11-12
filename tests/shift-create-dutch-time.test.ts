@@ -6,10 +6,15 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 // dezelfde UTC-tijd, en verschoven over de wisseling van zomer- naar wintertijd.
 
 const ORIGINAL_TZ = process.env.TZ;
+// Tijdbom (12 nov): de dienst op 10 januari 2027 moet "in de toekomst" liggen. Vanaf die dag faalde de test en hield
+// hij elke uitrol tegen (de live-zetter draait vitest related). Daarom staat de klok hier vast.
 beforeAll(() => {
   process.env.TZ = "UTC";
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-12-01T12:00:00+01:00"));
 });
 afterAll(() => {
+  vi.useRealTimers();
   if (ORIGINAL_TZ === undefined) delete process.env.TZ;
   else process.env.TZ = ORIGINAL_TZ;
 });

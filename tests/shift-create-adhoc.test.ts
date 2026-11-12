@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { createShiftSchema } from "@/lib/shifts/create";
 
 describe("createShiftSchema — branchId vs adHocAddress", () => {
@@ -49,6 +49,14 @@ vi.mock("@/lib/prisma", () => ({
 import { createShift } from "@/lib/shifts/create";
 
 afterEach(() => vi.clearAllMocks());
+
+// Tijdbom (12 nov): de dienst op 10 januari 2027 moet "in de toekomst" liggen. Vanaf die dag faalde de test en hield
+// hij elke uitrol tegen (de live-zetter draait vitest related). Daarom staat de klok hier vast.
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-12-01T12:00:00+01:00"));
+});
+afterAll(() => vi.useRealTimers());
 
 describe("createShift — eenmalige locatie", () => {
   it("creates an AD_HOC branch with a wider default geofence and uses it for the shift", async () => {
