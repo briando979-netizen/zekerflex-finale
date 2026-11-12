@@ -31,7 +31,9 @@ export async function GET(
     return new Response(new Uint8Array(file.bytes), {
       headers: {
         "Content-Type": file.mimeType,
-        "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${encodeURIComponent(file.filename)}"`,
+        "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${file.filename.replace(/[^\x20-\x7E]|["\\]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(file.filename)}`,
+        // elk type mag in de chat: de browser mag nooit zelf raden wat het is
+        "X-Content-Type-Options": "nosniff",
         "Cache-Control": "private, max-age=86400",
       },
     });

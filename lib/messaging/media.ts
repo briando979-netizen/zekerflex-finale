@@ -2,6 +2,7 @@ import { storeUpload, readUpload } from "@/lib/storage/local";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { AppError } from "@/lib/errors";
 import { getMessages } from "@/lib/messaging/store";
+import { chatOpslagType } from "@/lib/messaging/bijlage";
 
 // ---------------------------------------------------------------------------
 // Chat attachments — voice notes, photos, documents. Bytes go through the
@@ -20,15 +21,8 @@ import { getMessages } from "@/lib/messaging/store";
 
 const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
 
-const ALLOWED_MIME = [
-  // no SVG: an SVG can carry script
-  /^image\/(jpeg|png|gif|webp|heic|heif|avif|bmp)$/,
-  /^audio\//,
-  /^video\/(mp4|webm|quicktime)$/,
-  /^application\/pdf$/,
-  /^application\/(msword|vnd\.openxmlformats-officedocument\.|vnd\.ms-excel|vnd\.oasis\.opendocument\.)/,
-  /^text\/(plain|csv)$/,
-];
+// Elk bestandstype mag (12 nov 2026, eigenaar). Wat een browser kan uitvoeren (html, svg, script) wordt bewaard als
+// gewoon bestand (chatOpslagType, lib/messaging/bijlage.ts); alleen opensInline() opent in de browser, de rest downloadt.
 
 /** Photos are re-encoded at most this wide/high: plenty for a phone screen, a fraction of the bytes. */
 export const PHOTO_MAX_PX = 2048;
@@ -43,10 +37,6 @@ export interface StoredChatMedia {
 interface ChatMediaOwner extends StoredChatMedia {
   threadId: string;
   by: string;
-}
-
-export function isAllowedChatMime(mime: string): boolean {
-  return ALLOWED_MIME.some((re) => re.test(mime));
 }
 
 const ownerKey = (mediaId: string) => `chat-media:${mediaId}`;
@@ -78,8 +68,7 @@ export async function storeChatMedia(
 ): Promise<StoredChatMedia & { durationSec?: number }> {
   if (input.bytes.length === 0) throw AppError.validation("leeg bestand");
   if (input.bytes.length > MAX_BYTES) throw AppError.validation(`bestand te groot (max ${MAX_BYTES / 1024 / 1024} MB)`);
-  const mime = input.mimeType || "application/octet-stream";
-  if (!isAllowedChatMime(mime)) throw AppError.validation("bestandstype niet toegestaan");
+  const mime = chatOpslagType(input.mimeType);
 
   const bytes = (await cleanPhoto(input.bytes, mime)) ?? input.bytes;
   const stored = await storeUpload({ filename: input.filename, mimeType: mime, bytes, uploadedById: uploaderId });

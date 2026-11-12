@@ -6,6 +6,7 @@ import { Avatar } from "./Avatar";
 import { IconReply, IconSmiley, IconDots, IconCopy, IconForward, IconPin, IconStar, IconPencil, IconTrash } from "./icons";
 import { ActionList, MessageSheet, ReactionRow, type ActionItem } from "./MessageActions";
 import { PollCard } from "./PollCard";
+import { isProgramma } from "@/lib/messaging/bijlage";
 
 /** Lang drukken (telefoon) opent het actiepaneel na zoveel ms. */
 const LONG_PRESS_MS = 450;
@@ -576,6 +577,9 @@ export function MessageBubble({
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium text-ink">{m.attachment?.filename}</span>
                   <span className="block text-[11px] text-neutralx-500">{m.attachment ? `${fmtBytes(m.attachment.sizeBytes)} · downloaden` : ""}</span>
+                  {m.attachment && isProgramma(m.attachment.filename) && (
+                    <span className="block text-[11px] font-medium text-ink">⚠️ Dit is een programma. Open het alleen als je de afzender vertrouwt.</span>
+                  )}
                 </span>
               </a>
             )}

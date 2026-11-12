@@ -6,6 +6,7 @@ import { readDraft, writeDraft } from "./drafts";
 import { Portal } from "./Portal";
 import { PollMaker } from "./PollMaker";
 import { IconPaperclip, IconMic, IconSend, IconBolt, IconSparkle, IconSmiley, IconClose, IconReply, IconPencil } from "./icons";
+import { isFotoType } from "@/lib/messaging/bijlage";
 
 export interface OutgoingMessage {
   text: string;
@@ -288,12 +289,13 @@ export function Composer({
     }
   };
 
-  const pick = (kind: "file" | "image") => (e: ChangeEvent<HTMLInputElement>) => {
+  const pick = (_kind: "file" | "image") => (e: ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     // cleared, so picking the same photo again fires onChange again
     e.target.value = "";
     setMenuOpen(false);
-    if (f) setPreview({ file: f, kind: kind === "file" && f.type.startsWith("image/") ? "image" : kind });
+    // alleen echte foto's als foto (geen SVG); elk ander bestand mag, als bestand
+    if (f) setPreview({ file: f, kind: isFotoType(f.type) ? "image" : "file" });
   };
 
   // a screenshot pasted into the field goes to the preview, like in WhatsApp Web
