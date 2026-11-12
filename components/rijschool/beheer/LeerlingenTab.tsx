@@ -9,7 +9,7 @@ import { Melding, Schakelaar, Veld, Voortgangsbalk } from "@/components/rijschoo
 import { LEERLING_STATUS_LABEL } from "@/lib/rijschool/format";
 import { tegoedTekst } from "@/lib/rijschool/tegoed";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
-import { whatsappNummer } from "@/lib/rijschool/website";
+import { whatsappNummer } from "@/lib/rijschool/whatsapp";
 
 // Leerlingen van de rijschool: zoeken, toevoegen en bewerken, een account
 // klaarzetten (uitnodiging per mail), betalingen en tegoed, en meteen een les

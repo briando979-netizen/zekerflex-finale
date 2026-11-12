@@ -95,10 +95,5 @@ function stripUndefined<T extends object>(o: T): Partial<RijschoolWebsite> {
   return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<RijschoolWebsite>;
 }
 
-/** "06 12345678" → "31612345678" voor wa.me; null als het geen bruikbaar nummer is. */
-export function whatsappNummer(s: string): string | null {
-  const cijfers = s.replace(/[^0-9+]/g, "").replace(/^\+/, "");
-  if (/^0[1-9][0-9]{8}$/.test(cijfers)) return `31${cijfers.slice(1)}`;
-  if (/^31[1-9][0-9]{8}$/.test(cijfers)) return cijfers;
-  return null;
-}
+/** Staat in een eigen puur bestand zodat de browser geen zod meeneemt. */
+export { whatsappNummer } from "@/lib/rijschool/whatsapp";
