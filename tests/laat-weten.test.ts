@@ -66,7 +66,11 @@ describe("teksten in vijf talen", () => {
       expect(nogStappenTekst(3, t)).toContain("3");
       expect(nogStappenTekst(1, t)).not.toContain("{n}");
       expect(nogStappenTekst(0, t)).toBe(t.alleKlaar);
-      for (const s of [t.gegevensStep, t.gegevensBody, t.gegevensCta, t.identiteitStep, t.identiteitBody, t.identiteitCta, t.laatWeten, t.sluiten, t.afsluiting, t.klaarLabel, t.eerstDit, t.wijzig, t.richtingVast, t.naarFiscaal]) expect(s.length).toBeGreaterThan(1);
+      for (const s of [t.gegevensStep, t.gegevensBody, t.gegevensCta, t.identiteitStep, t.identiteitBody, t.identiteitCta, t.laatWeten, t.sluiten, t.afsluiting, t.klaarLabel, t.eerstDit, t.wijzig, t.richtingVast, t.naarFiscaal, t.gegevensUitzend, t.gegevensZzp, t.gegevensFlex]) expect(s.length).toBeGreaterThan(1);
+      // de gegevens-stap noemt per soort wat er echt nodig is (12 nov): een uitzendkracht het BSN
+      expect(t.gegevensUitzend).toMatch(/BSN/);
+      expect(t.gegevensZzp).toMatch(/KVK/);
+      expect(t.gegevensFlex).toMatch(/KOR/);
       expect(t.nogMeerFew).toContain("{n}");
       for (const s of Object.values(d.loc)) expect(String(s).length).toBeGreaterThan(1);
       for (const s of Object.values(d.reageerBlok)) expect(String(s).length).toBeGreaterThan(1);
