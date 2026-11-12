@@ -1192,3 +1192,8 @@ export async function updateCustom(id: string, patch: { done?: boolean | undefin
   await kvSet("owner-todos:custom", list);
   return list;
 }
+
+/** Ids die een mens in Te doen op klaar zette, zonder de (trage) automatische controles van ownerTodos(). */
+export async function handmatigKlaar(): Promise<Set<string>> {
+  return new Set(Object.keys((await kvGet<Record<string, { at: string; by: string }>>("owner-todos:done")) ?? {}));
+}

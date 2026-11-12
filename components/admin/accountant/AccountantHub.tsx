@@ -6,11 +6,13 @@ import { FRANCHISE, FRANCHISE_BRON, berekenFranchise, teLaatKosten } from "@/lib
 import { KENNIS, kennisBeschrijving } from "@/lib/accountant/kennis";
 import { STRUCTUUR, dagenTot, type StructuurStatus, type StructuurToestand } from "@/lib/accountant/structuur";
 import type { VraagAntwoord } from "@/lib/accountant/antwoord";
+import type { Ernst, MaandcontroleUitslag } from "@/lib/accountant/maandcontrole-kern";
 
 // ---------------------------------------------------------------------------
-// Admin → Financiën → Accountant. Drie echte onderdelen (Structuur, Delaware, Vraag) en eerlijk wat
-// nog volgt (maandcontrole, jaarafsluiting en dossier wachten op Boekhouding). De AI-accountant is
-// geen geregistreerd accountant of belastingadviseur: geen verklaring, handtekening of indiening.
+// Admin → Financiën → Accountant: Structuur, Delaware, Vraag en de maandcontrole op de echte
+// boekhouding (lib/accountant/maandcontrole.ts, alleen lezen); jaarafsluiting en dossier volgen nog.
+// De AI-accountant is geen geregistreerd accountant of belastingadviseur: geen verklaring,
+// handtekening of indiening.
 // ---------------------------------------------------------------------------
 
 type Tab = "structuur" | "delaware" | "vraag" | "boekhouding";
@@ -87,14 +89,7 @@ export function AccountantHub() {
       {tab === "structuur" && <Structuur toestand={data?.structuur ?? null} onChange={(s) => setData((d) => (d ? { ...d, structuur: s } : d))} />}
       {tab === "delaware" && <Delaware />}
       {tab === "vraag" && <Vraag vragen={data?.vragen ?? []} naVraag={laad} />}
-      {tab === "boekhouding" && (
-        <Panel title="Maandcontrole, jaarafsluiting en dossier voor een mens">
-          <Empty
-            title="Volgt zodra Boekhouding er is"
-            body="Deze onderdelen lezen de boekhouding (grootboek, bonnetjes, btw). Die wordt nu gebouwd onder Beheer → Boekhouding. Zodra die er staat, komen hier: een lijst van wat niet klopt (ontbrekende bonnetjes, dubbele boekingen, btw-saldo), een concept van balans en winst- en verliesrekening, het pakket voor Form 1120 en 5472 en één knop die alles klaarzet voor een menselijk accountant."
-          />
-        </Panel>
-      )}
+      {tab === "boekhouding" && <Boekhouding />}
     </div>
   );
 }
@@ -253,6 +248,110 @@ function Vraag({ vragen, naVraag }: { vragen: { op: string; vraag: string; soort
           <ul className="space-y-1 text-sm">{vragen.slice(0, 8).map((v) => <li key={v.op}>{v.vraag} <Pill tone={v.soort === "antwoord" ? "ok" : "warn"}>{v.soort === "antwoord" ? "beantwoord" : "naar een mens"}</Pill></li>)}</ul>
         </Panel>
       )}
+    </div>
+  );
+}
+
+const ERNST: Record<Ernst, { naam: string; tone: Tone }> = {
+  probleem: { naam: "Probleem", tone: "crit" },
+  nakijken: { naam: "Nakijken", tone: "warn" },
+  info: { naam: "Ter info", tone: "neutral" },
+};
+
+const MAANDEN = ["januari", "februari", "maart", "april", "mei", "juni", "juli", "augustus", "september", "oktober", "november", "december"];
+/** "2027-03-01" → "1 maart 2027", zonder tijdzone (het is al een Amsterdamse dag). */
+const dagTekst = (dag: string) => `${Number(dag.slice(8, 10))} ${MAANDEN[Number(dag.slice(5, 7)) - 1] ?? ""} ${dag.slice(0, 4)}`;
+const maandTekst = (dag: string) => `${MAANDEN[Number(dag.slice(5, 7)) - 1] ?? ""} ${dag.slice(0, 4)}`;
+
+function Boekhouding() {
+  const [data, setData] = useState<MaandcontroleUitslag | null>(null);
+  const [fout, setFout] = useState<string | null>(null);
+  useEffect(() => {
+    void (async () => {
+      try {
+        setData(await api<MaandcontroleUitslag>("/api/admin/accountant/maandcontrole"));
+      } catch (e) {
+        setFout(e instanceof Error ? e.message : "De boekhouding kon niet gelezen worden.");
+      }
+    })();
+  }, []);
+
+  if (fout) return <Notice tone="crit" role="alert">{fout}</Notice>;
+  if (!data) return <Panel title="Maandcontrole"><p className="text-sm">De boekhouding wordt gelezen…</p></Panel>;
+
+  return (
+    <div className="space-y-4">
+      {data.administraties.length === 0 ? (
+        <Panel title="Maandcontrole">
+          <Empty
+            title="Nog geen echte administratie"
+            body="Zodra de boekhouding een echte administratie voor zekerflex, Inc. heeft, kijkt de accountant hier elke maand wat er niet klopt: kosten zonder bonnetje, bonnetjes die nog niet geboekt zijn, mogelijk dubbele boekingen, btw zonder btw-code, datums in de toekomst, facturen die lang openstaan en uitschieters."
+          />
+        </Panel>
+      ) : (
+        data.administraties.map((a) => {
+          const problemen = a.bevindingen.filter((b) => b.ernst === "probleem").length;
+          return (
+            <Panel
+              key={a.id}
+              title={`Maandcontrole ${a.naam}: ${maandTekst(a.van)}`}
+              actions={<Pill tone={problemen ? "crit" : a.bevindingen.length ? "warn" : "ok"}>{a.bevindingen.length === 0 ? "Alles klopt" : `${a.bevindingen.length} ${a.bevindingen.length === 1 ? "punt" : "punten"}`}</Pill>}
+            >
+              {a.bevindingen.length === 0 ? (
+                <p className="text-sm">{a.aantalBoekingen} {a.aantalBoekingen === 1 ? "boeking" : "boekingen"} bekeken; er viel niets op.</p>
+              ) : (
+                <ul className="space-y-4">
+                  {a.bevindingen.map((b) => (
+                    <li key={`${b.soort}-${b.boekstukken.join(",")}-${b.titel}`} className="text-sm">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Pill tone={ERNST[b.ernst].tone}>{ERNST[b.ernst].naam}</Pill>
+                        <strong>{b.titel}</strong>
+                      </div>
+                      <p className="mt-1">{b.uitleg}</p>
+                      {b.boekstukken.length > 0 && <p className="mt-1 text-xs">Boekstukken: {b.boekstukken.join(", ")}</p>}
+                      {b.actie && (
+                        <a href={b.actie.href} className="mt-1 inline-block text-xs font-semibold underline">
+                          {b.actie.label}
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
+          );
+        })
+      )}
+
+      <Panel title="Komende termijnen">
+        {data.termijnen.length === 0 ? (
+          <p className="text-sm">Geen termijnen in de komende maanden.</p>
+        ) : (
+          <ul className="space-y-3">
+            {data.termijnen.map((t) => (
+              <li key={t.sleutel} className="text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Pill tone={t.klaar ? "ok" : t.dagenTot <= 30 ? "warn" : "plan"}>
+                    {t.klaar ? "Klaar" : t.dagenTot <= 0 ? "Vandaag" : `Nog ${t.dagenTot} ${t.dagenTot === 1 ? "dag" : "dagen"}`}
+                  </Pill>
+                  <strong>{t.titel}</strong>
+                  <span>uiterlijk {dagTekst(t.dag)}</span>
+                </div>
+                <p className="mt-1">{t.wat}</p>
+                {t.waarschuwing && <p className="mt-1 font-semibold">{t.waarschuwing}</p>}
+                <p className="mt-1 text-xs">{t.bevestigDoor}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+
+      <Panel title="Jaarafsluiting en dossier voor een mens">
+        <Empty
+          title="Volgt hierna"
+          body="Een concept van balans en winst- en verliesrekening, het pakket voor Form 1120 en 5472 en één knop die alles klaarzet voor een menselijk accountant. De accountant zet het klaar; een mens tekent en dient in."
+        />
+      </Panel>
     </div>
   );
 }
