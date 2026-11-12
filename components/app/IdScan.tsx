@@ -93,6 +93,9 @@ type T = AuthDict["onb"];
 type Stap = "start" | "toestemming" | "telefoon" | "soort" | "voor" | "achter" | "chip" | "selfie" | "beweging" | "gegevens" | "bezig" | "klaar";
 
 /** De chipstap (alleen in de Android-app vanaf 1.0.4): de app leest de chip via NFC (lib/kyc/chip). */
+/** na zoveel mislukte chippogingen gaat de scan zonder chip verder */
+const MAX_CHIP_POGINGEN = 3;
+
 interface ChipStand {
   /** klaarzetten: code ophalen · gereed: de knop opent de app · wacht: de app leest · klaar · fout */
   status: "klaarzetten" | "gereed" | "wacht" | "klaar" | "fout";
@@ -904,6 +907,10 @@ export function IdScan({
   const [fout, setFout] = useState<string | null>(null);
   const [kanChip, setKanChip] = useState(false);
   const [chip, setChip] = useState<ChipStand | null>(null);
+  // mislukte chippogingen; na MAX_CHIP_POGINGEN gaat het zonder chip verder (zoals Onfido)
+  const [chipFouten, setChipFouten] = useState(0);
+  // 30 s na "Chip lezen" zonder uitslag: dan mag "Zonder chip verder", zodat niemand vastzit als de app niets terugmeldt
+  const [chipLang, setChipLang] = useState(false);
   const [naChip, setNaChip] = useState<Stap>("selfie");
   const [overgedragen, setOvergedragen] = useState(false);
   const [kanTelefoon, setKanTelefoon] = useState(false);
@@ -1093,6 +1100,19 @@ export function IdScan({
     if (stap === "chip" && chip === null) void zetChipKlaar();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- alleen bij het openen van de stap
   }, [stap, chip]);
+
+  // een mislukte poging tellen (niet het overslaan zelf: dat zet een lege tekst)
+  useEffect(() => {
+    if (chip?.status === "fout" && chip.tekst !== "") setChipFouten((n) => n + 1);
+  }, [chip]);
+  // de 30 s lopen vanaf het tikken op "Chip lezen" (status "wacht"), niet vanaf het openen van het scherm
+  const chipWacht = chip?.status === "wacht";
+  useEffect(() => {
+    setChipLang(false);
+    if (!chipWacht) return;
+    const id = setTimeout(() => setChipLang(true), 30_000);
+    return () => clearTimeout(id);
+  }, [chipWacht]);
 
   /** Opent ChipActivity in de app; de code gaat als extra mee, nooit in een adres op het web. */
   function openChipApp() {
@@ -1319,8 +1339,27 @@ export function IdScan({
           )}
 
           <div className="flex-1 px-5 py-6">
-            {stap === "start" && route === "nl" && <NlIntro x={s.extra} privacy={s.privacy} annuleren={s.annuleren} onStart={() => setStap("toestemming")} onAnnuleer={() => onSluiten(null)} />}
-            {stap === "start" && route === "eu" && <EuIntro x={s.extra} annuleren={s.annuleren} onStart={() => setStap("toestemming")} onAnnuleer={() => onSluiten(null)} />}
+            {/* de chip vooraf noemen (13 nov 2026, eigenaar: "die moet je als eerste voorgesteld krijgen"), alleen in de app die hem
+                kan lezen; de Android-app staat nog niet openbaar in de Play Store, dus in de browser beloven we niets */}
+            {stap === "start" && route === "nl" && (
+              <NlIntro
+                x={s.extra}
+                privacy={s.privacy}
+                annuleren={s.annuleren}
+                onStart={() => setStap("toestemming")}
+                onAnnuleer={() => onSluiten(null)}
+                extra={kanChip ? <p className="mt-4 rounded-lg border border-trust/30 bg-trust/10 px-3 py-2.5 text-left text-sm leading-relaxed text-ink">{s.chipVooraf}</p> : undefined}
+              />
+            )}
+            {stap === "start" && route === "eu" && (
+              <EuIntro
+                x={s.extra}
+                annuleren={s.annuleren}
+                onStart={() => setStap("toestemming")}
+                onAnnuleer={() => onSluiten(null)}
+                extra={kanChip ? <p className="mt-4 rounded-lg border border-trust/30 bg-trust/10 px-3 py-2.5 text-left text-sm leading-relaxed text-ink">{s.chipVooraf}</p> : undefined}
+              />
+            )}
             {stap === "start" && !route && (
               <>
                 {groet !== undefined && (
@@ -1650,29 +1689,35 @@ export function IdScan({
               <>
                 <h2 className="font-display text-lg font-bold text-ink">{s.chipTitel}</h2>
                 <p className="mt-1 text-sm leading-relaxed text-neutralx-500">{s.chipUitleg}</p>
-                <div className="grid place-items-center py-8">
+                <div className="grid place-items-center py-5">
                   <ChipBeeld />
                 </div>
+                {/* zo leggen de grote partijen het uit (Onfido, ReadID, ABN AMRO, DigiD): hoesje eraf, waar, stil, geen metaal, NFC aan */}
+                <ol className="list-decimal space-y-1.5 pl-5 text-sm leading-relaxed text-ink-soft">
+                  {[s.chipStap1, soort === "PASSPORT" ? s.chipStap2Paspoort : s.chipStap2Kaart, s.chipStap3, s.chipStap4, s.chipStap5].map((r) => (
+                    <li key={r}>{r}</li>
+                  ))}
+                </ol>
                 {chip?.status === "wacht" && (
-                  <p role="status" className="rounded-lg bg-paper-soft px-3 py-2.5 text-sm text-ink-soft">
+                  <p role="status" className="mt-4 rounded-lg bg-paper-soft px-3 py-2.5 text-sm text-ink-soft">
                     {s.chipWacht}
                   </p>
                 )}
                 {chip?.status === "klaar" && (
                   <p
                     role="status"
-                    className={`rounded-lg border px-3 py-2.5 text-sm text-ink ${chip.echt ? "border-ok/30 bg-ok/5" : "border-warn/30 bg-warn/5"}`}
+                    className={`mt-4 rounded-lg border px-3 py-2.5 text-sm text-ink ${chip.echt ? "border-ok/30 bg-ok/5" : "border-warn/30 bg-warn/5"}`}
                   >
                     {chip.echt ? `✓ ${s.chipEcht}` : s.chipNietEcht}
                   </p>
                 )}
                 {chip?.status === "fout" && (
-                  <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">
-                    {chip.tekst ?? s.chipFout}
+                  <p role="alert" className="mt-4 rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">
+                    {chipFouten >= MAX_CHIP_POGINGEN ? s.chipDrieKeer : chip.tekst || s.chipFout}
                   </p>
                 )}
                 <div className="mt-6 grid gap-2">
-                  {chip?.status === "klaar" ? (
+                  {chip?.status === "klaar" || (chip?.status === "fout" && chipFouten >= MAX_CHIP_POGINGEN) ? (
                     <button type="button" onClick={() => setStap(naChip)} className="btn-primary w-full">
                       {s.volgende}
                     </button>
@@ -1685,7 +1730,8 @@ export function IdScan({
                       {s.chipStart}
                     </button>
                   )}
-                  {chip?.status !== "klaar" && (
+                  {/* "Zonder chip verder" pas na een mislukte poging, of 30 s na "Chip lezen" zonder uitslag */}
+                  {((chip?.status === "fout" && chipFouten < MAX_CHIP_POGINGEN) || (chip?.status === "wacht" && chipLang)) && (
                     <button
                       type="button"
                       onClick={() => {

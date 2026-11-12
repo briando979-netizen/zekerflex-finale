@@ -63,13 +63,14 @@ export function NlIntro({ x, privacy, annuleren, onStart, onAnnuleer, extra }: {
 }
 
 /** Route 2, scherm 1: online identificatie. */
-export function EuIntro({ x, onStart, onAnnuleer, annuleren }: { x: ScanExtra; onStart: () => void; onAnnuleer: () => void; annuleren: string }) {
+export function EuIntro({ x, onStart, onAnnuleer, annuleren, extra }: { x: ScanExtra; onStart: () => void; onAnnuleer: () => void; annuleren: string; extra?: ReactNode }) {
   return (
     <div className="text-center">
       <PersoonBeeld />
       <h2 className="mt-5 font-display text-2xl font-bold text-ink">{x.euIntroTitel}</h2>
       <p className="mt-2 text-sm leading-relaxed text-ink-soft">{x.euIntroTekst}</p>
       <p className="mx-auto mt-4 inline-block rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">{x.euIntroLabel}</p>
+      {extra}
       <button type="button" onClick={onStart} className="btn-primary mt-6 w-full">
         {x.euStart}
       </button>
