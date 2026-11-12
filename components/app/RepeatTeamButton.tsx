@@ -3,12 +3,15 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
+import { useT } from "@/components/i18n/I18nProvider";
+import { fmt } from "@/lib/i18n/dictionaries";
 import { repeatShiftAction } from "@/app/werkgever/diensten/[shiftId]/actions";
 
 /** "Zelfde team volgende week": repeat this klus and offer it to the same people first. */
 export function RepeatTeamButton({ shiftId, teamSize }: { shiftId: string; teamSize: number }) {
   const toast = useToast();
   const router = useRouter();
+  const k = useT().herhaalKnop;
   const [pending, start] = useTransition();
   const [weeks, setWeeks] = useState(1);
 
@@ -34,26 +37,26 @@ export function RepeatTeamButton({ shiftId, teamSize }: { shiftId: string; teamS
       </span>
       {/* min-w: on a phone the text keeps its own line and the controls wrap below it */}
       <div className="min-w-[12rem] flex-1">
-        <p className="text-sm font-semibold text-plan-ink">Zelfde klus, zelfde team</p>
+        <p className="text-sm font-semibold text-plan-ink">{k.kop}</p>
         <p className="text-xs text-neutralx-600">
           {teamSize > 0
-            ? `Herhaal deze klus en bied hem eerst privé aan de ${teamSize === 1 ? "persoon" : `${teamSize} mensen`} van nu aan.`
-            : "Herhaal deze klus met dezelfde tijden, tarief en omschrijving."}
+            ? fmt(teamSize === 1 ? k.metTeamEen : k.metTeamMeer, { n: teamSize })
+            : k.zonderTeam}
         </p>
       </div>
       <select
         value={weeks}
         onChange={(e) => setWeeks(Number(e.target.value))}
-        aria-label="Hoeveel weken later"
+        aria-label={k.aria}
         className="rounded-lg border border-hairstrong bg-white px-2 py-1.5 text-sm"
         disabled={pending}
       >
-        <option value={1}>Volgende week</option>
-        <option value={2}>Over 2 weken</option>
-        <option value={4}>Over 4 weken</option>
+        <option value={1}>{k.w1}</option>
+        <option value={2}>{k.w2}</option>
+        <option value={4}>{k.w4}</option>
       </select>
       <button type="button" onClick={repeat} disabled={pending} className="btn-primary text-sm">
-        {pending ? "Bezig…" : "Herhalen"}
+        {pending ? k.bezig : k.herhalen}
       </button>
     </div>
   );

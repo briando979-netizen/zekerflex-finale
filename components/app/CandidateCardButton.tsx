@@ -4,6 +4,8 @@ import { useId, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { respondToOfferAction } from "@/app/werkgever/diensten/[shiftId]/actions";
 import { useToast } from "@/components/ui/Toast";
+import { useI18n, useT } from "@/components/i18n/I18nProvider";
+import { fmt } from "@/lib/i18n/dictionaries";
 
 interface Card {
   userId: string;
@@ -24,13 +26,13 @@ interface Card {
   followsYou?: boolean;
 }
 
-const euro = (c: number) => `€ ${(c / 100).toFixed(2).replace(".", ",")}`;
-const BADGE_NL: Record<string, string> = { BRONZE: "Brons", SILVER: "Zilver", GOLD: "Goud", PLATINUM: "Platina" };
+const euroIn = (c: number, nl: boolean) => `€ ${nl ? (c / 100).toFixed(2).replace(".", ",") : (c / 100).toFixed(2)}`;
 
 function Stars({ n }: { n: number }) {
+  const k = useT().kandidaatKaart;
   const full = Math.round(n);
   return (
-    <span className="inline-flex" aria-label={`${n} van 5`}>
+    <span className="inline-flex" aria-label={fmt(k.sterren, { n })}>
       {[1, 2, 3, 4, 5].map((i) => (
         <svg key={i} width="14" height="14" viewBox="0 0 24 24" className={i <= full ? "text-amber-400" : "text-neutralx-300"}>
           <path fill="currentColor" d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.8 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9z" />
@@ -69,6 +71,10 @@ export function CandidateCardButton({
 }) {
   const router = useRouter();
   const toast = useToast();
+  const { locale, t: dict } = useI18n();
+  const k = dict.kandidaatKaart;
+  const euro = (c: number) => euroIn(c, locale === "nl");
+  const badgeNaam = (b: string) => (Object.hasOwn(BADGES, b) ? k[BADGES[b]!] : b);
   const [gekozen, setGekozen] = useState<"accepted" | "declined" | null>(null);
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
@@ -98,7 +104,7 @@ export function CandidateCardButton({
     if (!beslissing || bezig) return;
     setBezig(true);
     setFout(null);
-    const r = await respondToOfferAction(beslissing.offerId, decision).catch(() => ({ ok: false, message: "Dat lukte niet. Probeer het opnieuw." }));
+    const r = await respondToOfferAction(beslissing.offerId, decision).catch(() => ({ ok: false, message: k.mislukt }));
     setBezig(false);
     if (!r.ok) {
       setFout(r.message);
@@ -120,19 +126,19 @@ export function CandidateCardButton({
     <>
       {knoppen === "beslissen" ? (
         besluit ? (
-          <span className={besluit.decision === "accepted" ? "pill-ok" : "pill-crit"}>{besluit.decision === "accepted" ? "Geaccepteerd" : "Afgewezen"}</span>
+          <span className={besluit.decision === "accepted" ? "pill-ok" : "pill-crit"}>{besluit.decision === "accepted" ? k.geaccepteerd : k.afgewezen}</span>
         ) : (
           <div className="flex gap-2">
             <button type="button" onClick={() => openMet("declined")} className="btn-ghost px-3 py-1.5 text-xs">
-              Afwijzen
+              {k.afwijzen}
             </button>
             <button type="button" onClick={() => openMet("accepted")} className="btn-primary px-3 py-1.5 text-xs">
-              Accepteren
+              {k.accepteren}
             </button>
           </div>
         )
       ) : children ? (
-        <button type="button" onClick={load} aria-label={`Profiel van ${name} bekijken`} className="group flex min-w-0 items-center gap-3 rounded-xl text-left">
+        <button type="button" onClick={load} aria-label={fmt(k.profielVan, { naam: name })} className="group flex min-w-0 items-center gap-3 rounded-xl text-left">
           {children}
         </button>
       ) : (
@@ -141,7 +147,7 @@ export function CandidateCardButton({
           onClick={load}
           className="rounded-lg border border-hairstrong px-2.5 py-1 text-xs font-medium text-neutralx-700 hover:border-brand-400"
         >
-          Bekijk profiel
+          {k.bekijkProfiel}
         </button>
       )}
 
@@ -156,16 +162,16 @@ export function CandidateCardButton({
           >
             <div className="mb-3 flex items-center justify-between">
               <h2 id={titleId} className="font-display text-lg font-bold text-ink">
-                {beslissing ? `Reactie van ${name}` : preview ? name : "Profiel"}
+                {beslissing ? fmt(k.reactieVan, { naam: name }) : preview ? name : k.profiel}
               </h2>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Sluiten" className="grid h-8 w-8 place-items-center rounded-full bg-paper-soft text-neutralx-600">✕</button>
+              <button type="button" onClick={() => setOpen(false)} aria-label={k.sluiten} className="grid h-8 w-8 place-items-center rounded-full bg-paper-soft text-neutralx-600">✕</button>
             </div>
 
             {preview && (
               <div className="space-y-4">
                 {preview.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={preview.avatarUrl} alt={`Foto van ${name}`} className="mx-auto aspect-square w-full max-w-[16rem] rounded-2xl object-cover" />
+                  <img src={preview.avatarUrl} alt={fmt(k.fotoVan, { naam: name })} className="mx-auto aspect-square w-full max-w-[16rem] rounded-2xl object-cover" />
                 ) : (
                   <span className="mx-auto grid aspect-square w-40 place-items-center rounded-2xl bg-brand-100 text-5xl font-bold text-brand-700">
                     {name.slice(0, 1).toUpperCase()}
@@ -179,14 +185,13 @@ export function CandidateCardButton({
                   </ul>
                 )}
                 <p className="rounded-xl bg-paper-soft px-3 py-2.5 text-xs text-neutralx-600">
-                  Het volledige profiel (betrouwbaarheid, werkverleden en beoordelingen) zie je zodra deze kracht op je klus reageert. Zo
-                  bepaalt de kracht zelf wie dat te zien krijgt.
+                  {k.volledigProfiel}
                 </p>
               </div>
             )}
 
-            {state === "loading" && <p className="py-8 text-center text-sm text-neutralx-500">Laden…</p>}
-            {state === "error" && <p className="py-8 text-center text-sm text-crit">Kon dit profiel niet laden.</p>}
+            {state === "loading" && <p className="py-8 text-center text-sm text-neutralx-500">{k.laden}</p>}
+            {state === "error" && <p className="py-8 text-center text-sm text-crit">{k.kanNietLaden}</p>}
 
             {card && (
               <div className="space-y-5">
@@ -203,13 +208,13 @@ export function CandidateCardButton({
                   <div className="min-w-0">
                     <p className="font-display text-xl font-bold">{card.name}</p>
                     <p className="flex flex-wrap items-center gap-x-2 text-sm text-neutralx-500">
-                      <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700">★ {BADGE_NL[card.badge] ?? card.badge}</span>
+                      <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700">★ {badgeNaam(card.badge)}</span>
                       {card.followsYou && (
-                        <span className="rounded-full bg-paper-soft px-2 py-0.5 text-xs font-semibold text-ink" title="Deze werker volgt jullie en krijgt een melding bij elke nieuwe dienst">
-                          ❤️ volgt jullie
+                        <span className="rounded-full bg-paper-soft px-2 py-0.5 text-xs font-semibold text-ink" title={k.volgtTitle}>
+                          {k.volgtJullie}
                         </span>
                       )}
-                      {card.area && <span>📍 omgeving {card.area}</span>}
+                      {card.area && <span>{fmt(k.omgeving, { gebied: card.area })}</span>}
                       {card.rating.count > 0 && (
                         <span className="inline-flex items-center gap-1"><Stars n={card.rating.average} /> {card.rating.average} ({card.rating.count})</span>
                       )}
@@ -219,14 +224,15 @@ export function CandidateCardButton({
 
                 {/* stats */}
                 <div className="grid grid-cols-4 gap-2 text-center">
-                  <Stat value={`${card.reliabilityPct}%`} label="betrouwbaar" />
-                  <Stat value={card.attendancePct !== null ? `${card.attendancePct}%` : "—"} label="opkomst" />
-                  <Stat value={String(card.shiftsCompleted)} label="diensten" />
-                  <Stat value={String(card.cancellations)} label="zelf afgezegd" tone={card.cancellations > 0 ? "warn" : "ok"} />
+                  <Stat value={`${card.reliabilityPct}%`} label={k.statBetrouwbaar} />
+                  <Stat value={card.attendancePct !== null ? `${card.attendancePct}%` : "—"} label={k.statOpkomst} />
+                  <Stat value={String(card.shiftsCompleted)} label={k.statDiensten} />
+                  <Stat value={String(card.cancellations)} label={k.statAfgezegd} tone={card.cancellations > 0 ? "warn" : "ok"} />
                 </div>
                 {card.avgRateCents !== null && (
                   <p className="text-center text-sm text-neutralx-600">
-                    Gemiddeld tarief bij klussen: <strong className="text-ink">{euro(card.avgRateCents)}/u</strong>
+                    {k.gemTarief}
+                    <strong className="text-ink">{fmt(k.perUur, { bedrag: euro(card.avgRateCents) })}</strong>
                   </p>
                 )}
 
@@ -247,7 +253,7 @@ export function CandidateCardButton({
                 {/* werkverleden */}
                 {card.history.length > 0 && (
                   <div>
-                    <h3 className="mb-2 text-sm font-semibold text-ink">Werkverleden</h3>
+                    <h3 className="mb-2 text-sm font-semibold text-ink">{k.werkverleden}</h3>
                     <ul className="space-y-2">
                       {card.history.map((h, i) => (
                         <li key={i} className="flex items-center justify-between gap-3 rounded-xl border border-hair px-3 py-2 text-sm">
@@ -255,7 +261,7 @@ export function CandidateCardButton({
                             <span className="block truncate font-medium text-ink">{h.title}</span>
                             <span className="block truncate text-xs text-neutralx-500">{h.company} · {h.city} · {h.monthLabel}</span>
                           </span>
-                          <span className="num flex-shrink-0 text-xs text-neutralx-500">{euro(h.rateCents)}/u</span>
+                          <span className="num flex-shrink-0 text-xs text-neutralx-500">{fmt(k.perUur, { bedrag: euro(h.rateCents) })}</span>
                         </li>
                       ))}
                     </ul>
@@ -265,7 +271,7 @@ export function CandidateCardButton({
                 {/* reviews */}
                 {card.reviews.length > 0 && (
                   <div>
-                    <h3 className="mb-2 text-sm font-semibold text-ink">Beoordelingen</h3>
+                    <h3 className="mb-2 text-sm font-semibold text-ink">{k.beoordelingen}</h3>
                     <div className="space-y-2">
                       {card.reviews.map((r, i) => (
                         <figure key={i} className="rounded-xl border border-hair p-3">
@@ -294,14 +300,14 @@ export function CandidateCardButton({
                       {besluit.message}
                     </p>
                     <button type="button" onClick={() => setOpen(false)} className="btn-ghost w-full">
-                      Sluiten
+                      {k.sluiten}
                     </button>
                   </div>
                 ) : (
                   <>
                     {gekozen && (
                       <p className="mt-1 text-xs text-neutralx-500">
-                        {gekozen === "accepted" ? `Bekijk het profiel en bevestig dat je ${name} aanneemt.` : `Bekijk het profiel en bevestig dat je deze reactie afwijst.`}
+                        {gekozen === "accepted" ? fmt(k.gekozenAccept, { naam: name }) : k.gekozenDecline}
                       </p>
                     )}
                     <div className="mt-3 grid grid-cols-2 gap-2">
@@ -314,7 +320,7 @@ export function CandidateCardButton({
                         disabled={bezig}
                         className={`btn-ghost disabled:opacity-50 ${gekozen === "declined" ? "ring-2 ring-crit/40" : ""}`}
                       >
-                        {bezig && gekozen === "declined" ? "Bezig…" : "Afwijzen"}
+                        {bezig && gekozen === "declined" ? k.bezig : k.afwijzen}
                       </button>
                       <button
                         type="button"
@@ -325,7 +331,7 @@ export function CandidateCardButton({
                         disabled={bezig}
                         className={`btn-primary disabled:opacity-50 ${gekozen === "accepted" ? "ring-2 ring-brand-300" : ""}`}
                       >
-                        {bezig && gekozen === "accepted" ? "Bezig…" : "Accepteren"}
+                        {bezig && gekozen === "accepted" ? k.bezig : k.accepteren}
                       </button>
                     </div>
                   </>
@@ -338,6 +344,8 @@ export function CandidateCardButton({
     </>
   );
 }
+
+const BADGES: Record<string, "badgeBRONZE" | "badgeSILVER" | "badgeGOLD" | "badgePLATINUM"> = { BRONZE: "badgeBRONZE", SILVER: "badgeSILVER", GOLD: "badgeGOLD", PLATINUM: "badgePLATINUM" };
 
 function Stat({ value, label, tone }: { value: string; label: string; tone?: "ok" | "warn" }) {
   return (
