@@ -421,19 +421,6 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("stripe-btw"),
     },
     {
-      id: "loonweek-grens",
-      group: "Geld & bank",
-      title: "Loonweek: laten beginnen om 00:00 Nederlandse tijd? (keuze nodig)",
-      why: "De loonweek begint nu op maandag 00:00 UTC: dat is 01:00 of 02:00 in Nederland. Een dienst op maandag tussen middernacht en dat uur valt daardoor in de loonrun van de week ervoor. Rechtzetten kan een dienst in de overgangsweek in twee loonruns laten belanden, en dan wordt hij dubbel betaald. Daarom is het niet zomaar aangepast (gevonden op 3 nov).",
-      how: [
-        "Aangeraden: de grens naar 00:00 Nederlandse tijd verleggen, met een vangnet. Urenbriefjes die al in een definitieve loonrun zitten, worden overgeslagen.",
-        "Of zo laten: het gaat alleen om diensten op maandag tussen 00:00 en 01:00/02:00.",
-        "Zeg je keuze tegen Claude; die bouwt het met tests op de overgangsweek.",
-      ],
-      auto: false,
-      ...m("loonweek-grens"),
-    },
-    {
       id: "no-show-sweep",
       group: "Geld & bank",
       title: "Automatisch 'niet opgekomen': aan of uit laten? (staat nu uit)",
