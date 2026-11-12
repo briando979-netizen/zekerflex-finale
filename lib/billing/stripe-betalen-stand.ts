@@ -20,7 +20,8 @@ export function isBetalenUitFout(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const e = err as { message?: unknown; code?: unknown; raw?: { message?: unknown } };
   const tekst = [e.message, e.raw?.message].filter((x): x is string => typeof x === "string").join(" ");
-  return /cannot currently make live charges|charges (are|have been) disabled|account (is|has been) (restricted|disabled|rejected)/i.test(tekst);
+  // ook "You cannot create new accounts because your account has been rejected" (Connect-account maken, 12 nov)
+  return /cannot currently make live charges|charges (are|have been) disabled|account (is|has been) (restricted|disabled|rejected)|cannot create new accounts/i.test(tekst);
 }
 
 /** De nieuwe stand na een meting, met "uit sinds" doorgeschoven als het al uit stond. */

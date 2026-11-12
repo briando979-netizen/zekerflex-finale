@@ -15,6 +15,7 @@ import { listCertificates } from "@/lib/certificates/store";
 import { mailPrefsView } from "@/lib/mail/prefs";
 import { MailPrefsToggles } from "@/components/marketing/MailPrefsToggles";
 import { StripeConnectPayout } from "@/components/app/StripeConnectPayout";
+import { betalenUit } from "@/lib/billing/stripe-betalen";
 import { BackLink } from "@/components/app/BackLink";
 import { PersonalInfoForm } from "@/components/app/PersonalInfoForm";
 import { updatePersonalInfoAction } from "@/app/dashboard/profiel/actions";
@@ -249,6 +250,8 @@ export default async function ProfielPage() {
             <StripeConnectPayout
               initialConnected={Boolean(profile?.stripeConnectedAccountId)}
               initialPayoutsEnabled={Boolean(profile?.stripePayoutsEnabled)}
+              // betalen staat bij Stripe uit: geen knop, wel "tijdelijk uit" (een storing in de KV laat de knop staan)
+              tijdelijkUit={Boolean(await betalenUit().catch(() => null))}
             />
           </div>
           <dl className="divide-y divide-hair text-sm">

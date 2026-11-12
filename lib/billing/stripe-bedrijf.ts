@@ -2,6 +2,9 @@ import type Stripe from "stripe";
 import type { CompanyRegistration } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { AppError } from "@/lib/errors";
+import { eisBetalenAan, zetBetalenUit } from "@/lib/billing/stripe-betalen";
+import { isBetalenUitFout } from "@/lib/billing/stripe-betalen-stand";
 
 // ---------------------------------------------------------------------------
 // Bedrijfsgegevens vooraf invullen bij een nieuw Stripe-account (Connect
@@ -61,13 +64,24 @@ export function isBedrijfsveldFout(err: unknown): boolean {
 
 /** Maakt het Connect-account met de KvK-gegevens erin; weigert Stripe die, dan zonder. */
 export async function maakAccountMetKvk(stripe: Pick<Stripe, "accounts">, gegevens: Stripe.AccountCreateParams, tenantId: string): Promise<Stripe.Account> {
-  const company = await stripeBedrijfVan(tenantId);
-  if (!company) return stripe.accounts.create(gegevens);
+  // staat betalen uit (lib/billing/stripe-betalen.ts), dan een 423 BETALEN_UIT en geen poging bij Stripe
+  await eisBetalenAan();
   try {
-    return await stripe.accounts.create({ ...gegevens, company });
+    const company = await stripeBedrijfVan(tenantId);
+    if (!company) return await stripe.accounts.create(gegevens);
+    try {
+      return await stripe.accounts.create({ ...gegevens, company });
+    } catch (err) {
+      if (!isBedrijfsveldFout(err)) throw err;
+      logger.warn("stripe: vooraf ingevulde bedrijfsgegevens geweigerd, account zonder gemaakt", { tenantId, error: err instanceof Error ? err.message : String(err) });
+      return await stripe.accounts.create(gegevens);
+    }
   } catch (err) {
-    if (!isBedrijfsveldFout(err)) throw err;
-    logger.warn("stripe: vooraf ingevulde bedrijfsgegevens geweigerd, account zonder gemaakt", { tenantId, error: err instanceof Error ? err.message : String(err) });
-    return stripe.accounts.create(gegevens);
+    // Stripe weigert nieuwe accounts (het platformaccount is afgewezen): "betalen uit" in plaats van een upstream-fout
+    if (isBetalenUitFout(err)) {
+      await zetBetalenUit((err as Error).message ?? "account rejected").catch(() => undefined);
+      throw AppError.betalenUit();
+    }
+    throw err;
   }
 }

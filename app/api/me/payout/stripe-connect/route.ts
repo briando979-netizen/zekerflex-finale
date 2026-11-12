@@ -10,6 +10,7 @@ import {
   getConnectAccountStatus,
 } from "@/lib/billing/stripe";
 import { recordAudit } from "@/lib/audit";
+import { betalenUit } from "@/lib/billing/stripe-betalen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -67,7 +68,12 @@ export async function POST(): Promise<NextResponse> {
 
     let accountId = profile.stripeConnectedAccountId;
     if (!accountId) {
-      const account = await createExpressAccount({ email: p.email });
+      // het Stripe-account betaalt even niet (uit): geen nieuw account proberen, een rustige melding in de app-taal
+      const uit = () => AppError.betalenUit("Uitbetalen via Stripe koppelen kan tijdelijk niet. Je verdiensten gaan gewoon naar je eigen IBAN.").metSleutel("stripe.tijdelijkUit");
+      if (await betalenUit().catch(() => null)) throw uit();
+      const account = await createExpressAccount({ email: p.email }).catch((err: unknown) => {
+        throw err instanceof AppError && err.code === "BETALEN_UIT" ? uit() : err;
+      });
       accountId = account.id;
       await prisma.freelancerProfile.update({
         where: { id: profile.id },

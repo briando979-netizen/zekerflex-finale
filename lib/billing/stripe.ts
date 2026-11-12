@@ -1,7 +1,8 @@
 import Stripe from "stripe";
 import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
-import { eisBetalenAan } from "@/lib/billing/stripe-betalen";
+import { eisBetalenAan, zetBetalenUit } from "@/lib/billing/stripe-betalen";
+import { isBetalenUitFout } from "@/lib/billing/stripe-betalen-stand";
 
 let client: Stripe | null = null;
 
@@ -344,14 +345,26 @@ export async function createExpressAccount(input: {
   email: string;
   country?: string;
 }): Promise<Stripe.Account> {
+  // zoals de andere Stripe-functies hier: staat betalen uit, dan een 423 BETALEN_UIT en geen poging bij Stripe
+  await eisBetalenAan();
   const stripe = getStripeClient();
-  return stripe.accounts.create({
-    type: "express",
-    country: input.country ?? "NL",
-    email: input.email,
-    business_type: "individual",
-    capabilities: { transfers: { requested: true } },
-  });
+  try {
+    return await stripe.accounts.create({
+      type: "express",
+      country: input.country ?? "NL",
+      email: input.email,
+      business_type: "individual",
+      capabilities: { transfers: { requested: true } },
+    });
+  } catch (err) {
+    // "You cannot create new accounts because your account has been rejected" (12 nov, foutenlogboek): geen kale 500
+    // maar de vlag zetten en een rustige 423, zodat de schermen "tijdelijk uit" tonen
+    if (isBetalenUitFout(err)) {
+      await zetBetalenUit((err as Error).message ?? "account rejected").catch(() => undefined);
+      throw AppError.betalenUit();
+    }
+    throw err;
+  }
 }
 
 /**
