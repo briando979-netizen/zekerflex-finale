@@ -601,7 +601,7 @@ export function OnboardingForm({
         onTerug={terug}
         onSluit={kanSluiten ? () => router.push("/dashboard") : undefined}
       />
-      <div className="relative -mt-5 rounded-t-3xl bg-white px-5 pb-6 pt-6">
+      <div id="id-stap" tabIndex={-1} className="relative -mt-5 scroll-mt-4 rounded-t-3xl bg-white px-5 pb-6 pt-6 focus:outline-none">
         {stap === "persoon" && (
           <WieBenJijPersoon
             begin={persoonNu}

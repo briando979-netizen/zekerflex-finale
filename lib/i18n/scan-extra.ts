@@ -81,7 +81,7 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
   nl: {
     introTitel: "Bevestig je identiteit",
     introTekst: "We vragen je je identiteitsdocument te scannen en een selfie te maken.",
-    beginnen: "Laten we beginnen",
+    beginnen: "ID-scan starten (2 minuten)",
     tipsKop: "Tips voor een goede foto",
     tips: [
       "Leg je document op een donkere, effen ondergrond.",
@@ -151,7 +151,7 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
   en: {
     introTitel: "Confirm your identity",
     introTekst: "We ask you to scan your identity document and take a selfie.",
-    beginnen: "Let's get started",
+    beginnen: "Start ID scan (2 minutes)",
     tipsKop: "Tips for a good photo",
     tips: [
       "Put your document on a dark, plain surface.",
@@ -221,7 +221,7 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
   pl: {
     introTitel: "Potwierdź swoją tożsamość",
     introTekst: "Poprosimy Cię o zeskanowanie dokumentu tożsamości i zrobienie selfie.",
-    beginnen: "Zaczynamy",
+    beginnen: "Rozpocznij skan dokumentu (2 minuty)",
     tipsKop: "Wskazówki do dobrego zdjęcia",
     tips: [
       "Połóż dokument na ciemnym, jednolitym podłożu.",
@@ -291,7 +291,7 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
   ro: {
     introTitel: "Confirmă-ți identitatea",
     introTekst: "Te rugăm să scanezi actul de identitate și să faci un selfie.",
-    beginnen: "Să începem",
+    beginnen: "Începe scanarea actului (2 minute)",
     tipsKop: "Sfaturi pentru o fotografie bună",
     tips: [
       "Așază documentul pe o suprafață închisă la culoare și uniformă.",
@@ -361,7 +361,7 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
   uk: {
     introTitel: "Підтвердьте свою особу",
     introTekst: "Ми просимо вас відсканувати документ, що посвідчує особу, і зробити селфі.",
-    beginnen: "Почнімо",
+    beginnen: "Почати сканування документа (2 хвилини)",
     tipsKop: "Поради для гарного фото",
     tips: [
       "Покладіть документ на темну однотонну поверхню.",
