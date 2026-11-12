@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { getPrefs } from "@/lib/prefs/store";
 import { exportUserKv } from "@/lib/privacy/user-kv";
+import { exportChatlogVan } from "@/lib/learn/store";
 
 // ---------------------------------------------------------------------------
 // Data subject access request (AVG art. 15 inzage + art. 20 dataportabiliteit).
@@ -260,6 +261,8 @@ export async function exportUserData(userId: string): Promise<DataExport> {
   // Per-user JSON in the KeyValueStore (agenda, trips, chat settings, contacts,
   // AI memory, …) — credentials redacted. See lib/privacy/user-kv.ts.
   sections.storedSettings = await safe("storedSettings", () => exportUserKv(userId));
+  // wat je aan de assistenten (Jarvis, Brain) hebt gevraagd en wat ze antwoordden; alleen je eigen regels, hooguit 90 dagen terug
+  sections.assistentChat = await safe("assistentChat", () => exportChatlogVan(userId));
 
   sections.auditTrail = await safe("auditTrail", () =>
     prisma.auditLog.findMany({
