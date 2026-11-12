@@ -31,3 +31,21 @@ export function schoonPersoonsgegevens(tekst: string): string {
     .replace(TEL_INTERNATIONAAL, WEG.tel)
     .replace(TEL_NATIONAAL, WEG.tel);
 }
+
+const zonderG = (re: RegExp) => new RegExp(re.source, re.flags.replace("g", ""));
+
+/**
+ * Welke soorten persoonsgegevens er in een tekst zitten (alleen ja/nee, nooit de inhoud): voor de droge telling van het
+ * eenmalige opschonen van de bestaande leerlijsten (lib/learn/store.ts scrubBestaandeChatlog). Dezelfde volgorde als
+ * schoonPersoonsgegevens, met telkens eerst wegschrappen: een rekeningnummer telt zo niet ook als telefoonnummer.
+ */
+export function soortenPersoonsgegevens(tekst: string): { mail: boolean; iban: boolean; tel: boolean; bsn: boolean } {
+  const mail = zonderG(MAIL).test(tekst);
+  let rest = tekst.replace(MAIL, WEG.mail);
+  const bsn = zonderG(BSN).test(rest);
+  rest = rest.replace(BSN, WEG.bsn);
+  const iban = zonderG(IBAN).test(rest);
+  rest = rest.replace(IBAN, WEG.iban);
+  const tel = zonderG(TEL_INTERNATIONAAL).test(rest) || zonderG(TEL_NATIONAAL).test(rest);
+  return { mail, iban, tel, bsn };
+}

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { kvAppend, kvGet, kvSet } from "@/lib/storage/kv";
-import { schoonPersoonsgegevens } from "@/lib/learn/schoon";
+import { schoonPersoonsgegevens, soortenPersoonsgegevens } from "@/lib/learn/schoon";
 
 // ---------------------------------------------------------------------------
 // Lightweight "learning" for the local assistants — Postgres-backed
@@ -145,4 +145,63 @@ export async function ruimChatlogOp(now: Date, dryRun: boolean): Promise<number>
     }
   }
   return totaal;
+}
+
+export interface ChatlogExportRegel {
+  assistent: Scope;
+  op: string;
+  vraag: string;
+  antwoord: string;
+  beoordeling: "goed" | "slecht" | null;
+}
+
+/** Wat een gebruiker aan de assistenten heeft gevraagd (AVG art. 15, lib/privacy/export.ts): alleen zijn eigen vragen en antwoorden. */
+export async function exportChatlogVan(userId: string): Promise<ChatlogExportRegel[]> {
+  const uit: ChatlogExportRegel[] = [];
+  for (const scope of SCOPES) {
+    const log = ((await kvGet<Exchange[]>(logKey(scope))) ?? []).filter((e) => e.userId === userId);
+    if (log.length === 0) continue;
+    const rated = (await kvGet<{ id: string; up: boolean }[]>(ratedKey(scope))) ?? [];
+    for (const e of log) {
+      const stem = rated.filter((r) => r.id === e.id).pop();
+      uit.push({ assistent: scope, op: e.at, vraag: e.q, antwoord: e.a, beoordeling: stem ? (stem.up ? "goed" : "slecht") : null });
+    }
+  }
+  return uit;
+}
+
+export interface ScrubTelling {
+  /** regels in de leerlijsten */
+  regels: number;
+  /** regels met minstens een e-mailadres, telefoonnummer, rekeningnummer of BSN (in vraag of antwoord) */
+  metPersoonsgegevens: number;
+  perSoort: { mail: number; tel: number; iban: number; bsn: number };
+  /** alleen bij schrijven: het aantal herschreven regels */
+  herschreven: number;
+}
+
+/**
+ * Eenmalig opschonen van wat vóór de scrub al bewaard was (lib/learn/schoon.ts). Idempotent: een tweede keer vindt niets meer.
+ * Met `dryRun` (de standaard van de route) alleen tellen. Geeft nooit inhoud terug, alleen aantallen.
+ */
+export async function scrubBestaandeChatlog(dryRun: boolean): Promise<ScrubTelling> {
+  const uit: ScrubTelling = { regels: 0, metPersoonsgegevens: 0, perSoort: { mail: 0, tel: 0, iban: 0, bsn: 0 }, herschreven: 0 };
+  for (const scope of SCOPES) {
+    const log = (await kvGet<Exchange[]>(logKey(scope))) ?? [];
+    let gewijzigd = false;
+    const nieuw = log.map((e) => {
+      uit.regels += 1;
+      const q = soortenPersoonsgegevens(e.q ?? "");
+      const a = soortenPersoonsgegevens(e.a ?? "");
+      const soorten = { mail: q.mail || a.mail, tel: q.tel || a.tel, iban: q.iban || a.iban, bsn: q.bsn || a.bsn };
+      if (!soorten.mail && !soorten.tel && !soorten.iban && !soorten.bsn) return e;
+      uit.metPersoonsgegevens += 1;
+      for (const k of ["mail", "tel", "iban", "bsn"] as const) if (soorten[k]) uit.perSoort[k] += 1;
+      gewijzigd = true;
+      if (!dryRun) uit.herschreven += 1;
+      return { ...e, q: schoonPersoonsgegevens(e.q ?? ""), a: schoonPersoonsgegevens(e.a ?? "") };
+    });
+    if (gewijzigd && !dryRun) await kvSet(logKey(scope), nieuw);
+  }
+  return uit;
 }
