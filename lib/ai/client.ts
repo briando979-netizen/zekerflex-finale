@@ -69,7 +69,16 @@ export interface ChatOptions {
    * stream loopt de wachttijd over het hele antwoord, dus die zou een traag eigen model halverwege afkappen.
    */
   interactief?: boolean;
+  /**
+   * Alleen bij een stream: hoe lang hooguit tot het eerste stuk tekst (standaard EERSTE_WOORD_MS). Komt er niets, dan
+   * neemt het reservemodel het over (met dezelfde grens), en anders een fout voor de eigen terugval van de aanroeper.
+   * Is het eerste woord binnen, dan loopt de stream door met de ruime totaaltijd.
+   */
+  eersteWoordMs?: number;
 }
+
+/** Bij een stream hooguit zo lang wachten op het eerste woord (12 nov: een traag eigen model liet mensen minuten wachten). */
+export const EERSTE_WOORD_MS = 30_000;
 
 interface TokenUsage {
   promptTokens: number;
@@ -461,6 +470,23 @@ export async function* chatStream(
   }
 
   const llmKey = await getLlmApiKey();
+  // Eén poging (hoofdmodel met zijn herhalingen, of het reservemodel): een eigen afbreekknop met twee klokken, de grens
+  // tot het eerste woord en de ruime totaaltijd van nu. Het eerste woord zet de eerste klok stil.
+  const grens = opts.eersteWoordMs ?? EERSTE_WOORD_MS;
+  const nieuwePoging = () => {
+    const ctl = new AbortController();
+    const p = { ctl, teLaat: false, klokken: [] as ReturnType<typeof setTimeout>[] };
+    const eerste = setTimeout(() => {
+      p.teLaat = true;
+      ctl.abort(new DOMException("geen eerste woord binnen de grens", "TimeoutError"));
+    }, grens);
+    const totaal = setTimeout(() => ctl.abort(new DOMException("The operation was aborted due to timeout", "TimeoutError")), timeoutMs);
+    for (const k of [eerste, totaal]) (k as { unref?: () => void }).unref?.();
+    p.klokken = [eerste, totaal];
+    return p;
+  };
+  const stopPoging = (q: ReturnType<typeof nieuwePoging>) => q.klokken.forEach((k) => clearTimeout(k));
+  let poging = nieuwePoging();
   const streamOnce = (m: string, doel?: { base: string }): Promise<Response> =>
     fetch(`${doel?.base ?? baseUrl()}/chat/completions`, {
       method: "POST",
@@ -468,7 +494,7 @@ export async function* chatStream(
         "Content-Type": "application/json",
         ...(llmKey && !doel ? { Authorization: `Bearer ${llmKey}` } : {}),
       },
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: poging.ctl.signal,
       body: JSON.stringify({
         model: m,
         messages: opts.messages,
@@ -480,10 +506,16 @@ export async function* chatStream(
       }),
     });
   const reserve = fallbackTarget();
+  let opReserve = false;
   const viaReserve = async (reden: string): Promise<Response> => {
     logger.warn("llm hoofdmodel weg - reservemodel streamt", { host: llmHost(), reserve: new URL(reserve!.base).host, model: reserve!.model, reden });
+    // het reservemodel krijgt een eigen poging, met dezelfde grens tot het eerste woord
+    stopPoging(poging);
+    poging = nieuwePoging();
+    opReserve = true;
     return streamOnce(reserve!.model, reserve!);
   };
+  const geenEersteWoord = () => AppError.upstream(`LLM gaf geen eerste woord binnen ${grens}ms`);
 
   let res: Response;
   try {
@@ -505,28 +537,49 @@ export async function* chatStream(
       res = await viaReserve(`HTTP ${res.status}`);
     }
   } catch (err) {
-    if (!reserve) throw unreachable(err);
+    if (!reserve || (opReserve && poging.teLaat)) {
+      stopPoging(poging);
+      throw poging.teLaat ? geenEersteWoord() : unreachable(err);
+    }
+    const reden = poging.teLaat ? `geen eerste woord binnen ${grens}ms` : ((err as Error).message?.slice(0, 80) ?? "onbereikbaar");
     try {
-      res = await viaReserve((err as Error).message?.slice(0, 80) ?? "onbereikbaar");
+      res = await viaReserve(reden);
     } catch {
-      throw unreachable(err);
+      stopPoging(poging);
+      throw poging.teLaat ? geenEersteWoord() : unreachable(err);
     }
   }
   if (!res.ok || !res.body) {
+    stopPoging(poging);
     const detail = await res.text().catch(() => "");
     throw AppError.upstream(`LLM stream HTTP ${res.status}: ${detail.slice(0, 300)}`);
   }
 
-  const reader = res.body.getReader();
+  let reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   let full = "";
+  let eersteBinnen = false;
   // Hold back the trailing partial word so brand-correction (fixBrandName) is
   // never split across chunks (e.g. "Seeker" + "Flex" arriving separately).
   let pending = "";
   try {
     for (;;) {
-      const { done, value } = await reader.read();
+      let stuk: ReadableStreamReadResult<Uint8Array>;
+      try {
+        stuk = await reader.read();
+      } catch (err) {
+        // de grens tot het eerste woord verstreek: één keer het reservemodel, anders de terugval van de aanroeper
+        if (eersteBinnen || !poging.teLaat) throw err;
+        reader.releaseLock();
+        if (!reserve || opReserve) throw geenEersteWoord();
+        const r = await viaReserve(`geen eerste woord binnen ${grens}ms`).catch(() => null);
+        if (!r || !r.ok || !r.body) throw geenEersteWoord();
+        reader = r.body.getReader();
+        buffer = "";
+        continue;
+      }
+      const { done, value } = stuk;
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
@@ -540,6 +593,11 @@ export async function* chatStream(
           const j = JSON.parse(payload) as { choices?: { delta?: { content?: string } }[] };
           const delta = j.choices?.[0]?.delta?.content;
           if (delta) {
+            if (!eersteBinnen) {
+              // het eerste woord is er: vanaf nu alleen nog de ruime totaaltijd
+              eersteBinnen = true;
+              clearTimeout(poging.klokken[0]);
+            }
             pending += delta;
             const cut = Math.max(pending.lastIndexOf(" "), pending.lastIndexOf("\n"), pending.lastIndexOf("\t"));
             if (cut >= 0) {
@@ -557,7 +615,12 @@ export async function* chatStream(
       }
     }
   } finally {
-    reader.releaseLock();
+    try {
+      reader.releaseLock();
+    } catch {
+      /* al vrijgegeven bij de overstap naar het reservemodel */
+    }
+    stopPoging(poging);
   }
   if (pending) {
     const emit = fixBrandName(pending);
