@@ -9,7 +9,8 @@ export type TijdlijnSleutel = "kind" | "branches" | "email" | "gegevens" | "iden
 
 // "werkrecht" staat sinds 10 nov niet meer in de start (eigenaar): het recht om te werken wordt vóór de
 // eerste betaalde klus gevraagd (lib/fiscal/eligibility.ts); met een EU-ID gaat het vanzelf.
-export const TIJDLIJN_VOLGORDE: TijdlijnSleutel[] = ["kind", "branches", "email", "gegevens", "identiteit", "foto", "tweestap"];
+// "tweestap" sinds 12 nov ook niet (eigenaar: optioneel); de stappen tonen hem als aanbeveling (WerkerStartWizard).
+export const TIJDLIJN_VOLGORDE: TijdlijnSleutel[] = ["kind", "branches", "email", "gegevens", "identiteit", "foto"];
 
 export type TijdlijnKlaar = Record<TijdlijnSleutel, boolean>;
 

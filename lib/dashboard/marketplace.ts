@@ -1,3 +1,4 @@
+import { ONBOARDING_EERST, onboardingKlaarVoorReageren } from "@/lib/onboarding/werker-poort-server";
 import { prisma } from "@/lib/prisma";
 import { companyRatings } from "@/lib/reviews/ratings";
 import { fastPayAvailableFor } from "@/lib/payouts/fastpay";
@@ -182,10 +183,11 @@ async function resolveFreelancer(userId: string) {
 }
 
 export async function getMarketplace(userId: string): Promise<MarketplaceData> {
-  const [profile, prefs, eligibility] = await Promise.all([
+  const [profile, prefs, eligibility, onboardingKlaar] = await Promise.all([
     resolveFreelancer(userId),
     getPrefs(userId),
     payoutEligibility(userId),
+    onboardingKlaarVoorReageren(userId),
   ]);
 
   const matchingBlocked = Boolean(
@@ -193,13 +195,16 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
   );
 
   const canApply =
+    onboardingKlaar &&
     !!profile &&
     profile.user.kycStatus === "VERIFIED" &&
     eligibility.ok &&
     !profile.isBlacklisted &&
     !matchingBlocked;
 
-  const blockReason = !profile
+  const blockReason = !onboardingKlaar
+    ? ONBOARDING_EERST
+    : !profile
     ? "Rond eerst je verificatie af om diensten aan te nemen."
     : profile.user.kycStatus !== "VERIFIED"
       ? "Je kunt pas aannemen als je identiteit is geverifieerd."

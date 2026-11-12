@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toegestaanTijdensOnboarding, werkerOnboardingKlaar, type WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
 
-// De poort van de werker-app (10 nov 2026): eerst de onboarding helemaal invullen, dan de rest.
+// De onboarding van de werker (10 nov 2026). Sinds 12 nov is de app open en wacht alleen reageren op de onboarding;
+// tweestapsverificatie is dan optioneel (eigenaar).
 
 const ALLES: WerkerPoortFeiten = {
   soortGekozen: true,
@@ -14,11 +15,12 @@ const ALLES: WerkerPoortFeiten = {
 };
 
 describe("werkerOnboardingKlaar", () => {
-  it("alleen klaar als elke stap is ingevuld", () => {
+  it("alleen klaar als elke verplichte stap is ingevuld", () => {
     expect(werkerOnboardingKlaar(ALLES)).toBe(true);
     for (const k of Object.keys(ALLES) as (keyof WerkerPoortFeiten)[]) {
-      // het recht om te werken hoort niet meer bij de onboarding (10 nov): dat telt vóór de eerste betaalde klus
-      expect(werkerOnboardingKlaar({ ...ALLES, [k]: false })).toBe(k === "werkrechtIngevuld");
+      // het recht om te werken hoort niet meer bij de onboarding (10 nov): dat telt vóór de eerste betaalde klus;
+      // tweestapsverificatie is sinds 12 nov optioneel (eigenaar)
+      expect(werkerOnboardingKlaar({ ...ALLES, [k]: false })).toBe(k === "werkrechtIngevuld" || k === "tweestapAan");
     }
   });
 });
@@ -49,12 +51,13 @@ const h = vi.hoisted(() => ({
   tweestap: false,
   passkeys: 0,
   foto: true as boolean,
+  email: "werker@voorbeeld.nl" as string | null,
 }));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     freelancerProfile: { findUnique: async () => h.profiel },
-    user: { findUnique: async () => ({ kycStatus: h.kyc }) },
+    user: { findUnique: async () => (h.email === null ? null : { kycStatus: h.kyc, email: h.email }) },
     identityVerification: { findFirst: async () => h.inBehandeling },
     passkey: { count: async () => h.passkeys },
   },
@@ -86,6 +89,7 @@ describe("werkerPoortStand", () => {
     h.tweestap = true;
     h.passkeys = 0;
     h.foto = true;
+    h.email = "werker@voorbeeld.nl";
   });
 
   it("zonder profielfoto: niet klaar", async () => {
@@ -96,12 +100,29 @@ describe("werkerPoortStand", () => {
     expect(s.klaar).toBe(false);
   });
 
-  it("zonder tweestapsverificatie en zonder passkey: niet klaar; een passkey telt ook", async () => {
+  it("zonder tweestapsverificatie en zonder passkey: toch klaar (optioneel sinds 12 nov), en de stand zegt het", async () => {
     const { werkerPoortStand } = await import("@/lib/onboarding/werker-poort-server");
     h.tweestap = false;
-    expect((await werkerPoortStand("u1")).klaar).toBe(false);
+    const s = await werkerPoortStand("u1");
+    expect(s.tweestapAan).toBe(false);
+    expect(s.klaar).toBe(true);
     h.passkeys = 1;
-    expect((await werkerPoortStand("u1")).klaar).toBe(true);
+    expect((await werkerPoortStand("u1")).tweestapAan).toBe(true);
+  });
+
+  it("reageren wacht op de onboarding: 412 met de reden, geen 403; afgerond, testaccount of storing: door", async () => {
+    const { eisOnboardingVoorReageren, ONBOARDING_EERST, onboardingKlaarVoorReageren } = await import("@/lib/onboarding/werker-poort-server");
+    await expect(eisOnboardingVoorReageren("u1")).resolves.toBeUndefined();
+    h.foto = false;
+    await expect(eisOnboardingVoorReageren("u1")).rejects.toMatchObject({ status: 412, code: "PRECONDITION_FAILED", message: ONBOARDING_EERST });
+    expect(await onboardingKlaarVoorReageren("u1")).toBe(false);
+    // de beoordelaars van Apple en Google (testaccount) vallen erbuiten
+    h.email = "appreview@zekerflex.test";
+    expect(await onboardingKlaarVoorReageren("u1")).toBe(true);
+    // een storing in een bron houdt reageren niet tegen (de controles vóór werk staan daar los van)
+    h.email = "werker@voorbeeld.nl";
+    h.fiscal = null as unknown as Record<string, unknown>;
+    expect(await onboardingKlaarVoorReageren("u1")).toBe(true);
   });
 
   it("alles ingevuld en in behandeling: klaar (goedkeuren hoeft niet om de app te zien)", async () => {

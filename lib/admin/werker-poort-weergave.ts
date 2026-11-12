@@ -15,6 +15,8 @@ export interface PoortStap {
   ok: boolean;
   /** wat de werker nog moet doen, in gewone taal (alleen zinvol als de stap open is) */
   uitleg: string;
+  /** telt niet mee voor reageren (tweestapsverificatie, sinds 12 nov optioneel) */
+  optioneel?: boolean;
 }
 
 function gegevensUitleg(soort: WerkerSoort): string {
@@ -31,14 +33,14 @@ export function poortStappen(f: WerkerPoortFeiten, soort: WerkerSoort): PoortSta
     { key: "branches", label: "Branches gekozen", ok: f.branchesGekozen, uitleg: "Kiezen in welke branches je wilt werken." },
     { key: "gegevens", label: "Gegevens ingevuld", ok: f.gegevensIngevuld, uitleg: gegevensUitleg(soort) },
     { key: "identiteit", label: "ID ingestuurd of goedgekeurd", ok: f.identiteitIngestuurd, uitleg: "Een identiteitsbewijs insturen." },
-    { key: "tweestap", label: "Tweestapsverificatie of passkey", ok: f.tweestapAan, uitleg: "Tweestapsverificatie of een passkey aanzetten bij Account → Beveiliging." },
+    { key: "tweestap", label: "Tweestapsverificatie of passkey (optioneel)", ok: f.tweestapAan, uitleg: "Aanbevolen, niet verplicht: tweestapsverificatie of een passkey bij Account → Beveiliging.", optioneel: true },
     { key: "foto", label: "Profielfoto", ok: f.fotoGezet, uitleg: "Een profielfoto zetten." },
   ];
 }
 
-/** De ondertitel van het blok: of de werker de hele app ziet. */
+/** De ondertitel van het blok: of de werker al kan reageren (sinds 12 nov ziet hij de hele app altijd). */
 export function poortSamenvatting(stappen: readonly PoortStap[]): string {
-  const open = stappen.filter((s) => !s.ok).length;
-  if (open === 0) return "Alles af: de werker ziet de hele app";
-  return `${open} ${open === 1 ? "stap" : "stappen"} open: de werker ziet alleen de onboarding`;
+  const open = stappen.filter((s) => !s.ok && !s.optioneel).length;
+  if (open === 0) return "Alles af: de werker kan op klussen reageren";
+  return `${open} ${open === 1 ? "stap" : "stappen"} open: de werker ziet de app, maar kan nog niet reageren`;
 }
