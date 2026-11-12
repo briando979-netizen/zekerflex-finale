@@ -320,7 +320,6 @@ export interface AuthDict {
       gebruik: string;
       volgende: string;
       geenCamera: string;
-      cameraApp: string;
       toch: string;
       anderDocument: string;
       gegevens: string;
@@ -703,8 +702,7 @@ const nl: AuthDict = {
       opnieuw: "Opnieuw",
       gebruik: "Deze gebruiken",
       volgende: "Volgende",
-      geenCamera: "We kunnen je camera niet openen. Geef toestemming in je browser, of maak de foto met je camera-app.",
-      cameraApp: "Foto maken met camera-app",
+      geenCamera: "We kunnen je camera niet openen. Geef toestemming in je browser en probeer het opnieuw.",
       toch: "Toch doorgaan",
       anderDocument: "Ander document kiezen",
       gegevens: "Controleer je gegevens",
@@ -1084,8 +1082,7 @@ const en: AuthDict = {
       opnieuw: "Retake",
       gebruik: "Use this one",
       volgende: "Next",
-      geenCamera: "We can't open your camera. Allow access in your browser, or take the photo with your camera app.",
-      cameraApp: "Take photo with camera app",
+      geenCamera: "We can't open your camera. Allow access in your browser and try again.",
       toch: "Continue anyway",
       anderDocument: "Choose another document",
       gegevens: "Check your details",
@@ -1465,8 +1462,7 @@ const pl: AuthDict = {
       opnieuw: "Ponownie",
       gebruik: "Użyj tego",
       volgende: "Dalej",
-      geenCamera: "Nie możemy otworzyć aparatu. Zezwól na dostęp w przeglądarce albo zrób zdjęcie aplikacją aparatu.",
-      cameraApp: "Zdjęcie aplikacją aparatu",
+      geenCamera: "Nie możemy otworzyć aparatu. Zezwól na dostęp w przeglądarce i spróbuj ponownie.",
       toch: "Kontynuuj mimo to",
       anderDocument: "Wybierz inny dokument",
       gegevens: "Sprawdź swoje dane",
@@ -1846,8 +1842,7 @@ const ro: AuthDict = {
       opnieuw: "Din nou",
       gebruik: "Folosește-o",
       volgende: "Mai departe",
-      geenCamera: "Nu putem deschide camera. Permite accesul în browser sau fă fotografia cu aplicația camerei.",
-      cameraApp: "Fotografie cu aplicația camerei",
+      geenCamera: "Nu putem deschide camera. Permite accesul în browser și încearcă din nou.",
       toch: "Continuă oricum",
       anderDocument: "Alege alt document",
       gegevens: "Verifică datele",
@@ -2227,8 +2222,7 @@ const uk: AuthDict = {
       opnieuw: "Ще раз",
       gebruik: "Використати це",
       volgende: "Далі",
-      geenCamera: "Не вдається відкрити камеру. Дозвольте доступ у браузері або зробіть фото застосунком камери.",
-      cameraApp: "Фото застосунком камери",
+      geenCamera: "Не вдається відкрити камеру. Дозвольте доступ у браузері й спробуйте ще раз.",
       toch: "Все одно продовжити",
       anderDocument: "Вибрати інший документ",
       gegevens: "Перевірте свої дані",

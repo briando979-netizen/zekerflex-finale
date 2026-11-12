@@ -371,6 +371,9 @@ function Camera({
   referentie = null,
   doc,
   omdraaien,
+  wijze,
+  onZelf,
+  onTelefoon,
 }: {
   facing: "environment" | "user";
   vorm: "kaart" | "ovaal";
@@ -383,9 +386,14 @@ function Camera({
   /** live begeleiding van het document; `server` = de server mag meten (ingelogd, of op de telefoon met de code van de QR-code) */
   doc?: { soort: DocSoortLive; kant: DocKant; server: boolean; overdracht?: { code: string; toestel: string } | undefined } | undefined;
   omdraaien?: string | undefined;
+  /** "auto": de foto gaat vanzelf en er is geen knop; "zelf": alleen de knop (13 nov 2026, eigenaar: geen mengvorm) */
+  wijze: ScanWijze;
+  /** omschakelen naar "zelf": na ±20 s zonder foto, of meteen als het hier niet vanzelf kan */
+  onZelf: () => void;
+  /** geen camera: verder op de telefoon met de QR-code (alleen op een computer) */
+  onTelefoon?: (() => void) | undefined;
 }) {
   const video = useRef<HTMLVideoElement>(null);
-  const bestand = useRef<HTMLInputElement>(null);
   const x = t.scan.extra;
   const l = t.scan.live;
   const [stand, setStand] = useState<"laden" | "aan" | "geen">("laden");
@@ -404,8 +412,21 @@ function Camera({
   const ovCode = doc?.overdracht?.code;
   const ovToestel = doc?.overdracht?.toestel;
   const docVanzelf = docSoort && docKant ? docServer && kanVanzelf(docKantMeting(docSoort, docKant)) : false;
-  // gaat de foto vanzelf? Dan geen uitleg over de handmatige opname
-  const vanzelfAan = (docVanzelf && !docUit) || (live !== undefined && !liveUit);
+  // gaat de foto vanzelf? Dan geen uitleg over de handmatige opname. In de stand "zelf" nooit vanzelf: alleen de knop.
+  const zelf = wijze === "zelf";
+  const zelfRef = useRef(zelf);
+  useEffect(() => {
+    zelfRef.current = zelf;
+  });
+  const kanVanzelfHier = (docVanzelf && !docUit) || (live !== undefined && !liveUit);
+  const vanzelfAan = !zelf && kanVanzelfHier;
+  // automatisch en na ±20 s nog geen foto: dan mag je omschakelen naar "zelf" (een wissel, geen knop in de automatische stand)
+  const [traag, setTraag] = useState(false);
+  useEffect(() => {
+    if (!vanzelfAan || stand !== "aan") return;
+    const id = setTimeout(() => setTraag(true), 20_000);
+    return () => clearTimeout(id);
+  }, [vanzelfAan, stand]);
   const [aftel, setAftel] = useState<number | null>(null);
   const afteller = useRef<ReturnType<typeof setTimeout> | null>(null);
   const opFoto = useRef(onFoto);
@@ -532,8 +553,13 @@ function Camera({
               teller = telSelfie(teller, vorige, r.meting);
               vorige = r.meting;
               // goed in beeld: "even stilhouden" met een balkje, en na een paar stille beelden de foto vanzelf
-              setAanwijzing({ a: teller > 0 ? "stil" : selfieAanwijzing(r.meting), voortgang: Math.min(1, teller / SELFIE_LIVE.goedeBeelden) });
-              if (teller >= SELFIE_LIVE.goedeBeelden) {
+              // (zelf de foto maken: alleen de aanwijzing, de knop doet de rest)
+              setAanwijzing(
+                zelfRef.current
+                  ? { a: selfieAanwijzing(r.meting), voortgang: 0 }
+                  : { a: teller > 0 ? "stil" : selfieAanwijzing(r.meting), voortgang: Math.min(1, teller / SELFIE_LIVE.goedeBeelden) },
+              );
+              if (teller >= SELFIE_LIVE.goedeBeelden && !zelfRef.current) {
                 // de foto op volle grootte nog een keer gemeten; haalt hij het niet, dan meten we door
                 const foto = await fotoVanVideo(v, `${vorm}-auto`);
                 if (weg) return;
@@ -548,7 +574,7 @@ function Camera({
             } else if (referentie) {
               const d = draaiAanwijzing(referentie, r.meting);
               setAanwijzing({ a: d.aanwijzing, voortgang: d.voortgang });
-              if (d.aanwijzing === "goed") {
+              if (d.aanwijzing === "goed" && !zelfRef.current) {
                 // de foto op volle grootte, nog een keer gemeten met de regels van de server; haalt hij die niet, dan meten we door
                 const foto = await fotoVanVideo(v, `${vorm}-auto`);
                 if (weg) return;
@@ -618,7 +644,7 @@ function Camera({
               fouten = 0;
               const a = serverAanwijzing(docSoort, kant, r.meting);
               setDocHint(a);
-              if (a === "goed" && groot) {
+              if (a === "goed" && groot && !zelfRef.current) {
                 const foto = await fotoVanCanvas(groot, `${vorm}-auto`);
                 if (weg) return;
                 if (foto) {
@@ -765,7 +791,24 @@ function Camera({
       </div>
       <div className="mt-4 grid gap-2">
         {stand === "aan" && vanzelfAan && <p className="text-center text-xs leading-relaxed text-neutralx-500">{x.vanzelf}</p>}
-        {stand !== "geen" && (
+        {/* automatisch: geen knop. Na ±20 s zonder foto mag je omschakelen; kan het hier niet vanzelf, dan meteen */}
+        {stand === "aan" && vanzelfAan && traag && (
+          <button type="button" onClick={onZelf} className="btn-ghost w-full text-sm">
+            {x.zelfWissel} {x.zelfWisselKnop}
+          </button>
+        )}
+        {stand === "aan" && !zelf && !kanVanzelfHier && (
+          <>
+            <p role="status" className="text-center text-sm leading-relaxed text-ink-soft">
+              {x.autoKanNiet}
+            </p>
+            <button type="button" onClick={onZelf} className="btn-primary w-full">
+              {x.zelfWisselKnop}
+            </button>
+          </>
+        )}
+        {stand === "aan" && zelf && !eu && <p className="text-center text-xs leading-relaxed text-neutralx-500">{x.zelfModus}</p>}
+        {stand !== "geen" && zelf && (
           live === "draai" ? (
             <button type="button" onClick={aftellen} disabled={stand !== "aan" || aftel !== null} className="btn-primary w-full">
               {l.aftelKnop}
@@ -786,26 +829,12 @@ function Camera({
             </button>
           )
         )}
-        <button
-          type="button"
-          onClick={() => bestand.current?.click()}
-          className={stand === "geen" ? "btn-primary w-full" : "btn-ghost w-full text-sm"}
-        >
-          {t.scan.cameraApp}
-        </button>
-        <input
-          ref={bestand}
-          type="file"
-          accept="image/*"
-          capture={facing}
-          className="sr-only"
-          tabIndex={-1}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) onFoto(f);
-            e.target.value = "";
-          }}
-        />
+        {/* geen camera (geweigerd of niet aanwezig): geen bestandskeuze meer, wel verder op de telefoon */}
+        {stand === "geen" && onTelefoon && (
+          <button type="button" onClick={onTelefoon} className="btn-primary w-full">
+            {t.scan.telefoonOptie}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -830,6 +859,9 @@ function FotoMini({ file, label }: { file: File; label: string }) {
   );
 }
 
+/** Automatisch (de foto gaat vanzelf, geen knop) of zelf de foto maken (alleen de knop). */
+export type ScanWijze = "auto" | "zelf";
+
 export function IdScan({
   t,
   naam,
@@ -840,7 +872,10 @@ export function IdScan({
   groet,
   onAfrondenOverdracht,
   route,
+  wijze: beginWijze = "auto",
 }: {
+  /** automatisch (aanbevolen) of zelf de foto maken: de keuze aan het begin (WieBenJijIdKaarten) */
+  wijze?: ScanWijze;
   /** met een route: eigen introductie, cameravraag vooraf, alleen paspoort of ID-kaart, en bij een paspoort geen achterkant */
   route?: ScanRoute;
   t: T;
@@ -872,6 +907,10 @@ export function IdScan({
   const [naChip, setNaChip] = useState<Stap>("selfie");
   const [overgedragen, setOvergedragen] = useState(false);
   const [kanTelefoon, setKanTelefoon] = useState(false);
+  // de gekozen stand; "Zelf de foto maken" in de camera schakelt om voor de rest van de scan
+  const [wijzeNu, setWijzeNu] = useState<ScanWijze>(beginWijze);
+  // "verder op je telefoon" kan ook halverwege (camera weg of geweigerd): "Of ga hier verder" brengt je terug waar je was
+  const [terugNa, setTerugNa] = useState<Stap>("soort");
   const [tel, setTel] = useState<TelefoonStand | null>(null);
   const [bijna, setBijna] = useState(false);
   const [camVraag, setCamVraag] = useState<"" | "bezig" | "geweigerd">("");
@@ -911,6 +950,11 @@ export function IdScan({
   useEffect(() => {
     setKanTelefoon(modus === "laptop" && Boolean(onAfrondenOverdracht) && window.matchMedia("(pointer: fine)").matches);
   }, [modus, onAfrondenOverdracht]);
+
+  function naarTelefoon() {
+    setTerugNa(stap === "start" || stap === "telefoon" ? "soort" : stap);
+    setStap("telefoon");
+  }
 
   /** Laptop: een eenmalige code vragen en als QR-code tonen (de code staat na de #, dus nooit in een serverlog). */
   async function maakQr() {
@@ -1322,7 +1366,7 @@ export function IdScan({
                   {s.akkoord}
                 </button>
                 {kanTelefoon && (
-                  <button type="button" onClick={() => setStap("telefoon")} className="btn-ghost mt-2 w-full">
+                  <button type="button" onClick={naarTelefoon} className="btn-ghost mt-2 w-full">
                     {s.telefoonOptie}
                   </button>
                 )}
@@ -1360,9 +1404,10 @@ export function IdScan({
                 <button type="button" onClick={() => void vraagCamera()} disabled={camVraag === "bezig"} className="btn-primary mt-6 w-full">
                   {camVraag === "bezig" ? s.extra.toestemmingBezig : s.extra.toestemmingKnop}
                 </button>
-                {camVraag === "geweigerd" && (
-                  <button type="button" onClick={() => setStap("soort")} className="btn-ghost mt-2 w-full">
-                    {s.extra.toestemmingZonder}
+                {/* geweigerd: geen bestandskeuze meer; op een computer kan het verder op de telefoon */}
+                {camVraag === "geweigerd" && kanTelefoon && (
+                  <button type="button" onClick={naarTelefoon} className="btn-ghost mt-2 w-full">
+                    {s.telefoonOptie}
                   </button>
                 )}
               </div>
@@ -1451,7 +1496,7 @@ export function IdScan({
                       {s.nieuweCode}
                     </button>
                   )}
-                  <button type="button" onClick={() => setStap("soort")} className="btn-ghost w-full">
+                  <button type="button" onClick={() => setStap(terugNa)} className="btn-ghost w-full">
                     {s.ofHier}
                   </button>
                 </div>
@@ -1581,6 +1626,9 @@ export function IdScan({
                       // eenmalige code (/api/id-overdracht/document-live). Beslissen doet daar hoe dan ook een mens.
                       doc={fotoStap === "voor" || fotoStap === "achter" ? { soort, kant: fotoStap, server: metBeweging || Boolean(overdracht), overdracht } : undefined}
                       omdraaien={fotoStap === "achter" && heeftAchterkant(soort) ? (soort === "DRIVERS_LICENSE" ? s.extra.omdraaiRijbewijs : s.extra.omdraaiId) : undefined}
+                      wijze={wijzeNu}
+                      onZelf={() => setWijzeNu("zelf")}
+                      onTelefoon={kanTelefoon ? naarTelefoon : undefined}
                       onFoto={(f) => {
                         setLiveFout(null);
                         setVoorbeeld({ file: f, url: URL.createObjectURL(f) });

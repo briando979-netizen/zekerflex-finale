@@ -22,11 +22,12 @@ describe("welke kanten van een document", () => {
     expect(scan).not.toMatch(/route && st === "(selfie|gegevens)" && zonderAchter/);
   });
 
-  it("het uploadformulier vraagt bij een paspoort geen achterkant en stuurt de fotopagina twee keer mee", () => {
+  it("geen bestandskeuze meer (13 nov): een paspoort gaat zonder achterkant door de live scan", () => {
     const form = lees("components/app/OnboardingForm.tsx");
-    expect(form).toContain('const nodig: PhotoKey[] = paspoort ? ["documentFront", "selfie"] : ["documentFront", "documentBack", "selfie"];');
-    expect(form).toContain('if (paspoort) body.set("documentBack", photos.current.documentFront!);');
-    expect(form).toContain("{heeftAchterkant(docType) && (");
+    const scan = lees("components/app/IdScan.tsx");
+    expect(form).not.toContain('type="file"');
+    expect(scan).not.toContain('type="file"');
+    expect(scan).toContain("const zonderAchter = !heeftAchterkant(soort);");
   });
 
   it("de uitleg bij een paspoort staat in alle vijf de talen en noemt geen achterkant als eis", () => {
