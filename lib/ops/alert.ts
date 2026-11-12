@@ -90,7 +90,9 @@ export async function alertOwner(alert: OpsAlert, now = Date.now()): Promise<"se
     const entry: LoggedAlert = { key: alert.key, title: alert.title, detail: alert.detail, severity, url, at: new Date(now).toISOString(), sent: { push, mail, webhook } };
     const log = (await kvGet<LoggedAlert[]>(LOG_KEY)) ?? [];
     await kvSet(LOG_KEY, [entry, ...log].slice(0, 100));
-    logger.warn("owner alert", { key: alert.key, severity, push, mail, webhook });
+    // info, geen waarschuwing (12 nov): een verstuurde melding is geen fout; hij staat al in ops-alerts:log (Admin), en als
+    // waarschuwing kwam hij in het foutenlogboek als groep "owner alert" (22x sinds 8 nov) die alleen ruis was
+    logger.info("owner alert", { key: alert.key, severity, push, mail, webhook });
     return "sent";
   } catch (err) {
     logger.error("owner alert failed", { key: alert.key, error: (err as Error).message });
