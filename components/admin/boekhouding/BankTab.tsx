@@ -7,6 +7,7 @@ import { STATUS_TEKST, voorstelZekerheidTekst } from "@/lib/boekhouding/bank/sch
 import type { ImportUitkomst } from "@/lib/boekhouding/bank/types";
 import { API_BOEKHOUDING, boekApi, jsonInit } from "@/lib/boekhouding/scherm-api";
 import { bedragTekst, dagTekst } from "@/lib/boekhouding/scherm-kern";
+import { StripeUitbetalingenBlok } from "./StripeUitbetalingenBlok";
 
 // ---------------------------------------------------------------------------
 // Beheer → Boekhouding → Bank: bankrekening toevoegen, een afschrift inlezen (CAMT.053 of csv), de lijst "even kijken"
@@ -357,6 +358,8 @@ export function BankTab() {
           </div>
         )}
       </Panel>
+
+      {adminId && <StripeUitbetalingenBlok administratieId={adminId} />}
 
       <Panel
         title="Even kijken"
