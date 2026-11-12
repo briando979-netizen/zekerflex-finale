@@ -22,6 +22,7 @@ import { money, moneyExact } from "@/components/app/ui";
 import { localStamp, type CalendarEvent } from "@/lib/calendar/links";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { listAdvances } from "@/lib/payouts/advances";
+import { voorschottenVoorWerker } from "@/lib/payouts/voorschot-zicht";
 import { gearForShift } from "@/lib/shop/klus-gear";
 import { certsRequiredForShift } from "@/lib/certificates/matching";
 import { validCertTypes, CERT_TYPES } from "@/lib/certificates/store";
@@ -298,7 +299,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
       : null;
   const payrollAdvance =
     isPayroll && ts
-      ? (await listAdvances(principal.userId)).find(
+      ? voorschottenVoorWerker(await listAdvances(principal.userId)).find(
           (a) => a.kind === "payroll" && a.timesheetId === ts.id,
         ) ?? null
       : null;

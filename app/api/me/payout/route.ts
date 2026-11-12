@@ -11,6 +11,7 @@ import {
   outstandingAdvanceCents,
   requestAdvance,
 } from "@/lib/payouts/advances";
+import { voorschottenVoorWerker } from "@/lib/payouts/voorschot-zicht";
 import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
 import { acceptTerms, FACTORING_TERMS_VERSION, hasAcceptedTerms } from "@/lib/payouts/fastpay";
 import { clientIp } from "@/lib/http/request";
@@ -40,7 +41,8 @@ export async function GET(): Promise<NextResponse> {
         threeDay: payoutFee(pending, "threeDay"),
         standard: 0,
       },
-      advances,
+      // Nooit uitbetaalde loonvoorschotten niet tonen (geen geld gegaan, niet verrekend); Beheer ziet ze wel.
+      advances: voorschottenVoorWerker(advances),
       outstandingAdvanceCents: outstanding,
       maxAdvanceCents: maxAdvanceCents(pending, outstanding),
       advanceFeeRatePct: Math.round((advanceFee(10000) / 10000) * 100),

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { nooitUitbetaaldLoonvoorschot } from "@/lib/payouts/voorschot-zicht";
 import { directeSepaIngericht, isValidIban, triggerInstantPayout } from "@/lib/billing/sepa";
 import { betalenUit } from "@/lib/billing/stripe-betalen";
 
@@ -100,13 +101,19 @@ export async function listAdvances(userId: string): Promise<Advance[]> {
   return rows.map(toAdvance);
 }
 
-/** Total advanced amount not yet settled (deducted from the next payout). */
+/**
+ * Total advanced amount not yet settled (deducted from the next payout). Een loonvoorschot dat nooit is uitbetaald
+ * telt niet mee: dat wordt ook niet verrekend (lib/payouts/voorschot-zicht.ts). In JS gefilterd, niet met een
+ * NOT in de query: kind en payoutStatus zijn bij een gewoon voorschot NULL, en NOT (NULL = …) sluit dat dan uit.
+ */
 export async function outstandingAdvanceCents(userId: string): Promise<number> {
   const rows = await prisma.advanceRecord.findMany({
     where: { userId, status: { in: ["requested", "approved"] } },
-    select: { amountCents: true },
+    select: { amountCents: true, kind: true, payoutStatus: true, providerRef: true, paidAt: true },
   });
-  return rows.reduce((s, a) => s + a.amountCents, 0);
+  return rows
+    .filter((a) => !nooitUitbetaaldLoonvoorschot({ ...a, kind: a.kind === "payroll" ? "payroll" : null }))
+    .reduce((s, a) => s + a.amountCents, 0);
 }
 
 export function advanceFee(amountCents: number): number {

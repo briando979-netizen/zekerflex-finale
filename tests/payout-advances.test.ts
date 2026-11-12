@@ -73,6 +73,15 @@ describe("voorschotbedragen", () => {
     m.rows = [{ amountCents: 1_000 }, { amountCents: 2_500 }];
     expect(await outstandingAdvanceCents("u1")).toBe(3_500);
   });
+
+  it("een nooit uitbetaald loonvoorschot (FAILED, geen referentie, geen betaaldatum) telt niet als openstaand", async () => {
+    m.rows = [
+      { amountCents: 1_000, kind: null, payoutStatus: null, providerRef: null, paidAt: null },
+      { amountCents: 4_000, kind: "payroll", payoutStatus: "FAILED", providerRef: null, paidAt: null },
+      { amountCents: 2_500, kind: "payroll", payoutStatus: "SUBMITTED", providerRef: "sepa_1", paidAt: new Date("2026-11-02T10:01:00+01:00") },
+    ];
+    expect(await outstandingAdvanceCents("u1")).toBe(3_500);
+  });
 });
 
 describe("requestAdvance", () => {
