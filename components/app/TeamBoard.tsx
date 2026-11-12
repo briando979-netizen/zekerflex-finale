@@ -1,14 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/components/i18n/I18nProvider";
 
 type Role = "HQ_ADMIN" | "LOCAL_MANAGER" | "DISPUTE_MANAGER";
-
-const ROLE_LABEL: Record<Role, string> = {
-  HQ_ADMIN: "Beheerder (alle vestigingen, facturen, team)",
-  LOCAL_MANAGER: "Lokale manager (alleen gekozen vestigingen)",
-  DISPUTE_MANAGER: "Geschillenbeheerder",
-};
 
 interface Member {
   id: string;
@@ -28,6 +23,8 @@ interface BranchOption {
 }
 
 export function TeamBoard({ canManage }: { canManage: boolean }) {
+  const k = useT().teamPagina;
+  const ROLE_LABEL: Record<Role, string> = { HQ_ADMIN: k.rolHq, LOCAL_MANAGER: k.rolLokaal, DISPUTE_MANAGER: k.rolGeschil };
   const [members, setMembers] = useState<Member[] | null>(null);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [branches, setBranches] = useState<BranchOption[]>([]);
@@ -75,7 +72,7 @@ export function TeamBoard({ canManage }: { canManage: boolean }) {
         body: JSON.stringify({ email, role, branchIds: role === "LOCAL_MANAGER" ? branchIds : undefined }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error?.message ?? "Uitnodigen mislukt");
+      if (!res.ok) throw new Error(data?.error?.message ?? k.uitnodigenMislukt);
       resetForm();
       await refresh();
       // De uitnodiging staat er wel, maar de mail kwam niet aan: eerlijk melden.
@@ -88,11 +85,11 @@ export function TeamBoard({ canManage }: { canManage: boolean }) {
   }
 
   async function removeMember(id: string) {
-    if (!window.confirm("Dit teamlid verwijderen?")) return;
+    if (!window.confirm(k.verwijderVraag)) return;
     const res = await fetch(`/api/werkgever/team/${id}`, { method: "DELETE" });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      window.alert(data?.error?.message ?? "Verwijderen mislukt");
+      window.alert(data?.error?.message ?? k.verwijderenMislukt);
       return;
     }
     await refresh();
@@ -110,7 +107,7 @@ export function TeamBoard({ canManage }: { canManage: boolean }) {
   return (
     <div className="space-y-4">
       {!members ? (
-        <p className="text-sm text-neutralx-500">Laden…</p>
+        <p className="text-sm text-neutralx-500">{k.laden}</p>
       ) : (
         <div className="divide-y divide-hair rounded-xl border border-hair">
           {members.map((m) => (
@@ -131,7 +128,7 @@ export function TeamBoard({ canManage }: { canManage: boolean }) {
                   onClick={() => removeMember(m.id)}
                   className="text-[11px] font-medium text-neutralx-500 hover:text-crit"
                 >
-                  Verwijderen
+                  {k.verwijderen}
                 </button>
               )}
             </div>
@@ -142,7 +139,7 @@ export function TeamBoard({ canManage }: { canManage: boolean }) {
       {invites.length > 0 && (
         <div className="rounded-xl border border-hair p-4">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutralx-400">
-            Openstaande uitnodigingen
+            {k.openUitnodigingen}
           </p>
           <div className="space-y-2">
             {invites.map((i) => (
@@ -152,7 +149,7 @@ export function TeamBoard({ canManage }: { canManage: boolean }) {
                 </span>
                 {canManage && (
                   <button type="button" onClick={() => revokeInvite(i.id)} className="text-[11px] text-neutralx-500 hover:text-crit">
-                    Intrekken
+                    {k.intrekken}
                   </button>
                 )}
               </div>
@@ -165,7 +162,7 @@ export function TeamBoard({ canManage }: { canManage: boolean }) {
         <>
           {!inviting ? (
             <button type="button" onClick={() => setInviting(true)} className="btn-ghost text-sm">
-              + Teamlid uitnodigen
+              {k.uitnodigenKnop}
             </button>
           ) : (
             <div className="rounded-xl border border-hair p-4">
@@ -173,7 +170,7 @@ export function TeamBoard({ canManage }: { canManage: boolean }) {
                 <input
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="E-mailadres"
+                  placeholder={k.email}
                   type="email"
                   className="field-input w-full"
                 />
@@ -187,12 +184,12 @@ export function TeamBoard({ canManage }: { canManage: boolean }) {
                 {role === "LOCAL_MANAGER" && (
                   <div>
                     <p className="mb-1 text-xs text-neutralx-500">
-                      Vestigingen (leeg = geen toegang; kies minstens één):
+                      {k.vestigingenKies}
                     </p>
                     <div className="space-y-1">
                       {branches.length === 0 && (
                         <p className="text-xs text-neutralx-400">
-                          Nog geen vestigingen — voeg er eerst een toe op /werkgever/locaties.
+                          {k.geenVestigingen}
                         </p>
                       )}
                       {branches.map((b) => (
@@ -216,10 +213,10 @@ export function TeamBoard({ canManage }: { canManage: boolean }) {
                     disabled={busy || !email || (role === "LOCAL_MANAGER" && branchIds.length === 0)}
                     className="btn-primary text-sm disabled:opacity-50"
                   >
-                    {busy ? "Bezig…" : "Uitnodigen"}
+                    {busy ? k.bezig : k.uitnodigen}
                   </button>
                   <button type="button" onClick={resetForm} className="btn-ghost text-sm">
-                    Annuleren
+                    {k.annuleren}
                   </button>
                 </div>
               </div>
