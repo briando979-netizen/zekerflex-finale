@@ -8,11 +8,13 @@ import { getRun, saveRun, type PayrollRun, type PayslipRecord } from "@/lib/payr
 import { payrollAdvancesForWeek, reconcilePayrollAdvances } from "@/lib/payouts/advances";
 import { generateSepaBatch, type SepaExportResult } from "@/lib/payroll/sepa-export";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { alBetaaldeRegels, regelSleutel } from "@/lib/payroll/al-betaald";
 import {
+  buurweken,
+  isoWeekBereik,
   isoWeekId,
   isoWeekLabel,
   isoWeekOf,
-  isoWeekRange,
   parseIsoWeekId,
   type IsoWeek,
 } from "@/lib/payroll/week";
@@ -27,7 +29,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /** Distinct ISO weeks a freelancer has an approved/paid timesheet for, up to `week`. */
 async function cumulativeWeeksWorked(freelancerId: string, upTo: IsoWeek): Promise<number> {
-  const { end } = isoWeekRange(upTo);
+  const { end } = isoWeekBereik(upTo);
   const rows = await prisma.timesheet.findMany({
     where: {
       freelancerId,
@@ -54,7 +56,8 @@ export async function buildWeeklyRun(isoWeekIdStr: string, createdBy: string): P
     return { run: existing, rebuilt: false };
   }
 
-  const { start, end } = isoWeekRange(week);
+  // de loonweek op Nederlandse tijd (lib/payroll/week.ts)
+  const { start, end } = isoWeekBereik(week);
   const timesheets = await prisma.timesheet.findMany({
     where: {
       status: { in: ["APPROVED", "PAID"] },
@@ -79,6 +82,10 @@ export async function buildWeeklyRun(isoWeekIdStr: string, createdBy: string): P
     },
   });
 
+  // Vangnet: wat al in een afgeronde loonrun van de week ervoor of erna staat, niet nog eens (lib/payroll/al-betaald.ts)
+  const alBetaald = alBetaaldeRegels(await Promise.all(buurweken(week).map((w) => getRun(isoWeekId(w)))));
+  let overgeslagen = 0;
+
   // Group by worker (userId).
   const byUser = new Map<
     string,
@@ -86,6 +93,10 @@ export async function buildWeeklyRun(isoWeekIdStr: string, createdBy: string): P
   >();
   for (const t of timesheets) {
     const userId = t.freelancer.userId;
+    if (alBetaald.has(regelSleutel(userId, t.assignment?.shift?.id ?? t.id))) {
+      overgeslagen++;
+      continue;
+    }
     const bucket =
       byUser.get(userId) ??
       {
@@ -201,6 +212,7 @@ export async function buildWeeklyRun(isoWeekIdStr: string, createdBy: string): P
     isoWeek: isoWeekIdStr,
     workers: run.totals.workers,
     payoutCents: run.totals.payoutCents,
+    ...(overgeslagen ? { alInAfgerondeBuurweek: overgeslagen } : {}),
   });
   return { run, rebuilt: Boolean(existing) };
 }
