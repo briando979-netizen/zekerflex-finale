@@ -6,6 +6,7 @@ import { withAdminAccess } from "@/lib/auth/handlers";
 import { readUpload } from "@/lib/storage/local";
 import { fotoUploadId } from "@/lib/admin/kyc-weergave";
 import { stripeIdFoto } from "@/lib/kyc/stripe-fotos";
+import { kleineVersie } from "@/lib/admin/foto-klein";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,8 +19,11 @@ const WELK_LABEL = { front: "voorkant", back: "achterkant", selfie: "selfie", se
 // beoordelaar in Admin → Gebruikers. Alleen PLATFORM_ADMIN, alleen bij een controle van deze
 // gebruiker, alleen afbeeldingen. Elke inzage komt in het auditlog (ID-documenten bevatten het BSN).
 // Een Stripe-controle: de foto komt rechtstreeks van Stripe (lib/kyc/stripe-fotos.ts), zonder kopie.
+// &klein=1: een kleine versie voor de tegels (lib/admin/foto-klein.ts), nergens bewaard; lukt dat niet, dan het origineel.
 export const GET = withAdminAccess<{ id: string; checkId: string }>(["PLATFORM_ADMIN"], async (request, { params, principal }) => {
-  const welk = welkSchema.parse(new URL(request.url).searchParams.get("welk"));
+  const zoek = new URL(request.url).searchParams;
+  const welk = welkSchema.parse(zoek.get("welk"));
+  const klein = zoek.get("klein") === "1";
   const check = await prisma.identityVerification.findFirst({
     where: { id: params.checkId, userId: params.id },
     select: { id: true, provider: true, sessionId: true, rawPayload: true },
@@ -48,9 +52,15 @@ export const GET = withAdminAccess<{ id: string; checkId: string }>(["PLATFORM_A
     summary: `${principal.email} bekeek de ${WELK_LABEL[welk]} van een identiteitscontrole`,
     targetType: "user",
     targetId: params.id,
-    metadata: { checkId: check.id, welk, bron: check.provider === "STRIPE_IDENTITY" ? "stripe" : "eigen" },
+    metadata: { checkId: check.id, welk, bron: check.provider === "STRIPE_IDENTITY" ? "stripe" : "eigen", ...(klein ? { klein: true } : {}) },
   });
 
+  const kleintje = klein ? await kleineVersie(file.bytes) : null;
+  if (kleintje) {
+    return new Response(new Uint8Array(kleintje), {
+      headers: { "Content-Type": "image/jpeg", "Content-Disposition": "inline", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" },
+    });
+  }
   return new Response(new Uint8Array(file.bytes), {
     headers: {
       "Content-Type": file.mimeType,

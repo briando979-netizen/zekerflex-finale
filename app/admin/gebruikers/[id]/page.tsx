@@ -220,7 +220,7 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
           {fotoUrl ? (
             <KopFoto src={fotoUrl} naam={user.fullName} titel="Profielfoto op ware grootte" />
           ) : kopSelfie ? (
-            <KopFoto src={kopSelfie} naam={user.fullName} titel="Selfie van de ID-controle (er is geen profielfoto)" />
+            <KopFoto src={kopSelfie} klein={`${kopSelfie}&klein=1`} naam={user.fullName} titel="Selfie van de ID-controle (er is geen profielfoto)" />
           ) : (
             <Avatar name={user.fullName} size={72} />
           )}
@@ -456,7 +456,7 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                       {fotos.length > 0 && (
                         <div className={`grid gap-2 ${fotos.length > 3 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>
                           {FOTO_SOORTEN.filter((f) => fotos.includes(f.id)).map((f) => (
-                            <IdFoto key={f.id} src={`/api/admin/gebruikers/${user.id}/identiteit/${c.id}/beeld?welk=${f.id}`} label={f.label} />
+                            <IdFoto key={f.id} src={`/api/admin/gebruikers/${user.id}/identiteit/${c.id}/beeld?welk=${f.id}`} klein={`/api/admin/gebruikers/${user.id}/identiteit/${c.id}/beeld?welk=${f.id}&klein=1`} label={f.label} />
                           ))}
                         </div>
                       )}
