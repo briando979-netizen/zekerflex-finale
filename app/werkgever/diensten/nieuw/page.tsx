@@ -45,7 +45,13 @@ export default async function NieuweDienstPage() {
       />
 
       {branches.length === 0 ? (
-        <div className="card border-warn/30 bg-warn/5 p-5 text-sm text-neutralx-700">{n.noBranches}</div>
+        // zonder vestiging kan er geen klus uit: dan meteen de weg naar de onboarding (12 nov: hier liep het dood)
+        <div className="card border-warn/30 bg-warn/5 p-5 text-sm text-neutralx-700">
+          <p>{n.noBranches}</p>
+          <Link href="/werkgever" className="btn-primary mt-3 inline-flex px-4 py-2 text-sm">
+            {n.toOnboarding} →
+          </Link>
+        </div>
       ) : (
         <div className="surface p-6">
           <NewShiftForm

@@ -385,6 +385,7 @@ export const en: Dict = {
     subtitle: "Pick a template or fill it in yourself. Post it across multiple days and ZekerFlex instantly matches the best candidates.",
     back: "Back",
     noBranches: "No locations are linked to your organisation yet. Finish onboarding first.",
+    toOnboarding: "Go to onboarding",
   },
   controls: {
     editShift: "Edit job",

@@ -389,6 +389,7 @@ export const nl = {
     subtitle: "Kies een sjabloon of vul het zelf in. Zet 'm op meerdere dagen en ZekerFlex matcht direct de beste kandidaten.",
     back: "Terug",
     noBranches: "Er zijn nog geen vestigingen aan je organisatie gekoppeld. Rond eerst de onboarding af.",
+    toOnboarding: "Naar de onboarding",
   },
   controls: {
     editShift: "Klus aanpassen",
