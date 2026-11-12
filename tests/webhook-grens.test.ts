@@ -13,7 +13,8 @@ vi.mock("@/lib/spoed/oproep", () => ({ antwoordOpSpoed: (...a: unknown[]) => ant
 vi.mock("@/lib/rate-limit", () => ({ enforceRateLimit: vi.fn().mockResolvedValue(undefined) }));
 const verifyWebhook = vi.fn();
 vi.mock("@/lib/integrations/didit", () => ({ verifyWebhook: (...a: unknown[]) => verifyWebhook(...a) }));
-vi.mock("@/lib/prisma", () => ({ prisma: { diditWebhookEvent: { create: vi.fn().mockResolvedValue({}) } } }));
+const diditCreate = vi.fn().mockResolvedValue({});
+vi.mock("@/lib/prisma", () => ({ prisma: { diditWebhookEvent: { create: (...a: unknown[]) => diditCreate(...a) } } }));
 vi.mock("@/lib/kyc/verification", () => ({ applyWebhookPayload: vi.fn() }));
 vi.mock("@/lib/redis", () => ({ claimIdempotency: vi.fn().mockResolvedValue(true) }));
 
@@ -48,6 +49,7 @@ function ondertekend(pad: string, params: Record<string, string>): Request {
 beforeEach(() => {
   antwoordOpSpoed.mockClear();
   verifyWebhook.mockReset();
+  diditCreate.mockClear();
 });
 
 describe("webhookTekst", () => {
@@ -119,9 +121,23 @@ describe("Didit", () => {
     expect(verifyWebhook).not.toHaveBeenCalled();
 
     const body = JSON.stringify({ session_id: "s1", status: "Approved", naam: "Zoë" });
-    verifyWebhook.mockReturnValue({ valid: false, method: "none", body: { session_id: "s1" } });
+    verifyWebhook.mockReturnValue({ valid: false, method: null, body: { session_id: "s1" } });
     await didit(post("http://app:3000/api/webhooks/didit", { headers: { "x-signature": "abc" }, body }) as never);
     expect(verifyWebhook.mock.calls[0]![0]).toBe(body);
+  });
+
+  it("een foute handtekening geeft 401 en schrijft NIETS in de database; een geldige wordt wel bewaard", async () => {
+    const body = JSON.stringify({ session_id: "s1", status: "Approved", created_at: 1 });
+    verifyWebhook.mockReturnValue({ valid: false, method: null, body: JSON.parse(body) });
+    const fout = await didit(post("http://app:3000/api/webhooks/didit", { headers: { "x-signature": "nep" }, body }) as never);
+    expect(fout.status).toBe(401);
+    expect(diditCreate).not.toHaveBeenCalled();
+
+    verifyWebhook.mockReturnValue({ valid: true, method: "v2", body: JSON.parse(body) });
+    const goed = await didit(post("http://app:3000/api/webhooks/didit", { headers: { "x-signature-v2": "ok" }, body }) as never);
+    expect(goed.status).toBe(200);
+    expect(diditCreate).toHaveBeenCalledTimes(1);
+    expect(diditCreate.mock.calls[0]![0]).toMatchObject({ data: { sessionId: "s1", signatureValid: true, signatureMethod: "v2" } });
   });
 });
 

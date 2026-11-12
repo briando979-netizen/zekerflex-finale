@@ -42,6 +42,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const body = verification.body;
   const sessionId = String(body.session_id ?? "unknown");
 
+  // Eerst de handtekening, dan pas opslaan (12 nov, beveiligingsronde): de body stond eerder óók bij een foute
+  // handtekening in de database, dus iedereen kon zonder limiet rijen schrijven. Een foute handtekening geeft alleen een
+  // kale logregel, zonder iets uit de (niet-vertrouwde) body.
+  if (!verification.valid) {
+    log.warn("rejected didit webhook (bad signature)");
+    return NextResponse.json({ error: "invalid signature" }, { status: 401 });
+  }
+
   await prisma.diditWebhookEvent
     .create({
       data: {
@@ -54,11 +62,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
     })
     .catch((err) => log.error("failed to log webhook", { error: err.message }));
-
-  if (!verification.valid) {
-    log.warn("rejected didit webhook (bad signature)", { sessionId });
-    return NextResponse.json({ error: "invalid signature" }, { status: 401 });
-  }
 
   const webhookId = String(
     body.webhook_id ?? body.webhookId ?? body.id ?? createHash("sha256").update(rawBody).digest("hex"),
