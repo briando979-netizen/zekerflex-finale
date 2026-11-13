@@ -1,4 +1,5 @@
 import { handleStripeIdentityEvent } from "@/lib/kyc/stripe-identity";
+import { laadActieveStripeSleutel } from "@/lib/billing/stripe-account";
 import { alertOwnerLater } from "@/lib/ops/alert";
 import { NextResponse, after, type NextRequest } from "next/server";
 import Stripe from "stripe";
@@ -275,6 +276,8 @@ async function handleStripeWebhook(request: NextRequest): Promise<NextResponse> 
   if (!lees.ok) return lees.response;
   const rawBody = lees.tekst;
   const signature = request.headers.get("stripe-signature");
+  // het webhook-geheim van het account uit Beheer → Stripe-account (lib/billing/stripe-account.ts)
+  await laadActieveStripeSleutel().catch(() => undefined);
 
   let event: Stripe.Event;
   try {

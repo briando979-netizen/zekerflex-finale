@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isOudConnectAccount } from "@/lib/billing/stripe-account";
 import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
@@ -34,6 +35,10 @@ export async function GET(): Promise<NextResponse> {
     if (!profile.stripeConnectedAccountId) {
       return NextResponse.json({ connected: false, payoutsEnabled: false });
     }
+    // gekoppeld bij het vorige Stripe-account van het platform (Beheer → Stripe-account): opnieuw koppelen
+    if (await isOudConnectAccount(profile.stripeConnectedAccountId)) {
+      return NextResponse.json({ connected: false, payoutsEnabled: false, opnieuw: true });
+    }
     if (profile.stripePayoutsEnabled) {
       return NextResponse.json({ connected: true, payoutsEnabled: true });
     }
@@ -61,12 +66,14 @@ export async function POST(): Promise<NextResponse> {
     const profile = await loadProfile(p.userId);
     const baseUrl = env.APP_BASE_URL.replace(/\/$/, "");
 
-    if (profile.stripeConnectedAccountId && profile.stripePayoutsEnabled) {
+    // een account van het vorige platform-account telt niet meer: dan een nieuw (het oude id wordt overschreven)
+    const oud = await isOudConnectAccount(profile.stripeConnectedAccountId);
+    if (profile.stripeConnectedAccountId && profile.stripePayoutsEnabled && !oud) {
       const url = await createAccountLoginLink(profile.stripeConnectedAccountId);
       return NextResponse.json({ url });
     }
 
-    let accountId = profile.stripeConnectedAccountId;
+    let accountId = oud ? null : profile.stripeConnectedAccountId;
     if (!accountId) {
       // het Stripe-account betaalt even niet (uit): geen nieuw account proberen, een rustige melding in de app-taal
       const uit = () => AppError.betalenUit("Uitbetalen via Stripe koppelen kan tijdelijk niet. Je verdiensten gaan gewoon naar je eigen IBAN.").metSleutel("stripe.tijdelijkUit");
