@@ -42,6 +42,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/analytics/taal-vraag",
     "/api/shop/products",
     "/api/shop/media/abc123",
+    "/api/shop/paskamer/passen",
     "/api/company/search",
     "/api/terminal/abc123-sleutel",
     "/api/installatie/abc123def456.sleutel", // klant en monteur volgen een installatie met de code in het adres

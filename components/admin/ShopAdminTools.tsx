@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { PasdienstPaneel } from "@/components/admin/PasdienstPaneel";
 
 interface Code {
   id: string;
@@ -184,6 +185,8 @@ export function ShopAdminTools() {
           </div>
         )}
       </section>
+
+      <PasdienstPaneel />
 
       <section className="a-panel flex flex-wrap items-end gap-3 p-6">
         <div className="flex-1">

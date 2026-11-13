@@ -384,6 +384,15 @@ export const GRATIS_DIENSTEN: GratisDienst[] = [
     eigen: "Geen eigen alternatief nodig: het is een gratis demo-rekening en de trader zelf draait op de pc van de eigenaar. Zonder sleutel of bij een storing toont Beheer een duidelijke melding en blijft de rest van het platform gewoon werken.",
     status: "gratis",
     hosts: ["paper-api.alpaca.markets"],
+  },
+  {
+    id: "pasdienst",
+    naam: "FASHN (echt passen in de paskamer)",
+    waarvoor: "Een kledingstuk echt op de foto van een bezoeker zetten, alleen met zijn uitdrukkelijke toestemming per keer",
+    nu: "FASHN tryon-v1.6 (api.fashn.ai), ± 8 cent per beeld, achter de vlag paskamer-echt-passen, een verzegelde sleutel en een dagplafond in euro's. De foto gaat als base64 naar FASHN en wordt daar na het beeld gewist; het beeld komt als base64 terug en wordt nergens bewaard.",
+    eigen: "Onze eigen 3D-paspop met de maten van de foto (op het toestel gemeten, de foto gaat nergens heen). Valt FASHN weg, is het plafond bereikt of ontbreekt de sleutel, dan krijgt de bezoeker die paspop. Een eigen pasmodel kan niet op onze server: daar is een videokaart voor nodig.",
+    status: "nodig",
+    hosts: ["api.fashn.ai"],
   },];
 
 /** Hoeveel diensten per stand — voor de tegels bovenaan. */

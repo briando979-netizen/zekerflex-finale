@@ -8,7 +8,7 @@ export type Bron = "eigen" | "betaald" | "auto";
 
 export const BRONNEN = ["eigen", "betaald", "auto"] as const;
 
-export const KEUZE_DIENSTEN = ["reistijd", "sales-bedrijven", "review-bedrijven", "stem", "kvk-zoeken"] as const;
+export const KEUZE_DIENSTEN = ["reistijd", "sales-bedrijven", "review-bedrijven", "stem", "kvk-zoeken", "pasdienst"] as const;
 export type KeuzeDienst = (typeof KEUZE_DIENSTEN)[number];
 
 export const BRON_LABEL: Record<Bron, string> = {
@@ -61,6 +61,12 @@ export const KEUZE_UITLEG: KeuzeUitleg[] = [
     gevolg:
       "Eigen: alleen onze eigen bedrijvenindex (alles wat we ooit vonden) en, op verzoek, OpenStreetMap voor het adres. Nieuwe bedrijven komen er dan niet bij uit het register; de bezoeker vult die zelf in. Betaald of automatisch: KVKBase vult de index aan zolang er tegoed is en slaat elk antwoord op, zodat dezelfde vraag daarna niets kost.",
   },
+  {
+    id: "pasdienst",
+    naam: "Echt passen op de eigen foto (paskamer)",
+    gevolg:
+      "Eigen: alleen onze gratis 3D-paspop met de maten van de foto; het kledingstuk komt dan niet echt op de foto. Betaald: FASHN zet het kledingstuk op de foto van de bezoeker (± 8 cent per beeld, binnen het dagplafond).",
+  },
 ];
 
 /**
@@ -74,4 +80,6 @@ export const STANDAARD_KEUZE: Record<KeuzeDienst, Bron> = {
   "review-bedrijven": "betaald",
   stem: "auto",
   "kvk-zoeken": "auto",
+  // de eigenaar koos deze betaalde dienst zelf (13 nov); hij staat daarnaast achter een vlag, een sleutel en een dagplafond
+  pasdienst: "betaald",
 };

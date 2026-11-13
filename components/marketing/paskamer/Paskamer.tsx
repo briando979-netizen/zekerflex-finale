@@ -155,6 +155,8 @@ export function Paskamer({ producten, looks, start, startLook = null }: { produc
     [stand.aan, perId, l],
   );
   const totaal = items.reduce((s, it) => s + it.prijs, 0);
+  // wat het laatst aangetrokken is (met een foto): dat kan "Echt passen" op de eigen foto zetten
+  const laatsteAan = [...stand.aan].reverse().map((a) => perId.get(a.productId)).find((x) => x?.imageUrl) ?? null;
 
   useEffect(() => {
     setKanDelen(typeof navigator !== "undefined" && typeof navigator.share === "function");
@@ -244,6 +246,7 @@ export function Paskamer({ producten, looks, start, startLook = null }: { produc
             {weergave === "foto" && (
               <MijnFoto
                 lengte={l.lengte}
+                kleding={laatsteAan ? { id: laatsteAan.id, naam: laatsteAan.name } : null}
                 onToepassen={(u) => {
                   zet((s) => ({
                     ...s,

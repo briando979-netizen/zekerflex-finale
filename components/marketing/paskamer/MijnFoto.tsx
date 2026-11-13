@@ -5,10 +5,12 @@ import { useT } from "@/components/i18n/I18nProvider";
 import { POSE } from "@/lib/shop/foto-meting";
 import { CSP_HERLAAD_VLAG, FOTO_FOUT_TEKST, foutRapport, fotoFoutSoort, isCspWasmFout, moetHerladen, type FotoFout } from "@/lib/shop/foto-fout";
 import type { FotoUitkomst } from "@/components/marketing/paskamer/fotoMeting";
+import { EchtPassen } from "@/components/marketing/paskamer/EchtPassen";
 
 // "Op mijn foto": de klant uploadt een foto van zichzelf (hele lichaam, van
 // voren). Op het toestel zelf meten we maten, gezicht, huid en haar; daarna
-// staat dat op de 3D-paspop. Gratis en privé: de foto gaat nergens heen.
+// staat dat op de 3D-paspop. Gratis en privé: de foto gaat nergens heen. Alleen "Echt passen" (EchtPassen.tsx,
+// als die aan staat) stuurt hem, na een vinkje, voor één beeld naar de pasdienst.
 
 export type Toepassing = { lengte: number; borst: number | null; taille: number | null; huid: string | null; haarKleur: string | null; gezicht: string | null };
 
@@ -29,7 +31,7 @@ function meldAanLogboek(fout: unknown): void {
   }
 }
 
-export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToepassen: (t: Toepassing) => void }) {
+export function MijnFoto({ lengte: begin, onToepassen, kleding = null }: { lengte: number; onToepassen: (t: Toepassing) => void; kleding?: { id: string; naam: string } | null }) {
   const p = useT().paskamer;
   const [lengte, setLengte] = useState(begin);
   const [bestand, setBestand] = useState<File | null>(null);
@@ -40,6 +42,8 @@ export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToe
   const [taille, setTaille] = useState("");
   const [afm, setAfm] = useState<{ w: number; h: number } | null>(null);
   const invoer = useRef<HTMLInputElement | null>(null);
+  // het beeld van het echte passen: alleen getoond, nergens bewaard
+  const [pasBeeld, setPasBeeld] = useState<string | null>(null);
 
   useEffect(() => {
     if (!uit) return setAfm(null);
@@ -85,6 +89,7 @@ export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToe
 
   const kies = (f: File | undefined) => {
     if (!f) return;
+    setPasBeeld(null);
     setBestand(f);
     void meet(f, lengte);
   };
@@ -101,7 +106,16 @@ export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToe
   return (
     <div className="absolute inset-0 flex flex-col bg-white">
       <div className="relative min-h-0 flex-1 overflow-y-auto p-4">
-        {uit && afm ? (
+        {pasBeeld ? (
+          <figure className="mx-auto flex h-full max-h-full w-full flex-col items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element -- het pasbeeld komt als data-URI en wordt niet bewaard */}
+            <img src={pasBeeld} alt={p.echtLabel.replace("{naam}", kleding?.naam ?? "")} className="min-h-0 flex-1 rounded-xl object-contain" />
+            <figcaption className="mt-2 text-center text-[12px] font-semibold text-neutralx-600">{p.echtLabel.replace("{naam}", kleding?.naam ?? "")}</figcaption>
+            <button type="button" onClick={() => setPasBeeld(null)} className="mt-2 h-9 rounded-lg border border-hairstrong px-3 text-[13px] font-semibold text-ink hover:bg-paper-soft">
+              {p.echtTerug}
+            </button>
+          </figure>
+        ) : uit && afm ? (
           <div className="mx-auto h-full max-h-full w-full">
             <div className="relative mx-auto h-full max-w-full" style={{ aspectRatio: `${afm.w} / ${afm.h}` }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- lokale foto van de klant */}
@@ -203,6 +217,8 @@ export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToe
             {uit && <p className="text-[11px] text-neutralx-500">{p.pasFotoGeschat}</p>}
           </div>
         )}
+
+        <EchtPassen bestand={bestand} kleding={kleding} onBeeld={setPasBeeld} />
 
         <div className="flex flex-wrap gap-2">
           <input ref={invoer} type="file" accept="image/*" className="sr-only" aria-label={p.pasFotoKies} onChange={(e) => kies(e.target.files?.[0])} />

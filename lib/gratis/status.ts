@@ -30,6 +30,7 @@ const KEUZE_VAN: Partial<Record<string, KeuzeDienst>> = {
   bedrijven: "sales-bedrijven",
   stem: "stem",
   handelsregister: "kvk-zoeken",
+  pasdienst: "pasdienst",
 };
 
 export async function dienstenStand(): Promise<{ diensten: DienstStand[]; aiGratis: boolean; kostNu: number }> {

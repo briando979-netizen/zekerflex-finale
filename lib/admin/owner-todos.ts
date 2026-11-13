@@ -29,6 +29,8 @@ import { platformnaamTodo, type PlatformnaamStand } from "@/lib/admin/todo-platf
 import { stripeAccountTodos } from "@/lib/admin/todo-stripe-account";
 import { werkrechtEisTodo } from "@/lib/admin/todo-werkrecht";
 import { aiTraderTodo } from "@/lib/admin/todo-ai-trader";
+import { pasdienstTodo } from "@/lib/admin/todo-pasdienst";
+import { pasdienstInfo } from "@/lib/shop/pasdienst";
 import { alpacaSleutelInfo } from "@/lib/trader/alpaca";
 import { featureEnabled } from "@/lib/flags";
 import { WISSEL_VERWIJZING, betalenUitEerst, betalenUitVoorzin, webhookHandtekeningStand } from "@/lib/admin/todo-stripe-wissel";
@@ -266,6 +268,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   const stripeKopie = stripeKopieTodo(await stripeKopieStand());
   // de vlag werkrecht-eis (lib/admin/todo-werkrecht.ts): de taak vinkt zichzelf af zodra hij aan staat; een leesfout geeft geen taak
   const aiTrader = aiTraderTodo(await alpacaSleutelInfo().then((i) => i.aanwezig, () => undefined));
+  // de echte paskamer (13 nov): de sleutel van FASHN (lib/shop/pasdienst.ts)
+  const pasdienst = pasdienstTodo(await pasdienstInfo().then((i) => i.aanwezig, () => undefined));
   const werkrechtEis = werkrechtEisTodo(await featureEnabled("werkrecht-eis").catch(() => undefined));
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
@@ -276,6 +280,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     ...(stripeKopie ? [stripeKopie] : []),
     ...(werkrechtEis ? [werkrechtEis] : []),
     ...(aiTrader ? [aiTrader] : []),
+    ...(pasdienst ? [pasdienst] : []),
     {
       id: "llm",
       group: "AI",
