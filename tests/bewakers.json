@@ -5,6 +5,7 @@
     "tests/accountant-vragen.test.ts",
     "tests/admin-access.test.ts",
     "tests/admin-nav.test.ts",
+    "tests/auto-uitrol.test.ts",
     "tests/backup-ophalen.test.ts",
     "tests/bewakers.test.ts",
     "tests/bezoekstatistiek-bewaren.test.ts",
