@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { apiUrl } from "@/components/studio/context";
 import { IArrowRight, IExternal, IGrid, ILayout, IStore, Pill, btn } from "@/components/studio/ui";
 import { zichtbareProducten } from "@/lib/sites/winkel";
+import { MeerSites } from "@/components/studio/MeerSites";
 import type { SiteDoc, SiteSoort } from "@/lib/sites/types";
 
 // ---------------------------------------------------------------------------
@@ -70,6 +71,8 @@ export default function Kiezer() {
             }}
           />
         </div>
+        {/* al je sites op een rij, en nog een site maken (verschijnt pas als er al een site is) */}
+        <MeerSites />
         <section aria-labelledby="kies-ontwerpen" className="mt-4 flex flex-wrap items-center gap-4 rounded-3xl border border-[#e3e3e3] bg-white p-6">
           <span className="grid h-12 w-12 flex-shrink-0 place-items-center rounded-2xl bg-[#f1f1f1] text-[#303030]"><IGrid width={24} height={24} /></span>
           <div className="min-w-0 flex-1">
