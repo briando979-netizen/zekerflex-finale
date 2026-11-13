@@ -18,7 +18,7 @@ import { getUserAvatars } from "@/lib/profile/store";
 import { listContacts } from "@/lib/messaging/contact-book";
 import { maybeAutoReply } from "@/lib/messaging/auto-reply";
 import { notifyNewMessage } from "@/lib/messaging/notify";
-import { checkChatPin, getChatPrefs, hiddenIn, isMuted, visibleFrom } from "@/lib/messaging/thread-prefs";
+import { blockedBetween, checkChatPin, getChatPrefs, hiddenIn, isMuted, visibleFrom } from "@/lib/messaging/thread-prefs";
 import { chatPrivacy } from "@/lib/messaging/settings";
 import { disappearCutoff } from "@/lib/messaging/store";
 import { scanChatMessage } from "@/lib/agenda/scan";
@@ -136,6 +136,13 @@ async function handlePOST(request: Request): Promise<NextResponse> {
 
     let thread: ChatThread;
     let otherUserId: string | null = null;
+    // Een nieuw gesprek mag het blokkeren niet omzeilen: er is één gesprek per tweetal, en dit eindpunt plaatst het eerste
+    // bericht zelf (de verzendroute van een open gesprek controleerde dat al, deze niet; 13 nov).
+    const magSturen = async (ander: string) => {
+      const geblokkeerd = await blockedBetween(p.userId, ander);
+      if (geblokkeerd === "me") throw AppError.forbidden("Je hebt deze persoon geblokkeerd. Deblokkeer om berichten te sturen.");
+      if (geblokkeerd === "them") throw AppError.forbidden("Je kunt deze persoon geen berichten sturen.");
+    };
 
     if ("support" in input) {
       thread = await ensureSupportThread(p.userId);
@@ -143,6 +150,7 @@ async function handlePOST(request: Request): Promise<NextResponse> {
       const contact = await resolveShiftContact(input.shiftId);
       if (!contact) throw AppError.notFound("Geen contactpersoon gevonden voor deze klus.");
       if (contact.userId === p.userId) throw AppError.validation("Je bent zelf de contactpersoon.");
+      await magSturen(contact.userId);
       thread = await ensureDirectThread(p.userId, contact.userId, {
         contextKey: `shift:${input.shiftId}`,
         shiftId: input.shiftId,
@@ -153,6 +161,8 @@ async function handlePOST(request: Request): Promise<NextResponse> {
       otherUserId = contact.userId;
     } else {
       if (input.toUserId === p.userId) throw AppError.validation("Je kunt jezelf geen bericht sturen.");
+      if (!(await userDirectory([input.toUserId])).has(input.toUserId)) throw AppError.notFound("Deze persoon bestaat niet (meer).");
+      await magSturen(input.toUserId);
       thread = await ensureDirectThread(p.userId, input.toUserId, {
         ...(input.contextKey ? { contextKey: input.contextKey } : {}),
         ...(input.subject ? { subject: input.subject } : {}),
