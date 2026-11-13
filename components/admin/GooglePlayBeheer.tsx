@@ -55,13 +55,14 @@ export function GooglePlayBeheer() {
         headers: { "content-type": "application/json" },
         ...(methode === "PUT" ? { body: JSON.stringify({ sleutel }) } : {}),
       });
-      const d = (await r.json()) as Stand & { error?: { message?: string } };
-      if (!r.ok) throw new Error(d.error?.message ?? "Dat lukte niet.");
+      // een foutpagina van een proxy is geen JSON: dan toch een nette melding, geen "Unexpected token"
+      const d = (await r.json().catch(() => ({}))) as Stand & { error?: { message?: string } };
+      if (!r.ok) throw new Error(d.error?.message ?? "Dat lukte niet. Probeer het later opnieuw.");
       setStand(d);
       setSleutel("");
       setMelding({ tone: "ok", tekst: methode === "PUT" ? "Sleutel gecontroleerd bij Google en opgeslagen." : "Koppeling weggehaald." });
     } catch (e) {
-      setMelding({ tone: "crit", tekst: (e as Error).message });
+      setMelding({ tone: "crit", tekst: e instanceof TypeError ? "Geen verbinding met ZekerFlex. Probeer het opnieuw." : (e as Error).message });
     } finally {
       setBezig(false);
     }
@@ -75,7 +76,7 @@ export function GooglePlayBeheer() {
         subtitle="Rijscholen zetten hun app in hun eigen Google Play-account. ZekerFlex bouwt de app en beheert hem daarna met één serviceaccount."
         meta={sa ? <Pill tone="ok">Gekoppeld</Pill> : <Pill tone="warn">Nog niet gekoppeld</Pill>}
       />
-      {melding && <Notice tone={melding.tone}>{melding.tekst}</Notice>}
+      {melding && <Notice tone={melding.tone} role={melding.tone === "crit" ? "alert" : "status"}>{melding.tekst}</Notice>}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Panel title="Serviceaccount" subtitle="Rijscholen nodigen dit e-mailadres uit in hun Play Console.">
