@@ -115,3 +115,33 @@ describe("eerlijk en veilig", () => {
     expect(bron("components/app/SiteBuilder.tsx")).toContain("onPasToe={(nieuw) => change((s) => ({ ...s, theme: nieuw.theme, pages: nieuw.pages }))}");
   });
 });
+
+describe("een websitevoorstel of bestaande site verandert nooit vanzelf", () => {
+  const kaart = bron("components/studio/AssistentKaart.tsx");
+
+  it("de kaart doet pas iets na een opdracht of Maak ongedaan: geen wijziging bij het laden", () => {
+    // onPasToe wordt alleen in de twee knop-functies aangeroepen, nooit in een effect
+    expect(kaart.match(/onPasToe\(/g) ?? []).toHaveLength(2);
+    const effect = kaart.slice(kaart.indexOf("useEffect(() => {"), kaart.indexOf("}, []);"));
+    expect(effect).not.toContain("onPasToe");
+    expect(effect).not.toContain("voerOpdrachtUit");
+    expect(kaart.match(/useEffect\(/g) ?? []).toHaveLength(1);
+  });
+
+  it("de assistent kent alleen het uiterlijk en de pagina's: het voorstelmerk, de bedrijfsgegevens, de winkel en wat online staat blijven", () => {
+    const regels = bron("lib/sites/assistent.ts");
+    const doc = regels.slice(regels.indexOf("export interface AssistentDoc {"), regels.indexOf("export interface AssistentUitkomst"));
+    expect(doc.match(/^ {2}\w+: /gm)).toEqual(["  theme: ", "  pages: "]);
+    for (const veld of ["voorstel", "liveBuild", "bedrijf:", "winkel", "builds", "voorbeeld"]) expect(regels, veld).not.toContain(veld);
+    // de bouwer neemt alleen die twee over en laat de rest van de site staan
+    expect(bron("components/app/SiteBuilder.tsx")).toContain("change((s) => ({ ...s, theme: nieuw.theme, pages: nieuw.pages }))");
+    // er wordt niets verstuurd of gepubliceerd
+    expect(kaart).not.toMatch(/fetch\(|publish|mail/i);
+  });
+
+  it("een opdracht raakt de bestaande blokken en hun teksten niet aan", () => {
+    const u = doe("maak de kleur rood en voeg een video toe");
+    expect(u.doc.pages[0]?.blocks[0]).toBe(DOC.pages[0]?.blocks[0]);
+    expect(u.doc.pages[1]).toBe(DOC.pages[1]);
+  });
+});
