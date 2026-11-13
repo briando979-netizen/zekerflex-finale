@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getFiscal, fiscaalIngevuld, invoiceModeFor } from "@/lib/fiscal/store";
-import { activeUitzendContract } from "@/lib/agreements/uitzend-contract";
+import { getFiscal } from "@/lib/fiscal/store";
 import { getBrancheKeuze } from "@/lib/worker/branche-store";
 import { werkrechtOverzicht } from "@/lib/werkrecht/store";
 import { branchesTellen, werkerOnboardingKlaar, type WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
@@ -38,18 +37,16 @@ export async function werkerPoortStand(userId: string): Promise<WerkerPoortStand
     // een storing telt als "foto gezet": de poort mag de app niet dichtgooien
     getUserProfileExtra(userId).catch(() => null),
   ]);
-  const uitzend = invoiceModeFor(fiscal) === "payroll";
-  const contract = uitzend ? Boolean(await activeUitzendContract(userId).catch(() => true)) : true;
   const feiten: WerkerPoortFeiten = {
     soortGekozen: Boolean(fiscal.workerKind),
     // een account van vóór de stap (10 nov) zonder keuze telt als "alle branches" (werker-poort.ts, BRANCHE_STAP_SINDS)
     branchesGekozen: branchesTellen(brancheKeuze !== null, user?.createdAt),
     gegevensIngevuld:
-      // uitzendkracht: het BSN (wettelijk nodig voor de loonadministratie) en de getekende overeenkomst. Een zzp'er of
-      // flexwerker: sinds 13 nov geen KVK/btw/KOR meer hier (86), net als het IBAN op 10 nov; die komen vóór de eerste
-      // klus (eligibility, met een eerlijke reden als de KVK-controle nog wacht)
-      (uitzend ? fiscaalIngevuld(fiscal) && contract : Boolean(fiscal.workerKind)) &&
-      Boolean(profiel?.homePostalCode),
+      // de soort en de postcode van de thuisbasis. Sinds 13 nov niet meer hier, net als het IBAN op 10 nov: KVK/btw/KOR van
+      // een zzp'er of flexwerker (86) en het BSN en de uitzendovereenkomst van een uitzendkracht (eigenaar; meting 13 nov:
+      // 11 van de 16 uitzendkrachten bleven op het BSN hangen). Die komen vóór de eerste klus: reageren houdt ze tegen
+      // (lib/fiscal/eligibility.ts, elig.uitzendGegevens en elig.contract), de loonadministratie krijgt ze dus altijd
+      Boolean(fiscal.workerKind) && Boolean(profiel?.homePostalCode),
     identiteitIngestuurd: user?.kycStatus === "VERIFIED" || (user?.kycStatus === "PENDING" && Boolean(inBehandeling)),
     // Nederland staat altijd vooraan (lib/werkrecht/store.ts); een storing telt niet als "niet ingevuld"
     werkrechtIngevuld: werkrecht === null || werkrecht[0]?.stand === "ok" || werkrecht[0]?.stand === "wacht",

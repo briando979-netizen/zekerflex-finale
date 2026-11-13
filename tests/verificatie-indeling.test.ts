@@ -22,16 +22,26 @@ beforeEach(() => h.kv.clear());
 
 describe("de verificatiepagina: elk ding op zijn plek", () => {
   const pagina = bron("app/dashboard/verificatie/page.tsx");
-  it("de uitzendovereenkomst staat bij de gegevens zolang hij niet getekend is, daarna onder Later", () => {
-    const boven = pagina.indexOf("{isUitzend && mist.includes(\"contract\") && (");
+  it("het BSN en de uitzendovereenkomst staan onder Later: sinds 13 nov vóór de eerste klus, niet bij de aanmelding", () => {
     const formulier = pagina.indexOf("<OnboardingForm");
     const later = pagina.indexOf('aria-labelledby="later-kop"');
-    expect(boven).toBeGreaterThan(pagina.indexOf("<GegevensMist"));
-    expect(boven).toBeLessThan(formulier);
     expect(later).toBeGreaterThan(formulier);
-    expect(pagina.indexOf("{isUitzend && !mist.includes(\"contract\") && (")).toBeGreaterThan(later);
-    // het anker voor "Naar de overeenkomst" bestaat in beide gevallen precies één keer per stand
-    expect(pagina.slice(pagina.indexOf("<GegevensMist")).match(/id="uitzendovereenkomst"/g)?.length).toBe(2);
+    expect(pagina).not.toContain('mist.includes("contract")');
+    expect(pagina.indexOf("{isUitzend && (", later)).toBeGreaterThan(later);
+    expect(pagina.indexOf('<GegevensMist mist={voorKlus} later kopId="gegevens-later-kop"', later)).toBeGreaterThan(later);
+    // ook op het eindscherm, met het voorstel uit de ID-scan
+    expect(pagina).toContain('<GegevensMist mist={voorKlus} later soort={uitzend ? "uitzendkracht" : null} bsnVoorstel={bsnVoorstel} />');
+    expect(pagina).toContain("voorKlus={voorKlus}");
+  });
+
+  it("de teksten voor 'vóór je eerste klus' in vijf talen, en de uitleg bij de start noemt het BSN als later", () => {
+    for (const [taal, d] of Object.entries(FREELANCER_DICTS)) {
+      expect(d.gegevensMist.titelLater.length, taal).toBeGreaterThan(5);
+      expect(d.gegevensMist.uitlegLater.length, taal).toBeGreaterThan(10);
+      expect(d.start.gegevensUitzend, taal).toMatch(/BSN/);
+      if (taal !== "nl") expect(d.gegevensMist.titelLater, taal).not.toBe(FREELANCER_DICTS.nl.gegevensMist.titelLater);
+    }
+    expect(FREELANCER_DICTS.nl.start.gegevensUitzend).toMatch(/vóór je eerste klus/);
   });
 
   it("bank en werkrecht staan onder Later, de vorige ID-poging in de ID-stap", () => {

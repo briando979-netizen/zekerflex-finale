@@ -228,6 +228,8 @@ export function GegevensMist({
   soort,
   bsnVoorstel = null,
   btw = null,
+  later = false,
+  kopId = "gegevens-mist-kop",
 }: {
   mist: GegevensStuk[];
   soort: "zzp" | "flexwerker" | "uitzendkracht" | null;
@@ -235,17 +237,21 @@ export function GegevensMist({
   bsnVoorstel?: string | null;
   /** wat er al bekend is voor het btw-veld (zzp'er en flexwerker) */
   btw?: BtwBegin | null;
+  /** niet voor de aanmelding maar vóór de eerste klus (13 nov: het BSN en de overeenkomst van een uitzendkracht) */
+  later?: boolean;
+  /** het id van de kop; twee lijsten op één pagina hebben elk hun eigen */
+  kopId?: string;
 }) {
   const t = useFT().gegevensMist;
   const [zelfInvullen, setZelfInvullen] = useState(false);
   if (mist.length === 0) return null;
   const vraagVoorstel = Boolean(bsnVoorstel) && !zelfInvullen;
   return (
-    <section aria-labelledby="gegevens-mist-kop" className="mb-6 rounded-2xl border border-warn/40 bg-warn/5 p-5">
-      <h2 id="gegevens-mist-kop" tabIndex={-1} className="font-display text-base font-bold text-ink focus:outline-none">
-        {vulIn(mist.length === 1 ? t.titelEen : t.titelMeer, { n: mist.length })}
+    <section aria-labelledby={kopId} className="mb-6 rounded-2xl border border-warn/40 bg-warn/5 p-5">
+      <h2 id={kopId} tabIndex={-1} className="font-display text-base font-bold text-ink focus:outline-none">
+        {later ? t.titelLater : vulIn(mist.length === 1 ? t.titelEen : t.titelMeer, { n: mist.length })}
       </h2>
-      <p className="mt-1 text-sm text-neutralx-600">{t.uitleg}</p>
+      <p className="mt-1 text-sm text-neutralx-600">{later ? t.uitlegLater : t.uitleg}</p>
       <ul className="mt-4 space-y-4">
         {mist.includes("bsn") && (
           <li>
