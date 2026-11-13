@@ -8,7 +8,7 @@ import { ComplianceDocsPanel } from "@/components/app/ComplianceDocsPanel";
 import { UitzendPanel } from "@/components/app/UitzendPanel";
 import { getFiscal, invoiceModeFor, fiscaalIngevuld } from "@/lib/fiscal/store";
 import { activeUitzendContract } from "@/lib/agreements/uitzend-contract";
-import { aanmeldingAf, gegevensMist } from "@/lib/onboarding/gegevens-mist";
+import { aanmeldingAf, gegevensMist, voorEersteKlus, type GegevensStand, type GegevensStuk } from "@/lib/onboarding/gegevens-mist";
 import { GegevensMist } from "@/components/app/GegevensMist";
 import { BackLink } from "@/components/app/BackLink";
 import { stripeIdentityAvailable, syncStripeIdentity } from "@/lib/kyc/stripe-identity";
@@ -61,6 +61,8 @@ function AanmeldingKlaar({
   uitzend,
   taal,
   ibanOpen = false,
+  voorKlus = [],
+  bsnVoorstel = null,
 }: {
   taal: Locale;
   pt: AuthDict["page"];
@@ -71,6 +73,10 @@ function AanmeldingKlaar({
   werkrechtVragen: boolean;
   uitzend: boolean;
   ibanOpen?: boolean;
+  /** wat een uitzendkracht nog moet doen vóór de eerste klus (BSN, overeenkomst; voorEersteKlus) */
+  voorKlus?: GegevensStuk[];
+  /** de laatste 4 van het BSN dat van het ID is gelezen, nog niet bevestigd */
+  bsnVoorstel?: string | null;
 }) {
   const klaar = fd.profielAf.klaar;
   const volgende = volgendeNaVerificatie(poortNu);
@@ -109,6 +115,9 @@ function AanmeldingKlaar({
           <Link href="/dashboard/eerste-indruk?stap=foto" className="btn-primary mt-4 inline-flex">{fd.start.fotoCta}</Link>
         </div>
       )}
+      {/* uitzendkracht: het BSN en de overeenkomst horen sinds 13 nov niet bij de aanmelding, maar zijn nodig vóór de eerste
+          klus (reageren houdt ze tegen). Hier meteen te doen; de overeenkomst staat onderaan (#uitzendovereenkomst) */}
+      <GegevensMist mist={voorKlus} later soort={uitzend ? "uitzendkracht" : null} bsnVoorstel={bsnVoorstel} />
       <Panel title={pt.statusTitel}>
         <div className="px-5 py-6">
           {volgende !== "klaar" && poortNu ? (
@@ -236,16 +245,16 @@ export default async function VerificatiePage() {
   const formulierNodig = !(persoon.klaar && woonKlaar && idKlaar);
   // wat er nog mist voor "gegevens", per onderdeel (BSN, overeenkomst, btw/KOR, postcode): bovenaan, met de plek om het te doen.
   // Dezelfde regel als de poort; staat de poort op "ingevuld", dan geen lijst.
-  const mist =
-    poort?.gegevensIngevuld === true
-      ? []
-      : gegevensMist({
-          soort: fiscal.workerKind ?? null,
-          fiscaalIngevuld: fiscaalIngevuld(fiscal),
-          contractGetekend: isUitzend ? Boolean(await activeUitzendContract(principal.userId).catch(() => true)) : true,
-          bedrijfOk: Boolean(bewaard?.kvkValid || /^\d{8}$/.test(bewaard?.kvkNumber ?? "") || fiscal.vatValid || fiscal.korApplies),
-          postcodeOk: Boolean(bewaard?.homePostalCode),
-        });
+  const gegevensStand: GegevensStand = {
+    soort: fiscal.workerKind ?? null,
+    fiscaalIngevuld: fiscaalIngevuld(fiscal),
+    contractGetekend: isUitzend ? Boolean(await activeUitzendContract(principal.userId).catch(() => true)) : true,
+    bedrijfOk: Boolean(bewaard?.kvkValid || /^\d{8}$/.test(bewaard?.kvkNumber ?? "") || fiscal.vatValid || fiscal.korApplies),
+    postcodeOk: Boolean(bewaard?.homePostalCode),
+  };
+  const mist = poort?.gegevensIngevuld === true ? [] : gegevensMist(gegevensStand);
+  // uitzendkracht: het BSN en de overeenkomst vóór de eerste klus (13 nov, eigenaar), onder "Later" en op het eindscherm
+  const voorKlus = isUitzend ? voorEersteKlus(gegevensStand) : [];
   // Het formulier heeft niets meer te vragen (persoon, thuisbasis, ID en gegevens af), maar het profiel is nog niet "compleet"
   // (meestal: het rekeningnummer): dan het eindscherm met wat er echt nog open staat, niet opnieuw het formulier. Anders gaf
   // "Opslaan" eindeloos "Bovenaan deze pagina zie je wat er nog mist", zonder lijst (13 nov, gemeld door de eigenaar).
@@ -260,6 +269,8 @@ export default async function VerificatiePage() {
         werkrechtOk={werkrecht.ok}
         werkrechtVragen={werkrechtVragen}
         uitzend={fiscal.workerKind === "uitzendkracht"}
+        voorKlus={voorKlus}
+        bsnVoorstel={fiscal.bsnVoorstelLast4 ?? null}
         // de postcode is er (woonKlaar), dus een open "thuisbasis en rekeningnummer" is het rekeningnummer
         ibanOpen={o.onboarding.some((s) => s.id === "thuisbasis" && !s.done)}
       />
@@ -298,17 +309,6 @@ export default async function VerificatiePage() {
           kvkNumber: fiscal.kvkNumber ?? (bewaard?.kvkNumber && /^\d{8}$/.test(bewaard.kvkNumber) ? bewaard.kvkNumber : null),
         }}
       />
-
-      {/* de uitzendovereenkomst hoort bij de gegevens (stap 3): zolang hij niet getekend is direct onder wat er mist, niet
-          onderaan de pagina (13 nov 2026, voorstel d4; "Naar de overeenkomst" in GegevensMist springt hierheen) */}
-      {isUitzend && mist.includes("contract") && (
-        <div id="uitzendovereenkomst" tabIndex={-1} className="mb-6 card scroll-mt-20 p-6 focus:outline-none">
-          <h2 className="font-display text-base font-bold text-ink">{pt.uitzendTitel}</h2>
-          <div className="mt-4">
-            <UitzendPanel />
-          </div>
-        </div>
-      )}
 
       {formulierNodig && (
         <OnboardingForm
@@ -365,6 +365,12 @@ export default async function VerificatiePage() {
       <section aria-labelledby="later-kop" className="mt-10 border-t border-hair pt-6">
         <h2 id="later-kop" className="font-display text-base font-bold text-ink">{pt.laterTitel}</h2>
         <p className="mt-1 text-sm text-neutralx-500">{pt.laterUitleg}</p>
+        {/* uitzendkracht: BSN en overeenkomst vóór de eerste klus (13 nov); "Naar de overeenkomst" springt naar het blok hieronder */}
+        {voorKlus.length > 0 && (
+          <div className="mt-6">
+            <GegevensMist mist={voorKlus} later kopId="gegevens-later-kop" soort={fiscal.workerKind ?? null} bsnVoorstel={fiscal.bsnVoorstelLast4 ?? null} />
+          </div>
+        )}
         <div id="bankrekening" className="mt-6 card scroll-mt-20 p-6">
           <h2 className="font-display text-base font-bold text-ink">{pt.bankTitle}</h2>
           <p className="mt-1 text-sm text-neutralx-500">{pt.bankSub}</p>
@@ -382,7 +388,7 @@ export default async function VerificatiePage() {
           </div>
         )}
 
-        {isUitzend && !mist.includes("contract") && (
+        {isUitzend && (
           <div id="uitzendovereenkomst" tabIndex={-1} className="mt-6 card scroll-mt-20 p-6 focus:outline-none">
             <h2 className="font-display text-base font-bold text-ink">{pt.uitzendTitel}</h2>
             <div className="mt-4">

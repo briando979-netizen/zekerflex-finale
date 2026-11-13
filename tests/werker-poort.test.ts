@@ -173,10 +173,13 @@ describe("werkerPoortStand", () => {
     }
   });
 
-  it("uitzendkracht: het BSN (fiscaal ingevuld) en de getekende overeenkomst blijven in de poort", async () => {
+  it("uitzendkracht: sinds 13 nov alleen de thuisbasis; het BSN en de overeenkomst komen vóór de eerste klus", async () => {
     const { werkerPoortStand } = await import("@/lib/onboarding/werker-poort-server");
+    // geen BSN en (de mock van activeUitzendContract geeft null) geen getekende overeenkomst
     h.fiscal = { workerKind: "uitzendkracht" };
-    // de mock van activeUitzendContract geeft null: geen getekende overeenkomst
+    h.profiel = { homePostalCode: "1012AB" };
+    expect((await werkerPoortStand("u1")).gegevensIngevuld).toBe(true);
+    h.profiel = { homePostalCode: null };
     expect((await werkerPoortStand("u1")).gegevensIngevuld).toBe(false);
   });
 

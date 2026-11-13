@@ -14,8 +14,8 @@ const gegevens = (over: Record<string, unknown> = {}) => ({ soort: "uitzendkrach
 const TALEN = ["nl", "en", "pl", "ro", "uk"] as const;
 
 describe("herinneringMist: per soort en toestand", () => {
-  it("een uitzendkracht zonder BSN ziet het BSN, daarna de overeenkomst, postcode, ID en foto", () => {
-    expect(herinneringMist({ ...leeg, identiteitIngestuurd: false, fotoGezet: false, gegevens: gegevens() })).toEqual(["bsn", "contract", "postcode", "identiteit", "foto"]);
+  it("een uitzendkracht: het BSN en de overeenkomst horen sinds 13 nov niet bij de aanmelding (vóór de eerste klus); wel postcode, ID en foto", () => {
+    expect(herinneringMist({ ...leeg, identiteitIngestuurd: false, fotoGezet: false, gegevens: gegevens() })).toEqual(["postcode", "identiteit", "foto"]);
   });
 
   it("een zzp'er of flexwerker: geen BSN of overeenkomst, en sinds 13 nov ook geen btw/KOR (dat komt vóór de eerste klus)", () => {

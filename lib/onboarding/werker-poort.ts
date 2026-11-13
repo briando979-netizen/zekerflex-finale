@@ -16,9 +16,9 @@ export interface WerkerPoortFeiten {
   /** branches gekozen (een of meer, of alle) */
   branchesGekozen: boolean;
   /**
-   * de thuisbasis, en bij een uitzendkracht het BSN en de getekende overeenkomst. KVK/btw/KOR (zzp'er, flexwerker) sinds
-   * 13 nov niet meer (86, eigenaar "veel te veel vragen"), net als het IBAN op 10 nov: die komen vóór de eerste klus
-   * (lib/fiscal/eligibility.ts)
+   * de thuisbasis (postcode). Sinds 13 nov niet meer: KVK/btw/KOR van een zzp'er of flexwerker (86, eigenaar "veel te veel
+   * vragen") en het BSN en de uitzendovereenkomst van een uitzendkracht (eigenaar), net als het IBAN op 10 nov: die komen
+   * vóór de eerste klus (lib/fiscal/eligibility.ts)
    */
   gegevensIngevuld: boolean;
   /** de ID-controle is ingestuurd (in behandeling) of goedgekeurd */
