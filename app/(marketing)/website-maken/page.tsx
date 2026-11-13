@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 // /website-maken (13 nov 2026, eigenaar: "bied dit aan voor de klant, zoals de grote websitebouwers"): de ingang voor een
 // bedrijf dat zelf een website of webshop wil maken in de Studio. Alles op deze pagina bestaat: de ontwerpen komen uit
 // lib/sites/ontwerpen.ts, de prijs uit lib/website/manage.ts (bouwen en bekijken is gratis, online zetten vraagt een
-// abonnement: lib/sites/access.ts). Geen verzonnen aantallen, klanten of beoordelingen.
+// abonnement: lib/sites/access.ts). Geen verzonnen aantallen of klanten.
 
 const BEGIN = "/register?type=bedrijf";
 
