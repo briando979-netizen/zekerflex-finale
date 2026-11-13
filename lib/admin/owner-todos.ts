@@ -27,6 +27,7 @@ import { appleConfig } from "@/lib/auth/apple";
 import { cronHeartbeats } from "@/lib/ops/heartbeat";
 import { platformnaamTodo, type PlatformnaamStand } from "@/lib/admin/todo-platformnaam";
 import { stripeAccountTodos } from "@/lib/admin/todo-stripe-account";
+import type { Eerst } from "@/lib/admin/te-doen-eerst";
 import { kvkTegoedTodo } from "@/lib/admin/todo-kvk-tegoed";
 import { stripeKopieTodo } from "@/lib/admin/todo-stripe-kopie";
 import { stripeKopieStand } from "@/lib/kyc/stripe-kopie";
@@ -57,6 +58,8 @@ export interface OwnerTodo {
   auto: boolean;
   done: boolean;
   doneNote?: string;
+  /** Alleen bij taken die echt blokkeren: ze komen bovenaan in het blok "Begin hier". Een datum alleen als die vastligt. */
+  eerst?: Eerst;
 }
 
 export interface CustomTodo {
@@ -412,6 +415,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
         "Controleer in Stripe bij het endpoint of nieuwe gebeurtenissen daarna op 200 staan; de melding verdwijnt dan uit het foutenlogboek.",
       ],
       auto: false,
+      eerst: { reden: "geld binnen" },
       ...m("stripe-webhook-handtekening"),
     },
     {
@@ -505,6 +509,34 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("kosten-bevestigen"),
     },
     {
+      id: "wtta-aanmelden",
+      group: "Juridisch",
+      title: "Wtta: controleer dat Zekerflex, Inc. is aangemeld, uiterlijk 31 december 2026",
+      why: "Voor het uitzenden van personeel moet Zekerflex, Inc. zich bij de Wtta aanmelden. In de projectnotities staat dat dat kan tot en met 31 december 2026.",
+      how: [
+        "Vraag de accountant of de aanmelding voor de Wtta voor Zekerflex, Inc. al is gedaan en wanneer.",
+        "Is dat nog niet gebeurd, laat de accountant of een adviseur het regelen en spreek een datum af ruim voor 31 december 2026.",
+        "Bewaar het bewijs van de aanmelding (bevestiging of registratienummer) bij je administratie en vink deze taak daarna af.",
+      ],
+      auto: false,
+      eerst: { reden: "wettelijk", uiterlijk: "2026-12-31" },
+      ...m("wtta-aanmelden"),
+    },
+    {
+      id: "irs-83b",
+      group: "Juridisch",
+      title: "Controleer of de 83(b)-verklaring is verstuurd en bewaar het bewijs",
+      why: "De 83(b)-verklaring moet binnen 30 dagen na 9 november 2026 bij de IRS zijn ingediend: uiterlijk 9 december 2026 (de datum komt uit de Atlas-documenten van de eigenaar).",
+      how: [
+        "Zoek het bewijs van verzending op (de verzendbevestiging of het ontvangstbewijs van de IRS) en kijk of de datum voor 9 december 2026 ligt.",
+        "Is de verklaring nog niet verstuurd, laat dat dan meteen doen (met een verzendmethode waarmee je een bewijs krijgt) en vraag zo nodig hulp aan de accountant of aan Atlas.",
+        "Bewaar het bewijs bij je Atlas-documenten en vink deze taak daarna af.",
+      ],
+      auto: false,
+      eerst: { reden: "wettelijk", uiterlijk: "2026-12-09" },
+      ...m("irs-83b"),
+    },
+    {
       id: "avg-bewaartermijn",
       group: "Juridisch",
       title: "AVG: elke nacht oude gegevens opschonen (bewaartermijnen)",
@@ -570,6 +602,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
         "Kom je er niet uit: zeg het tegen Claude. Die controleert daarna het DMARC-record en de aflevering.",
       ],
       auto: false,
+      eerst: { reden: "bezorging" },
       ...m("mail-microsoft"),
     },
     {
@@ -1023,6 +1056,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
         "Deze taak vinkt zichzelf af zodra ZekerFlex ziet dat betalingen weer aan staan (binnen 15 minuten).",
       ],
       auto: true,
+      eerst: { reden: "geld binnen" },
       done: !stripeDicht,
       ...(stripeStand ? { doneNote: `laatst gemeten ${new Date(stripeStand.gemeten).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", dateStyle: "short", timeStyle: "short" })}` } : {}),
     },
@@ -1170,6 +1204,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
         "Dit item vinkt zichzelf af zodra de nachtelijke kopie slaagt. De hersteltest (Admin → Systeem → Back-ups) bewijst daarna wekelijks dat de kopie klopt.",
       ],
       auto: true,
+      eerst: { reden: "gegevens kwijt" },
       done: backup?.status?.offsite?.ok === true && backup.status.encrypted,
       ...(backup?.status?.offsite?.configured ? { doneNote: backup.status.offsite?.ok ? `laatste kopie gelukt naar ${backup.status.offsite?.target}` : `laatste kopie mislukt: ${backup.status.offsite?.error}` } : {}),
     },

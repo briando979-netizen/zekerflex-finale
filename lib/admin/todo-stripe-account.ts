@@ -24,6 +24,7 @@ export function stripeAccountTodos(actief: StripeAccountInfo | null | undefined)
       "Deze taak vinkt zichzelf af zodra het account actief is.",
     ],
     auto: true,
+    eerst: { reden: "geld binnen" },
     done: actief !== null,
     ...(actief ? { doneNote: `sinds ${new Date(actief.ingesteldOp).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}, sleutel eindigt op ${actief.eind}` } : {}),
   };
