@@ -12,6 +12,7 @@ import { userLocale, userLocales } from "@/lib/i18n/worker-locale";
 import { applyToShift } from "@/lib/matching/apply";
 import { kanalenBeschikbaar, stuurSms, stuurWhatsApp } from "@/lib/spoed/kanalen";
 import { zonderTestwerker } from "@/lib/testwerker/adres";
+import { zonderNummers } from "@/lib/telephony/log-nummer";
 import {
   MAX_ONTVANGERS,
   isOpen,
@@ -175,7 +176,7 @@ export async function startSpoedoproep(input: StartInput): Promise<StartUitkomst
         via.push(kanaal);
       } catch (err) {
         mislukt += 1;
-        logger.warn("spoedoproep: bericht niet verstuurd", { kanaal, err: err instanceof Error ? err.message : String(err) });
+        logger.warn("spoedoproep: bericht niet verstuurd", { kanaal, err: zonderNummers(err instanceof Error ? err.message : String(err)) });
       }
     }
     ontvangers.push({ userId: k.userId, naam: k.user.fullName, km: Math.round(k.km * 10) / 10, via, at: nu.toISOString() });

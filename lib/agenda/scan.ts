@@ -11,6 +11,7 @@ import { imapConfigFor, mailboxPassword, type MailboxConnection } from "@/lib/ma
 import { userDirectory } from "@/lib/messaging/contacts";
 import type { ChatMessage, ChatThread } from "@/lib/messaging/store";
 import { getImportedChat } from "@/lib/whatsapp/store";
+import { nummerVoorLog, zonderNummers } from "@/lib/telephony/log-nummer";
 
 // ---------------------------------------------------------------------------
 // Puts appointments into people's agendas straight from what they write and
@@ -115,7 +116,7 @@ export async function scanWhatsAppChat(userId: string, chatId: string): Promise<
     }
     return added;
   } catch (err) {
-    logger.warn("agenda whatsapp scan failed", { chatId, error: (err as Error).message });
+    logger.warn("agenda whatsapp scan failed", { chat: nummerVoorLog(chatId), error: zonderNummers((err as Error).message) });
     return 0;
   }
 }
