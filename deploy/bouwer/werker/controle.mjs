@@ -22,6 +22,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { WERK, geefZwaarSlotVrij, haalMain, haalVastlegging, kloon, sh, testOmgeving, verkrijgZwaarSlot, wachtOpUitrol } from "./werkkopie.mjs";
 import { gefaaldeBewakers, leesBewakerLijst } from "./bewakers.mjs";
+import { basisKlopt } from "./basis.mjs";
 
 export const CONTROLE_DIR = path.join(WERK, "controle");
 const REPO = path.join(CONTROLE_DIR, "repo");
@@ -96,14 +97,6 @@ async function gewijzigdSinds(vanaf, sha) {
   const r = await sh("git", ["diff", "--name-only", "--diff-filter=ACMR", bereik], { cwd: REPO, timeout: 60_000 });
   if (r.code !== 0) return { basis: null, bestanden: [] };
   return { basis: basis ?? `${sha}~1`, bestanden: r.uit.split("\n").map((s) => s.trim()).filter(Boolean) };
-}
-
-/**
- * Mag een bewaarde uitslag worden hergebruikt voor een controle met deze gevraagde basis? Zonder gevraagde basis (geen vanaf) altijd;
- * met een volledige sha alleen als de uitslag met precies die basis is gemaakt.
- */
-export function basisKlopt(uitslag, gevraagd) {
-  return !isSha(gevraagd) || uitslag.vanaf === gevraagd;
 }
 
 /** Alle .py-bestanden onder een map (relatief aan de repo), zonder node_modules en __pycache__. */

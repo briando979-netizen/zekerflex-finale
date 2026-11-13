@@ -32,7 +32,7 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
   }
   if (body.noodrem !== undefined) {
     await zetNoodrem(body.noodrem, principal.userId);
-    await recordAudit({ category: "ADMIN", action: "admin.auto-uitrol.noodrem", severity: "warn", actorUserId: principal.userId, actorLabel: "user", summary: `Auto-uitrol noodrem ${body.noodrem ? "aan" : "uit"}` });
+    await recordAudit({ category: "ADMIN", action: "admin.auto-uitrol.noodrem", severity: "warning", actorUserId: principal.userId, actorLabel: "user", summary: `Auto-uitrol noodrem ${body.noodrem ? "aan" : "uit"}` });
   }
   return NextResponse.json(await stand());
 });

@@ -8,7 +8,10 @@ import {
   LEGE_STAND,
   MIN_LIVEZETTER_VERSIE,
   MIN_VRIJ_GEHEUGEN_MB,
+  RONDE_SLOT_TTL_MS,
   RUST_MS,
+  UITSTEL_MAX_POGINGEN,
+  UITSTEL_WACHT_MS,
   NACONTROLE_RONDGANG_MAX_MS,
   NACONTROLE_WACHT_MS,
   beoordeelNacontrole,
@@ -409,7 +412,7 @@ describe("zf-live.py laadt zichzelf alleen opnieuw als het nieuwe bestand compil
 
 describe("Auto-uitrol: herreview 14e", () => {
   it("(1) een bewaarde controle-uitslag wordt alleen hergebruikt bij dezelfde basis (vanaf)", async () => {
-    const pad = new URL("../deploy/bouwer/werker/controle.mjs", import.meta.url).href;
+    const pad = new URL("../deploy/bouwer/werker/basis.mjs", import.meta.url).href;
     const { basisKlopt } = (await import(/* @vite-ignore */ pad)) as { basisKlopt: (u: { vanaf: string | null }, g: string | null) => boolean };
     expect(basisKlopt({ vanaf: LIVE }, LIVE)).toBe(true);
     expect(basisKlopt({ vanaf: "c".repeat(40) }, LIVE)).toBe(false); // een tak-sha als basis: opnieuw controleren
