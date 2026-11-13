@@ -27,6 +27,7 @@ import { appleConfig } from "@/lib/auth/apple";
 import { cronHeartbeats } from "@/lib/ops/heartbeat";
 import { platformnaamTodo, type PlatformnaamStand } from "@/lib/admin/todo-platformnaam";
 import { stripeAccountTodos } from "@/lib/admin/todo-stripe-account";
+import { WISSEL_VERWIJZING, betalenUitEerst, betalenUitVoorzin, webhookHandtekeningStand } from "@/lib/admin/todo-stripe-wissel";
 import type { Eerst } from "@/lib/admin/te-doen-eerst";
 import { kvkTegoedTodo } from "@/lib/admin/todo-kvk-tegoed";
 import { stripeKopieTodo } from "@/lib/admin/todo-stripe-kopie";
@@ -250,9 +251,11 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   // facturen met de oude naam van de platformorganisatie als afzender (13 nov): eerst de accountant, dan de naam
   const platformnaam = platformnaamTodo(await platformnaamStand());
   // betalen via Zekerflex, Inc. (13 nov): het account uit Beheer → Stripe-account; een leesfout = geen taak
-  const stripeAccount = stripeAccountTodos(
-    await import("@/lib/billing/stripe-account").then((mod) => mod.stripeAccountInfo()).catch(() => undefined),
-  );
+  const stripeStandUitBeheer = await import("@/lib/billing/stripe-account").then((mod) => mod.stripeAccountInfo()).catch(() => undefined);
+  const stripeAccount = stripeAccountTodos(stripeStandUitBeheer);
+  // de twee andere Stripe-taken volgen dezelfde stand (lib/admin/todo-stripe-wissel.ts); een leesfout (undefined) verandert niets
+  const webhookStand = webhookHandtekeningStand(stripeStandUitBeheer);
+  const betalenEerst = betalenUitEerst(stripeStandUitBeheer);
   // het tegoed bij KVKBase (13 nov): op of bijna op = KVK-controles wachten op een herkansing (lib/kvk/tegoed.ts)
   const kvkTegoed = kvkTegoedTodo(await leesKvkTegoed(), (await wachtendeKvkControles().catch(() => [])).length);
   // de ID-foto's en gegevens uit het oude Stripe-account kopiëren (14 nov, lib/kyc/stripe-kopie.ts)
@@ -407,16 +410,15 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       id: "stripe-webhook-handtekening",
       group: "Geld & bank",
       title: "Stripe-webhook: de handtekening klopt niet (webhook-secret controleren)",
-      why: "Het foutenlogboek (Systeem → Foutmeldingen) toont sinds 6 november herhaald 'No signatures found matching the expected signature' op POST /api/webhooks/stripe. Dan verwerkt ZekerFlex die Stripe-gebeurtenissen (betalingen, terugboekingen) niet. Meestal staat in Stripe een tweede endpoint of is het secret opnieuw gemaakt, zodat STRIPE_WEBHOOK_SECRET op de server niet meer bij dat endpoint hoort.",
+      why: WISSEL_VERWIJZING + "Het foutenlogboek (Systeem → Foutmeldingen) toont sinds 6 november herhaald 'No signatures found matching the expected signature' op POST /api/webhooks/stripe. Dan verwerkt ZekerFlex die Stripe-gebeurtenissen (betalingen, terugboekingen) niet. Meestal staat in Stripe een tweede endpoint of is het secret opnieuw gemaakt, zodat STRIPE_WEBHOOK_SECRET op de server niet meer bij dat endpoint hoort.",
       how: [
         "Ga in Stripe naar Developers → Webhooks en kijk welke endpoints naar zekerflex.com wijzen; verwijder dubbele of oude.",
         "Open het endpoint https://zekerflex.com/api/webhooks/stripe, klik 'Reveal signing secret' (whsec_…) en vergelijk met STRIPE_WEBHOOK_SECRET in .env.production op de server.",
         "Wijkt het af: zet het juiste secret in .env.production en herstart de app-container (de live-zetter: Onderhoud → herstart-app).",
         "Controleer in Stripe bij het endpoint of nieuwe gebeurtenissen daarna op 200 staan; de melding verdwijnt dan uit het foutenlogboek.",
       ],
-      auto: false,
-      eerst: { reden: "geld binnen" },
-      ...m("stripe-webhook-handtekening"),
+      auto: webhookStand.achterhaald,
+      ...(webhookStand.achterhaald ? { done: true, ...(webhookStand.doneNote ? { doneNote: webhookStand.doneNote } : {}) } : m("stripe-webhook-handtekening")),
     },
     {
       id: "stripe-expired",
@@ -1063,7 +1065,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
         ? `Stripe ontvangt geen betalingen meer${stripeStand?.uitSinds ? ` sinds ${new Date(stripeStand.uitSinds).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", dateStyle: "short", timeStyle: "short" })}` : ""}`
         : "Stripe-account: betalingen en uitbetalingen staan aan",
       why: stripeDicht
-        ? `Het live Stripe-account (de stichting) ${!stripeStand?.betalen ? "kan geen betalingen ontvangen" : ""}${!stripeStand?.betalen && !stripeStand?.uitbetalen ? " en " : ""}${!stripeStand?.uitbetalen ? "betaalt niet uit" : ""}. Daardoor werkt inloggen bij de bank (iDEAL) voor werkers niet; ZekerFlex toont hun meteen het bankafschrift. Ook betalingen via Stripe elders (webshop, facturen, abonnementen, domeinen) lukken niet zolang dit zo is.`
+        ? `${betalenUitVoorzin(stripeStandUitBeheer)}Het live Stripe-account (de stichting) ${!stripeStand?.betalen ? "kan geen betalingen ontvangen" : ""}${!stripeStand?.betalen && !stripeStand?.uitbetalen ? " en " : ""}${!stripeStand?.uitbetalen ? "betaalt niet uit" : ""}. Daardoor werkt inloggen bij de bank (iDEAL) voor werkers niet; ZekerFlex toont hun meteen het bankafschrift. Ook betalingen via Stripe elders (webshop, facturen, abonnementen, domeinen) lukken niet zolang dit zo is.`
         : "ZekerFlex kijkt elke 15 minuten of het live Stripe-account betalingen kan ontvangen en uitbetalen. Staat dat uit, dan krijg je meteen een melding en opent deze taak zich met wat je moet doen.",
       how: [
         "Log in op dashboard.stripe.com met het live account en lees de melding bovenaan (bijvoorbeeld: account onder controle, gegevens of documenten nodig).",
@@ -1072,7 +1074,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
         "Deze taak vinkt zichzelf af zodra ZekerFlex ziet dat betalingen weer aan staan (binnen 15 minuten).",
       ],
       auto: true,
-      eerst: { reden: "geld binnen" },
+      ...(betalenEerst ? { eerst: betalenEerst } : {}),
       done: !stripeDicht,
       ...(stripeStand ? { doneNote: `laatst gemeten ${new Date(stripeStand.gemeten).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", dateStyle: "short", timeStyle: "short" })}` } : {}),
     },
