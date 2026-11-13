@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { KpiStrip, Notice, PageHead, Panel, Pill } from "@/components/admin/kit";
 import { DataTable, type TableColumn, type TableRow } from "@/components/admin/kit-client";
+import type { GeminiStand } from "@/lib/admin/gemini-verbruik";
 import {
   PER_LABEL,
   SCHATTING_LABEL,
@@ -206,7 +207,7 @@ const KOLOMMEN: TableColumn[] = [
   { key: "actie", label: "", align: "right" },
 ];
 
-export function KostenBeheer({ initieel, transip, financien }: { initieel: KostenStand; transip: TransipFacturen; financien: OperationeleKosten }) {
+export function KostenBeheer({ initieel, transip, financien, gemini }: { initieel: KostenStand; transip: TransipFacturen; financien: OperationeleKosten; gemini?: GeminiStand }) {
   const [stand, setStand] = useState<KostenStand>(initieel);
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<Fout>(null);
@@ -366,6 +367,28 @@ export function KostenBeheer({ initieel, transip, financien }: { initieel: Koste
           Deze lijst is nog niet opgeslagen, dus Financiën gebruikt hem nog niet. Klopt de lijst? Bevestig hem dan hieronder; of pas eerst een post aan.
           <button type="button" disabled={bezig} onClick={() => void bevestigLijst()} className="btn-ghost ml-2 text-xs">Lijst bevestigen</button>
         </Notice>
+      )}
+
+      {gemini && (
+        <Panel title="Gemeten: Gemini-verbruik" subtitle="Uit het AI-gebruikslogboek van ZekerFlex (aanroepen en tokens, nooit inhoud), hooguit een keer per uur gelezen. Een prijs staat hier niet: die zie je in Google Cloud.">
+          {gemini.ok ? (
+            <div className="space-y-2 text-sm">
+              <p role="status">{gemini.regel}</p>
+              {gemini.verbruik.perModel.length > 0 && (
+                <ul className="space-y-1 text-xs" style={{ color: "var(--a-mute)" }}>
+                  {gemini.verbruik.perModel.map((m) => (
+                    <li key={m.model}>
+                      {m.model}: {m.aanroepen.toLocaleString("nl-NL")} aanroepen, {m.tokens.toLocaleString("nl-NL")} tokens
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="text-xs" style={{ color: "var(--a-mute)" }}>Tokens zoals de aanbieder ze meldt; een aanroep zonder opgave telt als nul tokens. Alleen Gemini; andere aanbieders staan hier niet.</p>
+            </div>
+          ) : (
+            <Notice tone="warn" role="alert">{gemini.melding}</Notice>
+          )}
+        </Panel>
       )}
 
       {financien.bron === "kosten" ? (
