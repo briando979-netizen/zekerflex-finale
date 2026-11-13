@@ -58,6 +58,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ]),
     ...(await publicOpenShifts({ take: 500 }).catch(() => [])).map((s) => entry(`/klussen/${s.id}`, 0.6, "daily", s.createdAt)),
     entry("/prijzen", 0.8, "monthly"),
+    entry("/abonnementen", 0.7, "monthly"),
 
     // Het hele aanbod (lib/marketing/aanbod.ts) + de producten zonder eigen pagina elders
     entry("/aanbod", 0.9, "weekly"),
@@ -80,12 +81,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/app", 0.6, "monthly"),
     entry("/demo", 0.6, "monthly"),
     entry("/website-check", 0.7, "monthly"),
+    entry("/voorbeeldsites", 0.6, "monthly"),
     entry("/domeinnaam", 0.8, "monthly"),
     entry("/review-check", 0.7, "monthly"),
     entry("/rekentools", 0.7, "monthly"),
     entry("/rekentools/zzp-uurtarief-berekenen", 0.8, "monthly"),
     entry("/rekentools/kosten-uitzendkracht-berekenen", 0.8, "monthly"),
     entry("/rekentools/wet-dba-check", 0.8, "monthly"),
+    entry("/rekentools/btw-nummer-check", 0.8, "monthly"),
     entry("/klus-plaatsen", 0.8, "monthly"),
     entry("/over-ons", 0.6, "monthly"),
     entry("/beveiliging", 0.5, "monthly"),
@@ -100,6 +103,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/kennis/blog", 0.6, "weekly"),
     entry("/kennis/whitepapers", 0.6, "monthly"),
     entry("/uitleg", 0.5, "monthly"),
+    entry("/nieuwsbrief", 0.4, "monthly"),
     ...GUIDES.map((g) => entry(`/kennis/${g.slug}`, 0.6, "monthly", g.updated)),
     ...POSTS.map((p) => entry(`/kennis/blog/${p.slug}`, 0.5, "yearly", p.date)),
     ...WHITEPAPERS.map((w) => entry(`/kennis/whitepapers/${w.slug}`, 0.5, "monthly", w.updated)),
@@ -111,6 +115,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/voorwaarden", 0.3, "yearly"),
     entry("/voorwaarden/snelle-uitbetaling", 0.3, "yearly"),
     entry("/cookiebeleid", 0.3, "yearly"),
+    entry("/copyright", 0.3, "yearly"),
     entry("/toegankelijkheid", 0.3, "yearly"),
     entry("/verwerkersovereenkomst", 0.3, "yearly"),
 
