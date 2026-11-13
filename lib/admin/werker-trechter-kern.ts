@@ -72,7 +72,7 @@ export function stilBij(werkers: readonly WerkerFeiten[], nu: Date, dagen: numbe
 // --- Meetcodes ------------------------------------------------------------------
 
 /** De codes (data-track) van de ID-ombouw en de gegevens: start, chip, controle, klaar-naar, BSN-voorstel, btw/KOR. */
-export const MEETCODE_VOORVOEGSELS = ["id-start-", "id-zelf-wissel-", "id-chip-", "id-foto-", "id-controle-", "id-klaar-naar-", "bsn-voorstel-", "gegevens-btw", "gegevens-kor"] as const;
+export const MEETCODE_VOORVOEGSELS = ["id-start-", "id-zelf-wissel-", "id-chip-", "id-foto-", "id-controle-", "id-klaar-naar-", "bsn-voorstel-", "gegevens-btw", "gegevens-kor", "verificatie-naar-"] as const;
 
 export function isMeetcode(label: string | null | undefined): label is string {
   return Boolean(label && /^[a-z0-9-]+$/.test(label) && MEETCODE_VOORVOEGSELS.some((v) => label.startsWith(v)));

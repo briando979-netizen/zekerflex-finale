@@ -26,6 +26,7 @@
     "tests/sitechat-regels.test.ts",
     "tests/talen-bewaker.test.ts",
     "tests/valkuil-bewakers.test.ts",
+    "tests/verder-kaart.test.ts",
     "tests/voorstel-indoor-regels.test.ts",
     "tests/voorstel-sollicitatie-regels.test.ts",
     "tests/werkgever-taal-bewaker.test.ts",
