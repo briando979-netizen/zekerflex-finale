@@ -74,6 +74,10 @@ export interface AutoStand {
   laatsteBeslissing: { op: string; actie: BesluitActie; reden: string } | null;
   /** sha -> hoe vaak de live-zetter hem tijdelijk afwees en wanneer voor het laatst */
   uitgesteld: Record<string, { pogingen: number; laatste: string }>;
+  /** de laatste beslissingen (hoogstens 20), nieuwste laatst: voor de "kijken"-stand en de controle van wat de lus doet */
+  beslissingen: Beslissing[];
+  /** voor welke sha de lus al een controle startte (hooguit één per nieuwe sha) */
+  controleGestart: { sha: string; op: string } | null;
   /** sinds wanneer main voorloopt op live (ISO), voor de achterstandsmelding */
   achterSinds: string | null;
   /** de laatste keer dat de lus liep */
@@ -90,6 +94,8 @@ export const LEGE_STAND: AutoStand = {
   gezienSinds: null,
   geweigerd: {},
   migratieWacht: null,
+  beslissingen: [],
+  controleGestart: null,
   uitgesteld: {},
   verzocht: null,
   laatsteControle: null,
@@ -299,4 +305,69 @@ export function registreerUitstel(stand: AutoStand, sha: string, nu: number, red
 export function slotVrij(slot: { op?: string } | null | undefined, nu: number, ttl: number = RONDE_SLOT_TTL_MS): boolean {
   const t = slot?.op ? Date.parse(slot.op) : NaN;
   return !slot || !Number.isFinite(t) || nu - t > ttl;
+}
+
+// ---- de drie standen: uit / kijken / aan ------------------------------------------------------------------------------------
+//
+// De vlag `auto-uitrol` blijft de hoofdschakelaar (aan/uit), en de KV-waarde `bouwer:auto-uitrol:modus` zegt wat "aan" betekent:
+//   uit     = de vlag staat uit, of de modus is onbekend of kapot (alles behalve exact "kijken" of "aan"): de lus doet niets.
+//   kijken  = vlag aan en modus exact "kijken" (wat Beheer bij het aanzetten kiest): de lus doet alles (main lezen, rustperiode, controle,
+//             migratiecheck, vensters, geheugen) maar plaatst NOOIT een verzoek, zet geen harde stop en schrijft alleen wat hij zou doen.
+//   aan     = vlag aan en modus exact "aan" (alleen na een bevestiging in Beheer): de lus rolt echt uit.
+// Alles wat niet precies deze waarden is, geldt als uit: nooit aan, en nooit een kijken-stand die toch iets uitvoert.
+
+export type AutoModus = "uit" | "kijken" | "aan";
+
+export function autoModus(vlag: unknown, modus: unknown): AutoModus {
+  if (vlag !== true) return "uit";
+  if (modus === "kijken") return "kijken";
+  if (modus === "aan") return "aan";
+  return "uit";
+}
+
+/** Mag de lus nu een verzoek bij de live-zetter plaatsen? Alleen in "aan", en alleen bij een besluit om uit te rollen. */
+export function magVerzoekPlaatsen(modus: AutoModus, besluit: Besluit): boolean {
+  return modus === "aan" && besluit.actie === "uitrollen" && Boolean(besluit.sha);
+}
+
+/** Mag de lus iets veranderen buiten de stand (geweigerd onthouden, migratie-wacht, harde stop)? Alleen in "aan". */
+export function magIngrijpen(modus: AutoModus): boolean {
+  return modus === "aan";
+}
+
+/** Hoogstens één controle per nieuwe sha: in "kijken" nooit opnieuw voor dezelfde sha; in "aan" pas na 30 minuten opnieuw (een verloren controle). */
+export function magControleStarten(stand: Pick<AutoStand, "controleGestart">, sha: string, modus: AutoModus, nu: number): boolean {
+  const g = stand.controleGestart;
+  if (!g || g.sha !== sha) return true;
+  if (modus !== "aan") return false;
+  const t = Date.parse(g.op);
+  return !Number.isFinite(t) || nu - t > 30 * 60_000;
+}
+
+export interface Beslissing {
+  op: string;
+  sha: string | null;
+  actie: BesluitActie;
+  /** in gewoon Nederlands, zonder geheimen */
+  reden: string;
+  /** true = een droge ronde (kijken): dit is wat de lus ZOU doen */
+  kijken: boolean;
+}
+export const MAX_BESLISSINGEN = 20;
+
+/** De tekst voor de lijst: in "kijken" staat er wat de lus zou doen, in "aan" wat hij besloot. */
+export function beslissingTekst(besluit: Besluit, modus: AutoModus): string {
+  if (modus !== "kijken") return besluit.reden;
+  if (besluit.actie === "uitrollen") return `Zou nu uitrollen: ${besluit.sha ? besluit.sha.slice(0, 10) : "onbekend"}. ${besluit.reden}`;
+  if (besluit.actie === "weiger") return `Zou weigeren: ${besluit.reden}`;
+  if (besluit.actie === "migratie-wacht") return `Zou niet uitrollen, een migratie wacht: ${besluit.reden}`;
+  return besluit.reden;
+}
+
+/** Voegt een beslissing toe; een herhaling van dezelfde beslissing (sha, actie, reden) telt niet opnieuw; de lijst wordt afgekapt op 20. */
+export function voegBeslissingToe(lijst: Beslissing[] | undefined, nieuw: Beslissing, max: number = MAX_BESLISSINGEN): Beslissing[] {
+  const huidig = Array.isArray(lijst) ? lijst : [];
+  const laatste = huidig[huidig.length - 1];
+  if (laatste && laatste.sha === nieuw.sha && laatste.actie === nieuw.actie && laatste.reden === nieuw.reden && laatste.kijken === nieuw.kijken) return huidig.slice(-max);
+  return [...huidig, nieuw].slice(-max);
 }

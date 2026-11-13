@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { bewaarAutoStand, geefRondeSlotVrij, leesAutoStand, neemRondeSlot, noodremAan, zetNoodrem } from "@/lib/bouwer/auto-uitrol-opslag";
+import { bewaarAutoStand, geefRondeSlotVrij, leesAutoStand, leesModus, neemRondeSlot, noodremAan, zetModus, zetNoodrem } from "@/lib/bouwer/auto-uitrol-opslag";
 import { featureEnabled, setFlag } from "@/lib/flags";
 import { draaiRondgang, laatsteRondgang } from "@/lib/ops/rondgang";
 import { journal } from "@/lib/ops/error-journal";
@@ -9,12 +9,19 @@ import { agentLeeft, githubMainSha, githubVergelijk, isBezig, leesLive, plaatsVe
 import { lijstControles, startControle } from "@/lib/bouwer/controles";
 import {
   AUTO_UITROL_DOOR,
+  autoModus,
   beoordeelNacontrole,
   beslis,
+  beslissingTekst,
+  magControleStarten,
+  magIngrijpen,
+  magVerzoekPlaatsen,
+  voegBeslissingToe,
   registreerUitstel,
   uitkomstVanStatus,
   vrijGeheugenUitMeminfo,
   zietMain,
+  type AutoModus,
   type AutoStand,
   type Besluit,
   type ControleStatus,
@@ -90,10 +97,13 @@ async function leesVergelijking(live: string, main: string): Promise<{ vergelijk
   }
 }
 /** De harde stop: de Auto-uitrol gaat zelf UIT (dezelfde vlag als de schakelaar in Beheer), de noodrem krijgt de reden, een regel in het foutenlogboek; de Te-doen-taak volgt uit de stand. */
-async function hardeStop(stand: AutoStand, sha: string, reden: string, nu: number): Promise<AutoStand> {
+async function hardeStop(stand: AutoStand, sha: string, reden: string, nu: number, modus: AutoModus): Promise<AutoStand> {
   const op = new Date(nu).toISOString();
+  // in "kijken" (droog) verandert er niets buiten de stand: geen vlag, geen noodrem, geen foutenlogboek
+  if (!magIngrijpen(modus)) return { ...stand, verzocht: null, nacontrole: null, laatsteNacontrole: { sha, uitslag: "stop", reden: `Zou nu stoppen: ${reden}`, op } };
   await setFlag("auto-uitrol", { enabled: false }, AUTO_UITROL_DOOR).catch(() => undefined);
   await zetNoodrem(true, AUTO_UITROL_DOOR, reden).catch(() => undefined);
+  await zetModus("uit", AUTO_UITROL_DOOR).catch(() => undefined);
   journal("error", "auto-uitrol: harde stop", { sha: sha.slice(0, 10), reden });
   return { ...stand, verzocht: null, stop: { reden, sha, op }, laatsteNacontrole: { sha, uitslag: "stop", reden, op } };
 }
@@ -101,35 +111,42 @@ async function hardeStop(stand: AutoStand, sha: string, reden: string, nu: numbe
 export interface RondeUitslag {
   besluit: Besluit;
   aan: boolean;
+  modus: AutoModus;
   noodrem: boolean;
 }
 
 /** Eén ronde. Gooit niet: een storing wordt een besluit "wacht" met de reden. */
 export async function autoUitrolRonde(nu: number = Date.now()): Promise<RondeUitslag> {
-  const [aan, noodrem] = await Promise.all([featureEnabled("auto-uitrol").catch(() => false), noodremAan().catch(() => true)]);
+  // uit / kijken / aan: alleen exact "kijken" of "aan" bij een aangezette vlag telt; al het andere (rare waarden, een leesfout) is uit
+  const [vlag, modusRuw, noodrem] = await Promise.all([featureEnabled("auto-uitrol").catch(() => false), leesModus(), noodremAan().catch(() => true)]);
+  const modus = autoModus(vlag, modusRuw);
+  const aan = modus !== "uit";
   const slotToken = await neemRondeSlot(nu);
   if (!slotToken) {
-    return { besluit: { actie: "wacht", reden: "Een vorige ronde loopt nog (of de opslag is niet bereikbaar); deze ronde doet niets." }, aan, noodrem };
+    return { besluit: { actie: "wacht", reden: "Een vorige ronde loopt nog (of de opslag is niet bereikbaar); deze ronde doet niets." }, aan, modus, noodrem };
   }
   try {
-    return await ronde(nu, aan, noodrem);
+    return await ronde(nu, aan, modus, noodrem);
   } finally {
     await geefRondeSlotVrij(slotToken);
   }
 }
 
-async function ronde(nu: number, aan: boolean, noodrem: boolean): Promise<RondeUitslag> {
+async function ronde(nu: number, aan: boolean, modus: AutoModus, noodrem: boolean): Promise<RondeUitslag> {
   // Lukt het lezen van de stand niet, dan NIETS schrijven: een lege stand terugschrijven zou geweigerde versies, de nacontrole en de harde stop wissen.
   let stand: AutoStand;
   try {
     stand = await leesAutoStand();
   } catch {
-    return { besluit: { actie: "wacht", reden: "De opslag is niet te lezen: deze ronde schreef niets." }, aan, noodrem };
+    return { besluit: { actie: "wacht", reden: "De opslag is niet te lezen: deze ronde schreef niets." }, aan, modus, noodrem };
   }
   const klaar = async (besluit: Besluit): Promise<RondeUitslag> => {
-    stand = { ...stand, laatsteRonde: new Date(nu).toISOString(), laatsteBeslissing: { op: new Date(nu).toISOString(), actie: besluit.actie, reden: besluit.reden } };
+    const op = new Date(nu).toISOString();
+    stand = { ...stand, laatsteRonde: op, laatsteBeslissing: { op, actie: besluit.actie, reden: besluit.reden } };
+    // de lijst met beslissingen (laatste 20) alleen als de lus echt meedoet; in "kijken" staat erin wat hij ZOU doen
+    if (modus !== "uit") stand = { ...stand, beslissingen: voegBeslissingToe(stand.beslissingen, { op, sha: besluit.sha ?? null, actie: besluit.actie, reden: beslissingTekst(besluit, modus), kijken: modus === "kijken" }) };
     await bewaarAutoStand(stand).catch(() => undefined);
-    return { besluit, aan, noodrem };
+    return { besluit, aan, modus, noodrem };
   };
   // Staat hij uit of is de noodrem aan, dan blijft het bij het bijhouden van de stand (geen netwerk, geen verzoek).
   if (noodrem || !aan) return klaar(beslis({ nu, aan, noodrem, liveSha: null, mainSha: null, stand, controle: "onbekend", nieuweMigraties: [], uitrolBezig: false, livezetter: null, vrijGeheugenMb: null }));
@@ -150,7 +167,7 @@ async function ronde(nu: number, aan: boolean, noodrem: boolean): Promise<RondeU
       stand = { ...stand, verzocht: null, nacontrole: { sha, id: stand.verzocht.id, sinds: new Date(nu).toISOString(), rondgangGestart: null }, laatsteUitrol: { sha, uitkomst: "klaar", op: new Date(nu).toISOString() } };
     } else if (uitkomst === "geweigerd" && liveStand.status?.staat === "teruggezet") {
       // een slechte versie ging even live en is teruggezet: harde stop
-      stand = await hardeStop(stand, sha, "de live-zetter zette de vorige versie terug na een uitrol van de Auto-uitrol", nu);
+      stand = await hardeStop(stand, sha, "de live-zetter zette de vorige versie terug na een uitrol van de Auto-uitrol", nu, modus);
     } else if (uitkomst === "migratie") {
       stand = { ...stand, verzocht: null, migratieWacht: { sha, migraties: (liveStand.status?.migraties ?? []).map((m) => m.naam), op: new Date(nu).toISOString() } };
       journal("warn", "auto-uitrol: migratie wacht", { sha: sha.slice(0, 10) });
@@ -183,10 +200,10 @@ async function ronde(nu: number, aan: boolean, noodrem: boolean): Promise<RondeU
       rondgang: rondgang ? { at: rondgang.at, totaal: rondgang.totaal, ok: rondgang.ok, problemen: rondgang.problemen.length } : null,
     });
     if (na.uitslag === "stop") {
-      stand = await hardeStop({ ...stand, nacontrole: null }, nc.sha, `nacontrole faalde: ${na.reden}`, nu);
+      stand = await hardeStop({ ...stand, nacontrole: null }, nc.sha, `nacontrole faalde: ${na.reden}`, nu, modus);
     } else if (na.uitslag === "onbekend") {
       // geen rondgang binnen 15 minuten: niet te zeggen of alles werkt, dus ook stoppen (de eigenaar kijkt en zet hem weer aan)
-      stand = await hardeStop({ ...stand, nacontrole: null }, nc.sha, `nacontrole onbekend na 15 min: ${na.reden}`, nu);
+      stand = await hardeStop({ ...stand, nacontrole: null }, nc.sha, `nacontrole onbekend na 15 min: ${na.reden}`, nu, modus);
     } else if (na.uitslag === "ok") {
       stand = { ...stand, nacontrole: null, laatsteNacontrole: { sha: nc.sha, uitslag: "ok", reden: na.reden, op: new Date(nu).toISOString() } };
     } else if (!nc.rondgangGestart && nu - Date.parse(nc.sinds) >= 3 * 60_000) {
@@ -230,19 +247,29 @@ async function ronde(nu: number, aan: boolean, noodrem: boolean): Promise<RondeU
   });
 
   if (besluit.actie === "controleer" && besluit.sha) {
+    // Hooguit één controle per nieuwe sha (geen lus van controles op de Bouwer); in "kijken" nooit een tweede voor dezelfde sha.
+    if (!magControleStarten(stand, besluit.sha, modus, nu)) {
+      return klaar({ actie: "wacht", reden: "De controle van deze versie is al gestart; de lus wacht op de uitslag.", sha: besluit.sha });
+    }
+    stand = { ...stand, controleGestart: { sha: besluit.sha, op: new Date(nu).toISOString() } };
     // vanaf = de live VERSIE: eslint en tests dekken het hele stuk tussen live en main
     await startControle(besluit.sha, AUTO_UITROL_DOOR, false, live?.sha).catch(() => undefined);
   } else if (besluit.actie === "weiger" && besluit.sha) {
-    stand = { ...stand, geweigerd: { ...stand.geweigerd, [besluit.sha]: { reden: besluit.reden, op: new Date(nu).toISOString() } } };
-    journal("error", "auto-uitrol: controle faalt, niet uitgerold", { sha: besluit.sha.slice(0, 10) });
+    // alleen in "aan" wordt een weigering onthouden en gemeld; in "kijken" staat het alleen in de lijst ("Zou weigeren")
+    if (magIngrijpen(modus)) {
+      stand = { ...stand, geweigerd: { ...stand.geweigerd, [besluit.sha]: { reden: besluit.reden, op: new Date(nu).toISOString() } } };
+      journal("error", "auto-uitrol: controle faalt, niet uitgerold", { sha: besluit.sha.slice(0, 10) });
+    }
   } else if (besluit.actie === "migratie-wacht" && besluit.sha) {
-    stand = { ...stand, migratieWacht: { sha: besluit.sha, migraties: vergelijk?.nieuweMigraties ?? [], op: new Date(nu).toISOString() } };
-    journal("warn", "auto-uitrol: migratie wacht", { sha: besluit.sha.slice(0, 10) });
-  } else if (besluit.actie === "uitrollen" && besluit.sha) {
-    // Alleen schrijven als er GEEN verzoek ligt (INSERT ... ON CONFLICT DO NOTHING): een verzoek van een mens gaat voor.
+    if (magIngrijpen(modus)) {
+      stand = { ...stand, migratieWacht: { sha: besluit.sha, migraties: vergelijk?.nieuweMigraties ?? [], op: new Date(nu).toISOString() } };
+      journal("warn", "auto-uitrol: migratie wacht", { sha: besluit.sha.slice(0, 10) });
+    }
+  } else if (magVerzoekPlaatsen(modus, besluit) && besluit.sha) {
+    // De ENIGE plek waar een verzoek bij de live-zetter wordt geplaatst: alleen in "aan". Alleen schrijven als er GEEN verzoek ligt
+    // (INSERT ... ON CONFLICT DO NOTHING): een verzoek van een mens gaat voor.
     const v = await plaatsVerzoekAlsLeeg({ actie: "uitrollen", migraties: [], destructiefAkkoord: false, forceer: false, zonderControle: false, auto: true, doelSha: besluit.sha, door: AUTO_UITROL_DOOR });
     if (!v) return klaar({ actie: "wacht", reden: "Er lag al een verzoek van iemand anders; dat gaat voor. De volgende ronde kijkt opnieuw.", sha: besluit.sha });
     stand = { ...stand, verzocht: { sha: besluit.sha, id: v.id, op: v.op }, laatsteUitrol: { sha: besluit.sha, uitkomst: "gevraagd", op: v.op } };
-  }
-  return klaar(besluit);
+  }  return klaar(besluit);
 }

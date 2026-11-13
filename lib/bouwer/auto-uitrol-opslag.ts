@@ -6,6 +6,20 @@ import { LEGE_STAND, slotVrij, type AutoStand } from "@/lib/bouwer/auto-uitrol-r
 export const K_AUTO_STAND = "bouwer:auto-uitrol:stand";
 export const K_AUTO_NOODREM = "bouwer:auto-uitrol:noodrem";
 export const K_RONDE_SLOT = "bouwer:auto-uitrol:slot";
+export const K_AUTO_MODUS = "bouwer:auto-uitrol:modus";
+
+/** De modus (uit/kijken/aan) zoals bewaard; null als hij ontbreekt of niet te lezen is. autoModus() maakt daar "uit" van (nooit aan). */
+export async function leesModus(): Promise<unknown> {
+  try {
+    return (await kvGet<{ modus?: unknown }>(K_AUTO_MODUS))?.modus ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function zetModus(modus: "uit" | "kijken" | "aan", door: string): Promise<void> {
+  await kvSet(K_AUTO_MODUS, { modus, door, op: new Date().toISOString() });
+}
 
 /**
  * Het slot om één ronde (of om een schrijfactie op de stand). Een nx-set met een eigen token in de waarde; een slot ouder dan 10 minuten
