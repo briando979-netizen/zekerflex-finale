@@ -36,7 +36,9 @@ vi.mock("next/server", async (importOriginal) => ({
 
 import { POST as voice } from "@/app/api/telephony/voice/route";
 import { POST as gather } from "@/app/api/telephony/gather/route";
+import { POST as vervolg } from "@/app/api/telephony/gather/vervolg/route";
 import { POST as status } from "@/app/api/telephony/status/route";
+import { ANTWOORD_MAX_MS, EERSTE_WACHT_MS, VERVOLG_WACHT_MS } from "@/lib/telephony/agent-antwoord";
 import { placeTwilioCall } from "@/lib/telephony/twilio";
 import { CALL_SCRIPTS } from "@/lib/telephony/scripts";
 import { sayAndGather } from "@/lib/telephony/twiml";
@@ -241,12 +243,87 @@ describe("afronden", () => {
 });
 
 describe("als het taalmodel traag is of faalt", () => {
-  it("wacht niet langer dan Twilio toestaat en probeert niet opnieuw", async () => {
+  const TWILIO_WACHT_MS = 15_000; // zo lang wacht Twilio op één webhook
+  const naVervolg = async (): Promise<string> =>
+    (await vervolg(new Request("http://localhost:3000/api/telephony/gather/vervolg?callId=c1", { method: "POST", body: "" }))).text();
+  /** Een model dat pas antwoordt als de test dat zegt. */
+  const traagModel = () => {
+    let geef: (v: { text: string }) => void = () => undefined;
+    chat.mockReturnValue(new Promise((r) => (geef = r)));
+    return (text: string) => geef({ text });
+  };
+
+  it("wacht per aanvraag niet langer dan Twilio toestaat en probeert niet opnieuw", async () => {
     record();
     await say("Ik heb een vraag");
     const opts = chat.mock.calls[0]![0] as { timeoutMs: number; retry: boolean };
-    expect(opts.timeoutMs).toBeLessThanOrEqual(8000);
+    expect(opts.timeoutMs).toBe(ANTWOORD_MAX_MS);
     expect(opts.retry).toBe(false);
+    expect(EERSTE_WACHT_MS).toBeLessThan(TWILIO_WACHT_MS);
+    expect(VERVOLG_WACHT_MS).toBeLessThan(TWILIO_WACHT_MS);
+    // het model stopt zelf voordat de vervolgaanvraag ophoudt met wachten
+    expect(ANTWOORD_MAX_MS).toBeLessThanOrEqual(EERSTE_WACHT_MS + VERVOLG_WACHT_MS);
+  });
+
+  it("zegt 'een ogenblik' als het antwoord op zich laat wachten, en de vervolgaanvraag spreekt het uit", async () => {
+    record();
+    const geef = traagModel();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const bezig = say("Wat kost het per uur?");
+      await vi.advanceTimersByTimeAsync(EERSTE_WACHT_MS);
+      const xml = await bezig;
+      expect(xml).toContain("Een ogenblik, ik zoek het even voor u op.");
+      expect(xml).toContain('<Redirect method="POST">');
+      expect(xml).toContain("/api/telephony/gather/vervolg?callId=c1");
+      expect(xml).not.toContain("<Gather");
+      // "een ogenblik" hoort niet in het transcript: dat gaat mee naar het model
+      expect(calls.get("c1")!.transcript.map((t) => t.text)).not.toContain("Een ogenblik, ik zoek het even voor u op.");
+
+      geef("Drie euro vijftig per gewerkt uur.");
+      const xml2 = await naVervolg();
+      expect(xml2).toContain("Drie euro vijftig per gewerkt uur.");
+      expect(xml2).toContain("<Gather");
+      expect(xml2).toContain("/api/telephony/gather?callId=c1");
+      expect(calls.get("c1")!.transcript.at(-1)!.text).toBe("Drie euro vijftig per gewerkt uur.");
+      expect(chat).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("geeft ook na de vervolgwacht een antwoord en houdt het gesprek open", async () => {
+    record();
+    traagModel();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const bezig = say("Ik heb een vraag");
+      await vi.advanceTimersByTimeAsync(EERSTE_WACHT_MS);
+      expect(await bezig).toContain("Een ogenblik");
+      const later = naVervolg();
+      await vi.advanceTimersByTimeAsync(VERVOLG_WACHT_MS);
+      const xml = await later;
+      expect(xml).toContain("zekerflex punt com");
+      expect(xml).toContain("<Gather");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("houdt het gesprek open als er niets klaarstaat (de app is tussendoor herstart)", async () => {
+    record();
+    const xml = await naVervolg();
+    expect(xml).toContain("zekerflex punt com");
+    expect(xml).toContain("<Gather");
+    expect(chat).not.toHaveBeenCalled();
+  });
+
+  it("spreekt een snel antwoord meteen uit, zonder 'een ogenblik'", async () => {
+    record();
+    const xml = await say("Ik zoek personeel");
+    expect(xml).toContain("Antwoord van het taalmodel.");
+    expect(xml).not.toContain("Een ogenblik");
+    expect(xml).not.toContain("<Redirect");
   });
 
   it("geeft een antwoord en houdt het gesprek open", async () => {

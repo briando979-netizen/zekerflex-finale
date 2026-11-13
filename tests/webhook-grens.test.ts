@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// Twilio (sms/voice/menu/gather/status), de WhatsApp-brug en Didit lezen hun body begrensd: te groot = 422 (nooit 403), een
+// Twilio (sms/voice/menu/gather/vervolg/status), de WhatsApp-brug en Didit lezen hun body begrensd: te groot = 422 (nooit 403), een
 // geldige, ondertekende body werkt nog en de handtekening klopt op de ontvangen tekst.
 
 vi.mock("@/lib/env", () => ({ env: { APP_BASE_URL: "https://zf.test", TWILIO_AUTH_TOKEN: "twilio-geheim", WHATSAPP_BRUG_TOKEN: "brug-geheim", DIDIT_WEBHOOK_SECRET: "didit-geheim" } }));
@@ -22,6 +22,7 @@ import { POST as sms } from "@/app/api/telephony/sms/route";
 import { POST as voice } from "@/app/api/telephony/voice/route";
 import { POST as menu } from "@/app/api/telephony/menu/route";
 import { POST as gather } from "@/app/api/telephony/gather/route";
+import { POST as vervolg } from "@/app/api/telephony/gather/vervolg/route";
 import { POST as status } from "@/app/api/telephony/status/route";
 import { POST as whatsapp } from "@/app/api/whatsapp/inkomend/route";
 import { POST as didit } from "@/app/api/webhooks/didit/route";
@@ -71,7 +72,7 @@ describe("webhookTekst", () => {
 
 describe("Twilio: te groot is 422, een ondertekende body werkt nog", () => {
   it("een te grote body geeft 422 op elke telefonieroute, ook zonder Content-Length", async () => {
-    for (const [naam, route] of Object.entries({ sms, voice, menu, gather, status })) {
+    for (const [naam, route] of Object.entries({ sms, voice, menu, gather, "gather/vervolg": vervolg, status })) {
       const res = await route(post(`http://app:3000/api/telephony/${naam}`, { body: chunked(WEBHOOK_MAX.twilio + 64 * KB), duplex: "half" }));
       expect(res.status, naam).toBe(422);
       const res2 = await route(post(`http://app:3000/api/telephony/${naam}`, { headers: { "content-length": String(WEBHOOK_MAX.twilio + 1) }, body: "x=1" }));
@@ -145,7 +146,7 @@ describe("de routes", () => {
   const ROOT = process.cwd();
   const bron = (f: string) => readFileSync(path.join(ROOT, f), "utf8").split("\r\n").join("\n");
   it("geen webhook- of kanaalroute leest nog onbegrensd uit de request", () => {
-    for (const f of ["webhooks/stripe", "webhooks/didit", "telephony/sms", "telephony/voice", "telephony/menu", "telephony/gather", "telephony/status", "whatsapp/inkomend"]) {
+    for (const f of ["webhooks/stripe", "webhooks/didit", "telephony/sms", "telephony/voice", "telephony/menu", "telephony/gather", "telephony/gather/vervolg", "telephony/status", "whatsapp/inkomend"]) {
       const s = bron(`app/api/${f}/route.ts`);
       expect(s, f).toContain("webhookTekst(request, WEBHOOK_MAX.");
       expect(s, f).not.toMatch(/request\.(text|json|formData|arrayBuffer)\(/);
