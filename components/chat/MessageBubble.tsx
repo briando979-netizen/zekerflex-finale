@@ -564,12 +564,12 @@ export function MessageBubble({
               (onOpenImage ? (
                 <button type="button" onClick={() => onOpenImage(mediaUrl, m.attachment?.filename ?? t.photoName)} className="mb-1 block overflow-hidden rounded-lg" aria-label={t.viewPhoto}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={mediaUrl} alt={m.attachment?.filename ?? ""} loading="lazy" className="max-h-72 min-h-[6rem] min-w-[8rem] bg-black/5 object-cover" />
+                  <img src={`${mediaUrl}?klein=1`} alt={m.attachment?.filename ?? ""} loading="lazy" className="max-h-72 min-h-[6rem] min-w-[8rem] bg-black/5 object-cover" />
                 </button>
               ) : (
                 <a href={mediaUrl} target="_blank" rel="noopener noreferrer" className="mb-1 block overflow-hidden rounded-lg">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={mediaUrl} alt={m.attachment?.filename ?? ""} loading="lazy" className="max-h-72 min-h-[6rem] min-w-[8rem] bg-black/5 object-cover" />
+                  <img src={`${mediaUrl}?klein=1`} alt={m.attachment?.filename ?? ""} loading="lazy" className="max-h-72 min-h-[6rem] min-w-[8rem] bg-black/5 object-cover" />
                 </a>
               ))}
 
