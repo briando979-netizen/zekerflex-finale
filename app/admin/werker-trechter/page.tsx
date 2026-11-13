@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { KpiStrip, Notice, PageHead, Panel } from "@/components/admin/kit";
-import { WERKER_LIMIET, werkerTrechterData } from "@/lib/admin/werker-trechter";
+import { WERKER_LIMIET, werkerTrechterGecached } from "@/lib/admin/werker-trechter";
+import { amsterdamClock } from "@/lib/time/amsterdam";
 import { WERKER_VENSTERS, codeTelling, stilBij, werkerTrechter } from "@/lib/admin/werker-trechter-kern";
 
 export const dynamic = "force-dynamic";
@@ -8,13 +10,15 @@ export const dynamic = "force-dynamic";
 // Admin → Sales & groei → Werkerstrechter (13 nov 2026): hoe ver komen nieuwe echte werkers door de vijf stappen van de
 // poort, en wat doen ze op de schermen van de ID-ombouw? Zo ziet de eigenaar zelf of de ombouw helpt. Alleen aantallen.
 
-export default async function WerkerTrechterPage() {
+export default async function WerkerTrechterPage(props: { searchParams: Promise<{ vernieuw?: string }> }) {
   const principal = await getPrincipal();
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
     return <PageHead title="Geen toegang" subtitle="De werkerstrechter is alleen voor platformbeheerders." />;
   }
-  const nu = new Date();
-  const data = await werkerTrechterData(nu);
+  const { vernieuw } = await props.searchParams;
+  // hooguit 10 minuten oud (cache in het geheugen); de vensters rekenen vanaf het moment van ophalen
+  const data = await werkerTrechterGecached(new Date(), vernieuw === "1");
+  const nu = data.bijgewerkt;
   const tellingen = WERKER_VENSTERS.map((v) => ({ venster: v, t: werkerTrechter(data.werkers, nu, v) }));
   const t = (v: number) => tellingen.find((x) => x.venster === v)?.t;
   const t7 = t(7);
@@ -33,6 +37,13 @@ export default async function WerkerTrechterPage() {
       <PageHead
         title="Werkerstrechter"
         subtitle="Hoe ver komen nieuwe echte werkers door de vijf stappen, en wat doen ze op de schermen van de ID-check? Alleen aantallen."
+        meta={<span>Bijgewerkt om {amsterdamClock(nu)}</span>}
+        actions={
+          // geen prefetch: dat zou alle poortstanden voor niets opnieuw ophalen
+          <Link href="/admin/werker-trechter?vernieuw=1" prefetch={false} className="a-btn text-xs">
+            Vernieuwen
+          </Link>
+        }
       />
       <KpiStrip
         items={[
