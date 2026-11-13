@@ -2,6 +2,7 @@ import { createSign, randomBytes } from "node:crypto";
 import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { fetchOfUitval, isServerFout, nietBereikbaar } from "@/lib/http/uitval";
 
 // ---------------------------------------------------------------------------
 // TransIP REST API v6 — mailboxes for ZekerFlex Mail and domain look-ups.
@@ -41,12 +42,13 @@ async function token(): Promise<string> {
   } catch {
     throw AppError.precondition("De TransIP-sleutel op de server is geen geldige privésleutel.");
   }
-  const res = await fetch(`${BASE}/auth`, {
+  const res = await fetchOfUitval("TransIP", `${BASE}/auth`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Signature: signature },
     body,
     signal: AbortSignal.timeout(15_000),
   });
+  if (isServerFout(res.status)) throw nietBereikbaar("TransIP");
   const data = (await res.json().catch(() => ({}))) as { token?: string; error?: string };
   if (!res.ok || !data.token) {
     logger.warn("transip auth failed", { status: res.status });
@@ -57,7 +59,7 @@ async function token(): Promise<string> {
 }
 
 async function call<T>(method: "GET" | "POST" | "PUT" | "DELETE", path: string, body?: unknown): Promise<T | undefined> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetchOfUitval("TransIP", `${BASE}${path}`, {
     method,
     headers: { Authorization: `Bearer ${await token()}`, ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -72,6 +74,7 @@ async function call<T>(method: "GET" | "POST" | "PUT" | "DELETE", path: string, 
   }
   if (!res.ok) {
     if (res.status === 401) cached = null;
+    if (isServerFout(res.status)) throw nietBereikbaar("TransIP");
     const msg = `TransIP: ${(data as { error?: string } | undefined)?.error ?? `fout ${res.status}`}`;
     if (res.status === 404) throw AppError.notFound(msg);
     if (res.status === 409) throw AppError.conflict(msg);

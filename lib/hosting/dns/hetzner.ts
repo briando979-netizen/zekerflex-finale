@@ -1,4 +1,5 @@
 import type { HostingConfig } from "@/lib/hosting/config";
+import { fetchOfUitval, isServerFout, nietBereikbaar } from "@/lib/http/uitval";
 import { desiredRecords, emptyResult, reconcile, txtFamily, type ApplyResult, type DesiredRecord } from "./plan";
 
 // Hetzner DNS-adapter (EU, soeverein-vriendelijk): gewone fetch, token-header auth.
@@ -27,11 +28,12 @@ async function hz<T>(token: string, path: string, init?: RequestInit): Promise<T
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 12_000);
   try {
-    const res = await fetch(`${API}${path}`, {
+    const res = await fetchOfUitval("Hetzner DNS", `${API}${path}`, {
       ...init,
       signal: controller.signal,
       headers: { "Auth-API-Token": token, "Content-Type": "application/json", ...(init?.headers ?? {}) },
     });
+    if (isServerFout(res.status)) throw nietBereikbaar("Hetzner DNS");
     const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
     if (!res.ok) {
       const err = json.error as { message?: string } | undefined;
