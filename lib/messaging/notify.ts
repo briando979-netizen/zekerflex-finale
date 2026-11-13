@@ -10,7 +10,9 @@ import { previewText, type ChatMessage, type ChatThread } from "@/lib/messaging/
 // Phone/laptop notifications for the chat: incoming calls, missed calls and
 // new messages. A ringing call is pushed to every device of the callee — it
 // is urgent and over within 45s. Messages skip anyone who has a ZekerFlex tab
-// in view (they see it arrive in-app) and group threads (too noisy).
+// in view (they see it arrive in-app) or muted the chat. Group messages go to
+// every member, like WhatsApp: the group name as title, "Name: text" as body,
+// one notification per group on the device (same tag, the newest replaces it).
 // ---------------------------------------------------------------------------
 
 type CallMode = "audio" | "video" | "screen";
@@ -76,7 +78,7 @@ export async function notifyMissedCall(
 /**
  * Who should hear about a new message: the other side of a direct chat; on a
  * support thread the user who opened it (when support answers) or the
- * platform admins (when the user writes).
+ * platform admins (when the user writes); in a group every other member.
  */
 async function recipientsFor(thread: ChatThread, msg: ChatMessage): Promise<string[]> {
   if (thread.kind === "direct") return thread.participants.filter((id) => id !== msg.from);
@@ -85,6 +87,7 @@ async function recipientsFor(thread: ChatThread, msg: ChatMessage): Promise<stri
     if (!fromUser) return thread.participants;
     return (await platformAdminIds()).filter((id) => id !== msg.from);
   }
+  if (thread.kind === "group") return thread.participants.filter((id) => id !== msg.from);
   return [];
 }
 
@@ -94,20 +97,24 @@ export async function notifyNewMessage(thread: ChatThread, msg: ChatMessage): Pr
     const recipients = await recipientsFor(thread, msg);
     if (recipients.length === 0) return;
     const inView = await visibleUsers(recipients);
-    // "Dempen" (lib/messaging/thread-prefs.ts): no push for a muted conversation
+    // "Dempen" (lib/messaging/thread-prefs.ts): no push for a muted conversation, except when you are @mentioned (like WhatsApp)
+    const mentioned = new Set(msg.mentions ?? []);
     const muted = new Set(
-      (await Promise.all(recipients.map(async (id) => (isMuted(await getChatPrefs(id), thread.id) ? id : null)))).filter(Boolean),
+      (await Promise.all(recipients.map(async (id) => (!mentioned.has(id) && isMuted(await getChatPrefs(id), thread.id) ? id : null)))).filter(Boolean),
     );
     const targets = recipients.filter((id) => !inView.has(id) && !muted.has(id));
     if (targets.length === 0) return;
 
     const supportAnswer = thread.kind === "support" && !thread.participants.includes(msg.from);
-    const title = supportAnswer ? "ZekerFlex Support" : await nameOf(msg.from);
+    const sender = supportAnswer ? "ZekerFlex Support" : await nameOf(msg.from);
+    const group = thread.kind === "group";
+    const title = group ? thread.meta.title?.trim() || sender : sender;
+    const who = group ? `${sender}: ` : "";
     const { noPreview } = await chatPrivacy(targets);
     const withPreview = targets.filter((id) => !noPreview.has(id));
     const withoutPreview = targets.filter((id) => noPreview.has(id));
     const data = { type: "CHAT", url: chatUrl(thread.id), tag: `thread-${thread.id}` };
-    if (withPreview.length) await sendMixedPush(withPreview, (t) => ({ title, body: previewText(msg).slice(0, 140) || t.newMessage, data, ttlSeconds: CHAT_TTL_SEC }));
+    if (withPreview.length) await sendMixedPush(withPreview, (t) => ({ title, body: who + (previewText(msg).slice(0, 140) || t.newMessage), data, ttlSeconds: CHAT_TTL_SEC }));
     if (withoutPreview.length) await sendMixedPush(withoutPreview, (t) => ({ title, body: t.newMessage, data, ttlSeconds: CHAT_TTL_SEC }));
   } catch (err) {
     logger.warn("chat push failed", { threadId: thread.id, error: (err as Error).message });

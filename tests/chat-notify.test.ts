@@ -109,10 +109,22 @@ describe("notifyNewMessage", () => {
     expect(sendUserPush).not.toHaveBeenCalled();
   });
 
-  it("stays quiet on community/group threads", async () => {
+  it("group: every other member, titled with the group name, body Name: text (13 nov, like WhatsApp)", async () => {
+    visibleUsers.mockResolvedValue(new Set(["u_x"]));
+    await notifyNewMessage(thread({ kind: "group", participants: ["u_jan", "u_bol", "u_x"], meta: { title: "Team Zaterdag" } }), msg());
+    expect(sendUserPush).toHaveBeenCalledTimes(1);
+    expect(sendUserPush).toHaveBeenCalledWith(["u_bol"], {
+      title: "Team Zaterdag",
+      body: "Jan de Vries: Kun je morgen om 8 uur?",
+      data: { type: "CHAT", url: "/berichten?thread=t1", tag: "thread-t1" },
+      ttlSeconds: 86_400,
+    });
+  });
+
+  it("group without a name: the sender as title", async () => {
     visibleUsers.mockResolvedValue(new Set());
-    await notifyNewMessage(thread({ kind: "group", participants: ["u_jan", "u_bol", "u_x"] }), msg());
-    expect(sendUserPush).not.toHaveBeenCalled();
+    await notifyNewMessage(thread({ kind: "group", participants: ["u_jan", "u_bol"] }), msg());
+    expect(sendUserPush.mock.calls[0]![1]).toMatchObject({ title: "Jan de Vries", body: "Jan de Vries: Kun je morgen om 8 uur?" });
   });
 
   it("support: a user's question goes to the platform admins", async () => {

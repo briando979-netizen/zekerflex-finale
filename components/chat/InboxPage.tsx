@@ -527,6 +527,7 @@ function InboxPageInner({
       ...(msg.attachment ? { attachment: msg.attachment } : {}),
       ...(msg.location ? { location: msg.location } : {}),
       ...(peiling ? { poll: peiling.poll } : {}),
+      ...(msg.mentions?.length ? { mentions: msg.mentions } : {}),
     };
     outbox.current.set(tmpId, msg);
     setMessages((m) => [...m, optimistic]);
@@ -1370,7 +1371,7 @@ function InboxPageInner({
                         starred={savedHere.includes(m.id)}
                         onPollVote={votePoll}
                         onPollClose={closePoll}
-                        {...(m.kind === "poll" ? { names: dirNames } : {})}
+                        {...(m.kind === "poll" || m.mentions?.length ? { names: dirNames } : {})}
                         {...(me ? { myUserId: me.userId } : {})}
                         {...(pinned ? { pinnedId: pinned.id } : {})}
                       />
@@ -1422,6 +1423,11 @@ function InboxPageInner({
             onCancelEdit={() => setEditing(null)}
             onSend={send}
             onTyping={pingTyping}
+            members={
+              activeThread.kind === "group"
+                ? activeThread.participants.filter((id) => id !== me?.userId).map((id) => ({ userId: id, name: dir[id]?.name ?? "" })).filter((l) => l.name)
+                : []
+            }
             lastIncoming={[...messages].reverse().find((m) => m.from !== me?.userId && m.text)?.text ?? ""}
             {...(replyTo ? { replyName: replyTo.from === me?.userId ? ib.jezelf : (dir[replyTo.from]?.name ?? (activeThread.kind === "support" ? ib.support : activeOther.name)) } : {})}
             onEditLast={() => {
