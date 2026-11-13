@@ -631,6 +631,21 @@ function InboxPageInner({
     say(ib.verborgen);
   };
 
+  // spraakbericht uitschrijven: de server geeft het bijgewerkte bericht terug, dat nemen we over (AGENTS.md)
+  const transcribe = async (msg: Msg): Promise<boolean> => {
+    if (!active) return false;
+    const r = await fetch(`/api/inbox/${active}/transcript`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messageId: msg.id }),
+    }).catch(() => null);
+    const d = r?.ok ? ((await r.json().catch(() => null)) as { message?: Msg } | null) : null;
+    const nieuw = d?.message;
+    if (!nieuw) return false;
+    setMessages((prev) => prev.map((m) => (m.id === nieuw.id ? { ...m, ...nieuw } : m)));
+    return true;
+  };
+
   const doForward = async (toThreadId: string) => {
     const msg = forwarding;
     setForwarding(null);
@@ -1354,6 +1369,7 @@ function InboxPageInner({
                         onReact={react}
                         onDelete={del}
                         onHide={hide}
+                        onTranscribe={transcribe}
                         onEdit={(e) => {
                           setReplyTo(null);
                           setEditing(e);

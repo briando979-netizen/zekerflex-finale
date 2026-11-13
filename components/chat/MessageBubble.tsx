@@ -30,8 +30,10 @@ function Ticks({ m }: { m: Msg }) {
 
 const RATES = [1, 1.5, 2] as const;
 
-function VoiceNote({ src, durationSec }: { src: string; durationSec?: number }) {
+function VoiceNote({ src, durationSec, transcript, onTranscribe }: { src: string; durationSec?: number; transcript?: string | undefined; onTranscribe?: (() => Promise<boolean>) | undefined }) {
   const t = useChatTeksten().bubble;
+  // uitschrijven (zoals WhatsApp): op verzoek, met onze eigen Whisper; de tekst komt in het bericht
+  const [schrijft, setSchrijft] = useState<"bezig" | "mislukt" | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [pos, setPos] = useState(0);
@@ -57,7 +59,8 @@ function VoiceNote({ src, durationSec }: { src: string; durationSec?: number }) 
   };
   const pct = dur ? Math.min(100, (pos / dur) * 100) : 0;
   return (
-    <div className="flex min-w-[13rem] items-center gap-2.5">
+    <div className="min-w-[13rem]">
+    <div className="flex items-center gap-2.5">
       <button
         type="button"
         onClick={toggle}
@@ -116,6 +119,22 @@ function VoiceNote({ src, durationSec }: { src: string; durationSec?: number }) 
         }}
       />
     </div>
+    {transcript !== undefined ? (
+      <p className="mt-1.5 whitespace-pre-wrap break-words text-[0.85em] italic text-neutralx-600">{transcript || t.geenSpraak}</p>
+    ) : onTranscribe ? (
+      <button
+        type="button"
+        disabled={schrijft === "bezig"}
+        onClick={async () => {
+          setSchrijft("bezig");
+          setSchrijft((await onTranscribe()) ? null : "mislukt");
+        }}
+        className="mt-1 text-[11px] font-semibold text-brand-600 underline-offset-2 hover:underline disabled:opacity-60"
+      >
+        {schrijft === "bezig" ? t.uitschrijvenBezig : schrijft === "mislukt" ? t.uitschrijvenMislukt : t.uitschrijven}
+      </button>
+    ) : null}
+    </div>
   );
 }
 
@@ -169,6 +188,7 @@ export function MessageBubble({
   onReact,
   onDelete,
   onHide,
+  onTranscribe,
   onEdit,
   onForward,
   onPin,
@@ -200,6 +220,8 @@ export function MessageBubble({
   onDelete?: (m: Msg) => void;
   /** "Verwijderen voor mij": alleen uit je eigen weergave, de ander houdt het */
   onHide?: (m: Msg) => void;
+  /** spraakbericht uitschrijven; true = gelukt */
+  onTranscribe?: (m: Msg) => Promise<boolean>;
   /** your own text message, within 24 hours: back into the composer to rewrite */
   onEdit?: (m: Msg) => void;
   onForward?: (m: Msg) => void;
@@ -607,7 +629,12 @@ export function MessageBubble({
               ))}
 
             {m.kind === "voice" && mediaUrl && (
-              <VoiceNote src={mediaUrl} {...(m.attachment?.durationSec != null ? { durationSec: m.attachment.durationSec } : {})} />
+              <VoiceNote
+                src={mediaUrl}
+                {...(m.attachment?.durationSec != null ? { durationSec: m.attachment.durationSec } : {})}
+                transcript={m.transcript}
+                onTranscribe={onTranscribe && !m.pending ? () => onTranscribe(m) : undefined}
+              />
             )}
 
             {m.kind === "file" && mediaUrl && isVideoType(m.attachment?.mimeType ?? "") && !videoKapot && (

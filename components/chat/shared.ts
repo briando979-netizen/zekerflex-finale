@@ -55,6 +55,8 @@ export interface Msg {
   poll?: MessagePoll;
   /** @vermeldingen in een groep (userIds; lib/messaging/vermelding.ts) */
   mentions?: string[];
+  /** spraakbericht: de uitgeschreven tekst; "" = geen spraak gehoord */
+  transcript?: string;
 }
 
 /** Je eigen tekstbericht mag je tot 24 uur na het versturen bewerken (gelijk aan lib/messaging/store EDIT_WINDOW_MS). */

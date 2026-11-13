@@ -77,6 +77,8 @@ export interface ChatMessage {
   poll?: MessagePoll;
   /** @vermeldingen in een groep: wie er genoemd is (userIds; lib/messaging/vermelding.ts) */
   mentions?: string[];
+  /** kind "voice": de uitgeschreven tekst (eigen Whisper, op verzoek); "" = geen spraak gehoord */
+  transcript?: string;
 }
 
 /** Een eigen tekstbericht mag je zo lang na het versturen nog bewerken (afspraken veranderen niet ongemerkt achteraf). */
@@ -316,6 +318,19 @@ export async function getGroupThreadByCommunity(communityId: string): Promise<Ch
 export async function getMessageById(threadId: string, messageId: string): Promise<ChatMessage | null> {
   const all = await getMessages(threadId, 1000);
   return all.find((m) => m.id === messageId) ?? null;
+}
+
+/** Zet de uitgeschreven tekst op een spraakbericht (alleen een spraakbericht dat er nog is). */
+export async function setTranscript(threadId: string, messageId: string, text: string): Promise<ChatMessage | null> {
+  const key = messagesKey(await resolveThreadId(threadId));
+  const list = (await kvGet<ChatMessage[]>(key)) ?? [];
+  const idx = list.findIndex((m) => m.id === messageId);
+  const m = idx === -1 ? null : list[idx]!;
+  if (!m || m.kind !== "voice" || m.deleted) return null;
+  const updated: ChatMessage = { ...m, transcript: text.trim().slice(0, 4000) };
+  list[idx] = updated;
+  await kvSet(key, list.slice(-5000));
+  return updated;
 }
 
 export async function getMessages(threadId: string, limit = 200): Promise<ChatMessage[]> {
