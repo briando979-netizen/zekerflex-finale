@@ -132,7 +132,10 @@ export function welcomeEmailT(
   const t = TEKST[lang];
   const first = fullName.split(" ")[0] || fullName;
   const base = appUrl.replace(/\/+$/, "");
-  const next = type === "bedrijf" ? t.nextBedrijf : workerKind === "uitzendkracht" ? t.nextUitzend : t.nextZzp;
+  // naar het eigen startscherm, niet naar /login: wie al ingelogd is, kreeg anders het formulier en dacht dat hij
+  // uitgelogd was (13 nov); wie dat niet is, stuurt de layout zelf naar /login met terugkeer hierheen
+  const thuis = `${base}${type === "bedrijf" ? "/werkgever" : "/dashboard"}`;
+  const next =type === "bedrijf" ? t.nextBedrijf : workerKind === "uitzendkracht" ? t.nextUitzend : t.nextZzp;
   const notitie = opties.ontwikkelingsnotitie === true;
   // alleen de Nederlandse mail toont de korte regels in de andere talen; een andere taal heeft de notitie al in zijn eigen taal
   const metTalen = lang === "nl";
@@ -156,14 +159,14 @@ ${t.bevestigd}
 
 ${t.volgende} ${next}
 
-${t.inloggen} ${base}/login${notitieTekst}
+${t.inloggen} ${thuis}${notitieTekst}
 
 ${t.vragen}`,
     html: shell(
       t.subject,
       `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">${vulIn(t.introHtml, { naam: escapeHtml(first) })}</p>
        <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42"><strong>${t.volgende}</strong> ${next}</p>
-       <p style="margin:0">${button(`${base}/login`, t.knop)}</p>
+       <p style="margin:0">${button(thuis, t.knop)}</p>
        ${notitieHtml}
        <p style="margin:20px 0 0;font-size:12px;color:#667469">${t.vragen}</p>`,
       t.preheader,

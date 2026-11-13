@@ -51,11 +51,12 @@ describe("welcomeEmail en onboardingReminderEmail", () => {
     expect(onboardingReminderEmail(AANVAL, "bedrijf", "https://zekerflex.com", 1).html).not.toContain("<img src=x");
   });
 
-  it("welkomstmail heeft een platte tekst met inloglink en hulpadres", () => {
+  it("welkomstmail heeft een platte tekst met de link naar het eigen startscherm en hulpadres", () => {
     const w = welcomeEmail("Sam", "bedrijf", "https://zekerflex.com/", "zzp");
-    expect(w.text).toContain("https://zekerflex.com/login");
+    expect(w.text).toContain("https://zekerflex.com/werkgever");
     expect(w.text).toContain("support@zekerflex.com");
-    expect(w.html).toContain("https://zekerflex.com/login");
+    expect(w.html).toContain("https://zekerflex.com/werkgever");
+    expect(w.html).not.toContain("https://zekerflex.com/login");
   });
 
   it("met de ontwikkelingsnotitie leest een nieuwe gebruiker dat de klussen testklussen zijn, in vijf talen", () => {

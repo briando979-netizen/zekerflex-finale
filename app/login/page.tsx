@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { env } from "@/lib/env";
+import { getPrincipal } from "@/lib/auth";
+import { doorsturenAlsIngelogd } from "@/lib/auth/al-ingelogd";
+import { recordServerEvent } from "@/lib/analytics/track";
 import { appleConfig } from "@/lib/auth/apple";
 import { opPasskeyHost, passkeyBron } from "@/lib/auth/passkey/omgeving";
 import { LoginForm } from "@/components/auth/LoginForm";
@@ -26,6 +30,13 @@ export default async function LoginPage(
   }
 ) {
   const searchParams = await props.searchParams;
+  // Al ingelogd (terugknop, "Inloggen" in de kop, de knop in een mail): door naar het doel in plaats van het
+  // formulier, dat iemand laat denken dat hij uitgelogd is (lib/auth/al-ingelogd.ts). Alleen een telling, zonder gebruiker.
+  const doel = doorsturenAlsIngelogd((await getPrincipal()) !== null, searchParams);
+  if (doel) {
+    if (!(await headers()).has("next-router-prefetch")) void recordServerEvent({ path: "/login", label: "al-ingelogd" });
+    redirect(doel);
+  }
   const appleEnabled = appleConfig() !== null;
   // Niet in de iPhone-app: Google weigert inloggen in een ingebouwde webview (WKWebView,
   // "disallowed_useragent"). Apple werkt daar wel en is dan de enige aanbieder (App Store 4.8).
