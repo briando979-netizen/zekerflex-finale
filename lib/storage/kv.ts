@@ -39,6 +39,19 @@ export async function kvSetIfAbsent(key: string, value: unknown): Promise<boolea
   return res.count === 1;
 }
 
+/** Verwijdert de sleutel alleen als `value->>veld` gelijk is aan `waarde` (bv. een slot dat nog van jou is). Geeft true bij een verwijderde rij. */
+export async function kvVerwijderAlsVeld(key: string, veld: string, waarde: string): Promise<boolean> {
+  const n = await prisma.$executeRaw`DELETE FROM "KeyValueStore" WHERE key = ${key} AND value->>${veld} = ${waarde}`;
+  return n === 1;
+}
+
+/** Atomisch vervangen (compare-and-swap): alleen als `value->>veld` nog `oud` is (null = het veld ontbrak). Geeft true als wij het deden. */
+export async function kvVervangAlsVeld(key: string, veld: string, oud: string | null, nieuw: unknown): Promise<boolean> {
+  const json = JSON.stringify(nieuw);
+  const n = await prisma.$executeRaw`UPDATE "KeyValueStore" SET value = ${json}::jsonb, "updatedAt" = now() WHERE key = ${key} AND value->>${veld} IS NOT DISTINCT FROM ${oud}::text`;
+  return n === 1;
+}
+
 export async function kvDelete(key: string): Promise<void> {
   await prisma.keyValueStore.deleteMany({ where: { key } });
 }

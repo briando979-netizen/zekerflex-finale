@@ -41,6 +41,8 @@ export const ACHTERSTAND_MELDING_MS = 30 * 60_000;
 export const NACONTROLE_WACHT_MS = 3 * 60_000;
 /** Zo lang wachten we op een rondgang na de uitrol; daarna is de uitslag "onbekend" (geen stop, wel melding). */
 export const NACONTROLE_RONDGANG_MAX_MS = 15 * 60_000;
+/** Een rondgang die de lus zelf startte mag zo lang lopen voordat "geen rondgang" telt: een trage rondgang (>12 min) geeft anders een valse stop. */
+export const NACONTROLE_RONDGANG_LOOPT_MS = 20 * 60_000;
 
 /** De nacontrole na een door de Auto-uitrol gestarte uitrol die "klaar" meldde. */
 export interface Nacontrole {
@@ -243,6 +245,8 @@ export interface NaInvoer {
   gezond: boolean;
   /** de staat van de live-zetter voor dit verzoek (klaar, teruggezet, mislukt, ...) */
   liveStaat: string | null;
+  /** wanneer de lus zelf een rondgang startte (ISO), of null als dat nog niet is gebeurd */
+  rondgangGestart?: string | null;
   /** de laatste rondgang (KV rondgang:laatste): wanneer, hoeveel pagina's, hoeveel goed, hoeveel problemen */
   rondgang: { at: string; totaal: number; ok: number; problemen: number } | null;
 }
@@ -271,6 +275,9 @@ export function beoordeelNacontrole(i: NaInvoer): NaUitslag {
     return { uitslag: "ok", reden: "de app is gezond, de versie klopt en de rondgang is schoon" };
   }
   if (verstreken < NACONTROLE_RONDGANG_MAX_MS) return { uitslag: "wacht", reden: "wacht op een rondgang na de uitrol" };
+  // Na 15 minuten: alleen "onbekend" (en dus stop) als de rondgang die wij startten niet meer kan lopen; een trage rondgang krijgt tijd.
+  const gestart = i.rondgangGestart ? Date.parse(i.rondgangGestart) : NaN;
+  if (Number.isFinite(gestart) && i.nu - gestart < NACONTROLE_RONDGANG_LOOPT_MS) return { uitslag: "wacht", reden: "de rondgang na de uitrol loopt nog (een trage rondgang krijgt tot 20 minuten)" };
   return { uitslag: "onbekend", reden: "er kwam geen rondgang na de uitrol binnen 15 minuten: niet te zeggen of alle pagina's werken" };
 }
 

@@ -4,6 +4,7 @@ import { checkInternalToken } from "@/lib/internal-auth";
 import { recordCronHeartbeat } from "@/lib/ops/heartbeat";
 import { AppError } from "@/lib/errors";
 import { startControle } from "@/lib/bouwer/controles";
+import { liveVersie } from "@/lib/bouwer/versie";
 import { bouwerIngesteld } from "@/lib/bouwer/werker";
 
 export const runtime = "nodejs";
@@ -21,7 +22,7 @@ async function handle(request: Request): Promise<NextResponse> {
     return NextResponse.json({ overgeslagen: "Bouwer niet geïnstalleerd" });
   }
   try {
-    const { bezig } = await startControle("main", "planner");
+    const { bezig } = await startControle("main", "planner", false, liveVersie()?.sha);
     void recordCronHeartbeat("controles-tick", true);
     return NextResponse.json({ gestart: true, bezig });
   } catch (err) {

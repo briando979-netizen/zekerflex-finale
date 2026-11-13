@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { AppError } from "@/lib/errors";
 import { withAdminAccess } from "@/lib/auth/handlers";
 import { recordAudit } from "@/lib/audit";
 import { featureEnabled, setFlag } from "@/lib/flags";
 import { liveVersie } from "@/lib/bouwer/versie";
-import { herstelNaStop, leesAutoStand, leesNoodremReden, noodremAan, zetNoodrem } from "@/lib/bouwer/auto-uitrol-opslag";
+import { herstelNaStopMetSlot, leesAutoStand, leesNoodremReden, noodremAan, zetNoodrem } from "@/lib/bouwer/auto-uitrol-opslag";
 import { LEGE_STAND, meldingen } from "@/lib/bouwer/auto-uitrol-regels";
 
 export const runtime = "nodejs";
@@ -25,7 +26,7 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
   const body = schema.parse(await request.json().catch(() => ({})));
   if (body.aan !== undefined) {
     // een mens zet hem aan: de harde stop van de nacontrole vervalt (en de noodrem die de nacontrole zelf zette)
-    if (body.aan) await herstelNaStop(principal.userId);
+    if (body.aan && !(await herstelNaStopMetSlot(principal.userId))) throw AppError.upstream("Er loopt net een ronde van de Auto-uitrol; probeer het over een minuut opnieuw.");
     await setFlag("auto-uitrol", { enabled: body.aan }, principal.userId);
     await recordAudit({ category: "ADMIN", action: "admin.auto-uitrol.schakelaar", severity: "info", actorUserId: principal.userId, actorLabel: "user", summary: `Auto-uitrol ${body.aan ? "aangezet" : "uitgezet"}` });
   }
