@@ -147,6 +147,10 @@ const APP_ALLOWED = [
   "/dashboard", "/werkgever", "/admin", "/sales", "/berichten", "/betaal", "/betaalverzoek", "/kyc", "/r", "/uitnodiging",
   "/account-verwijderen", "/gegevens-verwijderen", "/privacy", "/voorwaarden", "/cookiebeleid", "/mail", "/nieuwsbrief/afmelden",
   "/shop", "/kennis", "/offline", "/studio",
+  // de bestanden van de paskamer (public/paskamer: meetmodel, wasm, 3D-paspop). De middleware vangt alles op wat geen afbeelding of lettertype is
+  // (.mjs, .wasm, .task, .tflite, .bin, .json), dus zonder dit stuurde de app-modus ze door naar /start: de import van vision_bundle.mjs kreeg
+  // HTML terug ("text/html is geen JavaScript") en "Op mijn foto" werkte in de iPhone- en Android-app nooit. Er is geen pagina onder /paskamer.
+  "/paskamer",
   // inchecken op locatie: de korte link op de NFC-sticker en het scherm bij de ingang (lib/incheck)
   "/i", "/terminal",
   // "verder op je telefoon": de QR-code van de ID-scan opent deze pagina, ook als de app op de telefoon staat

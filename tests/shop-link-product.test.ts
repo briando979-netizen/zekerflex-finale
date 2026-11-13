@@ -148,3 +148,27 @@ describe("meer bronnen: winkelsystemen met een gegevensadres", () => {
     expect(server).not.toMatch(/[^a-zA-Z]fetch\(/);
   });
 });
+
+describe("een winkel die we niet kunnen lezen: eerlijk zeggen, geen lege poging", () => {
+  it("een blokkade- of controlepagina is geen product, ook als er tekst of een afbeelding op staat", () => {
+    for (const titel of ["Just a moment...", "Robot Check", "Access Denied", "Captcha Interception", "Attention Required! | Cloudflare", "Are you a human?"]) {
+      const p = leesProductPagina(`<html><head><title>${titel}</title><meta property="og:description" content="Bevestig dat je een mens bent." /></head></html>`, BASIS);
+      expect(isBruikbaar(p), titel).toBe(false);
+    }
+    // een echt product met een gewone titel blijft bruikbaar
+    expect(isBruikbaar(leesProductPagina(`<html><head><title>Werkjas</title><meta property="og:description" content="Warme jas." /></head></html>`, BASIS))).toBe(true);
+  });
+
+  it("een lege titel (AliExpress, Temu of Amazon zonder gegevens) is niet bruikbaar", () => {
+    expect(isBruikbaar(leesProductPagina("<html><head><title>AliExpress</title></head><body></body></html>", BASIS))).toBe(false);
+    expect(isBruikbaar(leesProductPagina("<html><head><title></title></head></html>", BASIS))).toBe(false);
+  });
+
+  it("de melding zegt in gewoon Nederlands dat de winkel niet te lezen is en dat je de tekst zelf plakt; het scherm toont hem als fout, zonder concept", () => {
+    const server = bron("lib/shop/link-product-server.ts");
+    expect(server).toContain("Grote marktplaatsen zoals AliExpress, Temu en Amazon laten hun pagina's niet door een programma lezen. Kopieer daar zelf de naam en de omschrijving en plak ze in het vak hieronder");
+    expect(server).toContain("throw AppError.validation(NIET_LEESBAAR)");
+    const scherm = bron("components/admin/WinkelAI.tsx");
+    expect(scherm).toContain("setLinkMelding({ tekst: (e as Error).message, fout: true })");
+  });
+});

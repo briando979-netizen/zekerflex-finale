@@ -220,7 +220,10 @@ export function leesWooProduct(json: unknown, basis: string): LinkProduct | null
 }
 
 /** Of er genoeg staat om er een product van te maken: een naam met een omschrijving of een foto. */
-export const isBruikbaar = (p: LinkProduct | null): p is LinkProduct => Boolean(p && (p.omschrijving || p.fotos.length > 0));
+/** De titel van een blokkade- of controlepagina (Cloudflare, Amazon, AliExpress): geen product, ook al staat er tekst op. */
+const BLOKKADE_TITEL = /^(just a moment|attention required|access denied|robot check|captcha|are you a (robot|human)|verify you are|security check|403 forbidden|pardon our interruption|toegang geweigerd|een ogenblik geduld)/i;
+
+export const isBruikbaar = (p: LinkProduct | null): p is LinkProduct => Boolean(p && !BLOKKADE_TITEL.test(p.titel.trim()) && (p.omschrijving || p.fotos.length > 0));
 
 /** De tekst voor het vak "Het idee": de naam en de omschrijving van de leverancier, klaar voor de AI. */
 export function ideeUitLink(p: LinkProduct): string {
