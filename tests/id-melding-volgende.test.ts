@@ -62,7 +62,7 @@ describe("idMeldingVolgende: de eerste open stap", () => {
     expect(idMeldingVolgende({ ...af, fotoGezet: false })).toEqual({ sleutel: "foto", open: 1, pad: "/dashboard/eerste-indruk?stap=foto" });
   });
   it("gegevens en foto open: eerst de gegevens, op Verificatie", () => {
-    expect(idMeldingVolgende({ ...af, gegevensIngevuld: false, fotoGezet: false })).toEqual({ sleutel: "gegevens", open: 2, pad: "/dashboard/verificatie" });
+    expect(idMeldingVolgende({ ...af, gegevensIngevuld: false, fotoGezet: false })).toEqual({ sleutel: "gegevens", open: 2, pad: "/dashboard/verificatie#gegevens-mist-kop" });
   });
   it("branches open: naar de wizard bij de klussen", () => {
     expect(idMeldingVolgende({ ...af, branchesGekozen: false, gegevensIngevuld: false, fotoGezet: false })).toEqual({ sleutel: "branches", open: 3, pad: "/dashboard/klussen" });
@@ -118,10 +118,10 @@ describe("meldIdGeverifieerd per stand", () => {
   it("gegevens open: push en mail wijzen naar Verificatie en zeggen wat er nog moet", async () => {
     h.poort = { ...af, gegevensIngevuld: false, fotoGezet: false };
     expect(await meldIdGeverifieerd("u1")).toMatchObject({ verstuurd: true, push: 1, mail: true });
-    expect(h.pushes[0]?.data["url"]).toBe("/dashboard/verificatie");
+    expect(h.pushes[0]?.data["url"]).toBe("/dashboard/verificatie#gegevens-mist-kop");
     expect(h.pushes[0]?.body).toBe("Nog 2 stappen, eerst: je gegevens.");
     expect(h.mails[0]?.text).toContain("Nog 2 stappen, eerst: je gegevens.");
-    expect(h.mails[0]?.html).toContain("/dashboard/verificatie");
+    expect(h.mails[0]?.html).toContain("/dashboard/verificatie#gegevens-mist-kop");
   });
 
   it("alleen de foto open: naar de fotostap", async () => {
