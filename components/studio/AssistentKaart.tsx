@@ -108,7 +108,7 @@ export function AssistentKaart({ doc, paginaId, bedrijfNaam, maakId, onPasToe }:
         <label htmlFor="assistent-opdracht" className="sr-only">
           Je opdracht voor de assistent
         </label>
-        <input id="assistent-opdracht" className="input min-w-[14rem] flex-1" maxLength={600} value={tekst} onChange={(e) => setTekst(e.target.value)} placeholder="Bijvoorbeeld: maak de kleur donkerblauw en voeg openingstijden toe" />
+        <input id="assistent-opdracht" className="field-input min-w-[14rem] flex-1" maxLength={600} value={tekst} onChange={(e) => setTekst(e.target.value)} placeholder="Bijvoorbeeld: maak de kleur donkerblauw en voeg openingstijden toe" />
         <button type="submit" className="btn-primary disabled:opacity-50" disabled={!tekst.trim()}>
           Doe het
         </button>

@@ -97,7 +97,7 @@ function paginaTitel(stuk: string): string | null {
   const m = /(?:voeg|maak|zet)\s+(?:er\s+)?(?:een\s+|de\s+)?(?:nieuwe\s+)?pagina\s+(.+)$/i.exec(stuk);
   if (!m?.[1]) return null;
   const titel = m[1]
-    .replace(/^(?:toe\s+)?(?:met de naam|met als naam|genaamd|die heet|over|voor)\s+/i, "")
+    .replace(/^(?:toe\s+)?(?:met de naam|met als naam|genaamd|die heet)\s+/i, "")
     .replace(/\s+(?:toe|aan|erbij)$/i, "")
     .replace(/^["'“”‘’\s]+|["'“”‘’\s]+$/g, "")
     .slice(0, 60)
@@ -156,22 +156,23 @@ export function voerOpdrachtUit(tekst: string, doc: AssistentDoc, paginaId: stri
       continue;
     }
 
-    // 3. hoeken, lettertype en stijl
+    // 3. het uiterlijk: hoeken, lettertype, stijl en kleur mogen samen in één zin ("ronde hoeken en een klassiek lettertype")
+    let uiterlijk = false;
     if (zin.includes("hoek")) {
-      const rond = /rond|afgerond|zacht/.test(zin);
+      const rond = /rond|afgerond/.test(zin);
       const strak = /strak|recht|vierkant|scherp/.test(zin);
       if (rond !== strak) {
         theme = { ...theme, hoeken: rond ? "rond" : "strak" };
         gedaan.push(rond ? "De hoeken zijn nu rond." : "De hoeken zijn nu strak.");
-        continue;
+        uiterlijk = true;
       }
     }
     if (/letter|font/.test(zin)) {
-      const keuze = /klassiek|sierlijk|schreef/.test(zin) ? "klassiek" : /vriendelijk|speels|zacht/.test(zin) ? "vriendelijk" : /modern|strak|zakelijk/.test(zin) ? "modern" : null;
+      const keuze = /klassiek|sierlijk|schreef/.test(zin) ? "klassiek" : /vriendelijk|speels/.test(zin) ? "vriendelijk" : /modern|zakelijk/.test(zin) ? "modern" : null;
       if (keuze) {
         theme = { ...theme, lettertype: keuze };
         gedaan.push(`Het lettertype is nu ${keuze}.`);
-        continue;
+        uiterlijk = true;
       }
     }
     if (/stijl|uitstraling|uiterlijk/.test(zin)) {
@@ -179,11 +180,10 @@ export function voerOpdrachtUit(tekst: string, doc: AssistentDoc, paginaId: stri
       if (stijl) {
         theme = { ...theme, stijl: stijl[0] };
         gedaan.push(`De stijl is nu ${stijl[2]}.`);
-        continue;
+        uiterlijk = true;
       }
     }
-
-    // 4. een kleur: een naam of een code met een hekje
+    // een kleur: een naam of een code met een hekje
     const code = /#[0-9a-f]{6}(?![0-9a-f])/i.exec(stuk)?.[0];
     const naam = KLEUREN.find(([n]) => zin.includes(n));
     const hex = code ?? naam?.[1];
@@ -192,8 +192,9 @@ export function voerOpdrachtUit(tekst: string, doc: AssistentDoc, paginaId: stri
       theme = alsAccent ? { ...theme, accent: hex.toUpperCase() } : { ...theme, kleur: hex.toUpperCase() };
       const hoe = naam && !code ? naam[0] : hex.toUpperCase();
       gedaan.push(alsAccent ? `De accentkleur (knoppen en details) is nu ${hoe}.` : `De hoofdkleur is nu ${hoe}.`);
-      continue;
+      uiterlijk = true;
     }
+    if (uiterlijk) continue;
 
     nietGedaan.push(`"${stuk}": dat begrijp ik nog niet.`);
   }
