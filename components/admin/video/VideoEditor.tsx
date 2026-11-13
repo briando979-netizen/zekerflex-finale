@@ -42,6 +42,9 @@ import { Venster } from "@/components/admin/video/Venster";
 import { TEKST_PRESETS } from "@/components/admin/video/presets";
 import { metSpraakOndertitels, ondertitelSpoor, spraakRegels, type GesprokenWoord, type SpraakRegel } from "@/lib/video/spraak-ondertitels";
 import { knipStiltesWeg, spraakStukken } from "@/lib/video/stiltes";
+import { maatslagen, opDeMaat, slagenOpLijn, tempoVan } from "@/lib/video/maat";
+import { PIEKEN_PER_SECONDE } from "@/lib/video/golf";
+import { golfVan } from "@/components/admin/video/tijdlijn-media";
 import {
   bewaarProject,
   haalBestanden,
@@ -459,6 +462,37 @@ export function VideoEditor() {
     meld(`${proef.stiltes} ${proef.stiltes === 1 ? "stilte" : "stiltes"} weggehaald; het geheel is ${proef.weg.toFixed(1).replace(".", ",")} s korter. Ongedaan maken kan met Ctrl+Z.`);
   }
 
+  /** Maatslagen zoeken in een muziekclip (in de browser, op de golfvorm); clips klikken er daarna aan vast. */
+  async function zoekMaatslagen(clip: AudioClip) {
+    if (clip.bronDuur !== null && clip.bronDuur > 900) throw new Error("Deze muziek is te lang om te ontleden (hoogstens 15 minuten).");
+    const pieken = await golfVan(clip.bron);
+    if (!pieken) throw new Error("Deze muziek kon niet ontleed worden.");
+    const slagen = maatslagen(pieken, PIEKEN_PER_SECONDE);
+    if (slagen.length < 4) throw new Error("In deze muziek zijn geen duidelijke maatslagen gevonden.");
+    wijzig((p) => {
+      const nu = p.clips.find((c) => c.id === clip.id);
+      return nu && nu.soort === "audio" ? vervangClip(p, { ...nu, slagen }) : p;
+    });
+    const tempo = tempoVan(slagen);
+    meld(`${slagen.length} maatslagen gevonden${tempo ? `, ongeveer ${tempo} per minuut` : ""}. Clips klikken er nu aan vast.`);
+  }
+
+  /** Het hoofdspoor op de maat van een muziekclip: elke clip wisselt op een maatslag. */
+  function zetOpDeMaat(clip: AudioClip, elke: number) {
+    if (!project) return;
+    const spoor = project.sporen.find((s) => s.id === "s-beeld")?.id ?? project.sporen.find((s) => s.soort === "beeld")?.id;
+    const proef = spoor ? opDeMaat(project, spoor, slagenOpLijn(clip), elke) : null;
+    if (!spoor || !proef?.aantal) {
+      meld("Er valt niets op de maat te zetten: zet eerst foto's of video's op het hoofdspoor, onder de muziek.", "fout");
+      return;
+    }
+    wijzig((p) => {
+      const nu = p.clips.find((c) => c.id === clip.id);
+      return nu && nu.soort === "audio" ? opDeMaat(p, spoor, slagenOpLijn(nu), elke).project : p;
+    });
+    meld(`${proef.aantal} clips wisselen nu op de maat. Ongedaan maken kan met Ctrl+Z.`);
+  }
+
   /** Eigen muziek componeren en onder een net gemaakt project zetten. */
   async function zetMuziekOnder(p: Project, stemming: Stemming) {
     try {
@@ -619,6 +653,8 @@ export function VideoEditor() {
               onAiBeweeg={aiBeweeg}
               onOndertitels={maakOndertitels}
               onStiltes={haalStiltesWeg}
+              onMaatslagen={zoekMaatslagen}
+              onOpDeMaat={zetOpDeMaat}
               aiBeeld={Boolean(ai?.beeld)}
               tijd={tijd}
             />
