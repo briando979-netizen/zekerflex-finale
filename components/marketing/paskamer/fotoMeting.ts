@@ -5,7 +5,7 @@
 // meten. De foto verlaat het toestel nooit. Rekenregels: lib/shop/foto-meting.ts.
 
 import { HAARKLEUREN } from "@/lib/shop/paspop3d/kleding";
-import { FotoFoutError, isHeic, metStap, metTijdslimiet } from "@/lib/shop/foto-fout";
+import { FotoFoutError, bundelAdres, isHeic, metHerhaling, metStap, metTijdslimiet } from "@/lib/shop/foto-fout";
 import { POSE, beoordeelFoto, dichtstbij, gemiddeldeKleur, gezichtsKader, huidVoorPaspop, meetLichaam, type Meting, type Probleem, type Punt } from "@/lib/shop/foto-meting";
 
 const BASIS = "/paskamer/ml";
@@ -21,8 +21,9 @@ const G = globalThis as unknown as { __zfMeting?: Promise<Modellen> | undefined 
 
 /** De modellen één keer per tabblad laden. */
 function laad(): Promise<Modellen> {
-  return (G.__zfMeting ??= (async () => {
-    const v = await import(/* webpackIgnore: true */ `${BASIS}/vision_bundle.mjs`).then(
+  // Bij een laadfout (bv. HTML in plaats van JavaScript tijdens een uitrol) één keer opnieuw na 3 s, met een andere adres-suffix (?v=1).
+  return (G.__zfMeting ??= metHerhaling(async (nr) => {
+    const v = await import(/* webpackIgnore: true */ bundelAdres(BASIS, nr)).then(
       (m) => m as Vision,
       (e) => {
         throw metStap(e, "bundel", "model");
@@ -36,7 +37,7 @@ function laad(): Promise<Modellen> {
       v.ImageSegmenter.createFromOptions(f, { baseOptions: { modelAssetPath: `${BASIS}/selfie_segmenter.tflite`, delegate: "CPU" }, runningMode: "IMAGE", outputConfidenceMasks: true, outputCategoryMask: false }),
     ]);
     return { pose, segmenter };
-  })().catch((e) => {
+  }).catch((e) => {
     // wasm/model starten mislukt (geen SIMD, geheugen, beveiligingsinstelling): stap erbij
     G.__zfMeting = undefined;
     throw metStap(e, "wasm", "model");

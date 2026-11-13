@@ -111,3 +111,38 @@ export function moetHerladen(csp: boolean, opslag: VlagOpslag | null): boolean {
     return false;
   }
 }
+
+// ---- één keer opnieuw proberen bij een laadfout (15 nov: tijdens een uitrol kreeg de import van vision_bundle.mjs een HTML-pagina terug) ----
+
+export const HERHAAL_WACHT_MS = 3000;
+
+/**
+ * Een fout bij het LADEN van het model of de bundel: de import kreeg geen JavaScript (HTML van een uitrol, "geen JavaScript",
+ * verkeerd MIME-type), de download mislukte of de verbinding viel weg. Geen CSP-blokkade (die heeft een eigen herlading) en
+ * geen fout van het model zelf.
+ */
+export function isLaadFout(fout: unknown): boolean {
+  if (isCspWasmFout(fout)) return false;
+  const e = fout instanceof FotoFoutError ? fout.oorzaak : fout;
+  const tekst = e instanceof Error ? `${e.name}: ${e.message}` : typeof e === "string" ? e : "";
+  return /MIME type|not a valid JavaScript|geen JavaScript|text\/html|dynamically imported module|Importing a module script failed|Failed to fetch|NetworkError|Load failed|Unexpected token ['"]?<|expected expression, got ['"]?</i.test(tekst);
+}
+
+/** Het adres van de bundel; bij de herhaling met ?v=<poging>, zodat een gecachete mislukte import niet terugkomt (pad en host blijven gelijk voor de CSP). */
+export function bundelAdres(basis: string, poging: number): string {
+  return `${basis}/vision_bundle.mjs${poging > 0 ? `?v=${poging}` : ""}`;
+}
+
+/**
+ * Probeert `poging` en bij een herkenbare laadfout EENMAAL opnieuw, na `wacht` ms. Een andere fout, of een tweede mislukking,
+ * gaat door naar de aanroeper (de eerlijke melding).
+ */
+export async function metHerhaling<T>(poging: (nummer: number) => Promise<T>, herkenbaar: (fout: unknown) => boolean = isLaadFout, wacht: number = HERHAAL_WACHT_MS): Promise<T> {
+  try {
+    return await poging(0);
+  } catch (e) {
+    if (!herkenbaar(e)) throw e;
+  }
+  await new Promise<void>((klaar) => setTimeout(klaar, wacht));
+  return poging(1);
+}
