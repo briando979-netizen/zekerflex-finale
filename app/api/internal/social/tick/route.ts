@@ -16,8 +16,11 @@ async function handle(request: Request): Promise<NextResponse> {
   const gate = checkInternalToken(request);
   if (!gate.ok) return NextResponse.json({ error: { code: "UNAUTHENTICATED", message: gate.message } }, { status: gate.status });
   // tijdens een uitrol staat het eigen model stil (13 nov: "berichten vielen terug op vaste teksten" na 180 s): deze tik
-  // overslaan; de volgende, 10 minuten later, is de herkansing
+  // overslaan; de volgende, 10 minuten later, is de herkansing. De overgeslagen tik telt als gelukt voor de
+  // hartslagbewaking (zoals ai/warm): 13 nov volgden er uitrollen achter elkaar, zonder hartslag zag de
+  // bewaking na 2 uur "taak draait niet" en kwam er een vals alarm
   if (uitrolHoudtModelStil(await kvGet<LiveStatus>(K_STATUS).catch(() => null))) {
+    await recordCronHeartbeat("social-tick", true);
     return NextResponse.json({ ok: true, overgeslagen: "uitrol bezig" });
   }
   try {
