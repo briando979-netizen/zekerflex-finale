@@ -25,10 +25,13 @@ export interface Spoor {
   slot?: boolean;
 }
 
-export type Overgang = "geen" | "vervagen" | "schuiven" | "zoom" | "wissen" | "draaien";
+export type Overgang = "geen" | "vervagen" | "schuiven" | "zoom" | "wissen" | "draaien" | "glitch";
 export type Beweging = "geen" | "inzoomen" | "uitzoomen" | "links" | "rechts" | "omhoog";
-export type TekstAnimatie = "geen" | "vervagen" | "opschuiven" | "pop" | "typen" | "stuiteren";
-export type TekstStijl = "gewoon" | "kader" | "omlijnd" | "schaduw" | "neon";
+export type TekstAnimatie = "geen" | "vervagen" | "opschuiven" | "pop" | "typen" | "stuiteren" | "woorden" | "glitch";
+export type TekstStijl = "gewoon" | "kader" | "omlijnd" | "schaduw" | "neon" | "bubbel-blauw" | "bubbel-groen" | "venster" | "3d";
+
+/** Eigen kleur van het vlak bij de stijlen met een vlak (chatbubbel, venster); `achtergrond` op de clip gaat voor. */
+export const STIJL_VLAK: Partial<Record<TekstStijl, string>> = { "bubbel-blauw": "#1E86FF", "bubbel-groen": "#2FC55A", venster: "#1F63F0" };
 
 export interface Filters {
   helderheid: number; // 100 = normaal
@@ -414,16 +417,75 @@ export function bewegingOp(b: Beweging, p: number): { schaal: number; dx: number
   }
 }
 
-/** Tekst-animatie op tijdstip t: dekking, schaal, verschuiving (fractie hoogte) en hoeveel tekens. */
-export function tekstAnimatie(c: TekstClip, t: number): { dekking: number; schaal: number; dy: number; tekens: number } {
+/** Tekstgrootte hangt af van de breedte; in een liggend beeld moet hij kleiner. */
+export const tekstSchaal = (f: Formaat) => (f === "16:9" ? 0.6 : f === "1:1" ? 0.85 : 1);
+
+/** De woorden van een tekst (witruimte en regeleinden tellen niet mee). */
+export const woordenVan = (tekst: string) => tekst.split(/\s+/).filter(Boolean);
+
+/** Vast getal per tekst (het clip-id): elke clip glitcht anders, maar elke keer hetzelfde. */
+export function zaad(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/**
+ * Schijntoeval 0..1 uit een zaad en een volgnummer. Zelfde invoer, zelfde
+ * uitkomst: het voorbeeld en de export tekenen dus exact dezelfde glitch
+ * (nooit Math.random tijdens het tekenen).
+ */
+export function toeval(z: number, n: number): number {
+  let x = (z ^ Math.imul(n + 1, 0x9e3779b1)) >>> 0;
+  x = Math.imul(x ^ (x >>> 16), 0x85ebca6b);
+  x = Math.imul(x ^ (x >>> 13), 0xc2b2ae35);
+  x ^= x >>> 16;
+  return (x >>> 0) / 4294967296;
+}
+
+/** Een glitch verspringt in stapjes (20 per seconde), niet bij elk beeldje. */
+export const GLITCH_PER_SECONDE = 20;
+export const glitchStap = (t: number) => Math.floor(t * GLITCH_PER_SECONDE);
+
+/** Meng twee #RRGGBB-kleuren; f = 0 geeft a, f = 1 geeft b. Ongeldige kleur: grijs. */
+export function mengKleur(a: string, b: string, f: number): string {
+  const lees = (k: string) => (KLEUR.test(k) ? [1, 3, 5].map((i) => parseInt(k.slice(i, i + 2), 16)) : [128, 128, 128]);
+  const x = lees(a);
+  const y = lees(b);
+  const m = klem(f, 0, 1);
+  return `#${x.map((v, i) => Math.round(v + ((y[i] ?? v) - v) * m).toString(16).padStart(2, "0")).join("")}`;
+}
+
+export interface TekstStand {
+  dekking: number;
+  schaal: number;
+  /** Verschuiving omhoog/omlaag als fractie van de hoogte. */
+  dy: number;
+  /** Typen: hoeveel tekens er al staan. */
+  tekens: number;
+  /** Woord voor woord: hoeveel woorden er al staan (met een breuk voor het woord dat binnenkomt). */
+  woorden: number;
+  /** Glitch-sterkte 0..1 (bij binnenkomen en weggaan). */
+  glitch: number;
+}
+
+/** Tekst-animatie op tijdstip t: dekking, schaal, verschuiving, hoeveel tekens of woorden, en glitch. */
+export function tekstAnimatie(c: TekstClip, t: number): TekstStand {
   const IN = Math.min(0.45, c.duur / 3);
   const UIT = Math.min(0.35, c.duur / 3);
+  const GLITCH = Math.min(0.4, c.duur / 3);
   const sinds = t - c.start;
   const tot = einde(c) - t;
   let dekking = 1;
   let schaal = 1;
   let dy = 0;
   let tekens = c.tekst.length;
+  const aantal = woordenVan(c.tekst).length;
+  let woorden = aantal;
+  let glitch = 0;
   const pi = klem(sinds / IN, 0, 1);
   const pu = klem(tot / UIT, 0, 1);
   switch (c.animatieIn) {
@@ -447,6 +509,23 @@ export function tekstAnimatie(c: TekstClip, t: number): { dekking: number; schaa
       tekens = Math.round(c.tekst.length * klem(typT > 0 ? sinds / typT : 1, 0, 1));
       break;
     }
+    case "woorden": {
+      // Zoals een chatbericht dat groeit: het vlak popt open, daarna komt er
+      // elke ~0,3 s een woord bij (hooguit 60% van de clip).
+      const woordT = Math.min(c.duur * 0.6, aantal * 0.32);
+      woorden = aantal * klem(woordT > 0 ? sinds / woordT : 1, 0, 1);
+      const pp = klem(sinds / 0.25, 0, 1);
+      dekking *= klem(pp * 3, 0, 1);
+      schaal *= 0.7 + 0.3 * uitTerug(pp);
+      break;
+    }
+    case "glitch": {
+      const p = klem(sinds / GLITCH, 0, 1);
+      glitch = Math.max(glitch, 1 - p);
+      // Even aan en uit flikkeren voordat hij blijft staan.
+      if (p < 1 && toeval(zaad(c.id), glitchStap(t)) < 0.3 * (1 - p)) dekking *= 0.15;
+      break;
+    }
     default:
       break;
   }
@@ -462,10 +541,52 @@ export function tekstAnimatie(c: TekstClip, t: number): { dekking: number; schaa
       dekking *= zacht(pu);
       schaal *= 0.8 + 0.2 * zacht(pu);
       break;
+    case "glitch": {
+      const p = klem(tot / GLITCH, 0, 1);
+      glitch = Math.max(glitch, 1 - p);
+      if (p < 1 && toeval(zaad(c.id), glitchStap(t) + 7919) < 0.45 * (1 - p)) dekking *= 0.15;
+      break;
+    }
     default:
       break;
   }
-  return { dekking, schaal, dy, tekens };
+  return { dekking, schaal, dy, tekens, woorden, glitch };
+}
+
+export interface ZichtbareRegel {
+  /** Wat er al helemaal staat. */
+  vol: string;
+  /** Het woord dat nu binnenkomt (leeg als er geen is). */
+  nieuw: string;
+  /** Hoe ver dat woord binnen is, 0..1. */
+  f: number;
+}
+
+/**
+ * Welk deel van elke (al afgebroken) regel te zien is: bij "woorden" de hele
+ * woorden plus het woord dat binnenkomt, anders de getypte tekens (zonder
+ * typen zijn dat ze allemaal).
+ */
+export function zichtbareRegels(regels: string[], c: Pick<TekstClip, "animatieIn" | "tekst">, stand: Pick<TekstStand, "tekens" | "woorden">): ZichtbareRegel[] {
+  if (c.animatieIn === "woorden") {
+    const heel = Math.floor(stand.woorden);
+    // Een woord staat er in het eerste stuk van zijn beurt al helemaal: dat oogt als een tik, niet als een vervaging.
+    const f = klem((stand.woorden - heel) * 2.5, 0, 1);
+    let teller = 0;
+    return regels.map((regel) => {
+      const w = woordenVan(regel);
+      const hier = heel - teller;
+      const nieuw = f > 0 && hier >= 0 && hier < w.length ? (w[hier] ?? "") : "";
+      teller += w.length;
+      return { vol: w.slice(0, klem(hier, 0, w.length)).join(" "), nieuw, f: nieuw ? f : 0 };
+    });
+  }
+  let over = Math.min(stand.tekens, c.tekst.length);
+  return regels.map((regel) => {
+    const vol = regel.slice(0, Math.max(0, over));
+    over -= regel.length + 1;
+    return { vol, nieuw: "", f: 0 };
+  });
 }
 
 /** CSS/canvas-filter voor een clip; leeg als er niets aan staat. */
@@ -529,10 +650,10 @@ function uitLijst<T extends string>(v: unknown, lijst: readonly T[], std: T): T 
   return typeof v === "string" && (lijst as readonly string[]).includes(v) ? (v as T) : std;
 }
 
-const OVERGANGEN: readonly Overgang[] = ["geen", "vervagen", "schuiven", "zoom", "wissen", "draaien"];
+const OVERGANGEN: readonly Overgang[] = ["geen", "vervagen", "schuiven", "zoom", "wissen", "draaien", "glitch"];
 const BEWEGINGEN: readonly Beweging[] = ["geen", "inzoomen", "uitzoomen", "links", "rechts", "omhoog"];
-const ANIMATIES: readonly TekstAnimatie[] = ["geen", "vervagen", "opschuiven", "pop", "typen", "stuiteren"];
-const STIJLEN: readonly TekstStijl[] = ["gewoon", "kader", "omlijnd", "schaduw", "neon"];
+const ANIMATIES: readonly TekstAnimatie[] = ["geen", "vervagen", "opschuiven", "pop", "typen", "stuiteren", "woorden", "glitch"];
+const STIJLEN: readonly TekstStijl[] = ["gewoon", "kader", "omlijnd", "schaduw", "neon", "bubbel-blauw", "bubbel-groen", "venster", "3d"];
 
 /**
  * Maak van willekeurige JSON een geldig project: onbekende velden weg, getallen

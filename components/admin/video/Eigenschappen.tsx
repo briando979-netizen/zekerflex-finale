@@ -5,6 +5,7 @@ import {
   FILTER_PRESETS,
   FORMATEN,
   LETTERTYPES,
+  STIJL_VLAK,
   maxDuur,
   zetSnelheid,
   type AudioClip,
@@ -147,6 +148,7 @@ function BeeldPaneel({ clip, onClip, onAiBewerk, onAiBeweeg, aiBeeld }: { clip: 
           { id: "zoom", label: "Zoom" },
           { id: "wissen", label: "Wissen" },
           { id: "draaien", label: "Draaien" },
+          { id: "glitch", label: "Glitch" },
         ]}
         onChange={(v) => zet({ overgang: v })}
       />
@@ -252,6 +254,8 @@ function BeeldPaneel({ clip, onClip, onAiBewerk, onAiBeweeg, aiBeeld }: { clip: 
 
 function TekstPaneel({ clip, onClip }: { clip: TekstClip; onClip: Props["onClip"] }) {
   const zet = (deel: Partial<TekstClip>, sleutel?: string) => onClip({ ...clip, ...deel }, sleutel);
+  // Chatbubbel en venster hebben een eigen vlak; "achtergrond" kleurt dat vlak.
+  const vlak = STIJL_VLAK[clip.stijl];
   return (
     <div className="space-y-3">
       <Veld label="Tekst">
@@ -280,9 +284,18 @@ function TekstPaneel({ clip, onClip }: { clip: TekstClip; onClip: Props["onClip"
           { id: "omlijnd", label: "Omlijnd" },
           { id: "kader", label: "Kader" },
           { id: "neon", label: "Neon" },
+          { id: "bubbel-blauw", label: "Chatbubbel blauw" },
+          { id: "bubbel-groen", label: "Chatbubbel groen" },
+          { id: "venster", label: "Venster" },
+          { id: "3d", label: "3D-letters" },
         ]}
         onChange={(v) => zet({ stijl: v })}
       />
+      {vlak && (
+        <p className="text-[0.6875rem]" style={{ color: "var(--a-mute)" }}>
+          {clip.stijl === "venster" ? "Tip: met Binnenkomen \"Typen\" verschijnt de tekst regel voor regel, met een knipperende cursor." : "Tip: met Binnenkomen \"Woorden één voor één\" groeit de bubbel mee met de tekst."}
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <label className="flex items-center gap-1.5 text-[0.75rem]" style={{ color: "var(--a-dim)" }}>
           <input type="checkbox" checked={clip.vet} onChange={(e) => zet({ vet: e.target.checked })} /> Vet
@@ -291,7 +304,7 @@ function TekstPaneel({ clip, onClip }: { clip: TekstClip; onClip: Props["onClip"
           <input type="checkbox" checked={clip.karaoke} onChange={(e) => zet({ karaoke: e.target.checked })} /> Woord voor woord oplichten
         </label>
         <label className="flex items-center gap-1.5 text-[0.75rem]" style={{ color: "var(--a-dim)" }}>
-          <input type="checkbox" checked={Boolean(clip.achtergrond)} onChange={(e) => zet({ achtergrond: e.target.checked ? "#000000" : "" })} /> Vlak erachter
+          <input type="checkbox" checked={Boolean(clip.achtergrond)} onChange={(e) => zet({ achtergrond: e.target.checked ? (vlak ?? "#000000") : "" })} /> {vlak ? "Andere kleur vlak" : "Vlak erachter"}
         </label>
         {clip.achtergrond && <input type="color" aria-label="Kleur van het vlak" className="a-input h-8 w-12 p-1" value={clip.achtergrond} onChange={(e) => zet({ achtergrond: e.target.value }, "achtergrond")} />}
       </div>
@@ -312,6 +325,8 @@ function TekstPaneel({ clip, onClip }: { clip: TekstClip; onClip: Props["onClip"
           { id: "pop", label: "Pop" },
           { id: "stuiteren", label: "Stuiteren" },
           { id: "typen", label: "Typen" },
+          { id: "woorden", label: "Woorden één voor één" },
+          { id: "glitch", label: "Glitch" },
         ]}
         onChange={(v) => zet({ animatieIn: v })}
       />
@@ -323,6 +338,7 @@ function TekstPaneel({ clip, onClip }: { clip: TekstClip; onClip: Props["onClip"
           { id: "vervagen", label: "Vervagen" },
           { id: "opschuiven", label: "Opschuiven" },
           { id: "pop", label: "Krimpen" },
+          { id: "glitch", label: "Glitch" },
         ]}
         onChange={(v) => zet({ animatieUit: v })}
       />
