@@ -18,6 +18,7 @@
     "tests/kv-avg-bewaker.test.ts",
     "tests/kvk-tegoed.test.ts",
     "tests/log-geheimen.test.ts",
+    "tests/mail-log-domein.test.ts",
     "tests/marketing-h1.test.ts",
     "tests/onboarding-labels-taal.test.ts",
     "tests/onboarding-onderhoud.test.ts",
