@@ -1,3 +1,4 @@
+import { isShopTab } from "@/lib/shop/admin-tabs";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -49,8 +50,9 @@ describe("de tegels", () => {
       }
       expect(inMenu.has(pad ?? ""), a).toBe(true);
       if (zoek) {
-        expect(pad).toBe("/admin/ontwerper");
-        expect(isOntwerperTab(new URLSearchParams(zoek).get("tab")), a).toBe(true);
+        const tab = new URLSearchParams(zoek).get("tab");
+        expect(["/admin/ontwerper", "/admin/shop"], a).toContain(pad);
+        expect(pad === "/admin/shop" ? isShopTab(tab) : isOntwerperTab(tab), a).toBe(true);
       }
     }
   });

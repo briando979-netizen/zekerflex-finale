@@ -94,8 +94,8 @@ export const CONSOLE_GROEPEN: ConsoleGroep[] = [
     uitleg: "Wat je verkoopt en wat er besteld is.",
     tegels: [
       { titel: "Producten", uitleg: "Toevoegen, aanpassen, prijzen, maten, kleuren, voorraad en foto's.", href: "/admin/shop" },
-      { titel: "Bestellingen", uitleg: "Wat er besteld is, pakbon, verzonden melden en terugbetalen. Tabblad Bestellingen.", href: "/admin/shop" },
-      { titel: "Kortingscodes en cijfers", uitleg: "Kortingscodes maken, lage voorraad en de verkoop in cijfers. Tabbladen Cijfers en Hulpmiddelen.", href: "/admin/shop" },
+      { titel: "Bestellingen", uitleg: "Wat er besteld is, pakbon, verzonden melden en terugbetalen. Opent het tabblad Bestellingen.", href: "/admin/shop?tab=orders" },
+      { titel: "Kortingscodes en cijfers", uitleg: "Kortingscodes maken en de lage voorraad bekijken. Opent het tabblad Kortingen & voorraad; de verkoop in cijfers staat bij Statistieken.", href: "/admin/shop?tab=tools" },
       { titel: "Bekijk je webshop", uitleg: "Zoals een klant hem ziet.", href: "/shop", buiten: true },
     ],
   },

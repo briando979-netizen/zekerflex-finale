@@ -1,6 +1,7 @@
 "use client";
 
 import { bronRegel } from "@/lib/shop/link-product";
+import { kiesShopTab, zoekMetShopTab, type ShopTab } from "@/lib/shop/admin-tabs";
 import { Fragment, useEffect, useState } from "react";
 import { ShopAdminTools } from "@/components/admin/ShopAdminTools";
 import { ShopModel3D } from "@/components/admin/ShopModel3D";
@@ -95,7 +96,14 @@ export function ShopAdmin() {
   const [variantMessage, setVariantMessage] = useState("");
   const [stats, setStats] = useState<ShopStats | null>(null);
   const [showPreview, setShowPreview] = useState(false);
-  const [tab, setTab] = useState<"products" | "orders" | "stats" | "tools">("products");
+  const [tab, setTab] = useState<ShopTab>("products");
+  // het tabblad staat ook in het adres (?tab=orders), zodat de Webshop-console er rechtstreeks naartoe kan linken
+  useEffect(() => { setTab(kiesShopTab(new URLSearchParams(window.location.search).get("tab"))); }, []);
+  const kiesTab = (nieuw: ShopTab) => {
+    setTab(nieuw);
+    const zoek = zoekMetShopTab(window.location.search, nieuw);
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}${zoek ? `?${zoek}` : ""}${window.location.hash}`);
+  };
   const [showForm, setShowForm] = useState(false);
   const [productQuery, setProductQuery] = useState("");
   const [orderQuery, setOrderQuery] = useState("");
@@ -279,7 +287,7 @@ export function ShopAdmin() {
         <button
           key={key}
           type="button"
-          onClick={() => setTab(key)}
+          onClick={() => kiesTab(key)}
           className="relative pb-3 text-sm font-medium transition"
           style={{ color: tab === key ? "var(--a-text)" : "var(--a-mute)" }}
         >
