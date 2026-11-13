@@ -203,7 +203,10 @@ services:
     # voor de OOM-killer: liever het model opnieuw laden dan de database of de app kwijt.
     # Flash attention met een q8-cache halveert het werkgeheugen per gesprek, zodat
     # beide modellen ruimer binnen de grens passen. Warm houden: /api/internal/ai/warm.
-    mem_limit: 4g
+    # Gemeten 13 nov (17, productie-instellingen): de gemma-runner piekt op ±4,2 GiB,
+    # met granite erbij ±4,9 GiB; met 4g viel hij elke ochtend rond 06:00 UTC om (OOM-kill).
+    # 5632m geeft ±750 MiB ruimte; vps-update.sh stopt Ollama nog steeds bij < 6 GB vrij.
+    mem_limit: 5632m
     oom_score_adj: 500
     environment:
       OLLAMA_FLASH_ATTENTION: "1"
