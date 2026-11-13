@@ -44,7 +44,7 @@ const PUBLIC_PREFIXES = [
   "/api/review-scan", // gratis review-scan (Google Places) + aanvraagformulier; IP- en dagbegrenzing, rapport op niet te raden id (lib/review-scan/run.ts)
   "/api/deal", // voorstel op maat na een gratis scan: "bekeken" en "akkoord"; het niet te raden id is de sleutel, IP-begrensd (lib/scans/deal.ts)
   "/api/rekentools", // "stuur mij de uitkomst" op de openbare rekentools: IP-begrensd, verborgen anti-botveld, toestemming verplicht; rekent zelf opnieuw (lib/rekentools/uitkomst.ts)
-  "/api/klus-plaatsen", // /klus-plaatsen: de openbare voorpagina van een bedrijf lezen om de klus in te vullen; IP- en dagbegrenzing, alleen openbare adressen, niets bewaard (app/api/klus-plaatsen/website)
+  "/api/klus-plaatsen", // /klus-plaatsen: de openbare voorpagina van een bedrijf lezen om de klus in te vullen; IP- en dagbegrenzing, alleen openbare adressen, niets bewaard (app/api/klus-plaatsen/website); /via telt alleen een maandtotaal van de tip van een werker (geen persoon, geen adres)
   "/api/media/youtube", // eigen kopie van een YouTube-voorbeeldplaatje (klik-om-af-te-spelen video); alleen YouTube-ids, één vaste host, IP-begrensd
   "/api/kaart", // ZekerFlex Kaart: adres zoeken (PDOK, IP-begrensd), luchtfoto-tegels (PDOK, alleen NL) en route plannen (onze eigen routeplanner, IP-begrensd, alleen NL, niets bewaard); alleen lezen, geen gegevens van gebruikers
   "/api/domeinen", // domeinnaam zoeken (alleen lezen, vaste RDAP-adressen) en aanvragen (toestemming verplicht, alleen van de eigen site); beide IP-begrensd (lib/domeinen)
