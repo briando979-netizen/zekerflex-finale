@@ -97,5 +97,7 @@ describe("minder vragen bij de aanmelding", () => {
     }
     for (const [taal, d] of Object.entries(AUTH_DICTS)) expect(d.onb.uitzendNote, taal).not.toMatch(/“Uitzenden”|“Agency work”/);
     expect(AUTH_DICTS.nl.onb.uitzendNote).toMatch(/verderop op deze pagina/);
+    // het rekeningnummer hoort niet bij de onboarding (pas nodig bij het uitbetalen; tests/thuisbasis-plek.test.ts)
+    for (const [taal, d] of Object.entries(AUTH_DICTS)) expect(d.onb.uitzendNote, taal).not.toMatch(/rekeningnummer|bank account|numer konta|contul bancar|рахунок|IBAN/i);
   });
 });
