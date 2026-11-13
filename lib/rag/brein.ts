@@ -69,7 +69,7 @@ const geheugen: Geheugen = (g.__zfBrein ??= {});
 const CACHE_MS = 10 * 60_000;
 
 export function leegBreinCache(): void {
-  geheugen.brein = undefined;
+  delete geheugen.brein;
 }
 
 const kort = (t: string) => (t.length > 70 ? `${t.slice(0, 70).trimEnd()}…` : t);
