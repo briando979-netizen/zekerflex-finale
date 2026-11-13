@@ -116,7 +116,7 @@ export function FiscalForm({ initial, defaultKind, profiel }: { initial: FiscalP
     korIngediend: result?.korAanvraag?.stand === "ingediend",
   };
   const toonKeuze = toonWerkvormKeuze(savedKind, wijzigKind);
-  const toonBedrijfSamenvatting = !wijzigBedrijf && !switching && bedrijfAlIngevuld(kind, opgeslagenBedrijf);
+  const toonBedrijfOverzicht = !wijzigBedrijf && !switching && bedrijfAlIngevuld(kind, opgeslagenBedrijf);
 
   const mistSleutels = formulierMist({ kind, vatNumber, vatRequested, kvkNumber, kor, korIngediend, hasBsn: hasBsnOnFile, bsn });
   const missing: string[] = mistSleutels.map((s) => (s === "btwZzp" ? f.mistBtwZzp : s === "btwFlex" ? f.mistBtwFlex : f.mistBsn));
@@ -183,7 +183,7 @@ export function FiscalForm({ initial, defaultKind, profiel }: { initial: FiscalP
       <section className="card space-y-4 p-6">
         <h2 className="font-display text-lg font-semibold">{f.stap2}</h2>
 
-        {toonBedrijfSamenvatting && (
+        {toonBedrijfOverzicht && (
           <div className="rounded-lg border border-hair bg-paper-soft p-3 text-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="font-semibold text-ink">{f.alIngevuld}</p>
@@ -199,7 +199,7 @@ export function FiscalForm({ initial, defaultKind, profiel }: { initial: FiscalP
           </div>
         )}
 
-        {kind === "zzp" && !toonBedrijfSamenvatting && (
+        {kind === "zzp" && !toonBedrijfOverzicht && (
           <>
             <Field label={f.kvk}>
               <input value={kvkNumber} onChange={(e) => setKvkNumber(e.target.value)} placeholder="12345678" className="field-input" />
@@ -210,7 +210,7 @@ export function FiscalForm({ initial, defaultKind, profiel }: { initial: FiscalP
           </>
         )}
 
-        {kind === "flexwerker" && !toonBedrijfSamenvatting && (
+        {kind === "flexwerker" && !toonBedrijfOverzicht && (
           <>
             <div className="rounded-lg border border-hair bg-paper-soft p-3 text-xs leading-relaxed text-neutralx-600">
               {f.flexUitleg1} <b>{f.korNaam}</b> {f.flexUitleg2}
