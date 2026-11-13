@@ -9,7 +9,7 @@ import { KorHulp } from "@/components/app/KorHulp";
 import { useFT } from "@/components/i18n/useFT";
 import { vulIn } from "@/lib/i18n/vul-in";
 import type { FreelancerDict } from "@/lib/i18n/freelancer";
-import { bedrijfAlIngevuld, formulierMist, ibanVoorOpslag, toonWerkvormKeuze } from "@/lib/fiscal/formulier";
+import { bedrijfAlIngevuld, formulierMist, opslagBody, toonWerkvormKeuze } from "@/lib/fiscal/formulier";
 
 /** De tekst van de gekozen facturatiewijze (de sleutel komt van de server: reverse-billing, self-invoice of payroll). */
 function factuurTekst(f: FreelancerDict["fiscaalForm"], modus: string): string {
@@ -44,7 +44,6 @@ export function FiscalForm({ initial, defaultKind, profiel }: { initial: FiscalP
   const tk = ft.kor;
   const f = ft.fiscaalForm;
   const [bsn, setBsn] = useState("");
-  const [lhk, setLhk] = useState(initial.loonheffingskorting);
   const [iban, setIban] = useState(initial.iban ?? "");
   const [ibanCode, setIbanCode] = useState("");
   const [codeNodig, setCodeNodig] = useState<string | null>(null);
@@ -59,12 +58,9 @@ export function FiscalForm({ initial, defaultKind, profiel }: { initial: FiscalP
   async function submit() {
     setBusy(true);
     try {
-      // het IBAN alleen als er iets staat: het is hier optioneel (bevestigen kan later bij Verificatie)
-      const body: Record<string, unknown> = { workerKind: kind, ...ibanVoorOpslag(iban), korApplies: kor, vatRequested, loonheffingskorting: lhk };
-      if (vatNumber.trim()) body.vatNumber = vatNumber.trim();
-      if (kvkNumber.trim()) body.kvkNumber = kvkNumber.trim();
-      if (kind === "uitzendkracht" && bsn.trim()) body.bsn = bsn.trim();
-      if (ibanCode.trim()) body.ibanCode = ibanCode.trim();
+      // het IBAN alleen als er iets staat (optioneel, bevestigen kan later bij Verificatie); de loonheffingskorting niet:
+      // die kies je pas na de getekende uitzendovereenkomst, in het uitzendpaneel (lib/fiscal/formulier.ts, opslagBody)
+      const body = opslagBody({ kind, iban, kor, vatRequested, vatNumber, kvkNumber, bsn, ibanCode });
 
       const res = await fetch("/api/me/fiscal", {
         method: "PUT",
@@ -259,10 +255,6 @@ export function FiscalForm({ initial, defaultKind, profiel }: { initial: FiscalP
                 className="field-input"
               />
             </Field>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={lhk} onChange={(e) => setLhk(e.target.checked)} />
-              {f.lhk}
-            </label>
           </>
         )}
 
