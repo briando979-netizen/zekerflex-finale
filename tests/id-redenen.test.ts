@@ -30,6 +30,21 @@ const WAAR: Record<keyof typeof ALLES, string> = {
   "label.beweging": "lib/onboarding/verify.ts",
   "label.kvk": "lib/onboarding/verify.ts",
   "label.vies": "lib/onboarding/verify.ts",
+  "label.thuisbasis": "lib/onboarding/verify.ts",
+  "label.werkvorm": "lib/onboarding/verify.ts",
+  "label.fotos": "lib/onboarding/verify.ts",
+  "label.documentnummer": "lib/onboarding/verify.ts",
+  "label.geldigheid": "lib/onboarding/verify.ts",
+  "label.nummerOvereen": "lib/onboarding/verify.ts",
+  "label.echtheid": "lib/onboarding/verify.ts",
+  "label.gezichtBeeld": "lib/onboarding/verify.ts",
+  "label.spoof": "lib/onboarding/verify.ts",
+  "label.chip": "lib/onboarding/verify.ts",
+  "label.werkrecht": "lib/onboarding/verify.ts",
+  "label.leeftijd": "lib/onboarding/verify.ts",
+  "label.telefoon": "lib/onboarding/verify.ts",
+  "label.telefoonEerder": "lib/onboarding/verify.ts",
+  "label.wallet": "lib/onboarding/verify.ts",
 };
 
 describe("het woordenboek", () => {
@@ -92,7 +107,7 @@ describe("idUitslagVoorWerker", () => {
     summary: "In behandeling",
     checks: [
       { label: ID_LABELS["label.gezicht"].nl, ok: false, detail: ID_REDENEN["gezicht.twijfel"].nl },
-      { label: "Documentnummer komt overeen met het document", ok: true, detail: "Het getypte nummer staat ook op het document" },
+      { label: "Een controle die (nog) niet in het woordenboek staat", ok: true, detail: "Het getypte nummer staat ook op het document" },
     ],
     reasons: [ID_REDENEN["gezicht.twijfel"].nl, ID_REDENEN["ai.nietBeschikbaar"].nl],
   };
