@@ -3,7 +3,7 @@ import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { eisBetalenAan, zetBetalenUit } from "@/lib/billing/stripe-betalen";
 import { isBetalenUitFout } from "@/lib/billing/stripe-betalen-stand";
-import { actiefWebhookGeheimUitGeheugen, actieveStripeSleutelUitGeheugen, laadActieveStripeSleutel, stripeKeuzeGeladen } from "@/lib/billing/stripe-account";
+import { actieveStripeSleutelUitGeheugen, actieveWebhookGeheimenUitGeheugen, laadActieveStripeSleutel, stripeKeuzeGeladen } from "@/lib/billing/stripe-account";
 
 let client: Stripe | null = null;
 let clientSleutel: string | null = null;
@@ -527,7 +527,7 @@ export async function createBankTopupSession(input: {
 export function constructWebhookEvent(rawBody: string, signature: string): Stripe.Event {
   // eerst het geheim van het account uit Beheer, dan dat uit .env: zolang er nog gebeurtenissen van het vorige account
   // komen, klopt de handtekening met het oude geheim
-  const geheimen = [...new Set([actiefWebhookGeheimUitGeheugen(), env.STRIPE_WEBHOOK_SECRET].filter((g): g is string => Boolean(g)))];
+  const geheimen = [...new Set([...actieveWebhookGeheimenUitGeheugen(), env.STRIPE_WEBHOOK_SECRET].filter((g): g is string => Boolean(g)))];
   if (geheimen.length === 0) {
     throw AppError.upstream("Het Stripe-webhook-secret is niet ingesteld.");
   }

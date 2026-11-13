@@ -11,6 +11,7 @@ const m = vi.hoisted(() => ({
   retrieveFout: null as unknown,
   webhookCreate: vi.fn(),
   sleutels: [] as string[],
+  kvFout: false,
 }));
 vi.mock("stripe", () => ({
   default: class {
@@ -25,7 +26,10 @@ vi.mock("stripe", () => ({
 vi.mock("@/lib/env", () => ({ env: { AUTH_SECRET: "x".repeat(40) } }));
 vi.mock("@/lib/logger", () => ({ logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() } }));
 vi.mock("@/lib/storage/kv", () => ({
-  kvGet: async (k: string) => (m.kv.has(k) ? structuredClone(m.kv.get(k)) : null),
+  kvGet: async (k: string) => {
+    if (m.kvFout) throw new Error("kv weg");
+    return m.kv.has(k) ? structuredClone(m.kv.get(k)) : null;
+  },
   kvSet: async (k: string, v: unknown) => void m.kv.set(k, structuredClone(v)),
   kvDelete: async (k: string) => void m.kv.delete(k),
 }));
@@ -33,6 +37,8 @@ vi.mock("@/lib/storage/kv", () => ({
 import {
   STRIPE_ACTIEF_KV,
   actiefWebhookGeheimUitGeheugen,
+  actieveWebhookGeheimenUitGeheugen,
+  stripeKeuzeGeladen,
   actieveStripeSleutelUitGeheugen,
   controleerStripeSleutel,
   gebruikStripeAccount,
@@ -47,14 +53,17 @@ import { STRIPE_WEBHOOK_EVENTS, stripeAccountSleutelFout, waaromNietGebruiken } 
 const LIVE = "sk_" + "live_" + "A1b2C3d4E5f6G7h8I9j0K1l2";
 const TEST = "sk_" + "test_" + "A1b2C3d4E5f6G7h8I9j0K1l2";
 const WHSEC = "whsec_" + "nieuwgeheim1234567890";
+const WHSEC_C = "whsec_" + "connectgeheim12345678";
 const bron = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8").split("\r\n").join("\n");
 
 beforeEach(async () => {
   m.kv.clear();
   m.retrieveFout = null;
   m.account.charges_enabled = true;
+  m.kvFout = false;
   m.webhookCreate.mockReset();
-  m.webhookCreate.mockResolvedValue({ id: "we_nieuw", secret: WHSEC });
+  // het gewone endpoint en dat voor Connect (connect: true) krijgen elk een eigen geheim
+  m.webhookCreate.mockImplementation(async (a: { connect?: boolean }) => (a.connect ? { id: "we_connect", secret: WHSEC_C } : { id: "we_nieuw", secret: WHSEC }));
   await laadActieveStripeSleutel(Date.now(), true);
 });
 
@@ -101,19 +110,52 @@ describe("gebruiken en terug", () => {
   it("bewaart sleutel en webhook-geheim verzegeld, maakt de webhook aan en gebruikt hem meteen", async () => {
     const info = await gebruikStripeAccount(LIVE, "Eigenaar", "https://zekerflex.com/api/webhooks/stripe");
     expect(info).toMatchObject({ accountId: "acct_inc", eind: LIVE.slice(-4), webhook: true, heeftVorige: false });
-    expect(m.webhookCreate).toHaveBeenCalledTimes(1);
+    expect(m.webhookCreate).toHaveBeenCalledTimes(2);
     expect(m.webhookCreate.mock.calls[0]?.[0]).toMatchObject({ url: "https://zekerflex.com/api/webhooks/stripe", enabled_events: [...STRIPE_WEBHOOK_EVENTS] });
+    // het tweede endpoint: alleen account.updated, met connect: true (de accounts van werkers)
+    expect(m.webhookCreate.mock.calls[1]?.[0]).toMatchObject({ url: "https://zekerflex.com/api/webhooks/stripe", enabled_events: ["account.updated"], connect: true });
+    expect(info).toMatchObject({ connectWebhook: true, connectMelding: null });
+    expect(actieveWebhookGeheimenUitGeheugen()).toEqual([WHSEC, WHSEC_C]);
     const opslag = JSON.stringify(m.kv.get(STRIPE_ACTIEF_KV));
     expect(opslag).not.toContain(LIVE);
     expect(opslag).not.toContain(WHSEC);
+    expect(opslag).not.toContain(WHSEC_C);
     expect(actieveStripeSleutelUitGeheugen()).toBe(LIVE);
     expect(actiefWebhookGeheimUitGeheugen()).toBe(WHSEC);
   });
 
-  it("hetzelfde account opnieuw: geen tweede webhook", async () => {
+  it("hetzelfde account opnieuw: geen nieuwe webhooks", async () => {
     await gebruikStripeAccount(LIVE, "Eigenaar", "https://zekerflex.com/api/webhooks/stripe");
     await gebruikStripeAccount(LIVE, "Eigenaar", "https://zekerflex.com/api/webhooks/stripe");
-    expect(m.webhookCreate).toHaveBeenCalledTimes(1);
+    expect(m.webhookCreate).toHaveBeenCalledTimes(2);
+  });
+
+  it("de Connect-webhook mag mislukken (Connect staat niet aan): wisselen lukt, met een melding", async () => {
+    m.webhookCreate.mockImplementation(async (a: { connect?: boolean }) => {
+      if (a.connect) throw Object.assign(new Error("connect not enabled"), { type: "StripeInvalidRequestError" });
+      return { id: "we_nieuw", secret: WHSEC };
+    });
+    const info = await gebruikStripeAccount(LIVE, "Eigenaar", "https://zekerflex.com/api/webhooks/stripe");
+    expect(info).toMatchObject({ accountId: "acct_inc", webhook: true, connectWebhook: false });
+    expect(info.connectMelding).toMatch(/Connect/);
+    expect(actieveWebhookGeheimenUitGeheugen()).toEqual([WHSEC]);
+  });
+
+  it("koude start met een KV-storing: niet geladen (getStripeClient weigert), de volgende aanroep probeert het meteen opnieuw", async () => {
+    delete (globalThis as { __zfStripeActief?: unknown }).__zfStripeActief;
+    m.kvFout = true;
+    await laadActieveStripeSleutel(Date.now());
+    expect(stripeKeuzeGeladen()).toBe(false);
+    m.kvFout = false;
+    // geen minuut wachten: de volgende aanroep leest meteen opnieuw
+    await laadActieveStripeSleutel(Date.now());
+    expect(stripeKeuzeGeladen()).toBe(true);
+    // na een geslaagde lezing houdt een latere storing vast wat er was
+    await gebruikStripeAccount(LIVE, "Eigenaar", "https://zekerflex.com/api/webhooks/stripe");
+    m.kvFout = true;
+    await laadActieveStripeSleutel(Date.now(), true);
+    expect(stripeKeuzeGeladen()).toBe(true);
+    expect(actieveStripeSleutelUitGeheugen()).toBe(LIVE);
   });
 
   it("terug: zonder vorige keuze weer de sleutel uit .env", async () => {
@@ -142,7 +184,7 @@ describe("de rest van ZekerFlex gebruikt het gekozen account", () => {
   it("getStripeClient en de webhook kiezen eerst Beheer, dan .env; de webhook probeert beide geheimen", () => {
     const s = bron("lib/billing/stripe.ts");
     expect(s).toContain("const sleutel = actieveStripeSleutelUitGeheugen() ?? env.STRIPE_SECRET_KEY;");
-    expect(s).toContain("[actiefWebhookGeheimUitGeheugen(), env.STRIPE_WEBHOOK_SECRET]");
+    expect(s).toContain("[...actieveWebhookGeheimenUitGeheugen(), env.STRIPE_WEBHOOK_SECRET]");
     expect(bron("app/api/webhooks/stripe/route.ts")).toContain("await laadActieveStripeSleutel().catch(() => undefined);");
     expect(bron("lib/billing/stripe-betalen.ts")).toContain("await laadActieveStripeSleutel(nu).catch(() => undefined);");
     expect(bron("instrumentation.ts")).toContain("laadActieveStripeSleutel(Date.now(), true)");

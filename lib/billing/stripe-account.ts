@@ -34,6 +34,7 @@ export const STRIPE_OUDE_CONNECT_KV = "stripe:oude-connect";
 export const ENV_PLATFORM = "env";
 const DOEL_SLEUTEL = "stripe-platform-sleutel";
 const DOEL_WEBHOOK = "stripe-platform-webhook";
+const DOEL_CONNECT_WEBHOOK = "stripe-platform-connect-webhook";
 const HERLAAD_MS = 60_000;
 
 interface Opgeslagen {
@@ -44,6 +45,13 @@ interface Opgeslagen {
   land: string | null;
   webhookId: string | null;
   webhookSecret: string | null; // verzegeld
+  /**
+   * Het tweede endpoint, met connect: true, voor account.updated van Connect-accounts van werkers (event.account).
+   * Fail-soft: staat Connect op het account niet aan, dan null en een melding in Beheer.
+   */
+  connectWebhookId?: string | null;
+  connectWebhookSecret?: string | null; // verzegeld
+  connectMelding?: string | null;
   ingesteldOp: string;
   door: string;
   vorige: Omit<Opgeslagen, "vorige"> | null;
@@ -52,7 +60,10 @@ interface Opgeslagen {
 interface Geheugen {
   sleutel: string | null;
   webhook: string | null;
+  webhookConnect: string | null;
   geladenOp: number;
+  /** is de KV ooit gelukt gelezen? Zo niet, dan weigert getStripeClient (nooit stil .env, het oude account) */
+  geslaagd: boolean;
 }
 
 const g = globalThis as unknown as { __zfStripeActief?: Geheugen };
@@ -62,14 +73,23 @@ export function actieveStripeSleutelUitGeheugen(): string | null {
   return g.__zfStripeActief?.sleutel ?? null;
 }
 
-/** Is de keuze uit Beheer al geladen (bij het opstarten, instrumentation.ts)? Daarvoor mag getStripeClient niet stil .env nemen. */
+/**
+ * Is de keuze uit Beheer ooit gelukt gelezen (bij het opstarten, instrumentation.ts)? Zo niet (nog niet geladen, of de
+ * KV faalde bij een koude start), dan mag getStripeClient niet stil .env nemen.
+ */
 export function stripeKeuzeGeladen(): boolean {
-  return g.__zfStripeActief !== undefined;
+  return g.__zfStripeActief?.geslaagd === true;
 }
 
 /** Het webhook-geheim van het account uit Beheer, als dat er is. */
 export function actiefWebhookGeheimUitGeheugen(): string | null {
   return g.__zfStripeActief?.webhook ?? null;
+}
+
+/** De webhook-geheimen van het account uit Beheer: het gewone endpoint en dat voor Connect (account.updated van werkers). */
+export function actieveWebhookGeheimenUitGeheugen(): string[] {
+  const m = g.__zfStripeActief;
+  return [m?.webhook, m?.webhookConnect].filter((x): x is string => Boolean(x));
 }
 
 const openVeilig = (verzegeld: string | null, doel: string): string | null => {
@@ -85,23 +105,27 @@ const openVeilig = (verzegeld: string | null, doel: string): string | null => {
 
 /**
  * Leest de keuze uit de KV in het geheugen (bij het opstarten, vóór een betaling en bij de webhook), hooguit eens per
- * minuut tenzij `dwing`. Een storing in de KV houdt vast wat er al geladen was.
+ * minuut tenzij `dwing`. Een storing in de KV houdt vast wat er al gelukt geladen was, maar de volgende aanroep probeert
+ * het meteen opnieuw (geladenOp 0); was er nog nooit een geslaagde lezing, dan blijft `geslaagd` onwaar en weigert
+ * getStripeClient, in plaats van stil het oude account uit .env te nemen.
  */
 export async function laadActieveStripeSleutel(nu: number = Date.now(), dwing = false): Promise<void> {
   const m = g.__zfStripeActief;
-  if (!dwing && m && nu - m.geladenOp < HERLAAD_MS) return;
+  if (!dwing && m?.geslaagd && nu - m.geladenOp < HERLAAD_MS) return;
   let o: Opgeslagen | null;
   try {
     o = await kvGet<Opgeslagen>(STRIPE_ACTIEF_KV);
   } catch {
-    if (m) m.geladenOp = nu;
-    else g.__zfStripeActief = { sleutel: null, webhook: null, geladenOp: nu };
+    if (m) m.geladenOp = 0;
+    else g.__zfStripeActief = { sleutel: null, webhook: null, webhookConnect: null, geladenOp: 0, geslaagd: false };
     return;
   }
   g.__zfStripeActief = {
     sleutel: o ? openVeilig(o.sleutel, DOEL_SLEUTEL) : null,
     webhook: o ? openVeilig(o.webhookSecret, DOEL_WEBHOOK) : null,
+    webhookConnect: o ? openVeilig(o.connectWebhookSecret ?? null, DOEL_CONNECT_WEBHOOK) : null,
     geladenOp: nu,
+    geslaagd: true,
   };
 }
 
@@ -153,6 +177,8 @@ const info = (o: Opgeslagen): StripeAccountInfo => ({
   ingesteldOp: o.ingesteldOp,
   door: o.door,
   webhook: Boolean(o.webhookId && o.webhookSecret),
+  connectWebhook: Boolean(o.connectWebhookId && o.connectWebhookSecret),
+  connectMelding: o.connectMelding ?? null,
   heeftVorige: Boolean(o.vorige),
 });
 
@@ -190,6 +216,32 @@ export async function gebruikStripeAccount(ruw: string, door: string, webhookUrl
     webhookId = w.id;
     webhookSecret = sealSecret(w.secret, DOEL_WEBHOOK);
   }
+  // Het tweede endpoint, voor Connect (account.updated van de accounts van werkers komt alleen op een endpoint met
+  // connect: true). Fail-soft: lukt het niet (Connect staat niet aan), dan geen fout, alleen een melding in Beheer;
+  // GET /api/me/payout/stripe-connect leest de stand dan zelf bij Stripe.
+  const zelfdeAccount = huidig?.accountId === check.accountId;
+  let connectWebhookId = zelfdeAccount ? (huidig?.connectWebhookId ?? null) : null;
+  let connectWebhookSecret = zelfdeAccount ? (huidig?.connectWebhookSecret ?? null) : null;
+  let connectMelding: string | null = zelfdeAccount ? (huidig?.connectMelding ?? null) : null;
+  if (!connectWebhookId || !connectWebhookSecret) {
+    try {
+      const wc = await client(s).webhookEndpoints.create({
+        url: webhookUrl,
+        enabled_events: ["account.updated"],
+        connect: true,
+        description: "ZekerFlex: Connect (account.updated van werkers), automatisch aangemaakt in Beheer → Stripe-account",
+      });
+      if (wc.secret) {
+        connectWebhookId = wc.id;
+        connectWebhookSecret = sealSecret(wc.secret, DOEL_CONNECT_WEBHOOK);
+        connectMelding = null;
+      } else {
+        connectMelding = "Stripe gaf geen geheim voor de Connect-webhook terug; de stand van werkers wordt bij het openen van hun scherm gelezen.";
+      }
+    } catch {
+      connectMelding = "De Connect-webhook kon niet worden aangemaakt (staat Connect aan op dit account?). Betalingen werken gewoon; de stand van werkers wordt bij het openen van hun scherm gelezen.";
+    }
+  }
   const vorige = huidig ? (({ vorige: _weg, ...rest }) => rest)(huidig) : null;
   const opslag: Opgeslagen = {
     sleutel: sealSecret(s, DOEL_SLEUTEL),
@@ -199,6 +251,9 @@ export async function gebruikStripeAccount(ruw: string, door: string, webhookUrl
     land: check.land,
     webhookId,
     webhookSecret,
+    connectWebhookId,
+    connectWebhookSecret,
+    connectMelding,
     ingesteldOp: new Date().toISOString(),
     door,
     // hetzelfde account opnieuw: de terugval blijft wat hij was
