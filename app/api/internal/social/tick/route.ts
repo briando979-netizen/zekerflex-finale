@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { checkInternalToken } from "@/lib/internal-auth";
 import { recordCronHeartbeat } from "@/lib/ops/heartbeat";
 import { socialTick } from "@/lib/social/publiceer";
+import { kvGet } from "@/lib/storage/kv";
+import { K_STATUS, uitrolHoudtModelStil, type LiveStatus } from "@/lib/bouwer/live";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +15,11 @@ export const maxDuration = 300;
 async function handle(request: Request): Promise<NextResponse> {
   const gate = checkInternalToken(request);
   if (!gate.ok) return NextResponse.json({ error: { code: "UNAUTHENTICATED", message: gate.message } }, { status: gate.status });
+  // tijdens een uitrol staat het eigen model stil (13 nov: "berichten vielen terug op vaste teksten" na 180 s): deze tik
+  // overslaan; de volgende, 10 minuten later, is de herkansing
+  if (uitrolHoudtModelStil(await kvGet<LiveStatus>(K_STATUS).catch(() => null))) {
+    return NextResponse.json({ ok: true, overgeslagen: "uitrol bezig" });
+  }
   try {
     const r = await socialTick();
     await recordCronHeartbeat("social-tick", true);
