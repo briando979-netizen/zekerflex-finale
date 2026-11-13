@@ -187,6 +187,15 @@ function llmHost(): string {
   }
 }
 
+/** De host zonder poort of pad, zoals AiUsageLog hem bewaart (lib/ai/governor.ts GovernorDoel); nooit het hele adres. */
+function hostnaam(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return "invalid";
+  }
+}
+
 /** Make sure this instance knows the registered AI node (cheap, cached ~20 s). */
 export async function ensureAiNode(): Promise<void> {
   // eerst de gratis stand: die bepaalt welke server en welk model we kiezen
@@ -374,6 +383,8 @@ async function chatOnce(opts: ChatOptions): Promise<ChatResult> {
   if (problem) throw AppError.upstream(problem);
   const model = opts.model ?? modelForPurpose(opts.purpose);
   const timeoutMs = timeoutFor(opts);
+  // wat AiUsageLog bewaart, ook als de aanroep mislukt: het gevraagde model en de echte server (ook bij "alles gratis")
+  const doel = { model, host: hostnaam(baseUrl()) };
   return withGovernor(opts.purpose ?? "chat", async () => {
     try {
       const payload = {
@@ -388,6 +399,8 @@ async function chatOnce(opts: ChatOptions): Promise<ChatResult> {
         ...(opts.json ? { response_format: { type: "json_object" } } : {}),
       };
       let data: { model?: string; choices?: { message?: { content?: string } }[] };
+      // wie er echt antwoordde: het doel, of de reserve
+      let antwoord = doel;
       try {
         data = (await post("/chat/completions", payload, timeoutMs, opts.retry ?? true)) as typeof data;
       } catch (err) {
@@ -395,6 +408,7 @@ async function chatOnce(opts: ChatOptions): Promise<ChatResult> {
         if (!reserve || !reserveZinvol(err)) throw err;
         // Het hoofdmodel is (even) weg: antwoord met de reserve in plaats van een foutmelding.
         logger.warn("llm hoofdmodel weg - reservemodel antwoordt", { host: llmHost(), reserve: new URL(reserve.base).host, model: reserve.model, purpose: opts.purpose });
+        antwoord = { model: reserve.model, host: hostnaam(reserve.base) };
         data = (await postOnce("/chat/completions", { ...payload, model: reserve.model, keep_alive: env.LLM_KEEP_ALIVE }, timeoutMs, reserve)) as typeof data;
       }
       const usage = readUsage(data);
@@ -404,7 +418,7 @@ async function chatOnce(opts: ChatOptions): Promise<ChatResult> {
           model: data.model ?? model,
           raw: data,
         } satisfies ChatResult,
-        usage: { ...usage, model: data.model ?? model },
+        usage: { ...usage, model: data.model ?? antwoord.model, host: antwoord.host },
       };
     } catch (err) {
       if (err instanceof AppError) throw err;
@@ -415,7 +429,7 @@ async function chatOnce(opts: ChatOptions): Promise<ChatResult> {
       else logger.error("llm chat failed", { error: (err as Error).message, host: llmHost() });
       throw unreachable(err);
     }
-  });
+  }, doel);
 }
 
 /** Parse a JSON object out of a model reply, tolerating fences / preamble. */
@@ -732,13 +746,15 @@ export async function embed(input: string | string[]): Promise<number[][]> {
   if (!env.LLM_EMBED_MODEL) {
     throw AppError.upstream("No embedding model configured (LLM_EMBED_MODEL)");
   }
+  // Embeddings may use a dedicated endpoint (LLM_EMBED_BASE_URL, typically
+  // local Ollama) so bulk RAG-indexing doesn't burn the chat provider's
+  // embedding quota. A dedicated endpoint is treated as local: no API key,
+  // and keep_alive is allowed (Ollama accepts it).
+  const dedicated = Boolean(env.LLM_EMBED_BASE_URL);
+  const embedBase = (env.LLM_EMBED_BASE_URL ?? baseUrl()).replace(/\/+$/, "");
+  // wat AiUsageLog bewaart: het embedmodel en de server waar het echt draait (13 nov: stond als Google in het log)
+  const doel = { model: env.LLM_EMBED_MODEL, host: hostnaam(embedBase) };
   return withGovernor("embed", async () => {
-    // Embeddings may use a dedicated endpoint (LLM_EMBED_BASE_URL, typically
-    // local Ollama) so bulk RAG-indexing doesn't burn the chat provider's
-    // embedding quota. A dedicated endpoint is treated as local: no API key,
-    // and keep_alive is allowed (Ollama accepts it).
-    const dedicated = Boolean(env.LLM_EMBED_BASE_URL);
-    const embedBase = (env.LLM_EMBED_BASE_URL ?? baseUrl()).replace(/\/+$/, "");
     const localEmbed = dedicated || isLocalInference();
     const llmKey = dedicated ? null : await getLlmApiKey();
     let res: Response | null = null;
@@ -776,9 +792,10 @@ export async function embed(input: string | string[]): Promise<number[][]> {
         completionTokens: 0,
         totalTokens: tokens,
         model: env.LLM_EMBED_MODEL as string,
+        host: doel.host,
       },
     };
-  });
+  }, doel);
 }
 
 export interface LlmHealth {

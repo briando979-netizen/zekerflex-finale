@@ -374,6 +374,7 @@ export function KostenBeheer({ initieel, transip, financien, gemini }: { initiee
           {gemini.ok ? (
             <div className="space-y-2 text-sm">
               <p role="status">{gemini.regel}</p>
+              {gemini.notitie && <p className="text-xs" style={{ color: "var(--a-mute)" }}>{gemini.notitie}</p>}
               {gemini.verbruik.perModel.length > 0 && (
                 <ul className="space-y-1 text-xs" style={{ color: "var(--a-mute)" }}>
                   {gemini.verbruik.perModel.map((m) => (

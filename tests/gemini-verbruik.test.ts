@@ -7,7 +7,18 @@ const h = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/prisma", () => ({ prisma: { aiUsageLog: { groupBy: h.groupBy } } }));
 
-import { NIET_TE_LEZEN, geminiStand, isGemini, maandGrenzen, samenvatGemini, verbruikRegel, type VerbruikGroep } from "@/lib/admin/gemini-verbruik";
+import {
+  NIET_TE_LEZEN,
+  TELT_VANAF,
+  VANAF_NOTITIE,
+  geminiStand,
+  isGemini,
+  maandGrenzen,
+  samenvatGemini,
+  telGrenzen,
+  verbruikRegel,
+  type VerbruikGroep,
+} from "@/lib/admin/gemini-verbruik";
 import { geminiVerbruikDezeMaand } from "@/lib/admin/gemini-verbruik-lezen";
 
 const groep = (o: Partial<VerbruikGroep> = {}): VerbruikGroep => ({
@@ -51,25 +62,28 @@ describe("de maandgrens op Amsterdamse tijd", () => {
 });
 
 describe("alleen Gemini", () => {
-  it("herkent Gemini aan het model of de host van Google; andere aanbieders niet", () => {
-    expect(isGemini({ model: "gemini-2.0-flash", endpointHost: "local" })).toBe(true);
+  it("herkent een echte Gemini-aanroep aan de host van Google, niet meer aan de modelnaam (13 nov); andere aanbieders niet", () => {
+    expect(isGemini({ model: "gemini-2.0-flash", endpointHost: "generativelanguage.googleapis.com" })).toBe(true);
     expect(isGemini({ model: "iets", endpointHost: "generativelanguage.googleapis.com" })).toBe(true);
+    // vóór de reparatie heette een mislukte aanroep naar ons eigen model "gemini-..."; nu staat daar de echte host
+    expect(isGemini({ model: "gemini-2.0-flash", endpointHost: "local" })).toBe(false);
+    expect(isGemini({ model: "iets", endpointHost: "googleapis.com.example" })).toBe(false);
     expect(isGemini({ model: "gemma3:4b", endpointHost: "ollama" })).toBe(false);
     expect(isGemini({ model: "qwen2.5:3b", endpointHost: "local" })).toBe(false);
   });
 
-  it("telt per model op en laat andere aanbieders weg", () => {
+  it("telt per model op en laat andere hosts weg, ook met een Gemini-naam", () => {
     const v = samenvatGemini([
       groep({ aanroepen: 10, promptTokens: 100, completionTokens: 50, totalTokens: 150 }),
       groep({ endpointHost: "andere-host", aanroepen: 5, promptTokens: 40, completionTokens: 10, totalTokens: 50 }),
       groep({ model: "gemini-pro", aanroepen: 2, promptTokens: 7, completionTokens: 3, totalTokens: 0 }),
       groep({ model: "gemma3:4b", endpointHost: "ollama", aanroepen: 99, promptTokens: 1, completionTokens: 1, totalTokens: 2 }),
     ]);
-    expect(v.aanroepen).toBe(17);
+    expect(v.aanroepen).toBe(12);
     // totalTokens is leidend; zonder totaal telt invoer plus uitvoer
-    expect(v.tokens).toBe(150 + 50 + 10);
+    expect(v.tokens).toBe(150 + 10);
     expect(v.perModel).toEqual([
-      { model: "gemini-2.0-flash", aanroepen: 15, tokens: 200 },
+      { model: "gemini-2.0-flash", aanroepen: 10, tokens: 150 },
       { model: "gemini-pro", aanroepen: 2, tokens: 10 },
     ]);
   });
@@ -87,30 +101,53 @@ describe("alleen Gemini", () => {
     expect(regel).not.toMatch(/€|\$|EUR/);
   });
 
-  it("geminiStand geeft de maand van de klok mee", () => {
+  it("geminiStand geeft de maand van de klok mee, en in november 2026 de notitie vanaf wanneer hij telt", () => {
     const s = geminiStand([groep()], new Date("2026-11-14T10:00:00+01:00"));
     expect(s.ok && s.maand).toBe("november 2026");
+    expect(s.ok && s.notitie).toBe("Telt vanaf 14 november 2026; eerdere regels in het logboek noemden een verkeerde server.");
+    const dec = geminiStand([], new Date("2026-12-10T10:00:00+01:00"));
+    expect(dec.ok && dec.notitie).toBeNull();
+  });
+});
+
+describe("vanaf de reparatie van de host in AiUsageLog (13 nov 2026)", () => {
+  it("telt niets van vóór het begin van 14 nov 2026 (Amsterdamse tijd): die rijen hadden een verkeerde host", () => {
+    expect(TELT_VANAF.toISOString()).toBe("2026-11-13T23:00:00.000Z");
+    const nov = telGrenzen(new Date("2026-11-14T10:00:00+01:00"));
+    expect(nov.van.toISOString()).toBe("2026-11-13T23:00:00.000Z");
+    expect(nov.tot.toISOString()).toBe("2026-11-30T23:00:00.000Z");
+    expect(nov.notitie).toBe(VANAF_NOTITIE);
+  });
+
+  it("vanaf december gewoon de hele maand, zonder notitie", () => {
+    const dec = telGrenzen(new Date("2026-12-10T10:00:00+01:00"));
+    expect(dec.van.toISOString()).toBe("2026-11-30T23:00:00.000Z");
+    expect(dec.tot.toISOString()).toBe("2026-12-31T23:00:00.000Z");
+    expect(dec.notitie).toBeNull();
   });
 });
 
 describe("het lezen uit AiUsageLog", () => {
   const NU = new Date("2026-11-14T10:00:00+01:00");
 
-  it("één kleine groupBy over de maand, alleen sommen, met Gemini als filter", async () => {
+  it("één kleine groupBy vanaf TELT_VANAF, alleen sommen, alleen de host van Google", async () => {
     h.groupBy.mockResolvedValue([{ model: "gemini-2.0-flash", endpointHost: "generativelanguage.googleapis.com", _count: { _all: 3 }, _sum: { promptTokens: 30, completionTokens: 20, totalTokens: 50 } }]);
     const s = await geminiVerbruikDezeMaand(NU);
     expect(s.ok && s.verbruik.aanroepen).toBe(3);
     expect(s.ok && s.verbruik.tokens).toBe(50);
     expect(h.groupBy).toHaveBeenCalledTimes(1);
-    const arg = h.groupBy.mock.calls[0]?.[0] as { by: string[]; where: { createdAt: { gte: Date; lt: Date } }; _sum: Record<string, boolean> };
+    const arg = h.groupBy.mock.calls[0]?.[0] as { by: string[]; where: Record<string, unknown> & { createdAt: { gte: Date; lt: Date } }; _sum: Record<string, boolean> };
     expect(arg.by).toEqual(["model", "endpointHost"]);
-    expect(arg.where.createdAt.gte.toISOString()).toBe("2026-10-31T23:00:00.000Z");
+    // november 2026 telt pas vanaf de reparatie, niet vanaf 1 november
+    expect(arg.where.createdAt.gte.toISOString()).toBe("2026-11-13T23:00:00.000Z");
+    expect(arg.where.endpointHost).toEqual({ endsWith: "googleapis.com" });
+    expect(Object.keys(arg.where).sort()).toEqual(["createdAt", "endpointHost"]);
     expect(arg.where.createdAt.lt.toISOString()).toBe("2026-11-30T23:00:00.000Z");
     expect(Object.keys(arg._sum)).toEqual(["promptTokens", "completionTokens", "totalTokens"]);
   });
 
   it("een som die null is (geen tokens opgegeven) telt als nul", async () => {
-    h.groupBy.mockResolvedValue([{ model: "gemini-2.0-flash", endpointHost: "x", _count: { _all: 2 }, _sum: { promptTokens: null, completionTokens: null, totalTokens: null } }]);
+    h.groupBy.mockResolvedValue([{ model: "gemini-2.0-flash", endpointHost: "generativelanguage.googleapis.com", _count: { _all: 2 }, _sum: { promptTokens: null, completionTokens: null, totalTokens: null } }]);
     const s = await geminiVerbruikDezeMaand(NU);
     expect(s.ok && s.verbruik).toEqual({ aanroepen: 2, tokens: 0, perModel: [{ model: "gemini-2.0-flash", aanroepen: 2, tokens: 0 }] });
   });

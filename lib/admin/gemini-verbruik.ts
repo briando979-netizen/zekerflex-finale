@@ -30,14 +30,43 @@ export interface GeminiVerbruik {
   perModel: VerbruikPerModel[];
 }
 
-/** Wat het scherm krijgt: de regel en het overzicht per model, of een melding dat het verbruik nu niet te lezen is. */
-export type GeminiStand = { ok: true; maand: string; regel: string; verbruik: GeminiVerbruik } | { ok: false; melding: string };
+/**
+ * Wat het scherm krijgt: de regel en het overzicht per model (met een notitie als de telling later dan het begin van de
+ * maand begint, zie TELT_VANAF), of een melding dat het verbruik nu niet te lezen is.
+ */
+export type GeminiStand =
+  | { ok: true; maand: string; regel: string; notitie: string | null; verbruik: GeminiVerbruik }
+  | { ok: false; melding: string };
 
 export const NIET_TE_LEZEN = "Gemini-verbruik is nu niet te lezen.";
 
-/** Is dit een Gemini-groep? Op de modelnaam (gemini-...) of de host van Google. Andere aanbieders doen niet mee. */
+/**
+ * Vanaf wanneer AiUsageLog de echte host bewaart (lib/ai/governor.ts GovernorDoel, 13 nov 2026). Daarvoor stond bij élke
+ * rij de host uit de omgeving (Google), ook bij ons eigen model (gemma, granite), en bij een mislukte aanroep ook het
+ * Gemini-model uit de omgeving: die rijen zijn niet van een echte Gemini-aanroep te onderscheiden, dus ze tellen niet mee.
+ * Gekozen ná de uitrol van die reparatie (begin 14 nov, Amsterdamse tijd): liever een paar uur te weinig dan verzonnen.
+ */
+export const TELT_VANAF = new Date("2026-11-14T00:00:00+01:00");
+
+/** "14 november 2026" */
+const VANAF_LABEL = new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" }).format(TELT_VANAF);
+
+/** De notitie bij het paneel als de telling deze maand niet vanaf het begin loopt. */
+export const VANAF_NOTITIE = `Telt vanaf ${VANAF_LABEL}; eerdere regels in het logboek noemden een verkeerde server.`;
+
+/**
+ * Is dit een echte Gemini-aanroep? Alleen op de host van Google: sinds TELT_VANAF is dat de server waar de vraag echt heen
+ * ging. Niet meer op de modelnaam: een mislukte aanroep heette vóór de reparatie "gemini-..." terwijl hij naar ons eigen
+ * model ging. Andere aanbieders en ons eigen model doen niet mee.
+ */
 export function isGemini(g: Pick<VerbruikGroep, "model" | "endpointHost">): boolean {
-  return /gemini/i.test(g.model) || /generativelanguage\.googleapis\.com|\.googleapis\.com/i.test(g.endpointHost);
+  return /(^|\.)googleapis\.com$/i.test(g.endpointHost);
+}
+
+/** Het stuk van de maand dat telt: vanaf het begin van de maand, maar nooit vóór TELT_VANAF. */
+export function telGrenzen(nu: Date): { van: Date; tot: Date; notitie: string | null } {
+  const { van, tot } = maandGrenzen(nu);
+  return van < TELT_VANAF ? { van: TELT_VANAF, tot, notitie: VANAF_NOTITIE } : { van, tot, notitie: null };
 }
 
 /** Begin (inclusief) en einde (exclusief) van de kalendermaand van `nu`, op Amsterdamse tijd, als tijdstippen. */
@@ -77,5 +106,5 @@ export function verbruikRegel(v: GeminiVerbruik): string {
 
 export function geminiStand(groepen: VerbruikGroep[], nu: Date): GeminiStand {
   const verbruik = samenvatGemini(groepen);
-  return { ok: true, maand: maandGrenzen(nu).label, regel: verbruikRegel(verbruik), verbruik };
+  return { ok: true, maand: maandGrenzen(nu).label, regel: verbruikRegel(verbruik), notitie: telGrenzen(nu).notitie, verbruik };
 }

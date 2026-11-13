@@ -52,6 +52,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export interface GovernorUsage {
   purpose: string;
   model: string;
+  /** de host (zonder poort) waar de aanroep echt heen ging, zie GovernorDoel */
+  endpointHost: string;
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
@@ -167,7 +169,7 @@ async function recordUsage(usage: GovernorUsage, throttledMs: number): Promise<v
       data: {
         purpose: usage.purpose,
         model: usage.model,
-        endpointHost: llmHost(),
+        endpointHost: usage.endpointHost,
         promptTokens: usage.promptTokens,
         completionTokens: usage.completionTokens,
         totalTokens: usage.totalTokens,
@@ -186,7 +188,21 @@ export interface GovernedResult<T> {
   usage: Pick<
     GovernorUsage,
     "promptTokens" | "completionTokens" | "totalTokens" | "model"
-  >;
+  > & {
+    /** de host die echt antwoordde (bv. het reservemodel); zonder deze geldt de host van het doel */
+    host?: string | undefined;
+  };
+}
+
+/**
+ * Waar een aanroep heen gaat: het gevraagde model en de host (zonder poort), zoals de aanroeper ze kiest, dus ook bij
+ * "alles gratis" of een AI-node. AiUsageLog bewaart ze, ook als de aanroep mislukt. Tot 13 nov 2026 schreef recordUsage
+ * de host uit de omgeving (LLM_BASE_URL) en bij een fout ook het model uit de omgeving weg: elke rij heette Google, ook
+ * die van ons eigen model, en Beheer -> Kosten telde ze als Gemini-verbruik (lib/admin/gemini-verbruik.ts).
+ */
+export interface GovernorDoel {
+  model: string;
+  host: string;
 }
 
 /**
@@ -196,6 +212,7 @@ export interface GovernedResult<T> {
 export async function withGovernor<T>(
   purpose: string,
   fn: () => Promise<GovernedResult<T>>,
+  doel: GovernorDoel,
 ): Promise<T> {
   if (!env.AI_ALLOW_REMOTE && !isLocalInference()) {
     throw AppError.upstream(
@@ -245,7 +262,8 @@ export async function withGovernor<T>(
     await recordUsage(
       {
         purpose,
-        model: out?.usage.model ?? env.LLM_MODEL,
+        model: out?.usage.model ?? doel.model,
+        endpointHost: out?.usage.host ?? doel.host,
         promptTokens: out?.usage.promptTokens ?? 0,
         completionTokens: out?.usage.completionTokens ?? 0,
         totalTokens: out?.usage.totalTokens ?? 0,
