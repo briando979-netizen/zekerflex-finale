@@ -8,6 +8,7 @@ import { RagLab } from "@/components/admin/RagLab";
 import { ModelFleet } from "@/components/admin/ModelFleet";
 import { CronHealthPanel } from "@/components/admin/CronHealthPanel";
 import { RondgangPanel } from "@/components/admin/RondgangPanel";
+import { SchijfreeksPanel } from "@/components/admin/SchijfreeksPanel";
 import { BoekrondePanel } from "@/components/admin/BoekrondePanel";
 import { FeatureFlagsPanel } from "@/components/admin/FeatureFlagsPanel";
 import { FunnelPanel } from "@/components/admin/FunnelPanel";
@@ -299,6 +300,7 @@ export default async function SysteemPage() {
             content: (
               <>
                 <CronHealthPanel />
+                <SchijfreeksPanel />
                 <RondgangPanel />
                 <BoekrondePanel />
                 <OpsAlerts />
