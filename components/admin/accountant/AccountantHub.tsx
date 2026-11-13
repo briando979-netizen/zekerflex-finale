@@ -268,11 +268,11 @@ const MAANDEN = ["januari", "februari", "maart", "april", "mei", "juni", "juli",
 const dagTekst = (dag: string) => `${Number(dag.slice(8, 10))} ${MAANDEN[Number(dag.slice(5, 7)) - 1] ?? ""} ${dag.slice(0, 4)}`;
 const maandTekst = (dag: string) => `${MAANDEN[Number(dag.slice(5, 7)) - 1] ?? ""} ${dag.slice(0, 4)}`;
 
-const MAANDEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+const MAANDEN_KORT = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
 /** "2026-11-13" wordt "13 nov 2026" (zonder Date: een dag heeft geen tijdzone). */
 const dagNl = (dag: string) => {
   const [j, m, d] = dag.split("-");
-  return `${Number(d)} ${MAANDEN[Number(m) - 1] ?? ""} ${j ?? ""}`;
+  return `${Number(d)} ${MAANDEN_KORT[Number(m) - 1] ?? ""} ${j ?? ""}`;
 };
 
 /** De vaste lijst vragen voor een menselijk accountant (lib/accountant/open-vragen.ts); dezelfde staat in het dossier. */
