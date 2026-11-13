@@ -21,9 +21,11 @@ const m = vi.hoisted(() => ({
   zetNoodrem: vi.fn(async (..._a: unknown[]) => undefined),
 }));
 
-vi.mock("node:fs", () => {
-  const readFileSync = () => "MemAvailable:   16777216 kB\n";
-  return { readFileSync, default: { readFileSync } };
+// alleen /proc/meminfo is nagemaakt (16 GB vrij); alle andere bestanden (de bron in de tests hieronder) worden echt gelezen
+vi.mock("node:fs", async () => {
+  const echt = await vi.importActual<typeof import("node:fs")>("node:fs");
+  const readFileSync = ((pad: unknown, ...rest: unknown[]) => (pad === "/proc/meminfo" ? "MemAvailable:   16777216 kB\n" : (echt.readFileSync as (...a: unknown[]) => unknown)(pad, ...rest))) as typeof echt.readFileSync;
+  return { ...echt, readFileSync, default: { ...echt, readFileSync } };
 });
 vi.mock("@/lib/bouwer/auto-uitrol-opslag", async () => {
   const regels = await import("@/lib/bouwer/auto-uitrol-regels");
