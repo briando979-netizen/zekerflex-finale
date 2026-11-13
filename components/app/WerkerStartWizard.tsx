@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFT } from "@/components/i18n/useFT";
-import { TIJDLIJN_VOLGORDE, aantalOpen, nogStappenTekst, tijdlijnStappen, volgendeStap, type TijdlijnSleutel } from "@/lib/onboarding/laat-weten";
+import { TIJDLIJN_VOLGORDE, stapVanTotaal, tijdlijnStappen, volgendeStap, type TijdlijnSleutel } from "@/lib/onboarding/laat-weten";
+import { vulIn } from "@/lib/i18n/vul-in";
 import { BRANCHE_OPTIES, brancheSamenvatting, type BrancheKeuze } from "@/lib/shifts/branche-keuze";
 
 type Kind = "zzp" | "flexwerker" | "uitzendkracht";
@@ -132,7 +133,7 @@ export function WerkerStartWizard({
       const eerder = kind;
       setKind(pick);
       // een eerste keuze brengt je naar de volgende stap; een wijziging laat je waar je was
-      if (eerder === null) setOpen(keuze === null ? "branches" : emailVerified ? "gegevens" : "email");
+      if (eerder === null) setOpen(keuze === null ? "branches" : "gegevens");
       router.refresh();
     } catch {
       setError(t.saveError);
@@ -141,7 +142,7 @@ export function WerkerStartWizard({
     }
   }
 
-  const aantal = aantalOpen(done);
+  const stap = stapVanTotaal(done);
   const stappen = tijdlijnStappen(done);
 
   // Eén uitleg per stap: de bestaande teksten (vijf talen), niets nieuws verzonnen.
@@ -160,6 +161,17 @@ export function WerkerStartWizard({
   if (gesloten) return null;
 
   return (
+    <>
+    {/* geen stap maar een melding (13 nov): het e-mailadres bevestigen telt niet mee in "stap n van 5", de poort eist het ook niet */}
+    {!emailVerified && (
+      <div role="status" className="mb-4 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
+        <p className="font-semibold text-ink">{t.emailStep}</p>
+        <p className="mt-0.5">{t.emailBody}</p>
+        <Link href="/verifieer-email" className="mt-1 inline-flex min-h-[44px] items-center font-semibold text-brand-600 underline underline-offset-4 hover:text-brand-700">
+          {t.emailCta} <span aria-hidden>›</span>
+        </Link>
+      </div>
+    )}
     <section className="mb-6 overflow-hidden rounded-2xl border border-hair bg-white shadow-sm" aria-labelledby="werker-start-titel">
       <div className="relative bg-gradient-to-br from-brand-700 via-brand-700 to-brand-500 px-5 pb-8 pt-5 text-white">
         {!poort && (
@@ -174,7 +186,9 @@ export function WerkerStartWizard({
         )}
         <p className="text-xs font-semibold uppercase tracking-wide text-white/70">{t.eyebrow}</p>
         <h2 id="werker-start-titel" className="mt-1 pr-10 font-display text-2xl font-bold leading-tight">{t.laatWeten}</h2>
-        <p className="mt-1 text-sm text-white/85" role="status">{nogStappenTekst(aantal, t, ft.intl)}</p>
+        <p className="mt-1 text-sm text-white/85" role="status">
+          {stap ? `${vulIn(t.stapVan, { n: stap.n, totaal: stap.totaal })}: ${label[stap.sleutel]}` : t.alleKlaar}
+        </p>
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/20" role="progressbar" aria-label={t.progress.replace("{done}", String(completed)).replace("{total}", String(ORDER.length))} aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
           <div className="h-full rounded-full bg-white transition-all" style={{ width: `${pct}%` }} />
         </div>
@@ -361,5 +375,6 @@ export function WerkerStartWizard({
       )}
       <p className="border-t border-hair bg-paper-soft px-5 py-3 text-center text-xs text-neutralx-500">{poort ? t.afsluiting : t.browse}</p>
     </section>
+    </>
   );
 }

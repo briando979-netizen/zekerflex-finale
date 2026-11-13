@@ -5,12 +5,15 @@
 // de server (lib/fiscal/eligibility.ts, lib/werkrecht).
 // ---------------------------------------------------------------------------
 
+import { POORT_STAPPEN } from "@/lib/onboarding/werker-poort";
+
 export type TijdlijnSleutel = "kind" | "branches" | "email" | "gegevens" | "identiteit" | "foto" | "werkrecht" | "tweestap";
 
-// "werkrecht" staat sinds 10 nov niet meer in de start (eigenaar): het recht om te werken wordt vóór de
-// eerste betaalde klus gevraagd (lib/fiscal/eligibility.ts); met een EU-ID gaat het vanzelf.
-// "tweestap" sinds 12 nov ook niet (eigenaar: optioneel); de stappen tonen hem als aanbeveling (WerkerStartWizard).
-export const TIJDLIJN_VOLGORDE: TijdlijnSleutel[] = ["kind", "branches", "email", "gegevens", "identiteit", "foto"];
+// De stappen van de tijdlijn zijn die van de poort (POORT_STAPPEN in werker-poort.ts): één lijst, één teller "stap n van 5".
+// "email" is geen stap meer maar een gele melding (13 nov); "werkrecht" staat sinds 10 nov niet meer in de start (eigenaar):
+// het recht om te werken wordt vóór de eerste betaalde klus gevraagd (lib/fiscal/eligibility.ts); met een EU-ID gaat het
+// vanzelf. "tweestap" sinds 12 nov ook niet (eigenaar: optioneel); de stappen tonen hem als aanbeveling (WerkerStartWizard).
+export const TIJDLIJN_VOLGORDE: TijdlijnSleutel[] = POORT_STAPPEN.map((s) => s.sleutel);
 
 export type TijdlijnKlaar = Record<TijdlijnSleutel, boolean>;
 
@@ -36,6 +39,13 @@ export function aantalOpen(klaar: TijdlijnKlaar): number {
 
 export function volgendeStap(klaar: TijdlijnKlaar): TijdlijnSleutel | null {
   return TIJDLIJN_VOLGORDE.find((k) => !klaar[k]) ?? null;
+}
+
+/** "Stap 3 van 5": het nummer van de eerste open stap, en het aantal stappen; null als alles klaar is. */
+export function stapVanTotaal(klaar: TijdlijnKlaar): { n: number; totaal: number; sleutel: TijdlijnSleutel } | null {
+  const i = TIJDLIJN_VOLGORDE.findIndex((k) => !klaar[k]);
+  const sleutel = TIJDLIJN_VOLGORDE[i];
+  return i < 0 || !sleutel ? null : { n: i + 1, totaal: TIJDLIJN_VOLGORDE.length, sleutel };
 }
 
 /**
