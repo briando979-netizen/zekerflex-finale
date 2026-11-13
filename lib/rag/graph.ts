@@ -1,9 +1,38 @@
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { kvDeleteStale, kvGet, kvListEntries, kvSet } from "@/lib/storage/kv";
+import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { corpus, type Passage } from "@/lib/rag/corpus";
 import { cosine } from "@/lib/rag/store";
 import { recall } from "@/lib/rag/recall";
-import { conceptenUit, hiaten, naarGraphML, pagerank, verbondenDelen, type Begrip, type GraafKnoop, type GraafLijn, type Hiaten } from "@/lib/rag/graph-analyse";
+import {
+  brugsuggesties,
+  buurt,
+  conceptenUit,
+  gemeenschappen,
+  graafCijfers,
+  hiaten,
+  kortstePad,
+  lijnSleutel,
+  modulariteit,
+  naarCSV,
+  naarDOT,
+  naarGraphML,
+  pagerank,
+  rapportMarkdown,
+  snapshotVerschil,
+  themaNaam,
+  tussenligging,
+  verbondenDelen,
+  type Begrip,
+  type Brugsuggestie,
+  type GraafCijfers,
+  type GraafKnoop,
+  type GraafLijn,
+  type Hiaten,
+  type Snapshot,
+  type SnapshotVerschil,
+} from "@/lib/rag/graph-analyse";
 
 // ---------------------------------------------------------------------------
 // De Kennisgraaf: het brein van ZekerFlex als netwerk. Elke knoop is een document
@@ -13,10 +42,13 @@ import { conceptenUit, hiaten, naarGraphML, pagerank, verbondenDelen, type Begri
 //   semantisch  — de echte embeddings uit de RagChunk-index (nomic, 768 dim),
 //                 gemiddeld per document, als die er zijn
 //   begrip      — een begrip (TF-IDF) hangt aan de documenten waarin het zwaar weegt
-// Erbij: clusters, PageRank (welk document is het meest centraal), hiaten, een
-// detail per knoop en het denkpad van een vraag (welke knopen het brein pakt).
-// De corpusgraaf komt uit de code en werkt op elke uitrol; de semantische laag
-// komt uit de database en valt stil weg als de index er niet is.
+// Erbij: clusters (samenhangende delen), thema's (gemeenschappen), PageRank (het
+// meest centrale document), bruggen (tussenligging), netwerkcijfers, hiaten en
+// ontbrekende schakels, een detail per knoop, de buurt, het kortste pad tussen
+// twee knopen, het denkpad van een vraag, exports (GraphML, DOT, CSV, rapport)
+// en nachtelijke momentopnamen (groei). De corpusgraaf komt uit de code en werkt
+// op elke uitrol; de semantische laag komt uit de database en valt stil weg als
+// de index er niet is.
 // ---------------------------------------------------------------------------
 
 export type GraphNode = GraafKnoop;
@@ -35,12 +67,40 @@ export interface Cluster {
   groepen: Record<string, number>;
 }
 
+export interface Thema {
+  /** 1-based; staat ook als `thema` op elke knoop */
+  id: number;
+  /** de drie begrippen die het thema dragen, met een · ertussen */
+  naam: string;
+  begrippen: string[];
+  grootte: number;
+  kern: { id: string; label: string }[];
+  groepen: Record<string, number>;
+  leden: string[];
+}
+
+export interface Centraal {
+  id: string;
+  label: string;
+  group: string;
+  score: number;
+}
+
 export interface Kennisgraaf extends KnowledgeGraphData {
   begrippen: Begrip[];
   clusters: Cluster[];
+  themas: Thema[];
+  /** modulariteit van de thema-indeling (0 = toeval, ≥ 0,3 = duidelijke structuur) */
+  modulariteit: number;
   /** de meest centrale documenten (PageRank × 1000) */
-  centraal: { id: string; label: string; group: string; score: number }[];
+  centraal: Centraal[];
+  /** de bruggen: documenten op de meeste kortste paden (tussenligging × 1000) */
+  bruggen: Centraal[];
+  /** per document de centraliteit (c) en tussenligging (b), genormaliseerd op 0–1: de groottestand van de grafiek */
+  maten: Record<string, { c: number; b: number }>;
+  cijfers: GraafCijfers;
   hiaten: Hiaten;
+  brugsuggesties: { begrip: string; themas: number[]; docs: { id: string; label: string }[] }[];
   /** passages per publiek */
   publiek: Record<string, number>;
   /** chunks in het geheugen (RagChunk) per bron; leeg zonder index */
@@ -149,8 +209,6 @@ export function documenten(): Map<string, Doc> {
   return docs;
 }
 
-const key = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
-
 /** Per document de sterkste lijnen (woordoverlap, plus de semantische score als die er is). */
 function lijnenTussen(entries: Doc[], vectoren: Map<string, number[]>): GraphEdge[] {
   const picked = new Map<string, GraphEdge>();
@@ -170,7 +228,7 @@ function lijnenTussen(entries: Doc[], vectoren: Map<string, number[]>): GraphEdg
     }
     scored.sort((x, y) => y.w - x.w);
     for (const { j, w, soort } of scored.slice(0, TOP_PER_NODE)) {
-      const k = key(a.node.id, entries[j]!.node.id);
+      const k = lijnSleutel(a.node.id, entries[j]!.node.id);
       const bestaand = picked.get(k);
       if (!bestaand || bestaand.weight < w) picked.set(k, { source: a.node.id, target: entries[j]!.node.id, weight: Math.round(w * 100) / 100, soort });
     }
@@ -182,7 +240,7 @@ function lijnenTussen(entries: Doc[], vectoren: Map<string, number[]>): GraphEdg
 export function knowledgeGraph(): KnowledgeGraphData {
   const entries = [...documenten().values()];
   return {
-    nodes: entries.map((e) => e.node).sort((a, b) => b.size - a.size),
+    nodes: entries.map((e) => ({ ...e.node })).sort((a, b) => b.size - a.size),
     edges: lijnenTussen(entries, new Map()),
   };
 }
@@ -242,38 +300,89 @@ export async function kennisgraaf(vers = false): Promise<Kennisgraaf> {
   const docLijnen = lijnenTussen(entries, vectoren);
 
   const begrippen = conceptenUit(entries.map((e) => ({ id: e.node.id, text: e.text })), 40, 8);
-  const begripKnopen: GraphNode[] = begrippen.map((b) => ({ id: b.id, label: b.label, group: "begrip", size: b.docs.length }));
   const begripLijnen: GraphEdge[] = begrippen.flatMap((b) => b.docs.map((d) => ({ source: b.id, target: d.docId, weight: Math.min(1, d.gewicht * 10), soort: "begrip" as const })));
 
   const docIds = entries.map((e) => e.node.id);
   const pr = pagerank(docIds, docLijnen);
+  const tussen = tussenligging(docIds, docLijnen);
   const labelVan = (id: string) => docs.get(id)?.node.label ?? id;
-  const clusters: Cluster[] = verbondenDelen(docIds, docLijnen).map((deel, i) => {
+  const groepenVan = (deel: readonly string[]) => {
     const groepen: Record<string, number> = {};
     for (const id of deel) {
       const gr = docs.get(id)?.node.group ?? "overig";
       groepen[gr] = (groepen[gr] ?? 0) + 1;
     }
-    const kern = [...deel].sort((a, b) => (pr.get(b) ?? 0) - (pr.get(a) ?? 0)).slice(0, 3).map((id) => ({ id, label: labelVan(id) }));
-    return { id: i + 1, grootte: deel.length, kern, groepen };
+    return groepen;
+  };
+  const kernVan = (deel: readonly string[]) => [...deel].sort((a, b) => (pr.get(b) ?? 0) - (pr.get(a) ?? 0)).slice(0, 3).map((id) => ({ id, label: labelVan(id) }));
+
+  const clusters: Cluster[] = verbondenDelen(docIds, docLijnen).map((deel, i) => ({ id: i + 1, grootte: deel.length, kern: kernVan(deel), groepen: groepenVan(deel) }));
+
+  // thema's: gemeenschappen in de documentgraaf, met een naam uit hun begrippen
+  const delen = gemeenschappen(docIds, docLijnen);
+  const themaVan = new Map<string, number>();
+  const themas: Thema[] = delen.map((leden, i) => {
+    for (const id of leden) themaVan.set(id, i + 1);
+    const naamDelen = themaNaam(leden, begrippen, 3);
+    return {
+      id: i + 1,
+      naam: naamDelen.length > 0 ? naamDelen.join(" · ") : labelVan(kernVan(leden)[0]?.id ?? leden[0] ?? ""),
+      begrippen: naamDelen,
+      grootte: leden.length,
+      kern: kernVan(leden),
+      groepen: groepenVan(leden),
+      leden,
+    };
   });
-  const centraal = [...pr]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
-    .map(([id, s]) => ({ id, label: labelVan(id), group: docs.get(id)?.node.group ?? "overig", score: Math.round(s * 1000) }));
+  const begripKnopen: GraphNode[] = begrippen.map((b) => {
+    // het thema waar de meeste documenten van het begrip in zitten
+    const telling = new Map<number, number>();
+    for (const d of b.docs) {
+      const t = themaVan.get(d.docId);
+      if (t !== undefined) telling.set(t, (telling.get(t) ?? 0) + 1);
+    }
+    const thema = [...telling].sort((x, y) => y[1] - x[1] || x[0] - y[0])[0]?.[0];
+    return { id: b.id, label: b.label, group: "begrip", size: b.docs.length, ...(thema !== undefined ? { thema } : {}) };
+  });
+
+  const scoreLijst = (m: Map<string, number>, n: number): Centraal[] =>
+    [...m]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, n)
+      .map(([id, s]) => ({ id, label: labelVan(id), group: docs.get(id)?.node.group ?? "overig", score: Math.round(s * 1000) }));
+  const centraal = scoreLijst(pr, 10);
+  const bruggen = scoreLijst(tussen, 10).filter((b) => b.score > 0);
+  const maxPr = Math.max(...pr.values(), 1e-9);
+  const maxTussen = Math.max(...tussen.values(), 1e-9);
+  const maten: Record<string, { c: number; b: number }> = {};
+  for (const id of docIds) maten[id] = { c: Math.round(((pr.get(id) ?? 0) / maxPr) * 1000) / 1000, b: Math.round(((tussen.get(id) ?? 0) / maxTussen) * 1000) / 1000 };
 
   const publiek: Record<string, number> = {};
   for (const p of corpus()) for (const a of p.audience) publiek[a] = (publiek[a] ?? 0) + 1;
 
-  const nodes = [...entries.map((e) => e.node).sort((a, b) => b.size - a.size), ...begripKnopen];
+  const nodes: GraphNode[] = [
+    ...entries
+      .map((e) => {
+        const thema = themaVan.get(e.node.id);
+        return { ...e.node, ...(thema !== undefined ? { thema } : {}) };
+      })
+      .sort((a, b) => b.size - a.size),
+    ...begripKnopen,
+  ];
   const edges = [...docLijnen, ...begripLijnen];
   const data: Kennisgraaf = {
     nodes,
     edges,
     begrippen,
     clusters,
+    themas,
+    modulariteit: modulariteit(docIds, docLijnen, delen),
     centraal,
+    bruggen,
+    maten,
+    cijfers: graafCijfers(docIds, docLijnen),
     hiaten: hiaten(nodes, edges, begrippen),
+    brugsuggesties: brugsuggesties(delen, begrippen, docLijnen, 8).map((s) => ({ ...s, docs: s.docs.map((id) => ({ id, label: labelVan(id) })) })),
     publiek,
     geheugen: geheugenPerBron,
     semantisch: vectoren.size,
@@ -290,9 +399,13 @@ export interface KnoopDetail {
   buren: { id: string; label: string; group: string; weight: number; soort: GraphEdge["soort"] }[];
   begrippen: string[];
   publiek: string[];
+  /** het thema met zijn naam */
+  thema: { id: number; naam: string } | null;
+  /** centraliteit (PageRank × 1000) en tussenligging (× 1000) van een document */
+  scores: { centraal: number; brug: number } | null;
 }
 
-/** Alles over één knoop: passages, buren en begrippen. */
+/** Alles over één knoop: passages, buren, begrippen, thema en scores. */
 export async function knoopDetail(id: string): Promise<KnoopDetail | null> {
   const graaf = await kennisgraaf();
   const node = graaf.nodes.find((n) => n.id === id);
@@ -308,6 +421,8 @@ export async function knoopDetail(id: string): Promise<KnoopDetail | null> {
     .sort((a, b) => b.weight - a.weight)
     .slice(0, 12);
   const kort = (t: string) => (t.length > 320 ? `${t.slice(0, 320).trimEnd()}…` : t);
+  const thema = node.thema !== undefined ? (graaf.themas.find((t) => t.id === node.thema) ?? null) : null;
+  const themaKort = thema ? { id: thema.id, naam: thema.naam } : null;
   if (node.group === "begrip") {
     const begrip = graaf.begrippen.find((b) => b.id === id);
     const docs = documenten();
@@ -320,6 +435,8 @@ export async function knoopDetail(id: string): Promise<KnoopDetail | null> {
       buren,
       begrippen: [],
       publiek: [],
+      thema: themaKort,
+      scores: null,
     };
   }
   const doc = documenten().get(id);
@@ -329,7 +446,53 @@ export async function knoopDetail(id: string): Promise<KnoopDetail | null> {
     buren,
     begrippen: graaf.begrippen.filter((b) => b.docs.some((d) => d.docId === id)).map((b) => b.label),
     publiek: [...(doc?.audience ?? [])],
+    thema: themaKort,
+    scores: { centraal: graaf.centraal.find((c) => c.id === id)?.score ?? 0, brug: graaf.bruggen.find((c) => c.id === id)?.score ?? 0 },
   };
+}
+
+export interface Pad {
+  van: string;
+  naar: string;
+  /** de knopen onderweg, begin en eind meegerekend; leeg als er geen pad is */
+  knopen: { id: string; label: string; group: string }[];
+  /** de lijnen onderweg */
+  lijnen: GraphEdge[];
+}
+
+/** Het kortste pad tussen twee knopen, over alle lijnen (ook via begrippen). */
+export async function padTussen(van: string, naar: string): Promise<Pad> {
+  const graaf = await kennisgraaf();
+  const byId = new Map(graaf.nodes.map((n) => [n.id, n]));
+  const ids = kortstePad(
+    graaf.nodes.map((n) => n.id),
+    graaf.edges,
+    van,
+    naar,
+  );
+  if (!ids) return { van, naar, knopen: [], lijnen: [] };
+  const lijnen: GraphEdge[] = [];
+  for (let i = 1; i < ids.length; i++) {
+    const k = lijnSleutel(ids[i - 1]!, ids[i]!);
+    const l = graaf.edges.find((e) => lijnSleutel(e.source, e.target) === k);
+    if (l) lijnen.push(l);
+  }
+  return {
+    van,
+    naar,
+    knopen: ids.map((id) => {
+      const n = byId.get(id);
+      return { id, label: n?.label ?? id, group: n?.group ?? "overig" };
+    }),
+    lijnen,
+  };
+}
+
+/** De buurt van een knoop (alles binnen `diepte` stappen, 1 of 2), voor de focusstand. */
+export async function buurtVan(id: string, diepte: number): Promise<{ id: string; diepte: number; knopen: string[] }> {
+  const graaf = await kennisgraaf();
+  const d = diepte >= 2 ? 2 : 1;
+  return { id, diepte: d, knopen: buurt(graaf.nodes.map((n) => n.id), graaf.edges, id, d) };
 }
 
 export interface Denkpad {
@@ -362,7 +525,97 @@ export async function denkpad(vraag: string): Promise<Denkpad> {
   };
 }
 
+// --- exports ----------------------------------------------------------------
+
 export async function kennisgraafGraphML(): Promise<string> {
   const g2 = await kennisgraaf();
   return naarGraphML(g2.nodes, g2.edges);
 }
+
+export async function kennisgraafDOT(): Promise<string> {
+  const g2 = await kennisgraaf();
+  return naarDOT(g2.nodes, g2.edges);
+}
+
+export async function kennisgraafCSV(): Promise<{ knopen: string; lijnen: string }> {
+  const g2 = await kennisgraaf();
+  return naarCSV(g2.nodes, g2.edges);
+}
+
+/** Het rapport voor de eigenaar (Markdown), met de groei uit de momentopnamen. */
+export async function kennisgraafRapport(): Promise<string> {
+  const [g2, gr] = await Promise.all([kennisgraaf(), groei()]);
+  const labelVan = (id: string) => g2.nodes.find((n) => n.id === id)?.label ?? id;
+  return rapportMarkdown({
+    op: g2.op,
+    cijfers: g2.cijfers,
+    begrippen: g2.begrippen.length,
+    semantisch: g2.semantisch,
+    modulariteit: g2.modulariteit,
+    themas: g2.themas.map((t) => ({ id: t.id, naam: t.naam, grootte: t.grootte, kern: t.kern.map((k) => k.label) })),
+    centraal: g2.centraal.map((c) => ({ label: c.label, score: c.score })),
+    bruggen: g2.bruggen.map((c) => ({ label: c.label, score: c.score })),
+    hiaten: { los: g2.hiaten.los.map(labelVan), eilandjes: g2.hiaten.eilandjes.map((e) => e.map(labelVan)), dunneBegrippen: g2.hiaten.dunneBegrippen },
+    brugsuggesties: g2.brugsuggesties.map((s) => ({ begrip: s.begrip, themas: s.themas })),
+    groei: gr.reeks.map((r) => ({ dag: r.dag, documenten: r.documenten, lijnen: r.lijnen })),
+  });
+}
+
+// --- momentopnamen (groei) --------------------------------------------------
+// Eén sleutel per Amsterdamse dag, geen persoonsgegevens: alleen knoop-id's, lijnsleutels en aantallen. De cron
+// (/api/internal/kennisgraaf/snapshot, na de RAG-herindexering) schrijft hem; ouder dan 120 dagen gaat weg.
+
+export const SNAPSHOT_PREFIX = "kennisgraaf:snapshot:";
+const SNAPSHOT_BEWAREN_DAGEN = 120;
+
+export async function bewaarSnapshot(nu: Date = new Date()): Promise<Snapshot> {
+  const g2 = await kennisgraaf(true);
+  const snap: Snapshot = {
+    op: nu.toISOString(),
+    knopen: g2.nodes.map((n) => n.id).sort(),
+    lijnen: g2.edges.filter((e) => e.soort !== "begrip").map((e) => lijnSleutel(e.source, e.target)).sort(),
+    cijfers: {
+      documenten: g2.nodes.filter((n) => n.group !== "begrip").length,
+      begrippen: g2.begrippen.length,
+      lijnen: g2.edges.filter((e) => e.soort !== "begrip").length,
+      semantisch: g2.semantisch,
+      themas: g2.themas.length,
+      los: g2.hiaten.los.length,
+    },
+  };
+  await kvSet(`${SNAPSHOT_PREFIX}${amsterdamDayKey(nu)}`, snap);
+  await kvDeleteStale(SNAPSHOT_PREFIX, new Date(nu.getTime() - SNAPSHOT_BEWAREN_DAGEN * 86_400_000)).catch(() => 0);
+  return snap;
+}
+
+export interface Groei {
+  reeks: { dag: string; documenten: number; begrippen: number; lijnen: number; semantisch: number; themas: number; los: number }[];
+  /** wat er sinds de vorige momentopname bijkwam en wegviel; null met minder dan twee opnamen */
+  verschil: SnapshotVerschil | null;
+  /** de dag van de laatste momentopname */
+  laatste: string | null;
+}
+
+/** De reeks momentopnamen (oudste eerst) en het verschil tussen de laatste twee. Een storing geeft een lege reeks. */
+export async function groei(max = 60): Promise<Groei> {
+  const rijen = await kvListEntries<Snapshot>(SNAPSHOT_PREFIX, 400).catch(() => []);
+  const geldig = rijen
+    .filter((r) => r.value && Array.isArray(r.value.knopen) && r.value.cijfers)
+    .map((r) => ({ dag: r.key.slice(SNAPSHOT_PREFIX.length), snap: r.value }))
+    .sort((a, b) => a.dag.localeCompare(b.dag))
+    .slice(-max);
+  const laatste = geldig[geldig.length - 1];
+  const vorige = geldig[geldig.length - 2];
+  return {
+    reeks: geldig.map((r) => ({ dag: r.dag, ...r.snap.cijfers })),
+    verschil: laatste && vorige ? snapshotVerschil(vorige.snap, laatste.snap) : null,
+    laatste: laatste?.dag ?? null,
+  };
+}
+
+/** Voor het lezen van één momentopname (tests en beheer). */
+export async function leesSnapshot(dag: string): Promise<Snapshot | null> {
+  return kvGet<Snapshot>(`${SNAPSHOT_PREFIX}${dag}`).catch(() => null);
+}
+
+export type { Brugsuggestie, Snapshot, SnapshotVerschil };
