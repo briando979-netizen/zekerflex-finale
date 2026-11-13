@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n/config";
+import { basisLocale, type BasisLocale, type Locale } from "@/lib/i18n/config";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
 
@@ -112,7 +112,7 @@ export interface WorkerPushTexts {
   newMessage: string;
 }
 
-export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
+export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
   nl: {
     hours: "uur",
     approvedTitle: "✅ Je uren zijn goedgekeurd",
@@ -583,13 +583,13 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
 /** "do 5/11 19:00" in the worker's language, Dutch time (short, for offers). */
 export function pushDay(locale: Locale, d: Date): string {
   const p = amsterdamParts(d);
-  return `${FREELANCER_DICTS[locale].date.wd[p.weekday] ?? ""} ${p.day}/${p.month} ${amsterdamClock(d)}`;
+  return `${FREELANCER_DICTS[basisLocale(locale)].date.wd[p.weekday] ?? ""} ${p.day}/${p.month} ${amsterdamClock(d)}`;
 }
 
 /** "5 nov 09:00" in the worker's language, Dutch time. */
 export function pushDayMonth(locale: Locale, d: Date): string {
   const p = amsterdamParts(d);
-  return `${p.day} ${FREELANCER_DICTS[locale].date.mon[p.month - 1] ?? ""} ${amsterdamClock(d)}`;
+  return `${p.day} ${FREELANCER_DICTS[basisLocale(locale)].date.mon[p.month - 1] ?? ""} ${amsterdamClock(d)}`;
 }
 
 /** "€ 19,00/u" with the worker's own per-hour unit. */
@@ -599,7 +599,7 @@ export function pushRate(t: WorkerPushTexts, cents: number): string {
 
 /** "do 5 nov 09:00–17:00" in the worker's language, Dutch time. */
 export function pushWhen(locale: Locale, w: { startsAt: Date; endsAt: Date }): string {
-  const d = FREELANCER_DICTS[locale].date;
+  const d = FREELANCER_DICTS[basisLocale(locale)].date;
   const p = amsterdamParts(w.startsAt);
   return `${d.wd[p.weekday] ?? ""} ${p.day} ${d.mon[p.month - 1] ?? ""} ${amsterdamClock(w.startsAt)}–${amsterdamClock(w.endsAt)}`;
 }
