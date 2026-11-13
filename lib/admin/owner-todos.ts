@@ -33,6 +33,7 @@ import { pasdienstTodo } from "@/lib/admin/todo-pasdienst";
 import { pasdienstInfo } from "@/lib/shop/pasdienst";
 import { alpacaSleutelInfo } from "@/lib/trader/alpaca";
 import { featureEnabled } from "@/lib/flags";
+import { getGratisStand } from "@/lib/ai/gratis";
 import { WISSEL_VERWIJZING, betalenUitEerst, betalenUitVoorzin, webhookHandtekeningStand } from "@/lib/admin/todo-stripe-wissel";
 import type { Eerst } from "@/lib/admin/te-doen-eerst";
 import { kvkTegoedTodo } from "@/lib/admin/todo-kvk-tegoed";
@@ -142,6 +143,28 @@ async function googleDnsVerified(base: string): Promise<boolean> {
   }
 }
 
+/**
+ * Het DMARC-record van het hoofddomein (_dmarc.<domein>, TXT "v=DMARC1; p=…"): het beleid, of null als het er niet
+ * staat. Microsoft (Hotmail, Outlook) kijkt er streng naar; de meldingen van SNDS/JMRP kan de lijst niet zien.
+ */
+async function dmarcBeleid(base: string): Promise<string | null> {
+  let host = "";
+  try {
+    host = new URL(base).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+  if (!host.includes(".")) return null;
+  try {
+    const records = await new Resolver({ timeout: 2500, tries: 1 }).resolveTxt(`_dmarc.${host}`);
+    const dmarc = records.map((r) => r.join("")).find((r) => /^v=DMARC1/i.test(r.trim()));
+    if (!dmarc) return null;
+    return /\bp=([a-z]+)/i.exec(dmarc)?.[1]?.toLowerCase() ?? "none";
+  } catch {
+    return null;
+  }
+}
+
 /** Throwaway accounts from the October login diagnosis (zf-…@example.com); null = couldn't count. */
 async function testAccountCount(): Promise<number | null> {
   try {
@@ -237,7 +260,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     bouwerInstellingen().catch(() => null),
     unsentProposals(),
   ]);
-  const [beeldGelukt, beeldSlot] = await Promise.all([geminiBeeldGelukt(), geminiSlot("beeld")]);
+  const [beeldGelukt, beeldSlot, dmarc, gratis] = await Promise.all([geminiBeeldGelukt(), geminiSlot("beeld"), dmarcBeleid(base), getGratisStand().catch(() => null)]);
   // de kennisbank (lib/kennisbank/outline.ts): staat de API-sleutel erin en is hij gevuld?
   const kennisbank = await import("@/lib/kennisbank/outline").then((m) => m.leesStand()).catch(() => null);
   // de overheidscertificaten voor het chiplezen (lib/kyc/chip/csca.ts)
@@ -303,12 +326,15 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
         "Test in Admin → Video-editor → AI met één foto. Uitrollen is niet nodig; dit punt vinkt zichzelf af zodra er een foto gelukt is.",
       ],
       auto: true,
-      done: env.IMAGE_ENABLED || Boolean(beeldGelukt && !beeldSlot),
+      // "alles gratis" (Admin → Alles gratis, keuze eigenaar 6 nov): dan betalen we niets aan Google en is dit geen taak meer
+      done: env.IMAGE_ENABLED || Boolean(beeldGelukt && !beeldSlot) || Boolean(gratis?.aan),
       doneNote: env.IMAGE_ENABLED
         ? "eigen beeldserver gekoppeld"
         : beeldGelukt && !beeldSlot
           ? `laatste AI-foto gelukt op ${new Date(beeldGelukt).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}`
-          : "nog niet: Google geeft deze sleutel geen beeldtegoed (gratis laag)",
+          : gratis?.aan
+            ? "niet nodig: 'alles gratis' staat aan (keuze 6 nov); de gratis bronnen staan in de taak hieronder"
+            : "nog niet: Google geeft deze sleutel geen beeldtegoed (gratis laag)",
     },
     {
       id: "gratis-ai-bronnen",
@@ -633,9 +659,11 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
         "Meld het verzendende adres aan bij Microsoft SNDS (sendersupport.olc.protection.outlook.com/snds) en JMRP (sendersupport.olc.protection.outlook.com/pm/junk-mail-reporting-program.aspx). Beide zijn gratis en tonen of Microsoft onze mail als spam ziet.",
         "Kom je er niet uit: zeg het tegen Claude. Die controleert daarna het DMARC-record en de aflevering.",
       ],
-      auto: false,
-      eerst: { reden: "bezorging" },
-      ...m("mail-microsoft"),
+      auto: true,
+      done: dmarc !== null || Boolean(manual["mail-microsoft"]),
+      ...(dmarc !== null
+        ? { doneNote: `DMARC staat (p=${dmarc}); of SNDS en JMRP zijn aangemeld kan deze lijst niet zien${dmarc === "none" ? "; na een paar weken zonder problemen p=quarantine" : ""}` }
+        : { eerst: { reden: "bezorging" }, ...m("mail-microsoft") }),
     },
     {
       id: "search-console",
@@ -709,10 +737,12 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       id: "map-3d",
       group: "Vindbaarheid & app",
       title: "Kiezen waar de 3D-kaart van open diensten komt",
-      why: "De 3D-kaart (vraag en aanbod per regio) staat klaar op zekerflex.com/open-diensten/3d, maar is nog verborgen voor Google en nergens gelinkt. Zonder jouw akkoord komt hij niet op de homepage.",
-      how: ["Bekijk zekerflex.com/open-diensten/3d op je telefoon en op een computer.", "Zeg Claude waar hij mag komen: op de homepage, op de pagina Open diensten, of nog nergens."],
-      auto: false,
-      ...m("map-3d"),
+      why: "De 3D-kaart (vraag en aanbod per regio) staat op zekerflex.com/open-diensten/3d en is gelinkt vanaf de pagina Open diensten ('Bekijk vraag en aanbod in 3D'). Op de homepage komt hij alleen na jouw ja.",
+      how: ["Wil je hem ook op de homepage? Zeg het tegen Claude.", "Bekijk zekerflex.com/open-diensten/3d op je telefoon en op een computer als je hem nog niet zag."],
+      // achterhaald (13 nov): de keuze is gemaakt, de kaart staat op de pagina Open diensten (app/(marketing)/open-diensten/page.tsx)
+      auto: true,
+      done: true,
+      doneNote: "staat op de pagina Open diensten; homepage alleen op verzoek",
     },
     {
       id: "homepage-meta",
@@ -744,8 +774,10 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
         "Play Console → Instellingen → App-integriteit: kopieer de SHA-256 van de 'App-ondertekeningssleutel' en geef hem aan Claude; die moet in /.well-known/assetlinks.json zodat de app zonder adresbalk opent.",
         "Zet KEYSTORE-CREDENTIALS.txt en android-release.keystore (map android-twa) ook in je wachtwoordmanager: zonder die sleutel kun je de app nooit meer bijwerken.",
       ],
-      auto: false,
-      ...m("play-store-app"),
+      // achterhaald (13 nov): versie 1.0.5 vervangt 1.0.3; de stappen staan bij de taak 'app-105'
+      auto: true,
+      done: true,
+      doneNote: "vervangen door de taak voor app 1.0.5 (hieronder)",
     },
     {
       id: "app-105",
@@ -1371,6 +1403,22 @@ export async function setManualDone(id: string, done: boolean, by: string): Prom
 
 export async function customTodos(): Promise<CustomTodo[]> {
   return (await kvGet<CustomTodo[]>("owner-todos:custom")) ?? [];
+}
+
+/**
+ * Notities met precies dezelfde tekst (de orchestratie zette op 21, 27 okt en 1 nov dezelfde investering meerdere keren
+ * neer): de id's van alle exemplaren behalve het oudste, zodat de eigenaar ze weg kan doen. Puur; verwijdert niets.
+ */
+export function dubbeleNotities(lijst: readonly CustomTodo[]): string[] {
+  const eerste = new Map<string, CustomTodo>();
+  const dubbel: string[] = [];
+  for (const t of [...lijst].sort((a, b) => a.at.localeCompare(b.at))) {
+    const sleutel = t.text.replace(/\s+/g, " ").trim().toLowerCase();
+    const bestaand = eerste.get(sleutel);
+    if (bestaand) dubbel.push(t.id);
+    else eerste.set(sleutel, t);
+  }
+  return dubbel;
 }
 
 export async function addCustom(text: string): Promise<CustomTodo[]> {
