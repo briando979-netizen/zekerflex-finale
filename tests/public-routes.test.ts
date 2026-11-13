@@ -56,6 +56,8 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/id-overdracht/klaar",
     "/api/id-overdracht/document-live", // de camera op de telefoon meet het kader live (code in de body, IP-begrensd)
     "/api/whatsapp/inkomend",
+    "/api/telephony/gather", // Twilio; elke telefonieroute controleert X-Twilio-Signature
+    "/api/telephony/gather/vervolg", // Twilio komt hier na "een ogenblik" (<Redirect>), zelfde handtekening
     "/api/orgs/org_babycare/photo",
     "/api/sites/domein-check", // Caddy's on-demand TLS ask
     "/api/media/youtube/dQw4w9WgXcQ", // our copy of a YouTube thumbnail

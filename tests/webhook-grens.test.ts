@@ -93,6 +93,13 @@ describe("Twilio: te groot is 422, een ondertekende body werkt nog", () => {
     expect(res.status).toBe(403);
     expect(antwoordOpSpoed).not.toHaveBeenCalled();
   });
+
+  it("de vervolgaanvraag na 'een ogenblik' controleert de handtekening net als gather", async () => {
+    const res = await vervolg(post("http://app:3000/api/telephony/gather/vervolg?callId=c1", { headers: { "x-twilio-signature": "fout" }, body: "CallSid=CA1" }));
+    expect(res.status).toBe(403);
+    const zonder = await vervolg(post("http://app:3000/api/telephony/gather/vervolg?callId=c1", { body: "CallSid=CA1" }));
+    expect(zonder.status).toBe(403);
+  });
 });
 
 describe("WhatsApp-brug", () => {

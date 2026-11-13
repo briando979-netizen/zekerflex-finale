@@ -89,11 +89,19 @@ type Wachtend = { antwoord: Promise<string | null>; at: number };
 const g = globalThis as typeof globalThis & { __zfBelAntwoorden?: Map<string, Wachtend> };
 const wachtend = (): Map<string, Wachtend> => (g.__zfBelAntwoorden ??= new Map());
 
-/** Zet een antwoord klaar voor de vervolgaanvraag. Oude (de beller hing op) gaan weg. */
+/**
+ * Zet een antwoord klaar voor de vervolgaanvraag. Alleen in het geheugen (niet in KV) en hooguit BEWAAR_MS: hangt de
+ * beller op tijdens het wachten, dan gaat het vanzelf weg. Er staat geen nummer in, alleen het antwoord van het model.
+ */
 export function parkeer(callId: string, antwoord: Promise<string | null>, nu = Date.now()): void {
   const m = wachtend();
   for (const [k, v] of m) if (nu - v.at > BEWAAR_MS) m.delete(k);
-  m.set(callId, { antwoord, at: nu });
+  const w: Wachtend = { antwoord, at: nu };
+  m.set(callId, w);
+  const klok = setTimeout(() => {
+    if (m.get(callId) === w) m.delete(callId);
+  }, BEWAAR_MS);
+  (klok as { unref?: () => void }).unref?.();
 }
 
 /** Het klaargezette antwoord, één keer. Null als er niets klaarstaat (bv. na een herstart). */
