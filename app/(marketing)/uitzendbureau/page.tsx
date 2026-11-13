@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { Fragment, type ReactNode } from "react";
+import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
+import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
 import { ldJson } from "@/lib/seo/json-ld";
 import { prisma } from "@/lib/prisma";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
@@ -175,27 +178,10 @@ export default async function UitzendbureauPage() {
     })
     .catch(() => 0);
 
-  return (
-    <>
-      <script
-        type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{
-          __html: ldJson({
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            mainEntity: FAQ.map((f) => ({
-              "@type": "Question",
-              name: f.q,
-              acceptedAnswer: { "@type": "Answer", text: f.a },
-            })),
-          }),
-        }}
-      />
-
-      <UitzendJobBoard openCount={openCount} />
-
-      {/* Drie pijlers */}
+  // de onderdelen onder de kop: volgorde en zichtbaarheid uit de Site-ontwerper (Pagina's); zonder eigen indeling exact de standaard
+  const onderdelen: Record<string, ReactNode> = {
+    // Drie pijlers
+    pijlers: (
       <Section tone="paper">
         <SectionHead
           eyebrow="Waarom uitzendklussen"
@@ -210,8 +196,9 @@ export default async function UitzendbureauPage() {
           ))}
         </div>
       </Section>
-
-      {/* Wat kun je verwachten */}
+    ),
+    // Wat kun je verwachten
+    verwachtingen: (
       <Section tone="soft">
         <div id="verwachtingen" className="scroll-mt-24">
           <SectionHead
@@ -229,8 +216,9 @@ export default async function UitzendbureauPage() {
           ))}
         </div>
       </Section>
-
-      {/* In 4 stappen */}
+    ),
+    // In 4 stappen
+    stappen: (
       <Section tone="paper">
         <SectionHead
           eyebrow="Zo begin je"
@@ -250,8 +238,9 @@ export default async function UitzendbureauPage() {
           ))}
         </ol>
       </Section>
-
-      {/* Fasensysteem */}
+    ),
+    // Fasensysteem
+    fasen: (
       <Section tone="soft">
         <div id="fasen" className="scroll-mt-24" />
         <SectionHead
@@ -275,8 +264,9 @@ export default async function UitzendbureauPage() {
           rechten staan altijd actueel in je dashboard.
         </p>
       </Section>
-
-      {/* Testimonial */}
+    ),
+    // Testimonial
+    ervaring: (
       <Section tone="ink">
         <figure className="mx-auto max-w-2xl text-center">
           <blockquote className="font-display text-2xl font-semibold leading-snug text-white md:text-[1.7rem]">
@@ -287,8 +277,9 @@ export default async function UitzendbureauPage() {
           <figcaption className="mt-5 text-sm text-white/60">Anne · uitzendkracht in de horeca</figcaption>
         </figure>
       </Section>
-
-      {/* Drie routes */}
+    ),
+    // Drie routes
+    routes: (
       <Section tone="paper">
         <div id="routes" className="scroll-mt-24" />
         <SectionHead
@@ -323,8 +314,9 @@ export default async function UitzendbureauPage() {
           ))}
         </div>
       </Section>
-
-      {/* Zo lees je alles terug */}
+    ),
+    // Zo lees je alles terug
+    verloning: (
       <Section tone="soft">
         <div id="verloning" className="scroll-mt-24" />
         <SectionHead
@@ -350,7 +342,8 @@ export default async function UitzendbureauPage() {
           ))}
         </div>
       </Section>
-
+    ),
+    werkgevers: (
       <Section>
         <div id="werkgevers" className="scroll-mt-24" />
         <div className="grid gap-10 lg:grid-cols-2 lg:items-start">
@@ -368,7 +361,8 @@ export default async function UitzendbureauPage() {
           <UitzendbureauContactForm />
         </div>
       </Section>
-
+    ),
+    faq: (
       <Section tone="paper">
         <div id="faq" className="scroll-mt-24" />
         <SectionHead eyebrow="Veelgestelde vragen" title="Alles over uitzendklussen" />
@@ -383,7 +377,8 @@ export default async function UitzendbureauPage() {
           .
         </p>
       </Section>
-
+    ),
+    slot: (
       <CtaBand
         title="Begin als uitzendkracht bij ZekerFlex"
         body="Aanmelden kost een paar minuten. Geen KVK nodig — wij regelen de rest."
@@ -392,6 +387,32 @@ export default async function UitzendbureauPage() {
         secondaryLabel="Bekijk alle werkvormen"
         secondaryHref="/voor-freelancers"
       />
+    ),
+  };
+  const zichtbaar = zichtbareSecties("uitzendbureau", await getPaginaIndeling("uitzendbureau"));
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{
+          __html: ldJson({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: FAQ.map((f) => ({
+              "@type": "Question",
+              name: f.q,
+              acceptedAnswer: { "@type": "Answer", text: f.a },
+            })),
+          }),
+        }}
+      />
+
+      <UitzendJobBoard openCount={openCount} />
+
+      {zichtbaar.map((id) => (
+        <Fragment key={id}>{onderdelen[id]}</Fragment>
+      ))}
     </>
   );
 }

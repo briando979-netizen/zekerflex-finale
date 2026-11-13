@@ -57,7 +57,7 @@ export const WEGWIJZER: WegwijzerRegel[] = [
     doel: { tab: "paginas" },
   },
   {
-    wat: "Een vaste pagina indelen (Voor bedrijven, Voor freelancers, Prijzen, Over ons)",
+    wat: "Een vaste pagina indelen (zoals Voor bedrijven, Prijzen of Uitzendbureau)",
     uitleg: "Kies de pagina en sleep de onderdelen onder de kop naar een andere plek, of verberg ze. Opslaan zet het meteen live.",
     doel: { tab: "paginas" },
   },

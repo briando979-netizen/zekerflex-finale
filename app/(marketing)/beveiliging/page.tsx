@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { Fragment, type ReactNode } from "react";
+import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
+import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
 import Link from "next/link";
 import { CtaBand, Section, SectionHead, Stat } from "@/components/marketing/primitives";
 import { beveiligingsCijfers } from "@/lib/ops/crowdsec";
@@ -108,34 +111,9 @@ export default async function BeveiligingPagina() {
     isPartOf: { "@type": "WebSite", name: SITE.name, url: SITE.url },
   };
 
-  return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: ldJson([pagina, breadcrumbJsonLd([["Home", "/"], [TITEL, "/beveiliging"]])]) }}
-      />
-
-      <div className="hero-ink text-white">
-        <div className="shell py-20 md:py-24">
-          <p className="eyebrow text-brand-mint">Beveiliging &amp; eigen servers</p>
-          <h1 className="mt-4 max-w-3xl text-balance font-display text-4xl font-bold leading-tight md:text-6xl">
-            Jouw gegevens staan op onze eigen server in Nederland
-          </h1>
-          <p className="mt-6 max-w-2xl text-lg text-white/70">
-            Geen Amerikaanse cloud, geen tussenpartijen. Hieronder lees je precies hoe we de site beschermen, wat we loggen en wat er
-            gebeurt als iemand probeert in te breken.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/privacy" className="btn-mint">
-              Privacybeleid
-            </Link>
-            <Link href="/status" className="btn-ghost-invert">
-              Systeemstatus
-            </Link>
-          </div>
-        </div>
-      </div>
-
+  // de onderdelen onder de kop: volgorde en zichtbaarheid uit de Site-ontwerper (Pagina's); zonder eigen indeling exact de standaard
+  const onderdelen: Record<string, ReactNode> = {
+    cijfers: (
       <Section tone="soft" id="cijfers">
         <SectionHead
           eyebrow="Live"
@@ -161,7 +139,8 @@ export default async function BeveiligingPagina() {
           en krijgt daar de adressen voor terug die elders al zijn betrapt. Bezoekers, klanten en flexwerkers komen daar nooit in voor.
         </p>
       </Section>
-
+    ),
+    maatregelen: (
       <Section tone="paper" id="zo-beveiligd">
         <SectionHead eyebrow="Zo is ZekerFlex beveiligd" title="Negen dingen die standaard geregeld zijn" />
         <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -173,7 +152,8 @@ export default async function BeveiligingPagina() {
           ))}
         </div>
       </Section>
-
+    ),
+    logboek: (
       <Section tone="soft" id="logboek">
         <SectionHead
           eyebrow="Open kaart"
@@ -214,7 +194,8 @@ export default async function BeveiligingPagina() {
           . Je gegevens opvragen of laten wissen kan vanuit je account.
         </p>
       </Section>
-
+    ),
+    melden: (
       <Section tone="paper" id="melden">
         <SectionHead
           eyebrow="Iets gevonden?"
@@ -230,7 +211,8 @@ export default async function BeveiligingPagina() {
           </Link>
         </div>
       </Section>
-
+    ),
+    slot: (
       <CtaBand
         title="Zo veilig is ook jouw website bij ZekerFlex"
         body="Elke website die we voor een klant bouwen draait op dezelfde server, achter dezelfde bescherming, zonder scripts van derden."
@@ -239,6 +221,40 @@ export default async function BeveiligingPagina() {
         secondaryHref="/aanbod"
         secondaryLabel="Het hele aanbod"
       />
+    ),
+  };
+  const zichtbaar = zichtbareSecties("beveiliging", await getPaginaIndeling("beveiliging"));
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: ldJson([pagina, breadcrumbJsonLd([["Home", "/"], [TITEL, "/beveiliging"]])]) }}
+      />
+
+      <div className="hero-ink text-white">
+        <div className="shell py-20 md:py-24">
+          <p className="eyebrow text-brand-mint">Beveiliging &amp; eigen servers</p>
+          <h1 className="mt-4 max-w-3xl text-balance font-display text-4xl font-bold leading-tight md:text-6xl">
+            Jouw gegevens staan op onze eigen server in Nederland
+          </h1>
+          <p className="mt-6 max-w-2xl text-lg text-white/70">
+            Geen Amerikaanse cloud, geen tussenpartijen. Hieronder lees je precies hoe we de site beschermen, wat we loggen en wat er
+            gebeurt als iemand probeert in te breken.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href="/privacy" className="btn-mint">
+              Privacybeleid
+            </Link>
+            <Link href="/status" className="btn-ghost-invert">
+              Systeemstatus
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {zichtbaar.map((id) => (
+        <Fragment key={id}>{onderdelen[id]}</Fragment>
+      ))}
     </>
   );
 }

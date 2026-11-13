@@ -63,6 +63,33 @@ export const VASTE_PAGINAS = {
       { id: "slot", naam: "Slotoproep", uitleg: "De band onderaan met de knop om te beginnen." },
     ],
   },
+  uitzendbureau: {
+    naam: "Uitzendbureau",
+    pad: "/uitzendbureau",
+    secties: [
+      { id: "pijlers", naam: "Waarom uitzendklussen", uitleg: "De drie kaarten met de voordelen van uitzendwerk." },
+      { id: "verwachtingen", naam: "De verwachtingen", uitleg: "Wat je krijgt als uitzendkracht, punt voor punt." },
+      { id: "stappen", naam: "Zo begin je", uitleg: "De vier stappen om te starten met uitzendklussen." },
+      { id: "fasen", naam: "Het fasensysteem", uitleg: "De uitleg van de ABU-fasen, stap voor stap." },
+      { id: "ervaring", naam: "Ervaring van een uitzendkracht", uitleg: "De donkere band met het citaat." },
+      { id: "routes", naam: "Drie manieren om te werken", uitleg: "De drie kaarten: uitzendkracht, zzp en vaste baan." },
+      { id: "verloning", naam: "Alles terug te lezen", uitleg: "Het blok over loonstroken en inzicht in je verdiensten." },
+      { id: "werkgevers", naam: "Voor werkgevers", uitleg: "Het blok met het contactformulier voor bedrijven." },
+      { id: "faq", naam: "Veelgestelde vragen", uitleg: "De vragen en antwoorden over uitzendklussen." },
+      { id: "slot", naam: "Slotoproep", uitleg: "De band onderaan met de knop om te beginnen." },
+    ],
+  },
+  beveiliging: {
+    naam: "Beveiliging",
+    pad: "/beveiliging",
+    secties: [
+      { id: "cijfers", naam: "Live cijfers", uitleg: "Wat de bescherming op dit moment tegenhoudt." },
+      { id: "maatregelen", naam: "Zo is ZekerFlex beveiligd", uitleg: "De negen dingen die standaard geregeld zijn." },
+      { id: "logboek", naam: "Wat we loggen", uitleg: "Welke gegevens we bijhouden en hoe lang." },
+      { id: "melden", naam: "Een kwetsbaarheid melden", uitleg: "Hoe iemand een lek kan doorgeven." },
+      { id: "slot", naam: "Slotoproep", uitleg: "De band onderaan met de knop naar de websites." },
+    ],
+  },
 } as const satisfies Record<string, VastePagina>;
 
 export type VastePaginaId = keyof typeof VASTE_PAGINAS;
