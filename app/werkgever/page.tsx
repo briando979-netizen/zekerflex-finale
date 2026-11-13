@@ -1,3 +1,4 @@
+import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
 import { WelcomeBack } from "@/components/app/WelcomeBack";
 import { EmployerDashboardHero } from "@/components/app/EmployerDashboardHero";
@@ -38,6 +39,9 @@ import { WerkruimteKiezer } from "@/components/app/werkruimte/WerkruimteKiezer";
 import { VoorbeeldBalk } from "@/components/app/werkruimte/VoorbeeldBalk";
 import { isWerkruimte, thuisVan } from "@/lib/werkgever/werkruimte";
 import { redirect } from "next/navigation";
+import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
+import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
+import { kl, startMarges } from "@/lib/werkgever/start-marges";
 
 export const dynamic = "force-dynamic";
 
@@ -107,6 +111,185 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
       : o.kpis.openShifts > 0
         ? fmt(o.kpis.openShifts === 1 ? ws.greetOpenEen : ws.greetOpenMeer, { n: o.kpis.openShifts })
         : undefined;
+
+  // De onderdelen onder de kop. De beheerder versleept en verbergt ze in de Site-ontwerper (Pagina's, "Startscherm
+  // werkgevers-app"); zonder eigen indeling staat alles precies zoals het stond, met dezelfde tussenruimte.
+  const zichtbaar = zichtbareSecties("werkgever-start", await getPaginaIndeling("werkgever-start"));
+  const marge = startMarges(zichtbaar, { volgers: followers === 0, beoordelingen: pendingReviews.length === 0, berichten: threads.length === 0 });
+  const onderdelen: Record<string, ReactNode> = {
+    cijfers: (
+      <div className={kl(marge.cijfers, "grid gap-4 sm:grid-cols-2 lg:grid-cols-4")}>
+        <KpiCard label={t.start.kpiOpen} value={String(o.kpis.openShifts)} tone={o.kpis.openShifts > 0 ? "warn" : "default"} />
+        <KpiCard
+          label={t.start.kpiToApprove}
+          value={String(o.kpis.toApprove)}
+          tone={o.kpis.toApprove > 0 ? "warn" : "default"}
+          hint={t.start.kpiToApproveHint}
+        />
+        <KpiCard label={t.start.kpiSpent} value={money(o.kpis.spentThisMonthCents)} tone="brand" />
+        <KpiCard label={t.start.kpiActive} value={String(o.kpis.activeFreelancers)} hint={t.start.kpiActiveHint} />
+      </div>
+    ),
+    volgers: (
+      followers > 0 ? (
+        <div className={kl(marge.volgers, "flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-hair bg-brand-50 px-4 py-3 text-sm text-neutralx-700")}>
+          <p>
+            <span aria-hidden>❤️ </span>
+            <span className="font-semibold text-ink">
+              {fmt(followers === 1 ? ws.volgtEen : ws.volgtMeer, { n: followers, org: o.orgName })}
+            </span>{" "}
+            {ws.volgtNa}
+          </p>
+          <Link href="/werkgever/diensten/nieuw" className="text-sm font-semibold text-brand-600 hover:underline">
+            {ws.plaatsDienst}
+          </Link>
+        </div>
+      ) : null
+    ),
+    beoordelingen: (
+      pendingReviews.length > 0 ? (
+        <div className={kl(marge.beoordelingen)}>
+          <Panel title={t.reviewPrompt.title}>
+            <p className="px-5 pt-4 text-sm text-neutralx-600">{t.reviewPrompt.body}</p>
+            <ul className="mt-2 divide-y divide-hair">
+              {pendingReviews.map((r) => (
+                <li key={`${r.shiftId}-${r.freelancerName}`}>
+                  <Link
+                    href={`/werkgever/diensten/${r.shiftId}`}
+                    className="flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-paper-soft"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium text-ink">{r.freelancerName}</span>
+                      <span className="block truncate text-xs text-neutralx-500">{r.shiftTitle}</span>
+                    </span>
+                    <span className="flex-shrink-0 text-neutralx-400" aria-hidden>
+                      ›
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        </div>
+      ) : null
+    ),
+    werk: (
+      <div className={kl(marge.werk, "grid gap-6 lg:grid-cols-2")}>
+        <Panel
+          title={t.start.upcomingTitle}
+          action={
+            <Link href="/werkgever/diensten" className="text-xs font-medium text-brand-600">
+              {t.common.all}
+            </Link>
+          }
+        >
+          {o.shifts.length === 0 ? (
+            <EmptyState
+              title={t.start.upcomingEmptyTitle}
+              body={t.start.upcomingEmptyBody}
+            />
+          ) : (
+            <div className="grid gap-4 p-5 sm:grid-cols-2">
+              {o.shifts.slice(0, 4).map((s) => (
+                <EmployerShiftCard key={s.id} shift={s} href={`/werkgever/diensten/${s.id}`} />
+              ))}
+            </div>
+          )}
+        </Panel>
+
+        <Panel
+          title={t.start.approvalsTitle}
+          action={
+            <Link href="/werkgever/uren" className="text-xs font-medium text-brand-600">
+              {t.common.all}
+            </Link>
+          }
+        >
+          {o.approvals.length === 0 ? (
+            <EmptyState title={t.start.approvalsEmptyTitle} body={t.start.approvalsEmptyBody} />
+          ) : (
+            <ul className="divide-y divide-hair">
+              {o.approvals.map((ap) => (
+                <li key={ap.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-ink">{ap.freelancer}</p>
+                    <p className="text-xs text-neutralx-500">
+                      {ap.branch} · {dateTime(ap.scheduledStart)} · {(ap.billableMinutes / 60).toFixed(1)} u
+                    </p>
+                  </div>
+                  <span className="num flex-shrink-0 font-mono text-sm text-ink">
+                    {moneyExact(Math.round((ap.billableMinutes / 60) * ap.hourlyRateCents))}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      </div>
+    ),
+    berichten: (
+      threads.length > 0 ? (
+        <div className={kl(marge.berichten)}>
+          <Panel
+            title={t.start.messagesTitle}
+            action={
+              <Link href="/werkgever/berichten" className="text-xs font-medium text-brand-600">
+                {t.common.all}
+              </Link>
+            }
+          >
+            <RecentMessagesPanel threads={threads} allHref="/werkgever/berichten" />
+          </Panel>
+        </div>
+      ) : null
+    ),
+    facturen: (
+      <div className={kl(marge.facturen)}>
+        <Panel
+          title={t.start.invoicesTitle}
+          action={
+            <Link href="/werkgever/facturen" className="text-xs font-medium text-brand-600">
+              {t.common.all}
+            </Link>
+          }
+        >
+          {o.invoices.length === 0 ? (
+            <EmptyState title={t.start.invoicesEmptyTitle} body={t.start.invoicesEmptyBody} />
+          ) : (
+            // Four columns don't fit a phone: scroll sideways there instead of widening the page.
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-hair text-left text-xs uppercase tracking-wide text-neutralx-500">
+                  <th className="px-5 py-2.5 font-medium">{t.start.invNr}</th>
+                  <th className="px-5 py-2.5 font-medium">{t.start.invType}</th>
+                  <th className="px-5 py-2.5 text-right font-medium">{t.start.invAmount}</th>
+                  <th className="px-5 py-2.5 text-right font-medium">{t.start.invStatus}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-hair">
+                {o.invoices.map((i) => (
+                  <tr key={i.id}>
+                    <td className="px-5 py-3 font-mono text-xs text-neutralx-600">{i.number}</td>
+                    <td className="px-5 py-3 text-neutralx-600">
+                      {i.type === "PLATFORM_FEE" ? t.start.invFee : t.start.invShift}
+                    </td>
+                    <td className="num px-5 py-3 text-right font-medium">{moneyExact(i.totalCents)}</td>
+                    <td className="px-5 py-3 text-right">
+                      <StatusPill tone={i.status === "PAID" ? "ok" : i.status === "ISSUED" ? "warn" : "neutral"}>
+                        {i.status === "PAID" ? t.start.statusPaid : i.status === "ISSUED" ? t.start.statusOpen : i.status}
+                      </StatusPill>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            </div>
+          )}
+        </Panel>
+      </div>
+    ),
+  };
 
   return (
     <>
@@ -189,175 +372,10 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
       )}
 
       {/* in de startmodus is alles hieronder nog leeg (zie startModus) */}
-      {!startModus && (
-      <>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label={t.start.kpiOpen} value={String(o.kpis.openShifts)} tone={o.kpis.openShifts > 0 ? "warn" : "default"} />
-        <KpiCard
-          label={t.start.kpiToApprove}
-          value={String(o.kpis.toApprove)}
-          tone={o.kpis.toApprove > 0 ? "warn" : "default"}
-          hint={t.start.kpiToApproveHint}
-        />
-        <KpiCard label={t.start.kpiSpent} value={money(o.kpis.spentThisMonthCents)} tone="brand" />
-        <KpiCard label={t.start.kpiActive} value={String(o.kpis.activeFreelancers)} hint={t.start.kpiActiveHint} />
-      </div>
-
-      {followers > 0 && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-hair bg-brand-50 px-4 py-3 text-sm text-neutralx-700">
-          <p>
-            <span aria-hidden>❤️ </span>
-            <span className="font-semibold text-ink">
-              {fmt(followers === 1 ? ws.volgtEen : ws.volgtMeer, { n: followers, org: o.orgName })}
-            </span>{" "}
-            {ws.volgtNa}
-          </p>
-          <Link href="/werkgever/diensten/nieuw" className="text-sm font-semibold text-brand-600 hover:underline">
-            {ws.plaatsDienst}
-          </Link>
-        </div>
-      )}
-
-      {pendingReviews.length > 0 && (
-        <div className="mt-8">
-          <Panel title={t.reviewPrompt.title}>
-            <p className="px-5 pt-4 text-sm text-neutralx-600">{t.reviewPrompt.body}</p>
-            <ul className="mt-2 divide-y divide-hair">
-              {pendingReviews.map((r) => (
-                <li key={`${r.shiftId}-${r.freelancerName}`}>
-                  <Link
-                    href={`/werkgever/diensten/${r.shiftId}`}
-                    className="flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-paper-soft"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium text-ink">{r.freelancerName}</span>
-                      <span className="block truncate text-xs text-neutralx-500">{r.shiftTitle}</span>
-                    </span>
-                    <span className="flex-shrink-0 text-neutralx-400" aria-hidden>
-                      ›
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </Panel>
-        </div>
-      )}
-
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <Panel
-          title={t.start.upcomingTitle}
-          action={
-            <Link href="/werkgever/diensten" className="text-xs font-medium text-brand-600">
-              {t.common.all}
-            </Link>
-          }
-        >
-          {o.shifts.length === 0 ? (
-            <EmptyState
-              title={t.start.upcomingEmptyTitle}
-              body={t.start.upcomingEmptyBody}
-            />
-          ) : (
-            <div className="grid gap-4 p-5 sm:grid-cols-2">
-              {o.shifts.slice(0, 4).map((s) => (
-                <EmployerShiftCard key={s.id} shift={s} href={`/werkgever/diensten/${s.id}`} />
-              ))}
-            </div>
-          )}
-        </Panel>
-
-        <Panel
-          title={t.start.approvalsTitle}
-          action={
-            <Link href="/werkgever/uren" className="text-xs font-medium text-brand-600">
-              {t.common.all}
-            </Link>
-          }
-        >
-          {o.approvals.length === 0 ? (
-            <EmptyState title={t.start.approvalsEmptyTitle} body={t.start.approvalsEmptyBody} />
-          ) : (
-            <ul className="divide-y divide-hair">
-              {o.approvals.map((ap) => (
-                <li key={ap.id} className="flex items-center justify-between gap-3 px-5 py-3.5">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-ink">{ap.freelancer}</p>
-                    <p className="text-xs text-neutralx-500">
-                      {ap.branch} · {dateTime(ap.scheduledStart)} · {(ap.billableMinutes / 60).toFixed(1)} u
-                    </p>
-                  </div>
-                  <span className="num flex-shrink-0 font-mono text-sm text-ink">
-                    {moneyExact(Math.round((ap.billableMinutes / 60) * ap.hourlyRateCents))}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Panel>
-      </div>
-
-      {threads.length > 0 && (
-        <div className="mt-6">
-          <Panel
-            title={t.start.messagesTitle}
-            action={
-              <Link href="/werkgever/berichten" className="text-xs font-medium text-brand-600">
-                {t.common.all}
-              </Link>
-            }
-          >
-            <RecentMessagesPanel threads={threads} allHref="/werkgever/berichten" />
-          </Panel>
-        </div>
-      )}
-
-      <div className="mt-6">
-        <Panel
-          title={t.start.invoicesTitle}
-          action={
-            <Link href="/werkgever/facturen" className="text-xs font-medium text-brand-600">
-              {t.common.all}
-            </Link>
-          }
-        >
-          {o.invoices.length === 0 ? (
-            <EmptyState title={t.start.invoicesEmptyTitle} body={t.start.invoicesEmptyBody} />
-          ) : (
-            // Four columns don't fit a phone: scroll sideways there instead of widening the page.
-            <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-hair text-left text-xs uppercase tracking-wide text-neutralx-500">
-                  <th className="px-5 py-2.5 font-medium">{t.start.invNr}</th>
-                  <th className="px-5 py-2.5 font-medium">{t.start.invType}</th>
-                  <th className="px-5 py-2.5 text-right font-medium">{t.start.invAmount}</th>
-                  <th className="px-5 py-2.5 text-right font-medium">{t.start.invStatus}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hair">
-                {o.invoices.map((i) => (
-                  <tr key={i.id}>
-                    <td className="px-5 py-3 font-mono text-xs text-neutralx-600">{i.number}</td>
-                    <td className="px-5 py-3 text-neutralx-600">
-                      {i.type === "PLATFORM_FEE" ? t.start.invFee : t.start.invShift}
-                    </td>
-                    <td className="num px-5 py-3 text-right font-medium">{moneyExact(i.totalCents)}</td>
-                    <td className="px-5 py-3 text-right">
-                      <StatusPill tone={i.status === "PAID" ? "ok" : i.status === "ISSUED" ? "warn" : "neutral"}>
-                        {i.status === "PAID" ? t.start.statusPaid : i.status === "ISSUED" ? t.start.statusOpen : i.status}
-                      </StatusPill>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
-          )}
-        </Panel>
-      </div>
-      </>
-      )}
+      {!startModus &&
+        zichtbaar.map((id) => (
+          <Fragment key={id}>{onderdelen[id]}</Fragment>
+        ))}
       {/* wisselen of een dashboard toevoegen: de wisselaar bovenaan de zijbalk (components/app/werkruimte/DashboardWisselaar.tsx) */}
     </>
   );

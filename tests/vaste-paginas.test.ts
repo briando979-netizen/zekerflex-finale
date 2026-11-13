@@ -27,7 +27,10 @@ const OUD: Record<VastePaginaId, string[]> = {
   contact: ["email", "direct", "google"],
   "voor-bureaus": ["pakketten", "waarom", "faq", "slot"],
   abonnementen: ["pakketten", "faq", "slot"],
+  "werkgever-start": ["cijfers", "volgers", "beoordelingen", "werk", "berichten", "facturen"],
 };
+// het startscherm van de werkgevers-app staat buiten de site
+const bestand = (p: VastePaginaId) => (p === "werkgever-start" ? "app/werkgever/page.tsx" : `app/(marketing)/${p}/page.tsx`);
 
 beforeEach(() => kv.clear());
 
@@ -48,7 +51,7 @@ describe("de standaard is de oude pagina", () => {
         expect(x.naam.length, x.id).toBeGreaterThan(3);
         expect(x.uitleg.endsWith("."), x.id).toBe(true);
       }
-      expect(VASTE_PAGINAS[p].pad).toBe(`/${p}`);
+      expect(VASTE_PAGINAS[p].pad).toBe(p === "werkgever-start" ? "/werkgever" : `/${p}`);
     }
   });
 });
@@ -84,7 +87,7 @@ describe("de opslag", () => {
     expect(await getPaginaIndeling("voor-freelancers")).toBeNull();
     await setPaginaIndeling("voor-freelancers", { volgorde: OUD["voor-freelancers"], verborgen: ["stappen"] });
     expect(Object.keys(await getPaginaIndelingen()).sort()).toEqual(["voor-bedrijven", "voor-freelancers"]);
-    expect(PAGINAS).toHaveLength(9);
+    expect(PAGINAS).toHaveLength(10);
     expect(await setPaginaIndeling("voor-bedrijven", standaardPaginaIndeling("voor-bedrijven"))).toBeNull();
     expect((await getPaginaIndeling("voor-freelancers"))?.verborgen).toEqual(["stappen"]);
     await resetPaginaIndeling("voor-freelancers");
@@ -102,7 +105,7 @@ describe("de opslag", () => {
 describe("de pagina's, het paneel en de route", () => {
   it("elke pagina heeft precies de onderdelen uit de lijst, in de oude volgorde, en toont ze via de indeling", () => {
     for (const p of PAGINAS) {
-      const src = bron(`app/(marketing)/${p}/page.tsx`);
+      const src = bron(bestand(p));
       expect(src).toContain(`zichtbareSecties("${p}", await getPaginaIndeling("${p}"))`);
       expect(src).toContain("<Fragment key={id}>{onderdelen[id]}</Fragment>");
       const sleutels = [...src.matchAll(/^ {4}([a-z]+): \($/gm)].map((m) => m[1]);
@@ -124,7 +127,7 @@ describe("de pagina's, het paneel en de route", () => {
     expect(src.split('"@type": "FAQPage"')).toHaveLength(2);
     expect(src.indexOf(") : null}", faqPage)).toBeLessThan(src.indexOf("<UitzendJobBoard"));
     // geen andere vaste pagina heeft FAQ-gegevens buiten de indeling om
-    for (const p of PAGINAS) if (p !== "uitzendbureau") expect(bron(`app/(marketing)/${p}/page.tsx`), p).not.toContain("FAQPage");
+    for (const p of PAGINAS) if (p !== "uitzendbureau") expect(bron(bestand(p)), p).not.toContain("FAQPage");
   });
   it("het paneel staat in het tabblad Pagina's, met verslepen", () => {
     const ontwerper = bron("components/admin/ontwerper/Ontwerper.tsx");
