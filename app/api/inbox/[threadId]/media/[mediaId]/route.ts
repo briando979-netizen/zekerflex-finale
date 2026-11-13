@@ -5,6 +5,7 @@ import { canAccess, getThread } from "@/lib/messaging/store";
 import { isPlatformAdmin } from "@/lib/messaging/contacts";
 import { opensInline, readChatMedia } from "@/lib/messaging/media";
 import { kleineChatFoto } from "@/lib/messaging/foto-klein";
+import { leesBereik } from "@/lib/http/bereik";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,13 +34,22 @@ export async function GET(
     // ?klein=1: de foto in de bubbel (lib/messaging/foto-klein.ts), na dezelfde toegangscontrole; lukt dat niet, het origineel
     const kleintje = inline && zoek.get("klein") === "1" ? await kleineChatFoto(file.bytes, file.mimeType) : null;
     const naam = kleintje ? `${file.filename.replace(/\.[A-Za-z0-9]{1,5}$/, "")}.jpg` : file.filename;
-    return new Response(new Uint8Array(kleintje ?? file.bytes), {
+    // Range: een video speelt in Safari (iPhone) alleen af als we stukken kunnen geven (206); lib/http/bereik.ts
+    const bereik = kleintje ? null : leesBereik(req.headers.get("range"), file.bytes.length);
+    if (bereik === "ongeldig") {
+      return new Response(null, { status: 416, headers: { "Content-Range": `bytes */${file.bytes.length}`, "Cache-Control": "private, no-store" } });
+    }
+    const inhoud = kleintje ?? (bereik ? file.bytes.subarray(bereik.start, bereik.eind + 1) : file.bytes);
+    return new Response(new Uint8Array(inhoud), {
+      status: bereik ? 206 : 200,
       headers: {
         "Content-Type": kleintje ? "image/jpeg" : file.mimeType,
         "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${naam.replace(/[^\x20-\x7E]|["\\]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(naam)}`,
         // elk type mag in de chat: de browser mag nooit zelf raden wat het is
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "private, max-age=86400",
+        ...(kleintje ? {} : { "Accept-Ranges": "bytes" }),
+        ...(bereik ? { "Content-Range": `bytes ${bereik.start}-${bereik.eind}/${file.bytes.length}` } : {}),
       },
     });
   } catch (err) {

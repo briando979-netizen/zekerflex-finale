@@ -6,7 +6,7 @@ import { Avatar } from "./Avatar";
 import { IconReply, IconSmiley, IconDots, IconCopy, IconForward, IconPin, IconStar, IconPencil, IconTrash } from "./icons";
 import { ActionList, MessageSheet, ReactionRow, type ActionItem } from "./MessageActions";
 import { PollCard } from "./PollCard";
-import { isProgramma } from "@/lib/messaging/bijlage";
+import { isProgramma, isVideoType } from "@/lib/messaging/bijlage";
 import { useChatTeksten } from "./ChatTekstenContext";
 import { vulIn } from "@/lib/i18n/vul-in";
 
@@ -215,6 +215,8 @@ export function MessageBubble({
   const pickOpen = pick !== null;
   const [menu, setMenu] = useState<null | "up" | "down">(null);
   const [sheet, setSheet] = useState(false);
+  // een video die deze browser niet kan afspelen (bijv. HEVC uit een iPhone in Chrome): dan alleen de downloadkaart
+  const [videoKapot, setVideoKapot] = useState(false);
   const [dx, setDx] = useState(0);
   const rowRef = useRef<HTMLDivElement>(null);
   const touch = useRef<{ x: number; y: number; timer: ReturnType<typeof setTimeout> | null; horizontal: boolean | null } | null>(null);
@@ -591,6 +593,20 @@ export function MessageBubble({
 
             {m.kind === "voice" && mediaUrl && (
               <VoiceNote src={mediaUrl} {...(m.attachment?.durationSec != null ? { durationSec: m.attachment.durationSec } : {})} />
+            )}
+
+            {m.kind === "file" && mediaUrl && isVideoType(m.attachment?.mimeType ?? "") && !videoKapot && (
+              <div className="mb-1 overflow-hidden rounded-lg bg-black">
+                <video
+                  src={mediaUrl}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  aria-label={m.attachment?.filename ?? t.previewVideo}
+                  onError={() => setVideoKapot(true)}
+                  className="block max-h-72 w-full min-w-[12rem]"
+                />
+              </div>
             )}
 
             {m.kind === "file" && mediaUrl && (
