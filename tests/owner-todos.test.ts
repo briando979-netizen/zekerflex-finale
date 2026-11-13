@@ -11,6 +11,7 @@ const live = vi.hoisted(() => ({
   branches: [] as { name: string; tenant: { name: string } }[],
   webhookEvents: [] as string[],
   proposals: [] as { status: string; createdAt: string; expiresAt: string }[],
+  gratis: false,
 }));
 vi.mock("@/lib/sales/website-proposal", () => ({ listWebsiteProposals: async () => live.proposals }));
 vi.mock("@/lib/storage/kv", () => ({ kvGet: async (k: string) => kv.get(k) ?? null, kvSet: async (k: string, v: unknown) => void kv.set(k, v) }));
@@ -38,6 +39,7 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 vi.mock("@/lib/ops/backup", () => ({ readBackupReport: async () => live.backup }));
+vi.mock("@/lib/ai/gratis", () => ({ getGratisStand: async () => ({ aan: live.gratis, basis: "", model: "" }) }));
 vi.mock("@/lib/shop/model3d", () => ({ listModels3D: async () => live.models }));
 vi.mock("node:dns/promises", () => ({
   Resolver: class {
@@ -48,7 +50,7 @@ vi.mock("node:dns/promises", () => ({
   },
 }));
 
-import { addCustom, customTodos, ownerTodos, setManualDone, updateCustom } from "@/lib/admin/owner-todos";
+import { addCustom, customTodos, dubbeleNotities, ownerTodos, setManualDone, updateCustom } from "@/lib/admin/owner-todos";
 
 const byId = async () => Object.fromEntries((await ownerTodos()).map((x) => [x.id, x]));
 
@@ -63,6 +65,46 @@ beforeEach(() => {
   live.branches = [];
   live.webhookEvents = [];
   live.proposals = [];
+  live.gratis = false;
+});
+
+describe("opgeruimd op 13 nov: taken die achterhaald zijn staan op klaar, met de reden", () => {
+  it("de 3D-kaart staat op de pagina Open diensten en de Play Store-taak voor 1.0.3 is vervangen door 1.0.5", async () => {
+    const t = await byId();
+    expect(t["map-3d"]).toMatchObject({ auto: true, done: true, doneNote: "staat op de pagina Open diensten; homepage alleen op verzoek" });
+    expect(t["play-store-app"]).toMatchObject({ auto: true, done: true, doneNote: "vervangen door de taak voor app 1.0.5 (hieronder)" });
+    expect(t["app-105"]).toMatchObject({ auto: false, done: false });
+  });
+
+  it("betalen bij Google voor AI-foto's is geen taak zolang 'alles gratis' aan staat", async () => {
+    expect((await byId()).image).toMatchObject({ done: false });
+    live.gratis = true;
+    expect((await byId()).image).toMatchObject({ done: true, doneNote: expect.stringContaining("alles gratis") });
+  });
+
+  it("DMARC: de taak vinkt zichzelf af zodra het record op _dmarc.zekerflex.com staat (op prod, 13 nov: p=none)", async () => {
+    expect((await byId())["mail-microsoft"]).toMatchObject({ auto: true, done: false, eerst: { reden: "bezorging" } });
+    live.txt = [["v=DMARC1; p=none; rua=mailto:postmaster@zekerflex.com"]];
+    const t = (await byId())["mail-microsoft"]!;
+    expect(t.done).toBe(true);
+    expect(t.doneNote).toContain("p=none");
+    expect(t.doneNote).toContain("quarantine");
+    expect(t.eerst).toBeUndefined();
+    expect(live.txtHosts).toContain("_dmarc.zekerflex.com");
+    live.txt = [["v=DMARC1; p=quarantine"]];
+    expect((await byId())["mail-microsoft"]!.doneNote).not.toContain("quarantine;");
+  });
+
+  it("dubbele eigen notities: dezelfde tekst meer dan één keer, het oudste exemplaar blijft", () => {
+    const lijst = [
+      { id: "b", text: "Investering: Indeed — budget € 150", done: false, at: "2026-10-27T10:00:00.000Z" },
+      { id: "a", text: "Investering: Indeed — budget € 150", done: false, at: "2026-10-21T10:00:00.000Z" },
+      { id: "c", text: "investering:  indeed — budget € 150", done: false, at: "2026-11-01T10:00:00.000Z" },
+      { id: "d", text: "Iets anders", done: false, at: "2026-11-01T10:00:00.000Z" },
+    ];
+    expect(dubbeleNotities(lijst)).toEqual(["b", "c"]);
+    expect(dubbeleNotities([])).toEqual([]);
+  });
 });
 
 describe("websitevoorstellen versturen", () => {
