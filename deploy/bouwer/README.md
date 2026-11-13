@@ -80,3 +80,29 @@ Installeren (eenmalig): `sudo bash deploy/bouwer/installeer-bouwer.sh`
 Dit script zet `BOUWER_TOKEN` in `.env.production`, zet 4 GB swap aan en start de
 container. Vul daarna in de Bouwer-instellingen een fine-grained GitHub-sleutel
 in: alleen deze repo, met "Contents: Read and write".
+
+## 3. Auto-uitrol (zonder GitHub Actions)
+
+Na elke push naar `main` controleert en rolt de **eigen server** vanzelf uit; GitHub Actions blijft **uit** (het account had een
+billing-lock en de eigenaar wil niets aan GitHub betalen; de bestanden in `.github/workflows.disabled/` doen niets). De lus is
+een cron-taak elke 2 minuten (`/api/internal/auto-uitrol`, `lib/bouwer/auto-uitrol.ts`); de beslisregels staan puur in
+`lib/bouwer/auto-uitrol-regels.ts` (met test). De lus bouwt zelf niets: hij legt een verzoek bij de live-zetter, die zijn eigen
+controle, migratie-eis en terugzetten houdt.
+
+Beslisregels, in volgorde: noodrem aan, niets. Schakelaar uit, niets (standaard uit). Main niet te lezen, wacht. Live is al main,
+niets. Deze sha eerder geweigerd, niets (een nieuwe sha wel). Migratie wacht voor deze sha, niets. Rustperiode van 3 minuten
+zonder nieuwe push, wacht (daarna de nieuwste). Live-zetter oud of stil, of er loopt al een uitrol, wacht. Controle ontbreekt:
+starten; loopt: wachten; **rood: weigeren, nooit uitrollen**. **Wachtende migratie: nooit uitrollen** (droge proef en
+`ZF_MIGREER=1` blijven handwerk), melding. Venster van het eigen model 11:50 tot 12:40 UTC of minder dan 6 GB vrij geheugen:
+wachten. Anders: uitrollen. Faalt de uitrol of wordt hij teruggezet, dan wordt die sha nooit opnieuw geprobeerd en gaat de lus door
+met een nieuwe sha. De controle (`werker/controle.mjs`) doet `prisma validate`, tsc, eslint, `vitest related` en de bewakers.
+
+Bedienen: **Admin → ZekerFlex AI → Live zetten**, blok *Auto-uitrol* (aan/uit, **noodrem**, laatste ronde en reden). De vlag
+`auto-uitrol` staat standaard UIT. Bewaking: hartslag `auto-uitrol` (Admin → Systeem), en een taak in Te doen als een versie
+geweigerd wordt, een migratie wacht, of main meer dan 30 minuten voorloopt op live.
+
+**Installatie (door 16 of de eigenaar, niet door de code):**
+1. Rol deze versie uit zoals gewoonlijk (Live zetten). `zf-live.py` is dan nieuw, maar de draaiende dienst nog de oude:
+   `sudo systemctl restart zf-live` (zonder deze herstart blijft de Auto-uitrol wachten: hij eist live-zetter-versie 3 in de hartslag).
+2. Herstart de planner zodat de nieuwe cron-regel meekomt: `docker compose -f docker-compose.vps.yml --env-file .env.production restart cron`.
+3. Controleer in Live zetten dat de hartslag versie 3 toont en dat de Auto-uitrol *Laatste ronde* een tijd laat zien. Zet hem daarna zelf aan.

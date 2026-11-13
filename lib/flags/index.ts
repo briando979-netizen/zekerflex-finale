@@ -25,6 +25,7 @@ export interface FlagDef {
 export const FLAG_REGISTRY: FlagDef[] = [
   { key: "brein-assistent", label: "ZekerFlex-assistent (brein)", description: "De AI-assistent in de chat en op /dashboard|/werkgever/assistent.", default: true },
   { key: "autopilot", label: "Autopilot", description: "Laat de autopilot-acties draaien (naast de eigen aan/uit in Admin → Autopilot).", default: true },
+  { key: "auto-uitrol", label: "Auto-uitrol: main vanzelf controleren en live zetten", description: "Aan = elke 2 minuten kijkt de server of GitHub main nieuw is; na 3 minuten rust en een schone controle (TypeScript, databaseschema, eslint, tests, bewakers) zonder database-wijziging rolt hij zelf uit. Migraties blijven handwerk. Uit (standaard) = niets automatisch. Noodrem: Beheer, Live zetten.", default: false },
   { key: "uren-auto-goedkeuren", label: "Uren automatisch goedkeuren aanbieden", description: "Toon opdrachtgevers de optie om uren automatisch te laten goedkeuren.", default: true },
   { key: "qr-betalen", label: "QR-betalen", description: "QR-betaallink op facturen.", default: true },
   { key: "winkel-ai-autopubliceren", label: "Winkel-AI zet producten zelf aan", description: "De winkel-agent zet een door hem gemaakt product zelf aan, maar alleen met echte voorraad én een echte foto. Uit = jij zet ze aan.", default: false },

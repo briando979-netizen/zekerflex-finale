@@ -61,6 +61,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "bouwer-auto", label: "Bouwer: automatische reparaties", maxAgeHours: 2 },
   // elke 2 min: pushmeldingen over de Bouwer en het live zetten
   { job: "bouwer-meldingen", label: "Bouwer: meldingen", maxAgeHours: 2 },
+  // elke 2 min: Auto-uitrol (lib/bouwer/auto-uitrol.ts); draait ook als hij uit staat (dan alleen de hartslag). Stil = live loopt vanzelf achter.
+  { job: "auto-uitrol", label: "Auto-uitrol: main controleren en live zetten", maxAgeHours: 0.5 },
   // elke 10 min: de nieuwste main alvast controleren vóór het live zetten (lib/bouwer/controles.ts)
   { job: "controles-tick", label: "Controle van main (TypeScript, eslint, tests)", maxAgeHours: 2 },
   // elk kwartier: de productlijst voor AI-assistenten bij Stripe (lib/shop/agent-handel-server.ts)

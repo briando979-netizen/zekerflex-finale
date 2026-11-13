@@ -52,10 +52,10 @@ APP = os.environ.get("ZF_APP_CONTAINER", "zekerflex-app-1")
 BOUWER = os.environ.get("ZF_BOUWER_CONTAINER", "zekerflex-bouwer-1")
 LOGBESTAND = "/tmp/zf-live.log"
 COMPOSE = ["sudo", "docker", "compose", "-f", "docker-compose.vps.yml", "--env-file", ".env.production"]
-VERSIE = 2
+VERSIE = 3  # 3: kent verzoeken van de Auto-uitrol (auto, doelSha) en controleert ook het databaseschema
 
 # Namen van de onderdelen van de controle (controle.mjs) in de melding naar de eigenaar.
-CONTROLE_NAAM = {"tsc": "TypeScript", "eslint": "eslint", "tests": "de tests"}
+CONTROLE_NAAM = {"tsc": "TypeScript", "schema": "het databaseschema", "eslint": "eslint", "tests": "de tests"}
 
 K_VERZOEK = "bouwer:live:verzoek"
 K_STATUS = "bouwer:live:status"
@@ -344,6 +344,18 @@ class Uitrol:
             self.zet(waarschuwing="Onze eigen Git-server wijkt af van GitHub en loopt niet gewoon achter; hij is niet gebruikt. Kijk of iemand in Forgejo heeft geschreven.")
         self.schrijf(f"doel: {doel[:10]} {onderwerp} (via {'onze eigen Git-server, GitHub onbereikbaar' if bron == 'forgejo' else 'GitHub'})")
 
+        # Auto-uitrol (lib/bouwer/auto-uitrol.ts): nooit forceren, nooit zonder controle, nooit met migraties, en alleen precies
+        # de sha waarvoor de beslissing is genomen. Is main intussen verder gegaan, dan niets doen: de volgende ronde neemt de nieuwste.
+        auto = bool(self.v.get("auto"))
+        if auto:
+            self.v["forceer"] = False
+            self.v["zonderControle"] = False
+            self.v["migraties"] = []
+            self.v["destructiefAkkoord"] = False
+            gevraagd = str(self.v.get("doelSha") or "")
+            if gevraagd and gevraagd != doel:
+                self.zet(staat="mislukt", stap="Main is verder gegaan", bericht="AUTO_VERSCHOVEN: main is verder gegaan sinds de beslissing van de Auto-uitrol; er is niets uitgerold. De volgende ronde neemt de nieuwste versie.")
+                return
         live = self.live_sha()
         forceer = bool(self.v.get("forceer"))
         self.schrijf(f"live: {live[:10] if live else 'onbekend'}")
@@ -398,6 +410,10 @@ class Uitrol:
 
         self.stap("Controleren vóór het bouwen (TypeScript, eslint, tests)")
         uitslag = self.controle(doel, live)
+        if uitslag is None and auto:
+            # een automatische uitrol gaat nooit door zonder uitslag van de controle
+            self.zet(staat="mislukt", stap="Controle kon niet draaien", bericht="AUTO_GEEN_CONTROLE: de controle kon niet draaien, dus de Auto-uitrol rolde niets uit. De vorige versie draait door.")
+            return
         if uitslag is None:
             self.schrijf("controle overgeslagen; de bouw controleert TypeScript nog wel")
         else:
@@ -406,6 +422,7 @@ class Uitrol:
                 "sha": str(uitslag.get("sha") or doel),
                 "duurSec": uitslag.get("duurSec"),
                 "tsc": bool((uitslag.get("tsc") or {}).get("ok", True)),
+                "schema": bool((uitslag.get("schema") or {}).get("ok", True)),
                 "eslint": bool((uitslag.get("eslint") or {}).get("ok", True)),
                 "tests": bool((uitslag.get("tests") or {}).get("ok", True)),
             }
@@ -413,7 +430,7 @@ class Uitrol:
             if kort["ok"]:
                 self.schrijf(f"controle schoon ({kort['duurSec'] if kort['duurSec'] is not None else '?'} s)")
             else:
-                falen = [CONTROLE_NAAM[n] for n in ("tsc", "eslint", "tests") if not kort[n]]
+                falen = [CONTROLE_NAAM[n] for n in ("tsc", "schema", "eslint", "tests") if not kort[n]]
                 if self.v.get("zonderControle"):
                     self.schrijf(f"!! controle faalt op {', '.join(falen)}, maar 'zonder controle' is gevraagd door {self.status['door']}")
                 else:
