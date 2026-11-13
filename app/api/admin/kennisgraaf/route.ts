@@ -60,7 +60,9 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async (request) => {
 
 const voedSchema = z.object({ tekst: z.string().min(1).max(VOEDING_MAX + 200) });
 
-// POST: "Voed het brein". Alleen platformbeheer; de audit noemt de titel, niet de hele tekst.
+// POST: "Voed het brein". Alleen platformbeheer. De audit is onwisbaar en noemt daarom NIETS van de tekst (ook de titel
+// niet: een beheerder kan er persoonsgegevens in plakken), alleen wie, het id en de aantallen. De tekst zelf staat
+// uitsluitend in RagChunk en in de KV (brein:voeding:<id>), die wel te wissen zijn.
 export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
   const parsed = voedSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) throw AppError.validation("Typ eerst iets om het brein te voeden.");
@@ -71,10 +73,10 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
     action: "brein.gevoed",
     actorUserId: principal.userId,
     actorLabel: "user",
-    summary: `${principal.email} voedde het brein: "${uit.voeding.titel}"`,
+    summary: `${principal.email} voedde het brein (${uit.voeding.id}, ${parsed.data.tekst.trim().length} tekens)`,
     targetType: "rag",
     targetId: uit.voeding.id,
-    metadata: { stukken: uit.chunkIds.length, buren: uit.buren.length },
+    metadata: { stukken: uit.chunkIds.length, buren: uit.buren.length, tekens: parsed.data.tekst.trim().length },
   });
   return NextResponse.json({ id: uit.voeding.id, titel: uit.voeding.titel, chunkIds: uit.chunkIds, buren: uit.buren });
 });
