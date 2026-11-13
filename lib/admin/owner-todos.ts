@@ -515,6 +515,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       title: "Controleer of de 83(b)-verklaring is verstuurd en bewaar het bewijs",
       why: "De 83(b)-verklaring moet binnen 30 dagen na 9 november 2026 bij de IRS zijn ingediend: uiterlijk 9 december 2026 (de datum komt uit de Atlas-documenten van de eigenaar).",
       how: [
+        "Kijk eerst in het Stripe Atlas-dashboard of Atlas de 83(b)-verklaring al voor je heeft ingediend; Atlas biedt dat soms aan, maar controleer dat zelf.",
         "Zoek het bewijs van verzending op (de verzendbevestiging of het ontvangstbewijs van de IRS) en kijk of de datum voor 9 december 2026 ligt.",
         "Is de verklaring nog niet verstuurd, laat dat dan meteen doen (met een verzendmethode waarmee je een bewijs krijgt) en vraag zo nodig hulp aan de accountant of aan Atlas.",
         "Bewaar het bewijs bij je Atlas-documenten en vink deze taak daarna af.",
@@ -522,6 +523,21 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       auto: false,
       eerst: { reden: "wettelijk", uiterlijk: "2026-12-09" },
       ...m("irs-83b"),
+    },
+    {
+      id: "accountant-kiezen",
+      group: "Juridisch",
+      title: "Een accountant kiezen voor Nederland en de Verenigde Staten",
+      why: "Zekerflex, Inc. is een Amerikaanse Inc. die vanuit Nederland werkt. Dat vraagt twee kanten aan aangifte en administratie: in Nederland de btw en de Wtta, en in de Verenigde Staten de aangifte over 2026 (voor een vennootschap met een buitenlandse eigenaar gaat dat om Form 1120 met Form 5472). Ook de structuur zelf en de inschrijving bij de KvK horen bij zo iemand. Zonder accountant weet niemand zeker welke termijnen gelden.",
+      how: [
+        "Zoek een accountant (of twee, een voor Nederland en een voor de Verenigde Staten) met ervaring met een Amerikaanse Inc. die vanuit Nederland werkt, en leg de structuur uit: Zekerflex, Inc., met de eigenaar in Nederland.",
+        "Vraag de accountant de btw-positie, de Wtta en de inschrijving bij de KvK door te nemen, en de Amerikaanse aangifte over 2026 (Form 1120 met Form 5472) in te plannen.",
+        "Laat de accountant de datums bevestigen: de termijnen in Beheer → Te doen komen uit de projectnotities, niet van een adviseur.",
+        "Zet de gekozen accountant en de afspraken in Beheer → Accountant (/admin/accountant) en vink deze taak daarna af.",
+      ],
+      auto: false,
+      eerst: { reden: "wettelijk" },
+      ...m("accountant-kiezen"),
     },
     {
       id: "avg-bewaartermijn",
