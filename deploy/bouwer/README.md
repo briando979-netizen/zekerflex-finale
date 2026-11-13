@@ -99,6 +99,8 @@ met een nieuwe sha. De controle (`werker/controle.mjs`) doet `prisma validate`, 
 
 Na elke uitrol van de lus volgt na ~3 minuten een **nacontrole** (gezondheid, VERSIE, en een rondgang van na de uitrol die de lus zo nodig zelf start). Faalt die, meldt de live-zetter teruggezet, of komt er binnen 15 minuten geen rondgang, dan gaat de vlag `auto-uitrol` zelf **uit** en rolt niets meer uit tot een mens hem weer aanzet. Eén ronde tegelijk (KV-slot); lukt het lezen van de stand niet, dan schrijft een ronde niets; een verzoek van een mens wordt nooit overschreven; GitHub wordt voorwaardelijk bevraagd (ETag) binnen de limiet; een tijdelijk uitgestelde uitrol krijgt hoogstens 3 pogingen met 10 minuten ertussen.
 
+De Bouwer-container heeft geen `python3`, dus de `py_compile`-stap in `werker/controle.mjs` wordt daar overgeslagen (hij blijft staan voor omgevingen mét python3). **De zekere controle van `zf-live.py` zit in zf-live zelf:** vóór het zelf-herladen na een uitrol compileert hij het nieuwe bestand; bij een syntaxfout herlaadt hij niet, blijft de oude versie draaien, zet hij de korte reden in de KV (`bouwer:live:herlaadfout`) en in de hartslag (`herlaadFout`), en probeert hij dat kapotte bestand niet opnieuw (hash onthouden), dus geen herstart-lus.
+
 Bedienen: **Admin → ZekerFlex AI → Live zetten**, blok *Auto-uitrol* (aan/uit, **noodrem**, laatste ronde en reden). De vlag
 `auto-uitrol` staat standaard UIT. Bewaking: hartslag `auto-uitrol` (Admin → Systeem), en een taak in Te doen als een versie
 geweigerd wordt, een migratie wacht, of main meer dan 30 minuten voorloopt op live.
