@@ -7,6 +7,7 @@ import { IconReply, IconSmiley, IconDots, IconCopy, IconForward, IconPin, IconSt
 import { ActionList, MessageSheet, ReactionRow, type ActionItem } from "./MessageActions";
 import { PollCard } from "./PollCard";
 import { isProgramma, isVideoType } from "@/lib/messaging/bijlage";
+import { vermeldingDelen } from "@/lib/messaging/vermelding";
 import { useChatTeksten } from "./ChatTekstenContext";
 import { vulIn } from "@/lib/i18n/vul-in";
 
@@ -119,7 +120,7 @@ function VoiceNote({ src, durationSec }: { src: string; durationSec?: number }) 
 }
 
 /** Tekst met aanklikbare links. */
-function RichText({ text, mine }: { text: string; mine: boolean }) {
+function RichText({ text, mine, namen = [] }: { text: string; mine: boolean; namen?: readonly string[] }) {
   return (
     <>
       {linkParts(text).map((p, i) =>
@@ -133,6 +134,19 @@ function RichText({ text, mine }: { text: string; mine: boolean }) {
           >
             {p.text}
           </a>
+        ) : namen.length ? (
+          // @vermeldingen gekleurd, zoals in WhatsApp (lib/messaging/vermelding.ts)
+          <span key={i}>
+            {vermeldingDelen(p.text, namen).map((d, j) =>
+              d.vermelding ? (
+                <span key={j} className="font-semibold text-[#027EB5] [.app-scope[data-theme=dark]_&]:text-[#53BDEB]">
+                  {d.tekst}
+                </span>
+              ) : (
+                <span key={j}>{d.tekst}</span>
+              ),
+            )}
+          </span>
         ) : (
           <span key={i}>{p.text}</span>
         ),
@@ -261,6 +275,7 @@ export function MessageBubble({
     );
   }
 
+  const genoemd = (m.mentions ?? []).map((id) => names?.[id] ?? "").filter(Boolean);
   const myReaction = myUserId ? (Object.entries(m.reactions ?? {}).find(([, u]) => u.includes(myUserId))?.[0] ?? null) : null;
   const preview = m.text || (m.kind === "image" ? t.previewPhoto : m.kind === "voice" ? t.previewVoice : m.kind === "file" ? `📎 ${m.attachment?.filename ?? t.previewFileFallback}` : m.kind === "location" ? t.previewLocation : "");
 
@@ -655,7 +670,7 @@ export function MessageBubble({
             {textOnly ? (
               <>
                 <p className="whitespace-pre-wrap break-words text-ink">
-                  <RichText text={m.text} mine={mine} />
+                  <RichText text={m.text} mine={mine} namen={genoemd} />
                   <span className="inline-block h-3 align-bottom" style={{ width: metaPx }} aria-hidden />
                 </p>
                 <span className="absolute bottom-1.5 right-2.5">{meta}</span>
@@ -664,7 +679,7 @@ export function MessageBubble({
               <>
                 {m.text && m.kind !== "poll" && (
                   <p className="mt-0.5 whitespace-pre-wrap break-words text-ink">
-                    <RichText text={m.text} mine={mine} />
+                    <RichText text={m.text} mine={mine} namen={genoemd} />
                   </p>
                 )}
                 <div className="mt-1">{meta}</div>

@@ -9,6 +9,7 @@ import { useChatTeksten } from "./ChatTekstenContext";
 import { vulIn } from "@/lib/i18n/vul-in";
 import { IconPaperclip, IconMic, IconSend, IconBolt, IconSparkle, IconSmiley, IconClose, IconReply, IconPencil } from "./icons";
 import { isFotoType } from "@/lib/messaging/bijlage";
+import { kandidaten, vermeldingenIn, vermeldingVraag, vulVermeldingIn, type Lid } from "@/lib/messaging/vermelding";
 
 export interface OutgoingMessage {
   text: string;
@@ -20,6 +21,8 @@ export interface OutgoingMessage {
   editId?: string;
   /** kind "poll": de vraag is `text` */
   poll?: { options: string[]; multi: boolean };
+  /** @vermeldingen in een groep (userIds) */
+  mentions?: string[];
 }
 
 // Veelgebruikte emoji voor op een computer (een telefoon heeft ze op het toetsenbord).
@@ -132,6 +135,7 @@ export function Composer({
   onEditLast,
   droppedFile = null,
   onDropHandled,
+  members = [],
 }: {
   /** text of the last message from the other side — for ✨ reply suggestions */
   lastIncoming?: string;
@@ -151,11 +155,33 @@ export function Composer({
   /** een bestand dat op het gesprek is losgelaten (slepen) */
   droppedFile?: File | null;
   onDropHandled?: () => void;
+  /** in een groep: de andere leden, voor @vermeldingen (leeg = geen lijst) */
+  members?: Lid[];
 }) {
   const chat = useChatTeksten();
   // what you typed stays as a draft per conversation (drafts.ts)
   const [text, setText] = useState(() => (editing ? editing.text : readDraft(threadId)));
   const taRef = useRef<HTMLTextAreaElement>(null);
+  // @vermeldingen (groep): wat je na @ typt, en wie je al koos (lib/messaging/vermelding.ts)
+  const [noem, setNoem] = useState<{ start: number; vraag: string; actief: number } | null>(null);
+  const gekozen = useRef<Lid[]>([]);
+  const kijkNoem = (waarde: string, cursor: number) => {
+    const v = members.length ? vermeldingVraag(waarde, cursor) : null;
+    setNoem((oud) => (v ? { ...v, actief: oud && oud.start === v.start ? oud.actief : 0 } : null));
+  };
+  const noemLijst = noem ? kandidaten(members, noem.vraag) : [];
+  const kies = (lid: Lid) => {
+    if (!noem) return;
+    const ta = taRef.current;
+    const r = vulVermeldingIn(text, noem.start, ta?.selectionStart ?? text.length, lid.name);
+    setText(r.tekst);
+    gekozen.current = [...gekozen.current.filter((x) => x.userId !== lid.userId), lid];
+    setNoem(null);
+    requestAnimationFrame(() => {
+      ta?.focus();
+      ta?.setSelectionRange(r.cursor, r.cursor);
+    });
+  };
   // editing starts: the field gets the message's text; editing stops: back to the draft
   const firstEdit = useRef(true);
   useEffect(() => {
@@ -269,7 +295,10 @@ export function Composer({
         return;
       }
       writeDraft(threadId, "");
-      await onSend({ text: t, kind: "text", ...(replyTo ? { replyToId: replyTo.id } : {}) });
+      const genoemd = vermeldingenIn(t, gekozen.current);
+      gekozen.current = [];
+      setNoem(null);
+      await onSend({ text: t, kind: "text", ...(replyTo ? { replyToId: replyTo.id } : {}), ...(genoemd.length ? { mentions: genoemd } : {}) });
       onClearReply();
     } finally {
       setBusy(false);
@@ -561,6 +590,24 @@ export function Composer({
             </div>
           )}
 
+          {noem && noemLijst.length > 0 && (
+            <div className="absolute bottom-full left-2 z-10 mb-2 w-[min(18rem,calc(100%-1rem))] rounded-xl border border-hairstrong bg-white p-1 shadow-lift" role="listbox" aria-label={chat.composer.noemIemand}>
+              {noemLijst.map((l, i) => (
+                <button
+                  key={l.userId}
+                  type="button"
+                  role="option"
+                  aria-selected={i === noem.actief}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => kies(l)}
+                  className={`flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-ink ${i === noem.actief ? "bg-paper-soft" : "hover:bg-paper-soft"}`}
+                >
+                  <span className="truncate font-medium">@{l.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="flex min-w-0 flex-1 items-end gap-0.5 rounded-[1.4rem] bg-white px-1 py-0.5 shadow-sm">
             {hoverDevice && (
               <button
@@ -582,10 +629,32 @@ export function Composer({
               value={text}
               onChange={(e) => {
                 setText(e.target.value);
+                kijkNoem(e.target.value, e.target.selectionStart ?? e.target.value.length);
                 onTyping();
               }}
+              onSelect={(e) => kijkNoem(e.currentTarget.value, e.currentTarget.selectionStart ?? 0)}
               onPaste={onPaste}
               onKeyDown={(e) => {
+                // de @-lijst staat open: pijltjes kiezen, Enter of Tab zet de naam erin, Esc sluit
+                if (noem && noemLijst.length) {
+                  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                    e.preventDefault();
+                    const stap = e.key === "ArrowDown" ? 1 : -1;
+                    setNoem({ ...noem, actief: (noem.actief + stap + noemLijst.length) % noemLijst.length });
+                    return;
+                  }
+                  if ((e.key === "Enter" || e.key === "Tab") && !e.shiftKey && !e.nativeEvent.isComposing) {
+                    e.preventDefault();
+                    const lid = noemLijst[noem.actief] ?? noemLijst[0];
+                    if (lid) kies(lid);
+                    return;
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    setNoem(null);
+                    return;
+                  }
+                }
                 if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                   e.preventDefault();
                   void sendText();

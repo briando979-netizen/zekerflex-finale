@@ -48,6 +48,7 @@ export const COMPOSER_NL = {
   annuleer: "Annuleer",
   verstuurSpraak: "Verstuur spraakbericht",
   menuFoto: "Foto of video",
+  noemIemand: "Noem iemand in de groep",
   menuCamera: "Camera",
   menuDocument: "Document",
   menuLocatie: "Locatie delen",
