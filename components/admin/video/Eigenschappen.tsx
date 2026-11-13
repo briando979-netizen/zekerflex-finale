@@ -6,8 +6,14 @@ import {
   FORMATEN,
   LETTERTYPES,
   STIJL_VLAK,
+  alleSleutelbeeldenWeg,
   maxDuur,
+  metSleutelbeeld,
+  sleutelbeeldOp,
+  standOp,
+  zetStand,
   zetSnelheid,
+  zonderSleutelbeeld,
   type AudioClip,
   type BeeldClip,
   type Clip,
@@ -31,6 +37,8 @@ interface Props {
   /** Stiltes langer dan `minStilte` seconden uit een video- of geluidsclip halen (op de woordtijden van de spraak). */
   onStiltes: (clip: BeeldClip | AudioClip, taal: string, minStilte: number) => Promise<void>;
   aiBeeld: boolean;
+  /** De afspeelkop (seconden op de tijdlijn): daar komen sleutelbeelden. */
+  tijd: number;
 }
 
 function Veld({ label, children }: { label: string; children: ReactNode }) {
@@ -156,7 +164,12 @@ function SpraakKnoppen({ clip, onOndertitels, onStiltes }: { clip: BeeldClip | A
   );
 }
 
-function BeeldPaneel({ clip, onClip, onAiBewerk, onAiBeweeg, onOndertitels, onStiltes, aiBeeld }: { clip: BeeldClip; onClip: Props["onClip"]; onAiBewerk: Props["onAiBewerk"]; onAiBeweeg: Props["onAiBeweeg"]; onOndertitels: Props["onOndertitels"]; onStiltes: Props["onStiltes"]; aiBeeld: boolean }) {
+function BeeldPaneel({ clip, onClip, onAiBewerk, onAiBeweeg, onOndertitels, onStiltes, aiBeeld, tijd }: { clip: BeeldClip; onClip: Props["onClip"]; onAiBewerk: Props["onAiBewerk"]; onAiBeweeg: Props["onAiBeweeg"]; onOndertitels: Props["onOndertitels"]; onStiltes: Props["onStiltes"]; aiBeeld: boolean; tijd: number }) {
+  // de stand op de afspeelkop: met sleutelbeelden verandert een schuifje het sleutelbeeld daar (zetStand)
+  const stand = standOp(clip, tijd);
+  const hier = sleutelbeeldOp(clip, tijd);
+  const aantal = clip.sleutelbeelden?.length ?? 0;
+  const binnen = tijd >= clip.start - 1e-6 && tijd <= clip.start + clip.duur + 1e-6;
   const [instructie, setInstructie] = useState("");
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
@@ -185,14 +198,39 @@ function BeeldPaneel({ clip, onClip, onAiBewerk, onAiBeweeg, onOndertitels, onSt
       {clip.soort !== "kleur" && (
         <Knoppen label="Passen" waarde={clip.passen} opties={[{ id: "vullen", label: "Vullend" }, { id: "passend", label: "Hele beeld" }]} onChange={(v) => zet({ passen: v })} />
       )}
-      <Schuif label="Grootte" waarde={Math.round(clip.plaatsing.schaal * 100)} min={10} max={300} eenheid="%" onChange={(v) => zet({ plaatsing: { ...clip.plaatsing, schaal: v / 100 } }, "schaal")} />
+      <Schuif label="Grootte" waarde={Math.round(stand.plaatsing.schaal * 100)} min={10} max={300} eenheid="%" onChange={(v) => onClip(zetStand(clip, tijd, { schaal: v / 100 }), "schaal")} />
       <div className="grid grid-cols-2 gap-2">
-        <Schuif label="Links / rechts" waarde={Math.round(clip.plaatsing.x * 100)} min={-100} max={100} onChange={(v) => zet({ plaatsing: { ...clip.plaatsing, x: v / 100 } }, "x")} />
-        <Schuif label="Omhoog / omlaag" waarde={Math.round(clip.plaatsing.y * 100)} min={-100} max={100} onChange={(v) => zet({ plaatsing: { ...clip.plaatsing, y: v / 100 } }, "y")} />
+        <Schuif label="Links / rechts" waarde={Math.round(stand.plaatsing.x * 100)} min={-100} max={100} onChange={(v) => onClip(zetStand(clip, tijd, { x: v / 100 }), "x")} />
+        <Schuif label="Omhoog / omlaag" waarde={Math.round(stand.plaatsing.y * 100)} min={-100} max={100} onChange={(v) => onClip(zetStand(clip, tijd, { y: v / 100 }), "y")} />
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <Schuif label="Draaien" waarde={clip.plaatsing.draai} min={-180} max={180} eenheid="°" onChange={(v) => zet({ plaatsing: { ...clip.plaatsing, draai: v } }, "draai")} />
-        <Schuif label="Zichtbaar" waarde={Math.round(clip.dekking * 100)} min={0} max={100} eenheid="%" onChange={(v) => zet({ dekking: v / 100 }, "dekking")} />
+        <Schuif label="Draaien" waarde={Math.round(stand.plaatsing.draai)} min={-180} max={180} eenheid="°" onChange={(v) => onClip(zetStand(clip, tijd, { draai: v }), "draai")} />
+        <Schuif label="Zichtbaar" waarde={Math.round(stand.dekking * 100)} min={0} max={100} eenheid="%" onChange={(v) => onClip(zetStand(clip, tijd, { dekking: v / 100 }), "dekking")} />
+      </div>
+      <Kop>Sleutelbeelden</Kop>
+      <p className="text-[0.6875rem]" style={{ color: "var(--a-mute)" }}>
+        Zet de afspeelkop op een moment, zet daar een sleutelbeeld en verander grootte, plek, draaiing of zichtbaarheid. Tussen twee sleutelbeelden beweegt het beeld vloeiend.
+      </p>
+      <div className="flex flex-wrap items-center gap-1">
+        <button
+          type="button"
+          className={`a-button text-[0.6875rem] ${hier ? "a-button-primary" : ""}`}
+          aria-pressed={Boolean(hier)}
+          disabled={!binnen}
+          data-track="video-sleutelbeeld"
+          onClick={() => onClip(hier ? zonderSleutelbeeld(clip, tijd) : metSleutelbeeld(clip, tijd))}
+        >
+          {hier ? "\u25c6 Sleutelbeeld hier weg" : "\u25c7 Sleutelbeeld hier"}
+        </button>
+        {aantal > 0 && (
+          <button type="button" className="a-button text-[0.6875rem]" onClick={() => onClip(alleSleutelbeeldenWeg(clip, tijd))}>
+            Alle weg
+          </button>
+        )}
+        <span className="text-[0.6875rem]" style={{ color: "var(--a-mute)" }}>
+          {aantal === 0 ? "Nog geen" : aantal === 1 ? "1 sleutelbeeld" : `${aantal} sleutelbeelden`}
+          {!binnen && " \u00b7 zet de afspeelkop binnen deze clip"}
+        </span>
       </div>
       <Knoppen
         label="Beweging (Ken Burns)"
@@ -441,7 +479,7 @@ function AudioPaneel({ clip, onClip, onOndertitels, onStiltes }: { clip: AudioCl
   );
 }
 
-export function Eigenschappen({ project, clip, onClip, onProject, onAiBewerk, onAiBeweeg, onOndertitels, onStiltes, aiBeeld }: Props) {
+export function Eigenschappen({ project, clip, onClip, onProject, onAiBewerk, onAiBeweeg, onOndertitels, onStiltes, aiBeeld, tijd }: Props) {
   if (!clip) {
     return (
       <div className="space-y-3">
@@ -476,5 +514,5 @@ export function Eigenschappen({ project, clip, onClip, onProject, onAiBewerk, on
   }
   if (clip.soort === "tekst") return <TekstPaneel clip={clip} onClip={onClip} />;
   if (clip.soort === "audio") return <AudioPaneel key={clip.id} clip={clip} onClip={onClip} onOndertitels={onOndertitels} onStiltes={onStiltes} />;
-  return <BeeldPaneel key={clip.id} clip={clip} onClip={onClip} onAiBewerk={onAiBewerk} onAiBeweeg={onAiBeweeg} onOndertitels={onOndertitels} onStiltes={onStiltes} aiBeeld={aiBeeld} />;
+  return <BeeldPaneel key={clip.id} clip={clip} onClip={onClip} onAiBewerk={onAiBewerk} onAiBeweeg={onAiBeweeg} onOndertitels={onOndertitels} onStiltes={onStiltes} aiBeeld={aiBeeld} tijd={tijd} />;
 }
