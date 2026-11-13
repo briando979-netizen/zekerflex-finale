@@ -277,42 +277,51 @@ export interface ReindexResult {
   sales: number;
   database: number;
   interaction: number;
+  /** de indexers die faalden (de route beslist of dat een fout is of een uitrol: lib/rag/herkansing.ts) */
+  mislukt?: { indexer: string; fout: string }[];
 }
 
 async function safely(
   name: string,
   fn: () => Promise<number>,
+  mislukt: { indexer: string; fout: string }[],
+  stil: boolean,
 ): Promise<number> {
   try {
     return await fn();
   } catch (err) {
-    logger.error("rag indexer failed", { indexer: name, error: (err as Error).message });
+    mislukt.push({ indexer: name, fout: (err as Error).message });
+    if (!stil) logger.error("rag indexer failed", { indexer: name, error: (err as Error).message });
     return 0;
   }
 }
 
-export async function reindexAll(): Promise<ReindexResult> {
+/** stil: geen "rag indexer failed" hier, de aanroeper meldt het zelf (de cron-route, lib/rag/herkansing.ts). */
+export async function reindexAll(opts: { stil?: boolean } = {}): Promise<ReindexResult> {
   if (!isRagEnabled()) {
     throw new Error("RAG is not enabled (RAG_ENABLED + LLM_EMBED_MODEL)");
   }
   const started = Date.now();
-  const result = {
-    code: await safely("code", indexCodebase),
-    audit: await safely("audit", indexAudit),
-    legal: await safely("legal", indexLegal),
-    sales: await safely("sales", indexSales),
-    database: await safely("database", indexPlatform),
-    interaction: await safely("interaction", indexInteractions),
+  const mislukt: { indexer: string; fout: string }[] = [];
+  const stil = opts.stil === true;
+  const telling = {
+    code: await safely("code", indexCodebase, mislukt, stil),
+    audit: await safely("audit", indexAudit, mislukt, stil),
+    legal: await safely("legal", indexLegal, mislukt, stil),
+    sales: await safely("sales", indexSales, mislukt, stil),
+    database: await safely("database", indexPlatform, mislukt, stil),
+    interaction: await safely("interaction", indexInteractions, mislukt, stil),
   };
-  const total = Object.values(result).reduce((a, b) => a + b, 0);
+  const result: ReindexResult = { ...telling, mislukt };
+  const total = Object.values(telling).reduce((a, b) => a + b, 0);
 
-  logger.info("rag reindex complete", { ...result, ms: Date.now() - started });
+  logger.info("rag reindex complete", { ...telling, mislukt: mislukt.length, ms: Date.now() - started });
   await recordAudit({
     category: "ORCHESTRATION",
     action: "rag.reindex",
     actorLabel: "system",
     summary: `RAG-index herbouwd: ${total} chunks`,
-    metadata: result,
+    metadata: { ...telling, mislukt: mislukt.map((m) => m.indexer) },
   });
   return result;
 }
