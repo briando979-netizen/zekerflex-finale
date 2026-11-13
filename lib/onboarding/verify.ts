@@ -1065,6 +1065,16 @@ export async function submitFreelancerOnboarding(
     }
   }
 
+  // alleen een geteld totaal per maand (lib/kyc/id-soort-meting.ts): hoeveel scans een NL-document van model 2021+ waren.
+  // Geen gegeven per persoon; een storing houdt niets tegen.
+  if (mrzGeldig && mrz) {
+    const gelezen = mrz;
+    runAfter(async () => {
+      const { telIdSoort } = await import("@/lib/kyc/id-soort-meting");
+      await telIdSoort(gelezen).catch(() => undefined);
+    });
+  }
+
   // ID geverifieerd: de werker hoort het meteen (eenmalig, lib/onboarding/id-geverifieerd.ts)
   if (outcome === "verified") runAfter(() => meldIdGeverifieerd(user.id));
 

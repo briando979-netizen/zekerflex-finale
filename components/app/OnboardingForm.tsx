@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { useFT } from "@/components/i18n/useFT";
 import { ThuisbasisVelden, controleerThuisbasisVooraf, useThuisbasisFout } from "@/components/app/ThuisbasisVelden";
@@ -49,6 +49,7 @@ export function OnboardingForm({
   beginStap,
   idKlaar = false,
   kanSluiten = true,
+  laatstePoging = null,
 }: {
   /** stap 1 ("Hey! Wie ben jij?"): wat er al bewaard is */
   persoon: PersoonStand;
@@ -58,6 +59,8 @@ export function OnboardingForm({
   idKlaar?: boolean;
   /** de verplichte poort (lib/onboarding/werker-poort.ts) mag niet gesloten worden */
   kanSluiten?: boolean;
+  /** de vorige ID-poging (uitslag en redenen), getoond in de ID-stap */
+  laatstePoging?: ReactNode;
   defaultName: string;
   requireKvk?: boolean;
   /** Stripe Identity staat aan en weigert niet: dan een klein linkje onder de twee keuzes (12 nov 2026). */
@@ -579,6 +582,7 @@ export function OnboardingForm({
 
           {/* stap 3: de ID-check */}
           <div hidden={stap !== "id"} className="space-y-5" key={attempt}>
+            {laatstePoging}
             <IdKeuzeKaarten
               w={w.id}
               busy={busy}

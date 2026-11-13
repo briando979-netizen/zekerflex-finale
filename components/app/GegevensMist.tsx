@@ -107,10 +107,10 @@ function BsnVoorstelVraag({ laatste4, zelf }: { laatste4: string; zelf: () => vo
     <div className="mt-2">
       <p className="text-sm text-ink">{vulIn(t.voorstel, { laatste4 })}</p>
       <div className="mt-2 flex flex-wrap gap-2">
-        <button type="button" onClick={() => void ja()} disabled={busy} className="btn-primary min-h-[44px] px-4 py-2 text-sm disabled:opacity-50">
+        <button type="button" data-track="bsn-voorstel-ja" onClick={() => void ja()} disabled={busy} className="btn-primary min-h-[44px] px-4 py-2 text-sm disabled:opacity-50">
           {busy ? t.bezig : t.voorstelJa}
         </button>
-        <button type="button" onClick={zelf} disabled={busy} className="btn-ghost min-h-[44px] px-4 py-2 text-sm">
+        <button type="button" data-track="bsn-voorstel-nee" onClick={zelf} disabled={busy} className="btn-ghost min-h-[44px] px-4 py-2 text-sm">
           {t.voorstelNee}
         </button>
       </div>
@@ -183,6 +183,7 @@ function BtwVeld({ soort, begin }: { soort: "zzp" | "flexwerker"; begin: BtwBegi
         <label htmlFor="gegevens-btw" className="field-label">{f.btw}</label>
         <input
           id="gegevens-btw"
+          data-track="gegevens-btw"
           type="text"
           autoComplete="off"
           autoCapitalize="characters"
@@ -198,16 +199,16 @@ function BtwVeld({ soort, begin }: { soort: "zzp" | "flexwerker"; begin: BtwBegi
         <p id="gegevens-btw-hint" className="mt-1 text-xs text-neutralx-500">{flex ? f.btwHintOptioneel : f.btwHintLive}</p>
       </div>
       <label className="flex items-start gap-2 text-sm text-ink">
-        <input type="checkbox" checked={aangevraagd} onChange={(e) => setAangevraagd(e.target.checked)} className="mt-1" />
+        <input type="checkbox" data-track="gegevens-btw-aangevraagd" checked={aangevraagd} onChange={(e) => setAangevraagd(e.target.checked)} className="mt-1" />
         <span>{f.btwAangevraagd}</span>
       </label>
       {flex && (
         <label className="flex items-start gap-2 text-sm text-ink">
-          <input type="checkbox" checked={kor} onChange={(e) => setKor(e.target.checked)} className="mt-1" />
+          <input type="checkbox" data-track="gegevens-kor" checked={kor} onChange={(e) => setKor(e.target.checked)} className="mt-1" />
           <span>{ft.kor.keuzeHeb}</span>
         </label>
       )}
-      <button type="submit" disabled={busy || !ingevuld} className="btn-primary min-h-[44px] px-4 py-2 text-sm disabled:opacity-50">
+      <button type="submit" data-track="gegevens-btw-opslaan" disabled={busy || !ingevuld} className="btn-primary min-h-[44px] px-4 py-2 text-sm disabled:opacity-50">
         {busy ? t.bezig : t.opslaan}
       </button>
       {fout && <p id="gegevens-btw-fout" role="alert" className="text-xs text-crit">{fout}</p>}

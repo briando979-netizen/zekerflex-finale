@@ -121,6 +121,10 @@ export interface AuthDict {
     doneSub: string;
     bankTitle: string;
     bankSub: string;
+    /** de uitzendovereenkomst in stap 3, en het blok voor later (13 nov 2026) */
+    uitzendTitel: string;
+    laterTitel: string;
+    laterUitleg: string;
     allDone: string;
     needBoth: string;
     needBankHere: string;
@@ -505,6 +509,9 @@ const nl: AuthDict = {
     doneSub: "Je account is volledig geverifieerd.",
     bankTitle: "Bankrekening bevestigen",
     bankSub: "Nodig voordat je uitbetaald kunt worden: vul je rekeningnummer in en bevestig het via je bank, dan weten we zeker dat het van jou is.",
+    uitzendTitel: "Je uitzendovereenkomst en loonheffing",
+    laterTitel: "Later, voor je eerste uitbetaling",
+    laterUitleg: "Dit hoeft nu nog niet: je hebt het pas nodig als je voor het eerst wordt uitbetaald.",
     allDone: "✓ Je verplichte documenten staan klaar. Je IBAN wordt hiermee gecontroleerd.",
     needBoth: "Regel je identiteitsbewijs en bevestig je bankrekening via je bank. Beide zijn verplicht voordat je uitbetaald kunt worden.",
     needBankHere: "Verifieer nog je bankrekening — log in bij je bank, dan controleren we je IBAN direct. Je identiteitsbewijs regel je hierboven.",
@@ -892,6 +899,9 @@ const en: AuthDict = {
     doneSub: "Your account is fully verified.",
     bankTitle: "Confirm bank account",
     bankSub: "Needed before you can be paid: enter your account number and confirm it via your bank, so we know for sure it is yours.",
+    uitzendTitel: "Your agency contract and payroll tax",
+    laterTitel: "Later, for your first payout",
+    laterUitleg: "You don't need this yet: only when you're paid for the first time.",
     allDone: "✓ Your required documents are in place. Your IBAN is checked with them.",
     needBoth: "Sort out your ID and confirm your bank account via your bank. Both are required before you can be paid.",
     needBankHere: "Still verify your bank account — log in at your bank and we check your IBAN instantly. Your ID is handled above.",
@@ -1279,6 +1289,9 @@ const pl: AuthDict = {
     doneSub: "Twoje konto jest w pełni zweryfikowane.",
     bankTitle: "Potwierdź konto bankowe",
     bankSub: "Potrzebne przed pierwszą wypłatą: podaj numer konta i potwierdź go przez bank, dzięki temu wiemy, że należy do Ciebie.",
+    uitzendTitel: "Twoja umowa agencyjna i podatek od wynagrodzenia",
+    laterTitel: "Później, do pierwszej wypłaty",
+    laterUitleg: "To jeszcze nie jest potrzebne: dopiero przy pierwszej wypłacie.",
     allDone: "✓ Wymagane dokumenty są gotowe. Na ich podstawie sprawdzamy Twój IBAN.",
     needBoth: "Załatw dokument tożsamości i potwierdź konto bankowe przez swój bank. Oba są wymagane przed wypłatą.",
     needBankHere: "Zweryfikuj jeszcze konto bankowe — zaloguj się w banku, a od razu sprawdzimy Twój IBAN. Dokument tożsamości załatwiasz powyżej.",
@@ -1666,6 +1679,9 @@ const ro: AuthDict = {
     doneSub: "Contul tău este complet verificat.",
     bankTitle: "Confirmă contul bancar",
     bankSub: "Necesar înainte de a fi plătit: completează numărul contului și confirmă-l prin banca ta, așa știm sigur că este al tău.",
+    uitzendTitel: "Contractul tău de agenție și impozitul pe salariu",
+    laterTitel: "Mai târziu, pentru prima plată",
+    laterUitleg: "Nu e nevoie încă: abia la prima plată.",
     allDone: "✓ Documentele obligatorii sunt în regulă. Cu ele verificăm IBAN-ul tău.",
     needBoth: "Rezolvă actul de identitate și confirmă contul bancar prin banca ta. Ambele sunt obligatorii înainte de plată.",
     needBankHere: "Mai verifică-ți contul bancar — autentifică-te la bancă și îți verificăm IBAN-ul imediat. Actul de identitate îl rezolvi mai sus.",
@@ -2053,6 +2069,9 @@ const uk: AuthDict = {
     doneSub: "Твій акаунт повністю перевірено.",
     bankTitle: "Підтвердь банківський рахунок",
     bankSub: "Потрібно перед першою виплатою: вкажи номер рахунку й підтверди його через банк, так ми точно знаємо, що він твій.",
+    uitzendTitel: "Твій договір з агенцією й податок із зарплати",
+    laterTitel: "Пізніше, для першої виплати",
+    laterUitleg: "Це поки не потрібно: лише коли тобі вперше виплачуватимуть гроші.",
     allDone: "✓ Обов'язкові документи готові. За ними ми перевіряємо твій IBAN.",
     needBoth: "Оформи документ і підтвердь банківський рахунок через свій банк. Обидва потрібні перед виплатою.",
     needBankHere: "Ще підтвердь банківський рахунок — увійди у свій банк, і ми одразу перевіримо IBAN. Документ ти вже оформлюєш вище.",
