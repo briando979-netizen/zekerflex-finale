@@ -42,6 +42,27 @@ export const VASTE_PAGINAS = {
       { id: "slot", naam: "Slotoproep", uitleg: "De band onderaan met de knop om te beginnen." },
     ],
   },
+  prijzen: {
+    naam: "Prijzen",
+    pad: "/prijzen",
+    secties: [
+      { id: "tarieven", naam: "De tarieven", uitleg: "De twee kaarten (freelancers en bedrijven) met de rekenhulp en de links eronder." },
+      { id: "api", naam: "Koppeling voor ontwikkelaars", uitleg: "Het blok over de API, met de knop naar de pagina voor ontwikkelaars." },
+      { id: "faq", naam: "Veelgestelde vragen", uitleg: "De vragen en antwoorden over de kosten." },
+      { id: "slot", naam: "Slotoproep", uitleg: "De band onderaan met de knop om te beginnen." },
+    ],
+  },
+  "over-ons": {
+    naam: "Over ons",
+    pad: "/over-ons",
+    secties: [
+      { id: "verhaal", naam: "Ons verhaal", uitleg: "De drie alinea's over waarom ZekerFlex bestaat." },
+      { id: "oprichter", naam: "De oprichter", uitleg: "Het stuk over wie ZekerFlex heeft gebouwd." },
+      { id: "uitgangspunten", naam: "Uitgangspunten", uitleg: "De drie kaarten: onafhankelijk, zeker en transparant." },
+      { id: "werkenbij", naam: "Werken bij ZekerFlex", uitleg: "Het formulier voor een open sollicitatie." },
+      { id: "slot", naam: "Slotoproep", uitleg: "De band onderaan met de knop om te beginnen." },
+    ],
+  },
 } as const satisfies Record<string, VastePagina>;
 
 export type VastePaginaId = keyof typeof VASTE_PAGINAS;

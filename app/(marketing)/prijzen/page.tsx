@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
 import { seoMetadata } from "@/lib/ontwerp/seo-store";
 import { PlatformFeeEstimate } from "@/components/marketing/PlatformFeeEstimate";
 import { contentKeys, getContentMap } from "@/lib/content/store";
+import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
+import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
 
 // titel en omschrijving: de standaard in lib/ontwerp/seo.ts, of een eigen versie uit de Site-ontwerper (SEO)
 export async function generateMetadata(): Promise<Metadata> {
@@ -24,20 +27,9 @@ export default async function PrijzenPage() {
   // teksten uit de Site-ontwerper (Teksten); bedragen en staffel blijven uit lib/pricing/tiers.ts
   const tekst = await getContentMap(contentKeys("pr."));
   const v = (k: string) => tekst[k] ?? "";
-  return (
-    <>
-      <div className="hero-ink text-white">
-        <div className="shell py-20 md:py-24">
-          <p className="eyebrow text-brand-mint" data-cms-key="pr.eyebrow">{v("pr.eyebrow")}</p>
-          <h1 className="mt-4 font-display text-4xl font-bold md:text-6xl" data-cms-key="pr.title">
-            {v("pr.title")}
-          </h1>
-          <p className="mt-6 max-w-xl text-lg text-white/70" data-cms-key="pr.lead" data-cms-ml="1">
-            {v("pr.lead")}
-          </p>
-        </div>
-      </div>
-
+  // de onderdelen onder de kop: volgorde en zichtbaarheid uit de Site-ontwerper (Pagina's); zonder eigen indeling exact de standaard
+  const onderdelen: Record<string, ReactNode> = {
+    tarieven: (
       <Section tone="paper">
         <div className="grid gap-6 lg:grid-cols-2">
           <div id="freelancers" className="card flex scroll-mt-24 flex-col p-8">
@@ -127,7 +119,8 @@ export default async function PrijzenPage() {
           </Link>
         </p>
       </Section>
-
+    ),
+    api: (
       <Section tone="soft">
         <div id="api" className="scroll-mt-24" />
         <SectionHead
@@ -142,7 +135,8 @@ export default async function PrijzenPage() {
           </Link>
         </div>
       </Section>
-
+    ),
+    faq: (
       <Section tone="paper">
         <div id="faq" className="scroll-mt-24" />
         <SectionHead eyebrow={v("pr.faq.eyebrow")} title={v("pr.faq.title")} cms={{ eyebrow: "pr.faq.eyebrow", title: "pr.faq.title" }} />
@@ -150,7 +144,8 @@ export default async function PrijzenPage() {
           <FaqList items={FAQ} />
         </div>
       </Section>
-
+    ),
+    slot: (
       <CtaBand
         title={v("pr.cta.title")}
         body={v("pr.cta.body")}
@@ -158,6 +153,26 @@ export default async function PrijzenPage() {
         secondaryLabel={v("pr.cta.secondary")}
         cms={{ title: "pr.cta.title", body: "pr.cta.body", primary: "pr.cta.primary", secondary: "pr.cta.secondary" }}
       />
+    ),
+  };
+  const zichtbaar = zichtbareSecties("prijzen", await getPaginaIndeling("prijzen"));
+  return (
+    <>
+      <div className="hero-ink text-white">
+        <div className="shell py-20 md:py-24">
+          <p className="eyebrow text-brand-mint" data-cms-key="pr.eyebrow">{v("pr.eyebrow")}</p>
+          <h1 className="mt-4 font-display text-4xl font-bold md:text-6xl" data-cms-key="pr.title">
+            {v("pr.title")}
+          </h1>
+          <p className="mt-6 max-w-xl text-lg text-white/70" data-cms-key="pr.lead" data-cms-ml="1">
+            {v("pr.lead")}
+          </p>
+        </div>
+      </div>
+
+      {zichtbaar.map((id) => (
+        <Fragment key={id}>{onderdelen[id]}</Fragment>
+      ))}
     </>
   );
 }

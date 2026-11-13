@@ -20,6 +20,8 @@ const PAGINAS = Object.keys(VASTE_PAGINAS) as VastePaginaId[];
 const OUD: Record<VastePaginaId, string[]> = {
   "voor-bedrijven": ["systeem", "cijfers", "rekentools", "faq", "slot"],
   "voor-freelancers": ["voordelen", "stappen", "faq", "slot"],
+  prijzen: ["tarieven", "api", "faq", "slot"],
+  "over-ons": ["verhaal", "oprichter", "uitgangspunten", "werkenbij", "slot"],
 };
 
 beforeEach(() => kv.clear());
@@ -64,7 +66,7 @@ describe("een eigen indeling", () => {
 
   it("alleen de bekende pagina's tellen, geen sleutel uit het prototype", () => {
     expect(isVastePagina("voor-bedrijven")).toBe(true);
-    for (const v of ["constructor", "toString", "prijzen", "", null, 3]) expect(isVastePagina(v)).toBe(false);
+    for (const v of ["constructor", "toString", "contact", "", null, 3]) expect(isVastePagina(v)).toBe(false);
   });
 });
 
@@ -77,6 +79,7 @@ describe("de opslag", () => {
     expect(await getPaginaIndeling("voor-freelancers")).toBeNull();
     await setPaginaIndeling("voor-freelancers", { volgorde: OUD["voor-freelancers"], verborgen: ["stappen"] });
     expect(Object.keys(await getPaginaIndelingen()).sort()).toEqual(["voor-bedrijven", "voor-freelancers"]);
+    expect(PAGINAS).toHaveLength(4);
     expect(await setPaginaIndeling("voor-bedrijven", standaardPaginaIndeling("voor-bedrijven"))).toBeNull();
     expect((await getPaginaIndeling("voor-freelancers"))?.verborgen).toEqual(["stappen"]);
     await resetPaginaIndeling("voor-freelancers");
@@ -100,7 +103,7 @@ describe("de pagina's, het paneel en de route", () => {
       const sleutels = [...src.matchAll(/^ {4}([a-z]+): \($/gm)].map((m) => m[1]);
       expect(sleutels, p).toEqual(OUD[p]);
       // de kop blijft vast bovenaan: hij staat in de pagina zelf, vóór de onderdelen
-      expect(src.indexOf('data-cms-key="v')).toBeGreaterThan(src.indexOf("return ("));
+      expect(src.indexOf("<h1")).toBeGreaterThan(src.indexOf("  return (\n    <>"));
       expect(src.indexOf("<h1")).toBeLessThan(src.indexOf("zichtbaar.map("));
     }
   });

@@ -6,7 +6,7 @@ import { SleepGreep, useSleep } from "@/components/admin/ontwerper/Sleep";
 import { verplaatsNaar } from "@/lib/ontwerp/sleep";
 
 // ---------------------------------------------------------------------------
-// Tabblad Pagina's, deel "Vaste pagina's indelen": de onderdelen van een vaste pagina (Voor bedrijven, Voor freelancers)
+// Tabblad Pagina's, deel "Vaste pagina's indelen": de onderdelen van een vaste pagina (Voor bedrijven, Voor freelancers, Prijzen, Over ons)
 // onder de kop verslepen en verbergen. "Opslaan" zet de indeling meteen live; "Standaard" zet de oorspronkelijke terug.
 // De regels staan in lib/ontwerp/vaste-paginas.ts; de teksten van deze pagina's staan in het tabblad Teksten.
 // ---------------------------------------------------------------------------
