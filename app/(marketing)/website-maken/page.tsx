@@ -4,12 +4,13 @@ import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { galerijVoor } from "@/lib/sites/ontwerpen-server";
 import { WEBSITE_PLANS } from "@/lib/website/manage";
+import { accountStand } from "@/lib/billing/stripe-betalen";
 import { OntwerpGalerij, type GalerijKaart } from "@/components/marketing/OntwerpGalerij";
 
 export const metadata: Metadata = {
   title: "Maak zelf je website of webshop",
   description:
-    "Kies een ontwerp, pas het aan door te slepen en te typen, en zet je website of webshop online. Bouwen en bekijken is gratis; je betaalt pas als je hem online zet. Met producten, bestellingen, kortingscodes en een kassa erbij.",
+    "Kies een ontwerp, pas het aan door te slepen en te typen, en zet je website of webshop online. Bouwen en bekijken is gratis. Met producten, bestellingen, kortingscodes en een kassa erbij.",
   ...canonical("/website-maken"),
 };
 
@@ -18,15 +19,19 @@ export const dynamic = "force-dynamic";
 // /website-maken (13 nov 2026, eigenaar: "bied dit aan voor de klant, zoals de grote websitebouwers"): de ingang voor een
 // bedrijf dat zelf een website of webshop wil maken in de Studio. Alles op deze pagina bestaat: de ontwerpen komen uit
 // lib/sites/ontwerpen.ts, de prijs uit lib/website/manage.ts (bouwen en bekijken is gratis, online zetten vraagt een
-// abonnement: lib/sites/access.ts). Geen verzonnen aantallen of klanten.
+// abonnement: lib/sites/access.ts). Een abonnement nemen kan alleen als het betaalaccount open staat (lib/billing/
+// stripe-betalen.ts, dezelfde stand als de Webshop-console). Staat het dicht of is het niet gemeten, dan noemt de pagina geen
+// prijs en belooft hij niet dat je nu online kunt: alleen wat nu echt kan, staat op de site. Geen verzonnen aantallen of klanten.
 
 const BEGIN = "/register?type=bedrijf";
 
 const STAPPEN = [
   { titel: "Kies een ontwerp of vertel je idee", tekst: "Begin met een ontwerp voor jouw branche, of typ in een zin wat je wilt maken. Wij zetten de eerste pagina's voor je klaar." },
   { titel: "Maak het van jou", tekst: "Verander teksten en foto's, sleep blokken naar een andere plek en kies je kleuren. Je ziet meteen hoe het wordt." },
-  { titel: "Zet hem online", tekst: "Tevreden? Zet je site online op je eigen adres. Tot dat moment kost het niets." },
 ];
+// de derde stap hangt af van of online zetten nu kan
+const STAP_ONLINE = { titel: "Zet hem online", tekst: "Tevreden? Zet je site online op je eigen adres. Tot dat moment kost het niets." };
+const STAP_BINNENKORT = { titel: "Online zetten kan binnenkort", tekst: "Bouw je site nu alvast helemaal af en bekijk hem zoals een bezoeker hem ziet. Online zetten kan binnenkort." };
 
 const KRIJGT = [
   { titel: "Een webshop die af is", tekst: "Producten met foto's, maten en kleuren, voorraad, een winkelmand en bestellen." },
@@ -46,6 +51,9 @@ export default async function WebsiteMakenPage() {
     ...shops.map((k) => ({ id: k.id, soort: "webshop" as const, naam: k.naam, omschrijving: k.omschrijving, categorie: k.categorie, foto: k.foto, voorbeeld: k.voorbeeld })),
   ];
   const vanaf = euro(WEBSITE_PLANS.basis.priceCentsPerMonth);
+  // alleen bij een gemeten, open betaalaccount; onbekend of een storing telt als dicht
+  const kanOnline = (await accountStand().catch(() => null))?.betalen === true;
+  const stappen = [...STAPPEN, kanOnline ? STAP_ONLINE : STAP_BINNENKORT];
 
   return (
     <>
@@ -67,7 +75,7 @@ export default async function WebsiteMakenPage() {
               Bekijk de ontwerpen
             </a>
           </div>
-          <p className="mt-5 text-sm text-white/60">Bouwen en bekijken is gratis. Je betaalt pas als je hem online zet, vanaf {vanaf} per maand.</p>
+          <p className="mt-5 text-sm text-white/60">{kanOnline ? `Bouwen en bekijken is gratis. Je betaalt pas als je hem online zet, vanaf ${vanaf} per maand.` : "Bouwen en bekijken is gratis. Online zetten kan binnenkort."}</p>
         </div>
       </div>
 
@@ -96,7 +104,7 @@ export default async function WebsiteMakenPage() {
             Zo werkt het
           </h2>
           <ol className="mt-8 grid gap-5 md:grid-cols-3">
-            {STAPPEN.map((s, i) => (
+            {stappen.map((s, i) => (
               <li key={s.titel} className="surface p-6">
                 <p className="font-display text-3xl font-bold text-brand-700" aria-hidden>
                   {i + 1}
@@ -128,15 +136,19 @@ export default async function WebsiteMakenPage() {
       <section className="hero-ink text-white" aria-labelledby="begin">
         <div className="shell py-14 text-center md:py-20">
           <h2 id="begin" className="font-display text-3xl font-bold md:text-4xl">
-            Begin vandaag, betaal pas als hij online gaat
+            {kanOnline ? "Begin vandaag, betaal pas als hij online gaat" : "Begin vandaag met bouwen"}
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-white/70">
-            Maak een account voor je bedrijf en bouw je site in de Studio. Online zetten kan vanaf {vanaf} per maand.{" "}
-            <Link href="/abonnementen" className="underline underline-offset-2">
-              Bekijk de abonnementen
-            </Link>
-            .
-          </p>
+          {kanOnline ? (
+            <p className="mx-auto mt-4 max-w-2xl text-white/70">
+              Maak een account voor je bedrijf en bouw je site in de Studio. Online zetten kan vanaf {vanaf} per maand.{" "}
+              <Link href="/abonnementen" className="underline underline-offset-2">
+                Bekijk de abonnementen
+              </Link>
+              .
+            </p>
+          ) : (
+            <p className="mx-auto mt-4 max-w-2xl text-white/70">Maak een account voor je bedrijf en bouw je site in de Studio. Bouwen en bekijken is gratis. Online zetten kan binnenkort.</p>
+          )}
           <p className="mt-8">
             <Link href={BEGIN} className="btn-mint px-6 py-3">
               Begin gratis
