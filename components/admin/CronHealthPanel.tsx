@@ -6,12 +6,18 @@ import { Panel, Pill } from "@/components/admin/kit";
 export async function CronHealthPanel() {
   const health = await cronHeartbeats().catch(() => []);
   const stale = health.filter((h) => h.stale).length;
+  const mislukt = health.filter((h) => h.failing).length;
+  const kapot = stale + mislukt;
   return (
     <Panel
       flush
       title="Geplande taken"
-      subtitle={stale === 0 ? "Duurzame hartslag per taak. Alles draait op schema." : `${stale} ${stale === 1 ? "taak draait" : "taken draaien"} niet op tijd. De beheerders zijn gewaarschuwd.`}
-      actions={<Pill tone={stale === 0 ? "ok" : "crit"}>{stale === 0 ? "Op schema" : `${stale} te laat`}</Pill>}
+      subtitle={
+        kapot === 0
+          ? "Duurzame hartslag per taak. Alles draait op schema."
+          : `${stale > 0 ? `${stale} ${stale === 1 ? "taak draait" : "taken draaien"} niet op tijd` : ""}${stale > 0 && mislukt > 0 ? " en " : ""}${mislukt > 0 ? `${mislukt} ${mislukt === 1 ? "taak mislukt" : "taken mislukken"} al langer dan een uur` : ""}. De beheerders zijn gewaarschuwd.`
+      }
+      actions={<Pill tone={kapot === 0 ? "ok" : "crit"}>{kapot === 0 ? "Op schema" : mislukt > 0 && stale === 0 ? `${mislukt} mislukt` : `${kapot} ${kapot === 1 ? "storing" : "storingen"}`}</Pill>}
     >
       <ul>
         {health.map((h) => (

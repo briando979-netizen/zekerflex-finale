@@ -110,17 +110,24 @@ export const WATCHED_CRONS: WatchedCron[] = [
 interface Beat {
   at: string;
   ok: boolean;
+  /** sinds wanneer de taak onafgebroken mislukt (alleen bij ok=false) */
+  since?: string;
 }
 
 const beatKey = (job: string) => `cron-heartbeat:${job}`;
 const BOOT_KEY = "cron-heartbeat:first-seen";
 /** don't alert about a never-seen job until the deployment has existed this long */
 const GRACE_MS = 48 * 60 * 60 * 1000;
+/** een taak die zo lang achter elkaar mislukt, telt als kapot (één misser in een storing niet) */
+export const FAILING_AFTER_MS = 60 * 60 * 1000;
 
 /** Record that a job ran. Never throws; call fire-and-forget. */
 export async function recordCronHeartbeat(job: string, ok: boolean): Promise<void> {
   try {
-    await kvSet(beatKey(job), { at: new Date().toISOString(), ok } satisfies Beat);
+    const nu = new Date().toISOString();
+    const vorige = ok ? null : await kvGet<Beat>(beatKey(job)).catch(() => null);
+    const since = ok ? undefined : vorige && !vorige.ok && vorige.since ? vorige.since : nu;
+    await kvSet(beatKey(job), { at: nu, ok, ...(since ? { since } : {}) } satisfies Beat);
     if (!(await kvGet<{ at: string }>(BOOT_KEY))) await kvSet(BOOT_KEY, { at: new Date().toISOString() });
   } catch (err) {
     logger.warn("cron heartbeat write failed", { job, error: (err as Error).message });
@@ -133,6 +140,9 @@ export interface CronHealth {
   lastRunAt: string | null;
   lastRunOk: boolean | null;
   stale: boolean;
+  /** draait wel, maar mislukt al langer dan een uur achter elkaar */
+  failing: boolean;
+  failingSince: string | null;
   maxAgeHours: number;
 }
 
@@ -149,13 +159,15 @@ export async function cronHeartbeats(now = Date.now()): Promise<CronHealth[]> {
       const beat = await kvGet<Beat>(beatKey(c.job)).catch(() => null);
       const lastMs = beat ? new Date(beat.at).getTime() : null;
       const stale = lastMs !== null ? now - lastMs > c.maxAgeHours * 3_600_000 : deploymentOldEnough;
-      return { job: c.job, label: c.label, lastRunAt: beat?.at ?? null, lastRunOk: beat?.ok ?? null, stale, maxAgeHours: c.maxAgeHours };
+      const sinds = beat && !beat.ok ? (beat.since ?? beat.at) : null;
+      const failing = sinds !== null && !stale && now - new Date(sinds).getTime() > FAILING_AFTER_MS;
+      return { job: c.job, label: c.label, lastRunAt: beat?.at ?? null, lastRunOk: beat?.ok ?? null, stale, failing, failingSince: sinds, maxAgeHours: c.maxAgeHours };
     }),
   );
 }
 
 /** Check every watched job; alert the owner once per stale job (deduped in alertOwner). */
-export async function checkCronHeartbeats(now = Date.now()): Promise<{ stale: string[] }> {
+export async function checkCronHeartbeats(now = Date.now()): Promise<{ stale: string[]; failing: string[] }> {
   const health = await cronHeartbeats(now);
   const stale = health.filter((h) => h.stale);
   for (const h of stale) {
@@ -168,5 +180,18 @@ export async function checkCronHeartbeats(now = Date.now()): Promise<{ stale: st
       url: "/admin/systeem",
     });
   }
-  return { stale: stale.map((h) => h.job) };
+  // een taak die wél draait maar steeds mislukt (verkeerd token, mailbox niet ingericht, dienst onbereikbaar):
+  // de ouderdom-controle hierboven ziet dat niet, want de hartslag is vers
+  const failing = health.filter((h) => h.failing);
+  for (const h of failing) {
+    const sinds = h.failingSince ? new Date(h.failingSince).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" }) : "onbekend";
+    await alertOwner({
+      key: `cron-failing:${h.job}`,
+      title: `Geplande taak mislukt: ${h.label}`,
+      detail: `"${h.job}" draait wel, maar mislukt sinds ${sinds}. Kijk in Admin → Systeem → Foutmeldingen voor de reden.`,
+      severity: "warning",
+      url: "/admin/systeem",
+    });
+  }
+  return { stale: stale.map((h) => h.job), failing: failing.map((h) => h.job) };
 }
