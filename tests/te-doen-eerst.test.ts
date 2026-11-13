@@ -103,6 +103,31 @@ describe("de taken in de bron", () => {
     expect(aantal).toBeLessThanOrEqual(8);
   });
 
+  /** De tekst van een taak in owner-todos.ts, van zijn id tot de volgende taak. */
+  const taak = (id: string): string => {
+    const tekst = readFileSync(path.join(ROOT, "lib", "admin", "owner-todos.ts"), "utf8").replace(/\r\n/g, "\n");
+    const van = tekst.indexOf(`id: "${id}",`);
+    expect(van, `taak ${id} ontbreekt`).toBeGreaterThan(-1);
+    const tot = tekst.indexOf("\n    {\n      id: \"", van + 10);
+    return tekst.slice(van, tot === -1 ? undefined : tot);
+  };
+
+  it("de accountant-taak is wettelijk en heeft géén uiterste datum", () => {
+    const t = taak("accountant-kiezen");
+    expect(t).toContain('eerst: { reden: "wettelijk" }');
+    expect(t).not.toMatch(/uiterlijk/);
+    expect(t).toContain("/admin/accountant");
+    expect(t).toContain("Form 1120");
+    expect(t).toContain("Form 5472");
+    expect(t).not.toMatch(/B\.V\./);
+  });
+
+  it("de 83(b)-taak begint met een kijkje in het Atlas-dashboard", () => {
+    const t = taak("irs-83b");
+    const eerste = t.indexOf("how: [");
+    expect(t.slice(eerste, eerste + 200)).toContain("Stripe Atlas-dashboard");
+  });
+
   it("de wettelijke termijnen komen uit de projectnotities: Wtta 31 december 2026, 83(b) 9 december 2026", () => {
     const tekst = readFileSync(path.join(ROOT, "lib", "admin", "owner-todos.ts"), "utf8");
     expect(tekst).toContain('eerst: { reden: "wettelijk", uiterlijk: "2026-12-31" }');
