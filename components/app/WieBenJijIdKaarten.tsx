@@ -48,10 +48,10 @@ export function IdKeuzeKaarten({
           {w.nlPunt}
         </p>
         <div className="mt-4 grid gap-2" role="group" aria-labelledby="id-keuze-auto">
-          <button type="button" onClick={() => onStart("nl", "auto")} disabled={busy} className="btn-primary w-full disabled:opacity-60">
+          <button type="button" data-track="id-start-nl-auto" onClick={() => onStart("nl", "auto")} disabled={busy} className="btn-primary w-full disabled:opacity-60">
             {w.nlKnop}
           </button>
-          <button type="button" onClick={() => onStart("eu", "auto")} disabled={busy} className={KNOP_OMRAND}>
+          <button type="button" data-track="id-start-eu-auto" onClick={() => onStart("eu", "auto")} disabled={busy} className={KNOP_OMRAND}>
             {w.euKnop}
           </button>
         </div>
@@ -63,10 +63,10 @@ export function IdKeuzeKaarten({
         <h3 id="id-keuze-zelf" className="mt-2 font-display text-base font-bold text-ink">{w.zelfTitel}</h3>
         <p className="mt-1 text-sm leading-relaxed text-neutralx-600">{w.zelfUitleg}</p>
         <div className="mt-4 grid gap-2" role="group" aria-labelledby="id-keuze-zelf">
-          <button type="button" onClick={() => onStart("nl", "zelf")} disabled={busy} className={KNOP_OMRAND}>
+          <button type="button" data-track="id-start-nl-zelf" onClick={() => onStart("nl", "zelf")} disabled={busy} className={KNOP_OMRAND}>
             {w.nlKnop}
           </button>
-          <button type="button" onClick={() => onStart("eu", "zelf")} disabled={busy} className={KNOP_OMRAND}>
+          <button type="button" data-track="id-start-eu-zelf" onClick={() => onStart("eu", "zelf")} disabled={busy} className={KNOP_OMRAND}>
             {w.euKnop}
           </button>
         </div>

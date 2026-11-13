@@ -276,31 +276,14 @@ export default async function VerificatiePage() {
         }}
       />
 
-      {lastCheck && (
-        <div className="mb-6 card p-4 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-ink">{pt.attempt.last}</span>
-            <StatusPill
-              tone={
-                lastCheck.status === "VERIFIED" ? "ok" : lastCheck.status === "REJECTED" ? "crit" : "warn"
-              }
-            >
-              {attemptLabel(pt.attempt, lastCheck.decisionStatus, lastCheck.status)}
-            </StatusPill>
+      {/* de uitzendovereenkomst hoort bij de gegevens (stap 3): zolang hij niet getekend is direct onder wat er mist, niet
+          onderaan de pagina (13 nov 2026, voorstel d4; "Naar de overeenkomst" in GegevensMist springt hierheen) */}
+      {isUitzend && mist.includes("contract") && (
+        <div id="uitzendovereenkomst" tabIndex={-1} className="mb-6 card scroll-mt-20 p-6 focus:outline-none">
+          <h2 className="font-display text-base font-bold text-ink">{pt.uitzendTitel}</h2>
+          <div className="mt-4">
+            <UitzendPanel />
           </div>
-          {waitForStripe(lastCheck.decisionStatus) && <StripeIdentityWacht text={pt.attempt.checking} />}
-          {stripeReason && (
-            <p className="mt-2 text-neutralx-600">
-              Stripe kon je ID niet goedkeuren ({stripeReason}). Probeer het opnieuw met goed licht, of kies &ldquo;Zelf foto&apos;s uploaden&rdquo;.
-            </p>
-          )}
-          {reasons.length > 0 && (
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-neutralx-600">
-              {reasons.map((r, i) => (
-                <li key={i}>{r}</li>
-              ))}
-            </ul>
-          )}
         </div>
       )}
 
@@ -327,6 +310,36 @@ export default async function VerificatiePage() {
         beginStap={begin}
         idKlaar={idKlaar}
         kanSluiten={poort?.klaar ?? true}
+        // de vorige ID-poging hoort bij de ID-stap (stap 4), niet bovenaan de pagina
+        laatstePoging={
+          lastCheck ? (
+            <div className="card p-4 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-ink">{pt.attempt.last}</span>
+                <StatusPill
+                  tone={
+                    lastCheck.status === "VERIFIED" ? "ok" : lastCheck.status === "REJECTED" ? "crit" : "warn"
+                  }
+                >
+                  {attemptLabel(pt.attempt, lastCheck.decisionStatus, lastCheck.status)}
+                </StatusPill>
+              </div>
+              {waitForStripe(lastCheck.decisionStatus) && <StripeIdentityWacht text={pt.attempt.checking} />}
+              {stripeReason && (
+                <p className="mt-2 text-neutralx-600">
+                  Stripe kon je ID niet goedkeuren ({stripeReason}). Probeer het opnieuw met goed licht, of kies de eigen ID-scan hieronder.
+                </p>
+              )}
+              {reasons.length > 0 && (
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-neutralx-600">
+                  {reasons.map((r, i) => (
+                    <li key={i}>{r}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : null
+        }
       />
 
       {walletAan && (
@@ -335,31 +348,37 @@ export default async function VerificatiePage() {
         </div>
       )}
 
-      <div className="mt-6 card p-6">
-        <h2 className="font-display text-base font-bold text-ink">{pt.bankTitle}</h2>
-        <p className="mt-1 text-sm text-neutralx-500">{pt.bankSub}</p>
-        <div className="mt-4">
-          <ComplianceDocsPanel idInForm />
-        </div>
-      </div>
-
-      {werkrechtVragen && (
-        <div id="werkrecht" className="mt-6 card scroll-mt-20 p-6">
-          <h2 className="font-display text-base font-bold text-ink">{pt.werkrecht.title}</h2>
-          <div className="mt-3">
-            <WerkrechtPanel />
-          </div>
-        </div>
-      )}
-
-      {fiscal.workerKind === "uitzendkracht" && (
-        <div id="uitzendovereenkomst" tabIndex={-1} className="mt-6 card scroll-mt-20 p-6 focus:outline-none">
-          <h2 className="font-display text-base font-bold text-ink">Uitzenden — verloning, StiPP & loonheffing</h2>
+      {/* wat pas nodig is voor de eerste uitbetaling, apart onder de stappen (13 nov 2026, voorstel d4): de bank, het
+          werkrecht (vlag) en, als de overeenkomst al getekend is, de uitzendgegevens (StiPP, loonheffingskorting) */}
+      <section aria-labelledby="later-kop" className="mt-10 border-t border-hair pt-6">
+        <h2 id="later-kop" className="font-display text-base font-bold text-ink">{pt.laterTitel}</h2>
+        <p className="mt-1 text-sm text-neutralx-500">{pt.laterUitleg}</p>
+        <div className="mt-6 card p-6">
+          <h2 className="font-display text-base font-bold text-ink">{pt.bankTitle}</h2>
+          <p className="mt-1 text-sm text-neutralx-500">{pt.bankSub}</p>
           <div className="mt-4">
-            <UitzendPanel />
+            <ComplianceDocsPanel idInForm />
           </div>
         </div>
-      )}
+
+        {werkrechtVragen && (
+          <div id="werkrecht" className="mt-6 card scroll-mt-20 p-6">
+            <h2 className="font-display text-base font-bold text-ink">{pt.werkrecht.title}</h2>
+            <div className="mt-3">
+              <WerkrechtPanel />
+            </div>
+          </div>
+        )}
+
+        {isUitzend && !mist.includes("contract") && (
+          <div id="uitzendovereenkomst" tabIndex={-1} className="mt-6 card scroll-mt-20 p-6 focus:outline-none">
+            <h2 className="font-display text-base font-bold text-ink">{pt.uitzendTitel}</h2>
+            <div className="mt-4">
+              <UitzendPanel />
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

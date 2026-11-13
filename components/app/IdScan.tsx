@@ -795,7 +795,7 @@ function Camera({
         {stand === "aan" && vanzelfAan && <p className="text-center text-xs leading-relaxed text-neutralx-500">{x.vanzelf}</p>}
         {/* automatisch: geen knop. Na ±20 s zonder foto mag je omschakelen; kan het hier niet vanzelf, dan meteen */}
         {stand === "aan" && vanzelfAan && traag && (
-          <button type="button" onClick={onZelf} className="btn-ghost w-full text-sm">
+          <button type="button" data-track="id-zelf-wissel-traag" onClick={onZelf} className="btn-ghost w-full text-sm">
             {x.zelfWissel} {x.zelfWisselKnop}
           </button>
         )}
@@ -804,7 +804,7 @@ function Camera({
             <p role="status" className="text-center text-sm leading-relaxed text-ink-soft">
               {x.autoKanNiet}
             </p>
-            <button type="button" onClick={onZelf} className="btn-primary w-full">
+            <button type="button" data-track="id-zelf-wissel-kan-niet" onClick={onZelf} className="btn-primary w-full">
               {x.zelfWisselKnop}
             </button>
           </>
@@ -1608,7 +1608,7 @@ export function IdScan({
                       )}
                       <div className="mt-4 grid gap-2">
                         {!gelezenHier && !liveFout && (
-                          <button type="button" onClick={() => void gebruik()} disabled={meten} className="btn-primary w-full">
+                          <button type="button" data-track="id-foto-gebruik" onClick={() => void gebruik()} disabled={meten} className="btn-primary w-full">
                             {s.gebruik}
                           </button>
                         )}
@@ -1644,6 +1644,7 @@ export function IdScan({
                         {!(gelezenHier && lezing.status === "bezig") && (
                           <button
                             type="button"
+                            data-track="id-foto-opnieuw"
                             onClick={() => {
                               setVoorbeeld(null);
                               setLiveFout(null);
@@ -1732,7 +1733,7 @@ export function IdScan({
                       {s.opnieuw}
                     </button>
                   ) : (
-                    <button type="button" onClick={openChipApp} disabled={!chip?.code} className="btn-primary w-full">
+                    <button type="button" data-track="id-chip-start" onClick={openChipApp} disabled={!chip?.code} className="btn-primary w-full">
                       {s.chipStart}
                     </button>
                   )}
@@ -1740,6 +1741,7 @@ export function IdScan({
                   {((chip?.status === "fout" && chipFouten < MAX_CHIP_POGINGEN) || (chip?.status === "wacht" && chipLang)) && (
                     <button
                       type="button"
+                      data-track="id-chip-overslaan"
                       onClick={() => {
                         setChip({ status: "fout", tekst: "" });
                         setStap(naChip);
@@ -1820,6 +1822,7 @@ export function IdScan({
                 <div className="mt-6 grid gap-2">
                   <button
                     type="button"
+                    data-track="id-controle-indienen"
                     onClick={() => {
                       const f = bevestigFotos;
                       setBevestigFotos(null);
@@ -1829,7 +1832,7 @@ export function IdScan({
                   >
                     {s.indienen}
                   </button>
-                  <button type="button" onClick={terug} className="btn-ghost min-h-[44px] w-full">
+                  <button type="button" data-track="id-controle-terug" onClick={terug} className="btn-ghost min-h-[44px] w-full">
                     {ft.bevestig.terug}
                   </button>
                 </div>
