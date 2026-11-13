@@ -105,7 +105,7 @@ export function WerkerStartWizard({
         return;
       }
       setKeuze((d as { keuze: BrancheKeuze }).keuze);
-      setOpen(emailVerified ? "gegevens" : "email");
+      setOpen("gegevens");
       router.refresh();
     } catch {
       setBrancheFout(t.saveError);
@@ -161,17 +161,6 @@ export function WerkerStartWizard({
   if (gesloten) return null;
 
   return (
-    <>
-    {/* geen stap maar een melding (13 nov): het e-mailadres bevestigen telt niet mee in "stap n van 5", de poort eist het ook niet */}
-    {!emailVerified && (
-      <div className="mb-4 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
-        <p className="font-semibold text-ink">{t.emailStep}</p>
-        <p className="mt-0.5">{t.emailBody}</p>
-        <Link href="/verifieer-email" className="mt-1 inline-flex min-h-[44px] items-center gap-1 font-semibold text-brand-600 underline underline-offset-4 hover:text-brand-700">
-          {t.emailCta} <span aria-hidden>›</span>
-        </Link>
-      </div>
-    )}
     <section className="mb-6 overflow-hidden rounded-2xl border border-hair bg-white shadow-sm" aria-labelledby="werker-start-titel">
       <div className="relative bg-gradient-to-br from-brand-700 via-brand-700 to-brand-500 px-5 pb-8 pt-5 text-white">
         {!poort && (
@@ -375,6 +364,5 @@ export function WerkerStartWizard({
       )}
       <p className="border-t border-hair bg-paper-soft px-5 py-3 text-center text-xs text-neutralx-500">{poort ? t.afsluiting : t.browse}</p>
     </section>
-    </>
   );
 }
