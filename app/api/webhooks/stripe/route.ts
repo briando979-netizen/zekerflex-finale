@@ -1,3 +1,4 @@
+import { handtekeningOngeldigJson } from "@/lib/webhooks/handtekening";
 import { handleStripeIdentityEvent } from "@/lib/kyc/stripe-identity";
 import { laadActieveStripeSleutel } from "@/lib/billing/stripe-account";
 import { alertOwnerLater } from "@/lib/ops/alert";
@@ -288,7 +289,7 @@ async function handleStripeWebhook(request: NextRequest): Promise<NextResponse> 
     // body, zodat het logboek laat zien of het een testmodus-endpoint, een oude
     // signing-secret of iets anders is. Er wordt niets mee gedaan.
     log.warn("rejected stripe webhook (bad signature)", { error: (err as Error).message, ...unverifiedEventSummary(rawBody) });
-    return NextResponse.json({ error: "invalid signature" }, { status: 400 });
+    return handtekeningOngeldigJson();
   }
 
   const claimKey = `stripe:${event.id}`;

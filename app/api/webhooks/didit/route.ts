@@ -1,3 +1,4 @@
+import { handtekeningOngeldigJson } from "@/lib/webhooks/handtekening";
 import { NextResponse, type NextRequest } from "next/server";
 import { createHash } from "node:crypto";
 import type { Prisma } from "@prisma/client";
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   // kale logregel, zonder iets uit de (niet-vertrouwde) body.
   if (!verification.valid) {
     log.warn("rejected didit webhook (bad signature)");
-    return NextResponse.json({ error: "invalid signature" }, { status: 401 });
+    return handtekeningOngeldigJson();
   }
 
   await prisma.diditWebhookEvent

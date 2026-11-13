@@ -86,10 +86,11 @@ describe("Twilio: te groot is 422, een ondertekende body werkt nog", () => {
     expect(antwoordOpSpoed).toHaveBeenCalledWith("+31612345678", "1", "sms");
   });
 
-  it("een onjuiste handtekening blijft geweigerd (zoals eerder), zonder dat er iets wordt uitgevoerd", async () => {
+  it("een onjuiste handtekening geeft 423 met eigen code (geen 403: CrowdSec telt dat als inbraak), zonder dat er iets wordt uitgevoerd", async () => {
     const req = post("http://app:3000/api/telephony/sms", { headers: { "x-twilio-signature": "fout" }, body: "From=%2B31612345678&Body=1" });
     const res = await sms(req);
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(423);
+    expect(res.headers.get("x-zf-code")).toBe("handtekening_ongeldig");
     expect(antwoordOpSpoed).not.toHaveBeenCalled();
   });
 });
@@ -126,11 +127,11 @@ describe("Didit", () => {
     expect(verifyWebhook.mock.calls[0]![0]).toBe(body);
   });
 
-  it("een foute handtekening geeft 401 en schrijft NIETS in de database; een geldige wordt wel bewaard", async () => {
+  it("een foute handtekening geeft 423 en schrijft NIETS in de database; een geldige wordt wel bewaard", async () => {
     const body = JSON.stringify({ session_id: "s1", status: "Approved", created_at: 1 });
     verifyWebhook.mockReturnValue({ valid: false, method: null, body: JSON.parse(body) });
     const fout = await didit(post("http://app:3000/api/webhooks/didit", { headers: { "x-signature": "nep" }, body }) as never);
-    expect(fout.status).toBe(401);
+    expect(fout.status).toBe(423);
     expect(diditCreate).not.toHaveBeenCalled();
 
     verifyWebhook.mockReturnValue({ valid: true, method: "v2", body: JSON.parse(body) });

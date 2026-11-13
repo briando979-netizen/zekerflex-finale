@@ -1,3 +1,4 @@
+import { handtekeningOngeldigTekst } from "@/lib/webhooks/handtekening";
 import { readForm, signatureValid, xmlResponse } from "@/lib/telephony/webhook";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { antwoordOpSpoed } from "@/lib/spoed/oproep";
@@ -15,7 +16,7 @@ export async function POST(request: Request): Promise<Response> {
   const lees = await webhookTekst(request, WEBHOOK_MAX.twilio);
   if (!lees.ok) return lees.response;
   const params = readForm(lees.tekst);
-  if (!signatureValid(request, params)) return new Response("Forbidden", { status: 403 });
+  if (!signatureValid(request, params)) return handtekeningOngeldigTekst();
   const van = params.From ?? "";
   const tekst = params.Body ?? "";
   if (!van || !tekst) return xmlResponse("<Response/>");
