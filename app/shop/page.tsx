@@ -10,6 +10,9 @@ import { ShopMoreCategories, ShopNewsletter, ShopPaskamerPromo, ShopService } fr
 import { ShopCategorieGroot, ShopLooks, ShopThuisHero, type GroteTegel, type LookKaart } from "@/components/marketing/ShopThuis";
 import { LOOKS } from "@/lib/shop/paskamer";
 import { PaginaAchtergrond } from "@/components/shop/PaginaAchtergrond";
+import { Fragment, type ReactNode } from "react";
+import { zichtbareShopSecties, type ShopSectieId } from "@/lib/ontwerp/shop-indeling";
+import { getShopIndeling } from "@/lib/ontwerp/shop-indeling-store";
 
 const title = "ZekerFlex Shop — kleding, werkkleding en PBM, eerst passen in de paskamer";
 const description =
@@ -86,19 +89,28 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
   // wie zoekt of een categorie kiest, wil meteen het assortiment zien: dan geen banner en rij ervoor
   const browsing = initialQuery !== "" || initialCat !== "Alles";
 
+  // de onderdelen onder de kop: volgorde en zichtbaarheid komen uit de Site-ontwerper (tabblad Webshop, lib/ontwerp/shop-indeling.ts);
+  // zonder eigen indeling is dit precies de oude volgorde. Wie zoekt of een categorie kiest, ziet alleen het assortiment en wat eronder hoort.
+  const onderdelen: Record<ShopSectieId, ReactNode> = {
+    categorieen: <ShopCategorieGroot t={dict} tegels={tegels} />,
+    looks: <ShopLooks t={dict} looks={looks} />,
+    populair: featured.length === 5 ? <ShopFeatured title={t.popular} products={featured} /> : null,
+    onlangs: <OnlangsBekeken producten={products} />,
+    paskamer: <ShopPaskamerPromo pk={dict.paskamer} />,
+    assortiment: <ShopStorefront initialCat={initialCat} initialQuery={initialQuery} products={products} pageTitle={browsing} />,
+    meer: <ShopMoreCategories t={t} />,
+    service: <ShopService t={t} />,
+    nieuwsbrief: <ShopNewsletter t={t} />,
+  };
+  const zichtbaar = zichtbareShopSecties(await getShopIndeling(), browsing);
+
   return (
     <>
       {!browsing && <PaginaAchtergrond pagina="shop" />}
       {!browsing && <ShopThuisHero t={dict} uitgelicht={uitgelicht} />}
-      {!browsing && <ShopCategorieGroot t={dict} tegels={tegels} />}
-      {!browsing && <ShopLooks t={dict} looks={looks} />}
-      {!browsing && featured.length === 5 && <ShopFeatured title={t.popular} products={featured} />}
-      {!browsing && <OnlangsBekeken producten={products} />}
-      {!browsing && <ShopPaskamerPromo pk={dict.paskamer} />}
-      <ShopStorefront initialCat={initialCat} initialQuery={initialQuery} products={products} pageTitle={browsing} />
-      <ShopMoreCategories t={t} />
-      <ShopService t={t} />
-      <ShopNewsletter t={t} />
+      {zichtbaar.map((id) => (
+        <Fragment key={id}>{onderdelen[id]}</Fragment>
+      ))}
     </>
   );
 }

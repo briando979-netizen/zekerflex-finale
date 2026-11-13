@@ -11,6 +11,7 @@ import { PaginasPaneel } from "@/components/admin/ontwerper/PaginasPaneel";
 import { MediaPaneel } from "@/components/admin/ontwerper/Media";
 import { MenuPaneel } from "@/components/admin/ontwerper/MenuPaneel";
 import { HomePaneel } from "@/components/admin/ontwerper/HomePaneel";
+import { ShopPaneel } from "@/components/admin/ontwerper/ShopPaneel";
 import { SiteFotos } from "@/components/admin/ontwerper/SiteFotos";
 import { TekstWijzigingen } from "@/components/admin/ontwerper/TekstWijzigingen";
 import { SeoPaneel } from "@/components/admin/ontwerper/SeoPaneel";
@@ -27,6 +28,7 @@ const TABS = [
   { id: "stijl", label: "Stijl" },
   { id: "teksten", label: "Teksten" },
   { id: "home", label: "Homepage" },
+  { id: "shop", label: "Webshop" },
   { id: "paginas", label: "Pagina's" },
   { id: "menu", label: "Menu" },
   { id: "seo", label: "SEO" },
@@ -319,6 +321,12 @@ export function Ontwerper({ start }: { start: OntwerpStaat }) {
           {tab === "home" ? (
             <div id="ontwerper-paneel-home" role="tabpanel" aria-labelledby="ontwerper-tab-home">
               <HomePaneel onVoorbeeldPad={setVoorbeeldPad} onVernieuw={verversVoorbeeld} />
+            </div>
+          ) : null}
+          {/* de indeling van /shop: bewaard op de server zodra je op Opslaan klikt */}
+          {tab === "shop" ? (
+            <div id="ontwerper-paneel-shop" role="tabpanel" aria-labelledby="ontwerper-tab-shop">
+              <ShopPaneel onVoorbeeldPad={setVoorbeeldPad} onVernieuw={verversVoorbeeld} />
             </div>
           ) : null}
           {/* blijft ook bestaan: een half bewerkte pagina gaat niet verloren als je even naar Stijl gaat */}
