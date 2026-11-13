@@ -36,6 +36,7 @@ export async function POST(req: Request): Promise<NextResponse> {
       return NextResponse.json({ error: { code: "NOT_FOUND", message: "Bericht niet gevonden" } }, { status: 404 });
     }
     if (!FORWARDABLE.includes(src.kind)) throw AppError.validation("Dit bericht kan niet worden doorgestuurd");
+    if (src.eenmalig) throw AppError.validation("Een foto die je maar één keer kunt bekijken, kun je niet doorsturen.");
     const extra: MessageExtra = { forwarded: true };
     if (src.attachment) extra.attachment = src.attachment;
     if (src.location) extra.location = src.location;

@@ -49,6 +49,8 @@ export const COMPOSER_NL = {
   verstuurSpraak: "Verstuur spraakbericht",
   menuFoto: "Foto of video",
   noemIemand: "Noem iemand in de groep",
+  eenmaligUit: "Eenmalig bekijken",
+  eenmaligAan: "Eenmalig bekijken staat aan: de ontvanger kan de foto één keer openen",
   menuCamera: "Camera",
   menuDocument: "Document",
   menuLocatie: "Locatie delen",

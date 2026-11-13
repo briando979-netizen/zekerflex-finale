@@ -33,7 +33,7 @@ export function mediaOverzicht(messages: readonly Msg[]): { media: MediaItem[]; 
   const docs: DocItem[] = [];
   const links: LinkItem[] = [];
   for (const m of [...messages].reverse()) {
-    if (m.deleted || m.pending || m.failed) continue;
+    if (m.deleted || m.pending || m.failed || m.eenmalig) continue;
     const a = m.attachment;
     if (a && m.kind === "image") media.push({ id: m.id, at: m.at, soort: "foto", mediaId: a.mediaId, filename: a.filename });
     else if (a && m.kind === "file" && isVideoType(a.mimeType)) media.push({ id: m.id, at: m.at, soort: "video", mediaId: a.mediaId, filename: a.filename });

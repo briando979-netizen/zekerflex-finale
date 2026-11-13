@@ -193,6 +193,7 @@ export function MessageBubble({
   selected = false,
   onSelect,
   onInfo,
+  onOpenEenmalig,
   onEdit,
   onForward,
   onPin,
@@ -232,6 +233,8 @@ export function MessageBubble({
   onSelect?: (m: Msg) => void;
   /** berichtinfo van je eigen bericht: wie het gelezen heeft */
   onInfo?: (m: Msg) => void;
+  /** een foto die je maar één keer kunt bekijken, openen */
+  onOpenEenmalig?: (m: Msg) => void;
   /** your own text message, within 24 hours: back into the composer to rewrite */
   onEdit?: (m: Msg) => void;
   onForward?: (m: Msg) => void;
@@ -335,11 +338,11 @@ export function MessageBubble({
               },
             ]
           : []),
-        ...(onForward && !m.pending && m.kind !== "poll" ? [{ key: "fwd", label: t.forward, icon: <IconForward className="h-4 w-4" />, run: () => onForward(m) }] : []),
+        ...(onForward && !m.pending && m.kind !== "poll" && !m.eenmalig ? [{ key: "fwd", label: t.forward, icon: <IconForward className="h-4 w-4" />, run: () => onForward(m) }] : []),
         ...(onPin && !m.pending
           ? [{ key: "pin", label: pinnedId === m.id ? t.unpin : t.pin, icon: <IconPin className="h-4 w-4" />, run: () => onPin(m) }]
           : []),
-        ...(onStar && !m.pending
+        ...(onStar && !m.pending && !m.eenmalig
           ? [{ key: "star", label: starred ? t.unstar : t.star, icon: <IconStar className="h-4 w-4" />, run: () => onStar(m) }]
           : []),
         ...(mine && onEdit && canEdit(m, myUserId) ? [{ key: "edit", label: t.edit, icon: <IconPencil className="h-4 w-4" />, run: () => onEdit(m) }] : []),
@@ -645,7 +648,25 @@ export function MessageBubble({
               </button>
             )}
 
-            {m.kind === "image" && mediaUrl &&
+            {m.kind === "image" && m.eenmalig && (
+              // eenmalig bekijken (zoals WhatsApp): geen voorbeeld in de bubbel
+              mine || (myUserId && m.eenmaligGezien?.includes(myUserId)) || !onOpenEenmalig ? (
+                <span className="mb-1 flex items-center gap-2 rounded-lg bg-black/[0.04] px-3 py-2 text-sm text-neutralx-600">
+                  <span className="grid h-6 w-6 place-items-center rounded-full border-2 border-current text-[10px] font-bold" aria-hidden>
+                    1
+                  </span>
+                  {mine ? ((m.eenmaligGezien?.length ?? 0) > 0 ? t.eenmaligGeopend : t.eenmaligVerzonden) : t.eenmaligGeopend}
+                </span>
+              ) : (
+                <button type="button" onClick={() => onOpenEenmalig(m)} className="mb-1 flex items-center gap-2 rounded-lg bg-black/[0.04] px-3 py-2 text-sm font-semibold text-brand-600 hover:bg-black/[0.07]">
+                  <span className="grid h-6 w-6 place-items-center rounded-full border-2 border-current text-[10px] font-bold" aria-hidden>
+                    1
+                  </span>
+                  {t.eenmaligOpen}
+                </button>
+              )
+            )}
+            {m.kind === "image" && !m.eenmalig && mediaUrl &&
               (onOpenImage ? (
                 <button type="button" onClick={() => onOpenImage(mediaUrl, m.attachment?.filename ?? t.photoName)} className="mb-1 block overflow-hidden rounded-lg" aria-label={t.viewPhoto}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}

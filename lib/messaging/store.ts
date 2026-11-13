@@ -82,6 +82,9 @@ export interface ChatMessage {
   transcript?: string;
   /** voorbeeld van de eerste link (titel, omschrijving, site; lib/messaging/link-voorbeeld.ts) */
   linkVoorbeeld?: LinkVoorbeeld;
+  /** kind "image": maar één keer te bekijken (zoals WhatsApp); wie hem al opende staat in eenmaligGezien */
+  eenmalig?: true;
+  eenmaligGezien?: string[];
 }
 
 /** Een eigen tekstbericht mag je zo lang na het versturen nog bewerken (afspraken veranderen niet ongemerkt achteraf). */
@@ -91,7 +94,7 @@ export const EDIT_WINDOW_MS = 24 * 3_600_000;
 export const DELETE_WINDOW_MS = 48 * 3_600_000;
 
 export type MessageExtra = Partial<
-  Pick<ChatMessage, "attachment" | "location" | "call" | "replyTo" | "auto" | "forwarded" | "poll" | "mentions">
+  Pick<ChatMessage, "attachment" | "location" | "call" | "replyTo" | "auto" | "forwarded" | "poll" | "mentions" | "eenmalig">
 >;
 
 export interface ChatThread {
@@ -323,6 +326,22 @@ export async function getMessageById(threadId: string, messageId: string): Promi
   return all.find((m) => m.id === messageId) ?? null;
 }
 
+/**
+ * Een eenmalige foto openen: "ok" = de eerste keer (nu vastgelegd), "al" = deze persoon zag hem al, "geen" = geen
+ * eenmalige foto met dit bestand in dit gesprek. De route geeft de foto alleen bij "ok".
+ */
+export async function markeerEenmaligGezien(threadId: string, mediaId: string, userId: string): Promise<"ok" | "al" | "geen"> {
+  const key = messagesKey(await resolveThreadId(threadId));
+  const list = (await kvGet<ChatMessage[]>(key)) ?? [];
+  const idx = list.findIndex((m) => m.attachment?.mediaId === mediaId);
+  const m = idx === -1 ? null : list[idx]!;
+  if (!m || !m.eenmalig || m.deleted) return "geen";
+  if (m.from === userId || (m.eenmaligGezien ?? []).includes(userId)) return "al";
+  list[idx] = { ...m, eenmaligGezien: [...(m.eenmaligGezien ?? []), userId] };
+  await kvSet(key, list.slice(-5000));
+  return "ok";
+}
+
 /** Zet een linkvoorbeeld op een tekstbericht, alleen als het bericht er nog is met dezelfde tekst (niet bewerkt). */
 export async function setLinkVoorbeeld(threadId: string, messageId: string, tekst: string, v: LinkVoorbeeld): Promise<ChatMessage | null> {
   const key = messagesKey(await resolveThreadId(threadId));
@@ -476,6 +495,7 @@ export async function postMessage(
     ...(extra.forwarded ? { forwarded: true } : {}),
     ...(kind === "poll" && extra.poll ? { poll: extra.poll } : {}),
     ...(extra.mentions?.length ? { mentions: extra.mentions } : {}),
+    ...(kind === "image" && extra.eenmalig ? { eenmalig: true as const } : {}),
   };
   await kvAppend(messagesKey(threadId), msg, 5000);
 
