@@ -11,6 +11,7 @@
     "tests/donker-dekking.test.ts",
     "tests/donker-varianten.test.ts",
     "tests/eigen-test.test.ts",
+    "tests/gratis-dekking.test.ts",
     "tests/hulp-centrum.test.ts",
     "tests/i18n-bundle.test.ts",
     "tests/id-redenen.test.ts",
