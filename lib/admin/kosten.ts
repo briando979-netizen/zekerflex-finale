@@ -172,7 +172,17 @@ export function bronRegel(post: Pick<KostenPost, "bron" | "datum">): string {
 
 /** Wat Financien als "vaste maandlasten" gebruikt: het maandtotaal excl. btw van de opgegeven posten, of een reden waarom niet. */
 export type OperationeleKosten =
-  | { bron: "kosten"; maandCent: number; bijgewerktOp: string | null; onbekend: number; geteld: number }
+  | {
+      bron: "kosten";
+      maandCent: number;
+      bijgewerktOp: string | null;
+      onbekend: number;
+      geteld: number;
+      /** voorbelasting per maand, alleen over posten met een bekend Nederlands btw-percentage, tegen hun eigen percentage */
+      voorbelastingMaandCent: number;
+      /** posten in het maandtotaal waarvan de btw onbekend (null) is: zij tellen niet mee in de voorbelasting */
+      zonderBtw: number;
+    }
   | { bron: "instelling"; melding: string };
 
 export const KOSTEN_NIET_INGEVULD = "Kosten nog niet ingevuld: vul Beheer → Kosten in. Tot dan rekent Financiën met de vaste maandlasten die daar handmatig zijn ingesteld.";
@@ -185,6 +195,26 @@ export function operationeleMaandkosten(posten: KostenPost[]): { maandCent: numb
   const t = totalen(splits(posten).vaststaand);
   if (t.geteld === 0) return null;
   return { maandCent: t.maandExclCent, geteld: t.geteld, onbekend: t.onbekend };
+}
+
+/**
+ * De voorbelasting per maand over de opgegeven posten: alleen posten met een bekend btw-percentage (nu TransIP, 21%) tellen
+ * mee, tegen hun eigen percentage. Een post met btw null (buitenlandse leveranciers zoals Claude, Twilio, Apple, Delaware, of
+ * gewoon onbekend) geeft 0 en wordt apart geteld. Per post afgerond; schattingen, onbekende bedragen en eenmalige posten doen niet mee.
+ */
+export function voorbelastingPerMaand(posten: KostenPost[]): { cent: number; zonderBtw: number } {
+  let cent = 0;
+  let zonderBtw = 0;
+  for (const p of splits(posten).vaststaand) {
+    const m = perMaandCent(p);
+    if (m === null) continue;
+    if (p.btwPct === null) {
+      zonderBtw += 1;
+      continue;
+    }
+    cent += Math.round((m * p.btwPct) / 100);
+  }
+  return { cent, zonderBtw };
 }
 
 /** Eigen omzet per maand waarbij de vaste lasten precies gedekt zijn (de Stripe-kosten groeien met de omzet mee en zitten er niet in). */

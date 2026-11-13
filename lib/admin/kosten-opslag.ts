@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { kvGet, kvSet } from "@/lib/storage/kv";
-import { KOSTEN_NIET_INGEVULD, STANDAARD_POSTEN, operationeleMaandkosten, pasToe, type KostenStand, type KostenWijziging, type OperationeleKosten } from "@/lib/admin/kosten";
+import { KOSTEN_NIET_INGEVULD, STANDAARD_POSTEN, operationeleMaandkosten, pasToe, voorbelastingPerMaand, type KostenStand, type KostenWijziging, type OperationeleKosten } from "@/lib/admin/kosten";
 
 // ---------------------------------------------------------------------------
 // De bewerkbare kostenlijst van Beheer -> Kosten: een KV-sleutel voor de hele site (niet per gebruiker, dus niet
@@ -58,7 +58,8 @@ export async function operationeleKosten(): Promise<OperationeleKosten> {
   if (lezing.status !== "opgeslagen") return { bron: "instelling", melding: KOSTEN_NIET_INGEVULD };
   const m = operationeleMaandkosten(lezing.stand.posten);
   if (!m) return { bron: "instelling", melding: KOSTEN_NIET_INGEVULD };
-  return { bron: "kosten", maandCent: m.maandCent, bijgewerktOp: lezing.stand.bijgewerktOp, onbekend: m.onbekend, geteld: m.geteld };
+  const v = voorbelastingPerMaand(lezing.stand.posten);
+  return { bron: "kosten", maandCent: m.maandCent, bijgewerktOp: lezing.stand.bijgewerktOp, onbekend: m.onbekend, geteld: m.geteld, voorbelastingMaandCent: v.cent, zonderBtw: v.zonderBtw };
 }
 
 /** Past een gevalideerde wijziging toe, bewaart hem en geeft de nieuwe serverversie terug. */
