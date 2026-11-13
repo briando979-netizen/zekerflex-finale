@@ -192,6 +192,7 @@ export function MessageBubble({
   selecting = false,
   selected = false,
   onSelect,
+  onInfo,
   onEdit,
   onForward,
   onPin,
@@ -229,6 +230,8 @@ export function MessageBubble({
   selecting?: boolean;
   selected?: boolean;
   onSelect?: (m: Msg) => void;
+  /** berichtinfo van je eigen bericht: wie het gelezen heeft */
+  onInfo?: (m: Msg) => void;
   /** your own text message, within 24 hours: back into the composer to rewrite */
   onEdit?: (m: Msg) => void;
   onForward?: (m: Msg) => void;
@@ -316,6 +319,7 @@ export function MessageBubble({
     : [
         ...(onReply && !m.pending ? [{ key: "reply", label: t.reply, icon: <IconReply className="h-4 w-4" />, run: () => onReply(m) }] : []),
         ...(onSelect && !selecting && !m.pending ? [{ key: "select", label: t.select, icon: "☑", run: () => onSelect(m) }] : []),
+        ...(mine && onInfo && !m.pending ? [{ key: "info", label: t.info, icon: "ⓘ", run: () => onInfo(m) }] : []),
         ...(m.text
           ? [
               {

@@ -26,6 +26,7 @@ export const BUBBLE_NL = {
   select: "Selecteren",
   selectThis: "Selecteer dit bericht",
   deselect: "Niet meer selecteren",
+  info: "Berichtinfo",
   previewFileFallback: "Bestand",
   previewLocation: "📍 Locatie",
   retrySend: "Opnieuw versturen",

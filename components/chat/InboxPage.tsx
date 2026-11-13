@@ -31,6 +31,7 @@ import { PeoplePicker, CommunityCreateModal, CommunityManageModal, ChatSettingsM
 import { SwipeRow, ThreadMenuSheet, PinModal, type MenuAction } from "./ThreadMenu";
 import { MediaOverzicht } from "./MediaOverzicht";
 import { SelectieBalk } from "./SelectieBalk";
+import { BerichtInfo } from "./BerichtInfo";
 import { ChatSettingsPanel, readLook, type ChatLook } from "./ChatSettingsPanel";
 import { Portal } from "./Portal";
 import { ChatTekstenProvider, useChatTeksten } from "./ChatTekstenContext";
@@ -241,6 +242,7 @@ function InboxPageInner({
   // unread count when a conversation opens: the "N ongelezen berichten" line
   const [unreadAtOpen, setUnreadAtOpen] = useState(0);
   const [mediaOpen, setMediaOpen] = useState(false);
+  const [infoVan, setInfoVan] = useState<string | null>(null);
   useEffect(() => {
     setSelectie(null);
   }, [active]);
@@ -1452,6 +1454,7 @@ function InboxPageInner({
                         selecting={Boolean(selectie)}
                         selected={Boolean(selectie?.includes(m.id))}
                         onSelect={kiesBericht}
+                        onInfo={(i) => setInfoVan(i.id)}
                         onEdit={(e) => {
                           setReplyTo(null);
                           setEditing(e);
@@ -1567,6 +1570,7 @@ function InboxPageInner({
       )}
 
       {/* ─── overlays ─── */}
+      {infoVan && activeThread && <BerichtInfo threadId={activeThread.id} messageId={infoVan} onClose={() => setInfoVan(null)} />}
       {mediaOpen && activeThread && (
         <MediaOverzicht
           threadId={activeThread.id}
