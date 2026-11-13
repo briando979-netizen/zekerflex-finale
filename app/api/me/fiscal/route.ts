@@ -60,11 +60,19 @@ export async function PUT(request: Request): Promise<NextResponse> {
       }),
     );
 
+    // Eerst de huidige stand. Een sleutel die niet is meegestuurd, blijft zoals hij was (13 nov 2026): GegevensMist stuurt
+    // alleen de btw-, KOR- en KVK-velden, en een oudere stand in de browser mag een nieuwere keuze (zoals de
+    // loonheffingskorting) nooit stil terugzetten. FiscalForm stuurt alles expliciet mee. Ook nodig voor de BSN-check en
+    // het IBAN-wijzigsignaal verderop.
+    const before = await getFiscal(principal.userId);
+    const vatRequested = input.vatRequested ?? before.vatRequested;
+    const korApplies = input.korApplies ?? before.korApplies;
+
     const patch: Partial<FiscalProfile> = {
       workerKind: input.workerKind,
-      vatRequested: input.vatRequested ?? false,
-      korApplies: input.korApplies ?? false,
-      loonheffingskorting: input.loonheffingskorting ?? true,
+      ...(input.vatRequested !== undefined ? { vatRequested: input.vatRequested } : {}),
+      ...(input.korApplies !== undefined ? { korApplies: input.korApplies } : {}),
+      ...(input.loonheffingskorting !== undefined ? { loonheffingskorting: input.loonheffingskorting } : {}),
       ...(input.kvkNumber ? { kvkNumber: input.kvkNumber.replace(/\D/g, "") } : {}),
       ...(input.invoiceMode ? { invoiceMode: input.invoiceMode } : {}),
       ...(input.iban
@@ -99,7 +107,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
         patch.vatStatus = res.status === "valid" ? "validated" : res.status;
         patch.vatCheckedAt = nu;
       }
-    } else if (input.workerKind === "zzp" || (input.workerKind === "flexwerker" && !input.korApplies && !input.vatRequested)) {
+    } else if (input.workerKind === "zzp" || (input.workerKind === "flexwerker" && !korApplies && !vatRequested)) {
       // no VAT number given where one is expected — leave invalid
       patch.vatNumber = null;
       patch.vatValid = false;

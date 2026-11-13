@@ -423,6 +423,14 @@ async function ensureFreelancerBase(input: {
     }
   }
 
+  // de KVK ook in de fiscale gegevens, alleen als daar nog niets staat: anders vraagt /dashboard/fiscaal hem opnieuw en
+  // telt "btw aangevraagd" bij een zzp'er niet (13 nov 2026). Een storing houdt het opslaan nooit tegen.
+  if (/^\d{8}$/.test(cleanKvk)) {
+    const { getFiscal, setFiscal } = await import("@/lib/fiscal/store");
+    const f = await getFiscal(input.userId).catch(() => null);
+    if (f && !f.kvkNumber) await setFiscal(input.userId, { kvkNumber: cleanKvk }).catch(() => undefined);
+  }
+
   return { freelancerProfileId, checks, skipKvk, kvkValid, companyName, companyTradeName, companyStatus };
 }
 

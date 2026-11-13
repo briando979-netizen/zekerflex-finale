@@ -183,7 +183,18 @@ export default async function VerificatiePage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <GegevensMist mist={mist} soort={fiscal.workerKind ?? null} loonheffingskorting={fiscal.loonheffingskorting} bsnVoorstel={fiscal.bsnVoorstelLast4 ?? null} />
+      <GegevensMist
+        mist={mist}
+        soort={fiscal.workerKind ?? null}
+        bsnVoorstel={fiscal.bsnVoorstelLast4 ?? null}
+        btw={{
+          vatNumber: fiscal.vatNumber,
+          vatRequested: fiscal.vatRequested,
+          korApplies: fiscal.korApplies,
+          // de KVK uit de fiscale gegevens, anders uit het profiel (8 cijfers): nodig voor "btw aangevraagd" bij een zzp'er
+          kvkNumber: fiscal.kvkNumber ?? (bewaard?.kvkNumber && /^\d{8}$/.test(bewaard.kvkNumber) ? bewaard.kvkNumber : null),
+        }}
+      />
 
       {lastCheck && (
         <div className="mb-6 card p-4 text-sm">
