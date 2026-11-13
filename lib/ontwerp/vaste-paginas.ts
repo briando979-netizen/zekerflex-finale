@@ -118,6 +118,19 @@ export const VASTE_PAGINAS = {
       { id: "slot", naam: "Slotoproep", uitleg: "De band onderaan met de knop om te beginnen." },
     ],
   },
+  // het startscherm van de werkgevers-app (personeel); de marges staan in lib/werkgever/start-marges.ts
+  "werkgever-start": {
+    naam: "Startscherm werkgevers-app",
+    pad: "/werkgever",
+    secties: [
+      { id: "cijfers", naam: "De vier cijfers", uitleg: "Open klussen, uren om goed te keuren, uitgaven deze maand en actieve freelancers." },
+      { id: "volgers", naam: "Volgers", uitleg: "De regel met hoeveel werkers het bedrijf volgen; staat er alleen als er volgers zijn." },
+      { id: "beoordelingen", naam: "Nog te beoordelen", uitleg: "De werkers die nog een beoordeling krijgen; staat er alleen als er iemand wacht." },
+      { id: "werk", naam: "Komende klussen en uren", uitleg: "De twee panelen naast elkaar: de komende klussen en de uren die op goedkeuring wachten." },
+      { id: "berichten", naam: "Laatste berichten", uitleg: "De nieuwste gesprekken uit de chat; staat er alleen als er berichten zijn." },
+      { id: "facturen", naam: "Facturen", uitleg: "De laatste facturen met bedrag en status." },
+    ],
+  },
 } as const satisfies Record<string, VastePagina>;
 
 export type VastePaginaId = keyof typeof VASTE_PAGINAS;

@@ -72,6 +72,11 @@ export const WEGWIJZER: WegwijzerRegel[] = [
     doel: { tab: "paginas" },
   },
   {
+    wat: "Het startscherm van de werkgevers-app",
+    uitleg: "Kies bij de vaste pagina's \"Startscherm werkgevers-app\" en sleep de onderdelen (cijfers, klussen en uren, berichten, facturen) naar een andere plek, of verberg ze. Het geldt voor alle werkgevers.",
+    doel: { tab: "paginas" },
+  },
+  {
     wat: "Foto's en video's van de site",
     uitleg: "Upload beelden en kies welke foto op welke plek van de site staat.",
     doel: { tab: "media" },
