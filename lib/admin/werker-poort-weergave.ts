@@ -20,7 +20,7 @@ export interface PoortStap {
 }
 
 function gegevensUitleg(soort: WerkerSoort): string {
-  if (soort === "uitzendkracht") return "BSN invullen en de uitzendovereenkomst tekenen, plus de postcode van de thuisbasis.";
+  if (soort === "uitzendkracht") return "De postcode van de thuisbasis. Het BSN en de uitzendovereenkomst komen sinds 13 nov vóór de eerste klus (reageren houdt ze tegen).";
   if (soort === "zzp") return "Btw-nummer of KVK-nummer invullen, plus de postcode van de thuisbasis.";
   if (soort === "flexwerker") return "Btw-nummer of de KOR invullen, plus de postcode van de thuisbasis.";
   return "Eerst kiezen of je zzp'er, flexwerker of uitzendkracht bent.";

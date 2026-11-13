@@ -33,14 +33,23 @@ beforeEach(() => h.kv.clear());
 describe("gegevensMist: wat er nog mist", () => {
   const stand = (over: Partial<GegevensStand> = {}): GegevensStand => ({ soort: "uitzendkracht", fiscaalIngevuld: false, contractGetekend: false, bedrijfOk: false, postcodeOk: false, ...over });
 
-  it("een uitzendkracht zonder iets: BSN, overeenkomst en postcode, in die volgorde", () => {
-    expect(gegevensMist(stand())).toEqual(["bsn", "contract", "postcode"]);
+  it("een uitzendkracht mist bij de aanmelding alleen de postcode; BSN en overeenkomst komen vóór de eerste klus (13 nov)", () => {
+    expect(gegevensMist(stand())).toEqual(["postcode"]);
+    expect(gegevensMist(stand({ postcodeOk: true }))).toEqual([]);
+    expect(voorEersteKlus(stand())).toEqual(["bsn", "contract"]);
   });
 
-  it("alleen wat echt mist: BSN ja en overeenkomst nee, of alleen de postcode", () => {
-    expect(gegevensMist(stand({ fiscaalIngevuld: true }))).toEqual(["contract", "postcode"]);
-    expect(gegevensMist(stand({ fiscaalIngevuld: true, contractGetekend: true }))).toEqual(["postcode"]);
-    expect(gegevensMist(stand({ fiscaalIngevuld: true, contractGetekend: true, postcodeOk: true }))).toEqual([]);
+  it("vóór de eerste klus alleen wat echt mist: BSN ja en overeenkomst nee, of allebei klaar", () => {
+    expect(voorEersteKlus(stand({ fiscaalIngevuld: true }))).toEqual(["contract"]);
+    expect(voorEersteKlus(stand({ contractGetekend: true }))).toEqual(["bsn"]);
+    expect(voorEersteKlus(stand({ fiscaalIngevuld: true, contractGetekend: true }))).toEqual([]);
+  });
+
+  it("reageren eist het BSN en de overeenkomst nog steeds, met een eigen reden (lib/fiscal/eligibility.ts)", () => {
+    const elig = bron("lib/fiscal/eligibility.ts");
+    expect(elig).toContain("Boolean(fiscal.bsnHash)");
+    expect(elig).toContain('sleutel: "elig.uitzendGegevens"');
+    expect(elig).toContain('sleutel: "elig.contract"');
   });
 
   it("een zzp'er of flexwerker mist bij de aanmelding alleen de postcode; btw/KVK/KOR komt vóór de eerste klus (13 nov)", () => {
@@ -51,8 +60,8 @@ describe("gegevensMist: wat er nog mist", () => {
       expect(voorEersteKlus(stand({ soort, fiscaalIngevuld: true, postcodeOk: true }))).toEqual(["btw"]);
       expect(voorEersteKlus(stand({ soort, fiscaalIngevuld: true, bedrijfOk: true }))).toEqual([]);
     }
-    // een uitzendkracht heeft geen btw/KVK
-    expect(voorEersteKlus(stand({ soort: "uitzendkracht" }))).toEqual([]);
+    // een uitzendkracht heeft geen btw/KVK, wel het BSN en de overeenkomst
+    expect(voorEersteKlus(stand({ soort: "uitzendkracht" }))).toEqual(["bsn", "contract"]);
   });
 
   it("zonder gekozen soort valt er niets op te noemen behalve de postcode (de soort is een eerdere stap)", () => {
@@ -66,8 +75,8 @@ describe("gegevensMist: wat er nog mist", () => {
           for (const bedrijf of [false, true]) {
             for (const postcode of [false, true]) {
               const s: GegevensStand = { soort, fiscaalIngevuld: fiscaal, contractGetekend: contract, bedrijfOk: bedrijf, postcodeOk: postcode };
-              // sinds 13 nov: een zzp'er of flexwerker alleen de postcode (KVK/btw/KOR vóór de eerste klus)
-              const poort = (soort === "uitzendkracht" ? fiscaal && contract : true) && postcode;
+              // sinds 13 nov voor iedereen alleen de postcode (KVK/btw/KOR en BSN/overeenkomst vóór de eerste klus)
+              const poort = postcode;
               // zonder soort is fiscaalIngevuld nooit waar (isComplete), dat is hier een eerdere stap
               if (soort === null) continue;
               expect(gegevensMist(s).length === 0, JSON.stringify(s)).toBe(poort);
@@ -112,7 +121,9 @@ describe("de pagina en de vijf talen", () => {
     expect(pagina).toContain("mist={mist}");
     expect(pagina.indexOf("<GegevensMist")).toBeLessThan(pagina.indexOf("<OnboardingForm"));
     expect(pagina).toContain('id="uitzendovereenkomst"');
-    expect(pagina).toContain("gegevensMist({");
+    expect(pagina).toContain("gegevensMist(gegevensStand)");
+    // het BSN en de overeenkomst van een uitzendkracht: vóór de eerste klus (13 nov)
+    expect(pagina).toContain("voorEersteKlus(gegevensStand)");
   });
 
   it("het BSN-veld stuurt alleen het BSN (de route laat de loonheffingskorting staan) en ververst de pagina; foutmeldingen hebben role=alert", () => {
