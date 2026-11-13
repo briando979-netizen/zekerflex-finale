@@ -8,6 +8,8 @@ import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { geocodePostcode } from "@/lib/integrations/pdok";
 import { registerTenantCompany } from "@/lib/company/registration";
+import { kvkLimietVan } from "@/lib/kvk/tegoed";
+import { wisKvkWacht, zetKvkWacht } from "@/lib/kvk/tegoed-opslag";
 import { setBuitenlandBewijs, getBuitenlandBewijs, type BuitenlandBewijs } from "@/lib/company/buitenland";
 import { checkVies } from "@/lib/integrations/vies";
 import { landNaam, landSoort, normaliseerLand, controleerBuitenlandInvoer, viesLandCode } from "@/lib/onboarding/buitenland";
@@ -160,26 +162,18 @@ export async function submitEmployerOnboarding(
     if (!kvkValid) reasons.push(...reg.validation.reasons);
     // Een geldig KVK-nummer bewijst alleen dat het bedrijf bestaat. Hoort de
     // aanmelder er aantoonbaar bij (eigen maildomein dat bij de naam past)?
-    if (kvkValid) {
-      const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
-      const bewijs = eigendomVanEmail(user?.email ?? "", [reg.profile.legalName, reg.profile.tradeName]);
-      if (bewijs.ok) {
-        await setKvkBewijs(tenantId, { via: "domein", domein: bewijs.domein, at: new Date().toISOString() });
-      } else {
-        inControle = true;
-        alertOwnerLater({
-          key: `bedrijf-controle:${tenantId}`,
-          title: `Bedrijf wacht op controle: ${reg.profile.legalName}`,
-          detail: `KVK ${reg.profile.kvkNumber} is geldig, maar de aanmelder (${bewijs.reden === "gratis-mail" ? "gratis maildienst" : "maildomein past niet bij de naam"}) is niet automatisch aan dit bedrijf te koppelen. Bel of mail het bedrijf en keur het goed in Admin → Bedrijven.`,
-          severity: "warning",
-          url: `/admin/bedrijven/${tenantId}`,
-        });
-      }
-    }
+    if (kvkValid && (await koppelKvkAanAanmelder(tenantId, userId, reg.profile)).inControle) inControle = true;
+    // gecontroleerd: een eerdere wachtende controle is niet meer nodig
+    await wisKvkWacht("bedrijf", tenantId);
   } catch (err) {
+    // tegoed op of te veel vragen bij de KVK-dienst (13 nov 2026): later opnieuw, via de cron /api/internal/kvk/herkansing
+    const limiet = kvkLimietVan(err);
+    if (limiet) await zetKvkWacht("bedrijf", tenantId, cleanKvk, limiet);
     // De KVK-koppeling geeft technische, Engelse fouten ("No Handelsregister entry…"): hier in gewoon Nederlands.
     reasons.push(
-      err instanceof AppError && err.status === 404
+      limiet
+        ? "We controleren je KVK-nummer later; je kunt verder met je aanmelding."
+        : err instanceof AppError && err.status === 404
         ? "Dit KVK-nummer staat niet in het Handelsregister."
         : err instanceof AppError && err.status === 422 && /cijfers/.test(err.message)
           ? err.message
@@ -267,4 +261,29 @@ export async function isEmployerOnboarded(tenantIds: string[]): Promise<boolean>
     if ((t.country ?? "NL") !== "NL" && (t.vatNumber || (await getBuitenlandBewijs(t.id)))) return true;
   }
   return false;
+}
+
+/**
+ * Een geldig KVK-nummer bewijst alleen dat het bedrijf bestaat. Hoort de aanmelder er aantoonbaar bij (eigen maildomein dat
+ * bij de naam past)? Dan het bewijs; anders een controle door de eigenaar. Ook voor de KVK-herkansing (lib/kvk/herkansing.ts).
+ */
+export async function koppelKvkAanAanmelder(
+  tenantId: string,
+  userId: string,
+  profiel: { legalName: string; tradeName: string | null; kvkNumber: string },
+): Promise<{ inControle: boolean }> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+  const bewijs = eigendomVanEmail(user?.email ?? "", [profiel.legalName, profiel.tradeName]);
+  if (bewijs.ok) {
+    await setKvkBewijs(tenantId, { via: "domein", domein: bewijs.domein, at: new Date().toISOString() });
+    return { inControle: false };
+  }
+  alertOwnerLater({
+    key: `bedrijf-controle:${tenantId}`,
+    title: `Bedrijf wacht op controle: ${profiel.legalName}`,
+    detail: `KVK ${profiel.kvkNumber} is geldig, maar de aanmelder (${bewijs.reden === "gratis-mail" ? "gratis maildienst" : "maildomein past niet bij de naam"}) is niet automatisch aan dit bedrijf te koppelen. Bel of mail het bedrijf en keur het goed in Admin → Bedrijven.`,
+    severity: "warning",
+    url: `/admin/bedrijven/${tenantId}`,
+  });
+  return { inControle: true };
 }

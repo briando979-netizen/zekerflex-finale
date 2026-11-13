@@ -82,6 +82,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "scan-dagoverzicht", label: "Scans & deals: dagoverzicht aan sales", maxAgeHours: 26 },
   // elke 15 min: verzegelde chipgegevens van de ID-controle opruimen (lib/kyc/chip/sessie.ts ruimChipOp)
   { job: "chip-opruimen", label: "ID-controle: chipgegevens opruimen", maxAgeHours: 2 },
+  // elke 30 min: KVK-controles die wachtten op tegoed of de minuutlimiet (lib/kvk/herkansing.ts)
+  { job: "kvk-herkansing", label: "KVK-controles opnieuw (na tegoed of limiet)", maxAgeHours: 2 },
   // elke 15 min: het live Stripe-account (betalen en uitbetalen aan?) (lib/billing/stripe-betalen.ts)
   { job: "stripe-account-stand", label: "Stripe: kan het account betalingen ontvangen?", maxAgeHours: 2 },
   // dagelijks 04:20 UTC: elke openbare pagina ophalen; kapotte pagina's naar het foutenlogboek (lib/ops/rondgang.ts)

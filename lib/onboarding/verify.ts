@@ -35,6 +35,8 @@ import { meldIdGeverifieerd } from "@/lib/onboarding/id-geverifieerd";
 import { aiReviewOverslaan, aiReviewUitslag, laadAiReviewRem, REM_DUUR_MS, REM_NA } from "@/lib/onboarding/ai-review-rem";
 import { fotoBron } from "@/lib/kyc/foto-bron";
 import { fotoMaat } from "@/lib/kyc/foto-maat";
+import { kvkLimietVan } from "@/lib/kvk/tegoed";
+import { wisKvkWacht, zetKvkWacht } from "@/lib/kvk/tegoed-opslag";
 
 // ---------------------------------------------------------------------------
 // Self-serve freelancer onboarding verification.
@@ -411,14 +413,20 @@ async function ensureFreelancerBase(input: {
           ? `${reg.profile.legalName} — actief`
           : `Gevonden maar niet goedgekeurd: ${reg.validation.reasons.join(" ") || "onbekende reden"}`,
       });
+      // gecontroleerd: een eerdere wachtende controle is niet meer nodig
+      await wisKvkWacht("werker", input.userId);
     } catch (err) {
+      // tegoed op of te veel vragen bij de KVK-dienst: later opnieuw (cron /api/internal/kvk/herkansing), en dat ook zo zeggen
+      const limiet = kvkLimietVan(err);
+      if (limiet) await zetKvkWacht("werker", input.userId, cleanKvk, limiet);
       checks.push({
         label: "KVK Handelsregister",
         ok: false,
-        // een storing bij de KVK-dienst (429, quota, sleutel) is geen fout van de werker: geen technische (Engelse) melding,
-        // maar een vaste tekst die vertaald wordt (lib/i18n/id-redenen.ts, kvk.nietBereikbaar)
-        detail:
-          err instanceof AppError && err.code === "UPSTREAM_UNAVAILABLE"
+        // een storing bij de KVK-dienst is geen fout van de werker: geen technische (Engelse) melding, maar een vaste tekst
+        // die vertaald wordt (lib/i18n/id-redenen.ts: kvk.later en kvk.nietBereikbaar)
+        detail: limiet
+          ? "We controleren je KVK-nummer later; je kunt verder met je aanmelding."
+          : err instanceof AppError && err.code === "UPSTREAM_UNAVAILABLE"
             ? "Het KVK-register was even niet bereikbaar. Een medewerker kijkt mee."
             : err instanceof AppError
               ? err.message

@@ -5,10 +5,13 @@ import type { SalesCampaign } from "@prisma/client";
 // gratis) of het Handelsregister (tegoed per opvraging)? 6 nov liep dat tegoed
 // twaalf keer tegen zijn limiet aan terwijl zoeken ook gratis kan.
 
-const staat = vi.hoisted(() => ({ sleutel: true, eigen: true }));
+const RUIM = { tokens: 5000, perMinuut: 300, op: false, at: "2026-11-13T12:00:00.000Z" };
+const staat = vi.hoisted(() => ({ sleutel: true, eigen: true, tegoed: null as unknown }));
 
 vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock("@/lib/integrations/kvkbase", () => ({ isKvkBaseEnabled: () => staat.sleutel }));
+// het tegoed bij KVKBase (lib/kvk/tegoed-opslag.ts): de betaalde bron alleen ruim boven de reserve voor de KVK-controles
+vi.mock("@/lib/kvk/tegoed-opslag", () => ({ leesKvkTegoed: async () => staat.tegoed }));
 vi.mock("@/lib/gratis/keuzes", () => ({
   gebruikEigenVers: async (_id: string, heeftSleutel: boolean) => (heeftSleutel ? staat.eigen : true),
 }));
@@ -28,6 +31,7 @@ describe("bron voor het vinden van bedrijven", () => {
   beforeEach(() => {
     staat.sleutel = true;
     staat.eigen = true;
+    staat.tegoed = RUIM;
     viaKvk.mockReset().mockResolvedValue(raak);
     viaOsm.mockReset().mockResolvedValue(raak);
   });
@@ -45,6 +49,17 @@ describe("bron voor het vinden van bedrijven", () => {
     const uit = await discoverBedrijven(campagne);
     expect(uit.bron).toBe("kvkbase");
     expect(viaOsm).not.toHaveBeenCalled();
+  });
+
+  it("op 'betaald' maar met te weinig tegoed (of onbekend): onze eigen bron, het tegoed blijft voor de KVK-controles", async () => {
+    staat.eigen = false;
+    for (const tegoed of [null, { ...RUIM, tokens: 40 }, { ...RUIM, op: true, tokens: 0 }]) {
+      staat.tegoed = tegoed;
+      viaKvk.mockClear();
+      const uit = await discoverBedrijven(campagne);
+      expect(uit.bron).toBe("openstreetmap");
+      expect(viaKvk).not.toHaveBeenCalled();
+    }
   });
 
   it("zonder sleutel is het altijd onze eigen bron", async () => {
