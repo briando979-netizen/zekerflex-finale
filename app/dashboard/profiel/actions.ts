@@ -4,6 +4,23 @@ import { revalidatePath } from "next/cache";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
 import { updatePersonalInfo, updatePersonalInfoSchema } from "@/lib/profile/personal";
+import { bewaarOpleiding } from "@/lib/onboarding/wie-ben-jij-opslag";
+import type { Opleiding } from "@/lib/onboarding/opleiding";
+
+/**
+ * De opleiding in het profiel (13 nov 2026: uit stap 1 van de onboarding gehaald). null = wissen. Geeft de bewaarde
+ * stand terug, die het scherm overneemt; de tekst bij een fout kiest het scherm zelf, in de taal van de werker.
+ */
+export async function bewaarOpleidingAction(invoer: Opleiding | null): Promise<{ ok: boolean; opleiding: Opleiding | null }> {
+  const principal = await requirePrincipal();
+  try {
+    const opleiding = await bewaarOpleiding(principal.userId, invoer);
+    revalidatePath("/dashboard/profiel");
+    return { ok: true, opleiding };
+  } catch {
+    return { ok: false, opleiding: null };
+  }
+}
 
 export interface PersonalInfoResult {
   ok: boolean;

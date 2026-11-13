@@ -18,7 +18,9 @@ import { StripeConnectPayout } from "@/components/app/StripeConnectPayout";
 import { betalenUit } from "@/lib/billing/stripe-betalen";
 import { BackLink } from "@/components/app/BackLink";
 import { PersonalInfoForm } from "@/components/app/PersonalInfoForm";
-import { updatePersonalInfoAction } from "@/app/dashboard/profiel/actions";
+import { bewaarOpleidingAction, updatePersonalInfoAction } from "@/app/dashboard/profiel/actions";
+import { OpleidingProfiel } from "@/components/app/OpleidingProfiel";
+import { leesOpleiding } from "@/lib/onboarding/wie-ben-jij-opslag";
 import { getFreelancerDict } from "@/lib/i18n/server";
 import { vulIn } from "@/lib/i18n/vul-in";
 
@@ -26,7 +28,8 @@ export const dynamic = "force-dynamic";
 
 export default async function ProfielPage() {
   const principal = await requirePrincipal();
-  const t = (await getFreelancerDict()).profiel;
+  const dict = await getFreelancerDict();
+  const t = dict.profiel;
   const [o, profile, user, fiscal] = await Promise.all([
     getFreelancerOverview(principal.userId),
     prisma.freelancerProfile.findUnique({
@@ -50,6 +53,8 @@ export default async function ProfielPage() {
     getFiscal(principal.userId),
   ]);
   const ervaring = await getErvaring(principal.userId).catch(() => ({ items: [], geen: false }));
+  // de opleiding staat sinds 13 nov hier, niet meer in stap 1 van de onboarding (optioneel)
+  const opleiding = await leesOpleiding(principal.userId).catch(() => null);
   const [profileExtra, stats, mailPrefs, certs] = await Promise.all([
     getUserProfileExtra(principal.userId),
     getProfileStats(principal.userId),
@@ -225,6 +230,10 @@ export default async function ProfielPage() {
 
         <Panel title={t.werkervaring}>
           <ErvaringLijst start={ervaring.items} />
+        </Panel>
+
+        <Panel title={dict.wie.persoon.opleiding}>
+          <OpleidingProfiel begin={opleiding} bewaar={bewaarOpleidingAction} />
         </Panel>
 
         <Panel title={t.certificaten}>
