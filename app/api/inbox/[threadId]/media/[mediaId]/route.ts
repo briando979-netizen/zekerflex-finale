@@ -4,6 +4,7 @@ import { toErrorBody } from "@/lib/errors";
 import { canAccess, getThread } from "@/lib/messaging/store";
 import { isPlatformAdmin } from "@/lib/messaging/contacts";
 import { opensInline, readChatMedia } from "@/lib/messaging/media";
+import { kleineChatFoto } from "@/lib/messaging/foto-klein";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,11 +28,15 @@ export async function GET(
 
     // Opened in its own tab, the middleware gives this path a sandboxed CSP
     // (CHAT_MEDIA_CSP in lib/security/csp.ts); anything not plainly safe downloads.
-    const inline = new URL(req.url).searchParams.get("dl") !== "1" && opensInline(file.mimeType);
-    return new Response(new Uint8Array(file.bytes), {
+    const zoek = new URL(req.url).searchParams;
+    const inline = zoek.get("dl") !== "1" && opensInline(file.mimeType);
+    // ?klein=1: de foto in de bubbel (lib/messaging/foto-klein.ts), na dezelfde toegangscontrole; lukt dat niet, het origineel
+    const kleintje = inline && zoek.get("klein") === "1" ? await kleineChatFoto(file.bytes, file.mimeType) : null;
+    const naam = kleintje ? `${file.filename.replace(/\.[A-Za-z0-9]{1,5}$/, "")}.jpg` : file.filename;
+    return new Response(new Uint8Array(kleintje ?? file.bytes), {
       headers: {
-        "Content-Type": file.mimeType,
-        "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${file.filename.replace(/[^\x20-\x7E]|["\\]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(file.filename)}`,
+        "Content-Type": kleintje ? "image/jpeg" : file.mimeType,
+        "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${naam.replace(/[^\x20-\x7E]|["\\]/g, "_")}"; filename*=UTF-8''${encodeURIComponent(naam)}`,
         // elk type mag in de chat: de browser mag nooit zelf raden wat het is
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "private, max-age=86400",
