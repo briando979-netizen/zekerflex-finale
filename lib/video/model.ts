@@ -70,6 +70,15 @@ export interface Plaatsing {
   draai: number; // graden
 }
 
+/**
+ * Een sleutelbeeld (13 nov 2026): plek, grootte, draaiing en zichtbaarheid van een beeldclip op één moment, in
+ * seconden na het begin van de clip. Tussen twee sleutelbeelden loopt de stand vloeiend over (standOp).
+ */
+export interface Sleutelbeeld extends Plaatsing {
+  t: number;
+  dekking: number;
+}
+
 export interface BeeldClip extends ClipBasis {
   soort: "video" | "foto" | "kleur";
   /** Adres van het bronbestand (eigen herkomst) of leeg bij een kleurvlak. */
@@ -94,6 +103,8 @@ export interface BeeldClip extends ClipBasis {
   kleur: string;
   /** Tweede kleur voor een verloop (leeg = effen). */
   kleur2: string;
+  /** Sleutelbeelden, oplopend in de tijd; zonder gelden plaatsing en dekking hierboven voor de hele clip. */
+  sleutelbeelden?: Sleutelbeeld[] | undefined;
 }
 
 export interface TekstClip extends ClipBasis {
@@ -272,6 +283,13 @@ export function maxDuur(c: Clip): number {
   return Math.max(MIN_DUUR, (c.bronDuur - c.inpunt) / c.snelheid);
 }
 
+/** Tijden binnen een clip (woordtijden, sleutelbeelden) blijven op hun moment als het begin `delta` seconden opschuift. */
+export function schuifBinnen(c: Clip, delta: number): Clip {
+  if (c.soort === "tekst") return c.woordTijden ? { ...c, woordTijden: c.woordTijden.map((x) => rond(x - delta)) } : c;
+  if (c.soort === "audio") return c;
+  return c.sleutelbeelden ? { ...c, sleutelbeelden: c.sleutelbeelden.map((k) => ({ ...k, t: rond(k.t - delta) })) } : c;
+}
+
 /** Knip een clip op tijdstip t in twee. Geeft null als t niet binnen de clip valt. */
 export function knip(c: Clip, t: number): [Clip, Clip] | null {
   if (t <= c.start + MIN_DUUR / 2 || t >= einde(c) - MIN_DUUR / 2) return null;
@@ -283,9 +301,8 @@ export function knip(c: Clip, t: number): [Clip, Clip] | null {
   if (a.soort !== "tekst") a.vervagenUit = 0;
   if (b.soort !== "tekst") b.vervagenIn = 0;
   if (b.soort !== "tekst" && b.soort !== "audio") b.overgang = "geen";
-  // ondertitel uit spraak: de woordtijden van de tweede helft tellen vanaf zijn eigen begin
-  if (b.soort === "tekst" && b.woordTijden) b.woordTijden = b.woordTijden.map((x) => rond(x - links));
-  return [a, b];
+  // woordtijden en sleutelbeelden van de tweede helft tellen vanaf zijn eigen begin
+  return [a, schuifBinnen(b, links)];
 }
 
 /** Begin van een clip verschuiven (linkerrand slepen). */
@@ -296,14 +313,10 @@ export function snijBegin(c: Clip, nieuwStart: number): Clip {
     // Niet verder terug dan het begin van de bron.
     start = Math.max(start, c.start - c.inpunt / c.snelheid);
     const inpunt = rond(Math.max(0, c.inpunt + (start - c.start) * c.snelheid));
-    return { ...c, start: rond(start), duur: rond(eindT - start), inpunt };
+    return schuifBinnen({ ...c, start: rond(start), duur: rond(eindT - start), inpunt }, start - c.start);
   }
-  if (c.soort === "tekst" && c.woordTijden) {
-    // de woorden blijven op hun plek in de tijd, ook als het begin van de regel schuift
-    const delta = start - c.start;
-    return { ...c, start: rond(start), duur: rond(eindT - start), woordTijden: c.woordTijden.map((x) => rond(x - delta)) };
-  }
-  return { ...c, start: rond(start), duur: rond(eindT - start) };
+  // woordtijden en sleutelbeelden blijven op hun moment, ook als het begin schuift
+  return schuifBinnen({ ...c, start: rond(start), duur: rond(eindT - start) }, start - c.start);
 }
 
 /** Einde van een clip verschuiven (rechterrand slepen). */
@@ -404,6 +417,81 @@ export function vervaagFactor(c: { start: number; duur: number; vervagenIn: numb
 }
 
 export const zacht = (x: number) => x * x * (3 - 2 * x);
+
+// ---- Sleutelbeelden -------------------------------------------------------------
+
+/** Binnen een half beeldje (bij 30 fps) is het hetzelfde sleutelbeeld. */
+const BIJNA = 1 / 60;
+
+const standVan = (k: Sleutelbeeld): { plaatsing: Plaatsing; dekking: number } => ({ plaatsing: { x: k.x, y: k.y, schaal: k.schaal, draai: k.draai }, dekking: k.dekking });
+
+/**
+ * De stand van een beeldclip (plek, grootte, draaiing, zichtbaarheid) op tijdstip t van de tijdlijn. Met sleutelbeelden
+ * vloeiend ertussen (vóór het eerste en na het laatste: dat sleutelbeeld); zonder: de vaste waarden van de clip.
+ */
+export function standOp(c: Pick<BeeldClip, "start" | "plaatsing" | "dekking" | "sleutelbeelden">, t: number): { plaatsing: Plaatsing; dekking: number } {
+  const lijst = c.sleutelbeelden;
+  const eerste = lijst?.[0];
+  if (!lijst || !eerste) return { plaatsing: c.plaatsing, dekking: c.dekking };
+  const nu = t - c.start;
+  if (nu <= eerste.t) return standVan(eerste);
+  for (let i = 1; i < lijst.length; i++) {
+    const a = lijst[i - 1];
+    const b = lijst[i];
+    if (!a || !b || nu > b.t) continue;
+    const f = zacht(klem((nu - a.t) / Math.max(1e-6, b.t - a.t), 0, 1));
+    const m = (van: number, naar: number) => van + (naar - van) * f;
+    return { plaatsing: { x: m(a.x, b.x), y: m(a.y, b.y), schaal: m(a.schaal, b.schaal), draai: m(a.draai, b.draai) }, dekking: m(a.dekking, b.dekking) };
+  }
+  return standVan(lijst[lijst.length - 1] ?? eerste);
+}
+
+/** Het sleutelbeeld op tijdstip t van de tijdlijn (binnen een half beeldje), of null. */
+export function sleutelbeeldOp(c: Pick<BeeldClip, "start" | "sleutelbeelden">, t: number): Sleutelbeeld | null {
+  const rel = t - c.start;
+  return c.sleutelbeelden?.find((k) => Math.abs(k.t - rel) <= BIJNA) ?? null;
+}
+
+type StandDeel = Partial<Plaatsing> & { dekking?: number | undefined };
+
+/** Een sleutelbeeld op tijdstip t (binnen de clip): de stand van dat moment plus `deel`; één op die plek wordt bijgewerkt. */
+export function metSleutelbeeld(c: BeeldClip, t: number, deel: StandDeel = {}): BeeldClip {
+  const rel = rond(klem(t - c.start, 0, c.duur));
+  const stand = standOp(c, c.start + rel);
+  const nieuw: Sleutelbeeld = {
+    t: rel,
+    x: rond(deel.x ?? stand.plaatsing.x),
+    y: rond(deel.y ?? stand.plaatsing.y),
+    schaal: rond(deel.schaal ?? stand.plaatsing.schaal),
+    draai: rond(deel.draai ?? stand.plaatsing.draai),
+    dekking: rond(deel.dekking ?? stand.dekking),
+  };
+  const rest = (c.sleutelbeelden ?? []).filter((k) => Math.abs(k.t - rel) > BIJNA);
+  return { ...c, sleutelbeelden: [...rest, nieuw].sort((a, b) => a.t - b.t) };
+}
+
+/** Plek, grootte, draaiing of zichtbaarheid veranderen: met sleutelbeelden op de afspeelkop, anders voor de hele clip. */
+export function zetStand(c: BeeldClip, t: number, deel: StandDeel): BeeldClip {
+  if (c.sleutelbeelden?.length) return metSleutelbeeld(c, t, deel);
+  return {
+    ...c,
+    plaatsing: { x: deel.x ?? c.plaatsing.x, y: deel.y ?? c.plaatsing.y, schaal: deel.schaal ?? c.plaatsing.schaal, draai: deel.draai ?? c.plaatsing.draai },
+    dekking: deel.dekking ?? c.dekking,
+  };
+}
+
+/** Alle sleutelbeelden weg; de clip houdt de stand van tijdstip t voor de hele clip. */
+export function alleSleutelbeeldenWeg(c: BeeldClip, t: number): BeeldClip {
+  const stand = standOp(c, t);
+  return { ...c, plaatsing: stand.plaatsing, dekking: stand.dekking, sleutelbeelden: undefined };
+}
+
+/** Het sleutelbeeld op tijdstip t weg; was het het laatste, dan houdt de clip de stand van dat moment. */
+export function zonderSleutelbeeld(c: BeeldClip, t: number): BeeldClip {
+  const rel = t - c.start;
+  const rest = (c.sleutelbeelden ?? []).filter((k) => Math.abs(k.t - rel) > BIJNA);
+  return rest.length ? { ...c, sleutelbeelden: rest } : alleSleutelbeeldenWeg(c, t);
+}
 const uitTerug = (x: number) => {
   const c1 = 1.70158;
   const c3 = c1 + 1;
@@ -686,6 +774,26 @@ const ANIMATIES: readonly TekstAnimatie[] = ["geen", "vervagen", "opschuiven", "
 const STIJLEN: readonly TekstStijl[] = ["gewoon", "kader", "omlijnd", "schaduw", "neon", "bubbel-blauw", "bubbel-groen", "venster", "3d"];
 
 /** Woordtijden van buiten: alleen eindige getallen, oplopend, precies één per woord; anders weg (dan karaoke gelijkmatig). */
+/** Sleutelbeelden van buiten: hooguit 60, waarden begrensd zoals de plaatsing, oplopend; geen bruikbare = geen. */
+function schoneSleutelbeelden(v: unknown, duur: number): Sleutelbeeld[] | null {
+  if (!Array.isArray(v)) return null;
+  const uit: Sleutelbeeld[] = [];
+  for (const k of v.slice(0, 60)) {
+    if (!k || typeof k !== "object") continue;
+    const r = k as Record<string, unknown>;
+    if (typeof r.t !== "number" || !Number.isFinite(r.t)) continue;
+    uit.push({
+      t: rond(klem(r.t, -3600, duur + 3600)),
+      x: getal(r.x, -2, 2, 0),
+      y: getal(r.y, -2, 2, 0),
+      schaal: getal(r.schaal, 0.05, 5, 1),
+      draai: getal(r.draai, -360, 360, 0),
+      dekking: getal(r.dekking, 0, 1, 1),
+    });
+  }
+  return uit.length ? uit.sort((a, b) => a.t - b.t) : null;
+}
+
 function schoneWoordTijden(v: unknown, inhoud: string, duur: number): number[] | null {
   if (!Array.isArray(v)) return null;
   const n = inhoud.split(/\s+/).filter(Boolean).length;
@@ -767,6 +875,7 @@ export function schoonProject(ruw: unknown): Project {
     } else if (soortSpoor === "beeld" && (c.soort === "video" || c.soort === "foto" || c.soort === "kleur") && veiligeBron(c.bron)) {
       const f = (c.filters ?? {}) as Record<string, unknown>;
       const pl = (c.plaatsing ?? {}) as Record<string, unknown>;
+      const sleutels = schoneSleutelbeelden(c.sleutelbeelden, basis.duur);
       clips.push({
         ...basis,
         soort: c.soort,
@@ -795,6 +904,7 @@ export function schoonProject(ruw: unknown): Project {
         overgangDuur: getal(c.overgangDuur, 0.1, 3, 0.5),
         kleur: KLEUR.test(String(c.kleur)) ? String(c.kleur) : "#0E5C4A",
         kleur2: KLEUR.test(String(c.kleur2)) ? String(c.kleur2) : "",
+        ...(sleutels ? { sleutelbeelden: sleutels } : {}),
       });
     }
   }

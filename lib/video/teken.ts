@@ -9,6 +9,7 @@ import {
   karaokeWoord,
   klem,
   mengKleur,
+  standOp,
   tekstAnimatie,
   toeval,
   vervaagFactor,
@@ -142,7 +143,9 @@ function tekenGlitchOvergang(ctx: CanvasRenderingContext2D, vorig: BeeldClip, nu
 /** Tekent een beeldclip; p = voortgang van een overgang (1 = geen overgang). */
 function tekenBeeld(ctx: CanvasRenderingContext2D, c: BeeldClip, t: number, W: number, H: number, bronnen: Bronnen, overgang: { soort: BeeldClip["overgang"]; p: number; rol: "in" | "uit" } | null) {
   const voortgang = c.duur > 0 ? klem((t - c.start) / c.duur, 0, 1) : 0;
-  let dekking = c.dekking * vervaagFactor(c, t);
+  // sleutelbeelden (standOp): plek, grootte, draaiing en zichtbaarheid op dit moment
+  const stand = standOp(c, t);
+  let dekking = stand.dekking * vervaagFactor(c, t);
   const kb = bewegingOp(c.beweging, voortgang);
   let extraSchaal = 1;
   let dx = 0;
@@ -193,12 +196,12 @@ function tekenBeeld(ctx: CanvasRenderingContext2D, c: BeeldClip, t: number, W: n
   const filter = filterTekst(c.filters, schaalPx);
   if (filter) ctx.filter = filter;
 
-  const cx = W / 2 + (c.plaatsing.x + kb.dx) * (W / 2) + dx;
-  const cy = H / 2 + (c.plaatsing.y + kb.dy) * (H / 2) + dy;
+  const cx = W / 2 + (stand.plaatsing.x + kb.dx) * (W / 2) + dx;
+  const cy = H / 2 + (stand.plaatsing.y + kb.dy) * (H / 2) + dy;
   ctx.translate(cx, cy);
-  const rad = ((c.plaatsing.draai + draai) * Math.PI) / 180;
+  const rad = ((stand.plaatsing.draai + draai) * Math.PI) / 180;
   if (rad) ctx.rotate(rad);
-  const s = c.plaatsing.schaal * kb.schaal * extraSchaal;
+  const s = stand.plaatsing.schaal * kb.schaal * extraSchaal;
 
   if (c.soort === "kleur") {
     const w = W * s;

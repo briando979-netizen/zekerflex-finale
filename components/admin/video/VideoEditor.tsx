@@ -18,10 +18,12 @@ import {
   projectDuur,
   rond,
   spoorEinde,
+  standOp,
   tekstSchaal,
   verwijderClip,
   vervangClip,
   vrijePlek,
+  zetStand,
   type AudioClip,
   type BeeldClip,
   type Clip,
@@ -373,7 +375,11 @@ export function VideoEditor() {
     const dy = (e.clientY - s.y0) / s.h;
     const c = s.clip;
     if (c.soort === "tekst") wijzig((p) => vervangClip(p, { ...c, x: rond(klem(c.x + dx, 0, 1)), y: rond(klem(c.y + dy, 0, 1)) }), "canvas");
-    else if (c.soort !== "audio") wijzig((p) => vervangClip(p, { ...c, plaatsing: { ...c.plaatsing, x: rond(klem(c.plaatsing.x + dx * 2, -2, 2)), y: rond(klem(c.plaatsing.y + dy * 2, -2, 2)) } }), "canvas");
+    else if (c.soort !== "audio") {
+      // met sleutelbeelden verschuift het sleutelbeeld op de afspeelkop (zetStand), anders de hele clip
+      const pl = standOp(c, tijd).plaatsing;
+      wijzig((p) => vervangClip(p, zetStand(c, tijd, { x: rond(klem(pl.x + dx * 2, -2, 2)), y: rond(klem(pl.y + dy * 2, -2, 2)) })), "canvas");
+    }
   };
   const opCanvasLos = () => {
     canvasSleep.current = null;
@@ -614,6 +620,7 @@ export function VideoEditor() {
               onOndertitels={maakOndertitels}
               onStiltes={haalStiltesWeg}
               aiBeeld={Boolean(ai?.beeld)}
+              tijd={tijd}
             />
           )}
         </section>

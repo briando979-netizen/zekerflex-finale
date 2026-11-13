@@ -51,23 +51,6 @@ export function knipStiltesWeg(p: Project, clipId: string, stukken: readonly Bro
     .sort((a, b) => a.van - b.van);
   if (!binnen.length) return niets;
 
-  let cursor = c.start;
-  const delen: (BeeldClip | AudioClip)[] = binnen.map((st, i) => {
-    const duur = rond((st.tot - st.van) / s);
-    const deel = { ...c, id: i === 0 ? c.id : nieuwId(), start: rond(cursor), duur, inpunt: rond(st.van) } as BeeldClip | AudioClip;
-    cursor += duur;
-    // in- en uitvagen en de overgang horen bij de echte randen, niet bij een knip
-    if (i > 0) {
-      deel.vervagenIn = 0;
-      if (deel.soort === "video") deel.overgang = "geen";
-    }
-    if (i < binnen.length - 1) deel.vervagenUit = 0;
-    return deel;
-  });
-  const oudEinde = einde(c);
-  const weg = rond(oudEinde - cursor);
-  if (weg < MIN_DUUR / 2) return niets;
-
   /** Waar een tijdstip binnen de oude clip nu komt; in een weggehaalde stilte: het begin van het volgende stuk. */
   const naar = (t: number): number => {
     const b = bronVan + (t - c.start) * s;
@@ -79,6 +62,28 @@ export function knipStiltesWeg(p: Project, clipId: string, stukken: readonly Bro
     }
     return op;
   };
+
+  let cursor = c.start;
+  const delen: (BeeldClip | AudioClip)[] = binnen.map((st, i) => {
+    const duur = rond((st.tot - st.van) / s);
+    const deel = { ...c, id: i === 0 ? c.id : nieuwId(), start: rond(cursor), duur, inpunt: rond(st.van) } as BeeldClip | AudioClip;
+    cursor += duur;
+    // in- en uitvagen en de overgang horen bij de echte randen, niet bij een knip
+    if (i > 0) {
+      deel.vervagenIn = 0;
+      if (deel.soort === "video") deel.overgang = "geen";
+    }
+    if (i < binnen.length - 1) deel.vervagenUit = 0;
+    // sleutelbeelden schuiven mee met het moment waar ze bij horen, net als ondertitels
+    if (deel.soort === "video" && deel.sleutelbeelden) {
+      const begin = deel.start;
+      deel.sleutelbeelden = deel.sleutelbeelden.map((k) => ({ ...k, t: rond(naar(c.start + k.t) - begin) }));
+    }
+    return deel;
+  });
+  const oudEinde = einde(c);
+  const weg = rond(oudEinde - cursor);
+  if (weg < MIN_DUUR / 2) return niets;
 
   const clips: Clip[] = [];
   for (const x of p.clips) {
