@@ -38,7 +38,8 @@ import { TekstVideo } from "@/components/admin/video/TekstVideo";
 import { Export } from "@/components/admin/video/Export";
 import { Venster } from "@/components/admin/video/Venster";
 import { TEKST_PRESETS } from "@/components/admin/video/presets";
-import { metSpraakOndertitels, ondertitelSpoor, spraakRegels, type SpraakRegel } from "@/lib/video/spraak-ondertitels";
+import { metSpraakOndertitels, ondertitelSpoor, spraakRegels, type GesprokenWoord, type SpraakRegel } from "@/lib/video/spraak-ondertitels";
+import { knipStiltesWeg, spraakStukken } from "@/lib/video/stiltes";
 import {
   bewaarProject,
   haalBestanden,
@@ -92,6 +93,20 @@ export function VideoEditor() {
   const laatstBewaard = useRef<string | null>(null);
 
   const meld = useCallback((tekst: string, soort: "ok" | "fout" = "ok") => setMelding({ tekst, soort }), []);
+
+  // Wat de spraakherkenning in een bestand hoorde, per taal en bestand: ondertitels en stiltes delen één keer luisteren.
+  const spraak = useRef(new Map<string, Promise<{ tekst: string; woorden: GesprokenWoord[] }>>());
+  const woordenVan = useCallback((bron: string, taal: string) => {
+    const sleutel = `${taal}|${bron}`;
+    let bezig = spraak.current.get(sleutel);
+    if (!bezig) {
+      bezig = spraakNaarWoorden(bron, taal);
+      spraak.current.set(sleutel, bezig);
+      // een fout niet onthouden: dan kan het meteen opnieuw
+      bezig.catch(() => spraak.current.delete(sleutel));
+    }
+    return bezig;
+  }, []);
   useEffect(() => {
     if (!melding) return;
     const t = window.setTimeout(() => setMelding(null), melding.soort === "fout" ? 9000 : 4500);
@@ -399,7 +414,7 @@ export function VideoEditor() {
   async function maakOndertitels(clip: BeeldClip | AudioClip, taal: string) {
     if (!project) return;
     if (!ondertitelSpoor(project)) throw new Error("Er is geen tekstspoor voor de ondertitels.");
-    const { tekst, woorden } = await spraakNaarWoorden(clip.bron, taal);
+    const { tekst, woorden } = await woordenVan(clip.bron, taal);
     const staand = FORMATEN[project.formaat].h > FORMATEN[project.formaat].w;
     const perRegel = staand ? 4 : 6;
     const regelsVoor = (c: BeeldClip | AudioClip): SpraakRegel[] => {
@@ -417,6 +432,25 @@ export function VideoEditor() {
       return spoor ? metSpraakOndertitels(p, spoor, bron, bron === clip ? eerst : regelsVoor(bron)) : p;
     });
     meld(`${eerst.length} ondertitels gemaakt. Elke regel blijft aan te passen; ongedaan maken kan met Ctrl+Z.`);
+  }
+
+  /** Stiltes uit een video- of geluidsclip halen (op de woordtijden van de spraak); alles erna schuift aan. */
+  async function haalStiltesWeg(clip: BeeldClip | AudioClip, taal: string, minStilte: number) {
+    if (!project) return;
+    const { woorden } = await woordenVan(clip.bron, taal);
+    if (!woorden.length) throw new Error("In deze clip is geen spraak gehoord; dan valt er niets weg te halen.");
+    const stukkenVoor = (c: BeeldClip | AudioClip) => spraakStukken(woorden, { van: c.inpunt, tot: c.inpunt + c.duur * (c.snelheid || 1) }, { minStilte });
+    const proef = knipStiltesWeg(project, clip.id, stukkenVoor(clip));
+    if (!proef.weg) {
+      meld(`Geen stiltes gevonden die langer zijn dan ${String(minStilte).replace(".", ",")} s.`);
+      return;
+    }
+    wijzig((p) => {
+      // de clip zoals hij nu staat: hij kan tijdens het luisteren verschoven of ingekort zijn
+      const nu = p.clips.find((c) => c.id === clip.id);
+      return nu && (nu.soort === "video" || nu.soort === "audio") ? knipStiltesWeg(p, nu.id, stukkenVoor(nu)).project : p;
+    });
+    meld(`${proef.stiltes} ${proef.stiltes === 1 ? "stilte" : "stiltes"} weggehaald; het geheel is ${proef.weg.toFixed(1).replace(".", ",")} s korter. Ongedaan maken kan met Ctrl+Z.`);
   }
 
   /** Eigen muziek componeren en onder een net gemaakt project zetten. */
@@ -578,6 +612,7 @@ export function VideoEditor() {
               onAiBewerk={aiBewerk}
               onAiBeweeg={aiBeweeg}
               onOndertitels={maakOndertitels}
+              onStiltes={haalStiltesWeg}
               aiBeeld={Boolean(ai?.beeld)}
             />
           )}
