@@ -4,6 +4,8 @@ import { kvSet } from "@/lib/storage/kv";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { fetchPage } from "@/lib/website-check/fetch";
 import { isKvkBaseEnabled, lookupCompany } from "@/lib/integrations/kvkbase";
+import { achtergrondMag } from "@/lib/kvk/tegoed";
+import { leesKvkTegoed } from "@/lib/kvk/tegoed-opslag";
 import {
   BRONNEN,
   lege,
@@ -74,6 +76,11 @@ async function cao(): Promise<Omit<Meting, "op" | "duurMs">> {
 async function kvk(): Promise<Omit<Meting, "op" | "duurMs">> {
   if (!isKvkBaseEnabled()) return { ...lege("Wacht op een KVKBase-sleutel (KVKBASE_API_KEY in .env.production; zie Te doen)."), tekst: "Nog niet ingesteld" };
   const bedrijven = await prisma.tenant.findMany({ where: { kvkNumber: { not: null } }, select: { id: true, name: true, kvkNumber: true }, orderBy: { createdAt: "asc" }, take: 300 });
+  // elk bedrijf kost een token (na de cache van 30 dagen): alleen met een bekend tegoed ruim boven de reserve voor de controles
+  // van werkers en werkgevers (13 nov 2026: het gratis tegoed was op; lib/kvk/tegoed.ts)
+  if (!achtergrondMag(await leesKvkTegoed(), bedrijven.length)) {
+    return { ...lege("Overgeslagen: het KVK-tegoed is voor de controles van werkers en werkgevers (te weinig over, zie Admin → Alles gratis)."), tekst: "Overgeslagen" };
+  }
   const regels: Meting["regels"] = [];
   let actief = 0;
   let nietActief = 0;

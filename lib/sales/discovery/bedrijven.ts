@@ -4,6 +4,8 @@ import { isKvkBaseEnabled } from "@/lib/integrations/kvkbase";
 import { gebruikEigenVers } from "@/lib/gratis/keuzes";
 import { discoverViaKvkBase } from "@/lib/sales/discovery/kvkbase";
 import { discoverViaOsm } from "@/lib/sales/discovery/osm";
+import { achtergrondMag } from "@/lib/kvk/tegoed";
+import { leesKvkTegoed } from "@/lib/kvk/tegoed-opslag";
 
 // ---------------------------------------------------------------------------
 // Welke bron vindt de bedrijven voor een campagne?
@@ -29,7 +31,9 @@ export async function discoverBedrijven(
   limitPerRun = 12,
 ): Promise<DiscoveryUitkomst> {
   const eigen = await gebruikEigenVers("sales-bedrijven", isKvkBaseEnabled());
-  if (eigen) {
+  // ook op "betaald" alleen met een bekend tegoed ruim boven de reserve voor de KVK-controles van werkers en werkgevers
+  // (13 nov 2026: het gratis tegoed was op en elke controle faalde; lib/kvk/tegoed.ts)
+  if (eigen || !achtergrondMag(await leesKvkTegoed(), limitPerRun)) {
     const uit = await discoverViaOsm(campaign, limitPerRun);
     return { bron: "openstreetmap", ...uit };
   }

@@ -20,6 +20,8 @@ import { isKvkBaseEnabled } from "@/lib/integrations/kvkbase";
 import { crawlCareersSource } from "@/lib/sales/discovery/careers";
 import { guessAndVerifyDomain } from "@/lib/sales/discovery/domain-guess";
 import { enrichLeadContact } from "@/lib/sales/discovery/contact-scrape";
+import { achtergrondMag } from "@/lib/kvk/tegoed";
+import { leesKvkTegoed } from "@/lib/kvk/tegoed-opslag";
 
 // ---------------------------------------------------------------------------
 // The recruiter motor. One tick:
@@ -232,7 +234,8 @@ async function enrichAndScore(
   // Admin → Alles gratis voor "bedrijven zoeken" de betaalde bron kiest; standaard niet,
   // want het maandtegoed is nodig voor aanmelden en de bedrijfscontrole (9 nov: op).
   // Met de hand verrijken in de pijplijn blijft gewoon kunnen.
-  const viaKvk = !(await gebruikEigenVers("sales-bedrijven", isKvkBaseEnabled()));
+  // en alleen met een bekend tegoed ruim boven de reserve voor de KVK-controles (13 nov 2026, lib/kvk/tegoed.ts): 2 tokens per lead
+  const viaKvk = !(await gebruikEigenVers("sales-bedrijven", isKvkBaseEnabled())) && achtergrondMag(await leesKvkTegoed(), 2 * fresh.length);
   for (const lead of fresh) {
     if (lead.kvkNumber && viaKvk) {
       await safe(

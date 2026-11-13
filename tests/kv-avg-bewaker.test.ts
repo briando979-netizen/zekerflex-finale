@@ -46,6 +46,7 @@ const BASISLIJN: Record<string, string> = {
   "new:": "id van een bankmelding, geen KV-sleutel",
   "offer:seen:": "id van een verkoopkans (getal), geen gebruiker",
   "user:": "actorLabel in het auditspoor, geen KV-sleutel",
+  "kvk-register:v1:": "uitkomst per KVK-nummer (openbaar Handelsregister), geen persoon; 30 dagen cache (lib/integrations/kvkbase.ts)",
 };
 
 const GEBRUIKER = /^(?:userId|uid|gebruikerId|accountId|(?:[a-z]+\.)?(?:userId|user\.id)|principal\.userId|p\.userId|u\.id|user\.id|me\.id|ctx\.userId|input\.userId|opts\.userId|args\.userId)$/;

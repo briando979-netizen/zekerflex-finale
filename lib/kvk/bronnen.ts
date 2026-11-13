@@ -1,3 +1,4 @@
+import { kvkLimietVan } from "@/lib/kvk/tegoed";
 import { isKvkNummer, schonePostcode } from "@/lib/kvk/normaliseer";
 import type { KvkBedrijf, KvkTreffer } from "@/lib/kvk/types";
 
@@ -109,7 +110,7 @@ export async function metTijdslimiet<T>(belofte: Promise<T>, ms: number, terugva
   }
 }
 
-/** Zit de betaalde dienst aan zijn limiet of tegoed? (Zie lib/integrations/kvkbase.ts: 402/429.) */
+/** Zit de betaalde dienst aan zijn limiet of tegoed? (Zie lib/integrations/kvkbase.ts en lib/kvk/tegoed.ts: 402/429.) */
 export function isLimiet(err: unknown): boolean {
-  return err instanceof Error && /rate limit|quota/i.test(err.message);
+  return kvkLimietVan(err) !== null;
 }
