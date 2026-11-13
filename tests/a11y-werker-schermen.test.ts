@@ -53,7 +53,8 @@ describe("de kaart met het BSN-veld", () => {
     expect(s).toContain('htmlFor="gegevens-bsn"');
     expect(s).toContain('role="alert"');
     expect(s).toContain("min-h-[44px] px-4");
-    expect(aantal(s, /inline-flex min-h-\[44px\] items-center/g)).toBe(2);
+    // de overeenkomst, de fiscale gegevens (alleen nog als terugval) en "KOR nog aanvragen" bij het btw-veld (13 nov)
+    expect(aantal(s, /inline-flex min-h-\[44px\] items-center/g)).toBe(3);
   });
   it("na het opslaan gaat de focus naar de kop (het veld verdwijnt), en die kop kan focus krijgen", () => {
     expect(s).toContain('document.getElementById("gegevens-mist-kop")?.focus()');

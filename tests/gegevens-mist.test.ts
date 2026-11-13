@@ -104,15 +104,17 @@ describe("het BSN invullen op de verificatiepagina (PUT /api/me/fiscal)", () => 
 describe("de pagina en de vijf talen", () => {
   it("de verificatiepagina toont de lijst bovenaan en heeft een anker bij de overeenkomst", () => {
     const pagina = bron("app/dashboard/verificatie/page.tsx");
-    expect(pagina).toContain("<GegevensMist mist={mist}");
+    expect(pagina).toContain("<GegevensMist");
+    expect(pagina).toContain("mist={mist}");
     expect(pagina.indexOf("<GegevensMist")).toBeLessThan(pagina.indexOf("<OnboardingForm"));
     expect(pagina).toContain('id="uitzendovereenkomst"');
     expect(pagina).toContain("gegevensMist({");
   });
 
-  it("het BSN-veld stuurt de loonheffingskorting mee en ververst de pagina; foutmeldingen hebben role=alert", () => {
+  it("het BSN-veld stuurt alleen het BSN (de route laat de loonheffingskorting staan) en ververst de pagina; foutmeldingen hebben role=alert", () => {
     const veld = bron("components/app/GegevensMist.tsx");
-    expect(veld).toContain("loonheffingskorting");
+    // sinds 13 nov voegt de route alleen meegestuurde sleutels samen: een oudere stand hier zet de keuze niet terug
+    expect(veld).not.toMatch(/loonheffingskorting/);
     expect(veld).toContain("/api/me/fiscal");
     expect(veld).toContain("router.refresh()");
     expect(veld).toContain('role="alert"');
