@@ -3,24 +3,25 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 // Een dienst van buiten valt uit (Google Play, Cloudflare, Hetzner, TransIP, Didit): een time-out, netwerkfout of 5xx wordt
 // een nette AppError.upstream (503, UPSTREAM_UNAVAILABLE, Nederlands), nooit een kale 500. Een 4xx ("zij zeggen nee") blijft een eigen fout.
 
-const h = vi.hoisted(async () => {
+// Dezelfde opzet als tests/play-api.test.ts: gewone, synchrone vi.mock-regels bovenaan. Alleen de env-mock maakt (lazy,
+// bij de eerste import) een wegwerp RSA-sleutel voor het ondertekenen van de TransIP-token; geen vi.hoisted met await.
+vi.mock("@/lib/env", async () => {
   const { generateKeyPairSync } = await import("node:crypto");
   const sleutel = generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey.export({ type: "pkcs8", format: "pem" }).toString();
-  return { sleutel, log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } };
+  return {
+    env: {
+      TRANSIP_LOGIN: "zekerflex-test",
+      TRANSIP_PRIVATE_KEY: sleutel,
+      DIDIT_API_KEY: "didit-sleutel",
+      DIDIT_WORKFLOW_ID: "werkstroom",
+      DIDIT_BASE_URL: "https://didit.example.test",
+      DIDIT_CALLBACK_URL: undefined,
+    },
+  };
 });
-vi.mock("@/lib/env", async () => ({
-  env: {
-    TRANSIP_LOGIN: "zekerflex-test",
-    TRANSIP_PRIVATE_KEY: (await h).sleutel,
-    DIDIT_API_KEY: "didit-sleutel",
-    DIDIT_WORKFLOW_ID: "werkstroom",
-    DIDIT_BASE_URL: "https://didit.example.test",
-    DIDIT_CALLBACK_URL: undefined,
-  },
-}));
-vi.mock("@/lib/logger", async () => ({ logger: (await h).log }));
-vi.mock("@/lib/play/account", () => ({ toegangstoken: async () => "play-token" }));
-
+vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+// de Play-koppeling: zonder deze mock weigert lib/play/account.ts al voor de fetch ("nog niet gekoppeld")
+vi.mock("@/lib/play/account", () => ({ toegangstoken: async () => "proef-token" }));
 import { AppError } from "@/lib/errors";
 import { nieuweEdit, PlayFout } from "@/lib/play/api";
 import { alsAppFout } from "@/lib/play/uitleg";
