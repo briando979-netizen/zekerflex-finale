@@ -99,6 +99,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "domein-verlengen", label: "Domeinen: verlengen en herinneringen", maxAgeHours: 26 },
   { job: "onboarding-reminders", label: "Mails 'maak je account af'", maxAgeHours: 26 },
   // elke 10 min (/api/internal/boekhouding/bonnen-mail): bonnetjes uit de Postvak; met de vlag uit telt een run als gelukt (hij doet dan niets)
+  // elke 10 min (/api/internal/backup/check?alleen=geheugen): meet het geheugen van de server; schrijft ook een hartslag als alles ruim is
+  { job: "geheugen-check", label: "Geheugen van de server meten", maxAgeHours: 2 },
   { job: "boekhouding-bonnen-mail", label: "Boekhouding: bonnetjes per mail", maxAgeHours: 2 },
   // dagelijks 02:40 UTC (/api/internal/boekhouding/nachtronde): facturen boeken, bank koppelen, btw-concept, deadlinemeldingen; met de vlag uit telt een run als gelukt
   { job: "boekhouding-nachtronde", label: "Boekhouding: nachtelijke ronde", maxAgeHours: 26 },

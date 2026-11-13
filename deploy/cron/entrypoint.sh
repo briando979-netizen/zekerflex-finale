@@ -57,6 +57,8 @@ cat > /etc/crontabs/root <<EOF
 0 7 1 * * wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/pensioen/aangifte"
 30 3 * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/backup/check"
 15 * * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/backup/check?alleen=schijf"
+# elke 10 min: het geheugen van de server meten en de eigenaar waarschuwen voor het te laat is (lib/ops/geheugen.ts)
+*/10 * * * * wget -q -O /dev/null -T 30 "$H" "$APP/api/internal/backup/check?alleen=geheugen"
 */5 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/website/uptime"
 0 6 * * 1 wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/website/weekly-check"
 30 1 * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/website/site-backups"
