@@ -1,14 +1,15 @@
 import type { Dict } from "@/lib/i18n/dictionaries";
 
 // ---------------------------------------------------------------------------
-// De teksten van de voorpagina van de webshop, aan te passen in de Site-ontwerper (tabblad Teksten, groep "Webshop").
-// De standaard is de Nederlandse tekst uit het woordenboek (lib/i18n/dictionaries.ts): er staat dus niets dubbel.
-// Een eigen tekst geldt alleen voor de Nederlandse shop; wie de shop in het Engels bekijkt, houdt de Engelse vertaling.
-// Puur bestand: het register (lib/content/store.ts) neemt de velden over, de pagina (app/shop/page.tsx) past ze toe.
+// De teksten van de webshop, aan te passen in de Site-ontwerper (tabblad Teksten, groepen "Webshop — …").
+// De standaard is de Nederlandse tekst uit het woordenboek (lib/i18n/dictionaries.ts, delen `shop` en `shopThuis`): er staat
+// dus niets dubbel, en een tekst die er in het woordenboek bij komt, staat vanzelf ook in de lijst.
+// Een eigen tekst geldt alleen voor de Nederlandse shop; wie de shop in een andere taal bekijkt, houdt de vertaling.
+// Puur bestand: het register (lib/content/store.ts) neemt de velden over; de pagina (app/shop/page.tsx) en de omlijsting
+// (app/shop/layout.tsx, voor de onderdelen die in de browser draaien) passen ze toe.
 // ---------------------------------------------------------------------------
 
-type ShopThuisSleutel = keyof Dict["shopThuis"];
-type ShopSleutel = keyof Dict["shop"];
+type Deel = "shopThuis" | "shop";
 
 export interface ShopTekstVeld {
   key: string;
@@ -16,14 +17,14 @@ export interface ShopTekstVeld {
   label: string;
   multiline?: boolean;
   /** waar de tekst in het woordenboek staat */
-  plek: { deel: "shopThuis"; sleutel: ShopThuisSleutel } | { deel: "shop"; sleutel: ShopSleutel };
-  /** een stukje dat in de tekst moet blijven staan (een plaatshouder); zonder dat stukje geldt de standaard */
-  moetBevatten?: string;
+  plek: { deel: Deel; sleutel: string };
 }
 
 const KOP = "Webshop — kop";
 const ONDERDELEN = "Webshop — onderdelen";
+const OVERIG = "Webshop — alle overige teksten";
 
+/** De teksten die je het vaakst wilt aanpassen, met een eigen naam; de rest volgt vanzelf uit het woordenboek (overigeVelden). */
 export const SHOP_TEKST_VELDEN: ShopTekstVeld[] = [
   { key: "shop.heroEyebrow", group: KOP, label: "Bovenregel", plek: { deel: "shopThuis", sleutel: "heroEyebrow" } },
   { key: "shop.heroTitel", group: KOP, label: "Titel", plek: { deel: "shopThuis", sleutel: "heroTitel" } },
@@ -42,47 +43,63 @@ export const SHOP_TEKST_VELDEN: ShopTekstVeld[] = [
   { key: "shop.moreCategories", group: ONDERDELEN, label: "Meer categorieën: titel", plek: { deel: "shop", sleutel: "moreCategories" } },
   { key: "shop.serviceTitle", group: ONDERDELEN, label: "Service: titel", plek: { deel: "shop", sleutel: "serviceTitle" } },
   { key: "shop.newsletterTitle", group: ONDERDELEN, label: "Nieuwsbrief: titel", plek: { deel: "shop", sleutel: "newsletterTitle" } },
-  {
-    key: "shop.newsletterBody",
-    group: ONDERDELEN,
-    label: "Nieuwsbrief: tekst (laat {code} staan: daar komt de kortingscode)",
-    multiline: true,
-    plek: { deel: "shop", sleutel: "newsletterBody" },
-    moetBevatten: "{code}",
-  },
+  { key: "shop.newsletterBody", group: ONDERDELEN, label: "Nieuwsbrief: tekst (laat {code} staan: daar komt de kortingscode)", multiline: true, plek: { deel: "shop", sleutel: "newsletterBody" } },
 ];
 
-const standaard = (nl: Dict, v: ShopTekstVeld): string => {
-  const waarde = v.plek.deel === "shopThuis" ? nl.shopThuis[v.plek.sleutel] : nl.shop[v.plek.sleutel];
+const deel = (d: Dict, naam: Deel): Record<string, unknown> => d[naam] as unknown as Record<string, unknown>;
+const tekstOp = (d: Dict, plek: ShopTekstVeld["plek"]): string => {
+  const waarde = Object.hasOwn(deel(d, plek.deel), plek.sleutel) ? deel(d, plek.deel)[plek.sleutel] : "";
   return typeof waarde === "string" ? waarde : "";
 };
 
+/** De stukjes tussen accolades ({code}, {n}): die vult de shop zelf in en moeten in een eigen tekst blijven staan. */
+export const plaatshouders = (tekst: string): string[] => [...new Set([...tekst.matchAll(/\{[a-zA-Z0-9_]+\}/g)].map((m) => m[0]))];
+
+/** Alle andere teksten van de shop: één veld per tekst in het woordenboek die geen eigen naam hierboven heeft. */
+function overigeVelden(nl: Dict): ShopTekstVeld[] {
+  const benoemd = new Set(SHOP_TEKST_VELDEN.map((v) => `${v.plek.deel}.${v.plek.sleutel}`));
+  const uit: ShopTekstVeld[] = [];
+  for (const naam of ["shopThuis", "shop"] as const) {
+    for (const [sleutel, waarde] of Object.entries(deel(nl, naam))) {
+      if (typeof waarde !== "string" || !waarde.trim() || benoemd.has(`${naam}.${sleutel}`)) continue;
+      const vast = plaatshouders(waarde);
+      uit.push({
+        // "shop.x." voor het deel shop, "shop.t." voor shopThuis: zo botst een sleutel nooit met een benoemd veld
+        key: `shop.${naam === "shop" ? "x" : "t"}.${sleutel}`,
+        group: OVERIG,
+        label: `“${waarde.length > 60 ? `${waarde.slice(0, 57)}…` : waarde}”${vast.length ? ` (laat ${vast.join(" en ")} staan)` : ""}`,
+        ...(waarde.length > 70 ? { multiline: true } : {}),
+        plek: { deel: naam, sleutel },
+      });
+    }
+  }
+  return uit;
+}
+
+/** Alle velden van de shop: eerst de benoemde, dan de rest. */
+export const alleShopVelden = (nl: Dict): ShopTekstVeld[] => [...SHOP_TEKST_VELDEN, ...overigeVelden(nl)];
+
 /** De velden voor het tekstenregister, met de Nederlandse woordenboektekst als standaard. */
 export function shopTekstItems(nl: Dict): { key: string; group: string; label: string; default: string; multiline?: boolean }[] {
-  return SHOP_TEKST_VELDEN.map((v) => ({ key: v.key, group: v.group, label: v.label, default: standaard(nl, v), ...(v.multiline ? { multiline: true } : {}) }));
+  return alleShopVelden(nl).map((v) => ({ key: v.key, group: v.group, label: v.label, default: tekstOp(nl, v.plek), ...(v.multiline ? { multiline: true } : {}) }));
 }
 
 /**
  * Het woordenboek met de eigen teksten erin. Alleen voor Nederlands: een andere taal krijgt het woordenboek ongewijzigd terug.
- * Een lege waarde, of een tekst waarin een verplicht stukje ontbreekt, laat de standaard staan. Het oorspronkelijke woordenboek
- * wordt niet aangepast.
+ * Een lege waarde, of een tekst waarin een plaatshouder van de standaard ontbreekt, laat de standaard staan. Zonder eigen tekst
+ * komt hetzelfde woordenboek terug (hetzelfde object); het oorspronkelijke woordenboek wordt nooit aangepast.
  */
 export function metShopTeksten(dict: Dict, waarden: Record<string, string>, locale: string): Dict {
   if (locale !== "nl") return dict;
-  const shopThuis = { ...dict.shopThuis };
-  const shop = { ...dict.shop };
+  const nieuw: Record<Deel, Record<string, unknown>> = { shopThuis: { ...deel(dict, "shopThuis") }, shop: { ...deel(dict, "shop") } };
   let gewijzigd = false;
-  for (const v of SHOP_TEKST_VELDEN) {
-    const waarde = waarden[v.key]?.trim();
-    if (!waarde || (v.moetBevatten && !waarde.includes(v.moetBevatten))) continue;
-    if (v.plek.deel === "shopThuis") {
-      if (shopThuis[v.plek.sleutel] === waarde) continue;
-      (shopThuis as Record<string, unknown>)[v.plek.sleutel] = waarde;
-    } else {
-      if (shop[v.plek.sleutel] === waarde) continue;
-      (shop as Record<string, unknown>)[v.plek.sleutel] = waarde;
-    }
+  for (const v of alleShopVelden(dict)) {
+    const waarde = Object.hasOwn(waarden, v.key) ? waarden[v.key]?.trim() : "";
+    const standaard = tekstOp(dict, v.plek);
+    if (!waarde || waarde === standaard) continue;
+    if (plaatshouders(standaard).some((p) => !waarde.includes(p))) continue;
+    nieuw[v.plek.deel][v.plek.sleutel] = waarde;
     gewijzigd = true;
   }
-  return gewijzigd ? { ...dict, shopThuis, shop } : dict;
+  return gewijzigd ? ({ ...dict, shopThuis: nieuw.shopThuis, shop: nieuw.shop } as Dict) : dict;
 }
