@@ -1,4 +1,4 @@
-import { chat, chatStream, ensureAiNode, fastModel, llmConfigProblem } from "@/lib/ai/client";
+import { AFGEBROKEN_ZIN, chat, chatStream, ensureAiNode, fastModel, isStroomAfgebroken, llmConfigProblem } from "@/lib/ai/client";
 import { fixedWindow } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import { inspectPrompt } from "@/lib/security/prompt-guard";
@@ -53,6 +53,9 @@ function stroom(bron: AsyncIterable<string> | string, terugval: string, klaar?: 
         if (!alles.trim()) {
           alles = terugval;
           controller.enqueue(enc.encode(terugval));
+        } else if (isStroomAfgebroken(err)) {
+          // het begin staat al op het scherm: zeg dat het niet af is (niet in het bewaarde antwoord)
+          controller.enqueue(enc.encode(AFGEBROKEN_ZIN));
         }
       } finally {
         controller.close();
