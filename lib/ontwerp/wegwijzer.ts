@@ -32,6 +32,16 @@ export const WEGWIJZER: WegwijzerRegel[] = [
     doel: { tab: "home" },
   },
   {
+    wat: "De webshop beheren: producten, prijzen, voorraad en bestellingen",
+    uitleg: "Alles van je eigen webshop op één plek: producten toevoegen en aanpassen, foto's, voorraad, kortingscodes en bestellingen.",
+    doel: { pagina: "/admin/shop" },
+  },
+  {
+    wat: "Een product toevoegen vanaf een link of een idee",
+    uitleg: "Plak de link naar het product bij je leverancier, of beschrijf het in gewone woorden. De AI schrijft de Nederlandse tekst en rekent de prijs uit je marge uit. Het product staat uit tot jij het aanzet.",
+    doel: { pagina: "/admin/shop-ai" },
+  },
+  {
     wat: "De webshop indelen",
     uitleg: "Sleep de onderdelen van de shop-pagina naar een andere plek of verberg ze. Opslaan zet het meteen live.",
     doel: { tab: "shop" },

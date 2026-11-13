@@ -52,9 +52,32 @@ function NieuwProduct() {
   const [margePct, setMargePct] = useState(55);
   const [metFoto, setMetFoto] = useState(true);
   const [klaar, setKlaar] = useState<{ id: string; fotoGelukt: boolean; fotoMelding: string | null } | null>(null);
+  // product van een link: de pagina van de leverancier lezen en het idee, de inkoopprijs en de foto alvast invullen
+  const [link, setLink] = useState("");
+  const [fotoUrl, setFotoUrl] = useState("");
+  const [linkBezig, setLinkBezig] = useState(false);
+  const [linkMelding, setLinkMelding] = useState<{ tekst: string; fout?: boolean } | null>(null);
 
   const inkoopCents = inkoop ? Math.round(Number(inkoop.replace(",", ".")) * 100) : null;
   const heeftInkoop = inkoopCents !== null && Number.isFinite(inkoopCents) && inkoopCents > 0;
+
+  const haalOp = async () => {
+    setLinkBezig(true);
+    setLinkMelding(null);
+    try {
+      const d = await post<{ idee: string; fotos: string[]; prijsCents: number | null; valuta: string | null; bron: string }>("/api/admin/shop-ai/link", { url: link });
+      setIdee(d.idee);
+      setFotoUrl(d.fotos[0] ?? "");
+      // alleen een prijs in euro's is als inkoopprijs te gebruiken
+      if (d.prijsCents && d.valuta === "EUR") setInkoop((d.prijsCents / 100).toFixed(2).replace(".", ","));
+      const prijsZin = d.prijsCents ? (d.valuta === "EUR" ? " De prijs op de pagina staat als inkoopprijs ingevuld; pas hem aan als jij minder betaalt." : ` De prijs op de pagina is in ${d.valuta ?? "een andere munt"}; vul je inkoopprijs in euro's zelf in.`) : "";
+      setLinkMelding({ tekst: `Gelezen van ${d.bron}.${d.fotos[0] ? " De foto is gevonden." : " Er is geen foto gevonden."}${prijsZin} Controleer de tekst en kies Maak productconcept.` });
+    } catch (e) {
+      setLinkMelding({ tekst: (e as Error).message, fout: true });
+    } finally {
+      setLinkBezig(false);
+    }
+  };
 
   const maak = async () => {
     setBezig("concept");
@@ -87,10 +110,14 @@ function NieuwProduct() {
         inkoopCents: heeftInkoop ? inkoopCents : null,
         prijsCents: prijs,
         metFoto,
+        ...(fotoUrl.trim() ? { fotoUrl: fotoUrl.trim() } : {}),
       });
       setKlaar(d);
       setC(null);
       setIdee("");
+      setLink("");
+      setFotoUrl("");
+      setLinkMelding(null);
     } catch (e) {
       setFout((e as Error).message);
     } finally {
@@ -104,6 +131,21 @@ function NieuwProduct() {
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
       <Panel title="Het idee" subtitle="Schrijf in gewone woorden wat je wilt verkopen, of plak de omschrijving van je leverancier.">
         <label className="a-label">
+          Link naar het product bij je leverancier (mag leeg blijven)
+          <input className="a-input" type="url" inputMode="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://…" />
+        </label>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <button type="button" className="a-btn a-btn-ghost disabled:opacity-50" onClick={haalOp} disabled={linkBezig || bezig !== "" || link.trim().length < 8}>
+            {linkBezig ? "De pagina wordt gelezen…" : "Haal de gegevens op"}
+          </button>
+        </div>
+        <p className="mt-1 text-xs" style={{ color: "var(--a-mute)" }}>We lezen de naam, de omschrijving, de foto en de prijs van de pagina. AliExpress, Temu en Amazon laten dat niet toe: plak daar de tekst zelf hieronder.</p>
+        {linkMelding && (
+          <div className="mt-2">
+            <Notice tone={linkMelding.fout ? "crit" : "ok"} role={linkMelding.fout ? "alert" : "status"}>{linkMelding.tekst}</Notice>
+          </div>
+        )}
+        <label className="a-label mt-4">
           Wat wil je toevoegen?
           <textarea className="a-input" rows={6} value={idee} onChange={(e) => setIdee(e.target.value)} placeholder="Bijvoorbeeld: een warme zwarte fleece trui met rits voor mannen en vrouwen, voor buitenwerk in de winter." />
         </label>
@@ -112,6 +154,11 @@ function NieuwProduct() {
           <input className="a-input max-w-[10rem]" inputMode="decimal" value={inkoop} onChange={(e) => setInkoop(e.target.value)} placeholder="bijv. 12,50" />
         </label>
         <p className="mt-1 text-xs" style={{ color: "var(--a-mute)" }}>Met een inkoopprijs rekent de AI de verkoopprijs uit je marge uit.</p>
+        <label className="a-label mt-3">
+          Adres van de productfoto (mag leeg blijven)
+          <input className="a-input" type="url" inputMode="url" value={fotoUrl} onChange={(e) => setFotoUrl(e.target.value)} placeholder="https://…/foto.jpg" />
+        </label>
+        <p className="mt-1 text-xs" style={{ color: "var(--a-mute)" }}>De foto wordt overgenomen naar je eigen webshop. Gebruik alleen een foto die je van je leverancier mag gebruiken.</p>
         <button type="button" className="a-btn a-btn-primary mt-4" onClick={maak} disabled={bezig !== "" || idee.trim().length < 3}>
           {bezig === "concept" ? "De AI schrijft het product…" : "Maak productconcept"}
         </button>
@@ -125,7 +172,7 @@ function NieuwProduct() {
       <Panel title="Concept" subtitle="Pas aan wat je wilt. Het product wordt opgeslagen als UIT: jij zet het live in Webshop.">
         {klaar ? (
           <div className="space-y-2">
-            <Notice tone="ok">Opgeslagen als uitgezet product. {klaar.fotoGelukt ? "Er is een AI-impressiefoto gemaakt." : klaar.fotoMelding ?? ""}</Notice>
+            <Notice tone="ok">Opgeslagen als uitgezet product. {klaar.fotoGelukt ? "De foto staat erbij." : klaar.fotoMelding ?? ""}</Notice>
             <p className="text-sm">
               <Link className="underline" href="/admin/shop">Naar Webshop</Link> om het te controleren, een echte foto te zetten en live te zetten. In de paskamer is het meteen te passen zodra het live staat.
             </p>

@@ -16,6 +16,7 @@ import { gratisAan, primeGratis } from "@/lib/ai/gratis";
 import { extractJson } from "@/lib/ai/client";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { generateAndAttachConceptPhoto } from "@/lib/shop/concept-photos";
+import { koppelFotoVanAdres } from "@/lib/shop/link-product-server";
 import { SOORTEN, isSoort, type Soort } from "@/lib/shop/paskamer";
 import {
   STANDAARD_BELEID, WINKEL_CATEGORIEEN, inkoopAdvies, leesBeleid, leesConcept, maakVarianten, prijsUitInkoop, schoneKleuren, schoneMaten, slugVan, tariefVoor,
@@ -116,6 +117,8 @@ export const bewaarSchema = z.object({
   inkoopCents: z.number().int().min(0).max(1_000_000).nullable(),
   prijsCents: z.number().int().min(1).max(1_000_000),
   metFoto: z.boolean().default(false),
+  /** het adres van een productfoto (van de leverancier): wordt overgenomen naar onze eigen opslag; gaat vóór de AI-foto */
+  fotoUrl: z.string().trim().max(600).regex(/^https:\/\/\S+$/, "Het adres van de foto begint met https://.").optional(),
 });
 
 export type BewaardConcept = { id: string; slug: string; fotoGelukt: boolean; fotoMelding: string | null };
@@ -142,7 +145,15 @@ export async function bewaarConcept(inv: z.infer<typeof bewaarSchema>, actorUser
 
   let fotoGelukt = false;
   let fotoMelding: string | null = null;
-  if (inv.metFoto) {
+  if (inv.fotoUrl) {
+    try {
+      await koppelFotoVanAdres(product.id, inv.fotoUrl, actorUserId);
+      fotoGelukt = true;
+    } catch (e) {
+      fotoMelding = e instanceof AppError ? e.message : "De foto overnemen lukte niet.";
+      logger.warn("winkel-ai: foto van adres mislukt", { error: (e as Error).message.slice(0, 160) });
+    }
+  } else if (inv.metFoto) {
     try {
       await generateAndAttachConceptPhoto(product.id, actorUserId);
       fotoGelukt = true;
