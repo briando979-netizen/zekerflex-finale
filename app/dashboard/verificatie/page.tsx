@@ -228,9 +228,8 @@ export default async function VerificatiePage() {
     prisma.user.findUnique({ where: { id: principal.userId }, select: { kycStatus: true } }),
   ]);
   const idKlaar = gebruiker?.kycStatus === "VERIFIED";
-  const woonKlaar =
-    Boolean(bewaard?.homePostalCode) &&
-    (isUitzend || Boolean(bewaard?.kvkNumber && /^\d+$/.test(bewaard.kvkNumber)) || Boolean(bewaard?.vatNumber));
+  // de postcode; het KVK- of btw-nummer is daar sinds 13 nov optioneel (vóór de eerste klus, lib/fiscal/eligibility.ts)
+  const woonKlaar = Boolean(bewaard?.homePostalCode);
   const begin = beginStap({ persoonKlaar: persoon.klaar, woonKlaar, idKlaar });
   // alleen tonen wat open staat (13 nov, 86): zijn persoon, woon en ID af (bijv. geverifieerd, alleen de overeenkomst
   // nog), dan geen formulier "Waar woon je?" meer

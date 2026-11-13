@@ -15,7 +15,11 @@ export interface WerkerPoortFeiten {
   soortGekozen: boolean;
   /** branches gekozen (een of meer, of alle) */
   branchesGekozen: boolean;
-  /** fiscale gegevens, KVK/btw/KOR (of uitzendkracht met getekende overeenkomst), IBAN en thuisbasis */
+  /**
+   * de thuisbasis, en bij een uitzendkracht het BSN en de getekende overeenkomst. KVK/btw/KOR (zzp'er, flexwerker) sinds
+   * 13 nov niet meer (86, eigenaar "veel te veel vragen"), net als het IBAN op 10 nov: die komen vóór de eerste klus
+   * (lib/fiscal/eligibility.ts)
+   */
   gegevensIngevuld: boolean;
   /** de ID-controle is ingestuurd (in behandeling) of goedgekeurd */
   identiteitIngestuurd: boolean;
@@ -42,6 +46,18 @@ export const POORT_STAPPEN = [
   { sleutel: "identiteit", feit: "identiteitIngestuurd" },
   { sleutel: "foto", feit: "fotoGezet" },
 ] as const satisfies readonly { sleutel: string; feit: keyof WerkerPoortFeiten }[];
+
+/**
+ * De stap "branches" bestaat sinds 10 nov 2026. Wie zich daarvoor aanmeldde en nooit koos, telt als "alle branches" en
+ * staat niet stil (13 nov, 86: de 12 werkers die bij branches stilstonden waren allemaal accounts van vóór de stap; van wie
+ * zich daarna aanmeldde, kozen 18 van de 18). Nieuwe aanmeldingen houden de stap. Bijstellen kan op /dashboard/klussen.
+ */
+export const BRANCHE_STAP_SINDS = Date.parse("2026-11-10T00:00:00+01:00");
+
+/** Telt de stap "branches" als gedaan: een keuze gemaakt, of een account van vóór de stap (BRANCHE_STAP_SINDS). */
+export function branchesTellen(keuzeGemaakt: boolean, aangemeldOp: Date | null | undefined): boolean {
+  return keuzeGemaakt || (aangemeldOp instanceof Date && aangemeldOp.getTime() < BRANCHE_STAP_SINDS);
+}
 
 export function werkerOnboardingKlaar(f: WerkerPoortFeiten): boolean {
   return POORT_STAPPEN.every((s) => f[s.feit]);

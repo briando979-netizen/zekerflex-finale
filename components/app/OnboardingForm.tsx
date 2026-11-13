@@ -125,15 +125,18 @@ export function OnboardingForm({
     });
   }
 
-  /** Controleer de velden die bij deze actie horen; leeg KVK/btw mag bij "later verder". */
-  function valideer(form: FormData, opties: { documenten: boolean; bedrijfOptioneel: boolean }): boolean {
+  /**
+   * Controleer de velden die bij deze actie horen. KVK/btw is sinds 13 nov altijd optioneel (86, eigenaar "veel te veel
+   * vragen"): ingevuld wordt het gecontroleerd, leeg mag; het is pas nodig vóór de eerste klus (lib/fiscal/eligibility.ts).
+   */
+  function valideer(form: FormData, opties: { documenten: boolean }): boolean {
     const w = (n: string) => String(form.get(n) ?? "");
     const lijst: [VeldSleutel, string][] = [];
     // in Nederland komt de postcode uit het gekozen adres (ThuisbasisVelden); een adres in het buitenland controleert ThuisbasisVelden zelf
     if ((w("country") || "NL") === "NL") lijst.unshift(["postal", w("postalCode")]);
     if (requireKvk) {
       const waarde = biz === "kvk" ? w("kvkNumber") : w("vatNumber");
-      if (waarde.trim() || !opties.bedrijfOptioneel) lijst.push([biz, waarde]);
+      if (waarde.trim()) lijst.push([biz, waarde]);
     }
     if (opties.documenten) {
       lijst.push(["docNumber", w("documentNumber")], ["expiry", w("documentExpiry")], ["name", w("nameOnDocument")]);
@@ -151,13 +154,13 @@ export function OnboardingForm({
     return true;
   }
 
-  /** "Verder" in stap 2 (strikt: het bedrijf is nodig) of "bewaar en ga later verder"; slaat het basisdeel op en doet dan `daarna`. */
-  async function bewaarVoorLater(opties: { strikt?: boolean; daarna?: () => void } = {}) {
+  /** "Verder" in stap 2 of "bewaar en ga later verder"; slaat het basisdeel op en doet dan `daarna`. */
+  async function bewaarVoorLater(opties: { daarna?: () => void } = {}) {
     const form = formRef.current;
     if (busy || !form) return;
     setBewaard(null);
     const bron = new FormData(form);
-    if (!valideer(bron, { documenten: false, bedrijfOptioneel: !opties.strikt })) return;
+    if (!valideer(bron, { documenten: false })) return;
     const body = new FormData();
     for (const k of ["kvkNumber", "vatNumber", "postalCode", "city", "country", "houseNumber"]) {
       const v = bron.get(k);
@@ -241,7 +244,7 @@ export function OnboardingForm({
     const form = formRef.current;
     if (busy || !form) return;
     setBewaard(null);
-    if (!valideer(new FormData(form), { documenten: false, bedrijfOptioneel: false })) return;
+    if (!valideer(new FormData(form), { documenten: false })) return;
     setError(null);
     scanResult.current = null;
     // een adres in het buitenland eerst controleren: anders blijkt pas ná de scan dat OSM het niet kent
@@ -284,7 +287,7 @@ export function OnboardingForm({
     const form = formRef.current;
     if (busy || !form) return;
     setBewaard(null);
-    if (!valideer(new FormData(form), { documenten: false, bedrijfOptioneel: false })) return;
+    if (!valideer(new FormData(form), { documenten: false })) return;
     setError(null);
     const body = new FormData(form);
     body.set("identityMethod", "stripe");
@@ -334,7 +337,6 @@ export function OnboardingForm({
 
   function naVolgende() {
     return bewaarVoorLater({
-      strikt: true,
       // ID al af: dan is dit "Opslaan"; laat zien dat het gelukt is (vroeger alleen een stille refresh)
       daarna: () => {
         if (stappen.includes("id")) {
@@ -537,7 +539,7 @@ export function OnboardingForm({
                       className="field-input"
                     />
                     <VeldFout veld="kvk" tekst={veldFout("kvk")} />
-                    <span className="mt-1 block text-xs text-neutralx-400">{t.kvkHint}</span>
+                    <span className="mt-1 block text-xs text-neutralx-400">{t.kvkLater} {t.kvkHint}</span>
                   </label>
                 ) : (
                   <label className="block">

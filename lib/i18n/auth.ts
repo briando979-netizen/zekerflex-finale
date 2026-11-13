@@ -220,6 +220,8 @@ export interface AuthDict {
     vat: [string, string];
     kvkLabel: string;
     kvkHint: string;
+    /** het KVK/btw-veld bij de aanmelding van een werker is optioneel (13 nov) */
+    kvkLater: string;
     /** Bij de KVK-vraag (zzp, flexwerker): zonder KVK kies je Uitzendkracht. */
     geenKvk: string;
     geenKvkLink: string;
@@ -619,6 +621,7 @@ const nl: AuthDict = {
     vat: ["Btw-nummer (EU)", "Bijv. uit Polen, Roemenië, België"],
     kvkLabel: "KVK-nummer",
     kvkHint: "We controleren dit live in het Handelsregister.",
+    kvkLater: "Nog niet bij de hand? Laat het leeg: je vult het later in, vóór je eerste klus.",
     geenKvk: "Geen KVK-nummer? Kies dan bij je werkvorm ‘Uitzendkracht’: je werkt in loondienst via ZekerFlex en hebt geen KVK nodig.",
     geenKvkLink: "Werkvorm wijzigen",
     vatLabel: "Btw-nummer (met landcode)",
@@ -1016,6 +1019,7 @@ const en: AuthDict = {
     vat: ["VAT number (EU)", "E.g. from Poland, Romania, Belgium"],
     kvkLabel: "KVK number",
     kvkHint: "We check this live in the Dutch Chamber of Commerce register.",
+    kvkLater: "Don't have it to hand? Leave it empty: you can add it later, before your first job.",
     geenKvk: "No KVK number? Then choose ‘Agency worker’ as your work type: you are employed through ZekerFlex and need no KVK.",
     geenKvkLink: "Change work type",
     vatLabel: "VAT number (with country code)",
@@ -1413,6 +1417,7 @@ const pl: AuthDict = {
     vat: ["Numer VAT (UE)", "Np. z Polski, Rumunii, Belgii"],
     kvkLabel: "Numer KVK",
     kvkHint: "Sprawdzamy go na żywo w holenderskim rejestrze handlowym.",
+    kvkLater: "Nie masz go pod ręką? Zostaw puste: uzupełnisz je później, przed pierwszym zleceniem.",
     geenKvk: "Nie masz numeru KVK? Wybierz wtedy formę pracy ‘Pracownik tymczasowy’: pracujesz na etacie przez ZekerFlex i nie potrzebujesz KVK.",
     geenKvkLink: "Zmień formę pracy",
     vatLabel: "Numer VAT (z kodem kraju)",
@@ -1810,6 +1815,7 @@ const ro: AuthDict = {
     vat: ["Cod TVA (UE)", "De ex. din Polonia, România, Belgia"],
     kvkLabel: "Număr KVK",
     kvkHint: "Îl verificăm în timp real în registrul comerțului din Olanda.",
+    kvkLater: "Nu îl ai la îndemână? Lasă câmpul gol: îl completezi mai târziu, înainte de prima lucrare.",
     geenKvk: "Nu ai număr KVK? Alege atunci forma de lucru ‘Lucrător temporar’: lucrezi ca angajat prin ZekerFlex și nu ai nevoie de KVK.",
     geenKvkLink: "Schimbă forma de lucru",
     vatLabel: "Cod TVA (cu codul țării)",
@@ -2207,6 +2213,7 @@ const uk: AuthDict = {
     vat: ["Номер ПДВ (ЄС)", "Напр. з Польщі, Румунії, Бельгії"],
     kvkLabel: "Номер KVK",
     kvkHint: "Ми перевіряємо його в реальному часі в торговому реєстрі Нідерландів.",
+    kvkLater: "Немає під рукою? Залиш порожнім: заповниш пізніше, до першої роботи.",
     geenKvk: "Немає номера KVK? Тоді обери форму роботи ‘Тимчасовий працівник’: ти працюєш за наймом через ZekerFlex і KVK не потрібен.",
     geenKvkLink: "Змінити форму роботи",
     vatLabel: "Номер ПДВ (з кодом країни)",

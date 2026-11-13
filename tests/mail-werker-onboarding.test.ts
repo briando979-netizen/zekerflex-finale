@@ -115,7 +115,7 @@ describe("aanroepers", () => {
     expect(s).toContain("FOUTEN[reageren.sleutel]?.[taal]");
     expect(bron("lib/onboarding/kan-reageren.ts")).toContain("sleutel");
     // elke sleutel van eligibility heeft een vertaling in alle talen
-    for (const k of ["elig.uitzendGegevens", "elig.contract", "elig.kvk", "elig.iban"]) {
+    for (const k of ["elig.uitzendGegevens", "elig.contract", "elig.kvk", "elig.kvkWacht", "elig.iban"]) {
       for (const taal of LOCALES) expect(FOUTEN[k]?.[taal]?.length ?? 0, `${k} ${taal}`).toBeGreaterThan(5);
     }
   });

@@ -28,11 +28,18 @@ export function gegevensMist(s: GegevensStand): GegevensStuk[] {
   if (s.soort === "uitzendkracht") {
     if (!s.fiscaalIngevuld) mist.push("bsn");
     if (!s.contractGetekend) mist.push("contract");
-  } else if (s.soort) {
-    if (!s.fiscaalIngevuld || !s.bedrijfOk) mist.push("btw");
   }
+  // een zzp'er of flexwerker: KVK/btw/KOR hoort sinds 13 nov niet meer bij de aanmelding (86), zie voorEersteKlus
   if (!s.postcodeOk) mist.push("postcode");
   return mist;
+}
+
+/**
+ * Wat een zzp'er of flexwerker nog moet invullen vóór zijn eerste klus, maar niet voor de aanmelding (13 nov): btw, KVK
+ * of KOR. Reageren houdt het tegen (lib/fiscal/eligibility.ts), met een eerlijke reden als de KVK-controle nog wacht.
+ */
+export function voorEersteKlus(s: GegevensStand): GegevensStuk[] {
+  return s.soort === "zzp" || s.soort === "flexwerker" ? (s.fiscaalIngevuld && s.bedrijfOk ? [] : ["btw"]) : [];
 }
 
 /**
