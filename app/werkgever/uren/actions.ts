@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { requirePrincipal, requireRole } from "@/lib/auth";
 import { approveTimesheet } from "@/lib/timesheets/approve";
-import { BULK_MAX, bulkBericht, schoneUren } from "@/lib/timesheets/bulk-goedkeuren";
+import { BULK_MAX, bulkBerichtT, schoneUren } from "@/lib/timesheets/bulk-goedkeuren";
+import { getDict } from "@/lib/i18n/server";
+import { nl as nlDict, fmt } from "@/lib/i18n/dictionaries";
 import { fraudForTimesheets } from "@/lib/fraud/timesheet";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { prisma } from "@/lib/prisma";
@@ -15,6 +17,9 @@ export interface ApproveResult {
   message: string;
 }
 
+/** De meldingen in de taal van de werkgever; buiten een verzoek (of bij een storing) de Nederlandse standaard. */
+const teksten = async () => (await getDict().catch(() => nlDict)).urenActies;
+
 /**
  * `overrideGpsCheck` is only ever sent after the UI has already shown the
  * employer the specific flag(s) and they explicitly confirmed — see
@@ -25,6 +30,7 @@ export async function approveTimesheetAction(
   timesheetId: string,
   overrideGpsCheck = false,
 ): Promise<ApproveResult> {
+  const d = await teksten();
   try {
     const principal = await requirePrincipal();
     requireRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN");
@@ -39,19 +45,19 @@ export async function approveTimesheetAction(
       message:
         result.track === "payroll"
           ? result.advance
-            ? `Goedgekeurd. € ${(result.advance.netCents / 100).toFixed(2).replace(".", ",")} is als voorschot uitbetaald; de rest volgt op de loonstrook van week ${result.payroll?.weekLabel ?? ""}.`.trim()
-            : `Goedgekeurd. De uren worden verloond in de payroll van week ${result.payroll?.weekLabel ?? ""}.`.trim()
+            ? fmt(d.voorschot, { bedrag: (result.advance.netCents / 100).toFixed(2).replace(".", ","), week: result.payroll?.weekLabel ?? "" }).trim()
+            : fmt(d.payroll, { week: result.payroll?.weekLabel ?? "" }).trim()
           : result.payout?.status === "FAILED"
-            ? "Goedgekeurd. De uitbetaling wordt automatisch opnieuw geprobeerd."
-            : "Goedgekeurd en uitbetaling gestart.",
+            ? d.uitbetalingOpnieuw
+            : d.uitbetalingGestart,
     };
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };
     // Toon de echte oorzaak i.p.v. een generieke tekst, zodat een
     // onverwachte fout (bv. een wegvallende dienst) meteen zichtbaar is.
     console.error("approveTimesheetAction failed", err);
-    const reason = err instanceof Error ? err.message : "onbekende fout";
-    return { ok: false, message: `Goedkeuren mislukt: ${reason}`.slice(0, 180) };
+    const reason = err instanceof Error ? err.message : d.onbekendeFout;
+    return { ok: false, message: fmt(d.mislukt, { reden: reason }).slice(0, 180) };
   }
 }
 
@@ -63,13 +69,14 @@ export async function approveTimesheetAction(
  * zonder GPS-uitzondering. Wat intussen veranderde, blijft staan.
  */
 export async function approveCleanTimesheetsAction(timesheetIds: string[]): Promise<ApproveResult> {
+  const d = await teksten();
   try {
     const principal = await requirePrincipal();
     requireRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN");
     const ids = [...new Set(Array.isArray(timesheetIds) ? timesheetIds : [])]
       .filter((id): id is string => typeof id === "string" && id.length > 0 && id.length <= 128)
       .slice(0, BULK_MAX);
-    if (ids.length === 0) return { ok: false, message: "Er zijn geen uren gekozen." };
+    if (ids.length === 0) return { ok: false, message: d.geenUren };
 
     const scope = await resolveEmployerScope(principal);
     const branchFilter = scope.branchIds ? { id: { in: scope.branchIds } } : { tenantId: { in: scope.tenantIds } };
@@ -106,11 +113,11 @@ export async function approveCleanTimesheetsAction(timesheetIds: string[]): Prom
     }
     revalidatePath("/werkgever");
     revalidatePath("/werkgever/uren");
-    return { ok: goedgekeurd > 0, message: bulkBericht(goedgekeurd, mislukt, ids.length - kies.length) };
+    return { ok: goedgekeurd > 0, message: bulkBerichtT(d, goedgekeurd, mislukt, ids.length - kies.length) };
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };
     console.error("approveCleanTimesheetsAction failed", err);
-    return { ok: false, message: "Goedkeuren mislukt. Probeer het opnieuw." };
+    return { ok: false, message: d.opnieuw };
   }
 }
 
@@ -121,6 +128,7 @@ export async function approveCleanTimesheetsAction(timesheetIds: string[]): Prom
  * the admin Dispute Console instead of leaving it permanently stuck.
  */
 export async function requestManualReviewAction(timesheetId: string): Promise<ApproveResult> {
+  const d = await teksten();
   try {
     const principal = await requirePrincipal();
     requireRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN");
@@ -130,10 +138,10 @@ export async function requestManualReviewAction(timesheetId: string): Promise<Ap
       reason: `${principal.email} vroeg platformcontrole aan vanwege een signaal bij goedkeuring`,
     });
     revalidatePath("/werkgever/uren");
-    return { ok: true, message: "Platformcontrole aangevraagd — dit urenbriefje wordt door ZekerFlex beoordeeld." };
+    return { ok: true, message: d.controleAangevraagd };
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };
-    return { ok: false, message: "Aanvragen mislukt. Probeer het opnieuw." };
+    return { ok: false, message: d.aanvragenMislukt };
   }
 }
 
@@ -147,6 +155,7 @@ export async function proposeHoursCorrectionAction(
   proposedHours: number,
   note: string,
 ): Promise<ApproveResult> {
+  const d = await teksten();
   try {
     const principal = await requirePrincipal();
     requireRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN");
@@ -157,9 +166,9 @@ export async function proposeHoursCorrectionAction(
       note,
     });
     revalidatePath("/werkgever/uren");
-    return { ok: true, message: "Correctievoorstel verstuurd — de flexwerker moet nog akkoord gaan." };
+    return { ok: true, message: d.voorstelVerstuurd };
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };
-    return { ok: false, message: "Voorstellen mislukt. Probeer het opnieuw." };
+    return { ok: false, message: d.voorstellenMislukt };
   }
 }
