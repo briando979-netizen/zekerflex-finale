@@ -20,7 +20,25 @@ fi
 # geheimen die alleen op deze server hoeven te bestaan (browser-werker, kennisbank, Metabase): één keer
 # maken. Met sudo: .env.production is van root (600) en moet dat blijven.
 sudo bash deploy/scripts/env-aanvullen.sh .env.production
-sudo docker tag zekerflex-app:latest zekerflex-app:rollback
+# De terugzetversie (zekerflex-app:rollback) is de versie die vóór deze uitrol draaide. Hij wordt pas ná het
+# bouwen vastgelegd, en alleen als de app echt veranderde. Eerst gebeurde het meteen hier: een uitrol die hetzelfde
+# image oplevert (zelfde code opnieuw, of alleen wijzigingen buiten de app) overschreef zo de echte vorige versie met
+# de draaiende, en "Vorige versie terugzetten" deed dan niets (13 nov: rollback == latest).
+# --- rollback-vastleggen begin ---
+# $1 = het id van de versie die vóór deze uitrol draaide
+rollback_vastleggen() {
+  local voor="$1" nieuw
+  [ -n "$voor" ] || return 0
+  nieuw=$(sudo docker image inspect -f '{{.Id}}' zekerflex-app:latest 2>/dev/null | sed 's/^sha256://' || true)
+  if [ -n "$nieuw" ] && [ "$nieuw" != "$voor" ]; then
+    sudo docker tag "$voor" zekerflex-app:rollback && echo "rollback: de vorige versie is bewaard"
+  else
+    echo "rollback: de app is niet veranderd, de bewaarde vorige versie blijft staan"
+  fi
+  return 0
+}
+# --- rollback-vastleggen eind ---
+LIVE_VOOR=$(sudo docker image inspect -f '{{.Id}}' zekerflex-app:latest 2>/dev/null | sed 's/^sha256://' || true)
 # Het eigen taalmodel (Ollama, ±3,5 GB met gemma3:4b + granite-embedding) en de build (±4 GB) pasten
 # samen niet in de 8 GB van deze server: op 7 nov liep de load naar 138 en was de site 20 minuten
 # weg. Sinds de upgrade naar 16 GB (7 nov) blijft Ollama draaien (dan blijft de AI-chat werken tijdens
@@ -39,11 +57,12 @@ ollama_terug() {
 trap ollama_terug EXIT
 for i in 1 2 3; do
   if sudo $C build app; then
+    rollback_vastleggen "$LIVE_VOOR"
     # Migreren met de Prisma uit het nieuwe image, vóór de nieuwe app start. Mislukt
     # dat, dan blijft de oude app draaien en wijst latest weer naar de vorige versie.
     if [ -n "${ZF_MIGREER:-}" ]; then
       if ! sudo $C run --rm --no-deps -T app node node_modules/prisma/build/index.js migrate deploy; then
-        sudo docker tag zekerflex-app:rollback zekerflex-app:latest
+        sudo docker tag "${LIVE_VOOR:-zekerflex-app:rollback}" zekerflex-app:latest
         echo "MIGRATIE_MISLUKT: de vorige versie blijft draaien"
         echo "DEPLOY_EXIT=5"
         exit 5
