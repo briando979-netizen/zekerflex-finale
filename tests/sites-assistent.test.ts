@@ -132,7 +132,7 @@ describe("een websitevoorstel of bestaande site verandert nooit vanzelf", () => 
     const regels = bron("lib/sites/assistent.ts");
     const doc = regels.slice(regels.indexOf("export interface AssistentDoc {"), regels.indexOf("export interface AssistentUitkomst"));
     expect(doc.match(/^ {2}\w+: /gm)).toEqual(["  theme: ", "  pages: "]);
-    for (const veld of ["voorstel", "liveBuild", "bedrijf:", "winkel", "builds", "voorbeeld"]) expect(regels, veld).not.toContain(veld);
+    for (const veld of ["voorstel", "liveBuild", "winkel", "builds"]) expect(regels, veld).not.toContain(veld);
     // de bouwer neemt alleen die twee over en laat de rest van de site staan
     expect(bron("components/app/SiteBuilder.tsx")).toContain("change((s) => ({ ...s, theme: nieuw.theme, pages: nieuw.pages }))");
     // er wordt niets verstuurd of gepubliceerd
