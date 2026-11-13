@@ -32,6 +32,9 @@ export PGHOST="${PGHOST:-postgres}" PGUSER="${PGUSER:-zekerflex}"
 DB="${PGDATABASE:-zekerflex}"
 DIR=/backups
 KEEP="${BACKUP_KEEP:-14}"
+# de versleutelde kopieën (.enc) mogen korter blijven: de pc of de kopieplek bewaart er zelf meer (deploy/backup/OPHALEN.md)
+KEEP_ENC="${BACKUP_KEEP_ENC:-$KEEP}"
+case "$KEEP_ENC" in '' | *[!0-9]* | 0) KEEP_ENC="$KEEP" ;; esac
 AT="${BACKUP_AT:-02:30}"
 OWNER="${BACKUP_UID:-1000}"
 PASS="${BACKUP_PASSPHRASE:-}"
@@ -52,8 +55,8 @@ num() { case "$1" in ''|*[!0-9]*) echo 0 ;; *) echo "$1" ;; esac; }
 sha() { sha256sum "$1" | cut -d' ' -f1; }
 jsonstr() { printf '"%s"' "$(clean "$1")"; }
 
-prune() { # map patroon
-  ls -1t "$1"/$2 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm -f
+prune() { # map patroon [aantal, standaard KEEP]
+  ls -1t "$1"/$2 2>/dev/null | tail -n +$((${3:-$KEEP} + 1)) | xargs -r rm -f
 }
 
 # De eigen Git-server (Forgejo) als één archief. De database is SQLite met een WAL:
@@ -233,11 +236,11 @@ run_backup() {
   [ -n "$file" ] && [ -z "$err" ] && [ "$restore_ok" = true ] && ok=true
 
   prune "$DIR/db" "*.dump"
-  prune "$DIR/db" "*.dump.enc"
+  prune "$DIR/db" "*.dump.enc" "$KEEP_ENC"
   prune "$DIR/storage" "*.tar.gz"
-  prune "$DIR/storage" "*.tar.gz.enc"
+  prune "$DIR/storage" "*.tar.gz.enc" "$KEEP_ENC"
   prune "$DIR/forgejo" "*.tar.gz"
-  prune "$DIR/forgejo" "*.tar.gz.enc"
+  prune "$DIR/forgejo" "*.tar.gz.enc" "$KEEP_ENC"
   # hulpbestanden zonder dump: weg
   for h in "$DIR"/db/*.sha256 "$DIR"/db/*.counts; do
     [ -e "$h" ] || continue
