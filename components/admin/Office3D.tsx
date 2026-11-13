@@ -26,6 +26,9 @@ import type { Pick } from "@/components/admin/city/world";
 // zon boven Amsterdam. three.js laadt pas als deze weergave opent.
 // ---------------------------------------------------------------------------
 
+/** Waar de gekozen weergave (realistisch/eenvoudig) in de browser staat. */
+const WEERGAVE_SLEUTEL = "zf_kantoor_weergave";
+
 const VIEWS: [View, string][] = [
   ["stad", "Hele stad"],
   ["hq", "Hoofdkantoor"],
@@ -130,6 +133,9 @@ export function Office3D() {
   const [selected, setSelected] = useState<Pick | null>(null);
   const [touring, setTouring] = useState(false);
   const [legend, setLegend] = useState(false);
+  // Weergave van de stad (13 nov): realistisch (standaard) of eenvoudig (zoals vroeger, lichter voor zwakke apparaten).
+  // null = nog niet gelezen; de keuze staat alleen in deze browser.
+  const [weergave, setWeergave] = useState<"echt" | "eenvoudig" | null>(null);
   const [clock, setClock] = useState("");
   const [nowHour, setNowHour] = useState(12);
   const [timeOverride, setTimeOverride] = useState<number | null>(null);
@@ -213,9 +219,29 @@ export function Office3D() {
   }, []);
 
   useEffect(() => {
+    let w: "echt" | "eenvoudig" = "echt";
+    try {
+      if (window.localStorage.getItem(WEERGAVE_SLEUTEL) === "eenvoudig") w = "eenvoudig";
+    } catch {
+      // geen opslag (privévenster): realistisch
+    }
+    setWeergave(w);
+  }, []);
+
+  const wisselWeergave = () => {
+    const nieuw = weergave === "eenvoudig" ? "echt" : "eenvoudig";
+    try {
+      window.localStorage.setItem(WEERGAVE_SLEUTEL, nieuw);
+    } catch {
+      // niet bewaren lukt niet: dan alleen voor nu
+    }
+    setWeergave(nieuw);
+  };
+
+  useEffect(() => {
     const el = host.current;
     const labelHost = labelsRef.current;
-    if (!el || !labelHost) return;
+    if (!el || !labelHost || weergave === null) return;
     try {
       const c = document.createElement("canvas");
       if (!(c.getContext("webgl2") || c.getContext("webgl"))) {
@@ -238,6 +264,7 @@ export function Office3D() {
       const weer = q.get("weer");
       handle = createCity(el, labelHost, {
         reduced: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+        realistisch: weergave === "echt",
         onPick: setSelected,
         onTourEnd: () => setTouring(false),
         ...(thema && isThemeId(thema) && thema !== "verjaardag" ? { theme: thema } : {}),
@@ -254,7 +281,7 @@ export function Office3D() {
       handle?.dispose();
       city.current = null;
     };
-  }, []);
+  }, [weergave]);
 
   if (state === "geen-webgl") {
     return (
@@ -651,6 +678,11 @@ export function Office3D() {
             <button type="button" onClick={() => setLegend((v) => !v)} aria-expanded={legend} className="rounded-full px-3 py-1 text-[11px] font-semibold shadow" style={{ background: "var(--a-panel)", color: "var(--a-text)" }}>
               {legend ? "Verberg uitleg" : "Wat zie je?"}
             </button>
+            {weergave !== null && (
+              <button type="button" onClick={wisselWeergave} aria-pressed={weergave === "echt"} className="rounded-full px-3 py-1 text-[11px] font-semibold shadow" style={{ background: "var(--a-panel)", color: "var(--a-text)" }} title="Realistisch: echte lucht, wolken en weerspiegelingen. Eenvoudig: lichter, voor oudere apparaten.">
+                {weergave === "echt" ? "Weergave: realistisch" : "Weergave: eenvoudig"}
+              </button>
+            )}
           </div>
           <p className="pointer-events-none absolute bottom-3 right-3 hidden rounded-full px-3 py-1 text-[11px] shadow sm:block" style={{ background: "var(--a-panel)", color: "var(--a-dim)" }}>
             Sleep om te draaien · scroll om te zoomen · klik een gebouw of voertuig

@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { Sky } from "three/examples/jsm/objects/Sky.js";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { COMPANY_SLOTS, companyFloors, dayPhase, EXITS, houseCount, LANDMARKS, moonPhase, mustStop, signalColor, LANE_BIKE, LANE_CAR, laneOffset, millSpeed, type Origin, type Plot, type Pt, type RoadPt, sunAt, trafficFor, tripCenter } from "@/lib/admin/city-layout";
 import { courierRoute, roomCenter } from "@/lib/admin/office3d-layout";
 import type { CityData, CityWeather } from "@/lib/admin/city-data";
@@ -90,9 +92,16 @@ export function createCity(
     season?: YearSeason;
     /** Voorbeeld van het weer (?weer=regen); anders het echte weer in Amsterdam. */
     weather?: WeatherKind;
+    /**
+     * Realistisch (standaard, 13 nov, eigenaar: "zoals de werkelijke wereld"): echte lucht met wolken die de zon en het
+     * weer volgt, weerspiegelingen in glas en metaal en kleuren zoals een camera ze ziet. false = de eenvoudige weergave
+     * van vroeger, precies zoals hij was (ook voor zwakke apparaten).
+     */
+    realistisch?: boolean;
   },
 ): CityHandle {
   const { reduced } = opts;
+  const echt = opts.realistisch !== false;
   const rnd = seeded(Date.now() % 100_000);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
@@ -102,6 +111,11 @@ export function createCity(
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   // Schaduwen van stilstaande dingen; alleen opnieuw als de zon of de gebouwen veranderen.
   renderer.shadowMap.autoUpdate = false;
+  // kleuren zoals een camera ze ziet (licht en schaduw lopen zacht af in plaats van af te kappen)
+  if (echt) {
+    renderer.toneMapping = THREE.NeutralToneMapping;
+    renderer.toneMappingExposure = 1;
+  }
   host.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
@@ -116,6 +130,37 @@ export function createCity(
   const sky = skyTexture(kit);
   scene.background = sky.texture;
   scene.fog = new THREE.Fog(0xdcecf7, 280, 640);
+
+  // Realistisch: een omgeving die in glas en metaal weerspiegelt, en een echte lucht (atmosfeer en wolken) die met de
+  // zon meedraait. De lucht is een grote doos rond de stad; de camera kijkt daarom verder.
+  const pmrem = echt ? new THREE.PMREMGenerator(renderer) : null;
+  const envRT = (() => {
+    if (!pmrem) return null;
+    const kamer = new RoomEnvironment();
+    const rt = pmrem.fromScene(kamer, 0.04);
+    kamer.dispose();
+    return rt;
+  })();
+  if (envRT) {
+    scene.environment = envRT.texture;
+    scene.environmentIntensity = 0.45;
+  }
+  const echteLucht = echt ? new Sky() : null;
+  const luchtWaarde = (k: string, v: number) => {
+    const u = echteLucht?.material.uniforms[k];
+    if (u) u.value = v;
+  };
+  if (echteLucht) {
+    echteLucht.scale.setScalar(1500);
+    echteLucht.visible = false;
+    luchtWaarde("mieCoefficient", 0.004);
+    luchtWaarde("mieDirectionalG", 0.8);
+    luchtWaarde("cloudScale", 0.00025);
+    luchtWaarde("cloudSpeed", reduced ? 0 : 0.00006);
+    scene.add(echteLucht);
+    camera.far = 1400;
+    camera.updateProjectionMatrix();
+  }
 
   const hemi = new THREE.HemisphereLight(0xffffff, 0xb7c4a8, 1.3);
   const sun = new THREE.DirectionalLight(0xffffff, 1.5);
@@ -705,6 +750,8 @@ export function createCity(
     boardMat.emissiveIntensity = phase === "nacht" ? 1 : phase === "schemer" ? 0.75 : 0.4;
     taillights.emissiveIntensity = phase === "nacht" ? 1.6 : phase === "schemer" ? 1 : 0.5;
     hemiBase = (phase === "dag" ? 1.25 : phase === "schemer" ? 0.75 : 0.32) * (w === "helder" ? 1 : 0.92);
+    // realistisch: de omgeving geeft zelf al zacht licht, dus het hemellicht iets lager
+    if (echt) hemiBase *= 0.8;
     hemi.intensity = hemiBase;
     hemi.color.setHex(phase === "nacht" ? 0x8ea2d8 : 0xffffff);
     const grey = w !== "helder";
@@ -723,6 +770,19 @@ export function createCity(
             : ["#334a7d", "#f2b48a"]
           : ["#030712", "#1b2747"];
     sky.paint(top, bottom);
+    if (echteLucht) {
+      // de echte lucht bij dag en schemer, met wolken naar het weer; bij nacht, regen, mist en sneeuw het verloop van vroeger
+      const toon = phase !== "nacht" && (w === "helder" || w === "bewolkt");
+      echteLucht.visible = toon;
+      scene.background = toon ? null : sky.texture;
+      echteLucht.material.uniforms["sunPosition"]?.value.copy(sun.position).normalize();
+      luchtWaarde("turbidity", w === "bewolkt" ? 8 : 3);
+      luchtWaarde("rayleigh", phase === "schemer" ? 2.4 : 1.1);
+      luchtWaarde("cloudCoverage", w === "bewolkt" ? 0.75 : 0.3);
+      luchtWaarde("cloudDensity", w === "bewolkt" ? 0.6 : 0.35);
+      renderer.toneMappingExposure = phase === "dag" ? 1 : phase === "schemer" ? 0.85 : 0.75;
+    }
+    if (envRT) scene.environmentIntensity = phase === "dag" ? 0.45 : phase === "schemer" ? 0.25 : 0.08;
     const fog = scene.fog as THREE.Fog;
     fog.color.set(bottom);
     fog.near = w === "mist" ? 30 : w === "regen" || w === "onweer" || w === "sneeuw" ? 150 : 280;
@@ -761,6 +821,8 @@ export function createCity(
     const dt = Math.min(0.05, raw / 1000);
     last = now;
     if (!visible || document.hidden) return;
+    // de wolken in de echte lucht drijven langzaam mee (niet bij minder beweging)
+    if (echteLucht?.visible && !reduced) luchtWaarde("time", now / 1000);
     if (raw < 250) {
       perfSum += raw;
       perfN += 1;
@@ -1033,6 +1095,10 @@ export function createCity(
       life.dispose();
       festive.dispose();
       kit.dispose();
+      echteLucht?.geometry.dispose();
+      echteLucht?.material.dispose();
+      envRT?.dispose();
+      pmrem?.dispose();
       renderer.dispose();
       renderer.domElement.remove();
       labels.forEach((l) => l.el.remove());
