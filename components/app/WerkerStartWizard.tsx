@@ -164,10 +164,10 @@ export function WerkerStartWizard({
     <>
     {/* geen stap maar een melding (13 nov): het e-mailadres bevestigen telt niet mee in "stap n van 5", de poort eist het ook niet */}
     {!emailVerified && (
-      <div role="status" className="mb-4 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
+      <div className="mb-4 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
         <p className="font-semibold text-ink">{t.emailStep}</p>
         <p className="mt-0.5">{t.emailBody}</p>
-        <Link href="/verifieer-email" className="mt-1 inline-flex min-h-[44px] items-center font-semibold text-brand-600 underline underline-offset-4 hover:text-brand-700">
+        <Link href="/verifieer-email" className="mt-1 inline-flex min-h-[44px] items-center gap-1 font-semibold text-brand-600 underline underline-offset-4 hover:text-brand-700">
           {t.emailCta} <span aria-hidden>›</span>
         </Link>
       </div>
