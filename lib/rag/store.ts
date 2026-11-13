@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { estimateTokens } from "@/lib/rag/chunk";
+import { telVuren } from "@/lib/rag/vuren";
 
 // ---------------------------------------------------------------------------
 // Vector store on plain Postgres: embeddings live in a Float[] column and
@@ -210,6 +211,8 @@ export async function search(
     .slice(0, limit);
 
   logger.debug("rag search", { candidates: rows.length, returned: scored.length });
+  // het Brein (Admin → Kennisgraaf) laat zien welke stukken echt geraadpleegd worden; telt in het geheugen, hindert nooit
+  telVuren(scored.map((h) => h.id));
   return scored;
 }
 

@@ -9,6 +9,7 @@ import { smartChunk } from "@/lib/rag/smart-chunk";
 import { embedMany, isRagEnabled } from "@/lib/rag/embed";
 import { replaceSource, type UpsertChunkInput } from "@/lib/rag/store";
 import { corpus } from "@/lib/rag/corpus";
+import { voedingEntries, voedingLijst } from "@/lib/rag/voeding";
 
 // ---------------------------------------------------------------------------
 // Indexers - everything the sovereign box knows becomes searchable memory:
@@ -267,7 +268,9 @@ export async function indexInteractions(): Promise<number> {
       `${f.detail}\n(status ${f.status}, actie ${f.actionKind})\n` +
       `cyclus-samenvatting: ${f.run.summary ?? ""}`,
   }));
-  return indexEntries("INTERACTION", entries);
+  // wat beheerders het brein voerden (lib/rag/voeding.ts): dezelfde sourceRef, titel en tekst, dus dezelfde contentHash
+  const voeding = voedingEntries(await voedingLijst());
+  return indexEntries("INTERACTION", [...entries, ...voeding]);
 }
 
 export interface ReindexResult {
