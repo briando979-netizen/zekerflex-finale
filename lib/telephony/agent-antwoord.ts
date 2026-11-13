@@ -17,6 +17,8 @@ import { logger } from "@/lib/logger";
 //
 // Het wachtende antwoord staat op globalThis: gather en vervolg zijn aparte
 // bundels. Na een herstart is het weg; dan volgt gewoon de standaardzin.
+// Dat werkt alleen met één app-proces (zo staat het in docker-compose.vps.yml).
+// Komen er ooit twee app-containers, dan moet dit naar KV met een korte TTL.
 // ---------------------------------------------------------------------------
 
 /** Zo lang mag een beller na zijn zin stilte horen voordat de telefonist "een ogenblik" zegt. */
