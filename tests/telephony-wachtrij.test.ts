@@ -110,6 +110,7 @@ describe("naar een medewerker", () => {
     expect(xml).toContain("Toets 1");
     expect(xml).toContain("stap=aannemen");
     expect(medewerkerTwiml({ base: "https://zf.test", callId: "c1", dept: "constructor" })).toContain("Er wacht een beller van ZekerFlex.");
+    expect(medewerkerTwiml({ base: "https://zf.test", callId: "c1", dept: "werker" })).toContain("Er wacht een beller van ZekerFlex: een werknemer.");
     expect(aannemenTwiml(true)).toContain(`<Dial><Queue>${WACHTRIJ}</Queue></Dial>`);
     expect(aannemenTwiml(false)).not.toContain("<Dial");
   });

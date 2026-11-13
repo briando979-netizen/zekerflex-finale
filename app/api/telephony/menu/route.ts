@@ -51,8 +51,9 @@ export async function POST(request: Request): Promise<Response> {
     await addTurn(callId, "ai", opening).catch(() => undefined);
     return xmlResponse(twiml(sayAndGather(opening, `${base}/api/telephony/gather?callId=${callId}`, { voice, recogLang: recogLang(lang) })));
   };
-  const medewerker = async () => {
-    await patchCall(callId, { dept: "0" }).catch(() => undefined);
+  // dept zegt de medewerker wie er wacht (DEPT_LABEL): "werker" of "bedrijf" als dat al gekozen is
+  const medewerker = async (dept = "0") => {
+    await patchCall(callId, { dept }).catch(() => undefined);
     await addTurn(callId, "ai", "(naar een medewerker, in de wachtrij)").catch(() => undefined);
     return xmlResponse(
       twiml(naarMedewerkerTwiml({ base, callId, lang, voice, kantoor: binnenKantoortijd(new Date()), heeftNummer: Boolean(env.TELEPHONY_FORWARD_NUMBER) })),
@@ -68,7 +69,7 @@ export async function POST(request: Request): Promise<Response> {
 
   if (step === "werker" || step === "bedrijf") {
     if (digits === "*") return menu(ROL_MENU[lang], "rol", lang);
-    if (digits === "0") return medewerker();
+    if (digits === "0") return medewerker(step);
     const keuzes = MENU_KEUZE[step];
     if (Object.hasOwn(keuzes, digits)) return assistent(keuzes[digits] ?? "default");
     return opnieuw ? assistent("default") : menu(step === "werker" ? WERKER_MENU[lang] : BEDRIJF_MENU[lang], step, lang, true);
