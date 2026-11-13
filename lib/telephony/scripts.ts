@@ -56,6 +56,9 @@ export const DEPT_LABEL: Record<string, string> = {
   "3": "een werknemer, over account, uren of uitbetaling",
   "4": "iemand die werk zoekt",
   "5": "een bedrijf, over account, facturen of uren",
+  // toets 0 in het menu van werknemers of bedrijven: wie belt is bekend, waarover nog niet
+  werker: "een werknemer",
+  bedrijf: "een bedrijf",
 };
 
 // Openingszin per gekozen afdeling (toets) en taal. "9" (oude menu) en "0" gaan naar een medewerker.

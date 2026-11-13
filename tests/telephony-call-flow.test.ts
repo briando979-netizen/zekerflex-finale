@@ -324,6 +324,8 @@ describe("het keuzemenu: eerst werknemer of bedrijf, dan de keuze (13 nov)", () 
     const xml = await toets("bedrijf", "0");
     expect(xml).toContain("/api/telephony/terugbellen?callId=c1");
     expect(xml).not.toContain("<Dial");
+    // de medewerker hoort straks dat er een bedrijf wacht
+    expect(calls.get("c1")?.dept).toBe("bedrijf");
     expect(await toets("rol", "0")).toContain("/api/telephony/terugbellen?callId=c1");
   });
 
