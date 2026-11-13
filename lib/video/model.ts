@@ -113,6 +113,11 @@ export interface TekstClip extends ClipBasis {
   animatieUit: TekstAnimatie;
   /** Ondertitel: woord voor woord oplichten. */
   karaoke: boolean;
+  /**
+   * Ondertitel uit spraak (lib/video/spraak-ondertitels.ts): wanneer elk woord begint, in seconden na het begin van de
+   * clip, één per woord. Dan volgt het oplichten de stem; zonder (of als het aantal niet klopt) gaat het gelijkmatig.
+   */
+  woordTijden?: number[] | undefined;
 }
 
 export interface AudioClip extends ClipBasis {
@@ -278,6 +283,8 @@ export function knip(c: Clip, t: number): [Clip, Clip] | null {
   if (a.soort !== "tekst") a.vervagenUit = 0;
   if (b.soort !== "tekst") b.vervagenIn = 0;
   if (b.soort !== "tekst" && b.soort !== "audio") b.overgang = "geen";
+  // ondertitel uit spraak: de woordtijden van de tweede helft tellen vanaf zijn eigen begin
+  if (b.soort === "tekst" && b.woordTijden) b.woordTijden = b.woordTijden.map((x) => rond(x - links));
   return [a, b];
 }
 
@@ -290,6 +297,11 @@ export function snijBegin(c: Clip, nieuwStart: number): Clip {
     start = Math.max(start, c.start - c.inpunt / c.snelheid);
     const inpunt = rond(Math.max(0, c.inpunt + (start - c.start) * c.snelheid));
     return { ...c, start: rond(start), duur: rond(eindT - start), inpunt };
+  }
+  if (c.soort === "tekst" && c.woordTijden) {
+    // de woorden blijven op hun plek in de tijd, ook als het begin van de regel schuift
+    const delta = start - c.start;
+    return { ...c, start: rond(start), duur: rond(eindT - start), woordTijden: c.woordTijden.map((x) => rond(x - delta)) };
   }
   return { ...c, start: rond(start), duur: rond(eindT - start) };
 }
@@ -640,6 +652,24 @@ export function ondertitels(tekst: string, start: number, duur: number, woorden 
   });
 }
 
+/**
+ * Welk woord van een karaoke-ondertitel nu oplicht (index, -1 = geen woorden). Met woordTijden (uit de spraak) het
+ * laatste woord dat al begonnen is; anders gelijk verdeeld over de clip.
+ */
+export function karaokeWoord(c: Pick<TekstClip, "tekst" | "start" | "duur" | "woordTijden">, t: number): number {
+  const woorden = c.tekst.split(/\s+/).filter(Boolean);
+  if (!woorden.length) return -1;
+  const tijden = c.woordTijden;
+  if (tijden && tijden.length === woorden.length) {
+    const nu = t - c.start;
+    let i = 0;
+    while (i + 1 < tijden.length && (tijden[i + 1] ?? Infinity) <= nu) i++;
+    return i;
+  }
+  const p = klem((t - c.start) / Math.max(0.1, c.duur), 0, 0.9999);
+  return Math.floor(p * woorden.length);
+}
+
 // ---- Controle van een project dat van buiten komt (opslaan, AI) ----------------
 
 const KLEUR = /^#[0-9a-f]{6}$/i;
@@ -654,6 +684,21 @@ const OVERGANGEN: readonly Overgang[] = ["geen", "vervagen", "schuiven", "zoom",
 const BEWEGINGEN: readonly Beweging[] = ["geen", "inzoomen", "uitzoomen", "links", "rechts", "omhoog"];
 const ANIMATIES: readonly TekstAnimatie[] = ["geen", "vervagen", "opschuiven", "pop", "typen", "stuiteren", "woorden", "glitch"];
 const STIJLEN: readonly TekstStijl[] = ["gewoon", "kader", "omlijnd", "schaduw", "neon", "bubbel-blauw", "bubbel-groen", "venster", "3d"];
+
+/** Woordtijden van buiten: alleen eindige getallen, oplopend, precies één per woord; anders weg (dan karaoke gelijkmatig). */
+function schoneWoordTijden(v: unknown, inhoud: string, duur: number): number[] | null {
+  if (!Array.isArray(v)) return null;
+  const n = inhoud.split(/\s+/).filter(Boolean).length;
+  if (!v.length || v.length !== n || n > 200) return null;
+  const uit: number[] = [];
+  for (const x of v) {
+    if (typeof x !== "number" || !Number.isFinite(x)) return null;
+    const t = rond(klem(x, -3600, duur));
+    if (uit.length && t < (uit[uit.length - 1] ?? t)) return null;
+    uit.push(t);
+  }
+  return uit;
+}
 
 /**
  * Maak van willekeurige JSON een geldig project: onbekende velden weg, getallen
@@ -684,10 +729,12 @@ export function schoonProject(ruw: unknown): Project {
       duur: rond(getal(c.duur, MIN_DUUR, 3600, 3)),
     };
     if (soortSpoor === "tekst" && c.soort === "tekst") {
+      const inhoud = tekst(c.tekst, 400, "Tekst");
+      const tijden = schoneWoordTijden(c.woordTijden, inhoud, basis.duur);
       clips.push({
         ...basis,
         soort: "tekst",
-        tekst: tekst(c.tekst, 400, "Tekst"),
+        tekst: inhoud,
         lettertype: uitLijst(c.lettertype, LETTERTYPES, "Bricolage Grotesque"),
         grootte: getal(c.grootte, 10, 300, 70),
         kleur: KLEUR.test(String(c.kleur)) ? String(c.kleur) : "#FFFFFF",
@@ -701,6 +748,7 @@ export function schoonProject(ruw: unknown): Project {
         animatieIn: uitLijst(c.animatieIn, ANIMATIES, "pop"),
         animatieUit: uitLijst(c.animatieUit, ANIMATIES, "vervagen"),
         karaoke: c.karaoke === true,
+        ...(tijden ? { woordTijden: tijden } : {}),
       });
     } else if (soortSpoor === "audio" && c.soort === "audio" && veiligeBron(c.bron) && c.bron) {
       clips.push({

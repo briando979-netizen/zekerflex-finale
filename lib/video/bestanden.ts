@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { createReadStream } from "node:fs";
+import { createReadStream, openAsBlob } from "node:fs";
 import { mkdir, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
@@ -135,6 +135,12 @@ export async function verwijderBestand(id: string): Promise<void> {
   if (!item) return;
   await unlink(pad(id, item.ext)).catch(() => undefined);
   await kvSet(INDEX, lijst.filter((b) => b.id !== id));
+}
+
+/** Het bestand als Blob, zonder het in het geheugen te laden (voor de spraakherkenning van de ondertitels). */
+export async function bestandBlob(item: VideoBestand): Promise<Blob> {
+  // openAsBlob geeft de Blob van node:buffer; fetch en FormData nemen die gewoon aan
+  return (await openAsBlob(pad(item.id, item.ext), { type: item.mime })) as unknown as Blob;
 }
 
 /** Een Response met het bestand, met Range-ondersteuning (terugspoelen, Safari). */

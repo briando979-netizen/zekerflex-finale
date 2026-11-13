@@ -15,6 +15,7 @@ import {
   type Project,
   type TekstClip,
 } from "@/lib/video/model";
+import { AUDIO_TALEN } from "@/lib/asr/bestand";
 
 interface Props {
   project: Project;
@@ -25,6 +26,8 @@ interface Props {
   onAiBewerk: (clip: BeeldClip, instructie: string) => Promise<void>;
   /** Foto laten bewegen met de gratis video-AI (LTX-2.3). */
   onAiBeweeg: (clip: BeeldClip, omschrijving: string) => Promise<void>;
+  /** Ondertitels uit de spraak van een video- of geluidsclip (eigen Whisper). */
+  onOndertitels: (clip: BeeldClip | AudioClip, taal: string) => Promise<void>;
   aiBeeld: boolean;
 }
 
@@ -85,7 +88,64 @@ function TijdVelden({ clip, onClip }: { clip: Clip; onClip: Props["onClip"] }) {
   );
 }
 
-function BeeldPaneel({ clip, onClip, onAiBewerk, onAiBeweeg, aiBeeld }: { clip: BeeldClip; onClip: Props["onClip"]; onAiBewerk: Props["onAiBewerk"]; onAiBeweeg: Props["onAiBeweeg"]; aiBeeld: boolean }) {
+/** Ondertitels maken uit wat er in een video of geluid gezegd wordt (eigen spraakherkenning, gratis). */
+function OndertitelKnop({ clip, onOndertitels }: { clip: BeeldClip | AudioClip; onOndertitels: Props["onOndertitels"] }) {
+  const [taal, setTaal] = useState("nl");
+  const [bezig, setBezig] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
+  const taalId = useId();
+  return (
+    <>
+      <Kop>Ondertitels uit spraak</Kop>
+      <p className="text-[0.6875rem]" style={{ color: "var(--a-mute)" }}>
+        Onze eigen spraakherkenning schrijft uit wat er gezegd wordt; elk woord licht op als het klinkt. Gratis, op onze eigen server.
+      </p>
+      <div className="flex gap-2">
+        <label htmlFor={taalId} className="sr-only">
+          Taal van de spraak
+        </label>
+        <select id={taalId} className="a-input w-auto text-xs" value={taal} onChange={(e) => setTaal(e.target.value)} disabled={bezig}>
+          {AUDIO_TALEN.map((t) => (
+            <option key={t.code} value={t.code}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          className="a-button a-button-primary flex-1 text-xs"
+          disabled={bezig}
+          data-track="video-ondertitels"
+          onClick={async () => {
+            setBezig(true);
+            setFout(null);
+            try {
+              await onOndertitels(clip, taal);
+            } catch (err) {
+              setFout((err as Error).message);
+            } finally {
+              setBezig(false);
+            }
+          }}
+        >
+          {bezig ? "Aan het luisteren…" : "Ondertitels maken"}
+        </button>
+      </div>
+      {bezig && (
+        <p role="status" className="text-[0.6875rem]" style={{ color: "var(--a-mute)" }}>
+          Dit duurt ongeveer de helft van de lengte van de clip. Je kunt intussen gewoon verder werken.
+        </p>
+      )}
+      {fout && (
+        <p role="alert" className="text-xs" style={{ color: "var(--a-crit)" }}>
+          {fout}
+        </p>
+      )}
+    </>
+  );
+}
+
+function BeeldPaneel({ clip, onClip, onAiBewerk, onAiBeweeg, onOndertitels, aiBeeld }: { clip: BeeldClip; onClip: Props["onClip"]; onAiBewerk: Props["onAiBewerk"]; onAiBeweeg: Props["onAiBeweeg"]; onOndertitels: Props["onOndertitels"]; aiBeeld: boolean }) {
   const [instructie, setInstructie] = useState("");
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
@@ -192,6 +252,7 @@ function BeeldPaneel({ clip, onClip, onAiBewerk, onAiBeweeg, aiBeeld }: { clip: 
             onChange={(v) => onClip(zetSnelheid(clip, Number(v)) as BeeldClip)}
           />
           <Schuif label="Volume" waarde={Math.round(clip.volume * 100)} min={0} max={200} eenheid="%" onChange={(v) => zet({ volume: v / 100 }, "volume")} />
+          <OndertitelKnop clip={clip} onOndertitels={onOndertitels} />
         </>
       )}
 
@@ -346,7 +407,7 @@ function TekstPaneel({ clip, onClip }: { clip: TekstClip; onClip: Props["onClip"
   );
 }
 
-function AudioPaneel({ clip, onClip }: { clip: AudioClip; onClip: Props["onClip"] }) {
+function AudioPaneel({ clip, onClip, onOndertitels }: { clip: AudioClip; onClip: Props["onClip"]; onOndertitels: Props["onOndertitels"] }) {
   const zet = (deel: Partial<AudioClip>, sleutel?: string) => onClip({ ...clip, ...deel }, sleutel);
   return (
     <div className="space-y-3">
@@ -364,11 +425,12 @@ function AudioPaneel({ clip, onClip }: { clip: AudioClip; onClip: Props["onClip"
         opties={["0.5", "0.75", "1", "1.25", "1.5", "2"].map((s) => ({ id: s, label: `${s.replace(".", ",")}×` }))}
         onChange={(v) => onClip(zetSnelheid(clip, Number(v)) as AudioClip)}
       />
+      <OndertitelKnop clip={clip} onOndertitels={onOndertitels} />
     </div>
   );
 }
 
-export function Eigenschappen({ project, clip, onClip, onProject, onAiBewerk, onAiBeweeg, aiBeeld }: Props) {
+export function Eigenschappen({ project, clip, onClip, onProject, onAiBewerk, onAiBeweeg, onOndertitels, aiBeeld }: Props) {
   if (!clip) {
     return (
       <div className="space-y-3">
@@ -402,6 +464,6 @@ export function Eigenschappen({ project, clip, onClip, onProject, onAiBewerk, on
     );
   }
   if (clip.soort === "tekst") return <TekstPaneel clip={clip} onClip={onClip} />;
-  if (clip.soort === "audio") return <AudioPaneel clip={clip} onClip={onClip} />;
-  return <BeeldPaneel key={clip.id} clip={clip} onClip={onClip} onAiBewerk={onAiBewerk} onAiBeweeg={onAiBeweeg} aiBeeld={aiBeeld} />;
+  if (clip.soort === "audio") return <AudioPaneel key={clip.id} clip={clip} onClip={onClip} onOndertitels={onOndertitels} />;
+  return <BeeldPaneel key={clip.id} clip={clip} onClip={onClip} onAiBewerk={onAiBewerk} onAiBeweeg={onAiBeweeg} onOndertitels={onOndertitels} aiBeeld={aiBeeld} />;
 }

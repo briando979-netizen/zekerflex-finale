@@ -69,6 +69,85 @@ export async function transcribeAudio(
   }
 }
 
+/** Eén gesproken woord met zijn tijd in het bestand (seconden). */
+export interface GesprokenWoord {
+  woord: string;
+  start: number;
+  eind: number;
+}
+
+export interface WoordenResult extends TranscribeResult {
+  /** leeg als de spraakherkenning geen woordtijden geeft (dan alleen de tekst) */
+  woorden: GesprokenWoord[];
+}
+
+/**
+ * De woorden uit een antwoord van Whisper (verbose_json): uit `words`, anders uit de woorden per segment. Soepel
+ * gelezen (AGENTS.md): een onbruikbaar woord valt weg, de rest gaat door.
+ */
+export function woordenUitAntwoord(json: unknown): GesprokenWoord[] {
+  const j = (json && typeof json === "object" ? json : {}) as { words?: unknown; segments?: unknown };
+  const ruw: unknown[] = Array.isArray(j.words)
+    ? j.words
+    : Array.isArray(j.segments)
+      ? j.segments.flatMap((s: unknown) => (s && typeof s === "object" && Array.isArray((s as { words?: unknown }).words) ? (s as { words: unknown[] }).words : []))
+      : [];
+  const uit: GesprokenWoord[] = [];
+  for (const w of ruw) {
+    if (!w || typeof w !== "object") continue;
+    const r = w as { word?: unknown; start?: unknown; end?: unknown };
+    const woord = typeof r.word === "string" ? r.word.replace(/\s+/g, " ").trim() : "";
+    const start = typeof r.start === "number" && Number.isFinite(r.start) ? r.start : NaN;
+    const eind = typeof r.end === "number" && Number.isFinite(r.end) ? r.end : NaN;
+    if (!woord || Number.isNaN(start) || Number.isNaN(eind) || start < 0) continue;
+    uit.push({ woord: woord.slice(0, 60), start, eind: Math.max(start, eind) });
+  }
+  return uit.sort((a, b) => a.start - b.start).slice(0, 20_000);
+}
+
+/**
+ * Spraak naar woorden met hun tijd (voor ondertitels in de video-editor), via de eigen Whisper-server. Neemt een
+ * Blob, zodat een groot videobestand niet eerst in het geheugen hoeft. Zonder eigen Whisper: de gewone omzetting,
+ * zonder woordtijden.
+ */
+export async function transcribeWoorden(bestand: Blob, filename: string, opts: TranscribeOptions = {}): Promise<WoordenResult> {
+  if (!env.WHISPER_ENABLED) {
+    const r = await transcribeAudio(Buffer.from(await bestand.arrayBuffer()), filename, opts);
+    return { ...r, woorden: [] };
+  }
+  const url = `${env.WHISPER_BASE_URL.replace(/\/+$/, "")}/audio/transcriptions`;
+  const start = Date.now();
+  const form = new FormData();
+  form.append("file", bestand, filename);
+  form.append("model", env.WHISPER_MODEL);
+  form.append("language", opts.language ?? "nl");
+  form.append("response_format", "verbose_json");
+  form.append("timestamp_granularities[]", "word");
+  if (opts.prompt) form.append("prompt", opts.prompt);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? 600_000);
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      body: form,
+      signal: controller.signal,
+      ...(env.WHISPER_API_KEY ? { headers: { Authorization: `Bearer ${env.WHISPER_API_KEY}` } } : {}),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw AppError.upstream(`Spraakherkenning gaf een fout (${res.status}): ${text.slice(0, 200)}`);
+    }
+    const json: unknown = await res.json().catch(() => null);
+    const ruweTekst = json && typeof json === "object" ? (json as { text?: unknown }).text : undefined;
+    const text = typeof ruweTekst === "string" ? ruweTekst.trim() : "";
+    const woorden = woordenUitAntwoord(json);
+    logger.debug("asr: woorden klaar", { woorden: woorden.length, durationMs: Date.now() - start });
+    return { text, language: opts.language ?? "nl", durationMs: Date.now() - start, woorden };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function mimeTypeFor(filename: string): string {
   const ext = filename.split(".").pop()?.toLowerCase();
   const map: Record<string, string> = {
