@@ -33,6 +33,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "active-hours", label: "Actieve uren herberekenen", maxAgeHours: 26 },
   { job: "orchestration", label: "Orchestratie", maxAgeHours: 26 },
   { job: "rag-reindex", label: "RAG opnieuw indexeren", maxAgeHours: 26 },
+  // elke nacht na de RAG-herindexering: momentopname van de Kennisgraaf voor de groeireeks (lib/rag/graph.ts)
+  { job: "kennisgraaf-snapshot", label: "Kennisgraaf: momentopname (groei)", maxAgeHours: 26 },
   { job: "sales-motor", label: "Sales-motor", maxAgeHours: 26 },
   { job: "ai-watchdog", label: "AI-watchdog", maxAgeHours: 26 },
   { job: "abu-phase-sweep", label: "ABU-fasen", maxAgeHours: 26 },

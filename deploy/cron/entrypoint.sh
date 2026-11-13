@@ -26,6 +26,8 @@ cat > /etc/crontabs/root <<EOF
 25 0,12 * * * wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/rag/reindex"
 # de herkansing van de RAG-index na een uitrol (lib/rag/herkansing.ts); zonder herkansing klaar in een paar ms
 */15 * * * * wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/rag/reindex?herkansing=1"
+# momentopname van de Kennisgraaf voor de groeireeks in Admin -> Kennisgraaf (lib/rag/graph.ts), na de herindexering van 00:25
+10 1 * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/kennisgraaf/snapshot"
 0 8 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/sales/tick"
 0 8,12,16 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/sales/offers-sweep"
 0 7 * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/scans/dagoverzicht"

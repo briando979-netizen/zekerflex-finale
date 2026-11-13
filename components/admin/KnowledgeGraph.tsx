@@ -3,15 +3,19 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as RPointerEvent, WheelEvent as RWheelEvent } from "react";
-import type { Begrip, GraafKnoop, GraafLijn } from "@/lib/rag/graph-analyse";
+import type { Begrip, GraafKnoop, GraafLijn, LijnSoort } from "@/lib/rag/graph-analyse";
 
 // De Kennisgraaf als Obsidian-achtige force-directed grafiek, met eigen lichte
 // physics (geen dependency): afstoting tussen knopen, veren langs lijnen, lichte
 // zwaartekracht naar het midden, met cooling. Eromheen: zoeken (licht op), groepen
-// aan/uit, de begrippenlaag, "vraag het brein" (het denkpad licht op), een
-// detailpaneel per knoop (passages, buren, begrippen; buren zijn aanklikbaar),
-// passend maken, herstellen en export. Slepen pint een knoop; wiel = zoom;
-// slepen op de achtergrond = pan.
+// en thema's aan/uit, kleur op soort of thema, grootte op passages, centraliteit
+// of brugfunctie, labels, lijnsoorten en een ondergrens voor het gewicht, de
+// focusstand (alleen de buurt van een knoop), het kortste pad tussen twee knopen,
+// "vraag het brein" (het denkpad licht op), een detailpaneel per knoop (passages,
+// buren, begrippen, thema, scores), een lijstweergave (toegankelijk), zoomen,
+// passend maken, herstellen, volledig scherm en export. Slepen pint een knoop;
+// wiel = zoom; slepen op de achtergrond = pan. De weergave-instellingen blijven
+// per apparaat bewaard (localStorage, altijd in try/catch).
 
 type GNode = GraafKnoop;
 type GEdge = GraafLijn;
@@ -22,6 +26,8 @@ interface Detail {
   buren: { id: string; label: string; group: string; weight: number; soort: GEdge["soort"] }[];
   begrippen: string[];
   publiek: string[];
+  thema: { id: number; naam: string } | null;
+  scores: { centraal: number; brug: number } | null;
 }
 
 interface Denkpad {
@@ -30,6 +36,40 @@ interface Denkpad {
   retrievers: string[];
   stappen: { id: string; label: string; group: string; score: number; via: string[]; passage: string }[];
 }
+
+interface Pad {
+  van: string;
+  naar: string;
+  knopen: { id: string; label: string; group: string }[];
+  lijnen: GEdge[];
+}
+
+interface Focus {
+  id: string;
+  diepte: number;
+  knopen: Set<string>;
+}
+
+export interface ThemaKort {
+  id: number;
+  naam: string;
+  grootte: number;
+}
+
+type KleurStand = "soort" | "thema";
+type LabelStand = "auto" | "alles" | "geen";
+type GrootteStand = "passages" | "centraal" | "brug";
+
+interface Weergave {
+  kleur: KleurStand;
+  labels: LabelStand;
+  grootte: GrootteStand;
+  soorten: LijnSoort[];
+  minGewicht: number;
+}
+
+const WEERGAVE_SLEUTEL = "zf:kennisgraaf:weergave";
+const STANDAARD_WEERGAVE: Weergave = { kleur: "soort", labels: "auto", grootte: "passages", soorten: ["begrippen", "semantisch", "begrip"], minGewicht: 0 };
 
 const GROUP_COLOR: Record<string, string> = {
   intern: "#7CC5FF",
@@ -55,12 +95,17 @@ const GROUP_LABEL: Record<string, string> = {
   begrip: "Begrippen",
   overig: "Overig",
 };
+/** twaalf kleuren voor thema's, goed uit elkaar te houden op de donkere achtergrond */
+const THEMA_KLEUR = ["#4FE0A0", "#7CC5FF", "#FFC46B", "#C9A5FF", "#F5B9AE", "#73D2C0", "#F2E36B", "#FF9DC6", "#9EE6C9", "#B6C2CC", "#FFA07A", "#8FD3FF"];
 const SOORT_LABEL: Record<GEdge["soort"], string> = { begrippen: "woordoverlap", semantisch: "semantisch (embeddings)", begrip: "begrip" };
+const SOORT_KORT: Record<LijnSoort, string> = { begrippen: "woorden", semantisch: "semantisch", begrip: "begrippen" };
 const colorOf = (g: string) => GROUP_COLOR[g] ?? "#8A938C";
+const themaKleur = (t: number | undefined) => (t === undefined ? "#8A938C" : THEMA_KLEUR[(t - 1) % THEMA_KLEUR.length] ?? "#8A938C");
 const PUBLIEK_LABEL: Record<string, string> = { public: "openbaar", werknemer: "werknemers", opdrachtgever: "opdrachtgevers", admin: "alleen beheer" };
 
 const W = 1000;
 const H = 700;
+const lijnSleutel = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
 interface P {
   x: number;
@@ -69,7 +114,40 @@ interface P {
   vy: number;
 }
 
-export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: GNode[]; edges: GEdge[]; begrippen: Begrip[]; centraal: string[] }) {
+const knopKlasse = "rounded-md border border-white/15 px-2 py-1 hover:bg-white/10 disabled:opacity-40";
+const knopActief = "rounded-md border border-brand-mint/60 bg-brand-mint/15 px-2 py-1 text-white";
+
+/** Een rij keuzeknoppen (één actief), als segmentknop. */
+function Keuze<T extends string>({ label, waarde, opties, onKies }: { label: string; waarde: T; opties: { v: T; t: string }[]; onKies: (v: T) => void }) {
+  return (
+    <span className="inline-flex items-center gap-1" role="group" aria-label={label}>
+      <span className="text-white/35">{label}</span>
+      {opties.map((o) => (
+        <button key={o.v} type="button" aria-pressed={waarde === o.v} onClick={() => onKies(o.v)} className={waarde === o.v ? knopActief : knopKlasse}>
+          {o.t}
+        </button>
+      ))}
+    </span>
+  );
+}
+
+export function KnowledgeGraph({
+  nodes,
+  edges,
+  begrippen,
+  centraal,
+  bruggen,
+  themas,
+  maten,
+}: {
+  nodes: GNode[];
+  edges: GEdge[];
+  begrippen: Begrip[];
+  centraal: string[];
+  bruggen: string[];
+  themas: ThemaKort[];
+  maten: Record<string, { c: number; b: number }>;
+}) {
   const idx = useMemo(() => new Map(nodes.map((n, i) => [n.id, i])), [nodes]);
   const neighbors = useMemo(() => {
     const m = new Map<string, Set<string>>();
@@ -81,10 +159,44 @@ export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: G
     return m;
   }, [nodes, edges]);
   const centraalSet = useMemo(() => new Set(centraal), [centraal]);
+  const brugSet = useMemo(() => new Set(bruggen), [bruggen]);
   const groups = useMemo(() => [...new Set(nodes.map((n) => n.group))], [nodes]);
+  const themaNaam = useMemo(() => new Map(themas.map((t) => [t.id, t.naam])), [themas]);
+
+  // --- weergave (per apparaat bewaard)
+  const [weergave, setWeergave] = useState<Weergave>(STANDAARD_WEERGAVE);
+  const [weergaveGeladen, setWeergaveGeladen] = useState(false);
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(WEERGAVE_SLEUTEL);
+      if (raw) {
+        const w = JSON.parse(raw) as Partial<Weergave>;
+        setWeergave({
+          kleur: w.kleur === "thema" ? "thema" : "soort",
+          labels: w.labels === "alles" || w.labels === "geen" ? w.labels : "auto",
+          grootte: w.grootte === "centraal" || w.grootte === "brug" ? w.grootte : "passages",
+          soorten: Array.isArray(w.soorten) ? (w.soorten.filter((s): s is LijnSoort => s === "begrippen" || s === "semantisch" || s === "begrip")) : STANDAARD_WEERGAVE.soorten,
+          minGewicht: typeof w.minGewicht === "number" && w.minGewicht >= 0 && w.minGewicht <= 0.6 ? w.minGewicht : 0,
+        });
+      }
+    } catch {
+      /* geen opslag (privévenster): de standaard */
+    }
+    setWeergaveGeladen(true);
+  }, []);
+  useEffect(() => {
+    if (!weergaveGeladen) return;
+    try {
+      window.localStorage.setItem(WEERGAVE_SLEUTEL, JSON.stringify(weergave));
+    } catch {
+      /* geen opslag: dan onthouden we niets */
+    }
+  }, [weergave, weergaveGeladen]);
+  const zetWeergave = (deel: Partial<Weergave>) => setWeergave((w) => ({ ...w, ...deel }));
 
   // --- filters en selectie
   const [uit, setUit] = useState<Set<string>>(() => new Set());
+  const [uitThemas, setUitThemas] = useState<Set<number>>(() => new Set());
   const [zoek, setZoek] = useState("");
   const [vraag, setVraag] = useState("");
   const [pad, setPad] = useState<Denkpad | null>(null);
@@ -93,11 +205,34 @@ export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: G
   const [detail, setDetail] = useState<Detail | null>(null);
   const [detailBezig, setDetailBezig] = useState(false);
   const [melding, setMelding] = useState<string | null>(null);
+  const [focus, setFocus] = useState<Focus | null>(null);
+  const [routeVan, setRouteVan] = useState<string | null>(null);
+  const [route, setRoute] = useState<Pad | null>(null);
+  const [lijst, setLijst] = useState(false);
+  const [volledig, setVolledig] = useState(false);
 
-  const zichtbaar = useCallback((n: GNode) => !uit.has(n.group), [uit]);
+  const zichtbaar = useCallback(
+    (n: GNode) => !uit.has(n.group) && (n.thema === undefined || !uitThemas.has(n.thema)) && (!focus || focus.knopen.has(n.id)),
+    [uit, uitThemas, focus],
+  );
+  const soortenSet = useMemo(() => new Set(weergave.soorten), [weergave.soorten]);
+  const lijnZichtbaar = useCallback((e: GEdge) => soortenSet.has(e.soort) && e.weight >= weergave.minGewicht, [soortenSet, weergave.minGewicht]);
   const zoekLager = zoek.trim().toLowerCase();
   const matcht = useCallback((n: GNode) => zoekLager.length > 0 && n.label.toLowerCase().includes(zoekLager), [zoekLager]);
   const padIds = useMemo(() => new Set(pad?.stappen.map((s) => s.id) ?? []), [pad]);
+  const routeIds = useMemo(() => new Set(route?.knopen.map((k) => k.id) ?? []), [route]);
+  const routeLijnen = useMemo(() => new Set(route?.lijnen.map((l) => lijnSleutel(l.source, l.target)) ?? []), [route]);
+
+  const kleurVan = useCallback((n: GNode) => (weergave.kleur === "thema" ? themaKleur(n.thema) : colorOf(n.group)), [weergave.kleur]);
+  const straal = useCallback(
+    (n: GNode) => {
+      if (n.group === "begrip") return 4 + Math.sqrt(n.size) * 1.6;
+      if (weergave.grootte === "centraal") return 4 + (maten[n.id]?.c ?? 0) * 26;
+      if (weergave.grootte === "brug") return 4 + (maten[n.id]?.b ?? 0) * 26;
+      return 5 + Math.sqrt(n.size) * 2.2;
+    },
+    [weergave.grootte, maten],
+  );
 
   // --- physics
   const pos = useRef<P[]>([]);
@@ -106,13 +241,17 @@ export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: G
   const drag = useRef<{ i: number; moved: boolean } | null>(null);
   const pan = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
   const [, force] = useState(0);
   const [hover, setHover] = useState<string | null>(null);
   const [view, setView] = useState({ scale: 1, tx: 0, ty: 0 });
   const viewRef = useRef(view);
   viewRef.current = view;
-  const uitRef = useRef(uit);
-  uitRef.current = uit;
+  // wat de physics mag zien: dezelfde zichtbaarheid als het tekenen, maar via een ref (de animatie loopt buiten React)
+  const zichtRef = useRef<boolean[]>([]);
+  zichtRef.current = nodes.map(zichtbaar);
+  const lijnRef = useRef<boolean[]>([]);
+  lijnRef.current = edges.map(lijnZichtbaar);
 
   // beginposities in een ring, deterministisch (gelijk op server en in de browser)
   if (pos.current.length !== nodes.length) {
@@ -127,7 +266,7 @@ export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: G
     const p = pos.current;
     const n = p.length;
     const a = alpha.current;
-    const weg = (i: number) => uitRef.current.has(nodes[i]?.group ?? "");
+    const weg = (i: number) => zichtRef.current[i] === false;
     for (let i = 0; i < n; i++) {
       if (weg(i)) continue;
       for (let j = i + 1; j < n; j++) {
@@ -150,10 +289,11 @@ export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: G
         p[j]!.vy -= fy;
       }
     }
-    for (const e of edges) {
+    edges.forEach((e, k) => {
+      if (lijnRef.current[k] === false) return;
       const i = idx.get(e.source);
       const j = idx.get(e.target);
-      if (i === undefined || j === undefined || weg(i) || weg(j)) continue;
+      if (i === undefined || j === undefined || weg(i) || weg(j)) return;
       const dx = p[j]!.x - p[i]!.x;
       const dy = p[j]!.y - p[i]!.y;
       const d = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -166,7 +306,7 @@ export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: G
       p[i]!.vy += fy;
       p[j]!.vx -= fx;
       p[j]!.vy -= fy;
-    }
+    });
     const dragI = drag.current?.i ?? -1;
     for (let i = 0; i < n; i++) {
       if (i === dragI || weg(i)) continue;
@@ -181,7 +321,7 @@ export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: G
     force((v) => v + 1);
     if (alpha.current > 0.025 || drag.current) raf.current = requestAnimationFrame(tick);
     else raf.current = null;
-  }, [edges, idx, nodes]);
+  }, [edges, idx]);
 
   const kick = useCallback(
     (a = 0.6) => {
@@ -197,6 +337,13 @@ export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: G
       if (raf.current !== null) cancelAnimationFrame(raf.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // volledig scherm bijhouden (ook als iemand met Esc eruit gaat)
+  useEffect(() => {
+    const onChange = () => setVolledig(document.fullscreenElement === wrapRef.current && wrapRef.current !== null);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
   // --- muis en toetsen
@@ -235,7 +382,7 @@ export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: G
     }
   };
   const onUp = (_e: RPointerEvent, node?: GNode) => {
-    if (drag.current && node && !drag.current.moved) void kies(node.id);
+    if (drag.current && node && !drag.current.moved) void klikKnoop(node.id);
     drag.current = null;
     pan.current = null;
   };
@@ -246,6 +393,7 @@ export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: G
     const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
     setView((v) => ({ ...v, scale: Math.max(0.3, Math.min(3, v.scale * factor)) }));
   };
+  const zoom = (factor: number) => setView((v) => ({ ...v, scale: Math.max(0.3, Math.min(3, v.scale * factor)) }));
 
   const passend = () => {
     const p = pos.current;
@@ -262,12 +410,26 @@ export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: G
     pos.current = [];
     setView({ scale: 1, tx: 0, ty: 0 });
     setUit(new Set());
+    setUitThemas(new Set());
     setZoek("");
     setPad(null);
     setGekozen(null);
     setDetail(null);
+    setFocus(null);
+    setRoute(null);
+    setRouteVan(null);
+    setMelding(null);
+    setWeergave(STANDAARD_WEERGAVE);
     force((v) => v + 1);
     kick(1);
+  };
+  const volledigScherm = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await wrapRef.current?.requestFullscreen?.();
+    } catch {
+      setMelding("Volledig scherm is in deze browser niet beschikbaar.");
+    }
   };
 
   const kies = useCallback(async (id: string | null) => {
@@ -280,6 +442,25 @@ export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: G
     if (r?.ok) setDetail((await r.json()) as Detail);
     else setMelding("Details van deze knoop zijn niet te laden.");
   }, []);
+
+  /** Een klik op een knoop: het eindpunt van een pad als er een begin staat, anders de details. */
+  const klikKnoop = useCallback(
+    async (id: string) => {
+      if (routeVan && routeVan !== id) {
+        setMelding(null);
+        const r = await fetch(`/api/admin/kennisgraaf?van=${encodeURIComponent(routeVan)}&naar=${encodeURIComponent(id)}`, { cache: "no-store" }).catch(() => null);
+        setRouteVan(null);
+        if (r?.ok) {
+          const p = (await r.json()) as Pad;
+          setRoute(p);
+          if (p.knopen.length === 0) setMelding("Er is geen pad tussen deze twee knopen: ze liggen in losse delen van het netwerk.");
+        } else setMelding("Het pad kon niet worden berekend.");
+        return;
+      }
+      await kies(id);
+    },
+    [routeVan, kies],
+  );
 
   const vraagHetBrein = async () => {
     const v = vraag.trim();
@@ -298,11 +479,31 @@ export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: G
     } else setMelding("De vraag kon niet aan het brein worden gesteld.");
   };
 
+  const focusOp = async (id: string, diepte: 1 | 2) => {
+    setMelding(null);
+    const r = await fetch(`/api/admin/kennisgraaf?buurt=${encodeURIComponent(id)}&diepte=${diepte}`, { cache: "no-store" }).catch(() => null);
+    if (!r?.ok) {
+      setMelding("De buurt kon niet worden geladen.");
+      return;
+    }
+    const b = (await r.json()) as { id: string; diepte: number; knopen: string[] };
+    setFocus({ id, diepte: b.diepte, knopen: new Set(b.knopen) });
+    kick(0.8);
+  };
+  const focusUit = () => {
+    setFocus(null);
+    kick(0.6);
+  };
+
+  // zoeken: Enter kiest de eerste treffer
+  const zoekTreffers = useMemo(() => (zoekLager ? nodes.filter((n) => n.label.toLowerCase().includes(zoekLager)) : []), [nodes, zoekLager]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setGekozen(null);
         setDetail(null);
+        setRouteVan(null);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -311,23 +512,45 @@ export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: G
 
   const p = pos.current;
   const actiefId = hover ?? gekozen;
-  const nadruk = zoekLager.length > 0 || padIds.size > 0;
+  const nadruk = zoekLager.length > 0 || padIds.size > 0 || routeIds.size > 0;
   const zichtbaarAantal = nodes.filter(zichtbaar).length;
+  const lijnenZichtbaar = edges.filter((e, k) => {
+    if (!lijnZichtbaar(e)) return false;
+    const i = idx.get(e.source);
+    const j = idx.get(e.target);
+    return i !== undefined && j !== undefined && zichtRef.current[i] !== false && zichtRef.current[j] !== false && k >= 0;
+  }).length;
+  const gekozenNode = gekozen ? nodes.find((n) => n.id === gekozen) : undefined;
+  const themasInBeeld = themas.filter((t) => nodes.some((n) => n.thema === t.id));
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0b0e13] text-white">
+    <div ref={wrapRef} className={`overflow-hidden rounded-2xl border border-white/10 bg-[#0b0e13] text-white ${volledig ? "flex h-screen flex-col rounded-none" : ""}`}>
       {/* werkbalk */}
       <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-3 py-2 text-[11px] text-white/60">
-        <span className="font-semibold text-white/85">{zichtbaarAantal} knopen · {edges.length} verbanden</span>
-        <label className="ml-2 flex items-center gap-1.5">
-          <span className="sr-only">Zoek een knoop</span>
+        <span className="font-semibold text-white/85">
+          {zichtbaarAantal} knopen · {lijnenZichtbaar} verbanden · {begrippen.length} begrippen
+          {focus ? ` · focus op ${nodes.find((n) => n.id === focus.id)?.label ?? focus.id} (${focus.diepte} ${focus.diepte === 1 ? "stap" : "stappen"})` : ""}
+        </span>
+        <form
+          className="ml-2 flex items-center gap-1.5"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const eerste = zoekTreffers[0];
+            if (eerste) void kies(eerste.id);
+          }}
+        >
+          <label className="sr-only" htmlFor="kg-zoek">
+            Zoek een knoop
+          </label>
           <input
+            id="kg-zoek"
             value={zoek}
             onChange={(e) => setZoek(e.target.value)}
             placeholder="Zoek een document of begrip…"
             className="w-48 rounded-md border border-white/15 bg-white/5 px-2 py-1 text-[11px] text-white placeholder:text-white/35 focus:border-brand-mint focus:outline-none"
           />
-        </label>
+          {zoekLager && <span className="text-white/35">{zoekTreffers.length} {zoekTreffers.length === 1 ? "treffer" : "treffers"}{zoekTreffers.length > 0 ? " · Enter opent de eerste" : ""}</span>}
+        </form>
         <form
           className="flex items-center gap-1.5"
           onSubmit={(e) => {
@@ -354,45 +577,148 @@ export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: G
             </button>
           )}
         </form>
-        <span className="ml-auto flex items-center gap-2">
-          <button type="button" onClick={passend} className="rounded-md border border-white/15 px-2 py-1 hover:bg-white/10">
+        <span className="ml-auto flex flex-wrap items-center gap-1.5">
+          <button type="button" onClick={() => zoom(1.25)} aria-label="Inzoomen" className={knopKlasse}>
+            +
+          </button>
+          <button type="button" onClick={() => zoom(1 / 1.25)} aria-label="Uitzoomen" className={knopKlasse}>
+            −
+          </button>
+          <button type="button" onClick={passend} className={knopKlasse}>
             Passend maken
           </button>
-          <button type="button" onClick={herstel} className="rounded-md border border-white/15 px-2 py-1 hover:bg-white/10">
+          <button type="button" onClick={herstel} className={knopKlasse}>
             Herstellen
           </button>
-          <Link href="/api/admin/kennisgraaf?export=json" prefetch={false} className="rounded-md border border-white/15 px-2 py-1 hover:bg-white/10">
-            JSON
-          </Link>
-          <Link href="/api/admin/kennisgraaf?export=graphml" prefetch={false} className="rounded-md border border-white/15 px-2 py-1 hover:bg-white/10">
-            GraphML
-          </Link>
+          <button type="button" onClick={() => setLijst((v) => !v)} aria-pressed={lijst} className={lijst ? knopActief : knopKlasse}>
+            Lijst
+          </button>
+          <button type="button" onClick={() => void volledigScherm()} aria-pressed={volledig} className={volledig ? knopActief : knopKlasse}>
+            {volledig ? "Scherm sluiten" : "Volledig scherm"}
+          </button>
+          <details className="relative">
+            <summary className={`${knopKlasse} cursor-pointer list-none`}>Exporteren</summary>
+            <div className="absolute right-0 z-20 mt-1 flex w-56 flex-col rounded-md border border-white/15 bg-[#0e1116] p-1 shadow-xl">
+              {(
+                [
+                  ["json", "JSON (knopen, lijnen, thema's)"],
+                  ["graphml", "GraphML (Gephi, yEd)"],
+                  ["dot", "DOT (Graphviz)"],
+                  ["csv-knopen", "CSV: knopen (Excel)"],
+                  ["csv-lijnen", "CSV: lijnen (Excel)"],
+                  ["rapport", "Rapport in gewone taal (Markdown)"],
+                ] as const
+              ).map(([k, t]) => (
+                <Link key={k} href={`/api/admin/kennisgraaf?export=${k}`} prefetch={false} className="rounded px-2 py-1 text-left text-white/80 hover:bg-white/10">
+                  {t}
+                </Link>
+              ))}
+            </div>
+          </details>
         </span>
+      </div>
+      {/* weergave */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-white/10 px-3 py-1.5 text-[11px] text-white/60">
+        <Keuze label="Kleur" waarde={weergave.kleur} opties={[{ v: "soort", t: "soort" }, { v: "thema", t: "thema" }]} onKies={(v) => zetWeergave({ kleur: v })} />
+        <Keuze label="Grootte" waarde={weergave.grootte} opties={[{ v: "passages", t: "passages" }, { v: "centraal", t: "centraal" }, { v: "brug", t: "brug" }]} onKies={(v) => zetWeergave({ grootte: v })} />
+        <Keuze label="Labels" waarde={weergave.labels} opties={[{ v: "auto", t: "auto" }, { v: "alles", t: "alles" }, { v: "geen", t: "geen" }]} onKies={(v) => zetWeergave({ labels: v })} />
+        <span className="inline-flex items-center gap-1" role="group" aria-label="Lijnsoorten">
+          <span className="text-white/35">Lijnen</span>
+          {(["begrippen", "semantisch", "begrip"] as const).map((s) => {
+            const aan = soortenSet.has(s);
+            return (
+              <button
+                key={s}
+                type="button"
+                aria-pressed={aan}
+                onClick={() => {
+                  zetWeergave({ soorten: aan ? weergave.soorten.filter((x) => x !== s) : [...weergave.soorten, s] });
+                  kick(0.5);
+                }}
+                className={aan ? knopActief : knopKlasse}
+              >
+                {SOORT_KORT[s]}
+              </button>
+            );
+          })}
+        </span>
+        <label className="inline-flex items-center gap-1.5">
+          <span className="text-white/35">Minimaal gewicht</span>
+          <input
+            type="range"
+            min={0}
+            max={0.6}
+            step={0.05}
+            value={weergave.minGewicht}
+            onChange={(e) => {
+              zetWeergave({ minGewicht: Number(e.target.value) });
+              kick(0.4);
+            }}
+            className="w-24 accent-[#4FE0A0]"
+          />
+          <span className="w-8 tabular-nums text-white/70">{weergave.minGewicht.toFixed(2)}</span>
+        </label>
+        {focus && (
+          <button type="button" onClick={focusUit} className={knopActief}>
+            Focus uit
+          </button>
+        )}
+        {routeVan && <span className="text-[#FFC46B]">Pad vanaf {nodes.find((n) => n.id === routeVan)?.label ?? routeVan}: klik op de bestemming (Esc = stop)</span>}
+        {route && !routeVan && (
+          <button type="button" onClick={() => setRoute(null)} className={knopActief}>
+            Pad wissen
+          </button>
+        )}
       </div>
       {/* legenda = filters */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-white/10 px-3 py-1.5 text-[11px] text-white/55">
-        {groups.map((g) => (
-          <button
-            key={g}
-            type="button"
-            aria-pressed={!uit.has(g)}
-            onClick={() => {
-              setUit((s) => {
-                const n = new Set(s);
-                if (n.has(g)) n.delete(g);
-                else n.add(g);
-                return n;
-              });
-              kick(0.5);
-            }}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 ${uit.has(g) ? "border-white/10 opacity-40" : "border-white/20"}`}
-          >
-            <span className="h-2 w-2 rounded-full" style={{ background: colorOf(g) }} />
-            {GROUP_LABEL[g] ?? g}
-            <span className="text-white/35">{nodes.filter((n) => n.group === g).length}</span>
-          </button>
-        ))}
-        <span className="ml-auto text-white/30">sleep een knoop · scroll = zoom · klik = details · ring = meest centraal</span>
+        {weergave.kleur === "soort"
+          ? groups.map((g) => (
+              <button
+                key={g}
+                type="button"
+                aria-pressed={!uit.has(g)}
+                onClick={() => {
+                  setUit((s) => {
+                    const n = new Set(s);
+                    if (n.has(g)) n.delete(g);
+                    else n.add(g);
+                    return n;
+                  });
+                  kick(0.5);
+                }}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 ${uit.has(g) ? "border-white/10 opacity-40" : "border-white/20"}`}
+              >
+                <span className="h-2 w-2 rounded-full" style={{ background: colorOf(g) }} />
+                {GROUP_LABEL[g] ?? g}
+                <span className="text-white/35">{nodes.filter((n) => n.group === g).length}</span>
+              </button>
+            ))
+          : themasInBeeld.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                aria-pressed={!uitThemas.has(t.id)}
+                title={t.naam}
+                onClick={() => {
+                  setUitThemas((s) => {
+                    const n = new Set(s);
+                    if (n.has(t.id)) n.delete(t.id);
+                    else n.add(t.id);
+                    return n;
+                  });
+                  kick(0.5);
+                }}
+                className={`inline-flex max-w-[16rem] items-center gap-1.5 rounded-full border px-2 py-0.5 ${uitThemas.has(t.id) ? "border-white/10 opacity-40" : "border-white/20"}`}
+              >
+                <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: themaKleur(t.id) }} />
+                <span className="truncate">
+                  {t.id}. {t.naam}
+                </span>
+                <span className="text-white/35">{t.grootte}</span>
+              </button>
+            ))}
+        <span className="ml-auto text-white/30">sleep een knoop · scroll = zoom · klik = details · ring = meest centraal · ruitring = brug</span>
       </div>
       {melding && (
         <p role="status" className="border-b border-white/10 px-3 py-1.5 text-[11px] text-[#FFC46B]">
@@ -400,97 +726,180 @@ export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: G
         </p>
       )}
 
-      <div className="relative">
-        <svg
-          ref={svgRef}
-          viewBox={`0 0 ${W} ${H}`}
-          className="h-[70vh] w-full touch-none select-none"
-          onPointerMove={onMove}
-          onPointerDown={onBgDown}
-          onPointerUp={(e) => onUp(e)}
-          onPointerLeave={() => {
-            drag.current = null;
-            pan.current = null;
-          }}
-          onWheel={onWheel}
-        >
-          <g transform={`translate(${view.tx} ${view.ty}) scale(${view.scale})`}>
-            {edges.map((e, k) => {
-              const i = idx.get(e.source);
-              const j = idx.get(e.target);
-              if (i === undefined || j === undefined || !p[i] || !p[j]) return null;
-              if (!zichtbaar(nodes[i]!) || !zichtbaar(nodes[j]!)) return null;
-              const opPad = padIds.has(e.source) && padIds.has(e.target);
-              const active = actiefId === null ? true : actiefId === e.source || actiefId === e.target;
-              const kleur = opPad ? "rgba(79,224,160,0.7)" : e.soort === "semantisch" ? "rgba(201,165,255,0.35)" : e.soort === "begrip" ? "rgba(242,227,107,0.18)" : "rgba(255,255,255,0.22)";
-              return (
-                <line
-                  key={k}
-                  x1={p[i]!.x}
-                  y1={p[i]!.y}
-                  x2={p[j]!.x}
-                  y2={p[j]!.y}
-                  stroke={active ? kleur : "rgba(255,255,255,0.05)"}
-                  strokeWidth={(e.soort === "begrip" ? 0.5 : 0.6) + e.weight * 4}
-                  strokeDasharray={e.soort === "begrip" ? "3 3" : undefined}
-                />
-              );
-            })}
-            {nodes.map((n, i) => {
-              if (!p[i] || !zichtbaar(n)) return null;
-              const r = n.group === "begrip" ? 4 + Math.sqrt(n.size) * 1.6 : 5 + Math.sqrt(n.size) * 2.2;
-              const buur = actiefId !== null && neighbors.get(actiefId)?.has(n.id);
-              const hot = actiefId === n.id || Boolean(buur) || matcht(n) || padIds.has(n.id);
-              const dim = (actiefId !== null || nadruk) && !hot;
-              const showLabel = hot || (actiefId === null && !nadruk && (n.size >= 3 || n.group === "begrip"));
-              return (
-                <g
-                  key={n.id}
-                  transform={`translate(${p[i]!.x} ${p[i]!.y})`}
-                  style={{ cursor: "pointer", opacity: dim ? 0.2 : 1 }}
-                  onPointerDown={onNodeDown(i)}
-                  onPointerUp={(e) => onUp(e, n)}
-                  onPointerEnter={() => setHover(n.id)}
-                  onPointerLeave={() => setHover((h) => (h === n.id ? null : h))}
-                >
-                  {centraalSet.has(n.id) && <circle r={r + 4} fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth={1.2} />}
-                  {padIds.has(n.id) && <circle r={r + 7} fill="none" stroke="rgba(79,224,160,0.8)" strokeWidth={1.5} />}
-                  {n.group === "begrip" ? (
-                    <rect x={-r} y={-r} width={r * 2} height={r * 2} rx={2} transform="rotate(45)" fill={colorOf(n.group)} stroke="#0b0e13" strokeWidth={1.5} />
-                  ) : (
-                    <circle r={r} fill={colorOf(n.group)} stroke={gekozen === n.id ? "#fff" : "#0b0e13"} strokeWidth={1.5} />
-                  )}
-                  {showLabel && (
-                    <text
-                      x={r + 3}
-                      y={3.5}
-                      fontSize={actiefId === n.id ? 13 : n.group === "begrip" ? 9.5 : 10.5}
-                      fill={actiefId === n.id ? "#fff" : n.group === "begrip" ? "rgba(242,227,107,0.85)" : "rgba(255,255,255,0.7)"}
-                      style={{ pointerEvents: "none", paintOrder: "stroke", stroke: "#0b0e13", strokeWidth: 3 }}
-                    >
-                      {n.label.length > 42 ? `${n.label.slice(0, 42)}…` : n.label}
-                    </text>
-                  )}
-                </g>
-              );
-            })}
-          </g>
-        </svg>
+      <div className={`relative ${volledig ? "min-h-0 flex-1" : ""}`}>
+        {lijst ? (
+          <div className={`overflow-auto ${volledig ? "h-full" : "h-[70vh]"}`}>
+            <table className="w-full text-left text-xs">
+              <caption className="sr-only">Alle zichtbare knopen van de kennisgraaf</caption>
+              <thead className="sticky top-0 bg-[#0b0e13] text-[10px] uppercase tracking-[0.12em] text-white/40">
+                <tr>
+                  <th scope="col" className="px-3 py-2">
+                    Knoop
+                  </th>
+                  <th scope="col" className="px-3 py-2">
+                    Soort
+                  </th>
+                  <th scope="col" className="px-3 py-2">
+                    Thema
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-right">
+                    Passages
+                  </th>
+                  <th scope="col" className="px-3 py-2 text-right">
+                    Verbanden
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {nodes
+                  .filter(zichtbaar)
+                  .filter((n) => !zoekLager || matcht(n))
+                  .map((n) => (
+                    <tr key={n.id} className={`border-t border-white/5 hover:bg-white/5 ${gekozen === n.id ? "bg-white/10" : ""}`}>
+                      <td className="px-3 py-1.5">
+                        <button type="button" onClick={() => void kies(n.id)} className="flex items-center gap-2 text-left text-white/85 hover:underline">
+                          <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: kleurVan(n) }} />
+                          {n.label}
+                        </button>
+                      </td>
+                      <td className="px-3 py-1.5 text-white/55">{GROUP_LABEL[n.group] ?? n.group}</td>
+                      <td className="px-3 py-1.5 text-white/55">{n.thema !== undefined ? `${n.thema}. ${themaNaam.get(n.thema) ?? ""}` : "–"}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums text-white/55">{n.group === "begrip" ? "–" : n.size}</td>
+                      <td className="px-3 py-1.5 text-right tabular-nums text-white/55">{neighbors.get(n.id)?.size ?? 0}</td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <svg
+            ref={svgRef}
+            viewBox={`0 0 ${W} ${H}`}
+            className={`w-full touch-none select-none ${volledig ? "h-full" : "h-[70vh]"}`}
+            role="img"
+            aria-label="Kennisgraaf: documenten en begrippen als netwerk"
+            onPointerMove={onMove}
+            onPointerDown={onBgDown}
+            onPointerUp={(e) => onUp(e)}
+            onPointerLeave={() => {
+              drag.current = null;
+              pan.current = null;
+            }}
+            onWheel={onWheel}
+          >
+            <g transform={`translate(${view.tx} ${view.ty}) scale(${view.scale})`}>
+              {edges.map((e, k) => {
+                if (!lijnZichtbaar(e)) return null;
+                const i = idx.get(e.source);
+                const j = idx.get(e.target);
+                if (i === undefined || j === undefined || !p[i] || !p[j]) return null;
+                if (!zichtbaar(nodes[i]!) || !zichtbaar(nodes[j]!)) return null;
+                const opPad = padIds.has(e.source) && padIds.has(e.target);
+                const opRoute = routeLijnen.has(lijnSleutel(e.source, e.target));
+                const active = actiefId === null ? true : actiefId === e.source || actiefId === e.target;
+                const kleur = opRoute
+                  ? "rgba(255,196,107,0.95)"
+                  : opPad
+                    ? "rgba(79,224,160,0.7)"
+                    : e.soort === "semantisch"
+                      ? "rgba(201,165,255,0.35)"
+                      : e.soort === "begrip"
+                        ? "rgba(242,227,107,0.18)"
+                        : "rgba(255,255,255,0.22)";
+                return (
+                  <line
+                    key={k}
+                    x1={p[i]!.x}
+                    y1={p[i]!.y}
+                    x2={p[j]!.x}
+                    y2={p[j]!.y}
+                    stroke={active || opRoute ? kleur : "rgba(255,255,255,0.05)"}
+                    strokeWidth={(e.soort === "begrip" ? 0.5 : 0.6) + e.weight * 4 + (opRoute ? 1.5 : 0)}
+                    strokeDasharray={e.soort === "begrip" ? "3 3" : undefined}
+                  />
+                );
+              })}
+              {nodes.map((n, i) => {
+                if (!p[i] || !zichtbaar(n)) return null;
+                const r = straal(n);
+                const buur = actiefId !== null && neighbors.get(actiefId)?.has(n.id);
+                const hot = actiefId === n.id || Boolean(buur) || matcht(n) || padIds.has(n.id) || routeIds.has(n.id) || routeVan === n.id;
+                const dim = (actiefId !== null || nadruk) && !hot;
+                const showLabel = weergave.labels === "alles" || (weergave.labels === "auto" && (hot || (actiefId === null && !nadruk && (n.size >= 3 || n.group === "begrip" || Boolean(focus)))));
+                const kleur = kleurVan(n);
+                return (
+                  <g
+                    key={n.id}
+                    transform={`translate(${p[i]!.x} ${p[i]!.y})`}
+                    style={{ cursor: "pointer", opacity: dim ? 0.2 : 1 }}
+                    onPointerDown={onNodeDown(i)}
+                    onPointerUp={(e) => onUp(e, n)}
+                    onPointerEnter={() => setHover(n.id)}
+                    onPointerLeave={() => setHover((h) => (h === n.id ? null : h))}
+                  >
+                    {centraalSet.has(n.id) && <circle r={r + 4} fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth={1.2} />}
+                    {brugSet.has(n.id) && <rect x={-(r + 6)} y={-(r + 6)} width={(r + 6) * 2} height={(r + 6) * 2} rx={2} transform="rotate(45)" fill="none" stroke="rgba(255,196,107,0.55)" strokeWidth={1} />}
+                    {padIds.has(n.id) && <circle r={r + 7} fill="none" stroke="rgba(79,224,160,0.8)" strokeWidth={1.5} />}
+                    {(routeIds.has(n.id) || routeVan === n.id) && <circle r={r + 8} fill="none" stroke="rgba(255,196,107,0.95)" strokeWidth={1.8} />}
+                    {n.group === "begrip" ? (
+                      <rect x={-r} y={-r} width={r * 2} height={r * 2} rx={2} transform="rotate(45)" fill={kleur} stroke="#0b0e13" strokeWidth={1.5} />
+                    ) : (
+                      <circle r={r} fill={kleur} stroke={gekozen === n.id ? "#fff" : "#0b0e13"} strokeWidth={1.5} />
+                    )}
+                    {showLabel && (
+                      <text
+                        x={r + 3}
+                        y={3.5}
+                        fontSize={actiefId === n.id ? 13 : n.group === "begrip" ? 9.5 : 10.5}
+                        fill={actiefId === n.id ? "#fff" : n.group === "begrip" ? "rgba(242,227,107,0.85)" : "rgba(255,255,255,0.7)"}
+                        style={{ pointerEvents: "none", paintOrder: "stroke", stroke: "#0b0e13", strokeWidth: 3 }}
+                      >
+                        {n.label.length > 42 ? `${n.label.slice(0, 42)}…` : n.label}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+            </g>
+          </svg>
+        )}
 
         {/* detailpaneel */}
         {gekozen && (
           <aside className="absolute right-3 top-3 flex max-h-[calc(70vh-1.5rem)] w-80 flex-col overflow-hidden rounded-xl border border-white/15 bg-[#0e1116]/95 text-xs shadow-xl backdrop-blur" aria-live="polite">
             <div className="flex items-start gap-2 border-b border-white/10 px-3 py-2">
-              <span className="mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: colorOf(detail?.node.group ?? nodes.find((n) => n.id === gekozen)?.group ?? "overig") }} />
+              <span className="mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full" style={{ background: gekozenNode ? kleurVan(gekozenNode) : "#8A938C" }} />
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-white/90">{detail?.node.label ?? nodes.find((n) => n.id === gekozen)?.label ?? gekozen}</p>
+                <p className="font-semibold text-white/90">{detail?.node.label ?? gekozenNode?.label ?? gekozen}</p>
                 <p className="text-[10px] text-white/40">
-                  {GROUP_LABEL[detail?.node.group ?? ""] ?? ""}
+                  {GROUP_LABEL[detail?.node.group ?? gekozenNode?.group ?? ""] ?? ""}
+                  {detail?.thema ? ` · thema ${detail.thema.id}: ${detail.thema.naam}` : ""}
                   {detail && detail.publiek.length > 0 ? ` · ${detail.publiek.map((a) => PUBLIEK_LABEL[a] ?? a).join(", ")}` : ""}
                 </p>
               </div>
               <button type="button" onClick={() => void kies(null)} aria-label="Sluiten" className="text-white/45 hover:text-white">
                 ✕
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1 border-b border-white/10 px-3 py-1.5 text-[10px]">
+              <button type="button" onClick={() => void focusOp(gekozen, 1)} className={focus?.id === gekozen && focus.diepte === 1 ? knopActief : knopKlasse}>
+                Focus: buren
+              </button>
+              <button type="button" onClick={() => void focusOp(gekozen, 2)} className={focus?.id === gekozen && focus.diepte === 2 ? knopActief : knopKlasse}>
+                Focus: 2 stappen
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setRouteVan(gekozen);
+                  setRoute(null);
+                  setGekozen(null);
+                  setDetail(null);
+                  setMelding("Klik nu op de knoop waar het pad naartoe moet.");
+                }}
+                className={knopKlasse}
+              >
+                Pad vanaf hier
               </button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
@@ -501,6 +910,11 @@ export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: G
                     <a href={detail.node.href} target="_blank" rel="noopener noreferrer" className="mb-2 inline-block text-brand-mint underline">
                       Open de bron ↗
                     </a>
+                  )}
+                  {detail.scores && (
+                    <p className="mb-2 text-[10px] text-white/45">
+                      centraliteit {detail.scores.centraal} · brugfunctie {detail.scores.brug} (× 1000) · {detail.buren.length} {detail.buren.length === 1 ? "verband" : "verbanden"}
+                    </p>
                   )}
                   {detail.begrippen.length > 0 && (
                     <p className="mb-2 flex flex-wrap gap-1">
@@ -550,8 +964,36 @@ export function KnowledgeGraph({ nodes, edges, begrippen, centraal }: { nodes: G
           </aside>
         )}
 
+        {/* kortste pad */}
+        {route && !gekozen && route.knopen.length > 0 && (
+          <aside className="absolute left-3 top-3 max-h-[calc(70vh-1.5rem)] w-80 overflow-y-auto rounded-xl border border-[#FFC46B]/40 bg-[#0e1116]/95 p-3 text-xs shadow-xl backdrop-blur" aria-live="polite">
+            <p className="font-semibold text-white/90">
+              Kortste pad: {route.knopen.length - 1} {route.knopen.length - 1 === 1 ? "stap" : "stappen"}
+            </p>
+            <p className="mt-0.5 text-[10px] text-white/40">een sterke lijn is een korte stap; via begrippen mag ook</p>
+            <ol className="mt-2 space-y-1.5">
+              {route.knopen.map((k, i) => (
+                <li key={k.id}>
+                  <button type="button" onClick={() => void kies(k.id)} className="flex w-full items-start gap-2 text-left hover:underline">
+                    <span className="w-4 flex-shrink-0 text-white/35">{i + 1}.</span>
+                    <span className="mt-1 h-2 w-2 flex-shrink-0 rounded-full" style={{ background: colorOf(k.group) }} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-white/85">{k.label}</span>
+                      {i > 0 && route.lijnen[i - 1] && (
+                        <span className="block truncate text-[10px] text-white/40">
+                          via {SOORT_LABEL[route.lijnen[i - 1]!.soort]} · {route.lijnen[i - 1]!.weight}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ol>
+          </aside>
+        )}
+
         {/* denkpad */}
-        {pad && !gekozen && (
+        {pad && !gekozen && !route && (
           <aside className="absolute left-3 top-3 max-h-[calc(70vh-1.5rem)] w-80 overflow-y-auto rounded-xl border border-brand-mint/30 bg-[#0e1116]/95 p-3 text-xs shadow-xl backdrop-blur" aria-live="polite">
             <p className="font-semibold text-white/90">Denkpad voor: “{pad.vraag}”</p>
             <p className="mt-0.5 text-[10px] text-white/40">
