@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const m = vi.hoisted(() => ({
   logError: vi.fn(),
+  logWarn: vi.fn(),
+  logWarn: vi.fn(),
   featureEnabled: vi.fn(),
   imapConfig: vi.fn(),
   recordCronRun: vi.fn(),
@@ -10,7 +12,7 @@ const m = vi.hoisted(() => ({
   gate: vi.fn(),
 }));
 
-vi.mock("@/lib/logger", () => ({ logger: { error: m.logError, warn: vi.fn(), info: vi.fn(), debug: vi.fn() } }));
+vi.mock("@/lib/logger", () => ({ logger: { error: m.logError, warn: m.logWarn, info: vi.fn(), debug: vi.fn() } }));
 vi.mock("@/lib/flags", () => ({ featureEnabled: m.featureEnabled }));
 vi.mock("@/lib/mail", () => ({ imapConfig: m.imapConfig }));
 vi.mock("@/lib/metrics", () => ({ recordCronRun: m.recordCronRun }));
@@ -62,10 +64,29 @@ describe("draaiBonnenMail", () => {
     expect(cfg.timeout).toBeLessThanOrEqual(60);
   });
 
-  it("meldt een ontbrekende mailbox of administratie in het foutenlogboek", async () => {
+  it("meldt een ontbrekende mailbox of administratie als waarschuwing, niet als fout", async () => {
     expect(await draaiBonnenMail(deps({ imapConfig: () => null }))).toEqual({ status: "niet-ingericht", reden: "geen-mailbox" });
     expect(await draaiBonnenMail(deps({ administratieId: async () => null }))).toEqual({ status: "niet-ingericht", reden: "geen-administratie" });
-    expect(m.logError).toHaveBeenCalledTimes(2);
+    expect(m.logWarn).toHaveBeenCalledTimes(2);
+    expect(m.logError).not.toHaveBeenCalled();
+  });
+
+  it("meldt een inrichtingsfout hooguit één keer per dag", async () => {
+    const gezien = new Set<string>();
+    const eenmaalPerDag = async (s: string) => (gezien.has(s) ? false : (gezien.add(s), true));
+    for (let i = 0; i < 5; i++) await draaiBonnenMail(deps({ imapConfig: () => null, eenmaalPerDag }));
+    expect(m.logWarn).toHaveBeenCalledTimes(1);
+    // een andere reden is een eigen melding
+    await draaiBonnenMail(deps({ administratieId: async () => null, eenmaalPerDag }));
+    expect(m.logWarn).toHaveBeenCalledTimes(2);
+  });
+
+  it("meldt toch als het onthouden van de dagmelding zelf faalt (fail-open)", async () => {
+    const stuk = async (): Promise<boolean> => {
+      throw new Error("kv weg");
+    };
+    await draaiBonnenMail(deps({ imapConfig: () => null, eenmaalPerDag: stuk }));
+    expect(m.logWarn).toHaveBeenCalledTimes(1);
   });
 
   it("logt een fout van de mailserver zonder adressen of tekst eruit", async () => {
@@ -100,6 +121,15 @@ describe("route /api/internal/boekhouding/bonnen-mail", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ status: "uit" });
     expect(m.recordCronRun).toHaveBeenCalledWith("boekhouding-bonnen-mail", true);
+  });
+
+  it("niet ingericht: 200 en een geslaagde hartslag (een inrichtingsfout is geen storing)", async () => {
+    m.imapConfig.mockReturnValue(null);
+    const res = await aanroep();
+    expect(res.status).toBe(200);
+    expect((await res.json()).status).toBe("niet-ingericht");
+    expect(m.recordCronRun).toHaveBeenCalledWith("boekhouding-bonnen-mail", true);
+    expect(m.logError).not.toHaveBeenCalled();
   });
 
   it("met de vlag aan: leest de Postvak met het authserv-id uit de omgeving", async () => {
