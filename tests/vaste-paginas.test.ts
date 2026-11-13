@@ -111,6 +111,18 @@ describe("de pagina's, het paneel en de route", () => {
     }
   });
 
+  it("de vragen voor Google (FAQPage) staan er alleen als het onderdeel met de vragen zichtbaar is", () => {
+    const src = bron("app/(marketing)/uitzendbureau/page.tsx");
+    const voorwaarde = src.indexOf('{zichtbaar.includes("faq") ? (');
+    const faqPage = src.indexOf('"@type": "FAQPage"');
+    expect(voorwaarde).toBeGreaterThan(0);
+    expect(faqPage).toBeGreaterThan(voorwaarde);
+    // er staat maar één zo'n blok, en het sluit met ": null" vóór de rest van de pagina
+    expect(src.split('"@type": "FAQPage"')).toHaveLength(2);
+    expect(src.indexOf(") : null}", faqPage)).toBeLessThan(src.indexOf("<UitzendJobBoard"));
+    // geen andere vaste pagina heeft FAQ-gegevens buiten de indeling om
+    for (const p of PAGINAS) if (p !== "uitzendbureau") expect(bron(`app/(marketing)/${p}/page.tsx`), p).not.toContain("FAQPage");
+  });
   it("het paneel staat in het tabblad Pagina's, met verslepen", () => {
     const ontwerper = bron("components/admin/ontwerper/Ontwerper.tsx");
     expect(ontwerper).toContain("<VastePaginasPaneel onVoorbeeldPad={setVoorbeeldPad} onVernieuw={verversVoorbeeld} />");
