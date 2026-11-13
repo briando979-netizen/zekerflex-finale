@@ -146,7 +146,7 @@ describe("de routes", () => {
   const ROOT = process.cwd();
   const bron = (f: string) => readFileSync(path.join(ROOT, f), "utf8").split("\r\n").join("\n");
   it("geen webhook- of kanaalroute leest nog onbegrensd uit de request", () => {
-    for (const f of ["webhooks/stripe", "webhooks/didit", "telephony/sms", "telephony/voice", "telephony/menu", "telephony/gather", "telephony/status", "whatsapp/inkomend"]) {
+    for (const f of ["webhooks/stripe", "webhooks/didit", "telephony/sms", "telephony/voice", "telephony/menu", "telephony/gather", "telephony/status", "telephony/wachtrij", "telephony/wachtrij/klaar", "telephony/wachtrij/medewerker", "telephony/terugbellen", "whatsapp/inkomend"]) {
       const s = bron(`app/api/${f}/route.ts`);
       expect(s, f).toContain("webhookTekst(request, WEBHOOK_MAX.");
       expect(s, f).not.toMatch(/request\.(text|json|formData|arrayBuffer)\(/);
