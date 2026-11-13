@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/components/i18n/I18nProvider";
 import { POSE } from "@/lib/shop/foto-meting";
+import { FOTO_FOUT_TEKST, fotoFoutSoort, type FotoFout } from "@/lib/shop/foto-fout";
 import type { FotoUitkomst } from "@/components/marketing/paskamer/fotoMeting";
 
 // "Op mijn foto": de klant uploadt een foto van zichzelf (hele lichaam, van
@@ -19,7 +20,7 @@ export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToe
   const [bestand, setBestand] = useState<File | null>(null);
   const [stap, setStap] = useState<"" | "laden" | "meten">("");
   const [uit, setUit] = useState<FotoUitkomst | null>(null);
-  const [fout, setFout] = useState("");
+  const [fout, setFout] = useState<FotoFout | null>(null);
   const [borst, setBorst] = useState("");
   const [taille, setTaille] = useState("");
   const [afm, setAfm] = useState<{ w: number; h: number } | null>(null);
@@ -36,13 +37,13 @@ export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToe
 
   const meet = async (f: File, l: number) => {
     setStap("laden");
-    setFout("");
+    setFout(null);
     setUit(null);
     try {
       const { meetFoto } = await import("@/components/marketing/paskamer/fotoMeting");
       setUit(await meetFoto(f, l, (s) => setStap(s)));
-    } catch {
-      setFout(p.pasFotoMislukt);
+    } catch (e) {
+      setFout(fotoFoutSoort(e));
     } finally {
       setStap("");
     }
@@ -120,7 +121,7 @@ export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToe
       <div className="space-y-2.5 border-t border-hair p-3">
         {fout && (
           <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2 text-[13px] font-semibold text-crit">
-            {fout}
+            {p[FOTO_FOUT_TEKST[fout]]}
           </p>
         )}
         {probleem && (
@@ -134,15 +135,16 @@ export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToe
           </p>
         ))}
 
-        {uit && !probleem && (
+        {((uit && !probleem) || fout) && (
           <div className="space-y-2.5">
+            {fout && <p className="text-[13px] font-bold text-ink">{p.pasFotoHandmatigTitel}</p>}
             <div className="flex flex-wrap items-center gap-3">
-              {uit.gezicht && (
+              {uit?.gezicht && (
                 // eslint-disable-next-line @next/next/no-img-element -- uitgesneden gezicht uit de foto
                 <img src={uit.gezicht} alt={p.fotoTitel} className="h-14 w-[45px] rounded-[50%] border border-hair object-cover" />
               )}
-              {uit.huid && <span className="inline-flex items-center gap-1.5 text-[12px] text-neutralx-600"><span className="h-5 w-5 rounded-full border border-hair" style={{ background: uit.huid }} aria-hidden />{p.huid}</span>}
-              {uit.haarKleur && <span className="inline-flex items-center gap-1.5 text-[12px] text-neutralx-600"><span className="h-5 w-5 rounded-full border border-hair" style={{ background: uit.haarKleur }} aria-hidden />{p.haarTitel}</span>}
+              {uit?.huid && <span className="inline-flex items-center gap-1.5 text-[12px] text-neutralx-600"><span className="h-5 w-5 rounded-full border border-hair" style={{ background: uit.huid }} aria-hidden />{p.huid}</span>}
+              {uit?.haarKleur && <span className="inline-flex items-center gap-1.5 text-[12px] text-neutralx-600"><span className="h-5 w-5 rounded-full border border-hair" style={{ background: uit.haarKleur }} aria-hidden />{p.haarTitel}</span>}
             </div>
             <div className="grid grid-cols-3 gap-2">
               <label className="text-[12px] font-semibold text-ink">
@@ -159,12 +161,12 @@ export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToe
                   inputMode="numeric"
                   value={lengte}
                   onChange={(e) => setLengte(getal(e.target.value, 90, 215) ?? lengte)}
-                  onBlur={() => bestand && void meet(bestand, lengte)}
+                  onBlur={() => bestand && !fout && void meet(bestand, lengte)}
                   className="mt-1 block h-9 w-full rounded-lg border border-hairstrong px-2 text-[14px] font-semibold"
                 />
               </label>
             </div>
-            <p className="text-[11px] text-neutralx-500">{p.pasFotoGeschat}</p>
+            {uit && <p className="text-[11px] text-neutralx-500">{p.pasFotoGeschat}</p>}
           </div>
         )}
 
@@ -173,10 +175,10 @@ export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToe
           <button type="button" onClick={() => invoer.current?.click()} disabled={stap !== ""} className="h-10 rounded-lg border border-hairstrong px-3.5 text-[13px] font-semibold text-ink hover:bg-paper-soft disabled:opacity-50">
             {uit ? p.pasFotoAndere : p.pasFotoKies}
           </button>
-          {uit && !probleem && (
+          {((uit && !probleem) || fout) && (
             <button
               type="button"
-              onClick={() => onToepassen({ lengte, borst: getal(borst, 60, 160), taille: getal(taille, 50, 160), huid: uit.huid, haarKleur: uit.haarKleur, gezicht: uit.gezicht })}
+              onClick={() => onToepassen({ lengte, borst: getal(borst, 60, 160), taille: getal(taille, 50, 160), huid: uit?.huid ?? null, haarKleur: uit?.haarKleur ?? null, gezicht: uit?.gezicht ?? null })}
               className="h-10 flex-1 rounded-lg bg-brand-500 px-4 text-[13px] font-bold text-white hover:bg-brand-600"
             >
               {p.pasFotoToepassen}

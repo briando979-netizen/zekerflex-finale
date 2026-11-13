@@ -5,6 +5,7 @@
 // meten. De foto verlaat het toestel nooit. Rekenregels: lib/shop/foto-meting.ts.
 
 import { HAARKLEUREN } from "@/lib/shop/paspop3d/kleding";
+import { FotoFoutError, isHeic } from "@/lib/shop/foto-fout";
 import { POSE, beoordeelFoto, dichtstbij, gemiddeldeKleur, gezichtsKader, huidVoorPaspop, meetLichaam, type Meting, type Probleem, type Punt } from "@/lib/shop/foto-meting";
 
 const BASIS = "/paskamer/ml";
@@ -46,17 +47,46 @@ export type FotoUitkomst = {
   punten: Punt[] | null;
 };
 
-async function naarCanvas(bestand: File, max = 1280): Promise<HTMLCanvasElement> {
-  const bmp = await createImageBitmap(bestand);
-  const f = Math.min(1, max / Math.max(bmp.width, bmp.height));
+function tekenOp(bron: CanvasImageSource, breed: number, hoog: number, max: number): HTMLCanvasElement {
+  const f = Math.min(1, max / Math.max(breed, hoog));
   const c = document.createElement("canvas");
-  c.width = Math.round(bmp.width * f);
-  c.height = Math.round(bmp.height * f);
+  c.width = Math.max(1, Math.round(breed * f));
+  c.height = Math.max(1, Math.round(hoog * f));
   const ctx = c.getContext("2d");
-  if (!ctx) throw new Error("canvas");
-  ctx.drawImage(bmp, 0, 0, c.width, c.height);
-  bmp.close();
+  if (!ctx) throw new FotoFoutError("niet-leesbaar");
+  ctx.drawImage(bron, 0, 0, c.width, c.height);
   return c;
+}
+
+// Eerst createImageBitmap (snel). Ontbreekt die (oudere Safari) of kan hij het bestand niet lezen,
+// dan via een gewone <img> met een tijdelijke object-URL. Kan de browser het bestand echt niet
+// lezen (HEIC buiten Safari), dan weten we de oorzaak en zegt de melding dat eerlijk.
+async function naarCanvas(bestand: File, max = 1280): Promise<HTMLCanvasElement> {
+  if (typeof createImageBitmap === "function") {
+    try {
+      const bmp = await createImageBitmap(bestand);
+      try {
+        return tekenOp(bmp, bmp.width, bmp.height, max);
+      } finally {
+        bmp.close();
+      }
+    } catch (e) {
+      if (e instanceof FotoFoutError) throw e;
+    }
+  }
+  const url = URL.createObjectURL(bestand);
+  try {
+    const img = await new Promise<HTMLImageElement>((ok, fout) => {
+      const im = new Image();
+      im.onload = () => ok(im);
+      im.onerror = () => fout(new FotoFoutError(isHeic(bestand.name, bestand.type) ? "heic" : "niet-leesbaar"));
+      im.src = url;
+    });
+    if (!img.naturalWidth || !img.naturalHeight) throw new FotoFoutError(isHeic(bestand.name, bestand.type) ? "heic" : "niet-leesbaar");
+    return tekenOp(img, img.naturalWidth, img.naturalHeight, max);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 function pixels(c: HTMLCanvasElement, x: number, y: number, w: number, h: number): Uint8ClampedArray {
@@ -72,7 +102,10 @@ function pixels(c: HTMLCanvasElement, x: number, y: number, w: number, h: number
 export async function meetFoto(bestand: File, lengteCm: number, onStap?: (s: "laden" | "meten") => void): Promise<FotoUitkomst> {
   const canvas = await naarCanvas(bestand);
   onStap?.("laden");
-  const { pose, segmenter } = await laad();
+  // Het model laden kan mislukken (o.a. Safari vóór 16.4 heeft geen WebAssembly-SIMD): eigen oorzaak.
+  const { pose, segmenter } = await laad().catch(() => {
+    throw new FotoFoutError("model");
+  });
   onStap?.("meten");
   const w = canvas.width;
   const h = canvas.height;
