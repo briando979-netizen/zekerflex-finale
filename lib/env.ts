@@ -173,6 +173,9 @@ const schema = z.object({
   IMAP_PASS: z.string().optional(),
   // Bonnetjes per mail: het authserv-id van onze eigen mailserver (eerste term van de Authentication-Results-kop), zodat alleen onze eigen SPF/DKIM-uitslag telt (lib/boekhouding/bonnen/mail.ts). Leeg = de bovenste regel.
   BONNEN_AUTHSERV_ID: z.string().optional(),
+  // Bankkoppeling (lib/boekhouding/bank/koppeling): het app-id en de privésleutel (PEM) van de applicatie bij Enable Banking. Alleen in .env.production, nooit loggen.
+  ENABLE_BANKING_APP_ID: z.string().optional(),
+  ENABLE_BANKING_PRIVATE_KEY: z.string().optional(),
   // Check the mail server's TLS certificate (SMTP + IMAP). Loopback hosts
   // (Mailpit on localhost) are never checked; "false" only for a relay with
   // a self-signed certificate.

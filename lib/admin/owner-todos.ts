@@ -1,4 +1,5 @@
 import { smsIngericht, whatsappIngericht } from "@/lib/spoed/kanalen";
+import { bankToestemmingTeVernieuwen } from "@/lib/boekhouding/bank/koppeling/opslag";
 import { randomUUID } from "node:crypto";
 import { Resolver } from "node:dns/promises";
 import { existsSync } from "node:fs";
@@ -241,6 +242,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   const avgOk = Boolean(avgOpschoning?.lastRunAt && avgOpschoning.lastRunOk && !avgOpschoning.stale);
   // facturen met de oude naam van de platformorganisatie als afzender (13 nov): eerst de accountant, dan de naam
   const platformnaam = platformnaamTodo(await platformnaamStand());
+  // de toestemming van de bankkoppeling (lib/boekhouding/bank/koppeling): bijna verlopen of verlopen = de eigenaar moet opnieuw toestemming geven
+  const bankToestemming = await bankToestemmingTeVernieuwen().catch(() => null);
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
   return [
@@ -1213,6 +1216,36 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ],
       auto: false,
       ...m("bonnetjes-alias"),
+    },
+    {
+      id: "bankkoppeling",
+      group: "Geld & bank",
+      title: "Bank automatisch laten ophalen (geen bestanden meer uploaden)",
+      why: "Nu moet je de afschriften van de bank zelf uploaden. Met een bankkoppeling (open banking, PSD2) haalt ZekerFlex de transacties vanzelf op en koppelt ze aan facturen en bonnen. Een gratis aanbieder die zeker mag voor een bedrijf is er niet: GoCardless neemt geen nieuwe aanmeldingen meer aan, en de gratis modus van Enable Banking is volgens hun voorwaarden voor evaluatie en eigen gebruik van particulieren. Daarom eerst vragen of het voor Zekerflex, Inc. mag. De toestemming bij de bank geldt hooguit 180 dagen; daarna moet je hem opnieuw geven (ZekerFlex meldt dat 14 dagen van tevoren en zodra hij verlopen is). Uploaden blijft altijd kunnen.",
+      how: [
+        "Mail Enable Banking (info@enablebanking.com): vraag of Zekerflex, Inc. (Delaware, NL-bankrekening) de gratis modus voor eigen rekeningen mag gebruiken, of wat een contract kost. Bewaar het antwoord. Mag het niet en is het te duur: laat de koppeling uit en blijf uploaden.",
+        "Maak bij Enable Banking (enablebanking.com, Control Panel) een account en een productie-applicatie. Zet als terugkeeradres: https://<onze site>/api/admin/boekhouding/bank/koppeling/terug. Download de privésleutel.",
+        "Zet op de server (met sudo, eerst een kopie van .env.production) ENABLE_BANKING_APP_ID en ENABLE_BANKING_PRIVATE_KEY (de PEM; regeleinden als \\n) en zorg dat AUTH_URL klopt. Druk de sleutel nooit af.",
+        "Koppel in het Control Panel eerst je eigen zakelijke bankrekening aan de applicatie (knop 'Activate by linking accounts'); alleen gekoppelde rekeningen zijn leesbaar.",
+        "Geef daarna via Beheer, Boekhouding, Bank toestemming voor de rekening: je gaat naar de bank, logt in en keurt goed in de bank-app (kies de rekening met het juiste IBAN). Er komt een aparte uitleg zodra het scherm er is; tot dan kan dat via de route /api/admin/boekhouding/bank/koppeling/start.",
+        "Zet de vlag 'Boekhouding: bank automatisch ophalen' aan (Admin, Vlaggen) nadat een eerste 'Nu ophalen' klopt met je bankapp. De nachtelijke ronde roept haalBankOp() aan.",
+        "Over ongeveer 165 dagen vraagt ZekerFlex je opnieuw toestemming te geven; zet dat in je agenda.",
+      ],
+      auto: false,
+      ...m("bankkoppeling"),
+    },
+    {
+      id: "bankkoppeling-hernieuwen",
+      group: "Geld & bank",
+      title: "Bank: opnieuw toestemming geven",
+      why: "Een toestemming voor de bankkoppeling geldt hooguit 180 dagen (PSD2). Is hij bijna verlopen of verlopen, dan haalt ZekerFlex geen transacties meer op tot je opnieuw toestemming geeft. Deze taak staat vanzelf open zodra dat zo is en verdwijnt als de toestemming weer geldt.",
+      how: [
+        "Ga naar Beheer, Boekhouding, Bank en kies bij de rekening 'Opnieuw toestemming geven' (tot het scherm er is: POST /api/admin/boekhouding/bank/koppeling/start met de bankRekeningId en de bank).",
+        "Log in bij de bank en keur goed in de bank-app, met dezelfde rekening als eerst. Een vernieuwing mist niets: de volgende ophaling begint bij de laatste geslaagde dag.",
+      ],
+      auto: true,
+      done: bankToestemming === null || bankToestemming.length === 0,
+      ...(bankToestemming && bankToestemming.length > 0 ? { doneNote: bankToestemming.join("; ") } : {}),
     },
   ];
 }

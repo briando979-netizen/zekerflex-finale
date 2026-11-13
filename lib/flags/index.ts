@@ -73,6 +73,15 @@ FLAG_REGISTRY.push({
   default: false,
 });
 
+// Boekhouding: de bank automatisch ophalen (lib/boekhouding/bank/koppeling); aan pas na de eenmalige toestemming bij de bank.
+FLAG_REGISTRY.push({
+  key: "boekhouding-bankkoppeling",
+  label: "Boekhouding: bank automatisch ophalen",
+  description:
+    "Aan = de transacties van gekoppelde bankrekeningen worden automatisch opgehaald (zonder een bestand te uploaden) en gekoppeld aan facturen en bonnen. Zet dit pas aan als de sleutels van de koppeling in .env.production staan en de eigenaar bij de bank toestemming heeft gegeven (Admin, Te doen). Uit (standaard) = er wordt niets opgehaald; uploaden van een afschrift blijft werken.",
+  default: false,
+});
+
 export interface FlagOverride {
   /** master switch; undefined = use the registry default */
   enabled?: boolean | undefined;
