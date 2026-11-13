@@ -121,6 +121,14 @@ async function reserveRate(deadline: number): Promise<number> {
   }
 }
 
+/** De melding als alle rekensloten bezet zijn: het model is dan druk bezig (dus geladen), het is geen storing. */
+export const AI_BEZET = "AI-budget: alle rekensloten bezet, probeer later.";
+
+/** Kwam deze fout doordat alle rekensloten bezet waren (zie AI_BEZET)? */
+export function isAiBezet(err: unknown): boolean {
+  return err instanceof Error && err.message === AI_BEZET;
+}
+
 async function acquireConcurrency(deadline: number): Promise<void> {
   for (;;) {
     const n = await redis.incr(CONC_KEY);
@@ -128,7 +136,7 @@ async function acquireConcurrency(deadline: number): Promise<void> {
     if (n <= env.AI_MAX_CONCURRENCY) return;
     await redis.decr(CONC_KEY);
     if (Date.now() + 250 > deadline) {
-      throw AppError.upstream("AI-budget: alle rekensloten bezet, probeer later.");
+      throw AppError.upstream(AI_BEZET);
     }
     await sleep(150 + Math.random() * 200);
   }
