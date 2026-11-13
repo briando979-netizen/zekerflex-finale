@@ -5,6 +5,7 @@ import { visibleUsers } from "@/lib/messaging/presence";
 import { getChatPrefs, isMuted } from "@/lib/messaging/thread-prefs";
 import { chatPrivacy } from "@/lib/messaging/settings";
 import { previewText, type ChatMessage, type ChatThread } from "@/lib/messaging/store";
+import { claimIdempotency } from "@/lib/redis";
 
 // ---------------------------------------------------------------------------
 // Phone/laptop notifications for the chat: incoming calls, missed calls and
@@ -20,6 +21,16 @@ type CallMode = "audio" | "video" | "screen";
 const RING_TTL_SEC = 45; // the caller hangs up after 45s; a later delivery is useless
 const MISSED_TTL_SEC = 24 * 60 * 60;
 const CHAT_TTL_SEC = 24 * 60 * 60;
+/** In een druk groepsgesprek hooguit één melding per lid per zoveel seconden; een @vermelding komt altijd door. */
+export const GROEP_PUSH_SEC = 30;
+
+async function magGroepsPush(threadId: string, userId: string): Promise<boolean> {
+  try {
+    return await claimIdempotency(`chat-push:${threadId}:${userId}`, GROEP_PUSH_SEC);
+  } catch {
+    return true; // Redis weg: liever een melding te veel dan een gemiste
+  }
+}
 
 /** Role-neutral entry point; app/berichten redirects to the right inbox. */
 export function chatUrl(threadId: string): string {
@@ -102,7 +113,11 @@ export async function notifyNewMessage(thread: ChatThread, msg: ChatMessage): Pr
     const muted = new Set(
       (await Promise.all(recipients.map(async (id) => (!mentioned.has(id) && isMuted(await getChatPrefs(id), thread.id) ? id : null)))).filter(Boolean),
     );
-    const targets = recipients.filter((id) => !inView.has(id) && !muted.has(id));
+    let targets = recipients.filter((id) => !inView.has(id) && !muted.has(id));
+    if (thread.kind === "group") {
+      const mag = await Promise.all(targets.map(async (id) => mentioned.has(id) || (await magGroepsPush(thread.id, id))));
+      targets = targets.filter((_, i) => mag[i]);
+    }
     if (targets.length === 0) return;
 
     const supportAnswer = thread.kind === "support" && !thread.participants.includes(msg.from);
