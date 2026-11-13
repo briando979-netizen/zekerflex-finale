@@ -6,6 +6,7 @@ import {
   einde,
   filterTekst,
   glitchStap,
+  karaokeWoord,
   klem,
   mengKleur,
   tekstAnimatie,
@@ -437,7 +438,7 @@ function tekenLosseTekst(ctx: CanvasRenderingContext2D, c: TekstClip, t: number,
 
   // Per regel tekenen; bij typen alleen de tekens die al "getypt" zijn.
   const stand = zichtbareRegels(regels, c, anim);
-  const woordTijd = c.karaoke ? karaokeIndex(c, t) : -1;
+  const woordTijd = c.karaoke ? karaokeWoord(c, t) : -1;
   let woordTeller = 0;
   const basis = ctx.globalAlpha;
   regels.forEach((regel, i) => {
@@ -477,13 +478,6 @@ function tekenLosseTekst(ctx: CanvasRenderingContext2D, c: TekstClip, t: number,
       ctx.textAlign = oud;
     } else tekenStijl(ctx, c, deel, ankerX, y, px, c.kleur);
   });
-}
-
-function karaokeIndex(c: TekstClip, t: number): number {
-  const woorden = c.tekst.split(/\s+/).filter(Boolean);
-  if (!woorden.length) return -1;
-  const p = klem((t - c.start) / Math.max(0.1, c.duur), 0, 0.9999);
-  return Math.floor(p * woorden.length);
 }
 
 function tekenStijl(ctx: CanvasRenderingContext2D, c: TekstClip, s: string, x: number, y: number, px: number, kleur: string) {

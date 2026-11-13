@@ -14,6 +14,7 @@ import {
   nieuweBeeldClip,
   nieuweTekstClip,
   nieuwId,
+  ondertitels,
   projectDuur,
   rond,
   spoorEinde,
@@ -21,6 +22,7 @@ import {
   verwijderClip,
   vervangClip,
   vrijePlek,
+  type AudioClip,
   type BeeldClip,
   type Clip,
   type Project,
@@ -36,6 +38,7 @@ import { TekstVideo } from "@/components/admin/video/TekstVideo";
 import { Export } from "@/components/admin/video/Export";
 import { Venster } from "@/components/admin/video/Venster";
 import { TEKST_PRESETS } from "@/components/admin/video/presets";
+import { metSpraakOndertitels, ondertitelSpoor, spraakRegels, type SpraakRegel } from "@/lib/video/spraak-ondertitels";
 import {
   bewaarProject,
   haalBestanden,
@@ -44,6 +47,7 @@ import {
   bestandAdres,
   maakGratisClip,
   postJson,
+  spraakNaarWoorden,
   tijdTekst,
   uploadBestand,
   verwijderProject,
@@ -391,6 +395,30 @@ export function VideoEditor() {
     meld("De foto beweegt nu. Ongedaan maken kan met Ctrl+Z.");
   }
 
+  /** Ondertitels uit de spraak van een video- of geluidsclip (eigen Whisper, gratis), als één stap in de geschiedenis. */
+  async function maakOndertitels(clip: BeeldClip | AudioClip, taal: string) {
+    if (!project) return;
+    if (!ondertitelSpoor(project)) throw new Error("Er is geen tekstspoor voor de ondertitels.");
+    const { tekst, woorden } = await spraakNaarWoorden(clip.bron, taal);
+    const staand = FORMATEN[project.formaat].h > FORMATEN[project.formaat].w;
+    const perRegel = staand ? 4 : 6;
+    const regelsVoor = (c: BeeldClip | AudioClip): SpraakRegel[] => {
+      const r = spraakRegels(woorden, c, { maxWoorden: perRegel });
+      // zonder woordtijden (een andere spraakherkenning): de tekst gelijk over de clip verdeeld
+      return r.length || !tekst.trim() ? r : ondertitels(tekst, c.start, c.duur, perRegel).map((x) => ({ ...x, woordTijden: [] }));
+    };
+    const eerst = regelsVoor(clip);
+    if (!eerst.length) throw new Error("In deze clip is geen spraak gehoord.");
+    wijzig((p) => {
+      // de clip zoals hij nu staat: hij kan tijdens het luisteren verschoven of ingekort zijn
+      const nu = p.clips.find((c) => c.id === clip.id);
+      const bron = nu && (nu.soort === "video" || nu.soort === "audio") ? nu : clip;
+      const spoor = ondertitelSpoor(p);
+      return spoor ? metSpraakOndertitels(p, spoor, bron, bron === clip ? eerst : regelsVoor(bron)) : p;
+    });
+    meld(`${eerst.length} ondertitels gemaakt. Elke regel blijft aan te passen; ongedaan maken kan met Ctrl+Z.`);
+  }
+
   /** Eigen muziek componeren en onder een net gemaakt project zetten. */
   async function zetMuziekOnder(p: Project, stemming: Stemming) {
     try {
@@ -549,6 +577,7 @@ export function VideoEditor() {
               onProject={(deel, sleutel) => wijzig((p) => ({ ...p, ...deel }), sleutel ? `project:${sleutel}` : undefined)}
               onAiBewerk={aiBewerk}
               onAiBeweeg={aiBeweeg}
+              onOndertitels={maakOndertitels}
               aiBeeld={Boolean(ai?.beeld)}
             />
           )}

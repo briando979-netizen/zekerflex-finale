@@ -1,6 +1,7 @@
 // Kleine fetch-hulpjes voor de video-editor (client). Geen server-imports.
 
 import type { Project } from "@/lib/video/model";
+import type { GesprokenWoord } from "@/lib/video/spraak-ondertitels";
 
 export interface VideoBestand {
   id: string;
@@ -162,4 +163,9 @@ export async function zetInWachtrij(taken: { soort: WachtTaak["soort"]; omschrij
 export async function haalUitWachtrij(id: string): Promise<void> {
   const res = await fetch(`/api/admin/video/wachtrij?id=${encodeURIComponent(id)}`, { method: "DELETE" });
   if (!res.ok) throw new Error(((await res.json().catch(() => null)) as { error?: { message?: string } } | null)?.error?.message ?? "Weghalen lukte niet.");
+}
+
+/** De spraak in een video of geluid van de editor als woorden met hun tijd (eigen Whisper; duurt ongeveer de helft van de lengte). */
+export async function spraakNaarWoorden(bron: string, taal: string): Promise<{ tekst: string; woorden: GesprokenWoord[]; ms: number }> {
+  return postJson<{ tekst: string; woorden: GesprokenWoord[]; ms: number }>("/api/admin/video/ondertitel", { bron, taal }, "De ondertitels konden niet gemaakt worden.");
 }
