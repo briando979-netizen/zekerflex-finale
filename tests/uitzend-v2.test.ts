@@ -163,7 +163,11 @@ describe("alleen de huidige versie telt: opnieuw tekenen", () => {
     expect((await signUitzendContract("u4", "A")).created).toBe(false);
   });
 
-  it("de poort, de reageer-controle en Verificatie lezen activeUitzendContract: de stap 'contract' staat dus weer open", () => {
-    for (const f of ["lib/onboarding/werker-poort-server.ts", "lib/fiscal/eligibility.ts", "app/dashboard/verificatie/page.tsx"]) expect(bron(f), f).toContain("activeUitzendContract");
+  it("de reageer-controle en Verificatie lezen activeUitzendContract: de stap 'contract' staat dus weer open", () => {
+    for (const f of ["lib/fiscal/eligibility.ts", "app/dashboard/verificatie/page.tsx"]) expect(bron(f), f).toContain("activeUitzendContract");
+  });
+
+  it("de aanmeldpoort vraagt de overeenkomst niet meer: die komt vóór de eerste betaalde klus (13 nov, BSN later)", () => {
+    expect(bron("lib/onboarding/werker-poort-server.ts")).not.toContain("activeUitzendContract");
   });
 });
