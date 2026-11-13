@@ -143,6 +143,8 @@ export interface AudioClip extends ClipBasis {
   vervagenUit: number;
   /** Muziek zachter zetten zodra er een stem klinkt. */
   rol: "muziek" | "stem" | "effect";
+  /** Maatslagen in de muziek (seconden in de bron, oplopend), van "Maatslagen zoeken" (lib/video/maat.ts); clips klikken eraan vast. */
+  slagen?: number[] | undefined;
 }
 
 export type Clip = BeeldClip | TekstClip | AudioClip;
@@ -352,6 +354,13 @@ export function magneetPunten(p: Pick<Project, "clips">, behalve: string, kop: n
   for (const c of p.clips) {
     if (c.id === behalve) continue;
     punten.push(c.start, einde(c));
+    // de maatslagen van muziek (Op de maat): een clip klikt ook op de maat vast
+    if (c.soort === "audio" && c.slagen) {
+      for (const s of c.slagen) {
+        const t = c.start + (s - c.inpunt) / (c.snelheid || 1);
+        if (t >= c.start && t <= einde(c)) punten.push(t);
+      }
+    }
   }
   return punten;
 }
@@ -794,6 +803,19 @@ function schoneSleutelbeelden(v: unknown, duur: number): Sleutelbeeld[] | null {
   return uit.length ? uit.sort((a, b) => a.t - b.t) : null;
 }
 
+/** Maatslagen van buiten: eindige getallen binnen een bron van 10 uur, oplopend, hooguit 4000; geen = geen veld. */
+function schoneSlagen(v: unknown): number[] | null {
+  if (!Array.isArray(v)) return null;
+  const uit: number[] = [];
+  for (const x of v.slice(0, 4000)) {
+    if (typeof x !== "number" || !Number.isFinite(x) || x < 0 || x > 36000) continue;
+    const t = rond(x);
+    if (uit.length && t <= (uit[uit.length - 1] ?? -1)) continue;
+    uit.push(t);
+  }
+  return uit.length ? uit : null;
+}
+
 function schoneWoordTijden(v: unknown, inhoud: string, duur: number): number[] | null {
   if (!Array.isArray(v)) return null;
   const n = inhoud.split(/\s+/).filter(Boolean).length;
@@ -859,6 +881,7 @@ export function schoonProject(ruw: unknown): Project {
         ...(tijden ? { woordTijden: tijden } : {}),
       });
     } else if (soortSpoor === "audio" && c.soort === "audio" && veiligeBron(c.bron) && c.bron) {
+      const slagen = schoneSlagen(c.slagen);
       clips.push({
         ...basis,
         soort: "audio",
@@ -871,6 +894,7 @@ export function schoonProject(ruw: unknown): Project {
         vervagenIn: getal(c.vervagenIn, 0, 30, 0),
         vervagenUit: getal(c.vervagenUit, 0, 30, 0),
         rol: uitLijst(c.rol, ["muziek", "stem", "effect"] as const, "muziek"),
+        ...(slagen ? { slagen } : {}),
       });
     } else if (soortSpoor === "beeld" && (c.soort === "video" || c.soort === "foto" || c.soort === "kleur") && veiligeBron(c.bron)) {
       const f = (c.filters ?? {}) as Record<string, unknown>;

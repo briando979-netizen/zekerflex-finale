@@ -20,6 +20,7 @@ import {
 } from "@/lib/video/model";
 import { tijdTekst } from "@/components/admin/video/api";
 import { PIEKEN_PER_SECONDE, golfPad, kiesMiniaturen, miniatuurMomenten } from "@/lib/video/golf";
+import { slagenOpLijn } from "@/lib/video/maat";
 import { useGolf, useMiniaturen } from "@/components/admin/video/tijdlijn-media";
 
 export const SLEEP_TYPE = "application/x-zf-video";
@@ -155,6 +156,18 @@ function GeluidGolf({ clip, zoom, hoogte }: { clip: AudioClip; zoom: number; hoo
     <svg aria-hidden="true" className="pointer-events-none absolute inset-0" width={breedte} height={hoogte} style={{ background: clip.rol === "stem" ? "#1d5a49" : "#5a4a1d" }}>
       <path d={pad} stroke="rgba(255,255,255,.55)" strokeWidth={1.2} fill="none" />
     </svg>
+  );
+}
+
+/** De maatslagen van een muziekclip (Op de maat) als streepjes bovenin. */
+function Slagen({ clip, zoom }: { clip: AudioClip; zoom: number }) {
+  const lijn = useMemo(() => slagenOpLijn(clip).slice(0, 600), [clip]);
+  return (
+    <>
+      {lijn.map((t, i) => (
+        <span key={i} aria-hidden="true" className="pointer-events-none absolute top-0" style={{ left: (t - clip.start) * zoom, width: 1, height: 7, background: "rgba(255,255,255,.9)" }} />
+      ))}
+    </>
   );
 }
 
@@ -384,6 +397,7 @@ export function Tijdlijn({ project, tijd, speelt, zoom, selectie, magneetAan, on
                       >
                         {toon.soort === "video" && <VideoStrook clip={toon} zoom={zoom} hoogte={hoogte} />}
                         {toon.soort === "audio" && <GeluidGolf clip={toon} zoom={zoom} hoogte={hoogte} />}
+                        {toon.soort === "audio" && toon.slagen && <Slagen clip={toon} zoom={zoom} />}
                         {/* sleutelbeelden als ruitjes onderin (lib/video/model.ts standOp) */}
                         {(toon.soort === "foto" || toon.soort === "video" || toon.soort === "kleur") &&
                           toon.sleutelbeelden

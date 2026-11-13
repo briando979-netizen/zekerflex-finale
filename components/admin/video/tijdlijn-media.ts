@@ -93,6 +93,16 @@ async function maakBeelden(bron: string, bronDuur: number): Promise<string[] | n
   }
 }
 
+/** De golfvorm van een bestand: één keer ontleed, daarna uit het geheugen (ook voor Op de maat). Null = kan niet. */
+export function golfVan(bron: string): Promise<Float32Array | null> {
+  let bezig = golven.get(bron);
+  if (!bezig) {
+    bezig = naElkaar(() => maakGolf(bron));
+    golven.set(bron, bezig);
+  }
+  return bezig;
+}
+
 /** De golfvorm (pieken, 0..1 per 1/60 s bron) van een bestand, of null zolang hij er niet is of niet kan. */
 export function useGolf(bron: string, bronDuur: number | null, geluid: boolean): Float32Array | null {
   const [golf, setGolf] = useState<Float32Array | null>(null);
@@ -100,12 +110,7 @@ export function useGolf(bron: string, bronDuur: number | null, geluid: boolean):
     const mag = Boolean(bron) && (geluid ? bronDuur === null || bronDuur <= MAX_GELUID_SEC : bronDuur !== null && bronDuur <= MAX_VIDEO_SEC);
     if (!mag) return;
     let weg = false;
-    let bezig = golven.get(bron);
-    if (!bezig) {
-      bezig = naElkaar(() => maakGolf(bron));
-      golven.set(bron, bezig);
-    }
-    void bezig.then((g) => {
+    void golfVan(bron).then((g) => {
       if (!weg) setGolf(g);
     });
     return () => {
