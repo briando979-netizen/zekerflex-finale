@@ -11,6 +11,7 @@ import { WETTELIJKE_PAGINAS, metStandaardPagina, paginaIsLeeg, type WettelijkeSl
 import { DAGEN } from "@/lib/horeca/tijden";
 import { DomeinZoeker } from "@/components/domeinen/DomeinZoeker";
 import { NietInIphone } from "@/components/app/NietInIphone";
+import { IdeeKaart } from "@/components/studio/IdeeKaart";
 
 // ---------------------------------------------------------------------------
 // Website bouwen — the builder for a company's own site. Start from a sector
@@ -154,6 +155,8 @@ function StartWizard({ data, beginOntwerp, onCreated }: { data: Data; beginOntwe
         <h1 className="mt-1 font-display text-2xl font-bold text-ink">Je eigen website, gemaakt en gehost door ZekerFlex</h1>
         <p className="mt-1 max-w-2xl text-sm text-neutralx-600">Kies je branche, controleer je gegevens en je hebt meteen een complete website om aan te passen. Snel, veilig, zonder cookies of reclame, en alles op één plek.</p>
       </header>
+      {/* vertel je idee: kiest de branche en vult naam en plaats in, alleen waar nog niets stond */}
+      <IdeeKaart soort="website" templates={data.templates} onKeuze={(u) => { setTemplateId(u.templateId); setBedrijf((b) => ({ ...b, naam: b.naam.trim() ? b.naam : u.naam, plaats: b.plaats.trim() ? b.plaats : u.plaats })); }} />
       <section className="card p-6">
         <h2 className="font-display text-lg font-bold text-ink">1. Kies je branche</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
