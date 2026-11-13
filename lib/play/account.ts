@@ -2,6 +2,7 @@ import { createSign } from "node:crypto";
 import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
 import { openSecret, sealSecret } from "@/lib/security/sealed-secret";
 import { AppError } from "@/lib/errors";
+import { fetchOfUitval } from "@/lib/http/uitval";
 
 // ---------------------------------------------------------------------------
 // Het Google-serviceaccount waarmee ZekerFlex apps in Google Play beheert.
@@ -115,7 +116,7 @@ export async function toegangstoken(): Promise<string> {
 export async function tokenVoor(sa: ServiceAccount): Promise<string> {
   const bewaard = tokens().get(sa.client_email);
   if (bewaard && bewaard.tot > Date.now() + 60_000) return bewaard.token;
-  const res = await fetch(sa.token_uri, {
+  const res = await fetchOfUitval("Google Play", sa.token_uri, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: jwtVoor(sa, Math.floor(Date.now() / 1000)) }),

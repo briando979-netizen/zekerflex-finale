@@ -58,9 +58,23 @@ async function vraag<T>(methode: string, url: string, lichaam?: Lichaam): Promis
     headers["content-type"] = lichaam.type;
     body = new Blob([lichaam.bytes as Uint8Array<ArrayBuffer>]);
   }
-  const res = await fetch(url, { method: methode, headers, ...(body !== undefined ? { body } : {}), signal: AbortSignal.timeout(lichaam && !("json" in lichaam) ? 300_000 : 60_000) });
-  const tekst = await res.text();
-  const data = tekst ? (JSON.parse(tekst) as unknown) : {};
+  let res: Response;
+  try {
+    res = await fetch(url, { method: methode, headers, ...(body !== undefined ? { body } : {}), signal: AbortSignal.timeout(lichaam && !("json" in lichaam) ? 300_000 : 60_000) });
+  } catch {
+    // netwerkfout of time-out: geen kale 500; uitlegPlayFout maakt er "Google Play is even niet bereikbaar" van
+    throw new PlayFout(503, "onbereikbaar", "Google Play is niet bereikbaar");
+  }
+  const tekst = await res.text().catch(() => "");
+  let data: unknown = {};
+  if (tekst) {
+    try {
+      data = JSON.parse(tekst) as unknown;
+    } catch {
+      // een HTML-foutpagina van Google: bij een fout valt hij hieronder onder de statuscode, bij succes is het antwoord onleesbaar
+      if (res.ok) throw new PlayFout(502, "onleesbaar", "Onleesbaar antwoord van Google Play");
+    }
+  }
   if (!res.ok) {
     const e = (data as { error?: { message?: string; status?: string; errors?: { reason?: string }[] } }).error;
     throw new PlayFout(res.status, e?.errors?.[0]?.reason ?? e?.status ?? "", e?.message ?? `HTTP ${res.status}`);

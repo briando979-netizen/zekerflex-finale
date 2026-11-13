@@ -37,6 +37,8 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
   try {
     result = await provider.apply(cfg, host, { dryRun });
   } catch (e) {
+    // de DNS-aanbieder is niet bereikbaar: 503 met een eigen code, geen 422 alsof de invoer niet klopt
+    if (e instanceof AppError && e.code === "UPSTREAM_UNAVAILABLE") throw e;
     throw AppError.validation(`Toepassen op ${provider.label} mislukt: ${e instanceof Error ? e.message : "onbekende fout"}`);
   }
 
