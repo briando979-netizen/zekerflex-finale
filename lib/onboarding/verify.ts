@@ -1072,7 +1072,12 @@ export async function submitFreelancerOnboarding(
         const { bewaarBsnVoorstel, wilBsnVoorstel } = await import("@/lib/fiscal/bsn-voorstel");
         if (!(await wilBsnVoorstel(user.id))) return;
         const { leesBsnUitQr } = await import("@/lib/kyc/bsn-qr");
-        await bewaarBsnVoorstel(user.id, await leesBsnUitQr(fotos));
+        const begon = Date.now();
+        const voorstel = await leesBsnUitQr(fotos);
+        // alleen een totaal per maand: gelezen ja/nee en de duurklasse (lib/kyc/id-soort-meting.ts), nooit het nummer
+        const { telBsnQr } = await import("@/lib/kyc/id-soort-meting");
+        await telBsnQr(voorstel !== null, Date.now() - begon).catch(() => undefined);
+        await bewaarBsnVoorstel(user.id, voorstel);
       });
     }
   }
