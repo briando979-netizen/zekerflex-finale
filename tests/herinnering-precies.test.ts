@@ -18,10 +18,10 @@ describe("herinneringMist: per soort en toestand", () => {
     expect(herinneringMist({ ...leeg, identiteitIngestuurd: false, fotoGezet: false, gegevens: gegevens() })).toEqual(["bsn", "contract", "postcode", "identiteit", "foto"]);
   });
 
-  it("een zzp'er of flexwerker mist btw/KOR, nooit BSN of overeenkomst", () => {
+  it("een zzp'er of flexwerker: geen BSN of overeenkomst, en sinds 13 nov ook geen btw/KOR (dat komt vóór de eerste klus)", () => {
     for (const soort of ["zzp", "flexwerker"] as const) {
       const mist = herinneringMist({ ...leeg, gegevens: gegevens({ soort }) });
-      expect(mist).toEqual(["btw", "postcode"]);
+      expect(mist).toEqual(["postcode"]);
     }
   });
 
