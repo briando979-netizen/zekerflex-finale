@@ -72,6 +72,11 @@ const nextConfig = {
         { source: `/studio/${d}/:rest*`, destination: `/studio/webshop/${d}/:rest*`, permanent: false },
       ]),
       { source: "/studio/reserveringen", destination: "/studio/website/reserveringen", permanent: false },
+      // Browsers, pdf-viewers en de linkvoorvertoning van Apple vragen deze vaste adressen in de root, ook al staat het
+      // pictogram in de pagina-kop (13 nov: 17× /favicon.ico en 7× een apple-touch-icon als 404 in 2 dagen)
+      { source: "/favicon.ico", destination: "/icons/icon-192.png", permanent: true },
+      { source: "/apple-touch-icon.png", destination: "/icons/apple-touch-icon.png", permanent: true },
+      { source: "/apple-touch-icon-precomposed.png", destination: "/icons/apple-touch-icon.png", permanent: true },
     ];
   },
   async headers() {
