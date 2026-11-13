@@ -7,6 +7,7 @@ import { courierRoute, roomCenter } from "@/lib/admin/office3d-layout";
 import type { CityData, CityWeather } from "@/lib/admin/city-data";
 import { createLife } from "@/components/admin/city/life";
 import { createFestive } from "@/components/admin/city/feest";
+import { buildNederland } from "@/components/admin/city/nederland";
 import { type WeatherKind, yearSeason, type YearSeason } from "@/lib/admin/city-life";
 import { seasonOn, type SeasonId } from "@/lib/seasons/calendar";
 import { amsterdamClock, amsterdamDayKey, amsterdamParts, amsterdamToUtc } from "@/lib/time/amsterdam";
@@ -23,8 +24,8 @@ import { type Anchor, buildCompanies, buildDock, buildHouses, buildOffice, build
 // mensen die nu een dienst hebben; gewoon verkeer wordt drukker als er meer
 // mensen werken. Tekenen pauzeert buiten beeld en in een verborgen tabblad.
 
-export type View = "stad" | "hq" | "bedrijven" | "woonwijk" | "bank" | "datacenter" | "magazijn" | "opleiding" | "park" | "polder";
-export const TOUR: View[] = ["stad", "hq", "bedrijven", "bank", "datacenter", "magazijn", "opleiding", "woonwijk", "park", "polder"];
+export type View = "stad" | "hq" | "bedrijven" | "woonwijk" | "bank" | "datacenter" | "magazijn" | "opleiding" | "park" | "polder" | "station";
+export const TOUR: View[] = ["stad", "hq", "bedrijven", "bank", "datacenter", "magazijn", "opleiding", "woonwijk", "station", "park", "polder"];
 
 export interface CityHandle {
   setData: (d: CityData) => void;
@@ -197,6 +198,9 @@ export function createCity(
   const world = buildWorld(kit, win, season);
   const office = buildOffice(kit, shadow);
   scene.add(world.layer.group, office.layer.group);
+  // Nederland over de gracht: winkelstraat, station en treinen, en vier steden aan de horizon (nederland.ts)
+  const nederland = buildNederland(kit, reduced);
+  scene.add(nederland.layer.group);
   // voetgangers, dieren, wolken en neerslag; versiering op feestdagen
   const life = createLife(kit, scene, shadow);
   life.setHoliday(holiday);
@@ -245,7 +249,7 @@ export function createCity(
   let sigHouses = -1;
   let sigDock = "";
 
-  const layers = () => [world.layer, office.layer, companies.layer, houses.layer, dock];
+  const layers = () => [world.layer, office.layer, companies.layer, houses.layer, dock, nederland.layer];
   // voertuigen met een echte gebeurtenis; aanklikbaar, dan toont het paneel die gebeurtenis
   const trips: Trip[] = [];
   let pickables: THREE.Object3D[] = [];
@@ -371,6 +375,9 @@ export function createCity(
         return around(LANDMARKS.park.x, 3, LANDMARKS.park.z - 4, 16, 20, 30);
       case "polder":
         return around(0, 0, -106, 0, 58, 74);
+      case "station":
+        // van de kant van de gracht, zodat je de winkels en de stationshal van voren ziet
+        return around(0, 2, 100, -18, 26, -40);
       default: {
         const p = LANDMARKS[to];
         return around(p.x, 2, p.z, 14, 22, 28);
@@ -946,6 +953,7 @@ export function createCity(
       if (b.g.position.x < -160) b.g.position.x = 160;
     }
     life.update(dt, now, controls.target);
+    nederland.update(dt, now, phase);
     festive.update(dt, now, hourNow, phase !== "dag");
     // de vlaggen wapperen op de echte wind in Amsterdam
     if (!reduced) {

@@ -40,6 +40,7 @@ const VIEWS: [View, string][] = [
   ["woonwijk", "Woonwijk"],
   ["park", "Park"],
   ["polder", "Polder"],
+  ["station", "Station"],
 ];
 
 const LEGEND: [string, string][] = [
@@ -57,7 +58,7 @@ const LEGEND: [string, string][] = [
 ];
 
 const timeNl = (iso: string) => new Date(iso).toLocaleTimeString("nl-NL", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" });
-const pickFor = (v: View): Pick | null => (v === "stad" ? null : v === "polder" ? { kind: "polder" } : v === "bedrijven" ? { kind: "bedrijventerrein" } : v === "woonwijk" ? { kind: "woonwijk" } : { kind: "landmark", id: v });
+const pickFor = (v: View): Pick | null => (v === "stad" || v === "station" ? null : v === "polder" ? { kind: "polder" } : v === "bedrijven" ? { kind: "bedrijventerrein" } : v === "woonwijk" ? { kind: "woonwijk" } : { kind: "landmark", id: v });
 /** 21,25 → "21:15" */
 const hourText = (h: number) => `${String(Math.floor(h)).padStart(2, "0")}:${String(Math.round((h % 1) * 60)).padStart(2, "0")}`;
 const toneOf = (severity: string) => (severity === "critical" ? "crit" : severity === "warning" ? "warn" : "neutral");
