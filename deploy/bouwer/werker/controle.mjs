@@ -98,6 +98,14 @@ async function gewijzigdSinds(vanaf, sha) {
   return { basis: basis ?? `${sha}~1`, bestanden: r.uit.split("\n").map((s) => s.trim()).filter(Boolean) };
 }
 
+/**
+ * Mag een bewaarde uitslag worden hergebruikt voor een controle met deze gevraagde basis? Zonder gevraagde basis (geen vanaf) altijd;
+ * met een volledige sha alleen als de uitslag met precies die basis is gemaakt.
+ */
+export function basisKlopt(uitslag, gevraagd) {
+  return !isSha(gevraagd) || uitslag.vanaf === gevraagd;
+}
+
 /** Alle .py-bestanden onder een map (relatief aan de repo), zonder node_modules en __pycache__. */
 async function pythonBestanden(map, uit = []) {
   for (const e of await fs.readdir(map, { withFileTypes: true }).catch(() => [])) {
@@ -146,10 +154,13 @@ export async function controleerVastlegging({ doel = "main", vanaf = null, wacht
   const sha = await losOp(doel, log);
   if (!opnieuw) {
     const bekend = await uitslagVan(sha);
-    if (bekend) {
+    // Een bewaarde uitslag telt alleen als hij met dezelfde basis (vanaf) is gemaakt: een controle met een andere basis (bv. een
+    // tak-sha) dekte misschien alleen de laatste commit, en eslint en tests moeten het hele stuk tussen live en doel dekken.
+    if (bekend && basisKlopt(bekend, vanaf)) {
       log("info", `Uitslag van ${sha.slice(0, 7)} lag al klaar (${bekend.ok ? "schoon" : "faalt"})`);
       return bekend;
     }
+    if (bekend) log("info", `Uitslag van ${sha.slice(0, 7)} had een andere basis (${bekend.vanaf ? String(bekend.vanaf).slice(0, 7) : "?"}): opnieuw controleren`);
   }
   if (wacht) await wachtOpUitrol(log);
   await verkrijgZwaarSlot("controle", log);
@@ -235,6 +246,7 @@ export async function controleerVastlegging({ doel = "main", vanaf = null, wacht
       kort: sha.slice(0, 7),
       onderwerp,
       vanaf: basis,
+      basisGevraagd: vanaf ?? null,
       bestanden: bestanden.length,
       ok: tsc.code === 0 && schema.ok && python.ok && eslint.ok && tests.ok,
       tsc: { ok: tsc.code === 0, uit: kortTekst(tsc.uit) },

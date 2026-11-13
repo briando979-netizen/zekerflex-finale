@@ -71,6 +71,12 @@ K_HERLAAD = "bouwer:live:herlaadfout"
 # wordt de hash van het kapotte bestand onthouden, zodat het niet elke ronde opnieuw wordt geprobeerd.
 GELADEN_HASH: str | None = None
 HERLAAD_MISLUKT: dict = {"hash": None, "reden": None}
+# De afgewezen hash staat ook in een bestand (ZF_DIR/tmp/.herlaad-mislukt): een herstart van de dienst vergeet het anders en probeert het
+# kapotte bestand opnieuw. Daarnaast een kopie van de laatst draaiende (dus werkende) versie, die bij een afwijzing terugkomt op het pad,
+# zodat ook een herstart van de dienst door systemd de goede versie laadt.
+TMP_MAP = os.path.join(ZF_DIR, "tmp")
+MISLUKT_BESTAND = os.path.join(TMP_MAP, ".herlaad-mislukt")
+GOEDE_KOPIE = os.path.join(TMP_MAP, "zf-live.goed.py")
 
 # Serveronderhoud: alleen deze diensten mag de knop herstarten (database en redis bewust niet).
 ONDERHOUD_HERSTART = {"herstart-app": "app", "herstart-bouwer": "bouwer", "herstart-caddy": "caddy", "herstart-cron": "cron"}
@@ -692,6 +698,25 @@ def bestand_hash(pad: str) -> str | None:
         return None
 
 
+def lees_mislukt() -> None:
+    """Leest de onthouden afgewezen hash na een herstart van de dienst."""
+    try:
+        with open(MISLUKT_BESTAND, encoding="utf-8") as f:
+            data = json.load(f)
+        HERLAAD_MISLUKT.update(hash=data.get("hash"), reden=data.get("reden"))
+    except (OSError, ValueError):
+        pass
+
+
+def bewaar_goede_kopie(pad: str) -> None:
+    """Bewaart het bestand waarmee dit proces draait (het werkt, want het draait) voor het geval een volgende versie kapot blijkt."""
+    try:
+        os.makedirs(TMP_MAP, exist_ok=True)
+        shutil.copyfile(pad, GOEDE_KOPIE)
+    except OSError as e:
+        meld(f"goede kopie niet bewaard: {e}")
+
+
 def moet_herladen(geladen: str | None, nieuw: str | None, mislukt: str | None) -> bool:
     """Alleen herladen als het bestand echt veranderd is en dit kapotte bestand niet al eens is afgewezen."""
     return bool(nieuw) and nieuw != geladen and nieuw != mislukt
@@ -718,11 +743,28 @@ def herlaad_zo_nodig() -> None:
     global GELADEN_HASH
     pad = os.path.abspath(__file__)
     nieuw = bestand_hash(pad)
+    if nieuw and nieuw != GELADEN_HASH and nieuw == HERLAAD_MISLUKT["hash"]:
+        # dezelfde kapotte versie staat na een nieuwe uitrol weer op het pad: niet opnieuw proberen, maar de werkende versie terugzetten
+        try:
+            if os.path.exists(GOEDE_KOPIE):
+                shutil.copyfile(GOEDE_KOPIE, pad)
+        except OSError as e:
+            meld(f"werkende versie niet teruggezet: {e}")
+        return
     if not moet_herladen(GELADEN_HASH, nieuw, HERLAAD_MISLUKT["hash"]):
         return
     reden = controleer_syntax(pad)
     if reden:
         HERLAAD_MISLUKT.update(hash=nieuw, reden=reden)
+        try:
+            os.makedirs(TMP_MAP, exist_ok=True)
+            with open(MISLUKT_BESTAND, "w", encoding="utf-8") as f:
+                json.dump({"hash": nieuw, "reden": reden, "op": nu()}, f)
+            # zet de werkende versie terug op het pad: een herstart van de dienst laadt dan niet het kapotte bestand
+            if os.path.exists(GOEDE_KOPIE):
+                shutil.copyfile(GOEDE_KOPIE, pad)
+        except OSError as e:
+            meld(f"afgewezen hash niet bewaard of werkende versie niet teruggezet: {e}")
         meld(f"NIET herladen: het nieuwe zf-live.py compileert niet ({reden}); de oude versie blijft draaien")
         try:
             kv_zet(K_HERLAAD, {"op": nu(), "ok": False, "reden": reden})
@@ -730,6 +772,10 @@ def herlaad_zo_nodig() -> None:
             meld(f"herlaadfout niet bewaard: {e}")
         return
     HERLAAD_MISLUKT.update(hash=None, reden=None)
+    try:
+        os.remove(MISLUKT_BESTAND)
+    except OSError:
+        pass
     try:
         kv_zet(K_HERLAAD, {"op": nu(), "ok": True})
     except Exception:
@@ -748,6 +794,8 @@ def main() -> None:
     os.chdir(ZF_DIR)
     global GELADEN_HASH
     GELADEN_HASH = bestand_hash(os.path.abspath(__file__))
+    lees_mislukt()
+    bewaar_goede_kopie(os.path.abspath(__file__))
     meld(f"gestart (versie {VERSIE}) in {ZF_DIR}")
     laatste_slag = 0.0
     while True:
