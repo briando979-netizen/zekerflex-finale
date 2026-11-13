@@ -8,7 +8,7 @@ import { PushToggle } from "@/components/app/PushToggle";
 import { useChatTeksten } from "./ChatTekstenContext";
 import { vulIn } from "@/lib/i18n/vul-in";
 
-function Shell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+export function Shell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   const chat = useChatTeksten();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
