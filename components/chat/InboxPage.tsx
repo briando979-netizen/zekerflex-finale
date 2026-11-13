@@ -32,6 +32,8 @@ import { SwipeRow, ThreadMenuSheet, PinModal, type MenuAction } from "./ThreadMe
 import { MediaOverzicht } from "./MediaOverzicht";
 import { SelectieBalk } from "./SelectieBalk";
 import { BerichtInfo } from "./BerichtInfo";
+import { RondzendModal } from "./RondzendModal";
+import { rondzendKandidaten } from "@/lib/messaging/rondzenden";
 import { ChatSettingsPanel, readLook, type ChatLook } from "./ChatSettingsPanel";
 import { Portal } from "./Portal";
 import { ChatTekstenProvider, useChatTeksten } from "./ChatTekstenContext";
@@ -134,6 +136,7 @@ function InboxPageInner({
   const [cardUser, setCardUser] = useState<string | null>(null);
   const [picker, setPicker] = useState<null | "chat" | "community-invite">(null);
   const [showCommunityCreate, setShowCommunityCreate] = useState(false);
+  const [rondzendOpen, setRondzendOpen] = useState(false);
   const [manageCommunity, setManageCommunity] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showBrain, setShowBrain] = useState(false);
@@ -1125,6 +1128,13 @@ function InboxPageInner({
                   <span className="block text-xs text-neutralx-500">{ib.snelleAntwoordenUitleg}</span>
                 </span>
               </button>
+              <button type="button" onClick={() => setRondzendOpen(true)} className={rowBtn}>
+                <span className="w-8 text-center text-lg" aria-hidden>📣</span>
+                <span>
+                  {ib.rondzenden}
+                  <span className="block text-xs text-neutralx-500">{ib.rondzendenKort}</span>
+                </span>
+              </button>
               <button type="button" onClick={() => void startSupport()} className={rowBtn}>
                 <span className="w-8 text-center text-lg" aria-hidden>🛟</span>
                 <span>
@@ -1171,7 +1181,7 @@ function InboxPageInner({
                         <span className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl bg-brand-500 text-sm font-bold text-white">{c.name.slice(0, 2).toUpperCase()}</span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-semibold text-ink">{c.name}</span>
-                          <span className="block truncate text-xs text-neutralx-500">{vulIn(ib.ledenAantal, { aantal: c.memberCount })} · {c.myRole === "owner" ? ib.rolEigenaar : c.myRole}</span>
+                          <span className="block truncate text-xs text-neutralx-500">{vulIn(ib.ledenAantal, { aantal: c.memberCount })} · {c.myRole === "owner" ? ib.rolEigenaar : c.myRole === "admin" ? chat.modals.beheerder : chat.modals.lid}</span>
                         </span>
                       </button>
                     </li>
@@ -1641,6 +1651,16 @@ function InboxPageInner({
         />
       )}
       {picker === "chat" && <PeoplePicker title={ib.nieuwGesprek} cta="Bericht" onClose={() => setPicker(null)} onPick={startThreadWith} />}
+      {rondzendOpen && (
+        <RondzendModal
+          kandidaten={rondzendKandidaten(contacts, threads, me?.userId ?? "", (id) => dir[id]?.name)}
+          onClose={() => setRondzendOpen(false)}
+          onKlaar={(melding) => {
+            say(melding);
+            void loadThreads();
+          }}
+        />
+      )}
       {showCommunityCreate && (
         <CommunityCreateModal
           onClose={() => setShowCommunityCreate(false)}
