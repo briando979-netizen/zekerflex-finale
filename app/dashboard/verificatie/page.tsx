@@ -366,7 +366,7 @@ export default async function VerificatiePage() {
       <section aria-labelledby="later-kop" className="mt-10 border-t border-hair pt-6">
         <h2 id="later-kop" className="font-display text-base font-bold text-ink">{pt.laterTitel}</h2>
         <p className="mt-1 text-sm text-neutralx-500">{pt.laterUitleg}</p>
-        <div className="mt-6 card p-6">
+        <div id="bankrekening" className="mt-6 card scroll-mt-20 p-6">
           <h2 className="font-display text-base font-bold text-ink">{pt.bankTitle}</h2>
           <p className="mt-1 text-sm text-neutralx-500">{pt.bankSub}</p>
           <div className="mt-4">
