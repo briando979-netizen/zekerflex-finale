@@ -105,6 +105,8 @@ function AanmeldingKlaar({
           <ul className="mt-4 space-y-2">
             {o.onboarding.map((s) => {
               const waar = s.done ? null : WAAR[s.id];
+              // in de app-taal, net als op /dashboard/profiel (het label uit de overview is Nederlands)
+              const label = fd.profiel.stappen[s.id] ?? s.label;
               return (
                 <li key={s.id} className="flex items-center gap-2.5 text-sm">
                   {s.done ? (
@@ -113,9 +115,9 @@ function AanmeldingKlaar({
                     <span aria-hidden className="h-4 w-4 rounded-full border-2 border-warn" />
                   )}
                   {waar ? (
-                    <a href={waar} className="font-medium text-ink underline underline-offset-2">{s.label}</a>
+                    <a href={waar} className="font-medium text-ink underline underline-offset-2">{label}</a>
                   ) : (
-                    <span className={s.done ? "text-neutralx-600" : "font-medium text-ink"}>{s.label}</span>
+                    <span className={s.done ? "text-neutralx-600" : "font-medium text-ink"}>{label}</span>
                   )}
                 </li>
               );
