@@ -16,6 +16,10 @@ import { aanmeldingCompleetEmailT } from "@/lib/mail/werker/aanmelding-compleet"
 import { klusVoorstelEmailT } from "@/lib/mail/werker/klusvoorstel";
 
 const sha = (m: unknown) => createHash("sha256").update(JSON.stringify(m)).digest("hex");
+// 13 nov: de knop en de regel "Inloggen:" in de welkomstmail gaan naar het eigen startscherm (/dashboard, /werkgever) in plaats
+// van /login. Zet je dat ene adres terug, dan moet de mail weer byte voor byte de oude zijn: zo blijft de rest bewaakt.
+const shaMetOudeLink = (m: unknown, pad: string) =>
+  createHash("sha256").update(JSON.stringify(m).replaceAll(`${u}${pad}`, `${u}/login`)).digest("hex");
 const u = "https://zf.test";
 const klus = { fullName: "Anna Kowalska", title: "Barista", branch: "Café Noord", city: "Groningen", when: "maandag 10 november, 09:00–17:00", rate: "€ 16,50", link: `${u}/dashboard/klussen/s1` };
 
@@ -35,9 +39,18 @@ describe("Nederlands is byte voor byte gelijk aan vóór de vertaling", () => {
     expect(sha(verificationEmailT("Anna Kowalska", `${u}/verifieer-email?token=abc`, undefined, "nl"))).toBe(GOLDEN.verificatie_zonder);
   });
   it("welkomstmail (zzp, uitzendkracht met ontwikkelingsnotitie, bedrijf)", () => {
-    expect(sha(welcomeEmailT("Anna Kowalska", "freelancer", u, "zzp", {}, "nl"))).toBe(GOLDEN.welkom_zzp);
-    expect(sha(welcomeEmailT("Anna Kowalska", "freelancer", u, "uitzendkracht", { ontwikkelingsnotitie: true }, "nl"))).toBe(GOLDEN.welkom_uitzend);
-    expect(sha(welcomeEmailT("Jan Bakker", "bedrijf", u, undefined, {}, "nl"))).toBe(GOLDEN.welkom_bedrijf);
+    const zzp = welcomeEmailT("Anna Kowalska", "freelancer", u, "zzp", {}, "nl");
+    const uitzend = welcomeEmailT("Anna Kowalska", "freelancer", u, "uitzendkracht", { ontwikkelingsnotitie: true }, "nl");
+    const bedrijf = welcomeEmailT("Jan Bakker", "bedrijf", u, undefined, {}, "nl");
+    expect(shaMetOudeLink(zzp, "/dashboard")).toBe(GOLDEN.welkom_zzp);
+    expect(shaMetOudeLink(uitzend, "/dashboard")).toBe(GOLDEN.welkom_uitzend);
+    expect(shaMetOudeLink(bedrijf, "/werkgever")).toBe(GOLDEN.welkom_bedrijf);
+    // het nieuwe adres staat er in de tekst en in de knop, /login niet meer
+    for (const [m, pad] of [[zzp, "/dashboard"], [uitzend, "/dashboard"], [bedrijf, "/werkgever"]] as const) {
+      expect(m.text).toContain(`Inloggen: ${u}${pad}\n`);
+      expect(m.html).toContain(`href="${u}${pad}"`);
+      expect(JSON.stringify(m)).not.toContain(`${u}/login`);
+    }
   });
   it("ID geverifieerd", () => {
     expect(sha(idGeverifieerdEmailT("Anna Kowalska", u, true, "nl"))).toBe(GOLDEN.id_ja);

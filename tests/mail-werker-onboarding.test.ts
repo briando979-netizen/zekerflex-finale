@@ -26,8 +26,9 @@ describe("welkomstmail in vijf talen", () => {
       expect(m.subject.length).toBeGreaterThan(3);
       expect(m.text.length).toBeGreaterThan(50);
       expect(m.html).toContain(`<html lang="${taal}">`);
-      expect(m.text).toContain(`${u}/login`);
-      expect(m.html).toContain(`href="${u}/login"`);
+      expect(m.text).toContain(`${u}/dashboard`);
+      expect(m.html).toContain(`href="${u}/dashboard"`);
+      expect(m.html).not.toContain(`${u}/login`);
       expect(m.text).toContain("support@zekerflex.com");
       expect(m.kind).toBe("welcome");
     });
