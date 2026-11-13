@@ -34,6 +34,7 @@ const PUBLIC_PREFIXES = [
   "/api/mail/voorkeuren", // token-based, not session-based
   "/api/nieuwsbrief", // signup + its own /afmelden
   "/api/analytics/track", // anonymous visitor tracking, rate-limited by session id
+  "/api/analytics/taal-vraag", // anonieme telling per taalcode uit Accept-Language, zonder IP of gebruiker (lib/i18n/taal-vraag.ts)
   "/api/analytics/ping", // anonymous attention signals (time on page, tab away, leave), rate-limited
   "/api/companion", // owner's desktop Jarvis — its own personal-token auth (lib/companion)
   "/api/shop", // public storefront reads; writes are admin-gated inside the route

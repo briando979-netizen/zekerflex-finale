@@ -38,6 +38,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/nieuwsbrief",
     "/api/nieuwsbrief/afmelden",
     "/api/analytics/track",
+    "/api/analytics/taal-vraag",
     "/api/shop/products",
     "/api/shop/media/abc123",
     "/api/company/search",

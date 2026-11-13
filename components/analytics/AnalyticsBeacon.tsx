@@ -38,6 +38,17 @@ function sessionId(): string {
   }
 }
 
+/** Eén keer per sessie (lib/i18n/taal-vraag.ts): de server leest zelf Accept-Language, wij sturen niets mee. */
+function telTaalVraag() {
+  try {
+    if (sessionStorage.getItem("zekerflex.taalvraag")) return;
+    sessionStorage.setItem("zekerflex.taalvraag", "1");
+    void fetch("/api/analytics/taal-vraag", { method: "POST", keepalive: true }).catch(() => undefined);
+  } catch {
+    /* ignore */
+  }
+}
+
 let queue: QueuedEvent[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -132,6 +143,7 @@ export function AnalyticsBeacon() {
     }
     currentPath = pathname;
     visibleSince = document.visibilityState === "visible" ? performance.now() : null;
+    if (lastPath.current === null) telTaalVraag();
     ping("view", lastPath.current === null && document.referrer ? { r: document.referrer } : {});
     lastPath.current = pathname;
     enqueue({
