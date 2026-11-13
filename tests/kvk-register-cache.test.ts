@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { REGISTER_GEVONDEN_MS, REGISTER_NIET_GEVONDEN_MS, registerVers, type RegisterUitkomst } from "@/lib/kvk/register-cache";
+import type { CompanyProfile } from "@/types/company";
 
 // De bewaartermijn van een KVKBase-uitkomst per nummer (13 nov 2026, besluit 86): gevonden 30 dagen, "niet gevonden" 1 dag,
 // zodat een verse inschrijving die één dag te vroeg is ingevuld niet een maand vastzit. Bevroren klok: de controle vóór uitrol
@@ -8,7 +9,7 @@ import { REGISTER_GEVONDEN_MS, REGISTER_NIET_GEVONDEN_MS, registerVers, type Reg
 const NU = new Date("2026-11-13T12:00:00+01:00");
 const UUR = 3_600_000;
 const DAG = 86_400_000;
-const gevonden: RegisterUitkomst = { at: NU.toISOString(), profiel: { kvkNumber: "12345678" } as RegisterUitkomst["profiel"] };
+const gevonden: RegisterUitkomst = { at: NU.toISOString(), profiel: { kvkNumber: "12345678" } as CompanyProfile };
 const nietGevonden: RegisterUitkomst = { at: NU.toISOString(), nietGevonden: true };
 
 beforeEach(() => {
