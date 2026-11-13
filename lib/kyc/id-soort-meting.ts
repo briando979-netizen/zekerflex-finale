@@ -35,3 +35,40 @@ export async function telIdSoort(mrz: Pick<MrzUitslag, "land" | "soort" | "verva
   t[idSoortTeller(mrz)] += 1;
   await kvSet(sleutel, t);
 }
+
+// Ook een totaal per maand voor het BSN-voorstel uit de QR-code (13 nov 2026): lukte het lezen, en hoe lang duurde het
+// (in klassen). Het lezen loopt na het antwoord van de scan (lib/onboarding/verify.ts); wie meteen op "Verder: gegevens"
+// klikt, kan er eerder zijn dan het voorstel. Met deze telling en de klikken weten we of dat echt gebeurt. Geen userId,
+// geen nummer, geen tijdstip per scan: geen persoonsgegeven.
+
+export interface BsnQrTelling {
+  gelezen: number;
+  niet_gelezen: number;
+  onder_2s: number;
+  tot_5s: number;
+  boven_5s: number;
+}
+
+export type BsnQrDuur = "onder_2s" | "tot_5s" | "boven_5s";
+
+export function bsnQrDuurKlasse(ms: number): BsnQrDuur {
+  return ms < 2000 ? "onder_2s" : ms <= 5000 ? "tot_5s" : "boven_5s";
+}
+
+export const bsnQrSleutel = (nu: Date) => `meting:bsn-qr:${amsterdamDayKey(nu).slice(0, 7)}`;
+
+/** Telt één poging om het BSN uit de QR te lezen. Een storing telt niet, en houdt niets tegen. */
+export async function telBsnQr(gelezen: boolean, ms: number, nu: Date = new Date()): Promise<void> {
+  const sleutel = bsnQrSleutel(nu);
+  const oud = (await kvGet<Partial<BsnQrTelling>>(sleutel)) ?? {};
+  const t: BsnQrTelling = {
+    gelezen: oud.gelezen ?? 0,
+    niet_gelezen: oud.niet_gelezen ?? 0,
+    onder_2s: oud.onder_2s ?? 0,
+    tot_5s: oud.tot_5s ?? 0,
+    boven_5s: oud.boven_5s ?? 0,
+  };
+  t[gelezen ? "gelezen" : "niet_gelezen"] += 1;
+  t[bsnQrDuurKlasse(ms)] += 1;
+  await kvSet(sleutel, t);
+}
