@@ -25,6 +25,7 @@ import { chatPrivacy } from "@/lib/messaging/settings";
 import { disappearCutoff } from "@/lib/messaging/store";
 import { scanChatMessage } from "@/lib/agenda/scan";
 import { maakPeiling, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POLL_OPTION_MAX } from "@/lib/messaging/poll";
+import { geldigeVermeldingen, VERMELDING_MAX } from "@/lib/messaging/vermelding";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -154,6 +155,8 @@ const sendSchema = z.object({
       multi: z.boolean().optional().default(false),
     })
     .optional(),
+  // @vermeldingen in een groep (userIds); de server houdt alleen leden van het gesprek over
+  mentions: z.array(z.string().min(1).max(40)).max(VERMELDING_MAX).optional(),
 });
 
 // POST /api/inbox/:id — send a message (text, voice, file, image, location, call log).
@@ -189,6 +192,10 @@ export async function POST(request: Request, props: { params: Promise<{ threadId
 
     const extra: MessageExtra = {};
     let text = input.text;
+    if (thread.kind === "group") {
+      const genoemd = geldigeVermeldingen(input.mentions, thread.participants, p.userId);
+      if (genoemd.length) extra.mentions = genoemd;
+    }
     if (input.kind === "poll") {
       const peiling = input.poll ? maakPeiling(input.text, input.poll.options, input.poll.multi) : null;
       if (!peiling) throw AppError.validation("Een peiling heeft een vraag en minstens twee verschillende keuzes.");

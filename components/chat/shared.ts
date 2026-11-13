@@ -53,6 +53,8 @@ export interface Msg {
   editedAt?: string;
   /** kind "poll": keuzes en stemmen; de vraag staat in `text` (lib/messaging/poll.ts) */
   poll?: MessagePoll;
+  /** @vermeldingen in een groep (userIds; lib/messaging/vermelding.ts) */
+  mentions?: string[];
 }
 
 /** Je eigen tekstbericht mag je tot 24 uur na het versturen bewerken (gelijk aan lib/messaging/store EDIT_WINDOW_MS). */

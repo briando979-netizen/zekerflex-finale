@@ -75,6 +75,8 @@ export interface ChatMessage {
   editedAt?: string;
   /** kind "poll": de keuzes en stemmen; de vraag staat in `text` (lib/messaging/poll.ts) */
   poll?: MessagePoll;
+  /** @vermeldingen in een groep: wie er genoemd is (userIds; lib/messaging/vermelding.ts) */
+  mentions?: string[];
 }
 
 /** Een eigen tekstbericht mag je zo lang na het versturen nog bewerken (afspraken veranderen niet ongemerkt achteraf). */
@@ -84,7 +86,7 @@ export const EDIT_WINDOW_MS = 24 * 3_600_000;
 export const DELETE_WINDOW_MS = 48 * 3_600_000;
 
 export type MessageExtra = Partial<
-  Pick<ChatMessage, "attachment" | "location" | "call" | "replyTo" | "auto" | "forwarded" | "poll">
+  Pick<ChatMessage, "attachment" | "location" | "call" | "replyTo" | "auto" | "forwarded" | "poll" | "mentions">
 >;
 
 export interface ChatThread {
@@ -441,6 +443,7 @@ export async function postMessage(
     ...(extra.auto ? { auto: true } : {}),
     ...(extra.forwarded ? { forwarded: true } : {}),
     ...(kind === "poll" && extra.poll ? { poll: extra.poll } : {}),
+    ...(extra.mentions?.length ? { mentions: extra.mentions } : {}),
   };
   await kvAppend(messagesKey(threadId), msg, 5000);
 
