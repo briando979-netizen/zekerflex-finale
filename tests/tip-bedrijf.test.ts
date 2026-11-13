@@ -97,6 +97,21 @@ describe("POST /api/klus-plaatsen/via", () => {
     }
     expect(h.kv.size).toBe(0);
   });
+
+  it("begrenst per adres per DAG (tien tellingen), niet per 10 minuten: één bezoeker is hoogstens twee tellingen", async () => {
+    const { POST } = await import("@/app/api/klus-plaatsen/via/route");
+    await POST(post({ via: "werker", stap: "concept" }));
+    expect(h.limiet).toHaveBeenCalledWith(expect.objectContaining({ name: "klus-via", limit: 10, windowSeconds: 86_400 }));
+  });
+
+  it("boven de grens: 429 (nooit 403, dat telt CrowdSec als inbraakpoging) en niets geteld", async () => {
+    const { AppError } = await import("@/lib/errors");
+    h.limiet.mockRejectedValueOnce(AppError.rateLimited("Te veel verzoeken.", 60, 10));
+    const { POST } = await import("@/app/api/klus-plaatsen/via/route");
+    const res = await POST(post({ via: "werker", stap: "bezoek" }));
+    expect(res.status).toBe(429);
+    expect(h.kv.size).toBe(0);
+  });
 });
 
 describe("waar de kaart komt", () => {
