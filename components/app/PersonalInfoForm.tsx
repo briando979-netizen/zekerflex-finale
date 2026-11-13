@@ -3,31 +3,38 @@
 import { useEffect, useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { useToast } from "@/components/ui/Toast";
+import { PERSONAL_INFO_NL, type PersonalInfoCode, type PersonalInfoTexts } from "@/components/app/personal-info-texts";
 
 interface PersonalInfoResult {
   ok: boolean;
   message: string;
+  /** als de actie hem meegeeft, kiest het formulier de tekst in de taal van de gebruiker (texts.meldingen) */
+  code?: PersonalInfoCode;
 }
 
 const initial: PersonalInfoResult = { ok: false, message: "" };
 
-function Submit() {
+function Submit({ t }: { t: PersonalInfoTexts }) {
   const { pending } = useFormStatus();
   return (
     <button type="submit" disabled={pending} className="btn-primary disabled:opacity-50">
-      {pending ? "Opslaan…" : "Opslaan"}
+      {pending ? t.bezig : t.opslaan}
     </button>
   );
 }
 
+// Naam en telefoon in het account. Werker, werkgever en studio delen dit formulier; de werker geeft zijn eigen taal mee
+// (texts, uit lib/i18n/freelancer.ts), de anderen houden de Nederlandse standaard (components/app/personal-info-texts.ts).
 export function PersonalInfoForm({
   action,
   initialFullName,
   initialPhone,
+  texts = PERSONAL_INFO_NL,
 }: {
   action: (prev: PersonalInfoResult, formData: FormData) => Promise<PersonalInfoResult>;
   initialFullName: string;
   initialPhone: string;
+  texts?: PersonalInfoTexts;
 }) {
   const [state, formAction] = useFormState(action, initial);
   const toast = useToast();
@@ -36,11 +43,12 @@ export function PersonalInfoForm({
   useEffect(() => {
     if (state === seen.current) return;
     seen.current = state;
-    if (state.message) {
-      if (state.ok) toast.success(state.message);
-      else toast.error(state.message);
+    const tekst = (state.code ? texts.meldingen[state.code] : "") || state.message;
+    if (tekst) {
+      if (state.ok) toast.success(tekst);
+      else toast.error(tekst);
     }
-  }, [state, toast]);
+  }, [state, toast, texts]);
 
   const [fullName, setFullName] = useState(initialFullName);
   const [phone, setPhone] = useState(initialPhone);
@@ -48,7 +56,7 @@ export function PersonalInfoForm({
   return (
     <form action={formAction} className="space-y-4 p-5">
       <label className="block">
-        <span className="field-label">Volledige naam</span>
+        <span className="field-label">{texts.naam}</span>
         <input
           name="fullName"
           required
@@ -61,7 +69,7 @@ export function PersonalInfoForm({
       </label>
       <label className="block">
         <span className="field-label">
-          Telefoonnummer <span className="text-neutralx-400">(optioneel)</span>
+          {texts.telefoon} <span className="text-neutralx-400">{texts.optioneel}</span>
         </span>
         <input
           name="phone"
@@ -73,7 +81,7 @@ export function PersonalInfoForm({
           className="field-input"
         />
       </label>
-      <Submit />
+      <Submit t={texts} />
     </form>
   );
 }

@@ -159,6 +159,7 @@ export default async function ProfielPage() {
             action={updatePersonalInfoAction}
             initialFullName={user?.fullName ?? principal.fullName}
             initialPhone={user?.phone ?? ""}
+            texts={dict.persoonForm}
           />
           <dl className="divide-y divide-hair border-t border-hair text-sm">
             <Field k={t.email} v={user?.email ?? principal.email} />

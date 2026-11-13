@@ -4,6 +4,7 @@ import { LEVEL_KAART_NL, UITNODIGING_NL } from "@/lib/rewards/kaart-teksten";
 import { WIE_TEKSTEN } from "@/lib/i18n/wie-ben-jij";
 import { MELDING_NL } from "@/lib/notifications/feed-teksten";
 import { NOTIFICATIONS_NL } from "@/components/app/notifications-texts";
+import { PERSONAL_INFO_NL } from "@/components/app/personal-info-texts";
 import { LOONSTROOK_NL } from "@/lib/payroll/loonstrook-teksten";
 import { MILESTONE_NL } from "@/lib/worker/milestone-teksten";
 
@@ -218,6 +219,7 @@ const nl = {
     titel: "Weet je zeker dat je alles hebt ingevuld?", uitleg: "Controleer wat je gaat insturen. Klopt alles, dan sturen we het in voor de controle.",
     postcode: "Postcode", fotos: "Foto's", methode: "Manier van controleren", viaStripe: "Via Stripe (je gaat zo door naar Stripe)", terug: "Terug", ja: "Ja, insturen",
   },
+  persoonForm: PERSONAL_INFO_NL,
   meldingen: NOTIFICATIONS_NL,
   loonstrook: LOONSTROOK_NL,
   meldingTeksten: MELDING_NL,
@@ -1810,6 +1812,19 @@ const en: FreelancerDict = {
   bevestig: {
     titel: "Are you sure you've filled in everything?", uitleg: "Check what you're about to submit. If everything is right, we'll send it in for verification.",
     postcode: "Postcode", fotos: "Photos", methode: "Verification method", viaStripe: "Via Stripe (you'll continue to Stripe next)", terug: "Back", ja: "Yes, submit",
+  },
+  persoonForm: {
+    naam: "Full name",
+    telefoon: "Phone number",
+    optioneel: "(optional)",
+    opslaan: "Save",
+    bezig: "Saving…",
+    meldingen: {
+      opgeslagen: "Details saved.",
+      naam: "Enter your full name.",
+      naamVast: "Your name has been confirmed with your ID. Want to change it? Contact support.",
+      mislukt: "Saving failed. Please try again.",
+    },
   },
   meldingen: {
     bell: "Notifications", close: "Close", all: "All", markAllRead: "Mark all as read",
@@ -3509,6 +3524,19 @@ const pl: FreelancerDict = {
     titel: "Czy na pewno wszystko jest wypełnione?", uitleg: "Sprawdź, co zaraz wyślesz. Jeśli wszystko się zgadza, wyślemy to do weryfikacji.",
     postcode: "Kod pocztowy", fotos: "Zdjęcia", methode: "Sposób weryfikacji", viaStripe: "Przez Stripe (zaraz przejdziesz do Stripe)", terug: "Wstecz", ja: "Tak, wyślij",
   },
+  persoonForm: {
+    naam: "Imię i nazwisko",
+    telefoon: "Numer telefonu",
+    optioneel: "(opcjonalnie)",
+    opslaan: "Zapisz",
+    bezig: "Zapisywanie…",
+    meldingen: {
+      opgeslagen: "Dane zapisane.",
+      naam: "Wpisz swoje imię i nazwisko.",
+      naamVast: "Twoje imię i nazwisko zostały potwierdzone dokumentem tożsamości. Chcesz je zmienić? Skontaktuj się z pomocą.",
+      mislukt: "Nie udało się zapisać. Spróbuj ponownie.",
+    },
+  },
   meldingen: {
     bell: "Powiadomienia", close: "Zamknij", all: "Wszystkie", markAllRead: "Oznacz wszystko jako przeczytane",
     groups: { klussen: "O Twoich zleceniach", geld: "Godziny i wypłaty", berichten: "Wiadomości", account: "Konto" },
@@ -5207,6 +5235,19 @@ const ro: FreelancerDict = {
     titel: "Ești sigur că ai completat tot?", uitleg: "Verifică ce urmează să trimiți. Dacă totul e corect, trimitem pentru verificare.",
     postcode: "Cod poștal", fotos: "Fotografii", methode: "Metoda de verificare", viaStripe: "Prin Stripe (vei continua imediat la Stripe)", terug: "Înapoi", ja: "Da, trimite",
   },
+  persoonForm: {
+    naam: "Nume complet",
+    telefoon: "Număr de telefon",
+    optioneel: "(opțional)",
+    opslaan: "Salvează",
+    bezig: "Se salvează…",
+    meldingen: {
+      opgeslagen: "Datele au fost salvate.",
+      naam: "Introdu numele complet.",
+      naamVast: "Numele tău a fost confirmat cu actul de identitate. Vrei să-l schimbi? Contactează asistența.",
+      mislukt: "Salvarea nu a reușit. Încearcă din nou.",
+    },
+  },
   meldingen: {
     bell: "Notificări", close: "Închide", all: "Toate", markAllRead: "Marchează tot ca citit",
     groups: { klussen: "Despre joburile tale", geld: "Ore și plăți", berichten: "Mesaje", account: "Cont" },
@@ -6904,6 +6945,19 @@ const uk: FreelancerDict = {
   bevestig: {
     titel: "Чи все заповнено правильно?", uitleg: "Перевір, що ти зараз надішлеш. Якщо все вірно, ми відправимо це на перевірку.",
     postcode: "Поштовий індекс", fotos: "Фото", methode: "Спосіб перевірки", viaStripe: "Через Stripe (зараз ти перейдеш до Stripe)", terug: "Назад", ja: "Так, надіслати",
+  },
+  persoonForm: {
+    naam: "Повне ім’я",
+    telefoon: "Номер телефону",
+    optioneel: "(необов’язково)",
+    opslaan: "Зберегти",
+    bezig: "Зберігаємо…",
+    meldingen: {
+      opgeslagen: "Дані збережено.",
+      naam: "Введи своє повне ім’я.",
+      naamVast: "Твоє ім’я підтверджено документом, що посвідчує особу. Хочеш його змінити? Звернися до підтримки.",
+      mislukt: "Не вдалося зберегти. Спробуй ще раз.",
+    },
   },
   meldingen: {
     bell: "Сповіщення", close: "Закрити", all: "Усі", markAllRead: "Позначити все прочитаним",
