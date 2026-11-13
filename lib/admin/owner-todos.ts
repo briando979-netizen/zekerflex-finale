@@ -28,6 +28,7 @@ import { cronHeartbeats } from "@/lib/ops/heartbeat";
 import { platformnaamTodo, type PlatformnaamStand } from "@/lib/admin/todo-platformnaam";
 import { stripeAccountTodos } from "@/lib/admin/todo-stripe-account";
 import { werkrechtEisTodo } from "@/lib/admin/todo-werkrecht";
+import { bonnenMailTodo, type BonnenMailStand } from "@/lib/admin/todo-bonnen-mail";
 import { aiTraderTodo } from "@/lib/admin/todo-ai-trader";
 import { pasdienstTodo } from "@/lib/admin/todo-pasdienst";
 import { pasdienstInfo } from "@/lib/shop/pasdienst";
@@ -240,6 +241,14 @@ const hasVideos = () => {
 /** Een adres op een eigen naam: er is een adres en het is niet de technische sslip.io-naam van de server. */
 const eigenNaam = (url: string | undefined): boolean => Boolean(url) && !/sslip\.io/i.test(url ?? "");
 
+async function bonnenMailStand(): Promise<BonnenMailStand> {
+  const [{ imapConfig }, { BONNEN_MAIL_FLAG }] = await Promise.all([import("@/lib/mail"), import("@/lib/boekhouding/bonnen/mail-taak")]);
+  const vlagAan = await featureEnabled(BONNEN_MAIL_FLAG);
+  if (!vlagAan) return { vlagAan, mailbox: true, administratie: true };
+  const adm = await prisma.boekAdministratie.findFirst({ where: { soort: "ECHT", actief: true }, select: { id: true } });
+  return { vlagAan, mailbox: imapConfig() !== null, administratie: adm !== null };
+}
+
 export async function ownerTodos(): Promise<OwnerTodo[]> {
   const manual = (await kvGet<Record<string, { at: string; by: string }>>("owner-todos:done")) ?? {};
   const base = env.APP_BASE_URL ?? "";
@@ -294,6 +303,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   // de echte paskamer (13 nov): de sleutel van FASHN (lib/shop/pasdienst.ts)
   const pasdienst = pasdienstTodo(await pasdienstInfo().then((i) => i.aanwezig, () => undefined));
   const werkrechtEis = werkrechtEisTodo(await featureEnabled("werkrecht-eis").catch(() => undefined));
+  // bonnetjesmail (lib/boekhouding/bonnen/mail-taak.ts): staat de vlag aan terwijl er geen mailbox of administratie is? Een leesfout geeft geen taak
+  const bonnenMail = bonnenMailTodo(await bonnenMailStand().catch((): undefined => undefined));
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
   return [
@@ -302,6 +313,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     ...(kvkTegoed ? [kvkTegoed] : []),
     ...(stripeKopie ? [stripeKopie] : []),
     ...(werkrechtEis ? [werkrechtEis] : []),
+    ...(bonnenMail ? [bonnenMail] : []),
     ...(aiTrader ? [aiTrader] : []),
     ...(pasdienst ? [pasdienst] : []),
     {

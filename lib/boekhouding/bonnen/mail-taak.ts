@@ -33,21 +33,30 @@ export interface TaakAfhankelijkheden {
   /** authserv-id's die we vertrouwen (authservLijst) */
   vertrouwdeServers?: readonly string[] | undefined;
   tijdsgrensMs?: number | undefined;
+  /** Geeft true als deze melding vandaag nog niet is gedaan (en onthoudt dat). Zonder: elke run melden. Bij een fout: true (fail-open). */
+  eenmaalPerDag?: ((sleutel: string) => Promise<boolean>) | undefined;
 }
 
 const TIMEOUT = Symbol("time-out");
+
+// Een inrichtingsfout is geen storing: hooguit één waarschuwing per dag (niet elke 10 minuten een fout in het
+// foutenlogboek). De eigenaar ziet het ook als taak in Beheer → Te doen (lib/admin/todo-bonnen-mail.ts).
+async function meldNietIngericht(d: TaakAfhankelijkheden, reden: "geen-mailbox" | "geen-administratie", tekst: string): Promise<void> {
+  const melden = d.eenmaalPerDag ? await d.eenmaalPerDag(reden).catch(() => true) : true;
+  if (melden) logger.warn(`bonnetjesmail: ${tekst}`, { reden });
+}
 
 export async function draaiBonnenMail(d: TaakAfhankelijkheden): Promise<TaakUitkomst> {
   if (!(await d.flagAan())) return { status: "uit" };
 
   const cfg = d.imapConfig();
   if (!cfg) {
-    logger.error("bonnetjesmail: geen mailbox ingericht", { reden: "geen-mailbox" });
+    await meldNietIngericht(d, "geen-mailbox", "bonnetjesmail staat aan, maar er is geen mailbox ingericht");
     return { status: "niet-ingericht", reden: "geen-mailbox" };
   }
   const administratieId = await d.administratieId();
   if (!administratieId) {
-    logger.error("bonnetjesmail: geen echte administratie", { reden: "geen-administratie" });
+    await meldNietIngericht(d, "geen-administratie", "bonnetjesmail staat aan, maar er is geen echte administratie");
     return { status: "niet-ingericht", reden: "geen-administratie" };
   }
 
