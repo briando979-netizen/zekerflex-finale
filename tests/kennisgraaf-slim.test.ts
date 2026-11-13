@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { benoemThemas, inproduct, kiesK, normaliseer, ontdekThemas, synapsen, type Vector } from "@/lib/rag/brein-slim";
+import { ADEM_ELKE, benoemThemas, inproduct, kiesK, normaliseer, ontdekThemas, synapsen, type Vector } from "@/lib/rag/brein-slim";
 
 // Het slimme deel van het Brein (lib/rag/brein-slim.ts), puur: synapsen (echte betekenisverwanten), zelf ontdekte thema's
 // (k-means, deterministisch) en hun namen (TF-IDF over de thema's). Plus de afspraken van de componenten.
@@ -37,9 +37,21 @@ describe("normaliseer en inproduct", () => {
 });
 
 describe("synapsen", () => {
-  it("per stuk hooguit k verwanten boven de drempel, als unieke paren, sterkste eerst", () => {
+  it("laat de event-loop om de ADEM_ELKE rijen los: een timer komt tussendoor aan de beurt", async () => {
+    const veel: Vector[] = Array.from({ length: ADEM_ELKE * 2 + 5 }, (_, i) => ({ id: `s${i}`, v: [Math.cos(i), Math.sin(i), (i % 7) / 7, 0.3] }));
+    let tussendoor = false;
+    const timer = setTimeout(() => {
+      tussendoor = true;
+    }, 0);
+    const uit = await synapsen(veel, 2, 0.3);
+    clearTimeout(timer);
+    expect(tussendoor).toBe(true);
+    expect(uit.length).toBeGreaterThan(0);
+  });
+
+  it("per stuk hooguit k verwanten boven de drempel, als unieke paren, sterkste eerst", async () => {
     const v = proef();
-    const s = synapsen(v, 2, 0.5);
+    const s = await synapsen(v, 2, 0.5);
     expect(s.length).toBeGreaterThan(0);
     const gezien = new Set(s.map(([a, b]) => `${a}|${b}`));
     expect(gezien.size).toBe(s.length);
@@ -57,16 +69,16 @@ describe("synapsen", () => {
       tel.set(b, (tel.get(b) ?? 0) + 1);
     }
     for (const x of v) expect(tel.get(x.id) ?? 0).toBeGreaterThanOrEqual(1);
-    expect(synapsen([], 4, 0.5)).toEqual([]);
-    expect(synapsen(v, 4, 0.999999)).toEqual([]);
+    expect(await synapsen([], 4, 0.5)).toEqual([]);
+    expect(await synapsen(v, 4, 0.999999)).toEqual([]);
   });
 });
 
 describe("ontdekThemas (k-means)", () => {
-  it("vindt de drie groepen, deterministisch, grootste eerst en zonder lege thema's", () => {
+  it("vindt de drie groepen, deterministisch, grootste eerst en zonder lege thema's", async () => {
     const v = proef();
-    const a = ontdekThemas(v, 3);
-    const b = ontdekThemas(v, 3);
+    const a = await ontdekThemas(v, 3);
+    const b = await ontdekThemas(v, 3);
     expect(a).toEqual(b);
     expect(a.k).toBe(3);
     expect(a.groottes).toEqual([6, 6, 6]);
@@ -78,15 +90,15 @@ describe("ontdekThemas (k-means)", () => {
     expect(a.rondes).toBeGreaterThanOrEqual(1);
   });
 
-  it("kiesK groeit met de wortel van het aantal, tussen 6 en 16; k-means is netjes leeg zonder invoer", () => {
+  it("kiesK groeit met de wortel van het aantal, tussen 6 en 16; k-means is netjes leeg zonder invoer", async () => {
     expect(kiesK(0)).toBe(0);
     expect(kiesK(10)).toBe(5);
     expect(kiesK(500)).toBe(6);
     expect(kiesK(2028)).toBe(10);
     expect(kiesK(100000)).toBe(16);
-    expect(ontdekThemas([], 3)).toEqual({ per: {}, groottes: [], k: 0, rondes: 0 });
+    expect(await ontdekThemas([], 3)).toEqual({ per: {}, groottes: [], k: 0, rondes: 0 });
     // meer thema's dan stukken: elk stuk zijn eigen thema, lege vallen weg
-    const klein = ontdekThemas(proef().slice(0, 2), 5);
+    const klein = await ontdekThemas(proef().slice(0, 2), 5);
     expect(klein.k).toBeLessThanOrEqual(2);
   });
 });
