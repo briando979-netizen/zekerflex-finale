@@ -24,6 +24,14 @@ export async function register(): Promise<void> {
     } catch (err) {
       console.error(JSON.stringify({ level: "warn", message: "stripe-account niet geladen, .env geldt", error: String(err) }));
     }
+    // De OCR-taalbestanden vooraf laden, op de achtergrond: niet wachten (het opstarten loopt door), alleen als er een
+    // bestand ontbreekt, en nooit een onbehandelde rejection. Lukt het niet, dan probeert de eerste OCR-aanroep het opnieuw.
+    void import("@/lib/ocr/talen")
+      .then((m) => m.laadOcrVooraf())
+      .then((uitslag) => {
+        if (uitslag === "mislukt") console.error(JSON.stringify({ level: "warn", message: "ocr-taalbestanden vooraf laden mislukt, eerste gebruik probeert opnieuw" }));
+      })
+      .catch(() => undefined);
   }
 }
 

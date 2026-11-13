@@ -371,8 +371,8 @@ export const GRATIS_DIENSTEN: GratisDienst[] = [
     id: "ocr-taaldata",
     naam: "Tekstherkenning (taalbestanden)",
     waarvoor: "Tekst lezen uit foto's en documenten (OCR), bijvoorbeeld bonnen",
-    nu: "tesseract.js in ons eigen proces; de taalbestanden (Nederlands en Engels) worden bij het eerste gebruik van GitHub gehaald en in storage/ocr bewaard",
-    eigen: "Na de eerste keer staan de bestanden op onze eigen schijf en gaat er nooit een foto naar buiten. Is GitHub op dat moment onbereikbaar, dan lukt de eerste tekstherkenning niet tot de bestanden er staan.",
+    nu: "tesseract.js in ons eigen proces, met een eigen kopie van de taalbestanden (Nederlands en Engels) in storage/ocr op het opslagvolume. GitHub is alleen de bron van de eerste download; die gebeurt bij het opstarten op de achtergrond en anders bij het eerste gebruik.",
+    eigen: "Draait al van onze eigen kopie: na de eerste download werkt alles zonder netwerk en gaat er nooit een foto naar buiten. Een download komt eerst in een tijdelijk bestand en wordt pas daarna de echte, dus er blijft nooit een half bestand liggen; mislukt hij, dan probeert de volgende aanroep het opnieuw. Is GitHub bij de allereerste keer onbereikbaar, dan lukt tekstherkenning pas als de bestanden er staan.",
     status: "gratis",
     hosts: ["github.com"],
   },];
