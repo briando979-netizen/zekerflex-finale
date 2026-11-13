@@ -79,7 +79,7 @@ export async function testklusMeldfilter(): Promise<{ isTest: (s: KlusKenmerk) =
   const eigenTest = await leesEigenTest();
   const intern = new Map<string, Promise<Set<string>>>();
   const isTest = (s: KlusKenmerk) =>
-    isTestklus({ title: s.title, bedrijf: s.bedrijf, eigenTest: isEigenTestKlus(eigenTest, { tenantId: s.tenantId, createdAt: s.createdAt }) });
+    isTestklus({ title: s.title, bedrijf: s.bedrijf ?? null, eigenTest: isEigenTestKlus(eigenTest, { tenantId: s.tenantId, createdAt: s.createdAt }) });
   const mag = async (s: KlusKenmerk, userId: string) => {
     if (!isTest(s)) return true;
     let ids = intern.get(s.tenantId);
