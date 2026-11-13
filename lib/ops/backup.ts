@@ -19,6 +19,13 @@ export const BACKUP_MAX_AGE_HOURS = 26;
 /** vanaf dit percentage waarschuwen we; vanaf DISK_CRIT_PERCENT is het kritiek */
 export const DISK_WARN_PERCENT = 85;
 export const DISK_CRIT_PERCENT = 95;
+/**
+ * De proef-terugzetting telde tot 13 nov alleen of er tabellen waren: een dump met een lege "User"-tabel heette ook in orde.
+ * Nu moet hij bijna alle gebruikers van de database bevatten (een paar aanmeldingen tussen dump en telling mogen).
+ */
+export const GEBRUIKERS_MARGE = 0.9;
+/** Een databasebestand dat minder dan de helft is van dat van de vorige nacht valt op (lege tabel, verkeerde database). */
+export const KRIMP_FACTOR = 0.5;
 
 export interface BackupStatus {
   at: string;
@@ -92,6 +99,8 @@ export interface BackupReport {
   status: BackupStatus | null;
   files: BackupFile[];
   disk: DiskUsage | null;
+  /** iets opvallends dat de back-up niet onbruikbaar maakt (veel kleiner dan de vorige); null = niets */
+  waarschuwing: string | null;
   /** de diepgaande hersteltest (wekelijks en op verzoek) met de geschiedenis, nieuwste eerst */
   verificatie: { state: VerifyState; reasons: string[]; status: VerifyStatus | null; history: VerifyStatus[] };
 }
@@ -186,12 +195,31 @@ export function evaluateBackup(status: BackupStatus | null, fileFound: boolean, 
   if (!status.file || status.bytes < 1024) reasons.push("Het databasebestand ontbreekt of is leeg.");
   else if (!fileFound) reasons.push(`Het bestand ${status.file} staat niet meer op de server.`);
   if (status.file && !status.restore.ok) reasons.push("De proef-terugzetting is niet gelukt.");
+  // een status van vóór de telling (liveUsers 0) slaat dit over
+  const { users, liveUsers } = status.restore;
+  if (status.file && status.restore.ok && liveUsers > 0 && users < Math.floor(liveUsers * GEBRUIKERS_MARGE)) {
+    reasons.push(`In de proef-terugzetting staan maar ${users} van de ${liveUsers} gebruikers: de back-up is niet compleet.`);
+  }
   if (reasons.length > 0) return { state: "failed", reasons };
   const ageHours = (now - Date.parse(status.at)) / 3_600_000;
   if (ageHours > BACKUP_MAX_AGE_HOURS) {
     return { state: "stale", reasons: [`Er is al ${Math.floor(ageHours)} uur geen nieuwe back-up gemaakt.`] };
   }
   return { state: "ok", reasons: [] };
+}
+
+const mbTekst = (bytes: number): string => `${(bytes / 1_048_576).toFixed(bytes >= 10 * 1_048_576 ? 0 : 1).replace(".", ",")} MB`;
+
+/**
+ * Het nieuwste databasebestand tegen dat van de vorige back-up (`files` nieuwste eerst). Na een grote opruiming klopt een
+ * kleiner bestand; anders ontbreekt er iets, en dan moet het opvallen zolang de oudere back-ups er nog staan.
+ */
+export function krimpWaarschuwing(files: BackupFile[], nieuwste: string): string | null {
+  const i = files.findIndex((f) => f.name === nieuwste);
+  const nu = files[i];
+  const vorige = i >= 0 ? files[i + 1] : undefined;
+  if (!nu || !vorige || vorige.bytes < 1_048_576 || nu.bytes >= vorige.bytes * KRIMP_FACTOR) return null;
+  return `Het nieuwste databasebestand (${mbTekst(nu.bytes)}) is minder dan de helft van het vorige (${mbTekst(vorige.bytes)}). Na een grote opruiming klopt dat; anders ontbreken er gegevens. Kijk het na zolang de oudere back-ups er nog staan.`;
 }
 
 /** Zelfde getal als `df`: gebruikt / (gebruikt + beschikbaar). */
@@ -206,7 +234,7 @@ export function diskUsage(blocks: number, bfree: number, bavail: number, bsize: 
 }
 
 export async function readBackupReport(dir = BACKUP_DIR, now = Date.now()): Promise<BackupReport> {
-  const empty: BackupReport = { available: false, state: "missing", reasons: [], status: null, files: [], disk: null, verificatie: { state: "missing", reasons: [], status: null, history: [] } };
+  const empty: BackupReport = { available: false, state: "missing", reasons: [], status: null, files: [], disk: null, waarschuwing: null, verificatie: { state: "missing", reasons: [], status: null, history: [] } };
   try {
     if (!(await stat(dir)).isDirectory()) return empty;
   } catch {
@@ -269,7 +297,8 @@ export async function readBackupReport(dir = BACKUP_DIR, now = Date.now()): Prom
     /* geen geschiedenis */
   }
   const v = evaluateVerification(verify, now);
-  return { available: true, state, reasons, status, files, disk, verificatie: { state: v.state, reasons: v.reasons, status: verify, history } };
+  const waarschuwing = status?.file && fileFound ? krimpWaarschuwing(files, status.file) : null;
+  return { available: true, state, reasons, status, files, disk, waarschuwing, verificatie: { state: v.state, reasons: v.reasons, status: verify, history } };
 }
 
 /** Dagelijks na de back-up (cron): hartslag bij succes, anders de eigenaar waarschuwen. */
@@ -299,6 +328,17 @@ export async function checkBackup(now = Date.now(), dir = BACKUP_DIR): Promise<B
       title: report.verificatie.state === "stale" ? "Hersteltest van de back-up blijft uit" : "Hersteltest van de back-up mislukt",
       detail: `${report.verificatie.reasons.join(" ")} Een back-up die niet terug te zetten is, is geen back-up. Start de test opnieuw via Admin → Systeem → Back-ups.`,
       severity: "critical",
+      url: "/admin/systeem#backups",
+    });
+  }
+
+  // veel kleiner dan de vorige: de back-up zelf is gelukt (hartslag blijft), maar het moet opvallen
+  if (report.waarschuwing) {
+    await alertOwner({
+      key: "backup:krimp",
+      title: "Back-up opvallend kleiner dan de vorige",
+      detail: report.waarschuwing,
+      severity: "warning",
       url: "/admin/systeem#backups",
     });
   }

@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,7 +11,7 @@ vi.mock("@/lib/ops/alert", () => ({ alertOwner: (...a: unknown[]) => alertOwner(
 const recordCronRun = vi.fn();
 vi.mock("@/lib/metrics", () => ({ recordCronRun: (...a: unknown[]) => recordCronRun(...a) }));
 
-const { checkBackup, diskAlert, diskUsage, evaluateBackup, evaluateVerification, parseBackupStatus, parseVerifyStatus, readBackupReport } = await import("@/lib/ops/backup");
+const { checkBackup, diskAlert, diskUsage, evaluateBackup, evaluateVerification, krimpWaarschuwing, parseBackupStatus, parseVerifyStatus, readBackupReport } = await import("@/lib/ops/backup");
 
 const NOW = new Date("2026-11-03T04:00:00Z").getTime();
 const hoursAgo = (h: number) => new Date(NOW - h * 3_600_000).toISOString();
@@ -119,6 +119,29 @@ describe("back-up beoordelen", () => {
     expect(noRestore.reasons).toContain("De proef-terugzetting is niet gelukt.");
   });
 
+  it("een proef-terugzetting met veel minder gebruikers dan de database is niet compleet (13 nov)", () => {
+    const leeg = evaluateBackup(parseBackupStatus({ ...good, restore: { ...good.restore, users: 0 } }), true, NOW);
+    expect(leeg.state).toBe("failed");
+    expect(leeg.reasons).toContain("In de proef-terugzetting staan maar 0 van de 24 gebruikers: de back-up is niet compleet.");
+    expect(evaluateBackup(parseBackupStatus({ ...good, restore: { ...good.restore, users: 20 } }), true, NOW).state).toBe("failed");
+    // een paar aanmeldingen tussen dump en telling mogen; een status zonder telling (liveUsers 0) slaat het over
+    expect(evaluateBackup(parseBackupStatus({ ...good, restore: { ...good.restore, users: 22 } }), true, NOW).state).toBe("ok");
+    expect(evaluateBackup(parseBackupStatus({ ...good, restore: { ...good.restore, users: 0, liveUsers: 0 } }), true, NOW).state).toBe("ok");
+  });
+
+  it("een databasebestand dat minder dan de helft is van het vorige valt op, een gewone daling niet", () => {
+    const f = (name: string, mb: number, uurGeleden: number) => ({ name, bytes: Math.round(mb * 1_048_576), at: hoursAgo(uurGeleden) });
+    const vorig = f("zekerflex-20261102-0230.dump", 107, 25.5);
+    const krimp = krimpWaarschuwing([f(good.file, 12, 1.5), vorig], good.file);
+    expect(krimp).toContain("(12 MB) is minder dan de helft van het vorige (107 MB)");
+    expect(krimpWaarschuwing([f(good.file, 60, 1.5), vorig], good.file)).toBeNull();
+    expect(krimpWaarschuwing([f(good.file, 120, 1.5), vorig], good.file)).toBeNull();
+    // de eerste back-up, een piepkleine vorige of een onbekende naam: niets te vergelijken
+    expect(krimpWaarschuwing([f(good.file, 1, 1.5)], good.file)).toBeNull();
+    expect(krimpWaarschuwing([f(good.file, 0.1, 1.5), f("zekerflex-20261102-0230.dump", 0.5, 25.5)], good.file)).toBeNull();
+    expect(krimpWaarschuwing([f(good.file, 12, 1.5), vorig], "onbekend.dump")).toBeNull();
+  });
+
   it("een bestand dat van de schijf verdwenen is telt niet als back-up", () => {
     expect(evaluateBackup(parseBackupStatus(good), false, NOW).state).toBe("failed");
   });
@@ -183,6 +206,21 @@ describe("back-upmap lezen en controleren", () => {
     expect(report.state).toBe("failed");
     expect(recordCronRun).not.toHaveBeenCalled();
     expect(alertOwner).toHaveBeenCalledWith(expect.objectContaining({ key: "backup:db", severity: "critical" }));
+  });
+
+  it("veel kleiner dan de vorige: waarschuwing aan de eigenaar, maar de hartslag blijft (de back-up is gelukt)", async () => {
+    const vorige = "zekerflex-20261102-0230.dump";
+    const toen = (uur: number) => new Date(NOW - uur * 3_600_000);
+    await writeFile(path.join(dir, "db", vorige), Buffer.alloc(2 * 1_048_576));
+    await writeFile(path.join(dir, "db", good.file), Buffer.alloc(512 * 1024));
+    await utimes(path.join(dir, "db", vorige), toen(25.5), toen(25.5));
+    await utimes(path.join(dir, "db", good.file), toen(1.5), toen(1.5));
+    await writeFile(path.join(dir, "status.json"), JSON.stringify(good));
+    const report = await checkBackup(NOW, dir);
+    expect(report.state).toBe("ok");
+    expect(report.waarschuwing).toContain("(0,5 MB) is minder dan de helft van het vorige (2,0 MB)");
+    expect(recordCronRun).toHaveBeenCalledWith("db-backup", true);
+    expect(alertOwner).toHaveBeenCalledWith(expect.objectContaining({ key: "backup:krimp", severity: "warning" }));
   });
 
   it("een map zonder status.json is nog geen back-up", async () => {
