@@ -15,7 +15,9 @@ interface Props {
 }
 
 export function ApproveButton({ timesheetId, hasFlags = false, hasCriticalFlag = false, flagSummary = "" }: Props) {
-  const c = useT().controls;
+  const dict = useT();
+  const c = dict.controls;
+  const kn = dict.urenKnoppen;
   const toast = useToast();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +77,7 @@ export function ApproveButton({ timesheetId, hasFlags = false, hasCriticalFlag =
         disabled={pending}
         onClick={() => {
           if (hasFlags) {
-            if (window.confirm(`${flagSummary || "Dit urenbriefje heeft een signaal."}\n\nToch goedkeuren?`)) {
+            if (window.confirm(`${flagSummary || kn.signaalStandaard}\n\n${kn.tochGoedkeuren}`)) {
               approve(true);
             }
             return;

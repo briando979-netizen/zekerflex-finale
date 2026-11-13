@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/components/i18n/I18nProvider";
 
 /** Werkgever → Uren: let the autopilot approve hours that exactly match the planning. */
 export function AutoApproveToggle() {
+  const a = useT().autoGoedkeuren;
   const [on, setOn] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -25,13 +27,13 @@ export function AutoApproveToggle() {
           disabled={busy}
           onChange={async (e) => {
             const next = e.target.checked;
-            if (next && !window.confirm("Automatisch goedkeuren aanzetten? De AI keurt dan uren goed die precies kloppen met de planning, met jouw rechten. Daarmee worden factuur en uitbetaling gestart.")) return;
+            if (next && !window.confirm(a.bevestig)) return;
             setBusy(true);
             setErr(null);
             try {
               const r = await fetch("/api/werkgever/autopilot", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ autoApproveHours: next }) });
               const d = await r.json();
-              if (!r.ok) throw new Error(d?.error?.message ?? "Opslaan mislukt");
+              if (!r.ok) throw new Error(d?.error?.message ?? a.mislukt);
               setOn(Boolean(d.autoApproveHours));
             } catch (e2) {
               setErr((e2 as Error).message);
@@ -42,11 +44,9 @@ export function AutoApproveToggle() {
           className="mt-1 h-4 w-4 accent-brand-500"
         />
         <span>
-          <span className="block text-sm font-semibold text-ink">🤖 Uren automatisch goedkeuren</span>
+          <span className="block text-sm font-semibold text-ink">{a.kop}</span>
           <span className="block text-xs text-neutralx-500">
-            Na 24 uur keurt de autopilot uren goed als begin- en eindtijd binnen 15 minuten van de planning liggen, er niet meer uren zijn
-            geschreven dan gepland, de GPS-check-in klopt en er geen fraudesignalen zijn. Al het andere blijft voor jou. Je kunt het altijd
-            weer uitzetten.
+            {a.uitleg}
           </span>
           {err && <span role="alert" className="mt-1 block text-xs text-crit">{err}</span>}
         </span>

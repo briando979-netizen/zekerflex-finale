@@ -3,21 +3,23 @@
 import { useState, useTransition } from "react";
 import { proposeHoursCorrectionAction } from "@/app/werkgever/uren/actions";
 import { useToast } from "@/components/ui/Toast";
+import { useT } from "@/components/i18n/I18nProvider";
 
 export function ProposeCorrectionButton({ timesheetId, submittedHours }: { timesheetId: string; submittedHours: number }) {
   const toast = useToast();
+  const k = useT().urenKnoppen;
   const [open, setOpen] = useState(false);
   const [hours, setHours] = useState(submittedHours);
   const [note, setNote] = useState("");
   const [pending, start] = useTransition();
   const [sent, setSent] = useState(false);
 
-  if (sent) return <span className="text-xs text-neutralx-500">Voorstel verstuurd</span>;
+  if (sent) return <span className="text-xs text-neutralx-500">{k.voorstelVerstuurd}</span>;
 
   if (!open) {
     return (
       <button type="button" onClick={() => setOpen(true)} className="text-xs text-neutralx-500 underline hover:text-ink">
-        Uren corrigeren
+        {k.corrigeren}
       </button>
     );
   }
@@ -25,7 +27,7 @@ export function ProposeCorrectionButton({ timesheetId, submittedHours }: { times
   return (
     <div className="w-full max-w-xs rounded-lg border border-hairstrong bg-white p-3 text-xs">
       <label className="block">
-        <span className="mb-1 block font-medium text-ink">Voorgestelde uren</span>
+        <span className="mb-1 block font-medium text-ink">{k.voorgesteldeUren}</span>
         <input
           type="number"
           min={0}
@@ -37,12 +39,12 @@ export function ProposeCorrectionButton({ timesheetId, submittedHours }: { times
         />
       </label>
       <label className="mt-2 block">
-        <span className="mb-1 block font-medium text-ink">Toelichting</span>
+        <span className="mb-1 block font-medium text-ink">{k.toelichting}</span>
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
           rows={2}
-          placeholder="Waarom stel je deze correctie voor?"
+          placeholder={k.toelichtingPlaceholder}
           className="w-full rounded border border-hairstrong px-2 py-1"
         />
       </label>
@@ -63,10 +65,10 @@ export function ProposeCorrectionButton({ timesheetId, submittedHours }: { times
           }
           className="btn-primary px-2.5 py-1 text-xs disabled:opacity-50"
         >
-          {pending ? "Bezig…" : "Verstuur voorstel"}
+          {pending ? k.bezig : k.verstuurVoorstel}
         </button>
         <button type="button" onClick={() => setOpen(false)} className="btn-ghost px-2.5 py-1 text-xs">
-          Annuleren
+          {k.annuleren}
         </button>
       </div>
     </div>

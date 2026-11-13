@@ -25,6 +25,20 @@ export function schoneUren(rijen: readonly BulkRij[], signalen: ReadonlyMap<stri
 }
 
 /** Wat de werkgever na afloop ziet. */
+/** Dezelfde melding uit het woordenboek (werkgeversapp, Nederlands en Engels); bulkBericht hieronder is de Nederlandse standaard. */
+export function bulkBerichtT(
+  d: { bulkEen: string; bulkMeer: string; bulkMisluktEen: string; bulkMisluktMeer: string; bulkOvergeslagen: string; bulkNiets: string },
+  goedgekeurd: number,
+  mislukt: number,
+  overgeslagen: number,
+): string {
+  const delen: string[] = [];
+  if (goedgekeurd > 0) delen.push((goedgekeurd === 1 ? d.bulkEen : d.bulkMeer).replace("{n}", String(goedgekeurd)));
+  if (mislukt > 0) delen.push((mislukt === 1 ? d.bulkMisluktEen : d.bulkMisluktMeer).replace("{n}", String(mislukt)));
+  if (overgeslagen > 0) delen.push(d.bulkOvergeslagen.replace("{n}", String(overgeslagen)));
+  return delen.join(" ") || d.bulkNiets;
+}
+
 export function bulkBericht(goedgekeurd: number, mislukt: number, overgeslagen: number): string {
   const delen: string[] = [];
   if (goedgekeurd > 0) delen.push(`${goedgekeurd} ${goedgekeurd === 1 ? "urenbriefje" : "urenbriefjes"} goedgekeurd.`);
