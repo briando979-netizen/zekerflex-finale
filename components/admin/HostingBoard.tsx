@@ -43,7 +43,10 @@ export function HostingBoard() {
   const [cfg, setCfg] = useState<Cfg | null>(null);
   const [apiTokenSet, setApiTokenSet] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  // een melding is een fout (role="alert", rood) of gewoon een stand (role="status")
+  const [melding, setMelding] = useState<{ tekst: string; fout: boolean } | null>(null);
+  const msg = melding?.tekst ?? null;
+  const setMsg = (tekst: string | null, fout = false) => setMelding(tekst === null ? null : { tekst, fout });
   const [applying, setApplying] = useState(false);
   const [applyResult, setApplyResult] = useState<ApplyResult | null>(null);
 
@@ -75,7 +78,7 @@ export function HostingBoard() {
         setCfg((c) => (c ? { ...c, api: { ...c.api, token: "" } } : c));
       } else {
         const d = await res.json().catch(() => ({}));
-        setMsg(d?.error?.message ?? "Opslaan mislukt.");
+        setMsg(d?.error?.message ?? "Opslaan mislukt.", true);
       }
     } finally {
       setSaving(false);
@@ -121,8 +124,11 @@ export function HostingBoard() {
         setApplyResult(d as ApplyResult);
         setMsg(dryRun ? `Voorbeeld via ${d.provider} op zone ${d.zone} — niets gewijzigd.` : `Toegepast via ${d.provider} op zone ${d.zone}.`);
       } else {
-        setMsg(d?.error?.message ?? "Toepassen mislukt.");
+        setMsg(d?.error?.message ?? "Toepassen mislukt.", true);
       }
+    } catch {
+      // geen verbinding met onze eigen server: de knop mag niet blijven draaien en er moet iets in beeld staan
+      setMsg("Toepassen mislukt: er is geen verbinding. Probeer het opnieuw.", true);
     } finally {
       setApplying(false);
     }
@@ -317,7 +323,11 @@ export function HostingBoard() {
         <button type="button" onClick={() => window.open("/api/admin/hosting/export", "_blank")} className="btn-ghost text-sm" title="Download DNS-zone + mail-aliassen voor je eigen CoreDNS/BIND/Postfix">
           Exporteer config (DNS + mail)
         </button>
-        {msg && <span className="text-sm text-neutralx-600">{msg}</span>}
+        {msg && (
+          <span role={melding?.fout ? "alert" : "status"} className={`text-sm ${melding?.fout ? "text-crit" : "text-neutralx-600"}`}>
+            {msg}
+          </span>
+        )}
         <span className="w-full text-xs text-neutralx-400">Sla eerst op; de export gebruikt de opgeslagen waarden. Volledige zelf-gehoste stack: <code>deploy/sovereign/</code>.</span>
       </div>
     </div>
