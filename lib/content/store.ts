@@ -1,4 +1,6 @@
 import { kvGet, kvSet } from "@/lib/storage/kv";
+import { nl } from "@/lib/i18n/dictionaries";
+import { shopTekstItems } from "@/lib/ontwerp/shop-teksten";
 
 // ---------------------------------------------------------------------------
 // Bewerkbare site-teksten zonder code. Een register van tekst-sleutels met hun
@@ -252,6 +254,8 @@ export const CONTENT_REGISTRY: ContentItem[] = [
   { key: "comp.c3.body", group: "Homepage — compliance", label: "Kaart 3: tekst", default: "Een geverifieerde identiteit (KYC) is verplicht voordat je een dienst kunt aannemen.", multiline: true },
   { key: "comp.c4.title", group: "Homepage — compliance", label: "Kaart 4: titel", default: "Auditspoor" },
   { key: "comp.c4.body", group: "Homepage — compliance", label: "Kaart 4: tekst", default: "Elke gevoelige handeling wordt onwisbaar vastgelegd en is terug te zien voor beheerders.", multiline: true },
+  // de voorpagina van de webshop (/shop): de standaard is de Nederlandse tekst uit het woordenboek (lib/ontwerp/shop-teksten.ts)
+  ...shopTekstItems(nl),
 ];
 
 /** De punten van een lijsttekst (één per regel; lege regels tellen niet). */

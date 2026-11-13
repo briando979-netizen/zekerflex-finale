@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { canonical } from "@/lib/seo";
 import { prisma } from "@/lib/prisma";
-import { getDict } from "@/lib/i18n/server";
+import { getDict, getLocale } from "@/lib/i18n/server";
+import { contentKeys, getContentMap } from "@/lib/content/store";
+import { metShopTeksten } from "@/lib/ontwerp/shop-teksten";
 import { ShopStorefront } from "@/components/marketing/ShopStorefront";
 import { ShopFeatured } from "@/components/marketing/ShopProductCard";
 import { OnlangsBekeken } from "@/components/marketing/OnlangsBekeken";
@@ -39,7 +41,8 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
     .findMany({ where: { active: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], include: { variants: { orderBy: { createdAt: "asc" } }, seller: { select: { name: true } } } })
     .catch(() => []);
   const products = rows.map((r) => toShopProduct(r as unknown as Record<string, unknown>));
-  const dict = await getDict();
+  // eigen teksten uit de Site-ontwerper (tabblad Teksten, groep Webshop); alleen in het Nederlands, anders de vertaling
+  const dict = metShopTeksten(await getDict(), await getContentMap(contentKeys("shop.")).catch(() => ({})), await getLocale());
   const t = dict.shop;
 
   const h = dict.shopThuis;
