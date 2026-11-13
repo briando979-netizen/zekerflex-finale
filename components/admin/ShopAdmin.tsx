@@ -3,6 +3,8 @@
 import { Fragment, useEffect, useState } from "react";
 import { ShopAdminTools } from "@/components/admin/ShopAdminTools";
 import { ShopModel3D } from "@/components/admin/ShopModel3D";
+import { ShopMedia } from "@/components/admin/ShopMedia";
+import { kanZichtbaarWorden } from "@/lib/shop/media-product";
 import { ProductPlaceholder } from "@/components/marketing/ProductPlaceholder";
 import { bucketSum, resolvePeriod, timelineKeys } from "@/lib/admin/period";
 import { count as fmtCount, euro } from "@/lib/admin/format";
@@ -152,6 +154,8 @@ export function ShopAdmin() {
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault(); setMessage("");
+    const nietZichtbaar = form.active ? kanZichtbaarWorden(form) : null;
+    if (nietZichtbaar) { setMessage(nietZichtbaar); return; }
     const response = await fetch(editing ? `/api/shop/products/${editing}` : "/api/shop/products", { method: editing ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
     const data = await response.json();
     if (!response.ok) { setMessage(data?.error?.message ?? "Opslaan mislukt."); return; }
@@ -336,6 +340,8 @@ export function ShopAdmin() {
       <div className="space-y-4"><ImageUpload label="Productfoto" value={form.imageUrl} busy={uploading === "image"} onUpload={(file) => upload(file, "imageUploadId", "imageUrl")} /><ImageUpload label="Model-foto" value={form.modelPhotoUrl} busy={uploading === "model"} onUpload={(file) => upload(file, "modelUploadId", "modelPhotoUrl")} />{editing ? <ShopModel3D productId={editing} /> : <p className="text-xs" style={{ color: "var(--a-mute)" }}>Een 3D-model koppel je nadat het product is opgeslagen.</p>}<div className="flex gap-3 pt-2"><button className="a-button a-button-primary" type="submit">{editing ? "Wijzigingen opslaan" : "Product publiceren"}</button><button className="a-button" type="button" onClick={() => { setEditing(null); setForm(empty); setShowForm(false); }}>Annuleren</button></div>{message && <p className="text-sm" style={{ color: "var(--a-dim)" }}>{message}</p>}</div>
     </form>
     )}
+
+    {tab === "products" && <ShopMedia onProductenAangemaakt={() => { void load(); void loadStats(); }} />}
 
     {tab === "products" && (
     <section className="a-panel overflow-hidden p-0">
