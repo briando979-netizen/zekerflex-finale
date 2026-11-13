@@ -1,3 +1,4 @@
+import type { LinkVoorbeeld } from "@/lib/messaging/link-voorbeeld";
 import { randomUUID } from "node:crypto";
 import { kvAppend, kvDelete, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 import { sluitPeiling, stem, type MessagePoll } from "@/lib/messaging/poll";
@@ -79,6 +80,8 @@ export interface ChatMessage {
   mentions?: string[];
   /** kind "voice": de uitgeschreven tekst (eigen Whisper, op verzoek); "" = geen spraak gehoord */
   transcript?: string;
+  /** voorbeeld van de eerste link (titel, omschrijving, site; lib/messaging/link-voorbeeld.ts) */
+  linkVoorbeeld?: LinkVoorbeeld;
 }
 
 /** Een eigen tekstbericht mag je zo lang na het versturen nog bewerken (afspraken veranderen niet ongemerkt achteraf). */
@@ -320,6 +323,19 @@ export async function getMessageById(threadId: string, messageId: string): Promi
   return all.find((m) => m.id === messageId) ?? null;
 }
 
+/** Zet een linkvoorbeeld op een tekstbericht, alleen als het bericht er nog is met dezelfde tekst (niet bewerkt). */
+export async function setLinkVoorbeeld(threadId: string, messageId: string, tekst: string, v: LinkVoorbeeld): Promise<ChatMessage | null> {
+  const key = messagesKey(await resolveThreadId(threadId));
+  const list = (await kvGet<ChatMessage[]>(key)) ?? [];
+  const idx = list.findIndex((m) => m.id === messageId);
+  const m = idx === -1 ? null : list[idx]!;
+  if (!m || m.kind !== "text" || m.deleted || m.text !== tekst) return null;
+  const updated: ChatMessage = { ...m, linkVoorbeeld: v };
+  list[idx] = updated;
+  await kvSet(key, list.slice(-5000));
+  return updated;
+}
+
 /** Zet de uitgeschreven tekst op een spraakbericht (alleen een spraakbericht dat er nog is). */
 export async function setTranscript(threadId: string, messageId: string, text: string): Promise<ChatMessage | null> {
   const key = messagesKey(await resolveThreadId(threadId));
@@ -395,6 +411,7 @@ export async function editMessage(threadId: string, messageId: string, text: str
   const m = list[idx]!;
   if (m.kind !== "text" || m.deleted) return null;
   const updated: ChatMessage = { ...m, text: clean, editedAt: now.toISOString() };
+  delete updated.linkVoorbeeld; // de tekst is anders: het oude voorbeeld klopt misschien niet meer
   list[idx] = updated;
   await kvSet(key, list.slice(-5000));
   const t = await getThread(id);
