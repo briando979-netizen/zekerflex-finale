@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 const schema = z.union([
   z.object({ action: z.enum(["archive", "unarchive", "lock", "unlock", "favorite", "unfavorite", "unmute", "clear", "delete", "mark-unread", "mark-read"]) }),
   z.object({ action: z.literal("hide-message"), messageId: z.string().min(1).max(40) }),
+  z.object({ action: z.literal("hide-messages"), messageIds: z.array(z.string().min(1).max(40)).min(1).max(100) }),
   z.object({ action: z.literal("mute"), hours: z.number().int().positive().max(24 * 365).nullable() }),
   z.object({ action: z.enum(["list-add", "list-remove"]), list: z.string().trim().min(1).max(30) }),
   z.object({ action: z.enum(["block", "unblock"]) }),

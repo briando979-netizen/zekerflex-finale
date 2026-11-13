@@ -67,7 +67,8 @@ export type ThreadAction =
   | { action: "archive" | "unarchive" | "lock" | "unlock" | "favorite" | "unfavorite" | "unmute" | "clear" | "delete" | "mark-unread" | "mark-read" }
   | { action: "mute"; hours: number | null }
   | { action: "list-add" | "list-remove"; list: string }
-  | { action: "hide-message"; messageId: string };
+  | { action: "hide-message"; messageId: string }
+  | { action: "hide-messages"; messageIds: string[] };
 
 export async function applyThreadAction(userId: string, threadId: string, a: ThreadAction): Promise<ChatPrefs> {
   const p = await getChatPrefs(userId);
@@ -119,6 +120,9 @@ export async function applyThreadAction(userId: string, threadId: string, a: Thr
       break;
     case "hide-message":
       p.hiddenMsgs[threadId] = add(p.hiddenMsgs[threadId] ?? [], a.messageId).slice(-HIDDEN_MAX);
+      break;
+    case "hide-messages":
+      p.hiddenMsgs[threadId] = [...new Set([...(p.hiddenMsgs[threadId] ?? []), ...a.messageIds])].slice(-HIDDEN_MAX);
       break;
     case "list-add": {
       const name = a.list.trim().slice(0, 30);

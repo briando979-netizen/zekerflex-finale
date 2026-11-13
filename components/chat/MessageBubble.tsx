@@ -189,6 +189,9 @@ export function MessageBubble({
   onDelete,
   onHide,
   onTranscribe,
+  selecting = false,
+  selected = false,
+  onSelect,
   onEdit,
   onForward,
   onPin,
@@ -222,6 +225,10 @@ export function MessageBubble({
   onHide?: (m: Msg) => void;
   /** spraakbericht uitschrijven; true = gelukt */
   onTranscribe?: (m: Msg) => Promise<boolean>;
+  /** meerdere berichten selecteren (zoals WhatsApp): de modus staat aan, dit bericht is gekozen, aan/uit zetten */
+  selecting?: boolean;
+  selected?: boolean;
+  onSelect?: (m: Msg) => void;
   /** your own text message, within 24 hours: back into the composer to rewrite */
   onEdit?: (m: Msg) => void;
   onForward?: (m: Msg) => void;
@@ -308,6 +315,7 @@ export function MessageBubble({
       ]
     : [
         ...(onReply && !m.pending ? [{ key: "reply", label: t.reply, icon: <IconReply className="h-4 w-4" />, run: () => onReply(m) }] : []),
+        ...(onSelect && !selecting && !m.pending ? [{ key: "select", label: t.select, icon: "☑", run: () => onSelect(m) }] : []),
         ...(m.text
           ? [
               {
@@ -373,6 +381,7 @@ export function MessageBubble({
   const fromRow = (target: EventTarget) => Boolean(rowRef.current?.contains(target as Node));
 
   const onTouchStart = (e: TouchEvent) => {
+    if (selecting) return; // selecteren: een tik kiest, geen lang drukken of vegen
     const t = e.touches[0];
     if (!t || !fromRow(e.target)) return;
     touch.current = {
@@ -435,7 +444,7 @@ export function MessageBubble({
     </span>
   );
 
-  const hoverBar = (
+  const hoverBar = selecting ? null : (
     <div
       className={`mb-1 items-center gap-0.5 self-center ${pickOpen || menu ? "flex" : "hidden [@media(hover:hover)]:group-hover:flex [@media(hover:hover)]:group-focus-within:flex"}`}
     >
@@ -481,7 +490,7 @@ export function MessageBubble({
   return (
     <div
       ref={rowRef}
-      className={`group relative flex items-end gap-1.5 [touch-action:pan-y_pinch-zoom] ${mine ? "justify-end" : "justify-start"}`}
+      className={`group relative flex items-end gap-1.5 [touch-action:pan-y_pinch-zoom] ${mine ? "justify-end" : "justify-start"} ${selecting ? "pl-8" : ""}`}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -500,6 +509,23 @@ export function MessageBubble({
         }
       }}
     >
+      {/* selecteren: de hele rij is één knop (een link of foto opent dan niet), met een vinkje links */}
+      {selecting && onSelect && (
+        <button
+          type="button"
+          onClick={() => onSelect(m)}
+          aria-pressed={selected}
+          aria-label={selected ? t.deselect : t.selectThis}
+          className={`absolute inset-0 z-[5] rounded-lg ${selected ? "bg-brand-500/10" : ""}`}
+        >
+          <span
+            className={`absolute left-1.5 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center rounded-full border-2 text-[11px] font-bold ${selected ? "border-brand-600 bg-brand-600 text-white" : "border-neutralx-400 bg-white"}`}
+            aria-hidden
+          >
+            {selected ? "✓" : ""}
+          </span>
+        </button>
+      )}
       {/* beantwoorden door te vegen: het pijltje verschijnt links */}
       {dx > 0 && (
         <span
