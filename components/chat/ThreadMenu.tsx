@@ -11,6 +11,9 @@ export interface ThreadFlags {
   locked?: boolean;
   favorite?: boolean;
   lists?: string[];
+  /** ongelezen berichten, of "Markeer als ongelezen" */
+  unread?: number;
+  gemarkeerd?: boolean;
 }
 
 /* ───────────────────────── swipe-to-reveal row ───────────────────────── */
@@ -99,7 +102,7 @@ function Item({ icon, label, danger, onClick }: { icon: string; label: string; d
 }
 
 export type MenuAction =
-  | { action: "archive" | "unarchive" | "lock" | "unlock" | "favorite" | "unfavorite" | "unmute" | "clear" | "delete" | "block" | "unblock" | "export" }
+  | { action: "archive" | "unarchive" | "lock" | "unlock" | "favorite" | "unfavorite" | "unmute" | "clear" | "delete" | "block" | "unblock" | "export" | "mark-unread" | "mark-read" }
   | { action: "mute"; hours: number | null }
   | { action: "list-add" | "list-remove"; list: string }
   | { action: "disappear"; days: 0 | 1 | 7 | 90 };
@@ -175,6 +178,11 @@ export function ThreadMenuSheet({
             </>
           ) : (
             <>
+              {(flags.unread ?? 0) > 0 || flags.gemarkeerd ? (
+                <Item icon="✓" label={t.markRead} onClick={() => done({ action: "mark-read" })} />
+              ) : (
+                <Item icon="●" label={t.markUnread} onClick={() => done({ action: "mark-unread" })} />
+              )}
               {flags.muted ? <Item icon="🔔" label={t.unmute} onClick={() => done({ action: "unmute" })} /> : <Item icon="🔕" label={t.mute} onClick={() => setSub("mute")} />}
               {flags.locked ? <Item icon="🔓" label={t.unlockChat} onClick={() => done({ action: "unlock" })} /> : <Item icon="🔒" label={t.lockChat} onClick={() => done({ action: "lock" })} />}
               {flags.favorite ? <Item icon="☆" label={t.unfavorite} onClick={() => done({ action: "unfavorite" })} /> : <Item icon="★" label={t.favorite} onClick={() => done({ action: "favorite" })} />}

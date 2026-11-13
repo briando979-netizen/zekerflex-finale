@@ -20,7 +20,7 @@ import { getChatSettings } from "@/lib/messaging/settings";
 import { maybeAutoReply } from "@/lib/messaging/auto-reply";
 import { notifyNewMessage } from "@/lib/messaging/notify";
 import { ownChatUpload } from "@/lib/messaging/media";
-import { blockedBetween, checkChatPin, getChatPrefs, isMuted, visibleFrom } from "@/lib/messaging/thread-prefs";
+import { blockedBetween, checkChatPin, clearUnreadMark, getChatPrefs, hiddenIn, isMuted, visibleFrom } from "@/lib/messaging/thread-prefs";
 import { chatPrivacy } from "@/lib/messaging/settings";
 import { disappearCutoff } from "@/lib/messaging/store";
 import { scanChatMessage } from "@/lib/agenda/scan";
@@ -49,9 +49,13 @@ export async function GET(req: Request, props: { params: Promise<{ threadId: str
     const cut = disappearCutoff(thread);
     const own = visibleFrom(prefs, thread.id);
     const from = own && cut ? (own > cut ? own : cut) : (own ?? cut);
-    const messages = (await getMessages(thread.id, 400)).filter((m) => !from || m.at > from);
+    const hidden = hiddenIn(prefs, thread.id); // "Verwijderen voor mij"
+    const messages = (await getMessages(thread.id, 400)).filter((m) => (!from || m.at > from) && !hidden.has(m.id));
     // ?seen=0: the tab is in the background, so nobody reads it yet (no read receipt, unread stays)
-    if (new URL(req.url).searchParams.get("seen") !== "0") await markThreadRead(thread.id, p.userId);
+    if (new URL(req.url).searchParams.get("seen") !== "0") {
+      await markThreadRead(thread.id, p.userId);
+      if (prefs.unreadMark.includes(thread.id)) await clearUnreadMark(p.userId, thread.id); // "Markeer als ongelezen" is voorbij
+    }
     const other = thread.kind === "direct" ? thread.participants.find((u) => u !== p.userId) ?? null : null;
     const blocked = other ? await blockedBetween(p.userId, other) : null;
 

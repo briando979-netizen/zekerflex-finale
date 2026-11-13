@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
-import { canAccess, deleteMessage, getMessageById, getThread } from "@/lib/messaging/store";
+import { canAccess, DELETE_WINDOW_MS, deleteMessage, getMessageById, getThread } from "@/lib/messaging/store";
 import { isPlatformAdmin } from "@/lib/messaging/contacts";
 
 export const runtime = "nodejs";
@@ -10,7 +10,8 @@ export const dynamic = "force-dynamic";
 
 const schema = z.object({ messageId: z.string().min(1).max(40) });
 
-// POST /api/inbox/:id/delete — trek je eigen bericht in ("verwijderd voor iedereen").
+// POST /api/inbox/:id/delete — trek je eigen bericht in ("verwijderd voor iedereen"), tot 48 uur na het versturen.
+// "Verwijderen voor mij" is iets anders: dat is alleen jouw weergave (prefs-actie hide-message).
 export async function POST(req: Request, props: { params: Promise<{ threadId: string }> }): Promise<NextResponse> {
   const params = await props.params;
   try {
@@ -25,6 +26,9 @@ export async function POST(req: Request, props: { params: Promise<{ threadId: st
     const existing = await getMessageById(params.threadId, body.data.messageId);
     if (!existing) return NextResponse.json({ error: { code: "NOT_FOUND", message: "Bericht niet gevonden" } }, { status: 404 });
     if (existing.from !== p.userId && !admin) throw AppError.forbidden("Je kunt alleen je eigen berichten verwijderen");
+    if (!admin && Date.now() - new Date(existing.at).getTime() > DELETE_WINDOW_MS) {
+      throw AppError.validation("Na 48 uur kun je een bericht alleen nog voor jezelf verwijderen.");
+    }
     await deleteMessage(params.threadId, body.data.messageId);
     return NextResponse.json({ ok: true });
   } catch (err) {

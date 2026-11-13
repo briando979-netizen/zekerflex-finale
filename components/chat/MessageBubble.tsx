@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type TouchEvent } from "react";
-import { canEdit, emojiOnlyCount, fmtBytes, fmtDuration, fmtTime, linkParts, type Msg } from "./shared";
+import { canDeleteForAll, canEdit, emojiOnlyCount, fmtBytes, fmtDuration, fmtTime, linkParts, type Msg } from "./shared";
 import { Avatar } from "./Avatar";
 import { IconReply, IconSmiley, IconDots, IconCopy, IconForward, IconPin, IconStar, IconPencil, IconTrash } from "./icons";
 import { ActionList, MessageSheet, ReactionRow, type ActionItem } from "./MessageActions";
@@ -154,6 +154,7 @@ export function MessageBubble({
   onAvatarClick,
   onReact,
   onDelete,
+  onHide,
   onEdit,
   onForward,
   onPin,
@@ -183,6 +184,8 @@ export function MessageBubble({
   onAvatarClick?: (userId: string) => void;
   onReact?: (m: Msg, emoji: string) => void;
   onDelete?: (m: Msg) => void;
+  /** "Verwijderen voor mij": alleen uit je eigen weergave, de ander houdt het */
+  onHide?: (m: Msg) => void;
   /** your own text message, within 24 hours: back into the composer to rewrite */
   onEdit?: (m: Msg) => void;
   onForward?: (m: Msg) => void;
@@ -289,7 +292,20 @@ export function MessageBubble({
           ? [{ key: "star", label: starred ? t.unstar : t.star, icon: <IconStar className="h-4 w-4" />, run: () => onStar(m) }]
           : []),
         ...(mine && onEdit && canEdit(m, myUserId) ? [{ key: "edit", label: t.edit, icon: <IconPencil className="h-4 w-4" />, run: () => onEdit(m) }] : []),
-        ...(mine && onDelete && !m.pending
+        ...(onHide && !m.pending
+          ? [
+              {
+                key: "hide",
+                label: t.deleteForMe,
+                icon: <IconTrash className="h-4 w-4" />,
+                danger: true,
+                run: () => {
+                  if (window.confirm(t.hideConfirm)) onHide(m);
+                },
+              },
+            ]
+          : []),
+        ...(mine && onDelete && canDeleteForAll(m, myUserId)
           ? [
               {
                 key: "del",
