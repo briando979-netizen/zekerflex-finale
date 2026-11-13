@@ -415,10 +415,14 @@ async function ensureFreelancerBase(input: {
       checks.push({
         label: "KVK Handelsregister",
         ok: false,
+        // een storing bij de KVK-dienst (429, quota, sleutel) is geen fout van de werker: geen technische (Engelse) melding,
+        // maar een vaste tekst die vertaald wordt (lib/i18n/id-redenen.ts, kvk.nietBereikbaar)
         detail:
-          err instanceof AppError
-            ? err.message
-            : "KVK-nummer kon niet worden gecontroleerd. Controleer het nummer.",
+          err instanceof AppError && err.code === "UPSTREAM_UNAVAILABLE"
+            ? "Het KVK-register was even niet bereikbaar. Een medewerker kijkt mee."
+            : err instanceof AppError
+              ? err.message
+              : "KVK-nummer kon niet worden gecontroleerd. Controleer het nummer.",
       });
     }
   }

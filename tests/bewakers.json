@@ -11,6 +11,7 @@
     "tests/donker-varianten.test.ts",
     "tests/hulp-centrum.test.ts",
     "tests/i18n-bundle.test.ts",
+    "tests/id-redenen.test.ts",
     "tests/juridisch-canonical.test.ts",
     "tests/kv-avg-bewaker.test.ts",
     "tests/log-geheimen.test.ts",
