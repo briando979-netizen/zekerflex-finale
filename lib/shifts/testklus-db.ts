@@ -54,6 +54,44 @@ export async function testklusOntvangers(tenantId: string): Promise<TestklusOntv
   return rows.map((r) => ({ freelancerId: r.id, userId: r.userId }));
 }
 
+/** Wat een melding over een klus moet weten om een testklus te herkennen. */
+export interface KlusKenmerk {
+  title: string;
+  tenantId: string;
+  bedrijf: string | null | undefined;
+  createdAt: Date | string | null | undefined;
+}
+
+/** Het kenmerk uit een klusrij zoals de meldingen hem ophalen (titel, createdAt, vestiging met bedrijf). */
+export function klusKenmerk(s: { title: string; createdAt?: Date | string | null; branch: { tenantId: string; tenant?: { name: string } | null } }): KlusKenmerk {
+  return { title: s.title, tenantId: s.branch.tenantId, bedrijf: s.branch.tenant?.name ?? null, createdAt: s.createdAt ?? null };
+}
+
+/**
+ * Eén filter voor elke melding die klussen rondstuurt naar werkers buiten de matching om (13 nov 2026, gemeten: alle 103
+ * open klussen waren testklussen, en een geo-push en de volgers van het testbedrijf bereikten nog echte werkers; volgers,
+ * job-alerts, stand-by, "in de buurt" en de spoedoproep met sms/WhatsApp filterden niet). Een gewone klus mag naar
+ * iedereen, een testklus alleen naar interne accounts (testklusOntvangers). In de klussenlijst blijft een testklus
+ * gewoon zichtbaar, met label (lib/dashboard/marketplace.ts): dit gaat alleen over ongevraagde meldingen.
+ * Maak hem één keer per ronde: de interne accounts per bedrijf worden onthouden.
+ */
+export async function testklusMeldfilter(): Promise<{ isTest: (s: KlusKenmerk) => boolean; mag: (s: KlusKenmerk, userId: string) => Promise<boolean> }> {
+  const eigenTest = await leesEigenTest();
+  const intern = new Map<string, Promise<Set<string>>>();
+  const isTest = (s: KlusKenmerk) =>
+    isTestklus({ title: s.title, bedrijf: s.bedrijf, eigenTest: isEigenTestKlus(eigenTest, { tenantId: s.tenantId, createdAt: s.createdAt }) });
+  const mag = async (s: KlusKenmerk, userId: string) => {
+    if (!isTest(s)) return true;
+    let ids = intern.get(s.tenantId);
+    if (!ids) {
+      ids = testklusOntvangers(s.tenantId).then((r) => new Set(r.map((o) => o.userId)));
+      intern.set(s.tenantId, ids);
+    }
+    return (await ids).has(userId);
+  };
+  return { isTest, mag };
+}
+
 /**
  * Ids van de testklussen die vanaf `since` beginnen. Ruim zoeken in de database
  * ("test" in de titel of de bedrijfsnaam), precies beslissen met isTestklus.

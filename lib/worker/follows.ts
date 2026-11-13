@@ -5,6 +5,7 @@ import { AppError } from "@/lib/errors";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { pushDayMonth, pushRate } from "@/lib/i18n/worker-push";
+import { klusKenmerk, testklusMeldfilter } from "@/lib/shifts/testklus-db";
 
 // ---------------------------------------------------------------------------
 // Favoriete opdrachtgevers: een werker volgt een bedrijf (❤️ op de dienstpagina)
@@ -144,19 +145,26 @@ export async function notifyFollowersOfShifts(shiftIds: string[], now = new Date
   const shifts = await prisma.shift.findMany({
     where: { id: { in: shiftIds }, visibility: "PUBLIC", status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] }, startsAt: { gt: now } },
     orderBy: { startsAt: "asc" },
-    select: { id: true, title: true, startsAt: true, hourlyRateCents: true, viaUitzendbureau: true, branch: { select: { tenantId: true, city: true, tenant: { select: { name: true } } } } },
+    select: { id: true, title: true, createdAt: true, startsAt: true, hourlyRateCents: true, viaUitzendbureau: true, branch: { select: { tenantId: true, city: true, tenant: { select: { name: true } } } } },
   });
+  // een testklus alleen naar interne volgers (lib/shifts/testklus-db.ts); daarom per bedrijf testklussen en echte apart
+  const testklus = await testklusMeldfilter();
   const byTenant = new Map<string, typeof shifts>();
-  for (const s of shifts) byTenant.set(s.branch.tenantId, [...(byTenant.get(s.branch.tenantId) ?? []), s]);
+  for (const s of shifts) {
+    const groep = `${s.branch.tenantId}:${testklus.isTest(klusKenmerk(s)) ? "test" : "echt"}`;
+    byTenant.set(groep, [...(byTenant.get(groep) ?? []), s]);
+  }
 
   let notified = 0;
-  for (const [tenantId, list] of byTenant) {
+  for (const list of byTenant.values()) {
     const first = list[0]!;
+    const tenantId = first.branch.tenantId;
     const onlyUitzend = list.every((s) => s.viaUitzendbureau);
     const recipients: string[] = [];
     for (const userId of await getList(followersKey(tenantId))) {
       // De eigen lijst is leidend: ontvolgd of account verwijderd → geen push.
       if (!(await isFollowing(userId, tenantId))) continue;
+      if (!(await testklus.mag(klusKenmerk(first), userId))) continue;
       if (onlyUitzend && invoiceModeFor(await getFiscal(userId)) !== "payroll") continue;
       recipients.push(userId);
     }

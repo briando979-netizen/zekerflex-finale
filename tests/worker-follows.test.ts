@@ -4,11 +4,13 @@ const tenantFindUnique = vi.fn();
 const tenantFindMany = vi.fn();
 const shiftFindMany = vi.fn();
 const timesheetFindMany = vi.fn();
+const profileFindMany = vi.fn();
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     tenant: { findUnique: (...a: unknown[]) => tenantFindUnique(...a), findMany: (...a: unknown[]) => tenantFindMany(...a) },
     shift: { findMany: (...a: unknown[]) => shiftFindMany(...a) },
     timesheet: { findMany: (...a: unknown[]) => timesheetFindMany(...a) },
+    freelancerProfile: { findMany: (...a: unknown[]) => profileFindMany(...a) },
   },
 }));
 
@@ -109,6 +111,26 @@ describe("followerCount", () => {
 });
 
 describe("notifyFollowersOfShifts", () => {
+  it("een testklus alleen naar interne volgers; een echte klus van hetzelfde bedrijf naar iedereen (13 nov)", async () => {
+    store.set("volgers:t-test", ["echt", "intern"]);
+    store.set("volgt:echt", ["t-test"]);
+    store.set("volgt:intern", ["t-test"]);
+    const test = { tenantId: "t-test", city: "Utrecht", tenant: { name: "Test bedrijven" } };
+    shiftFindMany.mockResolvedValue([shift("s1", "2026-11-10T08:00:00Z", { branch: test })]);
+    profileFindMany.mockResolvedValue([{ id: "f-intern", userId: "intern" }]);
+    expect(await notifyFollowersOfShifts(["s1"], NOW)).toEqual({ notified: 1 });
+    expect(sendUserPush.mock.calls[0]![0]).toEqual(["intern"]);
+
+    sendUserPush.mockClear();
+    store.set("volgers:t1", ["u1", "intern"]);
+    store.set("volgt:u1", ["t1"]);
+    store.set("volgt:intern", ["t1"]);
+    shiftFindMany.mockResolvedValue([shift("s2", "2026-11-10T08:00:00Z"), shift("s3", "2026-11-11T08:00:00Z", { title: "Testklus kassa" })]);
+    profileFindMany.mockResolvedValue([{ id: "f-intern", userId: "intern" }]);
+    expect(await notifyFollowersOfShifts(["s2", "s3"], NOW)).toEqual({ notified: 3 });
+    expect(sendUserPush.mock.calls.map((c) => c[0])).toEqual([["u1", "intern"], ["intern"]]);
+  });
+
   it("stuurt één push per volger, ook voor een reeks dagen, in Nederlandse tijd", async () => {
     store.set("volgers:t1", ["u1", "u2", "weg"]);
     store.set("volgt:u1", ["t1"]);
