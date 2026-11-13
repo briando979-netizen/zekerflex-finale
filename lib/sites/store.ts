@@ -68,6 +68,12 @@ export async function siteOfTenant(tenantId: string, soort: SiteSoort = "website
   return id ? getSite(id) : null;
 }
 
+/** Zet welke site van deze soort open staat voor het bedrijf (lib/sites/meer-sites.ts). Alleen voor een site van dat bedrijf. */
+export async function zetActieveSite(tenantId: string, site: Pick<SiteDoc, "id" | "tenantId" | "soort">): Promise<void> {
+  if (site.tenantId !== tenantId) throw AppError.forbidden("Deze site hoort niet bij je bedrijf.");
+  await kvSet(tenantKey(tenantId, site.soort ?? "website"), site.id);
+}
+
 /**
  * De site waar de winkel van een bedrijf in zit: de webshop, en anders een website die al
  * producten heeft (zo werken de winkels die vóór de scheiding in een website zijn gemaakt gewoon door).
@@ -91,9 +97,13 @@ async function claimSlug(base: string, siteId: string): Promise<string> {
   throw AppError.conflict("Kon geen vrij webadres vinden; kies een andere naam.");
 }
 
-export async function createSite(tenantId: string, by: { userId: string; name: string }, input: z.infer<typeof createSchema>): Promise<SiteDoc> {
+/**
+ * `extra`: nog een site naast de bestaande (lib/sites/meer-sites.ts bewaart eerst de lijst met de bestaande sites). Zonder
+ * `extra` blijft de regel: één site per soort, zoals elke andere aanroep verwacht.
+ */
+export async function createSite(tenantId: string, by: { userId: string; name: string }, input: z.infer<typeof createSchema>, opts: { extra?: boolean } = {}): Promise<SiteDoc> {
   const soort: SiteSoort = input.soort ?? "website";
-  if (await siteOfTenant(tenantId, soort)) throw AppError.conflict(soort === "webshop" ? "Je bedrijf heeft al een webshop." : "Je bedrijf heeft al een website.");
+  if (!opts.extra && (await siteOfTenant(tenantId, soort))) throw AppError.conflict(soort === "webshop" ? "Je bedrijf heeft al een webshop." : "Je bedrijf heeft al een website.");
   const shopTemplate = webshopTemplate(input.templateId);
   const template = soort === "webshop" ? shopTemplate : (SECTOR_TEMPLATES.find((t) => t.id === input.templateId) ?? SECTOR_TEMPLATES[0]!);
   const id = rid("s");
