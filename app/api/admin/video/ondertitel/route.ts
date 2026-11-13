@@ -33,11 +33,13 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request: Request)
   if (g.__zfOndertitelBezig) throw AppError.conflict("Er wordt al een clip omgezet naar ondertitels. Wacht tot die klaar is en probeer het dan nog eens.");
   g.__zfOndertitelBezig = true;
   try {
-    const r = await transcribeWoorden(await bestandBlob(item), `${item.id}.${item.ext}`, { language: taal, prompt: WHISPER_HINT, timeoutMs: 570_000 });
+    // ruim binnen de 5 minuten die Node een verzoek geeft (requestTimeout): liever een nette melding dan een afgebroken
+    // verbinding. Whisper doet ±0,6 s per seconde spraak (gemeten 13 nov), dus dit is ±7 minuten spraak.
+    const r = await transcribeWoorden(await bestandBlob(item), `${item.id}.${item.ext}`, { language: taal, prompt: WHISPER_HINT, timeoutMs: 270_000 });
     return NextResponse.json({ ok: true, tekst: r.text, woorden: r.woorden, ms: r.durationMs });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    throw AppError.upstream("De spraakherkenning gaf geen antwoord. Probeer het zo nog eens, of met een kortere clip.");
+    throw AppError.upstream("De spraakherkenning was niet op tijd klaar of gaf geen antwoord. Probeer het zo nog eens, of knip de clip korter (hoogstens zo'n 7 minuten spraak).");
   } finally {
     g.__zfOndertitelBezig = false;
   }

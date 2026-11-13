@@ -14,6 +14,9 @@ const MAX_GELUID_SEC = 900;
 /** Een video hoogstens zo lang (s): voor de golfvorm moet het hele bestand binnenkomen. */
 const MAX_VIDEO_SEC = 300;
 
+/** Een bestand hoogstens zo groot voor een golfvorm: het komt helemaal in het geheugen van de browser (een 4K-video van een telefoon is snel 200 MB). */
+const MAX_GOLF_BYTES = 80_000_000;
+
 const golven = new Map<string, Promise<Float32Array | null>>();
 const beelden = new Map<string, Promise<string[] | null>>();
 let rij: Promise<unknown> = Promise.resolve();
@@ -29,6 +32,12 @@ async function maakGolf(bron: string): Promise<Float32Array | null> {
   try {
     const res = await fetch(bron);
     if (!res.ok) return null;
+    // te groot: niet ophalen (de tijdlijn werkt gewoon zonder golfvorm)
+    const grootte = Number(res.headers.get("content-length") ?? 0);
+    if (grootte > MAX_GOLF_BYTES) {
+      await res.body?.cancel().catch(() => undefined);
+      return null;
+    }
     const audio = await new OfflineAudioContext(1, 1, 44_100).decodeAudioData(await res.arrayBuffer());
     const kanalen = Array.from({ length: audio.numberOfChannels }, (_, i) => audio.getChannelData(i));
     return piekenUit(kanalen, audio.sampleRate);
