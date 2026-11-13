@@ -144,7 +144,7 @@ export function AssistentKaart({ doc, paginaId, bedrijfNaam, maakId, onPasToe }:
           {nietGedaan.map((n) => (
             <li key={n}>{n}</li>
           ))}
-          <li className="text-xs text-neutralx-600">Ik kan nu: de kleur, de hoeken, het lettertype en de stijl veranderen, een blok toevoegen en een pagina maken. Teksten pas je aan door op een blok te klikken.</li>
+          <li className="text-xs text-neutralx-600">Ik kan nu: de kleur, de hoeken, het lettertype en de stijl veranderen, een blok toevoegen, weghalen of verplaatsen, en een pagina maken of een andere naam geven. Teksten pas je aan door op een blok te klikken.</li>
         </ul>
       ) : null}
     </section>
