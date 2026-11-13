@@ -1,5 +1,6 @@
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { groei, kennisgraaf } from "@/lib/rag/graph";
+import { breinData } from "@/lib/rag/brein";
 import { count } from "@/lib/admin/format";
 import { BarList, Empty, InfoList, KpiStrip, PageHead, Panel, Spark, StackBar } from "@/components/admin/kit";
 import { KennisgraafWeergave } from "@/components/admin/KennisgraafWeergave";
@@ -28,7 +29,7 @@ export default async function KennisGraafPage() {
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
     return <PageHead title="Geen toegang" subtitle="De kennisgraaf is alleen beschikbaar voor platformbeheerders." />;
   }
-  const [g, gr] = await Promise.all([kennisgraaf(), groei()]);
+  const [g, gr, brein] = await Promise.all([kennisgraaf(), groei(), breinData().catch(() => null)]);
   const docs = g.nodes.filter((n) => n.group !== "begrip");
   const docLijnen = g.edges.filter((e) => e.soort !== "begrip");
   const semantisch = docLijnen.filter((e) => e.soort === "semantisch").length;
@@ -107,7 +108,37 @@ export default async function KennisGraafPage() {
         </Panel>
       </div>
 
-      <div className="grid items-start gap-4 lg:grid-cols-3">
+      <div className="grid items-start gap-4 lg:grid-cols-2 xl:grid-cols-4">
+        <Panel title="Wat het brein zelf ontdekte" subtitle={brein?.ontdekt ? `Thema's op betekenis uit alle ${count(brein.neuronen.length)} geheugenstukken (k-means over de embeddings), benoemd naar hun eigen woorden` : "Het brein verdeelt zijn geheugen elke nacht zelf in thema's op betekenis"}>
+          {brein?.ontdekt ? (
+            <ol className="space-y-2 text-[0.8125rem]">
+              {brein.ontdekt.clusters.map((c) => (
+                <li key={c.id} className="rounded-lg px-3 py-2" style={{ background: "var(--a-elev)" }}>
+                  <p className="font-medium" style={{ color: "var(--a-text)" }}>
+                    {c.naam} · {count(c.aantal)} {c.aantal === 1 ? "stuk" : "stukken"}
+                    {c.vuurt !== null ? ` · vuurt ${c.vuurt}%` : ""}
+                  </p>
+                </li>
+              ))}
+              <li className="text-xs" style={{ color: "var(--a-mute)" }}>
+                {count(brein.synapsen.length)} synapsen (betekenisverwanten, cosinus ≥ 0,5) tussen de stukken; berekend op {new Date(brein.ontdekt.op).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}.
+              </li>
+            </ol>
+          ) : (
+            <p className="text-[0.8125rem]" style={{ color: "var(--a-dim)" }}>
+              Nog niet gerekend: de eerste ronde loopt vannacht om 01:10 UTC mee met de momentopname. In het Brein (3D) kun je hem met ?slim=1 op de API eerder laten rekenen.
+            </p>
+          )}
+          {brein?.stil && (
+            <p className="mt-3 text-[0.8125rem]" style={{ color: "var(--a-dim)" }}>
+              <span className="font-medium" style={{ color: "var(--a-text)" }}>
+                Stil geheugen
+              </span>
+              : {count(brein.stil.aantal)} {brein.stil.aantal === 1 ? "stuk is" : "stukken zijn"} in {brein.vuur.dagen} dagen niet geraadpleegd en hebben geen betekenisverwant
+              {brein.stil.voorbeelden.length > 0 ? `: ${brein.stil.voorbeelden.slice(0, 4).map((v) => v.t).join("; ")}${brein.stil.aantal > 4 ? "…" : ""}` : ""}.
+            </p>
+          )}
+        </Panel>
         <Panel title="Het netwerk in cijfers" subtitle="Hoe dicht, hoe verbonden en hoe ver uit elkaar">
           <InfoList
             rows={[
