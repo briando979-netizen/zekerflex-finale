@@ -9,7 +9,7 @@ import { describe, expect, it, vi } from "vitest";
 const bestand = { bytes: Buffer.from(Array.from({ length: 1000 }, (_, i) => i % 256)), filename: "klus.mp4", mimeType: "video/mp4" };
 vi.mock("@/lib/auth", () => ({ requirePrincipal: async () => ({ userId: "a", fullName: "A" }) }));
 vi.mock("@/lib/messaging/contacts", () => ({ isPlatformAdmin: async () => false }));
-vi.mock("@/lib/messaging/store", () => ({ getThread: async () => ({ id: "t1", participants: ["a", "b"] }), canAccess: () => true }));
+vi.mock("@/lib/messaging/store", () => ({ getThread: async () => ({ id: "t1", participants: ["a", "b"] }), canAccess: () => true, getMessages: async () => [], markeerEenmaligGezien: async () => "geen" }));
 vi.mock("@/lib/messaging/media", () => ({
   readChatMedia: async () => bestand,
   opensInline: (m: string) => /^(?:image|audio|video)\//.test(m),

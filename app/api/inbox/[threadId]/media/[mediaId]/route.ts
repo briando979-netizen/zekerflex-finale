@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePrincipal } from "@/lib/auth";
 import { toErrorBody } from "@/lib/errors";
-import { canAccess, getThread } from "@/lib/messaging/store";
+import { canAccess, getMessages, getThread, markeerEenmaligGezien } from "@/lib/messaging/store";
 import { isPlatformAdmin } from "@/lib/messaging/contacts";
 import { opensInline, readChatMedia } from "@/lib/messaging/media";
 import { kleineChatFoto } from "@/lib/messaging/foto-klein";
@@ -30,6 +30,19 @@ export async function GET(
     // Opened in its own tab, the middleware gives this path a sandboxed CSP
     // (CHAT_MEDIA_CSP in lib/security/csp.ts); anything not plainly safe downloads.
     const zoek = new URL(req.url).searchParams;
+    // eenmalig bekijken (zoals WhatsApp): alleen een uitdrukkelijke opening (?eenmalig=1) telt, één keer per ontvanger;
+    // de afzender ziet hem na het versturen niet meer. Geen kleine versie, geen stukken, nooit in een cache.
+    const bericht = (await getMessages(thread.id, 5000)).find((x) => x.attachment?.mediaId === params.mediaId);
+    if (bericht?.eenmalig) {
+      if (zoek.get("eenmalig") !== "1" || bericht.from === p.userId) {
+        return NextResponse.json({ error: { code: "EENMALIG", message: "Deze foto kun je maar één keer bekijken." } }, { status: 404 });
+      }
+      const gezien = await markeerEenmaligGezien(thread.id, params.mediaId, p.userId);
+      if (gezien !== "ok") return NextResponse.json({ error: { code: "AL_BEKEKEN", message: "Deze foto is al bekeken." } }, { status: 410 });
+      return new Response(new Uint8Array(file.bytes), {
+        headers: { "Content-Type": file.mimeType, "Content-Disposition": "inline", "X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store" },
+      });
+    }
     const inline = zoek.get("dl") !== "1" && opensInline(file.mimeType);
     // ?klein=1: de foto in de bubbel (lib/messaging/foto-klein.ts), na dezelfde toegangscontrole; lukt dat niet, het origineel
     const kleintje = inline && zoek.get("klein") === "1" ? await kleineChatFoto(file.bytes, file.mimeType) : null;

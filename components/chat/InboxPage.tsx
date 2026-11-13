@@ -697,6 +697,20 @@ function InboxPageInner({
     else say(ib.doorsturenMislukt, true);
   };
 
+  // eenmalig bekijken: één keer ophalen (de server legt vast dat jij hem opende) en als blob tonen
+  const openEenmalig = async (msg: Msg) => {
+    if (!active || !msg.attachment) return;
+    const r = await fetch(`/api/inbox/${active}/media/${msg.attachment.mediaId}?eenmalig=1`, { cache: "no-store" }).catch(() => null);
+    if (!r?.ok) {
+      say(r?.status === 410 ? ib.eenmaligAlBekeken : ib.eenmaligMislukt, true);
+      void loadThread(active);
+      return;
+    }
+    const url = URL.createObjectURL(await r.blob());
+    setViewer({ src: url, filename: msg.attachment.filename });
+    void loadThread(active);
+  };
+
   // ── meerdere berichten selecteren
   const kiesBericht = (m: Msg) =>
     setSelectie((s) => {
@@ -1465,6 +1479,7 @@ function InboxPageInner({
                         selected={Boolean(selectie?.includes(m.id))}
                         onSelect={kiesBericht}
                         onInfo={(i) => setInfoVan(i.id)}
+                        onOpenEenmalig={(e) => void openEenmalig(e)}
                         onEdit={(e) => {
                           setReplyTo(null);
                           setEditing(e);
@@ -1638,7 +1653,16 @@ function InboxPageInner({
           />
         </Portal>
       )}
-      {viewer && <ImageViewer src={viewer.src} filename={viewer.filename} onClose={() => setViewer(null)} />}
+      {viewer && (
+        <ImageViewer
+          src={viewer.src}
+          filename={viewer.filename}
+          onClose={() => {
+            if (viewer.src.startsWith("blob:")) URL.revokeObjectURL(viewer.src); // een eenmalige foto is daarna weg
+            setViewer(null);
+          }}
+        />
+      )}
       {cardUser && (
         <UserCard
           userId={cardUser}

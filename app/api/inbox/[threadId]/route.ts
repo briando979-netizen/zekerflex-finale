@@ -158,6 +158,8 @@ const sendSchema = z.object({
     .optional(),
   // @vermeldingen in een groep (userIds); de server houdt alleen leden van het gesprek over
   mentions: z.array(z.string().min(1).max(40)).max(VERMELDING_MAX).optional(),
+  // kind "image": maar één keer te bekijken (zoals WhatsApp)
+  eenmalig: z.boolean().optional(),
 });
 
 // POST /api/inbox/:id — send a message (text, voice, file, image, location, call log).
@@ -193,6 +195,7 @@ export async function POST(request: Request, props: { params: Promise<{ threadId
 
     const extra: MessageExtra = {};
     let text = input.text;
+    if (input.kind === "image" && input.eenmalig) extra.eenmalig = true;
     if (thread.kind === "group") {
       const genoemd = geldigeVermeldingen(input.mentions, thread.participants, p.userId);
       if (genoemd.length) extra.mentions = genoemd;

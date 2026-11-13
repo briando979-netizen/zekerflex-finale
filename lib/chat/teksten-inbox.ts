@@ -149,6 +149,8 @@ export const INBOX_NL = {
   rondzendDeels: "Verstuurd naar {aantal}; {overgeslagen} overgeslagen (geblokkeerd of geen contact meer).",
   rondzendGeen: "Je hebt nog geen contacten of gesprekken om naar rond te zenden.",
   rondzendMislukt: "Rondzenden lukte niet. Probeer het opnieuw.",
+  eenmaligAlBekeken: "Deze foto is al bekeken.",
+  eenmaligMislukt: "De foto openen lukte niet.",
   gesprekStartenMislukt: "Dit gesprek kon niet starten.",
   gesprekNietInLijst: "Dit gesprek staat niet in je lijst (vergrendeld of verwijderd).",
   onjuistePincode: "Onjuiste pincode.",
