@@ -9,6 +9,7 @@ import { Reveal } from "@/components/marketing/Reveal";
 import { FaqList } from "@/components/marketing/primitives";
 import { BranchShowcase } from "@/components/marketing/BranchShowcase";
 import { AppDownload } from "@/components/marketing/AppDownload";
+import { PaginaAchtergrond } from "@/components/shop/PaginaAchtergrond";
 import {
   BEDRIJVEN_HOME,
   WERK_AANMELDEN,
@@ -35,6 +36,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return seoMetadata("/", { keywords: [...SITE.keywords] });
 }
 
+// De gekozen achtergrond komt uit de opslag: zonder dit zou hij bij het bouwen worden vastgelegd (toen is er geen database).
+export const revalidate = 60;
+
 export default function WerkHomePage() {
   return (
     <>
@@ -43,6 +47,7 @@ export default function WerkHomePage() {
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: ldJson(werkFaqJsonLd()) }}
       />
+      <PaginaAchtergrond pagina="home" />
 
       {/* ───────────────────────────────────────────────── opening */}
       <section className="relative isolate overflow-hidden bg-[#0C0E12] text-white">
