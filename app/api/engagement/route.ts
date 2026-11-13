@@ -3,7 +3,7 @@ import { z } from "zod";
 import { EngagementKind } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requirePrincipal, requireRole } from "@/lib/auth";
-import { AppError, toErrorBody } from "@/lib/errors";
+import { toErrorBody } from "@/lib/errors";
 import { recordEngagement } from "@/lib/engagement/events";
 import { appOpenTelt } from "@/lib/engagement/app-open";
 
@@ -32,7 +32,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       where: { userId: principal.userId },
       select: { id: true },
     });
-    if (!profile) throw AppError.notFound("Je hebt nog geen werkersprofiel. Maak eerst je profiel af.");
+    // nog geen werkersprofiel (een nieuwe werker vóór de woonstap): niets te tellen, en dat is geen fout. De app meldt
+    // "geopend" bij elke opening; een 404 kwam 15 keer per 2 dagen in het Caddy-log (13 nov), en CrowdSec telt 404-reeksen.
+    if (!profile) return NextResponse.json({ ok: true, kind, geteld: false });
 
     // "App geopend" telt hoogstens eens per half uur (lib/engagement/app-open.ts),
     // ook als de app zijn eigen rem kwijt is (privévenster, meerdere tabbladen).
