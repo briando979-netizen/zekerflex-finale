@@ -14,7 +14,8 @@ import { AppError } from "@/lib/errors";
 // ---------------------------------------------------------------------------
 
 export interface TranscribeOptions {
-  language?: string;
+  /** null = Whisper herkent de taal zelf (chat: werkers spreken ook Pools, Roemeens, Oekraïens) */
+  language?: string | null;
   prompt?: string; // optional context hint for Whisper
   timeoutMs?: number;
 }
@@ -42,7 +43,8 @@ export async function transcribeAudio(
   const blob = new Blob([new Uint8Array(audio)], { type: mimeTypeFor(filename) });
   form.append("file", blob, filename);
   form.append("model", viaWhisper ? env.WHISPER_MODEL : "whisper");
-  form.append("language", opts.language ?? "nl");
+  const taal = opts.language === null ? null : (opts.language ?? "nl");
+  if (taal) form.append("language", taal);
   form.append("response_format", "json");
   if (opts.prompt) form.append("prompt", opts.prompt);
 
@@ -63,7 +65,7 @@ export async function transcribeAudio(
     const json = (await res.json()) as { text?: string };
     const text = (json.text ?? "").trim();
     logger.debug("asr: transcript klaar", { chars: text.length, durationMs: Date.now() - start });
-    return { text, language: opts.language ?? "nl", durationMs: Date.now() - start };
+    return { text, language: taal ?? "auto", durationMs: Date.now() - start };
   } finally {
     clearTimeout(timeout);
   }
