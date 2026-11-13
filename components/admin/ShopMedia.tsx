@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { conceptProductVoorFoto } from "@/lib/shop/media-product";
+import { bewaarKnopTekst, bewaardMelding, nuLiveTekst, serverKeuze } from "@/lib/shop/media-keuze";
 
 // ---------------------------------------------------------------------------
 // Beheer → Webshop → Foto's en video's: meerdere bestanden tegelijk kiezen
@@ -43,19 +44,28 @@ async function stuurNaarBibliotheek(bestand: File): Promise<{ item?: Item; fout?
 }
 
 function PaginaKeuze({ pagina, titel, keuze, media, onBewaard }: { pagina: "shop" | "home"; titel: string; keuze: Keuze | null; media: Item[]; onBewaard: (k: Keuze | null) => void }) {
-  const [gekozen, setGekozen] = useState(keuze?.media ?? "");
-  const [poster, setPoster] = useState(keuze?.poster ?? "");
+  const serverMedia = keuze?.media ?? "";
+  const serverPoster = keuze?.poster ?? "";
+  const [gekozen, setGekozen] = useState(serverMedia);
+  const [poster, setPoster] = useState(serverPoster);
   const [status, setStatus] = useState("");
+  // De stand van de server komt pas na het laden binnen (en verandert na bewaren): de vakken volgen hem.
+  useEffect(() => {
+    setGekozen(serverMedia);
+    setPoster(serverPoster);
+  }, [serverMedia, serverPoster]);
   const item = media.find((m) => m.id === gekozen);
   const fotos = media.filter((m) => m.soort === "foto");
   const bewaar = async () => {
     setStatus("Bezig…");
     const body = { pagina, keuze: gekozen ? (item?.soort === "video" && poster ? { media: gekozen, poster } : { media: gekozen }) : null };
     const r = await fetch("/api/admin/ontwerp/achtergrond", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const d = (await r.json().catch(() => null)) as { error?: { message?: string } } | null;
+    const d = (await r.json().catch(() => null)) as { error?: { message?: string }; achtergrond?: Instelling } | null;
     if (!r.ok) { setStatus(d?.error?.message ?? "Bewaren mislukt."); return; }
-    onBewaard(body.keuze);
-    setStatus("Bewaard. Op de pagina verschijnt het binnen een minuut.");
+    // de teruggegeven serverversie overnemen, niet de eigen keuze
+    const bewaard = serverKeuze(d, pagina, body.keuze);
+    onBewaard(bewaard);
+    setStatus(bewaardMelding(pagina, bewaard));
   };
   return (
     <div className="space-y-2 rounded-xl p-3" style={{ border: "1px solid var(--a-border)" }}>
@@ -74,8 +84,9 @@ function PaginaKeuze({ pagina, titel, keuze, media, onBewaard }: { pagina: "shop
           </select>
         </label>
       ) : null}
+      <p className="text-xs font-semibold" style={{ color: "var(--a-dim)" }}>{nuLiveTekst(keuze, media)}</p>
       <div className="flex items-center gap-3">
-        <button type="button" className="a-button a-button-primary text-sm" onClick={() => void bewaar()}>Bewaren</button>
+        <button type="button" className="a-button a-button-primary text-sm" onClick={() => void bewaar()}>{bewaarKnopTekst(pagina)}</button>
         {status ? <span role="status" className="text-xs" style={{ color: "var(--a-mute)" }}>{status}</span> : null}
       </div>
     </div>
@@ -185,7 +196,7 @@ export function ShopMedia({ onProductenAangemaakt }: { onProductenAangemaakt: ()
       {media !== null ? (
         <div className="space-y-3 border-t pt-4" style={{ borderColor: "var(--a-border)" }}>
           <h3 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>Achtergrond bovenaan de pagina</h3>
-          <p className="text-xs" style={{ color: "var(--a-mute)" }}>Een foto of video als strook boven de kop van de pagina. Bij &quot;Geen&quot; blijft de pagina precies zoals hij nu is. Video speelt zonder geluid en staat stil bij &quot;minder beweging&quot;.</p>
+          <p className="text-xs" style={{ color: "var(--a-mute)" }}>Een foto of video als strook boven de kop van de pagina. Webshop en Homepage bewaar je los van elkaar: een knop verandert alleen die ene pagina. Bij &quot;Geen&quot; blijft de pagina precies zoals hij nu is. Video speelt zonder geluid en staat stil bij &quot;minder beweging&quot;.</p>
           <div className="grid gap-3 md:grid-cols-2">
             <PaginaKeuze pagina="shop" titel="Webshop (/shop)" keuze={instelling.shop} media={lijst} onBewaard={(k) => setInstelling((cur) => ({ ...cur, shop: k }))} />
             <PaginaKeuze pagina="home" titel="Homepage" keuze={instelling.home} media={lijst} onBewaard={(k) => setInstelling((cur) => ({ ...cur, home: k }))} />
