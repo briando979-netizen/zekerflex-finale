@@ -3,6 +3,7 @@ import { PageHead } from "@/components/admin/kit";
 import { KostenBeheer } from "@/components/admin/KostenBeheer";
 import { leesKosten, operationeleKosten } from "@/lib/admin/kosten-opslag";
 import { transipFacturen } from "@/lib/admin/kosten-transip";
+import { geminiVerbruikDezeMaand } from "@/lib/admin/gemini-verbruik-lezen";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,6 @@ export default async function AdminKostenPage() {
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
     return <PageHead title="Geen toegang" subtitle="Kosten zijn alleen beschikbaar voor platformbeheerders." />;
   }
-  const [stand, transip, financien] = await Promise.all([leesKosten(), transipFacturen(), operationeleKosten()]);
-  return <KostenBeheer initieel={stand} transip={transip} financien={financien} />;
+  const [stand, transip, financien, gemini] = await Promise.all([leesKosten(), transipFacturen(), operationeleKosten(), geminiVerbruikDezeMaand()]);
+  return <KostenBeheer initieel={stand} transip={transip} financien={financien} gemini={gemini} />;
 }
