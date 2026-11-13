@@ -30,9 +30,12 @@ describe("de lijst open vragen", () => {
         "opgaaf-volledig-adres",
         "btw-buitenlandse-diensten",
         "inc-werkgever-uitzend",
-        "facturen-bv-afzender",
       ]),
     );
+    expect(ACCOUNTANT_VRAGEN).toHaveLength(6);
+    // de eigenaar (13 nov): de facturen met "ZekerFlex B.V." gingen naar zijn eigen testbedrijf, staan op geannuleerd,
+    // € 0 open; "Die ZekerFlex BV mag je helemaal vergeten". Geen vraag aan de accountant.
+    expect(ACCOUNTANT_VRAGEN.some((v) => /B\.?V\b/.test(`${v.vraag} ${v.stand ?? ""}`))).toBe(false);
   });
 
   it("voor het dossier: eerst de jaarvragen (of de melding zonder administratie), dan de vaste lijst", () => {
@@ -46,10 +49,14 @@ describe("de lijst open vragen", () => {
   });
 
   it("het dossier zet ze in hoofdstuk 4, ge-escaped", () => {
-    const html = dossierHtml({ administratie: "nog geen echte administratie", gemaaktOp: "2026-11-13", concept: null, vragen: alleOpenVragen(null), structuur: {}, termijnen: [] });
+    // een eigen vraag met aanhalingstekens, & en < bewijst het escapen
+    const proef = vraagRegel({ id: "proef", onderwerp: "btw", vraag: 'Is "A & B" <verlegd>?', sinds: "2026-11-13" });
+    expect(proef).toBe('Btw: Is "A & B" <verlegd>?');
+    const html = dossierHtml({ administratie: "nog geen echte administratie", gemaaktOp: "2026-11-13", concept: null, vragen: [...alleOpenVragen(null), proef], structuur: {}, termijnen: [] });
     const h4 = html.slice(html.indexOf("<h2>4. Open vragen"), html.indexOf("<h2>5."));
-    for (const v of ACCOUNTANT_VRAGEN) expect(h4).toContain(esc(vraagRegel(v)));
-    expect(h4).toContain("&quot;ZekerFlex B.V.&quot;");
+    for (const v of ACCOUNTANT_VRAGEN) expect(h4).toContain(`<li>${esc(vraagRegel(v))}</li>`);
+    expect(h4).toContain("<li>Btw: Is &quot;A &amp; B&quot; &lt;verlegd&gt;?</li>");
+    expect(h4).not.toContain("<verlegd>");
   });
 
   it("de dossierroute en Beheer gebruiken dezelfde lijst", () => {
