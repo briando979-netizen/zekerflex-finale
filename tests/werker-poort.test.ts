@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { openVerplicht, toegestaanTijdensOnboarding, volgendeNaVerificatie, werkerOnboardingKlaar, type WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
+import { BRANCHE_STAP_SINDS, branchesTellen, openVerplicht, toegestaanTijdensOnboarding, volgendeNaVerificatie, werkerOnboardingKlaar, type WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
 
 // De onboarding van de werker (10 nov 2026). Sinds 12 nov is de app open en wacht alleen reageren op de onboarding;
 // tweestapsverificatie is dan optioneel (eigenaar).
@@ -75,12 +75,13 @@ const h = vi.hoisted(() => ({
   passkeys: 0,
   foto: true as boolean,
   email: "werker@voorbeeld.nl" as string | null,
+  aangemeld: null as Date | null,
 }));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     freelancerProfile: { findUnique: async () => h.profiel },
-    user: { findUnique: async () => (h.email === null ? null : { kycStatus: h.kyc, email: h.email }) },
+    user: { findUnique: async () => (h.email === null ? null : { kycStatus: h.kyc, email: h.email, createdAt: h.aangemeld }) },
     identityVerification: { findFirst: async () => h.inBehandeling },
     passkey: { count: async () => h.passkeys },
   },
@@ -113,6 +114,7 @@ describe("werkerPoortStand", () => {
     h.passkeys = 0;
     h.foto = true;
     h.email = "werker@voorbeeld.nl";
+    h.aangemeld = null;
   });
 
   it("zonder profielfoto: niet klaar", async () => {
@@ -160,11 +162,33 @@ describe("werkerPoortStand", () => {
     expect((await werkerPoortStand("u1")).gegevensIngevuld).toBe(true);
   });
 
-  it("een KVK-nummer van 8 cijfers telt ook als de KVK-koppeling het (nog) niet bevestigde", async () => {
+  it("zzp'er of flexwerker: KVK/btw/KOR hoort sinds 13 nov niet bij de aanmelding (86), alleen de thuisbasis", async () => {
     const { werkerPoortStand } = await import("@/lib/onboarding/werker-poort-server");
-    expect((await werkerPoortStand("u1")).gegevensIngevuld).toBe(true);
-    h.profiel = { ...h.profiel, kvkNumber: "pending-abc" };
+    for (const workerKind of ["zzp", "flexwerker"]) {
+      h.fiscal = { workerKind };
+      h.profiel = { homePostalCode: "1012AB" };
+      expect((await werkerPoortStand("u1")).gegevensIngevuld, workerKind).toBe(true);
+      h.profiel = { homePostalCode: null };
+      expect((await werkerPoortStand("u1")).gegevensIngevuld, workerKind).toBe(false);
+    }
+  });
+
+  it("uitzendkracht: het BSN (fiscaal ingevuld) en de getekende overeenkomst blijven in de poort", async () => {
+    const { werkerPoortStand } = await import("@/lib/onboarding/werker-poort-server");
+    h.fiscal = { workerKind: "uitzendkracht" };
+    // de mock van activeUitzendContract geeft null: geen getekende overeenkomst
     expect((await werkerPoortStand("u1")).gegevensIngevuld).toBe(false);
+  });
+
+  it("geen branchekeuze: een account van vóór de stap (10 nov) telt als 'alle', een nieuw account niet", async () => {
+    const { werkerPoortStand } = await import("@/lib/onboarding/werker-poort-server");
+    h.branches = null;
+    h.aangemeld = new Date("2026-11-09T23:59:00+01:00");
+    expect((await werkerPoortStand("u1")).branchesGekozen).toBe(true);
+    h.aangemeld = new Date("2026-11-10T00:00:00+01:00");
+    expect((await werkerPoortStand("u1")).branchesGekozen).toBe(false);
+    h.aangemeld = null;
+    expect((await werkerPoortStand("u1")).branchesGekozen).toBe(false);
   });
 
   it("een Stripe-sessie die alleen geopend is, telt niet als ingestuurd", async () => {
@@ -188,5 +212,19 @@ describe("werkerPoortStand", () => {
     const { werkerPoortStand } = await import("@/lib/onboarding/werker-poort-server");
     h.werkrecht = null;
     expect((await werkerPoortStand("u1")).werkrechtIngevuld).toBe(true);
+  });
+});
+
+describe("de stap branches voor accounts van vóór 10 nov (13 nov, 86)", () => {
+  it("een keuze telt altijd; zonder keuze alleen een account van vóór de stap", () => {
+    expect(branchesTellen(true, null)).toBe(true);
+    expect(branchesTellen(true, new Date(BRANCHE_STAP_SINDS + 1))).toBe(true);
+    expect(branchesTellen(false, new Date(BRANCHE_STAP_SINDS - 1))).toBe(true);
+    expect(branchesTellen(false, new Date(BRANCHE_STAP_SINDS))).toBe(false);
+    expect(branchesTellen(false, undefined)).toBe(false);
+  });
+
+  it("de grens is 10 nov 2026 00:00 in Amsterdam", () => {
+    expect(new Date(BRANCHE_STAP_SINDS).toISOString()).toBe("2026-11-09T23:00:00.000Z");
   });
 });

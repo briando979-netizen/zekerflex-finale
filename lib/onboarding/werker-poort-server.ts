@@ -3,7 +3,7 @@ import { getFiscal, fiscaalIngevuld, invoiceModeFor } from "@/lib/fiscal/store";
 import { activeUitzendContract } from "@/lib/agreements/uitzend-contract";
 import { getBrancheKeuze } from "@/lib/worker/branche-store";
 import { werkrechtOverzicht } from "@/lib/werkrecht/store";
-import { werkerOnboardingKlaar, type WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
+import { branchesTellen, werkerOnboardingKlaar, type WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
 import { hasTwoFactor } from "@/lib/auth/two-factor";
 import { getUserProfileExtra } from "@/lib/profile/store";
 import type { BrancheKeuze } from "@/lib/shifts/branche-keuze";
@@ -23,8 +23,8 @@ export interface WerkerPoortStand extends WerkerPoortFeiten {
 export async function werkerPoortStand(userId: string): Promise<WerkerPoortStand> {
   const [fiscal, profiel, user, inBehandeling, brancheKeuze, werkrecht, tweestap, passkeys, extra] = await Promise.all([
     getFiscal(userId),
-    prisma.freelancerProfile.findUnique({ where: { userId }, select: { kvkValid: true, kvkNumber: true, payoutIban: true, homePostalCode: true } }),
-    prisma.user.findUnique({ where: { id: userId }, select: { kycStatus: true } }),
+    prisma.freelancerProfile.findUnique({ where: { userId }, select: { homePostalCode: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { kycStatus: true, createdAt: true } }),
     // ingestuurd en in behandeling: niet een Stripe-sessie die alleen geopend is (die zet al PENDING)
     prisma.identityVerification.findFirst({
       where: { userId, status: "PENDING", OR: [{ provider: { not: "STRIPE_IDENTITY" } }, { decisionStatus: "processing" }] },
@@ -42,13 +42,13 @@ export async function werkerPoortStand(userId: string): Promise<WerkerPoortStand
   const contract = uitzend ? Boolean(await activeUitzendContract(userId).catch(() => true)) : true;
   const feiten: WerkerPoortFeiten = {
     soortGekozen: Boolean(fiscal.workerKind),
-    branchesGekozen: brancheKeuze !== null,
+    // een account van vóór de stap (10 nov) zonder keuze telt als "alle branches" (werker-poort.ts, BRANCHE_STAP_SINDS)
+    branchesGekozen: branchesTellen(brancheKeuze !== null, user?.createdAt),
     gegevensIngevuld:
-      fiscaalIngevuld(fiscal) &&
-      // ingevuld, niet per se al bevestigd: een KVK-nummer van 8 cijfers telt (bij een storing van de
-      // KVK-koppeling mag niemand hier vastlopen); vóór betaald werk wordt het opnieuw gecontroleerd
-      (uitzend ? contract : Boolean(profiel?.kvkValid || /^\d{8}$/.test(profiel?.kvkNumber ?? "") || fiscal.vatValid || fiscal.korApplies)) &&
-      // het IBAN niet meer hier (10 nov, eigenaar): dat komt vóór de eerste betaalde klus (eligibility)
+      // uitzendkracht: het BSN (wettelijk nodig voor de loonadministratie) en de getekende overeenkomst. Een zzp'er of
+      // flexwerker: sinds 13 nov geen KVK/btw/KOR meer hier (86), net als het IBAN op 10 nov; die komen vóór de eerste
+      // klus (eligibility, met een eerlijke reden als de KVK-controle nog wacht)
+      (uitzend ? fiscaalIngevuld(fiscal) && contract : Boolean(fiscal.workerKind)) &&
       Boolean(profiel?.homePostalCode),
     identiteitIngestuurd: user?.kycStatus === "VERIFIED" || (user?.kycStatus === "PENDING" && Boolean(inBehandeling)),
     // Nederland staat altijd vooraan (lib/werkrecht/store.ts); een storing telt niet als "niet ingevuld"

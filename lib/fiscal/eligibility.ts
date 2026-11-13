@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { activeUitzendContract } from "@/lib/agreements/uitzend-contract";
 import { werkrechtVoorWerk } from "@/lib/werkrecht/store";
+import { kvkWachtVan } from "@/lib/kvk/tegoed-opslag";
 
 // ---------------------------------------------------------------------------
 // Can this worker actually be paid for a klus? The rule differs by werkvorm:
@@ -64,7 +65,12 @@ async function fiscalEligibility(userId: string): Promise<PayoutEligibility> {
 
   const ok = Boolean(profile?.kvkValid || profile?.vatValid || fiscal.vatValid || fiscal.korApplies);
   if (!ok) {
-    return { ok, track, reason: "Je hebt nog geen geldig KVK-nummer of KOR. Maak er een aan om op deze klussen te reageren.", sleutel: "elig.kvk" };
+    // sinds 13 nov hoort de KVK niet meer bij de aanmelding: hier pas. Wacht de controle (tegoed bij KVKBase op of de
+    // minuutlimiet; lib/kvk/herkansing.ts probeert het opnieuw), zeg dat dan eerlijk in plaats van "nog geen KVK-nummer"
+    if (await kvkWachtVan("werker", userId)) {
+      return { ok, track, reason: "We konden je KVK-nummer nog niet controleren bij de KVK. We proberen het vanzelf opnieuw; daarna kun je op deze klussen reageren.", sleutel: "elig.kvkWacht" };
+    }
+    return { ok, track, reason: "Voor deze klussen is een geldig KVK-nummer, btw-nummer of de KOR nodig. Vul het in bij Verificatie of Fiscale gegevens om te reageren.", sleutel: "elig.kvk" };
   }
   // Het IBAN zit sinds 10 nov niet meer in de onboarding: zonder rekeningnummer kunnen we niet uitbetalen
   if (!(profile?.payoutIban || fiscal.iban)) {

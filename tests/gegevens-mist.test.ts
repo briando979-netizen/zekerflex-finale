@@ -18,7 +18,7 @@ vi.mock("@/lib/integrations/kvkbase", () => ({ validateVat: vi.fn() }));
 vi.mock("@/lib/compliance/documents", () => ({ flagIbanChanged: vi.fn() }));
 vi.mock("@/lib/fiscal/iban-bevestiging", () => ({ bevestigIbanWijziging: vi.fn() }));
 
-import { gegevensMist, type GegevensStand } from "@/lib/onboarding/gegevens-mist";
+import { gegevensMist, voorEersteKlus, type GegevensStand } from "@/lib/onboarding/gegevens-mist";
 import { fiscaalIngevuld, getFiscal, EMPTY_FISCAL } from "@/lib/fiscal/store";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 
@@ -43,13 +43,16 @@ describe("gegevensMist: wat er nog mist", () => {
     expect(gegevensMist(stand({ fiscaalIngevuld: true, contractGetekend: true, postcodeOk: true }))).toEqual([]);
   });
 
-  it("een zzp'er of flexwerker mist btw/KOR (en de postcode), nooit het BSN of de overeenkomst", () => {
+  it("een zzp'er of flexwerker mist bij de aanmelding alleen de postcode; btw/KVK/KOR komt vóór de eerste klus (13 nov)", () => {
     for (const soort of ["zzp", "flexwerker"] as const) {
-      expect(gegevensMist(stand({ soort }))).toEqual(["btw", "postcode"]);
-      expect(gegevensMist(stand({ soort, fiscaalIngevuld: true, bedrijfOk: true, postcodeOk: true }))).toEqual([]);
-      // fiscaal klaar maar nog geen bedrijfsgegevens: ook dan btw
-      expect(gegevensMist(stand({ soort, fiscaalIngevuld: true, postcodeOk: true }))).toEqual(["btw"]);
+      expect(gegevensMist(stand({ soort }))).toEqual(["postcode"]);
+      expect(gegevensMist(stand({ soort, postcodeOk: true }))).toEqual([]);
+      expect(voorEersteKlus(stand({ soort, postcodeOk: true }))).toEqual(["btw"]);
+      expect(voorEersteKlus(stand({ soort, fiscaalIngevuld: true, postcodeOk: true }))).toEqual(["btw"]);
+      expect(voorEersteKlus(stand({ soort, fiscaalIngevuld: true, bedrijfOk: true }))).toEqual([]);
     }
+    // een uitzendkracht heeft geen btw/KVK
+    expect(voorEersteKlus(stand({ soort: "uitzendkracht" }))).toEqual([]);
   });
 
   it("zonder gekozen soort valt er niets op te noemen behalve de postcode (de soort is een eerdere stap)", () => {
@@ -63,7 +66,8 @@ describe("gegevensMist: wat er nog mist", () => {
           for (const bedrijf of [false, true]) {
             for (const postcode of [false, true]) {
               const s: GegevensStand = { soort, fiscaalIngevuld: fiscaal, contractGetekend: contract, bedrijfOk: bedrijf, postcodeOk: postcode };
-              const poort = fiscaal && (soort === "uitzendkracht" ? contract : bedrijf) && postcode;
+              // sinds 13 nov: een zzp'er of flexwerker alleen de postcode (KVK/btw/KOR vóór de eerste klus)
+              const poort = (soort === "uitzendkracht" ? fiscaal && contract : true) && postcode;
               // zonder soort is fiscaalIngevuld nooit waar (isComplete), dat is hier een eerdere stap
               if (soort === null) continue;
               expect(gegevensMist(s).length === 0, JSON.stringify(s)).toBe(poort);

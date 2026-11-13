@@ -55,6 +55,11 @@ export async function wisKvkWacht(soort: "werker" | "bedrijf", id: string): Prom
   await kvDelete(wachtSleutel(soort, id)).catch(() => undefined);
 }
 
+/** De wachtende controle van één werker of bedrijf, of null (ook bij een storing). */
+export async function kvkWachtVan(soort: "werker" | "bedrijf", id: string): Promise<KvkWacht | null> {
+  return kvGet<KvkWacht>(wachtSleutel(soort, id)).catch(() => null);
+}
+
 /** Alle wachtende controles: soort, id en de markering. */
 export async function wachtendeKvkControles(limiet = 500): Promise<{ soort: "werker" | "bedrijf"; id: string; wacht: KvkWacht }[]> {
   const rijen = await kvListEntries<KvkWacht>(KVK_WACHT_PREFIX, limiet).catch(() => []);
