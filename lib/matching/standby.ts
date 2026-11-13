@@ -6,6 +6,7 @@ import { pushDay, pushRate } from "@/lib/i18n/worker-push";
 import { prefsAllowShift } from "@/lib/matching/worker-prefs";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { isBlockedByAny } from "@/lib/employer/relations";
+import { klusKenmerk, testklusMeldfilter } from "@/lib/shifts/testklus-db";
 
 // ---------------------------------------------------------------------------
 // Standby-modus (/dashboard/beschikbaarheid: "ik spring bij voor spoeddiensten").
@@ -30,6 +31,7 @@ export async function notifyStandby(shiftId: string, now = new Date()): Promise<
     select: {
       id: true,
       title: true,
+      createdAt: true,
       startsAt: true,
       endsAt: true,
       hourlyRateCents: true,
@@ -37,7 +39,7 @@ export async function notifyStandby(shiftId: string, now = new Date()): Promise<
       status: true,
       visibility: true,
       viaUitzendbureau: true,
-      branch: { select: { city: true, tenantId: true } },
+      branch: { select: { city: true, tenantId: true, tenant: { select: { name: true } } } },
       _count: { select: { assignments: { where: { cancelledAt: null } } } },
     },
   });
@@ -49,9 +51,12 @@ export async function notifyStandby(shiftId: string, now = new Date()): Promise<
     WHERE key LIKE 'prefs:%' AND value->>'standby' = 'true'
     LIMIT 2000`;
 
+  // een testklus alleen naar interne accounts (lib/shifts/testklus-db.ts)
+  const testklus = await testklusMeldfilter();
   const recipients: string[] = [];
   for (const row of rows) {
     const userId = row.key.slice("prefs:".length);
+    if (!(await testklus.mag(klusKenmerk(s), userId))) continue;
     if (!prefsAllowShift(row.value, s)) continue;
     if (s.viaUitzendbureau && invoiceModeFor(await getFiscal(userId)) !== "payroll") continue;
     if (await isBlockedByAny([s.branch.tenantId], userId)) continue;

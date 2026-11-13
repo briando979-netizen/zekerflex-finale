@@ -5,6 +5,7 @@ import { haversineMeters } from "@/lib/geo/geofencing";
 import { isMatchEligibleWorker } from "@/lib/matching/engine";
 import { blockedUserIdsForTenants } from "@/lib/employer/relations";
 import { zonderTestwerker } from "@/lib/testwerker/adres";
+import { klusKenmerk, testklusMeldfilter } from "@/lib/shifts/testklus-db";
 
 // ---------------------------------------------------------------------------
 // Geo-targeted push: een dienst die bijna begint maar nog plekken open heeft →
@@ -42,18 +43,21 @@ export async function notifyNearbyOpenShifts(now = new Date(), radiusKm = DEFAUL
     select: {
       id: true,
       title: true,
+      createdAt: true,
       startsAt: true,
       positions: true,
       hourlyRateCents: true,
       viaUitzendbureau: true,
       requiredSkillId: true,
-      branch: { select: { name: true, city: true, latitude: true, longitude: true, tenantId: true } },
+      branch: { select: { name: true, city: true, latitude: true, longitude: true, tenantId: true, tenant: { select: { name: true } } } },
       assignments: { where: { cancelledAt: null }, select: { id: true } },
     },
     orderBy: { startsAt: "asc" },
     take: 40,
   });
 
+  // een testklus alleen naar interne accounts (lib/shifts/testklus-db.ts; 13 nov: één geo-push over een testklus bereikte een echte werker)
+  const testklus = await testklusMeldfilter();
   let sent = 0;
   for (const shift of shifts) {
     if (shift.assignments.length >= shift.positions) continue;
@@ -84,6 +88,7 @@ export async function notifyNearbyOpenShifts(now = new Date(), radiusKm = DEFAUL
 
     const hoursOut = Math.round((shift.startsAt.getTime() - now.getTime()) / H);
     for (const { c, km } of near) {
+      if (!(await testklus.mag(klusKenmerk(shift), c.userId))) continue;
       if (!(await isMatchEligibleWorker(c, shift.viaUitzendbureau))) continue;
       if (!(await claimGeo(shift.id, c.userId))) continue;
       // In the worker's own app language (lib/i18n/worker-push.ts).

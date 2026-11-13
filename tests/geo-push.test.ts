@@ -65,4 +65,17 @@ describe("notifyNearbyOpenShifts", () => {
     blockedUserIdsForTenants.mockResolvedValue(new Set(["w"]));
     expect(await notifyNearbyOpenShifts(NOW, 15)).toBe(0);
   });
+
+  it("een testklus alleen naar interne accounts (13 nov: één geo-push over een testklus bereikte een echte werker)", async () => {
+    shiftFindMany.mockResolvedValue([shift({ branch: { ...BRANCH, tenantId: "t-test", tenant: { name: "Test bedrijven" } } })]);
+    const buurt = [
+      { userId: "echt", vatValid: true, kvkValid: true, homeLatitude: 52.1, homeLongitude: 5.12 },
+      { userId: "intern", vatValid: true, kvkValid: true, homeLatitude: 52.1, homeLongitude: 5.12 },
+    ];
+    // de kandidaten (met thuislocatie) of de interne accounts van het testbedrijf (testklusOntvangers)
+    profileFindMany.mockImplementation(async (args: { where: { homeLatitude?: unknown } }) => (args.where.homeLatitude ? buurt : [{ id: "f-intern", userId: "intern" }]));
+    expect(await notifyNearbyOpenShifts(NOW, 15)).toBe(1);
+    expect(sendUserPush.mock.calls[0]![0]).toEqual(["intern"]);
+    expect(kv["push-sent:geo:s1:echt"]).toBeUndefined();
+  });
 });

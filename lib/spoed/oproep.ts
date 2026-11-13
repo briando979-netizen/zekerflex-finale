@@ -12,6 +12,7 @@ import { userLocale, userLocales } from "@/lib/i18n/worker-locale";
 import { applyToShift } from "@/lib/matching/apply";
 import { kanalenBeschikbaar, stuurSms, stuurWhatsApp } from "@/lib/spoed/kanalen";
 import { zonderTestwerker } from "@/lib/testwerker/adres";
+import { testklusMeldfilter } from "@/lib/shifts/testklus-db";
 import { zonderNummers } from "@/lib/telephony/log-nummer";
 import {
   MAX_ONTVANGERS,
@@ -91,6 +92,7 @@ export async function startSpoedoproep(input: StartInput): Promise<StartUitkomst
     select: {
       id: true,
       title: true,
+      createdAt: true,
       startsAt: true,
       endsAt: true,
       hourlyRateCents: true,
@@ -132,12 +134,17 @@ export async function startSpoedoproep(input: StartInput): Promise<StartUitkomst
     .map((k) => ({ ...k, km: haversineMeters({ latitude: blat, longitude: blng }, { latitude: k.homeLatitude, longitude: k.homeLongitude }) / 1000 }));
   // de dichtstbijzijnde eerst, dan pas de (duurdere) geschiktheidscontrole
   const kandidaatRij = kiesOntvangers(dichtbij, alBereikt, input.radiusKm, MAX_ONTVANGERS * 3);
+  // een spoedoproep voor een testklus (push, sms, WhatsApp) alleen naar interne accounts (lib/shifts/testklus-db.ts)
+  const testklus = await testklusMeldfilter();
+  const kenmerk = { title: shift.title, tenantId: input.tenantId, bedrijf: shift.branch.tenant.name, createdAt: shift.createdAt };
   const gekozen: typeof kandidaatRij = [];
   for (const k of kandidaatRij) {
     if (gekozen.length >= MAX_ONTVANGERS) break;
+    if (!(await testklus.mag(kenmerk, k.userId))) continue;
     if (await isMatchEligibleWorker(k, shift.viaUitzendbureau)) gekozen.push(k);
   }
   if (!gekozen.length) {
+    if (testklus.isTest(kenmerk)) throw AppError.precondition("Dit is een testklus: een spoedoproep gaat dan alleen naar interne accounts, en die zijn er niet in deze straal.");
     throw AppError.precondition(alBereikt.size ? "Iedereen in deze straal is al bereikt. Probeer een grotere straal." : "Geen geschikte krachten gevonden in deze straal. Probeer een grotere straal.");
   }
 

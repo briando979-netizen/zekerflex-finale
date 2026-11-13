@@ -8,6 +8,7 @@ import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { prefsAllowShift } from "@/lib/matching/worker-prefs";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { isBlockedByAny } from "@/lib/employer/relations";
+import { klusKenmerk, testklusMeldfilter } from "@/lib/shifts/testklus-db";
 
 // ---------------------------------------------------------------------------
 // Job-alerts (/dashboard/beschikbaarheid): "Zodra er een passende dienst is,
@@ -69,9 +70,11 @@ export async function notifyJobAlerts(shiftIds: string[], now = new Date()): Pro
   const shifts = await prisma.shift.findMany({
     where: { id: { in: shiftIds }, visibility: "PUBLIC", status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] }, startsAt: { gt: now } },
     orderBy: { startsAt: "asc" },
-    select: { id: true, title: true, startsAt: true, hourlyRateCents: true, viaUitzendbureau: true, requiredSkill: { select: { name: true } }, branch: { select: { city: true, tenantId: true } } },
+    select: { id: true, title: true, createdAt: true, startsAt: true, hourlyRateCents: true, viaUitzendbureau: true, requiredSkill: { select: { name: true } }, branch: { select: { city: true, tenantId: true, tenant: { select: { name: true } } } } },
   });
   if (!shifts.length) return { notified: 0 };
+  // een testklus alleen naar interne accounts (lib/shifts/testklus-db.ts)
+  const testklus = await testklusMeldfilter();
 
   // Only the prefs rows that actually hold an alert, filtered in Postgres.
   const rows = await prisma.$queryRaw<{ key: string; value: Partial<UserPrefs> }[]>`
@@ -82,7 +85,9 @@ export async function notifyJobAlerts(shiftIds: string[], now = new Date()): Pro
   let notified = 0;
   for (const row of rows) {
     const userId = row.key.slice("prefs:".length);
-    const matches = shifts
+    const mogelijk: typeof shifts = [];
+    for (const s of shifts) if (await testklus.mag(klusKenmerk(s), userId)) mogelijk.push(s);
+    const matches = mogelijk
       .filter((s) => prefsAllowShift(row.value, s))
       .map((s) => ({ s, label: matchingAlert(row.value.jobAlerts, { ...s, skill: s.requiredSkill?.name ?? null, city: s.branch.city }) }))
       .filter((x) => x.label);

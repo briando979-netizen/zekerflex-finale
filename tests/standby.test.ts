@@ -11,12 +11,15 @@ const h = vi.hoisted(() => ({
   busyUsers: new Set<string>(),
   blocked: new Set<string>(),
   pushes: [] as { ids: string[]; push: { title: string; body: string } }[],
+  intern: [] as string[],
 }));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     shift: { findUnique: async () => h.shift },
     $queryRaw: async () => h.rows,
+    // de interne accounts die een testklus wél krijgen (lib/shifts/testklus-db.ts)
+    freelancerProfile: { findMany: async () => h.intern.map((userId) => ({ id: `f-${userId}`, userId })) },
     shiftAssignment: {
       count: async (args: { where: { freelancer: { userId: string } } }) => (h.busyUsers.has(args.where.freelancer.userId) ? 1 : 0),
     },
@@ -49,6 +52,7 @@ beforeEach(() => {
   h.pushes.length = 0;
   h.busyUsers.clear();
   h.blocked.clear();
+  h.intern = [];
   h.rows = [
     { key: "prefs:u1", value: { standby: true } },
     { key: "prefs:u2", value: { standby: true, minHourlyRateCents: 2500 } }, // tarief te laag voor hem
@@ -65,6 +69,18 @@ describe("isUrgent", () => {
 });
 
 describe("notifyStandby", () => {
+  it("een testklus alleen naar interne accounts op standby (13 nov)", async () => {
+    h.shift = { ...shiftAt("2026-11-05T18:00:00Z"), branch: { city: "Utrecht", tenantId: "t-test", tenant: { name: "Test bedrijven" } } };
+    h.intern = ["u3"];
+    const r = await notifyStandby("s1", NOW);
+    expect(r.notified).toBe(1);
+    expect(h.pushes[0]?.ids).toEqual(["u3"]);
+    // zonder interne accounts: niemand
+    h.intern = [];
+    h.pushes.length = 0;
+    expect((await notifyStandby("s1", NOW)).notified).toBe(0);
+  });
+
   it("stuurt standby-werkers binnen hun voorkeuren, niet wie al werkt of geblokkeerd is", async () => {
     h.shift = shiftAt("2026-11-05T18:00:00Z");
     h.busyUsers.add("u3");
