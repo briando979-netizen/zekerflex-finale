@@ -2,7 +2,7 @@ import { getPrincipal, hasRole } from "@/lib/auth";
 import { groei, kennisgraaf } from "@/lib/rag/graph";
 import { count } from "@/lib/admin/format";
 import { BarList, Empty, InfoList, KpiStrip, PageHead, Panel, Spark, StackBar } from "@/components/admin/kit";
-import { KnowledgeGraph } from "@/components/admin/KnowledgeGraph";
+import { KennisgraafWeergave } from "@/components/admin/KennisgraafWeergave";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +44,7 @@ export default async function KennisGraafPage() {
     <div className="space-y-4">
       <PageHead
         title="Kennisgraaf"
-        subtitle="Het brein van ZekerFlex als netwerk: elke stip is een kennisdocument, elke ruit een begrip, elke lijn een verband. Kleur op soort of thema, zoek, filter, zoom in op een buurt, trek het kortste pad tussen twee knopen, stel een vraag en zie welk pad het brein neemt; klik op een knoop voor de inhoud."
+        subtitle="Het brein van ZekerFlex als netwerk: elke stip is een kennisdocument, elke ruit een begrip, elke lijn een verband. Vlak of als sterrenstelsel in 3D (elk thema een zonnestelsel). Kleur op soort of thema, zoek, filter, zoom in op een buurt, trek het kortste pad tussen twee knopen, stel een vraag en zie welk pad het brein neemt; klik op een knoop voor de inhoud."
       />
       <KpiStrip
         items={[
@@ -62,7 +62,7 @@ export default async function KennisGraafPage() {
           <Empty title="Nog geen kennisdocumenten" body="Er zijn geen kennisdocumenten gevonden in deze versie." />
         </Panel>
       ) : (
-        <KnowledgeGraph
+        <KennisgraafWeergave
           nodes={g.nodes}
           edges={g.edges}
           begrippen={g.begrippen}

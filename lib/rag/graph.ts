@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { kvDeleteStale, kvGet, kvListEntries, kvSet } from "@/lib/storage/kv";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { layout3D, type Layout3D } from "@/lib/rag/graph-layout3d";
 import { corpus, type Passage } from "@/lib/rag/corpus";
 import { cosine } from "@/lib/rag/store";
 import { recall } from "@/lib/rag/recall";
@@ -284,6 +285,8 @@ async function geheugenStats(): Promise<Record<string, number>> {
 
 interface Geheugen {
   graaf?: { op: number; data: Kennisgraaf };
+  /** de 3D-layout van het Sterrenstelsel, geldig zolang de graaf (op) niet verandert */
+  layout?: { op: string; data: Layout3D };
 }
 const g = globalThis as typeof globalThis & { __zfKennisgraaf?: Geheugen };
 const geheugen: Geheugen = (g.__zfKennisgraaf ??= {});
@@ -523,6 +526,21 @@ export async function denkpad(vraag: string): Promise<Denkpad> {
     retrievers: r.retrievers,
     stappen: [...perDoc.values()].sort((a, b) => b.score - a.score).map((s) => ({ ...s, score: Math.round(s.score * 1000) / 1000 })),
   };
+}
+
+// --- 3D-layout (Sterrenstelsel) ---------------------------------------------
+
+/**
+ * De 3D-krachtenlayout voor de weergave Sterrenstelsel (lib/rag/graph-layout3d.ts): één keer berekend per versie van de
+ * graaf en in het geheugen, zodat de browser alleen tekent. Bij duizenden knopen rekent de layout met minder rondes.
+ */
+export async function kennisgraafLayout3D(): Promise<Layout3D & { op: string }> {
+  const g2 = await kennisgraaf();
+  const c = geheugen.layout;
+  if (c && c.op === g2.op) return { ...c.data, op: g2.op };
+  const data = layout3D(g2.nodes, g2.edges);
+  geheugen.layout = { op: g2.op, data };
+  return { ...data, op: g2.op };
 }
 
 // --- exports ----------------------------------------------------------------
