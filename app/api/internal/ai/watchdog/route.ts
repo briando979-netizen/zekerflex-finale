@@ -4,6 +4,7 @@ import { checkInternalToken } from "@/lib/internal-auth";
 import { recordCronRun } from "@/lib/metrics";
 import { checkLlm } from "@/lib/ai/watchdog";
 import { checkCronHeartbeats } from "@/lib/ops/heartbeat";
+import { ruimAiGebruikOp } from "@/lib/ai/gebruik-opruimen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,8 +25,14 @@ async function handle(request: Request): Promise<NextResponse> {
     const state = await checkLlm();
     // also check that every scheduled cron is still running (alerts if one went silent)
     const crons = await checkCronHeartbeats().catch(() => ({ stale: [] as string[] }));
+    // de AI-gebruikslog na 90 dagen weg (lib/ai/gebruik-opruimen.ts); ?droog=1 telt alleen. Een storing houdt de watchdog niet tegen.
+    const droog = new URL(request.url).searchParams.get("droog") === "1";
+    const aiGebruik = await ruimAiGebruikOp({ droog }).catch((err: unknown) => {
+      logger.warn("ai-gebruikslog niet opgeruimd", { error: (err as Error).message });
+      return null;
+    });
     recordCronRun("ai-watchdog", true);
-    return NextResponse.json({ ok: true, ...state, staleCrons: crons.stale });
+    return NextResponse.json({ ok: true, ...state, staleCrons: crons.stale, aiGebruik });
   } catch (err) {
     recordCronRun("ai-watchdog", false);
     logger.warn("ai watchdog tick failed", { error: (err as Error).message });
