@@ -1,4 +1,5 @@
 import type { HostingConfig } from "@/lib/hosting/config";
+import { fetchOfUitval, isServerFout, nietBereikbaar } from "@/lib/http/uitval";
 import {
   desiredRecords,
   emptyResult,
@@ -41,11 +42,12 @@ async function cf<T>(token: string, path: string, init?: RequestInit): Promise<T
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 12_000);
   try {
-    const res = await fetch(`${API}${path}`, {
+    const res = await fetchOfUitval("Cloudflare", `${API}${path}`, {
       ...init,
       signal: controller.signal,
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...(init?.headers ?? {}) },
     });
+    if (isServerFout(res.status)) throw nietBereikbaar("Cloudflare");
     const json = (await res.json().catch(() => ({}))) as CfEnvelope<T>;
     if (!res.ok || json.success === false) {
       const msg = (json.errors ?? []).map((e) => e.message).filter(Boolean).join("; ") || `HTTP ${res.status}`;

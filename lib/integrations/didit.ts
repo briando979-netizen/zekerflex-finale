@@ -85,6 +85,7 @@ export async function createSession(
       (data.error as string) ??
       `Didit responded ${res.status}`;
     logger.error("didit create-session rejected", { status: res.status, message });
+    if (res.status >= 500) throw AppError.upstream("De identiteitscontrole (Didit) is tijdelijk niet bereikbaar.");
     throw AppError.upstream(`Kon geen verificatiesessie starten: ${message}`);
   }
 
@@ -139,9 +140,12 @@ export async function getDecision(sessionId: string): Promise<DiditDecision> {
   }
 
   if (res.status === 404) throw AppError.notFound("Onbekende verificatiesessie.");
-  if (!res.ok) throw AppError.upstream(`Didit responded ${res.status}`);
+  if (res.status >= 500) throw AppError.upstream("De identiteitscontrole (Didit) is tijdelijk niet bereikbaar.");
+  if (!res.ok) throw AppError.upstream(`De identiteitscontrole (Didit) gaf een fout (${res.status}).`);
 
-  const data = (await res.json()) as Record<string, unknown>;
+  const data = (await res.json().catch(() => {
+    throw AppError.upstream("De identiteitscontrole (Didit) gaf een onleesbaar antwoord.");
+  })) as Record<string, unknown>;
   return parseDecision(sessionId, data);
 }
 
