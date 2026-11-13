@@ -26,6 +26,7 @@ import { accountStand } from "@/lib/billing/stripe-betalen";
 import { appleConfig } from "@/lib/auth/apple";
 import { cronHeartbeats } from "@/lib/ops/heartbeat";
 import { platformnaamTodo, type PlatformnaamStand } from "@/lib/admin/todo-platformnaam";
+import { stripeAccountTodos } from "@/lib/admin/todo-stripe-account";
 import { kvkTegoedTodo } from "@/lib/admin/todo-kvk-tegoed";
 import { leesKvkTegoed, wachtendeKvkControles } from "@/lib/kvk/tegoed-opslag";
 
@@ -243,12 +244,17 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   const avgOk = Boolean(avgOpschoning?.lastRunAt && avgOpschoning.lastRunOk && !avgOpschoning.stale);
   // facturen met de oude naam van de platformorganisatie als afzender (13 nov): eerst de accountant, dan de naam
   const platformnaam = platformnaamTodo(await platformnaamStand());
+  // betalen via Zekerflex, Inc. (13 nov): het account uit Beheer → Stripe-account; een leesfout = geen taak
+  const stripeAccount = stripeAccountTodos(
+    await import("@/lib/billing/stripe-account").then((mod) => mod.stripeAccountInfo()).catch(() => undefined),
+  );
   // het tegoed bij KVKBase (13 nov): op of bijna op = KVK-controles wachten op een herkansing (lib/kvk/tegoed.ts)
   const kvkTegoed = kvkTegoedTodo(await leesKvkTegoed(), (await wachtendeKvkControles().catch(() => [])).length);
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
   return [
     ...(platformnaam ? [platformnaam] : []),
+    ...stripeAccount,
     ...(kvkTegoed ? [kvkTegoed] : []),
     {
       id: "llm",

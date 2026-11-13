@@ -4,6 +4,8 @@
 // die organisatie (lib/pdf/documents.ts, lib/efactuur/factuur.ts), en wel bij elke opvraag opnieuw: een hernoeming zou de
 // "Van" op al uitgegeven facturen achteraf veranderen. Daarom eerst met de accountant afstemmen (creditnota en
 // herstelfactuur, of een toelichting), daarna de naam bijwerken. Puur: alleen de telling, nooit namen van ontvangers.
+// 13 nov 2026: de naam is bijgewerkt naar Zekerflex, Inc. en de facturen staan op geannuleerd; klopt de naam, dan is de
+// taak achterhaald en verdwijnt hij (er is nooit een B.V. geweest).
 // ---------------------------------------------------------------------------
 
 import type { OwnerTodo } from "@/lib/admin/owner-todos";
@@ -26,12 +28,13 @@ const euro = (cents: number) => new Intl.NumberFormat("nl-NL", { style: "currenc
 export function platformnaamTodo(stand: PlatformnaamStand | null): OwnerTodo | null {
   if (!stand) return null;
   const klopt = stand.naam.trim() === PLATFORM_NAAM;
-  if (!klopt && stand.aantal === 0) return null;
-  // afgevinkt: de naam klopt (13 nov 2026 hernoemd, de facturen aan de eigen testbedrijven geannuleerd); dan een gewone titel
+  // de naam klopt (13 nov 2026 hernoemd, de facturen geannuleerd): achterhaald, geen taak meer
+  if (klopt) return null;
+  if (stand.aantal === 0) return null;
   return {
     id: "platformnaam-facturen",
     group: "Juridisch",
-    title: klopt ? `De platformorganisatie heet "${PLATFORM_NAAM}", zoals de rechtspersoon` : `Facturen met afzender "${stand.naam}" (${stand.aantal}, ${euro(stand.totaalCents)}): met de accountant afstemmen`,
+    title: `Facturen met afzender "${stand.naam}" (${stand.aantal}, ${euro(stand.totaalCents)}): met de accountant afstemmen`,
     why: `De platformorganisatie heet in ZekerFlex nog "${stand.naam}", maar de rechtspersoon is ${PLATFORM_NAAM}. Die naam staat als afzender ("Van") op de facturen van het platform, ook in de e-factuur. Een factuur wordt bij elke opvraag opnieuw opgebouwd: verander je de naam, dan verandert de afzender ook op de facturen die al zijn uitgegeven. Daarom eerst met de accountant beslissen hoe.`,
     how: [
       `Bespreek met de accountant de ${stand.aantal} uitgegeven facturen (samen ${euro(stand.totaalCents)}): een creditnota met een herstelfactuur op naam van ${PLATFORM_NAAM}, of een toelichting aan de klant.`,
@@ -39,6 +42,6 @@ export function platformnaamTodo(stand: PlatformnaamStand | null): OwnerTodo | n
       "Deze taak vinkt zichzelf af zodra de naam klopt.",
     ],
     auto: true,
-    done: klopt,
+    done: false,
   };
 }
