@@ -27,6 +27,8 @@ import { appleConfig } from "@/lib/auth/apple";
 import { cronHeartbeats } from "@/lib/ops/heartbeat";
 import { platformnaamTodo, type PlatformnaamStand } from "@/lib/admin/todo-platformnaam";
 import { stripeAccountTodos } from "@/lib/admin/todo-stripe-account";
+import { werkrechtEisTodo } from "@/lib/admin/todo-werkrecht";
+import { featureEnabled } from "@/lib/flags";
 import { WISSEL_VERWIJZING, betalenUitEerst, betalenUitVoorzin, webhookHandtekeningStand } from "@/lib/admin/todo-stripe-wissel";
 import type { Eerst } from "@/lib/admin/te-doen-eerst";
 import { kvkTegoedTodo } from "@/lib/admin/todo-kvk-tegoed";
@@ -260,6 +262,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   const kvkTegoed = kvkTegoedTodo(await leesKvkTegoed(), (await wachtendeKvkControles().catch(() => [])).length);
   // de ID-foto's en gegevens uit het oude Stripe-account kopiëren (14 nov, lib/kyc/stripe-kopie.ts)
   const stripeKopie = stripeKopieTodo(await stripeKopieStand());
+  // de vlag werkrecht-eis (lib/admin/todo-werkrecht.ts): de taak vinkt zichzelf af zodra hij aan staat; een leesfout geeft geen taak
+  const werkrechtEis = werkrechtEisTodo(await featureEnabled("werkrecht-eis").catch(() => undefined));
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
   return [
@@ -267,6 +271,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     ...stripeAccount,
     ...(kvkTegoed ? [kvkTegoed] : []),
     ...(stripeKopie ? [stripeKopie] : []),
+    ...(werkrechtEis ? [werkrechtEis] : []),
     {
       id: "llm",
       group: "AI",
