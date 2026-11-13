@@ -143,7 +143,8 @@ export function voerOpdrachtUit(tekst: string, doc: AssistentDoc, paginaId: stri
     if (naamRuw !== undefined) {
       const naam = naamRuw.replace(/^["'“”‘’\s]+|["'“”‘’\s]+$/g, "").slice(0, 60).trim();
       const pagina = pages.find((p) => p.id === doel);
-      if (!pagina || naam.length < 2) {
+      // alleen het voorzetsel ("hernoem de pagina naar") is geen naam
+      if (!pagina || naam.length < 2 || /^(?:naar|in|om)$/i.test(naam)) {
         nietGedaan.push(`"${stuk}": zeg er de nieuwe naam bij, bijvoorbeeld "hernoem de pagina naar Ons verhaal".`);
         continue;
       }
