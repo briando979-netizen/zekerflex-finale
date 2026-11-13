@@ -47,7 +47,7 @@ const BASISLIJN: Record<string, string> = {
   "offer:seen:": "id van een verkoopkans (getal), geen gebruiker",
   "user:": "actorLabel in het auditspoor, geen KV-sleutel",
   "systeem:": "sleutels van het beheer, geen gegevens over een persoon; systeem:eigen-test is een lijst van tenant- en user-id's met een datum (lib/admin/eigen-test.ts)",
-  "kvk-register:v1:": "uitkomst per KVK-nummer (openbaar Handelsregister), geen persoon; 30 dagen cache (lib/integrations/kvkbase.ts)",
+  "kvk-register:v1:": "uitkomst per KVK-nummer (openbaar Handelsregister), geen persoon; gevonden 30 dagen, niet gevonden 1 dag (lib/kvk/register-cache.ts)",
 };
 
 /**

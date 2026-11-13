@@ -6,6 +6,7 @@ import { cached, withCircuitBreaker } from "@/lib/redis";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { limietUitAntwoord, tegoedUitAntwoord } from "@/lib/kvk/tegoed";
 import { bewaarKvkTegoed } from "@/lib/kvk/tegoed-opslag";
+import { registerVers, type RegisterUitkomst } from "@/lib/kvk/register-cache";
 import type {
   CompanyActivity,
   CompanyProfile,
@@ -248,8 +249,8 @@ export async function lookupCompany(
   }
   const enrich = opts.enrich ? "1" : "0";
 
-  // eerst de uitkomst van de laatste 30 dagen (Postgres-KV, ook "niet gevonden"): een opvraging kost tegoed, en een
-  // inschrijving verandert zelden. Wie met enrich vraagt, mag ook het antwoord met enrich van eerder gebruiken.
+  // eerst de bewaarde uitkomst (Postgres-KV; gevonden 30 dagen, "niet gevonden" 1 dag, lib/kvk/register-cache.ts): een
+  // opvraging kost tegoed, en een inschrijving verandert zelden. Wie met enrich vraagt, mag ook het antwoord met enrich van eerder gebruiken.
   const register = await leesRegister(kvkNumber, enrich);
   if (register?.nietGevonden) throw AppError.notFound("Geen inschrijving gevonden voor dit KVK-nummer.");
   if (register?.profiel) return register.profiel;
@@ -274,15 +275,13 @@ export async function lookupCompany(
   }
 }
 
-// --- register-cache (30 dagen) ------------------------------------------------
+// --- register-cache (gevonden 30 dagen, niet gevonden 1 dag; lib/kvk/register-cache.ts) --------------------------------
 // Sleutel per KVK-nummer: een openbaar register, geen persoonsgegeven (basislijn in tests/kv-avg-bewaker.test.ts).
 
 const REGISTER_PREFIX = "kvk-register:v1:";
-const REGISTER_MS = 30 * 86_400_000;
-type RegisterUitkomst = { at: string; profiel?: CompanyProfile; nietGevonden?: true };
 
 async function leesRegister(kvkNumber: string, enrich: "0" | "1"): Promise<RegisterUitkomst | null> {
-  const vers = (u: RegisterUitkomst | null) => (u && Date.now() - new Date(u.at).getTime() < REGISTER_MS ? u : null);
+  const vers = (u: RegisterUitkomst | null) => registerVers(u, Date.now());
   const met = vers(await kvGet<RegisterUitkomst>(`${REGISTER_PREFIX}${kvkNumber}:1`).catch(() => null));
   if (met || enrich === "1") return met;
   return vers(await kvGet<RegisterUitkomst>(`${REGISTER_PREFIX}${kvkNumber}:0`).catch(() => null));
