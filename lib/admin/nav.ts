@@ -71,6 +71,7 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/pensioen", label: "Pensioen" },
       { href: "/admin/fiscaal", label: "Werkvormen & btw" },
       { href: "/admin/icp", label: "ICP-opgave" },
+      { href: "/admin/kosten", label: "Kosten" },
       { href: "/admin/kosteloos", label: "Kosteloze accounts" },
     ],
   },
