@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 import { getPrefs } from "@/lib/prefs/store";
 import { exportUserKv } from "@/lib/privacy/user-kv";
 import { exportChatlogVan } from "@/lib/learn/store";
+import { idControleVoorExport } from "@/lib/privacy/id-export";
 
 // ---------------------------------------------------------------------------
 // Data subject access request (AVG art. 15 inzage + art. 20 dataportabiliteit).
@@ -79,20 +80,25 @@ export async function exportUserData(userId: string): Promise<DataExport> {
       : null,
   );
 
-  sections.identityVerification = await safe("identityVerification", () =>
-    prisma.identityVerification.findMany({
-      where: { userId },
-      // decision + timestamps only — not rawPayload / biometric scores
-      select: {
-        provider: true,
-        status: true,
-        decisionStatus: true,
-        documentType: true,
-        verifiedAt: true,
-        expiresAt: true,
-        createdAt: true,
-      },
-    }),
+  // Je eigen ID-gegevens (naam, geboortedatum, vervaldatum, laatste tekens van het nummer, uitslag). Welke velden mee
+  // mogen staat op één plek: lib/privacy/id-export.ts (whitelist). rawPayload wordt alleen daar gelezen, nooit doorgegeven.
+  sections.identityVerification = await safe("identityVerification", async () =>
+    (
+      await prisma.identityVerification.findMany({
+        where: { userId },
+        orderBy: { createdAt: "asc" },
+        select: {
+          provider: true,
+          status: true,
+          decisionStatus: true,
+          documentType: true,
+          verifiedAt: true,
+          expiresAt: true,
+          createdAt: true,
+          rawPayload: true,
+        },
+      })
+    ).map(idControleVoorExport),
   );
 
   sections.certificates = await safe("certificates", () =>
@@ -276,7 +282,7 @@ export async function exportUserData(userId: string): Promise<DataExport> {
   return {
     generatedAt: new Date().toISOString(),
     subject: { userId },
-    note: "AVG art. 15/20 export. Geüploade bestanden zelf zitten hier niet in; die download je apart. Interne velden (wachtwoordhash, ruwe KYC-biometrie) zijn uitgesloten.",
+    note: "AVG art. 15/20 export. Geüploade bestanden zelf zitten hier niet in; die download je apart. De foto's van je ID-controle zitten er ook niet in (bij je ID-gegevens staat welke er zijn); vraag ze aan bij ZekerFlex. Interne velden (wachtwoordhash, ruwe KYC-biometrie, BSN, hashes) zijn uitgesloten.",
     sections,
   };
 }

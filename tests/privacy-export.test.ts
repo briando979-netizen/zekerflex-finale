@@ -85,6 +85,33 @@ describe("exportUserData", () => {
     expect(stored[2]!.value).toEqual({ signature: "Groet, Jan", smtpPassword: "[afgeschermd]" });
   });
 
+  it("ID-gegevens: eigen gegevens erbij, nooit rawPayload, hashes, id_number of mrz", async () => {
+    (prisma.identityVerification.findMany as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      {
+        provider: "STRIPE",
+        status: "VERIFIED",
+        decisionStatus: "verified",
+        documentType: "PASSPORT",
+        createdAt: new Date("2026-11-01T10:00:00+01:00"),
+        documentNumberHash: "h1",
+        bsnHash: "h2",
+        bsnVoorstelHash: "h3",
+        rawPayload: {
+          id_number: "123456782",
+          mrz: "P<NLD<<<",
+          uploadIds: { front: "u1" },
+          stripeKopie: { document: { voornamen: "Jan", achternaam: "de Vries", geboortedatum: "1990-02-03", nummerEind: "A1B", id_number: "123456782" } },
+        },
+      },
+    ]);
+    const out = await exportUserData("u1");
+    const rijen = (out.sections as Record<string, unknown>).identityVerification as Record<string, unknown>[];
+    expect(rijen[0]).toMatchObject({ naam: "Jan de Vries", geboortedatum: "1990-02-03", nummerEindigtOp: "A1B" });
+    const json = JSON.stringify(out.sections.identityVerification);
+    for (const k of ["rawPayload", "documentNumberHash", "id_number", "mrz", "bsnHash", "bsnVoorstelHash"]) expect(json).not.toContain(`"${k}"`);
+    expect(json).not.toContain("123456782");
+  });
+
   it("filename is dated and namespaced", () => {
     expect(exportFilename("u1", new Date("2026-09-09T12:00:00Z"))).toBe(
       "zekerflex-gegevens-u1-2026-09-09.json",
