@@ -316,7 +316,7 @@ export const GRATIS_DIENSTEN: GratisDienst[] = [
     naam: "Bots tegenhouden (captcha)",
     waarvoor: "Aanmeld- en contactformulieren beschermen tegen bots",
     nu: "Naar keuze Cloudflare Turnstile of hCaptcha, of ons eigen werkbewijs (proof of work)",
-    eigen: "Het eigen werkbewijs (instelling 'pow') draait volledig bij ons en kost niets. Turnstile en hCaptcha zijn gratis, maar een derde partij; valt die weg, dan wordt een formulier geweigerd.",
+    eigen: "Het eigen werkbewijs (instelling 'pow') draait volledig bij ons en kost niets. Turnstile en hCaptcha zijn gratis, maar een derde partij; valt een van die twee weg (netwerkfout, time-out of foutmelding van hun kant), dan wordt aanmelden niet geweigerd maar doorgelaten, met een strengere limiet van 3 per IP per uur en een waarschuwing in het foutenlogboek. Een token dat de aanbieder zelf afwijst, blijft geweigerd.",
     status: "schakelbaar",
     env: ["CAPTCHA_SECRET"],
     hosts: ["challenges.cloudflare.com", "api.hcaptcha.com"],
