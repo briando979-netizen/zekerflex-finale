@@ -28,7 +28,7 @@ describe("cron heartbeat watchdog", () => {
 
   it("flags a job that hasn't run within its window and alerts once", async () => {
     // every watched job ran recently except one that went silent 30h ago
-    for (const c of WATCHED_CRONS) kv[`cron-heartbeat:${c.job}`] = { at: hoursAgo(2), ok: true };
+    for (const c of WATCHED_CRONS) kv[`cron-heartbeat:${c.job}`] = { at: hoursAgo(0.2), ok: true };
     kv["cron-heartbeat:matching-tick"] = { at: hoursAgo(30), ok: true };
     kv["cron-heartbeat:first-seen"] = { at: hoursAgo(1000) };
     const res = await checkCronHeartbeats(NOW);
@@ -45,7 +45,7 @@ describe("cron heartbeat watchdog", () => {
   });
 
   it("alerts for a job never seen once the deployment is old enough", async () => {
-    for (const c of WATCHED_CRONS) kv[`cron-heartbeat:${c.job}`] = { at: hoursAgo(2), ok: true };
+    for (const c of WATCHED_CRONS) kv[`cron-heartbeat:${c.job}`] = { at: hoursAgo(0.2), ok: true };
     delete kv["cron-heartbeat:ai-watchdog"]; // never recorded
     kv["cron-heartbeat:first-seen"] = { at: hoursAgo(1000) };
     const res = await checkCronHeartbeats(NOW);
@@ -63,7 +63,7 @@ describe("cron heartbeat watchdog", () => {
   });
 
   it("verwijst in de melding naar de cron-container, niet naar Vercel", async () => {
-    for (const c of WATCHED_CRONS) kv[`cron-heartbeat:${c.job}`] = { at: hoursAgo(2), ok: true };
+    for (const c of WATCHED_CRONS) kv[`cron-heartbeat:${c.job}`] = { at: hoursAgo(0.2), ok: true };
     kv["cron-heartbeat:winkel-agent"] = { at: hoursAgo(30), ok: true };
     kv["cron-heartbeat:first-seen"] = { at: hoursAgo(1000) };
     await checkCronHeartbeats(NOW);

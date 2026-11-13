@@ -253,7 +253,7 @@ describe("Auto-uitrol: de nacontrole (harde stop)", () => {
     expect(bron).toContain('journal("error", "auto-uitrol: harde stop"');
     expect(bron).toContain("nacontrole faalde: ${na.reden}");
     // de beheerroute: een mens die aanzet, haalt de stop weg
-    expect(lees("app/api/admin/bouwer/auto-uitrol/route.ts")).toContain("herstelNaStop(");
+    expect(lees("app/api/admin/bouwer/auto-uitrol/route.ts")).toContain("herstelNaStopMetSlot(");
   });
 });
 
