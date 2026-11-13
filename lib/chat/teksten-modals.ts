@@ -2,6 +2,16 @@
 // de vertalingen staan in teksten-modals-talen.ts. Plaatshouders vult vulIn (lib/i18n/vul-in.ts).
 export const MODALS_NL = {
   sluiten: "Sluiten",
+  mediaTitel: "Media, links en documenten",
+  tabMedia: "Media",
+  tabDocs: "Documenten",
+  tabLinks: "Links",
+  leegMedia: "Nog geen foto's of video's in dit gesprek.",
+  leegDocs: "Nog geen documenten in dit gesprek.",
+  leegLinks: "Nog geen links in dit gesprek.",
+  naarBericht: "Naar bericht",
+  naarVideo: "Video {naam} afspelen in het gesprek",
+  alleenGeladen: "Uit de laatste 400 berichten van dit gesprek.",
   zoekPlaceholder: "Zoek op naam…",
   zoekLabel: "Zoek op naam",
   zoeken: "Zoeken…",

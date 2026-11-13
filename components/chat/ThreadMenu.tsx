@@ -102,7 +102,7 @@ function Item({ icon, label, danger, onClick }: { icon: string; label: string; d
 }
 
 export type MenuAction =
-  | { action: "archive" | "unarchive" | "lock" | "unlock" | "favorite" | "unfavorite" | "unmute" | "clear" | "delete" | "block" | "unblock" | "export" | "mark-unread" | "mark-read" }
+  | { action: "archive" | "unarchive" | "lock" | "unlock" | "favorite" | "unfavorite" | "unmute" | "clear" | "delete" | "block" | "unblock" | "export" | "mark-unread" | "mark-read" | "media" }
   | { action: "mute"; hours: number | null }
   | { action: "list-add" | "list-remove"; list: string }
   | { action: "disappear"; days: 0 | 1 | 7 | 90 };
@@ -188,6 +188,7 @@ export function ThreadMenuSheet({
               {flags.favorite ? <Item icon="☆" label={t.unfavorite} onClick={() => done({ action: "unfavorite" })} /> : <Item icon="★" label={t.favorite} onClick={() => done({ action: "favorite" })} />}
               <Item icon="☰" label={t.addToList} onClick={() => setSub("list")} />
               <Item icon="⏱" label={t.disappearing} onClick={() => setSub("disappear")} />
+              <Item icon="🖼" label={t.mediaLinksDocs} onClick={() => done({ action: "media" })} />
               <Item icon="📤" label={t.exportChat} onClick={() => done({ action: "export" })} />
               {flags.archived ? <Item icon="🗄" label={t.unarchiveChat} onClick={() => done({ action: "unarchive" })} /> : <Item icon="🗄" label={t.archiveChat} onClick={() => done({ action: "archive" })} />}
               <Item

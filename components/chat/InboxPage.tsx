@@ -29,6 +29,7 @@ import { Composer, type OutgoingMessage } from "./Composer";
 import { UserCard } from "./UserCard";
 import { PeoplePicker, CommunityCreateModal, CommunityManageModal, ChatSettingsModal } from "./modals";
 import { SwipeRow, ThreadMenuSheet, PinModal, type MenuAction } from "./ThreadMenu";
+import { MediaOverzicht } from "./MediaOverzicht";
 import { ChatSettingsPanel, readLook, type ChatLook } from "./ChatSettingsPanel";
 import { Portal } from "./Portal";
 import { ChatTekstenProvider, useChatTeksten } from "./ChatTekstenContext";
@@ -232,6 +233,7 @@ function InboxPageInner({
 
   // unread count when a conversation opens: the "N ongelezen berichten" line
   const [unreadAtOpen, setUnreadAtOpen] = useState(0);
+  const [mediaOpen, setMediaOpen] = useState(false);
   useEffect(() => {
     setUnreadAtOpen(threadsRef.current.find((t) => t.id === active)?.unread ?? 0);
   }, [active]);
@@ -388,6 +390,12 @@ function InboxPageInner({
   const doAction = async (threadId: string, a: MenuAction): Promise<void> => {
     if (a.action === "lock" && !chatPrefs.hasPin) {
       setPinAsk({ mode: "set", then: () => void doAction(threadId, a) });
+      return;
+    }
+    if (a.action === "media") {
+      // Media, links en documenten: uit de geladen berichten van het gesprek (components/chat/media-overzicht.ts)
+      if (active !== threadId) openThread(threadId);
+      setMediaOpen(true);
       return;
     }
     if (a.action === "export") {
@@ -1469,6 +1477,18 @@ function InboxPageInner({
       )}
 
       {/* ─── overlays ─── */}
+      {mediaOpen && activeThread && (
+        <MediaOverzicht
+          threadId={activeThread.id}
+          messages={messages}
+          onClose={() => setMediaOpen(false)}
+          onOpenImage={(src, filename) => setViewer({ src, filename })}
+          onJump={(id) => {
+            setMediaOpen(false);
+            if (!jumpTo(id)) say(ib.verderTerugDat);
+          }}
+        />
+      )}
       {menuThread && (
         <ThreadMenuSheet
           name={otherOf(menuThread).name}
