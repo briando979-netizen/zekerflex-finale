@@ -1,3 +1,4 @@
+import { handtekeningOngeldigJson } from "@/lib/webhooks/handtekening";
 import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { getStripeClient } from "@/lib/billing/stripe";
@@ -40,7 +41,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     event = stripe.webhooks.constructEvent(raw, sig ?? "", secret);
   } catch (err) {
     logger.warn("issuing webhook signature invalid", { error: (err as Error).message });
-    return NextResponse.json({ error: { code: "BAD_SIGNATURE", message: "Ongeldige handtekening" } }, { status: 400 });
+    return handtekeningOngeldigJson();
   }
 
   if (event.type !== "issuing_authorization.request") {

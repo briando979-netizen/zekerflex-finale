@@ -171,7 +171,8 @@ describe("POST /api/webhooks/stripe — shop orders", () => {
       throw new Error("bad signature");
     });
     const res = await POST(new NextRequest("http://localhost/api/webhooks/stripe", { method: "POST", body: "{}" }));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(423);
+    expect((await res.json()).error.code).toBe("handtekening_ongeldig");
   });
 
   it("logt bij een afgekeurde handtekening alleen soort, modus en tijd van de gebeurtenis", async () => {
@@ -181,7 +182,7 @@ describe("POST /api/webhooks/stripe — shop orders", () => {
     logWarn.mockClear();
     const body = JSON.stringify({ id: "evt_geheim", type: "charge.refunded", livemode: false, created: 1762300000, data: { object: { customer: "cus_x" } } });
     const res = await POST(new NextRequest("http://localhost/api/webhooks/stripe", { method: "POST", body, headers: { "stripe-signature": "t=1,v1=abc" } }));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(423);
     expect(logWarn).toHaveBeenCalledWith("rejected stripe webhook (bad signature)", {
       error: "bad signature",
       eventType: "charge.refunded",

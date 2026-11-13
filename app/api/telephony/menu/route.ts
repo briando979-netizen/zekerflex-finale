@@ -1,3 +1,4 @@
+import { handtekeningOngeldigTekst } from "@/lib/webhooks/handtekening";
 import { env } from "@/lib/env";
 import { readForm, signatureValid, xmlResponse } from "@/lib/telephony/webhook";
 import { twiml, sayAndGather, gatherDigits, say, dial, hangupAfter } from "@/lib/telephony/twiml";
@@ -17,7 +18,7 @@ export async function POST(request: Request): Promise<Response> {
   const lees = await webhookTekst(request, WEBHOOK_MAX.twilio);
   if (!lees.ok) return lees.response;
   const params = readForm(lees.tekst);
-  if (!signatureValid(request, params)) return new Response("Forbidden", { status: 403 });
+  if (!signatureValid(request, params)) return handtekeningOngeldigTekst();
 
   const url = new URL(request.url);
   const callId = url.searchParams.get("callId");
