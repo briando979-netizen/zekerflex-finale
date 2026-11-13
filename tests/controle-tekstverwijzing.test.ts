@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { MAX_EXTRA, bouwIndex, normaliseer, teAlgemeen, vindTekstVerwijzingen } from "../deploy/bouwer/werker/tekst-verwijzing.mjs";
+// gewone .mjs zonder typen (draait in de Bouwer-container): dynamisch inladen en hier de vorm beschrijven
+type Test = { pad: string; inhoud: string };
+const mod = (await import(/* @vite-ignore */ new URL("../deploy/bouwer/werker/tekst-verwijzing.mjs", import.meta.url).href)) as {
+  MAX_EXTRA: number;
+  bouwIndex: (testen: Test[]) => Map<string, Set<string>>;
+  normaliseer: (stuk: string) => string;
+  teAlgemeen: (pad: string) => boolean;
+  vindTekstVerwijzingen: (gewijzigd: string[], testen: Test[], opties?: { max?: number }) => { tests: string[]; gevonden: number; afgekapt: boolean; redenen: Record<string, string[]> };
+};
+const { MAX_EXTRA, bouwIndex, normaliseer, teAlgemeen, vindTekstVerwijzingen } = mod;
 
 // Nagemaakte bestandslijst: geen echte schijf. De controle (deploy/bouwer/werker/controle.mjs) leest de testinhoud zelf uit de werkkopie.
 const t = (pad: string, inhoud: string) => ({ pad: `tests/${pad}.test.ts`, inhoud });
