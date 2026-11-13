@@ -126,7 +126,8 @@ const nl = {
     lhkUitleg: "Zet dit alleen aan bij je hoofdinkomen. Heb je meerdere werkgevers? Dan bij één.",
     nuAan: " Nu: aan.",
     nuUit: " Nu: uit.",
-    bsnBekend: "BSN bekend (eindigt op {laatste4}) — nooit onversleuteld opgeslagen.",
+    bsnBekend: "BSN: eindigend op {laatste4} ✓ — versleuteld bewaard.",
+    bsnOntbreekt: "BSN: nog niet ingevuld. Vul het in bij “Je gegevens”.",
   },
   restTaal: {
     walletMislukt: "Verificatie mislukt",
@@ -1662,7 +1663,8 @@ const en: FreelancerDict = {
     lhkUitleg: "Only turn this on for your main income. Several employers? Then at just one.",
     nuAan: " Currently: on.",
     nuUit: " Currently: off.",
-    bsnBekend: "BSN known (ends in {laatste4}) — never stored unencrypted.",
+    bsnBekend: "BSN: ending in {laatste4} ✓ — stored encrypted.",
+    bsnOntbreekt: "BSN: not filled in yet. Fill it in under “Your details”.",
   },
   restTaal: {
     walletMislukt: "Verification failed",
@@ -3346,7 +3348,8 @@ const pl: FreelancerDict = {
     lhkUitleg: "Włącz tylko przy głównym dochodzie. Masz kilku pracodawców? Wtedy tylko u jednego.",
     nuAan: " Teraz: włączona.",
     nuUit: " Teraz: wyłączona.",
-    bsnBekend: "BSN znany (kończy się na {laatste4}) — nigdy nie jest przechowywany bez szyfrowania.",
+    bsnBekend: "BSN: kończy się na {laatste4} ✓ — przechowywany w postaci zaszyfrowanej.",
+    bsnOntbreekt: "BSN: jeszcze nie podano. Uzupełnij go w sekcji „Twoje dane”.",
   },
   restTaal: {
     walletMislukt: "Weryfikacja nie powiodła się",
@@ -5030,7 +5033,8 @@ const ro: FreelancerDict = {
     lhkUitleg: "Activează doar pentru venitul principal. Ai mai mulți angajatori? Atunci doar la unul.",
     nuAan: " Acum: activ.",
     nuUit: " Acum: inactiv.",
-    bsnBekend: "BSN cunoscut (se termină cu {laatste4}) — niciodată păstrat necriptat.",
+    bsnBekend: "BSN: se termină cu {laatste4} ✓ — păstrat criptat.",
+    bsnOntbreekt: "BSN: încă necompletat. Completează-l la „Datele tale”.",
   },
   restTaal: {
     walletMislukt: "Verificarea a eșuat",
@@ -6714,7 +6718,8 @@ const uk: FreelancerDict = {
     lhkUitleg: "Вмикай лише для основного доходу. Кілька роботодавців? Тоді лише в одного.",
     nuAan: " Зараз: увімкнено.",
     nuUit: " Зараз: вимкнено.",
-    bsnBekend: "BSN відомий (закінчується на {laatste4}) — ніколи не зберігається незашифрованим.",
+    bsnBekend: "BSN: закінчується на {laatste4} ✓ — зберігається в зашифрованому вигляді.",
+    bsnOntbreekt: "BSN: ще не вказано. Вкажи його в розділі «Твої дані».",
   },
   restTaal: {
     walletMislukt: "Перевірка не вдалася",
