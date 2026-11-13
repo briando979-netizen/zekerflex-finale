@@ -17,6 +17,7 @@ import {
   projectDuur,
   rond,
   spoorEinde,
+  tekstSchaal,
   verwijderClip,
   vervangClip,
   vrijePlek,
@@ -26,11 +27,12 @@ import {
   type SpoorSoort,
 } from "@/lib/video/model";
 import { Speler } from "@/lib/video/speler";
-import { maakMuziek } from "@/lib/video/muziek";
+import { maakMuziek, type Stemming } from "@/lib/video/muziek";
 import { Tijdlijn, spoorVoor, type SleepData } from "@/components/admin/video/Tijdlijn";
 import { Eigenschappen } from "@/components/admin/video/Eigenschappen";
 import { Bibliotheek } from "@/components/admin/video/Bibliotheek";
 import { AiVideo, type AiVideoKeuze } from "@/components/admin/video/AiVideo";
+import { TekstVideo } from "@/components/admin/video/TekstVideo";
 import { Export } from "@/components/admin/video/Export";
 import { Venster } from "@/components/admin/video/Venster";
 import { TEKST_PRESETS } from "@/components/admin/video/presets";
@@ -63,9 +65,6 @@ const nieuweGeschiedenis = (p: Project): Geschiedenis => ({ verleden: [], nu: p,
 const klokTijd = (iso: string) => new Date(iso).toLocaleTimeString("nl-NL", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" });
 const datumTijd = (iso: string) => new Date(iso).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
-/** Tekstgrootte hangt af van de breedte; in een liggend beeld moet hij kleiner. */
-const tekstSchaal = (f: Project["formaat"]) => (f === "16:9" ? 0.6 : f === "1:1" ? 0.85 : 1);
-
 export function VideoEditor() {
   const [g, setG] = useState<Geschiedenis | null>(null);
   const [selectie, setSelectie] = useState<string | null>(null);
@@ -78,7 +77,7 @@ export function VideoEditor() {
   const [opslag, setOpslag] = useState<{ status: "bewaard" | "bezig" | "fout"; op?: string } | null>(null);
   const [melding, setMelding] = useState<{ tekst: string; soort: "ok" | "fout" } | null>(null);
   const [aiMeldingen, setAiMeldingen] = useState<string[]>([]);
-  const [venster, setVenster] = useState<"ai" | "export" | "projecten" | null>(null);
+  const [venster, setVenster] = useState<"ai" | "tekstvideo" | "export" | "projecten" | null>(null);
   const [projecten, setProjecten] = useState<ProjectKort[] | null>(null);
   const [laadFout, setLaadFout] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -392,24 +391,39 @@ export function VideoEditor() {
     meld("De foto beweegt nu. Ongedaan maken kan met Ctrl+Z.");
   }
 
+  /** Eigen muziek componeren en onder een net gemaakt project zetten. */
+  async function zetMuziekOnder(p: Project, stemming: Stemming) {
+    try {
+      const lengte = Math.ceil(projectDuur(p) + 0.5);
+      const wav = await maakMuziek(stemming, lengte);
+      const item = await uploadBestand(wav, `Muziek ${p.naam}`.slice(0, 80), "muziek", lengte);
+      const clip = nieuweAudioClip({ spoor: "s-muziek", start: 0, duur: lengte, bron: `/api/admin/video/bestand/${item.id}`, bronDuur: lengte, naam: "Muziek", rol: "muziek", volume: 0.5, vervagenIn: 0.5, vervagenUit: 1.8 });
+      // Als eerste stap in de geschiedenis van het nieuwe project.
+      setG((h) => (h && h.nu.id === p.id ? { ...h, nu: { ...h.nu, clips: [...h.nu.clips, clip], bijgewerkt: new Date().toISOString() }, op: Date.now() } : h));
+      await vernieuwBestanden();
+    } catch {
+      meld("De muziek kon niet gemaakt worden; voeg hem toe via het tabblad Muziek.", "fout");
+    }
+  }
+
+  async function tekstVideoKlaar(p: Project, muziek: Stemming | null) {
+    try {
+      await bewaarProject(p);
+    } catch {
+      /* wordt bij de eerste wijziging opnieuw geprobeerd */
+    }
+    openProject(p);
+    setVenster(null);
+    if (muziek) await zetMuziekOnder(p, muziek);
+    meld("Je tekstvideo staat klaar. Druk op afspelen; elke tekst, kleur en tijd blijft aan te passen.");
+  }
+
   async function aiKlaar(p: Project, keuze: AiVideoKeuze, meldingen: string[]) {
     openProject(p);
     setVenster(null);
     setAiMeldingen(meldingen);
     await vernieuwBestanden();
-    if (keuze.muziek) {
-      try {
-        const lengte = Math.ceil(projectDuur(p) + 0.5);
-        const wav = await maakMuziek(keuze.muziek, lengte);
-        const item = await uploadBestand(wav, `Muziek ${p.naam}`.slice(0, 80), "muziek", lengte);
-        const clip = nieuweAudioClip({ spoor: "s-muziek", start: 0, duur: lengte, bron: `/api/admin/video/bestand/${item.id}`, bronDuur: lengte, naam: "Muziek", rol: "muziek", volume: 0.5, vervagenIn: 0.5, vervagenUit: 1.8 });
-        // Als eerste stap in de geschiedenis van het nieuwe project.
-        setG((h) => (h && h.nu.id === p.id ? { ...h, nu: { ...h.nu, clips: [...h.nu.clips, clip], bijgewerkt: new Date().toISOString() }, op: Date.now() } : h));
-        await vernieuwBestanden();
-      } catch {
-        meld("De muziek kon niet gemaakt worden; voeg hem toe via het tabblad Muziek.", "fout");
-      }
-    }
+    if (keuze.muziek) await zetMuziekOnder(p, keuze.muziek);
     meld(keuze.bewegend ? "Je AI-video staat klaar. Het openingsshot wordt nu een echte bewegende video (1 tot 3 minuten); je kunt intussen verder." : "Je AI-video staat klaar. Druk op afspelen, pas aan wat je wilt en exporteer.");
     if (keuze.bewegend) {
       const eerste = p.clips.filter((c): c is BeeldClip => c.soort === "foto" && c.spoor === "s-beeld").sort((a, b) => a.start - b.start)[0];
@@ -464,6 +478,7 @@ export function VideoEditor() {
         actions={
           <div className="flex flex-wrap gap-2">
             <button type="button" className="a-button" onClick={() => void toonProjecten()}>Projecten</button>
+            <button type="button" className="a-button" onClick={() => setVenster("tekstvideo")}>Tekstvideo</button>
             <button type="button" className="a-button" onClick={() => setVenster("ai")}>✨ Video met AI</button>
             <button type="button" className="a-button a-button-primary" onClick={() => setVenster("export")} disabled={!project || project.clips.length === 0}>Exporteren</button>
           </div>
@@ -492,6 +507,7 @@ export function VideoEditor() {
             onToevoegen={(d) => toevoegen(d)}
             onMelding={meld}
             onAiVideo={() => setVenster("ai")}
+            onTekstVideo={() => setVenster("tekstvideo")}
           />
         </section>
 
@@ -590,6 +606,7 @@ export function VideoEditor() {
       )}
 
       {venster === "ai" && <AiVideo ai={ai} onSluit={() => setVenster(null)} onKlaar={aiKlaar} />}
+      {venster === "tekstvideo" && <TekstVideo onSluit={() => setVenster(null)} onKlaar={tekstVideoKlaar} />}
       {venster === "export" && project && <Export project={project} speler={speler} duur={duur} onSluit={() => setVenster(null)} onMelding={meld} onBewaard={vernieuwBestanden} />}
       {venster === "projecten" && (
         <Venster titel="Projecten" onSluit={() => setVenster(null)} breed>

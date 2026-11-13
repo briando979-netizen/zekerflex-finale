@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type DragEvent } from "react";
 import { STOCK_FOTOS } from "@/lib/video/stock";
 import { STEMMINGEN, maakMuziek, type Stemming } from "@/lib/video/muziek";
 import { meetMedia } from "@/lib/video/speler";
-import type { Formaat } from "@/lib/video/model";
+import { STIJL_VLAK, type Formaat } from "@/lib/video/model";
 import { SLEEP_TYPE, type SleepData } from "@/components/admin/video/Tijdlijn";
 import { TEKST_PRESETS } from "@/components/admin/video/presets";
 import { Wachtrij } from "@/components/admin/video/Wachtrij";
@@ -21,6 +21,7 @@ interface Props {
   onToevoegen: (data: SleepData) => void;
   onMelding: (tekst: string, soort?: "ok" | "fout") => void;
   onAiVideo: () => void;
+  onTekstVideo: () => void;
 }
 
 interface SiteMedia {
@@ -52,7 +53,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "ai", label: "AI" },
 ];
 
-export function Bibliotheek({ bestanden, ai, formaat, projectDuur, onVernieuw, onToevoegen, onMelding, onAiVideo }: Props) {
+export function Bibliotheek({ bestanden, ai, formaat, projectDuur, onVernieuw, onToevoegen, onMelding, onAiVideo, onTekstVideo }: Props) {
   const [tab, setTab] = useState<Tab>("media");
   const [bezig, setBezig] = useState<string | null>(null);
   const [siteMedia, setSiteMedia] = useState<SiteMedia[] | null>(null);
@@ -363,33 +364,45 @@ export function Bibliotheek({ bestanden, ai, formaat, projectDuur, onVernieuw, o
 
         {tab === "tekst" && (
           <div className="space-y-1.5">
-            {TEKST_PRESETS.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                draggable
-                onDragStart={(e) => sleepStart(e, { soort: "tekst", preset: p.id })}
-                onClick={() => onToevoegen({ soort: "tekst", preset: p.id })}
-                className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2.5 text-left"
-                style={{ background: "#10221d", border: "1px solid var(--a-border)" }}
-              >
-                <span
-                  className="truncate"
-                  style={{
-                    fontFamily: `"${p.instelling.lettertype ?? "Bricolage Grotesque"}", sans-serif`,
-                    fontWeight: p.instelling.vet === false ? 500 : 700,
-                    color: p.instelling.kleur ?? "#fff",
-                    background: p.instelling.achtergrond || undefined,
-                    padding: p.instelling.achtergrond ? "1px 6px" : undefined,
-                    borderRadius: 4,
-                    textShadow: p.instelling.stijl === "neon" ? `0 0 8px ${p.instelling.kleur}` : "0 1px 3px rgba(0,0,0,.7)",
-                  }}
+            <button type="button" onClick={onTekstVideo} className="a-button a-button-primary w-full text-xs">
+              Tekstvideo in één klik (chatbubbels, 3D, glitch)
+            </button>
+            {TEKST_PRESETS.map((p) => {
+              // Chatbubbel en venster tonen hun eigen vlak in het voorbeeld.
+              const vlak = p.instelling.achtergrond || (p.instelling.stijl ? STIJL_VLAK[p.instelling.stijl] : "") || "";
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  draggable
+                  onDragStart={(e) => sleepStart(e, { soort: "tekst", preset: p.id })}
+                  onClick={() => onToevoegen({ soort: "tekst", preset: p.id })}
+                  className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2.5 text-left"
+                  style={{ background: "#10221d", border: "1px solid var(--a-border)" }}
                 >
-                  {p.voorbeeld}
-                </span>
-                <span className="text-[0.625rem]" style={{ color: "#9fb8b0" }}>{p.label}</span>
-              </button>
-            ))}
+                  <span
+                    className="truncate"
+                    style={{
+                      fontFamily: `"${p.instelling.lettertype ?? "Bricolage Grotesque"}", sans-serif`,
+                      fontWeight: p.instelling.vet === false ? 500 : 700,
+                      color: p.instelling.kleur ?? "#fff",
+                      background: vlak || undefined,
+                      padding: vlak ? "1px 8px" : undefined,
+                      borderRadius: p.instelling.stijl === "bubbel-blauw" || p.instelling.stijl === "bubbel-groen" ? 999 : 4,
+                      textShadow:
+                        p.instelling.stijl === "neon"
+                          ? `0 0 8px ${p.instelling.kleur}`
+                          : p.instelling.stijl === "3d"
+                            ? "1px 1px 0 #8a8780, 2px 2px 0 #5f5d58, 3px 3px 0 #3a3936, 4px 5px 6px rgba(0,0,0,.6)"
+                            : "0 1px 3px rgba(0,0,0,.7)",
+                    }}
+                  >
+                    {p.voorbeeld}
+                  </span>
+                  <span className="text-[0.625rem]" style={{ color: "#9fb8b0" }}>{p.label}</span>
+                </button>
+              );
+            })}
             <button type="button" draggable onDragStart={(e) => sleepStart(e, { soort: "kleur", naam: "Kleurvlak" })} onClick={() => onToevoegen({ soort: "kleur", naam: "Kleurvlak" })} className="a-button w-full text-xs">
               + Kleurvlak (achtergrond of eindbeeld)
             </button>
