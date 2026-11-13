@@ -13,6 +13,13 @@ import {
   type SchijfPunt,
 } from "@/lib/ops/schijfreeks";
 
+const h = vi.hoisted(() => ({ meting: vi.fn(async () => null), disk: vi.fn(async () => ({ usedPercent: 50 })) }));
+vi.mock("@/lib/env", () => ({ env: { INTERNAL_CRON_TOKEN: "geheim-token", CRON_SECRET: "" } }));
+vi.mock("@/lib/logger", () => ({ logger: { info: () => undefined, warn: () => undefined, error: () => undefined } }));
+vi.mock("@/lib/ops/backup", () => ({ checkBackup: async () => ({}), checkDisk: () => h.disk() }));
+vi.mock("@/lib/ops/geheugen", () => ({ checkGeheugen: async () => null }));
+vi.mock("@/lib/ops/schijfreeks-meting", () => ({ bewaarSchijfmeting: () => h.meting() }));
+
 const GB = 1024 ** 3;
 const UUR = 3_600_000;
 const DAG = 24 * UUR;
@@ -152,13 +159,6 @@ describe("schijfreeks: aangesloten", () => {
 });
 
 describe("de interne route voor de schijfreeks", () => {
-  const h = vi.hoisted(() => ({ meting: vi.fn(async () => null), disk: vi.fn(async () => ({ usedPercent: 50 })) }));
-  vi.mock("@/lib/env", () => ({ env: { INTERNAL_CRON_TOKEN: "geheim-token", CRON_SECRET: "" } }));
-  vi.mock("@/lib/logger", () => ({ logger: { info: () => undefined, warn: () => undefined, error: () => undefined } }));
-  vi.mock("@/lib/ops/backup", () => ({ checkBackup: async () => ({}), checkDisk: () => h.disk() }));
-  vi.mock("@/lib/ops/geheugen", () => ({ checkGeheugen: async () => null }));
-  vi.mock("@/lib/ops/schijfreeks-meting", () => ({ bewaarSchijfmeting: () => h.meting() }));
-
   beforeEach(() => vi.clearAllMocks());
 
   it("weigert zonder token, ook voor ?alleen=schijf, en meet dan niets", async () => {
