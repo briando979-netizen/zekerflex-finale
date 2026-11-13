@@ -168,7 +168,8 @@ describe("voeding (puur deel)", () => {
   it("de titel is de eerste zin of regel, ingekort; de herindexering ziet dezelfde sourceRef, titel en tekst", () => {
     expect(voedingTitel("Uitzendkrachten krijgen vakantiegeld. Dat staat op de loonstrook.")).toBe("Uitzendkrachten krijgen vakantiegeld.");
     expect(voedingTitel("Eerste regel zonder punt\nTweede regel")).toBe("Eerste regel zonder punt");
-    expect(voedingTitel("x".repeat(100))).toHaveLength(80);
+    expect(voedingTitel("x".repeat(100))).toHaveLength(78);
+    expect(voedingTitel("x".repeat(100)).endsWith("…")).toBe(true);
     expect(voedingTitel("   ")).toBe("Zonder titel");
     expect(voedingEntries([{ id: "abc", titel: "T", tekst: "tekst", op: "2026-11-13T14:00:00.000Z", door: "usr", buren: [] }])).toEqual([{ sourceRef: "voeding:abc", title: "T", text: "tekst" }]);
   });
