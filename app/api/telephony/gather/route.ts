@@ -1,7 +1,8 @@
 import { handtekeningOngeldigTekst } from "@/lib/webhooks/handtekening";
 import { env } from "@/lib/env";
 import { readForm, signatureValid, xmlResponse } from "@/lib/telephony/webhook";
-import { twiml, sayAndGather, hangupAfter, say, dial } from "@/lib/telephony/twiml";
+import { twiml, sayAndGather, hangupAfter, say } from "@/lib/telephony/twiml";
+import { binnenKantoortijd, naarMedewerkerTwiml } from "@/lib/telephony/wachtrij";
 import { getCall, addTurn, patchCall } from "@/lib/telephony/store";
 import { phoneSystem, voiceForLang, recogLang, scriptOrDefault, voicemailMessage, type Lang } from "@/lib/telephony/scripts";
 import { isGoodbye, isGreetingOnly, looksLikeVoicemail } from "@/lib/telephony/intents";
@@ -61,7 +62,8 @@ export async function POST(request: Request): Promise<Response> {
   if (!rec || !callId) {
     return xmlResponse(twiml(hangupAfter(ERR_LINE[lang], voice)));
   }
-  const action = `${env.APP_BASE_URL.replace(/\/+$/, "")}/api/telephony/gather?callId=${callId}`;
+  const base = env.APP_BASE_URL.replace(/\/+$/, "");
+  const action = `${base}/api/telephony/gather?callId=${callId}`;
 
   const speech = (params.SpeechResult ?? "").trim();
   const firstReply = !rec.transcript.some((t) => t.who === "beller");
@@ -89,19 +91,13 @@ export async function POST(request: Request): Promise<Response> {
     return xmlResponse(twiml(say(HEARD[lang], voice) + sayAndGather(question, action, { voice, recogLang: recogLang(lang) })));
   }
 
+  // een mens spreken: niet meer meteen doorschakelen, maar de wachtrij (13 nov, eigenaar); buiten kantoortijd of zonder
+  // nummer een terugbelverzoek (lib/telephony/wachtrij.ts). Geen taalmodel nodig, dus ook met "alles gratis" meteen.
   if (speech && FORWARD.test(speech)) {
-    const fwd = env.TELEPHONY_FORWARD_NUMBER;
-    if (fwd) {
-      const line = lang === "en" ? "I'll connect you, one moment please." : "Ik verbind u door, een moment alstublieft.";
-      await addTurn(callId, "ai", `Doorverbinden → ${fwd}`).catch(() => undefined);
-      return xmlResponse(twiml(say(line, voice) + dial(fwd)));
-    }
-    const back =
-      lang === "en"
-        ? "That person isn't directly available. I can arrange a call back — tell me your name and when you'd like to be called."
-        : "Die persoon is nu niet direct bereikbaar. Ik kan een terugbelafspraak inplannen — zeg uw naam en wanneer u gebeld wilt worden.";
-    await addTurn(callId, "ai", back).catch(() => undefined);
-    return xmlResponse(twiml(sayAndGather(back, action, { voice, recogLang: recogLang(lang) })));
+    await addTurn(callId, "ai", "(naar een medewerker, in de wachtrij)").catch(() => undefined);
+    return xmlResponse(
+      twiml(naarMedewerkerTwiml({ base, callId, lang, voice, kantoor: binnenKantoortijd(new Date()), heeftNummer: Boolean(env.TELEPHONY_FORWARD_NUMBER) })),
+    );
   }
 
   let reply = FALLBACK[lang];
