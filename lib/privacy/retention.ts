@@ -186,6 +186,16 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
     blocksErasure: false,
   },
   {
+    key: "bezoekstatistiek",
+    label: "Bezoekstatistiek: bekeken pagina's en klikken op het platform, zonder cookies (aan je account gekoppeld als je was ingelogd)",
+    // 13 maanden (zo staat het in /privacy): een maand blijft te vergelijken met dezelfde maand een jaar eerder
+    days: YEAR + 30,
+    anchor: "bezoek vastgelegd",
+    basis: "Gerechtvaardigd belang (het platform verbeteren), tijdelijk",
+    onExpiry: "delete",
+    blocksErasure: false,
+  },
+  {
     key: "password_reset_tokens",
     label: "Wachtwoord-reset-tokens",
     days: 1,

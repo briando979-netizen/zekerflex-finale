@@ -32,6 +32,13 @@ const h = vi.hoisted(() => {
       deviceFingerprint: mk("deviceFingerprint", 2),
       engagementEvent: mk("engagementEvent", 9),
       passwordResetToken: mk("passwordResetToken", 1),
+      analyticsEvent: {
+        ...mk("analyticsEvent", 3),
+        findMany: async ({ where, take }: { where: unknown; take: number }) => {
+          calls.push({ model: "analyticsEvent", op: "findMany", where });
+          return [{ id: "ae-1" }, { id: "ae-2" }, { id: "ae-3" }].slice(0, take);
+        },
+      },
       identityVerification: {
         // met updatedAt in de where: de verlopen controles; zonder: alle controles met foto's (ook nieuwe)
         findMany: async ({ where }: { where: { updatedAt?: unknown } }) => {
@@ -102,7 +109,12 @@ describe("runRetentionSweep", () => {
       rijschool_berichten: 8,
       horeca_gasten: 13,
       site_reserveringen: 1,
+      bezoekstatistiek: 3,
     });
+    // bezoekstatistiek: na 13 maanden (365 + 30 dagen), de oudste eerst, en alleen die id's weg
+    const bezoek = h.calls.find((c) => c.model === "analyticsEvent" && c.op === "findMany");
+    expect((bezoek?.where as { createdAt: { lt: Date } }).createdAt.lt.toISOString()).toBe("2025-08-10T00:00:00.000Z");
+    expect(h.calls.find((c) => c.model === "analyticsEvent" && c.op === "deleteMany")?.where).toEqual({ id: { in: ["ae-1", "ae-2", "ae-3"] } });
     // klantsites: alleen reserveringen van vóór de grens, op de dag uit de sleutel
     expect(h.calls.find((c) => c.model === "keyValueStore")?.where).toEqual({ key: { in: ["site-reservering:s1:2025-09-08:r1"] } });
 

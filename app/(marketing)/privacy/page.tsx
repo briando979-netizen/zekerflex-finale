@@ -66,7 +66,7 @@ export default function PrivacyPage() {
       />
       <LegalSection
         heading="Diensten verbeteren"
-        body="We analyseren geaggregeerd hoe bezoekers het platform gebruiken om onze diensten te verbeteren, op grond van ons gerechtvaardigd belang. Dit gebeurt zonder cookies en zonder externe trackers; zie het cookiebeleid."
+        body="We analyseren geaggregeerd hoe bezoekers het platform gebruiken om onze diensten te verbeteren, op grond van ons gerechtvaardigd belang. Dit gebeurt zonder cookies en zonder externe trackers; zie het cookiebeleid. We bewaren bezoekstatistieken 13 maanden; daarna worden ze automatisch verwijderd."
       />
       <LegalSection
         heading="Advertenties"
