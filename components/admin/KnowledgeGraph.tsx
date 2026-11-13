@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as RPointerEvent, WheelEvent as RWheelEvent } from "react";
 import type { Begrip, GraafKnoop, GraafLijn, LijnSoort } from "@/lib/rag/graph-analyse";
+import { themaKleur } from "@/components/admin/sterrenstelsel/kleuren";
 
 // De Kennisgraaf als Obsidian-achtige force-directed grafiek, met eigen lichte
 // physics (geen dependency): afstoting tussen knopen, veren langs lijnen, lichte
@@ -95,12 +96,9 @@ const GROUP_LABEL: Record<string, string> = {
   begrip: "Begrippen",
   overig: "Overig",
 };
-/** twaalf kleuren voor thema's, goed uit elkaar te houden op de donkere achtergrond */
-const THEMA_KLEUR = ["#4FE0A0", "#7CC5FF", "#FFC46B", "#C9A5FF", "#F5B9AE", "#73D2C0", "#F2E36B", "#FF9DC6", "#9EE6C9", "#B6C2CC", "#FFA07A", "#8FD3FF"];
 const SOORT_LABEL: Record<GEdge["soort"], string> = { begrippen: "woordoverlap", semantisch: "semantisch (embeddings)", begrip: "begrip" };
 const SOORT_KORT: Record<LijnSoort, string> = { begrippen: "woorden", semantisch: "semantisch", begrip: "begrippen" };
 const colorOf = (g: string) => GROUP_COLOR[g] ?? "#8A938C";
-const themaKleur = (t: number | undefined) => (t === undefined ? "#8A938C" : THEMA_KLEUR[(t - 1) % THEMA_KLEUR.length] ?? "#8A938C");
 const PUBLIEK_LABEL: Record<string, string> = { public: "openbaar", werknemer: "werknemers", opdrachtgever: "opdrachtgevers", admin: "alleen beheer" };
 
 const W = 1000;

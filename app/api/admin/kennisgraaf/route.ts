@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { withAdminAccess } from "@/lib/auth/handlers";
 import { AppError } from "@/lib/errors";
-import { buurtVan, denkpad, groei, kennisgraaf, kennisgraafCSV, kennisgraafDOT, kennisgraafGraphML, kennisgraafRapport, knoopDetail, padTussen } from "@/lib/rag/graph";
+import { buurtVan, denkpad, groei, kennisgraaf, kennisgraafCSV, kennisgraafDOT, kennisgraafGraphML, kennisgraafLayout3D, kennisgraafRapport, knoopDetail, padTussen } from "@/lib/rag/graph";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 //   GET ?buurt=<id>&diepte=1|2   → de buurt van een knoop (focusstand)
 //   GET ?vraag=<tekst>           → het denkpad: welke knopen het brein voor die vraag pakt
 //   GET ?groei=1                 → de nachtelijke momentopnamen (reeks + verschil)
+//   GET ?layout=3d               → de vooraf berekende 3D-posities voor het Sterrenstelsel (per versie van de graaf gecachet)
 //   GET ?export=graphml|dot|json|csv-knopen|csv-lijnen|rapport → een bestand
 
 const ID_MAX = 200;
@@ -38,6 +39,7 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async (request) => {
     return NextResponse.json(await denkpad(vraag));
   }
   if (q.has("groei")) return NextResponse.json(await groei());
+  if (q.get("layout") === "3d") return NextResponse.json(await kennisgraafLayout3D());
   const exportAls = q.get("export");
   if (exportAls === "graphml") return bestand(await kennisgraafGraphML(), "application/xml; charset=utf-8", "zekerflex-kennisgraaf.graphml");
   if (exportAls === "dot") return bestand(await kennisgraafDOT(), "text/vnd.graphviz; charset=utf-8", "zekerflex-kennisgraaf.dot");
