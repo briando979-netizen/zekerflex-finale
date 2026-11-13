@@ -27,10 +27,11 @@ export function platformnaamTodo(stand: PlatformnaamStand | null): OwnerTodo | n
   if (!stand) return null;
   const klopt = stand.naam.trim() === PLATFORM_NAAM;
   if (!klopt && stand.aantal === 0) return null;
+  // afgevinkt: de naam klopt (13 nov 2026 hernoemd, de facturen aan de eigen testbedrijven geannuleerd); dan een gewone titel
   return {
     id: "platformnaam-facturen",
     group: "Juridisch",
-    title: `Facturen met afzender "${stand.naam}" (${stand.aantal}, ${euro(stand.totaalCents)}): met de accountant afstemmen`,
+    title: klopt ? `De platformorganisatie heet "${PLATFORM_NAAM}", zoals de rechtspersoon` : `Facturen met afzender "${stand.naam}" (${stand.aantal}, ${euro(stand.totaalCents)}): met de accountant afstemmen`,
     why: `De platformorganisatie heet in ZekerFlex nog "${stand.naam}", maar de rechtspersoon is ${PLATFORM_NAAM}. Die naam staat als afzender ("Van") op de facturen van het platform, ook in de e-factuur. Een factuur wordt bij elke opvraag opnieuw opgebouwd: verander je de naam, dan verandert de afzender ook op de facturen die al zijn uitgegeven. Daarom eerst met de accountant beslissen hoe.`,
     how: [
       `Bespreek met de accountant de ${stand.aantal} uitgegeven facturen (samen ${euro(stand.totaalCents)}): een creditnota met een herstelfactuur op naam van ${PLATFORM_NAAM}, of een toelichting aan de klant.`,

@@ -70,6 +70,8 @@ export interface TestKenmerken {
   rollen: string[];
   disabledAt: Date | null;
   tenantNamen: string[];
+  /** in het beheer gemarkeerd als eigen test, zelf of via een bedrijf (lib/admin/eigen-test-kern.ts) */
+  eigenTest?: boolean;
 }
 
 /**
@@ -79,6 +81,7 @@ export interface TestKenmerken {
  * accounts, beheerders en sales, en bedrijven die "Test …" heten (isTestklus in lib/shifts/testklus.ts).
  */
 export function isTestAccount(k: TestKenmerken): boolean {
+  if (k.eigenTest) return true;
   const email = k.email.trim().toLowerCase();
   if (RESERVED_ADDRESS.test(email) || /@localhost$/.test(email)) return true;
   if (/@(?:[^@\s]+\.)?example\.(com|net|org)$/.test(email)) return true;

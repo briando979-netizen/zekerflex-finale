@@ -16,6 +16,8 @@ import { ensureModelAgreement } from "@/lib/agreements/model-agreement";
 import { myOfferForShift } from "@/lib/offers/store";
 import { lockShiftSeats } from "@/lib/shifts/seat-lock";
 import { isTestklus } from "@/lib/shifts/testklus";
+import { isEigenTestKlus } from "@/lib/admin/eigen-test-kern";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
 import { testklusOntvangers } from "@/lib/shifts/testklus-db";
 import { findOverlappingShift, overlapMessageSelf } from "@/lib/shifts/worker-overlap";
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
@@ -204,6 +206,7 @@ export async function dispatchNextWave(shiftId: string): Promise<number> {
         select: {
           title: true,
           hourlyRateCents: true,
+          createdAt: true,
           branch: { select: { name: true, city: true, tenantId: true, tenant: { select: { name: true } } } },
         },
       }),
@@ -224,7 +227,8 @@ export async function dispatchNextWave(shiftId: string): Promise<number> {
     // die regel of uit de roosterplanner (lib/shifts/testklus-db.ts). Wie eruit
     // valt, houdt een stil voorstel (SCORED): geen push, geen mail.
     let golf = candidates;
-    if (isTestklus({ title: shift.title, bedrijf: shift.branch.tenant.name })) {
+    const eigenTestKlus = isEigenTestKlus(await leesEigenTest(), { tenantId: shift.branch.tenantId, createdAt: shift.createdAt });
+    if (isTestklus({ title: shift.title, bedrijf: shift.branch.tenant.name, eigenTest: eigenTestKlus })) {
       const intern = new Set((await testklusOntvangers(shift.branch.tenantId)).map((o) => o.freelancerId));
       golf = candidates.filter((c) => intern.has(c.freelancerId));
     }

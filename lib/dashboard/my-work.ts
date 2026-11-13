@@ -8,6 +8,8 @@ import { amsterdamParts } from "@/lib/time/amsterdam";
 import { overlapsAny } from "@/lib/shifts/worker-overlap";
 import { REACTIE_MARGE_MS, reactieVervalt } from "@/lib/offers/verval";
 import { isTestklus } from "@/lib/shifts/testklus";
+import { isEigenTestKlus, type EigenTest } from "@/lib/admin/eigen-test-kern";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
 
 // ---------------------------------------------------------------------------
 // "Mijn klussen" — the freelancer's own engagements in three buckets:
@@ -87,12 +89,13 @@ type ShiftRow = {
   positions: number;
   branchId: string;
   viaUitzendbureau: boolean;
+  createdAt: Date;
   requiredSkill: { name: string } | null;
   branch: { name: string; city: string; latitude: number; longitude: number; tenant: { id: string; name: string } };
   _count: { assignments: number };
 };
 
-export function toShift(row: ShiftRow, home: { lat: number; lng: number } | null): MarketplaceShift {
+export function toShift(row: ShiftRow, home: { lat: number; lng: number } | null, eigenTest: EigenTest | null = null): MarketplaceShift {
   const hours = (row.endsAt.getTime() - row.startsAt.getTime()) / 3_600_000 - row.breakMinutes / 60;
   return {
     // Fast payout is shown on the klus page / at hours-entry, which look it up per client.
@@ -125,7 +128,7 @@ export function toShift(row: ShiftRow, home: { lat: number; lng: number } | null
     replacementNote: null,
     myOffer: null,
     viaUitzendbureau: row.viaUitzendbureau,
-    testklus: isTestklus({ title: row.title, bedrijf: row.branch.tenant.name }),
+    testklus: isTestklus({ title: row.title, bedrijf: row.branch.tenant.name, eigenTest: isEigenTestKlus(eigenTest, { tenantId: row.branch.tenant.id, createdAt: row.createdAt }) }),
   };
 }
 
@@ -147,6 +150,7 @@ export const SHIFT_SELECT = {
   positions: true,
   branchId: true,
   viaUitzendbureau: true,
+  createdAt: true,
   status: true,
   requiredSkill: { select: { name: true } },
   branch: { select: { name: true, city: true, latitude: true, longitude: true, tenant: { select: { id: true, name: true } } } },
@@ -154,6 +158,8 @@ export const SHIFT_SELECT = {
 } as const;
 
 export async function getMyWork(userId: string): Promise<MyWork> {
+  // klussen van een eigen-testbedrijf (van na de markering) gelden als testklus (lib/admin/eigen-test-kern.ts)
+  const eigenTest = await leesEigenTest();
   const profile = await prisma.freelancerProfile.findUnique({
     where: { userId },
     select: { id: true, homeLatitude: true, homeLongitude: true },
@@ -259,7 +265,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
     const row = offerShiftById.get(o.shiftId);
     if (!row) continue;
     const over = row.endsAt.getTime() < now;
-    const shift = toShift(row, home);
+    const shift = toShift(row, home, eigenTest);
     // Een reactie waar niet op gekozen werd terwijl de klus al begon (of geannuleerd is)
     // telt als niet uitgekozen, ook vóór de opruimronde (lib/offers/expire.ts) hem omzet.
     const status = o.status === "pending" && reactieVervalt(row, now) ? "expired" : o.status;
@@ -299,7 +305,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
   // over, while its hours are still a draft it lives only on "Uren invullen";
   // after the hours are handed in it moves to "Gearchiveerd".
   for (const a of assignments) {
-    const shift = toShift(a.shift as ShiftRow, home);
+    const shift = toShift(a.shift as ShiftRow, home, eigenTest);
     const over = a.shift.endsAt.getTime() < now;
     // Een vervangingsverzoek telt alleen tot de klus begint; daarna gewoon uren of archief
     // (anders bleef de klus voor altijd onder "Uitgekozen" hangen zonder uren in te vullen).
@@ -352,7 +358,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
     if (pendingShiftIds.has(m.shift.id)) continue;
     pending.push({
       workKey: `m:${m.id}`,
-      shift: toShift(m.shift as ShiftRow, home),
+      shift: toShift(m.shift as ShiftRow, home, eigenTest),
       assignmentId: null,
       status: "pending",
       confirmedAt: null,
@@ -399,7 +405,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
   for (const m of notChosen) {
     nietGekozen.push({
       workKey: `nm:${m.id}`,
-      shift: toShift(m.shift as ShiftRow, home),
+      shift: toShift(m.shift as ShiftRow, home, eigenTest),
       assignmentId: null,
       status: "rejected",
       confirmedAt: null,

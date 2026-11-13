@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { getPrincipal, hasRole } from "@/lib/auth";
+import { EigenTestSchakelaar } from "@/components/admin/EigenTestSchakelaar";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
 import { prisma } from "@/lib/prisma";
 import { freelancerActivity } from "@/lib/admin/insights/detail";
 import { count, dateNl, dateTimeNl, euro, timeAgoNl } from "@/lib/admin/format";
@@ -197,6 +199,8 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
   const kopSelfie = selfieCheck ? `/api/admin/gebruikers/${user.id}/identiteit/${selfieCheck.id}/beeld?welk=selfie` : null;
   const kaartLink = (lat: number, lng: number) => `https://www.openstreetmap.org/?mlat=${lat.toFixed(5)}&mlon=${lng.toFixed(5)}#map=16/${lat.toFixed(5)}/${lng.toFixed(5)}`;
   const onbStatus = onboarding ? vastStatus(onboarding, new Date()) : null;
+  // "eigen test (telt niet mee)": een account van de eigenaar zelf (lib/admin/eigen-test-kern.ts)
+  const eigenTest = await leesEigenTest();
   const onbStappen = onboarding ? stappenVan(onboarding.doelgroep) : [];
   const onbTijdlijn = onboarding
     ? tijdlijn({
@@ -232,6 +236,7 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
               <Pill tone={user.emailVerifiedAt ? "ok" : "warn"}>{user.emailVerifiedAt ? "E-mail bevestigd" : "E-mail niet bevestigd"}</Pill>
               <Pill tone={kyc.tone}>{kyc.label}</Pill>
             </div>
+            {!isDeleted && <EigenTestSchakelaar soort="user" id={user.id} sinds={eigenTest.users[user.id] ?? null} />}
             {!fotoUrl && (
               <p className="mt-1.5 text-xs" style={{ color: "var(--a-mute)" }}>
                 {kopSelfie

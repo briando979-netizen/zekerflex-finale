@@ -8,6 +8,8 @@ import { mailTaalVoorWerker } from "@/lib/mail/taal";
 import { pushWhen } from "@/lib/i18n/worker-push";
 import { fixedWindow } from "@/lib/rate-limit";
 import { isTestklus } from "@/lib/shifts/testklus";
+import { isEigenTestKlus } from "@/lib/admin/eigen-test-kern";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
 import { amsterdamClock } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
@@ -56,14 +58,15 @@ export async function mailKlusVoorstel(input: {
         endsAt: true,
         hourlyRateCents: true,
         status: true,
-        branch: { select: { name: true, city: true, tenant: { select: { name: true } } } },
+        createdAt: true,
+        branch: { select: { name: true, city: true, tenantId: true, tenant: { select: { name: true } } } },
       },
     }),
   ]);
   const user = profiel?.user;
   if (!user?.email || !user.emailVerifiedAt || user.disabledAt) return "geen-adres";
   if (!shift || !OPEN.includes(shift.status) || shift.startsAt.getTime() <= Date.now()) return "geen-klus";
-  if (isTestklus({ title: shift.title, bedrijf: shift.branch.tenant.name })) return "testklus";
+  if (isTestklus({ title: shift.title, bedrijf: shift.branch.tenant.name, eigenTest: isEigenTestKlus(await leesEigenTest(), { tenantId: shift.branch.tenantId, createdAt: shift.createdAt }) })) return "testklus";
 
   const rem = await fixedWindow(`klus-mail:${input.freelancerId}`, 1, MAIL_PER_UREN * 3600, { failOpen: false });
   if (!rem.ok) return "begrensd";
