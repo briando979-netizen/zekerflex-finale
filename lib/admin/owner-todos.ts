@@ -547,6 +547,19 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       done: /^https:\/\//.test(base) && !/localhost/.test(base),
     },
     {
+      id: "mail-microsoft",
+      group: "Beheer & veiligheid",
+      title: "Bevestigingsmail bij Hotmail en Outlook: DMARC en Microsoft-meldingen aanzetten",
+      why: "Bij Hotmail en Outlook blijft een account vaker onbevestigd (6 van 16 in 30 dagen) dan bij Gmail (3 van 46), terwijl de mail overal door onze mailserver is geaccepteerd. Het domein zekerflex.com heeft geen DMARC-record, en Microsoft kijkt daar streng naar. Met de gratis meldingen van Microsoft zie je of mail daar in de spam belandt.",
+      how: [
+        "Zet bij TransIP in de DNS van zekerflex.com een TXT-record met naam _dmarc en waarde: v=DMARC1; p=none; rua=mailto:postmaster@zekerflex.com. Begin met p=none; pas na een paar weken zonder problemen p=quarantine.",
+        "Meld het verzendende adres aan bij Microsoft SNDS (sendersupport.olc.protection.outlook.com/snds) en JMRP (sendersupport.olc.protection.outlook.com/pm/junk-mail-reporting-program.aspx). Beide zijn gratis en tonen of Microsoft onze mail als spam ziet.",
+        "Kom je er niet uit: zeg het tegen Claude. Die controleert daarna het DMARC-record en de aflevering.",
+      ],
+      auto: false,
+      ...m("mail-microsoft"),
+    },
+    {
       id: "search-console",
       group: "Vindbaarheid & app",
       title: "Google Search Console en Bing koppelen",
