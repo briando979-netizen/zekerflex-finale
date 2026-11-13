@@ -110,7 +110,7 @@ describe("de loonheffingskorting hoort niet bij de aanmelding (kaartpunt 11)", (
     const werkgever = { naam: "Zekerflex, Inc.", adres: null, kvk: null, loonheffingennummer: null } as never;
     const werknemer = { naam: "Test Werker", nummer: "ZF-1", bsnLaatste4: null, postcode: null };
     const lhk = (extra: { loonheffingskorting: boolean; loonheffingskortingGekozen?: boolean }) =>
-      loonstrookRegels(slip, werkgever, werknemer, extra).find((r) => "label" in r && r.label === "Loonheffingskorting toegepast");
+      loonstrookRegels(slip, werkgever, werknemer, { ...extra, minimumloonPerUurCents: null }).find((r) => "label" in r && r.label === "Loonheffingskorting toegepast");
     expect(lhk({ loonheffingskorting: false, loonheffingskortingGekozen: false })).toMatchObject({ waarde: "Nee (niet gekozen)" });
     expect(lhk({ loonheffingskorting: false, loonheffingskortingGekozen: true })).toMatchObject({ waarde: "Nee" });
     expect(lhk({ loonheffingskorting: true, loonheffingskortingGekozen: true })).toMatchObject({ waarde: "Ja" });
