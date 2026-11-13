@@ -17,8 +17,9 @@ describe("eigenaar-taak: facturen met de oude platformnaam", () => {
     expect(t?.how.join(" ")).toContain(PLATFORM_NAAM);
   });
 
-  it("vinkt zichzelf af zodra de naam gelijk is aan de rechtspersoon", () => {
-    expect(platformnaamTodo({ naam: PLATFORM_NAAM, aantal: 11, totaalCents: 117_613 })?.done).toBe(true);
+  it("verdwijnt zodra de naam gelijk is aan de rechtspersoon (13 nov: hernoemd, de facturen geannuleerd)", () => {
+    expect(platformnaamTodo({ naam: PLATFORM_NAAM, aantal: 11, totaalCents: 117_613 })).toBeNull();
+    expect(platformnaamTodo({ naam: PLATFORM_NAAM, aantal: 0, totaalCents: 0 })).toBeNull();
   });
 
   it("geen taak zonder facturen (dan kan de naam zo worden bijgewerkt) of zonder telling", () => {
