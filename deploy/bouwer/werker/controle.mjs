@@ -152,6 +152,13 @@ export async function controleerVastlegging({ doel = "main", vanaf = null, wacht
     const { basis, bestanden } = await gewijzigdSinds(vanaf ?? (await laatsteSha()), sha);
     log("info", `${bestanden.length} gewijzigd(e) bestand(en) sinds ${basis ? basis.slice(0, 7) : "?"}`);
 
+    // Het databaseschema (8 nov: een ongeldig schema bleef onopgemerkt en 147 commits bouwden erop door). Altijd, ook zonder dat
+    // het schema veranderde; prisma validate leest geen database maar wil de variabelen wel zien.
+    log("info", "Databaseschema (prisma validate)");
+    const dummyDb = "postgresql://validate:validate@localhost:5432/validate";
+    const schemaRun = await sh("npx", ["prisma", "validate"], { cwd: REPO, env: { DATABASE_URL: process.env.DATABASE_URL || dummyDb, DATABASE_URL_UNPOOLED: process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL || dummyDb }, timeout: 120_000, zonderSleutel: true });
+    const schema = { ok: schemaRun.code === 0, uit: kortTekst(schemaRun.uit) };
+
     log("info", "TypeScript (hele project)");
     const tsc = await sh("npx", ["tsc", "--noEmit", "-p", "."], { cwd: REPO, timeout: 1_500_000 });
 
@@ -208,8 +215,9 @@ export async function controleerVastlegging({ doel = "main", vanaf = null, wacht
       onderwerp,
       vanaf: basis,
       bestanden: bestanden.length,
-      ok: tsc.code === 0 && eslint.ok && tests.ok,
+      ok: tsc.code === 0 && schema.ok && eslint.ok && tests.ok,
       tsc: { ok: tsc.code === 0, uit: kortTekst(tsc.uit) },
+      schema,
       eslint,
       tests,
       bewakers,
@@ -234,6 +242,7 @@ export function samenvattingControle(u) {
     onderwerp: u.onderwerp,
     ok: u.ok,
     tsc: u.tsc.ok,
+    schema: u.schema ? u.schema.ok : true,
     eslint: u.eslint.ok,
     tests: u.tests.ok,
     bestanden: u.bestanden,

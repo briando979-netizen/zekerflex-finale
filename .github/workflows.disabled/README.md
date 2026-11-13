@@ -36,3 +36,9 @@ rekening. Beide zijn niet nodig, want het werk gebeurt al op onze eigen server:
 
 Zet hier niets terug dat volgens een schema draait zonder eerst de kosten te
 rekenen. GitHub zelf (code bewaren) blijft gratis.
+
+## 14 nov 2026: automatisch controleren en uitrollen gebeurt op de eigen server
+
+Het doel van `ci.yml` en `deploy.yml` (na elke push controleren en uitrollen) draait nu als **Auto-uitrol** op de eigen VPS
+(`deploy/bouwer/README.md`, punt 3; `lib/bouwer/auto-uitrol.ts`), zonder GitHub Actions en dus zonder kosten bij GitHub. De
+bestanden in deze map blijven uit en doen niets. Zet Actions niet weer aan (repo-instelling `actions/permissions` staat uit).
