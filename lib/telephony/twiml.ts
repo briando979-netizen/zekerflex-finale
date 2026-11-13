@@ -67,6 +67,11 @@ export function hangupAfter(text: string, voice?: string): string {
   return say(text, voice) + "<Hangup/>";
 }
 
+/** Ga verder op een andere webhook: Twilio haalt daar de volgende TwiML op. */
+export function redirect(url: string): string {
+  return `<Redirect method="POST">${xmlEscape(url)}</Redirect>`;
+}
+
 /** Verbind door naar een mens (bv. kantoornummer). */
 export function dial(number: string): string {
   return `<Dial callerId="${xmlEscape(env.TWILIO_FROM_NUMBER ?? "")}">${xmlEscape(number)}</Dial>`;
