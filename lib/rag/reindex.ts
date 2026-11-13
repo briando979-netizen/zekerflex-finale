@@ -9,6 +9,8 @@ import { smartChunk } from "@/lib/rag/smart-chunk";
 import { embedMany, isRagEnabled } from "@/lib/rag/embed";
 import { replaceSource, type UpsertChunkInput } from "@/lib/rag/store";
 import { corpus } from "@/lib/rag/corpus";
+import { kvGet } from "@/lib/storage/kv";
+import { K_STATUS, uitrolHoudtModelStil, type LiveStatus } from "@/lib/bouwer/live";
 
 // ---------------------------------------------------------------------------
 // Indexers - everything the sovereign box knows becomes searchable memory:
@@ -279,14 +281,22 @@ export interface ReindexResult {
   interaction: number;
 }
 
-async function safely(
+/**
+ * Eén indexer die faalt stopt de rest niet. Tijdens (en net na) een uitrol staat het eigen model bewust stil: dan is een
+ * timeout van het embeddingsmodel geen storing (13 nov: 3× "rag indexer failed", "operation was aborted due to timeout",
+ * vlak voor de herstart van de app), net als bij de opwarmtik (app/api/internal/ai/warm).
+ */
+export async function safely(
   name: string,
   fn: () => Promise<number>,
 ): Promise<number> {
   try {
     return await fn();
   } catch (err) {
-    logger.error("rag indexer failed", { indexer: name, error: (err as Error).message });
+    const gegevens = { indexer: name, error: (err as Error).message };
+    const stil = uitrolHoudtModelStil(await kvGet<LiveStatus>(K_STATUS).catch(() => null));
+    if (stil) logger.info("rag indexer overgeslagen: uitrol bezig", gegevens);
+    else logger.error("rag indexer failed", gegevens);
     return 0;
   }
 }
