@@ -8,6 +8,7 @@ import { STRUCTUUR, dagenTot, type StructuurStatus, type StructuurToestand } fro
 import type { VraagAntwoord } from "@/lib/accountant/antwoord";
 import type { Ernst, MaandcontroleUitslag } from "@/lib/accountant/maandcontrole-kern";
 import type { Jaarconcept } from "@/lib/accountant/jaar-kern";
+import { ACCOUNTANT_VRAGEN, ONDERWERP_NAAM, type VraagOnderwerp } from "@/lib/accountant/open-vragen";
 
 // ---------------------------------------------------------------------------
 // Admin → Financiën → Accountant: Structuur, Delaware, Vraag en de maandcontrole op de echte
@@ -16,11 +17,12 @@ import type { Jaarconcept } from "@/lib/accountant/jaar-kern";
 // handtekening of indiening.
 // ---------------------------------------------------------------------------
 
-type Tab = "structuur" | "delaware" | "vraag" | "boekhouding";
+type Tab = "structuur" | "delaware" | "vraag" | "open" | "boekhouding";
 const TABS: { id: Tab; label: string }[] = [
   { id: "structuur", label: "Structuurcheck" },
   { id: "delaware", label: "Delaware-belasting" },
   { id: "vraag", label: "Vraag het de accountant" },
+  { id: "open", label: "Open vragen" },
   { id: "boekhouding", label: "Maand, jaar en dossier" },
 ];
 
@@ -76,6 +78,7 @@ export function AccountantHub() {
       <KpiStrip
         items={[
           { label: "Punten nog open", value: open === null ? "…" : String(open), tone: open ? "warn" : "ok" },
+          { label: "Vragen voor de accountant", value: String(ACCOUNTANT_VRAGEN.length), tone: ACCOUNTANT_VRAGEN.length ? "warn" : "ok" },
           { label: "Regels met bron", value: String(KENNIS.length), tone: "trust" },
           { label: "Bron zelf gelezen", value: `${KENNIS.filter((r) => r.zekerheid === "gelezen").length} van ${KENNIS.length}`, tone: "neutral" },
         ]}
@@ -90,6 +93,7 @@ export function AccountantHub() {
       {tab === "structuur" && <Structuur toestand={data?.structuur ?? null} onChange={(s) => setData((d) => (d ? { ...d, structuur: s } : d))} />}
       {tab === "delaware" && <Delaware />}
       {tab === "vraag" && <Vraag vragen={data?.vragen ?? []} naVraag={laad} />}
+      {tab === "open" && <OpenVragen />}
       {tab === "boekhouding" && <Boekhouding />}
     </div>
   );
@@ -263,6 +267,48 @@ const MAANDEN = ["januari", "februari", "maart", "april", "mei", "juni", "juli",
 /** "2027-03-01" → "1 maart 2027", zonder tijdzone (het is al een Amsterdamse dag). */
 const dagTekst = (dag: string) => `${Number(dag.slice(8, 10))} ${MAANDEN[Number(dag.slice(5, 7)) - 1] ?? ""} ${dag.slice(0, 4)}`;
 const maandTekst = (dag: string) => `${MAANDEN[Number(dag.slice(5, 7)) - 1] ?? ""} ${dag.slice(0, 4)}`;
+
+const MAANDEN = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+/** "2026-11-13" wordt "13 nov 2026" (zonder Date: een dag heeft geen tijdzone). */
+const dagNl = (dag: string) => {
+  const [j, m, d] = dag.split("-");
+  return `${Number(d)} ${MAANDEN[Number(m) - 1] ?? ""} ${j ?? ""}`;
+};
+
+/** De vaste lijst vragen voor een menselijk accountant (lib/accountant/open-vragen.ts); dezelfde staat in het dossier. */
+function OpenVragen() {
+  const onderwerpen = Object.keys(ONDERWERP_NAAM) as VraagOnderwerp[];
+  return (
+    <div className="space-y-4">
+      <Notice>
+        Vragen voor een menselijk accountant of belastingadviseur. Ze staan ook in het dossier (tab Maand, jaar en dossier). Hier staat alleen de vraag en wat er nu is; het antwoord geeft de accountant.
+      </Notice>
+      {ACCOUNTANT_VRAGEN.length === 0 && <Empty title="Geen open vragen" body="Alles is beantwoord." />}
+      {onderwerpen.map((o) => {
+        const lijst = ACCOUNTANT_VRAGEN.filter((v) => v.onderwerp === o);
+        if (lijst.length === 0) return null;
+        return (
+          <Panel key={o} title={ONDERWERP_NAAM[o]} actions={<Pill tone="warn">{lijst.length === 1 ? "1 vraag" : `${lijst.length} vragen`}</Pill>}>
+            <ul className="space-y-4 text-sm">
+              {lijst.map((v) => {
+                const punt = v.structuurId ? STRUCTUUR.find((p) => p.id === v.structuurId) : undefined;
+                return (
+                  <li key={v.id}>
+                    <p className="font-medium">{v.vraag}</p>
+                    {v.stand && <p className="mt-1">{v.stand}</p>}
+                    <p className="mt-1 text-xs" style={{ color: "var(--a-mute)" }}>
+                      {`Op de lijst sinds ${dagNl(v.sinds)}${punt ? ` · hoort bij "${punt.titel}" in de structuurcheck` : ""}`}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          </Panel>
+        );
+      })}
+    </div>
+  );
+}
 
 function Boekhouding() {
   const [data, setData] = useState<MaandcontroleUitslag | null>(null);

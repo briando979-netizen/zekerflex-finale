@@ -7,6 +7,7 @@ import { termijnenNu } from "@/lib/accountant/maandcontrole";
 import { getStructuur } from "@/lib/accountant/store";
 import { dossierHtml } from "@/lib/accountant/dossier";
 import { jaarUit } from "@/lib/accountant/jaar-kern";
+import { alleOpenVragen } from "@/lib/accountant/open-vragen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,7 +23,8 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princip
     administratie: eerste?.naam ?? "nog geen echte administratie",
     gemaaktOp: amsterdamDayKey(nu),
     concept: eerste?.concept ?? null,
-    vragen: eerste?.vragen ?? ["Er is nog geen echte administratie: eerst de boekhouding inrichten."],
+    // de vragen bij de jaarcijfers en de vaste lijst (lib/accountant/open-vragen.ts), ook zonder echte administratie
+    vragen: alleOpenVragen(eerste?.vragen ?? null),
     structuur,
     termijnen,
   });
