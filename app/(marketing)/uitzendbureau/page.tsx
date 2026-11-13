@@ -392,21 +392,24 @@ export default async function UitzendbureauPage() {
   const zichtbaar = zichtbareSecties("uitzendbureau", await getPaginaIndeling("uitzendbureau"));
   return (
     <>
-      <script
-        type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{
-          __html: ldJson({
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            mainEntity: FAQ.map((f) => ({
-              "@type": "Question",
-              name: f.q,
-              acceptedAnswer: { "@type": "Answer", text: f.a },
-            })),
-          }),
-        }}
-      />
+      {/* de vragen voor Google alleen als ze ook op de pagina staan: gestructureerde gegevens horen zichtbaar te zijn */}
+      {zichtbaar.includes("faq") ? (
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{
+            __html: ldJson({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              mainEntity: FAQ.map((f) => ({
+                "@type": "Question",
+                name: f.q,
+                acceptedAnswer: { "@type": "Answer", text: f.a },
+              })),
+            }),
+          }}
+        />
+      ) : null}
 
       <UitzendJobBoard openCount={openCount} />
 
