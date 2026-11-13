@@ -25,8 +25,11 @@ import { logger } from "@/lib/logger";
 export const EERSTE_WACHT_MS = 2_500;
 /** Zo lang wacht de vervolgaanvraag hooguit; ruim onder de 15 s die Twilio per webhook wacht. */
 export const VERVOLG_WACHT_MS = 11_000;
-/** Zo lang mag het model in totaal: de eerste wacht, "een ogenblik" uitspreken en de vervolgwacht. */
-export const ANTWOORD_MAX_MS = 14_000;
+/**
+ * Zo lang mag het model in totaal. Niet langer dan de eerste wacht plus de vervolgwacht, zodat het model altijd eerder
+ * stopt dan de vervolgaanvraag (die begint pas nadat "een ogenblik" is uitgesproken).
+ */
+export const ANTWOORD_MAX_MS = 13_000;
 const BEWAAR_MS = 60_000;
 
 export const EEN_OGENBLIK: Record<Lang, string> = {
