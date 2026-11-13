@@ -170,7 +170,7 @@ describe("owner to-do list", () => {
     for (const x of manual) await setManualDone(x.id, true, "Brian");
     const after = await byId();
     expect(manual.filter((x) => !after[x.id]!.done).map((x) => x.id)).toEqual([]);
-    expect(manual.map((x) => x.id)).toEqual(expect.arrayContaining(["stripe-identity", "play-store-app", "vacaturefeed", "google-business"]));
+    expect(manual.map((x) => x.id)).toEqual(expect.arrayContaining(["stripe-identity", "app-105", "vacaturefeed", "google-business"]));
   });
 
   it("kennisbank: de taak vinkt zichzelf af zodra de API-sleutel erin staat en de kennisbank gevuld is (op prod, 13 nov: nog geen sleutel)", async () => {
@@ -246,7 +246,8 @@ describe("owner to-do list", () => {
     expect((await byId())["search-console"]!.done).toBe(false);
     live.txt = [["v=spf1 include:_spf.transip.email ~all"], ["google-site-verification=abc", "123"]];
     expect((await byId())["search-console"]!.done).toBe(true);
-    expect(live.txtHosts.at(-1)).toBe("zekerflex.com");
+    // de DNS wordt ook voor DMARC gelezen (_dmarc.zekerflex.com); de Google-controle kijkt op het hoofddomein zelf
+    expect(live.txtHosts).toContain("zekerflex.com");
   });
 
   it("reads the Stripe webhook for the expired-checkout event", async () => {
