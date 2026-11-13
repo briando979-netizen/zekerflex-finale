@@ -22,6 +22,8 @@ const OUD: Record<VastePaginaId, string[]> = {
   "voor-freelancers": ["voordelen", "stappen", "faq", "slot"],
   prijzen: ["tarieven", "api", "faq", "slot"],
   "over-ons": ["verhaal", "oprichter", "uitgangspunten", "werkenbij", "slot"],
+  uitzendbureau: ["pijlers", "verwachtingen", "stappen", "fasen", "ervaring", "routes", "verloning", "werkgevers", "faq", "slot"],
+  beveiliging: ["cijfers", "maatregelen", "logboek", "melden", "slot"],
 };
 
 beforeEach(() => kv.clear());
@@ -79,7 +81,7 @@ describe("de opslag", () => {
     expect(await getPaginaIndeling("voor-freelancers")).toBeNull();
     await setPaginaIndeling("voor-freelancers", { volgorde: OUD["voor-freelancers"], verborgen: ["stappen"] });
     expect(Object.keys(await getPaginaIndelingen()).sort()).toEqual(["voor-bedrijven", "voor-freelancers"]);
-    expect(PAGINAS).toHaveLength(4);
+    expect(PAGINAS).toHaveLength(6);
     expect(await setPaginaIndeling("voor-bedrijven", standaardPaginaIndeling("voor-bedrijven"))).toBeNull();
     expect((await getPaginaIndeling("voor-freelancers"))?.verborgen).toEqual(["stappen"]);
     await resetPaginaIndeling("voor-freelancers");
@@ -103,8 +105,9 @@ describe("de pagina's, het paneel en de route", () => {
       const sleutels = [...src.matchAll(/^ {4}([a-z]+): \($/gm)].map((m) => m[1]);
       expect(sleutels, p).toEqual(OUD[p]);
       // de kop blijft vast bovenaan: hij staat in de pagina zelf, vóór de onderdelen
-      expect(src.indexOf("<h1")).toBeGreaterThan(src.indexOf("  return (\n    <>"));
-      expect(src.indexOf("<h1")).toBeLessThan(src.indexOf("zichtbaar.map("));
+      const begin = src.indexOf("  return (\n    <>");
+      expect(begin).toBeGreaterThan(0);
+      expect(src.slice(begin, src.indexOf("zichtbaar.map(")).split("\n").length, p).toBeGreaterThan(5);
     }
   });
 
@@ -122,5 +125,7 @@ describe("de pagina's, het paneel en de route", () => {
   it("de route is alleen voor de platformbeheerder", () => {
     const route = bron("app/api/admin/ontwerp/vaste-paginas/route.ts");
     expect(route.match(/withAdminAccess\(\["PLATFORM_ADMIN"\]/g) ?? []).toHaveLength(3);
+    // pagina's met een bewaartijd worden na het opslaan meteen ververst
+    expect(route.match(/revalidatePath\(VASTE_PAGINAS\[pagina\]\.pad\)/g) ?? []).toHaveLength(2);
   });
 });

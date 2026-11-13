@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { withAdminAccess } from "@/lib/auth/handlers";
@@ -35,6 +36,8 @@ export const PUT = withAdminAccess(["PLATFORM_ADMIN"], async (request: Request, 
   if (!parsed.success || !isVastePagina(parsed.data.pagina)) throw AppError.validation("Deze indeling kon niet worden gelezen.");
   const pagina = parsed.data.pagina;
   const eigen = await setPaginaIndeling(pagina, parsed.data.indeling);
+  // sommige pagina's bewaart Next een tijd (revalidate): meteen verversen, anders zie je de nieuwe indeling pas later
+  revalidatePath(VASTE_PAGINAS[pagina].pad);
   await recordAudit({
     category: "ADMIN",
     action: "ontwerp.vaste-pagina",
@@ -50,6 +53,7 @@ export const DELETE = withAdminAccess(["PLATFORM_ADMIN"], async (request: Reques
   const pagina = new URL(request.url).searchParams.get("pagina");
   if (!isVastePagina(pagina)) throw AppError.validation("Deze pagina bestaat niet.");
   await resetPaginaIndeling(pagina);
+  revalidatePath(VASTE_PAGINAS[pagina].pad);
   await recordAudit({ category: "ADMIN", action: "ontwerp.vaste-pagina", actorUserId: principal.userId, actorLabel: "user", summary: `Indeling van de pagina ${VASTE_PAGINAS[pagina].naam} terug naar de standaard` });
   return NextResponse.json(await antwoord());
 });
