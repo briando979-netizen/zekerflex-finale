@@ -12,6 +12,7 @@ import { WieBenJijKop } from "@/components/app/WieBenJijKop";
 import { WieBenJijPersoon, type PersoonStand } from "@/components/app/WieBenJijPersoon";
 import { IdKeuzeKaarten } from "@/components/app/WieBenJijIdKaarten";
 import { leesDatum, stappenVoor, voegNaam, type WieStap } from "@/lib/onboarding/wie-ben-jij";
+import { POORT_STAPPEN } from "@/lib/onboarding/werker-poort";
 import { controleerVeld, type VeldSleutel } from "@/lib/onboarding/velden";
 import { OnderSheet } from "@/components/app/OnderSheet";
 import { bevestigOverzicht, type OverzichtRij } from "@/lib/werker/bevestig-overzicht";
@@ -429,8 +430,11 @@ export function OnboardingForm({
       <WieBenJijKop
         titel={kopTitel}
         uitleg={kopUitleg}
-        aantal={stappen.length}
-        huidig={Math.max(0, stappen.indexOf(stap))}
+        // één teller voor de hele aanmelding (13 nov 2026, fase A/B van d4): de vijf stappen van de poort, gelijk aan de
+        // wizard op Klussen. Persoon en woon zijn samen "Je gegevens" (stap 3), de ID-check is "Je ID" (stap 4).
+        aantal={POORT_STAPPEN.length}
+        huidig={Math.max(0, POORT_STAPPEN.findIndex((p) => p.sleutel === (stap === "id" ? "identiteit" : "gegevens")))}
+        stapNaam={stap === "id" ? ft.start.identiteitStep : ft.start.gegevensStep}
         teksten={w}
         onTerug={terug}
         onSluit={kanSluiten ? () => router.push("/dashboard") : undefined}

@@ -27,7 +27,6 @@ import { nogStappenTekst } from "@/lib/onboarding/laat-weten";
 import { beginStap } from "@/lib/onboarding/wie-ben-jij";
 import { isReservedTestAddress } from "@/lib/mail";
 import { featureEnabled } from "@/lib/flags";
-import { ID_KAART } from "@/lib/onboarding/id-kaart-teksten";
 
 export const dynamic = "force-dynamic";
 
@@ -288,20 +287,6 @@ export default async function VerificatiePage() {
             <UitzendPanel />
           </div>
         </div>
-      )}
-
-      {/* Meting 12 nov: 5 van de 6 werkers die na de gegevens stilstonden, startten de ID-scan niet. Zijn de gegevens klaar en de ID nog niet, dan
-          zegt deze kaart wat er nog moet en springt naar de bestaande ID-stap hieronder (#id-stap); geen tweede startpad naast IdScan. */}
-      {begin === "id" && mist.length === 0 && (
-        <section aria-labelledby="id-kaart-kop" className="mb-4 rounded-2xl border border-trust/30 bg-trust-soft p-4">
-          <h2 id="id-kaart-kop" className="font-display text-base font-bold text-trust-ink">
-            {ID_KAART[locale].kop}
-          </h2>
-          <p className="mt-1 text-sm text-neutralx-600">{ID_KAART[locale].tekst}</p>
-          <a href="#id-stap" className="btn-trust mt-3 inline-flex min-h-[44px] w-full justify-center sm:w-auto">
-            {ID_KAART[locale].knop}
-          </a>
-        </section>
       )}
 
       {formulierNodig && (

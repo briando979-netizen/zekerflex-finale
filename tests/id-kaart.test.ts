@@ -33,34 +33,19 @@ describe("de teksten in vijf talen", () => {
   });
 });
 
-describe("de kaart op Verificatie", () => {
+describe("de kaart op Verificatie is opgegaan in de teller (13 nov 2026)", () => {
   const page = bron("app/dashboard/verificatie/page.tsx");
+  const form = bron("components/app/OnboardingForm.tsx");
 
-  it("verschijnt alleen als de gegevens klaar zijn en de ID nog de volgende stap is, met de taal van de werker", () => {
-    expect(page).toContain('begin === "id" && mist.length === 0');
-    expect(page).toContain("ID_KAART[locale]");
-    expect(page).toContain('href="#id-stap"');
+  it("geen aparte kaart meer: de kop van het formulier zegt \"Stap 4 van 5: Je ID\"", () => {
+    expect(page).not.toContain("ID_KAART[locale]");
+    expect(page).not.toContain('aria-labelledby="id-kaart-kop"');
+    expect(form).toContain('stapNaam={stap === "id" ? ft.start.identiteitStep : ft.start.gegevensStep}');
+    expect(form).toContain("aantal={POORT_STAPPEN.length}");
   });
 
-  it("de kaart zit boven het formulier, en het anker is de bestaande ID-stap in OnboardingForm (focusbaar)", () => {
-    expect(page.indexOf('href="#id-stap"')).toBeLessThan(page.indexOf("<OnboardingForm"));
-    expect(bron("components/app/OnboardingForm.tsx")).toContain('id="id-stap" tabIndex={-1}');
-  });
-
-  it("geen tweede startpad: IdScan en ComplianceDocsPanel zijn niet aangeraakt en kennen de kaart niet", () => {
-    for (const f of ["components/app/IdScan.tsx", "components/app/ComplianceDocsPanel.tsx"]) {
-      const s = bron(f);
-      expect(s, f).not.toContain("id-stap");
-      expect(s, f).not.toContain("id-kaart");
-    }
-    // de kaart is een anker, geen knop met eigen camera-/uploadcode
-    const kaart = page.slice(page.indexOf('<section aria-labelledby="id-kaart-kop"'), page.indexOf("</section>", page.indexOf('<section aria-labelledby="id-kaart-kop"')));
-    expect(kaart).not.toMatch(/getUserMedia|fetch\(|onClick|IdScan/);
-  });
-
-  it("de kaart is toegankelijk: kop met id, doelgrootte 44 px, en gebruikt de verificatiekleur (violet = verificatie)", () => {
-    expect(page).toContain('aria-labelledby="id-kaart-kop"');
-    expect(page).toContain("min-h-[44px]");
-    expect(page).toContain("trust");
+  it("de ID-stap blijft een focusbaar anker in OnboardingForm, en IdScan kent geen tweede startpad", () => {
+    expect(form).toContain('id="id-stap" tabIndex={-1}');
+    for (const f of ["components/app/IdScan.tsx", "components/app/ComplianceDocsPanel.tsx"]) expect(bron(f), f).not.toContain("id-kaart");
   });
 });

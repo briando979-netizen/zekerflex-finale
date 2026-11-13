@@ -212,7 +212,7 @@ const nl = {
   loonstrook: LOONSTROOK_NL,
   meldingTeksten: MELDING_NL,
   gegevensMist: {
-    titelEen: "Nog 1 ding voor je gegevens", titelMeer: "Nog {n} dingen voor je gegevens", uitleg: "Dit mist er nog om je aanmelding af te ronden. Je kunt het hier meteen doen.",
+    titelEen: "Je gegevens: nog 1 ding", titelMeer: "Je gegevens: nog {n} dingen", uitleg: "Dit mist er nog om je aanmelding af te ronden. Je kunt het hier meteen doen.",
     bsn: { kop: "Je BSN invullen", hint: "Nodig voor je loonstrook en loonheffing. Je BSN wordt alleen versleuteld bewaard. Je vindt het op de achterkant van je ID-kaart, in je paspoort (bij de pagina met je foto) of, als je uit het buitenland komt, in de brief van het RNI-loket.", label: "BSN", opslaan: "Opslaan", bezig: "Opslaan…", mislukt: "Opslaan mislukt. Probeer het opnieuw.", voorstelKop: "Je BSN van je ID", voorstel: "We lazen je BSN van je ID: eindigend op {laatste4}. Klopt dat?", voorstelJa: "Ja, klopt", voorstelNee: "Nee, zelf invullen" },
     contract: { kop: "Je uitzendovereenkomst ondertekenen", hint: "Lees de overeenkomst en onderteken hem; dat kan verderop op deze pagina.", knop: "Naar de overeenkomst ↓" },
     btw: { kop: "Je btw- of KOR-gegevens invullen", hintZzp: "Vul je btw-nummer in, of je KVK-nummer en dat je btw hebt aangevraagd.", hintFlex: "Vul je btw-nummer in, of geef aan dat je de kleineondernemersregeling (KOR) gebruikt of btw hebt aangevraagd.", knop: "Naar je fiscale gegevens →", opslaan: "Opslaan", bezig: "Opslaan…", korAanvragen: "KOR nog aanvragen? Dat doe je bij je fiscale gegevens →" },
@@ -1851,7 +1851,7 @@ const en: FreelancerDict = {
     vervangerTitel: "Replacement wanted", vervangerBody: '{klus}: your job is listed as "Replacement" on the platform.',
   },
   gegevensMist: {
-    titelEen: "1 thing left for your details", titelMeer: "{n} things left for your details", uitleg: "This is still missing to finish your sign-up. You can do it right here.",
+    titelEen: "Your details: 1 thing left", titelMeer: "Your details: {n} things left", uitleg: "This is still missing to finish your sign-up. You can do it right here.",
     bsn: { kop: "Fill in your BSN", hint: "Needed for your payslip and payroll tax. Your BSN is stored encrypted only. You'll find it on the back of your ID card, in your passport (by the page with your photo) or, if you come from abroad, in the letter from the RNI desk.", label: "BSN", opslaan: "Save", bezig: "Saving…", mislukt: "Saving failed. Please try again.", voorstelKop: "Your BSN from your ID", voorstel: "We read your BSN from your ID: ending in {laatste4}. Is that correct?", voorstelJa: "Yes, correct", voorstelNee: "No, I'll fill it in" },
     contract: { kop: "Sign your temp agency contract", hint: "Read the contract and sign it; you can do that further down this page.", knop: "Go to the contract ↓" },
     btw: { kop: "Fill in your VAT or KOR details", hintZzp: "Enter your VAT number, or your KVK number and that you have applied for VAT.", hintFlex: "Enter your VAT number, or say that you use the small business scheme (KOR) or have applied for VAT.", knop: "Go to your tax details →", opslaan: "Save", bezig: "Saving…", korAanvragen: "Still need to apply for the KOR? You do that in your tax details →" },
@@ -3535,7 +3535,7 @@ const pl: FreelancerDict = {
     vervangerTitel: "Szukamy zastępstwa", vervangerBody: '{klus}: Twoje zlecenie jest na platformie jako „Zastępstwo”.',
   },
   gegevensMist: {
-    titelEen: "Jeszcze 1 rzecz do uzupełnienia", titelMeer: "Jeszcze {n} rzeczy do uzupełnienia", uitleg: "Tego brakuje jeszcze, aby dokończyć rejestrację. Możesz to zrobić od razu tutaj.",
+    titelEen: "Twoje dane: jeszcze 1 rzecz", titelMeer: "Twoje dane: jeszcze {n} rzeczy", uitleg: "Tego brakuje jeszcze, aby dokończyć rejestrację. Możesz to zrobić od razu tutaj.",
     bsn: { kop: "Wpisz swój BSN", hint: "Potrzebny do odcinka wypłaty i podatku od wynagrodzenia. Twój BSN jest przechowywany tylko w postaci zaszyfrowanej. Znajdziesz go na odwrocie dowodu osobistego, w paszporcie (przy stronie ze zdjęciem) albo, jeśli przyjechałeś z zagranicy, w liście z punktu RNI.", label: "BSN", opslaan: "Zapisz", bezig: "Zapisywanie…", mislukt: "Zapis nie powiódł się. Spróbuj ponownie.", voorstelKop: "Twój BSN z dokumentu", voorstel: "Odczytaliśmy Twój BSN z dokumentu: kończy się na {laatste4}. Czy to się zgadza?", voorstelJa: "Tak, zgadza się", voorstelNee: "Nie, wpiszę ręcznie" },
     contract: { kop: "Podpisz umowę o pracę tymczasową", hint: "Przeczytaj umowę i podpisz ją; możesz to zrobić niżej na tej stronie.", knop: "Przejdź do umowy ↓" },
     btw: { kop: "Uzupełnij dane VAT lub KOR", hintZzp: "Wpisz numer VAT albo numer KVK i zaznacz, że złożono wniosek o VAT.", hintFlex: "Wpisz numer VAT albo zaznacz, że korzystasz ze zwolnienia dla małych firm (KOR) lub złożono wniosek o VAT.", knop: "Przejdź do danych podatkowych →", opslaan: "Zapisz", bezig: "Zapisywanie…", korAanvragen: "Chcesz dopiero złożyć wniosek o KOR? Zrobisz to w danych podatkowych →" },
@@ -5219,7 +5219,7 @@ const ro: FreelancerDict = {
     vervangerTitel: "Se caută înlocuitor", vervangerBody: '{klus}: jobul tău apare pe platformă ca „Înlocuire”.',
   },
   gegevensMist: {
-    titelEen: "Mai ai 1 lucru de completat", titelMeer: "Mai ai {n} lucruri de completat", uitleg: "Acestea mai lipsesc pentru a finaliza înscrierea. Le poți face chiar aici.",
+    titelEen: "Datele tale: mai ai 1 lucru", titelMeer: "Datele tale: mai ai {n} lucruri", uitleg: "Acestea mai lipsesc pentru a finaliza înscrierea. Le poți face chiar aici.",
     bsn: { kop: "Completează-ți BSN-ul", hint: "Necesar pentru fluturașul tău și impozitul pe salariu. BSN-ul tău este stocat doar criptat. Îl găsești pe spatele cărții de identitate, în pașaport (la pagina cu fotografia) sau, dacă vii din străinătate, în scrisoarea de la ghișeul RNI.", label: "BSN", opslaan: "Salvează", bezig: "Se salvează…", mislukt: "Salvarea nu a reușit. Încearcă din nou.", voorstelKop: "BSN-ul tău din act", voorstel: "Am citit BSN-ul tău din actul de identitate: se termină în {laatste4}. Este corect?", voorstelJa: "Da, este corect", voorstelNee: "Nu, îl completez eu" },
     contract: { kop: "Semnează contractul de muncă temporară", hint: "Citește contractul și semnează-l; poți face asta mai jos pe această pagină.", knop: "Mergi la contract ↓" },
     btw: { kop: "Completează datele de TVA sau KOR", hintZzp: "Introdu codul de TVA sau numărul KVK și că ai solicitat TVA.", hintFlex: "Introdu codul de TVA sau indică faptul că folosești regimul întreprinderilor mici (KOR) sau ai solicitat TVA.", knop: "Mergi la datele fiscale →", opslaan: "Salvează", bezig: "Se salvează…", korAanvragen: "Trebuie încă să soliciți KOR? Faci asta în datele fiscale →" },
@@ -6903,7 +6903,7 @@ const uk: FreelancerDict = {
     vervangerTitel: "Шукаємо заміну", vervangerBody: '{klus}: твоя робота на платформі позначена як «Заміна».',
   },
   gegevensMist: {
-    titelEen: "Залишилась 1 річ у твоїх даних", titelMeer: "Залишилось речей у твоїх даних: {n}", uitleg: "Цього ще бракує, щоб завершити реєстрацію. Ти можеш зробити це тут же.",
+    titelEen: "Твої дані: залишилась 1 річ", titelMeer: "Твої дані: залишилось речей: {n}", uitleg: "Цього ще бракує, щоб завершити реєстрацію. Ти можеш зробити це тут же.",
     bsn: { kop: "Введи свій BSN", hint: "Потрібен для розрахункового листка й податку із зарплати. Твій BSN зберігається лише в зашифрованому вигляді. Він є на звороті ID-картки, у паспорті (біля сторінки з фото) або, якщо ти з-за кордону, у листі від пункту RNI.", label: "BSN", opslaan: "Зберегти", bezig: "Збереження…", mislukt: "Не вдалося зберегти. Спробуй ще раз.", voorstelKop: "Твій BSN з документа", voorstel: "Ми зчитали твій BSN з документа: закінчується на {laatste4}. Це правильно?", voorstelJa: "Так, правильно", voorstelNee: "Ні, введу вручну" },
     contract: { kop: "Підпиши договір тимчасової роботи", hint: "Прочитай договір і підпиши його; це можна зробити нижче на цій сторінці.", knop: "До договору ↓" },
     btw: { kop: "Заповни дані ПДВ або KOR", hintZzp: "Введи номер ПДВ або номер KVK і позначку, що ти подав(-ла) заявку на ПДВ.", hintFlex: "Введи номер ПДВ або вкажи, що ти користуєшся режимом для малого бізнесу (KOR) чи подав(-ла) заявку на ПДВ.", knop: "До податкових даних →", opslaan: "Зберегти", bezig: "Збереження…", korAanvragen: "Ще треба подати заявку на KOR? Це робиться в податкових даних →" },

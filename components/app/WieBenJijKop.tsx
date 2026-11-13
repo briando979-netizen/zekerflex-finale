@@ -12,6 +12,7 @@ export function WieBenJijKop({
   teksten,
   onTerug,
   onSluit,
+  stapNaam,
 }: {
   titel: string;
   uitleg?: string | undefined;
@@ -23,6 +24,8 @@ export function WieBenJijKop({
   onTerug: () => void;
   /** zonder: niet sluitbaar (de verplichte poort) */
   onSluit?: (() => void) | undefined;
+  /** de naam van de stap in de hele aanmelding ("Je gegevens", "Je ID"): dan staat "Stap n van 5: …" boven de kop */
+  stapNaam?: string | undefined;
 }) {
   const knop =
     "grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white";
@@ -56,7 +59,12 @@ export function WieBenJijKop({
           <span aria-hidden className="h-10 w-10" />
         )}
       </div>
-      <h1 className="mt-6 font-display text-3xl font-bold leading-tight">{titel}</h1>
+      {stapNaam && (
+        <p className="mt-5 text-xs font-semibold uppercase tracking-wide text-white/75">
+          {teksten.stapVan.replace("{n}", String(huidig + 1)).replace("{totaal}", String(aantal))}: {stapNaam}
+        </p>
+      )}
+      <h1 className={`${stapNaam ? "mt-1.5" : "mt-6"} font-display text-3xl font-bold leading-tight`}>{titel}</h1>
       {uitleg && <p className="mt-1.5 text-sm text-white/80">{uitleg}</p>}
     </div>
   );
