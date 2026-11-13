@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState, type ReactNode } from "react";
 import { Empty, InfoList, Panel, Pill } from "@/components/admin/kit";
 import type { CityData } from "@/lib/admin/city-data";
 import { dayPhase, moonName, moonPhase, type Origin, sunAt, sunTimes, trafficFor, type VehicleKind } from "@/lib/admin/city-layout";
@@ -13,6 +13,7 @@ import { amsterdamClock, amsterdamDayKey, amsterdamParts } from "@/lib/time/amst
 import { ROOMS, roomOf, type CityEvent } from "@/components/admin/city/rooms";
 import type { CityHandle, View } from "@/components/admin/city/scene";
 import type { Pick } from "@/components/admin/city/world";
+import { type Gang, GANGEN } from "@/lib/admin/verkennen";
 
 // ---------------------------------------------------------------------------
 // Live kantoor in 3D, uitgebouwd tot een stad. In het midden staat het
@@ -41,7 +42,14 @@ const VIEWS: [View, string][] = [
   ["park", "Park"],
   ["polder", "Polder"],
   ["station", "Station"],
+  ["amsterdam", "Amsterdam"],
+  ["rotterdam", "Rotterdam"],
+  ["utrecht", "Utrecht"],
+  ["groningen", "Groningen"],
 ];
+
+/** De steden over de snelweg hebben geen eigen paneel (nog geen cijfers): alleen erheen vliegen. */
+const STADSVIEWS = new Set<View>(["stad", "station", "amsterdam", "rotterdam", "utrecht", "groningen"]);
 
 const LEGEND: [string, string][] = [
   ["#16a34a", "Bus: planning & uren"],
@@ -58,7 +66,7 @@ const LEGEND: [string, string][] = [
 ];
 
 const timeNl = (iso: string) => new Date(iso).toLocaleTimeString("nl-NL", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" });
-const pickFor = (v: View): Pick | null => (v === "stad" || v === "station" ? null : v === "polder" ? { kind: "polder" } : v === "bedrijven" ? { kind: "bedrijventerrein" } : v === "woonwijk" ? { kind: "woonwijk" } : { kind: "landmark", id: v });
+const pickFor = (v: View): Pick | null => (STADSVIEWS.has(v) ? null : v === "polder" ? { kind: "polder" } : v === "bedrijven" ? { kind: "bedrijventerrein" } : v === "woonwijk" ? { kind: "woonwijk" } : { kind: "landmark", id: v });
 /** 21,25 → "21:15" */
 const hourText = (h: number) => `${String(Math.floor(h)).padStart(2, "0")}:${String(Math.round((h % 1) * 60)).padStart(2, "0")}`;
 const toneOf = (severity: string) => (severity === "critical" ? "crit" : severity === "warning" ? "warn" : "neutral");
@@ -133,6 +141,8 @@ export function Office3D() {
   const [data, setData] = useState<CityData | null>(null);
   const [selected, setSelected] = useState<Pick | null>(null);
   const [touring, setTouring] = useState(false);
+  // zelf rondlopen of rondrijden (13 nov, eigenaar: "de hele stad verkennen"); null = het gewone overzicht
+  const [verken, setVerken] = useState<Gang | null>(null);
   const [legend, setLegend] = useState(false);
   // Weergave van de stad (13 nov): realistisch (standaard) of eenvoudig (zoals vroeger, lichter voor zwakke apparaten).
   // null = nog niet gelezen; de keuze staat alleen in deze browser.
@@ -236,6 +246,7 @@ export function Office3D() {
     } catch {
       // niet bewaren lukt niet: dan alleen voor nu
     }
+    setVerken(null);
     setWeergave(nieuw);
   };
 
@@ -268,6 +279,7 @@ export function Office3D() {
         realistisch: weergave === "echt",
         onPick: setSelected,
         onTourEnd: () => setTouring(false),
+        onVerkenEind: () => setVerken(null),
         ...(thema && isThemeId(thema) && thema !== "verjaardag" ? { theme: thema } : {}),
         ...(seizoen === "lente" || seizoen === "zomer" || seizoen === "herfst" || seizoen === "winter" ? { season: seizoen } : {}),
         ...(weer && Object.hasOwn(WEATHER_NL, weer) ? { weather: weer as keyof typeof WEATHER_NL } : {}),
@@ -297,6 +309,7 @@ export function Office3D() {
     city.current?.select(p);
   };
   const go = (v: View) => {
+    setVerken(null);
     setTouring(false);
     city.current?.tour(false);
     city.current?.fly(v);
@@ -304,10 +317,33 @@ export function Office3D() {
   };
   const toggleTour = () => {
     const on = !touring;
+    if (on) {
+      city.current?.verkennen(null);
+      setVerken(null);
+    }
     setTouring(on);
     city.current?.tour(on);
     if (on) choose(null);
   };
+  const kiesGang = (g: Gang) => {
+    const nieuw = verken === g ? null : g;
+    if (nieuw) {
+      setTouring(false);
+      choose(null);
+    }
+    city.current?.verkennen(nieuw);
+    setVerken(nieuw);
+  };
+  /** Knop op het scherm vasthouden = lopen; loslaten (of de vinger eraf) = stoppen. */
+  const houd = (as: "vooruit" | "opzij" | "draai", waarde: number) => ({
+    onPointerDown: (e: ReactPointerEvent<HTMLButtonElement>) => {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      city.current?.verkenKnop(as, waarde);
+    },
+    onPointerUp: () => city.current?.verkenKnop(as, 0),
+    onPointerCancel: () => city.current?.verkenKnop(as, 0),
+    onLostPointerCapture: () => city.current?.verkenKnop(as, 0),
+  });
   const goCompany = (id: string) => {
     city.current?.fly({ company: id });
     choose({ kind: "company", id });
@@ -572,6 +608,19 @@ export function Office3D() {
         >
           {touring ? "Stop rondleiding" : "▶ Rondleiding"}
         </button>
+        {(["lopen", "rijden"] as const).map((g) => (
+          <button
+            key={g}
+            type="button"
+            onClick={() => kiesGang(g)}
+            aria-pressed={verken === g}
+            className="rounded-full border px-2.5 py-1 text-xs font-semibold transition"
+            style={verken === g ? { borderColor: "#16a34a", background: "#16a34a", color: "#fff" } : { borderColor: "#16a34a", color: "#16a34a" }}
+            title={g === "lopen" ? "Zelf door de straten lopen: W A S D of de pijltjes, slepen om rond te kijken" : "Zelf over de wegen rijden naar het station en de steden"}
+          >
+            {verken === g ? `Stop ${GANGEN[g].naam.toLowerCase()}` : g === "lopen" ? "🚶 Rondlopen" : "🚗 Rondrijden"}
+          </button>
+        ))}
         <button
           type="button"
           onClick={() => void toggleReplay()}
@@ -685,9 +734,33 @@ export function Office3D() {
               </button>
             )}
           </div>
-          <p className="pointer-events-none absolute bottom-3 right-3 hidden rounded-full px-3 py-1 text-[11px] shadow sm:block" style={{ background: "var(--a-panel)", color: "var(--a-dim)" }}>
-            Sleep om te draaien · scroll om te zoomen · klik een gebouw of voertuig
-          </p>
+          {verken ? (
+            <>
+              <p className="pointer-events-none absolute right-3 top-12 hidden max-w-[22rem] rounded-xl px-3 py-1.5 text-[11px] shadow sm:block" style={{ background: "var(--a-panel)", color: "var(--a-dim)" }}>
+                W of ↑ vooruit · S of ↓ achteruit · A en D opzij · ← en → draaien · Shift sneller · sleep om rond te kijken · Esc stopt
+              </p>
+              <div className="absolute bottom-3 right-3 grid grid-cols-3 gap-1" role="group" aria-label={GANGEN[verken].naam}>
+                <span />
+                <button type="button" aria-label="Vooruit" className="h-11 w-11 touch-none select-none rounded-full text-lg font-semibold shadow" style={{ background: "var(--a-panel)", color: "var(--a-text)" }} {...houd("vooruit", 1)}>
+                  ↑
+                </button>
+                <span />
+                <button type="button" aria-label="Naar links draaien" className="h-11 w-11 touch-none select-none rounded-full text-lg font-semibold shadow" style={{ background: "var(--a-panel)", color: "var(--a-text)" }} {...houd("draai", 1)}>
+                  ↺
+                </button>
+                <button type="button" aria-label="Achteruit" className="h-11 w-11 touch-none select-none rounded-full text-lg font-semibold shadow" style={{ background: "var(--a-panel)", color: "var(--a-text)" }} {...houd("vooruit", -1)}>
+                  ↓
+                </button>
+                <button type="button" aria-label="Naar rechts draaien" className="h-11 w-11 touch-none select-none rounded-full text-lg font-semibold shadow" style={{ background: "var(--a-panel)", color: "var(--a-text)" }} {...houd("draai", -1)}>
+                  ↻
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="pointer-events-none absolute bottom-3 right-3 hidden rounded-full px-3 py-1 text-[11px] shadow sm:block" style={{ background: "var(--a-panel)", color: "var(--a-dim)" }}>
+              Sleep om te draaien · scroll om te zoomen · klik een gebouw of voertuig
+            </p>
+          )}
           {clock && (
             <p className="pointer-events-none absolute right-3 top-3 rounded-full px-3 py-1 text-[11px] font-medium shadow" style={{ background: timeOverride !== null ? "#4f6bed" : "var(--a-panel)", color: timeOverride !== null ? "#fff" : "var(--a-text)" }}>
               {timeOverride !== null ? `Voorbeeld: ${hourText(timeOverride)} vandaag in Amsterdam` : clock}
