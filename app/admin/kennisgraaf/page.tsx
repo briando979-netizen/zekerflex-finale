@@ -153,7 +153,7 @@ export default async function KennisGraafPage() {
                 <span className="font-medium" style={{ color: "var(--a-text)" }}>
                   Ontbrekende schakel „{s.begrip}”
                 </span>
-                : speelt in thema {s.themas.join(" en ")} ({s.docs.slice(0, 3).map((d) => d.label).join(", ")}), maar geen lijn verbindt die thema's. Een verwijzing of gids hierover knoopt ze aan elkaar.
+                : speelt in thema {s.themas.join(" en ")} ({s.docs.slice(0, 3).map((d) => d.label).join(", ")}), maar geen lijn verbindt die thema&apos;s. Een verwijzing of gids hierover knoopt ze aan elkaar.
               </li>
             ))}
             {g.semantisch === 0 && (
@@ -199,7 +199,7 @@ export default async function KennisGraafPage() {
                   </ul>
                 )}
                 <p className="text-[11px]" style={{ color: "var(--a-mute)" }}>
-                  {count(gr.reeks.length)} momentopnamen, van {eerste?.dag} tot {laatste?.dag}; semantische laag nu {laatste?.semantisch ?? 0} documenten, {laatste?.themas ?? 0} thema's.
+                  {count(gr.reeks.length)} momentopnamen, van {eerste?.dag} tot {laatste?.dag}; semantische laag nu {laatste?.semantisch ?? 0} documenten, {laatste?.themas ?? 0} thema&apos;s.
                 </p>
               </div>
             )}
@@ -210,7 +210,7 @@ export default async function KennisGraafPage() {
         </div>
       </div>
       <p className="text-xs" style={{ color: "var(--a-mute)" }}>
-        Berekend op {new Date(g.op).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}; de graaf wordt elke tien minuten opnieuw berekend. Begrippen komen uit TF-IDF over het corpus; verbanden uit woordoverlap (Jaccard) en, waar de index ze heeft, de echte embeddings (cosinus ≥ 0,5). Thema's via labelpropagatie, centraliteit via PageRank, bruggen via tussenligging (Brandes). Exporteren kan als JSON, GraphML, DOT, CSV of rapport, via de knop Exporteren in de grafiek.
+        Berekend op {new Date(g.op).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}; de graaf wordt elke tien minuten opnieuw berekend. Begrippen komen uit TF-IDF over het corpus; verbanden uit woordoverlap (Jaccard) en, waar de index ze heeft, de echte embeddings (cosinus ≥ 0,5). Thema&apos;s via labelpropagatie, centraliteit via PageRank, bruggen via tussenligging (Brandes). Exporteren kan als JSON, GraphML, DOT, CSV of rapport, via de knop Exporteren in de grafiek.
       </p>
     </div>
   );
