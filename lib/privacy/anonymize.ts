@@ -245,6 +245,9 @@ export async function anonymizeUser(
     cleared.work_rights = (await tx.workRight.deleteMany({ where: { userId } })).count;
     // Bezoekstatistiek van dit account (de rijen zonder account vallen onder de termijn van 13 maanden, lib/privacy/sweep.ts).
     cleared.bezoekstatistiek = (await tx.analyticsEvent.deleteMany({ where: { userId } })).count;
+    // Matching-signalen (engagement_events in lib/privacy/retention.ts, "wordt meteen verwijderd"): het profiel blijft
+    // bestaan, dus de cascade van FreelancerProfile wist ze niet vanzelf.
+    cleared.engagement_events = (await tx.engagementEvent.deleteMany({ where: { freelancer: { userId } } })).count;
 
     // Audit log stays append-only — scrub the PII inside it instead. The
     // tamper-evident hash chain covers only the immutable identity fields, so
