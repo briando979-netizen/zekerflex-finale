@@ -219,7 +219,7 @@ export function FiscalForm({ initial, defaultKind }: { initial: FiscalProfile; d
           </>
         )}
 
-        <Field label={f.iban}>
+        <Field label={f.iban} hint={f.ibanHint}>
           <input value={iban} onChange={(e) => setIban(e.target.value)} placeholder="NL00 BANK 0000 0000 00" className="field-input" />
         </Field>
         {codeNodig && (

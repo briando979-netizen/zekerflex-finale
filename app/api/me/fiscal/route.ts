@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePrincipal, requireRole } from "@/lib/auth";
 import { toErrorBody, AppError } from "@/lib/errors";
-import { logger } from "@/lib/logger";
-import { validateVat } from "@/lib/integrations/kvkbase";
+import { checkVies } from "@/lib/integrations/vies";
 import { isValidIban } from "@/lib/billing/sepa";
 import { flagIbanChanged } from "@/lib/compliance/documents";
 import { bevestigIbanWijziging } from "@/lib/fiscal/iban-bevestiging";
@@ -76,31 +75,35 @@ export async function PUT(request: Request): Promise<NextResponse> {
         : {}),
     };
 
-    // BTW validation (VIES-backed, via KVKBase). Best-effort.
+    // Load the current profile first — needed for the VAT check (keep a valid number valid while VIES is down), the
+    // BSN-reuse check and the IBAN-changed flag further down.
+    const before = await getFiscal(principal.userId);
+
+    // Btw-nummer: VIES, de officiële en gratis dienst van de EU, voor elk EU-land (zelfde als de onboarding,
+    // lib/onboarding/verify.ts). Tot 13 nov ging dit via KVKBase, en viel die weg (limiet, storing), dan werd het nummer
+    // "niet geldig" en viel een zzp'er bij een gewone wijziging uit de onboarding. Nu: is VIES even onbereikbaar, dan
+    // blijft een eerder geldig, ongewijzigd nummer geldig; een nieuw nummer wacht op een volgende controle.
     if (input.vatNumber) {
       const clean = input.vatNumber.replace(/[\s.-]/g, "").toUpperCase();
       patch.vatNumber = clean;
-      const looksNl = NL_VAT.test(clean);
-      try {
-        const res = await validateVat(clean);
-        patch.vatValid = res.valid;
-        patch.vatStatus = res.status ?? (res.valid ? "validated" : "unvalidated");
-        patch.vatCheckedAt = new Date().toISOString();
-      } catch (err) {
-        logger.warn("vat validation unavailable", { error: (err as Error).message });
-        patch.vatValid = false;
-        patch.vatStatus = looksNl ? "format-ok-unvalidated" : "unvalidated";
-        patch.vatCheckedAt = new Date().toISOString();
+      const res = await checkVies(clean);
+      const nu = new Date().toISOString();
+      if (res.status === "unavailable") {
+        const blijftGeldig = before.vatValid && before.vatNumber === res.vatNumber;
+        patch.vatValid = blijftGeldig;
+        patch.vatStatus = blijftGeldig ? (before.vatStatus ?? "validated") : NL_VAT.test(clean) ? "format-ok-unvalidated" : "unvalidated";
+        if (!blijftGeldig) patch.vatCheckedAt = nu;
+      } else {
+        patch.vatNumber = res.vatNumber;
+        patch.vatValid = res.status === "valid";
+        patch.vatStatus = res.status === "valid" ? "validated" : res.status;
+        patch.vatCheckedAt = nu;
       }
     } else if (input.workerKind === "zzp" || (input.workerKind === "flexwerker" && !input.korApplies && !input.vatRequested)) {
       // no VAT number given where one is expected — leave invalid
       patch.vatNumber = null;
       patch.vatValid = false;
     }
-
-    // Load the current profile first — needed both for the BSN-reuse check
-    // here and the IBAN-changed flag further down.
-    const before = await getFiscal(principal.userId);
 
     // Payroll worker → BSN (hashed only, never stored raw). Switching TO
     // uitzendkracht requires a BSN; someone who already has one on file
@@ -112,12 +115,12 @@ export async function PUT(request: Request): Promise<NextResponse> {
         patch.bsnHash = before.bsnVoorstelHash;
         patch.bsnLast4 = before.bsnVoorstelLast4;
       } else if (input.bsn) {
-        if (!validBsn(input.bsn)) throw AppError.validation("Dit BSN klopt niet. Controleer de 9 cijfers: je BSN staat op een Nederlands paspoort, ID-kaart of verblijfsdocument, of in de brief van de gemeente.").metSleutel("fiscal.bsnFout");
+        if (!validBsn(input.bsn)) throw AppError.validation("Dit BSN klopt niet. Controleer de 9 cijfers: je BSN staat op een Nederlands paspoort, ID-kaart of verblijfsdocument, of in de brief van de gemeente. Kom je uit het buitenland, dan staat het in de brief van het RNI-loket.").metSleutel("fiscal.bsnFout");
         const { hash, last4 } = hashBsn(input.bsn);
         patch.bsnHash = hash;
         patch.bsnLast4 = last4;
       } else if (!before.bsnHash) {
-        throw AppError.validation("Voor verloning als uitzendkracht is je BSN nodig.").metSleutel("fiscal.bsnNodig");
+        throw AppError.validation("Voor verloning als uitzendkracht is je BSN nodig. Kom je uit het buitenland en heb je nog geen BSN? Dan vraag je het aan bij een RNI-loket van een gemeente, met je paspoort of ID-kaart.").metSleutel("fiscal.bsnNodig");
       }
       // bevestigd of zelf ingevuld: het voorstel is niet meer nodig
       if (patch.bsnHash) {
