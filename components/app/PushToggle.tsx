@@ -186,6 +186,7 @@ export function PushToggle({
   stapTexts,
   cardTexts = PUSH_KAART_NL,
   onAan,
+  track,
 }: {
   variant?: "card" | "banner" | "stap";
   texts?: PushBannerTexts;
@@ -193,6 +194,8 @@ export function PushToggle({
   /** de kaart (variant card) in de taal van de werker; zonder: Nederlands (werkgever, chat-instellingen) */
   cardTexts?: PushKaartTeksten;
   onAan?: () => void;
+  /** meetcodes (data-track) voor de knoppen van de banner, bv. de pushkaart op /dashboard/klussen */
+  track?: { aan: string; weg: string } | undefined;
 }) {
   const k = cardTexts;
   const [state, setState] = useState<State>("loading");
@@ -349,6 +352,7 @@ export function PushToggle({
         {state !== "ios-install" && (
           <button
             type="button"
+            data-track={track?.aan}
             onClick={enable}
             disabled={state === "busy"}
             className="rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
@@ -356,7 +360,7 @@ export function PushToggle({
             {state === "busy" ? texts.bezig : texts.knop}
           </button>
         )}
-        <button type="button" onClick={dismiss} className="text-neutralx-400 hover:text-ink" aria-label={texts.nietNu}>
+        <button type="button" data-track={track?.weg} onClick={dismiss} className="text-neutralx-400 hover:text-ink" aria-label={texts.nietNu}>
           ✕
         </button>
       </div>

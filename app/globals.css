@@ -888,6 +888,8 @@ body {
 .app-scope[data-theme="dark"] .text-brand-700 { color: rgb(var(--brand-mint-rgb)) !important; }
 .app-scope[data-theme="dark"] .bg-brand-50,
 .app-scope[data-theme="dark"] .bg-brand-100 { background-color: rgb(var(--brand-mint-rgb) / 0.12) !important; }
+/* de rand van de pushkaart (PushToggle, variant banner) bleef in het donker een lichte mintlijn (13 nov) */
+.app-scope[data-theme="dark"] .border-brand-100 { border-color: rgb(var(--brand-mint-rgb) / 0.25) !important; }
 /* Dezelfde mint-tint met een dekking: bg-brand-50/40 tot /60 bleef in het donker een lichtmint vlak (over de kaart een
    middengrijs, 2:1 met de tekst erop; o.a. het ondertekenblok van de uitzendovereenkomst, contrastmeting 13 nov). */
 .app-scope[data-theme="dark"] .bg-brand-50\/40 { background-color: rgb(var(--brand-mint-rgb) / 0.05) !important; }

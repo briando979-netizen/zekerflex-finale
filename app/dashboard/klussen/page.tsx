@@ -17,7 +17,9 @@ import { getFreelancerDict } from "@/lib/i18n/server";
 import { translateBlockReason } from "@/lib/i18n/freelancer";
 import { alleenTestklussen } from "@/lib/shifts/testklus";
 import { TipBedrijfKaart } from "@/components/app/TipBedrijfKaart";
+import { PushToggle } from "@/components/app/PushToggle";
 import { tipPlek } from "@/lib/klusconcept/via";
+import { klussenKaarten } from "@/lib/onboarding/klussen-kaarten";
 import { getBrancheKeuze } from "@/lib/worker/branche-store";
 import { standaardFilter } from "@/lib/shifts/branche-keuze";
 import { EersteIndrukMelding } from "@/components/app/EersteIndrukMelding";
@@ -64,8 +66,16 @@ export default async function KlussenPage(
   };
   // Alleen testklussen (lib/shifts/testklus.ts)? Dan zeggen we eerlijk dat er nog geen echt werk is.
   const alleenTest = alleenTestklussen(m.shifts);
-  // "Ken je een bedrijf dat mensen zoekt?": bovenaan als er geen echte klussen zijn (leeg of alleen testklussen), anders onderaan
-  const tipBoven = tipPlek(m.shifts) === "boven";
+  // "Ken je een bedrijf dat mensen zoekt?": bovenaan als er geen echte klussen zijn (leeg of alleen testklussen), anders onderaan.
+  // Hooguit één aansporing bovenaan (lib/onboarding/klussen-kaarten.ts): staat alleen de stap meldingen nog open, dan komt de
+  // pushkaart in plaats van "eerste indruk", en gaat de tip naar onderen.
+  const kaarten = klussenKaarten({
+    geverifieerd: overview.onboarding.some((s) => s.id === "kyc" && s.done),
+    eersteIndruk,
+    netOpgeslagen: searchParams.eerste === "1",
+    tipPlek: tipPlek(m.shifts),
+  });
+  const tipBoven = kaarten.tip === "boven";
   // Warme, contextuele subregel bij de groet — alleen als er iets te melden is.
   const greetSub =
     m.newSinceLastVisit > 0 ? t.greet.subNew : m.shifts.length > 0 && !alleenTest ? t.greet.subDiscover : undefined;
@@ -93,13 +103,16 @@ export default async function KlussenPage(
         />
       )}
       {/* de optionele stappen na de ID-controle (profielfoto, werkervaring): alleen zolang er nog een open staat; de poort zelf blijft ongemoeid */}
-      {eersteIndruk && eersteIndruk.open > 0 && searchParams.eerste !== "1" && (
+      {kaarten.eersteIndruk && eersteIndruk && (
         <Link href="/dashboard/eerste-indruk" className="card mb-5 block p-4 hover:border-brand-500/40">
           <p className="font-display text-base font-bold text-ink">{t.eersteIndruk.card.title}</p>
           <p className="mt-1 text-sm text-neutralx-600">{t.eersteIndruk.card.body(eersteIndruk.open)}</p>
           <span className="mt-2 inline-block text-sm font-semibold text-brand-600">{t.eersteIndruk.card.open} ›</span>
         </Link>
       )}
+      {/* de pushkaart (13 nov, eigenaar: ja): dezelfde stap meldingen, meteen met de knop. Wegklikbaar (na 14 dagen terug), niet
+          in de iPhone-app, en weg zodra meldingen op dit apparaat aanstaan (components/app/PushToggle.tsx, variant banner) */}
+      {kaarten.push && <PushToggle variant="banner" texts={t.pushBanner} track={{ aan: "push-kaart-aan", weg: "push-kaart-weg" }} />}
       {/* het recht om te werken zit niet meer in de start (10 nov); aannemen vraagt het wel (lib/werkrecht) */}
       {/* de melding "we verbeteren de aanmelding" staat niet meer bij werkers (10 nov, eigenaar); werkgevers: flag onboarding-onderhoud */}
       {poort && onboardingOpen ? (
