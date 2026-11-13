@@ -24,6 +24,7 @@
     "tests/log-geheimen.test.ts",
     "tests/mail-log-domein.test.ts",
     "tests/marketing-h1.test.ts",
+    "tests/minder-vragen-stap1.test.ts",
     "tests/onboarding-labels-taal.test.ts",
     "tests/onboarding-onderhoud.test.ts",
     "tests/openbare-grens-middleware.test.ts",

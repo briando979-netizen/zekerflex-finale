@@ -5,7 +5,7 @@ vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: 
 import {
   inNederland,
   leesPlekResultaat,
-  nettePostcode,
+  nettePostcode, plaatsBijPostcode,
   thuisbasisUitPlek,
 } from "@/lib/geo/thuisbasis-plek";
 import { adresBijCoordinaat, wisPdokGeheugen, zoekPlekken } from "@/lib/geo/pdok";
@@ -47,6 +47,21 @@ describe("thuisbasisUitPlek: de postcode komt uit het gekozen adres", () => {
 });
 
 describe("nettePostcode / inNederland / leesPlekResultaat", () => {
+  it("plaatsBijPostcode: de woonplaats van een adres met precies die postcode (13 nov)", () => {
+    const hits = [
+      { label: "Damrak 1, 1012 LG Amsterdam", lat: 52.37, lng: 4.89, postcode: "1012LG", plaats: "Amsterdam", soort: "adres" },
+      { label: "Damrak 2, 1012 LH Amsterdam", lat: 52.37, lng: 4.89, postcode: "1012LH", plaats: "Amsterdam", soort: "adres" },
+    ];
+    expect(plaatsBijPostcode(hits, "1012lg")).toBe("Amsterdam");
+    expect(plaatsBijPostcode(hits, "1012 LG")).toBe("Amsterdam");
+    // een andere postcode in de antwoorden telt niet, net als geen woonplaats of een onleesbaar antwoord
+    expect(plaatsBijPostcode(hits, "1013 AA")).toBeNull();
+    expect(plaatsBijPostcode([{ ...hits[0], plaats: "" }], "1012 LG")).toBeNull();
+    expect(plaatsBijPostcode([{ label: "x" }, null, "onzin"], "1012 LG")).toBeNull();
+    expect(plaatsBijPostcode(undefined, "1012 LG")).toBeNull();
+    expect(plaatsBijPostcode(hits, "Amsterdam")).toBeNull();
+  });
+
   it("nettePostcode", () => {
     expect(nettePostcode("1012js")).toBe("1012 JS");
     expect(nettePostcode(" 1012 JS ")).toBe("1012 JS");
@@ -177,6 +192,8 @@ describe("teksten in alle vijf talen", () => {
   const thuisSleutels = [
     "waarWoon", "zoekPlaceholder", "zoekUitleg", "zoekLeeg", "geenPostcode", "lijst", "locatieKnop", "locatieUitleg",
     "locatieBezig", "locatieGeweigerd", "locatieMislukt", "locatieBuitenNL", "locatieGeenAdres", "gekozen", "wissen", "kiesAdres",
+    // 13 nov 2026: alleen de postcode, de plaats zoeken wij erbij
+    "ofPostcode", "postcodeUitleg", "postcodeZoeken", "postcodeOnbekend",
   ] as const;
   const ibanSleutels = [
     "ibanLabel", "ibanWhy", "ibanSave", "ibanSaving", "ibanChange", "ibanCancel", "ibanEndsOn", "ibanInvalid", "ibanFailed", "ibanFirst",

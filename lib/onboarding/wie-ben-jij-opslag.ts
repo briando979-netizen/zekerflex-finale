@@ -59,6 +59,26 @@ export async function leesWieBenJij(userId: string): Promise<WieBenJijStand> {
   };
 }
 
+/** De opleiding alleen (het profiel, /dashboard/profiel); null = niet ingevuld. */
+export async function leesOpleiding(userId: string): Promise<Opleiding | null> {
+  return schoonOpleiding(await kvGet<unknown>(opleidingSleutel(userId)).catch(() => null));
+}
+
+/**
+ * De opleiding los bewaren of wissen (null), vanuit het profiel (13 nov 2026: niet meer in stap 1, "veel te veel
+ * vragen"). Optioneel en nooit een eis. Iets onleesbaars is een fout; geeft de bewaarde stand terug.
+ */
+export async function bewaarOpleiding(userId: string, invoer: unknown): Promise<Opleiding | null> {
+  if (invoer === null) {
+    await kvDelete(opleidingSleutel(userId));
+    return null;
+  }
+  const schoon = schoonOpleiding(invoer);
+  if (!schoon) throw AppError.validation("Kies een opleiding uit de lijst.");
+  await kvSet(opleidingSleutel(userId), { ...schoon, bijgewerkt: new Date().toISOString() });
+  return schoon;
+}
+
 export interface WieBenJijInvoer extends PersoonGegevens {
   /** undefined = laten staan, null = wissen */
   opleiding?: Opleiding | null | undefined;

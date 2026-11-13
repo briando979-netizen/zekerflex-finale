@@ -66,3 +66,19 @@ export function leesPlekResultaat(v: unknown): PlekResultaat | null {
     soort: typeof r.soort === "string" ? r.soort : null,
   };
 }
+
+/**
+ * De woonplaats bij een Nederlandse postcode, uit de adressen die /api/geo/search?soort=adres voor die postcode
+ * geeft (PDOK). Alleen een adres met precies die postcode telt; geen of een onleesbaar antwoord geeft null.
+ * Voor de thuisbasis (13 nov 2026): de werker typt alleen zijn postcode, de plaats zoeken wij erbij.
+ */
+export function plaatsBijPostcode(resultaten: readonly unknown[] | null | undefined, postcode: string | null | undefined): string | null {
+  const net = nettePostcode(postcode);
+  if (!net) return null;
+  for (const r of resultaten ?? []) {
+    const plek = leesPlekResultaat(r);
+    const uit = plek ? thuisbasisUitPlek(plek) : null;
+    if (uit && uit.postalCode === net && uit.city) return uit.city;
+  }
+  return null;
+}

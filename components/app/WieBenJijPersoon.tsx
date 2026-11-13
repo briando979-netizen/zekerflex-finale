@@ -4,12 +4,13 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { useFT } from "@/components/i18n/useFT";
 import { GeboortedatumSheet } from "@/components/app/DraaiwielDatum";
-import { OpleidingSheets } from "@/components/app/OpleidingSheets";
-import { NIVEAU_LABELS, RICHTING_LABELS, type Opleiding } from "@/lib/onboarding/opleiding";
+import type { Opleiding } from "@/lib/onboarding/opleiding";
 import { LANDNUMMERS, controleerPersoon, leesDatum, type PersoonGegevens, type PersoonVeld } from "@/lib/onboarding/wie-ben-jij";
 
 // Stap 1, "Hey! Wie ben jij?": de velden als kaartjes met een klein label bovenin. Bewaart bij
 // "Opslaan" via /api/me/wie-ben-jij; de server controleert met dezelfde regels (lib/onboarding/wie-ben-jij.ts).
+// De opleiding staat sinds 13 nov 2026 niet meer hier maar in het profiel (components/app/OpleidingProfiel.tsx;
+// eigenaar: "veel te veel vragen"). Dit scherm stuurt hem niet mee, dus een opleiding uit het profiel blijft staan.
 
 export interface PersoonStand extends PersoonGegevens {
   opleiding: Opleiding | null;
@@ -39,12 +40,10 @@ export function WieBenJijPersoon({ begin, onKlaar }: { begin: PersoonStand; onKl
   const w = useFT().wie;
   const p = w.persoon;
   const [g, setG] = useState<PersoonGegevens>({ voornaam: begin.voornaam, achternaam: begin.achternaam, geboortedatum: begin.geboortedatum, landnummer: begin.landnummer, telefoon: begin.telefoon });
-  const [opleiding, setOpleiding] = useState<Opleiding | null>(begin.opleiding);
   const [fouten, setFouten] = useState<Partial<Record<PersoonVeld, string>>>({});
   const [melding, setMelding] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [datumOpen, setDatumOpen] = useState(false);
-  const [opleidingOpen, setOpleidingOpen] = useState(false);
   // de melding staat bovenaan, de knop onderaan: in beeld brengen, anders lijkt "Opslaan" niets te doen
   const meldingRef = useRef<HTMLParagraphElement>(null);
   useEffect(() => {
@@ -65,10 +64,6 @@ export function WieBenJijPersoon({ begin, onKlaar }: { begin: PersoonStand; onKl
     const d = leesDatum(g.geboortedatum);
     return d ? `${d.dag} ${w.datum.maanden[d.maand - 1] ?? ""} ${d.jaar}` : "";
   }, [g.geboortedatum, w.datum.maanden]);
-
-  const opleidingTekst = opleiding
-    ? [NIVEAU_LABELS[locale][opleiding.niveau], opleiding.richting ? RICHTING_LABELS[locale][opleiding.richting] : null].filter(Boolean).join(" · ")
-    : "";
 
   const zet = (k: keyof PersoonGegevens, v: string) => {
     setG((o) => ({ ...o, [k]: v }));
@@ -97,7 +92,7 @@ export function WieBenJijPersoon({ begin, onKlaar }: { begin: PersoonStand; onKl
       const res = await fetch("/api/me/wie-ben-jij", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...g, opleiding }),
+        body: JSON.stringify(g),
       });
       const d: unknown = await res.json().catch(() => null);
       if (!res.ok) {
@@ -219,21 +214,6 @@ export function WieBenJijPersoon({ begin, onKlaar }: { begin: PersoonStand; onKl
         </Veld>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setOpleidingOpen(true)}
-        aria-haspopup="dialog"
-        className={`${KAARTJE} flex items-center justify-between gap-3 focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-100`}
-      >
-        <span className="min-w-0">
-          <span className={LABEL}>{p.opleiding}</span>
-          <span className={`block min-h-[1.5rem] truncate text-base ${opleidingTekst ? "text-ink" : "text-neutralx-400"}`}>{opleidingTekst || p.opleidingKies}</span>
-        </span>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden className="flex-shrink-0 text-neutralx-400">
-          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
-
       <button type="submit" disabled={busy} className="btn-primary mt-2 w-full">
         {busy ? p.bezig : p.opslaan}
       </button>
@@ -248,7 +228,6 @@ export function WieBenJijPersoon({ begin, onKlaar }: { begin: PersoonStand; onKl
         }}
         onSluit={() => setDatumOpen(false)}
       />
-      <OpleidingSheets open={opleidingOpen} waarde={opleiding} locale={locale} teksten={w.opl} onKies={setOpleiding} onSluit={() => setOpleidingOpen(false)} />
     </form>
   );
 }
