@@ -26,7 +26,39 @@ export const DEPT_MENU: Record<Lang, string> = {
   en: "How can we help? For hiring staff or sales, press 1. To report fraud, abuse or a complaint, press 2. For help with your account, hours or payout, press 3. If you are looking for work yourself, press 4. To speak to a staff member, press 9. Or stay on the line to speak with our assistant.",
 };
 
-// Openingszin per gekozen afdeling (toets) en taal. "9" wordt doorverbonden.
+// Het keuzemenu sinds 13 nov 2026 (eigenaar: "ben je werknemer toets.., ben je bedrijf toets.., en dan de keuze"):
+// eerst wie er belt, dan per groep wat hij wil; 0 is overal een medewerker (in de wachtrij, lib/telephony/wachtrij.ts).
+export const ROL_MENU: Record<Lang, string> = {
+  nl: "Bent u werknemer, of zoekt u werk? Toets 1. Bent u een bedrijf of opdrachtgever? Toets 2. Wilt u meteen een medewerker spreken? Toets 0.",
+  en: "Are you a worker, or looking for work? Press 1. Are you a business or client? Press 2. Want to speak to a staff member right away? Press 0.",
+};
+
+export const WERKER_MENU: Record<Lang, string> = {
+  nl: "Voor werk zoeken of een vraag over een klus, toets 1. Voor uw account, uren of uitbetaling, toets 2. Om fraude, misbruik of een klacht te melden, toets 3. Om een medewerker te spreken, toets 0. Terug naar het vorige menu: toets sterretje.",
+  en: "To find work or ask about a job, press 1. For your account, hours or payout, press 2. To report fraud, abuse or a complaint, press 3. To speak to a staff member, press 0. To go back, press star.",
+};
+
+export const BEDRIJF_MENU: Record<Lang, string> = {
+  nl: "Voor personeel inhuren of een klus plaatsen, toets 1. Voor uw account, facturen of het goedkeuren van uren, toets 2. Om fraude, misbruik of een klacht te melden, toets 3. Om een medewerker te spreken, toets 0. Terug naar het vorige menu: toets sterretje.",
+  en: "To hire staff or post a job, press 1. For your account, invoices or approving hours, press 2. To report fraud, abuse or a complaint, press 3. To speak to a staff member, press 0. To go back, press star.",
+};
+
+/** Welke afdeling (DEPT_OPENING) bij welke toets in het menu van werknemers of bedrijven hoort. */
+export const MENU_KEUZE: Record<"werker" | "bedrijf", Record<string, string>> = {
+  werker: { "1": "4", "2": "3", "3": "2" },
+  bedrijf: { "1": "1", "2": "5", "3": "2" },
+};
+
+/** Wat een medewerker te horen krijgt over de beller in de wachtrij (naar de gekozen afdeling). */
+export const DEPT_LABEL: Record<string, string> = {
+  "1": "een bedrijf, over personeel of een klus",
+  "2": "een melding van fraude, misbruik of een klacht",
+  "3": "een werknemer, over account, uren of uitbetaling",
+  "4": "iemand die werk zoekt",
+  "5": "een bedrijf, over account, facturen of uren",
+};
+
+// Openingszin per gekozen afdeling (toets) en taal. "9" (oude menu) en "0" gaan naar een medewerker.
 export const DEPT_OPENING: Record<string, Record<Lang, string>> = {
   "1": {
     nl: "U bent bij sales. Ik ben de digitale assistent; dit gesprek kan worden opgenomen. Vertel me kort waar u personeel voor zoekt.",
@@ -39,6 +71,10 @@ export const DEPT_OPENING: Record<string, Record<Lang, string>> = {
   "3": {
     nl: "U bent bij support. Dit gesprek kan worden opgenomen. Waarmee kan ik u helpen met uw account, uren of uitbetaling?",
     en: "You've reached support. This call may be recorded. How can I help with your account, hours or payout?",
+  },
+  "5": {
+    nl: "U bent bij support voor opdrachtgevers. Dit gesprek kan worden opgenomen. Waarmee kan ik u helpen: uw account, facturen of het goedkeuren van uren?",
+    en: "You've reached support for clients. This call may be recorded. How can I help: your account, invoices or approving hours?",
   },
   "4": {
     nl: "Zoekt u zelf werk? Mooi. Dit gesprek kan worden opgenomen. Vertel me kort wat voor werk u zoekt, dan help ik u op weg.",
