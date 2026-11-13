@@ -8,19 +8,26 @@ import type { BreinData } from "@/lib/rag/brein";
 import { themaKleur } from "@/components/admin/brein/kleuren";
 
 // Het Brein in 3D: elk geheugenstuk (RagChunk) een lichtgevend neuron in één Points-object
-// (duizenden in één tekenopdracht), kleur = cluster (thema of bron), grootte groeit met het
-// aantal raadplegingen (vuren). Clusters zijn wolken die in elkaar overlopen (additieve gloed);
-// per cluster een donker labelkaartje met de naam, het aantal neuronen en "vuurt y%" uit de
-// echte telling (of "geen activiteit gemeten"). Korte stralen tussen verwante stukken; de
-// camera zweeft langzaam; inzoomen op een cluster laat losse neuronen met hun titels zien.
-// Voeden: nieuwe neuronen verschijnen (groeien) en trekken heldere stralen naar de stukken
-// waarmee het brein ze verbond. Alleen echte gegevens (lib/rag/brein.ts). Dit bestand laadt
-// three.js en komt alleen op de pagina Kennisgraaf, pas als iemand het Brein kiest.
+// (duizenden in één tekenopdracht), kleur = cluster, grootte groeit met het aantal raadplegingen
+// (vuren). Twee indelingen: per bron/thema van de kennisgraaf, of per thema dat het brein zelf
+// op betekenis ontdekte; wisselen laat de neuronen naar hun nieuwe plek zweven. Clusters zijn
+// wolken die in elkaar overlopen (additieve gloed); per cluster een donker labelkaartje met de
+// naam, het aantal neuronen en "vuurt y%" uit de echte telling (of "geen activiteit gemeten").
+// Korte stralen tussen opeenvolgende stukken en, helderder, synapsen: echte betekenisverwanten
+// uit de embeddings. De camera zweeft langzaam; inzoomen op een cluster laat losse neuronen met
+// hun titels zien. Een vraag laat de gebruikte neuronen oplichten (pulserend) en vliegt erheen;
+// voeden laat nieuwe neuronen groeien met heldere stralen naar hun verwanten. Alleen echte
+// gegevens (lib/rag/brein.ts). Dit bestand laadt three.js en komt alleen op de pagina
+// Kennisgraaf, pas als iemand het Brein kiest.
+
+export type Indeling = "bron" | "betekenis";
 
 export interface BreinOpties {
   licht: boolean;
   bloom: boolean;
   lijnen: boolean;
+  synapsen: boolean;
+  indeling: Indeling;
   minderBeweging: boolean;
   onHover: (id: string | null) => void;
   onKlik: (id: string) => void;
@@ -31,10 +38,15 @@ export interface BreinHandle {
   dispose: () => void;
   setBloom: (aan: boolean) => void;
   setLijnen: (aan: boolean) => void;
+  setSynapsen: (aan: boolean) => void;
+  /** wisselen tussen de indelingen; de neuronen zweven naar hun nieuwe plek */
+  setIndeling: (indeling: Indeling) => void;
   /** alleen deze neuronen helder; null = alles */
   setFocus: (ids: Set<string> | null) => void;
   /** treffers van het zoekveld: labels erbij */
   setZoek: (ids: Set<string> | null) => void;
+  /** de neuronen die het brein voor een vraag gebruikte: pulserend oplichten, camera erheen; null = uit */
+  setOplichten: (ids: string[] | null) => void;
   vliegNaar: (id: string) => void;
   vliegNaarCluster: (index: number) => void;
   vliegtocht: (aan: boolean) => void;
@@ -46,6 +58,7 @@ export interface BreinHandle {
 
 const ACHTERGROND = 0x04060b;
 const MAX_NEURON_LABELS = 14;
+const ZWEEF_MS = 2600;
 
 const VERTEX = `
 attribute float grootte;
@@ -53,10 +66,8 @@ attribute vec3 kleur;
 attribute float fase;
 uniform float tijd;
 varying vec3 vKleur;
-varying float vFase;
 void main() {
   vKleur = kleur;
-  vFase = fase;
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   float twinkel = 1.0 + 0.12 * sin(tijd * 1.7 + fase * 6.2831);
   gl_PointSize = clamp(grootte * twinkel * (260.0 / -mv.z), 1.5, 72.0);
@@ -99,6 +110,13 @@ function toeval(zaad: number): () => number {
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+}
+
+interface LijnSet {
+  obj: THREE.LineSegments;
+  paren: [number, number][];
+  basis: Float32Array;
+  opacity: number;
 }
 
 export function createBrein(host: HTMLDivElement, eerste: BreinData, opties: BreinOpties): BreinHandle {
@@ -156,17 +174,21 @@ export function createBrein(host: HTMLDivElement, eerste: BreinData, opties: Bre
     blending: THREE.AdditiveBlending,
   });
   let data = eerste;
+  let indeling: Indeling = opties.indeling;
   let neuronGeo = new THREE.BufferGeometry();
   let neuronPunten = new THREE.Points(neuronGeo, neuronMat);
   scene.add(neuronPunten);
-  let lijnObj: THREE.LineSegments | null = null;
-  let stralenObj: THREE.LineSegments | null = null;
   const idx = new Map<string, number>();
   let basisGrootte = new Float32Array(0);
-  let basisKleur = new Float32Array(0);
+  let basisKleurBron = new Float32Array(0);
+  let basisKleurBetekenis = new Float32Array(0);
+  let posBron = new Float32Array(0);
+  let posBetekenis = new Float32Array(0);
   let groei = new Map<number, number>(); // index → starttijd van het verschijnen
-  const clusterKaarten = new Map<number, HTMLDivElement>();
-  const buren = new Map<number, number[]>();
+  let zweef: { van: Float32Array; naar: Float32Array; start: number } | null = null;
+  const clusterKaarten = new Map<string, HTMLDivElement>();
+  let lijnSets: LijnSet[] = [];
+  let stralenObj: THREE.LineSegments | null = null;
 
   const labelLaag = document.createElement("div");
   labelLaag.style.cssText = "position:absolute;inset:0;pointer-events:none;overflow:hidden;font-family:inherit";
@@ -174,69 +196,99 @@ export function createBrein(host: HTMLDivElement, eerste: BreinData, opties: Bre
   const neuronLabels = new Map<string, HTMLDivElement>();
 
   const kleurVanCluster = (c: number) => new THREE.Color(themaKleur(c + 1));
-  const grootteVan = (v: number, licht2: boolean) => (licht2 ? 2.2 : 2.8) + Math.min(6, Math.sqrt(v) * 1.1);
+  const grootteVan = (v: number) => (licht ? 2.2 : 2.8) + Math.min(6, Math.sqrt(v) * 1.1);
+  const basisKleur = () => (indeling === "betekenis" && data.ontdekt ? basisKleurBetekenis : basisKleurBron);
+  const clusterVan = (i: number) => (indeling === "betekenis" && data.ontdekt ? data.neuronen[i]?.o ?? data.neuronen[i]?.c ?? 0 : data.neuronen[i]?.c ?? 0);
+  const positieVan = (i: number): [number, number, number] => {
+    const ne = data.neuronen[i];
+    if (!ne) return [0, 0, 0];
+    return indeling === "betekenis" && ne.q ? ne.q : ne.p;
+  };
+
+  const maakLijnen = (paren: [number, number][], opacity: number, mix: number, breedteFactor = 1): LijnSet => {
+    const lp = new Float32Array(paren.length * 6);
+    const lk = new Float32Array(paren.length * 6);
+    const wit = new THREE.Color(0xffffff);
+    paren.forEach(([a, b], k) => {
+      const pa = positieVan(a);
+      const pb = positieVan(b);
+      lp.set([...pa, ...pb], k * 6);
+      const ka = kleurVanCluster(clusterVan(a)).lerp(wit, mix);
+      const kb = kleurVanCluster(clusterVan(b)).lerp(wit, mix);
+      lk.set([ka.r, ka.g, ka.b, kb.r, kb.g, kb.b], k * 6);
+    });
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(lp, 3));
+    geo.setAttribute("color", new THREE.BufferAttribute(lk, 3));
+    const obj = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending, linewidth: breedteFactor }));
+    scene.add(obj);
+    return { obj, paren, basis: lk.slice(), opacity };
+  };
+  const ruimLijnenOp = () => {
+    for (const s of lijnSets) {
+      scene.remove(s.obj);
+      s.obj.geometry.dispose();
+      (s.obj.material as THREE.Material).dispose();
+    }
+    lijnSets = [];
+  };
 
   const bouw = (d: BreinData) => {
     data = d;
     straal = Math.max(60, d.straal);
     controls.maxDistance = straal * 8;
+    if (indeling === "betekenis" && !d.ontdekt) indeling = "bron";
     idx.clear();
-    buren.clear();
     const n = d.neuronen.length;
-    const pos = new Float32Array(n * 3);
-    basisKleur = new Float32Array(n * 3);
+    posBron = new Float32Array(n * 3);
+    posBetekenis = new Float32Array(n * 3);
+    basisKleurBron = new Float32Array(n * 3);
+    basisKleurBetekenis = new Float32Array(n * 3);
     basisGrootte = new Float32Array(n);
     const fase = new Float32Array(n);
     const rf = toeval(7);
     d.neuronen.forEach((ne, i) => {
       idx.set(ne.id, i);
-      pos.set(ne.p, i * 3);
-      const k = kleurVanCluster(ne.c);
+      posBron.set(ne.p, i * 3);
+      posBetekenis.set(ne.q ?? ne.p, i * 3);
       const helder = ne.v > 0 ? 1.35 : 1;
-      basisKleur.set([k.r * helder, k.g * helder, k.b * helder], i * 3);
-      basisGrootte[i] = grootteVan(ne.v, licht);
+      const kb = kleurVanCluster(ne.c);
+      basisKleurBron.set([kb.r * helder, kb.g * helder, kb.b * helder], i * 3);
+      const ko = kleurVanCluster(ne.o ?? ne.c);
+      basisKleurBetekenis.set([ko.r * helder, ko.g * helder, ko.b * helder], i * 3);
+      basisGrootte[i] = grootteVan(ne.v);
       fase[i] = rf();
     });
     neuronGeo.dispose();
     neuronGeo = new THREE.BufferGeometry();
-    neuronGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-    neuronGeo.setAttribute("kleur", new THREE.BufferAttribute(basisKleur.slice(), 3));
+    neuronGeo.setAttribute("position", new THREE.BufferAttribute((indeling === "betekenis" ? posBetekenis : posBron).slice(), 3));
+    neuronGeo.setAttribute("kleur", new THREE.BufferAttribute(basisKleur().slice(), 3));
     neuronGeo.setAttribute("grootte", new THREE.BufferAttribute(basisGrootte.slice(), 1));
     neuronGeo.setAttribute("fase", new THREE.BufferAttribute(fase, 1));
     scene.remove(neuronPunten);
     neuronPunten = new THREE.Points(neuronGeo, neuronMat);
     scene.add(neuronPunten);
+    zweef = null;
 
-    // korte stralen
-    if (lijnObj) {
-      scene.remove(lijnObj);
-      lijnObj.geometry.dispose();
-      (lijnObj.material as THREE.Material).dispose();
-    }
-    const lp = new Float32Array(d.lijnen.length * 6);
-    const lk = new Float32Array(d.lijnen.length * 6);
-    d.lijnen.forEach(([a, b], k) => {
-      const na = d.neuronen[a];
-      const nb = d.neuronen[b];
-      if (!na || !nb) return;
-      buren.set(a, [...(buren.get(a) ?? []), b]);
-      buren.set(b, [...(buren.get(b) ?? []), a]);
-      lp.set([...na.p, ...nb.p], k * 6);
-      const ka = kleurVanCluster(na.c);
-      const kb = kleurVanCluster(nb.c);
-      lk.set([ka.r, ka.g, ka.b, kb.r, kb.g, kb.b], k * 6);
-    });
-    const lg = new THREE.BufferGeometry();
-    lg.setAttribute("position", new THREE.BufferAttribute(lp, 3));
-    lg.setAttribute("color", new THREE.BufferAttribute(lk, 3));
-    lijnObj = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: licht ? 0.12 : 0.2, depthWrite: false, blending: THREE.AdditiveBlending }));
-    lijnObj.visible = opties.lijnen;
-    scene.add(lijnObj);
+    ruimLijnenOp();
+    const gewoon = maakLijnen(d.lijnen, licht ? 0.12 : 0.2, 0);
+    gewoon.obj.visible = opties.lijnen;
+    const syn = maakLijnen(
+      d.synapsen.map(([a, b]) => [a, b] as [number, number]),
+      licht ? 0.28 : 0.42,
+      0.35,
+    );
+    syn.obj.visible = opties.synapsen;
+    lijnSets = [gewoon, syn];
+    bouwKaarten();
+    herkleur();
+  };
 
-    // clusterkaartjes
+  const bouwKaarten = () => {
     for (const el of clusterKaarten.values()) el.remove();
     clusterKaarten.clear();
-    d.clusters.forEach((cl, i) => {
+    const lijst = indeling === "betekenis" && data.ontdekt ? data.ontdekt.clusters : data.clusters;
+    lijst.forEach((cl, i) => {
       const el = document.createElement("div");
       el.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;background:rgba(8,11,18,0.78);border:1px solid rgba(255,255,255,0.14);border-radius:8px;padding:5px 8px;font-size:11px;line-height:1.3;color:#e8edf5;white-space:nowrap;box-shadow:0 2px 12px rgba(0,0,0,0.5);will-change:transform";
       const kop = document.createElement("div");
@@ -247,14 +299,14 @@ export function createBrein(host: HTMLDivElement, eerste: BreinData, opties: Bre
       sub.textContent = `${cl.aantal.toLocaleString("nl-NL")} ${cl.aantal === 1 ? "neuron" : "neuronen"} · ${cl.vuurt === null ? "geen activiteit gemeten" : `vuurt ${cl.vuurt}%`}`;
       el.append(kop, sub);
       labelLaag.appendChild(el);
-      clusterKaarten.set(i, el);
+      clusterKaarten.set(cl.id, el);
     });
-    herkleur();
   };
 
   // --- toestand en kleuren
   let focus: Set<string> | null = null;
   let zoek: Set<string> | null = null;
+  let oplichten: Set<string> | null = null;
   let hoverId: string | null = null;
   let hoverIndex = -1;
   const herkleur = () => {
@@ -263,19 +315,42 @@ export function createBrein(host: HTMLDivElement, eerste: BreinData, opties: Bre
     if (!kAttr || !gAttr) return;
     const k = kAttr.array as Float32Array;
     const gr = gAttr.array as Float32Array;
+    const bk = basisKleur();
     data.neuronen.forEach((ne, i) => {
       let f = 1;
-      if (zoek?.has(ne.id)) f = 1.7;
+      if (oplichten?.has(ne.id)) f = 2.1;
+      else if (zoek?.has(ne.id)) f = 1.7;
       else if (focus) f = focus.has(ne.id) ? 1.4 : 0.07;
+      else if (oplichten) f = 0.25;
       if (ne.id === hoverId) f = Math.max(f, 1.9);
-      k[i * 3] = Math.min(1.6, (basisKleur[i * 3] ?? 0) * f);
-      k[i * 3 + 1] = Math.min(1.6, (basisKleur[i * 3 + 1] ?? 0) * f);
-      k[i * 3 + 2] = Math.min(1.6, (basisKleur[i * 3 + 2] ?? 0) * f);
-      gr[i] = (basisGrootte[i] ?? 2.5) * (zoek?.has(ne.id) || ne.id === hoverId ? 1.6 : focus && focus.has(ne.id) ? 1.25 : 1);
+      k[i * 3] = Math.min(1.8, (bk[i * 3] ?? 0) * f);
+      k[i * 3 + 1] = Math.min(1.8, (bk[i * 3 + 1] ?? 0) * f);
+      k[i * 3 + 2] = Math.min(1.8, (bk[i * 3 + 2] ?? 0) * f);
+      gr[i] = (basisGrootte[i] ?? 2.5) * (oplichten?.has(ne.id) ? 1.9 : zoek?.has(ne.id) || ne.id === hoverId ? 1.6 : focus && focus.has(ne.id) ? 1.25 : 1);
     });
     kAttr.needsUpdate = true;
     gAttr.needsUpdate = true;
-    if (lijnObj) (lijnObj.material as THREE.LineBasicMaterial).opacity = focus ? 0.05 : licht ? 0.12 : 0.2;
+    for (const s of lijnSets) (s.obj.material as THREE.LineBasicMaterial).opacity = focus || oplichten ? s.opacity * 0.3 : s.opacity;
+  };
+
+  /** na een wissel van indeling: lijnen op de nieuwe plekken */
+  const lijnenHerpositioneer = () => {
+    for (const s of lijnSets) {
+      const attr = s.obj.geometry.getAttribute("position") as THREE.BufferAttribute;
+      const arr = attr.array as Float32Array;
+      const kl = s.obj.geometry.getAttribute("color") as THREE.BufferAttribute;
+      const karr = kl.array as Float32Array;
+      const wit = new THREE.Color(0xffffff);
+      const mix = s === lijnSets[1] ? 0.35 : 0;
+      s.paren.forEach(([a, b], k) => {
+        arr.set([...positieVan(a), ...positieVan(b)], k * 6);
+        const ka = kleurVanCluster(clusterVan(a)).lerp(wit, mix);
+        const kb = kleurVanCluster(clusterVan(b)).lerp(wit, mix);
+        karr.set([ka.r, ka.g, ka.b, kb.r, kb.g, kb.b], k * 6);
+      });
+      attr.needsUpdate = true;
+      kl.needsUpdate = true;
+    }
   };
 
   bouw(eerste);
@@ -297,7 +372,6 @@ export function createBrein(host: HTMLDivElement, eerste: BreinData, opties: Bre
     const rect = renderer.domElement.getBoundingClientRect();
     muis.set(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
     raycaster.setFromCamera(muis, camera);
-    // dichtstbijzijnde treffer bij de straal, en liever een heldere (focus) dan een gedoofde
     const hits = raycaster.intersectObject(neuronPunten, false);
     const keus = hits.find((h) => !focus || focus.has(data.neuronen[h.index ?? -1]?.id ?? "")) ?? hits[0];
     return keus?.index ?? -1;
@@ -333,8 +407,14 @@ export function createBrein(host: HTMLDivElement, eerste: BreinData, opties: Bre
   const vliegHeen = (positie: THREE.Vector3, doel: THREE.Vector3, duur = 1600) => {
     vlucht = { van: camera.position.clone(), naar: positie, doelVan: controls.target.clone(), doelNaar: doel, start: performance.now(), duur: opties.minderBeweging ? 1 : duur };
   };
+  const vliegNaarPunt = (p: THREE.Vector3, afstand: number, duur = 1400) => {
+    const richting = camera.position.clone().sub(p).normalize();
+    if (richting.lengthSq() < 0.01) richting.set(0, 0.4, 1).normalize();
+    vliegHeen(p.clone().add(richting.multiplyScalar(afstand)), p.clone(), duur);
+  };
+  const clusterLijst = () => (indeling === "betekenis" && data.ontdekt ? data.ontdekt.clusters : data.clusters);
   const clusterZicht = (i: number) => {
-    const cl = data.clusters[i];
+    const cl = clusterLijst()[i];
     if (!cl) return null;
     const midden = new THREE.Vector3(...cl.centrum);
     const ver = 16 + 2.2 * Math.sqrt(cl.aantal);
@@ -346,8 +426,9 @@ export function createBrein(host: HTMLDivElement, eerste: BreinData, opties: Bre
   let tochtStap = 0;
   let tochtWacht = 0;
   const tochtVolgende = () => {
-    if (data.clusters.length === 0) return;
-    const z = clusterZicht(tochtStap % data.clusters.length);
+    const lijst = clusterLijst();
+    if (lijst.length === 0) return;
+    const z = clusterZicht(tochtStap % lijst.length);
     tochtStap += 1;
     if (!z) return;
     vliegHeen(z.positie, z.midden, 3000);
@@ -361,7 +442,7 @@ export function createBrein(host: HTMLDivElement, eerste: BreinData, opties: Bre
   };
   controls.addEventListener("start", stopTochtDoorGebruiker);
 
-  // --- labels: clusterkaartjes altijd; neurontitels bij inzoomen, zoeken, focus en aanwijzen
+  // --- labels
   const projectie = new THREE.Vector3();
   const labelEl = (key: string, tekst: string, kleur: string) => {
     let el = neuronLabels.get(key);
@@ -379,23 +460,29 @@ export function createBrein(host: HTMLDivElement, eerste: BreinData, opties: Bre
     projectie.set(p[0] ?? 0, p[1] ?? 0, p[2] ?? 0).project(camera);
     return { z: projectie.z, x: (projectie.x * 0.5 + 0.5) * breed(), y: (-projectie.y * 0.5 + 0.5) * hoog() };
   };
+  const huidigePositie = (i: number): [number, number, number] => {
+    const attr = neuronGeo.getAttribute("position") as THREE.BufferAttribute | undefined;
+    const arr = attr?.array as Float32Array | undefined;
+    return arr ? [arr[i * 3] ?? 0, arr[i * 3 + 1] ?? 0, arr[i * 3 + 2] ?? 0] : positieVan(i);
+  };
   const labelsBijwerken = () => {
     const w = breed();
     const h = hoog();
-    for (const [i, el] of clusterKaarten) {
-      const cl = data.clusters[i];
-      if (!cl) continue;
+    const lijst = clusterLijst();
+    lijst.forEach((cl, i) => {
+      const el = clusterKaarten.get(cl.id);
+      if (!el) return;
       const s = schermPositie(cl.centrum);
-      const zichtbaar = s.z < 1 && s.x > -200 && s.x < w + 50 && s.y > -60 && s.y < h + 20 && (!focus || true);
+      const zichtbaar = s.z < 1 && s.x > -200 && s.x < w + 50 && s.y > -60 && s.y < h + 20 && !zweef;
       el.style.display = zichtbaar ? "block" : "none";
       if (zichtbaar) el.style.transform = `translate(${Math.round(s.x + 10)}px, ${Math.round(s.y - 28)}px)`;
-    }
-    // neurontitels: wat de camera dicht genoeg ziet (inzoomen), plus zoektreffers, focus en het aangewezen neuron
-    const wil = new Map<string, number>(); // id → prioriteit
+      void i;
+    });
+    const wil = new Map<string, number>();
     const afstandTotDoel = camera.position.distanceTo(controls.target);
-    if (afstandTotDoel < 34) {
+    if (afstandTotDoel < 34 && !zweef) {
       const dichtbij = data.neuronen
-        .map((ne, i) => ({ i, d: controls.target.distanceToSquared(new THREE.Vector3(...ne.p)) }))
+        .map((ne, i) => ({ i, d: controls.target.distanceToSquared(new THREE.Vector3(...huidigePositie(i))) }))
         .filter((x) => x.d < 400)
         .sort((a, b) => a.d - b.d)
         .slice(0, MAX_NEURON_LABELS);
@@ -403,19 +490,20 @@ export function createBrein(host: HTMLDivElement, eerste: BreinData, opties: Bre
     }
     if (zoek) for (const id of [...zoek].slice(0, 20)) wil.set(id, 2);
     if (focus) for (const id of [...focus].slice(0, 16)) wil.set(id, 2);
-    if (hoverId) wil.set(hoverId, 3);
+    if (oplichten) for (const id of [...oplichten].slice(0, 12)) wil.set(id, 3);
+    if (hoverId) wil.set(hoverId, 4);
     const gezien = new Set<string>();
-    const lijst = [...wil]
+    const kandidaten = [...wil]
       .map(([id, prio]) => {
         const i = idx.get(id);
         const ne = i !== undefined ? data.neuronen[i] : undefined;
-        return ne ? { id, prio, ne, s: schermPositie(ne.p) } : null;
+        return ne && i !== undefined ? { id, prio, ne, i, s: schermPositie(huidigePositie(i)) } : null;
       })
       .filter((x): x is NonNullable<typeof x> => x !== null && x.s.z < 1 && x.s.x > -60 && x.s.x < w + 60 && x.s.y > -20 && x.s.y < h + 20)
       .sort((a, b) => b.prio - a.prio || a.s.z - b.s.z)
       .slice(0, MAX_NEURON_LABELS + 8);
-    for (const x of lijst) {
-      const el = labelEl(x.id, x.ne.t, themaKleur(x.ne.c + 1));
+    for (const x of kandidaten) {
+      const el = labelEl(x.id, x.ne.t, themaKleur(clusterVan(x.i) + 1));
       el.style.transform = `translate(${Math.round(x.s.x + 7)}px, ${Math.round(x.s.y - 7)}px)`;
       gezien.add(x.id);
     }
@@ -440,11 +528,11 @@ export function createBrein(host: HTMLDivElement, eerste: BreinData, opties: Bre
       const i = idx.get(id);
       if (i === undefined) continue;
       if (!opties.minderBeweging) groei.set(i, nu);
-      const van = data.neuronen[i]!.p;
+      const van = positieVan(i);
       for (const b of nieuw.buren) {
         const j = idx.get(b);
         if (j === undefined) continue;
-        paren.push(...van, ...data.neuronen[j]!.p);
+        paren.push(...van, ...positieVan(j));
       }
     }
     if (paren.length > 0) {
@@ -454,12 +542,7 @@ export function createBrein(host: HTMLDivElement, eerste: BreinData, opties: Bre
       scene.add(stralenObj);
     }
     const eerste2 = nieuw.ids.map((id) => idx.get(id)).find((i): i is number => i !== undefined);
-    if (eerste2 !== undefined) {
-      const p = new THREE.Vector3(...data.neuronen[eerste2]!.p);
-      const richting = camera.position.clone().sub(p).normalize();
-      if (richting.lengthSq() < 0.01) richting.set(0, 0.4, 1).normalize();
-      vliegHeen(p.clone().add(richting.multiplyScalar(22)), p, 1800);
-    }
+    if (eerste2 !== undefined) vliegNaarPunt(new THREE.Vector3(...positieVan(eerste2)), 22, 1800);
   };
 
   // --- tekenen
@@ -487,6 +570,21 @@ export function createBrein(host: HTMLDivElement, eerste: BreinData, opties: Bre
       } else if (tocht && nu > tochtWacht) {
         tochtVolgende();
       }
+      // zweven naar de andere indeling
+      if (zweef) {
+        const t = Math.min(1, (nu - zweef.start) / ZWEEF_MS);
+        const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        const attr = neuronGeo.getAttribute("position") as THREE.BufferAttribute;
+        const arr = attr.array as Float32Array;
+        for (let i = 0; i < arr.length; i++) arr[i] = (zweef.van[i] ?? 0) + ((zweef.naar[i] ?? 0) - (zweef.van[i] ?? 0)) * e;
+        attr.needsUpdate = true;
+        if (t >= 1) {
+          zweef = null;
+          lijnenHerpositioneer();
+          for (const s of lijnSets) s.obj.visible = s === lijnSets[0] ? opties.lijnen : opties.synapsen;
+          bouwKaarten();
+        }
+      }
       // in-groeiende neuronen
       if (groei.size > 0) {
         const gAttr = neuronGeo.getAttribute("grootte") as THREE.BufferAttribute;
@@ -501,7 +599,17 @@ export function createBrein(host: HTMLDivElement, eerste: BreinData, opties: Bre
         }
         gAttr.needsUpdate = true;
       }
-      // langzaam zweven en een lichte twinkeling
+      // oplichtende neuronen pulseren
+      if (oplichten && oplichten.size > 0 && !opties.minderBeweging) {
+        const gAttr = neuronGeo.getAttribute("grootte") as THREE.BufferAttribute;
+        const arr = gAttr.array as Float32Array;
+        const puls = 1.6 + 0.5 * Math.sin(nu / 180);
+        for (const id of oplichten) {
+          const i = idx.get(id);
+          if (i !== undefined) arr[i] = (basisGrootte[i] ?? 2.5) * puls;
+        }
+        gAttr.needsUpdate = true;
+      }
       if (!opties.minderBeweging) {
         neuronMat.uniforms.tijd!.value = nu / 1000;
         hemelPunten.rotation.y += 0.00006;
@@ -557,7 +665,29 @@ export function createBrein(host: HTMLDivElement, eerste: BreinData, opties: Bre
       metBloom = aan && !licht;
     },
     setLijnen: (aan) => {
-      if (lijnObj) lijnObj.visible = aan;
+      opties.lijnen = aan;
+      if (lijnSets[0]) lijnSets[0].obj.visible = aan;
+    },
+    setSynapsen: (aan) => {
+      opties.synapsen = aan;
+      if (lijnSets[1]) lijnSets[1].obj.visible = aan;
+    },
+    setIndeling: (nieuw) => {
+      if (nieuw === indeling || (nieuw === "betekenis" && !data.ontdekt)) return;
+      const attr = neuronGeo.getAttribute("position") as THREE.BufferAttribute;
+      const van = (attr.array as Float32Array).slice();
+      indeling = nieuw;
+      const naar = (indeling === "betekenis" ? posBetekenis : posBron).slice();
+      for (const s of lijnSets) s.obj.visible = false;
+      for (const el of clusterKaarten.values()) el.style.display = "none";
+      if (opties.minderBeweging) {
+        (attr.array as Float32Array).set(naar);
+        attr.needsUpdate = true;
+        lijnenHerpositioneer();
+        for (const s of lijnSets) s.obj.visible = s === lijnSets[0] ? opties.lijnen : opties.synapsen;
+        bouwKaarten();
+      } else zweef = { van, naar, start: performance.now() };
+      herkleur();
     },
     setFocus: (ids) => {
       focus = ids;
@@ -567,14 +697,24 @@ export function createBrein(host: HTMLDivElement, eerste: BreinData, opties: Bre
       zoek = ids;
       herkleur();
     },
+    setOplichten: (ids) => {
+      oplichten = ids && ids.length > 0 ? new Set(ids) : null;
+      herkleur();
+      const eerste2 = ids?.map((id) => idx.get(id)).find((i): i is number => i !== undefined);
+      if (eerste2 !== undefined) {
+        stopTochtDoorGebruiker();
+        // het midden van de gebruikte neuronen in beeld
+        const punten = (ids ?? []).map((id) => idx.get(id)).filter((i): i is number => i !== undefined).map((i) => new THREE.Vector3(...huidigePositie(i)));
+        const midden = punten.reduce((s, p) => s.add(p), new THREE.Vector3()).multiplyScalar(1 / Math.max(1, punten.length));
+        const spreiding = Math.max(...punten.map((p) => p.distanceTo(midden)), 8);
+        vliegNaarPunt(midden, spreiding * 2.2 + 14, 1800);
+      }
+    },
     vliegNaar: (id) => {
       const i = idx.get(id);
       if (i === undefined) return;
       stopTochtDoorGebruiker();
-      const p = new THREE.Vector3(...data.neuronen[i]!.p);
-      const richting = camera.position.clone().sub(p).normalize();
-      if (richting.lengthSq() < 0.01) richting.set(0, 0.4, 1).normalize();
-      vliegHeen(p.clone().add(richting.multiplyScalar(18)), p, 1400);
+      vliegNaarPunt(new THREE.Vector3(...huidigePositie(i)), 18);
     },
     vliegNaarCluster: (index) => {
       const z = clusterZicht(index);
@@ -592,6 +732,7 @@ export function createBrein(host: HTMLDivElement, eerste: BreinData, opties: Bre
     reset: () => {
       tocht = false;
       focus = null;
+      oplichten = null;
       herkleur();
       vliegHeen(startPos(), new THREE.Vector3(0, 0, 0), 1200);
     },

@@ -3,7 +3,8 @@ import { withAdminAccess } from "@/lib/auth/handlers";
 import { AppError } from "@/lib/errors";
 import { z } from "zod";
 import { recordAudit } from "@/lib/audit";
-import { breinData, leegBreinCache } from "@/lib/rag/brein";
+import { breinData, breinUitleg, leegBreinCache } from "@/lib/rag/brein";
+import { vernieuwSlim } from "@/lib/rag/slim";
 import { VOEDING_MAX, voedBrein } from "@/lib/rag/voeding";
 import { buurtVan, denkpad, groei, kennisgraaf, kennisgraafCSV, kennisgraafDOT, kennisgraafGraphML, kennisgraafLayout3D, kennisgraafRapport, knoopDetail, padTussen } from "@/lib/rag/graph";
 
@@ -19,6 +20,8 @@ export const dynamic = "force-dynamic";
 //   GET ?groei=1                 → de nachtelijke momentopnamen (reeks + verschil)
 //   GET ?layout=3d               → de vooraf berekende 3D-posities van de documentgraaf (per versie van de graaf gecachet)
 //   GET ?brein=1                 → het Brein: alle geheugenstukken als neuronen met clusters, posities, stralen en de raadpleegtelling (lib/rag/brein.ts)
+//   GET ?uitleg=<cluster-id>     → de uitleg van één cluster door het taalmodel, uit zijn echte stukken (lib/rag/slim.ts)
+//   GET ?slim=1                  → synapsen en ontdekte thema's nu vernieuwen (anders elke nacht); geeft de aantallen
 //   POST { tekst }               → "Voed het brein": de tekst wordt kennis in het geheugen; antwoord: de nieuwe stukken en hun verwanten (lib/rag/voeding.ts)
 //   GET ?export=graphml|dot|json|csv-knopen|csv-lijnen|rapport → een bestand
 
@@ -47,6 +50,17 @@ export const GET = withAdminAccess(["PLATFORM_ADMIN"], async (request) => {
   if (q.has("groei")) return NextResponse.json(await groei());
   if (q.get("layout") === "3d") return NextResponse.json(await kennisgraafLayout3D());
   if (q.has("brein")) return NextResponse.json(await breinData(q.has("vers")));
+  const uitleg = q.get("uitleg");
+  if (uitleg) {
+    const u = await breinUitleg(uitleg.slice(0, 80));
+    if (!u) throw AppError.notFound("Dit cluster bestaat niet (meer)");
+    return NextResponse.json(u);
+  }
+  if (q.has("slim")) {
+    const uit = await vernieuwSlim();
+    leegBreinCache();
+    return NextResponse.json({ ok: true, ...uit });
+  }
   const exportAls = q.get("export");
   if (exportAls === "graphml") return bestand(await kennisgraafGraphML(), "application/xml; charset=utf-8", "zekerflex-kennisgraaf.graphml");
   if (exportAls === "dot") return bestand(await kennisgraafDOT(), "text/vnd.graphviz; charset=utf-8", "zekerflex-kennisgraaf.dot");

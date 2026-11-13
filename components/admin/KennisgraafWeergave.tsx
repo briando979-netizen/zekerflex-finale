@@ -70,7 +70,7 @@ export function KennisgraafWeergave({
         {knop("vlak", "Vlak")}
         {knop("brein", "Brein (3D)")}
         <span style={{ color: "var(--a-mute)" }}>
-          {weergave === "brein" ? "elk geheugenstuk een neuron, elk cluster een thema of bron, stralen tussen verwante stukken; typ onderaan om het brein te voeden" : "elke stip een document, elke ruit een begrip, elke lijn een verband"}
+          {weergave === "brein" ? "elk geheugenstuk een neuron, synapsen tussen betekenisverwanten, thema's die het brein zelf ontdekt; stel een vraag en de gebruikte neuronen lichten op, of voed het brein onderaan" : "elke stip een document, elke ruit een begrip, elke lijn een verband"}
         </span>
       </div>
       {geladen && weergave === "brein" ? (
