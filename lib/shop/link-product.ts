@@ -70,7 +70,7 @@ export function prijsNaarCents(v: unknown): number | null {
 /** De meta-tags van een pagina, sleutel in kleine letters; de eerste waarde telt. */
 function metaTags(html: string): Map<string, string> {
   const uit = new Map<string, string>();
-  for (const m of html.matchAll(/<meta\b[^>]{0,2000}>/gi)) {
+  for (const m of html.matchAll(/<meta\b[^>]{0,8000}>/gi)) {
     const tag = m[0];
     const sleutel = /\b(?:property|name|itemprop)\s*=\s*["']([^"']{1,80})["']/i.exec(tag)?.[1]?.toLowerCase();
     const inhoud = /\bcontent\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(tag);

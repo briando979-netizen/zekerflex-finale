@@ -16,7 +16,7 @@ import { gratisAan, primeGratis } from "@/lib/ai/gratis";
 import { extractJson } from "@/lib/ai/client";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { generateAndAttachConceptPhoto } from "@/lib/shop/concept-photos";
-import { koppelFotoVanAdres } from "@/lib/shop/link-product-server";
+import { bewaarLinkBron, koppelFotoVanAdres } from "@/lib/shop/link-product-server";
 import { SOORTEN, isSoort, type Soort } from "@/lib/shop/paskamer";
 import {
   STANDAARD_BELEID, WINKEL_CATEGORIEEN, inkoopAdvies, leesBeleid, leesConcept, maakVarianten, prijsUitInkoop, schoneKleuren, schoneMaten, slugVan, tariefVoor,
@@ -119,6 +119,8 @@ export const bewaarSchema = z.object({
   metFoto: z.boolean().default(false),
   /** het adres van een productfoto (van de leverancier): wordt overgenomen naar onze eigen opslag; gaat vóór de AI-foto */
   fotoUrl: z.string().trim().max(600).regex(/^https:\/\/\S+$/, "Het adres van de foto begint met https://.").optional(),
+  /** de pagina van de leverancier waar de gegevens vandaan komen; wordt bij het concept bewaard */
+  bronUrl: z.string().trim().max(600).regex(/^https:\/\/\S+$/).optional(),
 });
 
 export type BewaardConcept = { id: string; slug: string; fotoGelukt: boolean; fotoMelding: string | null };
@@ -145,6 +147,7 @@ export async function bewaarConcept(inv: z.infer<typeof bewaarSchema>, actorUser
 
   let fotoGelukt = false;
   let fotoMelding: string | null = null;
+  await bewaarLinkBron(product.id, { pagina: inv.bronUrl, foto: inv.fotoUrl });
   if (inv.fotoUrl) {
     try {
       await koppelFotoVanAdres(product.id, inv.fotoUrl, actorUserId);
