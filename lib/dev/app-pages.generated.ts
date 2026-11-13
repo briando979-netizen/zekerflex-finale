@@ -310,6 +310,7 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/voorwaarden","file":"app/(marketing)/voorwaarden/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/voorwaarden/snelle-uitbetaling","file":"app/(marketing)/voorwaarden/snelle-uitbetaling/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/website-check","file":"app/(marketing)/website-check/page.tsx","area":"Marketing","dynamic":false},
+  {"route":"/website-maken","file":"app/(marketing)/website-maken/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/shop","file":"app/shop/page.tsx","area":"Webshop","dynamic":false},
   {"route":"/shop/[slug]","file":"app/shop/[slug]/page.tsx","area":"Webshop","dynamic":true},
   {"route":"/shop/account","file":"app/shop/account/page.tsx","area":"Webshop","dynamic":false},
