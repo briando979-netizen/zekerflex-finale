@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { ideeUitLink, leesProductPagina, prijsNaarCents } from "@/lib/shop/link-product";
+import { ideeUitLink, isBruikbaar, leesProductPagina, leesShopifyProduct, leesWooProduct, prijsNaarCents, shopifyGegevensAdres, wooGegevensAdres } from "@/lib/shop/link-product";
 
 // "Product van een link" in de Winkel-AI (13 nov): uit de pagina van een leverancier de naam, omschrijving, foto en prijs
 // lezen. Soepel: wat ontbreekt blijft leeg, en een pagina zonder gegevens (AliExpress geeft een robot een lege pagina) geeft null.
@@ -109,5 +109,42 @@ describe("de route, het opslaan en het scherm", () => {
     const w = bron("lib/ontwerp/wegwijzer.ts");
     expect(w).toContain('doel: { pagina: "/admin/shop" }');
     expect(w).toContain('doel: { pagina: "/admin/shop-ai" }');
+  });
+});
+
+describe("meer bronnen: winkelsystemen met een gegevensadres", () => {
+  it("Shopify: het adres en het lezen van het product", () => {
+    expect(shopifyGegevensAdres("https://winkel.example/collections/jassen/products/fleece-vest?variant=12")).toBe("https://winkel.example/products/fleece-vest.json");
+    expect(shopifyGegevensAdres("https://winkel.example/nl/products/Fleece_Vest/")).toBe("https://winkel.example/products/Fleece_Vest.json");
+    for (const u of ["https://winkel.example/over-ons", "http://winkel.example/products/x", "geen adres", "https://winkel.example/products/"]) expect(shopifyGegevensAdres(u), u).toBeNull();
+    const json = { product: { title: "Fleece vest", body_html: "<p>Warm &amp; licht.</p>", image: { src: "https://cdn.example/1.jpg" }, images: [{ src: "https://cdn.example/1.jpg" }, { src: "//cdn.example/2.jpg" }, { src: 4 }], variants: [{ price: "24.95" }] } };
+    expect(leesShopifyProduct(json, "https://winkel.example/products/fleece-vest")).toEqual({ titel: "Fleece vest", omschrijving: "Warm & licht.", fotos: ["https://cdn.example/1.jpg", "https://cdn.example/2.jpg"], prijsCents: 2495, valuta: null });
+    for (const kapot of [null, "x", {}, { product: null }, { product: { title: "" } }, []]) expect(leesShopifyProduct(kapot, "https://winkel.example/")).toBeNull();
+  });
+
+  it("WooCommerce: het adres en het lezen van het product, met de prijs in centen", () => {
+    expect(wooGegevensAdres("https://zaak.example/product/thermo-sokken/")).toBe("https://zaak.example/wp-json/wc/store/v1/products?slug=thermo-sokken");
+    expect(wooGegevensAdres("https://zaak.example/winkel/kleding/thermo-sokken")).toBe("https://zaak.example/wp-json/wc/store/v1/products?slug=thermo-sokken");
+    expect(wooGegevensAdres("https://zaak.example/contact")).toBeNull();
+    const json = [{ name: "Thermo sokken", short_description: "", description: "<p>Warme sokken.</p>", images: [{ src: "https://zaak.example/wp-content/sok.jpg" }], prices: { price: "795", currency_code: "EUR", currency_minor_unit: 2 } }];
+    expect(leesWooProduct(json, "https://zaak.example/product/thermo-sokken/")).toEqual({ titel: "Thermo sokken", omschrijving: "Warme sokken.", fotos: ["https://zaak.example/wp-content/sok.jpg"], prijsCents: 795, valuta: "EUR" });
+    // een munt zonder centen (yen): 500 blijft 500 hele eenheden
+    expect(leesWooProduct([{ name: "Ding", description: "Iets.", prices: { price: "500", currency_code: "JPY", currency_minor_unit: 0 } }], "https://zaak.example/")?.prijsCents).toBe(50000);
+    for (const kapot of [null, {}, [], [null], [{ name: "" }]]) expect(leesWooProduct(kapot, "https://zaak.example/")).toBeNull();
+  });
+
+  it("bruikbaar = een naam met een omschrijving of een foto", () => {
+    expect(isBruikbaar(null)).toBe(false);
+    expect(isBruikbaar({ titel: "X", omschrijving: "", fotos: [], prijsCents: null, valuta: null })).toBe(false);
+    expect(isBruikbaar({ titel: "X", omschrijving: "", fotos: ["https://cdn.example/a.jpg"], prijsCents: null, valuta: null })).toBe(true);
+  });
+
+  it("de server probeert eerst de pagina en dan de gegevensadressen, steeds via de veilige ophaler", () => {
+    const server = bron("lib/shop/link-product-server.ts");
+    expect(server.indexOf("leesProductPagina(pagina.body")).toBeLessThan(server.indexOf("shopifyGegevensAdres(pagina.finalUrl)"));
+    expect(server.indexOf("shopifyGegevensAdres(pagina.finalUrl)")).toBeLessThan(server.indexOf("wooGegevensAdres(pagina.finalUrl)"));
+    expect(server).toContain("await fetchPage(adres, { timeoutMs: 10_000, maxBytes: 1_500_000 })");
+    // geen eigen fetch buiten de veilige ophaler om
+    expect(server).not.toMatch(/[^a-zA-Z]fetch\(/);
   });
 });
