@@ -22,7 +22,8 @@ cat > /etc/crontabs/root <<EOF
 0 4 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/active-hours/recompute"
 0 6 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/orchestration/tick"
 # RAG twee keer per dag (de route zegt "elke ~12 uur"): valt één run weg door een uitrol, dan blijft de hartslag (26 u) toch vers
-0 0,12 * * * wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/rag/reindex"
+# :25 en niet :00: om middernacht en 12:00 draaien ook social/tick en ai/warm; samen bezetten ze het eigen model (13 nov, meting 17: embed timeout)
+25 0,12 * * * wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/rag/reindex"
 # de herkansing van de RAG-index na een uitrol (lib/rag/herkansing.ts); zonder herkansing klaar in een paar ms
 */15 * * * * wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/rag/reindex?herkansing=1"
 0 8 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/sales/tick"
@@ -48,7 +49,8 @@ cat > /etc/crontabs/root <<EOF
 0 17 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/notifications/tick"
 0 10 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/worker/milestones"
 0 11 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/seo/indexnow"
-0 6 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/autopilot/tick"
+# 06:20 en niet 06:00: dan draait orchestration/tick al; samen hielden ze gemma bezig en kreeg de RAG-embedding een time-out (13 nov, meting 17)
+20 6 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/autopilot/tick"
 0 15 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/autopilot/tick"
 0 7 1 * * wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/pensioen/aangifte"
 30 3 * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/backup/check"
