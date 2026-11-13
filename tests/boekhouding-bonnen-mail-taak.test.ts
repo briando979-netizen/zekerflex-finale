@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const m = vi.hoisted(() => ({
   logError: vi.fn(),
   logWarn: vi.fn(),
-  logWarn: vi.fn(),
   featureEnabled: vi.fn(),
   imapConfig: vi.fn(),
   recordCronRun: vi.fn(),
