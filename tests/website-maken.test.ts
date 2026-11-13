@@ -28,9 +28,24 @@ describe("de pagina", () => {
 
   it("de prijs komt uit de abonnementen zelf en er staat eerlijk bij wanneer je betaalt", () => {
     expect(pagina).toContain("const vanaf = euro(WEBSITE_PLANS.basis.priceCentsPerMonth);");
-    expect(pagina).toContain("Bouwen en bekijken is gratis. Je betaalt pas als je hem online zet, vanaf {vanaf} per maand.");
+    expect(pagina).toContain("`Bouwen en bekijken is gratis. Je betaalt pas als je hem online zet, vanaf ${vanaf} per maand.`");
     // geen los bedrag in de tekst
     expect(pagina).not.toMatch(/€\s?\d/);
+  });
+
+  it("staat betalen dicht of is het niet gemeten, dan geen prijs en geen belofte dat je nu online kunt", () => {
+    // dezelfde stand als de Webshop-console; alleen een gemeten 'open' telt, een storing telt als dicht
+    expect(pagina).toContain("const kanOnline = (await accountStand().catch(() => null))?.betalen === true;");
+    expect(pagina).toContain('"Bouwen en bekijken is gratis. Online zetten kan binnenkort."');
+    expect(pagina).toContain("const stappen = [...STAPPEN, kanOnline ? STAP_ONLINE : STAP_BINNENKORT];");
+    // elke plek waar de prijs staat hangt aan die stand
+    const metPrijs = pagina.split("\n").filter((r) => r.includes("{vanaf}"));
+    expect(metPrijs.length).toBeGreaterThan(0);
+    for (const r of metPrijs) expect(r.includes("kanOnline ?") || pagina.slice(pagina.indexOf("{kanOnline ? (\n            <p"), pagina.indexOf(") : (\n            <p")).includes(r), r).toBe(true);
+    // de beschrijving voor zoekmachines belooft het ook niet
+    expect(pagina.slice(pagina.indexOf("description:"), pagina.indexOf("...canonical"))).not.toContain("online zet");
+    // alleen lezen
+    expect(pagina).not.toMatch(/kvSet|\.(create|update|delete)\(/);
   });
 
   it("geen verzonnen aantallen, sterren of klanten", () => {
