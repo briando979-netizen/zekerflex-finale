@@ -97,7 +97,7 @@ export default async function SysteemPage() {
     budgetSnapshot().catch(() => null),
     whisperReachable(),
     cronHeartbeats().catch(() => []),
-    readBackupReport().catch((): BackupReport => ({ available: false, state: "missing", reasons: [], status: null, files: [], disk: null, verificatie: { state: "missing", reasons: [], status: null, history: [] } })),
+    readBackupReport().catch((): BackupReport => ({ available: false, state: "missing", reasons: [], status: null, files: [], disk: null, waarschuwing: null, verificatie: { state: "missing", reasons: [], status: null, history: [] } })),
     listErrorGroups(500).catch(() => []),
     leesLive().catch(() => null),
     bouwerGezond(),
@@ -316,6 +316,7 @@ export default async function SysteemPage() {
             ) : (
               <>
                 {backupBroken && <Notice tone="crit" role="alert">{backup.reasons.join(" ")}</Notice>}
+                {backup.waarschuwing && <Notice tone="warn">{backup.waarschuwing}</Notice>}
                 <div className="grid items-start gap-4 lg:grid-cols-[1fr_1fr]">
                   <Panel
                     title="Laatste back-up"
