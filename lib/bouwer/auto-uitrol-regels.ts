@@ -5,6 +5,7 @@
 // het bouwen zelf blijft de live-zetter (deploy/bouwer/zf-live.py) met zijn eigen controle, migratie-eis en terugzetten.
 //
 // De regels, in volgorde (de eerste die past, beslist):
+//  0b gestopt door de nacontrole  -> niets (harde stop: pas weer na een mens die de schakelaar aanzet)
 //  1  noodrem aan                 -> niets
 //  2  schakelaar uit              -> niets (standaard uit; de eigenaar zet hem aan)
 //  3  main niet te lezen          -> wacht
@@ -30,6 +31,25 @@ export const MIN_VRIJ_GEHEUGEN_MB = 6 * 1024;
 export const MIN_LIVEZETTER_VERSIE = 3;
 /** Loopt main zo lang voor op live zonder dat de lus iets doet, dan melden we het. */
 export const ACHTERSTAND_MELDING_MS = 30 * 60_000;
+/** Na een gestarte uitrol wacht de lus zo lang voordat de nacontrole loopt (de app moet opgestart zijn). */
+export const NACONTROLE_WACHT_MS = 3 * 60_000;
+/** Zo lang wachten we op een rondgang na de uitrol; daarna is de uitslag "onbekend" (geen stop, wel melding). */
+export const NACONTROLE_RONDGANG_MAX_MS = 15 * 60_000;
+
+/** De nacontrole na een door de Auto-uitrol gestarte uitrol die "klaar" meldde. */
+export interface Nacontrole {
+  sha: string;
+  id: string;
+  /** wanneer de uitrol klaar was (begin van de wachttijd) */
+  sinds: string;
+  /** wanneer de lus zelf een rondgang startte (eenmalig) */
+  rondgangGestart: string | null;
+}
+export interface Stop {
+  reden: string;
+  sha: string;
+  op: string;
+}
 
 export interface AutoStand {
   /** de sha van main die als laatste is gezien, en sinds wanneer hij onveranderd is (ISO) */
@@ -48,6 +68,11 @@ export interface AutoStand {
   achterSinds: string | null;
   /** de laatste keer dat de lus liep */
   laatsteRonde: string | null;
+  /** loopt er een nacontrole na een uitrol? */
+  nacontrole: Nacontrole | null;
+  /** de harde stop: de nacontrole faalde. Gezet = er wordt nooit meer automatisch uitgerold tot een mens de schakelaar aanzet. */
+  stop: Stop | null;
+  laatsteNacontrole: { sha: string; uitslag: "ok" | "stop" | "onbekend"; reden: string; op: string } | null;
 }
 
 export const LEGE_STAND: AutoStand = {
@@ -61,6 +86,9 @@ export const LEGE_STAND: AutoStand = {
   laatsteBeslissing: null,
   achterSinds: null,
   laatsteRonde: null,
+  nacontrole: null,
+  stop: null,
+  laatsteNacontrole: null,
 };
 
 export type ControleStatus = "onbekend" | "bezig" | "schoon" | "faalt";
@@ -110,6 +138,8 @@ export function zietMain(stand: AutoStand, mainSha: string | null, nu: number): 
 }
 
 export function beslis(i: Invoer): Besluit {
+  // 0b: de harde stop van de nacontrole gaat voor alles behalve niets doen
+  if (i.stand.stop) return { actie: "niets", reden: `Gestopt door de nacontrole: ${i.stand.stop.reden}. Er wordt niets automatisch uitgerold tot je de Auto-uitrol zelf weer aanzet.` };
   if (i.noodrem) return { actie: "niets", reden: "De noodrem staat aan: er wordt niets automatisch uitgerold." };
   if (!i.aan) return { actie: "niets", reden: "Auto-uitrol staat uit." };
   if (!i.mainSha) return { actie: "wacht", reden: "Main is nu niet te lezen (GitHub onbereikbaar); de volgende ronde probeert het opnieuw." };
@@ -174,9 +204,60 @@ export function meldingen(stand: AutoStand, liveSha: string | null, nu: number, 
   if (gezien && migratie && liveSha !== gezien) {
     uit.push({ id: "auto-uitrol-migratie", titel: "Migratie wacht: rol deze versie met de hand uit", tekst: `${gezien.slice(0, 10)} bevat een database-wijziging (${migratie.migraties.join(", ") || "onbekend"}). Auto-uitrol rolt die niet uit: kies Live zetten, bekijk de migratie en geef akkoord.` });
   }
+  if (stand.stop) {
+    uit.push({ id: "auto-uitrol-stop", titel: "Auto-uitrol is gestopt door de nacontrole", tekst: `${stand.stop.sha.slice(0, 10)}: ${stand.stop.reden}. De Auto-uitrol staat uit en rolt niets meer uit tot je hem zelf weer aanzet (Beheer, Live zetten). Kijk eerst of de site goed werkt.` });
+  }
+  if (stand.laatsteNacontrole?.uitslag === "onbekend" && stand.laatsteNacontrole.sha === gezien) {
+    uit.push({ id: "auto-uitrol-nacontrole-onbekend", titel: "Nacontrole na de uitrol kon niet worden afgerond", tekst: stand.laatsteNacontrole.reden });
+  }
   const achter = stand.achterSinds ? Date.parse(stand.achterSinds) : NaN;
-  if (aan && !geweigerd && !migratie && Number.isFinite(achter) && nu - achter > ACHTERSTAND_MELDING_MS) {
+  if (aan && !stand.stop && !geweigerd && !migratie && Number.isFinite(achter) && nu - achter > ACHTERSTAND_MELDING_MS) {
     uit.push({ id: "auto-uitrol-achter", titel: "Live loopt meer dan 30 minuten achter op main", tekst: `Reden van de laatste ronde: ${stand.laatsteBeslissing?.reden ?? "onbekend"}` });
   }
   return uit;
+}
+
+// ---- de nacontrole (harde stop) ----------------------------------------------------------------------------------------------
+
+export interface NaInvoer {
+  nu: number;
+  /** de sha die de lus besloot uit te rollen */
+  sha: string;
+  /** wanneer de uitrol klaar was (ISO) */
+  sinds: string;
+  /** de VERSIE die nu draait (liveVersie().sha); null = niet te lezen */
+  versie: string | null;
+  /** antwoordt de app op /api/health? */
+  gezond: boolean;
+  /** de staat van de live-zetter voor dit verzoek (klaar, teruggezet, mislukt, ...) */
+  liveStaat: string | null;
+  /** de laatste rondgang (KV rondgang:laatste): wanneer, hoeveel pagina's, hoeveel goed, hoeveel problemen */
+  rondgang: { at: string; totaal: number; ok: number; problemen: number } | null;
+}
+export type NaUitslag = { uitslag: "wacht" | "ok" | "stop" | "onbekend"; reden: string };
+
+/**
+ * Na een uitrol van de Auto-uitrol: stop (en schakel de Auto-uitrol uit) als de live-zetter terugzette of mislukte, als
+ * de VERSIE niet de besloten sha is, als de app niet gezond is of als de rondgang van na de uitrol problemen meldt. Een
+ * ontbrekende rondgang is geen stop: eerst 15 minuten afwachten, daarna "onbekend" (wel een melding).
+ */
+export function beoordeelNacontrole(i: NaInvoer): NaUitslag {
+  if (i.liveStaat === "teruggezet" || i.liveStaat === "mislukt") {
+    return { uitslag: "stop", reden: `de live-zetter meldt ${i.liveStaat === "teruggezet" ? "dat de vorige versie is teruggezet" : "dat de uitrol mislukte"}` };
+  }
+  const sinds = Date.parse(i.sinds);
+  const verstreken = Number.isFinite(sinds) ? i.nu - sinds : 0;
+  if (verstreken < NACONTROLE_WACHT_MS) return { uitslag: "wacht", reden: "de nacontrole begint 3 minuten na de uitrol" };
+  if (i.versie !== i.sha) return { uitslag: "stop", reden: `de draaiende VERSIE (${i.versie ? i.versie.slice(0, 10) : "onbekend"}) is niet de besloten versie (${i.sha.slice(0, 10)})` };
+  if (!i.gezond) return { uitslag: "stop", reden: "de app antwoordt niet op /api/health" };
+  const at = i.rondgang ? Date.parse(i.rondgang.at) : NaN;
+  const vers = Number.isFinite(at) && at >= sinds && i.nu - at <= NACONTROLE_RONDGANG_MAX_MS;
+  if (i.rondgang && vers) {
+    if (i.rondgang.problemen > 0 || i.rondgang.ok < i.rondgang.totaal) {
+      return { uitslag: "stop", reden: `de rondgang na de uitrol vond ${i.rondgang.problemen || i.rondgang.totaal - i.rondgang.ok} kapotte pagina('s)` };
+    }
+    return { uitslag: "ok", reden: "de app is gezond, de versie klopt en de rondgang is schoon" };
+  }
+  if (verstreken < NACONTROLE_RONDGANG_MAX_MS) return { uitslag: "wacht", reden: "wacht op een rondgang na de uitrol" };
+  return { uitslag: "onbekend", reden: "er kwam geen rondgang na de uitrol binnen 15 minuten: niet te zeggen of alle pagina's werken" };
 }

@@ -8,6 +8,7 @@ import type { AutoStand } from "@/lib/bouwer/auto-uitrol-regels";
 interface AutoAntwoord {
   aan: boolean;
   noodrem: boolean;
+  noodremReden: string | null;
   stand: AutoStand;
   meldingen: { id: string; titel: string; tekst: string }[];
 }
@@ -58,7 +59,7 @@ export function AutoUitrolPaneel() {
         <div>
           <h3 id="auto-uitrol-kop" className="text-sm font-semibold text-white">Auto-uitrol</h3>
           <p className="mt-0.5 text-xs text-white/50">
-            {d.noodrem ? "De noodrem staat aan: er wordt niets automatisch uitgerold." : d.aan ? "Aan: nieuwe versies van main worden vanzelf gecontroleerd en live gezet." : "Uit: er wordt niets automatisch uitgerold."} Database-wijzigingen rol je altijd zelf uit.
+            {d.stand.stop ? `Gestopt door de nacontrole (${d.stand.stop.reden}). Zet hem zelf weer aan als alles goed werkt.` : d.noodrem ? `De noodrem staat aan${d.noodremReden ? ` (${d.noodremReden})` : ""}: er wordt niets automatisch uitgerold.` : d.aan ? "Aan: nieuwe versies van main worden vanzelf gecontroleerd en live gezet." : "Uit: er wordt niets automatisch uitgerold."} Database-wijzigingen rol je altijd zelf uit.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -79,6 +80,7 @@ export function AutoUitrolPaneel() {
         <div><dt className="inline text-white/40">Laatste ronde: </dt><dd className="inline">{tijd(s.laatsteRonde)}</dd></div>
         <div><dt className="inline text-white/40">Laatste controle: </dt><dd className="inline">{s.laatsteControle ? `${kort(s.laatsteControle.sha)} ${s.laatsteControle.ok ? "schoon" : "faalt"}` : "nog niet"}</dd></div>
         <div><dt className="inline text-white/40">Laatste uitrol: </dt><dd className="inline">{s.laatsteUitrol ? `${kort(s.laatsteUitrol.sha)} (${s.laatsteUitrol.uitkomst === "klaar" ? "klaar" : s.laatsteUitrol.uitkomst === "geweigerd" ? "mislukt, niet opnieuw geprobeerd" : "gevraagd"}) ${tijd(s.laatsteUitrol.op)}` : "nog niet"}</dd></div>
+        <div className="sm:col-span-2"><dt className="inline text-white/40">Nacontrole na de uitrol: </dt><dd className="inline">{s.nacontrole ? `loopt voor ${kort(s.nacontrole.sha)}` : s.laatsteNacontrole ? `${kort(s.laatsteNacontrole.sha)}: ${s.laatsteNacontrole.uitslag === "ok" ? "in orde" : s.laatsteNacontrole.uitslag === "stop" ? "gefaald" : "onbekend"} (${s.laatsteNacontrole.reden})` : "nog niet"}</dd></div>
         <div className="sm:col-span-2"><dt className="inline text-white/40">Waarom (laatste ronde): </dt><dd className="inline">{s.laatsteBeslissing?.reden ?? "nog geen ronde"}</dd></div>
       </dl>
       {fout ? <p role="alert" className="mt-2 text-xs text-[#F07C6B]">{fout}</p> : null}
