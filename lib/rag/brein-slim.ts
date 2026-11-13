@@ -25,22 +25,37 @@ export function normaliseer(v: readonly number[]): number[] {
   return v.map((x) => x / l);
 }
 
-export function inproduct(a: readonly number[], b: readonly number[]): number {
+export function inproduct(a: ArrayLike<number>, b: ArrayLike<number>): number {
   const n = Math.min(a.length, b.length);
   let s = 0;
   for (let i = 0; i < n; i++) s += (a[i] ?? 0) * (b[i] ?? 0);
   return s;
 }
 
+/** Genormaliseerd als Float32Array: compacter en sneller voor het O(n²)-rekenwerk. */
+function normaliseer32(v: ArrayLike<number>): Float32Array {
+  const uit = new Float32Array(v.length);
+  let som = 0;
+  for (let i = 0; i < v.length; i++) som += (v[i] ?? 0) * (v[i] ?? 0);
+  const l = Math.sqrt(som) || 1;
+  for (let i = 0; i < v.length; i++) uit[i] = (v[i] ?? 0) / l;
+  return uit;
+}
+
+/** Hoeveel rijen achter elkaar vóór de event-loop even adem krijgt (de server bedient intussen gewone verzoeken). */
+export const ADEM_ELKE = 100;
+const adem = (): Promise<void> => new Promise((r) => setImmediate(r));
+
 export type Synaps = [string, string, number];
 
 /**
  * Per stuk de `k` sterkste verwanten met cosinus ≥ `min`, als ongerichte paren (id-a < id-b), sterkste eerst.
- * O(n²·d): enkele seconden voor een paar duizend stukken, één keer per nacht of op verzoek.
+ * O(n²·d): enkele seconden voor een paar duizend stukken, één keer per nacht of op verzoek; laat om de ADEM_ELKE
+ * rijen de event-loop los, zodat de app intussen blijft antwoorden.
  */
-export function synapsen(vectoren: readonly Vector[], k = 4, min = 0.5): Synaps[] {
+export async function synapsen(vectoren: readonly Vector[], k = 4, min = 0.5): Promise<Synaps[]> {
   const n = vectoren.length;
-  const norm = vectoren.map((x) => normaliseer(x.v));
+  const norm = vectoren.map((x) => normaliseer32(x.v));
   const beste: { j: number; s: number }[][] = Array.from({ length: n }, () => []);
   const neem = (lijst: { j: number; s: number }[], j: number, s: number) => {
     if (s < min) return;
@@ -62,6 +77,8 @@ export function synapsen(vectoren: readonly Vector[], k = 4, min = 0.5): Synaps[
       neem(beste[i]!, j, s);
       neem(beste[j]!, i, s);
     }
+    // om de ADEM_ELKE rijen de event-loop loslaten: om 01:10 draait dit op de app zelf
+    if (i % ADEM_ELKE === ADEM_ELKE - 1) await adem();
   }
   const gezien = new Set<string>();
   const uit: Synaps[] = [];
@@ -97,15 +114,15 @@ export interface Ontdekking {
  * k-means op genormaliseerde embeddings (cosinus), deterministisch: de startpunten komen uit k-means++ met een vaste
  * toevalsgenerator (zaad uit de id's), hooguit `rondes` rondes of tot niets meer verschuift. Lege thema's vallen weg.
  */
-export function ontdekThemas(vectoren: readonly Vector[], k = kiesK(vectoren.length), rondes = 25): Ontdekking {
+export async function ontdekThemas(vectoren: readonly Vector[], k = kiesK(vectoren.length), rondes = 25): Promise<Ontdekking> {
   const n = vectoren.length;
   if (n === 0 || k <= 0) return { per: {}, groottes: [], k: 0, rondes: 0 };
   const kk = Math.min(k, n);
-  const norm = vectoren.map((x) => normaliseer(x.v));
+  const norm = vectoren.map((x) => normaliseer32(x.v));
   const d = norm[0]?.length ?? 0;
   const r = toeval(hashVan(vectoren.map((x) => x.id).join("|")));
   // k-means++: het eerste middelpunt willekeurig, elk volgende met kans evenredig aan de afstand tot het dichtste
-  const centra: number[][] = [norm[Math.floor(r() * n)]!.slice()];
+  const centra: Float32Array[] = [norm[Math.floor(r() * n)]!.slice()];
   const dichtst = new Float64Array(n).fill(2);
   while (centra.length < kk) {
     const c = centra[centra.length - 1]!;
@@ -158,9 +175,10 @@ export function ontdekThemas(vectoren: readonly Vector[], k = kiesK(vectoren.len
     }
     for (let c = 0; c < centra.length; c++) {
       if ((tel[c] ?? 0) === 0) continue;
-      centra[c] = normaliseer(Array.from(som[c]!));
+      centra[c] = normaliseer32(som[c]!);
     }
     if (verschoven === 0) break;
+    await adem();
   }
   // lege thema's weg en opnieuw nummeren, grootste eerst
   const tel = new Map<number, number>();

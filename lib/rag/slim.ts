@@ -72,8 +72,8 @@ async function alleVectoren(): Promise<{ vectoren: Vector[]; tekst: Map<string, 
 export async function vernieuwSlim(nu: Date = new Date()): Promise<{ stukken: number; synapsen: number; themas: number; ms: number }> {
   const t0 = Date.now();
   const { vectoren, tekst } = await alleVectoren();
-  const paren = synapsen(vectoren, 4, 0.5);
-  const ontdekking = ontdekThemas(vectoren, kiesK(vectoren.length));
+  const paren = await synapsen(vectoren, 4, 0.5);
+  const ontdekking = await ontdekThemas(vectoren, kiesK(vectoren.length));
   const perThema: string[][] = Array.from({ length: ontdekking.k }, () => []);
   for (const [id, c] of Object.entries(ontdekking.per)) perThema[c]?.push(tekst.get(id) ?? "");
   const namen = benoemThemas(perThema.map((t) => t.join("\n")));
