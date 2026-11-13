@@ -39,6 +39,7 @@ vi.mock("next/server", async (importOriginal) => ({
 
 import { POST as voice } from "@/app/api/telephony/voice/route";
 import { POST as gather } from "@/app/api/telephony/gather/route";
+import { POST as menuRoute } from "@/app/api/telephony/menu/route";
 import { POST as status } from "@/app/api/telephony/status/route";
 import { placeTwilioCall } from "@/lib/telephony/twilio";
 import { CALL_SCRIPTS } from "@/lib/telephony/scripts";
@@ -274,10 +275,69 @@ describe("als het taalmodel traag is of faalt", () => {
     record();
     gratis.aan = true;
     expect(await say("Ik heb een vraag")).toContain("zeg dan: een medewerker");
-    expect(await say("een medewerker")).toMatch(/Ik verbind u door|terugbelafspraak/);
+    // niet meer meteen doorschakelen: de wachtrij, of (hier: geen doorschakelnummer) het terugbelverzoek (13 nov)
+    expect(await say("een medewerker")).toContain("/api/telephony/terugbellen?callId=c1");
     record({ lang: "en" });
     expect(await say("I have a question")).toContain("just say: a person");
-    expect(await say("a person")).toMatch(/connect you|call back/);
+    expect(await say("a person")).toContain("call you back");
     expect(chat).not.toHaveBeenCalled();
+  });
+});
+
+describe("het keuzemenu: eerst werknemer of bedrijf, dan de keuze (13 nov)", () => {
+  async function toets(step: string, digits: string, keer = false): Promise<string> {
+    const req = new Request(`http://localhost:3000/api/telephony/menu?callId=c1&step=${step}${keer ? "&keer=2" : ""}`, {
+      method: "POST",
+      body: new URLSearchParams(digits ? { Digits: digits } : {}).toString(),
+    });
+    return (await menuRoute(req)).text();
+  }
+
+  it("na de taal: wie belt er, met 0 voor een medewerker", async () => {
+    record({ direction: "inbound", script: "inbound", transcript: [] });
+    const xml = await toets("lang", "1");
+    expect(xml).toContain("Bent u werknemer");
+    expect(xml).toContain("Toets 0");
+    expect(xml).toContain("step=rol");
+    expect(xml).toContain('input="dtmf"');
+  });
+
+  it("werknemer en dan een keuze: de assistent met de opening van die afdeling", async () => {
+    record({ direction: "inbound", script: "inbound", transcript: [] });
+    expect(await toets("rol", "1")).toContain("step=werker");
+    const xml = await toets("werker", "2");
+    expect(xml).toContain("uw account, uren of uitbetaling");
+    expect(xml).toContain("/api/telephony/gather?callId=c1");
+    expect(calls.get("c1")?.dept).toBe("3");
+  });
+
+  it("bedrijf en dan support: de opening voor opdrachtgevers", async () => {
+    record({ direction: "inbound", script: "inbound", transcript: [] });
+    expect(await toets("rol", "2")).toContain("step=bedrijf");
+    expect(await toets("bedrijf", "2")).toContain("support voor opdrachtgevers");
+    expect(calls.get("c1")?.dept).toBe("5");
+  });
+
+  it("sterretje is terug, 0 is een medewerker (hier zonder nummer: het terugbelverzoek), nooit meteen doorschakelen", async () => {
+    record({ direction: "inbound", script: "inbound", transcript: [] });
+    expect(await toets("werker", "*")).toContain("Bent u werknemer");
+    const xml = await toets("bedrijf", "0");
+    expect(xml).toContain("/api/telephony/terugbellen?callId=c1");
+    expect(xml).not.toContain("<Dial");
+    expect(await toets("rol", "0")).toContain("/api/telephony/terugbellen?callId=c1");
+  });
+
+  it("niets of iets onbekends getoetst: het menu nog één keer, daarna de assistent", async () => {
+    record({ direction: "inbound", script: "inbound", transcript: [] });
+    const eerst = await toets("werker", "7");
+    expect(eerst).toContain("Voor werk zoeken");
+    expect(eerst).toContain("keer=2");
+    expect(await toets("werker", "", true)).toContain("/api/telephony/gather?callId=c1");
+  });
+
+  it("het oude menu (gesprekken die tijdens een uitrol al liepen) werkt nog; 9 gaat nu ook naar de wachtrij", async () => {
+    record({ direction: "inbound", script: "inbound", transcript: [] });
+    expect(await toets("dept", "4")).toContain("Zoekt u zelf werk");
+    expect(await toets("dept", "9")).not.toContain("<Dial");
   });
 });

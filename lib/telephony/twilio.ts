@@ -18,6 +18,8 @@ export interface PlaceCallInput {
   voiceUrl: string;
   /** Status- + opname-callback. */
   statusUrl: string;
+  /** Opnemen (standaard ja: de belscripts melden het). Niet bij het overgaan van een eigen medewerker (wachtrij). */
+  opnemen?: boolean | undefined;
 }
 
 /** Plaatst een echte uitgaande oproep. Geeft de Twilio Call SID terug. */
@@ -31,12 +33,14 @@ export async function placeTwilioCall(input: PlaceCallInput): Promise<{ sid: str
     Method: "POST",
     StatusCallback: input.statusUrl,
     StatusCallbackMethod: "POST",
-    Record: "true",
-    RecordingStatusCallback: input.statusUrl,
     // Bewust geen MachineDetection: die houdt het gesprek vast tot de analyse klaar
     // is, dus iemand die opneemt hoort stilte en gaat "hallo?" roepen. Voicemail
     // herkennen we aan de tekst (lib/telephony/intents).
   });
+  if (input.opnemen !== false) {
+    body.append("Record", "true");
+    body.append("RecordingStatusCallback", input.statusUrl);
+  }
   body.append("StatusCallbackEvent", "initiated");
   body.append("StatusCallbackEvent", "answered");
   body.append("StatusCallbackEvent", "completed");
