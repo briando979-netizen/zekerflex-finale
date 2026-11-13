@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { API, foutVan, useStudio } from "@/components/studio/context";
 import { Card, btn, input } from "@/components/studio/ui";
+import { IdeeKaart } from "@/components/studio/IdeeKaart";
 import type { Company } from "@/lib/sites/types";
 
 // ---------------------------------------------------------------------------
@@ -54,6 +55,9 @@ export default function WebshopStart() {
         <h1 className="mt-2 max-w-2xl text-3xl font-bold tracking-tight">Je eigen webwinkel, met alles erin</h1>
         <p className="mt-3 max-w-xl text-white/75">Producten, bestellingen, klanten, kortingen en verzending in één plek. Kies hieronder een startpunt; je kunt alles daarna aanpassen.</p>
       </section>
+
+      {/* vertel je idee: kiest het startpunt en vult naam en plaats in, alleen waar nog niets stond */}
+      <IdeeKaart soort="webshop" templates={templates} onKeuze={(u) => { setTemplateId(u.templateId); setBedrijf((b) => ({ ...b, naam: b.naam.trim() ? b.naam : u.naam, plaats: b.plaats.trim() ? b.plaats : u.plaats })); }} />
 
       <Card title="1. Kies een startpunt" actions={<Link href={`${base}/ontwerpen`} className="text-sm font-semibold text-[#005bd3] hover:underline">Bekijk alle ontwerpen met voorbeeld</Link>}>
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
