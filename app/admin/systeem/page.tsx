@@ -97,7 +97,7 @@ export default async function SysteemPage() {
     budgetSnapshot().catch(() => null),
     whisperReachable(),
     cronHeartbeats().catch(() => []),
-    readBackupReport().catch((): BackupReport => ({ available: false, state: "missing", reasons: [], status: null, files: [], disk: null, waarschuwing: null, verificatie: { state: "missing", reasons: [], status: null, history: [] } })),
+    readBackupReport().catch((): BackupReport => ({ available: false, state: "missing", reasons: [], status: null, files: [], disk: null, waarschuwing: null, ophaal: { state: "uit", reasons: [], status: null }, verificatie: { state: "missing", reasons: [], status: null, history: [] } })),
     listErrorGroups(500).catch(() => []),
     leesLive().catch(() => null),
     bouwerGezond(),
@@ -423,8 +423,19 @@ export default async function SysteemPage() {
                             label: "Laatste nacht",
                             value: !backup.status?.offsite.configured ? "—" : backup.status.offsite.ok ? "kopie gelukt" : `mislukt: ${backup.status.offsite.error || "onbekende fout"}`,
                           },
+                          {
+                            label: "Kopie op de pc",
+                            value: backup.ophaal.status
+                              ? `laatst ${dateTimeNl(backup.ophaal.status.at, now)} (${timeAgoNl(backup.ophaal.status.at, now.getTime())}), set ${backup.ophaal.status.set}`
+                              : "niet ingesteld (deploy/backup/OPHALEN.md)",
+                          },
                         ]}
                       />
+                      {backup.ophaal.state === "oud" && (
+                        <div className="mt-3">
+                          <Notice tone="warn">{backup.ophaal.reasons.join(" ")}</Notice>
+                        </div>
+                      )}
                     </Panel>
                     <Panel flush title="Geschiedenis van de hersteltests" subtitle="Nieuwste eerst">
                       {verify.history.length === 0 ? (
@@ -449,8 +460,8 @@ export default async function SysteemPage() {
                   </div>
                 </div>
                 <Notice>
-                  {backup.status?.offsite.ok
-                    ? "Er staat elke nacht een versleutelde kopie buiten deze server. Terugzetten vanaf die kopie staat in deploy/DISASTER-RECOVERY.md."
+                  {backup.status?.offsite.ok || backup.ophaal.state === "ok"
+                    ? `Er staat elke nacht een versleutelde kopie buiten deze server${backup.status?.offsite.ok ? "" : " (op de pc van de eigenaar)"}. Terugzetten vanaf die kopie staat in deploy/DISASTER-RECOVERY.md.`
                     : "Deze back-ups staan op dezelfde server als de database. Ze beschermen tegen fouten en wissen, niet tegen het kwijtraken van de hele server. Zet BACKUP_PASSPHRASE en BACKUP_OFFSITE (zie Te doen) voor een versleutelde kopie elders; terugzetten staat in deploy/DISASTER-RECOVERY.md."}
                 </Notice>
               </>

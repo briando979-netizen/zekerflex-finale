@@ -26,6 +26,19 @@ export const DISK_CRIT_PERCENT = 95;
 export const GEBRUIKERS_MARGE = 0.9;
 /** Een databasebestand dat minder dan de helft is van dat van de vorige nacht valt op (lege tabel, verkeerde database). */
 export const KRIMP_FACTOR = 0.5;
+/**
+ * De pc van de eigenaar haalt elke dag de versleutelde set op (deploy/backup/OPHALEN.md); het vaste ophaalcommando op de
+ * server (deploy/backup/ophalen.sh) schrijft daarna ophaal/laatst.json. Langer dan dit zonder ophalen: een waarschuwing.
+ */
+export const OPHAAL_MAX_AGE_DAYS = 3;
+
+export interface OphaalStatus {
+  at: string;
+  /** de set, als in de bestandsnamen: 20261113-0230 */
+  set: string;
+}
+/** uit = nog nooit opgehaald (niet ingesteld), oud = langer dan OPHAAL_MAX_AGE_DAYS geleden */
+export type OphaalState = "uit" | "ok" | "oud";
 
 export interface BackupStatus {
   at: string;
@@ -101,6 +114,8 @@ export interface BackupReport {
   disk: DiskUsage | null;
   /** iets opvallends dat de back-up niet onbruikbaar maakt (veel kleiner dan de vorige); null = niets */
   waarschuwing: string | null;
+  /** de kopie op de pc van de eigenaar (deploy/backup/OPHALEN.md) */
+  ophaal: { state: OphaalState; reasons: string[]; status: OphaalStatus | null };
   /** de diepgaande hersteltest (wekelijks en op verzoek) met de geschiedenis, nieuwste eerst */
   verificatie: { state: VerifyState; reasons: string[]; status: VerifyStatus | null; history: VerifyStatus[] };
 }
@@ -208,6 +223,25 @@ export function evaluateBackup(status: BackupStatus | null, fileFound: boolean, 
   return { state: "ok", reasons: [] };
 }
 
+export function parseOphaal(raw: unknown): OphaalStatus | null {
+  const o = raw as Record<string, unknown> | null;
+  if (!o || typeof o !== "object" || typeof o.at !== "string" || Number.isNaN(Date.parse(o.at))) return null;
+  if (typeof o.set !== "string" || !/^\d{8}-\d{4}$/.test(o.set)) return null;
+  return { at: o.at, set: o.set };
+}
+
+/** Is de versleutelde kopie onlangs naar de pc gehaald? Nooit = niet ingesteld (geen alarm). */
+export function evaluateOphaal(status: OphaalStatus | null, now = Date.now()): { state: OphaalState; reasons: string[] } {
+  if (!status) return { state: "uit", reasons: [] };
+  const dagen = Math.floor((now - Date.parse(status.at)) / 86_400_000);
+  if (dagen <= OPHAAL_MAX_AGE_DAYS) return { state: "ok", reasons: [] };
+  const toen = new Date(status.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "long" });
+  return {
+    state: "oud",
+    reasons: [`De versleutelde kopie is al ${dagen} dagen niet naar de pc gehaald (laatst ${toen}). Staat de pc aan en draait de taak "ZekerFlex back-up ophalen"? Het logboek staat in C:\\Users\\pc\\ZekerFlex-backups\\ophalen.log.`],
+  };
+}
+
 const mbTekst = (bytes: number): string => `${(bytes / 1_048_576).toFixed(bytes >= 10 * 1_048_576 ? 0 : 1).replace(".", ",")} MB`;
 
 /**
@@ -234,7 +268,7 @@ export function diskUsage(blocks: number, bfree: number, bavail: number, bsize: 
 }
 
 export async function readBackupReport(dir = BACKUP_DIR, now = Date.now()): Promise<BackupReport> {
-  const empty: BackupReport = { available: false, state: "missing", reasons: [], status: null, files: [], disk: null, waarschuwing: null, verificatie: { state: "missing", reasons: [], status: null, history: [] } };
+  const empty: BackupReport = { available: false, state: "missing", reasons: [], status: null, files: [], disk: null, waarschuwing: null, ophaal: { state: "uit", reasons: [], status: null }, verificatie: { state: "missing", reasons: [], status: null, history: [] } };
   try {
     if (!(await stat(dir)).isDirectory()) return empty;
   } catch {
@@ -298,7 +332,15 @@ export async function readBackupReport(dir = BACKUP_DIR, now = Date.now()): Prom
   }
   const v = evaluateVerification(verify, now);
   const waarschuwing = status?.file && fileFound ? krimpWaarschuwing(files, status.file) : null;
-  return { available: true, state, reasons, status, files, disk, waarschuwing, verificatie: { state: v.state, reasons: v.reasons, status: verify, history } };
+  // de kopie op de pc: het ophaalcommando schrijft ophaal/laatst.json (deploy/backup/ophalen.sh)
+  let ophaalStatus: OphaalStatus | null = null;
+  try {
+    ophaalStatus = parseOphaal(JSON.parse(await readFile(path.join(dir, "ophaal", "laatst.json"), "utf8")));
+  } catch {
+    /* nog nooit opgehaald */
+  }
+  const ophaal = { ...evaluateOphaal(ophaalStatus, now), status: ophaalStatus };
+  return { available: true, state, reasons, status, files, disk, waarschuwing, ophaal, verificatie: { state: v.state, reasons: v.reasons, status: verify, history } };
 }
 
 /** Dagelijks na de back-up (cron): hartslag bij succes, anders de eigenaar waarschuwen. */
@@ -333,6 +375,17 @@ export async function checkBackup(now = Date.now(), dir = BACKUP_DIR): Promise<B
   }
 
   // veel kleiner dan de vorige: de back-up zelf is gelukt (hartslag blijft), maar het moet opvallen
+  // de kopie op de pc blijft uit: waarschuwen (nooit ingesteld = geen melding)
+  if (report.ophaal.state === "oud") {
+    await alertOwner({
+      key: "backup:ophaal",
+      title: "Kopie van de back-up niet naar de pc gehaald",
+      detail: report.ophaal.reasons.join(" "),
+      severity: "warning",
+      url: "/admin/systeem#backups",
+    });
+  }
+
   if (report.waarschuwing) {
     await alertOwner({
       key: "backup:krimp",

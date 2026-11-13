@@ -4,6 +4,7 @@
     "tests/a11y-alert-roles.test.ts",
     "tests/admin-access.test.ts",
     "tests/admin-nav.test.ts",
+    "tests/backup-ophalen.test.ts",
     "tests/bewakers.test.ts",
     "tests/bezoekstatistiek-bewaren.test.ts",
     "tests/caddy-log-bewaren.test.ts",
