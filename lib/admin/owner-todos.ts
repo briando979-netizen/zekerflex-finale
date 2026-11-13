@@ -1031,6 +1031,22 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       done: zfMailOpheffen.length === 0,
     },
     {
+      id: "internal-cron-token",
+      group: "Beheer & veiligheid",
+      title: "INTERNAL_CRON_TOKEN vernieuwen",
+      why: "Met deze sleutel roept de cron-container de interne taken van de app aan (de nachtelijke rondgang, orchestratie, herinneringen). De waarde is op 13 november buiten de server zichtbaar geweest, alleen op de eigen pc en niet naar buiten. Vernieuwen is veiliger. Doe het overdag, met tijd om na te kijken: zolang app en cron niet dezelfde nieuwe waarde hebben, krijgen de taken een 401 en lopen ze niet.",
+      how: [
+        "Kijk eerst wie de sleutel gebruikt: in de map van ZekerFlex op de server `grep -rl INTERNAL_CRON_TOKEN .` (alleen bestandsnamen). Verwacht: de app en de cron-container. Gebruikt een eigen script of de laptop hem ook, zet de nieuwe waarde daar mee.",
+        "Maak een kopie: `sudo cp -p .env.production .env.production.voor-token`.",
+        "Maak een nieuwe waarde (`openssl rand -hex 32`) en zet die met sudo op de regel INTERNAL_CRON_TOKEN= in .env.production. Druk de waarde of het bestand nooit af.",
+        "Start alleen app en cron opnieuw: `sudo docker compose -f docker-compose.vps.yml --env-file .env.production up -d --no-deps app cron`.",
+        "Controleer met één rondgang: laat Claude de rondgang één keer via de cron-container aanroepen. In Beheer → Systeem → Taken staat dan een nieuwe uitslag, de hartslagen blijven groen en het foutenlogboek toont geen 401 van /api/internal.",
+        "Werkt alles, vink dit dan af en verwijder de kopie `.env.production.voor-token` (sudo rm). Werkt het niet, zet dan de kopie terug en start app en cron opnieuw.",
+      ],
+      auto: false,
+      ...m("internal-cron-token"),
+    },
+    {
       id: "alert-push",
       group: "Beheer & veiligheid",
       title: "Storingsmeldingen op je telefoon aanzetten",
