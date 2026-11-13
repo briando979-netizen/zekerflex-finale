@@ -303,8 +303,10 @@ describe("Auto-uitrol: review van poortwachter 15", () => {
 
   it("(3) een ronde heeft een eigen KV-slot dat altijd wordt vrijgegeven", () => {
     const bron = lees("lib/bouwer/auto-uitrol.ts");
-    expect(bron).toContain("kvSetIfAbsent(K_RONDE_SLOT, mijn)");
-    expect(bron).toMatch(/finally \{\s*await kvDelete\(K_RONDE_SLOT\)/);
+    expect(bron).toContain("neemRondeSlot(nu)");
+    expect(bron).toMatch(/finally \{\s*await geefRondeSlotVrij\(slotToken\)/);
+    const opslag = lees("lib/bouwer/auto-uitrol-opslag.ts");
+    expect(opslag).toContain("kvSetIfAbsent(K_RONDE_SLOT, mijn)");
   });
 
   it("(4) lukt het lezen van de stand niet, dan schrijft de ronde niets", () => {
@@ -329,7 +331,9 @@ describe("Auto-uitrol: review van poortwachter 15", () => {
     expect(live).toContain("Authorization: `Bearer ${t}`");
     const bron = lees("lib/bouwer/auto-uitrol.ts");
     expect(bron).toContain("githubMainSha(cache?.etag ?? null)");
-    expect(bron).not.toMatch(/githubOverzicht|GITHUB_LEES_TOKEN|console\./);
+    expect(bron).not.toMatch(/githubOverzicht|console\./);
+    // het leestoken wordt alleen op aanwezigheid gelezen en nergens gelogd
+    expect(bron).not.toMatch(/(logger|journal)\([^)]*GITHUB_LEES_TOKEN/);
     expect(bron).toContain("Main is nu niet te lezen: ${main.fout");
   });
 
@@ -400,6 +404,85 @@ describe("zf-live.py laadt zichzelf alleen opnieuw als het nieuwe bestand compil
     expect(r.c).toBe(false); // dit kapotte bestand is al afgewezen: niet nog eens
     expect(r.d).toBe(false); // niet te lezen: niet herladen
     expect(r.e).toBe(true); // een ander bestand dan het afgewezene: wel proberen
+  });
+});
+
+describe("Auto-uitrol: herreview 14e", () => {
+  it("(1) een bewaarde controle-uitslag wordt alleen hergebruikt bij dezelfde basis (vanaf)", async () => {
+    const pad = new URL("../deploy/bouwer/werker/controle.mjs", import.meta.url).href;
+    const { basisKlopt } = (await import(/* @vite-ignore */ pad)) as { basisKlopt: (u: { vanaf: string | null }, g: string | null) => boolean };
+    expect(basisKlopt({ vanaf: LIVE }, LIVE)).toBe(true);
+    expect(basisKlopt({ vanaf: "c".repeat(40) }, LIVE)).toBe(false); // een tak-sha als basis: opnieuw controleren
+    expect(basisKlopt({ vanaf: `${MAIN}~1` }, LIVE)).toBe(false);
+    expect(basisKlopt({ vanaf: "c".repeat(40) }, null)).toBe(true); // geen basis gevraagd: oude gedrag
+    const controle = lees("deploy/bouwer/werker/controle.mjs");
+    expect(controle).toContain("if (bekend && basisKlopt(bekend, vanaf))");
+    expect(controle).toContain("basisGevraagd: vanaf ?? null");
+    // de controle-tik gebruikt de live VERSIE als basis
+    expect(lees("app/api/internal/controles/tick/route.ts")).toContain('startControle("main", "planner", false, liveVersie()?.sha)');
+  });
+
+  it("(a) het slot heeft een token: alleen vrijgeven als het van jou is, en overnemen met een compare-and-swap", () => {
+    const opslag = lees("lib/bouwer/auto-uitrol-opslag.ts");
+    expect(opslag).toContain("randomUUID()");
+    expect(opslag).toContain('kvVerwijderAlsVeld(K_RONDE_SLOT, "token", token)');
+    expect(opslag).toContain('kvVervangAlsVeld(K_RONDE_SLOT, "token", bestaand.token ?? null, mijn)');
+    const kv = lees("lib/storage/kv.ts");
+    expect(kv).toContain("value->>${veld} = ${waarde}");
+    expect(kv).toContain("IS NOT DISTINCT FROM");
+  });
+
+  it("(b) de beheerknop haalt de stop weg onder hetzelfde slot", () => {
+    expect(lees("app/api/admin/bouwer/auto-uitrol/route.ts")).toContain("herstelNaStopMetSlot(");
+    const opslag = lees("lib/bouwer/auto-uitrol-opslag.ts");
+    expect(opslag).toContain("metRondeSlot(() => herstelNaStop(door))");
+  });
+
+  it("(c) van de vergelijking live-main wordt alleen het laatste paar bewaard (één sleutel)", () => {
+    const bron = lees("lib/bouwer/auto-uitrol.ts");
+    expect(bron).toContain('const K_VERGELIJK = "bouwer:auto-uitrol:vergelijk";');
+    expect(bron).not.toContain("${K_VERGELIJK}");
+    expect(bron).toContain("bewaard.live === live && bewaard.main === main");
+  });
+
+  it("(d) zf-live.py onthoudt de afgewezen hash ook in een bestand en zet de werkende versie terug", () => {
+    const py = lees("deploy/bouwer/zf-live.py");
+    expect(py).toContain('MISLUKT_BESTAND = os.path.join(TMP_MAP, ".herlaad-mislukt")');
+    expect(py).toContain("lees_mislukt()");
+    expect(py).toContain("bewaar_goede_kopie(os.path.abspath(__file__))");
+    expect(py).toContain("shutil.copyfile(GOEDE_KOPIE, pad)");
+    expect(py).toContain("json.dump({\"hash\": nieuw");
+  });
+
+  it("(e) een trage rondgang geeft geen valse stop; een klaar-gemelde rondgang met problemen wel", () => {
+    const na = (extra: Partial<NaInvoer>, minuten: number): NaInvoer => ({
+      nu: Date.parse("2026-11-14T10:00:00Z") + minuten * 60_000,
+      sha: MAIN,
+      sinds: "2026-11-14T10:00:00Z",
+      versie: MAIN,
+      gezond: true,
+      liveStaat: "klaar",
+      rondgang: null,
+      rondgangGestart: "2026-11-14T10:03:00Z",
+      ...extra,
+    });
+    // na 16 minuten loopt de rondgang die wij startten (om 3 min) nog: wachten
+    expect(beoordeelNacontrole(na({}, 16)).uitslag).toBe("wacht");
+    expect(beoordeelNacontrole(na({}, 22)).uitslag).toBe("wacht");
+    // 20 minuten na de start (>= 23 min) is hij er nog niet: onbekend
+    expect(beoordeelNacontrole(na({}, 24)).uitslag).toBe("onbekend");
+    // een rondgang die na 18 minuten klaar is, telt gewoon (met problemen: stop, schoon: ok)
+    const vers = (problemen: number) => ({ at: "2026-11-14T10:18:00Z", totaal: 105, ok: 105 - problemen, problemen });
+    expect(beoordeelNacontrole(na({ rondgang: vers(2) }, 19)).uitslag).toBe("stop");
+    expect(beoordeelNacontrole(na({ rondgang: vers(0) }, 19)).uitslag).toBe("ok");
+    // zonder dat wij een rondgang startten: na 15 minuten onbekend (zoals eerder)
+    expect(beoordeelNacontrole(na({ rondgangGestart: null }, 16)).uitslag).toBe("onbekend");
+  });
+
+  it("(f) zonder GITHUB_LEES_TOKEN bevraagt de lus GitHub hoogstens elke 4 minuten", () => {
+    const bron = lees("lib/bouwer/auto-uitrol.ts");
+    expect(bron).toContain("const GITHUB_ZONDER_TOKEN_MS = 4 * 60_000;");
+    expect(bron).toMatch(/!heeftToken && cache\?\.sha && cache\.at !== undefined && nu - cache\.at < GITHUB_ZONDER_TOKEN_MS/);
   });
 });
 

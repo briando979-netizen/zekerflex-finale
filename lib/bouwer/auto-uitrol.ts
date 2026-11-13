@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
-import { bewaarAutoStand, leesAutoStand, noodremAan, zetNoodrem } from "@/lib/bouwer/auto-uitrol-opslag";
+import { bewaarAutoStand, geefRondeSlotVrij, leesAutoStand, neemRondeSlot, noodremAan, zetNoodrem } from "@/lib/bouwer/auto-uitrol-opslag";
 import { featureEnabled, setFlag } from "@/lib/flags";
 import { draaiRondgang, laatsteRondgang } from "@/lib/ops/rondgang";
 import { journal } from "@/lib/ops/error-journal";
-import { kvDelete, kvGet, kvSet, kvSetIfAbsent } from "@/lib/storage/kv";
+import { kvGet, kvSet } from "@/lib/storage/kv";
 import { liveVersie } from "@/lib/bouwer/versie";
 import { agentLeeft, githubMainSha, githubVergelijk, isBezig, leesLive, plaatsVerzoekAlsLeeg } from "@/lib/bouwer/live";
 import { lijstControles, startControle } from "@/lib/bouwer/controles";
@@ -12,7 +12,6 @@ import {
   beoordeelNacontrole,
   beslis,
   registreerUitstel,
-  slotVrij,
   uitkomstVanStatus,
   vrijGeheugenUitMeminfo,
   zietMain,
@@ -31,9 +30,11 @@ import {
 // ---------------------------------------------------------------------------
 
 const VERZOEK_MAX_MS = 15 * 60_000;
-const K_RONDE_SLOT = "bouwer:auto-uitrol:slot";
 const K_MAIN_CACHE = "bouwer:auto-uitrol:github-main";
-const K_VERGELIJK = "bouwer:auto-uitrol:vergelijk:";
+/** Zonder leestoken telt ook een 304 mee voor de limiet van 60 per uur: dan hoogstens elke 4 minuten GitHub bevragen (de ronde zelf blijft elke 2 minuten). */
+const GITHUB_ZONDER_TOKEN_MS = 4 * 60_000;
+// Alleen het laatste paar (live, main) wordt bewaard: één sleutel, dus er blijft niets achter dat opgeruimd moet worden.
+const K_VERGELIJK = "bouwer:auto-uitrol:vergelijk";
 
 /** Antwoordt de app zelf op /api/health? (de lus draait in de nieuwe app; een container die niet antwoordt, is niet gezond) */
 async function appGezond(): Promise<boolean> {
@@ -57,33 +58,37 @@ function vrijGeheugenMb(): number | null {
  * De sha van GitHub main, met een ETag in de KV: een ongewijzigde main kost een 304 (telt niet mee voor de limiet van 60 per uur
  * zonder token), zodat een ronde elke 2 minuten ruim binnen de limiet blijft. Een fout (ook een 429) geeft null met de reden.
  */
-async function leesMain(): Promise<{ sha: string | null; fout: string | null }> {
-  const cache = await kvGet<{ sha: string; etag: string | null }>(K_MAIN_CACHE).catch(() => null);
+async function leesMain(nu: number): Promise<{ sha: string | null; fout: string | null }> {
+  const cache = await kvGet<{ sha: string; etag: string | null; at?: number }>(K_MAIN_CACHE).catch(() => null);
+  // Zonder GITHUB_LEES_TOKEN (nooit gelogd) telt ook een 304 mee voor de 60 per uur: dan adaptief, hoogstens elke 4 minuten.
+  const heeftToken = Boolean(process.env.GITHUB_LEES_TOKEN?.trim());
+  if (!heeftToken && cache?.sha && cache.at !== undefined && nu - cache.at < GITHUB_ZONDER_TOKEN_MS) return { sha: cache.sha, fout: null };
   try {
     const r = await githubMainSha(cache?.etag ?? null);
-    if (r.status === "ongewijzigd") return cache ? { sha: cache.sha, fout: null } : { sha: null, fout: "GitHub meldde ongewijzigd zonder bewaard antwoord" };
-    await kvSet(K_MAIN_CACHE, { sha: r.sha, etag: r.etag }).catch(() => undefined);
+    if (r.status === "ongewijzigd") {
+      if (!cache) return { sha: null, fout: "GitHub meldde ongewijzigd zonder bewaard antwoord" };
+      await kvSet(K_MAIN_CACHE, { ...cache, at: nu }).catch(() => undefined);
+      return { sha: cache.sha, fout: null };
+    }
+    await kvSet(K_MAIN_CACHE, { sha: r.sha, etag: r.etag, at: nu }).catch(() => undefined);
     return { sha: r.sha, fout: null };
   } catch (e) {
     return { sha: null, fout: (e as Error).message };
   }
 }
-
 /** Ligt main voor op live, en welke migraties komen mee? Per paar één keer opgehaald en bewaard (het antwoord verandert nooit). */
 async function leesVergelijking(live: string, main: string): Promise<{ vergelijking: string; nieuweMigraties: string[] } | null> {
   if (live === main) return { vergelijking: "identical", nieuweMigraties: [] };
-  const sleutel = `${K_VERGELIJK}${live.slice(0, 12)}:${main.slice(0, 12)}`;
-  const bewaard = await kvGet<{ vergelijking: string; nieuweMigraties: string[] }>(sleutel).catch(() => null);
-  if (bewaard) return bewaard;
+  const bewaard = await kvGet<{ live: string; main: string; vergelijking: string; nieuweMigraties: string[] }>(K_VERGELIJK).catch(() => null);
+  if (bewaard && bewaard.live === live && bewaard.main === main) return { vergelijking: bewaard.vergelijking, nieuweMigraties: bewaard.nieuweMigraties };
   try {
     const nieuw = await githubVergelijk(live, main);
-    await kvSet(sleutel, nieuw).catch(() => undefined);
+    await kvSet(K_VERGELIJK, { live, main, ...nieuw }).catch(() => undefined);
     return nieuw;
   } catch {
     return null;
   }
 }
-
 /** De harde stop: de Auto-uitrol gaat zelf UIT (dezelfde vlag als de schakelaar in Beheer), de noodrem krijgt de reden, een regel in het foutenlogboek; de Te-doen-taak volgt uit de stand. */
 async function hardeStop(stand: AutoStand, sha: string, reden: string, nu: number): Promise<AutoStand> {
   const op = new Date(nu).toISOString();
@@ -99,30 +104,17 @@ export interface RondeUitslag {
   noodrem: boolean;
 }
 
-/** Het slot om één ronde: nx-set in de KV; een slot ouder dan 10 minuten is van een vastgelopen ronde en wordt overgenomen. */
-async function neemRondeSlot(nu: number): Promise<boolean> {
-  try {
-    const mijn = { op: new Date(nu).toISOString() };
-    if (await kvSetIfAbsent(K_RONDE_SLOT, mijn)) return true;
-    const bestaand = await kvGet<{ op?: string }>(K_RONDE_SLOT);
-    if (!slotVrij(bestaand, nu)) return false;
-    await kvSet(K_RONDE_SLOT, mijn);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 /** Eén ronde. Gooit niet: een storing wordt een besluit "wacht" met de reden. */
 export async function autoUitrolRonde(nu: number = Date.now()): Promise<RondeUitslag> {
   const [aan, noodrem] = await Promise.all([featureEnabled("auto-uitrol").catch(() => false), noodremAan().catch(() => true)]);
-  if (!(await neemRondeSlot(nu))) {
+  const slotToken = await neemRondeSlot(nu);
+  if (!slotToken) {
     return { besluit: { actie: "wacht", reden: "Een vorige ronde loopt nog (of de opslag is niet bereikbaar); deze ronde doet niets." }, aan, noodrem };
   }
   try {
     return await ronde(nu, aan, noodrem);
   } finally {
-    await kvDelete(K_RONDE_SLOT).catch(() => undefined);
+    await geefRondeSlotVrij(slotToken);
   }
 }
 
@@ -143,7 +135,7 @@ async function ronde(nu: number, aan: boolean, noodrem: boolean): Promise<RondeU
   if (noodrem || !aan) return klaar(beslis({ nu, aan, noodrem, liveSha: null, mainSha: null, stand, controle: "onbekend", nieuweMigraties: [], uitrolBezig: false, livezetter: null, vrijGeheugenMb: null }));
 
   const live = liveVersie();
-  const [liveStand, main] = await Promise.all([leesLive().catch(() => null), leesMain()]);
+  const [liveStand, main] = await Promise.all([leesLive().catch(() => null), leesMain(nu)]);
   const mainSha = main.sha;
   const vergelijk = live && mainSha ? await leesVergelijking(live.sha, mainSha) : null;
   stand = zietMain(stand, mainSha, nu);
@@ -187,6 +179,7 @@ async function ronde(nu: number, aan: boolean, noodrem: boolean): Promise<RondeU
       versie: live?.sha ?? null,
       gezond: await appGezond(),
       liveStaat: liveStand?.status && liveStand.status.id === nc.id ? liveStand.status.staat : null,
+      rondgangGestart: nc.rondgangGestart,
       rondgang: rondgang ? { at: rondgang.at, totaal: rondgang.totaal, ok: rondgang.ok, problemen: rondgang.problemen.length } : null,
     });
     if (na.uitslag === "stop") {
