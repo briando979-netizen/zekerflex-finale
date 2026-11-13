@@ -141,6 +141,21 @@ export function trageQueryNiveau(ms: number, sql: string): "info" | "warn" {
   return ms < BEKEND_TRAAG_MAX_MS && BEKEND_TRAAG.has(queryVorm(sql)) ? "info" : "warn";
 }
 
+const TABEL = String.raw`(?:"?[A-Za-z_]\w*"?\.)?"?([A-Za-z_]\w*)"?`;
+
+/**
+ * Soort en eerste tabel van een query, voor de groep in het foutenlogboek: `SELECT RagChunk`, `UPDATE Shift`.
+ * Alleen de eerste FROM / UPDATE / INSERT INTO telt, nooit waarden. Een vorm die we niet kennen geeft null:
+ * dan blijft de melding in de bestaande groep.
+ */
+export function queryTabel(sql: string): string | null {
+  const soort = sql.trim().match(/^(SELECT|UPDATE|INSERT|DELETE)\b/i)?.[1]?.toUpperCase();
+  if (!soort) return null;
+  const na = soort === "UPDATE" ? String.raw`UPDATE\s+(?:ONLY\s+)?` : soort === "INSERT" ? String.raw`INSERT\s+INTO\s+` : String.raw`\bFROM\s+(?:ONLY\s+)?`;
+  const naam = sql.match(new RegExp(na + TABEL, "i"))?.[1];
+  return naam ? `${soort} ${naam}` : null;
+}
+
 export interface ApmSnapshot {
   sinds: string;
   laatsteUur: { verzoeken: number; fouten: number; gemMs: number };
