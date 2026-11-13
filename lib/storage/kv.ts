@@ -30,6 +30,15 @@ export async function kvSet(key: string, value: unknown): Promise<void> {
   });
 }
 
+/**
+ * Alleen schrijven als de sleutel er nog niet is (INSERT ... ON CONFLICT DO NOTHING). Geeft true als wij hem schreven, false als
+ * iemand eerder was: dan blijft diens waarde staan. Voor een slot of een verzoek dat niet overschreven mag worden.
+ */
+export async function kvSetIfAbsent(key: string, value: unknown): Promise<boolean> {
+  const res = await prisma.keyValueStore.createMany({ data: [{ key, value: value as Prisma.InputJsonValue }], skipDuplicates: true });
+  return res.count === 1;
+}
+
 export async function kvDelete(key: string): Promise<void> {
   await prisma.keyValueStore.deleteMany({ where: { key } });
 }
