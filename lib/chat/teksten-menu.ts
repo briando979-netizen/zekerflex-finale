@@ -36,6 +36,7 @@ export const MENU_NL = {
   deleteChat: "Verwijder chat",
   markUnread: "Markeer als ongelezen",
   markRead: "Markeer als gelezen",
+  mediaLinksDocs: "Media, links en documenten",
   deleteConfirm: "Chat verwijderen? Hij verdwijnt uit je lijst tot er een nieuw bericht komt.",
   pinSetTitle: "Kies een chat-pincode",
   pinUnlockTitle: "Vergrendelde chats",
