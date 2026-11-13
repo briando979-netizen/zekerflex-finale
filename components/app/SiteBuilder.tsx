@@ -13,6 +13,7 @@ import { DomeinZoeker } from "@/components/domeinen/DomeinZoeker";
 import { NietInIphone } from "@/components/app/NietInIphone";
 import { IdeeKaart } from "@/components/studio/IdeeKaart";
 import { AssistentKaart } from "@/components/studio/AssistentKaart";
+import { BlokTekstHulp } from "@/components/studio/BlokTekstHulp";
 
 // ---------------------------------------------------------------------------
 // Website bouwen — the builder for a company's own site. Start from a sector
@@ -1139,6 +1140,18 @@ function BlockEditor({ block, site, onChange, onClose, onMedia }: { block: Block
       <textarea className="field-input" rows={6} value={value} maxLength={4000} onChange={(e) => set(e.target.value)} />
     </Field>
   );
+  // "Schrijf met AI": een voorstel voor de kop en de tekst van dit blok; er verandert niets tot de ondernemer het gebruikt
+  const schrijfHulp = (huidig: string) => (
+    <BlokTekstHulp
+      key={block.id}
+      soort={BLOCK_LABELS[block.type]}
+      kop={(block.props as { kop: string }).kop}
+      tekst={huidig}
+      bedrijf={site.bedrijf.naam}
+      plaats={site.bedrijf.plaats}
+      onGebruik={(n) => onChange({ ...block, props: { ...block.props, kop: n.kop, tekst: n.tekst } } as Block)}
+    />
+  );
   let fields: ReactNode = null;
   switch (block.type) {
     case "hero":
@@ -1149,6 +1162,7 @@ function BlockEditor({ block, site, onChange, onClose, onMedia }: { block: Block
         <>
           {kop}
           {tekst(p.tekst, (v) => set({ tekst: v }))}
+          {schrijfHulp(p.tekst)}
           <Field label="Tekst op de knop (leeg = geen knop)"><input className="field-input" value={p.knop} maxLength={200} onChange={(e) => set({ knop: e.target.value })} /></Field>
           <LinkField value={p.knopLink} site={site} onChange={(v) => set({ knopLink: v })} />
           {block.type === "hero" && <PhotoPicker value={block.props.foto} site={site} onMedia={onMedia} onPick={(foto) => onChange({ ...block, props: { ...block.props, foto } })} />}
@@ -1161,6 +1175,7 @@ function BlockEditor({ block, site, onChange, onClose, onMedia }: { block: Block
         <>
           {kop}
           {tekst(block.props.tekst, (v) => onChange({ ...block, props: { ...block.props, tekst: v } }))}
+          {schrijfHulp(block.props.tekst)}
         </>
       );
       break;
@@ -1169,6 +1184,7 @@ function BlockEditor({ block, site, onChange, onClose, onMedia }: { block: Block
         <>
           {kop}
           {tekst(block.props.tekst, (v) => onChange({ ...block, props: { ...block.props, tekst: v } }))}
+          {schrijfHulp(block.props.tekst)}
           <label className="flex items-center gap-2 text-sm text-neutralx-700">
             <input type="checkbox" checked={block.props.fotoLinks} onChange={(e) => onChange({ ...block, props: { ...block.props, fotoLinks: e.target.checked } })} className="h-4 w-4 accent-brand-600" />
             Foto links van de tekst
