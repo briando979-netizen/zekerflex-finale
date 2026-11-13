@@ -139,7 +139,12 @@ export function voerOpdrachtUit(tekst: string, doc: AssistentDoc, paginaId: stri
     }
 
     // 2. een blok erbij op de pagina die open staat
-    const blok = voegtToe && !/(?:^|\s)(?:kleur|hoeken|lettertype|letters|stijl)(?:\s|$)/.test(zin) ? BLOKKEN.find(([, woorden]) => heeft(zin, woorden)) : undefined;
+    // "maak de knoppen oranje" gaat over de kleur, niet over een blok met knoppen: een kleur in de zin telt als uiterlijk,
+    // tenzij er echt "toe", "erbij" of "blok" staat
+    const noemtKleur = /#[0-9a-f]{6}/.test(zin) || KLEUREN.some(([n]) => zin.includes(n));
+    const wilErbij = /(?:^|\s)(?:toe|erbij|blok)(?:\s|$)/.test(zin);
+    const overUiterlijk = /(?:^|\s)(?:kleur|hoeken|lettertype|letters|stijl)(?:\s|$)/.test(zin) || (noemtKleur && !wilErbij);
+    const blok = voegtToe && !overUiterlijk ? BLOKKEN.find(([, woorden]) => heeft(zin, woorden)) : undefined;
     if (blok) {
       const pagina = pages.find((p) => p.id === doel);
       if (!pagina) {
