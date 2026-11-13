@@ -271,7 +271,7 @@ export function KostenBeheer({ initieel, transip, financienMaandCent }: { initie
           ]}
         />
         <ul className="mt-3 space-y-1 text-xs" style={{ color: "var(--a-mute)" }}>
-          {t.onbekend > 0 && <li>{t.onbekend} posten met 'bedrag onbekend' staan in de lijst maar tellen niet mee: het totaal is dus minimaal.</li>}
+          {t.onbekend > 0 && <li>{t.onbekend} posten met “bedrag onbekend” staan in de lijst maar tellen niet mee: het totaal is dus minimaal.</li>}
           {t.eenmalig > 0 && <li>{t.eenmalig} eenmalige post(en) tellen niet mee in de maand- en jaartotalen.</li>}
           {t.omgerekend > 0 && <li>{t.omgerekend} post(en) in dollars zijn omgerekend met de aanname 1 USD = {String(USD_NAAR_EUR).replace(".", ",")} EUR (geen bankkoers).</li>}
           <li>Jaarbedragen staan per maand als een twaalfde, maandbedragen per jaar als twaalf keer.</li>
