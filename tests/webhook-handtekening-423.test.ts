@@ -21,7 +21,7 @@ describe("ongeldige webhook-handtekening: 423 met eigen code", () => {
     expect(await res.json()).toEqual({ error: { code: "handtekening_ongeldig", message: "Ongeldige handtekening" } });
   });
 
-  it.each(["voice", "gather", "menu", "sms", "status"])("Twilio-route %s weigert met 423 en niet met 403", (naam) => {
+  it.each(["voice", "gather", "menu", "sms", "status", "wachtrij", "wachtrij/klaar", "wachtrij/medewerker", "terugbellen"])("Twilio-route %s weigert met 423 en niet met 403", (naam) => {
     const bron = lees(`app/api/telephony/${naam}/route.ts`);
     expect(bron).toMatch(/if \(!signatureValid\(request, params\)\) return handtekeningOngeldigTekst\(\);/);
     expect(bron).not.toMatch(/status: 403/);
