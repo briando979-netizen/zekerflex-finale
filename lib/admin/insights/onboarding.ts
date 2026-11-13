@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { kvGetMany } from "@/lib/storage/kv";
 import { kindOf } from "@/lib/admin/insights/people";
 import { isTestAccount, type OnboardingRij } from "@/lib/admin/onboarding-model";
+import { isEigenTestAccount } from "@/lib/admin/eigen-test-kern";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
 import { TENANT_APPROVAL_PREFIX, TENANT_BEWIJS_PREFIX, verificatieUitFeiten } from "@/lib/company/verified";
 import { herinneringenVerstuurd } from "@/lib/onboarding/reminders";
 
@@ -45,6 +47,8 @@ export async function onboardingData(opts: { testMeetellen: boolean; alleenId?: 
   });
 
   type Gebruiker = (typeof users)[number];
+  // in het beheer gemarkeerd als eigen test (zelf of via een bedrijf): telt niet mee (lib/admin/eigen-test-kern.ts)
+  const eigenTest = await leesEigenTest();
   const soortVan = (u: Gebruiker) => kindOf(u.memberships.map((m) => m.role));
   const werkgeverTenant = (u: Gebruiker) =>
     (u.memberships.find((m) => m.role === "HQ_ADMIN") ?? u.memberships.find((m) => m.role === "LOCAL_MANAGER") ?? u.memberships.find((m) => m.role === "DISPUTE_MANAGER"))?.tenantId ?? null;
@@ -54,7 +58,13 @@ export async function onboardingData(opts: { testMeetellen: boolean; alleenId?: 
     return soort === "flexwerker" || soort === "opdrachtgever";
   });
   const getest = (u: Gebruiker) =>
-    isTestAccount({ email: u.email, rollen: u.memberships.map((m) => m.role), disabledAt: u.disabledAt, tenantNamen: u.memberships.map((m) => m.tenant.name) });
+    isTestAccount({
+      email: u.email,
+      rollen: u.memberships.map((m) => m.role),
+      disabledAt: u.disabledAt,
+      tenantNamen: u.memberships.map((m) => m.tenant.name),
+      eigenTest: isEigenTestAccount(eigenTest, { userId: u.id, tenantIds: u.memberships.map((m) => m.tenantId) }),
+    });
   // Beheerders en sales zitten niet in de lijst (soort "beheerder"), dus alleen de rest kan uitgesloten worden.
   const geteld = opts.testMeetellen ? meedoen : meedoen.filter((u) => !getest(u));
 

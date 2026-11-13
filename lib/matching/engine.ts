@@ -21,6 +21,8 @@ import { loadWorkerPrefs, prefsAllowShift, prefsAllowTravel, type WorkerPrefs } 
 import { dispatchWebhook } from "@/lib/webhooks/dispatcher";
 import { invitedPoolMemberUserIds } from "@/lib/pools/store";
 import { isTestklus } from "@/lib/shifts/testklus";
+import { isEigenTestKlus } from "@/lib/admin/eigen-test-kern";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
 import { testklusOntvangers } from "@/lib/shifts/testklus-db";
 import { zonderTestwerker } from "@/lib/testwerker/adres";
 import {
@@ -252,7 +254,8 @@ export async function runMatchingForShift(
       shift.visibility === "POOL_ONLY" ? await invitedPoolMemberUserIds(shift.id) : null;
     // Een testklus nooit als voorstel (of automatisch ingepland) naar echte
     // werkers, alleen naar interne accounts (lib/shifts/testklus-db.ts).
-    if (isTestklus({ title: shift.title, bedrijf: shift.branch.tenant.name })) {
+    const eigenTestKlus = isEigenTestKlus(await leesEigenTest(), { tenantId: shift.branch.tenantId, createdAt: shift.createdAt });
+    if (isTestklus({ title: shift.title, bedrijf: shift.branch.tenant.name, eigenTest: eigenTestKlus })) {
       const intern = new Set((await testklusOntvangers(shift.branch.tenantId)).map((o) => o.userId));
       restrictToUserIds = (restrictToUserIds ?? [...intern]).filter((id) => intern.has(id));
     }

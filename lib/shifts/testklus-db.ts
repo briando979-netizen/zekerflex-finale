@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { isTestklus } from "@/lib/shifts/testklus";
+import { isEigenTestKlus } from "@/lib/admin/eigen-test-kern";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
 
 // ---------------------------------------------------------------------------
 // Testklussen en echte werkers. Achter een testklus (lib/shifts/testklus.ts)
@@ -57,16 +59,22 @@ export async function testklusOntvangers(tenantId: string): Promise<TestklusOntv
  * ("test" in de titel of de bedrijfsnaam), precies beslissen met isTestklus.
  */
 export async function testklusIds(since: Date): Promise<string[]> {
+  // ook de bedrijven die het beheer als eigen test markeerde (lib/admin/eigen-test-kern.ts): hun klussen van daarna
+  const eigenTest = await leesEigenTest();
+  const eigen = Object.keys(eigenTest.tenants);
   const rows = await prisma.shift.findMany({
     where: {
       startsAt: { gte: since },
       OR: [
         { title: { contains: "test", mode: "insensitive" } },
         { branch: { tenant: { name: { contains: "test", mode: "insensitive" } } } },
+        ...(eigen.length ? [{ branch: { tenantId: { in: eigen } } }] : []),
       ],
     },
-    select: { id: true, title: true, branch: { select: { tenant: { select: { name: true } } } } },
+    select: { id: true, title: true, createdAt: true, branch: { select: { tenantId: true, tenant: { select: { name: true } } } } },
     take: 5000,
   });
-  return rows.filter((s) => isTestklus({ title: s.title, bedrijf: s.branch.tenant.name })).map((s) => s.id);
+  return rows
+    .filter((s) => isTestklus({ title: s.title, bedrijf: s.branch.tenant.name, eigenTest: isEigenTestKlus(eigenTest, { tenantId: s.branch.tenantId, createdAt: s.createdAt }) }))
+    .map((s) => s.id);
 }

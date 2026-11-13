@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { haversineMeters } from "@/lib/geo/geofencing";
 import { isTestklus } from "@/lib/shifts/testklus";
+import { isEigenTestKlus, type EigenTest } from "@/lib/admin/eigen-test-kern";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
 
 // ---------------------------------------------------------------------------
 // Open klussen as the public (not logged-in) web sees them: /klussen, the city
@@ -42,7 +44,7 @@ const select = {
   viaUitzendbureau: true,
   createdAt: true,
   requiredSkill: { select: { name: true } },
-  branch: { select: { city: true, postalCode: true, latitude: true, longitude: true, tenant: { select: { name: true } } } },
+  branch: { select: { city: true, postalCode: true, latitude: true, longitude: true, tenantId: true, tenant: { select: { name: true } } } },
 } as const;
 
 type Row = {
@@ -56,10 +58,10 @@ type Row = {
   viaUitzendbureau: boolean;
   createdAt: Date;
   requiredSkill: { name: string } | null;
-  branch: { city: string; postalCode: string; latitude: number; longitude: number; tenant: { name: string } };
+  branch: { city: string; postalCode: string; latitude: number; longitude: number; tenantId: string; tenant: { name: string } };
 };
 
-const toPublic = (s: Row): PublicShift => ({
+const toPublic = (s: Row, eigenTest: EigenTest | null = null): PublicShift => ({
   id: s.id,
   title: s.title,
   description: s.description,
@@ -75,7 +77,7 @@ const toPublic = (s: Row): PublicShift => ({
   viaUitzendbureau: s.viaUitzendbureau,
   createdAt: s.createdAt,
   skill: s.requiredSkill?.name ?? null,
-  testklus: isTestklus({ title: s.title, bedrijf: s.branch.tenant.name }),
+  testklus: isTestklus({ title: s.title, bedrijf: s.branch.tenant.name, eigenTest: isEigenTestKlus(eigenTest, { tenantId: s.branch.tenantId, createdAt: s.createdAt }) }),
 });
 
 export async function publicOpenShifts(opts: { near?: { lat: number; lng: number; km: number }; take?: number; tenantId?: string } = {}): Promise<PublicShift[]> {
@@ -104,7 +106,9 @@ export async function publicOpenShifts(opts: { near?: { lat: number; lng: number
     select,
   })) as Row[];
   // Testklussen horen niet in openbare lijsten (en dus niet bij Google); op de eigen site van een bedrijf wel.
-  let out = rows.map(toPublic).filter((s) => opts.tenantId || !s.testklus);
+  // klussen van een eigen-testbedrijf (van na de markering) gelden als testklus (lib/admin/eigen-test-kern.ts)
+  const eigenTest = await leesEigenTest();
+  let out = rows.map((s) => toPublic(s, eigenTest)).filter((s) => opts.tenantId || !s.testklus);
   if (near) {
     const { lat, lng, km } = near;
     out = out.filter((s) => haversineMeters({ latitude: lat, longitude: lng }, { latitude: s.latitude, longitude: s.longitude }) <= km * 1000);
@@ -121,7 +125,7 @@ export async function publicShift(id: string): Promise<PublicShift | null> {
     where: { id, status: { in: [...OPEN] }, visibility: "PUBLIC", startsAt: { gt: new Date() } },
     select,
   })) as Row | null;
-  return s ? toPublic(s) : null;
+  return s ? toPublic(s, await leesEigenTest()) : null;
 }
 
 /** schema.org JobPosting — what makes a klus show up in Google's job search. */

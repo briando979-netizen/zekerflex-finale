@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { kvGetMany } from "@/lib/storage/kv";
 import { isTestAccount } from "@/lib/admin/onboarding-model";
+import { isEigenTestAccount } from "@/lib/admin/eigen-test-kern";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
 import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
 import { idSoortSleutel, type IdSoortTelling } from "@/lib/kyc/id-soort-meting";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
@@ -49,12 +51,15 @@ export async function werkerTrechterData(nu: Date = new Date()): Promise<WerkerT
     where: { createdAt: { gte: sinds, lte: nu }, memberships: { some: { role: "FREELANCER" } } },
     orderBy: { createdAt: "desc" },
     take: WERKER_LIMIET + 1,
-    select: { id: true, email: true, createdAt: true, disabledAt: true, memberships: { select: { role: true } } },
+    select: { id: true, email: true, createdAt: true, disabledAt: true, memberships: { select: { role: true, tenantId: true } } },
   });
+  // in het beheer gemarkeerd als eigen test (zelf of via een bedrijf): telt niet mee
+  const eigenTest = await leesEigenTest();
+  const eigen = (u: { id: string; memberships: { tenantId: string }[] }) => isEigenTestAccount(eigenTest, { userId: u.id, tenantIds: u.memberships.map((m) => m.tenantId) });
   const afgekapt = gebruikers.length > WERKER_LIMIET;
   const echt = gebruikers
     .slice(0, WERKER_LIMIET)
-    .filter((u) => !u.id.startsWith("usr_zf_") && !isTestAccount({ email: u.email, rollen: u.memberships.map((m) => m.role), disabledAt: u.disabledAt, tenantNamen: [] }));
+    .filter((u) => !u.id.startsWith("usr_zf_") && !isTestAccount({ email: u.email, rollen: u.memberships.map((m) => m.role), disabledAt: u.disabledAt, tenantNamen: [], eigenTest: eigen(u) }));
   const ids = echt.map((u) => u.id);
 
   // QA- en beheersessies (ook die van een inspectiesessie op een werkeraccount) tellen nergens mee
@@ -86,13 +91,13 @@ export async function werkerTrechterData(nu: Date = new Date()): Promise<WerkerT
   const anderen = codeGebruikers.length
     ? await prisma.user.findMany({
         where: { id: { in: codeGebruikers } },
-        select: { id: true, email: true, disabledAt: true, memberships: { select: { role: true } } },
+        select: { id: true, email: true, disabledAt: true, memberships: { select: { role: true, tenantId: true } } },
       })
     : [];
   const echteIds = new Set([
     ...ids,
     ...anderen
-      .filter((u) => !u.id.startsWith("usr_zf_") && !isTestAccount({ email: u.email, rollen: u.memberships.map((m) => m.role), disabledAt: u.disabledAt, tenantNamen: [] }))
+      .filter((u) => !u.id.startsWith("usr_zf_") && !isTestAccount({ email: u.email, rollen: u.memberships.map((m) => m.role), disabledAt: u.disabledAt, tenantNamen: [], eigenTest: eigen(u) }))
       .map((u) => u.id),
   ]);
   const codes: CodeRij[] = codeRijen

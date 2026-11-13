@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { getPrincipal, hasRole } from "@/lib/auth";
+import { EigenTestSchakelaar } from "@/components/admin/EigenTestSchakelaar";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
 import { prisma } from "@/lib/prisma";
 import { companyActivity } from "@/lib/admin/insights/detail";
 import { count, dateNl, dateTimeNl, euro, euroExact, percentOf } from "@/lib/admin/format";
@@ -73,6 +75,8 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
 
   const hqAdmin = tenant.memberships.find((m) => m.role === "HQ_ADMIN")?.user;
   const blocked = tenant.memberships.length > 0 && tenant.memberships.every((m) => m.user.disabledAt);
+  // "eigen test (telt niet mee)": een bedrijf van de eigenaar zelf, zonder het te hernoemen (lib/admin/eigen-test-kern.ts)
+  const eigenTest = await leesEigenTest();
 
   const invoiceRows: TableRow[] = activity.invoices.map((inv) => ({
     id: inv.id,
@@ -133,6 +137,7 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
                     : "Niet geverifieerd, alleen testklus"}
               </Pill>
             </div>
+            <EigenTestSchakelaar soort="tenant" id={tenant.id} sinds={eigenTest.tenants[tenant.id] ?? null} />
           </div>
         </div>
         {hqAdmin && <CompanyActions tenantId={tenant.id} contactUserId={hqAdmin.id} blocked={blocked} verifiedVia={verification.via} />}

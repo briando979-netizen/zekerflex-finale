@@ -17,6 +17,8 @@ import { overlapsAny } from "@/lib/shifts/worker-overlap";
 import { matchingAlert } from "@/lib/matching/job-alerts";
 import { getKlusBeelden, type KlusBeeld } from "@/lib/profile/store";
 import { isTestklus } from "@/lib/shifts/testklus";
+import { isEigenTestKlus } from "@/lib/admin/eigen-test-kern";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
 
 // ---------------------------------------------------------------------------
 // Freelancer marketplace. Read-only queries + a lightweight match score.
@@ -353,9 +355,11 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
   const ratingByTenant = await companyRatings(visible.map((s) => s.branch.tenantId));
   // a missing logo never costs the list: the card falls back to the branch photo
   const beeldByTenant = await getKlusBeelden(visible.map((s) => s.branch.tenantId)).catch(() => new Map<string, KlusBeeld>());
+  // klussen van een eigen-testbedrijf (van na de markering) gelden als testklus (lib/admin/eigen-test-kern.ts)
+  const eigenTest = await leesEigenTest();
   const shifts: MarketplaceShift[] = visible.map((s) => {
       const hours = (s.endsAt.getTime() - s.startsAt.getTime()) / 3_600_000 - s.breakMinutes / 60;
-      const testklus = isTestklus({ title: s.title, bedrijf: s.branch.tenant.name });
+      const testklus = isTestklus({ title: s.title, bedrijf: s.branch.tenant.name, eigenTest: isEigenTestKlus(eigenTest, { tenantId: s.branch.tenantId, createdAt: s.createdAt }) });
       // "3 nieuw" telt alleen echt werk, geen testklussen
       if (s.createdAt.getTime() > lastSeen && !testklus) newSinceLastVisit += 1;
       return {
@@ -461,6 +465,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
       hourlyRateCents: true,
       positions: true,
       branchId: true,
+      createdAt: true,
       requiredSkill: { select: { name: true } },
       branch: {
         select: {
@@ -605,7 +610,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
       myOffer: null,
       fastPay: (await fastPayAvailableFor([row.branch.tenantId])).get(row.branch.tenantId) ?? false,
       viaUitzendbureau: row.viaUitzendbureau,
-      testklus: isTestklus({ title: row.title, bedrijf: row.branch.tenant.name }),
+      testklus: isTestklus({ title: row.title, bedrijf: row.branch.tenant.name, eigenTest: isEigenTestKlus(await leesEigenTest(), { tenantId: row.branch.tenantId, createdAt: row.createdAt }) }),
     } satisfies MarketplaceShift);
   if (ownOffer && ownOffer.status !== "withdrawn") {
     // begonnen zonder keuze: niet uitgekozen, niet meer "in afwachting" (lib/offers/verval.ts)

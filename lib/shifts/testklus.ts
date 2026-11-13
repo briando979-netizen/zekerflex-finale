@@ -8,7 +8,9 @@
 // Puur bestand: de openbare pagina's (server) en de werker-app delen dit.
 // ---------------------------------------------------------------------------
 
-export function isTestklus(s: { title: string; bedrijf?: string | null }): boolean {
+export function isTestklus(s: { title: string; bedrijf?: string | null; eigenTest?: boolean }): boolean {
+  // het bedrijf is in het beheer gemarkeerd als eigen test en de klus is van daarna (lib/admin/eigen-test-kern.ts)
+  if (s.eigenTest) return true;
   if (/\btest[\s-]?klus\b/i.test(s.title)) return true;
   return /^\s*test(\s|$)/i.test(s.bedrijf ?? "");
 }

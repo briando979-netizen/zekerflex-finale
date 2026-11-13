@@ -10,6 +10,8 @@ import { payoutEligibility } from "@/lib/fiscal/eligibility";
 import { isInvitedToPoolOnlyShift } from "@/lib/pools/store";
 import { findOverlappingShift, overlapMessageSelf, overlapParams } from "@/lib/shifts/worker-overlap";
 import { isTestklus } from "@/lib/shifts/testklus";
+import { isEigenTestKlus } from "@/lib/admin/eigen-test-kern";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
 import { isTestwerker } from "@/lib/testwerker/adres";
 
 // ---------------------------------------------------------------------------
@@ -76,13 +78,15 @@ export async function applyToShift(
       viaUitzendbureau: true,
       visibility: true,
       title: true,
+      createdAt: true,
       branch: { select: { tenantId: true, latitude: true, longitude: true, geofenceRadiusMeters: true, tenant: { select: { name: true } } } },
       _count: { select: { assignments: { where: { cancelledAt: null } } } },
     },
   });
   if (!shift) throw AppError.notFound("Deze dienst bestaat niet meer.").metSleutel("apply.bestaatNiet");
   // het testwerkeraccount van de eigenaar (lib/testwerker/adres.ts) reageert alleen op testklussen, nooit op echt werk
-  if (isTestwerker(profile.user.email) && !isTestklus({ title: shift.title, bedrijf: shift.branch.tenant.name })) {
+  const eigenTestKlus = isEigenTestKlus(await leesEigenTest(), { tenantId: shift.branch.tenantId, createdAt: shift.createdAt });
+  if (isTestwerker(profile.user.email) && !isTestklus({ title: shift.title, bedrijf: shift.branch.tenant.name, eigenTest: eigenTestKlus })) {
     throw AppError.forbidden("Met het testaccount kun je alleen op testklussen reageren.").metSleutel("apply.alleenTestklus");
   }
   if (shift.viaUitzendbureau && eligible.track !== "payroll") {
