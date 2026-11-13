@@ -34,6 +34,8 @@ export const BUBBLE_NL = {
   edit: "Bewerken",
   deleteForAll: "Verwijderen voor iedereen",
   deleteConfirm: "Dit bericht voor iedereen verwijderen?",
+  deleteForMe: "Verwijderen voor mij",
+  hideConfirm: "Dit bericht alleen voor jou verwijderen? De ander houdt het.",
   starred: "bewaard",
   auto: "automatisch",
   edited: "bewerkt",

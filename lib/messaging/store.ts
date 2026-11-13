@@ -80,6 +80,9 @@ export interface ChatMessage {
 /** Een eigen tekstbericht mag je zo lang na het versturen nog bewerken (afspraken veranderen niet ongemerkt achteraf). */
 export const EDIT_WINDOW_MS = 24 * 3_600_000;
 
+/** Voor iedereen verwijderen kan tot 48 uur na het versturen; daarna alleen nog voor jezelf (beheer mag altijd). */
+export const DELETE_WINDOW_MS = 48 * 3_600_000;
+
 export type MessageExtra = Partial<
   Pick<ChatMessage, "attachment" | "location" | "call" | "replyTo" | "auto" | "forwarded" | "poll">
 >;

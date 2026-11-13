@@ -3,14 +3,15 @@ import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { isPlatformAdmin } from "@/lib/messaging/contacts";
-import { canAccess, getThread, postMessage, setThreadMeta } from "@/lib/messaging/store";
+import { canAccess, getThread, markThreadRead, postMessage, setThreadMeta } from "@/lib/messaging/store";
 import { applyThreadAction, setBlocked, type ThreadAction } from "@/lib/messaging/thread-prefs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const schema = z.union([
-  z.object({ action: z.enum(["archive", "unarchive", "lock", "unlock", "favorite", "unfavorite", "unmute", "clear", "delete"]) }),
+  z.object({ action: z.enum(["archive", "unarchive", "lock", "unlock", "favorite", "unfavorite", "unmute", "clear", "delete", "mark-unread", "mark-read"]) }),
+  z.object({ action: z.literal("hide-message"), messageId: z.string().min(1).max(40) }),
   z.object({ action: z.literal("mute"), hours: z.number().int().positive().max(24 * 365).nullable() }),
   z.object({ action: z.enum(["list-add", "list-remove"]), list: z.string().trim().min(1).max(30) }),
   z.object({ action: z.enum(["block", "unblock"]) }),
@@ -45,6 +46,8 @@ export async function POST(request: Request, props: { params: Promise<{ threadId
     } catch (err) {
       throw AppError.validation((err as Error).message);
     }
+    // "Markeer als gelezen" vanuit de lijst: ook echt gelezen, net als het gesprek openen
+    if (body.action === "mark-read") await markThreadRead(thread.id, p.userId);
     return NextResponse.json({ ok: true });
   } catch (err) {
     const { status, body } = toErrorBody(err);

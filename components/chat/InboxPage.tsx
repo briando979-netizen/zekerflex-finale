@@ -43,6 +43,7 @@ import {
   canShareScreen,
   dayLabel,
   fmtTime,
+  isOngelezen,
   lastSeenLabel,
   listTime,
   threadMatches,
@@ -409,6 +410,11 @@ function InboxPageInner({
       say(ib.chatGeexporteerd);
       return;
     }
+    // "Markeer als ongelezen" op het open gesprek: eerst terug naar de lijst, anders leest de volgende poll hem meteen weer
+    if (a.action === "mark-unread" && active === threadId) {
+      setActive(null);
+      setPane("list");
+    }
     const r = await fetch(`/api/inbox/${threadId}/prefs`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(a) });
     if (!r.ok) {
       const d = await r.json().catch(() => ({}));
@@ -435,7 +441,7 @@ function InboxPageInner({
     const msg = done[a.action];
     if (msg) say(msg);
     await loadThreads();
-    if (active === threadId && a.action !== "delete") void loadThread(threadId);
+    if (active === threadId && a.action !== "delete" && a.action !== "mark-unread") void loadThread(threadId);
   };
 
   const q = listQuery.trim();
@@ -448,12 +454,12 @@ function InboxPageInner({
         .filter(
           (t) =>
             filter === "all" ||
-            (filter === "unread" && t.unread > 0) ||
+            (filter === "unread" && isOngelezen(t)) ||
             (filter === "fav" && t.favorite) ||
             (filter.startsWith("list:") && t.lists?.includes(filter.slice(5))),
         );
   const archivedCount = threads.filter((t) => t.archived && !t.locked).length;
-  const unreadChats = threads.filter((t) => !t.archived && !t.locked && t.unread > 0).length;
+  const unreadChats = threads.filter((t) => !t.archived && !t.locked && isOngelezen(t)).length;
   const menuThread = menuFor ? (threads.find((t) => t.id === menuFor) ?? null) : null;
 
   const emptyText = q
@@ -605,6 +611,23 @@ function InboxPageInner({
       say(ib.verwijderenMislukt, true);
       void loadThread(active);
     }
+  };
+
+  const hide = async (msg: Msg) => {
+    if (!active) return;
+    const threadId = active;
+    setMessages((prev) => prev.filter((m) => m.id !== msg.id));
+    const r = await fetch(`/api/inbox/${threadId}/prefs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "hide-message", messageId: msg.id }),
+    }).catch(() => null);
+    if (!r?.ok) {
+      say(ib.verwijderenMislukt, true);
+      void loadThread(threadId);
+      return;
+    }
+    say(ib.verborgen);
   };
 
   const doForward = async (toThreadId: string) => {
@@ -873,7 +896,7 @@ function InboxPageInner({
                   {listed.map((t) => {
                     const o = otherOf(t);
                     const pres = presence[o.userId];
-                    const unread = t.unread > 0;
+                    const unread = isOngelezen(t);
                     return (
                       <li key={t.id}>
                         <SwipeRow archived={Boolean(t.archived)} onArchive={() => void doAction(t.id, { action: t.archived ? "unarchive" : "archive" })} onMore={() => setMenuFor(t.id)}>
@@ -908,8 +931,8 @@ function InboxPageInner({
                                 {t.favorite && <span className="text-[11px] text-amber-500" aria-label={ib.favoriet}>★</span>}
                                 {t.muted && <span className="text-[11px]" title={ib.gedemptTitel} aria-label={ib.gedempt}>🔕</span>}
                                 {unread && (
-                                  <span className={`grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px] font-bold text-white ${t.muted ? "bg-neutralx-400" : "bg-[#1DA851]"}`} aria-label={vulIn(ib.ongelezenAantal, { aantal: t.unread })}>
-                                    {t.unread}
+                                  <span className={`grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px] font-bold text-white ${t.muted ? "bg-neutralx-400" : "bg-[#1DA851]"}`} aria-label={t.unread > 0 ? vulIn(ib.ongelezenAantal, { aantal: t.unread }) : ib.gemarkeerdOngelezen}>
+                                    {t.unread > 0 ? t.unread : ""}
                                   </span>
                                 )}
                               </span>
@@ -1143,7 +1166,7 @@ function InboxPageInner({
               ["settings", IconGear, ib.tabSettings],
             ] as const
           ).map(([k, Ico, label]) => {
-            const badge = k === "chats" ? threads.filter((t) => !t.archived && !t.muted && t.unread > 0).length : 0;
+            const badge = k === "chats" ? threads.filter((t) => !t.archived && !t.muted && isOngelezen(t)).length : 0;
             return (
               <button
                 key={k}
@@ -1329,6 +1352,7 @@ function InboxPageInner({
                         onAvatarClick={setCardUser}
                         onReact={react}
                         onDelete={del}
+                        onHide={hide}
                         onEdit={(e) => {
                           setReplyTo(null);
                           setEditing(e);

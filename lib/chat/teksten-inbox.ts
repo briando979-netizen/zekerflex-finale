@@ -40,6 +40,8 @@ export const INBOX_NL = {
   gedempt: "gedempt",
   gedemptTitel: "Gedempt",
   ongelezenAantal: "{aantal} ongelezen",
+  gemarkeerdOngelezen: "Gemarkeerd als ongelezen",
+  verborgen: "Alleen voor jou verwijderd.",
   meerOptiesVoor: "Meer opties voor {naam}",
   // bewaarde berichten en tools
   laden: "Laden…",

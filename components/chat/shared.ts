@@ -60,6 +60,14 @@ export const EDIT_WINDOW_MS = 24 * 3_600_000;
 export const canEdit = (m: Msg, myUserId: string | null | undefined, now = Date.now()): boolean =>
   Boolean(myUserId) && m.from === myUserId && m.kind === "text" && !m.deleted && !m.pending && now - new Date(m.at).getTime() < EDIT_WINDOW_MS;
 
+/** Je eigen bericht voor iedereen verwijderen kan tot 48 uur na het versturen (gelijk aan lib/messaging/store DELETE_WINDOW_MS). */
+export const DELETE_WINDOW_MS = 48 * 3_600_000;
+export const canDeleteForAll = (m: Msg, myUserId: string | null | undefined, now = Date.now()): boolean =>
+  Boolean(myUserId) && m.from === myUserId && !m.deleted && !m.pending && now - new Date(m.at).getTime() < DELETE_WINDOW_MS;
+
+/** Telt als ongelezen: echte ongelezen berichten, of "Markeer als ongelezen" (een stip zonder aantal). */
+export const isOngelezen = (t: Pick<ThreadRow, "unread" | "gemarkeerd">): boolean => t.unread > 0 || Boolean(t.gemarkeerd);
+
 /** Zet reacties op een bericht (of haalt het veld weg als er geen zijn). */
 export function withReactions(m: Msg, reactions: Record<string, string[]>): Msg {
   const next: Msg = { ...m };
@@ -102,6 +110,8 @@ export interface ThreadRow {
   lastMessage: { from: string; text: string; at: string } | null;
   lastMessageAt: string;
   unread: number;
+  /** "Markeer als ongelezen" en geen echte ongelezen berichten */
+  gemarkeerd?: boolean;
   /** per-user chat settings (lib/messaging/thread-prefs.ts) */
   archived?: boolean;
   muted?: boolean;

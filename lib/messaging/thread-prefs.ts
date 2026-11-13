@@ -12,6 +12,8 @@ import { kvGet, kvSet } from "@/lib/storage/kv";
 //   clearedAt  — "Wis chat": messages up to then are hidden
 //   deletedAt  — "Verwijder chat": gone from the list until a new message
 //   blocked    — userIds that can't message this user (and vice versa)
+//   hiddenMsgs — "Verwijderen voor mij": per thread the message ids only this user no longer sees
+//   unreadMark — "Markeer als ongelezen": threads shown as unread until this user opens them
 // KV key "chat-prefs:<userId>".
 // ---------------------------------------------------------------------------
 
@@ -24,15 +26,33 @@ export interface ChatPrefs {
   clearedAt: Record<string, string>;
   deletedAt: Record<string, string>;
   blocked: string[];
+  hiddenMsgs: Record<string, string[]>; // threadId -> messageIds
+  unreadMark: string[];
   pinHash?: string;
 }
 
-const EMPTY: ChatPrefs = { archived: [], muted: {}, locked: [], favorites: [], lists: {}, clearedAt: {}, deletedAt: {}, blocked: [] };
+/** Per thread at most this many "Verwijderen voor mij" ids (the oldest go first). */
+export const HIDDEN_MAX = 500;
+
+// A fresh object every time: the actions below change muted/lists/clearedAt/… in place, and a shared empty object
+// would carry one user's change over to the next user without a record (13 nov: "Wis chat" leaked that way).
+const leeg = (): ChatPrefs => ({
+  archived: [],
+  muted: {},
+  locked: [],
+  favorites: [],
+  lists: {},
+  clearedAt: {},
+  deletedAt: {},
+  blocked: [],
+  hiddenMsgs: {},
+  unreadMark: [],
+});
 const key = (userId: string) => `chat-prefs:${userId}`;
 
 export async function getChatPrefs(userId: string): Promise<ChatPrefs> {
   const p = await kvGet<Partial<ChatPrefs>>(key(userId)).catch(() => null);
-  return { ...EMPTY, ...(p ?? {}) };
+  return { ...leeg(), ...(p ?? {}) };
 }
 
 async function save(userId: string, p: ChatPrefs): Promise<ChatPrefs> {
@@ -44,9 +64,10 @@ const add = (xs: string[], x: string) => (xs.includes(x) ? xs : [...xs, x]);
 const del = (xs: string[], x: string) => xs.filter((y) => y !== x);
 
 export type ThreadAction =
-  | { action: "archive" | "unarchive" | "lock" | "unlock" | "favorite" | "unfavorite" | "unmute" | "clear" | "delete" }
+  | { action: "archive" | "unarchive" | "lock" | "unlock" | "favorite" | "unfavorite" | "unmute" | "clear" | "delete" | "mark-unread" | "mark-read" }
   | { action: "mute"; hours: number | null }
-  | { action: "list-add" | "list-remove"; list: string };
+  | { action: "list-add" | "list-remove"; list: string }
+  | { action: "hide-message"; messageId: string };
 
 export async function applyThreadAction(userId: string, threadId: string, a: ThreadAction): Promise<ChatPrefs> {
   const p = await getChatPrefs(userId);
@@ -80,12 +101,24 @@ export async function applyThreadAction(userId: string, threadId: string, a: Thr
       break;
     case "clear":
       p.clearedAt[threadId] = now;
+      delete p.hiddenMsgs[threadId]; // alles tot nu is toch weg
       break;
     case "delete":
       p.deletedAt[threadId] = now;
       p.clearedAt[threadId] = now;
       p.archived = del(p.archived, threadId);
       p.favorites = del(p.favorites, threadId);
+      p.unreadMark = del(p.unreadMark, threadId);
+      delete p.hiddenMsgs[threadId];
+      break;
+    case "mark-unread":
+      p.unreadMark = add(p.unreadMark, threadId);
+      break;
+    case "mark-read":
+      p.unreadMark = del(p.unreadMark, threadId);
+      break;
+    case "hide-message":
+      p.hiddenMsgs[threadId] = add(p.hiddenMsgs[threadId] ?? [], a.messageId).slice(-HIDDEN_MAX);
       break;
     case "list-add": {
       const name = a.list.trim().slice(0, 30);
@@ -158,6 +191,19 @@ export function visibleFrom(p: ChatPrefs, threadId: string): string | null {
   return a > b ? a : b;
 }
 
+/** "Verwijderen voor mij": the message ids this user no longer sees in this thread. */
+export function hiddenIn(p: ChatPrefs, threadId: string): Set<string> {
+  return new Set(p.hiddenMsgs[threadId] ?? []);
+}
+
+/** Opening a thread ends "Markeer als ongelezen"; only writes when the mark is there. */
+export async function clearUnreadMark(userId: string, threadId: string): Promise<void> {
+  const p = await getChatPrefs(userId);
+  if (!p.unreadMark.includes(threadId)) return;
+  p.unreadMark = del(p.unreadMark, threadId);
+  await save(userId, p);
+}
+
 /* ─────────────── bulk + label management (Instellingen) ─────────────── */
 
 export async function bulkChatAction(
@@ -172,7 +218,10 @@ export async function bulkChatAction(
       for (const id of threadIds) if (!p.locked.includes(id)) p.archived = add(p.archived, id);
       break;
     case "clear-all":
-      for (const id of threadIds) p.clearedAt[id] = now;
+      for (const id of threadIds) {
+        p.clearedAt[id] = now;
+        delete p.hiddenMsgs[id];
+      }
       break;
     case "unmute-all":
       p.muted = {};

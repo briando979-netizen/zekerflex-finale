@@ -18,7 +18,7 @@ import { getUserAvatars } from "@/lib/profile/store";
 import { listContacts } from "@/lib/messaging/contact-book";
 import { maybeAutoReply } from "@/lib/messaging/auto-reply";
 import { notifyNewMessage } from "@/lib/messaging/notify";
-import { checkChatPin, getChatPrefs, isMuted, visibleFrom } from "@/lib/messaging/thread-prefs";
+import { checkChatPin, getChatPrefs, hiddenIn, isMuted, visibleFrom } from "@/lib/messaging/thread-prefs";
 import { chatPrivacy } from "@/lib/messaging/settings";
 import { disappearCutoff } from "@/lib/messaging/store";
 import { scanChatMessage } from "@/lib/agenda/scan";
@@ -52,8 +52,11 @@ async function handleGET(request: Request): Promise<NextResponse> {
         const cut = disappearCutoff(t);
         const own = visibleFrom(prefs, t.id);
         const from = own && cut ? (own > cut ? own : cut) : (own ?? cut);
-        const msgs = (await getMessages(t.id, 300)).filter((m) => !from || m.at > from);
+        const hidden = hiddenIn(prefs, t.id); // "Verwijderen voor mij"
+        const msgs = (await getMessages(t.id, 300)).filter((m) => (!from || m.at > from) && !hidden.has(m.id));
         const unread = unreadForUser(t, msgs, p.userId);
+        // "Markeer als ongelezen": een stip zonder aantal, tot je het gesprek opent
+        const gemarkeerd = unread === 0 && prefs.unreadMark.includes(t.id);
         t.participants.forEach((id) => dirIds.add(id));
         if (t.lastMessage) dirIds.add(t.lastMessage.from);
         return {
@@ -69,6 +72,7 @@ async function handleGET(request: Request): Promise<NextResponse> {
           lastMessage: t.lastMessage && (!from || t.lastMessage.at > from) ? t.lastMessage : null,
           lastMessageAt: t.lastMessageAt,
           unread,
+          gemarkeerd,
           archived: prefs.archived.includes(t.id),
           muted: isMuted(prefs, t.id),
           locked: prefs.locked.includes(t.id),
@@ -101,7 +105,7 @@ async function handleGET(request: Request): Promise<NextResponse> {
       contacts,
       chatPrefs: { lists: Object.keys(prefs.lists), hasPin: Boolean(prefs.pinHash), lockedCount, pinOk, blocked: prefs.blocked },
       // muted and archived chats don't count towards the badge
-      totalUnread: rows.filter((r) => !r.muted && !r.archived).reduce((s, r) => s + r.unread, 0),
+      totalUnread: rows.filter((r) => !r.muted && !r.archived).reduce((s, r) => s + r.unread + (r.gemarkeerd ? 1 : 0), 0),
     });
   } catch (err) {
     const { status, body } = toErrorBody(err);

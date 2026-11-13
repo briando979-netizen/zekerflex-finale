@@ -34,6 +34,8 @@ export const MENU_NL = {
   block: "Blokkeer",
   blockConfirm: "{naam} blokkeren? Jullie kunnen elkaar dan geen berichten meer sturen.",
   deleteChat: "Verwijder chat",
+  markUnread: "Markeer als ongelezen",
+  markRead: "Markeer als gelezen",
   deleteConfirm: "Chat verwijderen? Hij verdwijnt uit je lijst tot er een nieuw bericht komt.",
   pinSetTitle: "Kies een chat-pincode",
   pinUnlockTitle: "Vergrendelde chats",
