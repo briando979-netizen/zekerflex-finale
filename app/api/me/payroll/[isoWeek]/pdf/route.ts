@@ -35,7 +35,7 @@ export async function GET(_req: Request, props: { params: Promise<{ isoWeek: str
       slip,
       werkgeverVoorLoonstrook(),
       { naam: slip.workerName, nummer: werknemerNummer(p.userId), bsnLaatste4: fiscal.bsnLast4, postcode: profiel?.homePostalCode || null },
-      { loonheffingskorting: fiscal.loonheffingskorting, minimumloonPerUurCents: minimumHourlyCents(ageOn(fiscal.birthDate, op), op) },
+      { loonheffingskorting: fiscal.loonheffingskorting, loonheffingskortingGekozen: fiscal.loonheffingskortingGekozen === true, minimumloonPerUurCents: minimumHourlyCents(ageOn(fiscal.birthDate, op), op) },
     );
     const pdf = tekenRegels(new SimplePdf(), regels);
 

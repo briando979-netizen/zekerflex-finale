@@ -36,6 +36,8 @@ export interface WerknemerGegevens {
 
 export interface LoonstrookExtra {
   loonheffingskorting: boolean;
+  /** de werker koos de korting uitdrukkelijk; zonder keuze geldt geen korting en zegt de loonstrook dat */
+  loonheffingskortingGekozen?: boolean | undefined;
   /** het wettelijk minimumloon per uur dat in deze week voor deze werknemer geldt (centen) */
   minimumloonPerUurCents: number | null;
 }
@@ -109,7 +111,7 @@ export function loonstrookRegels(
   if (loon) {
     rij("ABU-fase", b.phase);
     if (extra.minimumloonPerUurCents) rij("Wettelijk minimumloon per uur", euro(extra.minimumloonPerUurCents));
-    rij("Loonheffingskorting toegepast", extra.loonheffingskorting ? "Ja" : "Nee");
+    rij("Loonheffingskorting toegepast", extra.loonheffingskorting ? "Ja" : extra.loonheffingskortingGekozen === false ? "Nee (niet gekozen)" : "Nee");
   }
   if (slip.computed.lines.length > 0) {
     r.push({ soort: "ruimte", hoogte: 6 });

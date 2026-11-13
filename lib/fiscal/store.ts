@@ -48,7 +48,14 @@ export interface FiscalProfile {
   bsnVoorstelLast4?: string | null;
   /** wanneer het voorstel is gelezen (ISO): na 30 dagen zonder antwoord ruimt de retentie-sweep het op */
   bsnVoorstelAt?: string | null;
+  /**
+   * Of de loonheffingskorting wordt toegepast. Zonder uitdrukkelijke keuze van de werker geldt GEEN korting (de wettelijke standaard:
+   * korting alleen na een opgave van de werknemer). De waarde telt alleen als `loonheffingskortingGekozen` waar is; getFiscal
+   * (normaliseerFiscal) behandelt alles zonder dat merk als false, ook records van vóór 14 nov 2026.
+   */
   loonheffingskorting: boolean;
+  /** de werker koos de korting uitdrukkelijk (uitzendpaneel of Fiscaal); zonder dit merk geldt false */
+  loonheffingskortingGekozen?: boolean;
   /** geboortedatum (YYYY-MM-DD) — voor jeugdloon / WML-vloer */
   birthDate: string | null;
 
@@ -81,7 +88,7 @@ export const EMPTY_FISCAL: FiscalProfile = {
   bsnVoorstelHash: null,
   bsnVoorstelLast4: null,
   bsnVoorstelAt: null,
-  loonheffingskorting: true,
+  loonheffingskorting: false,
   birthDate: null,
   invoiceMode: null,
   iban: null,
@@ -96,14 +103,25 @@ const PREFIX = "fiscal:";
 export const FISCAL_KV_PREFIX = PREFIX;
 const key = (userId: string) => `${PREFIX}${userId}`;
 
+/**
+ * Een opgeslagen stand aangevuld met de standaardwaarden. Zonder uitdrukkelijk "gekozen"-merk telt de loonheffingskorting als
+ * false (14 nov 2026, besluit 86): een oudere record met true kwam uit de oude standaard, niet uit een keuze van de werker.
+ */
+export function normaliseerFiscal(raw: Partial<FiscalProfile> | null | undefined): FiscalProfile {
+  const f: FiscalProfile = { ...EMPTY_FISCAL, ...(raw ?? {}) };
+  if (f.loonheffingskortingGekozen !== true) f.loonheffingskorting = false;
+  return f;
+}
+
 export async function getFiscal(userId: string): Promise<FiscalProfile> {
-  const raw = await kvGet<Partial<FiscalProfile>>(key(userId));
-  return raw ? { ...EMPTY_FISCAL, ...raw } : { ...EMPTY_FISCAL };
+  return normaliseerFiscal(await kvGet<Partial<FiscalProfile>>(key(userId)));
 }
 
 export async function setFiscal(userId: string, patch: Partial<FiscalProfile>): Promise<FiscalProfile> {
   const current = await getFiscal(userId);
-  const next: FiscalProfile = { ...current, ...patch, updatedAt: new Date().toISOString() };
+  // een uitdrukkelijke waarde voor de korting is een keuze van de werker: dat merk bewaren we mee
+  const keuze = patch.loonheffingskorting !== undefined && patch.loonheffingskortingGekozen === undefined ? { loonheffingskortingGekozen: true } : {};
+  const next: FiscalProfile = { ...current, ...patch, ...keuze, updatedAt: new Date().toISOString() };
   next.completedAt = isComplete(next) ? (current.completedAt ?? new Date().toISOString()) : null;
   await kvSet(key(userId), next);
   return next;
