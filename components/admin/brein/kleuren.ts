@@ -1,5 +1,5 @@
 // De kleuren van de thema's van de Kennisgraaf, gedeeld door de vlakke grafiek (KnowledgeGraph.tsx)
-// en het Sterrenstelsel (sterrenstelsel/scene.ts): twaalf tinten die op een donkere achtergrond uit
+// en het Brein (brein/scene.ts): twaalf tinten die op een donkere achtergrond uit
 // elkaar te houden zijn. Puur bestand, zonder imports.
 
 export const THEMA_KLEUREN = ["#4FE0A0", "#7CC5FF", "#FFC46B", "#C9A5FF", "#F5B9AE", "#73D2C0", "#F2E36B", "#FF9DC6", "#9EE6C9", "#B6C2CC", "#FFA07A", "#8FD3FF"] as const;
