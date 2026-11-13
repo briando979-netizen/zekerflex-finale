@@ -56,6 +56,8 @@ function NieuwProduct() {
   const [link, setLink] = useState("");
   const [fotoUrl, setFotoUrl] = useState("");
   const [linkBezig, setLinkBezig] = useState(false);
+  // de link waarvan de gegevens echt zijn opgehaald: die bewaren we bij het concept
+  const [bronUrl, setBronUrl] = useState("");
   const [linkMelding, setLinkMelding] = useState<{ tekst: string; fout?: boolean } | null>(null);
 
   const inkoopCents = inkoop ? Math.round(Number(inkoop.replace(",", ".")) * 100) : null;
@@ -67,10 +69,11 @@ function NieuwProduct() {
     try {
       const d = await post<{ idee: string; fotos: string[]; prijsCents: number | null; valuta: string | null; bron: string }>("/api/admin/shop-ai/link", { url: link });
       setIdee(d.idee);
+      setBronUrl(link.trim());
       setFotoUrl(d.fotos[0] ?? "");
       // alleen een prijs in euro's is als inkoopprijs te gebruiken
       if (d.prijsCents && d.valuta === "EUR") setInkoop((d.prijsCents / 100).toFixed(2).replace(".", ","));
-      const prijsZin = d.prijsCents ? (d.valuta === "EUR" ? " De prijs op de pagina staat als inkoopprijs ingevuld; pas hem aan als jij minder betaalt." : ` De prijs op de pagina is in ${d.valuta ?? "een andere munt"}; vul je inkoopprijs in euro's zelf in.`) : "";
+      const prijsZin = d.prijsCents ? (d.valuta === "EUR" ? " De prijs op de pagina staat als indicatie bij de inkoopprijs; pas hem aan naar wat jij betaalt. De verkoopprijs kies je zelf." : ` De prijs op de pagina is in ${d.valuta ?? "een andere munt"}; vul je inkoopprijs in euro's zelf in.`) : "";
       setLinkMelding({ tekst: `Gelezen van ${d.bron}.${d.fotos[0] ? " De foto is gevonden." : " Er is geen foto gevonden."}${prijsZin} Controleer de tekst en kies Maak productconcept.` });
     } catch (e) {
       setLinkMelding({ tekst: (e as Error).message, fout: true });
@@ -111,12 +114,14 @@ function NieuwProduct() {
         prijsCents: prijs,
         metFoto,
         ...(fotoUrl.trim() ? { fotoUrl: fotoUrl.trim() } : {}),
+        ...(/^https:\/\/\S+$/.test(bronUrl) ? { bronUrl } : {}),
       });
       setKlaar(d);
       setC(null);
       setIdee("");
       setLink("");
       setFotoUrl("");
+      setBronUrl("");
       setLinkMelding(null);
     } catch (e) {
       setFout((e as Error).message);
@@ -158,7 +163,7 @@ function NieuwProduct() {
           Adres van de productfoto (mag leeg blijven)
           <input className="a-input" type="url" inputMode="url" value={fotoUrl} onChange={(e) => setFotoUrl(e.target.value)} placeholder="https://…/foto.jpg" />
         </label>
-        <p className="mt-1 text-xs" style={{ color: "var(--a-mute)" }}>De foto wordt overgenomen naar je eigen webshop. Gebruik alleen een foto die je van je leverancier mag gebruiken.</p>
+        <p className="mt-1 text-xs" style={{ color: "var(--a-mute)" }}>De foto wordt overgenomen naar je eigen webshop en het product blijft uit. Foto&apos;s van een andere winkel zijn van die winkel of de fabrikant: controleer of je de foto mag gebruiken voordat je het product aanzet. We bewaren waar de foto vandaan komt.</p>
         <button type="button" className="a-btn a-btn-primary mt-4" onClick={maak} disabled={bezig !== "" || idee.trim().length < 3}>
           {bezig === "concept" ? "De AI schrijft het product…" : "Maak productconcept"}
         </button>

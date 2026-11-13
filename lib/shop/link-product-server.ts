@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { FetchError, fetchPage } from "@/lib/website-check/fetch";
 import { importRemoteImage } from "@/lib/media/clean-image";
 import { storeUpload } from "@/lib/storage/local";
+import { kvGet, kvSet } from "@/lib/storage/kv";
 import { leesProductPagina, type LinkProduct } from "@/lib/shop/link-product";
 
 // ---------------------------------------------------------------------------
@@ -47,4 +48,22 @@ export async function koppelFotoVanAdres(productId: string, fotoUrl: string, act
   const foto = await importRemoteImage(fotoUrl);
   const upload = await storeUpload({ filename: `${product.slug}.webp`, mimeType: foto.mime, bytes: foto.bytes, uploadedById: actorUserId });
   await prisma.shopProduct.update({ where: { id: product.id }, data: { imageUploadId: upload.id, imageUrl: `/api/shop/media/${upload.id}` } });
+}
+
+// Waar een conceptproduct vandaan komt: de pagina van de leverancier en het adres van de foto. Zo kan de eigenaar later
+// nagaan of hij de foto mag gebruiken. Gegevens van de winkel, niet van een gebruiker (dus niet in ERASABLE_KV_PREFIXES).
+const K_BRON = "shop:link-bron:";
+export interface LinkBron {
+  pagina: string | null;
+  foto: string | null;
+  op: string;
+}
+
+export async function bewaarLinkBron(productId: string, bron: { pagina?: string | undefined; foto?: string | undefined }, now = new Date()): Promise<void> {
+  if (!bron.pagina && !bron.foto) return;
+  await kvSet(`${K_BRON}${productId}`, { pagina: bron.pagina ?? null, foto: bron.foto ?? null, op: now.toISOString() } satisfies LinkBron).catch(() => undefined);
+}
+
+export async function leesLinkBron(productId: string): Promise<LinkBron | null> {
+  return kvGet<LinkBron>(`${K_BRON}${productId}`).catch(() => null);
 }

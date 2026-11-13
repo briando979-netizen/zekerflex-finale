@@ -37,11 +37,11 @@ describe("een productpagina lezen", () => {
 
   it("alleen https-foto's, geen dubbele, hooguit zes; geen script of opmaak in de tekst", () => {
     const fotos = Array.from({ length: 9 }, (_, i) => `"https://cdn.example/${i}.jpg"`).join(",");
-    const html = `<script type="application/ld+json">{"@type":"Product","name":"Jas <script>alert(1)</script>","description":"Regel 1<br>Regel   2","image":["http://onveilig.example/x.jpg","javascript:alert(1)","https://cdn.example/0.jpg",${fotos}]}</script>`;
+    const html = `<script type="application/ld+json">{"@type":"Product","name":"Jas <b onclick=\\"x()\\">stevig</b>","description":"Regel 1<br>Regel   2","image":["http://onveilig.example/x.jpg","javascript:alert(1)","https://cdn.example/0.jpg",${fotos}]}</script>`;
     const p = leesProductPagina(html, BASIS);
     expect(p?.fotos).toHaveLength(6);
     expect(p?.fotos[0]).toBe("https://cdn.example/0.jpg");
-    expect(p?.titel).toBe("Jas alert(1)");
+    expect(p?.titel).toBe("Jas stevig");
     expect(p?.omschrijving).toBe("Regel 1 Regel 2");
   });
 
@@ -70,6 +70,8 @@ describe("de route, het opslaan en het scherm", () => {
     const route = bron("app/api/admin/shop-ai/link/route.ts");
     expect(route).toContain('withAdminAccess(["PLATFORM_ADMIN"]');
     expect(route).not.toContain("prisma");
+    // begrensd per gebruiker
+    expect(route).toContain('enforceRateLimit({ name: "shop-ai-link", identifier: principal.userId');
   });
 
   it("ophalen gaat via de veilige ophaler en het logboek krijgt alleen de website, nooit het hele adres", () => {
@@ -87,6 +89,8 @@ describe("de route, het opslaan en het scherm", () => {
     expect(ai).toContain("if (inv.fotoUrl) {");
     expect(ai).toContain("} else if (inv.metFoto) {");
     expect(ai).toContain("active: false,");
+    // waar het vandaan komt wordt bij het concept bewaard
+    expect(ai).toContain("await bewaarLinkBron(product.id, { pagina: inv.bronUrl, foto: inv.fotoUrl });");
     expect(ai).toMatch(/fotoUrl: z\.string\(\)\.trim\(\)\.max\(600\)\.regex\(\/\^https:/);
   });
 
@@ -97,6 +101,8 @@ describe("de route, het opslaan en het scherm", () => {
     expect(scherm).toContain("Adres van de productfoto");
     expect(scherm).toContain("...(fotoUrl.trim() ? { fotoUrl: fotoUrl.trim() } : {}),");
     expect(scherm).toContain("AliExpress, Temu en Amazon laten dat niet toe");
+    expect(scherm).toContain("controleer of je de foto mag gebruiken");
+    expect(scherm).toContain("De verkoopprijs kies je zelf.");
   });
 
   it("de wegwijzer zegt waar je de webshop beheert", () => {
