@@ -21,6 +21,8 @@ import type { ReactElement } from "react";
 import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IGlobe, IPhone, ICar, IStar, IList, IPin, IUsers, IImage, ISettings, IActivity } from "@/components/app/icons";
 import type { NavItem } from "@/components/app/AppShell";
 import { menuVoor, SECTIE_NAAM, type MenuSectie, type MenuSleutel } from "@/lib/werkgever/werkruimte";
+import { pasMenuVolgordeToe } from "@/lib/werkgever/menu-volgorde";
+import { getMenuVolgorde } from "@/lib/werkgever/menu-volgorde-store";
 import { werkruimteVan } from "@/lib/werkgever/werkruimte-server";
 import { kennisbankIngesteld } from "@/lib/kennisbank/outline";
 import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
@@ -133,15 +135,20 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
   const sectieNaam = (s: MenuSectie) => (s === "beheer" ? t.nav.beheer : SECTIE_NAAM[s]);
   // de beheerder: studio, rijschool- en horecabeheer, dashboards toevoegen
   const beheerder = hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN");
-  const nav: NavItem[] = menuVoor(werkruimte.soort, {
-    heeftAfspraken: metAfspraken,
-    heeftRijschool: werkruimte.heeftRijschool,
-    heeftHoreca: werkruimte.heeftHoreca,
-    horecaModules: werkruimte.horecaModules,
-    inApp,
-    // de studio eist HQ_ADMIN of PLATFORM_ADMIN (app/studio/layout.tsx)
-    studio: beheerder,
-  })
+  // de volgorde uit de Site-ontwerper (Menu), alleen voor het dashboard personeel; zonder eigen volgorde of bij een storing exact het gewone menu
+  const menuVolgorde = werkruimte.soort === "personeel" ? await getMenuVolgorde().catch(() => null) : null;
+  const nav: NavItem[] = pasMenuVolgordeToe(
+    menuVoor(werkruimte.soort, {
+      heeftAfspraken: metAfspraken,
+      heeftRijschool: werkruimte.heeftRijschool,
+      heeftHoreca: werkruimte.heeftHoreca,
+      horecaModules: werkruimte.horecaModules,
+      inApp,
+      // de studio eist HQ_ADMIN of PLATFORM_ADMIN (app/studio/layout.tsx)
+      studio: beheerder,
+    }),
+    menuVolgorde,
+  )
     .filter(({ sleutel }) => sleutel !== "netwerk" || netwerkAan)
     .filter(({ sleutel }) => sleutel !== "kennisbank" || kennisbankIngesteld())
     .filter(({ sleutel }) => sleutel !== "locatie" || locatieAan)

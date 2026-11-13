@@ -52,6 +52,11 @@ export const WEGWIJZER: WegwijzerRegel[] = [
     doel: { tab: "menu" },
   },
   {
+    wat: "Het menu van de werkgevers-app",
+    uitleg: "Sleep de onderdelen van het menu dat werkgevers zien naar een andere plek. De volgorde geldt voor alle werkgevers; er verdwijnt niets.",
+    doel: { tab: "menu" },
+  },
+  {
     wat: "Een eigen pagina maken",
     uitleg: "Bouw een pagina uit blokken (tekst, foto, video, formulier) en zet hem online op een eigen adres. Blokken versleep je met de greep.",
     doel: { tab: "paginas" },
