@@ -3,6 +3,9 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { cached, withCircuitBreaker } from "@/lib/redis";
+import { kvGet, kvSet } from "@/lib/storage/kv";
+import { limietUitAntwoord, tegoedUitAntwoord } from "@/lib/kvk/tegoed";
+import { bewaarKvkTegoed } from "@/lib/kvk/tegoed-opslag";
 import type {
   CompanyActivity,
   CompanyProfile,
@@ -67,11 +70,21 @@ async function kvkbaseFetch<T>(path: string): Promise<T> {
     throw AppError.upstream("De KVK-dienst is tijdelijk niet bereikbaar.");
   }
 
-  if (res.ok) return (await res.json()) as T;
+  // het tegoed en de limiet staan bij elk antwoord in de headers: bewaren, zodat Beheer het ziet (lib/kvk/tegoed.ts)
+  const meetTegoed = (code: string | null) => {
+    const t = tegoedUitAntwoord(res.headers, code, new Date());
+    if (t) void bewaarKvkTegoed(t);
+  };
+
+  if (res.ok) {
+    meetTegoed(null);
+    return (await res.json()) as T;
+  }
 
   const body = (await res.json().catch(() => ({}))) as KvkBaseError;
   const code = body.error?.code ?? `HTTP_${res.status}`;
   const message = body.error?.message ?? `KVKBase responded ${res.status}`;
+  meetTegoed(body.error?.code ?? null);
 
   switch (res.status) {
     case 400:
@@ -83,12 +96,17 @@ async function kvkbaseFetch<T>(path: string): Promise<T> {
     case 404:
       throw AppError.notFound("Geen inschrijving gevonden voor dit KVK-nummer.");
     case 402:
-    case 429:
-      throw AppError.upstream(
-        code === "INSUFFICIENT_TOKENS"
-          ? "KVKBase token quota exhausted"
-          : "KVKBase rate limit reached, retry shortly",
+    case 429: {
+      // 13 nov 2026: QUOTA_EXCEEDED (maandtegoed op) en RATE_LIMIT_EXCEEDED (te veel deze minuut) zijn allebei 429; vroeger
+      // heette alles "rate limit", ook een tegoed dat de hele maand op bleef. De soort gaat mee (details.kvkLimiet).
+      const limiet = limietUitAntwoord(res.status, body.error?.code ?? null, res.headers.get("retry-after"));
+      throw new AppError(
+        "UPSTREAM_UNAVAILABLE",
+        limiet?.soort === "tegoed" ? "Het tegoed van de KVK-dienst is op." : "De KVK-dienst krijgt nu te veel vragen.",
+        503,
+        { kvkLimiet: limiet ?? { soort: "minuut", naSeconden: 60 } },
       );
+    }
     default:
       logger.error("kvkbase http error", { path, status: res.status, code });
       throw AppError.upstream(message);
@@ -230,17 +248,48 @@ export async function lookupCompany(
   }
   const enrich = opts.enrich ? "1" : "0";
 
-  return cached(
-    `kvkbase:lookup:v3:${kvkNumber}:${enrich}`,
-    CACHE_TTL_SECONDS,
-    async () => {
-      const path = opts.enrich
-        ? `/v1/lookup/${kvkNumber}?enrich=true`
-        : `/v1/lookup/${kvkNumber}`;
-      const raw = await kvkbaseFetch<Raw>(path);
-      return normalizeCompany(raw);
-    },
-  );
+  // eerst de uitkomst van de laatste 30 dagen (Postgres-KV, ook "niet gevonden"): een opvraging kost tegoed, en een
+  // inschrijving verandert zelden. Wie met enrich vraagt, mag ook het antwoord met enrich van eerder gebruiken.
+  const register = await leesRegister(kvkNumber, enrich);
+  if (register?.nietGevonden) throw AppError.notFound("Geen inschrijving gevonden voor dit KVK-nummer.");
+  if (register?.profiel) return register.profiel;
+
+  try {
+    const profiel = await cached(
+      `kvkbase:lookup:v3:${kvkNumber}:${enrich}`,
+      CACHE_TTL_SECONDS,
+      async () => {
+        const path = opts.enrich
+          ? `/v1/lookup/${kvkNumber}?enrich=true`
+          : `/v1/lookup/${kvkNumber}`;
+        const raw = await kvkbaseFetch<Raw>(path);
+        return normalizeCompany(raw);
+      },
+    );
+    await bewaarRegister(kvkNumber, enrich, { profiel });
+    return profiel;
+  } catch (err) {
+    if (err instanceof AppError && err.status === 404) await bewaarRegister(kvkNumber, enrich, { nietGevonden: true });
+    throw err;
+  }
+}
+
+// --- register-cache (30 dagen) ------------------------------------------------
+// Sleutel per KVK-nummer: een openbaar register, geen persoonsgegeven (basislijn in tests/kv-avg-bewaker.test.ts).
+
+const REGISTER_PREFIX = "kvk-register:v1:";
+const REGISTER_MS = 30 * 86_400_000;
+type RegisterUitkomst = { at: string; profiel?: CompanyProfile; nietGevonden?: true };
+
+async function leesRegister(kvkNumber: string, enrich: "0" | "1"): Promise<RegisterUitkomst | null> {
+  const vers = (u: RegisterUitkomst | null) => (u && Date.now() - new Date(u.at).getTime() < REGISTER_MS ? u : null);
+  const met = vers(await kvGet<RegisterUitkomst>(`${REGISTER_PREFIX}${kvkNumber}:1`).catch(() => null));
+  if (met || enrich === "1") return met;
+  return vers(await kvGet<RegisterUitkomst>(`${REGISTER_PREFIX}${kvkNumber}:0`).catch(() => null));
+}
+
+async function bewaarRegister(kvkNumber: string, enrich: "0" | "1", u: Omit<RegisterUitkomst, "at">): Promise<void> {
+  await kvSet(`${REGISTER_PREFIX}${kvkNumber}:${enrich}`, { ...u, at: new Date().toISOString() }).catch(() => undefined);
 }
 
 export async function searchCompanies(

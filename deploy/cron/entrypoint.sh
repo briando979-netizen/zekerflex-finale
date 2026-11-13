@@ -30,6 +30,8 @@ cat > /etc/crontabs/root <<EOF
 0 7 * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/scans/dagoverzicht"
 # elke 15 min: verzegelde chipgegevens (MRZ-sleutel, chipsessies, uitslagen) echt wissen als ze te oud zijn (lib/kyc/chip/sessie.ts)
 */15 * * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/kyc/chip-opruimen"
+# KVK-controles die wachtten op tegoed of de minuutlimiet bij KVKBase opnieuw doen (lib/kvk/herkansing.ts)
+*/30 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/kvk/herkansing"
 # elke 15 min: staat het live Stripe-account nog open voor betalingen? Zo niet: melding aan de eigenaar en bankcontrole op het bankafschrift (lib/billing/stripe-betalen.ts)
 */15 * * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/stripe/account-stand"
 15 6 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/winkel-agent/tick"

@@ -26,6 +26,8 @@ import { accountStand } from "@/lib/billing/stripe-betalen";
 import { appleConfig } from "@/lib/auth/apple";
 import { cronHeartbeats } from "@/lib/ops/heartbeat";
 import { platformnaamTodo, type PlatformnaamStand } from "@/lib/admin/todo-platformnaam";
+import { kvkTegoedTodo } from "@/lib/admin/todo-kvk-tegoed";
+import { leesKvkTegoed, wachtendeKvkControles } from "@/lib/kvk/tegoed-opslag";
 
 /** Bij taken die alleen voor ZekerFlex Bank nodig waren. */
 const BANK_UIT = "niet meer nodig: ZekerFlex Bank staat uit (7 nov)";
@@ -241,10 +243,13 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   const avgOk = Boolean(avgOpschoning?.lastRunAt && avgOpschoning.lastRunOk && !avgOpschoning.stale);
   // facturen met de oude naam van de platformorganisatie als afzender (13 nov): eerst de accountant, dan de naam
   const platformnaam = platformnaamTodo(await platformnaamStand());
+  // het tegoed bij KVKBase (13 nov): op of bijna op = KVK-controles wachten op een herkansing (lib/kvk/tegoed.ts)
+  const kvkTegoed = kvkTegoedTodo(await leesKvkTegoed(), (await wachtendeKvkControles().catch(() => [])).length);
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
   return [
     ...(platformnaam ? [platformnaam] : []),
+    ...(kvkTegoed ? [kvkTegoed] : []),
     {
       id: "llm",
       group: "AI",

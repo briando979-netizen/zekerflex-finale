@@ -66,6 +66,14 @@ export const ID_REDENEN = {
     ro: "Registrul KVK a fost temporar indisponibil. Un coleg va verifica.",
     uk: "Реєстр KVK був тимчасово недоступний. Співробітник перевірить.",
   },
+  // tegoed op of minuutlimiet bij de KVK-dienst: de controle wacht en een cron probeert hem later (lib/kvk/herkansing.ts)
+  "kvk.later": {
+    nl: "We controleren je KVK-nummer later; je kunt verder met je aanmelding.",
+    en: "We will check your KVK number later; you can continue with your sign-up.",
+    pl: "Sprawdzimy Twój numer KVK później; możesz kontynuować rejestrację.",
+    ro: "Îți vom verifica numărul KVK mai târziu; poți continua înregistrarea.",
+    uk: "Ми перевіримо твій номер KVK пізніше; ти можеш продовжити реєстрацію.",
+  },
   "vies.ongeldig": {
     nl: "{nummer} is volgens de EU-database (VIES) niet geldig.",
     en: "According to the EU database (VIES), {nummer} is not valid.",

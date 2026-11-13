@@ -5,6 +5,9 @@ import { GratisKeuzes } from "@/components/admin/GratisKeuzes";
 import { GRATIS_STATUS_LABEL, GRATIS_STATUS_TINT } from "@/lib/gratis/diensten";
 import { getKeuzes } from "@/lib/gratis/keuzes";
 import { dienstenStand, telling } from "@/lib/gratis/status";
+import { tegoedLaag, tegoedTekst } from "@/lib/kvk/tegoed";
+import { leesKvkTegoed, wachtendeKvkControles } from "@/lib/kvk/tegoed-opslag";
+import { amsterdamClock, amsterdamDayKey } from "@/lib/time/amsterdam";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +23,9 @@ export default async function GratisPage() {
     return <PageHead title="Geen toegang" subtitle="Dit overzicht is alleen voor platformbeheerders." />;
   }
 
-  const [{ diensten }, keuzes] = await Promise.all([dienstenStand(), getKeuzes()]);
+  const [{ diensten }, keuzes, kvkTegoed, kvkWacht] = await Promise.all([dienstenStand(), getKeuzes(), leesKvkTegoed(), wachtendeKvkControles().catch(() => [])]);
+  // het tegoed bij KVKBase, bij elk antwoord gemeten (13 nov 2026: het gratis tegoed was op en niemand zag het)
+  const kvkRegel = tegoedTekst(kvkTegoed, kvkWacht.length, (iso) => `${amsterdamDayKey(new Date(iso)).slice(5).split("-").reverse().join("-")} om ${amsterdamClock(iso)}`);
   const t = telling(diensten);
 
   return (
@@ -85,6 +90,12 @@ export default async function GratisPage() {
                     <dd style={{ color: "var(--a-text)" }}>{d.eigen}</dd>
                   </div>
                 </dl>
+                {d.id === "handelsregister" && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs" style={{ color: "var(--a-text)" }}>
+                    <Pill tone={tegoedLaag(kvkTegoed) ? "crit" : kvkTegoed ? "ok" : "neutral"}>{tegoedLaag(kvkTegoed) ? "Tegoed op" : kvkTegoed ? "Tegoed" : "Niet gemeten"}</Pill>
+                    <span>{kvkRegel}</span>
+                  </div>
+                )}
                 {d.env?.length ? (
                   <p className="mt-2 text-[0.6875rem]" style={{ color: "var(--a-mute)" }}>
                     Instellingen: {d.env.join(", ")} — {d.sleutel ? "staat klaar" : "staat niet ingesteld"}

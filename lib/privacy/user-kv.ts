@@ -38,6 +38,8 @@ export const ERASABLE_KV_PREFIXES = [
   "contacts:",
   // de live reeks van de selfies tijdens de ID-scan, alleen getallen (lib/kyc/gezicht/reeks-opslag.ts)
   "gezicht-live:",
+  // een KVK-controle die wacht op tegoed bij KVKBase (lib/kvk/tegoed-opslag.ts): het nummer en wanneer opnieuw
+  "kvk-wacht:werker:",
   "id-overdracht:",
   "id-overdracht-merk:",
   "id-overdracht-ander:",
