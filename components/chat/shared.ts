@@ -59,6 +59,9 @@ export interface Msg {
   transcript?: string;
   /** voorbeeld van de eerste link (zonder afbeelding) */
   linkVoorbeeld?: { url: string; host: string; titel: string; omschrijving?: string };
+  /** foto die maar één keer te bekijken is, en wie hem al opende */
+  eenmalig?: boolean;
+  eenmaligGezien?: string[];
 }
 
 /** Je eigen tekstbericht mag je tot 24 uur na het versturen bewerken (gelijk aan lib/messaging/store EDIT_WINDOW_MS). */

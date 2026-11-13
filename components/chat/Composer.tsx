@@ -23,6 +23,8 @@ export interface OutgoingMessage {
   poll?: { options: string[]; multi: boolean };
   /** @vermeldingen in een groep (userIds) */
   mentions?: string[];
+  /** kind "image": maar één keer te bekijken */
+  eenmalig?: boolean;
 }
 
 // Veelgebruikte emoji voor op een computer (een telefoon heeft ze op het toetsenbord).
@@ -43,11 +45,12 @@ function AttachPreview({
 }: {
   file: File;
   kind: "image" | "file";
-  onSend: (caption: string) => void;
+  onSend: (caption: string, eenmalig: boolean) => void;
   onCancel: () => void;
 }) {
   const chat = useChatTeksten();
   const [caption, setCaption] = useState("");
+  const [eenmalig, setEenmalig] = useState(false);
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     if (kind !== "image") return;
@@ -71,7 +74,7 @@ function AttachPreview({
           onClick={(e) => e.stopPropagation()}
           onSubmit={(e) => {
             e.preventDefault();
-            onSend(caption.trim());
+            onSend(caption.trim(), eenmalig);
           }}
         >
           <div className="flex items-center gap-2 border-b border-hair px-4 py-3">
@@ -95,6 +98,19 @@ function AttachPreview({
             )}
           </div>
           <div className="flex items-end gap-2 border-t border-hair bg-[#F0F2F5] p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+            {kind === "image" && (
+              // eenmalig bekijken (zoals WhatsApp): de ontvanger kan de foto één keer openen
+              <button
+                type="button"
+                onClick={() => setEenmalig((v) => !v)}
+                aria-pressed={eenmalig}
+                aria-label={eenmalig ? chat.composer.eenmaligAan : chat.composer.eenmaligUit}
+                title={eenmalig ? chat.composer.eenmaligAan : chat.composer.eenmaligUit}
+                className={`grid h-10 w-10 flex-shrink-0 place-items-center rounded-full text-xs font-bold shadow-sm ${eenmalig ? "bg-[#008069] text-white" : "bg-white text-neutralx-600"}`}
+              >
+                1×
+              </button>
+            )}
             <textarea
               autoFocus
               rows={1}
@@ -104,7 +120,7 @@ function AttachPreview({
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  onSend(caption.trim());
+                  onSend(caption.trim(), eenmalig);
                 }
               }}
               placeholder={chat.composer.onderschriftPlaceholder}
@@ -306,13 +322,13 @@ export function Composer({
     }
   };
 
-  const sendFile = async (file: File, kind: "file" | "image", caption = "") => {
+  const sendFile = async (file: File, kind: "file" | "image", caption = "", eenmalig = false) => {
     setBusy(true);
     setMenuOpen(false);
     setSendError(null);
     try {
       const att = await uploadMedia(file, file.name || (kind === "image" ? "foto.png" : "bestand"));
-      if (att) await onSend({ text: caption, kind, attachment: att, ...(replyTo ? { replyToId: replyTo.id } : {}) });
+      if (att) await onSend({ text: caption, kind, attachment: att, ...(replyTo ? { replyToId: replyTo.id } : {}), ...(eenmalig && kind === "image" ? { eenmalig: true } : {}) });
       onClearReply();
     } catch (e) {
       // silently swallowing this made photos look broken ("werkte niet") without any hint why
@@ -756,10 +772,10 @@ export function Composer({
           file={preview.file}
           kind={preview.kind}
           onCancel={() => setPreview(null)}
-          onSend={(caption) => {
+          onSend={(caption, eenmalig) => {
             const p = preview;
             setPreview(null);
-            void sendFile(p.file, p.kind, caption);
+            void sendFile(p.file, p.kind, caption, eenmalig);
           }}
         />
       )}
