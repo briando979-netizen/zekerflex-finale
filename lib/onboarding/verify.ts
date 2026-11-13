@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { chatJson } from "@/lib/ai/client";
+import { getGratisStand } from "@/lib/ai/gratis";
 import { geocodeThuisbasis } from "@/lib/geo/thuisbasis";
 import { registerFreelancerCompany } from "@/lib/company/registration";
 import { storeUpload } from "@/lib/storage/local";
@@ -201,6 +202,12 @@ Richtlijnen:
     reasons: ["De automatische beoordeling was tijdelijk niet beschikbaar; een controleur kijkt ernaar."],
     summary: "In behandeling — automatische beoordeling niet beschikbaar.",
   };
+  // Met "alles gratis" gaat deze vraag naar ons eigen model op de cpu, en dat haalt de 8 s nooit: een antwoord van
+  // deze lengte kost daar 14-45 s (gemeten 13 nov 2026, mediaan 19 s); alle 17 pogingen sinds 9 nov liepen op de
+  // tijdgrens af. Dan niet vragen: een AI zonder antwoord verandert de uitkomst niet (lib/onboarding/auto-redenen.ts),
+  // de werker wacht 8 s minder en het foutenlogboek krijgt niet elke 6 uur een waarschuwing van de rem. Komt er een
+  // snellere eigen server, haal deze regel dan weg.
+  if ((await getGratisStand()).aan) return nietBeschikbaar;
   // gaf de AI de laatste keren geen antwoord, dan niet nog eens 8 s wachten (lib/onboarding/ai-review-rem.ts);
   // de rem staat ook in de database, anders begint hij na elke uitrol opnieuw
   await laadAiReviewRem();

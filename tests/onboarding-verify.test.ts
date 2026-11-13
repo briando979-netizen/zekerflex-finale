@@ -157,6 +157,13 @@ vi.mock("@/lib/ai/client", () => ({
   }),
 }));
 
+/** "alles gratis" (lib/ai/gratis.ts): standaard uit, dan vraagt de controle de tekst-AI wel */
+let gratisStand = false;
+vi.mock("@/lib/ai/gratis", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/ai/gratis")>()),
+  getGratisStand: async () => ({ aan: gratisStand, basis: "", model: "" }),
+}));
+
 const consumeVerifiedWalletAttempt = vi.fn();
 vi.mock("@/lib/kyc/wallet", () => ({
   consumeVerifiedWalletAttempt: (...a: unknown[]) => consumeVerifiedWalletAttempt(...a),
@@ -695,6 +702,23 @@ describe("submitFreelancerOnboarding — gezichtscontrole met het eigen model (1
     expect(JSON.stringify(data.rawPayload)).not.toMatch(/kenmerk|embedding/i);
     // live camera of bestandskeuze per vak (lib/kyc/foto-bron.ts): deze testfoto's heten front.jpg enz., dus uit bestand
     expect((data.rawPayload as unknown as { bron: unknown }).bron).toEqual({ front: "bestand", back: "bestand", selfie: "bestand" });
+  });
+
+  it("met 'alles gratis' vraagt de controle de tekst-AI niet (het eigen model haalt de 8 s nooit, 13 nov): zelfde uitkomst", async () => {
+    userFindUnique.mockResolvedValue(GEBRUIKER);
+    gezichtControle.mockResolvedValueOnce(GEZICHT_ZELFDE);
+    gratisStand = true;
+    try {
+      const result = await submitFreelancerOnboarding({ ...BASE_INPUT, files: FOTOS });
+      expect(result.outcome).toBe("verified");
+    } finally {
+      gratisStand = false;
+    }
+    const { chatJson } = await import("@/lib/ai/client");
+    expect(chatJson).not.toHaveBeenCalled();
+    // hetzelfde als een AI die niet op tijd antwoordt: "bekijk handmatig" met vertrouwen 0
+    const data = (ivCreate.mock.calls[0]![0] as { data: { rawPayload: { ai: { verdict: string; confidence: number } } } }).data;
+    expect(data.rawPayload.ai).toMatchObject({ verdict: "needs_review", confidence: 0 });
   });
 
   it("de live reeks: alleen de samenvatting bij de controle, daarna gewist; nog geen poort (ook een sprong keurt goed)", async () => {
