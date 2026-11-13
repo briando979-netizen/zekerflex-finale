@@ -5,6 +5,7 @@ import { KlusConcept, type ConceptTemplate } from "@/components/marketing/KlusCo
 import { MIN_SHIFT_RATE_CENTS, SHIFT_TEMPLATES } from "@/lib/shifts/create";
 import { getSupplyMap } from "@/lib/shifts/supply-map";
 import { supplyLabel, supplyNear } from "@/lib/klusconcept/concept";
+import { leesVia } from "@/lib/klusconcept/via";
 import { CITIES } from "@/lib/seo-cities";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
@@ -35,8 +36,10 @@ const FAQ = [
   },
 ];
 
-export default async function KlusPlaatsenPage(props: { searchParams: Promise<{ functie?: string; plaats?: string }> }) {
-  const { functie, plaats } = await props.searchParams;
+export default async function KlusPlaatsenPage(props: { searchParams: Promise<{ functie?: string; plaats?: string; via?: string | string[] }> }) {
+  const { functie, plaats, via: viaRuw } = await props.searchParams;
+  // de tip van een werker (/klus-plaatsen?via=werker): alleen de bron "werker", als totaal geteld (lib/klusconcept/via.ts)
+  const via = leesVia(viaRuw);
   // From a sector/city page (klusUrl): only a known template and a known city are taken over.
   const templateKey = SHIFT_TEMPLATES.some((t) => t.key === functie) ? functie : undefined;
   const city = CITIES.find((c) => c.name.toLowerCase() === (plaats ?? "").trim().toLowerCase())?.name;
@@ -92,6 +95,7 @@ export default async function KlusPlaatsenPage(props: { searchParams: Promise<{ 
           minRateCents={MIN_SHIFT_RATE_CENTS}
           cities={cities}
           initial={{ ...(templateKey ? { templateKey } : {}), ...(city ? { city } : {}) }}
+        via={via}
         />
       </Section>
 

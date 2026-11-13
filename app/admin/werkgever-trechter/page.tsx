@@ -1,6 +1,7 @@
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { KpiStrip, Notice, PageHead, Panel } from "@/components/admin/kit";
 import { werkgeverTrechterData } from "@/lib/admin/werkgever-trechter";
+import { leesKlusVia } from "@/lib/klusconcept/via-opslag";
 import { BEDRIJF_STAPPEN, VENSTERS, bedrijfTrechter, bezoekPerPagina, type Venster } from "@/lib/admin/werkgever-trechter-kern";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,7 @@ export default async function WerkgeverTrechterPage() {
     return <PageHead title="Geen toegang" subtitle="De werkgeverstrechter is alleen voor platformbeheerders." />;
   }
   const nu = new Date();
-  const { bedrijven, bezoek } = await werkgeverTrechterData(nu);
+  const [{ bedrijven, bezoek }, via] = await Promise.all([werkgeverTrechterData(nu), leesKlusVia(nu)]);
   const trechters = VENSTERS.map((v) => ({ venster: v, stappen: bedrijfTrechter(bedrijven, nu, v) }));
   const bezoeken = ([7, 30] as const).map((v) => ({ venster: v, paginas: bezoekPerPagina(bezoek, nu, v) }));
   const stap = (v: Venster, key: string) => trechters.find((t) => t.venster === v)?.stappen.find((s) => s.key === key)?.aantal ?? 0;
@@ -41,6 +42,9 @@ export default async function WerkgeverTrechterPage() {
           { label: "Klik op de hoofdknop", value: String(som(7, "klikken")), hint: `sessies in 7 dagen · ${som(30, "klikken")} in 30 dagen`, tone: som(7, "klikken") > 0 ? "ok" : "warn" },
         ]}
       />
+      <Notice tone="neutral">
+        Via de tip van een werker (/klus-plaatsen?via=werker), deze maand: {via.bezoek} keer geopend, {via.concept} keer een klus samengesteld. Alleen een totaal, geen persoon.
+      </Notice>
       <Notice tone="plan">
         Echte bedrijven: geen platform, en minstens één lid dat geen testaccount is (geen testadres, geen eigen domein, geen beheer of sales, geen testbedrijfsnaam). Een venster telt de bedrijven die in die periode zijn aangemeld, en per stap hoeveel van hen hem al haalden. Geverifieerd volgt dezelfde regel als de poort voor klussen.
       </Notice>

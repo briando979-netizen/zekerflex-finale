@@ -38,6 +38,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/nieuwsbrief",
     "/api/nieuwsbrief/afmelden",
     "/api/analytics/track",
+    "/api/klus-plaatsen/via", // /klus-plaatsen?via=werker: alleen een telling per maand, openbaar en IP-begrensd (valt onder het voorvoegsel /api/klus-plaatsen)
     "/api/analytics/taal-vraag",
     "/api/shop/products",
     "/api/shop/media/abc123",

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { CONCEPT_KEY, conceptCost, type KlusConcept as Concept } from "@/lib/klusconcept/concept";
+import { VIA_WERKER, type KlusVia, type ViaStap } from "@/lib/klusconcept/via";
 import { initialen, websiteOmschrijving, type WebsiteKlus } from "@/lib/klusconcept/website";
 import { centsFrom, euroCents, euroWhole, numberFrom } from "@/lib/rekentools/invoer";
 import { tekstOp } from "@/lib/rijschool/kleuren";
@@ -77,15 +78,23 @@ export function KlusConcept({
   minRateCents,
   cities,
   initial = {},
+  via = null,
 }: {
   templates: ConceptTemplate[];
   minRateCents: number;
   cities: { name: string; supply: string | null }[];
   /** from a sector/city page link (lib/klusconcept/concept.ts klusUrl) */
   initial?: { templateKey?: string; city?: string };
+  /** de bron van de link (alleen "werker", uit /klus-plaatsen?via=werker): telt als totaal, nooit een persoon */
+  via?: KlusVia | null;
 }) {
   const router = useRouter();
   const used = useEersteGebruik("klus-concept");
+  // alleen een telling per maand (lib/klusconcept/via-opslag.ts); een storing houdt niets tegen
+  const telVia = (stap: ViaStap) => {
+    if (via !== VIA_WERKER) return;
+    void fetch("/api/klus-plaatsen/via", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ via, stap }), keepalive: true }).catch(() => undefined);
+  };
   const first = templates.find((t) => t.key === initial.templateKey) ?? templates[0];
   const [tpl, setTpl] = useState(first?.key ?? ANDERS);
   const [eigen, setEigen] = useState("");
@@ -113,6 +122,12 @@ export function KlusConcept({
       ),
     [templates],
   );
+
+  // geopend via de tip van een werker: één keer tellen
+  useEffect(() => {
+    telVia("bezoek");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- alleen bij het openen
+  }, []);
 
   // Dates in the browser's own (Dutch) time: the server runs in UTC.
   useEffect(() => {
@@ -216,6 +231,7 @@ export function KlusConcept({
     } catch {
       /* private mode: sign-up still works, the form just starts empty */
     }
+    telVia("concept");
     const company = found?.bedrijf ? `&company=${encodeURIComponent(found.bedrijf)}` : "";
     router.push(employer ? "/werkgever/diensten/nieuw" : `/register?type=bedrijf${company}`);
   }

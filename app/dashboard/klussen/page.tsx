@@ -16,6 +16,8 @@ import { WilReagerenNudge } from "@/components/app/WilReagerenNudge";
 import { getFreelancerDict } from "@/lib/i18n/server";
 import { translateBlockReason } from "@/lib/i18n/freelancer";
 import { alleenTestklussen } from "@/lib/shifts/testklus";
+import { TipBedrijfKaart } from "@/components/app/TipBedrijfKaart";
+import { tipPlek } from "@/lib/klusconcept/via";
 import { getBrancheKeuze } from "@/lib/worker/branche-store";
 import { standaardFilter } from "@/lib/shifts/branche-keuze";
 import { EersteIndrukMelding } from "@/components/app/EersteIndrukMelding";
@@ -62,6 +64,8 @@ export default async function KlussenPage(
   };
   // Alleen testklussen (lib/shifts/testklus.ts)? Dan zeggen we eerlijk dat er nog geen echt werk is.
   const alleenTest = alleenTestklussen(m.shifts);
+  // "Ken je een bedrijf dat mensen zoekt?": bovenaan als er geen echte klussen zijn (leeg of alleen testklussen), anders onderaan
+  const tipBoven = tipPlek(m.shifts) === "boven";
   // Warme, contextuele subregel bij de groet — alleen als er iets te melden is.
   const greetSub =
     m.newSinceLastVisit > 0 ? t.greet.subNew : m.shifts.length > 0 && !alleenTest ? t.greet.subDiscover : undefined;
@@ -153,6 +157,8 @@ export default async function KlussenPage(
         </div>
       )}
 
+      {tipBoven && <TipBedrijfKaart />}
+
       {m.shifts.length === 0 ? (
         <div className="card">
           <div className="px-5 py-14 text-center">
@@ -175,6 +181,12 @@ export default async function KlussenPage(
           defaultMinRateCents={m.prefs.minHourlyRateCents}
           defaultMaxTravel={m.prefs.maxTravelMinutes}
         />
+      )}
+
+      {!tipBoven && (
+        <div className="mt-6">
+          <TipBedrijfKaart />
+        </div>
       )}
     </>
   );
