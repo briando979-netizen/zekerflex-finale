@@ -30,6 +30,7 @@
     "tests/onboarding-onderhoud.test.ts",
     "tests/openbare-grens-middleware.test.ts",
     "tests/org-kv.test.ts",
+    "tests/paskamer-csp.test.ts",
     "tests/profiel-meldingen-taal.test.ts",
     "tests/regex-safari.test.ts",
     "tests/sitechat-regels.test.ts",
