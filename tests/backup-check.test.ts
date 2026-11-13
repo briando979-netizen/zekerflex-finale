@@ -11,7 +11,7 @@ vi.mock("@/lib/ops/alert", () => ({ alertOwner: (...a: unknown[]) => alertOwner(
 const recordCronRun = vi.fn();
 vi.mock("@/lib/metrics", () => ({ recordCronRun: (...a: unknown[]) => recordCronRun(...a) }));
 
-const { checkBackup, diskAlert, diskUsage, evaluateBackup, evaluateVerification, krimpWaarschuwing, parseBackupStatus, parseVerifyStatus, readBackupReport } = await import("@/lib/ops/backup");
+const { checkBackup, diskAlert, diskUsage, evaluateBackup, evaluateOphaal, evaluateVerification, krimpWaarschuwing, parseBackupStatus, parseOphaal, parseVerifyStatus, readBackupReport } = await import("@/lib/ops/backup");
 
 const NOW = new Date("2026-11-03T04:00:00Z").getTime();
 const hoursAgo = (h: number) => new Date(NOW - h * 3_600_000).toISOString();
@@ -171,6 +171,23 @@ describe("back-up beoordelen", () => {
   });
 });
 
+describe("kopie op de pc (deploy/backup/OPHALEN.md)", () => {
+  it("leest de markering van het ophaalcommando, en weigert iets anders", () => {
+    expect(parseOphaal({ at: hoursAgo(2), set: "20261103-0230" })).toEqual({ at: hoursAgo(2), set: "20261103-0230" });
+    expect(parseOphaal({ at: hoursAgo(2), set: "../etc" })).toBeNull();
+    expect(parseOphaal({ at: "gisteren", set: "20261103-0230" })).toBeNull();
+    expect(parseOphaal(null)).toBeNull();
+  });
+
+  it("nooit opgehaald is 'uit' (geen alarm), tot 3 dagen in orde, daarna oud met de reden", () => {
+    expect(evaluateOphaal(null, NOW)).toEqual({ state: "uit", reasons: [] });
+    expect(evaluateOphaal({ at: hoursAgo(24 * 3 + 20), set: "20261031-0230" }, NOW).state).toBe("ok");
+    const oud = evaluateOphaal({ at: hoursAgo(24 * 5), set: "20261029-0230" }, NOW);
+    expect(oud.state).toBe("oud");
+    expect(oud.reasons[0]).toContain("al 5 dagen niet naar de pc gehaald");
+  });
+});
+
 describe("back-upmap lezen en controleren", () => {
   let dir: string;
 
@@ -221,6 +238,23 @@ describe("back-upmap lezen en controleren", () => {
     expect(report.waarschuwing).toContain("(0,5 MB) is minder dan de helft van het vorige (2,0 MB)");
     expect(recordCronRun).toHaveBeenCalledWith("db-backup", true);
     expect(alertOwner).toHaveBeenCalledWith(expect.objectContaining({ key: "backup:krimp", severity: "warning" }));
+  });
+
+  it("de kopie op de pc: verse markering zonder melding, een oude met een waarschuwing, geen markering = uit", async () => {
+    await writeFile(path.join(dir, "db", good.file), Buffer.alloc(2048));
+    await writeFile(path.join(dir, "status.json"), JSON.stringify(good));
+    expect((await checkBackup(NOW, dir)).ophaal.state).toBe("uit");
+    await mkdir(path.join(dir, "ophaal"));
+    await writeFile(path.join(dir, "ophaal", "laatst.json"), JSON.stringify({ at: hoursAgo(3), set: "20261103-0230" }));
+    const vers = await checkBackup(NOW, dir);
+    expect(vers.ophaal).toEqual({ state: "ok", reasons: [], status: { at: hoursAgo(3), set: "20261103-0230" } });
+    expect(alertOwner.mock.calls.filter((c) => (c[0] as { key: string }).key === "backup:ophaal")).toHaveLength(0);
+    await writeFile(path.join(dir, "ophaal", "laatst.json"), JSON.stringify({ at: hoursAgo(24 * 4), set: "20261030-0230" }));
+    const oud = await checkBackup(NOW, dir);
+    expect(oud.ophaal.state).toBe("oud");
+    expect(alertOwner).toHaveBeenCalledWith(expect.objectContaining({ key: "backup:ophaal", severity: "warning" }));
+    // de back-up zelf blijft in orde: hartslag
+    expect(recordCronRun).toHaveBeenCalledWith("db-backup", true);
   });
 
   it("een map zonder status.json is nog geen back-up", async () => {

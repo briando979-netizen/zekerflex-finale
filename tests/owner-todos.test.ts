@@ -190,6 +190,16 @@ describe("owner to-do list", () => {
     expect((await byId()).backups).toMatchObject({ done: false, doneNote: "De proef-terugzetting is niet gelukt." });
   });
 
+  it("de kopie buiten de server telt ook als de pc hem ophaalt, maar alleen versleuteld (13 nov)", async () => {
+    const status = { at: "2026-11-13T02:31:00Z", encrypted: true, offsite: { configured: false, target: "", ok: false, error: "" } };
+    live.backup = { available: true, state: "ok", reasons: [], status, files: [], disk: null, ophaal: { state: "ok", reasons: [], status: { at: "2026-11-13T06:00:00Z", set: "20261113-0230" } } };
+    expect((await byId())["backup-offsite"]).toMatchObject({ done: true, doneNote: "laatst naar de pc gehaald: set 20261113-0230" });
+    live.backup = { available: true, state: "ok", reasons: [], status, files: [], disk: null, ophaal: { state: "oud", reasons: ["…"], status: { at: "2026-11-08T06:00:00Z", set: "20261108-0230" } } };
+    expect((await byId())["backup-offsite"]).toMatchObject({ done: false, doneNote: "laatst naar de pc gehaald: set 20261108-0230 (te lang geleden)" });
+    live.backup = { available: true, state: "ok", reasons: [], status: { ...status, encrypted: false }, files: [], disk: null, ophaal: { state: "ok", reasons: [], status: { at: "2026-11-13T06:00:00Z", set: "20261113-0230" } } };
+    expect((await byId())["backup-offsite"]!.done).toBe(false);
+  });
+
   it("counts Search Console as done when the DNS record of the main domain is there", async () => {
     expect((await byId())["search-console"]!.done).toBe(false);
     live.txt = [["v=spf1 include:_spf.transip.email ~all"], ["google-site-verification=abc", "123"]];

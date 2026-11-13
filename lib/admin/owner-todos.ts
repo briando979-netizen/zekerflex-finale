@@ -1217,12 +1217,17 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       how: [
         "Kies een plek: een eigen reserveserver (scp) of WebDAV-opslag zoals TransIP STACK, Hetzner Storage Box of Nextcloud (gratis of een paar euro per maand). Geef Claude het adres en de inloggegevens.",
         "Claude zet in .env.production op de VPS: BACKUP_PASSPHRASE (een lange wachtwoordzin; bewaar die óók in je wachtwoordmanager, want zonder is de kopie waardeloos) en BACKUP_OFFSITE (scp://gebruiker@host/pad of https://host/pad/), en herstart de back-updienst.",
+        "Of zonder extra dienst: je eigen pc haalt elke dag de versleutelde kopie op (een eigen sleutel die alleen mag ophalen, en een taak in Taakplanner; deploy/backup/OPHALEN.md). Dan is alleen BACKUP_PASSPHRASE nodig.",
         "Dit item vinkt zichzelf af zodra de nachtelijke kopie slaagt. De hersteltest (Admin → Systeem → Back-ups) bewijst daarna wekelijks dat de kopie klopt.",
       ],
       auto: true,
       eerst: { reden: "gegevens kwijt" },
-      done: backup?.status?.offsite?.ok === true && backup.status.encrypted,
-      ...(backup?.status?.offsite?.configured ? { doneNote: backup.status.offsite?.ok ? `laatste kopie gelukt naar ${backup.status.offsite?.target}` : `laatste kopie mislukt: ${backup.status.offsite?.error}` } : {}),
+      done: (backup?.status?.offsite?.ok === true || backup?.ophaal?.state === "ok") && backup?.status?.encrypted === true,
+      ...(backup?.status?.offsite?.configured
+        ? { doneNote: backup.status.offsite?.ok ? `laatste kopie gelukt naar ${backup.status.offsite?.target}` : `laatste kopie mislukt: ${backup.status.offsite?.error}` }
+        : backup?.ophaal?.status
+          ? { doneNote: `laatst naar de pc gehaald: set ${backup.ophaal.status.set}${backup.ophaal.state === "oud" ? " (te lang geleden)" : ""}` }
+          : {}),
     },
     {
       id: "diensten-dns",
