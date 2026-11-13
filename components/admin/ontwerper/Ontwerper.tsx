@@ -12,6 +12,7 @@ import { VastePaginasPaneel } from "@/components/admin/ontwerper/VastePaginasPan
 import { MediaPaneel } from "@/components/admin/ontwerper/Media";
 import { MenuPaneel } from "@/components/admin/ontwerper/MenuPaneel";
 import { WerkgeverMenuPaneel } from "@/components/admin/ontwerper/WerkgeverMenuPaneel";
+import { WerkerTabsPaneel } from "@/components/admin/ontwerper/WerkerTabsPaneel";
 import { HomePaneel } from "@/components/admin/ontwerper/HomePaneel";
 import { ONTWERPER_TABS, type OntwerperTab } from "@/lib/ontwerp/tabs";
 import { ShopPaneel } from "@/components/admin/ontwerper/ShopPaneel";
@@ -330,6 +331,7 @@ export function Ontwerper({ start, beginTab }: { start: OntwerpStaat; /** het ta
             <div id="ontwerper-paneel-menu" role="tabpanel" aria-labelledby="ontwerper-tab-menu">
               <MenuPaneel onVernieuw={verversVoorbeeld} />
               <WerkgeverMenuPaneel />
+              <WerkerTabsPaneel />
             </div>
           ) : null}
           {tab === "seo" ? (

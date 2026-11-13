@@ -57,6 +57,11 @@ export const WEGWIJZER: WegwijzerRegel[] = [
     doel: { tab: "menu" },
   },
   {
+    wat: "De balk onderaan de werker-app",
+    uitleg: "Sleep de knoppen van de balk (Ontdekken, Mijn klussen, Uren, Chat, Account) naar een andere plek. De volgorde geldt voor alle werkers.",
+    doel: { tab: "menu" },
+  },
+  {
     wat: "Een eigen pagina maken",
     uitleg: "Bouw een pagina uit blokken (tekst, foto, video, formulier) en zet hem online op een eigen adres. Blokken versleep je met de greep.",
     doel: { tab: "paginas" },

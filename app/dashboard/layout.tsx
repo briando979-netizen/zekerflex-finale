@@ -26,6 +26,7 @@ import { avatarUrlFor } from "@/lib/profile/card";
 import { hulpTeksten } from "@/lib/hulp/teksten";
 import { kennisbankIngesteld } from "@/lib/kennisbank/outline";
 import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
+import { getTabVolgorde } from "@/lib/werker/tab-volgorde-store";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +67,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         // het vraagteken: alleen de teksten in de taal van de werker gaan mee (lib/hulp/teksten.ts)
         hulp={hulpTeksten(locale)}
         handleidingen={kennisbankIngesteld() ? `${outlinePubliekeUrl()}/` : null}
+        // de volgorde van de balk uit de Site-ontwerper (Menu); een storing geeft de standaard
+        tabVolgorde={await getTabVolgorde().catch(() => null)}
       >
         <IbanHoldBanner userId={principal.userId} />
         {/* in- en uitchecks die zonder bereik zijn bewaard: versturen zodra het kan (lib/checkin/wachtrij.ts) */}
