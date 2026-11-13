@@ -55,7 +55,7 @@ COMPOSE = ["sudo", "docker", "compose", "-f", "docker-compose.vps.yml", "--env-f
 VERSIE = 3  # 3: kent verzoeken van de Auto-uitrol (auto, doelSha) en controleert ook het databaseschema
 
 # Namen van de onderdelen van de controle (controle.mjs) in de melding naar de eigenaar.
-CONTROLE_NAAM = {"tsc": "TypeScript", "schema": "het databaseschema", "eslint": "eslint", "tests": "de tests"}
+CONTROLE_NAAM = {"tsc": "TypeScript", "schema": "het databaseschema", "python": "de Python-bestanden", "eslint": "eslint", "tests": "de tests"}
 
 K_VERZOEK = "bouwer:live:verzoek"
 K_STATUS = "bouwer:live:status"
@@ -423,6 +423,7 @@ class Uitrol:
                 "duurSec": uitslag.get("duurSec"),
                 "tsc": bool((uitslag.get("tsc") or {}).get("ok", True)),
                 "schema": bool((uitslag.get("schema") or {}).get("ok", True)),
+                "python": bool((uitslag.get("python") or {}).get("ok", True)),
                 "eslint": bool((uitslag.get("eslint") or {}).get("ok", True)),
                 "tests": bool((uitslag.get("tests") or {}).get("ok", True)),
             }
@@ -430,7 +431,7 @@ class Uitrol:
             if kort["ok"]:
                 self.schrijf(f"controle schoon ({kort['duurSec'] if kort['duurSec'] is not None else '?'} s)")
             else:
-                falen = [CONTROLE_NAAM[n] for n in ("tsc", "schema", "eslint", "tests") if not kort[n]]
+                falen = [CONTROLE_NAAM[n] for n in ("tsc", "schema", "python", "eslint", "tests") if not kort[n]]
                 if self.v.get("zonderControle"):
                     self.schrijf(f"!! controle faalt op {', '.join(falen)}, maar 'zonder controle' is gevraagd door {self.status['door']}")
                 else:

@@ -12,6 +12,8 @@ export interface ControleKort {
   tsc: boolean;
   /** het databaseschema (prisma validate); ontbreekt in oude uitslagen */
   schema?: boolean;
+  /** de Python-bestanden van de uitrol (py_compile); ontbreekt in oude uitslagen */
+  python?: boolean;
   eslint: boolean;
   tests: boolean;
   /** gewijzigde bestanden sinds de basis (live, of de vorige controle) */
@@ -29,10 +31,11 @@ export interface ControleDeel {
   overgeslagen?: string | null;
 }
 
-export interface ControleUitslag extends Omit<ControleKort, "tsc" | "schema" | "eslint" | "tests"> {
+export interface ControleUitslag extends Omit<ControleKort, "tsc" | "schema" | "python" | "eslint" | "tests"> {
   vanaf: string | null;
   tsc: ControleDeel;
   schema?: ControleDeel;
+  python?: ControleDeel;
   eslint: ControleDeel;
   tests: ControleDeel;
 }
@@ -49,8 +52,8 @@ export interface ControlesStand {
   uitslagen: ControleKort[];
 }
 
-export function faaltOp(c: Pick<ControleKort, "tsc" | "eslint" | "tests"> & { schema?: boolean | undefined }): string[] {
-  return [...(c.tsc ? [] : ["TypeScript"]), ...(c.schema === false ? ["het databaseschema"] : []), ...(c.eslint ? [] : ["eslint"]), ...(c.tests ? [] : ["de tests"])];
+export function faaltOp(c: Pick<ControleKort, "tsc" | "eslint" | "tests"> & { schema?: boolean | undefined; python?: boolean | undefined }): string[] {
+  return [...(c.tsc ? [] : ["TypeScript"]), ...(c.schema === false ? ["het databaseschema"] : []), ...(c.python === false ? ["de Python-bestanden"] : []), ...(c.eslint ? [] : ["eslint"]), ...(c.tests ? [] : ["de tests"])];
 }
 
 export function duurKort(sec: number): string {
@@ -59,7 +62,7 @@ export function duurKort(sec: number): string {
 }
 
 /** "schoon in 4 min" / "faalt op TypeScript en de tests (6 min)". */
-export function controleTekst(c: Pick<ControleKort, "ok" | "tsc" | "eslint" | "tests" | "duurSec"> & { schema?: boolean | undefined }): string {
+export function controleTekst(c: Pick<ControleKort, "ok" | "tsc" | "eslint" | "tests" | "duurSec"> & { schema?: boolean | undefined; python?: boolean | undefined }): string {
   if (c.ok) return `schoon in ${duurKort(c.duurSec)}`;
   const delen = faaltOp(c);
   const lijst = delen.length > 1 ? `${delen.slice(0, -1).join(", ")} en ${delen[delen.length - 1]}` : (delen[0] ?? "een onderdeel");
