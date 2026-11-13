@@ -179,6 +179,9 @@ const hasVideos = () => {
   }
 };
 
+/** Een adres op een eigen naam: er is een adres en het is niet de technische sslip.io-naam van de server. */
+const eigenNaam = (url: string | undefined): boolean => Boolean(url) && !/sslip\.io/i.test(url ?? "");
+
 export async function ownerTodos(): Promise<OwnerTodo[]> {
   const manual = (await kvGet<Record<string, { at: string; by: string }>>("owner-todos:done")) ?? {};
   const base = env.APP_BASE_URL ?? "";
@@ -200,6 +203,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     unsentProposals(),
   ]);
   const [beeldGelukt, beeldSlot] = await Promise.all([geminiBeeldGelukt(), geminiSlot("beeld")]);
+  // de kennisbank (lib/kennisbank/outline.ts): staat de API-sleutel erin en is hij gevuld?
+  const kennisbank = await import("@/lib/kennisbank/outline").then((m) => m.leesStand()).catch(() => null);
   // de overheidscertificaten voor het chiplezen (lib/kyc/chip/csca.ts)
   const csca = await cscaStand().catch(() => null);
   // de beperkte Stripe-sleutel voor de foto's van Stripe-controles (lib/kyc/stripe-fotos.ts)
@@ -1054,7 +1059,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       title: "Fouten en prestaties bewaken met eigen GlitchTip en Grafana",
       why: "De site meet nu zelf hoe lang elk verzoek en elke databasequery duurt (Admin → Prestaties) en bewaart fouten in het eigen logboek. Dat geheugen begint bij elke uitrol opnieuw. Een eigen GlitchTip (open source, zoals Sentry) en Grafana op dezelfde server bewaren de geschiedenis, met zoeken en meldingen, zonder abonnement.",
       how: [
-        "Zeg tegen Claude: 'zet GlitchTip en Grafana aan'. Hij start de extra containers uit infra/docker/docker-compose.observability.yml (±600 MB geheugen; de VPS heeft 8 GB), maakt een beheerder aan en zet GLITCHTIP_DSN in .env.production.",
+        "Zeg tegen Claude: 'zet GlitchTip en Grafana aan'. Hij start de extra containers uit infra/docker/docker-compose.observability.yml (±600 MB geheugen; de VPS heeft 16 GB), maakt een beheerder aan en zet GLITCHTIP_DSN in .env.production.",
         "Kies een adres (bijv. fouten.zekerflex.com en grafana.zekerflex.com, beide alleen voor jou met wachtwoord) of laat ze intern; Claude zet de Caddy-regel erbij.",
         "Daarna komt elke nieuwe soort fout vanzelf in GlitchTip en zie je in Grafana de responstijden per route en het geheugen van de server.",
       ],
@@ -1095,8 +1100,9 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
         "Zet bij je domeinbeheer twee A-records naar het IP van de VPS (37.97.226.24): bi.zekerflex.com en kennis.zekerflex.com.",
         "Zeg het tegen Claude; die zet METABASE_HOST en OUTLINE_HOST in .env.production en herstart de webserver. Certificaten komen vanzelf.",
       ],
-      auto: false,
-      ...m("diensten-dns"),
+      auto: true,
+      done: (eigenNaam(env.METABASE_PUBLIC_URL) && eigenNaam(env.OUTLINE_PUBLIC_URL)) || Boolean(manual["diensten-dns"]),
+      ...(eigenNaam(env.METABASE_PUBLIC_URL) && eigenNaam(env.OUTLINE_PUBLIC_URL) ? {} : { doneNote: "nog een technische naam (sslip.io)" }),
     },
     {
       id: "kennisbank-api",
@@ -1107,8 +1113,9 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
         "Open Admin → AI & automatisering → Kennisbank en klik op het adres; log in met je ZekerFlex-account (de eerste wordt beheerder).",
         "In Outline: Instellingen → API-sleutels → Nieuwe sleutel. Plak hem in Admin → Kennisbank en klik 'Kennisbank vullen'.",
       ],
-      auto: false,
-      ...m("kennisbank-api"),
+      auto: true,
+      done: Boolean(kennisbank?.apiGezet && kennisbank.laatstGevuld) || Boolean(manual["kennisbank-api"]),
+      ...(kennisbank?.apiGezet && !kennisbank.laatstGevuld ? { doneNote: "de sleutel staat erin; klik nog op 'Kennisbank vullen'" } : {}),
     },
     {
       id: "test-accounts",
