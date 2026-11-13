@@ -8,6 +8,9 @@ import type { CityData, CityWeather } from "@/lib/admin/city-data";
 import { createLife } from "@/components/admin/city/life";
 import { createFestive } from "@/components/admin/city/feest";
 import { buildNederland } from "@/components/admin/city/nederland";
+import { buildWegen } from "@/components/admin/city/wegen";
+import { STEDEN } from "@/lib/admin/nl-wegen";
+import { type Gang, GEEN_INVOER, GRENS, type Invoer, kijkSlepen, ooghoogte, startStand, verkenStap, type Verkenstand, vooruitVan } from "@/lib/admin/verkennen";
 import { type WeatherKind, yearSeason, type YearSeason } from "@/lib/admin/city-life";
 import { seasonOn, type SeasonId } from "@/lib/seasons/calendar";
 import { amsterdamClock, amsterdamDayKey, amsterdamParts, amsterdamToUtc } from "@/lib/time/amsterdam";
@@ -24,7 +27,7 @@ import { type Anchor, buildCompanies, buildDock, buildHouses, buildOffice, build
 // mensen die nu een dienst hebben; gewoon verkeer wordt drukker als er meer
 // mensen werken. Tekenen pauzeert buiten beeld en in een verborgen tabblad.
 
-export type View = "stad" | "hq" | "bedrijven" | "woonwijk" | "bank" | "datacenter" | "magazijn" | "opleiding" | "park" | "polder" | "station";
+export type View = "stad" | "hq" | "bedrijven" | "woonwijk" | "bank" | "datacenter" | "magazijn" | "opleiding" | "park" | "polder" | "station" | "amsterdam" | "rotterdam" | "utrecht" | "groningen";
 export const TOUR: View[] = ["stad", "hq", "bedrijven", "bank", "datacenter", "magazijn", "opleiding", "woonwijk", "station", "park", "polder"];
 
 export interface CityHandle {
@@ -40,6 +43,10 @@ export interface CityHandle {
   setTime: (hour: number | null) => void;
   /** Foto van de stad zoals hij nu in beeld is (PNG), om te delen. */
   snapshot: () => string;
+  /** Zelf rondlopen of rondrijden (null = stoppen, terug naar het overzicht). */
+  verkennen: (gang: Gang | null) => void;
+  /** Knoppen op het scherm (telefoon): vooruit/achteruit, opzij, draaien; −1 tot 1, 0 = losgelaten. */
+  verkenKnop: (as: "vooruit" | "opzij" | "draai", waarde: number) => void;
   dispose: () => void;
 }
 
@@ -99,6 +106,8 @@ export function createCity(
      * van vroeger, precies zoals hij was (ook voor zwakke apparaten).
      */
     realistisch?: boolean;
+    /** Het rondlopen is gestopt (Esc of een plek gekozen), zodat de knoppen dat ook laten zien. */
+    onVerkenEind?: () => void;
   },
 ): CityHandle {
   const { reduced } = opts;
@@ -203,6 +212,9 @@ export function createCity(
   scene.add(nederland.layer.group);
   // voetgangers, dieren, wolken en neerslag; versiering op feestdagen
   const life = createLife(kit, scene, shadow);
+  // snelwegen naar Amsterdam, Rotterdam, Utrecht en Groningen, met een ringweg, panden en verkeer in elke stad (wegen.ts)
+  const wegen = buildWegen(kit, shadow, win, reduced);
+  scene.add(wegen.layer.group);
   life.setHoliday(holiday);
   const festive = createFestive(kit, scene, holiday);
   let hourNow = amsterdamParts(today).hour;
@@ -249,7 +261,7 @@ export function createCity(
   let sigHouses = -1;
   let sigDock = "";
 
-  const layers = () => [world.layer, office.layer, companies.layer, houses.layer, dock, nederland.layer];
+  const layers = () => [world.layer, office.layer, companies.layer, houses.layer, dock, nederland.layer, wegen.layer];
   // voertuigen met een echte gebeurtenis; aanklikbaar, dan toont het paneel die gebeurtenis
   const trips: Trip[] = [];
   let pickables: THREE.Object3D[] = [];
@@ -336,6 +348,54 @@ export function createCity(
   controls.keyPanSpeed = 18;
 
   let fly: { p0: THREE.Vector3; p1: THREE.Vector3; t0: THREE.Vector3; t1: THREE.Vector3; start: number; dur: number } | null = null;
+  // zelf rondlopen of rondrijden (lib/admin/verkennen.ts): de camera op ooghoogte, toetsen, slepen of knoppen
+  let verken: Verkenstand | null = null;
+  const toetsen = new Set<string>();
+  const knoppen = { vooruit: 0, opzij: 0, draai: 0 };
+  const verkenDoel = new THREE.Vector3();
+  const VERKEN_TOETSEN = new Set(["KeyW", "KeyA", "KeyS", "KeyD", "KeyQ", "KeyE", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "ShiftLeft", "ShiftRight"]);
+  const typt = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT");
+  const invoer = (): Invoer => {
+    if (!verken) return GEEN_INVOER;
+    const k = (...codes: string[]) => (codes.some((c) => toetsen.has(c)) ? 1 : 0);
+    return {
+      vooruit: k("KeyW", "ArrowUp") - k("KeyS", "ArrowDown") + knoppen.vooruit,
+      opzij: k("KeyD") - k("KeyA") + knoppen.opzij,
+      draai: k("ArrowLeft", "KeyQ") - k("ArrowRight", "KeyE") + knoppen.draai,
+      snel: k("ShiftLeft", "ShiftRight") === 1,
+    };
+  };
+  const onKeyDown = (ev: KeyboardEvent) => {
+    if (!verken || typt(ev.target)) return;
+    if (ev.code === "Escape") {
+      stopVerken();
+      opts.onVerkenEind?.();
+      return;
+    }
+    if (!VERKEN_TOETSEN.has(ev.code)) return;
+    // de pijltjes schuiven anders de pagina
+    ev.preventDefault();
+    toetsen.add(ev.code);
+  };
+  const onKeyUp = (ev: KeyboardEvent) => {
+    toetsen.delete(ev.code);
+  };
+  const onBlur = () => toetsen.clear();
+  window.addEventListener("keydown", onKeyDown);
+  window.addEventListener("keyup", onKeyUp);
+  window.addEventListener("blur", onBlur);
+  const stopVerken = () => {
+    const s = verken;
+    if (!s) return;
+    verken = null;
+    toetsen.clear();
+    knoppen.vooruit = knoppen.opzij = knoppen.draai = 0;
+    controls.enabled = true;
+    // van bovenaf verder, achter de plek waar je stond en dezelfde kant op kijkend
+    const [fx, fz] = vooruitVan(s.kijk);
+    controls.target.set(s.x + fx * 6, 0, s.z + fz * 6);
+    flyToPoints(new THREE.Vector3(s.x - fx * 45, 38, s.z - fz * 45), new THREE.Vector3(s.x + fx * 10, 0, s.z + fz * 10));
+  };
   let touring = false;
   let tourStep = 0;
   let nextTourAt = 0;
@@ -378,6 +438,14 @@ export function createCity(
       case "station":
         // van de kant van de gracht, zodat je de winkels en de stationshal van voren ziet
         return around(0, 2, 100, -18, 26, -40);
+      case "amsterdam":
+      case "rotterdam":
+      case "utrecht":
+      case "groningen": {
+        // de stad van schuin boven, vanaf de kant van de snelweg
+        const s = STEDEN.find((x) => x.id === to);
+        return s ? around(s.x, 0, s.z, s.x < 0 ? 70 : -70, 60, -80) : around(0, 0, 8, 0, 140, 155);
+      }
       default: {
         const p = LANDMARKS[to];
         return around(p.x, 2, p.z, 14, 22, 28);
@@ -395,6 +463,7 @@ export function createCity(
     fly = { p0: camera.position.clone(), p1: pos, t0: controls.target.clone(), t1: target, start: performance.now(), dur: 1700 };
   };
   const flyTo = (to: View | { company: string }) => {
+    stopVerken();
     const v = viewFor(to);
     flyToPoints(v.pos, v.target);
   };
@@ -476,11 +545,13 @@ export function createCity(
     return null;
   };
   let down: { t: number; x: number; y: number } | null = null;
+  let sleep: { x: number; y: number } | null = null;
   const onDown = (ev: PointerEvent) => {
     // een muisklik maakt het tekenvlak niet actief, anders schuift de browser de pagina
     // ernaartoe (sprong); met Tab werkt het toetsenbord gewoon
     if (ev.pointerType === "mouse") ev.preventDefault();
     down = { t: performance.now(), x: ev.clientX, y: ev.clientY };
+    sleep = { x: ev.clientX, y: ev.clientY };
   };
   const onUp = (ev: PointerEvent) => {
     if (!down) return;
@@ -493,6 +564,11 @@ export function createCity(
   };
   let lastHover = 0;
   const onMove = (ev: PointerEvent) => {
+    if (verken && down && sleep) {
+      verken = kijkSlepen(verken, ev.clientX - sleep.x, ev.clientY - sleep.y);
+      sleep = { x: ev.clientX, y: ev.clientY };
+      return;
+    }
     if (down || ev.pointerType !== "mouse") return;
     const now = performance.now();
     if (now - lastHover < 120) return;
@@ -952,8 +1028,9 @@ export function createCity(
       if (b.g.position.x > 160) b.g.position.x = -160;
       if (b.g.position.x < -160) b.g.position.x = 160;
     }
-    life.update(dt, now, controls.target);
+    life.update(dt, now, verken ? verkenDoel : controls.target);
     nederland.update(dt, now, phase);
+    wegen.update(dt, now);
     festive.update(dt, now, hourNow, phase !== "dag");
     // de vlaggen wapperen op de echte wind in Amsterdam
     if (!reduced) {
@@ -1006,10 +1083,21 @@ export function createCity(
       controls.target.lerpVectors(fly.t0, fly.t1, e);
       if (k >= 1) fly = null;
     }
-    controls.target.x = Math.max(-120, Math.min(120, controls.target.x));
-    controls.target.z = Math.max(-110, Math.min(110, controls.target.z));
-    controls.target.y = Math.max(0, Math.min(20, controls.target.y));
-    controls.update();
+    if (verken) {
+      verken = verkenStap(verken, invoer(), dt);
+      const y = ooghoogte(verken);
+      const [fx, fz] = vooruitVan(verken.kijk);
+      const c = Math.cos(verken.op);
+      camera.position.set(verken.x, y, verken.z);
+      camera.lookAt(verken.x + fx * c, y + Math.sin(verken.op), verken.z + fz * c);
+      verkenDoel.set(verken.x + fx * 12, 0, verken.z + fz * 12);
+    } else {
+      // de hele wereld is te verkennen (13 nov: tot en met de vier steden), niet alleen de stad rond het kantoor
+      controls.target.x = Math.max(GRENS.x0, Math.min(GRENS.x1, controls.target.x));
+      controls.target.z = Math.max(GRENS.z0, Math.min(GRENS.z1, controls.target.z));
+      controls.target.y = Math.max(0, Math.min(20, controls.target.y));
+      controls.update();
+    }
     renderer.render(scene, camera);
 
     const w = host.clientWidth;
@@ -1057,6 +1145,24 @@ export function createCity(
     },
     stopReplay: endReplay,
     fly: flyTo,
+    verkennen(gang) {
+      if (gang === null) return stopVerken();
+      if (verken) {
+        verken = { ...verken, gang };
+        return;
+      }
+      stopTour();
+      fly = null;
+      follow = null;
+      followCam = false;
+      controls.autoRotate = false;
+      controls.enabled = false;
+      verken = startStand(camera.position.x, camera.position.z, controls.target.x, controls.target.z, gang);
+      renderer.domElement.focus({ preventScroll: true });
+    },
+    verkenKnop(as, waarde) {
+      knoppen[as] = Math.max(-1, Math.min(1, waarde));
+    },
     tour(on) {
       touring = on;
       if (on) {
@@ -1099,6 +1205,9 @@ export function createCity(
       renderer.domElement.removeEventListener("pointerdown", onDown);
       renderer.domElement.removeEventListener("pointerup", onUp);
       renderer.domElement.removeEventListener("pointermove", onMove);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
       for (const l of layers()) l.dispose();
       life.dispose();
       festive.dispose();

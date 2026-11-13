@@ -7,6 +7,7 @@ import { bake, gableGeometry, hashOf, type Kit, repeated, seeded, signTexture, t
 import { ROOMS, type Room, type RoomId } from "@/components/admin/city/rooms";
 import { robot, vehicle } from "@/components/admin/city/vehicles";
 import { kruinVorm, naaldboomVorm } from "@/components/admin/city/vormen";
+import { afstandTotWeg } from "@/lib/admin/nl-wegen";
 
 // De gebouwen en wegen van de 3D-stad. De vaste stad (wegen, park, gracht,
 // bank, datacenter, magazijn, opleidingscentrum, hoofdkantoor) wordt één keer
@@ -301,7 +302,9 @@ export function buildWorld(kit: Kit, win: Windows, season: YearSeason = "zomer")
     const inCanal = z > cz0 - 2 && z < cz1 + 2;
     const onExit = (x > 72 && Math.abs(z - 24) < 5) || (x < -72 && Math.abs(z + 24) < 5);
     const inPolder = inRect(MEADOW_COWS, x, z, -3) || inRect(MEADOW_SHEEP, x, z, -3) || Math.hypot(x - FARM[0], z - FARM[1]) < 15 || (z < -84 && z > -134 && Math.abs(x) < 112);
-    if (!inCity && !inCanal && !onExit && !inPolder) (kit.echt && far && rnd() < 0.4 ? bos : trees).push([x, z]);
+    // niet op de snelwegen en ringwegen naar de steden (lib/admin/nl-wegen.ts)
+    const opWeg = afstandTotWeg(x, z) < 7;
+    if (!inCity && !inCanal && !onExit && !inPolder && !opWeg) (kit.echt && far && rnd() < 0.4 ? bos : trees).push([x, z]);
   }
   const trunks: Inst[] = [];
   const crowns: Inst[] = [];
