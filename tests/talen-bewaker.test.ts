@@ -28,7 +28,15 @@ import { OVERRIDE_LADERS } from "@/lib/i18n/overrides";
 // LOCALES / de taalkiezer) als zijn gegenereerde bestand er is en de steekproef klopt; een gegenereerd bestand wordt
 // nooit met de hand aangepast; geen enkele taal komt in een client-bundel via een statische import.
 const wortel = process.cwd();
-const lees = (p: string) => readFileSync(join(wortel, p), "utf8");
+const gelezen = new Map<string, string>();
+const lees = (p: string): string => {
+  const eerder = gelezen.get(p);
+  if (eerder !== undefined) return eerder;
+  const s = readFileSync(join(wortel, p), "utf8");
+  gelezen.set(p, s);
+  return s;
+};
+const TRAAG = 60_000; // de tests die de hele code doorzoeken mogen op een drukke machine langer duren
 const genMap = join(wortel, "lib/i18n/gen");
 const genBestanden = () => readdirSync(genMap).filter((f) => /^freelancer\.\w+\.ts$/.test(f));
 
@@ -114,7 +122,7 @@ describe("talen: gegenereerde bestanden", () => {
       if (/\bimport\(["']@\/lib\/i18n\/(gen\/freelancer|overrides\/\w)/.test(s)) fout.push(f);
     }
     expect(fout).toEqual([]);
-  });
+  }, TRAAG);
 
   it("freelancer.ts bevat geen talen-motor: alleen de vijf handgemaakte woordenboeken, de lader staat apart", () => {
     const s = lees("lib/i18n/freelancer.ts");
@@ -126,5 +134,5 @@ describe("talen: gegenereerde bestanden", () => {
   it("het script is de enige schrijver naar lib/i18n/gen", () => {
     const schrijvers = [...bronBestanden("lib"), ...bronBestanden("app"), ...bronBestanden("components")].filter((f) => /i18n\/gen/.test(lees(f)) && /writeFile/.test(lees(f)));
     expect(schrijvers).toEqual([]);
-  });
+  }, TRAAG);
 });
