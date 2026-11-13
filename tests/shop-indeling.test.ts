@@ -35,7 +35,8 @@ describe("de standaard is de oude webshop", () => {
     const src = bron("app/shop/page.tsx");
     expect(src).toContain("zichtbareShopSecties(await getShopIndeling(), browsing)");
     expect(src.indexOf("<ShopThuisHero")).toBeLessThan(src.indexOf("zichtbaar.map("));
-    expect(src.indexOf('<PaginaAchtergrond pagina="shop" />')).toBeLessThan(src.indexOf("<ShopThuisHero"));
+    // de foto in de kop vervangt de losse achtergrondstrook: geen dubbel beeld bovenaan
+    expect(src).not.toContain("<PaginaAchtergrond");
     for (const s of SHOP_SECTIES) expect(src, s.id).toContain(`    ${s.id}: `);
     // "Populair" staat er alleen met vijf producten, zoals voorheen
     expect(src).toContain("populair: featured.length === 5 ?");

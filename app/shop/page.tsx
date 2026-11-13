@@ -11,7 +11,6 @@ import { toShopProduct, type ShopCategory } from "@/components/marketing/shop-pr
 import { ShopMoreCategories, ShopNewsletter, ShopPaskamerPromo, ShopService } from "@/components/marketing/ShopSections";
 import { ShopCategorieGroot, ShopLooks, ShopThuisHero, type GroteTegel, type LookKaart } from "@/components/marketing/ShopThuis";
 import { LOOKS } from "@/lib/shop/paskamer";
-import { PaginaAchtergrond } from "@/components/shop/PaginaAchtergrond";
 import { Fragment, type ReactNode } from "react";
 import { zichtbareShopSecties, type ShopSectieId } from "@/lib/ontwerp/shop-indeling";
 import { getShopIndeling } from "@/lib/ontwerp/shop-indeling-store";
@@ -109,8 +108,8 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
 
   return (
     <>
-      {!browsing && <PaginaAchtergrond pagina="shop" />}
-      {!browsing && <ShopThuisHero t={dict} uitgelicht={uitgelicht} />}
+      {/* de foto in de kop vervangt de losse achtergrondstrook (geen dubbel beeld); PaginaAchtergrond blijft bestaan voor andere pagina's */}
+      {!browsing && <ShopThuisHero t={dict} />}
       {zichtbaar.map((id) => (
         <Fragment key={id}>{onderdelen[id]}</Fragment>
       ))}

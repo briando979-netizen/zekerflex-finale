@@ -5,7 +5,6 @@ import { ShopPrijs } from "@/components/marketing/ShopPrijs";
 import { Paspop } from "@/components/marketing/paskamer/Paspop";
 import { STANDAARD_LICHAAM, pasvormVoor, type Look } from "@/lib/shop/paskamer";
 import type { Gedragen } from "@/lib/shop/paspop-figuur";
-import type { ShopCardProduct } from "@/components/marketing/shop-product";
 
 // De startpagina van de shop voor gewone klanten (5 nov 2026): een warme kop
 // met echte producten, grote categorietegels en "Shop de look" met paspoppen.
@@ -15,7 +14,7 @@ import type { ShopCardProduct } from "@/components/marketing/shop-product";
 const WRAP = "mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8";
 const H2 = "font-display text-[24px] font-extrabold tracking-tight text-ink sm:text-[30px]";
 
-export function ShopThuisHero({ t, uitgelicht }: { t: Dict; uitgelicht: ShopCardProduct[] }) {
+export function ShopThuisHero({ t }: { t: Dict }) {
   const h = t.shopThuis;
   return (
     <section aria-labelledby="shop-kop" className="overflow-hidden bg-[#f4efe6]">
@@ -43,26 +42,20 @@ export function ShopThuisHero({ t, uitgelicht }: { t: Dict; uitgelicht: ShopCard
             ))}
           </ul>
         </div>
-        {uitgelicht.length >= 4 && (
-          <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:ml-auto lg:w-full lg:max-w-[540px]">
-            {uitgelicht.slice(0, 4).map((p, i) => (
-              <li key={p.id} className={i % 2 === 1 ? "mt-6 sm:mt-10 lg:mt-8" : ""}>
-                <Link href={`/shop/${p.slug}`} className="group relative block overflow-hidden rounded-2xl bg-white shadow-e1 transition hover:shadow-e2">
-                  <span className="relative block aspect-[4/5] overflow-hidden bg-paper-soft lg:aspect-square">
-                    {p.imageUrl && <Image src={p.imageUrl} alt="" fill priority={i < 2} sizes="(min-width: 1024px) 262px, 46vw" className="object-cover transition duration-700 group-hover:scale-[1.04]" />}
-                  </span>
-                  <span className="block p-3 sm:p-4">
-                    <span className="block truncate text-[13px] font-semibold text-ink sm:text-[14px]">{p.name}</span>
-                    <span className="mt-1 block">
-                      <ShopPrijs centen={Math.round(p.price * 100)} product={p} />
-                    </span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+        <div className="relative mx-auto w-full max-w-[560px] lg:ml-auto lg:max-w-[540px]">
+          <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-ink shadow-e2 ring-1 ring-black/5 sm:aspect-[5/4] lg:aspect-square">
+            {/* eigen foto van de eigenaar (public/shop/kop-team.jpg), 1024 x 1046; Next levert WebP en verkleint per scherm */}
+            <Image
+              src="/shop/kop-team.jpg"
+              alt="Vier lachende mensen in ZekerFlex-kleding voor een bakstenen muur met het ZF-logo"
+              width={1024}
+              height={1046}
+              priority
+              sizes="(min-width: 1024px) 540px, (min-width: 640px) 560px, calc(100vw - 32px)"
+              className="h-full w-full object-cover object-[50%_22%] lg:object-[50%_28%]"
+            />
+          </div>
+        </div>      </div>
     </section>
   );
 }

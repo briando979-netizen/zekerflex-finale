@@ -5,6 +5,7 @@ Deze productfoto's komen van het vrije web. CC BY-SA 4.0 vereist naamsvermelding
 
 | Bestand | Titel | Auteur | Licentie | Bron |
 |---|---|---|---|---|
+| kop-team.jpg | ZekerFlex-team voor de ZF-muur (kop van /shop) | eigen foto van de eigenaar | eigen beeld, vrij te gebruiken door ZekerFlex | geleverd door de eigenaar |
 | veiligheidsschoenen-s3.jpg | OZAPATO S3 Safety Boot | Thefabgeo | CC BY-SA | https://commons.wikimedia.org/w/index.php?curid=60540211 |
 | snijbestendige-handschoenen.jpg | construction worker safety gloves | — | CC0 (publiek domein) | https://www.rawpixel.com/image/5928007/ |
 | gehoorbescherming-oordoppen.jpg | Day 94: Earplugs | quinn.anya | CC BY-SA | https://www.flickr.com/photos/53326337@N00/2388120713 |
