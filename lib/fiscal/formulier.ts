@@ -45,6 +45,20 @@ export function ibanVoorOpslag(iban: string): { iban?: string } {
   return schoon ? { iban: schoon } : {};
 }
 
+/**
+ * De body van het opslaan (PUT /api/me/fiscal). De loonheffingskorting zit er bewust NIET in (kaartpunt 11): die kies je pas na
+ * de getekende uitzendovereenkomst in het uitzendpaneel (components/app/UitzendPanel.tsx), en de route laat een sleutel die niet
+ * is meegestuurd staan. Zo zet dit formulier een eerdere keuze nooit stil terug.
+ */
+export function opslagBody(f: { kind: WorkerKind; iban: string; kor: boolean; vatRequested: boolean; vatNumber: string; kvkNumber: string; bsn: string; ibanCode: string }): Record<string, unknown> {
+  const body: Record<string, unknown> = { workerKind: f.kind, ...ibanVoorOpslag(f.iban), korApplies: f.kor, vatRequested: f.vatRequested };
+  if (f.vatNumber.trim()) body.vatNumber = f.vatNumber.trim();
+  if (f.kvkNumber.trim()) body.kvkNumber = f.kvkNumber.trim();
+  if (f.kind === "uitzendkracht" && f.bsn.trim()) body.bsn = f.bsn.trim();
+  if (f.ibanCode.trim()) body.ibanCode = f.ibanCode.trim();
+  return body;
+}
+
 /** Staat de werkvorm al vast? Dan geen keuze meer tonen, tenzij de werker op "wijzigen" drukte. */
 export function toonWerkvormKeuze(opgeslagen: WorkerKind | null | undefined, wijzigen: boolean): boolean {
   return !opgeslagen || wijzigen;

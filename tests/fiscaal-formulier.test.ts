@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/storage/kv", () => ({ kvGet: vi.fn(async () => null), kvSet: vi.fn(async () => undefined), kvListEntries: vi.fn(async () => []) }));
 
-import { bedrijfAlIngevuld, formulierMist, ibanVoorOpslag, schoonKvk, toonWerkvormKeuze, type FormulierFeiten } from "@/lib/fiscal/formulier";
-import { fiscaalIngevuld, isComplete, type FiscalProfile } from "@/lib/fiscal/store";
+import { bedrijfAlIngevuld, formulierMist, ibanVoorOpslag, opslagBody, schoonKvk, toonWerkvormKeuze, type FormulierFeiten } from "@/lib/fiscal/formulier";
+import { fiscaalIngevuld, getFiscal, isComplete, type FiscalProfile } from "@/lib/fiscal/store";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 
 // Het fiscale formulier vraagt niets dubbel meer (14 nov, punten 12, 5 en 7 van de kaart): het IBAN is daar optioneel, de
@@ -50,6 +50,28 @@ describe("het IBAN telt niet meer als 'mist' in het formulier", () => {
     expect(isComplete(zonder)).toBe(false);
     expect(fiscaalIngevuld(zonder)).toBe(true);
     expect(isComplete({ ...zonder, iban: "NL91ABNA0417164300" })).toBe(true);
+  });
+});
+
+describe("de loonheffingskorting hoort niet bij de aanmelding (kaartpunt 11)", () => {
+  const invoer = { kind: "uitzendkracht" as const, iban: "", kor: false, vatRequested: false, vatNumber: "", kvkNumber: "", bsn: "123456782", ibanCode: "" };
+
+  it("de korting telt niet als 'mist' en zit niet in de opslag-body: een eerdere keuze wordt nooit stil teruggezet", () => {
+    expect(formulierMist(feiten({ kind: "uitzendkracht", hasBsn: true }))).toEqual([]);
+    const body = opslagBody(invoer);
+    expect(Object.keys(body)).not.toContain("loonheffingskorting");
+    expect(body).toEqual({ workerKind: "uitzendkracht", korApplies: false, vatRequested: false, bsn: "123456782" });
+  });
+
+  it("de body stuurt alleen mee wat is ingevuld", () => {
+    const body = opslagBody({ ...invoer, kind: "zzp", bsn: "999", iban: " NL91ABNA0417164300 ", vatNumber: " NL123456789B01 ", kvkNumber: "12345678", ibanCode: "123456" });
+    expect(body).toEqual({ workerKind: "zzp", iban: "NL91ABNA0417164300", korApplies: false, vatRequested: false, vatNumber: "NL123456789B01", kvkNumber: "12345678", ibanCode: "123456" });
+  });
+
+  it("BEKEND, gemeten 14 nov: zonder keuze staat de korting AAN (lib/fiscal/store.ts:84; lib/payroll/compute.ts:231 rekent dan met 27,35% in plaats van 36,97%)", async () => {
+    // Dit legt vast wat de code nu doet, niet wat de wet als standaard noemt (geen korting tenzij de werknemer kiest).
+    // Klopt dit niet met de bedoeling, dan is dat een besluit voor ae en de eigenaar: pas dan deze test en de standaardwaarde samen aan.
+    expect((await getFiscal("onbekende-werker")).loonheffingskorting).toBe(true);
   });
 });
 
