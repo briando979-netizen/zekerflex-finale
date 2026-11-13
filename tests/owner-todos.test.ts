@@ -131,6 +131,33 @@ describe("owner to-do list", () => {
     expect(manual.map((x) => x.id)).toEqual(expect.arrayContaining(["stripe-identity", "play-store-app", "vacaturefeed", "google-business"]));
   });
 
+  it("kennisbank: de taak vinkt zichzelf af zodra de API-sleutel erin staat en de kennisbank gevuld is (op prod, 13 nov: nog geen sleutel)", async () => {
+    expect((await byId())["kennisbank-api"]).toMatchObject({ done: false, auto: true });
+    kv.set("kennisbank:api", "sleutel");
+    kv.set("kennisbank:stand", { apiGezet: true, laatstGevuld: null, verzamelingen: [], laatsteFout: null });
+    expect((await byId())["kennisbank-api"]).toMatchObject({ done: false, doneNote: "de sleutel staat erin; klik nog op 'Kennisbank vullen'" });
+    kv.set("kennisbank:stand", { apiGezet: true, laatstGevuld: "2026-11-13T09:00:00.000Z", verzamelingen: [], laatsteFout: null });
+    expect((await byId())["kennisbank-api"]!.done).toBe(true);
+  });
+
+  it("eigen namen voor rapportages en kennisbank: klaar zodra beide adressen geen sslip.io-naam meer zijn (op prod, 13 nov: nog technische namen)", async () => {
+    const env = live.env as Record<string, unknown>;
+    env.METABASE_PUBLIC_URL = "https://bi.37-97-226-24.sslip.io";
+    env.OUTLINE_PUBLIC_URL = "https://kennis.37-97-226-24.sslip.io";
+    expect((await byId())["diensten-dns"]).toMatchObject({ done: false, auto: true, doneNote: "nog een technische naam (sslip.io)" });
+    env.METABASE_PUBLIC_URL = "https://bi.zekerflex.com";
+    expect((await byId())["diensten-dns"]!.done).toBe(false);
+    env.OUTLINE_PUBLIC_URL = "https://kennis.zekerflex.com";
+    expect((await byId())["diensten-dns"]!.done).toBe(true);
+    delete env.METABASE_PUBLIC_URL;
+    delete env.OUTLINE_PUBLIC_URL;
+  });
+
+  it("geen taaktekst noemt nog een server van 8 GB (de VPS heeft 16 GB sinds 7 nov)", async () => {
+    const tekst = (await ownerTodos()).map((x) => [x.title, x.why, ...x.how].join(" ")).join("\n");
+    expect(tekst).not.toMatch(/\b8 GB\b.*(VPS|server)|(VPS|server).*\b8 GB\b/);
+  });
+
   it("geen taak meer om GitHub te betalen: Actions staan bewust uit (9 nov), de controle draait op de eigen server", async () => {
     const ids = (await ownerTodos()).map((x) => x.id);
     expect(ids).not.toContain("github-billing");
