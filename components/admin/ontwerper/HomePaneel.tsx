@@ -64,6 +64,11 @@ export function HomePaneel({ onVoorbeeldPad, onVernieuw }: { onVoorbeeldPad: (pa
     };
   }, []);
 
+  // een hook hoort boven de vroege return hieronder; zonder indeling valt er niets te verslepen
+  const sleep = useSleep((van, naar) => {
+    if (indeling) zet({ ...indeling, volgorde: verplaatsNaar(indeling.volgorde, van, naar) });
+  });
+
   if (!indeling || !live) {
     return (
       <p className="text-sm" style={mute}>
@@ -97,7 +102,6 @@ export function HomePaneel({ onVoorbeeldPad, onVernieuw }: { onVoorbeeldPad: (pa
     if (x) v.splice(j, 0, x);
     zet({ ...indeling, volgorde: v });
   };
-  const sleep = useSleep((van, naar) => zet({ ...indeling, volgorde: verplaatsNaar(indeling.volgorde, van, naar) }));
   const toon = (id: HomeItem, aan: boolean) => zet({ ...indeling, verborgen: aan ? indeling.verborgen.filter((x) => x !== id) : [...indeling.verborgen, id] });
   const afwijkend = !gelijk(indeling, live);
   const blokOp = new Map(indeling.eigen.map((b) => [eigenSleutel(b), b] as const));
