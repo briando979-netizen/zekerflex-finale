@@ -5,7 +5,7 @@
 // meten. De foto verlaat het toestel nooit. Rekenregels: lib/shop/foto-meting.ts.
 
 import { HAARKLEUREN } from "@/lib/shop/paspop3d/kleding";
-import { FotoFoutError, isHeic } from "@/lib/shop/foto-fout";
+import { FotoFoutError, isHeic, metStap, metTijdslimiet } from "@/lib/shop/foto-fout";
 import { POSE, beoordeelFoto, dichtstbij, gemiddeldeKleur, gezichtsKader, huidVoorPaspop, meetLichaam, type Meting, type Probleem, type Punt } from "@/lib/shop/foto-meting";
 
 const BASIS = "/paskamer/ml";
@@ -22,16 +22,24 @@ const G = globalThis as unknown as { __zfMeting?: Promise<Modellen> | undefined 
 /** De modellen één keer per tabblad laden. */
 function laad(): Promise<Modellen> {
   return (G.__zfMeting ??= (async () => {
-    const v = (await import(/* webpackIgnore: true */ `${BASIS}/vision_bundle.mjs`)) as Vision;
-    const f = await v.FilesetResolver.forVisionTasks(`${BASIS}/wasm`);
+    const v = await import(/* webpackIgnore: true */ `${BASIS}/vision_bundle.mjs`).then(
+      (m) => m as Vision,
+      (e) => {
+        throw metStap(e, "bundel", "model");
+      },
+    );
+    const f = await v.FilesetResolver.forVisionTasks(`${BASIS}/wasm`).catch((e) => {
+      throw metStap(e, "wasm", "model");
+    });
     const [pose, segmenter] = await Promise.all([
       v.PoseLandmarker.createFromOptions(f, { baseOptions: { modelAssetPath: `${BASIS}/pose_landmarker_lite.task`, delegate: "CPU" }, runningMode: "IMAGE", numPoses: 1, minPoseDetectionConfidence: 0.5 }),
       v.ImageSegmenter.createFromOptions(f, { baseOptions: { modelAssetPath: `${BASIS}/selfie_segmenter.tflite`, delegate: "CPU" }, runningMode: "IMAGE", outputConfidenceMasks: true, outputCategoryMask: false }),
     ]);
     return { pose, segmenter };
   })().catch((e) => {
+    // wasm/model starten mislukt (geen SIMD, geheugen, beveiligingsinstelling): stap erbij
     G.__zfMeting = undefined;
-    throw e;
+    throw metStap(e, "wasm", "model");
   }));
 }
 
@@ -98,16 +106,27 @@ function pixels(c: HTMLCanvasElement, x: number, y: number, w: number, h: number
   return ctx.getImageData(x0, y0, w0, h0).data;
 }
 
-/** Foto meten. `onStap` meldt "laden" (eerste keer) en "meten". */
+/** Foto meten. `onStap` meldt "laden" (eerste keer) en "meten". Fouten dragen de stap waarin het misging. */
 export async function meetFoto(bestand: File, lengteCm: number, onStap?: (s: "laden" | "meten") => void): Promise<FotoUitkomst> {
-  const canvas = await naarCanvas(bestand);
+  const canvas = await naarCanvas(bestand).catch((e) => {
+    throw metStap(e, "inlezen");
+  });
   onStap?.("laden");
-  // Het model laden kan mislukken (o.a. Safari vóór 16.4 heeft geen WebAssembly-SIMD): eigen oorzaak.
-  const { pose, segmenter } = await laad().catch(() => {
-    throw new FotoFoutError("model");
+  // Traag laden (20 MB wasm en model) krijgt een eigen melding in plaats van eindeloos draaien.
+  const modellen = await metTijdslimiet(laad(), LAAD_LIMIET_MS, () => {
+    G.__zfMeting = undefined;
   });
   onStap?.("meten");
-  const w = canvas.width;
+  try {
+    return meetCanvas(canvas, modellen, lengteCm);
+  } catch (e) {
+    throw metStap(e, "meten");
+  }
+}
+
+const LAAD_LIMIET_MS = 60_000;
+
+function meetCanvas(canvas: HTMLCanvasElement, { pose, segmenter }: Modellen, lengteCm: number): FotoUitkomst {  const w = canvas.width;
   const h = canvas.height;
   const beeld = canvas.toDataURL("image/jpeg", 0.85);
   const punten = pose.detect(canvas).landmarks[0] ?? null;

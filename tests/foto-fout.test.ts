@@ -1,10 +1,61 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
-import { FOTO_FOUT_TEKST, FotoFoutError, fotoFoutSoort, isHeic } from "@/lib/shop/foto-fout";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { FOTO_FOUT_TEKST, FotoFoutError, fotoFoutSoort, foutRapport, isHeic, metStap, metTijdslimiet } from "@/lib/shop/foto-fout";
 import { nl } from "@/lib/i18n/dictionaries";
 import { en } from "@/lib/i18n/dictionary-en";
 
 const lees = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
+
+afterEach(() => vi.useRealTimers());
+
+describe("Op mijn foto: logboek, stappen en tijdslimiet", () => {
+  it("het rapport bevat soort, stap, naam en bericht, zonder adressen of bestandsnamen", () => {
+    const e = metStap(new TypeError("kon https://zekerflex.nl/paskamer/ml/x.wasm?token=abc niet laden voor IMG_0042.heic"), "wasm", "model");
+    const r = foutRapport(e);
+    expect(r).toContain("soort=model");
+    expect(r).toContain("stap=wasm");
+    expect(r).toContain("TypeError");
+    expect(r).not.toMatch(/token|zekerflex\.nl|IMG_0042|https?:/);
+    expect(r).toContain("<adres>");
+    expect(r.length).toBeLessThanOrEqual(400);
+  });
+
+  it("een lang bericht wordt afgekapt en een onbekende fout krijgt de stap meten", () => {
+    expect(foutRapport(new Error("x".repeat(5000))).length).toBeLessThanOrEqual(400);
+    expect(foutRapport(new Error("boem"))).toContain("stap=meten");
+  });
+
+  it("metStap laat een bestaande stap staan", () => {
+    const eerst = new FotoFoutError("model", "bundel");
+    expect(metStap(eerst, "wasm").stap).toBe("bundel");
+    expect(metStap(new FotoFoutError("heic"), "inlezen").stap).toBe("inlezen");
+  });
+
+  it("een traag model geeft na de limiet de soort traag; een snel model gaat gewoon door", async () => {
+    vi.useFakeTimers();
+    let afgebroken = false;
+    const traag = metTijdslimiet(new Promise<number>(() => undefined), 1000, () => {
+      afgebroken = true;
+    });
+    const verwacht = expect(traag).rejects.toMatchObject({ soort: "traag", stap: "wasm" });
+    await vi.advanceTimersByTimeAsync(1001);
+    await verwacht;
+    expect(afgebroken).toBe(true);
+    await expect(metTijdslimiet(Promise.resolve(7), 1000)).resolves.toBe(7);
+  });
+
+  it("elke melding bestaat ook voor traag, met de Edge-instelling alleen als mogelijke oorzaak", () => {
+    expect(nl.paskamer.pasFotoTraag).toMatch(/mogelijke oorzaak/);
+    expect(en.paskamer.pasFotoTraag).toMatch(/possible cause/);
+  });
+
+  it("het scherm meldt de fout aan de bestaande client-error-route", () => {
+    const bron = lees("components/marketing/paskamer/MijnFoto.tsx");
+    expect(bron).toContain("/api/client-error");
+    expect(bron).toContain("foutRapport(fout)");
+    expect(bron).not.toMatch(/bestand\.name|f\.name/);
+  });
+});
 
 describe("Op mijn foto: oorzaak en melding", () => {
   it("herkent HEIC/HEIF aan type of bestandsnaam", () => {
@@ -37,7 +88,8 @@ describe("Op mijn foto: oorzaak en melding", () => {
     expect(bron).toContain('typeof createImageBitmap === "function"');
     expect(bron).toContain("URL.createObjectURL(bestand)");
     expect(bron).toContain("URL.revokeObjectURL(url)");
-    expect(bron).toContain('new FotoFoutError("model")');
+    expect(bron).toContain('metStap(e, "wasm", "model")');
+    expect(bron).toContain('metTijdslimiet(laad()');
     expect(bron).not.toMatch(/\(\?<[=!]/);
   });
 

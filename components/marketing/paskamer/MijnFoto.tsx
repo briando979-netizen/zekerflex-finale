@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/components/i18n/I18nProvider";
 import { POSE } from "@/lib/shop/foto-meting";
-import { FOTO_FOUT_TEKST, fotoFoutSoort, type FotoFout } from "@/lib/shop/foto-fout";
+import { FOTO_FOUT_TEKST, foutRapport, fotoFoutSoort, type FotoFout } from "@/lib/shop/foto-fout";
 import type { FotoUitkomst } from "@/components/marketing/paskamer/fotoMeting";
 
 // "Op mijn foto": de klant uploadt een foto van zichzelf (hele lichaam, van
@@ -13,6 +13,21 @@ import type { FotoUitkomst } from "@/components/marketing/paskamer/fotoMeting";
 export type Toepassing = { lengte: number; borst: number | null; taille: number | null; huid: string | null; haarKleur: string | null; gezicht: string | null };
 
 const PROBLEEM_TEKST = { "geen-mens": "pasFotoGeenMens", "niet-heel": "pasFotoNietHeel", "niet-voor": "pasFotoNietVoor", klein: "pasFotoKlein" } as const;
+
+// De echte oorzaak (soort, stap, naam en bericht van de fout; geen foto of bestandsnaam) naar het
+// foutenlogboek via de bestaande client-error-route. Best-effort: melden mag nooit zelf falen.
+function meldAanLogboek(fout: unknown): void {
+  try {
+    void fetch("/api/client-error", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({ message: foutRapport(fout), url: window.location.pathname, userAgent: navigator.userAgent.slice(0, 300) }),
+    }).catch(() => undefined);
+  } catch {
+    /* geen netwerk of fetch: negeren */
+  }
+}
 
 export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToepassen: (t: Toepassing) => void }) {
   const p = useT().paskamer;
@@ -44,6 +59,7 @@ export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToe
       setUit(await meetFoto(f, l, (s) => setStap(s)));
     } catch (e) {
       setFout(fotoFoutSoort(e));
+      meldAanLogboek(e);
     } finally {
       setStap("");
     }
