@@ -157,6 +157,6 @@ describe("de kaart zelf", () => {
   });
 
   it("een useEffect geeft niets terug behalve een opruimfunctie", () => {
-    expect(kaart).not.toMatch(/useEffect\(\s*\(\)\s*=>\s*(?!\{)/);
+    expect(kaart).not.toMatch(/useEffect\(\s*\(\)\s*=>\s*(?![\s{])/);
   });
 });
