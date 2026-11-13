@@ -9,6 +9,7 @@ import { isOpgeschoond, kycOpschonen, kycUploadIds } from "@/lib/privacy/kyc-fot
 import { ruimChatlogOp } from "@/lib/learn/store";
 import { ruimWeesrekeningenOp } from "@/lib/privacy/bank-wissen";
 import { ruimBsnVoorstellenOp } from "@/lib/fiscal/bsn-voorstel";
+import { ruimBezoekstatistiekOp } from "@/lib/privacy/bezoekstatistiek";
 
 // ---------------------------------------------------------------------------
 // Retention sweep.
@@ -110,6 +111,12 @@ export async function runRetentionSweep(
           where: { occurredAt: { lt: engagementCut } },
         })
       ).count;
+
+  // Bezoekstatistiek (AnalyticsEvent) na 13 maanden weg, begrensd per ronde en de oudste eerst (lib/privacy/bezoekstatistiek.ts).
+  cleared.bezoekstatistiek = await ruimBezoekstatistiekOp(now, dryRun).catch((err) => {
+    logger.warn("retention sweep: bezoekstatistiek niet opgeruimd", { soort: err instanceof Error ? err.name : "onbekend" });
+    return 0;
+  });
 
   // De leerlijsten van de assistenten (lib/learn/store.ts): vragen en beoordelingen na 90 dagen weg. Een storing in de opslag
   // laat de rest van de sweep gewoon doorlopen.

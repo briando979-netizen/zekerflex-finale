@@ -243,6 +243,8 @@ export async function anonymizeUser(
       await tx.complianceDocument.deleteMany({ where: { userId } })
     ).count;
     cleared.work_rights = (await tx.workRight.deleteMany({ where: { userId } })).count;
+    // Bezoekstatistiek van dit account (de rijen zonder account vallen onder de termijn van 13 maanden, lib/privacy/sweep.ts).
+    cleared.bezoekstatistiek = (await tx.analyticsEvent.deleteMany({ where: { userId } })).count;
 
     // Audit log stays append-only — scrub the PII inside it instead. The
     // tamper-evident hash chain covers only the immutable identity fields, so

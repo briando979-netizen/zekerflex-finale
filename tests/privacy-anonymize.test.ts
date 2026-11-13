@@ -56,6 +56,7 @@ const h = vi.hoisted(() => {
     certificate: { deleteMany: async () => ({ count: 1 }) },
     complianceDocument: { deleteMany: async () => ({ count: 2 }) },
     workRight: { deleteMany: async () => ({ count: 1 }) },
+    analyticsEvent: { deleteMany: async ({ where }: { where: { userId: string } }) => { state.deleted.push(`analytics:${where.userId}`); return { count: 6 }; } },
     auditLog: {
       findMany: async () => [
         { id: "a1", summary: "Jan de Vries (jan@example.com) logde in" },
@@ -159,6 +160,8 @@ describe("anonymizeUser", () => {
     expect(report.cleared.passkeys).toBe(2);
     expect(h.state.uploadsDeleted).toEqual(expect.arrayContaining(["up1", "up2", "up_werkrecht"]));
     expect(report.cleared.work_rights).toBe(1);
+    // bezoekstatistiek van dit account meteen weg (de verwijderpagina belooft dat via erasableNow)
+    expect(report.cleared.bezoekstatistiek).toBe(6);
     // ook alle ID-foto's (achterkant en selfie stonden nergens anders) en die van de telefoon
     expect(h.state.uploadsDeleted).toEqual(expect.arrayContaining(["up_iv_voor", "up_iv_achter", "up_iv_selfie", "up_tel_voor"]));
 
