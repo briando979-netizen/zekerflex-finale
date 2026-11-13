@@ -45,6 +45,27 @@ const WAAR: Record<keyof typeof ALLES, string> = {
   "label.telefoon": "lib/onboarding/verify.ts",
   "label.telefoonEerder": "lib/onboarding/verify.ts",
   "label.wallet": "lib/onboarding/verify.ts",
+  "werkrecht.vrij": "lib/kyc/werkrecht.ts",
+  "werkrecht.controle": "lib/kyc/werkrecht.ts",
+  "leeftijd.volwassen": "lib/kyc/werkrecht.ts",
+  "leeftijd.minderjarig": "lib/kyc/werkrecht.ts",
+  "leeftijd.teJong": "lib/kyc/werkrecht.ts",
+  "telefoon.binnen": "lib/onboarding/verify.ts",
+  "telefoon.eerder": "lib/onboarding/verify.ts",
+  "nummer.formaatOk": "lib/onboarding/verify.ts",
+  "nummer.formaatFout": "lib/onboarding/verify.ts",
+  "nummer.overeen": "lib/onboarding/verify.ts",
+  "nummer.wijktAf": "lib/onboarding/verify.ts",
+  "geldig.tot": "lib/onboarding/verify.ts",
+  "geldig.verlopen": "lib/onboarding/verify.ts",
+  "geldig.walletVerlopen": "lib/onboarding/verify.ts",
+  "fotos.ok": "lib/onboarding/verify.ts",
+  "fotos.onleesbaar": "lib/onboarding/verify.ts",
+  "werkvorm.uitzend": "lib/onboarding/verify.ts",
+  "thuisbasis.globaal": "lib/onboarding/verify.ts",
+  "naam.overeen": "lib/onboarding/verify.ts",
+  "naam.gelezen": "lib/onboarding/verify.ts",
+  "wallet.ok": "lib/onboarding/verify.ts",
 };
 
 describe("het woordenboek", () => {
@@ -61,7 +82,7 @@ describe("het woordenboek", () => {
 
   it("de Nederlandse tekst staat letterlijk op de plek waar hij ontstaat", () => {
     for (const [sleutel, t] of Object.entries(ALLES) as [keyof typeof ALLES, { nl: string }][]) {
-      const stuk = t.nl.split(/\{\w+\}/).at(-1) ?? t.nl;
+      const stuk = t.nl.split(/\{\w+\}/).filter((d) => d.trim()).at(-1) ?? t.nl;
       expect(bron(WAAR[sleutel]), `${sleutel} in ${WAAR[sleutel]}`).toContain(stuk.trim() ? stuk : t.nl);
     }
   });
@@ -80,7 +101,7 @@ describe("vertaalIdTekst", () => {
   });
 
   it("een onbekende tekst valt terug op het Nederlands, in elke taal", () => {
-    const onbekend = "Het getypte documentnummer wijkt af van het nummer op het document";
+    const onbekend = "Een uitleg die (nog) niet in het woordenboek staat";
     for (const taal of LOCALES) expect(vertaalIdTekst(onbekend, taal)).toBe(onbekend);
     // ook geen sleutel uit het prototype van een object
     expect(idRedenSleutel("constructor")).toBeNull();
@@ -107,7 +128,7 @@ describe("idUitslagVoorWerker", () => {
     summary: "In behandeling",
     checks: [
       { label: ID_LABELS["label.gezicht"].nl, ok: false, detail: ID_REDENEN["gezicht.twijfel"].nl },
-      { label: "Een controle die (nog) niet in het woordenboek staat", ok: true, detail: "Het getypte nummer staat ook op het document" },
+      { label: "Een controle die (nog) niet in het woordenboek staat", ok: true, detail: "Een uitleg die (nog) niet in het woordenboek staat" },
     ],
     reasons: [ID_REDENEN["gezicht.twijfel"].nl, ID_REDENEN["ai.nietBeschikbaar"].nl],
   };
