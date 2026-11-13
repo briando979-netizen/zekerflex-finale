@@ -18,10 +18,12 @@ import {
   zacht,
   zichtbareRegels,
   type BeeldClip,
+  type GroenScherm,
   type Project,
   type TekstClip,
   type TekstStand,
 } from "@/lib/video/model";
+import { haalKleurWeg, hexNaarRgb } from "@/lib/video/groen-scherm";
 
 // ---------------------------------------------------------------------------
 // Tekent één beeldje van een project op een canvas. Gedeeld door het voorbeeld
@@ -42,6 +44,32 @@ function maat(b: Bron): { w: number; h: number } {
   if (b instanceof HTMLVideoElement) return { w: b.videoWidth, h: b.videoHeight };
   if (b instanceof HTMLImageElement) return { w: b.naturalWidth, h: b.naturalHeight };
   return { w: b.width, h: b.height };
+}
+
+/** Eén werkdoek voor groen scherm: de bron eerst hierop (hooguit 960 px), de kleur weg, dan pas op het beeld. */
+let werkdoek: HTMLCanvasElement | null = null;
+const GROEN_MAX = 960;
+
+function zonderGroen(bron: Bron, m: { w: number; h: number }, g: GroenScherm): HTMLCanvasElement | null {
+  const schaal = Math.min(1, GROEN_MAX / Math.max(1, m.w, m.h));
+  const w = Math.max(1, Math.round(m.w * schaal));
+  const h = Math.max(1, Math.round(m.h * schaal));
+  werkdoek ??= document.createElement("canvas");
+  if (werkdoek.width !== w) werkdoek.width = w;
+  if (werkdoek.height !== h) werkdoek.height = h;
+  const ctx = werkdoek.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.clearRect(0, 0, w, h);
+  ctx.drawImage(bron, 0, 0, w, h);
+  try {
+    const beeld = ctx.getImageData(0, 0, w, h);
+    haalKleurWeg(beeld.data, hexNaarRgb(g.kleur), g.drempel, g.zachtheid);
+    ctx.putImageData(beeld, 0, 0);
+    return werkdoek;
+  } catch {
+    // een bron van elders (beschermd doek): dan zonder groen scherm
+    return null;
+  }
 }
 
 function klaar(b: Bron | null): b is Bron {
@@ -220,7 +248,8 @@ function tekenBeeld(ctx: CanvasRenderingContext2D, c: BeeldClip, t: number, W: n
       const pas = c.passen === "vullen" ? Math.max(W / m.w, H / m.h) : Math.min(W / m.w, H / m.h);
       const w = m.w * pas * s;
       const h = m.h * pas * s;
-      ctx.drawImage(bron, -w / 2, -h / 2, w, h);
+      const zonder = c.groenScherm ? zonderGroen(bron, m, c.groenScherm) : null;
+      ctx.drawImage(zonder ?? bron, -w / 2, -h / 2, w, h);
     }
   }
   ctx.restore();
