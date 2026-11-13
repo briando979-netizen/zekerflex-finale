@@ -38,6 +38,9 @@ case "$KEEP_ENC" in '' | *[!0-9]* | 0) KEEP_ENC="$KEEP" ;; esac
 AT="${BACKUP_AT:-02:30}"
 OWNER="${BACKUP_UID:-1000}"
 PASS="${BACKUP_PASSPHRASE:-}"
+# openssl leest de zin met -pass env:PASS uit de OMGEVING, niet uit een shellvariabele: zonder export faalde elke
+# versleuteling ("No environment variable PASS", 13 nov 2026, de eerste keer dat er een zin stond)
+export PASS
 OFFSITE="${BACKUP_OFFSITE:-}"
 OFFSITE_USER="${BACKUP_OFFSITE_USER:-}"
 OFFSITE_PASS="${BACKUP_OFFSITE_PASS:-}"

@@ -138,6 +138,9 @@ describe("BACKUP_KEEP_ENC: de .enc-kopieën met een eigen termijn (13 nov)", () 
       expect(script).toMatch(new RegExp(`prune "\\$DIR/${map}" "\\${patroon}"\\n`));
     }
     expect(script).toContain('KEEP_ENC="${BACKUP_KEEP_ENC:-$KEEP}"');
+    // openssl -pass env:PASS ziet alleen een geëxporteerde variabele (13 nov: elke versleuteling faalde zonder)
+    expect(script).toMatch(/^export PASS$/m);
+    expect(script).toContain("-pass env:PASS");
     expect(readFileSync("docker-compose.vps.yml", "utf8")).toMatch(/BACKUP_KEEP_ENC: \$\{BACKUP_KEEP_ENC:-14\}/);
   });
 });
