@@ -90,6 +90,34 @@ export const VASTE_PAGINAS = {
       { id: "slot", naam: "Slotoproep", uitleg: "De band onderaan met de knop naar de websites." },
     ],
   },
+  contact: {
+    naam: "Contact",
+    pad: "/contact",
+    secties: [
+      { id: "email", naam: "E-mailadressen", uitleg: "De kaarten met per onderwerp het juiste e-mailadres." },
+      { id: "direct", naam: "Direct praten", uitleg: "De knoppen om te bellen, een demo te vragen of een klacht in te dienen." },
+      { id: "google", naam: "Review op Google", uitleg: "De oproep om een review te schrijven, met de link naar Google Maps." },
+    ],
+  },
+  "voor-bureaus": {
+    naam: "Voor bureaus",
+    pad: "/voor-bureaus",
+    secties: [
+      { id: "pakketten", naam: "Pakketten", uitleg: "De pakketten waarmee een bureau ZekerFlex kan inzetten." },
+      { id: "waarom", naam: "Waarom ZekerFlex", uitleg: "De redenen om voor ZekerFlex te kiezen." },
+      { id: "faq", naam: "Veelgestelde vragen", uitleg: "De vragen en antwoorden voor bureaus." },
+      { id: "slot", naam: "Slotoproep", uitleg: "De band onderaan met de knop om contact op te nemen." },
+    ],
+  },
+  abonnementen: {
+    naam: "Abonnementen",
+    pad: "/abonnementen",
+    secties: [
+      { id: "pakketten", naam: "Pakketten", uitleg: "De abonnementen met hun prijzen en modules." },
+      { id: "faq", naam: "Veelgestelde vragen", uitleg: "De vragen en antwoorden over de abonnementen." },
+      { id: "slot", naam: "Slotoproep", uitleg: "De band onderaan met de knop om te beginnen." },
+    ],
+  },
 } as const satisfies Record<string, VastePagina>;
 
 export type VastePaginaId = keyof typeof VASTE_PAGINAS;

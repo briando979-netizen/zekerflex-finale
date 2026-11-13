@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { Fragment, type ReactNode } from "react";
+import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
+import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
 import Link from "next/link";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
 import { canonical } from "@/lib/seo";
@@ -24,7 +27,49 @@ const FAQ = [
   { q: "Van wie is de data?", a: "Bij het Soeverein-pakket staat alles op jouw eigen infrastructuur, dus volledig van jou. Bij Platform/Plugin blijft je data gescheiden per afnemer en AVG-conform verwerkt." },
 ];
 
-export default function VoorBureausPage() {
+export default async function VoorBureausPage() {
+  // de onderdelen onder de kop: volgorde en zichtbaarheid uit de Site-ontwerper (Pagina's); zonder eigen indeling exact de standaard
+  const onderdelen: Record<string, ReactNode> = {
+    pakketten: (
+      <Section tone="paper">
+        <SectionHead eyebrow="Pakketten" title="Kies hoe je ZekerFlex inzet" intro="Van één gekoppelde module tot je eigen, volledig zelf-gehoste platform." />
+        <PartnerPlans />
+      </Section>
+    ),
+    waarom: (
+      <Section>
+        <SectionHead
+          eyebrow="Waarom ZekerFlex"
+          title="Eén motor, geen vendor-afhankelijkheid"
+          intro="Je krijgt een volledig uitontwikkeld platform dat je zelf in de hand houdt."
+        />
+        <div className="mt-8 grid gap-6 sm:grid-cols-3 text-sm text-neutralx-700">
+          <div><p className="font-semibold text-ink">AI zonder credits</p><p className="mt-1">Recruiter en beeld draaien op eigen modellen — geen kosten per intake of beeld.</p></div>
+          <div><p className="font-semibold text-ink">Volledige keten</p><p className="mt-1">Van vacature en matching tot uren, facturen, ABU/StiPP en betalingen.</p></div>
+          <div><p className="font-semibold text-ink">Jouw data, jouw infra</p><p className="mt-1">Self-host alles met onze deploy-recepten, of laat ons het white-label draaien.</p></div>
+        </div>
+      </Section>
+    ),
+    faq: (
+      <Section tone="paper">
+        <SectionHead eyebrow="Veelgestelde vragen" title="Goed om te weten" />
+        <div className="mt-8">
+          <FaqList items={FAQ} />
+        </div>
+      </Section>
+    ),
+    slot: (
+      <CtaBand
+        title="Benieuwd wat ZekerFlex voor jouw bureau kan?"
+        body="Vraag een demo of offerte aan, of bekijk de API-documentatie voor de plugin-koppeling."
+        primaryHref="/developers"
+        primaryLabel="Bekijk de API"
+        secondaryHref="/prijzen"
+        secondaryLabel="Prijzen voor eindklanten"
+      />
+    ),
+  };
+  const zichtbaar = zichtbareSecties("voor-bureaus", await getPaginaIndeling("voor-bureaus"));
   return (
     <>
       <div className="hero-ink text-white">
@@ -42,39 +87,9 @@ export default function VoorBureausPage() {
         </div>
       </div>
 
-      <Section tone="paper">
-        <SectionHead eyebrow="Pakketten" title="Kies hoe je ZekerFlex inzet" intro="Van één gekoppelde module tot je eigen, volledig zelf-gehoste platform." />
-        <PartnerPlans />
-      </Section>
-
-      <Section>
-        <SectionHead
-          eyebrow="Waarom ZekerFlex"
-          title="Eén motor, geen vendor-afhankelijkheid"
-          intro="Je krijgt een volledig uitontwikkeld platform dat je zelf in de hand houdt."
-        />
-        <div className="mt-8 grid gap-6 sm:grid-cols-3 text-sm text-neutralx-700">
-          <div><p className="font-semibold text-ink">AI zonder credits</p><p className="mt-1">Recruiter en beeld draaien op eigen modellen — geen kosten per intake of beeld.</p></div>
-          <div><p className="font-semibold text-ink">Volledige keten</p><p className="mt-1">Van vacature en matching tot uren, facturen, ABU/StiPP en betalingen.</p></div>
-          <div><p className="font-semibold text-ink">Jouw data, jouw infra</p><p className="mt-1">Self-host alles met onze deploy-recepten, of laat ons het white-label draaien.</p></div>
-        </div>
-      </Section>
-
-      <Section tone="paper">
-        <SectionHead eyebrow="Veelgestelde vragen" title="Goed om te weten" />
-        <div className="mt-8">
-          <FaqList items={FAQ} />
-        </div>
-      </Section>
-
-      <CtaBand
-        title="Benieuwd wat ZekerFlex voor jouw bureau kan?"
-        body="Vraag een demo of offerte aan, of bekijk de API-documentatie voor de plugin-koppeling."
-        primaryHref="/developers"
-        primaryLabel="Bekijk de API"
-        secondaryHref="/prijzen"
-        secondaryLabel="Prijzen voor eindklanten"
-      />
+      {zichtbaar.map((id) => (
+        <Fragment key={id}>{onderdelen[id]}</Fragment>
+      ))}
     </>
   );
 }

@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { Fragment, type ReactNode } from "react";
+import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
+import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
 import Link from "next/link";
 import { Section, SectionHead } from "@/components/marketing/primitives";
 import { canonical, CONTACTS, GOOGLE_PROFIEL, SITE } from "@/lib/seo";
@@ -24,7 +27,64 @@ const CHANNELS: { label: string; email: string; body: string }[] = [
   { label: "Werken bij ons", email: CONTACTS.werkenbij, body: "Open sollicitatie — zie ook /over-ons." },
 ];
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  // de onderdelen onder de kop: volgorde en zichtbaarheid uit de Site-ontwerper (Pagina's); zonder eigen indeling exact de standaard
+  const onderdelen: Record<string, ReactNode> = {
+    email: (
+      <Section tone="paper">
+        <SectionHead eyebrow="E-mail" title="Kies het juiste onderwerp" />
+        <div className="mt-10 grid gap-5 sm:grid-cols-2">
+          {CHANNELS.map((c) => (
+            <div key={c.email} className="card p-5">
+              <h3 className="font-display text-base font-semibold text-ink">{c.label}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">{c.body}</p>
+              <a href={`mailto:${c.email}`} className="mt-3 inline-block text-sm font-semibold text-brand-700 hover:underline">
+                {c.email}
+              </a>
+            </div>
+          ))}
+        </div>
+      </Section>
+    ),
+    direct: (
+      <Section tone="soft">
+        <SectionHead
+          eyebrow="Liever direct praten"
+          title="Plan een demo of dien een klacht in"
+          intro="Voor werkgevers die willen zien hoe het platform werkt, of voor een formele klacht, hebben we een directe route."
+        />
+        <div className="mt-8 flex flex-wrap gap-4">
+          <a href={SITE.phoneHref} className="btn-primary">
+            📞 Bel ons: {SITE.phone}
+          </a>
+          <Link href="/demo" className="btn-ghost">
+            Vraag een demo aan
+          </Link>
+          <a href={`mailto:${CONTACTS.klachten}`} className="btn-ghost">
+            Klacht indienen ({CONTACTS.klachten})
+          </a>
+        </div>
+      </Section>
+    ),
+    google: (
+      <Section tone="paper">
+        <SectionHead
+          eyebrow="Op Google"
+          title="Al met ZekerFlex gewerkt?"
+          intro="Vertel op Google hoe het ging. Je review helpt andere bedrijven en flexkrachten om ons te vinden, ook als er iets beter kan."
+        />
+        <div className="mt-8 flex flex-wrap gap-4">
+          <a href={GOOGLE_PROFIEL.review} target="_blank" rel="noopener noreferrer" className="btn-primary">
+            Schrijf een review op Google
+          </a>
+          <a href={GOOGLE_PROFIEL.kaart} target="_blank" rel="noopener noreferrer" className="btn-ghost">
+            Bekijk ons op Google Maps
+          </a>
+        </div>
+      </Section>
+    ),
+  };
+  const zichtbaar = zichtbareSecties("contact", await getPaginaIndeling("contact"));
   return (
     <>
       <div className="hero-ink text-white">
@@ -49,55 +109,9 @@ export default function ContactPage() {
         </div>
       </div>
 
-      <Section tone="paper">
-        <SectionHead eyebrow="E-mail" title="Kies het juiste onderwerp" />
-        <div className="mt-10 grid gap-5 sm:grid-cols-2">
-          {CHANNELS.map((c) => (
-            <div key={c.email} className="card p-5">
-              <h3 className="font-display text-base font-semibold text-ink">{c.label}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">{c.body}</p>
-              <a href={`mailto:${c.email}`} className="mt-3 inline-block text-sm font-semibold text-brand-700 hover:underline">
-                {c.email}
-              </a>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      <Section tone="soft">
-        <SectionHead
-          eyebrow="Liever direct praten"
-          title="Plan een demo of dien een klacht in"
-          intro="Voor werkgevers die willen zien hoe het platform werkt, of voor een formele klacht, hebben we een directe route."
-        />
-        <div className="mt-8 flex flex-wrap gap-4">
-          <a href={SITE.phoneHref} className="btn-primary">
-            📞 Bel ons: {SITE.phone}
-          </a>
-          <Link href="/demo" className="btn-ghost">
-            Vraag een demo aan
-          </Link>
-          <a href={`mailto:${CONTACTS.klachten}`} className="btn-ghost">
-            Klacht indienen ({CONTACTS.klachten})
-          </a>
-        </div>
-      </Section>
-
-      <Section tone="paper">
-        <SectionHead
-          eyebrow="Op Google"
-          title="Al met ZekerFlex gewerkt?"
-          intro="Vertel op Google hoe het ging. Je review helpt andere bedrijven en flexkrachten om ons te vinden, ook als er iets beter kan."
-        />
-        <div className="mt-8 flex flex-wrap gap-4">
-          <a href={GOOGLE_PROFIEL.review} target="_blank" rel="noopener noreferrer" className="btn-primary">
-            Schrijf een review op Google
-          </a>
-          <a href={GOOGLE_PROFIEL.kaart} target="_blank" rel="noopener noreferrer" className="btn-ghost">
-            Bekijk ons op Google Maps
-          </a>
-        </div>
-      </Section>
+      {zichtbaar.map((id) => (
+        <Fragment key={id}>{onderdelen[id]}</Fragment>
+      ))}
     </>
   );
 }

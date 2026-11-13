@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { Fragment, type ReactNode } from "react";
+import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
+import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
 import { canonical } from "@/lib/seo";
 import { SaasPlans } from "@/components/marketing/SaasPlans";
@@ -21,7 +24,35 @@ const FAQ = [
   { q: "Wat zit er in Enterprise?", a: "Alles uit Business plus eigen merk/white-label, SSO en SLA — op maat. Neem contact op via sales@zekerflex.com." },
 ];
 
-export default function AbonnementenPage() {
+export default async function AbonnementenPage() {
+  // de onderdelen onder de kop: volgorde en zichtbaarheid uit de Site-ontwerper (Pagina's); zonder eigen indeling exact de standaard
+  const onderdelen: Record<string, ReactNode> = {
+    pakketten: (
+      <Section tone="paper">
+        <SectionHead eyebrow="Pakketten" title="Eén platform, groeit met je mee" intro="De €3,50/uur blijft de basis; het abonnement ontsluit de extra modules." />
+        <SaasPlans />
+      </Section>
+    ),
+    faq: (
+      <Section tone="paper">
+        <SectionHead eyebrow="Veelgestelde vragen" title="Goed om te weten" />
+        <div className="mt-8">
+          <FaqList items={FAQ} />
+        </div>
+      </Section>
+    ),
+    slot: (
+      <CtaBand
+        title="Begin gratis, upgrade wanneer je wilt"
+        body="Maak een account aan en probeer de marktplaats; een abonnement activeer je later met één klik vanuit je werkgeversomgeving."
+        primaryHref="/register"
+        primaryLabel="Gratis account"
+        secondaryHref="/voor-bureaus"
+        secondaryLabel="Zelf aanbieden (white-label)"
+      />
+    ),
+  };
+  const zichtbaar = zichtbareSecties("abonnementen", await getPaginaIndeling("abonnementen"));
   return (
     <>
       <div className="hero-ink text-white">
@@ -35,26 +66,9 @@ export default function AbonnementenPage() {
         </div>
       </div>
 
-      <Section tone="paper">
-        <SectionHead eyebrow="Pakketten" title="Eén platform, groeit met je mee" intro="De €3,50/uur blijft de basis; het abonnement ontsluit de extra modules." />
-        <SaasPlans />
-      </Section>
-
-      <Section tone="paper">
-        <SectionHead eyebrow="Veelgestelde vragen" title="Goed om te weten" />
-        <div className="mt-8">
-          <FaqList items={FAQ} />
-        </div>
-      </Section>
-
-      <CtaBand
-        title="Begin gratis, upgrade wanneer je wilt"
-        body="Maak een account aan en probeer de marktplaats; een abonnement activeer je later met één klik vanuit je werkgeversomgeving."
-        primaryHref="/register"
-        primaryLabel="Gratis account"
-        secondaryHref="/voor-bureaus"
-        secondaryLabel="Zelf aanbieden (white-label)"
-      />
+      {zichtbaar.map((id) => (
+        <Fragment key={id}>{onderdelen[id]}</Fragment>
+      ))}
     </>
   );
 }
