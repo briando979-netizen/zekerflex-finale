@@ -7,6 +7,7 @@ import { gratisAan, gratisModel, primeGratis } from "@/lib/ai/gratis";
 import { vastBegin } from "@/lib/chat/publiek-begin";
 import { kvGet } from "@/lib/storage/kv";
 import { K_STATUS, uitrolHoudtModelStil, type LiveStatus } from "@/lib/bouwer/live";
+import { isAiBezet } from "@/lib/ai/governor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,6 +35,13 @@ async function handle(request: Request): Promise<NextResponse> {
     recordCronRun("ai-warm", true);
     return NextResponse.json({ ok: true, model: gratisModel("main"), ms: Date.now() - t0 });
   } catch (err) {
+    // alle rekensloten bezet: het model is druk bezig, dus geladen. Geen storing en geen melding aan de eigenaar (gemeten
+    // 8, 10 en 11 nov om 06:04 en 12:04, na de zware taken van 06:00 en 12:00: telkens "Geplande taak mislukt: ai-warm")
+    if (isAiBezet(err)) {
+      recordCronRun("ai-warm", true);
+      logger.info("ai warm houden overgeslagen: model bezig", { ms: Date.now() - t0 });
+      return NextResponse.json({ ok: true, overgeslagen: "model bezig", ms: Date.now() - t0 });
+    }
     // tijdens (en net na) een uitrol staat het model bewust stil: geen storing, geen melding aan de eigenaar
     if (uitrolHoudtModelStil(await kvGet<LiveStatus>(K_STATUS).catch(() => null))) {
       recordCronRun("ai-warm", true);
