@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CallRecord } from "@/lib/telephony/store";
 
 const calls = new Map<string, CallRecord>();
+/** "alles gratis" (lib/ai/gratis.ts): standaard uit, dan vraagt de gesprekslus het taalmodel wel */
+const gratis = { aan: false };
 
 vi.mock("@/lib/telephony/webhook", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/telephony/webhook")>()),
@@ -27,6 +29,7 @@ vi.mock("@/lib/ai/client", () => ({
   llmConfigProblem: () => null,
   ensureAiNode: async () => undefined,
 }));
+vi.mock("@/lib/ai/gratis", () => ({ getGratisStand: async () => ({ aan: gratis.aan, basis: "", model: "" }) }));
 const captureCallOutcome = vi.fn(async (_id: string) => undefined);
 vi.mock("@/lib/telephony/outcome", () => ({ captureCallOutcome: (id: string) => captureCallOutcome(id) }));
 vi.mock("next/server", async (importOriginal) => ({
@@ -71,6 +74,7 @@ async function say(speech: string): Promise<string> {
 
 beforeEach(() => {
   calls.clear();
+  gratis.aan = false;
   chat.mockResolvedValue({ text: "Antwoord van het taalmodel." });
 });
 afterEach(() => vi.clearAllMocks());
@@ -255,5 +259,25 @@ describe("als het taalmodel traag is of faalt", () => {
     const xml = await say("Ik heb een vraag");
     expect(xml).toContain("zekerflex punt com");
     expect(xml).toContain("<Gather");
+  });
+
+  it("met 'alles gratis' vraagt hij het eigen model niet (dat haalt de tijdgrens nooit) en antwoordt meteen (13 nov)", async () => {
+    record();
+    gratis.aan = true;
+    const xml = await say("Ik heb een vraag");
+    expect(chat).not.toHaveBeenCalled();
+    expect(xml).toContain("zekerflex punt com");
+    expect(xml).toContain("<Gather");
+  });
+
+  it("de vaste zin wijst de weg naar een mens, en die woorden verbinden echt door (of bieden terugbellen)", async () => {
+    record();
+    gratis.aan = true;
+    expect(await say("Ik heb een vraag")).toContain("zeg dan: een medewerker");
+    expect(await say("een medewerker")).toMatch(/Ik verbind u door|terugbelafspraak/);
+    record({ lang: "en" });
+    expect(await say("I have a question")).toContain("just say: a person");
+    expect(await say("a person")).toMatch(/connect you|call back/);
+    expect(chat).not.toHaveBeenCalled();
   });
 });

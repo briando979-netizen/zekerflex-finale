@@ -5,6 +5,7 @@ import { getCall, addTurn, patchCall } from "@/lib/telephony/store";
 import { phoneSystem, voiceForLang, recogLang, scriptOrDefault, voicemailMessage, type Lang } from "@/lib/telephony/scripts";
 import { isGoodbye, isGreetingOnly, looksLikeVoicemail } from "@/lib/telephony/intents";
 import { chat, fastModel, llmConfigProblem, ensureAiNode } from "@/lib/ai/client";
+import { getGratisStand } from "@/lib/ai/gratis";
 import { logger } from "@/lib/logger";
 import { webhookTekst, WEBHOOK_MAX } from "@/lib/http/webhook-lezen";
 
@@ -30,9 +31,10 @@ const GREET_QUESTION: Record<Lang, string> = {
   en: "How can I help — are you looking for staff, looking for work yourself, or do you have another question?",
 };
 
+// Met de weg naar een mens: "een medewerker" en "a person" herkent FORWARD hierboven (doorverbinden of terugbellen).
 const FALLBACK: Record<Lang, string> = {
-  nl: "Dat kan ik het beste via de website regelen: kijk op zekerflex punt com, of mail naar info at zekerflex punt com. Kan ik u verder nog ergens mee helpen?",
-  en: "I can best arrange that via the website: visit zekerflex dot com, or e-mail info at zekerflex dot com. Can I help you with anything else?",
+  nl: "Dat kan ik het beste via de website regelen: kijk op zekerflex punt com. Wilt u liever iemand spreken, zeg dan: een medewerker. Kan ik u verder nog ergens mee helpen?",
+  en: "I can best arrange that via the website: visit zekerflex dot com. If you would rather speak to someone, just say: a person. Can I help you with anything else?",
 };
 const BYE_LINE: Record<Lang, string> = {
   nl: "Fijn dat u belde. Een prettige dag nog, en tot ziens.",
@@ -104,7 +106,11 @@ export async function POST(request: Request): Promise<Response> {
   let reply = FALLBACK[lang];
   try {
     await ensureAiNode();
-    if (!llmConfigProblem()) {
+    // Met "alles gratis" rekent ons eigen model op de cpu, met ±60 tokens per seconde voor de vraag (gemeten 13 nov 2026).
+    // Alleen de systeemprompt (±2.150 tekens, ±650 tokens) kost daar al ±10 s, en Twilio wacht hooguit 15 s op dit
+    // antwoord. De enige poging (13 nov, 09:33 UTC) liep op de 8 s af: de beller hoorde 8 s stilte en daarna toch de
+    // vaste zin. Dan niet vragen, maar meteen de vaste zin, met de weg naar een medewerker.
+    if (!llmConfigProblem() && !(await getGratisStand()).aan) {
       const fresh = (await getCall(callId)) ?? rec;
       const history = fresh.transcript.slice(-10).map((t) => ({
         role: (t.who === "ai" ? "assistant" : "user") as "assistant" | "user",
