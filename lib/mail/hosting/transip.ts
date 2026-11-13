@@ -224,6 +224,30 @@ export async function domainInfo(domainName: string): Promise<TransipDomain | nu
   return d?.domain ?? null;
 }
 
+/** Een factuur van TransIP, alleen wat Beheer -> Kosten nodig heeft (bedragen in centen). */
+export interface TransipFactuur {
+  nummer: string;
+  /** JJJJ-MM-DD */
+  datum: string;
+  status: string;
+  exclCent: number;
+  inclCent: number;
+}
+
+const getal = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? Math.round(v) : 0);
+
+/** De facturen van het account, alleen lezen (GET /invoices). Bedragen in centen, zoals TransIP ze geeft. */
+export async function listInvoices(): Promise<TransipFactuur[]> {
+  const d = await call<{ invoices?: Record<string, unknown>[] }>("GET", "/invoices");
+  return (d?.invoices ?? []).map((f) => ({
+    nummer: String(f.invoiceNumber ?? ""),
+    datum: String(f.creationDate ?? "").slice(0, 10),
+    status: String(f.invoiceStatus ?? ""),
+    exclCent: getal(f.totalAmount),
+    inclCent: getal(f.totalAmountInclVat),
+  }));
+}
+
 /**
  * Voeg ÉÉN DNS-record toe aan een domein in ons TransIP-account: POST /domains/{domein}/dns.
  * Nooit PUT: dat vervangt de hele zone. Eerst controleren dat het domein van ons is en dat
