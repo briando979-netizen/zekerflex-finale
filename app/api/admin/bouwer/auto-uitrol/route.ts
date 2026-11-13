@@ -5,14 +5,14 @@ import { recordAudit } from "@/lib/audit";
 import { featureEnabled, setFlag } from "@/lib/flags";
 import { liveVersie } from "@/lib/bouwer/versie";
 import { herstelNaStop, leesAutoStand, leesNoodremReden, noodremAan, zetNoodrem } from "@/lib/bouwer/auto-uitrol-opslag";
-import { meldingen } from "@/lib/bouwer/auto-uitrol-regels";
+import { LEGE_STAND, meldingen } from "@/lib/bouwer/auto-uitrol-regels";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // Admin -> Live zetten -> Auto-uitrol: de stand, de schakelaar (vlag auto-uitrol) en de noodrem. Alleen platformbeheer.
 async function stand() {
-  const [aan, noodrem, s] = await Promise.all([featureEnabled("auto-uitrol").catch(() => false), noodremAan().catch(() => true), leesAutoStand()]);
+  const [aan, noodrem, s] = await Promise.all([featureEnabled("auto-uitrol").catch(() => false), noodremAan().catch(() => true), leesAutoStand().catch(() => LEGE_STAND)]);
   const live = liveVersie();
   return { aan, noodrem, noodremReden: await leesNoodremReden(), stand: s, meldingen: meldingen(s, live?.sha ?? null, Date.now(), aan) };
 }

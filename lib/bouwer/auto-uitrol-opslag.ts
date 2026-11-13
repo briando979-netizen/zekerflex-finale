@@ -5,8 +5,12 @@ import { LEGE_STAND, type AutoStand } from "@/lib/bouwer/auto-uitrol-regels";
 export const K_AUTO_STAND = "bouwer:auto-uitrol:stand";
 export const K_AUTO_NOODREM = "bouwer:auto-uitrol:noodrem";
 
+/**
+ * De stand uit de KV. Geen sleutel = de eerste keer (lege stand). Lukt het LEZEN niet, dan gooit dit: de aanroeper mag dan niets
+ * schrijven (een lege stand terugschrijven zou "geweigerd", de nacontrole en de harde stop wissen).
+ */
 export async function leesAutoStand(): Promise<AutoStand> {
-  return { ...LEGE_STAND, ...((await kvGet<AutoStand>(K_AUTO_STAND).catch(() => null)) ?? {}) };
+  return { ...LEGE_STAND, ...((await kvGet<AutoStand>(K_AUTO_STAND)) ?? {}) };
 }
 
 export async function bewaarAutoStand(stand: AutoStand): Promise<void> {
@@ -36,5 +40,5 @@ export async function herstelNaStop(door: string): Promise<void> {
   const stand = await leesAutoStand();
   if (stand.stop) await bewaarAutoStand({ ...stand, stop: null });
   const reden = await leesNoodremReden();
-  if (reden?.startsWith("nacontrole faalde")) await zetNoodrem(false, door);
+  if (reden?.startsWith("nacontrole")) await zetNoodrem(false, door);
 }

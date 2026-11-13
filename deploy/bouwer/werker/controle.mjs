@@ -98,6 +98,17 @@ async function gewijzigdSinds(vanaf, sha) {
   return { basis: basis ?? `${sha}~1`, bestanden: r.uit.split("\n").map((s) => s.trim()).filter(Boolean) };
 }
 
+/** Alle .py-bestanden onder een map (relatief aan de repo), zonder node_modules en __pycache__. */
+async function pythonBestanden(map, uit = []) {
+  for (const e of await fs.readdir(map, { withFileTypes: true }).catch(() => [])) {
+    const p = path.join(map, e.name);
+    if (e.isDirectory()) {
+      if (e.name !== "node_modules" && e.name !== "__pycache__") await pythonBestanden(p, uit);
+    } else if (e.name.endsWith(".py")) uit.push(path.relative(REPO, p));
+  }
+  return uit.sort();
+}
+
 export async function uitslagVan(sha) {
   try {
     return JSON.parse(await fs.readFile(path.join(UITSLAGEN, `${sha}.json`), "utf8"));
@@ -159,6 +170,16 @@ export async function controleerVastlegging({ doel = "main", vanaf = null, wacht
     const schemaRun = await sh("npx", ["prisma", "validate"], { cwd: REPO, env: { DATABASE_URL: process.env.DATABASE_URL || dummyDb, DATABASE_URL_UNPOOLED: process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL || dummyDb }, timeout: 120_000, zonderSleutel: true });
     const schema = { ok: schemaRun.code === 0, uit: kortTekst(schemaRun.uit) };
 
+    // De Python-bestanden van de uitrol (zf-live.py komt met de gewone uitrol mee en wordt zelf niet gecontroleerd: een syntaxfout geeft
+    // een herstart-lus die alleen via ssh te herstellen is). py_compile leest alleen; zonder python3 in deze container: overgeslagen.
+    log("info", "Python (py_compile)");
+    const pyBestanden = await pythonBestanden(path.join(REPO, "deploy"));
+    let python = { ok: true, uit: "", overgeslagen: pyBestanden.length ? null : "geen Python-bestanden" };
+    if (pyBestanden.length) {
+      const py = await sh("python3", ["-m", "py_compile", ...pyBestanden], { cwd: REPO, env: { PYTHONPYCACHEPREFIX: "/tmp/zf-pyc" }, timeout: 120_000, zonderSleutel: true });
+      python = py.code === -1 && /ENOENT/.test(py.uit) ? { ok: true, uit: "", overgeslagen: "python3 ontbreekt in de Bouwer" } : { ok: py.code === 0, uit: kortTekst(py.uit), overgeslagen: null };
+    }
+
     log("info", "TypeScript (hele project)");
     const tsc = await sh("npx", ["tsc", "--noEmit", "-p", "."], { cwd: REPO, timeout: 1_500_000 });
 
@@ -215,9 +236,10 @@ export async function controleerVastlegging({ doel = "main", vanaf = null, wacht
       onderwerp,
       vanaf: basis,
       bestanden: bestanden.length,
-      ok: tsc.code === 0 && schema.ok && eslint.ok && tests.ok,
+      ok: tsc.code === 0 && schema.ok && python.ok && eslint.ok && tests.ok,
       tsc: { ok: tsc.code === 0, uit: kortTekst(tsc.uit) },
       schema,
+      python,
       eslint,
       tests,
       bewakers,
@@ -243,6 +265,7 @@ export function samenvattingControle(u) {
     ok: u.ok,
     tsc: u.tsc.ok,
     schema: u.schema ? u.schema.ok : true,
+    python: u.python ? u.python.ok : true,
     eslint: u.eslint.ok,
     tests: u.tests.ok,
     bestanden: u.bestanden,

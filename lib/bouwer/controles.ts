@@ -25,8 +25,9 @@ export async function controleVan(sha: string): Promise<ControleUitslag> {
 }
 
 /** Een controle starten op de achtergrond; de Bouwer weigert (409) als er al een loopt of hij zelf aan het werk is. */
-export async function startControle(doel = "main", door = "app", opnieuw = false): Promise<{ bezig: ControleBezig }> {
-  return bouwer<{ bezig: ControleBezig }>("/controles", { method: "POST", body: { sha: doel, door, opnieuw } });
+export async function startControle(doel = "main", door = "app", opnieuw = false, vanaf?: string): Promise<{ bezig: ControleBezig }> {
+  // vanaf = de live VERSIE (volledige sha): eslint en tests dekken dan het hele stuk tussen live en doel, niet alleen sinds de vorige controle
+  return bouwer<{ bezig: ControleBezig }>("/controles", { method: "POST", body: { sha: doel, door, opnieuw, ...(vanaf ? { vanaf } : {}) } });
 }
 
 /** Voor Admin → Systeem: de nieuwste uitslag, of null als de Bouwer er niet is of niet antwoordt. */

@@ -6,6 +6,7 @@
 //
 // De regels, in volgorde (de eerste die past, beslist):
 //  0b gestopt door de nacontrole  -> niets (harde stop: pas weer na een mens die de schakelaar aanzet)
+//  0c nacontrole van de vorige uitrol loopt nog -> wacht (eerst afronden, dan pas een nieuwe beslissing)
 //  1  noodrem aan                 -> niets
 //  2  schakelaar uit              -> niets (standaard uit; de eigenaar zet hem aan)
 //  3  main niet te lezen          -> wacht
@@ -29,6 +30,11 @@ export const OLLAMA_VENSTER = { vanMin: 11 * 60 + 50, totMin: 12 * 60 + 40 };
 export const MIN_VRIJ_GEHEUGEN_MB = 6 * 1024;
 /** Minimale versie van de live-zetter die de auto-regels kent (zf-live.py VERSIE). */
 export const MIN_LIVEZETTER_VERSIE = 3;
+/** Een uitrol die de live-zetter "tijdelijk" afwees (slot bezet, main verschoven): zo vaak opnieuw, met zo lang wachten ertussen. */
+export const UITSTEL_MAX_POGINGEN = 3;
+export const UITSTEL_WACHT_MS = 10 * 60_000;
+/** Eén ronde van de lus houdt dit slot (KV); een slot ouder dan dit is van een vastgelopen ronde en mag worden overgenomen. */
+export const RONDE_SLOT_TTL_MS = 10 * 60_000;
 /** Loopt main zo lang voor op live zonder dat de lus iets doet, dan melden we het. */
 export const ACHTERSTAND_MELDING_MS = 30 * 60_000;
 /** Na een gestarte uitrol wacht de lus zo lang voordat de nacontrole loopt (de app moet opgestart zijn). */
@@ -64,6 +70,8 @@ export interface AutoStand {
   laatsteControle: { sha: string; ok: boolean; op: string } | null;
   laatsteUitrol: { sha: string; uitkomst: "gevraagd" | "klaar" | "geweigerd"; op: string } | null;
   laatsteBeslissing: { op: string; actie: BesluitActie; reden: string } | null;
+  /** sha -> hoe vaak de live-zetter hem tijdelijk afwees en wanneer voor het laatst */
+  uitgesteld: Record<string, { pogingen: number; laatste: string }>;
   /** sinds wanneer main voorloopt op live (ISO), voor de achterstandsmelding */
   achterSinds: string | null;
   /** de laatste keer dat de lus liep */
@@ -80,6 +88,7 @@ export const LEGE_STAND: AutoStand = {
   gezienSinds: null,
   geweigerd: {},
   migratieWacht: null,
+  uitgesteld: {},
   verzocht: null,
   laatsteControle: null,
   laatsteUitrol: null,
@@ -142,12 +151,18 @@ export function beslis(i: Invoer): Besluit {
   if (i.stand.stop) return { actie: "niets", reden: `Gestopt door de nacontrole: ${i.stand.stop.reden}. Er wordt niets automatisch uitgerold tot je de Auto-uitrol zelf weer aanzet.` };
   if (i.noodrem) return { actie: "niets", reden: "De noodrem staat aan: er wordt niets automatisch uitgerold." };
   if (!i.aan) return { actie: "niets", reden: "Auto-uitrol staat uit." };
+  // 0c: eerst de nacontrole van de vorige uitrol afronden (gezondheid, VERSIE, rondgang), dan pas een nieuwe beslissing
+  if (i.stand.nacontrole) return { actie: "wacht", reden: `De nacontrole van de vorige uitrol (${i.stand.nacontrole.sha.slice(0, 10)}) loopt nog; daarna pas een nieuwe beslissing.` };
   if (!i.mainSha) return { actie: "wacht", reden: "Main is nu niet te lezen (GitHub onbereikbaar); de volgende ronde probeert het opnieuw." };
   if (i.liveSha === i.mainSha) return { actie: "niets", reden: "Live is al de nieuwste main.", sha: i.mainSha };
   const geweigerd = i.stand.geweigerd[i.mainSha];
   if (geweigerd) return { actie: "niets", reden: `Deze versie is geweigerd en wordt niet opnieuw geprobeerd: ${geweigerd.reden}`, sha: i.mainSha };
   if (i.stand.migratieWacht?.sha === i.mainSha) {
     return { actie: "niets", reden: "Deze versie bevat een database-wijziging die de eigenaar met de hand uitrolt (dat blijft handwerk).", sha: i.mainSha };
+  }
+  const uitstel = i.stand.uitgesteld[i.mainSha];
+  if (uitstel && i.nu - Date.parse(uitstel.laatste) < UITSTEL_WACHT_MS) {
+    return { actie: "wacht", reden: `De live-zetter stelde deze versie uit (poging ${uitstel.pogingen} van ${UITSTEL_MAX_POGINGEN}); opnieuw na een wachttijd van 10 minuten.`, sha: i.mainSha };
   }
   if (i.stand.gezienSha !== i.mainSha || !rustVoorbij(i.stand.gezienSinds, i.nu)) {
     return { actie: "wacht", reden: "Rustperiode: er kan nog een push volgen; daarna wordt de nieuwste versie genomen.", sha: i.mainSha };
@@ -207,9 +222,6 @@ export function meldingen(stand: AutoStand, liveSha: string | null, nu: number, 
   if (stand.stop) {
     uit.push({ id: "auto-uitrol-stop", titel: "Auto-uitrol is gestopt door de nacontrole", tekst: `${stand.stop.sha.slice(0, 10)}: ${stand.stop.reden}. De Auto-uitrol staat uit en rolt niets meer uit tot je hem zelf weer aanzet (Beheer, Live zetten). Kijk eerst of de site goed werkt.` });
   }
-  if (stand.laatsteNacontrole?.uitslag === "onbekend" && stand.laatsteNacontrole.sha === gezien) {
-    uit.push({ id: "auto-uitrol-nacontrole-onbekend", titel: "Nacontrole na de uitrol kon niet worden afgerond", tekst: stand.laatsteNacontrole.reden });
-  }
   const achter = stand.achterSinds ? Date.parse(stand.achterSinds) : NaN;
   if (aan && !stand.stop && !geweigerd && !migratie && Number.isFinite(achter) && nu - achter > ACHTERSTAND_MELDING_MS) {
     uit.push({ id: "auto-uitrol-achter", titel: "Live loopt meer dan 30 minuten achter op main", tekst: `Reden van de laatste ronde: ${stand.laatsteBeslissing?.reden ?? "onbekend"}` });
@@ -260,4 +272,24 @@ export function beoordeelNacontrole(i: NaInvoer): NaUitslag {
   }
   if (verstreken < NACONTROLE_RONDGANG_MAX_MS) return { uitslag: "wacht", reden: "wacht op een rondgang na de uitrol" };
   return { uitslag: "onbekend", reden: "er kwam geen rondgang na de uitrol binnen 15 minuten: niet te zeggen of alle pagina's werken" };
+}
+
+/**
+ * De live-zetter wees een uitrol "tijdelijk" af (een andere uitrol hield het slot, main schoof op, de controle kon niet draaien).
+ * Telt de poging; na UITSTEL_MAX_POGINGEN wordt de sha geweigerd (met melding) in plaats van eindeloos te proberen.
+ */
+export function registreerUitstel(stand: AutoStand, sha: string, nu: number, reden: string): AutoStand {
+  const pogingen = (stand.uitgesteld[sha]?.pogingen ?? 0) + 1;
+  const rest = { ...stand.uitgesteld };
+  delete rest[sha];
+  if (pogingen >= UITSTEL_MAX_POGINGEN) {
+    return { ...stand, uitgesteld: rest, geweigerd: { ...stand.geweigerd, [sha]: { reden: `${UITSTEL_MAX_POGINGEN} keer door de live-zetter uitgesteld, laatst: ${reden}`, op: new Date(nu).toISOString() } } };
+  }
+  return { ...stand, uitgesteld: { ...rest, [sha]: { pogingen, laatste: new Date(nu).toISOString() } } };
+}
+
+/** Is het ronde-slot vrij of verlopen (van een vastgelopen ronde)? */
+export function slotVrij(slot: { op?: string } | null | undefined, nu: number, ttl: number = RONDE_SLOT_TTL_MS): boolean {
+  const t = slot?.op ? Date.parse(slot.op) : NaN;
+  return !slot || !Number.isFinite(t) || nu - t > ttl;
 }

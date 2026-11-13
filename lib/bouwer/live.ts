@@ -1,4 +1,4 @@
-import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
+import { kvDelete, kvGet, kvSet, kvSetIfAbsent } from "@/lib/storage/kv";
 import type { Versie } from "@/lib/bouwer/versie";
 
 // ---------------------------------------------------------------------------
@@ -139,6 +139,15 @@ export async function plaatsVerzoek(v: Omit<LiveVerzoek, "id" | "op">): Promise<
   return verzoek;
 }
 
+/**
+ * Een verzoek neerleggen ZONDER een ander te overschrijven (INSERT ... ON CONFLICT DO NOTHING): lag er al een verzoek van een
+ * mens (ook "terug" of een migratie-akkoord), dan blijft dat staan en geeft dit null. Voor de Auto-uitrol.
+ */
+export async function plaatsVerzoekAlsLeeg(v: Omit<LiveVerzoek, "id" | "op">): Promise<LiveVerzoek | null> {
+  const verzoek: LiveVerzoek = { ...v, id: `live_${Date.now().toString(36)}`, op: new Date().toISOString() };
+  return (await kvSetIfAbsent(K_VERZOEK, verzoek)) ? verzoek : null;
+}
+
 export async function trekVerzoekIn(): Promise<void> {
   await kvDelete(K_VERZOEK);
 }
@@ -171,6 +180,32 @@ export function migratiesUitBestanden(files: { filename: string; status: string 
 export async function commitsTussen(van: string, tot: string): Promise<Commit[]> {
   const c = await gh<GhCompare>(`/compare/${van}...${tot}`);
   return c.commits.map(toCommit);
+}
+
+/**
+ * De sha van GitHub main met een voorwaardelijk verzoek (ETag): een 304 telt niet mee voor de limiet van 60 per uur (anoniem).
+ * Het leestoken (GITHUB_LEES_TOKEN) gaat alleen mee als Bearer-header en wordt nooit gelogd. Bij 429 of een leeg limiet-saldo
+ * gooit dit een nette fout; de aanroeper wacht dan tot de volgende ronde.
+ */
+export async function githubMainSha(etag: string | null): Promise<{ status: "nieuw"; sha: string; etag: string | null } | { status: "ongewijzigd" }> {
+  const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/commits/main`, {
+    headers: { ...githubKoppen(), Accept: "application/vnd.github.sha", ...(etag ? { "If-None-Match": etag } : {}) },
+    cache: "no-store",
+    signal: AbortSignal.timeout(8000),
+  });
+  if (res.status === 304) return { status: "ongewijzigd" };
+  if (res.status === 429 || (res.status === 403 && res.headers.get("x-ratelimit-remaining") === "0")) throw new Error("de GitHub-limiet is bereikt (429); de volgende ronde probeert het opnieuw");
+  if (!res.ok) throw new Error(`GitHub gaf ${res.status}`);
+  const sha = (await res.text()).trim();
+  if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error("GitHub gaf geen sha terug");
+  return { status: "nieuw", sha, etag: res.headers.get("etag") };
+}
+
+/** Vergelijkt twee vastleggingen: ligt `tot` voor op `van`, en welke migraties komen mee? Het antwoord voor een vast paar verandert nooit. */
+export async function githubVergelijk(van: string, tot: string): Promise<{ vergelijking: GithubOverzicht["vergelijking"]; nieuweMigraties: string[] }> {
+  const c = await gh<GhCompare>(`/compare/${van}...${tot}`);
+  const vergelijking = (["ahead", "identical", "behind", "diverged"] as const).find((s) => s === c.status) ?? "onbekend";
+  return { vergelijking, nieuweMigraties: migratiesUitBestanden(c.files ?? []) };
 }
 
 let ghCache: { key: string; at: number; data: GithubOverzicht } | null = null;

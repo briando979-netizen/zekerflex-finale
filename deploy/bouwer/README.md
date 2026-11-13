@@ -97,12 +97,14 @@ starten; loopt: wachten; **rood: weigeren, nooit uitrollen**. **Wachtende migrat
 wachten. Anders: uitrollen. Faalt de uitrol of wordt hij teruggezet, dan wordt die sha nooit opnieuw geprobeerd en gaat de lus door
 met een nieuwe sha. De controle (`werker/controle.mjs`) doet `prisma validate`, tsc, eslint, `vitest related` en de bewakers.
 
+Na elke uitrol van de lus volgt na ~3 minuten een **nacontrole** (gezondheid, VERSIE, en een rondgang van na de uitrol die de lus zo nodig zelf start). Faalt die, meldt de live-zetter teruggezet, of komt er binnen 15 minuten geen rondgang, dan gaat de vlag `auto-uitrol` zelf **uit** en rolt niets meer uit tot een mens hem weer aanzet. Eén ronde tegelijk (KV-slot); lukt het lezen van de stand niet, dan schrijft een ronde niets; een verzoek van een mens wordt nooit overschreven; GitHub wordt voorwaardelijk bevraagd (ETag) binnen de limiet; een tijdelijk uitgestelde uitrol krijgt hoogstens 3 pogingen met 10 minuten ertussen.
+
 Bedienen: **Admin → ZekerFlex AI → Live zetten**, blok *Auto-uitrol* (aan/uit, **noodrem**, laatste ronde en reden). De vlag
 `auto-uitrol` staat standaard UIT. Bewaking: hartslag `auto-uitrol` (Admin → Systeem), en een taak in Te doen als een versie
 geweigerd wordt, een migratie wacht, of main meer dan 30 minuten voorloopt op live.
 
 **Installatie (door 16 of de eigenaar, niet door de code):**
-1. Rol deze versie uit zoals gewoonlijk (Live zetten). `zf-live.py` is dan nieuw, maar de draaiende dienst nog de oude:
-   `sudo systemctl restart zf-live` (zonder deze herstart blijft de Auto-uitrol wachten: hij eist live-zetter-versie 3 in de hartslag).
+1. Rol deze versie uit zoals gewoonlijk (Live zetten). Een herstart van `zf-live` is niet nodig: de dienst leest uit `~/zekerflex` en
+   start zichzelf na een uitrol opnieuw met de nieuwe `zf-live.py`; daarna meldt de hartslag versie 3 (de Auto-uitrol wacht tot dat zo is).
 2. Herstart de planner zodat de nieuwe cron-regel meekomt: `docker compose -f docker-compose.vps.yml --env-file .env.production restart cron`.
 3. Controleer in Live zetten dat de hartslag versie 3 toont en dat de Auto-uitrol *Laatste ronde* een tijd laat zien. Zet hem daarna zelf aan.

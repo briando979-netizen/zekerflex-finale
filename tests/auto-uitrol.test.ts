@@ -13,7 +13,9 @@ import {
   beslis,
   inOllamaVenster,
   meldingen,
+  registreerUitstel,
   rustVoorbij,
+  slotVrij,
   uitkomstVanStatus,
   vrijGeheugenUitMeminfo,
   zietMain,
@@ -237,8 +239,6 @@ describe("Auto-uitrol: de nacontrole (harde stop)", () => {
   it("de harde stop meldt zichzelf aan de eigenaar", () => {
     const stop = { reden: "nacontrole faalde: x", sha: MAIN, op: "2026-11-14T10:05:00Z" };
     expect(meldingen({ ...LEGE_STAND, gezienSha: MAIN, stop }, MAIN, NU).map((m) => m.id)).toContain("auto-uitrol-stop");
-    const onbekend = { ...LEGE_STAND, gezienSha: MAIN, laatsteNacontrole: { sha: MAIN, uitslag: "onbekend" as const, reden: "geen rondgang", op: "x" } };
-    expect(meldingen(onbekend, MAIN, NU).map((m) => m.id)).toContain("auto-uitrol-nacontrole-onbekend");
   });
 
   it("de uitvoering zet bij een stop de vlag uit, de noodrem met reden en logt het", () => {
@@ -249,6 +249,98 @@ describe("Auto-uitrol: de nacontrole (harde stop)", () => {
     expect(bron).toContain("nacontrole faalde: ${na.reden}");
     // de beheerroute: een mens die aanzet, haalt de stop weg
     expect(lees("app/api/admin/bouwer/auto-uitrol/route.ts")).toContain("herstelNaStop(");
+  });
+});
+
+describe("Auto-uitrol: review van poortwachter 15", () => {
+  it("regel 0c: eerst de nacontrole van de vorige uitrol afronden, dan pas een nieuwe beslissing", () => {
+    const nacontrole = { sha: LIVE, id: "live_1", sinds: new Date(NU - 60_000).toISOString(), rondgangGestart: null };
+    const b = beslis(invoer({}, { nacontrole }));
+    expect(b.actie).toBe("wacht");
+    expect(b.reden).toMatch(/nacontrole van de vorige uitrol/);
+  });
+
+  it("een tijdelijk uitgestelde uitrol: hoogstens 3 pogingen met 10 minuten ertussen, daarna geweigerd", () => {
+    let stand: AutoStand = { ...LEGE_STAND, gezienSha: MAIN, gezienSinds: RUSTIG };
+    stand = registreerUitstel(stand, MAIN, NU, "al een andere uitrol");
+    expect(stand.uitgesteld[MAIN]?.pogingen).toBe(1);
+    expect(beslis(invoer({}, stand)).actie).toBe("wacht");
+    expect(beslis(invoer({ nu: NU + UITSTEL_WACHT_MS + 1000 }, { ...stand })).actie).toBe("uitrollen");
+    stand = registreerUitstel(stand, MAIN, NU + UITSTEL_WACHT_MS, "al een andere uitrol");
+    expect(stand.uitgesteld[MAIN]?.pogingen).toBe(2);
+    expect(stand.geweigerd[MAIN]).toBeUndefined();
+    stand = registreerUitstel(stand, MAIN, NU + 2 * UITSTEL_WACHT_MS, "al een andere uitrol");
+    expect(UITSTEL_MAX_POGINGEN).toBe(3);
+    expect(stand.geweigerd[MAIN]?.reden).toMatch(/3 keer/);
+    expect(stand.uitgesteld[MAIN]).toBeUndefined();
+    expect(beslis(invoer({}, stand)).actie).toBe("niets");
+  });
+
+  it("het ronde-slot: vrij zonder slot, bezet binnen 10 minuten, overneembaar daarna", () => {
+    expect(slotVrij(null, NU)).toBe(true);
+    expect(slotVrij({ op: new Date(NU - 60_000).toISOString() }, NU)).toBe(false);
+    expect(slotVrij({ op: new Date(NU - RONDE_SLOT_TTL_MS - 1000).toISOString() }, NU)).toBe(true);
+    expect(slotVrij({}, NU)).toBe(true);
+  });
+
+  it("(1) de controle start met de live VERSIE als basis", () => {
+    expect(lees("lib/bouwer/auto-uitrol.ts")).toContain("startControle(besluit.sha, AUTO_UITROL_DOOR, false, live?.sha)");
+    expect(lees("lib/bouwer/controles.ts")).toContain('...(vanaf ? { vanaf } : {})');
+  });
+
+  it("(2) een verzoek wordt alleen geschreven als er geen ligt: ON CONFLICT DO NOTHING en de rijen tellen", () => {
+    expect(lees("lib/bouwer/live.ts")).toContain("kvSetIfAbsent(K_VERZOEK, verzoek)");
+    const kv = lees("lib/storage/kv.ts");
+    expect(kv).toContain("skipDuplicates: true");
+    expect(kv).toContain("res.count === 1");
+    const bron = lees("lib/bouwer/auto-uitrol.ts");
+    expect(bron).toContain("plaatsVerzoekAlsLeeg(");
+    expect(bron).not.toMatch(/\bplaatsVerzoek\(/);
+    expect(bron).toContain("Er lag al een verzoek van iemand anders");
+  });
+
+  it("(3) een ronde heeft een eigen KV-slot dat altijd wordt vrijgegeven", () => {
+    const bron = lees("lib/bouwer/auto-uitrol.ts");
+    expect(bron).toContain("kvSetIfAbsent(K_RONDE_SLOT, mijn)");
+    expect(bron).toMatch(/finally \{\s*await kvDelete\(K_RONDE_SLOT\)/);
+  });
+
+  it("(4) lukt het lezen van de stand niet, dan schrijft de ronde niets", () => {
+    const opslag = lees("lib/bouwer/auto-uitrol-opslag.ts");
+    expect(opslag).toContain("(await kvGet<AutoStand>(K_AUTO_STAND)) ??");
+    expect(opslag).not.toMatch(/kvGet<AutoStand>\(K_AUTO_STAND\)\.catch/);
+    const bron = lees("lib/bouwer/auto-uitrol.ts");
+    expect(bron).toMatch(/catch \{\s*return \{ besluit: \{ actie: "wacht", reden: "De opslag is niet te lezen: deze ronde schreef niets\."/);
+  });
+
+  it("(7) geen rondgang na 15 minuten is ook een harde stop, met reden", () => {
+    const bron = lees("lib/bouwer/auto-uitrol.ts");
+    expect(bron).toContain("nacontrole onbekend na 15 min:");
+    expect(bron).toMatch(/na\.uitslag === "onbekend"\) \{[^}]*hardeStop/s);
+  });
+
+  it("(9) GitHub: een voorwaardelijk verzoek (ETag, 304), het leestoken alleen als Bearer, nooit gelogd, en 429 wacht netjes", () => {
+    const live = lees("lib/bouwer/live.ts");
+    expect(live).toContain('"If-None-Match": etag');
+    expect(live).toContain('res.status === 304');
+    expect(live).toContain("de GitHub-limiet is bereikt (429)");
+    expect(live).toContain("Authorization: `Bearer ${t}`");
+    const bron = lees("lib/bouwer/auto-uitrol.ts");
+    expect(bron).toContain("githubMainSha(cache?.etag ?? null)");
+    expect(bron).not.toMatch(/githubOverzicht|GITHUB_LEES_TOKEN|console\./);
+    expect(bron).toContain("Main is nu niet te lezen: ${main.fout");
+  });
+
+  it("(10) de controle compileert de Python-bestanden van de uitrol, en de README vraagt geen herstart van zf-live", () => {
+    const controle = lees("deploy/bouwer/werker/controle.mjs");
+    expect(controle).toContain('"-m", "py_compile"');
+    expect(controle).toMatch(/ok: tsc\.code === 0 && schema\.ok && python\.ok && eslint\.ok && tests\.ok/);
+    expect(controle).toContain("python3 ontbreekt in de Bouwer");
+    const py = lees("deploy/bouwer/zf-live.py");
+    expect(py).toContain('"python": "de Python-bestanden"');
+    const readme = lees("deploy/bouwer/README.md");
+    expect(readme).not.toContain("sudo systemctl restart zf-live");
+    expect(readme).toContain("Een herstart van `zf-live` is niet nodig");
   });
 });
 
@@ -278,7 +370,7 @@ describe("Auto-uitrol: aangesloten op de server", () => {
     expect(py).toContain('"schema": "het databaseschema"');
     const controle = lees("deploy/bouwer/werker/controle.mjs");
     expect(controle).toContain('["prisma", "validate"]');
-    expect(controle).toMatch(/ok: tsc\.code === 0 && schema\.ok && eslint\.ok && tests\.ok/);
+    expect(controle).toMatch(/ok: tsc\.code === 0 && schema\.ok && python\.ok && eslint\.ok && tests\.ok/);
   });
 
   it("de beheerroutes zijn strikt voor platformbeheer en de schakelaar werkt via de vlag", () => {
