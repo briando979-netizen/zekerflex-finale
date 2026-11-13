@@ -6,6 +6,7 @@ import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { pushDay, type WorkerPushTexts } from "@/lib/i18n/worker-push";
 import type { Locale } from "@/lib/i18n/config";
 import { ruimVerlopenReactiesOp } from "@/lib/offers/expire";
+import { ruimPushMarkeringenOp } from "@/lib/notifications/push-eenmalig";
 import { plekVoorWerker } from "@/lib/shifts/place-label";
 
 // ---------------------------------------------------------------------------
@@ -164,6 +165,8 @@ export async function sweepWorkerPushes(now = new Date()): Promise<{ selected: n
   const profile = hour >= 9 && hour < 20 ? await profilePushes(now) : 0;
   // geo-targeted push for soon-starting, still-open shifts (daytime only)
   const geo = hour >= 8 && hour < 21 ? await notifyNearbyOpenShifts(now).catch(() => 0) : 0;
+  // de eenmalige pushmarkeringen (volgers, job-alerts, geo) na 30 dagen weg; hooguit één keer per dag
+  await ruimPushMarkeringenOp(now).catch(() => 0);
   return { selected, reminders, profile, geo, verlopen: opruim.reacties + opruim.vervangingen };
 }
 
