@@ -375,6 +375,15 @@ export const GRATIS_DIENSTEN: GratisDienst[] = [
     eigen: "Draait al van onze eigen kopie: na de eerste download werkt alles zonder netwerk en gaat er nooit een foto naar buiten. Een download komt eerst in een tijdelijk bestand en wordt pas daarna de echte, dus er blijft nooit een half bestand liggen; mislukt hij, dan probeert de volgende aanroep het opnieuw. Is GitHub bij de allereerste keer onbereikbaar, dan lukt tekstherkenning pas als de bestanden er staan.",
     status: "gratis",
     hosts: ["github.com"],
+  },
+  {
+    id: "alpaca-papier",
+    naam: "Alpaca (demo-rekening van de AI-trader)",
+    waarvoor: "De stand van de AI-trader laten zien in Beheer: vermogen, posities en orders van de demo-rekening (nep-geld)",
+    nu: "De papier-omgeving van Alpaca (paper-api.alpaca.markets), gratis. Beheer doet alleen GET: lezen, nooit een order plaatsen. De sleutel staat verzegeld in de opslag.",
+    eigen: "Geen eigen alternatief nodig: het is een gratis demo-rekening en de trader zelf draait op de pc van de eigenaar. Zonder sleutel of bij een storing toont Beheer een duidelijke melding en blijft de rest van het platform gewoon werken.",
+    status: "gratis",
+    hosts: ["paper-api.alpaca.markets"],
   },];
 
 /** Hoeveel diensten per stand — voor de tegels bovenaan. */

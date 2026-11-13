@@ -28,6 +28,8 @@ import { cronHeartbeats } from "@/lib/ops/heartbeat";
 import { platformnaamTodo, type PlatformnaamStand } from "@/lib/admin/todo-platformnaam";
 import { stripeAccountTodos } from "@/lib/admin/todo-stripe-account";
 import { werkrechtEisTodo } from "@/lib/admin/todo-werkrecht";
+import { aiTraderTodo } from "@/lib/admin/todo-ai-trader";
+import { alpacaSleutelInfo } from "@/lib/trader/alpaca";
 import { featureEnabled } from "@/lib/flags";
 import { WISSEL_VERWIJZING, betalenUitEerst, betalenUitVoorzin, webhookHandtekeningStand } from "@/lib/admin/todo-stripe-wissel";
 import type { Eerst } from "@/lib/admin/te-doen-eerst";
@@ -263,6 +265,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   // de ID-foto's en gegevens uit het oude Stripe-account kopiëren (14 nov, lib/kyc/stripe-kopie.ts)
   const stripeKopie = stripeKopieTodo(await stripeKopieStand());
   // de vlag werkrecht-eis (lib/admin/todo-werkrecht.ts): de taak vinkt zichzelf af zodra hij aan staat; een leesfout geeft geen taak
+  const aiTrader = aiTraderTodo(await alpacaSleutelInfo().then((i) => i.aanwezig, () => undefined));
   const werkrechtEis = werkrechtEisTodo(await featureEnabled("werkrecht-eis").catch(() => undefined));
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
@@ -272,6 +275,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     ...(kvkTegoed ? [kvkTegoed] : []),
     ...(stripeKopie ? [stripeKopie] : []),
     ...(werkrechtEis ? [werkrechtEis] : []),
+    ...(aiTrader ? [aiTrader] : []),
     {
       id: "llm",
       group: "AI",
