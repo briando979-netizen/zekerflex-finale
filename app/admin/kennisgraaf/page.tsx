@@ -44,7 +44,7 @@ export default async function KennisGraafPage() {
     <div className="space-y-4">
       <PageHead
         title="Kennisgraaf"
-        subtitle="Het brein van ZekerFlex als netwerk: elke stip is een kennisdocument, elke ruit een begrip, elke lijn een verband. Vlak of als sterrenstelsel in 3D (elk thema een zonnestelsel). Kleur op soort of thema, zoek, filter, zoom in op een buurt, trek het kortste pad tussen twee knopen, stel een vraag en zie welk pad het brein neemt; klik op een knoop voor de inhoud."
+        subtitle="Het brein van ZekerFlex als netwerk: elke stip is een kennisdocument, elke ruit een begrip, elke lijn een verband. Vlak, of als brein in 3D: elk geheugenstuk een neuron, elk cluster een thema of bron, met de echte raadpleegtelling en een balk om het brein te voeden. Kleur op soort of thema, zoek, filter, zoom in op een buurt, trek het kortste pad tussen twee knopen, stel een vraag en zie welk pad het brein neemt; klik op een knoop voor de inhoud."
       />
       <KpiStrip
         items={[

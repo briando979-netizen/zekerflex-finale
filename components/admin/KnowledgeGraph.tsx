@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as RPointerEvent, WheelEvent as RWheelEvent } from "react";
 import type { Begrip, GraafKnoop, GraafLijn, LijnSoort } from "@/lib/rag/graph-analyse";
-import { themaKleur } from "@/components/admin/sterrenstelsel/kleuren";
+import { themaKleur } from "@/components/admin/brein/kleuren";
 
 // De Kennisgraaf als Obsidian-achtige force-directed grafiek, met eigen lichte
 // physics (geen dependency): afstoting tussen knopen, veren langs lijnen, lichte
