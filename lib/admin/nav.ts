@@ -56,6 +56,7 @@ export const ADMIN_HUBS: AdminHub[] = [
     blurb: "Omzet, facturen, betalingen en aangiftes",
     icon: "money",
     pages: [
+      { href: "/admin/winstplan", label: "Weg naar winst" },
       { href: "/admin/financien", label: "Financiën & winst" },
       { href: "/admin/accountant", label: "Accountant" },
       { href: "/admin/boekhouding", label: "Boekhouding" },
