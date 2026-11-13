@@ -48,9 +48,6 @@ const VIEWS: [View, string][] = [
   ["groningen", "Groningen"],
 ];
 
-/** De steden over de snelweg hebben geen eigen paneel (nog geen cijfers): alleen erheen vliegen. */
-const STADSVIEWS = new Set<View>(["stad", "station", "amsterdam", "rotterdam", "utrecht", "groningen"]);
-
 const LEGEND: [string, string][] = [
   ["#16a34a", "Bus: planning & uren"],
   ["#d97706", "Bestelbus: webshop"],
@@ -66,7 +63,8 @@ const LEGEND: [string, string][] = [
 ];
 
 const timeNl = (iso: string) => new Date(iso).toLocaleTimeString("nl-NL", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit" });
-const pickFor = (v: View): Pick | null => (STADSVIEWS.has(v) ? null : v === "polder" ? { kind: "polder" } : v === "bedrijven" ? { kind: "bedrijventerrein" } : v === "woonwijk" ? { kind: "woonwijk" } : { kind: "landmark", id: v });
+// het station en de steden over de snelweg hebben geen eigen paneel (nog geen cijfers): alleen erheen vliegen
+const pickFor = (v: View): Pick | null => (v === "stad" || v === "station" || v === "amsterdam" || v === "rotterdam" || v === "utrecht" || v === "groningen" ? null : v === "polder" ? { kind: "polder" } : v === "bedrijven" ? { kind: "bedrijventerrein" } : v === "woonwijk" ? { kind: "woonwijk" } : { kind: "landmark", id: v });
 /** 21,25 → "21:15" */
 const hourText = (h: number) => `${String(Math.floor(h)).padStart(2, "0")}:${String(Math.round((h % 1) * 60)).padStart(2, "0")}`;
 const toneOf = (severity: string) => (severity === "critical" ? "crit" : severity === "warning" ? "warn" : "neutral");
