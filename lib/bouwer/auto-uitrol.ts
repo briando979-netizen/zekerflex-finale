@@ -1,12 +1,14 @@
 import { readFileSync } from "node:fs";
-import { bewaarAutoStand, leesAutoStand, noodremAan } from "@/lib/bouwer/auto-uitrol-opslag";
-import { featureEnabled } from "@/lib/flags";
+import { bewaarAutoStand, leesAutoStand, noodremAan, zetNoodrem } from "@/lib/bouwer/auto-uitrol-opslag";
+import { featureEnabled, setFlag } from "@/lib/flags";
+import { draaiRondgang, laatsteRondgang } from "@/lib/ops/rondgang";
 import { journal } from "@/lib/ops/error-journal";
 import { liveVersie } from "@/lib/bouwer/versie";
 import { agentLeeft, githubOverzicht, isBezig, leesLive, plaatsVerzoek } from "@/lib/bouwer/live";
 import { lijstControles, startControle } from "@/lib/bouwer/controles";
 import {
   AUTO_UITROL_DOOR,
+  beoordeelNacontrole,
   beslis,
   uitkomstVanStatus,
   vrijGeheugenUitMeminfo,
@@ -26,12 +28,31 @@ import {
 
 const VERZOEK_MAX_MS = 15 * 60_000;
 
+/** Antwoordt de app zelf op /api/health? (de lus draait in de nieuwe app; een container die niet antwoordt, is niet gezond) */
+async function appGezond(): Promise<boolean> {
+  try {
+    const res = await fetch(`http://127.0.0.1:${process.env.PORT || 3000}/api/health`, { cache: "no-store", signal: AbortSignal.timeout(5000) });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 function vrijGeheugenMb(): number | null {
   try {
     return vrijGeheugenUitMeminfo(readFileSync("/proc/meminfo", "utf8"));
   } catch {
     return null;
   }
+}
+
+/** De harde stop: de Auto-uitrol gaat zelf UIT (dezelfde vlag als de schakelaar in Beheer), de noodrem krijgt de reden, een regel in het foutenlogboek; de Te-doen-taak volgt uit de stand. */
+async function hardeStop(stand: AutoStand, sha: string, reden: string, nu: number): Promise<AutoStand> {
+  const op = new Date(nu).toISOString();
+  await setFlag("auto-uitrol", { enabled: false }, AUTO_UITROL_DOOR).catch(() => undefined);
+  await zetNoodrem(true, AUTO_UITROL_DOOR, reden).catch(() => undefined);
+  journal("error", "auto-uitrol: harde stop", { sha: sha.slice(0, 10), reden });
+  return { ...stand, verzocht: null, stop: { reden, sha, op }, laatsteNacontrole: { sha, uitslag: "stop", reden, op } };
 }
 
 export interface RondeUitslag {
@@ -66,7 +87,12 @@ export async function autoUitrolRonde(nu: number = Date.now()): Promise<RondeUit
     const verlopen = nu - Date.parse(stand.verzocht.op) > VERZOEK_MAX_MS;
     const sha = stand.verzocht.sha;
     if (uitkomst === "klaar") {
-      stand = { ...stand, verzocht: null, laatsteUitrol: { sha, uitkomst: "klaar", op: new Date(nu).toISOString() } };
+      // de nacontrole begint: na ~3 minuten gezondheid, VERSIE en rondgang (harde stop als het faalt)
+      stand = { ...stand, verzocht: null, nacontrole: { sha, id: stand.verzocht.id, sinds: new Date(nu).toISOString(), rondgangGestart: null }, laatsteUitrol: { sha, uitkomst: "klaar", op: new Date(nu).toISOString() } };
+    } else if (uitkomst === "geweigerd" && liveStand.status?.staat === "teruggezet") {
+      // een slechte versie ging even live en is teruggezet: harde stop
+      const reden = "de live-zetter zette de vorige versie terug na een uitrol van de Auto-uitrol";
+      stand = await hardeStop(stand, sha, reden, nu);
     } else if (uitkomst === "migratie") {
       stand = { ...stand, verzocht: null, migratieWacht: { sha, migraties: (liveStand.status?.migraties ?? []).map((m) => m.naam), op: new Date(nu).toISOString() } };
       journal("warn", "auto-uitrol: migratie wacht", { sha: sha.slice(0, 10) });
@@ -76,6 +102,31 @@ export async function autoUitrolRonde(nu: number = Date.now()): Promise<RondeUit
       journal("error", "auto-uitrol: uitrol mislukt of teruggezet", { sha: sha.slice(0, 10), reden });
     } else if (uitkomst === "tijdelijk" || (uitkomst === "bezig" && verlopen && !isBezig(liveStand.status) && !liveStand.verzoek)) {
       stand = { ...stand, verzocht: null };
+    }
+  }
+
+  // de nacontrole van een uitrol die klaar meldde (alleen één keer; een rondgang starten we zelf als er geen verse is)
+  if (stand.nacontrole) {
+    const nc = stand.nacontrole;
+    const rondgang = await laatsteRondgang().catch(() => null);
+    const na = beoordeelNacontrole({
+      nu,
+      sha: nc.sha,
+      sinds: nc.sinds,
+      versie: live?.sha ?? null,
+      gezond: await appGezond(),
+      liveStaat: liveStand?.status && liveStand.status.id === nc.id ? liveStand.status.staat : null,
+      rondgang: rondgang ? { at: rondgang.at, totaal: rondgang.totaal, ok: rondgang.ok, problemen: rondgang.problemen.length } : null,
+    });
+    if (na.uitslag === "stop") {
+      stand = await hardeStop({ ...stand, nacontrole: null }, nc.sha, `nacontrole faalde: ${na.reden}`, nu);
+    } else if (na.uitslag === "ok" || na.uitslag === "onbekend") {
+      stand = { ...stand, nacontrole: null, laatsteNacontrole: { sha: nc.sha, uitslag: na.uitslag, reden: na.reden, op: new Date(nu).toISOString() } };
+      if (na.uitslag === "onbekend") journal("warn", "auto-uitrol: nacontrole onbekend", { sha: nc.sha.slice(0, 10), reden: na.reden });
+    } else if (!nc.rondgangGestart && nu - Date.parse(nc.sinds) >= 3 * 60_000) {
+      // geen verse rondgang: zelf één starten (op de achtergrond; de uitslag komt in KV rondgang:laatste)
+      stand = { ...stand, nacontrole: { ...nc, rondgangGestart: new Date(nu).toISOString() } };
+      void draaiRondgang().catch(() => undefined);
     }
   }
 

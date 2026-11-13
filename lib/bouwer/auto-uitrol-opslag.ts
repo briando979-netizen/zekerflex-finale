@@ -18,6 +18,23 @@ export async function noodremAan(): Promise<boolean> {
   return Boolean(await kvGet<{ aan?: boolean }>(K_AUTO_NOODREM).then((v) => v?.aan, () => true));
 }
 
-export async function zetNoodrem(aan: boolean, door: string): Promise<void> {
-  await kvSet(K_AUTO_NOODREM, { aan, door, op: new Date().toISOString() });
+/** De noodrem met zijn reden (bij de harde stop: "nacontrole faalde: ..."). */
+export async function zetNoodrem(aan: boolean, door: string, reden?: string): Promise<void> {
+  await kvSet(K_AUTO_NOODREM, { aan, door, op: new Date().toISOString(), ...(reden ? { reden } : {}) });
+}
+
+export async function leesNoodremReden(): Promise<string | null> {
+  const v = await kvGet<{ aan?: boolean; reden?: string }>(K_AUTO_NOODREM).catch(() => null);
+  return v?.aan && v.reden ? v.reden : null;
+}
+
+/**
+ * De mens zet de Auto-uitrol weer aan: de harde stop vervalt, en een noodrem die de nacontrole zelf zette gaat mee los
+ * (een noodrem die de eigenaar zelf zette blijft staan).
+ */
+export async function herstelNaStop(door: string): Promise<void> {
+  const stand = await leesAutoStand();
+  if (stand.stop) await bewaarAutoStand({ ...stand, stop: null });
+  const reden = await leesNoodremReden();
+  if (reden?.startsWith("nacontrole faalde")) await zetNoodrem(false, door);
 }

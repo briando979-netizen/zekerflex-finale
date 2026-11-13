@@ -7,6 +7,9 @@ import {
   MIN_LIVEZETTER_VERSIE,
   MIN_VRIJ_GEHEUGEN_MB,
   RUST_MS,
+  NACONTROLE_RONDGANG_MAX_MS,
+  NACONTROLE_WACHT_MS,
+  beoordeelNacontrole,
   beslis,
   inOllamaVenster,
   meldingen,
@@ -16,6 +19,7 @@ import {
   zietMain,
   type AutoStand,
   type Invoer,
+  type NaInvoer,
 } from "@/lib/bouwer/auto-uitrol-regels";
 import { autoUitrolTodos } from "@/lib/admin/todo-auto-uitrol";
 
@@ -166,6 +170,85 @@ describe("Auto-uitrol: hulpjes", () => {
     expect(todos).toHaveLength(1);
     expect(todos[0]).toMatchObject({ id: "auto-uitrol-achter", done: false, auto: true });
     expect(autoUitrolTodos(undefined)).toEqual([]);
+  });
+});
+
+describe("Auto-uitrol: de nacontrole (harde stop)", () => {
+  const KLAAR = Date.parse("2026-11-14T10:00:00Z");
+  const na = (extra: Partial<NaInvoer> = {}, minuten = 4): NaInvoer => ({
+    nu: KLAAR + minuten * 60_000,
+    sha: MAIN,
+    sinds: new Date(KLAAR).toISOString(),
+    versie: MAIN,
+    gezond: true,
+    liveStaat: "klaar",
+    rondgang: { at: new Date(KLAAR + 3.5 * 60_000).toISOString(), totaal: 105, ok: 105, problemen: 0 },
+    ...extra,
+  });
+
+  it("stopt niet bij groen: gezond, juiste VERSIE en een schone rondgang", () => {
+    expect(beoordeelNacontrole(na()).uitslag).toBe("ok");
+  });
+
+  it("stopt bij een rode rondgang (kapotte pagina's of ok kleiner dan totaal)", () => {
+    const r = beoordeelNacontrole(na({ rondgang: { at: new Date(KLAAR + 3.5 * 60_000).toISOString(), totaal: 105, ok: 103, problemen: 2 } }));
+    expect(r.uitslag).toBe("stop");
+    expect(r.reden).toMatch(/rondgang/);
+    expect(beoordeelNacontrole(na({ rondgang: { at: new Date(KLAAR + 3.5 * 60_000).toISOString(), totaal: 10, ok: 9, problemen: 0 } })).uitslag).toBe("stop");
+  });
+
+  it("stopt bij een verkeerde VERSIE en bij een app die niet gezond is", () => {
+    expect(beoordeelNacontrole(na({ versie: LIVE })).uitslag).toBe("stop");
+    expect(beoordeelNacontrole(na({ versie: null })).uitslag).toBe("stop");
+    expect(beoordeelNacontrole(na({ gezond: false })).uitslag).toBe("stop");
+  });
+
+  it("stopt als de live-zetter teruggezet of mislukt meldt, ook binnen de wachttijd", () => {
+    expect(beoordeelNacontrole(na({ liveStaat: "teruggezet" }, 1)).uitslag).toBe("stop");
+    expect(beoordeelNacontrole(na({ liveStaat: "mislukt" }, 1)).uitslag).toBe("stop");
+  });
+
+  it("wacht de eerste 3 minuten af", () => {
+    expect(beoordeelNacontrole(na({}, NACONTROLE_WACHT_MS / 60_000 - 0.5)).uitslag).toBe("wacht");
+  });
+
+  it("stopt NIET bij ontbrekende of oude rondgang binnen 15 minuten: afwachten; daarna onbekend (geen stop)", () => {
+    expect(beoordeelNacontrole(na({ rondgang: null }, 5)).uitslag).toBe("wacht");
+    // een rondgang van vóór de uitrol telt niet
+    expect(beoordeelNacontrole(na({ rondgang: { at: new Date(KLAAR - 3_600_000).toISOString(), totaal: 105, ok: 50, problemen: 55 } }, 5)).uitslag).toBe("wacht");
+    const laat = beoordeelNacontrole(na({ rondgang: null }, NACONTROLE_RONDGANG_MAX_MS / 60_000 + 1));
+    expect(laat.uitslag).toBe("onbekend");
+    expect(laat.reden).toMatch(/15 minuten/);
+  });
+
+  it("een rondgang ouder dan 15 minuten telt niet als vers", () => {
+    const oud = { at: new Date(KLAAR + 3.5 * 60_000).toISOString(), totaal: 105, ok: 105, problemen: 0 };
+    expect(beoordeelNacontrole(na({ rondgang: oud }, 25)).uitslag).toBe("onbekend");
+  });
+
+  it("regel 0b: met een stop-reden rolt de lus nooit meer uit, ook niet bij een schone controle", () => {
+    const stop = { reden: "nacontrole faalde: de app antwoordt niet", sha: MAIN, op: "2026-11-14T10:05:00Z" };
+    const b = beslis(invoer({}, { stop }));
+    expect(b.actie).toBe("niets");
+    expect(b.reden).toMatch(/Gestopt door de nacontrole/);
+    expect(beslis(invoer({ aan: true, noodrem: false }, { stop, gezienSha: "e".repeat(40) })).actie).toBe("niets");
+  });
+
+  it("de harde stop meldt zichzelf aan de eigenaar", () => {
+    const stop = { reden: "nacontrole faalde: x", sha: MAIN, op: "2026-11-14T10:05:00Z" };
+    expect(meldingen({ ...LEGE_STAND, gezienSha: MAIN, stop }, MAIN, NU).map((m) => m.id)).toContain("auto-uitrol-stop");
+    const onbekend = { ...LEGE_STAND, gezienSha: MAIN, laatsteNacontrole: { sha: MAIN, uitslag: "onbekend" as const, reden: "geen rondgang", op: "x" } };
+    expect(meldingen(onbekend, MAIN, NU).map((m) => m.id)).toContain("auto-uitrol-nacontrole-onbekend");
+  });
+
+  it("de uitvoering zet bij een stop de vlag uit, de noodrem met reden en logt het", () => {
+    const bron = lees("lib/bouwer/auto-uitrol.ts");
+    expect(bron).toContain('setFlag("auto-uitrol", { enabled: false }');
+    expect(bron).toContain("zetNoodrem(true, AUTO_UITROL_DOOR, reden)");
+    expect(bron).toContain('journal("error", "auto-uitrol: harde stop"');
+    expect(bron).toContain("nacontrole faalde: ${na.reden}");
+    // de beheerroute: een mens die aanzet, haalt de stop weg
+    expect(lees("app/api/admin/bouwer/auto-uitrol/route.ts")).toContain("herstelNaStop(");
   });
 });
 
