@@ -11,6 +11,7 @@ const getFiscal = vi.fn();
 vi.mock("@/lib/fiscal/store", () => ({
   getFiscal,
   isComplete: () => false,
+  fiscaalIngevuld: () => false,
   invoiceModeFor: (f: { workerKind?: string }) => (f.workerKind === "uitzendkracht" ? "payroll" : "reverse-billing"),
 }));
 const activeUitzendContract = vi.fn();

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getFiscal, isComplete as isFiscalComplete, invoiceModeFor } from "@/lib/fiscal/store";
+import { getFiscal, fiscaalIngevuld, invoiceModeFor } from "@/lib/fiscal/store";
 import { activeUitzendContract } from "@/lib/agreements/uitzend-contract";
 import { amsterdamStartOfMonth } from "@/lib/time/amsterdam";
 import { werkerStappen, berekenVoortgang, type Stap, type Voortgang, type WerkerStapSleutel } from "@/lib/onboarding/voortgang";
@@ -60,7 +60,10 @@ export async function getFreelancerOverview(userId: string): Promise<FreelancerO
     getFiscal(userId),
     prisma.webPushSubscription.count({ where: { userId, disabledAt: null } }).catch(() => 0),
   ]);
-  const fiscalDone = isFiscalComplete(fiscal);
+  // zonder het IBAN: dat staat vaak alleen op het profiel (payoutIban) en wordt hieronder apart gecontroleerd, op beide plekken.
+  // Met isComplete (eist fiscal.iban) bleef een geverifieerde werker met alles ingevuld eindeloos in het formulier van
+  // /dashboard/verificatie hangen (13 nov, gemeld door de eigenaar).
+  const fiscalDone = fiscaalIngevuld(fiscal);
   const isUitzend = invoiceModeFor(fiscal) === "payroll";
   const uitzendContractSigned = isUitzend ? Boolean(await activeUitzendContract(userId)) : true;
 
