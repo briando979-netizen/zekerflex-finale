@@ -14,6 +14,8 @@ interface IdTekst {
   standNee: string;
   tip: string;
   knop: string;
+  /** de knop naar de eerste open stap van de aanmelding (13 nov 2026) */
+  knopVolgende: string;
 }
 
 const TEKST: Record<MailTaal, IdTekst> = {
@@ -26,6 +28,7 @@ const TEKST: Record<MailTaal, IdTekst> = {
     standNee: "Je kunt op klussen reageren zodra de rest van je aanmelding klopt.",
     tip: "Met een duidelijke profielfoto en je werkervaring kunnen opdrachtgevers je beter inschatten. Beide stappen zijn optioneel en kosten een paar minuten",
     knop: "Maak een goede eerste indruk",
+    knopVolgende: "Verder met je aanmelding",
   },
   en: {
     subject: "Your ID is verified",
@@ -36,6 +39,7 @@ const TEKST: Record<MailTaal, IdTekst> = {
     standNee: "You can apply for jobs as soon as the rest of your registration is in order.",
     tip: "With a clear profile photo and your work experience, employers can judge you better. Both steps are optional and take a few minutes",
     knop: "Make a good first impression",
+    knopVolgende: "Continue your sign-up",
   },
   pl: {
     subject: "Twój dokument tożsamości został zweryfikowany",
@@ -46,6 +50,7 @@ const TEKST: Record<MailTaal, IdTekst> = {
     standNee: "Na zlecenia możesz odpowiadać, gdy reszta Twojej rejestracji będzie w porządku.",
     tip: "Z wyraźnym zdjęciem profilowym i doświadczeniem zawodowym zleceniodawcy lepiej Cię ocenią. Oba kroki są opcjonalne i zajmują kilka minut",
     knop: "Zrób dobre pierwsze wrażenie",
+    knopVolgende: "Kontynuuj rejestrację",
   },
   ro: {
     subject: "Actul tău de identitate este verificat",
@@ -56,6 +61,7 @@ const TEKST: Record<MailTaal, IdTekst> = {
     standNee: "Poți aplica la joburi imediat ce restul înregistrării tale este în regulă.",
     tip: "Cu o fotografie de profil clară și experiența ta, angajatorii te pot evalua mai bine. Ambii pași sunt opționali și durează câteva minute",
     knop: "Fă o primă impresie bună",
+    knopVolgende: "Continuă înregistrarea",
   },
   uk: {
     subject: "Твій документ підтверджено",
@@ -66,12 +72,44 @@ const TEKST: Record<MailTaal, IdTekst> = {
     standNee: "Ти зможеш відгукуватися на роботи, щойно решта твоєї реєстрації буде в порядку.",
     tip: "З чітким фото профілю та досвідом роботи замовники зможуть краще тебе оцінити. Обидва кроки необов’язкові й займають кілька хвилин",
     knop: "Зроби гарне перше враження",
+    knopVolgende: "Продовжити реєстрацію",
   },
 };
 
-export function idGeverifieerdEmailT(fullName: string, appUrl: string, kanReageren: boolean, taal: MailTaal): MailInput {
+/**
+ * Met `volgende` (er staat nog een stap van de aanmelding open): in één zin wat er nog moet en een knop naar die stap, in plaats
+ * van "eerste indruk" (die pagina stuurt terug zolang gegevens of branches open staan). Zonder blijft de mail zoals hij was.
+ */
+export function idGeverifieerdEmailT(
+  fullName: string,
+  appUrl: string,
+  kanReageren: boolean,
+  taal: MailTaal,
+  volgende?: { zin: string; pad: string },
+): MailInput {
   const t = TEKST[taal];
   const first = fullName.split(" ")[0] || fullName;
+  if (volgende) {
+    const naar = `${appUrl.replace(/\/+$/, "")}${volgende.pad}`;
+    return {
+      to: "",
+      subject: t.subject,
+      kind: "onboarding",
+      text: `${vulIn(t.hoi, { naam: first })}
+
+${t.intro} ${volgende.zin}
+
+${t.knopVolgende}: ${naar}`,
+      html: shell(
+        t.subject,
+        `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">${vulIn(t.introHtml, { naam: escapeHtml(first) })}</p>
+       <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#3C4A42">${escapeHtml(volgende.zin)}</p>
+       <p style="margin:0">${button(naar, t.knopVolgende)}</p>`,
+        volgende.zin,
+        taal,
+      ),
+    };
+  }
   const href = `${appUrl.replace(/\/+$/, "")}/dashboard/eerste-indruk`;
   const stand = kanReageren ? t.standJa : t.standNee;
   return {

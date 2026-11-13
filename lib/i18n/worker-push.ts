@@ -74,6 +74,8 @@ export interface WorkerPushTexts {
   /** ID geverifieerd (lib/onboarding/id-geverifieerd.ts): alleen wat voor het ID geldt */
   idOkTitle: string;
   idOkBody: string;
+  /** wat er na het ID nog moet: de eerste open stap (lib/onboarding/id-melding-volgende.ts); open is hooguit 4, dus in het Pools en Oekraïens de vorm voor 2–4 */
+  idOkVolgende: (stap: string, open: number) => string;
   /** een klusvoorstel van de matching (lib/notifications/dispatcher.ts): titel, en plek · stad · tarief · reistijd */
   offerTitle: (title: string) => string;
   offerBody: (plek: string, stad: string, tarief: string, minuten: number) => string;
@@ -172,6 +174,7 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     werkrechtAfBody: (l, r) => `Werken in ${l}: ${r} Upload een nieuw document bij Verificatie.`,
     idOkTitle: "Je ID is geverifieerd",
     idOkBody: "Je kunt op klussen reageren zodra de rest van je aanmelding klopt. Een duidelijke foto en je werkervaring helpen opdrachtgevers je te kiezen.",
+    idOkVolgende: (s, n) => (n <= 1 ? `Nog 1 stap: ${s}.` : `Nog ${n} stappen, eerst: ${s}.`),
     offerTitle: (t) => `Nieuwe klus: ${t}`,
     offerBody: (p, c, r, m) => `${p}, ${c} · ${r} · ±${m} min reizen`,
     msBtwTitle: "🧾 Btw-aangifte bijna",
@@ -264,6 +267,7 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     werkrechtAfBody: (l, r) => `Working in ${l}: ${r} Upload a new document under Verification.`,
     idOkTitle: "Your ID has been verified",
     idOkBody: "You can respond to jobs as soon as the rest of your sign-up is in order. A clear photo and your work experience help clients choose you.",
+    idOkVolgende: (s, n) => (n <= 1 ? `1 step to go: ${s}.` : `${n} steps to go, first: ${s}.`),
     offerTitle: (t) => `New job: ${t}`,
     offerBody: (p, c, r, m) => `${p}, ${c} · ${r} · ~${m} min travel`,
     msBtwTitle: "🧾 VAT return due soon",
@@ -356,6 +360,7 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     werkrechtAfBody: (l, r) => `Praca w kraju ${l}: ${r} Prześlij nowy dokument w sekcji Weryfikacja.`,
     idOkTitle: "Twój dokument został zweryfikowany",
     idOkBody: "Możesz odpowiadać na zlecenia, gdy reszta Twojej rejestracji będzie w porządku. Wyraźne zdjęcie i doświadczenie zawodowe pomagają zleceniodawcom Cię wybrać.",
+    idOkVolgende: (s, n) => (n <= 1 ? `Został 1 krok: ${s}.` : `Zostały ${n} kroki, najpierw: ${s}.`),
     offerTitle: (t) => `Nowe zlecenie: ${t}`,
     offerBody: (p, c, r, m) => `${p}, ${c} · ${r} · ok. ${m} min dojazdu`,
     msBtwTitle: "🧾 Zbliża się deklaracja VAT",
@@ -448,6 +453,7 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     werkrechtAfBody: (l, r) => `Munca în ${l}: ${r} Încarcă un document nou la Verificare.`,
     idOkTitle: "Actul tău de identitate a fost verificat",
     idOkBody: "Poți răspunde la lucrări imediat ce restul înregistrării tale este în regulă. O fotografie clară și experiența ta de muncă îi ajută pe clienți să te aleagă.",
+    idOkVolgende: (s, n) => (n <= 1 ? `Mai ai 1 pas: ${s}.` : `Mai ai ${n} pași, mai întâi: ${s}.`),
     offerTitle: (t) => `Job nou: ${t}`,
     offerBody: (p, c, r, m) => `${p}, ${c} · ${r} · ~${m} min de drum`,
     msBtwTitle: "🧾 Declarația de TVA se apropie",
@@ -540,6 +546,7 @@ export const WORKER_PUSH: Record<Locale, WorkerPushTexts> = {
     werkrechtAfBody: (l, r) => `Робота в країні ${l}: ${r} Завантажте новий документ у розділі «Перевірка».`,
     idOkTitle: "Ваш документ перевірено",
     idOkBody: "Ви зможете відгукуватися на роботу, щойно решта вашої реєстрації буде в порядку. Чітке фото та досвід роботи допомагають замовникам вибрати вас.",
+    idOkVolgende: (s, n) => (n <= 1 ? `Залишився 1 крок: ${s}.` : `Залишилося ${n} кроки, спершу: ${s}.`),
     offerTitle: (t) => `Нова робота: ${t}`,
     offerBody: (p, c, r, m) => `${p}, ${c} · ${r} · ~${m} хв у дорозі`,
     msBtwTitle: "🧾 Скоро декларація з ПДВ",

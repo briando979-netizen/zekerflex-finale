@@ -7,10 +7,14 @@ import { idGeverifieerdEmailT } from "@/lib/mail/werker/id-geverifieerd";
 import { mailTaalVoorWerker } from "@/lib/mail/taal";
 import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { kanReagerenOpKlussen } from "@/lib/onboarding/kan-reageren";
+import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
+import { idMeldingVolgende, stapNaam } from "@/lib/onboarding/id-melding-volgende";
+import { WORKER_PUSH } from "@/lib/i18n/worker-push";
 
 // ---------------------------------------------------------------------------
 // De melding aan een werker zodra zijn ID geverifieerd is (11 nov 2026): een push in zijn
-// app-taal en een korte mail, met een link naar /dashboard/eerste-indruk. EENMALIG per werker:
+// app-taal en een korte mail. Sinds 13 nov met een link naar de eerste open stap van de aanmelding en in één zin wat er
+// nog moet (lib/onboarding/id-melding-volgende.ts); is alles af, dan naar /dashboard/eerste-indruk. EENMALIG per werker:
 // de markering staat in KV "werker-id-melding:<userId>" (AVG: voorvoegsel in ERASABLE_KV_PREFIXES).
 // Wordt aangeroepen op elke plek waar een ID-controle op "geverifieerd" komt; wie het al
 // kreeg, krijgt het niet nog eens (ook niet als de status later weer wisselt).
@@ -44,14 +48,16 @@ export async function meldIdGeverifieerd(userId: string, now = new Date()): Prom
     // kan de werker nu al echt reageren (start ingevuld, IBAN, …)? Dan zegt de mail dat, zoals bij "aanmelding
     // compleet" (lib/onboarding/aanmelding-compleet.ts), die hierop let om niet twee keer hetzelfde te sturen
     const reageren = await kanReagerenOpKlussen(userId, now);
+    // de eerste open stap (soort, branches, gegevens, foto); een storing geeft de melding van vroeger (eerste indruk)
+    const volgende = idMeldingVolgende(await werkerPoortStand(userId).catch(() => null));
 
     // eerst de markering, dan versturen: liever één melding te weinig dan er twee
     await kvSet(sleutel(userId), { at: now.toISOString(), kanReageren: reageren.ok });
 
-    const push = await sendLocalizedPush([userId], (t) => ({
+    const push = await sendLocalizedPush([userId], (t, locale) => ({
       title: t.idOkTitle,
-      body: t.idOkBody.slice(0, 180),
-      data: { type: "PROFILE", url: "/dashboard/eerste-indruk", tag: "id-geverifieerd" },
+      body: (volgende.sleutel ? t.idOkVolgende(stapNaam(volgende.sleutel, locale), volgende.open) : t.idOkBody).slice(0, 180),
+      data: { type: "PROFILE", url: volgende.pad, tag: "id-geverifieerd" },
       ttlSeconds: 3 * 86_400,
     })).catch((err) => {
       logger.warn("id-melding: push mislukt", { error: (err as Error).message });
@@ -62,7 +68,8 @@ export async function meldIdGeverifieerd(userId: string, now = new Date()): Prom
     let mail = false;
     if (!isReservedTestAddress(user.email)) {
       const taal = await mailTaalVoorWerker(userId);
-      const r = await sendMail({ ...idGeverifieerdEmailT(user.fullName, env.APP_BASE_URL, reageren.ok, taal), to: user.email }).catch(() => null);
+      const naarStap = volgende.sleutel ? { zin: WORKER_PUSH[taal].idOkVolgende(stapNaam(volgende.sleutel, taal), volgende.open), pad: volgende.pad } : undefined;
+      const r = await sendMail({ ...idGeverifieerdEmailT(user.fullName, env.APP_BASE_URL, reageren.ok, taal, naarStap), to: user.email }).catch(() => null);
       mail = Boolean(r?.delivered);
     }
     return { verstuurd: true, push, mail };
