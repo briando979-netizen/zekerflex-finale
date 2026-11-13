@@ -28,6 +28,21 @@ export interface WerkerTrechterData {
   idSoort: { maand: string; telling: IdSoortTelling | null }[];
 }
 
+const CACHE_MS = 10 * 60_000;
+const geheugen = globalThis as unknown as { __zfWerkerTrechter?: { at: number; data: WerkerTrechterData } };
+
+/**
+ * Met een cache van 10 minuten in het geheugen (globalThis: Next bundelt routes apart). werkerPoortStand doet per werker een
+ * handvol query's; zo kost een keer heen en weer klikken niets. `vernieuw` haalt meteen opnieuw op.
+ */
+export async function werkerTrechterGecached(nu: Date = new Date(), vernieuw = false): Promise<WerkerTrechterData & { bijgewerkt: Date }> {
+  const c = geheugen.__zfWerkerTrechter;
+  if (!vernieuw && c && nu.getTime() - c.at >= 0 && nu.getTime() - c.at < CACHE_MS) return { ...c.data, bijgewerkt: new Date(c.at) };
+  const data = await werkerTrechterData(nu);
+  geheugen.__zfWerkerTrechter = { at: nu.getTime(), data };
+  return { ...data, bijgewerkt: nu };
+}
+
 export async function werkerTrechterData(nu: Date = new Date()): Promise<WerkerTrechterData> {
   const sinds = new Date(nu.getTime() - 30 * DAG);
   const gebruikers = await prisma.user.findMany({
