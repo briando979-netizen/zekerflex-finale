@@ -24,8 +24,14 @@ import {
 // ---------------------------------------------------------------------------
 
 export const STRIPE_ACTIEF_KV = "stripe:actief-account";
-/** Connect-accounts van werkers die bij het vorige platform-account horen: die koppelen opnieuw (alleen de id's). */
+/**
+ * Bij welk platform-account hoort een Connect-account van een werker (alleen de id's: connect-id → account-id van het
+ * platform, of "env" voor de sleutel uit .env). Hoort het bij een ander platform-account dan het actieve, dan koppelt de
+ * werker opnieuw; gaat het platform terug, dan is het weer geldig. Niets wordt gewist.
+ */
 export const STRIPE_OUDE_CONNECT_KV = "stripe:oude-connect";
+/** Het platform-account zonder keuze in Beheer: de sleutel uit .env. */
+export const ENV_PLATFORM = "env";
 const DOEL_SLEUTEL = "stripe-platform-sleutel";
 const DOEL_WEBHOOK = "stripe-platform-webhook";
 const HERLAAD_MS = 60_000;
@@ -54,6 +60,11 @@ const g = globalThis as unknown as { __zfStripeActief?: Geheugen };
 /** De verzegelde sleutel uit Beheer, als die geladen is; anders null (dan geldt .env). Synchroon voor getStripeClient. */
 export function actieveStripeSleutelUitGeheugen(): string | null {
   return g.__zfStripeActief?.sleutel ?? null;
+}
+
+/** Is de keuze uit Beheer al geladen (bij het opstarten, instrumentation.ts)? Daarvoor mag getStripeClient niet stil .env nemen. */
+export function stripeKeuzeGeladen(): boolean {
+  return g.__zfStripeActief !== undefined;
 }
 
 /** Het webhook-geheim van het account uit Beheer, als dat er is. */
@@ -208,17 +219,33 @@ export async function terugNaarVorigStripeAccount(): Promise<StripeAccountInfo |
   return huidig.vorige ? info({ ...huidig.vorige, vorige: null }) : null;
 }
 
-/** Bij een wissel: de Connect-accounts van het vorige platform onthouden (alleen de id's); niets wordt gewist. */
-export async function markeerOudeConnectAccounts(ids: readonly string[], nu: Date = new Date()): Promise<number> {
-  const oud = (await kvGet<{ ids: string[] }>(STRIPE_OUDE_CONNECT_KV).catch(() => null))?.ids ?? [];
-  const alle = [...new Set([...oud, ...ids.filter((i) => typeof i === "string" && i.startsWith("acct_"))])];
-  await kvSet(STRIPE_OUDE_CONNECT_KV, { ids: alle, op: nu.toISOString() });
-  return alle.length;
+interface ConnectHerkomst {
+  per: Record<string, string>;
+  op: string;
 }
 
-/** Hoort dit Connect-account bij het vorige platform-account? Dan moet de werker opnieuw koppelen. */
+/** Het platform-account dat nu actief is: het account-id uit Beheer, of "env". */
+export async function actiefPlatform(): Promise<string> {
+  const o = await kvGet<Opgeslagen>(STRIPE_ACTIEF_KV).catch(() => null);
+  return o?.accountId ?? ENV_PLATFORM;
+}
+
+/**
+ * Vóór een wissel (en vóór "terug"): de Connect-accounts die nu bestaan, horen bij het platform-account dat we verlaten.
+ * Een id dat al een herkomst heeft, houdt die (een werker die later opnieuw koppelde, krijgt een nieuw id).
+ */
+export async function markeerOudeConnectAccounts(ids: readonly string[], platform: string, nu: Date = new Date()): Promise<number> {
+  const oud = (await kvGet<ConnectHerkomst>(STRIPE_OUDE_CONNECT_KV).catch(() => null))?.per ?? {};
+  const per: Record<string, string> = { ...oud };
+  for (const id of ids) if (typeof id === "string" && id.startsWith("acct_") && !Object.hasOwn(per, id)) per[id] = platform;
+  await kvSet(STRIPE_OUDE_CONNECT_KV, { per, op: nu.toISOString() } satisfies ConnectHerkomst);
+  return Object.keys(per).length;
+}
+
+/** Hoort dit Connect-account bij een ander platform-account dan het actieve? Dan moet de werker opnieuw koppelen. */
 export async function isOudConnectAccount(id: string | null | undefined): Promise<boolean> {
   if (!id) return false;
-  const oud = await kvGet<{ ids: string[] }>(STRIPE_OUDE_CONNECT_KV).catch(() => null);
-  return Boolean(oud?.ids?.includes(id));
+  const herkomst = (await kvGet<ConnectHerkomst>(STRIPE_OUDE_CONNECT_KV).catch(() => null))?.per;
+  if (!herkomst || !Object.hasOwn(herkomst, id)) return false;
+  return herkomst[id] !== (await actiefPlatform());
 }

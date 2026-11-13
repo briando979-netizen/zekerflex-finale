@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/lib/audit";
 import { kvDelete } from "@/lib/storage/kv";
 import {
+  actiefPlatform,
   controleerStripeSleutel,
   gebruikStripeAccount,
   markeerOudeConnectAccounts,
@@ -26,6 +27,13 @@ export const dynamic = "force-dynamic";
 export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => NextResponse.json({ actief: await stripeAccountInfo() }));
 
 const schema = z.object({ actie: z.enum(["controleer", "gebruik"]), sleutel: z.string().min(10).max(300) });
+
+/** De Connect-accounts van werkers die nu bestaan (alleen de id's). */
+async function bestaandeConnectIds(): Promise<string[]> {
+  return (await prisma.freelancerProfile.findMany({ where: { stripeConnectedAccountId: { not: null } }, select: { stripeConnectedAccountId: true } }))
+    .map((p) => p.stripeConnectedAccountId)
+    .filter((id): id is string => typeof id === "string");
+}
 
 /** Na een wissel: de vlag "betalen uit" weg en meteen opnieuw meten bij het nieuwe account. */
 async function meetOpnieuw(): Promise<void> {
@@ -51,13 +59,12 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (req, { principal 
     });
     return NextResponse.json({ check });
   }
-  // de Connect-accounts die nu bestaan, horen bij het vorige platform-account (alleen de id's onthouden)
-  const oudeConnect = (await prisma.freelancerProfile.findMany({ where: { stripeConnectedAccountId: { not: null } }, select: { stripeConnectedAccountId: true } }))
-    .map((p) => p.stripeConnectedAccountId)
-    .filter((id): id is string => typeof id === "string");
+  // de Connect-accounts die nu bestaan, horen bij het platform-account dat we verlaten (alleen de id's onthouden)
+  const oudeConnect = await bestaandeConnectIds();
   const vorige = await stripeAccountInfo();
+  const verlaten = await actiefPlatform();
   const actief = await gebruikStripeAccount(sleutel, principal.fullName, `${env.APP_BASE_URL.replace(/\/$/, "")}/api/webhooks/stripe`);
-  if (vorige?.accountId !== actief.accountId) await markeerOudeConnectAccounts(oudeConnect);
+  if (verlaten !== actief.accountId) await markeerOudeConnectAccounts(oudeConnect, verlaten);
   await meetOpnieuw();
   await recordAudit({
     category: "BILLING",
@@ -74,6 +81,8 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (req, { principal 
 });
 
 export const DELETE = withAdminAccess(["PLATFORM_ADMIN"], async (_req, { principal }) => {
+  // wat er nu gekoppeld is, hoort bij het account dat we verlaten; de id's van het account waar we heen gaan, gelden weer
+  await markeerOudeConnectAccounts(await bestaandeConnectIds(), await actiefPlatform());
   const actief = await terugNaarVorigStripeAccount();
   await meetOpnieuw();
   await recordAudit({

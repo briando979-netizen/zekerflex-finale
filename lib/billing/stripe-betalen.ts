@@ -70,6 +70,8 @@ export async function verwerkAccountStand(betalen: boolean, uitbetalen: boolean,
 export async function meetStripeAccount(nu: Date = new Date()): Promise<AccountStand | null> {
   // dynamisch: stripe.ts importeert dit bestand (eisBetalenAan), zo ontstaat geen kring
   const { getStripeClient } = await import("@/lib/billing/stripe");
+  // het account uit Beheer → Stripe-account, niet stil het oude uit .env
+  await laadActieveStripeSleutel(nu.getTime()).catch(() => undefined);
   const a = await getStripeClient().accounts.retrieveCurrent();
   return verwerkAccountStand(Boolean(a.charges_enabled), Boolean(a.payouts_enabled), `meting-${nu.toISOString().slice(0, 13)}`, nu);
 }
