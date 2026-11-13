@@ -12,6 +12,7 @@ import { DAGEN } from "@/lib/horeca/tijden";
 import { DomeinZoeker } from "@/components/domeinen/DomeinZoeker";
 import { NietInIphone } from "@/components/app/NietInIphone";
 import { IdeeKaart } from "@/components/studio/IdeeKaart";
+import { AssistentKaart } from "@/components/studio/AssistentKaart";
 
 // ---------------------------------------------------------------------------
 // Website bouwen — the builder for a company's own site. Start from a sector
@@ -373,6 +374,8 @@ function Editor({ data, site: initial, origin, onSite, beginPagina, beginTab }: 
           <Link href="/werkgever/website" className="btn-primary">Online zetten met Website-beheer</Link>
         )}
       </header>
+      {/* de assistent: een opdracht in gewone woorden verandert de site via dezelfde wijzigfunctie als de bouwer (lib/sites/assistent.ts) */}
+      <AssistentKaart doc={{ theme: site.theme, pages: site.pages }} paginaId={page.id} bedrijfNaam={site.bedrijf.naam} maakId={nid} onPasToe={(nieuw) => change((s) => ({ ...s, theme: nieuw.theme, pages: nieuw.pages }))} />
       {notice && (
         <p role={notice.ok ? "status" : "alert"} className={`rounded-xl px-4 py-3 text-sm ${notice.ok ? "bg-ok/10 text-ok" : "bg-crit/10 text-crit"}`}>
           {notice.text}
