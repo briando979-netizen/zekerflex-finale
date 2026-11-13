@@ -15,6 +15,7 @@ import { useI18n, setLocale } from "@/components/i18n/I18nProvider";
 import { useFT } from "@/components/i18n/useFT";
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
 import { BANK_AAN } from "@/lib/app-mode";
+import { sorteerTabs } from "@/lib/werker/tab-volgorde";
 
 // ---------------------------------------------------------------------------
 // Freelancer workspace shell — YoungOnes-style: a slim top bar and a
@@ -82,12 +83,15 @@ export function FreelancerShell({
   onboarding = false,
   hulp,
   handleidingen = null,
+  tabVolgorde = null,
   children,
 }: {
   /** het hulpcentrum achter het vraagteken, in de taal van de werker (lib/hulp/teksten.ts) */
   hulp?: HulpTeksten;
   /** adres van de handleidingen (Outline); null = niet ingesteld */
   handleidingen?: string | null;
+  /** eigen volgorde van de knoppen in de balk (lib/werker/tab-volgorde.ts); null = de standaard */
+  tabVolgorde?: readonly string[] | null;
   /** de onboarding is nog niet ingevuld (lib/onboarding/werker-poort.ts): alleen Start en Account */
   onboarding?: boolean;
   userName: string;
@@ -100,11 +104,13 @@ export function FreelancerShell({
   children: ReactNode;
 }) {
   useLocaleSync();
-  const tabs = onboarding
+  const zichtbaar = onboarding
     ? TABS.filter((t) => t.key === "discover" || t.key === "account")
     : inApp || !BANK_AAN
       ? TABS.filter((t) => t.key !== "bank")
       : TABS;
+  // de volgorde uit de Site-ontwerper (Menu); zonder eigen volgorde dezelfde lijst terug
+  const tabs = sorteerTabs(zichtbaar, tabVolgorde);
   const pathname = usePathname();
   const ft = useFT();
   const isActive = (href: string) =>
