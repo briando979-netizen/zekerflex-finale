@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/prisma", () => ({ prisma: {} }));
-import { ERASABLE_KV_PREFIXES, erasableKvWhere } from "@/lib/privacy/user-kv";
+import { ERASABLE_KV_ACHTERAAN, ERASABLE_KV_PREFIXES, erasableKvWhere } from "@/lib/privacy/user-kv";
 
 // Bewaker (12 nov 2026, AGENTS.md "AVG"): een nieuwe KV-sleutel per gebruiker hoort met zijn voorvoegsel in
 // ERASABLE_KV_PREFIXES (lib/privacy/user-kv.ts), anders ontbreekt hij bij inzage en wissen. Deze test zoekt in lib/, app/
@@ -50,8 +50,18 @@ const BASISLIJN: Record<string, string> = {
   "kvk-register:v1:": "uitkomst per KVK-nummer (openbaar Handelsregister), geen persoon; 30 dagen cache (lib/integrations/kvkbase.ts)",
 };
 
+/**
+ * Sleutels met de gebruiker ACHTERAAN (`prefix:${iets}…:${userId}`) die bewust niet mee gewist worden, met de reden.
+ * Gemeten 13 nov: in bestanden die de KV gebruiken alleen push-sent: (wisbaar via ERASABLE_KV_ACHTERAAN). De andere
+ * sleutels van die vorm (rl:${naam}:${userId} bij passkeys, chat:typing:${threadId}:${userId}) staan in Redis en
+ * verlopen vanzelf; die bestanden gebruiken de KV niet en vallen buiten deze scan.
+ */
+const BASISLIJN_ACHTERAAN: Record<string, string> = {};
+
 const GEBRUIKER = /^(?:userId|uid|gebruikerId|accountId|(?:[a-z]+\.)?(?:userId|user\.id)|principal\.userId|p\.userId|u\.id|user\.id|me\.id|ctx\.userId|input\.userId|opts\.userId|args\.userId)$/;
 const SLEUTEL = /`([a-z0-9][a-z0-9-]*(?::[a-z0-9-]+)*:)\$\{([^}]+)\}/g;
+/** Voorvoegsel, eerste invulling en de LAATSTE invulling vlak voor het eind van de sleutel. */
+const ACHTER = /`([a-z0-9][a-z0-9-]*(?::[a-z0-9-]+)*:)\$\{([^}]+)\}[^`]*:\$\{([^}]+)\}`/g;
 
 function bronbestanden(): string[] {
   const uit: string[] = [];
@@ -96,6 +106,31 @@ describe("AVG: elke KV-sleutel per gebruiker is wisbaar of staat bewust op de ba
       // een andere gebruiker zit er niet in
       expect(JSON.stringify(waar)).not.toContain(`${voor}usr_avg_2`);
     }
+  });
+
+  it("ook een sleutel met de gebruiker achteraan is wisbaar of staat bewust op de basislijn (13 nov, besluit 86)", () => {
+    const nieuw = new Map<string, Set<string>>();
+    let gezien = 0;
+    for (const f of bronbestanden()) {
+      const tekst = readFileSync(f, "utf8");
+      if (!/@\/lib\/storage\/kv|keyValueStore/.test(tekst)) continue;
+      for (const m of tekst.matchAll(ACHTER)) {
+        const voor = m[1] ?? "";
+        // staat de gebruiker vooraan, dan telt de gewone regel hierboven al
+        if (GEBRUIKER.test((m[2] ?? "").trim()) || !GEBRUIKER.test((m[3] ?? "").trim())) continue;
+        gezien += 1;
+        if (ERASABLE_KV_ACHTERAAN.some((p) => voor.startsWith(p)) || Object.hasOwn(BASISLIJN_ACHTERAAN, voor)) continue;
+        nieuw.set(voor, (nieuw.get(voor) ?? new Set()).add(path.relative(ROOT, f).replace(/\\/g, "/")));
+      }
+    }
+    // push-sent:geo: (geo-push) en push-sent:${kanaal} (push-eenmalig)
+    expect(gezien, "de bewaker vindt de pushmarkeringen niet meer: zoekt hij op de goede plek?").toBeGreaterThanOrEqual(2);
+    const melding = [...nieuw].map(([v, fs]) => `${v} (${[...fs].join(", ")})`);
+    expect(melding, "zet het voorvoegsel in ERASABLE_KV_ACHTERAAN (lib/privacy/user-kv.ts, na overleg met 86), of op BASISLIJN_ACHTERAAN hier met een reden").toEqual([]);
+    // en het wissen raakt precies deze gebruiker
+    const waar = erasableKvWhere("usr_avg_1").OR;
+    expect(waar).toContainEqual({ AND: [{ key: { startsWith: "push-sent:" } }, { key: { endsWith: ":usr_avg_1" } }] });
+    expect(JSON.stringify(waar)).not.toContain("usr_avg_2");
   });
 
   it("de basislijn en de wislijst overlappen niet (een voorvoegsel is wisbaar of bewust niet)", () => {

@@ -85,6 +85,19 @@ export const ERASABLE_KV_PREFIXES = [
   "zfmail:user:",
 ] as const;
 
+/**
+ * Voorvoegsels waar de gebruiker ACHTERAAN de sleutel staat: "<voorvoegsel>…:<userId>" (13 nov 2026, besluit 86). Nu de
+ * eenmalige pushmarkeringen push-sent:<kanaal>:<klus>:<werker> (lib/notifications/push-eenmalig.ts) en
+ * push-sent:geo:<klus>:<werker> (geo-push): alleen een tijd, maar de werker-id in de sleutel is een gegeven per persoon.
+ * De inzage vindt ze al (exportUserKv: de userId als los segment); bij het wissen gaan ze mee via erasableKvWhere.
+ */
+export const ERASABLE_KV_ACHTERAAN = ["push-sent:"] as const;
+
+type KvWaar =
+  | { key: { startsWith: string } }
+  | { key: { equals: string } }
+  | { AND: [{ key: { startsWith: string } }, { key: { endsWith: string } }] };
+
 /** Hele waarde afschermen: dit zijn (versleutelde) inloggegevens. */
 const SECRET_KEY_PREFIXES = ["auth-2fa:", "mailbox-connection:"];
 /** Woorden in een veldnaam (camelCase/snake_case) die op een geheim wijzen, op welke diepte ook. */
@@ -141,8 +154,12 @@ export async function exportUserKv(userId: string): Promise<{ key: string; updat
 }
 
 /** Prisma-filter voor de sleutels die een verwijderverzoek meteen wist. */
-export function erasableKvWhere(userId: string): { OR: { key: { startsWith: string } | { equals: string } }[] } {
+export function erasableKvWhere(userId: string): { OR: KvWaar[] } {
   return {
-    OR: ERASABLE_KV_PREFIXES.flatMap((p) => [{ key: { equals: `${p}${userId}` } }, { key: { startsWith: `${p}${userId}:` } }]),
+    OR: [
+      ...ERASABLE_KV_PREFIXES.flatMap((p): KvWaar[] => [{ key: { equals: `${p}${userId}` } }, { key: { startsWith: `${p}${userId}:` } }]),
+      // de gebruiker achteraan: "push-sent:…:<userId>" (met de dubbele punt ervoor, dus "u1" raakt "u12" niet)
+      ...ERASABLE_KV_ACHTERAAN.map((p): KvWaar => ({ AND: [{ key: { startsWith: p } }, { key: { endsWith: `:${userId}` } }] })),
+    ],
   };
 }
