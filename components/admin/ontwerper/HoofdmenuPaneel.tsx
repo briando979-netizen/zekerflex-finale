@@ -4,6 +4,8 @@ import { useState } from "react";
 import { NAV, type MenuItem } from "@/lib/marketing/site-nav";
 import { MAX_EIGEN_KNOPPEN, MAX_SUBMENU_LINKS, isEigenKnop, type Hoofdmenu, type HoofdmenuKnop } from "@/lib/ontwerp/hoofdmenu";
 import type { MenuLink } from "@/lib/ontwerp/menu";
+import { SleepGreep, useSleep } from "@/components/admin/ontwerper/Sleep";
+import { verplaatsNaar } from "@/lib/ontwerp/sleep";
 
 // ---------------------------------------------------------------------------
 // Tabblad Menu, deel Hoofdmenu: de knoppen bovenaan de site. Hernoemen,
@@ -70,8 +72,9 @@ function KnopRij({
   const zetExtra = (extra: MenuItem[]) => onZet({ ...knop, extra });
   return (
     // verborgen: gestippelde rand en een andere achtergrond (geen doorzichtigheid: de tekst moet leesbaar blijven)
-    <li className="space-y-2 rounded-xl p-3" style={knop.verborgen ? { background: "var(--a-elev)", border: "1px dashed var(--a-border)" } : paneel}>
+    <li data-sleep-rij="" className="space-y-2 rounded-xl p-3" style={knop.verborgen ? { background: "var(--a-elev)", border: "1px dashed var(--a-border)" } : paneel}>
       <div className="flex items-center gap-1.5">
+        <SleepGreep naam={knop.label || standaard?.label || `Knop ${index + 1}`} />
         <label className="min-w-0 flex-1">
           <span className="sr-only">Naam van knop {index + 1}</span>
           <input value={knop.label} onChange={(e) => onZet({ ...knop, label: e.target.value })} maxLength={30} placeholder={standaard?.label ?? "Naam van de knop"} className="w-full rounded-lg px-2 py-1.5 text-sm font-semibold" style={veld} />
@@ -171,6 +174,7 @@ export function HoofdmenuPaneel({ begin, beginEigen, eigenPaginas, onVernieuw }:
     setGewijzigd(true);
     setMelding(null);
   };
+  const sleep = useSleep((van, naar) => zet(verplaatsNaar(knoppen, van, naar)));
   const aantalEigen = knoppen.filter((k) => isEigenKnop(k.key)).length;
   const zichtbaar = knoppen.filter((k) => !k.verborgen).length;
 
@@ -228,7 +232,7 @@ export function HoofdmenuPaneel({ begin, beginEigen, eigenPaginas, onVernieuw }:
           Op een laptop is de balk al bijna vol. Met {zichtbaar} knoppen kan hij krap worden: verberg liever een andere knop, of zet de link in een submenu.
         </p>
       ) : null}
-      <ul className="space-y-2">
+      <ul className="space-y-2" {...sleep.lijst}>
         {knoppen.map((k, i) => (
           <KnopRij
             key={k.key}

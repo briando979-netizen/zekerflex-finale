@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { HOME_SECTIES, MAX_EIGEN_BLOKKEN, eigenSleutel, isStandaardHomeIndeling, normalizeHomeIndeling, type HomeIndeling, type HomeItem } from "@/lib/ontwerp/home";
 import { BLOK_SOORTEN, leegBlok, nieuwId, type Blok, type BlokSoort } from "@/lib/ontwerp/paginas";
 import { BlokKaart } from "@/components/admin/ontwerper/PaginasPaneel";
+import { SleepGreep, useSleep } from "@/components/admin/ontwerper/Sleep";
+import { verplaatsNaar } from "@/lib/ontwerp/sleep";
 
 // ---------------------------------------------------------------------------
 // Tabblad Homepage: de blokken onder de kop verbergen en verplaatsen. Elke
@@ -95,6 +97,7 @@ export function HomePaneel({ onVoorbeeldPad, onVernieuw }: { onVoorbeeldPad: (pa
     if (x) v.splice(j, 0, x);
     zet({ ...indeling, volgorde: v });
   };
+  const sleep = useSleep((van, naar) => zet({ ...indeling, volgorde: verplaatsNaar(indeling.volgorde, van, naar) }));
   const toon = (id: HomeItem, aan: boolean) => zet({ ...indeling, verborgen: aan ? indeling.verborgen.filter((x) => x !== id) : [...indeling.verborgen, id] });
   const afwijkend = !gelijk(indeling, live);
   const blokOp = new Map(indeling.eigen.map((b) => [eigenSleutel(b), b] as const));
@@ -205,7 +208,7 @@ export function HomePaneel({ onVoorbeeldPad, onVernieuw }: { onVoorbeeldPad: (pa
         ) : null}
       </section>
 
-      <ol className="space-y-1.5" aria-label="Blokken van de homepage, van boven naar beneden">
+      <ol className="space-y-1.5" aria-label="Blokken van de homepage, van boven naar beneden" {...sleep.lijst}>
         <li className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs" style={{ background: "var(--a-elev)", border: "1px solid var(--a-border)" }}>
           <span className="font-semibold" style={{ color: "var(--a-text)" }}>
             Kop met foto
@@ -235,7 +238,8 @@ export function HomePaneel({ onVoorbeeldPad, onVernieuw }: { onVoorbeeldPad: (pa
           const aan = !verborgen.has(id);
           return (
             // verborgen: gestippelde rand en een andere achtergrond (geen doorzichtigheid: de tekst moet leesbaar blijven)
-            <li key={id} className="flex items-center gap-2 rounded-xl px-3 py-2" style={aan ? paneel : verborgenStijl}>
+            <li key={id} data-sleep-rij="" className="flex items-center gap-2 rounded-xl px-3 py-2" style={aan ? paneel : verborgenStijl}>
+              <SleepGreep naam={info?.naam ?? id} />
               <label className="flex min-w-0 flex-1 items-start gap-2">
                 <input type="checkbox" checked={aan} onChange={(e) => toon(id, e.target.checked)} className="mt-0.5" />
                 <span className="min-w-0">
@@ -265,7 +269,7 @@ export function HomePaneel({ onVoorbeeldPad, onVernieuw }: { onVoorbeeldPad: (pa
             Eigen blok toevoegen
           </h3>
           <p className="text-[11px]" style={mute}>
-            Dezelfde blokken als op eigen pagina&apos;s. Het nieuwe blok komt boven de slotoproep; verplaats het met de pijltjes.
+            Dezelfde blokken als op eigen pagina&apos;s. Het nieuwe blok komt boven de slotoproep; sleep het naar zijn plek of gebruik de pijltjes.
           </p>
           <div className="flex flex-wrap gap-1.5">
             {BLOK_SOORTEN.map((s) => (

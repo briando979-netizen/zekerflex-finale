@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { ACHTERGRONDEN, BLOK_SOORTEN, PAGINA_SJABLONEN, TALEN, leegBlok, nieuwId, videoBron, type Taal, type Achtergrond, type Blok, type BlokSoort, type Knop, type Pagina, type PaginaInhoud } from "@/lib/ontwerp/paginas";
 import { MediaKiezer, MediaVoorbeeld } from "@/components/admin/ontwerper/Media";
+import { SleepGreep, useSleep } from "@/components/admin/ontwerper/Sleep";
+import { verplaatsNaar } from "@/lib/ontwerp/sleep";
 
 // ---------------------------------------------------------------------------
 // Tabblad Pagina's: eigen pagina's bouwen uit blokken. Elke wijziging wordt na
@@ -297,8 +299,9 @@ export function BlokKaart({ blok, open, onOpen, onZet, onOmhoog, onOmlaag, onDup
   const soort = BLOK_SOORTEN.find((s) => s.soort === blok.soort);
   const klein = "grid h-7 w-7 place-items-center rounded-md text-xs disabled:opacity-30";
   return (
-    <li className="rounded-xl" style={{ ...paneel, outline: open ? "2px solid var(--a-accent)" : "none" }}>
+    <li {...(vast ? {} : { "data-sleep-rij": "" })} className="rounded-xl" style={{ ...paneel, outline: open ? "2px solid var(--a-accent)" : "none" }}>
       <div className="flex items-center gap-2 p-2">
+        {vast ? null : <SleepGreep naam={soort?.label ?? blok.soort} />}
         <button type="button" onClick={onOpen} aria-expanded={open} className="min-w-0 flex-1 text-left">
           <span className="block text-xs font-semibold" style={{ color: "var(--a-text)" }}>
             {soort?.label ?? blok.soort}
@@ -517,6 +520,7 @@ function PaginaEditor({ start, onTerug, onBijgewerkt, onVoorbeeld, onPad }: { st
 
   const zetBlokken = (blokken: Blok[]) => setInhoud((c) => ({ ...c, blokken }));
   const blokken = inhoud.blokken;
+  const sleep = useSleep((van, naar) => zetBlokken(verplaatsNaar(blokken, van, naar)));
   const verplaats = (i: number, d: number) => {
     const j = i + d;
     if (j < 0 || j >= blokken.length) return;
@@ -651,7 +655,7 @@ function PaginaEditor({ start, onTerug, onBijgewerkt, onVoorbeeld, onPad }: { st
         />
       ) : (
       <>
-      <ol className="space-y-2">
+      <ol className="space-y-2" {...sleep.lijst}>
         {blokken.map((b, i) => (
           <BlokKaart
             key={b.id}

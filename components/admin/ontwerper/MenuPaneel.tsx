@@ -5,6 +5,8 @@ import { MAX_KOLOMMEN, MAX_LINKS, normalizeVoettekst, type MenuLink, type Voette
 import type { Hoofdmenu } from "@/lib/ontwerp/hoofdmenu";
 import { HoofdmenuPaneel } from "@/components/admin/ontwerper/HoofdmenuPaneel";
 import { BalkPaneel } from "@/components/admin/ontwerper/BalkPaneel";
+import { SleepGreep, useSleep } from "@/components/admin/ontwerper/Sleep";
+import { verplaatsNaar } from "@/lib/ontwerp/sleep";
 
 // ---------------------------------------------------------------------------
 // Tabblad Menu: het hoofdmenu bovenaan (HoofdmenuPaneel) en de voettekst
@@ -29,7 +31,8 @@ function verplaats<T>(lijst: T[], i: number, d: number): T[] {
 
 function LinkRij({ link, onZet, onOmhoog, onOmlaag, onWeg, eerste, laatste, nummer }: { link: MenuLink; onZet: (l: MenuLink) => void; onOmhoog: () => void; onOmlaag: () => void; onWeg: () => void; eerste: boolean; laatste: boolean; nummer: number }) {
   return (
-    <li className="flex items-center gap-1.5">
+    <li data-sleep-rij="" className="flex items-center gap-1.5">
+      <SleepGreep naam={`Link ${nummer}`} />
       <input aria-label={`Link ${nummer}: tekst`} value={link.label} onChange={(e) => onZet({ ...link, label: e.target.value })} maxLength={60} placeholder="Tekst" className="min-w-0 flex-1 rounded-lg px-2 py-1 text-xs" style={veld} />
       <input aria-label={`Link ${nummer}: adres`} value={link.href} onChange={(e) => onZet({ ...link, href: e.target.value })} maxLength={500} placeholder="/pagina of https://…" className="min-w-0 flex-1 rounded-lg px-2 py-1 font-mono text-[11px]" style={veld} />
       <button type="button" onClick={onOmhoog} disabled={eerste} aria-label="Omhoog" className={klein} style={{ background: "var(--a-elev)", color: "var(--a-text)" }}>
@@ -47,6 +50,7 @@ function LinkRij({ link, onZet, onOmhoog, onOmlaag, onWeg, eerste, laatste, numm
 
 function KolomKaart({ kolom, index, aantal, eigenPaginas, onZet, onWeg, onVerplaats }: { kolom: VoettekstKolom; index: number; aantal: number; eigenPaginas: MenuLink[]; onZet: (k: VoettekstKolom) => void; onWeg: () => void; onVerplaats: (d: number) => void }) {
   const zetLinks = (links: MenuLink[]) => onZet({ ...kolom, links });
+  const sleep = useSleep((van, naar) => zetLinks(verplaatsNaar(kolom.links, van, naar)));
   return (
     <section className="space-y-2 rounded-xl p-3" style={paneel}>
       <div className="flex items-center gap-1.5">
@@ -64,7 +68,7 @@ function KolomKaart({ kolom, index, aantal, eigenPaginas, onZet, onWeg, onVerpla
           ✕
         </button>
       </div>
-      <ul className="space-y-1.5">
+      <ul className="space-y-1.5" {...sleep.lijst}>
         {kolom.links.map((l, i) => (
           <LinkRij
             key={i}
