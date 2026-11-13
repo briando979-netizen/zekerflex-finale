@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n/config";
+import { basisLocale, type BasisLocale, type Locale } from "@/lib/i18n/config";
 
 // ---------------------------------------------------------------------------
 // Foutmeldingen van de server aan een WERKER, in zijn app-taal (12 nov 2026). Een AppError die een werker vaak tegenkomt
@@ -10,7 +10,7 @@ import type { Locale } from "@/lib/i18n/config";
 // Machine-assisted translations: native-speaker review recommended.
 // ---------------------------------------------------------------------------
 
-type Tekst = Record<Locale, string>;
+type Tekst = Record<BasisLocale, string>;
 
 export const FOUTEN: Record<string, Tekst> = {
   // — reageren op een klus (lib/matching/apply.ts) —
@@ -72,6 +72,6 @@ export const FOUTEN: Record<string, Tekst> = {
 export function foutenVoor(locale: Locale): Record<string, string> {
   if (locale === "nl") return {};
   const uit: Record<string, string> = {};
-  for (const [sleutel, t] of Object.entries(FOUTEN)) uit[sleutel] = t[locale];
+  for (const [sleutel, t] of Object.entries(FOUTEN)) uit[sleutel] = t[basisLocale(locale)];
   return uit;
 }

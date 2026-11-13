@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/i18n/config";
+import type { BasisLocale } from "@/lib/i18n/config";
 import { PUSH_KAART_NL, ZIEK_NL, THEMA_NL } from "@/lib/account/teksten";
 import { LEVEL_KAART_NL, UITNODIGING_NL } from "@/lib/rewards/kaart-teksten";
 import { WIE_TEKSTEN } from "@/lib/i18n/wie-ben-jij";
@@ -8292,7 +8292,7 @@ const uk: FreelancerDict = {
   },
 };
 
-export const FREELANCER_DICTS: Record<Locale, FreelancerDict> = { nl, en, pl, ro, uk };
+export const FREELANCER_DICTS: Record<BasisLocale, FreelancerDict> = { nl, en, pl, ro, uk };
 
 /** Server-side reasons arrive as Dutch sentences — map the known ones, keep anything else as-is. */
 export function translateBlockReason(reason: string, t: FreelancerDict): string {

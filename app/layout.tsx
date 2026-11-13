@@ -7,6 +7,7 @@ import "./globals.css";
 import { FONT_PRELOADS, fontVariables } from "@/lib/fonts";
 import { FontPreloads } from "@/components/ui/FontPreloads";
 import { getLocale } from "@/lib/i18n/server";
+import { taalRichting } from "@/lib/i18n/config";
 import { AnalyticsBeacon } from "@/components/analytics/AnalyticsBeacon";
 import { ServiceWorkerRegister } from "@/components/app/ServiceWorkerRegister";
 import { KonamiEasterEgg } from "@/components/ui/KonamiEasterEgg";
@@ -107,8 +108,9 @@ export default async function RootLayout({
   const brandingCss = await liveOntwerpCss().catch(() => null);
   // Feestversiering rond Nederlandse feestdagen (lib/seasons); op gewone dagen laadt er niets.
   const season = await activeSeason().catch(() => null);
+  const taal = await getLocale();
   return (
-    <html lang={await getLocale()} className={fontVariables}>
+    <html lang={taal} dir={taalRichting(taal)} className={fontVariables}>
       <body>
         <FontPreloads hrefs={FONT_PRELOADS} />
         {brandingCss && (
