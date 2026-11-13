@@ -88,7 +88,7 @@ const heeft = (zin: string, woorden: readonly string[]) => woorden.some((w) => z
 function stukken(tekst: string): string[] {
   return tekst
     .slice(0, 600)
-    .split(/[.;!\n]+|,\s*(?=(?:maak|voeg|zet|gebruik|kies|verander|plaats)\b)|\s+en\s+(?=(?:maak|voeg|zet|gebruik|kies|verander|plaats)\b)/i)
+    .split(/[.;!\n]+|,\s*(?=(?:maak|voeg|zet|gebruik|kies|verander|plaats|hernoem|noem|verwijder|haal|wis|verplaats|schuif)\b)|\s+en\s+(?=(?:maak|voeg|zet|gebruik|kies|verander|plaats|hernoem|noem|verwijder|haal|wis|verplaats|schuif)\b)/i)
     .map((s) => s.trim())
     .filter((s) => s.length > 2);
 }
@@ -135,6 +135,65 @@ export function voerOpdrachtUit(tekst: string, doc: AssistentDoc, paginaId: stri
       const pagina: Page = { id: maakId("p"), slug: nieuweSlug(titel, pages.map((p) => p.slug)), titel, seoTitel: `${titel} | ${bedrijfNaam}`.slice(0, 70), seoOmschrijving: "", blocks: [newBlock("tekst", maakId("b"))] };
       pages = [...pages, pagina];
       gedaan.push(`De pagina ${titel} is toegevoegd. Je vindt hem bij Pagina's.`);
+      continue;
+    }
+
+    // 1b. de pagina die open staat een andere naam geven (het adres van de pagina blijft, dus links blijven werken)
+    const naamRuw = /(?:^|\s)(?:hernoem|noem)\s+(?:de\s+|deze\s+)?pagina\s+(?:om\s+)?(?:naar\s+|in\s+)?(.+)$/i.exec(stuk)?.[1];
+    if (naamRuw !== undefined) {
+      const naam = naamRuw.replace(/^["'“”‘’\s]+|["'“”‘’\s]+$/g, "").slice(0, 60).trim();
+      const pagina = pages.find((p) => p.id === doel);
+      if (!pagina || naam.length < 2) {
+        nietGedaan.push(`"${stuk}": zeg er de nieuwe naam bij, bijvoorbeeld "hernoem de pagina naar Ons verhaal".`);
+        continue;
+      }
+      const titel = naam.charAt(0).toUpperCase() + naam.slice(1);
+      pages = pages.map((p) => (p.id === doel ? { ...p, titel } : p));
+      gedaan.push(`De pagina ${pagina.titel} heet nu ${titel}. Het adres van de pagina blijft hetzelfde.`);
+      continue;
+    }
+
+    // 1c. een blok weghalen of verplaatsen op de pagina die open staat
+    const wilWeg = /(?:^|\s)(?:verwijder|wis)(?:\s|$)/.test(zin) || (/(?:^|\s)haal(?:\s|$)/.test(zin) && /(?:^|\s)(?:weg|eraf|eruit)(?:\s|$)/.test(zin));
+    const richting = /bovenaan|helemaal naar boven/.test(zin) ? "boven" : /onderaan|helemaal naar beneden/.test(zin) ? "onder" : /omhoog|naar boven/.test(zin) ? "op" : /omlaag|naar beneden/.test(zin) ? "neer" : null;
+    const wilVerplaatsen = richting !== null && /(?:^|\s)(?:zet|verplaats|schuif|plaats)(?:\s|$)/.test(zin);
+    if (wilWeg || wilVerplaatsen) {
+      const soort = BLOKKEN.find(([, woorden]) => heeft(zin, woorden));
+      const pagina = pages.find((p) => p.id === doel);
+      if (!soort || !pagina) {
+        nietGedaan.push(`"${stuk}": zeg erbij welk blok je bedoelt, bijvoorbeeld "${wilWeg ? "verwijder de openingstijden" : "zet de openingstijden bovenaan"}".`);
+        continue;
+      }
+      const label = BLOCK_LABELS[soort[0]];
+      // het laatste blok van die soort: meestal het blok dat net is toegevoegd
+      let plek = -1;
+      pagina.blocks.forEach((b, i) => {
+        if (b.type === soort[0]) plek = i;
+      });
+      const blok = pagina.blocks[plek];
+      if (!blok) {
+        nietGedaan.push(`Op de pagina ${pagina.titel} staat geen blok "${label}".`);
+        continue;
+      }
+      if (wilWeg) {
+        if (pagina.blocks.length <= 1) {
+          nietGedaan.push(`Het blok "${label}" is het enige blok op deze pagina en blijft dus staan.`);
+          continue;
+        }
+        pages = pages.map((p) => (p.id === doel ? { ...p, blocks: p.blocks.filter((_, i) => i !== plek) } : p));
+        gedaan.push(`Het blok "${label}" is van de pagina ${pagina.titel} gehaald. Met Maak ongedaan zet je het terug.`);
+        continue;
+      }
+      const laatste = pagina.blocks.length - 1;
+      const naar = richting === "boven" ? 0 : richting === "onder" ? laatste : richting === "op" ? Math.max(0, plek - 1) : Math.min(laatste, plek + 1);
+      if (naar === plek) {
+        nietGedaan.push(`Het blok "${label}" staat daar al.`);
+        continue;
+      }
+      const rest = pagina.blocks.filter((_, i) => i !== plek);
+      const blokken = [...rest.slice(0, naar), blok, ...rest.slice(naar)];
+      pages = pages.map((p) => (p.id === doel ? { ...p, blocks: blokken } : p));
+      gedaan.push(`Het blok "${label}" staat nu ${naar === 0 ? "bovenaan" : naar === laatste ? "onderaan" : naar < plek ? "een plek hoger" : "een plek lager"} op de pagina ${pagina.titel}.`);
       continue;
     }
 
@@ -208,4 +267,4 @@ export function voerOpdrachtUit(tekst: string, doc: AssistentDoc, paginaId: stri
 }
 
 /** Voorbeelden onder het invoerveld. */
-export const ASSISTENT_VOORBEELDEN = ["Maak de kleur donkerblauw", "Voeg openingstijden toe", "Maak een pagina Over ons", "Ronde hoeken en een klassiek lettertype"] as const;
+export const ASSISTENT_VOORBEELDEN = ["Maak de kleur donkerblauw", "Voeg openingstijden toe", "Zet de openingstijden bovenaan", "Maak een pagina Over ons", "Ronde hoeken en een klassiek lettertype"] as const;
