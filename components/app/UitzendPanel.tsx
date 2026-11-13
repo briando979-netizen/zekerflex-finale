@@ -133,10 +133,9 @@ export function UitzendPanel() {
         </span>
       </label>
 
-      {/* Het rekeningnummer vul je in bij "Bankrekening bevestigen" (hierboven op deze pagina). */}
-      {f.bsnLast4 && (
-        <p className="text-xs text-neutralx-400">{vulIn(t.bsnBekend, { laatste4: f.bsnLast4 })}</p>
-      )}
+      {/* Het rekeningnummer vul je in bij "Bankrekening bevestigen" (hierboven op deze pagina). Het BSN vul je hier niet in:
+          dat staat in "Je gegevens" (GegevensMist); dit paneel toont alleen de stand. */}
+      <p className="text-xs text-neutralx-500">{f.bsnLast4 ? vulIn(t.bsnBekend, { laatste4: f.bsnLast4 }) : t.bsnOntbreekt}</p>
     </div>
   );
 }
