@@ -12,6 +12,7 @@ import { ShopMoreCategories, ShopNewsletter, ShopPaskamerPromo, ShopService } fr
 import { ShopCategorieGroot, ShopLooks, ShopThuisHero, type GroteTegel, type LookKaart } from "@/components/marketing/ShopThuis";
 import { LOOKS } from "@/lib/shop/paskamer";
 import { PaginaAchtergrond } from "@/components/shop/PaginaAchtergrond";
+import { achtergrondVoor } from "@/lib/ontwerp/achtergrond";
 import { Fragment, type ReactNode } from "react";
 import { zichtbareShopSecties, type ShopSectieId } from "@/lib/ontwerp/shop-indeling";
 import { getShopIndeling } from "@/lib/ontwerp/shop-indeling-store";
@@ -106,11 +107,15 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
     nieuwsbrief: <ShopNewsletter t={t} />,
   };
   const zichtbaar = zichtbareShopSecties(await getShopIndeling(), browsing);
+  // De foto die de beheerder voor de webshop koos staat in de kop zelf (rechts, in het kader), niet meer als losse strook erboven:
+  // anders staat dezelfde foto er twee keer. Een video blijft de strook; zonder keuze toont de kop de vaste teamfoto.
+  const achtergrond = browsing ? null : await achtergrondVoor("shop");
+  const kopFoto = achtergrond?.soort === "foto" ? { src: achtergrond.src, alt: achtergrond.alt } : null;
 
   return (
     <>
-      {!browsing && <PaginaAchtergrond pagina="shop" />}
-      {!browsing && <ShopThuisHero t={dict} uitgelicht={uitgelicht} />}
+      {!browsing && achtergrond?.soort === "video" && <PaginaAchtergrond pagina="shop" />}
+      {!browsing && <ShopThuisHero t={dict} {...(kopFoto ? { foto: kopFoto } : {})} />}
       {zichtbaar.map((id) => (
         <Fragment key={id}>{onderdelen[id]}</Fragment>
       ))}
