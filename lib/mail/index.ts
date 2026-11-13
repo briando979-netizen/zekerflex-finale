@@ -20,6 +20,7 @@ export { escapeHtml };
 import { categoryBySlug, isAutomatedKind, isOptionalCategory, mailCategoryForKind } from "@/lib/mail/categories";
 import { getMailPrefs, mailAllowed } from "@/lib/mail/prefs";
 import { isReservedTestAddress } from "@/lib/mail/test-adres";
+import { ontvangerDomeinen, zonderAdressen } from "@/lib/mail/log-domein";
 
 // ---- brand logo (inline CID image in every HTML mail) ------------------------
 
@@ -376,7 +377,7 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
   if (cfg && !suppressed && !isReservedTestAddress(input.to)) {
     transport = "smtp";
     ({ delivered, error } = await deliverWithRetry(cfg, addr, input.to, raw));
-    if (!delivered) logger.warn("smtp delivery failed - mail kept in local mailbox", { to: input.to, error });
+    if (!delivered) logger.warn("smtp delivery failed - mail kept in local mailbox", { domein: ontvangerDomeinen(input.to), error: zonderAdressen(error) });
   }
 
   const rec: SentRecord = {
