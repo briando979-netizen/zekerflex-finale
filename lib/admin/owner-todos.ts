@@ -25,6 +25,7 @@ import { actieveWeigering } from "@/lib/kyc/stripe-weigering";
 import { accountStand } from "@/lib/billing/stripe-betalen";
 import { appleConfig } from "@/lib/auth/apple";
 import { cronHeartbeats } from "@/lib/ops/heartbeat";
+import { platformnaamTodo, type PlatformnaamStand } from "@/lib/admin/todo-platformnaam";
 
 /** Bij taken die alleen voor ZekerFlex Bank nodig waren. */
 const BANK_UIT = "niet meer nodig: ZekerFlex Bank staat uit (7 nov)";
@@ -162,6 +163,25 @@ async function vagueBranchCities(): Promise<string[] | null> {
   }
 }
 
+/**
+ * De naam van de platformorganisatie en de facturen die hij als afzender uitgaf (uitgegeven of betaald); alleen de telling,
+ * nooit ontvangers. null = niet kunnen tellen. Zie lib/admin/todo-platformnaam.ts.
+ */
+async function platformnaamStand(): Promise<PlatformnaamStand | null> {
+  try {
+    const t = await prisma.tenant.findFirst({ where: { type: "PLATFORM" }, select: { id: true, name: true } });
+    if (!t) return null;
+    const som = await prisma.invoice.aggregate({
+      where: { issuerTenantId: t.id, status: { in: ["ISSUED", "PAID"] } },
+      _count: { _all: true },
+      _sum: { totalCents: true },
+    });
+    return { naam: t.name, aantal: som._count._all, totaalCents: som._sum.totalCents ?? 0 };
+  } catch {
+    return null;
+  }
+}
+
 function backupNote(report: BackupReport | null): string {
   if (!report?.available) return "geen back-upmap gevonden op deze server";
   if (report.state === "ok" && report.status) {
@@ -219,9 +239,12 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   // de nachtelijke AVG-opschoning (cron 03:40): gelukt binnen de grens van de bewaking (lib/ops/heartbeat.ts)?
   const avgOpschoning = (await cronHeartbeats().catch(() => [])).find((h) => h.job === "retention-sweep") ?? null;
   const avgOk = Boolean(avgOpschoning?.lastRunAt && avgOpschoning.lastRunOk && !avgOpschoning.stale);
+  // facturen met de oude naam van de platformorganisatie als afzender (13 nov): eerst de accountant, dan de naam
+  const platformnaam = platformnaamTodo(await platformnaamStand());
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
   return [
+    ...(platformnaam ? [platformnaam] : []),
     {
       id: "llm",
       group: "AI",
