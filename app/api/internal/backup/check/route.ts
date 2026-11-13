@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 import { checkInternalToken } from "@/lib/internal-auth";
 import { checkBackup, checkDisk } from "@/lib/ops/backup";
 import { checkGeheugen } from "@/lib/ops/geheugen";
+import { bewaarSchijfmeting } from "@/lib/ops/schijfreeks-meting";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,7 +11,7 @@ export const dynamic = "force-dynamic";
 // Dagelijks na de nachtelijke back-up (deploy/cron/entrypoint.sh): controleert
 // of de dump vers, compleet en proef-teruggezet is, en hoe vol de serverschijf
 // is. Waarschuwt de eigenaar als iets niet klopt (lib/ops/backup.ts).
-// ?alleen=schijf (elk uur): alleen de schijf, want uitrollen vullen hem overdag.
+// ?alleen=schijf (elk uur): alleen de schijf, want uitrollen vullen hem overdag; ook bewaart dit uur een punt in de schijfreeks.
 // ?alleen=geheugen (elke 10 minuten): alleen het geheugen van de server (lib/ops/geheugen.ts).
 async function handle(request: Request): Promise<NextResponse> {
   const gate = checkInternalToken(request);
@@ -22,6 +23,8 @@ async function handle(request: Request): Promise<NextResponse> {
     }
     if (new URL(request.url).searchParams.get("alleen") === "schijf") {
       const disk = await checkDisk();
+      // de schijfreeks van 14 dagen (alleen getallen); een storing daarin laat de gewone schijfcontrole staan
+      await bewaarSchijfmeting().catch(() => null);
       return NextResponse.json({ diskUsedPercent: disk?.usedPercent ?? null });
     }
     const report = await checkBackup();

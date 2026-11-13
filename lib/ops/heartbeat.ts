@@ -62,6 +62,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   // elke 2 min: pushmeldingen over de Bouwer en het live zetten
   { job: "bouwer-meldingen", label: "Bouwer: meldingen", maxAgeHours: 2 },
   // elke 2 min: Auto-uitrol (lib/bouwer/auto-uitrol.ts); draait ook als hij uit staat (dan alleen de hartslag). Stil = live loopt vanzelf achter.
+  // elk uur (/api/internal/backup/check?alleen=schijf): de schijfreeks van 14 dagen (lib/ops/schijfreeks-meting.ts); alarm na 3 uur stilte
+  { job: "schijfreeks", label: "Schijfreeks: elk uur de schijfstand bewaren", maxAgeHours: 3 },
   { job: "auto-uitrol", label: "Auto-uitrol: main controleren en live zetten", maxAgeHours: 0.5 },
   // elke 10 min: de nieuwste main alvast controleren vóór het live zetten (lib/bouwer/controles.ts)
   { job: "controles-tick", label: "Controle van main (TypeScript, eslint, tests)", maxAgeHours: 2 },
