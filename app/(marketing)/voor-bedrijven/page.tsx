@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
 import { HeroChecks } from "@/components/marketing/HeroChecks";
@@ -6,6 +7,8 @@ import { Photo } from "@/components/marketing/Photo";
 import { SceneApprove } from "@/components/marketing/Scene";
 import { seoMetadata } from "@/lib/ontwerp/seo-store";
 import { contentKeys, getContentMap } from "@/lib/content/store";
+import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
+import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
 
 // titel en omschrijving: de standaard in lib/ontwerp/seo.ts, of een eigen versie uit de Site-ontwerper (SEO)
 export async function generateMetadata(): Promise<Metadata> {
@@ -69,6 +72,83 @@ export default async function VoorBedrijvenPage() {
   // teksten uit de Site-ontwerper (Teksten); zonder eigen versie exact de standaard
   const tekst = await getContentMap(contentKeys("vb."));
   const v = (k: string) => tekst[k] ?? "";
+  // de onderdelen onder de kop: volgorde en zichtbaarheid uit de Site-ontwerper (Pagina's); zonder eigen indeling exact de standaard
+  const onderdelen: Record<string, ReactNode> = {
+    systeem: (
+      <Section tone="paper">
+        <SectionHead eyebrow={v("vb.sys.eyebrow")} title={v("vb.sys.title")} cms={{ eyebrow: "vb.sys.eyebrow", title: "vb.sys.title" }} />
+        <div className="mt-14 grid gap-6 md:grid-cols-2">
+          {BLOCKS.map((b) => (
+            <div key={b.id} id={b.id} className="card scroll-mt-24 p-7">
+              <h3 className="font-display text-xl font-semibold">{b.title}</h3>
+              <p className="mt-2 text-[0.975rem] leading-relaxed text-neutralx-600">{b.body}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
+    ),
+    cijfers: (
+      <div className="hero-ink text-white">
+        <div className="shell grid gap-10 py-16 sm:grid-cols-3">
+          <div>
+            <div className="num font-display text-4xl font-bold text-brand-mint">€ 3,50</div>
+            <p className="mt-1 text-sm text-white/60">platformkosten per gewerkt uur — alleen bij gebruik</p>
+          </div>
+          <div>
+            <div className="num font-display text-4xl font-bold text-brand-mint">€ 0</div>
+            <p className="mt-1 text-sm text-white/60">opstart-, abonnement- en plaatsingskosten</p>
+          </div>
+          <div>
+            <div className="num font-display text-2xl font-bold text-brand-mint">Afspraken</div>
+            <p className="mt-1 text-sm text-white/60">vastgelegd per samenwerking</p>
+          </div>
+        </div>
+      </div>
+    ),
+    rekentools: (
+      <Section tone="paper">
+        <SectionHead
+          eyebrow={v("vb.tools.eyebrow")}
+          title={v("vb.tools.title")}
+          intro={v("vb.tools.intro")}
+          cms={{ eyebrow: "vb.tools.eyebrow", title: "vb.tools.title", intro: "vb.tools.intro" }}
+        />
+        <div className="mt-10 grid gap-6 md:grid-cols-2">
+          {TOOLS.map((t) => (
+            <Link
+              key={t.href}
+              href={t.href}
+              className="card group flex flex-col p-7 transition-shadow hover:shadow-lift focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500"
+            >
+              <span className="font-display text-xl font-semibold text-ink">{t.title}</span>
+              <span className="mt-2 flex-1 text-[0.975rem] leading-relaxed text-neutralx-600">{t.body}</span>
+              <span className="mt-5 text-sm font-semibold text-brand-600 group-hover:underline">Naar de rekentool →</span>
+            </Link>
+          ))}
+        </div>
+      </Section>
+    ),
+    faq: (
+      <Section tone="soft">
+        <SectionHead eyebrow={v("vb.faq.eyebrow")} title={v("vb.faq.title")} cms={{ eyebrow: "vb.faq.eyebrow", title: "vb.faq.title" }} />
+        <div className="mt-10">
+          <FaqList items={FAQ} />
+        </div>
+      </Section>
+    ),
+    slot: (
+      <CtaBand
+        title={v("vb.cta.title")}
+        body={v("vb.cta.body")}
+        primaryHref="/register?type=bedrijf"
+        primaryLabel={v("vb.cta.primary")}
+        secondaryLabel={v("vb.cta.secondary")}
+        secondaryHref="/voor-freelancers"
+        cms={{ title: "vb.cta.title", body: "vb.cta.body", primary: "vb.cta.primary", secondary: "vb.cta.secondary" }}
+      />
+    ),
+  };
+  const zichtbaar = zichtbareSecties("voor-bedrijven", await getPaginaIndeling("voor-bedrijven"));
   return (
     <>
       <div className="hero-ink text-white">
@@ -101,73 +181,9 @@ export default async function VoorBedrijvenPage() {
         </div>
       </div>
 
-      <Section tone="paper">
-        <SectionHead eyebrow={v("vb.sys.eyebrow")} title={v("vb.sys.title")} cms={{ eyebrow: "vb.sys.eyebrow", title: "vb.sys.title" }} />
-        <div className="mt-14 grid gap-6 md:grid-cols-2">
-          {BLOCKS.map((b) => (
-            <div key={b.id} id={b.id} className="card scroll-mt-24 p-7">
-              <h3 className="font-display text-xl font-semibold">{b.title}</h3>
-              <p className="mt-2 text-[0.975rem] leading-relaxed text-neutralx-600">{b.body}</p>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      <div className="hero-ink text-white">
-        <div className="shell grid gap-10 py-16 sm:grid-cols-3">
-          <div>
-            <div className="num font-display text-4xl font-bold text-brand-mint">€ 3,50</div>
-            <p className="mt-1 text-sm text-white/60">platformkosten per gewerkt uur — alleen bij gebruik</p>
-          </div>
-          <div>
-            <div className="num font-display text-4xl font-bold text-brand-mint">€ 0</div>
-            <p className="mt-1 text-sm text-white/60">opstart-, abonnement- en plaatsingskosten</p>
-          </div>
-          <div>
-            <div className="num font-display text-2xl font-bold text-brand-mint">Afspraken</div>
-            <p className="mt-1 text-sm text-white/60">vastgelegd per samenwerking</p>
-          </div>
-        </div>
-      </div>
-
-      <Section tone="paper">
-        <SectionHead
-          eyebrow={v("vb.tools.eyebrow")}
-          title={v("vb.tools.title")}
-          intro={v("vb.tools.intro")}
-          cms={{ eyebrow: "vb.tools.eyebrow", title: "vb.tools.title", intro: "vb.tools.intro" }}
-        />
-        <div className="mt-10 grid gap-6 md:grid-cols-2">
-          {TOOLS.map((t) => (
-            <Link
-              key={t.href}
-              href={t.href}
-              className="card group flex flex-col p-7 transition-shadow hover:shadow-lift focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500"
-            >
-              <span className="font-display text-xl font-semibold text-ink">{t.title}</span>
-              <span className="mt-2 flex-1 text-[0.975rem] leading-relaxed text-neutralx-600">{t.body}</span>
-              <span className="mt-5 text-sm font-semibold text-brand-600 group-hover:underline">Naar de rekentool →</span>
-            </Link>
-          ))}
-        </div>
-      </Section>
-
-      <Section tone="soft">
-        <SectionHead eyebrow={v("vb.faq.eyebrow")} title={v("vb.faq.title")} cms={{ eyebrow: "vb.faq.eyebrow", title: "vb.faq.title" }} />
-        <div className="mt-10">
-          <FaqList items={FAQ} />
-        </div>
-      </Section>
-
-      <CtaBand
-        title={v("vb.cta.title")}
-        body={v("vb.cta.body")}
-        primaryHref="/register?type=bedrijf"
-        primaryLabel={v("vb.cta.primary")}
-        secondaryLabel={v("vb.cta.secondary")}
-        secondaryHref="/voor-freelancers"
-        cms={{ title: "vb.cta.title", body: "vb.cta.body", primary: "vb.cta.primary", secondary: "vb.cta.secondary" }}
-      />
+      {zichtbaar.map((id) => (
+        <Fragment key={id}>{onderdelen[id]}</Fragment>
+      ))}
     </>
   );
 }

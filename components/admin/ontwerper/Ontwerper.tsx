@@ -8,6 +8,7 @@ import { AiPaneel } from "@/components/admin/ontwerper/AiPaneel";
 import { GeschiedenisPaneel } from "@/components/admin/ontwerper/GeschiedenisPaneel";
 import { Voorbeeld } from "@/components/admin/ontwerper/Voorbeeld";
 import { PaginasPaneel } from "@/components/admin/ontwerper/PaginasPaneel";
+import { VastePaginasPaneel } from "@/components/admin/ontwerper/VastePaginasPaneel";
 import { MediaPaneel } from "@/components/admin/ontwerper/Media";
 import { MenuPaneel } from "@/components/admin/ontwerper/MenuPaneel";
 import { HomePaneel } from "@/components/admin/ontwerper/HomePaneel";
@@ -321,6 +322,7 @@ export function Ontwerper({ start, beginTab }: { start: OntwerpStaat; /** het ta
           ) : null}
           {/* blijft ook bestaan: een half bewerkte pagina gaat niet verloren als je even naar Stijl gaat */}
           <div id="ontwerper-paneel-paginas" role="tabpanel" aria-labelledby="ontwerper-tab-paginas" hidden={tab !== "paginas"}>
+            <VastePaginasPaneel onVoorbeeldPad={setVoorbeeldPad} onVernieuw={verversVoorbeeld} />
             <PaginasPaneel onVoorbeeldPad={setVoorbeeldPad} onVernieuw={verversVoorbeeld} />
           </div>
           {tab === "menu" ? (

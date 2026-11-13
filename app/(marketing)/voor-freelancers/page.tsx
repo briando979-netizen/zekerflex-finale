@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
 import { HeroChecks } from "@/components/marketing/HeroChecks";
@@ -6,6 +7,8 @@ import { Photo } from "@/components/marketing/Photo";
 import { SceneWork } from "@/components/marketing/Scene";
 import { seoMetadata } from "@/lib/ontwerp/seo-store";
 import { contentKeys, getContentMap } from "@/lib/content/store";
+import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
+import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
 
 // titel en omschrijving: de standaard in lib/ontwerp/seo.ts, of een eigen versie uit de Site-ontwerper (SEO)
 export async function generateMetadata(): Promise<Metadata> {
@@ -71,6 +74,69 @@ export default async function VoorFreelancersPage() {
   // teksten uit de Site-ontwerper (Teksten); zonder eigen versie exact de standaard
   const tekst = await getContentMap(contentKeys("vf."));
   const v = (k: string) => tekst[k] ?? "";
+  // de onderdelen onder de kop: volgorde en zichtbaarheid uit de Site-ontwerper (Pagina's); zonder eigen indeling exact de standaard
+  const onderdelen: Record<string, ReactNode> = {
+    voordelen: (
+      <Section tone="paper">
+        <SectionHead eyebrow={v("vf.got.eyebrow")} title={v("vf.got.title")} cms={{ eyebrow: "vf.got.eyebrow", title: "vf.got.title" }} />
+        <div className="mt-14 grid gap-x-10 gap-y-12 md:grid-cols-2">
+          {BENEFITS.map((b) => (
+            <div key={b.id} id={b.id} className="scroll-mt-24">
+              <h3 className="font-display text-xl font-semibold">{b.title}</h3>
+              <p className="mt-2 text-[0.975rem] leading-relaxed text-neutralx-600">{b.body}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
+    ),
+    stappen: (
+      <Section tone="soft">
+        <SectionHead eyebrow={v("vf.how.eyebrow")} title={v("vf.how.title")} cms={{ eyebrow: "vf.how.eyebrow", title: "vf.how.title" }} />
+        <ol className="mt-12 space-y-6">
+          {[
+            "Maak je account aan en koppel je KVK.",
+            "Doorloop de identiteitsverificatie (5 minuten).",
+            "Stel je vak, thuisbasis en beschikbaarheid in.",
+            "Accepteer een dienst die bij je past.",
+            "Check in op locatie en werk je dienst.",
+            "Uren goedgekeurd → kies zelf hoe snel je uitbetaald wilt worden.",
+          ].map((step, i) => (
+            <li key={step} className="flex gap-4">
+              <span className="num flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-500 font-mono text-sm text-white">
+                {i + 1}
+              </span>
+              <span className="pt-1 text-[0.975rem] text-ink-soft">{step}</span>
+            </li>
+          ))}
+        </ol>
+      </Section>
+    ),
+    faq: (
+      <Section tone="paper">
+        <SectionHead eyebrow={v("vf.faq.eyebrow")} title={v("vf.faq.title")} cms={{ eyebrow: "vf.faq.eyebrow", title: "vf.faq.title" }} />
+        <div className="mt-10">
+          <FaqList items={FAQ} />
+        </div>
+        <p className="mt-8 text-[0.975rem] text-neutralx-600">
+          Twijfel je welk uurtarief je moet vragen?{" "}
+          <Link href="/rekentools/zzp-uurtarief-berekenen" className="font-semibold text-brand-600 underline">
+            Bereken je uurtarief
+          </Link>
+        </p>
+      </Section>
+    ),
+    slot: (
+      <CtaBand
+        title={v("vf.cta.title")}
+        body={v("vf.cta.body")}
+        primaryLabel={v("vf.cta.primary")}
+        secondaryLabel={v("vf.cta.secondary")}
+        secondaryHref="/voor-bedrijven"
+        cms={{ title: "vf.cta.title", body: "vf.cta.body", primary: "vf.cta.primary", secondary: "vf.cta.secondary" }}
+      />
+    ),
+  };
+  const zichtbaar = zichtbareSecties("voor-freelancers", await getPaginaIndeling("voor-freelancers"));
   return (
     <>
       <div className="hero-ink text-white">
@@ -97,60 +163,9 @@ export default async function VoorFreelancersPage() {
         </div>
       </div>
 
-      <Section tone="paper">
-        <SectionHead eyebrow={v("vf.got.eyebrow")} title={v("vf.got.title")} cms={{ eyebrow: "vf.got.eyebrow", title: "vf.got.title" }} />
-        <div className="mt-14 grid gap-x-10 gap-y-12 md:grid-cols-2">
-          {BENEFITS.map((b) => (
-            <div key={b.id} id={b.id} className="scroll-mt-24">
-              <h3 className="font-display text-xl font-semibold">{b.title}</h3>
-              <p className="mt-2 text-[0.975rem] leading-relaxed text-neutralx-600">{b.body}</p>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      <Section tone="soft">
-        <SectionHead eyebrow={v("vf.how.eyebrow")} title={v("vf.how.title")} cms={{ eyebrow: "vf.how.eyebrow", title: "vf.how.title" }} />
-        <ol className="mt-12 space-y-6">
-          {[
-            "Maak je account aan en koppel je KVK.",
-            "Doorloop de identiteitsverificatie (5 minuten).",
-            "Stel je vak, thuisbasis en beschikbaarheid in.",
-            "Accepteer een dienst die bij je past.",
-            "Check in op locatie en werk je dienst.",
-            "Uren goedgekeurd → kies zelf hoe snel je uitbetaald wilt worden.",
-          ].map((step, i) => (
-            <li key={step} className="flex gap-4">
-              <span className="num flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-500 font-mono text-sm text-white">
-                {i + 1}
-              </span>
-              <span className="pt-1 text-[0.975rem] text-ink-soft">{step}</span>
-            </li>
-          ))}
-        </ol>
-      </Section>
-
-      <Section tone="paper">
-        <SectionHead eyebrow={v("vf.faq.eyebrow")} title={v("vf.faq.title")} cms={{ eyebrow: "vf.faq.eyebrow", title: "vf.faq.title" }} />
-        <div className="mt-10">
-          <FaqList items={FAQ} />
-        </div>
-        <p className="mt-8 text-[0.975rem] text-neutralx-600">
-          Twijfel je welk uurtarief je moet vragen?{" "}
-          <Link href="/rekentools/zzp-uurtarief-berekenen" className="font-semibold text-brand-600 underline">
-            Bereken je uurtarief
-          </Link>
-        </p>
-      </Section>
-
-      <CtaBand
-        title={v("vf.cta.title")}
-        body={v("vf.cta.body")}
-        primaryLabel={v("vf.cta.primary")}
-        secondaryLabel={v("vf.cta.secondary")}
-        secondaryHref="/voor-bedrijven"
-        cms={{ title: "vf.cta.title", body: "vf.cta.body", primary: "vf.cta.primary", secondary: "vf.cta.secondary" }}
-      />
+      {zichtbaar.map((id) => (
+        <Fragment key={id}>{onderdelen[id]}</Fragment>
+      ))}
     </>
   );
 }
