@@ -13,6 +13,9 @@ import { GegevensMist } from "@/components/app/GegevensMist";
 import { BackLink } from "@/components/app/BackLink";
 import { stripeIdentityAvailable, syncStripeIdentity } from "@/lib/kyc/stripe-identity";
 import { getLocale, getFreelancerDict } from "@/lib/i18n/server";
+import type { Locale } from "@/lib/i18n/config";
+import { SCAN_EXTRA } from "@/lib/i18n/scan-extra";
+import { verderKaart } from "@/lib/onboarding/verder-kaart";
 import Link from "next/link";
 import { AUTH_DICTS, fill, type AuthDict } from "@/lib/i18n/auth";
 import { vertaalIdTekst } from "@/lib/i18n/id-redenen";
@@ -56,8 +59,10 @@ function AanmeldingKlaar({
   werkrechtOk,
   werkrechtVragen,
   uitzend,
+  taal,
   ibanOpen = false,
 }: {
+  taal: Locale;
   pt: AuthDict["page"];
   fd: FreelancerDict;
   o: FreelancerOverview;
@@ -69,6 +74,9 @@ function AanmeldingKlaar({
 }) {
   const klaar = fd.profielAf.klaar;
   const volgende = volgendeNaVerificatie(poortNu);
+  // staat er nog een stap open (behalve de foto, die heeft zijn eigen kaart), zeg dan welke en geef een knop erheen
+  // (14 nov 2026: 12 van de 19 werkers met een ID stonden stil bij de branches, en hier stond alleen "Nog 1 stap te gaan!")
+  const verder = verderKaart(poortNu, fd.start, SCAN_EXTRA[taal].volgendeKnop);
   const open = o.onboarding.filter((s) => !s.done).length;
   const documenten = (
     <div id="bankrekening" className="mt-6 scroll-mt-20">
@@ -84,6 +92,16 @@ function AanmeldingKlaar({
     <div className="mx-auto max-w-2xl">
       <BackLink fallbackHref="/dashboard/account" label={pt.back} />
       <PageHeader title={pt.doneTitle} subtitle={pt.doneSub} />
+      {verder && (
+        <div className="mb-6 card p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutralx-500">{verder.teller}</p>
+          <p className="mt-1 text-sm font-semibold text-ink">{verder.naam}</p>
+          <p className="mt-1 text-sm text-neutralx-600">{verder.uitleg}</p>
+          <Link href={verder.href} data-track={`verificatie-naar-${verder.sleutel}`} className="btn-primary mt-4 inline-flex">
+            {verder.knop}
+          </Link>
+        </div>
+      )}
       {volgende === "foto" && (
         <div className="mb-6 card p-5">
           <p className="text-sm font-semibold text-ink">{fd.start.fotoStep}</p>
@@ -191,7 +209,7 @@ export default async function VerificatiePage() {
     // oud account): dan niet "je kunt diensten aannemen", maar de volgende stap (lib/onboarding/werker-poort.ts).
     const poortNu = isReservedTestAddress(principal.email) ? null : await werkerPoortStand(principal.userId).catch(() => null);
     return (
-      <AanmeldingKlaar pt={pt} fd={fd} o={o} poortNu={poortNu} werkrechtOk={werkrecht.ok} werkrechtVragen={werkrechtVragen} uitzend={fiscal.workerKind === "uitzendkracht"} />
+      <AanmeldingKlaar taal={locale} pt={pt} fd={fd} o={o} poortNu={poortNu} werkrechtOk={werkrecht.ok} werkrechtVragen={werkrechtVragen} uitzend={fiscal.workerKind === "uitzendkracht"} />
     );
   }
 
@@ -235,6 +253,7 @@ export default async function VerificatiePage() {
   if (aanmeldingAf({ persoonKlaar: persoon.klaar, woonKlaar, idKlaar, mist })) {
     return (
       <AanmeldingKlaar
+        taal={locale}
         pt={pt}
         fd={fd}
         o={o}
