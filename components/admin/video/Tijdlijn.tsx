@@ -11,12 +11,16 @@ import {
   snijEinde,
   vervangClip,
   vrijePlek,
+  type AudioClip,
+  type BeeldClip,
   type Clip,
   type Project,
   type Spoor,
   type SpoorSoort,
 } from "@/lib/video/model";
 import { tijdTekst } from "@/components/admin/video/api";
+import { PIEKEN_PER_SECONDE, golfPad, kiesMiniaturen, miniatuurMomenten } from "@/lib/video/golf";
+import { useGolf, useMiniaturen } from "@/components/admin/video/tijdlijn-media";
 
 export const SLEEP_TYPE = "application/x-zf-video";
 
@@ -99,6 +103,57 @@ function GeluidIcoon({ uit }: { uit: boolean }) {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
       <path d="M11 5L6 9H2v6h4l5 4V5z" />
       {uit ? <path d="M23 9l-6 6M17 9l6 6" /> : <path d="M15.5 8.5a5 5 0 010 7M19 5a10 10 0 010 14" />}
+    </svg>
+  );
+}
+
+/** Kleine beelden uit de video en de golfvorm van zijn geluid, voor het stuk bron dat de clip laat zien. */
+function VideoStrook({ clip, zoom, hoogte }: { clip: BeeldClip; zoom: number; hoogte: number }) {
+  const lijst = useMiniaturen(clip.bron, clip.bronDuur);
+  const golf = useGolf(clip.bron, clip.bronDuur, false);
+  const breedte = Math.max(6, clip.duur * zoom);
+  const van = clip.inpunt;
+  const tot = clip.inpunt + clip.duur * clip.snelheid;
+  const vak = Math.max(24, Math.round((hoogte * 16) / 9));
+  const golfHoogte = Math.round(hoogte * 0.42);
+  const keuze = useMemo(
+    () => (lijst && clip.bronDuur ? kiesMiniaturen(miniatuurMomenten(clip.bronDuur), van, tot, Math.min(80, Math.ceil(breedte / vak))) : []),
+    [lijst, clip.bronDuur, van, tot, breedte, vak],
+  );
+  const pad = useMemo(() => (golf ? golfPad(golf, PIEKEN_PER_SECONDE, van, tot, breedte, golfHoogte) : ""), [golf, van, tot, breedte, golfHoogte]);
+  return (
+    <>
+      {keuze.map((i, n) => {
+        const beeld = lijst?.[i];
+        return beeld ? (
+          <span
+            key={n}
+            aria-hidden="true"
+            className="pointer-events-none absolute top-0 h-full"
+            style={{ left: n * vak, width: vak, backgroundImage: `url("${beeld}")`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.8 }}
+          />
+        ) : null;
+      })}
+      {pad && (
+        <svg aria-hidden="true" className="pointer-events-none absolute bottom-0 left-0" width={breedte} height={golfHoogte} style={{ background: "linear-gradient(transparent, rgba(0,0,0,.45))" }}>
+          <path d={pad} stroke="rgba(255,255,255,.75)" strokeWidth={1.2} fill="none" />
+        </svg>
+      )}
+    </>
+  );
+}
+
+/** De golfvorm van een geluidsclip: waar het hard en zacht is. */
+function GeluidGolf({ clip, zoom, hoogte }: { clip: AudioClip; zoom: number; hoogte: number }) {
+  const golf = useGolf(clip.bron, clip.bronDuur, true);
+  const breedte = Math.max(6, clip.duur * zoom);
+  const van = clip.inpunt;
+  const tot = clip.inpunt + clip.duur * clip.snelheid;
+  const pad = useMemo(() => (golf ? golfPad(golf, PIEKEN_PER_SECONDE, van, tot, breedte, hoogte) : ""), [golf, van, tot, breedte, hoogte]);
+  if (!pad) return null;
+  return (
+    <svg aria-hidden="true" className="pointer-events-none absolute inset-0" width={breedte} height={hoogte} style={{ background: clip.rol === "stem" ? "#1d5a49" : "#5a4a1d" }}>
+      <path d={pad} stroke="rgba(255,255,255,.55)" strokeWidth={1.2} fill="none" />
     </svg>
   );
 }
@@ -327,6 +382,20 @@ export function Tijdlijn({ project, tijd, speelt, zoom, selectie, magneetAan, on
                         onPointerDown={(e) => beginSleep(e, c, "verplaats")}
                         title={`${clipLabel(toon)} (${toon.duur.toFixed(1)} s)`}
                       >
+                        {toon.soort === "video" && <VideoStrook clip={toon} zoom={zoom} hoogte={hoogte} />}
+                        {toon.soort === "audio" && <GeluidGolf clip={toon} zoom={zoom} hoogte={hoogte} />}
+                        {/* sleutelbeelden als ruitjes onderin (lib/video/model.ts standOp) */}
+                        {(toon.soort === "foto" || toon.soort === "video" || toon.soort === "kleur") &&
+                          toon.sleutelbeelden
+                            ?.filter((k) => k.t >= 0 && k.t <= toon.duur)
+                            .map((k, i) => (
+                              <span
+                                key={`k${i}`}
+                                aria-hidden="true"
+                                className="pointer-events-none absolute bottom-1 h-2 w-2 rotate-45"
+                                style={{ left: k.t * zoom - 4, background: "#ffffff", border: "1px solid rgba(0,0,0,.55)" }}
+                              />
+                            ))}
                         <span className="pointer-events-none absolute inset-x-2 top-1 truncate" style={{ textShadow: "0 1px 2px rgba(0,0,0,.8)" }}>
                           {clipLabel(toon)}
                         </span>
