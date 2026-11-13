@@ -74,6 +74,13 @@ export interface Plaatsing {
  * Een sleutelbeeld (13 nov 2026): plek, grootte, draaiing en zichtbaarheid van een beeldclip op één moment, in
  * seconden na het begin van de clip. Tussen twee sleutelbeelden loopt de stand vloeiend over (standOp).
  */
+/** Groen scherm (13 nov 2026): een effen achtergrond weghalen; drempel en zachtheid 0..1 (afstand in kleur). */
+export interface GroenScherm {
+  kleur: string;
+  drempel: number;
+  zachtheid: number;
+}
+
 export interface Sleutelbeeld extends Plaatsing {
   t: number;
   dekking: number;
@@ -105,6 +112,8 @@ export interface BeeldClip extends ClipBasis {
   kleur2: string;
   /** Sleutelbeelden, oplopend in de tijd; zonder gelden plaatsing en dekking hierboven voor de hele clip. */
   sleutelbeelden?: Sleutelbeeld[] | undefined;
+  /** Groen scherm: deze kleur wordt doorzichtig (lib/video/groen-scherm.ts); alleen bij video en foto. */
+  groenScherm?: GroenScherm | undefined;
 }
 
 export interface TekstClip extends ClipBasis {
@@ -900,6 +909,7 @@ export function schoonProject(ruw: unknown): Project {
       const f = (c.filters ?? {}) as Record<string, unknown>;
       const pl = (c.plaatsing ?? {}) as Record<string, unknown>;
       const sleutels = schoneSleutelbeelden(c.sleutelbeelden, basis.duur);
+      const gs = (c.groenScherm && typeof c.groenScherm === "object" ? c.groenScherm : null) as Record<string, unknown> | null;
       clips.push({
         ...basis,
         soort: c.soort,
@@ -929,6 +939,15 @@ export function schoonProject(ruw: unknown): Project {
         kleur: KLEUR.test(String(c.kleur)) ? String(c.kleur) : "#0E5C4A",
         kleur2: KLEUR.test(String(c.kleur2)) ? String(c.kleur2) : "",
         ...(sleutels ? { sleutelbeelden: sleutels } : {}),
+        ...(gs && c.soort !== "kleur"
+          ? {
+              groenScherm: {
+                kleur: KLEUR.test(String(gs.kleur)) ? String(gs.kleur) : "#00b140",
+                drempel: getal(gs.drempel, 0, 1, 0.18),
+                zachtheid: getal(gs.zachtheid, 0, 1, 0.12),
+              },
+            }
+          : {}),
       });
     }
   }
