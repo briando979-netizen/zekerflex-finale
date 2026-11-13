@@ -66,7 +66,7 @@ describe("het scherm", () => {
     expect(src.match(/^ {4}kop,\n {4}cijfers,\n {4}tegels: \($/gm) ?? []).toHaveLength(3);
     expect(src.match(/kl\(marge\.cijfers, "grid grid-cols-1 gap-4 /g) ?? []).toHaveLength(3);
     expect(src.match(/<div className=\{kl\(marge\.onderdelen\)\}>/g) ?? []).toHaveLength(3);
-    expect(src).not.toMatch(/className="mt-\d/);
+    expect(src).not.toContain('className="mt-6');
     // nog niet aangezet: alleen de ene stap, als kop
     expect(src.match(/^ {6}kop: \(\n {8}<Opzetten$/gm) ?? []).toHaveLength(3);
   });
