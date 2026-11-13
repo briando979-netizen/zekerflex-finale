@@ -24,6 +24,9 @@ const OUD: Record<VastePaginaId, string[]> = {
   "over-ons": ["verhaal", "oprichter", "uitgangspunten", "werkenbij", "slot"],
   uitzendbureau: ["pijlers", "verwachtingen", "stappen", "fasen", "ervaring", "routes", "verloning", "werkgevers", "faq", "slot"],
   beveiliging: ["cijfers", "maatregelen", "logboek", "melden", "slot"],
+  contact: ["email", "direct", "google"],
+  "voor-bureaus": ["pakketten", "waarom", "faq", "slot"],
+  abonnementen: ["pakketten", "faq", "slot"],
 };
 
 beforeEach(() => kv.clear());
@@ -68,7 +71,7 @@ describe("een eigen indeling", () => {
 
   it("alleen de bekende pagina's tellen, geen sleutel uit het prototype", () => {
     expect(isVastePagina("voor-bedrijven")).toBe(true);
-    for (const v of ["constructor", "toString", "contact", "", null, 3]) expect(isVastePagina(v)).toBe(false);
+    for (const v of ["constructor", "toString", "klussen", "", null, 3]) expect(isVastePagina(v)).toBe(false);
   });
 });
 
@@ -81,7 +84,7 @@ describe("de opslag", () => {
     expect(await getPaginaIndeling("voor-freelancers")).toBeNull();
     await setPaginaIndeling("voor-freelancers", { volgorde: OUD["voor-freelancers"], verborgen: ["stappen"] });
     expect(Object.keys(await getPaginaIndelingen()).sort()).toEqual(["voor-bedrijven", "voor-freelancers"]);
-    expect(PAGINAS).toHaveLength(6);
+    expect(PAGINAS).toHaveLength(9);
     expect(await setPaginaIndeling("voor-bedrijven", standaardPaginaIndeling("voor-bedrijven"))).toBeNull();
     expect((await getPaginaIndeling("voor-freelancers"))?.verborgen).toEqual(["stappen"]);
     await resetPaginaIndeling("voor-freelancers");
