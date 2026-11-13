@@ -159,6 +159,69 @@ export function leesProductPagina(html: string, basis: string): LinkProduct | nu
   return { titel, omschrijving, fotos: uniek, prijsCents, valuta };
 }
 
+// ---------------------------------------------------------------------------
+// Winkelsystemen die hun producten ook als gegevens aanbieden (13 nov, "meer bronnen"). Veel leveranciers en dropshippers
+// draaien op Shopify of WooCommerce; daar staat naast de pagina een openbaar gegevensadres. Dat lezen we als de pagina zelf
+// te weinig geeft (bijvoorbeeld omdat de winkel alles met scripts opbouwt).
+// ---------------------------------------------------------------------------
+
+/** Shopify: "/products/<naam>" (ook achter /collections/… of een taal) heeft een "/products/<naam>.json". */
+export function shopifyGegevensAdres(url: string): string | null {
+  try {
+    const u = new URL(url);
+    const m = /\/products\/([a-z0-9][a-z0-9_-]{0,200})(?:\.json)?\/?$/i.exec(u.pathname);
+    return u.protocol === "https:" && m?.[1] ? `${u.origin}/products/${m[1]}.json` : null;
+  } catch {
+    return null;
+  }
+}
+
+/** WooCommerce: "/product/<naam>/" (of /winkel/…, /shop/…) is op te vragen via de openbare winkel-API. */
+export function wooGegevensAdres(url: string): string | null {
+  try {
+    const u = new URL(url);
+    const m = /\/(?:product|producten|winkel|shop)\/(?:[^/]+\/)*([a-z0-9][a-z0-9_-]{0,200})\/?$/i.exec(u.pathname);
+    return u.protocol === "https:" && m?.[1] ? `${u.origin}/wp-json/wc/store/v1/products?slug=${encodeURIComponent(m[1])}` : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Het antwoord van "/products/<naam>.json" van een Shopify-winkel. De munt staat er niet in. */
+export function leesShopifyProduct(json: unknown, basis: string): LinkProduct | null {
+  const p = isLos(json) && isLos(json.product) ? json.product : null;
+  if (!p) return null;
+  const titel = tekst(p.title, 160);
+  if (titel.length < 2) return null;
+  const fotos = [...fotosUit(isLos(p.image) ? p.image.src : null, basis), ...fotosUit(Array.isArray(p.images) ? p.images.map((f) => (isLos(f) ? f.src : null)) : [], basis)];
+  const variant = Array.isArray(p.variants) ? p.variants.find(isLos) : null;
+  return { titel, omschrijving: tekst(p.body_html, 1500), fotos: fotos.filter((f, i) => fotos.indexOf(f) === i).slice(0, 6), prijsCents: prijsNaarCents(variant?.price), valuta: null };
+}
+
+/** Het antwoord van de winkel-API van WooCommerce: een lijst met (hooguit) dit ene product. De prijs staat er in centen. */
+export function leesWooProduct(json: unknown, basis: string): LinkProduct | null {
+  const p = Array.isArray(json) ? json.find(isLos) : null;
+  if (!p) return null;
+  const titel = tekst(p.name, 160);
+  if (titel.length < 2) return null;
+  const fotos = fotosUit(Array.isArray(p.images) ? p.images.map((f) => (isLos(f) ? f.src : null)) : [], basis);
+  const prijzen = isLos(p.prices) ? p.prices : null;
+  const klein = typeof prijzen?.currency_minor_unit === "number" ? prijzen.currency_minor_unit : 2;
+  const ruw = typeof prijzen?.price === "string" && /^\d{1,9}$/.test(prijzen.price) ? Number(prijzen.price) : null;
+  const prijsCents = ruw && ruw > 0 ? Math.round(ruw * 10 ** (2 - klein)) : null;
+  const munt = prijzen?.currency_code;
+  return {
+    titel,
+    omschrijving: tekst(p.short_description, 1500) || tekst(p.description, 1500),
+    fotos: fotos.slice(0, 6),
+    prijsCents: prijsCents && prijsCents < 100_000_000 ? prijsCents : null,
+    valuta: prijsCents && typeof munt === "string" && /^[A-Za-z]{3}$/.test(munt) ? munt.toUpperCase() : null,
+  };
+}
+
+/** Of er genoeg staat om er een product van te maken: een naam met een omschrijving of een foto. */
+export const isBruikbaar = (p: LinkProduct | null): p is LinkProduct => Boolean(p && (p.omschrijving || p.fotos.length > 0));
+
 /** De tekst voor het vak "Het idee": de naam en de omschrijving van de leverancier, klaar voor de AI. */
 export function ideeUitLink(p: LinkProduct): string {
   return [p.titel, p.omschrijving].filter(Boolean).join("\n\n").slice(0, 1500);

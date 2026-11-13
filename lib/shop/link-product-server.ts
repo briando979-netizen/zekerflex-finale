@@ -5,7 +5,7 @@ import { FetchError, fetchPage } from "@/lib/website-check/fetch";
 import { importRemoteImage } from "@/lib/media/clean-image";
 import { storeUpload } from "@/lib/storage/local";
 import { kvGet, kvListEntries, kvSet } from "@/lib/storage/kv";
-import { kortAdres, leesProductPagina, type LinkProduct } from "@/lib/shop/link-product";
+import { isBruikbaar, kortAdres, leesProductPagina, leesShopifyProduct, leesWooProduct, shopifyGegevensAdres, wooGegevensAdres, type LinkProduct } from "@/lib/shop/link-product";
 
 // ---------------------------------------------------------------------------
 // "Product van een link" (Winkel-AI): de pagina ophalen via de veilige ophaler (geen interne adressen, begrensde grootte)
@@ -32,13 +32,42 @@ export async function haalProductVanLink(url: string): Promise<LinkUitkomst> {
   }
   const bron = new URL(pagina.finalUrl).hostname.replace(/^www\./, "");
   if (pagina.status !== 200) throw AppError.validation(`Die website antwoordde met code ${pagina.status}. Controleer de link, of plak de naam en de omschrijving zelf in het vak hieronder.`);
-  const product = leesProductPagina(pagina.body, pagina.finalUrl);
+  let product = leesProductPagina(pagina.body, pagina.finalUrl);
+  let via = "pagina";
+  // Geeft de pagina te weinig, dan het gegevensadres van het winkelsysteem proberen (Shopify, WooCommerce).
+  if (!isBruikbaar(product)) {
+    const shopify = shopifyGegevensAdres(pagina.finalUrl);
+    const uitShopify = shopify ? leesShopifyProduct(await haalJson(shopify), pagina.finalUrl) : null;
+    if (isBruikbaar(uitShopify)) {
+      product = uitShopify;
+      via = "shopify";
+    } else {
+      const woo = wooGegevensAdres(pagina.finalUrl);
+      const uitWoo = woo ? leesWooProduct(await haalJson(woo), pagina.finalUrl) : null;
+      if (isBruikbaar(uitWoo)) {
+        product = uitWoo;
+        via = "woocommerce";
+      }
+    }
+  }
   // alleen de website in het logboek, nooit het hele adres (er kunnen volgcodes in staan)
-  if (!product || (!product.omschrijving && product.fotos.length === 0)) {
+  if (!isBruikbaar(product)) {
     logger.info("winkel-ai: link gaf geen productgegevens", { host: bron });
     throw AppError.validation(NIET_LEESBAAR);
   }
+  logger.info("winkel-ai: product van link gelezen", { host: bron, via });
   return { ...product, bron };
+}
+
+/** Een gegevensadres ophalen en als JSON lezen; alles wat misgaat geeft null (dan proberen we de volgende bron). */
+async function haalJson(adres: string): Promise<unknown> {
+  try {
+    const r = await fetchPage(adres, { timeoutMs: 10_000, maxBytes: 1_500_000 });
+    if (r.status !== 200 || r.truncated) return null;
+    return JSON.parse(r.body) as unknown;
+  } catch {
+    return null;
+  }
 }
 
 /** De foto van een adres overnemen en aan het product hangen. Het product blijft uit. */

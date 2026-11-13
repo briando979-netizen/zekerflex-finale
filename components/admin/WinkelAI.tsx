@@ -144,7 +144,7 @@ function NieuwProduct() {
             {linkBezig ? "De pagina wordt gelezen…" : "Haal de gegevens op"}
           </button>
         </div>
-        <p className="mt-1 text-xs" style={{ color: "var(--a-mute)" }}>We lezen de naam, de omschrijving, de foto en de prijs van de pagina. AliExpress, Temu en Amazon laten dat niet toe: plak daar de tekst zelf hieronder.</p>
+        <p className="mt-1 text-xs" style={{ color: "var(--a-mute)" }}>We lezen de naam, de omschrijving, de foto en de prijs van de pagina. Dat werkt bij de meeste webwinkels van leveranciers, ook als ze op Shopify of WooCommerce draaien. AliExpress, Temu en Amazon laten dat niet toe: plak daar de tekst zelf hieronder.</p>
         {linkMelding && (
           <div className="mt-2">
             <Notice tone={linkMelding.fout ? "crit" : "ok"} role={linkMelding.fout ? "alert" : "status"}>{linkMelding.tekst}</Notice>
