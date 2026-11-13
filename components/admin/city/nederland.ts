@@ -3,6 +3,7 @@ import type { Phase } from "@/lib/admin/city-life";
 import { CANAL_Z } from "@/lib/admin/city-layout";
 import { bake, gableGeometry, type Kit, seeded, signTexture } from "@/components/admin/city/parts";
 import type { Anchor, Glow, Layer } from "@/components/admin/city/world";
+import { STEDEN } from "@/lib/admin/nl-wegen";
 import { beenVorm, jasVorm } from "@/components/admin/city/vormen";
 
 // Nederland rond de 3D-stad (13 nov 2026, eigenaar: "net als Nederland: Amsterdam, Groningen, verschillende steden,
@@ -20,13 +21,8 @@ export const SPOOR_EIND = 700;
 export const RIT = { in: 38, stil: 24, uit: 38, weg: 50 } as const;
 const RIT_DUUR = RIT.in + RIT.stil + RIT.uit + RIT.weg;
 
-/** Steden aan de horizon (x, z en de naam op het bordje). */
-export const STEDEN = [
-  { id: "amsterdam", naam: "Amsterdam", x: -430, z: 150 },
-  { id: "rotterdam", naam: "Rotterdam", x: -300, z: 430 },
-  { id: "utrecht", naam: "Utrecht", x: 300, z: 430 },
-  { id: "groningen", naam: "Groningen", x: 430, z: 150 },
-] as const;
+/** Steden aan de horizon (x, z en de naam op het bordje); staan in lib/admin/nl-wegen.ts, met de wegen erheen. */
+export { STEDEN };
 
 /** Winkels in de straat: gewone soorten, geen echte merken. */
 export const WINKELS = ["Bakker", "Boekhandel", "Fietsen", "Kaas", "Bloemen", "Mode", "Drogist", "Koffie", "Speelgoed", "Schoenen", "Groente", "Optiek"] as const;
