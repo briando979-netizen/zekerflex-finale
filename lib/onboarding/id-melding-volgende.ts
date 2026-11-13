@@ -1,6 +1,7 @@
 import type { Locale } from "@/lib/i18n/config";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
-import { openVerplicht, poortStapVan, type POORT_STAPPEN, type WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
+import { openVerplicht, poortStapVan, type WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
+import { volgendeStapHref, type PoortSleutel } from "@/lib/onboarding/volgende-stap";
 
 // ---------------------------------------------------------------------------
 // Waar de melding "ID geverifieerd" (lib/onboarding/id-geverifieerd.ts) naartoe wijst (13 nov 2026). Hij linkte altijd naar
@@ -9,17 +10,6 @@ import { openVerplicht, poortStapVan, type POORT_STAPPEN, type WerkerPoortFeiten
 // dezelfde teller als "Stap n van 5"), met in één zin wat er nog moet. Is alleen de foto nog open, dan de fotostap; is alles
 // af (of lukt het opzoeken niet), dan zoals vroeger "eerste indruk". Server-only (leest FREELANCER_DICTS).
 // ---------------------------------------------------------------------------
-
-export type PoortSleutel = (typeof POORT_STAPPEN)[number]["sleutel"];
-
-/** De plek waar je elke stap doet (zoals de wizard op /dashboard/klussen: soort en branches staan daar zelf in). */
-const PAD: Record<PoortSleutel, string> = {
-  kind: "/dashboard/klussen",
-  branches: "/dashboard/klussen",
-  gegevens: "/dashboard/verificatie",
-  identiteit: "/dashboard/verificatie",
-  foto: "/dashboard/eerste-indruk?stap=foto",
-};
 
 export interface IdMeldingVolgende {
   /** de eerste open stap; null = alles af of onbekend */
@@ -33,7 +23,8 @@ export interface IdMeldingVolgende {
 export function idMeldingVolgende(f: WerkerPoortFeiten | null): IdMeldingVolgende {
   const stap = f ? poortStapVan(f) : null;
   if (!f || !stap) return { sleutel: null, open: 0, pad: "/dashboard/eerste-indruk" };
-  return { sleutel: stap.sleutel, open: openVerplicht(f), pad: PAD[stap.sleutel] };
+  // dezelfde plek als na de ID-scan (lib/onboarding/volgende-stap.ts, ae)
+  return { sleutel: stap.sleutel, open: openVerplicht(f), pad: volgendeStapHref(stap.sleutel) };
 }
 
 const NAAM = {
