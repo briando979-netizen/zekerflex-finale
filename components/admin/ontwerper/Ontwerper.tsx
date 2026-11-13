@@ -11,6 +11,7 @@ import { PaginasPaneel } from "@/components/admin/ontwerper/PaginasPaneel";
 import { MediaPaneel } from "@/components/admin/ontwerper/Media";
 import { MenuPaneel } from "@/components/admin/ontwerper/MenuPaneel";
 import { HomePaneel } from "@/components/admin/ontwerper/HomePaneel";
+import { ONTWERPER_TABS, type OntwerperTab } from "@/lib/ontwerp/tabs";
 import { ShopPaneel } from "@/components/admin/ontwerper/ShopPaneel";
 import { SiteFotos } from "@/components/admin/ontwerper/SiteFotos";
 import { TekstWijzigingen } from "@/components/admin/ontwerper/TekstWijzigingen";
@@ -24,19 +25,8 @@ import { Assistent } from "@/components/admin/ontwerper/Assistent";
 // live; de vorige versie blijft in Geschiedenis.
 // ---------------------------------------------------------------------------
 
-const TABS = [
-  { id: "stijl", label: "Stijl" },
-  { id: "teksten", label: "Teksten" },
-  { id: "home", label: "Homepage" },
-  { id: "shop", label: "Webshop" },
-  { id: "paginas", label: "Pagina's" },
-  { id: "menu", label: "Menu" },
-  { id: "seo", label: "SEO" },
-  { id: "media", label: "Media" },
-  { id: "ai", label: "AI-hulp" },
-  { id: "geschiedenis", label: "Geschiedenis" },
-] as const;
-type Tab = (typeof TABS)[number]["id"];
+const TABS = ONTWERPER_TABS;
+type Tab = OntwerperTab;
 
 const MAX_STAPPEN = 80;
 const SAMENVOEG_MS = 600;
@@ -50,13 +40,13 @@ async function post<T>(body: unknown): Promise<T> {
   return d;
 }
 
-export function Ontwerper({ start }: { start: OntwerpStaat }) {
+export function Ontwerper({ start, beginTab }: { start: OntwerpStaat; /** het tabblad waarmee de ontwerper opent (een link met ?tab=…) */ beginTab?: OntwerperTab | undefined }) {
   const [thema, setThema] = useState<Thema>(start.concept);
   const [bewaard, setBewaard] = useState<Thema>(start.concept);
   const [live, setLive] = useState<Thema>(start.live);
   const [geschiedenis, setGeschiedenis] = useState<OntwerpVersie[]>(start.geschiedenis);
   const [status, setStatus] = useState<Status>("bewaard");
-  const [tab, setTab] = useState<Tab>("stijl");
+  const [tab, setTab] = useState<Tab>(beginTab ?? "stijl");
   const [teksten, setTeksten] = useState<Record<string, string>>({});
   const [gekozenTekst, setGekozenTekst] = useState<string | null>(null);
   const [voorbeeldPad, setVoorbeeldPad] = useState<string | null>(null);

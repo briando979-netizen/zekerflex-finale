@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { PageHead } from "@/components/admin/kit";
 import { IssuingRulesPanel } from "@/components/admin/IssuingRulesPanel";
+import { WEGWIJZER, wegwijzerHref } from "@/lib/ontwerp/wegwijzer";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,26 @@ export default async function AdminBeheerPage() {
   return (
     <div className="space-y-4">
       <PageHead title="Instellingen" subtitle="Eén plek om alles van ZekerFlex te regelen zonder code: tarieven, regels, functies, kaarten en systeem." />
+      {/* waar je wat aanpast, in gewone taal: elke regel brengt je naar de juiste plek (lib/ontwerp/wegwijzer.ts) */}
+      <section className="space-y-2.5" aria-labelledby="zelf-inrichten-kop">
+        <h2 id="zelf-inrichten-kop" className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>
+          Zelf inrichten: wat wil je aanpassen?
+        </h2>
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {WEGWIJZER.map((r) => (
+            <li key={r.wat}>
+              <Link href={wegwijzerHref(r)} className="a-panel group block h-full p-4 transition-colors hover:border-[var(--a-border-strong)] sm:p-5">
+                <span className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: "var(--a-text)" }}>
+                  {r.wat}
+                  <span className="transition-transform group-hover:translate-x-0.5" style={{ color: "var(--a-mute)" }} aria-hidden>→</span>
+                </span>
+                <span className="mt-1 block text-xs leading-relaxed" style={{ color: "var(--a-mute)" }}>{r.uitleg}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <h2 className="pt-2 text-sm font-semibold" style={{ color: "var(--a-text)" }}>Geld, regels en systeem</h2>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {CARDS.map((c) => (
           <Link key={c.href + c.title} href={c.href} className="a-panel group block p-4 transition-colors hover:border-[var(--a-border-strong)] sm:p-5">
