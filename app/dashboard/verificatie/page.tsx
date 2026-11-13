@@ -15,6 +15,7 @@ import { stripeIdentityAvailable, syncStripeIdentity } from "@/lib/kyc/stripe-id
 import { getLocale, getFreelancerDict } from "@/lib/i18n/server";
 import Link from "next/link";
 import { AUTH_DICTS, type AuthDict } from "@/lib/i18n/auth";
+import { vertaalIdTekst } from "@/lib/i18n/id-redenen";
 import type { FreelancerDict } from "@/lib/i18n/freelancer";
 import { attemptLabel, waitForStripe } from "@/lib/kyc/stripe-status";
 import { StripeIdentityWacht } from "@/components/app/StripeIdentityWacht";
@@ -252,7 +253,7 @@ export default async function VerificatiePage() {
 
   const reasons =
     lastCheck && typeof lastCheck.rawPayload === "object" && lastCheck.rawPayload !== null
-      ? ((lastCheck.rawPayload as Record<string, unknown>).ai as { reasons?: string[] } | undefined)?.reasons ?? []
+      ? (((lastCheck.rawPayload as Record<string, unknown>).ai as { reasons?: string[] } | undefined)?.reasons ?? []).map((r) => vertaalIdTekst(r, locale))
       : [];
 
   const stripeId = await stripeIdentityAvailable();

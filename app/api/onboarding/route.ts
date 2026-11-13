@@ -11,6 +11,7 @@ import { netwerkVan, overdrachtGegevens, overdrachtMerk, pakOverdracht } from "@
 import { clientIp } from "@/lib/http/request";
 import { controleerThuisbasis, thuisbasisVelden } from "@/lib/onboarding/thuisbasis-schema";
 import { geocodeThuisbasis } from "@/lib/geo/thuisbasis";
+import { idUitslagVoorWerker, taalVanVerzoek } from "@/lib/i18n/id-redenen";
 
 export const runtime = "nodejs";
 
@@ -117,9 +118,11 @@ export async function POST(request: Request): Promise<NextResponse> {
         payoutIban: base.data.payoutIban,
         ibanCode: base.data.ibanCode,
       });
-      if (bewaren) return NextResponse.json({ opgeslagen: true, checks: saved.checks }, { status: 200 });
+      // de redenen in de app-taal van de werker; rawPayload en het beheer houden het Nederlands (lib/i18n/id-redenen.ts)
+      const taal = taalVanVerzoek(request);
+      if (bewaren) return NextResponse.json(idUitslagVoorWerker({ opgeslagen: true, checks: saved.checks }, taal), { status: 200 });
       const redirectUrl = await startStripeIdentity(principal.userId, principal.email);
-      return NextResponse.json({ redirectUrl, checks: saved.checks }, { status: 200 });
+      return NextResponse.json(idUitslagVoorWerker({ redirectUrl, checks: saved.checks }, taal), { status: 200 });
     }
 
     // "Verder op je telefoon" (lib/kyc/overdracht.ts): de documentgegevens en foto's
@@ -212,7 +215,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         : {}),
     });
 
-    return NextResponse.json(result, { status: 200 });
+    return NextResponse.json(idUitslagVoorWerker(result, taalVanVerzoek(request)), { status: 200 });
   } catch (err) {
     // Een gewijzigd IBAN zonder (geldige) bevestigingscode: 423 met eigen code, nooit 403.
     const ibanFout = ibanBevestigingAntwoord(err);
