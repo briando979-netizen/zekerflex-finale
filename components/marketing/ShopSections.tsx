@@ -1,3 +1,4 @@
+import { PaskamerLink } from "@/components/marketing/PaskamerLink";
 import Link from "next/link";
 import type { Dict } from "@/lib/i18n/dictionaries";
 import { NewsletterSignup } from "@/components/marketing/NewsletterSignup";
@@ -175,15 +176,15 @@ export function ShopPaskamerPromo({ pk }: { pk: Dict["paskamer"] }) {
                 </li>
               ))}
             </ul>
-            <Link href="/shop/paskamer" className="mt-7 inline-flex h-12 items-center rounded-lg bg-brand-mint px-6 text-[15px] font-bold text-ink transition hover:brightness-95">
+            <PaskamerLink href="/shop/paskamer" className="mt-7 inline-flex h-12 items-center rounded-lg bg-brand-mint px-6 text-[15px] font-bold text-ink transition hover:brightness-95">
               {pk.promoKnop} →
-            </Link>
+            </PaskamerLink>
           </div>
-          <Link href="/shop/paskamer" aria-label={pk.promoKnop} className="relative flex h-[340px] items-end justify-center gap-2 bg-gradient-to-b from-[#f4f1ea] to-[#e5dfd3] px-4 pb-2 pt-6 sm:h-[420px] md:h-[460px]">
+          <PaskamerLink href="/shop/paskamer" aria-label={pk.promoKnop} className="relative flex h-[340px] items-end justify-center gap-2 bg-gradient-to-b from-[#f4f1ea] to-[#e5dfd3] px-4 pb-2 pt-6 sm:h-[420px] md:h-[460px]">
             {PROMO_LOOKS.map((l, i) => (
               <Paspop key={i} id={`promo${i}`} lichaam={l.lichaam} huid={l.huid} stukken={promoStukken(l.slugs, l.kleur)} label={pk.titel} achtergrond={false} className="h-full w-auto" />
             ))}
-          </Link>
+          </PaskamerLink>
         </div>
       </div>
     </section>

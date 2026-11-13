@@ -1,5 +1,6 @@
 "use client";
 
+import { PaskamerLink } from "@/components/marketing/PaskamerLink";
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -85,7 +86,7 @@ export function ShopProductCard({
           <IconHeart filled={fav} />
         </button>
         {pasvorm && p.slug && (
-          <Link
+          <PaskamerLink
             href={`/shop/paskamer?pas=${encodeURIComponent(p.slug)}`}
             aria-label={`${t.paskamer.probeerAan}: ${p.name}`}
             className="absolute bottom-2 left-2 z-10 inline-flex h-8 items-center gap-1 rounded-full bg-white/95 px-2.5 text-[11px] font-bold text-ink shadow-e1 transition hover:bg-white sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
@@ -95,7 +96,7 @@ export function ShopProductCard({
               <path d="M7 9.5c1.5-1.2 3.2-1.8 5-1.8s3.5.6 5 1.8l-1.2 5.5H8.2zM9.5 15l-.8 6M14.5 15l.8 6" />
             </svg>
             {t.shopThuis.pasAanKort}
-          </Link>
+          </PaskamerLink>
         )}
       </div>
 

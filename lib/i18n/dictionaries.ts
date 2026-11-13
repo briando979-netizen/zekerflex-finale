@@ -1000,6 +1000,7 @@ export const nl = {
   pasFotoHeic: "Deze fotosoort (HEIC van een iPhone) kan je browser niet lezen. Kies een JPEG-foto, of zet de iPhone-camera op Meest compatibel (Instellingen, Camera, Formaten). Je kunt je maten ook hieronder zelf invullen.",
   pasFotoNietLeesbaar: "Deze foto kon niet gelezen worden. Probeer een andere foto (JPEG of PNG). Je kunt je maten ook hieronder zelf invullen.",
   pasFotoModel: "Het meten op de foto werkt niet in deze browser of op dit toestel. Een mogelijke oorzaak (niet zeker) is de Edge-instelling Verbeterde beveiliging: zet die voor deze site uit en probeer opnieuw. Je kunt je maten ook hieronder zelf invullen.",
+  pasFotoCsp: "Je browser blokkeerde het meetmodel voor deze pagina. Laad de pagina opnieuw (of open de paskamer vanuit de webshop) en kies je foto nog een keer. Je kunt je maten ook hieronder zelf invullen.",
   pasFotoTraag: "Het laden van het meetmodel duurt te lang. Dat kan aan je verbinding liggen; een mogelijke oorzaak (niet zeker) is de Edge-instelling Verbeterde beveiliging voor deze site. Probeer het opnieuw, of vul je maten hieronder zelf in.",
   pasFotoHandmatigTitel: "Maten zelf invullen",
     pasFotoGeschat: "Een schatting uit je foto. Pas de maten aan als je ze beter weet.",

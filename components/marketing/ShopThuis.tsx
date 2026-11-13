@@ -1,3 +1,4 @@
+import { PaskamerLink } from "@/components/marketing/PaskamerLink";
 import Image from "next/image";
 import Link from "next/link";
 import { fmt, type Dict } from "@/lib/i18n/dictionaries";
@@ -32,10 +33,10 @@ export function ShopThuisHero({ t, foto = SHOP_KOP_FOTO }: { t: Dict; foto?: { s
             <Link href="#collectie" className="inline-flex h-12 items-center rounded-full bg-ink px-7 text-[15px] font-bold text-white transition hover:bg-ink/85">
               {h.heroKnop}
             </Link>
-            <Link href="/shop/paskamer" className="inline-flex h-12 items-center gap-2 rounded-full border border-ink/20 bg-white px-6 text-[15px] font-bold text-ink transition hover:border-ink/40">
+            <PaskamerLink href="/shop/paskamer" className="inline-flex h-12 items-center gap-2 rounded-full border border-ink/20 bg-white px-6 text-[15px] font-bold text-ink transition hover:border-ink/40">
               {h.heroPaskamer}
               <span className="rounded-full bg-brand-mint px-1.5 py-px text-[10px] font-bold uppercase tracking-wide">{t.paskamer.nieuw}</span>
-            </Link>
+            </PaskamerLink>
           </div>
           <ul className="mt-7 flex flex-wrap gap-x-5 gap-y-2 text-[13px] font-semibold text-neutralx-700">
             {[t.shop.uspNextDay, t.shop.freeShipping, t.shop.uspReturns].map((u) => (
@@ -113,9 +114,9 @@ export function ShopLooks({ t, looks }: { t: Dict; looks: LookKaart[] }) {
             </h2>
             <p className="mt-1 text-[14px] text-neutralx-600">{t.shopThuis.looksSub}</p>
           </div>
-          <Link href="/shop/paskamer" className="text-[14px] font-bold text-brand-700 underline underline-offset-4">
+          <PaskamerLink href="/shop/paskamer" className="text-[14px] font-bold text-brand-700 underline underline-offset-4">
             {pk.promoKnop} →
-          </Link>
+          </PaskamerLink>
         </div>
         <ul className="-mx-4 mt-6 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:thin] sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-4 lg:gap-4 lg:overflow-visible lg:px-0">
           {looks.map(({ look, stukken }) => {
@@ -123,7 +124,7 @@ export function ShopLooks({ t, looks }: { t: Dict; looks: LookKaart[] }) {
             const totaal = stukken.reduce((s, x) => s + x.priceCents, 0);
             return (
               <li key={look.id} className="w-[72%] shrink-0 snap-start sm:w-[44%] lg:w-auto">
-                <Link href={`/shop/paskamer?look=${look.id}`} className="group relative flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-e1 transition hover:shadow-e2">
+                <PaskamerLink href={`/shop/paskamer?look=${look.id}`} className="group relative flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-e1 transition hover:shadow-e2">
                   <span className="relative block h-[300px] bg-[radial-gradient(ellipse_at_50%_35%,#ffffff_0%,#efe9de_100%)] pt-3">
                     <Paspop
                       id={`look-${look.id}`}
@@ -143,7 +144,7 @@ export function ShopLooks({ t, looks }: { t: Dict; looks: LookKaart[] }) {
                       <span className="shrink-0 text-[13px] font-bold text-brand-700 group-hover:underline">{t.shopThuis.lookBekijk} →</span>
                     </span>
                   </span>
-                </Link>
+                </PaskamerLink>
               </li>
             );
           })}

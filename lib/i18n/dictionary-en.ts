@@ -994,6 +994,7 @@ export const en: Dict = {
   pasFotoHeic: "Your browser cannot read this type of photo (HEIC from an iPhone). Choose a JPEG photo, or set the iPhone camera to Most Compatible (Settings, Camera, Formats). You can also enter your measurements below.",
   pasFotoNietLeesbaar: "This photo could not be read. Try another photo (JPEG or PNG). You can also enter your measurements below.",
   pasFotoModel: "Measuring from a photo does not work in this browser or on this device. One possible cause (not certain) is the Edge setting Enhanced security: turn it off for this site and try again. You can also enter your measurements below.",
+  pasFotoCsp: "Your browser blocked the measuring model on this page. Reload the page (or open the fitting room from the shop) and choose your photo again. You can also enter your measurements below.",
   pasFotoTraag: "Loading the measuring model takes too long. That may be your connection; one possible cause (not certain) is the Edge setting Enhanced security for this site. Try again, or enter your measurements below.",
   pasFotoHandmatigTitel: "Enter measurements yourself",
     pasFotoGeschat: "An estimate from your photo. Adjust the measurements if you know them better.",
