@@ -92,7 +92,7 @@ async function herinneringActie(u: HerinneringUser, stage: number, handmatig = f
           await sendLocalizedPush([u.id], () => ({
             title: h.pushTitel,
             body: h.pushBody,
-            data: { type: "onboarding", url: h.items[0]?.href ?? "/dashboard/verificatie", tag: "onboarding-reminder" },
+            data: { type: "onboarding", url: h.knopHref ?? h.items[0]?.href ?? "/dashboard/verificatie", tag: "onboarding-reminder" },
             ttlSeconds: 24 * 60 * 60,
           })).catch(() => 0);
         }

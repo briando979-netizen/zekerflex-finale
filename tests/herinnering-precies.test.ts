@@ -41,7 +41,7 @@ describe("herinneringMist: per soort en toestand", () => {
 
   it("elk onderdeel wijst naar een bestaande plek; de overeenkomst naar het anker", () => {
     expect(MIST_HREF.contract).toBe("/dashboard/verificatie#uitzendovereenkomst");
-    expect(MIST_HREF.bsn).toBe("/dashboard/verificatie");
+    expect(MIST_HREF.bsn).toBe("/dashboard/verificatie#gegevens-mist-kop");
     for (const href of Object.values(MIST_HREF)) expect(href).toMatch(/^\/dashboard\//);
   });
 });

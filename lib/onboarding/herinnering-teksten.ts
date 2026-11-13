@@ -1,6 +1,9 @@
 import type { Locale } from "@/lib/i18n/config";
 import { gegevensMist, type GegevensStand } from "@/lib/onboarding/gegevens-mist";
 import { vulIn } from "@/lib/i18n/vul-in";
+import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
+import { POORT_STAPPEN } from "@/lib/onboarding/werker-poort";
+import { volgendeStapHref, type PoortSleutel, type VolgendeStap } from "@/lib/onboarding/volgende-stap";
 
 // ---------------------------------------------------------------------------
 // De herinnering aan een werker die zijn aanmelding niet afmaakte (12 nov 2026): noemt precies wat er mist, in de taal
@@ -32,17 +35,49 @@ export function herinneringMist(f: HerinneringFeitenWerker): MistStuk[] {
   return mist;
 }
 
-/** Waar de werker dit invult (pad vanaf de root). */
-export const MIST_HREF: Record<MistStuk, string> = {
-  soort: "/dashboard/fiscaal",
-  branches: "/dashboard/klussen",
-  bsn: "/dashboard/verificatie",
-  contract: "/dashboard/verificatie#uitzendovereenkomst",
-  btw: "/dashboard/verificatie",
-  postcode: "/dashboard/verificatie",
-  identiteit: "/dashboard/verificatie",
-  foto: "/dashboard/eerste-indruk?stap=foto",
+/** Bij welke stap van de poort (POORT_STAPPEN) een ontbrekend onderdeel hoort. */
+export const MIST_POORT: Record<MistStuk, PoortSleutel> = {
+  soort: "kind",
+  branches: "branches",
+  bsn: "gegevens",
+  contract: "gegevens",
+  btw: "gegevens",
+  postcode: "gegevens",
+  identiteit: "identiteit",
+  foto: "foto",
 };
+
+/**
+ * Waar een open poortstap heen gaat: dezelfde plek als het eindscherm van de ID-scan (volgendeStapHref), behalve de ID zelf: die is
+ * hier nog niet gescand en wordt op Verificatie gedaan (volgendeStapHref gaat uit van een ID die al is ingestuurd).
+ */
+export function herinneringHref(sleutel: PoortSleutel): string {
+  return sleutel === "identiteit" ? "/dashboard/verificatie" : volgendeStapHref(sleutel);
+}
+
+/** Waar de werker dit invult (pad vanaf de root): de plek van zijn poortstap; de overeenkomst heeft een eigen anker. */
+export const MIST_HREF: Record<MistStuk, string> = {
+  soort: herinneringHref("kind"),
+  branches: herinneringHref("branches"),
+  bsn: herinneringHref("gegevens"),
+  contract: "/dashboard/verificatie#uitzendovereenkomst",
+  btw: herinneringHref("gegevens"),
+  postcode: herinneringHref("gegevens"),
+  identiteit: herinneringHref("identiteit"),
+  foto: herinneringHref("foto"),
+};
+
+/**
+ * De eerste open stap van de poort ("Stap 3 van 5"), afgeleid van wat er mist. De lijst komt van de poort zelf in de volgorde
+ * van POORT_STAPPEN, dus dit is dezelfde stap als poortStapVan (lib/onboarding/werker-poort.ts); een test bewaakt dat.
+ */
+export function stapUitMist(mist: MistStuk[]): VolgendeStap | null {
+  const eerste = mist[0];
+  if (!eerste) return null;
+  const sleutel = MIST_POORT[eerste];
+  const i = POORT_STAPPEN.findIndex((s) => s.sleutel === sleutel);
+  return i < 0 ? null : { n: i + 1, totaal: POORT_STAPPEN.length, sleutel };
+}
 
 export interface HerinneringTeksten {
   onderwerp: string;
@@ -195,12 +230,20 @@ export interface WerkerHerinnering {
   /** voor de push: de lijst als één regel */
   pushTitel: string;
   pushBody: string;
+  /** "Stap 3 van 5: Je gegevens" in de taal van de werker, of null als er geen open stap is */
+  stapRegel: string | null;
+  /** waar de knop en de push heen gaan: de plek van de eerste open poortstap */
+  knopHref: string | null;
 }
 
 /** De herinnering in de taal van de werker, voor deze ontbrekende onderdelen; stap 3 of hoger = "laatste herinnering". */
 export function werkerHerinnering(mist: MistStuk[], t: HerinneringTeksten, voornaam: string, stap: number, taal?: Locale): WerkerHerinnering {
   const items = mist.map((m) => ({ tekst: t.stuk[m], href: MIST_HREF[m] }));
   const lijst = items.map((i) => i.tekst).join("; ");
+  const poort = stapUitMist(mist);
+  const start = FREELANCER_DICTS[taal ?? "nl"].start;
+  const naam: Record<PoortSleutel, string> = { kind: start.kindStep, branches: start.brancheStep, gegevens: start.gegevensStep, identiteit: start.identiteitStep, foto: start.fotoStep };
+  const stapRegel = poort ? `${vulIn(start.stapVan, { n: poort.n, totaal: poort.totaal })}: ${naam[poort.sleutel]}` : null;
   return {
     ...(taal ? { taal } : {}),
     onderwerp: stap >= 3 ? t.onderwerpLaatste : t.onderwerp,
@@ -212,6 +255,8 @@ export function werkerHerinnering(mist: MistStuk[], t: HerinneringTeksten, voorn
     hulp: t.hulp,
     preheader: vulIn(t.preheader, { lijst }),
     pushTitel: t.pushTitel,
-    pushBody: vulIn(t.pushBody, { lijst }),
+    pushBody: stapRegel ? `${stapRegel}. ${vulIn(t.pushBody, { lijst })}` : vulIn(t.pushBody, { lijst }),
+    stapRegel,
+    knopHref: poort ? herinneringHref(poort.sleutel) : null,
   };
 }
