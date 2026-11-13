@@ -3,7 +3,7 @@ import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { eisBetalenAan, zetBetalenUit } from "@/lib/billing/stripe-betalen";
 import { isBetalenUitFout } from "@/lib/billing/stripe-betalen-stand";
-import { actiefWebhookGeheimUitGeheugen, actieveStripeSleutelUitGeheugen } from "@/lib/billing/stripe-account";
+import { actiefWebhookGeheimUitGeheugen, actieveStripeSleutelUitGeheugen, laadActieveStripeSleutel, stripeKeuzeGeladen } from "@/lib/billing/stripe-account";
 
 let client: Stripe | null = null;
 let clientSleutel: string | null = null;
@@ -13,6 +13,12 @@ let clientSleutel: string | null = null;
  * (verzegeld, lib/billing/stripe-account.ts) gaat voor; zonder die keuze geldt STRIPE_SECRET_KEY uit .env.
  */
 export function getStripeClient(): Stripe {
+  // Vlak na een herstart, als instrumentation de keuze nog niet geladen heeft: niet stil het oude account (.env) nemen
+  // maar even weigeren en het laden starten. Alleen op de echte server; tests en scripts hebben geen keuze in Beheer.
+  if (!stripeKeuzeGeladen() && process.env.NEXT_RUNTIME === "nodejs" && process.env.NEXT_PHASE !== "phase-production-build") {
+    void laadActieveStripeSleutel(Date.now(), true).catch(() => undefined);
+    throw AppError.upstream("Stripe wordt nog geladen. Probeer het over een paar seconden opnieuw.");
+  }
   const sleutel = actieveStripeSleutelUitGeheugen() ?? env.STRIPE_SECRET_KEY;
   if (!sleutel) {
     throw AppError.upstream("Stripe is nog niet ingericht.");

@@ -123,11 +123,18 @@ describe("gebruiken en terug", () => {
     expect(actieveStripeSleutelUitGeheugen()).toBeNull();
   });
 
-  it("Connect-accounts van het vorige platform koppelen opnieuw; niets gewist", async () => {
-    expect(await markeerOudeConnectAccounts(["acct_oud1", "acct_oud2", "geen-id"])).toBe(2);
+  it("Connect-accounts van het vorige platform koppelen opnieuw; bij terug gelden ze weer; niets gewist", async () => {
+    // zoals de route: eerst markeren met het platform dat we verlaten (.env), dan wisselen
+    expect(await markeerOudeConnectAccounts(["acct_oud1", "acct_oud2", "geen-id"], "env")).toBe(2);
+    await gebruikStripeAccount(LIVE, "Eigenaar", "https://zekerflex.com/api/webhooks/stripe");
     expect(await isOudConnectAccount("acct_oud1")).toBe(true);
     expect(await isOudConnectAccount("acct_nieuw")).toBe(false);
     expect(await isOudConnectAccount(null)).toBe(false);
+    // een werker koppelde opnieuw bij Inc. (acct_inc1); dan terug naar .env: de oude gelden weer, het nieuwe niet
+    await markeerOudeConnectAccounts(["acct_oud1", "acct_inc1"], "acct_inc");
+    await terugNaarVorigStripeAccount();
+    expect(await isOudConnectAccount("acct_oud1")).toBe(false);
+    expect(await isOudConnectAccount("acct_inc1")).toBe(true);
   });
 });
 
@@ -139,6 +146,9 @@ describe("de rest van ZekerFlex gebruikt het gekozen account", () => {
     expect(bron("app/api/webhooks/stripe/route.ts")).toContain("await laadActieveStripeSleutel().catch(() => undefined);");
     expect(bron("lib/billing/stripe-betalen.ts")).toContain("await laadActieveStripeSleutel(nu).catch(() => undefined);");
     expect(bron("instrumentation.ts")).toContain("laadActieveStripeSleutel(Date.now(), true)");
+    // vlak na een herstart: niet stil het oude account, maar even weigeren en laden (alleen op de echte server)
+    expect(s).toContain('if (!stripeKeuzeGeladen() && process.env.NEXT_RUNTIME === "nodejs" && process.env.NEXT_PHASE !== "phase-production-build") {');
+    expect(bron("lib/billing/stripe-betalen.ts")).toContain("await laadActieveStripeSleutel(nu.getTime()).catch(() => undefined);");
   });
 
   it("de beheerroute is strikt PLATFORM_ADMIN, en de sleutel komt nooit in de audit", () => {
