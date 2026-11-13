@@ -22,6 +22,7 @@ import {
   type TekstClip,
 } from "@/lib/video/model";
 import { AUDIO_TALEN } from "@/lib/asr/bestand";
+import { tempoVan } from "@/lib/video/maat";
 
 interface Props {
   project: Project;
@@ -36,6 +37,10 @@ interface Props {
   onOndertitels: (clip: BeeldClip | AudioClip, taal: string) => Promise<void>;
   /** Stiltes langer dan `minStilte` seconden uit een video- of geluidsclip halen (op de woordtijden van de spraak). */
   onStiltes: (clip: BeeldClip | AudioClip, taal: string, minStilte: number) => Promise<void>;
+  /** Maatslagen zoeken in een muziekclip (Op de maat). */
+  onMaatslagen: (clip: AudioClip) => Promise<void>;
+  /** Het hoofdspoor op de maat van deze muziek knippen, om de `elke` slagen. */
+  onOpDeMaat: (clip: AudioClip, elke: number) => void;
   aiBeeld: boolean;
   /** De afspeelkop (seconden op de tijdlijn): daar komen sleutelbeelden. */
   tijd: number;
@@ -456,7 +461,69 @@ function TekstPaneel({ clip, onClip }: { clip: TekstClip; onClip: Props["onClip"
   );
 }
 
-function AudioPaneel({ clip, onClip, onOndertitels, onStiltes }: { clip: AudioClip; onClip: Props["onClip"]; onOndertitels: Props["onOndertitels"]; onStiltes: Props["onStiltes"] }) {
+/** Op de maat: maatslagen in de muziek zoeken (clips klikken eraan vast) en het hoofdspoor erop laten wisselen. */
+function MaatKnoppen({ clip, onMaatslagen, onOpDeMaat }: { clip: AudioClip; onMaatslagen: Props["onMaatslagen"]; onOpDeMaat: Props["onOpDeMaat"] }) {
+  const [bezig, setBezig] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
+  const [elke, setElke] = useState("1");
+  const aantal = clip.slagen?.length ?? 0;
+  const tempo = clip.slagen ? tempoVan(clip.slagen) : null;
+  return (
+    <>
+      <Kop>Op de maat</Kop>
+      <p className="text-[0.6875rem]" style={{ color: "var(--a-mute)" }}>
+        Zoek de maatslagen in de muziek: clips klikken er dan aan vast, en met één knop wisselt het hoofdspoor precies op de maat.
+      </p>
+      <button
+        type="button"
+        className="a-button w-full text-xs"
+        disabled={bezig}
+        data-track="video-maatslagen"
+        onClick={async () => {
+          setBezig(true);
+          setFout(null);
+          try {
+            await onMaatslagen(clip);
+          } catch (err) {
+            setFout((err as Error).message);
+          } finally {
+            setBezig(false);
+          }
+        }}
+      >
+        {bezig ? "Aan het luisteren…" : aantal ? "Maatslagen opnieuw zoeken" : "Maatslagen zoeken"}
+      </button>
+      {aantal > 0 && (
+        <>
+          <p className="text-[0.6875rem]" style={{ color: "var(--a-mute)" }}>
+            {aantal} maatslagen{tempo ? `, ongeveer ${tempo} per minuut` : ""}.
+          </p>
+          <div className="grid grid-cols-2 items-end gap-2">
+            <Veld label="Wisselen om de">
+              <select className="a-input text-xs" value={elke} onChange={(e) => setElke(e.target.value)}>
+                {["1", "2", "4"].map((s) => (
+                  <option key={s} value={s}>
+                    {s === "1" ? "slag" : `${s} slagen`}
+                  </option>
+                ))}
+              </select>
+            </Veld>
+            <button type="button" className="a-button a-button-primary text-xs" data-track="video-op-de-maat" onClick={() => onOpDeMaat(clip, Number(elke))}>
+              Beelden op de maat
+            </button>
+          </div>
+        </>
+      )}
+      {fout && (
+        <p role="alert" className="text-xs" style={{ color: "var(--a-crit)" }}>
+          {fout}
+        </p>
+      )}
+    </>
+  );
+}
+
+function AudioPaneel({ clip, onClip, onOndertitels, onStiltes, onMaatslagen, onOpDeMaat }: { clip: AudioClip; onClip: Props["onClip"]; onOndertitels: Props["onOndertitels"]; onStiltes: Props["onStiltes"]; onMaatslagen: Props["onMaatslagen"]; onOpDeMaat: Props["onOpDeMaat"] }) {
   const zet = (deel: Partial<AudioClip>, sleutel?: string) => onClip({ ...clip, ...deel }, sleutel);
   return (
     <div className="space-y-3">
@@ -474,12 +541,13 @@ function AudioPaneel({ clip, onClip, onOndertitels, onStiltes }: { clip: AudioCl
         opties={["0.5", "0.75", "1", "1.25", "1.5", "2"].map((s) => ({ id: s, label: `${s.replace(".", ",")}×` }))}
         onChange={(v) => onClip(zetSnelheid(clip, Number(v)) as AudioClip)}
       />
+      <MaatKnoppen clip={clip} onMaatslagen={onMaatslagen} onOpDeMaat={onOpDeMaat} />
       <SpraakKnoppen clip={clip} onOndertitels={onOndertitels} onStiltes={onStiltes} />
     </div>
   );
 }
 
-export function Eigenschappen({ project, clip, onClip, onProject, onAiBewerk, onAiBeweeg, onOndertitels, onStiltes, aiBeeld, tijd }: Props) {
+export function Eigenschappen({ project, clip, onClip, onProject, onAiBewerk, onAiBeweeg, onOndertitels, onStiltes, onMaatslagen, onOpDeMaat, aiBeeld, tijd }: Props) {
   if (!clip) {
     return (
       <div className="space-y-3">
@@ -513,6 +581,6 @@ export function Eigenschappen({ project, clip, onClip, onProject, onAiBewerk, on
     );
   }
   if (clip.soort === "tekst") return <TekstPaneel clip={clip} onClip={onClip} />;
-  if (clip.soort === "audio") return <AudioPaneel key={clip.id} clip={clip} onClip={onClip} onOndertitels={onOndertitels} onStiltes={onStiltes} />;
+  if (clip.soort === "audio") return <AudioPaneel key={clip.id} clip={clip} onClip={onClip} onOndertitels={onOndertitels} onStiltes={onStiltes} onMaatslagen={onMaatslagen} onOpDeMaat={onOpDeMaat} />;
   return <BeeldPaneel key={clip.id} clip={clip} onClip={onClip} onAiBewerk={onAiBewerk} onAiBeweeg={onAiBeweeg} onOndertitels={onOndertitels} onStiltes={onStiltes} aiBeeld={aiBeeld} tijd={tijd} />;
 }
