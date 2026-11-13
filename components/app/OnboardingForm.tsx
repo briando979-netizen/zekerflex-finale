@@ -50,6 +50,7 @@ export function OnboardingForm({
   idKlaar = false,
   kanSluiten = true,
   laatstePoging = null,
+  bsnBekend = false,
 }: {
   /** stap 1 ("Hey! Wie ben jij?"): wat er al bewaard is */
   persoon: PersoonStand;
@@ -61,6 +62,8 @@ export function OnboardingForm({
   kanSluiten?: boolean;
   /** de vorige ID-poging (uitslag en redenen), getoond in de ID-stap */
   laatstePoging?: ReactNode;
+  /** het BSN is al bekend: de uitzendnoot noemt het dan niet meer */
+  bsnBekend?: boolean;
   defaultName: string;
   requireKvk?: boolean;
   /** Stripe Identity staat aan en weigert niet: dan een klein linkje onder de twee keuzes (12 nov 2026). */
@@ -560,7 +563,7 @@ export function OnboardingForm({
 
             {!requireKvk && (
               <p className="rounded-lg border border-hair bg-paper-soft px-3 py-2.5 text-xs leading-relaxed text-neutralx-500">
-                {t.uitzendNote}
+                {bsnBekend ? t.uitzendNoteZonderBsn : t.uitzendNote}
               </p>
             )}
 

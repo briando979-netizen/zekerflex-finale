@@ -54,6 +54,25 @@ describe("de verificatiepagina: elk ding op zijn plek", () => {
   });
 });
 
+describe("alleen tonen wat open staat (13 nov, 86)", () => {
+  it("zijn persoon, woon en ID af, dan geen formulier meer (ook niet 'Waar woon je?')", () => {
+    const pagina = bron("app/dashboard/verificatie/page.tsx");
+    expect(pagina).toContain("const formulierNodig = !(persoon.klaar && woonKlaar && idKlaar);");
+    expect(pagina).toContain("{formulierNodig && (\n        <OnboardingForm");
+  });
+
+  it("de uitzendnoot noemt het BSN niet als het al bekend is, en nooit het rekeningnummer", () => {
+    const form = bron("components/app/OnboardingForm.tsx");
+    expect(form).toContain("{bsnBekend ? t.uitzendNoteZonderBsn : t.uitzendNote}");
+    expect(bron("app/dashboard/verificatie/page.tsx")).toContain("bsnBekend={Boolean(fiscal.bsnHash)}");
+    for (const [taal, d] of Object.entries(AUTH_DICTS)) {
+      expect(d.onb.uitzendNoteZonderBsn, taal).not.toMatch(/BSN/);
+      expect(d.onb.uitzendNoteZonderBsn, taal).not.toMatch(/rekeningnummer|bank account|numer konta|contul bancar|рахунок|IBAN/i);
+      if (taal !== "nl") expect(d.onb.uitzendNoteZonderBsn, taal).not.toBe(AUTH_DICTS.nl.onb.uitzendNoteZonderBsn);
+    }
+  });
+});
+
 describe("meetcodes op de nieuwe knoppen (alleen codes)", () => {
   it("auto/zelf, de wissel, chip, controle, BSN-voorstel en het btw-veld hebben een data-track-code", () => {
     const alles = ["components/app/WieBenJijIdKaarten.tsx", "components/app/IdScan.tsx", "components/app/GegevensMist.tsx"].map(bron).join("\n");

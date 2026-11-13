@@ -212,6 +212,9 @@ export default async function VerificatiePage() {
     Boolean(bewaard?.homePostalCode) &&
     (isUitzend || Boolean(bewaard?.kvkNumber && /^\d+$/.test(bewaard.kvkNumber)) || Boolean(bewaard?.vatNumber));
   const begin = beginStap({ persoonKlaar: persoon.klaar, woonKlaar, idKlaar });
+  // alleen tonen wat open staat (13 nov, 86): zijn persoon, woon en ID af (bijv. geverifieerd, alleen de overeenkomst
+  // nog), dan geen formulier "Waar woon je?" meer
+  const formulierNodig = !(persoon.klaar && woonKlaar && idKlaar);
   // wat er nog mist voor "gegevens", per onderdeel (BSN, overeenkomst, btw/KOR, postcode): bovenaan, met de plek om het te doen.
   // Dezelfde regel als de poort; staat de poort op "ingevuld", dan geen lijst.
   const mist =
@@ -301,46 +304,49 @@ export default async function VerificatiePage() {
         </section>
       )}
 
-      <OnboardingForm
-        defaultName={principal.fullName}
-        requireKvk={!isUitzend}
-        stripeIdentity={stripeId}
-        initial={initial}
-        persoon={persoon}
-        beginStap={begin}
-        idKlaar={idKlaar}
-        kanSluiten={poort?.klaar ?? true}
-        // de vorige ID-poging hoort bij de ID-stap (stap 4), niet bovenaan de pagina
-        laatstePoging={
-          lastCheck ? (
-            <div className="card p-4 text-sm">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-ink">{pt.attempt.last}</span>
-                <StatusPill
-                  tone={
-                    lastCheck.status === "VERIFIED" ? "ok" : lastCheck.status === "REJECTED" ? "crit" : "warn"
-                  }
-                >
-                  {attemptLabel(pt.attempt, lastCheck.decisionStatus, lastCheck.status)}
-                </StatusPill>
+      {formulierNodig && (
+        <OnboardingForm
+          defaultName={principal.fullName}
+          requireKvk={!isUitzend}
+          stripeIdentity={stripeId}
+          initial={initial}
+          persoon={persoon}
+          beginStap={begin}
+          idKlaar={idKlaar}
+          kanSluiten={poort?.klaar ?? true}
+          bsnBekend={Boolean(fiscal.bsnHash)}
+          // de vorige ID-poging hoort bij de ID-stap (stap 4), niet bovenaan de pagina
+          laatstePoging={
+            lastCheck ? (
+              <div className="card p-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-ink">{pt.attempt.last}</span>
+                  <StatusPill
+                    tone={
+                      lastCheck.status === "VERIFIED" ? "ok" : lastCheck.status === "REJECTED" ? "crit" : "warn"
+                    }
+                  >
+                    {attemptLabel(pt.attempt, lastCheck.decisionStatus, lastCheck.status)}
+                  </StatusPill>
+                </div>
+                {waitForStripe(lastCheck.decisionStatus) && <StripeIdentityWacht text={pt.attempt.checking} />}
+                {stripeReason && (
+                  <p className="mt-2 text-neutralx-600">
+                    Stripe kon je ID niet goedkeuren ({stripeReason}). Probeer het opnieuw met goed licht, of kies de eigen ID-scan hieronder.
+                  </p>
+                )}
+                {reasons.length > 0 && (
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-neutralx-600">
+                    {reasons.map((r, i) => (
+                      <li key={i}>{r}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
-              {waitForStripe(lastCheck.decisionStatus) && <StripeIdentityWacht text={pt.attempt.checking} />}
-              {stripeReason && (
-                <p className="mt-2 text-neutralx-600">
-                  Stripe kon je ID niet goedkeuren ({stripeReason}). Probeer het opnieuw met goed licht, of kies de eigen ID-scan hieronder.
-                </p>
-              )}
-              {reasons.length > 0 && (
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-neutralx-600">
-                  {reasons.map((r, i) => (
-                    <li key={i}>{r}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ) : null
-        }
-      />
+            ) : null
+          }
+        />
+      )}
 
       {walletAan && (
         <div className="mt-4">
