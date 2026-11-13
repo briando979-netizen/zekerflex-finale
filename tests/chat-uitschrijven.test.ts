@@ -28,6 +28,7 @@ vi.mock("@/lib/messaging/media", () => ({
 import { transcribeAudio } from "@/lib/asr/transcribe";
 import { getMessages, postMessage, setTranscript, type ChatThread } from "@/lib/messaging/store";
 import { POST } from "@/app/api/inbox/[threadId]/transcript/route";
+import { uitschrijfTijd } from "@/lib/messaging/uitschrijf-tijd";
 
 const whisper = vi.fn(async (_url: string, _init: RequestInit) => new Response(JSON.stringify({ text: " Ik ben er om negen uur. " }), { status: 200 }));
 const vraag = (messageId: string) =>
@@ -77,6 +78,18 @@ describe("POST /api/inbox/:id/transcript", () => {
     expect((await vraag("bestaat-niet")).status).toBe(404);
     expect(await setTranscript("t1", tekst.id, "mag niet")).toBeNull();
     expect(whisper).not.toHaveBeenCalled();
+  });
+});
+
+describe("hoe lang Whisper mag", () => {
+  it("45 s plus 3 s per seconde audio, hooguit 240 s; onbekend telt als een minuut", () => {
+    // 13 nov gemeten: 1 s audio kostte 15 s
+    expect(uitschrijfTijd(1)).toBe(48_000);
+    expect(uitschrijfTijd(30)).toBe(135_000);
+    expect(uitschrijfTijd(600)).toBe(240_000);
+    expect(uitschrijfTijd(undefined)).toBe(225_000);
+    expect(uitschrijfTijd(Number.NaN)).toBe(225_000);
+    expect(uitschrijfTijd(240_000 / 1000)).toBeLessThan(5 * 60_000); // onder de requestTimeout van Node
   });
 });
 
