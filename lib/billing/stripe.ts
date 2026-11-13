@@ -3,16 +3,23 @@ import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { eisBetalenAan, zetBetalenUit } from "@/lib/billing/stripe-betalen";
 import { isBetalenUitFout } from "@/lib/billing/stripe-betalen-stand";
+import { actiefWebhookGeheimUitGeheugen, actieveStripeSleutelUitGeheugen } from "@/lib/billing/stripe-account";
 
 let client: Stripe | null = null;
+let clientSleutel: string | null = null;
 
-/** Lazily constructed so a missing key fails at call time, not at import time. */
+/**
+ * Lazily constructed so a missing key fails at call time, not at import time. De sleutel uit Beheer → Stripe-account
+ * (verzegeld, lib/billing/stripe-account.ts) gaat voor; zonder die keuze geldt STRIPE_SECRET_KEY uit .env.
+ */
 export function getStripeClient(): Stripe {
-  if (!env.STRIPE_SECRET_KEY) {
+  const sleutel = actieveStripeSleutelUitGeheugen() ?? env.STRIPE_SECRET_KEY;
+  if (!sleutel) {
     throw AppError.upstream("Stripe is nog niet ingericht.");
   }
-  if (!client) {
-    client = new Stripe(env.STRIPE_SECRET_KEY);
+  if (!client || clientSleutel !== sleutel) {
+    client = new Stripe(sleutel);
+    clientSleutel = sleutel;
   }
   return client;
 }
@@ -512,9 +519,20 @@ export async function createBankTopupSession(input: {
 
 /** Verifies the Stripe signature and returns the parsed event. Throws on a bad signature. */
 export function constructWebhookEvent(rawBody: string, signature: string): Stripe.Event {
-  if (!env.STRIPE_WEBHOOK_SECRET) {
+  // eerst het geheim van het account uit Beheer, dan dat uit .env: zolang er nog gebeurtenissen van het vorige account
+  // komen, klopt de handtekening met het oude geheim
+  const geheimen = [...new Set([actiefWebhookGeheimUitGeheugen(), env.STRIPE_WEBHOOK_SECRET].filter((g): g is string => Boolean(g)))];
+  if (geheimen.length === 0) {
     throw AppError.upstream("Het Stripe-webhook-secret is niet ingesteld.");
   }
   const stripe = getStripeClient();
-  return stripe.webhooks.constructEvent(rawBody, signature, env.STRIPE_WEBHOOK_SECRET);
+  let laatste: unknown = null;
+  for (const geheim of geheimen) {
+    try {
+      return stripe.webhooks.constructEvent(rawBody, signature, geheim);
+    } catch (err) {
+      laatste = err;
+    }
+  }
+  throw laatste;
 }

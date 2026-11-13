@@ -14,6 +14,7 @@ import { logger } from "@/lib/logger";
 import { alertOwnerLater } from "@/lib/ops/alert";
 import { AppError } from "@/lib/errors";
 import { leesStand, nieuweStand, slaatOmNaarUit, type AccountStand } from "@/lib/billing/stripe-betalen-stand";
+import { laadActieveStripeSleutel } from "@/lib/billing/stripe-account";
 
 export const BETALEN_UIT_KEY = "stripe:betalen-uit";
 export const ACCOUNT_STAND_KEY = "stripe:account-stand";
@@ -78,5 +79,7 @@ export async function meetStripeAccount(nu: Date = new Date()): Promise<AccountS
  * BETALEN_UIT en rustige tekst, in plaats van een vage 500 uit Stripe. Een storing in de KV laat de betaling door.
  */
 export async function eisBetalenAan(nu: number = Date.now()): Promise<void> {
+  // het account uit Beheer → Stripe-account (hooguit eens per minuut uit de KV); een storing laat .env gelden
+  await laadActieveStripeSleutel(nu).catch(() => undefined);
   if (await betalenUit(nu).catch(() => null)) throw AppError.betalenUit();
 }

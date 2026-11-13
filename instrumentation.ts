@@ -17,6 +17,13 @@ export async function register(): Promise<void> {
       // the site must start even if the journal can't
       console.error(JSON.stringify({ level: "error", message: "error journal not started", error: String(err) }));
     }
+    try {
+      // het Stripe-account uit Beheer → Stripe-account (verzegeld in de KV); zonder: de sleutel uit .env
+      const { laadActieveStripeSleutel } = await import("@/lib/billing/stripe-account");
+      await laadActieveStripeSleutel(Date.now(), true);
+    } catch (err) {
+      console.error(JSON.stringify({ level: "warn", message: "stripe-account niet geladen, .env geldt", error: String(err) }));
+    }
   }
 }
 
