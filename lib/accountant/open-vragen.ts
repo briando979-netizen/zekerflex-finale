@@ -6,14 +6,13 @@
 // Een vraag beantwoord? Haal hem hier weg en leg het antwoord vast waar het hoort (structuurcheck, kennisbank, code).
 // ---------------------------------------------------------------------------
 
-export type VraagOnderwerp = "vs" | "loon" | "btw" | "werkgever" | "facturen";
+export type VraagOnderwerp = "vs" | "loon" | "btw" | "werkgever";
 
 export const ONDERWERP_NAAM: Record<VraagOnderwerp, string> = {
   vs: "Verenigde Staten",
   loon: "Loon en loonheffingen",
   btw: "Btw",
   werkgever: "Werkgeverschap",
-  facturen: "Facturen",
 };
 
 export interface AccountantVraag {
@@ -71,13 +70,6 @@ export const ACCOUNTANT_VRAGEN: readonly AccountantVraag[] = [
     stand: "De controle op het recht om te werken (vlag werkrecht-eis in Beheer) staat sinds 10 november 2026 uit: er wordt niets gevraagd of geblokkeerd.",
     sinds: "2026-11-13",
     structuurId: "wtta",
-  },
-  {
-    id: "facturen-bv-afzender",
-    onderwerp: "facturen",
-    vraag: "Er zijn facturen uitgegaan met \"ZekerFlex B.V.\" als afzender, een vennootschap die niet bestaat. Moeten die worden hersteld, of volstaat een toelichting?",
-    stand: "Het gaat om 11 facturen, samen € 1.176,13; ze zijn geannuleerd.",
-    sinds: "2026-11-13",
   },
 ];
 
