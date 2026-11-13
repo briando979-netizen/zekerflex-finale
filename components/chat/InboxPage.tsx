@@ -1653,6 +1653,10 @@ function InboxPageInner({
           communityId={manageCommunity}
           onClose={() => setManageCommunity(null)}
           onChanged={() => { void loadCommunities(); void loadThreads(); if (active) void loadThread(active); }}
+          onLeft={() => {
+            setActive(null);
+            setPane("list");
+          }}
         />
       )}
       {showBrain && (

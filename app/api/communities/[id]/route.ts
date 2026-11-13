@@ -10,6 +10,7 @@ import {
   renameCommunity,
 } from "@/lib/communities/store";
 import { userDirectory } from "@/lib/messaging/contacts";
+import { postMessage } from "@/lib/messaging/store";
 import { getUserAvatars } from "@/lib/profile/store";
 
 export const runtime = "nodejs";
@@ -36,6 +37,7 @@ export async function GET(_req: Request, props: { params: Promise<{ id: string }
         members: c.members,
         invites: canManage(c, p.userId) ? c.invites : [],
         myRole: memberRole(c, p.userId),
+        myUserId: p.userId,
       },
       directory,
       avatars,
@@ -61,11 +63,19 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
     const input = patchSchema.parse(await request.json().catch(() => {
       throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
     }));
+    const oudeNaam = c.name;
+    const oudeOmschrijving = c.description;
     const updated = await renameCommunity(
       c,
       input.name ?? c.name,
       input.description,
     );
+    // zoals WhatsApp: een regel in het groepsgesprek
+    const regels = [
+      ...(updated.name !== oudeNaam ? [`${p.fullName} heeft de groepsnaam gewijzigd in “${updated.name}”.`] : []),
+      ...(updated.description !== oudeOmschrijving ? [`${p.fullName} heeft de groepsbeschrijving gewijzigd.`] : []),
+    ];
+    if (c.threadId) for (const r of regels) await postMessage(c.threadId, "system", r, "system").catch(() => undefined);
     return NextResponse.json({ community: { id: updated.id, name: updated.name, description: updated.description } });
   } catch (err) {
     const { status, body } = toErrorBody(err);

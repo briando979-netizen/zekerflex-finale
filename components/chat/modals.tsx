@@ -7,6 +7,7 @@ import type { ChatUser } from "./shared";
 import { PushToggle } from "@/components/app/PushToggle";
 import { useChatTeksten } from "./ChatTekstenContext";
 import { vulIn } from "@/lib/i18n/vul-in";
+import { opvolgerVan } from "./groep-opvolger";
 
 export function Shell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   const chat = useChatTeksten();
@@ -157,9 +158,10 @@ interface CommunityDetail {
     name: string;
     description: string;
     ownerId: string;
-    members: { userId: string; role: string }[];
+    members: { userId: string; role: string; joinedAt?: string }[];
     invites: { token: string; toUserId?: string; toEmail?: string; acceptedAt?: string }[];
     myRole: string | null;
+    myUserId?: string;
   };
   directory: Record<string, ChatUser>;
   avatars: Record<string, string>;
@@ -169,14 +171,20 @@ export function CommunityManageModal({
   communityId,
   onClose,
   onChanged,
+  onLeft,
 }: {
   communityId: string;
   onClose: () => void;
   onChanged: () => void;
+  /** je hebt de groep verlaten: het venster en het gesprek sluiten */
+  onLeft?: () => void;
 }) {
   const chat = useChatTeksten();
+  const t = chat.modals;
   const [d, setD] = useState<CommunityDetail | null>(null);
   const [pick, setPick] = useState(false);
+  const [bewerk, setBewerk] = useState<{ naam: string; omschrijving: string } | null>(null);
+  const [fout, setFout] = useState<string | null>(null);
 
   const load = () =>
     fetch(`/api/communities/${communityId}`, { cache: "no-store" })
@@ -190,62 +198,147 @@ export function CommunityManageModal({
 
   const c = d?.community;
   const canManage = c?.myRole === "owner" || c?.myRole === "admin";
+  const naamVan = (id: string) => d?.directory[id]?.name ?? t.onbekend;
+  const rol = (r: string) => (r === "owner" ? t.eigenaar : r === "admin" ? t.beheerder : t.lid);
+
+  // elke wijziging: de serverversie opnieuw ophalen (AGENTS.md), en een fout in gewone taal
+  const doe = async (pad: string, init: RequestInit) => {
+    setFout(null);
+    const r = await fetch(pad, init).catch(() => null);
+    if (!r?.ok) {
+      const body = (await r?.json().catch(() => null)) as { error?: { message?: string } } | null;
+      setFout(body?.error?.message ?? t.datLukteNiet);
+      return false;
+    }
+    await load();
+    onChanged();
+    return true;
+  };
 
   const invite = async (userId: string) => {
     setPick(false);
-    await fetch(`/api/communities/${communityId}/invite`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId }),
-    });
-    await load();
-    onChanged();
+    await doe(`/api/communities/${communityId}/invite`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId }) });
   };
-  const remove = async (userId: string) => {
-    await fetch(`/api/communities/${communityId}/members?userId=${userId}`, { method: "DELETE" });
-    await load();
+  const remove = (userId: string) => doe(`/api/communities/${communityId}/members?userId=${encodeURIComponent(userId)}`, { method: "DELETE" });
+  const zetRol = (userId: string, role: "admin" | "member") =>
+    doe(`/api/communities/${communityId}/members`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId, role }) });
+  const bewaar = async () => {
+    if (!bewerk) return;
+    const ok = await doe(`/api/communities/${communityId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: bewerk.naam.trim(), description: bewerk.omschrijving }),
+    });
+    if (ok) setBewerk(null);
+  };
+  const verlaat = async () => {
+    if (!c) return;
+    const opvolger = c.myRole === "owner" ? opvolgerVan(c.members, c.ownerId) : null;
+    const vraag = opvolger ? vulIn(t.verlatenEigenaarConfirm, { naam: naamVan(opvolger) }) : t.verlatenConfirm;
+    if (!window.confirm(vraag)) return;
+    setFout(null);
+    const r = await fetch(`/api/communities/${communityId}/members`, { method: "DELETE" }).catch(() => null);
+    if (!r?.ok) {
+      const body = (await r?.json().catch(() => null)) as { error?: { message?: string } } | null;
+      setFout(body?.error?.message ?? t.datLukteNiet);
+      return;
+    }
     onChanged();
+    onLeft?.();
+    onClose();
   };
 
   if (pick) {
-    return <PeoplePicker title={chat.modals.uitnodigen} cta={chat.modals.nodigUit} onClose={() => setPick(false)} onPick={invite} />;
+    return <PeoplePicker title={t.uitnodigen} cta={t.nodigUit} onClose={() => setPick(false)} onPick={invite} />;
   }
 
+  const alleenIk = Boolean(c && c.members.length <= 1);
   return (
-    <Shell title={c?.name ?? chat.modals.community} onClose={onClose}>
+    <Shell title={c?.name ?? t.community} onClose={onClose}>
       {c && (
         <>
-          {c.description && <p className="mb-3 text-sm text-neutralx-600">{c.description}</p>}
+          {bewerk ? (
+            <div className="mb-4 space-y-2">
+              <label className="block">
+                <span className="field-label">{t.groepsnaam}</span>
+                <input value={bewerk.naam} maxLength={80} onChange={(e) => setBewerk({ ...bewerk, naam: e.target.value })} className="field-input mt-1 w-full" />
+              </label>
+              <label className="block">
+                <span className="field-label">{t.omschrijving}</span>
+                <textarea value={bewerk.omschrijving} maxLength={400} rows={3} onChange={(e) => setBewerk({ ...bewerk, omschrijving: e.target.value })} className="field-input mt-1 w-full" />
+              </label>
+              <div className="flex gap-2">
+                <button type="button" disabled={bewerk.naam.trim().length < 2} onClick={() => void bewaar()} className="btn-primary flex-1 text-sm disabled:opacity-50">
+                  {t.opslaan}
+                </button>
+                <button type="button" onClick={() => setBewerk(null)} className="rounded-lg px-3 text-sm text-neutralx-500 hover:bg-paper-soft">
+                  {t.annuleren}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {c.description && <p className="mb-3 text-sm text-neutralx-600">{c.description}</p>}
+              {canManage && (
+                <button type="button" onClick={() => setBewerk({ naam: c.name, omschrijving: c.description ?? "" })} className="mb-2 text-xs font-semibold text-brand-600 hover:underline">
+                  {t.naamWijzigen}
+                </button>
+              )}
+            </>
+          )}
           {canManage && (
             <button type="button" onClick={() => setPick(true)} className="btn-primary mb-4 w-full text-sm">
-              {chat.modals.ledenUitnodigen}
+              {t.ledenUitnodigen}
             </button>
           )}
-          <p className="field-label">{vulIn(chat.modals.leden, { aantal: c.members.length })}</p>
+          {fout && (
+            <p role="alert" className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-crit">
+              {fout}
+            </p>
+          )}
+          <p className="field-label">{vulIn(t.leden, { aantal: c.members.length })}</p>
           <ul className="mt-1 space-y-1">
             {c.members.map((m) => (
               <li key={m.userId} className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-paper-soft">
                 <Avatar userId={m.userId} name={d.directory[m.userId]?.name ?? "…"} role={d.directory[m.userId]?.role ?? "employer"} avatars={d.avatars} size={32} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm text-ink">{d.directory[m.userId]?.name ?? chat.modals.onbekend}</span>
-                  <span className="block text-xs text-neutralx-400">{m.role === "owner" ? chat.modals.eigenaar : m.role}</span>
+                  <span className="block truncate text-sm text-ink">{naamVan(m.userId)}</span>
+                  <span className="block text-xs text-neutralx-400">{rol(m.role)}</span>
                 </span>
-                {canManage && m.userId !== c.ownerId && (
-                  <button type="button" onClick={() => remove(m.userId)} className="text-xs text-neutralx-400 hover:text-crit">{chat.modals.verwijder}</button>
+                {canManage && m.userId !== c.ownerId && m.userId !== c.myUserId && (
+                  <span className="flex flex-shrink-0 items-center gap-2">
+                    <button type="button" onClick={() => void zetRol(m.userId, m.role === "admin" ? "member" : "admin")} className="text-xs text-brand-600 hover:underline">
+                      {m.role === "admin" ? t.geenBeheerder : t.maakBeheerder}
+                    </button>
+                    <button type="button" onClick={() => void remove(m.userId)} className="text-xs text-neutralx-400 hover:text-crit">
+                      {t.verwijder}
+                    </button>
+                  </span>
                 )}
               </li>
             ))}
           </ul>
           {canManage && c.invites.filter((i) => !i.acceptedAt).length > 0 && (
             <>
-              <p className="field-label mt-4">{chat.modals.openstaandeUitnodigingen}</p>
+              <p className="field-label mt-4">{t.openstaandeUitnodigingen}</p>
               <ul className="mt-1 space-y-1 text-sm text-neutralx-500">
                 {c.invites.filter((i) => !i.acceptedAt).map((i) => (
-                  <li key={i.token}>{i.toEmail ?? d.directory[i.toUserId ?? ""]?.name ?? chat.modals.uitnodiging}</li>
+                  <li key={i.token}>{i.toEmail ?? d.directory[i.toUserId ?? ""]?.name ?? t.uitnodiging}</li>
                 ))}
               </ul>
             </>
           )}
+          <div className="mt-5 border-t border-hair pt-3">
+            <button
+              type="button"
+              disabled={alleenIk}
+              onClick={() => void verlaat()}
+              className="w-full rounded-lg px-3 py-2 text-sm font-semibold text-crit hover:bg-paper-soft disabled:opacity-50"
+            >
+              {t.groepVerlaten}
+            </button>
+            {alleenIk && <p className="mt-1 text-center text-xs text-neutralx-500">{t.verlatenAlleen}</p>}
+          </div>
         </>
       )}
     </Shell>

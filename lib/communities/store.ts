@@ -146,6 +146,36 @@ export async function removeMember(c: Community, userId: string): Promise<void> 
   await syncThread(c);
 }
 
+/**
+ * Zelf de groep verlaten (zoals WhatsApp). Ook de eigenaar mag weg: dan wordt de beheerder die het langst lid is
+ * eigenaar, anders het lid dat het langst lid is. Alleen het laatste lid kan niet weg. Geeft de nieuwe eigenaar terug.
+ */
+export async function leaveCommunity(c: Community, userId: string): Promise<{ newOwnerId: string | null }> {
+  if (!isMember(c, userId)) return { newOwnerId: null };
+  let newOwnerId: string | null = null;
+  if (userId === c.ownerId) {
+    const rest = c.members.filter((m) => m.userId !== userId).sort((a, b) => a.joinedAt.localeCompare(b.joinedAt));
+    const opvolger = rest.find((m) => m.role === "admin") ?? rest[0];
+    if (!opvolger) throw new Error("Je bent het enige lid van deze groep.");
+    opvolger.role = "owner";
+    c.ownerId = opvolger.userId;
+    newOwnerId = opvolger.userId;
+  }
+  c.members = c.members.filter((m) => m.userId !== userId);
+  await write(c);
+  await syncThread(c);
+  return { newOwnerId };
+}
+
+/** Iemand beheerder maken of dat intrekken. De eigenaar blijft eigenaar. */
+export async function setMemberRole(c: Community, userId: string, role: "admin" | "member"): Promise<void> {
+  const m = c.members.find((x) => x.userId === userId);
+  if (!m) throw new Error("Deze persoon is geen lid van de groep.");
+  if (m.role === "owner") throw new Error("De rol van de eigenaar verandert niet.");
+  m.role = role;
+  await write(c);
+}
+
 export async function renameCommunity(c: Community, name: string, description?: string): Promise<Community> {
   c.name = name.trim().slice(0, 80) || c.name;
   if (description !== undefined) c.description = description.trim().slice(0, 400);
