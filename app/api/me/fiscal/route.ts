@@ -63,7 +63,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
     // Eerst de huidige stand. Een sleutel die niet is meegestuurd, blijft zoals hij was (13 nov 2026): GegevensMist stuurt
     // alleen de btw-, KOR- en KVK-velden, en een oudere stand in de browser mag een nieuwere keuze (zoals de
     // loonheffingskorting) nooit stil terugzetten. FiscalForm stuurt alles expliciet mee. Ook nodig voor de BSN-check en
-    // het IBAN-wijzigsignaal verderop.
+    // het IBAN-wijzigsignaal verderop, en voor de btw: is VIES even weg, dan blijft een eerder geldig nummer geldig.
     const before = await getFiscal(principal.userId);
     const vatRequested = input.vatRequested ?? before.vatRequested;
     const korApplies = input.korApplies ?? before.korApplies;
@@ -82,10 +82,6 @@ export async function PUT(request: Request): Promise<NextResponse> {
           })()
         : {}),
     };
-
-    // Load the current profile first — needed for the VAT check (keep a valid number valid while VIES is down), the
-    // BSN-reuse check and the IBAN-changed flag further down.
-    const before = await getFiscal(principal.userId);
 
     // Btw-nummer: VIES, de officiële en gratis dienst van de EU, voor elk EU-land (zelfde als de onboarding,
     // lib/onboarding/verify.ts). Tot 13 nov ging dit via KVKBase, en viel die weg (limiet, storing), dan werd het nummer

@@ -13,7 +13,8 @@ vi.mock("@/lib/storage/kv", () => ({
 }));
 vi.mock("@/lib/auth", () => ({ requirePrincipal: async () => h.principal, requireRole: vi.fn() }));
 vi.mock("@/lib/logger", () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } }));
-vi.mock("@/lib/integrations/kvkbase", () => ({ validateVat: vi.fn(async () => ({ valid: true, status: "validated" })) }));
+// de btw gaat via VIES (lib/integrations/vies, 13 nov): hier altijd geldig, met het opgeschoonde nummer terug
+vi.mock("@/lib/integrations/vies", () => ({ checkVies: vi.fn(async (n: string) => ({ status: "valid", vatNumber: n })) }));
 vi.mock("@/lib/compliance/documents", () => ({ flagIbanChanged: vi.fn() }));
 vi.mock("@/lib/fiscal/iban-bevestiging", () => ({ bevestigIbanWijziging: vi.fn() }));
 
