@@ -34,8 +34,13 @@
 (toegangslog) {
 	log {
 		output file /var/log/caddy/toegang.log {
+			# 13 nov gemeten: ±120 MB per dag, dus elke ±10 uur een nieuw bestand, en een gerold bestand
+			# is gezipt ±3 MB (Caddy zipt standaard; CrowdSec leest alleen het actuele *.log). Met
+			# roll_keep 3 bleef er maar ±1,7 dag over. 40 bestanden dekken ruim 14 dagen (±120 MB);
+			# de termijn zelf is roll_keep_for, gelijk aan de privacyverklaring en /beveiliging
+			# (tests/caddy-log-bewaren.test.ts bewaakt dat).
 			roll_size 50mb
-			roll_keep 3
+			roll_keep 40
 			roll_keep_for 168h
 		}
 		format filter {
