@@ -130,6 +130,18 @@ describe.skipIf(!kan)("het vaste ophaalcommando op de server", () => {
   });
 });
 
+describe("BACKUP_KEEP_ENC: de .enc-kopieën met een eigen termijn (13 nov)", () => {
+  const script = readFileSync("deploy/backup/entrypoint.sh", "utf8");
+  it("elke soort .enc wordt met KEEP_ENC opgeruimd, de originelen met KEEP; standaard gelijk aan BACKUP_KEEP", () => {
+    for (const [map, patroon] of [["db", "*.dump"], ["storage", "*.tar.gz"], ["forgejo", "*.tar.gz"]] as const) {
+      expect(script).toContain(`prune "$DIR/${map}" "${patroon}.enc" "$KEEP_ENC"`);
+      expect(script).toMatch(new RegExp(`prune "\\$DIR/${map}" "\\${patroon}"\\n`));
+    }
+    expect(script).toContain('KEEP_ENC="${BACKUP_KEEP_ENC:-$KEEP}"');
+    expect(readFileSync("docker-compose.vps.yml", "utf8")).toMatch(/BACKUP_KEEP_ENC: \$\{BACKUP_KEEP_ENC:-14\}/);
+  });
+});
+
 describe.skipIf(!kan)("het ophaalscript op de pc (met een nep-ssh)", () => {
   let pc = "";
   let nep = "";

@@ -83,8 +83,8 @@ openssl enc -d -aes-256-cbc -md sha256 -pbkdf2 -iter 210000 -in zekerflex-<set>.
 
 ## Goed om te weten
 
-- **Ruimte op de server.** Met `BACKUP_PASSPHRASE` staan de `.enc`-kopieën naast de originelen en worden ze net zo lang bewaard (`BACKUP_KEEP`, 14). De back-upmap wordt dan ±2× zo groot. Omdat de pc er 7 bewaart, is het voorstel om voor `.enc` een kortere termijn te nemen (bijv. 3). Dat is een wijziging in `entrypoint.sh` en dus voor 86.
-- **Ruimte op de pc.** Een set is nu ±340 MB, dus 7 sets ±2,4 GB, en dat groeit mee met de database. Het script stopt met een FOUT-regel als er te weinig ruimte is.
+- **Ruimte op de server.** Met `BACKUP_PASSPHRASE` staan de `.enc`-kopieën naast de originelen. Hoeveel nachten ze blijven staan, regelt `BACKUP_KEEP_ENC` (standaard 14, net als `BACKUP_KEEP`). Omdat de pc er 7 bewaart, is het voorstel om `BACKUP_KEEP_ENC=3` in `.env.production` te zetten. Dan groeit de map niet tot het dubbele.
+- **Ruimte op de pc.** Een volledige set was op 13 nov 356,7 MB (dump 112,5 MB + uploads 135,5 MB + Forgejo 108,8 MB; een `.enc` is even groot). 7 sets zijn dus ±2,5 GB, en dat groeit mee met de database. Op C: was 19,3 GB vrij. Het script stopt met een FOUT-regel als er te weinig ruimte is.
 - **Intrekken.** Haal de regel met `zekerflex-pc-ophalen` uit `~/.ssh/authorized_keys` op de server. Gaat de pc verloren, dan heeft de vinder alleen versleutelde bestanden, en met de sleutel kan hij alleen versleutelde bestanden ophalen.
 - **Wijzigt `ophalen.sh` in de repo?** Installeer hem dan opnieuw (stap 2). Tot dan draait de oude versie. Dat is bewust.
 - **Tests.** `tests/backup-ophalen.test.ts` draait het vaste commando en het pc-script echt, met een nep-ssh:

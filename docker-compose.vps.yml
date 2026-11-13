@@ -152,6 +152,8 @@ services:
       PGDATABASE: zekerflex
       PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}
       BACKUP_KEEP: ${BACKUP_KEEP:-14}
+      # zoveel nachten blijven de versleutelde kopieën (.enc) staan; de pc bewaart er zelf 7 (deploy/backup/OPHALEN.md)
+      BACKUP_KEEP_ENC: ${BACKUP_KEEP_ENC:-14}
       BACKUP_AT: ${BACKUP_AT:-02:30}
       # eigenaar van de back-upbestanden op de host (de deploy-gebruiker), zodat
       # ze zonder sudo naar een andere computer gekopieerd kunnen worden
