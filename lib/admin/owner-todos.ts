@@ -892,6 +892,21 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("netwerk-5g"),
     },
     {
+      id: "webshop-leverancier",
+      group: "Bellen & koppelingen",
+      title: "Een leverancier kiezen die de webshop automatisch van producten kan voorzien (AliExpress of een dropshipper)",
+      why: "Je wilt producten van bijvoorbeeld AliExpress met foto en omschrijving in je webshop zetten. Een link plakken werkt daar niet: AliExpress, Temu en Amazon geven een programma een lege pagina (gemeten 13 november). Het kan wel via de officiële koppeling van een leverancier, en daarvoor is een account op jouw naam nodig. Tot die tijd werkt Winkel-AI met een link van een gewone leverancier of met geplakte tekst.",
+      how: [
+        "Kies één leverancier om mee te beginnen: AliExpress (koppeling voor webwinkels, aanmelden als ontwikkelaar op hun Open Platform) of een dropshipper met een magazijn in Europa, zoals CJdropshipping (sneller leveren, minder gedoe met invoer).",
+        "Maak daar een account aan en vraag de sleutel voor de koppeling aan (bij CJdropshipping: My CJ, Authorization, API). Kijk of het gratis is voordat je iets afsluit.",
+        "Geef de sleutel aan Claude; die sluit hem aan op Winkel-AI, zodat een product met foto, omschrijving en inkoopprijs als uitgezet concept in je webshop komt.",
+        "Let op: wie producten van buiten Europa hier verkoopt is zelf verantwoordelijk voor veiligheid en keurmerken (zeker bij speelgoed), en foto's zijn van de leverancier.",
+        "Vink af als de sleutel bij Claude ligt.",
+      ],
+      auto: false,
+      ...m("webshop-leverancier"),
+    },
+    {
       id: "locatie-prijzen",
       group: "Bellen & koppelingen",
       title: "Prijzen bepalen voor de Op locatie-modules (portofoon, toegang op kenteken, sleutelkluis, badges printen)",
