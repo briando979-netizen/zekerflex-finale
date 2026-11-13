@@ -1,5 +1,6 @@
 "use client";
 
+import { PaskamerLink } from "@/components/marketing/PaskamerLink";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
@@ -272,10 +273,10 @@ function ShopOmlijsting({ children }: { children: ReactNode }) {
               {n.label}
             </Link>
           ))}
-          <Link href="/shop/paskamer" className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[14px] font-semibold text-ink transition hover:bg-paper-soft">
+          <PaskamerLink href="/shop/paskamer" className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[14px] font-semibold text-ink transition hover:bg-paper-soft">
             {t.paskamer.navLabel}
             <span className="rounded-full bg-brand-mint px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-ink">{t.paskamer.nieuw}</span>
-          </Link>
+          </PaskamerLink>
           <Link href={modus === "zakelijk" ? "/shop" : "/shop/zakelijk"} className="ml-auto hidden h-9 shrink-0 items-center rounded-lg px-3 text-[14px] font-semibold text-brand-600 hover:bg-brand-50 lg:inline-flex">
             {modus === "zakelijk" ? t.shopZakelijk.naarParticulier : t.shopZakelijk.naarZakelijk} →
           </Link>
@@ -376,13 +377,13 @@ function ShopOmlijsting({ children }: { children: ReactNode }) {
                   {n.label} <span aria-hidden>›</span>
                 </Link>
               ))}
-              <Link href="/shop/paskamer" onClick={() => setMenu(false)} className="flex items-center justify-between border-b border-hair px-5 py-3.5 text-[15px] font-semibold text-ink hover:bg-paper-soft">
+              <PaskamerLink href="/shop/paskamer" onClick={() => setMenu(false)} className="flex items-center justify-between border-b border-hair px-5 py-3.5 text-[15px] font-semibold text-ink hover:bg-paper-soft">
                 <span className="inline-flex items-center gap-2">
                   {t.paskamer.navLabel}
                   <span className="rounded-full bg-brand-mint px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-ink">{t.paskamer.nieuw}</span>
                 </span>
                 <span aria-hidden>›</span>
-              </Link>
+              </PaskamerLink>
               <div className="mt-3 space-y-1 px-5 py-2 text-[14px]">
                 <Link href="/shop/account" onClick={() => setMenu(false)} className="block py-2 text-ink hover:underline">
                   {t.shop.account}

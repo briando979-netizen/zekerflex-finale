@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { PaskamerLink } from "@/components/marketing/PaskamerLink";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { bySize } from "@/components/marketing/shop-product";
@@ -49,9 +49,9 @@ export function PaskamerTip({
               {fmt(p.pdpKies, { maat: advies.maat })}
             </button>
           )}
-          <Link href={`/shop/paskamer?pas=${encodeURIComponent(product.slug)}`} className="font-bold text-brand-700 underline underline-offset-2">
+          <PaskamerLink href={`/shop/paskamer?pas=${encodeURIComponent(product.slug)}`} className="font-bold text-brand-700 underline underline-offset-2">
             {p.probeerAan} →
-          </Link>
+          </PaskamerLink>
         </div>
       </div>
     </div>

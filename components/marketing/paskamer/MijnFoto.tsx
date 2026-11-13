@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/components/i18n/I18nProvider";
 import { POSE } from "@/lib/shop/foto-meting";
-import { FOTO_FOUT_TEKST, foutRapport, fotoFoutSoort, type FotoFout } from "@/lib/shop/foto-fout";
+import { CSP_HERLAAD_VLAG, FOTO_FOUT_TEKST, foutRapport, fotoFoutSoort, isCspWasmFout, moetHerladen, type FotoFout } from "@/lib/shop/foto-fout";
 import type { FotoUitkomst } from "@/components/marketing/paskamer/fotoMeting";
 
 // "Op mijn foto": de klant uploadt een foto van zichzelf (hele lichaam, van
@@ -57,7 +57,25 @@ export function MijnFoto({ lengte: begin, onToepassen }: { lengte: number; onToe
     try {
       const { meetFoto } = await import("@/components/marketing/paskamer/fotoMeting");
       setUit(await meetFoto(f, l, (s) => setStap(s)));
+      // het model laadde: de herlaad-vlag mag weer vrij voor een volgende keer
+      try {
+        window.sessionStorage.removeItem(CSP_HERLAAD_VLAG);
+      } catch {
+        /* geen opslag: niets te wissen */
+      }
     } catch (e) {
+      // Vangnet: de CSP van het eerste document liet WebAssembly niet toe (paskamer via een client-navigatie geopend).
+      // Eenmaal volledig herladen geeft de juiste CSP; de vlag voorkomt een lus, en zonder opslag volgt alleen de melding.
+      let opslag: Storage | null = null;
+      try {
+        opslag = window.sessionStorage;
+      } catch {
+        opslag = null;
+      }
+      if (moetHerladen(isCspWasmFout(e), opslag)) {
+        window.location.reload();
+        return;
+      }
       setFout(fotoFoutSoort(e));
       meldAanLogboek(e);
     } finally {

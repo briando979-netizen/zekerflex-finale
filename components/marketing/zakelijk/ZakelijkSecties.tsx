@@ -1,3 +1,4 @@
+import { PaskamerLink } from "@/components/marketing/PaskamerLink";
 import Image from "next/image";
 import Link from "next/link";
 import { fmt, type Dict } from "@/lib/i18n/dictionaries";
@@ -121,9 +122,9 @@ export function ZakelijkPakketten({ z, pakketten }: { z: ZT; pakketten: PakketKa
                   {z.pakketBestel}
                 </Link>
                 {pk.look && (
-                  <Link href={`/shop/paskamer?look=${pk.look}`} className="inline-flex h-10 items-center justify-center rounded-lg border border-hairstrong px-4 text-[13px] font-semibold text-ink hover:bg-paper-soft">
+                  <PaskamerLink href={`/shop/paskamer?look=${pk.look}`} className="inline-flex h-10 items-center justify-center rounded-lg border border-hairstrong px-4 text-[13px] font-semibold text-ink hover:bg-paper-soft">
                     {z.pakketPaspop}
-                  </Link>
+                  </PaskamerLink>
                 )}
               </div>
             </li>
