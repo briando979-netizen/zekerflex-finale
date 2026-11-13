@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/prisma", () => ({ prisma: {} }));
 
-import { ERASABLE_KV_PREFIXES, erasableKvWhere, isSecretField, keyBelongsTo, redactSecrets } from "@/lib/privacy/user-kv";
+import { ERASABLE_KV_ACHTERAAN, ERASABLE_KV_PREFIXES, erasableKvWhere, isSecretField, keyBelongsTo, redactSecrets } from "@/lib/privacy/user-kv";
 
 describe("isSecretField", () => {
   it("herkent geheimen in camelCase, snake_case en samengestelde namen", () => {
@@ -47,11 +47,13 @@ describe("keyBelongsTo", () => {
 describe("erasableKvWhere", () => {
   it("wist precies de sleutel of sleutel + ':' per prefix, niets anders", () => {
     const where = erasableKvWhere("u1");
-    expect(where.OR).toHaveLength(ERASABLE_KV_PREFIXES.length * 2);
+    expect(where.OR).toHaveLength(ERASABLE_KV_PREFIXES.length * 2 + ERASABLE_KV_ACHTERAAN.length);
     expect(where.OR).toContainEqual({ key: { equals: "ritten-eigen:u1" } });
     expect(where.OR).toContainEqual({ key: { startsWith: "wa-chat:u1:" } });
     // geen kale prefix: "agenda:u1" mag "agenda:u12" niet raken
     expect(where.OR).not.toContainEqual({ key: { startsWith: "agenda:u1" } });
+    // de gebruiker achteraan (13 nov, besluit 86): de pushmarkeringen push-sent:<kanaal>:<klus>:<werker>, met de dubbele punt
+    expect(where.OR).toContainEqual({ AND: [{ key: { startsWith: "push-sent:" } }, { key: { endsWith: ":u1" } }] });
   });
 
   it("bevat geen sleutels met een wettelijke bewaarplicht", () => {
