@@ -28,6 +28,8 @@ import { cronHeartbeats } from "@/lib/ops/heartbeat";
 import { platformnaamTodo, type PlatformnaamStand } from "@/lib/admin/todo-platformnaam";
 import { stripeAccountTodos } from "@/lib/admin/todo-stripe-account";
 import { kvkTegoedTodo } from "@/lib/admin/todo-kvk-tegoed";
+import { stripeKopieTodo } from "@/lib/admin/todo-stripe-kopie";
+import { stripeKopieStand } from "@/lib/kyc/stripe-kopie";
 import { leesKvkTegoed, wachtendeKvkControles } from "@/lib/kvk/tegoed-opslag";
 
 /** Bij taken die alleen voor ZekerFlex Bank nodig waren. */
@@ -250,12 +252,15 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   );
   // het tegoed bij KVKBase (13 nov): op of bijna op = KVK-controles wachten op een herkansing (lib/kvk/tegoed.ts)
   const kvkTegoed = kvkTegoedTodo(await leesKvkTegoed(), (await wachtendeKvkControles().catch(() => [])).length);
+  // de ID-foto's en gegevens uit het oude Stripe-account kopiëren (14 nov, lib/kyc/stripe-kopie.ts)
+  const stripeKopie = stripeKopieTodo(await stripeKopieStand());
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
   return [
     ...(platformnaam ? [platformnaam] : []),
     ...stripeAccount,
     ...(kvkTegoed ? [kvkTegoed] : []),
+    ...(stripeKopie ? [stripeKopie] : []),
     {
       id: "llm",
       group: "AI",

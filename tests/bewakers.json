@@ -25,6 +25,7 @@
     "tests/regex-safari.test.ts",
     "tests/sitechat-regels.test.ts",
     "tests/sitemap-dekking.test.ts",
+    "tests/stripe-kopie.test.ts",
     "tests/talen-bewaker.test.ts",
     "tests/valkuil-bewakers.test.ts",
     "tests/verder-kaart.test.ts",

@@ -54,8 +54,14 @@ async function sleutel(): Promise<string | null> {
   }
 }
 
+/** Een Stripe-client met de verzegelde beperkte sleutel, of null als er geen (bruikbare) sleutel staat. Ook voor lib/kyc/stripe-kopie.ts. */
+export async function stripeFotoClient(): Promise<Stripe | null> {
+  const s = await sleutel();
+  return s ? client(s) : null;
+}
+
 /** Een Stripe-fout in gewone taal (Stripe antwoordt in het Engels). */
-function stripeFout(err: unknown): string {
+export function stripeFout(err: unknown): string {
   const type = (err as { type?: string } | null)?.type;
   if (type === "StripeAuthenticationError") return "Stripe kent deze sleutel niet (meer). Maak een nieuwe en zet hem opnieuw.";
   if (type === "StripePermissionError") return "De sleutel mist een recht bij Stripe. Zet Identity Verification Results en Recent Detailed Verification Results op Lezen en Files op Schrijven.";
@@ -101,18 +107,25 @@ export async function stripeIdFoto(sessieId: string, welk: FotoSoort): Promise<S
             : "Stripe gaf deze foto niet vrij. Zonder IP-beperking leest de sleutel alleen controles van de laatste 48 uur.",
       };
     }
-    // Stripe staat voor ID-foto's alleen links toe die binnen 30 seconden verlopen
-    const link = await stripe.fileLinks.create({ file: bestandId, expires_at: Math.floor(Date.now() / 1000) + 30 });
-    if (!link.url) return { ok: false, reden: "Stripe gaf geen link naar de foto." };
-    const res = await fetch(link.url, { signal: AbortSignal.timeout(10_000) });
-    const mimeType = (res.headers.get("content-type") ?? "").split(";")[0]?.trim() ?? "";
-    if (!res.ok || !mimeType.startsWith("image/")) return { ok: false, reden: "De foto kwam niet goed door van Stripe." };
-    const bytes = new Uint8Array(await res.arrayBuffer());
-    if (bytes.byteLength > MAX_BYTES) return { ok: false, reden: "De foto is te groot." };
-    return { ok: true, bytes, mimeType };
+    return await haalStripeBestand(stripe, bestandId);
   } catch (err) {
     // nooit de link of de sleutel loggen (capability-URL), alleen het soort fout
     logger.warn("stripe identity foto niet op te halen", { type: (err as { type?: string } | null)?.type ?? "onbekend", welk });
     return { ok: false, reden: stripeFout(err) };
   }
+}
+
+/**
+ * Eén bestand van Stripe binnenhalen: een bestandslink van 30 seconden (Stripe staat voor ID-foto's niets langers toe), en
+ * alleen een afbeelding tot 15 MB. Gooit bij een Stripe-fout; de link zelf komt nooit in een log (capability-URL).
+ */
+export async function haalStripeBestand(stripe: Stripe, bestandId: string): Promise<StripeFoto> {
+  const link = await stripe.fileLinks.create({ file: bestandId, expires_at: Math.floor(Date.now() / 1000) + 30 });
+  if (!link.url) return { ok: false, reden: "Stripe gaf geen link naar de foto." };
+  const res = await fetch(link.url, { signal: AbortSignal.timeout(10_000) });
+  const mimeType = (res.headers.get("content-type") ?? "").split(";")[0]?.trim() ?? "";
+  if (!res.ok || !mimeType.startsWith("image/")) return { ok: false, reden: "De foto kwam niet goed door van Stripe." };
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  if (bytes.byteLength > MAX_BYTES) return { ok: false, reden: "De foto is te groot." };
+  return { ok: true, bytes, mimeType };
 }

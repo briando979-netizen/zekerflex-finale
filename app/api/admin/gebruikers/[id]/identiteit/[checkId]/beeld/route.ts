@@ -18,7 +18,7 @@ const WELK_LABEL = { front: "voorkant", back: "achterkant", selfie: "selfie", se
 // eigen ID-controle (lib/onboarding/verify.ts zet de upload-id's in rawPayload.uploadIds) voor de
 // beoordelaar in Admin → Gebruikers. Alleen PLATFORM_ADMIN, alleen bij een controle van deze
 // gebruiker, alleen afbeeldingen. Elke inzage komt in het auditlog (ID-documenten bevatten het BSN).
-// Een Stripe-controle: de foto komt rechtstreeks van Stripe (lib/kyc/stripe-fotos.ts), zonder kopie.
+// Een Stripe-controle: de kopie bij ons als die er is (lib/kyc/stripe-kopie.ts), anders rechtstreeks van Stripe (lib/kyc/stripe-fotos.ts).
 // &klein=1: een kleine versie voor de tegels (lib/admin/foto-klein.ts), nergens bewaard; lukt dat niet, dan het origineel.
 export const GET = withAdminAccess<{ id: string; checkId: string }>(["PLATFORM_ADMIN"], async (request, { params, principal }) => {
   const zoek = new URL(request.url).searchParams;
@@ -30,7 +30,10 @@ export const GET = withAdminAccess<{ id: string; checkId: string }>(["PLATFORM_A
   });
   if (!check) throw AppError.notFound("Controle niet gevonden.");
   let file: { bytes: Uint8Array; mimeType: string };
-  if (check.provider === "STRIPE_IDENTITY") {
+  // een kopie bij ons (ook van een Stripe-controle, lib/kyc/stripe-kopie.ts) gaat voor; zonder kopie live van Stripe
+  const kopieId = fotoUploadId(check.rawPayload, welk);
+  const bron = kopieId ? (check.provider === "STRIPE_IDENTITY" ? "stripe-kopie" : "eigen") : check.provider === "STRIPE_IDENTITY" ? "stripe" : "eigen";
+  if (bron === "stripe") {
     if (!check.sessionId) throw AppError.notFound("Deze controle heeft geen Stripe-sessie.");
     const foto = await stripeIdFoto(check.sessionId, welk);
     if (!foto.ok) throw AppError.notFound(foto.reden);
@@ -52,7 +55,7 @@ export const GET = withAdminAccess<{ id: string; checkId: string }>(["PLATFORM_A
     summary: `${principal.email} bekeek de ${WELK_LABEL[welk]} van een identiteitscontrole`,
     targetType: "user",
     targetId: params.id,
-    metadata: { checkId: check.id, welk, bron: check.provider === "STRIPE_IDENTITY" ? "stripe" : "eigen", ...(klein ? { klein: true } : {}) },
+    metadata: { checkId: check.id, welk, bron, ...(klein ? { klein: true } : {}) },
   });
 
   const kleintje = klein ? await kleineVersie(file.bytes) : null;
@@ -66,7 +69,7 @@ export const GET = withAdminAccess<{ id: string; checkId: string }>(["PLATFORM_A
       "Content-Type": file.mimeType,
       "Content-Disposition": "inline",
       // niet in een gedeelde cache, en niet lang in die van de browser; een foto van Stripe helemaal niet bewaren
-      "Cache-Control": check.provider === "STRIPE_IDENTITY" ? "private, no-store" : "private, max-age=300",
+      "Cache-Control": bron === "stripe" ? "private, no-store" : "private, max-age=300",
       "X-Content-Type-Options": "nosniff",
     },
   });
