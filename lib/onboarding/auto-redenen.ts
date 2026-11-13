@@ -24,6 +24,12 @@ import { GEZICHT_DREMPEL } from "@/lib/kyc/gezicht/vergelijk";
 export const MIN_LIVE_BEELDEN = 5;
 
 export interface AutoFeiten {
+  /**
+   * Alleen ter info, telt NIET mee (13 nov 2026, 86): een ID-controle gaat over wie iemand is, de KVK over zijn
+   * onderneming. Die houdt eligibility al tegen vóór het reageren (lib/fiscal/eligibility.ts), en een KVK-controle die
+   * niet kan (tegoed bij KVKBase op) mag een ID niet naar een mens duwen. Een opgeheven bedrijf blijft een harde afwijzing
+   * (idHardeAfwijzing).
+   */
   kvkOk: boolean;
   naamOk: boolean;
   nummerFormaatOk: boolean;
@@ -64,6 +70,14 @@ const BEWEGING_TEKST: Record<string, string> = {
   "niet-beoordeeld": "de bewegingscontrole kon niet draaien",
 };
 
+/**
+ * Een harde afwijzing van de eigen ID-controle (verify.ts): verlopen of ongeldige datum, een chip die niet klopt, een
+ * opgeheven bedrijf in het Handelsregister, of het beeldmodel is zeker dat het gezicht niet bij de pasfoto hoort.
+ */
+export function idHardeAfwijzing(f: { geldigOk: boolean; chipVals: boolean; bedrijfStatus: string; gezichtZekerAnders: boolean }): boolean {
+  return !f.geldigOk || f.chipVals || f.bedrijfStatus === "DISSOLVED" || f.gezichtZekerAnders;
+}
+
 /** Kijkt de eigen gezichtscontrole (pasfoto tegen selfie, met echte hoofddraai) zeker genoeg om zelf goed te keuren? */
 export function gezichtBeslist(f: AutoFeiten): boolean {
   return f.gezichtAutomatischAan && f.gezichtOordeel === "zelfde" && f.bewegingOordeel === "ok" && !f.rijbewijs && f.mrzGeldig;
@@ -72,7 +86,7 @@ export function gezichtBeslist(f: AutoFeiten): boolean {
 /** Waarom deze controle niet zelf goedkeurt, in gewoon Nederlands; leeg = zelf goedkeuren. */
 export function redenenNietAutomatisch(f: AutoFeiten): string[] {
   const r: string[] = [];
-  if (!f.kvkOk) r.push("het KVK- of btw-nummer is niet bevestigd");
+  // de KVK telt hier niet meer mee (zie kvkOk in AutoFeiten)
   if (!f.naamOk) r.push("de getypte naam wijkt af van de accountnaam");
   if (!f.nummerFormaatOk) r.push("het documentnummer heeft niet het verwachte formaat");
   if (!f.geldigOk) r.push("het document is verlopen of de datum is ongeldig");

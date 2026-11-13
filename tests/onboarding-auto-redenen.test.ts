@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gezichtBeslist, redenenNietAutomatisch, type AutoFeiten } from "@/lib/onboarding/auto-redenen";
+import { gezichtBeslist, idHardeAfwijzing, redenenNietAutomatisch, type AutoFeiten } from "@/lib/onboarding/auto-redenen";
 
 // Mag de eigen ID-controle zelf goedkeuren, en zo niet: waarom (12 nov 2026, eigenaar: "niet meer handmatig
 // beoordelen tenzij het echt niet anders is")? Leeg = zelf goedkeuren.
@@ -73,7 +73,6 @@ describe("redenenNietAutomatisch", () => {
     expect(met({ chipFotoVerschil: true })).toEqual(["de chip hoort bij een ander document dan de foto's"]);
     expect(met({ mrzNummerOk: false })[0]).toMatch(/documentnummer wijkt af/);
     expect(met({ mrzNaamOk: false })[0]).toMatch(/naam op het document wijkt af/);
-    expect(met({ kvkOk: false })[0]).toMatch(/KVK/);
     expect(met({ naamOk: false })[0]).toMatch(/getypte naam/);
     expect(met({ nummerFormaatOk: false })[0]).toMatch(/formaat/);
     expect(met({ geldigOk: false })[0]).toMatch(/verlopen/);
@@ -92,5 +91,21 @@ describe("redenenNietAutomatisch", () => {
       ...met({ gezichtOordeel: "twijfel", gezichtScore: 0.3, bewegingOordeel: "te-onzeker", gezichtAutomatischAan: false }),
     ];
     for (const r of alle) expect(r).not.toMatch(/needs_review|rejected|approved|undefined|null/);
+  });
+});
+
+describe("de KVK hoort niet bij de ID-controle (13 nov 2026, 86)", () => {
+  it("zzp'er, KVK niet te controleren (tegoed op), verder alles goed: automatisch goedgekeurd", () => {
+    expect(redenenNietAutomatisch({ ...ALLES_GOED, kvkOk: false })).toEqual([]);
+  });
+
+  it("een opgeheven bedrijf (DISSOLVED) blijft een harde afwijzing; de rest van de harde afwijzingen ook", () => {
+    const goed = { geldigOk: true, chipVals: false, bedrijfStatus: "ACTIVE", gezichtZekerAnders: false };
+    expect(idHardeAfwijzing(goed)).toBe(false);
+    expect(idHardeAfwijzing({ ...goed, bedrijfStatus: "ONBEKEND" })).toBe(false);
+    expect(idHardeAfwijzing({ ...goed, bedrijfStatus: "DISSOLVED" })).toBe(true);
+    expect(idHardeAfwijzing({ ...goed, geldigOk: false })).toBe(true);
+    expect(idHardeAfwijzing({ ...goed, chipVals: true })).toBe(true);
+    expect(idHardeAfwijzing({ ...goed, gezichtZekerAnders: true })).toBe(true);
   });
 });

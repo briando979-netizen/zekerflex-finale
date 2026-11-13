@@ -74,6 +74,14 @@ export const ID_REDENEN = {
     ro: "Îți vom verifica numărul KVK mai târziu; poți continua înregistrarea.",
     uk: "Ми перевіримо твій номер KVK пізніше; ти можеш продовжити реєстрацію.",
   },
+  // zzp'er of flexwerker zonder KVK: mag sinds 13 nov later, vóór de eerste klus (lib/fiscal/eligibility.ts)
+  "kvk.nogNiet": {
+    nl: "Nog geen KVK-nummer ingevuld; dat komt vóór de eerste klus.",
+    en: "No KVK number entered yet; that comes before your first job.",
+    pl: "Nie wpisano jeszcze numeru KVK; będzie potrzebny przed pierwszym zleceniem.",
+    ro: "Încă nu ai introdus un număr KVK; acesta vine înainte de prima lucrare.",
+    uk: "Номер KVK ще не введено; він знадобиться до першої роботи.",
+  },
   "vies.ongeldig": {
     nl: "{nummer} is volgens de EU-database (VIES) niet geldig.",
     en: "According to the EU database (VIES), {nummer} is not valid.",

@@ -21,6 +21,7 @@ const WAAR: Record<keyof typeof ALLES, string> = {
   "beweging.onnatuurlijk": "lib/kyc/gezicht/beweging.ts",
   "kvk.nietBereikbaar": "lib/onboarding/verify.ts",
   "kvk.later": "lib/onboarding/verify.ts",
+  "kvk.nogNiet": "lib/onboarding/verify.ts",
   "vies.ongeldig": "lib/onboarding/verify.ts",
   "ai.nietBeschikbaar": "lib/onboarding/verify.ts",
   "label.gezicht": "lib/onboarding/verify.ts",

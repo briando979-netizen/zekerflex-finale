@@ -13,7 +13,7 @@ import { storeUpload } from "@/lib/storage/local";
 import { runVisionReview } from "@/lib/kyc/vision";
 import { gezichtControle } from "@/lib/kyc/gezicht/controle";
 import { GEZICHT_DREMPEL } from "@/lib/kyc/gezicht/vergelijk";
-import { gezichtBeslist, redenenNietAutomatisch, type AutoFeiten } from "@/lib/onboarding/auto-redenen";
+import { gezichtBeslist, idHardeAfwijzing, redenenNietAutomatisch, type AutoFeiten } from "@/lib/onboarding/auto-redenen";
 import { reeksSamenvatting, wisReeks } from "@/lib/kyc/gezicht/reeks-opslag";
 import { isReservedTestAddress } from "@/lib/mail/test-adres";
 import { featureEnabled } from "@/lib/flags";
@@ -397,11 +397,16 @@ async function ensureFreelancerBase(input: {
             : `De EU-btw-controle (VIES) was niet bereikbaar; we controleren ${vat.vatNumber} later handmatig.`,
     });
   } else if (skipKvk) {
-    checks.push({
-      label: "Werkvorm",
-      ok: true,
-      detail: "Uitzendkracht — geen KVK vereist. Verloning loopt via de payroll.",
-    });
+    // geen KVK ingevuld: bij een uitzendkracht hoort dat zo; bij een zzp'er of flexwerker mag het sinds 13 nov later, vóór
+    // de eerste klus (lib/fiscal/eligibility.ts). Een storing bij het lezen geeft de neutrale tekst, nooit een fout.
+    const soort = await import("@/lib/fiscal/store")
+      .then(async (m) => (await m.getFiscal(input.userId)).workerKind ?? null)
+      .catch(() => null);
+    checks.push(
+      soort === "uitzendkracht"
+        ? { label: "Werkvorm", ok: true, detail: "Uitzendkracht — geen KVK vereist. Verloning loopt via de payroll." }
+        : { label: "KVK Handelsregister", ok: true, detail: "Nog geen KVK-nummer ingevuld; dat komt vóór de eerste klus." },
+    );
   } else {
     try {
       const reg = await registerFreelancerCompany({
@@ -868,11 +873,7 @@ export async function submitFreelancerOnboarding(
     vision.available && vision.face !== null && !vision.face.samePerson && vision.face.faceMatchConfidence >= 0.7;
   // De tekst-AI wijst nooit meer zelf af (12 nov 2026): hij ziet alleen wat iemand typte. Zegt hij "afgekeurd", dan
   // kijkt een mens (zie redenenNietAutomatisch).
-  const hardFail =
-    !expiryOk ||
-    chipVals ||
-    companyStatus === "DISSOLVED" ||
-    visionFaceMismatch;
+  const hardFail = idHardeAfwijzing({ geldigOk: expiryOk, chipVals, bedrijfStatus: companyStatus, gezichtZekerAnders: visionFaceMismatch });
   // Automatisch goedkeuren alleen als iets echt naar de foto's heeft gekeken: het eigen gezichtsmodel (pasfoto tegen
   // selfie, met een echte hoofddraai, alleen bij een paspoort of ID-kaart met een kloppende MRZ) of het oude beeldmodel.
   // Eén bron voor de beslissing en de uitleg (lib/onboarding/auto-redenen.ts): de redenen staan bij de controle in het
@@ -1239,7 +1240,8 @@ export async function submitFreelancerOnboardingViaWallet(
     : "ID_CARD";
 
   const hardFail = !nameOk || !expiryOk;
-  const autoApprove = !hardFail && (skipKvk || kvkValid);
+  // de KVK telt niet mee voor de ID (13 nov, 86; lib/onboarding/auto-redenen.ts): die houdt eligibility tegen vóór het reageren
+  const autoApprove = !hardFail;
   const outcome: OnboardingResult["outcome"] = hardFail ? "rejected" : autoApprove ? "verified" : "in_review";
   const kycStatus: KycStatus =
     outcome === "verified" ? KycStatus.VERIFIED : outcome === "rejected" ? KycStatus.REJECTED : KycStatus.PENDING;
