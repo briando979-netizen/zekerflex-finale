@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { aantalOpen, nogStappenTekst, reageerStap, reageerStapHref, stapVanTotaal, TIJDLIJN_VOLGORDE, tijdlijnStappen, volgendeStap, type TijdlijnKlaar } from "@/lib/onboarding/laat-weten";
-import { openVerplicht, POORT_STAPPEN, werkerOnboardingKlaar, type WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
+import { openVerplicht, POORT_STAPPEN, poortStapVan, werkerOnboardingKlaar, type WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
 import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 
 const alles: TijdlijnKlaar = { kind: true, branches: true, email: true, gegevens: true, identiteit: true, foto: true, werkrecht: true, tweestap: true };
@@ -57,6 +57,13 @@ describe("één teller: de tijdlijn is de poort (13 nov)", () => {
   it("e-mail bevestigen, werkrecht en tweestap zijn geen stap: ze veranderen de teller niet", () => {
     expect(aantalOpen({ ...alles, email: false, werkrecht: false, tweestap: false })).toBe(0);
     expect(stapVanTotaal({ ...alles, email: false })).toBeNull();
+  });
+
+  it("poortStapVan geeft dezelfde teller rechtstreeks uit de poortfeiten", () => {
+    expect(poortStapVan(leeg)).toEqual({ n: 1, totaal: 5, sleutel: "kind" });
+    expect(poortStapVan({ ...leeg, soortGekozen: true, branchesGekozen: true })).toEqual({ n: 3, totaal: 5, sleutel: "gegevens" });
+    expect(poortStapVan({ ...leeg, soortGekozen: true, branchesGekozen: true, gegevensIngevuld: true, identiteitIngestuurd: true })).toEqual({ n: 5, totaal: 5, sleutel: "foto" });
+    expect(poortStapVan({ ...leeg, soortGekozen: true, branchesGekozen: true, gegevensIngevuld: true, identiteitIngestuurd: true, fotoGezet: true })).toBeNull();
   });
 
   it("stapVanTotaal: het nummer van de eerste open stap, van vijf", () => {

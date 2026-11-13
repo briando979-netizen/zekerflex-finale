@@ -47,6 +47,16 @@ export function werkerOnboardingKlaar(f: WerkerPoortFeiten): boolean {
   return POORT_STAPPEN.every((s) => f[s.feit]);
 }
 
+/**
+ * "Stap 3 van 5": de eerste open stap van de poort, met zijn nummer, het aantal stappen en de sleutel (kind, branches,
+ * gegevens, identiteit, foto); null als alles klaar is. Dezelfde teller als de tijdlijn (stapVanTotaal in laat-weten.ts).
+ */
+export function poortStapVan(f: WerkerPoortFeiten): { n: number; totaal: number; sleutel: (typeof POORT_STAPPEN)[number]["sleutel"] } | null {
+  const i = POORT_STAPPEN.findIndex((s) => !f[s.feit]);
+  const stap = POORT_STAPPEN[i];
+  return i < 0 || !stap ? null : { n: i + 1, totaal: POORT_STAPPEN.length, sleutel: stap.sleutel };
+}
+
 /** De verplichte stappen (zoals werkerOnboardingKlaar) die nog open staan. */
 export function openVerplicht(f: WerkerPoortFeiten): number {
   return POORT_STAPPEN.filter((s) => !f[s.feit]).length;
