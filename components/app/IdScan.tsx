@@ -5,9 +5,8 @@ import { Portal } from "@/components/chat/Portal";
 import { type AuthDict } from "@/lib/i18n/auth";
 import { DocumentLezing, goedGelezen, leesDocumentFoto, type Lezing } from "@/components/app/DocumentLezing";
 import { useDialog } from "@/components/app/useDialog";
-import { OnderSheet } from "@/components/app/OnderSheet";
 import { useFT } from "@/components/i18n/useFT";
-import { bevestigOverzicht } from "@/lib/werker/bevestig-overzicht";
+import { bevestigOverzicht, type OverzichtRij } from "@/lib/werker/bevestig-overzicht";
 import { cookieStringHasChip, cookieStringIsApp } from "@/lib/app-mode";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { AuthLanguage } from "@/components/auth/AuthLanguage";
@@ -90,7 +89,7 @@ interface TelefoonStand {
 }
 
 type T = AuthDict["onb"];
-type Stap = "start" | "toestemming" | "telefoon" | "soort" | "voor" | "achter" | "chip" | "selfie" | "beweging" | "gegevens" | "bezig" | "klaar";
+type Stap = "start" | "toestemming" | "telefoon" | "soort" | "voor" | "achter" | "chip" | "selfie" | "beweging" | "gegevens" | "controle" | "bezig" | "klaar";
 
 /** De chipstap (alleen in de Android-app vanaf 1.0.4): de app leest de chip via NFC (lib/kyc/chip). */
 /** na zoveel mislukte chippogingen gaat de scan zonder chip verder */
@@ -876,7 +875,10 @@ export function IdScan({
   onAfrondenOverdracht,
   route,
   wijze: beginWijze = "auto",
+  overzicht = [],
 }: {
+  /** wat de werker verder instuurt (persoon, bedrijf, thuisbasis), voor de controlestap aan het eind */
+  overzicht?: readonly OverzichtRij[];
   /** automatisch (aanbevolen) of zelf de foto maken: de keuze aan het begin (WieBenJijIdKaarten) */
   wijze?: ScanWijze;
   /** met een route: eigen introductie, cameravraag vooraf, alleen paspoort of ID-kaart, en bij een paspoort geen achterkant */
@@ -946,6 +948,8 @@ export function IdScan({
   // de bewegingscontrole (tweede selfie met een gedraaid hoofd) alleen op de laptop: de telefoon stuurt de foto's door en daar beslist altijd een medewerker
   const metBeweging = modus !== "telefoon";
   const vorigeVan = (st: Stap): Stap | undefined => {
+    // de controle: terug naar de laatste foto (met het voorbeeld en "Deze gebruiken"), of naar de gegevens
+    if (st === "controle") return handmatig ? "gegevens" : metBeweging ? "beweging" : "selfie";
     if (route && st === "soort") return "toestemming";
     if (st === "selfie" && zonderAchter) return "voor";
     if (st === "gegevens" && metBeweging) return "beweging";
@@ -1236,7 +1240,17 @@ export function IdScan({
     else if (handmatig) setStap("gegevens");
     // een goed gelezen MRZ vult de gegevens zelf in: dan eerst de vraag (op de telefoon gaat het naar de laptop, die zelf laat nakijken)
     else if (modus === "telefoon") void afronden(alle, gegevens);
-    else setBevestigFotos(alle);
+    else naarControle(alle);
+  }
+
+  /**
+   * De controle vóór het indienen is een eigen stap, geen paneel (13 nov 2026, eigenaar: "je ziet geen knop afronding of
+   * indienen of alle gegevens nog een keer zien"): een paneel dat je per ongeluk sloot, liet je bij de camera achter
+   * zonder knop om in te dienen.
+   */
+  function naarControle(f: Fotos) {
+    setBevestigFotos(f);
+    setStap("controle");
   }
 
   async function gebruik() {
@@ -1764,58 +1778,63 @@ export function IdScan({
                   </label>
                 </div>
                 {/* op de telefoon (na een QR-code) gaat het alleen naar de laptop, die zelf nog laat nakijken: daar geen tweede vraag */}
-                <button type="button" disabled={!gegevensOk} onClick={() => (modus === "telefoon" ? void afronden(fotos, gegevens) : setBevestigFotos(fotos))} className="btn-primary mt-6 w-full">
+                <button type="button" disabled={!gegevensOk} onClick={() => (modus === "telefoon" ? void afronden(fotos, gegevens) : naarControle(fotos))} className="btn-primary mt-6 w-full">
                   {modus === "telefoon" ? s.telVersturen : s.afronden}
                 </button>
               </>
             )}
 
-            <OnderSheet open={bevestigFotos !== null} titelId="idscan-bevestig-titel" beschrijvingId="idscan-bevestig-uitleg" titel={ft.bevestig.titel} onSluit={() => setBevestigFotos(null)}>
-                  <div className="overflow-y-auto px-6 pb-6">
-                    <p id="idscan-bevestig-uitleg" className="text-center text-sm leading-relaxed text-neutralx-600">{ft.bevestig.uitleg}</p>
-                    {/* soort, naam zoals getypt en geldigheid; het documentnummer en alles uit de MRZ blijven buiten beeld */}
-                    <dl className="mt-4 divide-y divide-hair rounded-xl border border-hair text-sm">
-                      {bevestigOverzicht({
-                        methode: "upload",
-                        nummerTonen: false,
-                        veld: (n) => (n === "nameOnDocument" ? gegevens.naam.trim() || naam : n === "documentExpiry" ? gegevens.datum : ""),
-                        labels: { naam: t.nameOnDoc, soort: t.docType, nummer: t.docNumber, geldigTot: t.validUntil, kvk: "", btw: "", postcode: "", fotos: ft.bevestig.fotos, methode: ft.bevestig.methode },
-                        soortNaam: t.docs[soort],
-                        bedrijf: null,
-                        fotoNamen: [],
-                        viaStripe: "",
-                      }).map(([label, waarde]) => (
-                        <div key={label} className="flex items-start justify-between gap-3 px-3 py-2">
-                          <dt className="text-neutralx-500">{label}</dt>
-                          <dd className="break-words text-right font-medium text-ink">{waarde}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                    <p className="mt-4 text-xs font-semibold text-neutralx-500">{ft.bevestig.fotos}</p>
-                    <div className="mt-2 flex flex-wrap gap-3">
-                      {bevestigFotos?.voor && <FotoMini file={bevestigFotos.voor} label={t.missingNames.documentFront} />}
-                      {!zonderAchter && bevestigFotos?.achter && <FotoMini file={bevestigFotos.achter} label={t.missingNames.documentBack} />}
-                      {bevestigFotos?.selfie && <FotoMini file={bevestigFotos.selfie} label={t.missingNames.selfie} />}
-                      {metBeweging && bevestigFotos?.beweging && <FotoMini file={bevestigFotos.beweging} label={t.missingNames.selfie2} />}
+            {stap === "controle" && bevestigFotos && (
+              <>
+                <h2 id="idscan-bevestig-titel" className="font-display text-lg font-bold text-ink">{ft.bevestig.titel}</h2>
+                <p id="idscan-bevestig-uitleg" className="mt-1 text-sm leading-relaxed text-neutralx-600">{ft.bevestig.uitleg}</p>
+                {/* alles wat er wordt ingestuurd: de werker zelf, het bedrijf en de thuisbasis (uit het formulier), dan het
+                    document; het documentnummer en alles uit de MRZ blijven buiten beeld */}
+                <dl className="mt-4 divide-y divide-hair rounded-xl border border-hair text-sm">
+                  {[
+                    ...overzicht,
+                    ...bevestigOverzicht({
+                      methode: "upload",
+                      nummerTonen: false,
+                      veld: (n) => (n === "nameOnDocument" ? gegevens.naam.trim() || naam : n === "documentExpiry" ? gegevens.datum : ""),
+                      labels: { naam: t.nameOnDoc, soort: t.docType, nummer: t.docNumber, geldigTot: t.validUntil, kvk: "", btw: "", postcode: "", fotos: ft.bevestig.fotos, methode: ft.bevestig.methode },
+                      soortNaam: t.docs[soort],
+                      bedrijf: null,
+                      fotoNamen: [],
+                      viaStripe: "",
+                    }),
+                  ].map(([label, waarde]) => (
+                    <div key={label} className="flex items-start justify-between gap-3 px-3 py-2">
+                      <dt className="text-neutralx-500">{label}</dt>
+                      <dd className="break-words text-right font-medium text-ink">{waarde}</dd>
                     </div>
-                    <div className="mt-5 flex gap-2">
-                      <button type="button" onClick={() => setBevestigFotos(null)} className="btn-ghost min-h-[44px] flex-1">
-                        {ft.bevestig.terug}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const f = bevestigFotos;
-                          setBevestigFotos(null);
-                          if (f) void afronden(f, gegevens);
-                        }}
-                        className="btn-trust min-h-[44px] flex-1"
-                      >
-                        {ft.bevestig.ja}
-                      </button>
-                    </div>
-                  </div>
-                </OnderSheet>
+                  ))}
+                </dl>
+                <p className="mt-4 text-xs font-semibold text-neutralx-500">{ft.bevestig.fotos}</p>
+                <div className="mt-2 flex flex-wrap gap-3">
+                  {bevestigFotos.voor && <FotoMini file={bevestigFotos.voor} label={t.missingNames.documentFront} />}
+                  {!zonderAchter && bevestigFotos.achter && <FotoMini file={bevestigFotos.achter} label={t.missingNames.documentBack} />}
+                  {bevestigFotos.selfie && <FotoMini file={bevestigFotos.selfie} label={t.missingNames.selfie} />}
+                  {metBeweging && bevestigFotos.beweging && <FotoMini file={bevestigFotos.beweging} label={t.missingNames.selfie2} />}
+                </div>
+                <div className="mt-6 grid gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const f = bevestigFotos;
+                      setBevestigFotos(null);
+                      if (f) void afronden(f, gegevens);
+                    }}
+                    className="btn-trust min-h-[44px] w-full"
+                  >
+                    {s.indienen}
+                  </button>
+                  <button type="button" onClick={terug} className="btn-ghost min-h-[44px] w-full">
+                    {ft.bevestig.terug}
+                  </button>
+                </div>
+              </>
+            )}
 
             {stap === "bezig" && (
               <div className="grid place-items-center py-16 text-center" role="status">

@@ -344,6 +344,8 @@ export interface AuthDict {
       chipFout: string;
       chipAppHint: string;
       chipOverslaan: string;
+      /** de knop in de controlestap aan het eind van de scan (13 nov 2026) */
+      indienen: string;
       /** de chip vooraf noemen (alleen in de app die hem leest) en de uitleg in stappen (13 nov 2026) */
       chipVooraf: string;
       chipStap1: string;
@@ -733,6 +735,7 @@ const nl: AuthDict = {
       chipFout: "Het lezen van de chip lukte niet. Haal het hoesje eraf, schuif langzaam over de achterkant van je telefoon en houd stil zodra hij trilt. Probeer het opnieuw.",
       chipAppHint: "Heeft je ID-kaart of paspoort een chip? Na de foto van de kant met de code lees je de chip met NFC: sneller en veiliger.",
       chipOverslaan: "Zonder chip verder",
+      indienen: "Indienen",
       chipVooraf: "We lezen ook de chip van je document: sneller en veiliger. Dat duurt ongeveer 10 seconden.",
       chipStap1: "Haal je telefoon uit het hoesje.",
       chipStap2Kaart: "Leg je ID-kaart plat tegen het midden van de achterkant van je telefoon. Schuif langzaam heen en weer tot je telefoon trilt.",
@@ -1119,6 +1122,7 @@ const en: AuthDict = {
       chipFout: "Reading the chip didn't work. Take off the case, slide slowly over the back of your phone and hold still as soon as it vibrates. Try again.",
       chipAppHint: "Does your ID card or passport have a chip? After the photo of the side with the code, you read the chip with NFC: faster and safer.",
       chipOverslaan: "Continue without chip",
+      indienen: "Submit",
       chipVooraf: "We also read the chip in your document: faster and safer. It takes about 10 seconds.",
       chipStap1: "Take your phone out of its case.",
       chipStap2Kaart: "Lay your ID card flat against the middle of the back of your phone. Slide it slowly back and forth until your phone vibrates.",
@@ -1505,6 +1509,7 @@ const pl: AuthDict = {
       chipFout: "Nie udało się odczytać chipu. Zdejmij etui, przesuwaj powoli po tylnej części telefonu i zatrzymaj się, gdy zawibruje. Spróbuj ponownie.",
       chipAppHint: "Czy Twój dowód osobisty lub paszport ma chip? Po zdjęciu strony z kodem odczytasz chip przez NFC: szybciej i bezpieczniej.",
       chipOverslaan: "Dalej bez chipu",
+      indienen: "Wyślij",
       chipVooraf: "Odczytamy też chip Twojego dokumentu: szybciej i bezpieczniej. To trwa około 10 sekund.",
       chipStap1: "Wyjmij telefon z etui.",
       chipStap2Kaart: "Przyłóż dowód osobisty płasko do środka tylnej części telefonu. Przesuwaj go powoli tam i z powrotem, aż telefon zawibruje.",
@@ -1891,6 +1896,7 @@ const ro: AuthDict = {
       chipFout: "Citirea cipului nu a reușit. Scoate husa, glisează încet pe spatele telefonului și ține nemișcat imediat ce vibrează. Încearcă din nou.",
       chipAppHint: "Are cartea ta de identitate sau pașaportul un cip? După poza părții cu codul, citești cipul prin NFC: mai rapid și mai sigur.",
       chipOverslaan: "Continuă fără cip",
+      indienen: "Trimite",
       chipVooraf: "Citim și cipul documentului tău: mai rapid și mai sigur. Durează aproximativ 10 secunde.",
       chipStap1: "Scoate telefonul din husă.",
       chipStap2Kaart: "Așază cartea de identitate plat pe mijlocul spatelui telefonului. Glisează încet înainte și înapoi până când telefonul vibrează.",
@@ -2277,6 +2283,7 @@ const uk: AuthDict = {
       chipFout: "Не вдалося зчитати чип. Зніміть чохол, повільно проведіть по задній панелі телефона й тримайте нерухомо, щойно він завібрує. Спробуйте ще раз.",
       chipAppHint: "Чи є в твоєму ID чи паспорті чип? Після фото сторони з кодом ти зчитуєш чип через NFC: швидше й безпечніше.",
       chipOverslaan: "Далі без чипа",
+      indienen: "Надіслати",
       chipVooraf: "Ми також зчитаємо чип вашого документа: швидше й безпечніше. Це триває близько 10 секунд.",
       chipStap1: "Вийміть телефон із чохла.",
       chipStap2Kaart: "Прикладіть ID-картку рівно до середини задньої панелі телефона. Повільно посувайте її туди й назад, доки телефон не завібрує.",

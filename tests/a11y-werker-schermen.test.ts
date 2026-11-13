@@ -35,13 +35,15 @@ describe("de bevestiging vóór het insturen (OnderSheet)", () => {
     expect(sheet).toContain("useDialog(");
   });
   it("beide plekken koppelen de uitleg, de knoppen zijn 44 px, en een foto-voorbeeld wordt niet dubbel voorgelezen", () => {
-    for (const [f, id] of [["components/app/OnboardingForm.tsx", "bevestig-insturen-uitleg"], ["components/app/IdScan.tsx", "idscan-bevestig-uitleg"]] as const) {
-      const s = bron(f);
-      expect(s, f).toContain(`beschrijvingId="${id}"`);
-      expect(s, f).toContain(`id="${id}"`);
-      expect(aantal(s, /min-h-\[44px\] flex-1/g), f).toBe(2);
-    }
+    const form = bron("components/app/OnboardingForm.tsx");
+    expect(form).toContain('beschrijvingId="bevestig-insturen-uitleg"');
+    expect(form).toContain('id="bevestig-insturen-uitleg"');
+    expect(aantal(form, /min-h-\[44px\] flex-1/g)).toBe(2);
+    // de ID-scan heeft sinds 13 nov een eigen controlestap (geen sheet): kop en uitleg met id, twee knoppen van 44 px
     const scan = bron("components/app/IdScan.tsx");
+    expect(scan).toContain('id="idscan-bevestig-titel"');
+    expect(scan).toContain('id="idscan-bevestig-uitleg"');
+    expect(aantal(scan, /min-h-\[44px\] w-full/g)).toBeGreaterThanOrEqual(2);
     expect(scan).toContain('alt=""');
     expect(scan).toContain('<figcaption className="mt-1 text-xs text-neutralx-500">');
   });

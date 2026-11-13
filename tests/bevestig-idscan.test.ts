@@ -55,34 +55,46 @@ describe("de vraag in IdScan.tsx", () => {
   // op Windows kan het bestand regeleinden \r\n hebben: gelijktrekken, de controles hieronder lopen over meerdere regels
   const src = readFileSync(path.join(ROOT, "components/app/IdScan.tsx"), "utf8").split("\r\n").join("\n");
 
-  it("een eigen sheet (OnderSheet: role=dialog, Escape, focus), geen window.confirm", () => {
+  // 13 nov 2026, eigenaar: "je ziet geen knop afronding of indienen of alle gegevens nog een keer zien". Een paneel dat je
+  // per ongeluk sloot, liet je bij de camera achter zonder knop; nu is de controle een eigen stap met "Indienen".
+  it("een eigen controlestap (geen paneel dat je per ongeluk sluit), geen window.confirm", () => {
     expect(src).not.toMatch(/window\.confirm\(|[^\w.]confirm\(/);
-    expect(src).toContain("<OnderSheet open={bevestigFotos !== null}");
-    expect(src).toContain('titelId="idscan-bevestig-titel"');
+    expect(src).not.toContain("<OnderSheet");
+    expect(src).toContain('{stap === "controle" && bevestigFotos && (');
+    expect(src).toContain('id="idscan-bevestig-titel"');
+    expect(src).toContain("{s.indienen}");
+    // terug brengt je naar de laatste foto (met het voorbeeld), of naar de gegevens
+    expect(src).toContain('if (st === "controle") return handmatig ? "gegevens" : metBeweging ? "beweging" : "selfie";');
   });
 
-  it("de sheet staat los van de gegevensstap: hij opent ook na de selfie, als de scan de gegevensstap overslaat", () => {
-    const sheet = src.indexOf("<OnderSheet open={bevestigFotos");
+  it("de controle toont alles: de werker, het bedrijf en de thuisbasis (uit het formulier) en het document", () => {
+    expect(src).toContain("...overzicht,");
+    const form = readFileSync(path.join(ROOT, "components/app/OnboardingForm.tsx"), "utf8").split("\r\n").join("\n");
+    expect(form).toContain("overzicht={overzicht}");
+    for (const veld of ["w.persoon.voornaam", "w.persoon.achternaam", "w.persoon.geboortedatum", "w.persoon.telefoon", "ft.bevestig.postcode"]) expect(form).toContain(veld);
+  });
+
+  it("de controlestap staat los van de gegevensstap: hij komt ook na de selfie, als de scan de gegevensstap overslaat", () => {
+    const controle = src.indexOf('{stap === "controle" && bevestigFotos && (');
     const gegevensStap = src.indexOf('{stap === "gegevens" && (');
     const bezigStap = src.indexOf('{stap === "bezig" && (');
-    // de sheet staat tussen de gegevensstap en de stap 'bezig', niet erin
-    expect(sheet).toBeGreaterThan(gegevensStap);
-    expect(sheet).toBeLessThan(bezigStap);
-    expect(src.slice(gegevensStap, sheet)).toContain("</>\n            )}");
+    expect(controle).toBeGreaterThan(gegevensStap);
+    expect(controle).toBeLessThan(bezigStap);
+    expect(src.slice(gegevensStap, controle)).toContain("</>\n            )}");
   });
 
   it("insturen alleen na 'Ja': op de laptop vraagt zowel de knop als de automatische afronding eerst, op de telefoon (QR) gaat het meteen naar de laptop", () => {
     // drie aanroepen van afronden: de telefoon-tak in verder(), de telefoon-tak van de knop, en 'Ja' in de sheet
     expect(src.match(/void afronden\(/g)?.length).toBe(3);
-    expect(src).toContain('else if (modus === "telefoon") void afronden(alle, gegevens);\n    else setBevestigFotos(alle);');
-    expect(src).toContain('modus === "telefoon" ? void afronden(fotos, gegevens) : setBevestigFotos(fotos)');
+    expect(src).toContain('else if (modus === "telefoon") void afronden(alle, gegevens);\n    else naarControle(alle);');
+    expect(src).toContain('modus === "telefoon" ? void afronden(fotos, gegevens) : naarControle(fotos)');
     expect(src).toContain("if (f) void afronden(f, gegevens);");
     // geen directe, ongevraagde afronding meer na de selfie
     expect(src).not.toMatch(/else void afronden\(alle, gegevens\)/);
   });
 
   it("het overzicht geeft geen documentnummer door en toont de foto's als kleine voorbeelden die hun adres opruimen", () => {
-    const blok = src.slice(src.indexOf("bevestigOverzicht({"), src.indexOf("}).map(([label, waarde])"));
+    const blok = src.slice(src.indexOf("bevestigOverzicht({"), src.indexOf("].map(([label, waarde])"));
     expect(blok).toContain("nummerTonen: false");
     expect(blok).not.toContain("gegevens.nummer");
     expect(blok).not.toContain("documentNumber");

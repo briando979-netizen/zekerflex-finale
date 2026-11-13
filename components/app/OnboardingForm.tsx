@@ -11,7 +11,7 @@ import { IdScan, type ScanAfronden, type ScanAfrondenOverdracht, type ScanRoute,
 import { WieBenJijKop } from "@/components/app/WieBenJijKop";
 import { WieBenJijPersoon, type PersoonStand } from "@/components/app/WieBenJijPersoon";
 import { IdKeuzeKaarten } from "@/components/app/WieBenJijIdKaarten";
-import { stappenVoor, voegNaam, type WieStap } from "@/lib/onboarding/wie-ben-jij";
+import { leesDatum, stappenVoor, voegNaam, type WieStap } from "@/lib/onboarding/wie-ben-jij";
 import { controleerVeld, type VeldSleutel } from "@/lib/onboarding/velden";
 import { OnderSheet } from "@/components/app/OnderSheet";
 import { bevestigOverzicht, type OverzichtRij } from "@/lib/werker/bevestig-overzicht";
@@ -79,6 +79,8 @@ export function OnboardingForm({
   // Stripe (als dat aanstaat). Geen bestandskeuze meer (13 nov 2026, eigenaar).
   const [route, setRoute] = useState<ScanRoute>("nl");
   const [wijze, setWijze] = useState<ScanWijze>("auto");
+  // wat de werker verder instuurt, voor de controlestap aan het eind van de scan
+  const [overzicht, setOverzicht] = useState<OverzichtRij[]>([]);
   const [scanOpen, setScanOpen] = useState(false);
   const naamNu = voegNaam(persoonNu.voornaam, persoonNu.achternaam) || defaultName;
   const stappen = stappenVoor({ idKlaar });
@@ -239,6 +241,25 @@ export function OnboardingForm({
       setError(fout);
       return;
     }
+    // alles wat de werker instuurt, voor de controlestap aan het eind van de scan (13 nov 2026, eigenaar: "alle gegevens
+    // nog een keer zien en controleren voordat er ingediend wordt")
+    const fd = new FormData(form);
+    const veld = (n: string) => String(fd.get(n) ?? "").trim();
+    const twee = (n: number) => String(n).padStart(2, "0");
+    const geboren = leesDatum(persoonNu.geboortedatum);
+    const rijen: OverzichtRij[] = [
+      [w.persoon.voornaam, persoonNu.voornaam || "—"],
+      [w.persoon.achternaam, persoonNu.achternaam || "—"],
+      [w.persoon.geboortedatum, geboren ? `${twee(geboren.dag)}-${twee(geboren.maand)}-${geboren.jaar}` : "—"],
+      [w.persoon.telefoon, [persoonNu.landnummer, persoonNu.telefoon].filter(Boolean).join(" ") || "—"],
+    ];
+    if (requireKvk) {
+      const nr = veld(biz === "kvk" ? "kvkNumber" : "vatNumber");
+      if (nr) rijen.push([biz === "kvk" ? t.kvkLabel : t.vatLabel, nr]);
+    }
+    const plaats = [veld("postalCode"), veld("city")].filter(Boolean).join(" ");
+    if (plaats) rijen.push([ft.bevestig.postcode, plaats]);
+    setOverzicht(rijen);
     setRoute(r);
     setWijze(wz);
     setScanOpen(true);
@@ -579,7 +600,7 @@ export function OnboardingForm({
             <p className="text-xs leading-relaxed text-neutralx-400">{t.uploadNote}</p>
           </div>
         </form>
-        {scanOpen && <IdScan t={t} naam={naamNu} route={route} wijze={wijze} onAfronden={afrondenViaScan} onAfrondenOverdracht={afrondenViaTelefoon} onSluiten={sluitScan} />}
+        {scanOpen && <IdScan t={t} naam={naamNu} route={route} wijze={wijze} overzicht={overzicht} onAfronden={afrondenViaScan} onAfrondenOverdracht={afrondenViaTelefoon} onSluiten={sluitScan} />}
       </div>
     </section>
   );
