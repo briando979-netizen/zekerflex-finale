@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { dateNl, percentOf } from "@/lib/admin/format";
 import { Empty, KpiStrip, Meter, PageHead, Panel, Pill } from "@/components/admin/kit";
+import { BeginHier } from "@/components/admin/BeginHier";
+import type { Eerst } from "@/lib/admin/te-doen-eerst";
 
 interface Todo {
   id: string;
@@ -13,6 +15,7 @@ interface Todo {
   auto: boolean;
   done: boolean;
   doneNote?: string;
+  eerst?: Eerst;
 }
 interface Custom {
   id: string;
@@ -85,6 +88,8 @@ export function OwnerTodos() {
   return (
     <div className="space-y-4">
       {head}
+
+      <BeginHier todos={todos} />
 
       <KpiStrip
         items={[

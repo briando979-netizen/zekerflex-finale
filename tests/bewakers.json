@@ -32,6 +32,7 @@
     "tests/sitemap-dekking.test.ts",
     "tests/stripe-kopie.test.ts",
     "tests/talen-bewaker.test.ts",
+    "tests/te-doen-eerst.test.ts",
     "tests/valkuil-bewakers.test.ts",
     "tests/verder-kaart.test.ts",
     "tests/voorstel-indoor-regels.test.ts",
