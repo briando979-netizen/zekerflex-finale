@@ -27,5 +27,6 @@ export function useFT(): FreelancerDict {
     };
   }, [locale, vast]);
   if (heeftVastWoordenboek(locale)) return FREELANCER_DICTS[locale];
-  return geladen?.taal === locale ? geladen.dict : FREELANCER_DICTS.en;
+  const taal: string = locale;
+  return geladen?.taal === taal ? geladen.dict : FREELANCER_DICTS.en;
 }

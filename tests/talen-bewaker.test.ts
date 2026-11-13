@@ -72,7 +72,7 @@ describe("talen: taalmeta en lijsten", () => {
     expect(basisLocale("pl")).toBe("pl");
     expect(basisLocale("tr" as Locale)).toBe("en");
     expect(foutenVoor("tr" as Locale)).toEqual(foutenVoor("en"));
-    expect(isMachineLocale("tr")).toBe(MACHINE_LOCALES.some((l) => l === "tr"));
+    expect(isMachineLocale("tr")).toBe((MACHINE_LOCALES as readonly string[]).includes("tr"));
   });
 
   it("de juridische regel noemt Nederlands en Engels", () => {
