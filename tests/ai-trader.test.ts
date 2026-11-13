@@ -88,7 +88,7 @@ describe("AI-trader: alleen lezen, alleen de papier-host", () => {
   it("noemt alleen de papier-host en nergens de echte API", () => {
     expect(ALPACA_PAPER_HOST).toBe("paper-api.alpaca.markets");
     const alles = bron + kern + lees("app/api/admin/ai-trader/route.ts") + lees("app/admin/ai-trader/page.tsx");
-    expect(alles).not.toMatch(/\bapi\.alpaca\.markets/);
+    expect(alles).not.toMatch(/(^|[^-\w])api\.alpaca\.markets/);
     expect([...alles.matchAll(/https?:\/\/[a-z0-9.-]+/gi)].map((m) => m[0]).filter((h) => !h.includes("paper-api.alpaca.markets") && !h.includes("app.alpaca"))).toEqual([]);
   });
 
