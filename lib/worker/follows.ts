@@ -6,6 +6,7 @@ import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { pushDayMonth, pushRate } from "@/lib/i18n/worker-push";
 import { klusKenmerk, testklusMeldfilter } from "@/lib/shifts/testklus-db";
+import { eenmaligPush } from "@/lib/notifications/push-eenmalig";
 
 // ---------------------------------------------------------------------------
 // Favoriete opdrachtgevers: een werker volgt een bedrijf (❤️ op de dienstpagina)
@@ -166,6 +167,8 @@ export async function notifyFollowersOfShifts(shiftIds: string[], now = new Date
       if (!(await isFollowing(userId, tenantId))) continue;
       if (!(await testklus.mag(klusKenmerk(first), userId))) continue;
       if (onlyUitzend && invoiceModeFor(await getFiscal(userId)) !== "payroll") continue;
+      // één keer per klus: opnieuw openbaar zetten stuurt hem niet nog eens (lib/notifications/push-eenmalig.ts)
+      if (!(await eenmaligPush("volg", first.id, userId, now))) continue;
       recipients.push(userId);
     }
     if (!recipients.length) continue;

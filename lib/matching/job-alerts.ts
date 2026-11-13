@@ -9,6 +9,7 @@ import { prefsAllowShift } from "@/lib/matching/worker-prefs";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { isBlockedByAny } from "@/lib/employer/relations";
 import { klusKenmerk, testklusMeldfilter } from "@/lib/shifts/testklus-db";
+import { eenmaligPush } from "@/lib/notifications/push-eenmalig";
 
 // ---------------------------------------------------------------------------
 // Job-alerts (/dashboard/beschikbaarheid): "Zodra er een passende dienst is,
@@ -99,6 +100,8 @@ export async function notifyJobAlerts(shiftIds: string[], now = new Date()): Pro
     for (const x of matches) {
       if (x.s.viaUitzendbureau && !payroll) continue;
       if (await isBlockedByAny([x.s.branch.tenantId], userId)) continue;
+      // één keer per klus: opnieuw openbaar zetten stuurt hem niet nog eens (lib/notifications/push-eenmalig.ts)
+      if (!(await eenmaligPush("alert", x.s.id, userId, now))) continue;
       hit = x;
       break;
     }
