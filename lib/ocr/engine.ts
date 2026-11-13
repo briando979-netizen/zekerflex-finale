@@ -9,17 +9,16 @@
 // ---------------------------------------------------------------------------
 
 import path from "node:path";
-import { access, mkdir, rename, writeFile } from "node:fs/promises";
 import sharp from "sharp";
 import { createWorker, PSM, type Worker } from "tesseract.js";
 import { AppError } from "@/lib/errors";
+import { OCR_DATA_DIR, OCR_TALEN, taalBestandKlaar, zorgVoorTalen } from "@/lib/ocr/talen";
 
-export const OCR_TALEN = ["nld", "eng"] as const;
-const TAAL_BRON = "https://github.com/tesseract-ocr/tessdata_fast/raw/main";
+// de taalbestanden en hun download wonen in lib/ocr/talen.ts (licht, zodat ook de opstart ze mag laden)
+export { OCR_DATA_DIR, OCR_TALEN };
+
 const MAX_PIXELS = 40_000_000;
 const STIL_MS = 10 * 60_000;
-
-export const OCR_DATA_DIR = process.env.OCR_DATA_DIR || path.join(process.cwd(), "storage", "ocr");
 
 export interface OcrUitkomst {
   tekst: string;
@@ -34,43 +33,10 @@ interface Staat {
   mrz?: Promise<Worker> | null;
   keten: Promise<unknown>;
   timer: ReturnType<typeof setTimeout> | null;
-  talen: Promise<void> | null;
 }
 
 const g = globalThis as unknown as { __zfOcr?: Staat };
-const staat = (): Staat => (g.__zfOcr ??= { worker: null, mrz: null, keten: Promise.resolve(), timer: null, talen: null });
-
-const bestaat = (p: string) =>
-  access(p).then(
-    () => true,
-    () => false,
-  );
-
-/** Zorgt dat de taalbestanden op schijf staan (eenmalig ophalen). */
-async function zorgVoorTalen(): Promise<void> {
-  const s = staat();
-  if (!s.talen) {
-    s.talen = (async () => {
-      await mkdir(OCR_DATA_DIR, { recursive: true });
-      for (const taal of OCR_TALEN) {
-        const doel = path.join(OCR_DATA_DIR, `${taal}.traineddata`);
-        if (await bestaat(doel)) continue;
-        const res = await fetch(`${TAAL_BRON}/${taal}.traineddata`, { signal: AbortSignal.timeout(120_000) });
-        if (!res.ok) throw new Error(`taalbestand ${taal}: HTTP ${res.status}`);
-        const bytes = Buffer.from(await res.arrayBuffer());
-        if (bytes.length < 500_000) throw new Error(`taalbestand ${taal}: te klein (${bytes.length} bytes)`);
-        // eerst ernaast schrijven, dan hernoemen: een halve download is nooit "klaar"
-        const tmp = `${doel}.${process.pid}.tmp`;
-        await writeFile(tmp, bytes);
-        await rename(tmp, doel);
-      }
-    })().catch((err: unknown) => {
-      s.talen = null; // volgende keer opnieuw proberen
-      throw err;
-    });
-  }
-  return s.talen;
-}
+const staat = (): Staat => (g.__zfOcr ??= { worker: null, mrz: null, keten: Promise.resolve(), timer: null });
 
 async function worker(): Promise<Worker> {
   const s = staat();
@@ -217,6 +183,6 @@ export async function leesMrzTekst(png: Buffer): Promise<OcrUitkomst> {
 /** Voor beheer en controle: staan de taalbestanden er al? */
 export async function ocrStand(): Promise<{ map: string; talen: Record<string, boolean> }> {
   const talen: Record<string, boolean> = {};
-  for (const taal of OCR_TALEN) talen[taal] = await bestaat(path.join(OCR_DATA_DIR, `${taal}.traineddata`));
+  for (const taal of OCR_TALEN) talen[taal] = await taalBestandKlaar(path.join(OCR_DATA_DIR, `${taal}.traineddata`));
   return { map: OCR_DATA_DIR, talen };
 }
