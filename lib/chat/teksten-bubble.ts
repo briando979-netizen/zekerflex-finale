@@ -18,6 +18,7 @@ export const BUBBLE_NL = {
   callVoice: "Spraakoproep",
   previewPhoto: "📷 Foto",
   previewVoice: "🎤 Spraakbericht",
+  previewVideo: "🎥 Video",
   previewFileFallback: "Bestand",
   previewLocation: "📍 Locatie",
   retrySend: "Opnieuw versturen",

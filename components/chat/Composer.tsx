@@ -675,7 +675,7 @@ export function Composer({
             </button>
           )}
 
-          <input ref={imgRef} type="file" accept="image/*" hidden onChange={pick("image")} />
+          <input ref={imgRef} type="file" accept="image/*,video/*" hidden onChange={pick("image")} />
           {/* on a phone this opens the camera straight away; a computer shows the file picker */}
           <input ref={camRef} type="file" accept="image/*" capture="environment" hidden onChange={pick("image")} />
           <input ref={fileRef} type="file" hidden onChange={pick("file")} />
