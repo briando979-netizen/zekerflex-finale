@@ -31,6 +31,8 @@ describe("openbareRoutes", () => {
     expect(routes.length).toBeGreaterThan(50);
     expect(routes.some((r) => r.startsWith("/dashboard") || r.startsWith("/admin") || r.startsWith("/werkgever"))).toBe(false);
     expect(routes).toContain("/rekentools/btw-nummer-check");
+    // nieuwe openbare pagina (13 nov): hoort in de nachtelijke ronde
+    expect(routes).toContain("/website-maken");
   });
 });
 
