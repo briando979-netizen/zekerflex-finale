@@ -23,6 +23,7 @@ import {
 } from "@/lib/video/model";
 import { AUDIO_TALEN } from "@/lib/asr/bestand";
 import { tempoVan } from "@/lib/video/maat";
+import { STANDAARD_GROEN } from "@/lib/video/groen-scherm";
 
 interface Props {
   project: Project;
@@ -293,6 +294,52 @@ function BeeldPaneel({ clip, onClip, onAiBewerk, onAiBeweeg, onOndertitels, onSt
             <Schuif label="Zwart-wit" waarde={clip.filters.zwartwit} min={0} max={100} eenheid="%" onChange={(v) => zet({ filters: { ...clip.filters, zwartwit: v } }, "f-z")} />
             <Schuif label="Vervaging" waarde={clip.filters.vervaging} min={0} max={20} eenheid=" px" onChange={(v) => zet({ filters: { ...clip.filters, vervaging: v } }, "f-b")} />
           </div>
+        </>
+      )}
+
+      {clip.soort !== "kleur" && (
+        <>
+          <Kop>Groen scherm</Kop>
+          <label className="flex items-center gap-2 text-[0.75rem]" style={{ color: "var(--a-dim)" }}>
+            <input
+              type="checkbox"
+              checked={Boolean(clip.groenScherm)}
+              data-track="video-groen-scherm"
+              onChange={(e) => zet({ groenScherm: e.target.checked ? { ...STANDAARD_GROEN } : undefined })}
+            />
+            Groene (of blauwe) achtergrond weghalen
+          </label>
+          {clip.groenScherm && (
+            <>
+              <Veld label="Kleur van de achtergrond">
+                <input
+                  type="color"
+                  className="a-input h-9 p-1"
+                  value={clip.groenScherm.kleur}
+                  onChange={(e) => clip.groenScherm && zet({ groenScherm: { ...clip.groenScherm, kleur: e.target.value } }, "groen-kleur")}
+                />
+              </Veld>
+              <div className="grid grid-cols-2 gap-2">
+                <Schuif
+                  label="Hoeveel weg"
+                  waarde={Math.round(clip.groenScherm.drempel * 100)}
+                  min={0}
+                  max={60}
+                  onChange={(v) => clip.groenScherm && zet({ groenScherm: { ...clip.groenScherm, drempel: v / 100 } }, "groen-drempel")}
+                />
+                <Schuif
+                  label="Zachte rand"
+                  waarde={Math.round(clip.groenScherm.zachtheid * 100)}
+                  min={0}
+                  max={40}
+                  onChange={(v) => clip.groenScherm && zet({ groenScherm: { ...clip.groenScherm, zachtheid: v / 100 } }, "groen-zacht")}
+                />
+              </div>
+              <p className="text-[0.6875rem]" style={{ color: "var(--a-mute)" }}>
+                Zet deze clip op het spoor Overlay, boven de achtergrond die je wilt laten zien.
+              </p>
+            </>
+          )}
         </>
       )}
 
