@@ -12,6 +12,18 @@ vi.mock("@/lib/storage/kv", () => ({
   },
 }));
 
+const rl = vi.hoisted(() => ({ ok: true, kapot: false, sleutels: [] as string[], limiet: 0, venster: 0 }));
+vi.mock("@/lib/rate-limit", () => ({
+  privateRateLimitIdentifier: (id: string) => `h(${id.length})`,
+  fixedWindow: async (sleutel: string, limiet: number, venster: number) => {
+    if (rl.kapot) throw new Error("redis weg");
+    rl.sleutels.push(sleutel);
+    rl.limiet = limiet;
+    rl.venster = venster;
+    return { ok: rl.ok, count: 0, limit: limiet, remaining: 0, retryAfterSeconds: 0 };
+  },
+}));
+
 import { TAALVRAAG_CODES, TAALVRAAG_COOKIE, eersteTaalcode, taalVraagSleutel, telTaalVraag } from "@/lib/i18n/taal-vraag";
 import { POST } from "@/app/api/analytics/taal-vraag/route";
 import { isPublicApiRoute } from "@/lib/auth/public-routes";
@@ -21,6 +33,9 @@ const NU = new Date("2026-11-13T10:00:00+01:00");
 beforeEach(() => {
   kv.opslag.clear();
   kv.kapot = false;
+  rl.ok = true;
+  rl.kapot = false;
+  rl.sleutels = [];
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(NU);
 });
@@ -90,5 +105,34 @@ describe("POST /api/analytics/taal-vraag", () => {
   it("bewaart geen IP, gebruiker of pad: alleen getallen per taalcode", async () => {
     await POST(maak({ "accept-language": "es-ES", "user-agent": "Mozilla/5.0", "x-forwarded-for": "203.0.113.9" }));
     expect(JSON.stringify([...kv.opslag])).not.toMatch(/203\.0\.113|user|path|pad/i);
+  });
+});
+
+describe("limiet per IP (20 per uur)", () => {
+  const maak = () => new Request("http://app:3000/api/analytics/taal-vraag", { method: "POST", headers: { "accept-language": "tr", "user-agent": "Mozilla/5.0", "x-forwarded-for": "203.0.113.9" } });
+
+  it("onder de limiet wordt er geteld, met een gehasht IP in de sleutel", async () => {
+    await POST(maak());
+    expect(kv.opslag.get("meting:taal-vraag:2026-11-13")).toEqual({ tr: 1 });
+    expect(rl.limiet).toBe(20);
+    expect(rl.venster).toBe(3600);
+    expect(rl.sleutels).toHaveLength(1);
+    expect(rl.sleutels[0]).toMatch(/^rl:taal-vraag:h\(\d+\)$/);
+    expect(rl.sleutels[0]).not.toContain("203.0.113.9");
+  });
+
+  it("boven de limiet: stil 204, zonder te tellen en zonder cookie", async () => {
+    rl.ok = false;
+    const r = await POST(maak());
+    expect(r.status).toBe(204);
+    expect(kv.opslag.size).toBe(0);
+    expect(r.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("faalt de limiet zelf, dan wordt er wel geteld (fail-open)", async () => {
+    rl.kapot = true;
+    const r = await POST(maak());
+    expect(r.status).toBe(204);
+    expect(kv.opslag.get("meting:taal-vraag:2026-11-13")).toEqual({ tr: 1 });
   });
 });
