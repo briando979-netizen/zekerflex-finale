@@ -219,6 +219,8 @@ export interface AuthDict {
     vatLabel: string;
     vatHint: string;
     uitzendNote: string;
+    /** zelfde noot als het BSN al bekend is (13 nov) */
+    uitzendNoteZonderBsn: string;
     home: string;
     postal: string;
     house: string;
@@ -609,6 +611,7 @@ const nl: AuthDict = {
     vatLabel: "Btw-nummer (met landcode)",
     vatHint: "We controleren dit live in de EU-database (VIES). Werk je in Nederland als zzp'er zonder KVK? Dan factureer je met je eigen btw-nummer.",
     uitzendNote: "Je werkt als uitzendkracht — je hoeft geen KVK te koppelen. Vul hieronder je thuisbasis en identiteitsbewijs in. Je BSN en loonheffingskorting vul je verderop op deze pagina in.",
+    uitzendNoteZonderBsn: "Je werkt als uitzendkracht — je hoeft geen KVK te koppelen. Vul hieronder je thuisbasis en identiteitsbewijs in. Je loonheffingskorting kies je verderop op deze pagina.",
     home: "Thuisbasis",
     postal: "Postcode",
     house: "Huisnr.",
@@ -999,6 +1002,7 @@ const en: AuthDict = {
     vatLabel: "VAT number (with country code)",
     vatHint: "We check this live in the EU database (VIES). Self-employed in the Netherlands without a KVK? Then you invoice with your own VAT number.",
     uitzendNote: "You work as an agency worker — no KVK needed. Fill in your home base and ID below. You enter your BSN and payroll tax credit further down this page.",
+    uitzendNoteZonderBsn: "You work as an agency worker — no KVK needed. Fill in your home base and ID below. You choose your payroll tax credit further down this page.",
     home: "Home base",
     postal: "Postcode",
     house: "House no.",
@@ -1389,6 +1393,7 @@ const pl: AuthDict = {
     vatLabel: "Numer VAT (z kodem kraju)",
     vatHint: "Sprawdzamy go na żywo w unijnej bazie VIES. Pracujesz w Holandii jako samozatrudniony bez KVK? Wtedy wystawiasz faktury na swój własny numer VAT, np. PL1234567890.",
     uitzendNote: "Pracujesz jako pracownik agencyjny — nie potrzebujesz KVK. Poniżej podaj adres i dokument tożsamości. BSN i ulgę podatkową podajesz niżej na tej stronie.",
+    uitzendNoteZonderBsn: "Pracujesz jako pracownik agencyjny — nie potrzebujesz KVK. Poniżej podaj adres i dokument tożsamości. Ulgę podatkową wybierasz niżej na tej stronie.",
     home: "Adres zamieszkania",
     postal: "Kod pocztowy",
     house: "Nr domu",
@@ -1779,6 +1784,7 @@ const ro: AuthDict = {
     vatLabel: "Cod TVA (cu codul țării)",
     vatHint: "Îl verificăm în timp real în baza de date UE (VIES). Lucrezi în Olanda ca independent fără KVK? Atunci facturezi cu propriul cod TVA, de ex. RO12345678.",
     uitzendNote: "Lucrezi prin agenție — nu ai nevoie de KVK. Completează mai jos adresa și actul de identitate. BSN-ul și deducerea fiscală le completezi mai jos pe această pagină.",
+    uitzendNoteZonderBsn: "Lucrezi prin agenție — nu ai nevoie de KVK. Completează mai jos adresa și actul de identitate. Deducerea fiscală o alegi mai jos pe această pagină.",
     home: "Adresa de domiciliu",
     postal: "Cod poștal",
     house: "Nr.",
@@ -2169,6 +2175,7 @@ const uk: AuthDict = {
     vatLabel: "Номер ПДВ (з кодом країни)",
     vatHint: "Ми перевіряємо його в реальному часі в базі ЄС (VIES). Працюєш у Нідерландах як самозайнятий без KVK? Тоді виставляєш рахунки зі своїм номером ПДВ.",
     uitzendNote: "Ти працюєш через агенцію — KVK не потрібен. Нижче вкажи адресу і документ. BSN і податкову пільгу вказуєш нижче на цій сторінці.",
+    uitzendNoteZonderBsn: "Ти працюєш через агенцію — KVK не потрібен. Нижче вкажи адресу і документ. Податкову пільгу обираєш нижче на цій сторінці.",
     home: "Домашня адреса",
     postal: "Поштовий індекс",
     house: "№ будинку",
