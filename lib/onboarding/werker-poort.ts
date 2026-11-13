@@ -27,16 +27,29 @@ export interface WerkerPoortFeiten {
   fotoGezet: boolean;
 }
 
+/**
+ * De verplichte stappen, in de volgorde waarin een werker ze doet. Dit is de enige lijst: de poort (werkerOnboardingKlaar,
+ * openVerplicht) en de tijdlijn "Laat weten wie je bent" (lib/onboarding/laat-weten.ts) lezen haar allebei, zodat de teller
+ * "stap n van 5" overal hetzelfde telt (13 nov: er waren vier tellers). "sleutel" is de naam in de tijdlijn en de teksten.
+ * Het recht om te werken hoort sinds 10 nov niet meer bij de onboarding (eigenaar); het blijft verplicht vóór de eerste
+ * betaalde klus (payoutEligibility, eisWerkrecht). Tweestapsverificatie is sinds 12 nov optioneel (eigenaar), en een
+ * bevestigd e-mailadres telt hier niet mee: dat is een melding, geen stap.
+ */
+export const POORT_STAPPEN = [
+  { sleutel: "kind", feit: "soortGekozen" },
+  { sleutel: "branches", feit: "branchesGekozen" },
+  { sleutel: "gegevens", feit: "gegevensIngevuld" },
+  { sleutel: "identiteit", feit: "identiteitIngestuurd" },
+  { sleutel: "foto", feit: "fotoGezet" },
+] as const satisfies readonly { sleutel: string; feit: keyof WerkerPoortFeiten }[];
+
 export function werkerOnboardingKlaar(f: WerkerPoortFeiten): boolean {
-  // het recht om te werken hoort sinds 10 nov niet meer bij de onboarding (eigenaar); het blijft verplicht
-  // vóór de eerste betaalde klus (payoutEligibility, eisWerkrecht)
-  // tweestapsverificatie is sinds 12 nov optioneel (eigenaar): aanbevolen in de stappen, maar geen voorwaarde
-  return f.soortGekozen && f.branchesGekozen && f.gegevensIngevuld && f.identiteitIngestuurd && f.fotoGezet;
+  return POORT_STAPPEN.every((s) => f[s.feit]);
 }
 
 /** De verplichte stappen (zoals werkerOnboardingKlaar) die nog open staan. */
 export function openVerplicht(f: WerkerPoortFeiten): number {
-  return [f.soortGekozen, f.branchesGekozen, f.gegevensIngevuld, f.identiteitIngestuurd, f.fotoGezet].filter((x) => !x).length;
+  return POORT_STAPPEN.filter((s) => !f[s.feit]).length;
 }
 
 /**
