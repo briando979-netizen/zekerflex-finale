@@ -34,3 +34,12 @@ export function gegevensMist(s: GegevensStand): GegevensStuk[] {
   if (!s.postcodeOk) mist.push("postcode");
   return mist;
 }
+
+/**
+ * Heeft het formulier van /dashboard/verificatie niets meer te vragen? Persoon, thuisbasis en ID af en geen gegevens die
+ * missen: dan toont de pagina het eindscherm, ook als het profiel nog niet "compleet" is (het rekeningnummer hoort niet bij
+ * de aanmelding). Zonder deze regel bleef zo'n werker in het formulier hangen (13 nov).
+ */
+export function aanmeldingAf(f: { persoonKlaar: boolean; woonKlaar: boolean; idKlaar: boolean; mist: readonly GegevensStuk[] }): boolean {
+  return f.persoonKlaar && f.woonKlaar && f.idKlaar && f.mist.length === 0;
+}

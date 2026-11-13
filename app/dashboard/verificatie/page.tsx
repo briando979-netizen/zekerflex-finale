@@ -1,6 +1,6 @@
 import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
+import { getFreelancerOverview, type FreelancerOverview } from "@/lib/dashboard/freelancer";
 import { PageHeader, Panel, StatusPill } from "@/components/app/ui";
 import { OnboardingForm } from "@/components/app/OnboardingForm";
 import { WalletVerifyButton } from "@/components/app/WalletVerifyButton";
@@ -8,19 +8,20 @@ import { ComplianceDocsPanel } from "@/components/app/ComplianceDocsPanel";
 import { UitzendPanel } from "@/components/app/UitzendPanel";
 import { getFiscal, invoiceModeFor, fiscaalIngevuld } from "@/lib/fiscal/store";
 import { activeUitzendContract } from "@/lib/agreements/uitzend-contract";
-import { gegevensMist } from "@/lib/onboarding/gegevens-mist";
+import { aanmeldingAf, gegevensMist } from "@/lib/onboarding/gegevens-mist";
 import { GegevensMist } from "@/components/app/GegevensMist";
 import { BackLink } from "@/components/app/BackLink";
 import { stripeIdentityAvailable, syncStripeIdentity } from "@/lib/kyc/stripe-identity";
 import { getLocale, getFreelancerDict } from "@/lib/i18n/server";
 import Link from "next/link";
-import { AUTH_DICTS } from "@/lib/i18n/auth";
+import { AUTH_DICTS, type AuthDict } from "@/lib/i18n/auth";
+import type { FreelancerDict } from "@/lib/i18n/freelancer";
 import { attemptLabel, waitForStripe } from "@/lib/kyc/stripe-status";
 import { StripeIdentityWacht } from "@/components/app/StripeIdentityWacht";
 import { WerkrechtPanel } from "@/components/app/WerkrechtPanel";
 import { werkrechtVoorWerk, werkrechtEisAan } from "@/lib/werkrecht/store";
 import { leesWieBenJij } from "@/lib/onboarding/wie-ben-jij-opslag";
-import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
+import { werkerPoortStand, type WerkerPoortStand } from "@/lib/onboarding/werker-poort-server";
 import { openVerplicht, volgendeNaVerificatie } from "@/lib/onboarding/werker-poort";
 import { nogStappenTekst } from "@/lib/onboarding/laat-weten";
 import { beginStap } from "@/lib/onboarding/wie-ben-jij";
@@ -30,12 +31,145 @@ import { ID_KAART } from "@/lib/onboarding/id-kaart-teksten";
 
 export const dynamic = "force-dynamic";
 
+type Onderdeel = FreelancerOverview["onboarding"][number]["id"];
+/** Waar je een onderdeel dat nog open staat afmaakt (null: hier niet te doen of al gedaan). */
+const WAAR: Record<Onderdeel, string | null> = {
+  account: null,
+  fiscaal: "/dashboard/fiscaal",
+  kvk: "/dashboard/fiscaal",
+  contract: "#uitzendovereenkomst",
+  kyc: null,
+  thuisbasis: "#bankrekening",
+};
+
+/**
+ * Het eindscherm van de aanmelding: per onderdeel een vinkje of "nog open" (met de plek waar je het doet), wat er daarna
+ * kan, de documenten met het rekeningnummer, en bij een uitzendkracht de verloning. Staat het rekeningnummer nog open,
+ * dan staat dat direct onder de stand: het hoort niet bij de aanmelding, maar is wel nodig vóór je eerste klus
+ * (lib/fiscal/eligibility.ts).
+ */
+function AanmeldingKlaar({
+  pt,
+  fd,
+  o,
+  poortNu,
+  werkrechtOk,
+  werkrechtVragen,
+  uitzend,
+  ibanOpen = false,
+}: {
+  pt: AuthDict["page"];
+  fd: FreelancerDict;
+  o: FreelancerOverview;
+  poortNu: WerkerPoortStand | null;
+  werkrechtOk: boolean;
+  werkrechtVragen: boolean;
+  uitzend: boolean;
+  ibanOpen?: boolean;
+}) {
+  const klaar = fd.profielAf.klaar;
+  const volgende = volgendeNaVerificatie(poortNu);
+  const open = o.onboarding.filter((s) => !s.done).length;
+  const documenten = (
+    <div id="bankrekening" className="mt-6 scroll-mt-20">
+      <Panel title={ibanOpen ? pt.bankTitle : "Verplichte documenten"}>
+        <div className="p-5">
+          {ibanOpen && <p className="mb-4 text-sm text-neutralx-600">{pt.bankSub}</p>}
+          <ComplianceDocsPanel />
+        </div>
+      </Panel>
+    </div>
+  );
+  return (
+    <div className="mx-auto max-w-2xl">
+      <BackLink fallbackHref="/dashboard/account" label={pt.back} />
+      <PageHeader title={pt.doneTitle} subtitle={pt.doneSub} />
+      {volgende === "foto" && (
+        <div className="mb-6 card p-5">
+          <p className="text-sm font-semibold text-ink">{fd.start.fotoStep}</p>
+          <p className="mt-1 text-sm text-neutralx-600">{fd.start.fotoBody}</p>
+          <Link href="/dashboard/eerste-indruk?stap=foto" className="btn-primary mt-4 inline-flex">{fd.start.fotoCta}</Link>
+        </div>
+      )}
+      <Panel title="Status">
+        <div className="px-5 py-6">
+          {volgende !== "klaar" && poortNu ? (
+            <StatusPill tone="warn">{nogStappenTekst(openVerplicht(poortNu), fd.start, fd.intl)}</StatusPill>
+          ) : open > 0 ? (
+            <StatusPill tone="warn">{nogStappenTekst(open, fd.start, fd.intl)}</StatusPill>
+          ) : werkrechtOk ? (
+            <StatusPill tone="ok">Geverifieerd — je kunt diensten aannemen</StatusPill>
+          ) : (
+            <StatusPill tone="warn">{pt.werkrecht.nodig}</StatusPill>
+          )}
+          <ul className="mt-4 space-y-2">
+            {o.onboarding.map((s) => {
+              const waar = s.done ? null : WAAR[s.id];
+              return (
+                <li key={s.id} className="flex items-center gap-2.5 text-sm">
+                  {s.done ? (
+                    <span className="grid h-4 w-4 place-items-center rounded-full bg-ok text-[10px] text-white">✓</span>
+                  ) : (
+                    <span aria-hidden className="h-4 w-4 rounded-full border-2 border-warn" />
+                  )}
+                  {waar ? (
+                    <a href={waar} className="font-medium text-ink underline underline-offset-2">{s.label}</a>
+                  ) : (
+                    <span className={s.done ? "text-neutralx-600" : "font-medium text-ink"}>{s.label}</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </Panel>
+
+      {ibanOpen && documenten}
+
+      {werkrechtVragen && (
+        <div id="werkrecht" className="mt-6 scroll-mt-20">
+          <Panel title={pt.werkrecht.title}>
+            <div className="p-5">
+              <WerkrechtPanel />
+            </div>
+          </Panel>
+        </div>
+      )}
+
+      <div className="mt-6">
+        <Panel title={klaar.nextTitle}>
+          <div className="px-5 py-5">
+            <p className="text-sm font-semibold text-ink">{klaar.title}</p>
+            <p className="mt-1 text-sm text-neutralx-600">{klaar.sub}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link href="/dashboard/klussen" className="btn-primary">{klaar.jobs}</Link>
+              <Link href="/dashboard/profiel" className="btn-ghost">{klaar.profile}</Link>
+              <Link href="/dashboard/beschikbaarheid" className="btn-ghost">{klaar.availability}</Link>
+            </div>
+          </div>
+        </Panel>
+      </div>
+
+      {!ibanOpen && documenten}
+
+      {uitzend && (
+        <div id="uitzendovereenkomst" tabIndex={-1} className="mt-6 scroll-mt-20 focus:outline-none">
+          <Panel title="Uitzenden — verloning, StiPP & loonheffing">
+            <div className="p-5">
+              <UitzendPanel />
+            </div>
+          </Panel>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default async function VerificatiePage() {
   const principal = await requirePrincipal();
   const locale = await getLocale();
   const pt = AUTH_DICTS[locale].page;
   const fd = await getFreelancerDict();
-  const klaar = fd.profielAf.klaar;
   // back from Stripe (or webhook not configured): fetch the result before rendering
   await syncStripeIdentity(principal.userId);
   const [o, lastCheck, fiscal, werkrecht, werkrechtVragen] = await Promise.all([
@@ -54,80 +188,8 @@ export default async function VerificatiePage() {
     // Gegevens en ID zijn af, maar reageren vraagt ook de rest van de onboarding (de profielfoto, of branches bij een
     // oud account): dan niet "je kunt diensten aannemen", maar de volgende stap (lib/onboarding/werker-poort.ts).
     const poortNu = isReservedTestAddress(principal.email) ? null : await werkerPoortStand(principal.userId).catch(() => null);
-    const volgende = volgendeNaVerificatie(poortNu);
     return (
-      <div className="mx-auto max-w-2xl">
-        <BackLink fallbackHref="/dashboard/account" label={pt.back} />
-        <PageHeader title={pt.doneTitle} subtitle={pt.doneSub} />
-        {volgende === "foto" && (
-          <div className="mb-6 card p-5">
-            <p className="text-sm font-semibold text-ink">{fd.start.fotoStep}</p>
-            <p className="mt-1 text-sm text-neutralx-600">{fd.start.fotoBody}</p>
-            <Link href="/dashboard/eerste-indruk?stap=foto" className="btn-primary mt-4 inline-flex">{fd.start.fotoCta}</Link>
-          </div>
-        )}
-        <Panel title="Status">
-          <div className="px-5 py-6">
-            {volgende !== "klaar" && poortNu ? (
-              <StatusPill tone="warn">{nogStappenTekst(openVerplicht(poortNu), fd.start, fd.intl)}</StatusPill>
-            ) : werkrecht.ok ? (
-              <StatusPill tone="ok">Geverifieerd — je kunt diensten aannemen</StatusPill>
-            ) : (
-              <StatusPill tone="warn">{pt.werkrecht.nodig}</StatusPill>
-            )}
-            <ul className="mt-4 space-y-2">
-              {o.onboarding.map((s) => (
-                <li key={s.label} className="flex items-center gap-2.5 text-sm">
-                  <span className="grid h-4 w-4 place-items-center rounded-full bg-ok text-[10px] text-white">✓</span>
-                  <span className="text-neutralx-600">{s.label}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Panel>
-
-        {werkrechtVragen && (
-          <div id="werkrecht" className="mt-6 scroll-mt-20">
-            <Panel title={pt.werkrecht.title}>
-              <div className="p-5">
-                <WerkrechtPanel />
-              </div>
-            </Panel>
-          </div>
-        )}
-
-        <div className="mt-6">
-          <Panel title={klaar.nextTitle}>
-            <div className="px-5 py-5">
-              <p className="text-sm font-semibold text-ink">{klaar.title}</p>
-              <p className="mt-1 text-sm text-neutralx-600">{klaar.sub}</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Link href="/dashboard/klussen" className="btn-primary">{klaar.jobs}</Link>
-                <Link href="/dashboard/profiel" className="btn-ghost">{klaar.profile}</Link>
-                <Link href="/dashboard/beschikbaarheid" className="btn-ghost">{klaar.availability}</Link>
-              </div>
-            </div>
-          </Panel>
-        </div>
-
-        <div className="mt-6">
-          <Panel title="Verplichte documenten">
-            <div className="p-5">
-              <ComplianceDocsPanel />
-            </div>
-          </Panel>
-        </div>
-
-        {fiscal.workerKind === "uitzendkracht" && (
-          <div className="mt-6">
-            <Panel title="Uitzenden — verloning, StiPP & loonheffing">
-              <div className="p-5">
-                <UitzendPanel />
-              </div>
-            </Panel>
-          </div>
-        )}
-      </div>
+      <AanmeldingKlaar pt={pt} fd={fd} o={o} poortNu={poortNu} werkrechtOk={werkrecht.ok} werkrechtVragen={werkrechtVragen} uitzend={fiscal.workerKind === "uitzendkracht"} />
     );
   }
 
@@ -162,6 +224,24 @@ export default async function VerificatiePage() {
           bedrijfOk: Boolean(bewaard?.kvkValid || /^\d{8}$/.test(bewaard?.kvkNumber ?? "") || fiscal.vatValid || fiscal.korApplies),
           postcodeOk: Boolean(bewaard?.homePostalCode),
         });
+  // Het formulier heeft niets meer te vragen (persoon, thuisbasis, ID en gegevens af), maar het profiel is nog niet "compleet"
+  // (meestal: het rekeningnummer): dan het eindscherm met wat er echt nog open staat, niet opnieuw het formulier. Anders gaf
+  // "Opslaan" eindeloos "Bovenaan deze pagina zie je wat er nog mist", zonder lijst (13 nov, gemeld door de eigenaar).
+  if (aanmeldingAf({ persoonKlaar: persoon.klaar, woonKlaar, idKlaar, mist })) {
+    return (
+      <AanmeldingKlaar
+        pt={pt}
+        fd={fd}
+        o={o}
+        poortNu={poort}
+        werkrechtOk={werkrecht.ok}
+        werkrechtVragen={werkrechtVragen}
+        uitzend={fiscal.workerKind === "uitzendkracht"}
+        // de postcode is er (woonKlaar), dus een open "thuisbasis en rekeningnummer" is het rekeningnummer
+        ibanOpen={o.onboarding.some((s) => s.id === "thuisbasis" && !s.done)}
+      />
+    );
+  }
   const initial = {
     ...(bewaard?.kvkNumber && /^\d+$/.test(bewaard.kvkNumber) ? { kvkNumber: bewaard.kvkNumber } : {}),
     ...(bewaard?.vatNumber ? { vatNumber: bewaard.vatNumber } : {}),
