@@ -442,16 +442,17 @@ export function onboardingReminderEmail(
   const base = appUrl.replace(/\/+$/, "");
   if (werker && werker.items.length) {
     const links = werker.items.map((i) => ({ tekst: i.tekst, href: `${base}${i.href}` }));
-    const eerste = links[0]!.href;
+    const eerste = werker.knopHref ? `${base}${werker.knopHref}` : links[0]!.href;
     return {
       to: "",
       subject: werker.onderwerp,
       kind: "onboarding-reminder",
-      text: `${werker.aanhef}\n\n${werker.intro}\n${links.map((l) => `- ${l.tekst}: ${l.href}`).join("\n")}\n\n${werker.duurt}\n\n${werker.hulp}`,
+      text: `${werker.aanhef}\n\n${werker.intro}${werker.stapRegel ? `\n${werker.stapRegel}` : ""}\n${links.map((l) => `- ${l.tekst}: ${l.href}`).join("\n")}\n\n${werker.duurt}\n\n${werker.hulp}`,
       html: shell(
         werker.onderwerp,
         `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">${escapeHtml(werker.aanhef)}</p>
        <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#3C4A42">${escapeHtml(werker.intro)}</p>
+       ${werker.stapRegel ? `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;font-weight:600;color:#1B2A22">${escapeHtml(werker.stapRegel)}</p>` : ""}
        <ul style="margin:0 0 16px;padding-left:20px;font-size:15px;line-height:1.7;color:#3C4A42">${links.map((l) => `<li><a href="${escapeHtml(l.href)}" style="color:#1F6B4A">${escapeHtml(l.tekst)}</a></li>`).join("")}</ul>
        <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#3C4A42">${escapeHtml(werker.duurt)}</p>
        <p style="margin:0">${button(eerste, werker.knop)}</p>
