@@ -23,6 +23,7 @@ import { fileURLToPath } from "node:url";
 import { WERK, geefZwaarSlotVrij, haalMain, haalVastlegging, kloon, sh, testOmgeving, verkrijgZwaarSlot, wachtOpUitrol } from "./werkkopie.mjs";
 import { gefaaldeBewakers, leesBewakerLijst } from "./bewakers.mjs";
 import { basisKlopt } from "./basis.mjs";
+import { vindTekstVerwijzingen } from "./tekst-verwijzing.mjs";
 
 export const CONTROLE_DIR = path.join(WERK, "controle");
 const REPO = path.join(CONTROLE_DIR, "repo");
@@ -233,6 +234,30 @@ export async function controleerVastlegging({ doel = "main", vanaf = null, wacht
         tests = { ok: false, uit: `Bewaker faalt: ${namen}\n${staartTekst(b.uit, 40)}${tests.uit ? `\n\n${tests.uit}` : ""}`, overgeslagen: null };
       }
     }
+    // Tests die een gewijzigd bestand als TEKST noemen (readFileSync + toContain): `vitest related` ziet ze niet (tests/uitzend-v2.test.ts, 13 nov).
+    // Meer dan 40: dan alleen de bewakers (die draaien hierboven al), met het aantal in de uitslag; de controle breekt nooit stil af.
+    let extraTests = { gevonden: 0, gedraaid: 0, afgekapt: false, lijst: [] };
+    if (lintbaar.length <= MAX_LINT) {
+      try {
+        const namen = (await fs.readdir(path.join(REPO, "tests")).catch(() => [])).filter((n) => /^[\w.-]+\.test\.ts$/.test(n));
+        const testen = await Promise.all(namen.map(async (n) => ({ pad: `tests/${n}`, inhoud: await fs.readFile(path.join(REPO, "tests", n), "utf8").catch(() => "") })));
+        const v = vindTekstVerwijzingen(bestanden, testen);
+        const nogTeDraaien = v.tests.filter((p) => !teDraaien.includes(p));
+        extraTests = { gevonden: v.gevonden, gedraaid: nogTeDraaien.length, afgekapt: v.afgekapt, lijst: Object.keys(v.redenen).slice(0, 40) };
+        if (v.afgekapt) {
+          log("info", `Tests die een gewijzigd bestand als tekst noemen: ${v.gevonden}, meer dan 40: alleen de bewakers draaien (hierboven)`);
+        } else if (nogTeDraaien.length) {
+          log("info", `Tests die een gewijzigd bestand als tekst noemen (${nogTeDraaien.length}): ${nogTeDraaien.slice(0, 6).join(", ")}${nogTeDraaien.length > 6 ? " ..." : ""}`);
+          const x = await sh("npx", ["vitest", "run", "--passWithNoTests", "--maxWorkers=2", ...nogTeDraaien], { cwd: REPO, env: testOmgeving(), timeout: 600_000, zonderSleutel: true });
+          if (x.code !== 0) {
+            const falen = gefaaldeBewakers(x.uit, nogTeDraaien);
+            tests = { ok: false, uit: `Test die een gewijzigd bestand als tekst noemt faalt: ${falen.length ? falen.join(", ") : "zie de uitvoer"}\n${staartTekst(x.uit, 40)}${tests.uit ? `\n\n${tests.uit}` : ""}`, overgeslagen: null };
+          }
+        }
+      } catch (e) {
+        log("info", `Tests met een tekstverwijzing overgeslagen: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
     const klaar = new Date();
     const u = {
       sha,
@@ -248,6 +273,7 @@ export async function controleerVastlegging({ doel = "main", vanaf = null, wacht
       eslint,
       tests,
       bewakers,
+      extraTests,
       door,
       begon: begon.toISOString(),
       klaar: klaar.toISOString(),
