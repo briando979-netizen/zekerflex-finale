@@ -14,7 +14,7 @@ export function isFotoType(mime: string): boolean {
 
 /** Video die de chat in de bubbel afspeelt (een gewone bijlage van het soort "file"; kan de browser hem niet, dan de downloadkaart). */
 export function isVideoType(mime: string): boolean {
-  return /^video/[a-z0-9.+-]+$/i.test((mime || "").trim());
+  return /^video\/[a-z0-9.+-]+$/i.test((mime || "").trim());
 }
 
 /** Soorten die een browser als pagina of script kan uitvoeren (html, svg, xml, javascript, php). */
