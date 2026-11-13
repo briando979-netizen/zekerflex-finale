@@ -1,4 +1,4 @@
-import { KycStatus } from "@prisma/client";
+import { KycStatus, Prisma } from "@prisma/client";
 import type Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
@@ -14,6 +14,7 @@ import { runAfter } from "@/lib/run-after";
 import { meldIdGeverifieerd } from "@/lib/onboarding/id-geverifieerd";
 import { actieveWeigering, isAccountWeigering, zetWeigering } from "@/lib/kyc/stripe-weigering";
 import { betalenUit } from "@/lib/billing/stripe-betalen";
+import { behoudKopie } from "@/lib/kyc/stripe-kopie-vorm";
 
 // ---------------------------------------------------------------------------
 // ID verification via Stripe Identity: Stripe's own camera flow on the phone
@@ -161,7 +162,9 @@ async function applySession(s: Stripe.Identity.VerificationSession, outcome: str
         verifiedAt: nameOk ? new Date() : null,
         documentType: docType === "passport" ? "PASSPORT" : docType === "driving_license" ? "DRIVERS_LICENSE" : docType ? "ID_CARD" : null,
         expiresAt,
-        rawPayload: { provider: PROVIDER, sessionId: s.id, nameOnDocument: docName, nameOk },
+        // een kopie van de foto's en gegevens (lib/kyc/stripe-kopie.ts) blijft staan: anders raken de bestanden los en vindt
+        // het wissen van het account ze niet meer
+        rawPayload: { provider: PROVIDER, sessionId: s.id, nameOnDocument: docName, nameOk, ...behoudKopie(row.rawPayload) } as Prisma.InputJsonValue,
       },
     });
     if (user.kycStatus !== KycStatus.REJECTED) await prisma.user.update({ where: { id: user.id }, data: { kycStatus: status } });
@@ -191,7 +194,7 @@ async function applySession(s: Stripe.Identity.VerificationSession, outcome: str
   if (outcome === "requires_input" || outcome === "canceled") {
     if (outcome === "requires_input" && !s.last_error) return; // just created, not yet attempted
     const reason = s.last_error?.reason ?? s.last_error?.code ?? (outcome === "canceled" ? "geannuleerd" : "niet afgerond");
-    await prisma.identityVerification.update({ where: { id: row.id }, data: { decisionStatus: outcome === "canceled" ? "canceled" : "requires_input", rawPayload: { provider: PROVIDER, sessionId: s.id, reason } } });
+    await prisma.identityVerification.update({ where: { id: row.id }, data: { decisionStatus: outcome === "canceled" ? "canceled" : "requires_input", rawPayload: { provider: PROVIDER, sessionId: s.id, reason, ...behoudKopie(row.rawPayload) } as Prisma.InputJsonValue } });
     await recordAudit({ category: "KYC", action: "kyc.stripe_requires_input", actorLabel: "system:stripe-identity", summary: `${user.fullName}: Stripe-verificatie niet gelukt (${reason})`, targetType: "user", targetId: user.id });
   }
 }

@@ -11,6 +11,8 @@ import { UserActions } from "@/components/admin/UserActions";
 import { IdentityCheckActions } from "@/components/admin/IdentityCheckActions";
 import { IdFoto, KopFoto } from "@/components/admin/IdFoto";
 import { StripeFotoSleutel } from "@/components/admin/StripeFotoSleutel";
+import { StripeKopieKnop } from "@/components/admin/StripeKopieKnop";
+import { KOPIE_FOTOS, kopieRegel, kopieStand } from "@/lib/kyc/stripe-kopie-vorm";
 import { stripeFotoSleutelInfo } from "@/lib/kyc/stripe-fotos";
 import { KycOverride } from "@/components/admin/KycOverride";
 import { InspectLinkPanel } from "@/components/admin/InspectLinkPanel";
@@ -187,8 +189,13 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
   // Stripe-controles: de foto's staan bij Stripe en komen via de beperkte sleutel (lib/kyc/stripe-fotos.ts)
   const stripeFotosVan = (c: (typeof user.identityChecks)[number]) =>
     c.provider === "STRIPE_IDENTITY" && Boolean(stripeSleutel) && Boolean(c.sessionId) && STRIPE_MET_RAPPORT.has(c.decisionStatus ?? "");
+  // een kopie van een Stripe-controle bij ons (lib/kyc/stripe-kopie.ts): die foto's, ook zonder sleutel
+  const kopieFotos = (c: (typeof user.identityChecks)[number]): FotoSoort[] =>
+    c.provider === "STRIPE_IDENTITY" ? KOPIE_FOTOS.filter((f) => Boolean(kopieStand(c.rawPayload).uploadIds[f])) : [];
   const fotosVan = (c: (typeof user.identityChecks)[number]): FotoSoort[] =>
-    stripeFotosVan(c)
+    kopieFotos(c).length > 0
+      ? kopieFotos(c)
+      : stripeFotosVan(c)
       ? FOTO_SOORTEN.map((f) => f.id).filter((f) => f !== "selfie2" && !(f === "back" && c.documentType === "PASSPORT"))
       : // een paspoort heeft geen achterkant: sinds 12 nov stuurt de scan de fotopagina als tweede beeld mee (lib/kyc/document-zijden.ts),
         // en eerder fotografeerden werkers die pagina vaak twee keer; die kopie tonen als "Achterkant" zag eruit als een fout
@@ -402,6 +409,7 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
             {user.identityChecks.some((c) => c.provider === "STRIPE_IDENTITY") && (
               <div className="px-4 pb-3 sm:px-5">
                 <StripeFotoSleutel begin={stripeSleutel} />
+                {stripeSleutel && !isDeleted && <StripeKopieKnop userId={user.id} />}
               </div>
             )}
             {user.identityChecks.length === 0 ? (
@@ -472,7 +480,9 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                         <p className="text-xs" style={{ color: "var(--a-dim)" }}>
                           {w.stripe.naamOpDocument ? `Naam op document: ${w.stripe.naamOpDocument}${w.stripe.naamKlopt === false ? " (klopt niet met het account)" : w.stripe.naamKlopt ? " (klopt)" : ""}. ` : ""}
                           {w.stripe.reden ? `Reden: ${w.stripe.reden}. ` : ""}
-                          {fotos.length > 0
+                          {kopieStand(c.rawPayload).kopie
+                            ? kopieRegel(kopieStand(c.rawPayload).kopie!, { datumTijd: (iso) => dateTimeNl(new Date(iso)), datum: (ymd) => dateNl(new Date(`${ymd}T12:00:00Z`)) })
+                            : fotos.length > 0
                             ? "De foto's komen rechtstreeks van Stripe en worden bij ons niet bewaard. "
                             : stripeSleutel
                               ? "Bij deze poging heeft Stripe geen foto's (niet afgerond). "
