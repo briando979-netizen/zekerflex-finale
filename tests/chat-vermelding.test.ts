@@ -15,6 +15,7 @@ vi.mock("@/lib/messaging/contacts", () => ({
 // iedereen heeft deze groep gedempt
 vi.mock("@/lib/messaging/thread-prefs", () => ({ getChatPrefs: async () => ({}), isMuted: () => true }));
 vi.mock("@/lib/messaging/settings", () => ({ chatPrivacy: async () => ({ hideOnline: new Set(), noReceipts: new Set(), noPreview: new Set() }) }));
+vi.mock("@/lib/redis", () => ({ claimIdempotency: async () => true }));
 
 import { notifyNewMessage } from "@/lib/messaging/notify";
 import type { ChatMessage, ChatThread } from "@/lib/messaging/store";

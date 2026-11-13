@@ -13,6 +13,10 @@ vi.mock("@/lib/messaging/contacts", () => ({
   platformAdminIds: (...a: unknown[]) => platformAdminIds(...a),
 }));
 
+// het plafond voor groepsmeldingen (Redis): hier altijd vrij, behalve waar een test het anders zet
+const claimIdempotency = vi.fn(async (..._a: unknown[]) => true);
+vi.mock("@/lib/redis", () => ({ claimIdempotency: (...a: unknown[]) => claimIdempotency(...a) }));
+
 // per-user chat settings: defaults (not muted, message preview on)
 vi.mock("@/lib/messaging/thread-prefs", () => ({
   getChatPrefs: async () => ({ archived: [], muted: {}, locked: [], favorites: [], lists: {}, clearedAt: {}, deletedAt: {}, blocked: [] }),
@@ -119,6 +123,31 @@ describe("notifyNewMessage", () => {
       data: { type: "CHAT", url: "/berichten?thread=t1", tag: "thread-t1" },
       ttlSeconds: 86_400,
     });
+  });
+
+  it("group: at most one push per member per 30 s, an @mention always gets through, Redis down = still a push", async () => {
+    visibleUsers.mockResolvedValue(new Set());
+    const g = thread({ kind: "group", participants: ["u_jan", "u_bol", "u_x"], meta: { title: "Team" } });
+    claimIdempotency.mockImplementation(async (key: unknown) => key !== "chat-push:t1:u_x");
+    await notifyNewMessage(g, msg());
+    expect(sendUserPush.mock.calls[0]![0]).toEqual(["u_bol"]);
+    expect(claimIdempotency).toHaveBeenCalledWith("chat-push:t1:u_bol", 30);
+    sendUserPush.mockClear();
+    await notifyNewMessage(g, msg({ text: "@u_x jij?", mentions: ["u_x"] }));
+    expect(sendUserPush.mock.calls[0]![0]).toEqual(["u_bol", "u_x"]);
+    sendUserPush.mockClear();
+    claimIdempotency.mockImplementation(async () => {
+      throw new Error("redis weg");
+    });
+    await notifyNewMessage(g, msg());
+    expect(sendUserPush.mock.calls[0]![0]).toEqual(["u_bol", "u_x"]);
+    claimIdempotency.mockImplementation(async () => true);
+  });
+
+  it("direct chats have no ceiling (one person, one conversation)", async () => {
+    visibleUsers.mockResolvedValue(new Set());
+    await notifyNewMessage(thread(), msg());
+    expect(claimIdempotency).not.toHaveBeenCalled();
   });
 
   it("group without a name: the sender as title", async () => {
