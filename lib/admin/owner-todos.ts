@@ -492,6 +492,19 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("no-show-sweep"),
     },
     {
+      id: "kosten-bevestigen",
+      group: "Geld & bank",
+      title: "Kosten bevestigen: twee posten zijn nog niet helemaal zeker",
+      why: "Beheer → Kosten (/admin/kosten) telt de vaste maandlasten op en geeft ze door aan Financiën & winst. Twee posten daarin zijn niet rond: bij het Twilio-nummer 097 ($ 7,70 per maand) staat geen datum van de prijs, en de eenmalige post \"TransIP onbekende post\" (€ 1) is niet toegelicht, dus we weten niet of hij terugkomt. Die laatste telt daarom niet mee in het maand- en jaartotaal. Gemini, Stripe-kosten, Atlas-kosten, Google Play en het Twilio-gebruik staan op \"bedrag onbekend\" en tellen ook niet mee, dus de totalen zijn minimaal.",
+      how: [
+        "Open Beheer → Kosten (/admin/kosten). Zoek bij het Twilio-nummer de datum van de prijs op in je Twilio-account en vul die in bij die post (Bewerken).",
+        "Kijk op je TransIP-factuur wat de post van € 1 is. Komt hij elke maand of elk jaar terug, zet hem dan op Maand of Jaar; is hij eenmalig, laat hem dan staan.",
+        "Vul waar je kunt de onbekende bedragen in (Gemini, Stripe, Atlas, Google Play, Twilio-gebruik), met bron en datum. Laat je boekhouder de schattingen (Delaware) bevestigen.",
+      ],
+      auto: false,
+      ...m("kosten-bevestigen"),
+    },
+    {
       id: "avg-bewaartermijn",
       group: "Juridisch",
       title: "AVG: elke nacht oude gegevens opschonen (bewaartermijnen)",

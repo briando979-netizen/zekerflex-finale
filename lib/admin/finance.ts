@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { getFinanceSettings, type FinanceSettings } from "@/lib/admin/finance-settings";
 import { sumRevenueEvents } from "@/lib/admin/revenue-events";
+import { operationeleKosten } from "@/lib/admin/kosten-opslag";
+import { KOSTEN_NIET_INGEVULD, breakEvenOmzetPerMaand, financienBronTekst, type OperationeleKosten } from "@/lib/admin/kosten";
 
 // ---------------------------------------------------------------------------
 // Financieel overzicht voor de eigenaar: eigen omzet (marge) losgetrokken van
@@ -43,6 +45,18 @@ export interface FinanceOverview {
     stripe: number;
     operational: number;
     total: number;
+  };
+  /** waar de vaste maandlasten vandaan komen: het totaal uit Beheer -> Kosten, of de eigen instelling met een melding */
+  operationalSource: {
+    /** de vaste maandlasten waarmee is gerekend, in centen (excl. btw) */
+    monthlyCents: number;
+    soort: "kosten" | "instelling";
+    /** "bron: Beheer -> Kosten, bijgewerkt 13 nov", of de melding "kosten nog niet ingevuld" */
+    tekst: string;
+    /** posten zonder bedrag in de kostenlijst: ze staan niet in het totaal */
+    onbekend: number;
+    /** eigen omzet per maand waarbij de vaste lasten gedekt zijn */
+    breakEvenMonthlyCents: number;
   };
   netProfit: number; // eigen omzet − kosten (excl. btw)
   taxReserve: number; // reservering belasting op de winst
@@ -101,7 +115,12 @@ export async function financeOverview(from: Date, to: Date): Promise<FinanceOver
   const months = Math.max(1, Math.round((to.getTime() - from.getTime()) / (30 * DAY)));
 
   const stripe = Math.round(grossInvoiced * settings.stripeFeePct);
-  const operational = settings.operationalMonthlyCents * months;
+  // De vaste maandlasten komen uit Beheer -> Kosten (opgegeven posten, excl. btw, geen schattingen en geen onbekende
+  // bedragen). Is er geen lijst of faalt het lezen, dan blijft de eigen instelling gelden en zegt het overzicht dat de
+  // kosten nog niet zijn ingevuld, in plaats van een stille 0.
+  const bron: OperationeleKosten = await operationeleKosten().catch(() => ({ bron: "instelling" as const, melding: KOSTEN_NIET_INGEVULD }));
+  const operationalMonthly = bron.bron === "kosten" ? bron.maandCent : settings.operationalMonthlyCents;
+  const operational = operationalMonthly * months;
   const costsTotal = stripe + operational;
 
   const vatOutput = SALES_TYPES.reduce((s, t) => s + (vat[t] ?? 0), 0) + shopVat;
@@ -121,6 +140,13 @@ export async function financeOverview(from: Date, to: Date): Promise<FinanceOver
     grossInvoiced,
     vat: { output: vatOutput, inputEstimate: vatInput, due: vatDue },
     costs: { stripe, operational, total: costsTotal },
+    operationalSource: {
+      monthlyCents: operationalMonthly,
+      soort: bron.bron,
+      tekst: bron.bron === "kosten" ? financienBronTekst(bron.bijgewerktOp) : bron.melding,
+      onbekend: bron.bron === "kosten" ? bron.onbekend : 0,
+      breakEvenMonthlyCents: breakEvenOmzetPerMaand(operationalMonthly),
+    },
     netProfit,
     taxReserve,
     distributable,

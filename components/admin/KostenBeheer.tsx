@@ -10,12 +10,14 @@ import {
   bedragTekst,
   bronRegel,
   datumKort,
+  financienBronTekst,
   formatEuro,
   postId,
   splits,
   totalen,
   type KostenPost,
   type KostenStand,
+  type OperationeleKosten,
   type Munt,
   type Per,
   type TransipFacturen,
@@ -204,7 +206,7 @@ const KOLOMMEN: TableColumn[] = [
   { key: "actie", label: "", align: "right" },
 ];
 
-export function KostenBeheer({ initieel, transip, financienMaandCent }: { initieel: KostenStand; transip: TransipFacturen; financienMaandCent: number }) {
+export function KostenBeheer({ initieel, transip, financien }: { initieel: KostenStand; transip: TransipFacturen; financien: OperationeleKosten }) {
   const [stand, setStand] = useState<KostenStand>(initieel);
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<Fout>(null);
@@ -242,6 +244,12 @@ export function KostenBeheer({ initieel, transip, financienMaandCent }: { initie
   async function verwijder(p: KostenPost) {
     if (!window.confirm(`"${p.naam}" uit de kostenlijst halen?`)) return;
     await stuur({ verwijder: p.id });
+  }
+
+  // de lijst voor het eerst bewaren: een ongewijzigde post opnieuw opslaan bewaart de hele lijst
+  async function bevestigLijst() {
+    const eerste = stand.posten[0];
+    if (eerste) await stuur({ upsert: eerste });
   }
 
   const bestaandeIds = stand.posten.map((p) => p.id);
@@ -353,9 +361,20 @@ export function KostenBeheer({ initieel, transip, financienMaandCent }: { initie
         )}
       </Panel>
 
-      <Notice tone="neutral">
-        Financiën &amp; winst rekent nu met {formatEuro(financienMaandCent)} per maand aan operationele kosten (instelling bij Financiën). Die lijst en deze lijst zijn nog niet aan elkaar gekoppeld.
-      </Notice>
+      {stand.versie === 0 && (
+        <Notice tone="warn" role="status">
+          Deze lijst is nog niet opgeslagen, dus Financiën gebruikt hem nog niet. Klopt de lijst? Bevestig hem dan hieronder; of pas eerst een post aan.
+          <button type="button" disabled={bezig} onClick={() => void bevestigLijst()} className="btn-ghost ml-2 text-xs">Lijst bevestigen</button>
+        </Notice>
+      )}
+
+      {financien.bron === "kosten" ? (
+        <Notice tone="neutral">
+          Financiën &amp; winst rekent met het maandtotaal van de opgegeven posten: {formatEuro(financien.maandCent)} per maand, excl. btw, zonder schattingen en zonder posten met een onbekend bedrag ({financienBronTekst(financien.bijgewerktOp)}).
+        </Notice>
+      ) : (
+        <Notice tone="warn" role="alert">{financien.melding}</Notice>
+      )}
     </div>
   );
 }

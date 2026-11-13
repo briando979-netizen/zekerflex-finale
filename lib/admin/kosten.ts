@@ -9,6 +9,8 @@
 // Een bedrag dat we niet weten is null ("bedrag onbekend"): het telt niet mee en wordt nooit verzonnen.
 // ---------------------------------------------------------------------------
 
+import { amsterdamDayKey } from "@/lib/time/amsterdam";
+
 export const BTW_PCT = 21;
 /** Alleen voor een omgerekende weergave van dollars; een aanname, geen koers van de bank. */
 export const USD_NAAR_EUR = 0.92;
@@ -164,6 +166,36 @@ export function datumKort(datum: string | null): string {
 /** De bron met datum zoals hij bij elke post staat: "opgave eigenaar, 13 nov". */
 export function bronRegel(post: Pick<KostenPost, "bron" | "datum">): string {
   return `${post.bron}, ${datumKort(post.datum)}`;
+}
+
+// --- koppeling met Financien: het maandtotaal van de vaste lasten ---------------------
+
+/** Wat Financien als "vaste maandlasten" gebruikt: het maandtotaal excl. btw van de opgegeven posten, of een reden waarom niet. */
+export type OperationeleKosten =
+  | { bron: "kosten"; maandCent: number; bijgewerktOp: string | null; onbekend: number; geteld: number }
+  | { bron: "instelling"; melding: string };
+
+export const KOSTEN_NIET_INGEVULD = "Kosten nog niet ingevuld: vul Beheer → Kosten in. Tot dan rekent Financiën met de vaste maandlasten die daar handmatig zijn ingesteld.";
+
+/**
+ * Het maandtotaal excl. btw voor Financien: alleen opgegeven posten (handmatig, met bron), GEEN schattingen en geen
+ * posten zonder bedrag. Geeft null als er niets te tellen is: dan hoort er geen stille 0 te staan.
+ */
+export function operationeleMaandkosten(posten: KostenPost[]): { maandCent: number; geteld: number; onbekend: number } | null {
+  const t = totalen(splits(posten).vaststaand);
+  if (t.geteld === 0) return null;
+  return { maandCent: t.maandExclCent, geteld: t.geteld, onbekend: t.onbekend };
+}
+
+/** Eigen omzet per maand waarbij de vaste lasten precies gedekt zijn (de Stripe-kosten groeien met de omzet mee en zitten er niet in). */
+export function breakEvenOmzetPerMaand(maandCent: number): number {
+  return Math.max(0, Math.round(maandCent));
+}
+
+/** "bron: Beheer -> Kosten, bijgewerkt 13 nov" (Amsterdamse datum van het moment van opslaan). */
+export function financienBronTekst(bijgewerktOp: string | null): string {
+  const dag = bijgewerktOp === null || Number.isNaN(Date.parse(bijgewerktOp)) ? null : amsterdamDayKey(bijgewerktOp);
+  return `bron: Beheer → Kosten, bijgewerkt ${datumKort(dag)}`;
 }
 
 // --- wijzigen (de server geeft de nieuwe stand terug) ---------------------------

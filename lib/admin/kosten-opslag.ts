@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { kvGet, kvSet } from "@/lib/storage/kv";
-import { STANDAARD_POSTEN, pasToe, type KostenStand, type KostenWijziging } from "@/lib/admin/kosten";
+import { KOSTEN_NIET_INGEVULD, STANDAARD_POSTEN, operationeleMaandkosten, pasToe, type KostenStand, type KostenWijziging, type OperationeleKosten } from "@/lib/admin/kosten";
 
 // ---------------------------------------------------------------------------
 // De bewerkbare kostenlijst van Beheer -> Kosten: een KV-sleutel voor de hele site (niet per gebruiker, dus niet
@@ -32,6 +32,33 @@ export async function leesKosten(): Promise<KostenStand> {
   const raw = await kvGet<Partial<KostenStand>>(KEY).catch(() => null);
   if (!raw || !Array.isArray(raw.posten)) return standaard();
   return { posten: raw.posten, versie: typeof raw.versie === "number" ? raw.versie : 0, bijgewerktOp: typeof raw.bijgewerktOp === "string" ? raw.bijgewerktOp : null };
+}
+
+/**
+ * Wat er echt is opgeslagen, zonder terugval op de startgegevens: "leeg" als er nog niets is bewaard, "fout" als de opslag
+ * niet antwoordt. Financien moet dat verschil kunnen zien (een storing mag nooit een stille 0 worden).
+ */
+export async function leesKostenStrikt(): Promise<{ status: "opgeslagen"; stand: KostenStand } | { status: "leeg" } | { status: "fout" }> {
+  try {
+    const raw = await kvGet<Partial<KostenStand>>(KEY);
+    if (!raw || !Array.isArray(raw.posten)) return { status: "leeg" };
+    return { status: "opgeslagen", stand: { posten: raw.posten, versie: typeof raw.versie === "number" ? raw.versie : 0, bijgewerktOp: typeof raw.bijgewerktOp === "string" ? raw.bijgewerktOp : null } };
+  } catch {
+    return { status: "fout" };
+  }
+}
+
+/**
+ * De vaste maandlasten voor Financien: het maandtotaal (excl. btw) van de opgegeven posten uit de opgeslagen lijst. Is er
+ * geen lijst, faalt het lezen, of valt er niets te tellen, dan blijft Financien bij zijn eigen instelling en komt er een
+ * melding "kosten nog niet ingevuld".
+ */
+export async function operationeleKosten(): Promise<OperationeleKosten> {
+  const lezing = await leesKostenStrikt();
+  if (lezing.status !== "opgeslagen") return { bron: "instelling", melding: KOSTEN_NIET_INGEVULD };
+  const m = operationeleMaandkosten(lezing.stand.posten);
+  if (!m) return { bron: "instelling", melding: KOSTEN_NIET_INGEVULD };
+  return { bron: "kosten", maandCent: m.maandCent, bijgewerktOp: lezing.stand.bijgewerktOp, onbekend: m.onbekend, geteld: m.geteld };
 }
 
 /** Past een gevalideerde wijziging toe, bewaart hem en geeft de nieuwe serverversie terug. */
