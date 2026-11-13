@@ -4,8 +4,8 @@ import { logger } from "@/lib/logger";
 import { FetchError, fetchPage } from "@/lib/website-check/fetch";
 import { importRemoteImage } from "@/lib/media/clean-image";
 import { storeUpload } from "@/lib/storage/local";
-import { kvGet, kvSet } from "@/lib/storage/kv";
-import { leesProductPagina, type LinkProduct } from "@/lib/shop/link-product";
+import { kvGet, kvListEntries, kvSet } from "@/lib/storage/kv";
+import { kortAdres, leesProductPagina, type LinkProduct } from "@/lib/shop/link-product";
 
 // ---------------------------------------------------------------------------
 // "Product van een link" (Winkel-AI): de pagina ophalen via de veilige ophaler (geen interne adressen, begrensde grootte)
@@ -66,4 +66,16 @@ export async function bewaarLinkBron(productId: string, bron: { pagina?: string 
 
 export async function leesLinkBron(productId: string): Promise<LinkBron | null> {
   return kvGet<LinkBron>(`${K_BRON}${productId}`).catch(() => null);
+}
+
+/** De bronnen van alle conceptproducten voor het scherm, per product-id: alleen host + pad (geen querystring of token). */
+export async function leesLinkBronnen(): Promise<Record<string, { pagina: string | null; foto: string | null }>> {
+  const rijen = await kvListEntries<LinkBron>(K_BRON, 1000).catch(() => []);
+  const uit: Record<string, { pagina: string | null; foto: string | null }> = {};
+  for (const r of rijen) {
+    const pagina = kortAdres(r.value?.pagina);
+    const foto = kortAdres(r.value?.foto);
+    if (pagina || foto) uit[r.key.slice(K_BRON.length)] = { pagina, foto };
+  }
+  return uit;
 }

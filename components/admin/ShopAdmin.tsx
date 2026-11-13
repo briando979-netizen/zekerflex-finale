@@ -1,5 +1,6 @@
 "use client";
 
+import { bronRegel } from "@/lib/shop/link-product";
 import { Fragment, useEffect, useState } from "react";
 import { ShopAdminTools } from "@/components/admin/ShopAdminTools";
 import { ShopModel3D } from "@/components/admin/ShopModel3D";
@@ -82,6 +83,7 @@ const marge = (priceCents: number, costCents: number | null) =>
 
 export function ShopAdmin() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [bronnen, setBronnen] = useState<Record<string, { pagina: string | null; foto: string | null }>>({});
   const [form, setForm] = useState<FormState>(empty);
   const [editing, setEditing] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -118,7 +120,12 @@ export function ShopAdmin() {
     const response = await fetch("/api/shop/stats", { cache: "no-store" });
     if (response.ok) setStats(await response.json());
   };
-  useEffect(() => { void load(); void loadOrders(); void loadStats(); }, []);
+  const loadBronnen = async () => {
+    const r = await fetch("/api/admin/shop-ai/bronnen", { cache: "no-store" }).catch(() => null);
+    const d = r?.ok ? ((await r.json().catch(() => null)) as { bronnen?: Record<string, { pagina: string | null; foto: string | null }> } | null) : null;
+    if (d?.bronnen) setBronnen(d.bronnen);
+  };
+  useEffect(() => { void load(); void loadOrders(); void loadStats(); void loadBronnen(); }, []);
 
   const setOrderStatus = async (id: string, status: OrderStatus) => {
     const response = await fetch(`/api/shop/orders/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
@@ -385,6 +392,7 @@ export function ShopAdmin() {
                       <div className="min-w-0">
                         <p className="truncate font-medium" style={{ color: "var(--a-text)" }}>{product.name}</p>
                         <p className="truncate text-xs" style={{ color: "var(--a-mute)" }}>{[product.gender, product.collection, product.isBundle ? "bundel" : null, product.badge].filter(Boolean).join(" · ") || product.slug}</p>
+                        {bronRegel(bronnen[product.id]) ? <p className="text-[11px] leading-snug" style={{ color: "var(--a-mute)" }}>{bronRegel(bronnen[product.id])}</p> : null}
                       </div>
                     </div>
                   </td>

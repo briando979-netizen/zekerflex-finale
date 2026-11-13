@@ -163,3 +163,26 @@ export function leesProductPagina(html: string, basis: string): LinkProduct | nu
 export function ideeUitLink(p: LinkProduct): string {
   return [p.titel, p.omschrijving].filter(Boolean).join("\n\n").slice(0, 1500);
 }
+
+/** Een adres voor in het scherm: alleen host en pad, nooit een querystring, fragment of inloggegevens (kunnen tokens zijn). */
+export function kortAdres(adres: string | null | undefined): string | null {
+  if (!adres) return null;
+  try {
+    const u = new URL(adres);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return null;
+    const pad = u.pathname.replace(/\/+$/, "");
+    const kort = `${u.host}${pad}`;
+    return kort.length > 90 ? `${kort.slice(0, 89)}…` : kort;
+  } catch {
+    return null;
+  }
+}
+
+/** De regel bij een conceptproduct in Beheer; null als er geen bron is. */
+export function bronRegel(bron: { pagina?: string | null | undefined; foto?: string | null | undefined } | null | undefined): string | null {
+  const pagina = kortAdres(bron?.pagina);
+  const foto = kortAdres(bron?.foto);
+  if (!pagina && !foto) return null;
+  const delen = [pagina ? `pagina ${pagina}` : null, foto ? `foto ${foto}` : null].filter(Boolean).join(", ");
+  return `Bron: ${delen}. Controleer of je de foto mag gebruiken.`;
+}
