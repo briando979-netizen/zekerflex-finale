@@ -18,6 +18,7 @@ interface Overview {
   grossInvoiced: number;
   vat: { output: number; inputEstimate: number; due: number };
   costs: { stripe: number; operational: number; total: number };
+  operationalSource?: { monthlyCents: number; soort: "kosten" | "instelling"; tekst: string; onbekend: number; breakEvenMonthlyCents: number };
   netProfit: number;
   taxReserve: number;
   distributable: number;
@@ -172,8 +173,15 @@ export function FinanceConsole({ chart }: { chart?: ReactNode }) {
                   { label: `Stripe- en betaalkosten (${pct(data.settings.stripeFeePct)})`, value: euroExact(data.costs.stripe) },
                   { label: `Vaste maandlasten × ${data.months} mnd`, value: euroExact(data.costs.operational) },
                   { label: "Totaal", value: euroExact(data.costs.total) },
+                  ...(data.operationalSource ? [{ label: "Break-even: eigen omzet per maand voor de vaste lasten", value: euroExact(data.operationalSource.breakEvenMonthlyCents) }] : []),
                 ]}
               />
+              {data.operationalSource && (
+                <p role={data.operationalSource.soort === "instelling" ? "alert" : "status"} className="mt-2 text-xs" style={{ color: data.operationalSource.soort === "instelling" ? "var(--a-warn)" : "var(--a-mute)" }}>
+                  {data.operationalSource.tekst}
+                  {data.operationalSource.soort === "kosten" && data.operationalSource.onbekend > 0 ? ` ${data.operationalSource.onbekend} posten zonder bedrag staan niet in dit totaal.` : ""}
+                </p>
+              )}
             </Panel>
             <Panel title="Btw-positie" subtitle="Indicatief">
               <InfoList
@@ -192,7 +200,7 @@ export function FinanceConsole({ chart }: { chart?: ReactNode }) {
                 <Field label="Stripe-kosten %" value={edit.stripeFeePct * 100} onChange={(n) => setEdit({ ...edit, stripeFeePct: n / 100 })} />
                 <Field label="Voorbelasting (btw) %" value={edit.vatInputPct * 100} onChange={(n) => setEdit({ ...edit, vatInputPct: n / 100 })} />
                 <Field label="Belastingreservering %" value={edit.taxReservePct * 100} onChange={(n) => setEdit({ ...edit, taxReservePct: n / 100 })} />
-                <Field label="Vaste maandlasten €" value={edit.operationalMonthlyCents / 100} onChange={(n) => setEdit({ ...edit, operationalMonthlyCents: Math.round(n * 100) })} />
+                <Field label="Vaste maandlasten € (alleen als Beheer → Kosten niet is ingevuld)" value={edit.operationalMonthlyCents / 100} onChange={(n) => setEdit({ ...edit, operationalMonthlyCents: Math.round(n * 100) })} />
                 <Field
                   label="Uitzendopslag % (leeg = standaard)"
                   value={edit.uitzendMarkupRate === null ? NaN : edit.uitzendMarkupRate * 100}
