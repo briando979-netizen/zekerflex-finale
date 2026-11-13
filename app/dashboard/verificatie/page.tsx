@@ -23,7 +23,7 @@ import { WerkrechtPanel } from "@/components/app/WerkrechtPanel";
 import { werkrechtVoorWerk, werkrechtEisAan } from "@/lib/werkrecht/store";
 import { leesWieBenJij } from "@/lib/onboarding/wie-ben-jij-opslag";
 import { werkerPoortStand, type WerkerPoortStand } from "@/lib/onboarding/werker-poort-server";
-import { openVerplicht, volgendeNaVerificatie } from "@/lib/onboarding/werker-poort";
+import { openVerplicht, poortStapVan, volgendeNaVerificatie } from "@/lib/onboarding/werker-poort";
 import { nogStappenTekst } from "@/lib/onboarding/laat-weten";
 import { beginStap } from "@/lib/onboarding/wie-ben-jij";
 import { isReservedTestAddress } from "@/lib/mail";
@@ -301,6 +301,8 @@ export default async function VerificatiePage() {
           idKlaar={idKlaar}
           kanSluiten={poort?.klaar ?? true}
           bsnBekend={Boolean(fiscal.bsnHash)}
+        // de eerste stap die na de ID-scan nog open staat (de ID zelf telt dan als ingestuurd)
+        naId={poort ? poortStapVan({ ...poort, identiteitIngestuurd: true }) : null}
           // de vorige ID-poging hoort bij de ID-stap (stap 4), niet bovenaan de pagina
           laatstePoging={
             lastCheck ? (

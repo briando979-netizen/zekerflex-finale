@@ -13,6 +13,7 @@ import { WieBenJijPersoon, type PersoonStand } from "@/components/app/WieBenJijP
 import { IdKeuzeKaarten } from "@/components/app/WieBenJijIdKaarten";
 import { leesDatum, stappenVoor, voegNaam, type WieStap } from "@/lib/onboarding/wie-ben-jij";
 import { POORT_STAPPEN } from "@/lib/onboarding/werker-poort";
+import type { VolgendeStap } from "@/lib/onboarding/volgende-stap";
 import { controleerVeld, type VeldSleutel } from "@/lib/onboarding/velden";
 import { OnderSheet } from "@/components/app/OnderSheet";
 import { bevestigOverzicht, type OverzichtRij } from "@/lib/werker/bevestig-overzicht";
@@ -52,6 +53,7 @@ export function OnboardingForm({
   kanSluiten = true,
   laatstePoging = null,
   bsnBekend = false,
+  naId = null,
 }: {
   /** stap 1 ("Hey! Wie ben jij?"): wat er al bewaard is */
   persoon: PersoonStand;
@@ -65,6 +67,8 @@ export function OnboardingForm({
   laatstePoging?: ReactNode;
   /** het BSN is al bekend: de uitzendnoot noemt het dan niet meer */
   bsnBekend?: boolean;
+  /** de volgende open stap van de poort na de ID-scan (voor het eindscherm van de scan) */
+  naId?: VolgendeStap | null;
   defaultName: string;
   requireKvk?: boolean;
   /** Stripe Identity staat aan en weigert niet: dan een klein linkje onder de twee keuzes (12 nov 2026). */
@@ -611,7 +615,7 @@ export function OnboardingForm({
             <p className="text-xs leading-relaxed text-neutralx-400">{t.uploadNote}</p>
           </div>
         </form>
-        {scanOpen && <IdScan t={t} naam={naamNu} route={route} wijze={wijze} overzicht={overzicht} onAfronden={afrondenViaScan} onAfrondenOverdracht={afrondenViaTelefoon} onSluiten={sluitScan} />}
+        {scanOpen && <IdScan t={t} naam={naamNu} route={route} wijze={wijze} overzicht={overzicht} naId={naId} onAfronden={afrondenViaScan} onAfrondenOverdracht={afrondenViaTelefoon} onSluiten={sluitScan} />}
       </div>
     </section>
   );

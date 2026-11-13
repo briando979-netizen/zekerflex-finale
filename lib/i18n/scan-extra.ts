@@ -34,6 +34,8 @@ export interface ScanExtra {
   bijnaTitel: string;
   bijnaTekst: string;
   bijnaKnop: string;
+  /** na de scan naar de volgende open stap: "Verder: Je gegevens" (13 nov 2026) */
+  volgendeKnop: string;
   euIntroTitel: string;
   euIntroTekst: string;
   euIntroLabel: string;
@@ -115,6 +117,7 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     bijnaTitel: "Bijna klaar!",
     bijnaTekst: "Je ID-check is verwerkt. Check de status in de app en ga verder!",
     bijnaKnop: "Verder naar de klussen",
+    volgendeKnop: "Verder: {stap}",
     euIntroTitel: "Online identificatie",
     euIntroTekst: "Met ZekerFlex deel je veilig je gegevens met het bedrijf waarmee je werkt.",
     euIntroLabel: "Reken op een paar minuten",
@@ -188,6 +191,7 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     bijnaTitel: "Almost done!",
     bijnaTekst: "Your ID check has been processed. Check the status in the app and carry on!",
     bijnaKnop: "Continue to the jobs",
+    volgendeKnop: "Continue: {stap}",
     euIntroTitel: "Online identification",
     euIntroTekst: "With ZekerFlex you safely share your details with the company you work with.",
     euIntroLabel: "Expect a few minutes",
@@ -261,6 +265,7 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     bijnaTitel: "Prawie gotowe!",
     bijnaTekst: "Twoja weryfikacja ID została przetworzona. Sprawdź status w aplikacji i idź dalej!",
     bijnaKnop: "Dalej do zleceń",
+    volgendeKnop: "Dalej: {stap}",
     euIntroTitel: "Identyfikacja online",
     euIntroTekst: "Dzięki ZekerFlex bezpiecznie udostępniasz swoje dane firmie, z którą pracujesz.",
     euIntroLabel: "Zajmie to kilka minut",
@@ -334,6 +339,7 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     bijnaTitel: "Aproape gata!",
     bijnaTekst: "Verificarea ID a fost procesată. Vezi starea în aplicație și mergi mai departe!",
     bijnaKnop: "Mai departe la joburi",
+    volgendeKnop: "Continuă: {stap}",
     euIntroTitel: "Identificare online",
     euIntroTekst: "Cu ZekerFlex îți împarți în siguranță datele cu firma cu care lucrezi.",
     euIntroLabel: "Durează câteva minute",
@@ -407,6 +413,7 @@ export const SCAN_EXTRA: Record<Locale, ScanExtra> = {
     bijnaTitel: "Майже готово!",
     bijnaTekst: "Вашу перевірку ID оброблено. Перевірте статус у застосунку та рухайтеся далі!",
     bijnaKnop: "Далі до робіт",
+    volgendeKnop: "Далі: {stap}",
     euIntroTitel: "Онлайн-ідентифікація",
     euIntroTekst: "За допомогою ZekerFlex ви безпечно передаєте свої дані компанії, з якою працюєте.",
     euIntroLabel: "Це займе кілька хвилин",

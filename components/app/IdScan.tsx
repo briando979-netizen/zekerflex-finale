@@ -7,6 +7,7 @@ import { DocumentLezing, goedGelezen, leesDocumentFoto, type Lezing } from "@/co
 import { useDialog } from "@/components/app/useDialog";
 import { useFT } from "@/components/i18n/useFT";
 import { bevestigOverzicht, type OverzichtRij } from "@/lib/werker/bevestig-overzicht";
+import { volgendeStapHref, type VolgendeStap } from "@/lib/onboarding/volgende-stap";
 import { cookieStringHasChip, cookieStringIsApp } from "@/lib/app-mode";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { AuthLanguage } from "@/components/auth/AuthLanguage";
@@ -876,7 +877,10 @@ export function IdScan({
   route,
   wijze: beginWijze = "auto",
   overzicht = [],
+  naId = null,
 }: {
+  /** de volgende open stap van de poort na deze scan (de pagina rekent hem uit); null = alles klaar */
+  naId?: VolgendeStap | null;
   /** wat de werker verder instuurt (persoon, bedrijf, thuisbasis), voor de controlestap aan het eind */
   overzicht?: readonly OverzichtRij[];
   /** automatisch (aanbevolen) of zelf de foto maken: de keuze aan het begin (WieBenJijIdKaarten) */
@@ -1131,6 +1135,14 @@ export function IdScan({
     }
     window.location.href = `intent://chip#Intent;scheme=zekerflex;package=com.zekerflex.app;S.code=${encodeURIComponent(chip.code)};end`;
   }
+
+  const STAP_NAAM: Record<VolgendeStap["sleutel"], string> = {
+    kind: ft.start.kindStep,
+    branches: ft.start.brancheStep,
+    gegevens: ft.start.gegevensStep,
+    identiteit: ft.start.identiteitStep,
+    foto: ft.start.fotoStep,
+  };
 
   // de pagina eronder scrollt niet mee zolang de scan open is
   useEffect(() => {
@@ -1894,16 +1906,23 @@ export function IdScan({
                 <BijnaKlaarBeeld />
                 <h2 className="mt-4 font-display text-xl font-bold text-ink">{s.extra.bijnaTitel}</h2>
                 <p className="mt-2 text-sm leading-relaxed text-ink-soft">{s.extra.bijnaTekst}</p>
-                {/* een gewone link: volledige paginalading, dus de poort en de status zijn vers */}
+                {/* staat er na de ID nog iets open (gegevens, branches, foto), dan wijst de knop daarheen, met de teller van de
+                    poort; anders naar de klussen. Een gewone paginalading, dus de poort en de status zijn vers. */}
+                {naId && (
+                  <p className="mt-6 text-xs font-semibold uppercase tracking-wide text-neutralx-500">
+                    {ft.start.stapVan.replace("{n}", String(naId.n)).replace("{totaal}", String(naId.totaal))}
+                  </p>
+                )}
                 <button
                   type="button"
+                  data-track={naId ? `id-klaar-naar-${naId.sleutel}` : "id-klaar-naar-klussen"}
                   onClick={() => {
                     onSluiten(uitslag);
-                    window.location.assign("/dashboard/klussen");
+                    window.location.assign(naId ? volgendeStapHref(naId.sleutel) : "/dashboard/klussen");
                   }}
-                  className="btn-primary mt-8 w-full"
+                  className={`btn-primary w-full ${naId ? "mt-2" : "mt-8"}`}
                 >
-                  {s.extra.bijnaKnop}
+                  {naId ? s.extra.volgendeKnop.replace("{stap}", STAP_NAAM[naId.sleutel]) : s.extra.bijnaKnop}
                 </button>
               </div>
             )}
