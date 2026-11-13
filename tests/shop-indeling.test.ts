@@ -84,7 +84,7 @@ describe("de opslag", () => {
 
 describe("het tabblad en de route", () => {
   it("de ontwerper heeft een tabblad Webshop, met verslepen", () => {
-    expect(bron("components/admin/ontwerper/Ontwerper.tsx")).toContain('{ id: "shop", label: "Webshop" }');
+    expect(bron("lib/ontwerp/tabs.ts")).toContain('{ id: "shop", label: "Webshop" }');
     const paneel = bron("components/admin/ontwerper/ShopPaneel.tsx");
     expect(paneel).toContain("{...sleep.lijst}");
     expect(paneel).toContain("<SleepGreep");
