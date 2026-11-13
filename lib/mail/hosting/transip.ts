@@ -2,6 +2,7 @@ import { createSign, randomBytes } from "node:crypto";
 import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { geldigDomein, valideerDnsRecord, zelfdeRecord } from "@/lib/mail/hosting/dns-record";
 
 // ---------------------------------------------------------------------------
 // TransIP REST API v6 — mailboxes for ZekerFlex Mail and domain look-ups.
@@ -221,6 +222,39 @@ export async function listTlds(): Promise<TransipTld[]> {
 export async function domainInfo(domainName: string): Promise<TransipDomain | null> {
   const d = await call<{ domain?: TransipDomain }>("GET", `/domains/${encodeURIComponent(domainName)}`);
   return d?.domain ?? null;
+}
+
+/**
+ * Voeg ÉÉN DNS-record toe aan een domein in ons TransIP-account: POST /domains/{domein}/dns.
+ * Nooit PUT: dat vervangt de hele zone. Eerst controleren dat het domein van ons is en dat
+ * hetzelfde record (naam + type + inhoud) er nog niet staat; dan gebeurt er niets (idempotent).
+ * Wordt nergens vanzelf aangeroepen; een mens beslist (owner-todo), 86 voert uit.
+ * Logt niets: geen tokens en geen antwoorden.
+ */
+export async function addDnsEntry(
+  domainName: string,
+  entry: { name: string; expire?: number; type: string; content: string },
+): Promise<"toegevoegd" | "bestond-al"> {
+  const domein = domainName.trim().toLowerCase();
+  if (!geldigDomein(domein)) throw AppError.validation("Dit is geen geldig domein.");
+  const check = valideerDnsRecord(entry);
+  if (!check.ok) throw AppError.validation(check.reden);
+
+  let info: TransipDomain | null;
+  try {
+    info = await domainInfo(domein);
+  } catch (err) {
+    if (err instanceof AppError && err.status === 404) info = null;
+    else throw err;
+  }
+  if (!info) throw AppError.validation("Dit domein staat niet in het TransIP-account van ZekerFlex.");
+
+  const pad = `/domains/${encodeURIComponent(domein)}/dns`;
+  const bestaand = await call<{ dnsEntries?: { name: string; type: string; content: string }[] }>("GET", pad);
+  if ((bestaand?.dnsEntries ?? []).some((e) => zelfdeRecord(e, check.record))) return "bestond-al";
+
+  await call("POST", pad, { dnsEntry: check.record });
+  return "toegevoegd";
 }
 
 /**
