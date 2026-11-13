@@ -579,37 +579,77 @@ export async function* chatStream(
   let buffer = "";
   let full = "";
   let eersteBinnen = false;
+  // finish_reason of [DONE] gezien: de stroom eindigde netjes. Eindigt hij zonder, of met een error-regel (13 nov: de
+  // eigen Ollama stopt de runner bij geheugengebrek, OOM), dan is het antwoord afgebroken (StroomAfgebroken).
+  let afgerond = false;
+  /** Waarom de stroom afbrak nadat er al tekst verstuurd was; null = niet afgebroken. */
+  let afgebroken: string | null = null;
   // Hold back the trailing partial word so brand-correction (fixBrandName) is
   // never split across chunks (e.g. "Seeker" + "Flex" arriving separately).
   let pending = "";
+  /** Vóór het eerste woord: één keer het reservemodel. true = de stroom van de reserve loopt nu. */
+  const naarReserve = async (reden: string): Promise<boolean> => {
+    if (!reserve || opReserve) return false;
+    await reader.cancel().catch(() => undefined);
+    const r = await viaReserve(reden).catch(() => null);
+    if (!r || !r.ok || !r.body) return false;
+    reader = r.body.getReader();
+    buffer = "";
+    afgerond = false;
+    return true;
+  };
+  /**
+   * De stroom brak af. Al tekst verstuurd: true = stoppen; de tekst blijft en daarna volgt StroomAfgebroken (geen
+   * herkansing). Nog niets: één keer de reserve (false = die loopt nu), anders een fout voor de terugval van de aanroeper.
+   */
+  const stoppenNa = async (reden: string): Promise<boolean> => {
+    logger.warn("llm stream afgebroken", { host: llmHost(), reden: reden.slice(0, 120), naEersteWoord: eersteBinnen, opReserve });
+    if (eersteBinnen) return true;
+    if (await naarReserve(`stroom afgebroken: ${reden.slice(0, 60)}`)) return false;
+    throw AppError.upstream(`LLM-stroom afgebroken vóór het eerste woord (${reden.slice(0, 120)})`);
+  };
   try {
     for (;;) {
-      let stuk: ReadableStreamReadResult<Uint8Array>;
+      // waarom de stroom nu afbreekt; null = gewoon doorlezen
+      let fout: string | null = null;
+      let stuk: ReadableStreamReadResult<Uint8Array> | null = null;
       try {
         stuk = await reader.read();
       } catch (err) {
         // de grens tot het eerste woord verstreek: één keer het reservemodel, anders de terugval van de aanroeper
-        if (eersteBinnen || !poging.teLaat) throw err;
-        reader.releaseLock();
-        if (!reserve || opReserve) throw geenEersteWoord();
-        const r = await viaReserve(`geen eerste woord binnen ${grens}ms`).catch(() => null);
-        if (!r || !r.ok || !r.body) throw geenEersteWoord();
-        reader = r.body.getReader();
-        buffer = "";
-        continue;
+        if (!eersteBinnen && poging.teLaat) {
+          if (await naarReserve(`geen eerste woord binnen ${grens}ms`)) continue;
+          throw geenEersteWoord();
+        }
+        // anders viel de verbinding weg (de runner viel om, het netwerk, de totaaltijd)
+        fout = `verbinding weg: ${(err as Error).message ?? "onbekend"}`;
       }
-      const { done, value } = stuk;
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-      for (const line of lines) {
-        const t = line.trim();
-        if (!t.startsWith("data:")) continue;
-        const payload = t.slice(5).trim();
-        if (payload === "[DONE]") continue;
-        try {
-          const j = JSON.parse(payload) as { choices?: { delta?: { content?: string } }[] };
+      if (stuk?.done) {
+        if (afgerond) break;
+        fout = "einde zonder finish_reason of [DONE]";
+      } else if (stuk) {
+        buffer += decoder.decode(stuk.value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          const t = line.trim();
+          if (!t.startsWith("data:")) continue;
+          const payload = t.slice(5).trim();
+          if (payload === "[DONE]") {
+            afgerond = true;
+            continue;
+          }
+          let j: { choices?: { delta?: { content?: string }; finish_reason?: string | null }[]; error?: unknown };
+          try {
+            j = JSON.parse(payload) as typeof j;
+          } catch {
+            continue; // partial JSON line — ignore, next chunk completes it
+          }
+          if (j.error) {
+            fout = `error-regel: ${foutTekst(j.error)}`;
+            break;
+          }
+          if (j.choices?.[0]?.finish_reason) afgerond = true;
           const delta = j.choices?.[0]?.delta?.content;
           if (delta) {
             if (!eersteBinnen) {
@@ -628,12 +668,16 @@ export async function* chatStream(
               }
             }
           }
-        } catch {
-          /* partial JSON line — ignore, next chunk completes it */
         }
+      }
+      if (fout === null) continue;
+      if (await stoppenNa(fout)) {
+        afgebroken = fout;
+        break;
       }
     }
   } finally {
+    if (afgebroken !== null) await reader.cancel().catch(() => undefined);
     try {
       reader.releaseLock();
     } catch {
@@ -646,7 +690,39 @@ export async function* chatStream(
     full += emit;
     yield emit;
   }
+  if (afgebroken !== null) throw new StroomAfgebroken(afgebroken, full);
   return { text: full, model };
+}
+
+/**
+ * Het antwoord brak af nadat er al tekst naar de gebruiker ging (13 nov: de runner van het eigen model viel om). Geen
+ * herkansing, want de tekst is al op het scherm; de aanroeper houdt die tekst en weet zo dat hij niet af is, zodat het
+ * scherm "Opnieuw" kan tonen (isStroomAfgebroken). Een AppError zodat de foutafhandeling hem als upstream ziet.
+ */
+export class StroomAfgebroken extends AppError {
+  readonly afgebroken = true as const;
+  constructor(
+    /** Waarom (voor het logboek; kan Engelse tekst van het model bevatten, dus niet in de melding). */
+    readonly reden: string,
+    /** De tekst die al verstuurd was. */
+    readonly deelTekst: string,
+  ) {
+    super("UPSTREAM_UNAVAILABLE", "Het antwoord brak halverwege af. Probeer het opnieuw.", 503);
+  }
+}
+
+export function isStroomAfgebroken(err: unknown): err is StroomAfgebroken {
+  return err instanceof StroomAfgebroken;
+}
+
+/** Wat een chatscherm achter een afgebroken antwoord zet (niet bewaard in het gesprek): zo weet de lezer dat het niet af is. */
+export const AFGEBROKEN_ZIN = "\n\n(Het antwoord brak af. Stel je vraag gerust nog een keer.)";
+
+/** De tekst van een error-regel in de stroom (Ollama: een tekst; OpenAI-vorm: { message }), kort. */
+function foutTekst(fout: unknown): string {
+  if (typeof fout === "string") return fout.slice(0, 120);
+  const bericht = typeof fout === "object" && fout !== null ? (fout as { message?: unknown }).message : undefined;
+  return (typeof bericht === "string" ? bericht : "onbekende fout").slice(0, 120);
 }
 
 export async function embed(input: string | string[]): Promise<number[][]> {

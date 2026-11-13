@@ -1,6 +1,6 @@
 import { withUsage } from "@/lib/ops/usage";
 import { z } from "zod";
-import { chatStream, ensureAiNode, fastModel, llmConfigProblem } from "@/lib/ai/client";
+import { AFGEBROKEN_ZIN, chatStream, ensureAiNode, fastModel, isStroomAfgebroken, llmConfigProblem } from "@/lib/ai/client";
 import { fallbackAnswer, kortGenoegVoorVastAntwoord, smallTalk, topicAnswer, withSuggestions } from "@/lib/chat/public-intents";
 import { appendMessage, isConversationId } from "@/lib/chat/webchat";
 import { fixedWindow } from "@/lib/rate-limit";
@@ -57,6 +57,9 @@ function textStream(
         if (!full.trim()) {
           full = fallback ?? "Daar kan ik je nu niet direct mee helpen. Mail info@zekerflex.com.";
           controller.enqueue(enc.encode(full));
+        } else if (isStroomAfgebroken(err)) {
+          // het begin staat al op het scherm: zeg dat het niet af is (niet in het bewaarde antwoord)
+          controller.enqueue(enc.encode(AFGEBROKEN_ZIN));
         }
       } finally {
         controller.close();
