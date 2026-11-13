@@ -22,7 +22,7 @@ import { amsterdamDayKey } from "@/lib/time/amsterdam";
 // ---------------------------------------------------------------------------
 // De echte paskamer, serverkant (zie lib/shop/pasdienst-kern.ts voor het waarom). De sleutel staat verzegeld in de KV,
 // zoals de Alpaca- en de Stripe-sleutel, en gaat nooit terug naar de browser, een log of de audit. Aan staat hij pas als
-// alles klopt: de vlag `paskamer-echt-passen` (Beheer → Vlaggen), een sleutel, de keuze bij Alles gratis niet op
+// alles klopt: de vlag `paskamer-echt-passen` (Beheer → Systeem → Functies aan en uit), een sleutel, de keuze bij Alles gratis niet op
 // "eigen", en het dagplafond in euro's niet bereikt. Anders blijft de paspop (onze eigen, gratis paskamer).
 // Foto en beeld komen nergens terecht: niet in de KV, niet in de database, niet in een log.
 // ---------------------------------------------------------------------------

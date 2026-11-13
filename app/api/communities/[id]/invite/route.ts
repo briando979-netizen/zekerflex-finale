@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { acceptInvite, canManage, getCommunity, inviteToCommunity, isMember } from "@/lib/communities/store";
+import { SITE } from "@/lib/seo";
 import { prisma } from "@/lib/prisma";
 import { ensureDirectThread, postMessage } from "@/lib/messaging/store";
 
@@ -40,7 +41,7 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
         await postMessage(
           dm.id,
           p.userId,
-          `Ik nodig je uit voor mijn community “${c.name}”. Neem deel via: /community/join/${c.id}/${invite.token}`,
+          `Ik nodig je uit voor mijn community “${c.name}”. Neem deel via: ${SITE.url.replace(/\/$/, "")}/community/join/${c.id}/${invite.token}`,
         );
       }
     }

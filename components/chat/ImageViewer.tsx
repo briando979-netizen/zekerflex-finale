@@ -22,9 +22,12 @@ export function ImageViewer({ src, filename, onClose }: { src: string; filename:
       <div role="dialog" aria-modal="true" aria-label={vulIn(t.viewerPhoto, { naam: filename })} className="fixed inset-0 z-[100] flex flex-col bg-black/90" onClick={onClose}>
         <div className="flex items-center gap-2 px-3 py-2 text-white" onClick={(e) => e.stopPropagation()}>
           <p className="min-w-0 flex-1 truncate text-sm">{filename}</p>
-          <a href={`${src}?dl=1`} className="grid h-10 w-10 place-items-center rounded-full hover:bg-white/10" aria-label={t.viewerDownloadPhoto} title={t.viewerDownload}>
-            <IconDownload className="h-5 w-5" />
-          </a>
+          {/* een eenmalige foto komt als blob-adres en wordt niet bewaard: geen downloadknop (InboxPage, eenmalig bekijken) */}
+          {!src.startsWith("blob:") && (
+            <a href={`${src}?dl=1`} className="grid h-10 w-10 place-items-center rounded-full hover:bg-white/10" aria-label={t.viewerDownloadPhoto} title={t.viewerDownload}>
+              <IconDownload className="h-5 w-5" />
+            </a>
+          )}
           <button ref={closeRef} type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full hover:bg-white/10" aria-label={t.viewerClose} title={t.viewerCloseEsc}>
             <IconClose className="h-5 w-5" />
           </button>

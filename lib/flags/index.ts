@@ -79,7 +79,7 @@ FLAG_REGISTRY.push({
   key: "paskamer-echt-passen",
   label: "Paskamer: echt passen op de eigen foto (FASHN, betaald)",
   description:
-    "Aan = in de paskamer kan een bezoeker na uitdrukkelijke toestemming een kledingstuk echt op zijn eigen foto laten zetten door de pasdienst FASHN (± 8 cent per beeld). De foto gaat alleen voor dat ene beeld naar FASHN, wordt daar na het beeld gewist en niet gebruikt om te trainen; ZekerFlex bewaart niets. Werkt pas met een sleutel en binnen het dagplafond (Beheer → Webshop → Hulpmiddelen). Uit (standaard) = alleen de gratis paspop.",
+    "Aan = in de paskamer kan een bezoeker na uitdrukkelijke toestemming een kledingstuk echt op zijn eigen foto laten zetten door de pasdienst FASHN (± 8 cent per beeld). De foto gaat alleen voor dat ene beeld naar FASHN, wordt daar na het beeld gewist en niet gebruikt om te trainen; ZekerFlex bewaart niets. Werkt pas met een sleutel en binnen het dagplafond (Beheer → Webshop → Kortingen & voorraad). Uit (standaard) = alleen de gratis paspop.",
   default: false,
 });
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-// Beheer → Webshop → Hulpmiddelen: de echte paskamer (FASHN). Sleutel invullen (verzegeld bewaard, nooit terug te
+// Beheer → Webshop → Kortingen & voorraad: de echte paskamer (FASHN). Sleutel invullen (verzegeld bewaard, nooit terug te
 // zien), dagplafond in euro's, en of hij nu echt aan staat. Aan/uit zelf is de vlag "paskamer-echt-passen" bij Vlaggen.
 
 interface Stand {
@@ -13,7 +13,7 @@ interface Stand {
 }
 
 const REDEN: Record<string, string> = {
-  uit: "Staat uit: zet de vlag \"Paskamer: echt passen\" aan bij Beheer → Vlaggen.",
+  uit: "Staat uit: zet de vlag \"Paskamer: echt passen\" aan bij Beheer → Systeem → Functies aan en uit.",
   "geen-sleutel": "Er staat nog geen sleutel van FASHN.",
   eigen: "Bij Alles gratis staat deze dienst op \"Van ons zelf\": dan alleen de paspop.",
   plafond: "Het dagplafond staat op € 0.",

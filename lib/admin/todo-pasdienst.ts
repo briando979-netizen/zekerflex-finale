@@ -14,8 +14,8 @@ export function pasdienstTodo(heeftSleutel: boolean | undefined): OwnerTodo | nu
     how: [
       "Maak een account op fashn.ai (Developer API) en koop het kleinste pakket tegoed.",
       "Maak in het dashboard van FASHN een API-sleutel aan.",
-      "Plak hem in Beheer → Webshop → Hulpmiddelen → Echt passen, kies een dagplafond (standaard € 2) en kies Opslaan.",
-      "Zet daarna bij Beheer → Vlaggen \"Paskamer: echt passen\" aan. Uit zetten kan altijd, zonder uitrol.",
+      "Plak hem in Beheer → Webshop → Kortingen & voorraad → Echt passen, kies een dagplafond (standaard € 2) en kies Opslaan.",
+      "Zet daarna bij Beheer → Systeem → Functies aan en uit \"Paskamer: echt passen\" aan. Uit zetten kan altijd, zonder uitrol.",
     ],
     auto: true,
     done: heeftSleutel,
