@@ -5,17 +5,19 @@ import { ShopPrijs } from "@/components/marketing/ShopPrijs";
 import { Paspop } from "@/components/marketing/paskamer/Paspop";
 import { STANDAARD_LICHAAM, pasvormVoor, type Look } from "@/lib/shop/paskamer";
 import type { Gedragen } from "@/lib/shop/paspop-figuur";
-import type { ShopCardProduct } from "@/components/marketing/shop-product";
 
 // De startpagina van de shop voor gewone klanten (5 nov 2026): een warme kop
-// met echte producten, grote categorietegels en "Shop de look" met paspoppen.
+// met een grote foto (13 nov: de teamfoto van de eigenaar), grote categorietegels en "Shop de look" met paspoppen.
 // Servercomponenten; alleen de prijs (particulier/zakelijk) is een klein
 // clientonderdeel.
 
 const WRAP = "mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8";
 const H2 = "font-display text-[24px] font-extrabold tracking-tight text-ink sm:text-[30px]";
 
-export function ShopThuisHero({ t, uitgelicht }: { t: Dict; uitgelicht: ShopCardProduct[] }) {
+/** De foto van de kop als de beheerder er geen koos (Beheer → Webshop → Foto's en video's). Eigen foto van de eigenaar. */
+export const SHOP_KOP_FOTO = { src: "/shop/kop-team.jpg", alt: "Vier mensen in ZekerFlex-kleding lachen samen voor een bakstenen muur met het ZF-logo" } as const;
+
+export function ShopThuisHero({ t, foto = SHOP_KOP_FOTO }: { t: Dict; foto?: { src: string; alt: string } }) {
   const h = t.shopThuis;
   return (
     <section aria-labelledby="shop-kop" className="overflow-hidden bg-[#f4efe6]">
@@ -43,25 +45,13 @@ export function ShopThuisHero({ t, uitgelicht }: { t: Dict; uitgelicht: ShopCard
             ))}
           </ul>
         </div>
-        {uitgelicht.length >= 4 && (
-          <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:ml-auto lg:w-full lg:max-w-[540px]">
-            {uitgelicht.slice(0, 4).map((p, i) => (
-              <li key={p.id} className={i % 2 === 1 ? "mt-6 sm:mt-10 lg:mt-8" : ""}>
-                <Link href={`/shop/${p.slug}`} className="group relative block overflow-hidden rounded-2xl bg-white shadow-e1 transition hover:shadow-e2">
-                  <span className="relative block aspect-[4/5] overflow-hidden bg-paper-soft lg:aspect-square">
-                    {p.imageUrl && <Image src={p.imageUrl} alt="" fill priority={i < 2} sizes="(min-width: 1024px) 262px, 46vw" className="object-cover transition duration-700 group-hover:scale-[1.04]" />}
-                  </span>
-                  <span className="block p-3 sm:p-4">
-                    <span className="block truncate text-[13px] font-semibold text-ink sm:text-[14px]">{p.name}</span>
-                    <span className="mt-1 block">
-                      <ShopPrijs centen={Math.round(p.price * 100)} product={p} />
-                    </span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+        {/* de foto van de kop: rechts in een afgerond kader, op de telefoon onder de tekst. Een vaste verhouding, dus niets verspringt. */}
+        <div className="relative mx-auto w-full max-w-[560px] lg:ml-auto lg:mr-0">
+          <span aria-hidden className="absolute -bottom-3 -right-3 hidden h-2/3 w-2/3 rounded-[1.75rem] bg-brand-mint/40 sm:block" />
+          <div className="relative aspect-[4/3] overflow-hidden rounded-[1.75rem] bg-ink shadow-e2 ring-1 ring-ink/10 lg:aspect-square">
+            <Image src={foto.src} alt={foto.alt} fill priority sizes="(min-width: 1024px) 560px, 100vw" className="object-cover object-[50%_18%]" />
+          </div>
+        </div>
       </div>
     </section>
   );
