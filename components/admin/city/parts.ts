@@ -19,10 +19,12 @@ export interface Kit {
   track: <T extends { dispose: () => void }>(t: T) => T;
   /** Kit voor een laag die opnieuw gebouwd kan worden: deelt materialen en vormen, ruimt alleen zijn eigen dingen op. */
   scope: () => Kit;
+  /** Realistische weergave (13 nov): echtere vormen voor auto's, bomen en mensen (vormen.ts). Een laag-kit erft hem. */
+  readonly echt: boolean;
   dispose: () => void;
 }
 
-export function makeKit(parent?: Kit): Kit {
+export function makeKit(parent?: Kit, echt = false): Kit {
   const mats = new Map<string, Mat>();
   const geos = new Map<string, THREE.BufferGeometry>();
   const owned: { dispose: () => void }[] = [];
@@ -71,6 +73,7 @@ export function makeKit(parent?: Kit): Kit {
       return t;
     },
     scope: () => makeKit(kit),
+    echt: parent ? parent.echt : echt,
     dispose() {
       mats.forEach((m) => m.dispose());
       geos.forEach((g) => g.dispose());

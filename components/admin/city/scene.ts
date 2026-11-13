@@ -125,7 +125,7 @@ export function createCity(
   const fitScale = () => (camera.aspect >= 1 ? 1 : Math.min(1.8, (1 / camera.aspect) ** 0.7));
   camera.position.set(0, 78 * fitScale(), 6 + 98 * fitScale());
 
-  const kit = makeKit();
+  const kit = makeKit(undefined, echt);
   const win = windowTextures(kit);
   const shadow = blobTexture(kit);
   const sky = skyTexture(kit);

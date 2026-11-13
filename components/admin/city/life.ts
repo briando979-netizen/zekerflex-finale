@@ -20,6 +20,7 @@ import {
   type WeatherKind,
 } from "@/lib/admin/city-life";
 import { type Kit, seeded } from "@/components/admin/city/parts";
+import { armVorm, beenVorm, rompMensVorm } from "@/components/admin/city/vormen";
 
 // Leven in de 3D-stad: voetgangers (bezoekers van de site in een blauwe jas,
 // verder bewoners), mensen op bankjes, honden aan de lijn, eenden, vogels,
@@ -128,9 +129,10 @@ export function createLife(root: Kit, scene: THREE.Scene, blobTex: THREE.Texture
   const pivotTop = (g: THREE.BufferGeometry, h: number) => g.translate(0, -h / 2, 0);
 
   // --- voetgangers ---------------------------------------------------------
-  const leg = many(kit.geo("p-leg", () => pivotTop(new THREE.BoxGeometry(0.16, 0.8, 0.18), 0.8)), white(), MAX_WALKERS * 2, true);
-  const arm = many(kit.geo("p-arm", () => pivotTop(new THREE.BoxGeometry(0.12, 0.62, 0.14), 0.62)), white(), MAX_WALKERS * 2, true);
-  const torso = many(kit.geo("p-torso", () => new THREE.BoxGeometry(0.42, 0.62, 0.24)), white(), MAX_WALKERS, true);
+  // realistisch: ronde armen en benen en een romp met schouders (vormen.ts), even groot als de blokjes van de eenvoudige weergave
+  const leg = many(kit.echt ? kit.geo("p-leg-echt", () => beenVorm()) : kit.geo("p-leg", () => pivotTop(new THREE.BoxGeometry(0.16, 0.8, 0.18), 0.8)), white(), MAX_WALKERS * 2, true);
+  const arm = many(kit.echt ? kit.geo("p-arm-echt", () => armVorm()) : kit.geo("p-arm", () => pivotTop(new THREE.BoxGeometry(0.12, 0.62, 0.14), 0.62)), white(), MAX_WALKERS * 2, true);
+  const torso = many(kit.echt ? kit.geo("p-torso-echt", rompMensVorm) : kit.geo("p-torso", () => new THREE.BoxGeometry(0.42, 0.62, 0.24)), white(), MAX_WALKERS, true);
   const head = many(kit.geo("p-head", () => new THREE.SphereGeometry(0.15, 12, 8)), white({ roughness: 0.6 }), MAX_WALKERS, true);
   const hair = many(kit.geo("p-hair", () => new THREE.SphereGeometry(0.162, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2)), white({ roughness: 0.9 }), MAX_WALKERS, true);
   const umbrella = many(kit.geo("p-umbrella", () => new THREE.ConeGeometry(0.62, 0.28, 10, 1, true)), kit.own({ color: 0x1f2937, roughness: 0.6, side: THREE.DoubleSide }), MAX_WALKERS);
