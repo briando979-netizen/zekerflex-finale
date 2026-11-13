@@ -18,8 +18,9 @@ describe("de trein", () => {
   });
 
   it("het andere spoor rijdt de andere kant op, een halve rit later", () => {
-    const x = treinX(1, 0);
-    expect(x === null || x >= 0).toBe(true);
+    // spoor 1 begint een halve rit verder: op t = 0 vertrekt hij net naar het westen (Amsterdam)
+    expect(treinX(1, 0) ?? 0).toBeLessThan(0);
+    // en een halve rit later komt hij uit het oosten (Groningen) binnen
     expect(treinX(1, duur / 2)).toBe(SPOOR_EIND);
   });
 
