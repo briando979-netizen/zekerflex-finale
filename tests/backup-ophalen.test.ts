@@ -37,7 +37,7 @@ const status = (ts: string, ok: boolean) =>
   writeFileSync(path.join(dir, "status.json"), `{"at":"2026-11-13T02:30:42Z","ok":${ok},"file":"zekerflex-${ts}.dump","bytes":1,"restore":{"ok":true,"tables":1,"users":1,"liveUsers":1}}\n`);
 
 function vraag(verzoek: string) {
-  const r = spawnSync("bash", [WRAPPER], { env: { PATH: process.env.PATH ?? "", HOME: tmp, ZF_BACKUP_DIR: dir, SSH_ORIGINAL_COMMAND: verzoek } });
+  const r = spawnSync("bash", [WRAPPER], { env: { PATH: process.env.PATH ?? "", HOME: tmp, ZF_BACKUP_DIR: dir, SSH_ORIGINAL_COMMAND: verzoek } as unknown as NodeJS.ProcessEnv });
   return { code: r.status, uit: r.stdout, fout: r.stderr.toString() };
 }
 
@@ -153,7 +153,7 @@ describe.skipIf(!kan)("het ophaalscript op de pc (met een nep-ssh)", () => {
   });
   const draai = (extra: Record<string, string> = {}) =>
     spawnSync("bash", [PC], {
-      env: { PATH: process.env.PATH ?? "", HOME: tmp, WRAPPER, ZF_BACKUP_DIR: dir, ZF_OPHAAL_SSH: nep, ZF_OPHAAL_HOST: "nep@server", ZF_OPHAAL_SLEUTEL: "/dev/null", ZF_OPHAAL_DOEL: pc, ...extra },
+      env: { PATH: process.env.PATH ?? "", HOME: tmp, WRAPPER, ZF_BACKUP_DIR: dir, ZF_OPHAAL_SSH: nep, ZF_OPHAAL_HOST: "nep@server", ZF_OPHAAL_SLEUTEL: "/dev/null", ZF_OPHAAL_DOEL: pc, ...extra } as unknown as NodeJS.ProcessEnv,
     });
   const log = () => readFileSync(path.join(pc, "ophalen.log"), "utf8");
 
