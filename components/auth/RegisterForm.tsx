@@ -117,7 +117,6 @@ export function RegisterForm({
 
   // ---- password ----------------------------------------------------
   const [pw, setPw] = useState("");
-  const [pw2, setPw2] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [pwInfo, setPwInfo] = useState<{ score: number; label: string; warnings: string[]; breached: boolean } | null>(
     null,
@@ -192,7 +191,6 @@ export function RegisterForm({
       const d = await res.json();
       if (!res.ok || typeof d?.password !== "string") throw new Error("geen wachtwoord");
       setPw(d.password);
-      setPw2(d.password);
       setShowPw(true);
     } catch {
       /* ignore */
@@ -212,11 +210,10 @@ export function RegisterForm({
     }
   }, [gratisMail, type, bedrijfGekozen]);
 
-  const match = pw.length > 0 && pw === pw2;
   const sociaal = type === "freelancer";
   const canSubmit =
     (emailState === "free" || emailState === "unavailable") &&
-    match &&
+    pw.length > 0 &&
     ((pwInfo?.score ?? 0) >= 2 || pwCheckUnavailable) &&
     !(pwInfo?.breached ?? false) &&
     (type === "freelancer" || company.trim().length >= 2);
@@ -411,6 +408,7 @@ export function RegisterForm({
               type="button"
               onClick={() => setShowPw((v) => !v)}
               aria-label={showPw ? t.hide : t.show}
+              aria-pressed={showPw}
               className="absolute inset-y-0 right-0 grid w-10 place-items-center text-neutralx-400 hover:text-ink"
             >
               <EyeIcon off={showPw} />
@@ -450,25 +448,6 @@ export function RegisterForm({
           )}
         </div>
 
-        <label className="block">
-          <span className="field-label">{t.repeat}</span>
-          <input
-            type={showPw ? "text" : "password"}
-            name="passwordConfirm"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            value={pw2}
-            onChange={(e) => setPw2(e.target.value)}
-            aria-invalid={Boolean(pw2) && !match}
-            className="field-input"
-          />
-          {pw2 && (
-            <span aria-live="polite" className={`mt-1 block text-xs ${match ? "text-ok" : "text-crit"}`}>
-              {match ? t.match : t.noMatch}
-            </span>
-          )}
-        </label>
 
         <SubmitButton type={type} disabled={!canSubmit} t={t} />
       </form>

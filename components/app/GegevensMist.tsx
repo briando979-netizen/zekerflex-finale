@@ -11,7 +11,7 @@ import type { GegevensStuk } from "@/lib/onboarding/gegevens-mist";
 // uitzendkracht kan hier meteen (daarvoor moest je tot nu toe zelf /dashboard/fiscaal vinden; daar kwam bijna niemand).
 
 /** Het BSN invullen: bewaard via dezelfde route als het fiscale formulier (versleuteld, nooit onversleuteld opgeslagen). */
-function BsnVeld({ loonheffingskorting }: { loonheffingskorting: boolean }) {
+function BsnVeld() {
   const router = useRouter();
   const t = useFT().gegevensMist.bsn;
   const [bsn, setBsn] = useState("");
@@ -24,11 +24,11 @@ function BsnVeld({ loonheffingskorting }: { loonheffingskorting: boolean }) {
     setBusy(true);
     setFout(null);
     try {
-      // loonheffingskorting meegeven zoals ze nu staat: de route zet het anders terug op "ja"
+      // alleen het BSN: wat niet wordt meegestuurd, laat de route staan (een oudere stand hier zet niets terug)
       const res = await fetch("/api/me/fiscal", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workerKind: "uitzendkracht", bsn: bsn.trim(), loonheffingskorting }),
+        body: JSON.stringify({ workerKind: "uitzendkracht", bsn: bsn.trim() }),
       });
       const d = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
       if (!res.ok) setFout(d.error?.message ?? t.mislukt);
@@ -74,7 +74,7 @@ function BsnVeld({ loonheffingskorting }: { loonheffingskorting: boolean }) {
  * Het BSN dat van het ID is gelezen (lib/kyc/bsn-uit-document.ts): de werker ziet alleen de laatste 4 en bevestigt het
  * zelf (AVG: hij weet wat we lazen, en een leesfout valt zo op). "Nee" laat het gewone veld zien.
  */
-function BsnVoorstelVraag({ laatste4, loonheffingskorting, zelf }: { laatste4: string; loonheffingskorting: boolean; zelf: () => void }) {
+function BsnVoorstelVraag({ laatste4, zelf }: { laatste4: string; zelf: () => void }) {
   const router = useRouter();
   const t = useFT().gegevensMist.bsn;
   const [busy, setBusy] = useState(false);
@@ -88,7 +88,7 @@ function BsnVoorstelVraag({ laatste4, loonheffingskorting, zelf }: { laatste4: s
       const res = await fetch("/api/me/fiscal", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workerKind: "uitzendkracht", bsnVoorstelOk: true, loonheffingskorting }),
+        body: JSON.stringify({ workerKind: "uitzendkracht", bsnVoorstelOk: true }),
       });
       const d = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
       if (!res.ok) setFout(d.error?.message ?? t.mislukt);
@@ -119,17 +119,121 @@ function BsnVoorstelVraag({ laatste4, loonheffingskorting, zelf }: { laatste4: s
   );
 }
 
+/** Wat er al bekend is voor het btw-veld (uit de fiscale gegevens; de KVK zo nodig uit het profiel). */
+export interface BtwBegin {
+  vatNumber: string | null;
+  vatRequested: boolean;
+  korApplies: boolean;
+  kvkNumber: string | null;
+}
+
+/**
+ * Btw (en bij een flexwerker de KOR) meteen hier, zodat /dashboard/fiscaal niet meer bij de aanmelding hoort (13 nov
+ * 2026). Dezelfde route en dezelfde controle als het fiscale formulier (VIES, de regel van fiscaalIngevuld); alleen de
+ * btw-, KOR- en KVK-velden gaan mee, de rest laat de route staan. Daarna de stand van de server (router.refresh).
+ */
+function BtwVeld({ soort, begin }: { soort: "zzp" | "flexwerker"; begin: BtwBegin }) {
+  const router = useRouter();
+  const ft = useFT();
+  const f = ft.fiscaalForm;
+  const t = ft.gegevensMist.btw;
+  const flex = soort === "flexwerker";
+  const [btw, setBtw] = useState(begin.vatNumber ?? "");
+  const [aangevraagd, setAangevraagd] = useState(begin.vatRequested);
+  const [kor, setKor] = useState(begin.korApplies);
+  const [busy, setBusy] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
+  const ingevuld = Boolean(btw.trim()) || aangevraagd || (flex && kor);
+
+  async function bewaar(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy || !ingevuld) return;
+    setBusy(true);
+    setFout(null);
+    try {
+      const body: Record<string, unknown> = { workerKind: soort, vatRequested: aangevraagd };
+      if (flex) body.korApplies = kor;
+      if (btw.trim()) body.vatNumber = btw.trim();
+      if (begin.kvkNumber) body.kvkNumber = begin.kvkNumber;
+      const res = await fetch("/api/me/fiscal", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const d = (await res.json().catch(() => ({}))) as { error?: { message?: string }; vatNumber?: string | null; vatRequested?: boolean; korApplies?: boolean };
+      if (!res.ok) setFout(d.error?.message ?? f.opslaanMislukt);
+      else {
+        // de stand van de server overnemen (die schoont het nummer op en beslist over de KOR)
+        setBtw(d.vatNumber ?? "");
+        if (typeof d.vatRequested === "boolean") setAangevraagd(d.vatRequested);
+        if (typeof d.korApplies === "boolean") setKor(d.korApplies);
+        router.refresh();
+        document.getElementById("gegevens-mist-kop")?.focus();
+      }
+    } catch {
+      setFout(f.opslaanMislukt);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={(e) => void bewaar(e)} className="mt-2 space-y-2" noValidate>
+      <div>
+        <label htmlFor="gegevens-btw" className="field-label">{f.btw}</label>
+        <input
+          id="gegevens-btw"
+          type="text"
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          maxLength={20}
+          value={btw}
+          onChange={(e) => setBtw(e.target.value)}
+          aria-describedby={fout ? "gegevens-btw-hint gegevens-btw-fout" : "gegevens-btw-hint"}
+          aria-invalid={fout ? true : undefined}
+          className="field-input mt-1 w-full max-w-xs"
+          placeholder="NL123456789B01"
+        />
+        <p id="gegevens-btw-hint" className="mt-1 text-xs text-neutralx-500">{flex ? f.btwHintOptioneel : f.btwHintLive}</p>
+      </div>
+      <label className="flex items-start gap-2 text-sm text-ink">
+        <input type="checkbox" checked={aangevraagd} onChange={(e) => setAangevraagd(e.target.checked)} className="mt-1" />
+        <span>{f.btwAangevraagd}</span>
+      </label>
+      {flex && (
+        <label className="flex items-start gap-2 text-sm text-ink">
+          <input type="checkbox" checked={kor} onChange={(e) => setKor(e.target.checked)} className="mt-1" />
+          <span>{ft.kor.keuzeHeb}</span>
+        </label>
+      )}
+      <button type="submit" disabled={busy || !ingevuld} className="btn-primary min-h-[44px] px-4 py-2 text-sm disabled:opacity-50">
+        {busy ? t.bezig : t.opslaan}
+      </button>
+      {fout && <p id="gegevens-btw-fout" role="alert" className="text-xs text-crit">{fout}</p>}
+      {flex && (
+        <p className="text-xs">
+          <Link href="/dashboard/fiscaal" className="inline-flex min-h-[44px] items-center font-semibold text-brand-600 underline underline-offset-2">
+            {t.korAanvragen}
+          </Link>
+        </p>
+      )}
+    </form>
+  );
+}
+
 export function GegevensMist({
   mist,
   soort,
-  loonheffingskorting,
   bsnVoorstel = null,
+  btw = null,
 }: {
   mist: GegevensStuk[];
   soort: "zzp" | "flexwerker" | "uitzendkracht" | null;
-  loonheffingskorting: boolean;
   /** de laatste 4 van het BSN dat van het ID is gelezen, nog niet bevestigd */
   bsnVoorstel?: string | null;
+  /** wat er al bekend is voor het btw-veld (zzp'er en flexwerker) */
+  btw?: BtwBegin | null;
 }) {
   const t = useFT().gegevensMist;
   const [zelfInvullen, setZelfInvullen] = useState(false);
@@ -147,9 +251,9 @@ export function GegevensMist({
             <p className="text-sm font-semibold text-ink">{vraagVoorstel ? t.bsn.voorstelKop : t.bsn.kop}</p>
             <p className="text-xs text-neutralx-600">{t.bsn.hint}</p>
             {vraagVoorstel && bsnVoorstel ? (
-              <BsnVoorstelVraag laatste4={bsnVoorstel} loonheffingskorting={loonheffingskorting} zelf={() => setZelfInvullen(true)} />
+              <BsnVoorstelVraag laatste4={bsnVoorstel} zelf={() => setZelfInvullen(true)} />
             ) : (
-              <BsnVeld loonheffingskorting={loonheffingskorting} />
+              <BsnVeld />
             )}
           </li>
         )}
@@ -164,7 +268,11 @@ export function GegevensMist({
           <li>
             <p className="text-sm font-semibold text-ink">{t.btw.kop}</p>
             <p className="text-xs text-neutralx-600">{soort === "zzp" ? t.btw.hintZzp : t.btw.hintFlex}</p>
-            <Link href="/dashboard/fiscaal" className="mt-1 inline-flex min-h-[44px] items-center text-sm font-semibold text-brand-600 underline underline-offset-2">{t.btw.knop}</Link>
+            {soort === "zzp" || soort === "flexwerker" ? (
+              <BtwVeld soort={soort} begin={btw ?? { vatNumber: null, vatRequested: false, korApplies: false, kvkNumber: null }} />
+            ) : (
+              <Link href="/dashboard/fiscaal" className="mt-1 inline-flex min-h-[44px] items-center text-sm font-semibold text-brand-600 underline underline-offset-2">{t.btw.knop}</Link>
+            )}
           </li>
         )}
         {mist.includes("postcode") && (
