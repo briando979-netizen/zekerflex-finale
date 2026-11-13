@@ -2,6 +2,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { twilioConfigured, twilioRefusal } from "@/lib/telephony/twilio";
 import type { Kanaal } from "@/lib/spoed/regels";
+import { zonderNummers } from "@/lib/telephony/log-nummer";
 
 // ---------------------------------------------------------------------------
 // De kanalen van een spoedoproep buiten de app: sms via Twilio (Messages API,
@@ -71,7 +72,7 @@ export async function whatsappStand(): Promise<{ ingericht: boolean; verbonden: 
     const d = (await res.json().catch(() => ({}))) as { verbonden?: boolean; nummer?: string };
     return { ingericht: true, verbonden: Boolean(d.verbonden), ...(d.nummer ? { nummer: d.nummer } : {}) };
   } catch (err) {
-    logger.warn("whatsapp-brug niet bereikbaar", { err: err instanceof Error ? err.message : String(err) });
+    logger.warn("whatsapp-brug niet bereikbaar", { err: zonderNummers(err instanceof Error ? err.message : String(err)) });
     return { ingericht: true, verbonden: false };
   }
 }

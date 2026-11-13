@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { AppError } from "@/lib/errors";
+import { ontvangerDomeinen } from "@/lib/mail/log-domein";
 import { BI_ROL, BI_VIEWS, inrichtSql, isHexWachtwoord, sqlTekst } from "@/lib/bi/views";
 import { DASHBOARD_NAAM, KAARTEN } from "@/lib/bi/dashboards";
 import { geldigeInbedsleutel, inbedToken, inbedUrl } from "@/lib/bi/embed";
@@ -125,7 +126,7 @@ async function sessieVoorBeheerder(stand: BiStand): Promise<{ sessie: Sessie; em
       },
       timeoutMs: 60_000,
     });
-    logger.info("bi: metabase ingericht met eerste beheerder", { email });
+    logger.info("bi: metabase ingericht met eerste beheerder", { domein: ontvangerDomeinen(email) });
     return { sessie: { token: r.id }, email };
   }
   const r = await api<{ id: string }>("/session", { method: "POST", body: { username: stand.beheerderEmail || email, password: wachtwoord } });

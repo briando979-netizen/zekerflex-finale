@@ -34,6 +34,19 @@ const BASISLIJN: Record<string, string> = {
   "lib/voice/tts.ts|code": "afsluitcode van het Piper-proces, geen geheim",
 };
 
+// Persoonsgegevens (13 nov): een e-mailadres of telefoonnummer hoort niet in een log. Log het domein
+// (ontvangerDomeinen, lib/mail/log-domein.ts) of land + laatste 2 cijfers (nummerVoorLog, lib/telephony/log-nummer.ts),
+// en haal adressen/nummers uit een foutmelding (zonderAdressen / zonderNummers). Een waarde die daar al doorheen gaat
+// (of een Boolean) mag; ander gebruik van deze veldnamen staat hieronder met een reden of faalt.
+const PERSOON = /^(to|from|replyTo|cc|bcc|email|emails|phone|telefoon|telefoonnummer|msisdn|nummer|number|chatId|jid|recipient|ontvanger)$/;
+const VEILIGE_WAARDE = /^\s*:\s*(?:Boolean\(|ontvanger|nummerVoorLog|zonderAdressen|zonderNummers)/;
+
+/** Persoonsveld-namen in een logregel die bewust blijven, per "bestand|veld", met de reden. */
+const BASISLIJN_PERSOON: Record<string, string> = {
+  "lib/replacements/reassign.ts|from": "id van de oorspronkelijke werker (userId), geen adres of nummer",
+  "lib/replacements/reassign.ts|to": "id van de vervanger (userId), geen adres of nummer",
+};
+
 function argumenten(tekst: string, start: number): string {
   let d = 0;
   for (let i = start; i < tekst.length; i++) {
@@ -86,5 +99,43 @@ describe("logs: geen capability-URL's of tokens, alleen de host", () => {
     }
     expect(aanroepen, "de bewaker vindt geen logregels meer: zoekt hij op de goede plek?").toBeGreaterThan(300);
     expect(nieuw, "log alleen de host (new URL(x).host) of een lengte; is het geen geheim, zet het dan met een reden op de basislijn").toEqual([]);
+  });
+
+  it("geen e-mailadres of telefoonnummer in een logveld (zonder reden op de basislijn)", () => {
+    const nieuw: string[] = [];
+    for (const f of bronnen()) {
+      const tekst = readFileSync(f, "utf8");
+      const rel = path.relative(ROOT, f).replace(/\\/g, "/");
+      for (const m of tekst.matchAll(AANROEP)) {
+        const args = argumenten(tekst, (m.index ?? 0) + m[0].length - 1);
+        const obj = args.includes("{") ? args.slice(args.indexOf("{")) : "";
+        for (const k of obj.matchAll(SLEUTEL)) {
+          const veld = k[1] ?? "";
+          if (!PERSOON.test(veld)) continue;
+          const na = obj.slice((k.index ?? 0) + k[0].length);
+          if (VEILIGE_WAARDE.test(na)) continue;
+          if (Object.hasOwn(BASISLIJN_PERSOON, `${rel}|${veld}`)) continue;
+          const regel = tekst.slice(0, m.index).split("\n").length;
+          nieuw.push(`${rel}:${regel} ${veld}`);
+        }
+      }
+    }
+    expect(nieuw, "log het domein (ontvangerDomeinen) of land + laatste 2 cijfers (nummerVoorLog); is het echt geen persoonsgegeven, zet het met een reden op BASISLIJN_PERSOON").toEqual([]);
+  });
+
+  it("de hulpjes maskeren", async () => {
+    const { nummerVoorLog, zonderNummers } = await import("@/lib/telephony/log-nummer");
+    expect(nummerVoorLog("+31612345678")).toBe("+31…78");
+    expect(nummerVoorLog("0031612345678")).toBe("+31…78");
+    expect(nummerVoorLog("whatsapp:+31612345678")).toBe("+31…78");
+    expect(nummerVoorLog("31612345678@s.whatsapp.net")).toBe("+31…78");
+    expect(nummerVoorLog("+1 (555) 123-4567")).toBe("+1…67");
+    expect(nummerVoorLog("+353 85 123 4567")).toBe("+353…67");
+    expect(nummerVoorLog("0612345678")).toBe("onbekend");
+    expect(nummerVoorLog("abc")).toBe("onbekend");
+    expect(nummerVoorLog(undefined)).toBe("onbekend");
+    expect(zonderNummers("The number +31612345678 is not valid")).toBe("The number <nummer> is not valid");
+    expect(zonderNummers("fout 404 bij oproep")).toBe("fout 404 bij oproep");
+    expect(zonderNummers(undefined)).toBe("");
   });
 });

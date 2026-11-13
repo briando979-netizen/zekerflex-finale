@@ -62,7 +62,8 @@ async function start() {
       verbonden = true;
       laatsteQr = null;
       nummer = sock.user?.id ? nummerVan(sock.user.id) : null;
-      console.log(`WhatsApp verbonden als ${nummer ?? "onbekend nummer"}.`);
+      // alleen land en laatste 2 cijfers in het log (het volledige nummer hoort er niet in)
+      console.log(`WhatsApp verbonden als ${nummer ? `${nummer.slice(0, 3)}…${nummer.slice(-2)}` : "onbekend nummer"}.`);
     }
     if (u.connection === "close") {
       verbonden = false;

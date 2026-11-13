@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { nummerVoorLog, zonderNummers } from "@/lib/telephony/log-nummer";
 import { twilioConfigured, placeTwilioCall } from "@/lib/telephony/twilio";
 import { isAllowedToCall, normalizeNumber } from "@/lib/telephony/consent";
 import { createCall, addTurn, type CallRecord } from "@/lib/telephony/store";
@@ -62,7 +63,7 @@ export async function placeOutboundCall(input: OutboundInput): Promise<OutboundR
   if (!configured) {
     // Mock: leg de openingszin vast zodat je het script ziet, maar bel niet.
     await addTurn(rec.id, "ai", openingText(script));
-    logger.info("telephony mock call (geen Twilio geconfigureerd)", { callId: rec.id, to: input.to });
+    logger.info("telephony mock call (geen Twilio geconfigureerd)", { callId: rec.id, nummer: nummerVoorLog(input.to) });
     return { ok: true, reason: "mock — geen echte oproep (Twilio niet geconfigureerd)", callId: rec.id, mock: true };
   }
 
@@ -72,12 +73,12 @@ export async function placeOutboundCall(input: OutboundInput): Promise<OutboundR
     const { sid } = await placeTwilioCall({ to, voiceUrl, statusUrl });
     const { patchCall } = await import("@/lib/telephony/store");
     await patchCall(rec.id, { providerCallId: sid });
-    logger.info("telephony outbound call placed", { callId: rec.id, sid, to: input.to });
+    logger.info("telephony outbound call placed", { callId: rec.id, sid, nummer: nummerVoorLog(input.to) });
     return { ok: true, reason: decision.reason, callId: rec.id, mock: false };
   } catch (err) {
     const { patchCall } = await import("@/lib/telephony/store");
     await patchCall(rec.id, { status: "failed" });
-    logger.warn("telephony outbound call failed", { callId: rec.id, error: (err as Error).message });
+    logger.warn("telephony outbound call failed", { callId: rec.id, error: zonderNummers((err as Error).message) });
     return { ok: false, reason: (err as Error).message, callId: rec.id, mock: false };
   }
 }
