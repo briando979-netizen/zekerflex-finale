@@ -21,24 +21,47 @@ fi
 # maken. Met sudo: .env.production is van root (600) en moet dat blijven.
 sudo bash deploy/scripts/env-aanvullen.sh .env.production
 # De terugzetversie (zekerflex-app:rollback) is de versie die vóór deze uitrol draaide. Hij wordt pas ná het
-# bouwen vastgelegd, en alleen als de app echt veranderde. Eerst gebeurde het meteen hier: een uitrol die hetzelfde
-# image oplevert (zelfde code opnieuw, of alleen wijzigingen buiten de app) overschreef zo de echte vorige versie met
-# de draaiende, en "Vorige versie terugzetten" deed dan niets (13 nov: rollback == latest).
+# bouwen en migreren vastgelegd, en alleen als de app echt veranderde. Eerst gebeurde het meteen vóór het bouwen: een
+# uitrol die hetzelfde image oplevert (zelfde code opnieuw, of alleen wijzigingen buiten de app) overschreef zo de
+# echte vorige versie met de draaiende, en "Vorige versie terugzetten" deed dan niets (13 nov: rollback == latest).
+# Deze Docker gebruikt de containerd-opslag: een image zonder naam bestaat dan niet meer. De draaiende versie houden
+# we daarom vast met een tijdelijke naam (zekerflex-app:voor-uitrol) en taggen nooit op id (de eerste poging, via het id,
+# faalde live met "No such image").
 # --- rollback-vastleggen begin ---
-# $1 = het id van de versie die vóór deze uitrol draaide
+VOOR_UITROL=""
+# vóór het bouwen: de draaiende versie een tijdelijke naam geven
+voor_uitrol_vastleggen() {
+  if sudo docker tag zekerflex-app:latest zekerflex-app:voor-uitrol 2>/dev/null; then VOOR_UITROL=1; else VOOR_UITROL=""; fi
+  return 0
+}
+# alleen de tijdelijke naam weghalen (nooit het image zelf: dat houdt zijn andere naam, latest of rollback)
+voor_uitrol_weg() {
+  if [ -n "$VOOR_UITROL" ]; then sudo docker rmi zekerflex-app:voor-uitrol > /dev/null 2>&1; VOOR_UITROL=""; fi
+  return 0
+}
+# na het bouwen en migreren: is de app echt veranderd, dan wordt de draaiende versie van vóór de uitrol de terugzetversie
 rollback_vastleggen() {
-  local voor="$1" nieuw
-  [ -n "$voor" ] || return 0
-  nieuw=$(sudo docker image inspect -f '{{.Id}}' zekerflex-app:latest 2>/dev/null | sed 's/^sha256://' || true)
-  if [ -n "$nieuw" ] && [ "$nieuw" != "$voor" ]; then
-    sudo docker tag "$voor" zekerflex-app:rollback && echo "rollback: de vorige versie is bewaard"
+  local voor nieuw
+  [ -n "$VOOR_UITROL" ] || return 0
+  voor=$(sudo docker image inspect -f '{{.Id}}' zekerflex-app:voor-uitrol 2>/dev/null || true)
+  nieuw=$(sudo docker image inspect -f '{{.Id}}' zekerflex-app:latest 2>/dev/null || true)
+  if [ -n "$voor" ] && [ -n "$nieuw" ] && [ "$nieuw" != "$voor" ]; then
+    sudo docker tag zekerflex-app:voor-uitrol zekerflex-app:rollback && echo "rollback: de vorige versie is bewaard"
   else
     echo "rollback: de app is niet veranderd, de bewaarde vorige versie blijft staan"
   fi
   return 0
 }
+# bij een mislukte migratie: de draaiende versie weer als latest; de terugzetversie is dan nog niet aangeraakt
+migratie_mislukt_herstel() {
+  if [ -n "$VOOR_UITROL" ]; then
+    sudo docker tag zekerflex-app:voor-uitrol zekerflex-app:latest
+  else
+    sudo docker tag zekerflex-app:rollback zekerflex-app:latest
+  fi
+}
 # --- rollback-vastleggen eind ---
-LIVE_VOOR=$(sudo docker image inspect -f '{{.Id}}' zekerflex-app:latest 2>/dev/null | sed 's/^sha256://' || true)
+voor_uitrol_vastleggen
 # Het eigen taalmodel (Ollama, ±3,5 GB met gemma3:4b + granite-embedding) en de build (±4 GB) pasten
 # samen niet in de 8 GB van deze server: op 7 nov liep de load naar 138 en was de site 20 minuten
 # weg. Sinds de upgrade naar 16 GB (7 nov) blijft Ollama draaien (dan blijft de AI-chat werken tijdens
@@ -54,20 +77,20 @@ fi
 ollama_terug() {
   if [ -n "$OLLAMA_WAS_AAN" ]; then sudo docker start zekerflex-ollama-1 > /dev/null 2>&1 && echo "ollama: weer gestart"; fi
 }
-trap ollama_terug EXIT
+trap 'ollama_terug; voor_uitrol_weg' EXIT
 for i in 1 2 3; do
   if sudo $C build app; then
-    rollback_vastleggen "$LIVE_VOOR"
     # Migreren met de Prisma uit het nieuwe image, vóór de nieuwe app start. Mislukt
     # dat, dan blijft de oude app draaien en wijst latest weer naar de vorige versie.
     if [ -n "${ZF_MIGREER:-}" ]; then
       if ! sudo $C run --rm --no-deps -T app node node_modules/prisma/build/index.js migrate deploy; then
-        sudo docker tag "${LIVE_VOOR:-zekerflex-app:rollback}" zekerflex-app:latest
+        migratie_mislukt_herstel
         echo "MIGRATIE_MISLUKT: de vorige versie blijft draaien"
         echo "DEPLOY_EXIT=5"
         exit 5
       fi
     fi
+    rollback_vastleggen
     # de back-updienst heeft een eigen klein image (postgres + scp/curl): gecacht, seconden
     sudo $C build -q backup > /dev/null 2>&1 || echo "backup: image bouwen mislukt, het oude blijft"
     # eigen databases voor Metabase en Outline (bestaan ze al, dan gebeurt er niets)
