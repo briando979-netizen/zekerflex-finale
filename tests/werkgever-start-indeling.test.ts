@@ -78,6 +78,6 @@ describe("het scherm", () => {
   });
 
   it("de regels voor de ruimte zijn puur", () => {
-    expect(bron("lib/werkgever/start-marges.ts").match(/^import .*$/gm)).toEqual(['import { VASTE_PAGINAS } from "@/lib/ontwerp/vaste-paginas";']);
+    expect(bron("lib/werkgever/start-marges.ts").match(/^import .*$/gm)).toEqual(['import { VASTE_PAGINAS, type VastePaginaId } from "@/lib/ontwerp/vaste-paginas";']);
   });
 });

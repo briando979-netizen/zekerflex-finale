@@ -1,3 +1,4 @@
+import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
 import type { Principal } from "@/lib/auth";
 import { WelcomeBack } from "@/components/app/WelcomeBack";
@@ -16,6 +17,9 @@ import type { WerkruimteContext } from "@/lib/werkgever/werkruimte-server";
 import { BANK_AAN } from "@/lib/app-mode";
 import { getDict } from "@/lib/i18n/server";
 import { fmt, type Dict } from "@/lib/i18n/dictionaries";
+import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
+import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
+import { kl, werkruimteMarges } from "@/lib/werkgever/start-marges";
 
 // ---------------------------------------------------------------------------
 // Het startscherm van /werkgever voor een rijschool, horecazaak of wie alleen een
@@ -36,6 +40,14 @@ interface Basis {
   d: WS;
 }
 
+/** Het eigen vak in stukken: de kop staat vast bovenaan, de cijfers en de tegels zijn te verslepen (Site-ontwerper, Pagina's). */
+interface Vak {
+  kop: ReactNode;
+  cijfers?: ReactNode;
+  tegels?: ReactNode;
+}
+type Marge = Record<string, string>;
+
 /** "1 nieuwe aanmelding" of "3 nieuwe aanmeldingen": de twee vormen komen uit het woordenboek, met {n} erin. */
 const aantal = (n: number, een: string, meer: string) => fmt(n === 1 ? een : meer, { n });
 
@@ -47,16 +59,30 @@ export async function WerkruimteStart({
 }: Omit<Basis, "d"> & { w: WerkruimteContext; inApp: boolean; studio: boolean }) {
   const d = (await getDict()).werkruimteStart;
   const basis: Basis = { ...rest, d };
-  return (
-    <>
-      {w.soort === "rijschool" ? <RijschoolVak {...basis} /> : w.soort === "horeca" ? <HorecaVak {...basis} /> : <WebsiteVak {...basis} studio={studio} />}
-      <KlusConceptNudge />
-      <div className="mt-6">
+  // De onderdelen onder de kop. De beheerder versleept en verbergt ze in de Site-ontwerper (Pagina's, "Startscherm rijschool,
+  // horeca en website"); zonder eigen indeling staat alles precies zoals het stond, met dezelfde tussenruimte.
+  const zichtbaar = zichtbareSecties("werkruimte-start", await getPaginaIndeling("werkruimte-start"));
+  const marge = werkruimteMarges(zichtbaar);
+  const vak = w.soort === "rijschool" ? await rijschoolVak(basis, marge) : w.soort === "horeca" ? await horecaVak(basis, marge) : await websiteVak({ ...basis, studio }, marge);
+  const onderdelen: Record<string, ReactNode> = {
+    cijfers: vak.cijfers,
+    onderdelen: vak.tegels,
+    concept: <KlusConceptNudge />,
+    extra: (
+      <div className={kl(marge.extra)}>
         <Panel title={d.extraTitel} subtitle={d.extraSub}>
           <TegelRaster label={d.extraTitel} tegels={extraTegels(inApp, d)} />
         </Panel>
       </div>
-      <PersoneelVak principal={basis.principal} tenantId={basis.tenantId} ookPersoneel={w.ookPersoneel} d={d} />
+    ),
+    personeel: <PersoneelVak principal={basis.principal} tenantId={basis.tenantId} ookPersoneel={w.ookPersoneel} d={d} marge={marge.personeel} />,
+  };
+  return (
+    <>
+      {vak.kop}
+      {zichtbaar.map((id) => (
+        <Fragment key={id}>{onderdelen[id]}</Fragment>
+      ))}
     </>
   );
 }
@@ -80,20 +106,22 @@ function Opzetten({ principal, greet, eyebrow, titel, uitleg, href, knop }: Basi
 
 // --- rijschool ----------------------------------------------------------------
 
-async function RijschoolVak(b: Basis) {
+async function rijschoolVak(b: Basis, marge: Marge): Promise<Vak> {
   const d = b.d;
   const k = b.tenantId ? await rijschoolKerncijfers(b.tenantId).catch(() => null) : null;
   if (!k) {
-    return (
-      <Opzetten
-        {...b}
-        eyebrow={b.d.rijEyebrow}
-        titel={b.d.rijOpzetTitel}
-        uitleg={b.d.rijOpzetUitleg}
-        href="/werkgever/rijschool"
-        knop={b.d.rijOpzetKnop}
-      />
-    );
+    return {
+      kop: (
+        <Opzetten
+          {...b}
+          eyebrow={b.d.rijEyebrow}
+          titel={b.d.rijOpzetTitel}
+          uitleg={b.d.rijOpzetUitleg}
+          href="/werkgever/rijschool"
+          knop={b.d.rijOpzetKnop}
+        />
+      ),
+    };
   }
   const sub =
     k.aanmeldingen > 0
@@ -131,7 +159,7 @@ async function RijschoolVak(b: Basis) {
     { href: `/rijschool/${k.slug}/instructeur`, titel: d.rijInstructeurApp, uitleg: d.rijInstructeurAppUitleg },
     { href: t("instellingen"), titel: d.instellingen, uitleg: d.rijInstellingenUitleg },
   ];
-  return (
+  const kop = (
     <>
       <WelcomeBack name={b.principal.fullName} labels={b.greet} {...(sub ? { subtitle: sub } : {})} />
       <PageHeader
@@ -149,7 +177,10 @@ async function RijschoolVak(b: Basis) {
           </div>
         }
       />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    </>
+  );
+  const cijfers = (
+      <div className={kl(marge.cijfers, "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3")}>
         <KpiCard label={d.rijKpiLessen} value={String(k.lessenVandaag)} hint={fmt(d.rijKpiLessenHint, { n: k.lessenKomendeWeek })} />
         <KpiCard label={d.rijKpiActief} value={String(k.leerlingenActief)} tone="brand" />
         <KpiCard label={d.rijKpiAanm} value={String(k.aanmeldingen)} tone={k.aanmeldingen > 0 ? "warn" : "default"} hint={d.rijKpiAanmHint} />
@@ -161,31 +192,38 @@ async function RijschoolVak(b: Basis) {
           hint={aantal(k.openBetalingen, d.betalingEen, d.betalingMeer)}
         />
       </div>
-      <div className="mt-6">
+  );
+  return {
+    kop,
+    cijfers,
+    tegels: (
+      <div className={kl(marge.onderdelen)}>
         <Panel title={d.rijPaneel}>
           <TegelRaster label={d.rijTegelLabel} tegels={tegels} />
         </Panel>
       </div>
-    </>
-  );
+    ),
+  };
 }
 
 // --- horeca -------------------------------------------------------------------
 
-async function HorecaVak(b: Basis) {
+async function horecaVak(b: Basis, marge: Marge): Promise<Vak> {
   const d = b.d;
   const h = b.tenantId ? await horecaCijfers(b.tenantId).catch(() => null) : null;
   if (!h) {
-    return (
-      <Opzetten
-        {...b}
-        eyebrow={b.d.horEyebrow}
-        titel={b.d.horOpzetTitel}
-        uitleg={b.d.horOpzetUitleg}
-        href="/werkgever/horeca"
-        knop={b.d.opzetKnopHoreca}
-      />
-    );
+    return {
+      kop: (
+        <Opzetten
+          {...b}
+          eyebrow={b.d.horEyebrow}
+          titel={b.d.horOpzetTitel}
+          uitleg={b.d.horOpzetUitleg}
+          href="/werkgever/horeca"
+          knop={b.d.opzetKnopHoreca}
+        />
+      ),
+    };
   }
   const aan = (m: string) => h.modules.includes(m);
   const sub =
@@ -217,7 +255,7 @@ async function HorecaVak(b: Basis) {
     { href: t("modules"), titel: d.horModules, uitleg: uit.length ? fmt(d.horModulesNog, { lijst: uit.join(", ") }) : d.horModulesAlle },
     { href: t("gegevens"), titel: d.horGegevens, uitleg: d.horGegevensUitleg },
   ];
-  return (
+  const kop = (
     <>
       <WelcomeBack name={b.principal.fullName} labels={b.greet} {...(sub ? { subtitle: sub } : {})} />
       <PageHeader
@@ -241,38 +279,48 @@ async function HorecaVak(b: Basis) {
         steps={AAN_DE_SLAG_STAPPEN}
         texts={AAN_DE_SLAG_KAART.horeca}
       />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    </>
+  );
+  const cijfers = (
+      <div className={kl(marge.cijfers, "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4")}>
         {aan("reserveren") && <KpiCard label={d.horKpiRes} value={String(h.reserveringenVandaag)} hint={aantal(h.gastenVandaag, d.gastEen, d.gastMeer)} />}
         {aan("bestellen") && <KpiCard label={d.horKpiOpen} value={String(h.openBestellingen)} tone={h.openBestellingen > 0 ? "warn" : "default"} />}
         {aan("bestellen") && <KpiCard label={d.horKpiBesteld} value={money(h.omzetVandaagCent)} tone="brand" />}
         <KpiCard label={d.horKpiMenu} value={String(h.menuItems)} hint={h.uitverkocht > 0 ? fmt(d.uitverkochtTeller, { n: h.uitverkocht }) : d.horKpiMenuHint} />
         <KpiCard label={d.horKpiTafels} value={String(h.tafels)} hint={d.horKpiTafelsHint} />
       </div>
-      <div className="mt-6">
+  );
+  return {
+    kop,
+    cijfers,
+    tegels: (
+      <div className={kl(marge.onderdelen)}>
         <Panel title={d.horPaneel}>
           <TegelRaster label={d.horTegelLabel} tegels={tegels} />
         </Panel>
       </div>
-    </>
-  );
+    ),
+  };
 }
 
 // --- website en webshop ---------------------------------------------------------
 
-async function WebsiteVak(b: Basis & { studio: boolean }) {
+async function websiteVak(b: Basis & { studio: boolean }, marge: Marge): Promise<Vak> {
   const d = b.d;
   const s = b.tenantId ? await websiteCijfers(b.tenantId).catch(() => null) : null;
   if (!s) {
-    return (
-      <Opzetten
-        {...b}
-        eyebrow={b.d.webEyebrow}
-        titel={b.d.webOpzetTitel}
-        uitleg={b.d.webOpzetUitleg}
-        href={b.studio ? "/studio" : "/werkgever/website"}
-        knop={b.d.webOpzetKnop}
-      />
-    );
+    return {
+      kop: (
+        <Opzetten
+          {...b}
+          eyebrow={b.d.webEyebrow}
+          titel={b.d.webOpzetTitel}
+          uitleg={b.d.webOpzetUitleg}
+          href={b.studio ? "/studio" : "/werkgever/website"}
+          knop={b.d.webOpzetKnop}
+        />
+      ),
+    };
   }
   const sub = s.nieuweBestellingen > 0 ? aantal(s.nieuweBestellingen, d.webBestEen, d.webBestMeer) : undefined;
   const tegels: Tegel[] = b.studio
@@ -288,7 +336,7 @@ async function WebsiteVak(b: Basis & { studio: boolean }) {
     : [
         { href: "/werkgever/website", titel: d.webBeheer, uitleg: d.webBeheerUitleg },
       ];
-  return (
+  const kop = (
     <>
       <WelcomeBack name={b.principal.fullName} labels={b.greet} {...(sub ? { subtitle: sub } : {})} />
       <PageHeader
@@ -308,19 +356,27 @@ async function WebsiteVak(b: Basis & { studio: boolean }) {
           </div>
         }
       />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    </>
+  );
+  const cijfers = (
+      <div className={kl(marge.cijfers, "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4")}>
         <KpiCard label={d.webKpiBezoekers} value={String(s.bezoekers7d)} hint={fmt(d.webKpiBezoekersHint, { n: s.weergaven7d })} />
         <KpiCard label={d.webKpiBest} value={String(s.nieuweBestellingen)} tone={s.nieuweBestellingen > 0 ? "warn" : "default"} />
         <KpiCard label={d.webProducten} value={String(s.producten)} tone="brand" />
         <KpiCard label={d.webPaginas} value={String(s.paginas)} />
       </div>
-      <div className="mt-6">
+  );
+  return {
+    kop,
+    cijfers,
+    tegels: (
+      <div className={kl(marge.onderdelen)}>
         <Panel title={d.webPaneel}>
           <TegelRaster label={d.webTegelLabel} tegels={tegels} />
         </Panel>
       </div>
-    </>
-  );
+    ),
+  };
 }
 
 // --- de rest van de werkruimte en personeel ---------------------------------------
@@ -340,10 +396,10 @@ function extraTegels(inApp: boolean, d: WS): Tegel[] {
   ];
 }
 
-async function PersoneelVak({ principal, tenantId, ookPersoneel, d }: { principal: Principal; tenantId: string | undefined; ookPersoneel: boolean; d: WS }) {
+async function PersoneelVak({ principal, tenantId, ookPersoneel, d, marge }: { principal: Principal; tenantId: string | undefined; ookPersoneel: boolean; d: WS; marge: string | undefined }) {
   if (!ookPersoneel) {
     return (
-      <section className="mt-6 flex flex-col gap-3 rounded-2xl border border-hair bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
+      <section className={kl(marge, "flex flex-col gap-3 rounded-2xl border border-hair bg-white p-5 sm:flex-row sm:items-center sm:justify-between")}>
         <div className="text-sm text-neutralx-600">
           <h2 className="font-semibold text-ink">{d.handenKop}</h2>
           <p className="mt-1">{d.handenTekst}</p>
@@ -356,7 +412,7 @@ async function PersoneelVak({ principal, tenantId, ookPersoneel, d }: { principa
   }
   const [o, geverifieerd] = await Promise.all([getEmployerOverview(principal), tenantId ? isTenantVerified(tenantId).catch(() => true) : Promise.resolve(true)]);
   return (
-    <div className="mt-6">
+    <div className={kl(marge)}>
       <Panel
         title={d.inhurenTitel}
         {...(geverifieerd ? {} : { subtitle: d.inhurenNietGeverifieerd })}
