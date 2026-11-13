@@ -80,6 +80,7 @@ export function synapsen(vectoren: readonly Vector[], k = 4, min = 0.5): Synaps[
 
 /** Hoeveel thema's het brein zoekt: groeit met de wortel van het aantal stukken, tussen 6 en 16. */
 export function kiesK(n: number): number {
+  if (n <= 0) return 0;
   if (n < 12) return Math.max(1, Math.floor(n / 2));
   return Math.min(16, Math.max(6, Math.round(Math.sqrt(n / 20))));
 }
