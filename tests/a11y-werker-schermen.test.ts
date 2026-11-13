@@ -60,7 +60,8 @@ describe("de kaart met het BSN-veld", () => {
   });
   it("na het opslaan gaat de focus naar de kop (het veld verdwijnt), en die kop kan focus krijgen", () => {
     expect(s).toContain('document.getElementById("gegevens-mist-kop")?.focus()');
-    expect(s).toContain('id="gegevens-mist-kop" tabIndex={-1}');
+    expect(s).toContain("id={kopId} tabIndex={-1}");
+    expect(s).toContain('kopId = "gegevens-mist-kop"');
   });
   it("de sprong naar de overeenkomst landt op een element dat focus kan krijgen", () => {
     expect(bron("app/dashboard/verificatie/page.tsx")).toContain('id="uitzendovereenkomst" tabIndex={-1}');

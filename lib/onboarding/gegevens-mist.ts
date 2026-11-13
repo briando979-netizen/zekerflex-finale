@@ -6,6 +6,8 @@
 // op /dashboard/fiscaal, waar maar 2 van de 23 ooit kwamen.
 // Puur (geen prisma, geen kv): de pagina levert de feiten; dezelfde regel als de poort, zodat de lijst leeg is precies wanneer
 // de poort "gegevens ingevuld" zegt (het IBAN hoort er sinds 10 nov niet meer bij: dat komt vóór de eerste betaalde klus).
+// Sinds 13 nov hoort ook het BSN met de uitzendovereenkomst niet meer bij de aanmelding (eigenaar, na de meting: 11 van de 16
+// uitzendkrachten bleven op het BSN hangen); die staan in voorEersteKlus, met het veld en de overeenkomst onder "Later".
 // ---------------------------------------------------------------------------
 
 export type GegevensStuk = "bsn" | "contract" | "btw" | "postcode";
@@ -24,22 +26,23 @@ export interface GegevensStand {
 
 /** Wat er nog mist, in de volgorde waarin een werker het doet; leeg = de gegevens zijn ingevuld. */
 export function gegevensMist(s: GegevensStand): GegevensStuk[] {
-  const mist: GegevensStuk[] = [];
-  if (s.soort === "uitzendkracht") {
-    if (!s.fiscaalIngevuld) mist.push("bsn");
-    if (!s.contractGetekend) mist.push("contract");
-  }
-  // een zzp'er of flexwerker: KVK/btw/KOR hoort sinds 13 nov niet meer bij de aanmelding (86), zie voorEersteKlus
-  if (!s.postcodeOk) mist.push("postcode");
-  return mist;
+  // KVK/btw/KOR (zzp'er, flexwerker; 86) en het BSN met de overeenkomst (uitzendkracht) horen sinds 13 nov niet meer bij de
+  // aanmelding: zie voorEersteKlus
+  return s.postcodeOk ? [] : ["postcode"];
 }
 
 /**
- * Wat een zzp'er of flexwerker nog moet invullen vóór zijn eerste klus, maar niet voor de aanmelding (13 nov): btw, KVK
- * of KOR. Reageren houdt het tegen (lib/fiscal/eligibility.ts), met een eerlijke reden als de KVK-controle nog wacht.
+ * Wat een werker nog moet invullen vóór zijn eerste klus, maar niet voor de aanmelding (13 nov): een zzp'er of flexwerker
+ * btw, KVK of KOR; een uitzendkracht het BSN (loonadministratie) en de getekende uitzendovereenkomst. Reageren houdt het
+ * tegen (lib/fiscal/eligibility.ts), met een eerlijke reden.
  */
 export function voorEersteKlus(s: GegevensStand): GegevensStuk[] {
-  return s.soort === "zzp" || s.soort === "flexwerker" ? (s.fiscaalIngevuld && s.bedrijfOk ? [] : ["btw"]) : [];
+  if (s.soort === "zzp" || s.soort === "flexwerker") return s.fiscaalIngevuld && s.bedrijfOk ? [] : ["btw"];
+  if (s.soort !== "uitzendkracht") return [];
+  const later: GegevensStuk[] = [];
+  if (!s.fiscaalIngevuld) later.push("bsn");
+  if (!s.contractGetekend) later.push("contract");
+  return later;
 }
 
 /**
