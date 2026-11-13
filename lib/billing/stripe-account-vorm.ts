@@ -68,6 +68,10 @@ export interface StripeAccountInfo {
   ingesteldOp: string;
   door: string;
   webhook: boolean;
+  /** het tweede endpoint voor Connect (account.updated van werkers) */
+  connectWebhook: boolean;
+  /** waarom de Connect-webhook er niet is (fail-soft), of null */
+  connectMelding: string | null;
   heeftVorige: boolean;
 }
 

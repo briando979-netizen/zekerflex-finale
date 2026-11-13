@@ -95,8 +95,10 @@ export function StripeAccountWissel() {
             </p>
             <p className="text-neutralx-500">
               Ingesteld door {actief.door} op {new Date(actief.ingesteldOp).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" })}.{" "}
-              {actief.webhook ? <Pill tone="ok">webhook aangemaakt</Pill> : <Pill tone="warn">geen webhook</Pill>}
+              {actief.webhook ? <Pill tone="ok">webhook aangemaakt</Pill> : <Pill tone="warn">geen webhook</Pill>}{" "}
+              {actief.connectWebhook ? <Pill tone="ok">Connect-webhook aangemaakt</Pill> : <Pill tone="warn">geen Connect-webhook</Pill>}
             </p>
+            {actief.connectMelding && <Notice tone="warn">{actief.connectMelding}</Notice>}
             <button type="button" onClick={() => void terug()} disabled={busy} className="btn-ghost min-h-[44px]">
               {actief.heeftVorige ? "Terug naar het vorige account" : "Terug naar de sleutel uit de serverinstellingen"}
             </button>
