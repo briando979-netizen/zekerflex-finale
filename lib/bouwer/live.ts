@@ -87,6 +87,8 @@ export interface LiveHartslag {
   host: string;
   versie: number;
   bezig: boolean;
+  /** de live-zetter kon zijn nieuwe bestand niet herladen (syntaxfout); de oude versie draait door */
+  herlaadFout?: string;
 }
 
 export interface Commit {

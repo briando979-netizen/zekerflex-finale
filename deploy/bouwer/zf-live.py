@@ -26,13 +26,16 @@ Installeren: sudo bash deploy/bouwer/installeer-live.sh
 from __future__ import annotations
 
 import fcntl
+import hashlib
 import json
 import os
+import py_compile
 import re
 import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from datetime import datetime, timezone
@@ -61,6 +64,13 @@ K_VERZOEK = "bouwer:live:verzoek"
 K_STATUS = "bouwer:live:status"
 K_LOG = "bouwer:live:log"
 K_HARTSLAG = "bouwer:live:hartslag"
+K_HERLAAD = "bouwer:live:herlaadfout"
+
+# Zelf-herladen: na een uitrol kan dit bestand nieuw zijn. Voor de herstart (os.execv) wordt het NIEUWE bestand eerst gecompileerd;
+# een syntaxfout geeft anders een herstart-lus die alleen via ssh te herstellen is. Bij een fout blijft de oude versie draaien en
+# wordt de hash van het kapotte bestand onthouden, zodat het niet elke ronde opnieuw wordt geprobeerd.
+GELADEN_HASH: str | None = None
+HERLAAD_MISLUKT: dict = {"hash": None, "reden": None}
 
 # Serveronderhoud: alleen deze diensten mag de knop herstarten (database en redis bewust niet).
 ONDERHOUD_HERSTART = {"herstart-app": "app", "herstart-bouwer": "bouwer", "herstart-caddy": "caddy", "herstart-cron": "cron"}
@@ -673,12 +683,71 @@ def vrije_ruimte() -> str:
     return regels[-1].strip() if code == 0 and len(regels) > 1 else "?"
 
 
+def bestand_hash(pad: str) -> str | None:
+    """SHA-256 van het bestand, of None als het niet te lezen is."""
+    try:
+        with open(pad, "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()
+    except OSError:
+        return None
+
+
+def moet_herladen(geladen: str | None, nieuw: str | None, mislukt: str | None) -> bool:
+    """Alleen herladen als het bestand echt veranderd is en dit kapotte bestand niet al eens is afgewezen."""
+    return bool(nieuw) and nieuw != geladen and nieuw != mislukt
+
+
+def controleer_syntax(pad: str) -> str | None:
+    """Compileert het bestand zonder iets uit te voeren. None = in orde, anders een korte reden (zonder paden)."""
+    cfile = os.path.join(tempfile.gettempdir(), "zf-live-controle.pyc")
+    try:
+        py_compile.compile(pad, cfile=cfile, doraise=True)
+        return None
+    except py_compile.PyCompileError as e:
+        fout = e.exc_value
+        regel = getattr(fout, "lineno", None)
+        tekst = getattr(fout, "msg", None) or str(e)
+        reden = (f"regel {regel}: " if regel else "") + str(tekst)
+    except Exception as e:  # een ander probleem bij het lezen of schrijven
+        reden = f"{type(e).__name__}: {e}"
+    return re.sub(r"/\S+/", "", " ".join(reden.split()))[:200]
+
+
+def herlaad_zo_nodig() -> None:
+    """Na een uitrol: herstart met het nieuwe bestand, maar alleen als dat compileert."""
+    global GELADEN_HASH
+    pad = os.path.abspath(__file__)
+    nieuw = bestand_hash(pad)
+    if not moet_herladen(GELADEN_HASH, nieuw, HERLAAD_MISLUKT["hash"]):
+        return
+    reden = controleer_syntax(pad)
+    if reden:
+        HERLAAD_MISLUKT.update(hash=nieuw, reden=reden)
+        meld(f"NIET herladen: het nieuwe zf-live.py compileert niet ({reden}); de oude versie blijft draaien")
+        try:
+            kv_zet(K_HERLAAD, {"op": nu(), "ok": False, "reden": reden})
+        except Exception as e:
+            meld(f"herlaadfout niet bewaard: {e}")
+        return
+    HERLAAD_MISLUKT.update(hash=None, reden=None)
+    try:
+        kv_zet(K_HERLAAD, {"op": nu(), "ok": True})
+    except Exception:
+        pass
+    os.execv(sys.executable, [sys.executable, pad])
+
+
 def hartslag(bezig: bool = False) -> None:
-    kv_zet(K_HARTSLAG, {"op": nu(), "host": socket.gethostname(), "versie": VERSIE, "bezig": bezig})
+    gegevens = {"op": nu(), "host": socket.gethostname(), "versie": VERSIE, "bezig": bezig}
+    if HERLAAD_MISLUKT["reden"]:
+        gegevens["herlaadFout"] = HERLAAD_MISLUKT["reden"]
+    kv_zet(K_HARTSLAG, gegevens)
 
 
 def main() -> None:
     os.chdir(ZF_DIR)
+    global GELADEN_HASH
+    GELADEN_HASH = bestand_hash(os.path.abspath(__file__))
     meld(f"gestart (versie {VERSIE}) in {ZF_DIR}")
     laatste_slag = 0.0
     while True:
@@ -694,7 +763,7 @@ def main() -> None:
                 hartslag()
                 if verzoek.get("actie") == "uitrollen":
                     # Na een uitrol kan dit script zelf vernieuwd zijn: herstart met de nieuwe versie.
-                    os.execv(sys.executable, [sys.executable, os.path.abspath(__file__)])
+                    herlaad_zo_nodig()
         except Exception as e:
             meld(f"fout: {e}")
             time.sleep(15)

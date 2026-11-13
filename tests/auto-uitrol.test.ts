@@ -1,4 +1,6 @@
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -341,6 +343,63 @@ describe("Auto-uitrol: review van poortwachter 15", () => {
     const readme = lees("deploy/bouwer/README.md");
     expect(readme).not.toContain("sudo systemctl restart zf-live");
     expect(readme).toContain("Een herstart van `zf-live` is niet nodig");
+  });
+});
+
+describe("zf-live.py laadt zichzelf alleen opnieuw als het nieuwe bestand compileert", () => {
+  const py = readFileSync(path.join(process.cwd(), "deploy/bouwer/zf-live.py"), "utf8").split("\r\n").join("\n");
+
+  it("compileert het nieuwe bestand vóór de herstart, en herstart niet bij een fout (geen execv-lus)", () => {
+    expect(py).toContain("def moet_herladen(");
+    expect(py).toContain("def controleer_syntax(");
+    expect(py).toContain("py_compile.compile(pad, cfile=cfile, doraise=True)");
+    // de enige os.execv staat in herlaad_zo_nodig, ná de syntaxcontrole en het onthouden van een mislukte hash
+    expect(py.match(/os\.execv\(/g)?.length).toBe(1);
+    const herlaad = py.slice(py.indexOf("def herlaad_zo_nodig"), py.indexOf("def hartslag"));
+    expect(herlaad.indexOf("controleer_syntax(pad)")).toBeLessThan(herlaad.indexOf("os.execv("));
+    expect(herlaad).toContain("HERLAAD_MISLUKT.update(hash=nieuw, reden=reden)");
+    expect(herlaad).toMatch(/if reden:[\s\S]*?return\n/);
+    expect(py).toContain("herlaad_zo_nodig()");
+    expect(py).toContain("GELADEN_HASH = bestand_hash(os.path.abspath(__file__))");
+  });
+
+  it("zet de fout kort (zonder paden) in de KV en in de hartslag", () => {
+    expect(py).toContain('K_HERLAAD = "bouwer:live:herlaadfout"');
+    expect(py).toContain('gegevens["herlaadFout"] = HERLAAD_MISLUKT["reden"]');
+    expect(py).toContain('re.sub(r"/\\S+/", ""');
+    expect(lees("lib/bouwer/live.ts")).toContain("herlaadFout?: string;");
+  });
+
+  it("README: de zekere controle van zf-live.py zit in zf-live zelf (de Bouwer heeft geen python3)", () => {
+    expect(lees("deploy/bouwer/README.md")).toContain("De zekere controle van `zf-live.py` zit in zf-live zelf");
+  });
+
+  // Draait alleen waar python3 met fcntl bestaat (de server of een Linux-ontwikkelmachine); de Bouwer-container heeft geen python3.
+  const probe = spawnSync("python3", ["-c", "import fcntl"], { encoding: "utf8" });
+  const heeftPython = !probe.error && probe.status === 0;
+  it.skipIf(!heeftPython)("de beslislogica en de syntaxcontrole werken echt (met python3)", () => {
+    const map = mkdtempSync(path.join(tmpdir(), "zf-live-"));
+    writeFileSync(path.join(map, "goed.py"), "x = 1\n");
+    writeFileSync(path.join(map, "fout.py"), "def kapot(:\n    pass\n");
+    const script = [
+      "import importlib.util, json, sys",
+      `spec = importlib.util.spec_from_file_location("zflive", ${JSON.stringify(path.join(process.cwd(), "deploy/bouwer/zf-live.py"))})`,
+      "m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)",
+      `goed = m.controleer_syntax(${JSON.stringify(path.join(map, "goed.py"))})`,
+      `fout = m.controleer_syntax(${JSON.stringify(path.join(map, "fout.py"))})`,
+      "print(json.dumps({'goed': goed, 'fout': fout, 'a': m.moet_herladen('h1','h2',None), 'b': m.moet_herladen('h1','h1',None), 'c': m.moet_herladen('h1','h2','h2'), 'd': m.moet_herladen('h1',None,None), 'e': m.moet_herladen(None,'h2','h3')}))",
+    ].join("\n");
+    const uit = spawnSync("python3", ["-c", script], { encoding: "utf8" });
+    expect(uit.status, uit.stderr).toBe(0);
+    const r = JSON.parse(uit.stdout.trim().split("\n").pop() ?? "{}") as Record<string, unknown>;
+    expect(r.goed).toBeNull();
+    expect(typeof r.fout).toBe("string");
+    expect(String(r.fout)).not.toMatch(/\//);
+    expect(r.a).toBe(true); // veranderd bestand: herladen
+    expect(r.b).toBe(false); // ongewijzigd: niet herladen
+    expect(r.c).toBe(false); // dit kapotte bestand is al afgewezen: niet nog eens
+    expect(r.d).toBe(false); // niet te lezen: niet herladen
+    expect(r.e).toBe(true); // een ander bestand dan het afgewezene: wel proberen
   });
 });
 
