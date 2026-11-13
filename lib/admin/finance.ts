@@ -53,6 +53,8 @@ export interface FinanceOverview {
     soort: "kosten" | "instelling";
     /** "bron: Beheer -> Kosten, bijgewerkt 13 nov", of de melding "kosten nog niet ingevuld" */
     tekst: string;
+    /** posten in het maandtotaal met onbekende btw (null): ze tellen niet mee in de voorbelasting */
+    zonderBtw: number;
     /** posten zonder bedrag in de kostenlijst: ze staan niet in het totaal */
     onbekend: number;
     /** eigen omzet per maand waarbij de vaste lasten gedekt zijn */
@@ -124,7 +126,11 @@ export async function financeOverview(from: Date, to: Date): Promise<FinanceOver
   const costsTotal = stripe + operational;
 
   const vatOutput = SALES_TYPES.reduce((s, t) => s + (vat[t] ?? 0), 0) + shopVat;
-  const vatInput = Math.round(costsTotal * settings.vatInputPct);
+  // Voorbelasting alleen over kosten met Nederlandse btw. Met een kostenlijst: per post tegen zijn eigen percentage (nu alleen
+  // TransIP, 21%); posten met btw null (buitenlands of onbekend) geven 0. De Stripe-kosten tellen NIET mee (Stripe rekent geen
+  // Nederlandse btw over transactiekosten van een buitenlands account); voorheen telde de code ze wel mee, tegen vatInputPct.
+  // Zonder kostenlijst (de eigen instelling) is er geen btw per post bekend: dan blijft vatInputPct over de vaste maandlasten.
+  const vatInput = bron.bron === "kosten" ? bron.voorbelastingMaandCent * months : Math.round(operational * settings.vatInputPct);
   const vatDue = vatOutput - vatInput;
 
   const netProfit = revenueTotal - costsTotal;
@@ -145,6 +151,7 @@ export async function financeOverview(from: Date, to: Date): Promise<FinanceOver
       soort: bron.bron,
       tekst: bron.bron === "kosten" ? financienBronTekst(bron.bijgewerktOp) : bron.melding,
       onbekend: bron.bron === "kosten" ? bron.onbekend : 0,
+      zonderBtw: bron.bron === "kosten" ? bron.zonderBtw : 0,
       breakEvenMonthlyCents: breakEvenOmzetPerMaand(operationalMonthly),
     },
     netProfit,

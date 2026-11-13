@@ -18,7 +18,7 @@ interface Overview {
   grossInvoiced: number;
   vat: { output: number; inputEstimate: number; due: number };
   costs: { stripe: number; operational: number; total: number };
-  operationalSource?: { monthlyCents: number; soort: "kosten" | "instelling"; tekst: string; onbekend: number; breakEvenMonthlyCents: number };
+  operationalSource?: { monthlyCents: number; soort: "kosten" | "instelling"; tekst: string; onbekend: number; zonderBtw?: number; breakEvenMonthlyCents: number };
   netProfit: number;
   taxReserve: number;
   distributable: number;
@@ -122,6 +122,12 @@ export function FinanceConsole({ chart }: { chart?: ReactNode }) {
         }
       />
 
+      {period === "all" && (
+        <p className="text-xs" style={{ color: "var(--a-mute)" }}>
+          Bij de periode Alles wordt het huidige maandtotaal van de vaste lasten teruggerekend over de hele periode. Kosten die later begonnen, kunnen daardoor te hoog uitvallen.
+        </p>
+      )}
+
       {!data ? (
         <div className="a-panel h-28 animate-pulse" />
       ) : (
@@ -187,10 +193,15 @@ export function FinanceConsole({ chart }: { chart?: ReactNode }) {
               <InfoList
                 rows={[
                   { label: "Btw op je verkoopfacturen", value: euroExact(data.vat.output) },
-                  { label: `Geschatte voorbelasting (${pct(data.settings.vatInputPct)})`, value: `− ${euroExact(data.vat.inputEstimate)}` },
+                  { label: data.operationalSource?.soort === "kosten" ? "Geschatte voorbelasting (alleen posten met Nederlandse btw)" : `Geschatte voorbelasting (${pct(data.settings.vatInputPct)})`, value: `− ${euroExact(data.vat.inputEstimate)}` },
                   { label: "Af te dragen of terug", value: euroExact(data.vat.due) },
                 ]}
               />
+              {data.operationalSource?.soort === "kosten" && (data.operationalSource.zonderBtw ?? 0) > 0 && (
+                <p className="mt-2 text-xs" style={{ color: "var(--a-mute)" }}>
+                  {data.operationalSource.zonderBtw} posten met onbekende btw tellen niet mee in de voorbelasting. Stripe-kosten tellen er ook niet in mee. Dit is een schatting.
+                </p>
+              )}
             </Panel>
           </div>
 
