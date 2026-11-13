@@ -40,6 +40,10 @@ export interface LiveVerzoek {
   forceer: boolean;
   /** Ook uitrollen als de controle vóór het bouwen (TypeScript, eslint, tests) faalt. */
   zonderControle?: boolean;
+  /** Gevraagd door de Auto-uitrol (lib/bouwer/auto-uitrol.ts): de live-zetter staat dan nooit forceren, zonder controle of migraties toe. */
+  auto?: boolean;
+  /** Bij auto: precies deze main-sha; is main intussen verder gegaan, dan niet uitrollen (de volgende ronde neemt de nieuwste). */
+  doelSha?: string;
   door: string;
   op: string;
 }

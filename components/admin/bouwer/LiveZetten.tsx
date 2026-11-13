@@ -6,6 +6,7 @@ import type { Commit, GithubOverzicht, LiveHartslag, LiveStatus, LiveVerzoek, On
 import type { LiveMoment } from "@/lib/bouwer/geschiedenis";
 import { controleTekst, type ControlesStand } from "@/lib/bouwer/controles-tekst";
 import { VoorbeeldPaneel } from "@/components/admin/bouwer/VoorbeeldPaneel";
+import { AutoUitrolPaneel } from "@/components/admin/bouwer/AutoUitrolPaneel";
 
 // ---------------------------------------------------------------------------
 // Live zetten — pane in de ZekerFlex AI-studio. Laat zien welke versie live
@@ -143,6 +144,7 @@ export function LiveZetten() {
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-[#0b0e13] p-4 text-sm">
       <div className="mx-auto w-full max-w-4xl space-y-4">
+        <AutoUitrolPaneel />
         {/* server-agent */}
         {!agent.leeft && (
           <div className="rounded-xl border border-[#FFC46B]/30 bg-[rgba(255,196,107,0.07)] p-4 text-xs leading-relaxed text-white/75">

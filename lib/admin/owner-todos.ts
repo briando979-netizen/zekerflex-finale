@@ -29,6 +29,10 @@ import { platformnaamTodo, type PlatformnaamStand } from "@/lib/admin/todo-platf
 import { stripeAccountTodos } from "@/lib/admin/todo-stripe-account";
 import { werkrechtEisTodo } from "@/lib/admin/todo-werkrecht";
 import { bonnenMailTodo, type BonnenMailStand } from "@/lib/admin/todo-bonnen-mail";
+import { autoUitrolTodos } from "@/lib/admin/todo-auto-uitrol";
+import { leesAutoStand } from "@/lib/bouwer/auto-uitrol-opslag";
+import { meldingen as autoUitrolMeldingen } from "@/lib/bouwer/auto-uitrol-regels";
+import { liveVersie } from "@/lib/bouwer/versie";
 import { aiTraderTodo } from "@/lib/admin/todo-ai-trader";
 import { pasdienstTodo } from "@/lib/admin/todo-pasdienst";
 import { pasdienstInfo } from "@/lib/shop/pasdienst";
@@ -302,6 +306,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   const aiTrader = aiTraderTodo(await alpacaSleutelInfo().then((i) => i.aanwezig, () => undefined));
   // de echte paskamer (13 nov): de sleutel van FASHN (lib/shop/pasdienst.ts)
   const pasdienst = pasdienstTodo(await pasdienstInfo().then((i) => i.aanwezig, () => undefined));
+  // Auto-uitrol: geweigerd, migratie wacht of main loopt >30 min achter (lib/bouwer/auto-uitrol-regels.ts); een leesfout geeft geen taak
+  const autoUitrol = autoUitrolTodos(await leesAutoStand().then(async (s) => autoUitrolMeldingen(s, liveVersie()?.sha ?? null, Date.now(), await featureEnabled("auto-uitrol").catch(() => false)), () => undefined));
   const werkrechtEis = werkrechtEisTodo(await featureEnabled("werkrecht-eis").catch(() => undefined));
   // bonnetjesmail (lib/boekhouding/bonnen/mail-taak.ts): staat de vlag aan terwijl er geen mailbox of administratie is? Een leesfout geeft geen taak
   const bonnenMail = bonnenMailTodo(await bonnenMailStand().catch((): undefined => undefined));
@@ -314,6 +320,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     ...(stripeKopie ? [stripeKopie] : []),
     ...(werkrechtEis ? [werkrechtEis] : []),
     ...(bonnenMail ? [bonnenMail] : []),
+    ...autoUitrol,
     ...(aiTrader ? [aiTrader] : []),
     ...(pasdienst ? [pasdienst] : []),
     {

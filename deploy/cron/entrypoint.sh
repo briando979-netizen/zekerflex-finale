@@ -71,6 +71,8 @@ cat > /etc/crontabs/root <<EOF
 0 17 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/rijschool/herinneringen"
 */30 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/bouwer/auto"
 */2 * * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/bouwer/meldingen"
+# elke 2 min: Auto-uitrol, de nieuwste main controleren en zonder database-wijziging vanzelf live zetten (lib/bouwer/auto-uitrol.ts); doet niets zolang de vlag auto-uitrol uit staat
+*/2 * * * * wget -q -O /dev/null -T 90 "$H" "$APP/api/internal/auto-uitrol"
 # elk uur: Metabase inrichten als dat nog niet lukte, en om 04:00 de views en kaarten bijwerken (lib/bi)
 40 * * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/bi/setup"
 # elk uur: bronnen van buiten ophalen die aan de beurt zijn (pompprijzen, minimumloon, cao, KVK, schermcontrole)
