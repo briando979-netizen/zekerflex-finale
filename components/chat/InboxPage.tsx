@@ -30,6 +30,7 @@ import { UserCard } from "./UserCard";
 import { PeoplePicker, CommunityCreateModal, CommunityManageModal, ChatSettingsModal } from "./modals";
 import { SwipeRow, ThreadMenuSheet, PinModal, type MenuAction } from "./ThreadMenu";
 import { MediaOverzicht } from "./MediaOverzicht";
+import { SelectieBalk } from "./SelectieBalk";
 import { ChatSettingsPanel, readLook, type ChatLook } from "./ChatSettingsPanel";
 import { Portal } from "./Portal";
 import { ChatTekstenProvider, useChatTeksten } from "./ChatTekstenContext";
@@ -40,6 +41,7 @@ import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { allDrafts, DRAFT_EVENT } from "./drafts";
 import { maakPeiling, sluitPeiling, stem } from "@/lib/messaging/poll";
 import {
+  canDeleteForAll,
   canEdit,
   canShareScreen,
   dayLabel,
@@ -78,6 +80,9 @@ interface InboxPageProps {
 }
 
 // De teksten komen uit een context: de inhoud draait daarom binnen de provider.
+/** Wat je kunt doorsturen (gelijk aan FORWARDABLE in app/api/inbox/forward/route.ts). */
+const FORWARDABLE: Msg["kind"][] = ["text", "image", "file", "voice", "location"];
+
 export function InboxPage({ texts, ...rest }: InboxPageProps = {}) {
   return (
     <ChatTekstenProvider texts={texts}>
@@ -221,7 +226,9 @@ function InboxPageInner({
   useEffect(() => {
     if (search.activeId) document.getElementById(`ip-msg-${search.activeId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [search.activeId]);
-  const [forwarding, setForwarding] = useState<Msg | null>(null);
+  const [forwarding, setForwarding] = useState<Msg[] | null>(null);
+  // meerdere berichten selecteren (zoals WhatsApp): de gekozen ids, null = de modus staat uit
+  const [selectie, setSelectie] = useState<string[] | null>(null);
   const [pinned, setPinned] = useState<{ id: string; excerpt: string } | null>(null);
   const activeRef = useRef<string | null>(null);
   activeRef.current = active;
@@ -234,6 +241,17 @@ function InboxPageInner({
   // unread count when a conversation opens: the "N ongelezen berichten" line
   const [unreadAtOpen, setUnreadAtOpen] = useState(0);
   const [mediaOpen, setMediaOpen] = useState(false);
+  useEffect(() => {
+    setSelectie(null);
+  }, [active]);
+  useEffect(() => {
+    if (!selectie) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelectie(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectie]);
   useEffect(() => {
     setUnreadAtOpen(threadsRef.current.find((t) => t.id === active)?.unread ?? 0);
   }, [active]);
@@ -655,17 +673,70 @@ function InboxPageInner({
   };
 
   const doForward = async (toThreadId: string) => {
-    const msg = forwarding;
+    const lijst = forwarding;
     setForwarding(null);
-    if (!msg || !active) return;
-    const r = await fetch("/api/inbox/forward", {
+    if (!lijst?.length || !active) return;
+    let goed = 0;
+    // één voor één, zodat de volgorde in het andere gesprek dezelfde blijft
+    for (const msg of lijst) {
+      const r = await fetch("/api/inbox/forward", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fromThreadId: active, messageId: msg.id, toThreadId }),
+      }).catch(() => null);
+      if (r?.ok) goed++;
+    }
+    const to = threads.find((t) => t.id === toThreadId);
+    const naam = to ? otherOf(to).name : ib.hetGesprek;
+    if (goed === lijst.length) say(lijst.length === 1 ? vulIn(ib.doorgestuurdNaar, { naam }) : vulIn(ib.doorgestuurdMeerNaar, { aantal: goed, naam }));
+    else say(ib.doorsturenMislukt, true);
+  };
+
+  // ── meerdere berichten selecteren
+  const kiesBericht = (m: Msg) =>
+    setSelectie((s) => {
+      if (!s) return [m.id];
+      const n = s.includes(m.id) ? s.filter((x) => x !== m.id) : [...s, m.id];
+      return n.length ? n : null;
+    });
+  const gekozen = selectie ? messages.filter((m) => selectie.includes(m.id)) : [];
+  const kopieerGekozen = () => {
+    const tekst = gekozen.filter((m) => m.text).map((m) => m.text).join("\n\n");
+    void navigator.clipboard?.writeText(tekst).then(
+      () => say(vulIn(ib.gekopieerdMeer, { aantal: gekozen.filter((m) => m.text).length })),
+      () => say(chat.bubble.copyFailed, true),
+    );
+    setSelectie(null);
+  };
+  const bewaarGekozen = async () => {
+    if (!active) return;
+    const threadId = active;
+    setSelectie(null);
+    for (const m of gekozen) if (!savedHere.includes(m.id)) await toggleSaved(threadId, m.id, true);
+  };
+  const verbergGekozen = async () => {
+    if (!active || !gekozen.length || !window.confirm(vulIn(ib.verbergenMeerConfirm, { aantal: gekozen.length }))) return;
+    const threadId = active;
+    const weg = gekozen.map((m) => m.id);
+    setSelectie(null);
+    setMessages((prev) => prev.filter((m) => !weg.includes(m.id)));
+    const r = await fetch(`/api/inbox/${threadId}/prefs`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fromThreadId: active, messageId: msg.id, toThreadId }),
+      body: JSON.stringify({ action: "hide-messages", messageIds: weg.slice(0, 100) }),
     }).catch(() => null);
-    const to = threads.find((t) => t.id === toThreadId);
-    if (r?.ok) say(vulIn(ib.doorgestuurdNaar, { naam: to ? otherOf(to).name : ib.hetGesprek }));
-    else say(ib.doorsturenMislukt, true);
+    if (!r?.ok) {
+      say(ib.verwijderenMislukt, true);
+      void loadThread(threadId);
+      return;
+    }
+    say(ib.verborgen);
+  };
+  const verwijderGekozenVoorIedereen = async () => {
+    if (!gekozen.length || !window.confirm(vulIn(ib.verwijderenMeerConfirm, { aantal: gekozen.length }))) return;
+    const lijst = gekozen;
+    setSelectie(null);
+    for (const m of lijst) await del(m);
   };
 
   const togglePin = async (msg: Msg) => {
@@ -1378,11 +1449,14 @@ function InboxPageInner({
                         onDelete={del}
                         onHide={hide}
                         onTranscribe={transcribe}
+                        selecting={Boolean(selectie)}
+                        selected={Boolean(selectie?.includes(m.id))}
+                        onSelect={kiesBericht}
                         onEdit={(e) => {
                           setReplyTo(null);
                           setEditing(e);
                         }}
-                        onForward={setForwarding}
+                        onForward={(f) => setForwarding([f])}
                         onPin={togglePin}
                         onRetry={retry}
                         onDiscard={discard}
@@ -1436,6 +1510,22 @@ function InboxPageInner({
                 {ib.deblokkeer}
               </button>
             </div>
+          ) : selectie ? (
+            <SelectieBalk
+              aantal={gekozen.length}
+              kanKopieren={gekozen.some((m) => m.text)}
+              kanDoorsturen={gekozen.some((m) => FORWARDABLE.includes(m.kind))}
+              kanVoorIedereen={gekozen.length > 0 && gekozen.every((m) => canDeleteForAll(m, me?.userId))}
+              onKopieer={kopieerGekozen}
+              onBewaar={() => void bewaarGekozen()}
+              onDoorsturen={() => {
+                setForwarding(gekozen.filter((m) => FORWARDABLE.includes(m.kind)));
+                setSelectie(null);
+              }}
+              onVoorMij={() => void verbergGekozen()}
+              onVoorIedereen={() => void verwijderGekozenVoorIedereen()}
+              onStop={() => setSelectie(null)}
+            />
           ) : (
           <Composer
             key={activeThread.id}
