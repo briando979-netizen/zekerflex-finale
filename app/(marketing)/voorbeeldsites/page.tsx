@@ -49,6 +49,9 @@ export default function VoorbeeldsitesPage() {
             <Link href="/website-check" className="btn-mint px-6 py-3">
               Maak er gratis een van mijn site
             </Link>
+            <Link href="/website-maken" className="btn-ghost-invert px-6 py-3">
+              Maak hem zelf
+            </Link>
             <a href="#webshops" className="btn-ghost-invert px-6 py-3">
               Bekijk de voorbeeldwebshops
             </a>
