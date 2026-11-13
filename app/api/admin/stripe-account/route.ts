@@ -11,6 +11,7 @@ import {
   actiefPlatform,
   controleerStripeSleutel,
   gebruikStripeAccount,
+  isOudConnectAccount,
   markeerOudeConnectAccounts,
   stripeAccountInfo,
   terugNaarVorigStripeAccount,
@@ -33,6 +34,23 @@ async function bestaandeConnectIds(): Promise<string[]> {
   return (await prisma.freelancerProfile.findMany({ where: { stripeConnectedAccountId: { not: null } }, select: { stripeConnectedAccountId: true } }))
     .map((p) => p.stripeConnectedAccountId)
     .filter((id): id is string => typeof id === "string");
+}
+
+/**
+ * Na een wissel: een Connect-account van een ander platform-account kan geen overboeking meer krijgen. Zet daar
+ * "uitbetalen aan" uit, zodat de uitbetaling naar de eigen IBAN gaat (lib/payouts/execute.ts, lib/timesheets/approve.ts
+ * en lib/claims/fulfillment.ts kijken alleen naar die vlag). Gaat het platform terug, dan zet de statuscheck van de
+ * werker (GET /api/me/payout/stripe-connect) hem live bij Stripe weer goed. Het id zelf blijft staan.
+ */
+async function zetOudeUitbetalingUit(): Promise<number> {
+  const aan = await prisma.freelancerProfile.findMany({
+    where: { stripeConnectedAccountId: { not: null }, stripePayoutsEnabled: true },
+    select: { id: true, stripeConnectedAccountId: true },
+  });
+  const oud: string[] = [];
+  for (const p of aan) if (await isOudConnectAccount(p.stripeConnectedAccountId)) oud.push(p.id);
+  if (oud.length === 0) return 0;
+  return (await prisma.freelancerProfile.updateMany({ where: { id: { in: oud } }, data: { stripePayoutsEnabled: false } })).count;
 }
 
 /** Na een wissel: de vlag "betalen uit" weg en meteen opnieuw meten bij het nieuwe account. */
@@ -65,6 +83,7 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (req, { principal 
   const verlaten = await actiefPlatform();
   const actief = await gebruikStripeAccount(sleutel, principal.fullName, `${env.APP_BASE_URL.replace(/\/$/, "")}/api/webhooks/stripe`);
   if (verlaten !== actief.accountId) await markeerOudeConnectAccounts(oudeConnect, verlaten);
+  const uitbetalingUit = await zetOudeUitbetalingUit();
   await meetOpnieuw();
   await recordAudit({
     category: "BILLING",
@@ -75,7 +94,7 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (req, { principal 
     summary: `${principal.email} maakte Stripe-account ${actief.accountId} het platform-account (sleutel eindigt op ${actief.eind})`,
     targetType: "platform",
     targetId: "stripe-account",
-    metadata: { accountId: actief.accountId, vorigeAccountId: vorige?.accountId ?? "env", connectOpnieuw: oudeConnect.length },
+    metadata: { accountId: actief.accountId, vorigeAccountId: vorige?.accountId ?? "env", connectOpnieuw: oudeConnect.length, uitbetalingUit },
   });
   return NextResponse.json({ ok: true, actief });
 });
@@ -84,6 +103,7 @@ export const DELETE = withAdminAccess(["PLATFORM_ADMIN"], async (_req, { princip
   // wat er nu gekoppeld is, hoort bij het account dat we verlaten; de id's van het account waar we heen gaan, gelden weer
   await markeerOudeConnectAccounts(await bestaandeConnectIds(), await actiefPlatform());
   const actief = await terugNaarVorigStripeAccount();
+  await zetOudeUitbetalingUit();
   await meetOpnieuw();
   await recordAudit({
     category: "BILLING",

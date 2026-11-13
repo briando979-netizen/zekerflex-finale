@@ -123,7 +123,7 @@ describe("POST /api/me/payout/stripe-connect", () => {
     const res = await POST();
     expect(await res.json()).toEqual({ url: "https://connect.stripe.test/onboard" });
     expect(m.create).toHaveBeenCalledWith({ email: "w@zekerflex.test" });
-    expect(m.update).toHaveBeenCalledWith({ where: { id: "p1" }, data: { stripeConnectedAccountId: "acct_new" } });
+    expect(m.update).toHaveBeenCalledWith({ where: { id: "p1" }, data: { stripeConnectedAccountId: "acct_new", stripePayoutsEnabled: false } });
     expect(m.audit).toHaveBeenCalledWith(expect.objectContaining({ action: "freelancer.stripe_connect_started", actorUserId: "u1", targetId: "p1" }));
     // een slash achteraan APP_BASE_URL wordt weggehaald
     expect(m.onboard).toHaveBeenCalledWith("acct_new", {

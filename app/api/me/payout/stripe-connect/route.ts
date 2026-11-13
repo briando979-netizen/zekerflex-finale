@@ -84,7 +84,8 @@ export async function POST(): Promise<NextResponse> {
       accountId = account.id;
       await prisma.freelancerProfile.update({
         where: { id: profile.id },
-        data: { stripeConnectedAccountId: accountId },
+        // een nieuw account begint zonder uitbetalen (ook als het oude van het vorige platform-account dat wel had)
+        data: { stripeConnectedAccountId: accountId, stripePayoutsEnabled: false },
       });
       await recordAudit({
         category: "BILLING",

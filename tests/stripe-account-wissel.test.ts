@@ -157,4 +157,13 @@ describe("de rest van ZekerFlex gebruikt het gekozen account", () => {
     expect(r).not.toMatch(/summary: `[^`]*\$\{sleutel/);
     expect(bron("lib/admin/nav.ts")).toContain('{ href: "/admin/stripe-account", label: "Stripe-account" }');
   });
+
+  it("na een wissel of terug: geen overboeking naar een Connect-account van een ander platform-account", () => {
+    const r = bron("app/api/admin/stripe-account/route.ts");
+    // uitbetalingen kijken alleen naar stripePayoutsEnabled; die gaat uit voor oude koppelingen, bij gebruik én terug
+    expect(r).toContain("data: { stripePayoutsEnabled: false }");
+    expect(r.match(/await zetOudeUitbetalingUit\(\);|= await zetOudeUitbetalingUit\(\);/g)?.length).toBe(2);
+    // een nieuwe koppeling begint zonder uitbetalen
+    expect(bron("app/api/me/payout/stripe-connect/route.ts")).toContain("data: { stripeConnectedAccountId: accountId, stripePayoutsEnabled: false },");
+  });
 });
