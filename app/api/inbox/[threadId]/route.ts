@@ -26,6 +26,7 @@ import { disappearCutoff } from "@/lib/messaging/store";
 import { scanChatMessage } from "@/lib/agenda/scan";
 import { maakPeiling, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POLL_OPTION_MAX } from "@/lib/messaging/poll";
 import { geldigeVermeldingen, VERMELDING_MAX } from "@/lib/messaging/vermelding";
+import { maakLinkVoorbeeld } from "@/lib/messaging/link-voorbeeld-ophalen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -256,6 +257,7 @@ export async function POST(request: Request, props: { params: Promise<{ threadId
     }
     after(() => notifyNewMessage(thread, msg));
     after(() => scanChatMessage(thread, msg));
+    if (input.kind === "text") after(() => maakLinkVoorbeeld(thread.id, msg));
 
     return NextResponse.json({ message: msg }, { status: 201 });
   } catch (err) {

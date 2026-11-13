@@ -724,6 +724,20 @@ export function MessageBubble({
               />
             )}
 
+            {m.linkVoorbeeld && !m.deleted && (
+              // linkvoorbeeld zoals WhatsApp, zonder afbeelding (lib/messaging/link-voorbeeld.ts)
+              <a
+                href={m.linkVoorbeeld.url}
+                target="_blank"
+                rel="noopener noreferrer nofollow"
+                className="mb-1 block rounded-lg border-l-4 border-brand-500 bg-black/[0.04] px-2.5 py-1.5 hover:bg-black/[0.07]"
+              >
+                <span className="block truncate text-[11px] text-neutralx-500">{m.linkVoorbeeld.host}</span>
+                <span className="line-clamp-2 block text-sm font-semibold text-ink">{m.linkVoorbeeld.titel}</span>
+                {m.linkVoorbeeld.omschrijving && <span className="line-clamp-2 block text-xs text-neutralx-600">{m.linkVoorbeeld.omschrijving}</span>}
+              </a>
+            )}
+
             {textOnly ? (
               <>
                 <p className="whitespace-pre-wrap break-words text-ink">

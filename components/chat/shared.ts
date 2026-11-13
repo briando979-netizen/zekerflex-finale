@@ -57,6 +57,8 @@ export interface Msg {
   mentions?: string[];
   /** spraakbericht: de uitgeschreven tekst; "" = geen spraak gehoord */
   transcript?: string;
+  /** voorbeeld van de eerste link (zonder afbeelding) */
+  linkVoorbeeld?: { url: string; host: string; titel: string; omschrijving?: string };
 }
 
 /** Je eigen tekstbericht mag je tot 24 uur na het versturen bewerken (gelijk aan lib/messaging/store EDIT_WINDOW_MS). */
