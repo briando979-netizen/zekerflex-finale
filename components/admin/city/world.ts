@@ -6,6 +6,7 @@ import { DITCHES, FARM, inRect, MEADOW_COWS, MEADOW_SHEEP, treeLook, type YearSe
 import { bake, gableGeometry, hashOf, type Kit, repeated, seeded, signTexture, type windowTextures } from "@/components/admin/city/parts";
 import { ROOMS, type Room, type RoomId } from "@/components/admin/city/rooms";
 import { robot, vehicle } from "@/components/admin/city/vehicles";
+import { kruinVorm, naaldboomVorm } from "@/components/admin/city/vormen";
 
 // De gebouwen en wegen van de 3D-stad. De vaste stad (wegen, park, gracht,
 // bank, datacenter, magazijn, opleidingscentrum, hoofdkantoor) wordt één keer
@@ -110,6 +111,9 @@ interface Inst {
   ry?: number;
   color?: number;
 }
+
+/** Kleuren van dennen en sparren in het bos (realistische weergave). */
+const NAALDGROEN = [0x2f5233, 0x355e3b, 0x2d4a2b, 0x3b5f3a, 0x27432a];
 
 /** Veel dezelfde vormen in één keer tekenen (bomen, lantaarns, strepen, huizen). */
 function instanced(kit: Kit, geo: THREE.BufferGeometry, m: THREE.Material, items: Inst[], shadow = false) {
@@ -275,6 +279,8 @@ export function buildWorld(kit: Kit, win: Windows, season: YearSeason = "zomer")
 
   // --- bomen: langs de stoep, in het park en in een rand om de stad -------
   const trees: Pt[] = [];
+  // realistisch: in het bos verderop staat ook naaldbos (dennen blijven in de winter groen)
+  const bos: Pt[] = [];
   for (const s of segs) {
     for (let p = s.a + 3; p < s.b - 2; p += 6.5) {
       for (const side of [-1, 1]) {
@@ -295,7 +301,7 @@ export function buildWorld(kit: Kit, win: Windows, season: YearSeason = "zomer")
     const inCanal = z > cz0 - 2 && z < cz1 + 2;
     const onExit = (x > 72 && Math.abs(z - 24) < 5) || (x < -72 && Math.abs(z + 24) < 5);
     const inPolder = inRect(MEADOW_COWS, x, z, -3) || inRect(MEADOW_SHEEP, x, z, -3) || Math.hypot(x - FARM[0], z - FARM[1]) < 15 || (z < -84 && z > -134 && Math.abs(x) < 112);
-    if (!inCity && !inCanal && !onExit && !inPolder) trees.push([x, z]);
+    if (!inCity && !inCanal && !onExit && !inPolder) (kit.echt && far && rnd() < 0.4 ? bos : trees).push([x, z]);
   }
   const trunks: Inst[] = [];
   const crowns: Inst[] = [];
@@ -310,10 +316,19 @@ export function buildWorld(kit: Kit, win: Windows, season: YearSeason = "zomer")
     if (look.bare) twigs.push({ x, y: base + 1.5 * s, z, sx: s, sy: s, sz: s, ry });
     else crowns.push({ x, y: base + 1.9 * s, z, sx: s, sy: s * 1.15, sz: s, ry, color: look.color });
   }
+  const naalden: Inst[] = [];
+  for (const [x, z] of bos) {
+    const s = 0.9 + rnd() * 0.7;
+    const base = baseAt(x, z);
+    trunks.push({ x, y: base + 0.6 * s, z, sx: s * 0.8, sy: s, sz: s * 0.8 });
+    naalden.push({ x, y: base + 1.25 * s, z, sx: s, sy: s * 1.1, sz: s, ry: rnd() * 6, color: NAALDGROEN[Math.floor(rnd() * NAALDGROEN.length)] ?? 0x2f5233 });
+  }
+  if (naalden.length) G.add(instanced(kit, kit.geo("naaldboom", naaldboomVorm), kit.mat(0xffffff, { roughness: 0.95, flatShading: true }), naalden, true));
   if (twigs.length) G.add(instanced(kit, kit.geo("twigs", () => new THREE.ConeGeometry(0.75, 1.6, 5, 1, true)), kit.mat(0x6b5b4b, { roughness: 1, flatShading: true }), twigs, true));
   G.add(
-    instanced(kit, kit.geo("trunk", () => new THREE.CylinderGeometry(0.12, 0.17, 1.2, 6)), kit.mat(0x7c5a3a), trunks, true),
-    instanced(kit, kit.geo("crown", () => new THREE.IcosahedronGeometry(0.95, 0)), kit.mat(0xffffff, { roughness: 0.9, flatShading: true }), crowns, true),
+    instanced(kit, kit.echt ? kit.geo("trunk-echt", () => new THREE.CylinderGeometry(0.09, 0.19, 1.2, 7)) : kit.geo("trunk", () => new THREE.CylinderGeometry(0.12, 0.17, 1.2, 6)), kit.mat(0x7c5a3a), trunks, true),
+    // realistisch: een bobbelige kruin met twee kleinere bollen ertegenaan (vormen.ts); eenvoudig: één twintigvlak
+    instanced(kit, kit.echt ? kit.geo("crown-echt", kruinVorm) : kit.geo("crown", () => new THREE.IcosahedronGeometry(0.95, 0)), kit.mat(0xffffff, { roughness: 0.9, flatShading: true }), crowns, true),
   );
 
   // --- polder achter het bedrijventerrein: weides, sloten en een boerderij --

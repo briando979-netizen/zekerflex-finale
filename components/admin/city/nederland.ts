@@ -3,6 +3,7 @@ import type { Phase } from "@/lib/admin/city-life";
 import { CANAL_Z } from "@/lib/admin/city-layout";
 import { bake, gableGeometry, type Kit, seeded, signTexture } from "@/components/admin/city/parts";
 import type { Anchor, Glow, Layer } from "@/components/admin/city/world";
+import { beenVorm, jasVorm } from "@/components/admin/city/vormen";
 
 // Nederland rond de 3D-stad (13 nov 2026, eigenaar: "net als Nederland: Amsterdam, Groningen, verschillende steden,
 // een treinstation, winkels met mensen die daar shoppen"). Over de gracht ligt een loopbrug naar een winkelstraat met
@@ -273,7 +274,14 @@ export function buildNederland(root: Kit, reduced: boolean): Nederland {
 
   // --- winkelend publiek: één vorm per lichaamsdeel voor iedereen (instancing) --
   const MAX = 44;
-  const lijf = new THREE.InstancedMesh(kit.geo("nl-lijf", () => new THREE.CylinderGeometry(0.22, 0.26, 1.15, 8)), kit.own({ roughness: 0.8 }), MAX);
+  // realistisch: een winterjas met mouwen en benen die lopen (vormen.ts); eenvoudig: een cilinder
+  const lijf = new THREE.InstancedMesh(kit.echt ? kit.geo("nl-jas", jasVorm) : kit.geo("nl-lijf", () => new THREE.CylinderGeometry(0.22, 0.26, 1.15, 8)), kit.own({ roughness: 0.8 }), MAX);
+  const benen = kit.echt ? kit.track(new THREE.InstancedMesh(kit.geo("nl-been", () => beenVorm(0.62, 0.07)), kit.mat(0x2b3340, { roughness: 0.85 }), MAX * 2)) : null;
+  if (benen) {
+    benen.castShadow = false;
+    benen.frustumCulled = false;
+    group.add(benen);
+  }
   const hoofd = new THREE.InstancedMesh(kit.geo("nl-hoofd", () => new THREE.SphereGeometry(0.17, 10, 8)), kit.mat(0xe0b494, { roughness: 0.7 }), MAX);
   const tas = new THREE.InstancedMesh(kit.geo("nl-tas", () => new THREE.BoxGeometry(0.32, 0.36, 0.12)), kit.own({ roughness: 0.7 }), MAX);
   for (const m of [lijf, hoofd, tas]) {
@@ -294,6 +302,8 @@ export function buildNederland(root: Kit, reduced: boolean): Nederland {
   const q = new THREE.Quaternion();
   const s1 = new THREE.Vector3(1, 1, 1);
   const pos = new THREE.Vector3();
+  const qBeen = new THREE.Quaternion();
+  const X_AS = new THREE.Vector3(1, 0, 0);
 
   const update = (dt: number, now: number, phase: Phase) => {
     const t = now / 1000;
@@ -306,6 +316,7 @@ export function buildNederland(root: Kit, reduced: boolean): Nederland {
     lijf.count = n;
     hoofd.count = n;
     tas.count = n;
+    if (benen) benen.count = n * 2;
     for (let i = 0; i < n; i++) {
       const p = mensen[i];
       if (!p) continue;
@@ -321,14 +332,25 @@ export function buildNederland(root: Kit, reduced: boolean): Nederland {
       const loopt = p.rust <= 0 && !reduced;
       const op = loopt ? Math.abs(Math.sin(t * 6 + p.fase)) * 0.05 : 0;
       q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, p.dir > 0 ? Math.PI / 2 : -Math.PI / 2);
-      mat4.compose(pos.set(p.x, 0.62 + op, p.z), q, s1);
+      // de jas staat op de grond (zoom op 0,4); de cilinder heeft zijn midden op 0,62
+      mat4.compose(pos.set(p.x, (benen ? 0 : 0.62) + op, p.z), q, s1);
       lijf.setMatrixAt(i, mat4);
+      if (benen) {
+        // heup op 0,62, de benen zwaaien om en om; het lijf is het laagst als de benen het verst uit elkaar staan
+        const zwaai = loopt ? Math.cos(t * 6 + p.fase) * 0.42 : 0;
+        for (const kant of [-1, 1] as const) {
+          qBeen.setFromAxisAngle(X_AS, kant * zwaai).premultiply(q);
+          mat4.compose(pos.set(p.x, 0.62 + op, p.z + kant * 0.1), qBeen, s1);
+          benen.setMatrixAt(i * 2 + (kant > 0 ? 1 : 0), mat4);
+        }
+      }
       mat4.compose(pos.set(p.x, 1.38 + op, p.z), q, s1);
       hoofd.setMatrixAt(i, mat4);
       mat4.compose(pos.set(p.x, p.tas ? 0.75 + op : -5, p.z + 0.3), q, s1);
       tas.setMatrixAt(i, mat4);
     }
     for (const m of [lijf, hoofd, tas]) m.instanceMatrix.needsUpdate = true;
+    if (benen) benen.instanceMatrix.needsUpdate = true;
   };
   update(0, 0, "dag");
 

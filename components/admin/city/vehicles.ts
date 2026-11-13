@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import type { Pt, VehicleKind } from "@/lib/admin/city-layout";
 import { bake, type Kit } from "@/components/admin/city/parts";
+import { asAfstand, type AutoMaten, autoMaten, glasVorm, rompVorm, velgVorm } from "@/components/admin/city/vormen";
 
 // Alles wat beweegt in de stad: robots in het kantoor, voertuigen met een
 // echte gebeurtenis, gewoon verkeer, fietsers en rondvaartboten. Voorkant =
@@ -85,6 +86,8 @@ const LOOK: Record<VehicleKind | "verkeer", { body: number; stripe?: number; len
   verkeer: { body: 0x94a3b8, len: 2.1, wid: 1.1, hgt: 0.55, cabin: "car" },
 };
 
+type Look = (typeof LOOK)[keyof typeof LOOK];
+
 export const TRAFFIC_COLORS = [0x94a3b8, 0xcbd5e1, 0x64748b, 0x1f2937, 0xe5e7eb, 0x9ca3af, 0x7f1d1d, 0x1e3a8a];
 
 /**
@@ -105,7 +108,10 @@ function buildVehicle(kit: Kit, kind: VehicleKind | "verkeer", shadow: THREE.Tex
   const glass = kit.mat(0x1e293b, { roughness: 0.15, metalness: 0.4 });
   const { len, wid, hgt } = look;
   const base = 0.32;
-  if (look.cabin === "car") {
+  // realistisch: een carrosserie uit één profiel met wielkasten, schuine ruiten en velgen (vormen.ts)
+  const maten = kit.echt ? autoMaten(look.cabin, hgt) : null;
+  if (maten) echteCarrosserie(kit, g, look, bodyMat, glass, maten);
+  else if (look.cabin === "car") {
     g.add(kit.box(wid, hgt, len, bodyMat, 0, base + hgt / 2, 0, false));
     g.add(kit.box(wid * 0.86, 0.42, len * 0.5, glass, 0, base + hgt + 0.21, -len * 0.05, false));
   } else if (look.cabin === "van") {
@@ -116,27 +122,60 @@ function buildVehicle(kit: Kit, kind: VehicleKind | "verkeer", shadow: THREE.Tex
     g.add(kit.box(wid, hgt, len, bodyMat, 0, base + hgt / 2, 0, false));
     g.add(kit.box(wid + 0.02, hgt * 0.32, len * 0.86, glass, 0, base + hgt * 0.66, 0, false));
   }
-  if (look.stripe !== undefined) g.add(kit.box(wid + 0.03, 0.14, len * (look.cabin === "bus" ? 0.98 : 0.7), kit.mat(look.stripe, { roughness: 0.5 }), 0, base + hgt * 0.32, look.cabin === "van" ? -len * 0.14 : 0, false));
+  // bij een echte auto boven de wielkasten, anders loopt de streep over het wiel heen
+  const streepY = maten && look.cabin === "car" ? 0.7 : base + hgt * 0.32;
+  if (look.stripe !== undefined) g.add(kit.box(wid + 0.03, 0.14, len * (look.cabin === "bus" ? 0.98 : 0.7), kit.mat(look.stripe, { roughness: 0.5 }), 0, streepY, look.cabin === "van" ? -len * 0.14 : 0, false));
   // koplampen en achterlichten (gloeien altijd een beetje, 's nachts het best te zien)
   const head = kit.mat(0xfff7d6, { emissive: 0xfff2c2, emissiveIntensity: 0.9 });
   const tail = kit.mat(0x7f1d1d, { emissive: 0xef4444, emissiveIntensity: 0.6 });
   for (const s of [-1, 1]) {
-    g.add(kit.box(0.22, 0.12, 0.04, head, s * wid * 0.32, base + 0.28, len / 2 + 0.01, false));
-    g.add(kit.box(0.2, 0.1, 0.04, tail, s * wid * 0.34, base + 0.3, -len / 2 - 0.01, false));
+    g.add(kit.box(0.22, 0.12, 0.04, head, s * wid * 0.32, maten ? maten.lamp : base + 0.28, len / 2 + 0.01, false));
+    g.add(kit.box(0.2, 0.1, 0.04, tail, s * wid * 0.34, maten ? maten.achterlamp : base + 0.3, -len / 2 - 0.01, false));
   }
-  const axle = len * 0.34;
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(wheel(kit, sx * (wid / 2 - 0.05), sz * axle));
+  const axle = maten ? asAfstand(look.cabin, len) : len * 0.34;
+  const velg = kit.mat(0xcbd5e1, { roughness: 0.35, metalness: 0.6 });
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      const w = wheel(kit, sx * (wid / 2 - 0.05), sz * axle);
+      g.add(w);
+      if (maten) {
+        const v = new THREE.Mesh(kit.geo("velg", () => velgVorm()), velg);
+        v.position.copy(w.position);
+        g.add(v);
+      }
+    }
+  }
   if (opts.severity === "critical" || opts.severity === "warning") {
     const c = opts.severity === "critical" ? 0xdc2626 : 0xf59e0b;
     // gedeeld per kleur: alle zwaailichten knipperen samen
     const beacon = kit.mat(c, { emissive: c, emissiveIntensity: 1 });
-    const top = look.cabin === "car" ? base + hgt + 0.42 : base + hgt;
+    const top = maten ? maten.dak : look.cabin === "car" ? base + hgt + 0.42 : base + hgt;
     const lamp = new THREE.Mesh(kit.geo("beacon", () => new THREE.SphereGeometry(0.17, 12, 8)), beacon);
     lamp.position.set(0, top + 0.12, look.cabin === "van" ? -len * 0.14 : 0);
     g.add(lamp);
   }
   g.add(blob(kit, shadow, wid * 1.6, len * 1.3));
   return g;
+}
+
+/**
+ * De echte carrosserie (realistische weergave): één profiel met wielkasten, een glazen kap of voorruit, en bij een auto
+ * een dak en een middenstijl in de kleur van de auto; een bus houdt zijn ruitenband en krijgt een voorruit.
+ */
+function echteCarrosserie(kit: Kit, g: THREE.Group, look: Look, bodyMat: THREE.Material, glass: THREE.Material, maten: AutoMaten) {
+  const { len, wid, hgt, cabin } = look;
+  const sleutel = `${cabin}:${len}:${wid}:${hgt}`;
+  g.add(new THREE.Mesh(kit.geo(`romp:${sleutel}`, () => rompVorm(cabin, len, wid, hgt)), bodyMat));
+  if (cabin === "bus") {
+    g.add(kit.box(wid + 0.02, hgt * 0.32, len * 0.86, glass, 0, 0.32 + hgt * 0.66, 0, false));
+    g.add(kit.box(wid * 0.9, 0.6, 0.04, glass, 0, 1.22, len / 2 + 0.01, false));
+    return;
+  }
+  g.add(new THREE.Mesh(kit.geo(`ruit:${sleutel}`, () => glasVorm(cabin, len, wid, hgt) ?? new THREE.BufferGeometry()), glass));
+  if (cabin === "car") {
+    g.add(kit.box(wid * 0.86, 0.05, len * 0.25 + 0.06, bodyMat, 0, maten.dak - 0.03, -len * 0.125, false));
+    g.add(kit.box(wid * 0.87, 0.4, 0.07, bodyMat, 0, maten.boven + 0.2, -len * 0.09, false));
+  }
 }
 
 /** Fietser (of alleen de fiets, geparkeerd in het rek bij een klant). */
