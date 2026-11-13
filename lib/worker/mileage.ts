@@ -88,7 +88,7 @@ function homeIsKnown(p: { homeLatitude: number; homeLongitude: number; homePosta
 }
 
 function assertKm(km: number): void {
-  if (!Number.isFinite(km) || km < 0 || km > MAX_KM) throw AppError.validation(`Vul een afstand in tussen 0 en ${MAX_KM} km`);
+  if (!Number.isFinite(km) || km < 0 || km > MAX_KM) throw AppError.validation(`Vul een afstand in tussen 0 en ${MAX_KM} km`).metSleutel("km.afstand", { max: MAX_KM });
 }
 
 const roundKm = (km: number) => Math.round(km * 10) / 10;
@@ -165,10 +165,10 @@ export async function setTripOverride(userId: string, tripId: string, change: { 
 
   if (isManualId(tripId)) {
     // Een eigen rit heeft geen schatting en wordt verwijderd in plaats van uitgezet.
-    if (change.km == null) throw AppError.validation("Vul de kilometers van deze rit in");
+    if (change.km == null) throw AppError.validation("Vul de kilometers van deze rit in").metSleutel("km.invullen");
     const list = (await kvGet<ManualTrip[]>(manualKey(userId))) ?? [];
     const trip = list.find((m) => m.id === tripId);
-    if (!trip) throw AppError.notFound("Deze rit bestaat niet meer");
+    if (!trip) throw AppError.notFound("Deze rit bestaat niet meer").metSleutel("km.bestaatNiet");
     trip.km = roundKm(change.km);
     await kvSet(manualKey(userId), list);
     return;
@@ -178,7 +178,7 @@ export async function setTripOverride(userId: string, tripId: string, change: { 
     where: { id: tripId, freelancer: { userId } },
     select: { id: true },
   });
-  if (!owned) throw AppError.notFound("Deze rit hoort niet bij jouw diensten");
+  if (!owned) throw AppError.notFound("Deze rit hoort niet bij jouw diensten").metSleutel("km.nietVanJou");
 
   const all = (await kvGet<Overrides>(kvKey(userId))) ?? {};
   const next: Override = { ...all[tripId] };
@@ -202,18 +202,18 @@ export interface NewManualTrip {
 
 /** Voeg een rit toe voor werk buiten ZekerFlex (of een rit die niet bij een dienst hoort). */
 export async function addManualTrip(userId: string, input: NewManualTrip, now = new Date()): Promise<Trip> {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.day)) throw AppError.validation("Kies een datum");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.day)) throw AppError.validation("Kies een datum").metSleutel("km.datum");
   const [y, m, d] = input.day.split("-").map(Number) as [number, number, number];
   const probe = new Date(Date.UTC(y, m - 1, d));
-  if (probe.getUTCFullYear() !== y || probe.getUTCMonth() !== m - 1 || probe.getUTCDate() !== d) throw AppError.validation("Die datum bestaat niet");
-  if (y < 2020 || input.day > amsterdamDayKey(now)) throw AppError.validation("Kies een datum vanaf 2020 en niet in de toekomst");
+  if (probe.getUTCFullYear() !== y || probe.getUTCMonth() !== m - 1 || probe.getUTCDate() !== d) throw AppError.validation("Die datum bestaat niet").metSleutel("km.datumBestaatNiet");
+  if (y < 2020 || input.day > amsterdamDayKey(now)) throw AppError.validation("Kies een datum vanaf 2020 en niet in de toekomst").metSleutel("km.datumBereik");
   assertKm(input.km);
-  if (input.km <= 0) throw AppError.validation("Vul de kilometers van deze rit in");
+  if (input.km <= 0) throw AppError.validation("Vul de kilometers van deze rit in").metSleutel("km.invullen");
   const destination = input.destination.trim();
-  if (!destination) throw AppError.validation("Vul in waar je naartoe reed");
+  if (!destination) throw AppError.validation("Vul in waar je naartoe reed").metSleutel("km.bestemming");
 
   const list = (await kvGet<ManualTrip[]>(manualKey(userId))) ?? [];
-  if (list.length >= MAX_MANUAL) throw AppError.validation("Je hebt het maximum aantal eigen ritten bereikt");
+  if (list.length >= MAX_MANUAL) throw AppError.validation("Je hebt het maximum aantal eigen ritten bereikt").metSleutel("km.max");
   const trip: ManualTrip = {
     id: `m-${randomUUID()}`,
     day: input.day,
@@ -229,10 +229,10 @@ export async function addManualTrip(userId: string, input: NewManualTrip, now = 
 }
 
 export async function deleteManualTrip(userId: string, tripId: string): Promise<void> {
-  if (!isManualId(tripId)) throw AppError.validation("Een rit van een dienst kun je uitzetten, niet verwijderen");
+  if (!isManualId(tripId)) throw AppError.validation("Een rit van een dienst kun je uitzetten, niet verwijderen").metSleutel("km.alleenUitzetten");
   const list = (await kvGet<ManualTrip[]>(manualKey(userId))) ?? [];
   const next = list.filter((m) => m.id !== tripId);
-  if (next.length === list.length) throw AppError.notFound("Deze rit bestaat niet meer");
+  if (next.length === list.length) throw AppError.notFound("Deze rit bestaat niet meer").metSleutel("km.bestaatNiet");
   await kvSet(manualKey(userId), next);
 }
 
