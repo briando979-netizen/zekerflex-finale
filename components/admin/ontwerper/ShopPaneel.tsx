@@ -182,7 +182,7 @@ export function ShopPaneel({ onVoorbeeldPad, onVernieuw }: { onVoorbeeldPad: (pa
       </ol>
 
       <p className="text-[11px]" style={mute}>
-        Producten, prijzen, foto&apos;s en collecties beheer je in Beheer → Webshop. De teksten van de voorpagina van de webshop staan in het tabblad Teksten, onder Webshop. Een eigen tekst geldt voor de Nederlandse shop; de Engelse versie houdt zijn vertaling.
+        Producten, prijzen, foto&apos;s en collecties beheer je in Beheer → Webshop. Alle teksten van de webshop staan in het tabblad Teksten, onder Webshop (kies het veld in de lijst; klikken in het voorbeeld werkt daar niet). Een eigen tekst geldt voor de Nederlandse shop; de Engelse versie houdt zijn vertaling.
       </p>
     </div>
   );
