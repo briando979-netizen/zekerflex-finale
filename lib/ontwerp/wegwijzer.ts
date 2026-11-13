@@ -77,6 +77,11 @@ export const WEGWIJZER: WegwijzerRegel[] = [
     doel: { tab: "paginas" },
   },
   {
+    wat: "Het startscherm van rijschool, horeca en website",
+    uitleg: "Kies bij de vaste pagina's \"Startscherm rijschool, horeca en website\" en sleep de onderdelen (cijfers, tegels, de rest van de werkruimte, personeel) naar een andere plek, of verberg ze. Het geldt voor alle drie.",
+    doel: { tab: "paginas" },
+  },
+  {
     wat: "Foto's en video's van de site",
     uitleg: "Upload beelden en kies welke foto op welke plek van de site staat.",
     doel: { tab: "media" },

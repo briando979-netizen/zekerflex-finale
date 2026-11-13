@@ -131,6 +131,18 @@ export const VASTE_PAGINAS = {
       { id: "facturen", naam: "Facturen", uitleg: "De laatste facturen met bedrag en status." },
     ],
   },
+  // het startscherm van rijschool, horeca en website (components/app/werkruimte/WerkruimteStart.tsx): één indeling voor alle drie
+  "werkruimte-start": {
+    naam: "Startscherm rijschool, horeca en website",
+    pad: "/werkgever",
+    secties: [
+      { id: "cijfers", naam: "De cijfers", uitleg: "De kerncijfers van het eigen vak, zoals lessen vandaag, reserveringen of bezoekers." },
+      { id: "onderdelen", naam: "De tegels van het eigen vak", uitleg: "Een tegel per onderdeel, zoals agenda, leerlingen, menukaart of producten." },
+      { id: "concept", naam: "Klus van de website staat klaar", uitleg: "De herinnering aan een klus die op de website is ingevuld; staat er alleen als er een klaarstaat." },
+      { id: "extra", naam: "De rest van de werkruimte", uitleg: "De tegels voor chat, mail, WhatsApp, reviews, telefonie, agenda, facturen en bedrijf." },
+      { id: "personeel", naam: "Personeel inhuren", uitleg: "Het blok over klussen plaatsen, met de cijfers als het bedrijf ook personeel inhuurt." },
+    ],
+  },
 } as const satisfies Record<string, VastePagina>;
 
 export type VastePaginaId = keyof typeof VASTE_PAGINAS;
