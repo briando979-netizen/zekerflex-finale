@@ -14,7 +14,7 @@ import { BackLink } from "@/components/app/BackLink";
 import { stripeIdentityAvailable, syncStripeIdentity } from "@/lib/kyc/stripe-identity";
 import { getLocale, getFreelancerDict } from "@/lib/i18n/server";
 import Link from "next/link";
-import { AUTH_DICTS, type AuthDict } from "@/lib/i18n/auth";
+import { AUTH_DICTS, fill, type AuthDict } from "@/lib/i18n/auth";
 import { vertaalIdTekst } from "@/lib/i18n/id-redenen";
 import type { FreelancerDict } from "@/lib/i18n/freelancer";
 import { attemptLabel, waitForStripe } from "@/lib/kyc/stripe-status";
@@ -72,7 +72,7 @@ function AanmeldingKlaar({
   const open = o.onboarding.filter((s) => !s.done).length;
   const documenten = (
     <div id="bankrekening" className="mt-6 scroll-mt-20">
-      <Panel title={ibanOpen ? pt.bankTitle : "Verplichte documenten"}>
+      <Panel title={ibanOpen ? pt.bankTitle : pt.documentenTitel}>
         <div className="p-5">
           {ibanOpen && <p className="mb-4 text-sm text-neutralx-600">{pt.bankSub}</p>}
           <ComplianceDocsPanel />
@@ -91,14 +91,14 @@ function AanmeldingKlaar({
           <Link href="/dashboard/eerste-indruk?stap=foto" className="btn-primary mt-4 inline-flex">{fd.start.fotoCta}</Link>
         </div>
       )}
-      <Panel title="Status">
+      <Panel title={pt.statusTitel}>
         <div className="px-5 py-6">
           {volgende !== "klaar" && poortNu ? (
             <StatusPill tone="warn">{nogStappenTekst(openVerplicht(poortNu), fd.start, fd.intl)}</StatusPill>
           ) : open > 0 ? (
             <StatusPill tone="warn">{nogStappenTekst(open, fd.start, fd.intl)}</StatusPill>
           ) : werkrechtOk ? (
-            <StatusPill tone="ok">Geverifieerd — je kunt diensten aannemen</StatusPill>
+            <StatusPill tone="ok">{pt.geverifieerdKlaar}</StatusPill>
           ) : (
             <StatusPill tone="warn">{pt.werkrecht.nodig}</StatusPill>
           )}
@@ -154,7 +154,7 @@ function AanmeldingKlaar({
 
       {uitzend && (
         <div id="uitzendovereenkomst" tabIndex={-1} className="mt-6 scroll-mt-20 focus:outline-none">
-          <Panel title="Uitzenden — verloning, StiPP & loonheffing">
+          <Panel title={pt.uitzendKlaarTitel}>
             <div className="p-5">
               <UitzendPanel />
             </div>
@@ -261,7 +261,7 @@ export default async function VerificatiePage() {
   const walletAan = !stripeId && (await featureEnabled("kyc-wallet").catch(() => false));
   const stripeReason =
     lastCheck?.decisionStatus === "requires_input"
-      ? ((lastCheck.rawPayload as { reason?: string } | null)?.reason ?? "onbekende reden")
+      ? ((lastCheck.rawPayload as { reason?: string } | null)?.reason ?? pt.onbekendeReden)
       : null;
 
   return (
@@ -319,9 +319,7 @@ export default async function VerificatiePage() {
                 </div>
                 {waitForStripe(lastCheck.decisionStatus) && <StripeIdentityWacht text={pt.attempt.checking} />}
                 {stripeReason && (
-                  <p className="mt-2 text-neutralx-600">
-                    Stripe kon je ID niet goedkeuren ({stripeReason}). Probeer het opnieuw met goed licht, of kies de eigen ID-scan hieronder.
-                  </p>
+                  <p className="mt-2 text-neutralx-600">{fill(pt.stripeAfgewezen, { reden: stripeReason })}</p>
                 )}
                 {reasons.length > 0 && (
                   <ul className="mt-2 list-disc space-y-1 pl-5 text-neutralx-600">

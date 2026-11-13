@@ -8,7 +8,6 @@ import { describe, expect, it } from "vitest";
 // de lijst mag alleen kleiner worden.
 
 const BASISLIJN: Record<string, { max: number; reden: string }> = {
-  "app/dashboard/verificatie/page.tsx": { max: 2, reden: "wacht op de tak verificatie-taal (poortwachter beslist)" },
   "app/dashboard/klussen/[shiftId]/page.tsx": { max: 1, reden: "omschrijving van het agenda-item (.ics): een agenda-item volgt niet de app-taal" },
   "components/app/AvatarUpload.tsx": { max: 1, reden: "de Nederlandse standaard van de texts-prop; de werker-app geeft zijn eigen taal mee" },
   "components/app/ColorLegend.tsx": { max: 1, reden: "de Nederlandse kolom van de eigen vijftalige tabel" },
