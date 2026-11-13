@@ -21,6 +21,8 @@ export async function GET(): Promise<NextResponse> {
       status,
       fiscal: {
         loonheffingskorting: fiscal.loonheffingskorting,
+        // zonder uitdrukkelijke keuze geldt geen korting; het paneel vraagt dan om een keuze
+        loonheffingskortingGekozen: fiscal.loonheffingskortingGekozen === true,
         iban: fiscal.iban,
         ibanValid: fiscal.ibanValid,
         ibanPendingVerification: fiscal.ibanPendingVerification,
@@ -97,6 +99,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
     }
     return NextResponse.json({
       loonheffingskorting: saved.loonheffingskorting,
+      loonheffingskortingGekozen: saved.loonheffingskortingGekozen === true,
       iban: saved.iban,
       ibanValid: saved.ibanValid,
       ibanPendingVerification: saved.ibanPendingVerification,

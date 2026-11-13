@@ -21,6 +21,8 @@ interface Status {
 }
 interface Fiscal {
   loonheffingskorting: boolean;
+  /** de werker koos de korting uitdrukkelijk; zonder keuze geldt geen korting */
+  loonheffingskortingGekozen: boolean;
   iban: string | null;
   ibanValid: boolean;
   ibanPendingVerification: boolean;
@@ -43,15 +45,27 @@ export function UitzendPanel() {
     void load();
   }, []);
 
+  const [lhFout, setLhFout] = useState(false);
   const toggleLh = async () => {
     if (!f) return;
     const next = !f.loonheffingskorting;
-    setF({ ...f, loonheffingskorting: next });
-    await fetch("/api/me/uitzend", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ loonheffingskorting: next }),
-    });
+    setLhFout(false);
+    try {
+      const res = await fetch("/api/me/uitzend", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ loonheffingskorting: next }),
+      });
+      const d = (await res.json().catch(() => null)) as { loonheffingskorting?: boolean; loonheffingskortingGekozen?: boolean } | null;
+      if (!res.ok || typeof d?.loonheffingskorting !== "boolean") {
+        setLhFout(true);
+        return;
+      }
+      // de teruggegeven serverversie vervangt wat er stond
+      setF({ ...f, loonheffingskorting: d.loonheffingskorting, loonheffingskortingGekozen: d.loonheffingskortingGekozen === true });
+    } catch {
+      setLhFout(true);
+    }
   };
 
   const contractBlock = (
@@ -132,6 +146,8 @@ export function UitzendPanel() {
           </span>
         </span>
       </label>
+      {!f.loonheffingskortingGekozen && <p role="status" className="-mt-4 text-xs font-medium text-ink">{t.lhkKies}</p>}
+      {lhFout && <p role="alert" className="-mt-4 text-xs font-medium text-crit">{t.lhkFout}</p>}
 
       {/* Het rekeningnummer vul je in bij "Bankrekening bevestigen" (hierboven op deze pagina). Het BSN vul je hier niet in:
           dat staat in "Je gegevens" (GegevensMist); dit paneel toont alleen de stand. */}

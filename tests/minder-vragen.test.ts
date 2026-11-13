@@ -31,7 +31,8 @@ beforeEach(() => h.kv.clear());
 describe("PUT /api/me/fiscal: een sleutel die ontbreekt, blijft zoals hij was", () => {
   it("de loonheffingskorting blijft staan als het btw-veld vanuit GegevensMist wordt opgeslagen (aan en uit)", async () => {
     for (const lhk of [true, false]) {
-      h.kv.set("fiscal:w1", { ...EMPTY_FISCAL, workerKind: "flexwerker", loonheffingskorting: lhk, korApplies: true, iban: "NL91ABNA0417164300" });
+      // uitdrukkelijk gekozen (merk gezet): zonder dat merk geldt de korting niet (lib/fiscal/store.ts, normaliseerFiscal)
+      h.kv.set("fiscal:w1", { ...EMPTY_FISCAL, workerKind: "flexwerker", loonheffingskorting: lhk, loonheffingskortingGekozen: true, korApplies: true, iban: "NL91ABNA0417164300" });
       const res = await put({ workerKind: "flexwerker", vatRequested: true });
       expect(res.status).toBe(200);
       const f = await getFiscal("w1");
