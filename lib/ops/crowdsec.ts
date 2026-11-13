@@ -39,6 +39,8 @@ interface Geheugen {
   token?: { waarde: string; verloopt: number };
   overzicht?: { op: number; data: BeveiligingOverzicht };
   cijfers?: { op: number; data: BeveiligingsCijfers | null };
+  /** het verversen van de cijfers dat nu loopt (hooguit één tegelijk) */
+  cijfersBezig?: Promise<BeveiligingsCijfers | null>;
 }
 
 const g = globalThis as typeof globalThis & { __zfCrowdsec?: Geheugen };
@@ -143,23 +145,43 @@ export async function beveiligingOverzicht(vers = false): Promise<BeveiligingOve
   return data;
 }
 
-/** Voor de openbare pagina /beveiliging: alleen aantallen, tien minuten in het geheugen. */
+/**
+ * Voor de openbare pagina /beveiliging: alleen aantallen, tien minuten in het geheugen. Zijn ze ouder, dan krijgt de
+ * bezoeker meteen de vorige cijfers (met hun eigen "bijgewerkt") en ververst het erachter. Gemeten 13 nov: bijna elk
+ * bezoek kwam na meer dan tien minuten stilte en wachtte dan 700–900 ms op de hele blokkadelijst; warm is het 15 ms.
+ * Alleen de eerste bezoeker na een herstart wacht nog.
+ */
 export async function beveiligingsCijfers(): Promise<BeveiligingsCijfers | null> {
   if (!crowdsecIngesteld()) return null;
   const c = geheugen.cijfers;
   if (c && Date.now() - c.op < CIJFERS_MS) return c.data;
-  let data: BeveiligingsCijfers | null = null;
-  try {
-    const blokkades = await actieveBlokkades();
-    const meldingen7d = await recenteMeldingen(168, 1000)
-      .then((m) => m.length)
-      .catch(() => null);
-    data = cijfersUit(samenvatBlokkades(blokkades), meldingen7d, new Date());
-  } catch (e) {
-    logger.warn("crowdsec figures failed", { error: (e as Error).message });
+  if (c) {
+    void ververs();
+    return c.data;
   }
-  geheugen.cijfers = { op: Date.now(), data };
-  return data;
+  return ververs();
+}
+
+function ververs(): Promise<BeveiligingsCijfers | null> {
+  if (geheugen.cijfersBezig) return geheugen.cijfersBezig;
+  const bezig = (async () => {
+    let data: BeveiligingsCijfers | null = null;
+    try {
+      const blokkades = await actieveBlokkades();
+      const meldingen7d = await recenteMeldingen(168, 1000)
+        .then((m) => m.length)
+        .catch(() => null);
+      data = cijfersUit(samenvatBlokkades(blokkades), meldingen7d, new Date());
+    } catch (e) {
+      logger.warn("crowdsec figures failed", { error: (e as Error).message });
+    }
+    geheugen.cijfers = { op: Date.now(), data };
+    return data;
+  })().finally(() => {
+    delete geheugen.cijfersBezig;
+  });
+  geheugen.cijfersBezig = bezig;
+  return bezig;
 }
 
 /** Voor Admin → Systeem: "off" = niet op deze omgeving, "crit" = engine reageert niet. */
