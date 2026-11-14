@@ -58,7 +58,7 @@ describe("kiesInTeHalen (puur)", () => {
     expect(kiesInTeHalen(profielen, new Set(["d"])).nieuw.map((p) => p.userId)).toEqual(["a", "e"]);
     // een opgegeven nummer (niet gevonden) komt niet terug; een ander nummer van dezelfde werker wel
     const op = new Map([["a", "12345678"], ["e", "99999999"]]);
-    const met = kiesInTeHalen(profielen, new Set(), op);
+    const met = kiesInTeHalen(profielen, new Set(["d"]), op);
     expect(met.nieuw.map((p) => p.userId)).toEqual(["e"]);
     expect(met.opgegeven).toBe(1);
     expect(INHALEN_PER_RONDE).toBe(50);
