@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requirePrincipal, requireRole } from "@/lib/auth";
+import { wisConceptVoorGebruiker } from "@/lib/klusconcept/server-opslag";
 import { createShift, createShiftSchema } from "@/lib/shifts/create";
 import { AppError } from "@/lib/errors";
 
@@ -51,6 +52,8 @@ export async function createShiftAction(
 
   try {
     await createShift(principal, parsed.data);
+    // het klusconcept van /klus-plaatsen dat bij het aanmelden is bewaard, is nu gebruikt (lib/klusconcept/server-opslag.ts)
+    await wisConceptVoorGebruiker(principal.userId).catch(() => undefined);
   } catch (err) {
     if (err instanceof AppError) return { error: err.message };
     return { error: "De dienst kon niet worden aangemaakt. Probeer het opnieuw." };

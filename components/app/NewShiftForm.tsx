@@ -133,24 +133,40 @@ export function NewShiftForm({
   const editing = Boolean(edit);
   useEffect(() => {
     if (editing) return;
+    let on = true;
+    const vulIn = (raw: string | null) => {
+      const concept = parseConcept(raw, Date.now(), amsterdamDayKey(new Date()));
+      if (!concept || !on) return false;
+      const v = toShiftFormValues(concept);
+      setTitle(v.title);
+      setDescription(v.description);
+      setRateEuro(v.rateEuro);
+      setBreakMin(v.breakMin);
+      setPositions(v.positions);
+      setStartsAt(v.startsAt);
+      setEndsAt(v.endsAt);
+      setFromWebsite(true);
+      return true;
+    };
     let raw: string | null = null;
     try {
       raw = localStorage.getItem(CONCEPT_KEY);
       if (raw) localStorage.removeItem(CONCEPT_KEY);
     } catch {
-      return;
+      /* opslag geblokkeerd: dan alleen de server */
     }
-    const concept = parseConcept(raw, Date.now(), amsterdamDayKey(new Date()));
-    if (!concept) return;
-    const v = toShiftFormValues(concept);
-    setTitle(v.title);
-    setDescription(v.description);
-    setRateEuro(v.rateEuro);
-    setBreakMin(v.breakMin);
-    setPositions(v.positions);
-    setStartsAt(v.startsAt);
-    setEndsAt(v.endsAt);
-    setFromWebsite(true);
+    if (vulIn(raw)) return;
+    // Niets in deze browser: het concept dat bij het aanmelden is meegegeven (bevestigingsmail op een ander
+    // apparaat geopend). De server wist het zodra de klus is geplaatst (createShiftAction).
+    fetch("/api/werkgever/klus-concept", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { concept?: unknown } | null) => {
+        if (data?.concept) vulIn(JSON.stringify(data.concept));
+      })
+      .catch(() => undefined);
+    return () => {
+      on = false;
+    };
   }, [editing]);
 
   useEffect(() => {

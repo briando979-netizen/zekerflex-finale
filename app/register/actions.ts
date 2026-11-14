@@ -9,6 +9,7 @@ import { isBreached, scorePassword } from "@/lib/auth/password";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { bezorgingMislukt } from "@/lib/mail/test-adres";
+import { bewaarConceptVoorGebruiker, leesConceptUitFormulier } from "@/lib/klusconcept/server-opslag";
 
 export interface RegisterState {
   error: string | null;
@@ -52,6 +53,17 @@ export async function registerAction(
   } catch (err) {
     if (err instanceof AppError) return { error: err.message };
     return { error: "Aanmaken van het account is mislukt. Probeer het opnieuw." };
+  }
+
+  // Het klusconcept van /klus-plaatsen (verborgen veld) bij de gebruiker bewaren: NewShiftForm haalt het op als
+  // deze browser er lokaal geen heeft. Een kapot of te oud concept houdt het aanmelden niet tegen.
+  if (parsed.data.type === "bedrijf") {
+    const concept = leesConceptUitFormulier(formData.get("klusConcept"));
+    if (concept) {
+      await bewaarConceptVoorGebruiker(account.userId, concept).catch((err: unknown) =>
+        logger.warn("klusconcept bewaren mislukt", { userId: account.userId, error: (err as Error).message }),
+      );
+    }
   }
 
   // De gebruiker komt hierna op /verifieer-email, waar hij zelf een nieuwe mail kan aanvragen: alleen loggen.
