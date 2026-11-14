@@ -63,6 +63,10 @@ const STATUS_TONE: Record<string, "ok" | "warn" | "crit" | "neutral"> = {
 };
 
 const PIPELINE = ["NEW", "ENRICHED", "QUEUED", "DRAFTED", "APPROVED", "SENT", "REPLIED", "WON"] as const;
+/** Het filter "Wacht op jou": leads met een concept-mail die alleen een mens kan versturen (DRAFT of APPROVED). */
+const WACHT = "wacht";
+const FILTERS = ["ALL", WACHT, ...PIPELINE, "LOST", "DISQUALIFIED"] as const;
+const wachtOpJou = (status: string | undefined) => status === "DRAFT" || status === "APPROVED";
 
 const SOURCE_LABEL: Record<string, string> = {
   manual: "Handmatig",
@@ -77,9 +81,9 @@ function fmtDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "short" });
 }
 
-export function SalesDashboard({ initialLeads }: { initialLeads: LeadDto[] }) {
+export function SalesDashboard({ initialLeads, initialFilter }: { initialLeads: LeadDto[]; initialFilter?: string | undefined }) {
   const [leads, setLeads] = useState<LeadDto[]>(initialLeads);
-  const [filter, setFilter] = useState<string>("ALL");
+  const [filter, setFilter] = useState<string>(initialFilter && (FILTERS as readonly string[]).includes(initialFilter) ? initialFilter : "ALL");
   const [openId, setOpenId] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -98,10 +102,13 @@ export function SalesDashboard({ initialLeads }: { initialLeads: LeadDto[] }) {
     return { total, open, sent, won, avgScore };
   }, [leads]);
 
+  const conceptStatus = (l: LeadDto) => outreach[l.id]?.status ?? l.outreach?.status;
+  const telt = (l: LeadDto, f: string) => (f === "ALL" ? true : f === WACHT ? wachtOpJou(conceptStatus(l)) : l.status === f);
   const shown = useMemo(() => {
-    const rows = filter === "ALL" ? leads : leads.filter((l) => l.status === filter);
+    const rows = leads.filter((l) => telt(l, filter));
     return [...rows].sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
-  }, [leads, filter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- telt leest alleen leads, filter en outreach
+  }, [leads, filter, outreach]);
 
   async function patchLead(
     id: string,
@@ -222,8 +229,8 @@ export function SalesDashboard({ initialLeads }: { initialLeads: LeadDto[] }) {
       )}
 
       <div className="flex flex-wrap gap-0.5">
-        {(["ALL", ...PIPELINE, "LOST", "DISQUALIFIED"] as string[]).map((s) => {
-          const count = s === "ALL" ? leads.length : leads.filter((l) => l.status === s).length;
+        {(FILTERS as readonly string[]).map((s) => {
+          const count = leads.filter((l) => telt(l, s)).length;
           const active = filter === s;
           return (
             <button
@@ -234,7 +241,7 @@ export function SalesDashboard({ initialLeads }: { initialLeads: LeadDto[] }) {
               className="rounded-md px-2.5 py-1 text-[0.8125rem] font-medium transition-colors"
               style={active ? { background: "var(--a-elev)", color: "var(--a-text)" } : { color: "var(--a-mute)" }}
             >
-              {s === "ALL" ? "Alles" : STATUS_LABEL[s]}
+              {s === "ALL" ? "Alles" : s === WACHT ? "Wacht op jou" : STATUS_LABEL[s]}
               <span className="num ml-1.5 text-xs" style={{ color: "var(--a-mute)" }}>{count}</span>
             </button>
           );
