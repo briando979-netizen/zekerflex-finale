@@ -4,13 +4,14 @@ import { withAdminAccess } from "@/lib/auth/handlers";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { servedModels } from "@/lib/ai/client";
-import { bouwerInstellingen, zetBouwerInstellingen } from "@/lib/bouwer/werker";
+import { CLAUDE_MODELLEN, bouwerInstellingen, zetBouwerInstellingen } from "@/lib/bouwer/werker";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // Bouwer → Instellingen: welk model programmeert, en de GitHub-sleutel waarmee
 // hij goedgekeurd werk naar main pusht (versleuteld in de KV, nooit terug te lezen).
+// Sinds 15 nov ook de motor: de eigen lus of Claude Code, met de sleutel van de eigenaar (claude setup-token).
 
 export const GET = withAdminAccess(["PLATFORM_ADMIN"], async () => {
   const [instellingen, modellen] = await Promise.all([bouwerInstellingen(), servedModels().catch(() => [] as string[])]);
@@ -26,27 +27,40 @@ const schema = z.object({
     .nullable()
     .optional(),
   autoFouten: z.boolean().optional(),
+  motor: z.enum(["eigen", "claude-code"]).optional(),
+  claudeModel: z.enum(CLAUDE_MODELLEN).optional(),
+  claudeToken: z
+    .string()
+    .trim()
+    .regex(/^sk-ant-[A-Za-z0-9_-]{20,400}$/, "Dit lijkt geen Claude-sleutel (begint met sk-ant-). Maak hem met: claude setup-token")
+    .nullable()
+    .optional(),
 });
 
 export const PUT = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
   const parsed = schema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) throw AppError.validation(parsed.error.issues[0]?.message ?? "Controleer de invoer");
-  const { model, githubToken, autoFouten } = parsed.data;
+  const { model, githubToken, autoFouten, motor, claudeModel, claudeToken } = parsed.data;
 
   await zetBouwerInstellingen({
     ...(model !== undefined ? { model: model || null } : {}),
     ...(githubToken !== undefined ? { githubToken } : {}),
     ...(autoFouten !== undefined ? { autoFouten } : {}),
+    ...(motor !== undefined ? { motor } : {}),
+    ...(claudeModel !== undefined ? { claudeModel } : {}),
+    ...(claudeToken !== undefined ? { claudeToken } : {}),
   });
   await recordAudit({
     category: "ADMIN",
     action: "admin.bouwer.instellingen",
-    severity: githubToken !== undefined ? "warning" : "info",
+    severity: githubToken !== undefined || claudeToken !== undefined ? "warning" : "info",
     actorUserId: principal.userId,
     actorLabel: "user",
     summary: `${principal.email} wijzigde de Bouwer-instellingen${model !== undefined ? ` (model: ${model || "standaard"})` : ""}${
       githubToken !== undefined ? (githubToken ? " (GitHub-sleutel ingesteld)" : " (GitHub-sleutel verwijderd)") : ""
-    }${autoFouten !== undefined ? ` (automatische reparaties ${autoFouten ? "aan" : "uit"})` : ""}`,
+    }${autoFouten !== undefined ? ` (automatische reparaties ${autoFouten ? "aan" : "uit"})` : ""}${motor !== undefined ? ` (motor: ${motor === "claude-code" ? "Claude Code" : "eigen"})` : ""}${
+      claudeToken !== undefined ? (claudeToken ? " (Claude-sleutel ingesteld)" : " (Claude-sleutel verwijderd)") : ""
+    }${claudeModel !== undefined ? ` (Claude-model: ${claudeModel})` : ""}`,
   });
   return NextResponse.json(await bouwerInstellingen());
 });

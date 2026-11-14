@@ -7,6 +7,8 @@
 //   GET  /gezond                     → leeft hij, is hij bezig
 //   GET  /taken                      → recente opdrachten
 //   POST /taken                      → { opdracht, door, llm } of { terugdraaien: sha, door } (git revert, zonder model)
+//                                      llm = { baseUrl, apiKey, model } (eigen lus, agent.mjs) of
+//                                      { motor: "claude-code", apiKey, model } (Claude Code zelf, claude-motor.mjs)
 //   GET  /taken/:id                  → opdracht + stappen + diff
 //   POST /taken/:id/bijsturen        → { bericht, door, llm }
 //   POST /taken/:id/goedkeuren       → { door, githubToken, liveZetten } commit → bijwerken → controle → push (achtergrond)
@@ -25,6 +27,7 @@ import { GITHUB_REPO, REPO_DIR, WERK, bronOpties, controleer, gewijzigdeBestande
 import { controleTekst, draai, systeemPrompt } from "./agent.mjs";
 import { startVoorbeeld, startVoorbeeldProxy, stopVoorbeeld, voorbeeldStand } from "./voorbeeld.mjs";
 import { controleerVastlegging, lijstUitslagen, samenvattingControle, uitslagVan } from "./controle.mjs";
+import { bewaarAfbeelding, draaiClaude, isClaudeLlm } from "./claude-motor.mjs";
 
 const POORT = Number(process.env.BOUWER_POORT || 4100);
 const TOKEN = process.env.BOUWER_TOKEN || "";
@@ -93,10 +96,45 @@ function logger(taak) {
 // ---- het werk -------------------------------------------------------------------
 
 function geldigLlm(llm) {
+  if (isClaudeLlm(llm)) return true;
   return llm && typeof llm.baseUrl === "string" && /^https?:\/\//.test(llm.baseUrl) && typeof llm.model === "string" && llm.model.length > 0;
 }
 
-async function werk(taak, llm, messages, afbeelding = null) {
+/** Zoals de opdracht in het logboek en de commit heet. */
+const modelNaam = (llm) => (isClaudeLlm(llm) ? `Claude Code (${llm.model})` : llm.model);
+
+/** Het werk met Claude Code (claude-motor.mjs); bijsturen gaat verder in dezelfde sessie (--resume). */
+async function werkMetClaude(taak, llm, log, signal, { afbeelding, bijsturing }) {
+  if (!bijsturing) taak.basis = await nieuweWerkkopie(taak.id, log);
+  const opdracht = `Opdracht van ${taak.door}:\n${taak.opdracht}`;
+  let prompt = opdracht;
+  if (bijsturing) prompt = taak.claudeSessie ? bijsturing : `${opdracht}\n\nEr staat al werk in deze kopie (zie git diff).\n\n${bijsturing}`;
+  const pad = afbeelding ? await bewaarAfbeelding(taak.id, afbeelding).catch(() => null) : null;
+  if (pad) prompt += `\n\nBij deze opdracht hoort een schermafbeelding: ${pad} (bekijk hem met je leesgereedschap).`;
+  log("info", `Motor: ${modelNaam(llm)}`);
+  const r = await draaiClaude({
+    llm,
+    prompt,
+    sessie: bijsturing ? (taak.claudeSessie ?? null) : null,
+    basis: taak.basis,
+    log,
+    signal,
+    zetControle: (c) => {
+      taak.controle = c;
+      void bewaar(taak);
+    },
+    telVerbruik: (v) => {
+      const t = (taak.verbruik ??= { invoer: 0, uitvoer: 0, aanroepen: 0 });
+      t.invoer += Number(v.prompt_tokens) || 0;
+      t.uitvoer += Number(v.completion_tokens) || 0;
+      t.aanroepen += 1;
+    },
+  });
+  taak.claudeSessie = r.sessie ?? taak.claudeSessie ?? null;
+  return r;
+}
+
+async function werk(taak, llm, messages, afbeelding = null, bijsturing = null) {
   const abort = new AbortController();
   actief = { id: taak.id, abort };
   const log = logger(taak);
@@ -106,7 +144,8 @@ async function werk(taak, llm, messages, afbeelding = null) {
     log("info", "Live voorbeeld gestopt zolang de Bouwer werkt");
   }
   try {
-    if (!messages) {
+    const claude = isClaudeLlm(llm);
+    if (!claude && !messages) {
       taak.basis = await nieuweWerkkopie(taak.id, log);
       const tekst = `Opdracht van ${taak.door}:\n${taak.opdracht}`;
       messages = [
@@ -123,8 +162,10 @@ async function werk(taak, llm, messages, afbeelding = null) {
       ];
       if (afbeelding) log("info", "Met schermafbeelding");
     }
-    log("info", `Model: ${llm.model}`);
-    const r = await draai({
+    if (!claude) log("info", `Model: ${llm.model}`);
+    const r = claude
+      ? await werkMetClaude(taak, llm, log, abort.signal, { afbeelding, bijsturing })
+      : await draai({
       llm,
       messages,
       log,
@@ -422,7 +463,7 @@ const server = http.createServer(async (req, res) => {
         id: `b_${Date.now().toString(36)}${randomBytes(2).toString("hex")}`,
         opdracht,
         door: String(b.door ?? "onbekend").slice(0, 200),
-        model: terug ? "git revert" : b.llm.model,
+        model: terug ? "git revert" : modelNaam(b.llm),
         staat: "bezig",
         begon: new Date().toISOString(),
         bijgewerkt: new Date().toISOString(),
@@ -475,17 +516,20 @@ const server = http.createServer(async (req, res) => {
       if (!bericht) return antwoord(res, 400, { fout: "Wat moet er anders?" });
       if (!geldigLlm(b.llm)) return antwoord(res, 400, { fout: "Geen taalmodel ingesteld" });
       if (!["klaar", "mislukt", "conflict", "vraag"].includes(taak.staat)) return antwoord(res, 409, { fout: "Bijsturen kan nu niet" });
-      const messages = JSON.parse(await fs.readFile(bestand(taak.id, "gesprek.json"), "utf8").catch(() => "[]"));
-      if (!messages.length) return antwoord(res, 409, { fout: "Het gesprek van deze opdracht is niet bewaard; geef een nieuwe opdracht" });
+      const claude = isClaudeLlm(b.llm);
+      // Claude Code bewaart zijn eigen gesprek (--resume); de eigen lus het hare in gesprek.json
+      const messages = claude ? null : JSON.parse(await fs.readFile(bestand(taak.id, "gesprek.json"), "utf8").catch(() => "[]"));
+      if (!claude && !messages.length) return antwoord(res, 409, { fout: "Het gesprek van deze opdracht is niet bewaard; geef een nieuwe opdracht" });
       const wie = String(b.door ?? "de eigenaar");
       const isAntwoord = taak.staat === "vraag";
-      messages.push({ role: "user", content: isAntwoord ? `Antwoord van ${wie} op je vraag:\n${bericht}` : `Bijsturing van ${wie}:\n${bericht}` });
+      const tekst = isAntwoord ? `Antwoord van ${wie} op je vraag:\n${bericht}` : `Bijsturing van ${wie}:\n${bericht}`;
+      if (messages) messages.push({ role: "user", content: tekst });
       taak.staat = "bezig";
       taak.vraag = null;
-      taak.model = b.llm.model;
+      taak.model = modelNaam(b.llm);
       logger(taak)("info", `${isAntwoord ? "Antwoord" : "Bijsturing"}: ${bericht}`);
       await bewaar(taak, true);
-      void werk(taak, b.llm, messages);
+      void werk(taak, b.llm, messages, null, claude ? tekst : null);
       return antwoord(res, 202, samenvatting(taak));
     }
 

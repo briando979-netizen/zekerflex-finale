@@ -553,16 +553,28 @@ function Wijzigingen({ diff, bestanden }: { diff: string; bestanden: { status: s
   );
 }
 
+type InstellingenData = {
+  model: string;
+  modelGekozen: boolean;
+  githubSleutel: boolean;
+  autoFouten: boolean;
+  modellen: string[];
+  motor: "eigen" | "claude-code";
+  claudeSleutel: boolean;
+  claudeModel: "opus" | "sonnet";
+};
+
 function Instellingen({ onOpgeslagen }: { onOpgeslagen: () => void }) {
-  const [data, setData] = useState<{ model: string; modelGekozen: boolean; githubSleutel: boolean; autoFouten: boolean; modellen: string[] } | null>(null);
+  const [data, setData] = useState<InstellingenData | null>(null);
   const [model, setModel] = useState("");
   const [sleutel, setSleutel] = useState("");
+  const [claudeSleutel, setClaudeSleutel] = useState("");
   const [melding, setMelding] = useState<string | null>(null);
 
   useEffect(() => {
     void fetch("/api/admin/bouwer/instellingen", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((d: { model: string; modelGekozen: boolean; githubSleutel: boolean; autoFouten: boolean; modellen: string[] }) => {
+      .then((d: InstellingenData) => {
         setData({ ...d, modellen: Array.isArray(d.modellen) ? d.modellen : [] });
         setModel(d.modelGekozen ? d.model : "");
       })
@@ -572,9 +584,10 @@ function Instellingen({ onOpgeslagen }: { onOpgeslagen: () => void }) {
   const bewaar = async (body: Record<string, unknown>) => {
     setMelding(null);
     try {
-      const d = await verstuur<{ model: string; modelGekozen: boolean; githubSleutel: boolean; autoFouten: boolean }>("/api/admin/bouwer/instellingen", "PUT", body);
+      const d = await verstuur<Omit<InstellingenData, "modellen">>("/api/admin/bouwer/instellingen", "PUT", body);
       setData((o) => (o ? { ...o, ...d } : o));
       setSleutel("");
+      setClaudeSleutel("");
       setMelding("Opgeslagen");
       onOpgeslagen();
     } catch (e) {
@@ -585,9 +598,83 @@ function Instellingen({ onOpgeslagen }: { onOpgeslagen: () => void }) {
   if (!data) return <p className="p-3 text-[11px] text-white/40">{melding ?? "Laden…"}</p>;
   return (
     <div className="space-y-3 border-b border-white/10 bg-black/20 p-3 text-[11px] text-white/70">
+      <fieldset className="space-y-1.5">
+        <legend className="text-white/50">Motor</legend>
+        <label className="flex items-start gap-2 leading-relaxed">
+          <input type="radio" name="bouwer-motor" className="mt-0.5" checked={data.motor === "eigen"} onChange={() => void bewaar({ motor: "eigen" })} />
+          <span>
+            <span className="text-white/80">Eigen Bouwer</span>
+            <span className="block text-white/35">Het taalmodel uit de AI-instellingen (gratis). Goed voor kleine wijzigingen.</span>
+          </span>
+        </label>
+        <label className="flex items-start gap-2 leading-relaxed">
+          <input
+            type="radio"
+            name="bouwer-motor"
+            className="mt-0.5"
+            checked={data.motor === "claude-code"}
+            disabled={!data.claudeSleutel}
+            onChange={() => void bewaar({ motor: "claude-code" })}
+          />
+          <span>
+            <span className="text-white/80">Claude Code</span>
+            <span className="block text-white/35">
+              Precies zoals de Claude-sessies op je pc, maar op de server: hetzelfde programma en hetzelfde gereedschap, in een eigen kopie van de
+              code. Het gebruikt je eigen Claude-abonnement. Je pc hoeft er niet voor aan te staan.
+            </span>
+          </span>
+        </label>
+        <div className="flex gap-1.5 pl-5">
+          <label htmlFor="bouwer-claude-sleutel" className="sr-only">
+            Claude-sleutel
+          </label>
+          <input
+            id="bouwer-claude-sleutel"
+            type="password"
+            autoComplete="off"
+            value={claudeSleutel}
+            onChange={(e) => setClaudeSleutel(e.target.value)}
+            placeholder={data.claudeSleutel ? "Claude-sleutel ingesteld ✓" : "sk-ant-…"}
+            className="min-w-0 flex-1 rounded-md border border-white/15 bg-[#0b0e13] px-2 py-1 font-mono text-white focus:border-brand-mint focus:outline-none"
+          />
+          <button
+            type="button"
+            disabled={!claudeSleutel.trim()}
+            onClick={() => void bewaar({ claudeToken: claudeSleutel.trim(), motor: "claude-code" })}
+            className="rounded-md border border-white/15 px-2 text-white/70 hover:bg-white/10 disabled:opacity-40"
+          >
+            Bewaar
+          </button>
+        </div>
+        <p className="pl-5 leading-relaxed text-white/35">
+          Sleutel maken: open op je pc een terminal, typ <span className="font-mono text-white/60">claude setup-token</span>, log in en plak de sleutel
+          (begint met sk-ant-) hierboven. Hij wordt versleuteld bewaard.
+          {data.claudeSleutel && (
+            <button type="button" onClick={() => void bewaar({ claudeToken: null, motor: "eigen" })} className="ml-1 text-[#F07C6B]/80 underline">
+              verwijderen
+            </button>
+          )}
+        </p>
+        {data.claudeSleutel && (
+          <div className="flex items-center gap-2 pl-5">
+            <label htmlFor="bouwer-claude-model" className="text-white/50">
+              Claude-model
+            </label>
+            <select
+              id="bouwer-claude-model"
+              value={data.claudeModel}
+              onChange={(e) => void bewaar({ claudeModel: e.target.value })}
+              className="rounded-md border border-white/15 bg-[#0b0e13] px-2 py-1 text-white"
+            >
+              <option value="opus">Opus (het slimst)</option>
+              <option value="sonnet">Sonnet (sneller, zuiniger)</option>
+            </select>
+          </div>
+        )}
+      </fieldset>
       <div className="space-y-1">
         <label htmlFor="bouwer-model" className="block text-white/50">
-          Model (leeg = het code-model uit de AI-instellingen)
+          Model van de eigen Bouwer (leeg = het code-model uit de AI-instellingen)
         </label>
         <div className="flex gap-1.5">
           <input

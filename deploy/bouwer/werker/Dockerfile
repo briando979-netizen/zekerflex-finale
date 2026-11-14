@@ -6,12 +6,16 @@ FROM node:24-bookworm-slim
 RUN apt-get update \
   && apt-get install -y --no-install-recommends git ripgrep ca-certificates openssl \
   && rm -rf /var/lib/apt/lists/*
+# Claude Code: de tweede motor (claude-motor.mjs). Hij draait alleen met een sleutel van de eigenaar
+# (claude setup-token), die de app per opdracht meegeeft; zonder sleutel gebruikt de Bouwer de eigen lus.
+RUN npm install -g @anthropic-ai/claude-code && npm cache clean --force
 # eigen uid, botst niet met de app (1001) of met testgebruikers op de host
 RUN useradd -u 61000 -m bouwer && mkdir -p /werk && chown bouwer:bouwer /werk
 USER bouwer
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_OPTIONS=--max-old-space-size=3584 \
-    npm_config_update_notifier=false
+    npm_config_update_notifier=false \
+    DISABLE_AUTOUPDATER=1
 WORKDIR /werk
 EXPOSE 4100
 CMD ["node", "/opt/bouwer/server.mjs"]

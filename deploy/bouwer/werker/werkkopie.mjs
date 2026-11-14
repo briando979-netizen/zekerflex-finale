@@ -392,6 +392,17 @@ const ALLEEN_LEZEN = [
 ];
 const GEHEIM = [/(^|\/)\.env/, /^\.git\//];
 
+/**
+ * Welke van deze gewijzigde paden de Bouwer niet mag wijzigen. Voor de motor die zelf schrijft (Claude Code,
+ * claude-motor.mjs): die gaat niet langs veiligPad, dus de Bouwer kijkt na elke ronde naar git status.
+ */
+export function verbodenPaden(paden) {
+  return paden.filter((p) => {
+    const schoon = path.posix.normalize(String(p ?? "").replace(/\\/g, "/")).replace(/^\.\/+/, "");
+    return schoon.startsWith("..") || path.posix.isAbsolute(schoon) || GEHEIM.some((r) => r.test(schoon)) || ALLEEN_LEZEN.some((r) => r.test(schoon));
+  });
+}
+
 function veiligPad(rel, schrijven) {
   const schoon = path.posix.normalize(String(rel || ".").replace(/\\/g, "/")).replace(/^\.\/+/, "");
   if (schoon.startsWith("..") || path.posix.isAbsolute(schoon)) throw new Error(`Pad buiten de codebase: ${rel}`);
