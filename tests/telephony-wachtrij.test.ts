@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const h = vi.hoisted(() => ({
   kv: new Map<string, unknown>(),
   kvFout: false,
-  bellen: [] as { to: string; voiceUrl: string; statusUrl: string; opnemen?: boolean | undefined }[],
+  bellen: [] as { to: string; voiceUrl: string; statusUrl: string; opnemen?: boolean | undefined; belTijd?: number | undefined }[],
+  rec: {} as Record<string, unknown>,
   twilio: true,
   alerts: [] as { key: string; title: string; detail: string; url?: string }[],
   achteraf: [] as (() => unknown)[],
@@ -21,7 +22,7 @@ vi.mock("@/lib/storage/kv", () => ({
 vi.mock("@/lib/telephony/twilio", async (orig) => ({
   ...(await orig<typeof import("@/lib/telephony/twilio")>()),
   twilioConfigured: () => h.twilio,
-  placeTwilioCall: async (i: { to: string; voiceUrl: string; statusUrl: string; opnemen?: boolean }) => {
+  placeTwilioCall: async (i: { to: string; voiceUrl: string; statusUrl: string; opnemen?: boolean; belTijd?: number }) => {
     h.bellen.push(i);
     return { sid: "CA1" };
   },
@@ -32,14 +33,15 @@ vi.mock("@/lib/env", async (orig) => {
 });
 vi.mock("@/lib/telephony/webhook", async (orig) => ({ ...(await orig<typeof import("@/lib/telephony/webhook")>()), signatureValid: () => true }));
 vi.mock("@/lib/telephony/store", () => ({
-  getCall: async (id: string) => (id === "c1" ? { id: "c1", lang: "nl", dept: "5", fromNumber: "+31612345678", transcript: [] } : null),
+  getCall: async (id: string) => (id === "c1" ? h.rec : null),
+  patchCall: async (id: string, patch: Record<string, unknown>) => (id === "c1" ? Object.assign(h.rec, patch) : null),
   addTurn: async () => null,
 }));
 vi.mock("@/lib/ops/alert", () => ({ alertOwnerLater: (a: { key: string; title: string; detail: string; url?: string }) => void h.alerts.push(a) }));
 vi.mock("next/server", async (orig) => ({ ...(await orig<typeof import("next/server")>()), after: (fn: () => unknown) => void h.achteraf.push(fn) }));
 
-import { MAX_WACHT_S, WACHTRIJ, aannemenTwiml, binnenKantoortijd, medewerkerTwiml, naWachtrijTwiml, naarMedewerkerTwiml, wachtTwiml } from "@/lib/telephony/wachtrij";
-import { BELT_MS, belMedewerker, medewerkerBezig, zetMedewerker } from "@/lib/telephony/wachtrij-server";
+import { MAX_POGINGEN, MAX_WACHT_S, WACHTRIJ, aannemenTwiml, binnenKantoortijd, medewerkerTwiml, naWachtrijTwiml, naarMedewerkerTwiml, wachtTwiml } from "@/lib/telephony/wachtrij";
+import { BELTIJD_S, BELT_MS, belMedewerker, medewerkerBezig, zetMedewerker } from "@/lib/telephony/wachtrij-server";
 import { POST as wachtRoute } from "@/app/api/telephony/wachtrij/route";
 import { POST as klaarRoute } from "@/app/api/telephony/wachtrij/klaar/route";
 import { POST as medewerkerRoute } from "@/app/api/telephony/wachtrij/medewerker/route";
@@ -55,6 +57,7 @@ beforeEach(() => {
   h.twilio = true;
   h.alerts.length = 0;
   h.achteraf.length = 0;
+  h.rec = { id: "c1", lang: "nl", dept: "5", fromNumber: "+31612345678", transcript: [] };
 });
 afterEach(() => vi.useRealTimers());
 
@@ -121,7 +124,9 @@ describe("de telefoon van de medewerker laten overgaan", () => {
     const nu = Date.parse("2026-11-16T10:00:00+01:00");
     expect(await medewerkerBezig(nu)).toBe(false);
     expect(await belMedewerker("https://zf.test", "c1", nu)).toBe(true);
-    expect(h.bellen[0]).toMatchObject({ to: "+31600000000", opnemen: false });
+    // hooguit 25 s overgaan: anders laat Twilio 60 s overgaan en kon er een tweede oproep tegelijk beginnen
+    expect(h.bellen[0]).toMatchObject({ to: "+31600000000", opnemen: false, belTijd: BELTIJD_S });
+    expect(BELTIJD_S * 1000).toBeLessThan(BELT_MS);
     expect(h.bellen[0]?.voiceUrl).toBe("https://zf.test/api/telephony/wachtrij/medewerker?callId=c1");
     expect(await medewerkerBezig(nu + 1000)).toBe(true);
     expect(await medewerkerBezig(nu + BELT_MS + 1)).toBe(false);
@@ -150,6 +155,17 @@ describe("de routes", () => {
     // tweede in de rij: wachten, niet nog eens bellen
     h.achteraf.length = 0;
     await wachtRoute(post("/api/telephony/wachtrij?callId=c1", { QueuePosition: "2", QueueTime: "10" }));
+    expect(h.achteraf).toHaveLength(0);
+  });
+
+  it("na MAX_POGINGEN keer overgaan zonder aannemen: niet meer bellen maar uit de rij (dan het terugbelaanbod)", async () => {
+    const eerst = await (await wachtRoute(post("/api/telephony/wachtrij?callId=c1", { QueuePosition: "1", QueueTime: "0" }))).text();
+    expect(eerst).toContain("nummer 1 in de wachtrij");
+    expect(h.rec.medewerkerPogingen).toBe(1);
+    h.rec.medewerkerPogingen = MAX_POGINGEN;
+    h.achteraf.length = 0;
+    const daarna = await (await wachtRoute(post("/api/telephony/wachtrij?callId=c1", { QueuePosition: "1", QueueTime: "60" }))).text();
+    expect(daarna).toContain("<Leave/>");
     expect(h.achteraf).toHaveLength(0);
   });
 

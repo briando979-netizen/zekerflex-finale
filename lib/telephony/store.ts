@@ -45,6 +45,8 @@ export interface CallRecord {
   lang?: "nl" | "en";
   /** Gekozen afdeling in het keuzemenu (toets). */
   dept?: string;
+  /** Hoe vaak de telefoon van een medewerker voor deze beller overging (wachtrij, lib/telephony/wachtrij.ts). */
+  medewerkerPogingen?: number;
   transcript: CallTurn[];
   /** Uitkomst na afloop: interesse, naam/bedrijf, terugbelnotitie, samenvatting. */
   outcome?: CallOutcome;

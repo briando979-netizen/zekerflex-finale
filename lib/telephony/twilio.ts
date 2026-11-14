@@ -20,6 +20,8 @@ export interface PlaceCallInput {
   statusUrl: string;
   /** Opnemen (standaard ja: de belscripts melden het). Niet bij het overgaan van een eigen medewerker (wachtrij). */
   opnemen?: boolean | undefined;
+  /** Zo lang (s) laat Twilio overgaan; zonder: de standaard van Twilio (60 s). */
+  belTijd?: number | undefined;
 }
 
 /** Plaatst een echte uitgaande oproep. Geeft de Twilio Call SID terug. */
@@ -41,6 +43,7 @@ export async function placeTwilioCall(input: PlaceCallInput): Promise<{ sid: str
     body.append("Record", "true");
     body.append("RecordingStatusCallback", input.statusUrl);
   }
+  if (input.belTijd !== undefined) body.append("Timeout", String(input.belTijd));
   body.append("StatusCallbackEvent", "initiated");
   body.append("StatusCallbackEvent", "answered");
   body.append("StatusCallbackEvent", "completed");

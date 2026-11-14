@@ -13,6 +13,8 @@ import { DEPT_LABEL, recogLang, type Lang } from "@/lib/telephony/scripts";
 export const WACHTRIJ = "zekerflex-medewerker";
 /** Zo lang (s) wacht een beller hooguit in de rij; daarna het terugbelaanbod. */
 export const MAX_WACHT_S = 180;
+/** Zo vaak gaat de telefoon van de medewerker hooguit over voor één beller; nam hij niet aan, dan het terugbelaanbod. */
+export const MAX_POGINGEN = 2;
 
 const T: Record<Lang, { naarRij: string; positie: string; nogSteeds: string; niemand: string; buitenTijd: string; bedankt: string; genoteerd: string }> = {
   nl: {
