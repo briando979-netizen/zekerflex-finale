@@ -50,7 +50,7 @@ describe("tekstregister van de Site-ontwerper", () => {
     expect(v["comp.c4.body"]).toBe("Elke gevoelige handeling wordt onwisbaar vastgelegd en is terug te zien voor beheerders.");
     // /bedrijven is sinds 14 nov alleen voor bedrijven: geen teksten meer voor werkers in de homepage-sleutels
     expect(CONTENT_REGISTRY.some((c) => c.key.startsWith("fl.") || c.key.startsWith("work."))).toBe(false);
-    const home = CONTENT_REGISTRY.filter((c) => c.group.startsWith("Homepage")).map((c) => v[c.key] ?? "").join("\n");
+    const home = CONTENT_REGISTRY.filter((c) => (c.group ?? "").startsWith("Homepage")).map((c) => v[c.key] ?? "").join("\n");
     expect(home).not.toMatch(/Ik zoek werk|Zoek je werk|uitbetaald|Gratis voor freelancers|rust-uren/);
     expect(v["hero.ctaPrimary"]).toBe("Klus plaatsen");
     // lege regels en spaties tellen niet
