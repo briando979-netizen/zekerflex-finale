@@ -1,5 +1,7 @@
 "use client";
 
+import { eersteOntbrekend } from "@/lib/formulieren/ontbreekt";
+import { meldOntbreekt } from "@/components/analytics/formulier";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { registerUrl } from "@/lib/rekentools/links";
@@ -19,6 +21,17 @@ export function StuurUitkomst({ payload, label }: { payload: Tool; label: string
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    // de knop staat aan (14 nov): de melding noemt wat ontbreekt, en dat wordt anoniem geteld
+    const ontbreekt = eersteOntbrekend([
+      { code: "email", naam: "je e-mailadres", mist: !email.trim() },
+      { code: "akkoord", naam: "het vinkje", mist: !consent, eigenTekst: "Zet het vinkje, dan mogen we je de uitkomst sturen." },
+    ]);
+    if (ontbreekt) {
+      setMsg(ontbreekt.tekst);
+      setState("error");
+      meldOntbreekt("rekentool-uitkomst", ontbreekt.veld);
+      return;
+    }
     setState("busy");
     setMsg("");
     try {
@@ -108,7 +121,7 @@ export function StuurUitkomst({ payload, label }: { payload: Tool; label: string
           {msg}
         </p>
       ) : null}
-      <button type="submit" disabled={state === "busy" || !email.trim() || !consent} className="btn-primary mt-4 disabled:opacity-50">
+      <button type="submit" disabled={state === "busy"} className="btn-primary mt-4 disabled:opacity-50">
         {state === "busy" ? "Bezig met versturen…" : "Stuur mij de uitkomst"}
       </button>
     </form>

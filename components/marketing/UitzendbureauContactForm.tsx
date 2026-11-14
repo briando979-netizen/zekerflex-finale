@@ -1,5 +1,7 @@
 "use client";
 
+import { eersteOntbrekend } from "@/lib/formulieren/ontbreekt";
+import { meldOntbreekt } from "@/components/analytics/formulier";
 import { useState } from "react";
 import Link from "next/link";
 
@@ -11,8 +13,16 @@ export function UitzendbureauContactForm() {
   const [done, setDone] = useState(false);
 
   async function submit() {
-    if (!consent) {
-      setErr("Zet het vinkje voor akkoord om te bevestigen.");
+    // de knop staat aan (14 nov): de melding noemt wat ontbreekt, en dat wordt anoniem geteld
+    const ontbreekt = eersteOntbrekend([
+      { code: "contactpersoon", naam: "de contactpersoon", mist: !form.contactName.trim() },
+      { code: "bedrijf", naam: "de bedrijfsnaam", mist: !form.company.trim() },
+      { code: "email", naam: "je zakelijke e-mailadres", mist: !form.email.trim() },
+      { code: "akkoord", naam: "het vinkje", mist: !consent, eigenTekst: "Zet het vinkje voor akkoord om te bevestigen." },
+    ]);
+    if (ontbreekt) {
+      setErr(ontbreekt.tekst);
+      meldOntbreekt("uitzendbureau", ontbreekt.veld);
       return;
     }
     setBusy(true);
@@ -142,7 +152,7 @@ export function UitzendbureauContactForm() {
         <button
           type="button"
           onClick={submit}
-          disabled={busy || !form.contactName || !form.company || !form.email}
+          disabled={busy}
           className="btn-primary mt-4 w-full disabled:opacity-60"
         >
           {busy ? "Versturen…" : "Aanvraag versturen"}

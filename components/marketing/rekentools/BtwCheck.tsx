@@ -1,5 +1,7 @@
 "use client";
 
+import { vulNogIn } from "@/lib/formulieren/ontbreekt";
+import { meldOntbreekt } from "@/components/analytics/formulier";
 import Link from "next/link";
 import { useState } from "react";
 import { kvkZoekLink, LANDEN, leesInvoer, uitlegBtw, viesLink, type ViesStatus } from "@/lib/rekentools/btw-check";
@@ -31,7 +33,12 @@ export function BtwCheck() {
 
   async function controleer(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!nummer.trim()) return;
+    if (!nummer.trim()) {
+      // de knop staat aan (14 nov): zeg wat ontbreekt in plaats van stil niets te doen
+      setFout(vulNogIn(["een btw- of KVK-nummer"]));
+      meldOntbreekt("btw-check", "nummer");
+      return;
+    }
     used();
     setBezig(true);
     setFout(null);
@@ -64,7 +71,7 @@ export function BtwCheck() {
             spellCheck={false}
             className="min-w-0 flex-1 rounded-xl border border-hair bg-paper px-4 py-3 font-mono text-base text-ink focus:outline focus:outline-2 focus:outline-brand-500"
           />
-          <button type="submit" disabled={bezig || !nummer.trim()} className="btn-primary whitespace-nowrap disabled:opacity-50">
+          <button type="submit" disabled={bezig} className="btn-primary whitespace-nowrap disabled:opacity-50">
             {bezig ? "Controleren…" : "Controleer"}
           </button>
         </div>
