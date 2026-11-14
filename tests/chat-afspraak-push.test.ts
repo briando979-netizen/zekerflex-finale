@@ -38,7 +38,7 @@ const afspraak = (antwoorden: Record<string, "ja" | "misschien" | "nee">): ChatM
     from: "a",
     text: "Teamuitje",
     kind: "afspraak",
-    createdAt: "",
+    at: "",
     // vrijdag 20 november 18:00–19:00 Nederlandse tijd
     afspraak: { start: "2026-11-20T17:00:00.000Z", eind: "2026-11-20T18:00:00.000Z", antwoorden, geannuleerd: "2026-11-14T12:00:00.000Z" },
   }) as ChatMessage;
