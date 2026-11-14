@@ -18,17 +18,22 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export function SalesConsole({
+  initialTab,
+  initialFilter,
   initialLeads,
   initialCampaigns,
   initialEngine,
   initialSuppression,
 }: {
+  /** uit de querystring (?weergave=leads&filter=wacht), bv. vanaf de kaart op het beheerstartscherm */
+  initialTab?: string | undefined;
+  initialFilter?: string | undefined;
   initialLeads: LeadDto[];
   initialCampaigns: CampaignDto[];
   initialEngine: EngineSnapshot;
   initialSuppression: SuppressionEntry[];
 }) {
-  const [tab, setTab] = useState<Tab>("pijplijn");
+  const [tab, setTab] = useState<Tab>(TABS.some((t) => t.id === initialTab) ? (initialTab as Tab) : "pijplijn");
 
   return (
     <div className="space-y-4">
@@ -53,7 +58,7 @@ export function SalesConsole({
       </div>
 
       {tab === "pijplijn" && <PipelineBoard initialLeads={initialLeads} />}
-      {tab === "leads" && <SalesDashboard initialLeads={initialLeads} />}
+      {tab === "leads" && <SalesDashboard initialLeads={initialLeads} {...(initialFilter ? { initialFilter } : {})} />}
       {tab === "campagnes" && <CampaignsTab initialCampaigns={initialCampaigns} />}
       {tab === "motor" && <EngineTab initial={initialEngine} />}
       {tab === "onderdrukking" && <SuppressionTab initial={initialSuppression} />}

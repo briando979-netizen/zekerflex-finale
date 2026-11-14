@@ -19,12 +19,12 @@ import type { EngineSnapshot } from "@/components/admin/sales/EngineTab";
 
 export const dynamic = "force-dynamic";
 
-export default async function SalesAdminPage(props: { searchParams: Promise<{ periode?: string }> }) {
+export default async function SalesAdminPage(props: { searchParams: Promise<{ periode?: string; weergave?: string; filter?: string }> }) {
   const principal = await getPrincipal();
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
     return <PageHead title="Geen toegang" subtitle="Het sales-dashboard is alleen voor platformbeheerders." />;
   }
-  const { periode } = await props.searchParams;
+  const { periode, weergave, filter } = await props.searchParams;
   const period = resolvePeriod(periode);
 
   const [insights, rows, campaignRows, suppression, paused, sentToday, scheduled, engineRuns, tools] = await Promise.all([
@@ -222,6 +222,8 @@ export default async function SalesAdminPage(props: { searchParams: Promise<{ pe
       </Panel>
 
       <SalesConsole
+        {...(weergave ? { initialTab: weergave } : {})}
+        {...(filter ? { initialFilter: filter } : {})}
         initialLeads={leads}
         initialCampaigns={campaigns}
         initialEngine={engine}

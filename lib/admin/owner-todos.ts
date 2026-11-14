@@ -35,7 +35,8 @@ import { meldingen as autoUitrolMeldingen } from "@/lib/bouwer/auto-uitrol-regel
 import { liveVersie } from "@/lib/bouwer/versie";
 import { aiTraderTodo } from "@/lib/admin/todo-ai-trader";
 import { pasdienstTodo } from "@/lib/admin/todo-pasdienst";
-import { scanOpvolgTodo, type ScanOpvolgStand } from "@/lib/admin/todo-scans";
+import { scanOpvolgTodo } from "@/lib/admin/todo-scans";
+import { CONCEPT_WACHT_DAGEN, wachtendeConcepten, wachtendeScans, wachtendeVoorstellen } from "@/lib/admin/verkoop-wacht";
 import { pasdienstInfo } from "@/lib/shop/pasdienst";
 import { alpacaSleutelInfo } from "@/lib/trader/alpaca";
 import { featureEnabled } from "@/lib/flags";
@@ -180,49 +181,9 @@ async function testAccountCount(): Promise<number | null> {
   }
 }
 
-/**
- * Website proposals made but still not sent after 2 days and not expired (lib/sales/website-proposal.ts);
- * null = couldn't look. The maker also gets a push, but an owner without a push device would never see it.
- */
-async function unsentProposals(now = Date.now()): Promise<number | null> {
-  try {
-    const { listWebsiteProposals } = await import("@/lib/sales/website-proposal");
-    return (await listWebsiteProposals()).filter((p) => p.status === "concept" && now - Date.parse(p.createdAt) >= 2 * 86_400_000 && Date.parse(p.expiresAt) > now).length;
-  } catch {
-    return null;
-  }
-}
-
-/** Gratis scans die op opvolging wachten (lib/scans/overzicht.ts), één per bedrijf; alleen aantallen. undefined = kon niet kijken. */
-async function wachtendeScans(now = new Date()): Promise<ScanOpvolgStand | undefined> {
-  try {
-    const [{ lijstScans }, { scanOverzicht }, { statusVan }] = await Promise.all([import("@/lib/scans/store"), import("@/lib/scans/overzicht"), import("@/lib/scans/model")]);
-    const wachten = scanOverzicht(await lijstScans(2000), now).wachten;
-    return { wachten: wachten.length, aanvragen: wachten.filter((l) => statusVan(l) === "aanvraag").length };
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * Outreach-concepten die al 3 dagen of langer op een mens wachten (status DRAFT of APPROVED,
- * lib/sales/outreach.ts). De motor verstuurt die nooit zelf in REVIEW-modus: alleen "Verstuur nu"
- * in Admin → Sales mailt echt, en goedkeuren alleen doet niets zichtbaar. Alleen aantallen, geen
- * namen of adressen. null = kon niet kijken.
- */
-export const CONCEPT_WACHT_DAGEN = 3;
-async function wachtendeConcepten(now = Date.now()): Promise<{ aantal: number; oudsteDagen: number } | null> {
-  try {
-    const rows = await prisma.salesOutreach.findMany({
-      where: { status: { in: ["DRAFT", "APPROVED"] } },
-      select: { createdAt: true },
-    });
-    const dagen = rows.map((r) => Math.floor((now - r.createdAt.getTime()) / 86_400_000)).filter((d) => d >= CONCEPT_WACHT_DAGEN);
-    return { aantal: dagen.length, oudsteDagen: dagen.length ? Math.max(...dagen) : 0 };
-  } catch {
-    return null;
-  }
-}
+// De tellers voor websitevoorstellen, scans en concept-mails staan in lib/admin/verkoop-wacht.ts:
+// dezelfde cijfers als de kaart "Verkoop: dit wacht op jou" op het beheerstartscherm.
+export { CONCEPT_WACHT_DAGEN };
 
 /** Branches whose city says nothing, as "company (branch)" so the owner knows whom to ask; null = couldn't look. */
 async function vagueBranchCities(): Promise<string[] | null> {
@@ -303,7 +264,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     vagueBranchCities(),
     playIngesteld().catch(() => false),
     bouwerInstellingen().catch(() => null),
-    unsentProposals(),
+    wachtendeVoorstellen().then((w) => (w ? w.aantal : null)),
     wachtendeConcepten(),
   ]);
   const [beeldGelukt, beeldSlot, dmarc, gratis] = await Promise.all([geminiBeeldGelukt(), geminiSlot("beeld"), dmarcBeleid(base), getGratisStand().catch(() => null)]);

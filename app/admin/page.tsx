@@ -8,6 +8,8 @@ import { count, dateNl, euro, timeAgoNl } from "@/lib/admin/format";
 import { Feed, Funnel, KpiStrip, PageHead, Panel, PeriodTabs, Pill, Spark, type Tone } from "@/components/admin/kit";
 import { Chart } from "@/components/admin/kit-client";
 import { HomeLive } from "@/components/admin/HomeLive";
+import { VerkoopKaart } from "@/components/admin/VerkoopKaart";
+import { verkoopWacht } from "@/lib/admin/verkoop-wacht";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +33,7 @@ export default async function AdminHomePage(props: { searchParams: Promise<{ per
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) redirect("/admin/disputes");
   const { periode } = await props.searchParams;
   const period = resolvePeriod(periode);
-  const d = await homeInsights(period);
+  const [d, verkoop] = await Promise.all([homeInsights(period), verkoopWacht()]);
   const now = new Date();
   const firstName = principal.fullName.split(/\s+/)[0] ?? "";
   const funnels = d.funnels.filter((f) => f.steps.some((s) => s.count > 0));
@@ -44,6 +46,9 @@ export default async function AdminHomePage(props: { searchParams: Promise<{ per
         meta={<HomeLive />}
         actions={<PeriodTabs period={period} basePath="/admin" />}
       />
+
+      {/* wat de eigenaar kan verkopen en wat op een mens wacht (lib/admin/verkoop-wacht.ts) */}
+      <VerkoopKaart stand={verkoop} />
 
       <KpiStrip
         items={[
