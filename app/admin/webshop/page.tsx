@@ -5,6 +5,8 @@ import { KpiStrip, Notice, PageHead, Panel, Pill } from "@/components/admin/kit"
 import { euro } from "@/lib/admin/format";
 import { accountStand } from "@/lib/billing/stripe-betalen";
 import { CONSOLE_GROEPEN, MIJN_WINKEL_KNOPPEN, betalenStatus, consoleTaken, type ConsoleStand } from "@/lib/shop/console";
+import { opzetStappen, opzetVoortgang, volgendeStap } from "@/lib/shop/opzetlijst";
+import { contentKeys, getContentMap } from "@/lib/content/store";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +17,9 @@ export const dynamic = "force-dynamic";
 const BETAALD = ["RECEIVED", "CONFIRMED", "SHIPPED"] as const;
 const DAGEN_30 = 30 * 24 * 60 * 60 * 1000;
 
-async function leesStand(nu: Date): Promise<ConsoleStand & { gemeten: string | null; uitSinds: string | null }> {
+async function leesStand(nu: Date): Promise<ConsoleStand & { gemeten: string | null; uitSinds: string | null; producten: number; eigenTeksten: boolean; betaaldTotaal: number }> {
   const sinds = new Date(nu.getTime() - DAGEN_30);
-  const [stripe, zichtbaar, uit, zonderFoto, lageVoorraad, pogingen30, betaald] = await Promise.all([
+  const [stripe, zichtbaar, uit, zonderFoto, lageVoorraad, pogingen30, betaald, betaaldTotaal, teksten] = await Promise.all([
     accountStand().catch(() => null),
     prisma.shopProduct.count({ where: { active: true } }),
     prisma.shopProduct.count({ where: { active: false } }),
@@ -25,6 +27,9 @@ async function leesStand(nu: Date): Promise<ConsoleStand & { gemeten: string | n
     prisma.shopProductVariant.count({ where: { stock: { lte: 5 }, product: { active: true } } }),
     prisma.shopOrder.count({ where: { createdAt: { gte: sinds } } }),
     prisma.shopOrder.aggregate({ where: { createdAt: { gte: sinds }, status: { in: [...BETAALD] } }, _count: { _all: true }, _sum: { totalCents: true } }),
+    prisma.shopOrder.count({ where: { status: { in: [...BETAALD] } } }),
+    // eigen teksten uit de Site-ontwerper (tabblad Teksten, groep Webshop): een storing telt als "niet gemeten" = geen vinkje
+    getContentMap(contentKeys("shop.")).catch(() => ({} as Record<string, unknown>)),
   ]);
   return {
     betalen: stripe ? stripe.betalen : null,
@@ -32,6 +37,9 @@ async function leesStand(nu: Date): Promise<ConsoleStand & { gemeten: string | n
     uitSinds: stripe?.uitSinds ?? null,
     zichtbaar,
     uit,
+    producten: zichtbaar + uit,
+    eigenTeksten: Object.keys(teksten).length > 0,
+    betaaldTotaal,
     zonderFoto,
     lageVoorraad,
     pogingen30,
@@ -49,6 +57,9 @@ export default async function WebshopConsolePage() {
   }
   const s = await leesStand(new Date());
   const taken = consoleTaken(s);
+  const stappen = opzetStappen({ producten: s.producten, zichtbaar: s.zichtbaar, zonderFoto: s.zonderFoto, eigenTeksten: s.eigenTeksten, betalen: s.betalen, betaaldTotaal: s.betaaldTotaal });
+  const voortgang = opzetVoortgang(stappen);
+  const volgende = volgendeStap(stappen);
   const betalenTekst = s.betalen === null ? "—" : s.betalen ? "Aan" : "Dicht";
 
   return (
@@ -102,6 +113,29 @@ export default async function WebshopConsolePage() {
           })}
         </ul>
       </section>
+
+      <Panel
+        title="Zo zet je je winkel op"
+        subtitle={voortgang.allesKlaar ? "Alles staat klaar." : volgende ? `Volgende stap: ${volgende.titel}` : undefined}
+        actions={<Pill tone={voortgang.allesKlaar ? "ok" : "plan"}>{voortgang.tekst}</Pill>}
+      >
+        <ol className="space-y-2">
+          {stappen.map((st, i) => (
+            <li key={st.id} className="flex flex-wrap items-start justify-between gap-3 rounded-xl p-3" style={{ border: "1px solid var(--a-border)", background: volgende?.id === st.id ? "var(--a-panel-2)" : undefined }}>
+              <div className="min-w-0 flex-1">
+                <p className="flex flex-wrap items-center gap-2 text-sm font-semibold" style={{ color: "var(--a-text)" }}>
+                  <span aria-hidden>{st.klaar === true ? "✓" : st.klaar === false ? "○" : "?"}</span>
+                  <span>{i + 1}. {st.titel}</span>
+                  <Pill tone={st.klaar === true ? "ok" : st.klaar === null ? "neutral" : st.id === "betalen" ? "crit" : "plan"}>{st.klaar === true ? "Klaar" : st.klaar === null ? "Niet gemeten" : "Nog te doen"}</Pill>
+                </p>
+                <p className="mt-1 text-[0.8125rem]" style={{ color: "var(--a-mute)" }}>{st.uitleg}</p>
+                <p className="mt-0.5 text-xs" style={{ color: "var(--a-dim)" }}>{st.status}</p>
+              </div>
+              <Link href={st.href} className="a-btn a-btn-ghost flex-shrink-0">{st.knop}</Link>
+            </li>
+          ))}
+        </ol>
+      </Panel>
 
       <KpiStrip
         items={[
