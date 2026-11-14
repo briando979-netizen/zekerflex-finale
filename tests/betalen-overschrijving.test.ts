@@ -45,7 +45,8 @@ describe("betalen per bankoverschrijving: de gegevens", () => {
     expect(regels.join("\n")).toContain("IBAN: NL91 ABNA 0417 1643 00");
     expect(regels.join("\n")).toContain("Bedrag: EUR 1234,50");
     expect(regels.join("\n")).toContain("Betalingskenmerk: ZF-2026-0042");
-    expect(regels[regels.length - 1]).toMatch(/factuurnummer bij de omschrijving/);
+    // de uitleg staat onderaan, in drie korte regels (lib/billing/overschrijving.ts OVERSCHRIJVING_UITLEG)
+    expect(regels.slice(-3).join(" ")).toMatch(/factuurnummer bij de omschrijving/);
   });
 
   it("het kenmerk is het factuurnummer: precies wat het afletteren op het bankafschrift herkent", () => {
