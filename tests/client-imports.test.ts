@@ -24,7 +24,8 @@ function bestanden(dir: string, uit: string[] = []): string[] {
 const UITZONDERING: Record<string, string> = {};
 
 /** Bestanden in lib/mail die puur zijn (alleen gegevens en hulpjes): de browser mag ze laden. Ze mogen zelf niets verbodens importeren; dat volgt de scan. */
-const PUUR_MAIL = new Set(["lib/mail/presets.ts", "lib/mail/zf-address.ts"]);
+// lib/mail/bounce.ts (14 nov): terugkaatsers lezen en de status in Beheer → Mail, zonder één import
+const PUUR_MAIL = new Set(["lib/mail/presets.ts", "lib/mail/zf-address.ts", "lib/mail/bounce.ts"]);
 const VERBODEN_PAD = /^lib\/(prisma|redis|env)\.tsx?$|^lib\/storage\/kv\.tsx?$|^lib\/mail\//;
 const NODE_INGEBOUWD = new Set([
   "fs", "path", "crypto", "child_process", "net", "os", "http", "https", "http2", "stream", "zlib", "dns", "tls", "worker_threads", "buffer", "util", "events", "url", "readline", "vm",
