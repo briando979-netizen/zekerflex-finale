@@ -13,6 +13,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { BUITEN_LANDEN, EU_LANDEN } from "@/lib/onboarding/buitenland";
 import { emailDomein, isGratisMail } from "@/lib/company/eigendom";
 import { WERKRUIMTES, WERKRUIMTE_INFO, type Werkruimte } from "@/lib/werkgever/werkruimte";
+import { CONCEPT_KEY, parseConcept } from "@/lib/klusconcept/concept";
 
 const initial: RegisterState = { error: null };
 
@@ -62,6 +63,17 @@ export function RegisterForm({
   // De richting (ZZP'er, flexwerker, uitzendkracht) kies je na het aanmelden, in de start van de werker-app.
   // Komt de bezoeker via een pagina die al een richting noemt, dan gaat die mee.
   const [state, formAction] = useFormState(registerAction, initial);
+  // Het klusconcept van /klus-plaatsen gaat mee in de registratie, zodat het ook klaarstaat als de
+  // bevestigingsmail op een ander apparaat wordt geopend (lib/klusconcept/server-opslag.ts).
+  const [klusConcept, setKlusConcept] = useState("");
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CONCEPT_KEY);
+      if (raw && parseConcept(raw)) setKlusConcept(raw);
+    } catch {
+      /* opslag geblokkeerd: dan alleen lokaal, zoals voorheen */
+    }
+  }, []);
 
   // ---- company (KVK) --------------------------------------------------
   const [company, setCompany] = useState(prefill?.company ?? "");
@@ -273,6 +285,7 @@ export function RegisterForm({
         <input type="hidden" name="type" value={type} />
         {type === "freelancer" && defaultWorkerKind && <input type="hidden" name="workerKind" value={defaultWorkerKind} />}
         {type === "bedrijf" && <input type="hidden" name="kvkNumber" value={kvk} />}
+        {type === "bedrijf" && klusConcept && <input type="hidden" name="klusConcept" value={klusConcept} />}
 
         {type === "bedrijf" && (
           <fieldset>
