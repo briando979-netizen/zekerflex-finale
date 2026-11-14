@@ -20,6 +20,9 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/internal/matching/tick",
     "/api/internal/boekhouding/bonnen-mail", // cron: bonnetjes uit de Postvak (eigen token via checkInternalToken)
     "/api/internal/boekhouding/nachtronde", // cron: nachtelijke boekhoudronde (eigen token via checkInternalToken)
+    "/api/partner-lead", // openbaar aanvraagformulier (bezoeker zonder account)
+    "/api/uitzendbureau", // openbaar contactformulier /voor-bureaus
+    "/api/sales-partner", // openbaar aanmeldformulier
     "/api/health",
     "/api/ready",
     "/api/status",
