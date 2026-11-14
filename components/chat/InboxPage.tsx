@@ -48,6 +48,7 @@ import { annuleerAfspraak, maakAfspraak, zetAntwoord, type Antwoord } from "@/li
 import { startLive, type Plek } from "@/lib/messaging/live-locatie";
 import { useLiveLocatieZender } from "./live-locatie-zender";
 import { GeplandBalk } from "./GeplandBalk";
+import { StatusRij } from "./StatusRij";
 import type { GeplandBericht } from "@/lib/messaging/gepland-tijd";
 import {
   canDeleteForAll,
@@ -1101,6 +1102,8 @@ function InboxPageInner({
               )}
               {!q && view === "main" && (
                 <>
+                  {/* status van je contacten, zoals in WhatsApp (lib/messaging/status.ts) */}
+                  {me && <StatusRij myUserId={me.userId} myName={me.name} avatars={avatars} onReageer={(uid) => void startThreadWith(uid)} />}
                   {chatPrefs.lockedCount > 0 && (
                     <button type="button" onClick={() => setPinAsk({ mode: "unlock" })} className={rowBtn}>
                       <span className="w-10 text-center" aria-hidden>🔒</span>{ib.vergrendeldeChats} <span className="ml-auto text-xs text-neutralx-400">{chatPrefs.lockedCount}</span>

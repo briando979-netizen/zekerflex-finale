@@ -38,6 +38,8 @@ cat > /etc/crontabs/root <<EOF
 */15 * * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/kyc/chip-opruimen"
 # elke minuut: geplande chatberichten versturen die aan de beurt zijn ("later versturen", lib/messaging/gepland.ts)
 * * * * * wget -q -O /dev/null -T 50 "$H" "$APP/api/internal/chat/gepland"
+# elk uur: verlopen statussen in de chat weg, met hun foto (lib/messaging/status.ts)
+17 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/chat/status-opruimen"
 # KVK-controles die wachtten op tegoed of de minuutlimiet bij KVKBase opnieuw doen (lib/kvk/herkansing.ts)
 */30 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/kvk/herkansing"
 # elke 15 min: staat het live Stripe-account nog open voor betalingen? Zo niet: melding aan de eigenaar en bankcontrole op het bankafschrift (lib/billing/stripe-betalen.ts)
