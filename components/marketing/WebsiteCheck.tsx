@@ -1,5 +1,7 @@
 "use client";
 
+import { eersteOntbrekend, vulNogIn } from "@/lib/formulieren/ontbreekt";
+import { meldOntbreekt } from "@/components/analytics/formulier";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { NieuweSite, WebsiteCheckResult } from "@/lib/website-check/run";
@@ -324,8 +326,15 @@ function LeadForm({ result, plans }: { result: WebsiteCheckResult; plans: PlanCa
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!consent) {
-      setErr("Zet het vinkje, dan mogen we contact met je opnemen.");
+    // de knop staat aan (14 nov): de melding noemt wat ontbreekt, en dat wordt anoniem geteld
+    const ontbreekt = eersteOntbrekend([
+      { code: "naam", naam: "je naam", mist: !form.name.trim() },
+      { code: "email", naam: "je e-mailadres", mist: !form.email.trim() },
+      { code: "akkoord", naam: "het vinkje", mist: !consent, eigenTekst: "Zet het vinkje, dan mogen we contact met je opnemen." },
+    ]);
+    if (ontbreekt) {
+      setErr(ontbreekt.tekst);
+      meldOntbreekt("website-check-lead", ontbreekt.veld);
       return;
     }
     setBusy(true);
@@ -449,7 +458,7 @@ function LeadForm({ result, plans }: { result: WebsiteCheckResult; plans: PlanCa
                   {err}
                 </p>
               )}
-              <button type="submit" disabled={busy || !form.name.trim() || !form.email.trim()} className="btn-primary mt-5 w-full">
+              <button type="submit" disabled={busy} className="btn-primary mt-5 w-full">
                 {busy ? "Versturen…" : "Neem contact met me op"}
               </button>
             </form>
@@ -484,7 +493,12 @@ export function WebsiteCheck({ initial, plans, initialDealId = null }: { initial
 
   async function run(e: React.FormEvent) {
     e.preventDefault();
-    if (!url.trim()) return;
+    if (!url.trim()) {
+      // de knop staat aan (14 nov): zeg wat ontbreekt in plaats van stil niets te doen
+      setErr(vulNogIn(["het adres van je website"]));
+      meldOntbreekt("website-check", "url");
+      return;
+    }
     setBusy(true);
     setErr("");
     try {
@@ -554,7 +568,7 @@ export function WebsiteCheck({ initial, plans, initialDealId = null }: { initial
               disabled={busy}
               className="min-w-0 flex-1 rounded-full border border-white/20 bg-white px-5 py-3 text-base text-ink placeholder:text-neutralx-400"
             />
-            <button type="submit" disabled={busy || !url.trim()} className="btn-mint px-7 py-3 text-base">
+            <button type="submit" disabled={busy} className="btn-mint px-7 py-3 text-base">
               {busy ? "Bezig…" : "Check mijn website"}
             </button>
           </form>

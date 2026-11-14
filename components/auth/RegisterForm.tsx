@@ -14,6 +14,8 @@ import { BUITEN_LANDEN, EU_LANDEN } from "@/lib/onboarding/buitenland";
 import { emailDomein, isGratisMail } from "@/lib/company/eigendom";
 import { WERKRUIMTES, WERKRUIMTE_INFO, type Werkruimte } from "@/lib/werkgever/werkruimte";
 import { CONCEPT_KEY, parseConcept } from "@/lib/klusconcept/concept";
+import { eersteOntbrekend } from "@/lib/formulieren/ontbreekt";
+import { meldOntbreekt } from "@/components/analytics/formulier";
 
 const initial: RegisterState = { error: null };
 
@@ -29,10 +31,11 @@ function EyeIcon({ off }: { off: boolean }) {
   );
 }
 
-function SubmitButton({ type, disabled, t }: { type: "freelancer" | "bedrijf"; disabled: boolean; t: (typeof AUTH_DICTS)["nl"]["register"] }) {
+function SubmitButton({ type, t }: { type: "freelancer" | "bedrijf"; t: (typeof AUTH_DICTS)["nl"]["register"] }) {
   const { pending } = useFormStatus();
+  // de knop staat aan (14 nov): wie drukt terwijl er iets ontbreekt, krijgt een melding die het veld noemt (onSubmit hieronder)
   return (
-    <button type="submit" disabled={pending || disabled} className="btn-primary w-full disabled:opacity-50">
+    <button type="submit" disabled={pending} className="btn-primary w-full disabled:opacity-50">
       {pending ? t.busy : type === "bedrijf" ? t.submitCompany : t.submitWorker}
     </button>
   );
@@ -223,12 +226,34 @@ export function RegisterForm({
   }, [gratisMail, type, bedrijfGekozen]);
 
   const sociaal = type === "freelancer";
-  const canSubmit =
-    (emailState === "free" || emailState === "unavailable") &&
-    pw.length > 0 &&
-    ((pwInfo?.score ?? 0) >= 2 || pwCheckUnavailable) &&
-    !(pwInfo?.breached ?? false) &&
-    (type === "freelancer" || company.trim().length >= 2);
+  // Wat ontbreekt er nog? De knop staat altijd aan; bij een druk met iets open komt deze zin met role="alert" en gaat
+  // één anoniem meet-event weg (formulier:register:melding:<veld>). De server controleert daarna alles opnieuw.
+  const [klopNiet, setKlopNiet] = useState<string | null>(null);
+  function controleerVoorVersturen(e: React.FormEvent<HTMLFormElement>) {
+    const fd = new FormData(e.currentTarget);
+    const woorden = { vulNogIn: t.fillIn.replace(/:\s*\{velden\}\.?$/, ""), en: t.listAnd };
+    const ontbreekt = eersteOntbrekend(
+      [
+        { code: "naam", naam: t.fullName.toLowerCase(), mist: !String(fd.get("fullName") ?? "").trim() },
+        { code: "email", naam: t.email.toLowerCase(), mist: !email.trim() },
+        { code: "email-ongeldig", naam: t.email.toLowerCase(), mist: email.trim().length > 0 && emailState === "invalid", eigenTekst: t.emailInvalid },
+        { code: "email-bezet", naam: t.email.toLowerCase(), mist: emailState === "taken", eigenTekst: t.emailTaken },
+        { code: "wachtwoord", naam: t.password.toLowerCase(), mist: pw.length === 0 },
+        { code: "wachtwoord-zwak", naam: t.password.toLowerCase(), mist: pw.length > 0 && (pwInfo?.score ?? 0) < 2 && !pwCheckUnavailable, eigenTekst: pwInfo?.warnings?.[0] ?? t.passwordWeak },
+        { code: "wachtwoord-gelekt", naam: t.password.toLowerCase(), mist: Boolean(pwInfo?.breached), eigenTekst: t.breached },
+        { code: "wachtwoord-herhaal", naam: t.repeat.toLowerCase(), mist: String(fd.get("passwordConfirm") ?? "") !== "" && String(fd.get("passwordConfirm") ?? "") !== pw, eigenTekst: t.noMatch },
+        { code: "bedrijf", naam: t.companyName, mist: type === "bedrijf" && company.trim().length < 2 },
+      ],
+      woorden,
+    );
+    if (!ontbreekt) {
+      setKlopNiet(null);
+      return;
+    }
+    e.preventDefault();
+    setKlopNiet(ontbreekt.tekst);
+    meldOntbreekt("register", ontbreekt.veld);
+  }
 
   return (
     <div>
@@ -281,7 +306,7 @@ export function RegisterForm({
       )}
       {sociaal && (googleEnabled || appleEnabled) && <AuthDivider label={or} />}
 
-      <form action={formAction} className="space-y-4">
+      <form action={formAction} onSubmit={controleerVoorVersturen} className="space-y-4">
         <input type="hidden" name="type" value={type} />
         {type === "freelancer" && defaultWorkerKind && <input type="hidden" name="workerKind" value={defaultWorkerKind} />}
         {type === "bedrijf" && <input type="hidden" name="kvkNumber" value={kvk} />}
@@ -462,7 +487,12 @@ export function RegisterForm({
         </div>
 
 
-        <SubmitButton type={type} disabled={!canSubmit} t={t} />
+        {klopNiet && (
+          <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2.5 text-sm text-crit">
+            {klopNiet}
+          </p>
+        )}
+        <SubmitButton type={type} t={t} />
       </form>
 
       <p className="mt-4 text-xs leading-relaxed text-neutralx-400">

@@ -89,6 +89,13 @@ export interface AuthDict {
     and: string;
     privacy: string;
     afterWorker: string;
+    /** "Vul nog in: {velden}." — de verzendknop staat aan; dit zegt wat ontbreekt */
+    fillIn: string;
+    /** het woord tussen de laatste twee velden in die zin ("en") */
+    listAnd: string;
+    /** de naam van het organisatieveld in die zin */
+    companyName: string;
+    passwordWeak: string;
   };
   verify: {
     title: string;
@@ -489,6 +496,10 @@ const nl: AuthDict = {
     and: "en de",
     privacy: "privacyverklaring",
     afterWorker: "Na aanmelding rond je je profiel af met je KVK- of btw-nummer en een identiteitscheck.",
+    fillIn: "Vul nog in: {velden}.",
+    listAnd: "en",
+    companyName: "de naam van je organisatie",
+    passwordWeak: "Kies een sterker wachtwoord.",
   },
   verify: {
     title: "Bevestig je e-mailadres",
@@ -888,6 +899,10 @@ const en: AuthDict = {
     and: "and the",
     privacy: "privacy statement",
     afterWorker: "After signing up you finish your profile with your KVK or VAT number and an ID check.",
+    fillIn: "Please fill in: {velden}.",
+    listAnd: "and",
+    companyName: "your organisation name",
+    passwordWeak: "Choose a stronger password.",
   },
   verify: {
     title: "Confirm your email address",
@@ -1287,6 +1302,10 @@ const pl: AuthDict = {
     and: "oraz",
     privacy: "politykę prywatności",
     afterWorker: "Po rejestracji uzupełnisz profil numerem KVK lub VAT i weryfikacją tożsamości.",
+    fillIn: "Uzupełnij: {velden}.",
+    listAnd: "i",
+    companyName: "nazwę organizacji",
+    passwordWeak: "Wybierz silniejsze hasło.",
   },
   verify: {
     title: "Potwierdź adres e-mail",
@@ -1686,6 +1705,10 @@ const ro: AuthDict = {
     and: "și",
     privacy: "declarația de confidențialitate",
     afterWorker: "După înregistrare îți completezi profilul cu numărul KVK sau codul TVA și o verificare a identității.",
+    fillIn: "Completează: {velden}.",
+    listAnd: "și",
+    companyName: "numele organizației",
+    passwordWeak: "Alege o parolă mai puternică.",
   },
   verify: {
     title: "Confirmă adresa de e-mail",
@@ -2085,6 +2108,10 @@ const uk: AuthDict = {
     and: "та",
     privacy: "політикою конфіденційності",
     afterWorker: "Після реєстрації ти завершиш профіль номером KVK або ПДВ і перевіркою особи.",
+    fillIn: "Заповніть: {velden}.",
+    listAnd: "та",
+    companyName: "назву організації",
+    passwordWeak: "Оберіть надійніший пароль.",
   },
   verify: {
     title: "Підтверди електронну пошту",

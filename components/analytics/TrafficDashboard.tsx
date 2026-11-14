@@ -29,7 +29,16 @@ interface Summary {
   formulieren: Record<string, { melding: number; velden: Record<string, number>; verstuurd: number }>;
 }
 
-const FORMULIER_NAAM: Record<string, string> = { demo: "Demo aanvragen (/demo)", "klus-plaatsen": "Klus samenstellen (/klus-plaatsen)" };
+const FORMULIER_NAAM: Record<string, string> = {
+  demo: "Demo aanvragen (/demo)",
+  "klus-plaatsen": "Klus samenstellen (/klus-plaatsen)",
+  "register": "Aanmelden (/register)",
+  "website-check": "Website-check: adres (/website-check)",
+  "website-check-lead": "Website-check: contact (/website-check)",
+  "uitzendbureau": "Uitzendbureau-aanvraag (/uitzendbureau)",
+  "rekentool-uitkomst": "Rekentool: uitkomst mailen (/rekentools)",
+  "btw-check": "Btw-nummer check (/rekentools/btw-nummer-check)",
+};
 
 const RANGES = [7, 30, 90] as const;
 

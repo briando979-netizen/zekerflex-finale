@@ -12,7 +12,7 @@
 export const FORMULIER_PREFIX = "formulier:";
 const CODE = /^[a-z0-9][a-z0-9-]{0,39}$/;
 
-export type FormulierNaam = "demo" | "klus-plaatsen";
+export type FormulierNaam = "demo" | "klus-plaatsen" | "register" | "website-check" | "website-check-lead" | "uitzendbureau" | "rekentool-uitkomst" | "btw-check";
 
 export interface FormulierTelling {
   /** hoe vaak de melding "Vul nog in" is gezien (per sessie hooguit één keer per veld) */
