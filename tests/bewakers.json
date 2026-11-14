@@ -11,6 +11,7 @@
     "tests/bewakers.test.ts",
     "tests/bezoekstatistiek-bewaren.test.ts",
     "tests/caddy-log-bewaren.test.ts",
+    "tests/chat-stickers.test.ts",
     "tests/chat-taal.test.ts",
     "tests/client-imports.test.ts",
     "tests/cookiebeleid-cookies.test.ts",
