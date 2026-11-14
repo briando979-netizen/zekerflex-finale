@@ -12,7 +12,8 @@ import { addSuppression, normaliseEmail } from "@/lib/sales/suppression";
 //  webhook.)
 // ---------------------------------------------------------------------------
 
-async function cancelOpenOutreach(leadId: string): Promise<void> {
+/** Open concepten van een lead vervallen (ook na een telefoontje, lib/sales/bellijst-server.ts). */
+export async function cancelOpenOutreach(leadId: string): Promise<void> {
   await prisma.salesOutreach.updateMany({
     where: { leadId, status: { in: ["DRAFT", "SCHEDULED", "APPROVED"] } },
     data: { status: "DISCARDED" },

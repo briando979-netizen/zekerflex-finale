@@ -7,14 +7,19 @@ import { markLeadBounced, markLeadReplied, suppressLead } from "@/lib/sales/repl
 import { enrichLeadContact } from "@/lib/sales/discovery/contact-scrape";
 import { scoreLeadWebsite } from "@/lib/sales/website-score";
 import { withAdminAccess } from "@/lib/auth/handlers";
+import { legBelUitkomstVast } from "@/lib/sales/bellijst-server";
+import { BEL_UITKOMSTEN, type BelUitkomst } from "@/lib/sales/bellijst";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const paramsSchema = z.object({ id: z.string().min(1).max(128) });
 const patchSchema = z.object({
-  action: z.enum(["enrich", "score", "draft", "mark-replied", "mark-bounced", "suppress", "scrape-contact", "set-stage", "website-check"]),
+  action: z.enum(["enrich", "score", "draft", "mark-replied", "mark-bounced", "suppress", "scrape-contact", "set-stage", "website-check", "gebeld"]),
   status: z.enum(["NEW", "QUEUED", "REPLIED", "WON", "LOST"]).optional(),
+  /** bij "gebeld" (de bellijst): de uitkomst van het telefoontje en een korte notitie */
+  uitkomst: z.enum(BEL_UITKOMSTEN.map((u) => u.id) as [BelUitkomst, ...BelUitkomst[]]).optional(),
+  notitie: z.string().trim().max(300).optional(),
 });
 
 export const GET = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (_req, { params }) => {
@@ -33,6 +38,12 @@ export const PATCH = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (
   if (action === "set-stage") {
     if (!parsed.status) throw AppError.validation("Fase ontbreekt.");
     return NextResponse.json({ lead: await setLeadStage(id, parsed.status, principal.userId) });
+  }
+
+  if (action === "gebeld") {
+    if (!parsed.uitkomst) throw AppError.validation("Kies wat het telefoontje opleverde.");
+    const { lead } = await legBelUitkomstVast(id, parsed.uitkomst, principal.userId, parsed.notitie);
+    return NextResponse.json({ lead });
   }
 
   if (action === "enrich") {

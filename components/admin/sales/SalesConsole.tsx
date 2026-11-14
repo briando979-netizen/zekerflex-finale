@@ -6,12 +6,14 @@ import { PipelineBoard } from "@/components/admin/sales/PipelineBoard";
 import { CampaignsTab, type CampaignDto } from "@/components/admin/sales/CampaignsTab";
 import { EngineTab, type EngineSnapshot } from "@/components/admin/sales/EngineTab";
 import { SuppressionTab, type SuppressionEntry } from "@/components/admin/sales/SuppressionTab";
+import { BelLijst } from "@/components/admin/sales/BelLijst";
 
-type Tab = "pijplijn" | "leads" | "campagnes" | "motor" | "onderdrukking";
+type Tab = "pijplijn" | "leads" | "bellen" | "campagnes" | "motor" | "onderdrukking";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "pijplijn", label: "Bord" },
   { id: "leads", label: "Lijst" },
+  { id: "bellen", label: "Bellen" },
   { id: "campagnes", label: "Campagnes" },
   { id: "motor", label: "Motor" },
   { id: "onderdrukking", label: "Niet benaderen" },
@@ -25,7 +27,7 @@ export function SalesConsole({
   initialEngine,
   initialSuppression,
 }: {
-  /** uit de querystring (?weergave=leads&filter=wacht), bv. vanaf de kaart op het beheerstartscherm */
+  /** uit de querystring (?weergave=leads&filter=wacht of ?weergave=bellen), bv. vanaf de kaart op het beheerstartscherm */
   initialTab?: string | undefined;
   initialFilter?: string | undefined;
   initialLeads: LeadDto[];
@@ -59,6 +61,7 @@ export function SalesConsole({
 
       {tab === "pijplijn" && <PipelineBoard initialLeads={initialLeads} />}
       {tab === "leads" && <SalesDashboard initialLeads={initialLeads} {...(initialFilter ? { initialFilter } : {})} />}
+      {tab === "bellen" && <BelLijst />}
       {tab === "campagnes" && <CampaignsTab initialCampaigns={initialCampaigns} />}
       {tab === "motor" && <EngineTab initial={initialEngine} />}
       {tab === "onderdrukking" && <SuppressionTab initial={initialSuppression} />}
