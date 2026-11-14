@@ -66,7 +66,7 @@ export function AfspraakCard({
       </p>
       {afspraak.plek && <p className="text-xs text-neutralx-600">📍 {afspraak.plek}</p>}
       {af ? (
-        <p className="mt-2 text-xs font-semibold text-crit">{t.afspraakAfgezegd}</p>
+        <p role="status" className="mt-2 text-xs font-semibold text-crit">{t.afspraakAfgezegd}</p>
       ) : (
         <div className="mt-2 flex gap-1.5" role="group" aria-label={t.afspraakAntwoord}>
           {ANTWOORDEN.map((a) => (
