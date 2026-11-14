@@ -88,6 +88,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "scan-dagoverzicht", label: "Scans & deals: dagoverzicht aan sales", maxAgeHours: 26 },
   // elke 15 min: verzegelde chipgegevens van de ID-controle opruimen (lib/kyc/chip/sessie.ts ruimChipOp)
   { job: "chip-opruimen", label: "ID-controle: chipgegevens opruimen", maxAgeHours: 2 },
+  // elke minuut: geplande chatberichten versturen (lib/messaging/gepland.ts, "later versturen")
+  { job: "chat-gepland", label: "Chat: geplande berichten versturen", maxAgeHours: 1 },
   // elke 30 min: KVK-controles die wachtten op tegoed of de minuutlimiet (lib/kvk/herkansing.ts)
   { job: "kvk-herkansing", label: "KVK-controles opnieuw (na tegoed of limiet)", maxAgeHours: 2 },
   // elke 15 min: het live Stripe-account (betalen en uitbetalen aan?) (lib/billing/stripe-betalen.ts)

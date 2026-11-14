@@ -16,6 +16,7 @@ import { ContactKiezer } from "./ContactKiezer";
 import { AfspraakMaker } from "./AfspraakMaker";
 import { LocatieKiezer } from "./LocatieKiezer";
 import { StickerKiezer } from "./StickerKiezer";
+import { LaterVersturen } from "./LaterVersturen";
 import type { StickerId } from "@/lib/messaging/stickers";
 import type { LiveDuur } from "@/lib/messaging/live-locatie";
 
@@ -168,6 +169,7 @@ export function Composer({
   onDropHandled,
   members = [],
   contactKandidaten = [],
+  onPlan,
 }: {
   /** text of the last message from the other side — for ✨ reply suggestions */
   lastIncoming?: string;
@@ -191,6 +193,8 @@ export function Composer({
   members?: Lid[];
   /** wie je als contactkaart kunt delen (je contacten en gesprekspartners) */
   contactKandidaten?: Kandidaat[];
+  /** later versturen: inplannen; geeft een foutmelding terug, of null als het lukte */
+  onPlan?: (text: string, wanneer: string) => Promise<string | null>;
 }) {
   const chat = useChatTeksten();
   // what you typed stays as a draft per conversation (drafts.ts)
@@ -259,6 +263,7 @@ export function Composer({
   const [afspraakOpen, setAfspraakOpen] = useState(false);
   const [locatieOpen, setLocatieOpen] = useState(false);
   const [stickerOpen, setStickerOpen] = useState(false);
+  const [laterOpen, setLaterOpen] = useState(false);
   const [hoverDevice, setHoverDevice] = useState(false);
   useEffect(() => {
     void setHoverDevice(window.matchMedia(HOVER).matches);
@@ -659,6 +664,16 @@ export function Composer({
                   setContactOpen(true);
                 }}
               />
+              {onPlan && (
+                <MenuItem
+                  icon="🕒"
+                  label={chat.composer.menuLater}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setLaterOpen(true);
+                  }}
+                />
+              )}
               <MenuItem
                 icon="✨"
                 label={chat.composer.menuSticker}
@@ -869,6 +884,22 @@ export function Composer({
       )}
 
       {locatieOpen && <LocatieKiezer onKies={shareLocation} onCancel={() => setLocatieOpen(false)} />}
+      {laterOpen && onPlan && (
+        <LaterVersturen
+          tekst={text}
+          onCancel={() => setLaterOpen(false)}
+          onPlan={async (t, wanneer) => {
+            const probleem = await onPlan(t, wanneer);
+            if (!probleem) {
+              // ingepland: het veld en het concept zijn leeg, zoals na gewoon versturen
+              setLaterOpen(false);
+              setText("");
+              writeDraft(threadId, "");
+            }
+            return probleem;
+          }}
+        />
+      )}
       {stickerOpen && (
         <StickerKiezer
           onCancel={() => setStickerOpen(false)}

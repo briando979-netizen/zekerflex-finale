@@ -34,6 +34,8 @@ export const ERASABLE_KV_PREFIXES = [
   "chat-bewaard:",
   // de plek van een lopende live locatie in de chat (lib/messaging/store.ts, chat-live:<userId>:<gesprek>:<bericht>)
   "chat-live:",
+  // berichten die iemand later wil versturen (lib/messaging/gepland.ts, chat-gepland:<userId>:<id>)
+  "chat-gepland:",
   "chat-prefs:",
   "chat-settings:",
   "chip-lezing:",
