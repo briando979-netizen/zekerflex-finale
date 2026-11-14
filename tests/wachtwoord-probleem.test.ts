@@ -12,7 +12,8 @@ describe("wachtwoordProbleem", () => {
 
   it("zwak: de reden uit de sterktemeting, zonder de lekdienst te vragen", async () => {
     let gevraagd = false;
-    const uit = await wachtwoordProbleem("wachtwoord123", [], async () => {
+    // "12345678" staat in de eigen lijst met veelgebruikte wachtwoorden (score 0); de lekdienst wordt dan niet eens gevraagd
+    const uit = await wachtwoordProbleem("12345678", [], async () => {
       gevraagd = true;
       return false;
     });
