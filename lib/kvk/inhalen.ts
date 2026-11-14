@@ -24,7 +24,8 @@ export const ZONDER_CONTROLE_WHERE: Prisma.FreelancerProfileWhereInput = {
   kvkValid: false,
   vatValid: false,
   companyRegistration: { is: null },
-  kvkNumber: { not: null },
+  // kvkNumber is een verplichte kolom: leeg = geen nummer; de vorm (8 cijfers) controleert kiesInTeHalen
+  kvkNumber: { not: "" },
   user: { disabledAt: null },
 };
 
