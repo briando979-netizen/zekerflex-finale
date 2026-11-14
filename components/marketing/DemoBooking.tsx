@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { DEMO_TIME_SLOTS, formatDemoDate, isSelectableDemoDate } from "@/lib/demo/slots";
+import { ontbrekendInDemo } from "@/lib/demo/validatie";
 import { amsterdamParts } from "@/lib/time/amsterdam";
 
 type Step = "date" | "time" | "info" | "done";
@@ -67,8 +68,11 @@ export function DemoBooking() {
   }
 
   async function submit() {
-    if (!consent) {
-      setErr("Zet het vinkje voor akkoord om te bevestigen.");
+    // De knop staat altijd aan: wie drukt, hoort precies wat er nog ontbreekt (gemeten 14 nov:
+    // bezoekers haakten af op dit formulier zonder dat er ooit een melding verscheen).
+    const ontbreekt = ontbrekendInDemo(form, consent);
+    if (ontbreekt) {
+      setErr(ontbreekt);
       return;
     }
     if (!date || !time) return;
@@ -210,6 +214,9 @@ export function DemoBooking() {
               <label className="block">
                 <span className="text-xs font-semibold text-ink">Voornaam *</span>
                 <input
+                  name="firstName"
+                  autoComplete="given-name"
+                  required
                   value={form.firstName}
                   onChange={(e) => setForm({ ...form, firstName: e.target.value })}
                   className="mt-1 w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm"
@@ -218,6 +225,9 @@ export function DemoBooking() {
               <label className="block">
                 <span className="text-xs font-semibold text-ink">Achternaam *</span>
                 <input
+                  name="lastName"
+                  autoComplete="family-name"
+                  required
                   value={form.lastName}
                   onChange={(e) => setForm({ ...form, lastName: e.target.value })}
                   className="mt-1 w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm"
@@ -228,6 +238,10 @@ export function DemoBooking() {
               <span className="text-xs font-semibold text-ink">Zakelijk e-mailadres *</span>
               <input
                 type="email"
+                name="email"
+                autoComplete="email"
+                inputMode="email"
+                required
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 className="mt-1 w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm"
@@ -237,6 +251,9 @@ export function DemoBooking() {
               <label className="block">
                 <span className="text-xs font-semibold text-ink">Bedrijfsnaam *</span>
                 <input
+                  name="company"
+                  autoComplete="organization"
+                  required
                   value={form.company}
                   onChange={(e) => setForm({ ...form, company: e.target.value })}
                   className="mt-1 w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm"
@@ -245,6 +262,10 @@ export function DemoBooking() {
               <label className="block">
                 <span className="text-xs font-semibold text-ink">Telefoon</span>
                 <input
+                  type="tel"
+                  name="phone"
+                  autoComplete="tel"
+                  inputMode="tel"
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   className="mt-1 w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-sm"
@@ -279,7 +300,7 @@ export function DemoBooking() {
             <button
               type="button"
               onClick={submit}
-              disabled={busy || !form.firstName || !form.lastName || !form.email || !form.company}
+              disabled={busy}
               className="btn-primary mt-4 w-full disabled:opacity-60"
             >
               {busy ? "Versturen…" : "Demo aanvragen"}
