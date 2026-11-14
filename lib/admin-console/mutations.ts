@@ -101,20 +101,31 @@ const deactivateInactiveFreelancers = defineMutation({
 
 // --- cancel_past_due_open_shifts ----------------------------------------
 
+// Alleen klussen waar niemand (meer) op staat. Een klus met een actieve inschrijving (cancelledAt null) is gewoon
+// uitgevoerd of loopt nog: die hoort niet op CANCELLED (14 nov: ook PARTIALLY_FILLED met werkers erop viel hieronder).
+// Zulke klussen rondt de nachtelijke taak na afloop af (lib/shifts/verlopen.ts); hier worden ze alleen geteld.
 function staleShiftWhere(): Prisma.ShiftWhereInput {
-  return { status: { in: MATCHABLE }, startsAt: { lt: new Date() } };
+  return { status: { in: MATCHABLE }, startsAt: { lt: new Date() }, assignments: { none: { cancelledAt: null } } };
+}
+
+function staleMetIemandWhere(): Prisma.ShiftWhereInput {
+  return { status: { in: MATCHABLE }, startsAt: { lt: new Date() }, assignments: { some: { cancelledAt: null } } };
+}
+
+function blijvenStaanTekst(n: number): string {
+  return `${n} verlopen klus(sen) met iemand erop blijven staan: die zijn uitgevoerd of nog bezig en horen niet op geannuleerd.`;
 }
 
 const cancelPastDueOpenShifts = defineMutation({
   name: "cancel_past_due_open_shifts",
   description:
-    "Annuleer shifts waarvan de starttijd al is verstreken maar die nog OPEN / MATCHING / gedeeltelijk gevuld zijn.",
+    "Annuleer klussen waarvan de starttijd al is verstreken, die nog OPEN / MATCHING / gedeeltelijk gevuld zijn en waar niemand op staat. Klussen met een actieve inschrijving blijven staan.",
   params: z.object({}),
   paramsHint: "{} (geen parameters)",
   risk: "medium",
   async dryRun() {
     const where = staleShiftWhere();
-    const [affectedCount, sample] = await Promise.all([
+    const [affectedCount, sample, blijvenStaan] = await Promise.all([
       prisma.shift.count({ where }),
       prisma.shift.findMany({
         where,
@@ -126,7 +137,11 @@ const cancelPastDueOpenShifts = defineMutation({
         take: 10,
         orderBy: { startsAt: "asc" },
       }),
+      prisma.shift.count({ where: staleMetIemandWhere() }),
     ]);
+    const warnings: string[] = [];
+    if (affectedCount > 0) warnings.push("Lopende matching-golven voor deze klussen stoppen bij de volgende worker-tick.");
+    if (blijvenStaan > 0) warnings.push(blijvenStaanTekst(blijvenStaan));
     return {
       affectedCount,
       sample: sample.map((s) => ({
@@ -134,24 +149,22 @@ const cancelPastDueOpenShifts = defineMutation({
         vestiging: s.branch.name,
         startte: s.startsAt.toISOString(),
       })),
-      warnings:
-        affectedCount === 0
-          ? []
-          : [
-              "Lopende matching-golven voor deze shifts stoppen bij de volgende worker-tick.",
-            ],
+      warnings,
       reversible: false,
-      summary: `${affectedCount} verlopen open shift(s) worden op CANCELLED gezet.`,
+      summary: `${affectedCount} verlopen open klus(sen) zonder iemand erop worden op CANCELLED gezet; ${blijvenStaan} met iemand erop blijven staan.`,
     };
   },
   async execute() {
-    const res = await prisma.shift.updateMany({
-      where: staleShiftWhere(),
-      data: { status: ShiftStatus.CANCELLED },
-    });
+    const [res, blijvenStaan] = await Promise.all([
+      prisma.shift.updateMany({
+        where: staleShiftWhere(),
+        data: { status: ShiftStatus.CANCELLED },
+      }),
+      prisma.shift.count({ where: staleMetIemandWhere() }),
+    ]);
     return {
       affectedCount: res.count,
-      detail: `${res.count} shift(s) geannuleerd.`,
+      detail: `${res.count} klus(sen) geannuleerd.${blijvenStaan > 0 ? ` ${blijvenStaanTekst(blijvenStaan)}` : ""}`,
     };
   },
 });
