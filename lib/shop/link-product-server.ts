@@ -5,7 +5,7 @@ import { FetchError, fetchPage } from "@/lib/website-check/fetch";
 import { importRemoteImage } from "@/lib/media/clean-image";
 import { storeUpload } from "@/lib/storage/local";
 import { kvGet, kvListEntries, kvSet } from "@/lib/storage/kv";
-import { isBruikbaar, kortAdres, leesProductPagina, leesShopifyProduct, leesWooProduct, shopifyGegevensAdres, wooGegevensAdres, type LinkProduct } from "@/lib/shop/link-product";
+import { alibabaGegevensAdres, isBruikbaar, kortAdres, leesProductPagina, leesShopifyProduct, leesWooProduct, shopifyGegevensAdres, wooGegevensAdres, type LinkProduct } from "@/lib/shop/link-product";
 
 // ---------------------------------------------------------------------------
 // "Product van een link" (Winkel-AI): de pagina ophalen via de veilige ophaler (geen interne adressen, begrensde grootte)
@@ -15,7 +15,7 @@ import { isBruikbaar, kortAdres, leesProductPagina, leesShopifyProduct, leesWooP
 // ---------------------------------------------------------------------------
 
 const NIET_LEESBAAR =
-  "Deze pagina geeft ons geen productgegevens. Grote marktplaatsen zoals AliExpress, Temu en Amazon laten hun pagina's niet door een programma lezen. Kopieer daar zelf de naam en de omschrijving en plak ze in het vak hieronder; het adres van de foto kun je apart invullen.";
+  "Deze pagina geeft ons geen productgegevens. Grote marktplaatsen zoals AliExpress, Temu en Amazon laten hun pagina's niet door een programma lezen. Bij Alibaba werkt de link van één product (…/product-detail/… of …/product-introduction/…), een overzicht zoals de dropshipping-producten niet. Kopieer anders zelf de naam en de omschrijving en plak ze in het vak hieronder; het adres van de foto kun je apart invullen.";
 
 export interface LinkUitkomst extends LinkProduct {
   /** de website waar het vandaan komt (alleen de naam, voor de melding) */
@@ -24,8 +24,10 @@ export interface LinkUitkomst extends LinkProduct {
 
 export async function haalProductVanLink(url: string): Promise<LinkUitkomst> {
   let pagina: Awaited<ReturnType<typeof fetchPage>>;
+  // Alibaba: meteen de leesbare introductiepagina van hetzelfde product (de gewone productpagina geeft een robot een captcha)
+  const alibaba = alibabaGegevensAdres(url);
   try {
-    pagina = await fetchPage(url.trim(), { timeoutMs: 15_000 });
+    pagina = await fetchPage(alibaba ?? url.trim(), { timeoutMs: 15_000 });
   } catch (err) {
     if (err instanceof FetchError) throw AppError.validation(err.message);
     throw err;
@@ -33,7 +35,7 @@ export async function haalProductVanLink(url: string): Promise<LinkUitkomst> {
   const bron = new URL(pagina.finalUrl).hostname.replace(/^www\./, "");
   if (pagina.status !== 200) throw AppError.validation(`Die website antwoordde met code ${pagina.status}. Controleer de link, of plak de naam en de omschrijving zelf in het vak hieronder.`);
   let product = leesProductPagina(pagina.body, pagina.finalUrl);
-  let via = "pagina";
+  let via = alibaba ? "alibaba" : "pagina";
   // Geeft de pagina te weinig, dan het gegevensadres van het winkelsysteem proberen (Shopify, WooCommerce).
   if (!isBruikbaar(product)) {
     const shopify = shopifyGegevensAdres(pagina.finalUrl);
