@@ -18,7 +18,8 @@ export function normalizeNumber(raw: string): string {
 }
 
 const consentKey = (n: string) => `tel:consent:${normalizeNumber(n)}`;
-const optoutKey = (n: string) => `tel:optout:${normalizeNumber(n)}`;
+/** De sleutel van de niet-bellen-lijst; ook gelezen door de bellijst in Beheer → Sales (lib/sales/bellijst-server.ts). */
+export const optoutKey = (n: string) => `tel:optout:${normalizeNumber(n)}`;
 
 export interface ConsentDecision {
   allowed: boolean;
