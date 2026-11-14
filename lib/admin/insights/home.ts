@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { zonderTestklussen } from "@/lib/shifts/testklus-db";
 import { financeOverview } from "@/lib/admin/finance";
 import { getTriage, type TriageItem } from "@/lib/admin/triage";
 import { allFunnelReports, type FunnelReport } from "@/lib/analytics/funnel";
@@ -67,6 +68,8 @@ const ACTIVITY_TEXT: Record<string, string> = {
 
 export async function homeInsights(period: Period): Promise<HomeInsights> {
   const { from, prevFrom, to } = period;
+  // klussen in tellingen en bezettingsgraad: alleen echte vraag, geen testklussen
+  const zonderTest = await zonderTestklussen(prevFrom);
   const [
     finance,
     financePrev,
@@ -106,10 +109,10 @@ export async function homeInsights(period: Period): Promise<HomeInsights> {
     safe(() => financeOverview(prevFrom, from), null),
     moneyRows(prevFrom, to),
     safe(() => prisma.timesheet.findMany({ where: { status: { in: ["APPROVED", "PAID"] }, scheduledStart: { gte: prevFrom, lt: to } }, select: { billableMinutes: true, scheduledStart: true }, take: 50_000 }), []),
-    safe(() => prisma.shift.count({ where: { startsAt: { gte: from, lt: to }, status: { not: "CANCELLED" } } }), 0),
-    safe(() => prisma.shift.count({ where: { startsAt: { gte: from, lt: to }, status: { not: "CANCELLED" }, assignments: { some: { cancelledAt: null } } } }), 0),
-    safe(() => prisma.shift.count({ where: { startsAt: { gte: prevFrom, lt: from }, status: { not: "CANCELLED" } } }), 0),
-    safe(() => prisma.shift.count({ where: { startsAt: { gte: prevFrom, lt: from }, status: { not: "CANCELLED" }, assignments: { some: { cancelledAt: null } } } }), 0),
+    safe(() => prisma.shift.count({ where: { startsAt: { gte: from, lt: to }, status: { not: "CANCELLED" }, ...zonderTest } }), 0),
+    safe(() => prisma.shift.count({ where: { startsAt: { gte: from, lt: to }, status: { not: "CANCELLED" }, assignments: { some: { cancelledAt: null } }, ...zonderTest } }), 0),
+    safe(() => prisma.shift.count({ where: { startsAt: { gte: prevFrom, lt: from }, status: { not: "CANCELLED" }, ...zonderTest } }), 0),
+    safe(() => prisma.shift.count({ where: { startsAt: { gte: prevFrom, lt: from }, status: { not: "CANCELLED" }, assignments: { some: { cancelledAt: null } }, ...zonderTest } }), 0),
     safe(() => prisma.user.findMany({ where: { createdAt: { gte: prevFrom } }, select: { createdAt: true }, take: 50_000 }), []),
     visitorSeries(period),
     safe(() => getTriage(), []),
@@ -132,8 +135,8 @@ export async function homeInsights(period: Period): Promise<HomeInsights> {
     safe(() => prisma.dispute.count({ where: { status: { in: ["OPEN", "UNDER_REVIEW", "ESCALATED"] } } }), 0),
     safe(() => prisma.payment.count({ where: { status: { in: ["FAILED", "RETURNED"] } } }), 0),
     safe(() => cronHeartbeats(), []),
-    safe(() => prisma.shift.count({ where: { startsAt: { gte: to, lt: new Date(to.getTime() + 7 * 86_400_000) }, status: { not: "CANCELLED" } } }), 0),
-    safe(() => prisma.shift.count({ where: { startsAt: { gte: to, lt: new Date(to.getTime() + 2 * 86_400_000) }, status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] } } }), 0),
+    safe(() => prisma.shift.count({ where: { startsAt: { gte: to, lt: new Date(to.getTime() + 7 * 86_400_000) }, status: { not: "CANCELLED" }, ...zonderTest } }), 0),
+    safe(() => prisma.shift.count({ where: { startsAt: { gte: to, lt: new Date(to.getTime() + 2 * 86_400_000) }, status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] }, ...zonderTest } }), 0),
     // Deze lijst vraagt ook externe diensten: de pagina wacht er niet langer dan even op.
     within(ownerTodos(), 1500),
   ]);

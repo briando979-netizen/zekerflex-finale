@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { listReplacementRequests } from "@/lib/replacements/store";
 import { claimsInIncasso } from "@/lib/claims/store";
 import { doubleBookedPairs } from "@/lib/shifts/worker-overlap";
+import { zonderTestklussen } from "@/lib/shifts/testklus-db";
 
 // Unified "needs a human" queue, built from read-only queries + the filesystem
 // replacement requests. No writes anywhere.
@@ -21,6 +22,8 @@ const DAY = 24 * 3600 * 1000;
 export async function getTriage(): Promise<TriageItem[]> {
   const now = Date.now();
   const items: TriageItem[] = [];
+  // geen testklussen als werk-om-te-doen: de vestigingsnaam van een testbedrijf zegt vaak niet "test"
+  const zonderTest = await zonderTestklussen(new Date());
 
   const [disputes, submitted, failedPayments, dbaHigh, kycPending, staleShifts, replacements, incassoClaims, upcomingBooked] = await Promise.all([
     prisma.dispute.findMany({
@@ -54,7 +57,7 @@ export async function getTriage(): Promise<TriageItem[]> {
       take: 15,
     }),
     prisma.shift.findMany({
-      where: { status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] }, startsAt: { lte: new Date(now + 2 * DAY), gte: new Date() } },
+      where: { status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] }, startsAt: { lte: new Date(now + 2 * DAY), gte: new Date() }, ...zonderTest },
       select: { id: true, title: true, startsAt: true, positions: true, branch: { select: { name: true } }, _count: { select: { assignments: { where: { cancelledAt: null } } } } },
       orderBy: { startsAt: "asc" },
       take: 20,
