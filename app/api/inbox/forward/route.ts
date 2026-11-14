@@ -15,7 +15,7 @@ const schema = z.object({
   toThreadId: z.string().min(1).max(64),
 });
 
-const FORWARDABLE = ["text", "image", "file", "voice", "location"];
+const FORWARDABLE = ["text", "image", "file", "voice", "location", "sticker"];
 
 // POST /api/inbox/forward — stuur een bericht door naar een ander gesprek.
 export async function POST(req: Request): Promise<NextResponse> {
@@ -40,6 +40,7 @@ export async function POST(req: Request): Promise<NextResponse> {
     if (src.eenmalig) throw AppError.validation("Een foto die je maar één keer kunt bekijken, kun je niet doorsturen.");
     const extra: MessageExtra = { forwarded: true };
     if (src.attachment) extra.attachment = src.attachment;
+    if (src.sticker) extra.sticker = src.sticker;
     // een live locatie gaat door als de plek van dit moment; meeschuiven doet alleen het eigen bericht
     if (src.location) extra.location = vastePlek((await metLiveStand([src]))[0]?.location ?? src.location);
     const msg = await postMessage(toThreadId, p.userId, src.text, src.kind, extra);

@@ -15,6 +15,8 @@ import type { Kandidaat } from "@/lib/messaging/rondzenden";
 import { ContactKiezer } from "./ContactKiezer";
 import { AfspraakMaker } from "./AfspraakMaker";
 import { LocatieKiezer } from "./LocatieKiezer";
+import { StickerKiezer } from "./StickerKiezer";
+import type { StickerId } from "@/lib/messaging/stickers";
 import type { LiveDuur } from "@/lib/messaging/live-locatie";
 
 export interface OutgoingMessage {
@@ -36,6 +38,8 @@ export interface OutgoingMessage {
   contact?: { userId: string };
   /** kind "afspraak": begin (Nederlandse tijd), duur, plek; de titel is text */
   afspraak?: { begin: string; duur: number; plek?: string };
+  /** kind "sticker": welke (lib/messaging/stickers.ts) */
+  sticker?: StickerId;
 }
 
 // Veelgebruikte emoji voor op een computer (een telefoon heeft ze op het toetsenbord).
@@ -254,6 +258,7 @@ export function Composer({
   const [contactOpen, setContactOpen] = useState(false);
   const [afspraakOpen, setAfspraakOpen] = useState(false);
   const [locatieOpen, setLocatieOpen] = useState(false);
+  const [stickerOpen, setStickerOpen] = useState(false);
   const [hoverDevice, setHoverDevice] = useState(false);
   useEffect(() => {
     void setHoverDevice(window.matchMedia(HOVER).matches);
@@ -511,7 +516,7 @@ export function Composer({
           <span className="min-w-0 flex-1 border-l-4 border-brand-500 pl-2">
             <span className="block font-semibold text-brand-700">{replyName ? vulIn(chat.composer.antwoordAan, { naam: replyName }) : chat.composer.antwoord}</span>
             <span className="block truncate text-neutralx-600">
-              {replyTo.text || (replyTo.kind === "image" ? chat.composer.previewFoto : replyTo.kind === "voice" ? chat.composer.previewSpraak : replyTo.kind === "file" ? chat.composer.previewBestand : replyTo.kind === "location" ? chat.composer.previewLocatie : chat.composer.previewBericht)}
+              {replyTo.text || (replyTo.kind === "image" ? chat.composer.previewFoto : replyTo.kind === "voice" ? chat.composer.previewSpraak : replyTo.kind === "file" ? chat.composer.previewBestand : replyTo.kind === "location" ? chat.composer.previewLocatie : replyTo.kind === "sticker" ? chat.bubble.previewSticker : chat.composer.previewBericht)}
             </span>
           </span>
           <button type="button" onClick={onClearReply} aria-label={chat.composer.antwoordAnnuleren} title={chat.composer.annulerenEsc} className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-full text-neutralx-500 hover:bg-black/5">
@@ -652,6 +657,14 @@ export function Composer({
                 onClick={() => {
                   setMenuOpen(false);
                   setContactOpen(true);
+                }}
+              />
+              <MenuItem
+                icon="✨"
+                label={chat.composer.menuSticker}
+                onClick={() => {
+                  setMenuOpen(false);
+                  setStickerOpen(true);
                 }}
               />
               <MenuItem
@@ -856,6 +869,15 @@ export function Composer({
       )}
 
       {locatieOpen && <LocatieKiezer onKies={shareLocation} onCancel={() => setLocatieOpen(false)} />}
+      {stickerOpen && (
+        <StickerKiezer
+          onCancel={() => setStickerOpen(false)}
+          onKies={(id) => {
+            setStickerOpen(false);
+            void onSend({ text: "", kind: "sticker", sticker: id });
+          }}
+        />
+      )}
       {afspraakOpen && (
         <AfspraakMaker
           onCancel={() => setAfspraakOpen(false)}
