@@ -36,6 +36,8 @@ export const ERASABLE_KV_PREFIXES = [
   "chat-live:",
   // berichten die iemand later wil versturen (lib/messaging/gepland.ts, chat-gepland:<userId>:<id>)
   "chat-gepland:",
+  // je status in de chat, 24 uur (lib/messaging/status.ts, chat-status:<userId>); de foto valt onder Upload
+  "chat-status:",
   "chat-prefs:",
   "chat-settings:",
   "chip-lezing:",

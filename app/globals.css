@@ -408,6 +408,15 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .live-dot::after { animation: none; }
 }
+/* status in de chat (components/chat/StatusViewer.tsx): het balkje van de status die je nu ziet loopt in 5 s vol */
+.status-balk {
+  transform-origin: left;
+  animation: status-balk 5s linear forwards;
+}
+@keyframes status-balk {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
 
 /* ============================================================ ADMIN
    De beheeromgeving. Alles hangt aan .admin-scope, zodat het nooit doorlekt naar de
