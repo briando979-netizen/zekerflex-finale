@@ -51,6 +51,12 @@ describe("het ontvangen bedrag", () => {
     expect(bedragNaarCents("1.234,50")).toBe(123450);
     expect(bedragNaarCents("1,234.50")).toBe(123450);
     expect(bedragNaarCents("1.234")).toBe(123400);
+    // een heel bedrag met een streepje, zoals op een afschrift of factuur
+    expect(bedragNaarCents("€ 120,-")).toBe(12000);
+    expect(bedragNaarCents("120.-")).toBe(12000);
+    expect(bedragNaarCents("1.250,- ")).toBe(125000);
+    // een minteken ergens anders blijft geen ontvangen bedrag
+    for (const v of ["-120,-", "- 42,35", "42-35"]) expect(bedragNaarCents(v), v).toBeNull();
     for (const v of ["", "  ", "gratis", ",", "0", "-5", null, undefined, 42, {}]) expect(bedragNaarCents(v), String(v)).toBeNull();
   });
 
@@ -96,7 +102,7 @@ describe("een tweede betaling via Stripe gaat niet stil voorbij", () => {
 
   it("een andere betaling op een factuur die al betaald is: waarschuwing in het logboek en een melding aan de eigenaar", () => {
     expect(blok).toContain("stripePaymentIntentId: true,");
-    expect(blok).toContain("if (!dezeBetaling || dezeBetaling !== invoice.stripePaymentIntentId) {");
+    expect(blok).toContain("if (dezeBetaling && dezeBetaling !== invoice.stripePaymentIntentId) {");
     expect(blok).toContain('logger.warn("stripe webhook: betaling voor een factuur die al betaald is", { invoiceId: invoice.id, eventType });');
     expect(blok).toContain("key: `dubbele-betaling:${invoice.id}`,");
     expect(blok).toContain("alertOwnerLater({");
@@ -105,6 +111,9 @@ describe("een tweede betaling via Stripe gaat niet stil voorbij", () => {
   it("dezelfde betaling nog een keer (Stripe stuurt soms dubbel) geeft geen melding, en er staan geen kaart- of persoonsgegevens in", () => {
     const melding = blok.slice(blok.indexOf("} else {"));
     expect(melding).toContain("dezeBetaling !== invoice.stripePaymentIntentId");
+    // zonder kenmerk van de betaling: alleen een regel in het logboek, geen melding aan de eigenaar
+    expect(melding).toContain('if (!dezeBetaling) logger.warn("stripe webhook: betaling zonder kenmerk voor een factuur die al betaald is"');
+    expect(melding.indexOf("alertOwnerLater({")).toBeGreaterThan(melding.indexOf("if (dezeBetaling && dezeBetaling !== invoice.stripePaymentIntentId) {"));
     expect(melding).not.toMatch(/customer_details|email|card|last4|recipient|fullName/);
     // de melding noemt alleen het factuurnummer
     expect(melding).toContain("voor factuur ${invoice.number}");
@@ -129,6 +138,7 @@ describe("eerlijke tekst", () => {
   it("het paneel zegt dat de knop niet in de boekhouding boekt", () => {
     const paneel = bron("components/admin/BetaaldMeldenPaneel.tsx");
     expect(paneel).toContain("Deze knop boekt de betaling niet in de boekhouding");
+    expect(paneel).toContain("Upload daarna het bankafschrift in Boekhouding → Bank, dan klopt ook het grootboek.");
     expect(paneel).toContain("alleen met het hele factuurbedrag");
   });
 });

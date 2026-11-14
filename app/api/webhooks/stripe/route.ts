@@ -110,7 +110,8 @@ async function markInvoicePaid(invoiceId: string, session: Stripe.Checkout.Sessi
     // de hand. Is het een andere betaling (de factuur was al met de hand of eerder via Stripe op betaald gezet), dan is er twee
     // keer betaald: dat mag niet stil voorbijgaan. Alleen het factuurnummer in de melding, geen kaart- of persoonsgegevens.
     const dezeBetaling = typeof session.payment_intent === "string" ? session.payment_intent : null;
-    if (!dezeBetaling || dezeBetaling !== invoice.stripePaymentIntentId) {
+    if (!dezeBetaling) logger.warn("stripe webhook: betaling zonder kenmerk voor een factuur die al betaald is", { invoiceId: invoice.id, eventType });
+    if (dezeBetaling && dezeBetaling !== invoice.stripePaymentIntentId) {
       logger.warn("stripe webhook: betaling voor een factuur die al betaald is", { invoiceId: invoice.id, eventType });
       alertOwnerLater({
         key: `dubbele-betaling:${invoice.id}`,
