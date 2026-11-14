@@ -30,7 +30,8 @@ describe("seo-cities: de lijst waar de stadspagina's uit komen", () => {
     for (const slug of REGIO) {
       const c = cityBySlug(slug)!;
       expect(c.local).toContain(c.name.split("-")[0]!);
-      expect(c.local, slug).not.toMatch(/\d/);
+      // wegnummers (A7, N33) zijn namen, geen aantallen
+      expect(c.local.replace(/[AN]\d+/g, ""), slug).not.toMatch(/\d/);
     }
   });
 
