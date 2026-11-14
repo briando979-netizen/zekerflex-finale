@@ -6,6 +6,8 @@ import { Avatar } from "./Avatar";
 import { IconReply, IconSmiley, IconDots, IconCopy, IconForward, IconPin, IconStar, IconPencil, IconTrash } from "./icons";
 import { ActionList, MessageSheet, ReactionRow, type ActionItem } from "./MessageActions";
 import { PollCard } from "./PollCard";
+import { AfspraakCard } from "./AfspraakCard";
+import type { Antwoord } from "@/lib/messaging/afspraak";
 import { isProgramma, isVideoType } from "@/lib/messaging/bijlage";
 import { vermeldingDelen } from "@/lib/messaging/vermelding";
 import { inkorten } from "@/lib/chat/lange-tekst";
@@ -221,6 +223,8 @@ export function MessageBubble({
   onOpenEenmalig,
   onStartChat,
   onSaveContact,
+  onAfspraakAntwoord,
+  onAfspraakAnnuleer,
   onEdit,
   onForward,
   onPin,
@@ -265,6 +269,9 @@ export function MessageBubble({
   /** contactkaart: een gesprek beginnen of bewaren */
   onStartChat?: (userId: string) => void;
   onSaveContact?: (userId: string) => void;
+  /** afspraak: antwoorden (null = intrekken) of afzeggen (alleen de maker) */
+  onAfspraakAntwoord?: (m: Msg, antwoord: Antwoord | null) => void;
+  onAfspraakAnnuleer?: (m: Msg) => void;
   /** your own text message, within 24 hours: back into the composer to rewrite */
   onEdit?: (m: Msg) => void;
   onForward?: (m: Msg) => void;
@@ -786,6 +793,20 @@ export function MessageBubble({
                   </span>
                 </span>
               </a>
+            )}
+
+            {m.kind === "afspraak" && m.afspraak && (
+              <AfspraakCard
+                id={m.id}
+                titel={m.text}
+                afspraak={m.afspraak}
+                mine={mine}
+                disabled={Boolean(m.pending || m.failed)}
+                {...(myUserId ? { myUserId } : {})}
+                {...(names ? { names } : {})}
+                {...(onAfspraakAntwoord ? { onAntwoord: (a: Antwoord | null) => onAfspraakAntwoord(m, a) } : {})}
+                {...(onAfspraakAnnuleer ? { onAnnuleer: () => onAfspraakAnnuleer(m) } : {})}
+              />
             )}
 
             {m.kind === "poll" && (

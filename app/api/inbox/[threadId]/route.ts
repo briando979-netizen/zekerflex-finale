@@ -28,6 +28,7 @@ import { maakPeiling, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POLL_OPTION_MAX } from
 import { geldigeVermeldingen, VERMELDING_MAX } from "@/lib/messaging/vermelding";
 import { maakLinkVoorbeeld } from "@/lib/messaging/link-voorbeeld-ophalen";
 import { bekendenVan } from "@/lib/messaging/bekenden";
+import { maakAfspraak } from "@/lib/messaging/afspraak";
 import { BERICHT_MAX } from "@/lib/chat/lange-tekst";
 import { lijstVersie, sinceUitUrl } from "@/lib/messaging/poll-versie";
 
@@ -139,7 +140,7 @@ export async function GET(req: Request, props: { params: Promise<{ threadId: str
 
 const sendSchema = z.object({
   text: z.string().trim().max(BERICHT_MAX).optional().default(""),
-  kind: z.enum(["text", "voice", "file", "image", "location", "call", "poll", "contact"]).optional().default("text"),
+  kind: z.enum(["text", "voice", "file", "image", "location", "call", "poll", "contact", "afspraak"]).optional().default("text"),
   attachment: z
     .object({
       mediaId: z.string().min(1).max(64),
@@ -177,6 +178,8 @@ const sendSchema = z.object({
   eenmalig: z.boolean().optional(),
   // kind "contact": wie je deelt; de server zet de naam erbij
   contact: z.object({ userId: z.string().min(1).max(40) }).optional(),
+  // kind "afspraak": begin in Nederlandse tijd (datetime-local), duur in minuten, plek; de titel is text
+  afspraak: z.object({ begin: z.string().max(20), duur: z.number().int().min(15).max(1440), plek: z.string().max(200).optional() }).optional(),
 });
 
 // POST /api/inbox/:id — send a message (text, voice, file, image, location, call log).
@@ -213,6 +216,12 @@ export async function POST(request: Request, props: { params: Promise<{ threadId
     const extra: MessageExtra = {};
     let text = input.text;
     if (input.kind === "image" && input.eenmalig) extra.eenmalig = true;
+    if (input.kind === "afspraak") {
+      const a = input.afspraak ? maakAfspraak(input.text, input.afspraak.begin, input.afspraak.duur, input.afspraak.plek) : null;
+      if (!a) throw AppError.validation("Een afspraak heeft een titel en een tijd tussen gisteren en over een jaar.");
+      extra.afspraak = a.afspraak;
+      text = a.titel;
+    }
     if (input.kind === "contact") {
       // alleen iemand met wie je zelf in contact staat (zo geef je niemand door die je niet kent); de naam komt van de server
       const wie = input.contact?.userId;

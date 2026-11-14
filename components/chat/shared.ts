@@ -1,5 +1,6 @@
 // Shared types + helpers for the chat UI (dock + full page).
 
+import type { MessageAfspraak } from "@/lib/messaging/afspraak";
 import { SHARED_NL, type SharedTeksten } from "@/lib/chat/teksten-shared";
 import { vulIn } from "@/lib/i18n/vul-in";
 import { amsterdamClock, amsterdamDayKey, amsterdamParts, amsterdamStartOfDay } from "@/lib/time/amsterdam";
@@ -36,7 +37,7 @@ export interface Msg {
   from: string;
   at: string;
   text: string;
-  kind: "text" | "system" | "voice" | "file" | "image" | "location" | "call" | "poll" | "contact";
+  kind: "text" | "system" | "voice" | "file" | "image" | "location" | "call" | "poll" | "contact" | "afspraak";
   attachment?: Attachment;
   location?: { lat: number; lng: number; label?: string };
   call?: CallInfo;
@@ -61,6 +62,8 @@ export interface Msg {
   linkVoorbeeld?: { url: string; host: string; titel: string; omschrijving?: string };
   /** een gedeeld contact */
   contact?: { userId: string; naam: string };
+  /** een afspraak met aanmelden (lib/messaging/afspraak.ts) */
+  afspraak?: MessageAfspraak;
   /** foto die maar één keer te bekijken is, en wie hem al opende */
   eenmalig?: boolean;
   eenmaligGezien?: string[];

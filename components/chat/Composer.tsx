@@ -13,6 +13,7 @@ import { BERICHT_MAX, isTeLang, tekstAlsBestand, tekstBestandNaam, voorproef } f
 import { kandidaten, vermeldingenIn, vermeldingVraag, vulVermeldingIn, type Lid } from "@/lib/messaging/vermelding";
 import type { Kandidaat } from "@/lib/messaging/rondzenden";
 import { ContactKiezer } from "./ContactKiezer";
+import { AfspraakMaker } from "./AfspraakMaker";
 
 export interface OutgoingMessage {
   text: string;
@@ -30,6 +31,8 @@ export interface OutgoingMessage {
   eenmalig?: boolean;
   /** kind "contact": wie je deelt */
   contact?: { userId: string };
+  /** kind "afspraak": begin (Nederlandse tijd), duur, plek; de titel is text */
+  afspraak?: { begin: string; duur: number; plek?: string };
 }
 
 // Veelgebruikte emoji voor op een computer (een telefoon heeft ze op het toetsenbord).
@@ -246,6 +249,7 @@ export function Composer({
   const [preview, setPreview] = useState<{ file: File; kind: "image" | "file" } | null>(null);
   const [pollOpen, setPollOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
+  const [afspraakOpen, setAfspraakOpen] = useState(false);
   const [hoverDevice, setHoverDevice] = useState(false);
   useEffect(() => {
     void setHoverDevice(window.matchMedia(HOVER).matches);
@@ -637,6 +641,14 @@ export function Composer({
                 }}
               />
               <MenuItem
+                icon="📅"
+                label={chat.composer.menuAfspraak}
+                onClick={() => {
+                  setMenuOpen(false);
+                  setAfspraakOpen(true);
+                }}
+              />
+              <MenuItem
                 icon="📊"
                 label={chat.composer.menuPeiling}
                 onClick={() => {
@@ -829,6 +841,15 @@ export function Composer({
         />
       )}
 
+      {afspraakOpen && (
+        <AfspraakMaker
+          onCancel={() => setAfspraakOpen(false)}
+          onSend={(a) => {
+            setAfspraakOpen(false);
+            void onSend({ text: a.titel, kind: "afspraak", afspraak: { begin: a.begin, duur: a.duur, ...(a.plek ? { plek: a.plek } : {}) } });
+          }}
+        />
+      )}
       {contactOpen && (
         <ContactKiezer
           kandidaten={contactKandidaten}

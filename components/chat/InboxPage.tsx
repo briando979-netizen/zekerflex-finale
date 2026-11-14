@@ -44,6 +44,7 @@ import { BrainChat } from "@/components/brain/BrainChat";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { allDrafts, DRAFT_EVENT } from "./drafts";
 import { maakPeiling, sluitPeiling, stem } from "@/lib/messaging/poll";
+import { annuleerAfspraak, maakAfspraak, zetAntwoord, type Antwoord } from "@/lib/messaging/afspraak";
 import {
   canDeleteForAll,
   canEdit,
@@ -572,6 +573,7 @@ function InboxPageInner({
     const threadId = active;
     const tmpId = "tmp" + Date.now();
     const peiling = msg.kind === "poll" && msg.poll ? maakPeiling(msg.text, msg.poll.options, msg.poll.multi) : null;
+    const voorlopigeAfspraak = msg.kind === "afspraak" && msg.afspraak ? maakAfspraak(msg.text, msg.afspraak.begin, msg.afspraak.duur, msg.afspraak.plek)?.afspraak : undefined;
     const optimistic: Msg = {
       id: tmpId,
       from: me?.userId ?? "me",
@@ -582,6 +584,7 @@ function InboxPageInner({
       ...(msg.attachment ? { attachment: msg.attachment } : {}),
       ...(msg.location ? { location: msg.location } : {}),
       ...(peiling ? { poll: peiling.poll } : {}),
+      ...(voorlopigeAfspraak ? { afspraak: voorlopigeAfspraak } : {}),
       ...(msg.mentions?.length ? { mentions: msg.mentions } : {}),
       ...(msg.contact ? { contact: { userId: msg.contact.userId, naam: msg.text } } : {}),
     };
@@ -631,6 +634,21 @@ function InboxPageInner({
     if (me) void updatePollRemote(msg, { optionIds }, (p) => stem(p, me.userId, optionIds));
   };
   const closePoll = (msg: Msg) => void updatePollRemote(msg, { sluit: true }, (p) => sluitPeiling(p));
+  // afspraak: optimistisch bijwerken, daarna de serverversie overnemen (AGENTS.md)
+  const updateAfspraakRemote = async (msg: Msg, body: { antwoord: Antwoord | null } | { annuleer: true }) => {
+    if (!active || !msg.afspraak || !me) return;
+    const threadId = active;
+    const nieuw = "annuleer" in body ? annuleerAfspraak(msg.afspraak) : zetAntwoord(msg.afspraak, me.userId, body.antwoord);
+    setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, afspraak: nieuw } : m)));
+    const r = await fetch(`/api/inbox/${threadId}/afspraak`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messageId: msg.id, ...body }) }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    if (r?.ok && d?.afspraak) {
+      setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, afspraak: d.afspraak } : m)));
+      return;
+    }
+    say(d?.error?.message ?? (r ? ib.datLukteNietOpnieuw : ib.geenVerbindingOpnieuw), true);
+    void loadThread(threadId);
+  };
   const dirNames: Record<string, string> = Object.fromEntries(Object.entries(dir).map(([id, u]) => [id, u.name]));
 
   const discard = (m: Msg) => {
@@ -1518,6 +1536,8 @@ function InboxPageInner({
                         onOpenEenmalig={(e) => void openEenmalig(e)}
                         onStartChat={(uid) => void startThreadWith(uid)}
                         onSaveContact={(uid) => void bewaarContact(uid)}
+                        onAfspraakAntwoord={(am, ant) => void updateAfspraakRemote(am, { antwoord: ant })}
+                        onAfspraakAnnuleer={(am) => void updateAfspraakRemote(am, { annuleer: true })}
                         onEdit={(e) => {
                           setReplyTo(null);
                           setEditing(e);
@@ -1535,7 +1555,7 @@ function InboxPageInner({
                         starred={savedHere.includes(m.id)}
                         onPollVote={votePoll}
                         onPollClose={closePoll}
-                        {...(m.kind === "poll" || m.mentions?.length ? { names: dirNames } : {})}
+                        {...(m.kind === "poll" || m.kind === "afspraak" || m.mentions?.length ? { names: dirNames } : {})}
                         {...(me ? { myUserId: me.userId } : {})}
                         {...(pinned ? { pinnedId: pinned.id } : {})}
                       />
