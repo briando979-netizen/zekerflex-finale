@@ -280,41 +280,46 @@ export async function fetchInboxList(cfg: ImapConfig, limit = 50): Promise<ImapE
 
     const start = Math.max(1, exists - limit + 1);
     const fetchLines = await command(sock, bs, `FETCH ${start}:${exists} (UID FLAGS ENVELOPE)`, timeoutMs);
-
-    const out: ImapEnvelope[] = [];
-    for (const l of fetchLines) {
-      const m = /^\* (\d+) FETCH/i.exec(l);
-      if (!m) continue;
-      const seq = Number(m[1]);
-      // UID is a bare number in the response ("UID 123"), not a parenthesized list.
-      const uidMatch = /UID (\d+)/i.exec(l);
-      const flagsList = parseParenListAfter(l, "FLAGS ") ?? [];
-      const seen = flagsList.some((f) => typeof f === "string" && f.toUpperCase() === "\\SEEN");
-      const envList = parseParenListAfter(l, "ENVELOPE ");
-      // ENVELOPE: date, subject, from, sender, reply-to, to, cc, bcc, in-reply-to, message-id
-      const env = (envList ?? []) as unknown[];
-      const [date, subject, from] = env;
-      const { name: fromName, address: fromAddress } = addressFromList(from);
-      const replyTo = addressFromList(env[4]).address;
-      const messageId = typeof env[9] === "string" ? env[9].replace(/^<|>$/g, "").trim() || null : null;
-      if (!uidMatch) continue;
-      out.push({
-        uid: Number(uidMatch[1]),
-        seq,
-        date: typeof date === "string" ? date : null,
-        subject: typeof subject === "string" ? decodeMimeWords(subject) : null,
-        fromName,
-        fromAddress,
-        replyToAddress: replyTo && replyTo !== fromAddress ? replyTo : null,
-        messageId,
-        seen,
-      });
-    }
+    const out = envelopesUitFetch(fetchLines);
     await command(sock, bs, "LOGOUT", 5000).catch(() => undefined);
     return out.sort((a, b) => b.uid - a.uid);
   } finally {
     sock.destroy();
   }
+}
+
+/** De enveloppen uit de regels van `FETCH … (UID FLAGS ENVELOPE)`. */
+function envelopesUitFetch(fetchLines: string[]): ImapEnvelope[] {
+  const out: ImapEnvelope[] = [];
+  for (const l of fetchLines) {
+    const m = /^\* (\d+) FETCH/i.exec(l);
+    if (!m) continue;
+    const seq = Number(m[1]);
+    // UID is a bare number in the response ("UID 123"), not a parenthesized list.
+    const uidMatch = /UID (\d+)/i.exec(l);
+    const flagsList = parseParenListAfter(l, "FLAGS ") ?? [];
+    const seen = flagsList.some((f) => typeof f === "string" && f.toUpperCase() === "\\SEEN");
+    const envList = parseParenListAfter(l, "ENVELOPE ");
+    // ENVELOPE: date, subject, from, sender, reply-to, to, cc, bcc, in-reply-to, message-id
+    const env = (envList ?? []) as unknown[];
+    const [date, subject, from] = env;
+    const { name: fromName, address: fromAddress } = addressFromList(from);
+    const replyTo = addressFromList(env[4]).address;
+    const messageId = typeof env[9] === "string" ? env[9].replace(/^<|>$/g, "").trim() || null : null;
+    if (!uidMatch) continue;
+    out.push({
+      uid: Number(uidMatch[1]),
+      seq,
+      date: typeof date === "string" ? date : null,
+      subject: typeof subject === "string" ? decodeMimeWords(subject) : null,
+      fromName,
+      fromAddress,
+      replyToAddress: replyTo && replyTo !== fromAddress ? replyTo : null,
+      messageId,
+      seen,
+    });
+  }
+  return out;
 }
 
 interface MimePart {
@@ -446,19 +451,23 @@ async function fetchRawMessage(cfg: ImapConfig, uid: number, opts: FetchOptions 
       await command(sock, bs, `UID STORE ${uid} +FLAGS (\\Seen)`, timeoutMs).catch(() => undefined);
     }
     await command(sock, bs, "LOGOUT", 5000).catch(() => undefined);
-
-    // The literal was inlined as a quoted string by readResponseLine() — pull
-    // it back out of the one `* n FETCH (... BODY[] "...")` line.
-    const sleutel = `BODY[${sectie}]`;
-    const fetchLine = lines.find((l) => /FETCH/i.test(l) && l.toUpperCase().includes(sleutel));
-    if (!fetchLine) return null;
-    const pos = { i: fetchLine.toUpperCase().indexOf(sleutel) + sleutel.length };
-    while (fetchLine[pos.i] === " ") pos.i++;
-    const value = parseSexp(fetchLine, pos);
-    return typeof value === "string" ? Buffer.from(value, "utf8") : null;
+    return bodyUitFetch(lines, sectie);
   } finally {
     sock.destroy();
   }
+}
+
+/** De body uit de regels van `UID FETCH n (BODY.PEEK[sectie])`; null als hij er niet in staat. */
+function bodyUitFetch(lines: string[], sectie: string): Buffer | null {
+  // The literal was inlined as a quoted string by readResponseLine() — pull
+  // it back out of the one `* n FETCH (... BODY[] "...")` line.
+  const sleutel = `BODY[${sectie}]`;
+  const fetchLine = lines.find((l) => /FETCH/i.test(l) && l.toUpperCase().includes(sleutel));
+  if (!fetchLine) return null;
+  const pos = { i: fetchLine.toUpperCase().indexOf(sleutel) + sleutel.length };
+  while (fetchLine[pos.i] === " ") pos.i++;
+  const value = parseSexp(fetchLine, pos);
+  return typeof value === "string" ? Buffer.from(value, "utf8") : null;
 }
 
 /** Plain-text rendering of one message's body (prefers text/plain, falls back to stripped text/html) plus its attachments' metadata. */
@@ -484,10 +493,63 @@ export async function fetchForScan(cfg: ImapConfig, uid: number): Promise<{ text
   };
 }
 
-/** Het hele ruwe bericht, zonder het op gelezen te zetten (BODY.PEEK[]): voor de bounce-ronde (lib/mail/bounce-ronde.ts). */
-export async function fetchRuwOngelezen(cfg: ImapConfig, uid: number): Promise<string | null> {
-  const raw = await fetchRawMessage(cfg, uid, { markSeen: false });
-  return raw ? raw.toString("utf8") : null;
+/**
+ * Eén leessessie op INBOX voor een ronde die meerdere berichten nodig heeft (de bounce-ronde, lib/mail/bounce-ronde.ts):
+ * één login in plaats van één per bericht. Die postbus is ook die van SMTP en de offerte-AI; een reeks logins elk uur
+ * kan TransIP laten afknijpen ("451 4.3.2"), en dan stokt de echte mail. EXAMINE (alleen lezen) en BODY.PEEK: er gaat
+ * niets op gelezen. Hooguit `maxBerichten` berichten per sessie; daarna geeft ruw() null. Sluit altijd met sluit()
+ * (in een finally): LOGOUT en de verbinding dicht, ook na een fout.
+ */
+export interface ImapLeesSessie {
+  /** de nieuwste `limit` berichten (alleen de envelop), nieuwste eerst */
+  lijst(limit: number): Promise<ImapEnvelope[]>;
+  /** het hele ruwe bericht, ongelezen; null als het er niet (meer) is of de grens bereikt is */
+  ruw(uid: number): Promise<string | null>;
+  sluit(): Promise<void>;
+}
+
+export async function openLeesSessie(cfg: ImapConfig, maxBerichten = 25): Promise<ImapLeesSessie> {
+  const timeoutMs = (cfg.timeout ?? 20) * 1000;
+  const { sock, bs } = await connect(cfg);
+  let exists = 0;
+  try {
+    await command(sock, bs, `LOGIN ${quote(cfg.user)} ${quote(cfg.pass)}`, timeoutMs);
+    for (const l of await command(sock, bs, "EXAMINE INBOX", timeoutMs)) {
+      const m = /^\* (\d+) EXISTS/i.exec(l);
+      if (m) exists = Number(m[1]);
+    }
+  } catch (err) {
+    sock.destroy();
+    throw err;
+  }
+  let open = true;
+  let opgehaald = 0;
+  return {
+    async lijst(limit) {
+      if (!open || exists === 0) return [];
+      const start = Math.max(1, exists - limit + 1);
+      const fetchLines = await command(sock, bs, `FETCH ${start}:${exists} (UID FLAGS ENVELOPE)`, timeoutMs);
+      return envelopesUitFetch(fetchLines).sort((a, b) => b.uid - a.uid);
+    },
+    async ruw(uid) {
+      if (!open || opgehaald >= maxBerichten || !Number.isInteger(uid) || uid <= 0) return null;
+      opgehaald += 1;
+      const lines = await command(sock, bs, `UID FETCH ${uid} (BODY.PEEK[])`, timeoutMs);
+      const body = bodyUitFetch(lines, "");
+      return body ? body.toString("utf8") : null;
+    },
+    async sluit() {
+      if (!open) return;
+      open = false;
+      try {
+        await command(sock, bs, "LOGOUT", 5000);
+      } catch {
+        /* de verbinding was al weg: niets aan de hand */
+      } finally {
+        sock.destroy();
+      }
+    },
+  };
 }
 
 /** Alleen de kopregels van een mail (ongelezen blijft ongelezen), voor de bonnetjes-herkenning. */

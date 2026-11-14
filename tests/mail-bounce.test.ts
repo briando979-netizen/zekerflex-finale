@@ -329,9 +329,10 @@ describe("aanhakingen", () => {
     expect(bron("lib/sales/offers.ts")).toContain("if (isBounceAfzender(env0.fromAddress, env0.subject)) continue;");
   });
 
-  it("de ronde leest zonder op gelezen te zetten", () => {
-    expect(bron("lib/mail/imap.ts")).toMatch(/export async function fetchRuwOngelezen[\s\S]{0,200}markSeen: false/);
-    expect(bron("lib/mail/bounce-ronde-db.ts")).toContain("fetchRuwOngelezen(cfg, berichtUid)");
+  it("de ronde leest in één sessie zonder op gelezen te zetten (tests/imap-lees-sessie.test.ts)", () => {
+    expect(bron("lib/mail/imap.ts")).toMatch(/export async function openLeesSessie[\s\S]{0,600}EXAMINE INBOX/);
+    expect(bron("lib/mail/imap.ts")).toContain("UID FETCH ${uid} (BODY.PEEK[])");
+    expect(bron("lib/mail/bounce-ronde-db.ts")).toContain("sessie = openLeesSessie(cfg, MAX_NIEUW_PER_RONDE);");
   });
 
   it("AVG: bij het wissen gaan de terugkaatsers van het oude adres mee", () => {

@@ -13,7 +13,7 @@ const h = vi.hoisted(() => ({
 vi.mock("@/lib/prisma", () => ({ prisma: { salesLead: { findMany: async () => h.leads } } }));
 vi.mock("@/lib/flags", () => ({ featureEnabled: async () => true }));
 vi.mock("@/lib/mail", () => ({ imapConfig: () => null }));
-vi.mock("@/lib/mail/imap", () => ({ fetchInboxList: async () => [], fetchRuwOngelezen: async () => null }));
+vi.mock("@/lib/mail/imap", () => ({ openLeesSessie: async () => ({ lijst: async () => [], ruw: async () => null, sluit: async () => undefined }) }));
 vi.mock("@/lib/mail/store", () => ({ readSentMessage: async () => null, saveSentMessage: async () => undefined }));
 vi.mock("@/lib/storage/kv", () => ({ kvSet: async () => undefined }));
 vi.mock("@/lib/ops/alert", () => ({ alertOwner: async () => "sent" }));

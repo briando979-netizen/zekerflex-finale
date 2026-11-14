@@ -58,11 +58,21 @@ export interface BounceAfhankelijkheden {
   mailLog(recordId: string, bounce: { soort: BounceSoort; code: string; at: string }): Promise<boolean>;
   bewaar(meting: BounceMeting): Promise<void>;
   ruimOp(): Promise<void>;
+  /** de postbus netjes afsluiten (één sessie per ronde); altijd aangeroepen, ook na een fout */
+  sluit?(): Promise<void>;
 }
 
 const leegVenster = (): Record<BounceSoort, number> => ({ hard: 0, beleid: 0, zacht: 0 });
 
 export async function rondBouncesAf(d: BounceAfhankelijkheden, nu: Date = new Date()): Promise<BounceMeting> {
+  try {
+    return await ronde(d, nu);
+  } finally {
+    await d.sluit?.().catch(() => undefined);
+  }
+}
+
+async function ronde(d: BounceAfhankelijkheden, nu: Date): Promise<BounceMeting> {
   const aan = await d.aan();
   const gedaan = { onderdrukt: 0, leads: 0, mailLog: 0, meldingen: 0, zachtNaarHard: 0 };
   const basis = (extra: Partial<BounceMeting> = {}): BounceMeting => ({ at: nu.toISOString(), droog: !aan, nieuw: 0, venster: leegVenster(), codes: {}, aanbieders: {}, gedaan, ...extra });
@@ -83,6 +93,8 @@ export async function rondBouncesAf(d: BounceAfhankelijkheden, nu: Date = new Da
 
   for (const e of kandidaten) {
     if (nieuw >= MAX_NIEUW_PER_RONDE) break;
+    // een fout bij één bericht (postbus, KV) houdt de rest niet tegen; dat bericht komt de volgende ronde terug
+    try {
     const merk = await d.merk(e.berichtUid);
     // gelezen en verwerkt, of gelezen met de vlag uit en die staat nog steeds uit: niet opnieuw ophalen
     if (merk && (merk.verwerkt || !aan)) continue;
@@ -118,6 +130,9 @@ export async function rondBouncesAf(d: BounceAfhankelijkheden, nu: Date = new Da
       if (recordId && zwaarste && (await d.mailLog(recordId, { soort: zwaarste.soort, code: zwaarste.code, at: nu.toISOString() }).catch(() => false))) gedaan.mailLog += 1;
     }
     await d.zetMerk(e.berichtUid, { at: nu.toISOString(), soorten: bericht.regels.map((r) => ({ soort: r.soort, code: r.code, aanbieder: aanbiederVan(r.ontvanger) })), verwerkt: aan });
+    } catch {
+      continue;
+    }
   }
 
   for (const [aanbieder, regels] of beleidPerAanbieder) {
