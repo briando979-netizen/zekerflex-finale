@@ -4,6 +4,7 @@ import { registerFreelancerCompany, registerTenantCompany } from "@/lib/company/
 import { koppelKvkAanAanmelder } from "@/lib/onboarding/employer";
 import { kvkLimietVan } from "@/lib/kvk/tegoed";
 import { wachtendeKvkControles, wisKvkWacht, zetKvkWacht } from "@/lib/kvk/tegoed-opslag";
+import { vulKvkWachtAan } from "@/lib/kvk/inhalen";
 
 // ---------------------------------------------------------------------------
 // De KVK-herkansing (13 nov 2026, cron /api/internal/kvk/herkansing, elke 30 minuten). Een KVK-controle die niet kon omdat
@@ -18,6 +19,8 @@ import { wachtendeKvkControles, wisKvkWacht, zetKvkWacht } from "@/lib/kvk/tegoe
 export const HERKANSING_PER_RONDE = 20;
 
 export interface HerkansingUitslag {
+  /** werkers met een nog nooit gecontroleerd KVK-nummer die deze ronde in de wacht zijn gezet (lib/kvk/inhalen.ts) */
+  ingehaald: number;
   aanDeBeurt: number;
   gelukt: number;
   weerInDeWacht: number;
@@ -27,9 +30,11 @@ export interface HerkansingUitslag {
 const isKvk = (v: string | null | undefined): v is string => /^\d{8}$/.test(v ?? "");
 
 export async function kvkHerkansing(nu: Date = new Date()): Promise<HerkansingUitslag> {
+  // eerst de werkers die buiten de wacht vielen (nummer ingevuld vóór 13 nov, of via /api/company/register bij een op tegoed)
+  const { ingehaald } = await vulKvkWachtAan(nu);
   const alle = await wachtendeKvkControles();
   const beurt = alle.filter((w) => new Date(w.wacht.volgende).getTime() <= nu.getTime()).slice(0, HERKANSING_PER_RONDE);
-  const uit: HerkansingUitslag = { aanDeBeurt: beurt.length, gelukt: 0, weerInDeWacht: 0, vervallen: 0 };
+  const uit: HerkansingUitslag = { ingehaald, aanDeBeurt: beurt.length, gelukt: 0, weerInDeWacht: 0, vervallen: 0 };
 
   for (const w of beurt) {
     try {

@@ -51,6 +51,18 @@ export async function zetKvkWacht(soort: "werker" | "bedrijf", id: string, kvkNu
   }
 }
 
+/**
+ * Zet een controle in de wacht die meteen aan de beurt is (het inhalen, lib/kvk/inhalen.ts): geen limiet gezien, geen
+ * poging geteld. Een bestaande wacht blijft staan (de aanroeper filtert die er al uit).
+ */
+export async function zetKvkWachtNu(soort: "werker" | "bedrijf", id: string, kvkNumber: string, nu = new Date()): Promise<void> {
+  try {
+    await kvSet(wachtSleutel(soort, id), { kvkNumber, sinds: nu.toISOString(), volgende: nu.toISOString(), pogingen: 0, limiet: "tegoed" } satisfies KvkWacht);
+  } catch {
+    // de herkansing is een extra
+  }
+}
+
 export async function wisKvkWacht(soort: "werker" | "bedrijf", id: string): Promise<void> {
   await kvDelete(wachtSleutel(soort, id)).catch(() => undefined);
 }

@@ -123,6 +123,15 @@ describe("reserve, melding en planning", () => {
     );
     expect(tegoedTekst(tegoed({ tokens: 847 }), 1, w)).toContain("847 tokens over");
     expect(kvkTegoedTodo(null, 0)).toBeNull();
+    // werkers met een nog nooit gecontroleerd KVK-nummer (lib/kvk/inhalen.ts): de taak noemt het aantal en blijft open, ook zonder meting
+    const zes = kvkTegoedTodo(null, 2, 6)!;
+    expect(zes.title).toBe("6 werkers met een ongecontroleerd KVK-nummer: zij krijgen nog geen voorstellen");
+    expect(zes.why).toContain("6 werkers hebben een KVK-nummer dat nog nooit is gecontroleerd");
+    expect(zes.why).toContain("nooit een voorstel");
+    expect(zes.done).toBe(false);
+    expect([zes.title, zes.why, ...zes.how].join(" ")).not.toMatch(/@/);
+    expect(kvkTegoedTodo(tegoed({ op: true, tokens: 0, perMinuut: 10 }), 2, 1)!.title).toContain("(1 werker zonder controle)");
+    expect(kvkTegoedTodo(tegoed({ tokens: 847 }), 0, 0)).toMatchObject({ title: "KVK-tegoed: weer voldoende", done: true });
     const op = kvkTegoedTodo(tegoed({ op: true, tokens: 0, perMinuut: 10 }), 2);
     expect(op?.done).toBe(false);
     expect(op?.title).toContain("KVK-tegoed op");

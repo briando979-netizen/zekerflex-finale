@@ -8,6 +8,8 @@ import {
   registerFreelancerCompany,
   registerTenantCompany,
 } from "@/lib/company/registration";
+import { kvkLimietVan } from "@/lib/kvk/tegoed";
+import { wisKvkWacht, zetKvkWacht } from "@/lib/kvk/tegoed-opslag";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -59,10 +61,21 @@ export async function POST(request: Request): Promise<NextResponse> {
     });
     if (!profile) throw AppError.forbidden("Je hebt nog geen werkersprofiel. Maak eerst je profiel af.");
 
-    const result = await registerFreelancerCompany({
-      freelancerProfileId: profile.id,
-      kvkNumber,
-    });
+    let result;
+    try {
+      result = await registerFreelancerCompany({
+        freelancerProfileId: profile.id,
+        kvkNumber,
+      });
+    } catch (err) {
+      // tegoed op of minuutlimiet bij KVKBase: in de wacht voor de herkansing (lib/kvk/herkansing.ts), zoals de aanmelding
+      // al deed (lib/onboarding/verify.ts); anders bleef deze werker voor altijd zonder controle en zonder voorstellen
+      const limiet = kvkLimietVan(err);
+      if (limiet) await zetKvkWacht("werker", principal.userId, kvkNumber.replace(/\D/g, ""), limiet);
+      throw err;
+    }
+    // gecontroleerd: een eerdere wachtende controle is niet meer nodig
+    await wisKvkWacht("werker", principal.userId);
     return NextResponse.json(result);
   } catch (err) {
     const { status, body } = toErrorBody(err);
