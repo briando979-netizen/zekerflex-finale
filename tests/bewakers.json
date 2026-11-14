@@ -12,6 +12,7 @@
     "tests/caddy-log-bewaren.test.ts",
     "tests/chat-taal.test.ts",
     "tests/client-imports.test.ts",
+    "tests/cookiebeleid-cookies.test.ts",
     "tests/cron-hartslag-ronde.test.ts",
     "tests/donker-dekking.test.ts",
     "tests/donker-varianten.test.ts",
