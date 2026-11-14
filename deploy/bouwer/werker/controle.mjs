@@ -24,6 +24,7 @@ import { WERK, geefZwaarSlotVrij, haalMain, haalVastlegging, kloon, sh, testOmge
 import { gefaaldeBewakers, leesBewakerLijst } from "./bewakers.mjs";
 import { basisKlopt } from "./basis.mjs";
 import { vindTekstVerwijzingen } from "./tekst-verwijzing.mjs";
+import { SUITE_ARGS, gefaaldeSuiteBestanden, telSuiteBestanden } from "./suite.mjs";
 
 export const CONTROLE_DIR = path.join(WERK, "controle");
 const REPO = path.join(CONTROLE_DIR, "repo");
@@ -235,8 +236,9 @@ export async function controleerVastlegging({ doel = "main", vanaf = null, wacht
       }
     }
     // Tests die een gewijzigd bestand als TEKST noemen (readFileSync + toContain): `vitest related` ziet ze niet (tests/uitzend-v2.test.ts, 13 nov).
-    // Meer dan 40: dan alleen de bewakers (die draaien hierboven al), met het aantal in de uitslag; de controle breekt nooit stil af.
-    let extraTests = { gevonden: 0, gedraaid: 0, afgekapt: false, lijst: [] };
+    // Meer dan 40 (14 nov): dan de hele suite, binnen het zware slot dat deze controle al heeft (942 bestanden in 95 s), met het
+    // aantal in de uitslag; eerder draaiden dan alleen de bewakers en bleef de rest stil liggen. De controle breekt nooit stil af.
+    let extraTests = { gevonden: 0, gedraaid: 0, afgekapt: false, lijst: [], heleSuite: null };
     if (lintbaar.length <= MAX_LINT) {
       try {
         const namen = (await fs.readdir(path.join(REPO, "tests")).catch(() => [])).filter((n) => /^[\w.-]+\.test\.ts$/.test(n));
@@ -245,7 +247,16 @@ export async function controleerVastlegging({ doel = "main", vanaf = null, wacht
         const nogTeDraaien = v.tests.filter((p) => !teDraaien.includes(p));
         extraTests = { gevonden: v.gevonden, gedraaid: nogTeDraaien.length, afgekapt: v.afgekapt, lijst: Object.keys(v.redenen).slice(0, 40) };
         if (v.afgekapt) {
-          log("info", `Tests die een gewijzigd bestand als tekst noemen: ${v.gevonden}, meer dan 40: alleen de bewakers draaien (hierboven)`);
+          log("info", `Tests die een gewijzigd bestand als tekst noemen: ${v.gevonden}, meer dan 40: de hele suite draait`);
+          const start = Date.now();
+          const x = await sh("npx", [...SUITE_ARGS], { cwd: REPO, env: testOmgeving(), timeout: 1_200_000, zonderSleutel: true });
+          const bestanden = telSuiteBestanden(x.uit);
+          extraTests.heleSuite = { ok: x.code === 0, bestanden: bestanden, duurSec: Math.round((Date.now() - start) / 1000) };
+          log("info", `hele suite: ${bestanden ?? "?"} bestanden, ${x.code === 0 ? "schoon" : "faalt"} na ${extraTests.heleSuite.duurSec} s`);
+          if (x.code !== 0) {
+            const falen = gefaaldeSuiteBestanden(x.uit);
+            tests = { ok: false, uit: `Hele suite faalt: ${falen.length ? falen.join(", ") : "zie de uitvoer (time-out of opstartfout)"}\n${staartTekst(x.uit, 40)}${tests.uit ? `\n\n${tests.uit}` : ""}`, overgeslagen: null };
+          }
         } else if (nogTeDraaien.length) {
           log("info", `Tests die een gewijzigd bestand als tekst noemen (${nogTeDraaien.length}): ${nogTeDraaien.slice(0, 6).join(", ")}${nogTeDraaien.length > 6 ? " ..." : ""}`);
           const x = await sh("npx", ["vitest", "run", "--passWithNoTests", "--maxWorkers=2", ...nogTeDraaien], { cwd: REPO, env: testOmgeving(), timeout: 600_000, zonderSleutel: true });
