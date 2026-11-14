@@ -3,6 +3,7 @@ import { kvGet, kvSet, kvListValues } from "@/lib/storage/kv";
 import { chat, fastModel, llmConfigProblem, ensureAiNode } from "@/lib/ai/client";
 import { imapConfig, sendMail, mailShell } from "@/lib/mail";
 import { fetchInboxList, fetchMessageContent } from "@/lib/mail/imap";
+import { isBounceAfzender } from "@/lib/mail/bounce";
 import { createLead } from "@/lib/sales/leads";
 import { CONTACTS } from "@/lib/seo";
 import { env } from "@/lib/env";
@@ -230,6 +231,8 @@ export async function sweepSalesOffers(limit = 15): Promise<OfferSweepResult> {
     if (await kvGet(seenKey(env0.uid))) continue;
     await kvSet(seenKey(env0.uid), { at: new Date().toISOString() }).catch(() => undefined);
     if (env0.fromAddress && SKIP_SENDERS.test(env0.fromAddress)) continue;
+    // een terugkaatser (lib/mail/bounce.ts) is nooit een offerteaanvraag, ook niet van een server met een andere afzender
+    if (isBounceAfzender(env0.fromAddress, env0.subject)) continue;
     base.scanned += 1;
     processed += 1;
     try {

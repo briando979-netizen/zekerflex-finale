@@ -5,6 +5,7 @@ import { recordUserErased } from "@/lib/metrics";
 import { deleteUpload } from "@/lib/storage/local";
 import { erasableNow, RETENTION_RULES } from "@/lib/privacy/retention";
 import { erasableKvWhere } from "@/lib/privacy/user-kv";
+import { bounceSleutel, zachtSleutel } from "@/lib/mail/bounce-opslag";
 import { wisChatlogVan } from "@/lib/learn/store";
 import { wisPersoonUitLocatie } from "@/lib/locatie/avg";
 import { wisBankrekeningVan } from "@/lib/privacy/bank-wissen";
@@ -223,6 +224,8 @@ export async function anonymizeUser(
     const fobs = await tx.keyValueStore.findUnique({ where: { key: `nfc-fob-user:${userId}` }, select: { value: true } });
     const fobHashes = ((fobs?.value as { fobs?: { hash?: string }[] } | null)?.fobs ?? []).map((f) => f.hash).filter((h): h is string => typeof h === "string");
     if (fobHashes.length) await tx.keyValueStore.deleteMany({ where: { key: { in: fobHashes.map((h) => `nfc-fob:${h}`) } } });
+    // terugkaatsers van het oude adres (lib/mail/bounce-opslag.ts): de sleutel is een hash van het adres, dus via het adres zelf
+    await tx.keyValueStore.deleteMany({ where: { key: { in: [bounceSleutel(oldEmail), zachtSleutel(oldEmail)] } } });
 
     // Personal JSON in the KeyValueStore without a retention duty (agenda,
     // trips, chat settings, contacts, AI memory, 2FA, mailbox login).

@@ -78,6 +78,8 @@ cat > /etc/crontabs/root <<EOF
 */2 * * * * wget -q -O /dev/null -T 90 "$H" "$APP/api/internal/auto-uitrol"
 # elk uur: Metabase inrichten als dat nog niet lukte, en om 04:00 de views en kaarten bijwerken (lib/bi)
 40 * * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/bi/setup"
+# elk uur op :35: terugkaatsers (bounces) in de postbus nalezen (lib/mail/bounce-ronde.ts); doet alleen tellen zolang de vlag mail-bounce-verwerken uit staat
+35 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/mail/bounces"
 # elk uur: bronnen van buiten ophalen die aan de beurt zijn (pompprijzen, minimumloon, cao, KVK, schermcontrole)
 20 * * * * wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/bronnen/tick"
 # elke 10 min: AI-opdrachten van de video-editor op de achtergrond afwerken (antwoordt meteen)

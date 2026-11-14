@@ -484,6 +484,12 @@ export async function fetchForScan(cfg: ImapConfig, uid: number): Promise<{ text
   };
 }
 
+/** Het hele ruwe bericht, zonder het op gelezen te zetten (BODY.PEEK[]): voor de bounce-ronde (lib/mail/bounce-ronde.ts). */
+export async function fetchRuwOngelezen(cfg: ImapConfig, uid: number): Promise<string | null> {
+  const raw = await fetchRawMessage(cfg, uid, { markSeen: false });
+  return raw ? raw.toString("utf8") : null;
+}
+
 /** Alleen de kopregels van een mail (ongelezen blijft ongelezen), voor de bonnetjes-herkenning. */
 export async function fetchKop(cfg: ImapConfig, uid: number): Promise<string | null> {
   const raw = await fetchRawMessage(cfg, uid, { markSeen: false, alleenKop: true });
