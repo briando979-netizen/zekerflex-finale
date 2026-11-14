@@ -6,7 +6,7 @@ vi.mock("@/lib/ops/error-journal", () => ({ journal: vi.fn() }));
 vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
 import { journal } from "@/lib/ops/error-journal";
-import { beoordeel, draaiRondgang, openbareRoutes } from "@/lib/ops/rondgang";
+import { beoordeel, draaiRondgang, openbareRoutes, rondgangRoutes } from "@/lib/ops/rondgang";
 
 // Nachtelijke rondgang (lib/ops/rondgang.ts): welke pagina's, en wat telt als kapot.
 
@@ -64,8 +64,14 @@ describe("draaiRondgang", () => {
         });
       }),
     );
+    // de klok vast: de steekproef van stadspagina's hangt af van de Amsterdamse dag (lib/ops/rondgang.ts rondgangRoutes)
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-14T04:20:00+01:00"));
     const uit = await draaiRondgang("https://voorbeeld.test/", 2);
-    expect(uit.totaal).toBe(openbareRoutes().length);
+    expect(uit.totaal).toBe(rondgangRoutes(new Date("2026-11-14T04:20:00+01:00")).length);
+    expect(uit.totaal).toBeGreaterThan(openbareRoutes().length);
+    expect(gezien.some((u) => u.endsWith("/register?type=bedrijf"))).toBe(true);
+    vi.useRealTimers();
     expect(gezien.every((u) => u.startsWith("https://voorbeeld.test/"))).toBe(true);
     expect(uit.problemen).toEqual([{ route: "/prijzen", status: 200, reden: "toont de foutgrens" }]);
     expect(journal).toHaveBeenCalledWith("error", "pagina kapot", expect.objectContaining({ route: "/prijzen" }));
