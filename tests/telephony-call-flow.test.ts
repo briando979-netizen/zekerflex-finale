@@ -103,6 +103,16 @@ describe("het begin van een uitgaand gesprek", () => {
     vi.unstubAllGlobals();
   });
 
+  it("de oproep naar een medewerker (wachtrij): zonder opname en hooguit zo lang overgaan als gevraagd", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ sid: "CA1" }), { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await placeTwilioCall({ to: "+31612345678", voiceUrl: "https://x/voice", statusUrl: "https://x/status", opnemen: false, belTijd: 25 });
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(String(init.body)).toContain("Timeout=25");
+    expect(String(init.body)).not.toContain("Record=");
+    vi.unstubAllGlobals();
+  });
+
   it("legt een weigering van Twilio in gewoon Nederlands uit, met wat je eraan doet", async () => {
     const refuse = (body: object, status = 400) => vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(body), { status })));
     refuse({ code: 21215, message: "Account not authorized to call +31612345678. Perhaps you need to enable some international permissions" });

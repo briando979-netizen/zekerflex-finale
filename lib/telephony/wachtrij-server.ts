@@ -11,7 +11,10 @@ import { zonderNummers } from "@/lib/telephony/log-nummer";
 // ---------------------------------------------------------------------------
 
 const SLEUTEL = "telefoon:medewerker";
-/** Zo lang telt "gaat over" (Twilio laat ±30 s overgaan); daarna mag het opnieuw. */
+/** Zo lang (s) gaat de telefoon van de medewerker over. Zonder grens laat Twilio 60 s overgaan, langer dan BELT_MS:
+ *  dan kon een tweede oproep beginnen terwijl de eerste nog overging. */
+export const BELTIJD_S = 25;
+/** Zo lang telt "gaat over" (BELTIJD_S plus de opbouw van de oproep); daarna mag het opnieuw. */
 export const BELT_MS = 45_000;
 /** Zo lang telt "in gesprek" hooguit, als het einde van het gesprek nooit binnenkomt. */
 export const BEZET_MS = 30 * 60_000;
@@ -47,6 +50,7 @@ export async function belMedewerker(base: string, callId: string, nu = Date.now(
       voiceUrl: `${base}/api/telephony/wachtrij/medewerker?callId=${callId}`,
       statusUrl: `${base}/api/telephony/wachtrij/medewerker?callId=${callId}&stap=status`,
       opnemen: false,
+      belTijd: BELTIJD_S,
     });
     return true;
   } catch (err) {
