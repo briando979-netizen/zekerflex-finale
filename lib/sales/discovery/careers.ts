@@ -5,6 +5,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { redis } from "@/lib/redis";
 import { createLead } from "@/lib/sales/leads";
+import { isDienstAdres, isVacatureSprong } from "@/lib/sales/discovery/vacature-sprong";
 
 // ---------------------------------------------------------------------------
 // Careers-page crawler.
@@ -16,6 +17,9 @@ import { createLead } from "@/lib/sales/leads";
 //   - up to a handful of open-vacancy titles -> `vacancySignal`
 //   - the company name (og:site_name / <title>)
 // It only ever touches public HTML. No login walls, no forms, no auth.
+// Het blijft op het eigen origin, met één uitzondering (14 nov): één sprong naar
+// het vacaturesysteem van hetzelfde bedrijf (<slug>.recruitee.com, werkenbij.<domein>;
+// zie vacature-sprong.ts). Links op die pagina worden niet verder gevolgd.
 // ---------------------------------------------------------------------------
 
 const UA = "ZekerFlexBot/1.0 (+https://zekerflex.com/bot; zakelijke kennismaking)";
@@ -46,6 +50,8 @@ export interface CareersCrawlResult {
   emailFound: string | null;
   vacancySignal: string | null;
   companyName: string | null;
+  /** Host van het vacaturesysteem waarnaar één sprong is gemaakt (bv. hotelzuidbroek.recruitee.com). */
+  sprong?: string;
   note?: string;
 }
 
@@ -115,8 +121,14 @@ function robotsAllows(robots: Robots, path: string): boolean {
   return false;
 }
 
-function extractLinks(html: string, base: URL): string[] {
-  const out = new Set<string>();
+/**
+ * Links op een pagina van de bedrijfssite: `eigen` = vacature-achtige links op
+ * hetzelfde origin (zoals altijd), `sprong` = links naar het vacaturesysteem van
+ * het bedrijf (ander origin, alleen de toegestane vormen uit vacature-sprong.ts).
+ */
+function extractLinks(html: string, base: URL): { eigen: string[]; sprong: string[] } {
+  const eigen = new Set<string>();
+  const sprong = new Set<string>();
   for (const m of html.matchAll(/<a\b[^>]*\bhref\s*=\s*["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
     const href = m[1] ?? "";
     const text = (m[2] ?? "").replace(/<[^>]+>/g, " ").toLowerCase();
@@ -126,11 +138,15 @@ function extractLinks(html: string, base: URL): string[] {
     } catch {
       continue;
     }
-    if (u.origin !== base.origin) continue;
+    if (u.origin !== base.origin) {
+      // een link naar het vacaturesysteem is altijd een vacaturepagina, ook zonder hint in de tekst
+      if (isVacatureSprong(u, base)) sprong.add(u.toString().split("#")[0]!);
+      continue;
+    }
     const hay = `${u.pathname.toLowerCase()} ${text}`;
-    if (VACANCY_HINTS.some((h) => hay.includes(h))) out.add(u.toString().split("#")[0]!);
+    if (VACANCY_HINTS.some((h) => hay.includes(h))) eigen.add(u.toString().split("#")[0]!);
   }
-  return [...out];
+  return { eigen: [...eigen], sprong: [...sprong] };
 }
 
 function extractSitemapUrls(xml: string, base: URL): string[] {
@@ -244,6 +260,9 @@ export async function crawlCareersSource(
 
   const robots = await loadRobots(start.origin);
   const siteDomain = start.hostname.replace(/^www\./, "");
+  // robots.txt per origin: het vacaturesysteem heeft zijn eigen regels en crawl-delay
+  const robotsPerOrigin = new Map<string, Robots>([[start.origin, robots]]);
+  let sprongOrigin: string | null = null;
 
   const queue: string[] = [];
   if (robotsAllows(robots, start.pathname)) queue.push(start.toString());
@@ -271,15 +290,22 @@ export async function crawlCareersSource(
 
     const page = await fetchText(url);
     result.pagesFetched += 1;
-    if (robots.crawlDelayMs) await sleep(robots.crawlDelayMs);
+    const paginaOrigin = new URL(url).origin;
+    const paginaRobots = robotsPerOrigin.get(paginaOrigin) ?? robots;
+    if (paginaRobots.crawlDelayMs) await sleep(paginaRobots.crawlDelayMs);
     if (!page || !page.body) continue;
 
-    companyName = extractCompanyName(page.body, companyName);
+    // de bedrijfsnaam komt van de eigen site, niet van de pagina bij de vacaturedienst
+    if (paginaOrigin === start.origin) companyName = extractCompanyName(page.body, companyName);
     emails.push(...extractEmails(page.body, siteDomain));
     titles.push(...extractTitles(page.body));
 
+    // links op de pagina van het vacaturesysteem worden niet gevolgd: hooguit één sprong
+    if (paginaOrigin !== start.origin) continue;
+
     if (result.pagesFetched < env.SALES_CRAWL_MAX_PAGES) {
-      for (const link of extractLinks(page.body, start)) {
+      const links = extractLinks(page.body, start);
+      for (const link of links.eigen) {
         if (seen.has(link) || queue.includes(link)) continue;
         if (!robotsAllows(robots, new URL(link).pathname)) {
           result.blockedByRobots += 1;
@@ -287,10 +313,24 @@ export async function crawlCareersSource(
         }
         queue.push(link);
       }
+      // één sprong naar het vacaturesysteem van dit bedrijf, met de robots.txt van dat origin
+      const doel = links.sprong[0];
+      if (doel && !sprongOrigin) {
+        const doelUrl = new URL(doel);
+        sprongOrigin = doelUrl.origin;
+        const doelRobots = await loadRobots(doelUrl.origin);
+        robotsPerOrigin.set(doelUrl.origin, doelRobots);
+        if (robotsAllows(doelRobots, doelUrl.pathname)) {
+          queue.push(doel);
+          result.sprong = doelUrl.hostname;
+        } else {
+          result.blockedByRobots += 1;
+        }
+      }
     }
   }
 
-  const email = [...new Set(emails)].filter((e) => !JUNK_EMAIL.test(e))[0] ?? null;
+  const email = [...new Set(emails)].filter((e) => !JUNK_EMAIL.test(e) && !isDienstAdres(e))[0] ?? null;
   const uniqueTitles = [...new Set(titles)].slice(0, 5);
   const vacancySignal = uniqueTitles.length
     ? `Open vacatures gezien: ${uniqueTitles.join("; ")}`
