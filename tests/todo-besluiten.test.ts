@@ -33,7 +33,9 @@ describe("functiesWachtenTodo", () => {
     expect(hoe).toContain("mail-bounce-verwerken");
     // wat aanzetten doet
     expect(hoe).toContain("Aanzetten doet: elke nacht gaat een klus");
-    expect(hoe).toContain("Aanzetten doet: een hard adres komt op de onderdrukkingslijst");
+    expect(hoe).toContain("Aanzetten doet: een hard adres krijgt een merk");
+    // de onderdrukkingslijst (adres in klare tekst) alleen voor leads (tests/bounce-onderdrukking.test.ts)
+    expect(hoe).toContain("is het van een lead, dan komt het ook op de onderdrukkingslijst");
     expect(hoe).toContain("Beheer → Systeem → tab Functies aan en uit");
     expect(t.doneNote).toBeUndefined();
   });
