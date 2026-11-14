@@ -9,7 +9,7 @@ import { BlokWeergave, type MediaInfo } from "@/components/marketing/ontwerp/Blo
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Photo } from "@/components/marketing/Photo";
-import { SceneMatch, SceneWork, SceneApprove } from "@/components/marketing/Scene";
+import { SceneMatch, SceneApprove } from "@/components/marketing/Scene";
 import { HeroStage } from "@/components/marketing/HeroStage";
 import { Reveal } from "@/components/marketing/Reveal";
 import { FaqList } from "@/components/marketing/primitives";
@@ -18,14 +18,16 @@ import { BranchShowcase } from "@/components/marketing/BranchShowcase";
 import { AanbodKiezer } from "@/components/marketing/AanbodKiezer";
 import { BedrijvenVoordeur } from "@/components/marketing/BedrijvenVoordeur";
 import { env } from "@/lib/env";
-import { AppDownload } from "@/components/marketing/AppDownload";
-import { faqJsonLd, serviceJsonLd, SITE } from "@/lib/seo";
+import { serviceJsonLd, SITE } from "@/lib/seo";
 import { seoMetadata } from "@/lib/ontwerp/seo-store";
 import { getContentValues, lijstRegels } from "@/lib/content/store";
 
 // De homepagina voor bedrijven (11 nov 2026): dit was de homepagina van zekerflex.com. Op verzoek van de
 // eigenaar ziet wie zekerflex.com opent de pagina voor werkzoekenden (app/(marketing)/page.tsx); deze staat
 // ongewijzigd hier, en de Site-ontwerper (tabblad Homepage, het voorbeeld met ?concept=1) werkt op deze pagina.
+// Sinds 14 nov alleen voor bedrijven (eigenaar: "pagina ben je een bedrijf, alleen voor bedrijf"): de blokken voor
+// werkers (freelancers, de drie werkvormen, de app) zijn weg en de teksten spreken het bedrijf aan; wie werk zoekt,
+// vindt dat op de homepagina (/).
 
 // titel en omschrijving: de standaard in lib/ontwerp/seo.ts, of een eigen versie uit de Site-ontwerper (SEO)
 export async function generateMetadata(): Promise<Metadata> {
@@ -50,7 +52,7 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
-          __html: ldJson([faqJsonLd(), serviceJsonLd()]),
+          __html: ldJson([faqPagina(FAQ), serviceJsonLd()]),
         }}
       />
       {/* ───────────────────────────────────────────────────────────── HERO */}
@@ -105,7 +107,7 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
 
       ),
       branches: (
-      <BranchShowcase minRateCents={env.MIN_SHIFT_RATE_CENTS} />
+      <BranchShowcase minRateCents={env.MIN_SHIFT_RATE_CENTS} voor="bedrijven" />
 
       ),
       hoe: (
@@ -143,21 +145,6 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
       </section>
 
       ),
-      freelancers: (
-      <ShowcaseSplit
-        keys={{ eyebrow: "fl.eyebrow", title: "fl.title", body: "fl.body" }}
-        eyebrow={t("fl.eyebrow")}
-        title={t("fl.title")}
-        body={t("fl.body")}
-        points={lijstRegels(t("fl.points"))}
-        pointsKey="fl.points"
-        href="/voor-freelancers"
-        cta={t("fl.cta")}
-        ctaKey="fl.cta"
-        photo={<Photo name="freelancer" fallback={<SceneWork />} rounded="rounded-3xl" sizes="(max-width:1024px) 100vw, 52vw" />}
-      />
-
-      ),
       bedrijven: (
       <ShowcaseSplit
         reverse
@@ -173,77 +160,6 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
         ctaKey="emp.cta"
         photo={<Photo name="employer" fallback={<SceneApprove />} rounded="rounded-3xl" sizes="(max-width:1024px) 100vw, 52vw" />}
       />
-
-      ),
-      werkvormen: (
-      <section className="relative bg-paper-soft">
-        <div className="shell-4k py-8 md:py-10 lg:py-12">
-          <Reveal>
-            <p className="eyebrow" data-cms-key="work.eyebrow">{t("work.eyebrow")}</p>
-            <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold" data-cms-key="work.title">
-              {t("work.title")}
-            </h2>
-            <p className="fluid-lead mt-5 max-w-2xl text-neutralx-600">
-              Geen eigen bedrijf? Werk als uitzendkracht via ZekerFlex. Wij zijn dan je
-              werkgever, verlonen je <strong>elke week</strong> met een echte loonstrook, en
-              regelen vakantiegeld, pensioen en het ABU-fasensysteem.
-            </p>
-          </Reveal>
-
-          <div className="mt-10 grid md:mt-14 gap-5 lg:grid-cols-3">
-            {WORKFORMS.map((vorm, i) => {
-              // teksten uit het register (work.f1 …); kleur en link blijven vast
-              const w = { ...vorm, kind: t(`${vorm.k}.kind`), who: t(`${vorm.k}.who`), points: lijstRegels(t(`${vorm.k}.points`)), cta: t(`${vorm.k}.cta`) };
-              return (
-              <Reveal key={vorm.k} delay={i * 110}>
-                <div
-                  className={`flex h-full flex-col rounded-2xl p-7 ${
-                    w.highlight ? "bg-brand-500 text-white shadow-lift" : "glass-light"
-                  }`}
-                >
-                  <h3 className="font-display text-xl font-bold" data-cms-key={`${vorm.k}.kind`}>{w.kind}</h3>
-                  <p className={`mt-2 text-sm ${w.highlight ? "text-white/75" : "text-neutralx-500"}`} data-cms-key={`${vorm.k}.who`}>
-                    {w.who}
-                  </p>
-                  <ul className="mt-5 space-y-2.5">
-                    {w.points.map((p, pi) => (
-                      <li
-                        key={`${pi}-${p}`}
-                        className={`flex gap-2.5 text-sm ${w.highlight ? "text-white/90" : "text-neutralx-600"}`}
-                        data-cms-key={`${vorm.k}.points`}
-                        data-cms-regel={pi}
-                      >
-                        <span className="mt-1 flex-shrink-0">
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
-                            <path
-                              d="M5 13l4 4L19 7"
-                              stroke={w.highlight ? "#FFFFFF" : "#0E5C4A"}
-                              strokeWidth="2.6"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </span>
-                        {p}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link
-                    href={w.href}
-                    className={`mt-7 self-start text-sm font-semibold ${
-                      w.highlight ? "text-white underline" : "text-brand-600 hover:underline"
-                    }`}
-                    data-cms-key={`${vorm.k}.cta`}
-                  >
-                    {w.cta} →
-                  </Link>
-                </div>
-              </Reveal>
-              );
-            })}
-          </div>
-        </div>
-      </section>
 
       ),
       cijfers: (
@@ -350,10 +266,6 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
       </section>
 
       ),
-      app: (
-      <AppDownload />
-
-      ),
       oproep: (
       <section className="relative isolate overflow-hidden hero-ink text-white">
         <div className="aurora" aria-hidden />
@@ -366,7 +278,7 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
               </p>
             </div>
             <div className="flex flex-shrink-0 flex-wrap gap-3">
-              <Link href="/register" className="btn-mint text-base" data-cms-key="cta.primary">
+              <Link href="/klus-plaatsen" className="btn-mint text-base" data-cms-key="cta.primary">
                 {t("cta.primary")}
               </Link>
               <Link href="/prijzen" className="btn-ghost-invert text-base" data-cms-key="cta.secondary">
@@ -488,14 +400,8 @@ function ShowcaseSplit({
 
 /* ───────────────────────────────────────────────────────────── content */
 
-// De teksten van de stappen, werkvormen, functies en zekerheden staan in het tekstregister
-// (lib/content/store.ts: how.s1 …, work.f1 …, feat.f1 …, comp.c1 …); hier alleen wat vast blijft.
-
-const WORKFORMS = [
-  { k: "work.f1", href: "/uitzendbureau", highlight: true },
-  { k: "work.f2", href: "/voor-freelancers", highlight: false },
-  { k: "work.f3", href: "/voor-freelancers", highlight: false },
-];
+// De teksten van de stappen, functies en zekerheden staan in het tekstregister
+// (lib/content/store.ts: how.s1 …, feat.f1 …, comp.c1 …); hier alleen wat vast blijft.
 
 const FEATURES = [
   { k: "feat.f1", icon: <IconTarget /> },
@@ -506,14 +412,25 @@ const FEATURES = [
   { k: "feat.f6", icon: <IconBell /> },
 ];
 
+// De vragen van bedrijven (14 nov: deze pagina is alleen voor bedrijven). De FAQ-gegevens voor zoekmachines
+// (faqPagina, bovenaan) volgen precies deze lijst.
 const FAQ = [
-  { q: "Kan ik werken zonder KVK?", a: "Ja. Via ons uitzendbureau werk je als uitzendkracht: ZekerFlex is dan je werkgever en verloont je elke week met een echte loonstrook, inclusief vakantiegeld, pensioen (StiPP) en het ABU-fasensysteem. Alles is terug te lezen in je dashboard onder ‘Verloning’." },
-  { q: "Wat kost ZekerFlex?", a: "Meedoen als freelancer is gratis. Bedrijven betalen voor personeel € 3,50 platformkosten per gewerkt uur, en alleen wanneer er daadwerkelijk iemand werkt. Daarvoor is geen abonnement nodig en zijn er geen opstartkosten. Software zoals de horeca- of rijschoolpakketten werkt met een abonnement." },
-  { q: "Hoe snel word ik als zzp'er betaald?", a: "Dat kies je zelf. Standaard wacht je gratis tot de opdrachtgever binnen 30 dagen afrekent. Wil je eerder, dan kies je een snellere uitbetaling tegen een fee: betaalopdracht direct indienen (4% van de factuur) of binnen 3 werkdagen indienen (2%)." },
-  { q: "Moet ik zelf facturen sturen?", a: "Nee. ZekerFlex werkt met reverse billing en maakt de facturen automatisch aan: één voor jouw dienst, één voor de platformfee, met de juiste btw-behandeling." },
+  { q: "Wat kost personeel via ZekerFlex?", a: "Je betaalt het uurtarief van de kracht plus € 3,50 platformkosten per gewerkt uur, en alleen als er echt gewerkt is. Bij meer uren daalt de platformfee volgens een vaste staffel. Voor personeel is er geen abonnement en zijn er geen opstartkosten; software zoals de horeca- of rijschoolpakketten werkt met een abonnement." },
+  { q: "Hoe plaats ik een klus?", a: "Via Klus plaatsen stel je zonder account een klus samen: functie, plaats, tijden, aantal mensen en tarief. Je ziet meteen wat het kost. Bevalt het, dan zet je de klus met een gratis account online en zoekt ZekerFlex passende, geverifieerde mensen in de buurt." },
+  { q: "Werk ik met zzp'ers of met uitzendkrachten?", a: "Allebei kan. Zzp'ers werken met hun eigen KVK-inschrijving, die we controleren tegen het Handelsregister. Uitzendkrachten werken via het ZekerFlex-uitzendbureau: dan is ZekerFlex hun werkgever en regelt de verloning." },
+  { q: "Moet ik zelf facturen maken?", a: "Nee. Zodra je de uren hebt goedgekeurd, maakt ZekerFlex de facturen automatisch aan, met de juiste btw-behandeling." },
   { q: "Hoe ondersteunt ZekerFlex bij de Wet DBA?", a: "ZekerFlex legt afspraken vast en signaleert onder meer urenconcentratie en opeenvolgende weken. Zulke hulpmiddelen geven geen garantie over de arbeidsrelatie: de Belastingdienst kijkt ook naar hoe er in de praktijk wordt gewerkt." },
   { q: "Is mijn data veilig?", a: "Voor diensten zoals betalingen, e-mail en verificatie gebruiken we gespecialiseerde aanbieders. Gevoelige gegevens worden waar nodig versleuteld opgeslagen; belangrijke handelingen komen in een auditspoor." },
 ];
+
+/** schema.org FAQPage met precies de vragen die op deze pagina staan. */
+function faqPagina(items: { q: string; a: string }[]): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map((i) => ({ "@type": "Question", name: i.q, acceptedAnswer: { "@type": "Answer", text: i.a } })),
+  };
+}
 
 /* icons */
 function IconTarget() { return (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden><circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2" /><circle cx="12" cy="12" r="3" fill="currentColor" /></svg>); }

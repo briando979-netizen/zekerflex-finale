@@ -10,16 +10,17 @@ describe("homepage-indeling uit de Site-ontwerper", () => {
     expect(zichtbareSecties(undefined)).toEqual(ALLE);
     expect(zichtbareSecties(standaardHomeIndeling())).toEqual(ALLE);
     expect(isStandaardHomeIndeling(standaardHomeIndeling())).toBe(true);
-    // dezelfde volgorde als op de pagina vóór de ontwerper, met sinds 11 nov de voordeur "Wat wil je doen?" vooraan
-    expect(ALLE).toEqual(["voordeur", "vertrouwen", "aanbod", "branches", "hoe", "freelancers", "bedrijven", "werkvormen", "cijfers", "functies", "zekerheid", "citaat", "vragen", "app", "oproep"]);
+    // de volgorde van vóór de ontwerper, met sinds 11 nov de voordeur "Wat wil je doen?" vooraan, en sinds 14 nov
+    // zonder de blokken voor werkers (freelancers, werkvormen, app): /bedrijven is alleen voor bedrijven
+    expect(ALLE).toEqual(["voordeur", "vertrouwen", "aanbod", "branches", "hoe", "bedrijven", "cijfers", "functies", "zekerheid", "citaat", "vragen", "oproep"]);
   });
 
   it("verbergt en verplaatst", () => {
-    const i = { volgorde: ["vragen", "vertrouwen", ...ALLE.filter((x) => x !== "vragen" && x !== "vertrouwen")], verborgen: ["citaat", "app"] };
+    const i = { volgorde: ["vragen", "vertrouwen", ...ALLE.filter((x) => x !== "vragen" && x !== "vertrouwen")], verborgen: ["citaat", "functies"] };
     const z = zichtbareSecties(normalizeHomeIndeling(i));
     expect(z.slice(0, 2)).toEqual(["vragen", "vertrouwen"]);
     expect(z).not.toContain("citaat");
-    expect(z).not.toContain("app");
+    expect(z).not.toContain("functies");
     expect(z.length).toBe(ALLE.length - 2);
     expect(isStandaardHomeIndeling(normalizeHomeIndeling(i))).toBe(false);
   });
@@ -56,6 +57,15 @@ describe("homepage-indeling uit de Site-ontwerper", () => {
     expect(isStandaardHomeIndeling(n)).toBe(false);
     // dubbel normaliseren verandert niets (de id's blijven gelijk)
     expect(normalizeHomeIndeling(JSON.parse(JSON.stringify(n)))).toEqual(n);
+  });
+
+  it("een bewaarde indeling met de oude blokken voor werkers: die vallen weg, de rest blijft staan", () => {
+    const n = normalizeHomeIndeling({ volgorde: ["freelancers", "oproep", "werkvormen", "app"], verborgen: ["app", "citaat"], eigen: [] });
+    expect(n.volgorde).not.toContain("freelancers");
+    expect(n.volgorde).not.toContain("werkvormen");
+    expect(n.volgorde).not.toContain("app");
+    expect(n.volgorde.slice(0, 2)).toEqual(["voordeur", "oproep"]);
+    expect(n.verborgen).toEqual(["citaat"]);
   });
 
   it("hooguit 12 eigen blokken", () => {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, type ReactNode } from "react";
 
 /**
+ * De kop van /bedrijven (sinds 14 nov alleen voor bedrijven: geen knop "Ik zoek werk" meer).
  * Immersive homepage hero. Dark aurora backdrop, fluid headline, a real photo
  * with a light scroll-parallax and a floating glass "live match" card. Purely
  * presentational — no data, no side effects beyond a passive scroll listener.
@@ -18,11 +19,11 @@ export interface HeroContent {
 }
 const HERO_DEFAULTS: HeroContent = {
   eyebrow: "Personeel · website · branchesoftware · administratie",
-  titleLine1: "Zeker van je werk.",
+  titleLine1: "Personeel nodig?",
   titleLine2: "Zeker van je mensen.",
-  lead: "Eén plek voor je hele bedrijf: personeel, een eigen website, software voor jouw branche en je administratie. Zoek je werk? Hier vind je diensten bij jou in de buurt.",
-  ctaPrimary: "Ik zoek werk",
-  ctaSecondary: "Ik zoek mensen",
+  lead: "Eén plek voor je hele bedrijf: personeel als het druk is, een eigen website, software voor jouw branche en je administratie.",
+  ctaPrimary: "Klus plaatsen",
+  ctaSecondary: "Bekijk de prijzen",
 };
 
 export function HeroStage({
@@ -81,10 +82,10 @@ export function HeroStage({
           <p className="fluid-lead mt-3 max-w-xl text-white/70" data-cms-key="hero.lead" data-cms-ml="1">{c.lead}</p>
           {/* twee duidelijke keuzes; op de telefoon onder elkaar over de hele breedte */}
           <div className="mt-5 grid gap-3 sm:flex sm:flex-wrap">
-            <Link href="/register" className="btn-mint text-base" data-cms-key="hero.ctaPrimary">
+            <Link href="/klus-plaatsen" className="btn-mint text-base" data-cms-key="hero.ctaPrimary">
               {c.ctaPrimary}
             </Link>
-            <Link href="/voor-bedrijven" className="btn-ghost-invert text-base" data-cms-key="hero.ctaSecondary">
+            <Link href="/prijzen" className="btn-ghost-invert text-base" data-cms-key="hero.ctaSecondary">
               {c.ctaSecondary}
             </Link>
           </div>
@@ -102,7 +103,7 @@ export function HeroStage({
             ))}
           </nav>
           <div className="mt-6 hidden flex-wrap items-center gap-x-7 gap-y-2 text-sm text-white/65 sm:flex">
-            {["Werk bij jou in de buurt", "Personeel als het druk is", "Software voor jouw zaak"].map((t) => (
+            {["Geverifieerde mensen", "Alleen betalen voor gewerkte uren", "Software voor jouw zaak"].map((t) => (
               <span key={t} className="flex items-center gap-2">
                 <Tick /> {t}
               </span>
@@ -166,8 +167,8 @@ export function HeroStage({
 }
 
 const SNEL = [
-  { label: "Open klussen", href: "/klussen" },
   { label: "Klus plaatsen", href: "/klus-plaatsen" },
+  { label: "Prijzen", href: "/prijzen" },
   { label: "Website-check", href: "/website-check" },
   { label: "Shop", href: "/shop" },
 ];
