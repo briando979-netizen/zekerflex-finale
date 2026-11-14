@@ -42,7 +42,8 @@ describe("het tabblad van Beheer, Webshop in het adres", () => {
 
   it("het scherm leest het tabblad bij laden, werkt het adres bij zonder scrollen en geeft niets terug uit de effect", () => {
     const bron = lees("components/admin/ShopAdmin.tsx");
-    expect(bron).toContain('useEffect(() => { setTab(kiesShopTab(new URLSearchParams(window.location.search).get("tab"))); }, []);');
+    expect(bron).toContain('setTab(kiesShopTab(zoek.get("tab")));');
+    expect(bron).toContain('const zoek = new URLSearchParams(window.location.search);');
     expect(bron).toContain("window.history.replaceState(");
     expect(bron).toContain("onClick={() => kiesTab(key)}");
     expect(bron).not.toMatch(/\(\?<[=!]/);
