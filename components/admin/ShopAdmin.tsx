@@ -1,6 +1,8 @@
 "use client";
 
 import { bronRegel } from "@/lib/shop/link-product";
+import { ShopSnelCellen } from "@/components/admin/ShopSnelCellen";
+import { centenNaarEuro, effectieveVoorraad, euroNaarCenten, slugUitNaam, uniekeSlug } from "@/lib/shop/product-formulier";
 import { kiesShopTab, zoekMetShopTab, type ShopTab } from "@/lib/shop/admin-tabs";
 import { Fragment, useEffect, useState } from "react";
 import { ShopAdminTools } from "@/components/admin/ShopAdminTools";
@@ -102,7 +104,7 @@ export function ShopAdmin() {
     const zoek = new URLSearchParams(window.location.search);
     setTab(kiesShopTab(zoek.get("tab")));
     // ?nieuw=1 (de knop Product toevoegen in Mijn winkel): meteen het formulier voor een nieuw product open
-    if (zoek.get("nieuw") === "1") { setEditing(null); setForm(empty); setShowForm(true); }
+    if (zoek.get("nieuw") === "1") { setEditing(null); setForm(empty); setPrijsTekst(""); setInkoopTekst(""); setShowForm(true); }
   }, []);
   const kiesTab = (nieuw: ShopTab) => {
     setTab(nieuw);
@@ -110,6 +112,9 @@ export function ShopAdmin() {
     window.history.replaceState(window.history.state, "", `${window.location.pathname}${zoek ? `?${zoek}` : ""}${window.location.hash}`);
   };
   const [showForm, setShowForm] = useState(false);
+  // prijzen in euro (tekst) in het formulier; naar centen bij het opslaan (lib/shop/product-formulier.ts)
+  const [prijsTekst, setPrijsTekst] = useState("");
+  const [inkoopTekst, setInkoopTekst] = useState("");
   const [productQuery, setProductQuery] = useState("");
   const [orderQuery, setOrderQuery] = useState("");
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatus | "">("");
@@ -174,16 +179,22 @@ export function ShopAdmin() {
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault(); setMessage("");
-    const nietZichtbaar = form.active ? kanZichtbaarWorden(form) : null;
+    // prijzen in euro -> centen; het webadres komt vanzelf uit de naam als je het leeg laat
+    const priceCents = euroNaarCenten(prijsTekst);
+    if (priceCents === null) { setMessage("Vul de verkoopprijs in euro in, bijvoorbeeld 12,95."); return; }
+    const costCents = inkoopTekst.trim() === "" ? null : euroNaarCenten(inkoopTekst);
+    if (inkoopTekst.trim() !== "" && costCents === null) { setMessage("Vul de inkoopprijs in euro in, bijvoorbeeld 6,50, of laat het leeg."); return; }
+    const slug = form.slug.trim() || uniekeSlug(slugUitNaam(form.name), products.filter((p) => p.id !== editing).map((p) => p.slug));
+    const body = { ...form, priceCents, costCents, slug };
+    const nietZichtbaar = body.active ? kanZichtbaarWorden(body) : null;
     if (nietZichtbaar) { setMessage(nietZichtbaar); return; }
-    const response = await fetch(editing ? `/api/shop/products/${editing}` : "/api/shop/products", { method: editing ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+    const response = await fetch(editing ? `/api/shop/products/${editing}` : "/api/shop/products", { method: editing ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const data = await response.json();
     if (!response.ok) { setMessage(data?.error?.message ?? "Opslaan mislukt."); return; }
-    setMessage(editing ? "Product bijgewerkt." : "Product aangemaakt en gepubliceerd."); setForm(empty); setEditing(null); setShowForm(false); await load(); void loadStats();
+    setMessage(editing ? "Product bijgewerkt." : "Product aangemaakt en gepubliceerd."); setForm(empty); setPrijsTekst(""); setInkoopTekst(""); setEditing(null); setShowForm(false); await load(); void loadStats();
   };
-
-  const edit = (product: Product) => { setEditing(product.id); setForm(product); setShowForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); };
-  const newProduct = () => { setEditing(null); setForm(empty); setShowForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const edit = (product: Product) => { setEditing(product.id); setForm(product); setPrijsTekst(centenNaarEuro(product.priceCents)); setInkoopTekst(product.costCents === null ? "" : centenNaarEuro(product.costCents)); setShowForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const newProduct = () => { setEditing(null); setForm(empty); setPrijsTekst(""); setInkoopTekst(""); setShowForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const archive = async (id: string) => { if (!window.confirm("Dit product verbergen uit de shop?")) return; await fetch(`/api/shop/products/${id}`, { method: "DELETE" }); await load(); void loadStats(); };
 
   // Genereert een productfoto via de eigen beeld-generator en koppelt 'm. Zet
@@ -356,7 +367,7 @@ export function ShopAdmin() {
 
     {tab === "products" && showForm && (
     <form onSubmit={save} className="a-panel grid gap-6 p-6 lg:grid-cols-[1.2fr_0.8fr]">
-      <div className="space-y-4"><div className="grid gap-4 sm:grid-cols-2"><label className="a-label">Productnaam<input className="a-input" value={form.name} onChange={(e) => set("name", e.target.value)} required /></label><label className="a-label">Slug<input className="a-input" value={form.slug} onChange={(e) => set("slug", e.target.value)} placeholder="shift-bottle" required /></label></div><label className="a-label">Beschrijving<textarea className="a-input min-h-28" value={form.description} onChange={(e) => set("description", e.target.value)} required minLength={10} /></label><div className="grid gap-4 sm:grid-cols-4"><label className="a-label">Categorie<select className="a-input" value={form.category} onChange={(e) => set("category", e.target.value)}><option>Werk & PBM</option><option>Kleding</option><option>Werkdag</option><option>Cadeaus</option></select></label><label className="a-label">Verkoop (centen)<input className="a-input" type="number" min="0" value={form.priceCents} onChange={(e) => set("priceCents", Number(e.target.value))} required /></label><label className="a-label">Inkoop (centen)<input className="a-input" type="number" min="0" value={form.costCents ?? ""} onChange={(e) => set("costCents", e.target.value === "" ? null : Number(e.target.value))} placeholder="optioneel" /><span className="mt-1 block text-xs" style={{ color: "var(--a-mute)" }}>Marge: {marge(form.priceCents, form.costCents)}</span></label><label className="a-label">Voorraad<input className="a-input" type="number" min="0" value={form.stock} onChange={(e) => set("stock", Number(e.target.value))} required /></label></div><div className="grid gap-4 sm:grid-cols-2"><label className="a-label">Badge<input className="a-input" value={form.badge ?? ""} onChange={(e) => set("badge", e.target.value || null)} placeholder="Nieuw" /></label><label className="a-label">Volgorde<input className="a-input" type="number" min="0" value={form.sortOrder} onChange={(e) => set("sortOrder", Number(e.target.value))} /></label></div><div className="grid gap-4 sm:grid-cols-3"><label className="a-label">Geslacht<select className="a-input" value={form.gender ?? ""} onChange={(e) => set("gender", e.target.value || null)}><option value="">— (geen)</option><option value="heren">Heren</option><option value="vrouwen">Vrouwen</option><option value="kinderen">Kinderen</option><option value="unisex">Unisex</option></select></label><label className="a-label">Collectie<input className="a-input" value={form.collection ?? ""} onChange={(e) => set("collection", e.target.value || null)} placeholder="Winter 2026" /></label><label className="flex items-center gap-3 pt-6 text-sm" style={{ color: "var(--a-text)" }}><input type="checkbox" checked={form.isBundle} onChange={(e) => set("isBundle", e.target.checked)} /> Is een bundel</label></div><label className="flex items-center gap-3 text-sm" style={{ color: "var(--a-text)" }}><input type="checkbox" checked={form.active} onChange={(e) => set("active", e.target.checked)} /> Zichtbaar in de publieke shop</label></div>
+      <div className="space-y-4"><div className="grid gap-4 sm:grid-cols-2"><label className="a-label">Productnaam<input className="a-input" value={form.name} onChange={(e) => set("name", e.target.value)} required /></label><label className="a-label">Webadres (optioneel)<input className="a-input" value={form.slug} onChange={(e) => set("slug", e.target.value)} placeholder="wordt vanzelf uit de naam gemaakt" /></label></div><label className="a-label">Beschrijving<textarea className="a-input min-h-28" value={form.description} onChange={(e) => set("description", e.target.value)} required minLength={10} /></label><div className="grid gap-4 sm:grid-cols-4"><label className="a-label">Categorie<select className="a-input" value={form.category} onChange={(e) => set("category", e.target.value)}><option>Werk & PBM</option><option>Kleding</option><option>Werkdag</option><option>Cadeaus</option></select></label><label className="a-label">Verkoopprijs in euro<input className="a-input" inputMode="decimal" value={prijsTekst} onChange={(e) => { setPrijsTekst(e.target.value); const c = euroNaarCenten(e.target.value); if (c !== null) set("priceCents", c); }} placeholder="12,95" required /></label><label className="a-label">Inkoopprijs in euro<input className="a-input" inputMode="decimal" value={inkoopTekst} onChange={(e) => { setInkoopTekst(e.target.value); const c = e.target.value.trim() === "" ? null : euroNaarCenten(e.target.value); set("costCents", c); }} placeholder="optioneel, bijvoorbeeld 6,50" /><span className="mt-1 block text-xs" style={{ color: "var(--a-mute)" }}>Marge: {marge(form.priceCents, form.costCents)}</span></label><label className="a-label">Voorraad<input className="a-input" type="number" min="0" value={form.stock} onChange={(e) => set("stock", Number(e.target.value))} required /></label></div><details className="rounded-xl border p-3" style={{ borderColor: "var(--a-border)" }}><summary className="cursor-pointer text-sm font-semibold" style={{ color: "var(--a-text)" }}>Meer opties (badge, volgorde, collectie)</summary><div className="mt-3 space-y-4"><div className="grid gap-4 sm:grid-cols-2"><label className="a-label">Badge<input className="a-input" value={form.badge ?? ""} onChange={(e) => set("badge", e.target.value || null)} placeholder="Nieuw" /></label><label className="a-label">Volgorde<input className="a-input" type="number" min="0" value={form.sortOrder} onChange={(e) => set("sortOrder", Number(e.target.value))} /></label></div><div className="grid gap-4 sm:grid-cols-3"><label className="a-label">Geslacht<select className="a-input" value={form.gender ?? ""} onChange={(e) => set("gender", e.target.value || null)}><option value="">— (geen)</option><option value="heren">Heren</option><option value="vrouwen">Vrouwen</option><option value="kinderen">Kinderen</option><option value="unisex">Unisex</option></select></label><label className="a-label">Collectie<input className="a-input" value={form.collection ?? ""} onChange={(e) => set("collection", e.target.value || null)} placeholder="Winter 2026" /></label><label className="flex items-center gap-3 pt-6 text-sm" style={{ color: "var(--a-text)" }}><input type="checkbox" checked={form.isBundle} onChange={(e) => set("isBundle", e.target.checked)} /> Is een bundel</label></div></div></details><label className="flex items-center gap-3 text-sm" style={{ color: "var(--a-text)" }}><input type="checkbox" checked={form.active} onChange={(e) => set("active", e.target.checked)} /> Zichtbaar in de publieke shop</label></div>
       <div className="space-y-4"><ImageUpload label="Productfoto" value={form.imageUrl} busy={uploading === "image"} onUpload={(file) => upload(file, "imageUploadId", "imageUrl")} /><ImageUpload label="Model-foto" value={form.modelPhotoUrl} busy={uploading === "model"} onUpload={(file) => upload(file, "modelUploadId", "modelPhotoUrl")} />{editing ? <ShopModel3D productId={editing} /> : <p className="text-xs" style={{ color: "var(--a-mute)" }}>Een 3D-model koppel je nadat het product is opgeslagen.</p>}<div className="flex gap-3 pt-2"><button className="a-button a-button-primary" type="submit">{editing ? "Wijzigingen opslaan" : "Product publiceren"}</button><button className="a-button" type="button" onClick={() => { setEditing(null); setForm(empty); setShowForm(false); }}>Annuleren</button></div>{message && <p className="text-sm" style={{ color: "var(--a-dim)" }}>{message}</p>}</div>
     </form>
     )}
@@ -409,15 +420,12 @@ export function ShopAdmin() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3"><StatusPill active={product.active} /></td>
-                  <td className="px-4 py-3" style={{ color: "var(--a-text)" }}>
-                    {product.stock} op voorraad{product.variants.length ? <span style={{ color: "var(--a-mute)" }}> · {product.variants.length} var.</span> : null}
-                  </td>
-                  <td className="px-4 py-3" style={{ color: "var(--a-dim)" }}>{product.category}</td>
-                  <td className="px-4 py-3 text-right font-medium" style={{ color: "var(--a-text)" }}>
-                    {moneyCents(product.priceCents)}
-                    {product.costCents ? <span className="block text-xs font-normal" style={{ color: "var(--a-mute)" }}>marge {marge(product.priceCents, product.costCents)}</span> : null}
-                  </td>
+                  <ShopSnelCellen
+                    key={`${product.id}-${product.priceCents}-${effectieveVoorraad(product)}-${product.active}`}
+                    product={product}
+                    onBijgewerkt={(serverProduct, serverVariant) => setProducts((lijst) => lijst.map((p) => (p.id === product.id ? { ...p, ...serverProduct, variants: serverVariant ? p.variants.map((v) => (v.id === serverVariant.id ? { ...v, ...serverVariant } : v)) : p.variants } as Product : p)))}
+                    onMelding={(tekst) => { setMessage(tekst); void loadStats(); }}
+                  />
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1.5">
                       {!product.imageUrl && <button type="button" className="a-button text-xs" disabled={generating !== null} onClick={() => void generateOne(product.id)} title="Genereer een foto via de eigen beeld-generator">{generating === product.id ? "✨ Bezig…" : "✨ Foto"}</button>}
@@ -563,10 +571,6 @@ type ShopStats = {
   topProducts: { name: string; qty: number; revenueCents: number }[];
   lowStock: { variantId: string; productName: string; slug: string; size: string | null; color: string | null; stock: number }[];
 };
-
-function StatusPill({ active }: { active: boolean }) {
-  return <Pill tone={active ? "ok" : "neutral"}>{active ? "Live" : "Verborgen"}</Pill>;
-}
 
 function OrderPill({ status }: { status: OrderStatus }) {
   return <Pill tone={ORDER_STATUS_TONE[status]}>{ORDER_STATUS_LABEL[status]}</Pill>;
