@@ -8,6 +8,8 @@ import { LogoGlyph } from "@/components/brand/Logo";
 import { QrCode } from "@/components/billing/QrCode";
 import { PayLinkButton } from "@/components/billing/PayLinkButton";
 import { inIosApp } from "@/lib/app-mode-server";
+import { bedragTekst, overschrijvingVoor } from "@/lib/billing/overschrijving";
+import { platformBankgegevens, stripeBetalenDicht } from "@/lib/billing/overschrijving-bron";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -49,6 +51,7 @@ export default async function BetaalPage(props: {
       issuedAt: true,
       createdAt: true,
       paidAt: true,
+      issuerFreelancerId: true,
       recipientTenant: { select: { name: true } },
       recipientFreelancer: { select: { user: { select: { fullName: true } } } },
     },
@@ -60,6 +63,13 @@ export default async function BetaalPage(props: {
   // een domeinnaam (digitaal) is in de iPhone-app niet te betalen (App Store 3.1.1, lib/app-mode.ts)
   const nietInIphone = inv.type === "DOMEIN" && (await inIosApp());
   const payable = inv.status === "ISSUED" && !justPaid && inv.totalCents > 0 && Boolean(recipient) && !nietInIphone;
+  // Betalen per overschrijving (lib/billing/overschrijving.ts): de rekening van ZekerFlex en het factuurnummer als kenmerk. De knop voor
+  // iDEAL en kaart (Stripe) en de QR-code staan er alleen zolang Stripe echt betaalt.
+  const stripeDicht = await stripeBetalenDicht();
+  const bank = platformBankgegevens();
+  const overschrijving = payable
+    ? overschrijvingVoor({ iban: bank.iban, naam: bank.naam, factuurnummer: inv.number, totaalCents: inv.totalCents, status: inv.status, betaaltAanPlatform: !inv.issuerFreelancerId })
+    : null;
 
   return (
     <main className="min-h-screen bg-paper-soft px-4 py-10">
@@ -102,7 +112,7 @@ export default async function BetaalPage(props: {
                   <span className="font-semibold text-ok">✓ Betaling ontvangen.</span> We verwerken hem nu; binnen een
                   minuut staat de factuur op betaald. Je krijgt een bevestiging van Stripe per e-mail.
                 </p>
-              ) : payable ? (
+              ) : payable && !stripeDicht ? (
                 <>
                   <PayLinkButton token={token} label={`Betaal ${euro(inv.totalCents)}`} />
                   <p className="mt-3 text-center text-xs text-neutralx-500">
@@ -123,9 +133,24 @@ export default async function BetaalPage(props: {
                 )
               )}
             </div>
+
+            {overschrijving && (
+              <div className="mt-6 rounded-xl border border-hair bg-paper-soft p-4" aria-labelledby="overschrijving-kop">
+                <h2 id="overschrijving-kop" className="text-sm font-semibold text-ink">{stripeDicht ? "Betalen via bankoverschrijving" : "Liever overmaken?"}</h2>
+                <dl className="mt-3 space-y-1.5 text-sm">
+                  <div className="flex justify-between gap-4"><dt className="text-neutralx-500">Rekeninghouder</dt><dd className="text-right text-ink">{overschrijving.naam}</dd></div>
+                  <div className="flex justify-between gap-4"><dt className="text-neutralx-500">IBAN</dt><dd className="num text-right font-semibold text-ink">{overschrijving.ibanLeesbaar}</dd></div>
+                  <div className="flex justify-between gap-4"><dt className="text-neutralx-500">Bedrag</dt><dd className="num text-right text-ink">{bedragTekst(overschrijving.bedragCents)}</dd></div>
+                  <div className="flex justify-between gap-4"><dt className="text-neutralx-500">Betalingskenmerk</dt><dd className="num text-right font-semibold text-ink">{overschrijving.kenmerk}</dd></div>
+                </dl>
+                <p className="mt-3 text-xs leading-relaxed text-neutralx-500">
+                  Zet het factuurnummer bij de omschrijving: dan zien wij je betaling vanzelf bij deze factuur. Het kan een of twee werkdagen duren voordat de factuur op betaald staat.
+                </p>
+              </div>
+            )}
           </section>
 
-          {payable && (
+          {payable && !stripeDicht && (
             <aside className="card hidden h-fit p-6 text-center md:block">
               <QrCode value={payUrl(invoiceId)} size={184} label={`QR-code om factuur ${inv.number} op je telefoon te betalen`} />
               <p className="mt-3 max-w-[184px] text-xs leading-relaxed text-neutralx-500">

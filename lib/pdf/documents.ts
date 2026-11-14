@@ -7,6 +7,8 @@ import { zakelijkeRegels } from "@/lib/shop/zakelijk";
 import type { UitzendContract } from "@/lib/agreements/uitzend-contract";
 import { uitzendContractBlokken } from "@/lib/agreements/uitzend-tekst";
 import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
+import { overschrijvingRegels, overschrijvingVoor } from "@/lib/billing/overschrijving";
+import { platformBankgegevens, stripeBetalenDicht } from "@/lib/billing/overschrijving-bron";
 
 const euro = (c: number) => `EUR ${(c / 100).toFixed(2).replace(".", ",")}`;
 // Every date and time in these documents is Dutch time (the server runs in UTC).
@@ -99,13 +101,28 @@ export async function invoicePdf(invoiceId: string): Promise<{ bytes: Buffer; fi
   }
 
   // Open invoice someone owes us: a QR to pay it straight from a phone.
+  // Betalen per overschrijving (lib/billing/overschrijving.ts): de rekening van ZekerFlex en het factuurnummer als kenmerk. De online
+  // betaallink (iDEAL, kaart via Stripe) staat er alleen bij zolang Stripe echt betaalt.
   if (inv.status === "ISSUED" && inv.totalCents > 0 && (inv.recipientTenantId || inv.recipientFreelancerId)) {
-    const link = payUrl(inv.id);
-    pdf.gap(4);
-    pdf.line("Direct betalen", 10.5, { bold: true });
-    pdf.line("Scan de QR-code met je telefoon en betaal met iDEAL, Apple Pay, Google Pay of kaart.", 9);
-    pdf.qr(qrEncode(link), 92);
-    pdf.line(link, 7.5, { color: [0.4, 0.45, 0.42] });
+    const stripeDicht = await stripeBetalenDicht();
+    const bank = platformBankgegevens();
+    const overschrijving = overschrijvingVoor({ iban: bank.iban, naam: bank.naam, factuurnummer: inv.number, totaalCents: inv.totalCents, status: inv.status, betaaltAanPlatform: !inv.issuerFreelancerId });
+    if (!stripeDicht) {
+      const link = payUrl(inv.id);
+      pdf.gap(4);
+      pdf.line("Direct betalen", 10.5, { bold: true });
+      pdf.line("Scan de QR-code met je telefoon en betaal met iDEAL, Apple Pay, Google Pay of kaart.", 9);
+      pdf.qr(qrEncode(link), 92);
+      pdf.line(link, 7.5, { color: [0.4, 0.45, 0.42] });
+    }
+    if (overschrijving) {
+      pdf.gap(4);
+      pdf.line("Betalen via bankoverschrijving", 10.5, { bold: true });
+      for (const regel of overschrijvingRegels(overschrijving)) pdf.line(regel, 9);
+    } else if (stripeDicht && !inv.issuerFreelancerId) {
+      pdf.gap(4);
+      pdf.line("Betalen: neem contact op met ZekerFlex; online betalen is op dit moment niet mogelijk.", 9);
+    }
   }
   pdf.gap(18);
   pdf.line(
