@@ -28,11 +28,14 @@ import { maakPeiling, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POLL_OPTION_MAX } from
 import { geldigeVermeldingen, VERMELDING_MAX } from "@/lib/messaging/vermelding";
 import { maakLinkVoorbeeld } from "@/lib/messaging/link-voorbeeld-ophalen";
 import { BERICHT_MAX } from "@/lib/chat/lange-tekst";
+import { lijstVersie, sinceUitUrl } from "@/lib/messaging/poll-versie";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/inbox/:id — full conversation; marks it read for the caller.
+// ?since=<versie> (14 nov): is de lijst (berichten, reacties, bewerkingen, gelezen-vinkjes, peilingen, vastgezet) sinds
+// die versie niet veranderd, dan alleen { ongewijzigd, versie, presence }. Zonder since precies het oude antwoord, plus `versie`.
 export async function GET(req: Request, props: { params: Promise<{ threadId: string }> }): Promise<NextResponse> {
   const params = await props.params;
   try {
@@ -74,7 +77,27 @@ export async function GET(req: Request, props: { params: Promise<{ threadId: str
     const privacy = await chatPrivacy([...ids, p.userId]);
     for (const id of privacy.hideOnline) if (id !== p.userId && presence[id]) presence[id] = { online: false, lastSeen: null };
 
+    const berichten = messages.map((m) => ({
+      ...m,
+      // leesbevestigingen: off for me → I see none; others with them off don't count
+      readByOthers:
+        !privacy.noReceipts.has(p.userId) &&
+        Object.entries(thread.reads).some(
+          ([uid, ts]) => uid !== m.from && !privacy.noReceipts.has(uid) && new Date(ts).getTime() >= new Date(m.at).getTime(),
+        ),
+    }));
+    const pinned = (() => {
+      const pid = thread.meta.pinnedMessageId;
+      if (!pid) return null;
+      const pm = messages.find((mm) => mm.id === pid);
+      return pm && !pm.deleted ? { id: pm.id, excerpt: previewText(pm).slice(0, 80) } : null;
+    })();
+    // alles wat de client van de lijst toont zit in de versie; aanwezigheid en namen niet (die gaan altijd mee)
+    const versie = lijstVersie({ berichten, pinned, participants: thread.participants, subject: thread.meta.subject ?? null, title: thread.meta.title ?? null, blocked, disappearDays: thread.meta.disappearDays ?? 0 });
+    if (sinceUitUrl(req.url) === versie) return NextResponse.json({ ongewijzigd: true, versie, presence });
+
     return NextResponse.json({
+      versie,
       thread: {
         id: thread.id,
         kind: thread.kind,
@@ -100,22 +123,9 @@ export async function GET(req: Request, props: { params: Promise<{ threadId: str
         lists: Object.entries(prefs.lists).filter(([, ids]) => ids.includes(thread.id)).map(([n]) => n),
         blocked,
       },
-      messages: messages.map((m) => ({
-        ...m,
-        // leesbevestigingen: off for me → I see none; others with them off don't count
-        readByOthers:
-          !privacy.noReceipts.has(p.userId) &&
-          Object.entries(thread.reads).some(
-            ([uid, ts]) => uid !== m.from && !privacy.noReceipts.has(uid) && new Date(ts).getTime() >= new Date(m.at).getTime(),
-          ),
-      })),
+      messages: berichten,
       disappearDays: thread.meta.disappearDays ?? 0,
-      pinned: (() => {
-        const pid = thread.meta.pinnedMessageId;
-        if (!pid) return null;
-        const pm = messages.find((mm) => mm.id === pid);
-        return pm && !pm.deleted ? { id: pm.id, excerpt: previewText(pm).slice(0, 80) } : null;
-      })(),
+      pinned,
     });
   } catch (err) {
     const { status, body } = toErrorBody(err);
