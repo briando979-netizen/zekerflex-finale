@@ -135,7 +135,7 @@ export default async function BetaalPage(props: {
             </div>
 
             {overschrijving && (
-              <div className="mt-6 rounded-xl border border-hair bg-paper-soft p-4" aria-labelledby="overschrijving-kop">
+              <section className="mt-6 rounded-xl border border-hair bg-paper-soft p-4" aria-labelledby="overschrijving-kop">
                 <h2 id="overschrijving-kop" className="text-sm font-semibold text-ink">{stripeDicht ? "Betalen via bankoverschrijving" : "Liever overmaken?"}</h2>
                 <dl className="mt-3 space-y-1.5 text-sm">
                   <div className="flex justify-between gap-4"><dt className="text-neutralx-500">Rekeninghouder</dt><dd className="text-right text-ink">{overschrijving.naam}</dd></div>
@@ -146,7 +146,7 @@ export default async function BetaalPage(props: {
                 <p className="mt-3 text-xs leading-relaxed text-neutralx-500">
                   Zet het factuurnummer bij de omschrijving: dan zien wij je betaling vanzelf bij deze factuur. Het kan een of twee werkdagen duren voordat de factuur op betaald staat.
                 </p>
-              </div>
+              </section>
             )}
           </section>
 
