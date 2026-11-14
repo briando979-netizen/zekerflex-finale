@@ -7,7 +7,8 @@ const rootDir = fileURLToPath(new URL(".", import.meta.url));
 export default defineConfig({
   test: {
     environment: "node",
-    setupFiles: ["./tests/setup.ts"],
+    // tests/setup-klok.ts verzet de klok alleen met ZF_TEST_KLOK_VERZET_MS gezet (meting op tijdbommen)
+    setupFiles: ["./tests/setup.ts", "./tests/setup-klok.ts"],
     include: ["tests/**/*.test.ts"],
     // Standaard krijgt een test 5 s. Een bewaker die de hele broncode leest (kv-avg-bewaker, de a11y- en importtests) haalt
     // dat niet als de machine druk is, en de uitrolcontrole op de server (vitest related) houdt dan een gewone uitrol tegen
