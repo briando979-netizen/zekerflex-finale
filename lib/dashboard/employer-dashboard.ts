@@ -51,7 +51,7 @@ export async function employerDashboardStats(principal: Principal, now = new Dat
     safe(() => prisma.invoice.findMany({ where: { recipientTenantId: { in: scope.tenantIds }, status: { in: ["PAID", "ISSUED"] }, createdAt: { gte: monthAgo } }, select: { totalCents: true, createdAt: true }, take: 20_000 }), [] as { totalCents: number; createdAt: Date }[]),
     safe(() => prisma.timesheet.findMany({ where: { branch: branchFilter, status: { in: ["APPROVED", "PAID"] }, scheduledStart: { gte: monthAgo } }, select: { billableMinutes: true, scheduledStart: true }, take: 50_000 }), [] as { billableMinutes: number; scheduledStart: Date }[]),
     safe(() => prisma.shift.count({ where: { branch: branchFilter, startsAt: { gte: monthAgo, lt: now } } }), 0),
-    safe(() => prisma.shift.count({ where: { branch: branchFilter, startsAt: { gte: monthAgo, lt: now }, status: "FILLED" } }), 0),
+    safe(() => prisma.shift.count({ where: { branch: branchFilter, startsAt: { gte: monthAgo, lt: now }, status: { in: ["FILLED", "COMPLETED"] } } }), 0),
     safe(() => prisma.timesheet.count({ where: { branch: branchFilter, status: "SUBMITTED" } }), 0),
     safe(() => prisma.shiftAssignment.findMany({ where: { cancelledAt: null, shift: { branch: branchFilter, startsAt: { gte: dayStart, lt: dayEnd } } }, select: { freelancerId: true }, take: 5000 }), [] as { freelancerId: string }[]),
     safe(

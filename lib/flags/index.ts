@@ -83,6 +83,15 @@ FLAG_REGISTRY.push({
   default: false,
 });
 
+// Klussen na afloop afronden (lib/shifts/verlopen.ts, 14 nov): eerst een paar nachten droog tellen (KV meting:klussen-verlopen).
+FLAG_REGISTRY.push({
+  key: "klussen-verlopen-sluiten",
+  label: "Klussen na afloop vanzelf afronden",
+  description:
+    "Aan = elke nacht (03:20 UTC) gaat een klus waarvan de eindtijd meer dan twee uur voorbij is en waar nog iemand op staat naar Afgerond. Een klus zonder inschrijving blijft open (die telt als onvervulde vraag). Er gaat geen mail of push uit; uren, facturen en reviews lopen gewoon door. Uit (standaard) = hij telt alleen hoeveel klussen het zouden zijn en bewaart dat.",
+  default: false,
+});
+
 export interface FlagOverride {
   /** master switch; undefined = use the registry default */
   enabled?: boolean | undefined;

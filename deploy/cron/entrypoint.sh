@@ -15,6 +15,9 @@ cat > /etc/crontabs/root <<EOF
 # AVG-bewaartermijnen (lib/privacy/sweep.ts): o.a. selfies van de ID-controle na 30 dagen weg, oude GPS-punten, verlopen resetcodes.
 # Stond sinds de verhuizing naar de VPS nergens ingepland (gemeten 12 nov: ID-gegevens van 14 sep stonden er nog).
 40 3 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/privacy/retention-sweep"
+# Klussen na afloop (eindtijd > 2 uur voorbij, nog iemand erop) naar Afgerond; zonder inschrijving blijft een klus open (lib/shifts/verlopen.ts).
+# Doet niets zolang de vlag klussen-verlopen-sluiten uit staat: dan telt hij alleen (KV meting:klussen-verlopen).
+20 3 * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/klussen/verlopen"
 # Elk uur het testwerkeraccount van de eigenaar terug naar "net aangemeld" (lib/testwerker/reset.ts); zonder TESTWERKER_EMAIL doet hij niets.
 5 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/testwerker/reset"
 # Nachtelijke rondgang langs elke openbare pagina; wat kapot is komt in het foutenlogboek (lib/ops/rondgang.ts).
