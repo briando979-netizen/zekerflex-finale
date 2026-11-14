@@ -123,7 +123,7 @@ export const ADMIN_HUBS: AdminHub[] = [
     blurb: "Producten, bestellingen, beeld en huisstijl",
     icon: "shop",
     pages: [
-      { href: "/admin/webshop", label: "Webshop-console" },
+      { href: "/admin/webshop", label: "Mijn winkel" },
       { href: "/admin/ontwerper", label: "Site-ontwerper" },
       { href: "/admin/shop", label: "Webshop" },
       { href: "/admin/verkoop-via-ai", label: "Verkoop via AI" },

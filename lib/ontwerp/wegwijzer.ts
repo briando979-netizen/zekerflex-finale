@@ -32,7 +32,7 @@ export const WEGWIJZER: WegwijzerRegel[] = [
     doel: { tab: "home" },
   },
   {
-    wat: "Alles van de webshop op één pagina (Webshop-console)",
+    wat: "Alles van de webshop op één pagina (Mijn winkel)",
     uitleg: "Hoe je webshop ervoor staat, wat er nu moet gebeuren, en een knop naar elk onderdeel: producten, bestellingen, uiterlijk en de AI-hulp.",
     doel: { pagina: "/admin/webshop" },
   },
