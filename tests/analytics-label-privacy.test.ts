@@ -57,6 +57,10 @@ describe("bewaarLabel: op /admin en /studio alleen een code", () => {
     expect(bewaarLabel("/dashboard/berichten", "BVJan de Vries14:06Jij: zie je morgen")).toBeNull();
     expect(bewaarLabel("/werkgever/berichten/abc", "JJJan Jansen09:12Hoi, kan je zaterdag?")).toBeNull();
     expect(bewaarLabel("/dashboard/berichten", "nieuw-gesprek")).toBe("nieuw-gesprek");
+    // ook /berichten en de websitechat met bezoekers; een pad dat alleen op "chat" lijkt niet
+    expect(bewaarLabel("/berichten", "PKPiet Klaassen10:01Ok")).toBeNull();
+    expect(bewaarLabel("/werkgever/website/chat", "Bezoeker 14:05 Hallo, zijn jullie open?")).toBeNull();
+    expect(bewaarLabel("/kennis/chatten-met-klanten", "Lees verder")).toBe("Lees verder");
   });
 
   it("elders gewoon veiligLabel; een pad dat alleen op admin lijkt telt niet", () => {
