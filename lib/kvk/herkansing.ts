@@ -4,6 +4,7 @@ import { registerFreelancerCompany, registerTenantCompany } from "@/lib/company/
 import { koppelKvkAanAanmelder } from "@/lib/onboarding/employer";
 import { kvkLimietVan } from "@/lib/kvk/tegoed";
 import { wachtendeKvkControles, wisKvkOpgegeven, wisKvkWacht, zetKvkOpgegeven, zetKvkWacht } from "@/lib/kvk/tegoed-opslag";
+import { kvSet } from "@/lib/storage/kv";
 import { vulKvkWachtAan } from "@/lib/kvk/inhalen";
 
 // ---------------------------------------------------------------------------
@@ -17,6 +18,13 @@ import { vulKvkWachtAan } from "@/lib/kvk/inhalen";
 // ---------------------------------------------------------------------------
 
 export const HERKANSING_PER_RONDE = 20;
+/** De laatste uitslag van de herkansing, voor Beheer en het ochtendbericht: alleen aantallen en een tijdstip. */
+export const KV_HERKANSING_METING = "meting:kvk-herkansing";
+
+/** Bewaar de uitslag van een ronde (met tijdstip). Faalt open: een storing in de KV houdt de cron niet tegen. */
+export async function bewaarHerkansingMeting(uitslag: HerkansingUitslag, nu: Date = new Date()): Promise<void> {
+  await kvSet(KV_HERKANSING_METING, { at: nu.toISOString(), ...uitslag }).catch(() => undefined);
+}
 
 export interface HerkansingUitslag {
   /** werkers met een nog nooit gecontroleerd KVK-nummer die deze ronde in de wacht zijn gezet (lib/kvk/inhalen.ts) */

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { checkInternalToken } from "@/lib/internal-auth";
 import { recordCronRun } from "@/lib/metrics";
 import { logger } from "@/lib/logger";
-import { kvkHerkansing } from "@/lib/kvk/herkansing";
+import { bewaarHerkansingMeting, kvkHerkansing } from "@/lib/kvk/herkansing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,6 +16,8 @@ async function handle(request: Request): Promise<NextResponse> {
   }
   try {
     const uitslag = await kvkHerkansing();
+    // de stand voor Beheer en het ochtendbericht (meting:kvk-herkansing), alleen aantallen
+    await bewaarHerkansingMeting(uitslag);
     recordCronRun("kvk-herkansing", true);
     return NextResponse.json(uitslag);
   } catch (err) {

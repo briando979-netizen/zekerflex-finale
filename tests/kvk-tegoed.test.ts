@@ -54,7 +54,7 @@ import {
 } from "@/lib/kvk/tegoed";
 import { KVK_TEGOED_SLEUTEL, leesKvkTegoed, zetKvkWacht } from "@/lib/kvk/tegoed-opslag";
 import { lookupCompany } from "@/lib/integrations/kvkbase";
-import { kvkHerkansing } from "@/lib/kvk/herkansing";
+import { KV_HERKANSING_METING, bewaarHerkansingMeting, kvkHerkansing } from "@/lib/kvk/herkansing";
 import { kvkTegoedTodo } from "@/lib/admin/todo-kvk-tegoed";
 import { isLimiet } from "@/lib/kvk/bronnen";
 import { ERASABLE_KV_PREFIXES } from "@/lib/privacy/user-kv";
@@ -240,6 +240,13 @@ describe("de herkansing", () => {
     h.registerWerker.mockResolvedValue({ kvkValid: true });
     expect(await kvkHerkansing(nu)).toMatchObject({ ingehaald: 1, aanDeBeurt: 1, gelukt: 1 });
     expect(h.kv.has("kvk-opgegeven:werker:u2")).toBe(false);
+  });
+
+  it("de uitslag van een ronde komt met tijdstip in KV (alleen aantallen)", async () => {
+    const uit = await kvkHerkansing(nu);
+    await bewaarHerkansingMeting(uit, nu);
+    expect(h.kv.get(KV_HERKANSING_METING)).toEqual({ at: nu.toISOString(), ...uit });
+    expect(JSON.stringify(h.kv.get(KV_HERKANSING_METING))).not.toMatch(/@|\d{8}/);
   });
 
   it("niet aan de beurt, of het nummer intussen veranderd", async () => {
