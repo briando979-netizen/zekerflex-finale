@@ -311,7 +311,7 @@ export function Composer({
     // in het veld staan tot het bestand echt verstuurd is
     if (isTeLang(t)) {
       if (editing) {
-        setSendError(vulIn(chat.composer.teLangOmTeBewerken, { max: BERICHT_MAX.toLocaleString("nl-NL") }));
+        setSendError(vulIn(chat.composer.teLangOmTeBewerken, { max: String(BERICHT_MAX) }));
         return;
       }
       setEmojiOpen(false);
@@ -542,8 +542,8 @@ export function Composer({
         // geen stille afkapping meer (het veld had maxLength 4000): zeg wat er met een lange tekst gebeurt
         <p role="status" className="border-b border-hair bg-paper-soft px-3 py-1.5 text-xs text-neutralx-600">
           {editing
-            ? vulIn(chat.composer.teLangOmTeBewerken, { max: BERICHT_MAX.toLocaleString("nl-NL") })
-            : vulIn(chat.composer.langeTekstAlsBestand, { aantal: text.trim().length.toLocaleString("nl-NL") })}
+            ? vulIn(chat.composer.teLangOmTeBewerken, { max: String(BERICHT_MAX) })
+            : vulIn(chat.composer.langeTekstAlsBestand, { aantal: String(text.trim().length) })}
         </p>
       )}
 
