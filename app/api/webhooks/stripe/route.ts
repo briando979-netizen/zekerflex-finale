@@ -107,7 +107,7 @@ async function markInvoicePaid(invoiceId: string, session: Stripe.Checkout.Sessi
     }
   } else {
     // De factuur stond al op betaald. Is dit dezelfde betaling nog een keer (Stripe stuurt soms dubbel), dan is er niets aan
-    // de hand. Is het een andere betaling (de factuur was al per overschrijving of eerder via Stripe betaald), dan is er twee
+    // de hand. Is het een andere betaling (de factuur was al met de hand of eerder via Stripe op betaald gezet), dan is er twee
     // keer betaald: dat mag niet stil voorbijgaan. Alleen het factuurnummer in de melding, geen kaart- of persoonsgegevens.
     const dezeBetaling = typeof session.payment_intent === "string" ? session.payment_intent : null;
     if (!dezeBetaling || dezeBetaling !== invoice.stripePaymentIntentId) {
