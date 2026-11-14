@@ -48,7 +48,7 @@ export async function dashboardStats(now = new Date()): Promise<DashboardStats> 
       [] as { billableMinutes: number; scheduledStart: Date }[],
     ),
     safe(() => prisma.shift.count({ where: { startsAt: { gte: monthAgo, lt: now } } }), 0),
-    safe(() => prisma.shift.count({ where: { startsAt: { gte: monthAgo, lt: now }, status: "FILLED" } }), 0),
+    safe(() => prisma.shift.count({ where: { startsAt: { gte: monthAgo, lt: now }, status: { in: ["FILLED", "COMPLETED"] } } }), 0),
     safe(() => prisma.shiftAssignment.findMany({ where: { cancelledAt: null, shift: { startsAt: { gte: dayStart, lt: new Date(dayStart.getTime() + DAY) } } }, select: { freelancerId: true }, take: 5000 }), [] as { freelancerId: string }[]),
     safe(() => prisma.freelancerProfile.count({ where: { matchingBlockedUntil: { gt: now } } }), 0),
     safe(
