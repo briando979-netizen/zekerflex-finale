@@ -4,6 +4,8 @@ import { CITIES, cityBySlug } from "@/lib/seo-cities";
 // De stadspagina's (freelance-werk, personeel-inhuren en 5 sectoren × 2) komen uit deze lijst; elke stad draagt
 // één eigen, ware regel lokale tekst. De regio van de eigen vestiging (Zuidbroek, Midden-Groningen) hoort erin.
 
+const REGIO = ["veendam", "hoogezand", "winschoten", "stadskanaal", "assen"];
+
 describe("seo-cities: de lijst waar de stadspagina's uit komen", () => {
   it("heeft unieke slugs en namen, en coördinaten binnen Nederland", () => {
     const slugs = CITIES.map((c) => c.slug);
@@ -25,13 +27,15 @@ describe("seo-cities: de lijst waar de stadspagina's uit komen", () => {
     for (const c of CITIES) {
       expect(c.local.length).toBeGreaterThanOrEqual(60);
       expect(c.local).toContain(c.name.split("-")[0]!);
-      // geen verzonnen aantallen in de lokale tekst
-      expect(c.local).not.toMatch(/\d/);
+    }
+    // de regiosteden van 14 nov: geen verzonnen aantallen in de lokale tekst (oudere teksten noemen soms een echte naam met een cijfer)
+    for (const slug of REGIO) {
+      expect(cityBySlug(slug)?.local, slug).not.toMatch(/\d/);
     }
   });
 
   it("kent de regio van de eigen vestiging: Veendam, Hoogezand-Sappemeer, Winschoten, Stadskanaal en Assen", () => {
-    for (const slug of ["groningen", "veendam", "hoogezand", "winschoten", "stadskanaal", "assen"]) {
+    for (const slug of ["groningen", ...REGIO]) {
       expect(cityBySlug(slug), slug).toBeDefined();
     }
     expect(cityBySlug("hoogezand")?.local).toMatch(/Zuidbroek/);
