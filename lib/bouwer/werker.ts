@@ -22,6 +22,16 @@ const URL_BOUWER = process.env.BOUWER_URL || "http://bouwer:4100";
 const TOKEN = process.env.BOUWER_TOKEN || "";
 const K_INSTELLINGEN = "bouwer:instellingen";
 const DOEL_GITHUB = "bouwer-github";
+const DOEL_CLAUDE = "bouwer-claude";
+
+/**
+ * De motor van de Bouwer (15 nov 2026). "eigen": de eigen lus op het taalmodel uit de AI-instellingen (gratis, Gemini of
+ * het eigen model). "claude-code": Claude Code zelf in de werkkopie op de server, met de sleutel van de eigenaar
+ * (claude setup-token, zijn eigen Claude-abonnement); zelfde gereedschap als een Claude-sessie op de pc.
+ */
+export type BouwerMotor = "eigen" | "claude-code";
+export const CLAUDE_MODELLEN = ["opus", "sonnet"] as const;
+export type ClaudeModel = (typeof CLAUDE_MODELLEN)[number];
 
 export type TaakStaat = "bezig" | "vraag" | "klaar" | "mislukt" | "conflict" | "goedkeuren" | "gepusht" | "weggegooid";
 
@@ -81,6 +91,10 @@ export interface Taak extends Omit<TaakKort, "bestanden"> {
 interface Instellingen {
   model?: string;
   githubToken?: string;
+  motor?: BouwerMotor;
+  /** versleuteld (sealSecret, doel bouwer-claude), nooit terug te lezen in de app */
+  claudeToken?: string;
+  claudeModel?: ClaudeModel;
   /** Zelf reparaties voorstellen voor terugkerende fouten (lib/bouwer/autopilot.ts). */
   autoFouten?: boolean;
 }
@@ -173,12 +187,38 @@ export async function bouwerModel(): Promise<string> {
 
 export async function bouwerInstellingen() {
   const i = await lees();
-  return { model: await bouwerModel(), modelGekozen: Boolean(i.model), githubSleutel: Boolean(i.githubToken), autoFouten: Boolean(i.autoFouten) };
+  return {
+    model: await bouwerModel(),
+    modelGekozen: Boolean(i.model),
+    githubSleutel: Boolean(i.githubToken),
+    autoFouten: Boolean(i.autoFouten),
+    motor: bouwerMotor(i),
+    claudeSleutel: Boolean(i.claudeToken),
+    claudeModel: i.claudeModel ?? "opus",
+  };
 }
 
-export async function zetBouwerInstellingen(wijziging: { model?: string | null; githubToken?: string | null; autoFouten?: boolean }): Promise<void> {
+/** Claude Code alleen als de eigenaar hem koos én er een sleutel is; anders altijd de eigen lus. */
+export function bouwerMotor(i: Pick<Instellingen, "motor" | "claudeToken">): BouwerMotor {
+  return i.motor === "claude-code" && i.claudeToken ? "claude-code" : "eigen";
+}
+
+export async function zetBouwerInstellingen(wijziging: {
+  model?: string | null;
+  githubToken?: string | null;
+  autoFouten?: boolean;
+  motor?: BouwerMotor;
+  claudeToken?: string | null;
+  claudeModel?: ClaudeModel;
+}): Promise<void> {
   const i = await lees();
   const volgende: Instellingen = { ...i };
+  if (wijziging.motor !== undefined) volgende.motor = wijziging.motor;
+  if (wijziging.claudeModel !== undefined) volgende.claudeModel = wijziging.claudeModel;
+  if (wijziging.claudeToken !== undefined) {
+    if (wijziging.claudeToken) volgende.claudeToken = sealSecret(wijziging.claudeToken, DOEL_CLAUDE);
+    else delete volgende.claudeToken;
+  }
   if (wijziging.autoFouten !== undefined) volgende.autoFouten = wijziging.autoFouten;
   if (wijziging.model !== undefined) {
     if (wijziging.model) volgende.model = wijziging.model;
@@ -205,7 +245,24 @@ export async function githubSleutel(): Promise<string | null> {
  * Het taalmodel dat de Bouwer per opdracht meekrijgt (zelfde endpoint/sleutel als de rest van de AI),
  * met het hoofdmodel als reserve voor als het gekozen model overbelast is of aan zijn daglimiet zit.
  */
-export async function bouwerLlm(): Promise<{ baseUrl: string; apiKey: string | null; model: string; reserveModel?: string }> {
+export type BouwerLlm =
+  | { baseUrl: string; apiKey: string | null; model: string; reserveModel?: string }
+  | { motor: "claude-code"; apiKey: string; model: ClaudeModel };
+
+export async function bouwerLlm(): Promise<BouwerLlm> {
+  const i = await lees();
+  if (bouwerMotor(i) === "claude-code") {
+    // Claude Code stuurt de code naar Anthropic: alleen als code naar buiten mag (zelfde regel als hieronder)
+    if (!env.AI_ALLOW_REMOTE) throw AppError.precondition("AI_ALLOW_REMOTE staat uit; de Bouwer stuurt geen code naar Claude.");
+    let apiKey: string | null = null;
+    try {
+      apiKey = i.claudeToken ? openSecret(i.claudeToken, DOEL_CLAUDE) : null;
+    } catch {
+      apiKey = null; // AUTH_SECRET gewisseld: opnieuw invullen
+    }
+    if (!apiKey) throw AppError.precondition("De Claude-sleutel van de Bouwer is niet te lezen. Vul hem opnieuw in bij de instellingen.");
+    return { motor: "claude-code", apiKey, model: i.claudeModel ?? "opus" };
+  }
   // zelfde regel als de governor: code gaat alleen naar een extern model als dat mag
   if (!env.AI_ALLOW_REMOTE && !isLocalInference()) {
     throw AppError.precondition("Het taalmodel staat extern en AI_ALLOW_REMOTE staat uit; de Bouwer stuurt geen code naar buiten.");
