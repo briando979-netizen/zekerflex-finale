@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { useNaarInlogAlsUitgelogd } from "@/components/ops/useNaarInlogAlsUitgelogd";
+import { isStaleDeployment } from "@/lib/ops/stale-deployment";
+import { magStaleHerladen, tabOpslag } from "@/lib/ops/stale-herlaad";
 
 // Foutgrens voor het beheer: valt één beheerpagina om, dan blijft de
 // beheeromgeving (menu, bovenbalk) staan en zie je hier wat er is, met een knop
@@ -12,6 +14,8 @@ import { useNaarInlogAlsUitgelogd } from "@/components/ops/useNaarInlogAlsUitgel
 export default function AdminError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   // sessie net verlopen: naar het inlogscherm met terugkeer (lib/ops/uitgelogd.ts)
   const uitgelogd = useNaarInlogAlsUitgelogd();
+  // een beheertabblad van voor een uitrol vraagt iets op dat de nieuwe versie niet meer kent: eenmaal vernieuwen (zie app/error.tsx)
+  const stale = isStaleDeployment(error);
   useEffect(() => {
     console.error(error);
     try {
@@ -30,19 +34,22 @@ export default function AdminError({ error, reset }: { error: Error & { digest?:
     } catch {
       /* rapporteren mag nooit zelf crashen */
     }
-  }, [error]);
+    if (stale && magStaleHerladen(tabOpslag(), Date.now())) window.location.reload();
+  }, [error, stale]);
 
   return (
     <div role="alert" className="mx-auto my-10 max-w-xl rounded-2xl border border-crit/30 bg-crit/5 p-6">
       <p className="text-xs font-semibold uppercase tracking-wide text-crit">Dit onderdeel haperde</p>
-      <h1 className="mt-2 text-xl font-bold text-ink">{uitgelogd ? "Je bent uitgelogd" : "De pagina kon niet worden geladen"}</h1>
+      <h1 className="mt-2 text-xl font-bold text-ink">{uitgelogd ? "Je bent uitgelogd" : stale ? "Er is net een nieuwe versie live gezet" : "De pagina kon niet worden geladen"}</h1>
       <p className="mt-2 text-sm text-neutralx-700">
-        De fout is in het foutenlogboek gezet (Systeem → Foutmeldingen). Probeer het opnieuw; blijft het misgaan, kijk dan daar wat er staat.
+        {stale
+          ? "Dit tabblad stond nog open van voor de uitrol. We vernieuwen de pagina even voor je; lukt dat niet, kies dan Pagina vernieuwen."
+          : "De fout is in het foutenlogboek gezet (Systeem → Foutmeldingen). Probeer het opnieuw; blijft het misgaan, kijk dan daar wat er staat."}
       </p>
       {error?.digest && <p className="mt-2 font-mono text-xs text-neutralx-500">kenmerk {error.digest}</p>}
       <div className="mt-5 flex flex-wrap gap-2">
-        <button type="button" onClick={() => reset()} className="rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white">
-          Opnieuw proberen
+        <button type="button" onClick={() => (stale ? window.location.reload() : reset())} className="rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-white">
+          {stale ? "Pagina vernieuwen" : "Opnieuw proberen"}
         </button>
         <Link href="/admin" className="rounded-xl border border-hair px-4 py-2 text-sm font-semibold text-ink">
           Naar het beheer
