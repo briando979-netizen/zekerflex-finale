@@ -20,15 +20,17 @@ export interface GeplaatsteCookie {
   /** de naam of namen zoals de browser ze ziet (in productie) */
   namen: readonly string[];
   doel: string;
+  /** hoe lang de cookie in de browser blijft */
   looptijd: Looptijd;
-  /** een tweede looptijd, met wanneer die geldt */
-  anders?: { looptijd: Looptijd; wanneer: string };
+  /** alleen de inlogcookie: de inlog erin verloopt eerder dan de cookie zelf, tenzij … */
+  inlog?: { verloopt: Looptijd; tenzij: string };
   /** false = deze cookie wordt nu niet gezet (de functie staat uit) en hoort dan niet in de lijst */
   aan?: boolean;
 }
 
 export const GEPLAATSTE_COOKIES: readonly GeplaatsteCookie[] = [
-  { namen: ["__Secure-zekerflex.session"], doel: "houdt je ingelogd", looptijd: 8 * UUR, anders: { looptijd: 30 * DAG, wanneer: "als je \"ingelogd blijven\" kiest" } },
+  // de cookie zelf leeft zo lang als de langste inlog (session.maxAge van NextAuth); de inlog erin heeft zijn eigen einde
+  { namen: ["__Secure-zekerflex.session"], doel: "houdt je ingelogd", looptijd: 30 * DAG, inlog: { verloopt: 8 * UUR, tenzij: "tenzij je \"ingelogd blijven\" kiest" } },
   { namen: ["__Secure-authjs.state", "__Secure-authjs.nonce", "__Secure-authjs.pkce.code_verifier"], doel: "rondt inloggen met Google of Apple veilig af", looptijd: 15 * MINUUT },
   { namen: ["__Secure-authjs.callback-url"], doel: "onthoudt waar je na het inloggen met Google of Apple terugkomt", looptijd: "sessie" },
   { namen: ["__Host-authjs.csrf-token"], doel: "beschermt het inloggen tegen misbruik vanaf een andere website", looptijd: "sessie" },
@@ -69,6 +71,8 @@ export function looptijdTekst(l: Looptijd): string {
 
 /** Eén regel voor de lijst: namen, doel en looptijd. */
 export function cookieRegel(c: GeplaatsteCookie): string {
-  const anders = c.anders ? `, of ${looptijdTekst(c.anders.looptijd)} ${c.anders.wanneer}` : "";
-  return `${c.namen.join(", ")}: ${c.doel}. Looptijd: ${looptijdTekst(c.looptijd)}${anders}.`;
+  const looptijd = c.inlog
+    ? `blijft tot ${looptijdTekst(c.looptijd)} in je browser; je inlog erin verloopt na ${looptijdTekst(c.inlog.verloopt)}, ${c.inlog.tenzij}`
+    : looptijdTekst(c.looptijd);
+  return `${c.namen.join(", ")}: ${c.doel}. Looptijd: ${looptijd}.`;
 }

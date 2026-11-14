@@ -35,15 +35,21 @@ interface Verwacht {
   /** het bestand waar de naam als tekst staat */
   bron: string;
   looptijd: () => Looptijd;
-  anders?: () => Looptijd;
+  /** alleen de inlogcookie: wanneer de inlog erin verloopt */
+  inlog?: () => Looptijd;
 }
 
 const NEXTAUTH = "lib/auth/nextauth.ts";
 const VERWACHT: Record<string, Verwacht> = {
   "__Secure-zekerflex.session": {
     bron: "lib/auth/session.ts",
-    looptijd: () => constante("lib/auth/session.ts", "SESSION_MAX_AGE_SECONDS"),
-    anders: () => constante("lib/auth/session.ts", "REMEMBER_MAX_AGE_SECONDS"),
+    // de cookie zelf: session.maxAge van NextAuth (de langste inlog, "ingelogd blijven")
+    looptijd: () => {
+      if (!/session: \{ strategy: "jwt", maxAge: REMEMBER_MAX_AGE_SECONDS \}/.test(lees(NEXTAUTH))) return -1;
+      return constante("lib/auth/session.ts", "REMEMBER_MAX_AGE_SECONDS");
+    },
+    // de inlog erin, zonder "ingelogd blijven"
+    inlog: () => constante("lib/auth/session.ts", "SESSION_MAX_AGE_SECONDS"),
   },
   "__Secure-authjs.state": { bron: NEXTAUTH, looptijd: () => uit(NEXTAUTH, new RegExp(`terugPostCookie\\("state",\\s*${SOM}\\)`)) },
   "__Secure-authjs.nonce": { bron: NEXTAUTH, looptijd: () => uit(NEXTAUTH, new RegExp(`terugPostCookie\\("nonce",\\s*${SOM}\\)`)) },
@@ -131,7 +137,8 @@ describe("de cookielijst klopt met de code", () => {
         const tekst = kort.startsWith("authjs.") ? "authjs." : `"${kort}"`;
         expect(lees(v.bron), `${naam} in ${v.bron}`).toContain(tekst);
         expect(c.looptijd, naam).toBe(v.looptijd());
-        if (v.anders) expect(c.anders?.looptijd, `${naam} (anders)`).toBe(v.anders());
+        if (v.inlog) expect(c.inlog?.verloopt, `${naam} (inlog)`).toBe(v.inlog());
+        else expect(c.inlog, `${naam} heeft geen eigen inlogtijd`).toBeUndefined();
       }
     }
     expect(lees("lib/auth/session.ts")).toContain('"__Secure-zekerflex.session"');
@@ -160,7 +167,9 @@ describe("de pagina", () => {
     expect(s).toContain("list={cookiesNu().map(cookieRegel)}");
     expect(s).not.toContain("tijdens je bezoek");
     expect(s).not.toContain("uitsluitend strikt noodzakelijke");
-    expect(cookieRegel(GEPLAATSTE_COOKIES[0]!)).toBe('__Secure-zekerflex.session: houdt je ingelogd. Looptijd: 8 uur, of 30 dagen als je "ingelogd blijven" kiest.');
+    expect(cookieRegel(GEPLAATSTE_COOKIES[0]!)).toBe(
+      '__Secure-zekerflex.session: houdt je ingelogd. Looptijd: blijft tot 30 dagen in je browser; je inlog erin verloopt na 8 uur, tenzij je "ingelogd blijven" kiest.',
+    );
   });
 
   it("looptijden in gewone woorden", () => {
