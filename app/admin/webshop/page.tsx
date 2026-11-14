@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { KpiStrip, Notice, PageHead, Panel, Pill } from "@/components/admin/kit";
 import { euro } from "@/lib/admin/format";
 import { accountStand } from "@/lib/billing/stripe-betalen";
-import { CONSOLE_GROEPEN, MIJN_WINKEL_KNOPPEN, betalenStatus, consoleTaken, type ConsoleStand } from "@/lib/shop/console";
+import { CONSOLE_GROEPEN, INRICHTEN_KNOPPEN, MIJN_WINKEL_KNOPPEN, betalenStatus, consoleTaken, type ConsoleStand } from "@/lib/shop/console";
 import { opzetStappen, opzetVoortgang, volgendeStap } from "@/lib/shop/opzetlijst";
 import { contentKeys, getContentMap } from "@/lib/content/store";
 
@@ -135,6 +135,19 @@ export default async function WebshopConsolePage() {
             </li>
           ))}
         </ol>
+      </Panel>
+
+      <Panel title="Winkel inrichten" subtitle="Kies wat je wilt aanpassen. Je ziet meteen een voorbeeld van je winkel ernaast.">
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {INRICHTEN_KNOPPEN.map((k) => (
+            <li key={k.id}>
+              <Link href={k.href} className="block h-full rounded-xl p-4 transition-colors hover:bg-[var(--a-panel-2)]" style={{ border: "1px solid var(--a-border)", background: "var(--a-panel)" }}>
+                <span className="block text-sm font-semibold" style={{ color: "var(--a-text)" }}>{k.titel}</span>
+                <span className="mt-1 block text-[0.8125rem]" style={{ color: "var(--a-mute)" }}>{k.uitleg}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </Panel>
 
       <KpiStrip

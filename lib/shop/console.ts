@@ -156,3 +156,24 @@ export function betalenStatus(betalen: boolean | null): { tekst: string; toon: "
   if (betalen === null) return { tekst: "Nog niet gemeten", toon: "neutral" };
   return betalen ? { tekst: "Klanten kunnen betalen", toon: "ok" } : { tekst: "Dicht: klanten kunnen nu niet betalen", toon: "crit" };
 }
+
+// ---- Winkel inrichten: waar je wat aanpast (Mijn winkel, deel 5) --------------------------------------------------------------------
+// De Site-ontwerper kan al alles hieronder, met een voorbeeld van je winkel ernaast en wat je klikt meteen zichtbaar. Dit is de korte weg
+// ernaartoe, in gewone woorden: wat wil je aanpassen, en een knop naar het goede tabblad. Er is dus geen tweede editor gebouwd.
+// Let op: de foto in de kop van /shop staat vast (de teamfoto in components/marketing/ShopThuis.tsx); wisselen kan nog niet vanuit een scherm.
+
+export interface InrichtenKnop {
+  id: "kop" | "indeling" | "kleuren" | "menu" | "teksten" | "beeld";
+  titel: string;
+  uitleg: string;
+  href: string;
+}
+
+export const INRICHTEN_KNOPPEN: InrichtenKnop[] = [
+  { id: "kop", titel: "Titel en ondertitel van je winkel", uitleg: "De grote kop bovenaan je winkel en de tekst eronder. Klik in het voorbeeld op de tekst die je wilt veranderen.", href: "/admin/ontwerper?tab=teksten" },
+  { id: "indeling", titel: "Indeling van je winkel", uitleg: "Welke onderdelen er onder de kop staan en in welke volgorde: sleep ze naar een andere plek of verberg ze.", href: "/admin/ontwerper?tab=shop" },
+  { id: "kleuren", titel: "Kleuren en letters", uitleg: "De stijl van je hele site, ook van de winkel.", href: "/admin/ontwerper?tab=stijl" },
+  { id: "menu", titel: "Menu", uitleg: "De knoppen bovenaan je site.", href: "/admin/ontwerper?tab=menu" },
+  { id: "teksten", titel: "Alle teksten, ook de voetnoot", uitleg: "Elke kop, knop en zin van de winkel aanpassen, ook onderaan de pagina.", href: "/admin/ontwerper?tab=teksten" },
+  { id: "beeld", titel: "Foto's en video's", uitleg: "Je bibliotheek met beelden voor je site.", href: "/admin/ontwerper?tab=media" },
+];

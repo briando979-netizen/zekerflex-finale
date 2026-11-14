@@ -59,3 +59,24 @@ describe("Mijn winkel: de pagina en het menu", () => {
     expect(scherm).toContain("setShowForm(true)");
   });
 });
+
+describe("Mijn winkel: Winkel inrichten (deel 5)", () => {
+  it("wijst naar bestaande tabbladen van de Site-ontwerper, in gewoon Nederlands", async () => {
+    const { INRICHTEN_KNOPPEN } = await import("@/lib/shop/console");
+    const { isOntwerperTab } = await import("@/lib/ontwerp/tabs");
+    expect(INRICHTEN_KNOPPEN.map((k) => k.id)).toEqual(["kop", "indeling", "kleuren", "menu", "teksten", "beeld"]);
+    for (const k of INRICHTEN_KNOPPEN) {
+      const [pad, zoek] = k.href.split("?");
+      expect(pad).toBe("/admin/ontwerper");
+      expect(isOntwerperTab(new URLSearchParams(zoek ?? "").get("tab")), k.titel).toBe(true);
+      expect(k.uitleg.endsWith("."), k.titel).toBe(true);
+    }
+  });
+
+  it("staat op de pagina met uitleg dat er een voorbeeld naast staat", () => {
+    const pagina = lees("app/admin/webshop/page.tsx");
+    expect(pagina).toContain('title="Winkel inrichten"');
+    expect(pagina).toContain("INRICHTEN_KNOPPEN.map");
+    expect(pagina).toContain("Je ziet meteen een voorbeeld van je winkel ernaast.");
+  });
+});
