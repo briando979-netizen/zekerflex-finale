@@ -49,6 +49,9 @@ import { stripeKopieTodo } from "@/lib/admin/todo-stripe-kopie";
 import { stripeKopieStand } from "@/lib/kyc/stripe-kopie";
 import { leesKvkTegoed, wachtendeKvkControles } from "@/lib/kvk/tegoed-opslag";
 import { telKvkStand } from "@/lib/kvk/inhalen";
+import { functiesWachtenTodo } from "@/lib/admin/todo-besluiten";
+import { KV_VERLOPEN_METING, VERLOPEN_VLAG, type VerlopenMeting } from "@/lib/shifts/verlopen";
+import { BOUNCE_VLAG, KV_BOUNCE_METING, type BounceMeting } from "@/lib/mail/bounce-ronde";
 
 /** Bij taken die alleen voor ZekerFlex Bank nodig waren. */
 const BANK_UIT = "niet meer nodig: ZekerFlex Bank staat uit (7 nov)";
@@ -333,6 +336,13 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   const werkrechtEis = werkrechtEisTodo(await featureEnabled("werkrecht-eis").catch(() => undefined));
   // bonnetjesmail (lib/boekhouding/bonnen/mail-taak.ts): staat de vlag aan terwijl er geen mailbox of administratie is? Een leesfout geeft geen taak
   const bonnenMail = bonnenMailTodo(await bonnenMailStand().catch((): undefined => undefined));
+  // twee functies die droog draaien tot de eigenaar ja zegt (14 nov, lib/admin/todo-besluiten.ts): de stand van de vlag plus
+  // de laatste droge telling uit KV; een leesfout van de vlag = die functie niet tonen, een leesfout van de telling = "nog geen telling"
+  const vlagStand = (key: string) => featureEnabled(key).catch((): undefined => undefined);
+  const functiesWachten = functiesWachtenTodo({
+    verlopen: { aan: await vlagStand(VERLOPEN_VLAG), meting: await kvGet<VerlopenMeting>(KV_VERLOPEN_METING).catch(() => null) },
+    bounces: { aan: await vlagStand(BOUNCE_VLAG), meting: await kvGet<BounceMeting>(KV_BOUNCE_METING).catch(() => null) },
+  });
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
   return [
@@ -342,6 +352,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     ...(stripeKopie ? [stripeKopie] : []),
     ...(werkrechtEis ? [werkrechtEis] : []),
     ...(bonnenMail ? [bonnenMail] : []),
+    ...(functiesWachten ? [functiesWachten] : []),
     ...autoUitrol,
     ...(aiTrader ? [aiTrader] : []),
     ...(pasdienst ? [pasdienst] : []),
