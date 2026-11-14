@@ -8,6 +8,7 @@ import { operationeleKosten } from "@/lib/admin/kosten-opslag";
 import { BASE_FEE_PER_HOUR_CENTS } from "@/lib/pricing/tiers";
 import { WEBSITE_PLANS } from "@/lib/website/manage";
 import { gebiedenVan, isTestbedrijf, nodigVoorKosten, stapVanNu, winstStappen, type WinstStand } from "@/lib/admin/winstplan";
+import { BetaaldMeldenPaneel } from "@/components/admin/BetaaldMeldenPaneel";
 
 export const dynamic = "force-dynamic";
 
@@ -107,6 +108,9 @@ export default async function WinstplanPage() {
           </p>
         )}
       </Panel>
+
+      {/* geld binnen per bankoverschrijving: de factuur op betaald zetten (lib/billing/overschrijving-betaald.ts) */}
+      <BetaaldMeldenPaneel />
 
       <Panel title="De stappen" subtitle="In volgorde. De eerste die open staat is de stap van nu.">
         <ol className="space-y-2">
