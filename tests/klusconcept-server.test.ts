@@ -22,7 +22,7 @@ import { ERASABLE_KV_PREFIXES } from "@/lib/privacy/user-kv";
 const NU = Date.parse("2026-11-14T05:00:00Z");
 const DAG = 86_400_000;
 const concept = {
-  v: 1,
+  v: 1 as const,
   title: "Magazijnmedewerker",
   description: "Orderpicken in de ochtend.",
   city: "Veendam",
