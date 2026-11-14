@@ -53,6 +53,10 @@ describe("bewaarLabel: op /admin en /studio alleen een code", () => {
     expect(bewaarLabel("/studio/klanten", "Jan Jansen")).toBeNull();
     expect(bewaarLabel("/admin", "lead-bellen")).toBe("lead-bellen");
     expect(bewaarLabel("/studio", "nieuwe-site")).toBe("nieuwe-site");
+    // de chat (14 nov): een gespreksrij is naam + tijd + berichtvoorbeeld
+    expect(bewaarLabel("/dashboard/berichten", "BVJan de Vries14:06Jij: zie je morgen")).toBeNull();
+    expect(bewaarLabel("/werkgever/berichten/abc", "JJJan Jansen09:12Hoi, kan je zaterdag?")).toBeNull();
+    expect(bewaarLabel("/dashboard/berichten", "nieuw-gesprek")).toBe("nieuw-gesprek");
   });
 
   it("elders gewoon veiligLabel; een pad dat alleen op admin lijkt telt niet", () => {
