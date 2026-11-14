@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { isStaleDeployment } from "@/lib/ops/stale-deployment";
+import { magStaleHerladen, tabOpslag } from "@/lib/ops/stale-herlaad";
 import { useNaarInlogAlsUitgelogd } from "@/components/ops/useNaarInlogAlsUitgelogd";
 
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
@@ -33,18 +34,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
     }
     // Zelfherstel na een deploy: herlaad één keer (max. 1× per 10s zodat een
     // echt blijvende fout niet in een herlaad-lus belandt).
-    if (stale && typeof window !== "undefined") {
-      try {
-        const key = "zf-stale-reload";
-        const last = Number(window.sessionStorage.getItem(key) ?? "0");
-        if (Date.now() - last > 10_000) {
-          window.sessionStorage.setItem(key, String(Date.now()));
-          window.location.reload();
-        }
-      } catch {
-        /* sessionStorage kan geblokkeerd zijn — dan gewoon de knop tonen */
-      }
-    }
+    if (stale && magStaleHerladen(tabOpslag(), Date.now())) window.location.reload();
   }, [error, stale]);
 
   return (
