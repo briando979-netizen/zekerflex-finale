@@ -5,6 +5,7 @@
     "tests/accountant-vragen.test.ts",
     "tests/admin-access.test.ts",
     "tests/admin-nav.test.ts",
+    "tests/api-toegang.test.ts",
     "tests/auto-uitrol.test.ts",
     "tests/backup-ophalen.test.ts",
     "tests/bewakers.test.ts",
@@ -45,7 +46,7 @@
     "tests/verder-kaart.test.ts",
     "tests/voorstel-indoor-regels.test.ts",
     "tests/voorstel-sollicitatie-regels.test.ts",
-    "tests/werkgever-taal-bewaker.test.ts",
-    "tests/werker-taal-bewaker.test.ts"
+    "tests/werker-taal-bewaker.test.ts",
+    "tests/werkgever-taal-bewaker.test.ts"
   ]
 }
