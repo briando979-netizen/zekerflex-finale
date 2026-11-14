@@ -124,3 +124,15 @@ export async function isBreached(pw: string): Promise<boolean> {
     return false; // offline / blocked — the common-list check above already ran
   }
 }
+
+/**
+ * De wachtwoordcontrole bij het aanmelden, voor het formulier (app/register/actions.ts) én /api/register: te zwak
+ * (score < 2) of gelekt → één begrijpelijke zin; anders null. De lekcontrole faalt open: een storing bij de externe
+ * dienst houdt aanmelden nooit tegen (de eigen lijst met veelgebruikte wachtwoorden is dan al gecontroleerd).
+ */
+export async function wachtwoordProbleem(pw: string, extraBad: string[] = []): Promise<string | null> {
+  const strength = scorePassword(pw, extraBad);
+  if (strength.score < 2) return strength.warnings[0] ?? "Kies een sterker wachtwoord.";
+  if (await isBreached(pw).catch(() => false)) return "Dit wachtwoord staat in bekende datalekken. Kies een ander wachtwoord.";
+  return null;
+}

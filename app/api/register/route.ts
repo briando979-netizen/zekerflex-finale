@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { registerAccount, registerSchema } from "@/lib/auth/register";
+import { wachtwoordProbleem } from "@/lib/auth/password";
 import { sendVerificationEmail } from "@/lib/auth/email-verify";
 import { onthoudAanmeldTaal } from "@/lib/i18n/aanmeld-taal";
 import { recordReferral, REF_COOKIE } from "@/lib/rewards/referral";
@@ -28,6 +29,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (!parsed.success) {
       throw AppError.validation("Controleer de ingevulde gegevens", parsed.error.flatten());
     }
+    // Dezelfde wachtwoordcontrole als het formulier (14 nov: de API nam "wachtwoord123" aan): zwak of gelekt → 422 met de
+    // reden; de lekcontrole faalt open, dus een storing bij die dienst houdt aanmelden niet tegen.
+    const probleem = await wachtwoordProbleem(parsed.data.password, [parsed.data.email, parsed.data.fullName]);
+    if (probleem) throw AppError.validation(probleem);
     const account = await registerAccount(parsed.data);
     let verificatieMailVerstuurd = true;
     try {

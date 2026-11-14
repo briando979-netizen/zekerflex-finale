@@ -5,7 +5,7 @@ import { signIn } from "@/lib/auth/nextauth";
 import { registerAccount, registerSchema } from "@/lib/auth/register";
 import { sendVerificationEmail } from "@/lib/auth/email-verify";
 import { onthoudAanmeldTaal } from "@/lib/i18n/aanmeld-taal";
-import { isBreached, scorePassword } from "@/lib/auth/password";
+import { wachtwoordProbleem } from "@/lib/auth/password";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { bezorgingMislukt } from "@/lib/mail/test-adres";
@@ -38,14 +38,9 @@ export async function registerAction(
     return { error: first };
   }
 
-  // Password quality — mirrors the live checks, enforced server-side.
-  const strength = scorePassword(parsed.data.password, [parsed.data.email, parsed.data.fullName]);
-  if (strength.score < 2) {
-    return { error: strength.warnings[0] ?? "Kies een sterker wachtwoord." };
-  }
-  if (await isBreached(parsed.data.password)) {
-    return { error: "Dit wachtwoord staat in bekende datalekken. Kies een ander wachtwoord." };
-  }
+  // Wachtwoordkwaliteit, aan de serverkant (dezelfde controle als /api/register: lib/auth/password.ts).
+  const probleem = await wachtwoordProbleem(parsed.data.password, [parsed.data.email, parsed.data.fullName]);
+  if (probleem) return { error: probleem };
 
   let account;
   try {
