@@ -55,7 +55,7 @@ function bouncesRegel(s: FunctieStand<BounceMeting>): Regel | null {
   return {
     aan: s.aan,
     label: "Terugkaatsers (bounces) verwerken",
-    tekst: `${telling} Aanzetten doet: een hard adres komt op de onderdrukkingslijst en de lead gaat op teruggekaatst (geen outreach, nieuwsbrief of herinnering meer; verificatie en beveiliging gaan altijd door), en bij een weigering door een provider krijg je één melding per provider. Vlag: mail-bounce-verwerken.`,
+    tekst: `${telling} Aanzetten doet: een hard adres krijgt een merk (geen outreach, nieuwsbrief of herinnering meer; verificatie en beveiliging gaan altijd door); is het van een lead, dan komt het ook op de onderdrukkingslijst en gaat de lead op teruggekaatst. Bij een weigering door een provider krijg je één melding per provider. Vlag: mail-bounce-verwerken.`,
   };
 }
 

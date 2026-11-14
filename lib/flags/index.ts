@@ -97,7 +97,7 @@ FLAG_REGISTRY.push({
   key: "mail-bounce-verwerken",
   label: "Terugkaatsers (bounces) verwerken",
   description:
-    "Aan = elk uur leest ZekerFlex de terugkaatsers in de postbus. Een adres dat niet bestaat komt op de onderdrukkingslijst, de lead gaat op teruggekaatst en dat adres krijgt geen outreach, nieuwsbrief of herinnering meer (verificatie, wachtwoord en beveiliging gaan altijd door). Weigert een provider onze mail (SPF, DKIM, DMARC, spam), dan krijg je een melding. In Beheer, Mail staat bij de mail dat hij terugkwam. Uit (standaard) = hij leest en telt alleen, en verandert niets.",
+    "Aan = elk uur leest ZekerFlex de terugkaatsers in de postbus. Een adres dat niet bestaat krijgt geen outreach, nieuwsbrief of herinnering meer (verificatie, wachtwoord en beveiliging gaan altijd door); is het van een lead, dan komt het ook op de onderdrukkingslijst en gaat de lead op teruggekaatst. Weigert een provider onze mail (SPF, DKIM, DMARC, spam), dan krijg je een melding. In Beheer, Mail staat bij de mail dat hij terugkwam. Uit (standaard) = hij leest en telt alleen, en verandert niets.",
   default: false,
 });
 
