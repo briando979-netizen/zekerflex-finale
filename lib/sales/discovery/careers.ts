@@ -25,7 +25,9 @@ import { isDienstAdres, isVacatureSprong } from "@/lib/sales/discovery/vacature-
 const UA = "ZekerFlexBot/1.0 (+https://zekerflex.com/bot; zakelijke kennismaking)";
 const FETCH_TIMEOUT_MS = 12_000;
 const MAX_BYTES = 1_800_000;
-const RESULT_TTL_S = 60 * 60 * 24;
+// korter dan de afstand tussen twee runs van de sales-motor (cron elke dag 08:00): bij 24 uur hing het van seconden af of
+// de dagelijkse run echt crawlde of de uitslag van gisteren kreeg (14 nov; tests/sales-cache-cron.test.ts)
+const RESULT_TTL_S = 60 * 60 * 20;
 const ROBOTS_TTL_S = 60 * 60 * 24;
 
 const VACANCY_HINTS = [
