@@ -35,6 +35,7 @@ import { meldingen as autoUitrolMeldingen } from "@/lib/bouwer/auto-uitrol-regel
 import { liveVersie } from "@/lib/bouwer/versie";
 import { aiTraderTodo } from "@/lib/admin/todo-ai-trader";
 import { pasdienstTodo } from "@/lib/admin/todo-pasdienst";
+import { scanOpvolgTodo, type ScanOpvolgStand } from "@/lib/admin/todo-scans";
 import { pasdienstInfo } from "@/lib/shop/pasdienst";
 import { alpacaSleutelInfo } from "@/lib/trader/alpaca";
 import { featureEnabled } from "@/lib/flags";
@@ -192,6 +193,17 @@ async function unsentProposals(now = Date.now()): Promise<number | null> {
   }
 }
 
+/** Gratis scans die op opvolging wachten (lib/scans/overzicht.ts), één per bedrijf; alleen aantallen. undefined = kon niet kijken. */
+async function wachtendeScans(now = new Date()): Promise<ScanOpvolgStand | undefined> {
+  try {
+    const [{ lijstScans }, { scanOverzicht }, { statusVan }] = await Promise.all([import("@/lib/scans/store"), import("@/lib/scans/overzicht"), import("@/lib/scans/model")]);
+    const wachten = scanOverzicht(await lijstScans(2000), now).wachten;
+    return { wachten: wachten.length, aanvragen: wachten.filter((l) => statusVan(l) === "aanvraag").length };
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Outreach-concepten die al 3 dagen of langer op een mens wachten (status DRAFT of APPROVED,
  * lib/sales/outreach.ts). De motor verstuurt die nooit zelf in REVIEW-modus: alleen "Verstuur nu"
@@ -327,6 +339,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   const aiTrader = aiTraderTodo(await alpacaSleutelInfo().then((i) => i.aanwezig, () => undefined));
   // de echte paskamer (13 nov): de sleutel van FASHN (lib/shop/pasdienst.ts)
   const pasdienst = pasdienstTodo(await pasdienstInfo().then((i) => i.aanwezig, () => undefined));
+  // gratis scans die op opvolging wachten (14 nov): stonden alleen in de dagmail aan sales@ (lib/admin/todo-scans.ts)
+  const scanOpvolg = scanOpvolgTodo(await wachtendeScans());
   // Auto-uitrol: geweigerd, migratie wacht of main loopt >30 min achter (lib/bouwer/auto-uitrol-regels.ts); een leesfout geeft geen taak
   const autoUitrol = autoUitrolTodos(await leesAutoStand().then(async (s) => autoUitrolMeldingen(s, liveVersie()?.sha ?? null, Date.now(), await featureEnabled("auto-uitrol").catch(() => false)), () => undefined));
   const werkrechtEis = werkrechtEisTodo(await featureEnabled("werkrecht-eis").catch(() => undefined));
@@ -344,6 +358,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     ...autoUitrol,
     ...(aiTrader ? [aiTrader] : []),
     ...(pasdienst ? [pasdienst] : []),
+    ...(scanOpvolg ? [scanOpvolg] : []),
     {
       id: "llm",
       group: "AI",
