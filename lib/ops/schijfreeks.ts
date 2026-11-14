@@ -12,6 +12,14 @@ const ZELFDE_PUNT_MS = 30 * 60_000;
 export const KNIK_PERCENT = 2;
 /** Minimaal zoveel tijd tussen het eerste en laatste punt van de trend, anders is het te vroeg voor een betrouwbaar getal. */
 export const TREND_MIN_MS = 6 * 3_600_000;
+/**
+ * De trend loopt langs de ondergrens: per punt het laagste niveau van de voorgaande zes uur. Elke uitrol laat tijdelijk
+ * buildcache achter (1 tot 2 GB per build, daarna ruimt de volgende uitrol op), dus de schijf heeft een zaagtand. 14 nov 2026,
+ * gemeten: de bodem lag steeds rond 59 tot 60 GB en piekte tijdens uitrollen naar 71 tot 72 GB; een lijn door die pieken gaf
+ * om 01:15 de melding "85% over 0,3 dag", terwijl de echte groei vlak was. Een piek verhoogt de ondergrens niet, een stijging die
+ * zes uur blijft wel.
+ */
+export const ONDERGRENS_MS = 6 * 3_600_000;
 /** Een groei onder dit aantal bytes per dag is "vlak": dan geen datum (die zou duizenden dagen zijn). */
 export const VLAK_BYTES_PER_DAG = 10 * 1024 ** 2;
 export const DREMPEL_WAARSCHUWING = 85;
@@ -68,9 +76,28 @@ export function trendReeks(reeks: SchijfPunt[]): SchijfPunt[] {
   return r.slice(begin);
 }
 
-/** Groei in bytes per dag (kleinste kwadraten door de punten sinds de laatste knik); null bij te weinig punten of een te korte periode. */
+/**
+ * De ondergrens van een gesorteerde reeks: per punt het laagste `gebruikt` binnen de voorgaande `venster` ms. Alleen punten waarvoor
+ * dat hele venster aan gegevens beschikbaar is; zo blijft een schone, rechte groei precies zoals hij is (alleen een uur of zes later).
+ */
+export function ondergrens(reeks: SchijfPunt[], venster: number = ONDERGRENS_MS): SchijfPunt[] {
+  const r = [...reeks].sort((a, b) => a.t - b.t);
+  const eerste = r[0];
+  if (!eerste) return [];
+  const uit: SchijfPunt[] = [];
+  for (let i = 0; i < r.length; i += 1) {
+    const p = r[i] as SchijfPunt;
+    if (p.t - eerste.t < venster - 1) continue;
+    let laagste = p.gebruikt;
+    for (let j = i - 1; j >= 0 && p.t - (r[j] as SchijfPunt).t < venster; j -= 1) laagste = Math.min(laagste, (r[j] as SchijfPunt).gebruikt);
+    uit.push({ ...p, gebruikt: laagste, pct: Math.round((laagste / p.totaal) * 1000) / 10 });
+  }
+  return uit;
+}
+
+/** Groei in bytes per dag (kleinste kwadraten door de ondergrens sinds de laatste knik); null bij te weinig punten of een te korte periode. */
 export function groeiPerDag(reeks: SchijfPunt[]): number | null {
-  const r = trendReeks(reeks);
+  const r = ondergrens(trendReeks(reeks));
   if (r.length < 2) return null;
   const eerste = r[0] as SchijfPunt;
   const laatste = r[r.length - 1] as SchijfPunt;
@@ -93,8 +120,10 @@ export function groeiPerDag(reeks: SchijfPunt[]): number | null {
 export function dagenTot(reeks: SchijfPunt[], drempelPct: number): number | null {
   const laatste = [...reeks].sort((a, b) => a.t - b.t).pop();
   if (!laatste) return null;
-  const nog = (drempelPct / 100) * laatste.totaal - laatste.gebruikt;
-  if (nog <= 0) return 0;
+  if ((drempelPct / 100) * laatste.totaal - laatste.gebruikt <= 0) return 0;
+  // de afstand tot de drempel telt vanaf de ondergrens, niet vanaf een tijdelijke piek van de buildcache
+  const basis = ondergrens(trendReeks(reeks)).pop()?.gebruikt ?? laatste.gebruikt;
+  const nog = (drempelPct / 100) * laatste.totaal - Math.min(basis, laatste.gebruikt);
   const groei = groeiPerDag(reeks);
   if (groei === null || groei < VLAK_BYTES_PER_DAG) return null;
   return Math.round((nog / groei) * 10) / 10;

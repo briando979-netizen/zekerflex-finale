@@ -9,6 +9,7 @@ import {
   dagenTot,
   groeiPerDag,
   maakPunt,
+  ondergrens,
   voegPuntToe,
   type SchijfPunt,
 } from "@/lib/ops/schijfreeks";
@@ -88,7 +89,10 @@ describe("schijfreeks: groei en datum", () => {
     expect(groeiPerDag(r)! / GB).toBeCloseTo(2, 3);
     const laatste = r[r.length - 1] as SchijfPunt;
     const tot85 = dagenTot(r, 85)!;
-    expect(tot85).toBeCloseTo((85 * GB - laatste.gebruikt) / (2 * GB), 1);
+    // de datum telt vanaf de ondergrens (het laagste punt van de laatste zes uur), niet vanaf een tijdelijke piek
+    const bodem = r[r.length - 1 - 5] as SchijfPunt;
+    expect(laatste.gebruikt).toBeGreaterThan(bodem.gebruikt);
+    expect(tot85).toBe(Math.round(((85 * GB - bodem.gebruikt) / (2 * GB)) * 10) / 10);
     expect(dagenTot(r, 95)!).toBeGreaterThan(tot85);
   });
 
@@ -117,6 +121,55 @@ describe("schijfreeks: groei en datum", () => {
     // een kleine schommeling (onder de knikgrens) breekt de trend niet
     const schommel = reeks(48, 50, 2).map((p, i) => (i === 24 ? { ...p, gebruikt: p.gebruikt - 1 * GB } : p));
     expect(groeiPerDag(schommel)! / GB).toBeGreaterThan(1.5);
+  });
+});
+
+describe("schijfreeks: de zaagtand van de buildcache", () => {
+  /** Een vlakke bodem van 60 GB (op een schijf van 100 GB) met tijdelijke pieken van `piek` GB op de gegeven uren. */
+  function zaagtand(n: number, bodem: number, piek: number, pieken: number[], perDag = 0): SchijfPunt[] {
+    return reeks(n, bodem, perDag).map((p, i) => (pieken.includes(i) ? { ...p, gebruikt: p.gebruikt + piek * GB } : p));
+  }
+
+  it("een tijdelijke piek geeft geen waarschuwing (de fout van 14 nov 01:15: 59,9 GB, daarna 71,4 GB)", () => {
+    // 7 uur vlak op 60 GB, dan één piek van +12 GB op het laatste punt
+    const r = zaagtand(8, 60, 12, [7]);
+    expect(groeiPerDag(r)).toBeNull(); // te weinig gegevens aan de ondergrens, geen getal
+    expect(beoordeelSchijf(r).melding).toBeNull();
+    // en met meer geschiedenis: nog steeds vlak
+    const lang = zaagtand(30, 60, 12, [7, 14, 22, 29]);
+    expect(Math.abs(groeiPerDag(lang)! / GB)).toBeLessThan(0.01);
+    expect(dagenTot(lang, 85)).toBeNull();
+    expect(beoordeelSchijf(lang).melding).toBeNull();
+  });
+
+  it("een bodem die echt stijgt, wordt wel gemeten, ook met pieken erbovenop", () => {
+    // 1 GB per dag op de bodem, met dagelijks een piek van 10 GB
+    const r = zaagtand(72, 60, 10, [10, 34, 58], 1);
+    expect(groeiPerDag(r)! / GB).toBeGreaterThan(0.8);
+    expect(groeiPerDag(r)! / GB).toBeLessThan(1.3);
+  });
+
+  it("een stijging die langer dan zes uur blijft, telt wel (het is geen piek meer)", () => {
+    const hoog = reeks(30, 60, 0).map((p, i) => (i >= 12 ? { ...p, gebruikt: p.gebruikt + 12 * GB } : p));
+    expect(groeiPerDag(hoog)!).toBeGreaterThan(0);
+  });
+
+  it("de afstand tot de drempel telt vanaf de ondergrens, niet vanaf de piek", () => {
+    // groei van 0,2 GB per dag op de bodem; het laatste punt is een piek tot 84 procent
+    const r = zaagtand(48, 60, 24, [47], 0.2);
+    expect(r[47]!.gebruikt / GB).toBeGreaterThan(83);
+    // vanaf de piek zou 85% over een paar uur zijn; vanaf de bodem (±60 GB) is het ver weg
+    expect(dagenTot(r, 85)!).toBeGreaterThan(30);
+    expect(beoordeelSchijf(r).melding).toBeNull();
+  });
+
+  it("de ondergrens bewaart een schone rechte reeks precies, en begint pas na een vol venster", () => {
+    const r = reeks(48, 50, 2);
+    const o = ondergrens(r);
+    expect(o).toHaveLength(48 - 6);
+    expect(o[0]!.t).toBe(r[6]!.t);
+    expect(groeiPerDag(r)! / GB).toBeCloseTo(2, 3);
+    expect(ondergrens([])).toEqual([]);
   });
 });
 
