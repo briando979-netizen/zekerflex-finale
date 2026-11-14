@@ -47,7 +47,7 @@ beforeEach(async () => {
 
 describe("bekendenVan", () => {
   it("je bewaarde contacten en je gesprekspartners, zonder jezelf", async () => {
-    expect([...(await bekendenVan("u_ik"))].sort()).toEqual(["u_anna", "u_ander", "u_cor"]);
+    expect([...(await bekendenVan("u_ik"))].sort()).toEqual(["u_ander", "u_anna", "u_cor"]);
   });
 });
 
