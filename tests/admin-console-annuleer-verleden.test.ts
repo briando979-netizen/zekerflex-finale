@@ -11,7 +11,7 @@ const { tellingen, count, findMany, updateMany } = vi.hoisted(() => {
       (where.assignments as { some?: unknown } | undefined)?.some ? tellingen.met : tellingen.zonder,
     ),
     findMany: vi.fn(async (_a: { where: Prisma.ShiftWhereInput }) => [
-      { title: "Bediening", startsAt: new Date("2026-11-10T16:00:00+01:00"), branch: { name: "Centrum" } },
+      { title: "Bediening", startsAt: new Date("2026-11-10T16:00:00+01:00"), endsAt: new Date("2026-11-10T23:00:00+01:00"), branch: { name: "Centrum" } },
     ]),
     updateMany: vi.fn(async (_a: { where: Prisma.ShiftWhereInput; data: unknown }) => ({ count: tellingen.zonder })),
   };
@@ -33,6 +33,9 @@ describe("cancel_past_due_open_shifts: alleen klussen waar niemand op staat", ()
     const r = await actie.execute({}, {});
     const where = updateMany.mock.calls[0]![0].where;
     expect(where.assignments).toEqual({ none: { cancelledAt: null } });
+    // verlopen = de eindtijd is voorbij; een klus die nog loopt (gestart, niet geëindigd) blijft staan
+    expect(where.endsAt).toEqual({ lt: expect.any(Date) });
+    expect(where.startsAt).toBeUndefined();
     expect(updateMany.mock.calls[0]![0].data).toEqual({ status: "CANCELLED" });
     expect(r.affectedCount).toBe(4);
     expect(r.detail).toContain("4 klus(sen) geannuleerd.");
@@ -45,6 +48,7 @@ describe("cancel_past_due_open_shifts: alleen klussen waar niemand op staat", ()
     expect(impact.summary).toBe("4 verlopen open klus(sen) zonder iemand erop worden op CANCELLED gezet; 3 met iemand erop blijven staan.");
     expect(impact.warnings.some((w) => w.includes("uitgevoerd of nog bezig"))).toBe(true);
     expect(impact.sample).toHaveLength(1);
+    expect(impact.sample[0]).toMatchObject({ titel: "Bediening", eindigde: "2026-11-10T22:00:00.000Z" });
     // het voorbeeld en de telling gebruiken dezelfde voorwaarde als het annuleren
     expect(findMany.mock.calls[0]![0].where.assignments).toEqual({ none: { cancelledAt: null } });
   });

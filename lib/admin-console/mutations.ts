@@ -104,12 +104,14 @@ const deactivateInactiveFreelancers = defineMutation({
 // Alleen klussen waar niemand (meer) op staat. Een klus met een actieve inschrijving (cancelledAt null) is gewoon
 // uitgevoerd of loopt nog: die hoort niet op CANCELLED (14 nov: ook PARTIALLY_FILLED met werkers erop viel hieronder).
 // Zulke klussen rondt de nachtelijke taak na afloop af (lib/shifts/verlopen.ts); hier worden ze alleen geteld.
+// "Verlopen" = de eindtijd is voorbij, niet de starttijd: een klus van acht uur die een uur geleden begon, kan nog
+// steeds iemand krijgen en wordt niet midden in de dienst geannuleerd.
 function staleShiftWhere(): Prisma.ShiftWhereInput {
-  return { status: { in: MATCHABLE }, startsAt: { lt: new Date() }, assignments: { none: { cancelledAt: null } } };
+  return { status: { in: MATCHABLE }, endsAt: { lt: new Date() }, assignments: { none: { cancelledAt: null } } };
 }
 
 function staleMetIemandWhere(): Prisma.ShiftWhereInput {
-  return { status: { in: MATCHABLE }, startsAt: { lt: new Date() }, assignments: { some: { cancelledAt: null } } };
+  return { status: { in: MATCHABLE }, endsAt: { lt: new Date() }, assignments: { some: { cancelledAt: null } } };
 }
 
 function blijvenStaanTekst(n: number): string {
@@ -119,7 +121,7 @@ function blijvenStaanTekst(n: number): string {
 const cancelPastDueOpenShifts = defineMutation({
   name: "cancel_past_due_open_shifts",
   description:
-    "Annuleer klussen waarvan de starttijd al is verstreken, die nog OPEN / MATCHING / gedeeltelijk gevuld zijn en waar niemand op staat. Klussen met een actieve inschrijving blijven staan.",
+    "Annuleer klussen waarvan de eindtijd al is verstreken, die nog OPEN / MATCHING / gedeeltelijk gevuld zijn en waar niemand op staat. Klussen met een actieve inschrijving blijven staan; een klus die nog loopt ook.",
   params: z.object({}),
   paramsHint: "{} (geen parameters)",
   risk: "medium",
@@ -132,10 +134,11 @@ const cancelPastDueOpenShifts = defineMutation({
         select: {
           title: true,
           startsAt: true,
+          endsAt: true,
           branch: { select: { name: true } },
         },
         take: 10,
-        orderBy: { startsAt: "asc" },
+        orderBy: { endsAt: "asc" },
       }),
       prisma.shift.count({ where: staleMetIemandWhere() }),
     ]);
@@ -148,6 +151,7 @@ const cancelPastDueOpenShifts = defineMutation({
         titel: s.title,
         vestiging: s.branch.name,
         startte: s.startsAt.toISOString(),
+        eindigde: s.endsAt.toISOString(),
       })),
       warnings,
       reversible: false,
