@@ -121,6 +121,22 @@ export function parseConcept(raw: string | null, now = Date.now(), today = ""): 
 }
 
 /** Sector landing page (lib/seo-sectors.ts key) → the SHIFT_TEMPLATES key that fits it best. */
+/**
+ * Wat ontbreekt er nog voordat de klus bewaard kan worden: één Nederlandse zin, of null.
+ * De knop op /klus-plaatsen staat altijd aan; wie drukt, hoort precies wat er mist (gemeten
+ * 14 nov: bezoekers zagen een uitgeschakelde knop en een algemene hint, en haakten af).
+ */
+export function conceptOntbreekt(c: { title: string; city: string; date: string; today: string; hours: number }): string | null {
+  const leeg: string[] = [];
+  if (c.title.trim().length < 2) leeg.push("de functie (of een naam voor de klus)");
+  if (c.city.trim().length < 2) leeg.push("de plaats");
+  if (!c.date) leeg.push("een datum");
+  if (leeg.length) return `Vul nog in: ${leeg.length === 1 ? leeg[0] : `${leeg.slice(0, -1).join(", ")} en ${leeg[leeg.length - 1]}`}.`;
+  if (c.today && c.date < c.today) return "Kies een datum vanaf vandaag.";
+  if (!(c.hours > 0)) return "De eindtijd moet na de begintijd liggen, met ruimte voor de pauze.";
+  return null;
+}
+
 export const SECTOR_TEMPLATE: Record<string, string> = {
   horeca: "horeca",
   logistiek: "magazijn",

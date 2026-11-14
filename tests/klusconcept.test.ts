@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canPostShift, conceptCost, conceptHours, klusUrl, parseConcept, SECTOR_TEMPLATE, supplyLabel, supplyNear, toShiftFormValues, type KlusConcept } from "@/lib/klusconcept/concept";
+import { canPostShift, conceptCost, conceptHours, conceptOntbreekt, klusUrl, parseConcept, SECTOR_TEMPLATE, supplyLabel, supplyNear, toShiftFormValues, type KlusConcept } from "@/lib/klusconcept/concept";
 import { SECTORS } from "@/lib/seo-sectors";
 
 const base: KlusConcept = {
@@ -119,5 +119,23 @@ describe("klusconcept: krachten in de buurt", () => {
     expect(supplyLabel(20)).toBe("20+");
     expect(supplyLabel(19)).toBeNull();
     expect(supplyLabel(0)).toBeNull();
+  });
+});
+
+describe("klusconcept: wat ontbreekt er nog voor de knop", () => {
+  const vol = { title: "Magazijnmedewerker", city: "Groningen", date: "2026-11-20", today: "2026-11-14", hours: 7.5 };
+
+  it("noemt de lege velden bij naam, in leesbare volgorde", () => {
+    expect(conceptOntbreekt({ ...vol, title: "", city: "", date: "" })).toBe("Vul nog in: de functie (of een naam voor de klus), de plaats en een datum.");
+    expect(conceptOntbreekt({ ...vol, city: " " })).toBe("Vul nog in: de plaats.");
+    expect(conceptOntbreekt({ ...vol, title: "X", date: "" })).toBe("Vul nog in: de functie (of een naam voor de klus) en een datum.");
+  });
+
+  it("controleert daarna de datum en de uren, en geeft null als alles klopt", () => {
+    expect(conceptOntbreekt({ ...vol, date: "2026-11-13" })).toBe("Kies een datum vanaf vandaag.");
+    expect(conceptOntbreekt({ ...vol, hours: 0 })).toMatch(/eindtijd/);
+    // vóór hydratie is "vandaag" nog leeg: dan telt de datum niet als verleden
+    expect(conceptOntbreekt({ ...vol, today: "", date: "2020-01-01" })).toBeNull();
+    expect(conceptOntbreekt(vol)).toBeNull();
   });
 });

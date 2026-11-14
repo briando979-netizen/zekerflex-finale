@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { CONCEPT_KEY, conceptCost, type KlusConcept as Concept } from "@/lib/klusconcept/concept";
+import { CONCEPT_KEY, conceptCost, conceptOntbreekt, type KlusConcept as Concept } from "@/lib/klusconcept/concept";
 import { VIA_WERKER, type KlusVia, type ViaStap } from "@/lib/klusconcept/via";
 import { initialen, websiteOmschrijving, type WebsiteKlus } from "@/lib/klusconcept/website";
 import { centsFrom, euroCents, euroWhole, numberFrom } from "@/lib/rekentools/invoer";
@@ -108,6 +108,7 @@ export function KlusConcept({
   const [positions, setPositions] = useState("1");
   const [rate, setRate] = useState(((first?.rateCents ?? minRateCents) / 100).toFixed(2).replace(".", ","));
   const [saving, setSaving] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
   const [employer, setEmployer] = useState(false);
   // the company's own website, read by /api/klus-plaatsen/website
   const [site, setSite] = useState("");
@@ -205,13 +206,23 @@ export function KlusConcept({
     [start, end, breakMinutes, effectiveRate],
   );
   const supply = cities.find((c) => c.name.toLowerCase() === city.trim().toLowerCase())?.supply ?? null;
-  const ready = title.length >= 2 && city.trim().length >= 2 && date !== "" && date >= today && cost.hours > 0;
+  const ontbreekt = conceptOntbreekt({ title, city, date, today, hours: cost.hours });
+  const ready = ontbreekt === null;
   const bedrijf = found?.bedrijf ?? "Jouw bedrijf";
   const when = `${date ? dateNl(date, { weekday: "short", day: "numeric", month: "short" }) : "Datum"} · ${start}–${end}`;
   const kaart = { title: title || "Je klus", bedrijf, city: city.trim() || "Plaats", when, start, rateCents: effectiveRate, hours: cost.hours };
 
+  // zodra de bezoeker iets aanpast, verdwijnt de melding van de vorige poging
+  useEffect(() => {
+    setFout(null);
+  }, [title, city, date, start, end, breakMinutes]);
+
   function save() {
-    if (!ready) return;
+    // de knop staat altijd aan: wie drukt, hoort precies wat er nog ontbreekt
+    if (ontbreekt) {
+      setFout(ontbreekt);
+      return;
+    }
     setSaving(true);
     const concept: Concept = {
       v: 1,
@@ -388,9 +399,14 @@ export function KlusConcept({
             </p>
           ) : null}
 
-          <button type="button" data-track="klus-plaatsknop" onClick={save} disabled={!ready || saving} className="btn-primary mt-6 w-full disabled:opacity-50">
+          <button type="button" data-track="klus-plaatsknop" onClick={save} disabled={saving} className="btn-primary mt-6 w-full disabled:opacity-50">
             {saving ? "Even geduld…" : employer ? "Zet deze klus klaar in je account" : "Plaats deze klus met een gratis account"}
           </button>
+          {fout ? (
+            <p role="alert" className="mt-3 text-sm font-medium text-crit">
+              {fout}
+            </p>
+          ) : null}
           <p className="mt-3 text-xs leading-relaxed text-neutralx-500">
             {!ready
               ? "Vul de functie, de plaats en een datum vanaf vandaag in."
