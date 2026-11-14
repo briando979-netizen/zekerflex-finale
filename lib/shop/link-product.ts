@@ -16,6 +16,16 @@ export interface LinkProduct {
   prijsCents: number | null;
   /** de munt bij die prijs (EUR, USD, …); null als onbekend */
   valuta: string | null;
+  /** de minimale afname die een groothandel (Alibaba) in zijn tekst zet; alleen als die er staat */
+  minimumAfname?: MinimumAfname;
+}
+
+export interface MinimumAfname {
+  aantal: number;
+  /** in het Nederlands: stuks, sets, paar, … */
+  eenheid: string;
+  /** "3-7" als de leverancier een levertijd in dagen noemt, anders null */
+  levertijdDagen: string | null;
 }
 
 const ENTITEIT: Record<string, string> = { amp: "&", quot: '"', apos: "'", lt: "<", gt: ">", nbsp: " ", euro: "€", eacute: "é", egrave: "è", euml: "ë", iuml: "ï", ouml: "ö", uuml: "ü" };
@@ -143,9 +153,12 @@ export function leesProductPagina(html: string, basis: string): LinkProduct | nu
   const meta = metaTags(bron);
   const m = (k: string) => meta.get(k) ?? "";
 
-  const titel = tekst(ld?.name, 160) || tekst(m("og:title"), 160) || tekst(m("twitter:title"), 160) || tekst(/<title[^>]*>([\s\S]{0,300}?)<\/title>/i.exec(bron)?.[1], 160);
+  const kop = leverancierTekst(tekst(ld?.name, 160) || tekst(m("og:title"), 160) || tekst(m("twitter:title"), 160) || tekst(/<title[^>]*>([\s\S]{0,300}?)<\/title>/i.exec(bron)?.[1], 160));
+  const titel = kop.tekst;
   if (titel.length < 2) return null;
-  const omschrijving = tekst(ld?.description, 1500) || tekst(m("og:description"), 1500) || tekst(m("description"), 1500) || tekst(m("twitter:description"), 1500);
+  const oms = leverancierTekst(tekst(ld?.description, 1500) || tekst(m("og:description"), 1500) || tekst(m("description"), 1500) || tekst(m("twitter:description"), 1500));
+  const omschrijving = oms.tekst;
+  const minimum = oms.minimum ?? kop.minimum;
 
   const fotos = [...fotosUit(ld?.image, basis), ...fotosUit([m("og:image:secure_url"), m("og:image"), m("twitter:image")], basis)];
   const uniek = fotos.filter((f, i) => fotos.indexOf(f) === i).slice(0, 6);
@@ -156,7 +169,70 @@ export function leesProductPagina(html: string, basis: string): LinkProduct | nu
     const munt = m("product:price:currency") || m("og:price:currency");
     valuta = prijsCents && /^[A-Za-z]{3}$/.test(munt) ? munt.toUpperCase() : null;
   }
-  return { titel, omschrijving, fotos: uniek, prijsCents, valuta };
+  return { titel, omschrijving, fotos: uniek, prijsCents, valuta, ...(minimum ? { minimumAfname: minimum } : {}) };
+}
+
+// ---------------------------------------------------------------------------
+// Alibaba (14 nov, link van de eigenaar). Een losse productpagina geeft een robot een controlepagina (captcha) op
+// /product-detail/…, maar dezelfde pagina onder /product-introduction/…_<nummer>.html heeft gewoon JSON-LD Product.
+// Het overzicht /dropshipping/products is een lege huls: dat werkt niet. De tekst van Alibaba begint met "Alibaba.com:"
+// en eindigt met de verkoopzin "Minimum order quantity 100 pieces with quick delivery in 3-7 days."; die halen we eraf
+// en de minimale afname wordt een waarschuwing. De prijs is een groothandelsprijs in dollars: een inkoopprijs.
+// ---------------------------------------------------------------------------
+
+/** Een productlink van Alibaba → de leesbare introductiepagina van hetzelfde product; anders null. */
+export function alibabaGegevensAdres(url: string): string | null {
+  try {
+    const u = new URL(url.trim());
+    if (u.protocol !== "https:" || !/(^|\.)alibaba\.com$/i.test(u.hostname)) return null;
+    const m = /^\/(?:product-detail|product-introduction)\/(?:[^/]*_)?(\d{6,15})\.html$/i.exec(u.pathname);
+    return m?.[1] ? `https://www.alibaba.com/product-introduction/_${m[1]}.html` : null;
+  } catch {
+    return null;
+  }
+}
+
+const EENHEID: Record<string, string> = {
+  piece: "stuks", pieces: "stuks", pc: "stuks", pcs: "stuks", unit: "stuks", units: "stuks",
+  set: "sets", sets: "sets", pair: "paar", pairs: "paar", box: "dozen", boxes: "dozen", carton: "dozen", cartons: "dozen",
+  bag: "zakken", bags: "zakken", roll: "rollen", rolls: "rollen", meter: "meter", meters: "meter", kilogram: "kilo", kilograms: "kilo", kg: "kilo",
+};
+
+/** "100", "1,000" of "1.000" → 100 / 1000; alles wat geen redelijk aantal is → null. */
+function aantalUit(s: string): number | null {
+  const schoon = /^\d{1,3}([.,]\d{3})+$/.test(s) ? s.replace(/[.,]/g, "") : s.replace(",", ".");
+  const n = Number(schoon);
+  return Number.isFinite(n) && n > 0 && n < 10_000_000 ? n : null;
+}
+
+/** Haalt het voorvoegsel "Alibaba.com:" en de verkoopzin "Minimum order quantity …" uit een tekst van een groothandel. */
+export function leverancierTekst(s: string): { tekst: string; minimum: MinimumAfname | null } {
+  let t = s.replace(/^\s*alibaba\.com\s*:\s*/i, "");
+  let minimum: MinimumAfname | null = null;
+  const m = /minimum order quantity\s*:?\s*(\d[\d.,]*)?\s*([a-z]+)?/i.exec(t);
+  if (m) {
+    const aantal = m[1] ? aantalUit(m[1]) : null;
+    const woord = (m[2] ?? "").toLowerCase();
+    const levertijd = /delivery (?:in|within) (\d{1,3}(?:\s*-\s*\d{1,3})?) days?/i.exec(t.slice(m.index));
+    if (aantal) minimum = { aantal, eenheid: Object.hasOwn(EENHEID, woord) ? (EENHEID[woord] ?? "stuks") : woord || "stuks", levertijdDagen: levertijd?.[1]?.replace(/\s+/g, "") ?? null };
+    t = t.slice(0, m.index);
+  }
+  return { tekst: t.replace(/[\s:;,|-]+$/, "").trim(), minimum };
+}
+
+const bedrag = (cents: number) => (cents / 100).toFixed(2).replace(".", ",");
+
+/** Wat de eigenaar moet weten voordat hij een product van een link maakt (alleen vaste zinnen met de gelezen getallen). */
+export function linkWaarschuwingen(p: LinkProduct): string[] {
+  const uit: string[] = [];
+  const min = p.minimumAfname;
+  if (min) {
+    uit.push(`Minimale afname bij deze leverancier: ${min.aantal} ${min.eenheid}${min.levertijdDagen ? `, levering in ${min.levertijdDagen} dagen` : ""}. Minder kun je daar niet bestellen; vraag het na als je per bestelling wilt laten leveren.`);
+  }
+  if (p.prijsCents && p.valuta && p.valuta !== "EUR") {
+    uit.push(`De prijs op de pagina is een inkoopprijs: ${p.valuta} ${bedrag(p.prijsCents)} per stuk${min ? ` bij afname vanaf ${min.aantal} ${min.eenheid}` : ""}. Dat is geen verkoopprijs en geen bedrag in euro's: reken hem zelf om, vul hem in als inkoopprijs en de verkoopprijs volgt uit je marge.`);
+  }
+  return uit;
 }
 
 // ---------------------------------------------------------------------------

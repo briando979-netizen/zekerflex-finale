@@ -76,7 +76,8 @@ describe("de route, het opslaan en het scherm", () => {
 
   it("ophalen gaat via de veilige ophaler en het logboek krijgt alleen de website, nooit het hele adres", () => {
     const server = bron("lib/shop/link-product-server.ts");
-    expect(server).toContain("fetchPage(url.trim()");
+    // een Alibaba-link gaat naar de leesbare introductiepagina, verder het adres zelf; beide via de veilige ophaler
+    expect(server).toContain("fetchPage(alibaba ?? url.trim()");
     expect(server).toContain("importRemoteImage(fotoUrl)");
     expect(server).toContain('logger.info("winkel-ai: link gaf geen productgegevens", { host: bron });');
     expect(server).not.toMatch(/logger\.\w+\([^)]*\burl\b/);
@@ -166,7 +167,9 @@ describe("een winkel die we niet kunnen lezen: eerlijk zeggen, geen lege poging"
 
   it("de melding zegt in gewoon Nederlands dat de winkel niet te lezen is en dat je de tekst zelf plakt; het scherm toont hem als fout, zonder concept", () => {
     const server = bron("lib/shop/link-product-server.ts");
-    expect(server).toContain("Grote marktplaatsen zoals AliExpress, Temu en Amazon laten hun pagina's niet door een programma lezen. Kopieer daar zelf de naam en de omschrijving en plak ze in het vak hieronder");
+    expect(server).toContain("Grote marktplaatsen zoals AliExpress, Temu en Amazon laten hun pagina's niet door een programma lezen.");
+    expect(server).toContain("Bij Alibaba werkt de link van één product (…/product-detail/… of …/product-introduction/…), een overzicht zoals de dropshipping-producten niet.");
+    expect(server).toContain("Kopieer anders zelf de naam en de omschrijving en plak ze in het vak hieronder");
     expect(server).toContain("throw AppError.validation(NIET_LEESBAAR)");
     const scherm = bron("components/admin/WinkelAI.tsx");
     expect(scherm).toContain("setLinkMelding({ tekst: (e as Error).message, fout: true })");
