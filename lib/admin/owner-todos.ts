@@ -35,6 +35,7 @@ import { meldingen as autoUitrolMeldingen } from "@/lib/bouwer/auto-uitrol-regel
 import { liveVersie } from "@/lib/bouwer/versie";
 import { aiTraderTodo } from "@/lib/admin/todo-ai-trader";
 import { pasdienstTodo } from "@/lib/admin/todo-pasdienst";
+import { dmarcNlTodo, dmarcStappenTodo, leesDmarcRecord, type DmarcStand } from "@/lib/admin/todo-dmarc";
 import { scanOpvolgTodo } from "@/lib/admin/todo-scans";
 import { CONCEPT_WACHT_DAGEN, wachtendeConcepten, wachtendeScans, wachtendeVoorstellen } from "@/lib/admin/verkoop-wacht";
 import { pasdienstInfo } from "@/lib/shop/pasdienst";
@@ -152,25 +153,42 @@ async function googleDnsVerified(base: string): Promise<boolean> {
 }
 
 /**
- * Het DMARC-record van het hoofddomein (_dmarc.<domein>, TXT "v=DMARC1; p=…"): het beleid, of null als het er niet
- * staat. Microsoft (Hotmail, Outlook) kijkt er streng naar; de meldingen van SNDS/JMRP kan de lijst niet zien.
+ * Het hoofddomein van de site (zekerflex.com), voor het DMARC-record (_dmarc.<domein>, TXT "v=DMARC1; p=…").
+ * Microsoft (Hotmail, Outlook) kijkt er streng naar; de meldingen van SNDS/JMRP kan de lijst niet zien.
  */
-async function dmarcBeleid(base: string): Promise<string | null> {
-  let host = "";
+function hoofddomeinVan(base: string): string {
   try {
-    host = new URL(base).hostname.replace(/^www\./, "");
+    return new URL(base).hostname.replace(/^www\./, "");
   } catch {
-    return null;
+    return "";
   }
-  if (!host.includes(".")) return null;
+}
+
+/** Geen record (NXDOMAIN of geen TXT) is een antwoord; een time-out of storing niet. */
+const geenRecord = (err: unknown) => ["ENOTFOUND", "ENODATA", "NXDOMAIN"].includes(String((err as { code?: unknown })?.code ?? ""));
+
+/** Het DMARC-record van een domein (lib/admin/todo-dmarc.ts): null = staat er niet, undefined = niet te lezen. */
+async function leesDmarc(domein: string): Promise<DmarcStand | null | undefined> {
+  if (!domein.includes(".")) return undefined;
   try {
-    const records = await new Resolver({ timeout: 2500, tries: 1 }).resolveTxt(`_dmarc.${host}`);
-    const dmarc = records.map((r) => r.join("")).find((r) => /^v=DMARC1/i.test(r.trim()));
-    if (!dmarc) return null;
-    return /\bp=([a-z]+)/i.exec(dmarc)?.[1]?.toLowerCase() ?? "none";
-  } catch {
-    return null;
+    return leesDmarcRecord(await new Resolver({ timeout: 2500, tries: 1 }).resolveTxt(`_dmarc.${domein}`));
+  } catch (err) {
+    return geenRecord(err) ? null : undefined;
   }
+}
+
+/** Staan de DKIM-regels van TransIP (transip-a/-b._domainkey) bij dit domein? undefined = niet te lezen. */
+async function heeftDkim(domein: string): Promise<boolean | undefined> {
+  const r = new Resolver({ timeout: 2500, tries: 1 });
+  for (const s of ["transip-a", "transip-b"]) {
+    try {
+      const records = await r.resolveTxt(`${s}._domainkey.${domein}`);
+      if (records.some((x) => /v=DKIM1|\bp=[A-Za-z0-9+/]/.test(x.join("")))) return true;
+    } catch (err) {
+      if (!geenRecord(err)) return undefined;
+    }
+  }
+  return false;
 }
 
 /** Throwaway accounts from the October login diagnosis (zf-…@example.com); null = couldn't count. */
@@ -268,7 +286,9 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     wachtendeVoorstellen().then((w) => (w ? w.aantal : null)),
     wachtendeConcepten(),
   ]);
-  const [beeldGelukt, beeldSlot, dmarc, gratis] = await Promise.all([geminiBeeldGelukt(), geminiSlot("beeld"), dmarcBeleid(base), getGratisStand().catch(() => null)]);
+  const [beeldGelukt, beeldSlot, dmarcStand, gratis] = await Promise.all([geminiBeeldGelukt(), geminiSlot("beeld"), leesDmarc(hoofddomeinVan(base)), getGratisStand().catch(() => null)]);
+  // het beleid voor de taak mail-microsoft (null = geen record of niet te lezen, zoals eerst)
+  const dmarc = dmarcStand ? dmarcStand.p : null;
   // de kennisbank (lib/kennisbank/outline.ts): staat de API-sleutel erin en is hij gevuld?
   const kennisbank = await import("@/lib/kennisbank/outline").then((m) => m.leesStand()).catch(() => null);
   // de overheidscertificaten voor het chiplezen (lib/kyc/chip/csca.ts)
@@ -303,6 +323,9 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   const aiTrader = aiTraderTodo(await alpacaSleutelInfo().then((i) => i.aanwezig, () => undefined));
   // de echte paskamer (13 nov): de sleutel van FASHN (lib/shop/pasdienst.ts)
   const pasdienst = pasdienstTodo(await pasdienstInfo().then((i) => i.aanwezig, () => undefined));
+  // DMARC in stappen (14 nov): rapporten (rua) en daarna p=quarantine; en zekerflex.nl zonder DKIM (lib/admin/todo-dmarc.ts)
+  const dmarcStappen = dmarcStappenTodo(dmarcStand);
+  const dmarcNl = hoofddomeinVan(base) === "zekerflex.com" ? dmarcNlTodo(await leesDmarc("zekerflex.nl"), await heeftDkim("zekerflex.nl")) : null;
   // gratis scans die op opvolging wachten (14 nov): stonden alleen in de dagmail aan sales@ (lib/admin/todo-scans.ts)
   const scanOpvolg = scanOpvolgTodo(await wachtendeScans());
   // Auto-uitrol: geweigerd, migratie wacht of main loopt >30 min achter (lib/bouwer/auto-uitrol-regels.ts); een leesfout geeft geen taak
@@ -322,6 +345,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     ...autoUitrol,
     ...(aiTrader ? [aiTrader] : []),
     ...(pasdienst ? [pasdienst] : []),
+    ...(dmarcStappen ? [dmarcStappen] : []),
+    ...(dmarcNl ? [dmarcNl] : []),
     ...(scanOpvolg ? [scanOpvolg] : []),
     {
       id: "llm",
@@ -674,14 +699,14 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       title: "Bevestigingsmail bij Hotmail en Outlook: DMARC en Microsoft-meldingen aanzetten",
       why: "Bij Hotmail en Outlook blijft een account vaker onbevestigd (6 van 16 in 30 dagen) dan bij Gmail (3 van 46), terwijl de mail overal door onze mailserver is geaccepteerd. Het domein zekerflex.com heeft geen DMARC-record, en Microsoft kijkt daar streng naar. Met de gratis meldingen van Microsoft zie je of mail daar in de spam belandt.",
       how: [
-        "Zet bij TransIP in de DNS van zekerflex.com een TXT-record met naam _dmarc en waarde: v=DMARC1; p=none; rua=mailto:postmaster@zekerflex.com. Begin met p=none; pas na een paar weken zonder problemen p=quarantine.",
+        "Zet bij TransIP in de DNS van zekerflex.com een TXT-record met naam _dmarc en waarde: v=DMARC1; p=none; rua=mailto:dmarc@zekerflex.com. Begin met p=none; pas na een paar weken zonder problemen p=quarantine (de stappen staan in de taak 'DMARC-rapporten aanzetten').",
         "Meld het verzendende adres aan bij Microsoft SNDS (sendersupport.olc.protection.outlook.com/snds) en JMRP (sendersupport.olc.protection.outlook.com/pm/junk-mail-reporting-program.aspx). Beide zijn gratis en tonen of Microsoft onze mail als spam ziet.",
         "Kom je er niet uit: zeg het tegen Claude. Die controleert daarna het DMARC-record en de aflevering.",
       ],
       auto: true,
       done: dmarc !== null || Boolean(manual["mail-microsoft"]),
       ...(dmarc !== null
-        ? { doneNote: `DMARC staat (p=${dmarc}); of SNDS en JMRP zijn aangemeld kan deze lijst niet zien${dmarc === "none" ? "; na een paar weken zonder problemen p=quarantine" : ""}` }
+        ? { doneNote: `DMARC staat (p=${dmarc}); of SNDS en JMRP zijn aangemeld kan deze lijst niet zien${dmarc === "none" ? "; na een paar weken zonder problemen p=quarantine (zie de DMARC-stappen)" : ""}` }
         : { eerst: { reden: "bezorging" }, ...m("mail-microsoft") }),
     },
     {
