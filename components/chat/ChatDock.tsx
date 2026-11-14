@@ -342,7 +342,8 @@ function ChatDockInner() {
         kind: msg.kind,
         pending: true,
         ...(msg.attachment ? { attachment: msg.attachment } : {}),
-        ...(msg.location ? { location: msg.location } : {}),
+        // het berichtpaneel van de dock staat uit (hideDock); een live locatie toont hier als gewone plek
+        ...(msg.location ? { location: { lat: msg.location.lat, lng: msg.location.lng, ...(msg.location.label ? { label: msg.location.label } : {}) } } : {}),
       },
     ]);
     await fetch(`/api/inbox/${active}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(msg) });

@@ -45,6 +45,8 @@ import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { allDrafts, DRAFT_EVENT } from "./drafts";
 import { maakPeiling, sluitPeiling, stem } from "@/lib/messaging/poll";
 import { annuleerAfspraak, maakAfspraak, zetAntwoord, type Antwoord } from "@/lib/messaging/afspraak";
+import { startLive, type Plek } from "@/lib/messaging/live-locatie";
+import { useLiveLocatieZender } from "./live-locatie-zender";
 import {
   canDeleteForAll,
   canEdit,
@@ -567,12 +569,21 @@ function InboxPageInner({
     }
   };
 
+  const liveZender = useLiveLocatieZender();
   const send = async (msg: OutgoingMessage) => {
     if (!active) return;
     if (msg.editId) return saveEdit(msg.editId, msg.text);
     const threadId = active;
     const tmpId = "tmp" + Date.now();
     const peiling = msg.kind === "poll" && msg.poll ? maakPeiling(msg.text, msg.poll.options, msg.poll.multi) : null;
+    // live locatie: meteen als live tonen; de server zet de echte tijden
+    const voorlopigePlek: Plek | undefined = msg.location
+      ? (() => {
+          const { live, ...plek } = msg.location;
+          const voorlopig = live ? startLive(live.minuten) : null;
+          return voorlopig ? { ...plek, live: voorlopig } : plek;
+        })()
+      : undefined;
     const voorlopigeAfspraak = msg.kind === "afspraak" && msg.afspraak ? maakAfspraak(msg.text, msg.afspraak.begin, msg.afspraak.duur, msg.afspraak.plek)?.afspraak : undefined;
     const optimistic: Msg = {
       id: tmpId,
@@ -582,7 +593,7 @@ function InboxPageInner({
       kind: msg.kind,
       pending: true,
       ...(msg.attachment ? { attachment: msg.attachment } : {}),
-      ...(msg.location ? { location: msg.location } : {}),
+      ...(voorlopigePlek ? { location: voorlopigePlek } : {}),
       ...(peiling ? { poll: peiling.poll } : {}),
       ...(voorlopigeAfspraak ? { afspraak: voorlopigeAfspraak } : {}),
       ...(msg.mentions?.length ? { mentions: msg.mentions } : {}),
@@ -603,7 +614,26 @@ function InboxPageInner({
       return;
     }
     outbox.current.delete(tmpId);
+    if (msg.location?.live) {
+      // vanaf nu meesturen zolang ZekerFlex open is (components/chat/live-locatie-zender.ts)
+      const d = await r.json().catch(() => null);
+      const nieuw = d?.message as Msg | undefined;
+      if (nieuw?.id && nieuw.location?.live) liveZender.start({ threadId, messageId: nieuw.id, tot: nieuw.location.live.tot });
+    }
     await loadThread(threadId);
+  };
+  // live locatie stoppen: daarna de serverversie overnemen (de laatste plek staat dan in het bericht)
+  const stopLive = async (msg: Msg) => {
+    if (!active) return;
+    const threadId = active;
+    const uit = await liveZender.stop(threadId, msg.id);
+    if (uit.location) {
+      const plek = uit.location;
+      setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, location: plek } : m)));
+      return;
+    }
+    if (uit.status !== 410) say(uit.fout ?? (uit.status ? ib.datLukteNietOpnieuw : ib.geenVerbindingOpnieuw), true);
+    void loadThread(threadId);
   };
 
   const retry = (m: Msg) => {
@@ -1538,6 +1568,7 @@ function InboxPageInner({
                         onSaveContact={(uid) => void bewaarContact(uid)}
                         onAfspraakAntwoord={(am, ant) => void updateAfspraakRemote(am, { antwoord: ant })}
                         onAfspraakAnnuleer={(am) => void updateAfspraakRemote(am, { annuleer: true })}
+                        onStopLive={(lm) => void stopLive(lm)}
                         onEdit={(e) => {
                           setReplyTo(null);
                           setEditing(e);

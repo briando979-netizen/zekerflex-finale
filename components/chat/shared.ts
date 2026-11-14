@@ -1,6 +1,7 @@
 // Shared types + helpers for the chat UI (dock + full page).
 
 import type { MessageAfspraak } from "@/lib/messaging/afspraak";
+import type { LiveLocatie } from "@/lib/messaging/live-locatie";
 import { SHARED_NL, type SharedTeksten } from "@/lib/chat/teksten-shared";
 import { vulIn } from "@/lib/i18n/vul-in";
 import { amsterdamClock, amsterdamDayKey, amsterdamParts, amsterdamStartOfDay } from "@/lib/time/amsterdam";
@@ -39,7 +40,7 @@ export interface Msg {
   text: string;
   kind: "text" | "system" | "voice" | "file" | "image" | "location" | "call" | "poll" | "contact" | "afspraak";
   attachment?: Attachment;
-  location?: { lat: number; lng: number; label?: string };
+  location?: { lat: number; lng: number; label?: string; live?: LiveLocatie };
   call?: CallInfo;
   replyTo?: { id: string; from: string; excerpt: string; kind: Msg["kind"] };
   auto?: boolean;

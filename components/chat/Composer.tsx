@@ -14,12 +14,15 @@ import { kandidaten, vermeldingenIn, vermeldingVraag, vulVermeldingIn, type Lid 
 import type { Kandidaat } from "@/lib/messaging/rondzenden";
 import { ContactKiezer } from "./ContactKiezer";
 import { AfspraakMaker } from "./AfspraakMaker";
+import { LocatieKiezer } from "./LocatieKiezer";
+import type { LiveDuur } from "@/lib/messaging/live-locatie";
 
 export interface OutgoingMessage {
   text: string;
   kind: Msg["kind"];
   attachment?: { mediaId: string; filename: string; mimeType: string; sizeBytes: number; durationSec?: number };
-  location?: { lat: number; lng: number; label?: string };
+  /** live: zoveel minuten meeschuiven (15, 60 of 480; lib/messaging/live-locatie.ts) */
+  location?: { lat: number; lng: number; label?: string; live?: { minuten: LiveDuur } };
   replyToId?: string;
   /** set: this rewrites your own message instead of sending a new one */
   editId?: string;
@@ -250,6 +253,7 @@ export function Composer({
   const [pollOpen, setPollOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [afspraakOpen, setAfspraakOpen] = useState(false);
+  const [locatieOpen, setLocatieOpen] = useState(false);
   const [hoverDevice, setHoverDevice] = useState(false);
   useEffect(() => {
     void setHoverDevice(window.matchMedia(HOVER).matches);
@@ -392,8 +396,9 @@ export function Composer({
     setPreview({ file: f, kind: "image" });
   };
 
-  const shareLocation = () => {
-    setMenuOpen(false);
+  // live = null: één keer de plek van nu; anders zoveel minuten live (de chat stuurt de plek daarna mee)
+  const shareLocation = (live: LiveDuur | null) => {
+    setLocatieOpen(false);
     setSendError(null);
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       setSendError(chat.composer.locatieNietOndersteund);
@@ -406,7 +411,9 @@ export function Composer({
           await onSend({
             text: "",
             kind: "location",
-            location: { lat: pos.coords.latitude, lng: pos.coords.longitude, label: "Mijn locatie" },
+            location: live
+              ? { lat: pos.coords.latitude, lng: pos.coords.longitude, live: { minuten: live } }
+              : { lat: pos.coords.latitude, lng: pos.coords.longitude, label: "Mijn locatie" },
           });
         } finally {
           setBusy(false);
@@ -631,7 +638,14 @@ export function Composer({
               <MenuItem icon="🖼️" label={chat.composer.menuFoto} onClick={() => imgRef.current?.click()} />
               <MenuItem icon="📷" label={chat.composer.menuCamera} onClick={() => camRef.current?.click()} />
               <MenuItem icon="📄" label={chat.composer.menuDocument} onClick={() => fileRef.current?.click()} />
-              <MenuItem icon="📍" label={chat.composer.menuLocatie} onClick={shareLocation} />
+              <MenuItem
+                icon="📍"
+                label={chat.composer.menuLocatie}
+                onClick={() => {
+                  setMenuOpen(false);
+                  setLocatieOpen(true);
+                }}
+              />
               <MenuItem
                 icon="👤"
                 label={chat.composer.menuContact}
@@ -841,6 +855,7 @@ export function Composer({
         />
       )}
 
+      {locatieOpen && <LocatieKiezer onKies={shareLocation} onCancel={() => setLocatieOpen(false)} />}
       {afspraakOpen && (
         <AfspraakMaker
           onCancel={() => setAfspraakOpen(false)}
