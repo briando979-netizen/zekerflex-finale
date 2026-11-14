@@ -583,6 +583,7 @@ function InboxPageInner({
       ...(msg.location ? { location: msg.location } : {}),
       ...(peiling ? { poll: peiling.poll } : {}),
       ...(msg.mentions?.length ? { mentions: msg.mentions } : {}),
+      ...(msg.contact ? { contact: { userId: msg.contact.userId, naam: msg.text } } : {}),
     };
     outbox.current.set(tmpId, msg);
     setMessages((m) => [...m, optimistic]);
@@ -719,6 +720,17 @@ function InboxPageInner({
     const naam = to ? otherOf(to).name : ib.hetGesprek;
     if (goed === lijst.length) say(lijst.length === 1 ? vulIn(ib.doorgestuurdNaar, { naam }) : vulIn(ib.doorgestuurdMeerNaar, { aantal: goed, naam }));
     else say(ib.doorsturenMislukt, true);
+  };
+
+  // contactkaart: het gedeelde contact bewaren bij je eigen contacten
+  const bewaarContact = async (userId: string) => {
+    const r = await fetch("/api/contacts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId }) }).catch(() => null);
+    if (!r?.ok) {
+      say(ib.contactOpslaanMislukt, true);
+      return;
+    }
+    say(ib.contactOpgeslagen);
+    void loadThreads();
   };
 
   // eenmalig bekijken: één keer ophalen (de server legt vast dat jij hem opende) en als blob tonen
@@ -1504,6 +1516,8 @@ function InboxPageInner({
                         onSelect={kiesBericht}
                         onInfo={(i) => setInfoVan(i.id)}
                         onOpenEenmalig={(e) => void openEenmalig(e)}
+                        onStartChat={(uid) => void startThreadWith(uid)}
+                        onSaveContact={(uid) => void bewaarContact(uid)}
                         onEdit={(e) => {
                           setReplyTo(null);
                           setEditing(e);
@@ -1589,6 +1603,7 @@ function InboxPageInner({
             onCancelEdit={() => setEditing(null)}
             onSend={send}
             onTyping={pingTyping}
+            contactKandidaten={rondzendKandidaten(contacts, threads, me?.userId ?? "", (id) => dir[id]?.name)}
             members={
               activeThread.kind === "group"
                 ? activeThread.participants.filter((id) => id !== me?.userId).map((id) => ({ userId: id, name: dir[id]?.name ?? "" })).filter((l) => l.name)

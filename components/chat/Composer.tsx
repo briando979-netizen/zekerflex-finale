@@ -11,6 +11,8 @@ import { IconPaperclip, IconMic, IconSend, IconBolt, IconSparkle, IconSmiley, Ic
 import { isFotoType } from "@/lib/messaging/bijlage";
 import { BERICHT_MAX, isTeLang, tekstAlsBestand, tekstBestandNaam, voorproef } from "@/lib/chat/lange-tekst";
 import { kandidaten, vermeldingenIn, vermeldingVraag, vulVermeldingIn, type Lid } from "@/lib/messaging/vermelding";
+import type { Kandidaat } from "@/lib/messaging/rondzenden";
+import { ContactKiezer } from "./ContactKiezer";
 
 export interface OutgoingMessage {
   text: string;
@@ -26,6 +28,8 @@ export interface OutgoingMessage {
   mentions?: string[];
   /** kind "image": maar één keer te bekijken */
   eenmalig?: boolean;
+  /** kind "contact": wie je deelt */
+  contact?: { userId: string };
 }
 
 // Veelgebruikte emoji voor op een computer (een telefoon heeft ze op het toetsenbord).
@@ -153,6 +157,7 @@ export function Composer({
   droppedFile = null,
   onDropHandled,
   members = [],
+  contactKandidaten = [],
 }: {
   /** text of the last message from the other side — for ✨ reply suggestions */
   lastIncoming?: string;
@@ -174,6 +179,8 @@ export function Composer({
   onDropHandled?: () => void;
   /** in een groep: de andere leden, voor @vermeldingen (leeg = geen lijst) */
   members?: Lid[];
+  /** wie je als contactkaart kunt delen (je contacten en gesprekspartners) */
+  contactKandidaten?: Kandidaat[];
 }) {
   const chat = useChatTeksten();
   // what you typed stays as a draft per conversation (drafts.ts)
@@ -238,6 +245,7 @@ export function Composer({
   const [aiNote, setAiNote] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ file: File; kind: "image" | "file" } | null>(null);
   const [pollOpen, setPollOpen] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
   const [hoverDevice, setHoverDevice] = useState(false);
   useEffect(() => {
     void setHoverDevice(window.matchMedia(HOVER).matches);
@@ -621,6 +629,14 @@ export function Composer({
               <MenuItem icon="📄" label={chat.composer.menuDocument} onClick={() => fileRef.current?.click()} />
               <MenuItem icon="📍" label={chat.composer.menuLocatie} onClick={shareLocation} />
               <MenuItem
+                icon="👤"
+                label={chat.composer.menuContact}
+                onClick={() => {
+                  setMenuOpen(false);
+                  setContactOpen(true);
+                }}
+              />
+              <MenuItem
                 icon="📊"
                 label={chat.composer.menuPeiling}
                 onClick={() => {
@@ -813,6 +829,16 @@ export function Composer({
         />
       )}
 
+      {contactOpen && (
+        <ContactKiezer
+          kandidaten={contactKandidaten}
+          onCancel={() => setContactOpen(false)}
+          onKies={(k) => {
+            setContactOpen(false);
+            void onSend({ text: k.name, kind: "contact", contact: { userId: k.userId } });
+          }}
+        />
+      )}
       {pollOpen && (
         <PollMaker
           onCancel={() => setPollOpen(false)}

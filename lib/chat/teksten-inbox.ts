@@ -151,6 +151,8 @@ export const INBOX_NL = {
   rondzendMislukt: "Rondzenden lukte niet. Probeer het opnieuw.",
   eenmaligAlBekeken: "Deze foto is al bekeken.",
   eenmaligMislukt: "De foto openen lukte niet.",
+  contactOpgeslagen: "Opgeslagen bij je contacten.",
+  contactOpslaanMislukt: "Opslaan lukte niet.",
   gesprekStartenMislukt: "Dit gesprek kon niet starten.",
   gesprekNietInLijst: "Dit gesprek staat niet in je lijst (vergrendeld of verwijderd).",
   onjuistePincode: "Onjuiste pincode.",

@@ -27,6 +27,7 @@ import { scanChatMessage } from "@/lib/agenda/scan";
 import { maakPeiling, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POLL_OPTION_MAX } from "@/lib/messaging/poll";
 import { geldigeVermeldingen, VERMELDING_MAX } from "@/lib/messaging/vermelding";
 import { maakLinkVoorbeeld } from "@/lib/messaging/link-voorbeeld-ophalen";
+import { bekendenVan } from "@/lib/messaging/bekenden";
 import { BERICHT_MAX } from "@/lib/chat/lange-tekst";
 import { lijstVersie, sinceUitUrl } from "@/lib/messaging/poll-versie";
 
@@ -138,7 +139,7 @@ export async function GET(req: Request, props: { params: Promise<{ threadId: str
 
 const sendSchema = z.object({
   text: z.string().trim().max(BERICHT_MAX).optional().default(""),
-  kind: z.enum(["text", "voice", "file", "image", "location", "call", "poll"]).optional().default("text"),
+  kind: z.enum(["text", "voice", "file", "image", "location", "call", "poll", "contact"]).optional().default("text"),
   attachment: z
     .object({
       mediaId: z.string().min(1).max(64),
@@ -174,6 +175,8 @@ const sendSchema = z.object({
   mentions: z.array(z.string().min(1).max(40)).max(VERMELDING_MAX).optional(),
   // kind "image": maar één keer te bekijken (zoals WhatsApp)
   eenmalig: z.boolean().optional(),
+  // kind "contact": wie je deelt; de server zet de naam erbij
+  contact: z.object({ userId: z.string().min(1).max(40) }).optional(),
 });
 
 // POST /api/inbox/:id — send a message (text, voice, file, image, location, call log).
@@ -210,6 +213,15 @@ export async function POST(request: Request, props: { params: Promise<{ threadId
     const extra: MessageExtra = {};
     let text = input.text;
     if (input.kind === "image" && input.eenmalig) extra.eenmalig = true;
+    if (input.kind === "contact") {
+      // alleen iemand met wie je zelf in contact staat (zo geef je niemand door die je niet kent); de naam komt van de server
+      const wie = input.contact?.userId;
+      if (!wie || wie === p.userId || !(await bekendenVan(p.userId)).has(wie)) throw AppError.validation("Je kunt alleen iemand delen met wie je zelf in contact staat.");
+      const naam = (await userDirectory([wie])).get(wie)?.name;
+      if (!naam) throw AppError.validation("Deze persoon bestaat niet (meer).");
+      extra.contact = { userId: wie, naam };
+      text = naam;
+    }
     if (thread.kind === "group") {
       const genoemd = geldigeVermeldingen(input.mentions, thread.participants, p.userId);
       if (genoemd.length) extra.mentions = genoemd;

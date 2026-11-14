@@ -36,7 +36,7 @@ export interface Msg {
   from: string;
   at: string;
   text: string;
-  kind: "text" | "system" | "voice" | "file" | "image" | "location" | "call" | "poll";
+  kind: "text" | "system" | "voice" | "file" | "image" | "location" | "call" | "poll" | "contact";
   attachment?: Attachment;
   location?: { lat: number; lng: number; label?: string };
   call?: CallInfo;
@@ -59,6 +59,8 @@ export interface Msg {
   transcript?: string;
   /** voorbeeld van de eerste link (zonder afbeelding) */
   linkVoorbeeld?: { url: string; host: string; titel: string; omschrijving?: string };
+  /** een gedeeld contact */
+  contact?: { userId: string; naam: string };
   /** foto die maar één keer te bekijken is, en wie hem al opende */
   eenmalig?: boolean;
   eenmaligGezien?: string[];

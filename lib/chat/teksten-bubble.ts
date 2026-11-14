@@ -30,6 +30,8 @@ export const BUBBLE_NL = {
   eenmaligOpen: "Foto bekijken (1×)",
   eenmaligGeopend: "Geopend",
   eenmaligVerzonden: "Foto · één keer te bekijken",
+  contactBericht: "Bericht sturen",
+  contactOpslaan: "Opslaan",
   previewFileFallback: "Bestand",
   previewLocation: "📍 Locatie",
   retrySend: "Opnieuw versturen",

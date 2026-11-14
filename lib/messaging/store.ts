@@ -25,7 +25,8 @@ export type MessageKind =
   | "image"
   | "location"
   | "call"
-  | "poll";
+  | "poll"
+  | "contact";
 
 export interface MessageAttachment {
   /** id in the per-thread chat media store (lib/messaging/media.ts) */
@@ -85,6 +86,8 @@ export interface ChatMessage {
   transcript?: string;
   /** voorbeeld van de eerste link (titel, omschrijving, site; lib/messaging/link-voorbeeld.ts) */
   linkVoorbeeld?: LinkVoorbeeld;
+  /** kind "contact": een gedeeld contact (alleen iemand met wie de afzender in contact staat); de naam staat ook in text */
+  contact?: { userId: string; naam: string };
   /** kind "image": maar één keer te bekijken (zoals WhatsApp); wie hem al opende staat in eenmaligGezien */
   eenmalig?: true;
   eenmaligGezien?: string[];
@@ -97,7 +100,7 @@ export const EDIT_WINDOW_MS = 24 * 3_600_000;
 export const DELETE_WINDOW_MS = 48 * 3_600_000;
 
 export type MessageExtra = Partial<
-  Pick<ChatMessage, "attachment" | "location" | "call" | "replyTo" | "auto" | "forwarded" | "poll" | "mentions" | "eenmalig">
+  Pick<ChatMessage, "attachment" | "location" | "call" | "replyTo" | "auto" | "forwarded" | "poll" | "mentions" | "eenmalig" | "contact">
 >;
 
 export interface ChatThread {
@@ -144,6 +147,8 @@ export function previewText(m: {
       return "📍 Locatie";
     case "poll":
       return `📊 ${m.text}`;
+    case "contact":
+      return `👤 ${m.text}`;
     case "call":
       return m.call?.mode === "video"
         ? "📹 Videogesprek"
@@ -509,6 +514,7 @@ export async function postMessage(
     ...(kind === "poll" && extra.poll ? { poll: extra.poll } : {}),
     ...(extra.mentions?.length ? { mentions: extra.mentions } : {}),
     ...(kind === "image" && extra.eenmalig ? { eenmalig: true as const } : {}),
+    ...(kind === "contact" && extra.contact ? { contact: extra.contact } : {}),
   };
   // zelf toevoegen in plaats van de generieke append uit lib/storage/kv: dezelfde grens als overal (aantal én bytes)
   const key = messagesKey(threadId);

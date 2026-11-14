@@ -219,6 +219,8 @@ export function MessageBubble({
   onSelect,
   onInfo,
   onOpenEenmalig,
+  onStartChat,
+  onSaveContact,
   onEdit,
   onForward,
   onPin,
@@ -260,6 +262,9 @@ export function MessageBubble({
   onInfo?: (m: Msg) => void;
   /** een foto die je maar één keer kunt bekijken, openen */
   onOpenEenmalig?: (m: Msg) => void;
+  /** contactkaart: een gesprek beginnen of bewaren */
+  onStartChat?: (userId: string) => void;
+  onSaveContact?: (userId: string) => void;
   /** your own text message, within 24 hours: back into the composer to rewrite */
   onEdit?: (m: Msg) => void;
   onForward?: (m: Msg) => void;
@@ -738,6 +743,32 @@ export function MessageBubble({
                   )}
                 </span>
               </a>
+            )}
+
+            {m.kind === "contact" && m.contact && (
+              // een gedeeld contact (zoals WhatsApp): naam, en een gesprek beginnen of bewaren
+              <div className="mb-1 min-w-[13rem] rounded-lg bg-black/[0.04] px-3 py-2">
+                <div className="flex items-center gap-2.5">
+                  <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full bg-brand-500 text-sm font-bold text-white" aria-hidden>
+                    {m.contact.naam.slice(0, 1).toUpperCase()}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{m.contact.naam}</span>
+                </div>
+                {m.contact.userId !== myUserId && (onStartChat || onSaveContact) && (
+                  <div className="mt-2 flex gap-2 border-t border-black/10 pt-2">
+                    {onStartChat && (
+                      <button type="button" onClick={() => onStartChat(m.contact!.userId)} className="flex-1 rounded-md py-1 text-xs font-semibold text-brand-600 hover:bg-black/5">
+                        {t.contactBericht}
+                      </button>
+                    )}
+                    {onSaveContact && (
+                      <button type="button" onClick={() => onSaveContact(m.contact!.userId)} className="flex-1 rounded-md py-1 text-xs font-semibold text-brand-600 hover:bg-black/5">
+                        {t.contactOpslaan}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
 
             {m.kind === "location" && m.location && (

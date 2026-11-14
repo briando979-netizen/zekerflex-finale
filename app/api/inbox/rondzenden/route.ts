@@ -2,8 +2,8 @@ import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
-import { ensureDirectThread, listThreadsForUser, postMessage } from "@/lib/messaging/store";
-import { listContacts } from "@/lib/messaging/contact-book";
+import { ensureDirectThread, postMessage } from "@/lib/messaging/store";
+import { bekendenVan } from "@/lib/messaging/bekenden";
 import { blockedBetween } from "@/lib/messaging/thread-prefs";
 import { notifyNewMessage } from "@/lib/messaging/notify";
 import { enforceRateLimit } from "@/lib/rate-limit";
@@ -35,12 +35,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       windowSeconds: 3600,
       message: "Je hebt net al een paar keer rondgezonden. Probeer het over een uur opnieuw.",
     });
-    const [contacten, gesprekken] = await Promise.all([listContacts(p.userId), listThreadsForUser(p.userId, false)]);
-    const mag = new Set<string>([
-      ...contacten.map((c) => c.userId),
-      ...gesprekken.filter((t) => t.kind === "direct").flatMap((t) => t.participants),
-    ]);
-    mag.delete(p.userId);
+    const mag = await bekendenVan(p.userId);
 
     let verstuurd = 0;
     let overgeslagen = 0;
