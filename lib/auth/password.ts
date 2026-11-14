@@ -130,9 +130,14 @@ export async function isBreached(pw: string): Promise<boolean> {
  * (score < 2) of gelekt → één begrijpelijke zin; anders null. De lekcontrole faalt open: een storing bij de externe
  * dienst houdt aanmelden nooit tegen (de eigen lijst met veelgebruikte wachtwoorden is dan al gecontroleerd).
  */
-export async function wachtwoordProbleem(pw: string, extraBad: string[] = []): Promise<string | null> {
+export async function wachtwoordProbleem(
+  pw: string,
+  extraBad: string[] = [],
+  /** de lekcontrole; in tests een nagemaakte dienst */
+  controleGelekt: (pw: string) => Promise<boolean> = isBreached,
+): Promise<string | null> {
   const strength = scorePassword(pw, extraBad);
   if (strength.score < 2) return strength.warnings[0] ?? "Kies een sterker wachtwoord.";
-  if (await isBreached(pw).catch(() => false)) return "Dit wachtwoord staat in bekende datalekken. Kies een ander wachtwoord.";
+  if (await controleGelekt(pw).catch(() => false)) return "Dit wachtwoord staat in bekende datalekken. Kies een ander wachtwoord.";
   return null;
 }
