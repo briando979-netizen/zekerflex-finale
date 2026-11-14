@@ -10,7 +10,7 @@ RUN apt-get update \
 RUN useradd -u 61000 -m bouwer && mkdir -p /werk && chown bouwer:bouwer /werk
 USER bouwer
 ENV NEXT_TELEMETRY_DISABLED=1 \
-    NODE_OPTIONS=--max-old-space-size=2560 \
+    NODE_OPTIONS=--max-old-space-size=3584 \
     npm_config_update_notifier=false
 WORKDIR /werk
 EXPOSE 4100

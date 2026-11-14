@@ -402,8 +402,9 @@ services:
       - bouwer-werk:/werk
       # de uitrol-vergrendeling: zware stappen wachten tot een uitrol klaar is
       - ./.zf-slot:/zf-slot:ro
-    # tsc op de hele codebase vraagt ~2 GB; hier begrensd zodat de app nooit krap komt
-    mem_limit: 3g
+    # tsc op de hele codebase vraagt sinds 14 nov (OOM bij 2,5 GB heap, 433.000 regels) ruim 3 GB; heap 3584 MB in het Dockerfile,
+    # hier begrensd zodat de app nooit krap komt (de controle draait vóór het bouwen)
+    mem_limit: 4g
     cpus: 2
     depends_on:
       bouwer-db: { condition: service_started }
