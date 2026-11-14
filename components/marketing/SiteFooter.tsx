@@ -5,6 +5,7 @@ import { SocialLinks } from "@/components/marketing/SocialLinks";
 import { CookieSettingsButton } from "@/components/marketing/CookieSettingsButton";
 import { STANDAARD_VOETTEKST, type Voettekst } from "@/lib/ontwerp/menu";
 import { BEDRIJF } from "@/lib/marketing/bedrijfsgegevens";
+import { SITE } from "@/lib/seo";
 
 // De kolommen en de zin onder het logo zijn te bewerken in Admin → Site-ontwerper → Menu
 // (lib/ontwerp/menu.ts); zonder eigen versie is het de standaard daar.
@@ -71,6 +72,16 @@ export function SiteFooter({ voettekst = STANDAARD_VOETTEKST }: { voettekst?: Vo
         <div className="shell py-5 text-xs leading-relaxed text-white/60">
           <p>
             <span className="font-semibold text-white/85">{BEDRIJF.naam}</span>, {BEDRIJF.rechtsvorm} · dossiernummer {BEDRIJF.dossiernummer} bij de Delaware Division of Corporations · officieel adres in Delaware: {BEDRIJF.registeredAgent}, {BEDRIJF.registeredAgentAdres}
+          </p>
+          <p className="mt-1">
+            Telefoon{" "}
+            <a href={SITE.phoneHref} className="underline underline-offset-2 hover:text-white">
+              {SITE.phone}
+            </a>{" "}
+            (de AI-assistent neemt dag en nacht op) · e-mail{" "}
+            <a href={`mailto:${SITE.email}`} className="underline underline-offset-2 hover:text-white">
+              {SITE.email}
+            </a>
           </p>
           <p className="mt-1">
             Zelf controleren? Zoek op dossiernummer {BEDRIJF.dossiernummer} in het{" "}

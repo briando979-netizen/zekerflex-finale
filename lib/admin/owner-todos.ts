@@ -937,6 +937,20 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("google-business"),
     },
     {
+      id: "lokaal-adres",
+      group: "Vindbaarheid & app",
+      title: "Lokaal gevonden worden in Groningen: zakelijk adres en servicegebied doorgeven",
+      why: "Op 14 nov had zich nog nooit een bedrijf van buiten aangemeld; het knelpunt is gevonden worden in de eigen regio. De site heeft nu stadspagina's voor Groningen, Veendam, Hoogezand-Sappemeer, Winschoten, Stadskanaal en Assen, maar Google koppelt een bedrijf pas aan een plaats met een adres of een servicegebied. Het woonadres mag nooit op de site of in het Bedrijfsprofiel (bedrijfsgegevens.ts), dus dit kan alleen de eigenaar beslissen.",
+      how: [
+        "Kies: een zakelijk adres in de regio (kantoor, bedrijfsverzamelgebouw of een vestigingsadres van een partner) óf houd het Google Bedrijfsprofiel op 'servicegebied' met de provincies Groningen en Drenthe.",
+        "Zet in het Bedrijfsprofiel hetzelfde telefoonnummer en dezelfde naam als op de site (contactpagina en footer), met als website zekerflex.com/personeel-inhuren/groningen.",
+        "Geef een gekozen adres door; dan komt het als LocalBusiness-gegevens op de contactpagina en in de footer (via ldJson). Zonder adres blijft de site op 'Organization' met het Bedrijfsprofiel als sameAs, wat klopt.",
+        "Bing: in bing.com/webmasters 'Importeren uit Google Search Console' kiezen; de Google-verificatie staat al in de DNS.",
+      ],
+      auto: false,
+      ...m("lokaal-adres"),
+    },
+    {
       id: "turn",
       group: "Bellen & koppelingen",
       title: "Eigen TURN-server voor bellen (aanrader)",
