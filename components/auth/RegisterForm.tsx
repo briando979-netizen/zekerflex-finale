@@ -229,6 +229,8 @@ export function RegisterForm({
   // Wat ontbreekt er nog? De knop staat altijd aan; bij een druk met iets open komt deze zin met role="alert" en gaat
   // één anoniem meet-event weg (formulier:register:melding:<veld>). De server controleert daarna alles opnieuw.
   const [klopNiet, setKlopNiet] = useState<string | null>(null);
+  const pwSterkGenoeg = ((pwInfo?.score ?? 0) >= 2 || pwCheckUnavailable);
+  const pwNietGelekt = !(pwInfo?.breached ?? false);
   function controleerVoorVersturen(e: React.FormEvent<HTMLFormElement>) {
     const fd = new FormData(e.currentTarget);
     const woorden = { vulNogIn: t.fillIn.replace(/:\s*\{velden\}\.?$/, ""), en: t.listAnd };
@@ -239,9 +241,8 @@ export function RegisterForm({
         { code: "email-ongeldig", naam: t.email.toLowerCase(), mist: email.trim().length > 0 && emailState === "invalid", eigenTekst: t.emailInvalid },
         { code: "email-bezet", naam: t.email.toLowerCase(), mist: emailState === "taken", eigenTekst: t.emailTaken },
         { code: "wachtwoord", naam: t.password.toLowerCase(), mist: pw.length === 0 },
-        { code: "wachtwoord-zwak", naam: t.password.toLowerCase(), mist: pw.length > 0 && (pwInfo?.score ?? 0) < 2 && !pwCheckUnavailable, eigenTekst: pwInfo?.warnings?.[0] ?? t.passwordWeak },
-        { code: "wachtwoord-gelekt", naam: t.password.toLowerCase(), mist: Boolean(pwInfo?.breached), eigenTekst: t.breached },
-        { code: "wachtwoord-herhaal", naam: t.repeat.toLowerCase(), mist: String(fd.get("passwordConfirm") ?? "") !== "" && String(fd.get("passwordConfirm") ?? "") !== pw, eigenTekst: t.noMatch },
+        { code: "wachtwoord-zwak", naam: t.password.toLowerCase(), mist: pw.length > 0 && !pwSterkGenoeg, eigenTekst: pwInfo?.warnings?.[0] ?? t.passwordWeak },
+        { code: "wachtwoord-gelekt", naam: t.password.toLowerCase(), mist: !pwNietGelekt, eigenTekst: t.breached },
         { code: "bedrijf", naam: t.companyName, mist: type === "bedrijf" && company.trim().length < 2 },
       ],
       woorden,
