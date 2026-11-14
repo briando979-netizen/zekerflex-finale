@@ -494,7 +494,8 @@ export async function fetchForScan(cfg: ImapConfig, uid: number): Promise<{ text
 }
 
 /**
- * Eén leessessie op INBOX voor een ronde die meerdere berichten nodig heeft (de bounce-ronde, lib/mail/bounce-ronde.ts):
+ * Eén leessessie op INBOX voor een ronde die meerdere berichten nodig heeft (de bounce-ronde, lib/mail/bounce-ronde.ts,
+ * en de offerte-AI, lib/sales/offers.ts):
  * één login in plaats van één per bericht. Die postbus is ook die van SMTP en de offerte-AI; een reeks logins elk uur
  * kan TransIP laten afknijpen ("451 4.3.2"), en dan stokt de echte mail. EXAMINE (alleen lezen) en BODY.PEEK: er gaat
  * niets op gelezen. Hooguit `maxBerichten` berichten per sessie; daarna geeft ruw() null. Sluit altijd met sluit()
@@ -505,6 +506,8 @@ export interface ImapLeesSessie {
   lijst(limit: number): Promise<ImapEnvelope[]>;
   /** het hele ruwe bericht, ongelezen; null als het er niet (meer) is of de grens bereikt is */
   ruw(uid: number): Promise<string | null>;
+  /** tekst en bijlagen (zoals fetchMessageContent), ongelezen; null als het er niet (meer) is of de grens bereikt is */
+  inhoud(uid: number): Promise<MessageContent | null>;
   sluit(): Promise<void>;
 }
 
@@ -524,6 +527,12 @@ export async function openLeesSessie(cfg: ImapConfig, maxBerichten = 25): Promis
   }
   let open = true;
   let opgehaald = 0;
+  const ruwBuffer = async (uid: number): Promise<Buffer | null> => {
+    if (!open || opgehaald >= maxBerichten || !Number.isInteger(uid) || uid <= 0) return null;
+    opgehaald += 1;
+    const lines = await command(sock, bs, `UID FETCH ${uid} (BODY.PEEK[])`, timeoutMs);
+    return bodyUitFetch(lines, "");
+  };
   return {
     async lijst(limit) {
       if (!open || exists === 0) return [];
@@ -532,11 +541,12 @@ export async function openLeesSessie(cfg: ImapConfig, maxBerichten = 25): Promis
       return envelopesUitFetch(fetchLines).sort((a, b) => b.uid - a.uid);
     },
     async ruw(uid) {
-      if (!open || opgehaald >= maxBerichten || !Number.isInteger(uid) || uid <= 0) return null;
-      opgehaald += 1;
-      const lines = await command(sock, bs, `UID FETCH ${uid} (BODY.PEEK[])`, timeoutMs);
-      const body = bodyUitFetch(lines, "");
+      const body = await ruwBuffer(uid);
       return body ? body.toString("utf8") : null;
+    },
+    async inhoud(uid) {
+      const body = await ruwBuffer(uid);
+      return body ? inhoudUitRuw(body) : null;
     },
     async sluit() {
       if (!open) return;
@@ -589,7 +599,11 @@ export async function fetchBijlagen(
 export async function fetchMessageContent(cfg: ImapConfig, uid: number): Promise<MessageContent> {
   const raw = await fetchRawMessage(cfg, uid);
   if (!raw) return { text: "(kon bericht niet laden)", attachments: [] };
+  return inhoudUitRuw(raw);
+}
 
+/** Tekst en bijlagen (alleen de gegevens) van een ruw bericht. */
+function inhoudUitRuw(raw: Buffer): MessageContent {
   const parts = walkMime(raw);
   const text = bodyText(parts.filter((p) => !isAttachment(p)));
 
