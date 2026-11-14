@@ -13,15 +13,32 @@ import { rijschoolPadenVoorSitemap } from "@/lib/rijschool/vindbaar";
 
 type Freq = "never" | "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly";
 
-// Zonder dit maakt Next de sitemap één keer tijdens de build, als er geen database is: dan
-// ontbraken open klussen (Google for Jobs), shopproducten en eigen pagina's (gemeten 4 nov:
-// x-nextjs-cache HIT, lastmod = buildtijd). Nu elke 10 minuten opnieuw, met de echte gegevens.
-export const revalidate = 600;
+// Next maakte de sitemap één keer tijdens de build, zonder database: dan ontbraken open klussen (Google for Jobs),
+// shopproducten en eigen pagina's (gemeten 4 nov: x-nextjs-cache HIT, lastmod = buildtijd). Met `revalidate = 600` kwam
+// dat terug bij elke (her)start van de container: tien minuten lang de bouwversie (gemeten 13 nov: 343 regels, 0
+// producten, pas na de herberekening 375), en op een dag met achttien uitrollen is dat uren. Daarom geen prerender meer
+// (force-dynamic) en een eigen geheugencache van tien minuten: de eerste aanvraag na een start leest de database al.
+export const dynamic = "force-dynamic";
+export const CACHE_MS = 600_000;
+
+interface SitemapGeheugen {
+  sitemap?: { op: number; regels: MetadataRoute.Sitemap };
+}
+const g = globalThis as typeof globalThis & { __zfSitemap?: SitemapGeheugen };
+const geheugen: SitemapGeheugen = (g.__zfSitemap ??= {});
 
 // lastmod alleen waar we de echte datum kennen (artikel, product, klus, eigen pagina). Zonder datum laten we hem weg:
 // "nu" gaf elke vaste pagina na elke uitrol en elke 10 minuten een nieuwe datum (gemeten 12 nov: 320 van 337 regels
 // op het tijdstip van de uitrol), en een lastmod die altijd verandert negeert Google voor de hele site.
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const c = geheugen.sitemap;
+  if (c && Date.now() - c.op < CACHE_MS) return c.regels;
+  const regels = await bouwSitemap();
+  geheugen.sitemap = { op: Date.now(), regels };
+  return regels;
+}
+
+async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
   const entry = (
     path: string,
     priority: number,

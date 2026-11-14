@@ -42,4 +42,9 @@ describe("sitemap", () => {
     expect(vers.map((r) => r.url)).toEqual([]);
     expect(regels.length).toBeGreaterThan(100);
   });
+
+  it("blijft tien minuten in het geheugen: een tweede aanvraag krijgt dezelfde lijst zonder de database opnieuw te lezen", async () => {
+    const eerste = await sitemap();
+    expect(await sitemap()).toBe(eerste);
+  });
 });

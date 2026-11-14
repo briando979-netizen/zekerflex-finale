@@ -67,7 +67,11 @@ describe("sitemap.xml dekt de openbare pagina's", () => {
     expect(fout).toEqual([]);
   });
 
-  it("de sitemap wordt elke 10 minuten opnieuw gemaakt, niet één keer tijdens de build", () => {
-    expect(lees("app/sitemap.ts")).toMatch(/export const revalidate = \d+;/);
+  it("de sitemap wordt niet tijdens de build gemaakt (dan is er geen database) en blijft tien minuten in het geheugen", () => {
+    const src = lees("app/sitemap.ts");
+    // met `revalidate` serveerde Next na elke (her)start van de container tien minuten de bouwversie zonder database (13 nov)
+    expect(src).toMatch(/export const dynamic = "force-dynamic";/);
+    expect(src).not.toMatch(/export const revalidate/);
+    expect(src).toMatch(/export const CACHE_MS = 600_000;/);
   });
 });
