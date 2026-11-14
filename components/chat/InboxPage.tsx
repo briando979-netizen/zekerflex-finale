@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { Avatar } from "./Avatar";
 import { MessageBubble } from "./MessageBubble";
 import { useMessageSearch } from "./useMessageSearch";
 import { useStickyScroll } from "./useStickyScroll";
+import { beoordeelPollAntwoord, sinceQuery } from "@/lib/messaging/poll-since";
 import { ChatSearchBar } from "./ChatSearchBar";
 import { ForwardPicker } from "./ForwardPicker";
 import { ChatPinnedBanner } from "./ChatPinnedBanner";
@@ -127,7 +128,15 @@ function InboxPageInner({
   const clearDropped = useCallback(() => setDropped(null), []);
 
   const [active, setActive] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Msg[]>([]);
+  const [messages, setMessagesRaw] = useState<Msg[]>([]);
+  // de versie van de lijst uit het laatste volledige antwoord van de server (lib/messaging/poll-since.ts); null = eerst de hele lijst
+  const versieRef = useRef<string | null>(null);
+  // elke lokale wijziging (sturen, bewerken, reageren, intrekken, stemmen) maakt de onthouden versie ongeldig: de volgende
+  // poll haalt weer de volledige lijst, zodat de server het laatste woord houdt. Alleen de poll zelf gebruikt setMessagesRaw.
+  const setMessages: Dispatch<SetStateAction<Msg[]>> = useCallback((v) => {
+    versieRef.current = null;
+    setMessagesRaw(v);
+  }, []);
   const [quickReplies, setQuickReplies] = useState<string[]>([]);
   const [typing, setTyping] = useState(false);
   const [replyTo, setReplyTo] = useState<Msg | null>(null);
@@ -324,12 +333,26 @@ function InboxPageInner({
   }, []);
 
   const loadThread = useCallback(async (id: string) => {
-    const r = await fetch(`/api/inbox/${id}${threadQuery()}`, { cache: "no-store", headers: pinHeaders() });
+    // ?since=<versie>: bij "ongewijzigd" komt alleen de aanwezigheid terug en blijft de lijst staan (lib/messaging/poll-since.ts)
+    const since = versieRef.current;
+    const r = await fetch(`/api/inbox/${id}${threadQuery()}${sinceQuery(since)}`, { cache: "no-store", headers: pinHeaders() });
     if (!r.ok) return;
     const d = await r.json();
     // a late answer for a conversation you already left must not fill the open one
     if (activeRef.current !== id) return;
-    setMessages((prev) => {
+    const uitslag = beoordeelPollAntwoord(d, since);
+    if (uitslag.soort === "ongewijzigd") {
+      setPresence((p) => ({ ...p, ...d.presence }));
+      return;
+    }
+    if (uitslag.soort === "opnieuw-volledig") {
+      // bij twijfel de volledige lijst, zonder since (en niet nog een keer als dat ook misgaat)
+      versieRef.current = null;
+      if (since) void loadThread(id);
+      return;
+    }
+    versieRef.current = uitslag.versie;
+    setMessagesRaw((prev) => {
       const server: Msg[] = d.messages;
       const local = prev.filter((m) => (m.pending || m.failed) && !server.some((s) => s.text === m.text && s.from === m.from && s.kind === m.kind));
       return [...server, ...local];
@@ -361,7 +384,8 @@ function InboxPageInner({
 
   useEffect(() => {
     if (!active) return;
-    setMessages([]);
+    setMessagesRaw([]);
+    versieRef.current = null;
     void loadThread(active);
     const i = setInterval(() => activeRef.current && loadThread(activeRef.current), 3000);
     return () => clearInterval(i);
