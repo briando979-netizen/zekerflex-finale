@@ -8,6 +8,8 @@
 //  - een label met een bestandsnaam, e-mailadres, IBAN of telefoonnummer/lang getal (9+ cijfers) wordt in zijn
 //    geheel vervangen ("bestand", "e-mailadres", "iban", "nummer"): een naam staat er vaak naast;
 //  - op /admin en /studio alleen een label in codevorm (data-track, [a-z0-9-]): daar staan namen in de rijen;
+//  - ook in de chat (/dashboard/berichten, /werkgever/berichten; 14 nov): een gespreksrij bevat de naam, de tijd en een
+//    stukje van het laatste bericht ("BVJan de Vries14:06Jij: …"), gemeten: 57 labels met een berichtvoorbeeld (sep–13 nov);
 //  - context bij een klik (data-track-ctx="stap=selfie;reden=geen-gezicht") alleen met een vaste lijst sleutels en korte
 //    codes [a-z0-9-]; al het andere valt weg. Zo komt er nooit tekst uit een beeld of de MRZ in.
 // ---------------------------------------------------------------------------
@@ -17,7 +19,7 @@ const EMAIL = /[^\s@]+@[^\s@]+\.[a-z]{2,}/i;
 const IBAN = /\b[A-Z]{2}\d{2}(?:\s?[A-Z0-9]){10,30}\b/;
 // 9 of meer cijfers, eventueel met spaties of streepjes ertussen (telefoon met + of 0, BSN, rekeningnummer)
 const LANG_GETAL = /\d(?:[\s-]?\d){8,}/;
-const BEHEER = /^\/(admin|studio)(\/|$)/;
+const BEHEER = /^\/(admin|studio)(\/|$)|^\/(dashboard|werkgever)\/berichten(\/|$)/;
 const CODE = /^[a-z0-9][a-z0-9-]{0,59}$/;
 
 /** Het label zoals het bewaard mag worden: het hele label vervangen als er iets persoonlijks in staat; null bij leeg. */
@@ -31,7 +33,7 @@ export function veiligLabel(label: string | null | undefined): string | null {
   return label ?? null;
 }
 
-/** Een beheerscherm (/admin, /studio): daar alleen labels in codevorm. */
+/** Een scherm met namen in de rijen (/admin, /studio, de chat): daar alleen labels in codevorm. */
 export function isBeheerPad(pad: string | null | undefined): boolean {
   return BEHEER.test(pad ?? "");
 }
