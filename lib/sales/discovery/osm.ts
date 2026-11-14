@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { osmZoekBedrijven } from "@/lib/integrations/osm-plaatsen";
 import { createLead } from "@/lib/sales/leads";
+import { CITIES, REGIO_STEDEN } from "@/lib/seo-cities";
+import { amsterdamDayKey } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // Bedrijven vinden voor de buitendienst via OpenStreetMap — gratis en zonder
@@ -18,6 +20,43 @@ import { createLead } from "@/lib/sales/leads";
 
 const STANDAARD_SECTOREN = ["horeca", "logistiek", "retail", "schoonmaak", "evenementen", "zorg"];
 
+/** Noemt de campagne geen steden: eerst Groningen en de regio rond de eigen vestiging, dan de andere steden met een eigen pagina. */
+const VOORRANG: readonly string[] = ["groningen", ...REGIO_STEDEN];
+export const STANDAARD_STEDEN: readonly string[] = [
+  ...VOORRANG.flatMap((slug) => CITIES.filter((c) => c.slug === slug).map((c) => c.name)),
+  ...CITIES.filter((c) => !VOORRANG.includes(c.slug)).map((c) => c.name),
+];
+
+/** Eén ronde blijft klein: OpenStreetMap wil hooguit één aanvraag per seconde (de wachtrij in lib/integrations/osm-plaatsen.ts bewaakt dat). */
+const VRAGEN_PER_RONDE = 4;
+/** De Amsterdamse dag waarop het venster bij de eerste vraag staat (15 nov 2026: Groningen). */
+const BEGINDAG = Date.UTC(2026, 10, 15) / 86_400_000;
+
+function amsterdamDag(nu: Date): number {
+  const [y, m, d] = amsterdamDayKey(nu).split("-").map(Number);
+  return Math.floor(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1) / 86_400_000);
+}
+
+/**
+ * De zoekvragen van de ronde op deze dag. Tot 14 nov 2026 vroeg hij elke dag de eerste vier (horeca, logistiek, retail,
+ * schoonmaak, zonder stad), met steeds dezelfde tien treffers: na drie dagen (35 leads) was alles een dubbel en kwam er
+ * elke dag 0 uit. Nu schuift het venster elke dag vier vragen op, zonder opgeslagen staat, en na de laatste begint hij
+ * weer vooraan. Per stad alle sectoren, zodat de steden met voorrang ook het eerst langskomen.
+ */
+export function osmVragen(sectoren: readonly string[], steden: readonly string[], nu: Date): string[] {
+  const vragen: string[] = [];
+  for (const c of steden.length ? steden : [""]) {
+    for (const s of sectoren) {
+      const q = [s, c].filter(Boolean).join(" ").trim();
+      if (q.length >= 3 && !vragen.includes(q)) vragen.push(q);
+    }
+  }
+  if (vragen.length <= VRAGEN_PER_RONDE) return vragen;
+  const stap = (amsterdamDag(nu) - BEGINDAG) * VRAGEN_PER_RONDE;
+  const begin = ((stap % vragen.length) + vragen.length) % vragen.length;
+  return Array.from({ length: VRAGEN_PER_RONDE }, (_, i) => vragen[(begin + i) % vragen.length] ?? "");
+}
+
 export interface OsmDiscoveryResult {
   created: number;
   seen: number;
@@ -28,22 +67,13 @@ export interface OsmDiscoveryResult {
 export async function discoverViaOsm(
   campaign: SalesCampaign,
   limitPerRun = 12,
+  nu: Date = new Date(),
 ): Promise<OsmDiscoveryResult> {
   const result: OsmDiscoveryResult = { created: 0, seen: 0, queries: [], skipped: 0 };
 
   const sectoren = campaign.targetSectors.length ? campaign.targetSectors : STANDAARD_SECTOREN;
-  const steden = campaign.targetCities.length ? campaign.targetCities : [""];
-
-  const vragen: string[] = [];
-  for (const s of sectoren) {
-    for (const c of steden) {
-      const q = [s, c].filter(Boolean).join(" ").trim();
-      if (q.length >= 3) vragen.push(q);
-    }
-  }
-  // Eén ronde blijft klein: OpenStreetMap wil hooguit één aanvraag per seconde
-  // (de wachtrij in lib/integrations/osm-plaatsen.ts bewaakt dat).
-  const ronde = vragen.slice(0, 4);
+  const steden = campaign.targetCities.length ? campaign.targetCities : STANDAARD_STEDEN;
+  const ronde = osmVragen(sectoren, steden, nu);
   result.queries = ronde;
 
   for (const q of ronde) {

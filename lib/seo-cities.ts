@@ -49,6 +49,10 @@ export const CITIES: City[] = [
   { slug: "maastricht", name: "Maastricht", province: "Limburg", lat: 50.8514, lng: 5.691, sectors: ["horeca", "hotels", "evenementen"], local: "Met de MECC-beurzen, veel hotels en internationale bezoekers is Maastricht dé horeca-stad van het zuiden." },
 ];
 
+/** Regiosteden rond de eigen vestiging (Zuidbroek): de nachtelijke rondgang en het zoeken van bedrijven voor de buitendienst
+ *  geven ze voorrang (lib/ops/rondgang.ts, lib/sales/discovery/osm.ts). */
+export const REGIO_STEDEN = ["veendam", "hoogezand", "winschoten", "stadskanaal", "assen"] as const;
+
 export function cityBySlug(slug: string): City | undefined {
   return CITIES.find((c) => c.slug === slug);
 }

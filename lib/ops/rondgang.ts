@@ -6,7 +6,7 @@ import { kvGet, kvSet } from "@/lib/storage/kv";
 import { beoordeel, type RondgangProbleem } from "@/lib/ops/rondgang-regels";
 import { draaiWerkerRondgang, type WerkerRondgang } from "@/lib/ops/rondgang-werker";
 import { draaiWerkgeverRondgang, type WerkgeverRondgang } from "@/lib/ops/rondgang-werkgever";
-import { CITIES } from "@/lib/seo-cities";
+import { CITIES, REGIO_STEDEN } from "@/lib/seo-cities";
 import { SECTORS } from "@/lib/seo-sectors";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 
@@ -48,8 +48,8 @@ const OVERSLAAN = new Set(["/account-verwijderen/voltooid", "/kyc/callback", "/w
 // Stadspagina's (14 nov): die zijn dynamisch ([stad]) en vielen dus altijd buiten de ronde, ook de regio rond de eigen
 // vestiging. Niet alle ±300: per soort twee per nacht, één uit alle steden en één regiostad, steeds een andere, zodat
 // elke regiostad binnen 5 nachten en elke stad binnen ±4 weken langskomt. Plus vaste adressen met een querystring.
-/** Regiosteden rond de eigen vestiging (Zuidbroek; lib/seo-cities.ts). */
-export const REGIO_STEDEN = ["veendam", "hoogezand", "winschoten", "stadskanaal", "assen"] as const;
+/** Regiosteden rond de eigen vestiging (Zuidbroek); de lijst zelf staat in lib/seo-cities.ts. */
+export { REGIO_STEDEN };
 /** Adressen die geen eigen pagina zijn maar wel een eigen weergave hebben. */
 export const EXTRA_ADRESSEN = ["/register?type=bedrijf"] as const;
 
