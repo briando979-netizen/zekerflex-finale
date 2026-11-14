@@ -102,7 +102,9 @@ describe("chat exporteren: bereikbaar in de chat", () => {
   const lees = (p: string) => readFileSync(path.join(process.cwd(), p), "utf8");
 
   it("het ⋯-menu van een chat heeft 'Chat exporteren' en de chat haalt het bestand op met de pincode", () => {
-    expect(lees("components/chat/ThreadMenu.tsx")).toContain('label="Chat exporteren" onClick={() => done({ action: "export" })}');
+    // sinds de chat vijftalig is, komt het label uit lib/chat/teksten-menu.ts
+    expect(lees("components/chat/ThreadMenu.tsx")).toContain('label={t.exportChat} onClick={() => done({ action: "export" })}');
+    expect(lees("lib/chat/teksten-menu.ts")).toContain('exportChat: "Chat exporteren"');
     const inbox = lees("components/chat/InboxPage.tsx");
     expect(inbox).toContain("/api/inbox/${threadId}/export`, { cache: \"no-store\", headers: pinHeaders() }");
   });
