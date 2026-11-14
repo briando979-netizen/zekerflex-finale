@@ -95,6 +95,10 @@ export const INBOX_NL = {
   geblokkeerdVoor: "Je hebt {naam} geblokkeerd.",
   deblokkeer: "Deblokkeer",
   jezelf: "jezelf",
+  geplandEen: "1 bericht gepland",
+  geplandMeer: "{n} berichten gepland",
+  geplandNiet: "Niet versturen",
+  geplandGelukt: "Ingepland. Je ziet het boven het invoerveld.",
   support: "Support",
   // kop van het gesprek
   supportSub: "Wij helpen je zo snel mogelijk",

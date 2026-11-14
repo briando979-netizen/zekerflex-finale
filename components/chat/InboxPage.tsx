@@ -47,6 +47,8 @@ import { maakPeiling, sluitPeiling, stem } from "@/lib/messaging/poll";
 import { annuleerAfspraak, maakAfspraak, zetAntwoord, type Antwoord } from "@/lib/messaging/afspraak";
 import { startLive, type Plek } from "@/lib/messaging/live-locatie";
 import { useLiveLocatieZender } from "./live-locatie-zender";
+import { GeplandBalk } from "./GeplandBalk";
+import type { GeplandBericht } from "@/lib/messaging/gepland-tijd";
 import {
   canDeleteForAll,
   canEdit,
@@ -570,6 +572,41 @@ function InboxPageInner({
   };
 
   const liveZender = useLiveLocatieZender();
+  // later versturen: je eigen geplande berichten in het open gesprek (lib/messaging/gepland.ts); elke minuut opnieuw, want
+  // de cron verstuurt ze op de achtergrond
+  const [gepland, setGepland] = useState<GeplandBericht[]>([]);
+  const laadGepland = useCallback(async (threadId: string) => {
+    const r = await fetch(`/api/inbox/${encodeURIComponent(threadId)}/gepland`, { cache: "no-store" }).catch(() => null);
+    const d = r?.ok ? await r.json().catch(() => null) : null;
+    if (d && Array.isArray(d.gepland)) setGepland(d.gepland as GeplandBericht[]);
+  }, []);
+  useEffect(() => {
+    setGepland([]);
+    if (!active) return;
+    const threadId = active;
+    void laadGepland(threadId);
+    const klok = window.setInterval(() => void laadGepland(threadId), 60_000);
+    return () => window.clearInterval(klok);
+  }, [active, laadGepland]);
+  const plan = async (text: string, wanneer: string): Promise<string | null> => {
+    if (!active) return ib.datLukteNietOpnieuw;
+    const threadId = active;
+    const r = await fetch(`/api/inbox/${encodeURIComponent(threadId)}/gepland`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, wanneer }) }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    if (!r?.ok) return d?.error?.message ?? (r ? ib.datLukteNietOpnieuw : ib.geenVerbindingOpnieuw);
+    say(ib.geplandGelukt);
+    void laadGepland(threadId);
+    return null;
+  };
+  const annuleerGepland = async (id: string) => {
+    if (!active) return;
+    const threadId = active;
+    setGepland((prev) => prev.filter((g) => g.id !== id));
+    const r = await fetch(`/api/inbox/${encodeURIComponent(threadId)}/gepland?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => null);
+    // 404: al verstuurd; dan staat hij in het gesprek
+    if (!r || (!r.ok && r.status !== 404)) say(r ? ib.datLukteNietOpnieuw : ib.geenVerbindingOpnieuw, true);
+    void laadGepland(threadId);
+  };
   const send = async (msg: OutgoingMessage) => {
     if (!active) return;
     if (msg.editId) return saveEdit(msg.editId, msg.text);
@@ -1645,8 +1682,11 @@ function InboxPageInner({
               onStop={() => setSelectie(null)}
             />
           ) : (
+          <>
+          <GeplandBalk gepland={gepland} onAnnuleer={(id) => void annuleerGepland(id)} />
           <Composer
             key={activeThread.id}
+            onPlan={plan}
             threadId={activeThread.id}
             quickReplies={quickReplies}
             replyTo={replyTo}
@@ -1673,6 +1713,7 @@ function InboxPageInner({
             droppedFile={dropped}
             onDropHandled={clearDropped}
           />
+          </>
           )}
         </div>
       )}
