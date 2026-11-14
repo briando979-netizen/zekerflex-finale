@@ -23,10 +23,10 @@ const BRANCHES: Branch[] = [
 
 const euro = (c: number) => `€ ${(c / 100).toFixed(2).replace(".", ",")}`;
 
-function Card({ b, minRateCents }: { b: Branch; minRateCents: number }) {
+function Card({ b, minRateCents, t }: { b: Branch; minRateCents: number; t: (typeof TEKST)[Voor] }) {
   return (
     <Link
-      href="/klussen"
+      href={t.kaartHref}
       className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-hair bg-paper shadow-e1 transition-all duration-300 hover:-translate-y-1 hover:shadow-e3"
     >
       <div className="relative aspect-[4/3] overflow-hidden">
@@ -48,12 +48,12 @@ function Card({ b, minRateCents }: { b: Branch; minRateCents: number }) {
         <p className="flex-1 text-sm text-neutralx-500">{b.blurb}</p>
         <div className="mt-3 border-t border-hair pt-3">
           <p>
-            <span className="text-xs text-neutralx-400">minimaal </span>
+            <span className="text-xs text-neutralx-400">{t.vanaf} </span>
             <span className="num font-display text-lg font-bold text-ink">{euro(minRateCents)}</span>
             <span className="text-xs font-medium text-neutralx-400"> /uur</span>
           </p>
           <span className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-brand-600">
-            Bekijk klussen
+            {t.kaartKnop}
             <span className="transition-transform group-hover:translate-x-0.5">→</span>
           </span>
         </div>
@@ -62,19 +62,40 @@ function Card({ b, minRateCents }: { b: Branch; minRateCents: number }) {
   );
 }
 
-export function BranchShowcase({ minRateCents }: { minRateCents: number }) {
+// Twee versies (14 nov): voor werkers op de homepagina (/), voor bedrijven op /bedrijven (alleen voor bedrijven).
+type Voor = "werkers" | "bedrijven";
+const TEKST = {
+  werkers: {
+    titel: "Werk in de branche die bij je past",
+    lead: "Van magazijn tot bediening. Elke klus met foto, reistijd en een helder uurtarief — zodat je precies weet waar je aan toe bent voordat je reageert.",
+    vanaf: "minimaal",
+    kaartHref: "/klussen",
+    kaartKnop: "Bekijk klussen",
+    knopHref: "/klussen",
+    knop: "Bekijk alle klussen",
+    noot: "Gratis aanmelden — je zit nergens aan vast.",
+  },
+  bedrijven: {
+    titel: "Personeel in jouw branche",
+    lead: "Van magazijn tot bediening: zet je klus uit met datum, plek en uurtarief, en zie meteen wat hij kost.",
+    vanaf: "uurtarief vanaf",
+    kaartHref: "/klus-plaatsen",
+    kaartKnop: "Klus plaatsen",
+    knopHref: "/klus-plaatsen",
+    knop: "Klus plaatsen",
+    noot: "Samenstellen zonder account — je betaalt alleen voor gewerkte uren.",
+  },
+} as const;
+
+export function BranchShowcase({ minRateCents, voor = "werkers" }: { minRateCents: number; voor?: Voor }) {
+  const t = TEKST[voor];
   return (
     <section className="relative bg-paper-soft">
       <div className="shell-4k py-8 md:py-10 lg:py-12">
         <Reveal>
           <p className="eyebrow">Branches</p>
-          <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold">
-            Werk in de branche die bij je past
-          </h2>
-          <p className="fluid-lead mt-5 max-w-2xl text-neutralx-600">
-            Van magazijn tot bediening. Elke klus met foto, reistijd en een helder uurtarief —
-            zodat je precies weet waar je aan toe bent voordat je reageert.
-          </p>
+          <h2 className="fluid-h2 mt-4 max-w-3xl text-balance font-display font-bold">{t.titel}</h2>
+          <p className="fluid-lead mt-5 max-w-2xl text-neutralx-600">{t.lead}</p>
         </Reveal>
 
         {/* Telefoon: één rij om door te vegen (acht kaarten onder elkaar waren vier
@@ -87,7 +108,7 @@ export function BranchShowcase({ minRateCents }: { minRateCents: number }) {
               delay={i * 70}
               className="w-[78%] flex-none snap-start sm:w-auto max-sm:![transform:none] max-sm:![transition-delay:0ms]"
             >
-              <Card b={b} minRateCents={minRateCents} />
+              <Card b={b} minRateCents={minRateCents} t={t} />
             </Reveal>
           ))}
         </div>
@@ -97,10 +118,10 @@ export function BranchShowcase({ minRateCents }: { minRateCents: number }) {
         </p>
         <Reveal delay={120}>
           <div className="mt-8 flex flex-wrap items-center gap-4 sm:mt-12">
-            <Link href="/klussen" className="btn-primary">
-              Bekijk alle klussen
+            <Link href={t.knopHref} className="btn-primary">
+              {t.knop}
             </Link>
-            <span className="text-sm text-neutralx-500">Gratis aanmelden — je zit nergens aan vast.</span>
+            <span className="text-sm text-neutralx-500">{t.noot}</span>
           </div>
         </Reveal>
       </div>

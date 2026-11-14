@@ -45,10 +45,14 @@ describe("tekstregister van de Site-ontwerper", () => {
     expect(lijstRegels(v["trust.items"] ?? "")).toEqual(["KVK Handelsregister", "Geverifieerde identiteit (KYC)", "SEPA-uitbetaling", "Wet DBA-monitor"]);
     expect(lijstRegels(v["marquee.items"] ?? "").length).toBe(10);
     expect(lijstRegels(v["emp.points"] ?? "").at(-1)).toBe("Alleen betalen bij gebruik: € 3,50 platformkosten per gewerkt uur");
-    expect(lijstRegels(v["work.f1.points"] ?? "")).toContain("Vakantiegeld (8,33%) en vakantie-uren");
-    expect(v["how.s2.title"]).toBe("Word slim gematcht");
+    expect(v["how.s2.title"]).toBe("Wij zoeken de juiste mensen");
     expect(v["feat.f6.title"]).toBe("Meldingen die kloppen");
     expect(v["comp.c4.body"]).toBe("Elke gevoelige handeling wordt onwisbaar vastgelegd en is terug te zien voor beheerders.");
+    // /bedrijven is sinds 14 nov alleen voor bedrijven: geen teksten meer voor werkers in de homepage-sleutels
+    expect(CONTENT_REGISTRY.some((c) => c.key.startsWith("fl.") || c.key.startsWith("work."))).toBe(false);
+    const home = CONTENT_REGISTRY.filter((c) => c.group.startsWith("Homepage")).map((c) => v[c.key] ?? "").join("\n");
+    expect(home).not.toMatch(/Ik zoek werk|Zoek je werk|uitbetaald|Gratis voor freelancers|rust-uren/);
+    expect(v["hero.ctaPrimary"]).toBe("Klus plaatsen");
     // lege regels en spaties tellen niet
     expect(lijstRegels("  een \n\n twee\n ")).toEqual(["een", "twee"]);
   });
