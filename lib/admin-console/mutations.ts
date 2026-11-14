@@ -2,7 +2,7 @@ import { z } from "zod";
 import { Prisma, ShiftStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { defineMutation, type MutationHandler } from "@/lib/admin-console/types";
-import { amsterdamParts } from "@/lib/time/amsterdam";
+import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 import { teWissenWhere } from "@/lib/analytics/label-opschoning";
 
 // ---------------------------------------------------------------------------
@@ -267,7 +267,7 @@ const clearChatClickLabels = defineMutation({
     if (!params.ookOudeChatrijen) warnings.push("Oude gespreksrij-labels buiten de berichten- en chatschermen blijven staan; wis die mee met ookOudeChatrijen: true.");
     return {
       affectedCount,
-      sample: sample.map((s) => ({ pad: s.pad, soort: s.soort, dag: s.wanneer.toISOString().slice(0, 10), tekens: s.tekens })),
+      sample: sample.map((s) => ({ pad: s.pad, soort: s.soort, dag: amsterdamDayKey(s.wanneer), tekens: s.tekens })),
       warnings,
       reversible: false,
       summary: `${affectedCount} kliklabel(s) met namen of berichttekst worden leeggemaakt${params.ookOudeChatrijen ? " (ook de oude gespreksrijen buiten de chat)" : ""}; de klikken zelf blijven staan.`,

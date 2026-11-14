@@ -12,7 +12,8 @@ const { queryRaw, executeRaw, stand } = vi.hoisted(() => {
     queryRaw: vi.fn(async (q: Prisma.Sql) =>
       q.sql.startsWith("SELECT count")
         ? [{ n: stand.aantal }]
-        : [{ pad: "/dashboard/berichten", soort: "INTERACTION", wanneer: new Date("2026-11-13T09:12:00+01:00"), tekens: 38 }],
+        : // net na middernacht in Amsterdam (23:30 UTC de dag ervoor): de dag in het voorbeeld is de Amsterdamse
+          [{ pad: "/dashboard/berichten", soort: "INTERACTION", wanneer: new Date("2026-11-14T00:30:00+01:00"), tekens: 38 }],
     ),
     executeRaw: vi.fn(async (_q: Prisma.Sql) => stand.aantal),
   };
@@ -43,7 +44,7 @@ describe("clear_chat_click_labels", () => {
     expect(impact.affectedCount).toBe(1357);
     expect(impact.reversible).toBe(false);
     expect(impact.summary).toBe("1357 kliklabel(s) met namen of berichttekst worden leeggemaakt; de klikken zelf blijven staan.");
-    expect(impact.sample).toEqual([{ pad: "/dashboard/berichten", soort: "INTERACTION", dag: "2026-11-13", tekens: 38 }]);
+    expect(impact.sample).toEqual([{ pad: "/dashboard/berichten", soort: "INTERACTION", dag: "2026-11-14", tekens: 38 }]);
     expect(Object.keys(impact.sample[0]!)).not.toContain("label");
     expect(impact.warnings.some((w) => w.includes("ookOudeChatrijen: true"))).toBe(true);
     expect(executeRaw).not.toHaveBeenCalled();
