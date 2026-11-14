@@ -3,6 +3,7 @@ import { Prisma, ShiftStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { defineMutation, type MutationHandler } from "@/lib/admin-console/types";
 import { amsterdamParts } from "@/lib/time/amsterdam";
+import { teWissenWhere } from "@/lib/analytics/label-opschoning";
 
 // ---------------------------------------------------------------------------
 // Data-changing operations. Each declares a `dryRun` (blast radius, no writes)
@@ -238,10 +239,51 @@ const blockFreelancerMatching = defineMutation({
   },
 });
 
+// --- clear_chat_click_labels --------------------------------------------
+
+// Kliklabels met namen of berichttekst (14 nov). Vóór de regel in bewaarLabel (lib/analytics/label-privacy.ts) bewaarde de
+// beacon op berichten- en chatschermen de hele gespreksrij als label ("BVJan de Vries14:06Jij: …"; gemeten 1357 rijen,
+// sep–14 nov). Deze actie zet zulke labels op NULL met precies die definitie (lib/analytics/label-opschoning.ts); de klik
+// zelf (pad, soort, tijd) blijft staan. Optioneel ook de oude gespreksrijen buiten die paden (een klus- of agendakaart met
+// het laatste bericht). In de telling en het voorbeeld staat nooit de labeltekst, alleen pad, soort, dag en lengte; het
+// auditlogboek van de bevestiging (lib/admin-console/index.ts) krijgt alleen aantallen.
+const clearChatClickLabels = defineMutation({
+  name: "clear_chat_click_labels",
+  description:
+    "Wis kliklabels met namen of berichttekst: zet het label op leeg voor klikken op berichten- en chatschermen die niet in codevorm zijn (de regel van bewaarLabel sinds 14 nov). Met ookOudeChatrijen ook de oude gespreksrij-labels buiten die schermen (initialen + naam + tijd, of 'Jij: …'). De klik zelf blijft staan.",
+  params: z.object({ ookOudeChatrijen: z.boolean().default(false) }),
+  paramsHint: '{ "ookOudeChatrijen"?: boolean (standaard false) }',
+  risk: "medium",
+  async dryRun(params) {
+    const where = teWissenWhere(params.ookOudeChatrijen);
+    const [telling, sample] = await Promise.all([
+      prisma.$queryRaw<Array<{ n: number }>>(Prisma.sql`SELECT count(*)::int AS n FROM "AnalyticsEvent" WHERE ${where}`),
+      prisma.$queryRaw<Array<{ pad: string; soort: string; wanneer: Date; tekens: number }>>(
+        Prisma.sql`SELECT left(split_part(path, '?', 1), 80) AS pad, "type"::text AS soort, "createdAt" AS wanneer, length(label) AS tekens FROM "AnalyticsEvent" WHERE ${where} ORDER BY "createdAt" DESC LIMIT 10`,
+      ),
+    ]);
+    const affectedCount = telling[0]?.n ?? 0;
+    const warnings = ["Het label is daarna weg en komt niet terug; de klik zelf (pad, soort, tijd) blijft staan en telt gewoon mee in de bezoekcijfers."];
+    if (!params.ookOudeChatrijen) warnings.push("Oude gespreksrij-labels buiten de berichten- en chatschermen blijven staan; wis die mee met ookOudeChatrijen: true.");
+    return {
+      affectedCount,
+      sample: sample.map((s) => ({ pad: s.pad, soort: s.soort, dag: s.wanneer.toISOString().slice(0, 10), tekens: s.tekens })),
+      warnings,
+      reversible: false,
+      summary: `${affectedCount} kliklabel(s) met namen of berichttekst worden leeggemaakt${params.ookOudeChatrijen ? " (ook de oude gespreksrijen buiten de chat)" : ""}; de klikken zelf blijven staan.`,
+    };
+  },
+  async execute(params) {
+    const n = await prisma.$executeRaw(Prisma.sql`UPDATE "AnalyticsEvent" SET label = NULL WHERE ${teWissenWhere(params.ookOudeChatrijen)}`);
+    return { affectedCount: n, detail: `${n} kliklabel(s) leeggemaakt.` };
+  },
+});
+
 export const MUTATIONS: Record<string, MutationHandler> = Object.fromEntries(
   [
     deactivateInactiveFreelancers,
     cancelPastDueOpenShifts,
     blockFreelancerMatching,
+    clearChatClickLabels,
   ].map((h) => [h.name, h]),
 );

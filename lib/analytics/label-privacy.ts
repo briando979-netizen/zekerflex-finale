@@ -20,8 +20,28 @@ const EMAIL = /[^\s@]+@[^\s@]+\.[a-z]{2,}/i;
 const IBAN = /\b[A-Z]{2}\d{2}(?:\s?[A-Z0-9]){10,30}\b/;
 // 9 of meer cijfers, eventueel met spaties of streepjes ertussen (telefoon met + of 0, BSN, rekeningnummer)
 const LANG_GETAL = /\d(?:[\s-]?\d){8,}/;
-const BEHEER = /^\/(admin|studio)(\/|$)|\/(berichten|chat)(\/|$)/;
-const CODE = /^[a-z0-9][a-z0-9-]{0,59}$/;
+/** Een padstuk /berichten of /chat; als tekst, zodat de opschoning in SQL (lib/analytics/label-opschoning.ts) precies deze regel gebruikt. */
+export const CHAT_PAD_PATROON = "/(berichten|chat)(/|$)";
+/** Een label in codevorm (data-track): [a-z0-9-], hooguit 60 tekens. */
+export const CODE_PATROON = "^[a-z0-9][a-z0-9-]{0,59}$";
+const BEHEER = new RegExp(`^/(admin|studio)(/|$)|${CHAT_PAD_PATROON}`);
+const CODE = new RegExp(CODE_PATROON);
+
+// Een oude gespreksrij buiten de chatpaden (vóór de regel van 14 nov; gemeten: een klus- of agendakaart met het laatste
+// bericht op /dashboard/klussen en /werkgever/kalender): initialen vast aan een naam ("BVJan de Vries") met een kloktijd,
+// of een eigen berichtvoorbeeld ("Jij: …"). Ook als tekst, voor de SQL van de opschoning.
+export const CHATRIJ_INITIALEN_PATROON = "^[A-Z]{2,3}[a-z]";
+export const KLOKTIJD_PATROON = "[0-9]{1,2}:[0-9]{2}";
+export const JIJ_PATROON = "(^|[^A-Za-z])Jij: ";
+const CHATRIJ_INITIALEN = new RegExp(CHATRIJ_INITIALEN_PATROON);
+const KLOKTIJD = new RegExp(KLOKTIJD_PATROON);
+const JIJ = new RegExp(JIJ_PATROON);
+
+/** Lijkt dit label op een oude gespreksrij (naam + tijd + berichtvoorbeeld), ook buiten de chatpaden? */
+export function isOudeChatrijLabel(label: string | null | undefined): boolean {
+  const l = label ?? "";
+  return JIJ.test(l) || (CHATRIJ_INITIALEN.test(l) && KLOKTIJD.test(l));
+}
 
 /** Het label zoals het bewaard mag worden: het hele label vervangen als er iets persoonlijks in staat; null bij leeg. */
 export function veiligLabel(label: string | null | undefined): string | null {
