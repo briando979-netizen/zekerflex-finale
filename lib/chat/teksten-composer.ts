@@ -66,5 +66,9 @@ export const COMPOSER_NL = {
   bijlageTitel: "Foto, camera, document of locatie",
   bewerkingOpslaan: "Bewerking opslaan",
   spraakOpnemen: "Spraakbericht opnemen",
+  langeTekstAlsBestand: "Lange tekst ({aantal} tekens): die gaat als tekstbestand (.txt), zodat er niets wegvalt.",
+  teLangOmTeBewerken: "Te lang om te bewerken: een bericht mag maximaal {max} tekens hebben.",
+  langeTekstNaam: "bericht",
+  teLangVoorAi: "Deze tekst is te lang om te herschrijven (maximaal 2.000 tekens).",
 };
 export type ComposerTeksten = typeof COMPOSER_NL;

@@ -27,6 +27,7 @@ import { scanChatMessage } from "@/lib/agenda/scan";
 import { maakPeiling, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POLL_OPTION_MAX } from "@/lib/messaging/poll";
 import { geldigeVermeldingen, VERMELDING_MAX } from "@/lib/messaging/vermelding";
 import { maakLinkVoorbeeld } from "@/lib/messaging/link-voorbeeld-ophalen";
+import { BERICHT_MAX } from "@/lib/chat/lange-tekst";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -123,7 +124,7 @@ export async function GET(req: Request, props: { params: Promise<{ threadId: str
 }
 
 const sendSchema = z.object({
-  text: z.string().trim().max(4000).optional().default(""),
+  text: z.string().trim().max(BERICHT_MAX).optional().default(""),
   kind: z.enum(["text", "voice", "file", "image", "location", "call", "poll"]).optional().default("text"),
   attachment: z
     .object({

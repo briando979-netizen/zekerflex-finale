@@ -68,6 +68,10 @@ export const COMPOSER_EN: ComposerTeksten = {
   bijlageTitel: "Photo, camera, document or location",
   bewerkingOpslaan: "Save edit",
   spraakOpnemen: "Record voice message",
+  langeTekstAlsBestand: "Long text ({aantal} characters): it will be sent as a text file (.txt), so nothing gets cut off.",
+  teLangOmTeBewerken: "Too long to edit: a message can have at most {max} characters.",
+  langeTekstNaam: "message",
+  teLangVoorAi: "This text is too long to rewrite (2,000 characters at most).",
 };
 export const COMPOSER_PL: ComposerTeksten = {
   fotoVersturen: "Wyślij zdjęcie",
@@ -136,6 +140,10 @@ export const COMPOSER_PL: ComposerTeksten = {
   bijlageTitel: "Zdjęcie, aparat, dokument lub lokalizacja",
   bewerkingOpslaan: "Zapisz zmiany",
   spraakOpnemen: "Nagraj wiadomość głosową",
+  langeTekstAlsBestand: "Długi tekst ({aantal} znaków): zostanie wysłany jako plik tekstowy (.txt), aby nic nie zostało ucięte.",
+  teLangOmTeBewerken: "Za długie do edycji: wiadomość może mieć maksymalnie {max} znaków.",
+  langeTekstNaam: "wiadomosc",
+  teLangVoorAi: "Ten tekst jest za długi do przepisania (maksymalnie 2000 znaków).",
 };
 export const COMPOSER_RO: ComposerTeksten = {
   fotoVersturen: "Trimite fotografia",
@@ -204,6 +212,10 @@ export const COMPOSER_RO: ComposerTeksten = {
   bijlageTitel: "Fotografie, cameră, document sau locație",
   bewerkingOpslaan: "Salvează modificarea",
   spraakOpnemen: "Înregistrează un mesaj vocal",
+  langeTekstAlsBestand: "Text lung ({aantal} caractere): va fi trimis ca fișier text (.txt), ca să nu se piardă nimic.",
+  teLangOmTeBewerken: "Prea lung pentru editare: un mesaj poate avea cel mult {max} caractere.",
+  langeTekstNaam: "mesaj",
+  teLangVoorAi: "Textul este prea lung pentru a fi rescris (maximum 2.000 de caractere).",
 };
 export const COMPOSER_UK: ComposerTeksten = {
   fotoVersturen: "Надіслати фото",
@@ -272,4 +284,8 @@ export const COMPOSER_UK: ComposerTeksten = {
   bijlageTitel: "Фото, камера, документ або геолокація",
   bewerkingOpslaan: "Зберегти зміни",
   spraakOpnemen: "Записати голосове повідомлення",
+  langeTekstAlsBestand: "Довгий текст ({aantal} символів): його буде надіслано як текстовий файл (.txt), щоб нічого не обрізалося.",
+  teLangOmTeBewerken: "Задовго для редагування: повідомлення може містити не більше {max} символів.",
+  langeTekstNaam: "povidomlennia",
+  teLangVoorAi: "Цей текст задовгий для переписування (не більше 2000 символів).",
 };

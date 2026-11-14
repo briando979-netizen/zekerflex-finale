@@ -4,11 +4,12 @@ import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { canAccess, editMessage, EDIT_WINDOW_MS, getMessageById, getThread } from "@/lib/messaging/store";
 import { isPlatformAdmin } from "@/lib/messaging/contacts";
+import { BERICHT_MAX } from "@/lib/chat/lange-tekst";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const schema = z.object({ messageId: z.string().min(1).max(40), text: z.string().trim().min(1).max(4000) });
+const schema = z.object({ messageId: z.string().min(1).max(40), text: z.string().trim().min(1).max(BERICHT_MAX) });
 
 // POST /api/inbox/:id/edit — bewerk je eigen tekstbericht (tot 24 uur na versturen).
 // Het bericht krijgt editedAt; de bubbel toont "bewerkt" met die tijd. Geen push.

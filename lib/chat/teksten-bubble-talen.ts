@@ -76,6 +76,7 @@ export const BUBBLE_EN: BubbleTeksten = {
   viewerDownload: "Download",
   viewerClose: "Close",
   viewerCloseEsc: "Close (Esc)",
+  leesMeer: "Read more",
 };
 
 export const BUBBLE_PL: BubbleTeksten = {
@@ -153,6 +154,7 @@ export const BUBBLE_PL: BubbleTeksten = {
   viewerDownload: "Pobierz",
   viewerClose: "Zamknij",
   viewerCloseEsc: "Zamknij (Esc)",
+  leesMeer: "Czytaj więcej",
 };
 
 export const BUBBLE_RO: BubbleTeksten = {
@@ -230,6 +232,7 @@ export const BUBBLE_RO: BubbleTeksten = {
   viewerDownload: "Descarcă",
   viewerClose: "Închide",
   viewerCloseEsc: "Închide (Esc)",
+  leesMeer: "Citește mai mult",
 };
 
 export const BUBBLE_UK: BubbleTeksten = {
@@ -307,4 +310,5 @@ export const BUBBLE_UK: BubbleTeksten = {
   viewerDownload: "Завантажити",
   viewerClose: "Закрити",
   viewerCloseEsc: "Закрити (Esc)",
+  leesMeer: "Читати далі",
 };

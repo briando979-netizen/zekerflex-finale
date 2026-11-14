@@ -9,6 +9,7 @@ import { useChatTeksten } from "./ChatTekstenContext";
 import { vulIn } from "@/lib/i18n/vul-in";
 import { IconPaperclip, IconMic, IconSend, IconBolt, IconSparkle, IconSmiley, IconClose, IconReply, IconPencil } from "./icons";
 import { isFotoType } from "@/lib/messaging/bijlage";
+import { BERICHT_MAX, isTeLang, tekstAlsBestand, tekstBestandNaam, voorproef } from "@/lib/chat/lange-tekst";
 import { kandidaten, vermeldingenIn, vermeldingVraag, vulVermeldingIn, type Lid } from "@/lib/messaging/vermelding";
 
 export interface OutgoingMessage {
@@ -115,7 +116,7 @@ function AttachPreview({
               autoFocus
               rows={1}
               value={caption}
-              maxLength={4000}
+              maxLength={BERICHT_MAX}
               onChange={(e) => setCaption(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
@@ -216,7 +217,7 @@ export function Composer({
     const ta = taRef.current;
     if (!ta) return;
     ta.style.height = "auto";
-    ta.style.height = `${Math.min(ta.scrollHeight, 160)}px`;
+    ta.style.height = `${Math.min(ta.scrollHeight, 240)}px`;
   }, [text]);
   // choosing reply or edit puts the cursor in the field
   useEffect(() => {
@@ -245,7 +246,7 @@ export function Composer({
   async function aiSuggest() {
     setAiBusy(true);
     setAiNote(null);
-    const r = await fetch("/api/me/chat-assist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "suggest", lastIncoming }) }).catch(() => null);
+    const r = await fetch("/api/me/chat-assist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "suggest", lastIncoming: lastIncoming.slice(0, 2000) }) }).catch(() => null);
     const d = r?.ok ? await r.json() : null;
     setAiSuggestions(d?.suggestions ?? []);
     if (!d?.suggestions?.length) setAiNote(lastIncoming ? chat.composer.geenVoorstellen : chat.composer.nogGeenBericht);
@@ -254,6 +255,11 @@ export function Composer({
 
   async function aiRewrite(style: string) {
     if (!text.trim()) return;
+    // de AI-hulp leest hooguit 2000 tekens (app/api/me/chat-assist): zeg dat, in plaats van een onduidelijke fout
+    if (text.trim().length > 2000) {
+      setAiNote(chat.composer.teLangVoorAi);
+      return;
+    }
     setAiBusy(true);
     setAiNote(null);
     const r = await fetch("/api/me/chat-assist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "rewrite", text, style }) }).catch(() => null);
@@ -301,6 +307,22 @@ export function Composer({
   const sendText = async () => {
     const t = text.trim();
     if (!t || busy) return;
+    // langer dan één bericht mag zijn: als tekstbestand (lib/chat/lange-tekst.ts), zodat er niets wegvalt; de tekst blijft
+    // in het veld staan tot het bestand echt verstuurd is
+    if (isTeLang(t)) {
+      if (editing) {
+        setSendError(vulIn(chat.composer.teLangOmTeBewerken, { max: BERICHT_MAX.toLocaleString("nl-NL") }));
+        return;
+      }
+      setEmojiOpen(false);
+      const bestand = tekstAlsBestand(t, tekstBestandNaam(chat.composer.langeTekstNaam, new Date()));
+      if (await sendFile(bestand, "file", voorproef(t))) {
+        setText("");
+        writeDraft(threadId, "");
+      }
+      taRef.current?.focus();
+      return;
+    }
     setBusy(true);
     setText("");
     setEmojiOpen(false);
@@ -322,7 +344,8 @@ export function Composer({
     }
   };
 
-  const sendFile = async (file: File, kind: "file" | "image", caption = "", eenmalig = false) => {
+  /** true als het bestand verstuurd is (een lange tekst blijft anders in het veld staan) */
+  const sendFile = async (file: File, kind: "file" | "image", caption = "", eenmalig = false): Promise<boolean> => {
     setBusy(true);
     setMenuOpen(false);
     setSendError(null);
@@ -330,9 +353,11 @@ export function Composer({
       const att = await uploadMedia(file, file.name || (kind === "image" ? "foto.png" : "bestand"));
       if (att) await onSend({ text: caption, kind, attachment: att, ...(replyTo ? { replyToId: replyTo.id } : {}), ...(eenmalig && kind === "image" ? { eenmalig: true } : {}) });
       onClearReply();
+      return Boolean(att);
     } catch (e) {
       // silently swallowing this made photos look broken ("werkte niet") without any hint why
       setSendError(vulIn(kind === "image" ? chat.composer.fotoNietVerstuurd : chat.composer.bestandNietVerstuurd, { fout: (e as Error).message }));
+      return false;
     } finally {
       setBusy(false);
     }
@@ -513,6 +538,15 @@ export function Composer({
         </div>
       )}
 
+      {isTeLang(text) && (
+        // geen stille afkapping meer (het veld had maxLength 4000): zeg wat er met een lange tekst gebeurt
+        <p role="status" className="border-b border-hair bg-paper-soft px-3 py-1.5 text-xs text-neutralx-600">
+          {editing
+            ? vulIn(chat.composer.teLangOmTeBewerken, { max: BERICHT_MAX.toLocaleString("nl-NL") })
+            : vulIn(chat.composer.langeTekstAlsBestand, { aantal: text.trim().length.toLocaleString("nl-NL") })}
+        </p>
+      )}
+
       {sendError && (
         <div role="alert" className="flex items-center gap-2 border-b border-hair bg-crit/10 px-3 py-1.5 text-xs text-crit">
           <span className="min-w-0 flex-1">{sendError}</span>
@@ -691,10 +725,9 @@ export function Composer({
                 }
               }}
               rows={1}
-              maxLength={4000}
               placeholder={editing ? chat.composer.placeholderBewerk : chat.composer.placeholderTyp}
               aria-label={chat.composer.bericht}
-              className="max-h-40 min-h-[2.5rem] min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-2 py-2 text-base leading-snug outline-none md:text-sm"
+              className="max-h-60 min-h-[2.5rem] min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-2 py-2 text-base leading-snug outline-none md:text-sm"
             />
 
             {!editing && (

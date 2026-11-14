@@ -75,5 +75,6 @@ export const BUBBLE_NL = {
   viewerDownload: "Downloaden",
   viewerClose: "Sluiten",
   viewerCloseEsc: "Sluiten (Esc)",
+  leesMeer: "Lees meer",
 };
 export type BubbleTeksten = typeof BUBBLE_NL;

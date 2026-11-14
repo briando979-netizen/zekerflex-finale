@@ -1,6 +1,7 @@
 import type { LinkVoorbeeld } from "@/lib/messaging/link-voorbeeld";
 import { randomUUID } from "node:crypto";
 import { kvAppend, kvDelete, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
+import { BERICHT_MAX } from "@/lib/chat/lange-tekst";
 import { sluitPeiling, stem, type MessagePoll } from "@/lib/messaging/poll";
 
 // ---------------------------------------------------------------------------
@@ -422,7 +423,7 @@ export async function deleteMessage(threadId: string, messageId: string): Promis
 export async function editMessage(threadId: string, messageId: string, text: string, now = new Date()): Promise<ChatMessage | null> {
   const id = await resolveThreadId(threadId);
   const key = messagesKey(id);
-  const clean = text.trim().slice(0, 4000);
+  const clean = text.trim().slice(0, BERICHT_MAX);
   if (!clean) throw new Error("empty message");
   const list = (await kvGet<ChatMessage[]>(key)) ?? [];
   const idx = list.findIndex((m) => m.id === messageId);
@@ -476,7 +477,7 @@ export async function postMessage(
   extra: MessageExtra = {},
 ): Promise<ChatMessage> {
   threadId = await resolveThreadId(threadId);
-  const clean = text.trim().slice(0, 4000);
+  const clean = text.trim().slice(0, BERICHT_MAX);
   // text/system need words; attachment/location/call kinds may carry no text
   const needsText = kind === "text" || kind === "system";
   if (needsText && !clean) throw new Error("empty message");

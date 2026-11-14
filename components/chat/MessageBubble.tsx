@@ -8,6 +8,7 @@ import { ActionList, MessageSheet, ReactionRow, type ActionItem } from "./Messag
 import { PollCard } from "./PollCard";
 import { isProgramma, isVideoType } from "@/lib/messaging/bijlage";
 import { vermeldingDelen } from "@/lib/messaging/vermelding";
+import { inkorten } from "@/lib/chat/lange-tekst";
 import { useChatTeksten } from "./ChatTekstenContext";
 import { vulIn } from "@/lib/i18n/vul-in";
 
@@ -135,6 +136,30 @@ function VoiceNote({ src, durationSec, transcript, onTranscribe }: { src: string
       </button>
     ) : null}
     </div>
+  );
+}
+
+/** Een lang bericht ingekort, met "Lees meer" (zoals WhatsApp); waar hij knipt staat in lib/chat/lange-tekst.ts. */
+function IngekorteTekst({ text, mine, namen, leesMeer }: { text: string; mine: boolean; namen: readonly string[]; leesMeer: string }) {
+  const [open, setOpen] = useState(false);
+  const deel = inkorten(text);
+  if (!deel.ingekort || open) return <RichText text={text} mine={mine} namen={namen} />;
+  return (
+    <>
+      <RichText text={deel.kort} mine={mine} namen={namen} />
+      {"… "}
+      <button
+        type="button"
+        onClick={(e) => {
+          // niet ook de bubbel aantikken (selecteren, menu)
+          e.stopPropagation();
+          setOpen(true);
+        }}
+        className="font-semibold text-[#027EB5] [.app-scope[data-theme=dark]_&]:text-[#53BDEB]"
+      >
+        {leesMeer}
+      </button>
+    </>
   );
 }
 
@@ -762,7 +787,7 @@ export function MessageBubble({
             {textOnly ? (
               <>
                 <p className="whitespace-pre-wrap break-words text-ink">
-                  <RichText text={m.text} mine={mine} namen={genoemd} />
+                  <IngekorteTekst text={m.text} mine={mine} namen={genoemd} leesMeer={t.leesMeer} />
                   <span className="inline-block h-3 align-bottom" style={{ width: metaPx }} aria-hidden />
                 </p>
                 <span className="absolute bottom-1.5 right-2.5">{meta}</span>
@@ -771,7 +796,7 @@ export function MessageBubble({
               <>
                 {m.text && m.kind !== "poll" && (
                   <p className="mt-0.5 whitespace-pre-wrap break-words text-ink">
-                    <RichText text={m.text} mine={mine} namen={genoemd} />
+                    <IngekorteTekst text={m.text} mine={mine} namen={genoemd} leesMeer={t.leesMeer} />
                   </p>
                 )}
                 <div className="mt-1">{meta}</div>

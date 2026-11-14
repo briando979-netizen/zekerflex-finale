@@ -22,6 +22,7 @@ import { checkChatPin, getChatPrefs, hiddenIn, isMuted, visibleFrom } from "@/li
 import { chatPrivacy } from "@/lib/messaging/settings";
 import { disappearCutoff } from "@/lib/messaging/store";
 import { scanChatMessage } from "@/lib/agenda/scan";
+import { BERICHT_MAX } from "@/lib/chat/lange-tekst";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -114,14 +115,14 @@ async function handleGET(request: Request): Promise<NextResponse> {
 }
 
 const startSchema = z.union([
-  z.object({ shiftId: z.string().min(1), text: z.string().trim().min(1).max(4000) }),
+  z.object({ shiftId: z.string().min(1), text: z.string().trim().min(1).max(BERICHT_MAX) }),
   z.object({
     toUserId: z.string().min(1),
-    text: z.string().trim().min(1).max(4000),
+    text: z.string().trim().min(1).max(BERICHT_MAX),
     contextKey: z.string().max(80).optional(),
     subject: z.string().max(120).optional(),
   }),
-  z.object({ support: z.literal(true), text: z.string().trim().min(1).max(4000) }),
+  z.object({ support: z.literal(true), text: z.string().trim().min(1).max(BERICHT_MAX) }),
 ]);
 
 // POST /api/inbox — start (or continue) a conversation and send the first message.
