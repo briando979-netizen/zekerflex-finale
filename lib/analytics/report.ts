@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { FORMULIER_PREFIX, telFormulieren, type FormulierTelling } from "@/lib/analytics/formulier-meting";
 
 // Read-side aggregations for the live traffic dashboard and Jarvis briefings.
 
@@ -87,6 +88,8 @@ export interface TrafficSummary {
     whitepaperDownloads: number;
     topWhitepapers: { slug: string; downloads: number }[];
   };
+  /** Per formulier (demo, klus-plaatsen): hoe vaak "Vul nog in" is gezien, per veld, en hoe vaak er echt is verstuurd. */
+  formulieren: Record<string, FormulierTelling>;
 }
 
 const INBOUND_LABELS = ["demo-request", "open-application", "whitepaper-download"];
@@ -94,7 +97,7 @@ const INBOUND_LABELS = ["demo-request", "open-application", "whitepaper-download
 export async function trafficSummary(days = 7): Promise<TrafficSummary> {
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-  const [events, conversions] = await Promise.all([
+  const [events, conversions, formulierEvents] = await Promise.all([
     prisma.analyticsEvent.findMany({
       where: { type: "PAGEVIEW", createdAt: { gte: since } },
       select: { path: true, sessionId: true, createdAt: true, referrerHost: true },
@@ -102,6 +105,10 @@ export async function trafficSummary(days = 7): Promise<TrafficSummary> {
     prisma.analyticsEvent.findMany({
       where: { type: "CUSTOM", createdAt: { gte: since }, label: { in: INBOUND_LABELS } },
       select: { label: true, meta: true },
+    }),
+    prisma.analyticsEvent.findMany({
+      where: { type: "INTERACTION", createdAt: { gte: since }, label: { startsWith: FORMULIER_PREFIX } },
+      select: { label: true },
     }),
   ]);
 
@@ -148,5 +155,6 @@ export async function trafficSummary(days = 7): Promise<TrafficSummary> {
       .slice(0, 8)
       .map(([host, count]) => ({ host, count })),
     inbound: { demoRequests, jobApplications, whitepaperDownloads, topWhitepapers },
+    formulieren: telFormulieren(formulierEvents),
   };
 }

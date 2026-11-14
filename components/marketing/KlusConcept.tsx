@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { CONCEPT_KEY, conceptCost, conceptOntbreekt, type KlusConcept as Concept } from "@/lib/klusconcept/concept";
+import { CONCEPT_KEY, conceptCost, conceptOntbreekt, conceptOntbreektVeld, type KlusConcept as Concept } from "@/lib/klusconcept/concept";
+import { meldOntbreekt, meldVerstuurd } from "@/components/analytics/formulier";
 import { VIA_WERKER, type KlusVia, type ViaStap } from "@/lib/klusconcept/via";
 import { initialen, websiteOmschrijving, type WebsiteKlus } from "@/lib/klusconcept/website";
 import { centsFrom, euroCents, euroWhole, numberFrom } from "@/lib/rekentools/invoer";
@@ -221,6 +222,8 @@ export function KlusConcept({
     // de knop staat altijd aan: wie drukt, hoort precies wat er nog ontbreekt
     if (ontbreekt) {
       setFout(ontbreekt);
+      // anoniem meten welk veld de melding veroorzaakte (alleen een code)
+      meldOntbreekt("klus-plaatsen", conceptOntbreektVeld({ title, city, date, today, hours: cost.hours }) ?? "onbekend");
       return;
     }
     setSaving(true);
@@ -243,6 +246,7 @@ export function KlusConcept({
       /* private mode: sign-up still works, the form just starts empty */
     }
     telVia("concept");
+    meldVerstuurd("klus-plaatsen");
     const company = found?.bedrijf ? `&company=${encodeURIComponent(found.bedrijf)}` : "";
     router.push(employer ? "/werkgever/diensten/nieuw" : `/register?type=bedrijf${company}`);
   }

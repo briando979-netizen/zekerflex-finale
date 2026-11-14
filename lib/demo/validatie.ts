@@ -15,11 +15,11 @@ export interface DemoFormulier {
   company: string;
 }
 
-const VELDEN: readonly { sleutel: keyof DemoFormulier; naam: string }[] = [
-  { sleutel: "firstName", naam: "je voornaam" },
-  { sleutel: "lastName", naam: "je achternaam" },
-  { sleutel: "email", naam: "je e-mailadres" },
-  { sleutel: "company", naam: "de bedrijfsnaam" },
+const VELDEN: readonly { sleutel: keyof DemoFormulier; naam: string; code: string }[] = [
+  { sleutel: "firstName", naam: "je voornaam", code: "voornaam" },
+  { sleutel: "lastName", naam: "je achternaam", code: "achternaam" },
+  { sleutel: "email", naam: "je e-mailadres", code: "email" },
+  { sleutel: "company", naam: "de bedrijfsnaam", code: "bedrijf" },
 ];
 
 /** Hetzelfde patroon als de server (z.string().email()): iets@iets.iets, zonder spaties. */
@@ -36,6 +36,18 @@ export function ontbrekendInDemo(form: DemoFormulier, consent: boolean): string 
   if (leeg.length) return `Vul nog in: ${opsomming(leeg)}.`;
   if (!lijktEmail(form.email)) return "Controleer je e-mailadres: daar moet een @ en een punt in staan.";
   if (!consent) return "Zet het vinkje voor akkoord om te bevestigen.";
+  return null;
+}
+
+/**
+ * De code van het eerste wat ontbreekt (voor de anonieme meting, lib/analytics/formulier-meting.ts):
+ * een veldnaam, "email-ongeldig" of "akkoord"; null als alles klopt. Dezelfde volgorde als de zin.
+ */
+export function ontbrekendVeldInDemo(form: DemoFormulier, consent: boolean): string | null {
+  const leeg = VELDEN.find((v) => !form[v.sleutel].trim());
+  if (leeg) return leeg.code;
+  if (!lijktEmail(form.email)) return "email-ongeldig";
+  if (!consent) return "akkoord";
   return null;
 }
 
