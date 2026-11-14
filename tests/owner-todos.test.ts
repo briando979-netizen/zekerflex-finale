@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const kv = vi.hoisted(() => new Map<string, unknown>());
 const live = vi.hoisted(() => ({
@@ -12,6 +12,7 @@ const live = vi.hoisted(() => ({
   webhookEvents: [] as string[],
   proposals: [] as { status: string; createdAt: string; expiresAt: string }[],
   gratis: false,
+  outreach: [] as { createdAt: Date }[],
 }));
 vi.mock("@/lib/sales/website-proposal", () => ({ listWebsiteProposals: async () => live.proposals }));
 vi.mock("@/lib/storage/kv", () => ({ kvGet: async (k: string) => kv.get(k) ?? null, kvSet: async (k: string, v: unknown) => void kv.set(k, v) }));
@@ -36,6 +37,7 @@ vi.mock("@/lib/prisma", () => ({
     user: { count: async () => live.testUsers },
     branch: { findMany: async () => live.branches },
     webPushSubscription: { count: async () => 0 },
+    salesOutreach: { findMany: async () => live.outreach },
   },
 }));
 vi.mock("@/lib/ops/backup", () => ({ readBackupReport: async () => live.backup }));
@@ -66,6 +68,25 @@ beforeEach(() => {
   live.webhookEvents = [];
   live.proposals = [];
   live.gratis = false;
+  live.outreach = [];
+});
+
+describe("concept-mails van de sales-motor", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("telt concepten die 3 dagen of langer wachten, noemt alleen aantal en oudste dagen, en vinkt zichzelf af", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-14T02:00:00Z"));
+    const oud = (dagen: number) => ({ createdAt: new Date(Date.now() - dagen * 86_400_000) });
+    live.outreach = [oud(14), oud(14), oud(5), oud(1)];
+    const t = (await byId())["sales-concepten-versturen"];
+    expect(t).toMatchObject({ title: "3 concept-mails wachten al 14 dagen op versturen", done: false, auto: true, group: "Overig" });
+    expect(t?.title).not.toMatch(/@/);
+    live.outreach = [oud(3)];
+    expect((await byId())["sales-concepten-versturen"]?.title).toBe("1 concept-mail wacht al 3 dagen op versturen");
+    live.outreach = [oud(2)];
+    expect((await byId())["sales-concepten-versturen"]).toMatchObject({ title: "Concept-mails van de sales-motor versturen", done: true });
+  });
 });
 
 describe("opgeruimd op 13 nov: taken die achterhaald zijn staan op klaar, met de reden", () => {

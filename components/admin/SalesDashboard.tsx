@@ -173,7 +173,7 @@ export function SalesDashboard({ initialLeads }: { initialLeads: LeadDto[] }) {
       }
       setOutreach((o) => ({ ...o, [leadId]: { ...(o[leadId] as OutreachDto), status: data.outreach.status } }));
       setLeads((ls) => ls.map((l) => (l.id === leadId ? { ...l, status: action === "approve" ? "APPROVED" : "SENT" } : l)));
-      setMsg(action === "approve" ? "Concept goedgekeurd — klaar om te versturen." : "Gemarkeerd als verstuurd.");
+      setMsg(action === "approve" ? "Goedgekeurd. Er is nog niets verstuurd: kies 'Verstuur nu' om de mail echt te versturen." : "Gemarkeerd als verstuurd.");
     } catch {
       setMsg("Netwerkfout.");
     } finally {

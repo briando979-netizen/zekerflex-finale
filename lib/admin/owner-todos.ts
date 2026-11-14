@@ -192,6 +192,26 @@ async function unsentProposals(now = Date.now()): Promise<number | null> {
   }
 }
 
+/**
+ * Outreach-concepten die al 3 dagen of langer op een mens wachten (status DRAFT of APPROVED,
+ * lib/sales/outreach.ts). De motor verstuurt die nooit zelf in REVIEW-modus: alleen "Verstuur nu"
+ * in Admin → Sales mailt echt, en goedkeuren alleen doet niets zichtbaar. Alleen aantallen, geen
+ * namen of adressen. null = kon niet kijken.
+ */
+export const CONCEPT_WACHT_DAGEN = 3;
+async function wachtendeConcepten(now = Date.now()): Promise<{ aantal: number; oudsteDagen: number } | null> {
+  try {
+    const rows = await prisma.salesOutreach.findMany({
+      where: { status: { in: ["DRAFT", "APPROVED"] } },
+      select: { createdAt: true },
+    });
+    const dagen = rows.map((r) => Math.floor((now - r.createdAt.getTime()) / 86_400_000)).filter((d) => d >= CONCEPT_WACHT_DAGEN);
+    return { aantal: dagen.length, oudsteDagen: dagen.length ? Math.max(...dagen) : 0 };
+  } catch {
+    return null;
+  }
+}
+
 /** Branches whose city says nothing, as "company (branch)" so the owner knows whom to ask; null = couldn't look. */
 async function vagueBranchCities(): Promise<string[] | null> {
   try {
@@ -256,7 +276,7 @@ async function bonnenMailStand(): Promise<BonnenMailStand> {
 export async function ownerTodos(): Promise<OwnerTodo[]> {
   const manual = (await kvGet<Record<string, { at: string; by: string }>>("owner-todos:done")) ?? {};
   const base = env.APP_BASE_URL ?? "";
-  const [webhookEvents, products, issuing, llm, admin2fa, adminPush, reminders, backup, models3d, googleDns, testAccounts, vagueBranches, playKoppeling, bouwer, unsent] = await Promise.all([
+  const [webhookEvents, products, issuing, llm, admin2fa, adminPush, reminders, backup, models3d, googleDns, testAccounts, vagueBranches, playKoppeling, bouwer, unsent, concepten] = await Promise.all([
     stripeWebhookEvents(),
     getProducts().catch(() => []),
     stripeIssuingActive(),
@@ -272,6 +292,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     playIngesteld().catch(() => false),
     bouwerInstellingen().catch(() => null),
     unsentProposals(),
+    wachtendeConcepten(),
   ]);
   const [beeldGelukt, beeldSlot, dmarc, gratis] = await Promise.all([geminiBeeldGelukt(), geminiSlot("beeld"), dmarcBeleid(base), getGratisStand().catch(() => null)]);
   // de kennisbank (lib/kennisbank/outline.ts): staat de API-sleutel erin en is hij gevuld?
@@ -1409,6 +1430,22 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ],
       auto: false,
       ...m("bonnetjes-alias"),
+    },
+    {
+      id: "sales-concepten-versturen",
+      group: "Overig",
+      title: concepten?.aantal
+        ? `${concepten.aantal} concept-mail${concepten.aantal === 1 ? " wacht" : "s wachten"} al ${concepten.oudsteDagen} dag${concepten.oudsteDagen === 1 ? "" : "en"} op versturen`
+        : "Concept-mails van de sales-motor versturen",
+      why: "De sales-motor schrijft concept-mails aan bedrijven met een open vacature, maar verstuurt ze in de stand 'controle' nooit zelf. Alleen goedkeuren verstuurt ook niets. Een concept dat blijft liggen, is een bedrijf dat nooit van ZekerFlex hoort.",
+      how: [
+        "Open Beheer → Sales en kies de chips 'In wachtrij' en 'Concept klaar'.",
+        "Klap de lead open, lees de concept-mail en kies 'Verstuur nu' (dat keurt goed én mailt echt). Past hij niet, kies dan 'Weggooien'.",
+        "Wil je dat de motor dit zelf doet, zet de campagne dan op autopilot en bevestig dat; de dagcap blijft gelden. Deze taak vinkt zichzelf af als er niets meer wacht.",
+      ],
+      auto: true,
+      done: concepten?.aantal === 0,
+      ...(concepten === null ? { doneNote: "kon de concepten nu niet tellen" } : {}),
     },
   ];
 }
