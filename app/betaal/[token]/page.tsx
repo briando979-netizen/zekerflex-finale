@@ -8,7 +8,7 @@ import { LogoGlyph } from "@/components/brand/Logo";
 import { QrCode } from "@/components/billing/QrCode";
 import { PayLinkButton } from "@/components/billing/PayLinkButton";
 import { inIosApp } from "@/lib/app-mode-server";
-import { bedragTekst, overschrijvingVoor } from "@/lib/billing/overschrijving";
+import { OVERSCHRIJVING_UITLEG, bedragTekst, overschrijvingVoor } from "@/lib/billing/overschrijving";
 import { platformBankgegevens, stripeBetalenDicht } from "@/lib/billing/overschrijving-bron";
 
 export const dynamic = "force-dynamic";
@@ -144,7 +144,7 @@ export default async function BetaalPage(props: {
                   <div className="flex justify-between gap-4"><dt className="text-neutralx-500">Betalingskenmerk</dt><dd className="num text-right font-semibold text-ink">{overschrijving.kenmerk}</dd></div>
                 </dl>
                 <p className="mt-3 text-xs leading-relaxed text-neutralx-500">
-                  Zet het factuurnummer bij de omschrijving: dan zien wij je betaling vanzelf bij deze factuur. Het kan een of twee werkdagen duren voordat de factuur op betaald staat.
+                  {OVERSCHRIJVING_UITLEG.join(" ")}
                 </p>
               </section>
             )}

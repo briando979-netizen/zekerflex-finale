@@ -65,6 +65,7 @@ async function markInvoicePaid(invoiceId: string, session: Stripe.Checkout.Sessi
       totalCents: true,
       currency: true,
       recipientFreelancerId: true,
+      stripePaymentIntentId: true,
     },
   });
   if (!invoice) {
@@ -103,6 +104,20 @@ async function markInvoicePaid(invoiceId: string, session: Stripe.Checkout.Sessi
     // verlenging van een domeinnaam betaald: de verlooptdatum schuift een jaar op (lib/domeinen/verlengen.ts)
     if (invoice.type === InvoiceType.DOMEIN) {
       await domeinFactuurBetaald(invoice.id).catch((err) => logger.error("domain renewal after payment failed", { invoiceId: invoice.id, error: (err as Error).message }));
+    }
+  } else {
+    // De factuur stond al op betaald. Is dit dezelfde betaling nog een keer (Stripe stuurt soms dubbel), dan is er niets aan
+    // de hand. Is het een andere betaling (de factuur was al per overschrijving of eerder via Stripe betaald), dan is er twee
+    // keer betaald: dat mag niet stil voorbijgaan. Alleen het factuurnummer in de melding, geen kaart- of persoonsgegevens.
+    const dezeBetaling = typeof session.payment_intent === "string" ? session.payment_intent : null;
+    if (!dezeBetaling || dezeBetaling !== invoice.stripePaymentIntentId) {
+      logger.warn("stripe webhook: betaling voor een factuur die al betaald is", { invoiceId: invoice.id, eventType });
+      alertOwnerLater({
+        key: `dubbele-betaling:${invoice.id}`,
+        title: "Dubbele betaling op een factuur",
+        detail: `Via Stripe kwam een betaling binnen voor factuur ${invoice.number}, maar die stond al op betaald. Er is mogelijk twee keer betaald; kijk of een van de twee terugbetaald moet worden.`,
+        url: "/admin/facturen",
+      });
     }
   }
   return true;

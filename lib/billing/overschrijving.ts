@@ -46,6 +46,16 @@ export function overschrijvingVoor(i: {
   return { naam, iban, ibanLeesbaar: ibanLeesbaar(iban), kenmerk: i.factuurnummer, bedragCents: i.totaalCents };
 }
 
+/**
+ * Wat de betaler te lezen krijgt, op de pdf en op de betaalpagina. Eerlijk: er is geen koppeling met de bank die een betaling
+ * vanzelf herkent; iemand ziet de betaling op de rekening en zet de factuur dan op betaald.
+ */
+export const OVERSCHRIJVING_UITLEG: readonly string[] = [
+  "Zet het factuurnummer bij de omschrijving.",
+  "Zodra wij je betaling op onze rekening zien, koppelen we hem aan deze factuur en zetten we de factuur op betaald.",
+  "Dat kan een of twee werkdagen duren.",
+];
+
 /** De regels voor de pdf (platte tekst). */
 export function overschrijvingRegels(o: Overschrijving): string[] {
   return [
@@ -53,7 +63,7 @@ export function overschrijvingRegels(o: Overschrijving): string[] {
     `IBAN: ${o.ibanLeesbaar}`,
     `Bedrag: EUR ${(o.bedragCents / 100).toFixed(2).replace(".", ",")}`,
     `Betalingskenmerk: ${o.kenmerk}`,
-    "Zet het factuurnummer bij de omschrijving: dan zien wij je betaling vanzelf bij deze factuur.",
+    ...OVERSCHRIJVING_UITLEG,
   ];
 }
 
