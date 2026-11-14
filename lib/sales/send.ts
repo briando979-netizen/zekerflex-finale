@@ -11,6 +11,7 @@ import {
   withinSendWindow,
 } from "@/lib/sales/campaign";
 import { addSuppression, isSuppressed, normaliseEmail } from "@/lib/sales/suppression";
+import { isBounceOpschorting } from "@/lib/mail/bounce";
 
 // ---------------------------------------------------------------------------
 // The one place that actually sends a sales-outreach mail. Re-checks every
@@ -146,9 +147,11 @@ export async function sendOutreachMail(outreachId: string, via: SendVia): Promis
     return { status: "failed", reason: (err as Error).message, outreachId };
   }
 
-  // sendMail never throws; a category opt-out comes back as `suppressed`.
+  // sendMail never throws; a category opt-out comes back as `suppressed`, and so does an address that
+  // bounced hard (lib/mail/bounce.ts) — that one is a bounce, not an unsubscribe.
   if (mailResult.suppressed) {
-    await addSuppression(email, "category-opt-out", null);
+    const bounce = isBounceOpschorting(mailResult.suppressed);
+    await addSuppression(email, bounce ? "bounce" : "category-opt-out", null);
     await prisma.$transaction([
       prisma.salesOutreach.update({
         where: { id: outreachId },
@@ -156,7 +159,9 @@ export async function sendOutreachMail(outreachId: string, via: SendVia): Promis
       }),
       prisma.salesLead.update({
         where: { id: lead.id },
-        data: { suppressed: true, suppressedReason: mailResult.suppressed, status: "UNSUBSCRIBED", nextActionAt: null },
+        data: bounce
+          ? { suppressed: true, suppressedReason: "e-mail bounce", status: "BOUNCED", bouncedAt: new Date(), nextActionAt: null }
+          : { suppressed: true, suppressedReason: mailResult.suppressed, status: "UNSUBSCRIBED", nextActionAt: null },
       }),
     ]);
     return { status: "suppressed", reason: mailResult.suppressed, outreachId };
