@@ -148,6 +148,14 @@ export function blokBijBounce(soort: string | null | undefined): boolean {
   return Boolean(soort && BOUNCE_BLOK_SOORTEN.includes(soort));
 }
 
+/** De reden die sendMail meegeeft als het adres hard terugkaatste (MailResult.suppressed). */
+export const BOUNCE_OPSCHORTING = "teruggekaatst (het adres bestaat niet)";
+
+/** Kwam een mail niet weg omdat het adres terugkaatst (en niet omdat iemand zich afmeldde)? */
+export function isBounceOpschorting(suppressed: string | null | undefined): boolean {
+  return (suppressed ?? "").startsWith("teruggekaatst");
+}
+
 /** De datum van een IMAP-envelop ("Sat, 07 Nov 2026 16:50:48 +0100") als tijd; null als hij niet te lezen is. */
 export function envelopDatum(s: string | null | undefined): number | null {
   if (!s) return null;
@@ -170,7 +178,7 @@ export function aanbiederVan(adres: string): "microsoft" | "google" | "apple" | 
 
 /** De status in Beheer → Mail: wat er met een verstuurde mail gebeurde. */
 export function mailStatusLabel(m: { delivered: boolean; transport: string; suppressed?: string | undefined; bounce?: { soort: BounceSoort } | undefined }): { label: string; toon: "ok" | "warn" | "crit" | "neutral" } {
-  if (m.suppressed) return /teruggekaatst/.test(m.suppressed) ? { label: "niet verstuurd (kaatst terug)", toon: "warn" } : { label: "afgemeld", toon: "warn" };
+  if (m.suppressed) return isBounceOpschorting(m.suppressed) ? { label: "niet verstuurd (kaatst terug)", toon: "warn" } : { label: "afgemeld", toon: "warn" };
   if (m.bounce?.soort === "hard") return { label: "teruggekaatst", toon: "crit" };
   if (m.bounce?.soort === "beleid") return { label: "geweigerd", toon: "crit" };
   if (m.bounce?.soort === "zacht") return { label: "vertraagd", toon: "warn" };

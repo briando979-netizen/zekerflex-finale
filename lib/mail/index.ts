@@ -20,7 +20,7 @@ export { escapeHtml };
 import { categoryBySlug, isAutomatedKind, isOptionalCategory, mailCategoryForKind } from "@/lib/mail/categories";
 import { getMailPrefs, mailAllowed } from "@/lib/mail/prefs";
 import { isReservedTestAddress } from "@/lib/mail/test-adres";
-import { blokBijBounce } from "@/lib/mail/bounce";
+import { BOUNCE_OPSCHORTING, blokBijBounce } from "@/lib/mail/bounce";
 import { heeftHardeBounce } from "@/lib/mail/bounce-opslag";
 import { ontvangerDomeinen, zonderAdressen } from "@/lib/mail/log-domein";
 
@@ -315,7 +315,7 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
   // Een adres dat hard terugkaatste (lib/mail/bounce-ronde.ts) krijgt geen outreach, nieuwsbrief of herinnering meer.
   // Verificatie, wachtwoord, beveiliging en andere noodzakelijke mail gaan altijd door; een storing hier laat de mail door.
   if (blokBijBounce(input.kind) && (await heeftHardeBounce(input.to))) {
-    suppressed = "teruggekaatst (het adres bestaat niet)";
+    suppressed = BOUNCE_OPSCHORTING;
   }
 
   // Optional-category mail: honour the recipient's unsubscribe.

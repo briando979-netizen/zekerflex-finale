@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { aanbiederVan, blokBijBounce, envelopDatum, isBounceAfzender, leesBounce, mailStatusLabel, recordIdUitMessageId, soortVanCode, veiligeDiagnose } from "@/lib/mail/bounce";
+import { BOUNCE_OPSCHORTING, aanbiederVan, blokBijBounce, envelopDatum, isBounceAfzender, isBounceOpschorting, leesBounce, mailStatusLabel, recordIdUitMessageId, soortVanCode, veiligeDiagnose } from "@/lib/mail/bounce";
 import { rondBouncesAf, type BounceAfhankelijkheden, type Envelop } from "@/lib/mail/bounce-ronde";
 import type { BerichtMerk } from "@/lib/mail/bounce-opslag";
 
@@ -343,5 +343,20 @@ describe("aanhakingen", () => {
     expect(FLAG_REGISTRY.find((f) => f.key === "mail-bounce-verwerken")?.default).toBe(false);
     expect(bron("deploy/cron/entrypoint.sh")).toMatch(/^35 \* \* \* \* wget .*\/api\/internal\/mail\/bounces"$/m);
     expect(bron("lib/ops/heartbeat.ts")).toContain('{ job: "mail-bounces", label: "Terugkaatsers in de postbus nalezen", maxAgeHours: 3 }');
+  });
+});
+
+describe("een opgeschorte mail: terugkaatser of afmelding", () => {
+  it("sendMail en de rest herkennen dezelfde reden", () => {
+    expect(isBounceOpschorting(BOUNCE_OPSCHORTING)).toBe(true);
+    expect(isBounceOpschorting('afgemeld voor "Zakelijke introducties"')).toBe(false);
+    expect(isBounceOpschorting(undefined)).toBe(false);
+  });
+
+  it("de outreach zet een lead bij een terugkaatser op BOUNCED (bounce), niet op UNSUBSCRIBED", () => {
+    const s = bron("lib/sales/send.ts");
+    expect(s).toContain('await addSuppression(email, bounce ? "bounce" : "category-opt-out", null);');
+    expect(s).toContain('status: "BOUNCED", bouncedAt: new Date()');
+    expect(bron("lib/mail/index.ts")).toContain("suppressed = BOUNCE_OPSCHORTING;");
   });
 });

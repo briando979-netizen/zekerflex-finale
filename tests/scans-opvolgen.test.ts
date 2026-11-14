@@ -89,6 +89,11 @@ describe("stuurVoorstel", () => {
     await expect(stuurVoorstel("website:0123456789abcdef", "info@bakkerij.nl", "", DOOR, new Date("2026-11-30T12:00:00Z"))).rejects.toThrow("al ja");
   });
 
+  it("een adres dat terugkaatst: de melding noemt die reden, niet 'afgemeld' (14 nov)", async () => {
+    sendMail.mockResolvedValue({ id: "m1", delivered: false, transport: "mailbox", suppressed: "teruggekaatst (het adres bestaat niet)" });
+    await expect(stuurVoorstel("website:0123456789abcdef", "info@bakkerij.nl", "", DOOR, NU)).rejects.toThrow("Mail naar dit adres kwam eerder terug: het adres bestaat niet.");
+  });
+
   it("een afgemeld adres krijgt niets en het logboek blijft gelijk", async () => {
     sendMail.mockResolvedValue({ id: "m1", delivered: false, transport: "smtp", suppressed: "sales-outreach" });
     await expect(stuurVoorstel("website:0123456789abcdef", "info@bakkerij.nl", "", DOOR, NU)).rejects.toThrow("afgemeld");

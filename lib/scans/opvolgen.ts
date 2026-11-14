@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { CONTACTS } from "@/lib/seo";
 import { dealVerlopen, getDeal } from "@/lib/scans/deal";
 import { getScanLog, logStap } from "@/lib/scans/store";
+import { isBounceOpschorting } from "@/lib/mail/bounce";
 import { SOORT_LABEL, dealEuro, isTestEmail, laatstOpgevolgd, type ScanLog, type ScanSoort } from "@/lib/scans/model";
 
 // ---------------------------------------------------------------------------
@@ -68,7 +69,13 @@ export async function stuurVoorstel(sleutel: string, emailRuw: string, notitie: 
        <p style="margin:0;font-size:14px;color:#3C4A42">Met vriendelijke groet,<br>${esc(door.naam)}<br>ZekerFlex</p>`,
     ),
   });
-  if (res.suppressed) throw AppError.validation("Dit adres heeft zich afgemeld voor zakelijke introducties; we hebben niets verstuurd.");
+  if (res.suppressed) {
+    throw AppError.validation(
+      isBounceOpschorting(res.suppressed)
+        ? "Mail naar dit adres kwam eerder terug: het adres bestaat niet. We hebben niets verstuurd; zoek een ander adres van dit bedrijf."
+        : "Dit adres heeft zich afgemeld voor zakelijke introducties; we hebben niets verstuurd.",
+    );
+  }
   if (res.error) throw AppError.upstream(`Versturen lukte niet: ${res.error}`);
 
   await logStap(k.soort, k.scanId, "opgevolgd", `${email} · ${door.naam}`, {}, now);
