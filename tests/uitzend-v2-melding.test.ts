@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // De melding "je uitzendovereenkomst is bijgewerkt" aan werkers met alleen een v1: eerst een push; bereikt die geen apparaat, dan een mail in de
 // mailtaal van de werker met een link naar Verificatie. Pas gemarkeerd als het echt aankwam (push > 0 of mail bezorgd), met kanaal en tijd.
@@ -54,6 +54,14 @@ import { POST as meldRoute } from "@/app/api/internal/agreements/uitzend-v2-meld
 
 const NU = new Date("2026-11-12T12:00:00+01:00").getTime();
 const DAG = 86_400_000;
+// Tijdbom (14 nov): de contracten in de fixtures lopen tot NU + 30 dagen, en de route neemt de echte klok (geen `nu`).
+// Vanaf 12 december 2026 zou de route-test dus 0 te melden zien en elke uitrol tegenhouden (gevonden met de klok
+// +35 dagen). Daarom staat de klok hier vast op NU; de losse aanroepen geven `nu: NU` al mee.
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(NU));
+});
+afterAll(() => vi.useRealTimers());
 const bron = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8").split("\r\n").join("\n");
 
 /** Een werker met alleen een geldige v1 (geen sjabloon-veld). */
