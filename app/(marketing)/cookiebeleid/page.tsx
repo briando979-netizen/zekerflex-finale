@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "@/components/marketing/LegalPage";
 import { canonical } from "@/lib/seo";
+import { cookieRegel, cookiesNu } from "@/lib/privacy/cookies";
 
 export const metadata: Metadata = { title: "Cookiebeleid", ...canonical("/cookiebeleid", { title: "Cookiebeleid" }) };
 
@@ -8,7 +9,7 @@ export default function CookiebeleidPage() {
   return (
     <LegalPage
       title="Cookiebeleid"
-      updated="1 mei 2026"
+      updated="14 november 2026"
       intro="Dit cookiebeleid geldt voor onze website zekerflex.com en de ZekerFlex-app (samen: 'het platform') en voor bezoekers uit de Europese Economische Ruimte en Zwitserland."
       note={
         <>
@@ -45,8 +46,8 @@ export default function CookiebeleidPage() {
         body="Deze zorgen dat het platform werkt en dat je voorkeuren bewaard blijven — bijvoorbeeld je ingelogde sessie, je taal- of weergavevoorkeur en je cookie-keuze. Zonder deze cookies werkt het platform niet goed. We plaatsen ze zonder toestemming, omdat ze strikt noodzakelijk zijn."
       />
       <LegalSection
-        heading="5.2 Statistische verwerking (zonder cookies)"
-        body="We meten geaggregeerd hoe het platform wordt gebruikt om de prestaties te verbeteren. Dit gebeurt zonder cookies en zonder externe trackers; browsergegevens worden alleen als versleutelde hash bewaard en niet gebruikt om je te identificeren. Hiervoor is geen toestemming nodig."
+        heading="5.2 Statistische verwerking (anoniem)"
+        body="We meten geaggregeerd hoe het platform wordt gebruikt om de prestaties te verbeteren. Dit gebeurt zonder externe trackers; browsergegevens worden alleen als versleutelde hash bewaard en niet gebruikt om je te identificeren. De bezoekstatistiek gebruikt geen cookie. Eén sessiecookie zonder id (zf_taal_geteld, zie hieronder) zorgt dat de taal van je browser maar één keer per bezoek wordt meegeteld. Hiervoor is geen toestemming nodig."
       />
       <LegalSection
         heading="5.3 Marketing- en trackingcookies"
@@ -58,15 +59,12 @@ export default function CookiebeleidPage() {
       />
       <LegalSection
         heading="6. Geplaatste cookies"
-        list={[
-          "Sessiecookie — functioneel — houdt je ingelogde sessie vast tijdens je bezoek.",
-          "Cookie-keuze — functioneel — onthoudt of en welke keuze je in de cookiemelding hebt gemaakt.",
-          "Voorkeuren (taal, weergave) — functioneel — onthoudt kleine instellingen zodat je ze niet steeds opnieuw hoeft te kiezen.",
-        ]}
+        body="Per cookie de naam, waarvoor hij is en hoe lang hij blijft staan. Ze zijn allemaal functioneel, op zf_taal_geteld na (anoniem, voor de statistiek). Websites van klanten die ZekerFlex bouwt, staan op hun eigen domein en vallen niet onder deze lijst."
+        list={cookiesNu().map(cookieRegel)}
       />
       <LegalSection
         heading="7. Toestemming"
-        body="Bij je eerste bezoek tonen we een korte melding over cookies. Omdat we uitsluitend strikt noodzakelijke functionele cookies gebruiken, is er geen toestemming vereist voor het plaatsen daarvan. Je kunt cookies altijd via je browser weigeren of verwijderen; houd er dan rekening mee dat het platform mogelijk niet meer optimaal werkt."
+        body="Bij je eerste bezoek tonen we een korte melding over cookies. Omdat we alleen functionele cookies gebruiken, plus één anonieme sessiecookie zonder id voor de statistiek, is er geen toestemming vereist voor het plaatsen daarvan. Je kunt cookies altijd via je browser weigeren of verwijderen; houd er dan rekening mee dat het platform mogelijk niet meer optimaal werkt."
       />
       <LegalSection
         heading="8. Cookies in- of uitschakelen en verwijderen"
