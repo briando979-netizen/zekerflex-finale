@@ -59,7 +59,10 @@ export async function GET(req: Request, props: { params: Promise<{ threadId: str
     const messages = (await getMessages(thread.id, 400)).filter((m) => (!from || m.at > from) && !hidden.has(m.id));
     // ?seen=0: the tab is in the background, so nobody reads it yet (no read receipt, unread stays)
     if (new URL(req.url).searchParams.get("seen") !== "0") {
-      await markThreadRead(thread.id, p.userId);
+      const gelezenOp = await markThreadRead(thread.id, p.userId);
+      // de eigen leesstand telt meteen mee in readByOthers en dus in de versie; anders is de poll na elk nieuw bericht van de
+      // ander nog één keer onnodig volledig (livetest 14 nov: stap 6 gaf de hele lijst terug)
+      if (gelezenOp) thread.reads[p.userId] = gelezenOp;
       if (prefs.unreadMark.includes(thread.id)) await clearUnreadMark(p.userId, thread.id); // "Markeer als ongelezen" is voorbij
     }
     const other = thread.kind === "direct" ? thread.participants.find((u) => u !== p.userId) ?? null : null;

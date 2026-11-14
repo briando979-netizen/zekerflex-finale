@@ -77,6 +77,9 @@ describe("route en InboxPage volgen de regels", () => {
     // gelezen-vinkjes, vastgezet en de berichten zelf zitten in de versie
     expect(s.indexOf("readByOthers:")).toBeLessThan(s.indexOf("const versie = lijstVersie("));
     expect(s.indexOf("const pinned = (() => {")).toBeLessThan(s.indexOf("const versie = lijstVersie("));
+    // de eigen leesstand van deze aanroep zit al in de versie (anders is de poll na elk nieuw bericht nog één keer volledig)
+    expect(s).toContain("if (gelezenOp) thread.reads[p.userId] = gelezenOp;");
+    expect(s.indexOf("thread.reads[p.userId] = gelezenOp")).toBeLessThan(s.indexOf("const versie = lijstVersie("));
   });
 
   it("InboxPage: since alleen uit de onthouden versie, ongewijzigd = alleen aanwezigheid, lokale wijziging wist de versie", () => {

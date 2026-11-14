@@ -609,12 +609,15 @@ export function disappearCutoff(thread: ChatThread, now = Date.now()): string | 
   return d && d > 0 ? new Date(now - d * 86_400_000).toISOString() : null;
 }
 
-export async function markThreadRead(threadId: string, userId: string): Promise<void> {
+/** Geeft het vastgelegde leesmoment terug, zodat de aanroeper zijn eigen (al opgehaalde) gesprek kan bijwerken. */
+export async function markThreadRead(threadId: string, userId: string): Promise<string | null> {
   const t = await getThread(threadId);
   // (getThread resolves a merged duplicate to its main thread)
-  if (!t) return;
-  t.reads[userId] = new Date().toISOString();
+  if (!t) return null;
+  const at = new Date().toISOString();
+  t.reads[userId] = at;
   await writeThread(t);
+  return at;
 }
 
 export function unreadForUser(
