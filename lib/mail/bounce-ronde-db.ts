@@ -31,18 +31,22 @@ export function echteBounceAfhankelijkheden(): BounceAfhankelijkheden {
     zetMerk: (berichtUid, merk) => zetBerichtMerk(berichtUid, merk),
     merken: () => berichtMerken(),
     hard: async (r) => {
+      // het adres-merk (gehasht) stopt outreach/nieuwsbrief/herinnering voor iedereen
       await markeerHard(r.ontvanger, r.code);
-      await addSuppression(r.ontvanger, "bounce", null);
       const leads = await prisma.salesLead.findMany({
         where: {
-          status: { not: "BOUNCED" },
           OR: [{ contactEmail: { equals: r.ontvanger, mode: "insensitive" } }, { discoveredEmail: { equals: r.ontvanger, mode: "insensitive" } }],
         },
-        select: { id: true },
+        select: { id: true, status: true },
         take: 20,
       });
-      for (const l of leads) await markLeadBounced(l.id, null);
-      return { onderdrukt: true, leads: leads.length };
+      // De onderdrukkingslijst (SalesSuppression, adres in klare tekst) is van de sales-pijplijn: alleen als dit adres
+      // van een lead is. Het adres van een gewone gebruiker (bijv. een verificatiemail die kaatst) hoort daar niet in;
+      // voor hem volstaat het gehashte merk, dat met zijn account mee gewist wordt (lib/privacy/anonymize.ts).
+      const onderdrukt = leads.length > 0;
+      if (onderdrukt) await addSuppression(r.ontvanger, "bounce", null);
+      for (const l of leads) if (l.status !== "BOUNCED") await markLeadBounced(l.id, null);
+      return { onderdrukt, leads: leads.filter((l) => l.status !== "BOUNCED").length };
     },
     zacht: (r) => telZacht(r.ontvanger, r.code),
     beleid: async (aanbieder, regels) => {

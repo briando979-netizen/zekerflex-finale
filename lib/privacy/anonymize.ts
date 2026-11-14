@@ -226,6 +226,8 @@ export async function anonymizeUser(
     if (fobHashes.length) await tx.keyValueStore.deleteMany({ where: { key: { in: fobHashes.map((h) => `nfc-fob:${h}`) } } });
     // terugkaatsers van het oude adres (lib/mail/bounce-opslag.ts): de sleutel is een hash van het adres, dus via het adres zelf
     await tx.keyValueStore.deleteMany({ where: { key: { in: [bounceSleutel(oldEmail), zachtSleutel(oldEmail)] } } });
+    // en de onderdrukkingsrij van de sales-pijplijn op dat adres (klare tekst), als die er is
+    await tx.salesSuppression.deleteMany({ where: { email: oldEmail.trim().toLowerCase() } });
 
     // Personal JSON in the KeyValueStore without a retention duty (agenda,
     // trips, chat settings, contacts, AI memory, 2FA, mailbox login).

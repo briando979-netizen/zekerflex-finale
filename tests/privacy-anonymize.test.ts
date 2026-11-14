@@ -53,6 +53,8 @@ const h = vi.hoisted(() => {
       },
     },
     webPushSubscription: { deleteMany: async () => { state.deleted.push("push"); return { count: 3 }; } },
+    // de onderdrukkingsrij van de sales-pijplijn op het oude adres (lib/mail/bounce-ronde-db.ts zet die bij een harde bounce van een lead)
+    salesSuppression: { deleteMany: async ({ where }: { where: { email: string } }) => { state.deleted.push(`suppression:${where.email}`); return { count: 1 }; } },
     certificate: { deleteMany: async () => ({ count: 1 }) },
     complianceDocument: { deleteMany: async () => ({ count: 2 }) },
     workRight: { deleteMany: async () => ({ count: 1 }) },
@@ -156,7 +158,7 @@ describe("anonymizeUser", () => {
       kvkNumber: "DELETED-u1",
     });
     expect(h.state.cregUpdates[0]).toMatchObject({ legalName: "[verwijderd]", city: null });
-    expect(h.state.deleted).toEqual(expect.arrayContaining(["kyc", "device", "push", "passkey:u1", "engagement:u1"]));
+    expect(h.state.deleted).toEqual(expect.arrayContaining(["kyc", "device", "push", "passkey:u1", "engagement:u1", "suppression:jan@example.com"]));
     // passkeys weg: het account blijft geanonimiseerd bestaan, een oud toestel mag er niet meer bij
     expect(report.cleared.passkeys).toBe(2);
     expect(h.state.uploadsDeleted).toEqual(expect.arrayContaining(["up1", "up2", "up_werkrecht"]));
