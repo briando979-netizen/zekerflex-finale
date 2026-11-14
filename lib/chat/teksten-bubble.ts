@@ -87,6 +87,8 @@ export const BUBBLE_NL = {
   liveZolangOpen: "Je plek schuift mee zolang ZekerFlex open is.",
   liveStoppen: "Stoppen met delen",
   previewLiveLocation: "📡 Live locatie",
+  previewSticker: "✨ Sticker",
+  stickerNamen: {"duim":"Duim omhoog","hart":"Hartje","ster":"Top!","klaar":"Klaar!","lach":"Haha","wow":"Wow","sorry":"Sorry","bloem":"Bedankt","koffie":"Koffie?","onderweg":"Onderweg","helm":"Aan het werk","klok":"Even geduld","feest":"Feest!","zon":"Goedemorgen","maan":"Welterusten"},
   reactionLabel: "{aantal}× {emoji}",
   reactionMine: "{aantal}× {emoji} (jij reageerde, tik om weg te halen)",
   notSent: "Niet verstuurd: {reden}",

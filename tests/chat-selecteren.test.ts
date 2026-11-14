@@ -63,7 +63,7 @@ describe("waar het in de code zit", () => {
     expect(inbox).toContain('body: JSON.stringify({ action: "hide-messages", messageIds: weg.slice(0, 100) }),');
     // doorsturen: dezelfde soorten als de server
     const route = lees("app/api/inbox/forward/route.ts");
-    expect(route).toContain('const FORWARDABLE = ["text", "image", "file", "voice", "location"];');
-    expect(inbox).toContain('const FORWARDABLE: Msg["kind"][] = ["text", "image", "file", "voice", "location"];');
+    expect(route).toContain('const FORWARDABLE = ["text", "image", "file", "voice", "location", "sticker"];');
+    expect(inbox).toContain('const FORWARDABLE: Msg["kind"][] = ["text", "image", "file", "voice", "location", "sticker"];');
   });
 });

@@ -2,6 +2,7 @@
 
 import type { MessageAfspraak } from "@/lib/messaging/afspraak";
 import type { LiveLocatie } from "@/lib/messaging/live-locatie";
+import type { StickerId } from "@/lib/messaging/stickers";
 import { SHARED_NL, type SharedTeksten } from "@/lib/chat/teksten-shared";
 import { vulIn } from "@/lib/i18n/vul-in";
 import { amsterdamClock, amsterdamDayKey, amsterdamParts, amsterdamStartOfDay } from "@/lib/time/amsterdam";
@@ -38,7 +39,7 @@ export interface Msg {
   from: string;
   at: string;
   text: string;
-  kind: "text" | "system" | "voice" | "file" | "image" | "location" | "call" | "poll" | "contact" | "afspraak";
+  kind: "text" | "system" | "voice" | "file" | "image" | "location" | "call" | "poll" | "contact" | "afspraak" | "sticker";
   attachment?: Attachment;
   location?: { lat: number; lng: number; label?: string; live?: LiveLocatie };
   call?: CallInfo;
@@ -65,6 +66,8 @@ export interface Msg {
   contact?: { userId: string; naam: string };
   /** een afspraak met aanmelden (lib/messaging/afspraak.ts) */
   afspraak?: MessageAfspraak;
+  /** een sticker uit de eigen set (lib/messaging/stickers.ts) */
+  sticker?: StickerId;
   /** foto die maar één keer te bekijken is, en wie hem al opende */
   eenmalig?: boolean;
   eenmaligGezien?: string[];

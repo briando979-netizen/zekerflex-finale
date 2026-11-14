@@ -26,6 +26,8 @@ export const COMPOSER_NL = {
   liveDuur15: "15 min",
   liveDuur60: "1 uur",
   liveDuur480: "8 uur",
+  menuSticker: "Sticker",
+  stickerKiezen: "Kies een sticker",
   geenMicrofoon: "Geen toegang tot je microfoon. Sta de microfoon toe in je browser en probeer opnieuw.",
   berichtBewerken: "Bericht bewerken",
   bewerkenStoppen: "Bewerken stoppen",

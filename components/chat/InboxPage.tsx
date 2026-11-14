@@ -88,7 +88,7 @@ interface InboxPageProps {
 
 // De teksten komen uit een context: de inhoud draait daarom binnen de provider.
 /** Wat je kunt doorsturen (gelijk aan FORWARDABLE in app/api/inbox/forward/route.ts). */
-const FORWARDABLE: Msg["kind"][] = ["text", "image", "file", "voice", "location"];
+const FORWARDABLE: Msg["kind"][] = ["text", "image", "file", "voice", "location", "sticker"];
 
 export function InboxPage({ texts, ...rest }: InboxPageProps = {}) {
   return (
@@ -596,6 +596,7 @@ function InboxPageInner({
       ...(voorlopigePlek ? { location: voorlopigePlek } : {}),
       ...(peiling ? { poll: peiling.poll } : {}),
       ...(voorlopigeAfspraak ? { afspraak: voorlopigeAfspraak } : {}),
+      ...(msg.sticker ? { sticker: msg.sticker } : {}),
       ...(msg.mentions?.length ? { mentions: msg.mentions } : {}),
       ...(msg.contact ? { contact: { userId: msg.contact.userId, naam: msg.text } } : {}),
     };

@@ -8,6 +8,7 @@ import { ActionList, MessageSheet, ReactionRow, type ActionItem } from "./Messag
 import { PollCard } from "./PollCard";
 import { AfspraakCard } from "./AfspraakCard";
 import { LiveLocatieKaart } from "./LiveLocatieKaart";
+import { isSticker, stickerSrc } from "@/lib/messaging/stickers";
 import type { Antwoord } from "@/lib/messaging/afspraak";
 import { isProgramma, isVideoType } from "@/lib/messaging/bijlage";
 import { vermeldingDelen } from "@/lib/messaging/vermelding";
@@ -353,7 +354,7 @@ export function MessageBubble({
 
   const genoemd = (m.mentions ?? []).map((id) => names?.[id] ?? "").filter(Boolean);
   const myReaction = myUserId ? (Object.entries(m.reactions ?? {}).find(([, u]) => u.includes(myUserId))?.[0] ?? null) : null;
-  const preview = m.text || (m.kind === "image" ? t.previewPhoto : m.kind === "voice" ? t.previewVoice : m.kind === "file" ? `📎 ${m.attachment?.filename ?? t.previewFileFallback}` : m.kind === "location" ? (m.location?.live ? t.previewLiveLocation : t.previewLocation) : "");
+  const preview = m.text || (m.kind === "image" ? t.previewPhoto : m.kind === "voice" ? t.previewVoice : m.kind === "file" ? `📎 ${m.attachment?.filename ?? t.previewFileFallback}` : m.kind === "location" ? (m.location?.live ? t.previewLiveLocation : t.previewLocation) : m.kind === "sticker" ? t.previewSticker : "");
 
   const items: ActionItem[] = m.failed
     ? [
@@ -659,10 +660,11 @@ export function MessageBubble({
             tabIndex={0}
             onKeyDown={(e) => (e.key === "Enter" || e.key === "ContextMenu") && e.target === e.currentTarget && openMenu()}
             className={`relative max-w-full rounded-2xl px-2.5 pb-1.5 pt-1.5 text-[0.875em] shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand-400 [@media(hover:none)]:select-none [-webkit-touch-callout:none] ${
-              mine ? "rounded-tr-none bg-[#D9FDD3]" : "rounded-tl-none bg-white"
+              // een sticker staat los, zonder ballon (zoals in WhatsApp)
+              m.kind === "sticker" ? "bg-transparent !shadow-none" : mine ? "rounded-tr-none bg-[#D9FDD3]" : "rounded-tl-none bg-white"
             } ${m.failed ? "ring-1 ring-crit/40" : ""}`}
           >
-            {mine ? (
+            {m.kind === "sticker" ? null : mine ? (
               <span className="absolute right-[-8px] top-0 h-[13px] w-2 bg-[#D9FDD3] [clip-path:polygon(0_0,0_100%,100%_0)]" aria-hidden />
             ) : (
               <span className="absolute left-[-8px] top-0 h-[13px] w-2 bg-white [clip-path:polygon(100%_0,100%_100%,0_0)]" aria-hidden />
@@ -806,6 +808,11 @@ export function MessageBubble({
                   </span>
                 </span>
               </a>
+            )}
+
+            {m.kind === "sticker" && isSticker(m.sticker) && (
+              // eslint-disable-next-line @next/next/no-img-element -- een vaste svg van de eigen site, geen optimalisatie nodig
+              <img src={stickerSrc(m.sticker)} alt={t.stickerNamen[m.sticker]} width={128} height={128} draggable={false} className="h-32 w-32 select-none [filter:drop-shadow(0_1px_2px_rgb(0_0_0/0.25))]" />
             )}
 
             {m.kind === "afspraak" && m.afspraak && (

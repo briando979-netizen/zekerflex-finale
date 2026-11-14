@@ -1,6 +1,7 @@
 import type { LinkVoorbeeld } from "@/lib/messaging/link-voorbeeld";
 import { annuleerAfspraak, zetAntwoord, type Antwoord, type MessageAfspraak } from "@/lib/messaging/afspraak";
 import { isLiveActief, stopLive, werkLiveBij, type LiveLocatie, type Plek } from "@/lib/messaging/live-locatie";
+import type { StickerId } from "@/lib/messaging/stickers";
 import { randomUUID } from "node:crypto";
 import { kvDelete, kvGet, kvGetMany, kvListValues, kvSet } from "@/lib/storage/kv";
 import { logger } from "@/lib/logger";
@@ -29,7 +30,8 @@ export type MessageKind =
   | "call"
   | "poll"
   | "contact"
-  | "afspraak";
+  | "afspraak"
+  | "sticker";
 
 export interface MessageAttachment {
   /** id in the per-thread chat media store (lib/messaging/media.ts) */
@@ -93,6 +95,8 @@ export interface ChatMessage {
   linkVoorbeeld?: LinkVoorbeeld;
   /** kind "afspraak": tijd, plek en wie komt (lib/messaging/afspraak.ts); de titel staat in text */
   afspraak?: MessageAfspraak;
+  /** kind "sticker": een sticker uit de eigen set (lib/messaging/stickers.ts) */
+  sticker?: StickerId;
   /** kind "contact": een gedeeld contact (alleen iemand met wie de afzender in contact staat); de naam staat ook in text */
   contact?: { userId: string; naam: string };
   /** kind "image": maar één keer te bekijken (zoals WhatsApp); wie hem al opende staat in eenmaligGezien */
@@ -107,7 +111,7 @@ export const EDIT_WINDOW_MS = 24 * 3_600_000;
 export const DELETE_WINDOW_MS = 48 * 3_600_000;
 
 export type MessageExtra = Partial<
-  Pick<ChatMessage, "attachment" | "location" | "call" | "replyTo" | "auto" | "forwarded" | "poll" | "mentions" | "eenmalig" | "contact" | "afspraak">
+  Pick<ChatMessage, "attachment" | "location" | "call" | "replyTo" | "auto" | "forwarded" | "poll" | "mentions" | "eenmalig" | "contact" | "afspraak" | "sticker">
 >;
 
 export interface ChatThread {
@@ -159,6 +163,8 @@ export function previewText(m: {
       return `👤 ${m.text}`;
     case "afspraak":
       return `📅 ${m.text}`;
+    case "sticker":
+      return "✨ Sticker";
     case "call":
       return m.call?.mode === "video"
         ? "📹 Videogesprek"
@@ -635,6 +641,7 @@ export async function postMessage(
     ...(kind === "image" && extra.eenmalig ? { eenmalig: true as const } : {}),
     ...(kind === "contact" && extra.contact ? { contact: extra.contact } : {}),
     ...(kind === "afspraak" && extra.afspraak ? { afspraak: extra.afspraak } : {}),
+    ...(kind === "sticker" && extra.sticker ? { sticker: extra.sticker } : {}),
   };
   // zelf toevoegen in plaats van de generieke append uit lib/storage/kv: dezelfde grens als overal (aantal én bytes)
   const key = messagesKey(threadId);

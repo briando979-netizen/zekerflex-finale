@@ -75,6 +75,6 @@ describe("in de chat", () => {
     const bubbel = lees("components/chat/MessageBubble.tsx");
     expect(bubbel).toContain('{m.kind === "contact" && m.contact && (');
     expect(bubbel).toContain("{m.contact.userId !== myUserId && (onStartChat || onSaveContact) && (");
-    expect(lees("app/api/inbox/forward/route.ts")).toContain('const FORWARDABLE = ["text", "image", "file", "voice", "location"];');
+    expect(lees("app/api/inbox/forward/route.ts")).toContain('const FORWARDABLE = ["text", "image", "file", "voice", "location", "sticker"];');
   });
 });
