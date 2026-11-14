@@ -72,7 +72,7 @@ describe("de pagina", () => {
   it("is alleen voor de platformbeheerder en staat in het menu, bovenaan Webshop & merk", () => {
     expect(src).toContain('hasRole(principal, "PLATFORM_ADMIN")');
     const merk = ADMIN_HUBS.find((h) => h.id === "merk");
-    expect(merk?.pages[0]).toEqual({ href: "/admin/webshop", label: "Webshop-console" });
+    expect(merk?.pages[0]).toEqual({ href: "/admin/webshop", label: "Mijn winkel" });
   });
 
   it("alleen lezen: tellen en optellen, niets schrijven", () => {

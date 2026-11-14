@@ -98,7 +98,12 @@ export function ShopAdmin() {
   const [showPreview, setShowPreview] = useState(false);
   const [tab, setTab] = useState<ShopTab>("products");
   // het tabblad staat ook in het adres (?tab=orders), zodat de Webshop-console er rechtstreeks naartoe kan linken
-  useEffect(() => { setTab(kiesShopTab(new URLSearchParams(window.location.search).get("tab"))); }, []);
+  useEffect(() => {
+    const zoek = new URLSearchParams(window.location.search);
+    setTab(kiesShopTab(zoek.get("tab")));
+    // ?nieuw=1 (de knop Product toevoegen in Mijn winkel): meteen het formulier voor een nieuw product open
+    if (zoek.get("nieuw") === "1") { setEditing(null); setForm(empty); setShowForm(true); }
+  }, []);
   const kiesTab = (nieuw: ShopTab) => {
     setTab(nieuw);
     const zoek = zoekMetShopTab(window.location.search, nieuw);

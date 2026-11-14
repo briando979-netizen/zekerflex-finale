@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { KpiStrip, Notice, PageHead, Panel, Pill } from "@/components/admin/kit";
 import { euro } from "@/lib/admin/format";
 import { accountStand } from "@/lib/billing/stripe-betalen";
-import { CONSOLE_GROEPEN, consoleTaken, type ConsoleStand } from "@/lib/shop/console";
+import { CONSOLE_GROEPEN, MIJN_WINKEL_KNOPPEN, betalenStatus, consoleTaken, type ConsoleStand } from "@/lib/shop/console";
 
 export const dynamic = "force-dynamic";
 
@@ -54,8 +54,8 @@ export default async function WebshopConsolePage() {
   return (
     <div className="space-y-4">
       <PageHead
-        title="Webshop-console"
-        subtitle="Alles van je eigen webshop op één plek: hoe hij ervoor staat, wat er nu moet gebeuren en een knop naar elk onderdeel."
+        title="Mijn winkel"
+        subtitle="Het startpunt voor je webshop: kies wat je wilt doen, zie hoe hij ervoor staat en wat er nu moet gebeuren."
         actions={
           <a href="/shop" target="_blank" rel="noopener" className="a-btn a-btn-ghost">
             Bekijk je webshop
@@ -72,6 +72,36 @@ export default async function WebshopConsolePage() {
           .
         </Notice>
       ) : null}
+
+      <section aria-labelledby="mijn-winkel-knoppen">
+        <h2 id="mijn-winkel-knoppen" className="sr-only">Wat wil je doen?</h2>
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {MIJN_WINKEL_KNOPPEN.map((k) => {
+            const betalen = k.id === "betalen" ? betalenStatus(s.betalen) : null;
+            const inhoud = (
+              <>
+                <span className="flex flex-wrap items-center gap-2 text-base font-semibold" style={{ color: "var(--a-text)" }}>
+                  {k.titel}
+                  {k.buiten ? <span className="sr-only"> (opent in een nieuw tabblad)</span> : null}
+                  {betalen ? <Pill tone={betalen.toon}>{betalen.tekst}</Pill> : null}
+                </span>
+                <span className="mt-1 block text-[0.8125rem]" style={{ color: "var(--a-mute)" }}>{k.uitleg}</span>
+              </>
+            );
+            const stijl = { border: "1px solid var(--a-border)", background: "var(--a-panel)" };
+            const klasse = "block h-full rounded-xl p-5 transition-colors hover:bg-[var(--a-panel-2)]";
+            return (
+              <li key={k.id}>
+                {k.buiten ? (
+                  <a href={k.href} target="_blank" rel="noopener" className={klasse} style={stijl}>{inhoud}</a>
+                ) : (
+                  <Link href={k.href} className={klasse} style={stijl}>{inhoud}</Link>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </section>
 
       <KpiStrip
         items={[

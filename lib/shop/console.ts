@@ -128,3 +128,31 @@ export const CONSOLE_GROEPEN: ConsoleGroep[] = [
     ],
   },
 ];
+
+// ---- Mijn winkel: de zes grote knoppen bovenaan (14 nov 2026) ------------------------------------------------------------------
+// De eigenaar: "mijn beheer van de webshop is echt niet goed, ik kan er niks mee". Dit is het startpunt: zes dingen die je met een webshop doet,
+// in gewone woorden, elk één knop naar de goede plek. De 12 losse menu-items blijven bereikbaar; dit is de ingang.
+
+export interface MijnWinkelKnop {
+  id: "toevoegen" | "producten" | "bestellingen" | "bekijken" | "inrichten" | "betalen";
+  titel: string;
+  uitleg: string;
+  href: string;
+  /** opent de webshop zelf, in een nieuw tabblad */
+  buiten?: true;
+}
+
+export const MIJN_WINKEL_KNOPPEN: MijnWinkelKnop[] = [
+  { id: "toevoegen", titel: "Product toevoegen", uitleg: "Een nieuw product in je winkel zetten, met foto, naam en prijs.", href: "/admin/shop?nieuw=1" },
+  { id: "producten", titel: "Producten", uitleg: "Je producten bekijken en aanpassen: prijs, voorraad en wat zichtbaar is.", href: "/admin/shop" },
+  { id: "bestellingen", titel: "Bestellingen", uitleg: "Wat er besteld is, verzonden melden en terugbetalen.", href: "/admin/shop?tab=orders" },
+  { id: "bekijken", titel: "Winkel bekijken", uitleg: "Je winkel zoals een klant hem ziet.", href: "/shop", buiten: true },
+  { id: "inrichten", titel: "Winkel inrichten", uitleg: "De indeling, teksten en kleuren van je winkel aanpassen en meteen zien hoe het eruitziet.", href: "/admin/ontwerper?tab=shop" },
+  { id: "betalen", titel: "Betalen", uitleg: "Of klanten kunnen betalen, en wat je moet doen als dat niet zo is.", href: "/admin/te-doen" },
+];
+
+/** De status op de knop Betalen, eerlijk: dicht zolang Stripe dat zegt, "nog niet gemeten" als dat zo is. */
+export function betalenStatus(betalen: boolean | null): { tekst: string; toon: "ok" | "crit" | "neutral" } {
+  if (betalen === null) return { tekst: "Nog niet gemeten", toon: "neutral" };
+  return betalen ? { tekst: "Klanten kunnen betalen", toon: "ok" } : { tekst: "Dicht: klanten kunnen nu niet betalen", toon: "crit" };
+}
