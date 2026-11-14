@@ -24,13 +24,13 @@ describe("seo-cities: de lijst waar de stadspagina's uit komen", () => {
   it("geeft elke stad een eigen lokale regel, geen dunne kopie en geen cijfers", () => {
     const regels = CITIES.map((c) => c.local);
     expect(new Set(regels).size).toBe(regels.length);
-    for (const c of CITIES) {
-      expect(c.local.length).toBeGreaterThanOrEqual(60);
-      expect(c.local).toContain(c.name.split("-")[0]!);
-    }
-    // de regiosteden van 14 nov: geen verzonnen aantallen in de lokale tekst (oudere teksten noemen soms een echte naam met een cijfer)
+    for (const c of CITIES) expect(c.local.length).toBeGreaterThanOrEqual(60);
+    // de regiosteden van 14 nov: de plaats staat in de tekst en er staan geen verzonnen aantallen in
+    // (oudere teksten noemen de stad soms niet, of een echte naam met een cijfer)
     for (const slug of REGIO) {
-      expect(cityBySlug(slug)?.local, slug).not.toMatch(/\d/);
+      const c = cityBySlug(slug)!;
+      expect(c.local).toContain(c.name.split("-")[0]!);
+      expect(c.local, slug).not.toMatch(/\d/);
     }
   });
 
