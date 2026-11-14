@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { kvGet, kvSet, kvListValues } from "@/lib/storage/kv";
 import { chat, fastModel, llmConfigProblem, ensureAiNode } from "@/lib/ai/client";
 import { imapConfig, sendMail, mailShell } from "@/lib/mail";
-import { fetchInboxList, fetchMessageContent } from "@/lib/mail/imap";
+import { openLeesSessie, type ImapEnvelope, type ImapLeesSessie } from "@/lib/mail/imap";
 import { isBounceAfzender } from "@/lib/mail/bounce";
 import { createLead } from "@/lib/sales/leads";
 import { CONTACTS } from "@/lib/seo";
@@ -218,16 +218,38 @@ export async function sweepSalesOffers(limit = 15): Promise<OfferSweepResult> {
   await ensureAiNode();
   if (llmConfigProblem()) return { ...base, ok: false, reason: "geen LLM beschikbaar" };
 
-  let envelopes;
+  // Eén IMAP-sessie voor de lijst en alle berichten (lib/mail/imap.ts openLeesSessie), zoals de bounce-ronde: eerst
+  // opende elk bericht een eigen login op info@, de postbus die ook SMTP gebruikt. Alleen lezen (EXAMINE, BODY.PEEK):
+  // de AI zette tot 14 nov elk gelezen bericht op gelezen (fetchMessageContent is voor het Postvak in, waar een mens
+  // opent); nu blijft een mail ongelezen voor de eigenaar. Dubbel verwerken voorkomt offer:seen, niet de IMAP-vlag.
+  const MAX_PER_RONDE = 10;
+  let sessie: ImapLeesSessie;
+  let envelopes: ImapEnvelope[];
   try {
-    envelopes = await fetchInboxList(cfg, limit);
+    sessie = await openLeesSessie(cfg, MAX_PER_RONDE);
   } catch (err) {
     return { ...base, ok: false, reason: `inbox lezen mislukte: ${(err as Error).message}` };
   }
+  try {
+    envelopes = await sessie.lijst(limit);
+  } catch (err) {
+    await sessie.sluit();
+    return { ...base, ok: false, reason: `inbox lezen mislukte: ${(err as Error).message}` };
+  }
 
+  try {
+    await verwerkEnveloppen(sessie, envelopes, MAX_PER_RONDE, base);
+  } finally {
+    await sessie.sluit();
+  }
+  logger.info("sales offers sweep done", { ...base, errors: base.errors.length });
+  return base;
+}
+
+async function verwerkEnveloppen(sessie: ImapLeesSessie, envelopes: ImapEnvelope[], max: number, base: OfferSweepResult): Promise<void> {
   let processed = 0;
   for (const env0 of envelopes) {
-    if (processed >= 10) break; // cap LLM-calls per run
+    if (processed >= max) break; // cap LLM-calls per run
     if (await kvGet(seenKey(env0.uid))) continue;
     await kvSet(seenKey(env0.uid), { at: new Date().toISOString() }).catch(() => undefined);
     if (env0.fromAddress && SKIP_SENDERS.test(env0.fromAddress)) continue;
@@ -236,7 +258,7 @@ export async function sweepSalesOffers(limit = 15): Promise<OfferSweepResult> {
     base.scanned += 1;
     processed += 1;
     try {
-      const content = await fetchMessageContent(cfg, env0.uid);
+      const content = (await sessie.inhoud(env0.uid)) ?? { text: "(kon bericht niet laden)", attachments: [] };
       const analysis = await analyzeOffer({
         fromName: env0.fromName,
         fromAddress: env0.replyToAddress ?? env0.fromAddress,
@@ -259,6 +281,4 @@ export async function sweepSalesOffers(limit = 15): Promise<OfferSweepResult> {
       base.errors.push(`uid ${env0.uid}: ${(err as Error).message}`);
     }
   }
-  logger.info("sales offers sweep done", { ...base, errors: base.errors.length });
-  return base;
 }
