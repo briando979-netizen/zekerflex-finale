@@ -26,3 +26,23 @@ e.LLM_TIMEOUT_MS ??= "30000";
 // Sales-recruiter motor: pinned off so tests never discover / send.
 e.SALES_ENGINE_ENABLED = "false";
 e.SALES_AUTOPILOT_ENABLED = "false";
+
+// Klok verzetten voor een meting (14 nov 2026): ZF_TEST_KLOK_VERZET_MS=<ms> laat elke `new Date()` en `Date.now()` zoveel
+// later lopen, zodat de hele suite "over een week" of "over een maand" gedraaid kan worden en tijdbommen vooraf omvallen
+// (de controle draait in UTC en houdt dan elke uitrol tegen). Tests met vi.useFakeTimers/setSystemTime merken er niets
+// van: die vervangen Date zelf. Zonder de variabele verandert er niets.
+const klokVerzet = Number(process.env.ZF_TEST_KLOK_VERZET_MS ?? 0);
+if (Number.isFinite(klokVerzet) && klokVerzet !== 0) {
+  const EchteDate = Date;
+  const nu = () => EchteDate.now() + klokVerzet;
+  class VerzetteDate extends EchteDate {
+    constructor(...a: ConstructorParameters<typeof Date>) {
+      if (a.length === 0) super(nu());
+      else super(...(a as [number]));
+    }
+    static override now(): number {
+      return nu();
+    }
+  }
+  globalThis.Date = VerzetteDate as DateConstructor;
+}
