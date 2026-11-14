@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { APanel, AButton, APill } from "@/components/admin/ui";
+import { MAX_BRONNEN_PLAKKEN, type PlakStatus, type PlakUitslag } from "@/lib/sales/bronnen-plakken";
 
 export type SourceDto = {
   id: string;
@@ -216,11 +217,45 @@ function Btn({
   );
 }
 
+const PLAK_LABEL: Record<PlakStatus, string> = { nieuw: "Nieuw", dubbel: "Dubbel", ongeldig: "Ongeldig" };
+const PLAK_TONE: Record<PlakStatus, "ok" | "neutral" | "crit"> = { nieuw: "ok", dubbel: "neutral", ongeldig: "crit" };
+
 function SourcesEditor({ campaign, onChange }: { campaign: CampaignDto; onChange: () => Promise<void> }) {
   const [url, setUrl] = useState("");
   const [csv, setCsv] = useState("");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  // meerdere vacaturepagina's tegelijk: eerst de voorvertoning, dan pas opslaan (lib/sales/bronnen-plakken.ts)
+  const [plak, setPlak] = useState("");
+  const [voorbeeld, setVoorbeeld] = useState<PlakUitslag | null>(null);
+
+  async function plakken(opslaan: boolean) {
+    if (!plak.trim()) return;
+    setBusy(true);
+    try {
+      const r = await fetch("/api/admin/sales/sources/plakken", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignId: campaign.id, tekst: plak, opslaan }),
+      });
+      const d = (await r.json().catch(() => null)) as (PlakUitslag & { opgeslagen?: number; error?: { message?: string } }) | null;
+      if (!r.ok || !d) {
+        setNote(d?.error?.message ?? "Mislukt.");
+        return;
+      }
+      if (!opslaan) {
+        setVoorbeeld(d);
+        setNote(null);
+        return;
+      }
+      setNote(`${d.opgeslagen ?? 0} vacaturepagina('s) toegevoegd; ${d.dubbel} dubbel en ${d.ongeldig} ongeldig overgeslagen.`);
+      setPlak("");
+      setVoorbeeld(null);
+      await onChange();
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function addCareers() {
     if (!url.trim()) return;
@@ -294,6 +329,46 @@ function SourcesEditor({ campaign, onChange }: { campaign: CampaignDto; onChange
         />
         <Btn label="+ Careers-URL" onClick={addCareers} busy={busy} />
       </div>
+
+      <details className="mt-2">
+        <summary className="cursor-pointer text-xs" style={{ color: "var(--a-mute)" }}>Meerdere tegelijk plakken</summary>
+        <label className="mt-2 block text-xs" style={{ color: "var(--a-dim)" }}>
+          Per regel een URL of &quot;label | URL&quot;, hooguit {MAX_BRONNEN_PLAKKEN}. Alleen https; wat er al staat, wordt overgeslagen.
+          <textarea
+            value={plak}
+            onChange={(e) => { setPlak(e.target.value); setVoorbeeld(null); }}
+            rows={6}
+            placeholder={"https://bedrijf.nl/werken-bij\nVoorbeeld bv | https://voorbeeld.nl/vacatures"}
+            className="mt-1 w-full rounded-lg px-3 py-2 text-xs font-mono"
+            style={{ background: "var(--a-panel)", color: "var(--a-text)", border: "1px solid var(--a-border)" }}
+          />
+        </label>
+        <p className="mb-2 text-xs" style={{ color: "var(--a-mute)" }}>
+          {campaign.mode === "AUTOPILOT" && campaign.autopilotEnabledGlobally
+            ? "Toevoegen verstuurt niets, maar deze campagne staat op autopilot: bedrijven die de crawler op deze pagina's vindt, kunnen binnen de limieten vanzelf een mail krijgen."
+            : "Toevoegen verstuurt niets: de crawler leest deze pagina's later en maakt hooguit conceptmails, die pas weggaan als jij ze goedkeurt."}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Btn label="Bekijk eerst" onClick={() => plakken(false)} busy={busy} disabled={!plak.trim()} />
+          <Btn label={voorbeeld ? `Voeg ${voorbeeld.nieuw} nieuwe toe` : "Voeg toe"} primary onClick={() => plakken(true)} busy={busy} disabled={!voorbeeld || voorbeeld.nieuw === 0} hint="Bekijk eerst de voorvertoning" />
+        </div>
+        {voorbeeld && (
+          <div className="mt-2" role="status">
+            <p className="text-xs" style={{ color: "var(--a-dim)" }}>
+              {voorbeeld.nieuw} nieuw · {voorbeeld.dubbel} dubbel · {voorbeeld.ongeldig} ongeldig
+            </p>
+            <ul className="mt-1 max-h-64 space-y-1 overflow-y-auto text-xs">
+              {voorbeeld.regels.map((r) => (
+                <li key={r.regel} className="flex flex-wrap items-center gap-2">
+                  <APill tone={PLAK_TONE[r.status]}>{PLAK_LABEL[r.status]}</APill>
+                  <span style={{ color: "var(--a-dim)" }}>regel {r.regel}: {r.label ? `${r.label} · ` : ""}{r.url}</span>
+                  {r.reden && <span style={{ color: "var(--a-mute)" }}>{r.reden}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </details>
 
       <details className="mt-2">
         <summary className="cursor-pointer text-xs" style={{ color: "var(--a-mute)" }}>CSV importeren</summary>
