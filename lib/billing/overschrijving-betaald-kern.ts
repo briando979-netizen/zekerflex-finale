@@ -35,8 +35,11 @@ export function handmatigMelding(reden: Exclude<HandmatigUitslag, { ok: true }>[
 
 /** "42,35", "42.35", "€ 1.234,50" of "42" → centen; null als het geen bedrag is. Wat de beheerder van het afschrift overtypt. */
 export function bedragNaarCents(v: unknown): number | null {
-  if (typeof v !== "string" || v.includes("-")) return null;
-  let s = v.replace(/[^\d.,]/g, "");
+  if (typeof v !== "string") return null;
+  // "€ 120,-" is een heel bedrag: het streepje aan het eind staat voor nul centen. Een minteken ergens anders is geen ontvangen bedrag.
+  const tekst = v.replace(/[.,]\s*-\s*$/, ",00");
+  if (tekst.includes("-")) return null;
+  let s = tekst.replace(/[^\d.,]/g, "");
   if (!s || !/\d/.test(s)) return null;
   const dec = Math.max(s.lastIndexOf(","), s.lastIndexOf("."));
   // het laatste teken van de twee is het decimaalteken als er één of twee cijfers achter staan; anders zijn het duizendtallen

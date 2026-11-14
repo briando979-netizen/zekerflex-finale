@@ -94,7 +94,7 @@ export function BetaaldMeldenPaneel() {
         </div>
       ) : null}
       <p className="mt-3 text-xs" style={{ color: "var(--a-mute)" }}>
-        Dit kan alleen bij een open factuur voor platformkosten, en alleen met het hele factuurbedrag. Bij andere facturen hangt er een uitbetaling of levering aan de betaling; die lopen niet met de hand. Deze knop boekt de betaling niet in de boekhouding: dat gebeurt pas als het bankafschrift daar wordt verwerkt.
+        Dit kan alleen bij een open factuur voor platformkosten, en alleen met het hele factuurbedrag. Bij andere facturen hangt er een uitbetaling of levering aan de betaling; die lopen niet met de hand. Deze knop boekt de betaling niet in de boekhouding. Upload daarna het bankafschrift in Boekhouding → Bank, dan klopt ook het grootboek.
       </p>
       {melding ? (
         <div className="mt-3">
