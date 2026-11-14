@@ -8,11 +8,20 @@ import { volgendePoging, type KvkLimiet, type KvkTegoed } from "@/lib/kvk/tegoed
 //   meting:kvkbase-tegoed            → KvkTegoed
 //   kvk-wacht:werker:<userId>        → KvkWacht   (per gebruiker: in ERASABLE_KV_PREFIXES)
 //   kvk-wacht:bedrijf:<tenantId>     → KvkWacht   (per bedrijf; alleen het openbare KVK-nummer, geen persoon)
+//   kvk-opgegeven:werker:<userId>    → KvkOpgegeven (de herkansing gaf het op: niet gevonden of ongeldig; in ERASABLE_KV_PREFIXES)
+//   kvk-opgegeven:bedrijf:<tenantId> → KvkOpgegeven
 // Een storing hier mag een controle of aanmelding nooit tegenhouden: alles vangt zijn fouten zelf af.
 // ---------------------------------------------------------------------------
 
 export const KVK_TEGOED_SLEUTEL = "meting:kvkbase-tegoed";
 export const KVK_WACHT_PREFIX = "kvk-wacht:";
+export const KVK_OPGEGEVEN_PREFIX = "kvk-opgegeven:";
+
+/** De herkansing gaf dit nummer op (niet gevonden of ongeldig): het komt niet opnieuw in de wacht, een ander nummer wel. */
+export interface KvkOpgegeven {
+  kvkNumber: string;
+  op: string;
+}
 
 export interface KvkWacht {
   kvkNumber: string;
@@ -70,6 +79,28 @@ export async function wisKvkWacht(soort: "werker" | "bedrijf", id: string): Prom
 /** De wachtende controle van één werker of bedrijf, of null (ook bij een storing). */
 export async function kvkWachtVan(soort: "werker" | "bedrijf", id: string): Promise<KvkWacht | null> {
   return kvGet<KvkWacht>(wachtSleutel(soort, id)).catch(() => null);
+}
+
+const opgegevenSleutel = (soort: "werker" | "bedrijf", id: string) => `${KVK_OPGEGEVEN_PREFIX}${soort}:${id}`;
+
+export async function zetKvkOpgegeven(soort: "werker" | "bedrijf", id: string, kvkNumber: string, nu = new Date()): Promise<void> {
+  await kvSet(opgegevenSleutel(soort, id), { kvkNumber, op: nu.toISOString() } satisfies KvkOpgegeven).catch(() => undefined);
+}
+
+export async function wisKvkOpgegeven(soort: "werker" | "bedrijf", id: string): Promise<void> {
+  await kvDelete(opgegevenSleutel(soort, id)).catch(() => undefined);
+}
+
+/** Alle opgegeven nummers: soort, id en het merk. */
+export async function opgegevenKvkControles(limiet = 500): Promise<{ soort: "werker" | "bedrijf"; id: string; opgegeven: KvkOpgegeven }[]> {
+  const rijen = await kvListEntries<KvkOpgegeven>(KVK_OPGEGEVEN_PREFIX, limiet).catch(() => []);
+  return rijen.flatMap((r) => {
+    const rest = r.key.slice(KVK_OPGEGEVEN_PREFIX.length);
+    const i = rest.indexOf(":");
+    const soort = rest.slice(0, i);
+    const id = rest.slice(i + 1);
+    return (soort === "werker" || soort === "bedrijf") && id && r.value?.kvkNumber ? [{ soort: soort as "werker" | "bedrijf", id, opgegeven: r.value }] : [];
+  });
 }
 
 /** Alle wachtende controles: soort, id en de markering. */

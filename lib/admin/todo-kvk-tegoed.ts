@@ -13,13 +13,14 @@ import { tegoedLaag, type KvkTegoed } from "@/lib/kvk/tegoed";
  * gecontroleerd (`zonderControle`, lib/kvk/inhalen.ts): die krijgen van de matching nooit een voorstel. Afgevinkt als het
  * tegoed weer hoger is en niemand meer zonder controle zit. null = nooit gemeten en niemand zonder controle.
  */
-export function kvkTegoedTodo(t: KvkTegoed | null, wachtend: number, zonderControle = 0): OwnerTodo | null {
-  if (!t && zonderControle <= 0) return null;
+export function kvkTegoedTodo(t: KvkTegoed | null, wachtend: number, zonderControle = 0, opgegeven = 0): OwnerTodo | null {
+  if (!t && zonderControle <= 0 && opgegeven <= 0) return null;
   const laag = tegoedLaag(t);
   const stand = t?.op ? "op" : `bijna op (${t?.tokens ?? "?"} over)`;
   const plan = t?.perMinuut === 10 ? "het gratis plan (50 tokens per maand)" : t?.perMinuut ? `een plan met ${t.perMinuut} vragen per minuut` : "het huidige plan";
   const n = zonderControle;
   const werkers = n > 0 ? ` ${n} werker${n === 1 ? " heeft" : "s hebben"} een KVK-nummer dat nog nooit is gecontroleerd: zonder die controle krijgen zij nooit een voorstel (de matching neemt alleen zzp'ers met een geldige KVK of btw mee; uitzendkrachten wel). De herkansing (elke 30 minuten) pakt ze op zodra er tegoed is.` : "";
+  const fout = opgegeven > 0 ? ` ${opgegeven} nummer${opgegeven === 1 ? " is" : "s zijn"} niet gevonden of ongeldig: de werker moet ${opgegeven === 1 ? "het" : "ze"} zelf verbeteren (Profiel → KVK); tot die tijd krijgt hij geen voorstel.` : "";
   return {
     id: "kvk-tegoed",
     group: "Bellen & koppelingen",
@@ -27,14 +28,16 @@ export function kvkTegoedTodo(t: KvkTegoed | null, wachtend: number, zonderContr
       ? `KVK-tegoed ${stand}: KVK-nummers worden nu niet gecontroleerd${n > 0 ? ` (${n} werker${n === 1 ? "" : "s"} zonder controle)` : ""}`
       : n > 0
         ? `${n} werker${n === 1 ? "" : "s"} met een ongecontroleerd KVK-nummer: zij krijgen nog geen voorstellen`
-        : "KVK-tegoed: weer voldoende",
-    why: `ZekerFlex controleert KVK-nummers van werkers en werkgevers bij KVKBase, op ${plan}. Is het tegoed op, dan wacht elke controle tot er weer tegoed is${wachtend > 0 ? ` (nu ${wachtend} wachtend)` : ""}: zzp'ers met alleen een KVK-nummer kunnen dan niet reageren, en nieuwe bedrijven worden niet vanzelf geverifieerd.${werkers}`,
+        : opgegeven > 0
+          ? `${opgegeven} KVK-nummer${opgegeven === 1 ? "" : "s"} niet gevonden: de werker moet ${opgegeven === 1 ? "het" : "ze"} verbeteren`
+          : "KVK-tegoed: weer voldoende",
+    why: `ZekerFlex controleert KVK-nummers van werkers en werkgevers bij KVKBase, op ${plan}. Is het tegoed op, dan wacht elke controle tot er weer tegoed is${wachtend > 0 ? ` (nu ${wachtend} wachtend)` : ""}: zzp'ers met alleen een KVK-nummer kunnen dan niet reageren, en nieuwe bedrijven worden niet vanzelf geverifieerd.${werkers}${fout}`,
     how: [
       "Kies een bron: de officiële KVK-API (€ 6,20 per maand; zoeken is gratis per vraag, en dat bevestigt nummer, naam en of het bedrijf actief is) of KVKBase Starter (€ 9 per maand, 1.000 tokens).",
       "Geef de keuze aan Claude: die zet de sleutel en de koppeling klaar. Het tegoed staat in Beheer → Alles gratis.",
       "Wachtende controles gaan vanzelf door zodra er weer tegoed is (elke 30 minuten een herkansing). Deze taak vinkt zichzelf af als het tegoed weer boven de 10 is.",
     ],
     auto: true,
-    done: !laag && zonderControle <= 0,
+    done: !laag && zonderControle <= 0 && opgegeven <= 0,
   };
 }

@@ -40,6 +40,8 @@ export const ERASABLE_KV_PREFIXES = [
   "gezicht-live:",
   // een KVK-controle die wacht op tegoed bij KVKBase (lib/kvk/tegoed-opslag.ts): het nummer en wanneer opnieuw
   "kvk-wacht:werker:",
+  // het nummer waar de herkansing op opgaf (lib/kvk/tegoed-opslag.ts)
+  "kvk-opgegeven:werker:",
   "id-overdracht:",
   "id-overdracht-merk:",
   "id-overdracht-ander:",

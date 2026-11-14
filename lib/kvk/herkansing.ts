@@ -3,7 +3,7 @@ import { logger } from "@/lib/logger";
 import { registerFreelancerCompany, registerTenantCompany } from "@/lib/company/registration";
 import { koppelKvkAanAanmelder } from "@/lib/onboarding/employer";
 import { kvkLimietVan } from "@/lib/kvk/tegoed";
-import { wachtendeKvkControles, wisKvkWacht, zetKvkWacht } from "@/lib/kvk/tegoed-opslag";
+import { wachtendeKvkControles, wisKvkOpgegeven, wisKvkWacht, zetKvkOpgegeven, zetKvkWacht } from "@/lib/kvk/tegoed-opslag";
 import { vulKvkWachtAan } from "@/lib/kvk/inhalen";
 
 // ---------------------------------------------------------------------------
@@ -62,6 +62,7 @@ export async function kvkHerkansing(nu: Date = new Date()): Promise<HerkansingUi
         if (reg.kvkValid && aanmelder) await koppelKvkAanAanmelder(t.id, aanmelder, reg.profile);
       }
       await wisKvkWacht(w.soort, w.id);
+      await wisKvkOpgegeven(w.soort, w.id);
       uit.gelukt += 1;
     } catch (err) {
       const limiet = kvkLimietVan(err);
@@ -72,7 +73,10 @@ export async function kvkHerkansing(nu: Date = new Date()): Promise<HerkansingUi
         if (limiet.soort === "tegoed") break;
         continue;
       }
+      // opgegeven (niet gevonden, ongeldig): een merk op dit nummer, zodat het inhalen (lib/kvk/inhalen.ts) het niet elke
+      // ronde opnieuw in de wacht zet en KVKBase opnieuw vraagt; een ander nummer telt wel weer
       await wisKvkWacht(w.soort, w.id);
+      await zetKvkOpgegeven(w.soort, w.id, w.wacht.kvkNumber, nu);
       uit.vervallen += 1;
       logger.warn("kvk-herkansing: controle niet gelukt", { soort: w.soort, fout: (err as Error).message });
     }

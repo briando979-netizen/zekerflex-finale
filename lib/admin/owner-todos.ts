@@ -47,7 +47,7 @@ import { kvkTegoedTodo } from "@/lib/admin/todo-kvk-tegoed";
 import { stripeKopieTodo } from "@/lib/admin/todo-stripe-kopie";
 import { stripeKopieStand } from "@/lib/kyc/stripe-kopie";
 import { leesKvkTegoed, wachtendeKvkControles } from "@/lib/kvk/tegoed-opslag";
-import { telWerkersZonderKvkControle } from "@/lib/kvk/inhalen";
+import { telKvkStand } from "@/lib/kvk/inhalen";
 
 /** Bij taken die alleen voor ZekerFlex Bank nodig waren. */
 const BANK_UIT = "niet meer nodig: ZekerFlex Bank staat uit (7 nov)";
@@ -295,7 +295,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   const betalenEerst = betalenUitEerst(stripeStandUitBeheer);
   // het tegoed bij KVKBase (13 nov): op of bijna op = KVK-controles wachten op een herkansing (lib/kvk/tegoed.ts)
   // plus de werkers met een nog nooit gecontroleerd KVK-nummer (14 nov: 6 van de 25 klare werkers; zij krijgen geen voorstellen)
-  const kvkTegoed = kvkTegoedTodo(await leesKvkTegoed(), (await wachtendeKvkControles().catch(() => [])).length, await telWerkersZonderKvkControle());
+  const kvkStand = await telKvkStand();
+  const kvkTegoed = kvkTegoedTodo(await leesKvkTegoed(), (await wachtendeKvkControles().catch(() => [])).length, kvkStand.zonderControle, kvkStand.opgegeven);
   // de ID-foto's en gegevens uit het oude Stripe-account kopiëren (14 nov, lib/kyc/stripe-kopie.ts)
   const stripeKopie = stripeKopieTodo(await stripeKopieStand());
   // de vlag werkrecht-eis (lib/admin/todo-werkrecht.ts): de taak vinkt zichzelf af zodra hij aan staat; een leesfout geeft geen taak

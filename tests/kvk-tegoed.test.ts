@@ -9,6 +9,7 @@ const h = vi.hoisted(() => ({
   kv: new Map<string, unknown>(),
   fetch: vi.fn(),
   profiel: null as unknown,
+  profielen: [] as { userId: string; kvkNumber: string | null }[],
   tenant: null as unknown,
   registerWerker: vi.fn(),
   registerBedrijf: vi.fn(),
@@ -29,7 +30,7 @@ vi.mock("@/lib/storage/kv", () => ({
 }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    freelancerProfile: { findUnique: async () => h.profiel },
+    freelancerProfile: { findUnique: async () => h.profiel, findMany: async () => h.profielen },
     tenant: { findUnique: async () => h.tenant },
   },
 }));
@@ -63,6 +64,8 @@ const tegoed = (t: Partial<KvkTegoed>): KvkTegoed => ({ tokens: 500, perMinuut: 
 
 beforeEach(() => {
   h.kv.clear();
+  h.profiel = null;
+  h.profielen = [];
   h.fetch.mockReset();
   vi.stubGlobal("fetch", h.fetch);
   h.registerWerker.mockReset();
@@ -132,6 +135,11 @@ describe("reserve, melding en planning", () => {
     expect([zes.title, zes.why, ...zes.how].join(" ")).not.toMatch(/@/);
     expect(kvkTegoedTodo(tegoed({ op: true, tokens: 0, perMinuut: 10 }), 2, 1)!.title).toContain("(1 werker zonder controle)");
     expect(kvkTegoedTodo(tegoed({ tokens: 847 }), 0, 0)).toMatchObject({ title: "KVK-tegoed: weer voldoende", done: true });
+    // opgegeven nummers apart: de werker moet ze zelf verbeteren
+    const fout = kvkTegoedTodo(tegoed({ tokens: 847 }), 0, 0, 2)!;
+    expect(fout.title).toBe("2 KVK-nummers niet gevonden: de werker moet ze verbeteren");
+    expect(fout.why).toContain("2 nummers zijn niet gevonden of ongeldig");
+    expect(fout.done).toBe(false);
     const op = kvkTegoedTodo(tegoed({ op: true, tokens: 0, perMinuut: 10 }), 2);
     expect(op?.done).toBe(false);
     expect(op?.title).toContain("KVK-tegoed op");
@@ -186,7 +194,7 @@ describe("de herkansing", () => {
     await zet("werker", "u1");
     h.profiel = { id: "fp1", kvkNumber: "12345678" };
     h.registerWerker.mockResolvedValue({ kvkValid: true });
-    // ingehaald 0: in deze test is er geen prisma.freelancerProfile.findMany, en het inhalen faalt open (lib/kvk/inhalen.ts)
+    // ingehaald 0: geen werkers zonder controle in deze test (lib/kvk/inhalen.ts)
     expect(await kvkHerkansing(nu)).toEqual({ ingehaald: 0, aanDeBeurt: 1, gelukt: 1, weerInDeWacht: 0, vervallen: 0 });
     expect(h.registerWerker).toHaveBeenCalledWith({ freelancerProfileId: "fp1", kvkNumber: "12345678", allowInactive: true });
     expect(h.kv.has("kvk-wacht:werker:u1")).toBe(false);
@@ -212,6 +220,26 @@ describe("de herkansing", () => {
     expect(h.registerWerker).toHaveBeenCalledTimes(1);
     const wacht = [...h.kv].filter(([k]) => k.startsWith("kvk-wacht:")).map(([, v]) => v as { volgende: string; pogingen: number });
     expect(wacht.some((w) => w.volgende === "2026-11-15T06:00:00.000Z" && w.pogingen === 2)).toBe(true);
+  });
+
+  it("opgegeven (niet gevonden): een merk op het nummer, en het inhalen zet hem niet opnieuw in de wacht", async () => {
+    await zet("werker", "u2", "87654321");
+    h.profiel = { id: "fp2", kvkNumber: "87654321" };
+    h.profielen = [{ userId: "u2", kvkNumber: "87654321" }];
+    h.registerWerker.mockRejectedValue(new AppError("NOT_FOUND", "KVK-nummer niet gevonden", 404));
+    expect(await kvkHerkansing(nu)).toMatchObject({ ingehaald: 0, aanDeBeurt: 1, vervallen: 1 });
+    expect(h.kv.has("kvk-wacht:werker:u2")).toBe(false);
+    expect(h.kv.get("kvk-opgegeven:werker:u2")).toEqual({ kvkNumber: "87654321", op: nu.toISOString() });
+    // de volgende ronde: niet opnieuw ingehaald, KVKBase niet opnieuw gevraagd
+    h.registerWerker.mockClear();
+    expect(await kvkHerkansing(nu)).toMatchObject({ ingehaald: 0, aanDeBeurt: 0 });
+    expect(h.registerWerker).not.toHaveBeenCalled();
+    // een ander nummer telt wel weer, en een geslaagde controle wist het merk
+    h.profielen = [{ userId: "u2", kvkNumber: "12345678" }];
+    h.profiel = { id: "fp2", kvkNumber: "12345678" };
+    h.registerWerker.mockResolvedValue({ kvkValid: true });
+    expect(await kvkHerkansing(nu)).toMatchObject({ ingehaald: 1, aanDeBeurt: 1, gelukt: 1 });
+    expect(h.kv.has("kvk-opgegeven:werker:u2")).toBe(false);
   });
 
   it("niet aan de beurt, of het nummer intussen veranderd", async () => {
