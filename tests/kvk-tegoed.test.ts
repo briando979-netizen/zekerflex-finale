@@ -186,7 +186,8 @@ describe("de herkansing", () => {
     await zet("werker", "u1");
     h.profiel = { id: "fp1", kvkNumber: "12345678" };
     h.registerWerker.mockResolvedValue({ kvkValid: true });
-    expect(await kvkHerkansing(nu)).toEqual({ aanDeBeurt: 1, gelukt: 1, weerInDeWacht: 0, vervallen: 0 });
+    // ingehaald 0: in deze test is er geen prisma.freelancerProfile.findMany, en het inhalen faalt open (lib/kvk/inhalen.ts)
+    expect(await kvkHerkansing(nu)).toEqual({ ingehaald: 0, aanDeBeurt: 1, gelukt: 1, weerInDeWacht: 0, vervallen: 0 });
     expect(h.registerWerker).toHaveBeenCalledWith({ freelancerProfileId: "fp1", kvkNumber: "12345678", allowInactive: true });
     expect(h.kv.has("kvk-wacht:werker:u1")).toBe(false);
   });

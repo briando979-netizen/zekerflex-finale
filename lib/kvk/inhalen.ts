@@ -23,7 +23,7 @@ const isKvk = (v: string | null | undefined): v is string => /^\d{8}$/.test(v ??
 export const ZONDER_CONTROLE_WHERE: Prisma.FreelancerProfileWhereInput = {
   kvkValid: false,
   vatValid: false,
-  companyRegistrationId: null,
+  companyRegistration: { is: null },
   kvkNumber: { not: null },
   user: { disabledAt: null },
 };
