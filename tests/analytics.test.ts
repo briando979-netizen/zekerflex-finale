@@ -135,6 +135,7 @@ describe("trafficSummary — inbound block", () => {
   it("splits CUSTOM conversion events into demo / application / whitepaper counts", async () => {
     findMany.mockImplementation(async ({ where }: { where: { type: string } }) => {
       if (where.type === "PAGEVIEW") return [];
+      if (where.type === "INTERACTION") return [{ label: "formulier:demo:melding:email" }, { label: "formulier:demo:melding:email" }, { label: "formulier:demo:verstuurd" }];
       return [
         { label: "demo-request", meta: {} },
         { label: "demo-request", meta: {} },
@@ -150,5 +151,7 @@ describe("trafficSummary — inbound block", () => {
     expect(s.inbound.jobApplications).toBe(1);
     expect(s.inbound.whitepaperDownloads).toBe(3);
     expect(s.inbound.topWhitepapers[0]).toEqual({ slug: "omzetbelasting", downloads: 2 });
+    // de formulieren: melding gezien en echt verstuurd (lib/analytics/formulier-meting.ts)
+    expect(s.formulieren).toEqual({ demo: { melding: 2, velden: { email: 2 }, verstuurd: 1 } });
   });
 });

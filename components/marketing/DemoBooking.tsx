@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { DEMO_TIME_SLOTS, formatDemoDate, isSelectableDemoDate } from "@/lib/demo/slots";
-import { ontbrekendInDemo } from "@/lib/demo/validatie";
+import { ontbrekendInDemo, ontbrekendVeldInDemo } from "@/lib/demo/validatie";
+import { meldOntbreekt, meldVerstuurd } from "@/components/analytics/formulier";
 import { amsterdamParts } from "@/lib/time/amsterdam";
 
 type Step = "date" | "time" | "info" | "done";
@@ -73,6 +74,8 @@ export function DemoBooking() {
     const ontbreekt = ontbrekendInDemo(form, consent);
     if (ontbreekt) {
       setErr(ontbreekt);
+      // anoniem meten welk veld de melding veroorzaakte (alleen een code, nooit wat er is ingetypt)
+      meldOntbreekt("demo", ontbrekendVeldInDemo(form, consent) ?? "onbekend");
       return;
     }
     if (!date || !time) return;
@@ -91,6 +94,7 @@ export function DemoBooking() {
       }
       setResult({ id: data.id, when: data.when });
       setStep("done");
+      meldVerstuurd("demo");
     } catch {
       setErr("Geen verbinding. Probeer het later opnieuw.");
     } finally {

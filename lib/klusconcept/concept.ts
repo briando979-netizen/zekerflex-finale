@@ -137,6 +137,16 @@ export function conceptOntbreekt(c: { title: string; city: string; date: string;
   return null;
 }
 
+/** De code van het eerste wat ontbreekt (anonieme meting, lib/analytics/formulier-meting.ts); null als alles klopt. */
+export function conceptOntbreektVeld(c: { title: string; city: string; date: string; today: string; hours: number }): string | null {
+  if (c.title.trim().length < 2) return "functie";
+  if (c.city.trim().length < 2) return "plaats";
+  if (!c.date) return "datum";
+  if (c.today && c.date < c.today) return "datum-verleden";
+  if (!(c.hours > 0)) return "tijden";
+  return null;
+}
+
 export const SECTOR_TEMPLATE: Record<string, string> = {
   horeca: "horeca",
   logistiek: "magazijn",

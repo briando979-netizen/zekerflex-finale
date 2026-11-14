@@ -26,7 +26,10 @@ interface Summary {
     whitepaperDownloads: number;
     topWhitepapers: { slug: string; downloads: number }[];
   };
+  formulieren: Record<string, { melding: number; velden: Record<string, number>; verstuurd: number }>;
 }
+
+const FORMULIER_NAAM: Record<string, string> = { demo: "Demo aanvragen (/demo)", "klus-plaatsen": "Klus samenstellen (/klus-plaatsen)" };
 
 const RANGES = [7, 30, 90] as const;
 
@@ -150,6 +153,27 @@ export function TrafficDashboard() {
             { label: "Whitepaper-downloads", value: count(summary?.inbound.whitepaperDownloads ?? 0), hint: summary?.inbound.topWhitepapers[0] ? `meest: ${summary.inbound.topWhitepapers[0].slug}` : "nog geen downloads" },
           ]}
         />
+        {/* sinds 14 nov staat de verstuurknop aan en zegt een melding wat ontbreekt; hier zie je of dat helpt (lib/analytics/formulier-meting.ts) */}
+        <Panel title="Formulieren: melding gezien en verstuurd" subtitle={`"Vul nog in" gezien (één keer per veld per sessie) tegenover echt verstuurd, laatste ${days} dagen`}>
+          {summary && Object.keys(summary.formulieren).length > 0 ? (
+            <ul className="space-y-2 text-sm">
+              {Object.entries(summary.formulieren).map(([naam, t]) => {
+                const meest = Object.entries(t.velden).sort(([, a], [, b]) => b - a)[0];
+                return (
+                  <li key={naam} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                    <span style={{ color: "var(--a-text)" }}>{FORMULIER_NAAM[naam] ?? naam}</span>
+                    <span className="num" style={{ color: "var(--a-mute)" }}>
+                      melding gezien {count(t.melding)} · verstuurd {count(t.verstuurd)}
+                      {meest ? ` · meest gemist: ${meest[0]} (${count(meest[1])})` : ""}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="text-sm" style={{ color: "var(--a-mute)" }}>Nog geen meldingen of verzendingen gemeten in deze periode.</p>
+          )}
+        </Panel>
       </section>
     </div>
   );
