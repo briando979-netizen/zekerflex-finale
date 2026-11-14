@@ -7,6 +7,7 @@ import { IconReply, IconSmiley, IconDots, IconCopy, IconForward, IconPin, IconSt
 import { ActionList, MessageSheet, ReactionRow, type ActionItem } from "./MessageActions";
 import { PollCard } from "./PollCard";
 import { AfspraakCard } from "./AfspraakCard";
+import { LiveLocatieKaart } from "./LiveLocatieKaart";
 import type { Antwoord } from "@/lib/messaging/afspraak";
 import { isProgramma, isVideoType } from "@/lib/messaging/bijlage";
 import { vermeldingDelen } from "@/lib/messaging/vermelding";
@@ -225,6 +226,7 @@ export function MessageBubble({
   onSaveContact,
   onAfspraakAntwoord,
   onAfspraakAnnuleer,
+  onStopLive,
   onEdit,
   onForward,
   onPin,
@@ -272,6 +274,8 @@ export function MessageBubble({
   /** afspraak: antwoorden (null = intrekken) of afzeggen (alleen de maker) */
   onAfspraakAntwoord?: (m: Msg, antwoord: Antwoord | null) => void;
   onAfspraakAnnuleer?: (m: Msg) => void;
+  /** live locatie: de afzender stopt met delen */
+  onStopLive?: (m: Msg) => void;
   /** your own text message, within 24 hours: back into the composer to rewrite */
   onEdit?: (m: Msg) => void;
   onForward?: (m: Msg) => void;
@@ -349,7 +353,7 @@ export function MessageBubble({
 
   const genoemd = (m.mentions ?? []).map((id) => names?.[id] ?? "").filter(Boolean);
   const myReaction = myUserId ? (Object.entries(m.reactions ?? {}).find(([, u]) => u.includes(myUserId))?.[0] ?? null) : null;
-  const preview = m.text || (m.kind === "image" ? t.previewPhoto : m.kind === "voice" ? t.previewVoice : m.kind === "file" ? `📎 ${m.attachment?.filename ?? t.previewFileFallback}` : m.kind === "location" ? t.previewLocation : "");
+  const preview = m.text || (m.kind === "image" ? t.previewPhoto : m.kind === "voice" ? t.previewVoice : m.kind === "file" ? `📎 ${m.attachment?.filename ?? t.previewFileFallback}` : m.kind === "location" ? (m.location?.live ? t.previewLiveLocation : t.previewLocation) : "");
 
   const items: ActionItem[] = m.failed
     ? [
@@ -778,7 +782,16 @@ export function MessageBubble({
               </div>
             )}
 
-            {m.kind === "location" && m.location && (
+            {m.kind === "location" && m.location?.live && (
+              <LiveLocatieKaart
+                plek={m.location}
+                mine={mine}
+                disabled={Boolean(m.pending || m.failed)}
+                {...(onStopLive ? { onStop: () => onStopLive(m) } : {})}
+              />
+            )}
+
+            {m.kind === "location" && m.location && !m.location.live && (
               <a
                 href={`https://www.openstreetmap.org/?mlat=${m.location.lat}&mlon=${m.location.lng}#map=16/${m.location.lat}/${m.location.lng}`}
                 target="_blank"

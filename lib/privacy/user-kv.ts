@@ -32,6 +32,8 @@ export const ERASABLE_KV_PREFIXES = [
   "badge-push:",
   "brain-mem:",
   "chat-bewaard:",
+  // de plek van een lopende live locatie in de chat (lib/messaging/store.ts, chat-live:<userId>:<gesprek>:<bericht>)
+  "chat-live:",
   "chat-prefs:",
   "chat-settings:",
   "chip-lezing:",

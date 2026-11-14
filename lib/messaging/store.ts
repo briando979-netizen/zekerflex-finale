@@ -1,7 +1,8 @@
 import type { LinkVoorbeeld } from "@/lib/messaging/link-voorbeeld";
 import { annuleerAfspraak, zetAntwoord, type Antwoord, type MessageAfspraak } from "@/lib/messaging/afspraak";
+import { isLiveActief, stopLive, werkLiveBij, type LiveLocatie, type Plek } from "@/lib/messaging/live-locatie";
 import { randomUUID } from "node:crypto";
-import { kvDelete, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
+import { kvDelete, kvGet, kvGetMany, kvListValues, kvSet } from "@/lib/storage/kv";
 import { logger } from "@/lib/logger";
 import { begrensLijst } from "@/lib/messaging/lijstgrens";
 import { BERICHT_MAX } from "@/lib/chat/lange-tekst";
@@ -44,6 +45,8 @@ export interface MessageLocation {
   lat: number;
   lng: number;
   label?: string;
+  /** live locatie (lib/messaging/live-locatie.ts); de plek die meeschuift staat apart, zie metLiveStand */
+  live?: LiveLocatie;
 }
 
 export interface CallInfo {
@@ -139,6 +142,7 @@ export function previewText(m: {
   kind: MessageKind;
   text: string;
   call?: CallInfo | undefined;
+  location?: { live?: unknown } | undefined;
 }): string {
   switch (m.kind) {
     case "voice":
@@ -148,7 +152,7 @@ export function previewText(m: {
     case "file":
       return "📎 Bestand";
     case "location":
-      return "📍 Locatie";
+      return m.location?.live ? "📡 Live locatie" : "📍 Locatie";
     case "poll":
       return `📊 ${m.text}`;
     case "contact":
@@ -435,6 +439,8 @@ export async function deleteMessage(threadId: string, messageId: string): Promis
   const updated: ChatMessage = { id: m.id, threadId: m.threadId, from: m.from, at: m.at, text: "", kind: m.kind, deleted: true };
   list[idx] = updated;
   await kvSet(key, bewaarLijst(list));
+  // een ingetrokken live locatie: ook de plek die meeschoof weg
+  if (m.location?.live) await kvDelete(liveStandKey(m.from, m.threadId, m.id)).catch(() => undefined);
   return updated;
 }
 
@@ -470,6 +476,91 @@ export async function editMessage(threadId: string, messageId: string, text: str
  * (`sluit`; de afzender-check doet de route). Null als het bericht geen
  * (open) peiling is.
  */
+// ── Live locatie (lib/messaging/live-locatie.ts). De plek die meeschuift staat in een eigen kleine sleutel per deling, niet in
+// de berichtenlijst: die lijst elke 10–15 s herschrijven kost veel schrijfwerk (tot 4 MB) en kan een bericht van een ander
+// laten wegvallen (lezen, wijzigen, schrijven). Is de deling voorbij (gestopt of verlopen), dan gaat de laatste plek één
+// keer in het bericht en verdwijnt de sleutel. De sleutel draagt de userId van de afzender: inzage en wissen
+// (ERASABLE_KV_PREFIXES in lib/privacy/user-kv.ts) nemen hem dan mee.
+interface LiveStand {
+  lat: number;
+  lng: number;
+  bijgewerkt: string;
+}
+const liveStandKey = (from: string, threadId: string, messageId: string) => `chat-live:${from}:${threadId}:${messageId}`;
+
+function isOpenLive(m: ChatMessage): boolean {
+  return m.kind === "location" && Boolean(m.location?.live) && !m.location?.live?.gestopt && !m.deleted;
+}
+
+function plekMetStand(loc: MessageLocation, stand: LiveStand | null | undefined): Plek {
+  return stand && loc.live ? { ...loc, lat: stand.lat, lng: stand.lng, live: { ...loc.live, bijgewerkt: stand.bijgewerkt } } : loc;
+}
+
+/** De laatste plek in het bericht zetten en de deling sluiten (gestopt: het moment van stoppen, of het einde). */
+async function sluitLiveAf(m: ChatMessage, plek: Plek, gestopt: string): Promise<ChatMessage | null> {
+  const key = messagesKey(await resolveThreadId(m.threadId));
+  const list = (await kvGet<ChatMessage[]>(key)) ?? [];
+  const idx = list.findIndex((x) => x.id === m.id);
+  const cur = idx === -1 ? undefined : list[idx];
+  if (!cur?.location?.live || cur.deleted) return null;
+  if (!cur.location.live.gestopt) {
+    const live: LiveLocatie = { ...cur.location.live, bijgewerkt: plek.live?.bijgewerkt ?? cur.location.live.bijgewerkt, gestopt };
+    list[idx] = { ...cur, location: { ...cur.location, lat: plek.lat, lng: plek.lng, live } };
+    await kvSet(key, bewaarLijst(list));
+  }
+  await kvDelete(liveStandKey(m.from, m.threadId, m.id)).catch(() => undefined);
+  return list[idx]!;
+}
+
+/**
+ * Berichten met een lopende live locatie krijgen de laatste plek. Is een deling inmiddels verlopen, dan wordt hij hier
+ * gesloten (de afzender heeft ZekerFlex misschien al dicht). Een storing in de opslag laat de berichten zoals ze waren.
+ */
+export async function metLiveStand(messages: ChatMessage[], now = new Date()): Promise<ChatMessage[]> {
+  const open = messages.filter(isOpenLive);
+  if (open.length === 0) return messages;
+  const standen = await kvGetMany<LiveStand>(open.map((m) => liveStandKey(m.from, m.threadId, m.id))).catch(() => new Map<string, LiveStand>());
+  const nieuw = new Map<string, ChatMessage>();
+  for (const m of open) {
+    const plek = plekMetStand(m.location!, standen.get(liveStandKey(m.from, m.threadId, m.id)));
+    const af = isLiveActief(plek.live, now) ? null : await sluitLiveAf(m, plek, plek.live!.tot).catch(() => null);
+    nieuw.set(m.id, af ?? { ...m, location: plek });
+  }
+  return messages.map((m) => nieuw.get(m.id) ?? m);
+}
+
+export type LiveUitkomst = { message: ChatMessage } | { fout: "niet-gevonden" | "voorbij" };
+
+/** De afzender stuurt een nieuwe plek of stopt. Alleen de afzender: voor een ander bestaat de deling niet. */
+export async function werkLiveLocatieBij(
+  threadId: string,
+  messageId: string,
+  userId: string,
+  change: { lat: number; lng: number } | { stop: true },
+  now = new Date(),
+): Promise<LiveUitkomst> {
+  const m = await getMessageById(threadId, messageId);
+  if (!m || m.from !== userId || m.kind !== "location" || !m.location?.live || m.deleted) return { fout: "niet-gevonden" };
+  if (m.location.live.gestopt) return { fout: "voorbij" };
+  const key = liveStandKey(m.from, m.threadId, m.id);
+  const plek = plekMetStand(m.location, await kvGet<LiveStand>(key));
+  if ("stop" in change) {
+    const gestopt = stopLive(plek, now);
+    const af = await sluitLiveAf(m, gestopt, gestopt.live?.gestopt ?? plek.live!.tot);
+    return af ? { message: af } : { fout: "niet-gevonden" };
+  }
+  const uit = werkLiveBij(plek, change.lat, change.lng, now);
+  if ("fout" in uit) {
+    if (uit.fout === "voorbij") await sluitLiveAf(m, plek, plek.live!.tot).catch(() => null);
+    return { fout: uit.fout === "voorbij" ? "voorbij" : "niet-gevonden" };
+  }
+  if (uit.opgeslagen) {
+    const stand: LiveStand = { lat: uit.plek.lat, lng: uit.plek.lng, bijgewerkt: uit.plek.live!.bijgewerkt };
+    await kvSet(key, stand);
+  }
+  return { message: { ...m, location: uit.plek } };
+}
+
 /** Een antwoord op een afspraak zetten of hem afzeggen; null als het geen (geldige) afspraak is. */
 export async function updateAfspraak(
   threadId: string,

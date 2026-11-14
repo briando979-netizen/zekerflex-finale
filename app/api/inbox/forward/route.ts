@@ -1,8 +1,9 @@
+import { vastePlek } from "@/lib/messaging/live-locatie";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
-import { canAccess, getMessageById, getThread, postMessage, type MessageExtra } from "@/lib/messaging/store";
+import { canAccess, getMessageById, getThread, metLiveStand, postMessage, type MessageExtra } from "@/lib/messaging/store";
 import { isPlatformAdmin } from "@/lib/messaging/contacts";
 
 export const runtime = "nodejs";
@@ -39,7 +40,8 @@ export async function POST(req: Request): Promise<NextResponse> {
     if (src.eenmalig) throw AppError.validation("Een foto die je maar één keer kunt bekijken, kun je niet doorsturen.");
     const extra: MessageExtra = { forwarded: true };
     if (src.attachment) extra.attachment = src.attachment;
-    if (src.location) extra.location = src.location;
+    // een live locatie gaat door als de plek van dit moment; meeschuiven doet alleen het eigen bericht
+    if (src.location) extra.location = vastePlek((await metLiveStand([src]))[0]?.location ?? src.location);
     const msg = await postMessage(toThreadId, p.userId, src.text, src.kind, extra);
     return NextResponse.json({ ok: true, threadId: toThreadId, messageId: msg.id });
   } catch (err) {

@@ -9,6 +9,7 @@ import {
   getThread,
   isReadByOthers,
   markThreadRead,
+  metLiveStand,
   postMessage,
   previewText,
   type MessageExtra,
@@ -29,6 +30,7 @@ import { geldigeVermeldingen, VERMELDING_MAX } from "@/lib/messaging/vermelding"
 import { maakLinkVoorbeeld } from "@/lib/messaging/link-voorbeeld-ophalen";
 import { bekendenVan } from "@/lib/messaging/bekenden";
 import { maakAfspraak } from "@/lib/messaging/afspraak";
+import { startLive } from "@/lib/messaging/live-locatie";
 import { BERICHT_MAX } from "@/lib/chat/lange-tekst";
 import { lijstVersie, sinceUitUrl } from "@/lib/messaging/poll-versie";
 
@@ -58,7 +60,8 @@ export async function GET(req: Request, props: { params: Promise<{ threadId: str
     const own = visibleFrom(prefs, thread.id);
     const from = own && cut ? (own > cut ? own : cut) : (own ?? cut);
     const hidden = hiddenIn(prefs, thread.id); // "Verwijderen voor mij"
-    const messages = (await getMessages(thread.id, 400)).filter((m) => (!from || m.at > from) && !hidden.has(m.id));
+    // live locatie: de laatste plek uit de eigen sleutel per deling (en een verlopen deling wordt gesloten)
+    const messages = await metLiveStand((await getMessages(thread.id, 400)).filter((m) => (!from || m.at > from) && !hidden.has(m.id)));
     // ?seen=0: the tab is in the background, so nobody reads it yet (no read receipt, unread stays)
     if (new URL(req.url).searchParams.get("seen") !== "0") {
       const gelezenOp = await markThreadRead(thread.id, p.userId);
@@ -155,6 +158,8 @@ const sendSchema = z.object({
       lat: z.number().gte(-90).lte(90),
       lng: z.number().gte(-180).lte(180),
       label: z.string().max(160).optional(),
+      // live locatie: 15 min, 1 uur of 8 uur (lib/messaging/live-locatie.ts)
+      live: z.object({ minuten: z.number().int() }).optional(),
     })
     .optional(),
   call: z
@@ -260,6 +265,11 @@ export async function POST(request: Request, props: { params: Promise<{ threadId
         lng: input.location.lng,
         ...(input.location.label ? { label: input.location.label } : {}),
       };
+      if (input.location.live) {
+        const live = startLive(input.location.live.minuten);
+        if (!live) throw AppError.validation("Live locatie deel je 15 minuten, 1 uur of 8 uur.");
+        extra.location.live = live;
+      }
     }
     if (input.call) {
       extra.call = {
