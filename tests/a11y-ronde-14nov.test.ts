@@ -32,7 +32,8 @@ describe("toegankelijkheid: de onderdelen van 14 nov", () => {
 
   it("de chat zegt wat er met een lange tekst gebeurt (status) en de fout is een alert", () => {
     const s = lees("components/chat/Composer.tsx");
-    expect(s).toMatch(/<p role="status"[^>]*>\s*\{text\.trim\(\)\.length/);
+    expect(s).toContain('<p role="status" className="border-b border-hair bg-paper-soft');
+    expect(s).toContain("chat.composer.langeTekstAlsBestand");
     expect(s).toContain('<div role="alert"');
   });
 
