@@ -1,6 +1,8 @@
 import type { LinkVoorbeeld } from "@/lib/messaging/link-voorbeeld";
 import { randomUUID } from "node:crypto";
-import { kvAppend, kvDelete, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
+import { kvDelete, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
+import { logger } from "@/lib/logger";
+import { begrensLijst } from "@/lib/messaging/lijstgrens";
 import { BERICHT_MAX } from "@/lib/chat/lange-tekst";
 import { sluitPeiling, stem, type MessagePoll } from "@/lib/messaging/poll";
 
@@ -155,6 +157,16 @@ export function previewText(m: {
 
 const threadKey = (id: string) => `chat-thread:${id}`;
 const messagesKey = (id: string) => `chat-messages:${id}`;
+
+/**
+ * De lijst zoals hij in KV mag staan (14 nov): hooguit 5.000 berichten én 4 MB JSON (lib/messaging/lijstgrens.ts); de oudste
+ * vallen weg, het nieuwste blijft altijd. Snijdt de bytegrens, dan één logregel met alleen aantallen: geen tekst, geen id's.
+ */
+function bewaarLijst(list: ChatMessage[]): ChatMessage[] {
+  const s = begrensLijst(list);
+  if (s.opBytes) logger.warn("chat: gesprekslijst op de bytegrens gesneden", { verwijderd: s.verwijderd, over: s.lijst.length, bytes: s.bytes });
+  return s.lijst;
+}
 
 async function writeThread(t: ChatThread): Promise<void> {
   await kvSet(threadKey(t.id), t);
@@ -339,7 +351,7 @@ export async function markeerEenmaligGezien(threadId: string, mediaId: string, u
   if (!m || !m.eenmalig || m.deleted) return "geen";
   if (m.from === userId || (m.eenmaligGezien ?? []).includes(userId)) return "al";
   list[idx] = { ...m, eenmaligGezien: [...(m.eenmaligGezien ?? []), userId] };
-  await kvSet(key, list.slice(-5000));
+  await kvSet(key, bewaarLijst(list));
   return "ok";
 }
 
@@ -352,7 +364,7 @@ export async function setLinkVoorbeeld(threadId: string, messageId: string, teks
   if (!m || m.kind !== "text" || m.deleted || m.text !== tekst) return null;
   const updated: ChatMessage = { ...m, linkVoorbeeld: v };
   list[idx] = updated;
-  await kvSet(key, list.slice(-5000));
+  await kvSet(key, bewaarLijst(list));
   return updated;
 }
 
@@ -365,7 +377,7 @@ export async function setTranscript(threadId: string, messageId: string, text: s
   if (!m || m.kind !== "voice" || m.deleted) return null;
   const updated: ChatMessage = { ...m, transcript: text.trim().slice(0, 4000) };
   list[idx] = updated;
-  await kvSet(key, list.slice(-5000));
+  await kvSet(key, bewaarLijst(list));
   return updated;
 }
 
@@ -398,7 +410,7 @@ export async function reactToMessage(
   if (Object.keys(reactions).length) updated.reactions = reactions;
   else delete updated.reactions;
   list[idx] = updated;
-  await kvSet(key, list.slice(-5000));
+  await kvSet(key, bewaarLijst(list));
   return updated;
 }
 
@@ -411,7 +423,7 @@ export async function deleteMessage(threadId: string, messageId: string): Promis
   const m = list[idx]!;
   const updated: ChatMessage = { id: m.id, threadId: m.threadId, from: m.from, at: m.at, text: "", kind: m.kind, deleted: true };
   list[idx] = updated;
-  await kvSet(key, list.slice(-5000));
+  await kvSet(key, bewaarLijst(list));
   return updated;
 }
 
@@ -433,7 +445,7 @@ export async function editMessage(threadId: string, messageId: string, text: str
   const updated: ChatMessage = { ...m, text: clean, editedAt: now.toISOString() };
   delete updated.linkVoorbeeld; // de tekst is anders: het oude voorbeeld klopt misschien niet meer
   list[idx] = updated;
-  await kvSet(key, list.slice(-5000));
+  await kvSet(key, bewaarLijst(list));
   const t = await getThread(id);
   if (t?.lastMessage && t.lastMessage.at === m.at && t.lastMessage.from === m.from) {
     t.lastMessage = { ...t.lastMessage, text: previewText(updated) };
@@ -465,7 +477,7 @@ export async function updatePoll(
     if (m.poll.closedAt) return null;
     list[idx] = { ...m, poll: stem(m.poll, change.userId, change.optionIds) };
   }
-  await kvSet(key, list.slice(-5000));
+  await kvSet(key, bewaarLijst(list));
   return list[idx]!;
 }
 
@@ -498,7 +510,9 @@ export async function postMessage(
     ...(extra.mentions?.length ? { mentions: extra.mentions } : {}),
     ...(kind === "image" && extra.eenmalig ? { eenmalig: true as const } : {}),
   };
-  await kvAppend(messagesKey(threadId), msg, 5000);
+  // zelf toevoegen in plaats van de generieke append uit lib/storage/kv: dezelfde grens als overal (aantal én bytes)
+  const key = messagesKey(threadId);
+  await kvSet(key, bewaarLijst([...((await kvGet<ChatMessage[]>(key)) ?? []), msg]));
 
   const t = await getThread(threadId);
   if (t) {
@@ -549,7 +563,7 @@ export async function mergeDuplicateDirectThreads(): Promise<{ pairs: number; me
       }
     }
     all.sort((a, b) => (a.at < b.at ? -1 : 1));
-    await kvSet(messagesKey(main.t.id), all.slice(-5000));
+    await kvSet(messagesKey(main.t.id), bewaarLijst(all));
     const last = all.at(-1);
     if (last) {
       main.t.lastMessageAt = last.at;
