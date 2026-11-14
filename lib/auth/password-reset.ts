@@ -9,6 +9,7 @@ import { mailTaalVoorWerker } from "@/lib/mail/taal";
 import { passwordResetEmailT } from "@/lib/mail/werker/wachtwoord";
 import { fixedWindow, privateRateLimitIdentifier } from "@/lib/rate-limit";
 import { clearLoginFailures } from "@/lib/auth/login-throttle";
+import { trekSessiesIn } from "@/lib/auth/sessie-intrekken";
 import { isBreached, scorePassword } from "@/lib/auth/password";
 import { wisPasskeysNaHerstel } from "@/lib/auth/passkey/beheer";
 
@@ -135,6 +136,8 @@ export async function completePasswordReset(token: string, newPassword: string):
   // anyway for the full window, unable to ever place the one login attempt
   // that would otherwise have cleared it.
   await clearLoginFailures(updated.email.toLowerCase().trim());
+  // wie zijn wachtwoord herstelt, verwacht dat een gestolen sessie niet blijft werken: alle bestaande sessies vervallen
+  await trekSessiesIn(userId).catch((err) => logger.warn("sessies intrekken na wachtwoordherstel mislukt", { error: (err as Error).message }));
   await recordAudit({
     category: "SECURITY",
     action: "auth.password.reset",

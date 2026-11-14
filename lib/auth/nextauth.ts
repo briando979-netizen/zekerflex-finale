@@ -8,6 +8,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { sessieNogGeldig } from "@/lib/auth/sessie-intrekken";
 import { featureEnabled } from "@/lib/flags";
 import { recordAudit } from "@/lib/audit";
 import { recordLoginFailure } from "@/lib/metrics";
@@ -229,6 +230,8 @@ export const authOptions: NextAuthConfig = {
     async decode({ token }) {
       const claims = await decodeSession(token);
       if (!claims) return null;
+      // ingetrokken na een wachtwoordherstel: geen sessie, en dus ook niets om te verlengen (lib/auth/sessie-intrekken.ts)
+      if (!(await sessieNogGeldig(claims.sub, claims.iat))) return null;
       return {
         sub: claims.sub,
         email: claims.email,

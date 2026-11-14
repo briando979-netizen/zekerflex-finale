@@ -1,6 +1,7 @@
 import { cookies, headers } from "next/headers";
 import type { UserRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { sessieNogGeldig } from "@/lib/auth/sessie-intrekken";
 import { AppError } from "@/lib/errors";
 import {
   decodeSession,
@@ -39,6 +40,8 @@ async function readSessionToken(): Promise<string | undefined> {
 export async function getPrincipal(): Promise<Principal | null> {
   const claims = await decodeSession(await readSessionToken());
   if (!claims) return null;
+  // een sessie van vóór een wachtwoordherstel is ingetrokken (lib/auth/sessie-intrekken.ts)
+  if (!(await sessieNogGeldig(claims.sub, claims.iat))) return null;
   return principalForUser(claims.sub);
 }
 
