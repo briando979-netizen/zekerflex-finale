@@ -74,7 +74,7 @@ describe("tests die een gewijzigd bestand als tekst noemen", () => {
     expect(vindTekstVerwijzingen([ZOEK], [eigen]).tests).toEqual(["tests/zelf.test.ts"]);
   });
 
-  it("de grens van 40: precies 40 draaien, 41 niet (dan alleen de bewakers) maar het echte aantal wordt gemeld", () => {
+  it("de grens van 40: precies 40 draaien, 41 niet (dan de hele suite) maar het echte aantal wordt gemeld", () => {
     const maak = (n: number) => Array.from({ length: n }, (_, i) => t(`t${String(i).padStart(3, "0")}`, `"${ZOEK}"`));
     const veertig = vindTekstVerwijzingen([ZOEK], maak(40));
     expect(MAX_EXTRA).toBe(40);
@@ -109,7 +109,9 @@ describe("tests die een gewijzigd bestand als tekst noemen", () => {
     expect(controle).toContain('import { vindTekstVerwijzingen } from "./tekst-verwijzing.mjs";');
     expect(controle).toContain("vindTekstVerwijzingen(bestanden, testen)");
     expect(controle).toContain("      extraTests,");
-    expect(controle).toContain("meer dan 40: alleen de bewakers draaien");
+    // sinds 14 nov draait bij meer dan 40 de hele suite (deploy/bouwer/werker/suite.mjs), niet alleen de bewakers
+    expect(controle).toContain("meer dan 40: de hele suite draait");
+    expect(controle).toContain("extraTests.heleSuite = {");
     expect(controle).toMatch(/catch \(e\) \{\s*log\("info", `Tests met een tekstverwijzing overgeslagen/);
   });
 });
