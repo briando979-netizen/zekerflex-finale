@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { zonderTestklussen } from "@/lib/shifts/testklus-db";
 import { redis } from "@/lib/redis";
 import { budgetSnapshot } from "@/lib/ai/governor";
 import { llmGezondheidGecachet } from "@/lib/ai/gezondheid";
@@ -76,6 +77,8 @@ export async function buildAdminOverview(): Promise<AdminOverview> {
   const now = new Date();
   const dayStart = new Date();
   dayStart.setUTCHours(0, 0, 0, 0);
+  // open klussen tellen alleen echte vraag, geen testklussen (lib/shifts/testklus-db.ts)
+  const zonderTest = await zonderTestklussen(new Date(now.getTime() - 30 * 86_400_000));
 
   const [
     dbOk,
@@ -112,7 +115,8 @@ export async function buildAdminOverview(): Promise<AdminOverview> {
     safe(() => liveTraffic(), null),
     safe(() => prisma.dispute.count({ where: { status: { in: ["OPEN", "UNDER_REVIEW"] } } }), 0),
     safe(() => prisma.timesheet.count({ where: { status: { in: ["SUBMITTED", "DISPUTED"] } } }), 0),
-    safe(() => prisma.shift.count({ where: { status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] }, startsAt: { lt: now } } }), 0),
+    // verlopen en nog open: alleen de laatste 30 dagen vragen om aandacht, oudere zijn geen werk meer
+    safe(() => prisma.shift.count({ where: { status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] }, startsAt: { lt: now, gte: new Date(now.getTime() - 30 * 86_400_000) }, ...zonderTest } }), 0),
     safe(() => prisma.payment.count({ where: { status: "FAILED" } }), 0),
     safe(() => prisma.orchestrationFinding.count({ where: { status: "OPEN" } }), 0),
     safe(
@@ -139,7 +143,7 @@ export async function buildAdminOverview(): Promise<AdminOverview> {
     safe(() => prisma.jarvisTurn.count({ where: { status: "RUNNING" } }), 0),
     safe(() => prisma.invoice.aggregate({ where: { status: "PAID", createdAt: { gte: dayStart } }, _sum: { totalCents: true } }), { _sum: { totalCents: null } }),
     safe(() => prisma.invoice.aggregate({ where: { status: "PAID", createdAt: { gte: new Date(now.getFullYear(), now.getMonth(), 1) } }, _sum: { totalCents: true } }), { _sum: { totalCents: null } }),
-    safe(() => prisma.shift.count({ where: { status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] }, startsAt: { gte: now } } }), 0),
+    safe(() => prisma.shift.count({ where: { status: { in: ["OPEN", "MATCHING", "PARTIALLY_FILLED"] }, startsAt: { gte: now }, ...zonderTest } }), 0),
     safe(() => prisma.user.count(), 0),
     safe(() => prisma.user.count({ where: { createdAt: { gte: dayStart } } }), 0),
   ]);

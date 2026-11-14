@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { zonderTestklussen } from "@/lib/shifts/testklus-db";
 import { cached, redis } from "@/lib/redis";
 import { amsterdamParts, amsterdamToUtc } from "@/lib/time/amsterdam";
 import { COMPANY_SLOTS } from "@/lib/admin/city-layout";
@@ -121,12 +122,13 @@ export async function getCityData(now = new Date()): Promise<CityData> {
   const dayStart = amsterdamToUtc(p.year, p.month, p.day);
   const weekEnd = new Date(now.getTime() + 7 * 86_400_000);
   const hourAgo = new Date(now.getTime() - 3_600_000);
+  const zonderTest = await zonderTestklussen(now);
 
   // tegelijk met de database-vragen, zodat het weer de stad niet ophoudt
   const extras = Promise.all([visitorsNow(now.getTime()), amsterdamWeather().catch(() => null)]);
   const [tenants, open, week, working, workers, ordersToday, toShip, openInv, paidInv, aiCalls, certTotal, certPending, leads, leadsToday, eventsLastHour] = await Promise.all([
     prisma.tenant.findMany({ where: { type: { not: "PLATFORM" } }, select: { id: true, name: true, _count: { select: { branches: true } } }, take: ROWS }),
-    prisma.shift.findMany({ where: { status: { in: [...OPEN_SHIFT] }, endsAt: { gte: now } }, select: { branch: { select: { tenantId: true } } }, take: ROWS }),
+    prisma.shift.findMany({ where: { status: { in: [...OPEN_SHIFT] }, endsAt: { gte: now }, ...zonderTest }, select: { branch: { select: { tenantId: true } } }, take: ROWS }),
     prisma.shift.findMany({ where: { startsAt: { gte: now, lte: weekEnd }, status: { notIn: ["DRAFT", "CANCELLED"] } }, select: { branch: { select: { tenantId: true } } }, take: ROWS }),
     prisma.shiftAssignment.findMany({
       where: { cancelledAt: null, shift: { startsAt: { lte: now }, endsAt: { gte: now }, status: { not: "CANCELLED" } } },

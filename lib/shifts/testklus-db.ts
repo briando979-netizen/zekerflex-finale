@@ -116,3 +116,15 @@ export async function testklusIds(since: Date): Promise<string[]> {
     .filter((s) => isTestklus({ title: s.title, bedrijf: s.branch.tenant.name, eigenTest: isEigenTestKlus(eigenTest, { tenantId: s.branch.tenantId, createdAt: s.createdAt }) }))
     .map((s) => s.id);
 }
+
+/**
+ * Prisma-filter voor tellingen en lijsten in Beheer die over echte vraag gaan (open klussen, "dienst nog niet vol", de
+ * bezettingsgraad): laat de testklussen weg. 14 nov 2026, gemeten: er was geen enkele toekomstige open klus van een echt
+ * bedrijf; de "10 open klussen" in de triage waren testklussen van één testbedrijf, met een vestigingsnaam zonder "test".
+ * Voeg het toe aan een `where` met `...(await zonderTestklussen(since))`; `since` is de vroegste startdatum die de telling
+ * raakt. Een storing bij het opzoeken laat het filter leeg: dan zijn de cijfers te hoog, niet weg.
+ */
+export async function zonderTestklussen(since: Date = new Date(0)): Promise<{ id?: { notIn: string[] } }> {
+  const ids = await testklusIds(since).catch((): string[] => []);
+  return ids.length ? { id: { notIn: ids } } : {};
+}
