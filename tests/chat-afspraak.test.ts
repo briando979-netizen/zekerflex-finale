@@ -16,6 +16,9 @@ vi.mock("@/lib/storage/kv", () => ({
 let wie = "a";
 vi.mock("@/lib/auth", () => ({ requirePrincipal: async () => ({ userId: wie, fullName: wie === "a" ? "Anna" : "Bas" }) }));
 vi.mock("@/lib/messaging/contacts", () => ({ isPlatformAdmin: async () => false }));
+const { afgezegdPush } = vi.hoisted(() => ({ afgezegdPush: vi.fn() }));
+vi.mock("@/lib/messaging/notify", () => ({ notifyAfspraakAfgezegd: (...a: unknown[]) => afgezegdPush(...a) }));
+vi.mock("next/server", async (orig) => ({ ...(await orig<typeof import("next/server")>()), after: (fn: () => unknown) => void fn() }));
 
 import { alsIcs, annuleerAfspraak, maakAfspraak, perAntwoord, zetAntwoord } from "@/lib/messaging/afspraak";
 import { getMessages, postMessage, previewText, type ChatThread } from "@/lib/messaging/store";
@@ -29,6 +32,7 @@ beforeEach(() => {
   kv.clear();
   kv.set("chat-thread:t1", { id: "t1", kind: "group", participants: ["a", "b"], createdAt: "", lastMessageAt: "", lastMessage: null, meta: {}, reads: {} } as ChatThread);
   wie = "a";
+  afgezegdPush.mockClear();
 });
 
 describe("maakAfspraak", () => {
@@ -85,6 +89,12 @@ describe("de afspraak-route", () => {
     wie = "a";
     expect((await antwoord({ messageId: m.id, annuleer: true })).status).toBe(200);
     expect((await getMessages("t1")).some((x) => x.kind === "system" && x.text === 'Anna heeft de afspraak "Teamuitje" afgezegd.')).toBe(true);
+    // de systeemregel geeft geen push: de route meldt het zelf, één keer (nog eens afzeggen meldt niets)
+    expect(afgezegdPush).toHaveBeenCalledTimes(1);
+    expect(afgezegdPush.mock.calls[0]?.[1]).toMatchObject({ id: m.id, afspraak: { geannuleerd: expect.any(String) } });
+    expect(afgezegdPush.mock.calls[0]?.[2]).toBe("Anna");
+    expect((await antwoord({ messageId: m.id, annuleer: true })).status).toBe(200);
+    expect(afgezegdPush).toHaveBeenCalledTimes(1);
     wie = "b";
     expect((await antwoord({ messageId: m.id, antwoord: "ja" })).status).toBe(422);
   });

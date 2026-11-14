@@ -110,6 +110,9 @@ export interface WorkerPushTexts {
   missedVideoBody: string;
   missedBody: string;
   newMessage: string;
+  /** een afgezegde afspraak in de chat (lib/messaging/notify.ts) */
+  afspraakAfgezegdTitle: (title: string) => string;
+  afspraakAfgezegdBody: (name: string, when: string) => string;
 }
 
 export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
@@ -205,6 +208,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     missedVideoBody: "📹 Videogesprek — tik om terug te bellen.",
     missedBody: "📞 Tik om terug te bellen.",
     newMessage: "Nieuw bericht",
+    afspraakAfgezegdTitle: (t) => `📅 Afgezegd: ${t}`,
+    afspraakAfgezegdBody: (n, w) => `${n} heeft de afspraak van ${w} afgezegd.`,
   },
   en: {
     hours: "hours",
@@ -298,6 +303,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     missedVideoBody: "📹 Video call — tap to call back.",
     missedBody: "📞 Tap to call back.",
     newMessage: "New message",
+    afspraakAfgezegdTitle: (t) => `📅 Cancelled: ${t}`,
+    afspraakAfgezegdBody: (n, w) => `${n} cancelled the event on ${w}.`,
   },
   pl: {
     hours: "godz.",
@@ -391,6 +398,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     missedVideoBody: "📹 Rozmowa wideo — stuknij, aby oddzwonić.",
     missedBody: "📞 Stuknij, aby oddzwonić.",
     newMessage: "Nowa wiadomość",
+    afspraakAfgezegdTitle: (t) => `📅 Odwołane: ${t}`,
+    afspraakAfgezegdBody: (n, w) => `Wydarzenie (${w}) odwołane przez: ${n}.`,
   },
   ro: {
     hours: "ore",
@@ -484,6 +493,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     missedVideoBody: "📹 Apel video — atinge pentru a suna înapoi.",
     missedBody: "📞 Atinge pentru a suna înapoi.",
     newMessage: "Mesaj nou",
+    afspraakAfgezegdTitle: (t) => `📅 Anulat: ${t}`,
+    afspraakAfgezegdBody: (n, w) => `${n} a anulat evenimentul din ${w}.`,
   },
   uk: {
     hours: "год",
@@ -577,6 +588,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     missedVideoBody: "📹 Відеодзвінок — натисни, щоб передзвонити.",
     missedBody: "📞 Натисни, щоб передзвонити.",
     newMessage: "Нове повідомлення",
+    afspraakAfgezegdTitle: (t) => `📅 Скасовано: ${t}`,
+    afspraakAfgezegdBody: (n, w) => `Подію (${w}) скасовано. Організатор: ${n}.`,
   },
 };
 

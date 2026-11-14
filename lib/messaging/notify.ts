@@ -6,6 +6,7 @@ import { getChatPrefs, isMuted } from "@/lib/messaging/thread-prefs";
 import { chatPrivacy } from "@/lib/messaging/settings";
 import { previewText, type ChatMessage, type ChatThread } from "@/lib/messaging/store";
 import { claimIdempotency } from "@/lib/redis";
+import { pushWhen } from "@/lib/i18n/worker-push";
 
 // ---------------------------------------------------------------------------
 // Phone/laptop notifications for the chat: incoming calls, missed calls and
@@ -133,5 +134,38 @@ export async function notifyNewMessage(thread: ChatThread, msg: ChatMessage): Pr
     if (withoutPreview.length) await sendMixedPush(withoutPreview, (t) => ({ title, body: t.newMessage, data, ttlSeconds: CHAT_TTL_SEC }));
   } catch (err) {
     logger.warn("chat push failed", { threadId: thread.id, error: (err as Error).message });
+  }
+}
+
+/**
+ * Een afgezegde afspraak (lib/messaging/afspraak.ts). De systeemregel in het gesprek geeft geen push (AGENTS.md), dus melden
+ * we het zelf: aan wie "ik kom" of "misschien" zei (ook in een gedempt gesprek: daar rekende je op) en in een direct gesprek
+ * aan de ander zolang die het gesprek niet dempte. Wie het gesprek open heeft, ziet de regel al.
+ */
+export async function notifyAfspraakAfgezegd(thread: ChatThread, msg: ChatMessage, doorNaam: string): Promise<void> {
+  if (msg.kind !== "afspraak" || !msg.afspraak) return;
+  try {
+    const afspraak = msg.afspraak;
+    const rekendeErop = new Set(Object.entries(afspraak.antwoorden).filter(([, a]) => a !== "nee").map(([id]) => id));
+    const ontvangers = thread.participants.filter((id) => id !== msg.from && rekendeErop.has(id));
+    if (thread.kind === "direct") {
+      for (const id of thread.participants) {
+        if (id === msg.from || rekendeErop.has(id)) continue;
+        if (!isMuted(await getChatPrefs(id), thread.id)) ontvangers.push(id);
+      }
+    }
+    if (ontvangers.length === 0) return;
+    const inView = await visibleUsers(ontvangers);
+    const targets = ontvangers.filter((id) => !inView.has(id));
+    if (targets.length === 0) return;
+    const wanneer = { startsAt: new Date(afspraak.start), endsAt: new Date(afspraak.eind) };
+    await sendMixedPush(targets, (t, locale) => ({
+      title: t.afspraakAfgezegdTitle(msg.text),
+      body: t.afspraakAfgezegdBody(doorNaam, pushWhen(locale, wanneer)),
+      data: { type: "CHAT", url: chatUrl(thread.id), tag: `afspraak-${msg.id}` },
+      ttlSeconds: CHAT_TTL_SEC,
+    }));
+  } catch (err) {
+    logger.warn("afspraak push failed", { threadId: thread.id, error: (err as Error).message });
   }
 }
