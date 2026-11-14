@@ -32,6 +32,8 @@ describe("taak: gratis scans opvolgen", () => {
     const bron = readFileSync(path.join(process.cwd(), "lib/admin/owner-todos.ts"), "utf8");
     expect(bron).toContain("scanOpvolgTodo(await wachtendeScans())");
     expect(bron).toContain("...(scanOpvolg ? [scanOpvolg] : [])");
-    expect(bron).toContain("scanOverzicht(await lijstScans(2000), now).wachten");
+    // de telling zelf staat sinds 14 nov in lib/admin/verkoop-wacht.ts, gedeeld met de kaart op het beheerstartscherm
+    const teller = readFileSync(path.join(process.cwd(), "lib/admin/verkoop-wacht.ts"), "utf8");
+    expect(teller).toContain("scanOverzicht(await lijstScans(2000), now).wachten");
   });
 });
