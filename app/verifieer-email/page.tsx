@@ -10,6 +10,7 @@ import { ResendVerification } from "@/components/auth/ResendVerification";
 import { WijzigEmail } from "@/components/auth/WijzigEmail";
 import { getLocale } from "@/lib/i18n/server";
 import { AUTH_DICTS, fill } from "@/lib/i18n/auth";
+import { heeftHardeBounce } from "@/lib/mail/bounce-opslag";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "E-mailadres bevestigen" };
@@ -54,6 +55,8 @@ export default async function VerifieerEmailPage(
   // When there's no real SMTP yet, surface the code + link here so verification
   // never blocks. With SMTP configured the mail actually arrives and we hide it.
   const local = smtpConfigured() ? null : await currentVerification(principal.userId);
+  // kaatste de mail naar dit adres hard terug (lib/mail/bounce-ronde.ts)? Dan heeft opnieuw sturen geen zin: zeg het
+  const kaatstTerug = user?.email ? await heeftHardeBounce(user.email) : false;
 
   return (
     <AuthShell
@@ -66,6 +69,11 @@ export default async function VerifieerEmailPage(
         </Link>
       }
     >
+      {kaatstTerug && (
+        <p role="alert" className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          {t.bounced}
+        </p>
+      )}
       <ResendVerification locale={locale} email={user?.email ?? ""} devLink={local?.link ?? null} devCode={local?.code ?? null} />
       <WijzigEmail locale={locale} />
     </AuthShell>

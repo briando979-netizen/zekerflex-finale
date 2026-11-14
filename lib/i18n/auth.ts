@@ -103,6 +103,7 @@ export interface AuthDict {
     busy: string;
     local: string;
     spamHint: string;
+    bounced: string;
     wrongEmail: string;
     newEmail: string;
     saveEmail: string;
@@ -502,6 +503,7 @@ const nl: AuthDict = {
     busy: "Bezig…",
     local: "Lokale omgeving: er is nog geen externe e-mailserver ingesteld, dus hier is je verificatie direct.",
     spamHint: "Geen mail gezien? Kijk ook in je map Ongewenst of Spam. Het kan een paar minuten duren.",
+    bounced: "Mail naar dit adres kwam terug: het adres bestaat niet (meer). Kijk of je het goed hebt getypt en wijzig het hieronder.",
     wrongEmail: "Verkeerd e-mailadres ingevuld?",
     newEmail: "Juiste e-mailadres",
     saveEmail: "Pas aan en stuur de code",
@@ -900,6 +902,7 @@ const en: AuthDict = {
     busy: "Working…",
     local: "Local environment: no external mail server is set up yet, so here is your verification directly.",
     spamHint: "No email? Also check your Junk or Spam folder. It can take a few minutes.",
+    bounced: "Mail to this address bounced: the address does not exist (any more). Check the spelling and change it below.",
     wrongEmail: "Entered the wrong email address?",
     newEmail: "Correct email address",
     saveEmail: "Change and send the code",
@@ -1298,6 +1301,7 @@ const pl: AuthDict = {
     busy: "Chwileczkę…",
     local: "Środowisko lokalne: serwer poczty nie jest jeszcze skonfigurowany, więc weryfikacja jest tutaj.",
     spamHint: "Nie widzisz wiadomości? Sprawdź też folder Spam lub Wiadomości-śmieci. Może to potrwać kilka minut.",
+    bounced: "Wiadomość na ten adres wróciła: taki adres nie istnieje. Sprawdź, czy jest poprawnie wpisany, i zmień go poniżej.",
     wrongEmail: "Podano zły adres e-mail?",
     newEmail: "Prawidłowy adres e-mail",
     saveEmail: "Zmień i wyślij kod",
@@ -1696,6 +1700,7 @@ const ro: AuthDict = {
     busy: "Se procesează…",
     local: "Mediu local: încă nu este configurat un server de e-mail, așa că verificarea este aici.",
     spamHint: "Nu ai primit e-mailul? Verifică și dosarul Spam sau Nesolicitate. Poate dura câteva minute.",
+    bounced: "E-mailul către această adresă a fost returnat: adresa nu există. Verifică dacă este scrisă corect și schimb-o mai jos.",
     wrongEmail: "Ai introdus o adresă de e-mail greșită?",
     newEmail: "Adresa de e-mail corectă",
     saveEmail: "Modifică și trimite codul",
@@ -2094,6 +2099,7 @@ const uk: AuthDict = {
     busy: "Зачекай…",
     local: "Локальне середовище: поштовий сервер ще не налаштовано, тому підтвердження тут.",
     spamHint: "Не бачите листа? Перевірте також папку «Спам». Це може тривати кілька хвилин.",
+    bounced: "Лист на цю адресу повернувся: такої адреси не існує. Перевірте, чи правильно її введено, і змініть її нижче.",
     wrongEmail: "Вказали неправильну адресу e-mail?",
     newEmail: "Правильна адреса e-mail",
     saveEmail: "Змінити й надіслати код",

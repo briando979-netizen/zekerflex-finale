@@ -1,5 +1,6 @@
 import { randomBytes, randomInt } from "node:crypto";
 import { kvDelete, kvGet, kvListEntries, kvListValues, kvSet } from "@/lib/storage/kv";
+import type { BounceSoort } from "@/lib/mail/bounce";
 
 // ---------------------------------------------------------------------------
 // Postgres-backed mail store (KeyValueStore) — was local disk, unreliable on
@@ -26,6 +27,8 @@ export interface SentRecord {
   error?: string;
   /** recipient unsubscribed from this optional category — not sent */
   suppressed?: string;
+  /** de mail kaatste terug (lib/mail/bounce-ronde.ts): "afgeleverd" betekende alleen dat TransIP hem aannam */
+  bounce?: { soort: BounceSoort; code: string; at: string };
 }
 
 export async function saveSentMessage(rec: SentRecord): Promise<void> {

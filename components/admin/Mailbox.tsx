@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { PageHead, Pill } from "@/components/admin/kit";
 import { MailToolsBar } from "@/components/mail/MailToolsBar";
+import { mailStatusLabel } from "@/lib/mail/bounce";
 
 interface SentMsg {
   id: string;
@@ -17,7 +18,10 @@ interface SentMsg {
   transport: "smtp" | "mailbox";
   error?: string;
   suppressed?: string;
+  bounce?: { soort: "hard" | "beleid" | "zacht"; code: string; at: string };
 }
+
+const STATUS_KLASSE = { ok: "text-ok", warn: "text-warn", crit: "text-crit", neutral: "text-neutralx-400" } as const;
 interface SentPayload {
   transport: {
     smtp: boolean;
@@ -360,8 +364,8 @@ export function Mailbox() {
                         <span className="block truncate text-xs text-neutralx-500">aan {m.to.join(", ")}</span>
                         <span className="block text-[11px] text-neutralx-400">{new Date(m.at).toLocaleString("nl-NL")}</span>
                       </span>
-                      <span className={`flex-shrink-0 text-[11px] ${m.suppressed ? "text-warn" : m.delivered ? "text-ok" : m.transport === "smtp" ? "text-crit" : "text-neutralx-400"}`}>
-                        {m.suppressed ? "afgemeld" : m.delivered ? "afgeleverd" : m.transport === "smtp" ? "mislukt" : "lokaal"}
+                      <span className={`flex-shrink-0 text-[11px] ${STATUS_KLASSE[mailStatusLabel(m).toon]}`}>
+                        {mailStatusLabel(m).label}
                       </span>
                     </button>
                   </li>
@@ -473,9 +477,10 @@ ${tpl.body}` : tpl.body));
             <div className="space-y-3 p-6">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="pill-neutral">{KIND_LABEL[selectedSent.kind] ?? selectedSent.kind}</span>
-                <span className={`text-xs ${selectedSent.suppressed ? "text-warn" : selectedSent.delivered ? "text-ok" : selectedSent.transport === "smtp" ? "text-crit" : "text-neutralx-400"}`}>
-                  {selectedSent.suppressed ? "afgemeld" : selectedSent.delivered ? "afgeleverd" : selectedSent.transport === "smtp" ? "mislukt" : "lokaal"}
+                <span className={`text-xs ${STATUS_KLASSE[mailStatusLabel(selectedSent).toon]}`}>
+                  {mailStatusLabel(selectedSent).label}
                 </span>
+                {selectedSent.bounce && <span className="text-xs text-neutralx-500">code {selectedSent.bounce.code}</span>}
               </div>
               <h2 className="font-display text-lg font-bold">{selectedSent.subject}</h2>
               <p className="text-xs text-neutralx-500">

@@ -92,6 +92,15 @@ FLAG_REGISTRY.push({
   default: false,
 });
 
+// Terugkaatsers verwerken (lib/mail/bounce-ronde.ts, 14 nov): eerst droog lezen en tellen (KV meting:mail-bounces).
+FLAG_REGISTRY.push({
+  key: "mail-bounce-verwerken",
+  label: "Terugkaatsers (bounces) verwerken",
+  description:
+    "Aan = elk uur leest ZekerFlex de terugkaatsers in de postbus. Een adres dat niet bestaat komt op de onderdrukkingslijst, de lead gaat op teruggekaatst en dat adres krijgt geen outreach, nieuwsbrief of herinnering meer (verificatie, wachtwoord en beveiliging gaan altijd door). Weigert een provider onze mail (SPF, DKIM, DMARC, spam), dan krijg je een melding. In Beheer, Mail staat bij de mail dat hij terugkwam. Uit (standaard) = hij leest en telt alleen, en verandert niets.",
+  default: false,
+});
+
 export interface FlagOverride {
   /** master switch; undefined = use the registry default */
   enabled?: boolean | undefined;
