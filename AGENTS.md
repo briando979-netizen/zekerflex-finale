@@ -91,7 +91,7 @@ ZekerFlex is een Nederlands flexwerk-/uitzend-/zzp-marktplaatsplatform.
 - **Snelheid mag het uiterlijk nooit veranderen:** bewijs het met schermafbeeldingen per scrollpositie, vóór en na.
 - **Lettertypes** staan zelf gehost (`public/fonts`, `app/fonts.css`); de build haalt niets bij Google.
 - **Eigen `opengraph-image.tsx`** werkt alleen met `canonical(path, { fileImage: true })` (`lib/seo.ts`).
-- **`sitemap.ts`/`robots.ts` zonder `revalidate` of dynamische API zijn statisch:** Next maakt ze tijdens de build, zonder database (gegevens ontbreken dan stil). Zet `export const revalidate = …` en controleer live dat `x-nextjs-cache`/`lastmod` niet de buildtijd blijven.
+- **`sitemap.ts`/`robots.ts` zonder `dynamic`/`revalidate` of dynamische API zijn statisch:** Next maakt ze tijdens de build, zonder database (gegevens ontbreken dan stil). Met `revalidate` komt die bouwversie bovendien na élke (her)start van de container tien minuten terug (13 nov: 343 regels, 0 producten; op een dag met achttien uitrollen is dat uren). De sitemap gebruikt daarom `export const dynamic = "force-dynamic"` plus een eigen geheugencache van tien minuten (`app/sitemap.ts`). Controleer live dat `x-nextjs-cache`/`lastmod` niet de buildtijd blijven.
 - **sharp** heeft geen lettertypes in de container: geen tekst in een SVG die naar PNG gaat, alleen vormen.
 
 ### Klantsites en websitevoorstellen
