@@ -15,6 +15,8 @@ describe("verzendknoppen staan aan; de melding zegt wat ontbreekt", () => {
     expect(s).toContain('meldOntbreekt("register"');
     expect(s).toMatch(/role="alert"[^>]*>\s*\{klopNiet\}/);
     expect(s).toContain("t.fillIn");
+    // een druk terwijl de sterktecontrole nog loopt (geplakt wachtwoord + Enter) geeft geen valse "te zwak"
+    expect(s).toMatch(/pwSterkGenoeg = pwChecking \|\|/);
   });
 
   it("website-check: het adres en het contactformulier", () => {

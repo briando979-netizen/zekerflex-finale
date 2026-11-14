@@ -88,7 +88,7 @@ describe("minder vragen bij de aanmelding", () => {
     expect(r).not.toContain('name="passwordConfirm"');
     expect(r).toContain("aria-pressed={showPw}");
     expect(r).toContain("!(pwInfo?.breached ?? false)");
-    expect(r).toContain("((pwInfo?.score ?? 0) >= 2 || pwCheckUnavailable)");
+    expect(r).toContain("(pwInfo?.score ?? 0) >= 2 || pwCheckUnavailable");
     // wachtwoord herstellen en de team-uitnodiging houden het tweede veld
     expect(bron("components/app/TeamInviteAccept.tsx")).toContain('name="passwordConfirm"');
   });

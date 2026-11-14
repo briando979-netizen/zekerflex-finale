@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { AppError } from "@/lib/errors";
 import { registerFreelancerCompany, registerTenantCompany } from "@/lib/company/registration";
 import { koppelKvkAanAanmelder } from "@/lib/onboarding/employer";
 import { kvkLimietVan } from "@/lib/kvk/tegoed";
@@ -10,7 +11,7 @@ import { vulKvkWachtAan } from "@/lib/kvk/inhalen";
 // ---------------------------------------------------------------------------
 // De KVK-herkansing (13 nov 2026, cron /api/internal/kvk/herkansing, elke 30 minuten). Een KVK-controle die niet kon omdat
 // het tegoed bij KVKBase op was of de minuutlimiet bereikt, staat in de wacht (lib/kvk/tegoed-opslag.ts). Is hij aan de
-// beurt, dan doen we hem opnieuw, met dezelfde functies als de aanmelding:
+// beurt, dan doen we hem opnieuw, met dezelfde functies als de aanmelding (een storing: over een uur weer):
 //   werker:  registerFreelancerCompany → kvkValid op het profiel (en dus de poort voor betaald werk);
 //   bedrijf: registerTenantCompany → de inschrijving, en daarna dezelfde koppeling aan de aanmelder als bij het aanmelden.
 // Weer een limiet: hij schuift door (bij een op tegoed stopt de ronde meteen, zonder de rest te proberen). Een ander antwoord
@@ -80,6 +81,14 @@ export async function kvkHerkansing(nu: Date = new Date()): Promise<HerkansingUi
         // tegoed nog op: de rest heeft geen zin vandaag (een 429 kost niets, maar een rij fouten zegt niets nieuws)
         if (limiet.soort === "tegoed") break;
         continue;
+      }
+      // een storing (KVK-dienst onbereikbaar, sleutel geweigerd, een 5xx, de database) zegt niets over het nummer: over een
+      // uur opnieuw, en de rest van de ronde niet (die faalt nu ook). Alleen een 4xx (niet gevonden, ongeldig) geeft op.
+      if (!(err instanceof AppError) || err.status >= 500) {
+        await zetKvkWacht(w.soort, w.id, w.wacht.kvkNumber, { soort: "minuut", naSeconden: 3600 }, nu);
+        uit.weerInDeWacht += 1;
+        logger.warn("kvk-herkansing: storing, later opnieuw", { soort: w.soort, fout: (err as Error).message });
+        break;
       }
       // opgegeven (niet gevonden, ongeldig): een merk op dit nummer, zodat het inhalen (lib/kvk/inhalen.ts) het niet elke
       // ronde opnieuw in de wacht zet en KVKBase opnieuw vraagt; een ander nummer telt wel weer

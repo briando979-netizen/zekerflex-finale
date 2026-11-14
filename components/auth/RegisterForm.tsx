@@ -229,7 +229,9 @@ export function RegisterForm({
   // Wat ontbreekt er nog? De knop staat altijd aan; bij een druk met iets open komt deze zin met role="alert" en gaat
   // één anoniem meet-event weg (formulier:register:melding:<veld>). De server controleert daarna alles opnieuw.
   const [klopNiet, setKlopNiet] = useState<string | null>(null);
-  const pwSterkGenoeg = ((pwInfo?.score ?? 0) >= 2 || pwCheckUnavailable);
+  // loopt de sterktecontrole nog (geplakt of voorgesteld wachtwoord, meteen Enter), dan geen "te zwak": de server kijkt
+  // zelf (wachtwoordProbleem in lib/auth/password.ts), anders kreeg een sterk wachtwoord een valse melding en een meet-event
+  const pwSterkGenoeg = pwChecking || (pwInfo?.score ?? 0) >= 2 || pwCheckUnavailable;
   const pwNietGelekt = !(pwInfo?.breached ?? false);
   function controleerVoorVersturen(e: React.FormEvent<HTMLFormElement>) {
     const fd = new FormData(e.currentTarget);

@@ -242,6 +242,21 @@ describe("de herkansing", () => {
     expect(h.kv.has("kvk-opgegeven:werker:u2")).toBe(false);
   });
 
+  it("een storing (dienst onbereikbaar, sleutel geweigerd, database) geeft niet op: over een uur opnieuw, de rest wacht", async () => {
+    for (const fout of [AppError.upstream("De KVK-dienst is tijdelijk niet bereikbaar."), new Error("db weg")]) {
+      h.kv.clear();
+      h.registerWerker.mockReset().mockRejectedValue(fout);
+      await zet("werker", "u1");
+      await zet("werker", "u2");
+      h.profiel = { id: "fp1", kvkNumber: "12345678" };
+      expect(await kvkHerkansing(nu)).toMatchObject({ aanDeBeurt: 2, weerInDeWacht: 1, vervallen: 0, gelukt: 0 });
+      expect(h.registerWerker).toHaveBeenCalledTimes(1);
+      expect([...h.kv.keys()].some((k) => k.startsWith("kvk-opgegeven:"))).toBe(false);
+      const wacht = [...h.kv].filter(([k]) => k.startsWith("kvk-wacht:")).map(([, v]) => v as { volgende: string });
+      expect(wacht.map((w) => w.volgende)).toContain("2026-11-14T08:00:00.000Z");
+    }
+  });
+
   it("de uitslag van een ronde komt met tijdstip in KV (alleen aantallen)", async () => {
     const uit = await kvkHerkansing(nu);
     await bewaarHerkansingMeting(uit, nu);
