@@ -181,6 +181,19 @@ describe("sales engine tick", () => {
     );
   });
 
+  it("zoekt contactgegevens ook bij een lead met telefoon maar zonder adres, met de poging uit enrichmentJson (14 nov 2026)", async () => {
+    wireCampaign("REVIEW");
+    await runSalesEngineTick({ campaignId: "c1", force: true });
+
+    const contactCall = leadFindMany.mock.calls.find((call: unknown[]) => Array.isArray((call[0] as { where?: { OR?: unknown } })?.where?.OR));
+    expect(contactCall).toBeTruthy();
+    const args = contactCall![0] as { where: Record<string, unknown>; select: Record<string, unknown>; take?: number };
+    expect(args.where.OR).toEqual([{ contactPhone: null }, { contactEmail: null, discoveredEmail: null }]);
+    expect(args.select).toEqual(expect.objectContaining({ enrichmentJson: true, sourceUrl: true, createdAt: true }));
+    // geen vaste "6 oudste" meer: de keuze maakt contactBeurt (tests/sales-contact-scrape.test.ts)
+    expect(args.take).toBeUndefined();
+  });
+
   it("AUTOPILOT does not send while SALES_AUTOPILOT_ENABLED is off", async () => {
     // tests/setup.ts leaves SALES_AUTOPILOT_ENABLED unset -> false
     wireCampaign("AUTOPILOT");

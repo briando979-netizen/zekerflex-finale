@@ -19,7 +19,7 @@ import { gebruikEigenVers } from "@/lib/gratis/keuzes";
 import { isKvkBaseEnabled } from "@/lib/integrations/kvkbase";
 import { crawlCareersSource } from "@/lib/sales/discovery/careers";
 import { guessAndVerifyDomain } from "@/lib/sales/discovery/domain-guess";
-import { enrichLeadContact } from "@/lib/sales/discovery/contact-scrape";
+import { contactBeurt, enrichLeadContact } from "@/lib/sales/discovery/contact-scrape";
 import { achtergrondMag } from "@/lib/kvk/tegoed";
 import { leesKvkTegoed } from "@/lib/kvk/tegoed-opslag";
 
@@ -42,6 +42,8 @@ const DRAFT_PER_TICK = 8;
 const DOMAIN_COOLDOWN_DAYS = 14;
 const DOMAIN_GUESS_PER_TICK = 5;
 const DOMAIN_GUESS_RETRY_DAYS = 14;
+/** Contactgegevens zoeken: zoveel leads per run (de herkansing staat in contact-scrape.ts, CONTACT_RETRY_DAYS). */
+const CONTACT_PER_TICK = 6;
 
 /**
  * Mirrors the tick's own summary into the Jarvis event log under agent
@@ -339,24 +341,30 @@ async function resolveLeadDomains(campaign: SalesCampaign, errors: string[]): Pr
  */
 async function enrichContacts(campaign: SalesCampaign, errors: string[]): Promise<number> {
   let done = 0;
-  const leads = await prisma.salesLead.findMany({
+  // zonder telefoon óf zonder adres, en per lead een poging met herkansing (contactBeurt): eerst pakte dit elke run de 6
+  // oudste zonder telefoon, en 37 stubs zonder website kwamen zo nooit verder; leads mét website kwamen nooit aan de beurt
+  // en een lead met telefoon werd nooit op een adres doorzocht (14 nov 2026)
+  const kandidaten = await prisma.salesLead.findMany({
     where: {
       campaignId: campaign.id,
-      contactPhone: null,
       status: { notIn: ["WON", "LOST", "DISQUALIFIED", "BOUNCED", "UNSUBSCRIBED"] },
+      OR: [{ contactPhone: null }, { contactEmail: null, discoveredEmail: null }],
     },
+    select: { id: true, createdAt: true, sourceUrl: true, enrichmentJson: true },
     orderBy: { createdAt: "asc" },
-    take: 6,
   });
-  for (const lead of leads) {
+  const uitkomsten: Record<string, number> = {};
+  for (const id of contactBeurt(kandidaten, new Date(), CONTACT_PER_TICK)) {
     const r = await safe(
-      `contact:${lead.id}`,
-      () => enrichLeadContact(lead.id),
-      { origin: null, phone: null, email: null, updated: false },
+      `contact:${id}`,
+      () => enrichLeadContact(id),
+      { origin: null, phone: null, email: null, updated: false, uitkomst: "onbereikbaar" as const },
       errors,
     );
+    uitkomsten[r.uitkomst] = (uitkomsten[r.uitkomst] ?? 0) + 1;
     if (r.updated) done += 1;
   }
+  logger.info("contact scrape ronde", { kandidaten: kandidaten.length, bijgewerkt: done, ...uitkomsten });
   return done;
 }
 

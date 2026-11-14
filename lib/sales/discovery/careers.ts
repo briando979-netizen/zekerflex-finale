@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { redis } from "@/lib/redis";
 import { createLead } from "@/lib/sales/leads";
 import { isDienstAdres, isVacatureSprong } from "@/lib/sales/discovery/vacature-sprong";
+import { loadRobots, robotsAllows, type Robots } from "@/lib/sales/discovery/robots";
 
 // ---------------------------------------------------------------------------
 // Careers-page crawler.
@@ -28,7 +29,6 @@ const MAX_BYTES = 1_800_000;
 // korter dan de afstand tussen twee runs van de sales-motor (cron elke dag 08:00): bij 24 uur hing het van seconden af of
 // de dagelijkse run echt crawlde of de uitslag van gisteren kreeg (14 nov; tests/sales-cache-cron.test.ts)
 const RESULT_TTL_S = 60 * 60 * 20;
-const ROBOTS_TTL_S = 60 * 60 * 24;
 
 const VACANCY_HINTS = [
   "vacature", "vacatures", "werken-bij", "werkenbij", "werken bij", "careers",
@@ -73,54 +73,6 @@ async function fetchText(
     logger.warn("careers fetch failed", { url, error: (err as Error).message });
     return null;
   }
-}
-
-interface Robots {
-  disallow: string[];
-  allow: string[];
-  crawlDelayMs: number;
-}
-
-async function loadRobots(origin: string): Promise<Robots> {
-  const cacheKey = `sales:robots:${origin}`;
-  const hit = await redis.get(cacheKey).catch(() => null);
-  if (hit) return JSON.parse(hit) as Robots;
-
-  const robots: Robots = { disallow: [], allow: [], crawlDelayMs: 0 };
-  const res = await fetchText(`${origin}/robots.txt`).catch(() => null);
-  const txt = res?.body ?? "";
-  if (txt) {
-    let applies = false;
-    for (const raw of txt.split(/\r?\n/)) {
-      const line = raw.replace(/#.*$/, "").trim();
-      if (!line) continue;
-      const [k, ...rest] = line.split(":");
-      const key = (k ?? "").toLowerCase().trim();
-      const val = rest.join(":").trim();
-      if (key === "user-agent") {
-        applies = val === "*" || /zekerflexbot/i.test(val);
-      } else if (applies && key === "disallow" && val) {
-        robots.disallow.push(val);
-      } else if (applies && key === "allow" && val) {
-        robots.allow.push(val);
-      } else if (applies && key === "crawl-delay") {
-        const n = Number(val);
-        if (Number.isFinite(n)) robots.crawlDelayMs = Math.min(3000, Math.max(0, n * 1000));
-      }
-    }
-  }
-  await redis.set(cacheKey, JSON.stringify(robots), "EX", ROBOTS_TTL_S).catch(() => undefined);
-  return robots;
-}
-
-function robotsAllows(robots: Robots, path: string): boolean {
-  const longestAllow = robots.allow.filter((p) => path.startsWith(p)).sort((a, b) => b.length - a.length)[0];
-  const longestDisallow = robots.disallow
-    .filter((p) => p && path.startsWith(p))
-    .sort((a, b) => b.length - a.length)[0];
-  if (!longestDisallow) return true;
-  if (longestAllow && longestAllow.length >= longestDisallow.length) return true;
-  return false;
 }
 
 /**
