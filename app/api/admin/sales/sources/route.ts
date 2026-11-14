@@ -4,6 +4,7 @@ import { AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/lib/audit";
 import { withAdminAccess } from "@/lib/auth/handlers";
+import { bronUrlSchema } from "@/lib/sales/bron-url";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 const createSchema = z.object({
   campaignId: z.string().min(1).max(128),
   kind: z.enum(["KVKBASE", "CAREERS_URL"]),
-  url: z.string().trim().url().max(400).optional(),
+  url: bronUrlSchema.optional(),
   label: z.string().trim().max(120).optional(),
 });
 
