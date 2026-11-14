@@ -87,6 +87,11 @@ export function openbareRoutes(paginas: readonly { route: string; dynamic: boole
     .sort();
 }
 
+/** Alle openbare adressen van deze nacht: de vaste pagina's, de vaste extra adressen en de steekproef van stadspagina's. */
+export function rondgangRoutes(nu: Date = new Date()): string[] {
+  return [...openbareRoutes(), ...EXTRA_ADRESSEN, ...stadSteekproef(dagNummer(nu))];
+}
+
 async function haal(url: string): Promise<{ status: number | null; body: string; contentType: string }> {
   try {
     const res = await fetch(url, {
@@ -104,7 +109,7 @@ async function haal(url: string): Promise<{ status: number | null; body: string;
 /** Haalt elke openbare vaste pagina op (3 tegelijk) en meldt wat kapot is. */
 export async function draaiRondgang(basis = env.APP_BASE_URL, gelijktijdig = 3): Promise<RondgangUitslag> {
   const t0 = Date.now();
-  const routes = [...openbareRoutes(), ...EXTRA_ADRESSEN, ...stadSteekproef(dagNummer(new Date()))];
+  const routes = rondgangRoutes();
   const base = basis.replace(/\/+$/, "");
   const problemen: RondgangProbleem[] = [];
   let i = 0;
