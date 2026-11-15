@@ -50,9 +50,9 @@ describe("model", () => {
       dashboards: [],
       medewerkers: [],
       mededelingen: [
-        { id: "a", tekst: "oud", datum: "2026-11-01T10:00:00Z", dashboardIds: [] },
-        { id: "b", tekst: "keuken", datum: "2026-11-02T10:00:00Z", dashboardIds: ["d2"] },
-        { id: "c", tekst: "bediening", datum: "2026-11-03T10:00:00Z", dashboardIds: ["d1"] },
+        { id: "a", tekst: "oud", datum: "2026-11-01T10:00:00Z", dashboardIds: [], gelezen: [] },
+        { id: "b", tekst: "keuken", datum: "2026-11-02T10:00:00Z", dashboardIds: ["d2"], gelezen: [] },
+        { id: "c", tekst: "bediening", datum: "2026-11-03T10:00:00Z", dashboardIds: ["d1"], gelezen: [] },
       ],
     };
     expect(mededelingenVoor(d, "d1").map((x) => x.id)).toEqual(["c", "a"]);

@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { meldChat } from "@/lib/horeca-personeel/meldingen";
 import { z } from "zod";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
@@ -50,6 +51,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const kanaal = kanaalVan(parsed.data.kanaal, c.medewerker.id);
     if (!kanaalToegang(kanaal, c.medewerker.id)) throw AppError.forbidden("Geen toegang tot dit gesprek.");
     await plaatsBericht(c.tenantId, kanaal, { id: c.medewerker.id, naam: c.naam }, parsed.data.tekst);
+    after(() => meldChat(c.tenantId, kanaal, { id: c.medewerker.id, naam: c.naam }));
     return NextResponse.json({ berichten: (await berichtenVan(c.tenantId, kanaal)).slice(-100), ik: c.medewerker.id }, { status: 201 });
   } catch (err) {
     return fout(err);

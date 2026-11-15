@@ -4,7 +4,9 @@ import { redirect } from "next/navigation";
 import { getPrincipal } from "@/lib/auth";
 import { getLocale } from "@/lib/i18n/server";
 import { vulIn } from "@/lib/i18n/vul-in";
+import { PushToggle } from "@/components/app/PushToggle";
 import { BerichtenBlok } from "@/components/personeel/BerichtenBlok";
+import { GelezenMarkering } from "@/components/personeel/GelezenMarkering";
 import { LoonstrokenBlok } from "@/components/personeel/LoonstrokenBlok";
 import { PlanningBlokken } from "@/components/personeel/PlanningBlokken";
 import { TakenBlok } from "@/components/personeel/TakenBlok";
@@ -46,7 +48,10 @@ export default async function PersoneelPage() {
         </Link>
       </header>
 
+      <PushToggle />
+
       {blokken.length === 0 && <p className="text-sm text-neutralx-600">{t.omgeving.geenBlokken}</p>}
+      {blokken.includes("mededelingen") && <GelezenMarkering ids={c.mededelingen.filter((m) => !m.gelezen.includes(c.medewerker.id)).map((m) => m.id)} />}
 
       {blokken.includes("mededelingen") && (
         <section aria-labelledby="pers-meded" className="space-y-3">

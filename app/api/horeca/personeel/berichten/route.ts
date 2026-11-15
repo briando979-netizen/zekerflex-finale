@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { meldChat } from "@/lib/horeca-personeel/meldingen";
 import { z } from "zod";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
@@ -50,6 +51,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (!parsed.success) throw AppError.validation("Dit verzoek klopt niet.");
     await eisKanaal(tenantId, parsed.data.kanaal);
     await plaatsBericht(tenantId, parsed.data.kanaal, { id: "beheer", naam: p.fullName }, parsed.data.tekst);
+    after(() => meldChat(tenantId, parsed.data.kanaal, { id: "beheer", naam: p.fullName }));
     return NextResponse.json({ berichten: (await berichtenVan(tenantId, parsed.data.kanaal)).slice(-100) }, { status: 201 });
   } catch (err) {
     return fout(err);

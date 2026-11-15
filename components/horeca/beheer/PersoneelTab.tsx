@@ -399,7 +399,13 @@ export function PersoneelTab({ t }: { t: PersoneelTeksten }) {
               <li key={m.id} className="flex flex-wrap items-start gap-3 py-3">
                 <div className="min-w-0 flex-1">
                   <p className="whitespace-pre-line text-sm text-ink">{m.tekst}</p>
-                  <p className="mt-1 text-xs text-neutralx-500">{m.dashboardIds.length === 0 ? b.iedereen : m.dashboardIds.map(naamVan).join(", ")}</p>
+                  <p className="mt-1 text-xs text-neutralx-500">
+                    {m.dashboardIds.length === 0 ? b.iedereen : m.dashboardIds.map(naamVan).join(", ")} ·{" "}
+                    {vulIn(b.gelezenDoor, {
+                      n: m.gelezen.length,
+                      totaal: data.medewerkers.filter((x) => x.status === "actief" && (m.dashboardIds.length === 0 || m.dashboardIds.includes(x.dashboardId))).length,
+                    })}
+                  </p>
                 </div>
                 <button type="button" className="min-h-[44px] text-sm font-semibold text-crit hover:underline" disabled={bezig} onClick={() => void stuur({ actie: "mededeling-weg", id: m.id })}>
                   {b.verwijder}

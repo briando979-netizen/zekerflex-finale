@@ -192,11 +192,23 @@ export async function koppelAccount(tenantId: string, medewerkerId: string, user
 export async function plaatsMededeling(tenantId: string, input: { tekst: string; dashboardIds: string[] }, nu: Date = new Date()): Promise<PersoneelData> {
   const d = await leesPersoneelVan(tenantId);
   const dashboardIds = input.dashboardIds.filter((id) => dashboardVan(d, id));
-  const m: Mededeling = { id: randomUUID().slice(0, 10), tekst: input.tekst.trim(), datum: nu.toISOString(), dashboardIds };
+  const m: Mededeling = { id: randomUUID().slice(0, 10), tekst: input.tekst.trim(), datum: nu.toISOString(), dashboardIds, gelezen: [] };
   // de oudste vallen af als de lijst vol is
   d.mededelingen = [m, ...d.mededelingen].slice(0, 30);
   await bewaar(tenantId, d);
   return d;
+}
+
+/** De medewerker heeft deze mededelingen gezien; alleen bestaande mededelingen, en elke medewerker hooguit één keer. */
+export async function markeerGelezen(tenantId: string, medewerkerId: string, ids: string[]): Promise<void> {
+  const d = await leesPersoneelVan(tenantId);
+  let veranderd = false;
+  d.mededelingen = d.mededelingen.map((m) => {
+    if (!ids.includes(m.id) || m.gelezen.includes(medewerkerId)) return m;
+    veranderd = true;
+    return { ...m, gelezen: [...m.gelezen, medewerkerId] };
+  });
+  if (veranderd) await bewaar(tenantId, d);
 }
 
 export async function verwijderMededeling(tenantId: string, id: string): Promise<PersoneelData> {

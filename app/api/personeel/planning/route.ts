@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { meldBeheerders } from "@/lib/horeca-personeel/meldingen";
 import { z } from "zod";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
@@ -105,15 +106,18 @@ export async function POST(request: Request): Promise<NextResponse> {
         break;
       case "aannemen":
         await neemRuilAan(t, m, a.ruilId);
+        after(() => meldBeheerders(t, `${c.naam} wil een dienst overnemen`, "ruil-wacht"));
         break;
       case "open-nemen":
         await neemOpenDienst(t, m, a.dienstId);
+        after(() => meldBeheerders(t, `${c.naam} wil een open dienst nemen`, "ruil-wacht"));
         break;
       case "ruil-intrekken":
         await trekRuilIn(t, m, a.ruilId);
         break;
       case "verlof-aanvragen":
         await vraagVerlof(t, m, { van: a.van, tot: a.tot, reden: a.reden });
+        after(() => meldBeheerders(t, `${c.naam} vraagt verlof aan`, "verlof-wacht"));
         break;
       case "verlof-intrekken":
         await trekVerlofIn(t, m, a.id);

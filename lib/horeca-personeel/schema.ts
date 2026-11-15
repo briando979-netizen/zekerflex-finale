@@ -29,6 +29,7 @@ const mededelingSchema = z.object({
   tekst: z.string().trim().min(1).max(MAX_TEKST),
   datum: z.string().max(40),
   dashboardIds: z.array(id).max(MAX_DASHBOARDS),
+  gelezen: z.array(id).max(MAX_MEDEWERKERS).default([]),
 });
 
 export const personeelSchema = z.object({

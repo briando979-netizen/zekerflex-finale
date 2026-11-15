@@ -58,6 +58,7 @@ export interface PersoneelTeksten {
     geenMededelingen: string;
     bezig: string;
     fout: string;
+    gelezenDoor: string;
     loonstroken: string;
     loonstrokenUitleg: string;
     periode: string;
@@ -165,6 +166,7 @@ const nl: PersoneelTeksten = {
     geenMededelingen: "Er zijn geen mededelingen.",
     bezig: "Bezig…",
     fout: "Dat lukte niet. Probeer het zo nog eens.",
+    gelezenDoor: "Gelezen door {n} van {totaal}",
     loonstroken: "Loonstroken",
     loonstrokenUitleg: "Zet de pdf van de loonstrook klaar. Alleen deze medewerker ziet hem, op zijn eigen dashboard (als dat het onderdeel Loonstroken heeft).",
     periode: "Periode (bijvoorbeeld oktober 2026)",
@@ -291,6 +293,7 @@ const en: PersoneelTeksten = {
     geenMededelingen: "There are no announcements.",
     bezig: "Working…",
     fout: "That did not work. Please try again in a moment.",
+    gelezenDoor: "Read by {n} of {totaal}",
     loonstroken: "Payslips",
     loonstrokenUitleg: "Put the payslip pdf ready. Only this staff member sees it, on their own dashboard (if it has the Payslips part).",
     periode: "Period (for example October 2026)",

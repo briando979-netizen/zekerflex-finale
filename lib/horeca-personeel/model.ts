@@ -48,6 +48,8 @@ export interface Mededeling {
   datum: string;
   /** leeg = voor alle medewerkers */
   dashboardIds: string[];
+  /** de medewerkers (ids) die de mededeling hebben gezien */
+  gelezen: string[];
 }
 
 export interface PersoneelData {

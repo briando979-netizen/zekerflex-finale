@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { meldMededeling } from "@/lib/horeca-personeel/meldingen";
 import { z } from "zod";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { logger } from "@/lib/logger";
@@ -122,8 +123,11 @@ export async function POST(request: Request): Promise<NextResponse> {
         return NextResponse.json({ data: await stopMedewerker(tenantId, a.id) });
       case "weg":
         return NextResponse.json({ data: await verwijderMedewerker(tenantId, a.id) });
-      case "mededeling":
-        return NextResponse.json({ data: await plaatsMededeling(tenantId, { tekst: a.tekst, dashboardIds: a.dashboardIds }) });
+      case "mededeling": {
+        const data = await plaatsMededeling(tenantId, { tekst: a.tekst, dashboardIds: a.dashboardIds });
+        after(() => meldMededeling(tenantId, a.dashboardIds, a.tekst));
+        return NextResponse.json({ data });
+      }
       case "mededeling-weg":
         return NextResponse.json({ data: await verwijderMededeling(tenantId, a.id) });
     }

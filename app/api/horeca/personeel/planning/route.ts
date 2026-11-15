@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { meldBesluit, meldDienst } from "@/lib/horeca-personeel/meldingen";
 import { z } from "zod";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
@@ -76,24 +77,37 @@ export async function POST(request: Request): Promise<NextResponse> {
     switch (a.actie) {
       case "dienst": {
         const r = await plaatsDienst(tenantId, { medewerkerId: a.medewerkerId, datum: a.datum, van: a.van, tot: a.tot, notitie: a.notitie });
+        after(() => meldDienst(tenantId, a.medewerkerId, "nieuw", a.datum, `${a.van}–${a.tot}`));
         return NextResponse.json({ planning: r.planning, waarschuwingen: r.waarschuwingen }, { status: 201 });
       }
       case "dienst-wijzig": {
         const r = await wijzigDienst(tenantId, a.id, { medewerkerId: a.medewerkerId, datum: a.datum, van: a.van, tot: a.tot, notitie: a.notitie });
+        const nu = r.planning.diensten.find((x) => x.id === a.id);
+        if (nu) after(() => meldDienst(tenantId, nu.medewerkerId, "gewijzigd", nu.datum, `${nu.van}–${nu.tot}`));
         return NextResponse.json({ planning: r.planning, waarschuwingen: r.waarschuwingen });
       }
-      case "dienst-weg":
-        return NextResponse.json({ planning: await verwijderDienst(tenantId, a.id) });
+      case "dienst-weg": {
+        const eerder = (await leesPlanningVan(tenantId)).diensten.find((x) => x.id === a.id);
+        const planning = await verwijderDienst(tenantId, a.id);
+        if (eerder) after(() => meldDienst(tenantId, eerder.medewerkerId, "weg", eerder.datum, `${eerder.van}–${eerder.tot}`));
+        return NextResponse.json({ planning });
+      }
       case "kopieer-week": {
         const r = await kopieerWeek(tenantId, a.van, a.naar);
         return NextResponse.json({ planning: r.planning, aantal: r.aantal });
       }
       case "ruil": {
+        const ruil = (await leesPlanningVan(tenantId)).ruilen.find((x) => x.id === a.id);
         const r = await beoordeelRuil(tenantId, a.id, a.besluit);
+        if (ruil) after(() => meldBesluit(tenantId, [ruil.van, ruil.naar], "ruil", a.besluit === "goedkeuren" ? "goedgekeurd" : "afgewezen"));
         return NextResponse.json({ planning: r.planning, waarschuwingen: r.waarschuwingen });
       }
-      case "verlof":
-        return NextResponse.json({ planning: await beoordeelVerlof(tenantId, a.id, a.besluit) });
+      case "verlof": {
+        const verlof = (await leesPlanningVan(tenantId)).verlof.find((x) => x.id === a.id);
+        const planning = await beoordeelVerlof(tenantId, a.id, a.besluit);
+        if (verlof) after(() => meldBesluit(tenantId, [verlof.medewerkerId], "verlof", a.besluit === "goedkeuren" ? "goedgekeurd" : "afgewezen"));
+        return NextResponse.json({ planning });
+      }
       case "uur":
         return NextResponse.json({ planning: await bewaarUur(tenantId, { id: a.id, medewerkerId: a.medewerkerId, datum: a.datum, in: a.in, uit: a.uit }) });
       case "uur-weg":
