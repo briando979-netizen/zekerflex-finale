@@ -83,7 +83,7 @@ interface GegevensStand {
 }
 type Formulier = Woonadres & { geboortedatum: string };
 type FormVeld = keyof Formulier;
-const VELDEN: readonly FormVeld[] = ["straat", "huisnummer", "postcode", "plaats", "land"];
+const VELDEN: readonly (keyof Woonadres)[] = ["straat", "huisnummer", "postcode", "plaats", "land"];
 
 const formulierUit = (s: GegevensStand): Formulier => ({
   ...(s.woonadres ?? { straat: "", huisnummer: "", postcode: s.postcodeVoorstel ?? "", plaats: "", land: "Nederland" }),
