@@ -5,7 +5,7 @@ import { useChatTeksten } from "./ChatTekstenContext";
 import { isLiveActief, type Plek } from "@/lib/messaging/live-locatie";
 import { vulIn } from "@/lib/i18n/vul-in";
 import { inNederland } from "@/lib/kaart/voorbeeld";
-import { KaartVoorbeeld } from "./KaartVoorbeeld";
+import { AfstandRegel, LocatieKaartje } from "./LocatieAfstand";
 
 // Live locatie in de chat (15 nov 2026), zoals in WhatsApp: de plek schuift mee tot de tijd om is of de afzender stopt.
 // Hoe oud de plek is, staat erbij (zojuist / x min geleden), zodat niemand een oude plek voor de echte aanziet. Tijden in
@@ -36,7 +36,7 @@ export function LiveLocatieKaart({ plek, mine, disabled, onStop }: { plek: Plek;
     <div className="rounded-lg bg-black/[0.04] px-2.5 py-2">
       <a href={kaart} target="_blank" rel="noopener noreferrer" className={heeftKaart ? "block space-y-2 rounded-lg hover:bg-black/[0.03]" : "flex items-center gap-2.5 rounded-lg hover:bg-black/[0.03]"}>
         {/* zoals in WhatsApp: een stukje kaart met een speld bovenaan, de tekst eronder (alleen binnen Nederland; elders het blokje) */}
-        {heeftKaart && <KaartVoorbeeld lat={plek.lat} lng={plek.lng} actief={actief} />}
+        {heeftKaart && <LocatieKaartje plek={plek} mine={mine} actief={actief} />}
         {!heeftKaart && (
           <span aria-hidden className={`grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg text-white ${actief ? "bg-brand-500" : "bg-neutralx-400"}`}>
             📡
@@ -50,6 +50,8 @@ export function LiveLocatieKaart({ plek, mine, disabled, onStop }: { plek: Plek;
           <span className="block text-[11px] text-neutralx-500">{vulIn(t.openInMap, { coords: `${plek.lat.toFixed(4)}, ${plek.lng.toFixed(4)}` })}</span>
         </span>
       </a>
+      {/* hoe ver de ander van jou is (zoals WhatsApp); delen jullie allebei live, dan zien jullie allebei dezelfde afstand */}
+      {!mine && <AfstandRegel plek={plek} />}
       {mine && actief && (
         <div className="mt-2 flex items-center gap-2 border-t border-black/10 pt-2">
           <span className="min-w-0 flex-1 text-[11px] text-neutralx-500">{t.liveZolangOpen}</span>
