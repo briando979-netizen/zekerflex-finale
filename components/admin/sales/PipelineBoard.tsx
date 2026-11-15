@@ -22,6 +22,8 @@ const COLUMNS: { id: StageId; label: string; set: string; accent: string; status
   { id: "verloren", label: "Verloren", set: "LOST", accent: "var(--a-mute)", statuses: ["LOST", "BOUNCED", "UNSUBSCRIBED", "DISQUALIFIED"] },
 ];
 
+const MAX_ZICHTBAAR = 12;
+
 function columnOf(status: string): StageId {
   return COLUMNS.find((c) => c.statuses.includes(status))?.id ?? "nieuw";
 }
@@ -32,6 +34,8 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<StageId | null>(null);
+  // lange kolommen (zoals Nieuw met honderd leads) tonen eerst de beste; zo blijft het bord leesbaar zonder schuifbalken
+  const [meer, setMeer] = useState<Set<StageId>>(new Set());
 
   const byColumn = useMemo(() => {
     const map: Record<StageId, LeadDto[]> = { nieuw: [], benaderd: [], gesprek: [], gewonnen: [], verloren: [] };
@@ -138,9 +142,10 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
         )}
       </div>
 
-      <div className="grid gap-3 md:grid-cols-5">
+      <div className="grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {COLUMNS.map((col) => {
-          const items = byColumn[col.id];
+          const alle = byColumn[col.id];
+          const items = meer.has(col.id) ? alle : alle.slice(0, MAX_ZICHTBAAR);
           return (
             <div
               key={col.id}
@@ -154,7 +159,7 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
                 if (dragId) void move(dragId, col.id);
                 setDragId(null);
               }}
-              className="flex min-h-[120px] flex-col rounded-xl p-2 transition-colors"
+              className="flex min-h-[120px] min-w-0 flex-col rounded-xl p-2 transition-colors"
               style={{
                 background: overCol === col.id ? "var(--a-elev)" : "var(--a-panel-2)",
                 border: `1px solid ${overCol === col.id ? "var(--a-border-strong)" : "var(--a-border)"}`,
@@ -165,22 +170,22 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: col.accent }} />
                 <span className="text-xs font-semibold" style={{ color: "var(--a-text)" }}>{col.label}</span>
                 <span className="ml-auto rounded-full px-1.5 text-[10px]" style={{ background: "var(--a-elev)", color: "var(--a-mute)" }}>
-                  {items.length}
+                  {alle.length}
                 </span>
               </div>
 
-              <div className="space-y-2 overflow-y-auto" style={{ maxHeight: "60vh" }}>
+              <div className="space-y-2">
                 {items.map((l) => (
                   <div
                     key={l.id}
                     draggable
                     onDragStart={() => setDragId(l.id)}
                     onDragEnd={() => setDragId(null)}
-                    className="cursor-grab rounded-lg p-2.5 transition-shadow hover:shadow-[var(--a-shadow-sm)] active:cursor-grabbing"
+                    className="min-w-0 cursor-grab rounded-lg p-2.5 transition-shadow hover:shadow-[var(--a-shadow-sm)] active:cursor-grabbing"
                     style={{ background: "var(--a-panel)", border: "1px solid var(--a-border)", opacity: dragId === l.id ? 0.5 : 1 }}
                   >
                     <div className="flex items-start gap-1.5">
-                      <span className="flex-1 text-[13px] font-semibold leading-tight" style={{ color: "var(--a-text)" }}>
+                      <span className="min-w-0 flex-1 break-words text-[13px] font-semibold leading-tight" style={{ color: "var(--a-text)" }}>
                         {l.companyName}
                       </span>
                       {typeof l.score === "number" && (
@@ -219,7 +224,7 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
                       </span>
                       {l.city && <span className="truncate">{l.city}</span>}
                     </div>
-                    <div className="mt-1.5 flex gap-1.5">
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
                       {l.contactPhone ? (
                         <button
                           type="button"
@@ -253,7 +258,23 @@ export function PipelineBoard({ initialLeads }: { initialLeads: LeadDto[] }) {
                     </div>
                   </div>
                 ))}
-                {items.length === 0 && (
+                {alle.length > MAX_ZICHTBAAR && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setMeer((m) => {
+                        const n = new Set(m);
+                        if (n.has(col.id)) n.delete(col.id);
+                        else n.add(col.id);
+                        return n;
+                      })
+                    }
+                    className="a-button !min-h-0 w-full !py-1 text-[11px]"
+                  >
+                    {meer.has(col.id) ? "Toon minder" : `Toon alle ${alle.length}`}
+                  </button>
+                )}
+                {alle.length === 0 && (
                   <p className="px-1 py-3 text-center text-[11px]" style={{ color: "var(--a-mute)" }}>leeg</p>
                 )}
               </div>

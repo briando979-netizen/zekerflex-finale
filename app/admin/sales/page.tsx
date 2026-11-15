@@ -10,6 +10,8 @@ import { env } from "@/lib/env";
 import { listLeads } from "@/lib/sales/leads";
 import { listCampaigns, startOfToday } from "@/lib/sales/campaign";
 import { enginePaused } from "@/lib/sales/engine";
+import { leesAutomatisering } from "@/lib/sales/automatisering";
+import { AutomatischPaneel } from "@/components/admin/sales/AutomatischPaneel";
 import { listSuppression } from "@/lib/sales/suppression";
 import { SalesConsole } from "@/components/admin/sales/SalesConsole";
 import type { LeadDto } from "@/components/admin/SalesDashboard";
@@ -27,7 +29,8 @@ export default async function SalesAdminPage(props: { searchParams: Promise<{ pe
   const { periode, weergave, filter } = await props.searchParams;
   const period = resolvePeriod(periode);
 
-  const [insights, rows, campaignRows, suppression, paused, sentToday, scheduled, engineRuns, tools] = await Promise.all([
+  const [stand, insights, rows, campaignRows, suppression, paused, sentToday, scheduled, engineRuns, tools] = await Promise.all([
+    leesAutomatisering(),
     salesInsights(period),
     listLeads({ limit: 200 }),
     listCampaigns(),
@@ -169,7 +172,9 @@ export default async function SalesAdminPage(props: { searchParams: Promise<{ pe
         ]}
       />
 
-      <div className="grid items-start gap-4 lg:grid-cols-3">
+      <AutomatischPaneel stand={stand} />
+
+      <div className="grid items-stretch gap-4 lg:grid-cols-3">
         <Panel title="Nieuwe leads" subtitle={`Per ${period.bucket === "month" ? "maand" : "dag"}, laatste ${period.label}`} className="lg:col-span-1">
           <Chart title="Nieuwe leads per periode" kind="bars" unit="count" labels={insights.labels} series={[{ label: "Nieuwe leads", values: insights.newSeries }]} height={170} emptyText="Geen nieuwe leads in deze periode." />
         </Panel>

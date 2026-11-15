@@ -37,13 +37,13 @@ import { leesKvkTegoed } from "@/lib/kvk/tegoed-opslag";
 const PAUSE_KEY = "sales:engine:paused";
 const TICK_LOCK = "sales:engine:tick";
 const DISCOVERY_INTERVAL_MS = 6 * 60 * 60 * 1000;
-const ENRICH_PER_TICK = 5;
+const ENRICH_PER_TICK = 15;
 const DRAFT_PER_TICK = 8;
 const DOMAIN_COOLDOWN_DAYS = 14;
-const DOMAIN_GUESS_PER_TICK = 5;
+const DOMAIN_GUESS_PER_TICK = 10;
 const DOMAIN_GUESS_RETRY_DAYS = 14;
 /** Contactgegevens zoeken: zoveel leads per run (de herkansing staat in contact-scrape.ts, CONTACT_RETRY_DAYS). */
-const CONTACT_PER_TICK = 6;
+const CONTACT_PER_TICK = 12;
 
 /**
  * Mirrors the tick's own summary into the Jarvis event log under agent
