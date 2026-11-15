@@ -8,6 +8,9 @@ import { jarvisStateLine } from "@/lib/admin/overview";
 import { logExchange, recentHistory, topExamples } from "@/lib/learn/store";
 import { inspectPrompt } from "@/lib/security/prompt-guard";
 import { withAdminAccess } from "@/lib/auth/handlers";
+import { gratisAan, primeGratis } from "@/lib/ai/gratis";
+import { logger } from "@/lib/logger";
+import { jarvisBerichten, jarvisFoutTekst } from "@/lib/jarvis/berichten";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,20 +50,11 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
     jarvisStateLine().catch(() => ""),
     recentHistory("jarvis", principal.userId, 4),
     topExamples("jarvis", 3),
+    primeGratis().catch(() => undefined),
   ]);
 
-  const exampleBlock = examples.length
-    ? "Voorbeelden van goede eerdere antwoorden:\n" +
-      examples.map((e, i) => `${i + 1}. V: ${e.q}\n   A: ${e.a}`).join("\n")
-    : "";
-
-  const messages = [
-    { role: "system" as const, content: JARVIS_PERSONA },
-    ...(stateLine ? [{ role: "system" as const, content: `LIVE PLATFORMSTATUS: ${stateLine}` }] : []),
-    ...(exampleBlock ? [{ role: "system" as const, content: exampleBlock }] : []),
-    ...history,
-    { role: "user" as const, content: prompt },
-  ];
+  // vaste delen eerst, wat wisselt erna; met "alles gratis" korter (lib/jarvis/berichten.ts)
+  const messages = jarvisBerichten({ persona: JARVIS_PERSONA, status: stateLine, voorbeelden: examples, geschiedenis: history, vraag: prompt, gratis: gratisAan() });
 
   const gen = chatStream({
     purpose: "jarvis-quick",
@@ -80,7 +74,9 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
           controller.enqueue(enc.encode(delta));
         }
       } catch (err) {
-        controller.enqueue(enc.encode(`\n\n(${(err as Error).message})`));
+        // de techniek in het log, een gewone zin voor de beheerder
+        logger.warn("jarvis snel antwoord mislukt", { error: (err as Error).message.slice(0, 160) });
+        controller.enqueue(enc.encode(`\n\n(${jarvisFoutTekst((err as Error).message)})`));
       } finally {
         controller.close();
         if (full.trim()) void logExchange("jarvis", { q: prompt, a: full.trim(), userId: principal.userId }).catch(() => undefined);
