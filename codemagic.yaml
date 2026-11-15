@@ -3,13 +3,21 @@
 # In Codemagic: Settings → Integrations → Developer Portal → sleutel "zekerflex" (zo heet hij,
 # met kleine letters; Key ID JB339NP4WP). ios_signing gebruikt alleen een certificaat en
 # profiel die al in Codemagic staan (Code signing identities): de volgorde staat in
-# ios-app/README.md. Daarna deze workflow met de hand starten. xcode: latest = Xcode 26+,
+# ios-app/README.md. Starten: met de hand, of (sinds 15 nov) met een git-tag ios-<versie>
+# (bv. `git tag ios-1.0.1 <sha> && git push origin ios-1.0.1`). xcode: latest = Xcode 26+,
 # wat Apple sinds 28 april 2026 eist.
 workflows:
   ios-app:
     name: ZekerFlex voor iPhone
     instance_type: mac_mini_m2
     max_build_duration: 45
+    # gewone pushes naar main bouwen niet (dat kost minuten); alleen een tag ios-*
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "ios-*"
+          include: true
     integrations:
       # de naam van de sleutel in Codemagic, letterlijk
       app_store_connect: zekerflex
@@ -24,6 +32,17 @@ workflows:
           cd ios-app
           brew install xcodegen
           xcodegen generate
+      - name: Het geldige App Store-profiel
+        script: |
+          # Het profiel in Codemagic kan het oude zijn (2b8fdd22, ongeldig sinds 10 nov; dezelfde
+          # naam). Het geldige (3QQX7MGLZ5, uuid e12f8d98…) staat in de repo: geen geheim, alleen
+          # app-ID, rechten en het openbare certificaat; de sleutel blijft in Codemagic. Alleen dat
+          # profiel blijft over, op de oude en de nieuwe plek van Xcode.
+          for D in "$HOME/Library/MobileDevice/Provisioning Profiles" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"; do
+            mkdir -p "$D"
+            rm -f "$D"/*.mobileprovision
+            cp ios-app/ondertekenen/ZekerFlex_App_Store.mobileprovision "$D/e12f8d98-d5e0-4fb2-9bfd-61daba8009c1.mobileprovision"
+          done
       - name: Ondertekenen
         script: xcode-project use-profiles --project ios-app/ZekerFlex.xcodeproj
       - name: Bouwen
