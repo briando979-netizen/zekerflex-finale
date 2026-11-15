@@ -1,0 +1,60 @@
+// ---------------------------------------------------------------------------
+// Na de aanmelding (de 5 stappen van lib/onboarding/werker-poort.ts) is er nog een tweede rijtje vóór een werker op een
+// klus kan reageren: het ID goedgekeurd, en per soort de gegevens voor betalen (lib/fiscal/eligibility.ts). Tot 15 nov
+// stond dat rijtje nergens als geheel: de stappenteller zei "klaar", een tweede startkaart toonde verkeerde stappen en de
+// echte reden werd op Klussen weggefilterd (eigenaar: "niet strak, loopt gelijk, onoverzichtelijk"). Dit is de ene lijst
+// die Klussen toont; dezelfde regels als payoutEligibility, zodat "alles af" hier precies "reageren kan" is.
+// Puur bestand: de feiten komen van lib/onboarding/klaar-voor-klus-server.ts.
+// ---------------------------------------------------------------------------
+
+export type KlusStuk = "bsn" | "contract" | "bedrijf" | "iban" | "werkrecht" | "idWacht";
+
+export interface KlusFeiten {
+  soort: "zzp" | "flexwerker" | "uitzendkracht" | null;
+  /** loonadministratie (uitzendkracht): verloning via ZekerFlex, dus BSN + overeenkomst; anders factureren (KVK/btw/KOR) */
+  payroll: boolean;
+  /** het ID is goedgekeurd (kycStatus VERIFIED) */
+  idGoedgekeurd: boolean;
+  /** het BSN staat (versleuteld) in de fiscale gegevens */
+  bsn: boolean;
+  /** een getekende, geldende uitzendovereenkomst */
+  contract: boolean;
+  /** een geldig KVK- of btw-nummer, of de KOR (zzp'er, flexwerker) */
+  bedrijf: boolean;
+  /** een rekeningnummer (IBAN) om op uit te betalen */
+  iban: boolean;
+  /** de vlag werkrecht-eis staat aan en het recht om te werken is nog niet aangetoond */
+  werkrechtOpen: boolean;
+}
+
+/**
+ * Wat er na de aanmelding nog nodig is om te reageren, in de volgorde waarin een werker het doet; leeg = niets meer.
+ * Eerst wat hij zelf invult, als laatste het nagekeken worden van zijn ID (daar hoeft hij niets voor te doen, en de rest
+ * kan intussen al).
+ */
+export function nogVoorEersteKlus(f: KlusFeiten): KlusStuk[] {
+  const lijst: KlusStuk[] = [];
+  if (f.payroll) {
+    if (!f.bsn) lijst.push("bsn");
+    if (!f.contract) lijst.push("contract");
+  } else if (!f.bedrijf) {
+    lijst.push("bedrijf");
+  }
+  if (!f.iban) lijst.push("iban");
+  if (f.werkrechtOpen) lijst.push("werkrecht");
+  if (!f.idGoedgekeurd) lijst.push("idWacht");
+  return lijst;
+}
+
+/**
+ * Waar een werker een stuk invult: op /dashboard/verificatie, bij het blok met de kop "Nog nodig vóór je eerste klus"
+ * (BSN, btw/KOR: GegevensMist met kopId gegevens-later-kop), de bankrekening en de overeenkomst. null: niets te doen.
+ */
+export const KLUS_STUK_HREF: Record<KlusStuk, string | null> = {
+  bsn: "/dashboard/verificatie#gegevens-later-kop",
+  bedrijf: "/dashboard/verificatie#gegevens-later-kop",
+  contract: "/dashboard/verificatie#uitzendovereenkomst",
+  iban: "/dashboard/verificatie#bankrekening",
+  werkrecht: "/dashboard/verificatie#werkrecht",
+  idWacht: null,
+};

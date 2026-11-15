@@ -29,8 +29,9 @@ describe("de verificatiepagina: elk ding op zijn plek", () => {
     expect(pagina).not.toContain('mist.includes("contract")');
     expect(pagina.indexOf("{isUitzend && (", later)).toBeGreaterThan(later);
     expect(pagina.indexOf('<GegevensMist mist={voorKlus} later kopId="gegevens-later-kop"', later)).toBeGreaterThan(later);
-    // ook op het eindscherm, met het voorstel uit de ID-scan
-    expect(pagina).toContain('<GegevensMist mist={voorKlus} later soort={uitzend ? "uitzendkracht" : null} bsnVoorstel={bsnVoorstel} />');
+    // ook op het eindscherm, met het voorstel uit de ID-scan, hetzelfde anker en (15 nov) het btw-veld voor een zzp'er/flexwerker
+    expect(pagina).toContain('<GegevensMist mist={voorKlus} later kopId="gegevens-later-kop" soort={soort ?? (uitzend ? "uitzendkracht" : null)} bsnVoorstel={bsnVoorstel} btw={btw} />');
+    expect(pagina).toContain("const voorKlus = voorEersteKlus(gegevensStand);");
     expect(pagina).toContain("voorKlus={voorKlus}");
   });
 

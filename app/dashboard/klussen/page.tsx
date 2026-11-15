@@ -3,7 +3,7 @@ import { WelcomeBack } from "@/components/app/WelcomeBack";
 import { TodayStrip } from "@/components/app/TodayStrip";
 import { MilestoneCelebration } from "@/components/app/MilestoneCelebration";
 import { WerkerStartWizard } from "@/components/app/WerkerStartWizard";
-import { OnboardingProgress } from "@/components/app/OnboardingProgress";
+import { KlaarVoorKlusKaart } from "@/components/app/KlaarVoorKlusKaart";
 import { requirePrincipal } from "@/lib/auth";
 import { getMarketplace } from "@/lib/dashboard/marketplace";
 import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
@@ -26,7 +26,7 @@ import { EersteIndrukMelding } from "@/components/app/EersteIndrukMelding";
 import { eersteIndrukVoor } from "@/lib/onboarding/eerste-indruk-server";
 import { inIosApp } from "@/lib/app-mode-server";
 import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
-import { isReservedTestAddress } from "@/lib/mail/test-adres";
+import { nogVoorEersteKlusVan } from "@/lib/onboarding/klaar-voor-klus-server";
 
 export const dynamic = "force-dynamic";
 
@@ -51,11 +51,16 @@ export default async function KlussenPage(
   ]);
   const birthday = isBirthdayToday(fiscal.birthDate);
   // De app is sinds 12 nov open (eigenaar): wie de onboarding nog niet af heeft, ziet hier de stappen bovenaan en
-  // reageert pas daarna (lib/onboarding/werker-poort-server.ts). Testaccounts en een storing: geen stappen.
-  const poort = isReservedTestAddress(principal.email) ? null : await werkerPoortStand(principal.userId).catch(() => null);
+  // reageert pas daarna (lib/onboarding/werker-poort-server.ts). Een storing: geen stappen. Testaccounts zien de stappen
+  // ook (15 nov); alleen het reageren laten we ze toe (onboardingKlaarVoorReageren), voor de beoordelaars van Apple en Google.
+  const poort = await werkerPoortStand(principal.userId).catch(() => null);
   const onboardingOpen = poort !== null && !poort.klaar;
-  // de kaart "eerste indruk" pas na de onboarding; in de iPhone-app vraagt de app zelf om meldingen: daar telt die stap als klaar
-  const eersteIndruk = onboardingOpen ? null : await eersteIndrukVoor(principal.userId, { iosApp: await inIosApp() }).catch(() => null);
+  // daarna: wat er nog nodig is om te reageren (ID goedgekeurd, BSN, overeenkomst, KVK/btw, rekeningnummer), als één lijst
+  // met dezelfde regels als de controle bij reageren (lib/onboarding/klaar-voor-klus.ts). Eén kaart tegelijk (15 nov, eigenaar)
+  const nogVoorKlus = !onboardingOpen && !m.canApply ? await nogVoorEersteKlusVan(principal.userId).catch(() => []) : [];
+  // de kaart "eerste indruk" (werkervaring, meldingen) pas als reageren kan; in de iPhone-app vraagt de app zelf om
+  // meldingen: daar telt die stap als klaar
+  const eersteIndruk = onboardingOpen || !m.canApply ? null : await eersteIndrukVoor(principal.userId, { iosApp: await inIosApp() }).catch(() => null);
   const greetLabels = {
     morning: t.greet.morning,
     afternoon: t.greet.afternoon,
@@ -127,20 +132,16 @@ export default async function KlussenPage(
           fotoGezet={poort.fotoGezet}
           brancheKeuze={poort.brancheKeuze}
         />
+      ) : nogVoorKlus.length > 0 ? (
+        <KlaarVoorKlusKaart stukken={nogVoorKlus} />
       ) : (
-        !overview.profileComplete && (
-          <WerkerStartWizard
-            workerKind={fiscal.workerKind}
-            emailVerified={Boolean(principal.emailVerifiedAt)}
-            profileComplete={overview.profileComplete}
-            werkrechtOk
-            brancheKeuze={brancheKeuze}
-          />
+        // iets anders houdt reageren tegen (bijv. de KVK-controle wacht, of matching is tijdelijk beperkt): de echte reden
+        !m.canApply &&
+        m.blockReason && (
+          <div className="card mb-6 border-warn/30 bg-warn/5 p-5 text-sm text-neutralx-700">
+            {t.page.browseFirst} {translateBlockReason(m.blockReason, t)} {t.page.applyWhenDone}
+          </div>
         )
-      )}
-      {/* de profiel-af-kaart staat er niet naast de startwizard: die dekt dezelfde open stappen */}
-      {!onboardingOpen && overview.profileComplete && (
-        <OnboardingProgress voortgang={overview.voortgang} steps={t.profielAf.steps} texts={t.profielAf} />
       )}
       <div className="mb-5 flex items-end justify-between gap-3">
         <div>
@@ -153,15 +154,6 @@ export default async function KlussenPage(
           <StatusPill tone="ok">{t.page.newCount(m.newSinceLastVisit)}</StatusPill>
         )}
       </div>
-
-      {/* De paarse kaart "naar verificatie" staat er niet meer (10 nov, eigenaar): de onboarding gaat nu
-          vóór alles (lib/onboarding/werker-poort.ts) en de startwizard hierboven toont wat nog openstaat.
-          Andere redenen (bijv. een document dat nog wordt nagekeken) blijven als gewone melding. */}
-      {!m.canApply && m.blockReason && !/verificatie|geverifieerd/i.test(m.blockReason) && (
-        <div className="card mb-6 border-warn/30 bg-warn/5 p-5 text-sm text-neutralx-700">
-          {t.page.browseFirst} {translateBlockReason(m.blockReason, t)} {t.page.applyWhenDone}
-        </div>
-      )}
 
       {alleenTest && (
         <div className="card mb-5 p-5 text-sm">

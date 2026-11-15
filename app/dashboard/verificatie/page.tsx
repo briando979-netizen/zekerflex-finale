@@ -9,7 +9,7 @@ import { UitzendPanel } from "@/components/app/UitzendPanel";
 import { getFiscal, invoiceModeFor, fiscaalIngevuld } from "@/lib/fiscal/store";
 import { activeUitzendContract } from "@/lib/agreements/uitzend-contract";
 import { aanmeldingAf, gegevensMist, voorEersteKlus, type GegevensStand, type GegevensStuk } from "@/lib/onboarding/gegevens-mist";
-import { GegevensMist } from "@/components/app/GegevensMist";
+import { GegevensMist, type BtwBegin } from "@/components/app/GegevensMist";
 import { BackLink } from "@/components/app/BackLink";
 import { stripeIdentityAvailable, syncStripeIdentity } from "@/lib/kyc/stripe-identity";
 import { getLocale, getFreelancerDict } from "@/lib/i18n/server";
@@ -63,6 +63,8 @@ function AanmeldingKlaar({
   ibanOpen = false,
   voorKlus = [],
   bsnVoorstel = null,
+  soort = null,
+  btw = null,
 }: {
   taal: Locale;
   pt: AuthDict["page"];
@@ -73,10 +75,14 @@ function AanmeldingKlaar({
   werkrechtVragen: boolean;
   uitzend: boolean;
   ibanOpen?: boolean;
-  /** wat een uitzendkracht nog moet doen vóór de eerste klus (BSN, overeenkomst; voorEersteKlus) */
+  /** wat er nog moet vóór de eerste klus (uitzendkracht: BSN, overeenkomst; zzp'er/flexwerker: btw/KVK/KOR; voorEersteKlus) */
   voorKlus?: GegevensStuk[];
   /** de laatste 4 van het BSN dat van het ID is gelezen, nog niet bevestigd */
   bsnVoorstel?: string | null;
+  /** de werkvorm: bij een zzp'er of flexwerker staat het btw-veld in "Nog nodig vóór je eerste klus" */
+  soort?: "zzp" | "flexwerker" | "uitzendkracht" | null;
+  /** wat er al bekend is voor het btw-veld */
+  btw?: BtwBegin | null;
 }) {
   const klaar = fd.profielAf.klaar;
   const volgende = volgendeNaVerificatie(poortNu);
@@ -117,7 +123,7 @@ function AanmeldingKlaar({
       )}
       {/* uitzendkracht: het BSN en de overeenkomst horen sinds 13 nov niet bij de aanmelding, maar zijn nodig vóór de eerste
           klus (reageren houdt ze tegen). Hier meteen te doen; de overeenkomst staat onderaan (#uitzendovereenkomst) */}
-      <GegevensMist mist={voorKlus} later soort={uitzend ? "uitzendkracht" : null} bsnVoorstel={bsnVoorstel} />
+      <GegevensMist mist={voorKlus} later kopId="gegevens-later-kop" soort={soort ?? (uitzend ? "uitzendkracht" : null)} bsnVoorstel={bsnVoorstel} btw={btw} />
       <Panel title={pt.statusTitel}>
         <div className="px-5 py-6">
           {volgende !== "klaar" && poortNu ? (
@@ -253,8 +259,16 @@ export default async function VerificatiePage() {
     postcodeOk: Boolean(bewaard?.homePostalCode),
   };
   const mist = poort?.gegevensIngevuld === true ? [] : gegevensMist(gegevensStand);
-  // uitzendkracht: het BSN en de overeenkomst vóór de eerste klus (13 nov, eigenaar), onder "Later" en op het eindscherm
-  const voorKlus = isUitzend ? voorEersteKlus(gegevensStand) : [];
+  // vóór de eerste klus (13 nov, eigenaar), onder "Later" en op het eindscherm: een uitzendkracht het BSN en de overeenkomst,
+  // een zzp'er of flexwerker btw, KVK of KOR (15 nov: dat stond er niet, terwijl reageren erop wacht)
+  const voorKlus = voorEersteKlus(gegevensStand);
+  const btwBegin: BtwBegin = {
+    vatNumber: fiscal.vatNumber,
+    vatRequested: fiscal.vatRequested,
+    korApplies: fiscal.korApplies,
+    // de KVK uit de fiscale gegevens, anders uit het profiel (8 cijfers): nodig voor "btw aangevraagd" bij een zzp'er
+    kvkNumber: fiscal.kvkNumber ?? (bewaard?.kvkNumber && /^\d{8}$/.test(bewaard.kvkNumber) ? bewaard.kvkNumber : null),
+  };
   // Het formulier heeft niets meer te vragen (persoon, thuisbasis, ID en gegevens af), maar het profiel is nog niet "compleet"
   // (meestal: het rekeningnummer): dan het eindscherm met wat er echt nog open staat, niet opnieuw het formulier. Anders gaf
   // "Opslaan" eindeloos "Bovenaan deze pagina zie je wat er nog mist", zonder lijst (13 nov, gemeld door de eigenaar).
@@ -271,6 +285,8 @@ export default async function VerificatiePage() {
         uitzend={fiscal.workerKind === "uitzendkracht"}
         voorKlus={voorKlus}
         bsnVoorstel={fiscal.bsnVoorstelLast4 ?? null}
+        soort={fiscal.workerKind ?? null}
+        btw={btwBegin}
         // de postcode is er (woonKlaar), dus een open "thuisbasis en rekeningnummer" is het rekeningnummer
         ibanOpen={o.onboarding.some((s) => s.id === "thuisbasis" && !s.done)}
       />
@@ -301,13 +317,7 @@ export default async function VerificatiePage() {
         mist={mist}
         soort={fiscal.workerKind ?? null}
         bsnVoorstel={fiscal.bsnVoorstelLast4 ?? null}
-        btw={{
-          vatNumber: fiscal.vatNumber,
-          vatRequested: fiscal.vatRequested,
-          korApplies: fiscal.korApplies,
-          // de KVK uit de fiscale gegevens, anders uit het profiel (8 cijfers): nodig voor "btw aangevraagd" bij een zzp'er
-          kvkNumber: fiscal.kvkNumber ?? (bewaard?.kvkNumber && /^\d{8}$/.test(bewaard.kvkNumber) ? bewaard.kvkNumber : null),
-        }}
+        btw={btwBegin}
       />
 
       {formulierNodig && (
@@ -368,7 +378,7 @@ export default async function VerificatiePage() {
         {/* uitzendkracht: BSN en overeenkomst vóór de eerste klus (13 nov); "Naar de overeenkomst" springt naar het blok hieronder */}
         {voorKlus.length > 0 && (
           <div className="mt-6">
-            <GegevensMist mist={voorKlus} later kopId="gegevens-later-kop" soort={fiscal.workerKind ?? null} bsnVoorstel={fiscal.bsnVoorstelLast4 ?? null} />
+            <GegevensMist mist={voorKlus} later kopId="gegevens-later-kop" soort={fiscal.workerKind ?? null} bsnVoorstel={fiscal.bsnVoorstelLast4 ?? null} btw={btwBegin} />
           </div>
         )}
         <div id="bankrekening" className="mt-6 card scroll-mt-20 p-6">
