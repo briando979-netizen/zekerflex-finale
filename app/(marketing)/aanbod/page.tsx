@@ -5,14 +5,15 @@ import { CtaBand } from "@/components/marketing/primitives";
 import { AANBOD, aanbodHref, PIJLERS, prijsTekst, WERK_ZOEKEN } from "@/lib/marketing/aanbod";
 import { breadcrumbJsonLd, canonical, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
+import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 
 const TITLE = "Het aanbod van ZekerFlex: personeel, website, branchesoftware en administratie";
 const DESCRIPTION =
   "Alles voor je bedrijf onder één dak: flexwerkers en uitzendkrachten, een eigen website en meer Google-reviews, software voor horeca en rijscholen, en facturen en rekentools. Met één account voor alles.";
 
 export const metadata: Metadata = {
-  title: { absolute: `${TITLE} | ZekerFlex` },
-  description: DESCRIPTION,
+  title: { absolute: seoTitel(TITLE) },
+  description: seoBeschrijving(DESCRIPTION),
   keywords: ["zekerflex aanbod", "software voor ondernemers", "horeca software", "rijschool software", "website laten maken", "personeel inhuren"],
   ...canonical("/aanbod", { title: TITLE, description: DESCRIPTION }),
 };

@@ -6,14 +6,15 @@ import { CITIES } from "@/lib/seo-cities";
 import { SECTORS } from "@/lib/seo-sectors";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { klusUrl } from "@/lib/klusconcept/concept";
+import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 
 const TITLE = "Personeel inhuren in heel Nederland — klus plaatsen voor flex- en uitzendkrachten";
 const DESCRIPTION =
   "Plaats een klus en huur flexkrachten, zzp'ers of uitzendkrachten in heel Nederland in. Matching op reistijd en vak, € 3,50 per gewerkt uur, geen abonnement en Wet DBA-risicosignalering.";
 
 export const metadata: Metadata = {
-  title: { absolute: `${TITLE} | ZekerFlex` },
-  description: DESCRIPTION,
+  title: { absolute: seoTitel(TITLE) },
+  description: seoBeschrijving(DESCRIPTION),
   keywords: ["personeel inhuren", "klus plaatsen", "uitzendbureau", "uitzendbureau alternatief", "flexkrachten inhuren", "zzp'er inhuren", "tijdelijk personeel"],
   ...canonical("/personeel-inhuren", { title: TITLE, description: DESCRIPTION }),
 };

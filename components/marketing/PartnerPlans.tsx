@@ -92,24 +92,24 @@ export function PartnerPlans() {
             <p className="mt-1 text-sm text-neutralx-600">Laat je gegevens achter, dan nemen we contact op met een voorstel op maat.</p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <div>
-                <label className={lbl}>Naam</label>
-                <input className={inp} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoComplete="name" />
+                <label htmlFor="partner-naam" className={lbl}>Naam</label>
+                <input id="partner-naam" className={inp} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoComplete="name" />
               </div>
               <div>
-                <label className={lbl}>Bedrijf</label>
-                <input className={inp} value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} autoComplete="organization" />
+                <label htmlFor="partner-bedrijf" className={lbl}>Bedrijf</label>
+                <input id="partner-bedrijf" className={inp} value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} autoComplete="organization" />
               </div>
               <div>
-                <label className={lbl}>E-mail</label>
-                <input className={inp} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} autoComplete="email" />
+                <label htmlFor="partner-email" className={lbl}>E-mail</label>
+                <input id="partner-email" className={inp} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} autoComplete="email" />
               </div>
               <div>
-                <label className={lbl}>Telefoon <span className="text-neutralx-400">(optioneel)</span></label>
-                <input className={inp} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} autoComplete="tel" />
+                <label htmlFor="partner-telefoon" className={lbl}>Telefoon <span className="text-neutralx-400">(optioneel)</span></label>
+                <input id="partner-telefoon" className={inp} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} autoComplete="tel" />
               </div>
               <div className="sm:col-span-2">
-                <label className={lbl}>Pakket</label>
-                <select className={inp} value={planId} onChange={(e) => setPlanId(e.target.value)}>
+                <label htmlFor="partner-pakket" className={lbl}>Pakket</label>
+                <select id="partner-pakket" className={inp} value={planId} onChange={(e) => setPlanId(e.target.value)}>
                   <option value="">— weet ik nog niet —</option>
                   {PARTNER_PLANS.map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
@@ -117,8 +117,8 @@ export function PartnerPlans() {
                 </select>
               </div>
               <div className="sm:col-span-2">
-                <label className={lbl}>Bericht <span className="text-neutralx-400">(optioneel)</span></label>
-                <textarea className={inp} rows={3} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="Vertel kort wat je zoekt (aantal vestigingen, modules, zelf hosten…)" />
+                <label htmlFor="partner-bericht" className={lbl}>Bericht <span className="text-neutralx-400">(optioneel)</span></label>
+                <textarea id="partner-bericht" className={inp} rows={3} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="Vertel kort wat je zoekt (aantal vestigingen, modules, zelf hosten…)" />
               </div>
             </div>
             <label className="mt-4 flex items-start gap-2 text-sm text-neutralx-600">

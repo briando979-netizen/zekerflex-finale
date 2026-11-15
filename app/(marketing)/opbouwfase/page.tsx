@@ -3,14 +3,15 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { CtaBand } from "@/components/marketing/primitives";
 import { canonical } from "@/lib/seo";
+import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 
 const TITLE = "ZekerFlex is nog in de opbouwfase";
 const DESCRIPTION =
   "ZekerFlex werkt al, maar is nog niet officieel gestart. Wat dat betekent voor testklussen, je gegevens en je ideeën.";
 
 export const metadata: Metadata = {
-  title: { absolute: `${TITLE} | ZekerFlex` },
-  description: DESCRIPTION,
+  title: { absolute: seoTitel(TITLE) },
+  description: seoBeschrijving(DESCRIPTION),
   robots: { index: false, follow: true },
   ...canonical("/opbouwfase", { title: TITLE, description: DESCRIPTION }),
 };

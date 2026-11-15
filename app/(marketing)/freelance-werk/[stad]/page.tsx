@@ -7,6 +7,7 @@ import { PublicShiftList } from "@/components/marketing/PublicShiftList";
 import { publicOpenShifts } from "@/lib/public-shifts";
 import { CITIES, RADIUS_KM, cityBySlug } from "@/lib/seo-cities";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
+import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 
 export const revalidate = 900;
 export const dynamicParams = false;
@@ -21,8 +22,8 @@ export async function generateMetadata({ params }: { params: Promise<{ stad: str
   const title = `Freelance werk in ${c.name} — klussen, flexwerk & uitzendwerk`;
   const description = `Open klussen in ${c.name} en omgeving: ${c.sectors.join(", ")}. Reageer direct via ZekerFlex, werk wanneer jij wilt en kies zelf hoe snel je wordt uitbetaald — ook zonder KVK via ons uitzendbureau.`;
   return {
-    title: { absolute: `${title} | ZekerFlex` },
-    description,
+    title: { absolute: seoTitel(title) },
+    description: seoBeschrijving(description),
     keywords: [`freelance werk ${c.name}`, `klussen ${c.name}`, `flexwerk ${c.name}`, `uitzendbureau ${c.name}`, `bijbaan ${c.name}`, `zzp opdrachten ${c.name}`],
     ...canonical(`/freelance-werk/${c.slug}`, { title, description }),
   };

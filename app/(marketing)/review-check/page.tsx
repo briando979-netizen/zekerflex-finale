@@ -5,14 +5,15 @@ import { breadcrumbJsonLd, canonical, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { getReviewScan } from "@/lib/review-scan/run";
 import { getScanLog } from "@/lib/scans/store";
+import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 
 const TITLE = "Gratis review-check: hoe scoort je bedrijf op Google?";
 const DESCRIPTION =
   "Plak je Google-link of website en zie binnen een halve minuut je reviewscore, hoe je het doet tegenover bedrijven in de buurt, wat klanten zeggen en wat je kunt verbeteren. Met een antwoordvoorstel per review.";
 
 export const metadata: Metadata = {
-  title: { absolute: `${TITLE} | ZekerFlex` },
-  description: DESCRIPTION,
+  title: { absolute: seoTitel(TITLE) },
+  description: seoBeschrijving(DESCRIPTION),
   keywords: ["google reviews verbeteren", "review check", "google bedrijfsprofiel", "meer google reviews", "reageren op reviews", "online reputatie"],
   ...canonical("/review-check", { title: TITLE, description: DESCRIPTION }),
 };

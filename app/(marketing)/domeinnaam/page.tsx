@@ -5,14 +5,15 @@ import { DomeinZoeker } from "@/components/domeinen/DomeinZoeker";
 import { BUNDEL_TLDS, EXTENSIES, euroPrijs } from "@/lib/domeinen/extensies";
 import { breadcrumbJsonLd, canonical, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
+import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 
 const TITLE = "Domeinnaam registreren of verhuizen";
 const DESCRIPTION =
   "Zoek direct of je domeinnaam nog vrij is: .nl, .com, .eu, .be en meer, voor een eerlijke prijs per jaar. Of verhuis je bestaande domein naar ZekerFlex, los of samen met je website of webshop.";
 
 export const metadata: Metadata = {
-  title: { absolute: `${TITLE} | ZekerFlex` },
-  description: DESCRIPTION,
+  title: { absolute: seoTitel(TITLE) },
+  description: seoBeschrijving(DESCRIPTION),
   keywords: ["domeinnaam registreren", "domeinnaam kopen", "domein verhuizen", "nl domein", "domeinnaam checken", "domeinnaam beschikbaar"],
   ...canonical("/domeinnaam", { title: TITLE, description: DESCRIPTION }),
 };

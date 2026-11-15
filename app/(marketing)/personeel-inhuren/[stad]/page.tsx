@@ -6,6 +6,7 @@ import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/p
 import { CITIES, cityBySlug } from "@/lib/seo-cities";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { klusUrl } from "@/lib/klusconcept/concept";
+import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 
 export const dynamicParams = false;
 
@@ -19,8 +20,8 @@ export async function generateMetadata({ params }: { params: Promise<{ stad: str
   const title = `Personeel inhuren in ${c.name} — klus plaatsen, flexkrachten & uitzendkrachten`;
   const description = `Flexpersoneel in ${c.name} voor ${c.sectors.join(", ")}. Plaats een klus en match op reistijd en vakmanschap. € 3,50 per gewerkt uur, zonder abonnement, met Wet DBA-risicosignalering.`;
   return {
-    title: { absolute: `${title} | ZekerFlex` },
-    description,
+    title: { absolute: seoTitel(title) },
+    description: seoBeschrijving(description),
     keywords: [`personeel inhuren ${c.name}`, `uitzendbureau ${c.name}`, `flexkrachten ${c.name}`, `zzp'er inhuren ${c.name}`, `klus plaatsen ${c.name}`, `tijdelijk personeel ${c.name}`],
     ...canonical(`/personeel-inhuren/${c.slug}`, { title, description }),
   };

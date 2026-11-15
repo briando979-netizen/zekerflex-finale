@@ -6,6 +6,7 @@ import { PublicShiftList } from "@/components/marketing/PublicShiftList";
 import { publicOpenShifts } from "@/lib/public-shifts";
 import { CITIES } from "@/lib/seo-cities";
 import { breadcrumbJsonLd, canonical, SITE } from "@/lib/seo";
+import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 
 export const revalidate = 600;
 
@@ -14,8 +15,8 @@ const DESCRIPTION =
   "Bekijk alle open klussen op ZekerFlex: freelance werk, flexwerk en uitzendwerk in heel Nederland. Horeca, logistiek, retail, evenementen en meer — reageer direct en kies zelf hoe snel je wordt uitbetaald.";
 
 export const metadata: Metadata = {
-  title: { absolute: `${TITLE} | ZekerFlex` },
-  description: DESCRIPTION,
+  title: { absolute: seoTitel(TITLE) },
+  description: seoBeschrijving(DESCRIPTION),
   keywords: ["klussen", "freelance werk", "flexwerk", "uitzendwerk", "klussen in de buurt", "bijbaan", "zzp opdrachten", "werk vandaag"],
   ...canonical("/klussen", { title: TITLE, description: DESCRIPTION }),
 };

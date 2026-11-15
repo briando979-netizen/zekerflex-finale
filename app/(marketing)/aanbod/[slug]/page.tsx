@@ -6,6 +6,7 @@ import { CtaBand } from "@/components/marketing/primitives";
 import { AANBOD, aanbodHref, aanbodVan, eigenPaginas, pijlerVan, prijsTekst } from "@/lib/marketing/aanbod";
 import { breadcrumbJsonLd, canonical, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
+import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 
 export const dynamicParams = false;
 
@@ -17,8 +18,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const a = aanbodVan((await params).slug);
   if (!a) return {};
   return {
-    title: { absolute: `${a.naam} | ZekerFlex` },
-    description: a.tekst,
+    title: { absolute: seoTitel(a.naam) },
+    description: seoBeschrijving(a.tekst),
     keywords: [a.naam, ...(a.zoekwoorden ?? []), "ZekerFlex"],
     ...canonical(`/aanbod/${a.slug}`, { title: a.naam, description: a.kort }),
   };

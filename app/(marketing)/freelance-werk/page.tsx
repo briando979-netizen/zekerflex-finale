@@ -7,6 +7,7 @@ import { publicOpenShifts } from "@/lib/public-shifts";
 import { CITIES } from "@/lib/seo-cities";
 import { SECTORS } from "@/lib/seo-sectors";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
+import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 
 export const revalidate = 600;
 
@@ -15,8 +16,8 @@ const DESCRIPTION =
   "Freelance werk vinden in heel Nederland: open klussen in horeca, logistiek, retail, evenementen en zorg. Met KVK of btw-nummer als zzp'er, of zonder KVK via het ZekerFlex-uitzendbureau. Gratis aanmelden, zelf je uitbetaling kiezen.";
 
 export const metadata: Metadata = {
-  title: { absolute: `${TITLE} | ZekerFlex` },
-  description: DESCRIPTION,
+  title: { absolute: seoTitel(TITLE) },
+  description: seoBeschrijving(DESCRIPTION),
   keywords: ["freelance werk", "freelance werk vinden", "freelance klussen", "zzp opdrachten", "flexwerk", "werk zonder KVK", "freelance werk Nederland"],
   ...canonical("/freelance-werk", { title: TITLE, description: DESCRIPTION }),
 };

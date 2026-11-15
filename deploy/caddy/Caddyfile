@@ -165,6 +165,8 @@ vpn.zekerflex.com {
 # bi.zekerflex.com worden. Metabase heeft zijn eigen login; de ingebedde
 # dashboards in /werkgever/rapportages gaan via getekende links.
 {$METABASE_HOST:bi.37-97-226-24.sslip.io} {
+	# met het toegangslog, zodat CrowdSec ook deze inlogpagina bewaakt (paginacheck 15 nov)
+	import toegangslog
 	encode zstd gzip
 	reverse_proxy metabase:3000 {
 		header_up -X-ZF-Site-Host
@@ -176,6 +178,8 @@ vpn.zekerflex.com {
 # "Inloggen met ZekerFlex" (lib/oidc). Standaard een sslip.io-naam; met een
 # A-record kan OUTLINE_HOST kennis.zekerflex.com worden.
 {$OUTLINE_HOST:kennis.37-97-226-24.sslip.io} {
+	# met het toegangslog, zodat CrowdSec ook deze inlogpagina bewaakt (paginacheck 15 nov)
+	import toegangslog
 	encode zstd gzip
 	reverse_proxy outline:3000 {
 		header_up -X-ZF-Site-Host

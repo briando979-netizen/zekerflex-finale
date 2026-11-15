@@ -17,44 +17,44 @@ export const SEO_ACHTERVOEGSEL = " · ZekerFlex";
 export const SEO_STANDAARD = {
   "/": {
     naam: "Homepage (werkzoekenden)",
-    titel: "ZekerFlex — freelance werk & klussen in heel Nederland | flexwerk, zzp en uitzendwerk",
+    titel: "ZekerFlex — freelance werk & klussen in heel Nederland",
     omschrijving:
-      "Vind flexwerk en klussen bij jou in de buurt. Je ziet vooraf wat je verdient, checkt in met je telefoon en krijgt je geld op je eigen rekening. Zzp'er of zonder KVK via ons uitzendbureau. Meedoen is gratis.",
+      "Vind flexwerk en klussen bij jou in de buurt. Je ziet vooraf wat je verdient en krijgt je geld op je eigen rekening. Ook zonder KVK, en gratis.",
     absoluut: true,
   },
   "/bedrijven": {
     naam: "Homepage voor bedrijven",
     titel: "Personeel, website en software voor je bedrijf",
     omschrijving:
-      "Eén plek voor je hele bedrijf: flexwerkers, uitzendkrachten en zzp'ers inhuren, een eigen website en software voor jouw branche. Personeel kost € 3,50 per gewerkt uur, zonder abonnement.",
+      "Flexwerkers, uitzendkrachten en zzp'ers inhuren, plus een eigen website en software voor je branche. Personeel € 3,50 per gewerkt uur, zonder abonnement.",
     absoluut: false,
   },
   "/voor-bedrijven": {
     naam: "Voor bedrijven",
     titel: "Flexkrachten & zzp'ers inhuren",
     omschrijving:
-      "Huur betrouwbare zzp'ers en flexkrachten in, precies wanneer je ze nodig hebt — horeca, retail, logistiek en meer. Automatische matching per vestiging, GPS check-in en Wet DBA-bewaking ingebouwd. € 3,50 per gewerkt uur, geen abonnement.",
+      "Huur zzp'ers en flexkrachten in wanneer je ze nodig hebt, met GPS-inchecken en Wet DBA-bewaking. € 3,50 per gewerkt uur, geen abonnement.",
     absoluut: false,
   },
   "/voor-freelancers": {
     naam: "Voor freelancers",
     titel: "Flexwerk & zzp-opdrachten vinden",
     omschrijving:
-      "Vind flexwerk en zzp-opdrachten die passen bij je vak en reistijd. Kies je uitbetaalsnelheid, verstuur geen facturen en bekijk Wet DBA-risicosignalen. Meedoen is gratis.",
+      "Vind flexwerk en zzp-opdrachten die passen bij je vak en reistijd. Kies hoe snel je wordt uitbetaald en verstuur geen facturen. Meedoen is gratis.",
     absoluut: false,
   },
   "/prijzen": {
     naam: "Prijzen",
     titel: "Prijzen — € 3,50 per gewerkt uur, gratis voor freelancers",
     omschrijving:
-      "Wat kost ZekerFlex? Gratis voor freelancers en flexkrachten. Bedrijven betalen € 3,50 platformkosten per gewerkt uur, alleen bij gebruik. Geen abonnement, geen opstartkosten, geen verrassingen.",
+      "Gratis voor freelancers en flexkrachten. Bedrijven betalen € 3,50 per gewerkt uur, alleen bij gebruik. Geen abonnement, geen opstartkosten.",
     absoluut: false,
   },
   "/over-ons": {
     naam: "Over ons",
     titel: "Over ZekerFlex",
     omschrijving:
-      "ZekerFlex is opgebouwd, bedacht en zelf geschreven door oprichter Briando van Essen — een Nederlands platform voor flexibel werk dat eerlijk, snel en zeker hoort te zijn.",
+      "ZekerFlex is bedacht en zelf gebouwd door oprichter Briando van Essen: een Nederlands platform voor flexwerk dat eerlijk, snel en zeker hoort te zijn.",
     absoluut: false,
   },
 } satisfies Record<string, SeoStandaard>;
