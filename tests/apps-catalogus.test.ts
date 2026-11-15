@@ -40,6 +40,10 @@ describe("de catalogus", () => {
     if (/loonstro/i.test(uitleg)) expect(heeft("LoonstrokenBlok.tsx")).toBe(true);
     if (/chat/i.test(uitleg)) expect(heeft("ChatPaneel.tsx")).toBe(true);
     if (/rooster|verlof|uren/i.test(uitleg)) expect(heeft("PlanningBlokken.tsx")).toBe(true);
+    if (/documenten/i.test(uitleg)) expect(heeft("DocumentenBlok.tsx")).toBe(true);
+    const pagina = readFileSync(path.join(ROOT, "app/personeel/page.tsx"), "utf8");
+    if (/fooi/i.test(uitleg)) expect(pagina).toMatch(/fooi/);
+    if (/melding/i.test(uitleg)) expect(pagina).toContain("<PushToggle");
   });
 });
 
