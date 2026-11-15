@@ -30,7 +30,6 @@ import { poortStapVan, volgendeNaVerificatie } from "@/lib/onboarding/werker-poo
 import { beginStap } from "@/lib/onboarding/wie-ben-jij";
 import { nogVoorEersteKlusVan } from "@/lib/onboarding/klaar-voor-klus-server";
 import type { KlusStuk } from "@/lib/onboarding/klaar-voor-klus";
-import { KlaarVoorKlusKaart } from "@/components/app/KlaarVoorKlusKaart";
 import { featureEnabled } from "@/lib/flags";
 
 export const dynamic = "force-dynamic";
@@ -116,8 +115,8 @@ function AanmeldingKlaar({
       {/* uitzendkracht: het BSN en de overeenkomst horen sinds 13 nov niet bij de aanmelding, maar zijn nodig vóór de eerste
           klus (reageren houdt ze tegen). Hier meteen te doen; de overeenkomst staat onderaan (#uitzendovereenkomst) */}
       <GegevensMist mist={voorKlus} later kopId="gegevens-later-kop" soort={soort ?? (uitzend ? "uitzendkracht" : null)} bsnVoorstel={bsnVoorstel} btw={btw} />
-      {/* wat reageren nog tegenhoudt: dezelfde lijst als bovenaan Klussen (15 nov; hier stond een oude checklist met een eigen teller) */}
-      <KlaarVoorKlusKaart stukken={nogVoorKlus} />
+      {/* hier stond een oude checklist met een eigen teller (weg, 15 nov); de lijst van Ontdekken hoort hier ook niet: deze
+          pagina ís de plek waar je het invult (eindtest 16 nov: twee blokken met bijna dezelfde titel onder elkaar) */}
 
       {ibanOpen && documenten}
 

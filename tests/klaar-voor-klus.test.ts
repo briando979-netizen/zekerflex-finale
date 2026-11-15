@@ -66,10 +66,12 @@ describe("nogVoorEersteKlus", () => {
   });
 });
 
-describe("Verificatie: het eindscherm toont dezelfde lijst", () => {
+describe("Verificatie: het eindscherm is de plek om het in te vullen", () => {
   const pagina = lees("app/dashboard/verificatie/page.tsx");
   it("geen oude checklist met eigen teller, en 'je bent klaar' alleen als reageren kan", () => {
-    expect(pagina).toContain("<KlaarVoorKlusKaart stukken={nogVoorKlus} />");
+    // de lijst van Ontdekken staat hier niet (dubbel met het invulblok, eindtest 16 nov); wel het invulblok
+    expect(pagina).not.toContain("<KlaarVoorKlusKaart");
+    expect(pagina).toContain('<GegevensMist mist={voorKlus} later kopId="gegevens-later-kop"');
     expect(pagina).not.toContain("o.onboarding.map");
     expect(pagina).not.toContain("nogStappenTekst");
     expect(pagina).toContain('const echtKlaar = volgende === "klaar" && nogVoorKlus.length === 0;');
