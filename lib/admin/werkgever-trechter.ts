@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { kvGetMany } from "@/lib/storage/kv";
-import { isTestAccount } from "@/lib/admin/onboarding-model";
+import { isEchtBedrijf } from "@/lib/admin/echt-kern";
 import { leesEigenTest } from "@/lib/admin/eigen-test";
 import { TENANT_APPROVAL_PREFIX, TENANT_BEWIJS_PREFIX, verificatieUitFeiten } from "@/lib/company/verified";
 import { WERKGEVER_PAGINAS, type BedrijfFeiten, type BezoekRij } from "@/lib/admin/werkgever-trechter-kern";
@@ -64,18 +64,10 @@ export async function werkgeverTrechterData(nu: Date = new Date()): Promise<{ be
   // in het beheer gemarkeerd als eigen test (het bedrijf of het account): telt niet mee (lib/admin/eigen-test-kern.ts)
   const eigenTest = await leesEigenTest();
   const bedrijven: BedrijfFeiten[] = tenants.map((t) => {
-    const echt =
-      !Object.hasOwn(eigenTest.tenants, t.id) &&
-      t.memberships.some(
-        (m) =>
-          !isTestAccount({
-            email: m.user.email,
-            rollen: m.user.memberships.map((x) => x.role),
-            disabledAt: m.user.disabledAt,
-            tenantNamen: [t.name],
-            eigenTest: Object.hasOwn(eigenTest.users, m.user.id),
-          }),
-      );
+    const echt = isEchtBedrijf(
+      { id: t.id, name: t.name, leden: t.memberships.map((m) => ({ id: m.user.id, email: m.user.email, disabledAt: m.user.disabledAt, rollen: m.user.memberships.map((x) => x.role) })) },
+      eigenTest,
+    );
     const kvkActief = Boolean(t.companyRegistration?.isActive && !t.companyRegistration.insolvent);
     const klus = perTenant.get(t.id);
     const geverifieerd = verificatieUitFeiten({

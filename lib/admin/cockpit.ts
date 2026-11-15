@@ -1,4 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { echteBedrijfIds } from "@/lib/admin/weekcijfers";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { zonderTestklussen } from "@/lib/shifts/testklus-db";
 import { platformAccount } from "@/lib/bank/accounts";
 
 // ---------------------------------------------------------------------------
@@ -41,6 +44,10 @@ export async function buildCockpit(now = new Date()): Promise<Cockpit> {
       _sum: { subtotalCents: true, totalCents: true },
     });
 
+  // bedrijven en klussen: alleen echte (lib/admin/echt-kern.ts); het eigen testbedrijf had op 15 nov alle 98 open klussen
+  const echt = await echteBedrijfIds(await leesEigenTest().catch(() => null)).catch(() => null);
+  const echtFilter = echt ? { id: { in: [...echt] } } : {};
+  const zonderTest = await zonderTestklussen(m1).catch(() => ({}));
   const [revNow, revBefore, gmvNow, gmvBefore, bankIncome, users, freelancers, usersNow, usersBefore, active7d, companies, companiesNow, shiftsNow, filledNow, upcoming, accounts, balances, pots, cards, daily, top] =
     await Promise.all([
       invoiceSum(m0, now, true),
@@ -53,11 +60,11 @@ export async function buildCockpit(now = new Date()): Promise<Cockpit> {
       prisma.user.count({ where: { createdAt: { gte: m0 } } }),
       prisma.user.count({ where: { createdAt: { gte: m1, lt: m0 } } }),
       prisma.user.count({ where: { lastLoginAt: { gte: new Date(now.getTime() - 7 * 86_400_000) } } }),
-      prisma.tenant.count({ where: { type: { not: "PLATFORM" } } }),
-      prisma.tenant.count({ where: { type: { not: "PLATFORM" }, createdAt: { gte: m0 } } }),
-      prisma.shift.count({ where: { startsAt: { gte: m0, lt: monthStart(now, 1) } } }),
-      prisma.shift.count({ where: { startsAt: { gte: m0, lt: monthStart(now, 1) }, assignments: { some: { cancelledAt: null } } } }),
-      prisma.shift.count({ where: { startsAt: { gte: now } } }),
+      prisma.tenant.count({ where: { type: { not: "PLATFORM" }, ...echtFilter } }),
+      prisma.tenant.count({ where: { type: { not: "PLATFORM" }, createdAt: { gte: m0 }, ...echtFilter } }),
+      prisma.shift.count({ where: { startsAt: { gte: m0, lt: monthStart(now, 1) }, ...zonderTest } }),
+      prisma.shift.count({ where: { startsAt: { gte: m0, lt: monthStart(now, 1) }, assignments: { some: { cancelledAt: null } }, ...zonderTest } }),
+      prisma.shift.count({ where: { startsAt: { gte: now }, ...zonderTest } }),
       prisma.bankAccount.count({ where: { ownerType: { not: "PLATFORM" } } }),
       prisma.bankAccount.aggregate({ where: { ownerType: { not: "PLATFORM" } }, _sum: { balanceCents: true } }),
       prisma.bankPot.aggregate({ where: { closedAt: null }, _sum: { balanceCents: true } }),

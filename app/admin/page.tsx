@@ -10,6 +10,8 @@ import { Chart } from "@/components/admin/kit-client";
 import { HomeLive } from "@/components/admin/HomeLive";
 import { VerkoopKaart } from "@/components/admin/VerkoopKaart";
 import { verkoopWacht } from "@/lib/admin/verkoop-wacht";
+import { WeekCijfersKaart } from "@/components/admin/WeekCijfersKaart";
+import { haalWeekCijfers } from "@/lib/admin/weekcijfers";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +35,7 @@ export default async function AdminHomePage(props: { searchParams: Promise<{ per
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) redirect("/admin/disputes");
   const { periode } = await props.searchParams;
   const period = resolvePeriod(periode);
-  const [d, verkoop] = await Promise.all([homeInsights(period), verkoopWacht()]);
+  const [d, verkoop, week] = await Promise.all([homeInsights(period), verkoopWacht(), haalWeekCijfers()]);
   const now = new Date();
   const firstName = principal.fullName.split(/\s+/)[0] ?? "";
   const funnels = d.funnels.filter((f) => f.steps.some((s) => s.count > 0));
@@ -50,13 +52,16 @@ export default async function AdminHomePage(props: { searchParams: Promise<{ per
       {/* wat de eigenaar kan verkopen en wat op een mens wacht (lib/admin/verkoop-wacht.ts) */}
       <VerkoopKaart stand={verkoop} />
 
+      {/* elke week dezelfde vijf getallen, zonder test (lib/admin/weekcijfers.ts): beweegt er iets? */}
+      <WeekCijfersKaart cijfers={week} />
+
       <KpiStrip
         items={[
           { label: "Eigen omzet", value: euro(d.revenue.total), delta: d.revenue.delta, spark: d.revenue.series, hint: period.versus, href: "/admin/financien" },
           { label: "Door het platform", value: euro(d.gross.total), delta: d.gross.delta, hint: "gefactureerd + webshop", href: "/admin/facturen" },
           { label: "Gewerkte uren", value: count(Math.round(d.hours.total)), delta: d.hours.delta, spark: d.hours.series, href: "/admin/verloning" },
           { label: "Bezetting", value: `${d.fill.pct}%`, delta: d.fill.delta, hint: `${d.fill.filled} van ${d.fill.total} klussen`, href: "/admin/vooruitblik" },
-          { label: "Nieuwe gebruikers", value: count(d.signups.total), delta: d.signups.delta, spark: d.signups.series, href: "/admin/gebruikers" },
+          { label: "Nieuwe gebruikers", value: count(d.signups.total), delta: d.signups.delta, spark: d.signups.series, hint: "zonder test", href: "/admin/gebruikers" },
           { label: "Bezoekers", value: count(d.visitors.total), delta: d.visitors.delta, spark: d.visitors.series, href: "/admin/analytics" },
         ]}
       />
