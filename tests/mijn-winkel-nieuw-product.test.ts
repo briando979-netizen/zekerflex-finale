@@ -74,11 +74,15 @@ describe("het scherm", () => {
     expect(s).not.toMatch(/window\.alert|\balert\(/);
   });
 
-  it("Product toevoegen in Beheer opent de drie stappen; Alle velden tonen opent het uitgebreide formulier; bewerken blijft het gewone formulier", () => {
+  // sinds 15 nov 2026: Product toevoegen en Bewerken openen het productscherm (meerdere foto's, maten in één keer,
+  // components/admin/ShopProductScherm.tsx); de drie stappen blijven voor een leverancierslink, het uitgebreide formulier
+  // (webadres, model-foto, 3D) via het productscherm
+  it("Product toevoegen en Bewerken openen het productscherm; de drie stappen alleen voor een leverancierslink", () => {
     const a = lees("components/admin/ShopAdmin.tsx");
-    expect(a).toContain("{tab === \"products\" && showForm && !editing && !uitgebreid && (");
+    expect(a).toContain("<ShopProductScherm");
+    expect(a).toContain("{tab === \"products\" && vanLink && (");
     expect(a).toContain("<ShopNieuwStappen");
-    expect(a).toContain("onAlleVelden={() => setUitgebreid(true)}");
+    expect(a).toContain("onVanLink={() => { setScherm(null); setVanLink(true); }}");
     expect(a).toContain("showForm && (editing || uitgebreid) && (");
   });
 });

@@ -13,7 +13,8 @@ export async function GET(_request: Request, props: { params: Promise<{ id: stri
   const params = await props.params;
   try {
     const linked = await prisma.shopProduct.findFirst({
-      where: { OR: [{ imageUploadId: params.id }, { modelUploadId: params.id }] },
+      // ook een extra foto van een product (fotos, 15 nov 2026); verder blijft elke andere upload dicht
+      where: { OR: [{ imageUploadId: params.id }, { modelUploadId: params.id }, { fotos: { has: `/api/shop/media/${params.id}` } }] },
       select: { id: true },
     });
     if (!linked) return NextResponse.json({ error: "Media niet gevonden" }, { status: 404 });

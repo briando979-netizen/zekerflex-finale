@@ -55,7 +55,8 @@ describe("de foto's die er zijn", () => {
 describe("op de productpagina", () => {
   it("de gekozen kleur zet zijn foto vooraan en toont hem meteen; de knop heeft een stipje", () => {
     const pdp = readFileSync(path.join(process.cwd(), "components/marketing/ProductDetail.tsx"), "utf8").split("\r\n").join("\n");
-    expect(pdp).toContain("const gallery = [...new Set([kleurFoto ?? product.imageUrl, product.modelPhotoUrl].filter(Boolean) as string[])];");
+    // sinds 15 nov ook de extra foto's van het product (fotos), na de (kleur)hoofdfoto
+    expect(pdp).toContain("const gallery = [...new Set([kleurFoto ?? product.imageUrl, ...(product.fotos ?? []), product.modelPhotoUrl].filter(Boolean) as string[])];");
     expect(pdp).toContain("setActive(0);\n                      setShow3d(false);");
     expect(pdp).toContain("kleurStip(c)");
     expect(readFileSync(path.join(process.cwd(), "app/shop/[slug]/page.tsx"), "utf8")).toContain("kleurFotos: kleurFotos(product)");
