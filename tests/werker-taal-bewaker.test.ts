@@ -12,7 +12,7 @@ const BASISLIJN: Record<string, { max: number; reden: string }> = {
   "components/app/AvatarUpload.tsx": { max: 1, reden: "de Nederlandse standaard van de texts-prop; de werker-app geeft zijn eigen taal mee" },
   "components/app/ColorLegend.tsx": { max: 1, reden: "de Nederlandse kolom van de eigen vijftalige tabel" },
   "components/kaart/VolgKaart.tsx": { max: 1, reden: "de Nederlandse standaard van de teksten-prop (de klantpagina blijft Nederlands)" },
-  "components/privacy/ErasureScopeInfo.tsx": { max: 1, reden: "de Nederlandse standaard van de texts-prop (de openbare pagina blijft Nederlands)" },
+  // ErasureScopeInfo.tsx: weg sinds 15 nov 2026, de Nederlandse standaard staat nu in components/privacy/erasure-texts.ts
 };
 
 const ROOT = process.cwd();
