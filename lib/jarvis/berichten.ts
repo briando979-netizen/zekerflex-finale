@@ -24,7 +24,7 @@ export interface JarvisInvoer {
 }
 
 /** Met "alles gratis": hooguit zoveel voorbeelden en beurten (vraag + antwoord), en zo lang per stuk. */
-export const GRATIS_GRENZEN = { voorbeelden: 1, beurten: 2, vraagTekens: 300, antwoordTekens: 500 } as const;
+export const GRATIS_GRENZEN = { voorbeelden: 0, beurten: 2, vraagTekens: 300, antwoordTekens: 500 } as const;
 
 const kort = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s);
 
