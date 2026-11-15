@@ -122,10 +122,10 @@ describe("de taken in de bron", () => {
     expect(t).not.toMatch(/B\.V\./);
   });
 
-  it("de 83(b)-taak begint met een kijkje in het Atlas-dashboard", () => {
+  it("de 83(b)-taak begint met het bewaren van het bewijs van Atlas", () => {
     const t = taak("irs-83b");
     const eerste = t.indexOf("how: [");
-    expect(t.slice(eerste, eerste + 200)).toContain("Stripe Atlas-dashboard");
+    expect(t.slice(eerste, eerste + 200)).toContain("Proof of 83(b) filing");
   });
 
   it("de wettelijke termijnen komen uit de projectnotities: Wtta 31 december 2026, 83(b) 9 december 2026", () => {

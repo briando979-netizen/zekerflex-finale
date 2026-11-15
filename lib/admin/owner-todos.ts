@@ -647,7 +647,6 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
         "Bewaar de bevestiging en vink deze taak daarna af.",
       ],
       auto: false,
-      eerst: { reden: "wettelijk", uiterlijk: "2027-03-01" },
       ...m("delaware-jaarverslag"),
     },
     {
@@ -661,7 +660,6 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
         "Laat de accountant het indienen regelen en bewaar het bewijs. Vink deze taak daarna af.",
       ],
       auto: false,
-      eerst: { reden: "wettelijk", uiterlijk: "2027-04-15" },
       ...m("irs-5472"),
     },
     {
