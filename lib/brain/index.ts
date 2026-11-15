@@ -10,7 +10,7 @@ import { cacheLookup, cacheStore, knowledgePack, packMessage } from "@/lib/rag/c
 import { gratisAan } from "@/lib/ai/gratis";
 import { breinBerichtenGratis } from "@/lib/brain/prompt-gratis";
 import type { Audience } from "@/lib/rag/corpus";
-import { roleOf, runTools, toolsFor, type ToolResult } from "@/lib/brain/tools";
+import { roleOf, runTools, toolsFor, type BrainApp, type ToolResult } from "@/lib/brain/tools";
 import { routeQuestion } from "@/lib/brain/router";
 import { loadMemory, remember } from "@/lib/brain/memory";
 
@@ -139,15 +139,18 @@ export interface ThinkOptions {
   stateless?: boolean;
   /** data handed in by an automation (n8n webhook payload…) — shown to the model as data, never as instructions */
   context?: string;
+  /** de app waarin gevraagd wordt (lib/brain/tools.ts, BrainApp): de werkgeversapp helpt het bedrijf */
+  app?: BrainApp;
 }
 
 export async function think(p: Principal, question: string, opts: ThinkOptions = {}): Promise<BrainAnswer> {
   await ensureAiNode();
-  const role = roleOf(p);
+  const role = roleOf(p, opts.app);
   const q = question.trim().slice(0, 1500);
   const guard = inspectPrompt(q);
   if (!guard.allowed) {
-    return { answer: "Daar kan ik je niet mee helpen. Stel gerust een vraag over je klussen, uren, uitbetalingen of hoe ZekerFlex werkt.", mode: "rules", tools: [], sources: [], links: [], suggestions: STARTERS[role].slice(0, 3) };
+    const onderwerp = role === "opdrachtgever" ? "je diensten, uren, facturen" : "je klussen, uren, uitbetalingen";
+    return { answer: `Daar kan ik je niet mee helpen. Stel gerust een vraag over ${onderwerp} of hoe ZekerFlex werkt.`, mode: "rules", tools: [], sources: [], links: [], suggestions: STARTERS[role].slice(0, 3) };
   }
 
   const modelOn = !llmConfigProblem();
@@ -182,7 +185,7 @@ export async function think(p: Principal, question: string, opts: ThinkOptions =
 
   // agentic RAG: plan → advanced recall (rewrite, multi-query, HyDE, hybrid + RRF, rerank, compress) → check → retry
   const [results, rag] = await Promise.all([
-    runTools(p, toolNames),
+    runTools(p, toolNames, role),
     agenticRecall(q, { role, k: 5, history: memory.map(({ role: r, content }) => ({ role: r, content })) }),
   ]);
   const knowledge = results.length ? rag.hits.slice(0, 2) : rag.hits;

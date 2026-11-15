@@ -11,11 +11,20 @@ interface Msg {
   mode?: "model" | "rules";
 }
 
+/** De kop en het welkom per app (15 nov 2026): een bedrijf vraagt naar diensten, uren en facturen, een werker naar klussen. */
+const KOP = {
+  werker: { sub: "Kent je klussen, uren en uitbetalingen · voert zelf niets uit", hoi: "Hoi! Vraag me iets over je klussen, uren, uitbetalingen of hoe ZekerFlex werkt." },
+  werkgever: { sub: "Kent je diensten, uren en facturen · voert zelf niets uit", hoi: "Hoi! Vraag me iets over je diensten, kandidaten, uren, facturen of hoe ZekerFlex werkt." },
+} as const;
+
 /**
  * The ZekerFlex assistant ("brein"): answers from the user's own data and the
  * knowledge base. Read-only — it explains and links to the right screen.
+ * `app`: de app waarin hij draait; in de werkgeversapp helpt hij het bedrijf (lib/brain/tools.ts, roleOf). Zonder: op rol.
  */
-export function BrainChat({ onClose }: { onClose?: () => void }) {
+export function BrainChat({ onClose, app }: { onClose?: () => void; app?: "werker" | "werkgever" }) {
+  const api = app ? `/api/brain?app=${app}` : "/api/brain";
+  const kop = KOP[app ?? "werker"];
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [starters, setStarters] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -24,7 +33,7 @@ export function BrainChat({ onClose }: { onClose?: () => void }) {
   const end = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch("/api/brain", { cache: "no-store" })
+    fetch(api, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (!d) return;
@@ -32,7 +41,7 @@ export function BrainChat({ onClose }: { onClose?: () => void }) {
         setStarters(d.starters ?? []);
       })
       .catch(() => undefined);
-  }, []);
+  }, [api]);
   useEffect(() => {
     void end.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, busy]);
@@ -45,7 +54,7 @@ export function BrainChat({ onClose }: { onClose?: () => void }) {
     setMsgs((m) => [...m, { role: "user", content: question }]);
     setBusy(true);
     try {
-      const r = await fetch("/api/brain", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question }) });
+      const r = await fetch(api, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question }) });
       const d = await r.json();
       if (!r.ok) throw new Error(d?.error?.message ?? "Er ging iets mis.");
       setMsgs((m) => [...m, { role: "assistant", content: d.answer, links: d.links, sources: d.sources, mode: d.mode }]);
@@ -65,7 +74,7 @@ export function BrainChat({ onClose }: { onClose?: () => void }) {
         <span className="grid h-9 w-9 place-items-center rounded-full bg-brand-50 text-lg">✨</span>
         <div className="min-w-0 flex-1">
           <p className="font-display text-sm font-bold text-ink">ZekerFlex-assistent</p>
-          <p className="text-[11px] text-neutralx-500">Kent je klussen, uren en uitbetalingen · voert zelf niets uit</p>
+          <p className="text-[11px] text-neutralx-500">{kop.sub}</p>
         </div>
         {msgs.length > 0 && (
           <button
@@ -90,7 +99,7 @@ export function BrainChat({ onClose }: { onClose?: () => void }) {
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {msgs.length === 0 && (
           <div className="rounded-2xl bg-white p-4 text-sm text-neutralx-700 shadow-sm">
-            Hoi! Vraag me iets over je klussen, uren, uitbetalingen of hoe ZekerFlex werkt.
+            {kop.hoi}
           </div>
         )}
         {msgs.map((m, i) => (
