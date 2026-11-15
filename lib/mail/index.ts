@@ -482,13 +482,13 @@ export function onboardingReminderEmail(
       : kind === "uitzendkracht"
         ? {
             href: `${base}/dashboard/verificatie`,
-            todo: "vul je BSN, thuisbasis en rekeningnummer in, bevestig je identiteit en onderteken je uitzendovereenkomst",
-            why: "Daarna kun je direct op klussen reageren en word je uitbetaald via ZekerFlex.",
+            todo: "doorloop de stappen van je aanmelding: je gegevens, een ID-check en een profielfoto",
+            why: "Daarna zie je bovenaan Ontdekken precies wat er nog nodig is voor je eerste klus (je BSN, rekeningnummer en uitzendovereenkomst).",
           }
         : {
             href: `${base}/dashboard/verificatie`,
-            todo: "koppel je KVK- of btw-nummer en bevestig je identiteit",
-            why: "Daarna kun je direct klussen aannemen bij bedrijven in heel Nederland en word je snel uitbetaald.",
+            todo: "doorloop de stappen van je aanmelding: je gegevens, een ID-check en een profielfoto",
+            why: "Daarna zie je bovenaan Ontdekken precies wat er nog nodig is voor je eerste klus (je KVK- of btw-nummer en rekeningnummer).",
           };
   const subject = step >= 3 ? "Laatste herinnering: maak je ZekerFlex-account af" : "Je ZekerFlex-account is bijna klaar";
   return {

@@ -2,7 +2,6 @@ import Link from "next/link";
 import { requirePrincipal } from "@/lib/auth";
 // verificatie flow lives at /dashboard/verificatie
 import { prisma } from "@/lib/prisma";
-import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { getUserProfileExtra } from "@/lib/profile/store";
 import { getProfileStats } from "@/lib/dashboard/profile-stats";
@@ -22,6 +21,8 @@ import { bewaarOpleidingAction, updatePersonalInfoAction } from "@/app/dashboard
 import { OpleidingProfiel } from "@/components/app/OpleidingProfiel";
 import { leesOpleiding } from "@/lib/onboarding/wie-ben-jij-opslag";
 import { getFreelancerDict } from "@/lib/i18n/server";
+import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
+import { nogVoorEersteKlusVan } from "@/lib/onboarding/klaar-voor-klus-server";
 import { vulIn } from "@/lib/i18n/vul-in";
 
 export const dynamic = "force-dynamic";
@@ -30,8 +31,7 @@ export default async function ProfielPage() {
   const principal = await requirePrincipal();
   const dict = await getFreelancerDict();
   const t = dict.profiel;
-  const [o, profile, user, fiscal] = await Promise.all([
-    getFreelancerOverview(principal.userId),
+  const [profile, user, fiscal] = await Promise.all([
     prisma.freelancerProfile.findUnique({
       where: { userId: principal.userId },
       select: {
@@ -64,6 +64,9 @@ export default async function ProfielPage() {
   const name = user?.fullName ?? principal.fullName;
   const stars = Math.round(stats.reviews.average);
   const isUitzend = invoiceModeFor(fiscal) === "payroll";
+  // af = de 5 stappen klaar en niets meer wat reageren tegenhoudt (dezelfde regels als Ontdekken)
+  const [poortNu, nogVoorKlus] = await Promise.all([werkerPoortStand(principal.userId).catch(() => null), nogVoorEersteKlusVan(principal.userId).catch(() => [])]);
+  const aanmeldingAf = (poortNu?.klaar ?? true) && nogVoorKlus.length === 0;
   const validCerts = certs.filter((c) => c.status === "valid").length;
 
   return (
@@ -123,28 +126,17 @@ export default async function ProfielPage() {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Panel title={t.onboarding}>
-          <ul className="space-y-3 px-5 py-4">
-            {o.onboarding.map((s) => (
-              <li key={s.label} className="flex items-center gap-2.5 text-sm">
-                <span
-                  className={`grid h-4 w-4 place-items-center rounded-full text-[10px] ${
-                    s.done ? "bg-ok text-white" : "border border-hairstrong text-transparent"
-                  }`}
-                >
-                  ✓
-                </span>
-                <span className={s.done ? "text-neutralx-500" : "text-ink"}>{t.stappen[s.id] ?? s.label}</span>
-              </li>
-            ))}
-          </ul>
-          {!o.profileComplete && (
-            <div className="border-t border-hair px-5 py-4">
-              <Link href="/dashboard/verificatie" className="btn-primary">
-                {isUitzend ? t.verificatieAfronden : t.kvkKoppelen}
+        {/* één regel in plaats van de oude checklist (15 nov: dat was de derde lijst met weer andere stappen); wat er
+            precies mist staat bovenaan Ontdekken (WerkerStartWizard, KlaarVoorKlusKaart) */}
+        <Panel title={t.aanmeldingTitel}>
+          <div className="px-5 py-4">
+            <p className="text-sm text-ink">{aanmeldingAf ? t.aanmeldingAf : t.aanmeldingNogNiet}</p>
+            {!aanmeldingAf && (
+              <Link href="/dashboard/klussen" className="btn-primary mt-4 inline-flex">
+                {t.naarOntdekken}
               </Link>
-            </div>
-          )}
+            )}
+          </div>
         </Panel>
 
         <Panel title={t.persoon}>

@@ -26,8 +26,9 @@ const klus = { fullName: "Anna Kowalska", title: "Barista", branch: "Café Noord
 const GOLDEN: Record<string, string> = {
   verificatie_code: "c60f75f4e0796713ace2b56af2db9a3bdde61f7835db1cad9bdb0d339863de1e",
   verificatie_zonder: "b87105e688e21cb679fd159727d223cd10134a75ee1a523f2c5840784e150a9c",
-  welkom_zzp: "107f45f9ac5ec6000d5308bd155417b471d71b8525a99fd5be8062ba2e67cde3",
-  welkom_uitzend: "6d956978135508eaaba492e5c699a0c0dc086a793d20aa7a4b1d3b68f857e08e",
+  // 15 nov: de volgende stap in de welkomstmail is de 5 stappen van de app (niet meer "verificatie: KVK of btw + identiteit")
+  welkom_zzp: "8896366ae7364c6afed636bc23495215c7e570ee344393355e6d5505f805cafd",
+  welkom_uitzend: "70a3665ba6cacad14acd1c6be999e239b1dc4903ca945b4e28b304ec52779c5d",
   welkom_bedrijf: "92fd90c33c40d92702a2f2308b00cc056f788c8a06636e006b83f58bb0408c6c",
   id_ja: "db76768f535c2e2d707c9872923fbfdce3417a1737d148a739d26eb05ff771f8",
   id_nee: "87d276a61b037fb8fe87751d8a3b149d11df04947472edfce65895b81b610e68",
@@ -70,7 +71,8 @@ describe("Nederlands is byte voor byte gelijk aan vóór de vertaling", () => {
 
 const GOLDEN_2: Record<string, string> = {
   aanm_kan: "68c1480ecc189d873f7fd6117d433125f6f3848765229d0bc1c9731bfa68f7be",
-  aanm_nog: "35a40da8dd49a9143a17364f739e0cf6b4dd753062dc31be1c2377b3d3e97939",
+  // 15 nov: niet meer "nog één ding" als er meer mist; de rest staat bovenaan Ontdekken
+  aanm_nog: "8f91d846be09dc642de126bf3662f5ebd22619dac3fe15e9b7cf70c74c38a1ac",
   aanm_id: "e1cb7c77a3609aff4dd301dd26c077e352f6bef636d70b590dfd563e97ba4f27",
   klus: "397c41d5fe6740f488d397c0bc1edf549c353f3830f72573de3e01ce839a60c7",
   klus_zonder_reis: "9ad712186906d7516ff70fbe556be65ebbfc9bca21a6e80f0044e1fb52713fb9",

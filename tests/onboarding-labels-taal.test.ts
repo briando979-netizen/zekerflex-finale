@@ -30,9 +30,10 @@ function doorlopers(src: string): string[] {
 describe("stappenlijst van de werker in de app-taal", () => {
   const schermen = [...tsx("app/dashboard"), ...tsx("components/app")].filter((f) => doorlopers(lees(f)).length > 0);
 
-  it("de scan vindt de schermen met de stappenlijst", () => {
-    // sinds 15 nov toont /dashboard/verificatie deze oude lijst niet meer (daar staat de lijst van Klussen, KlaarVoorKlusKaart)
-    expect(schermen).toEqual(expect.arrayContaining(["app/dashboard/profiel/page.tsx"]));
+  it("geen scherm toont nog de oude stappenlijst", () => {
+    // sinds 15 nov toont geen scherm de oude lijst meer: Verificatie toont de lijst van Klussen (KlaarVoorKlusKaart), het
+    // profiel één regel met een knop naar Ontdekken. Komt hij ergens terug, dan moet het label vertaald zijn (tests hieronder)
+    expect(schermen).toEqual([]);
   });
 
   it("geen scherm toont het Nederlandse label kaal; elk gebruikt stappen[id]", () => {

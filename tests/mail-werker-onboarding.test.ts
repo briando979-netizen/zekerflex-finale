@@ -95,7 +95,8 @@ describe("aanmelding compleet in vijf talen", () => {
   }
   it("zonder reden verwijst de mail naar de app", () => {
     const m = aanmeldingCompleetEmailT({ fullName: "Anna", appUrl: u, soort: "nog-iets", reden: null }, "en");
-    expect(m.text).toContain("open the app");
+    // de lijst staat bovenaan Ontdekken in de app (15 nov)
+    expect(m.text).toContain("top of Discover in the app");
   });
 });
 
