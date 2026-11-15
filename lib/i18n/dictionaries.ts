@@ -1939,6 +1939,7 @@ export const nl = {
     bediening: "Bediening",
     kassa: "Kassa",
     online: "Online",
+    kiosk: "Zelfbestelzuil",
     betalingKop: "Betaling",
     alle: "Alle",
     betaald: "Betaald",

@@ -9,14 +9,14 @@ import type { ModuleSleutel } from "@/lib/horeca/modules";
 // Puur, dus ook in de browser bruikbaar en los te testen.
 // ---------------------------------------------------------------------------
 
-export const SCHERM_ROLLEN = ["bediening", "kassa", "keuken", "bar", "uitgifte", "ontvangst", "afhaal", "overzicht"] as const;
+export const SCHERM_ROLLEN = ["bediening", "kassa", "keuken", "bar", "uitgifte", "ontvangst", "afhaal", "overzicht", "kiosk"] as const;
 export type SchermRol = (typeof SCHERM_ROLLEN)[number];
 
 export type ApparaatSoort = "handheld" | "tablet" | "monitor" | "tv";
 export const APPARAAT_LABEL: Record<ApparaatSoort, string> = { handheld: "Telefoon of handheld", tablet: "Tablet", monitor: "Monitor of pc", tv: "Tv-scherm" };
 
 /** Wat een scherm mag wijzigen (de API controleert dit, lib/horeca/scherm-server.ts). */
-export const SCHERM_ACTIES = ["fase", "serveer", "bestelling", "uitverkocht", "reservering-status", "reservering-tafel", "inloop", "oproep-af", "tafel-vrij", "afrekenen", "verkoop", "voorraad", "levering"] as const;
+export const SCHERM_ACTIES = ["fase", "serveer", "bestelling", "uitverkocht", "reservering-status", "reservering-tafel", "inloop", "oproep-af", "tafel-vrij", "afrekenen", "verkoop", "voorraad", "levering", "kiosk-bestelling"] as const;
 export type SchermActie = (typeof SCHERM_ACTIES)[number];
 
 export interface SchermSoort {
@@ -128,6 +128,18 @@ export const SCHERMEN: Record<SchermRol, SchermSoort> = {
     punten: ["Omzet, gasten en wachttijd van vandaag", "Alle tafels met hun status", "Wie er nog komt"],
     acties: [],
     verversSec: 15,
+  },
+  // 15 nov 2026: gasten bestellen zelf (zoals een bestelzuil bij een lunchroom of snackbar); betalen aan de balie
+  kiosk: {
+    rol: "kiosk",
+    naam: "Zelfbestelzuil",
+    kort: "Gasten bestellen zelf op een tablet bij de ingang of balie en krijgen een nummer",
+    apparaten: ["tablet"],
+    stand: "staand",
+    modules: ["bestellen"],
+    punten: ["Grote tegels per categorie, met keuzes per gerecht", "Hier opeten of meenemen", "Een nummer op het scherm; het afhaalscherm toont wanneer het klaar is", "Betalen aan de balie (de kassa ziet de bestelling)", "Geen namen of andere bestellingen in beeld"],
+    acties: ["kiosk-bestelling"],
+    verversSec: 60,
   },
 };
 

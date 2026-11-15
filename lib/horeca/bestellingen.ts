@@ -48,7 +48,7 @@ export const tafelVanCode = (zaakId: string, code: string) => prisma.horecaTafel
  */
 export async function plaatsBestelling(
   zaak: HorecaZaak,
-  b: { tafelId: string | null; mand: MandRegel[]; opmerking: string; naam: string; bron: "qr" | "bediening" | "kassa" | "online" },
+  b: { tafelId: string | null; mand: MandRegel[]; opmerking: string; naam: string; bron: "qr" | "bediening" | "kassa" | "online" | "kiosk" },
   extra?: (totaalCent: number) => Omit<Prisma.HorecaBestellingUncheckedCreateInput, "zaakId" | "nummer" | "regels" | "totaalCent">,
 ): Promise<HorecaBestelling> {
   if (b.tafelId && !(await prisma.horecaTafel.findFirst({ where: { id: b.tafelId, zaakId: zaak.id }, select: { id: true } }))) {

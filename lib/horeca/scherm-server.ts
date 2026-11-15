@@ -52,7 +52,7 @@ export async function schermContext(rol: SchermRol): Promise<SchermContext> {
 }
 
 /** Voert een actie uit; afrekenen en snelle verkoop geven de bonnen terug (om te printen). */
-export async function voerUit(ctx: SchermContext, rol: SchermRol, a: SchermActieInvoer): Promise<{ bonnen?: Bon[] }> {
+export async function voerUit(ctx: SchermContext, rol: SchermRol, a: SchermActieInvoer): Promise<{ bonnen?: Bon[]; nummer?: number }> {
   if (!magActie(rol, a.actie)) throw AppError.forbidden(`Dit kan niet vanaf het scherm ${SCHERMEN[rol].naam}.`);
   const { zaak } = ctx;
   if ((a.actie === "afrekenen" || a.actie === "verkoop") && !heeftModule(zaak, "kassa")) throw AppError.precondition("Zet eerst de module Kassa aan.");
@@ -68,6 +68,11 @@ export async function voerUit(ctx: SchermContext, rol: SchermRol, a: SchermActie
       if (a.meegegeven) await verplaatsFase(zaak, { id: b.id }, "alles", { van: ["nieuw", "gestart", "klaar"], naar: "geserveerd" });
       const lijst = await afrekenen(zaak, { tafelId: null, bestellingId: b.id, selectie: null, delen: [{ methode: a.methode, bedragCent: 0, fooiCent: a.fooiCent }], door: ctx.door, kortingProcent: a.kortingProcent });
       return { bonnen: await Promise.all(lijst.map((x) => bonVan(zaak, x))) };
+    }
+    case "kiosk-bestelling": {
+      // de zelfbestelzuil: naar keuken en bar, zonder tafel en zonder naam; het nummer gaat terug naar de zuil
+      const b = await plaatsBestelling(zaak, { tafelId: null, mand: a.mand, opmerking: a.hier ? "Hier opeten" : "Meenemen", naam: "", bron: "kiosk" });
+      return { nummer: b.nummer };
     }
     case "levering": {
       // telefonisch of aan de balie: meteen bevestigd, betalen bij afleveren of ophalen (Bestellingen → Bord)

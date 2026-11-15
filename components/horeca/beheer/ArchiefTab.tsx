@@ -73,7 +73,7 @@ export function ArchiefTab({ data }: { data: BeheerData }) {
 
   const wissel = (lijst: string[], zet: (l: string[]) => void, waarde: string) => zet(lijst.includes(waarde) ? lijst.filter((x) => x !== waarde) : [...lijst, waarde]);
   const soortLabel: Record<string, string> = { tafel: t.inDeZaak, afhalen: t.afhalen, bezorgen: t.bezorgen };
-  const bronLabel: Record<string, string> = { qr: t.qr, bediening: t.bediening, kassa: t.kassa, online: t.online };
+  const bronLabel: Record<string, string> = { qr: t.qr, bediening: t.bediening, kassa: t.kassa, online: t.online, kiosk: t.kiosk };
   const s = uit?.samenvatting;
 
   return (

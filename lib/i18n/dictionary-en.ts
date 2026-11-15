@@ -1922,6 +1922,7 @@ export const en: Dict = {
     bediening: "Staff",
     kassa: "Till",
     online: "Online",
+    kiosk: "Self-order kiosk",
     betalingKop: "Payment",
     alle: "All",
     betaald: "Paid",

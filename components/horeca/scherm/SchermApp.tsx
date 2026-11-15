@@ -12,6 +12,7 @@ import { KeukenScherm } from "@/components/horeca/scherm/KeukenScherm";
 import { UitgifteScherm } from "@/components/horeca/scherm/UitgifteScherm";
 import { BedieningApp } from "@/components/horeca/scherm/BedieningApp";
 import { KassaScherm } from "@/components/horeca/scherm/KassaScherm";
+import { KioskScherm } from "@/components/horeca/scherm/KioskScherm";
 import { OntvangstScherm } from "@/components/horeca/scherm/OntvangstScherm";
 import { AfhaalScherm, OverzichtScherm } from "@/components/horeca/scherm/TvSchermen";
 
@@ -110,9 +111,12 @@ export function SchermApp({ rol, zaakNaam, apparaatNaam }: { rol: SchermRol; zaa
         <button type="button" onClick={wisselVolledigScherm} className="hidden rounded-full px-3 py-2 text-sm font-semibold text-[#B8C4BD] ring-1 ring-white/15 hover:text-white md:block">
           Volledig scherm
         </button>
-        <Link href="/scherm?kies" className="rounded-full px-3 py-2 text-sm font-semibold text-[#B8C4BD] ring-1 ring-white/15 hover:text-white">
-          Menu
-        </Link>
+        {/* de zuil staat voor gasten: geen weg naar de andere schermen */}
+        {rol !== "kiosk" && (
+          <Link href="/scherm?kies" className="rounded-full px-3 py-2 text-sm font-semibold text-[#B8C4BD] ring-1 ring-white/15 hover:text-white">
+            Menu
+          </Link>
+        )}
       </header>
 
       <main className="flex-1">
@@ -139,6 +143,8 @@ export function SchermApp({ rol, zaakNaam, apparaatNaam }: { rol: SchermRol; zaa
           <KassaScherm {...props} />
         ) : rol === "ontvangst" ? (
           <OntvangstScherm {...props} />
+        ) : rol === "kiosk" ? (
+          <KioskScherm {...props} />
         ) : rol === "afhaal" ? (
           <AfhaalScherm {...props} />
         ) : (

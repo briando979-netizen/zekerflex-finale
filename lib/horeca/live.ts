@@ -102,6 +102,18 @@ export async function schermDataVan(zaak: HorecaZaak, rol: SchermRol) {
     const nummers = afhaalNummers(await bestellingenLive(zaak.id), Date.now());
     return { zaak: zaakKort, nu: { ...nuNL(), iso: new Date().toISOString() }, afhaal: nummers };
   }
+  if (rol === "kiosk") {
+    // de zelfbestelzuil staat voor gasten: alleen de kaart (wat er is), nooit bestellingen, namen, tafels of reserveringen
+    const [kaartItems, kaartCategorieen] = await Promise.all([
+      prisma.horecaItem.findMany({
+        where: { zaakId: zaak.id, beschikbaar: true },
+        select: { id: true, naam: true, prijsCent: true, beschikbaar: true, station: true, categorieId: true, allergenen: true, vegetarisch: true, voorraad: true, opties: true, btw: true },
+        orderBy: [{ volgorde: "asc" }, { createdAt: "asc" }],
+      }),
+      prisma.horecaCategorie.findMany({ where: { zaakId: zaak.id }, select: { id: true, naam: true }, orderBy: { volgorde: "asc" } }),
+    ]);
+    return { zaak: zaakKort, items: kaartItems, categorieen: kaartCategorieen };
+  }
   const live = await liveVan(zaak);
   // het live-overzicht hangt soms zichtbaar voor gasten: geen telefoonnummers of opmerkingen, geen losse bestellingen
   if (rol === "overzicht") {

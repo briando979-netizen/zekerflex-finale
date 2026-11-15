@@ -26,6 +26,7 @@ const STANDAARD_NAAM: Record<SchermRol, string> = {
   ontvangst: "Tablet ontvangst",
   afhaal: "Tv afhalen",
   overzicht: "Tv kantoor",
+  kiosk: "Zuil ingang",
 };
 
 interface Koppel {

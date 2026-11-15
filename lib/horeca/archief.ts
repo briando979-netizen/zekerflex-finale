@@ -8,7 +8,7 @@ import { hoofdTarief, teBetalenCent } from "@/lib/horeca/bezorgen";
 // ---------------------------------------------------------------------------
 
 export const ARCHIEF_SOORTEN = ["tafel", "afhalen", "bezorgen"] as const;
-export const ARCHIEF_BRONNEN = ["qr", "bediening", "kassa", "online"] as const;
+export const ARCHIEF_BRONNEN = ["qr", "bediening", "kassa", "online", "kiosk"] as const;
 export const MAX_DAGEN = 93;
 export const MAX_RIJEN = 1000;
 

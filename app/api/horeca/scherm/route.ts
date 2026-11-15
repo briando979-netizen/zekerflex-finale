@@ -50,7 +50,14 @@ export async function POST(request: Request): Promise<NextResponse> {
     const rol = rolUit((body as { rol?: unknown } | null)?.rol);
     const ctx = await schermContext(rol);
     const uit = await voerUit(ctx, rol, lees(schermActieSchema, body));
-    return NextResponse.json({ rol, apparaat: ctx.apparaat ? { naam: ctx.apparaat.naam } : null, ...(await schermDataVan(ctx.zaak, rol)), ...(uit.bonnen ? { bonnen: uit.bonnen } : {}) });
+    return NextResponse.json({
+      rol,
+      apparaat: ctx.apparaat ? { naam: ctx.apparaat.naam } : null,
+      ...(await schermDataVan(ctx.zaak, rol)),
+      ...(uit.bonnen ? { bonnen: uit.bonnen } : {}),
+      // de zelfbestelzuil toont het nummer van de bestelling
+      ...(typeof uit.nummer === "number" ? { nummer: uit.nummer } : {}),
+    });
   } catch (err) {
     return fout(err);
   }

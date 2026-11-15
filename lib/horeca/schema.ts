@@ -213,6 +213,8 @@ export const schermActieSchema = z.discriminatedUnion("actie", [
   }),
   // snelle verkoop aan de bar of balie: bestellen en meteen afrekenen
   z.object({ actie: z.literal("verkoop"), mand: mandSchema, methode, fooiCent: centen(100_000).default(0), meegegeven: z.boolean().default(false), kortingProcent: z.number().int().min(0).max(100).default(0) }),
+  // de zelfbestelzuil: een gast bestelt zelf, hier opeten of meenemen, en krijgt een nummer (betalen aan de balie)
+  z.object({ actie: z.literal("kiosk-bestelling"), mand: mandSchema, hier: z.boolean() }),
   // afhalen of bezorgen aannemen aan de kassa of met de handheld (module bezorgen, lib/horeca/bezorgen-server.ts)
   z.object({
     actie: z.literal("levering"),

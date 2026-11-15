@@ -126,6 +126,8 @@ export interface SchermData extends Partial<LiveBasis> {
   leveren?: { afhalen: boolean; bezorgen: boolean };
   /** na afrekenen: de bonnen om te tonen of te printen */
   bonnen?: BonData[];
+  /** zelfbestelzuil: het nummer van de net geplaatste bestelling */
+  nummer?: number;
 }
 
 export interface ApparaatRij {
