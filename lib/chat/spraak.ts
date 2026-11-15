@@ -49,18 +49,40 @@ export function niveauUit(monsters: ArrayLike<number>): number {
   return Math.min(1, Math.sqrt(som / monsters.length) * 2.5);
 }
 
-/** De golf van een hele opname samengevat tot GOLF_STAAFJES staafjes van 0..GOLF_MAX (de hoogste per stuk, zodat pieken blijven). */
+/** Onder dit niveau is een opname stilte: dan geen schaal, anders zou ruis de volle hoogte krijgen. */
+export const STILTE = 0.02;
+
+/**
+ * De golf van een hele opname samengevat tot GOLF_STAAFJES staafjes van 0..GOLF_MAX (de hoogste per stuk, zodat pieken blijven),
+ * op schaal: het hardste stuk haalt GOLF_MAX, zoals bij WhatsApp. Zonder schaal was een golf van een stille microfoon (of de
+ * nepmicrofoon van de belproef, 15 nov) een platte lijn. Echte stilte blijft laag.
+ */
 export function golfSamenvatten(niveaus: readonly number[], aantal: number = GOLF_STAAFJES): number[] {
   if (!niveaus.length) return [];
-  const uit: number[] = [];
+  const pieken: number[] = [];
   for (let i = 0; i < aantal; i++) {
     const van = Math.floor((i * niveaus.length) / aantal);
     const tot = Math.max(van + 1, Math.floor(((i + 1) * niveaus.length) / aantal));
     let hoogste = 0;
     for (let j = van; j < tot && j < niveaus.length; j++) hoogste = Math.max(hoogste, niveaus[j] ?? 0);
-    uit.push(Math.round(Math.max(0, Math.min(1, hoogste)) * GOLF_MAX));
+    pieken.push(Math.max(0, Math.min(1, hoogste)));
   }
-  return uit;
+  const max = Math.max(...pieken);
+  const schaal = max >= STILTE ? 1 / max : 1;
+  return pieken.map((p) => Math.round(Math.min(1, p * schaal) * GOLF_MAX));
+}
+
+/** Hoe hoog elk staafje getekend wordt (0..1), op schaal van de eigen golf; ook voor berichten met een golf van vóór de schaal. */
+export function golfHoogtes(golf: readonly number[], laagste = 0.14): number[] {
+  const max = Math.max(0, ...golf);
+  const schaal = max > 0 ? 1 / max : 0;
+  return golf.map((n) => Math.max(laagste, Math.min(1, n * schaal)));
+}
+
+/** De bewegende golf tijdens het opnemen: op schaal van het hardste van wat er te zien is (minstens STILTE * 2,5). */
+export function liveHoogtes(niveaus: readonly number[]): number[] {
+  const piek = Math.max(STILTE * 2.5, ...niveaus);
+  return niveaus.map((n) => Math.min(1, n / piek));
 }
 
 /** Een golf uit het bericht schoonmaken: alleen hele getallen 0..GOLF_MAX, hooguit 64 staafjes; anders geen golf. */
