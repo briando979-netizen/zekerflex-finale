@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { getChatSettings, saveChatSettings } from "@/lib/messaging/settings";
+import { isZakelijk } from "@/lib/messaging/zakelijk-rol";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,7 +11,8 @@ export const dynamic = "force-dynamic";
 export async function GET(): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
-    return NextResponse.json({ settings: await getChatSettings(p.userId) });
+    // een bedrijf krijgt zakelijke standaarden (zolang het ze niet zelf aanpaste)
+    return NextResponse.json({ settings: await getChatSettings(p.userId, { zakelijk: isZakelijk(p) }) });
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });
@@ -39,7 +41,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
     const input = putSchema.parse(await request.json().catch(() => {
       throw AppError.validation("Het verzoek kwam niet goed aan. Vernieuw de pagina en probeer het opnieuw.");
     }));
-    const settings = await saveChatSettings(p.userId, input);
+    const settings = await saveChatSettings(p.userId, input, { zakelijk: isZakelijk(p) });
     return NextResponse.json({ settings });
   } catch (err) {
     const { status, body } = toErrorBody(err);

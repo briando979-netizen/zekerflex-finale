@@ -29,6 +29,7 @@ import { maakPeiling, POLL_MAX_OPTIONS, POLL_MIN_OPTIONS, POLL_OPTION_MAX } from
 import { geldigeVermeldingen, VERMELDING_MAX } from "@/lib/messaging/vermelding";
 import { maakLinkVoorbeeld } from "@/lib/messaging/link-voorbeeld-ophalen";
 import { bekendenVan } from "@/lib/messaging/bekenden";
+import { isZakelijk } from "@/lib/messaging/zakelijk-rol";
 import { maakAfspraak } from "@/lib/messaging/afspraak";
 import { startLive } from "@/lib/messaging/live-locatie";
 import { isSticker } from "@/lib/messaging/stickers";
@@ -80,7 +81,7 @@ export async function GET(req: Request, props: { params: Promise<{ threadId: str
       userDirectory([...ids]).then((m) => Object.fromEntries(m)),
       getPresence([...ids]),
       getUserAvatars([...ids]),
-      getChatSettings(p.userId),
+      getChatSettings(p.userId, { zakelijk: isZakelijk(p) }),
     ]);
 
     const privacy = await chatPrivacy([...ids, p.userId]);

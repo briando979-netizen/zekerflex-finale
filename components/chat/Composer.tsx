@@ -17,6 +17,7 @@ import { AfspraakMaker } from "./AfspraakMaker";
 import { LocatieKiezer } from "./LocatieKiezer";
 import { StickerKiezer } from "./StickerKiezer";
 import { LaterVersturen } from "./LaterVersturen";
+import { slashTreffers } from "@/lib/chat/zakelijk";
 import type { StickerId } from "@/lib/messaging/stickers";
 import type { LiveDuur } from "@/lib/messaging/live-locatie";
 
@@ -170,6 +171,7 @@ export function Composer({
   members = [],
   contactKandidaten = [],
   onPlan,
+  zakelijk = false,
 }: {
   /** text of the last message from the other side — for ✨ reply suggestions */
   lastIncoming?: string;
@@ -195,6 +197,8 @@ export function Composer({
   contactKandidaten?: Kandidaat[];
   /** later versturen: inplannen; geeft een foutmelding terug, of null als het lukte */
   onPlan?: (text: string, wanneer: string) => Promise<string | null>;
+  /** zakelijke weergave: "/" in een leeg veld toont de snelle antwoorden (zoals WhatsApp Business) */
+  zakelijk?: boolean;
 }) {
   const chat = useChatTeksten();
   // what you typed stays as a draft per conversation (drafts.ts)
@@ -253,6 +257,15 @@ export function Composer({
   const [menuOpen, setMenuOpen] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [showQuick, setShowQuick] = useState(false);
+  // zakelijk: "/…" zoekt in de snelle antwoorden; pijltjes kiezen, Enter of Tab zet hem erin, Esc sluit
+  const [slashActief, setSlashActief] = useState(0);
+  const [slashDicht, setSlashDicht] = useState(false);
+  const slash = zakelijk && !editing && !slashDicht ? slashTreffers(text, quickReplies) : null;
+  const kiesSnel = (q: string) => {
+    setText(q);
+    setSlashActief(0);
+    taRef.current?.focus();
+  };
   const [aiOpen, setAiOpen] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
@@ -710,6 +723,26 @@ export function Composer({
             </div>
           )}
 
+          {slash && (
+            <div className="absolute bottom-full left-2 z-10 mb-2 w-[min(24rem,calc(100%-1rem))] rounded-xl border border-hairstrong bg-white p-1 shadow-lift" role="listbox" aria-label={chat.composer.snelleAntwoordenLijst}>
+              {slash.lijst.length === 0 && <p className="px-3 py-2 text-xs text-neutralx-500">{chat.composer.geenSnelGevonden}</p>}
+              {slash.lijst.map((q, i) => (
+                <button
+                  key={q}
+                  type="button"
+                  role="option"
+                  aria-selected={i === slashActief}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => kiesSnel(q)}
+                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-ink ${i === slashActief ? "bg-paper-soft" : "hover:bg-paper-soft"}`}
+                >
+                  <span aria-hidden className="text-neutralx-400">⚡</span>
+                  <span className="min-w-0 truncate">{q}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
           {noem && noemLijst.length > 0 && (
             <div className="absolute bottom-full left-2 z-10 mb-2 w-[min(18rem,calc(100%-1rem))] rounded-xl border border-hairstrong bg-white p-1 shadow-lift" role="listbox" aria-label={chat.composer.noemIemand}>
               {noemLijst.map((l, i) => (
@@ -749,12 +782,34 @@ export function Composer({
               value={text}
               onChange={(e) => {
                 setText(e.target.value);
+                setSlashDicht(false);
+                setSlashActief(0);
                 kijkNoem(e.target.value, e.target.selectionStart ?? e.target.value.length);
                 onTyping();
               }}
               onSelect={(e) => kijkNoem(e.currentTarget.value, e.currentTarget.selectionStart ?? 0)}
               onPaste={onPaste}
               onKeyDown={(e) => {
+                // zakelijk: de "/"-lijst met snelle antwoorden staat open
+                if (slash && slash.lijst.length) {
+                  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                    e.preventDefault();
+                    const stap = e.key === "ArrowDown" ? 1 : -1;
+                    setSlashActief((slashActief + stap + slash.lijst.length) % slash.lijst.length);
+                    return;
+                  }
+                  if ((e.key === "Enter" || e.key === "Tab") && !e.shiftKey && !e.nativeEvent.isComposing) {
+                    e.preventDefault();
+                    const q = slash.lijst[slashActief] ?? slash.lijst[0];
+                    if (q) kiesSnel(q);
+                    return;
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    setSlashDicht(true);
+                    return;
+                  }
+                }
                 // de @-lijst staat open: pijltjes kiezen, Enter of Tab zet de naam erin, Esc sluit
                 if (noem && noemLijst.length) {
                   if (e.key === "ArrowDown" || e.key === "ArrowUp") {

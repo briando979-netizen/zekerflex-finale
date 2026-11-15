@@ -36,6 +36,8 @@ export const COMPOSER_NL = {
   laterPlannen: "Inplannen",
   laterTekstNodig: "Typ eerst een bericht.",
   laterTijdNodig: "Kies een tijd vanaf over een minuut tot over {dagen} dagen.",
+  snelleAntwoordenLijst: "Snelle antwoorden",
+  geenSnelGevonden: "Geen snel antwoord gevonden. Je beheert ze in Zakelijke tools.",
   geenMicrofoon: "Geen toegang tot je microfoon. Sta de microfoon toe in je browser en probeer opnieuw.",
   berichtBewerken: "Bericht bewerken",
   bewerkenStoppen: "Bewerken stoppen",

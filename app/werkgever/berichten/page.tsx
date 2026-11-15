@@ -1,4 +1,6 @@
 import { requirePrincipal } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { isZakelijk } from "@/lib/messaging/zakelijk-rol";
 import { PageHeader } from "@/components/app/ui";
 import { InboxPage } from "@/components/chat/InboxPage";
 import { getDict } from "@/lib/i18n/server";
@@ -6,8 +8,12 @@ import { getDict } from "@/lib/i18n/server";
 export const dynamic = "force-dynamic";
 
 export default async function WerkgeverBerichtenPage() {
-  await requirePrincipal();
+  const p = await requirePrincipal();
   const m = (await getDict()).messages;
+  // zakelijk: de chat zoals WhatsApp Business, met de naam van het bedrijf (lib/chat/zakelijk.ts)
+  const zakelijk = isZakelijk(p);
+  const tenantId = p.memberships[0]?.tenantId;
+  const bedrijf = zakelijk && tenantId ? await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } }).catch(() => null) : null;
   return (
     <>
       <div className="hidden md:block">
@@ -16,7 +22,7 @@ export default async function WerkgeverBerichtenPage() {
       {/* op de telefoon is de kop verborgen; de pagina houdt een h1 voor schermlezers */}
       <h1 className="sr-only md:hidden">{m.title}</h1>
       {/* employer shell: 4rem top bar + page padding + header above the chat, no bottom tab bar on a phone */}
-      <InboxPage mobileHeight="h-[calc(100dvh-8rem)]" desktopHeight="md:h-[calc(100dvh-20rem)]" />
+      <InboxPage mobileHeight="h-[calc(100dvh-8rem)]" desktopHeight="md:h-[calc(100dvh-20rem)]" zakelijk={zakelijk} bedrijfsnaam={bedrijf?.name ?? ""} />
     </>
   );
 }
