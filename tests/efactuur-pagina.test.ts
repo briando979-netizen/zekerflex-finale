@@ -47,11 +47,11 @@ describe("e-facturatie: alleen wat echt kan", () => {
 });
 
 describe("de pagina", () => {
-  it("e-facturatie krijgt het eigen ontwerp, de andere aanbodpagina's blijven zoals ze waren", () => {
+  it("e-facturatie krijgt het eigen ontwerp, de andere aanbodpagina's de standaardopmaak", () => {
     const route = lees("app/(marketing)/aanbod/[slug]/page.tsx");
     expect(route).toContain('const eigenOntwerp = a.slug === "e-facturatie";');
     expect(route).toContain("<EfactuurPagina a={a} pijlerNaam={pijler.naam} pijlerSleutel={pijler.sleutel} />");
-    expect(route).toContain('<h2 className="font-display text-3xl font-bold text-ink">Wat het is</h2>');
+    expect(route).toContain("<AanbodStandaard a={a} pijler={pijler} />");
   });
 
   it("de vragen gaan ook als FAQPage naar Google, via ldJson (geen JSON.stringify in een script)", () => {
