@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Section, SectionHead, CtaBand } from "@/components/marketing/primitives";
+import { FotoKolom, HeroMetFoto } from "@/components/marketing/HeroMetFoto";
+import { paginaFoto } from "@/lib/marketing/fotos";
 import { GUIDES, POSTS, nlDate } from "@/lib/kennis/content";
 import { WHITEPAPERS } from "@/lib/kennis/whitepapers";
 import { canonical } from "@/lib/seo";
@@ -25,7 +27,8 @@ export default function KennisPage() {
   return (
     <>
       <div className="hero-ink text-white">
-        <div className="shell py-20 md:py-24">
+      <div className="shell grid items-center gap-10 py-20 md:py-24 lg:grid-cols-[1.15fr_0.85fr]">
+        <div>
           <p className="eyebrow text-brand-mint">Kennis</p>
           <h1 className="mt-4 max-w-2xl text-balance font-display text-4xl font-bold leading-tight md:text-5xl">
             Alles wat je wilt weten over flexibel werken via ZekerFlex
@@ -41,6 +44,8 @@ export default function KennisPage() {
               Veelgestelde vragen
             </Link>
           </div>
+        </div>
+        <FotoKolom foto={paginaFoto("kennis")} />
         </div>
       </div>
 

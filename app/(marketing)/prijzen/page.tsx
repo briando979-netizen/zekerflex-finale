@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
+import { FotoKolom, HeroMetFoto } from "@/components/marketing/HeroMetFoto";
+import { paginaFoto } from "@/lib/marketing/fotos";
 import { seoMetadata } from "@/lib/ontwerp/seo-store";
 import { PlatformFeeEstimate } from "@/components/marketing/PlatformFeeEstimate";
 import { contentKeys, getContentMap } from "@/lib/content/store";
@@ -159,7 +161,8 @@ export default async function PrijzenPage() {
   return (
     <>
       <div className="hero-ink text-white">
-        <div className="shell py-20 md:py-24">
+      <div className="shell grid items-center gap-10 py-20 md:py-24 lg:grid-cols-[1.15fr_0.85fr]">
+        <div>
           <p className="eyebrow text-brand-mint" data-cms-key="pr.eyebrow">{v("pr.eyebrow")}</p>
           <h1 className="mt-4 font-display text-4xl font-bold md:text-6xl" data-cms-key="pr.title">
             {v("pr.title")}
@@ -167,6 +170,8 @@ export default async function PrijzenPage() {
           <p className="mt-6 max-w-xl text-lg text-white/70" data-cms-key="pr.lead" data-cms-ml="1">
             {v("pr.lead")}
           </p>
+        </div>
+        <FotoKolom foto={paginaFoto("prijzen")} />
         </div>
       </div>
 

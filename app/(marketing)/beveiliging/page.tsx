@@ -4,6 +4,8 @@ import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
 import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
 import Link from "next/link";
 import { CtaBand, Section, SectionHead, Stat } from "@/components/marketing/primitives";
+import { FotoKolom, HeroMetFoto } from "@/components/marketing/HeroMetFoto";
+import { paginaFoto } from "@/lib/marketing/fotos";
 import { beveiligingsCijfers } from "@/lib/ops/crowdsec";
 import { breadcrumbJsonLd, canonical, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
@@ -233,7 +235,8 @@ export default async function BeveiligingPagina() {
       />
 
       <div className="hero-ink text-white">
-        <div className="shell py-20 md:py-24">
+      <div className="shell grid items-center gap-10 py-20 md:py-24 lg:grid-cols-[1.15fr_0.85fr]">
+        <div>
           <p className="eyebrow text-brand-mint">Beveiliging &amp; eigen servers</p>
           <h1 className="mt-4 max-w-3xl text-balance font-display text-4xl font-bold leading-tight md:text-6xl">
             Jouw gegevens staan op onze eigen server in Nederland
@@ -250,6 +253,8 @@ export default async function BeveiligingPagina() {
               Systeemstatus
             </Link>
           </div>
+        </div>
+        <FotoKolom foto={paginaFoto("beveiliging")} />
         </div>
       </div>
 

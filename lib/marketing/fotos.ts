@@ -107,3 +107,21 @@ export function sectorFoto(sector: string, seed: string | number = 0): Foto | un
   const n = typeof seed === "number" ? seed : [...seed].reduce((a, c) => a + c.charCodeAt(0), 0);
   return FOTOS.find((f) => f.slug === lijst[n % lijst.length]);
 }
+
+/** De foto voor de kop van een vaste openbare pagina (alleen pagina's waar een foto de kop sterker maakt; gereedschap en juridische pagina's niet). */
+const PAGINA_FOTOS: Record<string, string> = {
+  contact: "app-telefoon-lacht",
+  abonnementen: "team-highfive-tafel",
+  prijzen: "jong-vrienden-buiten",
+  beveiliging: "team-highfive-callcenter",
+  kennis: "horeca-barista-laptop",
+  klussen: "bezorg-fietstas",
+  "voor-bureaus": "team-highfive-raam",
+  "sales-partner": "team-handen",
+  demo: "team-highfive-geel",
+};
+
+export function paginaFoto(pagina: string): Foto | undefined {
+  if (!Object.hasOwn(PAGINA_FOTOS, pagina)) return undefined;
+  return FOTOS.find((f) => f.slug === PAGINA_FOTOS[pagina]);
+}

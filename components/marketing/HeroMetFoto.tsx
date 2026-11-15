@@ -16,3 +16,13 @@ export function HeroMetFoto({ foto, children }: { foto: Foto | undefined; childr
     </div>
   );
 }
+
+/** Alleen de foto, voor een kop op een donkere achtergrond waar de tekst al in een eigen kolom staat. Zonder foto komt er niets. */
+export function FotoKolom({ foto, className = "" }: { foto: Foto | undefined; className?: string }) {
+  if (!foto) return null;
+  return (
+    <div className={`relative aspect-[4/3] overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/10 ${className}`}>
+      <Image src={fotoPad(foto)} alt={foto.alt} fill priority sizes="(max-width: 1024px) 100vw, 480px" className={`object-cover ${foto.staand ? "object-[50%_25%]" : ""}`} />
+    </div>
+  );
+}

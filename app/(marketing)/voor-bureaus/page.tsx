@@ -4,6 +4,8 @@ import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
 import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
 import Link from "next/link";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
+import { FotoKolom, HeroMetFoto } from "@/components/marketing/HeroMetFoto";
+import { paginaFoto } from "@/lib/marketing/fotos";
 import { canonical } from "@/lib/seo";
 import { PartnerPlans } from "@/components/marketing/PartnerPlans";
 
@@ -73,7 +75,8 @@ export default async function VoorBureausPage() {
   return (
     <>
       <div className="hero-ink text-white">
-        <div className="shell py-20 md:py-24">
+      <div className="shell grid items-center gap-10 py-20 md:py-24 lg:grid-cols-[1.15fr_0.85fr]">
+        <div>
           <p className="eyebrow text-brand-mint">Voor bureaus &amp; bedrijven</p>
           <h1 className="mt-4 font-display text-4xl font-bold md:text-6xl">Bied ZekerFlex zelf aan</h1>
           <p className="mt-6 max-w-xl text-lg text-white/70">
@@ -84,6 +87,8 @@ export default async function VoorBureausPage() {
             Liever één losse module i.p.v. het hele platform?{" "}
             <Link href="/producten" className="text-brand-mint underline">Bekijk de losse producten →</Link>
           </p>
+        </div>
+        <FotoKolom foto={paginaFoto("voor-bureaus")} />
         </div>
       </div>
 

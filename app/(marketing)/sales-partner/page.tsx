@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Section, SectionHead, CtaBand, FaqList, Stat } from "@/components/marketing/primitives";
+import { FotoKolom, HeroMetFoto } from "@/components/marketing/HeroMetFoto";
+import { paginaFoto } from "@/lib/marketing/fotos";
 import { canonical } from "@/lib/seo";
 import { SalesPartnerForm } from "@/components/marketing/SalesPartnerForm";
 import {
@@ -32,7 +34,8 @@ export default function SalesPartnerPage() {
   return (
     <>
       <div className="hero-ink text-white">
-        <div className="shell py-20 md:py-24">
+      <div className="shell grid items-center gap-10 py-20 md:py-24 lg:grid-cols-[1.15fr_0.85fr]">
+        <div>
           <p className="eyebrow text-brand-mint">Sales-partner · ZZP op commissie</p>
           <h1 className="mt-4 font-display text-4xl font-bold md:text-6xl">Verdien mee met ZekerFlex</h1>
           <p className="mt-6 max-w-2xl text-lg text-white/70">
@@ -44,6 +47,8 @@ export default function SalesPartnerPage() {
             <a href="#aanmelden" className="btn-mint">Meld je aan</a>
             <a href="#hoe" className="btn-ghost-invert">Hoe het werkt</a>
           </div>
+        </div>
+        <FotoKolom foto={paginaFoto("sales-partner")} />
         </div>
       </div>
 
