@@ -20,6 +20,10 @@ describe("uitgebreide aanbodpagina's", () => {
       for (const s of u.andere) expect(AANBOD.some((x) => x.slug === s), `${slug} → ${s}`).toBe(true);
       expect(new Set(u.andere).size).toBe(3);
       expect(existsSync(path.join(process.cwd(), "public", "aanbod", u.foto.bestand)), u.foto.bestand).toBe(true);
+      for (const beeld of Object.values(u.beelden)) {
+        expect(existsSync(path.join(process.cwd(), "public", "aanbod", beeld.bestand)), beeld.bestand).toBe(true);
+        expect(beeld.alt.length).toBeGreaterThan(10);
+      }
     }
   });
 

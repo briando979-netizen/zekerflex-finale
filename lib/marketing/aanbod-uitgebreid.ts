@@ -1,17 +1,23 @@
 // De uitgebreide opmaak van een aanbodpagina (15 nov 2026, eigenaar: "ik wil de weergave zoals bij de prikklok van TimeChimp"):
-// een lichte kop met kruimelpad en een illustratie, dan afwisselend beeld en tekst (wat het is, voordelen, hoe het werkt),
+// een lichte kop met kruimelpad en echte schermafbeeldingen, dan afwisselend beeld en tekst (wat het is, voordelen, hoe het werkt),
 // kaarten met andere functies en een afsluitend blok. Een aanbodpagina zonder item hier houdt de gewone opmaak. Alles wat
 // hier staat bestaat echt (lib/checkin/, lib/incheck/); geen verzonnen aantallen of klanten. Puur: geen prisma of kv.
 
-export type Illustratie = "incheck" | "aanwezig";
+/** Een echte schermafbeelding in public/aanbod (gemaakt in een tijdelijk testbedrijf met voorbeeldgegevens en daarna opgeruimd). */
+export interface Beeld {
+  bestand: string;
+  breed: number;
+  hoog: number;
+  alt: string;
+}
 
 export interface Uitgebreid {
   /** het blok onder de kop: foto met een zwevende kaart, tekst en een knop */
   intro: { kop: string; alinea: string[]; knop: string };
   voordelen: { kop: string; intro: string; punten: string[]; knop: string };
   hoe: { kop: string; alinea: string[]; knop: string };
-  /** de illustratie rechts in de kop */
-  kopBeeld: Illustratie;
+  /** de echte schermen op de pagina: het tabletscherm bij de ingang en het beheer van de terminals */
+  beelden: { tablet: Beeld; beheer: Beeld };
   foto: { bestand: string; alt: string };
   /** slugs van andere aanbodpagina's voor de kaarten onderaan */
   andere: [string, string, string];
@@ -43,7 +49,10 @@ export const UITGEBREID: Record<string, Uitgebreid> = {
       ],
       knop: "Probeer gratis",
     },
-    kopBeeld: "incheck",
+    beelden: {
+      tablet: { bestand: "incheck-tablet.webp", breed: 900, hoog: 927, alt: "Het tabletscherm bij de ingang met de QR-code om in te checken" },
+      beheer: { bestand: "incheck-beheer.webp", breed: 1400, hoog: 414, alt: "Het beheer van inchecken op locatie met QR op het scherm, NFC-sticker en sleutelhanger" },
+    },
     foto: { bestand: "inchecken-op-locatie.jpg", alt: "Een werker checkt in met een tablet bij de ingang" },
     andere: ["inchecken-op-locatie", "roosterplanner", "flexwerkers-inhuren"],
     slot: { kop: "Probeer ZekerFlex gratis", checks: ["Een account aanmaken kost niets", "Inbegrepen bij flexwerkers inhuren", "Eén login voor alles"] },

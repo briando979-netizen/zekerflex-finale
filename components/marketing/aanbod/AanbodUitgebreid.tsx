@@ -1,19 +1,27 @@
 import Image from "next/image";
 import Link from "next/link";
 import { AANBOD, aanbodHref, type AanbodItem, type Pijler } from "@/lib/marketing/aanbod";
-import type { Uitgebreid } from "@/lib/marketing/aanbod-uitgebreid";
-import { AanwezigKaart, IncheckKaart, LocatieTegels, Plaat } from "@/components/marketing/aanbod/Illustraties";
+import type { Beeld, Uitgebreid } from "@/lib/marketing/aanbod-uitgebreid";
 
-// De uitgebreide aanbodpagina (lib/marketing/aanbod-uitgebreid.ts): lichte kop met kruimelpad en illustratie, daarna
-// afwisselend beeld en tekst, kaarten met andere functies en een afsluitend blok. Servercomponent, geen scripts.
-
-const PLATEN = ["incheck", "rooster", "uren"] as const;
+// De uitgebreide aanbodpagina (lib/marketing/aanbod-uitgebreid.ts): lichte kop met kruimelpad en een echte schermafbeelding,
+// daarna afwisselend beeld en tekst, kaarten met andere functies en een afsluitend blok. Servercomponent, geen scripts.
+// Alle beelden zijn echt: schermafbeeldingen uit ZekerFlex met voorbeeldgegevens, of foto's uit public/aanbod (CREDITS.md).
 
 function Vink() {
   return (
     <span aria-hidden className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand-500 text-xs font-bold text-white">
       ✓
     </span>
+  );
+}
+
+/** Een echte schermafbeelding met een regel eronder. */
+function Scherm({ b, className = "", sizes, priority = false }: { b: Beeld; className?: string; sizes: string; priority?: boolean }) {
+  return (
+    <figure className={className}>
+      <Image src={`/aanbod/${b.bestand}`} width={b.breed} height={b.hoog} alt={b.alt} sizes={sizes} priority={priority} className="h-auto w-full rounded-xl border border-hair shadow-xl" />
+      <figcaption className="mt-3 text-center text-xs text-neutralx-500">Schermafbeelding uit ZekerFlex, met voorbeeldgegevens</figcaption>
+    </figure>
   );
 }
 
@@ -41,10 +49,8 @@ export function AanbodUitgebreid({ a, pijler, u }: { a: AanbodItem; pijler: Pijl
                 <Link href="/demo" className="btn-ghost px-6 py-3">Plan een demo</Link>
               </div>
             </div>
-            <div className="relative mx-auto flex w-full max-w-md justify-center py-6">
-              <span aria-hidden className="absolute inset-x-6 inset-y-0 rounded-[3rem] bg-mintwash" />
-              <IncheckKaart className="relative -rotate-2" />
-              <AanwezigKaart className="absolute -bottom-2 -right-2 hidden !max-w-[14rem] !p-3 rotate-2 sm:block" />
+            <div className="relative mx-auto w-full max-w-md rounded-[2.5rem] bg-mintwash p-6 md:p-8">
+              <Scherm b={u.beelden.tablet} sizes="(max-width: 1024px) 90vw, 420px" priority />
             </div>
           </div>
         </div>
@@ -59,7 +65,6 @@ export function AanbodUitgebreid({ a, pijler, u }: { a: AanbodItem; pijler: Pijl
               {/* foto in public/aanbod (bron en licentie in CREDITS.md) */}
               <Image src={`/aanbod/${u.foto.bestand}`} alt={u.foto.alt} fill sizes="(max-width: 1024px) 100vw, 520px" className="object-cover" />
             </div>
-            <IncheckKaart className="absolute -bottom-10 -right-2 !w-48 !p-3 sm:-right-8" />
           </div>
           <div>
             <h2 id="intro-kop" className="text-balance font-display text-3xl font-bold leading-tight text-ink md:text-4xl">{u.intro.kop}</h2>
@@ -86,18 +91,14 @@ export function AanbodUitgebreid({ a, pijler, u }: { a: AanbodItem; pijler: Pijl
             </ul>
             <Link href={a.start.href} className="btn-primary mt-8 inline-block px-6 py-3">{u.voordelen.knop}</Link>
           </div>
-          <div className="relative mx-auto flex w-full max-w-md flex-col items-center gap-6 rounded-[2rem] bg-mintwash p-8">
-            <IncheckKaart />
-            <LocatieTegels className="w-full" />
+          <div className="mx-auto w-full rounded-[2rem] bg-mintwash p-6 md:p-8">
+            <Scherm b={u.beelden.beheer} sizes="(max-width: 1024px) 100vw, 560px" />
           </div>
         </div>
       </section>
 
       <section className="bg-paper-soft" aria-labelledby="hoe-kop">
-        <div className="shell grid items-center gap-12 py-16 md:py-24 lg:grid-cols-2">
-          <div className="mx-auto flex w-full max-w-md justify-center rounded-[2rem] bg-white p-8 shadow-inner-hair">
-            <AanwezigKaart className="!shadow-lg" />
-          </div>
+        <div className="shell max-w-3xl py-16 md:py-24">
           <div>
             <h2 id="hoe-kop" className="text-balance font-display text-3xl font-bold leading-tight text-ink md:text-4xl">{u.hoe.kop}</h2>
             <div className="mt-6 space-y-4 leading-relaxed text-neutralx-600">
@@ -112,9 +113,17 @@ export function AanbodUitgebreid({ a, pijler, u }: { a: AanbodItem; pijler: Pijl
         <div className="shell py-16 md:py-24">
           <h2 id="andere-kop" className="text-center font-display text-3xl font-bold text-ink md:text-5xl">Andere functionaliteiten</h2>
           <ul className="mt-12 grid gap-6 md:grid-cols-3">
-            {andere.map((x, i) => (
+            {andere.map((x) => (
               <li key={x.slug} className="flex flex-col overflow-hidden rounded-2xl border border-hair bg-white shadow-lg">
-                <Plaat soort={PLATEN[i % PLATEN.length] ?? "incheck"} />
+                {x.foto ? (
+                  <div className="relative h-40 w-full">
+                    <Image src={`/aanbod/${x.foto.bestand}`} alt={x.foto.alt} fill sizes="(max-width: 768px) 100vw, 360px" className="object-cover" />
+                  </div>
+                ) : (
+                  <div aria-hidden className="flex h-40 items-center justify-center bg-mintwash px-6 text-center font-display text-xl font-bold text-brand-700">
+                    {x.naam}
+                  </div>
+                )}
                 <div className="flex flex-1 flex-col p-6">
                   <h3 className="font-display text-xl font-bold text-ink">{x.naam}</h3>
                   <p className="mt-2 flex-1 text-sm leading-relaxed text-neutralx-600">{x.kort}</p>
