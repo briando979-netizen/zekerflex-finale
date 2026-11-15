@@ -5,6 +5,7 @@ import { useFT } from "@/components/i18n/useFT";
 import { vulIn } from "@/lib/i18n/vul-in";
 import type { ContractTekst } from "@/lib/agreements/uitzend-tekst";
 import { woonadresRegel, type Woonadres } from "@/lib/agreements/uitzend-gegevens";
+import { plaatsBijPostcode } from "@/lib/geo/thuisbasis-plek";
 import type { FreelancerDict } from "@/lib/i18n/freelancer";
 
 // De uitzendovereenkomst: eerst lezen, dan pas tekenen. Vóór het tekenen staan de belangrijkste punten bovenaan, de
@@ -121,6 +122,14 @@ function ContractGegevens({ t, fmt, onStand }: { t: T; fmt: Datum; onStand: (com
         setForm(formulierUit(d));
         setBewerk(!d.compleet);
         onStand(d.compleet, false);
+        // nog geen adres, wel de postcode van de thuisbasis: zoek de woonplaats erbij (mislukt het, dan typt de werker hem zelf)
+        if (!d.woonadres && d.postcodeVoorstel) {
+          const pc = d.postcodeVoorstel;
+          const g = await fetch(`/api/geo/search?soort=adres&q=${encodeURIComponent(pc.replace(" ", ""))}`, { cache: "no-store" }).catch(() => null);
+          const data = g?.ok ? ((await g.json().catch(() => null)) as { results?: unknown[] } | null) : null;
+          const plaats = plaatsBijPostcode(data?.results, pc);
+          if (!weg && plaats) setForm((vorig) => (vorig.plaats || vorig.postcode !== pc ? vorig : { ...vorig, plaats }));
+        }
       } catch {
         if (!weg) setStand("fout");
       }
