@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getPrincipal } from "@/lib/auth";
 import { getLocale } from "@/lib/i18n/server";
 import { vulIn } from "@/lib/i18n/vul-in";
+import { LoonstrokenBlok } from "@/components/personeel/LoonstrokenBlok";
 import { TakenBlok } from "@/components/personeel/TakenBlok";
 import { medewerkerContext } from "@/lib/horeca-personeel/context";
 import { personeelTeksten } from "@/lib/horeca-personeel/teksten";
@@ -66,6 +67,8 @@ export default async function PersoneelPage() {
       )}
 
       {blokken.includes("taken") && <TakenBlok t={t.omgeving} />}
+
+      {blokken.includes("loonstroken") && <LoonstrokenBlok t={t.omgeving} taal={taal} />}
     </main>
   );
 }

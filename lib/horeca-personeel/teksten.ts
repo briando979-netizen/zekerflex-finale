@@ -57,6 +57,14 @@ export interface PersoneelTeksten {
     geenMededelingen: string;
     bezig: string;
     fout: string;
+    loonstroken: string;
+    loonstrokenUitleg: string;
+    periode: string;
+    pdfKies: string;
+    toevoegen: string;
+    geenLoonstroken: string;
+    downloaden: string;
+    sluit: string;
   };
   uitnodiging: {
     titel: string;
@@ -87,6 +95,8 @@ export interface PersoneelTeksten {
     buitenGrens: string;
     loonstrokenKop: string;
     berichtenKop: string;
+    geenLoonstroken: string;
+    downloaden: string;
     binnenkort: string;
     uitloggen: string;
     geenToegang: string;
@@ -101,7 +111,7 @@ const nl: PersoneelTeksten = {
   blok: {
     taken: { naam: "Taken", uitleg: "De takenlijsten van de zaak (openen, sluiten, schoonmaak en metingen), om af te vinken." },
     mededelingen: { naam: "Mededelingen", uitleg: "Berichten van jou aan het team, bijvoorbeeld over het rooster of een actie." },
-    loonstroken: { naam: "Loonstroken", uitleg: "Hier zien medewerkers hun eigen loonstroken. Komt binnenkort." },
+    loonstroken: { naam: "Loonstroken", uitleg: "Medewerkers zien hier hun eigen loonstroken (pdf) die jij voor hen klaarzet." },
     berichten: { naam: "Berichten", uitleg: "Chatten met jou en met het team. Komt binnenkort." },
   },
   binnenkort: "Binnenkort",
@@ -149,6 +159,14 @@ const nl: PersoneelTeksten = {
     geenMededelingen: "Er zijn geen mededelingen.",
     bezig: "Bezig…",
     fout: "Dat lukte niet. Probeer het zo nog eens.",
+    loonstroken: "Loonstroken",
+    loonstrokenUitleg: "Zet de pdf van de loonstrook klaar. Alleen deze medewerker ziet hem, op zijn eigen dashboard (als dat het onderdeel Loonstroken heeft).",
+    periode: "Periode (bijvoorbeeld oktober 2026)",
+    pdfKies: "Kies een pdf (maximaal 3 MB)",
+    toevoegen: "Toevoegen",
+    geenLoonstroken: "Nog geen loonstroken.",
+    downloaden: "Downloaden",
+    sluit: "Sluiten",
   },
   uitnodiging: {
     titel: "Welkom bij {zaak}",
@@ -179,6 +197,8 @@ const nl: PersoneelTeksten = {
     buitenGrens: "Let op: buiten de grens.",
     loonstrokenKop: "Loonstroken",
     berichtenKop: "Berichten",
+    geenLoonstroken: "Er zijn nog geen loonstroken voor je klaargezet.",
+    downloaden: "Downloaden",
     binnenkort: "Komt binnenkort.",
     uitloggen: "Uitloggen",
     geenToegang: "Je hebt geen toegang meer tot deze zaak.",
@@ -199,7 +219,7 @@ const en: PersoneelTeksten = {
   blok: {
     taken: { naam: "Tasks", uitleg: "The venue's task lists (opening, closing, cleaning and readings), to tick off." },
     mededelingen: { naam: "Announcements", uitleg: "Messages from you to the team, for example about the rota or an offer." },
-    loonstroken: { naam: "Payslips", uitleg: "Staff see their own payslips here. Coming soon." },
+    loonstroken: { naam: "Payslips", uitleg: "Staff see their own payslips (pdf) here, which you put ready for them." },
     berichten: { naam: "Messages", uitleg: "Chat with you and with the team. Coming soon." },
   },
   binnenkort: "Coming soon",
@@ -247,6 +267,14 @@ const en: PersoneelTeksten = {
     geenMededelingen: "There are no announcements.",
     bezig: "Working…",
     fout: "That did not work. Please try again in a moment.",
+    loonstroken: "Payslips",
+    loonstrokenUitleg: "Put the payslip pdf ready. Only this staff member sees it, on their own dashboard (if it has the Payslips part).",
+    periode: "Period (for example October 2026)",
+    pdfKies: "Choose a pdf (maximum 3 MB)",
+    toevoegen: "Add",
+    geenLoonstroken: "No payslips yet.",
+    downloaden: "Download",
+    sluit: "Close",
   },
   uitnodiging: {
     titel: "Welcome to {zaak}",
@@ -277,6 +305,8 @@ const en: PersoneelTeksten = {
     buitenGrens: "Careful: outside the limit.",
     loonstrokenKop: "Payslips",
     berichtenKop: "Messages",
+    geenLoonstroken: "No payslips have been put ready for you yet.",
+    downloaden: "Download",
     binnenkort: "Coming soon.",
     uitloggen: "Sign out",
     geenToegang: "You no longer have access to this venue.",

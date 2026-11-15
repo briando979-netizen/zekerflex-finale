@@ -10,7 +10,7 @@ export const BLOKKEN = ["taken", "mededelingen", "loonstroken", "berichten"] as 
 export type Blok = (typeof BLOKKEN)[number];
 
 /** Welke onderdelen al werken; een onderdeel dat nog niet klaar is, laat het beheer zien als "binnenkort" en de server weigert het. */
-export const BLOK_KLAAR: Readonly<Record<Blok, boolean>> = { taken: true, mededelingen: true, loonstroken: false, berichten: false };
+export const BLOK_KLAAR: Readonly<Record<Blok, boolean>> = { taken: true, mededelingen: true, loonstroken: true, berichten: false };
 
 export const MEDEWERKER_STATUSSEN = ["uitgenodigd", "actief", "gestopt"] as const;
 export type MedewerkerStatus = (typeof MEDEWERKER_STATUSSEN)[number];

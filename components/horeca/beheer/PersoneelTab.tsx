@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { vulIn } from "@/lib/i18n/vul-in";
 import { BLOKKEN, BLOK_KLAAR, dashboardVan, type Blok, type PersoneelData, type PersoneelsDashboard } from "@/lib/horeca-personeel/model";
+import { LoonstrokenBeheer } from "@/components/horeca/beheer/LoonstrokenBeheer";
 import type { PersoneelTeksten } from "@/lib/horeca-personeel/teksten";
 
 // Het personeel van de zaak in het horeca-beheer: dashboards per rol maken, medewerkers uitnodigen (ze maken zelf een account) en
@@ -24,6 +25,7 @@ export function PersoneelTab({ t }: { t: PersoneelTeksten }) {
   const [bewerk, setBewerk] = useState<{ id?: string; naam: string; blokken: Blok[] } | null>(null);
   const [nieuw, setNieuw] = useState({ naam: "", email: "", functie: "", dashboardId: "" });
   const [mededeling, setMededeling] = useState({ tekst: "", dashboardIds: [] as string[] });
+  const [open, setOpen] = useState<string | null>(null);
 
   const stuur = useCallback(
     async (body?: unknown): Promise<Antwoord | null> => {
@@ -255,6 +257,14 @@ export function PersoneelTab({ t }: { t: PersoneelTeksten }) {
                         {b.haalWeg}
                       </button>
                     )}
+                  </div>
+                )}
+                {m.status === "actief" && (
+                  <div>
+                    <button type="button" className="min-h-[44px] text-sm font-semibold text-brand-600 hover:underline" aria-expanded={open === m.id} onClick={() => setOpen(open === m.id ? null : m.id)}>
+                      {open === m.id ? b.sluit : b.loonstroken}
+                    </button>
+                    {open === m.id && <LoonstrokenBeheer t={b} taal={t.taal} medewerkerId={m.id} />}
                   </div>
                 )}
                 {m.status === "gestopt" && (

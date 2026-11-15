@@ -70,6 +70,7 @@ export const ORG_KV_REGISTER: readonly OrgKvRegel[] = [
   { module: "inkaart", voorvoegsel: "inkaart:gegevens:", soort: "exact", omschrijving: "bedrijf in kaart: personeel, kosten, ruimtes en bezetting" },
 
   { module: "horeca-personeel", voorvoegsel: "horeca:personeel:", soort: "exact", omschrijving: "eigen personeel van een horecazaak: dashboards, medewerkers en mededelingen" },
+  { module: "horeca-personeel", voorvoegsel: "horeca:loonstroken:", soort: "exact", omschrijving: "loonstroken van het eigen personeel (verwijzingen naar de pdf-bestanden)" },
 ];
 
 /** Een echt organisatie-id: zo kan een leeg of vreemd id nooit een te breed voorvoegsel worden. */
