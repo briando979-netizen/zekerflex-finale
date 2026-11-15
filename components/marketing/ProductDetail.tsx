@@ -19,6 +19,8 @@ import { OnlangsBekeken } from "@/components/marketing/OnlangsBekeken";
 import { useOnlangsBekeken } from "@/components/marketing/useOnlangsBekeken";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
+import { useShopBetaalwijze } from "@/components/marketing/ShopBetaalwijze";
+import { bezorgmoment, resterendTekst } from "@/lib/shop/bezorgmoment";
 
 // De productpagina, opgebouwd als op een grote marktplaats. Telefoon: titel,
 // foto, koopblok onder elkaar en een vaste koopknop onderin zodra de gewone uit
@@ -40,6 +42,8 @@ export type PdpProduct = {
   /** extra foto's naast de hoofdfoto (Beheer → Webshop), in volgorde */
   fotos?: string[];
   badge: string | null;
+  /** collectie (bijv. Winter 2026), voor de specificaties */
+  collection?: string | null;
   variants: PdpVariant[];
   bundleItems?: PdpBundleItem[];
   /** 3D-model (glb) als de beheerder er een koppelde */
@@ -83,6 +87,16 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
   const [added, setAdded] = useState(false);
   const [buyVisible, setBuyVisible] = useState(true);
   const buyRef = useRef<HTMLDivElement | null>(null);
+  // wat de shop nu over betalen mag zeggen: hetzelfde als de kassa (online, per overschrijving, of even niet)
+  const betaalwijze = useShopBetaalwijze();
+  const betaalNoot = betaalwijze === "overschrijving" ? t.shop.bankPaymentNote : betaalwijze === "dicht" ? t.shop.paymentClosedNote : t.shop.securePaymentNote;
+  // het bezorgmoment telt af (zoals bol.com); pas in de browser uitgerekend, anders verschilt het met de server (hydratie)
+  const [nu, setNu] = useState<Date | null>(null);
+  useEffect(() => {
+    setNu(new Date());
+    const i = setInterval(() => setNu(new Date()), 30_000);
+    return () => clearInterval(i);
+  }, []);
 
   const sizes = useMemo(() => [...new Set(product.variants.map((v) => v.size).filter((s): s is string => Boolean(s)))].sort(bySize), [product.variants]);
   const colors = useMemo(() => [...new Set(product.variants.map((v) => v.color).filter((c): c is string => Boolean(c)))], [product.variants]);
@@ -278,6 +292,14 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
           <p className={`mt-5 text-[14px] font-bold ${variant && variantStock <= 0 ? "text-crit" : variant ? "text-ok" : "text-neutralx-600"}`}>
             {variant ? (variantStock > 0 ? fmt(t.shop.inStock, { n: variantStock }) : t.shop.outOfStockVariant) : t.shop.pickVariantForStock}
           </p>
+          {nu && variant && variantStock > 0 && !product.seller && (() => {
+            const b = bezorgmoment(nu);
+            return (
+              <p className="mt-1 text-[13px] font-semibold text-ok">
+                {b.dag === "morgen" ? fmt(t.shop.bezorgAftellen, { tijd: resterendTekst(b.resterendMin, { uurEnMin: t.shop.uurEnMin, uren: t.shop.uren, minuten: t.shop.minuten }) }) : t.shop.bezorgOvermorgen}
+              </p>
+            );
+          })()}
 
           <div ref={buyRef} className="mt-4 flex items-center gap-2.5">
             <label className="sr-only" htmlFor="pdp-aantal">
@@ -353,6 +375,27 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
               </li>
             ))}
           </ul>
+          {/* specificaties, zoals bol.com: alles wat vaststaat in één tabel */}
+          <h3 className="mt-8 text-[17px] font-bold text-ink">{t.shop.specificaties}</h3>
+          <table className="mt-3 w-full overflow-hidden rounded-xl border border-hair text-[14px]">
+            <tbody>
+              {(
+                [
+                  [t.shop.specCategorie, product.category],
+                  ...(product.gender ? [[t.shop.specDoelgroep, product.gender === "heren" ? t.shop.doelHeren : product.gender === "vrouwen" ? t.shop.doelVrouwen : product.gender === "kinderen" ? t.shop.doelKinderen : t.shop.doelUnisex]] : []),
+                  ...(product.collection ? [[t.shop.specCollectie, product.collection]] : []),
+                  ...(sizes.length ? [[t.shop.specMaten, sizes.join(", ")]] : []),
+                  ...(colors.length ? [[t.shop.specKleuren, colors.join(", ")]] : []),
+                  [t.shop.specVerkoper, product.seller ?? "ZekerFlex"],
+                ] as [string, string][]
+              ).map(([k, v], i) => (
+                <tr key={k} className={i % 2 ? "bg-white" : "bg-paper-soft"}>
+                  <th scope="row" className="w-2/5 px-4 py-2.5 text-left font-semibold text-neutralx-600">{k}</th>
+                  <td className="px-4 py-2.5 text-ink">{v}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
           {product.bundleItems && product.bundleItems.length > 0 && (
             <div className="mt-6 rounded-xl border border-hair p-5">
               <p className="text-[14px] font-bold text-ink">{t.shop.bundleContains}</p>
@@ -413,7 +456,7 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
               {t.shop.shippingReturns}
             </h2>
             <ul className="mt-4 space-y-2.5 text-[15px] leading-relaxed text-neutralx-700">
-              {(product.seller ? [fmt(t.shop.sellerShipsNote, { seller: product.seller }), t.shop.uspReturns, t.shop.securePaymentNote] : [t.shop.announcement, t.shop.uspReturns, t.shop.uspInvoice, t.shop.securePaymentNote]).map((line) => (
+              {(product.seller ? [fmt(t.shop.sellerShipsNote, { seller: product.seller }), t.shop.uspReturns, betaalNoot] : [t.shop.announcement, t.shop.uspReturns, t.shop.uspInvoice, betaalNoot]).map((line) => (
                 <li key={line} className="flex gap-3">
                   <span aria-hidden className="mt-[0.6rem] h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
                   <span>{line}</span>
