@@ -54,6 +54,11 @@ export const nl = {
     menuWorkerWorkspace: "Werkersomgeving",
     orgFallback: "Je organisatie",
   },
+  // de assistent in de werkgeversapp (components/brain/BrainChat.tsx, /werkgever/assistent): voor een bedrijf
+  assistent: {
+    sub: "Kent je diensten, uren en facturen · voert zelf niets uit",
+    hoi: "Hoi! Vraag me iets over je diensten, kandidaten, uren, facturen of hoe ZekerFlex werkt.",
+  },
   start: {
     eyebrow: "Jouw start",
     welcomeTitle: "Welkom bij ZekerFlex",
