@@ -38,16 +38,37 @@ export const DEFAULT_SETTINGS: ChatSettings = {
   notificationPreview: true,
 };
 
+/**
+ * Voor bedrijven (de zakelijke weergave, lib/chat/zakelijk.ts): snelle antwoorden en een afwezigheidsbericht die bij een
+ * opdrachtgever passen, zolang het bedrijf ze niet zelf aanpaste. De chat van een opdrachtgever is Nederlands.
+ */
+export const ZAKELIJK_STANDAARD: Pick<ChatSettings, "quickReplies" | "autoReply"> = {
+  quickReplies: [
+    "Bedankt voor je bericht! We reageren zo snel mogelijk.",
+    "Kun je morgen om 9:00 beginnen?",
+    "Je aanmelding is goedgekeurd, welkom!",
+    "Vergeet niet je uren in te vullen in de app.",
+    "Kun je je beschikbaarheid voor volgende week doorgeven?",
+  ],
+  autoReply: { enabled: false, text: "Bedankt voor je bericht! We zijn nu niet bereikbaar en reageren zo snel mogelijk.", onlyWhenAway: true },
+};
+
+export interface ChatSettingsOpties {
+  /** een bedrijf (lib/messaging/zakelijk-rol.ts): zakelijke standaarden */
+  zakelijk?: boolean;
+}
+
 const key = (userId: string) => `chat-settings:${userId}`;
 
-export async function getChatSettings(userId: string): Promise<ChatSettings> {
+export async function getChatSettings(userId: string, opties: ChatSettingsOpties = {}): Promise<ChatSettings> {
+  const basis: ChatSettings = opties.zakelijk ? { ...DEFAULT_SETTINGS, ...ZAKELIJK_STANDAARD } : DEFAULT_SETTINGS;
   const raw = await kvGet<Partial<ChatSettings>>(key(userId));
-  if (!raw) return { ...DEFAULT_SETTINGS };
+  if (!raw) return { ...basis };
   return {
-    ...DEFAULT_SETTINGS,
+    ...basis,
     ...raw,
-    autoReply: { ...DEFAULT_SETTINGS.autoReply, ...(raw.autoReply ?? {}) },
-    quickReplies: Array.isArray(raw.quickReplies) ? raw.quickReplies.slice(0, 20) : DEFAULT_SETTINGS.quickReplies,
+    autoReply: { ...basis.autoReply, ...(raw.autoReply ?? {}) },
+    quickReplies: Array.isArray(raw.quickReplies) ? raw.quickReplies.slice(0, 20) : basis.quickReplies,
   };
 }
 
@@ -65,8 +86,9 @@ export interface ChatSettingsPatch {
 export async function saveChatSettings(
   userId: string,
   patch: ChatSettingsPatch,
+  opties: ChatSettingsOpties = {},
 ): Promise<ChatSettings> {
-  const current = await getChatSettings(userId);
+  const current = await getChatSettings(userId, opties);
   const ar = patch.autoReply ?? {};
   const next: ChatSettings = {
     quickReplies: (patch.quickReplies ?? current.quickReplies)
