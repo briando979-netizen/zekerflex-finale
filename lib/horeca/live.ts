@@ -36,6 +36,8 @@ async function bestellingenLive(zaakId: string): Promise<SchermBestelling[]> {
     naam: b.naam,
     bron: b.bron,
     soort: b.soort,
+    // de kassa rekent een bezorgbestelling af mét bezorgkosten (lib/horeca/kassa-server.ts); dan moet het scherm ze ook tonen
+    bezorgkostenCent: b.soort === "bezorgen" ? b.bezorgkostenCent : 0,
   }));
 }
 

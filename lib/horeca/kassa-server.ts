@@ -4,11 +4,11 @@ import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { tekenMet } from "@/lib/horeca/link";
 import { kvGet, kvSet } from "@/lib/storage/kv";
-import { amsterdamToUtc } from "@/lib/time/amsterdam";
+import { amsterdamDayKey, amsterdamToUtc } from "@/lib/time/amsterdam";
 import { leesRegels } from "@/lib/horeca/bestellen";
 import { hoofdTarief } from "@/lib/horeca/bezorgen";
 import { plusDagen } from "@/lib/horeca/reserveren";
-import { alles, betaalRegels, deelRegels, kortingRegels, MAX_KORTING_PROCENT, rekeningVan, totaalVan, zRapport, type BonRegel, type Methode, type Selectie } from "@/lib/horeca/kassa";
+import { alles, betaalRegels, dagstaatCsv, deelRegels, kortingRegels, MAX_KORTING_PROCENT, rekeningVan, totaalVan, zRapport, type BonRegel, type KassaBetaling, type Methode, type Selectie } from "@/lib/horeca/kassa";
 
 // ---------------------------------------------------------------------------
 // De kassa op de server. Afrekenen gebeurt onder een rijslot op de bestellingen
@@ -153,13 +153,15 @@ export type Bon = Awaited<ReturnType<typeof bonVan>>;
 /** De gegevens van de zaak die op elke bon staan. */
 export const bonKop = (zaak: HorecaZaak) => ({ naam: zaak.naam, adres: zaak.adres, plaats: zaak.plaats, telefoon: zaak.telefoon, kvk: zaak.kvk, btwNummer: zaak.btwNummer, voettekst: leesKassa(zaak.kassa).voettekst });
 
+/** Middernacht in Nederland aan het begin van een dag ("2026-11-15"), als tijdstip. */
+function dagBegin(datum: string): Date {
+  const [y, m, d] = datum.split("-").map(Number);
+  return amsterdamToUtc(y ?? 1970, m ?? 1, d ?? 1);
+}
+
 /** De bonnen van één Nederlandse dag. */
 async function betalingenOp(zaak: HorecaZaak, datum: string) {
-  const [y, m, d] = datum.split("-").map(Number);
-  const [y2, m2, d2] = plusDagen(datum, 1).split("-").map(Number);
-  const van = amsterdamToUtc(y ?? 1970, m ?? 1, d ?? 1);
-  const tot = amsterdamToUtc(y2 ?? 1970, m2 ?? 1, d2 ?? 1);
-  return prisma.horecaBetaling.findMany({ where: { zaakId: zaak.id, status: "BETAALD", betaaldOp: { gte: van, lt: tot } }, orderBy: { betaaldOp: "asc" } });
+  return prisma.horecaBetaling.findMany({ where: { zaakId: zaak.id, status: "BETAALD", betaaldOp: { gte: dagBegin(datum), lt: dagBegin(plusDagen(datum, 1)) } }, orderBy: { betaaldOp: "asc" } });
 }
 
 const kKas = (zaakId: string, datum: string) => `horeca:kas:${zaakId}:${datum}`;
@@ -196,4 +198,26 @@ export async function kassaCsv(zaak: HorecaZaak, van: string, tot: string): Prom
   const veld = (v: string) => `"${v.replace(/"/g, '""')}"`;
   const kop = ["Bon", "Datum", "Tijd", "Betaalwijze", "Bedrag incl. btw", "Fooi", "Omzet 9%", "Omzet 21%", "Omzet 0%", "Door"];
   return `﻿${[kop, ...rijen].map((r) => r.map(veld).join(";")).join("\r\n")}`;
+}
+
+/**
+ * De dagstaat van een periode (hoogstens 93 dagen) als CSV: per dag omzet en btw per tarief, fooi, ontvangsten per
+ * betaalwijze en het kasverschil (lib/horeca/kassa.ts dagstaatCsv). Eén query voor de hele periode.
+ */
+export async function dagstaatCsvVan(zaak: HorecaZaak, van: string, tot: string): Promise<string> {
+  const dagen: string[] = [];
+  for (let datum = van; datum <= tot && dagen.length < 93; datum = plusDagen(datum, 1)) dagen.push(datum);
+  const laatste = dagen[dagen.length - 1] ?? van;
+  const lijst = await prisma.horecaBetaling.findMany({
+    where: { zaakId: zaak.id, status: "BETAALD", betaaldOp: { gte: dagBegin(van), lt: dagBegin(plusDagen(laatste, 1)) } },
+    select: { bedragCent: true, fooiCent: true, methode: true, regels: true, betaaldOp: true },
+  });
+  const per = new Map<string, KassaBetaling[]>();
+  for (const b of lijst) {
+    if (!b.betaaldOp) continue;
+    const dag = amsterdamDayKey(b.betaaldOp);
+    per.set(dag, [...(per.get(dag) ?? []), { bedragCent: b.bedragCent, fooiCent: b.fooiCent, methode: b.methode, regels: Array.isArray(b.regels) ? (b.regels as unknown as BonRegel[]) : [] }]);
+  }
+  const tellingen = await Promise.all(dagen.map((d) => kvGet<{ geteldCent: number }>(kKas(zaak.id, d)).catch(() => null)));
+  return dagstaatCsv(dagen.map((datum, i) => ({ datum, betalingen: per.get(datum) ?? [], geteldCent: tellingen[i]?.geteldCent ?? null })));
 }

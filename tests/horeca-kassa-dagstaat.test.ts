@@ -1,0 +1,92 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
+import { dagstaatCsv, dagstaatRij, ontvangstVan, type BonRegel, type KassaBetaling } from "@/lib/horeca/kassa";
+
+// De dagstaat voor de boekhouder (15 nov 2026): per dag omzet en btw per tarief, fooi, ontvangsten per betaalwijze
+// en het kasverschil, zo dat hij per dag sluit (memoriaalboeking). Plus de rekening in de kassa: korting bij één
+// betaling en de bezorgkosten op het scherm zoals de server ze op de bon zet.
+
+const lees = (rel: string) => readFileSync(path.join(process.cwd(), rel), "utf8");
+const r = (prijsCent: number, aantal: number, btw: number): BonRegel => ({ naam: "x", prijsCent, aantal, btw });
+const bon = (methode: string, regels: BonRegel[], fooiCent = 0): KassaBetaling => ({ methode, regels, fooiCent, bedragCent: regels.reduce((s, x) => s + x.prijsCent * x.aantal, 0) });
+
+const dag: KassaBetaling[] = [
+  bon("pin", [r(1950, 2, 9), r(450, 2, 21)], 200),
+  bon("contant", [r(1250, 1, 9), r(-125, 1, 9)], 50),
+  bon("kaart", [r(800, 1, 21)]),
+  bon("ideal", [r(350, 1, 0)]),
+];
+
+describe("dagstaat", () => {
+  it("online aan tafel (pas, Apple Pay, Google Pay) staat samen, onbekend is overig", () => {
+    expect(ontvangstVan("pin")).toBe("pin");
+    expect(ontvangstVan("kaart")).toBe("online");
+    expect(ontvangstVan("apple_pay")).toBe("online");
+    expect(ontvangstVan("constructor")).toBe("overig");
+  });
+
+  it("sluit per dag: omzet exclusief + btw + fooi = wat er binnenkwam", () => {
+    const rij = dagstaatRij({ datum: "2026-11-14", betalingen: dag, geteldCent: null });
+    expect(rij.bonnen).toBe(4);
+    expect(rij.omzetCent).toBe(3900 + 900 + 1125 + 800 + 350);
+    const credit = rij.btw[21].exclCent + rij.btw[21].btwCent + rij.btw[9].exclCent + rij.btw[9].btwCent + rij.btw[0].exclCent + rij.fooiCent;
+    const debet = Object.values(rij.ontvangen).reduce((s, x) => s + x, 0);
+    expect(credit).toBe(debet);
+    expect(debet).toBe(rij.omzetCent + rij.fooiCent);
+    expect(rij.ontvangen).toEqual({ pin: 4800 + 200, contant: 1125 + 50, ideal: 350, online: 800, overig: 0 });
+    // btw over het dagtotaal per tarief: 9% over 5025, 21% over 1700
+    expect(rij.btw[9]).toEqual({ exclCent: 5025 - 415, btwCent: 415 });
+    expect(rij.btw[21]).toEqual({ exclCent: 1700 - 295, btwCent: 295 });
+    expect(rij.btw[0]).toEqual({ exclCent: 350, btwCent: 0 });
+    expect(rij.kasVerschilCent).toBeNull();
+  });
+
+  it("kasverschil: geteld min contant plus fooi contant", () => {
+    expect(dagstaatRij({ datum: "2026-11-14", betalingen: dag, geteldCent: 1200 }).kasVerschilCent).toBe(1200 - 1175);
+    expect(dagstaatRij({ datum: "2026-11-14", betalingen: [], geteldCent: 0 }).kasVerschilCent).toBe(0);
+  });
+
+  it("csv: kop, een regel per dag (ook een lege), een totaalregel; Nederlandse bedragen", () => {
+    const csv = dagstaatCsv([
+      { datum: "2026-11-14", betalingen: dag, geteldCent: 1200 },
+      { datum: "2026-11-15", betalingen: [], geteldCent: null },
+    ]);
+    expect(csv.startsWith("﻿")).toBe(true);
+    const rijen = csv.slice(1).split("\r\n").map((x) => x.split(";").map((v) => v.replace(/^"|"$/g, "")));
+    expect(rijen).toHaveLength(4);
+    const [kop, eerste, tweede, totaal] = rijen;
+    expect(kop?.[0]).toBe("Datum");
+    expect(kop).toContain("Btw 21%");
+    expect(kop).toContain("Totaal ontvangen");
+    expect(kop?.length).toBe(eerste?.length);
+    expect(eerste?.[0]).toBe("2026-11-14");
+    expect(eerste?.[kop?.indexOf("Omzet incl. btw") ?? -1]).toBe("70,75");
+    expect(eerste?.[kop?.indexOf("Kasverschil") ?? -1]).toBe("0,25");
+    expect(tweede?.[kop?.indexOf("Kas geteld") ?? -1]).toBe("");
+    expect(totaal?.[0]).toBe("Totaal");
+    expect(totaal?.[kop?.indexOf("Totaal ontvangen") ?? -1]).toBe("73,25");
+    expect(totaal?.[kop?.indexOf("Kasverschil") ?? -1]).toBe("0,25");
+  });
+
+  it("de beheer-API en het tabblad Kassa bieden hem aan", () => {
+    expect(lees("app/api/horeca/beheer/route.ts")).toContain('q.get("alleen") === "kassa-dagstaat"');
+    expect(lees("components/horeca/beheer/KassaTab.tsx")).toContain("alleen=kassa-dagstaat");
+  });
+});
+
+describe("rekening in de kassa", () => {
+  const kassa = lees("components/horeca/scherm/KassaScherm.tsx");
+
+  it("korting bij één betaling, nooit bij gelijk verdelen", () => {
+    expect(kassa).toContain('const kortingHier = splits === "gelijk" ? 0 : korting;');
+    expect(kassa).toContain("kortingProcent: kortingHier");
+  });
+
+  it("de bezorgkosten staan op het scherm wanneer de server ze op de bon zet", () => {
+    expect(lees("lib/horeca/live.ts")).toContain('bezorgkostenCent: b.soort === "bezorgen" ? b.bezorgkostenCent : 0');
+    expect(kassa).toContain('keuze.soort === "bestelling" && !selectie');
+    expect(kassa).toContain("verdeelGelijk(totaal + bezorgCent, personen)");
+    expect(lees("lib/horeca/kassa-server.ts")).toContain("a.bestellingId && !a.selectie");
+  });
+});

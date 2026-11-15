@@ -1965,6 +1965,10 @@ export const nl = {
     adres: "Adres",
     bedrag: "Bedrag",
   },
+  horecaDagstaat: {
+    knop: "Download dagstaat",
+    uitleg: "De dagstaat geeft per dag de omzet en btw per tarief, de fooi, wat er per betaalwijze binnenkwam (met fooi) en het kasverschil. Hij sluit per dag, zodat je boekhouder hem als memoriaalboeking kan inlezen.",
+  },
 };
 
 export type Dict = typeof nl;

@@ -21,6 +21,8 @@ export interface SchermBestelling {
   bron: string;
   /** "tafel", "afhalen" of "bezorgen" (lib/horeca/bezorgen.ts); oudere gegevens: ontbreekt */
   soort?: string;
+  /** bij een bezorgbestelling: de bezorgkosten, die bij het afrekenen van de hele bestelling op de bon komen */
+  bezorgkostenCent?: number;
 }
 
 export type ReserveringStatus = "BEVESTIGD" | "AANGEKOMEN" | "NIET_GEKOMEN" | "GEANNULEERD";

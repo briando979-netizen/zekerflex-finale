@@ -39,7 +39,7 @@ import { dashboardVan } from "@/lib/horeca/live";
 import { apparatenVan, bewaarApparaat, koppelcodeVoor, ontkoppel } from "@/lib/horeca/apparaten";
 import { handelAf } from "@/lib/horeca/oproepen";
 import { STAPPEN } from "@/lib/horeca/fasen";
-import { afrekenen, bewaarKassa, dagafsluiting, kassaCsv, leesKassa, telKas } from "@/lib/horeca/kassa-server";
+import { afrekenen, bewaarKassa, dagafsluiting, dagstaatCsvVan, kassaCsv, leesKassa, telKas } from "@/lib/horeca/kassa-server";
 import { koppelStripe, stripeDashboard, stripeStand } from "@/lib/horeca/betalen";
 import type { HorecaZaak } from "@prisma/client";
 
@@ -97,8 +97,9 @@ export async function GET(request: Request): Promise<NextResponse> {
       eisModule(zaak, "betalen");
       return NextResponse.json({ stand: await uitbetaalStand(zaak), eigenaar: await isEigenaar(zaak) });
     }
-    // ?alleen=kassa&datum= → dagafsluiting (Z-rapport, bonnen, kastelling); ?alleen=kassa-csv&van=&tot= → CSV voor de boekhouder
-    if (q.get("alleen") === "kassa" || q.get("alleen") === "kassa-csv") {
+    // ?alleen=kassa&datum= → dagafsluiting (Z-rapport, bonnen, kastelling); ?alleen=kassa-csv&van=&tot= → alle bonnen als CSV;
+    // ?alleen=kassa-dagstaat&van=&tot= → de dagstaat (memoriaal per dag) als CSV, beide voor de boekhouder
+    if (q.get("alleen") === "kassa" || q.get("alleen") === "kassa-csv" || q.get("alleen") === "kassa-dagstaat") {
       eisModule(zaak, "kassa");
       if (q.get("alleen") === "kassa") {
         const datum = q.get("datum") ?? "";
@@ -108,8 +109,9 @@ export async function GET(request: Request): Promise<NextResponse> {
       const van = q.get("van") ?? "";
       const tot = q.get("tot") ?? "";
       if (!isDatum(van) || !isDatum(tot) || van > tot) throw AppError.validation("Kies een periode.");
-      return new NextResponse(await kassaCsv(zaak, van, tot), {
-        headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="kassa-${zaak.slug}-${van}-${tot}.csv"` },
+      const dagstaat = q.get("alleen") === "kassa-dagstaat";
+      return new NextResponse(dagstaat ? await dagstaatCsvVan(zaak, van, tot) : await kassaCsv(zaak, van, tot), {
+        headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="${dagstaat ? "dagstaat" : "kassa"}-${zaak.slug}-${van}-${tot}.csv"` },
       });
     }
     // ?alleen=archief&van=&tot=&soort=&bron=&betaald=&geannuleerd=&bezorger=&q= → het archief met omzet en btw;

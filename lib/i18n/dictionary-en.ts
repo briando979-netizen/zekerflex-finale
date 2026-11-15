@@ -1948,4 +1948,8 @@ export const en: Dict = {
     adres: "Address",
     bedrag: "Amount",
   },
+  horecaDagstaat: {
+    knop: "Download daily summary",
+    uitleg: "The daily summary shows, per day, revenue and VAT per rate, tips, what came in per payment method (including tips) and the cash difference. Each day balances, so your accountant can import it as a journal entry.",
+  },
 };

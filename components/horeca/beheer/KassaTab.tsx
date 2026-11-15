@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useT } from "@/components/i18n/I18nProvider";
 import { bedragVeld, centVan, foutVan, stuur } from "@/components/rijschool/api";
 import { Melding, Veld } from "@/components/rijschool/ui";
 import { euro } from "@/lib/horeca/weergave";
@@ -31,6 +32,7 @@ interface Afsluiting {
 const dagNaam = (d: string) => new Intl.DateTimeFormat("nl-NL", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${d}T12:00:00Z`));
 
 export function KassaTab({ data, doe }: { data: BeheerData; doe: Doe }) {
+  const t = useT().horecaDagstaat;
   const vandaag = amsterdamDayKey(Date.now());
   const [datum, setDatum] = useState(vandaag);
   const [a, setA] = useState<Afsluiting | null>(null);
@@ -237,7 +239,11 @@ export function KassaTab({ data, doe }: { data: BeheerData; doe: Doe }) {
                 <a className="btn-ghost" href={`${API}?alleen=kassa-csv&van=${van}&tot=${tot}`}>
                   Download CSV
                 </a>
+                <a className="btn-ghost" href={`${API}?alleen=kassa-dagstaat&van=${van}&tot=${tot}`}>
+                  {t.knop}
+                </a>
               </div>
+              <p className="text-sm text-neutralx-600">{t.uitleg}</p>
             </section>
           </div>
 

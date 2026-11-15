@@ -141,11 +141,19 @@ function Rekening({ keuze, bestellingen, doe, klaar }: { keuze: Extract<Keuze, {
   const [gekozen, setGekozen] = useState<Record<string, number>>({});
   const [personen, setPersonen] = useState(2);
   const [methoden, setMethoden] = useState<Methode[]>([]);
+  const [korting, setKorting] = useState(0);
   const [bezig, setBezig] = useState(false);
   const selectie = splits === "gerecht" ? rekening.filter((r) => (gekozen[sleutel(r)] ?? 0) > 0).map((r) => ({ bestellingId: r.bestellingId, index: r.index, aantal: Math.min(r.aantal, gekozen[sleutel(r)] ?? 0) })) : null;
   const totaal = totaalVan(rekening);
-  const te = selectie ? selectie.reduce((s, x) => s + (rekening.find((r) => sleutel(r) === sleutel(x))?.prijsCent ?? 0) * x.aantal, 0) : totaal;
-  const delen = verdeelGelijk(totaal, personen);
+  // wat er nu afgerekend wordt, met btw: daarover gaat de korting (min-regels per tarief, net als op de server)
+  const deze = selectie ? selectie.map((x) => ({ naam: "", prijsCent: rekening.find((r) => sleutel(r) === sleutel(x))?.prijsCent ?? 0, aantal: x.aantal, btw: rekening.find((r) => sleutel(r) === sleutel(x))?.btw ?? 9 })) : rekening.map((r) => ({ naam: "", prijsCent: r.prijsCent, aantal: r.aantal, btw: r.btw }));
+  // korting kan bij één betaling, niet bij gelijk verdelen (lib/horeca/kassa-server.ts)
+  const kortingHier = splits === "gelijk" ? 0 : korting;
+  const kortingCent = -totaalVan(kortingRegels(deze, kortingHier));
+  // een hele bezorgbestelling: de bezorgkosten komen op dezelfde bon (zoals de server ze rekent)
+  const bezorgCent = keuze.soort === "bestelling" && !selectie ? (eigen.find((b) => b.id === keuze.id)?.bezorgkostenCent ?? 0) : 0;
+  const te = totaalVan(deze) - kortingCent + bezorgCent;
+  const delen = verdeelGelijk(totaal + bezorgCent, personen);
   const nogOpen = eigen.some((b) => b.status === "NIEUW" || b.status === "IN_BEREIDING");
   const wie = keuze.soort === "tafel" ? { tafelId: keuze.id } : { bestellingId: keuze.id };
 
@@ -164,7 +172,7 @@ function Rekening({ keuze, bestellingen, doe, klaar }: { keuze: Extract<Keuze, {
           <h2 id="rekening-kop" className="font-display text-3xl font-bold text-white">
             {keuze.naam}
           </h2>
-          <p className="font-display text-3xl font-bold tabular-nums text-[#F5C451]">{euro(totaal)}</p>
+          <p className="font-display text-3xl font-bold tabular-nums text-[#F5C451]">{euro(totaal + bezorgCent)}</p>
         </div>
         {nogOpen && <p className="mt-1 text-sm font-semibold text-[#FCD34D]">Let op: er wordt nog iets bereid voor deze rekening.</p>}
         <div role="tablist" aria-label="Splitsen" className="mt-3 grid grid-cols-3 gap-1 rounded-xl bg-white/5 p-1">
@@ -202,7 +210,32 @@ function Rekening({ keuze, bestellingen, doe, klaar }: { keuze: Extract<Keuze, {
               </li>
             );
           })}
+          {bezorgCent > 0 && (
+            <li className="flex items-center gap-3 py-2 text-lg text-white">
+              <span className="w-10 flex-shrink-0" />
+              <span className="min-w-0 flex-1 truncate">Bezorgkosten</span>
+              <span className="w-24 flex-shrink-0 text-right tabular-nums">{euro(bezorgCent)}</span>
+            </li>
+          )}
         </ul>
+        {splits !== "gelijk" && (
+          <div className="mt-4" role="group" aria-label="Korting">
+            <p className="text-sm font-semibold text-[#B8C4BD]">Korting op de gerechten</p>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {KORTINGEN.map((k) => (
+                <button key={k} type="button" aria-pressed={korting === k} onClick={() => setKorting(k)} className={`rounded-lg px-3 py-2 text-sm font-bold ${korting === k ? "bg-[#22C55E] text-[#04130A]" : "text-[#B8C4BD] ring-1 ring-white/15"}`}>
+                  {k === 0 ? "Geen" : `${k}%`}
+                </button>
+              ))}
+            </div>
+            {kortingCent > 0 && (
+              <p className="mt-2 flex justify-between text-lg text-white">
+                <span>Korting {korting}%</span>
+                <span className="tabular-nums">− {euro(kortingCent)}</span>
+              </p>
+            )}
+          </div>
+        )}
         {splits === "gelijk" && (
           <div className="mt-4 space-y-2">
             <div className="flex items-center gap-3">
@@ -251,7 +284,7 @@ function Rekening({ keuze, bestellingen, doe, klaar }: { keuze: Extract<Keuze, {
           </Knop>
         </section>
       ) : (
-        <Betalen key={`${keuze.id}-${splits}`} te={te} fooiAan doeBetaal={(methode, fooiCent) => void betaal({ selectie, delen: [{ methode, bedragCent: 0, fooiCent }] })} bezig={bezig} />
+        <Betalen key={`${keuze.id}-${splits}`} te={te} fooiAan doeBetaal={(methode, fooiCent) => void betaal({ selectie, delen: [{ methode, bedragCent: 0, fooiCent }], ...(kortingHier > 0 ? { kortingProcent: kortingHier } : {}) })} bezig={bezig} />
       )}
     </div>
   );

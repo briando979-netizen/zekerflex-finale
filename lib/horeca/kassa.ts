@@ -233,3 +233,98 @@ export function zRapport(betalingen: readonly KassaBetaling[]): ZRapport {
     contantCent: (contant?.bedragCent ?? 0) + (contant?.fooiCent ?? 0),
   };
 }
+
+// ── Dagstaat voor de boekhouder (memoriaalboeking per dag) ───────────────────
+
+/** Waarop het geld binnenkwam, als kolommen op de dagstaat. Online aan tafel (pas, Apple Pay, Google Pay) staat samen. */
+export const DAGSTAAT_ONTVANGSTEN = [
+  ["pin", "Ontvangen pin"],
+  ["contant", "Ontvangen contant"],
+  ["ideal", "Ontvangen iDEAL"],
+  ["online", "Ontvangen online aan tafel"],
+  ["overig", "Ontvangen overig"],
+] as const;
+export type Ontvangst = (typeof DAGSTAAT_ONTVANGSTEN)[number][0];
+
+export const ontvangstVan = (methode: string): Ontvangst => (methode === "pin" || methode === "contant" || methode === "ideal" ? methode : Object.hasOwn(ONLINE_LABEL, methode) ? "online" : "overig");
+
+export interface DagstaatDag {
+  datum: string;
+  betalingen: readonly KassaBetaling[];
+  /** wat er bij de dagafsluiting in de la geteld is (zonder wisselgeld); null als er niet geteld is */
+  geteldCent: number | null;
+}
+
+export interface DagstaatRij {
+  datum: string;
+  bonnen: number;
+  omzetCent: number;
+  /** per tarief: omzet exclusief btw en de btw */
+  btw: Record<BtwTarief, { exclCent: number; btwCent: number }>;
+  fooiCent: number;
+  /** per betaalwijze, inclusief fooi: wat er op de bank of in de la kwam */
+  ontvangen: Record<Ontvangst, number>;
+  geteldCent: number | null;
+  /** geteld min wat er contant in de la hoort (contant plus fooi contant); null als er niet geteld is */
+  kasVerschilCent: number | null;
+}
+
+/**
+ * Eén dag van de dagstaat. Hij sluit: omzet exclusief plus btw per tarief plus fooi is samen precies wat er
+ * ontvangen is, zodat de boekhouder hem als één memoriaalboeking kan inlezen (ontvangsten debet, omzet, btw en
+ * fooi credit). De btw per tarief is berekend over het dagtotaal, net als in het Z-rapport.
+ */
+export function dagstaatRij(dag: DagstaatDag): DagstaatRij {
+  const z = zRapport(dag.betalingen);
+  const btw: DagstaatRij["btw"] = { 21: { exclCent: 0, btwCent: 0 }, 9: { exclCent: 0, btwCent: 0 }, 0: { exclCent: 0, btwCent: 0 } };
+  for (const b of z.btw) if (isBtw(b.tarief)) btw[b.tarief] = { exclCent: b.exclCent, btwCent: b.btwCent };
+  const ontvangen: DagstaatRij["ontvangen"] = { pin: 0, contant: 0, ideal: 0, online: 0, overig: 0 };
+  for (const b of dag.betalingen) ontvangen[ontvangstVan(b.methode)] += b.bedragCent + b.fooiCent;
+  return {
+    datum: dag.datum,
+    bonnen: z.bonnen,
+    omzetCent: z.omzetCent,
+    btw,
+    fooiCent: z.fooiCent,
+    ontvangen,
+    geteldCent: dag.geteldCent,
+    kasVerschilCent: dag.geteldCent === null ? null : dag.geteldCent - z.contantCent,
+  };
+}
+
+/** De dagstaat als CSV (puntkomma's, Nederlandse bedragen, opent in Excel): een regel per dag en een totaalregel. */
+export function dagstaatCsv(dagen: readonly DagstaatDag[]): string {
+  const rijen = dagen.map(dagstaatRij);
+  const bedrag = (c: number) => (c / 100).toFixed(2).replace(".", ",");
+  const som = (f: (r: DagstaatRij) => number) => rijen.reduce((s, r) => s + f(r), 0);
+  const ontvangenTotaal = (r: Pick<DagstaatRij, "ontvangen">) => DAGSTAAT_ONTVANGSTEN.reduce((s, [k]) => s + r.ontvangen[k], 0);
+  const cijfers = (r: Omit<DagstaatRij, "datum" | "geteldCent" | "kasVerschilCent">) => [
+    String(r.bonnen),
+    bedrag(r.omzetCent),
+    bedrag(r.btw[21].exclCent),
+    bedrag(r.btw[21].btwCent),
+    bedrag(r.btw[9].exclCent),
+    bedrag(r.btw[9].btwCent),
+    bedrag(r.btw[0].exclCent),
+    bedrag(r.fooiCent),
+    ...DAGSTAAT_ONTVANGSTEN.map(([k]) => bedrag(r.ontvangen[k])),
+    bedrag(ontvangenTotaal(r)),
+  ];
+  const kop = ["Datum", "Bonnen", "Omzet incl. btw", "Omzet 21% excl. btw", "Btw 21%", "Omzet 9% excl. btw", "Btw 9%", "Omzet 0%", "Fooi", ...DAGSTAAT_ONTVANGSTEN.map(([, label]) => label), "Totaal ontvangen", "Kas geteld", "Kasverschil"];
+  const dagRijen = rijen.map((r) => [r.datum, ...cijfers(r), r.geteldCent === null ? "" : bedrag(r.geteldCent), r.kasVerschilCent === null ? "" : bedrag(r.kasVerschilCent)]);
+  const geteld = rijen.filter((r) => r.kasVerschilCent !== null);
+  const totaal = [
+    "Totaal",
+    ...cijfers({
+      bonnen: som((r) => r.bonnen),
+      omzetCent: som((r) => r.omzetCent),
+      btw: { 21: { exclCent: som((r) => r.btw[21].exclCent), btwCent: som((r) => r.btw[21].btwCent) }, 9: { exclCent: som((r) => r.btw[9].exclCent), btwCent: som((r) => r.btw[9].btwCent) }, 0: { exclCent: som((r) => r.btw[0].exclCent), btwCent: 0 } },
+      fooiCent: som((r) => r.fooiCent),
+      ontvangen: { pin: som((r) => r.ontvangen.pin), contant: som((r) => r.ontvangen.contant), ideal: som((r) => r.ontvangen.ideal), online: som((r) => r.ontvangen.online), overig: som((r) => r.ontvangen.overig) },
+    }),
+    "",
+    geteld.length ? bedrag(geteld.reduce((s, r) => s + (r.kasVerschilCent ?? 0), 0)) : "",
+  ];
+  const veld = (v: string) => `"${v.replace(/"/g, '""')}"`;
+  return `﻿${[kop, ...dagRijen, totaal].map((r) => r.map(veld).join(";")).join("\r\n")}`;
+}
