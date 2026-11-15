@@ -1,5 +1,6 @@
 import type { Locale } from "@/lib/i18n/config";
 import type { Blok } from "@/lib/horeca-personeel/model";
+import { PLANNING_EN, PLANNING_NL, type PlanningTeksten } from "@/lib/horeca-personeel/planning-teksten";
 
 // ---------------------------------------------------------------------------
 // Alle tekst van het eigen personeel van een horecazaak, in Nederlands en Engels: het beheer van de opdrachtgever
@@ -104,6 +105,7 @@ export interface PersoneelTeksten {
     bezig: string;
   };
   mail: { onderwerp: string; hoi: string; tekst: string; knop: string; geldig: string };
+  planning: PlanningTeksten;
   chat: { kop: string; team: string; metBeheer: string; gesprek: string; schrijf: string; verstuur: string; geen: string; beheerder: string; verwijder: string; bezig: string; fout: string; teamUitleg: string };
 }
 
@@ -112,6 +114,9 @@ const nl: PersoneelTeksten = {
   blok: {
     taken: { naam: "Taken", uitleg: "De takenlijsten van de zaak (openen, sluiten, schoonmaak en metingen), om af te vinken." },
     mededelingen: { naam: "Mededelingen", uitleg: "Berichten van jou aan het team, bijvoorbeeld over het rooster of een actie." },
+    rooster: { naam: "Rooster", uitleg: "Medewerkers zien hun diensten, kunnen doorgeven wanneer ze niet kunnen en diensten ruilen of een open dienst nemen." },
+    verlof: { naam: "Verlof", uitleg: "Medewerkers vragen verlof aan; jij keurt het goed of af." },
+    uren: { naam: "Uren", uitleg: "Medewerkers klokken in en uit; jij ziet de uren en kunt ze als csv downloaden." },
     loonstroken: { naam: "Loonstroken", uitleg: "Medewerkers zien hier hun eigen loonstroken (pdf) die jij voor hen klaarzet." },
     berichten: { naam: "Berichten", uitleg: "Een teamkanaal voor iedereen en een eigen gesprek met jou, om te chatten." },
   },
@@ -213,6 +218,7 @@ const nl: PersoneelTeksten = {
     knop: "Account maken",
     geldig: "Deze link is {dagen} dagen geldig.",
   },
+  planning: PLANNING_NL,
   chat: {
     kop: "Berichten",
     team: "Team",
@@ -234,6 +240,9 @@ const en: PersoneelTeksten = {
   blok: {
     taken: { naam: "Tasks", uitleg: "The venue's task lists (opening, closing, cleaning and readings), to tick off." },
     mededelingen: { naam: "Announcements", uitleg: "Messages from you to the team, for example about the rota or an offer." },
+    rooster: { naam: "Rota", uitleg: "Staff see their shifts, can say when they cannot work and swap shifts or take an open shift." },
+    verlof: { naam: "Leave", uitleg: "Staff request leave; you approve or decline it." },
+    uren: { naam: "Hours", uitleg: "Staff clock in and out; you see the hours and can download them as csv." },
     loonstroken: { naam: "Payslips", uitleg: "Staff see their own payslips (pdf) here, which you put ready for them." },
     berichten: { naam: "Messages", uitleg: "A team channel for everyone and a private conversation with you, to chat." },
   },
@@ -335,6 +344,7 @@ const en: PersoneelTeksten = {
     knop: "Create account",
     geldig: "This link is valid for {dagen} days.",
   },
+  planning: PLANNING_EN,
   chat: {
     kop: "Messages",
     team: "Team",

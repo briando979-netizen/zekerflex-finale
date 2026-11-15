@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { vulIn } from "@/lib/i18n/vul-in";
 import { BLOKKEN, BLOK_KLAAR, dashboardVan, type Blok, type PersoneelData, type PersoneelsDashboard } from "@/lib/horeca-personeel/model";
 import { BerichtenBeheer } from "@/components/horeca/beheer/BerichtenBeheer";
+import { PlanningBeheer } from "@/components/horeca/beheer/PlanningBeheer";
 import { LoonstrokenBeheer } from "@/components/horeca/beheer/LoonstrokenBeheer";
 import type { PersoneelTeksten } from "@/lib/horeca-personeel/teksten";
 
@@ -341,6 +342,8 @@ export function PersoneelTab({ t }: { t: PersoneelTeksten }) {
           </form>
         )}
       </section>
+
+      <PlanningBeheer t={t.planning} taal={t.taal} />
 
       <BerichtenBeheer t={t.chat} taal={t.taal} data={data} />
 

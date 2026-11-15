@@ -6,11 +6,11 @@
 // ---------------------------------------------------------------------------
 
 /** Onderdelen die een medewerker op zijn dashboard kan zien; de beheerder kiest per dashboard welke. */
-export const BLOKKEN = ["taken", "mededelingen", "loonstroken", "berichten"] as const;
+export const BLOKKEN = ["taken", "mededelingen", "rooster", "verlof", "uren", "loonstroken", "berichten"] as const;
 export type Blok = (typeof BLOKKEN)[number];
 
 /** Welke onderdelen al werken; een onderdeel dat nog niet klaar is, laat het beheer zien als "binnenkort" en de server weigert het. */
-export const BLOK_KLAAR: Readonly<Record<Blok, boolean>> = { taken: true, mededelingen: true, loonstroken: true, berichten: true };
+export const BLOK_KLAAR: Readonly<Record<Blok, boolean>> = { taken: true, mededelingen: true, rooster: true, verlof: true, uren: true, loonstroken: true, berichten: true };
 
 export const MEDEWERKER_STATUSSEN = ["uitgenodigd", "actief", "gestopt"] as const;
 export type MedewerkerStatus = (typeof MEDEWERKER_STATUSSEN)[number];
