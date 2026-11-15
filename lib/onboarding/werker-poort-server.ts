@@ -63,7 +63,7 @@ export async function werkerPoortStand(userId: string): Promise<WerkerPoortStand
 }
 
 /** De reden die de werker ziet; ook in page.block (lib/i18n/freelancer.ts), zodat hij in zijn app-taal staat. */
-export const ONBOARDING_EERST = "Rond eerst je aanmelding af om op klussen te reageren. Bovenaan deze pagina zie je wat er nog mist.";
+export const ONBOARDING_EERST = "Rond eerst je aanmelding af om op klussen te reageren. Op Ontdekken zie je bovenaan wat er nog mist.";
 
 /**
  * Mag deze werker, wat de onboarding betreft, op klussen reageren (12 nov, eigenaar: de app is open, alleen reageren

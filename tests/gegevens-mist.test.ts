@@ -115,11 +115,11 @@ describe("het BSN invullen op de verificatiepagina (PUT /api/me/fiscal)", () => 
 });
 
 describe("de pagina en de vijf talen", () => {
-  it("de verificatiepagina toont de lijst bovenaan en heeft een anker bij de overeenkomst", () => {
+  it("de verificatiepagina: geen apart blok boven het formulier, wel de lijst vóór de eerste klus en een anker bij de overeenkomst", () => {
     const pagina = bron("app/dashboard/verificatie/page.tsx");
-    expect(pagina).toContain("<GegevensMist");
-    expect(pagina).toContain("mist={mist}");
-    expect(pagina.indexOf("<GegevensMist")).toBeLessThan(pagina.indexOf("<OnboardingForm"));
+    // 15 nov: het blok "Je thuisbasis invullen" stond altijd naast het formulier dat er zelf om vraagt (live doorloop)
+    expect(pagina).not.toContain("mist={mist}");
+    expect(pagina).toContain('<GegevensMist mist={voorKlus} later kopId="gegevens-later-kop"');
     expect(pagina).toContain('id="uitzendovereenkomst"');
     expect(pagina).toContain("gegevensMist(gegevensStand)");
     // het BSN en de overeenkomst van een uitzendkracht: vóór de eerste klus (13 nov)
