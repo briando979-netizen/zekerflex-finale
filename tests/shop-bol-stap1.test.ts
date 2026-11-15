@@ -9,7 +9,7 @@ import { VERKOPER_VERZENDT_BINNEN_WERKDAGEN } from "@/lib/shop/verkoper-core";
 // feestdagen: niets beloven wat niet kan), een tabel
 // met specificaties, en een betaaltekst die klopt met de kassa (er stond "beveiligd Stripe-betaalscherm" terwijl Stripe dicht is).
 
-const lees = (f: string) => readFileSync(join(process.cwd(), f), "utf8");
+const lees = (f: string) => readFileSync(join(process.cwd(), f), "utf8").split("\r\n").join("\n");
 
 const producten = [
   { name: "Werkhandschoen nitril", category: "Werk & PBM", description: "Grip bij nat werk" },
@@ -163,6 +163,26 @@ describe("de shop zelf", () => {
     expect(chrome).toContain("aria-activedescendant");
     expect(chrome).toContain('action="/shop#collectie" method="get"');
     expect(chrome).toContain('catalog={catalog}');
+  });
+
+  it("vaste teksten beloven geen 'morgen in huis' (geldt niet op vrijdagavond, in het weekend of op feestdagen)", () => {
+    const nl = lees("lib/i18n/dictionaries.ts");
+    const en = lees("lib/i18n/dictionary-en.ts");
+    for (const k of ["inStock", "announcement", "uspNextDay", "deliveryTomorrow", "lowStock"]) {
+      const nlRegel = nl.match(new RegExp(`\\n\\s+${k}: "([^"]*)"`))?.[1] ?? "";
+      const enRegel = en.match(new RegExp(`\\n\\s+${k}: "([^"]*)"`))?.[1] ?? "";
+      expect(nlRegel, k).not.toBe("");
+      expect(nlRegel, k).not.toMatch(/morgen in huis/i);
+      expect(enRegel, k).not.toMatch(/tomorrow/i);
+    }
+    expect(lees("app/shop/page.tsx")).not.toMatch(/morgen in huis/);
+  });
+
+  it("de zoeksuggesties halen de producten op bij het eerste klikken in de zoekbalk, ook met een lege winkelwagen", () => {
+    const chrome = lees("components/marketing/ShopChrome.tsx");
+    expect(chrome).toContain("const needCatalog = count > 0 || drawer || zoekt;");
+    expect(chrome.match(/onZoek=\{\(\) => setZoekt\(true\)\}/g)).toHaveLength(2);
+    expect(chrome).toMatch(/setOpen\(true\);\n\s+onZoek\(\);/);
   });
 
   it("alle nieuwe teksten staan in het Nederlands én het Engels", () => {

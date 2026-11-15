@@ -21,7 +21,7 @@ import { getShopIndeling } from "@/lib/ontwerp/shop-indeling-store";
 const title = "ZekerFlex Shop — kleding, werkkleding en PBM, eerst passen in de paskamer";
 const korteTitel = "ZekerFlex Shop — kleding, werkkleding en PBM";
 const description =
-  "Kleding, veiligheidsschoenen, handschoenen en werkkleding. Pas het eerst op je eigen paspop, voor 22:00 besteld morgen in huis. Ook zakelijk bestellen.";
+  "Kleding, veiligheidsschoenen, handschoenen en werkkleding. Pas het eerst op je eigen paspop; op werkdagen voor 22:00 besteld, de volgende werkdag in huis. Ook zakelijk bestellen.";
 
 export const metadata: Metadata = {
   title: { absolute: korteTitel },

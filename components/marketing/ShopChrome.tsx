@@ -93,9 +93,10 @@ function ShopOmlijsting({ children, betaalwijze }: { children: ReactNode; betaal
   const { cart, add, remove, count } = useShopCart();
   const wishlist = useShopWishlist();
 
-  // De catalogus is alleen nodig om de winkelwagen te tonen: pas ophalen als
-  // er iets in zit of de lade opengaat (eerder op elke pagina, ook bij leeg).
-  const needCatalog = count > 0 || drawer;
+  // De catalogus is nodig voor de winkelwagen en de zoeksuggesties: pas ophalen als er iets in de wagen zit, de lade
+  // opengaat of iemand de zoekbalk aanklikt (eerder op elke pagina, ook bij leeg).
+  const [zoekt, setZoekt] = useState(false);
+  const needCatalog = count > 0 || drawer || zoekt;
   useEffect(() => {
     if (!needCatalog || catalog.length > 0) return;
     fetch("/api/shop/products", { cache: "no-store" })
@@ -237,7 +238,7 @@ function ShopOmlijsting({ children, betaalwijze }: { children: ReactNode; betaal
             </span>
           </Link>
           <div className="hidden min-w-0 flex-1 md:block">
-            <SearchForm t={t} id="zoek-kop" catalog={catalog} />
+            <SearchForm t={t} id="zoek-kop" catalog={catalog} onZoek={() => setZoekt(true)} />
           </div>
           <nav aria-label={t.shop.account} className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
             <HeaderLink href="/shop/account" label={t.shop.account}>
@@ -262,7 +263,7 @@ function ShopOmlijsting({ children, betaalwijze }: { children: ReactNode; betaal
           </nav>
         </div>
         <div className="px-4 pb-2.5 sm:px-6 md:hidden">
-          <SearchForm t={t} id="zoek-telefoon" catalog={catalog} />
+          <SearchForm t={t} id="zoek-telefoon" catalog={catalog} onZoek={() => setZoekt(true)} />
         </div>
       </header>
 
@@ -661,9 +662,10 @@ type ZoekOptie = { soort: "zoek" } | { soort: "cat"; waarde: string; label: stri
 /**
  * De zoekbalk: een gewoon GET-formulier naar /shop, dus het werkt ook zonder JavaScript. Terwijl je typt (15 nov 2026, zoals
  * bol.com): producten met foto en prijs en de passende categorieën (lib/shop/zoeksuggesties.ts), te kiezen met de pijltjes
- * en Enter. De lijst producten heeft de shop al; er gaat geen extra verzoek weg.
+ * en Enter. De productlijst komt van dezelfde /api/shop/products als de winkelwagen, opgehaald bij het eerste klikken in de
+ * zoekbalk (onZoek).
  */
-function SearchForm({ t, id, catalog }: { t: Dict; id: string; catalog: ApiProduct[] }) {
+function SearchForm({ t, id, catalog, onZoek }: { t: Dict; id: string; catalog: ApiProduct[]; onZoek: () => void }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
@@ -715,7 +717,10 @@ function SearchForm({ t, id, catalog }: { t: Dict; id: string; catalog: ApiProdu
             setOpen(true);
             setActief(-1);
           }}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            setOpen(true);
+            onZoek();
+          }}
           onBlur={() => setOpen(false)}
           onKeyDown={(e) => {
             if (!toon) return;
@@ -804,11 +809,12 @@ function HeaderLink({ href, label, badge = 0, className = "flex", children }: { 
 
 function ServicePoint({ children, className = "", wrap = false }: { children: ReactNode; className?: string; wrap?: boolean }) {
   return (
-    <li className={`flex items-center gap-1.5 ${wrap ? "" : "whitespace-nowrap"} ${className}`}>
+    <li className={`flex min-w-0 items-center gap-1.5 ${wrap ? "" : "whitespace-nowrap"} ${className}`}>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-brand-mint" aria-hidden>
         <path d="m5 12.5 4.5 4.5L19 7.5" />
       </svg>
-      {children}
+      {/* past een belofte niet in de smalle servicebalk, dan eindigt hij met … in plaats van hard afgeknipt */}
+      <span className={wrap ? "" : "truncate"}>{children}</span>
     </li>
   );
 }

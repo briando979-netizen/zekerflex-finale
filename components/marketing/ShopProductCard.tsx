@@ -131,7 +131,7 @@ export function ShopProductCard({
       </div>
 
       <p className={`mt-2 text-[12px] font-semibold ${stock.kind === "uit" ? "text-crit" : "text-ok"}`}>
-        {stock.kind === "uit" ? t.shop.soldOut : stock.kind === "weinig" ? fmt(t.shop.lowStock, { n: stock.n }) : p.seller ? t.shop.deliveryBySeller : bezorg ? fmt(t.shop.opVoorraadDag, { dag: bezorgdagNaam(bezorg, t.shop.bezorgMorgen, locale) }) : t.shop.opVoorraad}
+        {stock.kind === "uit" ? t.shop.soldOut : stock.kind === "weinig" ? (bezorg && !p.seller ? fmt(t.shop.lowStockDag, { n: stock.n, dag: bezorgdagNaam(bezorg, t.shop.bezorgMorgen, locale) }) : fmt(t.shop.lowStock, { n: stock.n })) : p.seller ? t.shop.deliveryBySeller : bezorg ? fmt(t.shop.opVoorraadDag, { dag: bezorgdagNaam(bezorg, t.shop.bezorgMorgen, locale) }) : t.shop.opVoorraad}
       </p>
       <p className="mt-0.5 truncate text-[12px] text-neutralx-500">{fmt(t.shop.soldBy, { seller: p.seller ?? SELLER })}</p>
 
