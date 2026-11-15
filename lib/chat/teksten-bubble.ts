@@ -10,6 +10,8 @@ export const BUBBLE_NL = {
   voicePosition: "Positie in spraakbericht",
   voiceLabel: "spraak",
   playbackRate: "Afspeelsnelheid {snelheid}×",
+  beluisterd: "Beluisterd",
+  nietBeluisterd: "Nog niet beluisterd",
   deleted: "🚫 Dit bericht is verwijderd",
   callMissed: "Gemiste oproep",
   callDeclined: "Oproep geweigerd",

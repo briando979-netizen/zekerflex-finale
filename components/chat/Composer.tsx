@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type ClipboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { fmtBytes, fmtDuration, type Msg } from "./shared";
 import { readDraft, writeDraft } from "./drafts";
 import { Portal } from "./Portal";
 import { PollMaker } from "./PollMaker";
 import { useChatTeksten } from "./ChatTekstenContext";
 import { vulIn } from "@/lib/i18n/vul-in";
-import { IconPaperclip, IconMic, IconSend, IconBolt, IconSparkle, IconSmiley, IconClose, IconReply, IconPencil } from "./icons";
+import { IconPaperclip, IconMic, IconSend, IconBolt, IconSparkle, IconSmiley, IconClose, IconReply, IconPencil, IconTrash, IconPlay, IconPause, IconLock, IconChevronDown } from "./icons";
+import { annuleerVoortgang, golfSamenvatten, KORTE_TIK_MS, niveauUit, schuifStand } from "@/lib/chat/spraak";
 import { isFotoType } from "@/lib/messaging/bijlage";
 import { BERICHT_MAX, isTeLang, tekstAlsBestand, tekstBestandNaam, voorproef } from "@/lib/chat/lange-tekst";
 import { kandidaten, vermeldingenIn, vermeldingVraag, vulVermeldingIn, type Lid } from "@/lib/messaging/vermelding";
@@ -24,7 +25,7 @@ import type { LiveDuur } from "@/lib/messaging/live-locatie";
 export interface OutgoingMessage {
   text: string;
   kind: Msg["kind"];
-  attachment?: { mediaId: string; filename: string; mimeType: string; sizeBytes: number; durationSec?: number };
+  attachment?: { mediaId: string; filename: string; mimeType: string; sizeBytes: number; durationSec?: number; golf?: number[] };
   /** live: zoveel minuten meeschuiven (15, 60 of 480; lib/messaging/live-locatie.ts) */
   location?: { lat: number; lng: number; label?: string; live?: { minuten: LiveDuur } };
   replyToId?: string;
@@ -307,8 +308,13 @@ export function Composer({
     if (d?.text) setText(d.text);
     else setAiNote(d?.error?.message ?? (typeof d?.error === "string" ? d.error : null) ?? chat.composer.herschrijvenMislukt);
   }
-  const [recording, setRecording] = useState(false);
+  // spraakbericht (lib/chat/spraak.ts): start = microfoon wordt gevraagd, houden = ingedrukt, vast = handen vrij, pauze = vast en gepauzeerd
+  const [opname, setOpname] = useState<null | "start" | "houden" | "vast" | "pauze">(null);
   const [recSecs, setRecSecs] = useState(0);
+  const [niveaus, setNiveaus] = useState<number[]>([]);
+  const [schuif, setSchuif] = useState({ dx: 0, dy: 0 });
+  const [opnameHint, setOpnameHint] = useState(false);
+  const [voorluisterSpeelt, setVoorluisterSpeelt] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
@@ -316,12 +322,37 @@ export function Composer({
   const mediaRec = useRef<MediaRecorder | null>(null);
   const chunks = useRef<Blob[]>([]);
   const recTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const recStart = useRef(0);
+  const opnameRef = useRef<typeof opname>(null);
+  // opgenomen tijd zonder de pauzes: wat er al was, plus sinds wanneer het weer loopt (0 = gepauzeerd)
+  const verstreken = useRef(0);
+  const lopendSinds = useRef(0);
+  const alleNiveaus = useRef<number[]>([]);
+  const audioCtx = useRef<AudioContext | null>(null);
+  const meetTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const verzendBijStop = useRef(false);
+  const startPunt = useRef<{ x: number; y: number; id: number; t: number } | null>(null);
+  const vrijgelaten = useRef(false);
+  const laatstePointer = useRef<string | null>(null);
+  const voorluister = useRef<{ audio: HTMLAudioElement; url: string } | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   useEffect(() => () => {
     if (recTimer.current) clearInterval(recTimer.current);
+    if (meetTimer.current) clearInterval(meetTimer.current);
+    void audioCtx.current?.close().catch(() => undefined);
     mediaRec.current?.stream.getTracks().forEach((t) => t.stop());
+    if (voorluister.current) {
+      voorluister.current.audio.pause();
+      URL.revokeObjectURL(voorluister.current.url);
+    }
   }, []);
+
+  // de uitleg "houd ingedrukt" na een korte tik verdwijnt vanzelf
+  useEffect(() => {
+    if (!opnameHint) return;
+    const t = setTimeout(() => setOpnameHint(false), 2800);
+    return () => clearTimeout(t);
+  }, [opnameHint]);
 
   // a file dropped on the conversation: same preview as picking one
   useEffect(() => {
@@ -457,45 +488,222 @@ export function Composer({
     );
   };
 
-  const startRecording = async () => {
+  const zetOpname = (f: typeof opname) => {
+    opnameRef.current = f;
+    setOpname(f);
+  };
+  const tijdNu = () => verstreken.current + (lopendSinds.current ? Date.now() - lopendSinds.current : 0);
+
+  // de geluidsgolf: elke 100 ms het niveau van de microfoon (zoals WhatsApp hem tijdens het opnemen laat bewegen)
+  const meetStart = (stream: MediaStream) => {
+    try {
+      const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      ctx.createMediaStreamSource(stream).connect(analyser);
+      const buf = new Uint8Array(analyser.fftSize);
+      audioCtx.current = ctx;
+      meetTimer.current = setInterval(() => {
+        if (!lopendSinds.current) return; // gepauzeerd
+        analyser.getByteTimeDomainData(buf);
+        const n = niveauUit(buf);
+        alleNiveaus.current.push(n);
+        setNiveaus((v) => [...v.slice(-59), n]);
+      }, 100);
+    } catch {
+      /* geen golf, wel opnemen */
+    }
+  };
+  const meetStop = () => {
+    if (meetTimer.current) clearInterval(meetTimer.current);
+    meetTimer.current = null;
+    void audioCtx.current?.close().catch(() => undefined);
+    audioCtx.current = null;
+  };
+  const stopVoorluister = () => {
+    if (voorluister.current) {
+      voorluister.current.audio.pause();
+      URL.revokeObjectURL(voorluister.current.url);
+      voorluister.current = null;
+    }
+    setVoorluisterSpeelt(false);
+  };
+
+  const naStop = async (mime: string) => {
+    if (recTimer.current) clearInterval(recTimer.current);
+    const ms = tijdNu();
+    lopendSinds.current = 0;
+    const blob = new Blob(chunks.current, { type: mime || "audio/webm" });
+    const golf = golfSamenvatten(alleNiveaus.current);
+    mediaRec.current = null;
+    stopVoorluister();
+    zetOpname(null);
+    setRecSecs(0);
+    setNiveaus([]);
+    setSchuif({ dx: 0, dy: 0 });
+    if (!verzendBijStop.current || blob.size < 800 || ms < 700) return; // geannuleerd of te kort
+    const secs = Math.max(1, Math.round(ms / 1000));
+    setBusy(true);
     setSendError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const rec = new MediaRecorder(stream);
-      chunks.current = [];
-      rec.ondataavailable = (e) => e.data.size && chunks.current.push(e.data);
-      rec.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop());
-        const secs = Math.max(1, Math.round((Date.now() - recStart.current) / 1000));
-        const blob = new Blob(chunks.current, { type: rec.mimeType || "audio/webm" });
-        setRecording(false);
-        setRecSecs(0);
-        if (blob.size < 800) return; // discarded / too short
-        setBusy(true);
-        setSendError(null);
-        try {
-          const att = await uploadMedia(blob, `spraak-${Date.now()}.webm`, secs);
-          if (att) await onSend({ text: "", kind: "voice", attachment: att });
-        } catch (e) {
-          setSendError(vulIn(chat.composer.spraakNietVerstuurd, { fout: (e as Error).message }));
-        } finally {
-          setBusy(false);
-        }
-      };
-      mediaRec.current = rec;
-      recStart.current = Date.now();
-      rec.start();
-      setRecording(true);
-      recTimer.current = setInterval(() => setRecSecs((s) => s + 1), 1000);
-    } catch {
-      setSendError(chat.composer.geenMicrofoon);
+      const att = await uploadMedia(blob, `spraak-${Date.now()}.webm`, secs);
+      if (att) await onSend({ text: "", kind: "voice", attachment: { ...att, ...(golf.length ? { golf } : {}) } });
+    } catch (e) {
+      setSendError(vulIn(chat.composer.spraakNietVerstuurd, { fout: (e as Error).message }));
+    } finally {
+      setBusy(false);
     }
   };
 
-  const stopRecording = (cancel = false) => {
-    if (recTimer.current) clearInterval(recTimer.current);
-    if (cancel) chunks.current = [];
-    mediaRec.current?.stop();
+  /** Opname starten: "houden" (vinger op de knop) of meteen "vast" (muis, toetsenbord). */
+  const startOpname = async (fase: "houden" | "vast") => {
+    if (mediaRec.current || opnameRef.current) return;
+    setSendError(null);
+    zetOpname("start");
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      zetOpname(null);
+      setSendError(chat.composer.geenMicrofoon);
+      return;
+    }
+    // al losgelaten terwijl de microfoon werd gevraagd (de eerste keer, met de toestemmingsvraag): niet opnemen, wel uitleggen
+    if (fase === "houden" && vrijgelaten.current) {
+      stream.getTracks().forEach((t) => t.stop());
+      zetOpname(null);
+      setOpnameHint(true);
+      return;
+    }
+    const rec = new MediaRecorder(stream);
+    chunks.current = [];
+    alleNiveaus.current = [];
+    verstreken.current = 0;
+    lopendSinds.current = Date.now();
+    verzendBijStop.current = false;
+    rec.ondataavailable = (e) => {
+      if (e.data.size) chunks.current.push(e.data);
+    };
+    rec.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop());
+      meetStop();
+      void naStop(rec.mimeType);
+    };
+    mediaRec.current = rec;
+    rec.start();
+    zetOpname(fase);
+    setRecSecs(0);
+    setNiveaus([]);
+    recTimer.current = setInterval(() => setRecSecs(Math.floor(tijdNu() / 1000)), 250);
+    meetStart(stream);
+    navigator.vibrate?.(25);
+  };
+
+  /** Stoppen: versturen of weggooien. */
+  const stopOpname = (verzend: boolean) => {
+    verzendBijStop.current = verzend;
+    startPunt.current = null;
+    const rec = mediaRec.current;
+    if (!rec) {
+      zetOpname(null);
+      return;
+    }
+    if (!verzend) navigator.vibrate?.([20, 40, 20]);
+    rec.stop();
+  };
+  const pauzeer = () => {
+    const rec = mediaRec.current;
+    if (!rec || rec.state !== "recording") return;
+    rec.pause();
+    verstreken.current = tijdNu();
+    lopendSinds.current = 0;
+    zetOpname("pauze");
+  };
+  const hervat = () => {
+    stopVoorluister();
+    const rec = mediaRec.current;
+    if (!rec || rec.state !== "paused") return;
+    rec.resume();
+    lopendSinds.current = Date.now();
+    zetOpname("vast");
+  };
+  // terugluisteren tijdens de pauze: wat er tot nu toe is opgenomen
+  const beluister = async () => {
+    const rec = mediaRec.current;
+    if (!rec) return;
+    if (voorluister.current && !voorluister.current.audio.paused) {
+      voorluister.current.audio.pause();
+      setVoorluisterSpeelt(false);
+      return;
+    }
+    await new Promise<void>((klaar) => {
+      const t = setTimeout(klaar, 700);
+      rec.addEventListener("dataavailable", () => { clearTimeout(t); klaar(); }, { once: true });
+      try {
+        rec.requestData();
+      } catch {
+        clearTimeout(t);
+        klaar();
+      }
+    });
+    stopVoorluister();
+    const url = URL.createObjectURL(new Blob(chunks.current, { type: rec.mimeType || "audio/webm" }));
+    const audio = new Audio(url);
+    audio.onended = () => setVoorluisterSpeelt(false);
+    voorluister.current = { audio, url };
+    setVoorluisterSpeelt(true);
+    void audio.play().catch(() => setVoorluisterSpeelt(false));
+  };
+
+  // de microfoonknop: een vinger houdt ingedrukt (schuiven = annuleren of vastzetten), een muis of toetsenbord klikt
+  const micDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    laatstePointer.current = e.pointerType;
+    if (e.pointerType === "mouse" || e.button !== 0) return;
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    startPunt.current = { x: e.clientX, y: e.clientY, id: e.pointerId, t: Date.now() };
+    vrijgelaten.current = false;
+    void startOpname("houden");
+  };
+  const micMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const p = startPunt.current;
+    if (!p || p.id !== e.pointerId || opnameRef.current !== "houden") return;
+    const dx = Math.min(0, e.clientX - p.x);
+    const dy = Math.min(0, e.clientY - p.y);
+    const stand = schuifStand(dx, dy, formRef.current?.clientWidth ?? 360);
+    if (stand === "annuleren") {
+      stopOpname(false);
+      return;
+    }
+    if (stand === "vastzetten") {
+      startPunt.current = null;
+      navigator.vibrate?.(25);
+      setSchuif({ dx: 0, dy: 0 });
+      zetOpname("vast");
+      return;
+    }
+    setSchuif({ dx, dy });
+  };
+  const micUp = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const p = startPunt.current;
+    startPunt.current = null;
+    vrijgelaten.current = true;
+    if (!p || p.id !== e.pointerId) return;
+    setSchuif({ dx: 0, dy: 0 });
+    if (opnameRef.current !== "houden") return; // nog bezig met starten: startOpname ziet vrijgelaten
+    if (Date.now() - p.t < KORTE_TIK_MS) {
+      stopOpname(false);
+      setOpnameHint(true);
+    } else stopOpname(true);
+  };
+  const micClick = (e: { detail: number }) => {
+    // een vinger gaat via micDown/micUp; alleen muis en toetsenbord (detail 0) starten hier, meteen vastgezet
+    const via = laatstePointer.current;
+    laatstePointer.current = null;
+    if (opnameRef.current) return;
+    if (e.detail === 0 || via === "mouse") void startOpname("vast");
   };
 
   const insertEmoji = (e: string) => {
@@ -618,25 +826,63 @@ export function Composer({
         </div>
       )}
 
-      {recording ? (
-        <div className="flex items-center gap-3 bg-[#F0F2F5] p-3" role="status" aria-live="polite">
-          <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-crit" aria-hidden />
-          <span className="num font-mono text-sm">{fmtDuration(recSecs)}</span>
-          <span className="text-sm text-neutralx-500">{chat.composer.opnemen}</span>
-          <button type="button" onClick={() => stopRecording(true)} className="ml-auto rounded-full px-3 py-1.5 text-sm text-crit hover:bg-crit/10">
-            {chat.composer.annuleer}
-          </button>
-          <button
-            type="button"
-            onClick={() => stopRecording(false)}
-            className="grid h-10 w-10 place-items-center rounded-full bg-[#008069] text-white"
-            aria-label={chat.composer.verstuurSpraak}
-          >
-            <IconSend className="h-5 w-5" />
-          </button>
+      {opname === "vast" || opname === "pauze" ? (
+        // vastgezet, zoals WhatsApp: tijd en golf (in de pauze terugluisteren), dan verwijderen, pauzeren/hervatten en versturen
+        <div className="bg-[#F0F2F5] px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2" role="group" aria-label={chat.composer.spraakOpnemen}>
+          <div className="flex items-center gap-3 rounded-full bg-white px-3 py-2 shadow-sm">
+            {opname === "pauze" ? (
+              <button
+                type="button"
+                onClick={() => void beluister()}
+                aria-label={voorluisterSpeelt ? chat.composer.beluisterenStoppen : chat.composer.opnameBeluisteren}
+                className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full text-neutralx-600 hover:bg-black/5"
+              >
+                {voorluisterSpeelt ? <IconPause className="h-4 w-4" /> : <IconPlay className="h-4 w-4" />}
+              </button>
+            ) : (
+              <span className="ml-1 h-2.5 w-2.5 flex-shrink-0 animate-pulse rounded-full bg-crit" aria-hidden />
+            )}
+            <span className="num w-11 flex-shrink-0 font-mono text-sm" role="timer" aria-live="off">{fmtDuration(recSecs)}</span>
+            <span aria-hidden className="flex h-7 min-w-0 flex-1 items-center justify-end gap-[2px] overflow-hidden">
+              {(opname === "pauze" ? golfSamenvatten(alleNiveaus.current, 40).map((n) => n / 31) : niveaus).map((n, i) => (
+                <span key={i} className="w-[3px] flex-shrink-0 rounded-full bg-neutralx-400" style={{ height: `${Math.max(3, Math.round(n * 26))}px` }} />
+              ))}
+            </span>
+            {opname === "pauze" && <span className="flex-shrink-0 text-xs text-neutralx-500">{chat.composer.opnameGepauzeerd}</span>}
+          </div>
+          <div className="mt-2 flex items-center justify-between px-1">
+            <button
+              type="button"
+              onClick={() => stopOpname(false)}
+              aria-label={chat.composer.opnameVerwijderen}
+              title={chat.composer.opnameVerwijderen}
+              className="grid h-11 w-11 place-items-center rounded-full text-neutralx-600 hover:bg-black/5"
+            >
+              <IconTrash className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={opname === "pauze" ? hervat : pauzeer}
+              aria-label={opname === "pauze" ? chat.composer.opnameHervatten : chat.composer.opnamePauzeren}
+              title={opname === "pauze" ? chat.composer.opnameHervatten : chat.composer.opnamePauzeren}
+              className={`grid h-11 w-11 place-items-center rounded-full border-2 ${opname === "pauze" ? "border-crit text-crit" : "border-crit/70 text-crit"} hover:bg-crit/5`}
+            >
+              {opname === "pauze" ? <IconMic className="h-5 w-5" /> : <IconPause className="h-4 w-4" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => stopOpname(true)}
+              className="grid h-12 w-12 place-items-center rounded-full bg-[#008069] text-white transition-transform active:scale-95"
+              aria-label={chat.composer.verstuurSpraak}
+              title={chat.composer.verstuurSpraak}
+            >
+              <IconSend className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       ) : (
         <form
+          ref={formRef}
           onSubmit={(e) => {
             e.preventDefault();
             void sendText();
@@ -898,6 +1144,37 @@ export function Composer({
             )}
           </div>
 
+          {opname === "houden" && (
+            // ingedrukt houden (zoals WhatsApp): de tijd met een rode microfoon, en "schuif om te annuleren" die met de vinger meeschuift
+            <div className="absolute inset-y-0 left-0 right-14 z-20 flex items-center gap-3 bg-[#F0F2F5] pl-4" role="status" aria-live="polite">
+              <IconMic className="h-5 w-5 flex-shrink-0 animate-pulse text-crit" />
+              <span className="num w-11 flex-shrink-0 font-mono text-sm">{fmtDuration(recSecs)}</span>
+              <span
+                className="ml-auto mr-2 flex items-center gap-1 whitespace-nowrap text-sm text-neutralx-500"
+                style={{ transform: `translateX(${schuif.dx * 0.6}px)`, opacity: 1 - annuleerVoortgang(schuif.dx, formRef.current?.clientWidth ?? 360) * 0.8 }}
+              >
+                <IconChevronDown className="h-4 w-4 rotate-90" />
+                {chat.composer.schuifAnnuleren}
+              </span>
+            </div>
+          )}
+          {opname === "houden" && (
+            <span
+              aria-hidden
+              className="absolute bottom-full right-2 z-20 mb-2 flex flex-col items-center gap-1 rounded-full bg-white px-2.5 py-2 text-neutralx-500 shadow-lift"
+              style={{ transform: `translateY(${schuif.dy * 0.5}px)` }}
+              title={chat.composer.omhoogVastzetten}
+            >
+              <IconLock className="h-4 w-4" />
+              <IconChevronDown className="h-3.5 w-3.5 rotate-180" />
+            </span>
+          )}
+          {opnameHint && (
+            <p role="status" className="absolute bottom-full right-2 z-20 mb-2 max-w-[16rem] rounded-lg bg-ink px-3 py-2 text-xs text-white shadow-lift">
+              {chat.composer.houdIngedrukt}
+            </p>
+          )}
+
           {text.trim() || editing ? (
             <button
               type="submit"
@@ -910,9 +1187,19 @@ export function Composer({
           ) : (
             <button
               type="button"
-              onClick={startRecording}
-              className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full bg-[#008069] text-white transition-transform active:scale-95"
+              onPointerDown={micDown}
+              onPointerMove={micMove}
+              onPointerUp={micUp}
+              onPointerCancel={() => {
+                if (opnameRef.current === "houden") stopOpname(false);
+                startPunt.current = null;
+              }}
+              onClick={micClick}
+              onContextMenu={(e) => e.preventDefault()}
+              className={`relative z-30 grid h-10 w-10 flex-shrink-0 touch-none select-none place-items-center rounded-full bg-[#008069] text-white transition-transform ${opname === "houden" ? "scale-[1.6]" : "active:scale-95"}`}
+              style={opname === "houden" ? { transform: `translateX(${schuif.dx}px) scale(1.6)` } : undefined}
               aria-label={chat.composer.spraakOpnemen}
+              title={chat.composer.houdIngedrukt}
             >
               <IconMic className="h-5 w-5" />
             </button>
