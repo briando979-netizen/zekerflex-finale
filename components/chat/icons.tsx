@@ -199,3 +199,30 @@ export const IconDownload = (p: P) => (
     <path d="M5 20h14" />
   </svg>
 );
+
+// Belscherm (15 nov 2026): microfoon uit, video uit, camera wisselen en ophangen.
+export const IconMicOff = (p: P) => (
+  <svg {...stroke(p)}>
+    <path d="M15 9.3V6a3 3 0 00-5.7-1.3M9 9v2a3 3 0 004.6 2.5M5 11a7 7 0 0011 5.7M19 11a7 7 0 01-.6 2.8M12 18v3M8 21h8M3 3l18 18" />
+  </svg>
+);
+
+export const IconVideoOff = (p: P) => (
+  <svg {...stroke(p)}>
+    <path d="M10 6h4a2 2 0 012 2v4M16 16a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2M17 10.5l4-2.5v8l-1.6-1M3 3l18 18" />
+  </svg>
+);
+
+export const IconCameraFlip = (p: P) => (
+  <svg {...stroke(p)}>
+    <path d="M4 8h2.5l1.5-2h8l1.5 2H20a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z" />
+    <path d="M9 13.5a3 3 0 015-2.2M15 13.5a3 3 0 01-5 2.2M14 9.6v1.8h-1.8M10 17.4v-1.8h1.8" />
+  </svg>
+);
+
+/** De hoorn gekanteld: ophangen of weigeren. */
+export const IconPhoneDown = (p: P) => (
+  <svg {...fill(p)}>
+    <path transform="rotate(135 12 12)" d="M6.6 10.8c1.4 2.8 3.8 5.2 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.4.6 3.6.6.6 0 1 .5 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.4c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.4 0 .8-.2 1l-2.2 2.2z" />
+  </svg>
+);

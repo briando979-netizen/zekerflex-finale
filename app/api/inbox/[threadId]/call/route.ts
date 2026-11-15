@@ -27,7 +27,8 @@ const metaKey = (t: string, c: string) => `call:${t}:${c}:meta`;
 
 const postSchema = z.object({
   callId: z.string().min(6).max(40),
-  type: z.enum(["ring", "offer", "answer", "candidate", "accept", "decline", "end"]),
+  // media: camera of scherm aan/uit tijdens het gesprek (components/chat/CallOverlay.tsx), zodat de ander je foto toont i.p.v. zwart
+  type: z.enum(["ring", "offer", "answer", "candidate", "accept", "decline", "end", "media"]),
   mode: z.enum(["audio", "video", "screen"]).optional(),
   data: z.unknown().optional(),
 });
