@@ -562,11 +562,19 @@ const server = http.createServer(async (req, res) => {
 });
 
 // Een herstart breekt lopend werk af: markeer het, zodat de werkkopie vrijkomt voor bijsturen of weggooien.
+// Is er nog niets veranderd in de werkkopie, dan is er niets om over te beslissen: de opdracht gaat meteen naar
+// "weggegooid" (met dezelfde uitleg). Anders bleef een opdracht "Niet gelukt" staan en kon de eigenaar niets nieuws
+// beginnen tot hij hem met de hand weggooide (15 nov 2026: elke uitrol herstart de Bouwer).
 await fs.mkdir(TAKEN, { recursive: true });
 for (const t of await alleTaken()) {
   if (t.staat === "bezig" || t.staat === "goedkeuren") {
     t.staat = "mislukt";
     t.fout = "De Bouwer werd herstart tijdens het werk.";
+    const leeg = await gewijzigdeBestanden().then((b) => b.length === 0, () => false);
+    if (leeg) {
+      t.staat = "weggegooid";
+      t.fout = "De Bouwer werd herstart tijdens het werk; er was nog niets veranderd, dus de opdracht is vanzelf weggegooid. Geef hem gerust opnieuw.";
+    }
     await bewaar(t, true);
   }
 }
