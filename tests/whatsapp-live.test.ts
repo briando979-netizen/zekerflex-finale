@@ -124,4 +124,11 @@ describe("bewaker: met je eigen nummer antwoordt de spoedoproep niet vanzelf", (
     // geen poort naar buiten (de opmerking "Geen `ports:`" telt niet)
     expect(compose).not.toMatch(/^\s+ports:/m);
   });
+
+  it("het image bouwt: Baileys haalt libsignal via git, dus de bouwstap heeft git", () => {
+    const docker = readFileSync(new URL("../deploy/whatsapp-brug/Dockerfile", import.meta.url), "utf8");
+    expect(docker).toMatch(/apt-get install[^\n]*\bgit\b/);
+    expect(docker).toContain("COPY --from=bouw /brug/node_modules ./node_modules");
+    expect(docker).toMatch(/COPY [^\n]*brug\.mjs[^\n]*inhoud\.mjs/);
+  });
 });
