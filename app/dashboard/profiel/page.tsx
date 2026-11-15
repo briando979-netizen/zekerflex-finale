@@ -58,7 +58,7 @@ export default async function ProfielPage() {
   const [profileExtra, stats, mailPrefs, certs] = await Promise.all([
     getUserProfileExtra(principal.userId),
     getProfileStats(principal.userId),
-    mailPrefsView(user?.email ?? principal.email),
+    mailPrefsView(user?.email ?? principal.email, "werker"),
     listCertificates(principal.userId),
   ]);
   const name = user?.fullName ?? principal.fullName;

@@ -28,6 +28,8 @@ interface Card {
   href?: string;
   icon: ReactNode;
   soon?: boolean;
+  /** een gewone link (download of mail), geen pagina van de app: zonder Link, zodat er niets wordt voorgeladen */
+  gewoon?: boolean;
 }
 
 export default async function InstellingenPage() {
@@ -63,9 +65,13 @@ export default async function InstellingenPage() {
     { title: "Abonnement en uitbreidingen", sub: "Wat je nu hebt en wat je erbij kunt nemen", href: "/werkgever/abonnement", icon: <IGrid /> },
   ];
 
+  // 15 nov 2026: dezelfde onderdelen als de werkersapp (gegevens downloaden, privacy, feedback), en verwijderen in de app
   const account: Card[] = [
     { title: s.cAccountT, sub: s.cAccountS, href: "/werkgever/account", icon: <IUser /> },
-    { title: s.cDeleteAccountT, sub: s.cDeleteAccountS, href: "/account-verwijderen", icon: <IUser /> },
+    { title: s.cExportT, sub: s.cExportS, href: "/api/me/gegevens/export", icon: <IDoc />, gewoon: true },
+    { title: s.cPrivacyT, sub: s.cPrivacyS, href: "/privacy", icon: <IKey /> },
+    { title: s.cFeedbackT, sub: s.cFeedbackS, href: "mailto:info@zekerflex.com?subject=Feedback%20ZekerFlex%20zakelijk", icon: <IMail />, gewoon: true },
+    { title: s.cDeleteAccountT, sub: s.cDeleteAccountS, href: "/werkgever/account/verwijderen", icon: <IUser /> },
   ];
 
   return (
@@ -127,7 +133,11 @@ function Section({ title, cards, soonLabel }: { title: string; cards: Card[]; so
           );
           const cls =
             "flex items-start gap-3 rounded-xl border border-hair bg-white p-4 shadow-card transition";
-          return c.href && !c.soon ? (
+          return c.href && !c.soon && c.gewoon ? (
+            <a key={c.title} href={c.href} className={`${cls} hover:-translate-y-0.5 hover:border-brand-300`}>
+              {inner}
+            </a>
+          ) : c.href && !c.soon ? (
             <Link key={c.title} href={c.href} className={`${cls} hover:-translate-y-0.5 hover:border-brand-300`}>
               {inner}
             </Link>

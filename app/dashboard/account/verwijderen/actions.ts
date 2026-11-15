@@ -4,9 +4,12 @@ import { z } from "zod";
 import { requirePrincipal } from "@/lib/auth";
 import { signOut } from "@/lib/auth/nextauth";
 import { anonymizeUser } from "@/lib/privacy/anonymize";
+import { bedrijfBlokkeertVertrek, type VertrekBlok } from "@/lib/privacy/bedrijf-vertrek";
 
 export interface DeleteOwnAccountState {
   error: string | null;
+  /** de enige beheerder van een bedrijf dat nog collega's of geplande diensten heeft: eerst dat regelen (het formulier vertaalt) */
+  blok?: VertrekBlok;
 }
 
 export async function deleteOwnAccountAction(
@@ -21,6 +24,10 @@ export async function deleteOwnAccountAction(
   if (!parsed.success || parsed.data.confirmText.trim().toUpperCase() !== "VERWIJDEREN") {
     return { error: 'Typ precies "VERWIJDEREN" om te bevestigen.' };
   }
+
+  // geen bedrijf zonder beheerder achterlaten (lib/privacy/bedrijf-vertrek.ts)
+  const blok = await bedrijfBlokkeertVertrek(principal.userId);
+  if (blok) return { error: null, blok };
 
   await anonymizeUser(principal.userId, {
     actorUserId: principal.userId,

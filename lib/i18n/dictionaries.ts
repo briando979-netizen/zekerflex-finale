@@ -54,6 +54,19 @@ export const nl = {
     menuWorkerWorkspace: "Werkersomgeving",
     orgFallback: "Je organisatie",
   },
+  // account verwijderen in de werkgeversapp (/werkgever/account/verwijderen, 15 nov 2026): wat er met het bedrijf gebeurt
+  verwijderen: {
+    titel: "Account verwijderen",
+    sub: "Je persoonlijke account wordt gewist. Je bedrijf blijft bestaan.",
+    bedrijfKop: "Wat er met je bedrijf gebeurt",
+    punten: [
+      "Je naam, e-mailadres en telefoonnummer worden gewist en je kunt niet meer inloggen.",
+      "Het bedrijfsprofiel, de locaties, de diensten en de facturen blijven bestaan; facturen vallen onder de wettelijke bewaarplicht.",
+      "Je collega's houden hun toegang. Ben je de enige beheerder, maak dan eerst een collega beheerder via Team.",
+      "Wil je het hele bedrijfsaccount opheffen, ook met lopende diensten of facturen? Mail dan info@zekerflex.com, dan regelen we het samen.",
+    ],
+    jijKop: "Wat er met jou als persoon gebeurt",
+  },
   // de assistent in de werkgeversapp (components/brain/BrainChat.tsx, /werkgever/assistent): voor een bedrijf
   assistent: {
     sub: "Kent je diensten, uren en facturen · voert zelf niets uit",
@@ -268,6 +281,13 @@ export const nl = {
     cAccountS: "Je naam en telefoonnummer wijzigen, of je wachtwoord resetten",
     cDeleteAccountT: "Account verwijderen",
     cDeleteAccountS: "Je account en persoonsgegevens laten verwijderen (AVG art. 17)",
+    // 15 nov 2026: dezelfde onderdelen als de werkersapp, voor een bedrijf
+    cExportT: "Je gegevens downloaden",
+    cExportS: "Alles wat we over jou als persoon bewaren, in één bestand (AVG art. 15 en 20)",
+    cPrivacyT: "Privacy",
+    cPrivacyS: "Hoe ZekerFlex met de gegevens van je bedrijf en je krachten omgaat",
+    cFeedbackT: "Feedback geven",
+    cFeedbackS: "Mis je iets of loopt iets niet lekker? Laat het ons weten",
   },
   reviews: {
     backToStart: "Jouw start",
