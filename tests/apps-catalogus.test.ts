@@ -24,14 +24,18 @@ describe("de catalogus", () => {
     for (const a of ZF_APPS) {
       if (a.beschikbaar) expect(existsSync(paginaVan(a.start)), `${a.id} → ${a.start}`).toBe(true);
     }
-    // de omgeving voor horecapersoneel wordt nog gebouwd: zolang /personeel er niet is, staat de app uit
-    const personeel = ZF_APPS.find((a) => a.id === "personeel");
-    if (personeel && !existsSync(paginaVan(personeel.start))) expect(personeel.beschikbaar).toBe(false);
-    expect(appVan("personeel")).toBe(personeel?.beschikbaar ? personeel : undefined);
+    // een app die uit staat, is ook niet op te vragen
+    for (const a of ZF_APPS) expect(appVan(a.id), a.id).toBe(a.beschikbaar ? a : undefined);
   });
 
-  it("de opdrachtgevers, horeca, rijschool, webshop en website zijn er", () => {
-    for (const id of ["zakelijk", "horeca", "rijschool", "webshop", "website", "werk"]) expect(appVan(id), id).toBeDefined();
+  it("de opdrachtgevers, horeca, horecapersoneel, rijschool, webshop en website zijn er", () => {
+    for (const id of ["zakelijk", "horeca", "personeel", "rijschool", "webshop", "website", "werk"]) expect(appVan(id), id).toBeDefined();
+  });
+
+  it("de personeel-app belooft niet meer dan /personeel nu heeft (taken en mededelingen)", () => {
+    const uitleg = appVan("personeel")?.uitleg ?? "";
+    expect(uitleg).toMatch(/taken/);
+    expect(uitleg).not.toMatch(/loonstro|rooster|chat/i);
   });
 });
 

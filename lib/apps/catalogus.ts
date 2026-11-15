@@ -70,12 +70,12 @@ export const ZF_APPS: ZfApp[] = [
     naam: "ZekerFlex Personeel",
     kort: "Personeel",
     voorWie: "Voor de medewerkers van een horecazaak",
-    uitleg: "Je rooster, je taken en de mededelingen van je zaak, op je eigen telefoon.",
+    // alleen wat /personeel nu echt heeft (15 nov, ronde 1): loonstroken en chat komen later
+    uitleg: "Je taken en de mededelingen van je zaak, op je eigen telefoon.",
     start: `/personeel?${bron("personeel")}`,
     kleur: "#9A3412",
     symbool: "persoon",
-    // de omgeving /personeel wordt nu gebouwd (15 nov); aan zodra die er staat
-    beschikbaar: false,
+    beschikbaar: true,
   },
   {
     id: "rijschool",
