@@ -51,7 +51,7 @@ export function uitzendContractBlokken(c: UitzendContract, opties: { voorbeeld?:
           `als uitzendonderneming en formeel werkgever, hierna "ZekerFlex";`,
       ),
     );
-  } else {
+  } else if (sjabloonVan(c) === 2) {
     // v2: alleen wat echt bekend is (lib/platform/werkgever.ts); geen verzonnen KvK-nummer en geen vaste plaats
     uit.push(
       alinea(
@@ -59,9 +59,27 @@ export function uitzendContractBlokken(c: UitzendContract, opties: { voorbeeld?:
           `als uitzendonderneming en formeel werkgever, hierna "ZekerFlex";`,
       ),
     );
+  } else {
+    // v3 (15 nov 2026): ook de rechtsvorm en inschrijving; het adres en een KvK-nummer alleen als ze zijn ingesteld
+    uit.push(
+      alinea(
+        `${c.employerName}${c.employerInschrijving ? `, ${c.employerInschrijving}` : ""}${c.employerAddress ? `, gevestigd te ${c.employerAddress}` : ""}` +
+          `${c.employerKvk ? ` (KVK ${c.employerKvk})` : ""}, als uitzendonderneming en formeel werkgever, hierna "ZekerFlex";`,
+      ),
+    );
   }
   uit.push(alinea("en"));
-  uit.push(alinea(`${c.workerName}${c.workerBsnLast4 ? `, BSN eindigend op ${c.workerBsnLast4}` : ""}, ` + `hierna "de Uitzendkracht";`));
+  if (sjabloonVan(c) < 3) {
+    uit.push(alinea(`${c.workerName}${c.workerBsnLast4 ? `, BSN eindigend op ${c.workerBsnLast4}` : ""}, ` + `hierna "de Uitzendkracht";`));
+  } else {
+    // v3: naam, geboortedatum, woonadres en de laatste 4 cijfers van het BSN, zoals bij het tekenen bekend
+    uit.push(
+      alinea(
+        `${c.workerName}${c.workerBirthDate ? `, geboren op ${nlDate(c.workerBirthDate)}` : ""}${c.workerAddress ? `, wonende te ${c.workerAddress}` : ""}` +
+          `${c.workerBsnLast4 ? `, BSN eindigend op ${c.workerBsnLast4}` : ""}, hierna "de Uitzendkracht";`,
+      ),
+    );
+  }
   uit.push(alinea('Hierna gezamenlijk "Partijen".'));
 
   uit.push(kop("IN AANMERKING NEMENDE DAT:"));
@@ -103,7 +121,15 @@ export function uitzendContractBlokken(c: UitzendContract, opties: { voorbeeld?:
   uit.push(punt("2.", "Buiten een lopende klus kunnen beide Partijen de samenwerking op elk moment beeindigen door dit via het platform kenbaar te maken."));
 
   uit.push(kop("Artikel 8 - Overige bepalingen"));
-  uit.push(punt("1.", "De Uitzendkracht kan zich te allen tijde legitimeren met een geldig identiteitsbewijs en beschikt over een geldige verblijfs- en werkvergunning voor Nederland."));
+  // v3 (15 nov 2026, eigenaar): zonder de zin over een verblijfs- en werkvergunning; v1 en v2 blijven zoals getekend
+  uit.push(
+    punt(
+      "1.",
+      sjabloonVan(c) < 3
+        ? "De Uitzendkracht kan zich te allen tijde legitimeren met een geldig identiteitsbewijs en beschikt over een geldige verblijfs- en werkvergunning voor Nederland."
+        : "De Uitzendkracht kan zich te allen tijde legitimeren met een geldig identiteitsbewijs.",
+    ),
+  );
   uit.push(punt("2.", "De Gebruiksvoorwaarden van ZekerFlex en het privacybeleid zijn van toepassing."));
   uit.push(punt("3.", "Op deze overeenkomst is Nederlands recht van toepassing."));
 

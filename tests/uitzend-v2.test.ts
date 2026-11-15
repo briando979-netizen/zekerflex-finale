@@ -115,11 +115,11 @@ describe("v2: gegevens uit één bron, niets verzonnen", () => {
 
   it("een nieuwe overeenkomst en het voorbeeld nemen de werkgever uit werkgeverGegevens() (adres en KvK alleen als ingesteld)", async () => {
     const leeg = await signUitzendContract("u-a", "A");
-    expect(leeg.contract).toMatchObject({ employerName: "Zekerflex, Inc.", employerKvk: "", sjabloon: 2 });
+    expect(leeg.contract).toMatchObject({ employerName: "Zekerflex, Inc.", employerKvk: "", sjabloon: SJABLOON_HUIDIG });
     expect(leeg.contract).not.toHaveProperty("employerAddress");
     h.werkgever = { naam: "Zekerflex, Inc.", adres: "Straat 1, 1000 AA Plaats", kvk: "87654321", loonheffingennummer: null };
     const vol = await voorbeeldUitzendContract("u-b", "B", new Date(NU));
-    expect(vol).toMatchObject({ employerAddress: "Straat 1, 1000 AA Plaats", employerKvk: "87654321", sjabloon: 2, reference: "VOORBEELD" });
+    expect(vol).toMatchObject({ employerAddress: "Straat 1, 1000 AA Plaats", employerKvk: "87654321", sjabloon: SJABLOON_HUIDIG, reference: "VOORBEELD" });
   });
 
   it("de vaste verzonnen waarden staan nergens meer in de code", () => {
@@ -140,8 +140,8 @@ describe("alleen de huidige versie telt: opnieuw tekenen", () => {
     expect((await verouderdUitzendContract("u1"))?.id).toBe(v1.id);
   });
 
-  it("een geldige v2 telt, ook naast een v1; dan is er niets verouderds meer", async () => {
-    h.kv.set("uitzend-contracts:u2", [geldig({}), geldig({ id: "nieuw", sjabloon: 2, signedAt: "2026-11-12T10:00:00.000Z" })]);
+  it("een geldige huidige versie telt, ook naast een v1; dan is er niets verouderds meer", async () => {
+    h.kv.set("uitzend-contracts:u2", [geldig({}), geldig({ id: "nieuw", sjabloon: SJABLOON_HUIDIG, signedAt: "2026-11-12T10:00:00.000Z" })]);
     expect((await activeUitzendContract("u2"))?.id).toBe("nieuw");
     expect(await verouderdUitzendContract("u2")).toBeNull();
   });
@@ -152,11 +152,11 @@ describe("alleen de huidige versie telt: opnieuw tekenen", () => {
     expect(await verouderdUitzendContract("u3")).toBeNull();
   });
 
-  it("tekenen met alleen een v1 maakt een nieuwe v2 (geen 'al getekend')", async () => {
+  it("tekenen met alleen een v1 maakt een nieuwe in de huidige versie (geen 'al getekend')", async () => {
     h.kv.set("uitzend-contracts:u4", [geldig({})]);
     const r = await signUitzendContract("u4", "A");
     expect(r.created).toBe(true);
-    expect(r.contract.sjabloon).toBe(2);
+    expect(r.contract.sjabloon).toBe(SJABLOON_HUIDIG);
     expect((await activeUitzendContract("u4"))?.id).toBe(r.contract.id);
     expect(await verouderdUitzendContract("u4")).toBeNull();
     // en een tweede keer tekenen geeft dezelfde terug
