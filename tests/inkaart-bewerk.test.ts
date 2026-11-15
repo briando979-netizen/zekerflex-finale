@@ -9,7 +9,7 @@ import { leesBedrijf } from "@/lib/inkaart/schema";
 const NU = new Date("2026-11-15T10:00:00+01:00");
 function metRuimtes(): BedrijfInKaart {
   const b = leegBedrijf("praktijk", NU);
-  return { ...b, ruimtes: [nieuweRuimte([]), { ...nieuweRuimte([{ id: "r1" }]), naam: "Behandelkamer" }] };
+  return { ...b, ruimtes: [nieuweRuimte([], "Nieuwe ruimte"), { ...nieuweRuimte([{ id: "r1" }], "Nieuwe ruimte"), naam: "Behandelkamer" }] };
 }
 
 describe("getallen uit invoervelden", () => {
@@ -35,11 +35,11 @@ describe("regels toevoegen", () => {
     expect(volgendeId("r", [])).toBe("r1");
     expect(volgendeId("r", [{ id: "r1" }, { id: "r2" }])).toBe("r3");
     expect(volgendeId("r", [{ id: "r1" }, { id: "r3" }])).toBe("r2");
-    expect(nieuweGroep([{ id: "g1" }]).id).toBe("g2");
+    expect(nieuweGroep([{ id: "g1" }], "Nieuwe groep").id).toBe("g2");
   });
 
   it("een nieuwe ruimte is geldig volgens de controle", () => {
-    const b = { ...leegBedrijf("overig", NU), ruimtes: [nieuweRuimte([])] };
+    const b = { ...leegBedrijf("overig", NU), ruimtes: [nieuweRuimte([], "Nieuwe ruimte")] };
     expect(leesBedrijf(b)).not.toBeNull();
   });
 });

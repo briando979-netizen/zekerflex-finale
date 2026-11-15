@@ -24,12 +24,12 @@ export function volgendeId(voorvoegsel: string, bestaand: readonly { id: string 
   return `${voorvoegsel}${bestaand.length + 1}`;
 }
 
-export function nieuweRuimte(bestaand: readonly { id: string }[]): Ruimte {
-  return { id: volgendeId("r", bestaand), naam: "Nieuwe ruimte", soort: "", aantal: 1, m2: null, plekken: null, afdeling: "", verdieping: "", bezetting: legeBezetting(), notitie: "" };
+export function nieuweRuimte(bestaand: readonly { id: string }[], naam: string): Ruimte {
+  return { id: volgendeId("r", bestaand), naam, soort: "", aantal: 1, m2: null, plekken: null, afdeling: "", verdieping: "", bezetting: legeBezetting(), notitie: "" };
 }
 
-export function nieuweGroep(bestaand: readonly { id: string }[]): PersoneelGroep {
-  return { id: volgendeId("g", bestaand), naam: "Nieuwe groep", fte: 0, kostenJaar: null };
+export function nieuweGroep(bestaand: readonly { id: string }[], naam: string): PersoneelGroep {
+  return { id: volgendeId("g", bestaand), naam, fte: 0, kostenJaar: null };
 }
 
 export function wijzigRuimte(b: BedrijfInKaart, id: string, wijziging: Partial<Ruimte>): BedrijfInKaart {

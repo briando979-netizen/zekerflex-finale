@@ -1,4 +1,4 @@
-import { DAGDELEN, DAGEN, RASTER_LENGTE, UREN_PER_DAGDEEL, plekNaam, type BedrijfInKaart, type Ruimte } from "@/lib/inkaart/model";
+import { DAGDELEN, DAGEN, RASTER_LENGTE, UREN_PER_DAGDEEL, type BedrijfInKaart, type Ruimte } from "@/lib/inkaart/model";
 
 // ---------------------------------------------------------------------------
 // De berekeningen van "Bedrijf in kaart" (lib/inkaart/model.ts): puur, zonder opslag en klok, en uitlegbaar. Elk getal volgt uit wat het bedrijf zelf
@@ -15,13 +15,33 @@ export const DRUKTE_GRENS = 90;
 /** Zoveel procentpunten verschil tussen het drukste en het rustigste dagdeel noemen we een ongelijke spreiding. */
 export const SPREIDING_GRENS = 40;
 
+/** Welk tekstsjabloon (lib/inkaart/teksten.ts) bij een signaal hoort. */
+export type SignaalSoort =
+  | "geen-ruimtes"
+  | "geen-bezetting"
+  | "personeel-boven-doel"
+  | "personeel-binnen-doel"
+  | "personeel-doel"
+  | "personeel-omzet"
+  | "rustig"
+  | "minder-nodig"
+  | "vol"
+  | "spreiding"
+  | "m2-per-fte";
+
+export type SignaalParam = string | number | null;
+
+/**
+ * Een signaal is data, geen tekst: de soort en de cijfers waar hij uit volgt. De tekst (Nederlands of Engels) maakt lib/inkaart/render.ts uit
+ * de sjablonen in lib/inkaart/teksten.ts. Een plek in het raster staat als index in de parameters (sleutel "plek", "piekPlek" of "dalPlek").
+ */
 export interface Signaal {
   id: string;
+  soort: SignaalSoort;
   niveau: "aandacht" | "info";
-  titel: string;
-  /** de uitleg met de eigen cijfers */
-  waarom: string;
-  actie?: { label: string; href: string };
+  params: Record<string, SignaalParam>;
+  /** een knop naar een plek in de app; het label staat in de teksten, per soort */
+  actie?: { href: string };
 }
 
 export interface RuimteUitkomst {
@@ -78,10 +98,6 @@ export interface Analyse {
 const rond = (n: number, d = 1): number => Math.round(n * 10 ** d) / 10 ** d;
 const som = (xs: number[]): number => xs.reduce((a, b) => a + b, 0);
 
-function eurotekst(n: number): string {
-  return `€ ${Math.round(n).toLocaleString("nl-NL")}`;
-}
-
 /** De bezette dagdelen van één ruimte: alleen waar het bedrijf open is en iets is ingevuld. */
 function bezetteDagdelen(r: Ruimte, open: boolean[]): { index: number; pct: number }[] {
   const uit: { index: number; pct: number }[] = [];
@@ -124,9 +140,9 @@ export function analyseer(b: BedrijfInKaart): Analyse {
   });
 
   // per soort
-  const soorten = [...new Set(b.ruimtes.map((r) => r.soort.trim() || "Overig"))];
+  const soorten = [...new Set(b.ruimtes.map((r) => r.soort.trim()))];
   const perSoort = soorten.map((soort) => {
-    const regels = b.ruimtes.filter((r) => (r.soort.trim() || "Overig") === soort);
+    const regels = b.ruimtes.filter((r) => r.soort.trim() === soort);
     const uitk = perRuimte.filter((u) => regels.some((r) => r.id === u.id));
     const metM2 = regels.filter((r) => r.m2 !== null && r.m2 > 0);
     const gewogen = uitk.filter((u) => u.gemiddeld !== null);
@@ -191,14 +207,14 @@ export function analyseer(b: BedrijfInKaart): Analyse {
 
 function signalen(b: BedrijfInKaart, a: Analyse): Signaal[] {
   const s: Signaal[] = [];
+  const eigenDoel = b.doelBezettingPct !== null;
   const grens = b.doelBezettingPct ?? STANDAARD_LAGE_BEZETTING;
-  const grensUitleg = b.doelBezettingPct !== null ? `jouw doel van ${b.doelBezettingPct}%` : `de grens van ${STANDAARD_LAGE_BEZETTING}% die we gebruiken zolang je geen doel instelt`;
 
   // 1. niets ingevuld
   if (b.ruimtes.length === 0) {
-    s.push({ id: "geen-ruimtes", niveau: "info", titel: "Voeg je ruimtes toe", waarom: "Zonder ruimtes kunnen we niets zeggen over bezetting of indeling. Kies bij Ruimtes een voorbeeldset voor jouw soort bedrijf of voeg ze zelf toe." });
+    s.push({ id: "geen-ruimtes", soort: "geen-ruimtes", niveau: "info", params: {} });
   } else if (a.bezetting.ruimtesMetGegevens === 0) {
-    s.push({ id: "geen-bezetting", niveau: "info", titel: "Vul in wanneer je ruimtes bezet zijn", waarom: "Je hebt ruimtes, maar nog niet ingevuld hoe vol ze zijn. Zet bij Bezetting per ruimte een percentage per dagdeel (een schatting is genoeg), dan zie je waar capaciteit over is." });
+    s.push({ id: "geen-bezetting", soort: "geen-bezetting", niveau: "info", params: {} });
   }
 
   // 2. personeelskosten
@@ -209,46 +225,31 @@ function signalen(b: BedrijfInKaart, a: Analyse): Signaal[] {
         const bedrag = b.omzetJaar !== null ? Math.round((teveel / 100) * b.omzetJaar) : null;
         s.push({
           id: "personeel-boven-doel",
+          soort: "personeel-boven-doel",
           niveau: "aandacht",
-          titel: `Personeelskosten liggen ${teveel} procentpunt boven je doel`,
-          waarom: `Je personeelskosten zijn ${a.financieel.personeelPct}% van je omzet, je doel is ${b.doelPersoneelPct}%.${bedrag !== null ? ` Dat is ongeveer ${eurotekst(bedrag)} per jaar.` : ""} Kijk naar de momenten waarop er meer mensen zijn dan nodig (zie het rooster hieronder) en zet flexwerkers alleen in op de drukke momenten.`,
-          actie: { label: "Klus uitzetten voor een druk moment", href: "/werkgever/diensten/nieuw" },
+          params: { pct: a.financieel.personeelPct, doel: b.doelPersoneelPct, teveel, bedrag },
+          actie: { href: "/werkgever/diensten/nieuw" },
         });
       } else {
-        s.push({ id: "personeel-binnen-doel", niveau: "info", titel: "Personeelskosten binnen je doel", waarom: `${a.financieel.personeelPct}% van je omzet, je doel is ${b.doelPersoneelPct}%.` });
+        s.push({ id: "personeel-binnen-doel", soort: "personeel-binnen-doel", niveau: "info", params: { pct: a.financieel.personeelPct, doel: b.doelPersoneelPct } });
       }
     } else {
-      s.push({ id: "personeel-doel", niveau: "info", titel: `Personeelskosten zijn ${a.financieel.personeelPct}% van je omzet`, waarom: "Stel bij Gegevens een doel in voor dit percentage, dan laten we zien of je erboven of eronder zit. Een vergelijking met andere bedrijven geven we niet: de uitkomst hangt te veel af van je soort werk." });
+      s.push({ id: "personeel-doel", soort: "personeel-doel", niveau: "info", params: { pct: a.financieel.personeelPct } });
     }
   } else if (b.groepen.length > 0 || b.personeelskostenJaar !== null) {
-    s.push({ id: "personeel-omzet", niveau: "info", titel: "Vul je omzet in voor het personeelskostenpercentage", waarom: "We hebben personeel, maar nog geen omzet (of budget) per jaar. Zonder dat kunnen we het percentage niet uitrekenen." });
+    s.push({ id: "personeel-omzet", soort: "personeel-omzet", niveau: "info", params: {} });
   }
 
   // 3. per ruimte: rustig, en te veel ruimtes voor het drukste moment
   for (const u of a.perRuimte) {
     if (u.gemiddeld !== null && u.gemiddeld < grens) {
-      s.push({
-        id: `rustig-${u.id}`,
-        niveau: "aandacht",
-        titel: `${u.naam} is gemiddeld ${u.gemiddeld}% bezet`,
-        waarom: `Dat is onder ${grensUitleg}. ${u.ongebruiktUrenPerWeek !== null ? `Samen staan deze ruimtes ongeveer ${u.ongebruiktUrenPerWeek} uur per week leeg binnen je openingstijden. ` : ""}Je kunt het gebruik delen met een andere afdeling, er andere activiteiten in plannen of er een andere bestemming aan geven.`,
-      });
+      s.push({ id: `rustig-${u.id}`, soort: "rustig", niveau: "aandacht", params: { naam: u.naam, gemiddeld: u.gemiddeld, grens, eigenDoel: eigenDoel ? 1 : 0, uren: u.ongebruiktUrenPerWeek } });
     }
     if (u.aantal >= 2 && u.nodigBijPiek !== null && u.leegBijPiek !== null && u.leegBijPiek >= 1 && u.piek) {
-      s.push({
-        id: `minder-nodig-${u.id}`,
-        niveau: "info",
-        titel: `${u.naam}: op je drukste moment heb je ${u.nodigBijPiek} van de ${u.aantal} nodig`,
-        waarom: `Het drukste moment is ${plekNaam(u.piek.index)} (${u.piek.pct}% bezet). Dan staan er ${u.leegBijPiek} leeg. Dat betekent niet dat ze weg moeten: reken na of je de pieken kunt spreiden en of je de ruimte anders kunt gebruiken.`,
-      });
+      s.push({ id: `minder-nodig-${u.id}`, soort: "minder-nodig", niveau: "info", params: { naam: u.naam, nodig: u.nodigBijPiek, aantal: u.aantal, leeg: u.leegBijPiek, plek: u.piek.index, pct: u.piek.pct } });
     }
     if (u.piek && u.piek.pct >= DRUKTE_GRENS) {
-      s.push({
-        id: `vol-${u.id}`,
-        niveau: "aandacht",
-        titel: `${u.naam} zit op ${plekNaam(u.piek.index)} op ${u.piek.pct}%`,
-        waarom: "Op dit moment is er bijna geen ruimte over voor uitloop of een extra afspraak. Kijk of je dit moment kunt spreiden over rustiger dagdelen.",
-      });
+      s.push({ id: `vol-${u.id}`, soort: "vol", niveau: "aandacht", params: { naam: u.naam, plek: u.piek.index, pct: u.piek.pct } });
     }
   }
 
@@ -258,21 +259,16 @@ function signalen(b: BedrijfInKaart, a: Analyse): Signaal[] {
   if (a.bezetting.spreiding !== null && a.bezetting.spreiding >= SPREIDING_GRENS && piek && dal) {
     s.push({
       id: "spreiding",
+      soort: "spreiding",
       niveau: "aandacht",
-      titel: "De drukte is ongelijk verdeeld over de week",
-      waarom: `Het drukste dagdeel is ${plekNaam(piek.index)} (${piek.pct}%), het rustigste ${plekNaam(dal.index)} (${dal.pct}%): ${a.bezetting.spreiding} procentpunt verschil. Wie op de piek meer mensen nodig heeft en op het dal minder, kan flexwerkers op de piek inzetten in plaats van vast personeel.`,
-      actie: { label: "Klus uitzetten voor de piek", href: "/werkgever/diensten/nieuw" },
+      params: { piekPlek: piek.index, piekPct: piek.pct, dalPlek: dal.index, dalPct: dal.pct, verschil: a.bezetting.spreiding },
+      actie: { href: "/werkgever/diensten/nieuw" },
     });
   }
 
   // 5. indeling: oppervlakte per medewerker
   if (a.ruimtes.m2PerFte !== null) {
-    s.push({
-      id: "m2-per-fte",
-      niveau: "info",
-      titel: `${a.ruimtes.m2PerFte} m² ruimte per fte`,
-      waarom: `Je hebt ${a.ruimtes.m2Totaal} m² aan ruimtes en ${a.financieel.fte} fte. Vergelijk dit getal met een eerder jaar of met een andere locatie van jezelf; een algemene norm geven we niet.`,
-    });
+    s.push({ id: "m2-per-fte", soort: "m2-per-fte", niveau: "info", params: { m2fte: a.ruimtes.m2PerFte, m2: a.ruimtes.m2Totaal, fte: a.financieel.fte } });
   }
   return s;
 }

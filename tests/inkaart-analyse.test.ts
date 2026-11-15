@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { analyseer, roosterRijen } from "@/lib/inkaart/analyse";
-import { RASTER_LENGTE, leegBedrijf, legeBezetting, plekNaam, type BedrijfInKaart, type Ruimte } from "@/lib/inkaart/model";
+import { RASTER_LENGTE, leegBedrijf, legeBezetting, type BedrijfInKaart, type Ruimte } from "@/lib/inkaart/model";
+import { plekNaam, signaalTekst } from "@/lib/inkaart/render";
 import { bedrijfSchema, leesBedrijf } from "@/lib/inkaart/schema";
+import { inkaartTeksten } from "@/lib/inkaart/teksten";
 
 // De berekeningen van "Bedrijf in kaart": elk getal volgt uit wat het bedrijf zelf invulde en is hier met de hand nagerekend.
+
+const NL = inkaartTeksten("nl");
+/** De tekst van een signaal in het Nederlands (de analyse zelf levert alleen gegevens). */
+const tekst = (s: Parameters<typeof signaalTekst>[1] | undefined) => (s ? signaalTekst(NL, s) : undefined);
 
 /** Maandag tot en met vrijdag, ochtend (index 0) en middag (index 1): dat zijn de standaard open dagdelen. */
 function bezetting(waarden: Record<number, number>) {
@@ -72,15 +78,15 @@ describe("personeel en kosten", () => {
   it("zegt dat het personeelskostenpercentage boven het eigen doel ligt, met wat dat per jaar is", () => {
     const sig = analyseer(ziekenhuis({ doelPersoneelPct: 35 })).signalen.find((s) => s.id === "personeel-boven-doel");
     expect(sig?.niveau).toBe("aandacht");
-    expect(sig?.titel).toContain("5 procentpunt");
-    expect(sig?.waarom).toMatch(/312[.,  ]?500/); // 5% van 6,25 miljoen
+    expect(tekst(sig)?.titel).toContain("5 procentpunt");
+    expect(tekst(sig)?.waarom).toMatch(/312[.,  ]?500/); // 5% van 6,25 miljoen
     expect(sig?.actie?.href).toBe("/werkgever/diensten/nieuw");
     expect(analyseer(ziekenhuis({ doelPersoneelPct: 45 })).signalen.some((s) => s.id === "personeel-binnen-doel")).toBe(true);
   });
 
   it("zonder doel noemt het alleen het percentage en vergelijkt het niet met 'andere bedrijven'", () => {
     const s = analyseer(ziekenhuis()).signalen.find((x) => x.id === "personeel-doel");
-    expect(s?.titel).toContain("40%");
+    expect(tekst(s)?.titel).toContain("40%");
     expect(JSON.stringify(analyseer(ziekenhuis()).signalen)).not.toMatch(/gemiddeld in de branche|branchegemiddelde|doorsnee bedrijf/i);
   });
 });
@@ -105,8 +111,8 @@ describe("ruimtes en bezetting", () => {
     expect(u.nodigBijPiek).toBe(10); // 12 x 80% = 9,6 naar boven
     expect(u.leegBijPiek).toBe(2);
     const s = analyseer(ziekenhuis()).signalen.find((x) => x.id === "minder-nodig-r1");
-    expect(s?.titel).toContain("10 van de 12");
-    expect(s?.waarom).toContain("maandagochtend");
+    expect(tekst(s)?.titel).toContain("10 van de 12");
+    expect(tekst(s)?.waarom).toContain("maandagochtend");
   });
 
   it("de uren per week dat het leeg staat volgen uit de bezetting", () => {
@@ -133,29 +139,29 @@ describe("ruimtes en bezetting", () => {
     const b = analyseer(ziekenhuis()).bezetting;
     expect(b.piek).toEqual({ index: 0, pct: 80 });
     expect(b.dal).toEqual({ index: 13, pct: 20 });
-    expect(plekNaam(13)).toBe("vrijdagmiddag");
+    expect(plekNaam(NL, 13)).toBe("vrijdagmiddag");
     expect(b.spreiding).toBe(60);
     const s = analyseer(ziekenhuis()).signalen.find((x) => x.id === "spreiding");
     expect(s?.niveau).toBe("aandacht");
-    expect(s?.waarom).toContain("60 procentpunt");
+    expect(tekst(s)?.waarom).toContain("60 procentpunt");
     expect(s?.actie?.href).toBe("/werkgever/diensten/nieuw");
   });
 
   it("een rustige ruimte krijgt een signaal met de grens die gebruikt is (eigen doel, of onze standaard)", () => {
     expect(analyseer(ziekenhuis()).signalen.some((s) => s.id === "rustig-r1")).toBe(false); // 52 is boven de standaard 40
     const met = analyseer(ziekenhuis({ doelBezettingPct: 60 })).signalen.find((s) => s.id === "rustig-r1");
-    expect(met?.titel).toContain("52%");
-    expect(met?.waarom).toContain("jouw doel van 60%");
+    expect(tekst(met)?.titel).toContain("52%");
+    expect(tekst(met)?.waarom).toContain("jouw doel van 60%");
     const laag = { ...SPREEKKAMER, bezetting: bezetting({ 0: 30, 1: 20 }) };
     const standaard = analyseer(ziekenhuis({ ruimtes: [laag] })).signalen.find((s) => s.id === "rustig-r1");
-    expect(standaard?.waarom).toContain("40%");
-    expect(standaard?.waarom).toContain("zolang je geen doel instelt");
+    expect(tekst(standaard)?.waarom).toContain("40%");
+    expect(tekst(standaard)?.waarom).toContain("zolang je geen doel instelt");
   });
 
   it("een ruimte die op het drukste moment bijna vol zit, krijgt een signaal", () => {
     const vol = { ...SPREEKKAMER, bezetting: bezetting({ 0: 95, 1: 60 }) };
     const s = analyseer(ziekenhuis({ ruimtes: [vol] })).signalen.find((x) => x.id === "vol-r1");
-    expect(s?.titel).toContain("95%");
+    expect(tekst(s)?.titel).toContain("95%");
   });
 
   it("één ruimte heeft geen 'minder nodig'-signaal (er is niets om te verminderen)", () => {
