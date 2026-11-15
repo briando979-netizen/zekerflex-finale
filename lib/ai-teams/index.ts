@@ -34,7 +34,10 @@ export type ProposalAction =
   | { type: "rematch-shift"; shiftId: string }
   | { type: "approve-company"; tenantId: string }
   | { type: "rate-advice"; shiftId: string; tenantId: string; suggestedCents: number }
-  | { type: "investment"; title: string; budgetCents: number; firstStep: string };
+  | { type: "investment"; title: string; budgetCents: number; firstStep: string }
+  // AI-medewerkers (15 nov 2026, lib/ai-teams/medewerkers.ts): de Welkomstcoach en de Servicedesk
+  | { type: "welkom-opvolging"; tenantId: string }
+  | { type: "webchat-antwoord"; conversationId: string; tekst: string };
 
 export interface Proposal {
   id: string;
@@ -62,10 +65,10 @@ export const TEAMS: Team[] = [
   { id: "automatisering", name: "Automatisering", emoji: "⚙️", mission: "Ziet waar werk blijft liggen (uren die niet worden goedgekeurd) en zet herinneringen klaar.", members: ["Opvolger", "Herinneraar"], needsModel: false },
   { id: "stijl", name: "Stijl & ontwerp", emoji: "🎨", mission: "Bewaakt de uitstraling: producten zonder foto of goede tekst, onvolledige profielen.", members: ["Art director", "Tekstcontroleur"], needsModel: false },
   { id: "planning", name: "Planning & bezetting", emoji: "🗓️", mission: "Ziet klussen die binnen 48 uur starten en nog niet vol zijn, en mensen die niet zijn komen opdagen.", members: ["Planner", "No-show-wachter"], needsModel: false },
-  { id: "onboarding", name: "Onboarding", emoji: "🚪", mission: "Helpt nieuwe bedrijven en freelancers door de verificatie; zet bedrijven met wachtende reacties klaar voor goedkeuring.", members: ["Welkomstcoach", "Verificatie-opvolger"], needsModel: false },
+  { id: "onboarding", name: "Onboarding", emoji: "🚪", mission: "Helpt nieuwe bedrijven en freelancers door de verificatie; zet bedrijven met wachtende reacties klaar voor goedkeuring, en nieuwe bedrijven zonder eerste klus voor een persoonlijke welkomstmail.", members: ["Welkomstcoach", "Verificatie-opvolger"], needsModel: false },
   { id: "prijs", name: "Prijs & tarieven", emoji: "💶", mission: "Vergelijkt open klussen met de markt en adviseert opdrachtgevers die te laag betalen.", members: ["Tariefanalist"], needsModel: false },
   { id: "kwaliteit", name: "Kwaliteit", emoji: "⭐", mission: "Bewaakt beoordelingen en afzeggingen van freelancers en bedrijven.", members: ["Kwaliteitsbewaker"], needsModel: false },
-  { id: "klantenservice", name: "Klantenservice", emoji: "💬", mission: "Let op vragen in de websitechat die te lang onbeantwoord blijven.", members: ["Servicedesk"], needsModel: false },
+  { id: "klantenservice", name: "Klantenservice", emoji: "💬", mission: "Let op vragen in de websitechat die te lang onbeantwoord blijven en zet een conceptantwoord klaar dat jij goedkeurt.", members: ["Servicedesk"], needsModel: false },
   { id: "veiligheid", name: "Veiligheid", emoji: "🔐", mission: "Controleert tweestapsverificatie van beheerders en zoekt verdachte uren.", members: ["Beveiliger", "Fraudespeurder"], needsModel: false },
   { id: "investeren", name: "Investeringen", emoji: "💶", mission: "Kijkt waar geld het meeste oplevert en zet investeringen klaar binnen jouw maandbudget — uitgeven doe jij, na goedkeuring.", members: ["Investeerder", "Rekenmeester"], needsModel: false },
   { id: "updates", name: "Updates & rapportage", emoji: "📰", mission: "Dagelijks een verslag van de cijfers en wat er veranderde.", members: ["Verslaggever"], needsModel: false },

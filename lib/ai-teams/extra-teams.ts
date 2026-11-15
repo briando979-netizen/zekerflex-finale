@@ -7,6 +7,7 @@ import { fraudForTimesheet } from "@/lib/fraud/timesheet";
 import { listConversations } from "@/lib/chat/webchat";
 import type { Review } from "@/lib/reviews/store";
 import type { Proposal, FeedItem } from "@/lib/ai-teams";
+import { servicedeskConcepten, welkomstcoach } from "@/lib/ai-teams/medewerkers";
 
 // ---------------------------------------------------------------------------
 // Six more AI-teams. Like the original five they work from real platform data
@@ -94,6 +95,8 @@ export async function onboarding(now: Date, t: TeamTools) {
   if (unconfirmed > 0) await t.log("onboarding", `${unconfirmed} aanmelding(en) van de afgelopen 2 weken hebben hun e-mail nooit bevestigd (ze krijgen automatisch herinneringen).`, "finding");
   if (unverifiedWorkers > 0) await t.log("onboarding", `${unverifiedWorkers} freelancer(s) bevestigden hun e-mail maar zijn na 2 dagen nog niet geverifieerd — mogelijk lopen ze vast bij de ID-stap.`, "finding");
   await t.log("onboarding", `Aanmeldingen gecontroleerd: ${waiting} bedrijf/bedrijven wacht(en) op goedkeuring met reacties.`);
+  // de Welkomstcoach (lib/ai-teams/medewerkers.ts): nieuwe bedrijven zonder eerste klus
+  await welkomstcoach(now, t);
 }
 
 /** Pricing: open klussen that pay clearly below the going rate for that kind of work. */
@@ -177,6 +180,8 @@ export async function klantenservice(now: Date, t: TeamTools) {
     await t.log("klantenservice", `Websitechat wacht al ${h} uur op antwoord: "${q.slice(0, 140)}" — Admin → Webchat.`, "finding");
   }
   await t.log("klantenservice", `${open.length} open websitechat(s) bekeken, ${waiting.length} wachten langer dan 4 uur op een antwoord.`);
+  // de Servicedesk (lib/ai-teams/medewerkers.ts): een conceptantwoord voor wie te lang wacht, pas na goedkeuring in de chat
+  if (waiting.length > 0) await servicedeskConcepten(now, t);
 }
 
 /** Security: admins without two-step verification and suspicious hours. */

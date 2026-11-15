@@ -5,6 +5,7 @@ import { resendDelivery } from "@/lib/webhooks/manage";
 import type { ProposalAction } from "@/lib/ai-teams";
 import { notifyPendingReactions, setTenantApproval } from "@/lib/company/verified";
 import { commitInvestment } from "@/lib/ai-teams/invest";
+import { appendMessage, getConversation } from "@/lib/chat/webchat";
 
 async function hqAdmins(tenantId: string): Promise<{ email: string; name: string }[]> {
   const rows = await prisma.membership.findMany({ where: { tenantId, role: "HQ_ADMIN" }, select: { user: { select: { email: true, fullName: true } } } });
@@ -25,6 +26,32 @@ export async function executeProposal(action: ProposalAction, by = "ai-team"): P
   }
   if (action.type === "investment") {
     return commitInvestment(action.title, action.budgetCents, action.firstStep);
+  }
+  if (action.type === "webchat-antwoord") {
+    // de Servicedesk: het goedgekeurde concept komt als antwoord van ZekerFlex in de websitechat
+    const c = await getConversation(action.conversationId);
+    if (!c) return "het gesprek bestaat niet meer; niets geplaatst";
+    if (c.status === "closed") return "het gesprek is gesloten; niets geplaatst";
+    await appendMessage(action.conversationId, { role: "agent", content: action.tekst, by: "ZekerFlex" });
+    return "antwoord in de websitechat geplaatst";
+  }
+  if (action.type === "welkom-opvolging") {
+    // de Welkomstcoach: alleen als het bedrijf nog steeds geen klus heeft
+    const klussen = await prisma.shift.count({ where: { branch: { tenantId: action.tenantId } } });
+    if (klussen > 0) return "het bedrijf plaatste intussen een klus; niets verstuurd";
+    const tenant = await prisma.tenant.findUnique({ where: { id: action.tenantId }, select: { name: true } });
+    const admins = await hqAdmins(action.tenantId);
+    if (!admins.length) return "geen hoofdbeheerder met e-mailadres gevonden";
+    for (const a of admins) {
+      const first = a.name.split(" ")[0] ?? "";
+      await sendMail({
+        to: a.email,
+        subject: "Hulp bij je eerste klus op ZekerFlex?",
+        text: `Hoi ${first},\n\nJe hebt ${tenant?.name ?? "je bedrijf"} een tijdje geleden aangemeld bij ZekerFlex, maar er staat nog geen klus. Zal ik je helpen met de eerste? Een klus zet je in een paar minuten uit via:\n${base}/werkgever/diensten\n\nLiever even overleggen? Antwoord op deze mail, dan nemen we contact met je op.\n\nGroet,\nTeam ZekerFlex`,
+        kind: "onboarding-reminder",
+      });
+    }
+    return `welkomstmail verstuurd naar ${admins.length} beheerder(s)`;
   }
   if (action.type === "approve-company") {
     await setTenantApproval(action.tenantId, true, by);
