@@ -32,10 +32,15 @@ describe("de catalogus", () => {
     for (const id of ["zakelijk", "horeca", "personeel", "rijschool", "webshop", "website", "werk"]) expect(appVan(id), id).toBeDefined();
   });
 
-  it("de personeel-app belooft niet meer dan /personeel nu heeft (taken en mededelingen)", () => {
+  it("de personeel-app belooft niet meer dan /personeel heeft", () => {
     const uitleg = appVan("personeel")?.uitleg ?? "";
+    const heeft = (onderdeel: string) => existsSync(path.join(ROOT, "components/personeel", onderdeel));
     expect(uitleg).toMatch(/taken/);
-    expect(uitleg).not.toMatch(/loonstro|rooster|chat/i);
+    // loonstroken en chat alleen zolang de omgeving van de medewerker ze heeft
+    if (/loonstro/i.test(uitleg)) expect(heeft("LoonstrokenBlok.tsx")).toBe(true);
+    if (/chat/i.test(uitleg)) expect(heeft("ChatPaneel.tsx")).toBe(true);
+    // een rooster heeft /personeel (nog) niet
+    expect(uitleg).not.toMatch(/rooster/i);
   });
 });
 
