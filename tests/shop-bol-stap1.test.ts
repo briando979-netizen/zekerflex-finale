@@ -180,7 +180,8 @@ describe("de shop zelf", () => {
 
   it("de zoeksuggesties halen de producten op bij het eerste klikken in de zoekbalk, ook met een lege winkelwagen", () => {
     const chrome = lees("components/marketing/ShopChrome.tsx");
-    expect(chrome).toContain("const needCatalog = count > 0 || drawer || zoekt;");
+    // ook het menu (stap 3) kan de catalogus vragen; de zoekbalk hoort er in elk geval bij
+    expect(chrome).toMatch(/const needCatalog = count > 0 \|\| drawer \|\| zoekt\b/);
     expect(chrome.match(/onZoek=\{\(\) => setZoekt\(true\)\}/g)).toHaveLength(2);
     expect(chrome).toMatch(/setOpen\(true\);\n\s+onZoek\(\);/);
   });

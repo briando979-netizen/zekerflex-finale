@@ -6,6 +6,7 @@ import { getDict, getLocale } from "@/lib/i18n/server";
 import { contentKeys, getContentMap } from "@/lib/content/store";
 import { metShopTeksten } from "@/lib/ontwerp/shop-teksten";
 import { ShopStorefront } from "@/components/marketing/ShopStorefront";
+import { voorUitAdres } from "@/lib/shop/categoriemenu";
 import { ShopFeatured } from "@/components/marketing/ShopProductCard";
 import { OnlangsBekeken } from "@/components/marketing/OnlangsBekeken";
 import { toShopProduct, type ShopCategory } from "@/components/marketing/shop-product";
@@ -35,9 +36,10 @@ export const dynamic = "force-dynamic";
 const CATS = ["Alles", "Werk & PBM", "Kleding", "Werkdag", "Cadeaus"] as const;
 type Cat = (typeof CATS)[number];
 
-export default async function ShopPage(props: { searchParams: Promise<{ cat?: string; q?: string }> }) {
+export default async function ShopPage(props: { searchParams: Promise<{ cat?: string; q?: string; voor?: string }> }) {
   const searchParams = await props.searchParams;
   const initialCat: Cat = CATS.includes(searchParams.cat as Cat) ? (searchParams.cat as Cat) : "Alles";
+  const initialVoor = voorUitAdres(searchParams.voor);
   const initialQuery = typeof searchParams.q === "string" ? searchParams.q.trim().slice(0, 60) : "";
   // Op de server opgehaald en omgezet: de eerste HTML (en Google) toont de echte,
   // koopbare catalogus, en de browser krijgt alleen wat de kaarten nodig hebben.
@@ -106,7 +108,7 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
     populair: featured.length === 5 ? <ShopFeatured title={t.popular} products={featured} /> : null,
     onlangs: <OnlangsBekeken producten={products} />,
     paskamer: <ShopPaskamerPromo pk={dict.paskamer} />,
-    assortiment: <ShopStorefront initialCat={initialCat} initialQuery={initialQuery} products={products} pageTitle={browsing} />,
+    assortiment: <ShopStorefront initialCat={initialCat} initialQuery={initialQuery} initialVoor={initialVoor} products={products} pageTitle={browsing} />,
     meer: <ShopMoreCategories t={t} />,
     service: <ShopService t={t} />,
     nieuwsbrief: <ShopNewsletter t={t} />,

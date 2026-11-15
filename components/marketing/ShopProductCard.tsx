@@ -7,6 +7,8 @@ import Link from "next/link";
 import { ProductPlaceholder } from "@/components/marketing/ProductPlaceholder";
 import { useShopCart } from "@/components/marketing/useShopCart";
 import { useShopWishlist } from "@/components/marketing/useShopWishlist";
+import { useShopVergelijk } from "@/components/marketing/useShopVergelijk";
+import { vergelijkPad } from "@/lib/shop/vergelijk";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { GRID_SIZES, bySize, cardStock, type ShopCardProduct } from "@/components/marketing/shop-product";
@@ -42,6 +44,9 @@ export function ShopProductCard({
   const t = useT();
   const { add, count } = useShopCart();
   const wishlist = useShopWishlist();
+  // vergelijken zoals bol.com (lib/shop/vergelijk.ts): hooguit vier
+  const vergelijk = useShopVergelijk();
+  const [vergelijkVol, setVergelijkVol] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [added, setAdded] = useState(false);
   const single = p.variants.length <= 1 ? p.variants[0] : null;
@@ -142,6 +147,28 @@ export function ShopProductCard({
         {stock.kind === "uit" ? t.shop.soldOut : stock.kind === "weinig" ? (bezorg && !p.seller ? fmt(t.shop.lowStockDag, { n: stock.n, dag: bezorgdagNaam(bezorg, t.shop.bezorgMorgen, locale) }) : fmt(t.shop.lowStock, { n: stock.n })) : p.seller ? t.shop.deliveryBySeller : bezorg ? fmt(t.shop.opVoorraadDag, { dag: bezorgdagNaam(bezorg, t.shop.bezorgMorgen, locale) }) : t.shop.opVoorraad}
       </p>
       <p className="mt-0.5 truncate text-[12px] text-neutralx-500">{fmt(t.shop.soldBy, { seller: p.seller ?? SELLER })}</p>
+
+      <div className="relative z-10 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
+        <label className="inline-flex cursor-pointer items-center gap-1.5 font-semibold text-neutralx-600">
+          <input
+            type="checkbox"
+            checked={vergelijk.has(p.id)}
+            onChange={() => setVergelijkVol(!vergelijk.wissel(p.id))}
+            className="h-3.5 w-3.5 accent-[#0b3d2e]"
+          />
+          {t.shop.vergelijk}
+        </label>
+        {vergelijk.has(p.id) && vergelijk.count >= 2 && (
+          <Link href={vergelijkPad(vergelijk.ids)} className="font-semibold text-brand-600 hover:underline">
+            {fmt(t.shop.vergelijkNu, { n: vergelijk.count })} →
+          </Link>
+        )}
+        {vergelijkVol && (
+          <span role="alert" className="w-full font-semibold text-crit">
+            {t.shop.vergelijkVol}
+          </span>
+        )}
+      </div>
 
       <div className="relative z-10 mt-auto pt-3">
         {single ? (

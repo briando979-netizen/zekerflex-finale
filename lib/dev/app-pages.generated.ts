@@ -346,6 +346,7 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/shop/account","file":"app/shop/account/page.tsx","area":"Webshop","dynamic":false},
   {"route":"/shop/bestelling/[id]","file":"app/shop/bestelling/[id]/page.tsx","area":"Webshop","dynamic":true},
   {"route":"/shop/paskamer","file":"app/shop/paskamer/page.tsx","area":"Webshop","dynamic":false},
+  {"route":"/shop/vergelijk","file":"app/shop/vergelijk/page.tsx","area":"Webshop","dynamic":false},
   {"route":"/shop/zakelijk","file":"app/shop/zakelijk/page.tsx","area":"Webshop","dynamic":false},
   {"route":"/werkgever","file":"app/werkgever/page.tsx","area":"Werkgever","dynamic":false},
   {"route":"/werkgever/abonnement","file":"app/werkgever/abonnement/page.tsx","area":"Werkgever","dynamic":false},

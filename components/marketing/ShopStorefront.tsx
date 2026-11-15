@@ -6,6 +6,7 @@ import { useT } from "@/components/i18n/I18nProvider";
 import { fmt, type Dict } from "@/lib/i18n/dictionaries";
 import { ShopProductCard } from "@/components/marketing/ShopProductCard";
 import { bySize, type ShopCardProduct, type ShopCategory } from "@/components/marketing/shop-product";
+import type { VoorWaarde } from "@/lib/shop/categoriemenu";
 
 // Het assortiment op de shop-homepage, opgebouwd als een marktplaats: filters
 // links (op de telefoon in een uitschuifvenster), erboven het aantal resultaten
@@ -18,6 +19,7 @@ type Category = "Alles" | ShopCategory;
 type Gender = "Alle" | "Heren" | "Vrouwen" | "Kinderen";
 const GENDER_VALUE: Record<Exclude<Gender, "Alle">, string> = { Heren: "heren", Vrouwen: "vrouwen", Kinderen: "kinderen" };
 const GENDERS: Gender[] = ["Alle", "Heren", "Vrouwen", "Kinderen"];
+const genderUitVoor = (v: VoorWaarde | null): Gender => (v === "heren" ? "Heren" : v === "vrouwen" ? "Vrouwen" : v === "kinderen" ? "Kinderen" : "Alle");
 const TABS: Category[] = ["Alles", "Werk & PBM", "Kleding", "Werkdag", "Cadeaus"];
 
 type PriceBucket = "Alle" | "onder15" | "15-30" | "vanaf30";
@@ -33,11 +35,14 @@ const inStock = (p: ShopCardProduct) => p.variants.some((v) => v.stock > 0);
 export function ShopStorefront({
   initialCat = "Alles",
   initialQuery = "",
+  initialVoor = null,
   products,
   pageTitle = false,
 }: {
   initialCat?: Category;
   initialQuery?: string;
+  /** ?voor=heren|vrouwen|kinderen uit het menu "Alle categorieën" (lib/shop/categoriemenu.ts) */
+  initialVoor?: VoorWaarde | null;
   /** zonder banner (zoeken, een categorie) is de kop van het assortiment de paginatitel (h1) */
   pageTitle?: boolean;
   /** Actieve producten van de server, zodat de eerste HTML (en Google) de echte catalogus toont. */
@@ -46,7 +51,7 @@ export function ShopStorefront({
   const t = useT();
   const labels = useLabels(t);
   const [category, setCategory] = useState<Category>(initialCat);
-  const [gender, setGender] = useState<Gender>("Alle");
+  const [gender, setGender] = useState<Gender>(genderUitVoor(initialVoor));
   const [query, setQuery] = useState(initialQuery);
   const [onlyWishlist, setOnlyWishlist] = useState(false);
   const [onlyStock, setOnlyStock] = useState(false);
@@ -65,6 +70,9 @@ export function ShopStorefront({
   useEffect(() => {
     void setQuery(initialQuery);
   }, [initialQuery]);
+  useEffect(() => {
+    void setGender(genderUitVoor(initialVoor));
+  }, [initialVoor]);
 
   useEffect(() => {
     if (!panel) return;
