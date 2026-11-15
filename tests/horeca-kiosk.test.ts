@@ -43,4 +43,10 @@ describe("zelfbestelzuil", () => {
   it("de bron telt mee in het archief", () => {
     expect(ARCHIEF_BRONNEN).toContain("kiosk");
   });
+
+  it("geen cookiemelding vanzelf over de knoppen van een vast scherm (zuil, kassa, incheckterminal)", () => {
+    const cookie = lees("components/marketing/CookieConsent.tsx");
+    expect(cookie).toContain('["/scherm", "/terminal"].some(');
+    expect(cookie).toContain("&& !opScherm");
+  });
 });
