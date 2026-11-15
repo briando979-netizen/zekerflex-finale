@@ -1,5 +1,6 @@
 import type { Locale } from "@/lib/i18n/config";
 import { SUPPORT_CHAT_WERKGEVER, type HulpTeksten } from "@/lib/hulp/hulpjes";
+import { RONDLEIDING_BEDRIJF_TEKSTEN } from "@/lib/onboarding/rondleiding-bedrijf";
 
 // ---------------------------------------------------------------------------
 // Het hulpcentrum voor bedrijven: het vraagteken in de kopbalk van de werkgeversapp (components/app/EmployerShell.tsx), met
@@ -51,6 +52,7 @@ const nl: HulpTeksten = {
     teKort: "Schrijf iets meer, dan begrijpen we je beter.",
   },
   nieuws: { titel: "Nieuw in de app", nieuw: "Nieuw" },
+  rondleiding: RONDLEIDING_BEDRIJF_TEKSTEN.nl.opnieuw,
   vragen: [
     {
       id: "klus-uitzetten",
@@ -199,6 +201,7 @@ const en: HulpTeksten = {
     teKort: "Write a little more so we understand you better.",
   },
   nieuws: { titel: "New in the app", nieuw: "New" },
+  rondleiding: RONDLEIDING_BEDRIJF_TEKSTEN.en.opnieuw,
   vragen: [
     {
       id: "klus-uitzetten",

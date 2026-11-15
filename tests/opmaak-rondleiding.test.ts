@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 // rondleiding. Op 320 px waren Overslaan, Vorige en Volgende samen breder dan de kaart (in NL stak "Volgende" 36 px buiten de
 // kaart, in UK "Далі" 24 px). De rij mag nu omslaan.
 
-const src = readFileSync(path.join(process.cwd(), "components/app/WerkerRondleiding.tsx"), "utf8").split("\r\n").join("\n");
+const src = readFileSync(path.join(process.cwd(), "components/app/Rondleiding.tsx"), "utf8").split("\r\n").join("\n");
 
 describe("de knoppenrij van de rondleiding", () => {
   it("mag omslaan op een smal scherm: flex-wrap, Overslaan links, Vorige en Volgende rechts als groep", () => {

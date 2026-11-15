@@ -9,7 +9,7 @@ const bron = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8").sp
 const aantal = (s: string, re: RegExp) => s.match(re)?.length ?? 0;
 
 describe("de rondleiding", () => {
-  const s = bron("components/app/WerkerRondleiding.tsx");
+  const s = bron("components/app/Rondleiding.tsx");
   it("is een echte dialoog: Escape, Tab blijft binnen, focus terug naar waar hij vandaan kwam (useDialog)", () => {
     expect(s).toContain('role="dialog"');
     expect(s).toContain('aria-modal="true"');

@@ -47,6 +47,8 @@ export interface HulpTeksten {
   nieuws: { titel: string; nieuw: string };
   vragen: HulpVraag[];
   nieuwsItems: HulpNieuws[];
+  /** de regel om de rondleiding opnieuw te starten (alleen de versie voor bedrijven; werkers hebben die in hun woordenlijst, lib/i18n/freelancer.ts) */
+  rondleiding?: readonly [string, string];
 }
 
 /** Het gesprek met ZekerFlex Support openen (components/chat/InboxPage.tsx leest ?support=1). */

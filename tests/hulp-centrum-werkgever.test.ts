@@ -142,7 +142,7 @@ describe("twee aparte versies: werkers en bedrijven", () => {
   it("het hulpcentrum kiest de chat per versie, en de rondleiding van de werker staat er alleen in de werker-versie", () => {
     const c = bron("components/app/HulpCentrum.tsx");
     expect(c).toMatch(/soort === "bedrijf" \? SUPPORT_CHAT_WERKGEVER : SUPPORT_CHAT/);
-    expect(c).toMatch(/\{soort === "werker" && <RondleidingRegel sluit=\{sluit\} \/>\}/);
+    expect(c).toMatch(/soort === "werker" \? \(\s*<RondleidingRegel sluit=\{sluit\} \/>/);
     // useFT (de woordenlijst van de werker) staat alleen in die ene regel, niet in het hulpcentrum zelf
     const hoofd = c.slice(c.indexOf("export function HulpCentrum"));
     expect(hoofd).not.toContain("useFT(");

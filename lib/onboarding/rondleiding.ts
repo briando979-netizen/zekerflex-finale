@@ -20,6 +20,18 @@ export const NA_EERSTE_SESSIE_MS = 30 * 60_000;
 export const RONDLEIDING_STAPPEN = ["welkom", "discover", "myJobs", "hours", "chat", "account", "hulp"] as const;
 export type RondleidingStap = (typeof RONDLEIDING_STAPPEN)[number];
 
+/** De teksten die de rondleiding nodig heeft; de werker-app (vijf talen) en de werkgeversapp (nl, en) leveren ze elk zelf. */
+export interface RondleidingTeksten {
+  /** "Stap {n} van {m}" */
+  stap: string;
+  volgende: string;
+  vorige: string;
+  overslaan: string;
+  klaar: string;
+  /** per stap een titel en een uitleg */
+  stappen: Record<string, readonly string[]>;
+}
+
 export interface RondleidingStand {
   /** het eerste bezoek (ms sinds 1970) */
   eerste?: number;

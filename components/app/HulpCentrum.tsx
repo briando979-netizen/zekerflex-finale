@@ -85,9 +85,14 @@ function Regel({ icoon, titel, tekst, extra }: { icoon: ReactNode; titel: string
 
 const regelKlasse = "block w-full text-left transition hover:bg-paper-soft focus-visible:bg-paper-soft focus-visible:outline-none";
 
-/** "De rondleiding nog eens": alleen in de werker-app; de teksten staan in de woordenlijst van de werker (lib/onboarding/rondleiding.ts). */
+/** "De rondleiding nog eens" in de werker-app; de teksten staan in de woordenlijst van de werker (lib/onboarding/rondleiding.ts). */
 function RondleidingRegel({ sluit }: { sluit: () => void }) {
   const rt = useFT().rondleiding;
+  return <RondleidingKnop sluit={sluit} titel={rt.opnieuw[0] ?? ""} tekst={rt.opnieuw[1] ?? ""} />;
+}
+
+/** De regel zelf, zonder woordenlijst: de werkgeversapp geeft de tekst uit zijn eigen teksten mee (lib/hulp/werkgever-teksten.ts). */
+function RondleidingKnop({ sluit, titel, tekst }: { sluit: () => void; titel: string; tekst: string }) {
   return (
     <li>
       <button
@@ -98,7 +103,7 @@ function RondleidingRegel({ sluit }: { sluit: () => void }) {
           window.dispatchEvent(new Event(RONDLEIDING_START));
         }}
       >
-        <Regel icoon={<IHelp />} titel={rt.opnieuw[0] ?? ""} tekst={rt.opnieuw[1] ?? ""} />
+        <Regel icoon={<IHelp />} titel={titel} tekst={tekst} />
       </button>
     </li>
   );
@@ -317,7 +322,11 @@ export function HulpCentrum({
                     <Regel icoon={<IList />} titel={t.home.vragen[0]} tekst={t.home.vragen[1]} />
                   </button>
                 </li>
-                {soort === "werker" && <RondleidingRegel sluit={sluit} />}
+                {soort === "werker" ? (
+                  <RondleidingRegel sluit={sluit} />
+                ) : (
+                  t.rondleiding && <RondleidingKnop sluit={sluit} titel={t.rondleiding[0]} tekst={t.rondleiding[1]} />
+                )}
                 {handleidingen && (
                   <li>
                     <a href={handleidingen} target="_blank" rel="noopener noreferrer" className={regelKlasse} onClick={sluit}>

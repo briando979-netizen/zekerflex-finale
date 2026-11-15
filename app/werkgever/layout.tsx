@@ -26,6 +26,8 @@ import { getMenuVolgorde } from "@/lib/werkgever/menu-volgorde-store";
 import { werkruimteVan } from "@/lib/werkgever/werkruimte-server";
 import { kennisbankIngesteld } from "@/lib/kennisbank/outline";
 import { hulpTekstenWerkgever } from "@/lib/hulp/werkgever-teksten";
+import { BedrijfRondleiding } from "@/components/app/BedrijfRondleiding";
+import { rondleidingBedrijf } from "@/lib/onboarding/rondleiding-bedrijf";
 import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
 import { featureEnabled } from "@/lib/flags";
 import { heeftAfspraken } from "@/lib/afspraken/in-menu";
@@ -184,6 +186,8 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
         <OpbouwfaseBalk soort="werkgever" />
         {children}
         <ChatDock />
+        {/* de rondleiding voor bedrijven: na de eerste sessie één keer, daarna via het vraagteken (lib/onboarding/rondleiding-bedrijf.ts) */}
+        <BedrijfRondleiding t={rondleidingBedrijf(locale)} />
         {birthday && <SeasonalLoader theme="verjaardag" naam={principal.fullName.split(" ")[0] ?? null} />}
       </EmployerShell>
     </I18nProvider>
