@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { meldNieuweLevering } from "@/lib/horeca/levering-melding";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { env } from "@/lib/env";
 import { enforceRateLimit } from "@/lib/rate-limit";
@@ -35,6 +36,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     if (tijdFout) throw AppError.validation(tijdFout);
     const { bedrijf: _b, soort, ...inv } = b;
     const best = await plaatsLevering(zaak, { soort, ...inv }, "online");
+    // seintje aan de zaak (push en mail), na het antwoord aan de gast
+    after(() => meldNieuweLevering(zaak, best));
     return NextResponse.json({ nummer: best.nummer, token: tekenMet(env.AUTH_SECRET, "levering", best.id) });
   } catch (err) {
     return fout(err);

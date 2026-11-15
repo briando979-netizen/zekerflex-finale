@@ -99,6 +99,30 @@ export function geannuleerdZaak(z: Zaak, r: Res): MailInput | null {
   );
 }
 
+/** Aan de zaak: er is online besteld om af te halen of te laten bezorgen; de tijd moet nog bevestigd (alleen met een e-mailadres). */
+export function nieuweLeveringZaak(
+  z: Zaak,
+  b: { nummer: number; soort: string; naam: string; telefoon: string; adres: string; postcode: string; plaats: string; tijd: string; bedragCent: number; opmerking: string },
+): MailInput | null {
+  if (!z.email) return null;
+  const soort = b.soort === "bezorgen" ? "bezorging" : "afhaalbestelling";
+  const bedrag = new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(b.bedragCent / 100);
+  const regels = [
+    `Bestelling ${b.nummer} · ${b.soort === "bezorgen" ? "bezorgen" : "afhalen"} · ${b.tijd === "ZSM" ? "zo snel mogelijk" : `om ${b.tijd}`} · ${bedrag}`,
+    `${b.naam} · ${b.telefoon}`,
+    b.soort === "bezorgen" ? `${b.adres}, ${b.postcode} ${b.plaats}` : "",
+    b.opmerking ? `Opmerking: ${b.opmerking}` : "",
+  ].filter(Boolean);
+  const link = `${basis()}/werkgever/horeca?tab=bestellingen`;
+  return bericht(
+    z,
+    z.email,
+    `Nieuwe online ${soort} ${b.nummer}: bevestig de tijd`,
+    `Er is online besteld. Bevestig de tijd op het bord, dan ziet de klant het meteen.\n\n${regels.join("\n")}\n\nNaar het bord: ${link}`,
+    omlijsting(z, `Nieuwe online ${soort}`, `${alinea("Bevestig de tijd op het bord, dan ziet de klant het meteen.")}${regels.map((x) => alinea(esc(x))).join("")}${knop(z, link, "Naar het bord")}`),
+  );
+}
+
 export async function verstuur(m: MailInput | null): Promise<boolean> {
   if (!m || !m.to) return false;
   try {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { kolomVan } from "@/lib/horeca/bord";
 import { foutVan, stuur } from "@/components/rijschool/api";
 import { Melding, Veld } from "@/components/rijschool/ui";
 import { STATUS_LABEL, VOLGENDE, VOLGENDE_KNOP, isOpen, regelsVoor, type BestelRegel, type BestelStatus } from "@/lib/horeca/bestellen";
@@ -51,6 +52,27 @@ interface Bestelling {
 
 const isLevering = (b: Bestelling) => b.soort === "afhalen" || b.soort === "bezorgen";
 
+/** Een kort piepje (Web Audio, geen bestand). Mag de browser nog geen geluid maken, dan gebeurt er niets. */
+function piep() {
+  try {
+    const w = window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext };
+    const AC = w.AudioContext ?? w.webkitAudioContext;
+    if (!AC) return;
+    const ctx = new AC();
+    const toon = ctx.createOscillator();
+    const volume = ctx.createGain();
+    toon.frequency.value = 880;
+    volume.gain.value = 0.08;
+    toon.connect(volume);
+    volume.connect(ctx.destination);
+    toon.start();
+    toon.stop(ctx.currentTime + 0.25);
+    toon.onended = () => void ctx.close();
+  } catch {
+    // geen geluid: niet erg, de tegel en de titel tonen het ook
+  }
+}
+
 const KOLOMMEN: BestelStatus[] = ["NIEUW", "IN_BEREIDING", "KLAAR"];
 const minutenGeleden = (iso: string, nu: number) => Math.max(0, Math.round((nu - Date.parse(iso)) / 60000));
 
@@ -65,15 +87,31 @@ export function BestellingenTab({ data, doe }: { data: BeheerData; doe: Doe }) {
   const [gekozen, setGekozen] = useState<string | null>(null);
   const tb = useT().horecaBord;
 
+  // een nieuwe bestelling in "Nieuw" (bijvoorbeeld online): een kort piepje, zoals een bonprinter; niet bij het eerste laden
+  const gezien = useRef<Set<string> | null>(null);
   const laad = useCallback(async () => {
     try {
-      setLijst((await stuur<{ bestellingen: Bestelling[] }>(`${API}?alleen=bestellingen`)).bestellingen);
+      const nieuweLijst = (await stuur<{ bestellingen: Bestelling[] }>(`${API}?alleen=bestellingen`)).bestellingen;
+      const nieuwIds = nieuweLijst.filter((b) => kolomVan(b) === "nieuw").map((b) => b.id);
+      if (gezien.current && nieuwIds.some((id) => !gezien.current?.has(id))) piep();
+      gezien.current = new Set([...(gezien.current ?? []), ...nieuwIds]);
+      setLijst(nieuweLijst);
       setNu(Date.now());
       setFout(null);
     } catch (e) {
       setFout(foutVan(e));
     }
   }, []);
+
+  // het aantal dat op jou wacht in de titel van het tabblad, zoals "(2) Horeca"
+  const wachtend = (lijst ?? []).filter((b) => kolomVan(b) === "nieuw").length;
+  useEffect(() => {
+    const basis = document.title.replace(/^\(\d+\)\s*/, "");
+    document.title = wachtend > 0 ? `(${wachtend}) ${basis}` : basis;
+    return () => {
+      document.title = document.title.replace(/^\(\d+\)\s*/, "");
+    };
+  }, [wachtend]);
   useEffect(() => {
     void laad();
     const t = window.setInterval(() => void laad(), 8000);
