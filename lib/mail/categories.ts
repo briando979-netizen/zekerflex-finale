@@ -49,6 +49,42 @@ export const OPTIONAL_CATEGORIES: MailCategory[] = [
   },
 ];
 
+/**
+ * In welke app de voorkeuren staan (15 nov 2026). De eigenaar wil alles apart voor werkers en bedrijven: een bedrijf zag
+ * "Nieuwe klussen die bij je passen" en "vergeet je uren niet in te dienen", een werker "Zakelijke introductie … je bedrijf".
+ */
+export type MailKant = "werker" | "bedrijf";
+
+/** Categorieën die maar bij één kant horen; de zakelijke introductie is voor wie (nog) geen account heeft, niet voor een app. */
+const ALLEEN_VOOR: Record<string, MailKant | "niet-in-app"> = {
+  "klus-alerts": "werker",
+  "sales-outreach": "niet-in-app",
+};
+
+/** Een omschrijving die past bij wie hem leest; de rest blijft zoals hij is. */
+const OMSCHRIJVING: Record<string, Record<MailKant, string>> = {
+  herinneringen: {
+    werker: "Zachte reminders: je dienst begint morgen, vergeet je uren niet in te dienen, je verificatie is nog niet af.",
+    bedrijf: "Zachte reminders over je account, je diensten en de uren van je krachten.",
+  },
+  reviews: {
+    werker: "Een vraag om een beoordeling achter te laten na een afgeronde dienst.",
+    bedrijf: "Een vraag om een kracht te beoordelen na een afgeronde dienst.",
+  },
+};
+
+/** De categorieën voor de voorkeuren in één app; zonder kant (de openbare afmeldpagina) alle categorieën, zoals altijd. */
+export function categorieenVoor(kant?: MailKant): MailCategory[] {
+  if (!kant) return OPTIONAL_CATEGORIES;
+  return OPTIONAL_CATEGORIES.filter((c) => {
+    const alleen = ALLEEN_VOOR[c.slug];
+    return alleen === undefined || alleen === kant;
+  }).map((c) => {
+    const desc = OMSCHRIJVING[c.slug]?.[kant];
+    return desc ? { ...c, desc } : c;
+  });
+}
+
 const KIND_TO_CATEGORY: Record<string, string> = {
   // optional
   "klus-alert": "klus-alerts",

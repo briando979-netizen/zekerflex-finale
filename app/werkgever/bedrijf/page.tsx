@@ -46,7 +46,7 @@ export default async function WerkgeverBedrijfPage() {
     prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } }),
     getOrgProfileExtra(tenantId),
     reviewSummary("company", tenantId),
-    mailPrefsView(principal.email),
+    mailPrefsView(principal.email, "bedrijf"),
   ]);
 
   return (

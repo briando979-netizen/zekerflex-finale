@@ -51,6 +51,18 @@ export const en: Dict = {
     menuWorkerWorkspace: "Worker workspace",
     orgFallback: "Your organisation",
   },
+  verwijderen: {
+    titel: "Delete account",
+    sub: "Your personal account is erased. Your company stays.",
+    bedrijfKop: "What happens to your company",
+    punten: [
+      "Your name, email address and phone number are erased and you can no longer log in.",
+      "The company profile, locations, shifts and invoices stay; invoices fall under the legal retention period.",
+      "Your colleagues keep their access. If you are the only administrator, make a colleague an administrator first via Team.",
+      "Want to close the whole company account, including running shifts or invoices? Email info@zekerflex.com and we will sort it out together.",
+    ],
+    jijKop: "What happens to you as a person",
+  },
   assistent: {
     sub: "Knows your shifts, hours and invoices · never acts on its own",
     hoi: "Hi! Ask me about your shifts, candidates, hours, invoices or how ZekerFlex works.",
@@ -264,6 +276,12 @@ export const en: Dict = {
     cAccountS: "Change your name and phone number, or reset your password",
     cDeleteAccountT: "Delete account",
     cDeleteAccountS: "Request deletion of your account and personal data (GDPR art. 17)",
+    cExportT: "Download your data",
+    cExportS: "Everything we keep about you as a person, in one file (GDPR art. 15 and 20)",
+    cPrivacyT: "Privacy",
+    cPrivacyS: "How ZekerFlex handles the data of your company and your workers",
+    cFeedbackT: "Give feedback",
+    cFeedbackS: "Missing something, or is something not working well? Let us know",
   },
   reviews: {
     backToStart: "Your start",

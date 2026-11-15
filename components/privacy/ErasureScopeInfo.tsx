@@ -1,15 +1,10 @@
 import { RETENTION_RULES } from "@/lib/privacy/retention";
 import { erasureScope } from "@/lib/privacy/anonymize";
 import { vulIn } from "@/lib/i18n/vul-in";
+import { ERASURE_NL as NL, type ErasureTeksten } from "@/components/privacy/erasure-texts";
 
-/** De vaste teksten; Nederlands is de standaard (openbare pagina), de werker-app geeft zijn eigen taal mee. */
-export type ErasureTeksten = { wisNu: string; bewaard: string; bewaardTot: string; bewaardVoet: string };
-const NL: ErasureTeksten = {
-  wisNu: "Wordt meteen verwijderd of geanonimiseerd:",
-  bewaard: "Blijft nog even bewaard (wettelijke bewaarplicht):",
-  bewaardTot: "{label} — tot {jaar} jaar, {basis}",
-  bewaardVoet: "Deze gegevens worden niet gekoppeld aan een werkend account: je kunt niet meer inloggen en je naam, e-mailadres en telefoonnummer zijn al verwijderd.",
-};
+/** De vaste teksten (components/privacy/erasure-texts.ts); Nederlands is de standaard, de werker-app geeft zijn eigen taal mee. */
+export type { ErasureTeksten };
 
 const YEARS = (days: number) => Math.round(days / 365);
 

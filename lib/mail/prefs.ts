@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { isOptionalCategory, OPTIONAL_CATEGORIES } from "@/lib/mail/categories";
+import { categorieenVoor, isOptionalCategory, type MailKant } from "@/lib/mail/categories";
 import { kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 
 // ---------------------------------------------------------------------------
@@ -92,8 +92,11 @@ export async function findByToken(token: string): Promise<MailPrefs | null> {
   return rec ? { ...empty(rec.email), ...rec, off: (rec.off ?? []).filter(isOptionalCategory) } : null;
 }
 
-/** Summary for a preferences UI: which optional categories are on. */
-export async function mailPrefsView(email: string): Promise<{
+/**
+ * Summary for a preferences UI: which optional categories are on. `kant`: de app waarin de voorkeuren staan (werker of
+ * bedrijf, lib/mail/categories.ts); zonder kant alle categorieën (de openbare afmeldpagina).
+ */
+export async function mailPrefsView(email: string, kant?: MailKant): Promise<{
   unsubscribedAll: boolean;
   categories: { slug: string; label: string; desc: string; on: boolean }[];
   token: string;
@@ -102,7 +105,7 @@ export async function mailPrefsView(email: string): Promise<{
   return {
     unsubscribedAll: rec.unsubscribedAll,
     token: rec.token,
-    categories: OPTIONAL_CATEGORIES.map((c) => ({
+    categories: categorieenVoor(kant).map((c) => ({
       ...c,
       on: !rec.unsubscribedAll && !rec.off.includes(c.slug),
     })),
