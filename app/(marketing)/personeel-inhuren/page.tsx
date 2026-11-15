@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { ldJson } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { Section, SectionHead, CtaBand } from "@/components/marketing/primitives";
+import { HeroMetFoto } from "@/components/marketing/HeroMetFoto";
+import { sectorFoto } from "@/lib/marketing/fotos";
 import { CITIES } from "@/lib/seo-cities";
 import { SECTORS } from "@/lib/seo-sectors";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
@@ -28,6 +30,7 @@ export default function PersoneelInhurenPage() {
         dangerouslySetInnerHTML={{ __html: ldJson(breadcrumbJsonLd([["Home", "/"], ["Personeel inhuren", "/personeel-inhuren"]])) }}
       />
       <Section>
+        <HeroMetFoto foto={sectorFoto("algemeen", 0)}>
         <SectionHead
           kop="h1"
           eyebrow="Voor bedrijven"
@@ -42,6 +45,7 @@ export default function PersoneelInhurenPage() {
             Hoe het werkt
           </Link>
         </div>
+        </HeroMetFoto>
         <h2 className="mt-14 font-display text-xl font-bold text-ink">Personeel inhuren per stad</h2>
         <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {CITIES.map((c) => (

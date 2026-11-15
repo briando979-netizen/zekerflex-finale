@@ -3,6 +3,8 @@ import { ldJson } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
+import { HeroMetFoto } from "@/components/marketing/HeroMetFoto";
+import { sectorFoto } from "@/lib/marketing/fotos";
 import { CITIES, cityBySlug } from "@/lib/seo-cities";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { klusUrl } from "@/lib/klusconcept/concept";
@@ -79,6 +81,7 @@ export default async function PersoneelInhurenStadPage({ params }: { params: Pro
         }}
       />
       <Section>
+        <HeroMetFoto foto={sectorFoto("algemeen", c.slug)}>
         <SectionHead
           kop="h1"
           eyebrow={`${c.name} · voor bedrijven`}
@@ -93,6 +96,7 @@ export default async function PersoneelInhurenStadPage({ params }: { params: Pro
             Demo aanvragen
           </Link>
         </div>
+        </HeroMetFoto>
         <ul className="mt-12 grid gap-4 sm:grid-cols-3">
           {[
             ["Gematcht op reistijd", `Je klus gaat eerst naar mensen die snel in ${c.name} kunnen zijn — minder no-shows, minder reiskosten.`],

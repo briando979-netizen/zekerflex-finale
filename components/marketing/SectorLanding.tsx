@@ -4,6 +4,8 @@ import { ldJson } from "@/lib/seo/json-ld";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
 import { CITIES, type City } from "@/lib/seo-cities";
 import { SECTORS, type Sector } from "@/lib/seo-sectors";
+import { sectorFoto } from "@/lib/marketing/fotos";
+import { HeroMetFoto } from "@/components/marketing/HeroMetFoto";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { klusUrl } from "@/lib/klusconcept/concept";
 
@@ -98,6 +100,7 @@ export function SectorHub({ sector: s }: { sector: Sector }) {
         }}
       />
       <Section>
+        <HeroMetFoto foto={sectorFoto(s.key, 0)}>
         <SectionHead
           kop="h1"
           eyebrow={`${s.label} · voor bedrijven`}
@@ -113,6 +116,7 @@ export function SectorHub({ sector: s }: { sector: Sector }) {
           </Link>
         </div>
         <ToolHint />
+        </HeroMetFoto>
         <h2 className="mt-14 font-display text-xl font-bold text-ink">{s.label} personeel inhuren per stad</h2>
         <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {CITIES.map((c) => (
@@ -186,6 +190,7 @@ export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City 
         }}
       />
       <Section>
+        <HeroMetFoto foto={sectorFoto(s.key, c.slug)}>
         <SectionHead
           kop="h1"
           eyebrow={`${s.label} ${c.name} · voor bedrijven`}
@@ -201,6 +206,7 @@ export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City 
           </Link>
         </div>
         <ToolHint />
+        </HeroMetFoto>
         <ul className="mt-12 grid gap-4 sm:grid-cols-3">
           {[
             ["Snel bij uitval", `Je klus gaat eerst naar krachten die snel in ${c.name} kunnen zijn — minder no-shows, minder gedoe op de drukte.`],
@@ -288,6 +294,7 @@ export function SectorWorkerHub({ sector: s }: { sector: Sector }) {
         }}
       />
       <Section>
+        <HeroMetFoto foto={sectorFoto(s.key, 1)}>
         <SectionHead
           kop="h1"
           eyebrow={`Werken in de ${low(s)}`}
@@ -303,6 +310,7 @@ export function SectorWorkerHub({ sector: s }: { sector: Sector }) {
           </Link>
         </div>
         <ToolHint worker />
+        </HeroMetFoto>
         <ul className="mt-12 grid gap-4 sm:grid-cols-3">
           {workerBenefits(s, "").map(([t, b]) => (
             <li key={t} className="rounded-2xl border border-hair bg-white p-5">
@@ -364,6 +372,7 @@ export function SectorWorkerCity({ sector: s, city: c }: { sector: Sector; city:
         }}
       />
       <Section>
+        <HeroMetFoto foto={sectorFoto(s.key, c.slug + "w")}>
         <SectionHead
           kop="h1"
           eyebrow={`Werken in de ${low(s)} · ${c.name}`}
@@ -379,6 +388,7 @@ export function SectorWorkerCity({ sector: s, city: c }: { sector: Sector; city:
           </Link>
         </div>
         <ToolHint worker />
+        </HeroMetFoto>
         <ul className="mt-12 grid gap-4 sm:grid-cols-3">
           {workerBenefits(s, ` van ${c.name}`).map(([t, b]) => (
             <li key={t} className="rounded-2xl border border-hair bg-white p-5">

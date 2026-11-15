@@ -3,6 +3,8 @@ import { ldJson } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
+import { HeroMetFoto } from "@/components/marketing/HeroMetFoto";
+import { sectorFoto } from "@/lib/marketing/fotos";
 import { PublicShiftList } from "@/components/marketing/PublicShiftList";
 import { publicOpenShifts } from "@/lib/public-shifts";
 import { CITIES, RADIUS_KM, cityBySlug } from "@/lib/seo-cities";
@@ -69,12 +71,14 @@ export default async function FreelanceWerkStadPage({ params }: { params: Promis
         }}
       />
       <Section>
+        <HeroMetFoto foto={sectorFoto("freelance", c.slug)}>
         <SectionHead
           kop="h1"
           eyebrow={`${c.name} · ${c.province}`}
           title={`Freelance werk in ${c.name}`}
           intro={`${c.local} Op ZekerFlex vind je klussen in ${c.sectors.join(", ")} — reageer direct en kies zelf hoe snel je wordt uitbetaald.`}
         />
+        </HeroMetFoto>
         <h2 className="mt-12 font-display text-xl font-bold text-ink">
           Open klussen in en rond {c.name}
           {shifts.length > 0 ? ` (${shifts.length})` : ""}

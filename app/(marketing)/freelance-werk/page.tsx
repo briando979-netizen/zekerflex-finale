@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { ldJson } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
+import { HeroMetFoto } from "@/components/marketing/HeroMetFoto";
+import { sectorFoto } from "@/lib/marketing/fotos";
 import { PublicShiftList } from "@/components/marketing/PublicShiftList";
 import { publicOpenShifts } from "@/lib/public-shifts";
 import { CITIES } from "@/lib/seo-cities";
@@ -56,12 +58,14 @@ export default async function FreelanceWerkPage() {
         }}
       />
       <Section>
+        <HeroMetFoto foto={sectorFoto("freelance", 0)}>
         <SectionHead
           kop="h1"
           eyebrow="Freelance werk"
           title="Freelance werk in heel Nederland"
           intro="ZekerFlex verbindt freelancers, flexwerkers en uitzendkrachten met bedrijven door het hele land. Slim gematcht op reistijd en vak, en jij kiest per klus hoe snel je wordt uitbetaald."
         />
+        </HeroMetFoto>
         <h2 className="mt-12 font-display text-xl font-bold text-ink">Nieuwste klussen</h2>
         <div className="mt-4">
           <PublicShiftList shifts={shifts} empty="Er staan nu geen open klussen online — maak een account aan en krijg een melding zodra er werk bij je in de buurt is." />

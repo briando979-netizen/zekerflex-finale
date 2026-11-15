@@ -46,3 +46,4 @@ Een foto toevoegen: bestand hier neerzetten, een regel in `fotos.ts` en een rege
 | `zorg-bewoners.jpg` | zorg | Pexels #18429308 — https://www.pexels.com/photo/18429308/ |
 | `zorg-patient.jpg` | zorg | Pexels #18459702 — https://www.pexels.com/photo/18459702/ |
 | `rijschool-achter-het-stuur.jpg` | rijschool | Pexels #6816982 — https://www.pexels.com/photo/6816982/ |
+| `schoonmaak-uniform.jpg` | schoonmaak | Pexels #9462636 — https://www.pexels.com/photo/9462636/ |

@@ -7,7 +7,7 @@
 // bestand bestaat, een JPEG is en in CREDITS.md staat.
 // ---------------------------------------------------------------------------
 
-export type FotoThema = "horeca" | "logistiek" | "bezorgen" | "retail" | "team" | "jong" | "app" | "zorg" | "rijschool";
+export type FotoThema = "horeca" | "logistiek" | "bezorgen" | "retail" | "team" | "jong" | "app" | "zorg" | "rijschool" | "schoonmaak";
 
 export interface Foto {
   /** bestandsnaam zonder map en zonder .jpg */
@@ -35,6 +35,7 @@ export const FOTOTHEMA_NAAM: Record<FotoThema, string> = {
   app: "De app",
   zorg: "Zorg",
   rijschool: "Rijschool",
+  schoonmaak: "Schoonmaak",
 };
 
 export const FOTOS: readonly Foto[] = [
@@ -73,6 +74,7 @@ export const FOTOS: readonly Foto[] = [
   { slug: "app-telefoon-oranje", thema: "app", pexels: 3767404, alt: "Een vrouw in een oranje trui kijkt lachend op haar telefoon tegen een groene muur", trefwoorden: ["app", "telefoon", "melding"] },
   { slug: "app-telefoon-warm", thema: "app", pexels: 30677594, alt: "Een vrouw zwaait vrolijk met haar telefoon tegen een warme achtergrond", trefwoorden: ["app", "telefoon", "uitbetaald"] },
   { slug: "rijschool-achter-het-stuur", thema: "rijschool", pexels: 6816982, alt: "Een jonge vrouw in een rode jas zit lachend achter het stuur van een auto", trefwoorden: ["rijschool", "rijles", "rijbewijs", "auto", "leerling"] },
+  { slug: "schoonmaak-uniform", thema: "schoonmaak", pexels: 9462636, staand: true, alt: "Twee schoonmaaksters in uniform lachen in de camera met een stofzuiger en een dweil", trefwoorden: ["schoonmaak", "schoonmaker", "kantoor", "huishouden"] },
   { slug: "zorg-bewoners", thema: "zorg", pexels: 18429308, alt: "Een zorgmedewerker buigt vriendelijk naar bewoners aan tafel", trefwoorden: ["zorg", "verpleeg", "bewoners"] },
   { slug: "zorg-patient", thema: "zorg", pexels: 18459702, alt: "Een zorgmedewerker praat met een patiënt in een lichte kamer", trefwoorden: ["zorg", "thuiszorg", "patiënt", "verpleeg"] },
 ];
@@ -83,4 +85,25 @@ export function fotoPad(f: Pick<Foto, "slug">): string {
 
 export function fotosVan(thema: FotoThema): Foto[] {
   return FOTOS.filter((f) => f.thema === thema);
+}
+
+/** Welke foto's bij welke sector horen (sleutels uit lib/seo-sectors.ts). */
+const SECTOR_FOTOS: Record<string, readonly string[]> = {
+  horeca: ["horeca-serveerster-lacht", "horeca-gasten-bediening", "horeca-barista-team", "horeca-keuken-plezier", "horeca-terras-bediening", "horeca-keuken-team", "horeca-barista-laptop"],
+  logistiek: ["logistiek-magazijn-klembord", "logistiek-magazijn-doos", "logistiek-magazijn-dozen"],
+  retail: ["retail-winkelhulp", "retail-kassa", "retail-toonbank"],
+  evenementen: ["jong-vieren", "jong-kleurrook", "team-juichen"],
+  schoonmaak: ["schoonmaak-uniform"],
+  // de overzichtspagina's: bedrijven die personeel zoeken, en werkers die klussen zoeken
+  algemeen: ["team-highfive-raam", "horeca-gasten-bediening", "logistiek-magazijn-doos", "retail-winkelhulp", "team-highfive-tafel", "horeca-barista-team", "team-highfive-geel"],
+  freelance: ["jong-vrienden-zon", "app-telefoon-lacht", "jong-vrienden-park", "app-telefoon-oranje", "jong-vrienden-buiten", "app-telefoon-warm"],
+};
+
+/** Een foto voor een sectorpagina; de seed (bijv. de stad) kiest er één uit, zodat stadspagina's niet allemaal dezelfde tonen. */
+export function sectorFoto(sector: string, seed: string | number = 0): Foto | undefined {
+  if (!Object.hasOwn(SECTOR_FOTOS, sector)) return undefined;
+  const lijst = SECTOR_FOTOS[sector] ?? [];
+  if (lijst.length === 0) return undefined;
+  const n = typeof seed === "number" ? seed : [...seed].reduce((a, c) => a + c.charCodeAt(0), 0);
+  return FOTOS.find((f) => f.slug === lijst[n % lijst.length]);
 }
