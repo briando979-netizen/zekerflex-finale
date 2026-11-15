@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState, type TouchEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type TouchEvent } from "react";
 import { canDeleteForAll, canEdit, emojiOnlyCount, fmtBytes, fmtDuration, fmtTime, linkParts, type Msg } from "./shared";
 import { Avatar } from "./Avatar";
-import { IconReply, IconSmiley, IconDots, IconCopy, IconForward, IconPin, IconStar, IconPencil, IconTrash } from "./icons";
+import { IconReply, IconSmiley, IconDots, IconCopy, IconForward, IconPin, IconStar, IconPencil, IconTrash, IconMic, IconPlay, IconPause } from "./icons";
+import { golfPositie, vasteGolf } from "@/lib/chat/spraak";
 import { ActionList, MessageSheet, ReactionRow, type ActionItem } from "./MessageActions";
 import { PollCard } from "./PollCard";
 import { AfspraakCard } from "./AfspraakCard";
@@ -35,110 +36,235 @@ function Ticks({ m }: { m: Msg }) {
 
 const RATES = [1, 1.5, 2] as const;
 
-function VoiceNote({ src, durationSec, transcript, onTranscribe }: { src: string; durationSec?: number; transcript?: string | undefined; onTranscribe?: (() => Promise<boolean>) | undefined }) {
+/**
+ * Een spraakbericht zoals WhatsApp (15 nov 2026): afspeelknop, de geluidsgolf (tikken of slepen om te spoelen), de foto met een
+ * microfoontje (groen = nog niet beluisterd, blauw = beluisterd) en tijdens het afspelen de snelheid. Er speelt er altijd één
+ * tegelijk, en als hij klaar is speelt het volgende spraakbericht in het gesprek vanzelf door. De golf komt uit het bericht;
+ * oude berichten (zonder golf) krijgen een vaste vorm (lib/chat/spraak.ts).
+ */
+function VoiceNote({
+  id,
+  src,
+  durationSec,
+  golf,
+  transcript,
+  onTranscribe,
+  mine,
+  afzender,
+  beluisterd,
+  onAfgespeeld,
+}: {
+  id: string;
+  src: string;
+  durationSec?: number;
+  golf?: number[] | undefined;
+  transcript?: string | undefined;
+  onTranscribe?: (() => Promise<boolean>) | undefined;
+  mine: boolean;
+  afzender: { userId: string; name: string; role: string; avatars: Record<string, string> };
+  /** van mij: de ander heeft hem afgespeeld; van een ander: ik heb hem afgespeeld */
+  beluisterd: boolean;
+  /** een spraakbericht van een ander voor het eerst afgespeeld (de afzender krijgt de blauwe microfoon) */
+  onAfgespeeld?: (() => void) | undefined;
+}) {
   const t = useChatTeksten().bubble;
   // uitschrijven (zoals WhatsApp): op verzoek, met onze eigen Whisper; de tekst komt in het bericht
   const [schrijft, setSchrijft] = useState<"bezig" | "mislukt" | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   const [playing, setPlaying] = useState(false);
   const [pos, setPos] = useState(0);
   const [dur, setDur] = useState(durationSec ?? 0);
   const [rate, setRate] = useState<(typeof RATES)[number]>(1);
+  const rateRef = useRef<(typeof RATES)[number]>(1);
+  const gemeld = useRef(beluisterd);
+  const [lokaalBeluisterd, setLokaalBeluisterd] = useState(false);
+  const staafjes = useMemo(() => (golf && golf.length ? golf : vasteGolf(id)), [golf, id]);
+  const isBeluisterd = beluisterd || lokaalBeluisterd;
+
+  const start = () => {
+    const a = audioRef.current;
+    if (!a) return;
+    a.playbackRate = rateRef.current;
+    void a
+      .play()
+      .then(() => {
+        setPlaying(true);
+        // één tegelijk: de andere spraakberichten stoppen
+        window.dispatchEvent(new CustomEvent("zf:spraak-speelt", { detail: id }));
+        if (!mine) setLokaalBeluisterd(true);
+        if (!mine && !gemeld.current) {
+          gemeld.current = true;
+          onAfgespeeld?.();
+        }
+      })
+      .catch(() => setPlaying(false));
+  };
   const toggle = () => {
     const a = audioRef.current;
     if (!a) return;
-    if (a.paused) {
-      a.playbackRate = rate;
-      void a.play();
-      setPlaying(true);
-    } else {
+    if (a.paused) start();
+    else {
       a.pause();
       setPlaying(false);
     }
   };
+  // het volgende bericht in het gesprek, als dat ook een spraakbericht is, speelt vanzelf door (zoals WhatsApp)
+  const volgende = () => {
+    const bericht = rootRef.current?.closest('[id^="ip-msg-"]');
+    const v = bericht?.nextElementSibling?.querySelector<HTMLElement>("[data-spraak-id]");
+    const vid = v?.dataset.spraakId;
+    if (vid) window.dispatchEvent(new CustomEvent("zf:spraak-speel", { detail: vid }));
+  };
+
+  useEffect(() => {
+    const elders = (e: Event) => {
+      if ((e as CustomEvent<string>).detail === id) return;
+      if (audioRef.current && !audioRef.current.paused) audioRef.current.pause();
+      setPlaying(false);
+    };
+    const speel = (e: Event) => {
+      if ((e as CustomEvent<string>).detail === id) start();
+    };
+    window.addEventListener("zf:spraak-speelt", elders);
+    window.addEventListener("zf:spraak-speel", speel);
+    return () => {
+      window.removeEventListener("zf:spraak-speelt", elders);
+      window.removeEventListener("zf:spraak-speel", speel);
+    };
+    // start leest alleen refs en de vaste id
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
   const seek = (fraction: number) => {
     const a = audioRef.current;
     if (!a || !dur) return;
     a.currentTime = Math.max(0, Math.min(dur, fraction * dur));
     setPos(a.currentTime);
   };
-  const pct = dur ? Math.min(100, (pos / dur) * 100) : 0;
+  const sleep = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    seek(golfPositie(e.clientX, r.left, r.width));
+  };
+  const deel = dur ? Math.min(1, pos / dur) : 0;
+  // groen = nog niet beluisterd (zoals WhatsApp), blauw = beluisterd; bij mijn eigen bericht grijs tot de ander hem afspeelde
+  const kleur = isBeluisterd ? "bg-sky-500" : mine ? "bg-neutralx-400" : "bg-[#00a884]";
+  const heeftFoto = Boolean(afzender.avatars[afzender.userId]);
+
   return (
-    <div className="min-w-[13rem]">
-    <div className="flex items-center gap-2.5">
-      <button
-        type="button"
-        onClick={toggle}
-        className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full bg-brand-500 text-white"
-        aria-label={playing ? t.pause : t.play}
-      >
-        {playing ? "❚❚" : "▶"}
-      </button>
-      <div className="min-w-0 flex-1">
-        <div
-          className="relative h-1.5 cursor-pointer rounded-full bg-black/10"
-          onClick={(e) => {
-            const r = e.currentTarget.getBoundingClientRect();
-            seek((e.clientX - r.left) / r.width);
-          }}
-          role="slider"
-          aria-label={t.voicePosition}
-          aria-valuemin={0}
-          aria-valuemax={Math.round(dur)}
-          aria-valuenow={Math.round(pos)}
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "ArrowRight") seek((pos + 5) / (dur || 1));
-            if (e.key === "ArrowLeft") seek((pos - 5) / (dur || 1));
-          }}
+    <div ref={rootRef} data-spraak-id={id} className="min-w-[14.5rem] max-w-[20rem]">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={toggle}
+          className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full text-neutralx-600 hover:bg-black/5"
+          aria-label={playing ? t.pause : t.play}
         >
-          <div className="h-full rounded-full bg-brand-500" style={{ width: `${pct}%` }} />
-          <span className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-500" style={{ left: `${pct}%` }} aria-hidden />
+          {playing ? <IconPause className="h-6 w-6" /> : <IconPlay className="h-6 w-6" />}
+        </button>
+        <div className="min-w-0 flex-1">
+          <div
+            className="relative flex h-8 cursor-pointer touch-none items-center justify-between gap-[1.5px] text-neutralx-600"
+            onPointerDown={(e) => {
+              e.currentTarget.setPointerCapture(e.pointerId);
+              sleep(e);
+            }}
+            onPointerMove={(e) => {
+              if (e.buttons) sleep(e);
+            }}
+            role="slider"
+            aria-label={t.voicePosition}
+            aria-valuemin={0}
+            aria-valuemax={Math.round(dur)}
+            aria-valuenow={Math.round(pos)}
+            aria-valuetext={fmtDuration(pos)}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowRight") seek((pos + 5) / (dur || 1));
+              if (e.key === "ArrowLeft") seek((pos - 5) / (dur || 1));
+            }}
+          >
+            {staafjes.map((n, i) => (
+              <span
+                key={i}
+                aria-hidden
+                // de staafjes volgen de tekstkleur (text-neutralx-600 heeft een regel voor de donkere modus); nog te spelen = doorzichtiger
+                className={`min-w-[1.5px] max-w-[3px] flex-1 rounded-full ${(i + 0.5) / staafjes.length <= deel ? (isBeluisterd ? "bg-sky-500" : "bg-current") : "bg-current opacity-35"}`}
+                style={{ height: `${Math.max(14, Math.round((n / 31) * 100))}%` }}
+              />
+            ))}
+            <span
+              aria-hidden
+              className={`pointer-events-none absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full ${kleur}`}
+              style={{ left: `${deel * 100}%` }}
+            />
+          </div>
+          <span className="block text-[11px] text-neutralx-500">{playing || pos > 0 ? fmtDuration(pos) : dur ? fmtDuration(dur) : t.voiceLabel}</span>
         </div>
-        <span className="mt-1 block text-[11px] text-neutralx-500">{playing || pos > 0 ? fmtDuration(pos) : dur ? fmtDuration(dur) : t.voiceLabel}</span>
+        {playing ? (
+          <button
+            type="button"
+            onClick={() => {
+              const next = RATES[(RATES.indexOf(rate) + 1) % RATES.length]!;
+              setRate(next);
+              rateRef.current = next;
+              if (audioRef.current) audioRef.current.playbackRate = next;
+            }}
+            className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-full bg-black/[0.08] text-xs font-semibold text-neutralx-700"
+            aria-label={vulIn(t.playbackRate, { snelheid: rate })}
+          >
+            {rate}×
+          </button>
+        ) : (
+          // de foto van wie het insprak, met het microfoontje: groen = nog niet beluisterd, blauw = beluisterd
+          <span className="relative flex-shrink-0">
+            {heeftFoto ? (
+              <Avatar userId={afzender.userId} name={afzender.name} role={afzender.role} avatars={afzender.avatars} size={44} />
+            ) : (
+              <span className="grid h-11 w-11 place-items-center rounded-full bg-black/[0.08] text-neutralx-500">
+                <IconMic className="h-5 w-5" />
+              </span>
+            )}
+            <span
+              role="img"
+              aria-label={isBeluisterd ? t.beluisterd : t.nietBeluisterd}
+              className={`absolute -bottom-0.5 -left-1 grid h-5 w-5 place-items-center rounded-full border-2 border-white text-white ${isBeluisterd ? "bg-sky-500" : mine ? "bg-neutralx-400" : "bg-[#00a884]"}`}
+            >
+              <IconMic className="h-3 w-3" />
+            </span>
+          </span>
+        )}
+        <audio
+          ref={audioRef}
+          src={src}
+          preload="none"
+          onTimeUpdate={(e) => setPos(e.currentTarget.currentTime)}
+          onLoadedMetadata={(e) => {
+            const d = e.currentTarget.duration;
+            if (Number.isFinite(d) && d > 0) setDur(d);
+          }}
+          onEnded={() => {
+            setPlaying(false);
+            setPos(0);
+            volgende();
+          }}
+        />
       </div>
-      <button
-        type="button"
-        onClick={() => {
-          const next = RATES[(RATES.indexOf(rate) + 1) % RATES.length]!;
-          setRate(next);
-          if (audioRef.current) audioRef.current.playbackRate = next;
-        }}
-        className="flex-shrink-0 rounded-full bg-black/[0.06] px-1.5 py-0.5 text-[11px] font-semibold text-neutralx-600"
-        aria-label={vulIn(t.playbackRate, { snelheid: rate })}
-      >
-        {rate}×
-      </button>
-      <audio
-        ref={audioRef}
-        src={src}
-        preload="none"
-        onTimeUpdate={(e) => setPos(e.currentTarget.currentTime)}
-        onLoadedMetadata={(e) => {
-          const d = e.currentTarget.duration;
-          if (Number.isFinite(d) && d > 0) setDur(d);
-        }}
-        onEnded={() => {
-          setPlaying(false);
-          setPos(0);
-        }}
-      />
-    </div>
-    {transcript !== undefined ? (
-      <p className="mt-1.5 whitespace-pre-wrap break-words text-[0.85em] italic text-neutralx-600">{transcript || t.geenSpraak}</p>
-    ) : onTranscribe ? (
-      <button
-        type="button"
-        disabled={schrijft === "bezig"}
-        onClick={async () => {
-          setSchrijft("bezig");
-          setSchrijft((await onTranscribe()) ? null : "mislukt");
-        }}
-        className="mt-1 text-[11px] font-semibold text-brand-600 underline-offset-2 hover:underline disabled:opacity-60"
-      >
-        {schrijft === "bezig" ? t.uitschrijvenBezig : schrijft === "mislukt" ? t.uitschrijvenMislukt : t.uitschrijven}
-      </button>
-    ) : null}
+      {transcript !== undefined ? (
+        <p className="mt-1.5 whitespace-pre-wrap break-words text-[0.85em] italic text-neutralx-600">{transcript || t.geenSpraak}</p>
+      ) : onTranscribe ? (
+        <button
+          type="button"
+          disabled={schrijft === "bezig"}
+          onClick={async () => {
+            setSchrijft("bezig");
+            setSchrijft((await onTranscribe()) ? null : "mislukt");
+          }}
+          className="mt-1 text-[11px] font-semibold text-brand-600 underline-offset-2 hover:underline disabled:opacity-60"
+        >
+          {schrijft === "bezig" ? t.uitschrijvenBezig : schrijft === "mislukt" ? t.uitschrijvenMislukt : t.uitschrijven}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -725,10 +851,25 @@ export function MessageBubble({
 
             {m.kind === "voice" && mediaUrl && (
               <VoiceNote
+                id={m.id}
                 src={mediaUrl}
                 {...(m.attachment?.durationSec != null ? { durationSec: m.attachment.durationSec } : {})}
+                golf={m.attachment?.golf}
                 transcript={m.transcript}
                 onTranscribe={onTranscribe && !m.pending ? () => onTranscribe(m) : undefined}
+                mine={mine}
+                afzender={{ userId: m.from, name: mine ? "" : senderName ?? "", role: senderRole ?? "freelancer", avatars }}
+                beluisterd={Boolean(mine ? m.beluisterd : m.doorMijBeluisterd)}
+                onAfgespeeld={
+                  !mine && !m.pending && !m.doorMijBeluisterd
+                    ? () =>
+                        void fetch(`/api/inbox/${threadId}/afgespeeld`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ messageId: m.id }),
+                        }).catch(() => undefined)
+                    : undefined
+                }
               />
             )}
 

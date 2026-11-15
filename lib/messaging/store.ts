@@ -41,6 +41,8 @@ export interface MessageAttachment {
   sizeBytes: number;
   /** voice note length, seconds */
   durationSec?: number;
+  /** spraakbericht: de geluidsgolf, 48 staafjes van 0..31 (lib/chat/spraak.ts); ontbreekt bij berichten van vóór 15 nov 2026 */
+  golf?: number[];
 }
 
 export interface MessageLocation {
@@ -91,6 +93,8 @@ export interface ChatMessage {
   mentions?: string[];
   /** kind "voice": de uitgeschreven tekst (eigen Whisper, op verzoek); "" = geen spraak gehoord */
   transcript?: string;
+  /** kind "voice": wie het bericht heeft afgespeeld (userIds, nooit de afzender); de client krijgt alleen beluisterd/doorMijBeluisterd */
+  afgespeeld?: string[];
   /** voorbeeld van de eerste link (titel, omschrijving, site; lib/messaging/link-voorbeeld.ts) */
   linkVoorbeeld?: LinkVoorbeeld;
   /** kind "afspraak": tijd, plek en wie komt (lib/messaging/afspraak.ts); de titel staat in text */
@@ -397,6 +401,23 @@ export async function setTranscript(threadId: string, messageId: string, text: s
   const m = idx === -1 ? null : list[idx]!;
   if (!m || m.kind !== "voice" || m.deleted) return null;
   const updated: ChatMessage = { ...m, transcript: text.trim().slice(0, 4000) };
+  list[idx] = updated;
+  await kvSet(key, bewaarLijst(list));
+  return updated;
+}
+
+/**
+ * Vink een spraakbericht af als afgespeeld door deze gebruiker (de blauwe microfoon bij WhatsApp). Alleen een spraakbericht van
+ * een ander dat er nog is; twee keer afspelen telt één keer. Geeft het bericht terug, of null als er niets te doen was.
+ */
+export async function markeerAfgespeeld(threadId: string, messageId: string, userId: string): Promise<ChatMessage | null> {
+  const key = messagesKey(await resolveThreadId(threadId));
+  const list = (await kvGet<ChatMessage[]>(key)) ?? [];
+  const idx = list.findIndex((m) => m.id === messageId);
+  const m = idx === -1 ? null : list[idx]!;
+  if (!m || m.kind !== "voice" || m.deleted || m.from === userId) return null;
+  if ((m.afgespeeld ?? []).includes(userId)) return m;
+  const updated: ChatMessage = { ...m, afgespeeld: [...(m.afgespeeld ?? []), userId] };
   list[idx] = updated;
   await kvSet(key, bewaarLijst(list));
   return updated;

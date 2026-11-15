@@ -26,6 +26,8 @@ export interface Attachment {
   mimeType: string;
   sizeBytes: number;
   durationSec?: number;
+  /** spraakbericht: de geluidsgolf (lib/chat/spraak.ts) */
+  golf?: number[];
 }
 
 export interface CallInfo {
@@ -60,6 +62,10 @@ export interface Msg {
   mentions?: string[];
   /** spraakbericht: de uitgeschreven tekst; "" = geen spraak gehoord */
   transcript?: string;
+  /** spraakbericht van mij: de ander heeft het afgespeeld (de blauwe microfoon) */
+  beluisterd?: boolean;
+  /** spraakbericht van een ander: ik heb het al afgespeeld */
+  doorMijBeluisterd?: boolean;
   /** voorbeeld van de eerste link (zonder afbeelding) */
   linkVoorbeeld?: { url: string; host: string; titel: string; omschrijving?: string };
   /** een gedeeld contact */

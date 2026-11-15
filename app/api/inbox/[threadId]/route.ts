@@ -1,5 +1,6 @@
 import { after, NextResponse } from "next/server";
 import { z } from "zod";
+import { schoneGolf } from "@/lib/chat/spraak";
 import { requirePrincipal } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
 import {
@@ -87,8 +88,15 @@ export async function GET(req: Request, props: { params: Promise<{ threadId: str
     const privacy = await chatPrivacy([...ids, p.userId]);
     for (const id of privacy.hideOnline) if (id !== p.userId && presence[id]) presence[id] = { online: false, lastSeen: null };
 
-    const berichten = messages.map((m) => ({
+    const berichten = messages.map(({ afgespeeld, ...m }) => ({
       ...m,
+      // spraakbericht afgespeeld (de blauwe microfoon): dezelfde regel als leesbevestigingen; wie ze uit heeft, ziet en geeft ze niet
+      ...(m.kind === "voice"
+        ? {
+            beluisterd: !privacy.noReceipts.has(p.userId) && (afgespeeld ?? []).some((uid) => uid !== m.from && !privacy.noReceipts.has(uid)),
+            doorMijBeluisterd: (afgespeeld ?? []).includes(p.userId),
+          }
+        : {}),
       // leesbevestigingen: off for me → I see none; others with them off don't count
       readByOthers:
         !privacy.noReceipts.has(p.userId) &&
@@ -153,6 +161,8 @@ const sendSchema = z.object({
       mimeType: z.string().min(1).max(120),
       sizeBytes: z.number().int().nonnegative(),
       durationSec: z.number().nonnegative().optional(),
+      // spraakbericht: de geluidsgolf (lib/chat/spraak.ts), 48 staafjes van 0..31
+      golf: z.array(z.number().int().min(0).max(31)).max(64).optional(),
     })
     .optional(),
   location: z
@@ -266,6 +276,7 @@ export async function POST(request: Request, props: { params: Promise<{ threadId
         mimeType: own.mimeType,
         sizeBytes: own.sizeBytes,
         ...(input.attachment.durationSec != null ? { durationSec: input.attachment.durationSec } : {}),
+        ...(input.kind === "voice" && schoneGolf(input.attachment.golf) ? { golf: schoneGolf(input.attachment.golf)! } : {}),
       };
     }
     if (input.location) {
