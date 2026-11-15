@@ -18,7 +18,12 @@ export default function AppPage() {
         </h1>
       </div>
       <AppDownload standalone />
-      <div className="pb-8" />
+      {/* 15 nov 2026: een eigen app per doelgroep (lib/apps/catalogus.ts) */}
+      <div className="shell pb-10">
+        <a href="/apps" className="inline-flex items-center gap-2 text-sm font-semibold text-brand-mint hover:underline">
+          Liever een eigen app voor je bedrijf, je horecazaak, je rijschool of je webshop? Bekijk alle apps →
+        </a>
+      </div>
     </div>
   );
 }
