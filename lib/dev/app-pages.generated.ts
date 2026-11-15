@@ -40,6 +40,8 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/monteur/[code]","file":"app/monteur/[code]/page.tsx","area":"Account & overig","dynamic":true},
   {"route":"/offerte/[token]","file":"app/offerte/[token]/page.tsx","area":"Account & overig","dynamic":true},
   {"route":"/os","file":"app/os/page.tsx","area":"Account & overig","dynamic":false},
+  {"route":"/personeel","file":"app/personeel/page.tsx","area":"Account & overig","dynamic":false},
+  {"route":"/personeel/uitnodiging","file":"app/personeel/uitnodiging/page.tsx","area":"Account & overig","dynamic":false},
   {"route":"/register","file":"app/register/page.tsx","area":"Account & overig","dynamic":false},
   {"route":"/review/[token]","file":"app/review/[token]/page.tsx","area":"Account & overig","dynamic":true},
   {"route":"/rijschool/[slug]","file":"app/rijschool/[slug]/(site)/page.tsx","area":"Account & overig","dynamic":true},
