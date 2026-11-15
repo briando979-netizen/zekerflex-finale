@@ -8,7 +8,7 @@ import { golfHoogtes, golfPositie, vasteGolf } from "@/lib/chat/spraak";
 import { ActionList, MessageSheet, ReactionRow, type ActionItem } from "./MessageActions";
 import { PollCard } from "./PollCard";
 import { AfspraakCard } from "./AfspraakCard";
-import { KaartVoorbeeld } from "./KaartVoorbeeld";
+import { AfstandRegel, LocatieKaartje } from "./LocatieAfstand";
 import { LiveLocatieKaart } from "./LiveLocatieKaart";
 import { inNederland } from "@/lib/kaart/voorbeeld";
 import { isSticker, stickerSrc } from "@/lib/messaging/stickers";
@@ -939,6 +939,7 @@ export function MessageBubble({
             )}
 
             {m.kind === "location" && m.location && !m.location.live && (
+              <>
               <a
                 href={`https://www.openstreetmap.org/?mlat=${m.location.lat}&mlon=${m.location.lng}#map=16/${m.location.lat}/${m.location.lng}`}
                 target="_blank"
@@ -946,7 +947,7 @@ export function MessageBubble({
                 className={inNederland(m.location.lat, m.location.lng) ? "block space-y-2 rounded-lg bg-black/[0.04] px-2.5 py-2 hover:bg-black/[0.07]" : "flex items-center gap-2.5 rounded-lg bg-black/[0.04] px-2.5 py-2 hover:bg-black/[0.07]"}
               >
                 {inNederland(m.location.lat, m.location.lng) ? (
-                  <KaartVoorbeeld lat={m.location.lat} lng={m.location.lng} />
+                  <LocatieKaartje plek={m.location} mine={mine} />
                 ) : (
                   <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg bg-brand-500 text-white">📍</span>
                 )}
@@ -957,6 +958,9 @@ export function MessageBubble({
                   </span>
                 </span>
               </a>
+              {/* hoe ver is dit van jou (zoals WhatsApp); buiten de link, want het kan een knop zijn */}
+              {!mine && <AfstandRegel plek={m.location} />}
+              </>
             )}
 
             {m.kind === "sticker" && isSticker(m.sticker) && (

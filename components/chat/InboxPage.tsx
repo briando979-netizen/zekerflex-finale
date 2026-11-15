@@ -45,7 +45,8 @@ import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { allDrafts, DRAFT_EVENT } from "./drafts";
 import { maakPeiling, sluitPeiling, stem } from "@/lib/messaging/poll";
 import { annuleerAfspraak, maakAfspraak, zetAntwoord, type Antwoord } from "@/lib/messaging/afspraak";
-import { startLive, type Plek } from "@/lib/messaging/live-locatie";
+import { isLiveActief, startLive, type Plek } from "@/lib/messaging/live-locatie";
+import { AfstandProvider } from "./AfstandContext";
 import { useLiveLocatieZender } from "./live-locatie-zender";
 import { GeplandBalk } from "./GeplandBalk";
 import { StatusRij } from "./StatusRij";
@@ -1585,6 +1586,7 @@ function InboxPageInner({
               }
             >
               <div ref={contentRef} className="mx-auto max-w-3xl space-y-1">
+                <AfstandProvider mijnLive={mijnLivePlek(messages, me?.userId)} nodig={Boolean(me && messages.some((x) => x.kind === "location" && x.location && x.from !== me.userId))}>
                 {messages.map((m, i) => {
                   const mine = Boolean(me && m.from === me.userId);
                   const prev = messages[i - 1];
@@ -1663,6 +1665,7 @@ function InboxPageInner({
                     </div>
                   );
                 })}
+                </AfstandProvider>
                 {typing && (
                   <div className="flex justify-start pt-1">
                     <div className="rounded-2xl rounded-tl-none bg-white px-3 py-2.5 shadow-sm" aria-label={ib.aanHetTypen}>
@@ -1915,4 +1918,14 @@ function InboxPageInner({
 
 function Dot({ d = "0s" }: { d?: string }) {
   return <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-neutralx-400" style={{ animationDelay: d }} />;
+}
+
+/** Jouw lopende live-deling in dit gesprek (de nieuwste), voor de afstand bij een locatie van een ander (components/chat/AfstandContext.tsx). */
+function mijnLivePlek(berichten: readonly { from: string; kind?: string | undefined; location?: Plek | undefined }[], mijnId: string | undefined): { lat: number; lng: number } | null {
+  if (!mijnId) return null;
+  for (let i = berichten.length - 1; i >= 0; i--) {
+    const b = berichten[i];
+    if (b && b.from === mijnId && b.kind === "location" && b.location?.live && isLiveActief(b.location.live)) return { lat: b.location.lat, lng: b.location.lng };
+  }
+  return null;
 }
