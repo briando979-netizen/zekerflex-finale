@@ -4,7 +4,8 @@ import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { cached, withCircuitBreaker } from "@/lib/redis";
 import { kvGet, kvSet } from "@/lib/storage/kv";
-import { limietUitAntwoord, tegoedUitAntwoord } from "@/lib/kvk/tegoed";
+import { kvkLimietVan, limietUitAntwoord, tegoedUitAntwoord } from "@/lib/kvk/tegoed";
+import { lookupOpenData } from "@/lib/integrations/kvk-open-data";
 import { bewaarKvkTegoed } from "@/lib/kvk/tegoed-opslag";
 import { registerVers, type RegisterUitkomst } from "@/lib/kvk/register-cache";
 import type {
@@ -271,6 +272,16 @@ export async function lookupCompany(
     return profiel;
   } catch (err) {
     if (err instanceof AppError && err.status === 404) await bewaarRegister(kvkNumber, enrich, { nietGevonden: true });
+    // het KVKBase-tegoed is op (of de minuutlimiet): de gratis open dataset van KVK kan een BV of NV nog wel controleren
+    // (bestaat, actief, geen insolventie). Een eenmanszaak staat er niet in: dan blijft het bij de wacht van de herkansing.
+    // Bewust niet in het register geschreven: het profiel heeft geen naam en adres (lib/integrations/kvk-open-data.ts).
+    if (kvkLimietVan(err)) {
+      const gratis = await lookupOpenData(kvkNumber);
+      if (gratis) {
+        logger.info("kvk: gecontroleerd met de gratis open dataset van KVK", { rechtsvorm: gratis.legalForm });
+        return gratis;
+      }
+    }
     throw err;
   }
 }

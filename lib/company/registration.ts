@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { AppError } from "@/lib/errors";
 import { lookupCompany, validateVat } from "@/lib/integrations/kvkbase";
+import { isOpenDataProfiel } from "@/lib/integrations/kvk-open-data";
 import { onthoudProfiel } from "@/lib/kvk/index-opslag";
 import type { CompanyProfile } from "@/types/company";
 
@@ -135,10 +136,13 @@ async function upsertRegistration(
     fetchedAt: new Date(),
   } satisfies Prisma.CompanyRegistrationUncheckedUpdateInput;
 
+  // Een beperkt profiel uit de gratis open dataset (zonder naam, adres en btw) werkt alleen de status bij: een eerder
+  // volledig antwoord van KVKBase blijft zo staan.
+  const beperkt = isOpenDataProfiel(profile);
   const row = await tx.companyRegistration.upsert({
     where: { kvkNumber: profile.kvkNumber },
-    create: { kvkNumber: profile.kvkNumber, ...data },
-    update: data,
+    create: { kvkNumber: profile.kvkNumber, ...data, ...(beperkt ? { source: "KVK_OPEN_DATA" } : {}) },
+    update: beperkt ? { status: data.status, isActive: data.isActive, insolvent: data.insolvent, fetchedAt: data.fetchedAt } : data,
   });
   return row.id;
 }

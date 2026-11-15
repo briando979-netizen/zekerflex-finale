@@ -128,7 +128,7 @@ export const GRATIS_DIENSTEN: GratisDienst[] = [
   },
   {
     id: "handelsregister",
-    hosts: ["api.kvkbase.nl"],
+    hosts: ["api.kvkbase.nl", "opendata.kvk.nl"],
     naam: "Handelsregister (KVK-gegevens)",
     waarvoor: "Het KVK-nummer van een werkgever controleren; vroeger ook bedrijven zoeken voor de buitendienst",
     nu: "Bedrijf zoeken bij het aanmelden: eerst onze eigen bedrijvenindex (elk bedrijf dat we ooit vonden, ook uit KVKBase, bestaande organisaties en leads), daarna KVKBase zolang er tegoed is, en op verzoek OpenStreetMap voor naam en adres. Controleren van een KVK-nummer gaat nog bij KVKBase, met een tegoed per opvraging: elk antwoord bewaren we 30 dagen, en is het tegoed op, dan wacht de controle en probeert een cron het later opnieuw. Zoeken voor de buitendienst en de nachtelijke KVK-meting gebruiken het tegoed alleen ruim boven een reserve voor die controles.",
