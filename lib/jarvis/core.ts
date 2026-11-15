@@ -1,3 +1,5 @@
+import { gratisAan, primeGratis } from "@/lib/ai/gratis";
+import { jarvisBerichten } from "@/lib/jarvis/berichten";
 import { quickIntent } from "@/lib/admin-console/parser";
 import { z } from "zod";
 import type { JarvisEventKind } from "@prisma/client";
@@ -384,17 +386,14 @@ async function runTurn(turnId: string, input: StartTurnInput): Promise<void> {
       const [stateLine, history] = await Promise.all([
         jarvisStateLine().catch(() => ""),
         recentDialogue(input.principal.userId, turnId),
+        primeGratis().catch(() => undefined),
       ]);
       const res = await chat({
         purpose: "jarvis-chat",
         interactief: true,
         model: picked.model,
-        messages: [
-          { role: "system", content: JARVIS_PERSONA },
-          ...(stateLine ? [{ role: "system" as const, content: `LIVE PLATFORMSTATUS: ${stateLine}` }] : []),
-          ...history,
-          { role: "user", content: input.prompt },
-        ],
+        // vaste delen eerst, wat wisselt erna; met "alles gratis" korter (lib/jarvis/berichten.ts)
+        messages: jarvisBerichten({ persona: JARVIS_PERSONA, status: stateLine, voorbeelden: [], geschiedenis: history, vraag: input.prompt, gratis: gratisAan() }),
         temperature: 0.5,
         maxTokens: picked.role === "reasoning" || picked.role === "code" ? 900 : 500,
       });
