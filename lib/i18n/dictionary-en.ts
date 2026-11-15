@@ -51,6 +51,10 @@ export const en: Dict = {
     menuWorkerWorkspace: "Worker workspace",
     orgFallback: "Your organisation",
   },
+  assistent: {
+    sub: "Knows your shifts, hours and invoices · never acts on its own",
+    hoi: "Hi! Ask me about your shifts, candidates, hours, invoices or how ZekerFlex works.",
+  },
   start: {
     eyebrow: "Your start",
     welcomeTitle: "Welcome to ZekerFlex",

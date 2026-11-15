@@ -44,11 +44,13 @@ describe("de app kiest de kant, nooit meer rechten", () => {
 
 describe("het scherm en de route", () => {
   it("elke app geeft zijn kant mee; het bedrijf leest diensten, uren en facturen", () => {
-    expect(bron("app/werkgever/assistent/page.tsx")).toContain('<BrainChat app="werkgever" />');
+    expect(bron("app/werkgever/assistent/page.tsx")).toContain('<BrainChat app="werkgever" kop={{ sub: t.sub, hoi: t.hoi }} />');
     expect(bron("app/dashboard/assistent/page.tsx")).toContain('<BrainChat app="werker" />');
     const chat = bron("components/brain/BrainChat.tsx");
     expect(chat).toContain("`/api/brain?app=${app}`");
-    expect(chat).toContain("Kent je diensten, uren en facturen");
+    // de teksten van het bedrijf staan in de woordenlijst van de werkgeversapp, in het Nederlands en Engels
+    expect(bron("lib/i18n/dictionaries.ts")).toContain("Kent je diensten, uren en facturen");
+    expect(bron("lib/i18n/dictionary-en.ts")).toContain("Knows your shifts, hours and invoices");
     const route = bron("app/api/brain/route.ts");
     expect(route).toContain("roleOf(p, appUit(request))");
     expect(route).toContain("think(p, question, app ? { app } : {})");

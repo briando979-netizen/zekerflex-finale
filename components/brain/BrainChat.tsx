@@ -11,20 +11,18 @@ interface Msg {
   mode?: "model" | "rules";
 }
 
-/** De kop en het welkom per app (15 nov 2026): een bedrijf vraagt naar diensten, uren en facturen, een werker naar klussen. */
-const KOP = {
-  werker: { sub: "Kent je klussen, uren en uitbetalingen · voert zelf niets uit", hoi: "Hoi! Vraag me iets over je klussen, uren, uitbetalingen of hoe ZekerFlex werkt." },
-  werkgever: { sub: "Kent je diensten, uren en facturen · voert zelf niets uit", hoi: "Hoi! Vraag me iets over je diensten, kandidaten, uren, facturen of hoe ZekerFlex werkt." },
-} as const;
-
 /**
  * The ZekerFlex assistant ("brein"): answers from the user's own data and the
  * knowledge base. Read-only — it explains and links to the right screen.
  * `app`: de app waarin hij draait; in de werkgeversapp helpt hij het bedrijf (lib/brain/tools.ts, roleOf). Zonder: op rol.
+ * `kop`: de kop en het welkom; de werkgeversapp geeft die van een bedrijf mee (lib/i18n/dictionaries.ts, assistent).
  */
-export function BrainChat({ onClose, app }: { onClose?: () => void; app?: "werker" | "werkgever" }) {
+export function BrainChat({ onClose, app, kop: kopProp }: { onClose?: () => void; app?: "werker" | "werkgever"; kop?: { sub: string; hoi: string } }) {
   const api = app ? `/api/brain?app=${app}` : "/api/brain";
-  const kop = KOP[app ?? "werker"];
+  const kop = kopProp ?? {
+    sub: "Kent je klussen, uren en uitbetalingen · voert zelf niets uit",
+    hoi: "Hoi! Vraag me iets over je klussen, uren, uitbetalingen of hoe ZekerFlex werkt.",
+  };
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [starters, setStarters] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
