@@ -256,7 +256,7 @@ export function EfactuurPagina({ a, pijlerNaam, pijlerSleutel }: { a: AanbodItem
               Een e-factuur kost je <span className="text-brand-600">geen extra werk</span>
             </h2>
             <p className="mt-5 text-[16px] leading-relaxed text-neutralx-700">
-              Je stelt het één keer in: zet onder <strong>Werkgever → Facturen</strong> het mailadres waarop je boekhoudpakket inkoopfacturen ontvangt. Daarna gaat elke nieuwe factuur er vanzelf heen, als bestand dat je pakket zelf
+              Je stelt het één keer in: zet onder <strong>Werkgever → Facturen</strong> het mailadres waarop je boekhoudpakket inkoopfacturen ontvangt en vink <strong>automatisch versturen</strong> aan. Daarna gaat elke nieuwe factuur er vanzelf heen, als bestand dat je pakket zelf
               inleest. Leverancier, regels, btw en bedrag staan meteen goed.
             </p>
             <h3 className="mt-8 font-display text-xl font-bold text-ink">Welk boekhoudpakket?</h3>

@@ -18,7 +18,7 @@ export const EFACTUUR_STAPPEN = [
 
 export const EFACTUUR_FUNCTIES: { label: string; titel: string; tekst: string; binnenkort?: boolean }[] = [
   { label: "Bij elke factuur", titel: "Een UBL-bestand", tekst: "Volgens de Europese norm EN 16931 (Peppol BIS 3 en de Nederlandse NLCIUS). Hetzelfde bestand dat boekhoudpakketten zelf inlezen." },
-  { label: "Automatisch", titel: "Naar je boekhoudpakket", tekst: "Vul één keer het mailadres in waarop je pakket inkoopfacturen ontvangt. Elke nieuwe factuur gaat er vanzelf heen." },
+  { label: "Automatisch", titel: "Naar je boekhoudpakket", tekst: "Vul één keer het mailadres in waarop je pakket inkoopfacturen ontvangt en zet automatisch versturen aan. Elke nieuwe factuur gaat er vanzelf heen." },
   { label: "Vooraf", titel: "Gecontroleerd", tekst: "Een e-factuur met een fout wordt door een pakket geweigerd. Daarom controleren we hem eerst op de regels die pakketten gebruiken." },
   { label: "Altijd", titel: "Te downloaden", tekst: "Bij elke factuur staat de knop UBL: zo heb je het bestand ook zonder mail, bijvoorbeeld voor je boekhouder." },
   { label: "Bijgehouden", titel: "Per factuur vastgelegd", tekst: "ZekerFlex legt bij elke factuur vast wat er met de e-factuur gebeurde: gemaakt, gecontroleerd, verstuurd. Lukte versturen niet, dan staat hij klaar om te downloaden." },
@@ -58,7 +58,7 @@ export const EFACTUUR_FAQ: { vraag: string; antwoord: string }[] = [
   {
     vraag: "Wat moet ik instellen?",
     antwoord:
-      "Alleen het mailadres waarop je boekhoudpakket inkoopfacturen ontvangt, onder Werkgever → Facturen. Zonder dat adres werkt het ook: dan download je de e-factuur bij elke factuur met de knop UBL.",
+      "Onder Werkgever → Facturen: het mailadres waarop je boekhoudpakket inkoopfacturen ontvangt, en het vinkje automatisch versturen. Zonder dat adres werkt het ook: dan download je de e-factuur bij elke factuur met de knop UBL.",
   },
   {
     vraag: "Wat kost het?",
