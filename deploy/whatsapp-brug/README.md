@@ -1,4 +1,12 @@
-# WhatsApp-brug voor spoedoproepen
+# WhatsApp-brug
+
+**Sinds 15 nov 2026: je eigen WhatsApp live in Admin → WhatsApp.** Open de pagina, scan de koppelcode met
+WhatsApp op je telefoon (Instellingen → Gekoppelde apparaten → Apparaat koppelen), en je gesprekken komen binnen:
+lezen en beantwoorden zoals in WhatsApp Web. De brug bewaart de laatste 200 berichten per gesprek (300 gesprekken)
+in zijn volume (`/data/gesprekken.json`), niet in de database van de app. Ontkoppelen wist de sessie en de
+gesprekken en geeft een nieuwe code. Doorsturen naar de spoedoproep alleen met `WHATSAPP_BRUG_SPOED=1`.
+
+## Spoedoproepen
 
 Een klein containertje met een **eigen WhatsApp-nummer**, zodat een spoedoproep
 (Werkgever → Dienst → Spoedoproep) ook per WhatsApp bij krachten aankomt en

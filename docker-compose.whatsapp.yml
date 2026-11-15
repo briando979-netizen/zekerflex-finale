@@ -1,10 +1,11 @@
-# WhatsApp-brug voor spoedoproepen (optioneel, zie deploy/whatsapp-brug/README.md).
+# WhatsApp-brug (optioneel, zie deploy/whatsapp-brug/README.md): je eigen WhatsApp live in Admin → WhatsApp
+# (koppelcode, gesprekken) en, met WHATSAPP_BRUG_SPOED=1, de antwoorden op spoedoproepen.
 # Draait naast de gewone stack op het interne netwerk; de app praat ermee via
 # WHATSAPP_BRUG_URL=http://whatsapp-brug:3900 en WHATSAPP_BRUG_TOKEN.
 #
 #   docker compose -f docker-compose.vps.yml -f docker-compose.whatsapp.yml --env-file .env.production up -d --build whatsapp-brug
 #
-# De gewone uitrol (deploy/scripts/vps-update.sh) raakt deze container niet.
+# De gewone uitrol (deploy/scripts/vps-update.sh) bouwt en start hem mee zodra WHATSAPP_BRUG_TOKEN in .env.production staat.
 services:
   whatsapp-brug:
     build: ./deploy/whatsapp-brug
@@ -14,10 +15,18 @@ services:
       BRUG_TOKEN: ${WHATSAPP_BRUG_TOKEN}
       APP_URL: http://app:3000
       PORT: "3900"
+      DATA_DIR: /data
       AUTH_DIR: /data/auth
+      # doorsturen naar de spoedoproep alleen als je dat kiest: met je eigen nummer kan de spoedlogica anders aan
+      # gewone contacten antwoorden
+      BRUG_SPOED: ${WHATSAPP_BRUG_SPOED:-0}
     volumes:
       - whatsapp-auth:/data
     networks: [internal]
+    mem_limit: 384m
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
     # Geen `ports:` — alleen bereikbaar voor de app.
 
 volumes:

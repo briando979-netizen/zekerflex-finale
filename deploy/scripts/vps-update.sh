@@ -99,6 +99,11 @@ for i in 1 2 3; do
     # firewall-bouncer op de host haalt de blokkades bij hem op en hoeft niet mee
     # forgejo: de eigen Git-server (spiegel van GitHub, deploy/forgejo)
     sudo $C up -d app backup coturn freeradius headscale vpn-uitgang metabase outline crowdsec whisper forgejo
+    # de WhatsApp-brug (deploy/whatsapp-brug, eigen compose-bestand): alleen als hij is ingericht (sleutel in
+    # .env.production); bouwen is gecacht en een mislukte build laat de oude draaien
+    if sudo grep -q '^WHATSAPP_BRUG_TOKEN=' .env.production 2>/dev/null; then
+      sudo docker compose -f docker-compose.vps.yml -f docker-compose.whatsapp.yml --env-file .env.production up -d --build whatsapp-brug > /dev/null 2>&1 || echo "whatsapp-brug: bouwen of starten mislukt, de oude blijft"
+    fi
     # de browser-werker (deploy/scraper): eigen image, gecacht; een mislukte build laat de oude draaien
     sudo $C build -q scraper > /dev/null 2>&1 && sudo $C up -d scraper || echo "scraper: image bouwen mislukt, de oude blijft (of hij staat nog uit)"
     # de routeplanner (deploy/route): pas als zijn tegels gebouwd zijn (haal-route.sh); zonder
