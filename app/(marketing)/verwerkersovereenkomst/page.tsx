@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "@/components/marketing/LegalPage";
 import { canonical } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Verwerkersovereenkomst", ...canonical("/verwerkersovereenkomst", { title: "Verwerkersovereenkomst" }) };
+export const metadata: Metadata = {
+  title: "Verwerkersovereenkomst",
+  description: "De verwerkersovereenkomst van ZekerFlex: welke gegevens we in jouw opdracht verwerken, hoe we ze beveiligen, onze subverwerkers en datalekken.",
+  ...canonical("/verwerkersovereenkomst", { title: "Verwerkersovereenkomst" }),
+};
 
 export default function VerwerkersovereenkomstPage() {
   return (

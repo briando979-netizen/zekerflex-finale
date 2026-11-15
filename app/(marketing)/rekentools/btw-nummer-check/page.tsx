@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description:
     "Controleer gratis of een btw-nummer geldig is (alle EU-landen, via VIES) of zoek een KVK-nummer op in het Handelsregister. Direct uitslag, niets wordt bewaard.",
   keywords: ["btw nummer check", "btw nummer controleren", "vies check", "btw id controleren", "kvk nummer controleren", "btw nummer opzoeken", "btw nummer zzp controleren"],
-  ...canonical(PATH, { fileImage: true }),
+  ...canonical(PATH),
 };
 
 const FAQ = [

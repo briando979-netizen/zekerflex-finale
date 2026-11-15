@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { seoBeschrijving, seoSjabloonTitel } from "@/lib/seo-tekst";
 import { ldJson } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -14,8 +15,8 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
   const g = guideBySlug(params.slug);
   if (!g) return { title: "Kennisbank" };
   return {
-    title: g.title,
-    description: g.excerpt,
+    title: seoSjabloonTitel(g.title),
+    description: seoBeschrijving(g.excerpt),
     ...canonical(`/kennis/${g.slug}`),
   };
 }

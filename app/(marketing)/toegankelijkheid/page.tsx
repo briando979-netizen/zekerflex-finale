@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "@/components/marketing/LegalPage";
 import { canonical } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Toegankelijkheid", ...canonical("/toegankelijkheid", { title: "Toegankelijkheid" }) };
+export const metadata: Metadata = {
+  title: "Toegankelijkheid",
+  description: "Hoe toegankelijk de website en apps van ZekerFlex zijn: wat al werkt, welke beperkingen we kennen en hoe je een probleem bij ons meldt.",
+  ...canonical("/toegankelijkheid", { title: "Toegankelijkheid" }),
+};
 
 export default function ToegankelijkheidPage() {
   return (

@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "@/components/marketing/LegalPage";
 import { canonical } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Voorwaarden snelle uitbetaling", ...canonical("/voorwaarden/snelle-uitbetaling", { title: "Voorwaarden snelle uitbetaling" }) };
+export const metadata: Metadata = {
+  title: "Voorwaarden snelle uitbetaling",
+  description: "Wat snelle uitbetaling bij ZekerFlex is, wat het kost, wanneer het kan, welk risico erbij hoort en hoe je akkoord geeft of het weer intrekt.",
+  ...canonical("/voorwaarden/snelle-uitbetaling", { title: "Voorwaarden snelle uitbetaling" }),
+};
 
 // Versie 2026-11 — dezelfde versie als FACTORING_TERMS_VERSION in
 // lib/payouts/fastpay.ts. Wijzig je deze tekst inhoudelijk, verhoog dan de
