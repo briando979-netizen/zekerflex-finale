@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { logoutAction } from "@/lib/auth/actions";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
+import { NOTIFICATIONS_BEDRIJF } from "@/components/app/notifications-texts";
 import { PushSelfHeal } from "@/components/app/PushToggle";
 import { HulpCentrum } from "@/components/app/HulpCentrum";
 import type { HulpTeksten } from "@/lib/hulp/hulpjes";
@@ -365,7 +366,8 @@ export function EmployerShell({
               </Link>
             )}
 
-            <NotificationsBell />
+            {/* de bel van het bedrijf: alleen bedrijfsmeldingen, met tabbladen voor een bedrijf (Diensten, Uren & facturen) */}
+            <NotificationsBell app="werkgever" texts={locale === "en" ? NOTIFICATIONS_BEDRIJF.en : NOTIFICATIONS_BEDRIJF.nl} />
             <PushSelfHeal />
 
             <div ref={userMenuRef} className="relative">

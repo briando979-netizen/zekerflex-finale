@@ -160,7 +160,7 @@ export function FreelancerShell({
               <ISearch />
             </Link>
             {hulp && <HulpCentrum t={hulp} handleidingen={handleidingen} onboarding={onboarding} />}
-            <NotificationsBell texts={ft.meldingen} />
+            <NotificationsBell texts={ft.meldingen} app="werker" />
             <PushSelfHeal />
           </div>
           {/* in de kopbalk (een landmark), niet los onderaan de pagina */}

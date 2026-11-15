@@ -14,6 +14,25 @@ import { BANK_AAN } from "@/lib/app-mode";
 import { afsprakenBelVoor } from "@/lib/afspraken/bel";
 import { vulIn } from "@/lib/i18n/vul-in";
 import { MELDING_NL, type MeldingTeksten } from "@/lib/notifications/feed-teksten";
+import { MELDING_BEDRIJF_NL, type MeldingBedrijfTeksten } from "@/lib/notifications/bedrijf-teksten";
+
+/**
+ * In welke app de bel hangt (15 nov 2026): "werker" (/dashboard) toont alleen de meldingen voor een werker, "werkgever"
+ * (/werkgever) alleen die voor het bedrijf. Wie beide rollen heeft, zag in de bel van het bedrijf ook "Bevestig je komst".
+ * Zonder app (beheer, de oude AppShell): alles, zoals altijd.
+ */
+export type MeldingApp = "werker" | "werkgever";
+
+/** Een melding voor een bedrijf: titel en tekst in de taal van de werkgeversapp, de handtekening uit de Nederlandse versie. */
+function bedrijfMelding(
+  basis: Omit<NotificationItem, "title" | "body" | "sig">,
+  teksten: MeldingBedrijfTeksten,
+  mk: (n: MeldingBedrijfTeksten) => { title: string; body: string },
+): NotificationItem {
+  const nl = mk(MELDING_BEDRIJF_NL);
+  const tekst = teksten === MELDING_BEDRIJF_NL ? nl : mk(teksten);
+  return { ...basis, title: tekst.title, body: tekst.body, sig: notifSignature(basis.id, nl.body) };
+}
 
 // ---------------------------------------------------------------------------
 // Per-account notification feed. Derived, read-only, no storage of its own —
@@ -75,18 +94,34 @@ function groupOf(it: NotificationItem): NonNullable<NotificationItem["group"]> {
 
 /**
  * `teksten`: de zinnen voor een werker in zijn app-taal (alleen de werkersmeldingen en de chatmelding van een werker); zonder
- * teksten Nederlands. Opdrachtgevers en beheer krijgen altijd de Nederlandse meldingen: geef hun geen teksten mee.
+ * teksten Nederlands. `opts.app`: de app waarin de bel hangt (MeldingApp); in de werkgeversapp gelden `teksten` voor de
+ * chatmelding en `opts.bedrijf` voor de meldingen van het bedrijf (zonder: Nederlands). Beheer krijgt altijd Nederlands.
  */
-export async function getNotifications(principal: Principal, teksten: MeldingTeksten = MELDING_NL): Promise<NotificationItem[]> {
+export async function getNotifications(
+  principal: Principal,
+  teksten: MeldingTeksten = MELDING_NL,
+  opts: { app?: MeldingApp; bedrijf?: MeldingBedrijfTeksten } = {},
+): Promise<NotificationItem[]> {
   const out: NotificationItem[] = [];
   const now = Date.now();
   const admin = await isPlatformAdmin(principal.userId);
+  const werkerKant = opts.app !== "werkgever";
+  const bedrijfKant = opts.app !== "werker";
+  const bedrijf = opts.bedrijf ?? MELDING_BEDRIJF_NL;
 
   // ── unread chat (everyone) ────────────────────────────────────────
   try {
     const threads = await listThreadsForUser(principal.userId, admin);
-    // alleen een werker leest de zinnen in zijn taal; een opdrachtgever of beheerder houdt het Nederlands
-    const chatTeksten = hasRole(principal, "FREELANCER") && !admin ? teksten : MELDING_NL;
+    // een werker leest de zinnen in zijn taal, een bedrijf in de taal van de werkgeversapp; beheer houdt het Nederlands
+    const chatTeksten = admin ? MELDING_NL : opts.app === "werkgever" || hasRole(principal, "FREELANCER") ? teksten : MELDING_NL;
+    // de chat opent in de app waarin de bel hangt
+    const chatHref = admin
+      ? "/admin/berichten"
+      : opts.app === "werkgever"
+        ? "/werkgever/berichten"
+        : opts.app === "werker" || hasRole(principal, "FREELANCER")
+          ? "/dashboard/berichten"
+          : "/werkgever/berichten";
     for (const thread of threads.slice(0, 15)) {
       const msgs = await getMessages(thread.id, 100);
       const unread = unreadForUser(thread, msgs, principal.userId);
@@ -97,7 +132,7 @@ export async function getNotifications(principal: Principal, teksten: MeldingTek
             {
               id: `chat:${thread.id}`,
               kind: "chat",
-              href: admin ? "/admin/berichten" : hasRole(principal, "FREELANCER") ? "/dashboard/berichten" : "/werkgever/berichten",
+              href: chatHref,
               at: last.at,
               urgent: false,
             },
@@ -114,7 +149,7 @@ export async function getNotifications(principal: Principal, teksten: MeldingTek
     /* ignore */
   }
 
-  if (hasRole(principal, "FREELANCER")) {
+  if (werkerKant && hasRole(principal, "FREELANCER")) {
     const profile = await prisma.freelancerProfile.findUnique({
       where: { userId: principal.userId },
       select: { id: true },
@@ -231,7 +266,7 @@ export async function getNotifications(principal: Principal, teksten: MeldingTek
     }
   }
 
-  if (hasRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "DISPUTE_MANAGER") && !admin) {
+  if (bedrijfKant && hasRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "DISPUTE_MANAGER") && !admin) {
     const scope = await resolveEmployerScope(principal);
     const bf = scope.branchIds ? { id: { in: scope.branchIds } } : { tenantId: { in: scope.tenantIds } };
     const [toApprove, openShifts, myShifts] = await Promise.all([
@@ -260,49 +295,44 @@ export async function getNotifications(principal: Principal, teksten: MeldingTek
         ? (await listCounterOffers(500)).filter((o) => o.status === "pending" && myShiftIds.has(o.shiftId))
         : [];
     for (const o of pendingOffers) {
-      out.push({
-        id: `emp:offer:${o.id}`,
-        kind: "offer",
-        title: o.proposedRateCents !== o.listedRateCents ? "Nieuw tegenbod" : "Nieuwe reactie",
-        body:
-          o.proposedRateCents !== o.listedRateCents
-            ? `${o.freelancerName} biedt € ${(o.proposedRateCents / 100).toFixed(2)}/u voor ${o.shiftTitle}.`
-            : `${o.freelancerName} wil ${o.shiftTitle} doen. Kies voor de klus begint.`,
-        href: `/werkgever/diensten/${o.shiftId}`,
-        at: o.at,
-        urgent: true,
-      });
+      const tegenbod = o.proposedRateCents !== o.listedRateCents;
+      out.push(
+        bedrijfMelding(
+          { id: `emp:offer:${o.id}`, kind: "offer", href: `/werkgever/diensten/${o.shiftId}`, at: o.at, urgent: true },
+          bedrijf,
+          (n) =>
+            tegenbod
+              ? { title: n.tegenbodTitel, body: vulIn(n.tegenbodBody, { naam: o.freelancerName, tarief: (o.proposedRateCents / 100).toFixed(2), dienst: o.shiftTitle }) }
+              : { title: n.reactieTitel, body: vulIn(n.reactieBody, { naam: o.freelancerName, dienst: o.shiftTitle }) },
+        ),
+      );
     }
     if (toApprove > 0) {
-      out.push({
-        id: "emp:approve",
-        kind: "action",
-        title: `${toApprove} urenbriefje${toApprove === 1 ? "" : "s"} te keuren`,
-        body: "Keur goed zodat je krachten hun uitbetaling in gang kunnen zetten.",
-        href: "/werkgever/uren",
-        at: new Date(now).toISOString(),
-        urgent: toApprove > 3,
-      });
+      out.push(
+        bedrijfMelding(
+          { id: "emp:approve", kind: "action", href: "/werkgever/uren", at: new Date(now).toISOString(), urgent: toApprove > 3 },
+          bedrijf,
+          (n) => ({ title: vulIn(toApprove === 1 ? n.urenEen : n.urenMeer, { n: toApprove }), body: n.urenBody }),
+        ),
+      );
     }
     for (const s of openShifts) {
       const free = s.positions - s._count.assignments;
       const inH = Math.round((s.startsAt.getTime() - now) / 3600_000);
       if (free > 0) {
-        out.push({
-          id: `emp:shift:${s.id}`,
-          kind: "shift",
-          title: "Dienst nog niet vol",
-          body: `${s.title}: ${free} plek(ken) open, start over ${inH} uur.`,
-          href: `/werkgever/diensten/${s.id}`,
-          at: new Date(now).toISOString(),
-          urgent: inH <= 24,
-        });
+        out.push(
+          bedrijfMelding(
+            { id: `emp:shift:${s.id}`, kind: "shift", href: `/werkgever/diensten/${s.id}`, at: new Date(now).toISOString(), urgent: inH <= 24 },
+            bedrijf,
+            (n) => ({ title: n.nietVolTitel, body: vulIn(n.nietVolBody, { dienst: s.title, vrij: free, uren: inH }) }),
+          ),
+        );
       }
     }
   }
 
   // ── nieuwe online afspraken (alleen de beheerder, net als de afsprakenpagina en de push/mail) ──
-  if (hasRole(principal, "HQ_ADMIN") && !admin) {
+  if (bedrijfKant && hasRole(principal, "HQ_ADMIN") && !admin) {
     try {
       const tenantId = (await resolveEmployerScope(principal)).tenantIds[0];
       if (tenantId) out.push(...(await afsprakenBelVoor(tenantId, new Date(now))));
