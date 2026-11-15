@@ -19,8 +19,9 @@ tts-1:
   nl-vrouw:
     model: voices/nl_BE-nathalie-medium.onnx
     speaker:
-  # Tweede stem. Haal hem eerst binnen, anders verwijst deze regel naar een
-  # bestand dat er niet is:  sh deploy/piper/haal-stem.sh nl_NL-mls_5809-low
-  # nl-man:
-  #   model: voices/nl_NL-mls_5809-low.onnx
-  #   speaker:
+  # Tweede stem: man, Vlaams-Nederlands (CC0), sinds 16 nov 2026 op de VPS. De
+  # testklant in de luisterdemo van /aanbod/telefonie (lib/telephony/demo-server.ts).
+  # Ontbreekt het bestand, haal het dan binnen: sh deploy/piper/haal-stem.sh nl_BE-rdh-medium
+  nl-man:
+    model: voices/nl_BE-rdh-medium.onnx
+    speaker: # één spreker in dit model

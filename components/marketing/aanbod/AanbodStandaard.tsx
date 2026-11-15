@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { prijsTekst, type AanbodItem, type InkijkScherm, type Pijler } from "@/lib/marketing/aanbod";
 import { standaardVragen } from "@/lib/marketing/aanbod-vragen";
+import { TelefonieDemo } from "@/components/marketing/aanbod/TelefonieDemo";
 
 // De gewone opmaak van een aanbodpagina (/aanbod/<slug>), rijker gemaakt (15 nov 2026, eigenaar: "die pagina's moeten
 // indruk wekken zoals andere sites ze tonen; deze is karig"): een kop met een foto of een voorbeeld van het product en een
@@ -167,6 +168,9 @@ export function AanbodStandaard({ a, pijler }: { a: AanbodItem; pijler: Pijler }
           ))}
         </ul>
       </section>
+
+      {/* luister mee: de assistent en een testklant (alleen waar luisterdemo aan staat, nu telefonie) */}
+      {a.luisterdemo && <TelefonieDemo />}
 
       {/* wat je krijgt, als kaarten */}
       <section aria-labelledby="aanbod-krijgt" className="bg-paper-soft">

@@ -59,6 +59,8 @@ export interface AanbodItem {
    * verzonnen voorbeeldgegevens (vermeld in CREDITS.md). De eerste staat ook in de kop.
    */
   inkijk?: InkijkScherm[];
+  /** een luisterdemo onder de kop: een gesprek tussen de assistent en een testklant (components/marketing/aanbod/TelefonieDemo.tsx) */
+  luisterdemo?: true;
 }
 
 export interface InkijkScherm {
@@ -540,6 +542,7 @@ export const AANBOD: AanbodItem[] = [
     status: "binnenkort",
     start: DEMO,
     zoekwoorden: ["zakelijk telefoonnummer", "ai telefoonassistent", "telefonische assistent voor mijn bedrijf"],
+    luisterdemo: true,
   },
   {
     slug: "zakelijke-mail",

@@ -24,7 +24,7 @@ const PUBLIC_PREFIXES = [
   "/api/status",
   "/api/graphql", // auth + role checks live per-resolver, plus its own rate limiting
   "/api/chat", // public marketing chat widget + its own IP rate limiting
-  "/api/demo", // public "book a demo" form + its .ics link
+  "/api/demo", // public "book a demo" form + its .ics link; /api/demo/telefoon = luisterdemo van de telefoonassistent (eigen herkomst, IP- en dagbegrensd, botveld, hooguit 2 tegelijk; lib/telephony/demo-server.ts)
   "/api/afspraak", // public AI-concierge (bel)afspraak form + its own IP rate limiting
   "/api/telephony", // Twilio voice webhooks — X-Twilio-Signature validated (lib/telephony)
   "/api/whatsapp", // de WhatsApp-brug (deploy/whatsapp-brug) geeft antwoorden op spoedoproepen door: eigen gedeelde sleutel (WHATSAPP_BRUG_TOKEN)
