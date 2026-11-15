@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
-import { AgendaKaart, LeerlingTelefoon, LeskaartKaart, SiteKaart, TegoedKaart } from "@/components/marketing/rijschool/Mockups";
 
 export const metadata: Metadata = {
   title: "Rijschoolsoftware: agenda, leerlingen, tegoed en eigen app",
@@ -15,8 +15,10 @@ export const metadata: Metadata = {
 // /rijschool-software (15 nov 2026): de openbare pagina voor rijschoolhouders, opgezet naar de betere rijschoolsoftware
 // (PlanRijles, PlanGo): een lichte kop met het product in beeld, per onderdeel een blok met een voorbeeldkaart, voor wie het is,
 // overstappen, een korte start in drie stappen, vragen en een duidelijke afsluiting. Alles op de pagina bestaat echt
-// (lib/rijschool/, components/rijschool/); de voorbeeldkaarten dragen het label "Voorbeeld". Geen verzonnen aantallen, cijfers
+// (lib/rijschool/, components/rijschool/); de beelden zijn echte schermafbeeldingen met voorbeeldgegevens. Geen verzonnen aantallen, cijfers
 // over klanten of waarderingen, en geen prijs: die is nog niet vastgelegd. Wat nog niet kan, staat onderaan.
+// De beelden zijn echte schermafbeeldingen (15 nov 2026, eigenaar: "ik wil alleen maar echt"), gemaakt in een tijdelijk
+// testbedrijf met voorbeeldgegevens (verzonnen namen) en daarna opgeruimd. Bestanden: public/rijschool-software/.
 
 const BEGIN = "/register?type=bedrijf&dashboard=rijschool";
 
@@ -36,7 +38,7 @@ const BLOKKEN: Blok[] = [
     kort: "Planning",
     tekst: "Al je lessen in één agenda, per instructeur en per auto. Een tijd die al bezet is, weigert de agenda.",
     punten: ["Lessen, proeflessen, toetsen en examens", "Leerlingen annuleren zelf binnen de termijn die jij kiest", "De avond ervoor gaat er automatisch een herinnering uit", "Een les kost tegoed, of wordt apart betaald: dat bepaal je per soort les"],
-    beeld: <AgendaKaart />,
+    beeld: <Schermfoto naam="agenda" breed={1400} hoog={997} alt="De lesagenda van een week met per dag de geplande lessen" />,
   },
   {
     id: "betalen",
@@ -44,7 +46,7 @@ const BLOKKEN: Blok[] = [
     kort: "Tegoed en betalen",
     tekst: "Je ziet per leerling hoeveel tegoed er over is en wat er is afgeschreven. Pakketten hebben een vaste prijs, zonder verrassingen.",
     punten: ["Pakketten en prijzen stel je zelf in", "Tegoed in minuten, met een logboek van elke wijziging", "Online betalen via je eigen betaalaccount", "Niet verschenen? Het tegoed gaat eraf, zoals jij het afspreekt"],
-    beeld: <TegoedKaart />,
+    beeld: <Schermfoto naam="leerling-tegoed" breed={1400} hoog={1023} alt="De leerlingkaart met voortgang, tegoed en een betaling registreren" />,
   },
   {
     id: "leskaart",
@@ -52,7 +54,7 @@ const BLOKKEN: Blok[] = [
     kort: "Leskaart",
     tekst: "De instructeur geeft na de les per onderdeel een score van 1 tot 5. De leerling ziet waar hij staat en wat het huiswerk is.",
     punten: ["Zes fasen met 29 onderdelen, van Auto en bediening tot Zelfstandig en examen", "Notities voor jezelf blijven intern: de leerling ziet ze nooit", "De route van de les opnemen in de instructeurapp", "Oefenen voor de leerling: uitleg per onderdeel en theorievragen met uitleg"],
-    beeld: <LeskaartKaart />,
+    beeld: <Schermfoto naam="app-leskaart" breed={640} hoog={1385} alt="De voortgang van een leerling per onderdeel in de leerlingapp" telefoon />,
   },
   {
     id: "app",
@@ -60,7 +62,7 @@ const BLOKKEN: Blok[] = [
     kort: "Eigen app",
     tekst: "Leerlingen en instructeurs hebben een eigen app met de naam en kleuren van jouw rijschool.",
     punten: ["Leerlingapp: volgende les, tegoed, leskaart en berichten", "Instructeurapp: de dag, het lesscherm en de leskaart", "Installeerbaar op elke telefoon, ook zonder winkel", "Wil je een eigen Android-app onder jouw naam in Google Play? Dat kan, met je eigen ontwikkelaarsaccount"],
-    beeld: <LeerlingTelefoon />,
+    beeld: <Schermfoto naam="app-start" breed={640} hoog={1385} alt="Het beginscherm van de leerlingapp met de volgende les en het tegoed" telefoon />,
   },
   {
     id: "website",
@@ -68,7 +70,7 @@ const BLOKKEN: Blok[] = [
     kort: "Website",
     tekst: "Je website is meteen klaar. Een nieuwe leerling plant zelf een proefles, 24 uur per dag.",
     punten: ["Teksten, foto's en kleuren pas je zelf aan", "Op je eigen domeinnaam, met het slotje geregeld", "Een assistent beantwoordt vragen van bezoekers", "Een bezoeker die een proefles boekt, staat meteen bij je leerlingen"],
-    beeld: <SiteKaart />,
+    beeld: <Schermfoto naam="website" breed={1400} hoog={875} alt="De website van een rijschool met de knop om een proefles te plannen" />,
   },
 ];
 
@@ -92,6 +94,23 @@ const VRAGEN = [
 ];
 
 const NOG_NIET = ["Een koppeling met CBR TOP voor examens", "Een Code 95-module voor chauffeurs", "Lessen en tegoed overnemen uit je oude software (leerlingen kan wel)"];
+
+/** Een echte schermafbeelding in een lijst of een telefoon, met een regel eronder. */
+function Schermfoto({ naam, breed, hoog, alt, telefoon = false, className = "" }: { naam: string; breed: number; hoog: number; alt: string; telefoon?: boolean; className?: string }) {
+  return (
+    <figure className={className}>
+      <Image
+        src={`/rijschool-software/${naam}.webp`}
+        width={breed}
+        height={hoog}
+        alt={alt}
+        sizes={telefoon ? "(max-width: 1024px) 60vw, 280px" : "(max-width: 1024px) 100vw, 560px"}
+        className={telefoon ? "mx-auto h-auto w-56 rounded-[1.6rem] border-[5px] border-ink shadow-2xl md:w-64" : "h-auto w-full rounded-xl border border-hair shadow-xl"}
+      />
+      <figcaption className="mt-3 text-center text-xs text-neutralx-500">Schermafbeelding uit ZekerFlex, met voorbeeldgegevens</figcaption>
+    </figure>
+  );
+}
 
 function Vink() {
   return (
@@ -137,8 +156,8 @@ export default function RijschoolSoftwarePage() {
           </div>
           <div className="relative mx-auto flex w-full max-w-xl justify-center py-6 pr-10">
             <span aria-hidden className="absolute inset-x-4 inset-y-0 rounded-[3rem] bg-mintwash" />
-            <AgendaKaart className="relative -rotate-1" />
-            <LeerlingTelefoon className="absolute -bottom-8 -right-4 hidden !w-40 !border-[5px] !p-3 rotate-2 sm:block" />
+            <Image src="/rijschool-software/agenda.webp" width={1400} height={997} alt="De lesagenda van een week" priority sizes="(max-width: 1024px) 100vw, 560px" className="relative h-auto w-full rounded-xl border border-hair shadow-xl" />
+            <Image src="/rijschool-software/app-start.webp" width={640} height={1385} alt="De leerlingapp met de volgende les" sizes="160px" className="absolute -bottom-8 -right-2 hidden h-auto w-36 rounded-[1.4rem] border-4 border-ink shadow-2xl sm:block" />
           </div>
         </div>
       </section>
