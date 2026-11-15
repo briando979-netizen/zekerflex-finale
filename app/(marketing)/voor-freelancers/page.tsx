@@ -43,8 +43,9 @@ const BENEFITS = [
   },
   {
     id: "verzekering",
-    title: "Verzekerd tijdens je klus",
-    body: "Elke opdracht via ZekerFlex valt onder een bedrijfs- en beroepsaansprakelijkheids- en ongevallendekking. Je verzekeringsbewijs staat als pdf in je dashboard.",
+    // 15 nov 2026: er is geen verzekeraar; dit beloofde een dekking die er niet is
+    title: "Weten hoe je je verzekert",
+    body: "ZekerFlex biedt op dit moment geen verzekering. In je account en in de whitepaper lees je welke verzekeringen je als zzp'er of flexwerker zelf regelt, en waar je op let.",
   },
   {
     id: "kyc",

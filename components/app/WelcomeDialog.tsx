@@ -87,7 +87,7 @@ export function WelcomeDialog({ firstName }: { firstName: string }) {
               <a href="/kennis/whitepapers" target="_blank" rel="noreferrer" className="font-semibold text-brand-600 hover:underline">
                 whitepapers
               </a>{" "}
-              over belasting, uitbetaling en verzekering. Je bent vanaf je eerste klus gratis verzekerd.
+              over belasting, uitbetaling en verzekering.
             </span>
           </li>
         </ul>

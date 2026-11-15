@@ -680,6 +680,19 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...m("terms-review"),
     },
     {
+      id: "verzekering-werkers",
+      group: "Juridisch",
+      title: "Kiezen of werkers via ZekerFlex verzekerd worden",
+      why: "Tot 15 nov 2026 stond op de site, in de app, in de voorwaarden en in een whitepaper dat werkers vanaf hun eerste klus gratis verzekerd zijn (aansprakelijkheid, ongevallen, rechtsbijstand), met een downloadbaar verzekeringsbewijs. Er was geen verzekeraar en geen polis. Dat is overal weggehaald: nu staat er dat ZekerFlex geen verzekering biedt en dat zzp'ers en flexwerkers het zelf regelen.",
+      how: [
+        "Wil je werkers wél collectief verzekeren: vraag een offerte bij een volmachtkantoor of verzekeraar voor platformwerk (aansprakelijkheid en ongevallen per klus).",
+        "Met een getekende polis: geef de naam van de verzekeraar en het polisnummer door, dan komen de dekking en het bewijs terug in de app, de voorwaarden en de whitepaper.",
+        "Laat artikel 7 van de voorwaarden meenemen in de juridische controle (taak terms-review).",
+      ],
+      auto: false,
+      ...m("verzekering-werkers"),
+    },
+    {
       id: "insurer",
       group: "Juridisch",
       title: "Verzekeraar koppelen voor 'Verzekeren' in de bank",
