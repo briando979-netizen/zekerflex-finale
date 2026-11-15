@@ -64,7 +64,7 @@ export async function visitorSeries(period: Period): Promise<{ series: number[];
   const [rows, totals] = await Promise.all([
     safe(
       () => prisma.$queryRaw<{ bucket: string; visitors: bigint }[]>`
-        SELECT to_char("createdAt" AT TIME ZONE 'Europe/Amsterdam', ${format}) AS bucket, count(DISTINCT "sessionId") AS visitors
+        SELECT to_char(("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Amsterdam', ${format}) AS bucket, count(DISTINCT "sessionId") AS visitors
         FROM "AnalyticsEvent"
         WHERE type = 'PAGEVIEW' AND "createdAt" >= ${period.bucket === "month" ? new Date(period.to.getTime() - 366 * 86_400_000) : period.from}
         GROUP BY 1`,

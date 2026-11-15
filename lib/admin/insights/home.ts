@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { zonderTestklussen } from "@/lib/shifts/testklus-db";
+import { echteAanmeldingen } from "@/lib/admin/weekcijfers";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
 import { financeOverview } from "@/lib/admin/finance";
 import { getTriage, type TriageItem } from "@/lib/admin/triage";
 import { allFunnelReports, type FunnelReport } from "@/lib/analytics/funnel";
@@ -113,7 +115,8 @@ export async function homeInsights(period: Period): Promise<HomeInsights> {
     safe(() => prisma.shift.count({ where: { startsAt: { gte: from, lt: to }, status: { not: "CANCELLED" }, assignments: { some: { cancelledAt: null } }, ...zonderTest } }), 0),
     safe(() => prisma.shift.count({ where: { startsAt: { gte: prevFrom, lt: from }, status: { not: "CANCELLED" }, ...zonderTest } }), 0),
     safe(() => prisma.shift.count({ where: { startsAt: { gte: prevFrom, lt: from }, status: { not: "CANCELLED" }, assignments: { some: { cancelledAt: null } }, ...zonderTest } }), 0),
-    safe(() => prisma.user.findMany({ where: { createdAt: { gte: prevFrom } }, select: { createdAt: true }, take: 50_000 }), []),
+    // aanmeldingen zonder test- en eigen accounts (lib/admin/echt-kern.ts), zoals de weekcijfers
+    safe(async () => echteAanmeldingen(prevFrom, await leesEigenTest().catch(() => null)), []),
     visitorSeries(period),
     safe(() => getTriage(), []),
     safe(() => allFunnelReports(period.days > 90 ? 12 : 3), []),
