@@ -95,8 +95,8 @@ export async function onboarding(now: Date, t: TeamTools) {
   if (unconfirmed > 0) await t.log("onboarding", `${unconfirmed} aanmelding(en) van de afgelopen 2 weken hebben hun e-mail nooit bevestigd (ze krijgen automatisch herinneringen).`, "finding");
   if (unverifiedWorkers > 0) await t.log("onboarding", `${unverifiedWorkers} freelancer(s) bevestigden hun e-mail maar zijn na 2 dagen nog niet geverifieerd — mogelijk lopen ze vast bij de ID-stap.`, "finding");
   await t.log("onboarding", `Aanmeldingen gecontroleerd: ${waiting} bedrijf/bedrijven wacht(en) op goedkeuring met reacties.`);
-  // de Welkomstcoach (lib/ai-teams/medewerkers.ts): nieuwe bedrijven zonder eerste klus
-  await welkomstcoach(now, t);
+  // de Welkomstcoach (lib/ai-teams/medewerkers.ts): nieuwe bedrijven zonder eerste klus; een fout daarin stopt dit team niet
+  await welkomstcoach(now, t).catch((e: unknown) => t.log("onboarding", `Welkomstcoach: kon niet kijken (${(e as Error)?.message ?? "onbekend"}).`, "error"));
 }
 
 /** Pricing: open klussen that pay clearly below the going rate for that kind of work. */
@@ -181,7 +181,9 @@ export async function klantenservice(now: Date, t: TeamTools) {
   }
   await t.log("klantenservice", `${open.length} open websitechat(s) bekeken, ${waiting.length} wachten langer dan 4 uur op een antwoord.`);
   // de Servicedesk (lib/ai-teams/medewerkers.ts): een conceptantwoord voor wie te lang wacht, pas na goedkeuring in de chat
-  if (waiting.length > 0) await servicedeskConcepten(now, t);
+  if (waiting.length > 0) {
+    await servicedeskConcepten(now, t).catch((e: unknown) => t.log("klantenservice", `Servicedesk: kon geen concepten maken (${(e as Error)?.message ?? "onbekend"}).`, "error"));
+  }
 }
 
 /** Security: admins without two-step verification and suspicious hours. */
