@@ -91,6 +91,14 @@ describe("teksten in vijf talen", () => {
   });
 });
 
+describe("tabblad dicht tijdens een oproep", () => {
+  it("stuurt toch ophangen, zodat het bij de ander niet blijft overgaan", () => {
+    expect(overlay).toContain('window.addEventListener("pagehide", weg);');
+    expect(overlay).toContain("navigator.sendBeacon?.(`/api/inbox/${threadId}/call`, body);");
+    expect(overlay).toContain('type: "end"');
+  });
+});
+
 describe("een oproep ligt boven alles", () => {
   // 15 nov 2026, belproef met twee browsers: bij een nieuwe werker dekte de cookiebalk (z-[90]) de knop Opnemen af.
   it("het belscherm en gebeld worden liggen hoger dan elke andere laag in de app", () => {

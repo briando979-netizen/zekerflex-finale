@@ -24,9 +24,9 @@ const sha = (a: string[]) => createHash("sha1").update(a.join("\n")).digest("hex
 
 // Bijgewerkt 15 nov 2026, bewust: belscherm zoals WhatsApp (ronde knoppen, video aan midden in een spraakoproep via een lege
 // videolijn + replaceTrack, camera wisselen, signaal "media" voor camera aan/uit, knoppen verbergen bij video) en in ChatDock
-// weigeren met een bericht. Regel voor regel nagelopen met git diff; tests/bellen-whatsapp.test.ts bewaakt het nieuwe gedrag.
+// weigeren met een bericht; daarna (zelfde dag) "end" via sendBeacon bij pagehide. Regel voor regel nagelopen met git diff; tests/bellen-whatsapp.test.ts bewaakt het nieuwe gedrag.
 const VOOR_DE_VERTALING = {
-  "components/chat/CallOverlay.tsx": { regels: 151, sha1: "d38a3238d0ef600c21af2beda4971d44fdd08ef6" },
+  "components/chat/CallOverlay.tsx": { regels: 155, sha1: "7d264f8af5c31cb6511f3d0fee4ba895612221cb" },
   "components/chat/ChatDock.tsx": { regels: 103, sha1: "a7908ea8d6710957e204aec888a11135c37c28fd" },
 } as const;
 

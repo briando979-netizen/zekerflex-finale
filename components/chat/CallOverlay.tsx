@@ -490,6 +490,20 @@ export function CallOverlay({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Tabblad dicht of weg tijdens een oproep: toch "end" sturen (sendBeacon komt ook bij het sluiten nog aan). Anders bleef het
+  // bij de ander tot 90 s overgaan en gaf opnemen "kon niet verbinden" (belproef 15 nov 2026). WhatsApp stopt meteen.
+  useEffect(() => {
+    const weg = () => {
+      if (ended.current) return;
+      ended.current = true;
+      const dur = started.current ? Math.round((Date.now() - started.current) / 1000) : 0;
+      const body = new Blob([JSON.stringify({ callId, type: "end", mode, data: { durationSec: dur } })], { type: "text/plain" }); // tekst: altijd toegestaan voor sendBeacon; de route leest het als JSON
+      navigator.sendBeacon?.(`/api/inbox/${threadId}/call`, body);
+    };
+    window.addEventListener("pagehide", weg);
+    return () => window.removeEventListener("pagehide", weg);
+  }, [threadId, callId, mode]);
+
   // auto-hangup a never-answered call after 45s
   useEffect(() => {
     if (state !== "ringing") return;
