@@ -14,7 +14,15 @@ export default async function ZekerFlexAIPage() {
   }
   return (
     <div className="space-y-3">
-      <PageHead title="ZekerFlex AI" subtitle="Vraag, laat uitzoeken of geef een opdracht, getypt of gesproken. Draait op je eigen model." />
+      <PageHead
+        title="ZekerFlex AI"
+        subtitle="Vraag, laat uitzoeken of geef een opdracht, getypt of gesproken. Draait op je eigen model."
+        actions={
+          <Link href="/admin/zekerflex-ai/mijn-ai" className="a-btn a-btn-primary text-sm">
+            Mijn AI: gewoon chatten
+          </Link>
+        }
+      />
       <details className="a-panel group">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-[0.8125rem] font-medium sm:px-5" style={{ color: "var(--a-text)" }}>
           AI-instellingen — gratis op eigen server, sleutel, laptop
