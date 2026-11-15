@@ -13,6 +13,9 @@ import { GRID_SIZES, bySize, cardStock, type ShopCardProduct } from "@/component
 import { usePaskamerProfiel } from "@/components/marketing/paskamer/usePaskamer";
 import { kleurHex, maatAdvies, matenVan, pastBijSilhouet, pasvormVoor } from "@/lib/shop/paskamer";
 import { ShopPrijs } from "@/components/marketing/ShopPrijs";
+import { useBezorgmoment } from "@/components/marketing/useBezorgmoment";
+import { bezorgdagNaam } from "@/lib/shop/bezorgmoment";
+import { useI18n } from "@/components/i18n/I18nProvider";
 
 // Eén productkaart zoals op een grote marktplaats: foto, naam, opties, prijs,
 // levering, verkoper en meteen "In winkelwagen". De naam is de link en dekt de
@@ -43,6 +46,9 @@ export function ShopProductCard({
   const fav = wishlist.has(p.id);
   const stock = cardStock(p);
   const href = p.slug ? `/shop/${p.slug}` : null;
+  // "maandag in huis" in het weekend, niet altijd "morgen" (lib/shop/bezorgmoment.ts); de eerste weergave zegt alleen "Op voorraad"
+  const bezorg = useBezorgmoment();
+  const { locale } = useI18n();
   // draagbaar? dan een "Pas aan"-knop, en met een paskamerprofiel op dit toestel meteen jouw maat
   const profiel = usePaskamerProfiel();
   const pasvorm = useMemo(() => (p.slug ? pasvormVoor({ slug: p.slug, name: p.name, gender: p.gender ?? null }) : null), [p.slug, p.name, p.gender]);
@@ -125,7 +131,7 @@ export function ShopProductCard({
       </div>
 
       <p className={`mt-2 text-[12px] font-semibold ${stock.kind === "uit" ? "text-crit" : "text-ok"}`}>
-        {stock.kind === "uit" ? t.shop.soldOut : stock.kind === "weinig" ? fmt(t.shop.lowStock, { n: stock.n }) : p.seller ? t.shop.deliveryBySeller : t.shop.deliveryTomorrow}
+        {stock.kind === "uit" ? t.shop.soldOut : stock.kind === "weinig" ? fmt(t.shop.lowStock, { n: stock.n }) : p.seller ? t.shop.deliveryBySeller : bezorg ? fmt(t.shop.opVoorraadDag, { dag: bezorgdagNaam(bezorg, t.shop.bezorgMorgen, locale) }) : t.shop.opVoorraad}
       </p>
       <p className="mt-0.5 truncate text-[12px] text-neutralx-500">{fmt(t.shop.soldBy, { seller: p.seller ?? SELLER })}</p>
 

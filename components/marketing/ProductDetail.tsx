@@ -20,7 +20,10 @@ import { useOnlangsBekeken } from "@/components/marketing/useOnlangsBekeken";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { useShopBetaalwijze } from "@/components/marketing/ShopBetaalwijze";
-import { bezorgmoment, resterendTekst } from "@/lib/shop/bezorgmoment";
+import { bezorgZin } from "@/lib/shop/bezorgmoment";
+import { useBezorgmoment } from "@/components/marketing/useBezorgmoment";
+import { useI18n } from "@/components/i18n/I18nProvider";
+import { VERKOPER_VERZENDT_BINNEN_WERKDAGEN } from "@/lib/shop/verkoper-core";
 
 // De productpagina, opgebouwd als op een grote marktplaats. Telefoon: titel,
 // foto, koopblok onder elkaar en een vaste koopknop onderin zodra de gewone uit
@@ -90,13 +93,9 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
   // wat de shop nu over betalen mag zeggen: hetzelfde als de kassa (online, per overschrijving, of even niet)
   const betaalwijze = useShopBetaalwijze();
   const betaalNoot = betaalwijze === "overschrijving" ? t.shop.bankPaymentNote : betaalwijze === "dicht" ? t.shop.paymentClosedNote : t.shop.securePaymentNote;
-  // het bezorgmoment telt af (zoals bol.com); pas in de browser uitgerekend, anders verschilt het met de server (hydratie)
-  const [nu, setNu] = useState<Date | null>(null);
-  useEffect(() => {
-    setNu(new Date());
-    const i = setInterval(() => setNu(new Date()), 30_000);
-    return () => clearInterval(i);
-  }, []);
+  // het bezorgmoment telt af (zoals bol.com), met werkdagen en feestdagen; pas in de browser uitgerekend (hydratie)
+  const bezorg = useBezorgmoment(30_000);
+  const { locale } = useI18n();
 
   const sizes = useMemo(() => [...new Set(product.variants.map((v) => v.size).filter((s): s is string => Boolean(s)))].sort(bySize), [product.variants]);
   const colors = useMemo(() => [...new Set(product.variants.map((v) => v.color).filter((c): c is string => Boolean(c)))], [product.variants]);
@@ -292,14 +291,14 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
           <p className={`mt-5 text-[14px] font-bold ${variant && variantStock <= 0 ? "text-crit" : variant ? "text-ok" : "text-neutralx-600"}`}>
             {variant ? (variantStock > 0 ? fmt(t.shop.inStock, { n: variantStock }) : t.shop.outOfStockVariant) : t.shop.pickVariantForStock}
           </p>
-          {nu && variant && variantStock > 0 && !product.seller && (() => {
-            const b = bezorgmoment(nu);
-            return (
-              <p className="mt-1 text-[13px] font-semibold text-ok">
-                {b.dag === "morgen" ? fmt(t.shop.bezorgAftellen, { tijd: resterendTekst(b.resterendMin, { uurEnMin: t.shop.uurEnMin, uren: t.shop.uren, minuten: t.shop.minuten }) }) : t.shop.bezorgOvermorgen}
-              </p>
-            );
-          })()}
+          {variant && variantStock > 0 && product.seller && (
+            <p className="mt-1 text-[13px] font-semibold text-neutralx-600">{fmt(t.shop.bezorgVerkoper, { seller: product.seller, n: VERKOPER_VERZENDT_BINNEN_WERKDAGEN })}</p>
+          )}
+          {bezorg && variant && variantStock > 0 && !product.seller && (
+            <p className="mt-1 text-[13px] font-semibold text-ok">
+              {bezorgZin(bezorg, { aftellen: t.shop.bezorgAftellen, nu: t.shop.bezorgNu, morgen: t.shop.bezorgMorgen, uurEnMin: t.shop.uurEnMin, uren: t.shop.uren, minuten: t.shop.minuten }, locale)}
+            </p>
+          )}
 
           <div ref={buyRef} className="mt-4 flex items-center gap-2.5">
             <label className="sr-only" htmlFor="pdp-aantal">
