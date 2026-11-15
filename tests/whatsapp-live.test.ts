@@ -102,7 +102,7 @@ describe("de app-kant", () => {
   });
 
   it("zonder sleutel op de server: niet ingericht, en niets naar de brug", async () => {
-    const e = env as { WHATSAPP_BRUG_URL?: string };
+    const e = env as { WHATSAPP_BRUG_URL?: string | undefined };
     const oud = e.WHATSAPP_BRUG_URL;
     e.WHATSAPP_BRUG_URL = "";
     const fetchMock = vi.fn();
@@ -121,6 +121,7 @@ describe("bewaker: met je eigen nummer antwoordt de spoedoproep niet vanzelf", (
     expect(brug).not.toMatch(/console\.(log|warn|error)\([^)]*\btekst\b/);
     const compose = readFileSync(new URL("../docker-compose.whatsapp.yml", import.meta.url), "utf8");
     expect(compose).toContain("BRUG_SPOED: ${WHATSAPP_BRUG_SPOED:-0}");
-    expect(compose).not.toMatch(/ports:/);
+    // geen poort naar buiten (de opmerking "Geen `ports:`" telt niet)
+    expect(compose).not.toMatch(/^\s+ports:/m);
   });
 });
