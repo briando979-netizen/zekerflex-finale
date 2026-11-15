@@ -2,9 +2,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { categorieTreffers, normaliseer, zoekScore, zoekSuggesties } from "@/lib/shop/zoeksuggesties";
-import { BESTEL_VOOR_UUR, bezorgmoment, resterendTekst } from "@/lib/shop/bezorgmoment";
+import { BESTEL_VOOR_UUR, bezorgdagNaam, bezorgmoment, bezorgZin, isWerkdag, resterendTekst } from "@/lib/shop/bezorgmoment";
+import { VERKOPER_VERZENDT_BINNEN_WERKDAGEN } from "@/lib/shop/verkoper-core";
 
-// De webshop zoals bol.com, stap 1 (15 nov 2026): zoeksuggesties terwijl je typt, een aftellend bezorgmoment, een tabel
+// De webshop zoals bol.com, stap 1 (15 nov 2026): zoeksuggesties terwijl je typt, een aftellend bezorgmoment (werkdagen en
+// feestdagen: niets beloven wat niet kan), een tabel
 // met specificaties, en een betaaltekst die klopt met de kassa (er stond "beveiligd Stripe-betaalscherm" terwijl Stripe dicht is).
 
 const lees = (f: string) => readFileSync(join(process.cwd(), f), "utf8");
@@ -51,36 +53,79 @@ describe("zoeksuggesties", () => {
   });
 });
 
-describe("bezorgmoment (Nederlandse tijd, niet die van de server)", () => {
+describe("bezorgmoment (Nederlandse tijd, werkdagen en feestdagen)", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it("telt af tot het grensuur in de winter (UTC+1)", () => {
+  const T = { aftellen: "Bestel binnen {tijd}, {dag} in huis", nu: "Nu besteld, {dag} in huis", morgen: "morgen", uurEnMin: "{u} uur en {m} min", uren: "{u} uur", minuten: "{m} min" };
+  /** de zin zoals de productpagina hem toont, met de klok bevroren op dit moment */
+  const zin = (moment: string) => {
     vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-11-15T19:46:00+01:00"));
+    vi.setSystemTime(new Date(moment));
+    return bezorgZin(bezorgmoment(new Date()), T, "nl");
+  };
+
+  it("maandag 21:59: nog één minuut, morgen in huis", () => {
     expect(BESTEL_VOOR_UUR).toBe(22);
-    expect(bezorgmoment(new Date())).toEqual({ dag: "morgen", resterendMin: 134 });
+    expect(zin("2026-11-16T21:59:00+01:00")).toBe("Bestel binnen 1 min, morgen in huis");
   });
 
-  it("telt af tot het grensuur in de zomer (UTC+2)", () => {
-    expect(bezorgmoment(new Date("2026-07-01T21:30:00+02:00"))).toEqual({ dag: "morgen", resterendMin: 30 });
+  it("vrijdagmiddag: vandaag weg, maar pas maandag in huis (in het weekend wordt niet bezorgd)", () => {
+    expect(zin("2026-11-13T15:00:00+01:00")).toBe("Bestel binnen 7 uur, maandag in huis");
   });
 
-  it("na het grensuur wordt het overmorgen", () => {
-    expect(bezorgmoment(new Date("2026-11-15T22:00:00+01:00")).dag).toBe("overmorgen");
-    expect(bezorgmoment(new Date("2026-11-15T23:59:00+01:00")).dag).toBe("overmorgen");
+  it("vrijdag 23:00: maandag weg, dinsdag in huis", () => {
+    expect(zin("2026-11-13T23:00:00+01:00")).toBe("Nu besteld, dinsdag in huis");
   });
 
-  it("vlak na middernacht telt hij weer de hele dag af", () => {
-    expect(bezorgmoment(new Date("2026-11-16T00:10:00+01:00"))).toEqual({ dag: "morgen", resterendMin: 21 * 60 + 50 });
+  it("zaterdag 15:00 en zondag 12:00: geen aftelling (er gaat niets weg), dinsdag in huis", () => {
+    expect(zin("2026-11-14T15:00:00+01:00")).toBe("Nu besteld, dinsdag in huis");
+    expect(zin("2026-11-15T12:00:00+01:00")).toBe("Nu besteld, dinsdag in huis");
+    vi.setSystemTime(new Date("2026-11-14T15:00:00+01:00"));
+    expect(bezorgmoment(new Date()).resterendMin).toBeNull();
+  });
+
+  it("dinsdag na 22:00: woensdag weg, donderdag in huis", () => {
+    expect(zin("2026-11-17T22:00:00+01:00")).toBe("Nu besteld, donderdag in huis");
+  });
+
+  it("telt in de zomer (UTC+2) ook goed af", () => {
+    expect(zin("2026-07-01T21:30:00+02:00")).toBe("Bestel binnen 30 min, morgen in huis");
+  });
+
+  it("slaat feestdagen over: kerst en Koningsdag", () => {
+    // do 24 dec 23:00: 25 en 26 dec en het weekend gaat er niets weg; maandag 28 weg, dinsdag 29 in huis
+    expect(zin("2026-12-24T23:00:00+01:00")).toBe("Nu besteld, dinsdag in huis");
+    expect(bezorgmoment(new Date()).bezorgdag).toEqual({ year: 2026, month: 12, day: 29 });
+    // ma 26 april 2027 15:00: vandaag weg, maar dinsdag 27 april is Koningsdag, dus woensdag in huis
+    expect(zin("2027-04-26T15:00:00+02:00")).toBe("Bestel binnen 7 uur, woensdag in huis");
+    expect(isWerkdag({ year: 2027, month: 3, day: 29 })).toBe(false); // tweede paasdag
+    expect(isWerkdag({ year: 2027, month: 3, day: 30 })).toBe(true);
+  });
+
+  it("noemt in het Engels de dag ook bij naam", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-14T15:00:00+01:00"));
+    expect(bezorgdagNaam(bezorgmoment(new Date()), "tomorrow", "en")).toBe("Tuesday");
   });
 
   it("schrijft de tijd uit in uren en minuten", () => {
-    const t = { uurEnMin: "{u} uur en {m} min", uren: "{u} uur", minuten: "{m} min" };
-    expect(resterendTekst(134, t)).toBe("2 uur en 14 min");
-    expect(resterendTekst(120, t)).toBe("2 uur");
-    expect(resterendTekst(45, t)).toBe("45 min");
+    expect(resterendTekst(134, T)).toBe("2 uur en 14 min");
+    expect(resterendTekst(120, T)).toBe("2 uur");
+    expect(resterendTekst(45, T)).toBe("45 min");
+  });
+
+  it("een product van een verkoper krijgt geen aftelling, maar de echte termijn van de verkoper", () => {
+    const pdp = lees("components/marketing/ProductDetail.tsx");
+    expect(pdp).toMatch(/bezorg && variant && variantStock > 0 && !product\.seller/);
+    expect(pdp).toMatch(/variantStock > 0 && product\.seller && \(/);
+    expect(pdp).toContain("fmt(t.shop.bezorgVerkoper, { seller: product.seller, n: VERKOPER_VERZENDT_BINNEN_WERKDAGEN })");
+    expect(VERKOPER_VERZENDT_BINNEN_WERKDAGEN).toBe(2);
+    // ook het kaartje belooft niet altijd "morgen": de dag komt uit hetzelfde bezorgmoment
+    const kaart = lees("components/marketing/ShopProductCard.tsx");
+    expect(kaart).not.toContain("t.shop.deliveryTomorrow");
+    expect(kaart).toContain("bezorgdagNaam(bezorg, t.shop.bezorgMorgen, locale)");
   });
 });
 
@@ -98,8 +143,10 @@ describe("de shop zelf", () => {
 
   it("het bezorgmoment wordt pas in de browser uitgerekend (geen hydratiefout)", () => {
     const pdp = lees("components/marketing/ProductDetail.tsx");
-    expect(pdp).toContain("useState<Date | null>(null)");
-    expect(pdp).toMatch(/nu && variant && variantStock > 0 && !product\.seller/);
+    expect(pdp).toContain("useBezorgmoment(30_000)");
+    const hook = lees("components/marketing/useBezorgmoment.ts");
+    expect(hook).toContain("useState<Bezorgmoment | null>(null)");
+    expect(hook).toMatch(/useEffect\(\(\) => \{\n\s+setB\(bezorgmoment\(new Date\(\)\)\);/);
   });
 
   it("de productpagina heeft een tabel met specificaties en krijgt de collectie mee", () => {
@@ -121,7 +168,7 @@ describe("de shop zelf", () => {
   it("alle nieuwe teksten staan in het Nederlands én het Engels", () => {
     const nl = lees("lib/i18n/dictionaries.ts");
     const en = lees("lib/i18n/dictionary-en.ts");
-    for (const k of ["zoekSuggesties", "zoekNaar", "inCategorie", "bezorgAftellen", "bezorgOvermorgen", "specificaties", "specVerkoper", "doelUnisex"]) {
+    for (const k of ["zoekSuggesties", "zoekNaar", "inCategorie", "bezorgAftellen", "bezorgNu", "bezorgMorgen", "bezorgVerkoper", "opVoorraadDag", "specificaties", "specVerkoper", "doelUnisex"]) {
       expect(nl, k).toMatch(new RegExp(`\\b${k}: `));
       expect(en, k).toMatch(new RegExp(`\\b${k}: `));
     }
