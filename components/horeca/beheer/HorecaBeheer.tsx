@@ -18,6 +18,8 @@ import { SchermenTab } from "@/components/horeca/beheer/SchermenTab";
 import { KassaTab } from "@/components/horeca/beheer/KassaTab";
 import type { Antwoord, Doe, Voorstel } from "@/components/horeca/beheer/types";
 import { horecaTabs, type BeheerTab } from "@/lib/horeca/tabs";
+import { PersoneelTab } from "@/components/horeca/beheer/PersoneelTab";
+import type { PersoneelTeksten } from "@/lib/horeca-personeel/teksten";
 
 // ---------------------------------------------------------------------------
 // Het beheer van het horeca-pakket (/werkgever/horeca): aanzetten, het
@@ -30,7 +32,7 @@ import { horecaTabs, type BeheerTab } from "@/lib/horeca/tabs";
 
 const API = "/api/horeca/beheer";
 
-export function HorecaBeheer() {
+export function HorecaBeheer({ personeel }: { personeel: PersoneelTeksten }) {
   const router = useRouter();
   const pad = usePathname();
   const gevraagd = useSearchParams().get("tab");
@@ -124,6 +126,7 @@ export function HorecaBeheer() {
       {tab === "kassa" && z.modules.includes("kassa") && <KassaTab data={data} doe={doe} />}
       {tab === "taken" && z.modules.includes("taken") && <TakenTab />}
       {tab === "cijfers" && (z.modules.includes("bestellen") || z.modules.includes("reserveren")) && <CijfersTab />}
+      {tab === "personeel" && <PersoneelTab t={personeel} />}
       {tab === "menukaart" && <MenukaartTab data={data} doe={doe} />}
       {tab === "schermen" && <SchermenTab data={data} />}
       {tab === "modules" && <ModulesTab data={data} doe={doe} />}

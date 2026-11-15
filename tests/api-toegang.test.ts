@@ -24,7 +24,7 @@ const urlVan = (pad: string) => "/" + pad.replace(/^app\//, "").replace(/\/route
 
 // Elke vorm waarmee de code in dit project vaststelt wie er is, en wat die persoon mag.
 const WIE =
-  /requirePrincipal|getPrincipal|currentPrincipal|requireRole|hasRole|withAuth|withAdminAccess|withOrganizationAccess|withBranchAccess|employerTenant|requireWorker|requireEmployer|requireFreelancer|eigenOrganisatie|beheerContext|eisBeheer|auth\(\)|getServerSession|verifyApiKey|requireApiKey|checkInternalToken|handtekening|signature|verifySignature/;
+  /requirePrincipal|getPrincipal|currentPrincipal|requireRole|hasRole|withAuth|withAdminAccess|withOrganizationAccess|withBranchAccess|employerTenant|requireWorker|requireEmployer|requireFreelancer|eigenOrganisatie|beheerContext|eisBeheer|medewerkerContext|auth\(\)|getServerSession|verifyApiKey|requireApiKey|checkInternalToken|handtekening|signature|verifySignature/;
 
 // Bewust zonder eigen identiteitscontrole: ze geven niets terug dat per persoon of per bedrijf verschilt, en staan toch
 // achter de sessie van de middleware (ze zijn niet openbaar). Een nieuwe route hier toevoegen vraagt een reden.

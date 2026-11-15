@@ -37,6 +37,7 @@ export const dynamic = "force-dynamic";
 /** Een eigen icoon per tabblad van het rijschool- en horecabeheer in het menu. */
 const TAB_ICOON: Record<string, ReactElement> = {
   overzicht: <IGrid />,
+  personeel: <IUsers />,
   agenda: <ICalendar />,
   leerlingen: <IUsers />,
   berichten: <IChat />,

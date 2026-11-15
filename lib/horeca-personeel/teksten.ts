@@ -1,0 +1,297 @@
+import type { Locale } from "@/lib/i18n/config";
+import type { Blok } from "@/lib/horeca-personeel/model";
+
+// ---------------------------------------------------------------------------
+// Alle tekst van het eigen personeel van een horecazaak, in Nederlands en Engels: het beheer van de opdrachtgever
+// (components/horeca/beheer/PersoneelTab.tsx), de uitnodigingspagina en de omgeving van de medewerker (app/personeel).
+// De server kiest de taal en geeft alleen die mee; een tekst met een invulling heeft een plaatshouder ({naam}) die de
+// client met vulIn invult. Puur bestand, zonder functies in de data.
+// Machine-assisted translation (EN): native-speaker review recommended.
+// ---------------------------------------------------------------------------
+
+export interface PersoneelTeksten {
+  taal: "nl-NL" | "en-GB";
+  blok: Record<Blok, { naam: string; uitleg: string }>;
+  binnenkort: string;
+  beheer: {
+    kop: string;
+    intro: string;
+    dashboardsKop: string;
+    dashboardsUitleg: string;
+    geenDashboards: string;
+    voorbeeldKnop: string;
+    nieuwDashboard: string;
+    dashboardNaam: string;
+    blokkenLabel: string;
+    bewaar: string;
+    annuleer: string;
+    wijzig: string;
+    verwijder: string;
+    verwijderDashboardVraag: string;
+    medewerkersKop: string;
+    medewerkersUitleg: string;
+    geenMedewerkers: string;
+    eerstDashboard: string;
+    uitnodigenKop: string;
+    naam: string;
+    email: string;
+    functie: string;
+    dashboard: string;
+    uitnodigenKnop: string;
+    uitnodigingVerstuurd: string;
+    mailMislukt: string;
+    linkLabel: string;
+    kopieer: string;
+    gekopieerd: string;
+    status: { uitgenodigd: string; actief: string; gestopt: string };
+    nieuweLink: string;
+    stop: string;
+    stopVraag: string;
+    haalWeg: string;
+    mededelingenKop: string;
+    mededelingenUitleg: string;
+    mededelingTekst: string;
+    mededelingVoor: string;
+    iedereen: string;
+    plaats: string;
+    geenMededelingen: string;
+    bezig: string;
+    fout: string;
+  };
+  uitnodiging: {
+    titel: string;
+    ongeldig: string;
+    intro: string;
+    naam: string;
+    wachtwoord: string;
+    herhaal: string;
+    maak: string;
+    bezig: string;
+    bestaatAl: string;
+    naarInloggen: string;
+    gekoppeld: string;
+  };
+  omgeving: {
+    titel: string;
+    hallo: string;
+    geenBlokken: string;
+    mededelingenKop: string;
+    geenMededelingen: string;
+    takenKop: string;
+    takenUitleg: string;
+    geenTaken: string;
+    metenLabel: string;
+    afgevinktDoor: string;
+    afvinken: string;
+    terugdraaien: string;
+    buitenGrens: string;
+    loonstrokenKop: string;
+    berichtenKop: string;
+    binnenkort: string;
+    uitloggen: string;
+    geenToegang: string;
+    fout: string;
+    bezig: string;
+  };
+  mail: { onderwerp: string; hoi: string; tekst: string; knop: string; geldig: string };
+}
+
+const nl: PersoneelTeksten = {
+  taal: "nl-NL",
+  blok: {
+    taken: { naam: "Taken", uitleg: "De takenlijsten van de zaak (openen, sluiten, schoonmaak en metingen), om af te vinken." },
+    mededelingen: { naam: "Mededelingen", uitleg: "Berichten van jou aan het team, bijvoorbeeld over het rooster of een actie." },
+    loonstroken: { naam: "Loonstroken", uitleg: "Hier zien medewerkers hun eigen loonstroken. Komt binnenkort." },
+    berichten: { naam: "Berichten", uitleg: "Chatten met jou en met het team. Komt binnenkort." },
+  },
+  binnenkort: "Binnenkort",
+  beheer: {
+    kop: "Personeel",
+    intro: "Nodig je eigen medewerkers uit. Ze maken zelf een account en zien daarna alleen het dashboard dat jij voor hun rol hebt ingesteld.",
+    dashboardsKop: "Dashboards per rol",
+    dashboardsUitleg: "Een dashboard bepaalt wat een medewerker ziet. Maak er bijvoorbeeld een voor de bediening en een voor de keuken, met andere onderdelen.",
+    geenDashboards: "Je hebt nog geen dashboards.",
+    voorbeeldKnop: "Voorbeeld toevoegen (bediening en keuken)",
+    nieuwDashboard: "Nieuw dashboard",
+    dashboardNaam: "Naam van de rol",
+    blokkenLabel: "Wat ziet deze rol?",
+    bewaar: "Bewaren",
+    annuleer: "Annuleren",
+    wijzig: "Wijzigen",
+    verwijder: "Verwijderen",
+    verwijderDashboardVraag: "Dit dashboard verwijderen?",
+    medewerkersKop: "Medewerkers",
+    medewerkersUitleg: "Wie je uitnodigt krijgt een mail met een link om een account te maken. Je kunt de link ook zelf doorgeven.",
+    geenMedewerkers: "Je hebt nog geen medewerkers uitgenodigd.",
+    eerstDashboard: "Maak eerst een dashboard, dan kun je medewerkers uitnodigen.",
+    uitnodigenKop: "Medewerker uitnodigen",
+    naam: "Naam",
+    email: "E-mailadres",
+    functie: "Functie (bijvoorbeeld souschef)",
+    dashboard: "Dashboard",
+    uitnodigenKnop: "Uitnodigen",
+    uitnodigingVerstuurd: "Uitnodiging gemaakt en gemaild naar {email}.",
+    mailMislukt: "De uitnodiging is gemaakt, maar de mail kwam niet aan. Geef de link zelf door.",
+    linkLabel: "Link om een account te maken",
+    kopieer: "Link kopiëren",
+    gekopieerd: "Gekopieerd",
+    status: { uitgenodigd: "Uitgenodigd", actief: "Actief", gestopt: "Gestopt" },
+    nieuweLink: "Nieuwe link",
+    stop: "Stoppen",
+    stopVraag: "{naam} kan dan niet meer inloggen bij je zaak. Doorgaan?",
+    haalWeg: "Uit de lijst halen",
+    mededelingenKop: "Mededelingen",
+    mededelingenUitleg: "Een bericht aan je team. Het staat bovenaan hun dashboard.",
+    mededelingTekst: "Wat wil je het team laten weten?",
+    mededelingVoor: "Voor wie?",
+    iedereen: "Iedereen",
+    plaats: "Plaatsen",
+    geenMededelingen: "Er zijn geen mededelingen.",
+    bezig: "Bezig…",
+    fout: "Dat lukte niet. Probeer het zo nog eens.",
+  },
+  uitnodiging: {
+    titel: "Welkom bij {zaak}",
+    ongeldig: "Deze uitnodiging is niet meer geldig. Vraag je werkgever om een nieuwe link.",
+    intro: "Je bent uitgenodigd om mee te werken bij {zaak}. Maak een account met het e-mailadres {email}.",
+    naam: "Je volledige naam",
+    wachtwoord: "Kies een wachtwoord",
+    herhaal: "Herhaal het wachtwoord",
+    maak: "Account maken",
+    bezig: "Bezig…",
+    bestaatAl: "Er bestaat al een account met dit e-mailadres. Log in om de uitnodiging te gebruiken.",
+    naarInloggen: "Naar inloggen",
+    gekoppeld: "Je account is gekoppeld aan {zaak}.",
+  },
+  omgeving: {
+    titel: "Mijn werk bij {zaak}",
+    hallo: "Hallo {naam}",
+    geenBlokken: "Je werkgever heeft nog niets voor je klaargezet.",
+    mededelingenKop: "Mededelingen",
+    geenMededelingen: "Geen mededelingen.",
+    takenKop: "Taken van vandaag",
+    takenUitleg: "Vink af wat je gedaan hebt. Bij een meting vul je de waarde in.",
+    geenTaken: "Er zijn geen takenlijsten voor vandaag.",
+    metenLabel: "Gemeten waarde",
+    afgevinktDoor: "afgevinkt door {naam}",
+    afvinken: "Afvinken",
+    terugdraaien: "Terugdraaien",
+    buitenGrens: "Let op: buiten de grens.",
+    loonstrokenKop: "Loonstroken",
+    berichtenKop: "Berichten",
+    binnenkort: "Komt binnenkort.",
+    uitloggen: "Uitloggen",
+    geenToegang: "Je hebt geen toegang meer tot deze zaak.",
+    fout: "Dat lukte niet. Probeer het zo nog eens.",
+    bezig: "Bezig…",
+  },
+  mail: {
+    onderwerp: "Je bent uitgenodigd bij {zaak}",
+    hoi: "Hoi {naam},",
+    tekst: "{beheerder} nodigt je uit om mee te werken bij {zaak}. Maak een account met de knop hieronder.",
+    knop: "Account maken",
+    geldig: "Deze link is {dagen} dagen geldig.",
+  },
+};
+
+const en: PersoneelTeksten = {
+  taal: "en-GB",
+  blok: {
+    taken: { naam: "Tasks", uitleg: "The venue's task lists (opening, closing, cleaning and readings), to tick off." },
+    mededelingen: { naam: "Announcements", uitleg: "Messages from you to the team, for example about the rota or an offer." },
+    loonstroken: { naam: "Payslips", uitleg: "Staff see their own payslips here. Coming soon." },
+    berichten: { naam: "Messages", uitleg: "Chat with you and with the team. Coming soon." },
+  },
+  binnenkort: "Coming soon",
+  beheer: {
+    kop: "Staff",
+    intro: "Invite your own staff. They create their own account and then only see the dashboard you set up for their role.",
+    dashboardsKop: "Dashboards per role",
+    dashboardsUitleg: "A dashboard decides what a staff member sees. For example, make one for front of house and one for the kitchen, with different parts.",
+    geenDashboards: "You have no dashboards yet.",
+    voorbeeldKnop: "Add an example (front of house and kitchen)",
+    nieuwDashboard: "New dashboard",
+    dashboardNaam: "Name of the role",
+    blokkenLabel: "What does this role see?",
+    bewaar: "Save",
+    annuleer: "Cancel",
+    wijzig: "Edit",
+    verwijder: "Delete",
+    verwijderDashboardVraag: "Delete this dashboard?",
+    medewerkersKop: "Staff members",
+    medewerkersUitleg: "Anyone you invite gets an email with a link to create an account. You can also pass the link on yourself.",
+    geenMedewerkers: "You have not invited any staff yet.",
+    eerstDashboard: "Create a dashboard first, then you can invite staff.",
+    uitnodigenKop: "Invite a staff member",
+    naam: "Name",
+    email: "Email address",
+    functie: "Job title (for example sous chef)",
+    dashboard: "Dashboard",
+    uitnodigenKnop: "Invite",
+    uitnodigingVerstuurd: "Invitation created and emailed to {email}.",
+    mailMislukt: "The invitation was created, but the email did not arrive. Pass the link on yourself.",
+    linkLabel: "Link to create an account",
+    kopieer: "Copy link",
+    gekopieerd: "Copied",
+    status: { uitgenodigd: "Invited", actief: "Active", gestopt: "Stopped" },
+    nieuweLink: "New link",
+    stop: "Stop",
+    stopVraag: "{naam} will no longer be able to sign in at your venue. Continue?",
+    haalWeg: "Remove from list",
+    mededelingenKop: "Announcements",
+    mededelingenUitleg: "A message to your team. It appears at the top of their dashboard.",
+    mededelingTekst: "What do you want the team to know?",
+    mededelingVoor: "For whom?",
+    iedereen: "Everyone",
+    plaats: "Post",
+    geenMededelingen: "There are no announcements.",
+    bezig: "Working…",
+    fout: "That did not work. Please try again in a moment.",
+  },
+  uitnodiging: {
+    titel: "Welcome to {zaak}",
+    ongeldig: "This invitation is no longer valid. Ask your employer for a new link.",
+    intro: "You have been invited to work at {zaak}. Create an account with the email address {email}.",
+    naam: "Your full name",
+    wachtwoord: "Choose a password",
+    herhaal: "Repeat the password",
+    maak: "Create account",
+    bezig: "Working…",
+    bestaatAl: "An account with this email address already exists. Sign in to use the invitation.",
+    naarInloggen: "Go to sign in",
+    gekoppeld: "Your account is now linked to {zaak}.",
+  },
+  omgeving: {
+    titel: "My work at {zaak}",
+    hallo: "Hello {naam}",
+    geenBlokken: "Your employer has not set anything up for you yet.",
+    mededelingenKop: "Announcements",
+    geenMededelingen: "No announcements.",
+    takenKop: "Today's tasks",
+    takenUitleg: "Tick off what you have done. For a reading, enter the value.",
+    geenTaken: "There are no task lists for today.",
+    metenLabel: "Measured value",
+    afgevinktDoor: "ticked off by {naam}",
+    afvinken: "Tick off",
+    terugdraaien: "Undo",
+    buitenGrens: "Careful: outside the limit.",
+    loonstrokenKop: "Payslips",
+    berichtenKop: "Messages",
+    binnenkort: "Coming soon.",
+    uitloggen: "Sign out",
+    geenToegang: "You no longer have access to this venue.",
+    fout: "That did not work. Please try again in a moment.",
+    bezig: "Working…",
+  },
+  mail: {
+    onderwerp: "You have been invited to {zaak}",
+    hoi: "Hi {naam},",
+    tekst: "{beheerder} invites you to work at {zaak}. Create an account with the button below.",
+    knop: "Create account",
+    geldig: "This link is valid for {dagen} days.",
+  },
+};
+
+export function personeelTeksten(locale: Locale): PersoneelTeksten {
+  return locale === "en" ? en : nl;
+}

@@ -3,7 +3,7 @@
 // komt hieruit: elk tabblad is daar een eigen onderdeel (/werkgever/horeca?tab=<id>). Puur, zodat de
 // layout (server) en het scherm (client) dezelfde lijst lezen.
 
-export type BeheerTab = "overzicht" | "reserveringen" | "bestellingen" | "tafels" | "kassa" | "taken" | "cijfers" | "menukaart" | "schermen" | "modules" | "gegevens";
+export type BeheerTab = "overzicht" | "personeel" | "reserveringen" | "bestellingen" | "tafels" | "kassa" | "taken" | "cijfers" | "menukaart" | "schermen" | "modules" | "gegevens";
 
 export const horecaTabs = (modules: readonly string[]): { id: BeheerTab; label: string }[] => [
   { id: "overzicht", label: "Live" },
@@ -17,6 +17,7 @@ export const horecaTabs = (modules: readonly string[]): { id: BeheerTab; label: 
   ...(modules.includes("kassa") ? [{ id: "kassa" as const, label: "Kassa" }] : []),
   ...(modules.includes("taken") ? [{ id: "taken" as const, label: "Takenlijsten" }] : []),
   ...(modules.includes("bestellen") || modules.includes("reserveren") ? [{ id: "cijfers" as const, label: "Cijfers" }] : []),
+  { id: "personeel", label: "Personeel" },
   { id: "menukaart", label: "Menukaart" },
   { id: "schermen", label: "Schermen" },
   { id: "modules", label: "Modules & abonnement" },

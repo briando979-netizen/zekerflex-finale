@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { WELKOM_COOKIE, instroomBestemming } from "@/lib/welkom/slides";
+import { isMedewerker } from "@/lib/horeca-personeel/context";
 
 export const dynamic = "force-dynamic";
 
@@ -30,5 +31,7 @@ export default async function StartPage(props: { searchParams: Promise<{ utm_sou
   if (hasRole(principal, "HQ_ADMIN", "LOCAL_MANAGER", "DISPUTE_MANAGER")) {
     redirect("/werkgever");
   }
+  // een medewerker van een horecazaak (eigen account zonder rol, lib/horeca-personeel) gaat naar zijn eigen omgeving
+  if (principal.grants.length === 0 && (await isMedewerker(principal.userId))) redirect("/personeel");
   redirect("/dashboard");
 }
