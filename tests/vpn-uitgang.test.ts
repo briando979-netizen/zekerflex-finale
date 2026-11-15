@@ -25,6 +25,8 @@ describe("de uitgang van de VPN", () => {
     expect(blok).toMatch(/mem_limit: \d+m/);
     expect(blok).toContain("--advertise-exit-node");
     expect(blok).toContain("--login-server=https://vpn.zekerflex.com");
+    // zonder nftables zet Tailscale op deze host geen NAT-regels en gaat er niets naar internet (15 nov gemeten)
+    expect(blok).toContain("TS_DEBUG_FIREWALL_MODE: nftables");
     // geen sleutel in compose of in .env.production: aanmelden gaat eenmalig met aanmelden.sh
     expect(blok).not.toMatch(/TS_AUTHKEY/);
     expect(blok).not.toMatch(/ports:/);

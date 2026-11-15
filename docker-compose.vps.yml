@@ -352,6 +352,9 @@ services:
       TS_AUTH_ONCE: "true"
       TS_ACCEPT_DNS: "false"
       TS_EXTRA_ARGS: --login-server=https://vpn.zekerflex.com --advertise-exit-node
+      # de host gebruikt nf_tables; met de standaard (iptables-legacy) zet Tailscale geen NAT-regels en komt
+      # verkeer via de uitgang nooit op internet (gemeten 15 nov: "can't initialize iptables table filter")
+      TS_DEBUG_FIREWALL_MODE: nftables
     volumes:
       - vpn-uitgang:/var/lib/tailscale
     devices:
@@ -359,6 +362,7 @@ services:
     cap_add: [NET_ADMIN, NET_RAW]
     sysctls:
       net.ipv4.ip_forward: "1"
+      net.ipv6.conf.all.forwarding: "1"
     networks: [vpn-uitgang]
     mem_limit: 256m
     logging:

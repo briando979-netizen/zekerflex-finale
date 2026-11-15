@@ -11,7 +11,7 @@ HS="sudo docker exec zekerflex-headscale-1 headscale"
 UIT="zekerflex-vpn-uitgang-1"
 cd "$(dirname "$0")/../../.."
 
-json_id() { python3 -c 'import json,sys; naam=sys.argv[1]; veld=sys.argv[2]; d=json.load(sys.stdin); d=d if isinstance(d,list) else [d]; print(next((str(x.get("id","")) for x in d if x.get(veld)==naam), ""))' "$1" "$2"; }
+json_id() { python3 -c 'import json,sys; naam=sys.argv[1]; veld=sys.argv[2]; d=json.load(sys.stdin) or []; d=d if isinstance(d,list) else [d]; print(next((str(x.get("id","")) for x in d if x.get(veld)==naam), ""))' "$1" "$2"; }
 
 if ! sudo docker ps --format '{{.Names}}' | grep -qx "$UIT"; then echo "De container $UIT draait niet (eerst een uitrol met vpn-uitgang)"; exit 1; fi
 
