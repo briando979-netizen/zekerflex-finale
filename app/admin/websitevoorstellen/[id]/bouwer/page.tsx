@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { PageHead } from "@/components/admin/kit";
 import { SiteBuilder } from "@/components/app/SiteBuilder";
-import { isProposalId } from "@/lib/sales/website-proposal";
+import { getWebsiteProposal, isProposalId } from "@/lib/sales/website-proposal";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +15,21 @@ export default async function ProposalBuilderPage({ params }: { params: Promise<
     return <PageHead title="Geen toegang" subtitle="Websitevoorstellen aanpassen is alleen voor platformbeheerders." />;
   }
   const { id } = await params;
-  if (!isProposalId(id)) notFound();
+  // Alleen een echt voorstel heeft een bouwer. Een woord als "voorbeeld" (uit een uitleg of een oude link) of een id dat niet bestaat
+  // gaf een kale 404; nu staat er wat er mis is en waar het voorstel te vinden is.
+  if (!isProposalId(id) || !(await getWebsiteProposal(id))) {
+    return (
+      <div className="space-y-4">
+        <PageHead
+          title="Dit voorstel bestaat niet"
+          subtitle="De bouwer van een websitevoorstel opent met het nummer van een echt voorstel. Kies het voorstel in de lijst en druk op Aanpassen in de bouwer."
+        />
+        <Link href="/admin/websitevoorstellen" className="text-sm font-medium underline">
+          Naar Websitevoorstellen
+        </Link>
+      </div>
+    );
+  }
   return (
     <div className="space-y-4">
       <Link href="/admin/websitevoorstellen" className="text-sm font-medium underline">
