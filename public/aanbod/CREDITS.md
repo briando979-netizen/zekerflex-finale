@@ -15,3 +15,20 @@ losse foto). De fotograaf staat op de Pexels-pagina van het nummer.
 Een foto toevoegen: zet het bestand hier neer, vermeld het in deze tabel en
 verwijs ernaar met `foto: { bestand, alt }` in `lib/marketing/aanbod.ts`
 (`tests/marketing-aanbod.test.ts` controleert dat beide kloppen).
+
+## Schermafbeeldingen van het product (`inkijk/`)
+
+Eigen schermafbeeldingen van ZekerFlex, gemaakt op een tijdelijke voorbeeldzaak
+("Restaurant De Proef") met verzonnen voorbeeldgegevens: alleen voornamen,
+openbare adressen en een nepnummer. De voorbeeldzaak is daarna gewist. Geen
+gegevens van echte klanten. Verwijzen met `inkijk: [...]` in
+`lib/marketing/aanbod.ts` (`tests/aanbod-inkijk.test.ts` controleert bestand,
+maten en deze lijst).
+
+| bestand | plek | bron |
+|---|---|---|
+| `inkijk/horeca-kassa.webp` | Horeca: de kassa | eigen schermafbeelding, 15 nov 2026 |
+| `inkijk/horeca-bord.webp` | Horeca: het bestellingenbord | eigen schermafbeelding, 15 nov 2026 |
+| `inkijk/horeca-online-bestellen-telefoon.webp` | Horeca: bestellen voor gasten | eigen schermafbeelding, 15 nov 2026 |
+| `inkijk/horeca-kaart.webp` | Horeca: de bezorgkaart (kaart © Kadaster, BRT Achtergrondkaart, CC BY 4.0) | eigen schermafbeelding, 15 nov 2026 |
+| `inkijk/horeca-archief.webp` | Horeca: het archief | eigen schermafbeelding, 15 nov 2026 |
