@@ -152,7 +152,7 @@ export function ArchiefTab({ data }: { data: BeheerData }) {
         <section className="card space-y-3 p-5" aria-labelledby="archief-uitslag">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 id="archief-uitslag" className="font-display text-lg font-bold text-ink" aria-live="polite">
-              {t.resultaten.replace("{n}", String(uit.rijen.length))}
+              {uit.rijen.length === 1 ? t.resultatenEen : t.resultaten.replace("{n}", String(uit.rijen.length))}
             </h3>
             <button type="button" className="btn-ghost" aria-expanded={omzet} onClick={() => setOmzet((o) => !o)}>
               {omzet ? t.omzetVerbergen : t.omzetTonen}

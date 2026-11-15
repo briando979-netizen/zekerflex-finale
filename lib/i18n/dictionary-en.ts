@@ -1930,6 +1930,7 @@ export const en: Dict = {
     zoeken: "Search",
     csv: "Download as CSV",
     resultaten: "{n} orders",
+    resultatenEen: "1 order",
     meer: "There are more orders than shown here. Choose a shorter period or a stricter filter.",
     omzetTonen: "Show revenue and VAT",
     omzetVerbergen: "Hide revenue and VAT",

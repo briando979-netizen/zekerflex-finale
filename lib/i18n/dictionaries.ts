@@ -1947,6 +1947,7 @@ export const nl = {
     zoeken: "Zoeken",
     csv: "Download als CSV",
     resultaten: "{n} bestellingen",
+    resultatenEen: "1 bestelling",
     meer: "Er zijn meer bestellingen dan hier staan. Kies een kortere periode of een strengere filter.",
     omzetTonen: "Omzet en btw tonen",
     omzetVerbergen: "Omzet en btw verbergen",
