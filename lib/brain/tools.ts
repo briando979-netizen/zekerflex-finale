@@ -27,9 +27,17 @@ export interface BrainTool {
   run: (p: Principal) => Promise<ToolResult>;
 }
 
-export function roleOf(p: Principal): Audience {
+/**
+ * De app waarin de assistent draait (15 nov 2026). Wie werker is én een bedrijf beheert, kreeg in /werkgever/assistent de
+ * werkersversie ("Wanneer is mijn volgende klus?"). In de werkgeversapp helpt hij nu het bedrijf, maar alleen met een
+ * bedrijfsrol: de app kiest de kant, nooit meer rechten.
+ */
+export type BrainApp = "werker" | "werkgever";
+
+export function roleOf(p: Principal, app?: BrainApp): Audience {
   if (!p.grants.length) return "public"; // e.g. an API key without a user behind it
   if (hasRole(p, "PLATFORM_ADMIN")) return "admin";
+  if (app === "werkgever" && hasRole(p, "HQ_ADMIN", "LOCAL_MANAGER", "DISPUTE_MANAGER")) return "opdrachtgever";
   if (hasRole(p, "FREELANCER")) return "werknemer";
   return "opdrachtgever";
 }
@@ -198,8 +206,8 @@ export function toolsFor(role: Audience): BrainTool[] {
 }
 
 /** Run tools by name, but only those this role may use; failures become a short note instead of an error. */
-export async function runTools(p: Principal, names: string[]): Promise<{ name: string; result: ToolResult }[]> {
-  const allowed = toolsFor(roleOf(p));
+export async function runTools(p: Principal, names: string[], role: Audience = roleOf(p)): Promise<{ name: string; result: ToolResult }[]> {
+  const allowed = toolsFor(role);
   const picked = [...new Set(names)].map((n) => allowed.find((t) => t.name === n)).filter((t): t is BrainTool => Boolean(t)).slice(0, 3);
   return Promise.all(
     picked.map(async (t) => {
