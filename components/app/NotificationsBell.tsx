@@ -51,7 +51,16 @@ function sectionOf(iso: string, now = new Date()): Section {
  * Bell + meldingen-weergave. `dark` styles it for the admin surface. `texts`: de teksten van de bel; zonder prop Nederlands
  * (werkgever en beheer), het werkersdashboard geeft zijn eigen taal mee (components/app/notifications-texts.ts).
  */
-export function NotificationsBell({ dark = false, texts: t = NOTIFICATIONS_NL }: { dark?: boolean; texts?: NotificationsTexts }) {
+export function NotificationsBell({
+  dark = false,
+  texts: t = NOTIFICATIONS_NL,
+  app,
+}: {
+  dark?: boolean;
+  texts?: NotificationsTexts;
+  /** de app waarin de bel hangt: alleen de meldingen van die kant (lib/notifications/feed.ts); zonder: alles (beheer) */
+  app?: "werker" | "werkgever";
+}) {
   const [items, setItems] = useState<Item[]>([]);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState(false);
@@ -63,12 +72,12 @@ export function NotificationsBell({ dark = false, texts: t = NOTIFICATIONS_NL }:
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/me/notifications", { cache: "no-store" });
+      const r = await fetch(app ? `/api/me/notifications?app=${app}` : "/api/me/notifications", { cache: "no-store" });
       if (r.ok) setItems((await r.json()).items ?? []);
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [app]);
 
   useEffect(() => {
     try {
