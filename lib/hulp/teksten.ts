@@ -115,6 +115,12 @@ const nl: HulpTeksten = {
       link: { href: "/dashboard/account/passkeys", label: "Passkey instellen" },
     },
     {
+      id: "chat",
+      v: "Wat kan ik allemaal in de chat?",
+      a: "In Chat stuur je tekst, foto's en documenten. Je kunt ook je locatie live delen, stickers sturen, een bericht inplannen, een status van 24 uur zetten, een contact als kaartje delen en je aanmelden voor een afspraak. Een foto kan ook maar één keer te openen zijn.",
+      link: { href: "/dashboard/berichten", label: "Naar Chat" },
+    },
+    {
       id: "probleem",
       v: "Er ging iets mis tijdens een klus. Wie helpt me?",
       a: "Stuur ons een bericht via Chat met ons; we helpen je zo snel mogelijk. Gaat het over de klus zelf, zoals de tijden of het adres? Stuur dan de opdrachtgever een bericht vanuit de klus.",
@@ -128,6 +134,22 @@ const nl: HulpTeksten = {
     },
   ],
   nieuwsItems: [
+    {
+      id: "2026-11-15-chat",
+      dag: "2026-11-15",
+      datum: "15 november 2026",
+      titel: "Meer in de chat",
+      tekst: "Deel je locatie live (15 minuten, 1 uur of 8 uur), stuur stickers, plan een bericht in voor later, zet een status van 24 uur, deel een contact als kaartje en meld je aan voor een afspraak in een gesprek. Je vindt het in Chat.",
+      link: { href: "/dashboard/berichten", label: "Naar Chat" },
+    },
+    {
+      id: "2026-11-10-branches",
+      dag: "2026-11-10",
+      datum: "10 november 2026",
+      titel: "Kies je branches",
+      tekst: "Bij je aanmelding kies je in welke branches je wilt werken. Dan zie je eerst de klussen die bij je passen. Je kiest ze op Ontdekken.",
+      link: { href: "/dashboard/klussen", label: "Naar Ontdekken" },
+    },
     {
       id: "2026-11-10-hulpcentrum",
       dag: "2026-11-10",
@@ -283,6 +305,12 @@ const en: HulpTeksten = {
       link: { href: "/dashboard/account/passkeys", label: "Set up a passkey" },
     },
     {
+      id: "chat",
+      v: "What can I do in the chat?",
+      a: "In Chat you send text, photos and documents. You can also share your location live, send stickers, schedule a message, post a 24-hour status, share a contact as a card and sign up for an event. A photo can also be set to open just once.",
+      link: { href: "/dashboard/berichten", label: "Go to Chat" },
+    },
+    {
       id: "probleem",
       v: "Something went wrong during a job. Who can help me?",
       a: "Send us a message via Chat with us; we'll help you as soon as possible. Is it about the job itself, such as the times or the address? Then send the employer a message from the job.",
@@ -296,6 +324,22 @@ const en: HulpTeksten = {
     },
   ],
   nieuwsItems: [
+    {
+      id: "2026-11-15-chat",
+      dag: "2026-11-15",
+      datum: "15 November 2026",
+      titel: "More in the chat",
+      tekst: "Share your location live (15 minutes, 1 hour or 8 hours), send stickers, schedule a message for later, post a 24-hour status, share a contact as a card and sign up for an event in a conversation. You find it in Chat.",
+      link: { href: "/dashboard/berichten", label: "Go to Chat" },
+    },
+    {
+      id: "2026-11-10-branches",
+      dag: "2026-11-10",
+      datum: "10 November 2026",
+      titel: "Choose your industries",
+      tekst: "When you sign up, you choose the industries you want to work in. Then you see the jobs that fit you first. You choose them on Discover.",
+      link: { href: "/dashboard/klussen", label: "Go to Discover" },
+    },
     {
       id: "2026-11-10-hulpcentrum",
       dag: "2026-11-10",
@@ -451,6 +495,12 @@ const pl: HulpTeksten = {
       link: { href: "/dashboard/account/passkeys", label: "Ustaw klucz dostępu" },
     },
     {
+      id: "chat",
+      v: "Co mogę robić w czacie?",
+      a: "W Czacie wysyłasz tekst, zdjęcia i dokumenty. Możesz też udostępniać lokalizację na żywo, wysyłać naklejki, zaplanować wiadomość, dodać status na 24 godziny, udostępnić kontakt jako kartę i zapisać się na wydarzenie. Zdjęcie można też ustawić tak, by dało się je otworzyć tylko raz.",
+      link: { href: "/dashboard/berichten", label: "Przejdź do Czatu" },
+    },
+    {
       id: "probleem",
       v: "Coś poszło nie tak podczas zlecenia. Kto mi pomoże?",
       a: "Napisz do nas przez Czat z nami; pomożemy Ci jak najszybciej. Chodzi o samo zlecenie, na przykład godziny lub adres? Wtedy napisz do zleceniodawcy z poziomu zlecenia.",
@@ -464,6 +514,22 @@ const pl: HulpTeksten = {
     },
   ],
   nieuwsItems: [
+    {
+      id: "2026-11-15-chat",
+      dag: "2026-11-15",
+      datum: "15 listopada 2026",
+      titel: "Więcej w czacie",
+      tekst: "Udostępniaj lokalizację na żywo (15 minut, 1 godzinę lub 8 godzin), wysyłaj naklejki, zaplanuj wiadomość na później, dodaj status na 24 godziny, udostępnij kontakt jako kartę i zapisz się na wydarzenie w rozmowie. Znajdziesz to w Czacie.",
+      link: { href: "/dashboard/berichten", label: "Przejdź do Czatu" },
+    },
+    {
+      id: "2026-11-10-branches",
+      dag: "2026-11-10",
+      datum: "10 listopada 2026",
+      titel: "Wybierz branże",
+      tekst: "Przy rejestracji wybierasz branże, w których chcesz pracować. Wtedy najpierw widzisz zlecenia, które do Ciebie pasują. Wybierasz je w sekcji Odkrywaj.",
+      link: { href: "/dashboard/klussen", label: "Przejdź do Odkrywaj" },
+    },
     {
       id: "2026-11-10-hulpcentrum",
       dag: "2026-11-10",
@@ -619,6 +685,12 @@ const ro: HulpTeksten = {
       link: { href: "/dashboard/account/passkeys", label: "Configurează o cheie de acces" },
     },
     {
+      id: "chat",
+      v: "Ce pot face în chat?",
+      a: "În Chat trimiți text, fotografii și documente. Poți, de asemenea, să îți partajezi locația live, să trimiți stickere, să programezi un mesaj, să postezi un status de 24 de ore, să partajezi un contact ca card și să te înscrii la un eveniment. O fotografie poate fi setată să se deschidă o singură dată.",
+      link: { href: "/dashboard/berichten", label: "Mergi la Chat" },
+    },
+    {
       id: "probleem",
       v: "Ceva nu a mers bine la un job. Cine mă ajută?",
       a: "Trimite-ne un mesaj prin „Scrie-ne pe chat”; te ajutăm cât mai repede. E vorba de jobul în sine, de exemplu orele sau adresa? Atunci trimite un mesaj angajatorului din job.",
@@ -632,6 +704,22 @@ const ro: HulpTeksten = {
     },
   ],
   nieuwsItems: [
+    {
+      id: "2026-11-15-chat",
+      dag: "2026-11-15",
+      datum: "15 noiembrie 2026",
+      titel: "Mai mult în chat",
+      tekst: "Partajează-ți locația live (15 minute, 1 oră sau 8 ore), trimite stickere, programează un mesaj pentru mai târziu, postează un status de 24 de ore, partajează un contact ca card și înscrie-te la un eveniment dintr-o conversație. Găsești totul în Chat.",
+      link: { href: "/dashboard/berichten", label: "Mergi la Chat" },
+    },
+    {
+      id: "2026-11-10-branches",
+      dag: "2026-11-10",
+      datum: "10 noiembrie 2026",
+      titel: "Alege domeniile",
+      tekst: "La înscriere alegi domeniile în care vrei să lucrezi. Atunci vezi mai întâi lucrările potrivite pentru tine. Le alegi la Descoperă.",
+      link: { href: "/dashboard/klussen", label: "Mergi la Descoperă" },
+    },
     {
       id: "2026-11-10-hulpcentrum",
       dag: "2026-11-10",
@@ -787,6 +875,12 @@ const uk: HulpTeksten = {
       link: { href: "/dashboard/account/passkeys", label: "Налаштувати ключ доступу" },
     },
     {
+      id: "chat",
+      v: "Що я можу робити в чаті?",
+      a: "У Чаті ти надсилаєш текст, фото та документи. Також можна ділитися місцезнаходженням наживо, надсилати стікери, планувати повідомлення, публікувати статус на 24 години, ділитися контактом як карткою та записуватися на подію. Фото можна зробити таким, що відкривається лише один раз.",
+      link: { href: "/dashboard/berichten", label: "До Чату" },
+    },
+    {
       id: "probleem",
       v: "Під час роботи щось пішло не так. Хто мені допоможе?",
       a: "Надішліть нам повідомлення через «Напишіть нам у чат»; ми допоможемо якнайшвидше. Питання стосується самої роботи, наприклад часу чи адреси? Тоді напишіть роботодавцю зі сторінки роботи.",
@@ -800,6 +894,22 @@ const uk: HulpTeksten = {
     },
   ],
   nieuwsItems: [
+    {
+      id: "2026-11-15-chat",
+      dag: "2026-11-15",
+      datum: "15 листопада 2026",
+      titel: "Більше в чаті",
+      tekst: "Діліться місцезнаходженням наживо (15 хвилин, 1 година або 8 годин), надсилайте стікери, плануйте повідомлення на потім, публікуйте статус на 24 години, діліться контактом як карткою та записуйтеся на подію в розмові. Усе це в Чаті.",
+      link: { href: "/dashboard/berichten", label: "До Чату" },
+    },
+    {
+      id: "2026-11-10-branches",
+      dag: "2026-11-10",
+      datum: "10 листопада 2026",
+      titel: "Обери галузі",
+      tekst: "Під час реєстрації ти обираєш галузі, в яких хочеш працювати. Тоді спершу бачиш роботи, які тобі підходять. Обираєш їх у розділі Відкривати.",
+      link: { href: "/dashboard/klussen", label: "До Відкривати" },
+    },
     {
       id: "2026-11-10-hulpcentrum",
       dag: "2026-11-10",

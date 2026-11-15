@@ -7,6 +7,8 @@ import { logoutAction } from "@/lib/auth/actions";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
 import { PushSelfHeal } from "@/components/app/PushToggle";
+import { HulpCentrum } from "@/components/app/HulpCentrum";
+import type { HulpTeksten } from "@/lib/hulp/hulpjes";
 import { RecentResponseAlert } from "@/components/app/RecentResponseAlert";
 import type { NavItem } from "@/components/app/AppShell";
 import { useT, setLocale } from "@/components/i18n/I18nProvider";
@@ -50,6 +52,8 @@ export function EmployerShell({
   canSwitchToFreelancer = false,
   dashboards,
   helpHref = "/kennis/werkgevers",
+  hulp,
+  handleidingen = null,
   settingsHref = "/werkgever/instellingen",
   children,
 }: {
@@ -66,6 +70,10 @@ export function EmployerShell({
   /** Eigen profielfoto — toont in de gebruikersknop i.p.v. de initialen. */
   avatarUrl?: string | null;
   helpHref?: string;
+  /** het hulpcentrum voor bedrijven achter het vraagteken (lib/hulp/werkgever-teksten.ts); zonder staat er de oude link naar de kennispagina */
+  hulp?: HulpTeksten;
+  /** adres van de handleidingen (Outline); null = niet ingesteld */
+  handleidingen?: string | null;
   settingsHref?: string;
   children: ReactNode;
 }) {
@@ -344,14 +352,18 @@ export function EmployerShell({
               className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:border-brand-400 hover:text-brand-600"
             />
 
-            <Link
-              href={helpHref}
-              className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:border-brand-400 hover:text-brand-600"
-              aria-label={t.shell.help}
-              title={t.shell.help}
-            >
-              ?
-            </Link>
+            {hulp ? (
+              <HulpCentrum t={hulp} soort="bedrijf" handleidingen={handleidingen} />
+            ) : (
+              <Link
+                href={helpHref}
+                className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:border-brand-400 hover:text-brand-600"
+                aria-label={t.shell.help}
+                title={t.shell.help}
+              >
+                ?
+              </Link>
+            )}
 
             <NotificationsBell />
             <PushSelfHeal />

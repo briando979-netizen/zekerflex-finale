@@ -130,7 +130,7 @@ describe("de droge telling en het versturen", () => {
     h.gebruikers = [mk("pl1"), mk("nl1")];
     await meldBranchesKiezen({ verstuur: true });
     expect(h.mails.find((m) => m.to === "pl1@werker.nl")?.subject).toBe(BRANCHES_MELDING.pl.subject);
-    expect(h.mails.find((m) => m.to === "nl1@werker.nl")?.subject).toBe("Kies je branches, dan kun je weer reageren");
+    expect(h.mails.find((m) => m.to === "nl1@werker.nl")?.subject).toBe("Kies je branches voor klussen die bij je passen");
   });
 });
 

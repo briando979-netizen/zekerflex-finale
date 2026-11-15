@@ -51,6 +51,8 @@ export interface HulpTeksten {
 
 /** Het gesprek met ZekerFlex Support openen (components/chat/InboxPage.tsx leest ?support=1). */
 export const SUPPORT_CHAT = "/dashboard/berichten?support=1";
+/** Hetzelfde voor een bedrijf (de werkgeversapp): de chat is dezelfde, onder /werkgever. */
+export const SUPPORT_CHAT_WERKGEVER = "/werkgever/berichten?support=1";
 /** Zolang de onboarding loopt, is de chat dicht (lib/onboarding/werker-poort.ts): dan mailen. */
 export const SUPPORT_MAIL = "mailto:support@zekerflex.com";
 /** localStorage: id van het nieuwste nieuwsbericht dat de werker heeft gezien. */

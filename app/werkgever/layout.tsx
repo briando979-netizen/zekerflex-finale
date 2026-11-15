@@ -25,6 +25,7 @@ import { pasMenuVolgordeToe } from "@/lib/werkgever/menu-volgorde";
 import { getMenuVolgorde } from "@/lib/werkgever/menu-volgorde-store";
 import { werkruimteVan } from "@/lib/werkgever/werkruimte-server";
 import { kennisbankIngesteld } from "@/lib/kennisbank/outline";
+import { hulpTekstenWerkgever } from "@/lib/hulp/werkgever-teksten";
 import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
 import { featureEnabled } from "@/lib/flags";
 import { heeftAfspraken } from "@/lib/afspraken/in-menu";
@@ -173,6 +174,9 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
         userMeta={principal.email}
         avatarUrl={avatarUrl}
         canSwitchToFreelancer={hasRole(principal, "FREELANCER")}
+        // het vraagteken: het hulpcentrum voor bedrijven, alleen de teksten in de taal van de app gaan mee (lib/hulp/werkgever-teksten.ts)
+        hulp={hulpTekstenWerkgever(locale)}
+        handleidingen={kennisbankIngesteld() ? `${outlinePubliekeUrl()}/` : null}
         dashboards={{ actief: werkruimte.soort, dashboards: werkruimte.dashboards, kanToevoegen: beheerder }}
       >
         <OpbouwfaseBalk soort="werkgever" />

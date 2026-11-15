@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
 // Eenmalig: de werkers die zich tussen 6 en 9 november aanmeldden en nog geen branches kozen, krijgen één push (of mail) in hun app-taal
-// ("Kies je branches, dan kun je weer reageren"). Eigen geheim, zoals elke /api/internal-route.
+// ("Kies je branches voor klussen die bij je passen"). Eigen geheim, zoals elke /api/internal-route.
 //   POST /api/internal/onboarding/branches-melding             → droge telling: alleen aantallen, er gaat niets uit
 //   POST /api/internal/onboarding/branches-melding?verstuur=1  → verstuurt; per werker één keer, nooit naar testadressen
 // Het antwoord bevat alleen aantallen; er wordt geen id, naam of adres gelogd.

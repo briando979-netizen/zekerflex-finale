@@ -8,6 +8,7 @@ import { RONDLEIDING_START } from "@/lib/onboarding/rondleiding";
 import {
   HULP_NIEUWS_GEZIEN,
   SUPPORT_CHAT,
+  SUPPORT_CHAT_WERKGEVER,
   SUPPORT_MAIL,
   heeftNieuwsOngezien,
   zoekVragen,
@@ -84,17 +85,40 @@ function Regel({ icoon, titel, tekst, extra }: { icoon: ReactNode; titel: string
 
 const regelKlasse = "block w-full text-left transition hover:bg-paper-soft focus-visible:bg-paper-soft focus-visible:outline-none";
 
+/** "De rondleiding nog eens": alleen in de werker-app; de teksten staan in de woordenlijst van de werker (lib/onboarding/rondleiding.ts). */
+function RondleidingRegel({ sluit }: { sluit: () => void }) {
+  const rt = useFT().rondleiding;
+  return (
+    <li>
+      <button
+        type="button"
+        className={regelKlasse}
+        onClick={() => {
+          sluit();
+          window.dispatchEvent(new Event(RONDLEIDING_START));
+        }}
+      >
+        <Regel icoon={<IHelp />} titel={rt.opnieuw[0] ?? ""} tekst={rt.opnieuw[1] ?? ""} />
+      </button>
+    </li>
+  );
+}
+
 export function HulpCentrum({
   t,
   handleidingen = null,
   onboarding = false,
+  soort = "werker",
 }: {
   t: HulpTeksten;
+  /** de versie voor werkers (standaard, /dashboard) of voor bedrijven (/werkgever): bepaalt de chat en of de rondleiding erbij staat */
+  soort?: "werker" | "bedrijf";
   /** adres van de handleidingen (Outline, lib/kennisbank); null = niet ingesteld */
   handleidingen?: string | null;
   /** onboarding nog niet klaar: de chat is dan dicht, dus mailen */
   onboarding?: boolean;
 }) {
+  const chat = soort === "bedrijf" ? SUPPORT_CHAT_WERKGEVER : SUPPORT_CHAT;
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("home");
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -164,8 +188,6 @@ export function HulpCentrum({
   const gevonden = useMemo(() => zoekVragen(t.vragen, zoek), [t.vragen, zoek]);
 
   const sluit = () => setOpen(false);
-  // de rondleiding (lib/onboarding/rondleiding.ts) heeft zijn teksten in de woordenlijst van de werker-app
-  const rt = useFT().rondleiding;
   const kiesTab = (nieuw: Tab) => {
     setTab(nieuw);
     setFeedbackOpen(false);
@@ -290,18 +312,7 @@ export function HulpCentrum({
                     <Regel icoon={<IList />} titel={t.home.vragen[0]} tekst={t.home.vragen[1]} />
                   </button>
                 </li>
-                <li>
-                  <button
-                    type="button"
-                    className={regelKlasse}
-                    onClick={() => {
-                      sluit();
-                      window.dispatchEvent(new Event(RONDLEIDING_START));
-                    }}
-                  >
-                    <Regel icoon={<IHelp />} titel={rt.opnieuw[0] ?? ""} tekst={rt.opnieuw[1] ?? ""} />
-                  </button>
-                </li>
+                {soort === "werker" && <RondleidingRegel sluit={sluit} />}
                 {handleidingen && (
                   <li>
                     <a href={handleidingen} target="_blank" rel="noopener noreferrer" className={regelKlasse} onClick={sluit}>
@@ -315,7 +326,7 @@ export function HulpCentrum({
                       <Regel icoon={<IMail />} titel={t.home.mail[0]} tekst={t.home.mail[1]} />
                     </a>
                   ) : (
-                    <Link href={SUPPORT_CHAT} className={regelKlasse} onClick={sluit}>
+                    <Link href={chat} className={regelKlasse} onClick={sluit}>
                       <Regel icoon={<IChat />} titel={t.home.chat[0]} tekst={t.home.chat[1]} />
                     </Link>
                   )}
@@ -405,7 +416,7 @@ export function HulpCentrum({
                             </span>
                           </summary>
                           <p className="pb-2 text-sm leading-relaxed text-neutralx-600">{v.a}</p>
-                          {v.link && !(onboarding && v.link.href === SUPPORT_CHAT) && (
+                          {v.link && !(onboarding && v.link.href === chat) && (
                             <Link href={v.link.href} onClick={sluit} className="mb-2 inline-block text-sm font-semibold text-brand-600 hover:underline">
                               {v.link.label} →
                             </Link>
@@ -421,7 +432,7 @@ export function HulpCentrum({
                       {t.home.mail[0]} →
                     </a>
                   ) : (
-                    <Link href={SUPPORT_CHAT} onClick={sluit} className="font-semibold text-brand-600 hover:underline">
+                    <Link href={chat} onClick={sluit} className="font-semibold text-brand-600 hover:underline">
                       {t.hulp.vraagHet} →
                     </Link>
                   )}

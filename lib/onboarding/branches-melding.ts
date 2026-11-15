@@ -14,7 +14,7 @@ import { getBrancheKeuze } from "@/lib/worker/branche-store";
 
 // ---------------------------------------------------------------------------
 // Werkers die zich tussen 6 en 9 november aanmeldden (de stap "branches" bestaat sinds 10 november) en nog geen branches kozen, krijgen één
-// keer "Kies je branches, dan kun je weer reageren" in hun app-taal (eigenaar, 15 nov 2026: "ja"). Zelfde opzet als de melding over de nieuwe
+// keer "Kies je branches voor klussen die bij je passen" in hun app-taal (eigenaar, 15 nov 2026: "ja"; zonder de zin "dan kun je weer reageren": accounts van vóór 10 nov tellen als "alle branches" en staan niet stil, lib/onboarding/werker-poort.ts). Zelfde opzet als de melding over de nieuwe
 // uitzendovereenkomst (lib/agreements/uitzend-melding.ts): EERST een push; bereikt die geen apparaat, dan een mail. Pas als het echt aankwam
 // wordt de werker gemarkeerd (KV "branches-melding:<userId>", in ERASABLE_KV_PREFIXES); mislukt alles, dan probeert de volgende run het opnieuw,
 // nooit een tweede poging binnen dezelfde run. Nooit voor een testadres of geblokkeerd account. Droog: alleen aantallen.
