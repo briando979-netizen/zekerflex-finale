@@ -35,6 +35,7 @@ export const en: Dict = {
     bedrijfsprofiel: "Company profile",
     instellingen: "Settings",
     hulp: "Help centre",
+    inkaart: "Business overview",
   },
   shell: {
     collapse: "Collapse",

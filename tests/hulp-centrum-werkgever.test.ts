@@ -81,6 +81,7 @@ describe("de teksten van het hulpcentrum voor bedrijven", () => {
       [tekstVan(nl, "uren"), woordenNl.nav.urenGoedkeuren],
       [tekstVan(nl, "facturen"), woordenNl.nav.facturen],
       [tekstVan(nl, "chat"), woordenNl.nav.chat],
+      [tekstVan(nl, "bedrijf-in-kaart"), woordenNl.nav.inkaart],
       [tekstVan(nl, "geblokkeerd"), woordenNl.nav.geblokkeerd],
       [tekstVan(nl, "overeenkomsten"), woordenNl.nav.overeenkomsten],
       [tekstVan(nl, "overeenkomsten"), woordenNl.nav.compliance],
@@ -96,6 +97,7 @@ describe("de teksten van het hulpcentrum voor bedrijven", () => {
       [tekstVan(en, "overeenkomsten"), woordenEn.nav.overeenkomsten],
       [tekstVan(en, "overeenkomsten"), woordenEn.nav.compliance],
       [tekstVan(en, "meldingen"), woordenEn.nav.instellingen],
+      [tekstVan(en, "bedrijf-in-kaart"), woordenEn.nav.inkaart],
     ];
     for (const [tekst, naam] of moet) expect(tekst, `"${naam}"`).toContain(naam);
   });

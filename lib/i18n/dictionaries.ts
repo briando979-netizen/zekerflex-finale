@@ -38,6 +38,7 @@ export const nl = {
     bedrijfsprofiel: "Bedrijfsprofiel",
     instellingen: "Instellingen",
     hulp: "Hulpcentrum",
+    inkaart: "Bedrijf in kaart",
   },
   shell: {
     collapse: "Inklappen",

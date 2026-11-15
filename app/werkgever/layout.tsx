@@ -122,6 +122,8 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     reviews: { href: "/werkgever/google-reviews", label: "Google-reviews", icon: <IStar /> },
     netwerk: { href: "/werkgever/netwerk", label: "Wifi en VPN", icon: <IShield /> },
     rapportages: { href: "/werkgever/rapportages", label: "Rapportages", icon: <IGrid /> },
+    // personeel, kosten, ruimtes en bezetting in kaart brengen (lib/inkaart)
+    inkaart: { href: "/werkgever/in-kaart", label: t.nav.inkaart, icon: <IActivity /> },
     // de kennisbank staat op een eigen adres (Outline); inloggen gaat vanzelf met het ZekerFlex-account
     kennisbank: { href: `${outlinePubliekeUrl()}/`, label: "Handleidingen", icon: <IDoc /> },
     // het hulpcentrum voor bedrijven op een eigen pagina (lib/hulp/werkgever-teksten.ts); het vraagteken in de kopbalk opent hetzelfde

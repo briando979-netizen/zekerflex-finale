@@ -14,7 +14,7 @@ const alles = bestanden.map(tekst).join("\n");
 
 describe("de handleiding voor bedrijven", () => {
   it("bestaat uit genummerde handleidingen, elk met een eigen titel", () => {
-    expect(bestanden.length).toBeGreaterThanOrEqual(13);
+    expect(bestanden.length).toBeGreaterThanOrEqual(14);
     const titels = bestanden.map((f) => /^#\s+(.+)$/m.exec(tekst(f))?.[1] ?? "");
     for (const [i, t] of titels.entries()) expect(t.trim().length, bestanden[i]).toBeGreaterThan(3);
     expect(new Set(titels).size).toBe(titels.length);

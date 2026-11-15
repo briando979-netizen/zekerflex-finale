@@ -91,6 +91,12 @@ const nl: HulpTeksten = {
       link: { href: "/werkgever/facturen", label: "Naar Facturen" },
     },
     {
+      id: "bedrijf-in-kaart",
+      v: "Hoe krijg ik snel overzicht over mijn personeelskosten en mijn ruimtes?",
+      a: "Open Bedrijf in kaart. Kies je soort bedrijf, laad de voorbeeldset en vul je aantallen in: personeel met fte en kosten, je ruimtes (bijvoorbeeld het aantal spreekkamers) en hoe vol ze zijn per dagdeel. Je ziet dan het personeelskostenpercentage, hoeveel ruimtes je op het drukste moment echt nodig hebt, wanneer het druk en rustig is en wat dat betekent voor je inrichting en inzet.",
+      link: { href: "/werkgever/in-kaart", label: "Naar Bedrijf in kaart" },
+    },
+    {
       id: "chat",
       v: "Hoe neem ik contact op met een werker?",
       a: "Via Chat. Naast tekst stuur je foto's en documenten, deel je een locatie (ook live), plan je een bericht in voor later en maak je een afspraak waarop mensen kunnen aanmelden.",
@@ -128,6 +134,14 @@ const nl: HulpTeksten = {
     },
   ],
   nieuwsItems: [
+    {
+      id: "2026-11-15-in-kaart",
+      dag: "2026-11-15",
+      datum: "15 november 2026",
+      titel: "Nieuw: Bedrijf in kaart",
+      tekst: "Zet je personeel, kosten en ruimtes in een paar minuten neer. Je ziet je personeelskostenpercentage, hoeveel ruimtes je op het drukste moment echt nodig hebt, wanneer ze bezet zijn en waar je kunt verbeteren.",
+      link: { href: "/werkgever/in-kaart", label: "Naar Bedrijf in kaart" },
+    },
     {
       id: "2026-11-15-chat",
       dag: "2026-11-15",
@@ -240,6 +254,12 @@ const en: HulpTeksten = {
       link: { href: "/werkgever/facturen", label: "Go to Invoices" },
     },
     {
+      id: "bedrijf-in-kaart",
+      v: "How do I quickly get an overview of my staff costs and my rooms?",
+      a: "Open Business overview. Choose your type of business, load the example set and fill in your numbers: staff with fte and costs, your rooms (for example the number of consulting rooms) and how busy they are per part of the day. You then see the staff cost percentage, how many rooms you really need at the busiest moment, when it is busy and quiet, and what that means for your layout and staffing.",
+      link: { href: "/werkgever/in-kaart", label: "Go to Business overview" },
+    },
+    {
       id: "chat",
       v: "How do I contact a worker?",
       a: "Through Chat. Besides text you can send photos and documents, share a location (also live), schedule a message for later and create an event people can sign up for.",
@@ -277,6 +297,14 @@ const en: HulpTeksten = {
     },
   ],
   nieuwsItems: [
+    {
+      id: "2026-11-15-in-kaart",
+      dag: "2026-11-15",
+      datum: "15 November 2026",
+      titel: "New: Business overview",
+      tekst: "Enter your staff, costs and rooms in a few minutes. You see your staff cost percentage, how many rooms you really need at the busiest moment, when they are occupied and where you can improve.",
+      link: { href: "/werkgever/in-kaart", label: "Go to Business overview" },
+    },
     {
       id: "2026-11-15-chat",
       dag: "2026-11-15",

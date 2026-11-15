@@ -123,6 +123,7 @@ describe("menuVoor", () => {
       { sleutel: "inchecken", sectie: "beheer" },
       { sleutel: "facturen", sectie: "beheer" },
       { sleutel: "rapportages", sectie: "beheer" },
+      { sleutel: "inkaart", sectie: "beheer" },
       { sleutel: "compliance", sectie: "beheer" },
       { sleutel: "overeenkomsten", sectie: "beheer" },
       { sleutel: "bedrijf", sectie: "beheer" },
