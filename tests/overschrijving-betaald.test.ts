@@ -98,7 +98,7 @@ describe("de handeling", () => {
 
 describe("een tweede betaling via Stripe gaat niet stil voorbij", () => {
   const webhook = bron("app/api/webhooks/stripe/route.ts");
-  const blok = webhook.slice(webhook.indexOf("async function markInvoicePaid("), webhook.indexOf("/** Decrements variant stock"));
+  const blok = webhook.slice(webhook.indexOf("async function markInvoicePaid("), webhook.indexOf("const DECLINE_TEXT"));
 
   it("een andere betaling op een factuur die al betaald is: waarschuwing in het logboek en een melding aan de eigenaar", () => {
     expect(blok).toContain("stripePaymentIntentId: true,");
