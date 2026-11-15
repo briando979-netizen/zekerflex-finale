@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import { canDeleteForAll, canEdit, emojiOnlyCount, fmtBytes, fmtDuration, fmtTime, linkParts, type Msg } from "./shared";
 import { Avatar } from "./Avatar";
 import { IconReply, IconSmiley, IconDots, IconCopy, IconForward, IconPin, IconStar, IconPencil, IconTrash, IconMic, IconPlay, IconPause } from "./icons";
-import { golfPositie, vasteGolf } from "@/lib/chat/spraak";
+import { golfHoogtes, golfPositie, vasteGolf } from "@/lib/chat/spraak";
 import { ActionList, MessageSheet, ReactionRow, type ActionItem } from "./MessageActions";
 import { PollCard } from "./PollCard";
 import { AfspraakCard } from "./AfspraakCard";
@@ -80,6 +80,7 @@ function VoiceNote({
   const gemeld = useRef(beluisterd);
   const [lokaalBeluisterd, setLokaalBeluisterd] = useState(false);
   const staafjes = useMemo(() => (golf && golf.length ? golf : vasteGolf(id)), [golf, id]);
+  const hoogtes = useMemo(() => golfHoogtes(staafjes), [staafjes]);
   const isBeluisterd = beluisterd || lokaalBeluisterd;
 
   const start = () => {
@@ -184,13 +185,13 @@ function VoiceNote({
               if (e.key === "ArrowLeft") seek((pos - 5) / (dur || 1));
             }}
           >
-            {staafjes.map((n, i) => (
+            {staafjes.map((_, i) => (
               <span
                 key={i}
                 aria-hidden
                 // de staafjes volgen de tekstkleur (text-neutralx-600 heeft een regel voor de donkere modus); nog te spelen = doorzichtiger
                 className={`min-w-[1.5px] max-w-[3px] flex-1 rounded-full ${(i + 0.5) / staafjes.length <= deel ? (isBeluisterd ? "bg-sky-500" : "bg-current") : "bg-current opacity-35"}`}
-                style={{ height: `${Math.max(14, Math.round((n / 31) * 100))}%` }}
+                style={{ height: `${Math.round((hoogtes[i] ?? 0.14) * 100)}%` }}
               />
             ))}
             <span

@@ -8,7 +8,7 @@ import { PollMaker } from "./PollMaker";
 import { useChatTeksten } from "./ChatTekstenContext";
 import { vulIn } from "@/lib/i18n/vul-in";
 import { IconPaperclip, IconMic, IconSend, IconBolt, IconSparkle, IconSmiley, IconClose, IconReply, IconPencil, IconTrash, IconPlay, IconPause, IconLock, IconChevronDown } from "./icons";
-import { annuleerVoortgang, golfSamenvatten, KORTE_TIK_MS, niveauUit, schuifStand } from "@/lib/chat/spraak";
+import { annuleerVoortgang, golfSamenvatten, KORTE_TIK_MS, liveHoogtes, niveauUit, schuifStand } from "@/lib/chat/spraak";
 import { isFotoType } from "@/lib/messaging/bijlage";
 import { BERICHT_MAX, isTeLang, tekstAlsBestand, tekstBestandNaam, voorproef } from "@/lib/chat/lange-tekst";
 import { kandidaten, vermeldingenIn, vermeldingVraag, vulVermeldingIn, type Lid } from "@/lib/messaging/vermelding";
@@ -844,7 +844,7 @@ export function Composer({
             )}
             <span className="num w-11 flex-shrink-0 font-mono text-sm" role="timer" aria-live="off">{fmtDuration(recSecs)}</span>
             <span aria-hidden className="flex h-7 min-w-0 flex-1 items-center justify-end gap-[2px] overflow-hidden">
-              {(opname === "pauze" ? golfSamenvatten(alleNiveaus.current, 40).map((n) => n / 31) : niveaus).map((n, i) => (
+              {(opname === "pauze" ? golfSamenvatten(alleNiveaus.current, 40).map((n) => n / 31) : liveHoogtes(niveaus)).map((n, i) => (
                 <span key={i} className="w-[3px] flex-shrink-0 rounded-full bg-neutralx-400" style={{ height: `${Math.max(3, Math.round(n * 26))}px` }} />
               ))}
             </span>

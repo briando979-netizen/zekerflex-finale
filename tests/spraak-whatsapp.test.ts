@@ -22,8 +22,11 @@ import {
   annuleerVoortgang,
   GOLF_MAX,
   GOLF_STAAFJES,
+  golfHoogtes,
   golfPositie,
   golfSamenvatten,
+  liveHoogtes,
+  STILTE,
   KORTE_TIK_MS,
   niveauUit,
   schoneGolf,
@@ -99,6 +102,30 @@ describe("de geluidsgolf", () => {
     expect(golfPositie(50, 100, 200)).toBe(0);
     expect(golfPositie(400, 100, 200)).toBe(1);
     expect(golfPositie(150, 100, 0)).toBe(0);
+  });
+});
+
+describe("de golf op schaal (zoals WhatsApp)", () => {
+  it("een stille opname met een piek: de piek haalt de volle hoogte", () => {
+    const stil = Array.from({ length: 100 }, (_, i) => (i === 40 ? 0.05 : 0.01));
+    const g = golfSamenvatten(stil);
+    expect(Math.max(...g)).toBe(GOLF_MAX);
+    expect(Math.min(...g)).toBe(6);
+  });
+  it("echte stilte blijft laag, ruis krijgt geen volle hoogte", () => {
+    const g = golfSamenvatten(new Array(100).fill(STILTE / 2));
+    expect(Math.max(...g)).toBeLessThanOrEqual(1);
+  });
+  it("tekenen: op schaal van de eigen golf, nooit lager dan het minimum, ook een oude platte golf", () => {
+    expect(golfHoogtes([1, 0, 1])).toEqual([1, 0.14, 1]);
+    expect(golfHoogtes([0, 0])).toEqual([0.14, 0.14]);
+    expect(golfHoogtes([31, 15])[1]).toBeCloseTo(15 / 31);
+  });
+  it("tijdens het opnemen: op schaal van het hardste dat te zien is", () => {
+    expect(liveHoogtes([0.05, 0.1])).toEqual([0.5, 1]);
+    // onder de ondergrens (STILTE * 2,5) niet opgeblazen
+    expect(liveHoogtes([0.02, 0.04])[1]).toBeCloseTo(0.8);
+    expect(liveHoogtes([0.001])[0]).toBeLessThan(0.05);
   });
 });
 
