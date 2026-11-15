@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { BeheerWeergave, LeerlingRij } from "@/lib/rijschool/weergave";
 import type { Doe } from "@/components/rijschool/beheer/RijschoolBeheer";
+import { LeerlingenImport } from "@/components/rijschool/beheer/LeerlingenImport";
 import { LesFormulier, nieuwConcept } from "@/components/rijschool/beheer/AgendaTab";
 import { bedragVeld, centVan, foutVan } from "@/components/rijschool/api";
 import { Melding, Schakelaar, Veld, Voortgangsbalk } from "@/components/rijschool/ui";
@@ -48,6 +49,7 @@ export function LeerlingenTab({
   const [zoek, setZoek] = useState("");
   const [filter, setFilter] = useState<Status | "ALLE">("ALLE");
   const [nieuw, setNieuw] = useState(false);
+  const [importeren, setImport] = useState(false);
 
   const lijst = useMemo(() => {
     const z = zoek.trim().toLowerCase();
@@ -56,6 +58,8 @@ export function LeerlingenTab({
 
   const gekozen = focus ? data.leerlingen.find((l) => l.id === focus) : undefined;
   const lesMin = data.rijschool.lesMinuten;
+
+  if (importeren) return <LeerlingenImport doe={doe} onKlaar={() => setImport(false)} />;
 
   if (nieuw || gekozen) {
     return (
@@ -93,7 +97,10 @@ export function LeerlingenTab({
             ))}
           </select>
         </Veld>
-        <button type="button" className="btn-primary ml-auto" onClick={() => setNieuw(true)}>
+        <button type="button" className="btn-ghost ml-auto" onClick={() => setImport(true)}>
+          Overnemen uit een lijst
+        </button>
+        <button type="button" className="btn-primary" onClick={() => setNieuw(true)}>
           Nieuwe leerling
         </button>
       </div>

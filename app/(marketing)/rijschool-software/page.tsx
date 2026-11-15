@@ -49,6 +49,12 @@ const BLOKKEN: { id: string; kop: string; tekst: string; punten: string[] }[] = 
     punten: ["Teksten, foto's en kleuren pas je zelf aan", "Op je eigen domeinnaam, met het slotje geregeld", "Een assistent beantwoordt vragen van bezoekers", "Een bezoeker die een proefles boekt, staat meteen bij je leerlingen"],
   },
   {
+    id: "overstappen",
+    kop: "Overstappen",
+    tekst: "Kom je uit andere software of een Excel-lijst? Neem je leerlingen over in één keer, zonder ze opnieuw in te typen.",
+    punten: ["Exporteer je leerlingen als CSV en kies het bestand, of plak de tekst", "Je ziet eerst een voorbeeld en welke regels worden overgeslagen", "Naam, e-mail, telefoon en adres worden meegenomen", "Er gaat geen mail naar je leerlingen: uitnodigen doe je zelf, wanneer jij wilt"],
+  },
+  {
     id: "contact",
     kop: "Contact met leerlingen",
     tekst: "Berichten, mail en WhatsApp op één plek, zodat je niet meer in drie apps zoekt.",
@@ -56,7 +62,7 @@ const BLOKKEN: { id: string; kop: string; tekst: string; punten: string[] }[] = 
   },
 ];
 
-const NOG_NIET = ["Een koppeling met CBR TOP voor examens", "Een Code 95-module voor chauffeurs", "Automatisch overnemen van de gegevens uit je oude software (je leerlingen voer je nu zelf in of nodig je uit)"];
+const NOG_NIET = ["Een koppeling met CBR TOP voor examens", "Een Code 95-module voor chauffeurs", "Lessen en tegoed overnemen uit je oude software (leerlingen kan wel, zie Overstappen)"];
 
 export default function RijschoolSoftwarePage() {
   return (

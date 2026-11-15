@@ -146,6 +146,14 @@ async function voerUit(r: Rijschool, a: BeheerActie, door: string, userId: strin
       const nieuw = await prisma.rijschoolLeerling.create({ data: { ...data, rijschoolId: r.id } });
       return { nieuweLeerlingId: nieuw.id };
     }
+    case "importeer": {
+      // wie al met dit e-mailadres bij deze rijschool staat, blijft ongemoeid (unieke sleutel rijschool + e-mail)
+      const gemaakt = await prisma.rijschoolLeerling.createMany({
+        data: a.rijen.map((l) => ({ rijschoolId: r.id, naam: l.naam, email: l.email, telefoon: l.telefoon, adres: l.adres, status: "ACTIEF" as const })),
+        skipDuplicates: true,
+      });
+      return { overgenomen: gemaakt.count, bestonden: a.rijen.length - gemaakt.count };
+    }
     case "uitnodigen":
       return { verstuurd: await nodigUit(r, a.soort, a.id) };
     case "les": {

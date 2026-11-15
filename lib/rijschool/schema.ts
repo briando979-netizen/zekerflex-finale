@@ -172,6 +172,8 @@ export const beheerActieSchema = z.discriminatedUnion("actie", [
   z.object({ actie: z.literal("product"), id: id.nullable(), data: productSchema }),
   z.object({ actie: z.literal("productWeg"), id }),
   z.object({ actie: z.literal("leerling"), id: id.nullable(), data: leerlingSchema }),
+  // leerlingen overnemen uit een export van andere software (lib/rijschool/import.ts); stuurt niemand een mail
+  z.object({ actie: z.literal("importeer"), rijen: z.array(z.object({ naam, email, telefoon, adres: tekst(160) })).min(1, "Er zijn geen leerlingen om over te nemen.").max(500, "Er worden er maximaal 500 tegelijk overgenomen.") }),
   z.object({ actie: z.literal("uitnodigen"), soort: z.enum(["leerling", "instructeur"]), id }),
   z.object({ actie: z.literal("les"), id: id.nullable(), data: lesSchema, mail: z.boolean() }),
   z.object({ actie: z.literal("lesStatus"), id, status: z.enum(["GEPLAND", "VOLTOOID", "GEANNULEERD", "NIET_VERSCHENEN"]), mail: z.boolean() }),
