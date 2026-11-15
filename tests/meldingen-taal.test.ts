@@ -44,9 +44,10 @@ describe("meldingenbel: teksten", () => {
 });
 
 describe("meldingenbel: wie geeft welke teksten", () => {
-  it("alleen FreelancerShell geeft de vertaling mee; werkgever, beheer, OS en de algemene shell blijven Nederlands", () => {
-    expect(bron("components/app/FreelancerShell.tsx")).toContain("<NotificationsBell texts={ft.meldingen} />");
-    for (const f of ["components/app/EmployerShell.tsx", "components/admin/AdminShell.tsx", "components/app/AppShell.tsx", "components/os/Taakbalk.tsx"]) {
+  it("FreelancerShell geeft de vertaling mee, de werkgeversapp zijn eigen bedrijfsteksten (15 nov); beheer, OS en de algemene shell blijven Nederlands", () => {
+    expect(bron("components/app/FreelancerShell.tsx")).toContain('<NotificationsBell texts={ft.meldingen} app="werker" />');
+    expect(bron("components/app/EmployerShell.tsx")).toMatch(/<NotificationsBell app="werkgever" texts=\{locale === "en" \? NOTIFICATIONS_BEDRIJF\.en : NOTIFICATIONS_BEDRIJF\.nl\}/);
+    for (const f of ["components/admin/AdminShell.tsx", "components/app/AppShell.tsx", "components/os/Taakbalk.tsx"]) {
       const src = bron(f);
       expect(src, f).toContain("<NotificationsBell");
       expect(src, f).not.toMatch(/<NotificationsBell[^>]*texts=/);
