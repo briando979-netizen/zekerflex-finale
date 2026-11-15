@@ -17,14 +17,19 @@ export interface ShopSectie {
 
 /** De onderdelen onder de kop, in de oorspronkelijke volgorde. De kop met vier producten staat altijd bovenaan. */
 export const SHOP_SECTIES = [
+  { id: "ontdek", naam: "Uitgelicht", uitleg: "Een grote kaart (Sinterklaas, kerst of de werkdag) met acht tegels uit de catalogus, zoals bol.com.", alleenThuis: true },
   { id: "categorieen", naam: "Grote categorietegels", uitleg: "Vier tegels met een foto: kleding, werk en PBM, werkdag en cadeaus.", alleenThuis: true },
+  { id: "themas", naam: "Thema's", uitleg: "Kaarten per thema (seizoen, winter, veilig werken, onder € 15, team), alleen als er producten achter zitten.", alleenThuis: true },
   { id: "looks", naam: "Shop de look", uitleg: "Kant-en-klare combinaties van stukken die leverbaar zijn.", alleenThuis: true },
   { id: "populair", naam: "Populair", uitleg: "Vijf uitgelichte producten. Staat er alleen als er vijf met foto op voorraad zijn.", alleenThuis: true },
+  { id: "cadeauhulp", naam: "Cadeauhulp", uitleg: "Kies voor wie of je budget, of typ wat je zoekt.", alleenThuis: true },
   { id: "onlangs", naam: "Onlangs bekeken", uitleg: "Wat deze bezoeker eerder bekeek. Leeg voor wie nog niets bekeek.", alleenThuis: true },
   { id: "paskamer", naam: "Paskamer", uitleg: "De oproep om kleding eerst te passen op je eigen paspop.", alleenThuis: true },
   { id: "assortiment", naam: "Assortiment", uitleg: "Alle producten, met zoeken en filters. Altijd zichtbaar.", alleenThuis: false, vast: true },
+  { id: "alles", naam: "Ontdek alles", uitleg: "Het hele aanbod per categorie, met doelgroepen, collecties en aantallen.", alleenThuis: true },
   { id: "meer", naam: "Meer categorieën", uitleg: "De pakketten en snelkoppelingen naar de andere categorieën.", alleenThuis: false },
   { id: "service", naam: "Service", uitleg: "Verzending, retourneren en betalen in het kort.", alleenThuis: false },
+  { id: "regelen", naam: "Snel regelen", uitleg: "Je bestelling volgen en hulp als je ons nodig hebt.", alleenThuis: false },
   { id: "nieuwsbrief", naam: "Nieuwsbrief", uitleg: "Aanmelden voor de nieuwsbrief.", alleenThuis: false },
 ] as const satisfies readonly ShopSectie[];
 

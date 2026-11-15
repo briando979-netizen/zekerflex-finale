@@ -12,6 +12,8 @@ export type ShopCardProduct = {
   price: number;
   category: ShopCategory;
   gender?: string | null;
+  /** collectie (bijv. Winter 2026), voor ?collectie= en de voorpagina (lib/shop/etalage.ts) */
+  collection?: string | null;
   label?: string | null;
   imageUrl?: string | null;
   /** tweede foto (iemand die het draagt), getoond als je over de kaart beweegt */
@@ -44,6 +46,7 @@ export function toShopProduct(it: Record<string, unknown>): ShopCardProduct {
     price: Number(it.priceCents) / 100,
     category: (it.category as ShopCategory) ?? "Werkdag",
     gender: typeof it.gender === "string" ? it.gender : null,
+    collection: typeof it.collection === "string" && it.collection ? it.collection : null,
     label: typeof it.badge === "string" ? it.badge : null,
     imageUrl,
     altImageUrl: alt,
