@@ -50,7 +50,7 @@ export interface BeheerData {
   reserveren: ReserveerInstellingen;
   kassa: { btwNummer: string; voettekst: string };
   /** afhalen en bezorgen; ligging = het adres van de zaak is gevonden (de straal rekent vanaf daar) */
-  bezorgen: BezorgInstellingen & { ligging: boolean };
+  bezorgen: BezorgInstellingen & { ligging: boolean; plek: { lat: number; lng: number } | null };
 }
 
 /** Nog niet aan: wat we al van het bedrijf weten, voor de eerste stap (de soort uit de KvK-inschrijving, of null). */

@@ -6,6 +6,9 @@ import { Melding, Veld } from "@/components/rijschool/ui";
 import { STATUS_LABEL, VOLGENDE, VOLGENDE_KNOP, isOpen, regelsVoor, type BestelRegel, type BestelStatus } from "@/lib/horeca/bestellen";
 import { belbaar, FASE_LABEL, kmTekst, leverFase, schuif, teBetalenCent, tijdTekst, vroegsteOp, type BezorgInstellingen } from "@/lib/horeca/bezorgen";
 import { amsterdamClock } from "@/lib/time/amsterdam";
+import { useT } from "@/components/i18n/I18nProvider";
+import { Bord } from "@/components/horeca/beheer/Bord";
+import { BestelKaart } from "@/components/horeca/beheer/BestelKaart";
 import { euro } from "@/lib/horeca/weergave";
 import type { BeheerData, Doe } from "@/components/horeca/beheer/types";
 
@@ -34,6 +37,8 @@ interface Bestelling {
   postcode: string;
   plaats: string;
   afstandM: number | null;
+  lat: number | null;
+  lng: number | null;
   gewenstOp: string | null;
   bevestigdOp: string | null;
   bezorgerId: string | null;
@@ -55,6 +60,10 @@ export function BestellingenTab({ data, doe }: { data: BeheerData; doe: Doe }) {
   const [fout, setFout] = useState<string | null>(null);
   const [nu, setNu] = useState(() => Date.now());
   const [nieuw, setNieuw] = useState(false);
+  // bord (tegels per Nieuw/Bezig/Klaar), keuken (kolommen per status, per station) of kaart (bezorgingen)
+  const [weergave, setWeergave] = useState<"bord" | "keuken" | "kaart">("bord");
+  const [gekozen, setGekozen] = useState<string | null>(null);
+  const tb = useT().horecaBord;
 
   const laad = useCallback(async () => {
     try {
@@ -93,16 +102,33 @@ export function BestellingenTab({ data, doe }: { data: BeheerData; doe: Doe }) {
 
   const zichtbaar = (lijst ?? []).filter((b) => regelsVoor(b.regels, station).length > 0);
   const afgerond = zichtbaar.filter((b) => !isOpen(b.status)).reverse().slice(0, 20);
+  const gekozenB = gekozen ? (lijst ?? []).find((b) => b.id === gekozen) : undefined;
+  const knopStijl = (aan: boolean) => `rounded-full px-4 py-2 text-sm font-semibold ${aan ? "bg-ink text-white" : "bg-white text-neutralx-600 ring-1 ring-hair"}`;
+  const kies = (id: string | null) => {
+    setGekozen(id);
+    if (id && weergave === "kaart") setWeergave("bord");
+  };
 
   return (
     <div className="space-y-5">
       <section className="card flex flex-wrap items-center justify-between gap-3 p-5">
-        <div role="group" aria-label="Scherm voor" className="flex gap-1">
-          {(["alles", "keuken", "bar"] as Station[]).map((s) => (
-            <button key={s} type="button" aria-pressed={station === s} onClick={() => setStation(s)} className={`rounded-full px-4 py-2 text-sm font-semibold ${station === s ? "bg-ink text-white" : "bg-white text-neutralx-600 ring-1 ring-hair"}`}>
-              {s === "alles" ? "Alles" : s === "keuken" ? "Keuken" : "Bar"}
-            </button>
-          ))}
+        <div className="flex flex-wrap gap-3">
+          <div role="group" aria-label={tb.weergave} className="flex gap-1">
+            {(["bord", "keuken", "kaart"] as const).map((w) => (
+              <button key={w} type="button" aria-pressed={weergave === w} onClick={() => setWeergave(w)} className={knopStijl(weergave === w)}>
+                {tb[w]}
+              </button>
+            ))}
+          </div>
+          {weergave === "keuken" && (
+            <div role="group" aria-label="Scherm voor" className="flex gap-1">
+              {(["alles", "keuken", "bar"] as Station[]).map((s) => (
+                <button key={s} type="button" aria-pressed={station === s} onClick={() => setStation(s)} className={knopStijl(station === s)}>
+                  {s === "alles" ? "Alles" : s === "keuken" ? "Keuken" : "Bar"}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <button type="button" className="btn-primary" onClick={() => setNieuw((v) => !v)} aria-expanded={nieuw}>
           {nieuw ? "Sluiten" : "+ Bestelling invoeren"}
@@ -112,6 +138,18 @@ export function BestellingenTab({ data, doe }: { data: BeheerData; doe: Doe }) {
       {nieuw && <NieuweBestelling data={data} doe={doe} klaar={() => (setNieuw(false), void laad())} />}
       {lijst === null && <p className="text-sm text-neutralx-500">Laden…</p>}
 
+      {weergave === "bord" && lijst && (
+        <Bord
+          lijst={lijst}
+          nu={nu}
+          gekozen={gekozenB ? gekozenB.id : null}
+          kies={kies}
+          detail={gekozenB ? <BonKaart b={gekozenB} station="alles" nu={nu} inst={data.bezorgen} zet={zet} lever={lever} /> : null}
+        />
+      )}
+      {weergave === "kaart" && lijst && <BestelKaart lijst={lijst} zaak={data.bezorgen.plek} nu={nu} kies={kies} />}
+
+      {weergave === "keuken" && (
       <div className="grid gap-4 lg:grid-cols-3">
         {KOLOMMEN.map((k) => {
           const kolom = zichtbaar.filter((b) => b.status === k);
@@ -122,11 +160,46 @@ export function BestellingenTab({ data, doe }: { data: BeheerData; doe: Doe }) {
               </h2>
               <ul className="mt-2 space-y-2">
                 {kolom.length === 0 && <li className="px-1 text-sm text-neutralx-500">Niets.</li>}
-                {kolom.map((b) => {
-                  const volgende = VOLGENDE[b.status];
-                  const min = minutenGeleden(b.createdAt, nu);
-                  return (
-                    <li key={b.id} className={`card p-4 ${min >= 20 && b.status !== "KLAAR" ? "ring-2 ring-amber-400" : ""}`}>
+                {kolom.map((b) => (
+                  <li key={b.id}>
+                    <BonKaart b={b} station={station} nu={nu} inst={data.bezorgen} zet={zet} lever={lever} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          );
+        })}
+      </div>
+      )}
+
+      {weergave === "keuken" && afgerond.length > 0 && (
+        <section className="card p-5" aria-labelledby="afgerond-kop">
+          <h2 id="afgerond-kop" className="font-display text-lg font-bold text-ink">
+            Afgerond (laatste 12 uur)
+          </h2>
+          <ul className="mt-2 divide-y divide-hair text-sm">
+            {afgerond.map((b) => (
+              <li key={b.id} className="flex flex-wrap justify-between gap-2 py-2">
+                <span>
+                  #{b.nummer} · {isLevering(b) ? `${b.soort === "bezorgen" ? "Bezorgd" : "Afgehaald"} · ${b.naam}` : (b.tafelNaam ?? "Zonder tafel")} ·{" "}
+                  {isLevering(b) ? FASE_LABEL[leverFase(b)] : STATUS_LABEL[b.status]}
+                </span>
+                <span className="text-neutralx-600">{euro(isLevering(b) ? teBetalenCent(b) : b.totaalCent)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+}
+
+/** Eén bestelling met de regels en alle knoppen; in de keukenkolommen en als detail onder het bord. */
+function BonKaart({ b, station, nu, inst, zet, lever }: { b: Bestelling; station: Station; nu: number; inst: BezorgInstellingen; zet: (b: Bestelling, s: BestelStatus) => Promise<void>; lever: Lever }) {
+  const volgende = VOLGENDE[b.status];
+  const min = minutenGeleden(b.createdAt, nu);
+  return (
+                    <div className={`card p-4 ${min >= 20 && b.status !== "KLAAR" && isOpen(b.status) ? "ring-2 ring-amber-400" : ""}`}>
                       <p className="flex items-baseline justify-between gap-2">
                         <span className="font-display text-xl font-bold text-ink">#{b.nummer}</span>
                         <span className="text-sm text-neutralx-600">
@@ -154,7 +227,7 @@ export function BestellingenTab({ data, doe }: { data: BeheerData; doe: Doe }) {
                         })}
                       </ul>
                       {b.opmerking && <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1 text-sm text-ink">{b.opmerking}</p>}
-                      {isLevering(b) && <LeverKnoppen b={b} inst={data.bezorgen} lever={lever} />}
+                      {isLevering(b) && <LeverKnoppen b={b} inst={inst} lever={lever} />}
                       <div className="mt-3 flex flex-wrap gap-2">
                         {/* afhalen en bezorgen eindigen met Opgehaald of Afgeleverd (met betaalwijze), niet met Serveren */}
                         {volgende && !(isLevering(b) && volgende === "GESERVEERD") && (
@@ -173,34 +246,7 @@ export function BestellingenTab({ data, doe }: { data: BeheerData; doe: Doe }) {
                           Annuleren<span className="sr-only"> (bestelling {b.nummer})</span>
                         </button>
                       </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          );
-        })}
-      </div>
-
-      {afgerond.length > 0 && (
-        <section className="card p-5" aria-labelledby="afgerond-kop">
-          <h2 id="afgerond-kop" className="font-display text-lg font-bold text-ink">
-            Afgerond (laatste 12 uur)
-          </h2>
-          <ul className="mt-2 divide-y divide-hair text-sm">
-            {afgerond.map((b) => (
-              <li key={b.id} className="flex flex-wrap justify-between gap-2 py-2">
-                <span>
-                  #{b.nummer} · {isLevering(b) ? `${b.soort === "bezorgen" ? "Bezorgd" : "Afgehaald"} · ${b.naam}` : (b.tafelNaam ?? "Zonder tafel")} ·{" "}
-                  {isLevering(b) ? FASE_LABEL[leverFase(b)] : STATUS_LABEL[b.status]}
-                </span>
-                <span className="text-neutralx-600">{euro(isLevering(b) ? teBetalenCent(b) : b.totaalCent)}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-    </div>
+                    </div>
   );
 }
 

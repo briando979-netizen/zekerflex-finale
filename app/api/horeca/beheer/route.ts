@@ -6,6 +6,8 @@ import { aanzetVoorstel } from "@/lib/sites/aanzet-voorstel";
 import { zelfdeHerkomst } from "@/lib/rijschool/herkomst";
 import { aanzettenSchema, beheerActieSchema, BEZORG_ACTIES, bezorgActieSchema, lees, LIVE_ACTIES, liveActieSchema, takenActieSchema, TAKEN_ACTIES, uitbetaalSchema } from "@/lib/horeca/schema";
 import { leesBezorgen } from "@/lib/horeca/bezorgen";
+import { leesArchiefFilter } from "@/lib/horeca/archief";
+import { archiefCsvVan, archiefVan } from "@/lib/horeca/archief-server";
 import { bevestigTijd, bewaarBezorger, bewaarBezorgInstellingen, plaatsLevering, verwijderBezorger, wijsBezorgerToe, zetAfgeleverd, zetOnderweg } from "@/lib/horeca/bezorgen-server";
 import { prisma } from "@/lib/prisma";
 import { bewaarLijst, lijstenOp, maakVoorbeeldlijsten, registratie, verwijderLijst, vinkAf, vinkUit } from "@/lib/horeca/takenlijsten";
@@ -63,7 +65,12 @@ async function alles(zaak: HorecaZaak) {
     maand: maandbedrag(zaak.modules),
     reserveren: leesInstellingen(zaak.reserveren),
     kassa: { btwNummer: zaak.btwNummer, ...leesKassa(zaak.kassa) },
-    bezorgen: { ...leesBezorgen(zaak.bezorgen), ligging: typeof zaak.lat === "number" && typeof zaak.lng === "number" },
+    bezorgen: {
+      ...leesBezorgen(zaak.bezorgen),
+      ligging: typeof zaak.lat === "number" && typeof zaak.lng === "number",
+      // de zaak op de bestellingenkaart
+      plek: typeof zaak.lat === "number" && typeof zaak.lng === "number" ? { lat: zaak.lat, lng: zaak.lng } : null,
+    },
   };
 }
 
@@ -103,6 +110,17 @@ export async function GET(request: Request): Promise<NextResponse> {
       if (!isDatum(van) || !isDatum(tot) || van > tot) throw AppError.validation("Kies een periode.");
       return new NextResponse(await kassaCsv(zaak, van, tot), {
         headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="kassa-${zaak.slug}-${van}-${tot}.csv"` },
+      });
+    }
+    // ?alleen=archief&van=&tot=&soort=&bron=&betaald=&geannuleerd=&bezorger=&q= → het archief met omzet en btw;
+    // ?alleen=archief-csv met dezelfde filter → CSV (lib/horeca/archief.ts)
+    if (q.get("alleen") === "archief" || q.get("alleen") === "archief-csv") {
+      eisModule(zaak, "bestellen");
+      const f = leesArchiefFilter(q);
+      if ("fout" in f) throw AppError.validation(f.fout);
+      if (q.get("alleen") === "archief") return NextResponse.json(await archiefVan(zaak, f));
+      return new NextResponse(await archiefCsvVan(zaak, f), {
+        headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="bestellingen-${zaak.slug}-${f.van}-${f.tot}.csv"` },
       });
     }
     // ?alleen=apparaten → de gekoppelde schermen
