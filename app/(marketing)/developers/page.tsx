@@ -8,7 +8,7 @@ const euro = (cents: number) => `€ ${(cents / 100).toFixed(0)}`;
 
 const TITLE = "Ontwikkelaars — de ZekerFlex-API";
 const DESCRIPTION =
-  "De openbare REST-API en het GraphQL-endpoint van ZekerFlex: open diensten en goedgekeurde uren lezen, diensten aanmaken en webhooks registreren. Met OpenAPI-specificatie, uitleg over sleutels en voorbeelden.";
+  "De openbare REST- en GraphQL-API van ZekerFlex: open diensten en uren lezen, diensten aanmaken en webhooks registreren. Met OpenAPI-specificatie.";
 
 export const metadata: Metadata = {
   title: TITLE,

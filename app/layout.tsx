@@ -37,7 +37,8 @@ export const metadata: Metadata = {
     default: TITLE,
     template: `%s · ${SITE.name}`,
   },
-  description: SITE.description,
+  // standaard voor pagina's zonder eigen beschrijving (o.a. de juridische): op Google-lengte; SITE.description blijft voor JSON-LD
+  description: "Het Nederlandse platform waar flexwerkers en werkgevers elkaar vinden: slim gematcht op reistijd en vak, met flexibele uitbetaling.",
   applicationName: SITE.name,
   keywords: [...SITE.keywords],
   authors: [{ name: SITE.name }],

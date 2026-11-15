@@ -12,7 +12,7 @@ import { WINKEL_VOORBEELDEN, winkelVoorbeeldKaartfoto } from "@/lib/sites/winkel
 export const metadata: Metadata = {
   title: "Voorbeeldwebsites per branche",
   description:
-    "Bekijk complete voorbeeldwebsites van ZekerFlex voor horeca, bouw, schoonmaak, transport, zorg, kappers, garages, zakelijke dienstverlening en winkels, en een complete voorbeeldwebshop per ontwerp. Met online reserveren, een webshop met winkelmand, een 3D-burger, afspraken, offertes, chat en meer.",
+    "Complete voorbeeldwebsites voor horeca, bouw, schoonmaak, zorg, kappers en meer, plus voorbeeldwebshops. Met online reserveren, winkelmand en offertes.",
   ...canonical("/voorbeeldsites"),
 };
 

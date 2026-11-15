@@ -8,7 +8,7 @@ import { ldJson } from "@/lib/seo/json-ld";
 const PATH = "/rekentools/btw-nummer-check";
 
 export const metadata: Metadata = {
-  title: "Btw-nummer check — controleer gratis een btw-id of KVK-nummer",
+  title: "Btw-nummer check — gratis btw-id controleren",
   description:
     "Controleer gratis of een btw-nummer geldig is (alle EU-landen, via VIES) of zoek een KVK-nummer op in het Handelsregister. Direct uitslag, niets wordt bewaard.",
   keywords: ["btw nummer check", "btw nummer controleren", "vies check", "btw id controleren", "kvk nummer controleren", "btw nummer opzoeken", "btw nummer zzp controleren"],

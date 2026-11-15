@@ -8,9 +8,9 @@ import { ldJson } from "@/lib/seo/json-ld";
 const PATH = "/rekentools/wet-dba-check";
 
 export const metadata: Metadata = {
-  title: "Wet DBA-check — loop je risico op schijnzelfstandigheid?",
+  title: "Wet DBA-check: risico op schijnzelfstandigheid?",
   description:
-    "Doe gratis de Wet DBA-check: tien vragen over gezag, inbedding, duur, vervanging en ondernemerschap. Je ziet direct waar je opdracht op loondienst lijkt en wat je eraan kunt doen.",
+    "Doe gratis de Wet DBA-check: tien vragen over gezag, inbedding, duur en vervanging. Je ziet direct waar je opdracht op loondienst lijkt.",
   keywords: ["wet dba check", "schijnzelfstandigheid check", "dba check zzp", "zzp'er inhuren risico", "beoordeling arbeidsrelatie", "verkapt dienstverband"],
   ...canonical(PATH, { fileImage: true }),
 };

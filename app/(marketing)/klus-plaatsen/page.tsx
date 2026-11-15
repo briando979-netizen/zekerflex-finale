@@ -11,9 +11,9 @@ import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 
 export const metadata: Metadata = {
-  title: "Klus plaatsen — stel je klus samen en zie direct wat het kost",
+  title: "Klus plaatsen — zie direct wat het kost",
   description:
-    "Stel zonder account een klus samen: functie, plaats, tijden, aantal mensen en tarief. Je ziet meteen wat het kost en hoeveel krachten er in de buurt wonen. Plaatsen is gratis; je betaalt pas als er gewerkt is.",
+    "Stel zonder account een klus samen en zie meteen wat het kost en hoeveel krachten er in de buurt wonen. Plaatsen is gratis; je betaalt pas na het werk.",
   keywords: ["klus plaatsen", "personeel aanvragen", "flexkracht aanvragen", "dienst plaatsen", "zzp'er inhuren", "uitzendkracht aanvragen"],
   ...canonical("/klus-plaatsen"),
 };

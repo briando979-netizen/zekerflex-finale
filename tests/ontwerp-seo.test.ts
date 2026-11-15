@@ -23,7 +23,7 @@ describe("SEO van de vaste pagina's (Site-ontwerper)", () => {
       "Vind flexwerk en klussen bij jou in de buurt. Je ziet vooraf wat je verdient en krijgt je geld op je eigen rekening. Ook zonder KVK, en gratis.";
     expect(await seoMetadata("/", { keywords: ["a"] })).toEqual({ title: { absolute: TITLE }, description: DESCRIPTION, keywords: ["a"], ...canonical("/", { title: TITLE, description: DESCRIPTION }) });
     expect(await seoMetadata("/prijzen", { keywords: ["b"] })).toEqual({
-      title: "Prijzen — € 3,50 per gewerkt uur, gratis voor freelancers",
+      title: "Prijzen — € 3,50 per gewerkt uur",
       description:
         "Gratis voor freelancers en flexkrachten. Bedrijven betalen € 3,50 per gewerkt uur, alleen bij gebruik. Geen abonnement, geen opstartkosten.",
       keywords: ["b"],

@@ -8,9 +8,9 @@ import { ldJson } from "@/lib/seo/json-ld";
 const PATH = "/rekentools/kosten-uitzendkracht-berekenen";
 
 export const metadata: Metadata = {
-  title: "Kosten uitzendkracht of zzp'er berekenen — gratis rekentool",
+  title: "Kosten uitzendkracht of zzp'er berekenen",
   description:
-    "Wat kost een uitzendkracht per uur, en wat een zzp'er via ZekerFlex? Vul uurloon, omrekenfactor en uren in en zie direct het verschil per uur en voor de hele periode.",
+    "Wat kost een uitzendkracht per uur, en wat een zzp'er via ZekerFlex? Vul uurloon, omrekenfactor en uren in en zie direct het verschil.",
   keywords: [
     "kosten uitzendkracht berekenen",
     "wat kost een uitzendkracht",

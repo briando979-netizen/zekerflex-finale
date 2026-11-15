@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 const TITLE = "Open diensten in heel Nederland — live kaart | ZekerFlex";
 const DESCRIPTION =
-  "Bekijk live waar er werk is: open flex- en uitzenddiensten per plaats in heel Nederland, met uurtarieven. Reageer direct via ZekerFlex — geen tussenpartijen, snel uitbetaald.";
+  "Bekijk live waar er werk is: open flex- en uitzenddiensten per plaats in heel Nederland, met uurtarieven. Reageer direct, snel uitbetaald.";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },

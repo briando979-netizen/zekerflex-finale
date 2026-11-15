@@ -10,7 +10,7 @@ import { OntwerpGalerij, type GalerijKaart } from "@/components/marketing/Ontwer
 export const metadata: Metadata = {
   title: "Maak zelf je website of webshop",
   description:
-    "Kies een ontwerp, pas het aan door te slepen en te typen, en zet je website of webshop online. Bouwen en bekijken is gratis. Met producten, bestellingen, kortingscodes en een kassa erbij.",
+    "Kies een ontwerp, pas het aan door te slepen en te typen en zet je website of webshop online. Gratis te bouwen, met bestellingen en een kassa.",
   ...canonical("/website-maken"),
 };
 

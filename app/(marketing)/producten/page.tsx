@@ -8,7 +8,7 @@ import { SPINOFF_PRODUCTS, FLAGSHIP, ALL_PRODUCTS, type Product } from "@/lib/pr
 
 const title = "Producten — losse modules of het complete platform";
 const description =
-  "ZekerFlex ontbundeld: RecruitFlex AI (sourcing & matching), SovereignOps (self-hosted private AI-stack) en de FlexCompliance API (StiPP & ABU-fase), of het complete all-in-one uitzendplatform. Kies alleen wat je nodig hebt.";
+  "Kies alleen wat je nodig hebt: RecruitFlex AI (sourcing en matching), SovereignOps, de FlexCompliance API of het complete uitzendplatform.";
 
 export const metadata: Metadata = {
   title,
