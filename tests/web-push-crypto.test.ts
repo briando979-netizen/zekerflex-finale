@@ -8,6 +8,7 @@ import {
 } from "@/lib/notifications/push/encrypt";
 import {
   generateVapidKeys,
+  tot32Bytes,
   vapidAuthorization,
 } from "@/lib/notifications/push/vapid";
 
@@ -102,5 +103,24 @@ describe("VAPID authorization header", () => {
     });
     expect(payload.sub).toBe("mailto:ops@zekerflex.nl");
     expect(payload.exp).toBeGreaterThan(Math.floor(Date.now() / 1000));
+  });
+
+  // getPrivateKey() laat voorloopnullen weg: ±1 op 256 sleutels was 31 bytes en werd geweigerd (15 nov, willekeurig
+  // rood in de controle). Nu altijd 32 bytes, en een korte sleutel uit de omgeving werkt ook.
+  it("een geheime sleutel die met een nul-byte begint, werkt (ook als hij 31 bytes is opgeslagen)", async () => {
+    const d = Buffer.concat([Buffer.from([0]), randomBytes(31)]);
+    const ecdh = createECDH("prime256v1");
+    ecdh.setPrivateKey(d);
+    const keys = { publicKey: ecdh.getPublicKey().toString("base64url"), privateKey: d.subarray(1).toString("base64url") };
+    const header = await vapidAuthorization({ audience: "https://push.example.org", subject: "mailto:ops@zekerflex.nl", keys });
+    const jwt = header.match(/^vapid t=([^,]+), k=/)?.[1] ?? "";
+    const pub = Buffer.from(keys.publicKey, "base64url");
+    const publicKey = await importJWK({ kty: "EC", crv: "P-256", x: pub.subarray(1, 33).toString("base64url"), y: pub.subarray(33, 65).toString("base64url") }, "ES256");
+    await expect(jwtVerify(jwt, publicKey, { audience: "https://push.example.org" })).resolves.toBeTruthy();
+  });
+
+  it("nieuwe sleutels zijn altijd 32 bytes", () => {
+    expect(tot32Bytes(Buffer.from([1, 2]))).toEqual(Buffer.concat([Buffer.alloc(30), Buffer.from([1, 2])]));
+    for (let i = 0; i < 1000; i++) expect(Buffer.from(generateVapidKeys().privateKey, "base64url").length).toBe(32);
   });
 });

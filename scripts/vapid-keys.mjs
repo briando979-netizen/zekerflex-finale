@@ -7,7 +7,9 @@ const ecdh = createECDH("prime256v1");
 ecdh.generateKeys();
 
 const publicKey = ecdh.getPublicKey().toString("base64url"); // 65 bytes
-const privateKey = ecdh.getPrivateKey().toString("base64url"); // 32 bytes
+// getPrivateKey() laat voorloopnullen weg (±1 op 256 sleutels is dan 31 bytes): aanvullen tot 32 (lib/notifications/push/vapid.ts)
+const ruw = ecdh.getPrivateKey();
+const privateKey = Buffer.concat([Buffer.alloc(Math.max(0, 32 - ruw.length)), ruw]).toString("base64url"); // 32 bytes
 
 console.log("# Web Push VAPID keypair - add to .env");
 console.log(`WEBPUSH_VAPID_PUBLIC_KEY=${publicKey}`);

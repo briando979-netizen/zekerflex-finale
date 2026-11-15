@@ -14,21 +14,32 @@ export interface VapidKeys {
   privateKey: string;
 }
 
+/**
+ * De geheime sleutel als precies 32 bytes. Node's ecdh.getPrivateKey() laat voorloopnullen weg, dus ongeveer één op
+ * de 256 sleutels kwam als 31 bytes terug en werd dan geweigerd (15 nov: de controle viel er willekeurig op om; een
+ * sleutel in de omgeving die zo was gemaakt, had alle pushmeldingen stilgelegd). Links aanvullen met nullen is
+ * hetzelfde getal.
+ */
+export function tot32Bytes(priv: Buffer): Buffer {
+  return priv.length >= 32 ? priv : Buffer.concat([Buffer.alloc(32 - priv.length), priv]);
+}
+
 /** Mint a fresh VAPID keypair (used by scripts/vapid-keys.mjs and tests). */
 export function generateVapidKeys(): VapidKeys {
   const ecdh = createECDH("prime256v1");
   ecdh.generateKeys();
   return {
     publicKey: ecdh.getPublicKey().toString("base64url"),
-    privateKey: ecdh.getPrivateKey().toString("base64url"),
+    privateKey: tot32Bytes(ecdh.getPrivateKey()).toString("base64url"),
   };
 }
 
 async function importVapidKey(keys: VapidKeys) {
   const pub = Buffer.from(keys.publicKey, "base64url");
-  const priv = Buffer.from(keys.privateKey, "base64url");
+  const ruw = Buffer.from(keys.privateKey, "base64url");
   if (pub.length !== 65) throw new Error("VAPID public key must be 65 bytes");
-  if (priv.length !== 32) throw new Error("VAPID private key must be 32 bytes");
+  if (ruw.length < 1 || ruw.length > 32) throw new Error("VAPID private key must be 32 bytes");
+  const priv = tot32Bytes(ruw);
   return importJWK(
     {
       kty: "EC",
