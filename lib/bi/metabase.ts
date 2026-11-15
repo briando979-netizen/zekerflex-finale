@@ -104,7 +104,8 @@ async function databaseVoorMetabase(): Promise<void> {
 
 async function leesrolEnViews(stand: BiStand): Promise<string> {
   const wachtwoord = stand.rolWachtwoord && isHexWachtwoord(stand.rolWachtwoord) ? stand.rolWachtwoord : randomBytes(24).toString("hex");
-  for (const sql of inrichtSql(sqlTekst(wachtwoord))) await prisma.$executeRawUnsafe(sql);
+  // in één transactie: mislukt een stap (bijv. het eenmalig vervangen van de views), dan blijven de oude views en de rol staan
+  await prisma.$transaction(inrichtSql(sqlTekst(wachtwoord)).map((sql) => prisma.$executeRawUnsafe(sql)));
   return wachtwoord;
 }
 

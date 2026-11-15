@@ -13,6 +13,13 @@
 export const BI_SCHEMA = "bi";
 export const BI_ROL = "zf_bi";
 
+/**
+ * Een kolom (timestamp zonder zone, met UTC erin: zo slaat Prisma tijden op) als Nederlandse kloktijd. Eerst als UTC lezen,
+ * dan naar Europe/Amsterdam; los van de tijdzone van de sessie (Metabase kan die zetten). Alleen `x AT TIME ZONE
+ * 'Europe/Amsterdam'` leest de UTC-waarde als Nederlandse tijd en schuift hem 1-2 uur te vroeg (15 nov 2026).
+ */
+export const nlTijd = (kolom: string) => `((${kolom} AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Amsterdam')`;
+
 /** De views, in volgorde (latere views mogen op eerdere bouwen). */
 export const BI_VIEWS: { naam: string; uitleg: string; sql: string }[] = [
   {
@@ -24,11 +31,11 @@ export const BI_VIEWS: { naam: string; uitleg: string; sql: string }[] = [
              b.name                                                   AS vestiging,
              b."costCenter"                                           AS kostenplaats,
              s.title                                                  AS titel,
-             (s."startsAt" AT TIME ZONE 'Europe/Amsterdam')           AS start,
-             (s."endsAt"   AT TIME ZONE 'Europe/Amsterdam')           AS einde,
-             date_trunc('day',   s."startsAt" AT TIME ZONE 'Europe/Amsterdam')::date AS datum,
-             date_trunc('week',  s."startsAt" AT TIME ZONE 'Europe/Amsterdam')::date AS week,
-             date_trunc('month', s."startsAt" AT TIME ZONE 'Europe/Amsterdam')::date AS maand,
+             ${nlTijd('s."startsAt"')}                         AS start,
+             ${nlTijd('s."endsAt"')}                           AS einde,
+             date_trunc('day',   ${nlTijd('s."startsAt"')})::date AS datum,
+             date_trunc('week',  ${nlTijd('s."startsAt"')})::date AS week,
+             date_trunc('month', ${nlTijd('s."startsAt"')})::date AS maand,
              round(((EXTRACT(EPOCH FROM (s."endsAt" - s."startsAt")) / 60 - s."breakMinutes") / 60.0)::numeric, 2) AS uren_per_plaats,
              s.positions                                              AS plaatsen,
              round((s."hourlyRateCents" / 100.0)::numeric, 2)         AS uurtarief_eur,
@@ -47,15 +54,15 @@ export const BI_VIEWS: { naam: string; uitleg: string; sql: string }[] = [
              b.name                                                   AS vestiging,
              b."costCenter"                                           AS kostenplaats,
              s.title                                                  AS dienst,
-             date_trunc('day',   t."scheduledStart" AT TIME ZONE 'Europe/Amsterdam')::date AS datum,
-             date_trunc('week',  t."scheduledStart" AT TIME ZONE 'Europe/Amsterdam')::date AS week,
-             date_trunc('month', t."scheduledStart" AT TIME ZONE 'Europe/Amsterdam')::date AS maand,
+             date_trunc('day',   ${nlTijd('t."scheduledStart"')})::date AS datum,
+             date_trunc('week',  ${nlTijd('t."scheduledStart"')})::date AS week,
+             date_trunc('month', ${nlTijd('t."scheduledStart"')})::date AS maand,
              round((t."billableMinutes" / 60.0)::numeric, 2)          AS uren,
              round((t."hourlyRateCents" / 100.0)::numeric, 2)         AS uurtarief_eur,
              round((t."billableMinutes" / 60.0 * t."hourlyRateCents" / 100.0)::numeric, 2) AS kosten_eur,
              round((coalesce(t."extraCostsCents", 0) / 100.0)::numeric, 2) AS extra_kosten_eur,
              t.status::text                                           AS status,
-             (t."approvedAt" AT TIME ZONE 'Europe/Amsterdam')         AS goedgekeurd_op,
+             ${nlTijd('t."approvedAt"')}                       AS goedgekeurd_op,
              s."viaUitzendbureau"                                     AS via_uitzendbureau
       FROM "Timesheet" t
       JOIN "Branch" b ON b.id = t."branchId"
@@ -74,11 +81,11 @@ export const BI_VIEWS: { naam: string; uitleg: string; sql: string }[] = [
              round((i."subtotalCents" / 100.0)::numeric, 2)           AS subtotaal_eur,
              round((i."vatCents" / 100.0)::numeric, 2)                AS btw_eur,
              round((i."totalCents" / 100.0)::numeric, 2)              AS totaal_eur,
-             (i."issuedAt" AT TIME ZONE 'Europe/Amsterdam')::date     AS uitgereikt_op,
-             (i."paidAt"   AT TIME ZONE 'Europe/Amsterdam')::date     AS betaald_op,
-             (i."dueAt"    AT TIME ZONE 'Europe/Amsterdam')::date     AS vervalt_op,
-             date_trunc('month', coalesce(i."issuedAt", i."createdAt") AT TIME ZONE 'Europe/Amsterdam')::date AS maand,
-             (i.status = 'ISSUED' AND i."dueAt" IS NOT NULL AND i."dueAt" < now()) AS te_laat
+             ${nlTijd('i."issuedAt"')}::date                   AS uitgereikt_op,
+             ${nlTijd('i."paidAt"')}::date                     AS betaald_op,
+             ${nlTijd('i."dueAt"')}::date                      AS vervalt_op,
+             date_trunc('month', ${nlTijd('coalesce(i."issuedAt", i."createdAt")')})::date AS maand,
+             (i.status = 'ISSUED' AND i."dueAt" IS NOT NULL AND i."dueAt" < (now() AT TIME ZONE 'UTC')) AS te_laat
       FROM "Invoice" i
       WHERE i."recipientTenantId" IS NOT NULL`,
   },
@@ -125,6 +132,9 @@ export const BI_VIEWS: { naam: string; uitleg: string; sql: string }[] = [
 export function inrichtSql(rolWachtwoordLiteral: string): string[] {
   return [
     `CREATE SCHEMA IF NOT EXISTS ${BI_SCHEMA}`,
+    // eenmalig (15 nov 2026): de tijden waren timestamptz met een verschoven waarde; CREATE OR REPLACE kan het type van een
+    // kolom niet wijzigen, dus de views met zo'n kolom (en die erop bouwen) eerst weg. Daarna doet dit niets meer.
+    `DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = '${BI_SCHEMA}' AND data_type = 'timestamp with time zone' AND ((table_name = 'diensten' AND column_name IN ('start', 'einde')) OR (table_name = 'uren' AND column_name = 'goedgekeurd_op'))) THEN DROP VIEW IF EXISTS ${BI_SCHEMA}.maandoverzicht, ${BI_SCHEMA}.bezetting_per_week, ${BI_SCHEMA}.uren, ${BI_SCHEMA}.diensten; END IF; END $$`,
     ...BI_VIEWS.map((v) => `CREATE OR REPLACE VIEW ${BI_SCHEMA}.${v.naam} AS ${v.sql.trim()}`),
     ...BI_VIEWS.map((v) => `COMMENT ON VIEW ${BI_SCHEMA}.${v.naam} IS ${sqlTekst(v.uitleg)}`),
     // de rol: alleen inloggen en lezen in bi; nooit in public
