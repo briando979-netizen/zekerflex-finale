@@ -6,6 +6,8 @@ import { canonical, productJsonLd } from "@/lib/seo";
 import { ProductDetail, type PdpProduct } from "@/components/marketing/ProductDetail";
 import { boughtTogether } from "@/lib/shop/recommend";
 import { getModel3D, model3dUrl } from "@/lib/shop/model3d";
+import { kleurFotos } from "@/lib/shop/kleurfoto";
+import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 
 export const dynamic = "force-dynamic";
 
@@ -30,12 +32,13 @@ function toDto(p: {
 export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const params = await props.params;
   const p = await prisma.shopProduct.findUnique({ where: { slug: params.slug } });
-  if (!p) return { title: "Product niet gevonden — ZekerFlex Shop" };
+  if (!p) return { title: { absolute: "Product niet gevonden — ZekerFlex Shop" } };
   const title = `${p.name} — ZekerFlex Shop`;
   const description = p.description.slice(0, 160);
   return {
-    title,
-    description,
+    // het merk één keer, op Google-lengte (lib/seo-tekst.ts); de beschrijving tot een hele zin
+    title: { absolute: seoTitel(p.name, "ZekerFlex Shop") },
+    description: seoBeschrijving(p.description),
     ...canonical(`/shop/${p.slug}`, { title, description, ...(p.imageUrl ? { image: p.imageUrl } : {}) }),
   };
 }
@@ -86,7 +89,11 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
           ),
         }}
       />
-      <ProductDetail product={{ ...toDto(product), model3dUrl: model3d ? model3dUrl(product.id) : null }} related={related.map(toDto)} boughtTogether={together.length > 0} />
+      <ProductDetail
+        product={{ ...toDto(product), model3dUrl: model3d ? model3dUrl(product.id) : null, kleurFotos: kleurFotos(product) }}
+        related={related.map(toDto)}
+        boughtTogether={together.length > 0}
+      />
     </>
   );
 }

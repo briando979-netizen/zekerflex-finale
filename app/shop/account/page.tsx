@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { ShopAccount, type ShopAccountOrder } from "@/components/marketing/ShopAccount";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Mijn account — ZekerFlex Shop", robots: { index: false } };
+export const metadata: Metadata = { title: { absolute: "Mijn account — ZekerFlex Shop" }, robots: { index: false } };
 
 // Losstaand van het werk-dashboard (/dashboard) — de shop is gast-checkout,
 // dus een ingelogde bezoeker krijgt hier zijn shop-bestelgeschiedenis

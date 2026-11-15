@@ -1089,7 +1089,7 @@ export const nl = {
     btw: "Btw",
     verzendingIncl: "Verzending (incl. btw)",
     totaalIncl: "Totaal incl. btw",
-    metaTitel: "Zakelijk bestellen — werkkleding en PBM voor je team | ZekerFlex Shop",
+    metaTitel: "Zakelijk bestellen — werkkleding en PBM | ZekerFlex Shop",
     metaOmschrijving: "Werkkleding, veiligheidsschoenen en PBM voor je hele ploeg. Prijzen zonder btw, pakketten per branche, bestellen per maat en offerte op maat.",
     eyebrow: "ZekerFlex Zakelijk",
     titel: "Werkkleding en PBM voor je hele ploeg",

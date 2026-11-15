@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const z = (await getDict()).shopZakelijk;
-  return { title: z.metaTitel, description: z.metaOmschrijving, ...canonical("/shop/zakelijk", { title: z.metaTitel, description: z.metaOmschrijving }) };
+  return { title: { absolute: z.metaTitel }, description: z.metaOmschrijving, ...canonical("/shop/zakelijk", { title: z.metaTitel, description: z.metaOmschrijving }) };
 }
 
 // De zakelijke startpagina van de shop: even volwaardig als de gewone, maar
