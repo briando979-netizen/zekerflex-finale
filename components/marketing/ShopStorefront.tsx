@@ -9,6 +9,7 @@ import { bySize, type ShopCardProduct, type ShopCategory } from "@/components/ma
 import type { VoorWaarde } from "@/lib/shop/categoriemenu";
 import Link from "next/link";
 import { bedoeldeJe, zoekScore } from "@/lib/shop/zoeksuggesties";
+import type { Prijsklasse } from "@/lib/shop/etalage";
 
 // Het assortiment op de shop-homepage, opgebouwd als een marktplaats: filters
 // links (op de telefoon in een uitschuifvenster), erboven het aantal resultaten
@@ -38,6 +39,8 @@ export function ShopStorefront({
   initialCat = "Alles",
   initialQuery = "",
   initialVoor = null,
+  initialPrijs = null,
+  initialCollectie = null,
   products,
   pageTitle = false,
 }: {
@@ -45,6 +48,10 @@ export function ShopStorefront({
   initialQuery?: string;
   /** ?voor=heren|vrouwen|kinderen uit het menu "Alle categorieën" (lib/shop/categoriemenu.ts) */
   initialVoor?: VoorWaarde | null;
+  /** ?prijs=onder15|15-30|vanaf30 (thema's en cadeauhulp, lib/shop/etalage.ts) */
+  initialPrijs?: Prijsklasse | null;
+  /** ?collectie=… (een bestaande collectie, bijv. Winter 2026) */
+  initialCollectie?: string | null;
   /** zonder banner (zoeken, een categorie) is de kop van het assortiment de paginatitel (h1) */
   pageTitle?: boolean;
   /** Actieve producten van de server, zodat de eerste HTML (en Google) de echte catalogus toont. */
@@ -59,7 +66,8 @@ export function ShopStorefront({
   const [onlyStock, setOnlyStock] = useState(false);
   const [sizeFilter, setSizeFilter] = useState("Alle");
   const [colorFilter, setColorFilter] = useState("Alle");
-  const [priceBucket, setPriceBucket] = useState<PriceBucket>("Alle");
+  const [priceBucket, setPriceBucket] = useState<PriceBucket>(initialPrijs ?? "Alle");
+  const [collectie, setCollectie] = useState<string | null>(initialCollectie);
   const [sort, setSort] = useState<SortOrder>("relevantie");
   const [panel, setPanel] = useState(false);
   const wishlist = useShopWishlist();
@@ -75,6 +83,12 @@ export function ShopStorefront({
   useEffect(() => {
     void setGender(genderUitVoor(initialVoor));
   }, [initialVoor]);
+  useEffect(() => {
+    void setPriceBucket(initialPrijs ?? "Alle");
+  }, [initialPrijs]);
+  useEffect(() => {
+    void setCollectie(initialCollectie);
+  }, [initialCollectie]);
 
   useEffect(() => {
     if (!panel) return;
@@ -93,10 +107,11 @@ export function ShopStorefront({
       (p) =>
         (!onlyWishlist || wishlist.has(p.id)) &&
         (!onlyStock || inStock(p)) &&
+        (!collectie || p.collection === collectie) &&
         (!q || (kort ? p.name.toLowerCase().includes(q.toLowerCase()) : zoekScore(p, q) > 0)),
     );
     return q && !kort ? [...lijst].sort((a, b) => zoekScore(b, q) - zoekScore(a, q)) : lijst;
-  }, [products, query, onlyWishlist, onlyStock, wishlist]);
+  }, [products, query, onlyWishlist, onlyStock, wishlist, collectie]);
   // niets gevonden: een verbeterde zoekvraag ("Bedoelde je …?") en een paar producten om verder te kijken
   const voorstel = useMemo(() => (query.trim() && baseScope.length === 0 ? bedoeldeJe(products, query) : null), [products, query, baseScope.length]);
   const tips = useMemo(() => products.filter((p) => p.imageUrl && inStock(p)).slice(0, 4), [products]);
@@ -139,6 +154,7 @@ export function ShopStorefront({
 
   const chips: { key: string; label: string; clear: () => void }[] = [
     ...(query ? [{ key: "q", label: `“${query}”`, clear: () => setQuery("") }] : []),
+    ...(collectie ? [{ key: "col", label: collectie, clear: () => setCollectie(null) }] : []),
     ...(category !== "Alles" ? [{ key: "cat", label: labels.tab[category], clear: () => setCategory("Alles") }] : []),
     ...(gender !== "Alle" ? [{ key: "g", label: gender, clear: () => setGender("Alle") }] : []),
     ...(sizeFilter !== "Alle" ? [{ key: "s", label: `${t.shop.size} ${sizeFilter}`, clear: () => setSizeFilter("Alle") }] : []),

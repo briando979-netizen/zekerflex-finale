@@ -18,6 +18,8 @@ import { achtergrondVoor } from "@/lib/ontwerp/achtergrond";
 import { Fragment, type ReactNode } from "react";
 import { zichtbareShopSecties, type ShopSectieId } from "@/lib/ontwerp/shop-indeling";
 import { getShopIndeling } from "@/lib/ontwerp/shop-indeling-store";
+import { cadeauKeuzes, catalogusOverzicht, collectieUitAdres, ontdekTegels, prijsUitAdres, seizoenVan, themaKaarten, type EtalageProduct } from "@/lib/shop/etalage";
+import { ShopAlles, ShopCadeauhulp, ShopOntdek, ShopRegelen, ShopThemas } from "@/components/marketing/ShopEtalage";
 
 // <title> kort en zonder het sjabloon " · ZekerFlex" erachter (dan stond het merk er twee keer); delen houdt de lange
 const title = "ZekerFlex Shop — kleding, werkkleding en PBM, eerst passen in de paskamer";
@@ -36,7 +38,7 @@ export const dynamic = "force-dynamic";
 const CATS = ["Alles", "Werk & PBM", "Kleding", "Werkdag", "Cadeaus"] as const;
 type Cat = (typeof CATS)[number];
 
-export default async function ShopPage(props: { searchParams: Promise<{ cat?: string; q?: string; voor?: string }> }) {
+export default async function ShopPage(props: { searchParams: Promise<{ cat?: string; q?: string; voor?: string; prijs?: string; collectie?: string }> }) {
   const searchParams = await props.searchParams;
   const initialCat: Cat = CATS.includes(searchParams.cat as Cat) ? (searchParams.cat as Cat) : "Alles";
   const initialVoor = voorUitAdres(searchParams.voor);
@@ -98,17 +100,39 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
     }))
     .filter((l) => l.stukken.length >= 2);
   // wie zoekt of een categorie kiest, wil meteen het assortiment zien: dan geen banner en rij ervoor
-  const browsing = initialQuery !== "" || initialCat !== "Alles";
+  // ?prijs= en ?collectie= komen van de thema's en de cadeauhulp (lib/shop/etalage.ts)
+  const initialPrijs = prijsUitAdres(searchParams.prijs);
+  const initialCollectie = collectieUitAdres(searchParams.collectie, rows.map((r) => r.collection));
+  const browsing = initialQuery !== "" || initialCat !== "Alles" || initialVoor !== null || initialPrijs !== null || initialCollectie !== null;
+  // de voorpagina zoals bol.com: Uitgelicht, thema's, cadeauhulp, Ontdek alles en Snel regelen, uit de echte catalogus
+  const nu = new Date();
+  const etalage: EtalageProduct[] = products.map((p) => ({
+    id: p.id,
+    slug: p.slug,
+    name: p.name,
+    category: p.category,
+    gender: p.gender ?? null,
+    collection: p.collection ?? null,
+    imageUrl: p.imageUrl ?? null,
+    price: p.price,
+    opVoorraad: p.variants.some((v) => v.stock > 0),
+  }));
+  const seizoen = seizoenVan(nu);
 
   // de onderdelen onder de kop: volgorde en zichtbaarheid komen uit de Site-ontwerper (tabblad Webshop, lib/ontwerp/shop-indeling.ts);
   // zonder eigen indeling is dit precies de oude volgorde. Wie zoekt of een categorie kiest, ziet alleen het assortiment en wat eronder hoort.
   const onderdelen: Record<ShopSectieId, ReactNode> = {
+    ontdek: <ShopOntdek t={dict} seizoen={seizoen} tegels={ontdekTegels(etalage)} />,
     categorieen: <ShopCategorieGroot t={dict} tegels={tegels} />,
+    themas: <ShopThemas t={dict} themas={themaKaarten(etalage, nu)} seizoen={seizoen} />,
+    cadeauhulp: <ShopCadeauhulp t={dict} keuzes={cadeauKeuzes(etalage)} />,
+    alles: <ShopAlles t={dict} kolommen={catalogusOverzicht(etalage)} />,
+    regelen: <ShopRegelen t={dict} />,
     looks: <ShopLooks t={dict} looks={looks} />,
     populair: featured.length === 5 ? <ShopFeatured title={t.popular} products={featured} /> : null,
     onlangs: <OnlangsBekeken producten={products} />,
     paskamer: <ShopPaskamerPromo pk={dict.paskamer} />,
-    assortiment: <ShopStorefront initialCat={initialCat} initialQuery={initialQuery} initialVoor={initialVoor} products={products} pageTitle={browsing} />,
+    assortiment: <ShopStorefront initialCat={initialCat} initialQuery={initialQuery} initialVoor={initialVoor} initialPrijs={initialPrijs} initialCollectie={initialCollectie} products={products} pageTitle={browsing} />,
     meer: <ShopMoreCategories t={t} />,
     service: <ShopService t={t} />,
     nieuwsbrief: <ShopNewsletter t={t} />,

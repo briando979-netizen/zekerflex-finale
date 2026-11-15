@@ -4,7 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SHOP_SECTIES, isStandaardShopIndeling, normalizeShopIndeling, standaardShopIndeling, zichtbareShopSecties } from "@/lib/ontwerp/shop-indeling";
 
 // De indeling van de webshop (Site-ontwerper, tabblad Webshop, 13 nov): de onderdelen onder de kop verslepen en verbergen.
-// Zonder eigen indeling is /shop precies zoals hij was.
+// Zonder eigen indeling is /shop de voorpagina zoals bol.com (15 nov, stap 6, lib/shop/etalage.ts): de oude onderdelen in de oude
+// volgorde, met Uitgelicht, Thema's, Cadeauhulp, Ontdek alles en Snel regelen ertussen. Een eerder bewaarde indeling houdt zijn
+// volgorde; nieuwe onderdelen komen daar achteraan (er stond op 15 nov geen eigen indeling op de server).
 
 const kv = vi.hoisted(() => new Map<string, unknown>());
 vi.mock("@/lib/storage/kv", () => ({
@@ -17,18 +19,21 @@ import { getShopIndeling, resetShopIndeling, setShopIndeling } from "@/lib/ontwe
 
 const bron = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8").split("\r\n").join("\n");
 const OUD = ["categorieen", "looks", "populair", "onlangs", "paskamer", "assortiment", "meer", "service", "nieuwsbrief"];
+const STANDAARD = ["ontdek", "categorieen", "themas", "looks", "populair", "cadeauhulp", "onlangs", "paskamer", "assortiment", "alles", "meer", "service", "regelen", "nieuwsbrief"];
 
 beforeEach(() => kv.clear());
 
-describe("de standaard is de oude webshop", () => {
+describe("de standaard: de oude onderdelen in de oude volgorde, met de blokken van stap 6 ertussen", () => {
   it("dezelfde onderdelen in dezelfde volgorde, niets verborgen", () => {
-    expect(standaardShopIndeling()).toEqual({ volgorde: OUD, verborgen: [] });
-    expect(zichtbareShopSecties(null, false)).toEqual(OUD);
+    expect(standaardShopIndeling()).toEqual({ volgorde: STANDAARD, verborgen: [] });
+    expect(zichtbareShopSecties(null, false)).toEqual(STANDAARD);
+    // de oude onderdelen houden hun onderlinge volgorde
+    expect(STANDAARD.filter((id) => OUD.includes(id))).toEqual(OUD);
     expect(isStandaardShopIndeling(standaardShopIndeling())).toBe(true);
   });
 
   it("wie zoekt of een categorie kiest ziet alleen het assortiment en wat eronder hoort, zoals voorheen", () => {
-    expect(zichtbareShopSecties(null, true)).toEqual(["assortiment", "meer", "service", "nieuwsbrief"]);
+    expect(zichtbareShopSecties(null, true)).toEqual(["assortiment", "meer", "service", "regelen", "nieuwsbrief"]);
   });
 
   it("de pagina toont de onderdelen in de volgorde van de indeling; de kop en de achtergrond blijven bovenaan", () => {
@@ -46,9 +51,10 @@ describe("een eigen indeling", () => {
   it("verslepen en verbergen", () => {
     const i = normalizeShopIndeling({ volgorde: ["assortiment", "paskamer", ...OUD], verborgen: ["looks", "nieuwsbrief"] });
     expect(i.volgorde.slice(0, 2)).toEqual(["assortiment", "paskamer"]);
-    expect(i.volgorde).toHaveLength(OUD.length);
-    expect(zichtbareShopSecties(i, false)).toEqual(["assortiment", "paskamer", "categorieen", "populair", "onlangs", "meer", "service"]);
-    expect(zichtbareShopSecties(i, true)).toEqual(["assortiment", "meer", "service"]);
+    expect(i.volgorde).toHaveLength(STANDAARD.length);
+    // een bewaarde indeling van vóór stap 6: de nieuwe onderdelen komen achteraan
+    expect(zichtbareShopSecties(i, false)).toEqual(["assortiment", "paskamer", "categorieen", "populair", "onlangs", "meer", "service", "ontdek", "themas", "cadeauhulp", "alles", "regelen"]);
+    expect(zichtbareShopSecties(i, true)).toEqual(["assortiment", "meer", "service", "regelen"]);
     expect(isStandaardShopIndeling(i)).toBe(false);
   });
 
@@ -56,7 +62,7 @@ describe("een eigen indeling", () => {
     const i = normalizeShopIndeling({ volgorde: ["looks", "looks", "constructor", 7, "meer"], verborgen: ["assortiment", "toString", "looks", "looks"] });
     expect(i.verborgen).toEqual(["looks"]);
     expect(i.volgorde.slice(0, 2)).toEqual(["looks", "meer"]);
-    expect(new Set(i.volgorde).size).toBe(OUD.length);
+    expect(new Set(i.volgorde).size).toBe(STANDAARD.length);
     expect(zichtbareShopSecties(i, false)).toContain("assortiment");
   });
 
