@@ -1,5 +1,6 @@
 import { withUsage } from "@/lib/ops/usage";
 import { z } from "zod";
+import { lijst } from "@/lib/http/zod-lijst";
 import { AFGEBROKEN_ZIN, chatStream, ensureAiNode, fastModel, isStroomAfgebroken, llmConfigProblem } from "@/lib/ai/client";
 import { fallbackAnswer, kortGenoegVoorVastAntwoord, smallTalk, topicAnswer, withSuggestions } from "@/lib/chat/public-intents";
 import { appendMessage, isConversationId } from "@/lib/chat/webchat";
@@ -16,15 +17,13 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
-  messages: z
-    .array(
-      z.object({
-        role: z.enum(["user", "assistant"]),
-        content: z.string().trim().min(1).max(1500),
-      }),
-    )
-    .min(1)
-    .max(10),
+  messages: lijst(
+    z.object({
+      role: z.enum(["user", "assistant"]),
+      content: z.string().trim().min(1).max(1500),
+    }),
+    { min: 1, max: 10 },
+  ),
   /** random token from the widget — makes the conversation a ticket admins can follow */
   conversationId: z.string().optional(),
   page: z.string().max(200).optional(),

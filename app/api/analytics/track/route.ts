@@ -1,6 +1,7 @@
 import { withUsage } from "@/lib/ops/usage";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { lijst } from "@/lib/http/zod-lijst";
 import { AnalyticsEventType } from "@prisma/client";
 import { getPrincipal } from "@/lib/auth";
 import { trackEvents } from "@/lib/analytics/track";
@@ -23,7 +24,7 @@ const eventSchema = z.object({
 
 const bodySchema = z.object({
   sessionId: z.string().min(6).max(64),
-  events: z.array(eventSchema).min(1).max(20),
+  events: lijst(eventSchema, { min: 1, max: 20 }),
 });
 
 async function handlePOST(request: Request): Promise<NextResponse> {

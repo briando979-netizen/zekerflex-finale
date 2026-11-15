@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { lijst } from "@/lib/http/zod-lijst";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
@@ -31,7 +32,7 @@ const schema = z.object({
   email: z.string().trim().email().max(200),
   phone: z.string().trim().max(40).optional(),
   motivationText: z.string().trim().max(8000).optional(),
-  skills: z.array(z.string()).max(30).optional(),
+  skills: lijst(z.string(), { max: 30 }).optional(),
   consent: z.literal("true"),
 });
 

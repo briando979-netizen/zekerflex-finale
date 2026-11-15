@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { lijst } from "@/lib/http/zod-lijst";
 import { AppError, toErrorBody } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
@@ -26,10 +27,7 @@ const startSchema = z.object({
   code: z.string().min(6).max(40),
   fooiCent: z.number().int().min(0).max(10_000).default(0),
   // "alleen wat ik had": welke regels en hoeveel; leeg of weg = alles wat open staat
-  selectie: z
-    .array(z.object({ bestellingId: z.string().min(1).max(40), index: z.number().int().min(0).max(500), aantal: z.number().int().min(1).max(50) }))
-    .max(200)
-    .optional(),
+  selectie: lijst(z.object({ bestellingId: z.string().min(1).max(40), index: z.number().int().min(0).max(500), aantal: z.number().int().min(1).max(50) }), { max: 200 }).optional(),
   // terug van Stripe via "annuleren": laat deze betaling los
   stop: z.string().min(10).max(40).optional(),
 });

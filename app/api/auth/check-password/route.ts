@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { lijst } from "@/lib/http/zod-lijst";
 import { isBreached, scorePassword } from "@/lib/auth/password";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
@@ -10,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 const schema = z.object({
   password: z.string().min(1).max(200),
-  context: z.array(z.string().max(160)).max(5).optional(),
+  context: lijst(z.string().max(160), { max: 5 }).optional(),
 });
 
 // POST /api/auth/check-password — strength + breach check for the register form.

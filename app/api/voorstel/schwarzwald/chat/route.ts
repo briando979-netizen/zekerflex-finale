@@ -2,6 +2,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { jsonBegrensd } from "@/lib/http/body-grens";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { lijst } from "@/lib/http/zod-lijst";
 import { AppError } from "@/lib/errors";
 import { clientIp } from "@/lib/http/request";
 import { jsonError } from "@/lib/http/errors";
@@ -26,10 +27,7 @@ const schema = z.union([
   z.object({
     id: ID,
     pagina: z.string().max(200).optional(),
-    berichten: z
-      .array(z.object({ rol: z.enum(["gast", "ai"]), tekst: z.string().trim().min(1).max(1500) }))
-      .min(1)
-      .max(12),
+    berichten: lijst(z.object({ rol: z.enum(["gast", "ai"]), tekst: z.string().trim().min(1).max(1500) }), { min: 1, max: 12 }),
   }),
   z.object({ id: ID, actie: z.literal("mens"), pagina: z.string().max(200).optional() }),
   z.object({ id: ID, actie: z.literal("geboekt"), boeking: z.string().regex(/^[0-9A-F]{8}$/) }),
