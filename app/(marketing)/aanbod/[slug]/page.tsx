@@ -3,6 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CtaBand } from "@/components/marketing/primitives";
+import { AanbodUitgebreid } from "@/components/marketing/aanbod/AanbodUitgebreid";
+import { uitgebreidVan } from "@/lib/marketing/aanbod-uitgebreid";
 import { AANBOD, aanbodHref, aanbodVan, eigenPaginas, pijlerVan, prijsTekst } from "@/lib/marketing/aanbod";
 import { breadcrumbJsonLd, canonical, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
@@ -31,6 +33,7 @@ export default async function AanbodItemPagina({ params }: { params: Promise<{ s
   const a = aanbodVan((await params).slug);
   if (!a) notFound();
   const pijler = pijlerVan(a.pijler);
+  const uitgebreid = uitgebreidVan(a.slug);
   const verwant = AANBOD.filter((x) => x.pijler === a.pijler && x.slug !== a.slug);
   const dienst = {
     "@context": "https://schema.org",
@@ -49,6 +52,10 @@ export default async function AanbodItemPagina({ params }: { params: Promise<{ s
         dangerouslySetInnerHTML={{ __html: ldJson([dienst, breadcrumbJsonLd([["Home", "/"], ["Aanbod", "/aanbod"], [a.naam, `/aanbod/${a.slug}`]])]) }}
       />
 
+      {uitgebreid ? (
+        <AanbodUitgebreid a={a} pijler={pijler} u={uitgebreid} />
+      ) : (
+        <>
       <div className="hero-ink text-white">
         <div className={`shell py-20 md:py-24 ${a.foto ? "grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]" : ""}`}>
           <div>
@@ -161,6 +168,8 @@ export default async function AanbodItemPagina({ params }: { params: Promise<{ s
         secondaryHref="/demo"
         secondaryLabel="Vraag een demo aan"
       />
+        </>
+      )}
     </>
   );
 }
