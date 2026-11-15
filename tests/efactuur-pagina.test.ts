@@ -32,7 +32,7 @@ describe("e-facturatie: alleen wat echt kan", () => {
     const geld = PIJLERS.find((p) => p.sleutel === "geld");
     expect(`${geld?.kort} ${geld?.intro}`).not.toMatch(/betaalverzoek|QR/i);
     const facturen = AANBOD.find((a) => a.slug === "facturen-en-betalen");
-    expect(`${facturen?.kort} ${facturen?.tekst} ${facturen?.punten.join(" ")}`).not.toMatch(/betaalverzoek|QR/i);
+    expect(`${facturen?.naam} ${facturen?.kort} ${facturen?.tekst} ${facturen?.punten.join(" ")}`).not.toMatch(/betaalverzoek|QR/i);
   });
 
   it("voorbeelden zijn als voorbeeld gemarkeerd en de bedragen kloppen", () => {

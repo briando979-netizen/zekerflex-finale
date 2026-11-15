@@ -564,7 +564,7 @@ export const AANBOD: AanbodItem[] = [
   {
     slug: "facturen-en-betalen",
     pijler: "geld",
-    naam: "Facturen & betaalverzoeken",
+    naam: "Facturen uit je uren",
     kort: "Facturen komen vanzelf uit goedgekeurde uren, ook als e-factuur voor je boekhouding.",
     tekst:
       "Keur je uren goed, dan maakt ZekerFlex de factuur, met een e-factuur die je boekhoudpakket zelf inleest. Je ziet wat er openstaat en betaalt per overschrijving.",
