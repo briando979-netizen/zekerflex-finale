@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { GRATIS_GRENZEN, jarvisBerichten, jarvisFoutTekst } from "@/lib/jarvis/berichten";
+import { GRATIS_GRENZEN, isPraatje, jarvisBerichten, jarvisFoutTekst, statusAlsAchtergrond } from "@/lib/jarvis/berichten";
 import { JARVIS_PERSONA, JARVIS_PERSONA_KORT } from "@/lib/jarvis/persona";
 
 // Jarvis op het eigen model (15 nov): eerst wat vastligt (persona, voorbeelden), daarna wat wisselt (status met tijdstip,
@@ -19,7 +19,7 @@ const invoer = (gratis: boolean) => ({
     { role: "user" as const, content: `vraag ${n}` },
     { role: "assistant" as const, content: `antwoord ${n} `.repeat(100) },
   ]),
-  vraag: "Hoe gaat het?",
+  vraag: "Hoeveel klussen staan er open?",
   gratis,
 });
 
@@ -28,8 +28,9 @@ describe("jarvisBerichten", () => {
     const b = jarvisBerichten(invoer(false));
     expect(b[0]).toEqual({ role: "system", content: "PERSONA" });
     expect(b[1]?.content.startsWith("Voorbeelden van goede eerdere antwoorden:")).toBe(true);
-    expect(b[2]).toEqual({ role: "system", content: "LIVE PLATFORMSTATUS (2026-11-15T00:28:00Z): db=ok" });
-    expect(b.at(-1)).toEqual({ role: "user", content: "Hoe gaat het?" });
+    expect(b[2]).toEqual({ role: "system", content: statusAlsAchtergrond("LIVE PLATFORMSTATUS (2026-11-15T00:28:00Z): db=ok") });
+    expect(b[2]?.content).toContain("alleen voor als de beheerder ernaar vraagt");
+    expect(b.at(-1)).toEqual({ role: "user", content: "Hoeveel klussen staan er open?" });
     expect(b.filter((x) => x.role !== "system")).toHaveLength(9);
     // de status staat er één keer in (niet "LIVE PLATFORMSTATUS: LIVE PLATFORMSTATUS")
     expect(b.map((x) => x.content).join("\n").match(/LIVE PLATFORMSTATUS/g)).toHaveLength(1);
@@ -43,6 +44,23 @@ describe("jarvisBerichten", () => {
     expect(Math.max(...gesprek.map((x) => x.content.length))).toBeLessThanOrEqual(GRATIS_GRENZEN.antwoordTekens + 1);
     const tekens = (g: boolean) => jarvisBerichten(invoer(g)).reduce((n, x) => n + x.content.length, 0);
     expect(tekens(true)).toBeLessThan(tekens(false) / 2);
+  });
+
+  it("bij een groet of praatje gaat de status niet mee (het model plakte hem anders terug); bij een vraag wel", () => {
+    for (const groet of ["Hallo", "hoi!", "Goedemorgen Jarvis, alles goed?", "bedankt", "ok", "Hoe gaat het?"]) {
+      expect(isPraatje(groet), groet).toBe(true);
+      const b = jarvisBerichten({ ...invoer(true), vraag: groet });
+      expect(b.some((x) => x.content.includes("LIVE PLATFORMSTATUS")), groet).toBe(false);
+    }
+    expect(isPraatje("Hoeveel klussen staan er open?")).toBe(false);
+    expect(isPraatje("Hoe gaat het met de werkgevers in Groningen?")).toBe(false);
+    expect(jarvisBerichten({ ...invoer(true), vraag: "Hoeveel klussen staan er open?" }).some((x) => x.content.includes("LIVE PLATFORMSTATUS"))).toBe(true);
+  });
+
+  it("de persona noemt de status achtergrond, niet iets om te herhalen", () => {
+    expect(JARVIS_PERSONA_KORT).toContain("noem die cijfers alleen als ernaar gevraagd wordt");
+    expect(JARVIS_PERSONA).toContain("Noem die cijfers alleen als ernaar gevraagd wordt");
+    expect(JARVIS_PERSONA).not.toContain("gebruik die.");
   });
 
   it("zonder status of voorbeelden: die berichten vallen weg", () => {
