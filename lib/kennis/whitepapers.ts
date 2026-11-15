@@ -59,7 +59,7 @@ export const WHITEPAPERS: Whitepaper[] = [
           },
           {
             t: "note",
-            text: "Werk je als freelancer via ZekerFlex, dan ben je vanaf je eerste klus kosteloos verzekerd voor ongevallen, bedrijfsaansprakelijkheid en arbeidsongeschiktheid. Zie de whitepaper 'Ben ik verzekerd?'.",
+            text: "ZekerFlex biedt op dit moment geen verzekering aan: als freelancer regel je zelf een aansprakelijkheidsverzekering. Zie de whitepaper 'Welke verzekeringen heb je nodig?'.",
           },
         ],
       },
@@ -591,104 +591,67 @@ export const WHITEPAPERS: Whitepaper[] = [
   },
 
   {
+    // 15 nov 2026: herschreven. De oude tekst beschreef een verzekering via "onze verzekeringspartner" (met bedragen) die er niet is.
     slug: "verzekering",
-    title: "Ben ik verzekerd?",
-    subtitle: "De ZekerFlex-verzekering voor freelancers",
+    title: "Welke verzekeringen heb je nodig?",
+    subtitle: "Zelf verzekeren als freelancer",
     category: "Zekerheid",
-    updated: "2026-09-01",
-    readMinutes: 6,
+    updated: "2026-11-15",
+    readMinutes: 4,
     intro:
-      "Een ongeluk zit in een klein hoekje. In loondienst is verzekeren meestal geregeld; als freelancer moet je dat zelf doen. Werk je via ZekerFlex, dan regelen wij het — vanaf je eerste klus, kosteloos.",
+      "Een ongeluk zit in een klein hoekje. In loondienst is verzekeren meestal geregeld; als freelancer regel je het zelf. ZekerFlex biedt op dit moment geen verzekering aan, dus zo pak je het aan.",
     sections: [
       {
-        heading: "Wat ZekerFlex regelt",
+        heading: "Wat je als freelancer zelf regelt",
         blocks: [
+          { t: "h3", text: "Bedrijfsaansprakelijkheid (AVB)" },
           {
             t: "p",
-            text: "Elke freelancer die via ZekerFlex werkt is vanaf de allereerste klus automatisch verzekerd via onze verzekeringspartner. Grote financiële problemen door aansprakelijkheid, een ongeval of letsel worden zo goed als voorkomen — voor jou én voor de opdrachtgever.",
+            text: "Dekt schade die je tijdens je werk aan anderen of aan hun spullen toebrengt. Veel opdrachtgevers vragen ernaar, en zonder AVB betaal je zo'n schade zelf.",
           },
+          { t: "h3", text: "Beroepsaansprakelijkheid" },
           {
             t: "p",
-            text: "Nadat je ZekerFlex-account is geverifieerd, ontvang je van de verzekeringspartner een e-mail om een account aan te maken. Daarin zie je alle polisvoorwaarden en dien je een claim in. Zonder dat account ben je wél verzekerd, maar je hebt het nodig om te claimen.",
+            text: "Dekt financiële schade door een fout in je advies of ontwerp. Vooral nodig als je adviseert of ontwerpt; voor de meeste praktische klussen is een AVB genoeg.",
           },
+          { t: "h3", text: "Ongevallen en arbeidsongeschiktheid" },
+          {
+            t: "p",
+            text: "Een ongevallenverzekering keert uit bij blijvend letsel; een arbeidsongeschiktheidsverzekering (AOV) vult je inkomen aan als je een tijd niet kunt werken. Een AOV is duur: vergelijk ook andere vormen, zoals een broodfonds.",
+          },
+          { t: "h3", text: "Rechtsbijstand" },
+          { t: "p", text: "Juridische hulp bij een geschil over je werk of een factuur die niet wordt betaald." },
         ],
       },
       {
-        heading: "Waarvoor je verzekerd bent",
+        heading: "Waar je op let",
         blocks: [
           {
-            t: "h3",
-            text: "Ongevallen en ziekte",
-          },
-          {
-            t: "p",
-            text: "Een uitkering bij blijvende invaliditeit of overlijden, plus dekking voor onder meer medische kosten na een ongeval, ziekenhuisverblijf, botbreuken, tandschade en littekens in het gezicht.",
-          },
-          {
-            t: "h3",
-            text: "Bedrijfsaansprakelijkheid",
-          },
-          {
             t: "ul",
             items: [
-              "Lichamelijk letsel van derden: gedekt tot € 2.500.000",
-              "Materiële schade aan eigendommen van derden: gedekt tot € 2.500.000",
-              "Kosten van juridische verdediging: tot € 15.000",
-              "Eigen risico per claim: € 50",
-            ],
-          },
-          {
-            t: "h3",
-            text: "Arbeidsongeschiktheid",
-          },
-          {
-            t: "p",
-            text: "Je komt in aanmerking na minimaal tien voltooide opdrachten in de 26 weken voor het ongeval of de ziekte. De eerste 52 weken keert de polis 90% van je gemiddelde inkomsten uit, van week 53 tot 104 is dat 75%, met een maximale dagvergoeding van € 30, voor maximaal twee jaar.",
-          },
-          {
-            t: "h3",
-            text: "Wellbeing en extra dekkingen",
-          },
-          {
-            t: "ul",
-            items: [
-              "Digitale toegang tot een fysiotherapeut, huisarts en psycholoog, en financieel advies",
-              "Financiële dekking tot € 500 voor familieverlof (geboorte) en rouwverlof (overlijden eerste- of tweedegraads familielid)",
+              "De verzekerde som per schadegeval",
+              "Het eigen risico",
+              "Of jouw soort werk is meeverzekerd",
+              "Of schade op de locatie van een opdrachtgever gedekt is",
             ],
           },
         ],
       },
       {
-        heading: "Check wel de voorwaarden",
+        heading: "En als uitzendkracht?",
         blocks: [
           {
             t: "p",
-            text: "Per onderdeel van de verzekering gelden voorwaarden. Bij een bedrijfsongeval kan een medische keuring nodig zijn; bij een schadegeval moet je bewijzen en documenten aanleveren. De volledige voorwaarden staan in je account bij de verzekeringspartner.",
+            text: "Werk je als uitzendkracht via ZekerFlex, dan ben je in dienst van ZekerFlex. Wat er voor jou geregeld is, staat in je uitzendovereenkomst en de ABU-cao.",
           },
         ],
       },
       {
-        heading: "Wat kost het?",
-        blocks: [
-          {
-            t: "ul",
-            items: [
-              "Voor freelancers: geheel kosteloos",
-              "Voor opdrachtgevers: de verzekering zit in de vaste platformkosten van € 3,50 per gewerkt uur",
-            ],
-          },
-          {
-            t: "p",
-            text: "Voor de opdrachtgever betekent dit minder risico: veroorzaakt een freelancer schade, dan dekt de verzekering die kosten en wordt het incident professioneel afgehandeld.",
-          },
-        ],
-      },
-      {
-        heading: "Een claim indienen",
+        heading: "Hulp nodig?",
         blocks: [
           {
             t: "p",
-            text: "Ga in je account bij de verzekeringspartner naar 'claims', kies de dekking en doorloop de stappen. De claim wordt beoordeeld op de polisvoorwaarden en je bewijsmateriaal. Je krijgt elke twee weken een statusupdate. Is de claim goedgekeurd, dan staat het geld binnen vijf werkdagen op je rekening.",
+            text: "Twijfel je welke verzekering je nodig hebt, vraag het je boekhouder of een onafhankelijke verzekeringsadviseur. Gebeurt er iets tijdens een klus, meld het dan bij je eigen verzekeraar en laat het ons weten via ZekerFlex Support.",
           },
         ],
       },

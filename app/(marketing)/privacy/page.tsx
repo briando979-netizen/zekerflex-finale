@@ -97,7 +97,7 @@ export default function PrivacyPage() {
       />
       <LegalSection
         heading="Toegang tot jouw gegevens"
-        body="We delen je gegevens met partners die bij onze dienst betrokken zijn, zoals de partij die je verzekering regelt en de partij die de identiteitscheck verzorgt. Zij mogen je gegevens alleen voor het afgesproken doel gebruiken en behandelen ze veilig. ZekerFlex is een onafhankelijk bedrijf zonder moeder- of dochterondernemingen; we geven je gegevens niet aan anderen zonder jouw toestemming, tenzij dit in dit privacybeleid staat."
+        body="We delen je gegevens met partners die bij onze dienst betrokken zijn, zoals de partij die de identiteitscheck verzorgt. Zij mogen je gegevens alleen voor het afgesproken doel gebruiken en behandelen ze veilig. ZekerFlex is een onafhankelijk bedrijf zonder moeder- of dochterondernemingen; we geven je gegevens niet aan anderen zonder jouw toestemming, tenzij dit in dit privacybeleid staat."
       />
       <LegalSection
         heading="Jouw rechten"
