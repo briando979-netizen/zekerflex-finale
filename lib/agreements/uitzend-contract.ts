@@ -4,6 +4,8 @@ import { getUitzendStatus } from "@/lib/payroll/uitzend-status";
 import { kvAppend, kvGet } from "@/lib/storage/kv";
 import { amsterdamParts } from "@/lib/time/amsterdam";
 import { werkgeverGegevens } from "@/lib/platform/werkgever";
+import { PLATFORM_INSCHRIJVING } from "@/lib/platform/bedrijf";
+import { leesWoonadres, woonadresRegel } from "@/lib/agreements/uitzend-gegevens";
 
 // ---------------------------------------------------------------------------
 // Uitzendovereenkomst — the temp-work employment contract between ZekerFlex
@@ -21,9 +23,11 @@ export const CONTRACT_MONTHS = 3;
  * De versie van de tekst (sjabloon) waarmee een overeenkomst wordt opgemaakt en getekend. Een getekende overeenkomst blijft voor altijd
  * in de versie waarin hij is getekend: dezelfde tekst, pdf en referentie. v1 (tot 12 nov 2026) had vaste bedrijfsgegevens (een
  * verzonnen KvK-nummer en "kantoorhoudende te Amsterdam"); v2 neemt de gegevens van de werkgever uit één bron (lib/platform/werkgever.ts)
- * en laat weg wat niet is ingesteld. Alleen de huidige versie telt als geldig: wie alleen een v1 heeft, tekent opnieuw.
+ * en laat weg wat niet is ingesteld. v3 (15 nov 2026, eigenaar) noemt ook de geboortedatum en het woonadres van de uitzendkracht,
+ * de rechtsvorm en inschrijving van de werkgever, en laat de zin over een verblijfs- en werkvergunning weg. Alleen de huidige versie
+ * telt als geldig: wie alleen een oudere heeft, tekent opnieuw.
  */
-export const SJABLOON_HUIDIG = 2;
+export const SJABLOON_HUIDIG = 3;
 
 export interface UitzendContract {
   id: string;
@@ -36,6 +40,12 @@ export interface UitzendContract {
   employerKvk: string;
   /** v2: het adres van de werkgever zoals ingesteld; ontbreekt als het niet is ingesteld (en bij v1) */
   employerAddress?: string;
+  /** v3: rechtsvorm en inschrijving van de werkgever (lib/platform/bedrijf.ts) */
+  employerInschrijving?: string;
+  /** v3: de geboortedatum van de uitzendkracht (YYYY-MM-DD) zoals bij het tekenen; ontbreekt als die er niet was */
+  workerBirthDate?: string;
+  /** v3: het woonadres op één regel zoals bij het tekenen (lib/agreements/uitzend-gegevens.ts) */
+  workerAddress?: string;
   /** de sjabloonversie; ontbreekt bij v1 (de overeenkomsten van vóór 12 nov 2026) */
   sjabloon?: number;
   signedAt: string;
@@ -51,10 +61,16 @@ export const CONTRACTEN_PREFIX = "uitzend-contracts:";
 
 export const sjabloonVan = (c: Pick<UitzendContract, "sjabloon">): number => c.sjabloon ?? 1;
 
-/** De werkgeversgegevens voor een nieuwe overeenkomst (v2): wat niet is ingesteld blijft leeg en valt in de tekst weg. */
-function werkgeverVoorContract(): Pick<UitzendContract, "employerName" | "employerKvk" | "employerAddress"> {
+/** De werkgeversgegevens voor een nieuwe overeenkomst (v2/v3): wat niet is ingesteld blijft leeg en valt in de tekst weg. */
+function werkgeverVoorContract(): Pick<UitzendContract, "employerName" | "employerKvk" | "employerAddress" | "employerInschrijving"> {
   const w = werkgeverGegevens();
-  return { employerName: w.naam, employerKvk: w.kvk ?? "", ...(w.adres ? { employerAddress: w.adres } : {}) };
+  return { employerName: w.naam, employerKvk: w.kvk ?? "", ...(w.adres ? { employerAddress: w.adres } : {}), employerInschrijving: PLATFORM_INSCHRIJVING };
+}
+
+/** De gegevens van de uitzendkracht voor een nieuwe overeenkomst (v3): wat er (nog) niet is, valt in de tekst weg. */
+function werkerVoorContract(fiscal: { birthDate: string | null; woonadres?: unknown }): Pick<UitzendContract, "workerBirthDate" | "workerAddress"> {
+  const adres = leesWoonadres(fiscal.woonadres);
+  return { ...(fiscal.birthDate ? { workerBirthDate: fiscal.birthDate } : {}), ...(adres ? { workerAddress: woonadresRegel(adres) } : {}) };
 }
 
 const nogGeldig = (c: Pick<UitzendContract, "validUntil">, nu: number) => new Date(c.validUntil).getTime() > nu;
@@ -110,6 +126,7 @@ export async function signUitzendContract(
     userId,
     workerName,
     workerBsnLast4: fiscal.bsnLast4,
+    ...werkerVoorContract(fiscal),
     ...werkgeverVoorContract(),
     sjabloon: SJABLOON_HUIDIG,
     signedAt: now.toISOString(),
@@ -135,6 +152,7 @@ export async function voorbeeldUitzendContract(userId: string, workerName: strin
     userId,
     workerName,
     workerBsnLast4: fiscal.bsnLast4,
+    ...werkerVoorContract(fiscal),
     ...werkgeverVoorContract(),
     sjabloon: SJABLOON_HUIDIG,
     signedAt: now.toISOString(),

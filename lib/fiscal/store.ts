@@ -1,5 +1,6 @@
 import { kvGet, kvListEntries, kvSet } from "@/lib/storage/kv";
 import type { KorAanvraag } from "@/lib/fiscal/kor";
+import type { Woonadres } from "@/lib/agreements/uitzend-gegevens";
 
 // ---------------------------------------------------------------------------
 // Fiscal / BTW profile per worker — Postgres-backed (KeyValueStore, key
@@ -58,6 +59,11 @@ export interface FiscalProfile {
   loonheffingskortingGekozen?: boolean;
   /** geboortedatum (YYYY-MM-DD) — voor jeugdloon / WML-vloer */
   birthDate: string | null;
+  /**
+   * Het woonadres van een uitzendkracht (15 nov 2026): staat in de uitzendovereenkomst (sjabloon v3) en hoort in de
+   * loonadministratie. Alleen gevraagd bij de overeenkomst (lib/agreements/uitzend-gegevens.ts); ontbreekt = niet ingevuld.
+   */
+  woonadres?: Woonadres | null;
 
   invoiceMode: InvoiceMode | null;
   iban: string | null;

@@ -11,6 +11,7 @@ import {
 import { UITZEND_NIEUW } from "@/lib/agreements/uitzend-nieuw-teksten";
 import { getLocale } from "@/lib/i18n/server";
 import { recordAudit } from "@/lib/audit";
+import { gegevensVoorContractCompleet } from "@/lib/agreements/uitzend-gegevens";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +43,10 @@ export async function POST(): Promise<NextResponse> {
     const fiscal = await getFiscal(p.userId);
     if (invoiceModeFor(fiscal) !== "payroll") {
       throw AppError.precondition("Alleen uitzendkrachten ondertekenen een uitzendovereenkomst.");
+    }
+    // sjabloon v3: de overeenkomst noemt je geboortedatum en woonadres (het scherm vraagt die vóór de knop, GET/PUT /api/me/uitzend/gegevens)
+    if (!gegevensVoorContractCompleet(fiscal)) {
+      throw AppError.precondition("Vul eerst je geboortedatum en woonadres in; die staan in je uitzendovereenkomst.");
     }
 
     const { contract, created } = await signUitzendContract(p.userId, p.fullName);

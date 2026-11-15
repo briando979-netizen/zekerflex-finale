@@ -4,11 +4,13 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useFT } from "@/components/i18n/useFT";
 import { vulIn } from "@/lib/i18n/vul-in";
 import type { ContractTekst } from "@/lib/agreements/uitzend-tekst";
+import { woonadresRegel, type Woonadres } from "@/lib/agreements/uitzend-gegevens";
 import type { FreelancerDict } from "@/lib/i18n/freelancer";
 
 // De uitzendovereenkomst: eerst lezen, dan pas tekenen. Vóór het tekenen staan de belangrijkste punten bovenaan, de
 // volledige tekst is op het scherm te lezen (of als pdf te openen of te downloaden) en pas daarna komt de knop
 // "Ondertekenen": die staat uit tot de overeenkomst is geopend en het vakje "Ik heb de overeenkomst gelezen" is aangevinkt.
+// Sinds sjabloon v3 (15 nov 2026) noemt de overeenkomst ook je geboortedatum en woonadres: die vul je eerst in (ContractGegevens).
 // Na het tekenen blijft de overeenkomst terug te lezen en te downloaden. De juridische tekst is Nederlands en bindend
 // (lib/agreements/uitzend-tekst.ts); de knoppen en uitleg zijn vijftalig.
 
@@ -71,8 +73,199 @@ function Kernpunten({ data, t, fmt, bindend }: { data: ContractTekst; t: T; fmt:
 
 const PDF_VOORBEELD = "/api/me/uitzend/contract/pdf?voorbeeld=1";
 
-/** Vóór het tekenen: kernpunten, de tekst lezen, het vakje "gelezen" en dan pas de knop. */
-function LeesEnTeken({ t, fmt, bindend, busy, err, knop, onTekenen }: { t: T; fmt: Datum; bindend: boolean; busy: boolean; err: string; knop: string; onTekenen: () => void }) {
+/** Wat GET/PUT /api/me/uitzend/gegevens teruggeeft. */
+interface GegevensStand {
+  naam: string;
+  geboortedatum: string | null;
+  woonadres: Woonadres | null;
+  postcodeVoorstel: string | null;
+  compleet: boolean;
+}
+type Formulier = Woonadres & { geboortedatum: string };
+type FormVeld = keyof Formulier;
+const VELDEN: readonly FormVeld[] = ["straat", "huisnummer", "postcode", "plaats", "land"];
+
+const formulierUit = (s: GegevensStand): Formulier => ({
+  ...(s.woonadres ?? { straat: "", huisnummer: "", postcode: s.postcodeVoorstel ?? "", plaats: "", land: "Nederland" }),
+  geboortedatum: s.geboortedatum ?? "",
+});
+
+const leesStand = (d: unknown): GegevensStand | null => {
+  const o = d as Partial<GegevensStand> | null;
+  return o && typeof o.compleet === "boolean" && typeof o.naam === "string" ? (o as GegevensStand) : null;
+};
+
+/**
+ * Geboortedatum en woonadres voor de overeenkomst (sjabloon v3): eerst invullen, dan pas tekenen. Zijn ze compleet, dan staan ze
+ * er als overzicht met "Wijzigen". Na opslaan neemt het scherm de bewaarde stand van de server over.
+ */
+function ContractGegevens({ t, fmt, onStand }: { t: T; fmt: Datum; onStand: (compleet: boolean, opgeslagen: boolean) => void }) {
+  const g = t.gegevens;
+  const [stand, setStand] = useState<GegevensStand | "fout" | null>(null);
+  const [bewerk, setBewerk] = useState(false);
+  const [form, setForm] = useState<Formulier>({ straat: "", huisnummer: "", postcode: "", plaats: "", land: "Nederland", geboortedatum: "" });
+  const [busy, setBusy] = useState(false);
+  const [fout, setFout] = useState<{ veld: FormVeld | null; tekst: string } | null>(null);
+  const id = useId();
+  const foutId = `${id}-fout`;
+
+  useEffect(() => {
+    let weg = false;
+    void (async () => {
+      try {
+        const r = await fetch("/api/me/uitzend/gegevens", { cache: "no-store" });
+        const d = leesStand(await r.json());
+        if (!r.ok || !d) throw new Error("gegevens");
+        if (weg) return;
+        setStand(d);
+        setForm(formulierUit(d));
+        setBewerk(!d.compleet);
+        onStand(d.compleet, false);
+      } catch {
+        if (!weg) setStand("fout");
+      }
+    })();
+    return () => {
+      weg = true;
+    };
+  }, [onStand]);
+
+  async function opslaan(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
+    setFout(null);
+    try {
+      const { geboortedatum, ...woonadres } = form;
+      const r = await fetch("/api/me/uitzend/gegevens", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ woonadres, ...(geboortedatum ? { geboortedatum } : {}) }),
+      });
+      const d: unknown = await r.json().catch(() => null);
+      if (!r.ok) {
+        const veld = (d as { error?: { details?: { veld?: unknown } } } | null)?.error?.details?.veld;
+        const bekend = typeof veld === "string" && Object.hasOwn(g.veldFout, veld) ? (veld as FormVeld) : null;
+        setFout({ veld: bekend, tekst: bekend ? g.veldFout[bekend as keyof typeof g.veldFout] : g.fout });
+        return;
+      }
+      const nieuw = leesStand(d);
+      if (!nieuw) throw new Error("gegevens");
+      setStand(nieuw);
+      setForm(formulierUit(nieuw));
+      setBewerk(!nieuw.compleet);
+      onStand(nieuw.compleet, true);
+    } catch {
+      setFout({ veld: null, tekst: g.fout });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (stand === null) return <p role="status" className="mt-3 text-xs text-neutralx-500">{g.laden}</p>;
+  if (stand === "fout") return <p role="alert" className="mt-3 text-xs text-crit">{g.laadFout}</p>;
+
+  if (!bewerk && stand.compleet && stand.woonadres && stand.geboortedatum) {
+    return (
+      <div className="mt-3 rounded-lg bg-white/70 p-3">
+        <p className="text-xs font-semibold text-ink">{g.titel}</p>
+        <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+          <dt className="text-neutralx-500">{g.naam}</dt>
+          <dd className="text-ink">{stand.naam}</dd>
+          <dt className="text-neutralx-500">{g.geboren}</dt>
+          <dd className="text-ink">{fmt(stand.geboortedatum)}</dd>
+          <dt className="text-neutralx-500">{g.adres}</dt>
+          <dd className="text-ink">{woonadresRegel(stand.woonadres)}</dd>
+        </dl>
+        <button type="button" onClick={() => setBewerk(true)} className="btn-ghost mt-2 min-h-[44px] px-3 py-1.5 text-xs">
+          {g.wijzig}
+        </button>
+      </div>
+    );
+  }
+
+  const veldProps = (v: FormVeld) => ({
+    id: `${id}-${v}`,
+    value: form[v],
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [v]: e.target.value })),
+    "aria-invalid": fout?.veld === v ? true : undefined,
+    "aria-describedby": fout?.veld === v ? foutId : undefined,
+    className: "mt-1 block w-full rounded-lg border border-hair bg-white px-3 py-2 text-sm text-ink",
+  });
+
+  return (
+    <form onSubmit={(e) => void opslaan(e)} noValidate className="mt-3 rounded-lg bg-white/70 p-3">
+      <p className="text-xs font-semibold text-ink">{g.titel}</p>
+      <p className="mt-1 text-xs leading-relaxed text-neutralx-600">{g.uitleg}</p>
+      <p className="mt-2 text-xs text-neutralx-600">
+        <span className="font-semibold text-ink">{stand.naam}</span> · {g.naamUitleg}
+      </p>
+      <div className="mt-2 grid grid-cols-1 gap-x-3 gap-y-2 sm:grid-cols-2">
+        <label htmlFor={`${id}-geboortedatum`} className="text-xs text-neutralx-700 sm:col-span-2">
+          {g.geboren}
+          <input type="date" autoComplete="bday" {...veldProps("geboortedatum")} />
+        </label>
+        {VELDEN.map((v) => (
+          <label key={v} htmlFor={`${id}-${v}`} className="text-xs text-neutralx-700">
+            {g[v]}
+            <input
+              type="text"
+              autoComplete={v === "straat" ? "address-line1" : v === "postcode" ? "postal-code" : v === "plaats" ? "address-level2" : v === "land" ? "country-name" : "off"}
+              {...veldProps(v)}
+            />
+          </label>
+        ))}
+      </div>
+      {fout && (
+        <p id={foutId} role="alert" className="mt-2 text-xs text-crit">
+          {fout.tekst}
+        </p>
+      )}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button type="submit" disabled={busy} className="btn-primary min-h-[44px] px-4 py-2 text-sm disabled:opacity-50">
+          {busy ? g.bezig : g.opslaan}
+        </button>
+        {stand.compleet && (
+          <button
+            type="button"
+            onClick={() => {
+              setForm(formulierUit(stand));
+              setFout(null);
+              setBewerk(false);
+            }}
+            className="btn-ghost min-h-[44px] px-3 py-1.5 text-xs"
+          >
+            {g.annuleer}
+          </button>
+        )}
+      </div>
+    </form>
+  );
+}
+
+/** Vóór het tekenen: kernpunten, de tekst lezen, het vakje "gelezen" en dan pas de knop (en de gegevens moeten compleet zijn). */
+function LeesEnTeken({
+  t,
+  fmt,
+  bindend,
+  busy,
+  err,
+  knop,
+  klaar,
+  versie,
+  onTekenen,
+}: {
+  t: T;
+  fmt: Datum;
+  bindend: boolean;
+  busy: boolean;
+  err: string;
+  knop: string;
+  /** de gegevens voor de overeenkomst zijn compleet (ContractGegevens) */
+  klaar: boolean;
+  /** telt op na het opslaan van de gegevens: de tekst wordt dan opnieuw geladen, met de nieuwe gegevens erin */
+  versie: number;
+  onTekenen: () => void;
+}) {
   const [data, setData] = useState<ContractTekst | "fout" | null>(null);
   const [open, setOpen] = useState(false);
   const [geopend, setGeopend] = useState(false);
@@ -95,7 +288,7 @@ function LeesEnTeken({ t, fmt, bindend, busy, err, knop, onTekenen }: { t: T; fm
     return () => {
       weg = true;
     };
-  }, []);
+  }, [versie]);
 
   return (
     <div>
@@ -135,8 +328,9 @@ function LeesEnTeken({ t, fmt, bindend, busy, err, knop, onTekenen }: { t: T; fm
       </label>
       {!geopend && <p id={hintId} className="mt-1 text-xs text-neutralx-500">{t.eerstLezen}</p>}
 
+      {!klaar && <p className="mt-1 text-xs text-neutralx-500">{t.gegevens.eerst}</p>}
       {err && <p role="alert" className="mt-2 text-xs text-crit">{err}</p>}
-      <button type="button" onClick={onTekenen} disabled={busy || !gelezen} className="btn-primary mt-3 min-h-[44px] px-4 py-2 text-sm disabled:opacity-50">
+      <button type="button" onClick={onTekenen} disabled={busy || !gelezen || !klaar} className="btn-primary mt-3 min-h-[44px] px-4 py-2 text-sm disabled:opacity-50">
         {busy ? t.bezig : knop}
       </button>
     </div>
@@ -191,6 +385,13 @@ export function UitzendContractCard() {
   const [history, setHistory] = useState<Contract[]>([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  // de gegevens voor de overeenkomst (sjabloon v3): compleet = de knop mag aan; versie telt op na opslaan (de tekst laadt opnieuw)
+  const [gegevensKlaar, setGegevensKlaar] = useState(false);
+  const [versie, setVersie] = useState(0);
+  const opGegevens = useCallback((compleet: boolean, opgeslagen: boolean) => {
+    setGegevensKlaar(compleet);
+    if (opgeslagen) setVersie((v) => v + 1);
+  }, []);
   // na het tekenen verdwijnt de knop: de focus naar de melding "getekend", die ook wordt voorgelezen
   const getekendRef = useRef<HTMLParagraphElement>(null);
   const focusNaTekenen = useRef(false);
@@ -248,7 +449,8 @@ export function UitzendContractCard() {
         <p className="mt-1 text-xs leading-relaxed text-neutralx-600">
           {t.uitleg}
         </p>
-        <LeesEnTeken t={t} fmt={fmt} bindend={bindend} busy={busy} err={err} knop={t.ondertekenen} onTekenen={() => void sign()} />
+        <ContractGegevens t={t} fmt={fmt} onStand={opGegevens} />
+        <LeesEnTeken t={t} fmt={fmt} bindend={bindend} busy={busy} err={err} knop={t.ondertekenen} klaar={gegevensKlaar} versie={versie} onTekenen={() => void sign()} />
         {/* de oude versie blijft precies zoals hij getekend is: terug te lezen en te downloaden */}
         {nieuw && history[0] && (
           <div className="mt-4 border-t border-hair pt-3">
@@ -307,7 +509,8 @@ export function UitzendContractCard() {
           <p className="text-xs text-neutralx-600">
             {t.verlopenTekst}
           </p>
-          <LeesEnTeken t={t} fmt={fmt} bindend={bindend} busy={busy} err={err} knop={t.nieuw} onTekenen={() => void sign()} />
+          <ContractGegevens t={t} fmt={fmt} onStand={opGegevens} />
+          <LeesEnTeken t={t} fmt={fmt} bindend={bindend} busy={busy} err={err} knop={t.nieuw} klaar={gegevensKlaar} versie={versie} onTekenen={() => void sign()} />
         </div>
       )}
 
