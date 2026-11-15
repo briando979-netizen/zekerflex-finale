@@ -11,6 +11,7 @@ import { IconBack, IconPhone, IconSearch, IconVideo } from "./icons";
 import { Composer, type OutgoingMessage } from "./Composer";
 import { UserCard } from "./UserCard";
 import { CallOverlay } from "./CallOverlay";
+import { BinnenkomendGesprek } from "./BinnenkomendGesprek";
 import { Portal } from "./Portal";
 import { makeRingtone } from "./ringtone";
 import { ChatTekstenProvider, useChatTeksten } from "./ChatTekstenContext";
@@ -379,6 +380,22 @@ function ChatDockInner() {
     fetch(`/api/inbox/${incoming.threadId}/call`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ callId: incoming.callId, type: "decline", mode: incoming.mode }) }).catch(() => undefined);
     setIncoming(null);
   };
+  // weigeren met een kort bericht in de chat, zoals bij WhatsApp
+  const answerIncomingWithText = (text: string) => {
+    if (!incoming) return;
+    const threadId = incoming.threadId;
+    declineIncoming();
+    void fetch(`/api/inbox/${threadId}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) })
+      .then(() => (active === threadId ? loadThread(threadId) : undefined))
+      .catch(() => undefined);
+  };
+  // weigeren en de chat openen om zelf iets te schrijven (/berichten stuurt per rol door)
+  const writeOwnReply = () => {
+    if (!incoming) return;
+    const threadId = incoming.threadId;
+    declineIncoming();
+    window.location.assign(`/berichten?thread=${encodeURIComponent(threadId)}`);
+  };
 
   // Every page that mounts this component already has a full "Chat" entry in
   // its own nav (werkgever sidebar, freelancer bottom tabs, admin nav) — so
@@ -612,22 +629,16 @@ function ChatDockInner() {
         />
       )}
       {incoming && !call && (
-        // Top of the screen, like a phone's call banner — the message composer
-        // sits at the bottom and must stay usable while it rings.
+        // Je wordt gebeld: volledig scherm op de telefoon, een kaart rechtsboven op de computer (components/chat/BinnenkomendGesprek.tsx).
         <Portal>
-          <div
-            role="alertdialog"
-            aria-label={vulIn(chat.dock.beltJeNaam, { naam: incoming.fromName })}
-            className="fixed inset-x-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-[78] mx-auto flex max-w-[28rem] items-center gap-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-lift animate-slide-up-fade"
-          >
-            <Avatar userId={incoming.fromUserId} name={incoming.fromName} role={incoming.fromRole} avatars={avatars} size={36} />
-            <span className="min-w-0 flex-1 text-sm leading-tight">
-              <span className="block truncate font-semibold">{incoming.fromName}</span>
-              <span className="block text-xs text-white/60">{incoming.mode === "video" ? chat.dock.beltJeVideo : incoming.mode === "screen" ? chat.dock.beltJeScherm : chat.dock.beltJe}</span>
-            </span>
-            <button type="button" onClick={declineIncoming} className="rounded-full bg-crit px-3 py-1.5 text-sm font-semibold">{chat.dock.weiger}</button>
-            <button type="button" onClick={acceptIncoming} className="rounded-full bg-brand-mint px-3 py-1.5 text-sm font-semibold text-ink">{chat.dock.opnemen}</button>
-          </div>
+          <BinnenkomendGesprek
+            oproep={incoming}
+            avatars={avatars}
+            onOpnemen={acceptIncoming}
+            onWeigeren={declineIncoming}
+            onAntwoord={answerIncomingWithText}
+            onEigenBericht={writeOwnReply}
+          />
         </Portal>
       )}
     </>

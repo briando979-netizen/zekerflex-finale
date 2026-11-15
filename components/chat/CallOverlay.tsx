@@ -1,15 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { canShareScreen, fmtDuration } from "./shared";
 import { Portal } from "./Portal";
 import { Avatar } from "./Avatar";
 import { makeRingback } from "./ringtone";
 import { useChatTeksten } from "./ChatTekstenContext";
 import { vulIn } from "@/lib/i18n/vul-in";
+import { IconCameraFlip, IconChevronDown, IconMic, IconMicOff, IconPhoneDown, IconScreenShare, IconVideo, IconVideoOff } from "./icons";
 
 type Mode = "audio" | "video" | "screen";
 type Role = "caller" | "callee";
+type Hoek = "lt" | "rt" | "lb" | "rb";
 
 interface Signal {
   seq: number;
@@ -47,8 +49,9 @@ async function fetchIceServers(): Promise<RTCIceServer[]> {
   }
 }
 
-// Only a video sender negotiated at call start can carry a screen without
+// Only a video sender negotiated at call start can carry a camera or screen without
 // renegotiation. Found via its transceiver, since replaceTrack(null) clears sender.track.
+// Since 15 nov 2026 a voice call negotiates one too (empty), so you can switch to video mid-call, like WhatsApp.
 function videoSenderOf(peer: RTCPeerConnection | null): RTCRtpSender | null {
   return peer?.getTransceivers().find((t) => t.receiver.track?.kind === "video")?.sender ?? null;
 }
@@ -58,6 +61,30 @@ function videoSenderOf(peer: RTCPeerConnection | null): RTCRtpSender | null {
 // lost candidate can be the only route that works, so they wait in a queue.
 async function addQueued(peer: RTCPeerConnection, queue: RTCIceCandidateInit[]): Promise<void> {
   for (const c of queue.splice(0)) await peer.addIceCandidate(c).catch(() => undefined);
+}
+
+/** Waar het eigen kleine beeld staat; na het slepen springt het naar de dichtstbijzijnde hoek. */
+const HOEK_KLASSE: Record<Hoek, string> = {
+  lt: "left-3 top-[calc(4.5rem+env(safe-area-inset-top))]",
+  rt: "right-3 top-[calc(4.5rem+env(safe-area-inset-top))]",
+  lb: "left-3 bottom-[calc(7.5rem+env(safe-area-inset-bottom))]",
+  rb: "right-3 bottom-[calc(7.5rem+env(safe-area-inset-bottom))]",
+};
+
+/** Een ronde knop van het belscherm. `aan` = de omgekeerde stand (wit, zoals bij WhatsApp: gedempt, camera uit). */
+function BelKnop({ label, onClick, aan = false, children }: { label: string; onClick: () => void; aan?: boolean; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={aan}
+      title={label}
+      className={`grid h-14 w-14 flex-shrink-0 place-items-center rounded-full text-2xl transition active:scale-95 ${aan ? "bg-white text-ink" : "bg-white/15 text-white hover:bg-white/25"}`}
+    >
+      {children}
+    </button>
+  );
 }
 
 export function CallOverlay({
@@ -86,8 +113,19 @@ export function CallOverlay({
     role === "caller" ? "ringing" : "connecting",
   );
   const [muted, setMuted] = useState(false);
-  const [camOff, setCamOff] = useState(mode === "audio");
-  const [hasCam, setHasCam] = useState(mode === "video");
+  // de eigen camera stuurt beeld (een spraakoproep kan midden in het gesprek naar video)
+  const [camOn, setCamOn] = useState(mode === "video");
+  // de ander stuurt beeld (camera of scherm); een oude versie van de app meldt dat niet, dan geldt de soort oproep
+  const [anderBeeld, setAnderBeeld] = useState(mode === "video" || (mode === "screen" && role === "callee"));
+  const [kanVideo, setKanVideo] = useState(false);
+  const [kanWisselen, setKanWisselen] = useState(false);
+  const [voorCamera, setVoorCamera] = useState(true);
+  const [grootIk, setGrootIk] = useState(false);
+  const [knoppen, setKnoppen] = useState(true);
+  const [tik, setTik] = useState(0);
+  const [melding, setMelding] = useState("");
+  const [hoek, setHoek] = useState<Hoek>("rt");
+  const [sleep, setSleep] = useState<{ x: number; y: number } | null>(null);
   const [failReason, setFailReason] = useState<"network" | "media">("network");
   const [sharing, setSharing] = useState(mode === "screen" && role === "caller");
   const [secs, setSecs] = useState(0);
@@ -109,6 +147,7 @@ export function CallOverlay({
   const disconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ended = useRef(false);
   const pendingCandidates = useRef<RTCIceCandidateInit[]>([]);
+  const pipDrag = useRef<{ id: number; x0: number; y0: number; moved: boolean } | null>(null);
 
   // The media elements remount whenever the call is minimized/expanded or
   // video switches on, so each one picks up the current stream as it mounts.
@@ -150,6 +189,19 @@ export function CallOverlay({
       }).catch(() => undefined),
     [threadId, callId, mode],
   );
+
+  // laat de ander weten of er beeld komt: dan toont die je foto in plaats van een zwart vlak
+  const meldBeeld = useCallback(
+    (camera: boolean) => void post("media", { camera, scherm: Boolean(screenTrack.current) }),
+    [post],
+  );
+
+  const telCameras = useCallback(() => {
+    void navigator.mediaDevices
+      ?.enumerateDevices()
+      .then((d) => setKanWisselen(d.filter((x) => x.kind === "videoinput").length > 1))
+      .catch(() => undefined);
+  }, []);
 
   const cleanup = useCallback(
     (notify: boolean, failed = false) => {
@@ -200,15 +252,64 @@ export function CallOverlay({
     }
     if (mode === "video") {
       try {
-        return await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        return await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: "user" } });
       } catch {
         // no camera (a desktop without webcam): carry on as a voice call, the other side's video still shows
-        setHasCam(false);
-        setCamOff(true);
+        setCamOn(false);
       }
     }
     return navigator.mediaDevices.getUserMedia({ audio: true });
   }, [mode, role]);
+
+  // Na het ophalen van microfoon (en camera): in een video-oproep zonder camera meteen melden, en tellen hoeveel camera's er zijn.
+  const naMedia = useCallback(
+    (stream: MediaStream) => {
+      if (mode !== "video") return;
+      if (stream.getVideoTracks().length === 0) meldBeeld(false);
+      else telCameras();
+    },
+    [mode, meldBeeld, telCameras],
+  );
+
+  /** Camera aan (of de andere camera): de oude stopt eerst (een telefoon geeft er vaak maar één tegelijk). */
+  const camAan = useCallback(
+    async (voor: boolean): Promise<boolean> => {
+      const sender = videoSenderOf(pc.current);
+      if (!sender) return false;
+      const stream = localStream.current ?? new MediaStream();
+      localStream.current = stream;
+      for (const t of stream.getVideoTracks()) {
+        t.stop();
+        stream.removeTrack(t);
+      }
+      const nieuw = await navigator.mediaDevices
+        .getUserMedia({ video: { facingMode: { ideal: voor ? "user" : "environment" } } })
+        .catch(() => null);
+      const track = nieuw?.getVideoTracks()[0];
+      if (!track) {
+        if (!screenTrack.current) await sender.replaceTrack(null).catch(() => undefined);
+        setMelding(chat.bel.cameraGeenToegang);
+        return false;
+      }
+      stream.addTrack(track);
+      if (!screenTrack.current) {
+        await sender.replaceTrack(track).catch(() => undefined);
+        showLocal(new MediaStream([track]));
+      }
+      telCameras();
+      return true;
+    },
+    [chat.bel.cameraGeenToegang, showLocal, telCameras],
+  );
+
+  const camUit = useCallback(async () => {
+    if (!screenTrack.current) await videoSenderOf(pc.current)?.replaceTrack(null).catch(() => undefined);
+    const stream = localStream.current;
+    for (const t of stream?.getVideoTracks() ?? []) {
+      t.stop();
+      stream?.removeTrack(t);
+    }
+  }, []);
 
   const stopShare = useCallback(async () => {
     const screen = screenTrack.current;
@@ -217,11 +318,12 @@ export function CallOverlay({
     screen.onended = null;
     screen.stop();
     setSharing(false);
-    // back to the camera on a video call; a screen-share call just stops sending video
-    const cam = mode === "video" ? localStream.current?.getVideoTracks()[0] ?? null : null;
+    // back to the camera if it is on; otherwise the call just stops sending video
+    const cam = localStream.current?.getVideoTracks()[0] ?? null;
     await videoSenderOf(pc.current)?.replaceTrack(cam).catch(() => undefined);
-    if (localStream.current) showLocal(localStream.current);
-  }, [mode, showLocal]);
+    if (cam) showLocal(new MediaStream([cam]));
+    meldBeeld(Boolean(cam));
+  }, [showLocal, meldBeeld]);
 
   const startShare = useCallback(async () => {
     const sender = videoSenderOf(pc.current);
@@ -235,10 +337,11 @@ export function CallOverlay({
       track.onended = () => void stopShare();
       showLocal(screen);
       setSharing(true);
+      meldBeeld(Boolean(localStream.current?.getVideoTracks().length));
     } catch {
       /* user cancelled the picker */
     }
-  }, [showLocal, stopShare]);
+  }, [showLocal, stopShare, meldBeeld]);
 
   const makePc = useCallback((ice: RTCIceServer[]) => {
     const peer = new RTCPeerConnection({ iceServers: ice });
@@ -249,7 +352,7 @@ export function CallOverlay({
       // Remote audio is only heard through a media element: the hidden
       // <audio> always has the stream, the <video> tiles are muted views.
       const stream = e.streams[0] ?? remoteStream.current ?? new MediaStream();
-      if (!e.streams[0] && !stream.getTracks().includes(e.track)) stream.addTrack(e.track);
+      if (!stream.getTracks().includes(e.track)) stream.addTrack(e.track);
       remoteStream.current = stream;
       const audio = remoteAudioEl.current;
       if (audio && audio.srcObject !== stream) {
@@ -266,6 +369,7 @@ export function CallOverlay({
         }
         started.current = started.current || Date.now();
         setState("live");
+        setKanVideo(Boolean(videoSenderOf(peer)));
         if (!tick.current) tick.current = setInterval(() => setSecs((s) => s + 1), 1000);
       } else if (peer.connectionState === "disconnected") {
         // Often transient (a brief network blip) — ICE can recover back to
@@ -297,10 +401,16 @@ export function CallOverlay({
               if (!stream) return mediaFailed();
               attachStream(stream);
               stream.getTracks().forEach((t) => peer.addTrack(t, stream));
+              naMedia(stream);
+            }
+            // ook zonder camera beeld kunnen sturen: later video aan is dan alleen replaceTrack, geen nieuwe onderhandeling
+            for (const t of peer.getTransceivers()) {
+              if (t.receiver.track?.kind === "video" && t.direction === "recvonly") t.direction = "sendrecv";
             }
             const answer = await peer.createAnswer();
             await peer.setLocalDescription(answer);
             await post("answer", answer);
+            setKanVideo(Boolean(videoSenderOf(peer)));
             setState("connecting");
           } else if (s.type === "answer" && role === "caller") {
             await peer.setRemoteDescription(new RTCSessionDescription(s.data as RTCSessionDescriptionInit));
@@ -314,6 +424,9 @@ export function CallOverlay({
             const candidate = s.data as RTCIceCandidateInit;
             if (peer.remoteDescription) await peer.addIceCandidate(new RTCIceCandidate(candidate));
             else pendingCandidates.current.push(candidate);
+          } else if (s.type === "media") {
+            const d = (s.data ?? {}) as { camera?: unknown; scherm?: unknown };
+            setAnderBeeld(d.camera === true || d.scherm === true);
           } else if (s.type === "end" || s.type === "decline") {
             cleanup(false);
           }
@@ -322,7 +435,7 @@ export function CallOverlay({
         }
       }
     },
-    [role, getMedia, post, cleanup, attachStream, mediaFailed],
+    [role, getMedia, post, cleanup, attachStream, mediaFailed, naMedia],
   );
 
   // start
@@ -347,10 +460,16 @@ export function CallOverlay({
           if (shared) shared.onended = () => void stopShare();
         }
         stream.getTracks().forEach((t) => peer.addTrack(t, stream));
-        const offer = await peer.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: mode !== "audio" });
+        // een spraakoproep (of video zonder camera) krijgt toch een lege videolijn: video aan kan dan midden in het gesprek
+        if (!stream.getVideoTracks().length) peer.addTransceiver("video", { direction: "sendrecv", streams: [stream] });
+        // scherm delen zonder microfoon: toch de ander kunnen horen (wat offerToReceiveAudio vroeger deed)
+        if (!stream.getAudioTracks().length) peer.addTransceiver("audio", { direction: "recvonly" });
+        const offer = await peer.createOffer();
         await peer.setLocalDescription(offer);
         await post("ring");
         await post("offer", offer);
+        setKanVideo(Boolean(videoSenderOf(peer)));
+        naMedia(stream);
       }
       poll.current = setInterval(async () => {
         try {
@@ -386,22 +505,96 @@ export function CallOverlay({
     return () => ringer.stop();
   }, [role, state]);
 
+  // een melding (geen camera) verdwijnt vanzelf
+  useEffect(() => {
+    if (!melding) return;
+    const t = setTimeout(() => setMelding(""), 4500);
+    return () => clearTimeout(t);
+  }, [melding]);
+
+  const beeld = anderBeeld || camOn || sharing;
+
+  // bij video verdwijnen de knoppen na een paar seconden, zoals bij WhatsApp; tikken haalt ze terug
+  useEffect(() => {
+    if (!beeld || state !== "live" || !knoppen || minimized) return;
+    const t = setTimeout(() => setKnoppen(false), 5000);
+    return () => clearTimeout(t);
+  }, [beeld, state, knoppen, minimized, tik]);
+
+  const toonKnoppen = () => {
+    setKnoppen(true);
+    setTik((n) => n + 1);
+  };
+
   const toggleMute = () => {
     const on = !muted;
     setMuted(on);
     localStream.current?.getAudioTracks().forEach((t) => (t.enabled = !on));
+    toonKnoppen();
   };
-  const toggleCam = () => {
-    const off = !camOff;
-    setCamOff(off);
-    localStream.current?.getVideoTracks().forEach((t) => (t.enabled = !off));
+  const toggleVideo = async () => {
+    toonKnoppen();
+    if (camOn) {
+      await camUit();
+      setCamOn(false);
+      setGrootIk(false);
+      meldBeeld(false);
+    } else if (await camAan(voorCamera)) {
+      setCamOn(true);
+      meldBeeld(true);
+    }
   };
-  const toggleShare = () => void (screenTrack.current ? stopShare() : startShare());
+  const wisselCamera = async () => {
+    toonKnoppen();
+    const voor = !voorCamera;
+    if (await camAan(voor)) {
+      setVoorCamera(voor);
+    } else {
+      // de andere camera lukte niet: dan helemaal uit, zodat de ander geen bevroren beeld ziet
+      setCamOn(false);
+      meldBeeld(false);
+    }
+  };
+  const toggleShare = () => {
+    toonKnoppen();
+    void (screenTrack.current ? stopShare() : startShare());
+  };
 
-  const showVideo = mode !== "audio";
-  const showSelfView = mode === "video" ? !camOff || sharing : sharing;
+  // het kleine beeld: tikken wisselt groot en klein, slepen zet het in een andere hoek
+  const pipDown = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    pipDrag.current = { id: e.pointerId, x0: e.clientX, y0: e.clientY, moved: false };
+  };
+  const pipMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const d = pipDrag.current;
+    if (!d || d.id !== e.pointerId) return;
+    const dx = e.clientX - d.x0;
+    const dy = e.clientY - d.y0;
+    if (!d.moved && Math.hypot(dx, dy) < 8) return;
+    d.moved = true;
+    setSleep({ x: dx, y: dy });
+  };
+  const pipUp = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    const d = pipDrag.current;
+    pipDrag.current = null;
+    if (!d) return;
+    if (!d.moved) {
+      setGrootIk((g) => !g);
+      toonKnoppen();
+      return;
+    }
+    setSleep(null);
+    setHoek(`${e.clientX < window.innerWidth / 2 ? "l" : "r"}${e.clientY < window.innerHeight / 2 ? "t" : "b"}` as Hoek);
+  };
+
   // phones have no screen capture; the overlay only renders in the browser, so this is hydration-safe
-  const canShare = canShareScreen() && (mode === "video" || (mode === "screen" && role === "caller"));
+  const canShare = canShareScreen() && (mode === "video" || mode === "audio" || (mode === "screen" && role === "caller"));
+  const videoKnop = kanVideo && mode !== "screen";
+  // vóór het opnemen zie je jezelf groot (zoals bij WhatsApp); daarna de ander, tenzij je wisselt
+  const eigenGroot = (camOn || sharing) && (grootIk || state !== "live");
+  const kleinBeeld = eigenGroot ? state === "live" : camOn || sharing;
+  const spiegel = camOn && voorCamera && !sharing;
+  const knoppenZichtbaar = knoppen || !beeld || state !== "live";
   const status =
     state === "ringing"
       ? chat.bel.statusOvergaan
@@ -415,26 +608,11 @@ export function CallOverlay({
               ? chat.bel.statusGeenMicrofoon
               : chat.bel.statusMislukt;
 
-  const muteButton = (size: string) => (
-    <button
-      type="button"
-      onClick={toggleMute}
-      className={`grid ${size} place-items-center rounded-full ${muted ? "bg-white text-ink" : "bg-white/15"}`}
-      aria-label={muted ? chat.bel.microfoonAan : chat.bel.microfoonUit}
-    >
-      {muted ? "🔇" : "🎙️"}
-    </button>
+  const anderAvatar = (size: number) => <Avatar userId={peerUserId} name={peerName} role={peerRole} avatars={avatars} size={size} />;
+  const eigenVideo = (klasse: string) => (
+    <video ref={bindLocalVideo} autoPlay playsInline muted className={`${klasse} bg-black object-cover ${spiegel ? "-scale-x-100" : ""}`} />
   );
-  const hangupButton = (size: string) => (
-    <button
-      type="button"
-      onClick={() => cleanup(true)}
-      className={`grid ${size} place-items-center rounded-full bg-crit`}
-      aria-label={chat.bel.ophangen}
-    >
-      📵
-    </button>
-  );
+  const anderVideo = (klasse: string) => <video ref={bindRemoteVideo} autoPlay playsInline muted className={`${klasse} bg-black`} />;
 
   return (
     <Portal>
@@ -443,46 +621,41 @@ export function CallOverlay({
         // Compact bar so the chat underneath stays usable during the call.
         <div
           role="status"
-          className="fixed inset-x-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-[80] mx-auto flex max-w-[26rem] items-center gap-3 rounded-2xl bg-[#0b0f0e] px-3 py-2 text-white shadow-lift"
+          className="fixed inset-x-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-[80] mx-auto flex max-w-[26rem] items-center gap-2 rounded-2xl bg-[#0b0f0e] px-3 py-2 text-white shadow-lift"
         >
-          {showVideo ? (
-            <video ref={bindRemoteVideo} autoPlay playsInline muted className="h-12 w-16 flex-shrink-0 rounded-lg bg-black object-cover" />
-          ) : (
-            <Avatar userId={peerUserId} name={peerName} role={peerRole} avatars={avatars} size={36} />
-          )}
+          {anderBeeld ? anderVideo("h-12 w-16 flex-shrink-0 rounded-lg object-cover") : anderAvatar(36)}
           <button type="button" onClick={() => setMinimized(false)} className="min-w-0 flex-1 text-left leading-tight">
             <span className="block truncate text-sm font-semibold">{peerName}</span>
             <span className="block text-xs text-white/60">{status}</span>
           </button>
-          {muteButton("h-9 w-9 text-base")}
+          <button
+            type="button"
+            onClick={toggleMute}
+            aria-label={muted ? chat.bel.microfoonAan : chat.bel.microfoonUit}
+            aria-pressed={muted}
+            className={`grid h-9 w-9 place-items-center rounded-full text-lg ${muted ? "bg-white text-ink" : "bg-white/15"}`}
+          >
+            {muted ? <IconMicOff /> : <IconMic />}
+          </button>
           <button
             type="button"
             onClick={() => setMinimized(false)}
-            className="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-base"
+            className="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-lg"
             aria-label={chat.bel.grootScherm}
           >
-            ⤢
+            <IconChevronDown className="rotate-180" />
           </button>
-          {hangupButton("h-9 w-11 text-base")}
+          <button type="button" onClick={() => cleanup(true)} className="grid h-9 w-11 place-items-center rounded-full bg-crit text-lg" aria-label={chat.bel.ophangen}>
+            <IconPhoneDown />
+          </button>
         </div>
       ) : (
-        <div className="fixed inset-0 z-[80] flex flex-col bg-[#0b0f0e] pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] text-white">
-          <div className="flex flex-wrap items-center gap-3 p-4">
-            <span className="font-display text-lg font-semibold">{peerName}</span>
-            <span className="text-sm text-white/60">{status}</span>
-            {state !== "failed" && (
-              <button
-                type="button"
-                onClick={() => setMinimized(true)}
-                className="ml-auto rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold hover:bg-white/20"
-              >
-                {chat.bel.verkleinen}
-              </button>
-            )}
-          </div>
-
+        <div
+          className={`fixed inset-0 z-[80] overflow-hidden text-white ${beeld ? "bg-black" : "bg-[#0b0f0e]"}`}
+          onPointerMove={beeld && state === "live" && !knoppen ? toonKnoppen : undefined}
+        >
           {state === "failed" ? (
-            <div className="grid flex-1 place-items-center px-6 text-center">
+            <div className="grid h-full place-items-center px-6 text-center">
               <div>
                 <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-crit/20 text-3xl">⚠️</div>
                 {failReason === "media" ? (
@@ -506,53 +679,135 @@ export function CallOverlay({
               </div>
             </div>
           ) : (
-            // min-h-0: without it the video's own height (640×480 stretched to the screen width) wins
-            // over flex-1 and pushes the hang-up/mute buttons below the screen on a computer
-            <div className="relative min-h-0 flex-1 overflow-hidden">
-              {showVideo ? (
-                <video ref={bindRemoteVideo} autoPlay playsInline muted className="h-full w-full bg-black object-contain" />
+            <>
+              {beeld ? (
+                // het grote beeld vult het scherm; tikken toont of verbergt de knoppen
+                <button
+                  type="button"
+                  onClick={() => (knoppen ? setKnoppen(false) : toonKnoppen())}
+                  aria-label={chat.bel.knoppenTonen}
+                  className="absolute inset-0 block h-full w-full cursor-default"
+                >
+                  {eigenGroot ? (
+                    eigenVideo("h-full w-full")
+                  ) : anderBeeld ? (
+                    anderVideo("h-full w-full object-cover sm:object-contain")
+                  ) : (
+                    <span className="grid h-full w-full place-items-center bg-[#0b0f0e]">
+                      <span className="flex flex-col items-center text-center">
+                        {anderAvatar(112)}
+                        {mode !== "screen" && <span className="mt-4 text-sm text-white/70">{vulIn(chat.bel.cameraStaatUit, { naam: peerName })}</span>}
+                      </span>
+                    </span>
+                  )}
+                </button>
               ) : (
-                <div className="grid h-full w-full place-items-center">
-                  <Avatar userId={peerUserId} name={peerName} role={peerRole} avatars={avatars} size={112} />
+                // spraak: grote foto in het midden, naam en tijd eronder
+                <div className="flex h-full flex-col items-center justify-center px-6 pb-36 text-center">
+                  <div className="relative">
+                    {(state === "ringing" || state === "connecting") && (
+                      <span aria-hidden="true" className="absolute inset-0 animate-ping rounded-full bg-white/10" />
+                    )}
+                    {anderAvatar(128)}
+                  </div>
+                  <p className="mt-6 font-display text-2xl font-semibold">{peerName}</p>
+                  <p className="mt-1 text-sm text-white/70">{status}</p>
+                  {mode === "screen" && <p className="mt-1 text-xs text-white/50">{chat.bel.schermoproep}</p>}
                 </div>
               )}
-              {showSelfView && (
-                <video
-                  ref={bindLocalVideo}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="absolute bottom-4 right-4 w-32 rounded-lg border border-white/20 bg-black object-cover"
-                />
-              )}
-            </div>
-          )}
 
-          {state !== "failed" && (
-            <div className="flex items-center justify-center gap-4 p-6">
-              {muteButton("h-12 w-12 text-xl")}
-              {mode === "video" && hasCam && (
+              {/* het kleine beeld: tikken = wisselen, slepen = andere hoek */}
+              {beeld && kleinBeeld && (
                 <button
                   type="button"
-                  onClick={toggleCam}
-                  className={`grid h-12 w-12 place-items-center rounded-full text-xl ${camOff ? "bg-white text-ink" : "bg-white/15"}`}
-                  aria-label={chat.bel.camera}
+                  aria-label={chat.bel.beeldWisselen}
+                  onPointerDown={pipDown}
+                  onPointerMove={pipMove}
+                  onPointerUp={pipUp}
+                  onPointerCancel={() => {
+                    pipDrag.current = null;
+                    setSleep(null);
+                  }}
+                  onClick={(e) => {
+                    // alleen het toetsenbord (Enter/spatie); tikken en slepen gaan via de pointer
+                    if (e.detail === 0) setGrootIk((g) => !g);
+                  }}
+                  style={sleep ? { transform: `translate(${sleep.x}px, ${sleep.y}px)` } : undefined}
+                  className={`absolute z-20 aspect-[3/4] w-[28vw] max-w-[9.5rem] touch-none overflow-hidden rounded-2xl border border-white/25 bg-black shadow-lift ${sleep ? "" : "transition-all duration-200"} ${HOEK_KLASSE[hoek]}`}
                 >
-                  {camOff ? "📵" : "📷"}
+                  {eigenGroot ? (
+                    anderBeeld ? (
+                      anderVideo("h-full w-full object-cover")
+                    ) : (
+                      <span className="grid h-full w-full place-items-center bg-[#0b0f0e]">{anderAvatar(56)}</span>
+                    )
+                  ) : (
+                    eigenVideo("h-full w-full")
+                  )}
                 </button>
               )}
-              {canShare && (
+
+              {/* boven: terug naar de chat; bij video ook naam en tijd */}
+              <div
+                className={`absolute inset-x-0 top-0 z-10 flex items-center gap-2 px-3 pb-8 pt-[calc(0.75rem+env(safe-area-inset-top))] transition-opacity duration-300 ${knoppenZichtbaar ? "opacity-100" : "pointer-events-none opacity-0"} ${beeld ? "bg-gradient-to-b from-black/60 to-transparent" : ""}`}
+              >
                 <button
                   type="button"
-                  onClick={toggleShare}
-                  className={`grid h-12 w-12 place-items-center rounded-full text-xl ${sharing ? "bg-brand-mint text-ink" : "bg-white/15"}`}
-                  aria-label={sharing ? chat.bel.stopSchermDelen : chat.bel.schermDelen}
+                  onClick={() => setMinimized(true)}
+                  aria-label={chat.bel.terugNaarChat}
+                  title={chat.bel.terugNaarChat}
+                  className="grid h-11 w-11 place-items-center rounded-full text-2xl hover:bg-white/10"
                 >
-                  🖥️
+                  <IconChevronDown />
                 </button>
-              )}
-              {hangupButton("h-12 w-16 text-xl")}
-            </div>
+                {beeld && (
+                  <div className="min-w-0 flex-1 leading-tight">
+                    <p className="truncate font-semibold">{peerName}</p>
+                    <p className="text-xs text-white/75">{status}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* onder: de knoppen in een balk, rood ophangen rechts */}
+              <div
+                className={`absolute inset-x-0 bottom-0 z-10 flex flex-col items-center gap-3 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-10 transition-opacity duration-300 ${knoppenZichtbaar ? "opacity-100" : "pointer-events-none opacity-0"} ${beeld ? "bg-gradient-to-t from-black/70 to-transparent" : ""}`}
+              >
+                {melding && (
+                  <p role="alert" className="max-w-sm rounded-xl bg-black/70 px-3 py-2 text-center text-xs">
+                    {melding}
+                  </p>
+                )}
+                <div className="flex items-center gap-3 rounded-full bg-white/10 px-3 py-2.5 backdrop-blur-md sm:gap-4">
+                  {camOn && kanWisselen && !sharing && (
+                    <BelKnop label={chat.bel.cameraWisselen} onClick={() => void wisselCamera()}>
+                      <IconCameraFlip />
+                    </BelKnop>
+                  )}
+                  {videoKnop && (
+                    <BelKnop label={camOn ? chat.bel.videoUit : chat.bel.videoAan} onClick={() => void toggleVideo()} aan={mode === "video" && !camOn}>
+                      {camOn ? <IconVideo /> : <IconVideoOff />}
+                    </BelKnop>
+                  )}
+                  <BelKnop label={muted ? chat.bel.microfoonAan : chat.bel.microfoonUit} onClick={toggleMute} aan={muted}>
+                    {muted ? <IconMicOff /> : <IconMic />}
+                  </BelKnop>
+                  {canShare && kanVideo && (
+                    <BelKnop label={sharing ? chat.bel.stopSchermDelen : chat.bel.schermDelen} onClick={toggleShare} aan={sharing}>
+                      <IconScreenShare />
+                    </BelKnop>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => cleanup(true)}
+                    aria-label={chat.bel.ophangen}
+                    title={chat.bel.ophangen}
+                    className="grid h-14 w-14 flex-shrink-0 place-items-center rounded-full bg-crit text-3xl text-white transition hover:brightness-110 active:scale-95"
+                  >
+                    <IconPhoneDown />
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </div>
       )}

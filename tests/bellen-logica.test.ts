@@ -22,9 +22,12 @@ const logica = (f: string) =>
     .filter((l) => RE.test(l) && !l.includes("chat."));
 const sha = (a: string[]) => createHash("sha1").update(a.join("\n")).digest("hex");
 
+// Bijgewerkt 15 nov 2026, bewust: belscherm zoals WhatsApp (ronde knoppen, video aan midden in een spraakoproep via een lege
+// videolijn + replaceTrack, camera wisselen, signaal "media" voor camera aan/uit, knoppen verbergen bij video) en in ChatDock
+// weigeren met een bericht. Regel voor regel nagelopen met git diff; tests/bellen-whatsapp.test.ts bewaakt het nieuwe gedrag.
 const VOOR_DE_VERTALING = {
-  "components/chat/CallOverlay.tsx": { regels: 117, sha1: "62ae7bd09c69e92e0e6717e2f11a2f2cdbc5172d" },
-  "components/chat/ChatDock.tsx": { regels: 102, sha1: "958571128663b72435ed35fa72ec0250a26e1b6c" },
+  "components/chat/CallOverlay.tsx": { regels: 151, sha1: "d38a3238d0ef600c21af2beda4971d44fdd08ef6" },
+  "components/chat/ChatDock.tsx": { regels: 103, sha1: "a7908ea8d6710957e204aec888a11135c37c28fd" },
 } as const;
 
 describe("bellen: de logica is gelijk gebleven aan vóór de vertaling", () => {

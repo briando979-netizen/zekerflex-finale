@@ -23,5 +23,16 @@ export const BEL_NL = {
   camera: "Camera",
   stopSchermDelen: "Stop scherm delen",
   schermDelen: "Scherm delen",
+  terugNaarChat: "Terug naar de chat (het gesprek loopt door)",
+  videoAan: "Video aanzetten",
+  videoUit: "Video uitzetten",
+  cameraWisselen: "Camera wisselen",
+  cameraStaatUit: "{naam} heeft de camera uit",
+  beeldWisselen: "Groot en klein beeld wisselen",
+  knoppenTonen: "Knoppen tonen of verbergen",
+  spraakoproep: "Spraakoproep",
+  videooproep: "Video-oproep",
+  schermoproep: "Wil een scherm delen",
+  cameraGeenToegang: "Geen toegang tot je camera. Sta de camera toe via het slotje naast het adres.",
 };
 export type BelTeksten = typeof BEL_NL;
