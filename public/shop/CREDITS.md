@@ -25,3 +25,9 @@ Pixabay-foto's (royalty-vrij, commercieel toegestaan, geen bronvermelding vereis
 > helm, VCA-lesboek. Stock-zoeken gaf voor deze items vooral merklogo's (Nike/
 > Merrell/CAT) of onzin — upload deze het beste zelf via Admin → Shop (zoek op
 > pixabay.com, download een schone productfoto, upload 'm bij het product).
+
+## Kleurvarianten (eigen tekeningen)
+
+De productfoto's van overhemd, blouse, chino, fleece vest, kids-T-shirt en thermo-bodywarmer zijn eigen tekeningen van
+ZekerFlex. De foto per kleur (bv. `chino-broek-marineblauw.jpg`, `thermo-bodywarmer-unisex-zwart.jpg`) is daarvan afgeleid met
+`scripts/shop-kleurfotos.mjs` (15 nov 2026): alleen het kledingstuk krijgt een andere kleur. Geen bron van buiten.

@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = (await getDict()).paskamer;
-  return { title: t.metaTitel, description: t.metaOmschrijving, ...canonical("/shop/paskamer", { title: t.metaTitel, description: t.metaOmschrijving }) };
+  return { title: { absolute: t.metaTitel }, description: t.metaOmschrijving, ...canonical("/shop/paskamer", { title: t.metaTitel, description: t.metaOmschrijving }) };
 }
 
 // De paskamer: alle draagbare, koopbare producten (ook van verkopers) gaan als

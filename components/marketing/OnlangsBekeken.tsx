@@ -41,10 +41,11 @@ export function OnlangsBekeken({ producten, behalve, ingebed = false }: { produc
             {t.shopThuis.onlangsWis}
           </button>
         </div>
-        <ul className="-mx-4 mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:thin] sm:-mx-6 sm:px-6 lg:mx-0 lg:grid lg:grid-cols-6 lg:gap-4 lg:overflow-visible lg:px-0">
+        {/* bij weinig producten 4 kolommen (zoals "Anderen bekeken ook"), anders werden de kaarten smal met een leeg vlak ernaast */}
+        <ul className={`-mx-4 mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:thin] sm:-mx-6 sm:px-6 lg:mx-0 lg:grid ${lijst.length <= 4 ? "lg:grid-cols-4" : "lg:grid-cols-6"} lg:gap-4 lg:overflow-visible lg:px-0`}>
           {lijst.map((p) => (
             <li key={p.id} className="relative w-[46%] shrink-0 snap-start sm:w-[30%] lg:w-auto">
-              <ShopProductCard p={p} sizes="(min-width: 1024px) 16vw, (min-width: 640px) 30vw, 46vw" />
+              <ShopProductCard p={p} sizes={lijst.length <= 4 ? "(min-width: 1024px) 24vw, (min-width: 640px) 30vw, 46vw" : "(min-width: 1024px) 16vw, (min-width: 640px) 30vw, 46vw"} />
             </li>
           ))}
         </ul>

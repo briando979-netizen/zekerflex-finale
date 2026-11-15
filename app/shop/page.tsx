@@ -17,12 +17,14 @@ import { Fragment, type ReactNode } from "react";
 import { zichtbareShopSecties, type ShopSectieId } from "@/lib/ontwerp/shop-indeling";
 import { getShopIndeling } from "@/lib/ontwerp/shop-indeling-store";
 
+// <title> kort en zonder het sjabloon " · ZekerFlex" erachter (dan stond het merk er twee keer); delen houdt de lange
 const title = "ZekerFlex Shop — kleding, werkkleding en PBM, eerst passen in de paskamer";
+const korteTitel = "ZekerFlex Shop — kleding, werkkleding en PBM";
 const description =
   "Kleding, veiligheidsschoenen, handschoenen en werkkleding. Pas het eerst op je eigen paspop, voor 22:00 besteld morgen in huis. Ook zakelijk bestellen.";
 
 export const metadata: Metadata = {
-  title,
+  title: { absolute: korteTitel },
   description,
   ...canonical("/shop", { title, description }),
 };

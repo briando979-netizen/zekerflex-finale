@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ProductPlaceholder } from "@/components/marketing/ProductPlaceholder";
+import { kleurStip } from "@/lib/shop/kleurfoto-naam";
 import { Model3DViewer } from "@/components/marketing/Model3DViewer";
 import { useShopCart } from "@/components/marketing/useShopCart";
 import { useShopWishlist } from "@/components/marketing/useShopWishlist";
@@ -45,6 +46,8 @@ export type PdpProduct = {
   seller?: string | null;
   /** heren/vrouwen/kinderen/unisex: voor de paskamer (kindermaat of niet) */
   gender?: string | null;
+  /** per kleur de foto in die kleur (lib/shop/kleurfoto.ts); klik je een kleur, dan verschijnt die foto */
+  kleurFotos?: Record<string, string>;
 };
 
 const money = (cents: number) => `€ ${(cents / 100).toFixed(2).replace(".", ",")}`;
@@ -72,8 +75,6 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
   const { add, count } = useShopCart();
   const wishlist = useShopWishlist();
   const spec = useMemo(() => specFor(product.slug, product.description), [product]);
-  // ontdubbeld: een modelfoto die hetzelfde bestand is als de hoofdfoto stond er anders twee keer
-  const gallery = [...new Set([product.imageUrl, product.modelPhotoUrl].filter(Boolean) as string[])];
   const [active, setActive] = useState(0);
   const [show3d, setShow3d] = useState(false);
   const [qty, setQty] = useState(1);
@@ -85,6 +86,10 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
   const colors = useMemo(() => [...new Set(product.variants.map((v) => v.color).filter((c): c is string => Boolean(c)))], [product.variants]);
   const [selSize, setSelSize] = useState<string | null>(sizes[0] ?? null);
   const [selColor, setSelColor] = useState<string | null>(colors[0] ?? null);
+  // de foto in de gekozen kleur staat vooraan (lib/shop/kleurfoto.ts); zonder kleurfoto de gewone hoofdfoto.
+  // Ontdubbeld: een modelfoto die hetzelfde bestand is als de hoofdfoto stond er anders twee keer.
+  const kleurFoto = selColor ? product.kleurFotos?.[selColor] : undefined;
+  const gallery = [...new Set([kleurFoto ?? product.imageUrl, product.modelPhotoUrl].filter(Boolean) as string[])];
   const needsSelection = product.variants.length > 1;
   const variant = needsSelection
     ? product.variants.find((v) => (sizes.length === 0 || v.size === selSize) && (colors.length === 0 || v.color === selColor))
@@ -245,9 +250,13 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
                     onClick={() => {
                       setSelColor(c);
                       setAdded(false);
+                      // de foto in die kleur meteen tonen
+                      setActive(0);
+                      setShow3d(false);
                     }}
-                    className={option(selColor === c)}
+                    className={`${option(selColor === c)} inline-flex items-center gap-1.5`}
                   >
+                    {kleurStip(c) && <span aria-hidden className="inline-block h-3.5 w-3.5 rounded-full border border-black/15" style={{ backgroundColor: kleurStip(c) ?? undefined }} />}
                     {c}
                   </button>
                 ))}
