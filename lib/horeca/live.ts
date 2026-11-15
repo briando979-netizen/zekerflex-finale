@@ -35,6 +35,7 @@ async function bestellingenLive(zaakId: string): Promise<SchermBestelling[]> {
     opmerking: b.opmerking,
     naam: b.naam,
     bron: b.bron,
+    soort: b.soort,
   }));
 }
 

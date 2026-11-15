@@ -47,7 +47,7 @@ function Rekeningen({ data, keuze, kies }: { data: SchermData; keuze: Keuze | nu
           <li key={t.id}>{knop({ soort: "tafel", id: t.id, naam: t.naam }, t.naam, t.oproep === "rekening" ? "Wil afrekenen" : `${t.openBestellingen ? "nog in de maak · " : ""}${t.sindsMin ?? 0} min aan tafel`, t.openCent, t.oproep === "rekening")}</li>
         ))}
         {balie.map((b) => (
-          <li key={b.id}>{knop({ soort: "bestelling", id: b.id, naam: `#${b.nummer}` }, `#${b.nummer} · balie`, b.naam || (b.bron === "qr" ? "via QR" : "zonder tafel"), b.totaalCent)}</li>
+          <li key={b.id}>{knop({ soort: "bestelling", id: b.id, naam: `#${b.nummer}` }, `#${b.nummer} · ${b.soort === "bezorgen" ? "bezorgen" : b.soort === "afhalen" ? "afhalen" : "balie"}`, b.naam || (b.bron === "qr" ? "via QR" : "zonder tafel"), b.totaalCent)}</li>
         ))}
       </ul>
     </nav>

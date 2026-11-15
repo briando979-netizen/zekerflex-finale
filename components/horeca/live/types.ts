@@ -19,6 +19,8 @@ export interface SchermBestelling {
   opmerking: string;
   naam: string;
   bron: string;
+  /** "tafel", "afhalen" of "bezorgen" (lib/horeca/bezorgen.ts); oudere gegevens: ontbreekt */
+  soort?: string;
 }
 
 export type ReserveringStatus = "BEVESTIGD" | "AANGEKOMEN" | "NIET_GEKOMEN" | "GEANNULEERD";
