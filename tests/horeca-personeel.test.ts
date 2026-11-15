@@ -71,7 +71,7 @@ describe("schema", () => {
 
 describe("dashboards", () => {
   it("maakt, wijzigt en verwijdert; een onbekend onderdeel valt weg", async () => {
-    let d = await bewaarDashboard(T, { naam: " Bediening ", blokken: ["taken", "berichten", "onzin"] });
+    let d = await bewaarDashboard(T, { naam: " Bediening ", blokken: ["taken", "onzin"] });
     expect(d.dashboards).toEqual([{ id: "d1", naam: "Bediening", blokken: ["taken"] }]);
     d = await bewaarDashboard(T, { id: "d1", naam: "Zaal", blokken: ["mededelingen", "taken"] });
     expect(d.dashboards[0]).toEqual({ id: "d1", naam: "Zaal", blokken: ["taken", "mededelingen"] });

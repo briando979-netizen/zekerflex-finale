@@ -104,6 +104,7 @@ export interface PersoneelTeksten {
     bezig: string;
   };
   mail: { onderwerp: string; hoi: string; tekst: string; knop: string; geldig: string };
+  chat: { kop: string; team: string; metBeheer: string; gesprek: string; schrijf: string; verstuur: string; geen: string; beheerder: string; verwijder: string; bezig: string; fout: string; teamUitleg: string };
 }
 
 const nl: PersoneelTeksten = {
@@ -112,7 +113,7 @@ const nl: PersoneelTeksten = {
     taken: { naam: "Taken", uitleg: "De takenlijsten van de zaak (openen, sluiten, schoonmaak en metingen), om af te vinken." },
     mededelingen: { naam: "Mededelingen", uitleg: "Berichten van jou aan het team, bijvoorbeeld over het rooster of een actie." },
     loonstroken: { naam: "Loonstroken", uitleg: "Medewerkers zien hier hun eigen loonstroken (pdf) die jij voor hen klaarzet." },
-    berichten: { naam: "Berichten", uitleg: "Chatten met jou en met het team. Komt binnenkort." },
+    berichten: { naam: "Berichten", uitleg: "Een teamkanaal voor iedereen en een eigen gesprek met jou, om te chatten." },
   },
   binnenkort: "Binnenkort",
   beheer: {
@@ -212,6 +213,20 @@ const nl: PersoneelTeksten = {
     knop: "Account maken",
     geldig: "Deze link is {dagen} dagen geldig.",
   },
+  chat: {
+    kop: "Berichten",
+    team: "Team",
+    metBeheer: "Met de beheerder",
+    gesprek: "Gesprek",
+    schrijf: "Schrijf een bericht",
+    verstuur: "Versturen",
+    geen: "Nog geen berichten.",
+    beheerder: "Beheerder",
+    verwijder: "Weghalen",
+    bezig: "Bezig…",
+    fout: "Dat lukte niet. Probeer het zo nog eens.",
+    teamUitleg: "Iedereen van de zaak ziet de berichten in dit kanaal.",
+  },
 };
 
 const en: PersoneelTeksten = {
@@ -220,7 +235,7 @@ const en: PersoneelTeksten = {
     taken: { naam: "Tasks", uitleg: "The venue's task lists (opening, closing, cleaning and readings), to tick off." },
     mededelingen: { naam: "Announcements", uitleg: "Messages from you to the team, for example about the rota or an offer." },
     loonstroken: { naam: "Payslips", uitleg: "Staff see their own payslips (pdf) here, which you put ready for them." },
-    berichten: { naam: "Messages", uitleg: "Chat with you and with the team. Coming soon." },
+    berichten: { naam: "Messages", uitleg: "A team channel for everyone and a private conversation with you, to chat." },
   },
   binnenkort: "Coming soon",
   beheer: {
@@ -319,6 +334,20 @@ const en: PersoneelTeksten = {
     tekst: "{beheerder} invites you to work at {zaak}. Create an account with the button below.",
     knop: "Create account",
     geldig: "This link is valid for {dagen} days.",
+  },
+  chat: {
+    kop: "Messages",
+    team: "Team",
+    metBeheer: "With the manager",
+    gesprek: "Conversation",
+    schrijf: "Write a message",
+    verstuur: "Send",
+    geen: "No messages yet.",
+    beheerder: "Manager",
+    verwijder: "Remove",
+    bezig: "Working…",
+    fout: "That did not work. Please try again in a moment.",
+    teamUitleg: "Everyone at the venue sees the messages in this channel.",
   },
 };
 
