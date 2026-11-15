@@ -140,7 +140,7 @@ export function SiteHeader({ hoofdmenu = null }: { hoofdmenu?: Hoofdmenu | null 
         <nav
           aria-label="Hoofdnavigatie"
           ref={navRef}
-          className="ml-2 hidden items-center gap-3 xl:flex min-[1366px]:ml-6 min-[1366px]:gap-6"
+          className="ml-1 hidden items-center gap-0.5 lg:flex xl:ml-2 xl:gap-3 min-[1366px]:ml-6 min-[1366px]:gap-6"
         >
           {NAV.map((n) => {
             const active =
@@ -158,7 +158,7 @@ export function SiteHeader({ hoofdmenu = null }: { hoofdmenu?: Hoofdmenu | null 
                 <Link
                   href={n.href}
                   onFocus={() => hasMenu && showMenu(n.key)}
-                  className={`flex items-center whitespace-nowrap py-2 text-sm font-semibold transition-colors ${
+                  className={`flex items-center whitespace-nowrap py-2 pl-1.5 text-[13px] font-semibold transition-colors xl:pl-0 xl:text-sm ${
                     active || menu === n.key ? "text-brand-mint" : "text-white/75 hover:text-white"
                   }`}
                 >
@@ -174,7 +174,7 @@ export function SiteHeader({ hoofdmenu = null }: { hoofdmenu?: Hoofdmenu | null 
                     onClick={() => toggleMenu(n.key)}
                     aria-label={`${n.label} submenu`}
                     aria-expanded={menu === n.key}
-                    className="ml-0.5 grid h-9 w-9 flex-shrink-0 place-items-center rounded-full text-white/60 transition hover:bg-white/10 hover:text-white"
+                    className="ml-0.5 grid h-9 w-7 flex-shrink-0 place-items-center rounded-full xl:w-9 text-white/60 transition hover:bg-white/10 hover:text-white"
                   >
                     <svg
                       width="10"
@@ -226,23 +226,23 @@ export function SiteHeader({ hoofdmenu = null }: { hoofdmenu?: Hoofdmenu | null 
           </Link>
         </div>
 
-        <div className="ml-auto hidden items-center gap-3 xl:flex min-[1600px]:ml-0">
+        <div className="ml-auto hidden items-center gap-2 lg:flex xl:gap-3 min-[1600px]:ml-0">
           <Link
             href="/login"
-            className="whitespace-nowrap rounded-full bg-white px-4 py-2 text-sm font-bold text-ink transition hover:bg-white/90"
+            className="whitespace-nowrap rounded-full bg-white px-3 py-2 text-[13px] font-bold text-ink transition hover:bg-white/90 xl:px-4 xl:text-sm"
           >
             Inloggen
           </Link>
           <Link
             href={startHref(audience)}
-            className="whitespace-nowrap rounded-full bg-brand-mint px-4 py-2 text-sm font-bold text-ink transition hover:brightness-105"
+            className="whitespace-nowrap rounded-full bg-brand-mint px-3 py-2 text-[13px] font-bold text-ink transition hover:brightness-105 xl:px-4 xl:text-sm"
           >
             Start vandaag
           </Link>
         </div>
 
         {/* telefoon/tablet: inloggen altijd binnen handbereik, naast de menuknop */}
-        <div className="ml-auto flex items-center gap-2 xl:hidden">
+        <div className="ml-auto flex items-center gap-2 lg:hidden">
           {!open && (
             <Link
               href="/login"
