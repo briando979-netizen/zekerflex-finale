@@ -31,7 +31,8 @@ import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
 import { FOTO_SOORTEN, PROVIDER_LABEL, STRIPE_MET_RAPPORT, fotoUploadId, idControleWeergave, stripeSessieUrl, stripeZonderUitslag, type FotoSoort } from "@/lib/admin/kyc-weergave";
 import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
-import { poortSamenvatting, poortStappen } from "@/lib/admin/werker-poort-weergave";
+import { klusStappen, poortSamenvatting, poortStappen } from "@/lib/admin/werker-poort-weergave";
+import { klusFeiten } from "@/lib/onboarding/klaar-voor-klus-server";
 import { isReservedTestAddress } from "@/lib/mail/test-adres";
 
 export const dynamic = "force-dynamic";
@@ -155,9 +156,11 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
   const profile = user.freelancerProfile;
   // de poort van de werker-app (lib/onboarding/werker-poort.ts): zolang die dicht is, ziet de werker alleen de onboarding.
   // Een goedgekeurde ID is maar één van de stappen; het blok "Onboarding" hieronder is de trechter, niet de poort.
+  // Daarna "Vóór de eerste klus" (BSN, overeenkomst, KVK/btw, IBAN, ID goedgekeurd): dezelfde lijst als de werker ziet, zodat
+  // "Alles af" ook echt "kan reageren" is (15 nov). Een testaccount ziet de stappen ook, maar mag altijd reageren.
   const poortTest = isReservedTestAddress(user.email);
-  const poort = profile && !isDeleted && !poortTest ? await werkerPoortStand(user.id).catch(() => null) : null;
-  const poortLijst = poort ? poortStappen(poort, poort.workerKind) : [];
+  const [poort, klus] = profile && !isDeleted ? await Promise.all([werkerPoortStand(user.id).catch(() => null), klusFeiten(user.id).catch(() => null)]) : [null, null];
+  const poortLijst = poort ? [...poortStappen(poort, poort.workerKind), ...(klus ? klusStappen(klus) : [])] : [];
   // de profielfoto (KV profile-user:<id>) en de laatste in- en uitchecks met plek (GpsEvent)
   const [avatars, stripeSleutel, checkins] = await Promise.all([
     getUserAvatars([user.id]).catch(() => ({}) as Record<string, string>),
@@ -305,12 +308,17 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
           {profile && !isDeleted && (
             <Panel
               title="Toegang tot de werker-app"
-              subtitle={poortTest ? "Testaccount: geen poort, ziet de hele app" : poort ? poortSamenvatting(poortLijst) : "De stand kon niet worden gelezen"}
+              subtitle={poort ? `${poortSamenvatting(poortLijst)}${poortTest ? " (testaccount: mag altijd reageren)" : ""}` : "De stand kon niet worden gelezen"}
             >
               {poortLijst.length > 0 && (
                 <ol className="space-y-1.5">
-                  {poortLijst.map((st) => (
-                    <li key={st.key} className="flex items-start justify-between gap-3 text-[0.8125rem]">
+                  {poortLijst.map((st, i) => (
+                    <li key={st.key} className="flex flex-wrap items-start justify-between gap-3 text-[0.8125rem]">
+                      {st.eersteKlus && !poortLijst[i - 1]?.eersteKlus && (
+                        <span className="mt-2 w-full text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--a-dim)" }}>
+                          Vóór de eerste klus
+                        </span>
+                      )}
                       <span style={{ color: "var(--a-dim)" }}>
                         {st.label}
                         {!st.ok && <span className="mt-0.5 block text-xs">{st.uitleg}</span>}

@@ -89,15 +89,3 @@ export function volgendeNaVerificatie(f: WerkerPoortFeiten | null): "klaar" | "f
   if (!f || werkerOnboardingKlaar(f)) return "klaar";
   return werkerOnboardingKlaar({ ...f, fotoGezet: true }) ? "foto" : "stappen";
 }
-
-/**
- * Wat een werker al mag zien zolang de onboarding niet klaar is: de schermen waar je
- * de stappen invult (Verificatie, Fiscaal) en je account (uitloggen, taal, account
- * verwijderen). Al het andere toont de start.
- */
-const TOEGESTAAN = ["/dashboard/verificatie", "/dashboard/fiscaal", "/dashboard/account", "/dashboard/eerste-indruk"];
-
-export function toegestaanTijdensOnboarding(pad: string | null | undefined): boolean {
-  const p = (pad ?? "").replace(/\/+$/, "");
-  return TOEGESTAAN.some((t) => p === t || p.startsWith(`${t}/`));
-}

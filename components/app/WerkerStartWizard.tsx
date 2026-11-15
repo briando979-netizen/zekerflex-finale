@@ -29,10 +29,7 @@ export function WerkerStartWizard({
   tweestapAan = true,
   fotoGezet = true,
   brancheKeuze,
-  poort = false,
 }: {
-  /** in de poort (lib/onboarding/werker-poort.ts): de rest van de app is nog dicht */
-  poort?: boolean;
   /** de branches die de werker al koos, of null */
   brancheKeuze: BrancheKeuze | null;
   workerKind: Kind | null;
@@ -163,16 +160,14 @@ export function WerkerStartWizard({
   return (
     <section className="mb-6 overflow-hidden rounded-2xl border border-hair bg-white shadow-sm" aria-labelledby="werker-start-titel">
       <div className="relative bg-gradient-to-br from-brand-700 via-brand-700 to-brand-500 px-5 pb-8 pt-5 text-white">
-        {!poort && (
-          <button
-            type="button"
-            onClick={() => setGesloten(true)}
-            aria-label={t.sluiten}
-            className="absolute right-2 top-2 grid h-11 w-11 place-items-center rounded-full text-xl leading-none text-white/80 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-          >
-            <span aria-hidden>×</span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setGesloten(true)}
+          aria-label={t.sluiten}
+          className="absolute right-2 top-2 grid h-11 w-11 place-items-center rounded-full text-xl leading-none text-white/80 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        >
+          <span aria-hidden>×</span>
+        </button>
         <p className="text-xs font-semibold uppercase tracking-wide text-white/70">{t.eyebrow}</p>
         <h2 id="werker-start-titel" className="mt-1 pr-10 font-display text-2xl font-bold leading-tight">{t.laatWeten}</h2>
         <p className="mt-1 text-sm text-white/85" role="status">
@@ -352,7 +347,7 @@ export function WerkerStartWizard({
         })}
       </ol>
       {/* tweestapsverificatie is optioneel (12 nov) en staat onder Account → Beveiliging; niet midden in de 5 stappen (15 nov) */}
-      <p className="border-t border-hair bg-paper-soft px-5 py-3 text-center text-xs text-neutralx-500">{poort ? t.afsluiting : t.browse}</p>
+      <p className="border-t border-hair bg-paper-soft px-5 py-3 text-center text-xs text-neutralx-500">{t.browse}</p>
     </section>
   );
 }
