@@ -49,6 +49,8 @@ import { startLive, type Plek } from "@/lib/messaging/live-locatie";
 import { useLiveLocatieZender } from "./live-locatie-zender";
 import { GeplandBalk } from "./GeplandBalk";
 import { StatusRij } from "./StatusRij";
+import { ZakelijkPaneel } from "./ZakelijkPaneel";
+import { labelKlasse, labelsMetVoorstellen } from "@/lib/chat/zakelijk";
 import type { GeplandBericht } from "@/lib/messaging/gepland-tijd";
 import {
   canDeleteForAll,
@@ -87,6 +89,10 @@ interface InboxPageProps {
   desktopHeight?: string;
   /** Teksten in de taal van de werker; zonder: Nederlands (opdrachtgever, beheer) */
   texts?: ChatTeksten | undefined;
+  /** de zakelijke weergave, zoals WhatsApp Business (lib/chat/zakelijk.ts): voor bedrijven; werkers houden de gewone */
+  zakelijk?: boolean;
+  /** de naam van het bedrijf, bovenaan de chatlijst in de zakelijke weergave */
+  bedrijfsnaam?: string;
 }
 
 // De teksten komen uit een context: de inhoud draait daarom binnen de provider.
@@ -104,6 +110,8 @@ export function InboxPage({ texts, ...rest }: InboxPageProps = {}) {
 function InboxPageInner({
   mobileHeight = "h-[calc(100dvh-12rem)]",
   desktopHeight = "md:h-[calc(100vh-15rem)]",
+  zakelijk = false,
+  bedrijfsnaam = "",
 }: Omit<InboxPageProps, "texts">) {
   const chat = useChatTeksten();
   const ib = chat.inbox;
@@ -154,6 +162,7 @@ function InboxPageInner({
   const [rondzendOpen, setRondzendOpen] = useState(false);
   const [manageCommunity, setManageCommunity] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [zakelijkOpen, setZakelijkOpen] = useState(false);
   const [showBrain, setShowBrain] = useState(false);
   const [viewer, setViewer] = useState<{ src: string; filename: string } | null>(null);
   // short message at the bottom ("Gekopieerd", "Doorgestuurd naar …", an error) instead of window.alert
@@ -1030,9 +1039,20 @@ function InboxPageInner({
               <IconBack className="h-5 w-5" /> {ib.bewaardeBerichten}
             </button>
           ) : (
-            <h2 className="font-display text-lg font-bold text-ink">{tabTitle[tab]}</h2>
+            <>
+              <h2 className="min-w-0 truncate font-display text-lg font-bold text-ink">{zakelijk && tab === "chats" && bedrijfsnaam ? bedrijfsnaam : tabTitle[tab]}</h2>
+              {/* zakelijk: zoals WhatsApp Business, met een herkenbaar label */}
+              {zakelijk && <span className="flex-shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-700">{ib.zakelijkBadge}</span>}
+            </>
           )}
           <div className="ml-auto flex items-center gap-1">
+            {zakelijk && (
+              <button type="button" onClick={() => setZakelijkOpen(true)} className={iconBtn} aria-label={ib.zakelijkeTools} title={ib.zakelijkeTools}>
+                <span aria-hidden className="text-lg leading-none">
+                  💼
+                </span>
+              </button>
+            )}
             <button type="button" onClick={() => setPicker("chat")} className={iconBtn} aria-label={ib.nieuwGesprek} title={ib.nieuwGesprek}>
               <IconPencil className="h-5 w-5" />
             </button>
@@ -1176,6 +1196,15 @@ function InboxPageInner({
                                 )}
                               </span>
                             </span>
+                            {zakelijk && (t.lists?.length ?? 0) > 0 && (
+                              <span className="mt-1 flex flex-wrap gap-1">
+                                {(t.lists ?? []).slice(0, 3).map((l) => (
+                                  <span key={l} className={`rounded-full px-1.5 py-px text-[10px] font-medium ${labelKlasse(l, ib.zakelijkeLabels)}`}>
+                                    {l}
+                                  </span>
+                                ))}
+                              </span>
+                            )}
                           </span>
                         </button>
                         <button
@@ -1690,6 +1719,7 @@ function InboxPageInner({
           <Composer
             key={activeThread.id}
             onPlan={plan}
+            zakelijk={zakelijk}
             threadId={activeThread.id}
             quickReplies={quickReplies}
             replyTo={replyTo}
@@ -1749,7 +1779,7 @@ function InboxPageInner({
           flags={menuThread}
           direct={menuThread.kind === "direct"}
           blocked={chatPrefs.blocked.includes(otherOf(menuThread).userId)}
-          lists={chatPrefs.lists}
+          lists={zakelijk ? labelsMetVoorstellen(chatPrefs.lists, ib.zakelijkeLabels) : chatPrefs.lists}
           onAction={(a) => void doAction(menuThread.id, a)}
           onClose={() => setMenuFor(null)}
         />
@@ -1850,6 +1880,32 @@ function InboxPageInner({
             </div>
           </div>
         </Portal>
+      )}
+      {zakelijkOpen && (
+        <ZakelijkPaneel
+          bedrijfsnaam={bedrijfsnaam}
+          gesprekken={threads}
+          lijsten={chatPrefs.lists}
+          onInstellingen={() => {
+            setZakelijkOpen(false);
+            setShowSettings(true);
+          }}
+          {...(me
+            ? {
+                onZoZienWerkers: () => {
+                  setZakelijkOpen(false);
+                  setCardUser(me.userId);
+                },
+              }
+            : {})}
+          onFilter={(l) => {
+            setZakelijkOpen(false);
+            setTab("chats");
+            setView("main");
+            setFilter(`list:${l}`);
+          }}
+          onSluit={() => setZakelijkOpen(false)}
+        />
       )}
       {showSettings && <ChatSettingsModal onClose={() => { setShowSettings(false); if (active) void loadThread(active); }} />}
     </div>
