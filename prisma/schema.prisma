@@ -1938,6 +1938,8 @@ model ShopProduct {
   modelUploadId String?
   imageUrl      String?
   modelPhotoUrl String?
+  // extra foto's naast de hoofdfoto (imageUrl), in de volgorde van de shop (15 nov 2026); een eigen upload als /api/shop/media/<id>
+  fotos         String[] @default([])
   badge         String?
   active        Boolean  @default(true)
   sortOrder     Int      @default(0)

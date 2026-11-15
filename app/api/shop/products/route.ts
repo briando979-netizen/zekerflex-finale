@@ -6,6 +6,7 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { withAdminAccess } from "@/lib/auth/handlers";
 import { shopImageRef } from "@/lib/shop/schema";
+import { MAX_EXTRA_FOTOS } from "@/lib/shop/product-scherm";
 import { publiekProduct } from "@/lib/shop/publiek";
 import { bepaalSoort } from "@/lib/shop/winkel-ai";
 import { pasvormVoor } from "@/lib/shop/paskamer";
@@ -27,6 +28,8 @@ const productSchema = z.object({
   imageUploadId: z.string().max(128).nullable().optional(),
   modelUploadId: z.string().max(128).nullable().optional(),
   imageUrl: shopImageRef.nullable().optional(),
+  // extra foto's naast de hoofdfoto, in volgorde (lib/shop/product-scherm.ts)
+  fotos: z.array(shopImageRef).max(MAX_EXTRA_FOTOS).optional(),
   modelPhotoUrl: shopImageRef.nullable().optional(),
   badge: z.string().trim().max(40).nullable().optional(),
   active: z.boolean().default(true),
@@ -69,6 +72,7 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
     imageUploadId: parsed.imageUploadId ?? null,
     modelUploadId: parsed.modelUploadId ?? null,
     imageUrl: parsed.imageUrl ?? null,
+    fotos: parsed.fotos ?? [],
     modelPhotoUrl: parsed.modelPhotoUrl ?? null,
     badge: parsed.badge ?? null,
     costCents: parsed.costCents ?? null,

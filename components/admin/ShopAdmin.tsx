@@ -3,6 +3,7 @@
 import { bronRegel } from "@/lib/shop/link-product";
 import { ShopSnelCellen } from "@/components/admin/ShopSnelCellen";
 import { ShopNieuwStappen } from "@/components/admin/ShopNieuwStappen";
+import { ShopProductScherm } from "@/components/admin/ShopProductScherm";
 import { centenNaarEuro, effectieveVoorraad, euroNaarCenten, slugUitNaam, uniekeSlug } from "@/lib/shop/product-formulier";
 import { kiesShopTab, zoekMetShopTab, type ShopTab } from "@/lib/shop/admin-tabs";
 import { Fragment, useEffect, useState } from "react";
@@ -32,6 +33,8 @@ type Product = {
   modelUploadId: string | null;
   imageUrl: string | null;
   modelPhotoUrl: string | null;
+  /** extra foto's naast de hoofdfoto (15 nov 2026) */
+  fotos?: string[];
   badge: string | null;
   active: boolean;
   sortOrder: number;
@@ -109,7 +112,7 @@ export function ShopAdmin() {
     const zoek = new URLSearchParams(window.location.search);
     setTab(kiesShopTab(zoek.get("tab")));
     // ?nieuw=1 (de knop Product toevoegen in Mijn winkel): meteen het formulier voor een nieuw product open
-    if (zoek.get("nieuw") === "1") { setEditing(null); setForm(empty); setPrijsTekst(""); setInkoopTekst(""); setUitgebreid(false); setShowForm(true); }
+    if (zoek.get("nieuw") === "1") setScherm({ product: null });
   }, []);
   const kiesTab = (nieuw: ShopTab) => {
     setTab(nieuw);
@@ -117,6 +120,10 @@ export function ShopAdmin() {
     window.history.replaceState(window.history.state, "", `${window.location.pathname}${zoek ? `?${zoek}` : ""}${window.location.hash}`);
   };
   const [showForm, setShowForm] = useState(false);
+  // het productscherm (15 nov 2026): één scherm voor nieuw en wijzigen, met meerdere foto's en maten (ShopProductScherm)
+  const [scherm, setScherm] = useState<null | { product: Product | null }>(null);
+  // een product van een leverancierslink: de hulp in drie stappen (ShopNieuwStappen)
+  const [vanLink, setVanLink] = useState(false);
   // een nieuw product gaat in drie stappen (ShopNieuwStappen); "Alle velden tonen" opent het uitgebreide formulier
   const [uitgebreid, setUitgebreid] = useState(false);
   // prijzen in euro (tekst) in het formulier; naar centen bij het opslaan (lib/shop/product-formulier.ts)
@@ -200,8 +207,10 @@ export function ShopAdmin() {
     if (!response.ok) { setMessage(data?.error?.message ?? "Opslaan mislukt."); return; }
     setMessage(editing ? "Product bijgewerkt." : "Product aangemaakt en gepubliceerd."); setForm(empty); setPrijsTekst(""); setInkoopTekst(""); setEditing(null); setShowForm(false); await load(); void loadStats();
   };
-  const edit = (product: Product) => { setEditing(product.id); setForm(product); setPrijsTekst(centenNaarEuro(product.priceCents)); setInkoopTekst(product.costCents === null ? "" : centenNaarEuro(product.costCents)); setShowForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); };
-  const newProduct = () => { setEditing(null); setForm(empty); setPrijsTekst(""); setInkoopTekst(""); setUitgebreid(false); setShowForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const edit = (product: Product) => { setShowForm(false); setVanLink(false); setScherm({ product }); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  // het uitgebreide formulier (webadres, model-foto, 3D-model, volgorde), vanuit het productscherm
+  const geavanceerd = (product: Product) => { setScherm(null); setEditing(product.id); setForm(product); setPrijsTekst(centenNaarEuro(product.priceCents)); setInkoopTekst(product.costCents === null ? "" : centenNaarEuro(product.costCents)); setShowForm(true); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const newProduct = () => { setEditing(null); setShowForm(false); setVanLink(false); setScherm({ product: null }); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const archive = async (id: string) => { if (!window.confirm("Dit product verbergen uit de shop?")) return; await fetch(`/api/shop/products/${id}`, { method: "DELETE" }); await load(); void loadStats(); };
 
   // Genereert een productfoto via de eigen beeld-generator en koppelt 'm. Zet
@@ -372,12 +381,24 @@ export function ShopAdmin() {
       </section>
     )}
 
-    {tab === "products" && showForm && !editing && !uitgebreid && (
+    {tab === "products" && message && !showForm && <p role="status" className="a-panel px-4 py-3 text-sm" style={{ color: "var(--a-dim)" }}>{message}</p>}
+    {tab === "products" && scherm && (
+      <ShopProductScherm
+        key={scherm.product?.id ?? "nieuw"}
+        product={scherm.product}
+        bestaandeSlugs={products.map((p) => p.slug)}
+        onKlaar={(melding) => { setMessage(melding); setScherm(null); void load(); void loadStats(); }}
+        onAnnuleer={() => setScherm(null)}
+        onVanLink={() => { setScherm(null); setVanLink(true); }}
+        {...(scherm.product ? { onGeavanceerd: () => { const p = scherm.product; if (p) geavanceerd(p); } } : {})}
+      />
+    )}
+    {tab === "products" && vanLink && (
       <ShopNieuwStappen
         bestaandeSlugs={products.map((p) => p.slug)}
-        onKlaar={(melding) => { setMessage(melding); setShowForm(false); void load(); void loadStats(); }}
-        onAnnuleer={() => setShowForm(false)}
-        onAlleVelden={() => setUitgebreid(true)}
+        onKlaar={(melding) => { setMessage(melding); setVanLink(false); void load(); void loadStats(); }}
+        onAnnuleer={() => setVanLink(false)}
+        onAlleVelden={() => { setVanLink(false); setScherm({ product: null }); }}
       />
     )}
     {tab === "products" && showForm && (editing || uitgebreid) && (

@@ -37,6 +37,8 @@ export type PdpProduct = {
   stock: number;
   imageUrl: string | null;
   modelPhotoUrl: string | null;
+  /** extra foto's naast de hoofdfoto (Beheer → Webshop), in volgorde */
+  fotos?: string[];
   badge: string | null;
   variants: PdpVariant[];
   bundleItems?: PdpBundleItem[];
@@ -89,7 +91,7 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
   // de foto in de gekozen kleur staat vooraan (lib/shop/kleurfoto.ts); zonder kleurfoto de gewone hoofdfoto.
   // Ontdubbeld: een modelfoto die hetzelfde bestand is als de hoofdfoto stond er anders twee keer.
   const kleurFoto = selColor ? product.kleurFotos?.[selColor] : undefined;
-  const gallery = [...new Set([kleurFoto ?? product.imageUrl, product.modelPhotoUrl].filter(Boolean) as string[])];
+  const gallery = [...new Set([kleurFoto ?? product.imageUrl, ...(product.fotos ?? []), product.modelPhotoUrl].filter(Boolean) as string[])];
   const needsSelection = product.variants.length > 1;
   const variant = needsSelection
     ? product.variants.find((v) => (sizes.length === 0 || v.size === selSize) && (colors.length === 0 || v.color === selColor))

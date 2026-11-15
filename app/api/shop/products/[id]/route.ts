@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/lib/audit";
 import { withAdminAccess } from "@/lib/auth/handlers";
 import { shopImageRef } from "@/lib/shop/schema";
+import { MAX_EXTRA_FOTOS } from "@/lib/shop/product-scherm";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ const patchSchema = z.object({
   imageUploadId: z.string().max(128).nullable().optional(),
   modelUploadId: z.string().max(128).nullable().optional(),
   imageUrl: shopImageRef.nullable().optional(),
+  fotos: z.array(shopImageRef).max(MAX_EXTRA_FOTOS).optional(),
   modelPhotoUrl: shopImageRef.nullable().optional(),
   badge: z.string().trim().max(40).nullable().optional(),
   active: z.boolean().optional(),
