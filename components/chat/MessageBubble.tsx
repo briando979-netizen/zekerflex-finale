@@ -8,7 +8,9 @@ import { golfHoogtes, golfPositie, vasteGolf } from "@/lib/chat/spraak";
 import { ActionList, MessageSheet, ReactionRow, type ActionItem } from "./MessageActions";
 import { PollCard } from "./PollCard";
 import { AfspraakCard } from "./AfspraakCard";
+import { KaartVoorbeeld } from "./KaartVoorbeeld";
 import { LiveLocatieKaart } from "./LiveLocatieKaart";
+import { inNederland } from "@/lib/kaart/voorbeeld";
 import { isSticker, stickerSrc } from "@/lib/messaging/stickers";
 import type { Antwoord } from "@/lib/messaging/afspraak";
 import { isProgramma, isVideoType } from "@/lib/messaging/bijlage";
@@ -941,9 +943,13 @@ export function MessageBubble({
                 href={`https://www.openstreetmap.org/?mlat=${m.location.lat}&mlon=${m.location.lng}#map=16/${m.location.lat}/${m.location.lng}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2.5 rounded-lg bg-black/[0.04] px-2.5 py-2 hover:bg-black/[0.07]"
+                className={inNederland(m.location.lat, m.location.lng) ? "block space-y-2 rounded-lg bg-black/[0.04] px-2.5 py-2 hover:bg-black/[0.07]" : "flex items-center gap-2.5 rounded-lg bg-black/[0.04] px-2.5 py-2 hover:bg-black/[0.07]"}
               >
-                <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg bg-brand-500 text-white">📍</span>
+                {inNederland(m.location.lat, m.location.lng) ? (
+                  <KaartVoorbeeld lat={m.location.lat} lng={m.location.lng} />
+                ) : (
+                  <span className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg bg-brand-500 text-white">📍</span>
+                )}
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium text-ink">{m.location.label || t.sharedLocation}</span>
                   <span className="block text-[11px] text-neutralx-500">

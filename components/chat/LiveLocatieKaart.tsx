@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useChatTeksten } from "./ChatTekstenContext";
 import { isLiveActief, type Plek } from "@/lib/messaging/live-locatie";
 import { vulIn } from "@/lib/i18n/vul-in";
+import { inNederland } from "@/lib/kaart/voorbeeld";
+import { KaartVoorbeeld } from "./KaartVoorbeeld";
 
 // Live locatie in de chat (15 nov 2026), zoals in WhatsApp: de plek schuift mee tot de tijd om is of de afzender stopt.
 // Hoe oud de plek is, staat erbij (zojuist / x min geleden), zodat niemand een oude plek voor de echte aanziet. Tijden in
@@ -27,14 +29,19 @@ export function LiveLocatieKaart({ plek, mine, disabled, onStop }: { plek: Plek;
   const klokje = (iso: string) => new Date(iso).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", timeZone: TZ });
   const minuten = Math.max(0, Math.floor((nu - new Date(live.bijgewerkt).getTime()) / 60_000));
   const hoeOud = minuten < 1 ? t.liveZojuist : vulIn(t.liveMinGeleden, { n: String(minuten) });
+  const heeftKaart = inNederland(plek.lat, plek.lng);
   const kaart = `https://www.openstreetmap.org/?mlat=${plek.lat}&mlon=${plek.lng}#map=16/${plek.lat}/${plek.lng}`;
 
   return (
     <div className="rounded-lg bg-black/[0.04] px-2.5 py-2">
-      <a href={kaart} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 rounded-lg hover:bg-black/[0.03]">
-        <span aria-hidden className={`grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg text-white ${actief ? "bg-brand-500" : "bg-neutralx-400"}`}>
-          📡
-        </span>
+      <a href={kaart} target="_blank" rel="noopener noreferrer" className={heeftKaart ? "block space-y-2 rounded-lg hover:bg-black/[0.03]" : "flex items-center gap-2.5 rounded-lg hover:bg-black/[0.03]"}>
+        {/* zoals in WhatsApp: een stukje kaart met een speld bovenaan, de tekst eronder (alleen binnen Nederland; elders het blokje) */}
+        {heeftKaart && <KaartVoorbeeld lat={plek.lat} lng={plek.lng} actief={actief} />}
+        {!heeftKaart && (
+          <span aria-hidden className={`grid h-9 w-9 flex-shrink-0 place-items-center rounded-lg text-white ${actief ? "bg-brand-500" : "bg-neutralx-400"}`}>
+            📡
+          </span>
+        )}
         <span className="min-w-0">
           <span className="block truncate text-sm font-medium text-ink">{t.liveLocatie}</span>
           <span className="block text-[11px] text-neutralx-500">
