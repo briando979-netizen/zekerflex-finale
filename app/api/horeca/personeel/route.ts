@@ -85,6 +85,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       case "dashboard-weg":
         return NextResponse.json({ data: await verwijderDashboard(tenantId, a.id) });
       case "uitnodigen": {
+        // een uitnodiging is een mail naar een vreemd adres: hooguit 30 per bedrijf per dag
+        await enforceRateLimit({ name: "horeca-personeel-mail", identifier: tenantId, limit: 30, windowSeconds: 86_400 });
         const { data, medewerker, token } = await nodigUit(tenantId, zaak.naam, { naam: a.naam, email: a.email, functie: a.functie, dashboardId: a.dashboardId });
         const link = uitnodigingsLink(token);
         const mail = uitnodigingMail({ naam: medewerker.naam, zaak: zaak.naam, beheerder: p.fullName, link, taal: locale });
@@ -106,6 +108,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         return NextResponse.json({ data, link, melding: verstuurd ? t.beheer.uitnodigingVerstuurd : t.beheer.mailMislukt, mailVerstuurd: verstuurd, email: medewerker.email }, { status: 201 });
       }
       case "nieuwe-link": {
+        await enforceRateLimit({ name: "horeca-personeel-mail", identifier: tenantId, limit: 30, windowSeconds: 86_400 });
         const { medewerker, token } = await nieuweUitnodiging(tenantId, zaak.naam, a.id);
         const link = uitnodigingsLink(token);
         const mail = uitnodigingMail({ naam: medewerker.naam, zaak: zaak.naam, beheerder: p.fullName, link, taal: locale });
