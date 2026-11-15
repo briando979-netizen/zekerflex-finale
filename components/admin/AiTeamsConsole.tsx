@@ -142,7 +142,7 @@ export function AiTeamsConsole() {
                   <span className="block text-sm font-semibold" style={{ color: "var(--a-text)" }}>
                     {team(p.team)?.emoji} {p.title}
                   </span>
-                  <span className="block text-xs" style={{ color: "var(--a-dim)" }}>{p.detail}</span>
+                  <span className="block whitespace-pre-line text-xs" style={{ color: "var(--a-dim)" }}>{p.detail}</span>
                 </span>
                 <button type="button" className="a-button a-button-primary" disabled={busy === p.id} onClick={() => post({ action: "approve", id: p.id }, p.id)}>
                   {busy === p.id ? "Bezig…" : "Uitvoeren"}

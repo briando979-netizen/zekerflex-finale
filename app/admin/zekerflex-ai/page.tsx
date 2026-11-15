@@ -18,9 +18,15 @@ export default async function ZekerFlexAIPage() {
         title="ZekerFlex AI"
         subtitle="Vraag, laat uitzoeken of geef een opdracht, getypt of gesproken. Draait op je eigen model."
         actions={
-          <Link href="/admin/zekerflex-ai/mijn-ai" className="a-btn a-btn-primary text-sm">
-            Mijn AI: gewoon chatten
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            {/* alle agenten op één plek (15 nov 2026, app/admin/zekerflex-ai/medewerkers) */}
+            <Link href="/admin/zekerflex-ai/medewerkers" className="a-btn text-sm">
+              AI-medewerkers
+            </Link>
+            <Link href="/admin/zekerflex-ai/mijn-ai" className="a-btn a-btn-primary text-sm">
+              Mijn AI: gewoon chatten
+            </Link>
+          </div>
         }
       />
       <details className="a-panel group">
