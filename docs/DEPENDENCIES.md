@@ -31,8 +31,6 @@ These need a real migration, not a version bump. Each is its own piece of work.
 | `tailwindcss` 3 → 4 | 3.4.19 | New Oxide engine + config-in-CSS; whole design system re-tests. |
 | `typescript` 5 → 7 | 5.9.3 | New checker; expect fresh diagnostics. |
 | `eslint` 8 → 9/10 | 8.57.1 | Flat config migration; `eslint-config-next` must move in lockstep. |
-| `date-fns` 3 → 4 | 3.6.0 | ESM/tree-shaking + timezone API changes. |
-| `zustand` 4 → 5 | 4.5.7 | `create` signature + middleware types. |
 | `jose` 5 → 6 | 5.10.0 | Node-version floor + a few API renames in the session codec. |
 | `ioredis` 5 → 6 | 5.11.1 | Connection/option changes; the daemon + rate-limit + dispatcher all use it. |
 | `node` (Docker base) 20 → 26 | 20-bookworm-slim | Bump in step with the runtime the VPS/K8s actually runs. |

@@ -48,7 +48,6 @@ const nextConfig = {
     ],
   },
   experimental: {
-    optimizePackageImports: ["date-fns"],
     serverActions: {
       bodySizeLimit: "2mb",
     },
