@@ -9,6 +9,8 @@ import { AANBOD, aanbodHref, aanbodVan, eigenPaginas, pijlerVan, prijsTekst } fr
 import { breadcrumbJsonLd, canonical, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
+import { EfactuurPagina } from "@/components/marketing/aanbod/EfactuurPagina";
+import { EFACTUUR_FAQ } from "@/lib/marketing/efactuur-pagina";
 
 export const dynamicParams = false;
 
@@ -45,17 +47,27 @@ export default async function AanbodItemPagina({ params }: { params: Promise<{ s
     url: `${SITE.url}/aanbod/${a.slug}`,
   };
 
+  // E-facturatie heeft een eigen, uitgebreide pagina (components/marketing/aanbod/EfactuurPagina.tsx), met de vragen ook voor Google
+  const eigenOntwerp = a.slug === "e-facturatie";
+  const vragen = eigenOntwerp
+    ? [{ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: EFACTUUR_FAQ.map((v) => ({ "@type": "Question", name: v.vraag, acceptedAnswer: { "@type": "Answer", text: v.antwoord } })) }]
+    : [];
+
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: ldJson([dienst, breadcrumbJsonLd([["Home", "/"], ["Aanbod", "/aanbod"], [a.naam, `/aanbod/${a.slug}`]])]) }}
+        dangerouslySetInnerHTML={{ __html: ldJson([dienst, breadcrumbJsonLd([["Home", "/"], ["Aanbod", "/aanbod"], [a.naam, `/aanbod/${a.slug}`]]), ...vragen]) }}
       />
 
       {uitgebreid ? (
         <AanbodUitgebreid a={a} pijler={pijler} u={uitgebreid} />
       ) : (
         <>
+      {eigenOntwerp ? (
+        <EfactuurPagina a={a} pijlerNaam={pijler.naam} pijlerSleutel={pijler.sleutel} />
+      ) : (
+      <>
       <div className="hero-ink text-white">
         <div className={`shell py-20 md:py-24 ${a.foto ? "grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]" : ""}`}>
           <div>
@@ -139,6 +151,8 @@ export default async function AanbodItemPagina({ params }: { params: Promise<{ s
           </div>
         </div>
       </section>
+      </>
+      )}
 
       {verwant.length > 0 && (
         <section className="bg-paper-soft" aria-labelledby="verwant-titel">

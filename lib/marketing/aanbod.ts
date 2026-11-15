@@ -72,9 +72,9 @@ export const PIJLERS: Pijler[] = [
   {
     sleutel: "geld",
     naam: "Geld & administratie",
-    kort: "Facturen, betaalverzoeken en rekenwerk zonder losse pakketten.",
+    kort: "Facturen, e-facturen en rekenwerk zonder losse pakketten.",
     intro:
-      "Facturen die vanzelf uit goedgekeurde uren komen, betaalverzoeken met een QR-code en gratis rekentools voor de vragen ertussendoor.",
+      "Facturen die vanzelf uit goedgekeurde uren komen, ook als e-factuur voor je boekhoudpakket, en gratis rekentools voor de vragen ertussendoor.",
   },
 ];
 
@@ -565,14 +565,14 @@ export const AANBOD: AanbodItem[] = [
     slug: "facturen-en-betalen",
     pijler: "geld",
     naam: "Facturen & betaalverzoeken",
-    kort: "Facturen komen vanzelf uit goedgekeurde uren; betaalverzoeken met een QR-code.",
+    kort: "Facturen komen vanzelf uit goedgekeurde uren, ook als e-factuur voor je boekhouding.",
     tekst:
-      "Keur je uren goed, dan maakt ZekerFlex de factuur. Moet een klant jou betalen? Stuur een betaalverzoek met een link of QR-code.",
-    punten: ["Facturen vanzelf uit goedgekeurde uren", "Betaalverzoek met link of QR-code", "Overzicht van wat open staat"],
+      "Keur je uren goed, dan maakt ZekerFlex de factuur, met een e-factuur die je boekhoudpakket zelf inleest. Je ziet wat er openstaat en betaalt per overschrijving.",
+    punten: ["Facturen vanzelf uit goedgekeurde uren", "Ook als e-factuur (UBL) voor je boekhoudpakket", "Overzicht van wat open staat"],
     voorWie: "Bedrijven die minder tijd aan administratie willen kwijt zijn",
     status: "beschikbaar",
     start: AANMELDEN,
-    zoekwoorden: ["facturen uit urenregistratie", "betaalverzoek qr code"],
+    zoekwoorden: ["facturen uit urenregistratie", "factuur uit uren", "e-factuur"],
   },
   {
     slug: "bedrijfscheck",
@@ -602,11 +602,11 @@ export const AANBOD: AanbodItem[] = [
     naam: "E-facturatie (UBL / Peppol)",
     kort: "Elke factuur ook als e-factuur die je boekhoudpakket direct inleest, zonder overtypen.",
     tekst:
-      "Elke factuur van ZekerFlex is ook een e-factuur volgens de Europese norm (UBL, Peppol BIS 3 / NLCIUS). Je boekhoudpakket leest hem direct in: geen overtypen, geen fouten. Download het bestand per factuur, laat het automatisch naar je pakket mailen of ontvang het via het Peppol-netwerk op het adres van je bedrijf.",
+      "Elke factuur van ZekerFlex is ook een e-factuur volgens de Europese norm (UBL, Peppol BIS 3 / NLCIUS). Je boekhoudpakket leest hem direct in: geen overtypen, geen fouten. Download het bestand per factuur of laat het automatisch naar je pakket mailen. Bezorgen via het Peppol-netwerk koppelen we nog.",
     punten: [
       "UBL-bestand bij elke factuur, volgens EN 16931 / Peppol BIS 3",
       "Automatisch naar het mailadres van je boekhoudpakket",
-      "Bezorging via het Peppol-netwerk op je KVK- of btw-nummer",
+      "Peppol-netwerk: komt eraan (tot dan per mail of download)",
       "Vooraf gecontroleerd op de bedrijfsregels die pakketten afkeuren",
       "Werkt met Exact, Twinfield, e-Boekhouden, Moneybird, AFAS en meer",
     ],
