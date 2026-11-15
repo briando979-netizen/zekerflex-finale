@@ -621,7 +621,7 @@ export function CallOverlay({
         // Compact bar so the chat underneath stays usable during the call.
         <div
           role="status"
-          className="fixed inset-x-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-[80] mx-auto flex max-w-[26rem] items-center gap-2 rounded-2xl bg-[#0b0f0e] px-3 py-2 text-white shadow-lift"
+          className="fixed inset-x-3 top-[calc(0.75rem+env(safe-area-inset-top))] z-[2100] mx-auto flex max-w-[26rem] items-center gap-2 rounded-2xl bg-[#0b0f0e] px-3 py-2 text-white shadow-lift"
         >
           {anderBeeld ? anderVideo("h-12 w-16 flex-shrink-0 rounded-lg object-cover") : anderAvatar(36)}
           <button type="button" onClick={() => setMinimized(false)} className="min-w-0 flex-1 text-left leading-tight">
@@ -651,7 +651,7 @@ export function CallOverlay({
         </div>
       ) : (
         <div
-          className={`fixed inset-0 z-[80] overflow-hidden text-white ${beeld ? "bg-black" : "bg-[#0b0f0e]"}`}
+          className={`fixed inset-0 z-[2100] overflow-hidden text-white ${beeld ? "bg-black" : "bg-[#0b0f0e]"}`}
           onPointerMove={beeld && state === "live" && !knoppen ? toonKnoppen : undefined}
         >
           {state === "failed" ? (

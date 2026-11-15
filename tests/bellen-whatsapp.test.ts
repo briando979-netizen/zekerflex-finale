@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { BEL_NL } from "@/lib/chat/teksten-bel";
@@ -65,7 +65,7 @@ describe("belscherm: knoppen en beeld zoals bij WhatsApp", () => {
 describe("gebeld worden", () => {
   it("volledig scherm op de telefoon met Weiger, Bericht en Opnemen; een kaart op de computer", () => {
     expect(dock).toContain("<BinnenkomendGesprek");
-    expect(binnen).toContain('className="fixed inset-0 z-[78]');
+    expect(binnen).toContain('className="fixed inset-0 z-[2100]');
     expect(binnen).toContain("sm:right-4 sm:top-4 sm:w-[22rem]");
     for (const k of ["aria-label={chat.dock.weiger}", "aria-label={chat.dock.weigerMetBericht}", "aria-label={chat.dock.opnemen}"]) expect(binnen).toContain(k);
     // groen = doen, rood = probleem (één kleur, één betekenis)
@@ -88,5 +88,25 @@ describe("teksten in vijf talen", () => {
     for (const t of [BEL_NL, BEL_EN, BEL_PL, BEL_RO, BEL_UK]) for (const k of nieuwBel) expect(t[k].trim().length, k).toBeGreaterThan(0);
     for (const t of [DOCK_NL, DOCK_EN, DOCK_PL, DOCK_RO, DOCK_UK]) for (const k of nieuwDock) expect(t[k].trim().length, k).toBeGreaterThan(0);
     for (const t of [BEL_NL, BEL_EN, BEL_PL, BEL_RO, BEL_UK]) expect(t.cameraStaatUit).toContain("{naam}");
+  });
+});
+
+describe("een oproep ligt boven alles", () => {
+  // 15 nov 2026, belproef met twee browsers: bij een nieuwe werker dekte de cookiebalk (z-[90]) de knop Opnemen af.
+  it("het belscherm en gebeld worden liggen hoger dan elke andere laag in de app", () => {
+    const loop = (d: string): string[] =>
+      readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? loop(path.join(d, e.name)) : /\.tsx?$/.test(e.name) ? [path.join(d, e.name)] : []));
+    const bel = new Set(["components/chat/CallOverlay.tsx", "components/chat/BinnenkomendGesprek.tsx"]);
+    let hoogste = 0;
+    for (const f of [...loop(path.join(process.cwd(), "components")), ...loop(path.join(process.cwd(), "app"))]) {
+      const rel = path.relative(process.cwd(), f).split(path.sep).join("/");
+      if (bel.has(rel)) continue;
+      for (const m of readFileSync(f, "utf8").matchAll(/\bz-\[(\d+)\]/g)) hoogste = Math.max(hoogste, Number(m[1]));
+    }
+    for (const f of bel) {
+      const lagen = [...lees(f).matchAll(/\bfixed\b[^"`]*?\bz-\[(\d+)\]/g)].map((m) => Number(m[1]));
+      expect(lagen.length, f).toBeGreaterThan(0);
+      for (const z of lagen) expect(z, f).toBeGreaterThan(hoogste);
+    }
   });
 });

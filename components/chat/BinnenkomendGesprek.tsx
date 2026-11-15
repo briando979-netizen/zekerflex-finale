@@ -10,7 +10,8 @@ import { IconChatBubble, IconPhone, IconPhoneDown, IconVideo } from "./icons";
 // Je wordt gebeld (15 nov 2026, eigenaar: "dezelfde knoppen als WhatsApp"). Op de telefoon een volledig scherm met de foto,
 // de naam en de soort oproep, en onderaan drie ronde knoppen: Weiger (rood), Bericht en Opnemen. Bericht weigert met een
 // kort antwoord in de chat ("Ik kan nu niet praten…") of opent de chat voor een eigen bericht. Op een computer een kaart
-// rechtsboven, zodat je verder kunt typen terwijl het overgaat. ChatDock beltelt, laat de beltoon horen en kiest wat er
+// rechtsboven, zodat je verder kunt typen terwijl het overgaat. Laag 2100: boven alles, ook de cookiebalk (90) en vellen
+// (tot 2000); op 15 nov dekte de cookiebalk bij een nieuwe werker de knop Opnemen af (belproef met twee browsers). ChatDock beltelt, laat de beltoon horen en kiest wat er
 // gebeurt; dit onderdeel toont alleen. Eigen vormgeving, geen WhatsApp-merk.
 // ---------------------------------------------------------------------------
 
@@ -67,7 +68,7 @@ export function BinnenkomendGesprek({
     <div
       role="alertdialog"
       aria-label={vulIn(chat.dock.beltJeNaam, { naam: oproep.fromName })}
-      className="fixed inset-0 z-[78] flex flex-col bg-[#0b0f0e] pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] text-white animate-slide-up-fade sm:inset-auto sm:right-4 sm:top-4 sm:w-[22rem] sm:rounded-3xl sm:pb-0 sm:pt-0 sm:shadow-lift"
+      className="fixed inset-0 z-[2100] flex flex-col bg-[#0b0f0e] pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)] text-white animate-slide-up-fade sm:inset-auto sm:right-4 sm:top-4 sm:w-[22rem] sm:rounded-3xl sm:pb-0 sm:pt-0 sm:shadow-lift"
     >
       <div className="flex flex-1 flex-col items-center justify-center px-6 py-8 text-center sm:flex-none sm:py-6">
         <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-white/60">
