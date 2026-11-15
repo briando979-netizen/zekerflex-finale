@@ -98,7 +98,7 @@ for i in 1 2 3; do
     # crowdsec: de aanvalsbescherming (deploy/crowdsec) gaat mee in elke uitrol; de
     # firewall-bouncer op de host haalt de blokkades bij hem op en hoeft niet mee
     # forgejo: de eigen Git-server (spiegel van GitHub, deploy/forgejo)
-    sudo $C up -d app backup coturn freeradius headscale metabase outline crowdsec whisper forgejo
+    sudo $C up -d app backup coturn freeradius headscale vpn-uitgang metabase outline crowdsec whisper forgejo
     # de browser-werker (deploy/scraper): eigen image, gecacht; een mislukte build laat de oude draaien
     sudo $C build -q scraper > /dev/null 2>&1 && sudo $C up -d scraper || echo "scraper: image bouwen mislukt, de oude blijft (of hij staat nog uit)"
     # de routeplanner (deploy/route): pas als zijn tegels gebouwd zijn (haal-route.sh); zonder

@@ -46,6 +46,17 @@ dienst van een ander.
   `docker exec -i zekerflex-headscale-1 headscale policy set -f /dev/stdin < deploy/netwerk/headscale/policy.json`
   en controleren met `headscale policy get`.
 
+## Veilig internet op vreemde wifi: `vpn-uitgang`
+
+- Beeld `tailscale/tailscale:v1.104.7`, kernelmodus (`/dev/net/tun`, NET_ADMIN), eigen netwerk
+  `vpn-uitgang` met alleen internet: niet op `internal`, dus geen weg naar Postgres of Redis.
+- De knoop `zekerflex-uitgang` (gebruiker `zf-uitgang`) is een exit node; `policy.json` geeft
+  iedereen `autogroup:internet`, dus wel internet via de server, geen andere apparaten.
+- Geen poort open: de verbinding loopt via de relay van Headscale op `vpn.zekerflex.com:443`.
+- Eenmalig aanmelden (en opnieuw na een nieuw volume): `bash deploy/netwerk/uitgang/aanmelden.sh`.
+- Gebruiken: in de Tailscale-app bij *Exit node* `zekerflex-uitgang` kiezen. Controle: je IP-adres
+  is dan dat van de server (37.97.226.24).
+
 ## Eigen 5G-netwerk
 
 Geen container (nog): elk terrein vraagt een lokale 3,5 GHz-vergunning van de

@@ -461,6 +461,11 @@ export function Verbinding({ data }: { data: VerbindingData }) {
                         Open Tailscale, kies in het menu <em>Gebruik een eigen server</em> en vul <span className="font-mono">{vpnSleutel.server ?? data.vpn.adres}</span> in. Kies
                         daarna <em>Inloggen met toegangscode</em> en plak de code.
                       </p>
+                      <p className="mt-3 font-semibold text-ink">Veilig op elke wifi:</p>
+                      <p className="text-neutralx-600">
+                        Kies in Tailscale bij <em>Exit node</em> voor <span className="font-mono">zekerflex-uitgang</span>. Dan gaat al je internetverkeer
+                        versleuteld via ZekerFlex, ook op de wifi van een café, hotel of klant.
+                      </p>
                     </div>
                   )}
                   <h3 className="mt-5 text-sm font-semibold text-ink">Verbonden apparaten</h3>

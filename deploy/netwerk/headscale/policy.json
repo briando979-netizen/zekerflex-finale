@@ -1,7 +1,11 @@
 // ZekerFlex VPN: elk bedrijf is één gebruiker (zf-<tenantId>). Apparaten zien
 // alleen apparaten van dezelfde gebruiker, dus nooit die van een ander bedrijf.
+// Sinds 15 nov mag iedereen naar internet via de uitgang op de server (zekerflex-uitgang,
+// gebruiker zf-uitgang): veilig internet op vreemde wifi. Dat geeft geen toegang tot
+// andere apparaten, alleen tot internet (autogroup:internet).
 {
   "acls": [
-    { "action": "accept", "src": ["autogroup:member"], "dst": ["autogroup:self:*"] }
+    { "action": "accept", "src": ["autogroup:member"], "dst": ["autogroup:self:*"] },
+    { "action": "accept", "src": ["autogroup:member"], "dst": ["autogroup:internet:*"] }
   ]
 }

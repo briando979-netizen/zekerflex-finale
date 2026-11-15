@@ -335,6 +335,36 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
+  # De uitgang van de ZekerFlex VPN (15 nov 2026, eigenaar: "de wifi van zekerflex gebruiken in plaats van de wifi
+  # van andere bedrijven"): een Tailscale-knoop op deze server die zich bij onze Headscale aanmeldt als exit node.
+  # Kies je in de Tailscale-app deze uitgang (zekerflex-uitgang), dan gaat al je internetverkeer versleuteld via
+  # de VPS, ook op de wifi van een café of klant. Eigen netwerk met alleen internet: NIET op internal, dus nooit bij
+  # Postgres of Redis. Geen poort open: de verbinding loopt via de relay van Headscale (vpn.zekerflex.com:443).
+  # Eenmalig aanmelden: deploy/netwerk/uitgang/aanmelden.sh (geen sleutel in .env.production).
+  vpn-uitgang:
+    image: tailscale/tailscale:v1.104.7
+    restart: unless-stopped
+    hostname: zekerflex-uitgang
+    environment:
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "false"
+      TS_HOSTNAME: zekerflex-uitgang
+      TS_AUTH_ONCE: "true"
+      TS_ACCEPT_DNS: "false"
+      TS_EXTRA_ARGS: --login-server=https://vpn.zekerflex.com --advertise-exit-node
+    volumes:
+      - vpn-uitgang:/var/lib/tailscale
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    cap_add: [NET_ADMIN, NET_RAW]
+    sysctls:
+      net.ipv4.ip_forward: "1"
+    networks: [vpn-uitgang]
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
   # Aanvalsbescherming (CrowdSec, deploy/crowdsec): leest de toegangslogs van Caddy en
   # het ssh-log van de server, herkent scanners, brute force en bekende aanvallers (ook
   # via de gedeelde blokkadelijst van de community) en bewaart de blokkades. Blokkeren
@@ -669,6 +699,9 @@ networks:
   # Forgejo (eigen Git-server) en Caddy; met internet voor de spiegel, zonder Postgres/Redis
   git:
     driver: bridge
+  # alleen de uitgang van de VPN: internet, verder niets (geen app, database of Redis)
+  vpn-uitgang:
+    driver: bridge
 
 volumes:
   forgejo-data:
@@ -689,4 +722,5 @@ volumes:
   bouwer-db:
   android-bouwer-werk:
   headscale-data:
+  vpn-uitgang:
   android-bouwer-gradle:
