@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ProductPlaceholder } from "@/components/marketing/ProductPlaceholder";
@@ -20,6 +20,7 @@ import { useOnlangsBekeken } from "@/components/marketing/useOnlangsBekeken";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { useShopBetaalwijze } from "@/components/marketing/ShopBetaalwijze";
+import { FotoViewer } from "@/components/marketing/FotoViewer";
 import { bezorgZin } from "@/lib/shop/bezorgmoment";
 import { useBezorgmoment } from "@/components/marketing/useBezorgmoment";
 import { useI18n } from "@/components/i18n/I18nProvider";
@@ -136,6 +137,15 @@ export function ProductDetail({
     bekeken(product.id);
   }, [bekeken, product.id]);
   const shownImage = gallery[active] ?? gallery[0];
+  // de fotoviewer (groot, inzoomen, bladeren); bij sluiten blijft de laatst bekeken foto staan en krijgt hij de focus terug
+  const [viewer, setViewer] = useState(false);
+  const fotoKnopRef = useRef<HTMLButtonElement | null>(null);
+  const sluitViewer = useCallback((n: number) => {
+    setViewer(false);
+    setActive(n);
+    setShow3d(false);
+    requestAnimationFrame(() => fotoKnopRef.current?.focus());
+  }, []);
 
   // de vaste koopknop op de telefoon staat er zolang de gewone niet in beeld is
   useEffect(() => {
@@ -198,7 +208,9 @@ export function ProductDetail({
             ) : active === 0 && show3d && product.model3dUrl ? (
               <Model3DViewer src={product.model3dUrl} alt={`3D-model van ${product.name}`} poster={shownImage} className="h-full w-full" />
             ) : (
-              <Image src={shownImage} alt={active === 0 ? product.name : ""} fill priority sizes="(min-width: 1440px) 720px, (min-width: 1024px) 52vw, 100vw" className="object-cover" />
+              <button ref={fotoKnopRef} type="button" onClick={() => setViewer(true)} aria-label={t.shop.fotoVergroot} className="absolute inset-0 cursor-zoom-in focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-ink">
+                <Image src={shownImage} alt={active === 0 ? product.name : ""} fill priority sizes="(min-width: 1440px) 720px, (min-width: 1024px) 52vw, 100vw" className="object-cover" />
+              </button>
             )}
             {active === 0 && product.model3dUrl && (
               <button
@@ -557,6 +569,16 @@ export function ProductDetail({
       )}
 
       <OnlangsBekeken behalve={product.id} ingebed />
+
+      {viewer && gallery.length > 0 && (
+        <FotoViewer
+          fotos={gallery}
+          start={active}
+          titel={product.name}
+          teksten={{ sluiten: t.shop.close, vorige: t.shop.fotoVorige, volgende: t.shop.fotoVolgende, fotoVan: t.shop.photoOf, inzoomen: t.shop.fotoInzoomen, uitzoomen: t.shop.fotoUitzoomen }}
+          onSluit={sluitViewer}
+        />
+      )}
 
       {/* telefoon: vaste koopknop zodra de gewone uit beeld is */}
       {!buyVisible && (

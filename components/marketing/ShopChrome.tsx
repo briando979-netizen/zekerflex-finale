@@ -16,7 +16,7 @@ import { ShopModusProvider, useShopModus } from "@/components/marketing/ShopModu
 import { btwOverzicht, btwTarief, type ShopModus } from "@/lib/shop/modus";
 import type { ShopBetaalwijze } from "@/lib/shop/overschrijving-kenmerk";
 import { ShopBetaalwijzeProvider } from "@/components/marketing/ShopBetaalwijze";
-import { categorieTreffers, zoekSuggesties } from "@/lib/shop/zoeksuggesties";
+import { bedoeldeJe, categorieTreffers, zoekSuggesties } from "@/lib/shop/zoeksuggesties";
 import { useShopVergelijk } from "@/components/marketing/useShopVergelijk";
 import { vergelijkPad } from "@/lib/shop/vergelijk";
 import { categoriePad, menuGroep } from "@/lib/shop/categoriemenu";
@@ -688,7 +688,7 @@ function catLabel(c: string, t: Dict): string {
 
 const euroTekst = (cent: number) => `€ ${(cent / 100).toFixed(2).replace(".", ",")}`;
 
-type ZoekOptie = { soort: "zoek" } | { soort: "cat"; waarde: string; label: string } | { soort: "product"; p: ApiProduct };
+type ZoekOptie = { soort: "zoek" } | { soort: "bedoeld"; q: string } | { soort: "cat"; waarde: string; label: string } | { soort: "product"; p: ApiProduct };
 
 /**
  * De zoekbalk: een gewoon GET-formulier naar /shop, dus het werkt ook zonder JavaScript. Terwijl je typt (15 nov 2026, zoals
@@ -706,7 +706,11 @@ function SearchForm({ t, id, catalog, onZoek }: { t: Dict; id: string; catalog: 
     if (q.trim().length < 2) return [];
     const cats = categorieTreffers(CATS.map((c) => ({ waarde: c, label: catLabel(c, t) })), q);
     const producten = zoekSuggesties(catalog, q, 6);
-    if (!cats.length && !producten.length) return [];
+    if (!cats.length && !producten.length) {
+      // niets gevonden: misschien een tikfout ("hoddie"); dan de verbeterde vraag met zijn producten
+      const voorstel = bedoeldeJe(catalog, q);
+      return voorstel ? [{ soort: "bedoeld", q: voorstel }, ...zoekSuggesties(catalog, voorstel, 5).map((p) => ({ soort: "product" as const, p }))] : [];
+    }
     return [{ soort: "zoek" }, ...cats.map((c) => ({ soort: "cat" as const, ...c })), ...producten.map((p) => ({ soort: "product" as const, p }))];
   }, [catalog, q, t]);
   const toon = open && opties.length > 0;
@@ -715,6 +719,10 @@ function SearchForm({ t, id, catalog, onZoek }: { t: Dict; id: string; catalog: 
     setActief(-1);
     if (o.soort === "product") router.push(`/shop/${o.p.slug ?? o.p.id}`);
     else if (o.soort === "cat") router.push(`/shop?cat=${encodeURIComponent(o.waarde)}#collectie`);
+    else if (o.soort === "bedoeld") {
+      setQ(o.q);
+      router.push(`/shop?q=${encodeURIComponent(o.q)}#collectie`);
+    }
     else router.push(`/shop?q=${encodeURIComponent(q.trim())}#collectie`);
   };
   return (
@@ -780,7 +788,7 @@ function SearchForm({ t, id, catalog, onZoek }: { t: Dict; id: string; catalog: 
         <ul id={lijstId} role="listbox" aria-label={t.shop.zoekSuggesties} className="absolute inset-x-0 top-full z-50 mt-1 max-h-[70vh] overflow-y-auto rounded-lg border border-hair bg-white py-1 text-ink shadow-lift">
           {opties.map((o, i) => (
             <li
-              key={o.soort === "product" ? o.p.id : o.soort === "cat" ? `cat-${o.waarde}` : "zoek"}
+              key={o.soort === "product" ? o.p.id : o.soort === "cat" ? `cat-${o.waarde}` : o.soort === "bedoeld" ? "bedoeld" : "zoek"}
               id={`${lijstId}-${i}`}
               role="option"
               aria-selected={actief === i}
@@ -795,6 +803,14 @@ function SearchForm({ t, id, catalog, onZoek }: { t: Dict; id: string; catalog: 
                     <IconSearch />
                   </span>
                   <span className="min-w-0 truncate">{t.shop.zoekNaar.replace("{q}", q.trim())}</span>
+                </>
+              )}
+              {o.soort === "bedoeld" && (
+                <>
+                  <span className="grid h-8 w-8 shrink-0 place-items-center text-neutralx-500" aria-hidden>
+                    ?
+                  </span>
+                  <span className="min-w-0 truncate font-semibold text-brand-600">{t.shop.bedoeldeJe.replace("{q}", o.q)}</span>
                 </>
               )}
               {o.soort === "cat" && (

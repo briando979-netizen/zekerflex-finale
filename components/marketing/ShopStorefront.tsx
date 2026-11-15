@@ -7,6 +7,8 @@ import { fmt, type Dict } from "@/lib/i18n/dictionaries";
 import { ShopProductCard } from "@/components/marketing/ShopProductCard";
 import { bySize, type ShopCardProduct, type ShopCategory } from "@/components/marketing/shop-product";
 import type { VoorWaarde } from "@/lib/shop/categoriemenu";
+import Link from "next/link";
+import { bedoeldeJe, zoekScore } from "@/lib/shop/zoeksuggesties";
 
 // Het assortiment op de shop-homepage, opgebouwd als een marktplaats: filters
 // links (op de telefoon in een uitschuifvenster), erboven het aantal resultaten
@@ -82,16 +84,22 @@ export function ShopStorefront({
     return () => window.removeEventListener("keydown", onKey);
   }, [panel]);
 
-  // zoeken, favorieten en voorraad: de basis voor de aantallen per categorie
+  // zoeken, favorieten en voorraad: de basis voor de aantallen per categorie. Zoeken gaat woord voor woord en zonder
+  // accenten, zoals de suggesties (lib/shop/zoeksuggesties.ts): "hoodie grijs" vindt ook "Grijze hoodie"; beste eerst.
   const baseScope = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return products.filter(
+    const q = query.trim();
+    const kort = q.length < 2;
+    const lijst = products.filter(
       (p) =>
         (!onlyWishlist || wishlist.has(p.id)) &&
         (!onlyStock || inStock(p)) &&
-        (!q || p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)),
+        (!q || (kort ? p.name.toLowerCase().includes(q.toLowerCase()) : zoekScore(p, q) > 0)),
     );
+    return q && !kort ? [...lijst].sort((a, b) => zoekScore(b, q) - zoekScore(a, q)) : lijst;
   }, [products, query, onlyWishlist, onlyStock, wishlist]);
+  // niets gevonden: een verbeterde zoekvraag ("Bedoelde je …?") en een paar producten om verder te kijken
+  const voorstel = useMemo(() => (query.trim() && baseScope.length === 0 ? bedoeldeJe(products, query) : null), [products, query, baseScope.length]);
+  const tips = useMemo(() => products.filter((p) => p.imageUrl && inStock(p)).slice(0, 4), [products]);
 
   const catCounts = useMemo(() => {
     const m = new Map<Category, number>([["Alles", baseScope.length]]);
@@ -258,12 +266,34 @@ export function ShopStorefront({
           )}
 
           {shown.length === 0 ? (
-            <div className="py-20 text-center">
-              <p className="text-[18px] font-semibold text-ink">{onlyWishlist ? t.shop.noFavoritesFound : t.shop.noArticlesFound}</p>
+            <div className="py-14 text-center">
+              <p className="text-[18px] font-semibold text-ink">
+                {onlyWishlist ? t.shop.noFavoritesFound : query.trim() && baseScope.length === 0 ? fmt(t.shop.nietsGevonden, { q: query.trim() }) : t.shop.noArticlesFound}
+              </p>
+              {voorstel && (
+                <p className="mt-3 text-[16px]">
+                  <Link href={`/shop?q=${encodeURIComponent(voorstel)}#collectie`} className="font-semibold text-brand-600 underline">
+                    {fmt(t.shop.bedoeldeJe, { q: voorstel })}
+                  </Link>
+                </p>
+              )}
+              {query.trim() && baseScope.length === 0 && <p className="mx-auto mt-2 max-w-md text-[14px] text-neutralx-600">{t.shop.zoekTips}</p>}
               {chips.length > 0 && (
                 <button type="button" onClick={clearAll} className="mt-5 inline-flex h-10 items-center rounded-lg bg-brand-500 px-5 text-[13px] font-bold text-white hover:bg-brand-600">
                   {t.shop.clearAll}
                 </button>
+              )}
+              {query.trim() && baseScope.length === 0 && tips.length > 0 && (
+                <div className="mt-10 text-left">
+                  <p className="text-[16px] font-bold text-ink">{t.shop.misschienDit}</p>
+                  <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+                    {tips.map((p) => (
+                      <li key={p.id}>
+                        <ShopProductCard p={p} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           ) : (
