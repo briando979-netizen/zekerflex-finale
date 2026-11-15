@@ -35,7 +35,8 @@ describe("de standaardopmaak", () => {
   it("de pagina gebruikt de standaardopmaak, en geeft de vragen ook aan Google", () => {
     const route = lees("app/(marketing)/aanbod/[slug]/page.tsx");
     expect(route).toContain("<AanbodStandaard a={a} pijler={pijler} />");
-    expect(route).toContain("const faq = eigenOntwerp ? EFACTUUR_FAQ : uitgebreid ? [] : standaardVragen(a);");
+    // de redactionele opmaak (lib/marketing/aanbod-redactioneel.ts) levert zijn eigen vragen
+    expect(route).toContain("const faq = eigenOntwerp ? EFACTUUR_FAQ : redactioneel ? redactioneel.vragen.items : uitgebreid ? [] : standaardVragen(a);");
   });
 });
 
