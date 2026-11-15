@@ -4,6 +4,8 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { CtaBand } from "@/components/marketing/primitives";
 import { AanbodUitgebreid } from "@/components/marketing/aanbod/AanbodUitgebreid";
 import { uitgebreidVan } from "@/lib/marketing/aanbod-uitgebreid";
+import { AanbodRedactioneel } from "@/components/marketing/aanbod/AanbodRedactioneel";
+import { redactioneelVan } from "@/lib/marketing/aanbod-redactioneel";
 import { AANBOD, aanbodDoorsturen, aanbodHref, aanbodVan, eigenPaginas, pijlerVan } from "@/lib/marketing/aanbod";
 import { breadcrumbJsonLd, canonical, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
@@ -42,6 +44,7 @@ export default async function AanbodItemPagina({ params }: { params: Promise<{ s
   if (!a) notFound();
   const pijler = pijlerVan(a.pijler);
   const uitgebreid = uitgebreidVan(a.slug);
+  const redactioneel = redactioneelVan(a.slug);
   const verwant = AANBOD.filter((x) => x.pijler === a.pijler && x.slug !== a.slug);
   const dienst = {
     "@context": "https://schema.org",
@@ -55,7 +58,7 @@ export default async function AanbodItemPagina({ params }: { params: Promise<{ s
 
   // E-facturatie heeft een eigen, uitgebreide pagina (components/marketing/aanbod/EfactuurPagina.tsx), met de vragen ook voor Google
   const eigenOntwerp = a.slug === "e-facturatie";
-  const faq = eigenOntwerp ? EFACTUUR_FAQ : uitgebreid ? [] : standaardVragen(a);
+  const faq = eigenOntwerp ? EFACTUUR_FAQ : redactioneel ? redactioneel.vragen.items : uitgebreid ? [] : standaardVragen(a);
   const vragen = faq.length
     ? [{ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faq.map((v) => ({ "@type": "Question", name: v.vraag, acceptedAnswer: { "@type": "Answer", text: v.antwoord } })) }]
     : [];
@@ -67,7 +70,9 @@ export default async function AanbodItemPagina({ params }: { params: Promise<{ s
         dangerouslySetInnerHTML={{ __html: ldJson([dienst, breadcrumbJsonLd([["Home", "/"], ["Aanbod", "/aanbod"], [a.naam, `/aanbod/${a.slug}`]]), ...vragen]) }}
       />
 
-      {uitgebreid ? (
+      {redactioneel ? (
+        <AanbodRedactioneel a={a} r={redactioneel} />
+      ) : uitgebreid ? (
         <AanbodUitgebreid a={a} pijler={pijler} u={uitgebreid} />
       ) : (
         <>
