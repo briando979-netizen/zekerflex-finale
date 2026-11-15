@@ -1,0 +1,63 @@
+import type { Locale } from "@/lib/i18n/config";
+
+// De melding "kies je branches" (15 nov 2026) aan werkers die zich tussen 6 en 9 november aanmeldden, vóór de stap "branches" bestond
+// (10 nov) en nog geen keuze maakten (lib/onboarding/branches-melding.ts): als push en als mail, in de taal van de werker. Puur bestand.
+// Machine-assisted translations: native-speaker review recommended.
+
+export interface BranchesMeldingTekst {
+  pushTitel: string;
+  pushBody: string;
+  subject: string;
+  hoi: string;
+  alinea1: string;
+  alinea2: string;
+  knop: string;
+}
+
+export const BRANCHES_MELDING: Record<Locale, BranchesMeldingTekst> = {
+  nl: {
+    pushTitel: "Kies je branches",
+    pushBody: "Kies in welke branches je wilt werken, dan kun je weer reageren op klussen.",
+    subject: "Kies je branches, dan kun je weer reageren",
+    hoi: "Hoi {naam},",
+    alinea1: "Sinds 10 november kies je bij je aanmelding in welke branches je wilt werken. Jouw keuze ontbreekt nog.",
+    alinea2: "Kies je branches, dan kun je weer reageren op klussen.",
+    knop: "Branches kiezen",
+  },
+  en: {
+    pushTitel: "Choose your industries",
+    pushBody: "Choose the industries you want to work in, and you can apply for jobs again.",
+    subject: "Choose your industries, then you can apply again",
+    hoi: "Hi {naam},",
+    alinea1: "Since 10 November you choose the industries you want to work in when you sign up. Your choice is still missing.",
+    alinea2: "Choose your industries, and you can apply for jobs again.",
+    knop: "Choose industries",
+  },
+  pl: {
+    pushTitel: "Wybierz branże",
+    pushBody: "Wybierz branże, w których chcesz pracować, a znów będziesz mógł odpowiadać na zlecenia.",
+    subject: "Wybierz branże, a znów będziesz mógł odpowiadać",
+    hoi: "Cześć {naam},",
+    alinea1: "Od 10 listopada przy rejestracji wybiera się branże, w których chcesz pracować. Twojego wyboru jeszcze brakuje.",
+    alinea2: "Wybierz branże, a znów będziesz mógł odpowiadać na zlecenia.",
+    knop: "Wybierz branże",
+  },
+  ro: {
+    pushTitel: "Alege domeniile",
+    pushBody: "Alege domeniile în care vrei să lucrezi și vei putea aplica din nou la lucrări.",
+    subject: "Alege domeniile și vei putea aplica din nou",
+    hoi: "Salut {naam},",
+    alinea1: "Din 10 noiembrie, la înscriere alegi domeniile în care vrei să lucrezi. Alegerea ta încă lipsește.",
+    alinea2: "Alege domeniile și vei putea aplica din nou la lucrări.",
+    knop: "Alege domeniile",
+  },
+  uk: {
+    pushTitel: "Обери галузі",
+    pushBody: "Обери галузі, в яких хочеш працювати, і знову зможеш відгукуватися на роботи.",
+    subject: "Обери галузі, і знову зможеш відгукуватися",
+    hoi: "Привіт, {naam}!",
+    alinea1: "З 10 листопада під час реєстрації обирають галузі, в яких хочуть працювати. Твого вибору ще немає.",
+    alinea2: "Обери галузі, і знову зможеш відгукуватися на роботи.",
+    knop: "Обрати галузі",
+  },
+};
