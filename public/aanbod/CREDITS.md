@@ -11,6 +11,19 @@ losse foto). De fotograaf staat op de Pexels-pagina van het nummer.
 | `certificaten-in-een-foto.jpg` | Certificaten in één foto | Pexels #6863088 — https://www.pexels.com/photo/6863088/ |
 | `spoedoproep.jpg` | Spoedoproep | Pexels #4481325 — https://www.pexels.com/photo/4481325/ |
 | `bedrijfscheck.jpg` | Btw-nummer en KVK-check | Pexels #10376251 — https://www.pexels.com/photo/10376251/ |
+| `horeca-barista-laptop.jpg` | roosterplanner | Pexels #4350040 — https://www.pexels.com/photo/4350040/ |
+| `logistiek-magazijn-doos.jpg` | wifi-op-de-werkvloer | Pexels #8069548 — https://www.pexels.com/photo/8069548/ |
+| `team-highfive-raam.jpg` | veilige-werkplek | Pexels #3184427 — https://www.pexels.com/photo/3184427/ |
+| `logistiek-magazijn-dozen.jpg` | eigen-5g-netwerk | Pexels #8069547 — https://www.pexels.com/photo/8069547/ |
+| `horeca-keuken-team.jpg` | portofoon-in-de-app | Pexels #6937464 — https://www.pexels.com/photo/6937464/ |
+| `bezorg-bus.jpg` | toegang-op-kenteken | Pexels #7363098 — https://www.pexels.com/photo/7363098/ |
+| `logistiek-magazijn-klembord.jpg` | sleutelkluis | Pexels #6169652 — https://www.pexels.com/photo/6169652/ |
+| `retail-winkelhulp.jpg` | badges-en-labels-printen | Pexels #8422707 — https://www.pexels.com/photo/8422707/ |
+| `retail-toonbank.jpg` | website | Pexels #3738387 — https://www.pexels.com/photo/3738387/ |
+| `bezorg-overdracht.jpg` | webshop | Pexels #7843932 — https://www.pexels.com/photo/7843932/ |
+| `horeca-serveerster-lacht.jpg` | google-reviews | Pexels #4350094 — https://www.pexels.com/photo/4350094/ |
+| `team-highfive-geel.jpg` | zakelijke-mail | Pexels #8204405 — https://www.pexels.com/photo/8204405/ |
+| `team-highfive-tafel.jpg` | facturen-en-betalen | Pexels #6457610 — https://www.pexels.com/photo/6457610/ |
 
 Een foto toevoegen: zet het bestand hier neer, vermeld het in deze tabel en
 verwijs ernaar met `foto: { bestand, alt }` in `lib/marketing/aanbod.ts`
