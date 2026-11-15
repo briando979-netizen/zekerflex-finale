@@ -21,6 +21,7 @@ import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { useShopBetaalwijze } from "@/components/marketing/ShopBetaalwijze";
 import { FotoViewer } from "@/components/marketing/FotoViewer";
+import { VoorraadMelding } from "@/components/marketing/VoorraadMelding";
 import { bezorgZin } from "@/lib/shop/bezorgmoment";
 import { useBezorgmoment } from "@/components/marketing/useBezorgmoment";
 import { useI18n } from "@/components/i18n/I18nProvider";
@@ -325,6 +326,7 @@ export function ProductDetail({
           <p className={`mt-5 text-[14px] font-bold ${variant && variantStock <= 0 ? "text-crit" : variant ? "text-ok" : "text-neutralx-600"}`}>
             {variant ? (variantStock > 0 ? fmt(t.shop.inStock, { n: variantStock }) : t.shop.outOfStockVariant) : t.shop.pickVariantForStock}
           </p>
+          {variant && variantStock <= 0 && <VoorraadMelding key={variant.id} variantId={variant.id} />}
           {variant && variantStock > 0 && product.seller && (
             <p className="mt-1 text-[13px] font-semibold text-neutralx-600">{fmt(t.shop.bezorgVerkoper, { seller: product.seller, n: VERKOPER_VERZENDT_BINNEN_WERKDAGEN })}</p>
           )}

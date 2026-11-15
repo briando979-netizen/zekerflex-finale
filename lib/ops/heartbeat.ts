@@ -69,6 +69,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "controles-tick", label: "Controle van main (TypeScript, eslint, tests)", maxAgeHours: 2 },
   // elk kwartier: de productlijst voor AI-assistenten bij Stripe (lib/shop/agent-handel-server.ts)
   { job: "agent-catalogus", label: "Verkoop via AI: productlijst bij Stripe", maxAgeHours: 2 },
+  // elk kwartier: "Laat me weten als hij er weer is" in de webshop (lib/shop/voorraadmelding-server.ts)
+  { job: "voorraadmelding", label: "Webshop: mail als iets weer op voorraad is", maxAgeHours: 2 },
   // elke 10 min: AI-opdrachten van de video-editor op de achtergrond (lib/video/wachtrij.ts)
   { job: "video-wachtrij", label: "Video-editor: wachtrij op de achtergrond", maxAgeHours: 2 },
   // elke 10 min: sociale media: berichten plaatsen en autopilot (lib/social/publiceer.ts)

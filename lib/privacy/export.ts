@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { getPrefs } from "@/lib/prefs/store";
 import { exportUserKv } from "@/lib/privacy/user-kv";
+import { voorraadmeldingenVan } from "@/lib/shop/voorraadmelding-server";
 import { exportChatlogVan } from "@/lib/learn/store";
 import { idControleVoorExport } from "@/lib/privacy/id-export";
 
@@ -267,6 +268,8 @@ export async function exportUserData(userId: string): Promise<DataExport> {
   // Per-user JSON in the KeyValueStore (agenda, trips, chat settings, contacts,
   // AI memory, …) — credentials redacted. See lib/privacy/user-kv.ts.
   sections.storedSettings = await safe("storedSettings", () => exportUserKv(userId));
+  // "Laat me weten als hij er weer is" in de webshop: op e-mailadres bewaard, niet op gebruiker (lib/shop/voorraadmelding.ts)
+  sections.voorraadmeldingen = await safe("voorraadmeldingen", () => voorraadmeldingenVan(user.email));
   // wat je aan de assistenten (Jarvis, Brain) hebt gevraagd en wat ze antwoordden; alleen je eigen regels, hooguit 90 dagen terug
   sections.assistentChat = await safe("assistentChat", () => exportChatlogVan(userId));
 

@@ -47,6 +47,8 @@ cat > /etc/crontabs/root <<EOF
 15 6 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/winkel-agent/tick"
 # elk kwartier: de productlijst voor AI-assistenten bij Stripe bijwerken, alleen wat veranderde (lib/shop/agent-handel-server.ts)
 */15 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/shop/agent-catalogus"
+# elk kwartier: "Laat me weten als hij er weer is" — weer op voorraad = één mail en de aanvraag weg (lib/shop/voorraadmelding.ts)
+7,22,37,52 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/shop/voorraadmelding"
 30 6 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/markten/tick"
 0 7 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/ai/watchdog"
 # Eigen taalmodel warm houden (alleen met "alles gratis" aan): na een afgeschoten model staat het binnen 4 min weer klaar.
