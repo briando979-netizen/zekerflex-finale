@@ -10,6 +10,9 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
 import { bonToken } from "@/lib/shop/bon-token";
 import { jsonError } from "@/lib/http/errors";
+import { wachtOpOverschrijving } from "@/lib/shop/overschrijving-kenmerk";
+import { decrementVariantStock, notifyShopOrderPaid, type ShopOrderLine } from "@/lib/shop/bestelling-betaald";
+import { meldVerkopersBetaald } from "@/lib/shop/verkoper";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,7 +25,17 @@ const patchSchema = z.object({
 
 export const PATCH = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (request, { params, principal }) => {
   const d = patchSchema.parse(await request.json());
-  const before = await prisma.shopOrder.findUnique({ where: { id: params.id }, select: { status: true } });
+  const before = await prisma.shopOrder.findUnique({ where: { id: params.id }, select: { status: true, stripeSessionId: true } });
+  // Een bestelling per overschrijving (lib/shop/overschrijving.ts) die op betaald gaat: atomair claimen, zodat een dubbele klik of twee
+  // beheerders tegelijk de voorraad en de mails niet twee keer doen. Daarna verloopt het zoals na een betaling via Stripe.
+  let overschrijvingBinnen = false;
+  if (d.status === "RECEIVED" && before && wachtOpOverschrijving(before)) {
+    const claim = await prisma.shopOrder.updateMany({
+      where: { id: params.id, status: "PENDING_PAYMENT", stripeSessionId: null },
+      data: { status: "RECEIVED" },
+    });
+    overschrijvingBinnen = claim.count > 0;
+  }
   const order = await prisma.shopOrder.update({
     where: { id: params.id },
     data: {
@@ -40,6 +53,23 @@ export const PATCH = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (
     targetType: "shop-order",
     targetId: order.id,
   });
+
+  if (overschrijvingBinnen) {
+    await recordAudit({
+      category: "ADMIN",
+      action: "shop.order.paid",
+      actorUserId: principal.userId,
+      actorLabel: "user",
+      summary: `Shopbestelling ${order.id} betaald per overschrijving (bevestigd in Beheer)`,
+      targetType: "shop-order",
+      targetId: order.id,
+      metadata: { totalCents: order.totalCents, via: "overschrijving" },
+    });
+    await decrementVariantStock(order.id, (order.itemsJson as ShopOrderLine[] | null) ?? [], "user");
+    await notifyShopOrderPaid(order);
+    // producten van verkopers op de marktplaats: zij versturen zelf (lib/shop/verkoper.ts)
+    await meldVerkopersBetaald(order);
+  }
 
   // Just shipped with a tracking number on file — let the customer know
   // where to follow it live, rather than leaving them to guess.

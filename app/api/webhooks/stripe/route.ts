@@ -18,8 +18,6 @@ import { payOnClientPayment } from "@/lib/payouts/execute";
 import { checkLowBalance, notifyBank, notifyIncoming } from "@/lib/bank/notify";
 import { recordChargeRefund, recordDisputeClosed, recordDisputeOpened, settleClawbacks } from "@/lib/billing/clawback";
 import { recordAudit } from "@/lib/audit";
-import { bonToken } from "@/lib/shop/bon-token";
-import { sendMail, mailShell } from "@/lib/mail";
 import { fulfillPaidClaim } from "@/lib/claims/fulfillment";
 import { activateApiSubscription, syncApiSubscription } from "@/lib/billing/api-subscription-sync";
 import { abonnementBetalingMislukt, abonnementFactuurBetaald } from "@/lib/billing/api-subscription-invoice";
@@ -30,25 +28,13 @@ import { verwerkHorecaSessie } from "@/lib/horeca/betalen";
 import { verwerkDomeinSessie } from "@/lib/domeinen/bestelling";
 import { domeinFactuurBetaald } from "@/lib/domeinen/verlengen";
 import { meldVerkopersBetaald } from "@/lib/shop/verkoper";
-import { zakelijkeRegels } from "@/lib/shop/zakelijk";
+import { decrementVariantStock, notifyShopOrderPaid, type ShopOrderLine } from "@/lib/shop/bestelling-betaald";
 import { maakAgentBestelling } from "@/lib/shop/agent-handel-server";
 import { syncBankLogin } from "@/lib/kyc/bank-login";
 import { webhookTekst, WEBHOOK_MAX } from "@/lib/http/webhook-lezen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const money = (cents: number) => `€ ${(cents / 100).toFixed(2).replace(".", ",")}`;
-
-interface ShopOrderLine {
-  name: string;
-  priceCents: number;
-  qty: number;
-  imageUrl?: string | null;
-  variantId?: string;
-  size?: string | null;
-  color?: string | null;
-}
 
 /** Marks one invoice PAID (idempotent) and fulfils a cancellation-penalty
  * claim if applicable. Returns false if the invoice id doesn't resolve, so
@@ -122,107 +108,6 @@ async function markInvoicePaid(invoiceId: string, session: Stripe.Checkout.Sessi
     }
   }
   return true;
-}
-
-/** Decrements variant stock for a just-paid order. Best-effort per line: if a
- * variant was oversold in the window between checkout and payment (rare race),
- * the order still gets marked paid — the customer already paid — but the
- * shortfall is recorded so admin can follow up. */
-async function decrementVariantStock(orderId: string, lines: ShopOrderLine[]): Promise<void> {
-  const shortfalls: string[] = [];
-  for (const line of lines) {
-    if (!line.variantId) continue;
-    const res = await prisma.shopProductVariant.updateMany({
-      where: { id: line.variantId, stock: { gte: line.qty } },
-      data: { stock: { decrement: line.qty } },
-    });
-    if (res.count === 0) shortfalls.push(`${line.name} x${line.qty}`);
-  }
-  if (shortfalls.length > 0) {
-    logger.warn("shop order oversold", { orderId, shortfalls });
-    await recordAudit({
-      category: "ADMIN",
-      action: "shop.order.oversold",
-      actorLabel: "integration:stripe",
-      summary: `Shopbestelling ${orderId} betaald maar niet genoeg voorraad voor: ${shortfalls.join(", ")}`,
-      targetType: "shop-order",
-      targetId: orderId,
-      metadata: { shortfalls },
-    });
-  }
-}
-
-/** Sends the admin notification + customer confirmation for a just-paid shop order (product photos + a link to the PDF receipt). Best-effort — never throws. */
-async function notifyShopOrderPaid(order: {
-  id: string;
-  /** zakelijk bestellen (optioneel): bedrijf, btw-nummer, eigen referentie */
-  companyName?: string | null;
-  vatNumber?: string | null;
-  reference?: string | null;
-  firstName: string;
-  lastName: string;
-  email: string;
-  address: string;
-  postalCode: string;
-  city: string;
-  itemsJson: unknown;
-  subtotalCents: number;
-  shippingCents: number;
-  totalCents: number;
-}): Promise<void> {
-  const lines = (order.itemsJson as ShopOrderLine[] | null) ?? [];
-  const baseUrl = env.APP_BASE_URL.replace(/\/+$/, "");
-  const absImg = (u: string | null | undefined) => (u ? (u.startsWith("http") ? u : `${baseUrl}${u}`) : null);
-  const pdfUrl = `${baseUrl}/api/shop/orders/${order.id}/pdf?t=${bonToken(order.id)}`;
-
-  const lineRows = lines.map((l) => `${l.qty}x ${l.name} — ${money(l.priceCents * l.qty)}`).join("\n");
-  const zak = zakelijkeRegels(order);
-  const zakText = zak.length ? `\n${zak.map((r) => `${r.label}: ${r.waarde}`).join("\n")}` : "";
-  const zakHtml = zak.length ? `<p style="margin:0 0 12px;font-size:14px;color:#3C4A42">${zak.map((r) => `${r.label}: ${r.waarde.replace(/</g, "&lt;")}`).join("<br/>")}</p>` : "";
-  const lineRowsHtml = lines
-    .map((l) => {
-      const img = absImg(l.imageUrl);
-      return `<tr>
-        <td style="padding:6px 8px 6px 0;width:48px">${img ? `<img src="${img}" alt="" width="40" height="40" style="border-radius:8px;object-fit:cover;display:block">` : ""}</td>
-        <td style="padding:6px 0">${l.qty}x ${l.name.replace(/</g, "&lt;")}</td>
-        <td style="padding:6px 0;text-align:right">${money(l.priceCents * l.qty)}</td>
-      </tr>`;
-    })
-    .join("");
-
-  await sendMail({
-    to: env.MAIL_ADMIN,
-    replyTo: order.email,
-    kind: "shop-order",
-    subject: `Betaalde shopbestelling — ${order.id}`,
-    text: `Betaalde bestelling via de ZekerFlex-shop\n\n${order.firstName} ${order.lastName}\n${order.email}\n${order.address}, ${order.postalCode} ${order.city}${zakText}\n\n${lineRows}\n\nSubtotaal: ${money(order.subtotalCents)}\nVerzending: ${order.shippingCents === 0 ? "Gratis" : money(order.shippingCents)}\nTotaal: ${money(order.totalCents)}\n\nBestelreferentie: ${order.id}`,
-    html: mailShell(
-      "Betaalde shopbestelling",
-      `<p style="margin:0 0 4px"><strong>${order.firstName} ${order.lastName}</strong></p>
-       <p style="margin:0 0 12px;font-size:14px;color:#3C4A42">${order.email}<br/>${order.address}, ${order.postalCode} ${order.city}</p>
-       ${zakHtml}
-       <table style="width:100%;font-size:14px;color:#3C4A42">${lineRowsHtml}</table>
-       <p style="margin:10px 0 0;font-size:14px;color:#3C4A42">Totaal: <strong>${money(order.totalCents)}</strong></p>
-       <p style="margin:12px 0 0;font-size:12px;color:#667469">Referentie: ${order.id}</p>`,
-    ),
-  }).catch((e) => logger.warn("shop order notify failed", { error: (e as Error).message }));
-
-  await sendMail({
-    to: order.email,
-    from: env.MAIL_FROM,
-    kind: "shop-order-bevestiging",
-    subject: "Je betaling is gelukt — bestelling bij de ZekerFlex-shop",
-    text: `Hoi ${order.firstName},\n\nBedankt voor je bestelling, je betaling is gelukt. We gaan 'm inpakken.\n\n${lineRows}\n\nTotaal: ${money(order.totalCents)}${zakText}\n\nBestelreferentie: ${order.id}\nFactuur (PDF): ${pdfUrl}`,
-    html: mailShell(
-      "Betaling gelukt",
-      `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${order.firstName}, bedankt voor je bestelling — je betaling is gelukt. We gaan 'm inpakken.</p>
-       <table style="width:100%;font-size:14px;color:#3C4A42">${lineRowsHtml}</table>
-       <p style="margin:10px 0 0;font-size:14px;color:#3C4A42">Totaal: <strong>${money(order.totalCents)}</strong></p>
-       ${zakHtml ? `<div style="margin-top:12px">${zakHtml}</div>` : ""}
-       <p style="margin:14px 0 0"><a href="${pdfUrl}" style="font-size:13px;color:#0E5C4A;font-weight:600">Download je factuur (PDF)</a></p>
-       <p style="margin:12px 0 0;font-size:12px;color:#667469">Referentie: ${order.id}</p>`,
-    ),
-  }).catch((e) => logger.warn("shop order confirmation failed", { error: (e as Error).message }));
 }
 
 const DECLINE_TEXT: Record<string, string> = {

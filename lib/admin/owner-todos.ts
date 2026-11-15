@@ -485,7 +485,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       id: "sepa",
       group: "Geld & bank",
       title: "Bankrekening van ZekerFlex invullen: voor betalen per overschrijving en uitbetalen (SEPA)",
-      why: "Zonder deze gegevens staat er geen IBAN op de facturen: zolang Stripe dicht is, kan dan niemand een factuur betalen. Ook kunnen freelancers niet op hun eigen IBAN worden uitbetaald. Met de gegevens staat op elke factuur en op de betaalpagina Betalen via bankoverschrijving, met het factuurnummer als kenmerk.",
+      why: "Zonder deze gegevens staat er geen IBAN op de facturen en kan niemand iets in de webshop bestellen: zolang Stripe dicht is, kan dan niemand betalen (geen factuur, geen bestelling). Met het IBAN betaalt de webshop meteen per overschrijving (kenmerk ZF-…, in Beheer → Webshop op Overschrijving ontvangen). Ook kunnen freelancers niet op hun eigen IBAN worden uitbetaald. Met de gegevens staat op elke factuur en op de betaalpagina Betalen via bankoverschrijving, met het factuurnummer als kenmerk.",
       how: ["Geef Claude de zakelijke IBAN en de naam van de rekeninghouder precies zoals de bank hem kent (bijv. Zekerflex, Inc.); die worden SEPA_CREDITOR_IBAN en SEPA_CREDITOR_NAME op de server.", "Daarna komt elke ochtend automatisch een SEPA-bestand klaar (je krijgt een mail)."],
       auto: true,
       done: Boolean(env.SEPA_CREDITOR_IBAN && env.SEPA_CREDITOR_NAME),
