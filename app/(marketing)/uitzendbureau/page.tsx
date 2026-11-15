@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { canonical } from "@/lib/seo";
 import { Fragment, type ReactNode } from "react";
 import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
 import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
@@ -25,8 +26,7 @@ export const metadata: Metadata = {
     "StiPP pensioen",
     "ABU fasensysteem",
   ],
-  alternates: { canonical: "/uitzendbureau" },
-  openGraph: { url: "/uitzendbureau" },
+  ...canonical("/uitzendbureau"),
 };
 
 const PILLARS = [

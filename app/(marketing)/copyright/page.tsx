@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "@/components/marketing/LegalPage";
 import { canonical } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Copyright", ...canonical("/copyright", { title: "Copyright" }) };
+export const metadata: Metadata = {
+  title: "Copyright",
+  description: "Copyright en aansprakelijkheid voor de inhoud van de ZekerFlex-website: wie de rechten heeft en waarom aan de informatie geen rechten te ontlenen zijn.",
+  ...canonical("/copyright", { title: "Copyright" }),
+};
 
 export default function CopyrightPage() {
   const year = new Date().getFullYear();

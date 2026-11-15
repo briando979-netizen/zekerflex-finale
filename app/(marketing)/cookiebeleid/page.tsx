@@ -3,7 +3,11 @@ import { LegalPage, LegalSection } from "@/components/marketing/LegalPage";
 import { canonical } from "@/lib/seo";
 import { cookieRegel, cookiesNu } from "@/lib/privacy/cookies";
 
-export const metadata: Metadata = { title: "Cookiebeleid", ...canonical("/cookiebeleid", { title: "Cookiebeleid" }) };
+export const metadata: Metadata = {
+  title: "Cookiebeleid",
+  description: "Welke cookies en vergelijkbare technieken ZekerFlex gebruikt, waarvoor, hoe lang ze bewaard blijven en hoe je je keuze later aanpast.",
+  ...canonical("/cookiebeleid", { title: "Cookiebeleid" }),
+};
 
 export default function CookiebeleidPage() {
   return (

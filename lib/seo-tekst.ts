@@ -31,3 +31,21 @@ export function seoBeschrijving(tekst: string): string {
   if (zin >= 80) return stuk.slice(0, zin + 1);
   return `${t.slice(0, BESCHRIJVING_MAX - 1).replace(/[\s,;:—–-]+\S*$/, "").replace(/[\s,;:—–-]+$/, "")}…`;
 }
+
+/** Wat het titelsjabloon van de site erachter zet (app/layout.tsx). */
+export const SJABLOON_MERK = " · ZekerFlex";
+
+/**
+ * Een paginatitel voor het sjabloon "%s · ZekerFlex" (kennisbank, blog): past hij met het merk erachter niet binnen
+ * TITEL_MAX, dan het deel vóór " — " of ": ", en anders afgekapt op een heel woord. De kop op de pagina blijft heel.
+ */
+export function seoSjabloonTitel(titel: string): string {
+  const max = TITEL_MAX - SJABLOON_MERK.length;
+  const t = titel.replace(/\s+/g, " ").trim();
+  if (t.length <= max) return t;
+  for (const scheider of [" — ", ": "]) {
+    const kern = (t.split(scheider)[0] ?? "").trim();
+    if (kern && kern !== t && kern.length <= max) return kern;
+  }
+  return `${t.slice(0, max - 1).replace(/\s+\S*$/, "")}…`;
+}

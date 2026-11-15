@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { seoBeschrijving, seoSjabloonTitel } from "@/lib/seo-tekst";
 import { ldJson } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -13,11 +14,13 @@ export async function generateMetadata(props: { params: Promise<{ slug: string }
   const params = await props.params;
   const p = postBySlug(params.slug);
   if (!p) return { title: "Blog" };
+  // een eigen openGraph vervangt die van canonical() helemaal: het deelplaatje en de url gaan mee
+  const c = canonical(`/kennis/blog/${p.slug}`);
   return {
-    title: p.title,
-    description: p.excerpt,
-    ...canonical(`/kennis/blog/${p.slug}`),
-    openGraph: { type: "article", publishedTime: p.date, authors: [p.author] },
+    title: seoSjabloonTitel(p.title),
+    description: seoBeschrijving(p.excerpt),
+    ...c,
+    openGraph: { ...c.openGraph, type: "article", publishedTime: p.date, authors: [p.author] },
   };
 }
 

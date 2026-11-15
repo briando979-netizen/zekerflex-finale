@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "@/components/marketing/LegalPage";
 import { canonical } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Digital Services Act-informatie", ...canonical("/dsa", { title: "Digital Services Act-informatie" }) };
+export const metadata: Metadata = {
+  title: "Digital Services Act-informatie",
+  description: "De contactpunten van ZekerFlex onder de Digital Services Act, hoe je illegale inhoud meldt, hoe we misbruik aanpakken en hoe aanbevelingen werken.",
+  ...canonical("/dsa", { title: "Digital Services Act-informatie" }),
+};
 
 export default function DsaPage() {
   return (

@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "@/components/marketing/LegalPage";
 import { canonical } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "Privacybeleid", ...canonical("/privacy", { title: "Privacybeleid" }) };
+export const metadata: Metadata = {
+  title: "Privacybeleid",
+  description: "Hoe ZekerFlex met je persoonsgegevens omgaat: wat we bewaren en waarom, hoe lang, met wie we ze delen en welke rechten je hebt.",
+  ...canonical("/privacy", { title: "Privacybeleid" }),
+};
 
 export default function PrivacyPage() {
   return (
