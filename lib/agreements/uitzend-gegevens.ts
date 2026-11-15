@@ -72,6 +72,6 @@ export function leesWoonadres(v: unknown): Woonadres | null {
 }
 
 /** Zijn de gegevens voor de overeenkomst compleet: een geldige geboortedatum en een geldig woonadres? */
-export function gegevensVoorContractCompleet(f: { birthDate: string | null | undefined; woonadres: unknown }): boolean {
+export function gegevensVoorContractCompleet(f: { birthDate: string | null | undefined; woonadres?: unknown }): boolean {
   return Boolean(f.birthDate && /^\d{4}-\d{2}-\d{2}$/.test(f.birthDate)) && leesWoonadres(f.woonadres) !== null;
 }
