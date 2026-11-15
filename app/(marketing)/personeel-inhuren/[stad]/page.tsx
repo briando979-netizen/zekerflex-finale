@@ -83,7 +83,7 @@ export default async function PersoneelInhurenStadPage({ params }: { params: Pro
           kop="h1"
           eyebrow={`${c.name} · voor bedrijven`}
           title={`Personeel inhuren in ${c.name}`}
-          intro={`${c.local} Met ZekerFlex plaats je een klus en vind je binnen uren betrouwbare flexkrachten voor ${c.sectors.join(", ")} — voor € 3,50 per gewerkt uur, zonder abonnement.`}
+          intro={`${c.local} Met ZekerFlex plaats je een klus en bereik je geverifieerde flexkrachten in de buurt voor ${c.sectors.join(", ")} — voor € 3,50 per gewerkt uur, zonder abonnement.`}
         />
         <div className="mt-10 flex flex-wrap gap-3">
           <Link href={klusUrl({ city: c.name })} className="btn-primary">
@@ -96,7 +96,7 @@ export default async function PersoneelInhurenStadPage({ params }: { params: Pro
         <ul className="mt-12 grid gap-4 sm:grid-cols-3">
           {[
             ["Gematcht op reistijd", `Je klus gaat eerst naar mensen die snel in ${c.name} kunnen zijn — minder no-shows, minder reiskosten.`],
-            ["Alles geregeld", "Urenregistratie met GPS-check-in, automatische facturen, modelovereenkomst en verzekering."],
+            ["Alles geregeld", "Urenregistratie met GPS-check-in, automatische facturen en een modelovereenkomst."],
             ["Zzp of uitzend", "Kies per klus voor zzp'ers/flexwerkers of uitzendkrachten via het ZekerFlex-uitzendbureau."],
           ].map(([t, b]) => (
             <li key={t} className="rounded-2xl border border-hair bg-white p-5">

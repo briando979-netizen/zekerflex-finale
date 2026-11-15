@@ -270,7 +270,7 @@ export const DBA_GROUPS: DbaGroup[] = [
         q: "Wat is mijn 'zorgplicht' als opdrachtgever?",
         a: "Je bent verantwoordelijk voor een veilige werkplek voor iedereen die bij je over de vloer komt. De Arbowet geldt ook voor freelancers: zorg dat ze veilig kunnen werken en veiligheidsinstructies krijgen.",
         points: [
-          "Verzekering: gaat er toch iets mis, dan zijn freelancers via ZekerFlex automatisch verzekerd voor ongevallen en aansprakelijkheid via onze verzekeringspartner.",
+          "Verzekering: ZekerFlex biedt op dit moment geen verzekering; freelancers regelen zelf een aansprakelijkheidsverzekering. Vraag er gerust naar voordat de klus begint.",
         ],
       },
     ],

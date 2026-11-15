@@ -112,7 +112,7 @@ const WERKER_APPS: OsApp[] = [
   { id: "w-paspoort", naam: "Werkpaspoort", uitleg: "Je bewezen werkverleden, met QR-code.", href: "/dashboard/paspoort", icoon: "schild", categorie: "account", rollen: WERKER },
   { id: "w-certificaten", naam: "Certificaten", uitleg: "VCA, BHV, heftruck — bewijs van wat je kunt.", href: "/dashboard/certificaten", icoon: "schild", categorie: "account", rollen: WERKER, zoek: ["vca", "bhv", "diploma"] },
   { id: "w-verificatie", naam: "Verificatie", uitleg: "Je identiteit en KVK controleren.", href: "/dashboard/verificatie", icoon: "schild", categorie: "account", rollen: WERKER, zoek: ["kyc", "id"] },
-  { id: "w-verzekering", naam: "Verzekering", uitleg: "Je dekking tijdens een klus.", href: "/dashboard/verzekering", icoon: "schild", categorie: "account", rollen: WERKER },
+  { id: "w-verzekering", naam: "Verzekering", uitleg: "Welke verzekering je zelf regelt.", href: "/dashboard/verzekering", icoon: "schild", categorie: "account", rollen: WERKER },
   { id: "w-beoordelingen", naam: "Beoordelingen", uitleg: "Wat opdrachtgevers over je werk zeggen.", href: "/dashboard/beoordelingen", icoon: "ster", categorie: "account", rollen: WERKER, zoek: ["reviews", "sterren"] },
   { id: "w-vooruitblik", naam: "Vooruitblik", uitleg: "Wat je deze maand ongeveer gaat verdienen.", href: "/dashboard/vooruitblik", icoon: "groei", categorie: "geld", rollen: WERKER },
   { id: "w-assistent", naam: "Assistent", uitleg: "Vraag het de AI-assistent, in je eigen taal.", href: "/dashboard/assistent", icoon: "ai", categorie: "ai", rollen: WERKER },

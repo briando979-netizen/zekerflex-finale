@@ -101,7 +101,7 @@ export default function VoorwaardenPage() {
       />
       <LegalSection
         heading="7. Verzekering"
-        body="ZekerFlex biedt als aanvullende dienst dat de Opdrachtnemer voor elke Opdracht is verzekerd voor aansprakelijkheid en ongevallen via onze verzekeringspartner. De voorwaarden, dekkingen en uitsluitingen staan in de polisdocumenten die via je account bij de verzekeringspartner beschikbaar zijn. Het staat de Opdrachtnemer vrij zelf aanvullende verzekeringen af te sluiten."
+        body="ZekerFlex biedt op dit moment geen verzekering aan voor Opdrachten. De Opdrachtnemer zorgt zelf voor een passende verzekering, in elk geval voor aansprakelijkheid, en voor eventuele aanvullende verzekeringen. Biedt ZekerFlex later een verzekering aan, dan wordt dat vooraf gemeld en staan de voorwaarden, dekkingen en uitsluitingen in de polisdocumenten."
       />
       <LegalSection
         heading="8. Beëindiging registratie"
