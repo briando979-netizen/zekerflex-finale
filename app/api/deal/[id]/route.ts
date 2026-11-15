@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { lijst } from "@/lib/http/zod-lijst";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { enforceRateLimit } from "@/lib/rate-limit";
@@ -19,7 +20,7 @@ const schema = z.discriminatedUnion("actie", [
     naam: z.string().trim().min(1).max(120),
     email: z.string().trim().email().max(200),
     telefoon: z.string().trim().max(40).optional(),
-    keuze: z.array(z.string().max(40)).max(20),
+    keuze: lijst(z.string().max(40), { max: 20 }),
     consent: z.literal(true),
   }),
   z.object({

@@ -49,6 +49,7 @@
     "tests/voorstel-indoor-regels.test.ts",
     "tests/voorstel-sollicitatie-regels.test.ts",
     "tests/werker-taal-bewaker.test.ts",
-    "tests/werkgever-taal-bewaker.test.ts"
+    "tests/werkgever-taal-bewaker.test.ts",
+    "tests/zod-lijst.test.ts"
   ]
 }

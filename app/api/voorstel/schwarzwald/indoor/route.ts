@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { lijst } from "@/lib/http/zod-lijst";
 import { AppError } from "@/lib/errors";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
@@ -17,7 +18,7 @@ export const dynamic = "force-dynamic";
 const schema = z.object({
   email: z.string().trim().email().max(200),
   naam: z.string().trim().max(120).optional(),
-  interesses: z.array(z.string().max(30)).max(10).optional(),
+  interesses: lijst(z.string().max(30), { max: 10 }).optional(),
   groep: z.number().int().min(1).max(500).optional(),
   toestemming: z.literal(true),
 });

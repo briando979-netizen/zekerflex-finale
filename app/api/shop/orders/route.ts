@@ -1,6 +1,7 @@
 import { emailHash } from "@/lib/auth/email-hash";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { lijst } from "@/lib/http/zod-lijst";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
@@ -34,10 +35,7 @@ const schema = z.object({
   address: z.string().trim().min(3).max(200),
   postalCode: z.string().trim().min(3).max(12),
   city: z.string().trim().min(1).max(80),
-  items: z
-    .array(z.object({ variantId: z.string().min(1), qty: z.number().int().positive().max(99) }))
-    .min(1)
-    .max(40),
+  items: lijst(z.object({ variantId: z.string().min(1), qty: z.number().int().positive().max(99) }), { min: 1, max: 40 }),
   /** partnercode uit een partnerlink (/shop/p/<code>), alleen bewaard in het tabblad */
   partner: z.string().trim().max(40).optional(),
   /** zakelijk bestellen: komt op de bon, de pakbon en in de mails */
