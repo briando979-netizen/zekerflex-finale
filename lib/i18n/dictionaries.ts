@@ -1058,6 +1058,9 @@ export const nl = {
     weergaveLabel: "Zo bekijk je het",
     weergave3d: "3D-paspop",
     weergaveFoto: "Op mijn foto",
+    // de telefoon (15 nov 2026): de paspop bedekte het halve scherm; nu kleiner en weg te klikken
+    paspopVerbergen: "Verbergen",
+    paspopTonen: "Paspop tonen",
     probeerAan: "Pas aan op je paspop",
     pdpAdvies: "Jouw maat volgens je paskamer: {maat}",
     pdpKies: "Kies maat {maat}",

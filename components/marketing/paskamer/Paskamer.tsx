@@ -138,6 +138,8 @@ export function Paskamer({ producten, looks, start, startLook = null }: { produc
   const [vlak, setVlak] = useState(false); // true: 3D niet beschikbaar, dan de tekening
   const [draait, setDraait] = useState(true);
   const [weergave, setWeergave] = useState<"3d" | "foto">("3d");
+  // op de telefoon weggeklikt (15 nov 2026): het vak blijft wel bestaan (CSS), dus de 3D-paspop laadt niet opnieuw
+  const [verborgen, setVerborgen] = useState(false);
   const startGedaan = useRef(false);
 
   const perId = useMemo(() => new Map(producten.map((x) => [x.id, x])), [producten]);
@@ -235,14 +237,33 @@ export function Paskamer({ producten, looks, start, startLook = null }: { produc
       <div className="mx-auto max-w-[1440px] px-4 pb-16 sm:px-6 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-8 lg:px-8">
         {/* de paspop: op de telefoon blijft hij bovenaan staan terwijl je kiest */}
         <div className="-mx-4 bg-paper-soft px-4 pb-3 max-lg:sticky max-lg:top-[110px] max-lg:z-20 sm:-mx-6 sm:px-6 lg:sticky lg:top-[92px] lg:mx-0 lg:self-start lg:px-0 lg:pb-0">
-          <div role="group" aria-label={p.weergaveLabel} className="mb-2 grid grid-cols-2 rounded-xl bg-white p-1 shadow-e1">
+          <div role="group" aria-label={p.weergaveLabel} className="mb-2 grid grid-cols-[1fr_1fr_auto] rounded-xl bg-white p-1 shadow-e1 lg:grid-cols-2">
             {([["3d", p.weergave3d], ["foto", p.weergaveFoto]] as const).map(([id, naam]) => (
-              <button key={id} type="button" aria-pressed={weergave === id} onClick={() => setWeergave(id)} className={`h-9 rounded-lg text-[13px] font-bold transition ${weergave === id ? "bg-brand-500 text-white" : "text-ink hover:bg-paper-soft"}`}>
+              <button
+                key={id}
+                type="button"
+                aria-pressed={weergave === id && !verborgen}
+                onClick={() => (setWeergave(id), setVerborgen(false))}
+                className={`h-9 rounded-lg text-[13px] font-bold transition ${weergave === id && !verborgen ? "bg-brand-500 text-white" : "text-ink hover:bg-paper-soft"}`}
+              >
                 {naam}
               </button>
             ))}
+            {/* alleen op de telefoon: de paspop wegklikken, zodat je de hele ruimte hebt om te kiezen */}
+            <button
+              type="button"
+              aria-expanded={!verborgen}
+              aria-controls="pk-vak"
+              onClick={() => setVerborgen((v) => !v)}
+              className="h-9 rounded-lg px-3 text-[13px] font-bold text-ink hover:bg-paper-soft lg:hidden"
+            >
+              {verborgen ? p.paspopTonen : p.paspopVerbergen}
+            </button>
           </div>
-          <div className="relative h-[44vh] min-h-[300px] overflow-hidden rounded-2xl border border-hair bg-[radial-gradient(ellipse_at_50%_34%,#ffffff_0%,#f1ede5_55%,#e4ded2_100%)] shadow-e1 lg:h-[calc(100vh-170px)] lg:max-h-[860px]">
+          <div
+            id="pk-vak"
+            className={`relative h-[28vh] max-h-[240px] min-h-[180px] overflow-hidden rounded-2xl border border-hair bg-[radial-gradient(ellipse_at_50%_34%,#ffffff_0%,#f1ede5_55%,#e4ded2_100%)] shadow-e1 lg:block lg:h-[calc(100vh-170px)] lg:max-h-[860px] lg:min-h-[300px] ${verborgen ? "max-lg:hidden" : ""}`}
+          >
             {weergave === "foto" && (
               <MijnFoto
                 lengte={l.lengte}

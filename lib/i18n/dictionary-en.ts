@@ -1047,6 +1047,8 @@ export const en: Dict = {
     weergaveLabel: "How to view",
     weergave3d: "3D mannequin",
     weergaveFoto: "On my photo",
+    paspopVerbergen: "Hide",
+    paspopTonen: "Show mannequin",
     probeerAan: "Try it on your mannequin",
     pdpAdvies: "Your size according to your fitting room: {maat}",
     pdpKies: "Choose size {maat}",
