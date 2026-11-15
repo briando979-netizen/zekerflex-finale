@@ -7,7 +7,8 @@ import { modelForPurpose } from "@/lib/ai/models";
 import { primeNode, registeredNode, registeredNodeUrl } from "@/lib/ai/node-registry";
 import { getLlmApiKey } from "@/lib/ai/llm-key";
 import { primeMainModel, effectiveMainModel } from "@/lib/ai/llm-model";
-import { gratisAan, gratisBasis, primeGratis } from "@/lib/ai/gratis";
+import { gratisAan, gratisBasis, gratisModel, primeGratis } from "@/lib/ai/gratis";
+import { gezondModelUit } from "@/lib/ai/gezond-model";
 
 // ---------------------------------------------------------------------------
 // Self-hosted LLM adapter.
@@ -827,11 +828,9 @@ export async function llmHealth(): Promise<LlmHealth> {
     if (res.ok) {
       const body = (await res.json().catch(() => null)) as { data?: { id?: string }[] } | null;
       const served = body?.data?.map((m) => m.id).filter(Boolean) as string[] | undefined;
-      // Gemini's OpenAI-compatible list says "models/gemini-…" for the model you configure as "gemini-…"
-      const bare = (m: string) => m.replace(/^models\//, "");
-      const model =
-        served?.find((m) => bare(m) === env.LLM_MODEL) ?? served?.[0] ?? env.LLM_MODEL;
-      return { ok: true, baseUrl: base, model: bare(model) };
+      // met "alles gratis" praat de chat met ons eigen model, niet met LLM_MODEL; nooit een embedding-model noemen (lib/ai/gezond-model.ts)
+      const verwacht = gratisAan() ? gratisModel() : env.LLM_MODEL;
+      return { ok: true, baseUrl: base, model: gezondModelUit(served, verwacht) };
     }
     if (res.status !== 404) {
       return { ok: false, baseUrl: base, model: env.LLM_MODEL, detail: `models endpoint HTTP ${res.status}` };
