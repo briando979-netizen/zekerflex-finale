@@ -13,6 +13,7 @@ import { wisBsnVoorstelVan } from "@/lib/fiscal/bsn-voorstel";
 import { ERASED_EMAIL_DOMAIN } from "@/lib/privacy/gewist";
 import { overdrachtUploads } from "@/lib/kyc/overdracht";
 import { wisVerlatenOrganisaties } from "@/lib/afspraken/bewaren";
+import { wisVoorraadmeldingenVan } from "@/lib/shop/voorraadmelding-server";
 
 // ---------------------------------------------------------------------------
 // Account erasure (AVG art. 17).
@@ -106,6 +107,8 @@ export async function anonymizeUser(
   const oldPhone = user.phone;
   const profileId = user.freelancerProfile?.id ?? null;
   const cleared: Record<string, number> = {};
+  // "Laat me weten als hij er weer is" in de webshop staat op e-mailadres, niet op gebruiker (lib/shop/voorraadmelding.ts)
+  cleared.voorraadmeldingen = await wisVoorraadmeldingenVan(oldEmail).catch(() => 0);
 
   // Upload ids to purge (bytes + row) after the transaction.
   const uploadIds = new Set<string>();
