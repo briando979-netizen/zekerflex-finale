@@ -66,6 +66,9 @@ COPY --from=build --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/
 # so `npx prisma migrate deploy` works in this runtime image.
 RUN mkdir -p ./node_modules/.bin && ln -sf ../prisma/build/index.js ./node_modules/.bin/prisma
 COPY --from=build --chown=nextjs:nodejs /app/prisma ./prisma
+# De handleidingen voor de kennisbank (docs/kennisbank): Admin → Kennisbank → Vullen leest ze hier (lib/kennisbank/outline.ts, process.cwd()/docs/kennisbank).
+# Zonder deze regel was de map in de draaiende app leeg en kreeg Outline nooit een handleiding.
+COPY --from=build --chown=nextjs:nodejs /app/docs/kennisbank ./docs/kennisbank
 # Welke commit dit image is (git archive vult hem in, zie .gitattributes); de app
 # toont hem in Admin → ZekerFlex AI → Live zetten (lib/bouwer/versie.ts).
 COPY --from=build --chown=nextjs:nodejs /app/lib/bouwer/VERSIE.txt ./VERSIE

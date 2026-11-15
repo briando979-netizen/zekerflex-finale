@@ -15,7 +15,9 @@ storage
 .vscode
 tests
 deploy
-docs
+docs/*
+# de handleidingen gaan wel mee: de app vult er de kennisbank (Outline) mee (lib/kennisbank/outline.ts)
+!docs/kennisbank
 infra
 .github
 **/.terraform

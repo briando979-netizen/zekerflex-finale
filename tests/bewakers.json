@@ -21,6 +21,7 @@
     "tests/eigen-test.test.ts",
     "tests/gratis-dekking.test.ts",
     "tests/hulp-centrum.test.ts",
+    "tests/handleiding-opdrachtgevers.test.ts",
     "tests/i18n-bundle.test.ts",
     "tests/id-redenen.test.ts",
     "tests/juridisch-canonical.test.ts",
