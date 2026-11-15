@@ -11,6 +11,7 @@ import { createLead } from "@/lib/sales/leads";
 import { euroPrijs, extensie } from "@/lib/domeinen/extensies";
 import { leesDomein } from "@/lib/domeinen/naam";
 import { beschikbaarheid } from "@/lib/domeinen/beschikbaar";
+import { isTestAdres } from "@/lib/domeinen/verlengen-core";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,7 +64,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       logger.warn("domein-aanvraag -> sales mislukt", { error: (e as Error).message });
     }
 
-    await sendMail({
+    // een testadres (livetest) krijgt geen echte mail naar sales; de lead staat er wel, zodat de test hem kan nakijken
+    if (!isTestAdres(d.email)) await sendMail({
       to: CONTACTS.sales,
       replyTo: d.email,
       kind: "domein-aanvraag",

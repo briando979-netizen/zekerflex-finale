@@ -11,6 +11,7 @@ import { domeinenOpWebsite } from "@/lib/domeinen/koppelen";
 import { verlengStanden, zetAutoVerlengen } from "@/lib/domeinen/verlengen";
 import { behoudStanden, bevestigVerhuis, blijf, vraagVerhuis } from "@/lib/domeinen/behoud";
 import { VERHUIS_REDENEN } from "@/lib/domeinen/behoud-core";
+import { betalenUit } from "@/lib/billing/stripe-betalen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,8 +46,9 @@ const fout = (err: unknown) => {
 export async function GET(): Promise<NextResponse> {
   try {
     const b = await bedrijf();
-    const [bestellingen, bundel] = await Promise.all([lijst(b.tenantId), bundelOver(b.tenantId)]);
-    return NextResponse.json({ bestellingen, bundel }, { headers: { "cache-control": "no-store" } });
+    // betalen: staat online betalen (Stripe) aan? Zo niet, dan biedt de zoeker aanvragen aan in plaats van "Bestel en betaal"
+    const [bestellingen, bundel, uit] = await Promise.all([lijst(b.tenantId), bundelOver(b.tenantId), betalenUit().catch(() => null)]);
+    return NextResponse.json({ bestellingen, bundel, betalen: !uit }, { headers: { "cache-control": "no-store" } });
   } catch (err) {
     return fout(err);
   }
