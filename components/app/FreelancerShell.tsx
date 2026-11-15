@@ -80,7 +80,6 @@ export function FreelancerShell({
   theme,
   inApp = false,
   canSwitchToEmployer = false,
-  onboarding = false,
   hulp,
   handleidingen = null,
   tabVolgorde = null,
@@ -92,8 +91,6 @@ export function FreelancerShell({
   handleidingen?: string | null;
   /** eigen volgorde van de knoppen in de balk (lib/werker/tab-volgorde.ts); null = de standaard */
   tabVolgorde?: readonly string[] | null;
-  /** de onboarding is nog niet ingevuld (lib/onboarding/werker-poort.ts): alleen Start en Account */
-  onboarding?: boolean;
   userName: string;
   /** Eigen profielfoto — toont in de Account-tab i.p.v. het poppetje-icoon. */
   avatarUrl?: string | null;
@@ -104,11 +101,7 @@ export function FreelancerShell({
   children: ReactNode;
 }) {
   useLocaleSync();
-  const zichtbaar = onboarding
-    ? TABS.filter((t) => t.key === "discover" || t.key === "account")
-    : inApp || !BANK_AAN
-      ? TABS.filter((t) => t.key !== "bank")
-      : TABS;
+  const zichtbaar = inApp || !BANK_AAN ? TABS.filter((t) => t.key !== "bank") : TABS;
   // de volgorde uit de Site-ontwerper (Menu); zonder eigen volgorde dezelfde lijst terug
   const tabs = sorteerTabs(zichtbaar, tabVolgorde);
   const pathname = usePathname();
@@ -159,7 +152,7 @@ export function FreelancerShell({
             >
               <ISearch />
             </Link>
-            {hulp && <HulpCentrum t={hulp} handleidingen={handleidingen} onboarding={onboarding} />}
+            {hulp && <HulpCentrum t={hulp} handleidingen={handleidingen} />}
             <NotificationsBell texts={ft.meldingen} app="werker" />
             <PushSelfHeal />
           </div>

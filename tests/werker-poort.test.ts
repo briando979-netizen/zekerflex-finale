@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BRANCHE_STAP_SINDS, branchesTellen, openVerplicht, toegestaanTijdensOnboarding, volgendeNaVerificatie, werkerOnboardingKlaar, type WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
+import { BRANCHE_STAP_SINDS, branchesTellen, openVerplicht, volgendeNaVerificatie, werkerOnboardingKlaar, type WerkerPoortFeiten } from "@/lib/onboarding/werker-poort";
 
 // De onboarding van de werker (10 nov 2026). Sinds 12 nov is de app open en wacht alleen reageren op de onboarding;
 // tweestapsverificatie is dan optioneel (eigenaar).
@@ -44,20 +44,6 @@ describe("werkerOnboardingKlaar", () => {
       // het recht om te werken hoort niet meer bij de onboarding (10 nov): dat telt vóór de eerste betaalde klus;
       // tweestapsverificatie is sinds 12 nov optioneel (eigenaar)
       expect(werkerOnboardingKlaar({ ...ALLES, [k]: false })).toBe(k === "werkrechtIngevuld" || k === "tweestapAan");
-    }
-  });
-});
-
-describe("toegestaanTijdensOnboarding", () => {
-  it("de schermen om de stappen in te vullen en je account", () => {
-    for (const p of ["/dashboard/verificatie", "/dashboard/verificatie/", "/dashboard/fiscaal", "/dashboard/account", "/dashboard/account/taal"]) {
-      expect(toegestaanTijdensOnboarding(p)).toBe(true);
-    }
-  });
-
-  it("al het andere toont de start, ook bijna-gelijke namen", () => {
-    for (const p of ["/dashboard", "/dashboard/klussen", "/dashboard/diensten", "/dashboard/berichten", "/dashboard/verificatiex", "/dashboard/accounts", "", null, undefined]) {
-      expect(toegestaanTijdensOnboarding(p)).toBe(false);
     }
   });
 });
