@@ -858,7 +858,7 @@ export function MessageBubble({
                 transcript={m.transcript}
                 onTranscribe={onTranscribe && !m.pending ? () => onTranscribe(m) : undefined}
                 mine={mine}
-                afzender={{ userId: m.from, name: mine ? "" : senderName ?? "", role: senderRole ?? "freelancer", avatars }}
+                afzender={{ userId: m.from, name: mine ? "" : senderName ?? "", role: senderRole ?? "freelancer", avatars: avatars ?? {} }}
                 beluisterd={Boolean(mine ? m.beluisterd : m.doorMijBeluisterd)}
                 onAfgespeeld={
                   !mine && !m.pending && !m.doorMijBeluisterd
