@@ -184,7 +184,7 @@ describe("het overzicht van de AI-medewerkers", () => {
 
   it("de teams roepen de twee nieuwe medewerkers aan", () => {
     const teams = bron("lib/ai-teams/extra-teams.ts");
-    expect(teams).toContain("await welkomstcoach(now, t);");
-    expect(teams).toContain("await servicedeskConcepten(now, t);");
+    expect(teams).toContain("await welkomstcoach(now, t).catch(");
+    expect(teams).toContain("await servicedeskConcepten(now, t).catch(");
   });
 });
