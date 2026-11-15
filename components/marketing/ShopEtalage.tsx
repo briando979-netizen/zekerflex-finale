@@ -16,6 +16,9 @@ function catLabel(c: string, t: Dict): string {
 function voorLabel(v: VoorWaarde, t: Dict): string {
   return v === "heren" ? t.shop.doelHeren : v === "vrouwen" ? t.shop.doelVrouwen : t.shop.doelKinderen;
 }
+/** "1 artikel", "7 artikelen" */
+const artikelen = (n: number, t: Dict) => (n === 1 ? t.shop.artikelEen : fmt(t.shop.articles, { n }));
+
 function tegelLabel(g: OntdekTegel, t: Dict): string {
   if (g.soort === "collectie") return g.collectie ?? "";
   if (g.soort === "catVoor" && g.cat && g.voor) return fmt(t.shop.groepVoor, { cat: catLabel(g.cat, t), voor: voorLabel(g.voor, t) });
@@ -29,9 +32,9 @@ export function ShopOntdek({ t, seizoen, tegels }: { t: Dict; seizoen: Seizoen |
   const sub = seizoen ? t.shop.etalageSeizoenSub : t.shop.etalageWerkSub;
   const href = seizoen ? "/shop?cat=Cadeaus#collectie" : "/shop?cat=Werk%20%26%20PBM#collectie";
   return (
-    <section aria-labelledby="shop-uitgelicht" className="bg-white">
+    <section aria-labelledby="shop-ontdek" className="bg-white">
       <div className={`${WRAP} py-8 lg:py-10`}>
-        <h2 id="shop-uitgelicht" className="sr-only">
+        <h2 id="shop-ontdek" className="sr-only">
           {t.shop.uitgelicht}
         </h2>
         <div className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
@@ -55,6 +58,13 @@ export function ShopOntdek({ t, seizoen, tegels }: { t: Dict; seizoen: Seizoen |
                 </Link>
               </li>
             ))}
+            {tegels.length % 4 !== 0 && (
+              <li>
+                <Link href="/shop#collectie" className="grid h-full place-items-center rounded-xl border border-hair bg-mintwash p-2 text-center text-[11px] font-bold text-ink transition hover:border-brand-300 sm:text-[13px]">
+                  {t.shop.allesBekijken} →
+                </Link>
+              </li>
+            )}
           </ul>
         </div>
       </div>
@@ -97,7 +107,7 @@ export function ShopThemas({ t, themas, seizoen }: { t: Dict; themas: Thema[]; s
                     ))}
                   </span>
                   <span className="border-t border-hair px-4 py-2.5 text-[12px] font-semibold text-brand-600">
-                    {fmt(t.shop.articles, { n: th.aantal })} →
+                    {artikelen(th.aantal, t)} →
                   </span>
                 </Link>
               </li>
@@ -134,7 +144,7 @@ export function ShopCadeauhulp({ t, keuzes }: { t: Dict; keuzes: { sleutel: Cade
               <li key={k.sleutel}>
                 <Link href={k.href} className="flex h-full flex-col rounded-xl border border-hair bg-white px-4 py-3 transition hover:border-brand-300 hover:shadow-e1">
                   <span className="text-[15px] font-bold text-ink">{cadeauLabel(k.sleutel, t)}</span>
-                  <span className="mt-0.5 text-[12px] text-neutralx-600">{fmt(t.shop.articles, { n: k.aantal })}</span>
+                  <span className="mt-0.5 text-[12px] text-neutralx-600">{artikelen(k.aantal, t)}</span>
                 </Link>
               </li>
             ))}
