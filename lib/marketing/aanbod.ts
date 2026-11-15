@@ -556,6 +556,7 @@ export const AANBOD: AanbodItem[] = [
     voorWie: "Rijscholen en zelfstandige instructeurs",
     status: "beschikbaar",
     start: aanmeldenVoor("rijschool"),
+    voorbeelden: { label: "Bekijk alles voor rijscholen", href: "/rijschool-software" },
     zoekwoorden: ["rijschool software", "rijschool planning", "rijschool app", "lesplanner rijschool"],
   },
 

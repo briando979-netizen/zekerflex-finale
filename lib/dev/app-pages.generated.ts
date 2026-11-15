@@ -323,6 +323,7 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/retail-vacatures","file":"app/(marketing)/retail-vacatures/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/retail-vacatures/[stad]","file":"app/(marketing)/retail-vacatures/[stad]/page.tsx","area":"Marketing","dynamic":true},
   {"route":"/review-check","file":"app/(marketing)/review-check/page.tsx","area":"Marketing","dynamic":false},
+  {"route":"/rijschool-software","file":"app/(marketing)/rijschool-software/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/sales-partner","file":"app/(marketing)/sales-partner/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/schoonmaak-personeel-inhuren","file":"app/(marketing)/schoonmaak-personeel-inhuren/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/schoonmaak-personeel-inhuren/[stad]","file":"app/(marketing)/schoonmaak-personeel-inhuren/[stad]/page.tsx","area":"Marketing","dynamic":true},
