@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { lijst } from "@/lib/http/zod-lijst";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/lib/audit";
 import { withAdminAccess } from "@/lib/auth/handlers";
@@ -23,7 +24,7 @@ const patchSchema = z.object({
   imageUploadId: z.string().max(128).nullable().optional(),
   modelUploadId: z.string().max(128).nullable().optional(),
   imageUrl: shopImageRef.nullable().optional(),
-  fotos: z.array(shopImageRef).max(MAX_EXTRA_FOTOS).optional(),
+  fotos: lijst(shopImageRef, { max: MAX_EXTRA_FOTOS }).optional(),
   modelPhotoUrl: shopImageRef.nullable().optional(),
   badge: z.string().trim().max(40).nullable().optional(),
   active: z.boolean().optional(),

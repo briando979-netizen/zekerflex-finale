@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import { lijst } from "@/lib/http/zod-lijst";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
@@ -54,10 +55,7 @@ export const POST = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (r
 // erbij, wat er niet meer in staat gaat weg; de voorraad van het product is de som. In één transactie: mislukt er iets,
 // dan blijft alles zoals het was.
 const bulkSchema = z.object({
-  varianten: z
-    .array(z.object({ size: z.string().trim().max(20).nullable(), color: z.string().trim().max(40).nullable(), stock: z.number().int().nonnegative().max(1_000_000) }))
-    .min(1)
-    .max(MAX_VARIANTEN),
+  varianten: lijst(z.object({ size: z.string().trim().max(20).nullable(), color: z.string().trim().max(40).nullable(), stock: z.number().int().nonnegative().max(1_000_000) }), { min: 1, max: MAX_VARIANTEN }),
 });
 
 export const PUT = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (request, { params, principal }) => {
