@@ -17,6 +17,10 @@ import { isBtwNummer, normaliseerBtw } from "@/lib/shop/zakelijk";
 import { legVerkopersVast } from "@/lib/shop/verkoper";
 import { verzendkostenVoor } from "@/lib/shop/verzending";
 import { bonToken } from "@/lib/shop/bon-token";
+import { platformBankgegevens } from "@/lib/billing/overschrijving-bron";
+import { huidigeShopBetaalwijze } from "@/lib/shop/overschrijving-server";
+import { shopOverschrijvingVoor } from "@/lib/shop/overschrijving";
+import { meldOverschrijvingBesteld } from "@/lib/shop/bestelling-betaald";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -71,7 +75,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       throw AppError.validation("Dit btw-nummer klopt niet. Een Nederlands btw-nummer ziet eruit als NL123456789B01.");
     }
 
-    await eisBetalenAan(); // vóór de bestelling wordt vastgelegd: geen open bestelling zonder betaalmogelijkheid
+    // Stripe dicht en de rekening van ZekerFlex ingevuld: de klant maakt zelf over (lib/shop/overschrijving.ts). Anders geldt wat altijd
+    // gold: vóór de bestelling wordt vastgelegd moet betalen kunnen, geen open bestelling zonder betaalmogelijkheid.
+    const perOverschrijving = (await huidigeShopBetaalwijze()) === "overschrijving";
+    if (!perOverschrijving) await eisBetalenAan();
 
     const variants = await prisma.shopProductVariant.findMany({
       where: { id: { in: d.items.map((i) => i.variantId) }, product: { active: true } },
@@ -178,10 +185,21 @@ export async function POST(request: Request): Promise<NextResponse> {
       }
     }
 
+    const baseUrl = env.APP_BASE_URL.replace(/\/+$/, "");
+    if (perOverschrijving) {
+      const bank = platformBankgegevens();
+      const o = shopOverschrijvingVoor({ iban: bank.iban, naam: bank.naam, orderId: order.id, totaalCents: totalCents, status: order.status, stripeSessionId: null });
+      if (o) {
+        await meldOverschrijvingBesteld(order, o);
+        logger.info("shop order pending transfer", { id: order.id, totalCents, lines: lines.length });
+        // dezelfde vorm als bij Stripe: de winkelwagen gaat naar checkoutUrl, hier de bestelpagina met de gegevens om over te maken
+        return NextResponse.json({ ok: true, id: order.id, totalCents, overschrijving: true, checkoutUrl: `${baseUrl}/shop/bestelling/${order.id}?t=${bonToken(order.id)}` });
+      }
+    }
+
     // Confirmation mails go out from the Stripe webhook once payment is
     // actually confirmed (app/api/webhooks/stripe/route.ts) — never here,
     // since nothing has been paid yet at this point.
-    const baseUrl = env.APP_BASE_URL.replace(/\/+$/, "");
     let session;
     try {
       session = await createShopOrderCheckoutSession({

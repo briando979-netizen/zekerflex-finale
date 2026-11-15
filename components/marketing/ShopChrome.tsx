@@ -14,6 +14,7 @@ import { EMPLOYER_LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config"
 import { fmt, type Dict } from "@/lib/i18n/dictionaries";
 import { ShopModusProvider, useShopModus } from "@/components/marketing/ShopModus";
 import { btwOverzicht, btwTarief, type ShopModus } from "@/lib/shop/modus";
+import type { ShopBetaalwijze } from "@/lib/shop/overschrijving-kenmerk";
 
 // Gedeelde shop-omlijsting, opgebouwd als een marktplaats: een servicebalk, de
 // merkbalk met een grote zoekbalk (blijft staan tijdens scrollen), de
@@ -41,10 +42,11 @@ const WRAP = "mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8";
 const CATS = ["Werk & PBM", "Kleding", "Werkdag", "Cadeaus"] as const;
 
 /** De omlijsting met de keuze particulier/zakelijk (uit het cookie, gelezen in app/shop/layout.tsx). */
-export function ShopChrome({ children, modus = "particulier" }: { children: ReactNode; modus?: ShopModus }) {
+/** `betaalwijze` (app/shop/layout.tsx): online via Stripe, per overschrijving, of nu even niet; de shop belooft alleen wat echt kan. */
+export function ShopChrome({ children, modus = "particulier", betaalwijze = "online" }: { children: ReactNode; modus?: ShopModus; betaalwijze?: ShopBetaalwijze }) {
   return (
     <ShopModusProvider modus={modus}>
-      <ShopOmlijsting>{children}</ShopOmlijsting>
+      <ShopOmlijsting betaalwijze={betaalwijze}>{children}</ShopOmlijsting>
     </ShopModusProvider>
   );
 }
@@ -70,7 +72,7 @@ function navVoor(modus: ShopModus, t: Dict): NavItem[] {
       ];
 }
 
-function ShopOmlijsting({ children }: { children: ReactNode }) {
+function ShopOmlijsting({ children, betaalwijze }: { children: ReactNode; betaalwijze: ShopBetaalwijze }) {
   const { locale, t } = useI18n();
   const { modus } = useShopModus();
   const NAV = navVoor(modus, t);
@@ -309,9 +311,9 @@ function ShopOmlijsting({ children }: { children: ReactNode }) {
           <FooterCol title={t.shop.ordering} links={[{ label: t.shop.businessQuote, href: "/contact" }, { label: t.shop.terms, href: "/voorwaarden" }, { label: t.shop.myAccount, href: "/shop/account" }]} />
           <FooterCol title="ZekerFlex" links={[{ label: "Over ZekerFlex", href: "/over-ons" }, { label: "Werken bij", href: "/over-ons#werken-bij" }, { label: "Uitleg in het kort", href: "/uitleg" }, { label: t.shop.toPlatform, href: "/dashboard" }]} />
           <div>
-            <p className="text-[13px] font-bold">{t.shop.payWith}</p>
+            {betaalwijze !== "dicht" && <p className="text-[13px] font-bold">{t.shop.payWith}</p>}
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {["iDEAL", "Mastercard", "Visa", "Apple Pay", "Op rekening"].map((m) => (
+              {(betaalwijze === "online" ? ["iDEAL", "Mastercard", "Visa", "Apple Pay", "Op rekening"] : betaalwijze === "overschrijving" ? [t.shop.bankTransfer] : []).map((m) => (
                 <span key={m} className="rounded bg-white px-2 py-1 text-[11px] font-semibold text-ink">
                   {m}
                 </span>
@@ -595,10 +597,14 @@ function ShopOmlijsting({ children }: { children: ReactNode }) {
                   {orderError}
                 </p>
               )}
-              <button className="h-12 w-full rounded-lg bg-brand-500 text-[15px] font-bold text-white transition hover:bg-brand-600 disabled:opacity-60" type="submit" disabled={placing || items.length === 0}>
-                {placing ? t.shop.toPaymentPending : t.shop.toPayment}
+              <button className="h-12 w-full rounded-lg bg-brand-500 text-[15px] font-bold text-white transition hover:bg-brand-600 disabled:opacity-60" type="submit" disabled={placing || items.length === 0 || betaalwijze === "dicht"}>
+                {betaalwijze === "overschrijving" ? (placing ? t.shop.placeOrderBankPending : t.shop.placeOrderBank) : placing ? t.shop.toPaymentPending : t.shop.toPayment}
               </button>
-              <p className="text-center text-[12px] text-neutralx-500">{t.shop.securePaymentNote}</p>
+              {betaalwijze === "dicht" ? (
+                <p role="status" className="text-center text-[12px] font-semibold text-amber-800">{t.shop.paymentClosedNote}</p>
+              ) : (
+                <p className="text-center text-[12px] text-neutralx-500">{betaalwijze === "overschrijving" ? t.shop.bankPaymentNote : t.shop.securePaymentNote}</p>
+              )}
             </form>
           </div>
         </div>

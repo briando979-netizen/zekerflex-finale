@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useShopCart } from "@/components/marketing/useShopCart";
+import type { ShopOverschrijving } from "@/lib/shop/overschrijving-kenmerk";
 
 type Status = "PENDING_PAYMENT" | "RECEIVED" | "CONFIRMED" | "SHIPPED" | "CANCELLED" | "PAYMENT_FAILED";
 
@@ -41,7 +42,7 @@ function trackingUrl(carrier: string | null, trackingNumber: string | null): str
   return null;
 }
 
-export function OrderTracking({ orderId, bonUrl = null }: { orderId: string; bonUrl?: string | null }) {
+export function OrderTracking({ orderId, bonUrl = null, overschrijving = null }: { orderId: string; bonUrl?: string | null; overschrijving?: ShopOverschrijving | null }) {
   const [order, setOrder] = useState<Order | null>(null);
   const [notFound, setNotFound] = useState(false);
   const { clear } = useShopCart();
@@ -72,11 +73,12 @@ export function OrderTracking({ orderId, bonUrl = null }: { orderId: string; bon
   }, [orderId]);
 
   useEffect(() => {
-    if (order?.status === "RECEIVED" && !clearedRef.current) {
+    // betaald, of per overschrijving besteld (de bestelling staat vast, betalen gaat buiten de shop om): de winkelwagen is klaar
+    if ((order?.status === "RECEIVED" || (order?.status === "PENDING_PAYMENT" && overschrijving)) && !clearedRef.current) {
       clearedRef.current = true;
       clear();
     }
-  }, [order?.status, clear]);
+  }, [order?.status, clear, overschrijving]);
 
   if (notFound) {
     return (
@@ -98,7 +100,8 @@ export function OrderTracking({ orderId, bonUrl = null }: { orderId: string; bon
 
   return (
     <div className="mx-auto max-w-xl py-14">
-      {order.status === "PENDING_PAYMENT" && (
+      {order.status === "PENDING_PAYMENT" && overschrijving && <Overmaken o={overschrijving} />}
+      {order.status === "PENDING_PAYMENT" && !overschrijving && (
         <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           We wachten nog op bevestiging van je bank — deze pagina ververst zichzelf zodra dat binnen is.
         </div>
@@ -172,5 +175,49 @@ export function OrderTracking({ orderId, bonUrl = null }: { orderId: string; bon
         </a>
       )}
     </div>
+  );
+}
+
+/** De gegevens om over te maken, met een kopieerknop voor het IBAN en het kenmerk (lib/shop/overschrijving.ts). */
+function Overmaken({ o }: { o: ShopOverschrijving }) {
+  const [gekopieerd, setGekopieerd] = useState("");
+  const kopieer = (wat: string, tekst: string) => {
+    void navigator.clipboard
+      ?.writeText(tekst)
+      .then(() => setGekopieerd(`${wat} gekopieerd`))
+      .catch(() => setGekopieerd(""));
+  };
+  const rij = (label: string, waarde: string, kopie?: { wat: string; tekst: string }) => (
+    <div className="flex items-center justify-between gap-3 py-1.5">
+      <dt className="text-amber-800">{label}</dt>
+      <dd className="flex items-center gap-2 text-right font-semibold text-ink">
+        <span className={kopie ? "font-mono" : ""}>{waarde}</span>
+        {kopie && (
+          <button type="button" onClick={() => kopieer(kopie.wat, kopie.tekst)} aria-label={`${kopie.wat} kopiëren`} className="rounded-md border border-amber-300 bg-white px-2 py-0.5 text-[11px] font-semibold text-amber-900 hover:bg-amber-100">
+            Kopieer
+          </button>
+        )}
+      </dd>
+    </div>
+  );
+  return (
+    <section aria-labelledby="overmaken-titel" className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+      <h2 id="overmaken-titel" className="text-[15px] font-bold text-ink">
+        Maak {money(o.bedragCents)} over
+      </h2>
+      <p className="mt-1">Je bestelling staat klaar. Zodra je betaling binnen is, pakken we hem in en krijg je een mail.</p>
+      <dl className="mt-3 divide-y divide-amber-200">
+        {rij("Rekeninghouder", o.naam)}
+        {rij("IBAN", o.ibanLeesbaar, { wat: "IBAN", tekst: o.ibanLeesbaar.replace(/\s+/g, "") })}
+        {rij("Bedrag", money(o.bedragCents))}
+        {rij("Omschrijving", o.kenmerk, { wat: "Kenmerk", tekst: o.kenmerk })}
+      </dl>
+      <p className="mt-3 text-[12px]">
+        Zet <strong>{o.kenmerk}</strong> in de omschrijving, dan herkennen we je betaling. Maak het bedrag binnen {o.termijnDagen} dagen over; deze gegevens staan ook in je mail.
+      </p>
+      <p aria-live="polite" className="mt-1 min-h-[1em] text-[12px] font-semibold text-amber-900">
+        {gekopieerd}
+      </p>
+    </section>
   );
 }

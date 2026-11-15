@@ -7,6 +7,7 @@ import { MODUS_COOKIE, leesModus } from "@/lib/shop/modus";
 import { nl } from "@/lib/i18n/dictionaries";
 import { contentKeys, getContentMap } from "@/lib/content/store";
 import { metShopTeksten } from "@/lib/ontwerp/shop-teksten";
+import { huidigeShopBetaalwijze } from "@/lib/shop/overschrijving-server";
 
 export const dynamic = "force-dynamic";
 
@@ -22,9 +23,11 @@ export default async function ShopLayout({ children }: { children: ReactNode }) 
   // filters, winkelwagen). Alleen in het Nederlands, en alleen als er echt een eigen tekst is gaat het woordenboek mee: zonder
   // eigen tekst is `eigen` hetzelfde object als `nl` en verandert er niets aan wat de browser krijgt.
   const eigen = locale === "nl" ? metShopTeksten(nl, await getContentMap(contentKeys("shop.")).catch(() => ({})), "nl") : nl;
+  // hoe er nu betaald wordt (Stripe dicht sinds 11 nov): de checkout en de voettekst beloven alleen wat echt kan
+  const betaalwijze = await huidigeShopBetaalwijze();
   return (
     <I18nProvider locale={locale} t={eigen !== nl ? eigen : clientDict(locale)}>
-      <ShopChrome modus={modus}>{children}</ShopChrome>
+      <ShopChrome modus={modus} betaalwijze={betaalwijze}>{children}</ShopChrome>
     </I18nProvider>
   );
 }

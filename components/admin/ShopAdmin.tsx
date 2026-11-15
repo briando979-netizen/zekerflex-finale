@@ -10,6 +10,7 @@ import { ShopAdminTools } from "@/components/admin/ShopAdminTools";
 import { ShopModel3D } from "@/components/admin/ShopModel3D";
 import { ShopMedia } from "@/components/admin/ShopMedia";
 import { kanZichtbaarWorden } from "@/lib/shop/media-product";
+import { shopKenmerk, wachtOpOverschrijving } from "@/lib/shop/overschrijving-kenmerk";
 import { ProductPlaceholder } from "@/components/marketing/ProductPlaceholder";
 import { bucketSum, resolvePeriod, timelineKeys } from "@/lib/admin/period";
 import { count as fmtCount, euro } from "@/lib/admin/format";
@@ -57,6 +58,9 @@ type Order = {
   totalCents: number;
   carrier: string | null;
   trackingNumber: string | null;
+  /** null bij een bestelling per overschrijving (lib/shop/overschrijving-kenmerk.ts) */
+  stripeSessionId?: string | null;
+  stripePaymentIntentId?: string | null;
   createdAt: string;
 };
 const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
@@ -523,7 +527,12 @@ export function ShopAdmin() {
                   <td className="px-4 py-3" style={{ color: "var(--a-dim)" }}>{new Date(order.createdAt).toLocaleDateString("nl-NL")}</td>
                   <td className="max-w-[18rem] truncate px-4 py-3" style={{ color: "var(--a-dim)" }}>{order.itemsJson.map((l) => `${l.qty}x ${l.name}`).join(", ")}</td>
                   <td className="px-4 py-3 text-right font-medium" style={{ color: "var(--a-text)" }}>{money(order.totalCents / 100)}</td>
-                  <td className="px-4 py-3"><OrderPill status={order.status} /></td>
+                  <td className="px-4 py-3">
+                    <OrderPill status={order.status} />
+                    {wachtOpOverschrijving(order) && (
+                      <p className="mt-1 text-[11px]" style={{ color: "var(--a-mute)" }}>Overschrijving · {shopKenmerk(order.id)}</p>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <button type="button" className="a-button text-xs" onClick={() => setOpenOrder(openOrder === order.id ? null : order.id)}>{openOrder === order.id ? "Sluiten" : "Beheren"}</button>
                   </td>
@@ -544,7 +553,19 @@ export function ShopAdmin() {
                           <button type="submit" className="a-button text-xs">Opslaan</button>
                         </form>
                         <a className="a-button text-xs" href={`/api/admin/shop/orders/${order.id}/packing-slip`} target="_blank" rel="noreferrer">Pakbon</a>
-                        {["RECEIVED", "CONFIRMED", "SHIPPED"].includes(order.status) && (
+                        {wachtOpOverschrijving(order) && (
+                          <button
+                            type="button"
+                            className="a-button a-button-primary text-xs"
+                            onClick={() => {
+                              if (!window.confirm(`Staat ${money(order.totalCents / 100)} met kenmerk ${shopKenmerk(order.id)} op de rekening? Dan gaat de voorraad eraf en krijgt ${order.firstName} de bevestiging.`)) return;
+                              void setOrderStatus(order.id, "RECEIVED");
+                            }}
+                          >
+                            Overschrijving ontvangen
+                          </button>
+                        )}
+                        {["RECEIVED", "CONFIRMED", "SHIPPED"].includes(order.status) && order.stripePaymentIntentId && (
                           <button
                             type="button"
                             className="a-button text-xs"
