@@ -9,6 +9,15 @@
 
 import type { Werkruimte } from "@/lib/werkgever/werkruimte";
 
+/** Echte schermen van de horecasoftware (voorbeeldzaak "Restaurant De Proef", 15 nov 2026); maten in beeldpunten van het bestand. */
+const HORECA_INKIJK: InkijkScherm[] = [
+  { bestand: "horeca-kassa.webp", titel: "De kassa", tekst: "Snel verkopen op naam of nummer, korting per btw-tarief, fooi en afrekenen met pin of contant.", alt: "Het kassascherm met een snelle verkoop, 10% korting en de knoppen Pin en Contant", breedte: 1600, hoogte: 1075 },
+  { bestand: "horeca-bord.webp", titel: "Het bestellingenbord", tekst: "Elke bestelling als tegel, de tijd groot voorop. Amber wacht op jou, blauw is gepland, groen is onderweg.", alt: "Het bestellingenbord met bezorgingen en afhaalbestellingen in de kolommen Nieuw en Bezig", breedte: 1600, hoogte: 678 },
+  { bestand: "horeca-online-bestellen-telefoon.webp", titel: "Bestellen voor gasten", tekst: "Gasten bestellen op je eigen site om af te halen of te laten bezorgen, met een tijd van vandaag.", alt: "De bestelpagina voor gasten op een telefoon", breedte: 780, hoogte: 1688, toestel: "telefoon" },
+  { bestand: "horeca-kaart.webp", titel: "De bezorgkaart", tekst: "Je zaak en alle open bezorgingen op de kaart; een tik op een speld opent de bestelling.", alt: "De bestellingenkaart van Amsterdam met de zaak en de open bezorgingen", breedte: 1600, hoogte: 758 },
+  { bestand: "horeca-archief.webp", titel: "Het archief", tekst: "Alle bestellingen met filters, de omzet en de btw per tarief, en als CSV te downloaden.", alt: "Het archief met de omzet en de btw per tarief", breedte: 1600, hoogte: 778 },
+];
+
 export type PijlerSleutel = "personeel" | "online" | "branche" | "geld";
 
 export interface Pijler {
@@ -45,6 +54,22 @@ export interface AanbodItem {
   zoekwoorden?: string[];
   /** foto in public/aanbod (bron en licentie in public/aanbod/CREDITS.md) */
   foto?: { bestand: string; alt: string };
+  /**
+   * Echte schermen van het product ("inkijk"), in public/aanbod/inkijk: opgenomen op een tijdelijke voorbeeldzaak met
+   * verzonnen voorbeeldgegevens (vermeld in CREDITS.md). De eerste staat ook in de kop.
+   */
+  inkijk?: InkijkScherm[];
+}
+
+export interface InkijkScherm {
+  bestand: string;
+  titel: string;
+  tekst: string;
+  alt: string;
+  breedte: number;
+  hoogte: number;
+  /** een scherm van de telefoon krijgt een telefoonkader */
+  toestel?: "telefoon";
 }
 
 export const PIJLERS: Pijler[] = [
@@ -538,6 +563,7 @@ export const AANBOD: AanbodItem[] = [
     prijs: "Abonnement per module",
     status: "beschikbaar",
     start: aanmeldenVoor("horeca"),
+    inkijk: HORECA_INKIJK,
     zoekwoorden: ["horeca software", "reserveringssysteem restaurant", "qr bestellen", "haccp takenlijst", "kassasysteem horeca"],
   },
   {

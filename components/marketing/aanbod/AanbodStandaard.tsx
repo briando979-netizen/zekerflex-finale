@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { prijsTekst, type AanbodItem, type Pijler } from "@/lib/marketing/aanbod";
+import { prijsTekst, type AanbodItem, type InkijkScherm, type Pijler } from "@/lib/marketing/aanbod";
 import { standaardVragen } from "@/lib/marketing/aanbod-vragen";
 
 // De gewone opmaak van een aanbodpagina (/aanbod/<slug>), rijker gemaakt (15 nov 2026, eigenaar: "die pagina's moeten
@@ -30,7 +30,28 @@ function Icoon({ pad, className = "" }: { pad: string; className?: string }) {
   );
 }
 
-/** Rechts in de kop: de foto met een zwevende kaart, of zonder foto een voorbeeld van het product. */
+/** Een echt scherm van het product in een kader: een browservenster, of een telefoon. */
+function SchermKader({ s, prioriteit = false }: { s: InkijkScherm; prioriteit?: boolean }) {
+  if (s.toestel === "telefoon") {
+    return (
+      <div className="mx-auto w-full max-w-[280px] rounded-[2.4rem] border-[10px] border-ink bg-ink shadow-2xl">
+        <Image src={`/aanbod/inkijk/${s.bestand}`} alt={s.alt} width={s.breedte} height={s.hoogte} sizes="280px" className="h-auto w-full rounded-[1.6rem]" priority={prioriteit} />
+      </div>
+    );
+  }
+  return (
+    <div className="overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/10">
+      <div className="flex items-center gap-1.5 border-b border-hair bg-paper-soft px-3 py-2" aria-hidden>
+        <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
+        <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
+      </div>
+      <Image src={`/aanbod/inkijk/${s.bestand}`} alt={s.alt} width={s.breedte} height={s.hoogte} sizes="(max-width: 1024px) 100vw, 640px" className="h-auto w-full" priority={prioriteit} />
+    </div>
+  );
+}
+
+/** Rechts in de kop: de foto met een zwevende kaart, anders het eerste echte scherm, anders een voorbeeld van het product. */
 function KopBeeld({ a, pijler }: { a: AanbodItem; pijler: Pijler }) {
   const kaart = (
     <div className="rounded-2xl bg-white p-4 text-ink shadow-2xl ring-1 ring-black/5 sm:p-5">
@@ -53,6 +74,15 @@ function KopBeeld({ a, pijler }: { a: AanbodItem; pijler: Pijler }) {
       </ul>
     </div>
   );
+  const eersteScherm = a.inkijk?.find((x) => x.toestel !== "telefoon");
+  if (!a.foto && eersteScherm) {
+    return (
+      <div className="relative pb-10 lg:pb-0">
+        <SchermKader s={eersteScherm} prioriteit />
+        <div className="absolute -bottom-2 left-4 right-4 sm:left-auto sm:right-[-12px] sm:w-[300px] lg:-bottom-10">{kaart}</div>
+      </div>
+    );
+  }
   if (a.foto) {
     return (
       <div className="relative pb-10 lg:pb-0">
@@ -154,6 +184,30 @@ export function AanbodStandaard({ a, pijler }: { a: AanbodItem; pijler: Pijler }
           </ul>
         </div>
       </section>
+
+      {/* echte schermen van het product, met voorbeeldgegevens */}
+      {a.inkijk && a.inkijk.length > 0 && (
+        <section aria-labelledby="aanbod-inkijk" className="bg-white">
+          <div className="shell py-16 md:py-20">
+            <h2 id="aanbod-inkijk" className="text-center font-display text-3xl font-bold text-ink md:text-4xl">
+              Zo ziet het <span className="text-brand-600">eruit</span>
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-center text-[16px] text-neutralx-600">Echte schermen van ZekerFlex, met voorbeeldgegevens.</p>
+            <div className="mt-12 space-y-16">
+              {a.inkijk.map((x, i) => (
+                <figure key={x.bestand} className={`grid items-center gap-8 ${i % 2 === 1 ? "lg:grid-cols-[0.65fr_1.35fr] lg:[&>*:first-child]:order-2" : "lg:grid-cols-[1.35fr_0.65fr]"}`}>
+                  <SchermKader s={x} />
+                  <figcaption>
+                    <span className="text-[12px] font-bold uppercase tracking-[0.12em] text-brand-700">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="mt-2 block font-display text-2xl font-bold text-ink">{x.titel}</span>
+                    <span className="mt-2 block text-[16px] leading-relaxed text-neutralx-700">{x.tekst}</span>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* het verhaal, met In het kort */}
       <section aria-labelledby="aanbod-wat" className="bg-white">
