@@ -28,6 +28,25 @@ export const GRATIS_GRENZEN = { voorbeelden: 0, beurten: 2, vraagTekens: 300, an
 
 const kort = (s: string, n: number) => (s.length > n ? `${s.slice(0, n)}…` : s);
 
+/**
+ * Een groet of praatje ("hallo", "bedankt", "ok", hooguit twee woorden): dan gaat de platformstatus niet mee. Het kleine
+ * eigen model plakte hem anders gewoon terug (15 nov: "Hallo. Platform Status LIVE PLATFORMSTATUS (…): db=ok, …").
+ */
+export function isPraatje(vraag: string): boolean {
+  const p = vraag.trim().toLowerCase();
+  const woorden = p.split(/\s+/).filter(Boolean);
+  return (
+    woorden.length <= 2 ||
+    /^(hoi|hai|hallo|hey|hi|yo|dag|goedemorgen|goedemiddag|goedenavond|goedenacht)\b/.test(p) ||
+    /^(bedankt|dank je|dankje|dank u|thanks|top|oke|oké|ok|prima|super)\b/.test(p) ||
+    /^(hoe gaat het|alles goed)\s*[?!.]*$/.test(p)
+  );
+}
+
+/** De status als achtergrond, met de regel dat de cijfers alleen genoemd worden als ernaar gevraagd wordt. */
+export const statusAlsAchtergrond = (status: string): string =>
+  `Achtergrond, alleen voor als de beheerder ernaar vraagt (noem deze cijfers niet uit jezelf en niet bij een groet): ${status}`;
+
 export function jarvisBerichten(i: JarvisInvoer): JarvisBericht[] {
   const g = GRATIS_GRENZEN;
   const voorbeelden = i.gratis
@@ -44,8 +63,8 @@ export function jarvisBerichten(i: JarvisInvoer): JarvisBericht[] {
     // vast: elke keer woord voor woord hetzelfde, zodat het model dit begin kan hergebruiken
     { role: "system", content: i.persona },
     ...(voorbeeldBlok ? [{ role: "system" as const, content: voorbeeldBlok }] : []),
-    // wisselt: na het vaste begin
-    ...(i.status ? [{ role: "system" as const, content: i.status }] : []),
+    // wisselt: na het vaste begin; bij een groet of praatje geen status (het model plakte hem anders terug)
+    ...(i.status && !isPraatje(i.vraag) ? [{ role: "system" as const, content: statusAlsAchtergrond(i.status) }] : []),
     ...geschiedenis,
     { role: "user", content: i.vraag },
   ];
