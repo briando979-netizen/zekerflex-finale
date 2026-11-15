@@ -128,10 +128,19 @@ describe("de pagina", () => {
     expect(lees("components/marketing/ShopEtalage.tsx")).toMatch(/className="relative [^"]*overflow-x-auto/);
   });
 
+  it("na de live-controle: een eigen id, enkelvoud bij één artikel, en geen leeg vakje in Uitgelicht", () => {
+    const blok = lees("components/marketing/ShopEtalage.tsx");
+    expect(blok).toContain('<h2 id="shop-ontdek" className="sr-only">');
+    expect(blok).not.toContain('id="shop-uitgelicht"');
+    expect(blok).toContain("(n === 1 ? t.shop.artikelEen : fmt(t.shop.articles, { n }))");
+    expect(blok.split("fmt(t.shop.articles")).toHaveLength(2);
+    expect(blok).toContain("{tegels.length % 4 !== 0 && (");
+  });
+
   it("alle nieuwe teksten staan in het Nederlands én het Engels", () => {
     const nl = lees("lib/i18n/dictionaries.ts");
     const en = lees("lib/i18n/dictionary-en.ts");
-    for (const k of ["uitgelicht", "etalageSint", "etalageKerst", "groepVoor", "themaTitel", "themaWinter", "themaBudget", "cadeauTitel", "cadeauVoorHem", "cadeauZoek", "allesTitel", "regelenTitel", "hulpTitel"]) {
+    for (const k of ["artikelEen", "allesBekijken", "uitgelicht", "etalageSint", "etalageKerst", "groepVoor", "themaTitel", "themaWinter", "themaBudget", "cadeauTitel", "cadeauVoorHem", "cadeauZoek", "allesTitel", "regelenTitel", "hulpTitel"]) {
       expect(nl, k).toMatch(new RegExp(`\\n\\s+${k}: "`));
       expect(en, k).toMatch(new RegExp(`\\n\\s+${k}: "`));
     }
