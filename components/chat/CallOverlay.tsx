@@ -80,7 +80,7 @@ function BelKnop({ label, onClick, aan = false, children }: { label: string; onC
       aria-label={label}
       aria-pressed={aan}
       title={label}
-      className={`grid h-14 w-14 flex-shrink-0 place-items-center rounded-full text-2xl transition active:scale-95 ${aan ? "bg-white text-ink" : "bg-white/15 text-white hover:bg-white/25"}`}
+      className={`grid h-14 w-14 flex-shrink-0 place-items-center rounded-full focus-visible:rounded-full text-2xl transition active:scale-95 ${aan ? "bg-white text-ink" : "bg-white/15 text-white hover:bg-white/25"}`}
     >
       {children}
     </button>
@@ -647,19 +647,19 @@ export function CallOverlay({
             onClick={toggleMute}
             aria-label={muted ? chat.bel.microfoonAan : chat.bel.microfoonUit}
             aria-pressed={muted}
-            className={`grid h-9 w-9 place-items-center rounded-full text-lg ${muted ? "bg-white text-ink" : "bg-white/15"}`}
+            className={`grid h-9 w-9 place-items-center rounded-full focus-visible:rounded-full text-lg ${muted ? "bg-white text-ink" : "bg-white/15"}`}
           >
             {muted ? <IconMicOff /> : <IconMic />}
           </button>
           <button
             type="button"
             onClick={() => setMinimized(false)}
-            className="grid h-9 w-9 place-items-center rounded-full bg-white/15 text-lg"
+            className="grid h-9 w-9 place-items-center rounded-full focus-visible:rounded-full bg-white/15 text-lg"
             aria-label={chat.bel.grootScherm}
           >
             <IconChevronDown className="rotate-180" />
           </button>
-          <button type="button" onClick={() => cleanup(true)} className="grid h-9 w-11 place-items-center rounded-full bg-crit text-lg" aria-label={chat.bel.ophangen}>
+          <button type="button" onClick={() => cleanup(true)} className="grid h-9 w-11 place-items-center rounded-full focus-visible:rounded-full bg-crit text-lg" aria-label={chat.bel.ophangen}>
             <IconPhoneDown />
           </button>
         </div>
@@ -671,7 +671,7 @@ export function CallOverlay({
           {state === "failed" ? (
             <div className="grid h-full place-items-center px-6 text-center">
               <div>
-                <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-crit/20 text-3xl">⚠️</div>
+                <div className="mx-auto grid h-16 w-16 place-items-center rounded-full focus-visible:rounded-full bg-crit/20 text-3xl">⚠️</div>
                 {failReason === "media" ? (
                   <>
                     <p className="mt-4 text-base font-semibold">{chat.bel.geenToegangTitel}</p>
@@ -720,7 +720,7 @@ export function CallOverlay({
                 <div className="flex h-full flex-col items-center justify-center px-6 pb-36 text-center">
                   <div className="relative">
                     {(state === "ringing" || state === "connecting") && (
-                      <span aria-hidden="true" className="absolute inset-0 animate-ping rounded-full bg-white/10" />
+                      <span aria-hidden="true" className="absolute inset-0 animate-ping rounded-full focus-visible:rounded-full bg-white/10" />
                     )}
                     {anderAvatar(128)}
                   </div>
@@ -747,7 +747,7 @@ export function CallOverlay({
                     if (e.detail === 0) setGrootIk((g) => !g);
                   }}
                   style={sleep ? { transform: `translate(${sleep.x}px, ${sleep.y}px)` } : undefined}
-                  className={`absolute z-20 aspect-[3/4] w-[28vw] max-w-[9.5rem] touch-none overflow-hidden rounded-2xl border border-white/25 bg-black shadow-lift ${sleep ? "" : "transition-all duration-200"} ${HOEK_KLASSE[hoek]}`}
+                  className={`absolute z-20 aspect-[3/4] w-[28vw] max-w-[9.5rem] touch-none overflow-hidden rounded-2xl focus-visible:rounded-2xl border border-white/25 bg-black shadow-lift ${sleep ? "" : "transition-all duration-200"} ${HOEK_KLASSE[hoek]}`}
                 >
                   {eigenGroot ? (
                     anderBeeld ? (
@@ -770,7 +770,7 @@ export function CallOverlay({
                   onClick={() => setMinimized(true)}
                   aria-label={chat.bel.terugNaarChat}
                   title={chat.bel.terugNaarChat}
-                  className="grid h-11 w-11 place-items-center rounded-full text-2xl hover:bg-white/10"
+                  className="grid h-11 w-11 place-items-center rounded-full focus-visible:rounded-full text-2xl hover:bg-white/10"
                 >
                   <IconChevronDown />
                 </button>
@@ -791,7 +791,7 @@ export function CallOverlay({
                     {melding}
                   </p>
                 )}
-                <div className="flex items-center gap-3 rounded-full bg-white/10 px-3 py-2.5 backdrop-blur-md sm:gap-4">
+                <div className="flex items-center gap-3 rounded-full focus-visible:rounded-full bg-white/10 px-3 py-2.5 backdrop-blur-md sm:gap-4">
                   {camOn && kanWisselen && !sharing && (
                     <BelKnop label={chat.bel.cameraWisselen} onClick={() => void wisselCamera()}>
                       <IconCameraFlip />
@@ -815,7 +815,7 @@ export function CallOverlay({
                     onClick={() => cleanup(true)}
                     aria-label={chat.bel.ophangen}
                     title={chat.bel.ophangen}
-                    className="grid h-14 w-14 flex-shrink-0 place-items-center rounded-full bg-crit text-3xl text-white transition hover:brightness-110 active:scale-95"
+                    className="grid h-14 w-14 flex-shrink-0 place-items-center rounded-full focus-visible:rounded-full bg-crit text-3xl text-white transition hover:brightness-110 active:scale-95"
                   >
                     <IconPhoneDown />
                   </button>

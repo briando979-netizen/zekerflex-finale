@@ -99,6 +99,17 @@ describe("tabblad dicht tijdens een oproep", () => {
   });
 });
 
+describe("ronde knoppen blijven rond met focus", () => {
+  // de algemene :focus-visible (app/globals.css) zet border-radius 4px: Opnemen (krijgt meteen de focus) werd vierkant
+  it("elke rounded-full in de belschermen houdt ook met focus zijn ronde vorm", () => {
+    for (const s of [overlay, binnen]) {
+      const rond = s.match(/\brounded-full\b/g)?.length ?? 0;
+      const metFocus = s.match(/\brounded-full focus-visible:rounded-full\b/g)?.length ?? 0;
+      expect(rond).toBe(metFocus * 2);
+    }
+  });
+});
+
 describe("een oproep ligt boven alles", () => {
   // 15 nov 2026, belproef met twee browsers: bij een nieuwe werker dekte de cookiebalk (z-[90]) de knop Opnemen af.
   it("het belscherm en gebeld worden liggen hoger dan elke andere laag in de app", () => {

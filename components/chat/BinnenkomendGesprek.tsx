@@ -76,7 +76,7 @@ export function BinnenkomendGesprek({
           {soort}
         </p>
         <div className="relative mt-8 sm:mt-5">
-          <span aria-hidden="true" className="absolute inset-0 animate-ping rounded-full bg-white/10" />
+          <span aria-hidden="true" className="absolute inset-0 animate-ping rounded-full focus-visible:rounded-full bg-white/10" />
           <span className="hidden sm:block">
             <Avatar userId={oproep.fromUserId} name={oproep.fromName} role={oproep.fromRole} avatars={avatars} size={72} />
           </span>
@@ -121,7 +121,7 @@ export function BinnenkomendGesprek({
               type="button"
               onClick={onWeigeren}
               aria-label={chat.dock.weiger}
-              className="grid h-16 w-16 place-items-center rounded-full bg-crit text-3xl transition hover:brightness-110 active:scale-95 sm:h-14 sm:w-14"
+              className="grid h-16 w-16 place-items-center rounded-full focus-visible:rounded-full bg-crit text-3xl transition hover:brightness-110 active:scale-95 sm:h-14 sm:w-14"
             >
               <IconPhoneDown />
             </button>
@@ -132,7 +132,7 @@ export function BinnenkomendGesprek({
               type="button"
               onClick={() => setAntwoorden(true)}
               aria-label={chat.dock.weigerMetBericht}
-              className="grid h-16 w-16 place-items-center rounded-full bg-white/15 text-2xl transition hover:bg-white/25 active:scale-95 sm:h-14 sm:w-14"
+              className="grid h-16 w-16 place-items-center rounded-full focus-visible:rounded-full bg-white/15 text-2xl transition hover:bg-white/25 active:scale-95 sm:h-14 sm:w-14"
             >
               <IconChatBubble />
             </button>
@@ -144,7 +144,7 @@ export function BinnenkomendGesprek({
               type="button"
               onClick={onOpnemen}
               aria-label={chat.dock.opnemen}
-              className="grid h-16 w-16 animate-pulse place-items-center rounded-full bg-ok text-3xl text-white transition hover:brightness-110 active:scale-95 motion-reduce:animate-none sm:h-14 sm:w-14"
+              className="grid h-16 w-16 animate-pulse place-items-center rounded-full focus-visible:rounded-full bg-ok text-3xl text-white transition hover:brightness-110 active:scale-95 motion-reduce:animate-none sm:h-14 sm:w-14"
             >
               {video ? <IconVideo /> : <IconPhone />}
             </button>
