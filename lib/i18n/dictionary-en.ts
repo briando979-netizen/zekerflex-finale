@@ -51,6 +51,18 @@ export const en: Dict = {
     menuWorkerWorkspace: "Worker workspace",
     orgFallback: "Your organisation",
   },
+  persoonlijkAccount: {
+    titel: "Personal account settings",
+    sub: "Your name, phone number and login details.",
+    persoon: "Personal details",
+    email: "Email",
+    wachtwoord: "Password",
+    wachtwoordUitleg: "You change your password with the \u201cforgot password\u201d link: we send a reset link to your email address.",
+    wachtwoordKnop: "Reset password",
+    tweestap: "Two-step verification",
+    passkey: "Log in with a passkey",
+    verjaardag: "Birthday (optional)",
+  },
   verwijderen: {
     titel: "Delete account",
     sub: "Your personal account is erased. Your company stays.",
