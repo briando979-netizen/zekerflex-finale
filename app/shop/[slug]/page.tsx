@@ -15,6 +15,7 @@ function toDto(p: {
   id: string; slug: string; name: string; description: string; category: string;
   priceCents: number; stock: number; imageUrl: string | null; modelPhotoUrl: string | null; badge: string | null;
   fotos?: string[];
+  collection?: string | null;
   gender?: string | null;
   seller?: { name: string } | null;
   variants?: { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number }[];
@@ -24,6 +25,7 @@ function toDto(p: {
     id: p.id, slug: p.slug, name: p.name, description: p.description, category: p.category,
     priceCents: p.priceCents, stock: p.stock, imageUrl: p.imageUrl, modelPhotoUrl: p.modelPhotoUrl, badge: p.badge,
     fotos: p.fotos ?? [],
+    collection: p.collection ?? null,
     variants: p.variants ?? [{ id: p.id, size: null, color: null, priceCents: null, stock: p.stock }],
     ...(p.bundleOf ? { bundleItems: p.bundleOf.map((b) => b.itemProduct) } : {}),
     seller: p.seller?.name ?? null,

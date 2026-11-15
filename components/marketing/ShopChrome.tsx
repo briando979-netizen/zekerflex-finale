@@ -15,6 +15,8 @@ import { fmt, type Dict } from "@/lib/i18n/dictionaries";
 import { ShopModusProvider, useShopModus } from "@/components/marketing/ShopModus";
 import { btwOverzicht, btwTarief, type ShopModus } from "@/lib/shop/modus";
 import type { ShopBetaalwijze } from "@/lib/shop/overschrijving-kenmerk";
+import { ShopBetaalwijzeProvider } from "@/components/marketing/ShopBetaalwijze";
+import { categorieTreffers, zoekSuggesties } from "@/lib/shop/zoeksuggesties";
 
 // Gedeelde shop-omlijsting, opgebouwd als een marktplaats: een servicebalk, de
 // merkbalk met een grote zoekbalk (blijft staan tijdens scrollen), de
@@ -23,7 +25,7 @@ import type { ShopBetaalwijze } from "@/lib/shop/overschrijving-kenmerk";
 // openen de lade met window-event "zf:shop-cart-open".
 
 type ApiVariant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number };
-type ApiProduct = { id: string; slug?: string | null; name: string; priceCents: number; imageUrl?: string | null; variants?: ApiVariant[] };
+type ApiProduct = { id: string; slug?: string | null; name: string; priceCents: number; imageUrl?: string | null; category?: string | null; description?: string | null; variants?: ApiVariant[] };
 type CartLine = { variantId: string; name: string; priceCents: number; imageUrl: string | null; qty: number; tarief: number };
 
 export const CART_OPEN_EVENT = "zf:shop-cart-open";
@@ -46,7 +48,9 @@ const CATS = ["Werk & PBM", "Kleding", "Werkdag", "Cadeaus"] as const;
 export function ShopChrome({ children, modus = "particulier", betaalwijze = "online" }: { children: ReactNode; modus?: ShopModus; betaalwijze?: ShopBetaalwijze }) {
   return (
     <ShopModusProvider modus={modus}>
-      <ShopOmlijsting betaalwijze={betaalwijze}>{children}</ShopOmlijsting>
+      <ShopBetaalwijzeProvider waarde={betaalwijze}>
+        <ShopOmlijsting betaalwijze={betaalwijze}>{children}</ShopOmlijsting>
+      </ShopBetaalwijzeProvider>
     </ShopModusProvider>
   );
 }
@@ -233,7 +237,7 @@ function ShopOmlijsting({ children, betaalwijze }: { children: ReactNode; betaal
             </span>
           </Link>
           <div className="hidden min-w-0 flex-1 md:block">
-            <SearchForm t={t} id="zoek-kop" />
+            <SearchForm t={t} id="zoek-kop" catalog={catalog} />
           </div>
           <nav aria-label={t.shop.account} className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
             <HeaderLink href="/shop/account" label={t.shop.account}>
@@ -258,7 +262,7 @@ function ShopOmlijsting({ children, betaalwijze }: { children: ReactNode; betaal
           </nav>
         </div>
         <div className="px-4 pb-2.5 sm:px-6 md:hidden">
-          <SearchForm t={t} id="zoek-telefoon" />
+          <SearchForm t={t} id="zoek-telefoon" catalog={catalog} />
         </div>
       </header>
 
@@ -645,26 +649,146 @@ function ModusKeuze({ t, licht = false, onGekozen }: { t: Dict; licht?: boolean;
   );
 }
 
-/** De zoekbalk: een gewoon GET-formulier naar /shop, dus het werkt ook zonder JavaScript. */
-function SearchForm({ t, id }: { t: Dict; id: string }) {
+/** De naam van een categorie in de taal van de shop. */
+function catLabel(c: string, t: Dict): string {
+  return c === "Werk & PBM" ? t.shop.navPbm : c === "Kleding" ? t.shop.navKleding : c === "Werkdag" ? t.shop.navWerkdag : t.shop.navTeams;
+}
+
+const euroTekst = (cent: number) => `€ ${(cent / 100).toFixed(2).replace(".", ",")}`;
+
+type ZoekOptie = { soort: "zoek" } | { soort: "cat"; waarde: string; label: string } | { soort: "product"; p: ApiProduct };
+
+/**
+ * De zoekbalk: een gewoon GET-formulier naar /shop, dus het werkt ook zonder JavaScript. Terwijl je typt (15 nov 2026, zoals
+ * bol.com): producten met foto en prijs en de passende categorieën (lib/shop/zoeksuggesties.ts), te kiezen met de pijltjes
+ * en Enter. De lijst producten heeft de shop al; er gaat geen extra verzoek weg.
+ */
+function SearchForm({ t, id, catalog }: { t: Dict; id: string; catalog: ApiProduct[] }) {
+  const router = useRouter();
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState(false);
+  const [actief, setActief] = useState(-1);
+  const lijstId = `${id}-suggesties`;
+  const opties = useMemo<ZoekOptie[]>(() => {
+    if (q.trim().length < 2) return [];
+    const cats = categorieTreffers(CATS.map((c) => ({ waarde: c, label: catLabel(c, t) })), q);
+    const producten = zoekSuggesties(catalog, q, 6);
+    if (!cats.length && !producten.length) return [];
+    return [{ soort: "zoek" }, ...cats.map((c) => ({ soort: "cat" as const, ...c })), ...producten.map((p) => ({ soort: "product" as const, p }))];
+  }, [catalog, q, t]);
+  const toon = open && opties.length > 0;
+  const kies = (o: ZoekOptie) => {
+    setOpen(false);
+    setActief(-1);
+    if (o.soort === "product") router.push(`/shop/${o.p.slug ?? o.p.id}`);
+    else if (o.soort === "cat") router.push(`/shop?cat=${encodeURIComponent(o.waarde)}#collectie`);
+    else router.push(`/shop?q=${encodeURIComponent(q.trim())}#collectie`);
+  };
   return (
-    <form role="search" action="/shop#collectie" method="get" className="flex h-11 w-full overflow-hidden rounded-lg bg-white text-ink ring-brand-mint focus-within:ring-2">
-      <select name="cat" aria-label={t.shop.searchIn} defaultValue="" className="hidden max-w-[11rem] shrink-0 border-r border-hair bg-paper-soft px-3 text-[13px] font-semibold text-ink outline-none lg:block">
-        <option value="">{t.shop.allCategories}</option>
-        {CATS.map((c) => (
-          <option key={c} value={c}>
-            {c === "Werk & PBM" ? t.shop.navPbm : c === "Kleding" ? t.shop.navKleding : c === "Werkdag" ? t.shop.navWerkdag : t.shop.navTeams}
-          </option>
-        ))}
-      </select>
-      <label htmlFor={id} className="sr-only">
-        {t.shop.search}
-      </label>
-      <input id={id} name="q" type="search" maxLength={60} placeholder={t.shop.searchPlaceholder} className="min-w-0 flex-1 bg-transparent px-3.5 text-[15px] text-ink outline-none placeholder:text-neutralx-500" />
-      <button type="submit" aria-label={t.shop.search} className="grid w-12 shrink-0 place-items-center bg-brand-mint text-ink transition hover:brightness-95">
-        <IconSearch />
-      </button>
-    </form>
+    <div className="relative w-full">
+      <form role="search" action="/shop#collectie" method="get" className="flex h-11 w-full overflow-hidden rounded-lg bg-white text-ink ring-brand-mint focus-within:ring-2">
+        <select name="cat" aria-label={t.shop.searchIn} defaultValue="" className="hidden max-w-[11rem] shrink-0 border-r border-hair bg-paper-soft px-3 text-[13px] font-semibold text-ink outline-none lg:block">
+          <option value="">{t.shop.allCategories}</option>
+          {CATS.map((c) => (
+            <option key={c} value={c}>
+              {catLabel(c, t)}
+            </option>
+          ))}
+        </select>
+        <label htmlFor={id} className="sr-only">
+          {t.shop.search}
+        </label>
+        <input
+          id={id}
+          name="q"
+          type="search"
+          maxLength={60}
+          autoComplete="off"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={toon}
+          aria-controls={lijstId}
+          aria-activedescendant={toon && actief >= 0 ? `${lijstId}-${actief}` : undefined}
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setOpen(true);
+            setActief(-1);
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
+          onKeyDown={(e) => {
+            if (!toon) return;
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setActief((a) => (a + 1) % opties.length);
+            } else if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setActief((a) => (a <= 0 ? opties.length - 1 : a - 1));
+            } else if (e.key === "Enter" && actief >= 0) {
+              const o = opties[actief];
+              if (o) {
+                e.preventDefault();
+                kies(o);
+              }
+            } else if (e.key === "Escape") setOpen(false);
+          }}
+          placeholder={t.shop.searchPlaceholder}
+          className="min-w-0 flex-1 bg-transparent px-3.5 text-[15px] text-ink outline-none placeholder:text-neutralx-500"
+        />
+        <button type="submit" aria-label={t.shop.search} className="grid w-12 shrink-0 place-items-center bg-brand-mint text-ink transition hover:brightness-95">
+          <IconSearch />
+        </button>
+      </form>
+      {toon && (
+        <ul id={lijstId} role="listbox" aria-label={t.shop.zoekSuggesties} className="absolute inset-x-0 top-full z-50 mt-1 max-h-[70vh] overflow-y-auto rounded-lg border border-hair bg-white py-1 text-ink shadow-lift">
+          {opties.map((o, i) => (
+            <li
+              key={o.soort === "product" ? o.p.id : o.soort === "cat" ? `cat-${o.waarde}` : "zoek"}
+              id={`${lijstId}-${i}`}
+              role="option"
+              aria-selected={actief === i}
+              onMouseDown={(e) => e.preventDefault()}
+              onMouseEnter={() => setActief(i)}
+              onClick={() => kies(o)}
+              className={`flex cursor-pointer items-center gap-3 px-3 py-2 text-[14px] ${actief === i ? "bg-paper-soft" : ""}`}
+            >
+              {o.soort === "zoek" && (
+                <>
+                  <span className="grid h-8 w-8 shrink-0 place-items-center text-neutralx-500" aria-hidden>
+                    <IconSearch />
+                  </span>
+                  <span className="min-w-0 truncate">{t.shop.zoekNaar.replace("{q}", q.trim())}</span>
+                </>
+              )}
+              {o.soort === "cat" && (
+                <>
+                  <span className="grid h-8 w-8 shrink-0 place-items-center text-neutralx-500" aria-hidden>
+                    ›
+                  </span>
+                  <span className="min-w-0 truncate font-semibold">{t.shop.inCategorie.replace("{cat}", o.label)}</span>
+                </>
+              )}
+              {o.soort === "product" && (
+                <>
+                  <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-paper-soft">
+                    {o.p.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={o.p.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+                    ) : null}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold">{o.p.name}</span>
+                    {o.p.category && <span className="block truncate text-[12px] text-neutralx-500">{catLabel(o.p.category, t)}</span>}
+                  </span>
+                  <span className="shrink-0 font-bold">{euroTekst(o.p.priceCents)}</span>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
