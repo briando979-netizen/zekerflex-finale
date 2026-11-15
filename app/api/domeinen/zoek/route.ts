@@ -5,6 +5,7 @@ import { clientIp } from "@/lib/http/request";
 import { extensie } from "@/lib/domeinen/extensies";
 import { leesNaam, teZoeken } from "@/lib/domeinen/naam";
 import { beschikbaarheid } from "@/lib/domeinen/beschikbaar";
+import { betalenUit } from "@/lib/billing/stripe-betalen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,14 +19,18 @@ export async function GET(request: Request): Promise<NextResponse> {
     const naam = leesNaam(new URL(request.url).searchParams.get("naam") ?? "");
     if (!naam) throw AppError.validation("Typ een naam, bijvoorbeeld bakkerijjansen of bakkerijjansen.nl.");
     const domeinen = teZoeken(naam);
-    const resultaten = await Promise.all(
+    const [resultaten, uit] = await Promise.all([
+      Promise.all(
       domeinen.map(async (domein) => {
         const tld = domein.slice(naam.label.length + 1);
         const ext = extensie(tld);
         return { domein, tld, prijsCent: ext?.prijsCent ?? null, verlengCent: ext?.verlengCent ?? null, status: await beschikbaarheid(domein) };
       }),
-    );
-    return NextResponse.json({ naam: naam.label, gevraagd: naam.tld, resultaten }, { headers: { "cache-control": "no-store" } });
+      ),
+      betalenUit().catch(() => null),
+    ]);
+    // betalen: kan een ingelogd bedrijf nu online betalen? (alleen ja/nee)
+    return NextResponse.json({ naam: naam.label, gevraagd: naam.tld, resultaten, betalen: !uit }, { headers: { "cache-control": "no-store" } });
   } catch (err) {
     const { status, body, headers } = toErrorBody(err);
     return NextResponse.json(body, { status, headers });

@@ -101,15 +101,19 @@ export function DomeinZoeker({
   const [mijn, setMijn] = useState<MijnDomein[] | null>(null);
   // eerste jaar nog inbegrepen (betaald websiteabonnement, bundel nog niet gebruikt)
   const [bundelOver, setBundelOver] = useState(false);
+  // staat online betalen aan? Zonder antwoord nemen we aan van niet: dan nooit "betaal" beloven wat niet kan
+  const [betalen, setBetalen] = useState(false);
   const [terug, setTerug] = useState<{ gelukt: boolean; domein: string } | null>(null);
   const [alles, setAlles] = useState(false);
+  const inBundel = (domein: string) => bundelOver && (BUNDEL_TLDS as readonly string[]).includes(domein.slice(domein.indexOf(".") + 1));
 
   const laadMijn = useCallback(async () => {
     const r = await fetch("/api/werkgever/domeinen", { cache: "no-store" }).catch(() => null);
     if (!r?.ok) return;
-    const d = (await r.json()) as { bestellingen: MijnDomein[]; bundel?: boolean };
+    const d = (await r.json()) as { bestellingen: MijnDomein[]; bundel?: boolean; betalen?: boolean };
     setMijn(d.bestellingen);
     setBundelOver(Boolean(d.bundel));
+    setBetalen(d.betalen === true);
   }, []);
   useEffect(() => {
     // terug van de betaalpagina van Stripe
@@ -141,7 +145,9 @@ export function DomeinZoeker({
       setMelding(await fout(r, "Zoeken lukte niet. Probeer het nog eens."));
       return;
     }
-    setRes(((await r.json()) as { resultaten: Resultaat[] }).resultaten);
+    const d = (await r.json()) as { resultaten: Resultaat[]; betalen?: boolean };
+    setRes(d.resultaten);
+    setBetalen(d.betalen === true);
   }
 
   return (
@@ -244,21 +250,29 @@ export function DomeinZoeker({
       )}
 
       {keuze &&
-        (werkgever && keuze.soort === "registreren" && keuze.prijsCent !== null ? (
+        // een bedrijf bestelt zelf als het eerste jaar inbegrepen is of online betalen aan staat; anders aanvragen (een mens neemt contact op)
+        (werkgever && keuze.soort === "registreren" && keuze.prijsCent !== null && (betalen || inBundel(keuze.domein)) ? (
           <Bestellen
             key={keuze.domein}
             domein={keuze.domein}
             prijsCent={keuze.prijsCent}
             verlengCent={keuze.verlengCent ?? keuze.prijsCent}
-            inbegrepen={bundelOver && (BUNDEL_TLDS as readonly string[]).includes(keuze.domein.slice(keuze.domein.indexOf(".") + 1))}
+            inbegrepen={inBundel(keuze.domein)}
             terugNaar={terugNaar}
             onAnnuleer={() => setKeuze(null)}
             onKlaar={() => void laadMijn()}
           />
         ) : (
-          <Aanvraag key={`${keuze.domein}-${keuze.soort}`} domein={keuze.domein} soort={keuze.soort} smal={smal} onAnnuleer={() => setKeuze(null)} />
+          <Aanvraag
+            key={`${keuze.domein}-${keuze.soort}`}
+            domein={keuze.domein}
+            soort={keuze.soort}
+            smal={smal}
+            betalenUit={werkgever && !betalen && keuze.soort === "registreren"}
+            onAnnuleer={() => setKeuze(null)}
+          />
         ))}
-      {keuze && !werkgever && keuze.soort === "registreren" && (
+      {keuze && !werkgever && betalen && keuze.soort === "registreren" && (
         <p className="text-sm text-neutralx-600">
           Heb je een bedrijfsaccount bij ZekerFlex?{" "}
           <Link href="/login?callbackUrl=%2Fdomeinnaam" className="font-semibold text-brand-600 underline">
@@ -643,7 +657,20 @@ function Bestellen({
   );
 }
 
-function Aanvraag({ domein, soort, smal, onAnnuleer }: { domein: string; soort: Soort; smal: boolean; onAnnuleer: () => void }) {
+function Aanvraag({
+  domein,
+  soort,
+  smal,
+  betalenUit = false,
+  onAnnuleer,
+}: {
+  domein: string;
+  soort: Soort;
+  smal: boolean;
+  /** een ingelogd bedrijf dat nu niet online kan betalen: zeg waarom het een aanvraag is */
+  betalenUit?: boolean;
+  onAnnuleer: () => void;
+}) {
   const id = useId();
   const [v, setV] = useState({ naam: "", bedrijf: "", email: "", telefoon: "", bericht: "", consent: false });
   const [bezig, setBezig] = useState(false);
@@ -695,7 +722,7 @@ function Aanvraag({ domein, soort, smal, onAnnuleer }: { domein: string; soort: 
       <h3 className="font-display text-xl font-bold text-ink">{soort === "registreren" ? `${domein} aanvragen` : `${domein} verhuizen naar ZekerFlex`}</h3>
       <p className="mt-1 text-sm text-neutralx-600">
         {soort === "registreren"
-          ? "We leggen de naam voor je vast en koppelen hem aan je website, webshop of e-mail. Je krijgt eerst een bevestiging met de prijs."
+          ? `${betalenUit ? "Online betalen staat op dit moment uit, dus je vraagt hem aan: binnen één werkdag nemen we contact met je op. " : ""}We leggen de naam voor je vast en koppelen hem aan je website, webshop of e-mail. Je krijgt eerst een bevestiging met de prijs.`
           : "Je houdt je domeinnaam; alleen de beheerder wordt ZekerFlex. Je website en mail blijven gewoon werken. Je hebt de verhuiscode van je huidige provider nodig."}
       </p>
       <div className={`mt-4 grid gap-4 ${smal ? "" : "sm:grid-cols-2"}`}>
