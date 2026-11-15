@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { GRATIS_GRENZEN, jarvisBerichten, jarvisFoutTekst } from "@/lib/jarvis/berichten";
+import { JARVIS_PERSONA, JARVIS_PERSONA_KORT } from "@/lib/jarvis/persona";
 
 // Jarvis op het eigen model (15 nov): eerst wat vastligt (persona, voorbeelden), daarna wat wisselt (status met tijdstip,
 // gesprek, vraag), zodat het model het begin kan hergebruiken; met "alles gratis" korter. Een technische fout wordt een
@@ -34,10 +35,9 @@ describe("jarvisBerichten", () => {
     expect(b.map((x) => x.content).join("\n").match(/LIVE PLATFORMSTATUS/g)).toHaveLength(1);
   });
 
-  it("met alles gratis korter: één voorbeeld, de laatste twee beurten, ingekort", () => {
+  it("met alles gratis korter: geen voorbeelden, de laatste twee beurten, ingekort", () => {
     const b = jarvisBerichten(invoer(true));
-    expect(b[1]?.content).toContain("1. V: v1");
-    expect(b[1]?.content).not.toContain("2. V:");
+    expect(b.some((x) => x.content.startsWith("Voorbeelden van goede eerdere antwoorden"))).toBe(false);
     const gesprek = b.filter((x) => x.role === "user" || x.role === "assistant").slice(0, -1);
     expect(gesprek.map((x) => x.content.slice(0, 9))).toEqual(["vraag 3", "antwoord ", "vraag 4", "antwoord "]);
     expect(Math.max(...gesprek.map((x) => x.content.length))).toBeLessThanOrEqual(GRATIS_GRENZEN.antwoordTekens + 1);
@@ -48,6 +48,13 @@ describe("jarvisBerichten", () => {
   it("zonder status of voorbeelden: die berichten vallen weg", () => {
     const b = jarvisBerichten({ ...invoer(false), status: "", voorbeelden: [] });
     expect(b.filter((x) => x.role === "system")).toEqual([{ role: "system", content: "PERSONA" }]);
+  });
+});
+
+describe("de korte persona", () => {
+  it("hooguit een kwart van de volle, met dezelfde kernregels", () => {
+    expect(JARVIS_PERSONA_KORT.length).toBeLessThan(JARVIS_PERSONA.length / 4);
+    for (const regel of ["ZekerFlex", "Nederlands", "Verzin geen", "voorstel"]) expect(JARVIS_PERSONA_KORT).toContain(regel);
   });
 });
 
@@ -62,8 +69,10 @@ describe("jarvisFoutTekst", () => {
 describe("in de routes", () => {
   it("het snelle antwoord en het volledige antwoord bouwen hun berichten met jarvisBerichten", () => {
     const lees = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8");
-    expect(lees("app/api/admin/jarvis/quick/route.ts")).toContain("jarvisBerichten({ persona: JARVIS_PERSONA");
     expect(lees("app/api/admin/jarvis/quick/route.ts")).toContain("jarvisFoutTekst((err as Error).message)");
-    expect(lees("lib/jarvis/core.ts")).toContain("messages: jarvisBerichten({ persona: JARVIS_PERSONA");
+    expect(lees("lib/jarvis/core.ts")).toContain("messages: jarvisBerichten({ persona: gratisAan() ? JARVIS_PERSONA_KORT : JARVIS_PERSONA");
+    // met alles gratis geen router-ronde voor gewone vragen, en de korte persona
+    expect(lees("app/api/admin/jarvis/quick/route.ts")).toContain("if (!gratis && !route && prompt.split(/\\s+/).length > 6) {");
+    expect(lees("app/api/admin/jarvis/quick/route.ts")).toContain("persona: gratis ? JARVIS_PERSONA_KORT : JARVIS_PERSONA");
   });
 });

@@ -3,7 +3,7 @@ import { AppError } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { chatStream, fastModel } from "@/lib/ai/client";
 import { heuristicRoute } from "@/lib/jarvis/core";
-import { JARVIS_PERSONA } from "@/lib/jarvis/persona";
+import { JARVIS_PERSONA, JARVIS_PERSONA_KORT } from "@/lib/jarvis/persona";
 import { jarvisStateLine } from "@/lib/admin/overview";
 import { logExchange, recentHistory, topExamples } from "@/lib/learn/store";
 import { inspectPrompt } from "@/lib/security/prompt-guard";
@@ -41,8 +41,13 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
   if (route && route.capability !== "chat") {
     return NextResponse.json({ needsFullTurn: true, capability: route.capability });
   }
-  // Ambiguous / medium prompts also go to the full engine so the LLM router decides.
-  if (!route && prompt.split(/\s+/).length > 6) {
+  await primeGratis().catch(() => undefined);
+  const gratis = gratisAan();
+  // Ambiguous / medium prompts also go to the full engine so the LLM router decides. Met "alles gratis" niet: de
+  // router-ronde kost op het eigen model ±6 s en het volledige antwoord komt niet woord voor woord (gemeten 36-50 s per
+  // vraag). Dan beantwoordt het snelle pad de vraag meteen; een duidelijke opdracht (cijfers, geheugen, briefing) herkent
+  // heuristicRoute hierboven al en gaat nog steeds naar de volledige route.
+  if (!gratis && !route && prompt.split(/\s+/).length > 6) {
     return NextResponse.json({ needsFullTurn: true, capability: null });
   }
 
@@ -50,11 +55,10 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
     jarvisStateLine().catch(() => ""),
     recentHistory("jarvis", principal.userId, 4),
     topExamples("jarvis", 3),
-    primeGratis().catch(() => undefined),
   ]);
 
   // vaste delen eerst, wat wisselt erna; met "alles gratis" korter (lib/jarvis/berichten.ts)
-  const messages = jarvisBerichten({ persona: JARVIS_PERSONA, status: stateLine, voorbeelden: examples, geschiedenis: history, vraag: prompt, gratis: gratisAan() });
+  const messages = jarvisBerichten({ persona: gratis ? JARVIS_PERSONA_KORT : JARVIS_PERSONA, status: stateLine, voorbeelden: examples, geschiedenis: history, vraag: prompt, gratis });
 
   const gen = chatStream({
     purpose: "jarvis-quick",
