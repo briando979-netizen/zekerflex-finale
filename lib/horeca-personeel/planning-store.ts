@@ -17,7 +17,9 @@ import {
   isTijd,
   legePlanning,
   plusDagen,
+  verdeelFooi,
   waarschuwingen,
+  MAX_FOOIEN,
   type Dienst,
   type PlanWaarschuwing,
   type Planning,
@@ -45,6 +47,10 @@ const planningSchema = z.object({
   ruilen: z.array(z.object({ id, dienstId: id, van: id.nullable(), naar: id.nullable(), status: z.enum(RUIL_STATUSSEN), op: z.string().max(40) })).max(MAX_RUILEN),
   verlof: z.array(z.object({ id, medewerkerId: id, van: datum, tot: datum, reden: tekst, status: z.enum(VERLOF_STATUSSEN), op: z.string().max(40) })).max(MAX_VERLOF),
   uren: z.array(z.object({ id, medewerkerId: id, datum, in: tijd, uit: tijd.nullable(), bron: z.enum(["klok", "beheer"]) })).max(MAX_UREN),
+  fooien: z
+    .array(z.object({ id, van: datum, tot: datum, totaalCent: z.number().int().min(1).max(100_000_000), verdeling: z.array(z.object({ medewerkerId: id, cent: z.number().int().min(0) })).max(200), notitie: tekst, op: z.string().max(40) }))
+    .max(MAX_FOOIEN)
+    .default([]),
 });
 
 export async function leesPlanningVan(tenantId: string): Promise<Planning> {
@@ -267,6 +273,28 @@ export async function beoordeelVerlof(tenantId: string, verlofId: string, beslui
     const v = p.verlof.find((x) => x.id === verlofId);
     if (!v || v.status !== "aangevraagd") throw AppError.precondition("Deze aanvraag wacht niet (meer) op jouw besluit.");
     p.verlof = p.verlof.map((x) => (x.id === verlofId ? { ...x, status: besluit === "goedkeuren" ? "goedgekeurd" : "afgewezen" } : x));
+  });
+  return planning;
+}
+
+// ---- fooi ------------------------------------------------------------------
+
+/** Een fooienpot vastleggen en verdelen naar de gewerkte uren in de periode (lib/horeca-personeel/planning.ts, verdeelFooi). */
+export async function bewaarFooi(tenantId: string, i: { van: string; tot: string; totaalCent: number; notitie: string }, nu: Date = new Date()): Promise<Planning> {
+  if (!isDatum(i.van) || !isDatum(i.tot) || i.tot < i.van) throw AppError.validation("Kies een geldige periode.");
+  if (!Number.isInteger(i.totaalCent) || i.totaalCent < 1) throw AppError.validation("Vul een bedrag in.");
+  const { planning } = await wijzig(tenantId, (p) => {
+    const verdeling = verdeelFooi(p, i.van, i.tot, i.totaalCent);
+    if (verdeling.length === 0) throw AppError.precondition("In deze periode zijn geen uren geregistreerd, dus er is niets te verdelen.");
+    p.fooien.push({ id: nieuwId(), van: i.van, tot: i.tot, totaalCent: i.totaalCent, verdeling, notitie: i.notitie.trim().slice(0, 300), op: nu.toISOString() });
+    p.fooien = p.fooien.slice(-MAX_FOOIEN);
+  });
+  return planning;
+}
+
+export async function verwijderFooi(tenantId: string, fooiId: string): Promise<Planning> {
+  const { planning } = await wijzig(tenantId, (p) => {
+    p.fooien = p.fooien.filter((f) => f.id !== fooiId);
   });
   return planning;
 }

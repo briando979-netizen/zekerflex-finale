@@ -10,7 +10,9 @@ import { isDatum, isTijd, urenCsv } from "@/lib/horeca-personeel/planning";
 import {
   beoordeelRuil,
   beoordeelVerlof,
+  bewaarFooi,
   bewaarUur,
+  verwijderFooi,
   kopieerWeek,
   leesPlanningVan,
   plaatsDienst,
@@ -46,6 +48,8 @@ const actieSchema = z.discriminatedUnion("actie", [
   z.object({ actie: z.literal("verlof"), id, besluit: z.enum(["goedkeuren", "afwijzen"]) }),
   z.object({ actie: z.literal("uur"), id: id.optional(), medewerkerId: id, datum, in: tijd, uit: tijd.nullable() }),
   z.object({ actie: z.literal("uur-weg"), id }),
+  z.object({ actie: z.literal("fooi"), van: datum, tot: datum, totaalCent: z.number().int().min(1).max(100_000_000), notitie }),
+  z.object({ actie: z.literal("fooi-weg"), id }),
 ]);
 
 export async function GET(request: Request): Promise<Response> {
@@ -112,6 +116,10 @@ export async function POST(request: Request): Promise<NextResponse> {
         return NextResponse.json({ planning: await bewaarUur(tenantId, { id: a.id, medewerkerId: a.medewerkerId, datum: a.datum, in: a.in, uit: a.uit }) });
       case "uur-weg":
         return NextResponse.json({ planning: await verwijderUur(tenantId, a.id) });
+      case "fooi":
+        return NextResponse.json({ planning: await bewaarFooi(tenantId, { van: a.van, tot: a.tot, totaalCent: a.totaalCent, notitie: a.notitie }) }, { status: 201 });
+      case "fooi-weg":
+        return NextResponse.json({ planning: await verwijderFooi(tenantId, a.id) });
     }
   } catch (err) {
     return fout(err);

@@ -6,6 +6,7 @@ import { getLocale } from "@/lib/i18n/server";
 import { vulIn } from "@/lib/i18n/vul-in";
 import { PushToggle } from "@/components/app/PushToggle";
 import { BerichtenBlok } from "@/components/personeel/BerichtenBlok";
+import { DocumentenBlok } from "@/components/personeel/DocumentenBlok";
 import { GelezenMarkering } from "@/components/personeel/GelezenMarkering";
 import { LoonstrokenBlok } from "@/components/personeel/LoonstrokenBlok";
 import { PlanningBlokken } from "@/components/personeel/PlanningBlokken";
@@ -75,13 +76,23 @@ export default async function PersoneelPage() {
 
       {blokken.includes("taken") && <TakenBlok t={t.omgeving} />}
 
-      {(blokken.includes("rooster") || blokken.includes("verlof") || blokken.includes("uren")) && (
-        <PlanningBlokken t={t.planning} taal={taal} rooster={blokken.includes("rooster")} verlof={blokken.includes("verlof")} uren={blokken.includes("uren")} />
+      {(blokken.includes("rooster") || blokken.includes("verlof") || blokken.includes("uren") || blokken.includes("fooi")) && (
+        <PlanningBlokken t={t.planning} taal={taal} rooster={blokken.includes("rooster")} verlof={blokken.includes("verlof")} uren={blokken.includes("uren")} fooi={blokken.includes("fooi")} />
       )}
+
+      {blokken.includes("documenten") && <DocumentenBlok t={t.documenten} taal={taal} />}
 
       {blokken.includes("loonstroken") && <LoonstrokenBlok t={t.omgeving} taal={taal} />}
 
       {blokken.includes("berichten") && <BerichtenBlok t={t.chat} taal={taal} />}
+
+      <p className="border-t border-hair pt-4 text-sm">
+        {/* een bestand downloaden, geen pagina: een gewone link, geen Link van Next */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a href="/api/personeel/export" download className="font-semibold text-brand-600 hover:underline">
+          {t.omgeving.exportGegevens}
+        </a>
+      </p>
     </main>
   );
 }

@@ -2,6 +2,7 @@ import { AppError } from "@/lib/errors";
 import { kvDelete, kvDeleteStale, kvGet, kvListEntries } from "@/lib/storage/kv";
 import { redactSecrets } from "@/lib/privacy/user-kv";
 import { ORGANISATIE_ID, ORG_KV_REGISTER, orgSleutel } from "@/lib/privacy/org-kv";
+import { wisPersoneelBestanden } from "@/lib/horeca-personeel/opruimen";
 
 // ---------------------------------------------------------------------------
 // Wissen en exporteren van de KV-gegevens van één organisatie, op basis van het register in lib/privacy/org-kv.ts.
@@ -28,6 +29,10 @@ export async function wisOrganisatieGegevens(orgId: string, nu: Date = new Date(
   const tel = (module: string, n: number) => {
     if (n > 0) perModule[module] = (perModule[module] ?? 0) + n;
   };
+
+  // de pdf-bestanden van loonstroken en documenten van het eigen personeel staan in de uploadopslag, niet in de KV: eerst die, want
+  // de lijst met verwijzingen verdwijnt hieronder
+  await wisPersoneelBestanden(orgId);
 
   // eerst de openbare opzoekrijtjes: de waarde zegt bij welke organisatie ze horen
   for (const regel of ORG_KV_REGISTER) {

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { vulIn } from "@/lib/i18n/vul-in";
 import {
+  euroTekst,
   plusDagen,
   urenPerMedewerker,
   urenTekst,
@@ -49,6 +50,7 @@ export function PlanningBeheer({ t, taal }: { t: PlanningTeksten; taal: string }
   const [invoer, setInvoer] = useState<Invoer | null>(null);
   const [maand, setMaand] = useState<string | null>(null);
   const [uur, setUur] = useState({ medewerkerId: "", datum: "", in: "", uit: "" });
+  const [fooi, setFooi] = useState({ van: "", tot: "", bedrag: "", notitie: "" });
 
   const dag = useCallback((s: string) => new Intl.DateTimeFormat(taal, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).format(new Date(`${s}T12:00:00Z`)), [taal]);
 
@@ -310,6 +312,74 @@ export function PlanningBeheer({ t, taal }: { t: PlanningTeksten; taal: string }
             ))}
           </ul>
         )}
+      </section>
+
+      {/* fooi */}
+      <section aria-labelledby="plb-fooi" className="rounded-2xl border border-hair bg-white p-5">
+        <h4 id="plb-fooi" className="font-semibold text-ink">
+          {t.fooi.kop}
+        </h4>
+        <p className="mt-1 text-sm text-neutralx-600">{t.fooi.uitleg}</p>
+        {p.fooien.length === 0 ? (
+          <p className="mt-2 text-sm text-neutralx-500">{t.fooi.geen}</p>
+        ) : (
+          <ul className="mt-2 divide-y divide-hair">
+            {[...p.fooien].reverse().map((f) => (
+              <li key={f.id} className="space-y-1 py-3 text-sm text-ink">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="min-w-0 flex-1 font-medium">
+                    {vulIn(t.fooi.periode, { van: dag(f.van), tot: dag(f.tot) })} · {vulIn(t.fooi.totaalPot, { bedrag: euroTekst(f.totaalCent) })}
+                  </span>
+                  <button type="button" className="min-h-[44px] text-xs font-semibold text-crit hover:underline" disabled={bezig} onClick={() => void aanroep({ actie: "fooi-weg", id: f.id })}>
+                    {t.gemeen.verwijder}
+                  </button>
+                </div>
+                <p className="text-xs text-neutralx-500">{f.verdeling.map((x) => `${naamVan(x.medewerkerId)}: € ${euroTekst(x.cent)}`).join(" · ")}</p>
+                {f.notitie && <p className="text-xs text-neutralx-500">{f.notitie}</p>}
+              </li>
+            ))}
+          </ul>
+        )}
+        <form
+          className="mt-4 grid gap-3 rounded-xl border border-hair p-4 sm:grid-cols-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const cent = Math.round(Number(fooi.bedrag.replace(",", ".")) * 100);
+            void aanroep({ actie: "fooi", van: fooi.van, tot: fooi.tot, totaalCent: cent, notitie: fooi.notitie }).then((r) => {
+              if (r) setFooi({ van: "", tot: "", bedrag: "", notitie: "" });
+            });
+          }}
+        >
+          <div>
+            <label htmlFor="plb-fv" className="block text-sm font-medium text-ink">
+              {t.fooi.van}
+            </label>
+            <input id="plb-fv" type="date" className={veld} required value={fooi.van} onChange={(e) => setFooi({ ...fooi, van: e.target.value })} />
+          </div>
+          <div>
+            <label htmlFor="plb-ft" className="block text-sm font-medium text-ink">
+              {t.fooi.tot}
+            </label>
+            <input id="plb-ft" type="date" className={veld} required min={fooi.van} value={fooi.tot} onChange={(e) => setFooi({ ...fooi, tot: e.target.value })} />
+          </div>
+          <div>
+            <label htmlFor="plb-fb" className="block text-sm font-medium text-ink">
+              {t.fooi.bedrag}
+            </label>
+            <input id="plb-fb" inputMode="decimal" className={veld} required value={fooi.bedrag} onChange={(e) => setFooi({ ...fooi, bedrag: e.target.value })} />
+          </div>
+          <div>
+            <label htmlFor="plb-fn" className="block text-sm font-medium text-ink">
+              {t.fooi.notitie}
+            </label>
+            <input id="plb-fn" className={veld} maxLength={300} value={fooi.notitie} onChange={(e) => setFooi({ ...fooi, notitie: e.target.value })} />
+          </div>
+          <div className="sm:col-span-4">
+            <button type="submit" className="btn-primary min-h-[44px]" disabled={bezig || !fooi.van || !fooi.tot || !fooi.bedrag}>
+              {t.fooi.verdeel}
+            </button>
+          </div>
+        </form>
       </section>
 
       {/* uren */}

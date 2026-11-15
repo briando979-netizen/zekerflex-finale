@@ -70,6 +70,7 @@ export interface PlanningTeksten {
   };
   verlof: { kop: string; uitleg: string; van: string; tot: string; reden: string; vraag: string; geen: string; intrekken: string; periode: string };
   uren: { kop: string; klokIn: string; klokUit: string; ingeklokt: string; niet: string; geen: string; totaal: string; lopend: string };
+  fooi: { kop: string; uitleg: string; periode: string; van: string; tot: string; bedrag: string; notitie: string; verdeel: string; geen: string; deel: string; totaalPot: string; verdeling: string };
 }
 
 export const PLANNING_NL: PlanningTeksten = {
@@ -142,6 +143,20 @@ export const PLANNING_NL: PlanningTeksten = {
   },
   verlof: { kop: "Verlof", uitleg: "Vraag verlof aan; je werkgever keurt het goed of af.", van: "Eerste dag", tot: "Laatste dag", reden: "Reden (optioneel)", vraag: "Aanvragen", geen: "Je hebt geen verlofaanvragen.", intrekken: "Intrekken", periode: "{van} t/m {tot}" },
   uren: { kop: "Mijn uren", klokIn: "Inklokken", klokUit: "Uitklokken", ingeklokt: "Ingeklokt sinds {tijd}", niet: "Je bent niet ingeklokt.", geen: "Nog geen uren.", totaal: "Deze maand: {uren} uur", lopend: "bezig" },
+  fooi: {
+    kop: "Fooi",
+    uitleg: "De fooienpot wordt verdeeld naar het aantal uren dat iedereen in die periode heeft gewerkt. De verdeling ligt vast zodra je hem maakt.",
+    periode: "{van} t/m {tot}",
+    van: "Eerste dag",
+    tot: "Laatste dag",
+    bedrag: "Bedrag in de pot (in euro)",
+    notitie: "Notitie (optioneel)",
+    verdeel: "Verdelen",
+    geen: "Nog geen fooi verdeeld.",
+    deel: "€ {bedrag}",
+    totaalPot: "Pot: € {bedrag}",
+    verdeling: "Jouw deel",
+  },
 };
 
 export const PLANNING_EN: PlanningTeksten = {
@@ -214,4 +229,18 @@ export const PLANNING_EN: PlanningTeksten = {
   },
   verlof: { kop: "Leave", uitleg: "Request leave; your employer approves or declines it.", van: "First day", tot: "Last day", reden: "Reason (optional)", vraag: "Request", geen: "You have no leave requests.", intrekken: "Withdraw", periode: "{van} to {tot}" },
   uren: { kop: "My hours", klokIn: "Clock in", klokUit: "Clock out", ingeklokt: "Clocked in since {tijd}", niet: "You are not clocked in.", geen: "No hours yet.", totaal: "This month: {uren} h", lopend: "in progress" },
+  fooi: {
+    kop: "Tips",
+    uitleg: "The tip pot is shared by the hours everyone worked in that period. The split is fixed as soon as you create it.",
+    periode: "{van} to {tot}",
+    van: "First day",
+    tot: "Last day",
+    bedrag: "Amount in the pot (in euros)",
+    notitie: "Note (optional)",
+    verdeel: "Share out",
+    geen: "No tips shared yet.",
+    deel: "€ {bedrag}",
+    totaalPot: "Pot: € {bedrag}",
+    verdeling: "Your share",
+  },
 };

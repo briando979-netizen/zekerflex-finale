@@ -64,6 +64,22 @@ export interface Uur {
   bron: "klok" | "beheer";
 }
 
+export interface FooiRegel {
+  medewerkerId: string;
+  cent: number;
+}
+
+/** Een fooienpot, verdeeld over de medewerkers naar hun gewerkte uren in de periode; de verdeling ligt vast op het moment van maken. */
+export interface Fooi {
+  id: string;
+  van: string;
+  tot: string;
+  totaalCent: number;
+  verdeling: FooiRegel[];
+  notitie: string;
+  op: string;
+}
+
 export interface Planning {
   versie: 1;
   diensten: Dienst[];
@@ -71,9 +87,12 @@ export interface Planning {
   ruilen: Ruil[];
   verlof: Verlof[];
   uren: Uur[];
+  fooien: Fooi[];
 }
 
-export const legePlanning = (): Planning => ({ versie: 1, diensten: [], nietBeschikbaar: [], ruilen: [], verlof: [], uren: [] });
+export const MAX_FOOIEN = 200;
+
+export const legePlanning = (): Planning => ({ versie: 1, diensten: [], nietBeschikbaar: [], ruilen: [], verlof: [], uren: [], fooien: [] });
 
 // ---- datum en tijd ---------------------------------------------------------
 
@@ -165,6 +184,35 @@ export function urenPerMedewerker(p: Planning, maand: string): Map<string, numbe
   for (const u of p.uren) if (u.datum.startsWith(maand) && u.uit !== null) uit.set(u.medewerkerId, (uit.get(u.medewerkerId) ?? 0) + werkMinuten(u));
   return uit;
 }
+
+/**
+ * Een fooienpot verdelen over de medewerkers naar hun gewerkte minuten in de periode (afgeronde urenregels, van en tot en met).
+ * Hele centen: elk krijgt het afgeronde deel naar beneden, de overgebleven centen gaan één voor één naar wie het meeste
+ * overhield (bij gelijk: de medewerker die het langst werkte, daarna op id), zodat de som altijd precies het totaal is.
+ * Geen gewerkte uren in de periode geeft een lege verdeling.
+ */
+export function verdeelFooi(p: Planning, van: string, tot: string, totaalCent: number): FooiRegel[] {
+  const minuten = new Map<string, number>();
+  for (const u of p.uren) if (u.uit !== null && u.datum >= van && u.datum <= tot) minuten.set(u.medewerkerId, (minuten.get(u.medewerkerId) ?? 0) + werkMinuten(u));
+  const totaal = [...minuten.values()].reduce((s, x) => s + x, 0);
+  if (totaal === 0 || totaalCent <= 0) return [];
+  const delen = [...minuten.entries()].map(([medewerkerId, min]) => {
+    const exact = (totaalCent * min) / totaal;
+    const cent = Math.floor(exact);
+    return { medewerkerId, min, cent, rest: exact - cent };
+  });
+  let over = totaalCent - delen.reduce((s, d) => s + d.cent, 0);
+  const volgorde = [...delen].sort((a, b) => b.rest - a.rest || b.min - a.min || (a.medewerkerId < b.medewerkerId ? -1 : 1));
+  for (const d of volgorde) {
+    if (over <= 0) break;
+    d.cent += 1;
+    over -= 1;
+  }
+  return delen.map((d) => ({ medewerkerId: d.medewerkerId, cent: d.cent })).sort((a, b) => (a.medewerkerId < b.medewerkerId ? -1 : 1));
+}
+
+/** Een bedrag in centen als tekst met een komma, bijvoorbeeld 1250 → "12,50". */
+export const euroTekst = (cent: number): string => `${Math.floor(cent / 100)},${String(cent % 100).padStart(2, "0")}`;
 
 /** De uren van een maand als csv voor de loonadministratie (puntkomma, komma als decimaalteken). */
 export function urenCsv(p: Planning, maand: string, naam: (medewerkerId: string) => string): string {

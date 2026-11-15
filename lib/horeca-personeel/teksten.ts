@@ -97,6 +97,7 @@ export interface PersoneelTeksten {
     buitenGrens: string;
     loonstrokenKop: string;
     berichtenKop: string;
+    exportGegevens: string;
     geenLoonstroken: string;
     downloaden: string;
     binnenkort: string;
@@ -107,6 +108,7 @@ export interface PersoneelTeksten {
   };
   mail: { onderwerp: string; hoi: string; tekst: string; knop: string; geldig: string };
   planning: PlanningTeksten;
+  documenten: { kop: string; uitleg: string; titel: string; soort: string; soorten: Record<"contract" | "huisregels" | "handboek" | "overig", string>; voor: string; iedereen: string; pdfKies: string; toevoegen: string; geen: string; downloaden: string; verwijder: string; bezig: string; fout: string; open: string; sluit: string };
   chat: { kop: string; team: string; metBeheer: string; gesprek: string; schrijf: string; verstuur: string; geen: string; beheerder: string; verwijder: string; bezig: string; fout: string; teamUitleg: string };
 }
 
@@ -118,6 +120,8 @@ const nl: PersoneelTeksten = {
     rooster: { naam: "Rooster", uitleg: "Medewerkers zien hun diensten, kunnen doorgeven wanneer ze niet kunnen en diensten ruilen of een open dienst nemen." },
     verlof: { naam: "Verlof", uitleg: "Medewerkers vragen verlof aan; jij keurt het goed of af." },
     uren: { naam: "Uren", uitleg: "Medewerkers klokken in en uit; jij ziet de uren en kunt ze als csv downloaden." },
+    fooi: { naam: "Fooi", uitleg: "Medewerkers zien hun deel van de fooienpot, verdeeld naar gewerkte uren." },
+    documenten: { naam: "Documenten", uitleg: "Medewerkers zien hun eigen contract en de huisregels en het handboek (pdf) die jij klaarzet." },
     loonstroken: { naam: "Loonstroken", uitleg: "Medewerkers zien hier hun eigen loonstroken (pdf) die jij voor hen klaarzet." },
     berichten: { naam: "Berichten", uitleg: "Een teamkanaal voor iedereen en een eigen gesprek met jou, om te chatten." },
   },
@@ -205,6 +209,7 @@ const nl: PersoneelTeksten = {
     buitenGrens: "Let op: buiten de grens.",
     loonstrokenKop: "Loonstroken",
     berichtenKop: "Berichten",
+    exportGegevens: "Mijn gegevens downloaden",
     geenLoonstroken: "Er zijn nog geen loonstroken voor je klaargezet.",
     downloaden: "Downloaden",
     binnenkort: "Komt binnenkort.",
@@ -221,6 +226,24 @@ const nl: PersoneelTeksten = {
     geldig: "Deze link is {dagen} dagen geldig.",
   },
   planning: PLANNING_NL,
+  documenten: {
+    kop: "Documenten",
+    uitleg: "Zet een pdf klaar voor één medewerker (bijvoorbeeld een contract) of voor iedereen (huisregels, handboek, HACCP).",
+    titel: "Titel",
+    soort: "Soort",
+    soorten: { contract: "Contract of afspraak", huisregels: "Huisregels", handboek: "Handboek", overig: "Overig" },
+    voor: "Voor wie?",
+    iedereen: "Iedereen",
+    pdfKies: "Kies een pdf (maximaal 5 MB)",
+    toevoegen: "Toevoegen",
+    geen: "Nog geen documenten.",
+    downloaden: "Downloaden",
+    verwijder: "Verwijderen",
+    bezig: "Bezig…",
+    fout: "Dat lukte niet. Probeer het zo nog eens.",
+    open: "Documenten beheren",
+    sluit: "Sluiten",
+  },
   chat: {
     kop: "Berichten",
     team: "Team",
@@ -245,6 +268,8 @@ const en: PersoneelTeksten = {
     rooster: { naam: "Rota", uitleg: "Staff see their shifts, can say when they cannot work and swap shifts or take an open shift." },
     verlof: { naam: "Leave", uitleg: "Staff request leave; you approve or decline it." },
     uren: { naam: "Hours", uitleg: "Staff clock in and out; you see the hours and can download them as csv." },
+    fooi: { naam: "Tips", uitleg: "Staff see their share of the tip pot, shared by hours worked." },
+    documenten: { naam: "Documents", uitleg: "Staff see their own contract and the house rules and handbook (pdf) that you put ready." },
     loonstroken: { naam: "Payslips", uitleg: "Staff see their own payslips (pdf) here, which you put ready for them." },
     berichten: { naam: "Messages", uitleg: "A team channel for everyone and a private conversation with you, to chat." },
   },
@@ -332,6 +357,7 @@ const en: PersoneelTeksten = {
     buitenGrens: "Careful: outside the limit.",
     loonstrokenKop: "Payslips",
     berichtenKop: "Messages",
+    exportGegevens: "Download my data",
     geenLoonstroken: "No payslips have been put ready for you yet.",
     downloaden: "Download",
     binnenkort: "Coming soon.",
@@ -348,6 +374,24 @@ const en: PersoneelTeksten = {
     geldig: "This link is valid for {dagen} days.",
   },
   planning: PLANNING_EN,
+  documenten: {
+    kop: "Documents",
+    uitleg: "Put a pdf ready for one staff member (for example a contract) or for everyone (house rules, handbook, HACCP).",
+    titel: "Title",
+    soort: "Type",
+    soorten: { contract: "Contract or agreement", huisregels: "House rules", handboek: "Handbook", overig: "Other" },
+    voor: "For whom?",
+    iedereen: "Everyone",
+    pdfKies: "Choose a pdf (maximum 5 MB)",
+    toevoegen: "Add",
+    geen: "No documents yet.",
+    downloaden: "Download",
+    verwijder: "Delete",
+    bezig: "Working…",
+    fout: "That did not work. Please try again in a moment.",
+    open: "Manage documents",
+    sluit: "Close",
+  },
   chat: {
     kop: "Messages",
     team: "Team",

@@ -72,6 +72,7 @@ export const ORG_KV_REGISTER: readonly OrgKvRegel[] = [
   { module: "horeca-personeel", voorvoegsel: "horeca:personeel:", soort: "exact", omschrijving: "eigen personeel van een horecazaak: dashboards, medewerkers en mededelingen" },
   { module: "horeca-personeel", voorvoegsel: "horeca:planning:", soort: "exact", omschrijving: "planning van het eigen personeel: rooster, ruilen, verlof en uren" },
   { module: "horeca-personeel", voorvoegsel: "horeca:meld:", soort: "exact", omschrijving: "wanneer het personeel voor het laatst een chatmelding kreeg (om niet te spammen)" },
+  { module: "horeca-personeel", voorvoegsel: "horeca:documenten:", soort: "exact", omschrijving: "documenten voor het eigen personeel (verwijzingen naar de pdf-bestanden)" },
   { module: "horeca-personeel", voorvoegsel: "horeca:chat:", soort: "organisatie", omschrijving: "chat van het eigen personeel: teamkanaal en gesprekken met de beheerder" },
   { module: "horeca-personeel", voorvoegsel: "horeca:loonstroken:", soort: "exact", omschrijving: "loonstroken van het eigen personeel (verwijzingen naar de pdf-bestanden)" },
 ];

@@ -26,6 +26,8 @@ export interface MedewerkerPlanning {
   uren: Uur[];
   /** is hij nu ingeklokt? */
   ingeklokt: Uur | null;
+  /** zijn eigen deel van de fooienpotten, nieuwste eerst */
+  fooien: { id: string; van: string; tot: string; cent: number; totaalCent: number; notitie: string }[];
 }
 
 const voornaam = (d: PersoneelData, id: string | null): string => {
@@ -53,5 +55,11 @@ export function planningVoorMedewerker(p: Planning, d: PersoneelData, medewerker
       .filter((u) => u.medewerkerId === medewerkerId && isDatum(u.datum) && u.datum >= plusDagen(vandaag, -35))
       .sort((a, b) => (a.datum + a.in < b.datum + b.in ? 1 : -1)),
     ingeklokt: p.uren.find((u) => u.medewerkerId === medewerkerId && u.uit === null) ?? null,
+    fooien: p.fooien
+      .map((f) => ({ id: f.id, van: f.van, tot: f.tot, cent: f.verdeling.find((x) => x.medewerkerId === medewerkerId)?.cent ?? 0, totaalCent: f.totaalCent, notitie: f.notitie, op: f.op }))
+      .filter((f) => f.cent > 0)
+      .sort((a, b) => (a.op < b.op ? 1 : -1))
+      .slice(0, 20)
+      .map(({ op: _op, ...rest }) => rest),
   };
 }

@@ -50,7 +50,7 @@ async function antwoord(c: MedewerkerContext, extra: Record<string, unknown> = {
 
 export async function GET(): Promise<NextResponse> {
   try {
-    return await antwoord(await eis(["rooster", "verlof", "uren"]));
+    return await antwoord(await eis(["rooster", "verlof", "uren", "fooi"]));
   } catch (err) {
     return fout(err);
   }

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { vulIn } from "@/lib/i18n/vul-in";
-import { duurMinuten, urenTekst, werkMinuten, type Dienst, type Uur } from "@/lib/horeca-personeel/planning";
+import { duurMinuten, euroTekst, urenTekst, werkMinuten, type Dienst, type Uur } from "@/lib/horeca-personeel/planning";
 import type { MedewerkerPlanning, RuilMetDienst } from "@/lib/horeca-personeel/planning-view";
 import type { PlanningTeksten } from "@/lib/horeca-personeel/planning-teksten";
 
@@ -13,7 +13,7 @@ import type { PlanningTeksten } from "@/lib/horeca-personeel/planning-teksten";
 const API = "/api/personeel/planning";
 const veld = "mt-1 w-full rounded-lg border border-hairstrong bg-white px-3 py-2.5 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400";
 
-export function PlanningBlokken({ t, taal, rooster, verlof, uren }: { t: PlanningTeksten; taal: string; rooster: boolean; verlof: boolean; uren: boolean }) {
+export function PlanningBlokken({ t, taal, rooster, verlof, uren, fooi }: { t: PlanningTeksten; taal: string; rooster: boolean; verlof: boolean; uren: boolean; fooi: boolean }) {
   const [d, setD] = useState<MedewerkerPlanning | null>(null);
   const [fout, setFout] = useState<string | null>(null);
   const [bezig, setBezig] = useState(false);
@@ -292,6 +292,29 @@ export function PlanningBlokken({ t, taal, rooster, verlof, uren }: { t: Plannin
               </button>
             </div>
           </form>
+        </section>
+      )}
+
+      {fooi && (
+        <section aria-labelledby="pl-fooi" className="space-y-3">
+          <h2 id="pl-fooi" className="font-display text-xl font-bold text-ink">
+            {t.fooi.kop}
+          </h2>
+          {d.fooien.length === 0 ? (
+            <p className="text-sm text-neutralx-500">{t.fooi.geen}</p>
+          ) : (
+            <ul className="divide-y divide-hair rounded-2xl border border-hair bg-white px-4">
+              {d.fooien.map((f) => (
+                <li key={f.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm text-ink">
+                  <span>
+                    {vulIn(t.fooi.periode, { van: dag(f.van), tot: dag(f.tot) })}
+                    <span className="ml-2 text-xs text-neutralx-500">{vulIn(t.fooi.totaalPot, { bedrag: euroTekst(f.totaalCent) })}</span>
+                  </span>
+                  <span className="font-semibold">{vulIn(t.fooi.deel, { bedrag: euroTekst(f.cent) })}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
 
