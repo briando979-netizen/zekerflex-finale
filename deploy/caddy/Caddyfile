@@ -151,6 +151,9 @@ schwarzwald.zekerflex.com {
 # klantsite en voorstel gaan hier weg, zoals in elk blok.
 vpn.zekerflex.com {
 	encode zstd gzip
+	# Wie het adres in een browser opent, zag een witte pagina (15 nov, eigenaar): alleen de kale voorpagina
+	# gaat naar de uitleg en de toegangscodes. De Tailscale-apps gebruiken andere paden (/key, /ts2021, /derp).
+	redir / https://zekerflex.com/werkgever/netwerk 302
 	reverse_proxy headscale:8080 {
 		header_up -X-ZF-Site-Host
 		header_up -X-ZF-Voorstel
