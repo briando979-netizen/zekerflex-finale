@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { DemoBooking } from "@/components/marketing/DemoBooking";
+import { FotoKolom } from "@/components/marketing/HeroMetFoto";
+import { paginaFoto } from "@/lib/marketing/fotos";
 
 export const metadata: Metadata = {
   title: "Vraag een demo aan",
@@ -41,6 +43,7 @@ export default function DemoPage() {
               </li>
             ))}
           </ul>
+          <FotoKolom foto={paginaFoto("demo")} className="mt-10 hidden lg:block" />
         </div>
 
         <div className="lg:pt-2">

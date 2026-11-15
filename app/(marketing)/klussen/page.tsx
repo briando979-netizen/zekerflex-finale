@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { ldJson } from "@/lib/seo/json-ld";
 import Link from "next/link";
 import { Section, SectionHead, CtaBand } from "@/components/marketing/primitives";
+import { FotoKolom, HeroMetFoto } from "@/components/marketing/HeroMetFoto";
+import { paginaFoto } from "@/lib/marketing/fotos";
 import { PublicShiftList } from "@/components/marketing/PublicShiftList";
 import { publicOpenShifts } from "@/lib/public-shifts";
 import { CITIES } from "@/lib/seo-cities";
@@ -41,12 +43,14 @@ export default async function KlussenPage() {
         }}
       />
       <Section>
+        <HeroMetFoto foto={paginaFoto("klussen")}>
         <SectionHead
           kop="h1"
           eyebrow="Open klussen"
           title="Klussen in heel Nederland"
           intro="Freelance werk, flexwerk en uitzendwerk — van één avond in de horeca tot een week orderpicken. Maak gratis een account, reageer en kies per klus hoe snel je wordt uitbetaald."
         />
+        </HeroMetFoto>
         <div className="mt-10">
           <PublicShiftList
             shifts={shifts}

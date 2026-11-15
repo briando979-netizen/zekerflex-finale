@@ -3,6 +3,8 @@ import { Fragment, type ReactNode } from "react";
 import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
 import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
+import { FotoKolom, HeroMetFoto } from "@/components/marketing/HeroMetFoto";
+import { paginaFoto } from "@/lib/marketing/fotos";
 import { canonical } from "@/lib/seo";
 import { SaasPlans } from "@/components/marketing/SaasPlans";
 
@@ -56,13 +58,16 @@ export default async function AbonnementenPage() {
   return (
     <>
       <div className="hero-ink text-white">
-        <div className="shell py-20 md:py-24">
+      <div className="shell grid items-center gap-10 py-20 md:py-24 lg:grid-cols-[1.15fr_0.85fr]">
+        <div>
           <p className="eyebrow text-brand-mint">Abonnementen</p>
           <h1 className="mt-4 font-display text-4xl font-bold md:text-6xl">Kies wat bij je past</h1>
           <p className="mt-6 max-w-xl text-lg text-white/70">
             Gratis beginnen kan altijd. Wil je sneller werven en uitbetalen of uitzenden met ABU/StiPP? Zet een
             maandabonnement erbij — maandelijks opzegbaar, geen opstartkosten.
           </p>
+        </div>
+        <FotoKolom foto={paginaFoto("abonnementen")} />
         </div>
       </div>
 

@@ -4,6 +4,8 @@ import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
 import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
 import Link from "next/link";
 import { Section, SectionHead } from "@/components/marketing/primitives";
+import { FotoKolom, HeroMetFoto } from "@/components/marketing/HeroMetFoto";
+import { paginaFoto } from "@/lib/marketing/fotos";
 import { canonical, CONTACTS, GOOGLE_PROFIEL, SITE } from "@/lib/seo";
 
 const TITLE = "Contact — ZekerFlex";
@@ -88,7 +90,8 @@ export default async function ContactPage() {
   return (
     <>
       <div className="hero-ink text-white">
-        <div className="shell py-20 md:py-24">
+      <div className="shell grid items-center gap-10 py-20 md:py-24 lg:grid-cols-[1.15fr_0.85fr]">
+        <div>
           <p className="eyebrow text-brand-mint">Contact</p>
           <h1 className="mt-4 max-w-2xl text-balance font-display text-4xl font-bold leading-tight md:text-5xl">
             Waar kunnen we mee helpen?
@@ -106,6 +109,8 @@ export default async function ContactPage() {
             </a>
             <span className="text-sm text-white/60">Neem contact op — onze assistent neemt 24/7 op.</span>
           </div>
+        </div>
+        <FotoKolom foto={paginaFoto("contact")} />
         </div>
       </div>
 
