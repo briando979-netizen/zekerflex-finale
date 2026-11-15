@@ -40,6 +40,9 @@ export const ERASABLE_KV_PREFIXES = [
   "chat-gepland:",
   // je status in de chat, 24 uur (lib/messaging/status.ts, chat-status:<userId>); de foto valt onder Upload
   "chat-status:",
+  // de eigen AI-gesprekken van een beheerder (lib/mijn-ai/opslag.ts: mijn-ai-lijst:<userId>, mijn-ai:<userId>:<id>)
+  "mijn-ai-lijst:",
+  "mijn-ai:",
   "chat-prefs:",
   "chat-settings:",
   "chip-lezing:",
