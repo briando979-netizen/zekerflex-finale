@@ -24,6 +24,17 @@ export const BEL_EN: BelTeksten = {
   camera: "Camera",
   stopSchermDelen: "Stop sharing screen",
   schermDelen: "Share screen",
+  terugNaarChat: "Back to the chat (the call continues)",
+  videoAan: "Turn on video",
+  videoUit: "Turn off video",
+  cameraWisselen: "Switch camera",
+  cameraStaatUit: "{naam} has the camera off",
+  beeldWisselen: "Swap large and small view",
+  knoppenTonen: "Show or hide the buttons",
+  spraakoproep: "Voice call",
+  videooproep: "Video call",
+  schermoproep: "Wants to share a screen",
+  cameraGeenToegang: "No access to your camera. Allow the camera via the padlock next to the address.",
 };
 
 export const BEL_PL: BelTeksten = {
@@ -49,6 +60,17 @@ export const BEL_PL: BelTeksten = {
   camera: "Kamera",
   stopSchermDelen: "Zatrzymaj udostępnianie ekranu",
   schermDelen: "Udostępnij ekran",
+  terugNaarChat: "Wróć do czatu (rozmowa trwa dalej)",
+  videoAan: "Włącz wideo",
+  videoUit: "Wyłącz wideo",
+  cameraWisselen: "Przełącz kamerę",
+  cameraStaatUit: "{naam} ma wyłączoną kamerę",
+  beeldWisselen: "Zamień duży i mały obraz",
+  knoppenTonen: "Pokaż lub ukryj przyciski",
+  spraakoproep: "Połączenie głosowe",
+  videooproep: "Połączenie wideo",
+  schermoproep: "Chce udostępnić ekran",
+  cameraGeenToegang: "Brak dostępu do kamery. Zezwól na kamerę przez kłódkę obok adresu.",
 };
 
 export const BEL_RO: BelTeksten = {
@@ -74,6 +96,17 @@ export const BEL_RO: BelTeksten = {
   camera: "Cameră",
   stopSchermDelen: "Oprește partajarea ecranului",
   schermDelen: "Partajează ecranul",
+  terugNaarChat: "Înapoi la chat (apelul continuă)",
+  videoAan: "Pornește video",
+  videoUit: "Oprește video",
+  cameraWisselen: "Schimbă camera",
+  cameraStaatUit: "{naam} are camera oprită",
+  beeldWisselen: "Schimbă imaginea mare cu cea mică",
+  knoppenTonen: "Arată sau ascunde butoanele",
+  spraakoproep: "Apel vocal",
+  videooproep: "Apel video",
+  schermoproep: "Vrea să partajeze ecranul",
+  cameraGeenToegang: "Nu există acces la cameră. Permite camera din lacătul de lângă adresă.",
 };
 
 export const BEL_UK: BelTeksten = {
@@ -99,4 +132,15 @@ export const BEL_UK: BelTeksten = {
   camera: "Камера",
   stopSchermDelen: "Припинити показ екрана",
   schermDelen: "Показати екран",
+  terugNaarChat: "Назад до чату (дзвінок триває)",
+  videoAan: "Увімкнути відео",
+  videoUit: "Вимкнути відео",
+  cameraWisselen: "Змінити камеру",
+  cameraStaatUit: "У {naam} вимкнена камера",
+  beeldWisselen: "Поміняти велике й мале зображення",
+  knoppenTonen: "Показати або сховати кнопки",
+  spraakoproep: "Голосовий дзвінок",
+  videooproep: "Відеодзвінок",
+  schermoproep: "Хоче поділитися екраном",
+  cameraGeenToegang: "Немає доступу до камери. Дозвольте камеру через замок біля адреси.",
 };

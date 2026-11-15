@@ -23,6 +23,13 @@ export const DOCK_NL = {
   beltJeNaam: "{naam} belt je",
   weiger: "Weiger",
   opnemen: "Opnemen",
+  bericht: "Bericht",
+  weigerMetBericht: "Weiger met een bericht",
+  snelAntwoord1: "Ik kan nu niet praten. Ik bel je zo terug.",
+  snelAntwoord2: "Ik zit in een gesprek. Ik bel je later.",
+  snelAntwoord3: "Stuur me een bericht, dan lees ik het zo.",
+  eigenBericht: "Eigen bericht schrijven…",
+  annuleren: "Annuleren",
 };
 
 export type DockTeksten = typeof DOCK_NL;

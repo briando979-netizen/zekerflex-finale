@@ -25,6 +25,13 @@ export const DOCK_EN: DockTeksten = {
   beltJeNaam: "{naam} is calling you",
   weiger: "Decline",
   opnemen: "Answer",
+  bericht: "Message",
+  weigerMetBericht: "Decline with a message",
+  snelAntwoord1: "I can't talk right now. I'll call you back soon.",
+  snelAntwoord2: "I'm in a meeting. I'll call you later.",
+  snelAntwoord3: "Send me a message and I'll read it soon.",
+  eigenBericht: "Write your own message…",
+  annuleren: "Cancel",
 };
 
 export const DOCK_PL: DockTeksten = {
@@ -51,6 +58,13 @@ export const DOCK_PL: DockTeksten = {
   beltJeNaam: "{naam} dzwoni do ciebie",
   weiger: "Odrzuć",
   opnemen: "Odbierz",
+  bericht: "Wiadomość",
+  weigerMetBericht: "Odrzuć z wiadomością",
+  snelAntwoord1: "Nie mogę teraz rozmawiać. Zaraz oddzwonię.",
+  snelAntwoord2: "Jestem na spotkaniu. Zadzwonię później.",
+  snelAntwoord3: "Napisz do mnie, zaraz przeczytam.",
+  eigenBericht: "Napisz własną wiadomość…",
+  annuleren: "Anuluj",
 };
 
 export const DOCK_RO: DockTeksten = {
@@ -77,6 +91,13 @@ export const DOCK_RO: DockTeksten = {
   beltJeNaam: "{naam} te sună",
   weiger: "Respinge",
   opnemen: "Răspunde",
+  bericht: "Mesaj",
+  weigerMetBericht: "Respinge cu un mesaj",
+  snelAntwoord1: "Nu pot vorbi acum. Te sun înapoi imediat.",
+  snelAntwoord2: "Sunt într-o întâlnire. Te sun mai târziu.",
+  snelAntwoord3: "Trimite-mi un mesaj și îl citesc imediat.",
+  eigenBericht: "Scrie un mesaj propriu…",
+  annuleren: "Anulează",
 };
 
 export const DOCK_UK: DockTeksten = {
@@ -103,4 +124,11 @@ export const DOCK_UK: DockTeksten = {
   beltJeNaam: "{naam} дзвонить тобі",
   weiger: "Відхилити",
   opnemen: "Відповісти",
+  bericht: "Повідомлення",
+  weigerMetBericht: "Відхилити з повідомленням",
+  snelAntwoord1: "Зараз не можу говорити. Скоро передзвоню.",
+  snelAntwoord2: "Я на зустрічі. Зателефоную пізніше.",
+  snelAntwoord3: "Напишіть мені, я скоро прочитаю.",
+  eigenBericht: "Написати своє повідомлення…",
+  annuleren: "Скасувати",
 };
