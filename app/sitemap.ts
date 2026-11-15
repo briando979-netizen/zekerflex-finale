@@ -96,6 +96,8 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/sales-partner", 0.6, "monthly"),
 
     entry("/app", 0.6, "monthly"),
+    // de apps per doelgroep (lib/apps/catalogus.ts), 15 nov 2026
+    entry("/apps", 0.6, "monthly"),
     entry("/demo", 0.6, "monthly"),
     entry("/website-check", 0.7, "monthly"),
     entry("/voorbeeldsites", 0.6, "monthly"),
