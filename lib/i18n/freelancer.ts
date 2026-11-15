@@ -178,6 +178,14 @@ const nl = {
     laden: "Laden…", teken: "Onderteken je uitzendovereenkomst", uitleg: "ZekerFlex is je formele werkgever tijdens uitzendklussen. De uitzendovereenkomst regelt je loon, vakantiegeld, pensioen (StiPP) en het ABU-fasensysteem. Hij is 3 maanden geldig; in die periode kun je alle uitzendklussen doen. Je moet hem ondertekenen voordat je kunt reageren op klussen.",
     ondertekenen: "Ondertekenen", bezig: "Ondertekenen…", mislukt: "Ondertekenen mislukt", getekend: "Uitzendovereenkomst — getekend ✓", ref: "{ref} · ondertekend op {datum}", verlopen: "Verlopen", actief: "Actief", geldigVan: "Geldig van", geldigTot: "Geldig tot", abuFase: "ABU-fase", fase: "Fase {fase} · {weken} weken",
     bekijk: "Bekijk de overeenkomst (pdf)", verlopenTekst: "Je overeenkomst is verlopen. Onderteken een nieuwe om door te werken.", nieuw: "Nieuwe overeenkomst ondertekenen", eerdere: "Eerdere overeenkomsten", pdf: "pdf",
+    // de gegevens van de uitzendkracht in de overeenkomst (sjabloon v3, 15 nov 2026): eerst invullen, dan tekenen
+    gegevens: {
+      titel: "Jouw gegevens in de overeenkomst", uitleg: "Een uitzendovereenkomst noemt je naam, geboortedatum en woonadres. Je adres gebruiken we alleen in je overeenkomst en de loonadministratie.",
+      naam: "Naam", geboren: "Geboortedatum", adres: "Woonadres", straat: "Straat", huisnummer: "Huisnummer", postcode: "Postcode", plaats: "Woonplaats", land: "Land",
+      opslaan: "Gegevens opslaan", bezig: "Opslaan…", wijzig: "Wijzigen", annuleer: "Annuleren", laden: "Gegevens laden…", fout: "Opslaan lukte niet. Probeer het opnieuw.", laadFout: "Je gegevens konden niet worden geladen. Probeer het opnieuw.",
+      veldFout: { straat: "Vul je straat in.", huisnummer: "Vul je huisnummer in, bijvoorbeeld 12 of 12a.", postcode: "Vul een geldige postcode in, bijvoorbeeld 1234 AB.", plaats: "Vul je woonplaats in.", land: "Vul je land in.", geboortedatum: "Vul een geldige geboortedatum in; je moet minimaal 18 jaar zijn." },
+      eerst: "Vul eerst je gegevens hierboven in, dan kun je ondertekenen.", naamUitleg: "Je naam komt van je account. Klopt hij niet? Pas hem aan in je profiel.",
+    },
   },
   administratie: {
     back: "Terug", titel: "Je administratie", subtitelLeeg: "Herinneringen en mijlpalen, zodat jij nergens aan hoeft te denken.", leegTitel: "Nog geen profiel", leegTekst: "Deze pagina verschijnt zodra je als professional bent geregistreerd.",
@@ -1740,6 +1748,13 @@ const en: FreelancerDict = {
     laden: "Loading…", teken: "Sign your temp agency contract", uitleg: "ZekerFlex is your formal employer during temp jobs. The temp agency contract covers your pay, holiday allowance, pension (StiPP) and the ABU phase system. It is valid for 3 months; during that period you can do all temp jobs. You must sign it before you can respond to jobs.",
     ondertekenen: "Sign", bezig: "Signing…", mislukt: "Signing failed", getekend: "Temp agency contract — signed ✓", ref: "{ref} · signed on {datum}", verlopen: "Expired", actief: "Active", geldigVan: "Valid from", geldigTot: "Valid until", abuFase: "ABU phase", fase: "Phase {fase} · {weken} weeks",
     bekijk: "View the contract (pdf)", verlopenTekst: "Your contract has expired. Sign a new one to keep working.", nieuw: "Sign a new contract", eerdere: "Previous contracts", pdf: "pdf",
+    gegevens: {
+      titel: "Your details in the agreement", uitleg: "A temporary-work agreement states your name, date of birth and home address. We only use your address in your agreement and the payroll records.",
+      naam: "Name", geboren: "Date of birth", adres: "Home address", straat: "Street", huisnummer: "House number", postcode: "Postcode", plaats: "Town or city", land: "Country",
+      opslaan: "Save details", bezig: "Saving…", wijzig: "Change", annuleer: "Cancel", laden: "Loading details…", fout: "Saving failed. Please try again.", laadFout: "Your details could not be loaded. Please try again.",
+      veldFout: { straat: "Enter your street.", huisnummer: "Enter your house number, for example 12 or 12a.", postcode: "Enter a valid postcode, for example 1234 AB.", plaats: "Enter your town or city.", land: "Enter your country.", geboortedatum: "Enter a valid date of birth; you must be at least 18." },
+      eerst: "First fill in your details above, then you can sign.", naamUitleg: "Your name comes from your account. Is it wrong? Change it in your profile.",
+    },
   },
   administratie: {
     back: "Back", titel: "Your admin", subtitelLeeg: "Reminders and milestones, so you don't have to think about anything.", leegTitel: "No profile yet", leegTekst: "This page appears once you're registered as a professional.",
@@ -3462,6 +3477,13 @@ const pl: FreelancerDict = {
     laden: "Ładowanie…", teken: "Podpisz umowę o pracę tymczasową", uitleg: "ZekerFlex jest Twoim formalnym pracodawcą podczas zleceń tymczasowych. Umowa o pracę tymczasową reguluje Twoje wynagrodzenie, dodatek urlopowy, emeryturę (StiPP) i system faz ABU. Jest ważna 3 miesiące; w tym okresie możesz wykonywać wszystkie zlecenia tymczasowe. Musisz ją podpisać, zanim zaczniesz odpowiadać na zlecenia.",
     ondertekenen: "Podpisz", bezig: "Podpisywanie…", mislukt: "Podpisanie nie powiodło się", getekend: "Umowa o pracę tymczasową — podpisana ✓", ref: "{ref} · podpisano {datum}", verlopen: "Wygasła", actief: "Aktywna", geldigVan: "Ważna od", geldigTot: "Ważna do", abuFase: "Faza ABU", fase: "Faza {fase} · {weken} tyg.",
     bekijk: "Zobacz umowę (pdf)", verlopenTekst: "Twoja umowa wygasła. Podpisz nową, aby dalej pracować.", nieuw: "Podpisz nową umowę", eerdere: "Wcześniejsze umowy", pdf: "pdf",
+    gegevens: {
+      titel: "Twoje dane w umowie", uitleg: "Umowa o pracę tymczasową zawiera Twoje imię i nazwisko, datę urodzenia i adres zamieszkania. Twojego adresu używamy tylko w umowie i w dokumentacji płacowej.",
+      naam: "Imię i nazwisko", geboren: "Data urodzenia", adres: "Adres zamieszkania", straat: "Ulica", huisnummer: "Numer domu", postcode: "Kod pocztowy", plaats: "Miejscowość", land: "Kraj",
+      opslaan: "Zapisz dane", bezig: "Zapisywanie…", wijzig: "Zmień", annuleer: "Anuluj", laden: "Ładowanie danych…", fout: "Nie udało się zapisać. Spróbuj ponownie.", laadFout: "Nie udało się wczytać Twoich danych. Spróbuj ponownie.",
+      veldFout: { straat: "Wpisz ulicę.", huisnummer: "Wpisz numer domu, np. 12 lub 12a.", postcode: "Wpisz prawidłowy kod pocztowy, np. 1234 AB.", plaats: "Wpisz miejscowość.", land: "Wpisz kraj.", geboortedatum: "Wpisz prawidłową datę urodzenia; musisz mieć co najmniej 18 lat." },
+      eerst: "Najpierw uzupełnij swoje dane powyżej, potem możesz podpisać.", naamUitleg: "Imię i nazwisko pochodzi z Twojego konta. Jest błędne? Zmień je w profilu.",
+    },
   },
   administratie: {
     back: "Wstecz", titel: "Twoja administracja", subtitelLeeg: "Przypomnienia i kamienie milowe, żebyś o niczym nie musiał pamiętać.", leegTitel: "Brak profilu", leegTekst: "Ta strona pojawi się, gdy zarejestrujesz się jako profesjonalista.",
@@ -5184,6 +5206,13 @@ const ro: FreelancerDict = {
     laden: "Se încarcă…", teken: "Semnează contractul tău de muncă temporară", uitleg: "ZekerFlex este angajatorul tău formal în timpul joburilor temporare. Contractul de muncă temporară reglementează salariul, indemnizația de vacanță, pensia (StiPP) și sistemul de faze ABU. Este valabil 3 luni; în această perioadă poți face toate joburile temporare. Trebuie să îl semnezi înainte de a putea răspunde la joburi.",
     ondertekenen: "Semnează", bezig: "Se semnează…", mislukt: "Semnarea nu a reușit", getekend: "Contract de muncă temporară — semnat ✓", ref: "{ref} · semnat la {datum}", verlopen: "Expirat", actief: "Activ", geldigVan: "Valabil de la", geldigTot: "Valabil până la", abuFase: "Faza ABU", fase: "Faza {fase} · {weken} săptămâni",
     bekijk: "Vezi contractul (pdf)", verlopenTekst: "Contractul tău a expirat. Semnează unul nou pentru a continua.", nieuw: "Semnează un contract nou", eerdere: "Contracte anterioare", pdf: "pdf",
+    gegevens: {
+      titel: "Datele tale din contract", uitleg: "Contractul de muncă temporară conține numele, data nașterii și adresa ta de domiciliu. Folosim adresa doar în contract și în evidența salarială.",
+      naam: "Nume", geboren: "Data nașterii", adres: "Adresa de domiciliu", straat: "Strada", huisnummer: "Număr", postcode: "Cod poștal", plaats: "Localitate", land: "Țară",
+      opslaan: "Salvează datele", bezig: "Se salvează…", wijzig: "Modifică", annuleer: "Anulează", laden: "Se încarcă datele…", fout: "Salvarea nu a reușit. Încearcă din nou.", laadFout: "Datele tale nu au putut fi încărcate. Încearcă din nou.",
+      veldFout: { straat: "Completează strada.", huisnummer: "Completează numărul, de exemplu 12 sau 12a.", postcode: "Completează un cod poștal valid, de exemplu 1234 AB.", plaats: "Completează localitatea.", land: "Completează țara.", geboortedatum: "Completează o dată a nașterii validă; trebuie să ai cel puțin 18 ani." },
+      eerst: "Completează mai întâi datele de mai sus, apoi poți semna.", naamUitleg: "Numele vine din contul tău. Nu este corect? Modifică-l în profil.",
+    },
   },
   administratie: {
     back: "Înapoi", titel: "Administrația ta", subtitelLeeg: "Mementouri și borne, ca să nu trebuiască să te gândești la nimic.", leegTitel: "Încă fără profil", leegTekst: "Această pagină apare după ce te înregistrezi ca profesionist.",
@@ -6906,6 +6935,13 @@ const uk: FreelancerDict = {
     laden: "Завантаження…", teken: "Підпиши договір тимчасової роботи", uitleg: "ZekerFlex є твоїм офіційним роботодавцем під час тимчасових робіт. Договір тимчасової роботи регулює твою оплату, відпускні, пенсію (StiPP) і систему фаз ABU. Він діє 3 місяці; протягом цього періоду ти можеш виконувати всі тимчасові роботи. Підписати його потрібно, перш ніж відгукуватися на роботи.",
     ondertekenen: "Підписати", bezig: "Підписання…", mislukt: "Не вдалося підписати", getekend: "Договір тимчасової роботи — підписано ✓", ref: "{ref} · підписано {datum}", verlopen: "Закінчився", actief: "Діє", geldigVan: "Діє з", geldigTot: "Діє до", abuFase: "Фаза ABU", fase: "Фаза {fase} · {weken} тижн.",
     bekijk: "Переглянути договір (pdf)", verlopenTekst: "Твій договір закінчився. Підпиши новий, щоб продовжити працювати.", nieuw: "Підписати новий договір", eerdere: "Попередні договори", pdf: "pdf",
+    gegevens: {
+      titel: "Твої дані в договорі", uitleg: "Договір тимчасової роботи містить твоє ім'я, дату народження та адресу проживання. Адресу ми використовуємо лише в договорі та в обліку заробітної плати.",
+      naam: "Ім'я", geboren: "Дата народження", adres: "Адреса проживання", straat: "Вулиця", huisnummer: "Номер будинку", postcode: "Поштовий індекс", plaats: "Населений пункт", land: "Країна",
+      opslaan: "Зберегти дані", bezig: "Збереження…", wijzig: "Змінити", annuleer: "Скасувати", laden: "Завантаження даних…", fout: "Не вдалося зберегти. Спробуй ще раз.", laadFout: "Не вдалося завантажити твої дані. Спробуй ще раз.",
+      veldFout: { straat: "Вкажи вулицю.", huisnummer: "Вкажи номер будинку, наприклад 12 або 12a.", postcode: "Вкажи правильний поштовий індекс, наприклад 1234 AB.", plaats: "Вкажи населений пункт.", land: "Вкажи країну.", geboortedatum: "Вкажи правильну дату народження; тобі має бути щонайменше 18 років." },
+      eerst: "Спочатку заповни свої дані вище, потім можна підписати.", naamUitleg: "Ім'я береться з твого акаунта. Воно неправильне? Зміни його в профілі.",
+    },
   },
   administratie: {
     back: "Назад", titel: "Твоя адміністрація", subtitelLeeg: "Нагадування та віхи, щоб тобі ні про що не доводилося думати.", leegTitel: "Профілю ще немає", leegTekst: "Ця сторінка з’явиться, щойно ти зареєструєшся як фахівець.",
