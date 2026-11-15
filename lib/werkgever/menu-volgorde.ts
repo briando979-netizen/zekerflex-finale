@@ -15,7 +15,7 @@ export type MenuDeel = "hoofd" | "beheer";
 export const HOOFD_STANDAARD: readonly MenuSleutel[] = ["klussen", "kalender", "planner", "agenda", "afspraken", "klanten", "bank", "favorieten", "berichten", "assistent", "mail", "whatsapp", "geblokkeerd"];
 
 /** Het deel onder "Beheer", in de oorspronkelijke volgorde. */
-export const BEHEER_STANDAARD: readonly MenuSleutel[] = ["uren", "inchecken", "facturen", "rapportages", "compliance", "overeenkomsten", "bedrijf", "telefonie", "reviews", "netwerk", "locatie", "branche", "kennisbank"];
+export const BEHEER_STANDAARD: readonly MenuSleutel[] = ["uren", "inchecken", "facturen", "rapportages", "compliance", "overeenkomsten", "bedrijf", "telefonie", "reviews", "netwerk", "locatie", "branche", "kennisbank", "hulp"];
 
 const STANDAARD: Record<MenuDeel, readonly MenuSleutel[]> = { hoofd: HOOFD_STANDAARD, beheer: BEHEER_STANDAARD };
 
@@ -47,6 +47,7 @@ export const MENU_NAAM: Partial<Record<MenuSleutel, { naam: string; wanneer?: st
   locatie: { naam: "Op locatie", wanneer: "Alleen als de modules voor op locatie aan staan." },
   branche: { naam: "Jouw branche" },
   kennisbank: { naam: "Handleidingen", wanneer: "Alleen als de kennisbank is ingesteld." },
+  hulp: { naam: "Hulpcentrum" },
 };
 
 export interface MenuVolgorde {

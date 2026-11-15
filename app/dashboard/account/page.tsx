@@ -20,6 +20,7 @@ import { getFreelancerDict, getLocale } from "@/lib/i18n/server";
 import { kennisbankIngesteld } from "@/lib/kennisbank/outline";
 import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
 import { locatieTeksten } from "@/lib/locatie/teksten";
+import { hulpTeksten } from "@/lib/hulp/teksten";
 import { BANK_AAN } from "@/lib/app-mode";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +44,8 @@ export default async function AccountPage() {
   const ft = await getFreelancerDict();
   const t = ft.acct;
   // Op locatie (portofoon, toegangscodes, kenteken): eigen vijftalige teksten (lib/locatie/teksten.ts)
-  const lt = locatieTeksten(await getLocale()).account;
+  const locale = await getLocale();
+  const lt = locatieTeksten(locale).account;
   const [card, overview, fiscal, myReplacements, matched, notCompleted, theme] = await Promise.all([
     getUserCard(principal.userId),
     getFreelancerOverview(principal.userId),
@@ -146,6 +148,8 @@ export default async function AccountPage() {
     },
     {
       items: [
+        // het hulpcentrum voor werkers (lib/hulp/teksten.ts), in de taal van de werker; dezelfde plek als het vraagteken in de kopbalk
+        { label: hulpTeksten(locale).titel, href: "/dashboard/hulp" },
         { label: t.kb, href: "/kennis" },
         // de handleidingen (Outline, lib/kennisbank): inloggen gaat met het ZekerFlex-account
         ...(kennisbankIngesteld() ? [{ label: t.manuals, href: `${outlinePubliekeUrl()}/`, external: true }] : []),

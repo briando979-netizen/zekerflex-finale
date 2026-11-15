@@ -308,6 +308,11 @@ export function HulpCentrum({
             {tab === "home" && !feedbackOpen && (
               <ul className="divide-y divide-hair py-1">
                 <li>
+                  <Link href={soort === "bedrijf" ? "/werkgever/hulp" : "/dashboard/hulp"} className={regelKlasse} onClick={sluit}>
+                    <Regel icoon={<IHelp />} titel={t.titel} tekst={t.onder} />
+                  </Link>
+                </li>
+                <li>
                   <button type="button" className={regelKlasse} onClick={() => kiesTab("hulp")}>
                     <Regel icoon={<IList />} titel={t.home.vragen[0]} tekst={t.home.vragen[1]} />
                   </button>

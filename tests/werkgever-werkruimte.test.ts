@@ -100,7 +100,7 @@ describe("leesKeuze en voegToe", () => {
     expect(dashboardVanPad("/werkgever/uren")).toBe("personeel");
     expect(dashboardVanPad("/werkgever/diensten/abc")).toBe("personeel");
     // past bij elk dashboard
-    for (const pad of ["/werkgever", "/werkgever/mail", "/werkgever/facturen", "/werkgever/bedrijf", "/werkgever/urenoverzicht"]) expect(dashboardVanPad(pad), pad).toBeNull();
+    for (const pad of ["/werkgever", "/werkgever/mail", "/werkgever/facturen", "/werkgever/bedrijf", "/werkgever/urenoverzicht", "/werkgever/hulp"]) expect(dashboardVanPad(pad), pad).toBeNull();
   });
 });
 
@@ -132,10 +132,19 @@ describe("menuVoor", () => {
       { sleutel: "locatie", sectie: "beheer" },
       { sleutel: "branche", sectie: "beheer" },
       { sleutel: "kennisbank", sectie: "beheer" },
+      { sleutel: "hulp", sectie: "beheer" },
     ]);
     // ook met een rijschool en een horecazaak: die staan in hun eigen dashboard
     for (const s of PAKKET_SLEUTELS) expect(sleutels("personeel"), `personeel bevat ${s}`).not.toContain(s);
     for (const soort of WERKRUIMTES) expect(sleutels(soort, { inApp: true })).not.toContain("bank");
+  });
+
+  it("elk dashboard heeft een vaste plek voor het hulpcentrum van bedrijven, na de handleidingen", () => {
+    for (const soort of WERKRUIMTES) {
+      const s = sleutels(soort);
+      expect(s, `${soort} mist hulp`).toContain("hulp");
+      expect(s.indexOf("hulp"), soort).toBe(s.indexOf("kennisbank") + 1);
+    }
   });
 
   it("Afspraken en Klantenkaart staan alleen in het menu als het bedrijf afspraken heeft ingericht", () => {

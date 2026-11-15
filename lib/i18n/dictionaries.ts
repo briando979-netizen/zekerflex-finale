@@ -37,6 +37,7 @@ export const nl = {
     overeenkomsten: "Modelovereenkomsten",
     bedrijfsprofiel: "Bedrijfsprofiel",
     instellingen: "Instellingen",
+    hulp: "Hulpcentrum",
   },
   shell: {
     collapse: "Inklappen",

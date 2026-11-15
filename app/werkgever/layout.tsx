@@ -18,7 +18,7 @@ import { ChatDock } from "@/components/chat/ChatDock";
 import { SeasonalLoader } from "@/components/seasons/SeasonalLoader";
 import { birthdayToday } from "@/lib/seasons/settings";
 import type { ReactElement } from "react";
-import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IGlobe, IPhone, ICar, IStar, IList, IPin, IUsers, IImage, ISettings, IActivity } from "@/components/app/icons";
+import { IRocket, IBriefcase, ICalendar, IHeart, IChat, IMail, IBan, IClock, IDoc, IShield, IGrid, IWallet, IGlobe, IPhone, ICar, IStar, IList, IPin, IUsers, IImage, ISettings, IActivity, IHelp } from "@/components/app/icons";
 import type { NavItem } from "@/components/app/AppShell";
 import { menuVoor, SECTIE_NAAM, type MenuSectie, type MenuSleutel } from "@/lib/werkgever/werkruimte";
 import { pasMenuVolgordeToe } from "@/lib/werkgever/menu-volgorde";
@@ -122,6 +122,8 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     rapportages: { href: "/werkgever/rapportages", label: "Rapportages", icon: <IGrid /> },
     // de kennisbank staat op een eigen adres (Outline); inloggen gaat vanzelf met het ZekerFlex-account
     kennisbank: { href: `${outlinePubliekeUrl()}/`, label: "Handleidingen", icon: <IDoc /> },
+    // het hulpcentrum voor bedrijven op een eigen pagina (lib/hulp/werkgever-teksten.ts); het vraagteken in de kopbalk opent hetzelfde
+    hulp: { href: "/werkgever/hulp", label: t.nav.hulp, icon: <IHelp /> },
     locatie: { href: "/werkgever/op-locatie", label: "Op locatie", icon: <IGrid /> },
     // per soort bedrijf een dashboard met alles wat erbij hoort (lib/branches)
     branche: { href: "/werkgever/branche", label: "Jouw branche", icon: <IList /> },

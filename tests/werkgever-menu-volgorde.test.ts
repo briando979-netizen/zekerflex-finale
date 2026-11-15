@@ -69,7 +69,7 @@ describe("een eigen volgorde", () => {
     expect(n.slice(1, eersteBeheer).every((p) => !p.sectie)).toBe(true);
     expect(n.slice(eersteBeheer).every((p) => p.sectie === "beheer")).toBe(true);
     expect(n[1]?.sleutel).toBe("geblokkeerd");
-    expect(n[eersteBeheer]?.sleutel).toBe("kennisbank");
+    expect(n[eersteBeheer]?.sleutel).toBe("hulp");
     for (const p of n) expect(p.sectie, p.sleutel).toBe(m.find((x) => x.sleutel === p.sleutel)?.sectie);
   });
 
@@ -98,7 +98,7 @@ describe("de opslag", () => {
     expect(await getMenuVolgorde()).toBeNull();
     const eigen = await setMenuVolgorde(omgekeerd());
     expect(eigen?.hoofd[0]).toBe("geblokkeerd");
-    expect((await getMenuVolgorde())?.beheer[0]).toBe("kennisbank");
+    expect((await getMenuVolgorde())?.beheer[0]).toBe("hulp");
     expect(await setMenuVolgorde(standaardMenuVolgorde())).toBeNull();
     expect(kv.has("ontwerp:werkgever-menu")).toBe(false);
   });

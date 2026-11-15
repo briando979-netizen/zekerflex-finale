@@ -181,6 +181,7 @@ export type MenuSleutel =
   | "netwerk"
   | "rapportages"
   | "kennisbank"
+  | "hulp"
   | "assistent"
   | "locatie"
   | "branche"
@@ -238,7 +239,7 @@ export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
       return [
         { sleutel: "start" },
         ...(["klussen", "kalender", "planner", "agenda", ...afspraken, ...bank, "favorieten", "berichten", "assistent", "mail", "whatsapp", "geblokkeerd"] as MenuSleutel[]).map(plek()),
-        ...(["uren", "inchecken", "facturen", "rapportages", "compliance", "overeenkomsten", "bedrijf", "telefonie", "reviews", "netwerk", "locatie", "branche", "kennisbank"] as MenuSleutel[]).map(plek("beheer")),
+        ...(["uren", "inchecken", "facturen", "rapportages", "compliance", "overeenkomsten", "bedrijf", "telefonie", "reviews", "netwerk", "locatie", "branche", "kennisbank", "hulp"] as MenuSleutel[]).map(plek("beheer")),
       ];
     case "rijschool":
       return [
@@ -247,7 +248,7 @@ export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
           ? RIJSCHOOL_TABS.map((tab): MenuPlek => ({ sleutel: "rijschool", tab }))
           : [{ sleutel: "rijschool" as const }]),
         ...([...afspraken, "mail", "whatsapp", "telefonie", "reviews"] as MenuSleutel[]).map(plek("klanten")),
-        ...(["facturen", "rapportages", ...bank, "bedrijf", "branche", "kennisbank"] as MenuSleutel[]).map(plek("administratie")),
+        ...(["facturen", "rapportages", ...bank, "bedrijf", "branche", "kennisbank", "hulp"] as MenuSleutel[]).map(plek("administratie")),
       ];
     case "horeca":
       return [
@@ -255,7 +256,7 @@ export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
           ? horecaTabs(o.horecaModules ?? []).map((tab): MenuPlek => ({ sleutel: "horeca", tab }))
           : [{ sleutel: "horeca" as const }]),
         ...([...afspraken, "mail", "whatsapp", "telefonie", "reviews", "netwerk", "locatie"] as MenuSleutel[]).map(plek("klanten")),
-        ...(["facturen", "rapportages", ...bank, "bedrijf", "branche", "kennisbank"] as MenuSleutel[]).map(plek("administratie")),
+        ...(["facturen", "rapportages", ...bank, "bedrijf", "branche", "kennisbank", "hulp"] as MenuSleutel[]).map(plek("administratie")),
       ];
     default:
       // website en webshop: de studio is het dashboard; hier wat erbij hoort buiten de studio
@@ -263,7 +264,7 @@ export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
         ...(o.studio ? [{ sleutel: soort === "webshop" ? ("winkel" as const) : ("studio" as const) }] : [{ sleutel: "start" as const }]),
         { sleutel: "website" },
         ...([...afspraken, "mail", "whatsapp", "telefonie", "reviews"] as MenuSleutel[]).map(plek("klanten")),
-        ...(["facturen", "rapportages", ...bank, "bedrijf", "branche", "kennisbank"] as MenuSleutel[]).map(plek("administratie")),
+        ...(["facturen", "rapportages", ...bank, "bedrijf", "branche", "kennisbank", "hulp"] as MenuSleutel[]).map(plek("administratie")),
       ];
   }
 }
