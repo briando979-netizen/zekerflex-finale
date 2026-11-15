@@ -125,7 +125,8 @@ describe("runRetentionSweep", () => {
     expect((res6?.where as { datum: { lt: string } }).datum.lt).toBe("2025-09-09");
     const best = h.calls.find((c) => c.model === "horecaBestelling");
     expect(best?.op).toBe("updateMany");
-    expect(best?.data).toEqual({ naam: "", opmerking: "" });
+    // sinds afhalen en bezorgen (15 nov 2026) ook de contact- en adresgegevens; plaats en afstand blijven voor de cijfers
+    expect(best?.data).toEqual({ naam: "", opmerking: "", telefoon: "", email: "", adres: "", postcode: "", lat: null, lng: null });
     expect((best?.where as { createdAt: { lt: Date } }).createdAt.lt.toISOString()).toBe("2025-09-09T00:00:00.000Z");
 
     // lesroutes: alleen de route weg (updateMany), de les zelf blijft
