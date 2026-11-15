@@ -54,6 +54,19 @@ export const nl = {
     menuWorkerWorkspace: "Werkersomgeving",
     orgFallback: "Je organisatie",
   },
+  // de persoonlijke accountpagina in de werkgeversapp (/werkgever/account, 15 nov 2026: was alleen Nederlands)
+  persoonlijkAccount: {
+    titel: "Persoonlijke accountinstellingen",
+    sub: "Je naam, telefoonnummer en inloggegevens.",
+    persoon: "Persoonsgegevens",
+    email: "E-mail",
+    wachtwoord: "Wachtwoord",
+    wachtwoordUitleg: "Je wachtwoord wijzig je via de link \u201cwachtwoord vergeten\u201d: we sturen een resetlink naar je e-mailadres.",
+    wachtwoordKnop: "Wachtwoord resetten",
+    tweestap: "Tweestapsverificatie",
+    passkey: "Inloggen met passkey",
+    verjaardag: "Verjaardag (optioneel)",
+  },
   // account verwijderen in de werkgeversapp (/werkgever/account/verwijderen, 15 nov 2026): wat er met het bedrijf gebeurt
   verwijderen: {
     titel: "Account verwijderen",
