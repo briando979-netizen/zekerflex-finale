@@ -83,6 +83,13 @@ describe("reageerStap", () => {
     expect(reageerStap("Je account kan momenteel geen diensten aannemen.")).toBe("anders");
     expect(reageerStap(null)).toBe("anders");
     expect(reageerStapHref("werkrecht")).toContain("#werkrecht");
+    // 15 nov: de aanmelding zelf gaat naar de stappen bovenaan Ontdekken, en een reden over het rekeningnummer of de
+    // overeenkomst (die noemen "Verificatie") is gegevens, geen identiteit
+    expect(reageerStap("Rond eerst je aanmelding af om op klussen te reageren. Op Ontdekken zie je bovenaan wat er nog mist.")).toBe("start");
+    expect(reageerStapHref("start")).toBe("/dashboard/klussen");
+    expect(reageerStap("Vul je rekeningnummer (IBAN) in bij Verificatie → Bankrekening bevestigen om op klussen te reageren.")).toBe("gegevens");
+    expect(reageerStap("Onderteken eerst je uitzendovereenkomst bij Verificatie om op klussen te reageren.")).toBe("gegevens");
+    for (const d of Object.values(FREELANCER_DICTS)) expect(d.reageerBlok.start.length).toBeGreaterThan(5);
   });
 });
 

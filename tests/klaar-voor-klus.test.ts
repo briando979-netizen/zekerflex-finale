@@ -8,7 +8,7 @@ import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 // loopt gelijk, onoverzichtelijk"). Dezelfde regels als payoutEligibility (lib/fiscal/eligibility.ts).
 
 const lees = (p: string) => readFileSync(join(process.cwd(), p), "utf8").replace(/\r\n/g, "\n");
-const basis: KlusFeiten = { soort: "uitzendkracht", payroll: true, idGoedgekeurd: true, bsn: true, contract: true, bedrijf: false, iban: true, werkrechtOpen: false };
+const basis: KlusFeiten = { soort: "uitzendkracht", payroll: true, idGoedgekeurd: true, bsn: true, contract: true, bedrijf: false, kvkWacht: false, iban: true, werkrechtOpen: false };
 
 describe("nogVoorEersteKlus", () => {
   it("uitzendkracht: BSN, overeenkomst en rekeningnummer; KVK/btw doet er niet toe", () => {
@@ -26,6 +26,14 @@ describe("nogVoorEersteKlus", () => {
   it("het nakijken van het ID staat als laatste: daar hoeft de werker niets voor te doen", () => {
     expect(nogVoorEersteKlus({ ...basis, idGoedgekeurd: false, iban: false })).toEqual(["iban", "idWacht"]);
     expect(KLUS_STUK_HREF.idWacht).toBeNull();
+  });
+
+  it("wacht de KVK-controle, dan zegt de lijst dat (zonder knop) in plaats van om het nummer te vragen", () => {
+    const zzp: KlusFeiten = { ...basis, soort: "zzp", payroll: false, bedrijf: false, kvkWacht: true };
+    expect(nogVoorEersteKlus(zzp)).toEqual(["kvkWacht"]);
+    expect(KLUS_STUK_HREF.kvkWacht).toBeNull();
+    // bij een uitzendkracht speelt de KVK geen rol
+    expect(nogVoorEersteKlus({ ...basis, kvkWacht: true })).toEqual([]);
   });
 
   it("het recht om te werken alleen als de vlag het eist", () => {
@@ -47,14 +55,27 @@ describe("nogVoorEersteKlus", () => {
   it("de teksten staan er in alle vijf talen", () => {
     for (const [taal, d] of Object.entries(FREELANCER_DICTS)) {
       const t = d.klaarVoorKlus;
-      for (const k of ["idWacht", "bsn", "contract", "bedrijf", "iban"] as const) {
+      for (const k of ["idWacht", "bsn", "contract", "bedrijf", "kvkWacht", "iban"] as const) {
         expect(t[k].kop.length, `${taal} ${k}`).toBeGreaterThan(3);
         expect(t[k].hint.length, `${taal} ${k}`).toBeGreaterThan(3);
       }
       expect(t.uitlegMeer, taal).toContain("{n}");
-      // "Je gegevens" vraagt alleen nog de postcode: geen KVK/btw als iets wat je nu moet invullen
-      expect(d.start.gegevensBody, taal).not.toMatch(/KVK|btw|VAT|naam|name|geboorte|birth/i);
+      // "Je gegevens" vraagt naam, geboortedatum, telefoon en postcode; KVK/btw/BSN/IBAN komen pas vóór de eerste klus
+      expect(d.start.gegevensBody, taal).not.toMatch(/KVK|btw|VAT|BSN|IBAN/i);
     }
+  });
+});
+
+describe("Verificatie: het eindscherm toont dezelfde lijst", () => {
+  const pagina = lees("app/dashboard/verificatie/page.tsx");
+  it("geen oude checklist met eigen teller, en 'je bent klaar' alleen als reageren kan", () => {
+    expect(pagina).toContain("<KlaarVoorKlusKaart stukken={nogVoorKlus} />");
+    expect(pagina).not.toContain("o.onboarding.map");
+    expect(pagina).not.toContain("nogStappenTekst");
+    expect(pagina).toContain('const echtKlaar = volgende === "klaar" && nogVoorKlus.length === 0;');
+    expect(pagina).toContain("{echtKlaar && (");
+    // geen losse ID-upload of tweede bankwaarschuwing onder Documenten
+    expect(pagina).not.toMatch(/<ComplianceDocsPanel \/>/);
   });
 });
 

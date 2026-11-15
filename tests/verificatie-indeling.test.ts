@@ -47,7 +47,7 @@ describe("de verificatiepagina: elk ding op zijn plek", () => {
 
   it("bank en werkrecht staan onder Later, de vorige ID-poging in de ID-stap", () => {
     const later = pagina.indexOf('aria-labelledby="later-kop"');
-    expect(pagina.indexOf("<ComplianceDocsPanel idInForm />")).toBeGreaterThan(later);
+    expect(pagina.indexOf("<ComplianceDocsPanel idInForm />", later)).toBeGreaterThan(later);
     expect(pagina.indexOf("<WerkrechtPanel />", later)).toBeGreaterThan(later);
     expect(pagina).toContain("laatstePoging={");
     const form = bron("components/app/OnboardingForm.tsx");

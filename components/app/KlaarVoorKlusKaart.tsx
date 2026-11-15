@@ -18,6 +18,7 @@ export function KlaarVoorKlusKaart({ stukken }: { stukken: KlusStuk[] }) {
     bsn: t.bsn,
     contract: t.contract,
     bedrijf: t.bedrijf,
+    kvkWacht: t.kvkWacht,
     iban: t.iban,
     werkrecht: { kop: ft.start.werkrechtStep, hint: ft.start.werkrechtBody },
     idWacht: t.idWacht,
@@ -34,7 +35,8 @@ export function KlaarVoorKlusKaart({ stukken }: { stukken: KlusStuk[] }) {
       <ul className="relative -mt-4 space-y-3 rounded-t-2xl bg-white px-4 pb-4 pt-5">
         {stukken.map((s, i) => {
           const href = KLUS_STUK_HREF[s];
-          const wacht = s === "idWacht";
+          // daar hoeft de werker niets voor te doen
+          const wacht = s === "idWacht" || s === "kvkWacht";
           return (
             <li key={s} className={`flex gap-3 rounded-xl border p-4 ${wacht ? "border-hair bg-paper-soft" : "border-brand-500/40 bg-white shadow-sm"}`}>
               <span

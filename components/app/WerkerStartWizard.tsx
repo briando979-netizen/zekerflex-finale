@@ -351,17 +351,7 @@ export function WerkerStartWizard({
           );
         })}
       </ol>
-      {!tweestapAan && (
-        <div className="mx-4 mb-4 rounded-xl border border-hair bg-paper-soft p-4">
-          <p className="text-sm font-semibold text-ink">
-            {t.tweestapStep} <span className="font-normal text-neutralx-500">{ft.cert.optional}</span>
-          </p>
-          <p className="mt-1 text-xs leading-snug text-neutralx-600">{t.tweestapBody}</p>
-          <Link href="/dashboard/account/beveiliging" className="mt-1 inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-brand-600 underline underline-offset-4 hover:text-brand-700">
-            {t.tweestapCta} <span aria-hidden>›</span>
-          </Link>
-        </div>
-      )}
+      {/* tweestapsverificatie is optioneel (12 nov) en staat onder Account → Beveiliging; niet midden in de 5 stappen (15 nov) */}
       <p className="border-t border-hair bg-paper-soft px-5 py-3 text-center text-xs text-neutralx-500">{poort ? t.afsluiting : t.browse}</p>
     </section>
   );

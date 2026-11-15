@@ -31,7 +31,8 @@ describe("stappenlijst van de werker in de app-taal", () => {
   const schermen = [...tsx("app/dashboard"), ...tsx("components/app")].filter((f) => doorlopers(lees(f)).length > 0);
 
   it("de scan vindt de schermen met de stappenlijst", () => {
-    expect(schermen).toEqual(expect.arrayContaining(["app/dashboard/profiel/page.tsx", "app/dashboard/verificatie/page.tsx"]));
+    // sinds 15 nov toont /dashboard/verificatie deze oude lijst niet meer (daar staat de lijst van Klussen, KlaarVoorKlusKaart)
+    expect(schermen).toEqual(expect.arrayContaining(["app/dashboard/profiel/page.tsx"]));
   });
 
   it("geen scherm toont het Nederlandse label kaal; elk gebruikt stappen[id]", () => {

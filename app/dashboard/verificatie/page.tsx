@@ -1,6 +1,6 @@
 import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getFreelancerOverview, type FreelancerOverview } from "@/lib/dashboard/freelancer";
+import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
 import { PageHeader, Panel, StatusPill } from "@/components/app/ui";
 import { OnboardingForm } from "@/components/app/OnboardingForm";
 import { WalletVerifyButton } from "@/components/app/WalletVerifyButton";
@@ -23,27 +23,17 @@ import type { FreelancerDict } from "@/lib/i18n/freelancer";
 import { attemptLabel, waitForStripe } from "@/lib/kyc/stripe-status";
 import { StripeIdentityWacht } from "@/components/app/StripeIdentityWacht";
 import { WerkrechtPanel } from "@/components/app/WerkrechtPanel";
-import { werkrechtVoorWerk, werkrechtEisAan } from "@/lib/werkrecht/store";
+import { werkrechtEisAan } from "@/lib/werkrecht/store";
 import { leesWieBenJij } from "@/lib/onboarding/wie-ben-jij-opslag";
 import { werkerPoortStand, type WerkerPoortStand } from "@/lib/onboarding/werker-poort-server";
-import { openVerplicht, poortStapVan, volgendeNaVerificatie } from "@/lib/onboarding/werker-poort";
-import { nogStappenTekst } from "@/lib/onboarding/laat-weten";
+import { poortStapVan, volgendeNaVerificatie } from "@/lib/onboarding/werker-poort";
 import { beginStap } from "@/lib/onboarding/wie-ben-jij";
-import { isReservedTestAddress } from "@/lib/mail";
+import { nogVoorEersteKlusVan } from "@/lib/onboarding/klaar-voor-klus-server";
+import type { KlusStuk } from "@/lib/onboarding/klaar-voor-klus";
+import { KlaarVoorKlusKaart } from "@/components/app/KlaarVoorKlusKaart";
 import { featureEnabled } from "@/lib/flags";
 
 export const dynamic = "force-dynamic";
-
-type Onderdeel = FreelancerOverview["onboarding"][number]["id"];
-/** Waar je een onderdeel dat nog open staat afmaakt (null: hier niet te doen of al gedaan). */
-const WAAR: Record<Onderdeel, string | null> = {
-  account: null,
-  fiscaal: "/dashboard/fiscaal",
-  kvk: "/dashboard/fiscaal",
-  contract: "#uitzendovereenkomst",
-  kyc: null,
-  thuisbasis: "#bankrekening",
-};
 
 /**
  * Het eindscherm van de aanmelding: per onderdeel een vinkje of "nog open" (met de plek waar je het doet), wat er daarna
@@ -54,13 +44,11 @@ const WAAR: Record<Onderdeel, string | null> = {
 function AanmeldingKlaar({
   pt,
   fd,
-  o,
   poortNu,
-  werkrechtOk,
   werkrechtVragen,
   uitzend,
   taal,
-  ibanOpen = false,
+  nogVoorKlus,
   voorKlus = [],
   bsnVoorstel = null,
   soort = null,
@@ -69,12 +57,11 @@ function AanmeldingKlaar({
   taal: Locale;
   pt: AuthDict["page"];
   fd: FreelancerDict;
-  o: FreelancerOverview;
   poortNu: WerkerPoortStand | null;
-  werkrechtOk: boolean;
   werkrechtVragen: boolean;
   uitzend: boolean;
-  ibanOpen?: boolean;
+  /** wat reageren nog tegenhoudt, dezelfde lijst als bovenaan Klussen (lib/onboarding/klaar-voor-klus.ts) */
+  nogVoorKlus: KlusStuk[];
   /** wat er nog moet vóór de eerste klus (uitzendkracht: BSN, overeenkomst; zzp'er/flexwerker: btw/KVK/KOR; voorEersteKlus) */
   voorKlus?: GegevensStuk[];
   /** de laatste 4 van het BSN dat van het ID is gelezen, nog niet bevestigd */
@@ -89,13 +76,18 @@ function AanmeldingKlaar({
   // staat er nog een stap open (behalve de foto, die heeft zijn eigen kaart), zeg dan welke en geef een knop erheen
   // (14 nov 2026: 12 van de 19 werkers met een ID stonden stil bij de branches, en hier stond alleen "Nog 1 stap te gaan!")
   const verder = verderKaart(poortNu, fd.start, SCAN_EXTRA[taal].volgendeKnop);
-  const open = o.onboarding.filter((s) => !s.done).length;
+  // de postcode is er (het formulier is af), dus een open rekeningnummer is het enige wat de bank nog vraagt
+  const ibanOpen = nogVoorKlus.includes("iban");
+  // "je bent klaar, je kunt reageren" alleen als dat ook zo is (15 nov: het stond er ook als het BSN, de overeenkomst of
+  // het rekeningnummer nog ontbrak)
+  const echtKlaar = volgende === "klaar" && nogVoorKlus.length === 0;
   const documenten = (
     <div id="bankrekening" className="mt-6 scroll-mt-20">
       <Panel title={ibanOpen ? pt.bankTitle : pt.documentenTitel}>
         <div className="p-5">
           {ibanOpen && <p className="mb-4 text-sm text-neutralx-600">{pt.bankSub}</p>}
-          <ComplianceDocsPanel />
+          {/* geen losse ID-upload (alleen de ID-scan) en geen tweede bankwaarschuwing: het blok legt zichzelf uit */}
+          <ComplianceDocsPanel idInForm />
         </div>
       </Panel>
     </div>
@@ -124,40 +116,8 @@ function AanmeldingKlaar({
       {/* uitzendkracht: het BSN en de overeenkomst horen sinds 13 nov niet bij de aanmelding, maar zijn nodig vóór de eerste
           klus (reageren houdt ze tegen). Hier meteen te doen; de overeenkomst staat onderaan (#uitzendovereenkomst) */}
       <GegevensMist mist={voorKlus} later kopId="gegevens-later-kop" soort={soort ?? (uitzend ? "uitzendkracht" : null)} bsnVoorstel={bsnVoorstel} btw={btw} />
-      <Panel title={pt.statusTitel}>
-        <div className="px-5 py-6">
-          {volgende !== "klaar" && poortNu ? (
-            <StatusPill tone="warn">{nogStappenTekst(openVerplicht(poortNu), fd.start, fd.intl)}</StatusPill>
-          ) : open > 0 ? (
-            <StatusPill tone="warn">{nogStappenTekst(open, fd.start, fd.intl)}</StatusPill>
-          ) : werkrechtOk ? (
-            <StatusPill tone="ok">{pt.geverifieerdKlaar}</StatusPill>
-          ) : (
-            <StatusPill tone="warn">{pt.werkrecht.nodig}</StatusPill>
-          )}
-          <ul className="mt-4 space-y-2">
-            {o.onboarding.map((s) => {
-              const waar = s.done ? null : WAAR[s.id];
-              // in de app-taal, net als op /dashboard/profiel (het label uit de overview is Nederlands)
-              const label = fd.profiel.stappen[s.id] ?? s.label;
-              return (
-                <li key={s.id} className="flex items-center gap-2.5 text-sm">
-                  {s.done ? (
-                    <span className="grid h-4 w-4 place-items-center rounded-full bg-ok text-[10px] text-white">✓</span>
-                  ) : (
-                    <span aria-hidden className="h-4 w-4 rounded-full border-2 border-warn" />
-                  )}
-                  {waar ? (
-                    <a href={waar} className="font-medium text-ink underline underline-offset-2">{label}</a>
-                  ) : (
-                    <span className={s.done ? "text-neutralx-600" : "font-medium text-ink"}>{label}</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      </Panel>
+      {/* wat reageren nog tegenhoudt: dezelfde lijst als bovenaan Klussen (15 nov; hier stond een oude checklist met een eigen teller) */}
+      <KlaarVoorKlusKaart stukken={nogVoorKlus} />
 
       {ibanOpen && documenten}
 
@@ -171,6 +131,7 @@ function AanmeldingKlaar({
         </div>
       )}
 
+      {echtKlaar && (
       <div className="mt-6">
         <Panel title={klaar.nextTitle}>
           <div className="px-5 py-5">
@@ -184,6 +145,7 @@ function AanmeldingKlaar({
           </div>
         </Panel>
       </div>
+      )}
 
       {!ibanOpen && documenten}
 
@@ -207,7 +169,7 @@ export default async function VerificatiePage() {
   const fd = await getFreelancerDict();
   // back from Stripe (or webhook not configured): fetch the result before rendering
   await syncStripeIdentity(principal.userId);
-  const [o, lastCheck, fiscal, werkrecht, werkrechtVragen] = await Promise.all([
+  const [o, lastCheck, fiscal, werkrechtVragen] = await Promise.all([
     getFreelancerOverview(principal.userId),
     prisma.identityVerification.findFirst({
       where: { userId: principal.userId },
@@ -215,16 +177,18 @@ export default async function VerificatiePage() {
       select: { status: true, decisionStatus: true, createdAt: true, rawPayload: true },
     }),
     getFiscal(principal.userId),
-    werkrechtVoorWerk(principal.userId, "NL"),
     werkrechtEisAan(),
   ]);
 
   if (o.profileComplete) {
     // Gegevens en ID zijn af, maar reageren vraagt ook de rest van de onboarding (de profielfoto, of branches bij een
     // oud account): dan niet "je kunt diensten aannemen", maar de volgende stap (lib/onboarding/werker-poort.ts).
-    const poortNu = isReservedTestAddress(principal.email) ? null : await werkerPoortStand(principal.userId).catch(() => null);
+    const [poortNu, nogVoorKlus] = await Promise.all([
+      werkerPoortStand(principal.userId).catch(() => null),
+      nogVoorEersteKlusVan(principal.userId).catch(() => []),
+    ]);
     return (
-      <AanmeldingKlaar taal={locale} pt={pt} fd={fd} o={o} poortNu={poortNu} werkrechtOk={werkrecht.ok} werkrechtVragen={werkrechtVragen} uitzend={fiscal.workerKind === "uitzendkracht"} />
+      <AanmeldingKlaar taal={locale} pt={pt} fd={fd} poortNu={poortNu} nogVoorKlus={nogVoorKlus} werkrechtVragen={werkrechtVragen} uitzend={fiscal.workerKind === "uitzendkracht"} />
     );
   }
 
@@ -239,7 +203,7 @@ export default async function VerificatiePage() {
   // stap 1 ("Hey! Wie ben jij?") en waar deze werker verdergaat; de poort mag niet gesloten worden
   const [persoon, poort, gebruiker] = await Promise.all([
     leesWieBenJij(principal.userId),
-    isReservedTestAddress(principal.email) ? Promise.resolve(null) : werkerPoortStand(principal.userId).catch(() => null),
+    werkerPoortStand(principal.userId).catch(() => null),
     prisma.user.findUnique({ where: { id: principal.userId }, select: { kycStatus: true } }),
   ]);
   const idKlaar = gebruiker?.kycStatus === "VERIFIED";
@@ -278,17 +242,14 @@ export default async function VerificatiePage() {
         taal={locale}
         pt={pt}
         fd={fd}
-        o={o}
         poortNu={poort}
-        werkrechtOk={werkrecht.ok}
         werkrechtVragen={werkrechtVragen}
         uitzend={fiscal.workerKind === "uitzendkracht"}
         voorKlus={voorKlus}
         bsnVoorstel={fiscal.bsnVoorstelLast4 ?? null}
         soort={fiscal.workerKind ?? null}
         btw={btwBegin}
-        // de postcode is er (woonKlaar), dus een open "thuisbasis en rekeningnummer" is het rekeningnummer
-        ibanOpen={o.onboarding.some((s) => s.id === "thuisbasis" && !s.done)}
+        nogVoorKlus={await nogVoorEersteKlusVan(principal.userId).catch(() => [])}
       />
     );
   }
@@ -313,12 +274,7 @@ export default async function VerificatiePage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <GegevensMist
-        mist={mist}
-        soort={fiscal.workerKind ?? null}
-        bsnVoorstel={fiscal.bsnVoorstelLast4 ?? null}
-        btw={btwBegin}
-      />
+      {/* geen apart blok "Je thuisbasis invullen" meer boven het formulier: het formulier vraagt het zelf (15 nov) */}
 
       {formulierNodig && (
         <OnboardingForm

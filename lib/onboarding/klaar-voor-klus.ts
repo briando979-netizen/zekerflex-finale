@@ -7,7 +7,7 @@
 // Puur bestand: de feiten komen van lib/onboarding/klaar-voor-klus-server.ts.
 // ---------------------------------------------------------------------------
 
-export type KlusStuk = "bsn" | "contract" | "bedrijf" | "iban" | "werkrecht" | "idWacht";
+export type KlusStuk = "bsn" | "contract" | "bedrijf" | "kvkWacht" | "iban" | "werkrecht" | "idWacht";
 
 export interface KlusFeiten {
   soort: "zzp" | "flexwerker" | "uitzendkracht" | null;
@@ -21,6 +21,8 @@ export interface KlusFeiten {
   contract: boolean;
   /** een geldig KVK- of btw-nummer, of de KOR (zzp'er, flexwerker) */
   bedrijf: boolean;
+  /** het KVK-nummer is ingevuld maar de controle bij de KVK wacht nog (kvkWachtVan in lib/kvk/tegoed-opslag.ts) */
+  kvkWacht: boolean;
   /** een rekeningnummer (IBAN) om op uit te betalen */
   iban: boolean;
   /** de vlag werkrecht-eis staat aan en het recht om te werken is nog niet aangetoond */
@@ -38,7 +40,8 @@ export function nogVoorEersteKlus(f: KlusFeiten): KlusStuk[] {
     if (!f.bsn) lijst.push("bsn");
     if (!f.contract) lijst.push("contract");
   } else if (!f.bedrijf) {
-    lijst.push("bedrijf");
+    // wacht de KVK-controle, zeg dat dan eerlijk in plaats van "vul je KVK-nummer in" (da, 15 nov)
+    lijst.push(f.kvkWacht ? "kvkWacht" : "bedrijf");
   }
   if (!f.iban) lijst.push("iban");
   if (f.werkrechtOpen) lijst.push("werkrecht");
@@ -53,6 +56,7 @@ export function nogVoorEersteKlus(f: KlusFeiten): KlusStuk[] {
 export const KLUS_STUK_HREF: Record<KlusStuk, string | null> = {
   bsn: "/dashboard/verificatie#gegevens-later-kop",
   bedrijf: "/dashboard/verificatie#gegevens-later-kop",
+  kvkWacht: null,
   contract: "/dashboard/verificatie#uitzendovereenkomst",
   iban: "/dashboard/verificatie#bankrekening",
   werkrecht: "/dashboard/verificatie#werkrecht",

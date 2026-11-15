@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { activeUitzendContract } from "@/lib/agreements/uitzend-contract";
 import { werkrechtVoorWerk } from "@/lib/werkrecht/store";
+import { kvkWachtVan } from "@/lib/kvk/tegoed-opslag";
 import { nogVoorEersteKlus, type KlusFeiten, type KlusStuk } from "@/lib/onboarding/klaar-voor-klus";
 
 // De feiten voor "Nog nodig vóór je eerste klus" (lib/onboarding/klaar-voor-klus.ts), met dezelfde bronnen en regels als
@@ -15,6 +16,7 @@ export async function klusFeiten(userId: string): Promise<KlusFeiten> {
     werkrechtVoorWerk(userId, "NL").catch(() => ({ ok: true, reden: null })),
   ]);
   const payroll = invoiceModeFor(fiscal) === "payroll";
+  const bedrijf = Boolean(profiel?.kvkValid || profiel?.vatValid || fiscal.vatValid || fiscal.korApplies);
   return {
     soort: fiscal.workerKind ?? null,
     payroll,
@@ -22,7 +24,8 @@ export async function klusFeiten(userId: string): Promise<KlusFeiten> {
     bsn: Boolean(fiscal.bsnHash),
     // alleen bij verloning nodig; een storing telt als "getekend" (dan zegt de controle bij reageren het wel)
     contract: payroll ? Boolean(await activeUitzendContract(userId).catch(() => true)) : true,
-    bedrijf: Boolean(profiel?.kvkValid || profiel?.vatValid || fiscal.vatValid || fiscal.korApplies),
+    bedrijf,
+    kvkWacht: !payroll && !bedrijf && Boolean(await kvkWachtVan("werker", userId).catch(() => false)),
     iban: Boolean(fiscal.iban || profiel?.payoutIban),
     werkrechtOpen: !werkrecht.ok,
   };
