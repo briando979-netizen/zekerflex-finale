@@ -36,6 +36,7 @@ export default async function PersoneelUitnodigingPage(props: { searchParams: Pr
       naam={payload.naam}
       bestaatAl={Boolean(bestaand)}
       ingelogdMetZelfdeAdres={Boolean(principal && principal.email.toLowerCase() === payload.email)}
+      ingelogdAls={principal && principal.email.toLowerCase() !== payload.email ? principal.email : null}
     />
   );
 }

@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { AuthError } from "next-auth";
-import { signIn } from "@/lib/auth/nextauth";
+import { signIn, signOut } from "@/lib/auth/nextauth";
 import { getPrincipal } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
 import { isBreached, scorePassword } from "@/lib/auth/password";
@@ -44,6 +44,16 @@ export async function maakAccountAction(_vorige: PersoneelAcceptState, formData:
     if (err instanceof AuthError) return { error: "Account aangemaakt, maar automatisch inloggen lukte niet. Log handmatig in." };
     throw err; // een gelukte signIn gooit NEXT_REDIRECT en die moet doorgaan
   }
+}
+
+/**
+ * Uitloggen en terug naar het inlogscherm met de uitnodiging als doel: voor wie met een ander account is ingelogd dan het adres van
+ * de uitnodiging. Zonder dit stuurt /login een ingelogde bezoeker meteen terug naar de uitnodiging, en zit hij in een kring.
+ */
+export async function uitloggenVoorUitnodigingAction(token: string): Promise<void> {
+  const t = await leesUitnodigingsToken(token);
+  if (!t) redirect("/login");
+  await signOut({ redirectTo: `/login?callbackUrl=${encodeURIComponent(`/personeel/uitnodiging?token=${token}`)}` });
 }
 
 /** Een bestaand account (al ingelogd met hetzelfde e-mailadres) aan de zaak koppelen. */

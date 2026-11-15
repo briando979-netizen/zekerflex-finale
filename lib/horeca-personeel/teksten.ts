@@ -80,6 +80,9 @@ export interface PersoneelTeksten {
     bestaatAl: string;
     naarInloggen: string;
     gekoppeld: string;
+    koppel: string;
+    anderAccount: string;
+    uitlogEnInlog: string;
   };
   omgeving: {
     titel: string;
@@ -192,6 +195,9 @@ const nl: PersoneelTeksten = {
     bestaatAl: "Er bestaat al een account met dit e-mailadres. Log in om de uitnodiging te gebruiken.",
     naarInloggen: "Naar inloggen",
     gekoppeld: "Je account is gekoppeld aan {zaak}.",
+    koppel: "Koppelen aan {zaak}",
+    anderAccount: "Je bent nu ingelogd als {ingelogd}, maar deze uitnodiging is voor {email}. Log eerst uit en log daarna in met {email}.",
+    uitlogEnInlog: "Uitloggen en inloggen met {email}",
   },
   omgeving: {
     titel: "Mijn werk bij {zaak}",
@@ -340,6 +346,9 @@ const en: PersoneelTeksten = {
     bestaatAl: "An account with this email address already exists. Sign in to use the invitation.",
     naarInloggen: "Go to sign in",
     gekoppeld: "Your account is now linked to {zaak}.",
+    koppel: "Link to {zaak}",
+    anderAccount: "You are currently signed in as {ingelogd}, but this invitation is for {email}. Sign out first, then sign in with {email}.",
+    uitlogEnInlog: "Sign out and sign in with {email}",
   },
   omgeving: {
     titel: "My work at {zaak}",

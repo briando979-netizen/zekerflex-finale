@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState, useState, useTransition } from "react";
 import { vulIn } from "@/lib/i18n/vul-in";
 import type { PersoneelTeksten } from "@/lib/horeca-personeel/teksten";
-import { koppelBestaandAction, maakAccountAction, type PersoneelAcceptState } from "@/app/personeel/uitnodiging/actions";
+import { koppelBestaandAction, maakAccountAction, uitloggenVoorUitnodigingAction, type PersoneelAcceptState } from "@/app/personeel/uitnodiging/actions";
 
 // De pagina waarop een medewerker zijn uitnodiging gebruikt (app/personeel/uitnodiging): een nieuw account maken, of, als het
 // e-mailadres al een account heeft, inloggen en koppelen. Alle tekst komt van de server (lib/horeca-personeel/teksten.ts).
@@ -19,6 +19,8 @@ export function UitnodigingForm(props: {
   naam: string;
   bestaatAl: boolean;
   ingelogdMetZelfdeAdres: boolean;
+  /** het adres van een ander account waarmee de bezoeker nu is ingelogd, anders null */
+  ingelogdAls: string | null;
 }) {
   const { t } = props;
   const [state, actie, bezig] = useActionState<PersoneelAcceptState, FormData>(maakAccountAction, { error: null });
@@ -46,8 +48,18 @@ export function UitnodigingForm(props: {
                 })
               }
             >
-              {koppelBezig ? t.bezig : vulIn(t.gekoppeld, { zaak: props.zaak })}
+              {koppelBezig ? t.bezig : vulIn(t.koppel, { zaak: props.zaak })}
             </button>
+          ) : props.ingelogdAls ? (
+            // met een ander account ingelogd: /login stuurt een ingelogde bezoeker meteen terug hierheen, dus eerst uitloggen
+            <div className="space-y-3">
+              <p role="alert" className="text-sm font-medium text-ink">
+                {vulIn(t.anderAccount, { ingelogd: props.ingelogdAls, email: props.email })}
+              </p>
+              <button type="button" className="btn-primary min-h-[44px]" disabled={koppelBezig} onClick={() => start(() => void uitloggenVoorUitnodigingAction(props.token))}>
+                {koppelBezig ? t.bezig : vulIn(t.uitlogEnInlog, { email: props.email })}
+              </button>
+            </div>
           ) : (
             <Link href={`/login?callbackUrl=${encodeURIComponent(`/personeel/uitnodiging?token=${props.token}`)}`} className="btn-primary inline-flex min-h-[44px] items-center">
               {t.naarInloggen}
