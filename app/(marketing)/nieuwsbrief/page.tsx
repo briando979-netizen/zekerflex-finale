@@ -12,7 +12,7 @@ import { ldJson } from "@/lib/seo/json-ld";
 const PATH = "/nieuwsbrief";
 
 export const metadata: Metadata = {
-  title: "Nieuwsbrief — nieuws over flexwerk, klussen en ZekerFlex",
+  title: "Nieuwsbrief — nieuws over flexwerk en klussen",
   description: "Eens per maand het belangrijkste over flexwerk, nieuwe functies van ZekerFlex en tips voor opdrachtgevers en flexwerkers. Gratis, afmelden kan altijd met één klik.",
   ...canonical(PATH),
 };

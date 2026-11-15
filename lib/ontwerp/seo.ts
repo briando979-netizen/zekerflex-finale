@@ -45,7 +45,7 @@ export const SEO_STANDAARD = {
   },
   "/prijzen": {
     naam: "Prijzen",
-    titel: "Prijzen — € 3,50 per gewerkt uur, gratis voor freelancers",
+    titel: "Prijzen — € 3,50 per gewerkt uur",
     omschrijving:
       "Gratis voor freelancers en flexkrachten. Bedrijven betalen € 3,50 per gewerkt uur, alleen bij gebruik. Geen abonnement, geen opstartkosten.",
     absoluut: false,

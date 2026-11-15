@@ -11,9 +11,9 @@ import { UitzendbureauContactForm } from "@/components/marketing/UitzendbureauCo
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Uitzendbureau ZekerFlex — uitzendwerk zonder KVK in heel Nederland",
+  title: "Uitzendbureau — uitzendwerk zonder KVK",
   description:
-    "Werk als uitzendkracht via ZekerFlex, ook zonder KVK. Bepaal je eigen uren, krijg wekelijks loon met vakantiegeld, pensioen (StiPP), reiskosten en het ABU-fasensysteem. ZekerFlex is je werkgever — al het papierwerk geregeld.",
+    "Werk als uitzendkracht via ZekerFlex, ook zonder KVK. Kies je eigen uren en krijg wekelijks loon met vakantiegeld, pensioen en reiskosten.",
   keywords: [
     "uitzendbureau",
     "online uitzendbureau",

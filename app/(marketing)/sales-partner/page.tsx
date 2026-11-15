@@ -13,7 +13,7 @@ import {
 
 const title = "Word sales-partner — verdien mee op commissie";
 const description =
-  "Breng als zzp'er bedrijven binnen bij ZekerFlex en verdien op commissie: een aanbrengbonus plus doorlopende commissie over elk gewerkt uur, een jaar lang. Je wordt alleen uit echt verdiende fee betaald — geen vaste uren, geen target, uncapped.";
+  "Breng als zzp'er bedrijven binnen en verdien commissie: een aanbrengbonus plus commissie over elk gewerkt uur, een jaar lang. Geen vaste uren of target.";
 
 export const metadata: Metadata = {
   title,

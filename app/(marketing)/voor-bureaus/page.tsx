@@ -7,9 +7,9 @@ import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/p
 import { canonical } from "@/lib/seo";
 import { PartnerPlans } from "@/components/marketing/PartnerPlans";
 
-const title = "ZekerFlex voor bureaus — plugin, white-label of self-hosted";
+const title = "Voor uitzendbureaus — plugin of white-label";
 const description =
-  "Bied ZekerFlex zelf aan: koppel één module via de API (plugin), draai het hele platform onder je eigen merk (white-label), of host alles op je eigen infrastructuur. AI-recruiter, matching, uren & facturen, uitzend en webshop in één.";
+  "Bied ZekerFlex zelf aan: één module via de API, het hele platform onder je eigen merk, of alles op je eigen servers. Met AI-recruiter en matching.";
 
 export const metadata: Metadata = {
   title,

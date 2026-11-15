@@ -6,9 +6,9 @@ import { WHITEPAPERS } from "@/lib/kennis/whitepapers";
 import { canonical } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Kennisbank — flexwerk, Wet DBA, uitbetaling en verloning",
+  title: "Kennisbank — flexwerk, Wet DBA en uitbetaling",
   description:
-    "De ZekerFlex-kennisbank: gidsen, blogs, whitepapers en veelgestelde vragen over flexibel werken — Wet DBA, StiPP-pensioen, het ABU-fasensysteem, uitbetaling, facturen en verificatie.",
+    "Gidsen, blogs en veelgestelde vragen over flexibel werken: Wet DBA, StiPP-pensioen, het ABU-fasensysteem, uitbetaling, facturen en verificatie.",
   ...canonical("/kennis"),
 };
 
