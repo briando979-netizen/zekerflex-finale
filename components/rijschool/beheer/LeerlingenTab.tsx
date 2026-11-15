@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { BeheerWeergave, LeerlingRij } from "@/lib/rijschool/weergave";
 import type { Doe } from "@/components/rijschool/beheer/RijschoolBeheer";
+import { useT } from "@/components/i18n/I18nProvider";
 import { LeerlingenImport } from "@/components/rijschool/beheer/LeerlingenImport";
 import { LesFormulier, nieuwConcept } from "@/components/rijschool/beheer/AgendaTab";
 import { bedragVeld, centVan, foutVan } from "@/components/rijschool/api";
@@ -50,6 +51,7 @@ export function LeerlingenTab({
   const [filter, setFilter] = useState<Status | "ALLE">("ALLE");
   const [nieuw, setNieuw] = useState(false);
   const [importeren, setImport] = useState(false);
+  const importTekst = useT().werkruimteStart.impKnop;
 
   const lijst = useMemo(() => {
     const z = zoek.trim().toLowerCase();
@@ -98,7 +100,7 @@ export function LeerlingenTab({
           </select>
         </Veld>
         <button type="button" className="btn-ghost ml-auto" onClick={() => setImport(true)}>
-          Overnemen uit een lijst
+          {importTekst}
         </button>
         <button type="button" className="btn-primary" onClick={() => setNieuw(true)}>
           Nieuwe leerling
