@@ -32,7 +32,7 @@ export const STANDAARD_KOLOMMEN: VoettekstKolom[] = [
     links: [
       { href: "/aanbod", label: "Het hele aanbod" },
       { href: "/aanbod/horeca", label: "Horecasoftware" },
-      { href: "/aanbod/rijschool", label: "Rijschoolsoftware" },
+      { href: "/rijschool-software", label: "Rijschoolsoftware" },
       { href: "/aanbod/website", label: "Website laten maken" },
       { href: "/klussen", label: "Open klussen" },
       { href: "/open-diensten", label: "Open diensten op de kaart" },
