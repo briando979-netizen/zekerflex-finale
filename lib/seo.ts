@@ -1,4 +1,5 @@
 import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
+import { amsterdamDayKey } from "@/lib/time/amsterdam";
 // Read APP_BASE_URL directly from process.env (not lib/env) so this module stays
 // free of the full env-schema validation — it's imported by statically collected
 // pages (layout, sitemap, robots, marketing) that run at build time without
@@ -303,6 +304,11 @@ export function productJsonLd(p: {
   variants?: { priceCents: number | null; stock: number }[];
   /** verkoper op de marktplaats; zonder = ZekerFlex verkoopt zelf */
   sellerName?: string | null;
+  /** goedgekeurde beoordelingen van echte kopers (lib/shop/beoordeling.ts); alleen meegeven als er minstens één is */
+  beoordelingen?: {
+    samenvatting: { gemiddelde: number; aantal: number };
+    lijst: { naam: string; sterren: number; tekst: string; datum: string }[];
+  };
 }): Record<string, unknown> {
   const seller = p.sellerName ? { "@type": "Organization", name: p.sellerName } : { "@id": ORG_ID };
   const hasVariants = Boolean(p.variants && p.variants.length > 0);
@@ -341,6 +347,24 @@ export function productJsonLd(p: {
     image: p.imageUrl ? (p.imageUrl.startsWith("http") ? p.imageUrl : `${SITE.url}${p.imageUrl}`) : `${SITE.url}/opengraph-image`,
     ...(p.sellerName ? {} : { brand: { "@type": "Brand", name: SITE.name } }),
     offers,
+    ...(p.beoordelingen && p.beoordelingen.samenvatting.aantal > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: p.beoordelingen.samenvatting.gemiddelde.toFixed(1),
+            reviewCount: p.beoordelingen.samenvatting.aantal,
+            bestRating: 5,
+            worstRating: 1,
+          },
+          review: p.beoordelingen.lijst.slice(0, 5).map((r) => ({
+            "@type": "Review",
+            author: { "@type": "Person", name: r.naam },
+            datePublished: amsterdamDayKey(r.datum),
+            reviewBody: r.tekst,
+            reviewRating: { "@type": "Rating", ratingValue: r.sterren, bestRating: 5, worstRating: 1 },
+          })),
+        }
+      : {}),
   };
 }
 

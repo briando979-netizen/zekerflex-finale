@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { beoordelingPerProduct } from "@/lib/shop/beoordeling-server";
 import { canonical } from "@/lib/seo";
 import { getDict } from "@/lib/i18n/server";
 import { ShopStorefront } from "@/components/marketing/ShopStorefront";
@@ -50,7 +51,9 @@ export default async function ZakelijkPage(props: { searchParams: Promise<{ pakk
     variants: r.variants.map((v) => ({ id: v.id, size: v.size, color: v.color, priceCents: v.priceCents, stock: v.stock })),
   }));
   const start = typeof pakket === "string" && pakketten.some((pk) => pk.id === pakket) ? pakket : null;
-  const products = rows.map((r) => toShopProduct(r as unknown as Record<string, unknown>));
+  // sterren op de kaartjes: alleen goedgekeurde beoordelingen van echte kopers (lib/shop/beoordeling.ts)
+  const scores = await beoordelingPerProduct(rows.map((r) => r.id)).catch(() => new Map<string, { gemiddelde: number; aantal: number }>());
+  const products = rows.map((r) => toShopProduct({ ...(r as unknown as Record<string, unknown>), beoordeling: scores.get(r.id) ?? null }));
 
   return (
     <VasteModus modus="zakelijk">

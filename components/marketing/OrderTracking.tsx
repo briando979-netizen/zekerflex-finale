@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useShopCart } from "@/components/marketing/useShopCart";
 import type { ShopOverschrijving } from "@/lib/shop/overschrijving-kenmerk";
+import { TEKST_MAX, TEKST_MIN, type TeBeoordelen } from "@/lib/shop/beoordeling";
 
 type Status = "PENDING_PAYMENT" | "RECEIVED" | "CONFIRMED" | "SHIPPED" | "CANCELLED" | "PAYMENT_FAILED";
 
@@ -42,7 +43,18 @@ function trackingUrl(carrier: string | null, trackingNumber: string | null): str
   return null;
 }
 
-export function OrderTracking({ orderId, bonUrl = null, overschrijving = null }: { orderId: string; bonUrl?: string | null; overschrijving?: ShopOverschrijving | null }) {
+export function OrderTracking({
+  orderId,
+  bonUrl = null,
+  overschrijving = null,
+  beoordelen = null,
+}: {
+  orderId: string;
+  bonUrl?: string | null;
+  overschrijving?: ShopOverschrijving | null;
+  /** na verzending: de producten die de koper kan beoordelen, met het token uit zijn link (lib/shop/beoordeling.ts) */
+  beoordelen?: { token: string; producten: TeBeoordelen[] } | null;
+}) {
   const [order, setOrder] = useState<Order | null>(null);
   const [notFound, setNotFound] = useState(false);
   const { clear } = useShopCart();
@@ -173,6 +185,136 @@ export function OrderTracking({ orderId, bonUrl = null, overschrijving = null }:
         >
           Download je factuur (PDF)
         </a>
+      )}
+
+      {order.status === "SHIPPED" && beoordelen && <Beoordelen orderId={orderId} token={beoordelen.token} begin={beoordelen.producten} />}
+    </div>
+  );
+}
+
+/** Beoordeel je aankoop: per product sterren en een paar zinnen. Komt pas op de site na een controle door ZekerFlex. */
+function Beoordelen({ orderId, token, begin }: { orderId: string; token: string; begin: TeBeoordelen[] }) {
+  const [producten, setProducten] = useState(begin);
+  return (
+    <section aria-labelledby="beoordelen-titel" className="mt-8 rounded-xl border border-hair p-5">
+      <h2 id="beoordelen-titel" className="text-[17px] font-bold text-ink">
+        Beoordeel je aankoop
+      </h2>
+      <p className="mt-1 text-sm text-neutralx-600">
+        Help andere kopers kiezen. Je beoordeling komt op de site na een korte controle, met je voornaam en de eerste letter van je achternaam.
+      </p>
+      <div className="mt-4 divide-y divide-hair">
+        {producten.map((p) => (
+          <BeoordeelProduct key={p.productId} orderId={orderId} token={token} product={p} onOpgeslagen={setProducten} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+const STATUS_TEKST = { wacht: "Ontvangen, we kijken hem even na", zichtbaar: "Staat op de site", afgewezen: "Niet geplaatst" } as const;
+
+function BeoordeelProduct({ orderId, token, product, onOpgeslagen }: { orderId: string; token: string; product: TeBeoordelen; onOpgeslagen: (p: TeBeoordelen[]) => void }) {
+  const eigen = product.beoordeling;
+  const [open, setOpen] = useState(!eigen);
+  const [sterren, setSterren] = useState(eigen?.sterren ?? 0);
+  const [tekst, setTekst] = useState(eigen?.tekst ?? "");
+  const [bezig, setBezig] = useState(false);
+  const [fout, setFout] = useState<string | null>(null);
+  const veld = `beoordeling-${product.productId}`;
+
+  async function stuur() {
+    if (sterren < 1) return setFout("Kies eerst hoeveel sterren je geeft.");
+    if (tekst.trim().length < TEKST_MIN) return setFout(`Schrijf minstens ${TEKST_MIN} tekens over het product.`);
+    setBezig(true);
+    setFout(null);
+    const r = await fetch(`/api/shop/orders/${orderId}/beoordeling`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ t: token, productId: product.productId, sterren, tekst: tekst.trim() }),
+    }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    setBezig(false);
+    if (r?.ok && Array.isArray(d.producten)) {
+      onOpgeslagen(d.producten as TeBeoordelen[]);
+      setOpen(false);
+    } else setFout(d?.error?.message ?? "Versturen lukte niet. Probeer het zo nog eens.");
+  }
+
+  return (
+    <div className="py-4 first:pt-0 last:pb-0">
+      <div className="flex items-center gap-3">
+        <span className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-paper-soft">
+          {product.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={product.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+          ) : null}
+        </span>
+        <div className="min-w-0 flex-1">
+          <Link href={`/shop/${product.slug}`} className="block truncate text-[15px] font-semibold text-ink hover:underline">
+            {product.naam}
+          </Link>
+          {eigen && !open && <p className="text-[12px] text-neutralx-600">{STATUS_TEKST[eigen.status]}</p>}
+        </div>
+        {eigen && !open && (
+          <button type="button" onClick={() => setOpen(true)} className="shrink-0 rounded-lg border border-hair px-3 py-1.5 text-[13px] font-semibold text-ink hover:bg-paper-soft">
+            Aanpassen
+          </button>
+        )}
+      </div>
+      {eigen && !open && (
+        <p className="mt-2 text-[14px] text-ink">
+          <span aria-label={`${eigen.sterren} van de 5 sterren`} className="mr-2 tracking-wide">
+            {"★".repeat(eigen.sterren)}
+            <span className="text-neutralx-300">{"★".repeat(5 - eigen.sterren)}</span>
+          </span>
+          {eigen.tekst}
+        </p>
+      )}
+      {open && (
+        <div className="mt-3">
+          <fieldset className="relative">
+            <legend className="text-[13px] font-semibold text-ink">Hoeveel sterren geef je?</legend>
+            <div className="mt-1 flex gap-1">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <label key={n} className="relative cursor-pointer rounded text-[30px] leading-none has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ink">
+                  <input type="radio" name={`${veld}-sterren`} value={n} checked={sterren === n} onChange={() => setSterren(n)} className="sr-only" />
+                  <span aria-hidden className={n <= sterren ? "text-ink" : "text-neutralx-300"}>
+                    ★
+                  </span>
+                  <span className="sr-only">{n === 1 ? "1 ster" : `${n} sterren`}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <label htmlFor={veld} className="mt-3 block text-[13px] font-semibold text-ink">
+            Wat vind je ervan?
+          </label>
+          <textarea
+            id={veld}
+            value={tekst}
+            onChange={(e) => setTekst(e.target.value)}
+            maxLength={TEKST_MAX}
+            rows={3}
+            placeholder="Bijvoorbeeld: hoe het past, de kwaliteit, of je het zou aanraden"
+            className="mt-1 w-full rounded-lg border border-hair px-3 py-2 text-[14px] text-ink outline-none focus:border-ink"
+          />
+          {fout && (
+            <p role="alert" className="mt-1 text-[13px] font-semibold text-crit">
+              {fout}
+            </p>
+          )}
+          <div className="mt-2 flex gap-2">
+            <button type="button" disabled={bezig} onClick={() => void stuur()} className="rounded-lg bg-ink px-4 py-2 text-[14px] font-bold text-white disabled:opacity-60">
+              {bezig ? "Versturen…" : eigen ? "Opslaan" : "Versturen"}
+            </button>
+            {eigen && (
+              <button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-hair px-4 py-2 text-[14px] font-semibold text-ink">
+                Annuleren
+              </button>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

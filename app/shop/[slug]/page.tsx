@@ -8,6 +8,7 @@ import { boughtTogether } from "@/lib/shop/recommend";
 import { getModel3D, model3dUrl } from "@/lib/shop/model3d";
 import { kleurFotos } from "@/lib/shop/kleurfoto";
 import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
+import { zichtbareBeoordelingen } from "@/lib/shop/beoordeling-server";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +73,7 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
   });
   const related = [...together, ...fill];
   const model3d = await getModel3D(product.id);
+  const beoordelingen = await zichtbareBeoordelingen(product.id).catch(() => null);
 
   return (
     <>
@@ -89,6 +91,7 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
               imageUrl: product.imageUrl,
               variants: product.variants.map((v) => ({ priceCents: v.priceCents, stock: v.stock })),
               sellerName: product.seller?.name ?? null,
+              ...(beoordelingen && beoordelingen.samenvatting.aantal > 0 ? { beoordelingen } : {}),
             }),
           ),
         }}
@@ -97,6 +100,7 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
         product={{ ...toDto(product), model3dUrl: model3d ? model3dUrl(product.id) : null, kleurFotos: kleurFotos(product) }}
         related={related.map(toDto)}
         boughtTogether={together.length > 0}
+        beoordelingen={beoordelingen}
       />
     </>
   );

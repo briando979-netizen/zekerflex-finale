@@ -46,6 +46,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/shop/products",
     "/api/shop/media/abc123",
     "/api/shop/paskamer/passen",
+    "/api/shop/orders/abc123/beoordeling", // een koper beoordeelt zijn aankoop: alleen met het getekende token van de bestelling (lib/shop/beoordeling.ts)
     "/api/company/search",
     "/api/terminal/abc123-sleutel",
     "/api/installatie/abc123def456.sleutel", // klant en monteur volgen een installatie met de code in het adres
@@ -121,6 +122,7 @@ describe("isPublicApiRoute — protected (must NOT be public)", () => {
     "/api/me/certificates",
     "/api/uploads/upl_1",
     "/api/admin/mail",
+    "/api/admin/shop/beoordelingen", // beoordelingen nakijken: alleen platformbeheerders
     "/api/admin/boekhouding/bonnen", // de bonnen van de boekhouding: alleen platformbeheerders
     "/api/admin/boekhouding/bonnen/abc123def456/bestand",
     "/api/werkgever/claims/claim_1",

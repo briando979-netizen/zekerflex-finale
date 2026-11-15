@@ -16,6 +16,8 @@ import { ShopPrijs } from "@/components/marketing/ShopPrijs";
 import { useBezorgmoment } from "@/components/marketing/useBezorgmoment";
 import { bezorgdagNaam } from "@/lib/shop/bezorgmoment";
 import { useI18n } from "@/components/i18n/I18nProvider";
+import { Sterren } from "@/components/marketing/Sterren";
+import { cijferTekst } from "@/lib/shop/beoordeling";
 
 // Eén productkaart zoals op een grote marktplaats: foto, naam, opties, prijs,
 // levering, verkoper en meteen "In winkelwagen". De naam is de link en dekt de
@@ -116,6 +118,12 @@ export function ShopProductCard({
           p.name
         )}
       </Title>
+      {p.beoordeling && (
+        <p className="mt-1 flex items-center gap-1.5 text-[12px] text-neutralx-600">
+          <Sterren gemiddelde={p.beoordeling.gemiddelde} grootte={13} label={fmt(t.shop.sterrenVan5, { cijfer: cijferTekst(p.beoordeling.gemiddelde) })} />
+          <span aria-hidden>({p.beoordeling.aantal})</span>
+        </p>
+      )}
       {p.variants.length > 1 && <p className="mt-1 text-[12px] text-neutralx-500">{fmt(t.shop.optionsCount, { n: p.variants.length })}</p>}
       {kleuren.length > 1 && (
         <p role="img" className="mt-1.5 flex items-center gap-1" aria-label={fmt(t.shopThuis.kleurenLabel, { kleuren: kleuren.join(", ") })}>

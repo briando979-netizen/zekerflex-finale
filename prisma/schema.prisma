@@ -1949,6 +1949,7 @@ model ShopProduct {
   variants   ShopProductVariant[]
   bundleOf   ShopBundleItem[]     @relation("BundleProduct")
   includedIn ShopBundleItem[]     @relation("ItemProduct")
+  reviews    ShopReview[]
 
   // Verkoper op de marktplaats (null = ZekerFlex zelf, lib/shop/verkoper.ts). Een
   // verkopersproduct is pas zichtbaar (active) na goedkeuring door de beheerder.
@@ -2032,9 +2033,31 @@ model ShopOrder {
   reference             String? // eigen referentie of inkoopnummer van de klant
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
+  reviews               ShopReview[]
 
   @@index([status, createdAt])
   @@index([email])
+}
+
+// Een beoordeling door iemand die het product echt kocht (15 nov 2026, de webshop zoals bol.com; lib/shop/beoordeling.ts).
+// Alleen via de getekende link van een verzonden bestelling, één per product per bestelling, en pas zichtbaar als de
+// beheerder hem goedkeurt. Weg met de bestelling of het product (cascade).
+model ShopReview {
+  id        String      @id @default(cuid())
+  productId String
+  product   ShopProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderId   String
+  order     ShopOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  naam      String // zoals op de site: voornaam + eerste letter van de achternaam
+  sterren   Int // 1 t/m 5
+  tekst     String
+  status    String      @default("wacht") // "wacht" | "zichtbaar" | "afgewezen"
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([orderId, productId])
+  @@index([productId, status])
+  @@index([status, createdAt])
 }
 
 // ===========================================================================

@@ -6,6 +6,7 @@ import { ShopNieuwStappen } from "@/components/admin/ShopNieuwStappen";
 import { ShopProductScherm } from "@/components/admin/ShopProductScherm";
 import { centenNaarEuro, effectieveVoorraad, euroNaarCenten, slugUitNaam, uniekeSlug } from "@/lib/shop/product-formulier";
 import { kiesShopTab, zoekMetShopTab, type ShopTab } from "@/lib/shop/admin-tabs";
+import { ShopBeoordelingen } from "@/components/admin/ShopBeoordelingen";
 import { Fragment, useEffect, useState } from "react";
 import { ShopAdminTools } from "@/components/admin/ShopAdminTools";
 import { ShopModel3D } from "@/components/admin/ShopModel3D";
@@ -107,6 +108,16 @@ export function ShopAdmin() {
   const [stats, setStats] = useState<ShopStats | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [tab, setTab] = useState<ShopTab>("products");
+  // beoordelingen die op de beheerder wachten (lib/shop/beoordeling.ts), als teller op het tabblad
+  const [reviewsWacht, setReviewsWacht] = useState(0);
+  useEffect(() => {
+    void fetch("/api/admin/shop/beoordelingen", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { beoordelingen?: { status: string }[] } | null) => {
+        if (d?.beoordelingen) setReviewsWacht(d.beoordelingen.filter((b) => b.status === "wacht").length);
+      })
+      .catch(() => undefined);
+  }, []);
   // het tabblad staat ook in het adres (?tab=orders), zodat de Webshop-console er rechtstreeks naartoe kan linken
   useEffect(() => {
     const zoek = new URLSearchParams(window.location.search);
@@ -313,6 +324,7 @@ export function ShopAdmin() {
       {([
         ["products", "Producten"],
         ["orders", "Bestellingen"],
+        ["reviews", "Beoordelingen"],
         ["stats", "Statistieken"],
         ["tools", "Kortingen & voorraad"],
       ] as const).map(([key, label]) => (
@@ -329,12 +341,19 @@ export function ShopAdmin() {
               {key === "products" ? products.length : orders.length}
             </span>
           )}
+          {key === "reviews" && reviewsWacht > 0 && (
+            <span className="ml-1.5 rounded-full px-1.5 py-0.5 text-xs font-semibold" style={{ background: "var(--a-warn-soft)", color: "var(--a-warn-ink)" }}>
+              {reviewsWacht}
+            </span>
+          )}
           {tab === key && <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full" style={{ background: "var(--a-accent)" }} />}
         </button>
       ))}
     </div>
 
     {tab === "tools" && <ShopAdminTools />}
+
+    {tab === "reviews" && <ShopBeoordelingen onAantalWacht={setReviewsWacht} />}
 
     {tab === "stats" && stats && (
       <div className="space-y-4">

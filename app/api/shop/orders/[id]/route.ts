@@ -80,11 +80,12 @@ export const PATCH = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (
       from: env.MAIL_FROM,
       kind: "shop-order-bevestiging",
       subject: "Je bestelling is onderweg",
-      text: `Hoi ${order.firstName},\n\nJe bestelling is verzonden${order.carrier ? ` via ${order.carrier}` : ""}${order.trackingNumber ? ` (track & trace: ${order.trackingNumber})` : ""}.\n\nVolg 'm live: ${trackUrl}\n\nBestelreferentie: ${order.id}`,
+      text: `Hoi ${order.firstName},\n\nJe bestelling is verzonden${order.carrier ? ` via ${order.carrier}` : ""}${order.trackingNumber ? ` (track & trace: ${order.trackingNumber})` : ""}.\n\nVolg 'm live: ${trackUrl}\n\nBinnen? Op dezelfde pagina kun je je aankoop beoordelen; daar help je andere kopers mee.\n\nBestelreferentie: ${order.id}`,
       html: mailShell(
         "Je bestelling is onderweg",
         `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${order.firstName}, je bestelling is verzonden${order.carrier ? ` via ${order.carrier}` : ""}.</p>
          <p style="margin:0 0 20px">${mailButton(trackUrl, "Volg je bestelling live")}</p>
+         <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#3C4A42">Binnen? Op dezelfde pagina kun je je aankoop beoordelen; daar help je andere kopers mee.</p>
          <p style="margin:12px 0 0;font-size:12px;color:#667469">Referentie: ${order.id}</p>`,
       ),
     }).catch((e) => logger.warn("shop order shipped mail failed", { error: (e as Error).message }));

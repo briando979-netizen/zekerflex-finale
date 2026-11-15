@@ -24,6 +24,8 @@ import { bezorgZin } from "@/lib/shop/bezorgmoment";
 import { useBezorgmoment } from "@/components/marketing/useBezorgmoment";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { VERKOPER_VERZENDT_BINNEN_WERKDAGEN } from "@/lib/shop/verkoper-core";
+import { beoordelingDatum, cijferTekst, type ProductBeoordelingen } from "@/lib/shop/beoordeling";
+import { Sterren } from "@/components/marketing/Sterren";
 
 // De productpagina, opgebouwd als op een grote marktplaats. Telefoon: titel,
 // foto, koopblok onder elkaar en een vaste koopknop onderin zodra de gewone uit
@@ -79,7 +81,18 @@ const asCard = (p: PdpProduct): ShopCardProduct => ({
   seller: p.seller ?? null,
 });
 
-export function ProductDetail({ product, related, boughtTogether = false }: { product: PdpProduct; related: PdpProduct[]; boughtTogether?: boolean }) {
+export function ProductDetail({
+  product,
+  related,
+  boughtTogether = false,
+  beoordelingen = null,
+}: {
+  product: PdpProduct;
+  related: PdpProduct[];
+  boughtTogether?: boolean;
+  /** goedgekeurde beoordelingen van kopers (lib/shop/beoordeling.ts); null = niet geladen */
+  beoordelingen?: ProductBeoordelingen | null;
+}) {
   const t = useT();
   const { add, count } = useShopCart();
   const wishlist = useShopWishlist();
@@ -90,6 +103,8 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
   const [added, setAdded] = useState(false);
   const [buyVisible, setBuyVisible] = useState(true);
   const buyRef = useRef<HTMLDivElement | null>(null);
+  const sam = beoordelingen?.samenvatting ?? null;
+  const aantalTekst = sam ? (sam.aantal === 1 ? t.shop.beoordelingEen : fmt(t.shop.beoordelingMeer, { n: sam.aantal })) : "";
   // wat de shop nu over betalen mag zeggen: hetzelfde als de kassa (online, per overschrijving, of even niet)
   const betaalwijze = useShopBetaalwijze();
   const betaalNoot = betaalwijze === "overschrijving" ? t.shop.bankPaymentNote : betaalwijze === "dicht" ? t.shop.paymentClosedNote : t.shop.securePaymentNote;
@@ -166,6 +181,13 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
               </>
             )}
           </p>
+          {sam && sam.aantal > 0 && (
+            <a href="#beoordelingen" className="mt-1.5 inline-flex items-center gap-2 text-[14px] text-neutralx-600 hover:underline">
+              <Sterren gemiddelde={sam.gemiddelde} grootte={16} label={fmt(t.shop.sterrenVan5, { cijfer: cijferTekst(sam.gemiddelde) })} />
+              <span className="font-semibold text-ink">{cijferTekst(sam.gemiddelde)}</span>
+              <span>({aantalTekst})</span>
+            </a>
+          )}
         </div>
 
         {/* foto's */}
@@ -465,6 +487,59 @@ export function ProductDetail({ product, related, boughtTogether = false }: { pr
           </section>
         </div>
       </div>
+
+      {/* beoordelingen van echte kopers, zoals bol.com; zonder beoordelingen zegt de pagina dat eerlijk */}
+      {beoordelingen && sam && (
+        <section id="beoordelingen" aria-labelledby="pdp-beoordelingen" className="mt-12 scroll-mt-32 border-t border-hair pt-10 lg:scroll-mt-24">
+          <h2 id="pdp-beoordelingen" className={H2}>
+            {t.shop.beoordelingen}
+          </h2>
+          {sam.aantal === 0 ? (
+            <div className="mt-4 rounded-xl border border-hair bg-paper-soft p-5">
+              <p className="text-[15px] font-semibold text-ink">{t.shop.beoordelingGeen}</p>
+              <p className="mt-1 text-[14px] text-neutralx-600">{t.shop.beoordelingGeenUitleg}</p>
+            </div>
+          ) : (
+            <div className="mt-5 grid gap-8 lg:grid-cols-[260px_minmax(0,1fr)]">
+              <div>
+                <p className="font-display text-[44px] font-bold leading-none text-ink">{cijferTekst(sam.gemiddelde)}</p>
+                <div className="mt-2">
+                  <Sterren gemiddelde={sam.gemiddelde} grootte={20} label={fmt(t.shop.sterrenVan5, { cijfer: cijferTekst(sam.gemiddelde) })} />
+                </div>
+                <p className="mt-1 text-[13px] text-neutralx-600">{aantalTekst}</p>
+                <ul className="mt-4 space-y-1.5">
+                  {[5, 4, 3, 2, 1].map((n) => {
+                    const c = sam.verdeling[n - 1] ?? 0;
+                    return (
+                      <li key={n} className="flex items-center gap-2 text-[13px] text-neutralx-600">
+                        <span className="w-16 shrink-0">{n === 1 ? t.shop.sterLabel1 : fmt(t.shop.sterLabelN, { n })}</span>
+                        <span aria-hidden className="h-2 flex-1 overflow-hidden rounded-full bg-paper-soft">
+                          <span className="block h-full rounded-full bg-ink" style={{ width: `${Math.round((c / sam.aantal) * 100)}%` }} />
+                        </span>
+                        <span className="w-6 shrink-0 text-right">{c}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="mt-4 text-[12px] text-neutralx-500">{t.shop.beoordelingUitleg}</p>
+              </div>
+              <ul className="divide-y divide-hair">
+                {beoordelingen.lijst.map((r) => (
+                  <li key={r.id} className="py-4 first:pt-0">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <Sterren gemiddelde={r.sterren} label={fmt(t.shop.sterrenVan5, { cijfer: String(r.sterren) })} />
+                      <span className="text-[14px] font-semibold text-ink">{r.naam}</span>
+                      <span className="text-[12px] font-semibold text-trust-ink">{t.shop.beoordelingKoper}</span>
+                      <span className="text-[12px] text-neutralx-500">{beoordelingDatum(r.datum, locale)}</span>
+                    </div>
+                    <p className="mt-1.5 whitespace-pre-line text-[15px] leading-relaxed text-neutralx-700">{r.tekst}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
 
       {related.length > 0 && (
         <section aria-labelledby="pdp-meer" className="mt-12 border-t border-hair pt-10">

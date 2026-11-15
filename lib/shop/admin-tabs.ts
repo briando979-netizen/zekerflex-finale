@@ -1,10 +1,10 @@
 // De tabbladen van Beheer -> Webshop -> Producten (components/admin/ShopAdmin.tsx) in het adres: /admin/shop?tab=orders.
 // Puur bestand, zodat de Webshop-console (lib/shop/console.ts), het scherm en de test dezelfde namen gebruiken.
 
-export const SHOP_TABS = ["products", "orders", "stats", "tools"] as const;
+export const SHOP_TABS = ["products", "orders", "reviews", "stats", "tools"] as const;
 export type ShopTab = (typeof SHOP_TABS)[number];
 
-const TABEL: Record<ShopTab, true> = { products: true, orders: true, stats: true, tools: true };
+const TABEL: Record<ShopTab, true> = { products: true, orders: true, reviews: true, stats: true, tools: true };
 
 /** Is dit een bekende tabnaam? Object.hasOwn, niet `in`: anders telt "constructor" uit het adres als geldig. */
 export function isShopTab(waarde: unknown): waarde is ShopTab {

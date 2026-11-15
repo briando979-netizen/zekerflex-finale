@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { canonical } from "@/lib/seo";
 import { prisma } from "@/lib/prisma";
+import { beoordelingPerProduct } from "@/lib/shop/beoordeling-server";
 import { getDict, getLocale } from "@/lib/i18n/server";
 import { contentKeys, getContentMap } from "@/lib/content/store";
 import { metShopTeksten } from "@/lib/ontwerp/shop-teksten";
@@ -43,7 +44,9 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
   const rows = await prisma.shopProduct
     .findMany({ where: { active: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }], include: { variants: { orderBy: { createdAt: "asc" } }, seller: { select: { name: true } } } })
     .catch(() => []);
-  const products = rows.map((r) => toShopProduct(r as unknown as Record<string, unknown>));
+  // sterren op de kaartjes: alleen goedgekeurde beoordelingen van echte kopers (lib/shop/beoordeling.ts)
+  const scores = await beoordelingPerProduct(rows.map((r) => r.id)).catch(() => new Map<string, { gemiddelde: number; aantal: number }>());
+  const products = rows.map((r) => toShopProduct({ ...(r as unknown as Record<string, unknown>), beoordeling: scores.get(r.id) ?? null }));
   // eigen teksten uit de Site-ontwerper (tabblad Teksten, groep Webshop); alleen in het Nederlands, anders de vertaling
   const dict = metShopTeksten(await getDict(), await getContentMap(contentKeys("shop.")).catch(() => ({})), await getLocale());
   const t = dict.shop;

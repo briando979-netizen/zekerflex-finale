@@ -19,6 +19,8 @@ export type ShopCardProduct = {
   variants: ShopVariant[];
   /** verkoper op de marktplaats; null = ZekerFlex zelf */
   seller?: string | null;
+  /** gemiddelde van de goedgekeurde beoordelingen (lib/shop/beoordeling.ts); ontbreekt zonder beoordelingen */
+  beoordeling?: { gemiddelde: number; aantal: number } | null;
 };
 
 const oneSize = (id: string, stock = 10): ShopVariant[] => [{ id: `${id}-default`, size: null, color: null, priceCents: null, stock }];
@@ -56,7 +58,14 @@ export function toShopProduct(it: Record<string, unknown>): ShopCardProduct {
           }))
         : oneSize(String(it.id), Number(it.stock ?? 0)),
     seller: sellerName(it.seller),
+    beoordeling: beoordelingUit(it.beoordeling),
   };
+}
+
+function beoordelingUit(v: unknown): { gemiddelde: number; aantal: number } | null {
+  if (!v || typeof v !== "object") return null;
+  const { gemiddelde, aantal } = v as { gemiddelde?: unknown; aantal?: unknown };
+  return typeof gemiddelde === "number" && typeof aantal === "number" && aantal > 0 ? { gemiddelde, aantal } : null;
 }
 
 export const shopMoney = (euros: number): string => `€ ${euros.toFixed(2).replace(".", ",")}`;
