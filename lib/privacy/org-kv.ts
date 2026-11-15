@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
 // Register van de KV-gegevens die bij een ORGANISATIE horen (en niet bij één gebruiker): werkbonnen, offertes,
-// checklists, voorraad, kamers, ritten, lidmaatschappen en afspraken/klantenkaart. Klantgegevens van een bedrijf zijn
+// checklists, voorraad, kamers, ritten, lidmaatschappen en afspraken/klantenkaart en bedrijf in kaart. Klantgegevens van een bedrijf zijn
 // gegevens van derden; verdwijnt de organisatie, dan moeten ze mee weg (AVG art. 17) en horen ze in een export.
 // Een nieuwe module met KV-gegevens per organisatie meldt zich HIER aan (één regel per voorvoegsel); tests/org-kv.test.ts
 // leest de store-bestanden en laat een vergeten voorvoegsel direct opvallen. Puur bestand: geen prisma of kv.
@@ -66,6 +66,8 @@ export const ORG_KV_REGISTER: readonly OrgKvRegel[] = [
   { module: "afspraken", voorvoegsel: "afspraken:klant:", soort: "organisatie", omschrijving: "klantenkaart (notities per klant)" },
   { module: "afspraken", voorvoegsel: "afspraken:tok:", soort: "organisatie", omschrijving: "annuleerlinks (alleen de hash)" },
   { module: "afspraken", voorvoegsel: "afspraken:rem:", soort: "organisatie", omschrijving: "herinneringsrijtje" },
+
+  { module: "inkaart", voorvoegsel: "inkaart:gegevens:", soort: "exact", omschrijving: "bedrijf in kaart: personeel, kosten, ruimtes en bezetting" },
 ];
 
 /** Een echt organisatie-id: zo kan een leeg of vreemd id nooit een te breed voorvoegsel worden. */
