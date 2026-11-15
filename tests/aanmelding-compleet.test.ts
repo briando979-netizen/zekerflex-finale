@@ -78,7 +78,7 @@ describe("meldAanmeldingCompleet", () => {
     h.reageren = { ok: false, reden: "Vul je rekeningnummer (IBAN) in bij Verificatie → Bankrekening bevestigen om op klussen te reageren." };
     await noteerAanmeldingOpen("u4", nu);
     expect(await meldAanmeldingCompleet("u4", nu)).toMatchObject({ verstuurd: true, soort: "nog-iets" });
-    expect(h.mails[0]?.subject).toBe("Je aanmelding is compleet: nog één ding");
+    expect(h.mails[0]?.subject).toBe("Je aanmelding is compleet: dit is nog nodig vóór je eerste klus");
     expect(h.mails[0]?.text).toMatch(/IBAN/);
   });
 

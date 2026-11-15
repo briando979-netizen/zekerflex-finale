@@ -155,8 +155,8 @@ export function herinneringInhoud(reden: Exclude<HerinneringReden, "email">): { 
   switch (reden) {
     case "werker-profiel":
       return {
-        todo: "vul je thuisbasis en rekeningnummer in en bevestig je identiteit",
-        why: "Je hebt je werkvorm al gekozen, dat scheelt. Hierna kun je direct op klussen reageren en word je uitbetaald via ZekerFlex.",
+        todo: "vul je gegevens in en laat je ID controleren",
+        why: "Je hebt je werkvorm al gekozen, dat scheelt. Daarna zie je bovenaan Ontdekken precies wat er nog nodig is voor je eerste klus.",
         href: "/dashboard/verificatie",
       };
     case "werker-verificatie":
