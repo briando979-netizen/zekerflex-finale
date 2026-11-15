@@ -80,11 +80,15 @@ export async function runRetentionSweep(
     datum: { lt: amsterdamDayKey(horecaCut) },
     OR: [{ naam: { not: "Gast" } }, { email: { not: "" } }, { telefoon: { not: "" } }, { opmerking: { not: "" } }],
   };
-  const bestelWhere = { createdAt: { lt: horecaCut }, OR: [{ naam: { not: "" } }, { opmerking: { not: "" } }] };
+  // afhalen en bezorgen (15 nov): ook telefoon, e-mail, adres, postcode en de exacte plek; plaats en afstand blijven voor de cijfers
+  const bestelWhere = {
+    createdAt: { lt: horecaCut },
+    OR: [{ naam: { not: "" } }, { opmerking: { not: "" } }, { telefoon: { not: "" } }, { email: { not: "" } }, { adres: { not: "" } }, { postcode: { not: "" } }, { lat: { not: null } }],
+  };
   cleared.horeca_gasten = dryRun
     ? (await prisma.horecaReservering.count({ where: resWhere })) + (await prisma.horecaBestelling.count({ where: bestelWhere }))
     : (await prisma.horecaReservering.updateMany({ where: resWhere, data: { naam: "Gast", email: "", telefoon: "", opmerking: "" } })).count +
-      (await prisma.horecaBestelling.updateMany({ where: bestelWhere, data: { naam: "", opmerking: "" } })).count;
+      (await prisma.horecaBestelling.updateMany({ where: bestelWhere, data: { naam: "", opmerking: "", telefoon: "", email: "", adres: "", postcode: "", lat: null, lng: null } })).count;
 
   // Tafelreserveringen via een klantsite (lib/sites/reserveringen-opslag.ts): na dezelfde 12 maanden helemaal weg.
   // De dag zit in de sleutel: site-reservering:<siteId>:<datum>:<id>.

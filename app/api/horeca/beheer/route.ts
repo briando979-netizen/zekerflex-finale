@@ -4,7 +4,10 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { companyDefaults } from "@/lib/sites/access";
 import { aanzetVoorstel } from "@/lib/sites/aanzet-voorstel";
 import { zelfdeHerkomst } from "@/lib/rijschool/herkomst";
-import { aanzettenSchema, beheerActieSchema, lees, LIVE_ACTIES, liveActieSchema, takenActieSchema, TAKEN_ACTIES, uitbetaalSchema } from "@/lib/horeca/schema";
+import { aanzettenSchema, beheerActieSchema, BEZORG_ACTIES, bezorgActieSchema, lees, LIVE_ACTIES, liveActieSchema, takenActieSchema, TAKEN_ACTIES, uitbetaalSchema } from "@/lib/horeca/schema";
+import { leesBezorgen } from "@/lib/horeca/bezorgen";
+import { bevestigTijd, bewaarBezorger, bewaarBezorgInstellingen, plaatsLevering, verwijderBezorger, wijsBezorgerToe, zetAfgeleverd, zetOnderweg } from "@/lib/horeca/bezorgen-server";
+import { prisma } from "@/lib/prisma";
 import { bewaarLijst, lijstenOp, maakVoorbeeldlijsten, registratie, verwijderLijst, vinkAf, vinkUit } from "@/lib/horeca/takenlijsten";
 import { beheerContext, eisBeheer, isEigenaar } from "@/lib/horeca/toegang";
 import { neemOp, uitbetaalStand, zetAutomatischUitbetalen } from "@/lib/horeca/uitbetalen";
@@ -52,7 +55,16 @@ const fout = (err: unknown) => {
 
 async function alles(zaak: HorecaZaak) {
   const [kaart, tafels] = await Promise.all([menukaart(zaak.id), tafelsVan(zaak.id)]);
-  return { aan: true, zaak: zaakWeergave(zaak), ...kaart, tafels, maand: maandbedrag(zaak.modules), reserveren: leesInstellingen(zaak.reserveren), kassa: { btwNummer: zaak.btwNummer, ...leesKassa(zaak.kassa) } };
+  return {
+    aan: true,
+    zaak: zaakWeergave(zaak),
+    ...kaart,
+    tafels,
+    maand: maandbedrag(zaak.modules),
+    reserveren: leesInstellingen(zaak.reserveren),
+    kassa: { btwNummer: zaak.btwNummer, ...leesKassa(zaak.kassa) },
+    bezorgen: { ...leesBezorgen(zaak.bezorgen), ligging: typeof zaak.lat === "number" && typeof zaak.lng === "number" },
+  };
 }
 
 const eisModule = (zaak: HorecaZaak, m: ModuleSleutel) => {
@@ -178,6 +190,39 @@ export async function POST(request: Request): Promise<NextResponse> {
       else await maakVoorbeeldlijsten(zaak);
       return NextResponse.json({ ok: true });
     }
+    // afhalen en bezorgen (module bezorgen): eigen schema
+    if (BEZORG_ACTIES.includes(String((body as { actie?: unknown } | null)?.actie))) {
+      const b = lees(bezorgActieSchema, body);
+      switch (b.actie) {
+        case "bezorg-instellingen": {
+          const { actie: _a, ...inst } = b;
+          return NextResponse.json(await alles(await bewaarBezorgInstellingen(zaak, inst)));
+        }
+        case "bezorger":
+          return NextResponse.json(await alles(await bewaarBezorger(zaak, { id: b.id, naam: b.naam, telefoon: b.telefoon, actief: b.actief })));
+        case "bezorger-weg":
+          return NextResponse.json(await alles(await verwijderBezorger(zaak, b.id)));
+        case "levering": {
+          eisModule(zaak, "bestellen");
+          const { actie: _a, soort, ...inv } = b;
+          const nieuw = await plaatsLevering(zaak, { soort, ...inv }, "bediening");
+          return NextResponse.json({ ...(await alles(zaak)), nummer: nieuw.nummer });
+        }
+        case "levering-tijd":
+          await bevestigTijd(zaak, b.id, b.tijd);
+          break;
+        case "levering-bezorger":
+          await wijsBezorgerToe(zaak, b.id, b.bezorgerId);
+          break;
+        case "levering-onderweg":
+          await zetOnderweg(zaak, b.id, b.terug);
+          break;
+        case "levering-af":
+          await zetAfgeleverd(zaak, b.id, b.betaalwijze, p.fullName);
+          break;
+      }
+      return NextResponse.json({ bestellingen: await bestellingenVan(zaak.id) });
+    }
     // live-dashboard en schermen: eigen schema
     if (LIVE_ACTIES.includes(String((body as { actie?: unknown } | null)?.actie))) {
       const l = lees(liveActieSchema, body);
@@ -208,6 +253,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       case "gegevens": {
         const { actie: _a, ...g } = a;
         nu = await werkGegevensBij(zaak, g);
+        // ander adres: de ligging opnieuw opzoeken bij de volgende bezorging (lib/horeca/bezorgen-server.ts)
+        if (g.adres !== zaak.adres || g.plaats !== zaak.plaats) nu = await prisma.horecaZaak.update({ where: { id: zaak.id }, data: { lat: null, lng: null } });
         break;
       }
       case "online":

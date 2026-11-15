@@ -2652,6 +2652,11 @@ model HorecaZaak {
   // kassa: btw-nummer op de bon en instellingen (voettekst, fooi) (lib/horeca/kassa.ts)
   btwNummer       String   @default("")
   kassa           Json     @default("{}")
+  // afhalen en bezorgen: straal, minimum, kosten, tijden en bezorgers (lib/horeca/bezorgen.ts)
+  bezorgen        Json     @default("{}")
+  // ligging van de zaak (uit het adres via PDOK), voor de afstand naar de klant
+  lat             Float?
+  lng             Float?
   // Stripe Connect: het geld gaat rechtstreeks naar de zaak, niet via ZekerFlex.
   stripeAccountId String?
   createdAt       DateTime @default(now())
@@ -2742,12 +2747,34 @@ model HorecaBestelling {
   naam       String                 @default("")
   betaald    Boolean                @default(false)
   betalingId String?
+  // afhalen en bezorgen (15 nov 2026, lib/horeca/bezorgen.ts): "tafel" (in de zaak), "afhalen" of "bezorgen"
+  soort            String    @default("tafel")
+  telefoon         String    @default("")
+  email            String    @default("")
+  adres            String    @default("")
+  postcode         String    @default("")
+  plaats           String    @default("")
+  lat              Float?
+  lng              Float?
+  // geschatte afstand over de weg vanaf de zaak (lib/geo/eigen-afstand.ts)
+  afstandM         Int?
+  // wat de klant vroeg (null = zo snel mogelijk) en wat de zaak toezegde
+  gewenstOp        DateTime?
+  bevestigdOp      DateTime?
+  kortingCent      Int       @default(0)
+  bezorgkostenCent Int       @default(0)
+  // hoe de klant betaalt: "" (nog niet), aan de deur of balie "pin"/"contant", of "online"
+  betaalwijze      String    @default("")
+  bezorgerId       String?
+  onderwegOp       DateTime?
+  afgeleverdOp     DateTime?
   createdAt  DateTime               @default(now())
   updatedAt  DateTime               @updatedAt
 
   @@unique([zaakId, nummer])
   @@index([zaakId, status])
   @@index([zaakId, createdAt])
+  @@index([zaakId, soort, createdAt])
 }
 
 model HorecaBetaling {

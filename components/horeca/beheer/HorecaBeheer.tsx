@@ -10,6 +10,7 @@ import { ModulesTab } from "@/components/horeca/beheer/ModulesTab";
 import { GegevensTab } from "@/components/horeca/beheer/GegevensTab";
 import { BestellingenTab } from "@/components/horeca/beheer/BestellingenTab";
 import { TafelsTab } from "@/components/horeca/beheer/TafelsTab";
+import { BezorgenTab } from "@/components/horeca/beheer/BezorgenTab";
 import { ReserveringenTab } from "@/components/horeca/beheer/ReserveringenTab";
 import { TakenTab } from "@/components/horeca/beheer/TakenTab";
 import { CijfersTab } from "@/components/horeca/beheer/CijfersTab";
@@ -123,6 +124,7 @@ export function HorecaBeheer({ personeel }: { personeel: PersoneelTeksten }) {
       {tab === "reserveringen" && z.modules.includes("reserveren") && <ReserveringenTab data={data} doe={doe} />}
       {tab === "bestellingen" && z.modules.includes("bestellen") && <BestellingenTab data={data} doe={doe} />}
       {tab === "tafels" && z.modules.includes("bestellen") && <TafelsTab data={data} doe={doe} />}
+      {tab === "bezorgen" && z.modules.includes("bezorgen") && <BezorgenTab data={data} doe={doe} />}
       {tab === "kassa" && z.modules.includes("kassa") && <KassaTab data={data} doe={doe} />}
       {tab === "taken" && z.modules.includes("taken") && <TakenTab />}
       {tab === "cijfers" && (z.modules.includes("bestellen") || z.modules.includes("reserveren")) && <CijfersTab />}

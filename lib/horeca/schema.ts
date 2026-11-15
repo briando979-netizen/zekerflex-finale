@@ -137,6 +137,42 @@ export const takenActieSchema = z.discriminatedUnion("actie", [
 ]);
 export const TAKEN_ACTIES: readonly string[] = ["takenlijst", "takenlijst-weg", "takenlijst-voorbeeld", "afvinken", "afvinken-weg"];
 
+/** Afhalen en bezorgen (module bezorgen, lib/horeca/bezorgen.ts): eigen schema, net als de takenlijsten. */
+export const bezorgActieSchema = z.discriminatedUnion("actie", [
+  z.object({
+    actie: z.literal("bezorg-instellingen"),
+    afhalen: z.boolean(),
+    bezorgen: z.boolean(),
+    straalKm: z.number().min(0.5, "De straal is minstens 0,5 km.").max(30, "De straal is hooguit 30 km."),
+    minimumCent: centen(100_000),
+    kostenCent: centen(5_000),
+    gratisVanafCent: centen(100_000).nullable(),
+    afhaalMinuten: z.number().int().min(5).max(180),
+    bezorgMinuten: z.number().int().min(10).max(240),
+  }),
+  z.object({ actie: z.literal("bezorger"), id: id.optional(), naam: tekst(40).pipe(z.string().min(1, "Vul de naam van de bezorger in.")), telefoon: tekst(20).default(""), actief: z.boolean().default(true) }),
+  z.object({ actie: z.literal("bezorger-weg"), id }),
+  // telefonisch of aan de balie aangenomen
+  z.object({
+    actie: z.literal("levering"),
+    soort: z.enum(["afhalen", "bezorgen"]),
+    mand: mandSchema,
+    opmerking: tekst(300).default(""),
+    naam: tekst(60),
+    telefoon: tekst(20),
+    email: z.union([z.literal(""), z.string().trim().email("Vul een geldig e-mailadres in, of laat het leeg.").max(200)]).default(""),
+    adres: tekst(120).default(""),
+    postcode: tekst(8).default(""),
+    plaats: tekst(60).default(""),
+    tijd: z.union([z.literal("zsm"), tijd]),
+  }),
+  z.object({ actie: z.literal("levering-tijd"), id, tijd }),
+  z.object({ actie: z.literal("levering-bezorger"), id, bezorgerId: id.nullable() }),
+  z.object({ actie: z.literal("levering-onderweg"), id, terug: z.boolean().default(false) }),
+  z.object({ actie: z.literal("levering-af"), id, betaalwijze: z.enum(["pin", "contant", "al-betaald"]) }),
+]);
+export const BEZORG_ACTIES: readonly string[] = ["bezorg-instellingen", "bezorger", "bezorger-weg", "levering", "levering-tijd", "levering-bezorger", "levering-onderweg", "levering-af"];
+
 const oproepSoort = z.enum(["ober", "rekening"]);
 const reserveringStatus = z.enum(["BEVESTIGD", "AANGEKOMEN", "NIET_GEKOMEN", "GEANNULEERD"]);
 

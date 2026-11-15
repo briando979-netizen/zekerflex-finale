@@ -6,6 +6,7 @@ import { tekenMet } from "@/lib/horeca/link";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { amsterdamToUtc } from "@/lib/time/amsterdam";
 import { leesRegels } from "@/lib/horeca/bestellen";
+import { hoofdTarief } from "@/lib/horeca/bezorgen";
 import { plusDagen } from "@/lib/horeca/reserveren";
 import { alles, betaalRegels, deelRegels, rekeningVan, totaalVan, zRapport, type BonRegel, type Methode, type Selectie } from "@/lib/horeca/kassa";
 
@@ -52,7 +53,9 @@ export async function afrekenen(
       ? await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "HorecaBestelling" WHERE id = ${a.bestellingId} AND "zaakId" = ${zaak.id} AND betaald = false AND status <> 'GEANNULEERD' FOR UPDATE`
       : await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "HorecaBestelling" WHERE "tafelId" = ${a.tafelId} AND "zaakId" = ${zaak.id} AND betaald = false AND status <> 'GEANNULEERD' FOR UPDATE`;
     if (!rijen.length) throw AppError.conflict("Er staat niets (meer) open. Ververs de rekening.");
-    const lijst = (await tx.horecaBestelling.findMany({ where: { id: { in: rijen.map((r) => r.id) } }, orderBy: { createdAt: "asc" }, select: { id: true, nummer: true, status: true, betaald: true, regels: true } })).map((b) => ({ ...b, regels: leesRegels(b.regels) }));
+    const lijst = (
+      await tx.horecaBestelling.findMany({ where: { id: { in: rijen.map((r) => r.id) } }, orderBy: { createdAt: "asc" }, select: { id: true, nummer: true, status: true, betaald: true, regels: true, soort: true, bezorgkostenCent: true } })
+    ).map((b) => ({ ...b, regels: leesRegels(b.regels) }));
     const rekening = rekeningVan(lijst);
     const selectie = a.selectie ?? alles(rekening);
     if (!selectie.length) throw AppError.validation("Kies wat er afgerekend wordt.");
@@ -64,6 +67,9 @@ export async function afrekenen(
       if (s.aantal > r.aantal) throw AppError.conflict(`Van ${r.naam} staat nog ${r.aantal} open.`);
       return { naam: r.naam, prijsCent: r.prijsCent, aantal: s.aantal, btw: r.btw };
     });
+    // een hele bezorgbestelling: de bezorgkosten op dezelfde bon, met het tarief van het grootste deel (ze volgen de maaltijd)
+    const bezorging = a.bestellingId && !a.selectie ? lijst.find((b) => b.id === a.bestellingId && b.soort === "bezorgen" && b.bezorgkostenCent > 0) : undefined;
+    if (bezorging) bonRegels.push({ naam: "Bezorgkosten", prijsCent: bezorging.bezorgkostenCent, aantal: 1, btw: hoofdTarief(bonRegels) });
     const totaal = totaalVan(bonRegels);
     const bedragen = a.delen.length === 1 ? [totaal] : a.delen.map((d) => d.bedragCent);
     if (bedragen.some((b) => !Number.isInteger(b) || b < 0) || bedragen.reduce((s, b) => s + b, 0) !== totaal) {

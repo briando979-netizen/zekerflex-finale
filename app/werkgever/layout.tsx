@@ -50,6 +50,7 @@ const TAB_ICOON: Record<string, ReactElement> = {
   reserveringen: <ICalendar />,
   bestellingen: <IList />,
   tafels: <IGrid />,
+  bezorgen: <IPin />,
   kassa: <IWallet />,
   taken: <IClock />,
   cijfers: <IActivity />,

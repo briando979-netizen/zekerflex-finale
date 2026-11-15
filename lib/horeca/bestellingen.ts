@@ -1,5 +1,5 @@
 import { randomBytes } from "crypto";
-import type { HorecaBestelling, HorecaBestellingStatus, HorecaZaak } from "@prisma/client";
+import type { HorecaBestelling, HorecaBestellingStatus, HorecaZaak, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { bouwRegels, leesRegels, type BestelRegel, type MandRegel } from "@/lib/horeca/bestellen";
@@ -42,11 +42,14 @@ export const tafelVanCode = (zaakId: string, code: string) => prisma.horecaTafel
 
 /**
  * Een bestelling plaatsen. Prijzen en namen komen van de menukaart (bouwRegels);
- * het volgnummer onder een slot per zaak.
+ * het volgnummer onder een slot per zaak. `extra` krijgt het totaal van de
+ * gerechten en geeft de velden voor afhalen of bezorgen (lib/horeca/bezorgen-server.ts);
+ * gooit hij een fout (te weinig voor bezorgen), dan wordt er niets geplaatst.
  */
 export async function plaatsBestelling(
   zaak: HorecaZaak,
-  b: { tafelId: string | null; mand: MandRegel[]; opmerking: string; naam: string; bron: "qr" | "bediening" | "kassa" },
+  b: { tafelId: string | null; mand: MandRegel[]; opmerking: string; naam: string; bron: "qr" | "bediening" | "kassa" | "online" },
+  extra?: (totaalCent: number) => Omit<Prisma.HorecaBestellingUncheckedCreateInput, "zaakId" | "nummer" | "regels" | "totaalCent">,
 ): Promise<HorecaBestelling> {
   if (b.tafelId && !(await prisma.horecaTafel.findFirst({ where: { id: b.tafelId, zaakId: zaak.id }, select: { id: true } }))) {
     throw AppError.validation("Kies een bestaande tafel.");
@@ -54,6 +57,7 @@ export async function plaatsBestelling(
   const kaart = await prisma.horecaItem.findMany({ where: { zaakId: zaak.id }, select: { id: true, naam: true, prijsCent: true, beschikbaar: true, station: true, btw: true, opties: true, voorraad: true } });
   const r = bouwRegels(b.mand, kaart);
   if ("fout" in r) throw AppError.validation(r.fout);
+  const levering = extra ? extra(r.totaalCent) : {};
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`horeca-bestelling:${zaak.id}`}))`;
     // voorraad afboeken onder hetzelfde slot; op nul is het gerecht vanzelf uitverkocht
@@ -68,6 +72,7 @@ export async function plaatsBestelling(
     const laatste = await tx.horecaBestelling.findFirst({ where: { zaakId: zaak.id }, orderBy: { nummer: "desc" }, select: { nummer: true } });
     return tx.horecaBestelling.create({
       data: {
+        ...levering,
         zaakId: zaak.id,
         tafelId: b.tafelId,
         nummer: (laatste?.nummer ?? 0) + 1,

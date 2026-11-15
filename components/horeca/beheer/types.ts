@@ -2,6 +2,7 @@ import type { ZaakWeergave } from "@/lib/horeca/weergave";
 import type { ReserveerInstellingen } from "@/lib/horeca/reserveren";
 import type { AanzetVoorstel } from "@/lib/sites/aanzet-voorstel";
 import type { Soort } from "@/lib/horeca/soorten";
+import type { BezorgInstellingen } from "@/lib/horeca/bezorgen";
 
 // Wat /api/horeca/beheer teruggeeft, zoals de browser het ziet.
 
@@ -48,6 +49,8 @@ export interface BeheerData {
   maand: { totaalCent: number; losCent: number; bundel: boolean };
   reserveren: ReserveerInstellingen;
   kassa: { btwNummer: string; voettekst: string };
+  /** afhalen en bezorgen; ligging = het adres van de zaak is gevonden (de straal rekent vanaf daar) */
+  bezorgen: BezorgInstellingen & { ligging: boolean };
 }
 
 /** Nog niet aan: wat we al van het bedrijf weten, voor de eerste stap (de soort uit de KvK-inschrijving, of null). */

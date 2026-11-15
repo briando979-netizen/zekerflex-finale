@@ -7,7 +7,7 @@
 // browser bruikbaar en los te testen.
 // ---------------------------------------------------------------------------
 
-export const MODULE_SLEUTELS = ["reserveren", "bestellen", "qr", "kassa", "betalen", "taken", "personeel"] as const;
+export const MODULE_SLEUTELS = ["reserveren", "bestellen", "qr", "bezorgen", "kassa", "betalen", "taken", "personeel"] as const;
 export type ModuleSleutel = (typeof MODULE_SLEUTELS)[number];
 
 export interface Module {
@@ -56,6 +56,17 @@ export const MODULES: Record<ModuleSleutel, Module> = {
     kort: "Gasten scannen de QR-code op tafel en bestellen zelf van de menukaart",
     punten: ["QR-code per tafel om te printen", "Gast ziet direct wat er is en wat het kost", "Bestelling gaat meteen naar keuken of bar"],
     prijsCentPerMaand: 1900,
+    vereist: ["bestellen"],
+    klaar: true,
+  },
+  bezorgen: {
+    sleutel: "bezorgen",
+    naam: "Afhalen en bezorgen",
+    kort: "Telefonische en online bestellingen om af te halen of te bezorgen, met tijd, adres, afstand en bezorgers",
+    punten: ["Gewenste tijd bevestigen of verzetten", "Adres en afstand vanaf de zaak, binnen jullie straal", "Bezorgers toewijzen, onderweg en afgeleverd", "Afrekenen aan de deur of balie, bezorgkosten op de bon"],
+    // hoort bij Bestellingen en keukenscherm; de eigenaar van ZekerFlex kan er later een eigen prijs aan geven
+    prijsCentPerMaand: 0,
+    prijsUitleg: "zit bij Bestellingen en keukenscherm",
     vereist: ["bestellen"],
     klaar: true,
   },
