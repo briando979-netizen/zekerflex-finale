@@ -208,9 +208,24 @@ export const schermActieSchema = z.discriminatedUnion("actie", [
     bestellingId: id.nullable().default(null),
     selectie: z.array(z.object({ bestellingId: id, index: z.number().int().min(0).max(MAX_REGELS), aantal: z.number().int().min(1).max(MAX_AANTAL) })).max(200).nullable().default(null),
     delen: z.array(z.object({ methode, bedragCent: centen(10_000_000).default(0), fooiCent: centen(100_000).default(0) })).min(1, "Kies hoe er betaald wordt.").max(20),
+    // korting in procenten op de gerechten (min-regels per btw-tarief op de bon); alleen bij één betaling
+    kortingProcent: z.number().int().min(0).max(100).default(0),
   }),
   // snelle verkoop aan de bar of balie: bestellen en meteen afrekenen
-  z.object({ actie: z.literal("verkoop"), mand: mandSchema, methode, fooiCent: centen(100_000).default(0), meegegeven: z.boolean().default(false) }),
+  z.object({ actie: z.literal("verkoop"), mand: mandSchema, methode, fooiCent: centen(100_000).default(0), meegegeven: z.boolean().default(false), kortingProcent: z.number().int().min(0).max(100).default(0) }),
+  // afhalen of bezorgen aannemen aan de kassa of met de handheld (module bezorgen, lib/horeca/bezorgen-server.ts)
+  z.object({
+    actie: z.literal("levering"),
+    soort: z.enum(["afhalen", "bezorgen"]),
+    mand: mandSchema,
+    opmerking: tekst(300).default(""),
+    naam: tekst(60),
+    telefoon: tekst(20),
+    adres: tekst(120).default(""),
+    postcode: tekst(8).default(""),
+    plaats: tekst(60).default(""),
+    tijd: z.union([z.literal("zsm"), tijd]),
+  }),
 ]);
 export type SchermActieInvoer = z.output<typeof schermActieSchema>;
 

@@ -49,6 +49,8 @@ export interface SchermItem {
   voorraad: number | null;
   /** keuzegroepen (Json; in de browser met leesOpties gelezen) */
   opties: unknown;
+  /** btw-tarief (9, 21 of 0), voor de korting per tarief aan de kassa */
+  btw?: number;
 }
 
 export interface Oproep {
@@ -118,6 +120,8 @@ export interface SchermData extends Partial<LiveBasis> {
   afhaal?: { bereiding: number[]; klaar: number[] };
   /** kassa en bediening: wat er op de bon staat */
   bonKop?: BonKop;
+  /** kassa en bediening, als de module Afhalen en bezorgen aan staat: wat de zaak aanneemt */
+  leveren?: { afhalen: boolean; bezorgen: boolean };
   /** na afrekenen: de bonnen om te tonen of te printen */
   bonnen?: BonData[];
 }

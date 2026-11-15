@@ -11,6 +11,7 @@ import { apparatenVan } from "@/lib/horeca/apparaten";
 import { afhaalNummers, liveCijfers, nogTeKomen, opAandacht, zaalLive, type LiveBestelling, type LiveReservering } from "@/lib/horeca/zaal";
 import { stationVan, type SchermRol } from "@/lib/horeca/schermen";
 import { bonKop } from "@/lib/horeca/kassa-server";
+import { leesBezorgen } from "@/lib/horeca/bezorgen";
 
 // ---------------------------------------------------------------------------
 // Alles wat er nu in de zaak speelt, voor het live-dashboard in het beheer en
@@ -112,10 +113,19 @@ export async function schermDataVan(zaak: HorecaZaak, rol: SchermRol) {
     metKaart || rol === "keuken" || rol === "bar"
       ? await prisma.horecaItem.findMany({
           where: { zaakId: zaak.id, ...(station === "alles" ? {} : { station }) },
-          select: { id: true, naam: true, prijsCent: true, beschikbaar: true, station: true, categorieId: true, allergenen: true, vegetarisch: true, voorraad: true, opties: true },
+          select: { id: true, naam: true, prijsCent: true, beschikbaar: true, station: true, categorieId: true, allergenen: true, vegetarisch: true, voorraad: true, opties: true, btw: true },
           orderBy: [{ volgorde: "asc" }, { createdAt: "asc" }],
         })
       : [];
   const categorieen = metKaart ? await prisma.horecaCategorie.findMany({ where: { zaakId: zaak.id }, select: { id: true, naam: true }, orderBy: { volgorde: "asc" } }) : [];
-  return { zaak: zaakKort, ...live, items, categorieen, ...(metKaart ? { bonKop: bonKop(zaak) } : {}) };
+  // afhalen en bezorgen aannemen (kassa en handheld), als de module aan staat
+  const lever = metKaart && heeftModule(zaak, "bezorgen") ? leesBezorgen(zaak.bezorgen) : null;
+  return {
+    zaak: zaakKort,
+    ...live,
+    items,
+    categorieen,
+    ...(metKaart ? { bonKop: bonKop(zaak) } : {}),
+    ...(lever ? { leveren: { afhalen: lever.afhalen, bezorgen: lever.bezorgen } } : {}),
+  };
 }

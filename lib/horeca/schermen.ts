@@ -16,7 +16,7 @@ export type ApparaatSoort = "handheld" | "tablet" | "monitor" | "tv";
 export const APPARAAT_LABEL: Record<ApparaatSoort, string> = { handheld: "Telefoon of handheld", tablet: "Tablet", monitor: "Monitor of pc", tv: "Tv-scherm" };
 
 /** Wat een scherm mag wijzigen (de API controleert dit, lib/horeca/scherm-server.ts). */
-export const SCHERM_ACTIES = ["fase", "serveer", "bestelling", "uitverkocht", "reservering-status", "reservering-tafel", "inloop", "oproep-af", "tafel-vrij", "afrekenen", "verkoop", "voorraad"] as const;
+export const SCHERM_ACTIES = ["fase", "serveer", "bestelling", "uitverkocht", "reservering-status", "reservering-tafel", "inloop", "oproep-af", "tafel-vrij", "afrekenen", "verkoop", "voorraad", "levering"] as const;
 export type SchermActie = (typeof SCHERM_ACTIES)[number];
 
 export interface SchermSoort {
@@ -53,8 +53,14 @@ export const SCHERMEN: Record<SchermRol, SchermSoort> = {
     apparaten: ["tablet", "monitor"],
     stand: "liggend",
     modules: ["kassa"],
-    punten: ["Alle open rekeningen, per tafel of bestelling", "Splitsen gelijk of per gerecht, fooi en wisselgeld", "Bon met btw-specificatie, ook voor een bonprinter", "Snelle verkoop: kiezen en meteen afrekenen"],
-    acties: ["afrekenen", "verkoop", "tafel-vrij"],
+    punten: [
+      "Alle open rekeningen, per tafel of bestelling",
+      "Splitsen gelijk of per gerecht, fooi en wisselgeld",
+      "Bon met btw-specificatie, ook voor een bonprinter",
+      "Snelle verkoop: zoeken op naam of nummer, korting, meteen afrekenen",
+      "Afhalen en bezorgen aannemen, met klant, adres en tijd",
+    ],
+    acties: ["afrekenen", "verkoop", "tafel-vrij", "levering"],
     verversSec: 5,
   },
   keuken: {

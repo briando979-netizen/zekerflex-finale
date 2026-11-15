@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { euro } from "@/lib/horeca/weergave";
 import { centVan } from "@/components/rijschool/api";
-import { fooiOpties, rekeningVan, totaalVan, verdeelGelijk, wisselgeld, type Methode, type RekeningRegel } from "@/lib/horeca/kassa";
+import { fooiOpties, kortingRegels, rekeningVan, totaalVan, verdeelGelijk, wisselgeld, type Methode, type RekeningRegel } from "@/lib/horeca/kassa";
 import type { BonData, SchermBestelling, SchermData } from "@/components/horeca/live/types";
 import { BonVenster } from "@/components/horeca/live/Bon";
 import { KeuzeVenster } from "@/components/horeca/live/KeuzeVenster";
@@ -257,30 +257,77 @@ function Rekening({ keuze, bestellingen, doe, klaar }: { keuze: Extract<Keuze, {
   );
 }
 
+const KORTINGEN = [0, 5, 10, 15, 20, 25, 50];
+type Wijze = "nu" | "afhalen" | "bezorgen";
+/** Zoeken zonder hoofdletters of accenten ("creme" vindt "Crème brûlée"). */
+const kaal = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
 function SnelleVerkoop({ data, doe, klaar }: { data: SchermData; doe: SchermDoe; klaar: (b: BonData[]) => void }) {
   const items = useMemo(() => (data.items ?? []).filter((i) => i.beschikbaar), [data.items]);
+  // een vast nummer per gerecht (de volgorde van de menukaart), om snel in te tikken zoals op een bonnenblok
+  const nummerVan = useMemo(() => new Map((data.items ?? []).map((i, n) => [i.id, n + 1])), [data.items]);
   const cats = data.categorieen ?? [];
   const [cat, setCat] = useState("alles");
+  const [zoek, setZoek] = useState("");
   const [mand, setMand] = useState<Record<string, number>>({});
   const [extra, setExtra] = useState<{ sleutel: string; itemId: string; aantal: number; opties: Gekozen[]; tekst: string; prijsCent: number }[]>([]);
   const [kiezen, setKiezen] = useState<(typeof items)[number] | null>(null);
   const [meegegeven, setMeegegeven] = useState(false);
+  const [korting, setKorting] = useState(0);
+  const [wijze, setWijze] = useState<Wijze>("nu");
+  const [klant, setKlant] = useState({ naam: "", telefoon: "", adres: "", postcode: "", plaats: "", tijd: "" });
   const [bezig, setBezig] = useState(false);
   const regels = Object.entries(mand).filter(([, n]) => n > 0);
-  const te = regels.reduce((s, [id, n]) => s + (items.find((i) => i.id === id)?.prijsCent ?? 0) * n, 0) + extra.reduce((s, x) => s + x.prijsCent * x.aantal, 0);
+  const btwVan = (id: string) => items.find((i) => i.id === id)?.btw ?? 9;
+  const bonRegels = [
+    ...regels.map(([id, n]) => ({ naam: "", prijsCent: items.find((i) => i.id === id)?.prijsCent ?? 0, aantal: n, btw: btwVan(id) })),
+    ...extra.map((x) => ({ naam: "", prijsCent: x.prijsCent, aantal: x.aantal, btw: btwVan(x.itemId) })),
+  ];
+  const subtotaal = totaalVan(bonRegels);
+  const kortingCent = wijze === "nu" ? -totaalVan(kortingRegels(bonRegels, korting)) : 0;
+  const te = subtotaal - kortingCent;
   const aantalVan = (id: string) => (mand[id] ?? 0) + extra.filter((x) => x.itemId === id).reduce((s, x) => s + x.aantal, 0);
-  const zichtbaar = items.filter((i) => cat === "alles" || i.categorieId === cat);
+  const z = kaal(zoek.trim());
+  const zichtbaar = items.filter((i) => (cat === "alles" || i.categorieId === cat) && (!z || (/^\d+$/.test(z) ? String(nummerVan.get(i.id) ?? "") === z : kaal(i.naam).includes(z))));
+  const leveren = data.leveren;
+  const wijzen: { id: Wijze; label: string }[] = [
+    { id: "nu", label: "Nu afrekenen" },
+    ...(leveren?.afhalen ? [{ id: "afhalen" as const, label: "Afhalen" }] : []),
+    ...(leveren?.bezorgen ? [{ id: "bezorgen" as const, label: "Bezorgen" }] : []),
+  ];
+  const mandLijst = () => [...regels.map(([itemId, aantal]) => ({ itemId, aantal })), ...extra.map((x) => ({ itemId: x.itemId, aantal: x.aantal, opties: x.opties }))];
+  const leeg = () => {
+    setMand({});
+    setExtra([]);
+    setKorting(0);
+  };
 
   async function betaal(methode: Methode, fooiCent: number) {
     setBezig(true);
-    const uit = await doe({ actie: "verkoop", mand: [...regels.map(([itemId, aantal]) => ({ itemId, aantal })), ...extra.map((x) => ({ itemId: x.itemId, aantal: x.aantal, opties: x.opties }))], methode, fooiCent, meegegeven });
+    const uit = await doe({ actie: "verkoop", mand: mandLijst(), methode, fooiCent, meegegeven, kortingProcent: korting });
     setBezig(false);
     if (uit?.bonnen?.length) {
-      setMand({});
-      setExtra([]);
+      leeg();
       klaar(uit.bonnen);
     }
   }
+
+  async function geefDoor() {
+    if (wijze === "nu") return;
+    setBezig(true);
+    const uit = await doe(
+      { actie: "levering", soort: wijze, mand: mandLijst(), opmerking: "", naam: klant.naam, telefoon: klant.telefoon, adres: klant.adres, postcode: klant.postcode, plaats: klant.plaats, tijd: klant.tijd || "zsm" },
+      wijze === "bezorgen" ? "De bezorging staat op het bord bij Bestellingen." : "De afhaalbestelling staat op het bord bij Bestellingen.",
+    );
+    setBezig(false);
+    if (uit) {
+      leeg();
+      setKlant({ naam: "", telefoon: "", adres: "", postcode: "", plaats: "", tijd: "" });
+      setWijze("nu");
+    }
+  }
+
+  const veld = "w-full rounded-lg bg-white/10 px-3 py-2 text-white placeholder:text-[#9BA8A1] ring-1 ring-white/15";
 
   return (
     <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
@@ -288,6 +335,10 @@ function SnelleVerkoop({ data, doe, klaar }: { data: SchermData; doe: SchermDoe;
         <h2 id="verkoop-kop" className="font-display text-2xl font-bold text-white">
           Snelle verkoop
         </h2>
+        <label className="mt-3 block">
+          <span className="sr-only">Zoek een gerecht op naam of nummer</span>
+          <input type="search" value={zoek} onChange={(e) => setZoek(e.target.value)} placeholder="Zoek gerecht of nummer…" className={veld} autoComplete="off" />
+        </label>
         {cats.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Categorie">
             {[{ id: "alles", naam: "Alles" }, ...cats].map((c) => (
@@ -301,15 +352,28 @@ function SnelleVerkoop({ data, doe, klaar }: { data: SchermData; doe: SchermDoe;
           {zichtbaar.map((i) => (
             <li key={i.id}>
               <button type="button" onClick={() => (leesOpties(i.opties).length ? setKiezen(i) : setMand((m) => ({ ...m, [i.id]: Math.min(50, (m[i.id] ?? 0) + 1) })))} className="relative flex h-24 w-full flex-col justify-between rounded-xl bg-white/[0.06] p-3 text-left ring-1 ring-white/10 hover:bg-white/10 active:scale-[0.98]" aria-label={`${i.naam} erbij`}>
-                <span className="line-clamp-2 text-base font-bold text-white">{i.naam}</span>
+                <span className="line-clamp-2 text-base font-bold text-white">
+                  <span className="mr-1 text-[#9BA8A1]">{nummerVan.get(i.id)}.</span>
+                  {i.naam}
+                </span>
                 <span className="text-sm text-[#B8C4BD]">{euro(i.prijsCent)}</span>
                 {aantalVan(i.id) > 0 && <span className="absolute right-2 top-2 grid h-7 min-w-7 place-items-center rounded-full bg-[#22C55E] px-1.5 text-sm font-bold text-[#04130A]">{aantalVan(i.id)}</span>}
               </button>
             </li>
           ))}
         </ul>
+        {zichtbaar.length === 0 && <p className="mt-3 text-[#9BA8A1]">Niets gevonden.</p>}
       </section>
       <div className="space-y-3">
+        {wijzen.length > 1 && (
+          <div role="group" aria-label="Soort bestelling" className="flex flex-wrap gap-2">
+            {wijzen.map((w) => (
+              <button key={w.id} type="button" aria-pressed={wijze === w.id} onClick={() => setWijze(w.id)} className={`rounded-lg px-3 py-2 text-sm font-bold ${wijze === w.id ? "bg-[#22C55E] text-[#04130A]" : "text-[#B8C4BD] ring-1 ring-white/15"}`}>
+                {w.label}
+              </button>
+            ))}
+          </div>
+        )}
         <section aria-label="Mandje" className="rounded-2xl bg-[#141A17] p-4 ring-1 ring-white/10">
           {regels.length === 0 && extra.length === 0 ? (
             <p className="text-[#9BA8A1]">Tik op wat er verkocht wordt.</p>
@@ -347,12 +411,67 @@ function SnelleVerkoop({ data, doe, klaar }: { data: SchermData; doe: SchermDoe;
               ))}
             </ul>
           )}
-          <label className="mt-3 flex items-center gap-2 text-sm text-[#B8C4BD]">
-            <input type="checkbox" className="h-5 w-5 accent-[#22C55E]" checked={meegegeven} onChange={(e) => setMeegegeven(e.target.checked)} />
-            Al meegegeven (niet naar keuken of bar)
-          </label>
+          {wijze === "nu" && (
+            <>
+              <div className="mt-3" role="group" aria-label="Korting">
+                <p className="text-sm text-[#B8C4BD]">Korting op de gerechten</p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {KORTINGEN.map((k) => (
+                    <button key={k} type="button" aria-pressed={korting === k} onClick={() => setKorting(k)} className={`rounded-lg px-2.5 py-1.5 text-sm font-bold ${korting === k ? "bg-[#22C55E] text-[#04130A]" : "text-[#B8C4BD] ring-1 ring-white/15"}`}>
+                      {k === 0 ? "Geen" : `${k}%`}
+                    </button>
+                  ))}
+                </div>
+                {kortingCent > 0 && (
+                  <p className="mt-2 flex justify-between text-white">
+                    <span>Korting {korting}%</span>
+                    <span className="tabular-nums">− {euro(kortingCent)}</span>
+                  </p>
+                )}
+              </div>
+              <label className="mt-3 flex items-center gap-2 text-sm text-[#B8C4BD]">
+                <input type="checkbox" className="h-5 w-5 accent-[#22C55E]" checked={meegegeven} onChange={(e) => setMeegegeven(e.target.checked)} />
+                Al meegegeven (niet naar keuken of bar)
+              </label>
+            </>
+          )}
         </section>
-        <Betalen te={te} fooiAan doeBetaal={(m, f) => void betaal(m, f)} bezig={bezig} />
+        {wijze === "nu" ? (
+          <Betalen te={te} fooiAan doeBetaal={(m, f) => void betaal(m, f)} bezig={bezig} />
+        ) : (
+          <form
+            className="space-y-2 rounded-2xl bg-[#141A17] p-4 ring-1 ring-white/10"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void geefDoor();
+            }}
+            aria-label={wijze === "bezorgen" ? "Klant en adres voor de bezorging" : "Klant voor het afhalen"}
+          >
+            <input className={veld} value={klant.naam} onChange={(e) => setKlant((k) => ({ ...k, naam: e.target.value }))} placeholder="Naam klant" aria-label="Naam klant" maxLength={60} required autoComplete="off" />
+            <input className={veld} type="tel" value={klant.telefoon} onChange={(e) => setKlant((k) => ({ ...k, telefoon: e.target.value }))} placeholder="Telefoon" aria-label="Telefoon" maxLength={20} required autoComplete="off" />
+            {wijze === "bezorgen" && (
+              <>
+                <input className={veld} value={klant.adres} onChange={(e) => setKlant((k) => ({ ...k, adres: e.target.value }))} placeholder="Straat en huisnummer" aria-label="Straat en huisnummer" maxLength={120} required autoComplete="off" />
+                <div className="grid grid-cols-[7rem_1fr] gap-2">
+                  <input className={veld} value={klant.postcode} onChange={(e) => setKlant((k) => ({ ...k, postcode: e.target.value }))} placeholder="Postcode" aria-label="Postcode" maxLength={8} required autoComplete="off" />
+                  <input className={veld} value={klant.plaats} onChange={(e) => setKlant((k) => ({ ...k, plaats: e.target.value }))} placeholder="Plaats" aria-label="Plaats" maxLength={60} required autoComplete="off" />
+                </div>
+              </>
+            )}
+            <label className="flex items-center gap-2 text-sm text-[#B8C4BD]">
+              <span>{wijze === "bezorgen" ? "Bezorgen om" : "Ophalen om"}</span>
+              <input className={`${veld} w-32`} type="time" step={300} value={klant.tijd} onChange={(e) => setKlant((k) => ({ ...k, tijd: e.target.value }))} />
+              <span>leeg = zo snel mogelijk</span>
+            </label>
+            <p className="flex justify-between text-white">
+              <span>Te betalen bij {wijze === "bezorgen" ? "afleveren" : "ophalen"}</span>
+              <span className="tabular-nums">{euro(subtotaal)}</span>
+            </p>
+            <Knop type="submit" soort="doen" groot className="w-full" disabled={bezig || subtotaal === 0}>
+              Bestelling doorgeven
+            </Knop>
+          </form>
+        )}
       </div>
       {kiezen && (
         <KeuzeVenster

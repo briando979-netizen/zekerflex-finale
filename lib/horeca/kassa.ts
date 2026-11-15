@@ -102,6 +102,25 @@ export interface BonRegel {
   btw: number;
 }
 
+export const MAX_KORTING_PROCENT = 100;
+
+/**
+ * Korting (een percentage) als min-regels op de bon, één per btw-tarief: zo blijft de btw per tarief kloppen
+ * (15 nov 2026, de kassa zoals bij een bon maken). Afgerond op hele centen per tarief.
+ */
+export function kortingRegels(regels: readonly BonRegel[], procent: number): BonRegel[] {
+  const p = Math.round(procent);
+  if (!(p > 0)) return [];
+  const per = new Map<number, number>();
+  for (const r of regels) per.set(r.btw, (per.get(r.btw) ?? 0) + r.prijsCent * r.aantal);
+  return [...per.entries()]
+    .sort((a, b) => b[0] - a[0])
+    .flatMap(([btw, som]) => {
+      const k = Math.round((som * Math.min(MAX_KORTING_PROCENT, p)) / 100);
+      return k > 0 ? [{ naam: `Korting ${Math.min(MAX_KORTING_PROCENT, p)}%`, prijsCent: -k, aantal: 1, btw }] : [];
+    });
+}
+
 /**
  * Bij gelijk (of vrij) splitsen: welk deel van elk btw-tarief iedere betaler
  * betaalt. Per deel klopt het bedrag precies, en samen precies het totaal per

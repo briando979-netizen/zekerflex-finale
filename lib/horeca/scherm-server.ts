@@ -13,6 +13,7 @@ import { klok } from "@/lib/horeca/reserveren";
 import { zetBeschikbaar, zetVoorraad } from "@/lib/horeca/store";
 import { handelAf } from "@/lib/horeca/oproepen";
 import { afrekenen, bonVan, type Bon } from "@/lib/horeca/kassa-server";
+import { plaatsLevering } from "@/lib/horeca/bezorgen-server";
 import { heeftModule } from "@/lib/horeca/modules";
 
 // ---------------------------------------------------------------------------
@@ -57,7 +58,7 @@ export async function voerUit(ctx: SchermContext, rol: SchermRol, a: SchermActie
   if ((a.actie === "afrekenen" || a.actie === "verkoop") && !heeftModule(zaak, "kassa")) throw AppError.precondition("Zet eerst de module Kassa aan.");
   switch (a.actie) {
     case "afrekenen": {
-      const lijst = await afrekenen(zaak, { tafelId: a.tafelId, bestellingId: a.bestellingId, selectie: a.selectie, delen: a.delen, door: ctx.door });
+      const lijst = await afrekenen(zaak, { tafelId: a.tafelId, bestellingId: a.bestellingId, selectie: a.selectie, delen: a.delen, door: ctx.door, kortingProcent: a.kortingProcent });
       if (a.tafelId) await handelAf(zaak.id, a.tafelId, "rekening");
       return { bonnen: await Promise.all(lijst.map((b) => bonVan(zaak, b))) };
     }
@@ -65,8 +66,14 @@ export async function voerUit(ctx: SchermContext, rol: SchermRol, a: SchermActie
       // snelle verkoop: bestellen en meteen afrekenen; meegegeven = niet naar keuken of bar
       const b = await plaatsBestelling(zaak, { tafelId: null, mand: a.mand, opmerking: "", naam: "", bron: "kassa" });
       if (a.meegegeven) await verplaatsFase(zaak, { id: b.id }, "alles", { van: ["nieuw", "gestart", "klaar"], naar: "geserveerd" });
-      const lijst = await afrekenen(zaak, { tafelId: null, bestellingId: b.id, selectie: null, delen: [{ methode: a.methode, bedragCent: 0, fooiCent: a.fooiCent }], door: ctx.door });
+      const lijst = await afrekenen(zaak, { tafelId: null, bestellingId: b.id, selectie: null, delen: [{ methode: a.methode, bedragCent: 0, fooiCent: a.fooiCent }], door: ctx.door, kortingProcent: a.kortingProcent });
       return { bonnen: await Promise.all(lijst.map((x) => bonVan(zaak, x))) };
+    }
+    case "levering": {
+      // telefonisch of aan de balie: meteen bevestigd, betalen bij afleveren of ophalen (Bestellingen → Bord)
+      const { actie: _a, soort, ...inv } = a;
+      await plaatsLevering(zaak, { soort, ...inv, email: "" }, "kassa");
+      return {};
     }
     case "fase": {
       const station = stationVan(rol);

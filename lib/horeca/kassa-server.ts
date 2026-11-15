@@ -8,7 +8,7 @@ import { amsterdamToUtc } from "@/lib/time/amsterdam";
 import { leesRegels } from "@/lib/horeca/bestellen";
 import { hoofdTarief } from "@/lib/horeca/bezorgen";
 import { plusDagen } from "@/lib/horeca/reserveren";
-import { alles, betaalRegels, deelRegels, rekeningVan, totaalVan, zRapport, type BonRegel, type Methode, type Selectie } from "@/lib/horeca/kassa";
+import { alles, betaalRegels, deelRegels, kortingRegels, MAX_KORTING_PROCENT, rekeningVan, totaalVan, zRapport, type BonRegel, type Methode, type Selectie } from "@/lib/horeca/kassa";
 
 // ---------------------------------------------------------------------------
 // De kassa op de server. Afrekenen gebeurt onder een rijslot op de bestellingen
@@ -44,10 +44,13 @@ export const bewaarKassa = (zaak: HorecaZaak, k: { btwNummer: string; voettekst:
  */
 export async function afrekenen(
   zaak: HorecaZaak,
-  a: { tafelId: string | null; bestellingId: string | null; selectie: Selectie[] | null; delen: Deel[]; door: string },
+  a: { tafelId: string | null; bestellingId: string | null; selectie: Selectie[] | null; delen: Deel[]; door: string; kortingProcent?: number },
 ): Promise<HorecaBetaling[]> {
   if (!a.delen.length) throw AppError.validation("Kies hoe er betaald wordt.");
   if (!a.tafelId && !a.bestellingId) throw AppError.validation("Kies een tafel of bestelling.");
+  const korting = Math.round(a.kortingProcent ?? 0);
+  if (korting < 0 || korting > MAX_KORTING_PROCENT) throw AppError.validation("Kies een korting tussen 0 en 100%.");
+  if (korting > 0 && a.delen.length > 1) throw AppError.validation("Korting kan bij één betaling, niet bij splitsen.");
   return prisma.$transaction(async (tx) => {
     const rijen = a.bestellingId
       ? await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "HorecaBestelling" WHERE id = ${a.bestellingId} AND "zaakId" = ${zaak.id} AND betaald = false AND status <> 'GEANNULEERD' FOR UPDATE`
@@ -67,15 +70,23 @@ export async function afrekenen(
       if (s.aantal > r.aantal) throw AppError.conflict(`Van ${r.naam} staat nog ${r.aantal} open.`);
       return { naam: r.naam, prijsCent: r.prijsCent, aantal: s.aantal, btw: r.btw };
     });
+    // korting op de gerechten (niet op de bezorgkosten): min-regels per btw-tarief
+    const kortingRegelsHier = kortingRegels(bonRegels, korting);
     // een hele bezorgbestelling: de bezorgkosten op dezelfde bon, met het tarief van het grootste deel (ze volgen de maaltijd)
     const bezorging = a.bestellingId && !a.selectie ? lijst.find((b) => b.id === a.bestellingId && b.soort === "bezorgen" && b.bezorgkostenCent > 0) : undefined;
-    if (bezorging) bonRegels.push({ naam: "Bezorgkosten", prijsCent: bezorging.bezorgkostenCent, aantal: 1, btw: hoofdTarief(bonRegels) });
+    const tarief = hoofdTarief(bonRegels);
+    bonRegels.push(...kortingRegelsHier);
+    if (bezorging) bonRegels.push({ naam: "Bezorgkosten", prijsCent: bezorging.bezorgkostenCent, aantal: 1, btw: tarief });
     const totaal = totaalVan(bonRegels);
     const bedragen = a.delen.length === 1 ? [totaal] : a.delen.map((d) => d.bedragCent);
     if (bedragen.some((b) => !Number.isInteger(b) || b < 0) || bedragen.reduce((s, b) => s + b, 0) !== totaal) {
       throw AppError.validation("De delen tellen niet op tot het totaal. Verdeel opnieuw.");
     }
     const perDeel = a.delen.length === 1 ? [bonRegels] : deelRegels(bonRegels, bedragen);
+
+    // de korting op de bestelling zelf (archief en cijfers), bij één bestelling
+    const kortingCent = -totaalVan(kortingRegelsHier);
+    if (kortingCent > 0 && a.bestellingId) await tx.horecaBestelling.update({ where: { id: a.bestellingId }, data: { kortingCent } });
 
     // regels per bestelling bijwerken
     const gewijzigd: string[] = [];
