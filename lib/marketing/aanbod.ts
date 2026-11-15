@@ -649,6 +649,9 @@ export const eigenPaginas = (): AanbodItem[] => AANBOD.filter((a) => !a.pagina);
 
 export const aanbodVan = (slug: string): AanbodItem | undefined => eigenPaginas().find((a) => a.slug === slug);
 
+/** Waar /aanbod/<slug> heen moet als het item een eigen pagina elders heeft (bv. rijschool → /rijschool-software); anders undefined. */
+export const aanbodDoorsturen = (slug: string): string | undefined => AANBOD.find((a) => a.slug === slug && a.pagina)?.pagina;
+
 export const pijlerVan = (s: PijlerSleutel): Pijler => {
   const p = PIJLERS.find((x) => x.sleutel === s);
   if (!p) throw new Error(`Onbekende pijler ${s}`);

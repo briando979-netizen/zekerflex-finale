@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { standaardVragen } from "@/lib/marketing/aanbod-vragen";
-import { AANBOD, eigenPaginas } from "@/lib/marketing/aanbod";
+import { AANBOD, aanbodDoorsturen, aanbodVan, eigenPaginas } from "@/lib/marketing/aanbod";
 
 // De gewone opmaak van een aanbodpagina, rijker gemaakt (15 nov 2026, eigenaar: "die pagina's moeten indruk wekken; deze
 // is karig"): alles uit het item zelf, geen verzonnen klanten, cijfers of reviews. /aanbod/rijschool stuurt door naar de
@@ -43,7 +43,20 @@ describe("doorsturen", () => {
   it("/aanbod/rijschool gaat naar de uitgebreide rijschoolpagina, ook in het menu", () => {
     expect(AANBOD.find((a) => a.slug === "rijschool")?.pagina).toBe("/rijschool-software");
     expect(lees("lib/ontwerp/menu.ts")).toContain('{ href: "/rijschool-software", label: "Rijschoolsoftware" }');
-    expect(lees("app/(marketing)/aanbod/[slug]/page.tsx")).toContain("if (a.pagina) permanentRedirect(a.pagina);");
+    // 15 nov: dit gaf live een 404, want aanbodVan() kent rijschool niet (eigen pagina) en notFound() kwam eerst
+    expect(aanbodDoorsturen("rijschool")).toBe("/rijschool-software");
+    expect(aanbodVan("rijschool")).toBeUndefined();
+    expect(aanbodDoorsturen("horeca")).toBeUndefined();
+    expect(aanbodDoorsturen("bestaat-niet")).toBeUndefined();
+    const route = lees("app/(marketing)/aanbod/[slug]/page.tsx");
+    const doorsturen = route.indexOf("if (naar) permanentRedirect(naar);");
+    const nietGevonden = route.indexOf("if (!a) notFound();");
+    expect(doorsturen).toBeGreaterThan(0);
+    // de doorverwijzing staat vóór notFound(), en in de pagina zelf (niet in generateMetadata)
+    expect(doorsturen).toBeLessThan(nietGevonden);
+    expect(route.indexOf("export default async function AanbodItemPagina")).toBeLessThan(doorsturen);
+    // elk item met een eigen pagina stuurt door
+    for (const x of AANBOD.filter((y) => y.pagina)) expect(aanbodDoorsturen(x.slug), x.slug).toBe(x.pagina);
   });
 
   it("elke /aanbod/<slug> bestaat: eigen pagina's sturen door, de rest krijgt een pagina", () => {

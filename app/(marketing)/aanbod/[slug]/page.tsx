@@ -4,7 +4,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { CtaBand } from "@/components/marketing/primitives";
 import { AanbodUitgebreid } from "@/components/marketing/aanbod/AanbodUitgebreid";
 import { uitgebreidVan } from "@/lib/marketing/aanbod-uitgebreid";
-import { AANBOD, aanbodHref, aanbodVan, eigenPaginas, pijlerVan } from "@/lib/marketing/aanbod";
+import { AANBOD, aanbodDoorsturen, aanbodHref, aanbodVan, eigenPaginas, pijlerVan } from "@/lib/marketing/aanbod";
 import { breadcrumbJsonLd, canonical, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
@@ -34,9 +34,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 // Eén product uit het aanbod (lib/marketing/aanbod.ts) dat elders nog geen
 // eigen openbare pagina heeft.
 export default async function AanbodItemPagina({ params }: { params: Promise<{ slug: string }> }) {
-  const a = aanbodVan((await params).slug);
+  const slug = (await params).slug;
+  // eerst doorsturen: aanbodVan() kent alleen items zonder eigen pagina, dus anders werd een oud adres een 404 (15 nov)
+  const naar = aanbodDoorsturen(slug);
+  if (naar) permanentRedirect(naar);
+  const a = aanbodVan(slug);
   if (!a) notFound();
-  if (a.pagina) permanentRedirect(a.pagina);
   const pijler = pijlerVan(a.pijler);
   const uitgebreid = uitgebreidVan(a.slug);
   const verwant = AANBOD.filter((x) => x.pijler === a.pijler && x.slug !== a.slug);
