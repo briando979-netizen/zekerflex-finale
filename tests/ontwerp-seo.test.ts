@@ -16,15 +16,16 @@ describe("SEO van de vaste pagina's (Site-ontwerper)", () => {
   beforeEach(() => opslag.clear());
 
   it("zonder eigen versie precies de metadata van vóór de ontwerper", async () => {
-    const TITLE = "ZekerFlex — freelance werk & klussen in heel Nederland | flexwerk, zzp en uitzendwerk";
+    // 15 nov 2026: op Google-lengte (titel ≤ 60, omschrijving ≤ 155 tekens; tests/seo-tekst.test.ts)
+    const TITLE = "ZekerFlex — freelance werk & klussen in heel Nederland";
     // sinds 11 nov 2026 is de homepagina voor werkzoekenden; de omschrijving noemt geen bedrijfsprijs meer (die staat bij /bedrijven)
     const DESCRIPTION =
-      "Vind flexwerk en klussen bij jou in de buurt. Je ziet vooraf wat je verdient, checkt in met je telefoon en krijgt je geld op je eigen rekening. Zzp'er of zonder KVK via ons uitzendbureau. Meedoen is gratis.";
+      "Vind flexwerk en klussen bij jou in de buurt. Je ziet vooraf wat je verdient en krijgt je geld op je eigen rekening. Ook zonder KVK, en gratis.";
     expect(await seoMetadata("/", { keywords: ["a"] })).toEqual({ title: { absolute: TITLE }, description: DESCRIPTION, keywords: ["a"], ...canonical("/", { title: TITLE, description: DESCRIPTION }) });
     expect(await seoMetadata("/prijzen", { keywords: ["b"] })).toEqual({
       title: "Prijzen — € 3,50 per gewerkt uur, gratis voor freelancers",
       description:
-        "Wat kost ZekerFlex? Gratis voor freelancers en flexkrachten. Bedrijven betalen € 3,50 platformkosten per gewerkt uur, alleen bij gebruik. Geen abonnement, geen opstartkosten, geen verrassingen.",
+        "Gratis voor freelancers en flexkrachten. Bedrijven betalen € 3,50 per gewerkt uur, alleen bij gebruik. Geen abonnement, geen opstartkosten.",
       keywords: ["b"],
       ...canonical("/prijzen"),
     });
@@ -38,7 +39,7 @@ describe("SEO van de vaste pagina's (Site-ontwerper)", () => {
     await zetSeoEigen("/over-ons", { titel: "  Wie   wij zijn ", omschrijving: "" });
     const m = await seoMetadata("/over-ons");
     expect(m.title).toBe("Wie wij zijn");
-    expect(m.description).toMatch(/^ZekerFlex is opgebouwd/);
+    expect(m.description).toMatch(/^ZekerFlex is bedacht/);
     expect((m.openGraph as Record<string, unknown>).title).toBe("Wie wij zijn · ZekerFlex");
     expect(volledigeTitel("/over-ons", "Wie wij zijn")).toBe("Wie wij zijn · ZekerFlex");
     expect(volledigeTitel("/", "Home")).toBe("Home");

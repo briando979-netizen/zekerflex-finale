@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { canonical } from "@/lib/seo";
 import { SEO_PADEN, SEO_STANDAARD, normalizeSeoEigen, volledigeTitel, type SeoEigen, type SeoPad } from "@/lib/ontwerp/seo";
+import { seoBeschrijving } from "@/lib/seo-tekst";
 
 // ---------------------------------------------------------------------------
 // Opslag van de eigen titels en omschrijvingen (KV ontwerp:seo) en de
@@ -43,7 +44,8 @@ export async function seoMetadata(pad: SeoPad, extra: Metadata = {}): Promise<Me
   return {
     ...extra,
     title: s.absoluut ? { absolute: titel } : titel,
-    description: omschrijving,
+    // Google toont ±155 tekens: tot de laatste hele zin (lib/seo-tekst.ts); OpenGraph houdt de volle tekst
+    description: seoBeschrijving(omschrijving),
     ...canonical(pad, og),
   };
 }

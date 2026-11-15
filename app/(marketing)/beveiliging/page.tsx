@@ -8,6 +8,7 @@ import { beveiligingsCijfers } from "@/lib/ops/crowdsec";
 import { breadcrumbJsonLd, canonical, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { amsterdamClock } from "@/lib/time/amsterdam";
+import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 
 // De cijfers van de aanvalsbescherming verversen elke 10 minuten; de rest is vaste tekst.
 // Zonder revalidate zou Next deze pagina bij de build vastzetten, zonder cijfers (AGENTS.md).
@@ -18,8 +19,8 @@ const OMSCHRIJVING =
   "ZekerFlex draait op een eigen server in Nederland. Lees hoe we de site en jouw gegevens beschermen: automatische aanvalsbescherming, versleuteling, dagelijkse back-ups en wat we loggen.";
 
 export const metadata: Metadata = {
-  title: { absolute: `${TITEL} | ZekerFlex` },
-  description: OMSCHRIJVING,
+  title: { absolute: seoTitel(TITEL) },
+  description: seoBeschrijving(OMSCHRIJVING),
   keywords: ["beveiliging zekerflex", "eigen server nederland", "aanvalsbescherming", "avg flexwerk platform", "veilig uitzendplatform"],
   ...canonical("/beveiliging", { title: TITEL, description: OMSCHRIJVING }),
 };

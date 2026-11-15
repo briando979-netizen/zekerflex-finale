@@ -312,7 +312,8 @@ export function MessageBubble({
   const rowRef = useRef<HTMLDivElement>(null);
   const touch = useRef<{ x: number; y: number; timer: ReturnType<typeof setTimeout> | null; horizontal: boolean | null } | null>(null);
   const longPressAt = useRef(0);
-  const mediaUrl = m.attachment ? `/api/inbox/${threadId}/media/${m.attachment.mediaId}` : null;
+  // zonder bestands-id geen adres (paginacheck 15 nov: /api/inbox/<id>/media/ gaf 14× een 404 vanuit de beheerchat)
+  const mediaUrl = m.attachment?.mediaId ? `/api/inbox/${threadId}/media/${encodeURIComponent(m.attachment.mediaId)}` : null;
   const chat = useChatTeksten();
   const t = chat.bubble;
 

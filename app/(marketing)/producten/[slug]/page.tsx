@@ -6,6 +6,7 @@ import { canonical, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { ProductLeadForm } from "@/components/marketing/ProductLeadForm";
 import { SPINOFF_PRODUCTS, spinoffProduct, type ProductDeployment } from "@/lib/products";
+import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 
 export const dynamicParams = false;
 
@@ -18,8 +19,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   if (!p) return {};
   const title = `${p.name} — ${p.kicker}`;
   return {
-    title: { absolute: `${title} | ZekerFlex` },
-    description: p.concept,
+    title: { absolute: seoTitel(title) },
+    description: seoBeschrijving(p.concept),
     keywords: [p.name, p.kicker, "ZekerFlex", p.audience],
     ...canonical(`/producten/${p.slug}`, { title, description: p.concept }),
   };

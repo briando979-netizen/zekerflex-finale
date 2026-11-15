@@ -13,40 +13,8 @@ import { klusUrl } from "@/lib/klusconcept/concept";
 
 const low = (s: Sector) => s.label.toLowerCase();
 
-// ---- metadata -------------------------------------------------------------
-export function sectorHubMetadata(s: Sector): Metadata {
-  const title = `${s.label} personeel inhuren — flexkrachten & uitzendkrachten voor de ${low(s)}`;
-  const description = `Snel betrouwbaar ${low(s)}personeel inhuren in heel Nederland: ${s.roles}. Plaats een klus, vul je gat vaak nog dezelfde dag. € 3,50 per gewerkt uur, geen uitzendmarge — het voordelige alternatief voor het ${low(s)}-uitzendbureau.`;
-  return {
-    title: { absolute: `${title} | ZekerFlex` },
-    description,
-    keywords: [
-      `${low(s)} personeel inhuren`,
-      `${low(s)} uitzendbureau`,
-      `${low(s)} flexkrachten`,
-      `${low(s)} uitzendkracht`,
-      `${low(s)} personeel last minute`,
-    ],
-    ...canonical(`/${s.slug}`, { title, description }),
-  };
-}
-
-export function sectorCityMetadata(s: Sector, c: City): Metadata {
-  const title = `${s.label} personeel inhuren in ${c.name} — flexkrachten & uitzendkrachten`;
-  const description = `Snel betrouwbaar ${low(s)}personeel in ${c.name}: ${s.roles}. Plaats een klus, vul je gat vaak nog dezelfde dag. € 3,50 per gewerkt uur, geen uitzendmarge — een voordelig alternatief voor het ${low(s)}-uitzendbureau.`;
-  return {
-    title: { absolute: `${title} | ZekerFlex` },
-    description,
-    keywords: [
-      `${low(s)} personeel inhuren ${c.name}`,
-      `${low(s)} uitzendbureau ${c.name}`,
-      `${low(s)} flexkrachten ${c.name}`,
-      `${low(s)} uitzendkracht ${c.name}`,
-      `${low(s)} personeel ${c.name} last minute`,
-    ],
-    ...canonical(`/${s.slug}/${c.slug}`, { title, description }),
-  };
-}
+// ---- metadata: in lib/seo-sector-meta.ts (puur, te testen); hier doorgegeven voor de paginabestanden ----
+export { sectorCityMetadata, sectorHubMetadata, sectorWorkerCityMetadata, sectorWorkerHubMetadata } from "@/lib/seo-sector-meta";
 
 // ---- shared faq -----------------------------------------------------------
 function cityFaq(s: Sector, c: City) {
@@ -277,34 +245,6 @@ export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City 
 // ===========================================================================
 // Werker-kant: vacature-/flexwerk-pagina's om de aanbodkant organisch te vullen.
 // ===========================================================================
-
-export function sectorWorkerHubMetadata(s: Sector): Metadata {
-  const title = `Werken in de ${low(s)} — flexibele diensten & bijbanen door heel Nederland`;
-  const description = `Zelf je diensten kiezen in de ${low(s)}: ${s.roles}. Werk wanneer jij wil, snel uitbetaald, met of zonder KVK. Vind flexwerk in de ${low(s)} bij jou in de buurt.`;
-  return {
-    title: { absolute: `${title} | ZekerFlex` },
-    description,
-    keywords: [`${low(s)} vacatures`, `werken in de ${low(s)}`, `${low(s)} bijbaan`, `${low(s)} flexwerk`, `${low(s)} uitzendwerk`],
-    ...canonical(`/${s.workerSlug}`, { title, description }),
-  };
-}
-
-export function sectorWorkerCityMetadata(s: Sector, c: City): Metadata {
-  const title = `Werken in de ${low(s)} in ${c.name} — vacatures, bijbanen & flexwerk`;
-  const description = `Flexibel werken in de ${low(s)} in ${c.name}: ${s.roles}. Kies je eigen diensten, snel uitbetaald, met of zonder KVK. Zie het werk bij jou in de buurt.`;
-  return {
-    title: { absolute: `${title} | ZekerFlex` },
-    description,
-    keywords: [
-      `${low(s)} vacatures ${c.name}`,
-      `werken in de ${low(s)} ${c.name}`,
-      `${low(s)} bijbaan ${c.name}`,
-      `${low(s)} flexwerk ${c.name}`,
-      `${s.worker} worden ${c.name}`,
-    ],
-    ...canonical(`/${s.workerSlug}/${c.slug}`, { title, description }),
-  };
-}
 
 const workerFaq = (s: Sector) => [
   {

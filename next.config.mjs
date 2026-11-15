@@ -136,6 +136,13 @@ const nextConfig = {
         source: "/voorstel/:pad*/:bestand.:ext(webp|png|jpg|jpeg|svg|mp4)",
         headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }],
       },
+      {
+        // Foto's van de eigen site (paginacheck 15 nov): ook die kwamen met max-age=0, dus elk bezoek vroeg ze opnieuw
+        // op (bv. /shifts/logistiek.jpg, 221 kB, op / en /bedrijven). Alleen bestanden met een beeld-extensie, nooit een
+        // pagina zoals /shop/<product>. Geen hash in de naam: een dag bewaren, op de achtergrond verversen.
+        source: "/:map(marketing|paskamer|shop|shifts|chat-stickers|werk|icons|aanbod|welkom|voorbeeldsites|sites|videos)/:pad*/:bestand.:ext(webp|png|jpg|jpeg|svg|gif|avif|mp4|webm)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }],
+      },
     ];
   },
 };

@@ -343,6 +343,7 @@ export function ChatWidget() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Stel je vraag…"
+              aria-label="Stel je vraag"
               className="flex-1 rounded-full border border-hairstrong px-4 py-2 text-sm outline-none focus:border-brand-500"
             />
             <button
@@ -460,12 +461,13 @@ function BookingForm({ onCancel, onBooked }: { onCancel: () => void; onBooked: (
         ))}
       </div>
       <div className="space-y-1.5">
-        <input className={field} placeholder="Je naam" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
-        <input className={field} type="email" placeholder="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+        <input className={field} placeholder="Je naam" aria-label="Je naam" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+        <input className={field} type="email" placeholder="E-mail" aria-label="E-mail" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
         <input
           className={field}
           type="tel"
           placeholder={kind === "call" ? "Telefoonnummer (voor de belafspraak)" : "Telefoon (optioneel)"}
+          aria-label={kind === "call" ? "Telefoonnummer (voor de belafspraak)" : "Telefoon (optioneel)"}
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           autoComplete="tel"
@@ -491,6 +493,7 @@ function BookingForm({ onCancel, onBooked }: { onCancel: () => void; onBooked: (
         <input
           className={field}
           placeholder="Waar gaat het over? (optioneel)"
+          aria-label="Waar gaat het over? (optioneel)"
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
         />
