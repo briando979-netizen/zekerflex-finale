@@ -32,7 +32,7 @@ targets:
         INFOPLIST_FILE: ZekerFlex/Info.plist
         CODE_SIGN_ENTITLEMENTS: ZekerFlex/ZekerFlex.entitlements
         CODE_SIGN_STYLE: Automatic
-        MARKETING_VERSION: "1.0.0"
+        MARKETING_VERSION: "1.0.1"
         CURRENT_PROJECT_VERSION: "1"
         # alleen iPhone: op een iPad draait hij als iPhone-app (geen aparte iPad-schermen nodig)
         TARGETED_DEVICE_FAMILY: "1"
