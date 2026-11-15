@@ -246,6 +246,21 @@ export const gastReserveringSchema = z.object({
   opmerking: tekst(500).default(""),
 });
 
+/** Een gast bestelt online om af te halen of te laten bezorgen (/api/horeca/site/<slug>/leveren). `bedrijf` is een verborgen botveld. */
+export const gastLeverSchema = z.object({
+  soort: z.enum(["afhalen", "bezorgen"]),
+  mand: mandSchema,
+  opmerking: tekst(300).default(""),
+  naam: tekst(60).pipe(z.string().min(2, "Vul je naam in.")),
+  telefoon: tekst(20).pipe(z.string().min(6, "Vul je telefoonnummer in.")),
+  email: z.union([z.literal(""), z.string().trim().email("Vul een geldig e-mailadres in, of laat het leeg.").max(200)]).default(""),
+  adres: tekst(120).default(""),
+  postcode: tekst(8).default(""),
+  plaats: tekst(60).default(""),
+  tijd: z.union([z.literal("zsm"), tijd]),
+  bedrijf: z.string().max(200).default(""),
+});
+
 /** Een gast bestelt via de QR-code op tafel (/api/horeca/site/<slug>/bestellen). */
 export const gastBestellingSchema = z.object({ code: z.string().min(6).max(40), mand: mandSchema, opmerking: tekst(300).default(""), naam: tekst(60).default("") });
 

@@ -8,7 +8,8 @@ import { createHmac, timingSafeEqual } from "crypto";
 // argument) en los te testen.
 // ---------------------------------------------------------------------------
 
-export type LinkDoel = "annuleer" | "bon";
+// levering: de gast volgt zijn online afhaal- of bezorgbestelling (/horeca/<slug>/levering/<token>)
+export type LinkDoel = "annuleer" | "bon" | "levering";
 
 const sleutelVoor = (geheim: string, doel: LinkDoel) => createHmac("sha256", geheim).update(`horeca-link:${doel}`).digest();
 

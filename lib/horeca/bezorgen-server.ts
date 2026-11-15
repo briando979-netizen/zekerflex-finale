@@ -13,14 +13,18 @@ import {
   belbaar,
   bezorgkostenVoor,
   leesBezorgen,
+  leverFase,
   leverFout,
+  leverSlots,
   MAX_BEZORGERS,
   postcodeNetjes,
+  teBetalenCent,
   tijdOpDag,
   vroegsteOp,
   type BezorgInstellingen,
   type LeverSoort,
 } from "@/lib/horeca/bezorgen";
+import { leesTijden } from "@/lib/horeca/tijden";
 
 // ---------------------------------------------------------------------------
 // Afhalen en bezorgen op de server (lib/horeca/bezorgen.ts is het pure deel).
@@ -170,6 +174,53 @@ export async function zetAfgeleverd(zaak: HorecaZaak, id: string, betaalwijze: "
     where: { id, zaakId: zaak.id },
     data: { afgeleverdOp: new Date(), betaald: true, ...(aanDeDeur ? { betaalwijze } : b.betaalwijze ? {} : { betaalwijze: "vooraf" }) },
   });
+}
+
+// --- online bestellen door gasten (ronde 4) ---------------------------------
+
+/** Wat een gast vandaag online kan: afhalen en/of bezorgen, met de tijden en de voorwaarden. */
+export function leverOpties(zaak: HorecaZaak, nu = new Date()) {
+  const inst = leesBezorgen(zaak.bezorgen);
+  const tijden = leesTijden(zaak.openingstijden);
+  const aan = heeftModule(zaak, "bezorgen");
+  const voor = (soort: LeverSoort, staatAan: boolean) => (aan && staatAan ? { aan: true, ...leverSlots(nu, soort, inst, tijden) } : { aan: false, slots: [] as string[], zsm: false });
+  return {
+    afhalen: voor("afhalen", inst.afhalen),
+    bezorgen: voor("bezorgen", inst.bezorgen),
+    minimumCent: inst.minimumCent,
+    kostenCent: inst.kostenCent,
+    gratisVanafCent: inst.gratisVanafCent,
+    straalKm: inst.straalKm,
+  };
+}
+export type LeverOpties = ReturnType<typeof leverOpties>;
+
+/** Kan deze tijd online? Geeft een nette fout of null. */
+export function onlineTijdFout(opties: LeverOpties, soort: LeverSoort, tijd: string): string | null {
+  const o = opties[soort];
+  if (!o.aan) return soort === "afhalen" ? "Afhalen kan bij deze zaak niet online." : "Bezorgen kan bij deze zaak niet online.";
+  if (!o.slots.length && !o.zsm) return "Vandaag nemen we geen bestellingen meer aan.";
+  if (tijd === "zsm") return o.zsm ? null : "Zo snel mogelijk kan nu niet: kies een tijd.";
+  return o.slots.includes(tijd) ? null : "Kies een tijd uit de lijst.";
+}
+
+/** Wat de gast van zijn eigen bestelling ziet (met de ondertekende link): geen adres, telefoon of e-mail. */
+export async function leveringVoorGast(zaakId: string, id: string) {
+  const b = await prisma.horecaBestelling.findFirst({
+    where: { id, zaakId, soort: { in: ["afhalen", "bezorgen"] } },
+    select: { nummer: true, soort: true, status: true, gewenstOp: true, bevestigdOp: true, onderwegOp: true, afgeleverdOp: true, totaalCent: true, kortingCent: true, bezorgkostenCent: true, betaald: true },
+  });
+  if (!b) return null;
+  return {
+    nummer: b.nummer,
+    soort: b.soort,
+    fase: leverFase(b),
+    tijd: (b.bevestigdOp ?? b.gewenstOp)?.toISOString() ?? null,
+    bevestigd: b.bevestigdOp !== null,
+    teBetalenCent: teBetalenCent(b),
+    bezorgkostenCent: b.bezorgkostenCent,
+    betaald: b.betaald,
+  };
 }
 
 // --- instellingen en bezorgers ---------------------------------------------

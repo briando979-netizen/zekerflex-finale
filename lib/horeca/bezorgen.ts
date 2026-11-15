@@ -135,6 +135,31 @@ export function tijdOpDag(nu: Date, tijd: string): Date | null {
   return op;
 }
 
+/**
+ * Online bestellen (ronde 4): de tijden (per kwartier, "UU:MM") waarop een bestelling vandaag klaar of bezorgd kan
+ * zijn, van de vroegste tijd (nu of de opening, plus de bereidingstijd) tot sluiten; en of "zo snel mogelijk" kan
+ * (alleen als de zaak nu open is en het voor sluiten lukt). Openingstijden per weekdag, 0 = zondag (lib/horeca/tijden.ts).
+ */
+export function leverSlots(nu: Date, soort: LeverSoort, inst: BezorgInstellingen, tijden: Record<string, { van: string; tot: string } | null>): { slots: string[]; zsm: boolean } {
+  const p = amsterdamParts(nu);
+  const vandaag = tijden[String(p.weekday)];
+  if (!vandaag) return { slots: [], zsm: false };
+  const [vh = 0, vm = 0] = vandaag.van.split(":").map(Number);
+  const [th = 0, tm = 0] = vandaag.tot.split(":").map(Number);
+  const open = amsterdamToUtc(p.year, p.month, p.day, vh, vm);
+  let dicht = amsterdamToUtc(p.year, p.month, p.day, th, tm);
+  // een tot vóór de van loopt door na middernacht (bar tot 02:00)
+  if (dicht.getTime() <= open.getTime()) dicht = new Date(dicht.getTime() + 24 * 3600_000);
+  const minuten = soort === "afhalen" ? inst.afhaalMinuten : inst.bezorgMinuten;
+  const vroegste = vroegsteOp(nu, soort, inst);
+  const begin = new Date(Math.max(vroegste.getTime(), open.getTime() + minuten * 60_000));
+  const kwartier = 15 * 60_000;
+  const slots: string[] = [];
+  for (let t = Math.ceil(begin.getTime() / kwartier) * kwartier; t <= dicht.getTime() && slots.length < 96; t += kwartier) slots.push(amsterdamClock(t));
+  const zsm = nu.getTime() >= open.getTime() && vroegste.getTime() <= dicht.getTime();
+  return { slots, zsm };
+}
+
 /** Een tijd een paar minuten verschuiven (de − en + bij "tijd bevestigen"). */
 export const schuif = (op: Date, minuten: number) => new Date(op.getTime() + minuten * 60_000);
 

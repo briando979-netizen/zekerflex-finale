@@ -8,6 +8,7 @@ import { euro, zaakWeergave } from "@/lib/horeca/weergave";
 import { telefoonLink } from "@/lib/rijschool/format";
 import { leesbaarOpLicht, ZAND } from "@/lib/rijschool/kleuren";
 import { heeftModule } from "@/lib/horeca/modules";
+import { leesBezorgen } from "@/lib/horeca/bezorgen";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,8 @@ export default async function HorecaHome({ params }: { params: Promise<{ slug: s
     ...categorieen.map((c) => ({ id: c.id, naam: c.naam, items: items.filter((i) => i.categorieId === c.id) })),
     { id: "overig", naam: "Overig", items: items.filter((i) => !i.categorieId) },
   ].filter((g) => g.items.length);
+  const lever = heeftModule(z, "bezorgen") ? leesBezorgen(z.bezorgen) : null;
+  const bestelKnop = lever?.afhalen && lever.bezorgen ? "Bestellen: afhalen of bezorgen" : lever?.bezorgen ? "Laten bezorgen" : lever?.afhalen ? "Bestellen om af te halen" : null;
 
   return (
     <>
@@ -60,6 +63,12 @@ export default async function HorecaHome({ params }: { params: Promise<{ slug: s
                   Bel om te reserveren
                 </a>
               )
+            )}
+            {/* alleen als de zaak afhalen of bezorgen zelf heeft aangezet (module bezorgen, 15 nov 2026) */}
+            {bestelKnop && (
+              <a href={`/horeca/${z.slug}/bestellen`} className="rounded-full px-6 py-3 font-semibold ring-1 ring-white/30 hover:bg-white/10">
+                {bestelKnop}
+              </a>
             )}
           </div>
         </div>
