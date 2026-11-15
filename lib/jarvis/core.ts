@@ -15,7 +15,7 @@ import { runAdminConsole } from "@/lib/admin-console";
 import { runOrchestrationCycle } from "@/lib/orchestration/core";
 import { speakBriefing } from "@/lib/voice/briefing";
 import {
-  JARVIS_PERSONA,
+  JARVIS_PERSONA, JARVIS_PERSONA_KORT,
   JARVIS_REPORT_RULES,
   JARVIS_ROUTER_PREFIX,
 } from "@/lib/jarvis/persona";
@@ -393,7 +393,7 @@ async function runTurn(turnId: string, input: StartTurnInput): Promise<void> {
         interactief: true,
         model: picked.model,
         // vaste delen eerst, wat wisselt erna; met "alles gratis" korter (lib/jarvis/berichten.ts)
-        messages: jarvisBerichten({ persona: JARVIS_PERSONA, status: stateLine, voorbeelden: [], geschiedenis: history, vraag: input.prompt, gratis: gratisAan() }),
+        messages: jarvisBerichten({ persona: gratisAan() ? JARVIS_PERSONA_KORT : JARVIS_PERSONA, status: stateLine, voorbeelden: [], geschiedenis: history, vraag: input.prompt, gratis: gratisAan() }),
         temperature: 0.5,
         maxTokens: picked.role === "reasoning" || picked.role === "code" ? 900 : 500,
       });
