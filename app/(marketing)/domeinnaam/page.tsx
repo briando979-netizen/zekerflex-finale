@@ -93,7 +93,7 @@ export default function DomeinnaamPagina() {
             {goedkoopste && (
               <>
                 {" "}
-                Het eerste jaar al vanaf <strong className="text-white">{euroPrijs(goedkoopste.prijsCent)}</strong> (excl. btw), bij een .{goedkoopste.tld}.
+                Een .{goedkoopste.tld} heb je het eerste jaar al vanaf <strong className="text-white">{euroPrijs(goedkoopste.prijsCent)}</strong> (excl. btw).
               </>
             )}
           </p>
@@ -291,13 +291,14 @@ export default function DomeinnaamPagina() {
           <p className="mx-auto mt-3 max-w-2xl text-center text-neutralx-600">
             Prijzen per jaar, excl. btw. Verhuizen kost hetzelfde als een jaar verlengen; bij .nl is verhuizen gratis.
           </p>
-          <ul className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {/* op de telefoon twee naast elkaar, anders wordt het een lange rij */}
+          <ul className="mt-10 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
             {kaarten.map((k) => (
-              <li key={k.tld} className="flex flex-col rounded-2xl border border-hair bg-white p-6">
-                <h3 className="font-display text-3xl font-bold text-ink">.{k.tld}</h3>
+              <li key={k.tld} className="flex flex-col rounded-2xl border border-hair bg-white p-4 sm:p-6">
+                <h3 className="font-display text-2xl font-bold text-ink sm:text-3xl">.{k.tld}</h3>
                 <p className="mt-1 text-sm text-neutralx-600">{k.omschrijving}</p>
-                <p className="mt-5 text-[13px] font-semibold uppercase tracking-wide text-neutralx-500">Eerste jaar</p>
-                <p className="font-display text-3xl font-bold text-ink">{k.eersteJaar}</p>
+                <p className="mt-4 text-[12px] font-semibold uppercase tracking-wide text-neutralx-500 sm:mt-5 sm:text-[13px]">Eerste jaar</p>
+                <p className="font-display text-2xl font-bold text-ink sm:text-3xl">{k.eersteJaar}</p>
                 <p className="text-xs text-neutralx-500">{k.eersteJaarIncl} incl. btw</p>
                 <p className="mt-3 text-sm text-neutralx-700">
                   Daarna <strong className="text-ink">{k.daarna}</strong> per jaar
@@ -316,15 +317,16 @@ export default function DomeinnaamPagina() {
 
           <div className="mx-auto mt-14 max-w-4xl rounded-2xl border border-hair bg-white p-5 md:p-7">
             <h3 className="font-display text-xl font-bold text-ink">Alle extensies</h3>
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[480px] text-left text-sm">
+            {/* past op de telefoon zonder vegen: daar zonder de kolom Waarvoor */}
+            <div className="relative mt-4">
+              <table className="w-full text-left text-sm">
                 <caption className="sr-only">Prijzen van domeinnamen per jaar, excl. btw</caption>
                 <thead>
                   <tr className="border-b border-hair text-neutralx-500">
                     <th scope="col" className="py-2 font-semibold">
                       Extensie
                     </th>
-                    <th scope="col" className="py-2 font-semibold">
+                    <th scope="col" className="hidden py-2 font-semibold sm:table-cell">
                       Waarvoor
                     </th>
                     <th scope="col" className="py-2 text-right font-semibold">
@@ -341,7 +343,7 @@ export default function DomeinnaamPagina() {
                       <th scope="row" className="py-2.5 font-display font-bold text-ink">
                         .{e.tld}
                       </th>
-                      <td className="py-2.5 text-neutralx-600">{e.omschrijving}</td>
+                      <td className="hidden py-2.5 text-neutralx-600 sm:table-cell">{e.omschrijving}</td>
                       <td className="py-2.5 text-right font-semibold text-ink">{euroPrijs(e.prijsCent)}</td>
                       <td className="py-2.5 text-right text-ink">{euroPrijs(e.verlengCent)}</td>
                     </tr>
