@@ -36,11 +36,10 @@ describe("de catalogus", () => {
     const uitleg = appVan("personeel")?.uitleg ?? "";
     const heeft = (onderdeel: string) => existsSync(path.join(ROOT, "components/personeel", onderdeel));
     expect(uitleg).toMatch(/taken/);
-    // loonstroken en chat alleen zolang de omgeving van de medewerker ze heeft
+    // elke belofte alleen zolang de omgeving van de medewerker dat onderdeel heeft
     if (/loonstro/i.test(uitleg)) expect(heeft("LoonstrokenBlok.tsx")).toBe(true);
     if (/chat/i.test(uitleg)) expect(heeft("ChatPaneel.tsx")).toBe(true);
-    // een rooster heeft /personeel (nog) niet
-    expect(uitleg).not.toMatch(/rooster/i);
+    if (/rooster|verlof|uren/i.test(uitleg)) expect(heeft("PlanningBlokken.tsx")).toBe(true);
   });
 });
 
