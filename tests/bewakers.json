@@ -46,6 +46,7 @@
     "tests/te-doen-eerst.test.ts",
     "tests/valkuil-bewakers.test.ts",
     "tests/verder-kaart.test.ts",
+    "tests/verzekering-eerlijk.test.ts",
     "tests/voorstel-indoor-regels.test.ts",
     "tests/voorstel-sollicitatie-regels.test.ts",
     "tests/werker-taal-bewaker.test.ts",
