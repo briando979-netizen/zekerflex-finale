@@ -56,6 +56,7 @@ import { BOUNCE_VLAG, KV_BOUNCE_METING, type BounceMeting } from "@/lib/mail/bou
 
 /** Bij taken die alleen voor ZekerFlex Bank nodig waren. */
 const BANK_UIT = "niet meer nodig: ZekerFlex Bank staat uit (7 nov)";
+const STRIPE_DICHT = "niet nodig zolang betalen via Stripe dicht is; komt vanzelf terug als dat weer opengaat";
 
 // ---------------------------------------------------------------------------
 // "Te doen voor jou" — the things only the owner can do (accounts, payment
@@ -517,9 +518,10 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       title: "Stripe-melding 'checkout.session.expired' aanzetten",
       why: "Sluit iemand in de webshop het betaalscherm zonder te betalen, dan meldt Stripe dat na 24 uur. Zonder die melding blijft zo'n bestelling in Admin → Shop op 'wacht op betaling' staan. Voorraad gaat pas af bij betaling, dus er gaat niets mis: het is opruimen.",
       how: ["dashboard.stripe.com → Developers → Webhooks → het endpoint dat eindigt op /api/webhooks/stripe.", "Kies 'Gebeurtenissen bewerken', voeg checkout.session.expired toe en sla op."],
-      auto: webhookEvents !== null,
-      done: webhookEvents !== null && receives(webhookEvents, "checkout.session.expired"),
-      ...(webhookEvents === null ? m("stripe-expired") : {}),
+      // niet nodig zolang betalen via Stripe dicht is (16 nov: de webshop rekent af per overschrijving)
+      auto: webhookEvents !== null || stripeDicht,
+      done: stripeDicht || (webhookEvents !== null && receives(webhookEvents, "checkout.session.expired")),
+      ...(stripeDicht ? { doneNote: STRIPE_DICHT } : webhookEvents === null ? m("stripe-expired") : {}),
     },
     {
       id: "stripe-agentische-handel",
@@ -560,8 +562,8 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
         "Wil je liever prijzen inclusief btw, zeg dat tegen Claude; die past de teksten op de site aan.",
         "Daarna kan ook de eenmalige websiteprijs uit een geaccepteerd websitevoorstel via hetzelfde betaalscherm worden afgerekend. Nu factureert het team die met de hand.",
       ],
-      auto: false,
-      ...m("stripe-btw"),
+      auto: stripeDicht,
+      ...(stripeDicht ? { done: true, doneNote: STRIPE_DICHT } : m("stripe-btw")),
     },
     {
       id: "loonheffingennummer",
@@ -1022,19 +1024,6 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ],
       auto: true,
       done: Boolean(env.NETWERK_RADIUS_TOKEN),
-    },
-    {
-      id: "netwerk-5g",
-      group: "Bellen & koppelingen",
-      title: "Eigen 5G-netwerk: vergunning en apparatuur regelen vóór de eerste klant",
-      why: "Een eigen 5G-netwerk op een terrein vraagt een lokale frequentievergunning (3,5 GHz) van de Rijksinspectie Digitale Infrastructuur per locatie, plus apparatuur ter plaatse (antenne/small cell en simkaarten). De software (Open5GS) is gratis en draait op de eigen server; de vergunning en apparatuur kosten wel geld en tijd. Aanvragen van klanten komen binnen als lead (Admin → Pijplijn) en op Admin → Verbinding.",
-      how: [
-        "Lees op rdi.nl hoe een lokale vergunning in de 3,5 GHz-band werkt (aanvraag per locatie, jaarlijkse kosten).",
-        "Kies een leverancier voor small cells en simkaarten (bijvoorbeeld via een Nederlandse integrator) en spreek een inkoopprijs af; die rekenen we door met een opslag.",
-        "Vink af als je weet hoe je de eerste aanvraag oppakt.",
-      ],
-      auto: false,
-      ...m("netwerk-5g"),
     },
     {
       id: "webshop-leverancier",
