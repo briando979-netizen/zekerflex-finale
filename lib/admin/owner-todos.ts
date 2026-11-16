@@ -250,14 +250,6 @@ function backupNote(report: BackupReport | null): string {
   return report.reasons[0] ?? "de laatste back-up is niet in orde";
 }
 
-const hasVideos = () => {
-  try {
-    return existsSync(path.join(process.cwd(), "public", "videos", "wat-is-zekerflex.mp4"));
-  } catch {
-    return false;
-  }
-};
-
 /** Een adres op een eigen naam: er is een adres en het is niet de technische sslip.io-naam van de server. */
 const eigenNaam = (url: string | undefined): boolean => Boolean(url) && !/sslip\.io/i.test(url ?? "");
 
@@ -797,15 +789,6 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ],
       auto: false,
       ...m("social-meta"),
-    },
-    {
-      id: "videos",
-      group: "Vindbaarheid & app",
-      title: "Uitlegvideo's plaatsen",
-      why: "De pagina /uitleg toont nu alleen foto's met 'video komt binnenkort'.",
-      how: ["Maak of lever 5 korte video's: wat is ZekerFlex, klus plaatsen, uitzenden of freelance, uren goedkeuren, kosten en facturen.", "Geef ze aan mij door; ik zet ze online (bij voorkeur via een videodienst of de eigen server, niet in git)."],
-      auto: true,
-      done: hasVideos(),
     },
     {
       id: "product-photos",
