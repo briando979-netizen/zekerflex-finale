@@ -5,6 +5,7 @@ import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { alertOwner } from "@/lib/ops/alert";
 import { normalizeNumber } from "@/lib/telephony/consent";
+import type { LijnInstellingen } from "@/lib/telephony/lijn";
 import {
   ANSWER_AT,
   BUNDLES,
@@ -62,6 +63,8 @@ export interface PhoneLine {
   adminNote: string | null;
   history: { at: string; status: LineStatus; by: string }[];
   createdAt: string;
+  /** wat de klant instelt zodra de lijn actief is (lib/telephony/lijn.ts); ontbreekt = de standaard */
+  instellingen?: LijnInstellingen;
 }
 
 const lineKey = (id: string) => `phone-line:${id}`;

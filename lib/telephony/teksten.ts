@@ -1,5 +1,5 @@
 import type { Locale } from "@/lib/i18n/config";
-import type { AnswerAt, BundleId, NumberKind, OptionId, ShowOn } from "@/lib/telephony/plans";
+import type { AnswerAt, BundleId, NumberKind, OptionId } from "@/lib/telephony/plans";
 import type { LineStatus } from "@/lib/telephony/lines";
 
 // ---------------------------------------------------------------------------
@@ -41,8 +41,6 @@ export interface TelefonieTeksten {
   inBundel: string;
   stap3: string;
   opnemen: string;
-  nummerTonen: string;
-  binnenkort: string;
   doorschakelNaar: string;
   nogIets: string;
   magLeeg: string;
@@ -71,7 +69,6 @@ export interface TelefonieTeksten {
   optie: Record<OptionId, { label: string; blurb: string }>;
   bundels: Record<BundleId, { label: string; blurb: string }>;
   antwoord: Record<AnswerAt, string>;
-  tonen: Record<ShowOn, string>;
   terug: string;
 }
 
@@ -103,10 +100,8 @@ export const TELEFONIE_NL: TelefonieTeksten = {
   perMnd: " /mnd",
   zonderBundel: "Zonder bundel: alleen de lijn ({bedrag} /mnd) en losse opties",
   inBundel: "in bundel",
-  stap3: "3. Waar neem je op, en waar laten we je nummer zien?",
+  stap3: "3. Waar neem je op?",
   opnemen: "Opnemen",
-  nummerTonen: "Nummer tonen",
-  binnenkort: "binnenkort",
   doorschakelNaar: "Naar welk nummer schakelen we door?",
   nogIets: "Nog iets wat we moeten weten?",
   magLeeg: "(mag leeg)",
@@ -142,8 +137,8 @@ export const TELEFONIE_NL: TelefonieTeksten = {
     overzetten: { label: "Bestaand nummer overzetten", example: "nummerbehoud", blurb: "Je nummer verhuist helemaal naar ZekerFlex. Dat duurt een paar weken; tot die tijd kun je doorschakelen." },
   },
   optie: {
-    ai: { label: "AI-assistent", blurb: "Neemt dag en nacht op in het Nederlands of Engels, beantwoordt vragen over je bedrijf en plant terugbelafspraken. Je krijgt van elk gesprek een samenvatting." },
-    voicemail: { label: "Voicemail in ZekerFlex", blurb: "Ingesproken berichten komen als tekst en geluid in je ZekerFlex-chat." },
+    ai: { label: "AI-assistent", blurb: "Neemt op als jij niet kunt of buiten je openingstijden: vraagt de beller naar zijn vraag en naam en zet een terugbelverzoek voor je klaar. Je ziet het meteen in ZekerFlex, met een melding." },
+    voicemail: { label: "Voicemail in ZekerFlex", blurb: "Ingesproken berichten krijg je als geluid en als uitgeschreven tekst in ZekerFlex, met een melding." },
     doorschakelen: { label: "Doorschakelen", blurb: "Gesprekken gaan naar je eigen telefoon, binnen je openingstijden. Daarbuiten voicemail of de AI-assistent." },
     keuzemenu: { label: "Keuzemenu", blurb: "\"Toets 1 voor planning, 2 voor administratie.\" Elke keuze komt bij de juiste persoon." },
     team: { label: "Teamnummer", blurb: "Meerdere telefoons gaan tegelijk over. Wie het eerst opneemt, heeft het gesprek." },
@@ -155,8 +150,7 @@ export const TELEFONIE_NL: TelefonieTeksten = {
     zakelijk: { label: "Zakelijk", blurb: "Voor een team met vaste tijden." },
     compleet: { label: "AI Compleet", blurb: "Nooit meer een gemiste klant." },
   },
-  antwoord: { telefoon: "Op mijn eigen telefoon", ai: "De AI-assistent neemt eerst op", app: "In de ZekerFlex-app en op de computer" },
-  tonen: { profiel: "Op mijn profiel in ZekerFlex", diensten: "Bij mijn diensten en vacatures", website: "Als belknop op mijn website", facturen: "Op mijn facturen" },
+  antwoord: { telefoon: "Op mijn eigen telefoon", ai: "De AI-assistent neemt eerst op" },
   terug: "← Terug",
 };
 
@@ -188,10 +182,8 @@ const EN: TelefonieTeksten = {
   perMnd: " /mo",
   zonderBundel: "No bundle: just the line ({bedrag} /mo) and separate options",
   inBundel: "in bundle",
-  stap3: "3. Where do you answer, and where do we show your number?",
+  stap3: "3. Where do you answer?",
   opnemen: "Answering",
-  nummerTonen: "Show number",
-  binnenkort: "coming soon",
   doorschakelNaar: "Which number do we forward to?",
   nogIets: "Anything else we should know?",
   magLeeg: "(optional)",
@@ -227,8 +219,8 @@ const EN: TelefonieTeksten = {
     overzetten: { label: "Transfer an existing number", example: "number porting", blurb: "Your number moves entirely to ZekerFlex. That takes a few weeks; until then you can forward calls." },
   },
   optie: {
-    ai: { label: "AI assistant", blurb: "Answers day and night in Dutch or English, answers questions about your business and schedules callbacks. You get a summary of every call." },
-    voicemail: { label: "Voicemail in ZekerFlex", blurb: "Recorded messages arrive as text and audio in your ZekerFlex chat." },
+    ai: { label: "AI assistant", blurb: "Answers when you can't or outside your opening hours: asks the caller for their question and name and sets up a call-back request for you. You see it right away in ZekerFlex, with a notification." },
+    voicemail: { label: "Voicemail in ZekerFlex", blurb: "You get voicemail messages as audio and as written-out text in ZekerFlex, with a notification." },
     doorschakelen: { label: "Call forwarding", blurb: "Calls go to your own phone during your opening hours. Outside them: voicemail or the AI assistant." },
     keuzemenu: { label: "Menu", blurb: "\"Press 1 for planning, 2 for administration.\" Every choice reaches the right person." },
     team: { label: "Team number", blurb: "Several phones ring at once. Whoever answers first takes the call." },
@@ -240,8 +232,7 @@ const EN: TelefonieTeksten = {
     zakelijk: { label: "Business", blurb: "For a team with fixed hours." },
     compleet: { label: "AI Complete", blurb: "Never miss a customer again." },
   },
-  antwoord: { telefoon: "On my own phone", ai: "The AI assistant answers first", app: "In the ZekerFlex app and on the computer" },
-  tonen: { profiel: "On my profile in ZekerFlex", diensten: "With my services and vacancies", website: "As a call button on my website", facturen: "On my invoices" },
+  antwoord: { telefoon: "On my own phone", ai: "The AI assistant answers first" },
   terug: "← Back",
 };
 
@@ -273,10 +264,8 @@ const PL: TelefonieTeksten = {
   perMnd: " /mies.",
   zonderBundel: "Bez pakietu: tylko linia ({bedrag} /mies.) i pojedyncze opcje",
   inBundel: "w pakiecie",
-  stap3: "3. Gdzie odbierasz i gdzie pokazujemy Twój numer?",
+  stap3: "3. Gdzie odbierasz?",
   opnemen: "Odbieranie",
-  nummerTonen: "Pokaż numer",
-  binnenkort: "wkrótce",
   doorschakelNaar: "Na jaki numer przekierować?",
   nogIets: "Coś jeszcze, co powinniśmy wiedzieć?",
   magLeeg: "(może być puste)",
@@ -312,8 +301,8 @@ const PL: TelefonieTeksten = {
     overzetten: { label: "Przenieś istniejący numer", example: "przeniesienie numeru", blurb: "Twój numer przenosi się w całości do ZekerFlex. To trwa kilka tygodni; do tego czasu możesz przekierowywać połączenia." },
   },
   optie: {
-    ai: { label: "Asystent AI", blurb: "Odbiera dniem i nocą po niderlandzku lub angielsku, odpowiada na pytania o Twoją firmę i planuje oddzwonienia. Z każdej rozmowy dostajesz podsumowanie." },
-    voicemail: { label: "Poczta głosowa w ZekerFlex", blurb: "Nagrane wiadomości trafiają jako tekst i dźwięk do Twojego czatu ZekerFlex." },
+    ai: { label: "Asystent AI", blurb: "Odbiera, gdy nie możesz, lub poza godzinami otwarcia: pyta dzwoniącego o sprawę i imię i przygotowuje dla Ciebie prośbę o oddzwonienie. Widzisz ją od razu w ZekerFlex, z powiadomieniem." },
+    voicemail: { label: "Poczta głosowa w ZekerFlex", blurb: "Wiadomości głosowe dostajesz jako dźwięk i spisany tekst w ZekerFlex, z powiadomieniem." },
     doorschakelen: { label: "Przekierowanie", blurb: "Rozmowy trafiają na Twój telefon w godzinach otwarcia. Poza nimi: poczta głosowa lub asystent AI." },
     keuzemenu: { label: "Menu wyboru", blurb: "\"Wciśnij 1 – planowanie, 2 – administracja.\" Każdy wybór trafia do właściwej osoby." },
     team: { label: "Numer zespołu", blurb: "Dzwoni kilka telefonów naraz. Kto pierwszy odbierze, ten prowadzi rozmowę." },
@@ -325,8 +314,7 @@ const PL: TelefonieTeksten = {
     zakelijk: { label: "Biznes", blurb: "Dla zespołu ze stałymi godzinami." },
     compleet: { label: "AI Kompletny", blurb: "Żadnego straconego klienta." },
   },
-  antwoord: { telefoon: "Na moim telefonie", ai: "Najpierw odbiera asystent AI", app: "W aplikacji ZekerFlex i na komputerze" },
-  tonen: { profiel: "Na moim profilu w ZekerFlex", diensten: "Przy moich usługach i ofertach", website: "Jako przycisk połączenia na mojej stronie", facturen: "Na moich fakturach" },
+  antwoord: { telefoon: "Na moim telefonie", ai: "Najpierw odbiera asystent AI" },
   terug: "← Wstecz",
 };
 
@@ -358,10 +346,8 @@ const RO: TelefonieTeksten = {
   perMnd: " /lună",
   zonderBundel: "Fără pachet: doar linia ({bedrag} /lună) și opțiuni separate",
   inBundel: "în pachet",
-  stap3: "3. Unde răspunzi și unde arătăm numărul tău?",
+  stap3: "3. Unde răspunzi?",
   opnemen: "Răspuns",
-  nummerTonen: "Arată numărul",
-  binnenkort: "în curând",
   doorschakelNaar: "Către ce număr redirecționăm?",
   nogIets: "Mai este ceva ce ar trebui să știm?",
   magLeeg: "(poate rămâne gol)",
@@ -397,8 +383,8 @@ const RO: TelefonieTeksten = {
     overzetten: { label: "Transferă un număr existent", example: "portare număr", blurb: "Numărul tău se mută complet la ZekerFlex. Durează câteva săptămâni; până atunci poți redirecționa apelurile." },
   },
   optie: {
-    ai: { label: "Asistent AI", blurb: "Răspunde zi și noapte în olandeză sau engleză, răspunde la întrebări despre firma ta și programează apeluri înapoi. Primești un rezumat al fiecărei convorbiri." },
-    voicemail: { label: "Mesagerie vocală în ZekerFlex", blurb: "Mesajele vocale ajung ca text și sunet în chatul tău ZekerFlex." },
+    ai: { label: "Asistent AI", blurb: "Răspunde când tu nu poți sau în afara programului: îl întreabă pe apelant ce dorește și cum îl cheamă și îți pregătește o cerere de apel înapoi. O vezi imediat în ZekerFlex, cu o notificare." },
+    voicemail: { label: "Mesagerie vocală în ZekerFlex", blurb: "Primești mesajele vocale ca sunet și ca text transcris în ZekerFlex, cu o notificare." },
     doorschakelen: { label: "Redirecționare", blurb: "Apelurile merg la telefonul tău, în programul tău. În afara lui: mesagerie vocală sau asistentul AI." },
     keuzemenu: { label: "Meniu de opțiuni", blurb: "\"Apasă 1 pentru planificare, 2 pentru administrație.\" Fiecare alegere ajunge la persoana potrivită." },
     team: { label: "Număr de echipă", blurb: "Mai multe telefoane sună simultan. Cine răspunde primul preia apelul." },
@@ -410,8 +396,7 @@ const RO: TelefonieTeksten = {
     zakelijk: { label: "Business", blurb: "Pentru o echipă cu program fix." },
     compleet: { label: "AI Complet", blurb: "Niciun client pierdut." },
   },
-  antwoord: { telefoon: "Pe telefonul meu", ai: "Asistentul AI răspunde primul", app: "În aplicația ZekerFlex și pe calculator" },
-  tonen: { profiel: "Pe profilul meu din ZekerFlex", diensten: "La serviciile și anunțurile mele", website: "Ca buton de apel pe site-ul meu", facturen: "Pe facturile mele" },
+  antwoord: { telefoon: "Pe telefonul meu", ai: "Asistentul AI răspunde primul" },
   terug: "← Înapoi",
 };
 
@@ -443,10 +428,8 @@ const UK: TelefonieTeksten = {
   perMnd: " /міс.",
   zonderBundel: "Без пакета: лише лінія ({bedrag} /міс.) та окремі опції",
   inBundel: "у пакеті",
-  stap3: "3. Де ти відповідаєш і де ми показуємо твій номер?",
+  stap3: "3. Де ти відповідаєш?",
   opnemen: "Відповідь",
-  nummerTonen: "Показувати номер",
-  binnenkort: "незабаром",
   doorschakelNaar: "На який номер переадресовувати?",
   nogIets: "Ще щось, що нам варто знати?",
   magLeeg: "(можна залишити порожнім)",
@@ -482,8 +465,8 @@ const UK: TelefonieTeksten = {
     overzetten: { label: "Перенести наявний номер", example: "перенесення номера", blurb: "Твій номер повністю переходить до ZekerFlex. Це триває кілька тижнів; до того часу можна переадресовувати." },
   },
   optie: {
-    ai: { label: "ШІ-асистент", blurb: "Відповідає вдень і вночі нідерландською або англійською, відповідає на запитання про твою компанію й планує передзвони. Про кожну розмову ти отримуєш підсумок." },
-    voicemail: { label: "Голосова пошта в ZekerFlex", blurb: "Записані повідомлення приходять текстом і звуком у твій чат ZekerFlex." },
+    ai: { label: "ШІ-асистент", blurb: "Відповідає, коли ти не можеш, або поза робочими годинами: питає абонента, що він хоче і як його звати, і готує для тебе запит на зворотний дзвінок. Ти одразу бачиш його в ZekerFlex зі сповіщенням." },
+    voicemail: { label: "Голосова пошта в ZekerFlex", blurb: "Голосові повідомлення ти отримуєш як звук і як розписаний текст у ZekerFlex зі сповіщенням." },
     doorschakelen: { label: "Переадресація", blurb: "Дзвінки йдуть на твій телефон у години роботи. Поза ними: голосова пошта або ШІ-асистент." },
     keuzemenu: { label: "Меню вибору", blurb: "\"Натисни 1 для планування, 2 для адміністрації.\" Кожен вибір потрапляє до потрібної особи." },
     team: { label: "Командний номер", blurb: "Дзвонить одразу кілька телефонів. Хто першим відповість, той веде розмову." },
@@ -495,8 +478,7 @@ const UK: TelefonieTeksten = {
     zakelijk: { label: "Бізнес", blurb: "Для команди з постійним графіком." },
     compleet: { label: "ШІ Повний", blurb: "Жодного втраченого клієнта." },
   },
-  antwoord: { telefoon: "На моєму телефоні", ai: "Спершу відповідає ШІ-асистент", app: "У застосунку ZekerFlex і на комп'ютері" },
-  tonen: { profiel: "У моєму профілі в ZekerFlex", diensten: "Біля моїх послуг і вакансій", website: "Як кнопка дзвінка на моєму сайті", facturen: "На моїх рахунках" },
+  antwoord: { telefoon: "На моєму телефоні", ai: "Спершу відповідає ШІ-асистент" },
   terug: "← Назад",
 };
 

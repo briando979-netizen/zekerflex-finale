@@ -113,6 +113,9 @@ export interface WorkerPushTexts {
   /** een afgezegde afspraak in de chat (lib/messaging/notify.ts) */
   afspraakAfgezegdTitle: (title: string) => string;
   afspraakAfgezegdBody: (name: string, when: string) => string;
+  /** een bericht op je eigen werknummer (lib/telephony/lijn-server.ts): soort = terugbelverzoek | voicemail | sms */
+  lijnTitle: (soort: "terugbelverzoek" | "voicemail" | "sms", van: string) => string;
+  lijnBody: string;
 }
 
 export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
@@ -210,6 +213,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     newMessage: "Nieuw bericht",
     afspraakAfgezegdTitle: (t) => `📅 Afgezegd: ${t}`,
     afspraakAfgezegdBody: (n, w) => `${n} heeft de afspraak van ${w} afgezegd.`,
+    lijnTitle: (s, v) => (s === "voicemail" ? `Voicemail van ${v}` : s === "sms" ? `Sms van ${v}` : `Terugbelverzoek van ${v}`),
+    lijnBody: "Bekijk het bij je werknummer.",
   },
   en: {
     hours: "hours",
@@ -305,6 +310,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     newMessage: "New message",
     afspraakAfgezegdTitle: (t) => `📅 Cancelled: ${t}`,
     afspraakAfgezegdBody: (n, w) => `${n} cancelled the event on ${w}.`,
+    lijnTitle: (s, v) => (s === "voicemail" ? `Voicemail from ${v}` : s === "sms" ? `Text from ${v}` : `Call-back request from ${v}`),
+    lijnBody: "See it at your work number.",
   },
   pl: {
     hours: "godz.",
@@ -400,6 +407,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     newMessage: "Nowa wiadomość",
     afspraakAfgezegdTitle: (t) => `📅 Odwołane: ${t}`,
     afspraakAfgezegdBody: (n, w) => `Wydarzenie (${w}) odwołane przez: ${n}.`,
+    lijnTitle: (s, v) => (s === "voicemail" ? `Poczta głosowa od ${v}` : s === "sms" ? `SMS od ${v}` : `Prośba o oddzwonienie od ${v}`),
+    lijnBody: "Zobacz przy swoim numerze służbowym.",
   },
   ro: {
     hours: "ore",
@@ -495,6 +504,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     newMessage: "Mesaj nou",
     afspraakAfgezegdTitle: (t) => `📅 Anulat: ${t}`,
     afspraakAfgezegdBody: (n, w) => `${n} a anulat evenimentul din ${w}.`,
+    lijnTitle: (s, v) => (s === "voicemail" ? `Mesaj vocal de la ${v}` : s === "sms" ? `SMS de la ${v}` : `Cerere de apel înapoi de la ${v}`),
+    lijnBody: "Vezi-l la numărul tău de serviciu.",
   },
   uk: {
     hours: "год",
@@ -590,6 +601,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     newMessage: "Нове повідомлення",
     afspraakAfgezegdTitle: (t) => `📅 Скасовано: ${t}`,
     afspraakAfgezegdBody: (n, w) => `Подію (${w}) скасовано. Організатор: ${n}.`,
+    lijnTitle: (s, v) => (s === "voicemail" ? `Голосове повідомлення від ${v}` : s === "sms" ? `SMS від ${v}` : `Запит на зворотний дзвінок від ${v}`),
+    lijnBody: "Переглянь біля свого робочого номера.",
   },
 };
 

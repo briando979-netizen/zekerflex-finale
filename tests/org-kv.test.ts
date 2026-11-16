@@ -18,7 +18,7 @@ vi.mock("@/lib/prisma", () => ({ prisma: {} }));
 import { ORG_KV_REGISTER, orgSleutel } from "@/lib/privacy/org-kv";
 import { exporteerOrganisatieGegevens, wisOrganisatieGegevens } from "@/lib/privacy/org-wissen";
 
-const MODULES = ["werkbonnen", "offertes", "checklists", "voorraad", "kamers", "ritten", "lidmaatschappen", "afspraken", "inkaart", "horeca-personeel"];
+const MODULES = ["werkbonnen", "offertes", "checklists", "voorraad", "kamers", "ritten", "lidmaatschappen", "afspraken", "inkaart", "horeca-personeel", "telefoon-berichten"];
 const LIB = join(process.cwd(), "lib");
 
 describe("register van organisatie-gegevens", () => {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { withAdminAccess } from "@/lib/auth/handlers";
 import { DEFAULT_PRICING } from "@/lib/telephony/plans";
 import { adminUpdateLine, adminUpdateSchema, getPricing, listLines, pricingSchema, savePricing } from "@/lib/telephony/lines";
+import { koppelNummer } from "@/lib/telephony/lijn-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,5 +22,8 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
     return NextResponse.json({ pricing });
   }
   const line = await adminUpdateLine(adminUpdateSchema.parse(body), actor);
-  return NextResponse.json({ line });
+  // actief gezet: het nummer in ons Twilio-account meteen op onze webhooks zetten (bellen en sms gaan dan naar de
+  // instellingen van deze klant, lib/telephony/lijn.ts); lukt dat niet, dan zegt `koppeling` wat de beheerder moet doen
+  const koppeling = line.status === "actief" && line.number ? await koppelNummer(line.number).catch(() => "Koppelen bij Twilio lukte niet.") : null;
+  return NextResponse.json({ line, koppeling });
 });

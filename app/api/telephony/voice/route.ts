@@ -5,6 +5,10 @@ import { twiml, say, sayAndGather, gatherDigits } from "@/lib/telephony/twiml";
 import { getCall, createCall, addTurn } from "@/lib/telephony/store";
 import { scriptOrDefault, openingText, LANG_MENU } from "@/lib/telephony/scripts";
 import { webhookTekst, WEBHOOK_MAX } from "@/lib/http/webhook-lezen";
+import { normalizeNumber } from "@/lib/telephony/consent";
+import { belplan } from "@/lib/telephony/lijn";
+import { nuInNederland, startTwiml } from "@/lib/telephony/lijn-twiml";
+import { bewaarBericht, instellingenVan, lijnBijNummer, opties } from "@/lib/telephony/lijn-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,6 +34,18 @@ export async function POST(request: Request): Promise<Response> {
       // en wie "hallo" zegt moet alsnog horen wie er belt en dat er opgenomen wordt.
       return xmlResponse(twiml(say(script.notice) + sayAndGather(script.question, `${base}/api/telephony/gather?callId=${existingId}`)));
     }
+  }
+
+  // Inkomend op een klantlijn (16 nov): de instellingen van die klant, niet het keuzemenu van ZekerFlex
+  // (lib/telephony/lijn.ts). Geen record onder "call:": dat is de eigen lijn (uitkomst, leads, meldingen).
+  const lijn = await lijnBijNummer(params.To).catch(() => null);
+  if (lijn) {
+    const inst = instellingenVan(lijn);
+    const plan = belplan(opties(lijn), lijn.answerAt.includes("ai"), inst, nuInNederland());
+    const van = params.From ? normalizeNumber(params.From) : "onbekend";
+    // meteen de terugval (buiten de tijden, geen doorschakelen): het gemiste gesprek bewaren
+    if (!plan.menu && !plan.bellen && params.CallSid) await bewaarBericht(lijn, params.CallSid, { soort: "gemist", van }).catch(() => undefined);
+    return xmlResponse(startTwiml(lijn.id, plan, inst, /^\+\d{9,15}$/.test(van) ? van : (lijn.number ?? "")));
   }
 
   // Inkomend: record + taalkeuze → /menu?step=lang.

@@ -89,7 +89,9 @@ export function TelefonieAdmin() {
                   const d = await post({ action: "update", id: l.id, ...patch });
                   if (d?.line) {
                     setLines((all) => (all ?? []).map((x) => (x.id === l.id ? (d.line as PhoneLine) : x)));
-                    setMessage({ tone: "ok", text: "Aanvraag bijgewerkt." });
+                    // actief gezet: het nummer is bij Twilio aan de webhooks gekoppeld, of `koppeling` zegt wat er nog moet
+                    const koppeling = typeof d.koppeling === "string" ? d.koppeling : null;
+                    setMessage(koppeling ? { tone: "warn", text: `Aanvraag bijgewerkt. ${koppeling}` } : { tone: "ok", text: (d.line as PhoneLine).status === "actief" ? "Aanvraag bijgewerkt; het nummer is gekoppeld." : "Aanvraag bijgewerkt." });
                   }
                 }}
               />

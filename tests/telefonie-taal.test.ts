@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { TELEFONIE_NL, TELEFONIE_TEKSTEN } from "@/lib/telephony/teksten";
-import { ANSWER_AT, BUNDLES, DEFAULT_PRICING, NUMBER_TYPES, OPTIONS, SHOW_ON, quote } from "@/lib/telephony/plans";
+import { ANSWER_AT, BUNDLES, DEFAULT_PRICING, NUMBER_TYPES, OPTIONS, quote } from "@/lib/telephony/plans";
 
 // "Je eigen werknummer" (/dashboard/telefonie) is in de taal van de werker. De Nederlandse bron blijft lib/telephony/plans.ts
 // (werkgever en beheer); de werker-pagina geeft `texts` mee, zonder `texts` blijft de pagina Nederlands.
@@ -41,7 +41,7 @@ describe("teksten in vijf talen", () => {
     for (const o of OPTIONS) expect(TELEFONIE_NL.optie[o.id], o.id).toEqual({ label: o.label, blurb: o.blurb });
     for (const b of BUNDLES) expect(TELEFONIE_NL.bundels[b.id], b.id).toEqual({ label: b.label, blurb: b.blurb });
     for (const a of ANSWER_AT) expect(TELEFONIE_NL.antwoord[a.id], a.id).toBe(a.label);
-    for (const s of SHOW_ON) expect(TELEFONIE_NL.tonen[s.id], s.id).toBe(s.label);
+    // "nummer tonen" (profiel, website, facturen) is weg sinds 16 nov: dat werd nergens echt gedaan
   });
 
   it("twaalf maanden en alle vier de statussen", () => {
@@ -76,8 +76,10 @@ describe("het scherm", () => {
 
   it("de werkerpagina kiest de taal op de server en geeft de teksten mee; werkgever en beheer geven niets mee", () => {
     const werker = bron("app/dashboard/telefonie/page.tsx");
-    expect(werker).toContain("TELEFONIE_TEKSTEN[await getLocale()]");
+    expect(werker).toContain("const locale = await getLocale();");
+    expect(werker).toContain("TELEFONIE_TEKSTEN[locale]");
     expect(werker).toContain("texts={tx}");
+    expect(werker).toContain("lijnTexts={LIJN_TEKSTEN[locale]}");
     expect(bron("app/werkgever/telefonie/page.tsx")).not.toContain("texts=");
   });
 

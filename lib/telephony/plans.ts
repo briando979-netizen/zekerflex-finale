@@ -45,8 +45,9 @@ export interface LineOption {
 }
 
 export const OPTIONS: readonly LineOption[] = [
-  { id: "ai", label: "AI-assistent", blurb: "Neemt dag en nacht op in het Nederlands of Engels, beantwoordt vragen over je bedrijf en plant terugbelafspraken. Je krijgt van elk gesprek een samenvatting." },
-  { id: "voicemail", label: "Voicemail in ZekerFlex", blurb: "Ingesproken berichten komen als tekst en geluid in je ZekerFlex-chat." },
+  // 16 nov: wat het echt doet (lib/telephony/lijn.ts): de assistent noteert vraag en naam, geen verzonnen antwoorden
+  { id: "ai", label: "AI-assistent", blurb: "Neemt op als jij niet kunt of buiten je openingstijden: vraagt de beller naar zijn vraag en naam en zet een terugbelverzoek voor je klaar. Je ziet het meteen in ZekerFlex, met een melding." },
+  { id: "voicemail", label: "Voicemail in ZekerFlex", blurb: "Ingesproken berichten krijg je als geluid en als uitgeschreven tekst in ZekerFlex, met een melding." },
   { id: "doorschakelen", label: "Doorschakelen", blurb: "Gesprekken gaan naar je eigen telefoon, binnen je openingstijden. Daarbuiten voicemail of de AI-assistent." },
   { id: "keuzemenu", label: "Keuzemenu", blurb: "\"Toets 1 voor planning, 2 voor administratie.\" Elke keuze komt bij de juiste persoon." },
   { id: "team", label: "Teamnummer", blurb: "Meerdere telefoons gaan tegelijk over. Wie het eerst opneemt, heeft het gesprek." },
@@ -70,12 +71,11 @@ export const BUNDLES: readonly Bundle[] = [
   { id: "compleet", label: "AI Compleet", blurb: "Nooit meer een gemiste klant.", options: ["voicemail", "doorschakelen", "keuzemenu", "team", "sms", "ai", "opnemen"] },
 ];
 
-export type AnswerAt = "telefoon" | "app" | "ai";
-export const ANSWER_AT: readonly { id: AnswerAt; label: string; soon?: boolean }[] = [
+// Opnemen in de app of in de browser (Twilio Voice SDK) bieden we niet aan (16 nov, eigenaar: nergens "binnenkort").
+export type AnswerAt = "telefoon" | "ai";
+export const ANSWER_AT: readonly { id: AnswerAt; label: string }[] = [
   { id: "telefoon", label: "Op mijn eigen telefoon" },
   { id: "ai", label: "De AI-assistent neemt eerst op" },
-  // bellen in de browser/app vraagt nog een eigen koppeling (Twilio Voice SDK)
-  { id: "app", label: "In de ZekerFlex-app en op de computer", soon: true },
 ];
 
 export type ShowOn = "profiel" | "diensten" | "website" | "facturen";

@@ -26,6 +26,8 @@ export interface OrgKvRegel {
 }
 
 export const ORG_KV_REGISTER: readonly OrgKvRegel[] = [
+  // berichten op het zakelijke nummer van een bedrijf (terugbelverzoeken, voicemail, sms; lib/telefoon-berichten/sleutel.ts)
+  { module: "telefoon-berichten", voorvoegsel: "telefoon:berichten:", soort: "organisatie", omschrijving: "berichten op het zakelijke nummer (bellers en sms)" },
   { module: "werkbonnen", voorvoegsel: "werkbonnen:item:", soort: "organisatie", omschrijving: "werkbonnen met klantgegevens" },
   { module: "werkbonnen", voorvoegsel: "werkbonnen:teller:", soort: "organisatie", omschrijving: "nummerteller per jaar" },
   { module: "werkbonnen", voorvoegsel: "werkbonnen:nr:", soort: "organisatie", omschrijving: "nummerclaims" },

@@ -1,4 +1,7 @@
+import { after } from "next/server";
 import { handtekeningOngeldigTekst } from "@/lib/webhooks/handtekening";
+import { normalizeNumber } from "@/lib/telephony/consent";
+import { bewaarBericht, lijnBijNummer, meldBericht, opties } from "@/lib/telephony/lijn-server";
 import { readForm, signatureValid, xmlResponse } from "@/lib/telephony/webhook";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { antwoordOpSpoed } from "@/lib/spoed/oproep";
@@ -23,6 +26,15 @@ export async function POST(request: Request): Promise<Response> {
   try {
     await enforceRateLimit({ name: "sms-inkomend", identifier: van, limit: 20, windowSeconds: 600, message: "te veel berichten" });
   } catch {
+    return xmlResponse("<Response/>");
+  }
+  // een sms naar een klantlijn (16 nov): bewaren bij die lijn en de klant een seintje geven; geen automatisch antwoord
+  const lijn = await lijnBijNummer(params.To).catch(() => null);
+  if (lijn) {
+    if (opties(lijn).has("sms") && params.MessageSid) {
+      const b = await bewaarBericht(lijn, params.MessageSid, { soort: "sms", van: normalizeNumber(van), tekst: tekst.slice(0, 1600) }).catch(() => null);
+      if (b) after(() => meldBericht(lijn, b));
+    }
     return xmlResponse("<Response/>");
   }
   const antwoord = await antwoordOpSpoed(van, tekst, "sms").catch(() => null);

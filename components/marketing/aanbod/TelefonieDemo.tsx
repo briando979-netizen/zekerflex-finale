@@ -210,7 +210,7 @@ export function TelefonieDemo() {
               </ol>
               <p className="mt-4 text-xs text-neutralx-500">
                 Een voorbeeld met een verzonnen testklant, voorgelezen door onze eigen computerstem.
-                {gesprek.zaak !== VOORBEELD_ZAAK ? " De assistent noemt alleen wat op je website staat; de rest zet hij door als terugbelverzoek." : ""} De assistent aan je eigen nummer komt binnenkort.
+                {gesprek.zaak !== VOORBEELD_ZAAK ? " De assistent noemt alleen wat op je website staat; de rest zet hij door als terugbelverzoek." : ""} Op je eigen ZekerFlex-nummer werkt hij net zo.
               </p>
             </div>
           )}

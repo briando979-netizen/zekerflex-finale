@@ -4,6 +4,7 @@ import { linesOf, pricingFor } from "@/lib/telephony/lines";
 import { freeAccess } from "@/lib/billing/comp";
 import { Telefonie } from "@/components/app/Telefonie";
 import { TELEFONIE_TEKSTEN } from "@/lib/telephony/teksten";
+import { LIJN_TEKSTEN } from "@/lib/telephony/lijn-teksten";
 import { getLocale } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,8 @@ export const dynamic = "force-dynamic";
 export default async function MyNumberPage() {
   const principal = await requirePrincipal();
   const free = await freeAccess(principal);
-  const tx = TELEFONIE_TEKSTEN[await getLocale()];
+  const locale = await getLocale();
+  const tx = TELEFONIE_TEKSTEN[locale];
   const [pricing, lines] = await Promise.all([pricingFor(free), linesOf("persoonlijk", principal.userId)]);
   return (
     <>
@@ -20,7 +22,7 @@ export default async function MyNumberPage() {
           {tx.terug}
         </Link>
       </div>
-      <Telefonie scope="persoonlijk" pricing={pricing} free={free} initialLines={lines} canRequest={hasRole(principal, "FREELANCER", "PLATFORM_ADMIN")} texts={tx} />
+      <Telefonie scope="persoonlijk" pricing={pricing} free={free} initialLines={lines} canRequest={hasRole(principal, "FREELANCER", "PLATFORM_ADMIN")} texts={tx} lijnTexts={LIJN_TEKSTEN[locale]} />
     </>
   );
 }

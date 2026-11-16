@@ -18,6 +18,8 @@ import { prisma } from "@/lib/prisma";
 
 /** Sleutels (prefix + userId) die bij een verwijderverzoek direct weg mogen. */
 export const ERASABLE_KV_PREFIXES = [
+  // de berichten op je eigen werknummer (lib/telefoon-berichten/sleutel.ts, telefoon:berichten:<userId>:<lijn>)
+  "telefoon:berichten:",
   // de verwijzing van een medewerker naar de horecazaak waar hij werkt (lib/horeca-personeel/store.ts, horeca:medewerker:<userId>)
   "horeca:medewerker:",
   "agenda:",

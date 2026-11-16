@@ -8,7 +8,6 @@ import {
   NEEDS_OWN_NUMBER,
   NUMBER_TYPES,
   OPTIONS,
-  SHOW_ON,
   bundleById,
   euro,
   numberTypeById,
@@ -19,8 +18,9 @@ import {
   type NumberKind,
   type OptionId,
   type Pricing,
-  type ShowOn,
 } from "@/lib/telephony/plans";
+import { TelefonieLijn } from "@/components/app/TelefonieLijn";
+import { LIJN_NL, type LijnTeksten } from "@/lib/telephony/lijn-teksten";
 import type { LineScope, LineStatus, PhoneLine } from "@/lib/telephony/lines";
 import { TELEFONIE_NL, type TelefonieTeksten } from "@/lib/telephony/teksten";
 import { vulIn } from "@/lib/i18n/vul-in";
@@ -52,6 +52,7 @@ export function Telefonie({
   initialLines,
   canRequest,
   texts,
+  lijnTexts,
 }: {
   scope: LineScope;
   pricing: Pricing;
@@ -61,6 +62,8 @@ export function Telefonie({
   canRequest: boolean;
   /** de teksten in de taal van de werker (lib/telephony/teksten.ts); zonder: Nederlands (werkgever, beheer) */
   texts?: TelefonieTeksten | undefined;
+  /** de teksten van het beheer van een actieve lijn, in dezelfde taal (lib/telephony/lijn-teksten.ts) */
+  lijnTexts?: LijnTeksten | undefined;
 }) {
   const tx = texts ?? TELEFONIE_NL;
   const [lines, setLines] = useState(initialLines);
@@ -68,7 +71,6 @@ export function Telefonie({
   const [bundle, setBundle] = useState<BundleId | null>("start");
   const [options, setOptions] = useState<OptionId[]>([]);
   const [answerAt, setAnswerAt] = useState<AnswerAt[]>(["telefoon"]);
-  const [showOn, setShowOn] = useState<ShowOn[]>(["profiel"]);
   const [ownNumber, setOwnNumber] = useState("");
   const [forwardTo, setForwardTo] = useState("");
   const [region, setRegion] = useState("");
@@ -98,7 +100,8 @@ export function Telefonie({
     const res = await fetch("/api/telefonie", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scope, kind, bundle, options: [...wanted], answerAt, showOn, ownNumber, forwardTo, region, note }),
+      // showOn bestaat nog in het model, maar we beloven geen plekken waar het nummer vanzelf verschijnt (16 nov)
+      body: JSON.stringify({ scope, kind, bundle, options: [...wanted], answerAt, showOn: [], ownNumber, forwardTo, region, note }),
     }).catch(() => null);
     const data = res ? await res.json().catch(() => ({})) : null;
     setBusy(false);
@@ -150,6 +153,12 @@ export function Telefonie({
                   <button type="button" onClick={() => void cancel(l.id)} className="text-xs text-neutralx-500 underline hover:text-crit">
                     {tx.annuleren}
                   </button>
+                )}
+                {/* een actieve lijn: berichten (terugbelverzoeken, voicemail, sms) en instellingen (lib/telephony/lijn.ts) */}
+                {l.status === "actief" && (
+                  <div className="w-full">
+                    <TelefonieLijn scope={scope} line={l} kanInstellen={canRequest} texts={lijnTexts ?? LIJN_NL} />
+                  </div>
                 )}
               </li>
             ))}
@@ -249,27 +258,15 @@ export function Telefonie({
             {/* 3. waar */}
             <section className="rounded-2xl border border-hair bg-white p-5 shadow-e1">
               <h2 className="font-display text-base font-bold text-ink">{tx.stap3}</h2>
-              <div className="mt-3 grid gap-5 sm:grid-cols-2">
-                <fieldset>
-                  <legend className="text-sm font-medium text-ink">{tx.opnemen}</legend>
-                  {ANSWER_AT.map((a) => (
-                    <label key={a.id} className={`mt-2 flex items-center gap-2 text-sm ${a.soon ? "text-neutralx-400" : "text-neutralx-700"}`}>
-                      <input type="checkbox" disabled={a.soon} checked={answerAt.includes(a.id)} onChange={() => setAnswerAt((l) => toggle(l, a.id))} className="h-4 w-4" />
-                      {tx.antwoord[a.id]}
-                      {a.soon && <span className="rounded-full bg-paper-soft px-2 py-0.5 text-[11px] text-neutralx-600">{tx.binnenkort}</span>}
-                    </label>
-                  ))}
-                </fieldset>
-                <fieldset>
-                  <legend className="text-sm font-medium text-ink">{tx.nummerTonen}</legend>
-                  {SHOW_ON.filter((s) => bedrijf || !s.bedrijfOnly).map((s) => (
-                    <label key={s.id} className="mt-2 flex items-center gap-2 text-sm text-neutralx-700">
-                      <input type="checkbox" checked={showOn.includes(s.id)} onChange={() => setShowOn((l) => toggle(l, s.id))} className="h-4 w-4" />
-                      {tx.tonen[s.id]}
-                    </label>
-                  ))}
-                </fieldset>
-              </div>
+              <fieldset className="mt-3">
+                <legend className="text-sm font-medium text-ink">{tx.opnemen}</legend>
+                {ANSWER_AT.map((a) => (
+                  <label key={a.id} className="mt-2 flex items-center gap-2 text-sm text-neutralx-700">
+                    <input type="checkbox" checked={answerAt.includes(a.id)} onChange={() => setAnswerAt((l) => toggle(l, a.id))} className="h-4 w-4" />
+                    {tx.antwoord[a.id]}
+                  </label>
+                ))}
+              </fieldset>
               {needsForward && (
                 <label className="mt-4 block text-sm font-medium text-ink">
                   {tx.doorschakelNaar}

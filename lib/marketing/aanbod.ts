@@ -517,11 +517,17 @@ export const AANBOD: AanbodItem[] = [
     naam: "Zakelijk nummer & AI-beller",
     kort: "Een vast zakelijk nummer, met een assistent die opneemt als jij niet kunt.",
     tekst:
-      "Een zakelijk telefoonnummer dat met je meegaat, met een slimme assistent die opneemt, vragen beantwoordt en een terugbelverzoek voor je klaarzet.",
-    punten: ["Zakelijk nummer", "Assistent die opneemt als jij bezig bent", "Gesprekken terug te lezen"],
+      "Een zakelijk telefoonnummer met doorschakelen binnen je openingstijden, een keuzemenu of teamnummer, en een assistent die opneemt als jij niet kunt: hij noteert de vraag en naam van de beller en zet een terugbelverzoek voor je klaar. Voicemail en sms komen in ZekerFlex, met een melding.",
+    punten: [
+      "Nieuw mobiel nummer, of je eigen nummer houden",
+      "Doorschakelen binnen je openingstijden, ook naar een team",
+      "Assistent die opneemt als jij bezig bent en een terugbelverzoek klaarzet",
+      "Voicemail als geluid en uitgeschreven tekst",
+    ],
     voorWie: "Zaken die geen oproep willen missen",
-    status: "binnenkort",
-    start: DEMO,
+    // 16 nov: per klantlijn gebouwd (lib/telephony/lijn.ts): doorschakelen, keuzemenu, team, assistent, voicemail, opnemen, sms
+    status: "beschikbaar",
+    start: AANMELDEN,
     zoekwoorden: ["zakelijk telefoonnummer", "ai telefoonassistent", "telefonische assistent voor mijn bedrijf"],
     luisterdemo: true,
   },

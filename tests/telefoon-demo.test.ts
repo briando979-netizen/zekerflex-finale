@@ -129,14 +129,16 @@ describe("de route en de pagina", () => {
     expect(route).toContain("b.data.extra?.trim()");
   });
 
-  it("de telefoniepagina toont de demo, eerlijk: voorbeeld, eigen stem, niets bewaard, komt binnenkort", () => {
+  it("de telefoniepagina toont de demo, eerlijk: voorbeeld, eigen stem, niets bewaard, geen 'binnenkort'", () => {
     expect(AANBOD.find((a) => a.slug === "telefonie")?.luisterdemo).toBe(true);
     expect(lees("components/marketing/aanbod/AanbodStandaard.tsx")).toContain("{a.luisterdemo && <TelefonieDemo />}");
     const demo = lees("components/marketing/aanbod/TelefonieDemo.tsx");
     expect(demo).toContain("We bewaren niets van wat je invult.");
     expect(demo).toContain("voorgelezen door onze eigen computerstem");
     expect(demo).toContain("De assistent noemt alleen wat op je website staat");
-    expect(demo).toContain("komt binnenkort");
+    // 16 nov: de lijn per klant werkt (lib/telephony/lijn.ts), dus geen "komt binnenkort" meer
+    expect(demo).toContain("Op je eigen ZekerFlex-nummer werkt hij net zo.");
+    expect(demo).not.toMatch(/binnenkort/i);
   });
 
   it("de tweede stem staat in de stemmenlijst van Piper", () => {
