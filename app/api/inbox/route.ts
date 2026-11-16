@@ -23,12 +23,16 @@ import { chatPrivacy } from "@/lib/messaging/settings";
 import { disappearCutoff } from "@/lib/messaging/store";
 import { scanChatMessage } from "@/lib/agenda/scan";
 import { BERICHT_MAX } from "@/lib/chat/lange-tekst";
+import { lijstVersie, sinceUitUrl } from "@/lib/messaging/poll-versie";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/inbox — the signed-in user's threads, unread counts + a name directory.
 // ?visible=1 is sent while the polling tab is in view (suppresses chat pushes).
+// ?since=<versie> (16 nov): is er niets veranderd aan wat de lijst toont (gesprekken, ongelezen, namen, avatars, contacten,
+// instellingen), dan alleen { ongewijzigd, versie, presence }. Zonder since precies het oude antwoord, plus `versie`.
+// Gemeten 14-16 nov: 5.641 lijstpolls in 31 uur, mediaan 1.754 B, 7,5 MB; de gesprekspoll met since zat al op 86% klein.
 async function handleGET(request: Request): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
@@ -97,17 +101,15 @@ async function handleGET(request: Request): Promise<NextResponse> {
     const privacy = await chatPrivacy(ids);
     for (const id of privacy.hideOnline) if (id !== p.userId && presence[id]) presence[id] = { online: false, lastSeen: null };
 
-    return NextResponse.json({
-      me: { userId: p.userId, name: p.fullName, isAdmin: admin },
-      threads: rows,
-      directory,
-      presence,
-      avatars,
-      contacts,
-      chatPrefs: { lists: Object.keys(prefs.lists), hasPin: Boolean(prefs.pinHash), lockedCount, pinOk, blocked: prefs.blocked },
-      // muted and archived chats don't count towards the badge
-      totalUnread: rows.filter((r) => !r.muted && !r.archived).reduce((s, r) => s + r.unread + (r.gemarkeerd ? 1 : 0), 0),
-    });
+    const me = { userId: p.userId, name: p.fullName, isAdmin: admin };
+    const chatPrefs = { lists: Object.keys(prefs.lists), hasPin: Boolean(prefs.pinHash), lockedCount, pinOk, blocked: prefs.blocked };
+    // muted and archived chats don't count towards the badge
+    const totalUnread = rows.filter((r) => !r.muted && !r.archived).reduce((s, r) => s + r.unread + (r.gemarkeerd ? 1 : 0), 0);
+    // alles wat de client van de lijst toont zit in de versie; de aanwezigheid niet (die gaat altijd mee)
+    const versie = lijstVersie({ me, threads: rows, directory, avatars, contacts, chatPrefs, totalUnread });
+    if (sinceUitUrl(request.url) === versie) return NextResponse.json({ ongewijzigd: true, versie, presence });
+
+    return NextResponse.json({ versie, me, threads: rows, directory, presence, avatars, contacts, chatPrefs, totalUnread });
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });

@@ -5,7 +5,7 @@ import { Avatar } from "./Avatar";
 import { MessageBubble } from "./MessageBubble";
 import { useMessageSearch } from "./useMessageSearch";
 import { useStickyScroll } from "./useStickyScroll";
-import { beoordeelPollAntwoord, sinceQuery } from "@/lib/messaging/poll-since";
+import { beoordeelPollAntwoord, metSince, sinceQuery } from "@/lib/messaging/poll-since";
 import { ChatSearchBar } from "./ChatSearchBar";
 import { ForwardPicker } from "./ForwardPicker";
 import { ChatPinnedBanner } from "./ChatPinnedBanner";
@@ -317,10 +317,26 @@ function InboxPageInner({
     });
   }, [messages, active, jumpTo, say, ib]);
 
+  // de versie van de gesprekslijst uit het laatste volledige antwoord (lib/messaging/poll-since.ts); de lijst wordt alleen hier
+  // gezet, dus er is geen lokale wijziging die de versie ongeldig hoeft te maken: een handeling verandert de server, en de
+  // server geeft dan een nieuwe versie met de hele lijst
+  const lijstVersieRef = useRef<string | null>(null);
   const loadThreads = useCallback(async () => {
-    const r = await fetch(`/api/inbox${visibleQuery()}`, { cache: "no-store", headers: pinHeaders() });
+    const since = lijstVersieRef.current;
+    const r = await fetch(`/api/inbox${metSince(visibleQuery(), since)}`, { cache: "no-store", headers: pinHeaders() });
     if (!r.ok) return;
     const d = await r.json();
+    const uitslag = beoordeelPollAntwoord(d, since, "threads");
+    if (uitslag.soort === "ongewijzigd") {
+      setPresence((p) => ({ ...p, ...d.presence }));
+      return;
+    }
+    if (uitslag.soort === "opnieuw-volledig") {
+      lijstVersieRef.current = null;
+      if (since) void loadThreads();
+      return;
+    }
+    lijstVersieRef.current = uitslag.versie;
     setMe(d.me);
     setThreads(d.threads);
     if (d.chatPrefs) setChatPrefs(d.chatPrefs);

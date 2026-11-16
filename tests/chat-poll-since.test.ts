@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { lijstVersie, sinceUitUrl } from "@/lib/messaging/poll-versie";
-import { beoordeelPollAntwoord, sinceQuery } from "@/lib/messaging/poll-since";
+import { beoordeelPollAntwoord, metSince, sinceQuery } from "@/lib/messaging/poll-since";
 
 // De zuinige poll van de chat (14 nov 2026): de server geeft een versie over alles wat de lijst toont; met ?since=<versie>
 // komt bij "ongewijzigd" alleen de aanwezigheid terug. De client gelooft dat alleen voor zijn eigen versie en valt bij twijfel
@@ -46,6 +46,19 @@ describe("poll-since (client)", () => {
     expect(sinceQuery(null)).toBe("");
     expect(sinceQuery(undefined)).toBe("");
     expect(sinceQuery("0123456789abcdef")).toBe("&since=0123456789abcdef");
+  });
+
+  it("metSince: achter een lege of een bestaande querystring (de lijstpoll heeft soms geen ?visible=1)", () => {
+    expect(metSince("", null)).toBe("");
+    expect(metSince("?visible=1", undefined)).toBe("?visible=1");
+    expect(metSince("", "0123456789abcdef")).toBe("?since=0123456789abcdef");
+    expect(metSince("?visible=1", "0123456789abcdef")).toBe("?visible=1&since=0123456789abcdef");
+  });
+
+  it("de gesprekslijst: volledig is een antwoord met `threads`, niet met `messages`", () => {
+    expect(beoordeelPollAntwoord({ versie: "cccccccccccccccc", threads: [] }, null, "threads")).toEqual({ soort: "volledig", versie: "cccccccccccccccc" });
+    expect(beoordeelPollAntwoord({ versie: "cccccccccccccccc", messages: [] }, null, "threads")).toEqual({ soort: "opnieuw-volledig" });
+    expect(beoordeelPollAntwoord({ ongewijzigd: true, versie: "aaaaaaaaaaaaaaaa", presence: {} }, "aaaaaaaaaaaaaaaa", "threads")).toEqual({ soort: "ongewijzigd", versie: "aaaaaaaaaaaaaaaa" });
   });
 
   it("ongewijzigd: alleen geloven voor precies onze eigen versie", () => {
@@ -94,5 +107,23 @@ describe("route en InboxPage volgen de regels", () => {
     // de chatregels blijven: sticky scroll op het laatste id, optimistisch met failed + Opnieuw
     expect(s).toContain("useStickyScroll(");
     expect(s).toContain("failed: reason");
+  });
+
+  it("de lijstroute (GET /api/inbox) antwoordt bij een gelijke since met alleen ongewijzigd + versie + presence", () => {
+    const s = readFileSync("app/api/inbox/route.ts", "utf8");
+    expect(s).toContain("const versie = lijstVersie({ me, threads: rows, directory, avatars, contacts, chatPrefs, totalUnread });");
+    expect(s).toContain("if (sinceUitUrl(request.url) === versie) return NextResponse.json({ ongewijzigd: true, versie, presence });");
+    // zonder since het oude antwoord, plus versie
+    expect(s).toContain("return NextResponse.json({ versie, me, threads: rows, directory, presence, avatars, contacts, chatPrefs, totalUnread });");
+  });
+
+  it("InboxPage: de lijstpoll stuurt since uit de onthouden lijstversie en zet bij ongewijzigd alleen de aanwezigheid", () => {
+    const s = readFileSync("components/chat/InboxPage.tsx", "utf8");
+    expect(s).toContain("fetch(`/api/inbox${metSince(visibleQuery(), since)}`");
+    expect(s).toContain('beoordeelPollAntwoord(d, since, "threads")');
+    expect(s).toContain("if (since) void loadThreads();");
+    expect(s).toContain("lijstVersieRef.current = uitslag.versie;");
+    // de lijst wordt alleen door de poll gezet (geen optimistische lijstwijziging die de versie ongeldig moet maken)
+    expect(s.match(/setThreads\(/g)?.length).toBe(1);
   });
 });
