@@ -315,7 +315,8 @@ export const AANBOD: AanbodItem[] = [
       "Rechtstreekse, versleutelde verbindingen tussen apparaten",
       "Toegangscodes uit ZekerFlex, eenmalig en met een vervaldatum",
       "Zie welke apparaten verbonden zijn en zet er een af",
-      "Geen Tailscale-, Cloudflare- of andere VPN-abonnementen nodig",
+      // 16 nov 2026: "geen Tailscale nodig" klopte niet helemaal: op elk apparaat komt de gratis Tailscale-app
+      "Geen abonnement bij een VPN-dienst: op elk apparaat komt alleen de gratis Tailscale-app",
     ],
     voorWie: "Bedrijven met mensen op afstand, ICT en wie met gevoelige gegevens werkt",
     prijs: "€ 4 per gebruiker per maand, of € 149 per maand voor het hele bedrijf",
@@ -637,7 +638,8 @@ export const AANBOD: AanbodItem[] = [
   {
     slug: "e-facturatie",
     pijler: "geld",
-    naam: "E-facturatie (UBL / Peppol)",
+    // 16 nov 2026: "(UBL / Peppol)" weg; versturen via het Peppol-netwerk kan pas met een toegangspunt (lib/efactuur, owner-todo)
+    naam: "E-facturatie (UBL)",
     kort: "Elke factuur ook als e-factuur die je boekhoudpakket direct inleest, zonder overtypen.",
     tekst:
       "Elke factuur van ZekerFlex is ook een e-factuur volgens de Europese norm (UBL, Peppol BIS 3 / NLCIUS). Je boekhoudpakket leest hem direct in: geen overtypen, geen fouten. Download het bestand per factuur of laat het automatisch naar je pakket mailen.",

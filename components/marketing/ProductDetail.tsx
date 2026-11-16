@@ -110,6 +110,8 @@ export function ProductDetail({
   // wat de shop nu over betalen mag zeggen: hetzelfde als de kassa (online, per overschrijving, of even niet)
   const betaalwijze = useShopBetaalwijze();
   const betaalNoot = betaalwijze === "overschrijving" ? t.shop.bankPaymentNote : betaalwijze === "dicht" ? t.shop.paymentClosedNote : t.shop.securePaymentNote;
+  // 16 nov 2026: kan bestellen nu niet, dan ook geen "bestel binnen … morgen in huis" en geen actieve knop voor de winkelwagen
+  const bestellenDicht = betaalwijze === "dicht";
   // het bezorgmoment telt af (zoals bol.com), met werkdagen en feestdagen; pas in de browser uitgerekend (hydratie)
   const bezorg = useBezorgmoment(30_000);
   const { locale } = useI18n();
@@ -128,8 +130,8 @@ export function ProductDetail({
     : product.variants[0];
   const variantPriceCents = variant?.priceCents ?? product.priceCents;
   const variantStock = variant?.stock ?? product.stock;
-  const canBuy = Boolean(variant) && variantStock > 0;
-  const buyLabel = !variant ? t.shop.chooseOptionShort : variantStock <= 0 ? t.shop.soldOut : t.shop.addToCart;
+  const canBuy = Boolean(variant) && variantStock > 0 && !bestellenDicht;
+  const buyLabel = bestellenDicht ? t.shop.orderClosedShort : !variant ? t.shop.chooseOptionShort : variantStock <= 0 ? t.shop.soldOut : t.shop.addToCart;
   const { modus } = useShopModus();
   const fav = wishlist.has(product.id);
   // onthouden voor "Onlangs bekeken" (alleen in deze browser)
@@ -327,10 +329,10 @@ export function ProductDetail({
             {variant ? (variantStock > 0 ? fmt(t.shop.inStock, { n: variantStock }) : t.shop.outOfStockVariant) : t.shop.pickVariantForStock}
           </p>
           {variant && variantStock <= 0 && <VoorraadMelding key={variant.id} variantId={variant.id} />}
-          {variant && variantStock > 0 && product.seller && (
+          {variant && variantStock > 0 && product.seller && !bestellenDicht && (
             <p className="mt-1 text-[13px] font-semibold text-neutralx-600">{fmt(t.shop.bezorgVerkoper, { seller: product.seller, n: VERKOPER_VERZENDT_BINNEN_WERKDAGEN })}</p>
           )}
-          {bezorg && variant && variantStock > 0 && !product.seller && (
+          {bezorg && variant && variantStock > 0 && !product.seller && !bestellenDicht && (
             <p className="mt-1 text-[13px] font-semibold text-ok">
               {bezorgZin(bezorg, { aftellen: t.shop.bezorgAftellen, nu: t.shop.bezorgNu, morgen: t.shop.bezorgMorgen, uurEnMin: t.shop.uurEnMin, uren: t.shop.uren, minuten: t.shop.minuten }, locale)}
             </p>
@@ -491,7 +493,7 @@ export function ProductDetail({
               {t.shop.shippingReturns}
             </h2>
             <ul className="mt-4 space-y-2.5 text-[15px] leading-relaxed text-neutralx-700">
-              {(product.seller ? [fmt(t.shop.sellerShipsNote, { seller: product.seller }), t.shop.uspReturns, betaalNoot] : [t.shop.announcement, t.shop.uspReturns, t.shop.uspInvoice, betaalNoot]).map((line) => (
+              {(product.seller ? [fmt(t.shop.sellerShipsNote, { seller: product.seller }), t.shop.uspReturns, betaalNoot] : [...(bestellenDicht ? [] : [t.shop.announcement]), t.shop.uspReturns, t.shop.uspInvoice, betaalNoot]).map((line) => (
                 <li key={line} className="flex gap-3">
                   <span aria-hidden className="mt-[0.6rem] h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
                   <span>{line}</span>
@@ -593,7 +595,7 @@ export function ProductDetail({
             <button
               type="button"
               onClick={() => (canBuy ? addToCart() : buyRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }))}
-              className="inline-flex h-11 shrink-0 items-center gap-2 rounded-lg bg-brand-500 px-5 text-[14px] font-bold text-white"
+              className={`inline-flex h-11 shrink-0 items-center gap-2 rounded-lg px-5 text-[14px] font-bold text-white ${bestellenDicht ? "bg-neutralx-300" : "bg-brand-500"}`}
             >
               <IconCart size={17} />
               {buyLabel}

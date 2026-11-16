@@ -6,6 +6,7 @@ import { getManagedWebsite, isUnlocked, WEBSITE_PLANS } from "@/lib/website/mana
 import { WebsiteManage } from "@/components/app/WebsiteManage";
 import { renewalView } from "@/lib/website/renewal";
 import { monitorView } from "@/lib/website/uptime";
+import { stripeBetalenDicht } from "@/lib/billing/overschrijving-bron";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,8 @@ export default async function WebsiteBeheerPage() {
   const record = tenantId ? await getManagedWebsite(tenantId) : null;
   const renewal = record?.domain && isUnlocked(record) ? await renewalView(record).catch(() => null) : null;
   const monitor = record?.domain && isUnlocked(record) ? await monitorView(record.id, record.domain).catch(() => null) : null;
+  // online betalen dicht: de abonnementen zeggen dat (components/app/WebsiteManage.tsx)
+  const betalenDicht = await stripeBetalenDicht();
 
   return (
     <>
@@ -61,6 +64,7 @@ export default async function WebsiteBeheerPage() {
         }}
         plans={WEBSITE_PLANS}
         adminOverride={admin}
+        betalenDicht={betalenDicht}
       />
     </>
   );

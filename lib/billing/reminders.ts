@@ -106,7 +106,7 @@ function reminderMail(stage: 1 | 2, orgName: string, rows: { id: string; number:
       : "Is er iets niet in orde met een factuur? Antwoord dan op deze mail of neem contact op met support, dan zoeken we het samen uit. Blijft betaling uit, dan nemen we persoonlijk contact op en kunnen we nieuwe klussen tijdelijk pauzeren.";
   return {
     subject,
-    text: `${intro}\n\n${list}\n\nTotaal: ${euro(total)}\n\nBetalen kan per factuur met de link erachter (iDEAL of creditcard), of alles tegelijk op ${env.APP_BASE_URL.replace(/\/+$/, "")}/werkgever/facturen.\n\n${outro}\n\nMet vriendelijke groet,\nZekerFlex`,
+    text: `${intro}\n\n${list}\n\nTotaal: ${euro(total)}\n\nVia de link achter elke factuur zie je hoe je hem betaalt. Al je facturen staan ook op ${env.APP_BASE_URL.replace(/\/+$/, "")}/werkgever/facturen.\n\n${outro}\n\nMet vriendelijke groet,\nZekerFlex`,
   };
 }
 

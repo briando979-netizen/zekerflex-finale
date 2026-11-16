@@ -8,6 +8,8 @@ import { BillingPrefsForm } from "@/components/app/BillingPrefsForm";
 import { EfactuurSettings } from "@/components/werkgever/EfactuurSettings";
 import { InvoicesOverview, type InvoiceRow } from "@/components/app/InvoicesOverview";
 import { payUrl } from "@/lib/billing/pay-link";
+import { huidigeFactuurBetaalwijze } from "@/lib/billing/overschrijving-bron";
+import { peppolIngesteld } from "@/lib/efactuur/instellingen";
 import { getDict } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +21,8 @@ export default async function WerkgeverFacturenPage() {
   await naarStudioAccount(principal, "facturen");
   const scope = await resolveEmployerScope(principal);
   const billing = scope.tenantIds[0] ? await getOrgProfileExtra(scope.tenantIds[0]) : {};
+  // online betalen dicht: geen iDEAL-knoppen maar de overschrijving (components/app/InvoicesOverview.tsx)
+  const betaalwijze = await huidigeFactuurBetaalwijze();
 
   const invoices = await prisma.invoice.findMany({
     where: { recipientTenantId: { in: scope.tenantIds } },
@@ -88,13 +92,13 @@ export default async function WerkgeverFacturenPage() {
 
       {/* e-factuur (lib/efactuur): Peppol-adres, ontvangstadres en automatisch versturen */}
       <div id="e-factuur" className="mt-8 scroll-mt-24">
-        <Panel title="E-factuur (UBL / Peppol)">
+        <Panel title={peppolIngesteld() ? "E-factuur (UBL / Peppol)" : "E-factuur (UBL)"}>
           <EfactuurSettings />
         </Panel>
       </div>
 
       <div className="mt-8">
-        <InvoicesOverview invoices={rows} t={iv} />
+        <InvoicesOverview invoices={rows} t={iv} betaalwijze={betaalwijze} />
       </div>
     </>
   );

@@ -14,9 +14,9 @@ export async function POST(req: Request): Promise<NextResponse> {
   return NextResponse.json({ ok: true });
 }
 
-// A plain link click lands here too — bounce to the friendly page.
+// A plain link click lands here too — bounce to the friendly page. Alleen met een geldige code "afgemeld" (16 nov 2026).
 export async function GET(req: Request): Promise<NextResponse> {
   const t = token(req);
-  await unsubscribeAny(t).catch(() => null);
-  return NextResponse.redirect(new URL(`/nieuwsbrief/afmelden?done=1`, req.url));
+  const ok = await unsubscribeAny(t).catch(() => false);
+  return NextResponse.redirect(new URL(ok ? "/nieuwsbrief/afmelden?done=1" : "/nieuwsbrief/afmelden?ongeldig=1", req.url));
 }

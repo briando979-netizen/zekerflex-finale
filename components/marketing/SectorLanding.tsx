@@ -213,7 +213,7 @@ export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City 
           {[
             ["Snel bij uitval", `Je klus gaat eerst naar krachten die snel in ${c.name} kunnen zijn — minder no-shows, minder gedoe op de drukte.`],
             ["Jij houdt de regie", "Kies zelf wie je inroostert op basis van reviews en ervaring, blokkeer wie niet bevalt, en bouw je vaste ploeg met favorieten."],
-            ["Alles geregeld", "Urenregistratie met check-in, automatische facturen, modelovereenkomst en verzekering — zzp of uitzend, jij kiest."],
+            ["Alles geregeld", "Urenregistratie met check-in, automatische facturen en een modelovereenkomst — zzp of uitzend, jij kiest."],
           ].map(([t, b]) => (
             <li key={t} className="rounded-2xl border border-hair bg-white p-5">
               <p className="font-display font-bold text-ink">{t}</p>

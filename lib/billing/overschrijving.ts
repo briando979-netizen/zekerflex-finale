@@ -69,3 +69,15 @@ export function overschrijvingRegels(o: Overschrijving): string[] {
 
 /** Wat de factuur over online betalen mag zeggen: alleen als Stripe echt betaalt. */
 export type OnlineStand = "open" | "dicht";
+
+/**
+ * Hoe een factuur van ZekerFlex nu betaald wordt (16 nov 2026), voor de facturenschermen: online (Stripe betaalt), per overschrijving
+ * (Stripe dicht, de rekening van ZekerFlex is ingevuld) of nog niet (Stripe dicht en geen rekening: contact opnemen).
+ */
+export type FactuurBetaalwijze = "online" | "overschrijving" | "dicht";
+
+export function factuurBetaalwijze(stripeDicht: boolean, bank: { iban: string | null | undefined; naam: string | null | undefined }): FactuurBetaalwijze {
+  if (!stripeDicht) return "online";
+  const iban = (bank.iban ?? "").replace(/\s+/g, "").toUpperCase();
+  return iban && (bank.naam ?? "").trim() && isValidIban(iban) ? "overschrijving" : "dicht";
+}

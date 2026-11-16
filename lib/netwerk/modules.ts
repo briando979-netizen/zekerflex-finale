@@ -74,7 +74,8 @@ export const MODULE_DEFS: Record<ModuleSleutel, ModuleDef> = {
       "Rechtstreekse, versleutelde verbindingen tussen apparaten (zero trust: alleen wat is toegestaan)",
       "Toegangscodes maak je in ZekerFlex; een code werkt één keer en verloopt vanzelf",
       "Je ziet welke apparaten verbonden zijn en zet er één met één klik af",
-      "Geen dure diensten als Tailscale, Cloudflare Teams of een bedrijfs-VPN van een derde nodig",
+      // 16 nov 2026: hier stond "geen Tailscale nodig", terwijl je op elk apparaat de (gratis) Tailscale-app installeert
+      "Loopt via de eigen server van ZekerFlex: geen abonnement bij Tailscale, Cloudflare of een andere VPN-dienst",
     ],
     voorWie: "Bedrijven met mensen op afstand of hybride, ICT-bedrijven en wie met gevoelige gegevens werkt (administratie, logistiek).",
     eenheid: "gebruiker",

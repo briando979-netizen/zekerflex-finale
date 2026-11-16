@@ -261,7 +261,7 @@ export const DBA_GROUPS: DbaGroup[] = [
       },
       {
         q: "Wat is het verschil tussen uurtarief en platformfee?",
-        a: "Het uurtarief is wat de freelancer verdient (bijvoorbeeld € 19 per uur). De platformkosten zijn wat jij als opdrachtgever aan ZekerFlex betaalt voor het platform, de verzekering en de service: € 3,50 per gewerkt uur.",
+        a: "Het uurtarief is wat de freelancer verdient (bijvoorbeeld € 19 per uur). De platformkosten zijn wat jij als opdrachtgever aan ZekerFlex betaalt voor het platform en de service: € 3,50 per gewerkt uur.",
         points: [
           "Op de factuur zie je het uurtarief én de platformkosten apart. Helder en transparant.",
         ],

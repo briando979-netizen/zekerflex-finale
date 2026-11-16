@@ -32,8 +32,8 @@ export default function DemoPage() {
           </h1>
           <p className="mt-6 max-w-lg text-lg leading-relaxed text-white/70">
             Benieuwd hoe je makkelijk en snel flexibele krachten inzet via ZekerFlex? In een
-            vrijblijvende demo van 30 minuten laten we zien hoe je duizenden krachten bereikt en
-            hoe je planning gevuld raakt — inclusief urengoedkeuring, facturatie en de Wet
+            vrijblijvende demo van 30 minuten laten we zien hoe je een klus plaatst en hoe die bij
+            passende krachten in de buurt terechtkomt — inclusief urengoedkeuring, facturatie en de Wet
             DBA-monitor. Kies hieronder een datum en tijd, dan bevestigen we de afspraak.
           </p>
           <ul className="mt-8 space-y-3">

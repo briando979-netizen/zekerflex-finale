@@ -6,7 +6,7 @@ vi.mock("@/lib/env", () => ({ env: { AUTH_SECRET: "x".repeat(40), APP_BASE_URL: 
 vi.mock("@/lib/logger", () => ({ logger: { info: () => undefined, warn: () => undefined, error: () => undefined } }));
 vi.mock("@/lib/billing/stripe", () => ({ transferToConnectedAccount: async () => undefined }));
 
-import { bedragTekst, ibanLeesbaar, overschrijvingRegels, overschrijvingVoor } from "@/lib/billing/overschrijving";
+import { bedragTekst, factuurBetaalwijze, ibanLeesbaar, overschrijvingRegels, overschrijvingVoor } from "@/lib/billing/overschrijving";
 
 const lees = (p: string) => readFileSync(path.join(process.cwd(), p), "utf8").split("\r\n").join("\n");
 // een geldig testadres (checksum klopt): geen echte rekening
@@ -95,5 +95,26 @@ describe("de factuur en de betaalpagina", () => {
   it("niets van de kassa, de bonnen of de Stripe-webhook is aangeraakt, en ZekerFlex Bank blijft uit", () => {
     expect(lees("lib/app-mode.ts")).toContain("BANK_AAN = false");
     for (const p of ["app/api/webhooks/stripe/route.ts", "lib/billing/stripe.ts"]) expect(lees(p)).not.toContain("overschrijving");
+  });
+});
+
+// 16 nov 2026: de facturenschermen zeiden "Betalen kan meteen online" en toonden iDEAL-knoppen terwijl Stripe dicht was.
+describe("de facturenschermen volgen de echte stand van betalen", () => {
+  it("online zolang Stripe betaalt, anders per overschrijving met een geldige rekening, en anders nog niet", () => {
+    expect(factuurBetaalwijze(false, { iban: null, naam: null })).toBe("online");
+    expect(factuurBetaalwijze(true, { iban: IBAN, naam: "Zekerflex, Inc." })).toBe("overschrijving");
+    expect(factuurBetaalwijze(true, { iban: null, naam: "Zekerflex, Inc." })).toBe("dicht");
+    expect(factuurBetaalwijze(true, { iban: IBAN, naam: "  " })).toBe("dicht");
+    expect(factuurBetaalwijze(true, { iban: "NL91ABNA0417164301", naam: "Zekerflex, Inc." })).toBe("dicht");
+  });
+
+  it("de studio zegt alleen 'meteen online' als het kan, en het overzicht toont dan pas de knoppen voor iDEAL en kaart", () => {
+    const studio = lees("components/studio/account/Schermen.tsx");
+    expect(studio).toContain("huidigeFactuurBetaalwijze()");
+    expect(studio).not.toMatch(/zoals je domeinnaam\. Betalen kan meteen online\./);
+    expect(lees("app/werkgever/facturen/page.tsx")).toContain("betaalwijze={betaalwijze}");
+    const overzicht = lees("components/app/InvoicesOverview.tsx");
+    expect(overzicht).toMatch(/online && !\(i\.digitaal/);
+    expect(overzicht).toContain("selectable={online}");
   });
 });

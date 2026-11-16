@@ -10,7 +10,20 @@ import { whitepaperBySlug } from "@/lib/kennis/whitepapers";
 // polis, dan gaat de tekst terug mét de naam van de verzekeraar en het polisnummer (eigenaar-taak verzekering-werkers).
 
 const ROOT = process.cwd();
-const BELOFTE = /gratis verzekerd|automatisch verzekerd|kosteloos verzekerd|collectieve dekking|onze verzekeringspartner|verzekeringsbewijs|insurance certificate|you're insured/i;
+// 16 nov: de bewaker zocht alleen hele zinnen ("gratis verzekerd") en miste de verzekering als los punt in een rijtje van
+// wat ZekerFlex regelt ("automatische facturen, modelovereenkomst en verzekering" op elke stadspagina), "gedekt tijdens
+// elke opdracht" in het menu, "betaalt voor het platform, de verzekering en de service" en de menuregel "voordelen".
+const BELOFTE = new RegExp(
+  [
+    "gratis verzekerd|automatisch verzekerd|kosteloos verzekerd|collectieve dekking|onze verzekeringspartner",
+    "verzekeringsbewijs|insurance certificate|you're insured",
+    "gedekt tijdens (elke|iedere|je|een|de) (opdracht|klus|dienst)",
+    "(urenregistratie|facturen|modelovereenkomst|contract)[^.\"\\n]{0,40}\\ben verzekering\\b",
+    "betaalt voor[^.\"\\n]{0,40}\\bverzekering\\b",
+    "verzekering (&|en) voordelen|insurance (&|and) benefits",
+  ].join("|"),
+  "i",
+);
 // beheer (taken, de bank die uit staat) en de tests noemen het bewust
 const BUITEN = /^(lib\/admin\/|lib\/bank\/|components\/bank\/|app\/api\/admin\/bank\/|app\/api\/me\/bank\/|app\/(dashboard|werkgever)\/bank\/|lib\/social\/veilig\.ts$)/;
 

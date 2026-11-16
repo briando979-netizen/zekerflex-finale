@@ -53,7 +53,7 @@ export const MODULES: readonly BrancheModule[] = [
   klaar("kaart", "online", "Op de kaart", "Gratis vermeld op ZekerFlex Kaart, met adres, openingstijden en website.", "/werkgever/kaart"),
   klaar("reviews", "online", "Reviews verzamelen", "Klanten om een Google-review vragen met een eigen link.", "/werkgever/google-reviews"),
   // plek
-  klaar("netwerk", "plek", "Wifi, VPN en 5G", "Netwerk voor je vestiging, personeel en terrein.", "/werkgever/netwerk"),
+  klaar("netwerk", "plek", "Wifi en VPN", "Wifi voor je vestiging en een veilige verbinding voor je personeel.", "/werkgever/netwerk"),
   klaar("op-locatie", "plek", "Op locatie", "Portofoon, toegang op kenteken, sleutelkluis en badges printen.", "/werkgever/op-locatie"),
   klaar("telefonie", "plek", "Nummer en bellen", "Een eigen nummer met opties voor klanten en personeel.", "/werkgever/telefonie"),
   // klanten
