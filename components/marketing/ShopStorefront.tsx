@@ -5,7 +5,7 @@ import { useShopWishlist } from "@/components/marketing/useShopWishlist";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt, type Dict } from "@/lib/i18n/dictionaries";
 import { ShopProductCard } from "@/components/marketing/ShopProductCard";
-import { bySize, type ShopCardProduct, type ShopCategory } from "@/components/marketing/shop-product";
+import { bySize, filterKeuzes, filterSleutel, type ShopCardProduct, type ShopCategory } from "@/components/marketing/shop-product";
 import type { VoorWaarde } from "@/lib/shop/categoriemenu";
 import Link from "next/link";
 import { bedoeldeJe, zoekScore } from "@/lib/shop/zoeksuggesties";
@@ -128,8 +128,9 @@ export function ShopStorefront({
     () => baseScope.filter((p) => (category === "Alles" || p.category === category) && (gender === "Alle" || p.gender === GENDER_VALUE[gender])),
     [baseScope, category, gender],
   );
-  const sizes = useMemo(() => [...new Set(facetScope.flatMap((p) => p.variants.map((v) => v.size).filter((s): s is string => Boolean(s))))].sort(bySize), [facetScope]);
-  const colors = useMemo(() => [...new Set(facetScope.flatMap((p) => p.variants.map((v) => v.color).filter((c): c is string => Boolean(c))))], [facetScope]);
+  // één knop per maat en kleur, ook als verkopers ze verschillend schrijven ("S" en "s", "zwart" en "Zwart")
+  const sizes = useMemo(() => filterKeuzes(facetScope.flatMap((p) => p.variants.map((v) => v.size))).sort(bySize), [facetScope]);
+  const colors = useMemo(() => filterKeuzes(facetScope.flatMap((p) => p.variants.map((v) => v.color))), [facetScope]);
   useEffect(() => {
     if (sizeFilter !== "Alle" && !sizes.includes(sizeFilter)) setSizeFilter("Alle");
   }, [sizes, sizeFilter]);
@@ -140,8 +141,8 @@ export function ShopStorefront({
   const shown = useMemo(() => {
     const filtered = facetScope.filter(
       (p) =>
-        (sizeFilter === "Alle" || p.variants.some((v) => v.size === sizeFilter)) &&
-        (colorFilter === "Alle" || p.variants.some((v) => v.color === colorFilter)) &&
+        (sizeFilter === "Alle" || p.variants.some((v) => v.size !== null && filterSleutel(v.size) === filterSleutel(sizeFilter))) &&
+        (colorFilter === "Alle" || p.variants.some((v) => v.color !== null && filterSleutel(v.color) === filterSleutel(colorFilter))) &&
         inPriceBucket(p.price, priceBucket),
     );
     if (sort === "relevantie") return filtered;

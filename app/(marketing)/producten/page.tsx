@@ -102,9 +102,10 @@ export default function ProductenPage() {
 
       <Section>
         <SectionHead eyebrow="Vergelijk" title="Welk product past bij jou?" />
+        {/* onder md per product onder elkaar (op een telefoon vielen twee kolommen buiten beeld); vanaf md een gewone tabel */}
         <div className="mt-8 overflow-x-auto">
-          <table className="w-full min-w-[640px] border-collapse text-left text-sm">
-            <thead>
+          <table className="block w-full border-collapse text-left text-sm md:table md:min-w-[640px]">
+            <thead className="hidden md:table-header-group">
               <tr className="border-b border-hairstrong text-neutralx-500">
                 <th className="py-3 pr-4 font-semibold">Product</th>
                 <th className="py-3 pr-4 font-semibold">Doelgroep</th>
@@ -112,13 +113,19 @@ export default function ProductenPage() {
                 <th className="py-3 pr-4 font-semibold">Tijd tot eerste omzet</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="block md:table-row-group">
               {ALL_PRODUCTS.map((p) => (
-                <tr key={p.slug} className="border-b border-hair align-top">
-                  <td className="py-3 pr-4 font-semibold text-ink">{p.name}</td>
-                  <td className="py-3 pr-4 text-neutralx-700">{p.audience}</td>
-                  <td className="py-3 pr-4 text-neutralx-700">{complexityLabel(p.salesComplexity)}</td>
-                  <td className="py-3 pr-4 text-neutralx-700">{p.timeToMrr}</td>
+                <tr key={p.slug} className="block border-b border-hair py-3 align-top md:table-row md:py-0">
+                  <td className="block font-semibold text-ink md:table-cell md:py-3 md:pr-4">{p.name}</td>
+                  <td className="block pt-1 text-neutralx-700 md:table-cell md:py-3 md:pr-4">{p.audience}</td>
+                  <td className="block pt-1 text-neutralx-700 md:table-cell md:py-3 md:pr-4">
+                    <span className="text-neutralx-500 md:hidden">Verkoopcomplexiteit: </span>
+                    {complexityLabel(p.salesComplexity)}
+                  </td>
+                  <td className="block pt-1 text-neutralx-700 md:table-cell md:py-3 md:pr-4">
+                    <span className="text-neutralx-500 md:hidden">Tijd tot eerste omzet: </span>
+                    {p.timeToMrr}
+                  </td>
                 </tr>
               ))}
             </tbody>

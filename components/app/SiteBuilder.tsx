@@ -352,7 +352,8 @@ function Editor({ data, site: initial, origin, onSite, beginPagina, beginTab }: 
   return (
     <div className="space-y-4">
       <header className="card flex flex-wrap items-center gap-3 p-4">
-        <div className="min-w-0 flex-1">
+        {/* basis-64: op een telefoon gaan label, opslagstand en knop naar een eigen regel, anders breekt de kop per woord */}
+        <div className="min-w-0 flex-1 basis-64">
           <p className="eyebrow">{proposal ? "Websitevoorstel aanpassen" : woord === "webshop" ? "Pagina's van je webshop" : "Website bouwen"}</p>
           <h1 className="truncate font-display text-xl font-bold text-ink">{site.bedrijf.naam}</h1>
           <p className="truncate text-xs text-neutralx-500">

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { beheerContext } from "@/lib/horeca/toegang";
 import { menukaart } from "@/lib/horeca/store";
 import { ALLERGENEN } from "@/lib/horeca/allergenen";
@@ -25,7 +25,8 @@ const vandaag = () => new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: 
 
 export default async function AllergenenPagina() {
   const { zaak } = await beheerContext().catch(() => ({ zaak: null }));
-  if (!zaak) notFound();
+  // zonder horecapakket: naar /werkgever/horeca, waar je het aanzet (eerder een 404)
+  if (!zaak) redirect("/werkgever/horeca");
   const { categorieen, items } = await menukaart(zaak.id);
   const groepen = allergenenKaart(categorieen, items);
   return (

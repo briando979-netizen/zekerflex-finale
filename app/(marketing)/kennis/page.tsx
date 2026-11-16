@@ -138,7 +138,8 @@ export default function KennisPage() {
                   <path d="M14 3v5h5M8.5 13h7M8.5 16.5h7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                 </svg>
                 <Link href={`/kennis/whitepapers/${w.slug}`} className="min-w-0 flex-1 hover:text-white">
-                  <span className="block text-sm font-semibold text-white">{w.title}</span>
+                  {/* break-words: "kleineondernemersregeling" is één woord en liep op een telefoon onder de knop door */}
+                  <span className="block break-words text-sm font-semibold text-white hyphens-auto">{w.title}</span>
                   <span className="block truncate text-xs text-white/50">{w.subtitle}</span>
                 </Link>
                 <a

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bySize, shopMoney, toShopProduct } from "@/components/marketing/shop-product";
+import { bySize, filterKeuzes, filterSleutel, shopMoney, toShopProduct } from "@/components/marketing/shop-product";
 
 // Het etalageproduct van de vernieuwde shop: wat de server naar de browser stuurt.
 
@@ -13,6 +13,15 @@ describe("etalageproduct", () => {
 
   it("sorteert maten zoals mensen verwachten", () => {
     expect(["XL", "39-42", "S", "38", "M", "43-46", "XXL", "110", "39"].sort(bySize)).toEqual(["S", "M", "XL", "XXL", "38", "39", "39-42", "43-46", "110"]);
+  });
+
+  it("toont elke maat en kleur één keer in de filters, hoe de verkoper hem ook schreef", () => {
+    const maten = filterKeuzes(["S", "s", "M", "m", "XL", "xl", "Xl", "xxl", "Xxl", "XXL", "s/m", "39-42", " 42 ", null, ""]).sort(bySize);
+    expect(maten).toEqual(["S", "M", "XL", "XXL", "39-42", "42", "S/M"]);
+    expect(filterKeuzes(["zwart", "Zwart", "navy blauw", "Navy Blauw", "groen", "RAL 9010"])).toEqual(["Zwart", "Navy Blauw", "Groen", "RAL 9010"]);
+    // de opgeslagen schrijfwijze vindt de keuze terug
+    expect(filterSleutel("xl")).toBe(filterSleutel("XL"));
+    expect(filterSleutel(" Navy blauw")).toBe(filterSleutel("navy Blauw"));
   });
 
   it("schrijft bedragen op zijn Nederlands", () => {

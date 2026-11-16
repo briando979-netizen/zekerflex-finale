@@ -163,9 +163,10 @@ export default async function BeveiligingPagina() {
           title="Wat we loggen, en hoe lang"
           intro="Beveiliging kan niet zonder logboeken. Dit houden we bij, waarom, en wanneer het weer weg is."
         />
+        {/* onder md per regel onder elkaar (op een telefoon viel de kolom "Hoe lang" buiten beeld); vanaf md een gewone tabel */}
         <div className="mt-10 overflow-hidden rounded-2xl border border-hair bg-white">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-paper-soft text-xs uppercase tracking-wide text-neutralx-500">
+          <table className="block w-full text-left text-sm md:table">
+            <thead className="hidden bg-paper-soft text-xs uppercase tracking-wide text-neutralx-500 md:table-header-group">
               <tr>
                 <th scope="col" className="px-5 py-3 font-semibold">
                   Wat
@@ -178,12 +179,15 @@ export default async function BeveiligingPagina() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-hair">
+            <tbody className="block divide-y divide-hair md:table-row-group">
               {LOGS.map((l) => (
-                <tr key={l.wat} className="align-top">
-                  <td className="px-5 py-4 font-medium text-ink">{l.wat}</td>
-                  <td className="px-5 py-4 text-neutralx-600">{l.waarom}</td>
-                  <td className="whitespace-nowrap px-5 py-4 text-neutralx-600">{l.hoelang}</td>
+                <tr key={l.wat} className="block py-4 align-top md:table-row md:py-0">
+                  <td className="block px-5 font-medium text-ink md:table-cell md:py-4">{l.wat}</td>
+                  <td className="block px-5 pt-1 text-neutralx-600 md:table-cell md:py-4">{l.waarom}</td>
+                  <td className="block px-5 pt-1 text-neutralx-600 md:table-cell md:py-4 lg:whitespace-nowrap">
+                    <span className="font-medium text-ink md:hidden">Hoe lang: </span>
+                    {l.hoelang}
+                  </td>
                 </tr>
               ))}
             </tbody>
