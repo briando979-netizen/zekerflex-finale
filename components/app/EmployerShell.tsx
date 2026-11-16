@@ -160,7 +160,9 @@ export function EmployerShell({
     <div
       data-theme={theme}
       className={`app-scope min-h-screen bg-paper-soft lg:grid ${
-        collapsed ? "lg:grid-cols-[76px_1fr]" : "lg:grid-cols-[276px_1fr]"
+        // minmax(0,1fr): anders groeit de inhoudskolom mee met een lange rij tabbladen (horeca, rijschool)
+        // en wordt de hele pagina breder dan het scherm
+        collapsed ? "lg:grid-cols-[76px_minmax(0,1fr)]" : "lg:grid-cols-[276px_minmax(0,1fr)]"
       }`}
     >
       {/* Sidebar */}

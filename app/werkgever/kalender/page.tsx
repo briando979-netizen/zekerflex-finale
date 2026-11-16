@@ -74,9 +74,10 @@ export default async function KalenderPage(
         </Link>
       </div>
 
-      {/* op een smal scherm schuift de maand opzij: met het toetsenbord bereikbaar (tabIndex) */}
-      <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Maandkalender">
-        <div className="min-w-[720px]">
+      {/* Op een telefoon past de hele maand: smallere cellen, per klus alleen de begintijd (de naam staat
+          voor schermlezers in de link). Tussen sm en 720 px schuift de maand opzij, met het toetsenbord bereikbaar. */}
+      <div className="relative overflow-x-auto" tabIndex={0} role="region" aria-label="Maandkalender">
+        <div className="sm:min-w-[720px]">
           <div className="grid grid-cols-7 gap-px rounded-t-xl border border-hair bg-hair text-center text-xs font-semibold uppercase tracking-wide text-neutralx-500">
             {t.calendar.weekdays.map((d) => (
               <div key={d} className="bg-paper-soft py-2">
@@ -88,7 +89,7 @@ export default async function KalenderPage(
             {cal.weeks.flat().map((cell, i) => (
               <div
                 key={i}
-                className={`min-h-[104px] bg-white p-1.5 ${cell.inMonth ? "" : "bg-paper-soft/60"}`}
+                className={`min-h-[72px] min-w-0 bg-white p-1 sm:min-h-[104px] sm:p-1.5 ${cell.inMonth ? "" : "bg-paper-soft/60"}`}
               >
                 <div
                   className={`mb-1 text-right text-xs ${
@@ -106,16 +107,17 @@ export default async function KalenderPage(
                     <Link
                       key={s.id}
                       href={`/werkgever/diensten/${s.id}`}
-                      className={`block truncate rounded px-1.5 py-1 text-[11px] font-medium ${
+                      className={`relative block truncate rounded px-1 py-1 text-[11px] font-medium sm:px-1.5 ${
                         STATUS_TONE[s.status] ?? "bg-paper-soft text-neutralx-500"
                       }`}
                       title={`${s.title} · ${s.branch} · ${s.filled}/${s.positions}`}
                     >
-                      {s.startsAt.toLocaleTimeString(localeTag, { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" })} {s.title}
+                      {s.startsAt.toLocaleTimeString(localeTag, { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" })}{" "}
+                      <span className="sr-only sm:not-sr-only">{s.title}</span>
                     </Link>
                   ))}
                   {cell.shifts.length > 3 && (
-                    <p className="px-1.5 text-[10px] text-neutralx-400">{fmt(t.calendar.more, { n: cell.shifts.length - 3 })}</p>
+                    <p className="truncate px-1 text-[10px] text-neutralx-400 sm:px-1.5">{fmt(t.calendar.more, { n: cell.shifts.length - 3 })}</p>
                   )}
                 </div>
               </div>

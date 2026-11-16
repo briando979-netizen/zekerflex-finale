@@ -424,8 +424,9 @@ function InstellingenFormulier({ begin, nieuw, mailAan, bewaard }: { begin: Inst
       <section className={`${kaart} space-y-3`}>
         <h2 className="font-display text-base font-bold text-ink">Diensten</h2>
         {i.diensten.map((d, n) => (
-          <div key={d.id || `nieuw-${n}`} className="grid grid-cols-[1fr_5.5rem_6rem_auto] items-end gap-2">
-            <label className="block">
+          // op een telefoon staat de naam op een eigen regel, met minuten, prijs en Weg eronder
+          <div key={d.id || `nieuw-${n}`} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2 sm:grid-cols-[minmax(0,1fr)_5.5rem_6rem_auto]">
+            <label className="col-span-3 block sm:col-span-1">
               <span className="field-label">Dienst</span>
               <input value={d.naam} onChange={(e) => wijzig((x) => ({ ...x, diensten: x.diensten.map((v, k) => (k === n ? { ...v, naam: e.target.value } : v)) }))} maxLength={60} className="field-input" />
             </label>
@@ -488,11 +489,12 @@ function InstellingenFormulier({ begin, nieuw, mailAan, bewaard }: { begin: Inst
             <span className="w-24 text-sm font-semibold capitalize text-ink">{WEEKDAG_NAAM[dag]}</span>
             {vakken(dag).length === 0 && <span className="text-sm text-neutralx-500">Gesloten</span>}
             {vakken(dag).map((v, n) => (
-              <span key={n} className="flex items-center gap-1">
-                <input type="time" value={v.van} onChange={(e) => zetVakken(dag, vakken(dag).map((w, k) => (k === n ? { ...w, van: e.target.value } : w)))} className="field-input w-28" aria-label={`${WEEKDAG_NAAM[dag]} van`} />
+              // op een telefoon een eigen regel met twee even brede tijdvelden (ook "05:00 PM" past)
+              <span key={n} className="flex w-full items-center gap-1 sm:w-auto">
+                <input type="time" value={v.van} onChange={(e) => zetVakken(dag, vakken(dag).map((w, k) => (k === n ? { ...w, van: e.target.value } : w)))} className="field-input min-w-0 flex-1 sm:w-32 sm:flex-none" aria-label={`${WEEKDAG_NAAM[dag]} van`} />
                 –
-                <input type="time" value={v.tot} onChange={(e) => zetVakken(dag, vakken(dag).map((w, k) => (k === n ? { ...w, tot: e.target.value } : w)))} className="field-input w-28" aria-label={`${WEEKDAG_NAAM[dag]} tot`} />
-                <button type="button" className={knopKlein} onClick={() => zetVakken(dag, vakken(dag).filter((_, k) => k !== n))} aria-label={`Tijdvak op ${WEEKDAG_NAAM[dag]} weghalen`}>
+                <input type="time" value={v.tot} onChange={(e) => zetVakken(dag, vakken(dag).map((w, k) => (k === n ? { ...w, tot: e.target.value } : w)))} className="field-input min-w-0 flex-1 sm:w-32 sm:flex-none" aria-label={`${WEEKDAG_NAAM[dag]} tot`} />
+                <button type="button" className={`${knopKlein} flex-shrink-0`} onClick={() => zetVakken(dag, vakken(dag).filter((_, k) => k !== n))} aria-label={`Tijdvak op ${WEEKDAG_NAAM[dag]} weghalen`}>
                   Weg
                 </button>
               </span>

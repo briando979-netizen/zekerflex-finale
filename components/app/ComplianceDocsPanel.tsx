@@ -83,6 +83,7 @@ function IbanStap({ t, ibanLast4, onSaved }: { t: AuthDict["page"]; ibanLast4: s
           <p id="rekeningnummer-uitleg" className="mt-1 text-xs text-neutralx-500">
             {t.ibanWhy}
           </p>
+          {/* op een telefoon het veld over de hele breedte (een heel IBAN past), de knop eronder */}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <input
               id="rekeningnummer-stap"
@@ -100,7 +101,7 @@ function IbanStap({ t, ibanLast4, onSaved }: { t: AuthDict["page"]; ibanLast4: s
               spellCheck={false}
               aria-describedby="rekeningnummer-uitleg"
               aria-invalid={fout ? true : undefined}
-              className="field-input min-w-0 flex-1 font-mono"
+              className="field-input min-w-0 flex-1 basis-full font-mono sm:basis-0"
             />
             <button type="button" onClick={() => void opslaan()} disabled={bezig || iban.trim().length < 15} className="btn-primary text-sm disabled:opacity-50">
               {bezig ? t.ibanSaving : t.ibanSave}
