@@ -40,9 +40,14 @@ describe("de herinnering en de poort tellen hetzelfde", () => {
     }
   });
 
-  it("elk onderdeel hoort bij een stap van de poort", () => {
+  it("elk onderdeel hoort bij een stap van de poort, of (null) bij vóór de eerste klus", () => {
     const sleutels = new Set<string>(POORT_STAPPEN.map((s) => s.sleutel));
-    for (const stuk of Object.keys(MIST_POORT) as MistStuk[]) expect(sleutels.has(MIST_POORT[stuk]), stuk).toBe(true);
+    for (const stuk of Object.keys(MIST_POORT) as MistStuk[]) {
+      const p = MIST_POORT[stuk];
+      if (p !== null) expect(sleutels.has(p), stuk).toBe(true);
+    }
+    // sinds 13 nov niet meer bij de aanmelding, maar vóór de eerste klus (16 nov ook in de herinnering)
+    for (const stuk of ["bsn", "contract", "btw", "iban", "werkrecht"] as const) expect(MIST_POORT[stuk], stuk).toBeNull();
   });
 });
 
@@ -52,15 +57,18 @@ describe("de link volgt dezelfde plek als het eindscherm van de ID-scan", () => 
       if (s.sleutel === "identiteit") expect(herinneringHref(s.sleutel)).toBe("/dashboard/verificatie");
       else expect(herinneringHref(s.sleutel), s.sleutel).toBe(volgendeStapHref(s.sleutel));
     }
-    expect(MIST_HREF.bsn).toBe(volgendeStapHref("gegevens"));
+    expect(MIST_HREF.postcode).toBe(volgendeStapHref("gegevens"));
     expect(MIST_HREF.foto).toBe(volgendeStapHref("foto"));
+    // vóór de eerste klus: dezelfde plekken als de kaart "Klaar voor je eerste klus"
+    expect(MIST_HREF.bsn).toBe("/dashboard/verificatie#gegevens-later-kop");
     expect(MIST_HREF.contract).toBe("/dashboard/verificatie#uitzendovereenkomst");
+    expect(MIST_HREF.iban).toBe("/dashboard/verificatie#bankrekening");
   });
 });
 
 describe("de tekst noemt 'Stap n van 5: <naam>' in de taal van de werker", () => {
   it("per taal: de regel in mail en push, de knop en de push gaan naar de eerste open stap", () => {
-    const mist: MistStuk[] = ["bsn", "contract", "identiteit", "foto"];
+    const mist: MistStuk[] = ["postcode", "identiteit", "foto"];
     for (const taal of TALEN) {
       const t = HERINNERING_TEKSTEN[taal];
       const start = FREELANCER_DICTS[taal].start;
@@ -73,6 +81,17 @@ describe("de tekst noemt 'Stap n van 5: <naam>' in de taal van de werker", () =>
       expect(mail.text, taal).toContain(regel);
       expect(mail.html, taal).toContain(regel);
       expect(mail.html, taal).toContain(`href="https://zf.test${volgendeStapHref("gegevens")}"`);
+    }
+  });
+
+  it("na de aanmelding (alleen stukken vóór de eerste klus): geen 'Stap n van 5', de knop naar het eerste stuk (16 nov)", () => {
+    const mist: MistStuk[] = ["bsn", "contract", "iban"];
+    for (const taal of TALEN) {
+      const h = werkerHerinnering(mist, HERINNERING_TEKSTEN[taal], "Anna", 2, taal);
+      expect(h.stapRegel, taal).toBeNull();
+      expect(h.knopHref, taal).toBe("/dashboard/verificatie#gegevens-later-kop");
+      expect(h.items.map((i) => i.href), taal).toEqual(["/dashboard/verificatie#gegevens-later-kop", "/dashboard/verificatie#uitzendovereenkomst", "/dashboard/verificatie#bankrekening"]);
+      for (const i of h.items) expect(i.tekst.length, taal).toBeGreaterThan(5);
     }
   });
 
