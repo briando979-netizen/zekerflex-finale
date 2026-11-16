@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Section, SectionHead } from "@/components/marketing/primitives";
 import { canonical, CONTACTS, SITE } from "@/lib/seo";
 import { PLAN_KEYS, API_PLANS } from "@/lib/api-plans/catalog";
+import { FotoKolom } from "@/components/marketing/HeroMetFoto";
+import { paginaFoto } from "@/lib/marketing/fotos";
 
 const euro = (cents: number) => `€ ${(cents / 100).toFixed(0)}`;
 
@@ -28,7 +30,8 @@ export default function DevelopersPage() {
   return (
     <>
       <div className="hero-ink text-white">
-        <div className="shell py-20 md:py-24">
+        <div className="shell grid items-center gap-10 py-20 md:py-24 lg:grid-cols-[1.15fr_0.85fr]">
+          <div>
           <p className="eyebrow text-brand-mint">Ontwikkelaars</p>
           <h1 className="mt-4 max-w-2xl text-balance font-display text-4xl font-bold leading-tight md:text-5xl">
             Bouw op {SITE.name}
@@ -37,6 +40,8 @@ export default function DevelopersPage() {
             Een REST-API voor diensten, urenbriefjes en webhooks, plus een GraphQL-endpoint (vooral lezen). Beide werken op
             dezelfde gegevens als het dashboard; er is geen aparte testomgeving.
           </p>
+          </div>
+          <FotoKolom foto={paginaFoto("developers")} />
         </div>
       </div>
 

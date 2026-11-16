@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Section, CtaBand } from "@/components/marketing/primitives";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
+import { FotoKolom } from "@/components/marketing/HeroMetFoto";
+import { paginaFoto } from "@/lib/marketing/fotos";
 
 export const metadata: Metadata = {
   title: "Gratis rekentools voor zzp'ers en werkgevers",
@@ -66,7 +68,8 @@ export default function RekentoolsPage() {
         dangerouslySetInnerHTML={{ __html: ldJson(breadcrumbJsonLd([["Home", "/"], ["Rekentools", "/rekentools"]])) }}
       />
       <div className="hero-ink text-white">
-        <div className="shell py-16 md:py-20">
+        <div className="shell grid items-center gap-10 py-16 md:py-20 lg:grid-cols-[1.15fr_0.85fr]">
+          <div>
           <p className="eyebrow text-brand-mint">Rekentools</p>
           <h1 className="mt-4 max-w-3xl text-balance font-display text-4xl font-bold leading-[1.08] md:text-6xl">
             Reken het zelf uit
@@ -74,6 +77,8 @@ export default function RekentoolsPage() {
           <p className="mt-6 max-w-xl text-lg text-white/70">
             Gratis en zonder account. Alles wordt in je eigen browser berekend; we bewaren niets van wat je invult.
           </p>
+          </div>
+          <FotoKolom foto={paginaFoto("rekentools")} />
         </div>
       </div>
 

@@ -7,6 +7,8 @@ import { ldJson } from "@/lib/seo/json-ld";
 import { ProductLeadForm } from "@/components/marketing/ProductLeadForm";
 import { SPINOFF_PRODUCTS, spinoffProduct, type ProductDeployment } from "@/lib/products";
 import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
+import { FotoKolom } from "@/components/marketing/HeroMetFoto";
+import { paginaFoto } from "@/lib/marketing/fotos";
 
 export const dynamicParams = false;
 
@@ -60,7 +62,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(productLd) }} />
 
       <div className="hero-ink text-white">
-        <div className="shell py-20 md:py-24">
+        <div className="shell grid items-center gap-10 py-20 md:py-24 lg:grid-cols-[1.15fr_0.85fr]">
+          <div>
           <p className="eyebrow text-brand-mint">
             <Link href="/producten" className="hover:underline">Producten</Link> · {p.kicker}
           </p>
@@ -70,6 +73,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <div className="mt-8">
             <Link href="#aanvraag" className="btn-mint">{p.ctaLabel}</Link>
           </div>
+          </div>
+          <FotoKolom foto={paginaFoto(`producten-${p.slug}`)} />
         </div>
       </div>
 

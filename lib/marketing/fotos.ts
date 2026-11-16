@@ -119,6 +119,15 @@ const PAGINA_FOTOS: Record<string, string> = {
   "voor-bureaus": "team-highfive-raam",
   "sales-partner": "team-handen",
   demo: "team-highfive-geel",
+  rekentools: "retail-kassa",
+  "review-check": "horeca-serveerster-lacht",
+  producten: "team-highfive-callcenter",
+  developers: "horeca-barista-laptop",
+  nieuwsbrief: "app-telefoon-oranje",
+  uitleg: "team-highfive-geel",
+  "producten-flexcompliance-api": "team-highfive-raam",
+  "producten-recruitflex-ai": "horeca-barista-laptop",
+  "producten-sovereignops": "logistiek-magazijn-dozen",
 };
 
 export function paginaFoto(pagina: string): Foto | undefined {
