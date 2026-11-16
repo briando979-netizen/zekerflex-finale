@@ -4,6 +4,8 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { Section, SectionHead } from "@/components/marketing/primitives";
 import { CopyLinkButton } from "@/components/marketing/CopyLinkButton";
+import { FotoKolom } from "@/components/marketing/HeroMetFoto";
+import { paginaFoto } from "@/lib/marketing/fotos";
 
 // De filmpjes staan als bestand in /public/videos; force-dynamic zodat een
 // nieuw .mp4 meteen zichtbaar is zonder rebuild.
@@ -57,7 +59,8 @@ export default function UitlegPage() {
   return (
     <>
       <div className="hero-ink text-white">
-        <div className="shell py-16 md:py-20">
+        <div className="shell grid items-center gap-10 py-16 md:py-20 lg:grid-cols-[1.15fr_0.85fr]">
+          <div>
           <p className="eyebrow text-brand-mint">In het kort</p>
           <h1 className="mt-3 max-w-2xl font-display text-3xl font-bold leading-tight md:text-5xl">
             ZekerFlex uitgelegd in korte filmpjes
@@ -69,6 +72,8 @@ export default function UitlegPage() {
           <div className="mt-6">
             <CopyLinkButton path="/uitleg" />
           </div>
+          </div>
+          <FotoKolom foto={paginaFoto("uitleg")} />
         </div>
       </div>
 

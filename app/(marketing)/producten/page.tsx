@@ -5,6 +5,8 @@ import { canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { ProductLeadForm } from "@/components/marketing/ProductLeadForm";
 import { SPINOFF_PRODUCTS, FLAGSHIP, ALL_PRODUCTS, type Product } from "@/lib/products";
+import { FotoKolom } from "@/components/marketing/HeroMetFoto";
+import { paginaFoto } from "@/lib/marketing/fotos";
 
 const title = "Producten — losse modules of het complete platform";
 const description =
@@ -71,13 +73,16 @@ export default function ProductenPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(itemList) }} />
 
       <div className="hero-ink text-white">
-        <div className="shell py-20 md:py-24">
+        <div className="shell grid items-center gap-10 py-20 md:py-24 lg:grid-cols-[1.15fr_0.85fr]">
+          <div>
           <p className="eyebrow text-brand-mint">Producten</p>
           <h1 className="mt-4 font-display text-4xl font-bold md:text-6xl">Koop alleen wat je nodig hebt</h1>
           <p className="mt-6 max-w-2xl text-lg text-white/70">
             ZekerFlex is ontbundeld in losse producten die elk één scherp probleem oplossen — AI-sourcing, een soevereine
             AI-stack of de lastige NL uitzend-compliance — naast het complete all-in-one platform.
           </p>
+          </div>
+          <FotoKolom foto={paginaFoto("producten")} />
         </div>
       </div>
 

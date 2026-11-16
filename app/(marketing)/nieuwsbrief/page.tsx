@@ -4,6 +4,8 @@ import { Section } from "@/components/marketing/primitives";
 import { NewsletterSignup } from "@/components/marketing/NewsletterSignup";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
+import { FotoKolom } from "@/components/marketing/HeroMetFoto";
+import { paginaFoto } from "@/lib/marketing/fotos";
 
 // De aanmeldpagina voor de nieuwsbrief. Het formulier staat ook in de voettekst
 // en in de shop; deze pagina is de vaste plek waar de app en mails naartoe linken
@@ -22,12 +24,15 @@ export default function NieuwsbriefPage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(breadcrumbJsonLd([["Home", "/"], ["Nieuwsbrief", PATH]])) }} />
       <div className="hero-ink text-white">
-        <div className="shell py-16 md:py-20">
+        <div className="shell grid items-center gap-10 py-16 md:py-20 lg:grid-cols-[1.15fr_0.85fr]">
+          <div>
           <p className="eyebrow text-brand-mint">Nieuwsbrief</p>
           <h1 className="mt-4 max-w-3xl text-balance font-display text-4xl font-bold leading-[1.08] md:text-6xl">Blijf op de hoogte</h1>
           <p className="mt-6 max-w-xl text-lg text-white/70">
             Eens per maand: wat er nieuw is op ZekerFlex, welke klussen en branches in beweging zijn, en praktische tips voor opdrachtgevers en flexwerkers. Geen reclame van anderen, afmelden met één klik.
           </p>
+          </div>
+          <FotoKolom foto={paginaFoto("nieuwsbrief")} />
         </div>
       </div>
 

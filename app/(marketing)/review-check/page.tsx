@@ -6,6 +6,8 @@ import { ldJson } from "@/lib/seo/json-ld";
 import { getReviewScan } from "@/lib/review-scan/run";
 import { getScanLog } from "@/lib/scans/store";
 import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
+import { HeroMetFoto } from "@/components/marketing/HeroMetFoto";
+import { paginaFoto } from "@/lib/marketing/fotos";
 
 const TITLE = "Gratis review-check: hoe scoort je bedrijf op Google?";
 const DESCRIPTION =
@@ -78,7 +80,9 @@ export default async function ReviewCheckPage({ searchParams }: { searchParams: 
           dangerouslySetInnerHTML={{ __html: ldJson([app, breadcrumbJsonLd([["Home", "/"], ["Aanbod", "/aanbod"], ["Review-check", "/review-check"]])]) }}
         />
       )}
+      <HeroMetFoto foto={paginaFoto("review-check")}>
       <SectionHead kop="h1" eyebrow="Gratis review-check" title="Hoe scoort je bedrijf op Google?" intro={DESCRIPTION} />
+      </HeroMetFoto>
       <div className="mt-8 max-w-4xl">
         <ReviewScan variant="openbaar" initial={initial} initialDealId={log?.dealId ?? null} />
       </div>
