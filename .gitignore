@@ -58,11 +58,6 @@ kubeconfig
 # lokale TTS-cache van scripts/make-uitleg-videos.py
 scripts/.tts-cache
 
-# Marketing explainer videos — served from object storage / CDN in production,
-# kept on disk for local dev (the /uitleg page degrades gracefully without them).
-# ~42 MB; see public/videos/README.md.
-public/videos/*.mp4
-
 # Video Studio — gegenereerde projecten (script/manifest wel, media niet)
 studio/projects/*/work/
 studio/projects/*/clips/
@@ -85,3 +80,6 @@ tunnel.out
 /kaart-data/
 # Routeplanner: wegen van Nederland en de tegels van Valhalla (±4 GB), alleen op de server (deploy/route/haal-route.sh)
 /route-data/
+
+# tussenbestanden van de uitlegvideo's (scripts/uitleg-videos)
+scripts/uitleg-videos/.werk

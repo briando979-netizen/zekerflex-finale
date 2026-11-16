@@ -7,8 +7,8 @@ import { CopyLinkButton } from "@/components/marketing/CopyLinkButton";
 import { FotoKolom } from "@/components/marketing/HeroMetFoto";
 import { paginaFoto } from "@/lib/marketing/fotos";
 
-// De filmpjes staan als bestand in /public/videos; force-dynamic zodat een
-// nieuw .mp4 meteen zichtbaar is zonder rebuild.
+// De filmpjes staan als bestand in /public/videos (in git, ±1 MB per stuk, gemaakt met scripts/uitleg-videos/: echte schermen met
+// onze eigen stem). Een video zonder bestand wordt niet getoond; er staat nergens "komt binnenkort".
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
@@ -22,31 +22,31 @@ const VIDEOS = [
   {
     slug: "wat-is-zekerflex",
     title: "Wat is ZekerFlex?",
-    duration: "1 min",
+    duration: "35 sec",
     body: "Eén platform voor freelance- én uitzendkrachten. Geen bureau ertussen, alles digitaal geregeld.",
   },
   {
     slug: "klus-plaatsen",
     title: "Zo plaats je een klus",
-    duration: "2 min",
+    duration: "25 sec",
     body: "Van functie en tarief tot bevestigde kracht — je zet een klus in een paar minuten live.",
   },
   {
     slug: "uitzenden-of-freelance",
     title: "Uitzenden of freelance — het verschil",
-    duration: "2 min",
+    duration: "25 sec",
     body: "Loonstrook, vakantiegeld en pensioen via het uitzendbureau, of een ZZP'er met eigen factuur. Jij kiest per klus.",
   },
   {
     slug: "uren-goedkeuren",
     title: "Uren goedkeuren in 30 seconden",
-    duration: "1 min",
+    duration: "30 sec",
     body: "GPS-check-in, ingevulde uren, één tik akkoord. Daarna loopt facturatie of verloning automatisch.",
   },
   {
     slug: "kosten-en-facturen",
     title: "Wat kost het en hoe zit het met facturen?",
-    duration: "2 min",
+    duration: "30 sec",
     body: "€ 3,50 per gewerkt uur, één heldere factuur. Bij uitzenden zit de cao-beloning en payroll erbij in.",
   },
 ];
@@ -103,29 +103,18 @@ export default function UitlegPage() {
       <Section tone="paper">
         <SectionHead eyebrow="Per onderwerp" title="Of bekijk losse filmpjes" />
         <div className="mt-12 grid gap-8 md:grid-cols-2">
-          {VIDEOS.map((v) => {
-            const ready = videoReady(v.slug);
+          {VIDEOS.filter((v) => videoReady(v.slug)).map((v) => {
             return (
               <article key={v.slug} id={v.slug} className="scroll-mt-24">
                 <div className="overflow-hidden rounded-2xl border border-hair bg-white shadow-card">
-                  {ready ? (
-                    // eslint-disable-next-line jsx-a11y/media-has-caption
-                    <video
-                      controls
-                      preload="metadata"
-                      poster={`/videos/${v.slug}.jpg`}
-                      className="aspect-video w-full bg-ink"
-                      src={`/videos/${v.slug}.mp4`}
-                    />
-                  ) : (
-                    <div className="grid aspect-video w-full place-items-center bg-gradient-to-br from-ink to-brand-700 text-center text-white">
-                      <div>
-                        <span className="text-3xl">▶</span>
-                        <p className="mt-2 text-sm font-semibold">Video komt binnenkort</p>
-                        <p className="mt-0.5 text-xs text-white/60">{v.duration}</p>
-                      </div>
-                    </div>
-                  )}
+                  {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                  <video
+                    controls
+                    preload="metadata"
+                    poster={`/videos/${v.slug}.jpg`}
+                    className="aspect-video w-full bg-ink"
+                    src={`/videos/${v.slug}.mp4`}
+                  />
                   <div className="p-5">
                     <h2 className="font-display text-lg font-bold text-ink">{v.title}</h2>
                     <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">{v.body}</p>
