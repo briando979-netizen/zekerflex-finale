@@ -43,7 +43,6 @@ export function HeroStage({
   }
   const artRef = useRef<HTMLDivElement | null>(null);
   const glassRef = useRef<HTMLDivElement | null>(null);
-  const cueRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -55,7 +54,6 @@ export function HeroStage({
         const y = window.scrollY;
         if (artRef.current) artRef.current.style.transform = `translate3d(0, ${y * -0.06}px, 0)`;
         if (glassRef.current) glassRef.current.style.transform = `translate3d(0, ${y * 0.08}px, 0)`;
-        if (cueRef.current) cueRef.current.style.opacity = String(Math.max(0, 1 - y / 260));
       });
     };
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -149,19 +147,8 @@ export function HeroStage({
           </div>
         </div>
       </div>
-
-      <div
-        ref={cueRef}
-        className="absolute inset-x-0 bottom-6 hidden justify-center lg:flex"
-        aria-hidden
-      >
-        <span className="flex flex-col items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-white/60">
-          Scroll
-          <span className="h-9 w-5 rounded-full border border-white/25">
-            <span className="mx-auto mt-1.5 block h-2 w-1 animate-bounce rounded-full bg-white/50" />
-          </span>
-        </span>
-      </div>
+      {/* geen scroll-aanwijzer meer (16 nov): sinds de kop zo compact is, stond hij over de regel "Software voor jouw zaak",
+          en het blok eronder is toch al in beeld */}
     </section>
   );
 }

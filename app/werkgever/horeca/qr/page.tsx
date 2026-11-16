@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import QRCode from "qrcode";
 import { env } from "@/lib/env";
 import { beheerContext } from "@/lib/horeca/toegang";
@@ -21,7 +21,8 @@ const PRINT = `@media print {
 
 export default async function QrPagina() {
   const { zaak } = await beheerContext().catch(() => ({ zaak: null }));
-  if (!zaak) notFound();
+  // zonder horecapakket: naar /werkgever/horeca, waar je het aanzet (eerder een 404)
+  if (!zaak) redirect("/werkgever/horeca");
   const basis = env.APP_BASE_URL.replace(/\/+$/, "");
   const tafels = (await tafelsVan(zaak.id)).filter((t) => t.actief);
   const codes = await Promise.all(

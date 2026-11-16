@@ -123,7 +123,8 @@ export default function Overzicht() {
       <Card className="mt-4">
         <div className="flex flex-wrap items-center gap-4">
           <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-[#f1f1f1] text-[#303030]"><IGrid width={22} height={22} /></span>
-          <div className="min-w-0 flex-1">
+          {/* basis-48: op een telefoon gaat de knop onder de tekst, anders wordt de tekst een kolom van twee woorden breed */}
+          <div className="min-w-0 flex-1 basis-48">
             <h2 className="text-sm font-semibold text-[#1a1a1a]">Ander ontwerp voor je webshop?</h2>
             <p className="mt-0.5 text-sm text-[#616161]">Bekijk alle ontwerpen met een voorbeeld en wissel met één klik. Je producten, bestellingen en teksten blijven staan.</p>
           </div>

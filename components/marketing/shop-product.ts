@@ -99,5 +99,27 @@ export function bySize(a: string, b: string): number {
   return a.localeCompare(b, "nl");
 }
 
+/** De sleutel waarop de filters maten en kleuren vergelijken: "XL", "xl" en "Xl" zijn één maat. */
+export const filterSleutel = (s: string): string => s.trim().toLowerCase();
+
+const begintGroot = (s: string): boolean => s.charAt(0) !== s.charAt(0).toLowerCase();
+
+/**
+ * De keuzes voor het maat- of kleurfilter, één knop per maat of kleur hoe de verkoper hem ook schreef ("S" en "s",
+ * "zwart" en "Zwart"). Lettermaten in hoofdletters (ook "s/m"), de rest met een hoofdletter vooraan. Alleen de
+ * weergave: de opgeslagen varianten blijven zoals ze zijn; vergelijk een variant met de keuze via filterSleutel().
+ */
+export function filterKeuzes(waarden: Iterable<string | null>): string[] {
+  const per = new Map<string, string>();
+  for (const w of waarden) {
+    const t = w?.trim();
+    if (!t) continue;
+    const k = filterSleutel(t);
+    const nu = per.get(k);
+    if (nu === undefined || (!begintGroot(nu) && begintGroot(t))) per.set(k, t);
+  }
+  return [...per.values()].map((t) => (t.split(/[/-]/).every((d) => LETTER.includes(d.trim().toUpperCase())) ? t.toUpperCase() : t.charAt(0).toUpperCase() + t.slice(1)));
+}
+
 /** Breedtes voor next/image in het productraster: 2 kolommen op de telefoon, 3 op een tablet en naast de filters, 4 op een breed scherm. */
 export const GRID_SIZES = "(min-width: 1280px) 22vw, (min-width: 640px) 33vw, 50vw";

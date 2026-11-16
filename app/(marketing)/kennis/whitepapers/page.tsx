@@ -66,7 +66,8 @@ export default function WhitepapersPage() {
                 <div className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-paper-soft">
                   <DocIcon />
                   <Link href={`/kennis/whitepapers/${w.slug}`} className="min-w-0 flex-1">
-                    <span className="block font-semibold text-ink">{w.title}</span>
+                    {/* break-words: "kleineondernemersregeling" is één woord en liep op een telefoon onder de knop door */}
+                    <span className="block break-words font-semibold text-ink hyphens-auto">{w.title}</span>
                     <span className="block truncate text-sm text-neutralx-500">{w.subtitle}</span>
                   </Link>
                   <a

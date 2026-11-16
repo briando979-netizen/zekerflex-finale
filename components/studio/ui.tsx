@@ -39,7 +39,8 @@ export function PageHead({ title, back, sub, actions }: { title: ReactNode; back
           <IArrowLeft />
         </Link>
       )}
-      <div className="min-w-0 flex-1">
+      {/* basis-56: op een telefoon gaan de knoppen naar een eigen regel, anders wordt de kop "Ontw…" en de uitleg een smalle kolom */}
+      <div className="min-w-0 flex-1 basis-56">
         <h1 className="truncate text-xl font-bold tracking-tight text-[#1a1a1a]">{title}</h1>
         {sub && <p className="mt-0.5 text-sm text-[#616161]">{sub}</p>}
       </div>
