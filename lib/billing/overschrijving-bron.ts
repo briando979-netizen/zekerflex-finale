@@ -1,5 +1,6 @@
 import { env } from "@/lib/env";
 import { accountStand, betalenUit } from "@/lib/billing/stripe-betalen";
+import { factuurBetaalwijze, type FactuurBetaalwijze } from "@/lib/billing/overschrijving";
 
 // De server-kant van betalen per overschrijving (lib/billing/overschrijving.ts): waar de rekening van ZekerFlex vandaan komt en of Stripe
 // op dit moment betaalt. Geen IBAN in een log.
@@ -16,4 +17,9 @@ export function platformBankgegevens(): { iban: string | null; naam: string | nu
 export async function stripeBetalenDicht(): Promise<boolean> {
   const [vlag, stand] = await Promise.all([betalenUit().catch(() => null), accountStand().catch(() => null)]);
   return Boolean(vlag) || stand?.betalen === false;
+}
+
+/** Hoe een factuur van ZekerFlex nu betaald wordt (online, per overschrijving of nog niet), voor de facturenschermen. */
+export async function huidigeFactuurBetaalwijze(): Promise<FactuurBetaalwijze> {
+  return factuurBetaalwijze(await stripeBetalenDicht(), platformBankgegevens());
 }

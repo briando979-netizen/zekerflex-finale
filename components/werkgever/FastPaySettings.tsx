@@ -7,6 +7,8 @@ interface Settings {
   offerFastPay: boolean;
   advancesForUitzend: boolean;
   available: boolean;
+  /** kan een loonvoorschot nu echt worden overgemaakt (app/api/werkgever/fastpay/route.ts); anders geen schakelaar */
+  voorschotKan?: boolean;
   credit: { status: "none" | "approved" | "review" | "rejected"; score: number; reasons: string[]; checkedAt: string };
 }
 
@@ -83,13 +85,21 @@ export function FastPaySettings() {
           </p>
         </div>
       )}
-      <label className="flex items-start justify-between gap-3 border-t border-hair pt-4 text-sm">
-        <span>
-          <span className="block">{f.voorschotKop}</span>
-          <span className="block text-xs text-neutralx-500">{f.voorschotUitleg}</span>
-        </span>
-        <input type="checkbox" checked={s.advancesForUitzend} disabled={busy} onChange={(e) => save({ advancesForUitzend: e.target.checked })} className="mt-1" />
-      </label>
+      {s.voorschotKan ? (
+        <label className="flex items-start justify-between gap-3 border-t border-hair pt-4 text-sm">
+          <span>
+            <span className="block">{f.voorschotKop}</span>
+            <span className="block text-xs text-neutralx-500">{f.voorschotUitleg}</span>
+          </span>
+          <input type="checkbox" checked={s.advancesForUitzend} disabled={busy} onChange={(e) => save({ advancesForUitzend: e.target.checked })} className="mt-1" />
+        </label>
+      ) : (
+        // 16 nov 2026: de schakelaar stond aan en beloofde een voorschot dat niet werd overgemaakt (geen uitbetaalroute)
+        <div className="border-t border-hair pt-4 text-sm">
+          <p>{f.voorschotKop}</p>
+          <p className="text-xs text-neutralx-500">{f.voorschotNiet}</p>
+        </div>
+      )}
       {err && <p role="alert" className="text-sm text-crit">{err}</p>}
     </div>
   );

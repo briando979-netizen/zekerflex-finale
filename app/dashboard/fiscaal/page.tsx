@@ -1,5 +1,5 @@
 import { requirePrincipal } from "@/lib/auth";
-import { getFiscal, fiscaalVoorKlant } from "@/lib/fiscal/store";
+import { getFiscal, fiscaalVoorKlant, invoiceModeFor } from "@/lib/fiscal/store";
 import { prisma } from "@/lib/prisma";
 import { schoonKvk } from "@/lib/fiscal/formulier";
 import { PageHeader } from "@/components/app/ui";
@@ -26,6 +26,7 @@ export default async function FiscaalPage() {
       <FiscalForm
         initial={fiscaalVoorKlant(fiscal)}
         defaultKind={fiscal.workerKind}
+        facturatie={invoiceModeFor(fiscal)}
         profiel={{ kvkNumber: schoonKvk(profiel?.kvkNumber), vatNumber: profiel?.vatNumber ?? "" }}
       />
     </div>

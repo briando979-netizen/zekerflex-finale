@@ -152,7 +152,7 @@ const WERKGEVER_APPS: OsApp[] = [
   { id: "b-integraties", naam: "Koppelingen", uitleg: "ZekerFlex verbinden met je eigen systemen.", href: "/werkgever/integraties", icoon: "instellingen", categorie: "bedrijf", rollen: WERKGEVER, zoek: ["api", "koppeling"] },
   { id: "b-bedrijf", naam: "Bedrijfsgegevens", uitleg: "KVK, btw, adres en logo.", href: "/werkgever/bedrijf", icoon: "bedrijf", categorie: "bedrijf", rollen: WERKGEVER },
   { id: "b-instellingen", naam: "Instellingen", uitleg: "Hoe je werkruimte werkt.", href: "/werkgever/instellingen", icoon: "instellingen", categorie: "account", rollen: WERKGEVER },
-  { id: "b-netwerk", naam: "Verbinding", uitleg: "Wifi op de werkvloer, veilige werkplek en 5G.", href: "/werkgever/netwerk", icoon: "instellingen", categorie: "bedrijf", rollen: WERKGEVER, zoek: ["wifi", "vpn", "internet", "5g"] },
+  { id: "b-netwerk", naam: "Verbinding", uitleg: "Wifi op de werkvloer en een veilige werkplek.", href: "/werkgever/netwerk", icoon: "instellingen", categorie: "bedrijf", rollen: WERKGEVER, zoek: ["wifi", "vpn", "internet"] },
   { id: "b-op-locatie", naam: "Op locatie", uitleg: "Portofoon, toegang, sleutelkluis en badges.", href: "/werkgever/op-locatie", icoon: "schild", categorie: "bedrijf", rollen: WERKGEVER, zoek: ["portofoon", "sleutel", "badge", "kenteken"] },
   { id: "b-rapportages", naam: "Rapportages", uitleg: "Cijfers en grafieken over je bedrijf.", href: "/werkgever/rapportages", icoon: "groei", categorie: "bedrijf", rollen: WERKGEVER, zoek: ["bi", "cijfers", "dashboard"] },
   { id: "b-beoordelingen", naam: "Beoordelingen", uitleg: "Wat jij van je krachten vond, en zij van jou.", href: "/werkgever/reviews", icoon: "ster", categorie: "werk", rollen: WERKGEVER },

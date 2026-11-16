@@ -5,11 +5,22 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { recordAudit } from "@/lib/audit";
 import { fastPayAvailable, getFastPay, updateFastPay } from "@/lib/payouts/fastpay";
+import { directeSepaIngericht } from "@/lib/billing/sepa";
+import { stripeBetalenDicht } from "@/lib/billing/overschrijving-bron";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const schema = z.object({ offerFastPay: z.boolean().optional(), advancesForUitzend: z.boolean().optional() });
+
+/**
+ * Kan een loonvoorschot nu echt worden overgemaakt (16 nov 2026)? createPayrollAdvance (lib/payouts/advances.ts) betaalt alleen
+ * via directe SEPA of via Stripe Connect zolang Stripe betaalt; anders slaat hij het voorschot stil over. Dan belooft het scherm
+ * het ook niet (components/werkgever/FastPaySettings.tsx).
+ */
+async function voorschotKan(): Promise<boolean> {
+  return directeSepaIngericht() || !(await stripeBetalenDicht());
+}
 
 async function tenant() {
   const principal = await requirePrincipal();
@@ -24,7 +35,7 @@ export async function GET(): Promise<NextResponse> {
   try {
     const { tenantId } = await tenant();
     const s = await getFastPay(tenantId);
-    return NextResponse.json({ ...s, available: fastPayAvailable(s) });
+    return NextResponse.json({ ...s, available: fastPayAvailable(s), voorschotKan: await voorschotKan() });
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });
@@ -46,7 +57,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
       targetType: "tenant",
       targetId: tenantId,
     });
-    return NextResponse.json({ ...s, available: fastPayAvailable(s) });
+    return NextResponse.json({ ...s, available: fastPayAvailable(s), voorschotKan: await voorschotKan() });
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });

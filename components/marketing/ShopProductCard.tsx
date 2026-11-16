@@ -16,6 +16,7 @@ import { usePaskamerProfiel } from "@/components/marketing/paskamer/usePaskamer"
 import { kleurHex, maatAdvies, matenVan, pastBijSilhouet, pasvormVoor } from "@/lib/shop/paskamer";
 import { ShopPrijs } from "@/components/marketing/ShopPrijs";
 import { useBezorgmoment } from "@/components/marketing/useBezorgmoment";
+import { useShopBetaalwijze } from "@/components/marketing/ShopBetaalwijze";
 import { bezorgdagNaam } from "@/lib/shop/bezorgmoment";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { Sterren } from "@/components/marketing/Sterren";
@@ -55,6 +56,9 @@ export function ShopProductCard({
   const href = p.slug ? `/shop/${p.slug}` : null;
   // "maandag in huis" in het weekend, niet altijd "morgen" (lib/shop/bezorgmoment.ts); de eerste weergave zegt alleen "Op voorraad"
   const bezorg = useBezorgmoment();
+  // bestellen kan nu niet (app/shop/layout.tsx): dan geen bezorgdag en geen actieve knop (16 nov 2026)
+  const bestellenDicht = useShopBetaalwijze() === "dicht";
+  const dag = bestellenDicht ? null : bezorg;
   const { locale } = useI18n();
   // draagbaar? dan een "Pas aan"-knop, en met een paskamerprofiel op dit toestel meteen jouw maat
   const profiel = usePaskamerProfiel();
@@ -144,7 +148,7 @@ export function ShopProductCard({
       </div>
 
       <p className={`mt-2 text-[12px] font-semibold ${stock.kind === "uit" ? "text-crit" : "text-ok"}`}>
-        {stock.kind === "uit" ? t.shop.soldOut : stock.kind === "weinig" ? (bezorg && !p.seller ? fmt(t.shop.lowStockDag, { n: stock.n, dag: bezorgdagNaam(bezorg, t.shop.bezorgMorgen, locale) }) : fmt(t.shop.lowStock, { n: stock.n })) : p.seller ? t.shop.deliveryBySeller : bezorg ? fmt(t.shop.opVoorraadDag, { dag: bezorgdagNaam(bezorg, t.shop.bezorgMorgen, locale) }) : t.shop.opVoorraad}
+        {stock.kind === "uit" ? t.shop.soldOut : stock.kind === "weinig" ? (dag && !p.seller ? fmt(t.shop.lowStockDag, { n: stock.n, dag: bezorgdagNaam(dag, t.shop.bezorgMorgen, locale) }) : fmt(t.shop.lowStock, { n: stock.n })) : p.seller ? t.shop.deliveryBySeller : dag ? fmt(t.shop.opVoorraadDag, { dag: bezorgdagNaam(dag, t.shop.bezorgMorgen, locale) }) : t.shop.opVoorraad}
       </p>
       <p className="mt-0.5 truncate text-[12px] text-neutralx-500">{fmt(t.shop.soldBy, { seller: p.seller ?? SELLER })}</p>
 
@@ -175,7 +179,7 @@ export function ShopProductCard({
           <button
             type="button"
             onClick={quickAdd}
-            disabled={single.stock <= 0}
+            disabled={single.stock <= 0 || bestellenDicht}
             className="inline-flex h-10 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-brand-500 px-2 text-[12px] font-bold text-white transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:bg-neutralx-300 min-[400px]:text-[13px] sm:gap-2 sm:px-3"
           >
             {/* op een smalle telefoon past alleen de tekst */}

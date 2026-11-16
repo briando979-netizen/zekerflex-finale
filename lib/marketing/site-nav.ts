@@ -84,7 +84,7 @@ export const NAV: NavEntry[] = [
           { title: "Vind werk", desc: "Diensten die matchen op je vak, je reistijd en je beschikbaarheid.", href: "/voor-freelancers#matching" },
           { title: "Starten als freelancer", desc: "Van aanmelding tot je eerste dienst — alles geregeld behalve het werk zelf.", href: "/voor-freelancers" },
           { title: "Via het uitzendbureau", desc: "Liever loonstrook, vakantiegeld en pensioen? Werk als uitzendkracht.", href: "/uitzendbureau" },
-          { title: "Verzekeren", desc: "Aansprakelijkheid en ongevallen gedekt tijdens elke opdracht.", href: "/voor-freelancers#verzekering" },
+          { title: "Verzekeren", desc: "Welke verzekering je als zzp'er of flexwerker zelf regelt.", href: "/voor-freelancers#verzekering" },
         ],
       },
       bedrijven: {

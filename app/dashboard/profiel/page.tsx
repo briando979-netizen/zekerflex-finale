@@ -159,7 +159,16 @@ export default async function ProfielPage() {
               k={t.kyc}
               v={
                 <StatusPill tone={user?.kycStatus === "VERIFIED" ? "ok" : "warn"}>
-                  {user?.kycStatus === "VERIFIED" ? t.geverifieerd : (user?.kycStatus ?? t.nietGestart)}
+                  {/* 16 nov 2026: hier stond de ruwe waarde ("NOT_STARTED") */}
+                  {user?.kycStatus === "VERIFIED"
+                    ? t.geverifieerd
+                    : user?.kycStatus === "PENDING"
+                      ? t.kycInBehandeling
+                      : user?.kycStatus === "REJECTED"
+                        ? t.kycAfgekeurd
+                        : user?.kycStatus === "EXPIRED"
+                          ? t.kycVerlopen
+                          : t.nietGestart}
                 </StatusPill>
               }
             />

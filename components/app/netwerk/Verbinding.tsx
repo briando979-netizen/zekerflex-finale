@@ -223,10 +223,10 @@ export function Verbinding({ data }: { data: VerbindingData }) {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-ink">Wifi, VPN en eigen 5G</h1>
+        <h1 className="text-2xl font-bold text-ink">Wifi en VPN</h1>
         <p className="mt-1 max-w-3xl text-sm text-neutralx-600">
-          Netwerkpakketten die aan je rooster vastzitten: wifi die vanzelf aan- en uitgaat met een dienst, een veilige verbinding naar je eigen systemen, en een eigen
-          mobiel netwerk op een terrein. Alles draait op de servers van ZekerFlex in Nederland, zonder diensten van derden.
+          Netwerkpakketten die aan je rooster vastzitten: wifi die vanzelf aan- en uitgaat met een dienst, en een veilige verbinding naar je eigen systemen.
+          Alles loopt via de servers van ZekerFlex in Nederland; voor de VPN gebruik je op het apparaat de gratis Tailscale-app.
         </p>
       </header>
 
@@ -243,7 +243,8 @@ export function Verbinding({ data }: { data: VerbindingData }) {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
         <div className="space-y-5">
-          {MODULE_LIJST.map((def) => {
+          {/* een eigen 5G-netwerk bieden we niet meer aan (16 nov 2026, owner-todo netwerk-5g): alleen wie het al actief heeft, ziet het nog */}
+          {MODULE_LIJST.filter((def) => def.sleutel !== "5g" || stand.modules["5g"]?.status === "actief").map((def) => {
             const m = stand.modules[def.sleutel];
             const status = m?.status;
             const leverbaar = def.sleutel === "wifi" ? data.wifiServer.klaar : def.sleutel === "vpn" ? data.vpn.gekoppeld : false;

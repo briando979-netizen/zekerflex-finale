@@ -20,7 +20,7 @@ export type RetentionAction = "anonymise" | "delete";
 export interface RetentionRule {
   /** Stable key, also used in the erasure report. */
   key: string;
-  /** Human description of the data category. */
+  /** Human description of the data category. Gewone woorden: deze tekst staat letterlijk op de verwijderpagina's (16 nov 2026). */
   label: string;
   /** Retention period in days, counted from the anchor event. */
   days: number;
@@ -42,7 +42,7 @@ const YEAR = 365;
 export const RETENTION_RULES: readonly RetentionRule[] = [
   {
     key: "account",
-    label: "Accountgegevens (naam, e-mail, telefoon, wachtwoordhash)",
+    label: "Accountgegevens (naam, e-mail, telefoon en je versleutelde wachtwoord)",
     days: 0,
     anchor: "account gesloten / verwijderverzoek",
     basis: "Geen grondslag na beëindiging — art. 17 AVG",
@@ -51,7 +51,7 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
   },
   {
     key: "freelancer_profile",
-    label: "Freelancer-profiel (KVK, btw, IBAN, thuisadres/-locatie)",
+    label: "Je profiel als freelancer, als je er een hebt (KVK- en btw-nummer, IBAN, thuisadres en locatie)",
     days: 0,
     anchor: "account gesloten / verwijderverzoek",
     basis: "Geen grondslag na beëindiging; IBAN alleen tijdens actieve relatie",
@@ -60,7 +60,7 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
   },
   {
     key: "kyc",
-    label: "Identiteitsverificatie — ruwe Didit-payload, biometrie-scores, documentnummer-hash",
+    label: "Gegevens van je identiteitscontrole: wat de controle over je document en je gezicht teruggaf, de uitslag van de gezichtsvergelijking en een onleesbaar gemaakte versie van je documentnummer",
     days: 30,
     anchor: "verificatie afgerond of afgekeurd",
     basis:
@@ -70,7 +70,7 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
   },
   {
     key: "device_fingerprint",
-    label: "Apparaat-fingerprints (fraudedetectie)",
+    label: "Herkenning van je toestel (om fraude te voorkomen)",
     days: 180,
     anchor: "laatst gezien",
     basis: "Gerechtvaardigd belang (fraudepreventie), tijdelijk",
@@ -79,7 +79,7 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
   },
   {
     key: "web_push",
-    label: "Web Push-abonnementen",
+    label: "Aanmeldingen voor meldingen op je telefoon of computer (pushberichten)",
     days: 0,
     anchor: "account gesloten / verwijderverzoek",
     basis: "Toestemming ingetrokken",
@@ -88,16 +88,16 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
   },
   {
     key: "gps_events",
-    label: "GPS check-in/-out-events bij urenstaten",
+    label: "Je locatie bij het in- en uitchecken, bij je urenstaten",
     days: 2 * YEAR,
     anchor: "dienst gewerkt",
-    basis: "Bewijs bij urengeschil; daarna niet meer nodig",
+    basis: "Bewijs bij onenigheid over de uren; daarna niet meer nodig",
     onExpiry: "delete",
     blocksErasure: true,
   },
   {
     key: "rijschool_lesroutes",
-    label: "Lesroutes van rijlessen (uitgedunde GPS-lijn, opgenomen door de instructeur)",
+    label: "Lesroutes van rijlessen (de gereden route in grote lijnen, opgenomen door de instructeur)",
     days: 2 * YEAR,
     anchor: "les gereden",
     basis: "Inzicht in de rijopleiding voor de leerling; daarna niet meer nodig",
@@ -127,16 +127,16 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
     label: "Urenstaten",
     days: 7 * YEAR,
     anchor: "dienst gewerkt",
-    basis: "Fiscale bewaarplicht (art. 52 AWR) — loon-/factuuronderbouwing",
+    basis: "Wettelijke bewaarplicht voor de belasting (art. 52 AWR), als onderbouwing van loon en facturen",
     onExpiry: "anonymise",
     blocksErasure: true,
   },
   {
     key: "invoices_payments",
-    label: "Facturen, self-billing en betaalopdrachten",
+    label: "Facturen (ook die ZekerFlex namens jou opmaakt) en betaalopdrachten",
     days: 7 * YEAR,
     anchor: "factuur uitgereikt",
-    basis: "Fiscale bewaarplicht (art. 52 AWR)",
+    basis: "Wettelijke bewaarplicht voor de belasting (art. 52 AWR)",
     onExpiry: "anonymise",
     blocksErasure: true,
   },
@@ -145,31 +145,31 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
     label: "Modelovereenkomsten (Wet DBA)",
     days: 7 * YEAR,
     anchor: "overeenkomst beëindigd",
-    basis: "Fiscale bewaarplicht + Wet DBA-onderbouwing",
+    basis: "Wettelijke bewaarplicht voor de belasting en als onderbouwing voor de Wet DBA",
     onExpiry: "anonymise",
     blocksErasure: true,
   },
   {
     key: "payroll",
-    label: "Loonstroken / payroll-runs (uitzendkrachten)",
+    label: "Loonstroken en loonberekeningen (uitzendkrachten)",
     days: 7 * YEAR,
     anchor: "loonjaar afgesloten",
-    basis: "Fiscale + loonadministratie-bewaarplicht",
+    basis: "Wettelijke bewaarplicht voor de belasting en de loonadministratie",
     onExpiry: "anonymise",
     blocksErasure: true,
   },
   {
     key: "audit_log",
-    label: "Auditlog (append-only)",
+    label: "Logboek van wat er op het platform is gedaan (achteraf niet te wijzigen)",
     days: 7 * YEAR,
     anchor: "regel geschreven",
-    basis: "Verantwoording / beveiliging; PII wordt eerder geanonimiseerd",
+    basis: "Verantwoording en beveiliging; je persoonsgegevens worden er eerder uit gehaald",
     onExpiry: "anonymise",
     blocksErasure: true,
   },
   {
     key: "chatlog",
-    label: "Vragen en antwoorden in de assistenten (openbare chat, Jarvis, Brain) en de beoordelingen daarvan",
+    label: "Vragen en antwoorden in de assistenten (de chat op de site en de assistenten in de app) en de beoordelingen daarvan",
     days: 90,
     anchor: "vraag gesteld",
     basis: "Alleen om de antwoorden te verbeteren; daarna geen grondslag — dataminimalisatie (art. 5(1)(c) en (e) AVG). E-mailadressen, telefoonnummers, rekeningnummers en BSN's worden al vóór het bewaren weggehaald",
@@ -178,7 +178,7 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
   },
   {
     key: "engagement_events",
-    label: "Gedrags-/engagement-events (matching-signalen)",
+    label: "Wat je in de app doet (zoals de app openen en klussen bekijken), om je beter passend werk te tonen",
     days: YEAR,
     anchor: "event vastgelegd",
     basis: "Gerechtvaardigd belang (matchkwaliteit), tijdelijk",
@@ -197,7 +197,7 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
   },
   {
     key: "password_reset_tokens",
-    label: "Wachtwoord-reset-tokens",
+    label: "Links om je wachtwoord opnieuw in te stellen",
     days: 1,
     anchor: "aangemaakt",
     basis: "Alleen geldig binnen het resetvenster",
@@ -224,7 +224,7 @@ export const RETENTION_RULES: readonly RetentionRule[] = [
   },
   {
     key: "personal_settings",
-    label: "Persoonlijke instellingen en notities (agenda, ritten, chat, contacten, AI-geheugen, tweestapsverificatie)",
+    label: "Persoonlijke instellingen en notities (agenda, ritten, chat, contacten, wat de assistent over je onthoudt, tweestapsverificatie)",
     days: 0,
     anchor: "account gesloten / verwijderverzoek",
     basis: "Alleen nodig zolang je account bestaat — art. 17 AVG",

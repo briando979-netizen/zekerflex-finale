@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { RenewalView } from "@/lib/website/renewal";
 import type { MonitorView } from "@/lib/website/uptime";
 import { NietInIphone } from "@/components/app/NietInIphone";
+import { useT } from "@/components/i18n/I18nProvider";
 
 // ---------------------------------------------------------------------------
 // Opdrachtgevers-onderdeel "Website-beheer". Drie toestanden:
@@ -79,7 +80,18 @@ function monitorTiles(m: MonitorView | null | undefined): { label: string; value
   ];
 }
 
-export function WebsiteManage({ initial, plans, adminOverride = false }: { initial: WebsiteInitial; plans: Record<string, PlanDef>; adminOverride?: boolean }) {
+export function WebsiteManage({
+  initial,
+  plans,
+  adminOverride = false,
+  betalenDicht = false,
+}: {
+  initial: WebsiteInitial;
+  plans: Record<string, PlanDef>;
+  adminOverride?: boolean;
+  /** online betalen (Stripe) staat dicht: dan kan een abonnement nu niet afgesloten worden (lib/billing/overschrijving-bron.ts) */
+  betalenDicht?: boolean;
+}) {
   const [state, setState] = useState<WebsiteInitial>(initial);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -167,7 +179,7 @@ export function WebsiteManage({ initial, plans, adminOverride = false }: { initi
           <OnboardingForm form={form} set={set} onSubmit={saveDetails} busy={busy === "save"} message={message} hasSecrets={state.hasSecrets} free={adminOverride} />
         )
       ) : (
-        <LockedView plans={plans} onSubscribe={subscribe} busy={busy} message={message} pending={state.status === "PENDING_PAYMENT"} />
+        <LockedView plans={plans} onSubscribe={subscribe} busy={busy} message={message} pending={state.status === "PENDING_PAYMENT"} betalenDicht={betalenDicht} />
       )}
     </div>
   );
@@ -180,13 +192,16 @@ function LockedView({
   busy,
   message,
   pending,
+  betalenDicht,
 }: {
   plans: Record<string, PlanDef>;
   onSubscribe: (plan: string) => void;
   busy: string | null;
   message: string;
   pending: boolean;
+  betalenDicht: boolean;
 }) {
+  const tb = useT().billing;
   return (
     <div className="space-y-6">
       {/* Vergrendelde dashboard-preview */}
@@ -249,7 +264,7 @@ function LockedView({
               <button
                 type="button"
                 onClick={() => onSubscribe(key)}
-                disabled={busy !== null}
+                disabled={busy !== null || betalenDicht}
                 className="mt-5 w-full rounded-lg bg-ink py-3 text-sm font-bold text-white transition hover:bg-brand-600 disabled:opacity-50"
               >
                 {busy === key ? "Bezig…" : `${plan.label} nemen — ${euro(plan.priceCentsPerMonth)}/mnd`}
@@ -258,7 +273,12 @@ function LockedView({
           </div>
         ))}
       </div>
-      <p className="text-xs text-neutralx-400">Maandelijks opzegbaar. Betaling via iDEAL of creditcard, veilig afgehandeld door Stripe.</p>
+      {/* 16 nov 2026: hier stond altijd "Betaling via iDEAL of creditcard, veilig afgehandeld door Stripe", ook toen Stripe dicht was */}
+      <p className="text-xs text-neutralx-400">
+        {betalenDicht
+          ? tb.websiteAbonnementDicht
+          : "Maandelijks opzegbaar. Betaling via iDEAL of creditcard, veilig afgehandeld door Stripe."}
+      </p>
       {message && <p role="alert" className="text-sm font-semibold text-crit">{message}</p>}
     </div>
   );

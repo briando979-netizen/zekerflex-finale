@@ -119,13 +119,16 @@ describe("bezorgmoment (Nederlandse tijd, werkdagen en feestdagen)", () => {
   it("een product van een verkoper krijgt geen aftelling, maar de echte termijn van de verkoper", () => {
     const pdp = lees("components/marketing/ProductDetail.tsx");
     expect(pdp).toMatch(/bezorg && variant && variantStock > 0 && !product\.seller/);
-    expect(pdp).toMatch(/variantStock > 0 && product\.seller && \(/);
+    // 16 nov 2026: en geen van beide zolang bestellen dicht is (tests/beloftes-controle.test.ts)
+    expect(pdp).toMatch(/variantStock > 0 && product\.seller && !bestellenDicht && \(/);
     expect(pdp).toContain("fmt(t.shop.bezorgVerkoper, { seller: product.seller, n: VERKOPER_VERZENDT_BINNEN_WERKDAGEN })");
     expect(VERKOPER_VERZENDT_BINNEN_WERKDAGEN).toBe(2);
     // ook het kaartje belooft niet altijd "morgen": de dag komt uit hetzelfde bezorgmoment
     const kaart = lees("components/marketing/ShopProductCard.tsx");
     expect(kaart).not.toContain("t.shop.deliveryTomorrow");
-    expect(kaart).toContain("bezorgdagNaam(bezorg, t.shop.bezorgMorgen, locale)");
+    // 16 nov 2026: "dag" is het bezorgmoment, of niets zolang bestellen dicht is
+    expect(kaart).toContain("const dag = bestellenDicht ? null : bezorg;");
+    expect(kaart).toContain("bezorgdagNaam(dag, t.shop.bezorgMorgen, locale)");
   });
 });
 

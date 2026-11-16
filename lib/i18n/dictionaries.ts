@@ -385,6 +385,12 @@ export const nl = {
     qrCopied: "Gekopieerd ✓",
     qrOpen: "Betaalpagina openen",
     qrClose: "Sluiten",
+    // 16 nov 2026: zolang online betalen dicht staat (FactuurBetaalwijze in lib/billing/overschrijving.ts)
+    payTransfer: "Betaalgegevens",
+    payTransferTitle: "Betalen per overschrijving",
+    payTransferBody: "Maak het bedrag over naar de rekening van ZekerFlex, met het factuurnummer in de omschrijving. Bij elke open factuur staan de gegevens onder Betaalgegevens.",
+    payClosedTitle: "Online betalen staat uit",
+    payClosedBody: "Een factuur kun je op dit moment niet online betalen. Neem contact op met ZekerFlex, dan spreken we af hoe je betaalt.",
     ublTitel: "E-factuur (UBL) voor je boekhoudpakket",
     ublAria: "E-factuur UBL — {nr}",
   },
@@ -424,6 +430,9 @@ export const nl = {
     saving: "Bezig…",
     saved: "Opgeslagen",
     saveFailed: "Opslaan mislukt",
+    // /werkgever/website (components/app/WebsiteManage.tsx) zolang online betalen dicht staat (16 nov 2026)
+    websiteAbonnementDicht:
+      "Maandelijks opzegbaar. Online betalen staat op dit moment uit, dus een abonnement afsluiten kan nu niet. Wil je toch beginnen? Neem contact met ons op.",
   },
   newShift: {
     title: "Klus uitzetten",
@@ -824,6 +833,7 @@ export const nl = {
     chooseOption: "Kies maat/kleur →",
     chooseOptionShort: "Kies een optie",
     soldOut: "Uitverkocht",
+    orderClosedShort: "Bestellen kan nu niet",
     size: "Maat",
     color: "Kleur",
     price: "Prijs",
@@ -1352,6 +1362,7 @@ export const nl = {
     zetAan: "Zet de schakelaar aan om de kredietcheck te starten.",
     voorschotKop: "Voorschot voor uitzendkrachten",
     voorschotUitleg: "Na jouw goedkeuring probeert ZekerFlex ongeveer de helft van het verwachte bruto loon als voorschot over te maken. Bijschrijving hangt af van de betaalprovider en ontvangende bank; de rest volgt op de loonstrook.",
+    voorschotNiet: "Een voorschot kan op dit moment niet: er is nog geen manier om het meteen over te maken. Je uitzendkrachten krijgen hun loon via de wekelijkse verloning.",
   },
   volumeKaart: {
     kop: "📉 Staffelkorting",
@@ -1608,7 +1619,7 @@ export const nl = {
     telefonie: "Telefonie",
     telefonieUitleg: "Een zakelijk nummer en bellen vanuit ZekerFlex.",
     netwerk: "Wifi en VPN",
-    netwerkUitleg: "Wifi die het rooster volgt, een veilige verbinding op afstand en een eigen 5G-netwerk.",
+    netwerkUitleg: "Wifi die het rooster volgt en een veilige verbinding op afstand.",
     agendaUitleg: "Afspraken uit je mail, chat en WhatsApp, vanzelf bij elkaar.",
     facturen: "Facturen",
     facturenUitleg: "Facturen van ZekerFlex.",

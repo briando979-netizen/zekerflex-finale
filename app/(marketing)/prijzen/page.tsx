@@ -116,7 +116,7 @@ export default async function PrijzenPage() {
           </Link>
         </p>
         <p className="mt-2 text-center text-sm text-neutralx-600">
-          Liever een maandabonnement met extra modules (AI-recruiter, snelle uitbetaling, uitzend, bank)?{" "}
+          Liever een maandabonnement met extra modules (AI-recruiter, snelle uitbetaling, uitzend)?{" "}
           <Link href="/abonnementen" className="font-semibold text-brand-600 underline">
             Bekijk de abonnementen
           </Link>

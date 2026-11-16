@@ -27,7 +27,18 @@ export interface ProfielBedrijf {
   vatNumber: string;
 }
 
-export function FiscalForm({ initial, defaultKind, profiel }: { initial: FiscalProfile; defaultKind: WorkerKind | null; profiel?: ProfielBedrijf | undefined }) {
+export function FiscalForm({
+  initial,
+  defaultKind,
+  profiel,
+  facturatie,
+}: {
+  initial: FiscalProfile;
+  defaultKind: WorkerKind | null;
+  profiel?: ProfielBedrijf | undefined;
+  /** de facturatiewijze zoals de server hem bepaalt (invoiceModeFor); zonder dit prop "reverse-billing" zoals voorheen */
+  facturatie?: string | undefined;
+}) {
   const router = useRouter();
   const toast = useToast();
   const [kind, setKind] = useState<WorkerKind>(initial.workerKind ?? defaultKind ?? "flexwerker");
@@ -52,7 +63,8 @@ export function FiscalForm({ initial, defaultKind, profiel }: { initial: FiscalP
   const [wijzigKind, setWijzigKind] = useState(false);
   const [wijzigBedrijf, setWijzigBedrijf] = useState(false);
   const [result, setResult] = useState<(FiscalProfile & { resolvedInvoiceMode: string }) | null>(
-    initial.workerKind ? { ...initial, resolvedInvoiceMode: "reverse-billing" } : null,
+    // 16 nov 2026: stond vast op "reverse-billing", ook voor een uitzendkracht (die krijgt een loonstrook)
+    initial.workerKind ? { ...initial, resolvedInvoiceMode: facturatie ?? "reverse-billing" } : null,
   );
 
   async function submit() {

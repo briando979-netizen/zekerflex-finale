@@ -5,7 +5,7 @@ import { Section, SectionHead, CtaBand } from "@/components/marketing/primitives
 import { canonical, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { ProductLeadForm } from "@/components/marketing/ProductLeadForm";
-import { SPINOFF_PRODUCTS, spinoffProduct, type ProductDeployment } from "@/lib/products";
+import { DEPLOYMENT_LABEL, SPINOFF_PRODUCTS, spinoffProduct } from "@/lib/products";
 import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 import { FotoKolom } from "@/components/marketing/HeroMetFoto";
 import { paginaFoto } from "@/lib/marketing/fotos";
@@ -28,13 +28,6 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-const deploymentLabel: Record<ProductDeployment, string> = {
-  saas: "SaaS of plug-in",
-  "self-hosted": "Self-hosted",
-  api: "API as a service",
-  platform: "Platform (white-label)",
-};
-
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const p = spinoffProduct((await params).slug);
   if (!p) notFound();
@@ -50,11 +43,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     offers: { "@type": "Offer", priceCurrency: "EUR", availability: "https://schema.org/InStock", description: p.priceLabel },
   };
 
+  // 16 nov 2026: de interne verkoopnotities uit lib/products.ts staan hier niet meer (tests/beloftes-controle.test.ts)
   const facts: { label: string; value: string }[] = [
     { label: "Voor wie", value: p.audience },
-    { label: "Vorm", value: deploymentLabel[p.deployment] },
-    { label: "Verkoopcyclus", value: p.salesComplexity === "laag" ? "Kort" : p.salesComplexity === "gemiddeld" ? "Gemiddeld" : "Langer traject" },
-    { label: "Tijd tot eerste omzet", value: p.timeToMrr },
+    { label: "Vorm", value: DEPLOYMENT_LABEL[p.deployment] },
   ];
 
   return (
@@ -96,10 +88,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 <li key={i} className="flex gap-2"><span className="mt-0.5 flex-shrink-0 text-brand-500" aria-hidden>✓</span><span>{f}</span></li>
               ))}
             </ul>
-
-            <p className="mt-10 text-xs text-neutralx-400">
-              Hergebruikt uit het platform: {p.reused.join(" · ")}.
-            </p>
           </div>
 
           <aside className="rounded-2xl border border-hair bg-white p-6 h-fit">
@@ -134,7 +122,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         primaryHref="/producten"
         primaryLabel="Alle producten"
         secondaryHref="/voor-bureaus"
-        secondaryLabel="Platform & white-label"
+        secondaryLabel="Platform onder eigen merk"
       />
     </>
   );

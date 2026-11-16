@@ -328,7 +328,8 @@ export const FULL_FAQ: { category: string; items: { q: string; a: string }[] }[]
     ],
   },
   {
-    category: "Compliance & verzekering",
+    // 16 nov 2026: was "Compliance & verzekering"; ZekerFlex biedt geen verzekering, het antwoord hieronder zegt dat ook
+    category: "Regels, verzekeren en privacy",
     items: [
       { q: "Is werken via ZekerFlex Wet DBA-proof?", a: "ZekerFlex legt afspraken vast en signaleert onder meer urenconcentratie, opeenvolgende weken en omzetafhankelijkheid. Dat geeft geen garantie over de arbeidsrelatie; de feitelijke werkwijze blijft bepalend." },
       { q: "Ben ik verzekerd tijdens een dienst?", a: "Nee, ZekerFlex biedt op dit moment geen verzekering. Werk je als zzp'er of flexwerker, regel dan zelf een bedrijfsaansprakelijkheidsverzekering (AVB), en kijk of je een ongevallen- of arbeidsongeschiktheidsverzekering wilt. In de whitepaper 'Welke verzekeringen heb je nodig?' lees je waar je op let." },

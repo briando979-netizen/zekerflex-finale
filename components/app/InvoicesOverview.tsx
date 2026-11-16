@@ -8,6 +8,7 @@ import { PayInvoiceButton } from "@/components/app/PayInvoiceButton";
 import { QrCode } from "@/components/billing/QrCode";
 import { Portal } from "@/components/chat/Portal";
 import { useInIosApp } from "@/components/app/useInIosApp";
+import type { FactuurBetaalwijze } from "@/lib/billing/overschrijving";
 
 export type InvoiceRow = {
   id: string;
@@ -58,15 +59,23 @@ type Dict = {
   qrCopied: string;
   qrOpen: string;
   qrClose: string;
+  payTransfer: string;
+  payTransferTitle: string;
+  payTransferBody: string;
+  payClosedTitle: string;
+  payClosedBody: string;
   ublTitel: string;
   ublAria: string;
 };
 
 const moneyExact = (cents: number) => `€ ${(cents / 100).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export function InvoicesOverview({ invoices, t }: { invoices: InvoiceRow[]; t: Dict }) {
+export function InvoicesOverview({ invoices, t, betaalwijze = "online" }: { invoices: InvoiceRow[]; t: Dict; betaalwijze?: FactuurBetaalwijze }) {
   // in de iPhone-app geen domeinfacturen betalen (null: nog onbekend, dan ook niet tonen)
   const ios = useInIosApp();
+  // 16 nov 2026: staat online betalen dicht, dan geen knoppen voor iDEAL/kaart (die gaven alleen een foutmelding) maar de
+  // betaalpagina met de rekening en het kenmerk, of (zonder rekening) de vraag om contact op te nemen
+  const online = betaalwijze === "online";
   const outstanding = useMemo(() => invoices.filter((i) => i.status === "ISSUED"), [invoices]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [paying, setPaying] = useState(false);
@@ -183,7 +192,18 @@ export function InvoicesOverview({ invoices, t }: { invoices: InvoiceRow[]; t: D
                   </a>
                 </td>
                 <td className="px-5 py-3 text-right">
-                  {i.status === "ISSUED" && !(i.digitaal && ios !== false) && (
+                  {i.status === "ISSUED" && betaalwijze === "overschrijving" && i.payUrl && !(i.digitaal && ios !== false) && (
+                    <a
+                      href={i.payUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-lg border border-hairstrong px-2 py-1 text-xs font-semibold text-ink hover:bg-paper-soft"
+                      aria-label={`${t.payTransfer} — ${i.number}`}
+                    >
+                      {t.payTransfer}
+                    </a>
+                  )}
+                  {i.status === "ISSUED" && online && !(i.digitaal && ios !== false) && (
                     <span className="inline-flex items-center gap-2">
                       {i.payUrl && (
                         <button
@@ -219,11 +239,18 @@ export function InvoicesOverview({ invoices, t }: { invoices: InvoiceRow[]; t: D
           {outstanding.length === 0 ? (
             <p className="px-5 py-10 text-center text-sm text-neutralx-400">{t.noOutstanding}</p>
           ) : (
-            <Table rows={outstanding} selectable />
+            <Table rows={outstanding} selectable={online} />
           )}
         </div>
 
-        {outstanding.length > 0 && (
+        {outstanding.length > 0 && !online && (
+          <div className="card h-fit p-5">
+            <p className="text-sm font-semibold">{betaalwijze === "overschrijving" ? t.payTransferTitle : t.payClosedTitle}</p>
+            <p className="mt-2 text-xs leading-relaxed text-neutralx-500">{betaalwijze === "overschrijving" ? t.payTransferBody : t.payClosedBody}</p>
+          </div>
+        )}
+
+        {outstanding.length > 0 && online && (
           <div className="card sticky top-20 h-fit p-5">
             <p className="text-sm font-semibold">{t.payDirect}</p>
             <p className="mt-1 text-xs text-neutralx-500">{selected.size} {t.selected}</p>

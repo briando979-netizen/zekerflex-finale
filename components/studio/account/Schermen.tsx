@@ -8,6 +8,8 @@ import { tenantVerification } from "@/lib/company/verified";
 import { mailPrefsView } from "@/lib/mail/prefs";
 import { landNaam } from "@/lib/onboarding/buitenland";
 import { payUrl } from "@/lib/billing/pay-link";
+import { huidigeFactuurBetaalwijze } from "@/lib/billing/overschrijving-bron";
+import type { FactuurBetaalwijze } from "@/lib/billing/overschrijving";
 import { getDict } from "@/lib/i18n/server";
 import type { StudioSoort } from "@/lib/studio/account";
 import { updateEmployerPersonalInfoAction } from "@/app/werkgever/account/actions";
@@ -100,12 +102,20 @@ export async function BedrijfScherm({ soort }: { soort: StudioSoort }) {
   );
 }
 
+const BETAAL_ZIN: Record<FactuurBetaalwijze, string> = {
+  online: "Betalen kan meteen online.",
+  overschrijving: "Betalen gaat per bankoverschrijving: bij elke open factuur staan de rekening en het kenmerk.",
+  dicht: "Online betalen kan op dit moment niet; neem voor het betalen contact op met ZekerFlex.",
+};
+
 /** Studio → Facturen: wat ZekerFlex het bedrijf rekent (domeinnaam, abonnement), met betaallink. */
 export async function FacturenScherm({ soort }: { soort: StudioSoort }) {
   const iv = (await getDict()).invoices;
   const principal = await requirePrincipal();
   const scope = await resolveEmployerScope(principal);
   const billing = scope.tenantIds[0] ? await getOrgProfileExtra(scope.tenantIds[0]) : {};
+  // 16 nov 2026: "Betalen kan meteen online" stond er ook toen Stripe dicht was; nu volgt de tekst de echte stand
+  const betaalwijze = await huidigeFactuurBetaalwijze();
   const invoices = await prisma.invoice.findMany({
     where: { recipientTenantId: { in: scope.tenantIds } },
     select: { id: true, number: true, type: true, status: true, subtotalCents: true, vatCents: true, totalCents: true, vatTreatment: true, timesheet: { select: { branch: { select: { name: true } } } } },
@@ -131,7 +141,7 @@ export async function FacturenScherm({ soort }: { soort: StudioSoort }) {
 
   return (
     <>
-      <PageHead title="Facturen" sub={`Wat ZekerFlex je rekent voor je ${naamVan(soort)}, zoals je domeinnaam. Betalen kan meteen online.`} />
+      <PageHead title="Facturen" sub={`Wat ZekerFlex je rekent voor je ${naamVan(soort)}, zoals je domeinnaam. ${BETAAL_ZIN[betaalwijze]}`} />
       <Card>
         <div className="grid grid-cols-3 gap-5">
           <Stat label="Openstaand" value={money(openstaand)} />
@@ -145,7 +155,7 @@ export async function FacturenScherm({ soort }: { soort: StudioSoort }) {
             <p className="text-sm text-[#616161]">Nog geen facturen. Bestel je een domeinnaam, dan staat de factuur hier.</p>
           </Card>
         ) : (
-          <InvoicesOverview invoices={rows} t={iv} />
+          <InvoicesOverview invoices={rows} t={iv} betaalwijze={betaalwijze} />
         )}
       </div>
       <div className="mt-5" id="factuurgegevens">
