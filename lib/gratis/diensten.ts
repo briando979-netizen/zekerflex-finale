@@ -276,6 +276,15 @@ export const GRATIS_DIENSTEN: GratisDienst[] = [
     hosts: ["androidpublisher.googleapis.com"],
   },
   {
+    id: "alibaba",
+    naam: "Alibaba.com Open Platform (producten voor de webshop)",
+    waarvoor: "Producten van Alibaba met foto, omschrijving en inkoopprijs als concept in de webshop zetten",
+    nu: "De officiële koppeling met de app van de eigenaar op het Open Platform (lib/integrations/alibaba-openapi*.ts, Beheer → Webshop)",
+    eigen: "Winkel-AI leest een productlink zelf (lib/shop/link-product*.ts); bij Alibaba lukt dat via de productbeschrijving. Zonder app of als Alibaba wegvalt, blijft die weg werken.",
+    status: "nodig",
+    env: ["ALIBABA_APP_KEY", "ALIBABA_APP_SECRET", "ALIBABA_API_URL", "ALIBABA_AUTH_URL"],
+  },
+  {
     id: "dns-aanbieders",
     naam: "DNS bij Cloudflare of Hetzner (klantdomeinen)",
     waarvoor: "Records voor een klantdomein zetten als de klant zijn DNS daar heeft staan",

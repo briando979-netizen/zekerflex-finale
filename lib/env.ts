@@ -307,6 +307,14 @@ const schema = z.object({
   // Ons eigen Peppol-adres bij dat toegangspunt, bijv. 0106:12345678
   PEPPOL_SENDER_ID: z.string().optional(),
 
+  // ---- Alibaba.com Open Platform (lib/integrations/alibaba-openapi*.ts) --------
+  // De app van de eigenaar op openapi.alibaba.com. Leeg = Winkel-AI leest alleen een productlink.
+  ALIBABA_APP_KEY: z.string().optional(),
+  ALIBABA_APP_SECRET: z.string().optional(),
+  // De API-gateway (eindigt meestal op /rest) en de autorisatiepagina (…/oauth/authorize), zoals ze bij de app staan.
+  ALIBABA_API_URL: z.string().url().optional(),
+  ALIBABA_AUTH_URL: z.string().url().optional(),
+
   // ---- Roosterplanner (lib/planner) ------------------------------------------
   // Optionele rekendienst met Google OR-Tools (deploy/planner). Leeg = de
   // ingebouwde oplosser in TypeScript, die hetzelfde antwoordformaat geeft.

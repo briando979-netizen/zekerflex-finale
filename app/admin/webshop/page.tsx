@@ -7,6 +7,7 @@ import { accountStand } from "@/lib/billing/stripe-betalen";
 import { CONSOLE_GROEPEN, INRICHTEN_KNOPPEN, MIJN_WINKEL_KNOPPEN, betalenStatus, consoleTaken, type ConsoleStand } from "@/lib/shop/console";
 import { opzetStappen, opzetVoortgang, volgendeStap } from "@/lib/shop/opzetlijst";
 import { contentKeys, getContentMap } from "@/lib/content/store";
+import { alibabaStand } from "@/lib/integrations/alibaba-openapi-server";
 
 export const dynamic = "force-dynamic";
 
@@ -50,12 +51,25 @@ async function leesStand(nu: Date): Promise<ConsoleStand & { gemeten: string | n
 
 const datum = (iso: string | null) => (iso ? new Intl.DateTimeFormat("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date(iso)) : null);
 
-export default async function WebshopConsolePage() {
+/** De terugkeer van /api/admin/alibaba/* (?alibaba=…): wat er gebeurde, in gewone woorden. */
+const ALIBABA_MELDING: Record<string, { toon: "ok" | "warn" | "crit"; tekst: string }> = {
+  gekoppeld: { toon: "ok", tekst: "Alibaba is gekoppeld." },
+  ontkoppeld: { toon: "ok", tekst: "Alibaba is ontkoppeld; het bewaarde toegangstoken is weg." },
+  "niet-ingesteld": { toon: "warn", tekst: "Koppelen kan nog niet: de sleutels van je Alibaba-app staan nog niet op de server." },
+  verlopen: { toon: "warn", tekst: "De toestemming duurde te lang of kwam niet van deze pagina. Probeer het opnieuw." },
+  geweigerd: { toon: "warn", tekst: "Alibaba stuurde geen toestemming terug. Probeer het opnieuw." },
+  mislukt: { toon: "crit", tekst: "Koppelen met Alibaba lukte niet. De reden staat in het foutenlogboek." },
+};
+
+export default async function WebshopConsolePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const principal = await getPrincipal();
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
     return <PageHead title="Geen toegang" subtitle="De Webshop-console is alleen voor platformbeheerders." />;
   }
   const s = await leesStand(new Date());
+  const alibaba = await alibabaStand().catch(() => null);
+  const alibabaParam = (await searchParams).alibaba;
+  const alibabaMelding = typeof alibabaParam === "string" && Object.hasOwn(ALIBABA_MELDING, alibabaParam) ? ALIBABA_MELDING[alibabaParam] : undefined;
   const taken = consoleTaken(s);
   const stappen = opzetStappen({ producten: s.producten, zichtbaar: s.zichtbaar, zonderFoto: s.zonderFoto, eigenTeksten: s.eigenTeksten, betalen: s.betalen, betaaldTotaal: s.betaaldTotaal });
   const voortgang = opzetVoortgang(stappen);
@@ -149,6 +163,51 @@ export default async function WebshopConsolePage() {
           ))}
         </ul>
       </Panel>
+
+      {alibaba && (
+        <Panel
+          title="Alibaba: officiële koppeling"
+          subtitle="Producten van Alibaba via hun Open Platform ophalen, in plaats van de productpagina te lezen."
+          actions={<Pill tone={alibaba.gekoppeld ? "ok" : alibaba.ingesteld ? "plan" : "neutral"}>{alibaba.gekoppeld ? "Gekoppeld" : alibaba.ingesteld ? "Niet gekoppeld" : "Niet ingesteld"}</Pill>}
+        >
+          {alibabaMelding && (
+            <Notice tone={alibabaMelding.toon} role={alibabaMelding.toon === "crit" ? "alert" : "status"}>
+              {alibabaMelding.tekst}
+            </Notice>
+          )}
+          {!alibaba.ingesteld ? (
+            <p className="mt-2 text-sm" style={{ color: "var(--a-mute)" }}>
+              Nog niet ingesteld op de server: {alibaba.ontbreekt.join(", ")}. Zet bij je app op het Alibaba Open Platform als terugadres{" "}
+              <code className="break-all">{alibaba.terugAdres}</code>.{" "}
+              <Link href="/admin/te-doen" className="underline">
+                Zie Te doen
+              </Link>
+              .
+            </p>
+          ) : alibaba.gekoppeld ? (
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-3 text-sm" style={{ color: "var(--a-mute)" }}>
+              <p>
+                Gekoppeld{alibaba.account ? ` als ${alibaba.account}` : ""}. Het toegangstoken is geldig tot {datum(alibaba.verlooptOp) ?? "onbekend"} en wordt vanzelf vernieuwd.
+              </p>
+              <form method="post" action="/api/admin/alibaba/koppelen">
+                <button type="submit" className="a-btn a-btn-ghost">
+                  Ontkoppelen
+                </button>
+              </form>
+            </div>
+          ) : (
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-3 text-sm" style={{ color: "var(--a-mute)" }}>
+              <p>Je gaat naar Alibaba, logt in met je account en geeft ZekerFlex toestemming. Daarna kom je hier terug.</p>
+              {/* een formulier, geen <Link>: Link haalt de route vooraf op en zou dan al een state aanmaken */}
+              <form method="get" action="/api/admin/alibaba/koppelen">
+                <button type="submit" className="a-btn">
+                  Koppel Alibaba
+                </button>
+              </form>
+            </div>
+          )}
+        </Panel>
+      )}
 
       <KpiStrip
         items={[
