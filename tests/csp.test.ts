@@ -73,6 +73,14 @@ describe("buildContentSecurityPolicy — ZekerFlex AI studio (scoped relaxations
     expect(csp).toContain("img-src * data: blob:");
     // Still framable only by same-origin (the studio page).
     expect(csp).toContain("frame-ancestors 'self'");
+    // De eigen CSP zet het document op een lege herkomst (ook los geopend): geen cookies/sessie van zekerflex.com.
+    expect(csp).toContain("sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox");
+    expect(csp).not.toContain("allow-same-origin");
+  });
+
+  it("geen gewone pagina krijgt de sandbox-herkomst", () => {
+    const csp = buildContentSecurityPolicy({ dev: false, nonce: "N", pathname: "/admin/zekerflex-ai" });
+    expect(csp).not.toContain("sandbox allow-scripts");
   });
 
   it("does not loosen scripts for any other admin route", () => {

@@ -156,6 +156,12 @@ export function buildContentSecurityPolicy({ dev, nonce, pathname }: CspOptions)
   const imgSrc = sandboxFrame ? "img-src * data: blob:" : "img-src 'self' data: blob:";
 
   return [
+    // De sandbox draait de HTML/JS van de auteur. De studio bedt hem in met het iframe-attribuut `sandbox` (zonder
+    // allow-same-origin), maar dat beschermt niet als iemand het adres rechtstreeks als venster opent (een vreemde site
+    // kan dat bij een ingelogde beheerder; de sessiecookie is Lax en gaat mee). Daarom hier ook in de CSP een `sandbox`
+    // zonder allow-same-origin: dan heeft het document altijd een eigen, lege herkomst — geen cookies, opslag of API-sessie
+    // van zekerflex.com — of het nu ingebed is of los geopend. allow-scripts houdt de sandbox zelf werkend.
+    ...(sandboxFrame ? ["sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox"] : []),
     "default-src 'self'",
     scriptSrc,
     "style-src 'self' 'unsafe-inline'",
