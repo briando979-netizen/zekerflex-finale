@@ -119,6 +119,7 @@ const PAGINA_FOTOS: Record<string, string> = {
   "voor-bureaus": "team-highfive-raam",
   "sales-partner": "team-handen",
   demo: "team-highfive-geel",
+  intercedenten: "team-highfive-callcenter",
   rekentools: "retail-kassa",
   "review-check": "horeca-serveerster-lacht",
   producten: "team-highfive-callcenter",

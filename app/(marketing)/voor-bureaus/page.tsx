@@ -87,6 +87,10 @@ export default async function VoorBureausPage() {
             Liever één losse module i.p.v. het hele platform?{" "}
             <Link href="/producten" className="text-brand-mint underline">Bekijk de losse producten →</Link>
           </p>
+          <p className="mt-2 text-sm text-white/60">
+            Werk je als intercedent?{" "}
+            <Link href="/intercedenten" className="text-brand-mint underline">Zie wat ZekerFlex van je werk overneemt →</Link>
+          </p>
         </div>
         <FotoKolom foto={paginaFoto("voor-bureaus")} />
         </div>
