@@ -1967,6 +1967,12 @@ export const nl = {
     adres: "Adres",
     bedrag: "Bedrag",
   },
+  rdw: {
+    knop: "Haal op bij de RDW",
+    bezig: "Bezig…",
+    ingevuld: "Ingevuld met de openbare gegevens van de RDW. Controleer ze voordat je opslaat.",
+    mislukt: "Ophalen bij de RDW lukte niet. Vul de gegevens zelf in.",
+  },
   horecaDagstaat: {
     knop: "Download dagstaat",
     uitleg: "De dagstaat geeft per dag de omzet en btw per tarief, de fooi, wat er per betaalwijze binnenkwam (met fooi) en het kasverschil. Hij sluit per dag, zodat je boekhouder hem als memoriaalboeking kan inlezen.",

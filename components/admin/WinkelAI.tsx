@@ -70,12 +70,13 @@ function NieuwProduct() {
     setLinkMelding(null);
     setWaarschuwingen([]);
     try {
-      const d = await post<{ idee: string; fotos: string[]; prijsCents: number | null; valuta: string | null; bron: string; waarschuwingen?: string[] }>("/api/admin/shop-ai/link", { url: link });
+      const d = await post<{ idee: string; fotos: string[]; prijsCents: number | null; valuta: string | null; bron: string; waarschuwingen?: string[]; inkoopEuroCents?: number | null }>("/api/admin/shop-ai/link", { url: link });
       setIdee(d.idee);
       setBronUrl(link.trim());
       setFotoUrl(d.fotos[0] ?? "");
-      // alleen een prijs in euro's is als inkoopprijs te gebruiken
+      // een prijs in euro's, of omgerekend met de ECB-koers (de waarschuwing noemt de koersdatum), komt bij de inkoopprijs
       if (d.prijsCents && d.valuta === "EUR") setInkoop((d.prijsCents / 100).toFixed(2).replace(".", ","));
+      else if (d.inkoopEuroCents) setInkoop((d.inkoopEuroCents / 100).toFixed(2).replace(".", ","));
       // een prijs in een andere munt staat met bedrag en munt in de waarschuwingen (als inkoopprijs, nooit als verkoopprijs)
       const prijsZin = d.prijsCents ? (d.valuta === "EUR" ? " De prijs op de pagina staat als indicatie bij de inkoopprijs; pas hem aan naar wat jij betaalt. De verkoopprijs kies je zelf." : d.valuta ? "" : " De munt van de prijs op de pagina is onbekend; vul je inkoopprijs in euro's zelf in.") : "";
       setWaarschuwingen(d.waarschuwingen ?? []);

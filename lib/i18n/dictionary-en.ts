@@ -1950,6 +1950,12 @@ export const en: Dict = {
     adres: "Address",
     bedrag: "Amount",
   },
+  rdw: {
+    knop: "Fetch from the RDW",
+    bezig: "Working…",
+    ingevuld: "Filled in with the public data from the RDW (Dutch vehicle authority). Check them before you save.",
+    mislukt: "Fetching from the RDW didn't work. Fill in the details yourself.",
+  },
   horecaDagstaat: {
     knop: "Download daily summary",
     uitleg: "The daily summary shows, per day, revenue and VAT per rate, tips, what came in per payment method (including tips) and the cash difference. Each day balances, so your accountant can import it as a journal entry.",

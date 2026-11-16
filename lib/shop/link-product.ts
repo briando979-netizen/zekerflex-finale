@@ -222,15 +222,23 @@ export function leverancierTekst(s: string): { tekst: string; minimum: MinimumAf
 
 const bedrag = (cents: number) => (cents / 100).toFixed(2).replace(".", ",");
 
-/** Wat de eigenaar moet weten voordat hij een product van een link maakt (alleen vaste zinnen met de gelezen getallen). */
-export function linkWaarschuwingen(p: LinkProduct): string[] {
+/**
+ * Wat de eigenaar moet weten voordat hij een product van een link maakt (alleen vaste zinnen met de gelezen getallen).
+ * Met `omgerekend` (de ECB-koers, lib/integrations/wisselkoers.ts) staat de prijs in euro's erbij; zonder blijft het: zelf omrekenen.
+ */
+export function linkWaarschuwingen(p: LinkProduct, omgerekend?: { euroCents: number; koersDatum: string }): string[] {
   const uit: string[] = [];
   const min = p.minimumAfname;
   if (min) {
     uit.push(`Minimale afname bij deze leverancier: ${min.aantal} ${min.eenheid}${min.levertijdDagen ? `, levering in ${min.levertijdDagen} dagen` : ""}. Minder kun je daar niet bestellen; vraag het na als je per bestelling wilt laten leveren.`);
   }
   if (p.prijsCents && p.valuta && p.valuta !== "EUR") {
-    uit.push(`De prijs op de pagina is een inkoopprijs: ${p.valuta} ${bedrag(p.prijsCents)} per stuk${min ? ` bij afname vanaf ${min.aantal} ${min.eenheid}` : ""}. Dat is geen verkoopprijs en geen bedrag in euro's: reken hem zelf om, vul hem in als inkoopprijs en de verkoopprijs volgt uit je marge.`);
+    const begin = `De prijs op de pagina is een inkoopprijs: ${p.valuta} ${bedrag(p.prijsCents)} per stuk${min ? ` bij afname vanaf ${min.aantal} ${min.eenheid}` : ""}.`;
+    uit.push(
+      omgerekend
+        ? `${begin} Tegen de koers van de Europese Centrale Bank van ${omgerekend.koersDatum} is dat € ${bedrag(omgerekend.euroCents)}; dat staat al bij de inkoopprijs. Verzendkosten, invoerrechten en btw komen daar nog bij. De verkoopprijs volgt uit je marge.`
+        : `${begin} Dat is geen verkoopprijs en geen bedrag in euro's: reken hem zelf om, vul hem in als inkoopprijs en de verkoopprijs volgt uit je marge.`,
+    );
   }
   return uit;
 }

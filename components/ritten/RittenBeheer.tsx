@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useT } from "@/components/i18n/I18nProvider";
 import { amsterdamClock, amsterdamDayKey, amsterdamLocalInput } from "@/lib/time/amsterdam";
 import {
   MAX_CHAUFFEURS,
@@ -589,9 +590,34 @@ interface VoertuigVorm {
 const leegVoertuig: VoertuigVorm = { kenteken: "", omschrijving: "", laadvermogenKg: "", apk: "", notitie: "" };
 
 function VoertuigenBeheer({ voertuigen, ververs }: { voertuigen: Voertuig[]; ververs: () => void }) {
+  const t = useT().rdw;
   const [bewerk, setBewerk] = useState<string | null>(null); // id, of "nieuw"
   const [v, setV] = useState<VoertuigVorm>(leegVoertuig);
   const [fout, setFout] = useState<string | null>(null);
+  const [rdwBezig, setRdwBezig] = useState(false);
+  const [rdwOk, setRdwOk] = useState<string | null>(null);
+
+  // RDW Open Data (app/api/rdw): merk, model en kleur alleen in een leeg veld; de APK-datum altijd (die van de RDW klopt)
+  async function haalRdw() {
+    setFout(null);
+    setRdwOk(null);
+    setRdwBezig(true);
+    const r = await fetch(`/api/rdw?kenteken=${encodeURIComponent(v.kenteken)}`, { cache: "no-store" }).catch(() => null);
+    const d = (r ? await r.json().catch(() => null) : null) as { voertuig?: { apk: string | null; laadvermogenKg: number | null }; omschrijving?: string; error?: { message?: string } } | null;
+    setRdwBezig(false);
+    if (!r?.ok || !d?.voertuig) {
+      setFout(d?.error?.message ?? t.mislukt);
+      return;
+    }
+    const rdw = d.voertuig;
+    setV((x) => ({
+      ...x,
+      omschrijving: x.omschrijving.trim() ? x.omschrijving : (d.omschrijving ?? ""),
+      apk: rdw.apk ?? x.apk,
+      laadvermogenKg: x.laadvermogenKg.trim() || rdw.laadvermogenKg === null ? x.laadvermogenKg : String(rdw.laadvermogenKg),
+    }));
+    setRdwOk(t.ingevuld);
+  }
 
   function start(x: Voertuig | null) {
     setFout(null);
@@ -659,10 +685,20 @@ function VoertuigenBeheer({ voertuigen, ververs }: { voertuigen: Voertuig[]; ver
           }}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className="field-label">Kenteken</span>
-              <input className="field-input" value={v.kenteken} onChange={(e) => setV({ ...v, kenteken: e.target.value })} placeholder="AB-12-CD" maxLength={12} />
-            </label>
+            <div>
+              <label className="block">
+                <span className="field-label">Kenteken</span>
+                <input className="field-input" value={v.kenteken} onChange={(e) => setV({ ...v, kenteken: e.target.value })} placeholder="AB-12-CD" maxLength={12} />
+              </label>
+              <button type="button" className={`${knopKlein} mt-1`} onClick={() => void haalRdw()} disabled={rdwBezig || v.kenteken.replace(/[\s.-]/g, "").length !== 6}>
+                {rdwBezig ? t.bezig : t.knop}
+              </button>
+              {rdwOk && (
+                <p role="status" className="mt-1 text-xs text-ok">
+                  {rdwOk}
+                </p>
+              )}
+            </div>
             <label className="block">
               <span className="field-label">Omschrijving</span>
               <input className="field-input" value={v.omschrijving} onChange={(e) => setV({ ...v, omschrijving: e.target.value })} placeholder="Bestelbus Ford Transit" maxLength={80} />
