@@ -5,8 +5,8 @@ import { EFACTUUR_FAQ, EFACTUUR_FUNCTIES, EFACTUUR_STAPPEN, EFACTUUR_ZIT_ERIN } 
 // De pagina E-facturatie (/aanbod/e-facturatie), opgebouwd zoals een softwarepagina met een product om te laten zien
 // (15 nov 2026, eigenaar: "dezelfde weergave als de factuurpagina van Jortt"): kop met een voorbeeld van het product,
 // vier stappen, de factuur zelf, de stand per factuur, wat erin zit, telefoon, prijs, vragen en een oproep. Met onze eigen
-// teksten en alleen wat nu echt kan (lib/marketing/efactuur-pagina.ts): Peppol staat er als "komt eraan" tot er een
-// toegangspunt is (owner-todo), en er staat geen betaalverzoek of bank in (ZekerFlex Bank staat uit).
+// teksten en alleen wat nu echt kan (lib/marketing/efactuur-pagina.ts): bezorgen via Peppol staat er niet op tot er een
+// toegangspunt is (owner-todo; 16 nov: nergens meer "komt eraan"), en er staat geen betaalverzoek of bank in.
 
 const Vink = ({ className = "text-brand-500" }: { className?: string }) => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={`mt-1 shrink-0 ${className}`}>
@@ -301,7 +301,6 @@ export function EfactuurPagina({ a, pijlerNaam, pijlerSleutel }: { a: AanbodItem
                 <p className="text-[12px] font-bold uppercase tracking-[0.12em] text-brand-700">{f.label}</p>
                 <p className="mt-2 font-display text-[18px] font-bold text-ink">
                   {f.titel}
-                  {f.binnenkort && <span className="ml-2 inline-block rounded-full bg-plan-soft px-2 py-0.5 align-middle text-[11px] font-semibold text-plan-ink">Komt eraan</span>}
                 </p>
                 <p className="mt-2 text-[14px] leading-relaxed text-neutralx-600">{f.tekst}</p>
               </li>
@@ -368,7 +367,9 @@ export function EfactuurPagina({ a, pijlerNaam, pijlerSleutel }: { a: AanbodItem
                       <th scope="row" className="px-4 py-3 font-normal text-ink">
                         {r.wat}
                       </th>
-                      <td className="px-4 py-3 text-right font-semibold">{r.binnenkort ? <span className="text-plan-ink">Komt eraan</span> : <span className="text-ok">✓ Ja</span>}</td>
+                      <td className="px-4 py-3 text-right font-semibold">
+                        <span className="text-ok">✓ Ja</span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

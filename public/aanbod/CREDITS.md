@@ -14,7 +14,6 @@ losse foto). De fotograaf staat op de Pexels-pagina van het nummer.
 | `horeca-barista-laptop.jpg` | roosterplanner | Pexels #4350040 — https://www.pexels.com/photo/4350040/ |
 | `logistiek-magazijn-doos.jpg` | wifi-op-de-werkvloer | Pexels #8069548 — https://www.pexels.com/photo/8069548/ |
 | `team-highfive-raam.jpg` | veilige-werkplek | Pexels #3184427 — https://www.pexels.com/photo/3184427/ |
-| `logistiek-magazijn-dozen.jpg` | eigen-5g-netwerk | Pexels #8069547 — https://www.pexels.com/photo/8069547/ |
 | `horeca-keuken-team.jpg` | portofoon-in-de-app | Pexels #6937464 — https://www.pexels.com/photo/6937464/ |
 | `bezorg-bus.jpg` | toegang-op-kenteken | Pexels #7363098 — https://www.pexels.com/photo/7363098/ |
 | `logistiek-magazijn-klembord.jpg` | sleutelkluis | Pexels #6169652 — https://www.pexels.com/photo/6169652/ |

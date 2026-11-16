@@ -36,8 +36,10 @@ describe("de pagina", () => {
   it("staat betalen dicht of is het niet gemeten, dan geen prijs en geen belofte dat je nu online kunt", () => {
     // dezelfde stand als de Webshop-console; alleen een gemeten 'open' telt, een storing telt als dicht
     expect(pagina).toContain("const kanOnline = (await accountStand().catch(() => null))?.betalen === true;");
-    expect(pagina).toContain('"Bouwen en bekijken is gratis. Online zetten kan binnenkort."');
-    expect(pagina).toContain("const stappen = [...STAPPEN, kanOnline ? STAP_ONLINE : STAP_BINNENKORT];");
+    // 16 nov (eigenaar): geen "binnenkort" meer, wel wat er nu gebeurt: een mens zet hem samen met je online
+    expect(pagina).toContain('"Bouwen en bekijken is gratis. Is je site klaar, dan zetten we hem samen met je online."');
+    expect(pagina).toContain("const stappen = [...STAPPEN, kanOnline ? STAP_ONLINE : STAP_AANVRAGEN];");
+    expect(pagina.split("\n").filter((r) => !/^\s*\/\//.test(r)).join("\n")).not.toMatch(/binnenkort/i);
     // elke plek waar de prijs staat hangt aan die stand
     const metPrijs = pagina.split("\n").filter((r) => r.includes("{vanaf}"));
     expect(metPrijs.length).toBeGreaterThan(0);

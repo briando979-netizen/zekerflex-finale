@@ -281,7 +281,9 @@ export const AANBOD: AanbodItem[] = [
     start: DEMO,
   },
   // Netwerkpakketten (lib/netwerk/modules.ts): op de eigen server, zonder licentiekosten bij een ander.
-  // 5G blijft "binnenkort" (vergunning en apparatuur per terrein); wifi en VPN draaien op de eigen server.
+  // Wifi en VPN draaien op de eigen server. Een eigen 5G-netwerk staat hier niet meer (16 nov, eigenaar: "nergens meer
+  // binnenkort"): het vraagt per terrein een frequentievergunning en apparatuur (owner-todo netwerk-5g); /aanbod/eigen-5g-netwerk
+  // stuurt door naar /aanbod (next.config.mjs).
   {
     slug: "wifi-op-de-werkvloer",
     pijler: "personeel",
@@ -322,27 +324,6 @@ export const AANBOD: AanbodItem[] = [
     zoekwoorden: ["vpn voor flexwerkers", "zakelijke vpn", "veilig thuiswerken", "zero trust netwerk mkb"],
     foto: { bestand: "team-highfive-raam.jpg", alt: "Een team geeft elkaar een high five bij een groot raam" },
   },
-  {
-    slug: "eigen-5g-netwerk",
-    pijler: "personeel",
-    naam: "Eigen 5G-netwerk op het terrein",
-    kort: "Een eigen, afgeschermd mobiel netwerk op een bouwplaats, evenemententerrein of distributiecentrum.",
-    tekst:
-      "Een eigen 5G-netwerk voor handterminals, camera's, routers en machines op het terrein, los van de landelijke netwerken. ZekerFlex levert de software en het simkaartbeheer; voor de vergunning en de apparatuur beginnen we met een gesprek.",
-    punten: [
-      "Eigen frequentie op het terrein, onafhankelijk van de landelijke netwerken",
-      "Simkaarten beheren vanuit je ZekerFlex-beheer",
-      "Voorrang voor belangrijke verbindingen",
-      "Apparatuur erbij tegen kostprijs plus een opslag",
-    ],
-    voorWie: "Bouwlocaties, evenemententerreinen, grote distributiecentra",
-    prijs: "vanaf € 299 per maand, exclusief apparatuur en inrichting",
-    status: "binnenkort",
-    start: DEMO,
-    zoekwoorden: ["private 5g netwerk", "eigen 5g bouwplaats", "campusnetwerk", "lokaal 5g netwerk bedrijf"],
-    foto: { bestand: "logistiek-magazijn-dozen.jpg", alt: "Een magazijnmedewerker in een veiligheidsvest tussen stapels dozen" },
-  },
-
   // Op locatie (lib/locatie/modules.ts): vier modules voor de werkvloer, op de eigen server en zonder licentiekosten.
   // Aanzetten kan direct onder Werkgever → Op locatie; de prijs is nog "op aanvraag" (geen verzonnen prijzen).
   {
@@ -646,11 +627,11 @@ export const AANBOD: AanbodItem[] = [
     naam: "E-facturatie (UBL / Peppol)",
     kort: "Elke factuur ook als e-factuur die je boekhoudpakket direct inleest, zonder overtypen.",
     tekst:
-      "Elke factuur van ZekerFlex is ook een e-factuur volgens de Europese norm (UBL, Peppol BIS 3 / NLCIUS). Je boekhoudpakket leest hem direct in: geen overtypen, geen fouten. Download het bestand per factuur of laat het automatisch naar je pakket mailen. Bezorgen via het Peppol-netwerk koppelen we nog.",
+      "Elke factuur van ZekerFlex is ook een e-factuur volgens de Europese norm (UBL, Peppol BIS 3 / NLCIUS). Je boekhoudpakket leest hem direct in: geen overtypen, geen fouten. Download het bestand per factuur of laat het automatisch naar je pakket mailen.",
     punten: [
       "UBL-bestand bij elke factuur, volgens EN 16931 / Peppol BIS 3",
       "Automatisch naar het mailadres van je boekhoudpakket",
-      "Peppol-netwerk: komt eraan (tot dan per mail of download)",
+      "Per factuur te downloaden, ook voor je boekhouder",
       "Vooraf gecontroleerd op de bedrijfsregels die pakketten afkeuren",
       "Werkt met Exact, Twinfield, e-Boekhouden, Moneybird, AFAS en meer",
     ],

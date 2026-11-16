@@ -18,13 +18,13 @@ const alleTekst = () =>
     .join("\n");
 
 describe("e-facturatie: alleen wat echt kan", () => {
-  it("Peppol staat er als 'komt eraan', overal", () => {
-    expect(EFACTUUR_FUNCTIES.find((f) => /Peppol/.test(f.titel))?.binnenkort).toBe(true);
-    expect(EFACTUUR_ZIT_ERIN.find((r) => /Peppol/.test(r.wat))?.binnenkort).toBe(true);
-    for (const f of EFACTUUR_FUNCTIES.filter((x) => !x.binnenkort)) expect(f.tekst, f.titel).not.toMatch(/Peppol-netwerk bezorgt|via Peppol verstuurd/i);
+  it("bezorgen via Peppol staat er niet op (geen toegangspunt), en nergens 'komt eraan' of 'binnenkort' (eigenaar 16 nov)", () => {
+    expect(EFACTUUR_FUNCTIES.some((f) => /Peppol/.test(f.titel))).toBe(false);
+    expect(EFACTUUR_ZIT_ERIN.some((r) => /Peppol-netwerk/.test(r.wat))).toBe(false);
+    for (const f of EFACTUUR_FUNCTIES) expect(f.tekst, f.titel).not.toMatch(/Peppol-netwerk bezorgt|via Peppol verstuurd/i);
     const item = AANBOD.find((a) => a.slug === "e-facturatie");
-    expect(item?.tekst).not.toMatch(/ontvang het via het Peppol-netwerk/);
-    expect(item?.punten.join(" ")).toContain("Peppol-netwerk: komt eraan");
+    expect(`${item?.tekst} ${item?.punten.join(" ")}`).not.toMatch(/Peppol-netwerk|koppelen we nog/i);
+    expect(alleTekst()).not.toMatch(/komt eraan|binnenkort|koppelen we nog/i);
   });
 
   it("geen betaalverzoek, QR-betalen of bank (ZekerFlex Bank staat uit, Stripe is dicht)", () => {

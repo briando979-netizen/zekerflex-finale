@@ -31,7 +31,9 @@ const STAPPEN = [
 ];
 // de derde stap hangt af van of online zetten nu kan
 const STAP_ONLINE = { titel: "Zet hem online", tekst: "Tevreden? Zet je site online op je eigen adres. Tot dat moment kost het niets." };
-const STAP_BINNENKORT = { titel: "Online zetten kan binnenkort", tekst: "Bouw je site nu alvast helemaal af en bekijk hem zoals een bezoeker hem ziet. Online zetten kan binnenkort." };
+// zolang online betalen dicht staat (Stripe dicht, nog geen IBAN voor overschrijving) zet een mens hem online: geen "binnenkort"
+// (eigenaar 16 nov), wel wat er nu echt gebeurt
+const STAP_AANVRAGEN = { titel: "Zet hem online met ons", tekst: "Bouw je site af en bekijk hem zoals een bezoeker hem ziet. Is hij klaar, laat het ons weten: dan zetten we hem samen met je online." };
 
 const KRIJGT = [
   { titel: "Een webshop die af is", tekst: "Producten met foto's, maten en kleuren, voorraad, een winkelmand en bestellen." },
@@ -53,7 +55,7 @@ export default async function WebsiteMakenPage() {
   const vanaf = euro(WEBSITE_PLANS.basis.priceCentsPerMonth);
   // alleen bij een gemeten, open betaalaccount; onbekend of een storing telt als dicht
   const kanOnline = (await accountStand().catch(() => null))?.betalen === true;
-  const stappen = [...STAPPEN, kanOnline ? STAP_ONLINE : STAP_BINNENKORT];
+  const stappen = [...STAPPEN, kanOnline ? STAP_ONLINE : STAP_AANVRAGEN];
 
   return (
     <>
@@ -75,7 +77,7 @@ export default async function WebsiteMakenPage() {
               Bekijk de ontwerpen
             </a>
           </div>
-          <p className="mt-5 text-sm text-white/60">{kanOnline ? `Bouwen en bekijken is gratis. Je betaalt pas als je hem online zet, vanaf ${vanaf} per maand.` : "Bouwen en bekijken is gratis. Online zetten kan binnenkort."}</p>
+          <p className="mt-5 text-sm text-white/60">{kanOnline ? `Bouwen en bekijken is gratis. Je betaalt pas als je hem online zet, vanaf ${vanaf} per maand.` : "Bouwen en bekijken is gratis. Is je site klaar, dan zetten we hem samen met je online."}</p>
         </div>
       </div>
 
@@ -147,7 +149,13 @@ export default async function WebsiteMakenPage() {
               .
             </p>
           ) : (
-            <p className="mx-auto mt-4 max-w-2xl text-white/70">Maak een account voor je bedrijf en bouw je site in de Studio. Bouwen en bekijken is gratis. Online zetten kan binnenkort.</p>
+            <p className="mx-auto mt-4 max-w-2xl text-white/70">
+              Maak een account voor je bedrijf en bouw je site in de Studio. Bouwen en bekijken is gratis. Is je site klaar,{" "}
+              <Link href="/contact" className="underline underline-offset-2">
+                laat het ons weten
+              </Link>
+              : dan zetten we hem samen met je online.
+            </p>
           )}
           <p className="mt-8">
             <Link href={BEGIN} className="btn-mint px-6 py-3">

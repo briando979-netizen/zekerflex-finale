@@ -71,6 +71,8 @@ const nextConfig = {
         { source: `/studio/${d}/:rest*`, destination: `/studio/webshop/${d}/:rest*`, permanent: false },
       ]),
       { source: "/studio/reserveringen", destination: "/studio/website/reserveringen", permanent: false },
+      // 16 nov: het eigen 5G-netwerk staat niet meer in het aanbod (vergunning en apparatuur per terrein, owner-todo)
+      { source: "/aanbod/eigen-5g-netwerk", destination: "/aanbod", permanent: true },
       // Browsers, pdf-viewers en de linkvoorvertoning van Apple vragen deze vaste adressen in de root, ook al staat het
       // pictogram in de pagina-kop (13 nov: 17× /favicon.ico en 7× een apple-touch-icon als 404 in 2 dagen)
       { source: "/favicon.ico", destination: "/icons/icon-192.png", permanent: true },
