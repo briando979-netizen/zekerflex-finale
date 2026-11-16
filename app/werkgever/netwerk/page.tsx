@@ -7,6 +7,7 @@ import { RADIUS_POORT } from "@/lib/netwerk/modules";
 import { moduleLeverbaar } from "@/lib/netwerk/abonnement";
 import { netwerkStand, vestigingenVan, vpnLog, weergave, wifiInstellingen, wifiWachtwoord } from "@/lib/netwerk/store";
 import { vpnAdres, vpnApparaten, vpnGekoppeld } from "@/lib/netwerk/headscale";
+import { wifiPlekken } from "@/lib/netwerk/wifi-plekken";
 import { Verbinding, type VerbindingData } from "@/components/app/netwerk/Verbinding";
 
 export const dynamic = "force-dynamic";
@@ -43,9 +44,10 @@ export default async function NetwerkPage() {
   ]);
   const data: VerbindingData = {
     stand,
-    vestigingen: vestigingen.map((v) => {
+    // een eenmalig adres (een klus op een los adres) één keer, niet per klus (lib/netwerk/wifi-plekken.ts)
+    vestigingen: wifiPlekken(vestigingen, (id) => Boolean(wifi.vestigingen[id])).map((v) => {
       const w = wifi.vestigingen[v.id];
-      return { ...v, wifi: w ? weergave(v.id, w) : null };
+      return { id: v.id, naam: v.naam, plaats: v.plaats, wifi: w ? weergave(v.id, w) : null };
     }),
     wifiServer: { host: env.NETWERK_RADIUS_HOST, poort: RADIUS_POORT, klaar: moduleLeverbaar("wifi") },
     vpn: { gekoppeld: vpnGekoppeld(), adres: vpnAdres(), apparaten, log },

@@ -3,8 +3,9 @@
 // hele webshop account dashboard af, apart; ik wil niet dat die in het dashboard van een werkgever
 // zit dat zich bezighoudt met freelancen en klussen uitzetten"). Bedrijf, facturen, team, mail en
 // je eigen inloggegevens staan onder /studio/<soort>/<onderdeel>, in het menu van de studio, en
-// /werkgever/<onderdeel> stuurt wie het dashboard website of webshop open heeft daarheen
-// (lib/studio/account-server.ts). Puur: het menu (client) en de pagina's (server) lezen dit.
+// /werkgever/<onderdeel> stuurt wie het dashboard website of webshop open heeft daarheen, behalve
+// een bedrijf met klussen (lib/studio/account-server.ts). Puur: het menu (client) en de pagina's
+// (server) lezen dit.
 // ---------------------------------------------------------------------------
 
 export const ACCOUNT_ONDERDELEN = [

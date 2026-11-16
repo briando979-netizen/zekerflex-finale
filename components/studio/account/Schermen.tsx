@@ -59,7 +59,8 @@ export async function BedrijfScherm({ soort }: { soort: StudioSoort }) {
     prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, kvkNumber: true, country: true, vatNumber: true } }),
     prisma.branch.findFirst({ where: { tenantId }, orderBy: { createdAt: "asc" }, select: { addressLine: true, postalCode: true, city: true } }),
     tenantVerification(tenantId),
-    mailPrefsView(principal.email),
+    // alleen de mails die een bedrijf krijgt, niet die van werkers (lib/mail/categories.ts)
+    mailPrefsView(principal.email, "bedrijf"),
   ]);
   const land = tenant?.country ?? "NL";
   const status = verificatie.verified
@@ -93,7 +94,7 @@ export async function BedrijfScherm({ soort }: { soort: StudioSoort }) {
       <div className="mt-5">
         <Card title="Mails van ZekerFlex">
           <p className="mb-4 text-sm text-[#616161]">Kies welke mails van ZekerFlex je wilt krijgen.</p>
-          <MailPrefsToggles token={mail.token} initialCategories={mail.categories} initialUnsubscribedAll={mail.unsubscribedAll} />
+          <MailPrefsToggles token={mail.token} initialCategories={mail.categories} initialUnsubscribedAll={mail.unsubscribedAll} kant="bedrijf" />
         </Card>
       </div>
     </>

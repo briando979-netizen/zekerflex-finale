@@ -277,6 +277,7 @@ export default async function ProfielPage() {
               token={mailPrefs.token}
               initialCategories={mailPrefs.categories}
               initialUnsubscribedAll={mailPrefs.unsubscribedAll}
+              kant="werker"
             />
           </div>
         </Panel>

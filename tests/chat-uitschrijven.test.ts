@@ -64,6 +64,14 @@ describe("POST /api/inbox/:id/transcript", () => {
     expect((whisper.mock.calls[0]![1].body as FormData).has("language")).toBe(false);
   });
 
+  it("verzint Whisper bij stilte tekst (honderd keer 'hey' in 3 seconden), dan bewaren we een lege tekst: 'geen spraak gehoord'", async () => {
+    whisper.mockImplementationOnce(async () => new Response(JSON.stringify({ text: Array.from({ length: 120 }, () => "hey").join(", ") }), { status: 200 }));
+    const m = await spraak();
+    const res = await vraag(m.id);
+    expect((await res.json()).message.transcript).toBe("");
+    expect((await getMessages("t1"))[0]?.transcript).toBe("");
+  });
+
   it("al uitgeschreven: meteen de bewaarde tekst, Whisper niet opnieuw", async () => {
     const m = await spraak();
     await setTranscript("t1", m.id, "Al klaar.");
@@ -97,7 +105,8 @@ describe("in de bubbel", () => {
   it("een knop zolang er geen tekst is; daarna de tekst (of 'geen spraak gehoord')", () => {
     const bubbel = readFileSync(path.join(process.cwd(), "components/chat/MessageBubble.tsx"), "utf8").split("\r\n").join("\n");
     expect(bubbel).toContain("{transcript !== undefined ? (");
-    expect(bubbel).toContain("{transcript || t.geenSpraak}");
+    // een verzonnen tekst (ook een die al bewaard is) toont als "geen spraak gehoord" (lib/asr/verzonnen.ts)
+    expect(bubbel).toContain("{schoonTranscript(transcript, durationSec) || t.geenSpraak}");
     expect(bubbel).toContain("onTranscribe={onTranscribe && !m.pending ? () => onTranscribe(m) : undefined}");
   });
 });

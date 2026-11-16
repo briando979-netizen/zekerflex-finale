@@ -5,6 +5,7 @@ import { canDeleteForAll, canEdit, emojiOnlyCount, fmtBytes, fmtDuration, fmtTim
 import { Avatar } from "./Avatar";
 import { IconReply, IconSmiley, IconDots, IconCopy, IconForward, IconPin, IconStar, IconPencil, IconTrash, IconMic, IconPlay, IconPause } from "./icons";
 import { golfHoogtes, golfPositie, vasteGolf } from "@/lib/chat/spraak";
+import { schoonTranscript } from "@/lib/asr/verzonnen";
 import { ActionList, MessageSheet, ReactionRow, type ActionItem } from "./MessageActions";
 import { PollCard } from "./PollCard";
 import { AfspraakCard } from "./AfspraakCard";
@@ -254,7 +255,8 @@ function VoiceNote({
         />
       </div>
       {transcript !== undefined ? (
-        <p className="mt-1.5 whitespace-pre-wrap break-words text-[0.85em] italic text-neutralx-600">{transcript || t.geenSpraak}</p>
+        // een verzonnen tekst ("hey, hey, hey, …" bij stilte) tonen we niet, ook niet als hij al bewaard is (lib/asr/verzonnen.ts)
+        <p className="mt-1.5 whitespace-pre-wrap break-words text-[0.85em] italic text-neutralx-600">{schoonTranscript(transcript, durationSec) || t.geenSpraak}</p>
       ) : onTranscribe ? (
         <button
           type="button"

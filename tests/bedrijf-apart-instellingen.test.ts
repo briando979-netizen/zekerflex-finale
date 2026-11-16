@@ -55,6 +55,18 @@ describe("mailvoorkeuren per kant", () => {
     expect(bron("app/werkgever/bedrijf/page.tsx")).toContain('mailPrefsView(principal.email, "bedrijf")');
     expect(bron("app/dashboard/profiel/page.tsx")).toContain('mailPrefsView(user?.email ?? principal.email, "werker")');
   });
+
+  it("ook de studio (Bedrijf van de webshop en website) toont alleen bedrijfsmails, en na opslaan blijft de lijst per kant", () => {
+    const studio = bron("components/studio/account/Schermen.tsx");
+    expect(studio).toContain('mailPrefsView(principal.email, "bedrijf")');
+    expect(studio).not.toMatch(/mailPrefsView\(principal\.email\)/);
+    // de schakelaars sturen hun kant mee en de API geeft dezelfde lijst terug (anders kwamen de werkersmails na één klik terug)
+    for (const [f, kant] of [["components/studio/account/Schermen.tsx", "bedrijf"], ["app/werkgever/bedrijf/page.tsx", "bedrijf"], ["app/dashboard/profiel/page.tsx", "werker"]] as const) {
+      expect(bron(f), f).toMatch(new RegExp(`<MailPrefsToggles[^>]*kant="${kant}"`));
+    }
+    expect(bron("components/marketing/MailPrefsToggles.tsx")).toContain("...(kant ? { kant } : {})");
+    expect(bron("app/api/mail/voorkeuren/route.ts")).toContain("mailPrefsView(rec.email, kant)");
+  });
 });
 
 describe("account verwijderen laat geen bedrijf zonder beheerder achter", () => {

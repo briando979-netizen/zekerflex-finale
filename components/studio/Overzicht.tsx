@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useStudio } from "@/components/studio/context";
-import { AanDeSlag, Bezoekgrafiek, groet, taakVan, useEigenDomein, useStats, wanneer, type Taak } from "@/components/studio/OverzichtDelen";
+import { AanDeSlag, BezoekStat, Bezoekgrafiek, groet, taakVan, useEigenDomein, useStats, wanneer, type Taak } from "@/components/studio/OverzichtDelen";
 import { Card, IExternal, IGrid, PageHead, Pill, Stat, btn } from "@/components/studio/ui";
 import { webshopStappen } from "@/lib/onboarding/aan-de-slag";
 import { euro, zichtbareProducten } from "@/lib/sites/winkel";
@@ -87,7 +87,7 @@ export default function Overzicht() {
         <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
           <Stat label="Nieuwe bestellingen" value={bestellingen ? cijfers.nieuw : "—"} hint={bestellingen ? `${cijfers.teVerwerken} te verwerken` : undefined} />
           <Stat label="Omzet (30 dagen)" value={bestellingen ? euro(cijfers.omzet) : "—"} hint={bestellingen ? `${cijfers.aantal} bestellingen, zonder geannuleerde` : undefined} />
-          <Stat label="Bezoeken (30 dagen)" value={stats ? stats.entries.toLocaleString("nl-NL") : "—"} hint={stats ? `${stats.views.toLocaleString("nl-NL")} paginaweergaven` : "nog geen cijfers"} />
+          <BezoekStat stats={stats} />
           <Stat label="Producten online" value={actief} hint={`${winkel.producten.length} in totaal`} />
         </div>
         <Bezoekgrafiek stats={stats} />

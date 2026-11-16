@@ -28,7 +28,7 @@ interface Data {
  * Het slaat op via /api/me/uitzend, net als het uitzendpaneel eerder deed, met
  * dezelfde bevestigingscode (mail of verificatie-app) bij een gewijzigd nummer.
  */
-function IbanStap({ t, ibanLast4, onSaved }: { t: AuthDict["page"]; ibanLast4: string | null; onSaved: () => void }) {
+function IbanStap({ t, ibanLast4, bankLogin, onSaved }: { t: AuthDict["page"]; ibanLast4: string | null; /** bevestigen via de bank staat aan (anders geen "daarna log je in bij je bank") */ bankLogin: boolean; onSaved: () => void }) {
   const ft = useFT();
   const [bewerken, setBewerken] = useState(false);
   const [iban, setIban] = useState("");
@@ -81,7 +81,7 @@ function IbanStap({ t, ibanLast4, onSaved }: { t: AuthDict["page"]; ibanLast4: s
             {t.ibanLabel} <span className="text-crit">*</span>
           </label>
           <p id="rekeningnummer-uitleg" className="mt-1 text-xs text-neutralx-500">
-            {t.ibanWhy}
+            {bankLogin ? t.ibanWhy : t.ibanWhyZonderBank}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <input
@@ -268,9 +268,11 @@ function BankLoginSlot({
   /** Er staat een rekeningnummer: pas dan kunnen we het met de bank vergelijken. */
   heeftIban: boolean;
   onChanged: () => void;
+  /** of bevestigen via de bank nu kan (voor de uitleg bij het rekeningnummer) */
+  onBeschikbaar: (aan: boolean) => void;
 }) {
   const [enabled, setEnabled] = useState<boolean | null>(null);
-  // het live Stripe-account ontvangt even geen betalingen: dan meteen het bankafschrift, met een rustige uitleg
+  // het live Stripe-account ontvangt even geen betalingen: dan geen bevestigen via de bank
   const [tijdelijkUit, setTijdelijkUit] = useState(false);
   const [result, setResult] = useState<BankLogin | null>(null);
   const [busy, setBusy] = useState(false);
@@ -287,8 +289,12 @@ function BankLoginSlot({
           setEnabled(Boolean(d.enabled));
           setTijdelijkUit(d.tijdelijkUit === true);
           setResult(d.result ?? null);
+          onBeschikbaar(Boolean(d.enabled) && d.tijdelijkUit !== true);
         })
-        .catch(() => setEnabled(false));
+        .catch(() => {
+          setEnabled(false);
+          onBeschikbaar(false);
+        });
     if (sessionId) {
       url.searchParams.delete("bank_session");
       window.history.replaceState(null, "", url.toString());
@@ -337,14 +343,9 @@ function BankLoginSlot({
   const verified = result?.status === "verified" && bankOk;
 
   // Geen bankafschrift of foto van de bankpas meer uploaden (eigenaar, 12 nov): alleen bevestigen via je eigen bank.
-  // Kan dat even niet (geen Stripe, of het live account ontvangt geen betalingen), dan een rustige uitleg en gewoon door.
-  if ((enabled === false || tijdelijkUit) && !bankOk) {
-    return (
-      <p role="status" className="rounded-lg bg-paper-soft px-3 py-2 text-xs leading-relaxed text-ink-soft">
-        {t.bankLoginTijdelijkUit}
-      </p>
-    );
-  }
+  // Kan dat niet (geen Stripe, of het live account ontvangt geen betalingen), dan alleen het rekeningnummer: geen
+  // melding "kan nu even niet, probeer het later" (16 nov). Ook niets zolang we het nog niet weten, anders flitst het blok.
+  if ((enabled === false || tijdelijkUit || (enabled === null && !checking)) && !bankOk) return null;
 
   return (
     <div className={`rounded-xl border p-4 ${bankOk ? "border-ok/40 bg-ok/5" : "border-hairstrong"}`}>
@@ -387,6 +388,8 @@ function BankLoginSlot({
 export function ComplianceDocsPanel({ idInForm = false }: { idInForm?: boolean } = {}) {
   const t = AUTH_DICTS[useI18n().locale].page;
   const [d, setD] = useState<Data | null>(null);
+  // kan de werker zijn rekening via de bank bevestigen? (BankLoginSlot vraagt het na; tot dan de uitleg zonder bank)
+  const [bankLoginAan, setBankLoginAan] = useState(false);
   const load = () =>
     fetch("/api/me/documents", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
@@ -432,8 +435,8 @@ export function ComplianceDocsPanel({ idInForm = false }: { idInForm?: boolean }
             onUploaded={load}
           />
         )}
-        <IbanStap t={t} ibanLast4={d.ibanLast4 ?? null} onSaved={load} />
-        <BankLoginSlot t={t} bankDoc={bankDoc} bankOk={d.status.bankOk} heeftIban={Boolean(d.ibanLast4)} onChanged={load} />
+        <IbanStap t={t} ibanLast4={d.ibanLast4 ?? null} bankLogin={bankLoginAan} onSaved={load} />
+        <BankLoginSlot t={t} bankDoc={bankDoc} bankOk={d.status.bankOk} heeftIban={Boolean(d.ibanLast4)} onChanged={load} onBeschikbaar={setBankLoginAan} />
       </div>
       <p className="text-xs text-neutralx-400">
         {t.other}
