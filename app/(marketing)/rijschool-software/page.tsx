@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
+import { PaginaVideoBlok } from "@/components/marketing/PaginaVideoBlok";
 
 export const metadata: Metadata = {
   title: "Rijschoolsoftware: agenda, leerlingen, tegoed en eigen app",
@@ -161,6 +162,8 @@ export default function RijschoolSoftwarePage() {
           </div>
         </div>
       </section>
+
+      <PaginaVideoBlok id="rijschool-software" />
 
       <nav aria-label="Onderdelen" className="border-y border-hair bg-white">
         <ul className="shell flex gap-1 overflow-x-auto py-3 text-sm">

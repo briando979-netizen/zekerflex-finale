@@ -9,6 +9,7 @@ import { PlatformFeeEstimate } from "@/components/marketing/PlatformFeeEstimate"
 import { contentKeys, getContentMap } from "@/lib/content/store";
 import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
 import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
+import { PaginaVideoBlok } from "@/components/marketing/PaginaVideoBlok";
 
 // titel en omschrijving: de standaard in lib/ontwerp/seo.ts, of een eigen versie uit de Site-ontwerper (SEO)
 export async function generateMetadata(): Promise<Metadata> {
@@ -174,6 +175,8 @@ export default async function PrijzenPage() {
         <FotoKolom foto={paginaFoto("prijzen")} />
         </div>
       </div>
+
+      <PaginaVideoBlok id="prijzen" />
 
       {zichtbaar.map((id) => (
         <Fragment key={id}>{onderdelen[id]}</Fragment>

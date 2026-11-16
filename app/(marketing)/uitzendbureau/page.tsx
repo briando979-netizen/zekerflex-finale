@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
 import { UitzendJobBoard } from "@/components/marketing/UitzendJobBoard";
 import { UitzendbureauContactForm } from "@/components/marketing/UitzendbureauContactForm";
+import { PaginaVideoBlok } from "@/components/marketing/PaginaVideoBlok";
 
 export const revalidate = 3600;
 
@@ -412,6 +413,8 @@ export default async function UitzendbureauPage() {
       ) : null}
 
       <UitzendJobBoard openCount={openCount} />
+
+      <PaginaVideoBlok id="uitzendbureau" />
 
       {zichtbaar.map((id) => (
         <Fragment key={id}>{onderdelen[id]}</Fragment>
