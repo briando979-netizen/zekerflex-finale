@@ -9,6 +9,8 @@ import { getLlmApiKey } from "@/lib/ai/llm-key";
 import { primeMainModel, effectiveMainModel } from "@/lib/ai/llm-model";
 import { gratisAan, gratisBasis, gratisModel, primeGratis } from "@/lib/ai/gratis";
 import { gezondModelUit } from "@/lib/ai/gezond-model";
+import { kettingDoelen, noteerGelukt, noteerMislukt, noteerPoging, primeKetting, type KettingDoel } from "@/lib/ai/ketting-stand";
+import { STORING_PAUZE_MS, uitkomstVan } from "@/lib/ai/ketting-limiet";
 
 // ---------------------------------------------------------------------------
 // Self-hosted LLM adapter.
@@ -362,6 +364,85 @@ async function post(
   }
 }
 
+/**
+ * De gratis rij (lib/ai/ketting.ts): bij "alles gratis" eerst de gratis aanbieders met een sleutel, de beste eerst. Zit er
+ * één aan zijn limiet (429), dan meteen de volgende; pas als niemand kan, ons eigen model. Zo lang mag de rij bij elkaar
+ * duren, daarna krijgt ons eigen model zijn eigen, volle wachttijd.
+ */
+export const KETTING_GRENS_MS = 30_000;
+
+/** Een vraag met een foto kan niet door de rij: de gratis tekstmodellen kijken niet. */
+const heeftBeeld = (messages: ChatMessage[]): boolean => messages.some((m) => typeof m.content !== "string");
+
+/** De vraag zoals de rij hem stuurt: zonder keep_alive (alleen Ollama kent dat; anderen geven 400). */
+function kettingVraag(opts: ChatOptions, d: KettingDoel, stream: boolean): Record<string, unknown> {
+  return {
+    model: d.model,
+    messages: opts.messages,
+    temperature: opts.temperature ?? (stream ? 0.4 : 0.2),
+    stream,
+    // een denkend model telt zijn denkwerk mee in max_tokens: geef het die ruimte erbij
+    ...(opts.maxTokens ? { max_tokens: opts.maxTokens + d.denkRuimte } : {}),
+    ...(opts.json && d.json ? { response_format: { type: "json_object" } } : {}),
+    ...d.extra,
+  };
+}
+
+async function kettingFetch(d: KettingDoel, body: Record<string, unknown>, signal: AbortSignal): Promise<Response> {
+  return fetch(`${d.basis}/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${d.sleutel}` },
+    body: JSON.stringify(body),
+    signal,
+  });
+}
+
+/** Een mislukte vraag aan de rij: onthouden tot wanneer hij overgeslagen wordt. Alleen de naam in het log, nooit adres of sleutel. */
+async function kettingMislukt(d: KettingDoel, res: Response): Promise<void> {
+  const tekst = (await res.text().catch(() => "")).slice(0, 300);
+  const u = uitkomstVan(res.status, (n) => res.headers.get(n), tekst, Date.now());
+  noteerMislukt(d.id, u);
+  logger.info("llm gratis rij: volgende aanbieder", { aanbieder: d.id, status: res.status, reden: u.reden });
+}
+
+function kettingOnbereikbaar(d: KettingDoel, err: unknown): void {
+  const reden = (err as Error)?.name === "TimeoutError" ? "te traag" : "niet bereikbaar";
+  noteerMislukt(d.id, { soort: "storing", tot: Date.now() + STORING_PAUZE_MS, reden });
+  logger.info("llm gratis rij: volgende aanbieder", { aanbieder: d.id, reden });
+}
+
+/** Het antwoord van de eerste aanbieder in de rij die kan, of null (dan ons eigen model). */
+async function viaKetting(opts: ChatOptions, timeoutMs: number): Promise<{ data: unknown; doel: { model: string; host: string } } | null> {
+  if (!gratisAan() || heeftBeeld(opts.messages)) return null;
+  await primeKetting();
+  const start = Date.now();
+  const grens = Math.min(timeoutMs, KETTING_GRENS_MS);
+  for (const d of kettingDoelen({ purpose: opts.purpose, stream: false }, start)) {
+    const rest = grens - (Date.now() - start);
+    if (rest < 1500) break;
+    noteerPoging(d.id);
+    const t0 = Date.now();
+    try {
+      const res = await kettingFetch(d, kettingVraag(opts, d, false), AbortSignal.timeout(rest));
+      if (!res.ok) {
+        await kettingMislukt(d, res);
+        continue;
+      }
+      const data = (await res.json().catch(() => null)) as { model?: string; choices?: { message?: { content?: unknown } }[] } | null;
+      // leeg antwoord (bijv. al het werk ging op aan denken): deze vraag naar de volgende, het model blijft in de rij
+      if (typeof data?.choices?.[0]?.message?.content !== "string" || !data.choices[0].message.content.trim()) {
+        logger.info("llm gratis rij: volgende aanbieder", { aanbieder: d.id, reden: "leeg antwoord" });
+        continue;
+      }
+      noteerGelukt(d.id, Date.now() - t0);
+      return { data, doel: { model: data.model ?? d.model, host: hostnaam(d.basis) } };
+    } catch (err) {
+      kettingOnbereikbaar(d, err);
+    }
+  }
+  return null;
+}
+
 export async function chat(opts: ChatOptions): Promise<ChatResult> {
   await ensureAiNode();
   try {
@@ -402,15 +483,22 @@ async function chatOnce(opts: ChatOptions): Promise<ChatResult> {
       let data: { model?: string; choices?: { message?: { content?: string } }[] };
       // wie er echt antwoordde: het doel, of de reserve
       let antwoord = doel;
-      try {
-        data = (await post("/chat/completions", payload, timeoutMs, opts.retry ?? true)) as typeof data;
-      } catch (err) {
-        const reserve = fallbackTarget();
-        if (!reserve || !reserveZinvol(err)) throw err;
-        // Het hoofdmodel is (even) weg: antwoord met de reserve in plaats van een foutmelding.
-        logger.warn("llm hoofdmodel weg - reservemodel antwoordt", { host: llmHost(), reserve: new URL(reserve.base).host, model: reserve.model, purpose: opts.purpose });
-        antwoord = { model: reserve.model, host: hostnaam(reserve.base) };
-        data = (await postOnce("/chat/completions", { ...payload, model: reserve.model, keep_alive: env.LLM_KEEP_ALIVE }, timeoutMs, reserve)) as typeof data;
+      // "alles gratis": eerst de gratis rij (lib/ai/ketting.ts), dan pas ons eigen model
+      const rij = await viaKetting(opts, timeoutMs);
+      if (rij) {
+        data = rij.data as typeof data;
+        antwoord = rij.doel;
+      } else {
+        try {
+          data = (await post("/chat/completions", payload, timeoutMs, opts.retry ?? true)) as typeof data;
+        } catch (err) {
+          const reserve = fallbackTarget();
+          if (!reserve || !reserveZinvol(err)) throw err;
+          // Het hoofdmodel is (even) weg: antwoord met de reserve in plaats van een foutmelding.
+          logger.warn("llm hoofdmodel weg - reservemodel antwoordt", { host: llmHost(), reserve: new URL(reserve.base).host, model: reserve.model, purpose: opts.purpose });
+          antwoord = { model: reserve.model, host: hostnaam(reserve.base) };
+          data = (await postOnce("/chat/completions", { ...payload, model: reserve.model, keep_alive: env.LLM_KEEP_ALIVE }, timeoutMs, reserve)) as typeof data;
+        }
       }
       const usage = readUsage(data);
       return {
@@ -507,13 +595,13 @@ export async function* chatStream(
   // Eén poging (hoofdmodel met zijn herhalingen, of het reservemodel): een eigen afbreekknop met twee klokken, de grens
   // tot het eerste woord en de ruime totaaltijd van nu. Het eerste woord zet de eerste klok stil.
   const grens = opts.eersteWoordMs ?? eersteWoordGrens(gratisAan());
-  const nieuwePoging = () => {
+  const nieuwePoging = (ms = grens) => {
     const ctl = new AbortController();
     const p = { ctl, teLaat: false, klokken: [] as ReturnType<typeof setTimeout>[] };
     const eerste = setTimeout(() => {
       p.teLaat = true;
       ctl.abort(new DOMException("geen eerste woord binnen de grens", "TimeoutError"));
-    }, grens);
+    }, ms);
     const totaal = setTimeout(() => ctl.abort(new DOMException("The operation was aborted due to timeout", "TimeoutError")), timeoutMs);
     for (const k of [eerste, totaal]) (k as { unref?: () => void }).unref?.();
     p.klokken = [eerste, totaal];
@@ -539,9 +627,44 @@ export async function* chatStream(
         ...(opts.maxTokens ? { max_tokens: opts.maxTokens } : {}),
       }),
     });
-  const reserve = fallbackTarget();
+  let reserve = fallbackTarget();
   let opReserve = false;
+  // "alles gratis": eerst de gratis rij (lib/ai/ketting.ts). De eerste die opent, stroomt, met de korte grens tot het eerste
+  // woord van een snelle aanbieder; geeft hij dan toch niets, dan neemt ons eigen model het over als reserve.
+  let viaRij: KettingDoel | null = null;
+  let rijRes: Response | null = null;
+  if (gratisAan() && !heeftBeeld(opts.messages)) {
+    await primeKetting();
+    const rijBegin = Date.now();
+    for (const d of kettingDoelen({ purpose: opts.purpose, stream: true }, rijBegin)) {
+      // samen hooguit KETTING_GRENS_MS, net als bij chat: daarna ons eigen model met zijn volle grens
+      const rest = KETTING_GRENS_MS - (Date.now() - rijBegin);
+      if (rest < 1500) break;
+      stopPoging(poging);
+      poging = nieuwePoging(Math.min(grens, EERSTE_WOORD_MS, rest));
+      noteerPoging(d.id);
+      try {
+        const r = await kettingFetch(d, kettingVraag(opts, d, true), poging.ctl.signal);
+        if (r.ok && r.body) {
+          viaRij = d;
+          rijRes = r;
+          break;
+        }
+        await kettingMislukt(d, r);
+      } catch (err) {
+        kettingOnbereikbaar(d, err);
+      }
+    }
+    if (viaRij) {
+      reserve = { base: baseUrl(), model };
+    } else {
+      stopPoging(poging);
+      poging = nieuwePoging();
+    }
+  }
+  const rijStart = Date.now();
   const viaReserve = async (reden: string): Promise<Response> => {
+    if (viaRij && !opReserve) noteerMislukt(viaRij.id, { soort: "storing", tot: Date.now() + STORING_PAUZE_MS, reden: "stroom gaf niets" });
     logger.warn("llm hoofdmodel weg - reservemodel streamt", { host: llmHost(), reserve: new URL(reserve!.base).host, model: reserve!.model, reden });
     // het reservemodel krijgt een eigen poging, met dezelfde grens tot het eerste woord
     stopPoging(poging);
@@ -553,7 +676,7 @@ export async function* chatStream(
 
   let res: Response;
   try {
-    res = await streamOnce(model);
+    res = rijRes ?? (await streamOnce(model));
     // Tijdelijke overbelasting (bv. Gemini's gratis laag: 429/502/503/504) →
     // kort opnieuw proberen i.p.v. de gebruiker een foutmelding tonen.
     for (let attempt = 0; attempt < 3 && [429, 502, 503, 504].includes(res.status); attempt++) {
@@ -705,8 +828,12 @@ export async function* chatStream(
     full += emit;
     yield emit;
   }
+  if (viaRij && !opReserve) {
+    if (afgebroken === null) noteerGelukt(viaRij.id, Date.now() - rijStart);
+    else noteerMislukt(viaRij.id, { soort: "storing", tot: Date.now() + STORING_PAUZE_MS, reden: "stroom brak af" });
+  }
   if (afgebroken !== null) throw new StroomAfgebroken(afgebroken, full);
-  return { text: full, model };
+  return { text: full, model: viaRij && !opReserve ? viaRij.model : model };
 }
 
 /**

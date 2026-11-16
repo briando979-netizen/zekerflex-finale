@@ -7,6 +7,7 @@ import path from "node:path";
 import { env } from "@/lib/env";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { llmGezondheidGecachet } from "@/lib/ai/gezondheid";
+import { kettingOverzicht } from "@/lib/ai/ketting-stand";
 import { getStripeClient } from "@/lib/billing/stripe";
 import { getProducts } from "@/lib/bank/insurance";
 import { platformAdminIds } from "@/lib/messaging/contacts";
@@ -339,6 +340,10 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   });
   // de toestemming van de bankkoppeling (lib/boekhouding/bank/koppeling): bijna verlopen of verlopen = de eigenaar moet opnieuw toestemming geven
   const bankToestemming = await bankToestemmingTeVernieuwen().catch(() => null);
+  // de gratis rij (lib/ai/ketting.ts): welke gratis AI-diensten hebben een sleutel; een leesfout = de taak blijft open
+  const rij = await kettingOverzicht().catch(() => null);
+  const rijKlaar = rij?.filter((d) => d.klaar).map((d) => d.naam) ?? [];
+  const rijAlles = rij !== null && rijKlaar.length === rij.length;
   const m = (id: string) => ({ done: Boolean(manual[id]), ...(manual[id] ? { doneNote: `afgevinkt door ${manual[id]!.by} op ${new Date(manual[id]!.at).toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam" })}` } : {}) });
 
   return [
@@ -407,6 +412,21 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ],
       auto: false,
       ...m("gratis-ai-bronnen"),
+    },
+    {
+      id: "gratis-ai-rij",
+      group: "AI",
+      title: "Gratis AI-sleutels maken voor de gratis rij (sneller, kost niets)",
+      why: `Met "alles gratis" draait nu elke AI-taak op ons eigen model: gemeten 14–15 november meestal 9,5 seconden per antwoord, één op de tien duurt langer dan een minuut. Met gratis sleutels van Groq, Mistral en Cloudflare gaat een vraag eerst daarheen (meestal binnen een paar seconden); zit er één aan zijn gratis limiet, dan neemt de volgende het over, en ons eigen model blijft de laatste. Onderzocht op 16 november: alleen deze drie zijn echt gratis, mogen zakelijk vanuit Europa en trainen niet op onze vragen (bij Mistral pas na het uitzetten hieronder). ID-controle, telefoongesprekken, chats tussen gebruikers, cv's en geldzaken blijven altijd op onze eigen server.${rijKlaar.length ? ` Klaar: ${rijKlaar.join(", ")}.` : ""}`,
+      how: [
+        "Groq: maak een gratis account op console.groq.com (geen betaalkaart nodig), ga naar API Keys → Create API Key en kopieer de sleutel. Zet bij Settings → Data Controls 'Zero Data Retention' aan.",
+        "Mistral: maak een account op console.mistral.ai en kies het gratis plan 'Experiment'. Zet eerst bij Admin → Privacy 'Anonymous improvement data' UIT (anders mag Mistral onze vragen gebruiken om te trainen). Maak daarna bij API Keys een sleutel.",
+        "Cloudflare: log in op dash.cloudflare.com (of maak een gratis account), ga naar AI → Workers AI → 'Use REST API', maak een token met het recht Workers AI en kopieer ook je Account ID. Dezelfde sleutel maakt ook de AI-foto's mogelijk.",
+        "Plak elke sleutel in Admin → Alles gratis → Gratis rij en klik Bewaar. Uitrollen is niet nodig; dit punt vinkt zichzelf af als alle drie klaarstaan.",
+      ],
+      auto: true,
+      done: rijAlles,
+      ...(rijAlles ? { doneNote: "alle drie de sleutels staan klaar" } : {}),
     },
     {
       id: "cloudflare-ai",

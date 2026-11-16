@@ -33,6 +33,9 @@ const BASISLIJN: Record<string, string> = {
     "openidconnect.googleapis.com", "www.googleapis.com", "appleid.apple.com", "apps.apple.com", "play.google.com",
   ]),
   ...groep("standaardadres in lib/env.ts dat nergens wordt aangeroepen", ["api.openov.nl"]),
+  ...groep("link naar de console van een gratis AI-dienst om een sleutel te maken (lib/ai/ketting.ts), geen aanroep", [
+    "console.groq.com", "console.mistral.ai", "dash.cloudflare.com",
+  ]),
   ...groep("link naar een sociaal netwerk of een Google-pagina voor de gebruiker (geen koppeling; plaatsen gaat met de hand)", [
     "instagram.com", "www.instagram.com", "www.facebook.com", "nl-nl.facebook.com", "twitter.com", "x.com", "www.linkedin.com",
     "www.tiktok.com", "www.youtube.com", "studio.youtube.com", "business.google.com", "search.google.com", "www.google.com",
