@@ -769,6 +769,20 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ...(googleDns ? { doneNote: "De Google-verificatie staat in de DNS van zekerflex.com. Of de sitemap is ingediend, kan deze lijst niet zien." } : {}),
     },
     {
+      id: "bing-webmaster",
+      group: "Vindbaarheid & app",
+      title: "Bing Webmaster Tools koppelen en de sitemap indienen (ook voor ChatGPT en Copilot)",
+      why: "ChatGPT, Copilot en Bing-chat zoeken via de index van Bing. ZekerFlex meldt nieuwe pagina's al elke dag aan Bing (IndexNow), maar met Bing Webmaster Tools zie je wat Bing heeft opgenomen en waarop je gevonden wordt. Google staat al in de DNS; of de sitemap bij Google en Bing is ingediend, kan deze lijst niet zien.",
+      how: [
+        "Ga naar bing.com/webmasters, log in en kies 'Importeren uit Google Search Console': dan neemt Bing zekerflex.com en de sitemap over.",
+        "Lukt importeren niet: voeg zekerflex.com toe en dien https://zekerflex.com/sitemap.xml in onder Sitemaps.",
+        "Controleer in Google Search Console onder Sitemaps dat https://zekerflex.com/sitemap.xml er staat met status 'Geslaagd'.",
+        "Vink deze taak af als beide staan.",
+      ],
+      auto: false,
+      ...m("bing-webmaster"),
+    },
+    {
       id: "socials",
       group: "Vindbaarheid & app",
       title: "Social-media-accounts controleren (en LinkedIn toevoegen)",
