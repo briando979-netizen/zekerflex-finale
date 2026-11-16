@@ -284,6 +284,12 @@ export async function addDnsEntry(
   return "toegevoegd";
 }
 
+/** De DNS-regels van een domein in ons TransIP-account (alleen lezen; voor mailDnsPlan in transip-mail-dns.ts). */
+export async function listDnsEntries(domainName: string): Promise<{ name: string; type: string; content: string; expire?: number }[]> {
+  const d = await call<{ dnsEntries?: { name: string; type: string; content: string; expire?: number }[] }>("GET", `/domains/${encodeURIComponent(domainName.trim().toLowerCase())}/dns`);
+  return d?.dnsEntries ?? [];
+}
+
 /**
  * Zeg een domein op aan het eind van de lopende periode (endTime "end"): de
  * naam blijft werken tot de verlengdatum en wordt dan niet verlengd. Alleen
