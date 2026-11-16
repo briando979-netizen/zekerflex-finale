@@ -77,10 +77,13 @@ export async function claimsForFreelancer(userId: string): Promise<CancellationC
   return (await all()).filter((c) => c.freelancerUserId === userId);
 }
 
-export async function claimsForEmployer(userIds: string[], branchNames: string[]): Promise<CancellationClaim[]> {
-  const set = new Set(userIds);
-  const branches = new Set(branchNames);
-  return (await all()).filter((c) => (c.employerUserId && set.has(c.employerUserId)) || branches.has(c.branchName));
+export async function claimsForEmployer(tenantIds: string[], userIds: string[]): Promise<CancellationClaim[]> {
+  // Baken af op het bedrijf dat de claim toekwam (employerTenantId, altijd gezet = de tenant van de vestiging van de
+  // klus), nooit op de vestigingsnaam: die kiest een bedrijf zelf, dus een gedeelde naam zou claims van een ander
+  // bedrijf tonen. employerUserId blijft als extra ingang voor losse (ad-hoc) klussen.
+  const tenants = new Set(tenantIds);
+  const users = new Set(userIds);
+  return (await all()).filter((c) => tenants.has(c.employerTenantId) || (c.employerUserId !== null && users.has(c.employerUserId)));
 }
 
 export async function existingClaimFor(shiftId: string, freelancerUserId: string): Promise<CancellationClaim | null> {

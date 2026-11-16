@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError, toErrorBody } from "@/lib/errors";
-import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { decideClaim, getClaim } from "@/lib/claims/store";
 import { issueClaimInvoice } from "@/lib/claims/billing";
@@ -35,13 +34,10 @@ export async function POST(request: Request, props: { params: Promise<{ id: stri
     const claim = await getClaim(params.id);
     if (!claim) throw AppError.notFound("Claim niet gevonden.");
 
-    // verify the employer owns the branch the claim is about
+    // de claim hoort bij het bedrijf dat hem toekwam (employerTenantId), niet bij elke vestiging met dezelfde naam
     const scope = await resolveEmployerScope(p);
-    const branch = await prisma.branch.findFirst({
-      where: { name: claim.branchName, tenantId: { in: scope.tenantIds } },
-      select: { id: true },
-    });
-    if (!branch && claim.employerUserId !== p.userId) {
+    const hoortErbij = scope.tenantIds.includes(claim.employerTenantId) || claim.employerUserId === p.userId;
+    if (!hoortErbij) {
       throw AppError.forbidden("Deze claim hoort niet bij jouw organisatie.");
     }
 

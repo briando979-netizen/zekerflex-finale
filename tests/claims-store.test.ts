@@ -13,6 +13,7 @@ vi.mock("@/lib/storage/kv", () => ({
 
 import {
   fileClaim,
+  claimsForEmployer,
   offerEmployerClaim,
   decideClaim,
   decideOfferedClaim,
@@ -161,5 +162,21 @@ describe("collections queries", () => {
     expect(await claimsInIncasso()).toHaveLength(0);
     await markClaimEscalated(claim.id, 40_00);
     expect(await claimsInIncasso()).toHaveLength(1);
+  });
+});
+
+describe("claimsForEmployer: afbakenen op bedrijf (16 nov, beveiliging)", () => {
+  it("toont alleen claims van de eigen tenant, ook bij een gedeelde vestigingsnaam", async () => {
+    const basis = {
+      shiftId: "s", shiftTitle: "Klus", assignmentId: "a", freelancerUserId: "fw", freelancerName: "F",
+      freelancerProfileId: "fp", branchName: "Eenmalige locatie - Dam 1", shiftValueCents: 10000, reason: "x",
+    };
+    await offerEmployerClaim({ ...basis, shiftId: "sA", assignmentId: "aA", employerUserId: "uA", employerTenantId: "tA" });
+    await offerEmployerClaim({ ...basis, shiftId: "sB", assignmentId: "aB", employerUserId: "uB", employerTenantId: "tB" });
+    const vanA = await claimsForEmployer(["tA"], ["uA"]);
+    expect(vanA.map((c) => c.shiftId)).toEqual(["sA"]);
+    const vanB = await claimsForEmployer(["tB"], ["uB"]);
+    expect(vanB.map((c) => c.shiftId)).toEqual(["sB"]);
+    expect(await claimsForEmployer(["tX"], ["uX"])).toEqual([]);
   });
 });

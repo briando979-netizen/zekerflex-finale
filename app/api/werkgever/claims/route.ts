@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePrincipal } from "@/lib/auth";
 import { toErrorBody } from "@/lib/errors";
-import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { claimsForEmployer } from "@/lib/claims/store";
 
@@ -13,14 +12,7 @@ export async function GET(): Promise<NextResponse> {
   try {
     const p = await requirePrincipal();
     const scope = await resolveEmployerScope(p);
-    const branches = await prisma.branch.findMany({
-      where: { tenantId: { in: scope.tenantIds } },
-      select: { name: true },
-    });
-    const claims = await claimsForEmployer(
-      [p.userId],
-      branches.map((b) => b.name),
-    );
+    const claims = await claimsForEmployer(scope.tenantIds, [p.userId]);
     return NextResponse.json({ claims });
   } catch (err) {
     const { status, body } = toErrorBody(err);
