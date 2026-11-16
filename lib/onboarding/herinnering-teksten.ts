@@ -13,7 +13,8 @@ import { volgendeStapHref, type PoortSleutel, type VolgendeStap } from "@/lib/on
 // Machine-assisted translations: native-speaker review recommended.
 // ---------------------------------------------------------------------------
 
-export type MistStuk = "soort" | "branches" | "bsn" | "contract" | "btw" | "postcode" | "identiteit" | "foto";
+// bsn, contract, btw, iban en werkrecht: sinds 13 nov niet meer bij de aanmelding maar vóór de eerste klus (16 nov ook in de herinnering)
+export type MistStuk = "soort" | "branches" | "bsn" | "contract" | "btw" | "postcode" | "identiteit" | "foto" | "iban" | "werkrecht";
 
 export interface HerinneringFeitenWerker {
   soortGekozen: boolean;
@@ -35,16 +36,18 @@ export function herinneringMist(f: HerinneringFeitenWerker): MistStuk[] {
   return mist;
 }
 
-/** Bij welke stap van de poort (POORT_STAPPEN) een ontbrekend onderdeel hoort. */
-export const MIST_POORT: Record<MistStuk, PoortSleutel> = {
+/** Bij welke stap van de poort (POORT_STAPPEN) een ontbrekend onderdeel hoort; null = na de aanmelding, vóór de eerste klus. */
+export const MIST_POORT: Record<MistStuk, PoortSleutel | null> = {
   soort: "kind",
   branches: "branches",
-  bsn: "gegevens",
-  contract: "gegevens",
-  btw: "gegevens",
+  bsn: null,
+  contract: null,
+  btw: null,
   postcode: "gegevens",
   identiteit: "identiteit",
   foto: "foto",
+  iban: null,
+  werkrecht: null,
 };
 
 /**
@@ -59,12 +62,15 @@ export function herinneringHref(sleutel: PoortSleutel): string {
 export const MIST_HREF: Record<MistStuk, string> = {
   soort: herinneringHref("kind"),
   branches: herinneringHref("branches"),
-  bsn: herinneringHref("gegevens"),
+  // vóór de eerste klus: dezelfde plekken als de kaart "Klaar voor je eerste klus" (lib/onboarding/klaar-voor-klus.ts)
+  bsn: "/dashboard/verificatie#gegevens-later-kop",
   contract: "/dashboard/verificatie#uitzendovereenkomst",
-  btw: herinneringHref("gegevens"),
+  btw: "/dashboard/verificatie#gegevens-later-kop",
   postcode: herinneringHref("gegevens"),
   identiteit: herinneringHref("identiteit"),
   foto: herinneringHref("foto"),
+  iban: "/dashboard/verificatie#bankrekening",
+  werkrecht: "/dashboard/verificatie#werkrecht",
 };
 
 /**
@@ -72,9 +78,9 @@ export const MIST_HREF: Record<MistStuk, string> = {
  * van POORT_STAPPEN, dus dit is dezelfde stap als poortStapVan (lib/onboarding/werker-poort.ts); een test bewaakt dat.
  */
 export function stapUitMist(mist: MistStuk[]): VolgendeStap | null {
-  const eerste = mist[0];
-  if (!eerste) return null;
-  const sleutel = MIST_POORT[eerste];
+  // de eerste die bij een poortstap hoort; alleen stukken van na de aanmelding = geen "Stap n van 5"
+  const sleutel = mist.map((m) => MIST_POORT[m]).find((s) => s !== null);
+  if (!sleutel) return null;
   const i = POORT_STAPPEN.findIndex((s) => s.sleutel === sleutel);
   return i < 0 ? null : { n: i + 1, totaal: POORT_STAPPEN.length, sleutel };
 }
@@ -113,6 +119,8 @@ export const HERINNERING_NL: HerinneringTeksten = {
     postcode: "vul je thuisbasis (postcode) in",
     identiteit: "bevestig je identiteit met een ID-scan",
     foto: "zet een profielfoto",
+    iban: "vul je rekeningnummer (IBAN) in",
+    werkrecht: "vink aan dat je in Nederland mag werken en laat zien waarmee",
   },
 };
 
@@ -136,6 +144,8 @@ const HERINNERING_EN: HerinneringTeksten = {
     postcode: "enter your home base (postcode)",
     identiteit: "confirm your identity with an ID scan",
     foto: "add a profile photo",
+    iban: "enter your bank account (IBAN)",
+    werkrecht: "confirm that you may work in the Netherlands and show how",
   },
 };
 
@@ -159,6 +169,8 @@ const HERINNERING_PL: HerinneringTeksten = {
     postcode: "wpisz swoją bazę domową (kod pocztowy)",
     identiteit: "potwierdź tożsamość skanem dokumentu",
     foto: "dodaj zdjęcie profilowe",
+    iban: "wpisz swój numer konta (IBAN)",
+    werkrecht: "potwierdź, że możesz pracować w Holandii, i pokaż na jakiej podstawie",
   },
 };
 
@@ -182,6 +194,8 @@ const HERINNERING_RO: HerinneringTeksten = {
     postcode: "introdu baza ta de domiciliu (cod poștal)",
     identiteit: "confirmă-ți identitatea cu o scanare a actului",
     foto: "adaugă o fotografie de profil",
+    iban: "introdu contul tău bancar (IBAN)",
+    werkrecht: "confirmă că ai dreptul să lucrezi în Țările de Jos și arată pe ce bază",
   },
 };
 
@@ -205,6 +219,8 @@ const HERINNERING_UK: HerinneringTeksten = {
     postcode: "введи свою домашню базу (поштовий індекс)",
     identiteit: "підтвердь особу скануванням документа",
     foto: "додай фото профілю",
+    iban: "введи свій банківський рахунок (IBAN)",
+    werkrecht: "підтвердь, що маєш право працювати в Нідерландах, і покажи на якій підставі",
   },
 };
 
@@ -257,6 +273,6 @@ export function werkerHerinnering(mist: MistStuk[], t: HerinneringTeksten, voorn
     pushTitel: t.pushTitel,
     pushBody: stapRegel ? `${stapRegel}. ${vulIn(t.pushBody, { lijst })}` : vulIn(t.pushBody, { lijst }),
     stapRegel,
-    knopHref: poort ? herinneringHref(poort.sleutel) : null,
+    knopHref: poort ? herinneringHref(poort.sleutel) : (items[0]?.href ?? null),
   };
 }

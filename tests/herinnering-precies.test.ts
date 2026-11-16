@@ -41,7 +41,9 @@ describe("herinneringMist: per soort en toestand", () => {
 
   it("elk onderdeel wijst naar een bestaande plek; de overeenkomst naar het anker", () => {
     expect(MIST_HREF.contract).toBe("/dashboard/verificatie#uitzendovereenkomst");
-    expect(MIST_HREF.bsn).toBe("/dashboard/verificatie#gegevens-mist-kop");
+    // het BSN hoort sinds 13 nov bij "vóór de eerste klus" (blok gegevens-later-kop)
+    expect(MIST_HREF.bsn).toBe("/dashboard/verificatie#gegevens-later-kop");
+    expect(MIST_HREF.iban).toBe("/dashboard/verificatie#bankrekening");
     for (const href of Object.values(MIST_HREF)) expect(href).toMatch(/^\/dashboard\//);
   });
 });
