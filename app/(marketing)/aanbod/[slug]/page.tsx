@@ -14,6 +14,7 @@ import { EfactuurPagina } from "@/components/marketing/aanbod/EfactuurPagina";
 import { AanbodStandaard } from "@/components/marketing/aanbod/AanbodStandaard";
 import { standaardVragen } from "@/lib/marketing/aanbod-vragen";
 import { EFACTUUR_FAQ } from "@/lib/marketing/efactuur-pagina";
+import { aanbodBeeld, aanbodBeelden } from "@/lib/marketing/aanbod-beeld";
 
 export const dynamicParams = false;
 
@@ -25,11 +26,19 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const a = aanbodVan((await params).slug);
   if (!a) return {};
+  // het eigen beeld van het product (een echt scherm, anders de foto) in Google en bij het delen, niet het algemene plaatje (16 nov)
+  const beeld = aanbodBeeld(a);
+  const beeldUrl = beeld ? `${SITE.url}${beeld.pad}` : null;
   return {
     title: { absolute: seoTitel(a.naam) },
     description: seoBeschrijving(a.tekst),
     keywords: [a.naam, ...(a.zoekwoorden ?? []), "ZekerFlex"],
-    ...canonical(`/aanbod/${a.slug}`, { title: a.naam, description: a.kort }),
+    ...canonical(`/aanbod/${a.slug}`, {
+      title: a.naam,
+      description: a.kort,
+      ...(beeld && beeldUrl ? { image: beeldUrl, imageSize: { width: beeld.breedte, height: beeld.hoogte }, imageAlt: beeld.alt } : {}),
+    }),
+    twitter: { card: "summary_large_image", title: a.naam, description: a.kort, ...(beeldUrl ? { images: [beeldUrl] } : {}) },
   };
 }
 
@@ -54,6 +63,10 @@ export default async function AanbodItemPagina({ params }: { params: Promise<{ s
     provider: { "@type": "Organization", name: SITE.name, url: SITE.url },
     areaServed: { "@type": "Country", name: "Nederland" },
     url: `${SITE.url}/aanbod/${a.slug}`,
+    // echte schermen en de foto, zodat zoekmachines en AI-assistenten zien wat het product is
+    ...(aanbodBeelden(a).length
+      ? { image: aanbodBeelden(a).map((b) => ({ "@type": "ImageObject", url: `${SITE.url}${b.pad}`, caption: b.alt, width: b.breedte, height: b.hoogte })) }
+      : {}),
   };
 
   // E-facturatie heeft een eigen, uitgebreide pagina (components/marketing/aanbod/EfactuurPagina.tsx), met de vragen ook voor Google

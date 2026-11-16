@@ -265,7 +265,7 @@ const OG_IMAGE = { url: `${SITE.url}/opengraph-image`, width: 1200, height: 630,
  */
 export function canonical(
   path: string,
-  og?: { title?: string; description?: string; image?: string; fileImage?: boolean },
+  og?: { title?: string; description?: string; image?: string; imageSize?: { width: number; height: number }; imageAlt?: string; fileImage?: boolean },
 ): { alternates: { canonical: string }; openGraph: Record<string, unknown> } {
   return {
     alternates: { canonical: path },
@@ -276,7 +276,7 @@ export function canonical(
       locale: SITE.locale,
       ...(og?.fileImage
         ? {}
-        : { images: [og?.image ? { url: og.image, width: 1200, height: 1200, alt: og.title ?? SITE.name } : OG_IMAGE] }),
+        : { images: [og?.image ? { url: og.image, width: og.imageSize?.width ?? 1200, height: og.imageSize?.height ?? 1200, alt: og.imageAlt ?? og.title ?? SITE.name } : OG_IMAGE] }),
       ...(og?.title ? { title: og.title } : {}),
       ...(og?.description ? { description: og.description } : {}),
     },

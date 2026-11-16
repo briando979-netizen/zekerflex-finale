@@ -8,6 +8,7 @@ import { SECTORS } from "@/lib/seo-sectors";
 import { publicOpenShifts } from "@/lib/public-shifts";
 import { SPINOFF_PRODUCTS } from "@/lib/products";
 import { eigenPaginas } from "@/lib/marketing/aanbod";
+import { aanbodBeelden } from "@/lib/marketing/aanbod-beeld";
 import { paginaLijst } from "@/lib/ontwerp/paginas-store";
 import { rijschoolPadenVoorSitemap } from "@/lib/rijschool/vindbaar";
 
@@ -79,7 +80,11 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
 
     // Het hele aanbod (lib/marketing/aanbod.ts) + de producten zonder eigen pagina elders
     entry("/aanbod", 0.9, "weekly"),
-    ...eigenPaginas().map((a) => entry(`/aanbod/${a.slug}`, 0.7, "monthly")),
+    // met de beelden van het product (echte schermen, foto) voor Google Afbeeldingen (16 nov)
+    ...eigenPaginas().map((a) => {
+      const beelden = aanbodBeelden(a).map((b) => `${SITE.url}${b.pad}`);
+      return { ...entry(`/aanbod/${a.slug}`, 0.7, "monthly"), ...(beelden.length ? { images: beelden } : {}) };
+    }),
     // Eigen pagina's uit de Site-ontwerper (/p/<slug>): alleen live en niet op "niet in Google"
     ...(await paginaLijst().catch(() => []))
       .filter((p) => p.live && !p.live.noindex)
