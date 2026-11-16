@@ -370,11 +370,11 @@ export const GRATIS_DIENSTEN: GratisDienst[] = [
   {
     id: "zoekmachines",
     naam: "Zoekmachines laten weten wat nieuw is",
-    waarvoor: "Bing en andere zoekmachines melden dat een pagina is aangepast (IndexNow)",
-    nu: "De gratis IndexNow-dienst",
+    waarvoor: "Bing en andere zoekmachines melden dat een pagina is aangepast (IndexNow) en onze pagina's bij Bing indienen (Bing Webmaster, helpt ook ChatGPT en Copilot die via Bing zoeken)",
+    nu: "De gratis IndexNow-dienst en de gratis Bing Webmaster-API",
     eigen: "Zonder de melding vinden zoekmachines hetzelfde via de sitemap, alleen later. Een mislukte melding is geen fout voor de bezoeker.",
     status: "gratis",
-    hosts: ["api.indexnow.org"],
+    hosts: ["api.indexnow.org", "ssl.bing.com"],
   },
   {
     id: "open-data",
