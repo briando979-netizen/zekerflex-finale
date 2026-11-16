@@ -65,6 +65,16 @@ FLAG_REGISTRY.push({
   default: false,
 });
 
+// Zakelijke e-mail op het eigen domein van een klant (lib/mail/zf-accounts.ts, 16 nov): uit = elke aanvraag wacht op een klik in
+// Admin → ZekerFlex Mail; aan = de mailbox wordt meteen gemaakt (met de mailregels op het domein). Eerst de kosten bij TransIP nakijken.
+FLAG_REGISTRY.push({
+  key: "zakelijke-mail-auto",
+  label: "Zakelijke e-mail: mailbox op een klantdomein meteen maken",
+  description:
+    "Aan = vraagt een bedrijf een mailadres op zijn eigen domein aan (info@hunzaak.nl, alleen op een domein dat via ZekerFlex is gekocht of verhuisd), dan zet ZekerFlex meteen de mailregels op het domein en maakt het de mailbox bij TransIP. Uit (standaard) = de aanvraag wacht op jouw klik in Admin → ZekerFlex Mail. Kijk eerst wat een mailbox op een extra domein bij TransIP kost.",
+  default: false,
+});
+
 // Boekhouding: de nachtelijke ronde (lib/boekhouding/nachtronde.ts); staat bewust uit tot het boeken en koppelen is gecontroleerd.
 FLAG_REGISTRY.push({
   key: "boekhouding-nachtronde",

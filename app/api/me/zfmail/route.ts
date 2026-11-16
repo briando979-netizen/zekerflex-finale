@@ -5,7 +5,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { isTenantVerified } from "@/lib/company/verified";
 import { transipConfigured } from "@/lib/mail/hosting/transip";
 import { ZF_MAIL_DOMAIN, suggestLocalParts } from "@/lib/mail/zf-address";
-import { accountOfUser, checkAddress, createAccount, createSchema, publicAccount } from "@/lib/mail/zf-accounts";
+import { accountOfUser, checkAddress, createAccount, createSchema, eigenMailDomeinen, publicAccount } from "@/lib/mail/zf-accounts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,6 +30,8 @@ export async function GET(request: Request): Promise<NextResponse> {
     const p = await requirePrincipal();
     const name = new URL(request.url).searchParams.get("name")?.trim().slice(0, 80) || p.fullName;
     const [account, who] = await Promise.all([accountOfUser(p.userId), eligibility(p)]);
+    // de eigen domeinen van het bedrijf waarop een adres kan (via ZekerFlex gekocht of verhuisd, 16 nov)
+    const eigenDomeinen = who.mayCreate && !account ? await eigenMailDomeinen(who.tenantId).catch(() => []) : [];
     const suggestions =
       account || !who.mayCreate
         ? []
@@ -44,6 +46,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       mayCreate: who.mayCreate && !account,
       reason: who.reason,
       suggestions,
+      eigenDomeinen,
       fullName: p.fullName,
       email: p.email,
     });

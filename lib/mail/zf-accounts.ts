@@ -7,19 +7,25 @@ import { alertOwner } from "@/lib/ops/alert";
 import { kvDelete, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 import { openSecret, sealSecret } from "@/lib/security/sealed-secret";
 import { MAIL_PRESETS } from "@/lib/mail/presets";
+import { mailButton, mailShell, sendMail } from "@/lib/mail";
+import { env } from "@/lib/env";
 import { getMailboxConnection, saveMailboxConnection, deleteMailboxConnection, sealMailboxPassword } from "@/lib/mail/mailbox-connection";
-import { createMailbox, listMailboxes, listMailForwards, transipConfigured } from "@/lib/mail/hosting/transip";
+import { addDnsEntry, createMailbox, listMailboxes, listMailForwards, transipConfigured } from "@/lib/mail/hosting/transip";
+import { TRANSIP_MAIL_DNS } from "@/lib/mail/hosting/transip-mail-dns";
+import { featureEnabled } from "@/lib/flags";
 import {
   ZF_MAIL_DOMAIN,
   ZF_MAILBOX_QUOTA_MB,
   displayNameProblem,
+  eigenLocalPartProblem,
   localPartProblem,
   normalizeLocalPart,
   passwordProblem,
 } from "@/lib/mail/zf-address";
 
 // ---------------------------------------------------------------------------
-// ZekerFlex Mail accounts — an employer's own address on zekerflex.com.
+// ZekerFlex Mail accounts — an employer's own address on zekerflex.com, or (16 nov 2026) on the company's own domain
+// (info@jouwzaak.nl) when that domain is in ZekerFlex's TransIP account (bought or moved via /domeinnaam).
 //   key "zfmail:account:<address>" — the account (claimed atomically: the
 //                                    first create wins, a second gets 409)
 //   key "zfmail:user:<userId>"     — which address belongs to a user
@@ -33,6 +39,8 @@ export type ZfMailStatus = "aangevraagd" | "actief" | "geblokkeerd";
 export interface ZfMailAccount {
   address: string;
   localPart: string;
+  /** het domein van het adres; ontbreekt = zekerflex.com (de oorspronkelijke ZekerFlex Mail) */
+  domain?: string;
   userId: string;
   tenantId: string | null;
   displayName: string;
@@ -108,6 +116,8 @@ export const createSchema = z.object({
   password: z.string().min(1).max(200),
   recoveryEmail: z.string().trim().toLowerCase().email().max(254).optional(),
   acceptTerms: z.literal(true, { errorMap: () => ({ message: "Ga akkoord met de gebruiksregels." }) }),
+  /** een eigen domein van het bedrijf (eigenMailDomeinen); leeg = zekerflex.com */
+  domein: z.string().trim().toLowerCase().max(253).optional(),
 });
 
 export interface Creator {
@@ -132,12 +142,51 @@ async function connectForUser(a: ZfMailAccount, password: string): Promise<void>
   });
 }
 
+/**
+ * De eigen domeinen van een bedrijf waarop een mailadres kan: via ZekerFlex gekocht of verhuisd en vastgelegd (GEREGISTREERD),
+ * dus in het TransIP-account van ZekerFlex. Een domein dat elders staat kan (nog) niet: TransIP maakt alleen mailboxen op
+ * domeinen in het eigen account; verhuizen kan via /domeinnaam.
+ */
+export async function eigenMailDomeinen(tenantId: string | null): Promise<string[]> {
+  if (!tenantId) return [];
+  const rijen = await prisma.domeinBestelling.findMany({ where: { tenantId, status: "GEREGISTREERD" }, select: { domein: true }, orderBy: { createdAt: "asc" } });
+  return [...new Set(rijen.map((r) => r.domein.toLowerCase()))].filter((d) => d !== ZF_MAIL_DOMAIN);
+}
+
+/** Is dit adres op een eigen domein nog vrij (alleen de vorm en onze eigen lijst; TransIP zegt het bij het maken)? */
+export async function checkEigenAdres(raw: string, domein: string): Promise<AddressCheck> {
+  const localPart = normalizeLocalPart(raw);
+  const address = `${localPart}@${domein}`;
+  const problem = eigenLocalPartProblem(localPart);
+  if (problem) return { localPart, address, available: false, reason: problem };
+  if (await kvGet(accountKey(address))) return { localPart, address, available: false, reason: "Dit adres is al in gebruik." };
+  return { localPart, address, available: true, reason: null };
+}
+
+/** Vlag: een mailbox op een klantdomein meteen maken (aan na de kostencheck van de eigenaar); uit = wachten op Admin. */
+export const ZAKELIJKE_MAIL_AUTO = "zakelijke-mail-auto";
+
+/**
+ * De mailbox echt maken bij TransIP. Op een eigen domein eerst de mailregels (MX, SPF, DKIM, DMARC; idempotent), anders komt
+ * er geen mail binnen.
+ */
+async function maakMailbox(a: ZfMailAccount, password: string): Promise<void> {
+  const domein = a.domain ?? ZF_MAIL_DOMAIN;
+  if (domein !== ZF_MAIL_DOMAIN) for (const r of TRANSIP_MAIL_DNS) await addDnsEntry(domein, r);
+  await createMailbox(domein, { localPart: a.localPart, password, maxDiskUsage: ZF_MAILBOX_QUOTA_MB });
+}
+
 export async function createAccount(who: Creator, input: z.infer<typeof createSchema>): Promise<ZfMailAccount> {
   if (await accountOfUser(who.userId)) throw AppError.conflict("Je hebt al een ZekerFlex-mailadres.");
   if (await getMailboxConnection(who.userId)) {
     throw AppError.precondition("Er is al een mailbox gekoppeld. Ontkoppel die eerst als je een ZekerFlex-adres wilt.");
   }
-  const check = await checkAddress(input.localPart);
+  // een eigen domein moet van dit bedrijf zijn en in ons TransIP-account staan
+  const eigen = input.domein && input.domein !== ZF_MAIL_DOMAIN ? input.domein : null;
+  if (eigen && !(await eigenMailDomeinen(who.tenantId)).includes(eigen)) {
+    throw AppError.validation("Dit domein staat niet bij je bedrijf. Koop of verhuis het eerst via Domeinnaam.");
+  }
+  const check = eigen ? await checkEigenAdres(input.localPart, eigen) : await checkAddress(input.localPart);
   if (!check.available) throw AppError.validation(check.reason ?? "Dit adres kan niet.");
   const nameProblem = displayNameProblem(input.displayName);
   if (nameProblem) throw AppError.validation(nameProblem);
@@ -145,10 +194,12 @@ export async function createAccount(who: Creator, input: z.infer<typeof createSc
   if (pwProblem) throw AppError.validation(pwProblem);
 
   const now = new Date().toISOString();
-  const live = transipConfigured();
+  // op een eigen domein alleen meteen als de eigenaar dat aanzette (kosten bij TransIP, 16 nov); anders wacht het op Admin
+  const live = transipConfigured() && (!eigen || (await featureEnabled(ZAKELIJKE_MAIL_AUTO).catch(() => false)));
   const account: ZfMailAccount = {
     address: check.address,
     localPart: check.localPart,
+    ...(eigen ? { domain: eigen } : {}),
     userId: who.userId,
     tenantId: who.tenantId,
     displayName: input.displayName,
@@ -171,7 +222,7 @@ export async function createAccount(who: Creator, input: z.infer<typeof createSc
 
   if (live) {
     try {
-      await createMailbox(ZF_MAIL_DOMAIN, { localPart: account.localPart, password: input.password, maxDiskUsage: ZF_MAILBOX_QUOTA_MB });
+      await maakMailbox(account, input.password);
     } catch (err) {
       // nothing was made at TransIP: free the address again
       await kvDelete(accountKey(account.address));
@@ -186,10 +237,12 @@ export async function createAccount(who: Creator, input: z.infer<typeof createSc
     await connectForUser(account, input.password);
   } else if (!isReservedTestEmail(who.email)) {
     await alertOwner({
-      key: "zfmail:new",
+      key: eigen ? "zfmail:eigen-domein" : "zfmail:new",
       severity: "warning",
-      title: "Nieuw ZekerFlex-mailadres aangevraagd",
-      detail: `${account.displayName} wil ${account.address}. Zet de TransIP-sleutel op de server; daarna activeer je het in Admin → ZekerFlex Mail.`,
+      title: eigen ? "Zakelijk mailadres op een eigen domein aangevraagd" : "Nieuw ZekerFlex-mailadres aangevraagd",
+      detail: eigen
+        ? `${account.displayName} wil ${account.address}. Kijk wat een mailbox op ${eigen} bij TransIP kost en activeer het in Admin → ZekerFlex Mail; de mailregels van het domein gaan dan vanzelf mee.`
+        : `${account.displayName} wil ${account.address}. Zet de TransIP-sleutel op de server; daarna activeer je het in Admin → ZekerFlex Mail.`,
       url: "/admin/zekerflex-mail",
     });
   }
@@ -276,6 +329,20 @@ export const adminActionSchema = z.object({
   note: z.string().trim().max(300).optional(),
 });
 
+/** "Je mailadres werkt": naar het herstel-adres (meestal het login-adres) van wie het aanvroeg. Nederlands (werkgeversapp). */
+export function adresWerktMail(a: Pick<ZfMailAccount, "address" | "displayName" | "recoveryEmail">) {
+  const link = `${env.APP_BASE_URL.replace(/\/+$/, "")}/werkgever/mail`;
+  const voornaam = a.displayName.split(" ")[0] || a.displayName;
+  const subject = `Je mailadres ${a.address} werkt`;
+  return {
+    to: a.recoveryEmail ?? "",
+    subject,
+    kind: "zfmail-actief",
+    text: `Hoi ${voornaam},\n\nJe mailadres ${a.address} is klaar. Je mail komt binnen in ZekerFlex, onder Mail: ${link}\n\nVragen? Antwoord gewoon op deze mail.`,
+    html: mailShell(subject, `<p>Hoi ${voornaam},</p><p>Je mailadres <strong>${a.address}</strong> is klaar. Je mail komt binnen in ZekerFlex, onder Mail.</p>${mailButton(link, "Naar je mail")}<p>Vragen? Antwoord gewoon op deze mail.</p>`),
+  };
+}
+
 /** Admin: make a waiting request real (needs the TransIP key), or block/unblock an address. */
 export async function adminAction(input: z.infer<typeof adminActionSchema>, admin: { userId: string; name: string }): Promise<ZfMailAccount> {
   const account = await kvGet<ZfMailAccount>(accountKey(input.address));
@@ -286,12 +353,14 @@ export async function adminAction(input: z.infer<typeof adminActionSchema>, admi
     if (account.status !== "aangevraagd" || !account.pendingPasswordSealed) throw AppError.precondition("Dit adres wacht niet op activering.");
     if (!transipConfigured()) throw AppError.precondition("Zet eerst de TransIP-sleutel op de server (Admin → Te doen).");
     const password = openSecret(account.pendingPasswordSealed, PENDING_PURPOSE);
-    await createMailbox(ZF_MAIL_DOMAIN, { localPart: account.localPart, password, maxDiskUsage: ZF_MAILBOX_QUOTA_MB });
+    await maakMailbox(account, password);
     hostCache = null;
     delete account.pendingPasswordSealed;
     account.status = "actief";
     account.activatedAt = now;
     if (!(await getMailboxConnection(account.userId))) await connectForUser(account, password);
+    // het scherm beloofde "je krijgt bericht zodra hij werkt" (queuedBody): nu ook echt; een storing hier houdt het activeren niet tegen
+    if (account.recoveryEmail) await sendMail(adresWerktMail(account)).catch(() => undefined);
   } else if (input.action === "blokkeer") {
     account.status = "geblokkeerd";
     const conn = await getMailboxConnection(account.userId);
