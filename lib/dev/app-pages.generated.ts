@@ -281,6 +281,7 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/horeca-personeel-inhuren/[stad]","file":"app/(marketing)/horeca-personeel-inhuren/[stad]/page.tsx","area":"Marketing","dynamic":true},
   {"route":"/horeca-vacatures","file":"app/(marketing)/horeca-vacatures/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/horeca-vacatures/[stad]","file":"app/(marketing)/horeca-vacatures/[stad]/page.tsx","area":"Marketing","dynamic":true},
+  {"route":"/intercedenten","file":"app/(marketing)/intercedenten/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/kaart","file":"app/(marketing)/kaart/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/kennis","file":"app/(marketing)/kennis/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/kennis/[slug]","file":"app/(marketing)/kennis/[slug]/page.tsx","area":"Marketing","dynamic":true},
