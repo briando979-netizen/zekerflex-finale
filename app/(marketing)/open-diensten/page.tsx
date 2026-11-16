@@ -38,7 +38,7 @@ export default async function OpenShiftsPage() {
           </p>
         </div>
 
-        <div className="mt-12 grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
+        <div className="mt-12 grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
           {/* kaart */}
           <div className="rounded-3xl border border-hair bg-paper-soft p-6">
             {hasWork ? (

@@ -68,6 +68,8 @@ export const ERASABLE_KV_PREFIXES = [
   "mailbox-connection:",
   "mailbox-sent:",
   "mrz-lezing:",
+  // het eigen wifi-wachtwoord (lib/netwerk/store.ts, netwerk-wifi-ww:<userId>; 16 nov: ontbrak bij wissen en export)
+  "netwerk-wifi-ww:",
   "nfc-fob-user:",
   "spoed-uit:",
   "spoed-wacht:",

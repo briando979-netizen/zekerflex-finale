@@ -83,7 +83,7 @@ export function HardwarePrijzen({ regels, margePct, installatieCent }: { regels:
           <span className="mt-1 block text-xs" style={{ color: "var(--a-mute)" }}>De monteur, de reistijd en de uitleg op locatie. Leeg = nog niet vastgesteld.</span>
         </label>
       </div>
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full text-[0.8125rem]">
           <thead>
             <tr style={{ color: "var(--a-mute)" }}>

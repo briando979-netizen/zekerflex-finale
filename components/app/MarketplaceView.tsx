@@ -276,6 +276,7 @@ export function MarketplaceView({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={mk.search}
+          aria-label={mk.search}
           className="mb-2.5 w-full rounded-full border border-hairstrong bg-white px-4 py-2 text-sm outline-none focus:border-brand-500"
         />
         <div className="flex gap-2 overflow-x-auto pb-1">

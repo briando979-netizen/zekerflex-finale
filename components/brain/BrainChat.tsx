@@ -156,7 +156,7 @@ export function BrainChat({ onClose, app, kop: kopProp }: { onClose?: () => void
         }}
         className="flex gap-2 border-t border-hair bg-white px-3 py-3"
       >
-        <input value={input} onChange={(e) => setInput(e.target.value)} maxLength={1500} placeholder="Stel je vraag…" className="field-input flex-1 py-2 text-sm" />
+        <input value={input} onChange={(e) => setInput(e.target.value)} maxLength={1500} placeholder="Stel je vraag…" aria-label="Stel je vraag" className="field-input flex-1 py-2 text-sm" />
         <button type="submit" disabled={busy || !input.trim()} className="btn-primary px-4 py-2 text-sm disabled:opacity-50">
           Vraag
         </button>

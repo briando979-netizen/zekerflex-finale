@@ -256,7 +256,7 @@ export function KamersBeheer({ vandaag }: { vandaag: string }) {
             <p className="mt-2 text-xs text-neutralx-600">
               Een gekleurd vak is een bezette nacht. Blauw is gereserveerd, groen is ingecheckt, grijs is uitgecheckt. Op de vertrekdag is de kamer weer vrij voor een nieuwe aankomst. Klik op een vak om de boeking te openen.
             </p>
-            <div className="mt-3 overflow-x-auto">
+            <div className="relative mt-3 overflow-x-auto">
               <table className="w-full min-w-[760px] border-collapse text-xs">
                 <caption className="sr-only">Bezetting per kamer, 14 dagen vanaf {nlDag(start)}</caption>
                 <thead>

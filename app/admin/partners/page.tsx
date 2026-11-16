@@ -44,7 +44,7 @@ export default async function PartnersAdminPage() {
         {regels.length === 0 ? (
           <Empty title="Nog geen partnerbestellingen" body="Bedrijven vinden hun links in de Websitestudio onder Verdienen." />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead>
                 <tr>

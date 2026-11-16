@@ -59,7 +59,7 @@ export default async function StudioVerdienenPage() {
         </div>
       </Card>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <PartnerLinks base={base} code={code} pct={PARTNER_PCT} producten={producten} />
 
         <div className="grid content-start gap-4">

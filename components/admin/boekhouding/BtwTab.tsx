@@ -183,7 +183,7 @@ export function BtwTab() {
             subtitle={`Berekend op ${dagTekst(amsterdamDayKey(c.berekendOp))}. De bedragen komen uit de boekingen van ${dagTekst(c.inhoud.van)} t/m ${dagTekst(c.inhoud.tot)}.`}
             actions={<Pill tone={c.status === "INGEDIEND" ? "ok" : c.status === "GOEDGEKEURD" ? "plan" : "warn"}>{c.statusTekst}</Pill>}
           >
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
               <table className="w-full min-w-[560px] text-left text-[0.8125rem]">
                 <caption className="sr-only">Rubrieken van de btw-aangifte</caption>
                 <thead>

@@ -239,7 +239,7 @@ function ResultaatTab({ t, b, a, naarTab }: { t: InKaartTeksten; b: BedrijfInKaa
           <h2 id="inkaart-ruimtes" className="font-display text-xl font-bold text-ink">
             {t.perRuimte.kop}
           </h2>
-          <div className="mt-3 overflow-x-auto rounded-2xl border border-hair bg-white">
+          <div className="relative mt-3 overflow-x-auto rounded-2xl border border-hair bg-white">
             <table className="w-full text-sm">
               <caption className="sr-only">{t.perRuimte.caption}</caption>
               <thead>
@@ -292,7 +292,7 @@ function KopDagdelen({ t }: { t: InKaartTeksten }) {
 function RoosterTabel({ t, raster }: { t: InKaartTeksten; raster: (number | null)[] }) {
   const rijen = roosterRijen(raster);
   return (
-    <div className="mt-3 overflow-x-auto rounded-2xl border border-hair bg-white p-3">
+    <div className="relative mt-3 overflow-x-auto rounded-2xl border border-hair bg-white p-3">
       <table className="w-full min-w-[320px] text-sm">
         <caption className="sr-only">{t.rooster.caption}</caption>
         <KopDagdelen t={t} />
@@ -451,7 +451,7 @@ function GegevensTab({ t, b, wijzig, bewerkbaar, naarTab }: { t: InKaartTeksten;
 
 function OpenTijden({ t, b, wijzig, bewerkbaar }: { t: InKaartTeksten; b: BedrijfInKaart; wijzig: (b: BedrijfInKaart) => void; bewerkbaar: boolean }) {
   return (
-    <div className="mt-3 overflow-x-auto">
+    <div className="relative mt-3 overflow-x-auto">
       <table className="w-full min-w-[320px] text-sm">
         <caption className="sr-only">{t.gegevens.openCaption}</caption>
         <KopDagdelen t={t} />
@@ -603,7 +603,7 @@ function BezettingTab({ t, b, wijzig, bewerkbaar }: { t: InKaartTeksten; b: Bedr
           {z.geenOpen}
         </p>
       )}
-      <div className="overflow-x-auto rounded-2xl border border-hair bg-white p-3">
+      <div className="relative overflow-x-auto rounded-2xl border border-hair bg-white p-3">
         <table className="w-full min-w-[320px] text-sm">
           <caption className="sr-only">{vulIn(z.caption, { naam: ruimte.naam })}</caption>
           <KopDagdelen t={t} />

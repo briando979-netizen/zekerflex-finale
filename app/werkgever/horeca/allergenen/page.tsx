@@ -44,7 +44,7 @@ export default async function AllergenenPagina() {
       {groepen.length === 0 ? (
         <p className="card p-5 text-sm text-neutralx-600">Je menukaart is nog leeg. Zet eerst gerechten op de kaart onder Horeca → Menukaart.</p>
       ) : (
-        <div id="allergenen-vel" className="card overflow-x-auto p-4">
+        <div id="allergenen-vel" className="card relative overflow-x-auto p-4">
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="font-display text-xl font-bold text-ink">Allergenen · {zaak.naam}</h2>
             <p className="text-xs text-neutralx-600">Stand van {vandaag()}</p>

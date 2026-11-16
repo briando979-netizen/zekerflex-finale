@@ -75,7 +75,7 @@ export default async function VerkopersAdminPage() {
         {regels.length === 0 ? (
           <Empty title="Nog geen verkopen" body="Zodra iemand een product van een verkoper koopt, zie je het hier." />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[820px] text-left text-sm">
               <thead>
                 <tr>

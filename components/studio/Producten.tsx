@@ -105,7 +105,7 @@ export default function Producten() {
               </label>
             </div>
           </div>
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-[#ebebeb] bg-[#fafafa] text-left text-xs font-semibold text-[#616161]">
