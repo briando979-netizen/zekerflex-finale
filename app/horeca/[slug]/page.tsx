@@ -79,7 +79,8 @@ export default async function HorecaHome({ params }: { params: Promise<{ slug: s
         <h2 id="menukaart-kop" className="mt-2 font-display text-3xl font-bold tracking-tight sm:text-4xl">
           Wat we serveren
         </h2>
-        {groepen.length === 0 && <p className="mt-6 text-[#4B5563]">De menukaart volgt binnenkort.</p>}
+        {/* nog geen gerechten ingevuld: geen "volgt binnenkort" (eigenaar 16 nov), wel waar de gast hem wél vindt */}
+        {groepen.length === 0 && <p className="mt-6 text-[#4B5563]">Vraag in de zaak naar de menukaart.</p>}
         {/* grid-cols-1 en min-w-0: een naam met labels mag krimpen en afbreken (geen horizontale scroll op 390 px) */}
         <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
           {groepen.map((g) => (
