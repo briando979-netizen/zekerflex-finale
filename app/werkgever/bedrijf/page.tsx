@@ -120,6 +120,7 @@ export default async function WerkgeverBedrijfPage() {
               token={mailPrefs.token}
               initialCategories={mailPrefs.categories}
               initialUnsubscribedAll={mailPrefs.unsubscribedAll}
+              kant="bedrijf"
             />
           </div>
         </Panel>

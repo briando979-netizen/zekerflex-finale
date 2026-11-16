@@ -8,6 +8,7 @@ import { hasRole, type Principal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { amsterdamStartOfDay } from "@/lib/time/amsterdam";
 import { LEGE_STAND, leesbareCode, moduleActief, type ModuleSleutel, type ModuleStand, type NetwerkStand } from "@/lib/netwerk/modules";
+import type { WifiPlek } from "@/lib/netwerk/wifi-plekken";
 
 // ---------------------------------------------------------------------------
 // Wat een bedrijf aan netwerkpakketten heeft en hoe de wifi is ingericht.
@@ -251,7 +252,8 @@ export async function wifiVandaagVoor(userId: string, nu = new Date()): Promise<
 
 // --- de vestigingen van het bedrijf (uit de database) -------------------------------------
 
-export async function vestigingenVan(tenantId: string): Promise<{ id: string; naam: string; plaats: string }[]> {
-  const rijen = await prisma.branch.findMany({ where: { tenantId }, select: { id: true, name: true, city: true }, orderBy: { createdAt: "asc" } });
-  return rijen.map((b) => ({ id: b.id, naam: b.name, plaats: b.city }));
+/** Alle vestigingen, ook de eenmalige locaties van klussen; voor de lijst onder "Wifi instellen" eerst wifiPlekken() (lib/netwerk/wifi-plekken.ts). */
+export async function vestigingenVan(tenantId: string): Promise<WifiPlek[]> {
+  const rijen = await prisma.branch.findMany({ where: { tenantId }, select: { id: true, name: true, city: true, addressLine: true, kind: true }, orderBy: { createdAt: "asc" } });
+  return rijen.map((b) => ({ id: b.id, naam: b.name, plaats: b.city, adres: b.addressLine, eenmalig: b.kind === "AD_HOC" }));
 }

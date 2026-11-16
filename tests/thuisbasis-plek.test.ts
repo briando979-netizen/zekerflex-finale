@@ -196,7 +196,7 @@ describe("teksten in alle vijf talen", () => {
     "ofPostcode", "postcodeUitleg", "postcodeZoeken", "postcodeOnbekend",
   ] as const;
   const ibanSleutels = [
-    "ibanLabel", "ibanWhy", "ibanSave", "ibanSaving", "ibanChange", "ibanCancel", "ibanEndsOn", "ibanInvalid", "ibanFailed", "ibanFirst",
+    "ibanLabel", "ibanWhy", "ibanWhyZonderBank", "ibanSave", "ibanSaving", "ibanChange", "ibanCancel", "ibanEndsOn", "ibanInvalid", "ibanFailed", "ibanFirst",
   ] as const;
 
   it("de thuisbasis-teksten staan in elke taal, en alleen het Nederlands is Nederlands", () => {

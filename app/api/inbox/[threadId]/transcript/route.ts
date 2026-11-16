@@ -8,6 +8,7 @@ import { readChatMedia } from "@/lib/messaging/media";
 import { transcribeAudio } from "@/lib/asr/transcribe";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { uitschrijfTijd } from "@/lib/messaging/uitschrijf-tijd";
+import { schoonTranscript } from "@/lib/asr/verzonnen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -43,8 +44,10 @@ export async function POST(req: Request, props: { params: Promise<{ threadId: st
     const file = await readChatMedia(thread.id, m.attachment.mediaId, p.userId);
     if (!file) throw AppError.notFound("Spraakbericht niet gevonden");
     const uit = await transcribeAudio(file.bytes, file.filename, { language: null, timeoutMs: uitschrijfTijd(m.attachment.durationSec) });
-    const bijgewerkt = await setTranscript(thread.id, m.id, uit.text);
-    return NextResponse.json({ message: bijgewerkt ?? { ...m, transcript: uit.text } });
+    // Whisper verzint bij stilte soms tekst ("hey, hey, hey, …"): die bewaren we niet (lib/asr/verzonnen.ts)
+    const tekst = schoonTranscript(uit.text, m.attachment.durationSec);
+    const bijgewerkt = await setTranscript(thread.id, m.id, tekst);
+    return NextResponse.json({ message: bijgewerkt ?? { ...m, transcript: tekst } });
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });

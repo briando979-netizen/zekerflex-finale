@@ -15,6 +15,8 @@ const schema = z.object({
   category: z.string().optional(),
   on: z.boolean().optional(),
   unsubscribeAll: z.boolean().optional(),
+  // de app waarin de voorkeuren staan (lib/mail/categories.ts): het antwoord houdt dezelfde lijst
+  kant: z.enum(["werker", "bedrijf"]).optional(),
 });
 
 // POST /api/mail/voorkeuren — token-based (no login) update of one toggle.
@@ -29,7 +31,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       message: "Te veel pogingen — probeer het later opnieuw.",
     });
 
-    const { token, category, on, unsubscribeAll } = schema.parse(await request.json().catch(() => ({})));
+    const { token, category, on, unsubscribeAll, kant } = schema.parse(await request.json().catch(() => ({})));
     const rec = await findByToken(token);
     if (!rec) throw AppError.notFound("Ongeldige of verlopen link.");
 
@@ -41,7 +43,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       throw AppError.validation("Niets om aan te passen.");
     }
 
-    const view = await mailPrefsView(rec.email);
+    const view = await mailPrefsView(rec.email, kant);
     return NextResponse.json({ ok: true, ...view });
   } catch (err) {
     return jsonError(err);

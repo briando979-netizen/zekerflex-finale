@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   PAKKET_SLEUTELS,
@@ -8,6 +10,7 @@ import {
   dashboardsVan,
   leesKeuze,
   menuVoor,
+  studioVoorAccount,
   thuisVan,
   voegToe,
   type MenuOpties,
@@ -101,6 +104,35 @@ describe("leesKeuze en voegToe", () => {
     expect(dashboardVanPad("/werkgever/diensten/abc")).toBe("personeel");
     // past bij elk dashboard
     for (const pad of ["/werkgever", "/werkgever/mail", "/werkgever/facturen", "/werkgever/bedrijf", "/werkgever/urenoverzicht", "/werkgever/hulp"]) expect(dashboardVanPad(pad), pad).toBeNull();
+  });
+});
+
+describe("studioVoorAccount: facturen en team van een bedrijf met klussen blijven in /werkgever", () => {
+  it("alleen een website of webshop: het account staat in de studio", () => {
+    expect(studioVoorAccount(bepaalWerkruimte({ ...geen, heeftSite: true }))).toBe("website");
+    expect(studioVoorAccount(bepaalWerkruimte({ ...geen, heeftWebshop: true }))).toBe("webshop");
+    expect(studioVoorAccount(bepaalWerkruimte({ ...geen, keuze: keuze("webshop") }, "webshop"))).toBe("webshop");
+  });
+
+  it("wie klussen heeft, houdt de werkgeverspagina, ook met het dashboard website open (16 nov: 90 klussen, Facturen gaf de studio)", () => {
+    const metKlussen: WerkruimteFeiten = { ...geen, heeftKlussen: true, heeftSite: true, heeftWebshop: true, keuze: keuze("website") };
+    for (const open of ["website", "webshop", "personeel"] as const) {
+      const stand = bepaalWerkruimte(metKlussen, open);
+      expect(stand.soort).toBe(open);
+      expect(studioVoorAccount(stand), open).toBeNull();
+    }
+    // zelf personeel inhuren gekozen (nog zonder klussen) telt ook
+    expect(studioVoorAccount(bepaalWerkruimte({ ...geen, heeftSite: true, keuze: keuze("website", ["personeel", "website"]) }, "website"))).toBeNull();
+  });
+
+  it("het dashboard personeel, rijschool of horeca: nooit de studio", () => {
+    for (const soort of ["personeel", "rijschool", "horeca"] as const) expect(studioVoorAccount({ soort, ookPersoneel: false }), soort).toBeNull();
+  });
+
+  it("de accountpagina's van /werkgever vragen het via studioVoorAccount", () => {
+    const bron = readFileSync(path.join(process.cwd(), "lib/studio/account-server.ts"), "utf8");
+    expect(bron).toContain("studioVoorAccount(await werkruimteVan(");
+    expect(bron).not.toMatch(/soort === "website" \|\| soort === "webshop"/);
   });
 });
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useStudio } from "@/components/studio/context";
-import { AanDeSlag, Bezoekgrafiek, groet, taakVan, useEigenDomein, useStats, type Taak } from "@/components/studio/OverzichtDelen";
+import { AanDeSlag, BezoekStat, Bezoekgrafiek, groet, taakVan, useEigenDomein, useStats, type Taak } from "@/components/studio/OverzichtDelen";
 import { Card, IExternal, PageHead, Pill, Stat, btn } from "@/components/studio/ui";
 import { websiteStappen } from "@/lib/onboarding/aan-de-slag";
 
@@ -44,7 +44,7 @@ export default function WebsiteOverzicht() {
       />
       <Card className="mb-4">
         <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
-          <Stat label="Bezoeken (30 dagen)" value={stats ? stats.entries.toLocaleString("nl-NL") : "—"} hint={stats ? `${stats.views.toLocaleString("nl-NL")} paginaweergaven` : "nog geen cijfers"} />
+          <BezoekStat stats={stats} />
           <Stat label="Pagina's" value={site.pages.length} />
           <Stat label="Foto's" value={site.media.length} />
           <Stat label="Stand" value={site.liveBuild ? <Pill tone="ok">Online</Pill> : <Pill tone="warn">Concept</Pill>} hint={site.liveBuild && unpublished ? "wijzigingen nog niet gepubliceerd" : undefined} />

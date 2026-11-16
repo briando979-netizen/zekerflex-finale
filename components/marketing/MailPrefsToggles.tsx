@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { MailKant } from "@/lib/mail/categories";
 
 interface Cat {
   slug: string;
@@ -13,10 +14,13 @@ export function MailPrefsToggles({
   token,
   initialCategories,
   initialUnsubscribedAll,
+  kant,
 }: {
   token: string;
   initialCategories: Cat[];
   initialUnsubscribedAll: boolean;
+  /** de app waarin de voorkeuren staan: na opslaan dezelfde lijst terug (een bedrijf ziet geen werkersmails); zonder kant alles (de afmeldpagina) */
+  kant?: MailKant;
 }) {
   const [cats, setCats] = useState(initialCategories);
   const [all, setAll] = useState(initialUnsubscribedAll);
@@ -30,7 +34,7 @@ export function MailPrefsToggles({
       const res = await fetch("/api/mail/voorkeuren", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, ...body }),
+        body: JSON.stringify({ token, ...(kant ? { kant } : {}), ...body }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -89,7 +93,9 @@ export function MailPrefsToggles({
         <span className="text-sm text-neutralx-700">
           <span className="font-medium text-ink">Meld me af voor alle optionele e-mail.</span>
           <span className="mt-0.5 block text-xs text-neutralx-500">
-            Belangrijke e-mail (verificatie, wachtwoord, facturen, loonstroken) blijf je altijd ontvangen.
+            {kant === "bedrijf"
+              ? "Belangrijke e-mail (verificatie, wachtwoord, facturen) blijf je altijd ontvangen."
+              : "Belangrijke e-mail (verificatie, wachtwoord, facturen, loonstroken) blijf je altijd ontvangen."}
           </span>
         </span>
       </label>

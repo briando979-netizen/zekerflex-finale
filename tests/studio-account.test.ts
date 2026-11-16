@@ -7,14 +7,14 @@ import { ACCOUNT_ONDERDELEN, initialen, isAccountPad, studioAccountAdres } from 
 // dashboard van een werkgever is die zich alleen bezighoudt met freelancen en klussen uitzetten".
 // Het account (bedrijf, facturen, team, mail, mijn account) staat in de studio zelf.
 
-const m = vi.hoisted(() => ({ soort: "webshop" as string, redirect: vi.fn((url: string) => { throw new Error(`NEXT_REDIRECT ${url}`); }) }));
+const m = vi.hoisted(() => ({ soort: "webshop" as string, ookPersoneel: false, redirect: vi.fn((url: string) => { throw new Error(`NEXT_REDIRECT ${url}`); }) }));
 vi.mock("next/navigation", () => ({ redirect: m.redirect }));
 vi.mock("@/lib/auth", () => ({
   getPrincipal: vi.fn(async () => null),
   hasRole: (p: { grants: { role: string }[] }, ...rollen: string[]) => p.grants.some((g) => rollen.includes(g.role)),
 }));
 vi.mock("@/lib/dashboard/employer", () => ({ resolveEmployerScope: vi.fn(async () => ({ tenantIds: ["t1"] })) }));
-vi.mock("@/lib/werkgever/werkruimte-server", () => ({ werkruimteVan: vi.fn(async () => ({ soort: m.soort })) }));
+vi.mock("@/lib/werkgever/werkruimte-server", () => ({ werkruimteVan: vi.fn(async () => ({ soort: m.soort, ookPersoneel: m.ookPersoneel })) }));
 
 const lees = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8");
 const beheerder = { userId: "u1", email: "a@b.test", fullName: "Jan de Vries", grants: [{ role: "HQ_ADMIN", organizationId: "t1" }] };
@@ -62,6 +62,17 @@ describe("de accountschermen van de studio", () => {
 describe("naarStudioAccount", () => {
   beforeEach(() => {
     m.redirect.mockClear();
+    m.ookPersoneel = false;
+  });
+
+  it("een bedrijf met klussen (dashboard personeel) blijft op de werkgeverspagina, ook met de webshop of website open", async () => {
+    const { naarStudioAccount } = await import("@/lib/studio/account-server");
+    m.ookPersoneel = true;
+    for (const soort of ["website", "webshop"]) {
+      m.soort = soort;
+      for (const onderdeel of ["facturen", "team"] as const) await expect(naarStudioAccount(beheerder as never, onderdeel)).resolves.toBeUndefined();
+    }
+    expect(m.redirect).not.toHaveBeenCalled();
   });
 
   it("dashboard webshop of website open: naar hetzelfde onderdeel in de studio", async () => {

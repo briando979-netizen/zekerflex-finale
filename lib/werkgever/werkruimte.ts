@@ -151,6 +151,18 @@ export function bepaalWerkruimte(f: WerkruimteFeiten, gewenst?: Werkruimte | nul
   return { soort, ookPersoneel, gekozen: false, dashboards };
 }
 
+/**
+ * Hoort een accountscherm van /werkgever (bedrijf, facturen, team, mail, mijn account) in de studio
+ * (lib/studio/account-server.ts)? Alleen als het dashboard website of webshop open is en het bedrijf
+ * geen dashboard personeel heeft. Wie klussen heeft, houdt de werkgeverspagina met de facturen van
+ * zijn klussen en zijn team (16 nov: een bedrijf met 90 klussen kwam via Facturen op de
+ * domeinfacturen van de websitestudio).
+ */
+export function studioVoorAccount(stand: Pick<WerkruimteStand, "soort" | "ookPersoneel">): "website" | "webshop" | null {
+  if (stand.ookPersoneel) return null;
+  return stand.soort === "website" || stand.soort === "webshop" ? stand.soort : null;
+}
+
 // --- het menu ------------------------------------------------------------------
 
 export type MenuSleutel =

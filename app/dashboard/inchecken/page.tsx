@@ -25,10 +25,11 @@ export default async function IncheckenPage(props: { searchParams: Promise<{ b?:
 
   const profile = await prisma.freelancerProfile.findUnique({ where: { userId: principal.userId }, select: { id: true } });
   if (!profile || !b || !t) {
+    // zonder code (rechtstreeks geopend, uit het menu): uitleg hoe inchecken gaat, geen foutmelding
     return (
       <>
         <PageHeader title={ft.checkin.title} />
-        <p className="text-sm text-neutralx-600">{ft.checkin.qrWrong}</p>
+        <p className="text-sm text-neutralx-600">{b && t ? ft.checkin.qrWrong : ft.checkin.qrNone}</p>
         {terug}
       </>
     );

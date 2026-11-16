@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useStudio } from "@/components/studio/context";
-import { Card, ICheck, IChevron } from "@/components/studio/ui";
+import { Card, ICheck, IChevron, Stat } from "@/components/studio/ui";
 import type { SiteStats } from "@/lib/sites/stats-shared";
 import { AAN_DE_SLAG_STAPPEN, type AdsStap } from "@/lib/onboarding/aan-de-slag";
 
@@ -81,12 +81,28 @@ export function AanDeSlag({ titel, taken }: { titel: string; taken: Taak[] }) {
   );
 }
 
+/**
+ * Het cijfer boven de grafiek: bekeken pagina's, net als de grafiek, met eronder hoe vaak iemand van buitenaf binnenkwam
+ * (Google, een link, getypt; lib/sites/stats-shared.ts). Eerst stond er "Bezoeken 0" boven "12 paginaweergaven" en een
+ * grafiek met staven: je eigen klikken vanuit ZekerFlex tellen als weergave, niet als bezoek (16 nov).
+ */
+export function BezoekStat({ stats }: { stats: SiteStats | null }) {
+  const binnen = stats?.entries ?? 0;
+  return (
+    <Stat
+      label="Bekeken pagina's (30 dagen)"
+      value={stats ? stats.views.toLocaleString("nl-NL") : "—"}
+      hint={stats ? `${binnen.toLocaleString("nl-NL")} ${binnen === 1 ? "bezoek" : "bezoeken"} van buitenaf` : "nog geen cijfers"}
+    />
+  );
+}
+
 export function Bezoekgrafiek({ stats }: { stats: SiteStats | null }) {
   const dagen = stats?.days.slice(-30) ?? [];
   if (dagen.length === 0) return null;
   const piek = Math.max(1, ...dagen.map((d) => d.views));
   return (
-    <div className="mt-5" role="img" aria-label={`Bezoekers per dag, de laatste ${dagen.length} dagen`}>
+    <div className="mt-5" role="img" aria-label={`Bekeken pagina's per dag, de laatste ${dagen.length} dagen`}>
       <div className="flex h-24 items-end gap-[3px]">
         {dagen.map((d) => (
           <div key={d.day} title={`${d.day}: ${d.views} weergaven`} className="flex-1 rounded-t-[3px] bg-[#1a1a1a]/80" style={{ height: `${Math.max(3, (d.views / piek) * 100)}%` }} />
