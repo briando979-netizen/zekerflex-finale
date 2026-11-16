@@ -262,6 +262,7 @@ function BankLoginSlot({
   bankOk,
   heeftIban,
   onChanged,
+  onBeschikbaar,
 }: {
   t: AuthDict["page"];
   bankDoc: Doc | undefined;

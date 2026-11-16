@@ -540,8 +540,11 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       how: ["dashboard.stripe.com → Developers → Webhooks → het endpoint dat eindigt op /api/webhooks/stripe.", "Kies 'Gebeurtenissen bewerken', voeg checkout.session.expired toe en sla op."],
       // niet nodig zolang betalen via Stripe dicht is (16 nov: de webshop rekent af per overschrijving)
       auto: webhookEvents !== null || stripeDicht,
-      done: stripeDicht || (webhookEvents !== null && receives(webhookEvents, "checkout.session.expired")),
-      ...(stripeDicht ? { doneNote: STRIPE_DICHT } : webhookEvents === null ? m("stripe-expired") : {}),
+      ...(stripeDicht
+        ? { done: true, doneNote: STRIPE_DICHT }
+        : webhookEvents === null
+          ? m("stripe-expired")
+          : { done: receives(webhookEvents, "checkout.session.expired") }),
     },
     {
       id: "stripe-agentische-handel",
