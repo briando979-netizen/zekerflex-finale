@@ -28,7 +28,7 @@ async function handle(request: Request): Promise<NextResponse> {
 
     // Daarnaast een ronde sitemap-URL's rechtstreeks bij Bing indienen (naast IndexNow), binnen het dagquotum en met
     // omloop zodat de hele site langskomt. Faalt stil en doet niets zonder Bing-sleutel (lib/seo/bing-webmaster.ts).
-    let bing = { ingediend: 0, ok: false, reden: "overgeslagen" as string | undefined };
+    let bing: { ingediend: number; ok: boolean; reden?: string } = { ingediend: 0, ok: false, reden: "overgeslagen" };
     try {
       const regels = await sitemap();
       bing = await bingDienBatchIn(regels.map((r) => r.url));
