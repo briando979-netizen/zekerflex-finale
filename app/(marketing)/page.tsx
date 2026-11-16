@@ -10,6 +10,7 @@ import { FaqList } from "@/components/marketing/primitives";
 import { BranchShowcase } from "@/components/marketing/BranchShowcase";
 import { AppDownload } from "@/components/marketing/AppDownload";
 import { PaginaAchtergrond } from "@/components/shop/PaginaAchtergrond";
+import { PaginaVideoBlok } from "@/components/marketing/PaginaVideoBlok";
 import {
   BEDRIJVEN_HOME,
   WERK_AANMELDEN,
@@ -97,6 +98,8 @@ export default function WerkHomePage() {
           </div>
         </div>
       </section>
+
+      <PaginaVideoBlok id="home" />
 
       {/* ───────────────────────────────────────────────── voor wie */}
       <section className="bg-paper">

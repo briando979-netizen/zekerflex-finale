@@ -6,6 +6,7 @@ import { galerijVoor } from "@/lib/sites/ontwerpen-server";
 import { WEBSITE_PLANS } from "@/lib/website/manage";
 import { accountStand } from "@/lib/billing/stripe-betalen";
 import { OntwerpGalerij, type GalerijKaart } from "@/components/marketing/OntwerpGalerij";
+import { PaginaVideoBlok } from "@/components/marketing/PaginaVideoBlok";
 
 export const metadata: Metadata = {
   title: "Maak zelf je website of webshop",
@@ -80,6 +81,8 @@ export default async function WebsiteMakenPage() {
           <p className="mt-5 text-sm text-white/60">{kanOnline ? `Bouwen en bekijken is gratis. Je betaalt pas als je hem online zet, vanaf ${vanaf} per maand.` : "Bouwen en bekijken is gratis. Is je site klaar, dan zetten we hem samen met je online."}</p>
         </div>
       </div>
+
+      <PaginaVideoBlok id="website-maken" />
 
       <section className="bg-paper" aria-labelledby="ontwerpen">
         <div className="shell py-14 md:py-20">

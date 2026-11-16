@@ -8,6 +8,7 @@ import { sectorFoto } from "@/lib/marketing/fotos";
 import { HeroMetFoto } from "@/components/marketing/HeroMetFoto";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { klusUrl } from "@/lib/klusconcept/concept";
+import { PaginaVideoBlok } from "@/components/marketing/PaginaVideoBlok";
 
 // Shared template that renders a sector's hub + per-city landing pages from the
 // SECTORS config. Each page combines sector copy with the city's real local
@@ -139,6 +140,7 @@ export function SectorHub({ sector: s }: { sector: Sector }) {
           ))}
         </ul>
       </Section>
+      {s.key === "horeca" ? <PaginaVideoBlok id="horeca" /> : null}
       <Section tone="soft">
         <SectionHead eyebrow="Veelgestelde vragen" title={`${s.label}personeel inhuren`} />
         <div className="mt-8 max-w-3xl">
