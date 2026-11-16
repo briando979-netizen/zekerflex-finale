@@ -8,7 +8,7 @@ import { Prisma } from "@prisma/client";
 // bij het activeren eerst de mailregels op het domein (MX, SPF, DKIM, DMARC), dan de mailbox, en een mail "je adres werkt".
 
 const store = new Map<string, unknown>();
-const h = vi.hoisted(() => ({ domeinen: [] as { domein: string }[], vlag: false, live: true, dns: [] as unknown[], mailboxen: [] as unknown[], mails: [] as { to: string; subject: string }[] }));
+const h = vi.hoisted(() => ({ domeinen: [] as { domein: string }[], vlag: false, live: true, zone: [] as { name: string; type: string; content: string }[], dns: [] as unknown[], mailboxen: [] as unknown[], mails: [] as { to: string; subject: string }[] }));
 
 vi.mock("@/lib/storage/kv", () => ({
   kvGet: async (k: string) => store.get(k) ?? null,
@@ -52,10 +52,11 @@ vi.mock("@/lib/mail/hosting/transip", () => ({
   listMailForwards: async () => [],
   createMailbox: async (domein: string, i: { localPart: string }) => void h.mailboxen.push({ domein, localPart: i.localPart }),
   addDnsEntry: async (domein: string, r: { name: string; type: string }) => void h.dns.push({ domein, name: r.name, type: r.type }),
+  listDnsEntries: async () => h.zone,
 }));
 
 import { adminAction, checkEigenAdres, createAccount, eigenMailDomeinen } from "@/lib/mail/zf-accounts";
-import { TRANSIP_MAIL_DNS } from "@/lib/mail/hosting/transip-mail-dns";
+import { TRANSIP_MAIL_DNS, mailDnsPlan } from "@/lib/mail/hosting/transip-mail-dns";
 import { valideerDnsRecord } from "@/lib/mail/hosting/dns-record";
 import { eigenLocalPartProblem, localPartProblem } from "@/lib/mail/zf-address";
 import { AANBOD } from "@/lib/marketing/aanbod";
@@ -69,6 +70,8 @@ beforeEach(() => {
   h.domeinen = [{ domein: "proefzaak.nl" }];
   h.vlag = false;
   h.live = true;
+  // een gekocht domein: alleen de regels voor de website
+  h.zone = [{ name: "@", type: "A", content: "37.97.226.24" }, { name: "www", type: "CNAME", content: "proefzaak.nl." }];
   h.dns = [];
   h.mailboxen = [];
   h.mails = [];
@@ -130,6 +133,51 @@ describe("een adres op het eigen domein", () => {
     const a = await createAccount(jan, { ...invoer, localPart: "jan.proef", domein: undefined as unknown as string });
     expect(a.address).toBe("jan.proef@zekerflex.com");
     expect(h.dns).toHaveLength(0);
+  });
+});
+
+describe("een verhuisd domein met bestaande mail (da, 16 nov)", () => {
+  const google = [
+    { name: "@", type: "MX", content: "1 smtp.google.com." },
+    { name: "@", type: "TXT", content: '"v=spf1 include:_spf.google.com ~all"' },
+    { name: "_dmarc", type: "TXT", content: "v=DMARC1; p=quarantine" },
+  ];
+
+  it("mailDnsPlan: mail bij een ander = stoppen met de reden; niets toevoegen", () => {
+    const p = mailDnsPlan(google);
+    expect(p.conflict).toMatch(/al mail bij een andere aanbieder \(MX: 1 smtp\.google\.com\.\)/);
+    expect(p.toevoegen).toEqual([]);
+    expect(mailDnsPlan([{ name: "@", type: "TXT", content: "v=spf1 include:spf.protection.outlook.com -all" }]).conflict).toMatch(/SPF-regel voor een andere aanbieder/);
+    expect(mailDnsPlan([{ name: "transip-A._domainkey", type: "CNAME", content: "iets.anders.nl." }]).conflict).toMatch(/transip-A\._domainkey al voor iets anders/);
+  });
+
+  it("mailDnsPlan: een bestaande DMARC blijft staan, en wat er al goed staat komt er niet nog eens bij", () => {
+    const p = mailDnsPlan([
+      { name: "@", type: "MX", content: "10 mx.transip.email." },
+      { name: "@", type: "TXT", content: '"v=spf1 include:_spf.transip.email include:mail.zekerflex.nl ~all"' },
+      { name: "_dmarc", type: "TXT", content: "v=DMARC1; p=reject" },
+      { name: "transip-A._domainkey", type: "CNAME", content: "_dkim-A.transip.email." },
+    ]);
+    expect(p.conflict).toBeNull();
+    expect(p.toevoegen.map((r) => r.name)).toEqual(["transip-B._domainkey", "transip-C._domainkey"]);
+    expect(mailDnsPlan([]).toevoegen).toHaveLength(TRANSIP_MAIL_DNS.length);
+  });
+
+  it("activeren op zo'n domein: 412 met de reden, geen DNS en geen mailbox", async () => {
+    h.zone = google;
+    await createAccount(jan, invoer);
+    await expect(adminAction({ action: "activeer", address: "info@proefzaak.nl" }, { userId: "admin", name: "Eigenaar" })).rejects.toMatchObject({ status: 412 });
+    expect(h.dns).toHaveLength(0);
+    expect(h.mailboxen).toHaveLength(0);
+  });
+
+  it("met de vlag aan maar mail bij een ander: toch eerst een aanvraag (niets bij TransIP), met de reden in de melding", async () => {
+    h.vlag = true;
+    h.zone = google;
+    const a = await createAccount(jan, invoer);
+    expect(a.status).toBe("aangevraagd");
+    expect(h.dns).toHaveLength(0);
+    expect(h.mailboxen).toHaveLength(0);
   });
 });
 

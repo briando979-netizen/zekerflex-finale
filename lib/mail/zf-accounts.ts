@@ -10,8 +10,8 @@ import { MAIL_PRESETS } from "@/lib/mail/presets";
 import { mailButton, mailShell, sendMail } from "@/lib/mail";
 import { env } from "@/lib/env";
 import { getMailboxConnection, saveMailboxConnection, deleteMailboxConnection, sealMailboxPassword } from "@/lib/mail/mailbox-connection";
-import { addDnsEntry, createMailbox, listMailboxes, listMailForwards, transipConfigured } from "@/lib/mail/hosting/transip";
-import { TRANSIP_MAIL_DNS } from "@/lib/mail/hosting/transip-mail-dns";
+import { addDnsEntry, createMailbox, listDnsEntries, listMailboxes, listMailForwards, transipConfigured } from "@/lib/mail/hosting/transip";
+import { mailDnsPlan } from "@/lib/mail/hosting/transip-mail-dns";
 import { featureEnabled } from "@/lib/flags";
 import {
   ZF_MAIL_DOMAIN,
@@ -167,12 +167,28 @@ export async function checkEigenAdres(raw: string, domein: string): Promise<Addr
 export const ZAKELIJKE_MAIL_AUTO = "zakelijke-mail-auto";
 
 /**
- * De mailbox echt maken bij TransIP. Op een eigen domein eerst de mailregels (MX, SPF, DKIM, DMARC; idempotent), anders komt
- * er geen mail binnen.
+ * Kan TransIP E-mail op dit eigen domein zonder bestaande mail te breken? Null = ja; anders de reden (mail bij een andere
+ * aanbieder, lib/mail/hosting/transip-mail-dns.ts). Lukt het lezen niet, dan ook stoppen: liever wachten dan mail kwijt.
+ */
+export async function eigenDomeinMailConflict(domein: string): Promise<string | null> {
+  try {
+    return mailDnsPlan(await listDnsEntries(domein)).conflict;
+  } catch {
+    return "De DNS-regels van dit domein konden niet worden gelezen. Probeer het later opnieuw.";
+  }
+}
+
+/**
+ * De mailbox echt maken bij TransIP. Op een eigen domein eerst de mailregels die nog ontbreken (MX, SPF, DKIM, DMARC), anders
+ * komt er geen mail binnen; staat er al mail bij een andere aanbieder, dan stopt het hier (412) en verandert er niets.
  */
 async function maakMailbox(a: ZfMailAccount, password: string): Promise<void> {
   const domein = a.domain ?? ZF_MAIL_DOMAIN;
-  if (domein !== ZF_MAIL_DOMAIN) for (const r of TRANSIP_MAIL_DNS) await addDnsEntry(domein, r);
+  if (domein !== ZF_MAIL_DOMAIN) {
+    const plan = mailDnsPlan(await listDnsEntries(domein));
+    if (plan.conflict) throw AppError.precondition(plan.conflict);
+    for (const r of plan.toevoegen) await addDnsEntry(domein, r);
+  }
   await createMailbox(domein, { localPart: a.localPart, password, maxDiskUsage: ZF_MAILBOX_QUOTA_MB });
 }
 
@@ -194,8 +210,11 @@ export async function createAccount(who: Creator, input: z.infer<typeof createSc
   if (pwProblem) throw AppError.validation(pwProblem);
 
   const now = new Date().toISOString();
-  // op een eigen domein alleen meteen als de eigenaar dat aanzette (kosten bij TransIP, 16 nov); anders wacht het op Admin
-  const live = transipConfigured() && (!eigen || (await featureEnabled(ZAKELIJKE_MAIL_AUTO).catch(() => false)));
+  // op een eigen domein alleen meteen als de eigenaar dat aanzette (kosten bij TransIP, 16 nov) én er geen mail van een andere
+  // aanbieder op het domein staat; anders wacht het op Admin (met de reden in de melding)
+  const autoAan = Boolean(eigen) && transipConfigured() && (await featureEnabled(ZAKELIJKE_MAIL_AUTO).catch(() => false));
+  const conflict = eigen && autoAan ? await eigenDomeinMailConflict(eigen) : null;
+  const live = transipConfigured() && (!eigen || (autoAan && !conflict));
   const account: ZfMailAccount = {
     address: check.address,
     localPart: check.localPart,
@@ -241,7 +260,7 @@ export async function createAccount(who: Creator, input: z.infer<typeof createSc
       severity: "warning",
       title: eigen ? "Zakelijk mailadres op een eigen domein aangevraagd" : "Nieuw ZekerFlex-mailadres aangevraagd",
       detail: eigen
-        ? `${account.displayName} wil ${account.address}. Kijk wat een mailbox op ${eigen} bij TransIP kost en activeer het in Admin → ZekerFlex Mail; de mailregels van het domein gaan dan vanzelf mee.`
+        ? `${account.displayName} wil ${account.address}. ${conflict ? `Let op: ${conflict} ` : ""}Kijk wat een mailbox op ${eigen} bij TransIP kost en activeer het in Admin → ZekerFlex Mail; de mailregels van het domein gaan dan vanzelf mee.`
         : `${account.displayName} wil ${account.address}. Zet de TransIP-sleutel op de server; daarna activeer je het in Admin → ZekerFlex Mail.`,
       url: "/admin/zekerflex-mail",
     });
