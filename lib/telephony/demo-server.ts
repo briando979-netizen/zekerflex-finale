@@ -1,4 +1,3 @@
-import { chatJson, fastModel } from "@/lib/ai/client";
 import { piperSpreek, STANDAARD_PIPER_STEM } from "@/lib/ai/piper";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
@@ -6,10 +5,9 @@ import { extractFacts } from "@/lib/website-check/analyze";
 import { assertFetchableUrl, fetchPage, FetchError } from "@/lib/website-check/fetch";
 import { leesOpeningstijden, tekstVan } from "@/lib/website-check/inlezen";
 import {
-  leesGesprek,
+  gesprekVoor,
   leesInvoer,
   naamVanSite,
-  reserveGesprek,
   uurVoorlezen,
   voorStem,
   VOORBEELD,
@@ -22,9 +20,9 @@ import {
 
 // ---------------------------------------------------------------------------
 // De luisterdemo van de telefoonassistent (lib/telephony/demo.ts): de site van de bezoeker lezen (alleen openbare
-// adressen, lib/website-check/fetch.ts), ons taalmodel een kort gesprek met een testklant laten schrijven en dat met
+// adressen, lib/website-check/fetch.ts), het gesprek met een testklant opbouwen met de feiten van die site, en het met
 // twee eigen stemmen voorlezen (Piper: de assistent "nl-vrouw", de testklant "nl-man", deploy/piper/config). Niets
-// wordt bewaard: wat de bezoeker invult, gaat alleen naar de site zelf en naar ons eigen model.
+// wordt bewaard: wat de bezoeker invult, gaat alleen naar de site zelf.
 // ---------------------------------------------------------------------------
 
 export const STEM_ASSISTENT = "nl-vrouw";
@@ -80,47 +78,6 @@ export async function zaakVan(invoer: string): Promise<ZaakInfo> {
   }
 }
 
-const SYSTEEM = `Je schrijft een kort, natuurlijk telefoongesprek in het Nederlands tussen de digitale telefoonassistent van een zaak en een beller (een testklant die Sanne heet).
-Regels:
-- 6 tot 8 beurten, om en om. De assistent begint en de assistent eindigt.
-- De eerste zin van de assistent is: "Goedendag, u spreekt met de digitale assistent van {naam}." gevolgd door een korte vraag waarmee hij kan helpen.
-- Elke beurt hooguit twee korte zinnen, zoals mensen aan de telefoon praten. Geen opsommingen, geen emoji, geen markdown.
-- Sanne stelt een vraag die past bij dit soort zaak.
-- De assistent gebruikt alleen de feiten die je krijgt. Weet hij iets niet (een prijs, of iets vrij is, een afspraak in de agenda zetten), dan zegt hij dat eerlijk en zet hij een terugbelverzoek klaar: hij vraagt haar naam; het nummer heeft hij al, want zij belt ermee.
-- Noem geen telefoonnummers, mailadressen, webadressen of bedragen. Verzin geen namen van medewerkers.
-- De assistent zegt "u" tegen de beller.
-Antwoord alleen met JSON: {"regels":[{"wie":"assistent","tekst":"..."},{"wie":"klant","tekst":"..."}]}`;
-
-/** Het gesprek: door ons taalmodel geschreven, of het reservegesprek als dat niet op tijd of niet bruikbaar is. */
-async function gesprekVoor(z: ZaakInfo): Promise<{ regels: DemoRegel[]; door: "ai" | "vast" }> {
-  const feiten = [
-    `Naam van de zaak: ${z.naam}`,
-    z.omschrijving ? `Over de zaak: ${z.omschrijving}` : "Over de zaak is verder niets bekend.",
-    z.openingstijden?.length ? `Openingstijden: ${z.openingstijden.join("; ")}` : "Openingstijden: onbekend.",
-  ].join("\n");
-  try {
-    const raw = await chatJson<unknown>({
-      messages: [
-        { role: "system", content: SYSTEEM.replace("{naam}", z.naam) },
-        { role: "user", content: feiten },
-      ],
-      model: fastModel(),
-      temperature: 0.7,
-      maxTokens: 700,
-      timeoutMs: 45_000,
-      retry: false,
-      stilBijFout: true,
-      purpose: "telefoon-demo",
-    });
-    const regels = leesGesprek(raw);
-    if (regels) return { regels, door: "ai" };
-    logger.info("telefoon-demo: antwoord van het model niet bruikbaar, reservegesprek");
-  } catch (err) {
-    logger.info("telefoon-demo: taalmodel gaf geen gesprek, reservegesprek", { fout: err instanceof Error ? err.message.slice(0, 120) : "onbekend" });
-  }
-  return { regels: reserveGesprek(z), door: "vast" };
-}
-
 /** Eén regel voorlezen met de stem van die spreker; ontbreekt die stem, dan de standaardstem; lukt niets, dan null. */
 async function geluidVan(r: DemoRegel): Promise<DemoRegelMetGeluid["geluid"]> {
   const tekst = voorStem(r.tekst);
@@ -142,13 +99,13 @@ async function voorlezen(regels: DemoRegel[]): Promise<DemoRegelMetGeluid[]> {
 export async function voorbeeldGesprek(): Promise<DemoGesprek> {
   const klaar = gedeeld.__zfTelefoonVoorbeeld;
   if (klaar && Date.now() - klaar.op < VOORBEELD_TTL_MS) return klaar.gesprek;
-  const gesprek: DemoGesprek = { zaak: VOORBEELD_ZAAK, door: "vast", regels: await voorlezen(VOORBEELD) };
+  const gesprek: DemoGesprek = { zaak: VOORBEELD_ZAAK, regels: await voorlezen(VOORBEELD) };
   // alleen bewaren als de stem er was; anders de volgende keer opnieuw proberen
   if (gesprek.regels.every((r) => r.geluid)) gedeeld.__zfTelefoonVoorbeeld = { op: Date.now(), gesprek };
   return gesprek;
 }
 
-/** Een gesprek voor de zaak van de bezoeker: site lezen, gesprek schrijven, voorlezen. */
+/** Een gesprek voor de zaak van de bezoeker: site lezen, gesprek opbouwen, voorlezen. */
 export async function maakDemo(invoer: string): Promise<DemoGesprek> {
   if ((gedeeld.__zfTelefoonDemoBezig ?? 0) >= MAX_TEGELIJK) {
     throw AppError.rateLimited("Het is even druk met voorbeeldgesprekken. Probeer het over een minuut opnieuw.", 60);
@@ -157,9 +114,9 @@ export async function maakDemo(invoer: string): Promise<DemoGesprek> {
   const begon = Date.now();
   try {
     const zaak = await zaakVan(invoer);
-    const { regels, door } = await gesprekVoor(zaak);
-    const gesprek: DemoGesprek = { zaak: zaak.naam, door, regels: await voorlezen(regels) };
-    logger.info("telefoon-demo gemaakt", { door, regels: regels.length, metGeluid: gesprek.regels.filter((r) => r.geluid).length, ms: Date.now() - begon });
+    const regels = gesprekVoor(zaak);
+    const gesprek: DemoGesprek = { zaak: zaak.naam, regels: await voorlezen(regels) };
+    logger.info("telefoon-demo gemaakt", { regels: regels.length, metGeluid: gesprek.regels.filter((r) => r.geluid).length, metUren: Boolean(zaak.openingstijden?.length), ms: Date.now() - begon });
     return gesprek;
   } finally {
     gedeeld.__zfTelefoonDemoBezig = Math.max(0, (gedeeld.__zfTelefoonDemoBezig ?? 1) - 1);

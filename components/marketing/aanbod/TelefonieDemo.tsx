@@ -5,9 +5,10 @@ import { VOORBEELD_ZAAK, type DemoGesprek, type Spreker } from "@/lib/telephony/
 
 // ---------------------------------------------------------------------------
 // Luister mee op /aanbod/telefonie (16 nov 2026): eerst een vast voorbeeld, daarna een gesprek voor de eigen zaak.
-// De bezoeker vult zijn website of bedrijfsnaam in; de server (app/api/demo/telefoon) leest de site, laat ons model een
-// gesprek met een testklant schrijven en leest het voor met twee eigen stemmen. Het geluid komt als base64 en wordt
-// hier een blob-adres (de CSP staat media-src blob: toe, data: niet). De regels spelen na elkaar af, met de tekst erbij.
+// De bezoeker vult zijn website of bedrijfsnaam in; de server (app/api/demo/telefoon) leest de site, bouwt een gesprek
+// met een testklant met de feiten van die site (lib/telephony/demo.ts) en leest het voor met twee eigen stemmen. Het
+// geluid komt als base64 en wordt hier een blob-adres (de CSP staat media-src blob: toe, data: niet). De regels spelen
+// na elkaar af, met de tekst erbij.
 // ---------------------------------------------------------------------------
 
 interface Regel {
@@ -18,7 +19,6 @@ interface Regel {
 
 interface Gesprek {
   zaak: string;
-  door: "ai" | "vast";
   regels: Regel[];
 }
 
@@ -93,7 +93,7 @@ export function TelefonieDemo() {
         setFout(data?.error?.message ?? "Het gesprek kon nu niet gemaakt worden. Probeer het zo nog eens.");
         return;
       }
-      const g: Gesprek = { zaak: data.zaak, door: data.door, regels: data.regels.map((r) => ({ wie: r.wie, tekst: r.tekst, url: r.geluid ? blobAdres(r.geluid) : null })) };
+      const g: Gesprek = { zaak: data.zaak, regels: data.regels.map((r) => ({ wie: r.wie, tekst: r.tekst, url: r.geluid ? blobAdres(r.geluid) : null })) };
       setGesprek(g);
       setHuidig(-1);
       if (g.regels.some((r) => r.url)) speel(g, 0);
@@ -153,7 +153,7 @@ export function TelefonieDemo() {
               </label>
             </div>
             <p id="telefoon-demo-uitleg" className="mt-2 text-sm text-neutralx-500">
-              Het maken duurt meestal 20 tot 60 seconden. We bewaren niets van wat je invult.
+              Het maken duurt een paar seconden. We bewaren niets van wat je invult.
             </p>
           </form>
           <button type="button" onClick={() => void haal({ voorbeeld: true }, "voorbeeld")} disabled={bezig !== null} className="mt-5 inline-flex items-center gap-2 text-[15px] font-semibold text-brand-700 hover:underline disabled:opacity-60">
@@ -172,7 +172,7 @@ export function TelefonieDemo() {
             <div role="status" className="flex min-h-[18rem] flex-col items-center justify-center gap-3 text-center text-neutralx-600">
               <span className="h-8 w-8 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" aria-hidden />
               <p className="font-semibold text-ink">De assistent leest je website en oefent het gesprek…</p>
-              <p className="text-sm">Dit duurt meestal 20 tot 60 seconden.</p>
+              <p className="text-sm">Dit duurt een paar seconden.</p>
             </div>
           ) : !gesprek ? (
             <div className="flex min-h-[18rem] flex-col items-center justify-center gap-2 text-center text-neutralx-500">
@@ -210,7 +210,7 @@ export function TelefonieDemo() {
               </ol>
               <p className="mt-4 text-xs text-neutralx-500">
                 Een voorbeeld met een verzonnen testklant, voorgelezen door onze eigen computerstem.
-                {gesprek.door === "vast" && gesprek.zaak !== VOORBEELD_ZAAK ?" Het taalmodel had het even te druk, dus je hoort een vast gesprek met de gegevens van je zaak." : ""} De assistent aan je eigen nummer komt binnenkort.
+                {gesprek.zaak !== VOORBEELD_ZAAK ? " De assistent noemt alleen wat op je website staat; de rest zet hij door als terugbelverzoek." : ""} De assistent aan je eigen nummer komt binnenkort.
               </p>
             </div>
           )}

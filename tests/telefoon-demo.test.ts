@@ -1,15 +1,15 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { leesGesprek, leesInvoer, naamVanSite, reserveGesprek, uurVoorlezen, VOORBEELD, voorStem } from "@/lib/telephony/demo";
+import { gesprekVoor, leesInvoer, naamVanSite, TESTKLANT, uurVoorlezen, vraagVoor, VOORBEELD, voorStem } from "@/lib/telephony/demo";
 import { isPublicApiRoute } from "@/lib/auth/public-routes";
 import { AANBOD } from "@/lib/marketing/aanbod";
 
 // De luisterdemo van de telefoonassistent op /aanbod/telefonie (16 nov 2026): een vast voorbeeld en een gesprek voor
-// de eigen zaak (website of naam), geschreven door ons model en voorgelezen door twee eigen stemmen.
+// de eigen zaak (website of naam), opgebouwd met de feiten van de site en voorgelezen door twee eigen stemmen. Geen
+// taalmodel: gemma3:4b verzon dingen namens de zaak (zie lib/telephony/demo.ts).
 
-const { chatJson, piperSpreek, fetchPage } = vi.hoisted(() => ({ chatJson: vi.fn(), piperSpreek: vi.fn(), fetchPage: vi.fn() }));
-vi.mock("@/lib/ai/client", () => ({ chatJson, fastModel: () => "snel" }));
+const { piperSpreek, fetchPage } = vi.hoisted(() => ({ piperSpreek: vi.fn(), fetchPage: vi.fn() }));
 vi.mock("@/lib/ai/piper", () => ({ piperSpreek, STANDAARD_PIPER_STEM: "alloy" }));
 vi.mock("@/lib/website-check/fetch", async (orig) => {
   const echt = await orig<typeof import("@/lib/website-check/fetch")>();
@@ -17,6 +17,7 @@ vi.mock("@/lib/website-check/fetch", async (orig) => {
 });
 
 const lees = (rel: string) => readFileSync(path.join(process.cwd(), rel), "utf8");
+const omEnOm = (g: readonly { wie: string }[]) => g[0]?.wie === "assistent" && g[g.length - 1]?.wie === "assistent" && g.every((r, i) => i === 0 || r.wie !== g[i - 1]?.wie);
 
 describe("invoer en naam", () => {
   it("een domein is een website, een naam blijft een naam", () => {
@@ -42,54 +43,44 @@ describe("invoer en naam", () => {
 });
 
 describe("het gesprek", () => {
-  it("het vaste voorbeeld en het reservegesprek: de assistent begint en eindigt, om en om", () => {
-    for (const g of [VOORBEELD, reserveGesprek({ naam: "Bakkerij Jansen" }), reserveGesprek({ naam: "Bakkerij Jansen", openingstijden: ["maandag van 9 tot 17 uur"] })]) {
-      expect(g[0]?.wie).toBe("assistent");
-      expect(g[g.length - 1]?.wie).toBe("assistent");
-      expect(g.every((r, i) => i === 0 || r.wie !== g[i - 1]?.wie)).toBe(true);
-    }
-    expect(reserveGesprek({ naam: "Bakkerij Jansen" })[0]?.tekst).toContain("Bakkerij Jansen");
-    expect(reserveGesprek({ naam: "X", openingstijden: ["maandag van 9 tot 17 uur"] })[2]?.tekst).toContain("maandag van 9 tot 17 uur");
+  it("de vraag van de testklant past bij de soort zaak (naam of omschrijving), anders een algemene", () => {
+    expect(vraagVoor({ naam: "Kapsalon Lotte" })).toContain("haar te laten knippen");
+    expect(vraagVoor({ naam: "De Vries", omschrijving: "APK, onderhoud en reparatie van alle merken" })).toContain("APK");
+    expect(vraagVoor({ naam: "Bakkerij Jansen", omschrijving: "Vers brood in Haarlem" })).toContain("taart");
+    expect(vraagVoor({ naam: "Trattoria Roma" })).toContain("tafel reserveren");
+    expect(vraagVoor({ naam: "Jansen & Zn" })).toContain("jullie diensten");
   });
 
-  it("het antwoord van het model soepel gelezen: andere sleutels, een object als tekst, geen nummers of links", () => {
-    const g = leesGesprek({
-      gesprek: [
-        { spreker: "Assistent", tekst: "Goedendag, u spreekt met de digitale assistent van Jansen." },
-        { rol: "klant", text: { tekst: "Hebben jullie spelt?" } },
-        { wie: "assistent", tekst: "Bel ons op 06 12345678." },
-        { wie: "assistent", tekst: "Dat weet ik niet zeker; zal ik een terugbelverzoek klaarzetten?" },
-        { wie: "klant", tekst: "Graag." },
-        { wie: "onbekend", tekst: "weg" },
-      ],
-    });
-    expect(g?.map((r) => r.wie)).toEqual(["assistent", "klant", "assistent", "klant"]);
-    expect(g?.[1]?.tekst).toBe("Hebben jullie spelt?");
-    expect(JSON.stringify(g)).not.toContain("12345678");
+  it("de assistent neemt op met de naam, zet de vraag door als terugbelverzoek en verzint niets", () => {
+    const g = gesprekVoor({ naam: "Garage De Vries", omschrijving: "APK en onderhoud" });
+    expect(omEnOm(g)).toBe(true);
+    expect(g[0]?.tekst).toContain("digitale assistent van Garage De Vries");
+    expect(g.some((r) => r.wie === "assistent" && r.tekst.includes("terugbelverzoek"))).toBe(true);
+    expect(g.some((r) => r.wie === "klant" && r.tekst.includes(TESTKLANT))).toBe(true);
+    // geen openingstijden op de site: de assistent noemt er ook geen
+    expect(g.some((r) => /open/i.test(r.tekst) && /uur/.test(r.tekst))).toBe(false);
   });
 
-  it("onbruikbaar = null (dan het reservegesprek): te kort, alleen één spreker, of de klant begint", () => {
-    expect(leesGesprek(null)).toBeNull();
-    expect(leesGesprek({ regels: [{ wie: "assistent", tekst: "Hallo" }] })).toBeNull();
-    expect(leesGesprek([{ wie: "klant", tekst: "a b" }, { wie: "assistent", tekst: "c d" }, { wie: "klant", tekst: "e f" }, { wie: "assistent", tekst: "g h" }])).toBeNull();
+  it("met openingstijden van de site noemt de assistent precies die", () => {
+    const g = gesprekVoor({ naam: "X", openingstijden: ["maandag tot en met vrijdag van 8 tot 17 uur", "zaterdag van 9 tot 12 uur"] });
+    expect(omEnOm(g)).toBe(true);
+    expect(g.some((r) => r.tekst === "Wij zijn open maandag tot en met vrijdag van 8 tot 17 uur en zaterdag van 9 tot 12 uur.")).toBe(true);
   });
 
-  it("hooguit 10 regels en elke regel ingekort op een zin", () => {
-    const lang = Array.from({ length: 14 }, (_, i) => ({ wie: i % 2 ? "klant" : "assistent", tekst: `${"Dit is een zin. ".repeat(30)}` }));
-    const g = leesGesprek({ regels: lang });
-    expect(g).toHaveLength(10);
-    expect(g?.every((r) => r.tekst.length <= 240 && r.tekst.endsWith("."))).toBe(true);
+  it("het vaste voorbeeld: om en om, de testklant heet zoals de stem (een man)", () => {
+    expect(omEnOm(VOORBEELD)).toBe(true);
+    expect(TESTKLANT).toBe("Daan");
+    expect(JSON.stringify(VOORBEELD)).not.toContain("Sanne");
   });
 });
 
 describe("de server", () => {
   beforeEach(() => {
-    chatJson.mockReset();
     piperSpreek.mockReset();
     fetchPage.mockReset();
   });
 
-  it("een website: naam en openingstijden van de site, het gesprek van het model, twee stemmen", async () => {
+  it("een website: naam en openingstijden van de site, twee stemmen", async () => {
     const { maakDemo } = await import("@/lib/telephony/demo-server");
     fetchPage.mockResolvedValue({
       status: 200,
@@ -97,34 +88,28 @@ describe("de server", () => {
       headers: {},
       body: '<html><head><title>Home | Bakkerij Jansen</title><meta name="description" content="Vers brood in Utrecht"></head><body><h1>Bakkerij Jansen</h1><p>Maandag t/m vrijdag 08:00 - 18:00</p><p>Zaterdag 08:00 - 16:00</p></body></html>',
     });
-    chatJson.mockResolvedValue({
-      regels: [
-        { wie: "assistent", tekst: "Goedendag, u spreekt met de digitale assistent van Bakkerij Jansen." },
-        { wie: "klant", tekst: "Zijn jullie zaterdag open?" },
-        { wie: "assistent", tekst: "Ja, op zaterdag van 8 tot 16 uur." },
-        { wie: "klant", tekst: "Dank u wel." },
-        { wie: "assistent", tekst: "Graag gedaan, fijne dag!" },
-      ],
-    });
     piperSpreek.mockImplementation(async (_t: string, o: { stem: string }) => ({ audio: Buffer.from(o.stem), mime: "audio/mpeg" }));
     const g = await maakDemo("bakkerijjansen.nl");
     expect(g.zaak).toBe("Bakkerij Jansen");
-    expect(g.door).toBe("ai");
-    const feiten = (chatJson.mock.calls[0]?.[0] as { messages: { content: string }[] }).messages[1]?.content ?? "";
-    expect(feiten).toContain("Vers brood in Utrecht");
-    expect(feiten).toContain("maandag tot en met vrijdag van 8 tot 18 uur");
-    expect(g.regels.map((r) => Buffer.from(r.geluid?.data ?? "", "base64").toString())).toEqual(["nl-vrouw", "nl-man", "nl-vrouw", "nl-man", "nl-vrouw"]);
+    expect(g.regels[1]?.tekst).toContain("taart");
+    expect(g.regels.some((r) => r.tekst.includes("maandag tot en met vrijdag van 8 tot 18 uur en zaterdag van 8 tot 16 uur"))).toBe(true);
+    expect(g.regels.map((r) => Buffer.from(r.geluid?.data ?? "", "base64").toString())).toEqual(g.regels.map((r) => (r.wie === "assistent" ? "nl-vrouw" : "nl-man")));
   });
 
-  it("het model valt weg en de stem ook: het reservegesprek, als tekst", async () => {
+  it("alleen een naam en geen stem: geen site opgehaald, het gesprek als tekst", async () => {
     const { maakDemo } = await import("@/lib/telephony/demo-server");
-    chatJson.mockRejectedValue(new Error("time-out"));
     piperSpreek.mockResolvedValue(null);
     const g = await maakDemo("Kapsalon Lotte");
-    expect(g.door).toBe("vast");
     expect(g.regels[0]?.tekst).toContain("Kapsalon Lotte");
     expect(g.regels.every((r) => r.geluid === null)).toBe(true);
     expect(fetchPage).not.toHaveBeenCalled();
+  });
+
+  it("een site die niet te lezen is: de naam uit het domein", async () => {
+    const { maakDemo } = await import("@/lib/telephony/demo-server");
+    fetchPage.mockRejectedValue(new Error("weg"));
+    piperSpreek.mockResolvedValue(null);
+    expect((await maakDemo("www.garagedevries.nl")).zaak).toBe("Garagedevries");
   });
 
   it("een adres in het eigen netwerk wordt niet opgehaald", async () => {
@@ -150,10 +135,12 @@ describe("de route en de pagina", () => {
     const demo = lees("components/marketing/aanbod/TelefonieDemo.tsx");
     expect(demo).toContain("We bewaren niets van wat je invult.");
     expect(demo).toContain("voorgelezen door onze eigen computerstem");
+    expect(demo).toContain("De assistent noemt alleen wat op je website staat");
     expect(demo).toContain("komt binnenkort");
   });
 
   it("de tweede stem staat in de stemmenlijst van Piper", () => {
-    expect(lees("deploy/piper/config/voice_to_speaker.yaml")).toMatch(/\n {2}nl-man:\n {4}model: voices\/nl_BE-rdh-medium\.onnx/);
+    // \r?: een checkout op Windows heeft CRLF (b0, 16 nov)
+    expect(lees("deploy/piper/config/voice_to_speaker.yaml")).toMatch(/\r?\n {2}nl-man:\r?\n {4}model: voices\/nl_BE-rdh-medium\.onnx/);
   });
 });

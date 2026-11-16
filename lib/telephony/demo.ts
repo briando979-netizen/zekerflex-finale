@@ -3,8 +3,13 @@
 // het klinkt en laat ze eerst hun website of bedrijf invullen om de ai te horen met een test klant"). Een kort gesprek
 // tussen de assistent van een zaak en een testklant, voorgelezen door onze eigen stemmen (Piper).
 //
-// Puur bestand (ook voor de browser): het vaste voorbeeld, het reservegesprek, het lezen van wat de bezoeker invulde
-// en het soepel lezen van het antwoord van het taalmodel. De server staat in lib/telephony/demo-server.ts.
+// Het gesprek volgt vaste regels met de feiten van de site (naam, soort zaak, openingstijden), niet ons taalmodel:
+// gemeten op 16 nov verzon gemma3:4b dingen namens de zaak ("nee, we hebben geen APK-afspraken beschikbaar", "ik kijk
+// de voorraad even na", een fout "nee" op een open dag) en kopieerde hij de voorbeeldvraag. Een demo mag nooit iets
+// zeggen wat de zaak niet zei; de assistent antwoordt dus alleen met wat vaststaat en zet verder een terugbelverzoek
+// klaar, precies wat hij belooft.
+//
+// Puur bestand (ook voor de browser). De server staat in lib/telephony/demo-server.ts.
 // ---------------------------------------------------------------------------
 
 export type Spreker = "assistent" | "klant";
@@ -29,14 +34,13 @@ export interface DemoRegelMetGeluid extends DemoRegel {
 
 export interface DemoGesprek {
   zaak: string;
-  /** "ai": door het taalmodel geschreven; "vast": het reservegesprek of het voorbeeld */
-  door: "ai" | "vast";
   regels: DemoRegelMetGeluid[];
 }
 
-export const MAX_REGELS = 10;
-export const MAX_TEKENS_REGEL = 240;
 export const MAX_INVOER = 200;
+
+/** De testklant (de stem is een mannenstem: deploy/piper, nl-man). */
+export const TESTKLANT = "Daan";
 
 /** Wat de bezoeker invulde: een webadres (met of zonder https://) of gewoon de naam van de zaak. */
 export function leesInvoer(raw: string): { soort: "website"; url: string } | { soort: "naam"; naam: string } | null {
@@ -94,20 +98,62 @@ export function voorStem(tekst: string): string {
     .trim();
 }
 
-/** Het reservegesprek als het taalmodel niet op tijd of niet bruikbaar antwoordt: alleen met wat we zeker weten. */
-export function reserveGesprek(z: ZaakInfo): DemoRegel[] {
-  const uren = z.openingstijden?.slice(0, 2).join(", en ");
-  return [
+/** "a", "a en b", "a, b en c" */
+function opsomming(delen: readonly string[]): string {
+  if (delen.length <= 1) return delen[0] ?? "";
+  return `${delen.slice(0, -1).join(", ")} en ${delen[delen.length - 1]}`;
+}
+
+/**
+ * Wat de testklant vraagt, passend bij de soort zaak (herkend aan de naam en de omschrijving van de site). Vragen die
+ * de assistent niet zelf kan regelen, zodat hij laat horen wat hij wel doet: een terugbelverzoek klaarzetten.
+ */
+const VRAGEN: { soort: RegExp; vraag: string }[] = [
+  // niet los op "haar": dat staat ook in Haarlem
+  { soort: /kap(per|salon)|barbier|haarstudio|haarsalon|haarmode/, vraag: "Hoi, ik wil graag een afspraak maken om mijn haar te laten knippen. Kan dat deze week nog?" },
+  { soort: /garage|autobedrijf|\bapk\b|autoservice|banden/, vraag: "Goedemiddag, mijn auto moet binnenkort APK. Kan ik daarvoor een afspraak maken?" },
+  { soort: /bakker|banket|patisserie|taart/, vraag: "Hallo, ik wil graag een taart bestellen voor zaterdag. Kan dat bij jullie?" },
+  { soort: /restaurant|eetcaf|bistro|brasserie|pizzeria|lunchroom|grand caf|trattoria|sushi/, vraag: "Goedemiddag, ik wil graag een tafel reserveren voor vier personen op vrijdagavond. Kan dat nog?" },
+  { soort: /tandarts|fysio|huisarts|praktijk|massage|schoonheid|nagelstudio|beauty|pedicure|osteopa/, vraag: "Hallo, ik wil graag een afspraak maken. Wanneer zou dat kunnen?" },
+  { soort: /rijschool|rijles/, vraag: "Hoi, ik wil graag rijlessen nemen. Kan ik een proefles aanvragen?" },
+  { soort: /schoonmaak|glazenwas/, vraag: "Goedemiddag, wij zoeken iemand die ons kantoor elke week kan schoonmaken. Kunnen jullie daarbij helpen?" },
+  { soort: /loodgieter|installat|\bcv\b|cv-ketel|elektric|verwarming/, vraag: "Hallo, mijn cv-ketel doet het niet meer. Kan er iemand langskomen?" },
+  { soort: /schilder|aannemer|bouwbedrijf|klusbedrijf|timmer|dakdek|stukadoor|hovenier/, vraag: "Goedemiddag, ik wil graag een offerte voor een klus aan mijn huis. Kan iemand eens komen kijken?" },
+  { soort: /fiets/, vraag: "Hoi, mijn fiets heeft een lekke band. Kan ik vandaag nog langskomen?" },
+  { soort: /uitzend|personeel|werving|detacher|flexwerk/, vraag: "Goedemiddag, wij zoeken voor volgende week twee extra mensen. Kunnen jullie daarbij helpen?" },
+  { soort: /hotel|\bb&b\b|bed and breakfast|camping|vakantiepark|appartement/, vraag: "Hallo, hebben jullie nog een kamer vrij voor het komende weekend?" },
+  { soort: /advocat|notaris|accountant|administratie|boekhoud|belasting|makelaar|hypothe/, vraag: "Goedemiddag, ik heb een vraag waar ik graag even iemand over spreek. Kan dat?" },
+];
+const ALGEMENE_VRAAG = "Hallo, ik heb een vraag over jullie diensten. Kan ik daar iemand over spreken?";
+
+export function vraagVoor(z: ZaakInfo): string {
+  const tekst = `${z.naam} ${z.omschrijving ?? ""}`.toLowerCase();
+  return VRAGEN.find((v) => v.soort.test(tekst))?.vraag ?? ALGEMENE_VRAAG;
+}
+
+/**
+ * Het gesprek voor een zaak: de assistent neemt op met de naam van de zaak, zet de vraag door als terugbelverzoek en
+ * noemt de openingstijden alleen als ze op de site staan. De assistent begint en eindigt.
+ */
+export function gesprekVoor(z: ZaakInfo): DemoRegel[] {
+  const uren = z.openingstijden?.slice(0, 3) ?? [];
+  const begin: DemoRegel[] = [
     { wie: "assistent", tekst: `Goedendag, u spreekt met de digitale assistent van ${z.naam}. Waarmee kan ik u helpen?` },
-    { wie: "klant", tekst: "Hallo, ik wilde graag weten wanneer jullie open zijn." },
-    uren
-      ? { wie: "assistent", tekst: `Wij zijn open ${uren}. Kan ik verder nog iets voor u doen?` }
-      : { wie: "assistent", tekst: "Dat weet ik niet helemaal zeker, en ik wil u niets verkeerds vertellen. Zal ik een terugbelverzoek voor u klaarzetten?" },
-    uren ? { wie: "klant", tekst: "Ja, ik wil ook graag even iemand spreken over een afspraak." } : { wie: "klant", tekst: "Ja, graag." },
-    { wie: "assistent", tekst: "Dan zet ik een terugbelverzoek voor u klaar. Een collega belt u zo snel mogelijk terug. Mag ik uw naam?" },
-    { wie: "klant", tekst: "Ik ben Sanne de Vries." },
-    { wie: "assistent", tekst: "Dank u wel, Sanne. Het terugbelverzoek staat klaar, met het nummer waarmee u nu belt. Fijne dag nog!" },
+    { wie: "klant", tekst: vraagVoor(z) },
+    { wie: "assistent", tekst: "Dat zet ik graag voor u door. Ik maak een terugbelverzoek, dan belt een collega u zo snel mogelijk terug om het met u te regelen. Mag ik uw naam?" },
+    { wie: "klant", tekst: `Ja hoor, ik ben ${TESTKLANT} de Vries.` },
+    { wie: "assistent", tekst: `Dank u wel, ${TESTKLANT}. Het terugbelverzoek staat klaar, met het nummer waarmee u nu belt. Kan ik verder nog iets voor u doen?` },
   ];
+  if (uren.length) {
+    return [
+      ...begin,
+      { wie: "klant", tekst: "Ja, wanneer zijn jullie eigenlijk open?" },
+      { wie: "assistent", tekst: `Wij zijn open ${opsomming(uren)}.` },
+      { wie: "klant", tekst: "Top, dank u wel!" },
+      { wie: "assistent", tekst: "Graag gedaan. Fijne dag nog!" },
+    ];
+  }
+  return [...begin, { wie: "klant", tekst: "Nee, dat was het. Dank u wel!" }, { wie: "assistent", tekst: "Graag gedaan. Fijne dag nog!" }];
 }
 
 /** Het vaste voorbeeld (een verzonnen kapsalon), om meteen te luisteren zonder iets in te vullen. */
@@ -116,60 +162,8 @@ export const VOORBEELD: DemoRegel[] = [
   { wie: "assistent", tekst: "Goedemiddag, u spreekt met de digitale assistent van Kapsalon Knipwerk. Mijn collega's zijn aan het knippen, maar ik help u graag. Waarmee kan ik u helpen?" },
   { wie: "klant", tekst: "Hoi, ik wil graag een afspraak maken om mijn haar te laten knippen. Kan dat morgen?" },
   { wie: "assistent", tekst: "De agenda kan ik niet zelf invullen, maar ik zet een terugbelverzoek voor u klaar. Dan belt een collega u zo snel mogelijk om een tijd af te spreken. Mag ik uw naam?" },
-  { wie: "klant", tekst: "Ja hoor, ik ben Sanne de Vries. Zijn jullie op zaterdag ook open?" },
-  { wie: "assistent", tekst: "Dank u wel, Sanne. Ja, op zaterdag zijn we open van 9 tot 16 uur." },
+  { wie: "klant", tekst: `Ja hoor, ik ben ${TESTKLANT} de Vries. Zijn jullie op zaterdag ook open?` },
+  { wie: "assistent", tekst: `Dank u wel, ${TESTKLANT}. Ja, op zaterdag zijn we open van 9 tot 16 uur.` },
   { wie: "klant", tekst: "Top, dank je wel!" },
   { wie: "assistent", tekst: "Graag gedaan. Het terugbelverzoek staat klaar, met het nummer waarmee u nu belt. Fijne dag nog!" },
 ];
-
-const ASSISTENT = /assist|zaak|bedrijf|medewerker|receptie|^ai$|bot/i;
-const KLANT = /klant|beller|caller|sanne|gast|test/i;
-
-function wieVan(x: unknown): Spreker | null {
-  if (typeof x !== "string") return null;
-  if (ASSISTENT.test(x)) return "assistent";
-  if (KLANT.test(x)) return "klant";
-  return null;
-}
-
-/** Tekst van een model is soms een object of getal: maak er tekst van, of niets. */
-function tekstVan(x: unknown): string {
-  if (typeof x === "string") return x;
-  if (x && typeof x === "object") {
-    const o = x as Record<string, unknown>;
-    for (const k of ["tekst", "text", "zin", "inhoud"]) if (typeof o[k] === "string") return o[k] as string;
-  }
-  return "";
-}
-
-/** Op een grens van een zin inkorten, zodat een stem niet midden in een woord stopt. */
-function inkorten(t: string): string {
-  if (t.length <= MAX_TEKENS_REGEL) return t;
-  const stuk = t.slice(0, MAX_TEKENS_REGEL);
-  const eind = Math.max(stuk.lastIndexOf(". "), stuk.lastIndexOf("? "), stuk.lastIndexOf("! "));
-  return eind > 40 ? stuk.slice(0, eind + 1) : `${stuk.replace(/\s+\S*$/, "")}.`;
-}
-
-/**
- * Het antwoord van het taalmodel, soepel gelezen (lib/orchestration/antwoord.ts-aanpak): { regels: [...] }, een losse
- * lijst of { gesprek: [...] }; "wie" mag ook "spreker" of "rol" heten. Een regel met een telefoonnummer, mailadres of
- * link valt weg (die mag het model niet verzinnen). Bruikbaar = minstens 4 regels, beide sprekers, de assistent begint.
- * Anders null: dan het reservegesprek.
- */
-export function leesGesprek(raw: unknown): DemoRegel[] | null {
-  const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : null;
-  const lijst = Array.isArray(raw) ? raw : Array.isArray(o?.regels) ? o.regels : Array.isArray(o?.gesprek) ? o.gesprek : null;
-  if (!lijst) return null;
-  const uit: DemoRegel[] = [];
-  for (const item of lijst) {
-    if (uit.length >= MAX_REGELS) break;
-    const r = item && typeof item === "object" ? (item as Record<string, unknown>) : null;
-    const wie = wieVan(r?.wie ?? r?.spreker ?? r?.rol ?? r?.role);
-    const tekst = voorStem(tekstVan(r?.tekst ?? r?.text ?? r?.zin)).replace(/^["'“„]+|["'”]+$/g, "");
-    if (!wie || tekst.length < 2) continue;
-    if (/\d[\d\s-]{5,}\d|@|https?:|www\./i.test(tekst)) continue;
-    uit.push({ wie, tekst: inkorten(tekst) });
-  }
-  if (uit.length < 4 || uit[0]?.wie !== "assistent" || !uit.some((r) => r.wie === "klant")) return null;
-  return uit;
-}
