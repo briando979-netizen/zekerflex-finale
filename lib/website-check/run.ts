@@ -111,6 +111,13 @@ async function checkLinks(urls: string[]): Promise<{ url: string; status: number
       }
     }),
   );
+  // geen antwoord: één rustige herkansing, na elkaar en met meer tijd (een server die vijf verzoeken tegelijk weert,
+  // antwoordt vaak wel op één)
+  for (const l of out) {
+    if (l.status !== null) continue;
+    const res = await settle(fetchPage(l.url, { headersOnly: true, timeoutMs: 10_000, maxRedirects: 3 }));
+    l.status = res?.status ?? null;
+  }
   return out;
 }
 
@@ -187,7 +194,7 @@ export async function runWebsiteCheck(rawInput: string): Promise<WebsiteCheckRes
       scripts: facts.scripts,
       images: facts.images,
       linksChecked: links.length,
-      brokenLinks: links.filter((l) => l.status === null || l.status >= 400).length,
+      brokenLinks: links.filter((l) => l.status !== null && l.status >= 400).length,
     },
     platform: facts.platform,
     bedrijf: { naam: zaak.naam, telefoon: zaak.telefoon, email: zaak.email, plaats: zaak.plaats, kvk: zaak.kvk, reviews: zaak.reviews, koppen: zaak.koppen.slice(0, 8) },

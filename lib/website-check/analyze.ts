@@ -301,12 +301,20 @@ export function buildFindings(page: PageInput, facts: PageFacts, extra: ExtraInp
     add("contact", "bezoekers", "let-op", "Geen directe contactmogelijkheid", "Er staat geen klikbaar telefoonnummer, e-mailadres of formulier op deze pagina. Elke extra klik kost klanten.");
   }
   const checked = extra.links.length;
-  const broken = extra.links.filter((l) => l.status === null || l.status >= 400);
+  // Alleen een echte foutcode is kapot. Een link zonder antwoord (tijdslimiet, een beveiliging die onze server weert) is
+  // niet bewezen kapot: 16 nov gaf smileyapp.nl ons 4× geen antwoord terwijl elke pagina werkte, en het voorstel aan
+  // die klant zei "4 van 7 links werken niet". Die komen apart, als aandachtspunt.
+  const broken = extra.links.filter((l) => l.status !== null && l.status >= 400);
+  const stil = extra.links.filter((l) => l.status === null);
   if (checked > 0) {
-    if (broken.length === 0) add("links", "bezoekers", "goed", `${checked} links gecontroleerd, alles werkt`, "Geen kapotte links gevonden op deze pagina.");
-    else {
-      const list = broken.slice(0, 5).map((l) => new URL(l.url).pathname + (l.status ? ` (${l.status})` : " (geen antwoord)")).join(", ");
+    if (broken.length === 0 && stil.length === 0) add("links", "bezoekers", "goed", `${checked} links gecontroleerd, alles werkt`, "Geen kapotte links gevonden op deze pagina.");
+    if (broken.length > 0) {
+      const list = broken.slice(0, 5).map((l) => `${new URL(l.url).pathname} (${l.status})`).join(", ");
       add("links", "bezoekers", "probleem", `${broken.length} van ${checked} links werken niet`, `Bezoekers die hierop klikken krijgen een foutpagina: ${list}.`);
+    }
+    if (stil.length > 0) {
+      const list = stil.slice(0, 5).map((l) => new URL(l.url).pathname).join(", ");
+      add("links-stil", "bezoekers", "let-op", `${stil.length} van ${checked} links konden we niet controleren`, `De server gaf ons geen antwoord op: ${list}. Werken ze bij jou wel, dan is er niets aan de hand.`);
     }
   }
 

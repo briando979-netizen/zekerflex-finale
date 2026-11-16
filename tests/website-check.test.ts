@@ -116,6 +116,36 @@ describe("rapport", () => {
     expect(scoreFindings(findings).score).toBeLessThan(50);
   });
 
+  it("een link zonder antwoord is geen kapotte link (16 nov: smileyapp.nl)", () => {
+    const facts = extractFacts(GOOD, "https://goed.nl/");
+    const findings = buildFindings(page(GOOD, "https://goed.nl/"), facts, {
+      httpRedirectsTo: "https://goed.nl/",
+      robotsTxt: "User-agent: *\nAllow: /",
+      sitemapFound: true,
+      links: [
+        { url: "https://goed.nl/contact", status: 200 },
+        { url: "https://goed.nl/voorwaarden", status: null },
+        { url: "https://goed.nl/login", status: null },
+      ],
+    });
+    expect(findings.find((x) => x.id === "links")).toBeUndefined();
+    const stil = findings.find((x) => x.id === "links-stil");
+    expect(stil).toMatchObject({ status: "let-op", title: "2 van 3 links konden we niet controleren" });
+    expect(stil?.detail).toContain("/voorwaarden, /login");
+    // en een echte foutcode blijft een probleem
+    const kapot = buildFindings(page(GOOD, "https://goed.nl/"), facts, {
+      httpRedirectsTo: "https://goed.nl/",
+      robotsTxt: "User-agent: *\nAllow: /",
+      sitemapFound: true,
+      links: [
+        { url: "https://goed.nl/oud", status: 404 },
+        { url: "https://goed.nl/login", status: null },
+      ],
+    });
+    expect(kapot.find((x) => x.id === "links")).toMatchObject({ status: "probleem", title: "1 van 2 links werken niet" });
+    expect(kapot.find((x) => x.id === "links")?.detail).not.toContain("/login");
+  });
+
   it("doorsturen naar een andere website (toestemmingspagina) wordt gemeld", () => {
     expect(sameSite("bakkerij.nl", "www.bakkerij.nl")).toBe(true);
     expect(sameSite("www.bakkerij.nl", "shop.bakkerij.nl")).toBe(true);
