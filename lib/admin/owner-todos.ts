@@ -340,6 +340,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   // twee functies die droog draaien tot de eigenaar ja zegt (14 nov, lib/admin/todo-besluiten.ts): de stand van de vlag plus
   // de laatste droge telling uit KV; een leesfout van de vlag = die functie niet tonen, een leesfout van de telling = "nog geen telling"
   const vlagStand = (key: string) => featureEnabled(key).catch((): undefined => undefined);
+  const zakelijkeMailAuto = await vlagStand("zakelijke-mail-auto");
   const functiesWachten = functiesWachtenTodo({
     verlopen: { aan: await vlagStand(VERLOPEN_VLAG), meting: await kvGet<VerlopenMeting>(KV_VERLOPEN_METING).catch(() => null) },
     bounces: { aan: await vlagStand(BOUNCE_VLAG), meting: await kvGet<BounceMeting>(KV_BOUNCE_METING).catch(() => null) },
@@ -1118,6 +1119,20 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       ],
       auto: true,
       done: Boolean(env.TRANSIP_LOGIN && env.TRANSIP_PRIVATE_KEY),
+    },
+    {
+      id: "zakelijke-mail-kosten",
+      group: "Bellen & koppelingen",
+      title: "Zakelijke e-mail op een klantdomein: kosten nakijken en kiezen hoe het gaat",
+      why: "Bedrijven kunnen nu een mailadres op hun eigen domein aanvragen (info@hunzaak.nl), op een domein dat via ZekerFlex is gekocht of verhuisd. Zolang je niets kiest, wacht elke aanvraag op jouw klik in Admin → ZekerFlex Mail; bij die klik zet ZekerFlex de mailregels op het domein en maakt het de mailbox bij TransIP. Wat een mailbox op een extra domein bij TransIP kost, gaf de API niet (gemeten 16 nov).",
+      how: [
+        "Kijk in het TransIP-controlepaneel bij E-mail wat een mailbox op een extra domein kost, en kies wat de klant betaalt.",
+        "Moet het vanzelf gaan: zet in Admin → Vlaggen 'Zakelijke e-mail: mailbox op een klantdomein meteen maken' aan. Dan vinkt deze taak zichzelf af.",
+        "Liever per aanvraag: laat de vlag uit, activeer elke aanvraag in Admin → ZekerFlex Mail en vink deze taak af.",
+      ],
+      auto: false,
+      ...m("zakelijke-mail-kosten"),
+      ...(zakelijkeMailAuto === true ? { done: true } : {}),
     },
     {
       id: "telefonie-prijzen",

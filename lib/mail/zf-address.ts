@@ -57,6 +57,19 @@ export function localPartProblem(local: string): string | null {
   return null;
 }
 
+/**
+ * Een adres op het eigen domein van een klant (info@jouwzaak.nl, 16 nov): dezelfde vorm als hierboven, maar rolnamen als info,
+ * contact of administratie mogen wél (het is zijn eigen domein) en één teken is genoeg.
+ */
+export function eigenLocalPartProblem(local: string): string | null {
+  if (local.length < 1) return "Vul het deel vóór de @ in.";
+  if (local.length > ZF_LOCAL_MAX) return `Gebruik hoogstens ${ZF_LOCAL_MAX} tekens.`;
+  if (!/^[a-z0-9._-]+$/.test(local)) return "Gebruik alleen letters, cijfers, punten, streepjes en lage streepjes.";
+  if (!/^[a-z0-9]/.test(local) || !/[a-z0-9]$/.test(local)) return "Begin en eindig met een letter of cijfer.";
+  if (/[._-]{2}/.test(local)) return "Zet geen twee leestekens achter elkaar.";
+  return null;
+}
+
 const PARTICLES = new Set(["van", "de", "der", "den", "het", "ter", "ten", "te", "t", "in", "op", "la", "le", "da", "di", "del", "von", "zu"]);
 
 /** Address ideas from a name, best first: "Jan de Vries" → jan, jan.devries, jdevries, … */

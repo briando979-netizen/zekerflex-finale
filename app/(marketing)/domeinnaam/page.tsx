@@ -167,7 +167,7 @@ export default function DomeinnaamPagina() {
                 </li>
                 <li className="flex gap-2">
                   <Vinkje />
-                  Zakelijke e-mail op je domein (binnenkort)
+                  Zakelijke e-mail op je domein
                 </li>
               </ul>
               <div className="mt-7 flex flex-wrap gap-3">

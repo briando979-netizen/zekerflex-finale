@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
   ZF_MAIL_DOMAIN,
   displayNameProblem,
+  eigenLocalPartProblem,
   localPartProblem,
   normalizeLocalPart,
   passwordProblem,
@@ -20,7 +22,7 @@ import {
 // ---------------------------------------------------------------------------
 
 type Dict = Record<
-  | "brand" | "heroTitle" | "heroBody" | "heroCta" | "moveOld" | "ownDomainSoon" | "stepName" | "stepNameSub" | "firstName"
+  | "brand" | "heroTitle" | "heroBody" | "heroCta" | "moveOld" | "ownDomainHas" | "ownDomainNone" | "domainLabel" | "stepName" | "stepNameSub" | "firstName"
   | "lastName" | "stepAddress" | "stepAddressSub" | "ownAddress" | "checking" | "available" | "stepPassword" | "stepPasswordSub"
   | "password" | "confirm" | "showPassword" | "strength" | "levels" | "mismatch" | "stepRecovery" | "stepRecoverySub"
   | "recoveryEmail" | "stepReview" | "stepReviewSub" | "sender" | "terms" | "create" | "creating" | "next" | "back"
@@ -39,6 +41,8 @@ interface Status {
   mayCreate: boolean;
   reason: string | null;
   suggestions: string[];
+  /** eigen domeinen van het bedrijf waarop een adres kan (via ZekerFlex gekocht of verhuisd) */
+  eigenDomeinen?: string[];
   fullName: string;
   email: string;
 }
@@ -107,6 +111,9 @@ export function ZfMailSignup({ t, onCreated, onMoveOld }: { t: Dict; onCreated: 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [made, setMade] = useState<Account | null>(null);
+  // zekerflex.com, of een eigen domein van het bedrijf (16 nov): daar alleen een eigen adres, geen voorstellen
+  const [domein, setDomein] = useState(ZF_MAIL_DOMAIN);
+  const eigenDomein = domein !== ZF_MAIL_DOMAIN;
 
   const load = useCallback(async (name?: string) => {
     const res = await fetch(`/api/me/zfmail${name ? `?name=${encodeURIComponent(name)}` : ""}`, { cache: "no-store" }).catch(() => null);
@@ -131,14 +138,14 @@ export function ZfMailSignup({ t, onCreated, onMoveOld }: { t: Dict; onCreated: 
   useEffect(() => {
     if (choice !== OWN) return;
     const lp = normalizeLocalPart(own);
-    const problem = lp ? localPartProblem(lp) : null;
+    const problem = lp ? (eigenDomein ? eigenLocalPartProblem(lp) : localPartProblem(lp)) : null;
     if (!lp || problem) {
       setOwnCheck({ busy: false, ok: false, text: problem });
       return;
     }
     setOwnCheck({ busy: true, ok: false, text: null });
     const timer = setTimeout(() => {
-      fetch(`/api/me/zfmail/check?name=${encodeURIComponent(lp)}`, { cache: "no-store" })
+      fetch(`/api/me/zfmail/check?name=${encodeURIComponent(lp)}${eigenDomein ? `&domein=${encodeURIComponent(domein)}` : ""}`, { cache: "no-store" })
         .then((r) => r.json())
         .then((d: { available?: boolean; reason?: string | null; address?: string }) =>
           setOwnCheck({ busy: false, ok: Boolean(d.available), text: d.available ? fill(t.available, { address: d.address ?? "" }) : (d.reason ?? null) }),
@@ -146,12 +153,12 @@ export function ZfMailSignup({ t, onCreated, onMoveOld }: { t: Dict; onCreated: 
         .catch(() => setOwnCheck({ busy: false, ok: false, text: null }));
     }, 400);
     return () => clearTimeout(timer);
-  }, [own, choice, t.available]);
+  }, [own, choice, t.available, domein, eigenDomein]);
 
   if (!status) return null;
   const displayName = `${first.trim()} ${last.trim()}`.trim();
   const localPart = choice === OWN ? normalizeLocalPart(own) : (choice.split("@")[0] ?? "");
-  const address = `${localPart}@${ZF_MAIL_DOMAIN}`;
+  const address = `${localPart}@${domein}`;
   const strength = passwordStrength(pw);
   const levels = t.levels.split("|");
 
@@ -200,7 +207,13 @@ export function ZfMailSignup({ t, onCreated, onMoveOld }: { t: Dict; onCreated: 
             <button type="button" onClick={onMoveOld} className="text-xs font-medium text-brand-600 hover:underline">
               {t.moveOld}
             </button>
-            <span className="text-[11px] text-neutralx-400">{t.ownDomainSoon}</span>
+            {(status.eigenDomeinen ?? []).length > 0 ? (
+              <span className="text-[11px] text-neutralx-500">{fill(t.ownDomainHas, { domeinen: (status.eigenDomeinen ?? []).join(", ") })}</span>
+            ) : (
+              <Link href="/domeinnaam" className="text-[11px] font-medium text-brand-600 hover:underline">
+                {t.ownDomainNone}
+              </Link>
+            )}
           </div>
         </div>
       </section>
@@ -235,7 +248,7 @@ export function ZfMailSignup({ t, onCreated, onMoveOld }: { t: Dict; onCreated: 
     const res = await fetch("/api/me/zfmail", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ localPart, displayName, password: pw, ...(recovery ? { recoveryEmail: recovery } : {}), acceptTerms: true }),
+      body: JSON.stringify({ localPart, displayName, password: pw, ...(recovery ? { recoveryEmail: recovery } : {}), ...(eigenDomein ? { domein } : {}), acceptTerms: true }),
     }).catch(() => null);
     setBusy(false);
     const d = res ? await res.json().catch(() => ({})) : {};
@@ -264,7 +277,27 @@ export function ZfMailSignup({ t, onCreated, onMoveOld }: { t: Dict; onCreated: 
     fields = (
       <fieldset className="space-y-1">
         <legend className="sr-only">{t.stepAddress}</legend>
-        {[...ideas, OWN].map((opt) => (
+        {(status.eigenDomeinen ?? []).length > 0 && (
+          <label className="mb-3 block">
+            <span className="text-sm font-semibold text-ink">{t.domainLabel}</span>
+            <select
+              value={domein}
+              onChange={(e) => {
+                setDomein(e.target.value);
+                // op een eigen domein maak je zelf het adres (info@, jan@ …); de voorstellen horen bij zekerflex.com
+                if (e.target.value !== ZF_MAIL_DOMAIN) setChoice(OWN);
+              }}
+              className="mt-1 h-12 w-full rounded-md border border-neutralx-300 bg-white px-3 text-[15px] text-ink"
+            >
+              {[ZF_MAIL_DOMAIN, ...(status.eigenDomeinen ?? [])].map((d) => (
+                <option key={d} value={d}>
+                  @{d}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {(eigenDomein ? [OWN] : [...ideas, OWN]).map((opt) => (
           <label key={opt} className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-paper-soft">
             <input type="radio" name="zf-address" checked={choice === opt} onChange={() => setChoice(opt)} className="h-4 w-4 accent-brand-600" />
             <span className="text-[15px] text-ink">{opt === OWN ? t.ownAddress : opt}</span>
@@ -272,7 +305,7 @@ export function ZfMailSignup({ t, onCreated, onMoveOld }: { t: Dict; onCreated: 
         ))}
         {choice === OWN && (
           <div className="pt-2">
-            <Field label={t.ownAddress} value={own} onChange={setOwn} suffix={`@${ZF_MAIL_DOMAIN}`} autoComplete="off" autoFocus />
+            <Field label={t.ownAddress} value={own} onChange={setOwn} suffix={`@${domein}`} autoComplete="off" autoFocus />
             <p aria-live="polite" className={`mt-2 min-h-5 text-sm ${ownCheck.ok ? "text-ok" : "text-neutralx-500"}`}>
               {ownCheck.busy ? t.checking : ownCheck.text}
             </p>
