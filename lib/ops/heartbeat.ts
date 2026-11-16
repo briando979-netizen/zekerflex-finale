@@ -84,6 +84,7 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "bronnen", label: "Bronnen van buiten (pompprijzen, minimumloon, cao, KVK, schermcontrole)", maxAgeHours: 3 },
   // dagelijks 11:00 UTC: nieuwe pagina's melden bij Bing/IndexNow
   { job: "indexnow", label: "IndexNow (zoekmachines)", maxAgeHours: 26 },
+  { job: "bing-indienen", label: "Bing: pagina's indienen", maxAgeHours: 26 },
   // 08, 12 en 16 UTC: offerte-aanvragen in sales@/info@ herkennen
   { job: "sales-offers", label: "Offerte-AI (mailbox)", maxAgeHours: 26 },
   // dagelijks 07:00 UTC: dagoverzicht van de gratis scans aan sales@ (alleen een mail als er iets gebeurde)
