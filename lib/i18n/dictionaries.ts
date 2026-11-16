@@ -222,6 +222,10 @@ export const nl = {
     ],
     more: "+{n} meer",
   },
+  // Werkgever → Rapportages (het Metabase-dashboard)
+  rapportages: {
+    laden: "Even geduld bij het openen: de cijfers worden live berekend en dat duurt soms tot een halve minuut.",
+  },
   favorites: {
     title: "Favorieten",
     eyebrow: "Krachten",

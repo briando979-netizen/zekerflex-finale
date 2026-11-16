@@ -22,11 +22,12 @@ export default async function WebsiteBeheerPage() {
 
   return (
     <>
-      {/* de Websitestudio (/studio): website en webshop beheren op een eigen scherm */}
+      {/* de Websitestudio (/studio): website en webshop beheren op een eigen scherm.
+          De tekst houdt minstens 12rem, anders knijpen icoon en knop hem op een telefoon tot ±110 px: de knop schuift dan onder de tekst. */}
       <Link href="/studio" className="mb-6 flex flex-wrap items-center gap-4 rounded-2xl bg-[#1a1a1a] p-5 text-white shadow-lg transition hover:bg-black">
         {/* bg-[#ffffff] in plaats van bg-white: de donkere modus maakt .bg-white donker, deze zwarte kaart blijft in beide modi gelijk */}
         <span className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-[#ffffff] text-lg font-black text-[#1a1a1a]" aria-hidden>Z</span>
-        <span className="min-w-0 flex-1">
+        <span className="min-w-[12rem] flex-1">
           <span className="block font-display text-lg font-bold">Websitestudio: je website en webshop</span>
           <span className="block text-sm text-white/70">Producten met foto&apos;s en prijzen, bestellingen, ontwerp en pagina&apos;s, alles op één plek. Wij hosten je site, met je eigen domein.</span>
         </span>
@@ -39,7 +40,7 @@ export default async function WebsiteBeheerPage() {
             <path d="M4 5h16v11H8l-4 4V5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
           </svg>
         </span>
-        <span className="min-w-0 flex-1">
+        <span className="min-w-[12rem] flex-1">
           <span className="block font-display text-lg font-bold text-ink">Websitechat met AI-assistent</span>
           <span className="block text-sm text-neutralx-600">Beantwoordt vragen op je website met je eigen gegevens. Lees mee, neem over of laat een collega het oppakken.</span>
         </span>

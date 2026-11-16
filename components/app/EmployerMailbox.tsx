@@ -227,7 +227,7 @@ export function EmployerMailbox({ t, zt, userEmail }: { t: Dict; zt: ZfDict; use
         setTab(key);
         setSelection(null);
       }}
-      className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold sm:text-sm ${tab === key ? "bg-ink text-white" : "text-neutralx-600 hover:bg-paper-soft"}`}
+      className={`min-w-0 flex-1 rounded-lg px-2 py-1.5 text-xs font-semibold sm:text-sm ${tab === key ? "bg-ink text-white" : "text-neutralx-600 hover:bg-paper-soft"}`}
     >
       {label}
     </button>
@@ -275,8 +275,10 @@ export function EmployerMailbox({ t, zt, userEmail }: { t: Dict; zt: ZfDict; use
         />
       )}
 
-      <div className="card grid overflow-hidden sm:grid-cols-[280px_1fr] md:grid-cols-[320px_1fr]" style={{ minHeight: 560 }}>
-        <div className="flex flex-col border-b border-hair sm:border-b-0 sm:border-r">
+      {/* grid-cols-1 en minmax(0,1fr): anders groeit de kolom op een telefoon mee met het langste onderwerp
+          en valt de lijst (en het derde tabblad) rechts van het scherm. */}
+      <div className="card grid grid-cols-1 overflow-hidden sm:grid-cols-[280px_minmax(0,1fr)] md:grid-cols-[320px_minmax(0,1fr)]" style={{ minHeight: 560 }}>
+        <div className="flex min-w-0 flex-col border-b border-hair sm:border-b-0 sm:border-r">
           <div className="flex items-center gap-1 border-b border-hair p-2">
             {tabButton("inbox", `${t.tabInbox}${unread > 0 ? ` (${unread})` : ""}`)}
             {tabButton("zekerflex", t.tabZekerflex)}
@@ -350,7 +352,7 @@ export function EmployerMailbox({ t, zt, userEmail }: { t: Dict; zt: ZfDict; use
           )}
         </div>
 
-        <div className="flex min-h-0 flex-col overflow-y-auto">
+        <div className="flex min-h-0 min-w-0 flex-col overflow-y-auto">
           {status && !connected && tab === "inbox" ? (
             showConnect ? (
               <ConnectForm t={t} onConnected={() => void loadStatus().then(() => setTab("inbox"))} />

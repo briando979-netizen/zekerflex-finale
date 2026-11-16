@@ -74,7 +74,7 @@ export default async function WerkgeverReactiesPage() {
             >
               <ul className="divide-y divide-hair">
                 {reacties.map((o) => (
-                  <li key={o.id} className="flex flex-wrap items-center gap-3 py-3">
+                  <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3">
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold text-ink">{o.freelancerName}</p>
                       <p className="text-xs text-neutralx-500">

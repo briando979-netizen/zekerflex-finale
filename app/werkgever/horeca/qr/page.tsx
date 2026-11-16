@@ -43,7 +43,8 @@ export default async function QrPagina() {
         <div id="qr-vel" className="grid grid-cols-2 gap-4 md:grid-cols-3 print:grid-cols-3">
           {codes.map(({ t, svg }) => (
             <figure key={t.id} className="card break-inside-avoid p-4 text-center">
-              <div className="mx-auto w-40" aria-hidden="true" dangerouslySetInnerHTML={{ __html: svg }} />
+              {/* hoogstens 10rem, maar nooit breder dan de kaart (twee kolommen op een telefoon) */}
+              <div className="mx-auto w-full max-w-40" aria-hidden="true" dangerouslySetInnerHTML={{ __html: svg }} />
               <figcaption className="mt-2">
                 <span className="block font-display text-lg font-bold text-ink">{t.naam}</span>
                 <span className="block text-xs text-neutralx-600">Scan om te bestellen · {zaak.naam}</span>

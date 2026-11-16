@@ -80,11 +80,12 @@ export function AvailabilityForm({ initial }: { initial: UserPrefs }) {
       <section className="card p-6">
         <h2 className="font-display text-lg font-semibold">{t.whenTitle}</h2>
         <p className="mt-1 text-sm text-neutralx-600">{t.whenBody}</p>
+        {/* table-fixed: zeven even brede dagkolommen die ook op een telefoon (±310 px) passen. */}
         <div className="mt-5 overflow-x-auto">
-          <table className="w-full min-w-[420px] text-center text-sm">
+          <table className="w-full table-fixed text-center text-sm">
             <thead>
               <tr>
-                <th></th>
+                <th className="w-[4.5rem] sm:w-24"></th>
                 {DAYS.map((d) => (
                   <th key={d} className="pb-2 font-medium text-neutralx-500">{d}</th>
                 ))}
@@ -93,11 +94,11 @@ export function AvailabilityForm({ initial }: { initial: UserPrefs }) {
             <tbody>
               {PARTS.map((p) => (
                 <tr key={p.k}>
-                  <td className="py-1 pr-3 text-right text-xs text-neutralx-500">{p.l}</td>
+                  <td className="break-words py-1 pr-2 text-right text-xs text-neutralx-500 sm:pr-3">{p.l}</td>
                   {DAYS.map((_, day) => {
                     const on = (avail[day] ?? []).includes(p.k as never);
                     return (
-                      <td key={day} className="p-1">
+                      <td key={day} className="p-0.5 sm:p-1">
                         <button
                           type="button"
                           onClick={() => toggle(day, p.k)}

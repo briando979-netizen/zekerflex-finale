@@ -170,7 +170,7 @@ export function WhatsAppHub({ t }: { t: Dict }) {
       </div>
 
       {tab === "chats" ? (
-        <div className="card grid overflow-hidden sm:grid-cols-[280px_1fr]" style={{ minHeight: 520 }}>
+        <div className="card grid grid-cols-1 overflow-hidden sm:grid-cols-[280px_minmax(0,1fr)]" style={{ minHeight: 520 }}>
           <div className="border-b border-hair sm:border-b-0 sm:border-r">
             {chats === null ? (
               <p className="px-4 py-10 text-center text-sm text-neutralx-400">{t.loading}</p>

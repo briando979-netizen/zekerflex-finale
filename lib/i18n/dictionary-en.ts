@@ -216,6 +216,9 @@ export const en: Dict = {
     ],
     more: "+{n} more",
   },
+  rapportages: {
+    laden: "Please wait a moment when opening: the figures are calculated live and this can take up to half a minute.",
+  },
   favorites: {
     title: "Favourites",
     eyebrow: "Workers",

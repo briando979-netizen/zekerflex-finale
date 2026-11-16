@@ -4,6 +4,7 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { biIngesteld, dashboardLinkVoor, leesBiStand } from "@/lib/bi/metabase";
 import { KAARTEN } from "@/lib/bi/dashboards";
 import { getTheme } from "@/lib/theme/server";
+import { getDict } from "@/lib/i18n/server";
 
 export const metadata: Metadata = { title: "Rapportages" };
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ export default async function RapportagesPage() {
   // het dashboard volgt de donkere stand van het portaal (lib/theme: light/dark; Metabase noemt donker "night")
   const thema = (await getTheme()) === "dark" ? "night" : "light";
   const [url, stand] = await Promise.all([tenantId && biIngesteld() ? dashboardLinkVoor(tenantId, thema) : Promise.resolve(null), leesBiStand()]);
+  const t = await getDict();
 
   return (
     <div className="space-y-5">
@@ -26,9 +28,14 @@ export default async function RapportagesPage() {
         <p className="mt-1 max-w-2xl text-sm text-neutralx-600">Uren, loonkosten, bezetting en facturen, live uit ZekerFlex. Alleen de cijfers van je eigen bedrijf; niets wordt gedeeld.</p>
       </header>
       {url ? (
-        <section className="card overflow-hidden p-0" aria-label="Dashboard Mijn bedrijf">
-          <iframe src={url} title="Dashboard Mijn bedrijf" className="h-[80vh] min-h-[720px] w-full" allowTransparency />
-        </section>
+        <>
+          <p className="text-xs text-neutralx-500">{t.rapportages.laden}</p>
+          {/* Onder ±750 px zet Metabase alle kaarten onder elkaar (4 cijfers + 5 grafieken en tabellen, ±2400 px):
+              dan krijgt het frame die hele hoogte, zodat niets in een te laag frame wegvalt. */}
+          <section className="card overflow-hidden p-0" aria-label="Dashboard Mijn bedrijf">
+            <iframe src={url} title="Dashboard Mijn bedrijf" className="h-[2500px] w-full md:h-[80vh] md:min-h-[720px]" allowTransparency />
+          </section>
+        </>
       ) : (
         <section className="card p-6" role="status">
           <h2 className="font-display text-lg font-bold text-ink">Nog even geduld</h2>
