@@ -52,11 +52,11 @@ export const GRATIS_STATUS_TINT: Record<GratisStatus, "ok" | "plan" | "warn" | "
 export const GRATIS_DIENSTEN: GratisDienst[] = [
   {
     id: "ai",
-    hosts: ["generativelanguage.googleapis.com"],
+    hosts: ["generativelanguage.googleapis.com", "api.groq.com", "api.mistral.ai"],
     naam: "AI-taalmodel",
     waarvoor: "Alle AI: chat, samenvatten, vertalen, beoordelen, teksten schrijven",
     nu: "Gemini van Google: tot een bepaald aantal vragen per dag gratis, daarboven per gebruik afgerekend",
-    eigen: "Ons eigen model op de VPS (Ollama, gemma3:4b) staat al als reserve klaar: valt de aanbieder weg of geeft hij een foutcode, dan antwoordt onze server vanzelf. Met de knop hierboven gaat álles erheen. Gemeten op 7 november: 3 à 5 seconden per kort antwoord, rekent en vertaalt goed; voor lange teksten voor klanten blijft een groot model sterker.",
+    eigen: "Ons eigen model op de VPS (Ollama, gemma3:4b) staat al als reserve klaar: valt de aanbieder weg of geeft hij een foutcode, dan antwoordt onze server vanzelf. Met de knop hierboven gaat álles erheen. Gemeten op 7 november: 3 à 5 seconden per kort antwoord, rekent en vertaalt goed; voor lange teksten voor klanten blijft een groot model sterker. Sneller en nog steeds gratis: de gratis rij (Groq, Mistral, Cloudflare) krijgt de vraag eerst; zit er één aan zijn gratis limiet, dan neemt de volgende het over, en ons eigen model blijft de laatste.",
     status: "schakelbaar",
     env: ["LLM_BASE_URL", "LLM_API_KEY", "AI_ALLOW_REMOTE", "LLM_FALLBACK_BASE_URL"],
   },

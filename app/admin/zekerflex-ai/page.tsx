@@ -39,7 +39,7 @@ export default async function ZekerFlexAIPage() {
           <AiNodeKey />
           <p className="text-xs" style={{ color: "var(--a-mute)" }}>
             <Link href="/admin/gratis" className="underline">
-              Overzicht: wat kost nog geld en wat hebben we zelf
+              Overzicht: wat kost nog geld en wat hebben we zelf, en de gratis rij met andere gratis AI&apos;s
             </Link>
           </p>
         </div>

@@ -2,6 +2,7 @@ import { getPrincipal, hasRole } from "@/lib/auth";
 import { KpiStrip, PageHead, Panel, Pill } from "@/components/admin/kit";
 import { GratisAi } from "@/components/admin/GratisAi";
 import { GratisKeuzes } from "@/components/admin/GratisKeuzes";
+import { GratisRij } from "@/components/admin/GratisRij";
 import { GRATIS_STATUS_LABEL, GRATIS_STATUS_TINT } from "@/lib/gratis/diensten";
 import { getKeuzes } from "@/lib/gratis/keuzes";
 import { dienstenStand, telling } from "@/lib/gratis/status";
@@ -47,6 +48,13 @@ export default async function GratisPage() {
       <div className="mt-4 space-y-4">
         <Panel title="De AI zelf" subtitle="Eén knop die élke AI-taak naar ons eigen model stuurt.">
           <GratisAi />
+        </Panel>
+
+        <Panel
+          title="Gratis rij: eerst andere gratis AI's"
+          subtitle="Zit de ene aan zijn gratis limiet, dan neemt de volgende het over. Ons eigen model is altijd de laatste."
+        >
+          <GratisRij />
         </Panel>
 
         <Panel
