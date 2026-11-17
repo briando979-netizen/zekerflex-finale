@@ -883,7 +883,10 @@ export async function submitFreelancerOnboarding(
   );
   const autoFeiten: AutoFeiten = {
     kvkOk: skipKvk || kvkValid,
-    naamOk: nameOk,
+    // de getypte naam is invoer van de werker; bevestigt de code op het document de accountnaam (mrzNaamOk), dan telt
+    // een afwijking in dat getypte veld niet meer als reden voor een mens (17 nov 2026: 7 van 24 controles gingen zo
+    // naar een mens, terwijl het document zelf de naam al bewees)
+    naamOk: nameOk || mrzNaamOk,
     nummerFormaatOk: numOk,
     geldigOk: expiryOk,
     rijbewijs: input.documentType === "DRIVERS_LICENSE",
