@@ -168,7 +168,7 @@ export const AANBOD: AanbodItem[] = [
     status: "beschikbaar",
     start: AANMELDEN,
     zoekwoorden: ["inchecken personeel", "nfc inchecken", "prikklok tablet", "tijdregistratie flexwerkers", "kiosk inchecken"],
-    foto: { bestand: "inchecken-op-locatie.jpg", alt: "Iemand checkt in op een tablet bij de ingang" },
+    foto: { bestand: "campagne-deuropening.jpg", alt: "Een medewerker met een dienblad onder de arm staat in de deuropening van een café" },
   },
   {
     slug: "certificaten-in-een-foto",
@@ -189,7 +189,7 @@ export const AANBOD: AanbodItem[] = [
     status: "beschikbaar",
     start: AANMELDEN,
     zoekwoorden: ["vca certificaat registreren", "certificaten personeel bijhouden", "diploma scannen", "ocr certificaat", "vervaldatum vca"],
-    foto: { bestand: "certificaten-in-een-foto.jpg", alt: "Een telefoon maakt een foto van een document" },
+    foto: { bestand: "campagne-monteur.jpg", alt: "Een monteur draait met een ratelsleutel een bout vast op een stalen constructie" },
   },
   {
     slug: "spoedoproep",
@@ -210,7 +210,7 @@ export const AANBOD: AanbodItem[] = [
     status: "beschikbaar",
     start: AANMELDEN,
     zoekwoorden: ["invaller vandaag", "spoed personeel", "last minute personeel", "ziekmelding vervanging", "oproepkracht sms"],
-    foto: { bestand: "spoedoproep.jpg", alt: "Een medewerker in een magazijn kijkt op zijn telefoon" },
+    foto: { bestand: "campagne-bezorger.jpg", alt: "Een bezorger met een grote rugzak kijkt op van zijn telefoon" },
   },
   {
     slug: "roosterplanner",
@@ -231,7 +231,7 @@ export const AANBOD: AanbodItem[] = [
     status: "beschikbaar",
     start: AANMELDEN,
     zoekwoorden: ["roosterplanner", "automatisch roosteren", "personeelsplanning software", "rooster maken flexwerkers", "planning optimaliseren"],
-    foto: { bestand: "horeca-barista-laptop.jpg", alt: "Twee baristas kijken samen lachend op een laptop" },
+    foto: { bestand: "campagne-rooster.jpg", alt: "Een eigenaar bekijkt een rooster op een tablet terwijl zijn team de zaak klaarmaakt" },
   },
   {
     slug: "automatisch-inchecken",
@@ -302,7 +302,7 @@ export const AANBOD: AanbodItem[] = [
     status: "beschikbaar",
     start: { label: "Aanmelden via je werkgeversomgeving", href: "/werkgever/netwerk" },
     zoekwoorden: ["wifi voor flexwerkers", "gast wifi personeel", "wifi rooster", "radius wifi bedrijf"],
-    foto: { bestand: "logistiek-magazijn-doos.jpg", alt: "Een lachende magazijnmedewerker draagt een doos" },
+    foto: { bestand: "campagne-scanner.jpg", alt: "Een magazijnmedewerker scant een doos tussen hoge stellingen" },
   },
   {
     slug: "veilige-werkplek",
@@ -323,7 +323,7 @@ export const AANBOD: AanbodItem[] = [
     status: "beschikbaar",
     start: { label: "Aanmelden via je werkgeversomgeving", href: "/werkgever/netwerk" },
     zoekwoorden: ["vpn voor flexwerkers", "zakelijke vpn", "veilig thuiswerken", "zero trust netwerk mkb"],
-    foto: { bestand: "team-highfive-raam.jpg", alt: "Een team geeft elkaar een high five bij een groot raam" },
+    foto: { bestand: "campagne-bouw.jpg", alt: "Een medewerker met een witte helm onder de arm staat op een bouwplaats" },
   },
   // Op locatie (lib/locatie/modules.ts): vier modules voor de werkvloer, op de eigen server en zonder licentiekosten.
   // Aanzetten kan direct onder Werkgever → Op locatie; de prijs is nog "op aanvraag" (geen verzonnen prijzen).
@@ -345,7 +345,7 @@ export const AANBOD: AanbodItem[] = [
     status: "beschikbaar",
     start: { label: "Aanzetten in je werkgeversomgeving", href: "/werkgever/op-locatie" },
     zoekwoorden: ["portofoon app", "push to talk app", "walkie talkie app bedrijf", "portofoon evenement personeel", "team communicatie bouwplaats"],
-    foto: { bestand: "horeca-keuken-team.jpg", alt: "Een keukenbrigade maakt samen gerechten klaar" },
+    foto: { bestand: "campagne-podium.jpg", alt: "Een crewlid in een regenjack staat voor een podium in opbouw" },
   },
   {
     slug: "toegang-op-kenteken",
@@ -365,7 +365,7 @@ export const AANBOD: AanbodItem[] = [
     status: "beschikbaar",
     start: { label: "Aanzetten in je werkgeversomgeving", href: "/werkgever/op-locatie" },
     zoekwoorden: ["kentekenherkenning slagboom", "kenteken toegang bouwplaats", "automatische toegang terrein personeel", "anpr slagboom", "kentekenherkenning parkeerplaats bedrijf"],
-    foto: { bestand: "bezorg-bus.jpg", alt: "Een bezorger staat met een doos voor zijn bestelbus" },
+    foto: { bestand: "campagne-bestelbus.jpg", alt: "Een bezorger zit in de open laadruimte van een bestelbus tussen de dozen" },
   },
   {
     slug: "sleutelkluis",
@@ -385,7 +385,7 @@ export const AANBOD: AanbodItem[] = [
     status: "beschikbaar",
     start: { label: "Aanzetten in je werkgeversomgeving", href: "/werkgever/op-locatie" },
     zoekwoorden: ["wachtwoorden delen met personeel", "alarmcode flexwerker", "sleutelbeheer personeel", "wifi wachtwoord personeel veilig", "toegangscodes tijdelijk delen"],
-    foto: { bestand: "logistiek-magazijn-klembord.jpg", alt: "Een magazijnmedewerker met klembord kijkt vriendelijk in de camera" },
+    foto: { bestand: "campagne-aanbellen.jpg", alt: "Een bezorger belt aan bij een voordeur" },
   },
   {
     slug: "badges-en-labels-printen",
@@ -405,7 +405,7 @@ export const AANBOD: AanbodItem[] = [
     status: "beschikbaar",
     start: { label: "Aanzetten in je werkgeversomgeving", href: "/werkgever/op-locatie" },
     zoekwoorden: ["bezoekersbadge printen", "naamsticker printen bij inchecken", "labelprinter personeel", "badge printer evenement", "thermische labelprinter bedrijf"],
-    foto: { bestand: "retail-winkelhulp.jpg", alt: "Een winkelmedewerker helpt twee klanten in een buurtwinkel" },
+    foto: { bestand: "campagne-inpakken.jpg", alt: "Een medewerker plakt een kartonnen doos dicht met tape" },
   },
 
   // ── Online & klanten
@@ -428,7 +428,7 @@ export const AANBOD: AanbodItem[] = [
     start: aanmeldenVoor("website"),
     voorbeelden: { label: "Bekijk voorbeeldwebsites", href: "/voorbeeldsites" },
     zoekwoorden: ["website laten bouwen", "website laten maken", "website voor mijn bedrijf", "websitebouwer", "website zonder cookies"],
-    foto: { bestand: "retail-toonbank.jpg", alt: "Een medewerker staat achter de toonbank van een lichte winkel" },
+    foto: { bestand: "campagne-eigenaar.jpg", alt: "Een eigenaar zit met een tablet in zijn restaurant, het team dekt de tafels" },
   },
   {
     slug: "webshop",
@@ -450,7 +450,7 @@ export const AANBOD: AanbodItem[] = [
     start: aanmeldenVoor("webshop"),
     voorbeelden: { label: "Bekijk voorbeelden met webshop", href: "/voorbeeldsites" },
     zoekwoorden: ["webshop openen", "eigen webwinkel starten", "webshop beginnen", "webwinkel laten maken"],
-    foto: { bestand: "bezorg-overdracht.jpg", alt: "Een pakket wordt overhandigd door een fietskoerier in een geel vest" },
+    foto: { bestand: "campagne-vouwen.jpg", alt: "Een winkelmedewerker vouwt shirts op de toonbank" },
   },
   {
     slug: "domeinnaam",
@@ -510,7 +510,7 @@ export const AANBOD: AanbodItem[] = [
     status: "beschikbaar",
     start: AANMELDEN,
     zoekwoorden: ["google reviews verzamelen", "meer google reviews", "reviews vragen aan klanten"],
-    foto: { bestand: "horeca-serveerster-lacht.jpg", alt: "Een serveerster in een grijze schort lacht met gasten in een café" },
+    foto: { bestand: "campagne-bediening.jpg", alt: "Een medewerker leunt op de bar terwijl collega's met borden langslopen" },
   },
   {
     slug: "telefonie",
@@ -550,7 +550,7 @@ export const AANBOD: AanbodItem[] = [
     status: "beschikbaar",
     start: { label: "Begin met je domeinnaam", href: "/domeinnaam" },
     zoekwoorden: ["zakelijke e-mail eigen domein", "e-mail op eigen domeinnaam"],
-    foto: { bestand: "team-highfive-geel.jpg", alt: "Een vrouw in een gele blouse geeft collega's een high five" },
+    foto: { bestand: "campagne-barista.jpg", alt: "Een barista schenkt melk in een cappuccino achter de koffiebar" },
   },
 
   // ── Branchepakketten
@@ -611,7 +611,7 @@ export const AANBOD: AanbodItem[] = [
     status: "beschikbaar",
     start: AANMELDEN,
     zoekwoorden: ["facturen uit urenregistratie", "factuur uit uren", "e-factuur"],
-    foto: { bestand: "team-highfive-tafel.jpg", alt: "Collega's lachen en geven elkaar een high five aan tafel" },
+    foto: { bestand: "campagne-klembord.jpg", alt: "Een medewerker met werkhandschoenen schrijft op een klembord naast een stapel steigerbuizen" },
   },
   {
     slug: "bedrijfscheck",
@@ -633,7 +633,7 @@ export const AANBOD: AanbodItem[] = [
     pagina: "/rekentools/btw-nummer-check",
     start: { label: "Controleer een nummer", href: "/rekentools/btw-nummer-check" },
     zoekwoorden: ["btw nummer controleren", "vies check", "kvk nummer controleren", "btw id check"],
-    foto: { bestand: "bedrijfscheck.jpg", alt: "Een ondernemer bekijkt papieren naast zijn laptop" },
+    foto: { bestand: "campagne-ondernemer.jpg", alt: "Een ondernemer in een donker pak zit op een trap tussen kantoorgebouwen" },
   },
   {
     slug: "e-facturatie",

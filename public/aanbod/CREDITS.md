@@ -44,3 +44,25 @@ maten en deze lijst).
 | `inkijk/horeca-online-bestellen-telefoon.webp` | Horeca: bestellen voor gasten | eigen schermafbeelding, 15 nov 2026 |
 | `inkijk/horeca-kaart.webp` | Horeca: de bezorgkaart (kaart © Kadaster, BRT Achtergrondkaart, CC BY 4.0) | eigen schermafbeelding, 15 nov 2026 |
 | `inkijk/horeca-archief.webp` | Horeca: het archief | eigen schermafbeelding, 15 nov 2026 |
+
+Eigen beelden (17 nov 2026): gemaakt met Gemini uit alleen een tekstopdracht, geen fotobank, de personen bestaan niet.
+Liggende uitsnede (4:3) van de foto met dezelfde naam in `public/marketing/foto/`.
+
+| bestand | bron |
+|---|---|
+| `campagne-deuropening.jpg` | Eigen beeld |
+| `campagne-monteur.jpg` | Eigen beeld |
+| `campagne-bezorger.jpg` | Eigen beeld |
+| `campagne-rooster.jpg` | Eigen beeld |
+| `campagne-scanner.jpg` | Eigen beeld |
+| `campagne-bouw.jpg` | Eigen beeld |
+| `campagne-podium.jpg` | Eigen beeld |
+| `campagne-bestelbus.jpg` | Eigen beeld |
+| `campagne-aanbellen.jpg` | Eigen beeld |
+| `campagne-inpakken.jpg` | Eigen beeld |
+| `campagne-eigenaar.jpg` | Eigen beeld |
+| `campagne-vouwen.jpg` | Eigen beeld |
+| `campagne-bediening.jpg` | Eigen beeld |
+| `campagne-barista.jpg` | Eigen beeld |
+| `campagne-klembord.jpg` | Eigen beeld |
+| `campagne-ondernemer.jpg` | Eigen beeld |

@@ -104,6 +104,9 @@ export const FOTOS: readonly Foto[] = [
   { slug: "campagne-bezorger", thema: "bezorgen", eigen: true, staand: true, alt: "Een bezorger met een grote rugzak zit op de stoeprand met zijn telefoon", trefwoorden: ["bezorg", "maaltijd", "app", "telefoon"] },
   { slug: "campagne-aanbellen", thema: "bezorgen", eigen: true, staand: true, alt: "Een bezorger belt aan bij een voordeur met een papieren tas in de hand", trefwoorden: ["bezorg", "pakket", "fiets"] },
   { slug: "campagne-autowassen", thema: "team", eigen: true, staand: true, alt: "Een medewerker met een pet wast een zwarte auto met een spons vol schuim", trefwoorden: ["auto", "wasstraat", "autopoetser"] },
+  { slug: "campagne-monteur", thema: "team", eigen: true, staand: true, alt: "Een monteur draait met een ratelsleutel een bout vast op een stalen constructie", trefwoorden: ["bouw", "techniek", "monteur", "montage"] },
+  { slug: "campagne-klembord", thema: "team", eigen: true, staand: true, alt: "Een medewerker met werkhandschoenen schrijft op een klembord naast een stapel steigerbuizen", trefwoorden: ["bouw", "steiger", "werkgever", "administratie"] },
+  { slug: "campagne-wasstraat", thema: "team", eigen: true, staand: true, alt: "Een medewerker wast een zwarte auto met een spons in een wasstraat", trefwoorden: ["auto", "wasstraat", "autopoetser"] },
 ];
 
 export function fotoPad(f: Pick<Foto, "slug">): string {
@@ -116,14 +119,14 @@ export function fotosVan(thema: FotoThema): Foto[] {
 
 /** Welke foto's bij welke sector horen (sleutels uit lib/seo-sectors.ts). */
 const SECTOR_FOTOS: Record<string, readonly string[]> = {
-  horeca: ["campagne-tap", "campagne-barista", "campagne-kok", "campagne-bediening", "horeca-serveerster-lacht", "horeca-gasten-bediening", "horeca-barista-team", "horeca-keuken-plezier", "horeca-terras-bediening", "horeca-keuken-team", "horeca-barista-laptop"],
-  logistiek: ["campagne-scanner", "campagne-steekkar", "campagne-inpakken", "logistiek-magazijn-klembord", "logistiek-magazijn-doos", "logistiek-magazijn-dozen"],
-  retail: ["campagne-kledingrek", "campagne-vouwen", "campagne-schap", "retail-winkelhulp", "retail-kassa", "retail-toonbank"],
-  evenementen: ["campagne-festival-crew", "campagne-podium", "campagne-crew-pauze", "jong-vieren", "jong-kleurrook", "team-juichen"],
-  schoonmaak: ["campagne-ramen", "campagne-hotelbed", "schoonmaak-uniform"],
+  horeca: ["campagne-tap", "campagne-barista", "campagne-kok", "campagne-bediening", "campagne-deuropening"],
+  logistiek: ["campagne-scanner", "campagne-steekkar", "campagne-inpakken", "campagne-bestelbus"],
+  retail: ["campagne-kledingrek", "campagne-vouwen", "campagne-schap"],
+  evenementen: ["campagne-festival-crew", "campagne-podium", "campagne-crew-pauze"],
+  schoonmaak: ["campagne-ramen", "campagne-hotelbed"],
   // de overzichtspagina's: bedrijven die personeel zoeken, en werkers die klussen zoeken
-  algemeen: ["campagne-ondernemer", "campagne-rooster", "campagne-eigenaar", "campagne-bouw", "team-highfive-raam", "horeca-gasten-bediening", "logistiek-magazijn-doos", "retail-winkelhulp", "team-highfive-tafel", "horeca-barista-team", "team-highfive-geel"],
-  freelance: ["campagne-deuropening", "campagne-bezorger", "campagne-aanbellen", "campagne-autowassen", "jong-vrienden-zon", "app-telefoon-lacht", "jong-vrienden-park", "app-telefoon-oranje", "jong-vrienden-buiten", "app-telefoon-warm"],
+  algemeen: ["campagne-ondernemer", "campagne-rooster", "campagne-eigenaar", "campagne-bouw", "campagne-klembord", "campagne-monteur"],
+  freelance: ["campagne-deuropening", "campagne-bezorger", "campagne-aanbellen", "campagne-autowassen", "campagne-wasstraat", "campagne-barista", "campagne-scanner"],
 };
 
 /** Een foto voor een sectorpagina; de seed (bijv. de stad) kiest er één uit, zodat stadspagina's niet allemaal dezelfde tonen. */
@@ -137,25 +140,25 @@ export function sectorFoto(sector: string, seed: string | number = 0): Foto | un
 
 /** De foto voor de kop van een vaste openbare pagina (alleen pagina's waar een foto de kop sterker maakt; gereedschap en juridische pagina's niet). */
 const PAGINA_FOTOS: Record<string, string> = {
-  contact: "app-telefoon-lacht",
-  abonnementen: "team-highfive-tafel",
-  prijzen: "jong-vrienden-buiten",
-  beveiliging: "team-highfive-callcenter",
-  kennis: "horeca-barista-laptop",
+  contact: "campagne-deuropening",
+  abonnementen: "campagne-rooster",
+  prijzen: "campagne-eigenaar",
+  beveiliging: "campagne-ondernemer",
+  kennis: "campagne-klembord",
   klussen: "campagne-bezorger",
-  "voor-bureaus": "team-highfive-raam",
-  "sales-partner": "team-handen",
-  demo: "team-highfive-geel",
-  intercedenten: "team-highfive-callcenter",
-  rekentools: "retail-kassa",
-  "review-check": "horeca-serveerster-lacht",
-  producten: "team-highfive-callcenter",
-  developers: "horeca-barista-laptop",
-  nieuwsbrief: "app-telefoon-oranje",
-  uitleg: "team-highfive-geel",
-  "producten-flexcompliance-api": "team-highfive-raam",
-  "producten-recruitflex-ai": "horeca-barista-laptop",
-  "producten-sovereignops": "logistiek-magazijn-dozen",
+  "voor-bureaus": "campagne-ondernemer",
+  "sales-partner": "campagne-crew-pauze",
+  demo: "campagne-rooster",
+  intercedenten: "campagne-eigenaar",
+  rekentools: "campagne-vouwen",
+  "review-check": "campagne-bediening",
+  producten: "campagne-ondernemer",
+  developers: "campagne-monteur",
+  nieuwsbrief: "campagne-aanbellen",
+  uitleg: "campagne-barista",
+  "producten-flexcompliance-api": "campagne-klembord",
+  "producten-recruitflex-ai": "campagne-festival-crew",
+  "producten-sovereignops": "campagne-scanner",
 };
 
 export function paginaFoto(pagina: string): Foto | undefined {

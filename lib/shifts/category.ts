@@ -28,21 +28,21 @@ export interface ShiftCategory {
 // Photo sources: public/shifts/CREDITS.md. Accents carry white chip text (dark enough for it) and
 // avoid red, which means "problem" in the colour system.
 const CAT: Record<ShiftCategoryKey, Omit<ShiftCategory, "key">> = {
-  retail: { label: "Retail", photo: "/shifts/retail.jpg", accent: "#0E5C4A" },
-  horeca: { label: "Horeca", photo: "/shifts/horeca.jpg", accent: "#B45309" },
-  logistiek: { label: "Logistiek", photo: "/shifts/logistiek.jpg", accent: "#1D4ED8" },
-  productie: { label: "Productie & industrie", photo: "/shifts/productie.jpg", accent: "#334155" },
-  schoonmaak: { label: "Schoonmaak", photo: "/shifts/schoonmaak.jpg", accent: "#0891B2" },
-  evenement: { label: "Evenement", photo: "/shifts/evenement.jpg", accent: "#7C3AED" },
+  retail: { label: "Retail", photo: "/shifts/campagne-retail.jpg", accent: "#0E5C4A" },
+  horeca: { label: "Horeca", photo: "/shifts/campagne-horeca.jpg", accent: "#B45309" },
+  logistiek: { label: "Logistiek", photo: "/shifts/campagne-logistiek.jpg", accent: "#1D4ED8" },
+  productie: { label: "Productie & industrie", photo: "/shifts/campagne-productie.jpg", accent: "#334155" },
+  schoonmaak: { label: "Schoonmaak", photo: "/shifts/campagne-schoonmaak.jpg", accent: "#0891B2" },
+  evenement: { label: "Evenement", photo: "/shifts/campagne-evenement.jpg", accent: "#7C3AED" },
   promotie: { label: "Promotie & sales", photo: "/shifts/promotie.jpg", accent: "#A21CAF" },
   beveiliging: { label: "Beveiliging", photo: "/shifts/beveiliging.jpg", accent: "#1E293B" },
   zorg: { label: "Zorg", photo: "/shifts/zorg.jpg", accent: "#DB2777" },
   kinderopvang: { label: "Kinderopvang & onderwijs", photo: "/shifts/kinderopvang.jpg", accent: "#0F766E" },
   kantoor: { label: "Kantoor", photo: "/shifts/kantoor.jpg", accent: "#4A525E" },
-  bouw: { label: "Bouw & techniek", photo: "/shifts/bouw.jpg", accent: "#C2410C" },
-  auto: { label: "Auto & fiets", photo: "/shifts/auto.jpg", accent: "#3730A3" },
+  bouw: { label: "Bouw & techniek", photo: "/shifts/campagne-bouw.jpg", accent: "#C2410C" },
+  auto: { label: "Auto & fiets", photo: "/shifts/campagne-auto.jpg", accent: "#3730A3" },
   agrarisch: { label: "Land- & tuinbouw", photo: "/shifts/agrarisch.jpg", accent: "#3F6212" },
-  algemeen: { label: "Algemeen", photo: "/shifts/algemeen.jpg", accent: "#0E5C4A" },
+  algemeen: { label: "Algemeen", photo: "/shifts/campagne-algemeen.jpg", accent: "#0E5C4A" },
 };
 
 // First match wins, so the more specific branches come before the broad ones

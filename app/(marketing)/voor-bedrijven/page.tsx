@@ -10,6 +10,7 @@ import { contentKeys, getContentMap } from "@/lib/content/store";
 import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
 import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
 import { PaginaVideoBlok } from "@/components/marketing/PaginaVideoBlok";
+import { ReclameVideoBlok } from "@/components/marketing/ReclameVideoBlok";
 
 // titel en omschrijving: de standaard in lib/ontwerp/seo.ts, of een eigen versie uit de Site-ontwerper (SEO)
 export async function generateMetadata(): Promise<Metadata> {
@@ -183,6 +184,8 @@ export default async function VoorBedrijvenPage() {
       </div>
 
       <PaginaVideoBlok id="voor-bedrijven" />
+
+      <ReclameVideoBlok soort="bedrijven" />
 
       {zichtbaar.map((id) => (
         <Fragment key={id}>{onderdelen[id]}</Fragment>

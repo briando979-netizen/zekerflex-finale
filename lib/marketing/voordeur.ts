@@ -22,10 +22,10 @@ export interface VoordeurTegel {
 
 /** Welk aanbod-onderdeel bij welk dashboard hoort, en welke foto. */
 const TEGELS: { soort: Werkruimte; titel: string; slug: string; foto: string }[] = [
-  { soort: "personeel", titel: "Personeel", slug: "flexwerkers-inhuren", foto: "team-highfive-raam" },
-  { soort: "website", titel: "Website", slug: "website", foto: "horeca-barista-laptop" },
-  { soort: "webshop", titel: "Webshop", slug: "webshop", foto: "retail-toonbank" },
-  { soort: "horeca", titel: "Horeca", slug: "horeca", foto: "horeca-keuken-plezier" },
+  { soort: "personeel", titel: "Personeel", slug: "flexwerkers-inhuren", foto: "campagne-rooster" },
+  { soort: "website", titel: "Website", slug: "website", foto: "campagne-eigenaar" },
+  { soort: "webshop", titel: "Webshop", slug: "webshop", foto: "campagne-vouwen" },
+  { soort: "horeca", titel: "Horeca", slug: "horeca", foto: "campagne-kok" },
   { soort: "rijschool", titel: "Rijschool", slug: "rijschool", foto: "rijschool-achter-het-stuur" },
 ];
 

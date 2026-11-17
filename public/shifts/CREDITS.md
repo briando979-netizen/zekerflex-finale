@@ -16,3 +16,18 @@ Toegevoegd op 4 november 2026:
 
 Kies bij een nieuwe foto alleen CC0, publiek domein of de gratis Unsplash/Pexels-licentie
 (geen Unsplash+), zonder herkenbare kindergezichten en zonder merklogo vooraan.
+
+Toegevoegd op 17 november 2026 (eigen beelden: gemaakt met Gemini uit alleen een tekstopdracht, geen fotobank, de personen bestaan niet;
+liggende uitsnede 3:2 van de campagnefoto's in `public/marketing/foto/`). Deze staan nu op de klus-kaarten; de oude bestanden blijven voor de voorbeeldsites.
+
+| Bestand | Onderwerp | Bron | Licentie |
+|---|---|---|---|
+| campagne-horeca.jpg | horeca | eigen beeld | eigen |
+| campagne-logistiek.jpg | logistiek | eigen beeld | eigen |
+| campagne-retail.jpg | retail | eigen beeld | eigen |
+| campagne-schoonmaak.jpg | schoonmaak | eigen beeld | eigen |
+| campagne-evenement.jpg | evenement | eigen beeld | eigen |
+| campagne-bouw.jpg | bouw | eigen beeld | eigen |
+| campagne-auto.jpg | auto | eigen beeld | eigen |
+| campagne-productie.jpg | productie | eigen beeld | eigen |
+| campagne-algemeen.jpg | algemeen | eigen beeld | eigen |

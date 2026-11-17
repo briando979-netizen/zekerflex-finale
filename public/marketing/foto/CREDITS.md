@@ -71,3 +71,6 @@ Een foto toevoegen: bestand hier neerzetten, een regel in `fotos.ts` en een rege
 | `campagne-bezorger.jpg` | bezorgen | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
 | `campagne-aanbellen.jpg` | bezorgen | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
 | `campagne-autowassen.jpg` | team | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-monteur.jpg` | team | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-klembord.jpg` | team | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-wasstraat.jpg` | team | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
