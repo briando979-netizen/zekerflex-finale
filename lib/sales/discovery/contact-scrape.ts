@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { guessAndVerifyDomain } from "@/lib/sales/discovery/domain-guess";
 import { lookupCompanyContact } from "@/lib/sales/discovery/places-lookup";
+import { isRommelAdres } from "@/lib/sales/discovery/rommel-adres";
 import { loadRobots, robotsAllows } from "@/lib/sales/discovery/robots";
 
 function safeOrigin(url: string): string | null {
@@ -40,7 +41,6 @@ const UA = "ZekerFlexBot/1.0 (+https://zekerflex.com/bot; zakelijke kennismaking
 const TIMEOUT_MS = 10_000;
 const MAX_BYTES = 1_200_000;
 const CONTACT_PATHS = ["/", "/contact", "/contact/", "/contact-us", "/over-ons", "/nl/contact", "/contactgegevens"];
-const JUNK_EMAIL = /\.(png|jpe?g|gif|svg|webp|css|js)$|@(sentry|wixpress|example|domain|email|test|godaddy)\./i;
 /** Geen adressen voor een kennismaking: systeem- en klachtenadressen. */
 const GEEN_KENNISMAKING = /^(no-?reply|do-?not-?reply|mailer-daemon|postmaster|abuse|privacy)$/i;
 /** Bij meerdere eigen adressen: eerst personeel, dan het algemene adres; anders het eerste dat er staat. */
@@ -113,7 +113,7 @@ export function kiesAdres(paginas: readonly string[], eigenHosts: readonly strin
   }
   const eigen = [...new Set(gevonden)].filter((e) => {
     const [lokaal = "", domein = ""] = e.split("@");
-    if (!lokaal || !domein || JUNK_EMAIL.test(e) || GEEN_KENNISMAKING.test(lokaal)) return false;
+    if (!lokaal || !domein || isRommelAdres(e) || GEEN_KENNISMAKING.test(lokaal)) return false;
     return eigenHosts.some((h) => zelfdeDomein(domein, h));
   });
   for (const groep of VOORKEUR) {
