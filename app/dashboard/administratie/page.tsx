@@ -8,6 +8,7 @@ import { BANK_AAN } from "@/lib/app-mode";
 import { getFreelancerDict } from "@/lib/i18n/server";
 import { vulIn } from "@/lib/i18n/vul-in";
 import type { FreelancerDict } from "@/lib/i18n/freelancer";
+import { zakelijkeWerkvorm } from "@/lib/fiscal/formulier";
 
 export const dynamic = "force-dynamic";
 
@@ -135,6 +136,12 @@ export default async function AdministratiePage() {
         <Link href="/dashboard/ritten" className="font-semibold text-brand-600 hover:underline">
           {t.km}
         </Link>
+        {/* zzp'er en flexwerker: bedrijfsnaam, KVK, btw, KOR en IBAN staan op Zakelijke gegevens (17 nov 2026) */}
+        {zakelijkeWerkvorm(data.workerKind) && (
+          <Link href="/dashboard/fiscaal" className="font-semibold text-brand-600 hover:underline">
+            {t.zakelijk}
+          </Link>
+        )}
       </div>
 
       <p className="mt-5 text-xs text-neutralx-400">

@@ -9,7 +9,20 @@ import { KorHulp } from "@/components/app/KorHulp";
 import { useFT } from "@/components/i18n/useFT";
 import { vulIn } from "@/lib/i18n/vul-in";
 import type { FreelancerDict } from "@/lib/i18n/freelancer";
-import { bedrijfAlIngevuld, formulierMist, opslagBody, toonWerkvormKeuze } from "@/lib/fiscal/formulier";
+import {
+  BEDRIJFSNAAM_MAX,
+  KOR_SINDS_VROEGST,
+  bedrijfAlIngevuld,
+  bedrijfsnaamVooraf,
+  dagKort,
+  formulierMist,
+  korSindsGeldig,
+  korSindsVooraf,
+  maskeerIban,
+  opslagBody,
+  toonWerkvormKeuze,
+  zakelijkeWerkvorm,
+} from "@/lib/fiscal/formulier";
 
 /** De tekst van de gekozen facturatiewijze (de sleutel komt van de server: reverse-billing, self-invoice of payroll). */
 function factuurTekst(f: FreelancerDict["fiscaalForm"], modus: string): string {
@@ -25,6 +38,8 @@ const KIND_SLEUTELS: WorkerKind[] = ["zzp", "flexwerker", "uitzendkracht"];
 export interface ProfielBedrijf {
   kvkNumber: string;
   vatNumber: string;
+  /** de naam uit een gecontroleerde KVK-inschrijving: vult de bedrijfsnaam voor zolang de werker er nooit een invulde */
+  kvkNaam?: string | undefined;
 }
 
 export function FiscalForm({
@@ -32,12 +47,15 @@ export function FiscalForm({
   defaultKind,
   profiel,
   facturatie,
+  vandaag,
 }: {
   initial: FiscalProfile;
   defaultKind: WorkerKind | null;
   profiel?: ProfielBedrijf | undefined;
   /** de facturatiewijze zoals de server hem bepaalt (invoiceModeFor); zonder dit prop "reverse-billing" zoals voorheen */
   facturatie?: string | undefined;
+  /** vandaag als Nederlandse dag (YYYY-MM-DD, van de server): de grens van "KOR sinds" */
+  vandaag?: string | undefined;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -54,8 +72,15 @@ export function FiscalForm({
   const ft = useFT();
   const tk = ft.kor;
   const f = ft.fiscaalForm;
+  // Zakelijke gegevens (17 nov 2026): de bedrijfsnaam (voorgevuld uit de KVK zolang er nooit een is ingevuld) en "KOR sinds"
+  const bedrijfsnaamStart = bedrijfsnaamVooraf(initial.bedrijfsnaam, profiel?.kvkNaam);
+  const [bedrijfsnaam, setBedrijfsnaam] = useState(bedrijfsnaamStart);
+  const [korSinds, setKorSinds] = useState(korSindsVooraf(initial.korSinds, initial.korApplies ? initial.korAanvraag?.ingang : null, vandaag));
+  const korSindsFout = Boolean(korSinds && vandaag) && !korSindsGeldig(korSinds, vandaag);
   const [bsn, setBsn] = useState("");
   const [iban, setIban] = useState(initial.iban ?? "");
+  // een bewaard IBAN staat gemaskeerd; "Wijzig IBAN" toont het veld (de bevestigingscode van de route blijft gelden)
+  const [wijzigIban, setWijzigIban] = useState(false);
   const [ibanCode, setIbanCode] = useState("");
   const [codeNodig, setCodeNodig] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -72,7 +97,8 @@ export function FiscalForm({
     try {
       // het IBAN alleen als er iets staat (optioneel, bevestigen kan later bij Verificatie); de loonheffingskorting niet:
       // die kies je pas na de getekende uitzendovereenkomst, in het uitzendpaneel (lib/fiscal/formulier.ts, opslagBody)
-      const body = opslagBody({ kind, iban, kor, vatRequested, vatNumber, kvkNumber, bsn, ibanCode });
+      // de bedrijfsnaam en "KOR sinds" alleen bij een zzp'er of flexwerker (opslagBody beslist wat er meegaat)
+      const body = opslagBody({ kind, iban, kor, vatRequested, vatNumber, kvkNumber, bsn, ibanCode, bedrijfsnaam, bedrijfsnaamWas: (result ?? initial).bedrijfsnaam, korSinds });
 
       const res = await fetch("/api/me/fiscal", {
         method: "PUT",
@@ -93,8 +119,10 @@ export function FiscalForm({
         setResult(data);
         setWijzigKind(false);
         setWijzigBedrijf(false);
+        setWijzigIban(false);
+        setIban(data.iban ?? "");
         toast.success(
-          f.opgeslagen,
+          zakelijkeWerkvorm(kind) ? f.opgeslagenZakelijk : f.opgeslagen,
           data.vatNumber ? (data.vatValid ? f.btwGevalideerd : f.btwOpgeslagen) : undefined,
         );
         router.refresh();
@@ -122,9 +150,27 @@ export function FiscalForm({
     kor: Boolean(result?.korApplies),
     btwAangevraagd: Boolean(result?.vatRequested),
     korIngediend: result?.korAanvraag?.stand === "ingediend",
+    korSinds: result?.korSinds ?? "",
   };
   const toonKeuze = toonWerkvormKeuze(savedKind, wijzigKind);
   const toonBedrijfOverzicht = !wijzigBedrijf && !switching && bedrijfAlIngevuld(kind, opgeslagenBedrijf);
+  const zakelijk = zakelijkeWerkvorm(kind);
+  // het IBAN zoals de server het bewaarde (na een opslag de teruggegeven versie)
+  const opgeslagenIban = (result ?? initial).iban;
+  const bedrijfsnaamUitKvk = initial.bedrijfsnaam === undefined && Boolean(profiel?.kvkNaam) && bedrijfsnaam === bedrijfsnaamStart;
+  // een element, geen onderdeel: zzp'er en flexwerker delen hetzelfde veld bovenaan hun blok
+  const bedrijfsnaamVeld = (
+    <Field label={f.bedrijfsnaam} hint={bedrijfsnaamUitKvk ? f.bedrijfsnaamUitKvk : f.bedrijfsnaamHint}>
+      <input
+        value={bedrijfsnaam}
+        onChange={(e) => setBedrijfsnaam(e.target.value)}
+        maxLength={BEDRIJFSNAAM_MAX}
+        autoComplete="organization"
+        placeholder={f.optioneel}
+        className="field-input"
+      />
+    </Field>
+  );
 
   const mistSleutels = formulierMist({ kind, vatNumber, vatRequested, kvkNumber, kor, korIngediend, hasBsn: hasBsnOnFile, bsn });
   const missing: string[] = mistSleutels.map((s) => (s === "btwZzp" ? f.mistBtwZzp : s === "btwFlex" ? f.mistBtwFlex : f.mistBsn));
@@ -189,7 +235,7 @@ export function FiscalForm({
       </section>
 
       <section className="card space-y-4 p-6">
-        <h2 className="font-display text-lg font-semibold">{f.stap2}</h2>
+        <h2 className="font-display text-lg font-semibold">{zakelijk ? f.stap2Zakelijk : f.stap2}</h2>
 
         {toonBedrijfOverzicht && (
           <div className="rounded-lg border border-hair bg-paper-soft p-3 text-sm">
@@ -200,15 +246,19 @@ export function FiscalForm({
               </button>
             </div>
             <dl className="mt-2 divide-y divide-hair">
+              {bedrijfsnaam.trim() && <Row k={f.bedrijfsnaam} v={bedrijfsnaam.trim()} />}
               {opgeslagenBedrijf.kvk && <Row k={f.kvk} v={opgeslagenBedrijf.kvk} />}
               {opgeslagenBedrijf.btw && <Row k={f.btw} v={opgeslagenBedrijf.btw} />}
-              {kind === "flexwerker" && opgeslagenBedrijf.kor && <Row k={f.korNaam} v={f.ja} />}
+              {kind === "flexwerker" && opgeslagenBedrijf.kor && (
+                <Row k={f.korNaam} v={opgeslagenBedrijf.korSinds ? vulIn(f.jaSinds, { datum: dagKort(opgeslagenBedrijf.korSinds) }) : f.ja} />
+              )}
             </dl>
           </div>
         )}
 
         {kind === "zzp" && !toonBedrijfOverzicht && (
           <>
+            {bedrijfsnaamVeld}
             <Field label={f.kvk}>
               <input value={kvkNumber} onChange={(e) => setKvkNumber(e.target.value)} placeholder="12345678" className="field-input" />
             </Field>
@@ -220,6 +270,7 @@ export function FiscalForm({
 
         {kind === "flexwerker" && !toonBedrijfOverzicht && (
           <>
+            {bedrijfsnaamVeld}
             <div className="rounded-lg border border-hair bg-paper-soft p-3 text-xs leading-relaxed text-neutralx-600">
               {f.flexUitleg1} <b>{f.korNaam}</b> {f.flexUitleg2}
             </div>
@@ -232,6 +283,22 @@ export function FiscalForm({
                 </label>
               ))}
             </fieldset>
+            {korKeuze === "heb" && (
+              <>
+                <Field label={f.korSinds} hint={f.korSindsHint}>
+                  <input
+                    type="date"
+                    value={korSinds}
+                    onChange={(e) => setKorSinds(e.target.value)}
+                    min={KOR_SINDS_VROEGST}
+                    max={vandaag}
+                    aria-invalid={korSindsFout}
+                    className="field-input"
+                  />
+                </Field>
+                {korSindsFout && <p role="alert" className="-mt-2 text-xs text-crit">{f.korSindsFout}</p>}
+              </>
+            )}
             {korKeuze === "aanvragen" && <KorHulp initial={initial.korAanvraag ?? null} />}
             {!kor && (
               <>
@@ -271,15 +338,61 @@ export function FiscalForm({
         )}
 
         {/* het rekeningnummer is hier optioneel: bevestigen kan later bij Verificatie, vóór je eerste betaalde klus */}
-        <Field label={`${f.iban} (${f.optioneel})`} hint={f.ibanHint}>
-          <input value={iban} onChange={(e) => setIban(e.target.value)} placeholder="NL00 BANK 0000 0000 00" className="field-input" />
-        </Field>
-        <p className="-mt-2 text-xs leading-relaxed text-neutralx-500">
-          {f.ibanLater}{" "}
-          <Link href="/dashboard/verificatie#bankrekening" className="font-semibold text-brand-700 underline">
-            {f.ibanLink}
-          </Link>
-        </p>
+        {opgeslagenIban && !wijzigIban ? (
+          // een bewaard IBAN gemaskeerd (alleen weergave); "Wijzig IBAN" toont een leeg veld, de route vraagt dan de code
+          <div className="relative rounded-lg border border-hair bg-paper-soft p-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs text-neutralx-500">{f.iban}</p>
+                <p className="mt-0.5 font-semibold tracking-wide text-ink">
+                  <span aria-hidden="true">{maskeerIban(opgeslagenIban)}</span>
+                  <span className="sr-only">{vulIn(f.ibanEindigt, { laatste4: opgeslagenIban.slice(-4) })}</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIban("");
+                  setWijzigIban(true);
+                }}
+                className="btn-ghost text-sm"
+              >
+                {f.wijzigIban}
+              </button>
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-neutralx-500">{f.wijzigIbanUitleg}</p>
+          </div>
+        ) : (
+          <>
+            <Field label={`${f.iban} (${f.optioneel})`} hint={f.ibanHint}>
+              <input value={iban} onChange={(e) => setIban(e.target.value)} placeholder="NL00 BANK 0000 0000 00" className="field-input" />
+            </Field>
+            {opgeslagenIban ? (
+              <div className="-mt-2 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs leading-relaxed text-neutralx-500">{f.wijzigIbanUitleg}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIban(opgeslagenIban);
+                    setIbanCode("");
+                    setCodeNodig(null);
+                    setWijzigIban(false);
+                  }}
+                  className="btn-ghost text-sm"
+                >
+                  {f.annuleren}
+                </button>
+              </div>
+            ) : (
+              <p className="-mt-2 text-xs leading-relaxed text-neutralx-500">
+                {f.ibanLater}{" "}
+                <Link href="/dashboard/verificatie#bankrekening" className="font-semibold text-brand-700 underline">
+                  {f.ibanLink}
+                </Link>
+              </p>
+            )}
+          </>
+        )}
         {codeNodig && (
           <Field label={f.ibanCode}>
             <input
@@ -308,6 +421,7 @@ export function FiscalForm({
           <h2 className="font-display text-base font-semibold">{f.samenvatting}</h2>
           <dl className="mt-3 divide-y divide-hair text-sm">
             <Row k={f.werkvorm} v={f.kinds[result.workerKind].label} />
+            {zakelijkeWerkvorm(result.workerKind) && result.bedrijfsnaam && <Row k={f.bedrijfsnaam} v={result.bedrijfsnaam} />}
             {result.vatNumber && (
               <Row
                 k={f.btw}
