@@ -10,6 +10,7 @@ import {
   ZEKERFLEX_PITCH,
 } from "@/lib/sales/prompts";
 import type { BelUitkomst } from "@/lib/sales/bellijst";
+import { zonderIntroContacten } from "@/lib/introducties/lead";
 
 // ---------------------------------------------------------------------------
 // LLM-drafted outreach. A draft is generated on demand. In REVIEW mode a human
@@ -72,7 +73,8 @@ export async function draftOutreach(
   const step = Math.max(0, Math.min(OUTREACH_STEP_SYSTEM.length - 1, stepIndex));
   const system = OUTREACH_STEP_SYSTEM[step] ?? OUTREACH_SYSTEM;
 
-  const enrichment = (lead.enrichmentJson ?? {}) as Record<string, unknown>;
+  // zonder de contacten van een introductie (lib/introducties/lead.ts): een voorgestelde persoon komt nooit in een automatische mail
+  const enrichment = zonderIntroContacten(lead.enrichmentJson);
   let model = "self-hosted-llm";
   const draft = await chatJson<DraftShape>({
     messages: [

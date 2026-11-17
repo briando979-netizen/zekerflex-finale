@@ -137,7 +137,10 @@ export function IntroductiesTab() {
         subtitle={`Bedrijven die werkers en werkgevers voorstelden via "Introduceer een bedrijf". ZekerFlex mailt ze nooit vanzelf: bel of mail ze zelf (ze staan ook in de lijst en, met een telefoonnummer, bij Bellen). Meldt het bedrijf zich aan, kies dan "Gekoppeld aan bedrijf": vanaf die dag twee weken geen platformkosten. Na de eerste betaalde factuur komt er een taak om € ${BELONING_EURO} bol-tegoed te sturen.`}
       >
         <p className="text-xs" style={{ color: "var(--a-mute)" }}>
-          In de Android- en iPhone-app staat de beloning nergens (18+-keuring); het voorstellen en de twee gratis weken wel.
+          De korting geldt voor platformkosten (zzp&apos;ers en flexwerkers). Werkt een bedrijf alleen met uitzendkrachten via de verloning,
+          dan is er geen factuur voor platformkosten: geen korting en ook geen beloning. Koppelen kan alleen met een bedrijf dat zich na
+          de introductie aanmeldde, nog geen platformkosten betaalde en waar wie het voorstelde zelf niet bij hoort. In de Android- en
+          iPhone-app staat de beloning nergens (18+-keuring); het voorstellen en de twee gratis weken wel.
         </p>
       </APanel>
 
