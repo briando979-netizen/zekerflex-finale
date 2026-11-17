@@ -10,6 +10,7 @@ interface Msg {
   by?: string;
   q?: string; // the question that produced this answer (for rating)
   rated?: "up" | "down";
+  retry?: string; // de vraag die opnieuw geprobeerd kan worden (knop "Opnieuw" bij een fout)
 }
 
 const GREETING: Msg = {
@@ -124,10 +125,11 @@ export function ChatWidget() {
     }).catch(() => undefined);
   }
 
-  async function send(text: string) {
+  async function send(text: string, opnieuw = false) {
     const clean = text.trim();
     if (!clean || busy) return;
-    const next: Msg[] = [...messages, { role: "user", content: clean }];
+    // "Opnieuw": de vraag staat al in de lijst; haal alleen de foutbubbel weg en probeer het opnieuw.
+    const next: Msg[] = opnieuw ? messages.filter((m) => !m.retry) : [...messages, { role: "user", content: clean }];
     setMessages(next);
     setInput("");
     setBusy(true);
@@ -153,13 +155,14 @@ export function ChatWidget() {
       // answer: show a plain sentence instead of streaming the raw body into a bubble.
       if (!res.ok) {
         const fout = (await res.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null;
+        const kanOpnieuw = fout?.error?.code !== "READ_ONLY";
         const tekst =
           fout?.error?.code === "READ_ONLY"
             ? "Je bekijkt de site nu als voorbeeldaccount (Bekijk als). Daarin kun je niet chatten. Stop Bekijk als in het beheer, of open de site in een privévenster."
             : res.status === 429
               ? "Je stuurt veel berichten achter elkaar. Wacht even en probeer het dan opnieuw."
               : "De assistent is even niet bereikbaar. Probeer het zo opnieuw.";
-        setMessages((m) => [...m, { role: "assistant", content: tekst }]);
+        setMessages((m) => [...m, { role: "assistant", content: tekst, ...(kanOpnieuw ? { retry: clean } : {}) }]);
         return;
       }
       if (!res.body) throw new Error("no stream");
@@ -180,12 +183,12 @@ export function ChatWidget() {
       if (!acc.trim()) {
         setMessages((m) => {
           const c = [...m];
-          c[c.length - 1] = { role: "assistant", content: "Sorry, ik kon geen antwoord ophalen. Probeer het zo nog eens." };
+          c[c.length - 1] = { role: "assistant", content: "Sorry, ik kon geen antwoord ophalen. Probeer het zo nog eens.", retry: clean };
           return c;
         });
       }
     } catch {
-      setMessages((m) => [...m, { role: "assistant", content: "De assistent is even niet bereikbaar. Probeer het zo opnieuw." }]);
+      setMessages((m) => [...m, { role: "assistant", content: "De assistent is even niet bereikbaar. Probeer het zo opnieuw.", retry: clean }]);
     } finally {
       setBusy(false);
     }
@@ -248,6 +251,17 @@ export function ChatWidget() {
                         ▼
                       </button>
                       {m.rated && <span className="text-[10px] text-neutralx-400">bedankt</span>}
+                    </div>
+                  )}
+                  {m.role === "assistant" && m.retry && !busy && (
+                    <div className="mt-1.5">
+                      <button
+                        type="button"
+                        onClick={() => m.retry && send(m.retry, true)}
+                        className="rounded-full border border-brand-500/40 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 hover:border-brand-500"
+                      >
+                        ↻ Opnieuw
+                      </button>
                     </div>
                   )}
                 </div>
