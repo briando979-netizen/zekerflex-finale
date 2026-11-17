@@ -408,6 +408,45 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .live-dot::after { animation: none; }
 }
+
+/* "Voor wie"-kaarten (components/marketing/VoorWieKaarten.tsx): de uitgeknipte persoon
+   komt een stukje uit het kaartje bij hover (muis) of aanraken (telefoon → klasse .is-pop).
+   De persoon ligt in rust precies op de foto, dus je ziet er niets van tot je er langs gaat. */
+.popkaart { position: relative; transition: box-shadow 0.45s ease; }
+.popkaart:hover, .popkaart.is-pop {
+  z-index: 6;
+  box-shadow: 0 30px 60px -30px rgba(12, 20, 16, 0.38);
+}
+.popkaart-beeld { position: relative; aspect-ratio: 4 / 3; }
+.popkaart-achter {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 1rem 1rem 0 0;
+  background: #0c0e12;
+}
+.popkaart-achter img {
+  transform: scale(1.01);
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.popkaart:hover .popkaart-achter img,
+.popkaart.is-pop .popkaart-achter img { transform: scale(1.06); }
+.popkaart-pop {
+  transform-origin: 50% 100%;
+  pointer-events: none;
+  will-change: transform;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), filter 0.55s ease;
+}
+.popkaart:hover .popkaart-pop,
+.popkaart.is-pop .popkaart-pop {
+  transform: translateY(-18px) scale(1.12);
+  filter: drop-shadow(0 22px 20px rgba(8, 14, 10, 0.45));
+}
+@media (prefers-reduced-motion: reduce) {
+  .popkaart-achter img, .popkaart-pop { transition: none; }
+  .popkaart:hover .popkaart-pop, .popkaart.is-pop .popkaart-pop { transform: none; filter: none; }
+}
+
 /* status in de chat (components/chat/StatusViewer.tsx): het balkje van de status die je nu ziet loopt in 5 s vol */
 .status-balk {
   transform-origin: left;

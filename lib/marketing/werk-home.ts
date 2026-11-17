@@ -41,14 +41,16 @@ export interface WerkGroep {
   tekst: string;
   foto: string;
   alt: string;
+  /** De uitgeknipte persoon (achtergrond weg), voor het pop-out-effect bij hover/aanraken. */
+  uit?: string;
 }
 
 /** Voor wie: zo herkent een bezoeker zichzelf. */
 export const WERK_GROEPEN: WerkGroep[] = [
-  { titel: "Naast je studie", tekst: "Werk een avond of een weekend. Je tentamens plan je er gewoon omheen.", foto: "/werk/campagne-studie.jpg", alt: "Een barista schenkt melk in een cappuccino" },
-  { titel: "Als zzp'er", tekst: "Opdrachten zonder acquisitie, en je hoeft zelf geen facturen te sturen.", foto: "/werk/campagne-zzp.jpg", alt: "Een magazijnmedewerker scant een doos" },
-  { titel: "Zonder KVK", tekst: "Werk via ons uitzendbureau, met elke week een echte loonstrook.", foto: "/werk/campagne-uitzend.jpg", alt: "Een medewerker duwt een steekkar met dozen" },
-  { titel: "Iets extra's", tekst: "Een paar uur per week erbij, op de momenten dat het jou uitkomt.", foto: "/werk/campagne-extra.jpg", alt: "Een barman tapt een biertje achter de bar" },
+  { titel: "Naast je studie", tekst: "Werk een avond of een weekend. Je tentamens plan je er gewoon omheen.", foto: "/werk/campagne-studie.jpg", uit: "/werk/campagne-studie-cut.png", alt: "Een barista schenkt melk in een cappuccino" },
+  { titel: "Als zzp'er", tekst: "Opdrachten zonder acquisitie, en je hoeft zelf geen facturen te sturen.", foto: "/werk/campagne-zzp.jpg", uit: "/werk/campagne-zzp-cut.png", alt: "Een magazijnmedewerker scant een doos" },
+  { titel: "Zonder KVK", tekst: "Werk via ons uitzendbureau, met elke week een echte loonstrook.", foto: "/werk/campagne-uitzend.jpg", uit: "/werk/campagne-uitzend-cut.png", alt: "Een medewerker duwt een steekkar met dozen" },
+  { titel: "Iets extra's", tekst: "Een paar uur per week erbij, op de momenten dat het jou uitkomt.", foto: "/werk/campagne-extra.jpg", uit: "/werk/campagne-extra-cut.png", alt: "Een barman tapt een biertje achter de bar" },
 ];
 
 export const WERK_STAPPEN = [

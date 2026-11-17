@@ -11,6 +11,7 @@ import { BranchShowcase } from "@/components/marketing/BranchShowcase";
 import { AppDownload } from "@/components/marketing/AppDownload";
 import { PaginaAchtergrond } from "@/components/shop/PaginaAchtergrond";
 import { PaginaVideoBlok } from "@/components/marketing/PaginaVideoBlok";
+import { VoorWieKaarten } from "@/components/marketing/VoorWieKaarten";
 import {
   BEDRIJVEN_HOME,
   WERK_AANMELDEN,
@@ -156,19 +157,7 @@ export default function WerkHomePage() {
             <p className="eyebrow">Voor wie</p>
             <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">Werk dat past bij jouw leven</h2>
           </Reveal>
-          <ul className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-            {WERK_GROEPEN.map((g, i) => (
-              <Reveal key={g.titel} as="li" delay={i * 80} className="overflow-hidden rounded-2xl border border-hair bg-white">
-                <div className="relative aspect-[4/3]">
-                  <Image src={g.foto} alt={g.alt} fill sizes="(max-width: 1024px) 50vw, 25vw" className="object-cover" />
-                </div>
-                <div className="p-3 md:p-4">
-                  <h3 className="font-display text-base font-semibold md:text-lg">{g.titel}</h3>
-                  <p className="mt-1 text-sm leading-relaxed text-neutralx-600">{g.tekst}</p>
-                </div>
-              </Reveal>
-            ))}
-          </ul>
+          <VoorWieKaarten items={WERK_GROEPEN} />
         </div>
       </section>
 
