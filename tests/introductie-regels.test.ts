@@ -13,7 +13,17 @@ import {
   type StatusFeiten,
 } from "@/lib/introducties/regels";
 import { INTRODUCTIE_FEE_REDEN, binnenVrijePeriode, laatsteGratisDag, vrijePeriode } from "@/lib/introducties/periode";
-import { aanvulling, dubbelVoorwaarden, introContactVan, introNotitie, koppelNotitie, metIntroContact } from "@/lib/introducties/lead";
+import {
+  aanvulling,
+  aanvullingVoorLead,
+  behoudIntroContacten,
+  dubbelVoorwaarden,
+  introContactVan,
+  introNotitie,
+  koppelNotitie,
+  metIntroContact,
+  zonderIntroContacten,
+} from "@/lib/introducties/lead";
 import { zakelijkDomein } from "@/lib/sales/vrije-maildomeinen";
 import { INTRODUCTIE_NL } from "@/lib/introducties/teksten";
 import { INTRODUCTIE_TALEN } from "@/lib/introducties/teksten-talen";
@@ -216,11 +226,30 @@ describe("wat we al kennen", () => {
     expect(metIntroContact({ introductieContacten: "kapot" }, c("i1"))).toEqual({ introductieContacten: [c("i1")] });
     expect(metIntroContact([1, 2], c("i1"))).toEqual({ introductieContacten: [c("i1")] });
 
-    const lead = { contactEmail: "info@dekorf.nl", contactPhone: "+31201234567", enrichmentJson: een };
-    expect(introContactVan(lead, "i1")).toEqual({ email: "i1@dekorf.nl", telefoon: null });
+    const lead = { contactName: "Receptie", contactEmail: "info@dekorf.nl", contactPhone: "+31201234567", enrichmentJson: een };
+    expect(introContactVan(lead, "i1")).toEqual({ contactNaam: "Piet", email: "i1@dekorf.nl", telefoon: null });
     // een lead die de introductie zelf maakte: de velden van de lead
-    expect(introContactVan(lead, "i9")).toEqual({ email: "info@dekorf.nl", telefoon: "+31201234567" });
-    expect(introContactVan(null, "i1")).toEqual({ email: null, telefoon: null });
+    expect(introContactVan(lead, "i9")).toEqual({ contactNaam: "Receptie", email: "info@dekorf.nl", telefoon: "+31201234567" });
+    expect(introContactVan(null, "i1")).toEqual({ contactNaam: null, email: null, telefoon: null });
+  });
+
+  it("de sales-motor ziet de contacten van introducties nooit, en verrijken via de KVK laat ze staan", () => {
+    const c = { introId: "i1", at: "2026-11-17T08:00:00.000Z", contactNaam: "Piet", email: "piet@dekorf.nl", telefoon: null };
+    const verrijkt = metIntroContact({ sbiCodes: ["1071"], websiteCheck: { score: 40 } }, c);
+    expect(zonderIntroContacten(verrijkt)).toEqual({ sbiCodes: ["1071"], websiteCheck: { score: 40 } });
+    expect(JSON.stringify(zonderIntroContacten(verrijkt))).not.toContain("piet@dekorf.nl");
+    // het origineel blijft heel
+    expect((verrijkt as { introductieContacten: unknown[] }).introductieContacten).toHaveLength(1);
+    expect(zonderIntroContacten(null)).toEqual({});
+    expect(behoudIntroContacten(verrijkt)).toEqual({ introductieContacten: [c] });
+    expect(behoudIntroContacten({ sbiCodes: ["1071"] })).toEqual({});
+  });
+
+  it("een lead in een campagne krijgt het voorgestelde contact nooit in zijn eigen velden (de motor mailt die)", () => {
+    const leeg = { contactName: null, contactEmail: null, contactPhone: null };
+    const nieuw = { contactNaam: "Piet", email: "piet@dekorf.nl", telefoon: "+31612345678" };
+    expect(aanvullingVoorLead({ ...leeg, campaignId: "camp-1" }, nieuw)).toEqual({});
+    expect(aanvullingVoorLead({ ...leeg, campaignId: null }, nieuw)).toEqual({ contactName: "Piet", contactEmail: "piet@dekorf.nl", contactPhone: "+31612345678" });
   });
 
   it("de notitie bij de lead noemt geen naam van wie het voorstelde, wel dat niets vanzelf gaat", () => {

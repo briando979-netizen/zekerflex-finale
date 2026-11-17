@@ -61,7 +61,11 @@ export function koppelNotitie(bedrijfsnaam: string, laatsteGratisDag: string, nu
   return `${stempel(nu)} Gekoppeld aan bedrijf ${bedrijfsnaam.slice(0, 120)}: geen platformkosten tot en met ${laatsteGratisDag}.`;
 }
 
-/** Het contact dat een introductie gaf, bij een lead die al bestond (enrichmentJson.introductieContacten). */
+/**
+ * Het contact dat een introductie gaf, bij een lead die al bestond (enrichmentJson.introductieContacten). Alleen voor
+ * mensen: de sales-motor schrijft er geen mail mee (lib/sales/outreach.ts haalt het eruit met zonderIntroContacten) en
+ * verrijken via de KVK laat het staan (behoudIntroContacten in lib/sales/leads.ts).
+ */
 export interface IntroContact {
   introId: string;
   at: string;
@@ -84,14 +88,39 @@ export function metIntroContact(enrichment: unknown, contact: IntroContact): Pri
   return { ...basis, introductieContacten: contacten } as unknown as Prisma.InputJsonValue;
 }
 
-/** Het e-mailadres en nummer van één introductie: uit de verrijking, anders de velden van de lead (een lead die de introductie zelf maakte). */
+/** Wat de LLM van de sales-motor van de verrijking mag zien: alles behalve de contacten van introducties. */
+export function zonderIntroContacten(enrichment: unknown): Record<string, unknown> {
+  if (!enrichment || typeof enrichment !== "object" || Array.isArray(enrichment)) return (enrichment ?? {}) as Record<string, unknown>;
+  const rest = { ...(enrichment as Record<string, unknown>) };
+  delete rest.introductieContacten;
+  return rest;
+}
+
+/** Bij een verrijking die de oude vervangt (enrichLead): de contacten van introducties blijven staan. */
+export function behoudIntroContacten(enrichment: unknown): { introductieContacten?: IntroContact[] } {
+  const contacten = contactenVan(enrichment);
+  return contacten.length > 0 ? { introductieContacten: contacten } : {};
+}
+
+/** Naam, e-mailadres en nummer van één introductie: uit de verrijking, anders de velden van de lead (een lead die de introductie zelf maakte). */
 export function introContactVan(
-  lead: { contactEmail: string | null; contactPhone: string | null; enrichmentJson: unknown } | null,
+  lead: { contactName: string | null; contactEmail: string | null; contactPhone: string | null; enrichmentJson: unknown } | null,
   introId: string,
-): { email: string | null; telefoon: string | null } {
-  if (!lead) return { email: null, telefoon: null };
+): { contactNaam: string | null; email: string | null; telefoon: string | null } {
+  if (!lead) return { contactNaam: null, email: null, telefoon: null };
   const c = contactenVan(lead.enrichmentJson).find((x) => x.introId === introId);
-  return c ? { email: c.email, telefoon: c.telefoon } : { email: lead.contactEmail, telefoon: lead.contactPhone };
+  return c ? { contactNaam: c.contactNaam, email: c.email, telefoon: c.telefoon } : { contactNaam: lead.contactName, email: lead.contactEmail, telefoon: lead.contactPhone };
+}
+
+/**
+ * Een bestaande lead aanvullen: alleen lege velden vullen, nooit iets overschrijven. Nooit bij een lead in een campagne:
+ * de motor mailt die velden vanzelf (lib/sales/engine.ts), en een voorgestelde persoon krijgt nooit een automatische mail.
+ */
+export function aanvullingVoorLead(
+  lead: { campaignId: string | null; contactName: string | null; contactEmail: string | null; contactPhone: string | null },
+  nieuw: { contactNaam: string; email: string | null; telefoon: string | null },
+): { contactName?: string; contactEmail?: string; contactPhone?: string } {
+  return lead.campaignId ? {} : aanvulling(lead, nieuw);
 }
 
 /** Een bestaande lead aanvullen: alleen lege velden vullen, nooit iets overschrijven. */
