@@ -32,6 +32,8 @@ import { rewardReferral } from "@/lib/rewards/referral";
 import { getFastPay } from "@/lib/payouts/fastpay";
 import { feePerHourFor, monthHoursFor, tierFor } from "@/lib/pricing/volume";
 import { isCompTenant } from "@/lib/billing/comp";
+import { introductieZonderFee } from "@/lib/introducties/vrijstelling";
+import { INTRODUCTIE_FEE_REDEN } from "@/lib/introducties/periode";
 import { markupFor } from "@/lib/uitzendbureau/insights";
 import { personalAccount } from "@/lib/bank/accounts";
 import { evaluateTimesheetFraud } from "@/lib/fraud/timesheet";
@@ -287,6 +289,9 @@ async function approveTimesheetInner(
     const monthHours = await monthHoursFor(ts.branch.tenantId);
     // A free (comp) company pays no platform fee; its € 0 fee invoice is booked as paid.
     const freeFee = await isCompTenant(ts.branch.tenantId);
+    // "Introduceer een bedrijf" (lib/introducties): de eerste twee weken na het koppelen geen platformkosten, naar de dag
+    // van de dienst in Amsterdam. Dezelfde € 0-factuur als hierboven, met de reden op de regel; elk ander bedrijf: niets anders.
+    const introductieVrij = !freeFee && (await introductieZonderFee(ts.branch.tenantId, ts.scheduledStart));
 
     // --- Transaction: approve + invoices + pending payment ------------
     const persisted = await prisma.$transaction(async (tx) => {
@@ -312,8 +317,9 @@ async function approveTimesheetInner(
         platformInvoiceNumber: platformNumber,
         extraCostsGrossCents: ts.extraCostsCents,
         extraCostsNote: ts.extraCostsNote,
-        platformFeePerHourCents: freeFee ? 0 : feePerHourFor(monthHours),
+        platformFeePerHourCents: freeFee || introductieVrij ? 0 : feePerHourFor(monthHours),
         volumeTierName: tierFor(monthHours).tier.name,
+        ...(introductieVrij ? { platformFeeReden: INTRODUCTIE_FEE_REDEN } : {}),
       });
 
       const updated = await tx.timesheet.update({

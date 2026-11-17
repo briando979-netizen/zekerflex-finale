@@ -27,6 +27,7 @@ import { verwerkRijschoolSessie } from "@/lib/rijschool/betalen";
 import { verwerkHorecaSessie } from "@/lib/horeca/betalen";
 import { verwerkDomeinSessie } from "@/lib/domeinen/bestelling";
 import { domeinFactuurBetaald } from "@/lib/domeinen/verlengen";
+import { beloonIntroductieNaBetaling } from "@/lib/introducties/beloning";
 import { meldVerkopersBetaald } from "@/lib/shop/verkoper";
 import { decrementVariantStock, notifyShopOrderPaid, type ShopOrderLine } from "@/lib/shop/bestelling-betaald";
 import { maakAgentBestelling } from "@/lib/shop/agent-handel-server";
@@ -51,6 +52,7 @@ async function markInvoicePaid(invoiceId: string, session: Stripe.Checkout.Sessi
       totalCents: true,
       currency: true,
       recipientFreelancerId: true,
+      recipientTenantId: true,
       stripePaymentIntentId: true,
     },
   });
@@ -69,6 +71,8 @@ async function markInvoicePaid(invoiceId: string, session: Stripe.Checkout.Sessi
       },
     });
     await settleClawbacks(invoice.id).catch((err) => logger.error("settling clawback failed", { invoiceId: invoice.id, error: (err as Error).message }));
+    // de eerste betaalde factuur voor platformkosten van een voorgesteld bedrijf: bol-tegoed verschuldigd (lib/introducties/beloning.ts; eenmalig, gooit nooit)
+    await beloonIntroductieNaBetaling(invoice);
     // The client paid the freelancer's (self-billed) invoice: a freelancer
     // who chose "wait for the client" is paid in full now.
     if (invoice.type === InvoiceType.SELF_BILL_FREELANCER) {

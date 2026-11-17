@@ -38,6 +38,7 @@ const FORMULIER_NAAM: Record<string, string> = {
   "uitzendbureau": "Uitzendbureau-aanvraag (/uitzendbureau)",
   "rekentool-uitkomst": "Rekentool: uitkomst mailen (/rekentools)",
   "btw-check": "Btw-nummer check (/rekentools/btw-nummer-check)",
+  "introductie": "Introduceer een bedrijf (/dashboard en /werkgever)",
 };
 
 const RANGES = [7, 30, 90] as const;
