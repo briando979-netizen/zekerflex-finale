@@ -415,18 +415,57 @@ export interface OsmBuurtVraag {
   aantal?: number;
 }
 
+const TAG_SLEUTEL = /^[a-z][a-z_:]{1,39}$/;
+const TAG_SOORT = /^[a-z0-9][a-z0-9_:.-]{1,59}$/;
+
 /** Bedrijven van hetzelfde soort binnen een straal, via Overpass. */
 export async function osmBedrijvenInBuurt(vraag: OsmBuurtVraag): Promise<OsmPlaats[]> {
   const sleutel = vraag.soort.sleutel.trim().toLowerCase();
   const soort = vraag.soort.soort.trim().toLowerCase();
   // alleen nette tagnamen; een vreemd teken zou de Overpass-opdracht kunnen oprekken
-  if (!/^[a-z][a-z_:]{1,39}$/.test(sleutel) || !/^[a-z0-9][a-z0-9_:.-]{1,59}$/.test(soort)) return [];
+  if (!TAG_SLEUTEL.test(sleutel) || !TAG_SOORT.test(soort)) return [];
+  return overpassRond(vraag, `nwr["${sleutel}"="${soort}"`);
+}
+
+export interface OsmSoortenVraag {
+  lat: number;
+  lng: number;
+  /** straal in meters (standaard 3000, max 20000) */
+  radiusM?: number;
+  /** de kenmerken die meetellen: een tag met soorten, of zonder soorten elke waarde (shop=*) */
+  soorten: readonly { sleutel: string; soorten?: readonly string[] | undefined }[];
+  /** hooguit zoveel bedrijven terug (standaard 10, max 30) */
+  aantal?: number;
+}
+
+/**
+ * Bedrijven van meerdere soorten tegelijk binnen een straal, in één Overpass-vraag (de salesmotor: alle horeca rond het
+ * middelpunt van een plaats). Een kenmerk met een vreemde naam valt weg; zonder bruikbaar kenmerk komt er niets.
+ */
+export async function osmBedrijvenVanSoorten(vraag: OsmSoortenVraag): Promise<OsmPlaats[]> {
+  const delen: string[] = [];
+  for (const k of vraag.soorten) {
+    const sleutel = k.sleutel.trim().toLowerCase();
+    if (!TAG_SLEUTEL.test(sleutel)) continue;
+    const soorten = (k.soorten ?? []).map((x) => x.trim().toLowerCase()).filter((x) => TAG_SOORT.test(x));
+    if (k.soorten && !soorten.length) continue;
+    delen.push(soorten.length ? `nwr["${sleutel}"~"^(${soorten.join("|")})$"` : `nwr["${sleutel}"`);
+  }
+  if (!delen.length) return [];
+  return overpassRond(vraag, delen);
+}
+
+/** De Overpass-vraag rond een punt: één filter of een vereniging van filters, met cache en de wachtrij. */
+async function overpassRond(vraag: { lat: number; lng: number; radiusM?: number; aantal?: number }, filter: string | string[]): Promise<OsmPlaats[]> {
   const lat = nummer(vraag.lat);
   const lng = nummer(vraag.lng);
   if (lat === null || lng === null) return [];
   const radius = Math.min(20_000, Math.max(100, Math.round(vraag.radiusM ?? 3_000)));
   const aantal = Math.min(30, Math.max(1, vraag.aantal ?? 10));
-  const opdracht = `[out:json][timeout:20];nwr["${sleutel}"="${soort}"](around:${radius},${lat.toFixed(6)},${lng.toFixed(6)});out center tags ${aantal};`;
+  const rond = `](around:${radius},${lat.toFixed(6)},${lng.toFixed(6)});`;
+  const filters = Array.isArray(filter) ? filter : [filter];
+  const kern = filters.length === 1 ? `${filters[0]}${rond}` : `(${filters.map((f) => `${f}${rond}`).join("")});`;
+  const opdracht = `[out:json][timeout:20];${kern}out center tags ${aantal};`;
   const cacheSleutel = `buurt:${opdracht}`;
   const bewaard = uitCache<OsmPlaats[]>(cacheSleutel);
   if (bewaard) return bewaard;
