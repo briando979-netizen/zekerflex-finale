@@ -8,5 +8,6 @@ tekstopdracht, geen fotobank, de personen bestaan niet. Er is niets uit een ande
 | `slide-1.webp` | een crewlid voor een festivalpodium |
 | `slide-2.webp` | een magazijnmedewerker met een scanner |
 | `slide-3.webp` | twee crewleden op de rand van een podium |
+| `slide-1-uit.webp` | het crewlid van `slide-1.webp`, uitgeknipt (achtergrond weg, met rembg) voor de bewegende telefoon |
 
 Bijsnijden en verkleinen met sharp; er is geen tekst of logo toegevoegd.
