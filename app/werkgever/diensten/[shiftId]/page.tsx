@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { requirePrincipal } from "@/lib/auth";
-import { getEmployerShift } from "@/lib/dashboard/employer-shift";
+import { getEmployerShift, type EmployerShiftView } from "@/lib/dashboard/employer-shift";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getEmployerRelations } from "@/lib/employer/relations";
 import { PageHeader, Panel, EmptyState, StatusPill, money, moneyExact, dateTime } from "@/components/app/ui";
@@ -16,6 +16,8 @@ import { CandidateCardButton } from "@/components/app/CandidateCardButton";
 import { PublishPoolShiftButton } from "@/components/app/PublishPoolShiftButton";
 import { RepeatTeamButton } from "@/components/app/RepeatTeamButton";
 import { SpoedoproepPaneel } from "@/components/app/SpoedoproepPaneel";
+import { ReservebankKnop, ReserveInplannenKnop } from "@/components/app/ReservebankKnoppen";
+import { reservebankVoorPagina } from "@/lib/reservebank/store";
 import { getDict } from "@/lib/i18n/server";
 import { fmt, type Dict } from "@/lib/i18n/dictionaries";
 import { isTenantVerified } from "@/lib/company/verified";
@@ -61,6 +63,21 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
   const seatsFree = s.positions - s.assigned.length;
   const pendingOffers = s.offers.filter((o) => o.status === "pending");
   const shiftEnded = new Date(s.endsAt).getTime() < Date.now();
+
+  // Reservebank (lib/reservebank): open reacties die het bedrijf achter de hand houdt. Alleen vóór de start;
+  // daarna staan ze gewoon weer bij de reacties. Zegde iemand af, dan staan de reserves bovenaan om te kiezen.
+  const bank = await reservebankVoorPagina(
+    principal.grants,
+    { id: s.id, tenantId: s.tenantId, branchId: s.branchId, startsAt: s.startsAt, status: s.status },
+    s.offers.map((o) => ({ id: o.id, shiftId: s.id, status: o.status })),
+  );
+  const reserveSet = new Set(bank.reserveIds);
+  const reserves = bank.reserveIds.flatMap((id) => pendingOffers.filter((o) => o.id === id));
+  const openReacties = pendingOffers.filter((o) => !reserveSet.has(o.id));
+  const bankBewerkbaar = bank.toegang === "schrijven" && bank.open;
+  const kanInplannen = bankBewerkbaar && verified && seatsFree > 0;
+  const afzegBlok = bank.afzegging && kanInplannen && reserves.length > 0;
+  const zoektVervanger = s.assigned.find((a) => a.replacementRequested);
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -114,6 +131,22 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
         }
       />
 
+      {afzegBlok && (
+        <section aria-labelledby="afzeg-reservebank" className="mb-6 rounded-2xl border border-warn/40 bg-warn/10 p-4">
+          <div role="status">
+            <h2 id="afzeg-reservebank" className="font-semibold text-ink">
+              {d.afzegTitel}
+            </h2>
+            <p className="mt-1 text-sm text-neutralx-700">{d.afzegTekst}</p>
+          </div>
+          <ul className="surface mt-3 divide-y divide-hair overflow-hidden">
+            {reserves.map((o) => (
+              <ReserveRij key={o.id} o={o} shiftId={s.id} shiftTitle={s.title} dict={dict} bewerkbaar={bankBewerkbaar} kanInplannen={kanInplannen} vol={seatsFree === 0} />
+            ))}
+          </ul>
+        </section>
+      )}
+
       {!verified && (
         <div className="mb-6 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">
           <p className="font-semibold text-ink">Dit is een testklus</p>
@@ -155,11 +188,11 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
         />
       </div>
 
-      {pendingOffers.length > 0 && (
+      {openReacties.length > 0 && (
         <div className="mt-6">
-          <Panel title={fmt(d.offersTitle, { n: pendingOffers.length })} subtitle={d.offersSubtitle}>
+          <Panel title={fmt(d.offersTitle, { n: openReacties.length })} subtitle={seatsFree === 0 && bankBewerkbaar ? d.reserveTip : d.offersSubtitle}>
             <ul className="divide-y divide-hair">
-              {pendingOffers.map((o) => (
+              {openReacties.map((o) => (
                 <li key={o.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0 flex-1">
                     <CandidateCardButton userId={o.userId} shiftId={s.id} name={o.freelancerName} beslissing={{ offerId: o.id, regel: reactieRegel(dict.kandidaatKaart, o) }}>
@@ -190,10 +223,27 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
                   <Acties>
                     <CandidateCardButton userId={o.userId} shiftId={s.id} name={o.freelancerName} beslissing={{ offerId: o.id, regel: reactieRegel(dict.kandidaatKaart, o) }} />
                     <ChatUserButton toUserId={o.userId} contextKey={`shift:${s.id}`} subject={s.title} label={d.message} />
+                    {/* instead of declining: keep this reaction open, in reserve for a cancellation */}
+                    {bankBewerkbaar && <ReservebankKnop offerId={o.id} naam={o.freelancerName} op={false} />}
                     {/* Afwijzen / Accepteren open the same card: you always decide while seeing who it is */}
                     <CandidateCardButton userId={o.userId} shiftId={s.id} name={o.freelancerName} beslissing={{ offerId: o.id, regel: reactieRegel(dict.kandidaatKaart, o) }} knoppen="beslissen" />
                   </Acties>
                 </li>
+              ))}
+            </ul>
+          </Panel>
+        </div>
+      )}
+
+      {!afzegBlok && reserves.length > 0 && (
+        <div className="mt-6">
+          <Panel title={fmt(d.reserveTitle, { n: reserves.length })} subtitle={d.reserveSubtitle}>
+            {zoektVervanger && (
+              <p className="border-b border-hair px-5 py-3 text-xs text-neutralx-600">{fmt(d.reserveVervanging, { naam: zoektVervanger.name })}</p>
+            )}
+            <ul className="divide-y divide-hair">
+              {reserves.map((o) => (
+                <ReserveRij key={o.id} o={o} shiftId={s.id} shiftTitle={s.title} dict={dict} bewerkbaar={bankBewerkbaar} kanInplannen={kanInplannen} vol={seatsFree === 0} />
               ))}
             </ul>
           </Panel>
@@ -338,6 +388,50 @@ function reactieRegel(k: Dict["kandidaatKaart"], o: { proposedRateCents: number;
       ? fmt(k.reactieMet, { prijs: moneyExact(o.listedRateCents) })
       : fmt(k.tegenbod, { bod: moneyExact(o.proposedRateCents), lijst: moneyExact(o.listedRateCents) });
   return o.busyElsewhere ? `${bod}${k.elders}` : bod;
+}
+
+/** One reserve: who, the rate, and (before the start, seat free) "Inplannen" in one click. */
+function ReserveRij({
+  o,
+  shiftId,
+  shiftTitle,
+  dict,
+  bewerkbaar,
+  kanInplannen,
+  vol,
+}: {
+  o: EmployerShiftView["offers"][number];
+  shiftId: string;
+  shiftTitle: string;
+  dict: Dict;
+  bewerkbaar: boolean;
+  kanInplannen: boolean;
+  vol: boolean;
+}) {
+  const d = dict.shiftDetail;
+  return (
+    <li className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0 flex-1">
+        <CandidateCardButton userId={o.userId} shiftId={shiftId} name={o.freelancerName} beslissing={{ offerId: o.id, regel: reactieRegel(dict.kandidaatKaart, o) }}>
+          <Persoon url={o.avatarUrl} name={o.freelancerName}>
+            <span className="num font-semibold text-brand-600">{moneyExact(o.proposedRateCents)}/u</span>
+            {o.reliability !== null && <span> · {fmt(d.reliability, { n: Math.round(o.reliability * 100) })}</span>}
+            {o.reviewCount > 0 && <span> · ★ {o.reviewAverage.toFixed(1).replace(".", ",")} ({o.reviewCount})</span>}
+          </Persoon>
+        </CandidateCardButton>
+        {o.busyElsewhere && (
+          <p className="mt-1.5 pl-[3.25rem] text-xs text-neutralx-500">
+            <span className="font-semibold text-warn">⏰ {d.busyElsewhere}.</span> {d.busyElsewhereHint}
+          </p>
+        )}
+      </div>
+      <Acties>
+        <ChatUserButton toUserId={o.userId} contextKey={`shift:${shiftId}`} subject={shiftTitle} label={d.message} />
+        {bewerkbaar && <ReservebankKnop offerId={o.id} naam={o.freelancerName} op />}
+        {kanInplannen ? <ReserveInplannenKnop offerId={o.id} naam={o.freelancerName} /> : vol ? <StatusPill tone="neutral">{d.reserveWacht}</StatusPill> : null}
+      </Acties>
+    </li>
+  );
 }
 
 /** Photo + name + one line: the clickable part of a row (opens the profile card). */

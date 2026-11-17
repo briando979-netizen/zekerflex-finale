@@ -24,6 +24,8 @@ export interface EmployerShiftView {
   extraInfo: string | null;
   branch: string;
   branchId: string;
+  /** het bedrijf van de vestiging (o.a. voor de reservebank, lib/reservebank) */
+  tenantId: string;
   city: string;
   startsAt: Date;
   endsAt: Date;
@@ -206,6 +208,7 @@ export async function getEmployerShift(
     extraInfo: shift.extraInfo,
     branch: shift.branch.name,
     branchId: shift.branch.id,
+    tenantId: shift.branch.tenantId,
     city: shift.branch.city,
     startsAt: shift.startsAt,
     endsAt: shift.endsAt,

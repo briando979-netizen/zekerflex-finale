@@ -22,6 +22,8 @@ import { pushWhen } from "@/lib/i18n/worker-push";
 import { findOverlappingShift, overlapMessageOther, overlapWhen } from "@/lib/shifts/worker-overlap";
 import { shiftLengthProblem } from "@/lib/shifts/shift-length";
 import { parseAmsterdamLocal } from "@/lib/time/amsterdam";
+import { haalVanReservebank, zetOpReservebank } from "@/lib/reservebank/store";
+import { reservebankOpen, reservebankToegang } from "@/lib/reservebank/kern";
 
 export interface OfferResponse {
   ok: boolean;
@@ -47,7 +49,7 @@ async function assertOwnsShift(shiftId: string) {
       hourlyRateCents: true,
       positions: true,
       viaUitzendbureau: true,
-      branch: { select: { name: true } },
+      branch: { select: { id: true, name: true, tenantId: true } },
       assignments: {
         where: { cancelledAt: null },
         select: { id: true, freelancer: { select: { id: true, userId: true, user: { select: { fullName: true } } } } },
@@ -365,7 +367,7 @@ export async function respondToOfferAction(
     const scopeWhere = scope.branchIds ? { id: { in: scope.branchIds } } : { tenantId: { in: scope.tenantIds } };
     const shift = await prisma.shift.findFirst({
       where: { AND: [{ id: offer.shiftId }, { branch: scopeWhere }] },
-      select: { id: true, title: true, hourlyRateCents: true, status: true, startsAt: true, endsAt: true },
+      select: { id: true, title: true, hourlyRateCents: true, status: true, startsAt: true, endsAt: true, branch: { select: { tenantId: true } } },
     });
     if (!shift) throw AppError.forbidden("Je hebt geen toegang tot deze dienst.");
 
@@ -425,6 +427,8 @@ export async function respondToOfferAction(
       await setOfferStatus(offerId, decision);
       runAfter(() => pushOfferDeclined(offer.userId, { id: shift.id, title: shift.title }));
     }
+    // Gekozen of afgewezen: dan staat hij niet meer op de reservebank (lezen filtert hem ook al weg; dit ruimt op).
+    await haalVanReservebank({ id: shift.id, tenantId: shift.branch.tenantId }, offerId).catch(() => undefined);
     // "uitgekozen" push right away (the sweep would also catch it)
     if (decision === "accepted") runAfter(() => maybeSweepWorkerPushes());
 
@@ -456,6 +460,51 @@ export async function respondToOfferAction(
       ok: true,
       message: decision === "accepted" ? `${Noun} geaccepteerd — de kracht is toegewezen aan de dienst.` : `${Noun} afgewezen.`,
     };
+  } catch (err) {
+    if (err instanceof AppError) return { ok: false, message: err.message };
+    return { ok: false, message: "Actie mislukt." };
+  }
+}
+
+/**
+ * Reservebank (lib/reservebank): een open reactie achter de hand houden in plaats van afwijzen, of er weer af halen.
+ * De reactie blijft gewoon openstaan; inplannen gaat later via respondToOfferAction (dezelfde weg als altijd).
+ * Alleen het bedrijf zelf past de bank aan; het beheer van ZekerFlex kan hem alleen zien. Geen push aan de werker.
+ */
+export async function zetReserveAction(offerId: string, aan: boolean): Promise<OfferResponse> {
+  try {
+    const principal = await requirePrincipal();
+    requireRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN");
+    const offer = (await listCounterOffers(500)).find((o) => o.id === offerId);
+    if (!offer) return { ok: false, message: "Reactie niet gevonden." };
+    const { shift } = await assertOwnsShift(offer.shiftId);
+    const klus = { id: shift.id, tenantId: shift.branch.tenantId };
+    if (reservebankToegang(principal.grants, { tenantId: shift.branch.tenantId, branchId: shift.branch.id }) !== "schrijven") {
+      return { ok: false, message: "Alleen het bedrijf zelf kan de reservebank aanpassen." };
+    }
+
+    if (aan) {
+      if (offer.status !== "pending") return { ok: false, message: "Deze reactie is al afgehandeld." };
+      if (!reservebankOpen(shift, Date.now())) {
+        return { ok: false, message: "Deze klus is al begonnen of gaat niet door: de reservebank telt niet meer." };
+      }
+      await zetOpReservebank(klus, offer.id);
+    } else {
+      await haalVanReservebank(klus, offer.id);
+    }
+
+    await recordAudit({
+      category: "MATCHING",
+      action: aan ? "reservebank.added" : "reservebank.removed",
+      actorUserId: principal.userId,
+      actorLabel: "user",
+      summary: `Reactie ${aan ? "op de reservebank gezet" : "van de reservebank gehaald"} voor "${shift.title}"`,
+      targetType: "shift",
+      targetId: shift.id,
+    });
+
+    revalidatePath(`/werkgever/diensten/${shift.id}`);
+    return { ok: true, message: aan ? "Op de reservebank gezet." : "Van de reservebank gehaald." };
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };
     return { ok: false, message: "Actie mislukt." };

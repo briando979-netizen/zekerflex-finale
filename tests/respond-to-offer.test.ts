@@ -46,7 +46,15 @@ vi.mock("@/lib/messaging/store", () => ({
 }));
 vi.mock("@/lib/audit", () => ({ recordAudit: vi.fn().mockResolvedValue(undefined) }));
 
-import { respondToOfferAction } from "@/app/werkgever/diensten/[shiftId]/actions";
+// reservebank (lib/reservebank): een gekozen of afgewezen reactie gaat van de bank af
+const haalVanReservebank = vi.fn().mockResolvedValue(undefined);
+const zetOpReservebank = vi.fn().mockResolvedValue(undefined);
+vi.mock("@/lib/reservebank/store", () => ({
+  haalVanReservebank: (...a: unknown[]) => haalVanReservebank(...a),
+  zetOpReservebank: (...a: unknown[]) => zetOpReservebank(...a),
+}));
+
+import { respondToOfferAction, zetReserveAction } from "@/app/werkgever/diensten/[shiftId]/actions";
 
 function manager(): Principal {
   return {
@@ -82,9 +90,13 @@ const shift = {
   status: "OPEN",
   startsAt: new Date("2026-11-04T08:00:00Z"),
   endsAt: new Date("2026-11-04T16:00:00Z"),
+  branch: { id: "branch1", name: "Branch 1", tenantId: "org1" },
 };
 
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  vi.clearAllMocks();
+  vi.useRealTimers();
+});
 
 describe("respondToOfferAction", () => {
   it("accepts an offer by finalising a real assignment, not just flipping a status", async () => {
@@ -101,6 +113,8 @@ describe("respondToOfferAction", () => {
     expect(applyToShift).toHaveBeenCalledWith("freelancer1", "shift1");
     expect(setOfferStatus).toHaveBeenCalledWith("offer1", "accepted");
     expect(result).toEqual({ ok: true, message: expect.stringContaining("toegewezen") });
+    // een reserve die zo wordt ingepland staat daarna niet meer op de reservebank
+    expect(haalVanReservebank).toHaveBeenCalledWith({ id: "shift1", tenantId: "org1" }, "offer1");
   });
 
   it("leaves the offer pending when the assignment can't actually be finalised", async () => {
@@ -116,6 +130,8 @@ describe("respondToOfferAction", () => {
     expect(setOfferStatus).not.toHaveBeenCalled();
     expect(result.ok).toBe(false);
     expect(result.message).toContain("Deze dienst is al vol.");
+    // niet ingepland: dan blijft een reserve gewoon op de bank
+    expect(haalVanReservebank).not.toHaveBeenCalled();
   });
 
   it("refuses before changing the rate when the freelancer is booked elsewhere at that time", async () => {
@@ -175,5 +191,79 @@ describe("respondToOfferAction", () => {
 
     expect(result.message.toLowerCase()).not.toContain("tegenbod");
     expect(result.message).toContain("Reactie");
+  });
+});
+
+describe("zetReserveAction (reservebank)", () => {
+  // een dag vóór de klus (4 nov 09:00 Nederlandse tijd)
+  const voorDeStart = () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-03T12:00:00+01:00"));
+  };
+  const opzet = () => {
+    requirePrincipal.mockResolvedValue(manager());
+    resolveEmployerScope.mockResolvedValue({ tenantIds: ["org1"], branchIds: ["branch1"] });
+    listCounterOffers.mockResolvedValue([offer]);
+    shiftFindFirst.mockResolvedValue(shift);
+  };
+
+  it("zet een open reactie op de reservebank zonder hem af te wijzen", async () => {
+    voorDeStart();
+    opzet();
+
+    const result = await zetReserveAction("offer1", true);
+
+    expect(result.ok).toBe(true);
+    expect(zetOpReservebank).toHaveBeenCalledWith({ id: "shift1", tenantId: "org1" }, "offer1");
+    expect(setOfferStatus).not.toHaveBeenCalled();
+    expect(applyToShift).not.toHaveBeenCalled();
+  });
+
+  it("haalt hem er ook weer af", async () => {
+    voorDeStart();
+    opzet();
+
+    const result = await zetReserveAction("offer1", false);
+
+    expect(result.ok).toBe(true);
+    expect(haalVanReservebank).toHaveBeenCalledWith({ id: "shift1", tenantId: "org1" }, "offer1");
+  });
+
+  it("het beheer van ZekerFlex mag de bank zien, niet aanpassen", async () => {
+    voorDeStart();
+    opzet();
+    requirePrincipal.mockResolvedValue({
+      ...manager(),
+      grants: [{ role: "PLATFORM_ADMIN", organizationId: "zekerflex", locationIds: [] }],
+      managedBranchIds: [],
+    });
+    resolveEmployerScope.mockResolvedValue({ tenantIds: ["org1"], branchIds: null });
+
+    const result = await zetReserveAction("offer1", true);
+
+    expect(result.ok).toBe(false);
+    expect(zetOpReservebank).not.toHaveBeenCalled();
+  });
+
+  it("na de start telt de reservebank niet meer", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-04T09:30:00+01:00"));
+    opzet();
+
+    const result = await zetReserveAction("offer1", true);
+
+    expect(result.ok).toBe(false);
+    expect(zetOpReservebank).not.toHaveBeenCalled();
+  });
+
+  it("een afgehandelde reactie kan niet op de bank", async () => {
+    voorDeStart();
+    opzet();
+    listCounterOffers.mockResolvedValue([{ ...offer, status: "declined" }]);
+
+    const result = await zetReserveAction("offer1", true);
+
+    expect(result.ok).toBe(false);
+    expect(zetOpReservebank).not.toHaveBeenCalled();
   });
 });

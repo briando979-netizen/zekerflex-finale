@@ -11,8 +11,17 @@ const h = vi.hoisted(() => ({
   mails: [] as { text: string }[],
   rematched: [] as string[],
   standby: [] as string[],
+  // reservebank (lib/reservebank): hoeveel reserves de klus heeft, en welke afzegging gemeld werd
+  reserves: 0,
+  reserveMeldingen: [] as { shiftId: string; assignmentId: string }[],
 }));
 vi.mock("@/lib/matching/standby", () => ({ notifyStandby: async (id: string) => void h.standby.push(id) }));
+vi.mock("@/lib/reservebank/store", () => ({
+  meldReservesVrijePlek: async (shiftId: string, assignmentId: string) => {
+    h.reserveMeldingen.push({ shiftId, assignmentId });
+    return { reserves: h.reserves, gemeld: h.reserves };
+  },
+}));
 
 vi.mock("next/cache", () => ({ revalidatePath: () => undefined }));
 vi.mock("@/lib/auth", () => ({ requirePrincipal: async () => ({ userId: "u1", fullName: "Sanne de Vries" }) }));
@@ -78,6 +87,8 @@ beforeEach(() => {
   h.mails.length = 0;
   h.rematched.length = 0;
   h.standby.length = 0;
+  h.reserves = 0;
+  h.reserveMeldingen.length = 0;
 });
 
 describe("afzeggen door een werker", () => {
@@ -96,6 +107,25 @@ describe("afzeggen door een werker", () => {
     expect(h.pushes[0]?.push.title).toBe("Afgezegd: Magazijn");
     expect(h.pushes[0]?.push.body).toContain("Sanne de Vries komt niet op");
     expect(h.pushes[0]?.push.body).toContain("09:00");
+    expect(h.pushes[0]?.push.body).toContain("ZekerFlex zoekt direct een vervanger");
     expect(h.mails[0]?.text).toContain("09:00");
+    // de reserves van de klus horen het (één keer per afzegging, lib/reservebank/store.ts)
+    expect(h.reserveMeldingen).toEqual([{ shiftId: "sh1", assignmentId: "a1" }]);
+  });
+
+  it("met reserves op de reservebank zegt de push aan het bedrijf dat het daaruit kan kiezen", async () => {
+    h.reserves = 2;
+    const res = await POST(new Request("http://x/api", { method: "POST", body: JSON.stringify({ reason: "Ziek geworden" }) }), {
+      params: Promise.resolve({ assignmentId: "a1" }),
+    });
+    await Promise.all(h.tasks);
+    vi.useRealTimers();
+
+    expect(res.status).toBe(200);
+    expect(h.pushes).toHaveLength(1);
+    expect(h.pushes[0]?.ids).toEqual(["mgr1"]);
+    expect(h.pushes[0]?.push.body).toContain("Sanne de Vries komt niet op");
+    expect(h.pushes[0]?.push.body).toContain("2 reserves op de reservebank");
+    expect(h.pushes[0]?.push.body).not.toContain("ZekerFlex zoekt direct");
   });
 });

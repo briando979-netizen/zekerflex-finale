@@ -9,6 +9,7 @@ import { detectSeries, type Series } from "@/lib/shifts/series";
 import { listReplacementRequests } from "@/lib/replacements/store";
 import { offersForUser, myOfferForShift, type OfferStatus } from "@/lib/offers/store";
 import { reactieVervalt } from "@/lib/offers/verval";
+import { reserveReactieIds } from "@/lib/reservebank/store";
 import { tenantsBlockingUser } from "@/lib/employer/relations";
 import { payoutEligibility } from "@/lib/fiscal/eligibility";
 import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
@@ -80,7 +81,11 @@ export interface MarketplaceShift {
   isReplacement: boolean;
   replacementNote: string | null;
   /** the signed-in freelancer's own counter-offer on this shift, if any */
-  myOffer: { proposedRateCents: number; status: OfferStatus } | null;
+  /**
+   * reserve: de reactie staat op de reservebank van het bedrijf (lib/reservebank): nog niet ingepland, wel achter de
+   * hand. Alleen gezet bij een open reactie vóór de start.
+   */
+  myOffer: { proposedRateCents: number; status: OfferStatus; reserve?: true } | null;
   /** the client offers 1-minute / 3-day payout (credit-checked) */
   fastPay: boolean;
   /** only uitzendkrachten (payroll-track) can react to this shift */
@@ -466,6 +471,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
       positions: true,
       branchId: true,
       createdAt: true,
+      status: true,
       requiredSkill: { select: { name: true } },
       branch: {
         select: {
@@ -615,7 +621,12 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
   if (ownOffer && ownOffer.status !== "withdrawn") {
     // begonnen zonder keuze: niet uitgekozen, niet meer "in afwachting" (lib/offers/verval.ts)
     const verlopen = ownOffer.status === "pending" && reactieVervalt({ startsAt: new Date(base.startsAt), status: "" }, Date.now());
-    base.myOffer = { proposedRateCents: ownOffer.proposedRateCents, status: verlopen ? "expired" : ownOffer.status };
+    // op de reservebank van het bedrijf: de werker ziet "Reserve: je bent nog niet ingepland" (lib/reservebank)
+    const reserve =
+      ownOffer.status === "pending" &&
+      !verlopen &&
+      (await reserveReactieIds([ownOffer], [{ id: row.id, tenantId: row.branch.tenantId, startsAt: row.startsAt, status: row.status }])).has(ownOffer.id);
+    base.myOffer = { proposedRateCents: ownOffer.proposedRateCents, status: verlopen ? "expired" : ownOffer.status, ...(reserve ? { reserve: true as const } : {}) };
   }
 
   const agreementType =

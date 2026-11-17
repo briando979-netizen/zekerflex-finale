@@ -51,6 +51,9 @@ export interface WorkerPushTexts {
   /** reactie vervallen: de klus begon zonder dat de opdrachtgever koos (lib/offers/expire.ts) */
   notChosenTitle: string;
   notChosenBody: (title: string) => string;
+  /** reservebank: een aangenomen kracht zegde af, de plek is vrij (lib/reservebank/store.ts) */
+  reserveVrijTitle: string;
+  reserveVrijBody: (title: string) => string;
   followTitle: (company: string) => string;
   followMore: (extraDays: number) => string;
   geoTitle: (hours: number) => string;
@@ -160,6 +163,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     declinedBody: (t) => `Voor "${t}" is iemand anders gekozen. Er staan nog genoeg andere klussen voor je klaar.`,
     notChosenTitle: "Helaas niet uitgekozen",
     notChosenBody: (t) => `Voor "${t}" ben je deze keer niet gekozen. Zoek een andere klus: er staan er genoeg voor je klaar.`,
+    reserveVrijTitle: "Je staat op de reservebank",
+    reserveVrijBody: (t) => `Er is plek vrijgekomen bij "${t}"; het bedrijf kan je nu inplannen.`,
     followTitle: (c) => `❤️ Nieuwe dienst bij ${c}`,
     followMore: (n) => ` (+${n} ${n === 1 ? "dag" : "dagen"})`,
     geoTitle: (h) => `📍 Klus dichtbij — begint over ${h} uur`,
@@ -257,6 +262,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     declinedBody: (t) => `Someone else was chosen for "${t}". There are plenty of other jobs waiting for you.`,
     notChosenTitle: "Not selected this time",
     notChosenBody: (t) => `You were not chosen for "${t}" this time. Find another job: there are plenty waiting for you.`,
+    reserveVrijTitle: "You are on the reserve list",
+    reserveVrijBody: (t) => `A spot has opened up at "${t}"; the company can schedule you now.`,
     followTitle: (c) => `❤️ New shift at ${c}`,
     followMore: (n) => ` (+${n} ${n === 1 ? "day" : "days"})`,
     geoTitle: (h) => `📍 Job nearby — starts in ${h} ${h === 1 ? "hour" : "hours"}`,
@@ -354,6 +361,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     declinedBody: (t) => `Do „${t}” wybrano kogoś innego. Czeka na Ciebie wiele innych zleceń.`,
     notChosenTitle: "Tym razem nie wybrano",
     notChosenBody: (t) => `Tym razem nie wybrano Cię do „${t}”. Znajdź inne zlecenie: czeka na Ciebie wiele innych.`,
+    reserveVrijTitle: "Jesteś na liście rezerwowej",
+    reserveVrijBody: (t) => `Zwolniło się miejsce przy „${t}”; firma może Cię teraz zaplanować.`,
     followTitle: (c) => `❤️ Nowa zmiana w ${c}`,
     followMore: (n) => ` (+${n} ${n === 1 ? "dzień" : "dni"})`,
     geoTitle: (h) => `📍 Zlecenie w pobliżu — zaczyna się za ${h} godz.`,
@@ -451,6 +460,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     declinedBody: (t) => `Pentru „${t}” a fost ales altcineva. Te așteaptă multe alte joburi.`,
     notChosenTitle: "Nu ai fost ales(ă) de data aceasta",
     notChosenBody: (t) => `De data aceasta nu ai fost ales(ă) pentru „${t}”. Caută alt job: te așteaptă multe altele.`,
+    reserveVrijTitle: "Ești pe lista de rezervă",
+    reserveVrijBody: (t) => `S-a eliberat un loc la „${t}”; firma te poate programa acum.`,
     followTitle: (c) => `❤️ Tură nouă la ${c}`,
     followMore: (n) => ` (+${n} ${n === 1 ? "zi" : "zile"})`,
     geoTitle: (h) => `📍 Job în apropiere — începe în ${h} ${h === 1 ? "oră" : "ore"}`,
@@ -548,6 +559,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     declinedBody: (t) => `На «${t}» обрали іншу людину. На вас чекає багато інших робіт.`,
     notChosenTitle: "Цього разу вас не обрано",
     notChosenBody: (t) => `Цього разу вас не обрали на «${t}». Знайдіть іншу роботу: на вас чекає багато інших.`,
+    reserveVrijTitle: "Ви в резервному списку",
+    reserveVrijBody: (t) => `Звільнилося місце на «${t}»; компанія може вас зараз запланувати.`,
     followTitle: (c) => `❤️ Нова зміна в ${c}`,
     followMore: (n) => ` (+${n} дн.)`,
     geoTitle: (h) => `📍 Робота поруч — починається через ${h} год`,

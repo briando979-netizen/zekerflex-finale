@@ -177,11 +177,13 @@ export function ShiftCard({
             </span>
           )}
           {shift.myOffer && (
-            <span className="rounded-full bg-warn/10 px-2 py-0.5 text-[11px] font-semibold text-warn">
+            <span
+              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${shift.myOffer.reserve ? "bg-paper-soft text-neutralx-600" : "bg-warn/10 text-warn"}`}
+            >
               {shift.myOffer.proposedRateCents === shift.hourlyRateCents
                 ? c.responseSent
                 : c.counterOffer(moneyExact(shift.myOffer.proposedRateCents))}{" "}
-              · {c.offer[shift.myOffer.status] ?? shift.myOffer.status}
+              · {(shift.myOffer.reserve ? c.offer.reserve : c.offer[shift.myOffer.status]) ?? shift.myOffer.status}
             </span>
           )}
           {shift.replacementNote && !ribbon && (
