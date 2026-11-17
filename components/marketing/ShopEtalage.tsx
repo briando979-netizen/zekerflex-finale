@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { fmt, type Dict } from "@/lib/i18n/dictionaries";
+import { categorieNaam } from "@/lib/shop/categorieen";
 import type { CadeauSleutel, OntdekTegel, OverzichtKolom, Seizoen, Thema } from "@/lib/shop/etalage";
 import type { VoorWaarde } from "@/lib/shop/categoriemenu";
 
@@ -11,7 +12,7 @@ const WRAP = "mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8";
 const H2 = "font-display text-[22px] font-bold tracking-tight text-ink sm:text-[26px]";
 
 function catLabel(c: string, t: Dict): string {
-  return c === "Werk & PBM" ? t.shop.navPbm : c === "Kleding" ? t.shop.navKleding : c === "Werkdag" ? t.shop.navWerkdag : c === "Cadeaus" ? t.shopZakelijk.navCadeaus : c;
+  return c === "Werk & PBM" ? t.shop.navPbm : c === "Kleding" ? t.shop.navKleding : c === "Werkdag" ? t.shop.navWerkdag : c === "Cadeaus" ? t.shopZakelijk.navCadeaus : categorieNaam(c, t.shop.navKleding !== "Kleding");
 }
 function voorLabel(v: VoorWaarde, t: Dict): string {
   return v === "heren" ? t.shop.doelHeren : v === "vrouwen" ? t.shop.doelVrouwen : t.shop.doelKinderen;

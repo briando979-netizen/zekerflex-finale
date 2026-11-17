@@ -20,6 +20,7 @@ import { zichtbareShopSecties, type ShopSectieId } from "@/lib/ontwerp/shop-inde
 import { getShopIndeling } from "@/lib/ontwerp/shop-indeling-store";
 import { cadeauKeuzes, catalogusOverzicht, collectieUitAdres, ontdekTegels, prijsUitAdres, seizoenVan, themaKaarten, type EtalageProduct } from "@/lib/shop/etalage";
 import { ShopAlles, ShopCadeauhulp, ShopOntdek, ShopRegelen, ShopThemas } from "@/components/marketing/ShopEtalage";
+import { SHOP_CATEGORIEEN } from "@/lib/shop/categorieen";
 
 // <title> kort en zonder het sjabloon " · ZekerFlex" erachter (dan stond het merk er twee keer); delen houdt de lange
 const title = "ZekerFlex Shop — kleding, werkkleding en PBM, eerst passen in de paskamer";
@@ -35,7 +36,7 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-const CATS = ["Alles", "Werk & PBM", "Kleding", "Werkdag", "Cadeaus"] as const;
+const CATS = ["Alles", ...SHOP_CATEGORIEEN] as const;
 type Cat = (typeof CATS)[number];
 
 export default async function ShopPage(props: { searchParams: Promise<{ cat?: string; q?: string; voor?: string; prijs?: string; collectie?: string }> }) {

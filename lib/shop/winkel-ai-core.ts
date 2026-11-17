@@ -4,6 +4,7 @@
 // keurt goed; er wordt hier nooit iets besteld of betaald.
 
 import { btwTarief } from "@/lib/shop/modus";
+import { SHOP_CATEGORIEEN } from "@/lib/shop/categorieen";
 
 export type MargeBeleid = {
   /** Marge als % van de verkoopprijs excl. btw (bijv. 55 = inkoop is 45 % van de verkoopprijs). */
@@ -124,7 +125,7 @@ export const tariefVoor = (naam: string, slug = slugVan(naam)): number => btwTar
 
 // ── Een productconcept van het model soepel lezen ───────────────────────────
 
-export const WINKEL_CATEGORIEEN = ["Werk & PBM", "Kleding", "Werkdag", "Cadeaus"] as const;
+export const WINKEL_CATEGORIEEN = SHOP_CATEGORIEEN;
 export type WinkelCategorie = (typeof WINKEL_CATEGORIEEN)[number];
 export type Doelgroep = "heren" | "vrouwen" | "kinderen" | "unisex";
 
@@ -156,6 +157,13 @@ export function categorieVan(v: unknown): WinkelCategorie {
   if (precies) return precies;
   if (/pbm|veilig|werkkled|bescherm|werkschoen|helm|hesje/.test(s)) return "Werk & PBM";
   if (/cadeau|gift|kado/.test(s)) return "Cadeaus";
+  if (/elektro|electro|gadget|oplader|koptelefoon|speaker|usb|camera|smart/.test(s)) return "Elektronica";
+  if (/speelgoed|toy|puzzel|knuffel|spel\b/.test(s)) return "Speelgoed";
+  if (/wonen|keuken|home|decor|lamp|kussen/.test(s)) return "Wonen & keuken";
+  if (/sport|fitness|yoga|outdoor|kamperen|fiets/.test(s)) return "Sport & buiten";
+  if (/beauty|verzorging|make-?up|huid|haar|nagel/.test(s)) return "Beauty & verzorging";
+  if (/sieraad|sieraden|ketting|armband|horloge|watch|jewel/.test(s)) return "Sieraden & horloges";
+  if (/tassen|schoen|shoe|sneaker|rugzak|bag/.test(s)) return "Tassen & schoenen";
   if (/werkdag|lunch|thermos|drinkfles|\bfles\b|\btas\b|kantoor/.test(s)) return "Werkdag";
   return "Kleding";
 }

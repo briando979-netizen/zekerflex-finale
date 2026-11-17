@@ -2,7 +2,10 @@
 // server zet de databaserij om (app/shop/page.tsx), zodat alleen wat de kaart
 // nodig heeft naar de browser gaat.
 
-export type ShopCategory = "Werk & PBM" | "Kleding" | "Werkdag" | "Cadeaus";
+import type { ShopCategorie } from "@/lib/shop/categorieen";
+
+/** Eén lijst voor de hele shop: lib/shop/categorieen.ts. */
+export type ShopCategory = ShopCategorie;
 export type ShopVariant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number };
 export type ShopCardProduct = {
   id: string;

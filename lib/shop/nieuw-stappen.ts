@@ -1,11 +1,12 @@
 import { euroNaarCenten, slugUitNaam, uniekeSlug, voorraadNaarGetal } from "@/lib/shop/product-formulier";
 import { kanZichtbaarWorden } from "@/lib/shop/media-product";
+import { SHOP_CATEGORIEEN } from "@/lib/shop/categorieen";
 
 // Product toevoegen in drie stappen (Mijn winkel, deel 4): 1 foto of link, 2 naam, omschrijving en prijs, 3 voorraad en zichtbaar. Puur: de regels
 // en de aanvragen aan de bestaande routes; het scherm (components/admin/ShopNieuwStappen.tsx) doet alleen het praten. Een nieuw product kan altijd eerst
 // als concept (verborgen) worden bewaard; "Zet in de winkel" mag pas met een foto en een prijs, zoals in het gewone formulier.
 
-export const CATEGORIEEN = ["Werk & PBM", "Kleding", "Werkdag", "Cadeaus"] as const;
+export const CATEGORIEEN = SHOP_CATEGORIEEN;
 export type Categorie = (typeof CATEGORIEEN)[number];
 
 export interface NieuwVelden {

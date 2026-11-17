@@ -12,6 +12,7 @@ import { CookieSettingsButton } from "@/components/marketing/CookieSettingsButto
 import { useI18n, setLocale } from "@/components/i18n/I18nProvider";
 import { EMPLOYER_LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
 import { fmt, type Dict } from "@/lib/i18n/dictionaries";
+import { SHOP_CATEGORIEEN, categorieNaam } from "@/lib/shop/categorieen";
 import { ShopModusProvider, useShopModus } from "@/components/marketing/ShopModus";
 import { btwOverzicht, btwTarief, type ShopModus } from "@/lib/shop/modus";
 import type { ShopBetaalwijze } from "@/lib/shop/overschrijving-kenmerk";
@@ -44,7 +45,7 @@ const readPartner = (): string | undefined => {
 };
 const money = (v: number) => `€ ${v.toFixed(2).replace(".", ",")}`;
 const WRAP = "mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8";
-const CATS = ["Werk & PBM", "Kleding", "Werkdag", "Cadeaus"] as const;
+const CATS = SHOP_CATEGORIEEN;
 
 /** De omlijsting met de keuze particulier/zakelijk (uit het cookie, gelezen in app/shop/layout.tsx). */
 /** `betaalwijze` (app/shop/layout.tsx): online via Stripe, per overschrijving, of nu even niet; de shop belooft alleen wat echt kan. */
@@ -683,7 +684,12 @@ function ModusKeuze({ t, licht = false, onGekozen }: { t: Dict; licht?: boolean;
 
 /** De naam van een categorie in de taal van de shop. */
 function catLabel(c: string, t: Dict): string {
-  return c === "Werk & PBM" ? t.shop.navPbm : c === "Kleding" ? t.shop.navKleding : c === "Werkdag" ? t.shop.navWerkdag : t.shop.navTeams;
+  if (c === "Werk & PBM") return t.shop.navPbm;
+  if (c === "Kleding") return t.shop.navKleding;
+  if (c === "Werkdag") return t.shop.navWerkdag;
+  if (c === "Cadeaus") return t.shop.navTeams;
+  // de nieuwe categorieën (elektronica, speelgoed, …): Engels als de shop in het Engels staat
+  return categorieNaam(c, t.shop.navKleding !== "Kleding");
 }
 
 const euroTekst = (cent: number) => `€ ${(cent / 100).toFixed(2).replace(".", ",")}`;

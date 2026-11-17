@@ -6,6 +6,7 @@ import { recordAudit } from "@/lib/audit";
 import { withAdminAccess } from "@/lib/auth/handlers";
 import { shopImageRef } from "@/lib/shop/schema";
 import { MAX_EXTRA_FOTOS } from "@/lib/shop/product-scherm";
+import { SHOP_CATEGORIEEN } from "@/lib/shop/categorieen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ const patchSchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
   slug: z.string().trim().regex(/^[a-z0-9-]+$/).max(120).optional(),
   description: z.string().trim().min(10).max(600).optional(),
-  category: z.enum(["Werk & PBM", "Kleding", "Werkdag", "Cadeaus"]).optional(),
+  category: z.enum(SHOP_CATEGORIEEN).optional(),
   gender: z.enum(["heren", "vrouwen", "kinderen", "unisex"]).nullable().optional(),
   collection: z.string().trim().max(60).nullable().optional(),
   isBundle: z.boolean().optional(),
