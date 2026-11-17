@@ -160,12 +160,11 @@ export function telVoorBeloning(f: { type: string; totalCents: number }): boolea
   return f.type === "PLATFORM_FEE" && Number.isFinite(f.totalCents) && f.totalCents > 0;
 }
 
-/** Eén introductie zoals de werker of werkgever hem in de eigen lijst ziet. */
+/** Eén introductie zoals de werker of werkgever hem in de eigen lijst ziet: het bedrijf en de stand, geen contactgegevens. */
 export interface IntroductieRegel {
   id: string;
   at: string;
   bedrijf: string;
-  contactNaam: string;
   status: IntroStatus;
 }
 
@@ -175,7 +174,8 @@ export interface AdminIntroRegel {
   at: string;
   rol: IntroductieRol;
   bedrijf: string;
-  contactNaam: string;
+  /** naam, adres en nummer van de contactpersoon: uit de lead (niet bewaard bij wie het voorstelde) */
+  contactNaam: string | null;
   email: string | null;
   telefoon: string | null;
   door: { userId: string; naam: string; email: string | null };
