@@ -77,14 +77,15 @@ export async function alGeverifieerd(userId: string): Promise<boolean> {
       where: { id: userId },
       select: {
         kycStatus: true,
-        identityChecks: {
-          where: { status: "VERIFIED", OR: [{ verifiedAt: { lt: BESTAAND_TOT } }, { verifiedAt: null, createdAt: { lt: BESTAAND_TOT } }] },
-          select: { id: true },
-          take: 1,
-        },
+        createdAt: true,
+        identityChecks: { where: { status: "VERIFIED" }, select: { verifiedAt: true, createdAt: true } },
       },
     });
-    return u?.kycStatus === "VERIFIED" && (u.identityChecks?.length ?? 0) > 0;
+    if (u?.kycStatus !== "VERIFIED") return false;
+    const goedgekeurd = u.identityChecks ?? [];
+    // een medewerker zette de identiteit zelf op goedgekeurd (geen controle in de lijst): dan telt het account zelf
+    if (goedgekeurd.length === 0) return u.createdAt.getTime() < BESTAAND_TOT.getTime();
+    return goedgekeurd.some((c) => (c.verifiedAt ?? c.createdAt).getTime() < BESTAAND_TOT.getTime());
   } catch {
     return false;
   }
