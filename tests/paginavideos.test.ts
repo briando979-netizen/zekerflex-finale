@@ -10,7 +10,7 @@ const root = process.cwd();
 const credits = readFileSync(path.join(root, "public/videos/pagina/CREDITS.md"), "utf8");
 
 describe("paginavideo's", () => {
-  it("elke video heeft een mp4 en een poster en staat in CREDITS.md met zijn Pexels-bronnen", () => {
+  it("elke video heeft een mp4 en een poster en staat in CREDITS.md", () => {
     for (const v of Object.values(PAGINA_VIDEOS)) {
       expect(existsSync(path.join(root, "public/videos/pagina", `${v.slug}.mp4`)), `${v.slug}.mp4`).toBe(true);
       expect(existsSync(path.join(root, "public/videos/pagina", `${v.slug}.jpg`)), `${v.slug}.jpg`).toBe(true);

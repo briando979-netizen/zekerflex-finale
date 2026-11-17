@@ -2,6 +2,7 @@
 // uitleg"): per pagina één video van ±30 seconden met vrije beelden van echte mensen aan het werk (Pexels License, zie
 // public/videos/pagina/CREDITS.md), een stuk echt scherm van de pagina en onze eigen stem (Piper). De mensen in beeld praten niet zelf:
 // de stem is die van ZekerFlex, en dat staat onder elke video. De tekst die wordt voorgelezen staat er ook als tekst bij.
+// Sinds 17 nov 2026 is het beeld van onze eigen campagnefoto's, in de stijl van de reclamevideo's (geen fotobank meer).
 // Puur: geen prisma of kv.
 
 export interface PaginaVideo {
