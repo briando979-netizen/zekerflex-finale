@@ -136,7 +136,7 @@ export function voorraadVan(inventories: unknown, land?: string): number {
 
 const REGELS: [RegExp, ShopCategorie][] = [
   [/\b(safety|work ?wear|workwear|ppe|protective|hi-?vis|helmet|work glove)/i, "Werk & PBM"],
-  [/\b(toy|toys|kids?|baby|plush|puzzle|doll|building blocks?|lego|rc car|children)/i, "Speelgoed"],
+  [/\b(toy|toys|plush|puzzle|doll|building blocks?|lego|rc car)/i, "Speelgoed"],
   [/\b(jewel|necklace|bracelet|earring|pendant|ring|watch(?!.*smart)|watches)/i, "Sieraden & horloges"],
   [/\b(electronic|bluetooth|speaker|headphone|earphone|earbud|charger|charging|cable|usb|power bank|camera|smart ?watch|smart home|phone|tablet|keyboard|mouse|gadget|led strip|drone|projector|tracker)/i, "Elektronica"],
   [/\b(bag|bags|backpack|handbag|wallet|purse|shoe|shoes|sneaker|boot|boots|sandal|slipper|luggage)/i, "Tassen & schoenen"],

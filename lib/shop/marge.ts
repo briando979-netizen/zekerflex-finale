@@ -88,13 +88,26 @@ export interface WinstTotaal {
   perProduct: WinstPerProduct[];
 }
 
+/** Wat een product ons per stuk kost, of (verkopersproduct) wat we er vast aan overhouden: de commissie. */
+export type KostenVanProduct = { inkoopCents: number | null; verzendCents: number; tarief?: number; winstVastCents?: undefined } | { winstVastCents: number };
+
+/** Winst per stuk, ook voor een verkopersproduct (dan is de winst de commissie en is er geen inkoop). */
+export function winstVoor(priceCents: number, k: KostenVanProduct, betaalPct = 0): WinstPerStuk {
+  if (k.winstVastCents !== undefined) {
+    const w = winstPerStuk(priceCents, null, { betaalPct: 0 });
+    return { ...w, winstCents: Math.round(k.winstVastCents), margePct: w.exclCents > 0 ? Math.round((k.winstVastCents / w.exclCents) * 1000) / 10 : null };
+  }
+  return winstPerStuk(priceCents, k.inkoopCents, { verzendCents: k.verzendCents, betaalPct, ...(k.tarief !== undefined ? { tarief: k.tarief } : {}) });
+}
+
 /**
  * Winst uit echte bestellingen. `kosten(productId)` geeft de inkoopprijs (null = onbekend, telt als 0 inkoop
- * en wordt dus te rooskleurig: de lijst per product laat dat zien) en de verzendkosten per stuk.
+ * en wordt dus te rooskleurig: de lijst per product laat dat zien) en de verzendkosten per stuk, of voor een
+ * verkopersproduct de vaste winst (onze commissie).
  */
 export function winstUitBestellingen(
   bestellingen: readonly BestellingVoorWinst[],
-  kosten: (productId: string) => { inkoopCents: number | null; verzendCents: number; tarief?: number },
+  kosten: (productId: string) => KostenVanProduct,
   betaalPct = 0,
 ): WinstTotaal {
   const per = new Map<string, WinstPerProduct>();
@@ -109,8 +122,7 @@ export function winstUitBestellingen(
     if (!regels.length) continue;
     aantal++;
     for (const r of regels) {
-      const k = kosten(r.productId);
-      const w = winstPerStuk(r.priceCents, k.inkoopCents, { verzendCents: k.verzendCents, betaalPct, ...(k.tarief !== undefined ? { tarief: k.tarief } : {}) });
+      const w = winstVoor(r.priceCents, kosten(r.productId), betaalPct);
       stuks += r.qty;
       omzet += r.priceCents * r.qty;
       inkoop += w.inkoopCents * r.qty;

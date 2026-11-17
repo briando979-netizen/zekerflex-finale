@@ -37,6 +37,7 @@ export function Leverancier() {
   const [verzendTekst, setVerzendTekst] = useState("");
   const [land, setLand] = useState("");
   const [margeTekst, setMargeTekst] = useState("");
+  const [oudBewaard, setOudBewaard] = useState(0);
 
   const laad = useCallback(async () => {
     try {
@@ -45,6 +46,8 @@ export function Leverancier() {
       setVerzendTekst((s.instellingen.verzendCents / 100).toFixed(2).replace(".", ","));
       setLand(s.instellingen.land);
       setMargeTekst(s.instellingen.margePct === null ? "" : String(s.instellingen.margePct));
+      const o = await vraag<{ bewaard: number }>("/api/admin/shop-ai/cj/oud-uit");
+      setOudBewaard(o.bewaard);
     } catch (e) {
       setFout((e as Error).message);
     }
@@ -243,21 +246,40 @@ export function Leverancier() {
         </Panel>
       )}
 
-      <Panel title="Oude assortiment vervangen" subtitle="Zet alles uit wat niet van CJ komt (en niet van een verkoper is). Niets wordt gewist; per product zet je het in Beheer → Webshop weer aan.">
-        <button
-          type="button"
-          className="a-btn"
-          disabled={bezig !== ""}
-          onClick={() => {
-            if (!window.confirm("Alle oude producten uitzetten? Ze blijven bestaan en zijn per stuk weer aan te zetten.")) return;
-            void doe("oud", async () => {
-              const r = await vraag<{ aantal: number }>("/api/admin/shop-ai/cj/oud-uit", {});
-              setBericht(`${r.aantal} oude producten staan nu uit.`);
-            });
-          }}
-        >
-          {bezig === "oud" ? "Bezig…" : "Oude assortiment uitzetten"}
-        </button>
+      <Panel title="Oude assortiment vervangen" subtitle="Zet alles uit wat niet van CJ komt (en niet van een verkoper is). Niets wordt gewist: met Terugzetten gaan precies die producten weer aan, of per stuk in Beheer → Webshop.">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="a-btn"
+            disabled={bezig !== ""}
+            onClick={() => {
+              if (!window.confirm("Alle oude producten uitzetten? Ze blijven bestaan en gaan met Terugzetten weer aan.")) return;
+              void doe("oud", async () => {
+                const r = await vraag<{ aantal: number; bewaard: number }>("/api/admin/shop-ai/cj/oud-uit", { actie: "uit" });
+                setOudBewaard(r.bewaard);
+                setBericht(`${r.aantal} oude producten staan nu uit.`);
+              });
+            }}
+          >
+            {bezig === "oud" ? "Bezig…" : "Oude assortiment uitzetten"}
+          </button>
+          {oudBewaard > 0 && (
+            <button
+              type="button"
+              className="a-btn"
+              disabled={bezig !== ""}
+              onClick={() =>
+                void doe("oud", async () => {
+                  const r = await vraag<{ aantal: number; bewaard: number }>("/api/admin/shop-ai/cj/oud-uit", { actie: "terug" });
+                  setOudBewaard(r.bewaard);
+                  setBericht(`${r.aantal} producten staan weer aan.`);
+                })
+              }
+            >
+              Terugzetten ({oudBewaard})
+            </button>
+          )}
+        </div>
       </Panel>
     </div>
   );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { leesRegels, winstPerStuk, winstUitBestellingen } from "@/lib/shop/marge";
+import { leesRegels, winstPerStuk, winstUitBestellingen, winstVoor } from "@/lib/shop/marge";
 
 // Marge en winst (18 nov 2026): één rekenregel voor wat een verkoop oplevert, en de
 // winst uit echte bestellingen (alleen betaald of verder; wachten op betaling telt niet).
@@ -49,6 +49,16 @@ describe("winst uit bestellingen", () => {
     expect(t.winstCents).toBe(perStukA * 3 + perStukB);
     expect(t.perProduct.map((p) => p.productId)).toEqual(["a", "b"]);
     expect(t.perProduct[0]).toEqual({ productId: "a", stuks: 3, omzetCents: 2695 * 3, winstCents: perStukA * 3 });
+  });
+
+  it("een verkopersproduct levert ons alleen de commissie op, zonder inkoop", () => {
+    const w = winstVoor(2000, { winstVastCents: 240 });
+    expect(w.winstCents).toBe(240);
+    expect(w.inkoopCents).toBe(0);
+    expect(w.margePct).toBeCloseTo((240 / 1653) * 100, 0);
+    const t = winstUitBestellingen([{ status: "SHIPPED", itemsJson: [{ productId: "v", priceCents: 2000, qty: 2 }] }], () => ({ winstVastCents: 240 }));
+    expect(t.winstCents).toBe(480);
+    expect(t.inkoopCents).toBe(0);
   });
 
   it("leest kapotte regels soepel", () => {

@@ -12,7 +12,7 @@ import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { chatJson } from "@/lib/ai/client";
-import { kvGet, kvSet } from "@/lib/storage/kv";
+import { kvDelete, kvGet, kvSet, kvSetIfAbsent } from "@/lib/storage/kv";
 import { importRemoteImage } from "@/lib/media/clean-image";
 import { storeUpload } from "@/lib/storage/local";
 import { ecbKoersen } from "@/lib/integrations/wisselkoers-server";
@@ -28,6 +28,9 @@ const K_INSTEL = "shop:cj:instellingen";
 const K_PID = "shop:cj:pid:";
 const K_PRODUCT = "shop:cj:product:";
 const K_LIJST = "shop:cj:producten";
+const K_OUD_UIT = "shop:cj:oud-uit";
+/** onze variant-sku's van CJ beginnen hiermee (cj-core.ts onzeSku): zo herken je een CJ-product ook zonder KV */
+export const CJ_SKU_VOORVOEGSEL = "cj-";
 /** zoveel foto's per product (hoofdfoto + extra) */
 const MAX_FOTOS = 6;
 
@@ -153,6 +156,18 @@ export async function importeerCjProduct(pid: string, opties: { actorUserId: str
     const b = await prisma.shopProduct.findUnique({ where: { id: eerder }, select: { id: true, slug: true, name: true, priceCents: true, costCents: true, active: true, _count: { select: { variants: true } } } });
     if (b) return { bestaand: true, id: b.id, slug: b.slug, naam: b.name, prijsCents: b.priceCents, inkoopCents: b.costCents ?? 0, varianten: b._count.variants, fotos: 0, vertaald: true, actief: b.active, melding: "Stond al in de winkel." };
   }
+  // de pid claimen vóór het aanmaken: twee klikken tegelijk geven anders twee producten
+  const geclaimd = await kvSetIfAbsent(`${K_PID}${pid}`, "bezig");
+  if (!geclaimd) throw AppError.conflict("Dit product wordt al overgenomen of staat er al.");
+  try {
+    return await overnemen(pid, opties);
+  } catch (e) {
+    await kvDelete(`${K_PID}${pid}`).catch(() => undefined);
+    throw e;
+  }
+}
+
+async function overnemen(pid: string, opties: { actorUserId: string | null; actief: boolean; categorie?: string | undefined }): Promise<ImportUitkomst> {
   const p: CjProduct = await cjProduct(pid);
   const prijs = await prijsVoorCj(p.inkoopUsdCents, p.naamEn);
   const tekst = await vertaalVermelding(p.naamEn, p.omschrijvingEn);
@@ -190,6 +205,8 @@ export async function importeerCjProduct(pid: string, opties: { actorUserId: str
   if (rijen.length) {
     await prisma.shopProductVariant.createMany({ data: rijen.map((v) => ({ productId: product.id, size: v.size, color: v.color, priceCents: null, stock: v.stock, sku: v.sku })), skipDuplicates: true });
   }
+  // skipDuplicates: een sku die al bestond is overgeslagen; zonder variant is er niets te kopen, dus dan niet aan
+  const aantalVarianten = await prisma.shopProductVariant.count({ where: { productId: product.id } });
 
   // foto's: de eerste is de hoofdfoto; bij kleding en tassen is de tweede meestal gedragen (de "model"-foto op de kaart)
   const uploads: { id: string; url: string }[] = [];
@@ -199,7 +216,7 @@ export async function importeerCjProduct(pid: string, opties: { actorUserId: str
   }
   const hoofd = uploads[0] ?? null;
   const model = KLEDINGACHTIG.has(categorie) ? (uploads[1] ?? null) : null;
-  const actief = opties.actief && hoofd !== null;
+  const actief = opties.actief && hoofd !== null && aantalVarianten > 0;
   await prisma.shopProduct.update({
     where: { id: product.id },
     data: {
@@ -237,19 +254,49 @@ export async function importeerCjProduct(pid: string, opties: { actorUserId: str
 
   let melding: string | null = null;
   if (!hoofd) melding = "De foto's van de leverancier waren niet over te nemen; het product staat uit tot er een foto is.";
+  else if (aantalVarianten === 0) melding = "Geen enkele variant kon worden aangemaakt (de sku's bestonden al); het product staat uit.";
   else if (!tekst.vertaald) melding = "De tekst kon niet worden vertaald en staat nog in het Engels; pas hem aan in Beheer → Webshop.";
-  return { bestaand: false, id: product.id, slug, naam: tekst.naam, prijsCents: prijs.prijsCents, inkoopCents: prijs.inkoopCents, varianten: rijen.length, fotos: uploads.length, vertaald: tekst.vertaald, actief, melding };
+  return { bestaand: false, id: product.id, slug, naam: tekst.naam, prijsCents: prijs.prijsCents, inkoopCents: prijs.inkoopCents, varianten: aantalVarianten, fotos: uploads.length, vertaald: tekst.vertaald, actief, melding };
+}
+
+interface OudUit {
+  ids: string[];
+  op: string;
+}
+
+/** Hoeveel producten de laatste keer zijn uitgezet (en dus met één knop terug kunnen). */
+export async function oudAssortimentBewaard(): Promise<number> {
+  const b = await kvGet<OudUit>(K_OUD_UIT).catch(() => null);
+  return Array.isArray(b?.ids) ? b.ids.length : 0;
 }
 
 /**
- * Het oude assortiment uitzetten: alles wat nu aan staat, niet van CJ komt en niet van een verkoper is.
- * Omkeerbaar in Beheer → Webshop (per product weer aanzetten). Geeft het aantal terug.
+ * Het oude assortiment uitzetten: precies de producten die nu aan staan, niet van CJ komen (KV-lijst of een
+ * cj-sku) en niet van een verkoper zijn. De id's gaan in KV, zodat "Terugzetten" exact die weer aanzet.
  */
 export async function oudAssortimentUit(actorUserId: string | null): Promise<number> {
   const vanCj = await cjProductIds();
-  const r = await prisma.shopProduct.updateMany({ where: { active: true, sellerTenantId: null, id: { notIn: vanCj } }, data: { active: false } });
-  if (r.count) {
-    await recordAudit({ category: "ADMIN", action: "shop.product.oud-uit", actorUserId, actorLabel: "user", summary: `Oude assortiment uitgezet: ${r.count} producten`, targetType: "shop", targetId: "cj" });
-  }
+  const oud = await prisma.shopProduct.findMany({
+    where: { active: true, sellerTenantId: null, id: { notIn: vanCj }, variants: { none: { sku: { startsWith: CJ_SKU_VOORVOEGSEL } } } },
+    select: { id: true },
+  });
+  const ids = oud.map((p) => p.id);
+  if (!ids.length) return 0;
+  const r = await prisma.shopProduct.updateMany({ where: { id: { in: ids }, active: true }, data: { active: false } });
+  const eerder = await kvGet<OudUit>(K_OUD_UIT).catch(() => null);
+  const alle = [...new Set([...(Array.isArray(eerder?.ids) ? eerder.ids : []), ...ids])];
+  await kvSet(K_OUD_UIT, { ids: alle, op: new Date().toISOString() } satisfies OudUit);
+  await recordAudit({ category: "ADMIN", action: "shop.product.oud-uit", actorUserId, actorLabel: "user", summary: `Oude assortiment uitgezet: ${r.count} producten`, targetType: "shop", targetId: "cj" });
+  return r.count;
+}
+
+/** Precies de producten die "Oude assortiment uitzetten" uitzette weer aan (niet meer en niet minder). */
+export async function oudAssortimentTerug(actorUserId: string | null): Promise<number> {
+  const b = await kvGet<OudUit>(K_OUD_UIT).catch(() => null);
+  const ids = Array.isArray(b?.ids) ? b.ids : [];
+  if (!ids.length) return 0;
+  const r = await prisma.shopProduct.updateMany({ where: { id: { in: ids }, active: false }, data: { active: true } });
+  await kvDelete(K_OUD_UIT);
+  await recordAudit({ category: "ADMIN", action: "shop.product.oud-terug", actorUserId, actorLabel: "user", summary: `Oude assortiment teruggezet: ${r.count} producten`, targetType: "shop", targetId: "cj" });
   return r.count;
 }
