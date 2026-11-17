@@ -206,6 +206,9 @@ export default async function VerificatiePage() {
     prisma.user.findUnique({ where: { id: principal.userId }, select: { kycStatus: true } }),
   ]);
   const idKlaar = gebruiker?.kycStatus === "VERIFIED";
+  // de eigen controle wacht op een medewerker (PENDING, in_review): dan geen nieuwe scan aanbieden. 17 nov 2026: 4 van de 19
+  // werkers scanden binnen een paar minuten alles opnieuw, omdat het scherm "opnieuw" aanbood terwijl een mens al zou kijken.
+  const inBehandeling = !idKlaar && lastCheck?.status === "PENDING" && lastCheck.decisionStatus === "in_review";
   // de postcode; het KVK- of btw-nummer is daar sinds 13 nov optioneel (vóór de eerste klus, lib/fiscal/eligibility.ts)
   const woonKlaar = Boolean(bewaard?.homePostalCode);
   const begin = beginStap({ persoonKlaar: persoon.klaar, woonKlaar, idKlaar });
@@ -284,6 +287,8 @@ export default async function VerificatiePage() {
           persoon={persoon}
           beginStap={begin}
           idKlaar={idKlaar}
+          inBehandeling={inBehandeling}
+          tochOpnieuw={pt.attempt.tochOpnieuw}
           kanSluiten={poort?.klaar ?? true}
           bsnBekend={Boolean(fiscal.bsnHash)}
         // de eerste stap die na de ID-scan nog open staat (de ID zelf telt dan als ingestuurd)
@@ -302,6 +307,7 @@ export default async function VerificatiePage() {
                     {attemptLabel(pt.attempt, lastCheck.decisionStatus, lastCheck.status)}
                   </StatusPill>
                 </div>
+                {inBehandeling && <p className="mt-2 text-neutralx-600">{pt.attempt.wachtMens}</p>}
                 {waitForStripe(lastCheck.decisionStatus) && <StripeIdentityWacht text={pt.attempt.checking} />}
                 {stripeReason && (
                   <p className="mt-2 text-neutralx-600">{fill(pt.stripeAfgewezen, { reden: stripeReason })}</p>
