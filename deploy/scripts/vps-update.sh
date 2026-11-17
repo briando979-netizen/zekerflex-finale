@@ -67,10 +67,16 @@ voor_uitrol_vastleggen
 # weg. Sinds de upgrade naar 16 GB (7 nov) blijft Ollama draaien (dan blijft de AI-chat werken tijdens
 # een uitrol); alleen als er vóór het bouwen minder dan 6 GB vrij is, staat hij stil en start hij aan
 # het eind weer, ook als het bouwen mislukt (trap). Het model laadt daarna vanzelf (cron ai/warm).
+# Sinds 17 nov telt ook het vrije wisselgeheugen mee: vier uitrollen draaiden die dag met een vol wisselgeheugen
+# (4095/4095 MB, vooral stille diensten: whisper, metabase, ollama, valhalla). Er was ±8 GB vrij, dus Ollama bleef
+# aan, maar tijdens het bouwen zakte het vrije geheugen naar 2,3 GB. Zonder vrij wisselgeheugen is er dan geen uitwijk
+# meer en doodt de kernel een proces (postgres of de app) in plaats van traag te worden. Daarom staat Ollama ook stil
+# als vrij geheugen en vrij wisselgeheugen samen onder 9 GB zitten: een build vraagt ±5,7 GB extra, de rest is marge.
 OLLAMA_WAS_AAN=""
 VRIJ_MB=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo)
-echo "geheugen vrij vóór het bouwen: ${VRIJ_MB} MB"
-if [ "${VRIJ_MB:-0}" -lt 6144 ] && sudo docker ps --format '{{.Names}}' | grep -qx zekerflex-ollama-1; then
+WISSEL_VRIJ_MB=$(awk '/SwapFree/ {print int($2/1024)}' /proc/meminfo)
+echo "geheugen vrij vóór het bouwen: ${VRIJ_MB} MB, wisselgeheugen vrij: ${WISSEL_VRIJ_MB:-0} MB"
+if { [ "${VRIJ_MB:-0}" -lt 6144 ] || [ $(( ${VRIJ_MB:-0} + ${WISSEL_VRIJ_MB:-0} )) -lt 9216 ]; } && sudo docker ps --format '{{.Names}}' | grep -qx zekerflex-ollama-1; then
   OLLAMA_WAS_AAN=1
   sudo docker stop -t 10 zekerflex-ollama-1 > /dev/null && echo "ollama: stil tijdens het bouwen"
 fi
