@@ -9,6 +9,8 @@ import { HeroMetFoto } from "@/components/marketing/HeroMetFoto";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { klusUrl } from "@/lib/klusconcept/concept";
 import { PaginaVideoBlok } from "@/components/marketing/PaginaVideoBlok";
+import { cbsBlok } from "@/lib/seo-cbs-tekst";
+import { CBS_BRON } from "@/lib/seo-cbs";
 
 // Shared template that renders a sector's hub + per-city landing pages from the
 // SECTORS config. Each page combines sector copy with the city's real local
@@ -159,6 +161,28 @@ export function SectorHub({ sector: s }: { sector: Sector }) {
   );
 }
 
+// ---- echte cijfers van CBS over de gemeente (lib/seo-cbs.ts, eens per jaar ververst) ----
+function CbsCijfers({ sector: s, city: c }: { sector: Sector; city: City }) {
+  const blok = cbsBlok(s.key, c);
+  if (!blok) return null;
+  return (
+    <div className="mt-8 rounded-2xl border border-hair bg-white p-5">
+      <h2 className="font-display font-bold text-ink">{blok.kop}</h2>
+      {blok.regels.map((r) => (
+        <p key={r} className="mt-2 text-sm text-neutralx-700">
+          {r}
+        </p>
+      ))}
+      <p className="mt-3 text-xs text-neutralx-500">
+        {blok.bron}{" "}
+        <a href={CBS_BRON} target="_blank" rel="noopener noreferrer" className="underline">
+          Bekijk de tabel bij CBS
+        </a>
+      </p>
+    </div>
+  );
+}
+
 // ---- city page ------------------------------------------------------------
 export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City }) {
   const faq = cityFaq(s, c);
@@ -213,7 +237,7 @@ export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City 
           {[
             ["Snel bij uitval", `Je klus gaat eerst naar krachten die snel in ${c.name} kunnen zijn — minder no-shows, minder gedoe op de drukte.`],
             ["Jij houdt de regie", "Kies zelf wie je inroostert op basis van reviews en ervaring, blokkeer wie niet bevalt, en bouw je vaste ploeg met favorieten."],
-            ["Alles geregeld", "Urenregistratie met check-in, automatische facturen, modelovereenkomst en verzekering — zzp of uitzend, jij kiest."],
+            ["Alles geregeld", "Urenregistratie met check-in, automatische facturen en een modelovereenkomst — zzp of uitzend, jij kiest."],
           ].map(([t, b]) => (
             <li key={t} className="rounded-2xl border border-hair bg-white p-5">
               <p className="font-display font-bold text-ink">{t}</p>
@@ -221,6 +245,7 @@ export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City 
             </li>
           ))}
         </ul>
+        <CbsCijfers sector={s} city={c} />
       </Section>
       <Section tone="soft">
         <SectionHead eyebrow="Veelgestelde vragen" title={`${s.label}personeel in ${c.name}`} />
@@ -399,6 +424,7 @@ export function SectorWorkerCity({ sector: s, city: c }: { sector: Sector; city:
             </li>
           ))}
         </ul>
+        <CbsCijfers sector={s} city={c} />
       </Section>
       <Section tone="soft">
         <SectionHead eyebrow="Veelgestelde vragen" title={`Werken in de ${low(s)} in ${c.name}`} />

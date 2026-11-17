@@ -116,6 +116,15 @@ export interface WorkerPushTexts {
   /** een bericht op je eigen werknummer (lib/telephony/lijn-server.ts): soort = terugbelverzoek | voicemail | sms */
   lijnTitle: (soort: "terugbelverzoek" | "voicemail" | "sms", van: string) => string;
   lijnBody: string;
+  /** een weerwaarschuwing van het KNMI (code oranje of rood) tijdens een klus (lib/notifications/worker-push.ts); niveau en soort al vertaald */
+  weerTitle: (niveau: string, soort: string) => string;
+  weerBody: (title: string, branch: string, when: string) => string;
+}
+
+/** de namen van niveau en soort staan bij de kluspagina (FREELANCER_DICTS[taal].detail.weer) */
+export function weerNamen(locale: BasisLocale, niveau: string, soort: string): { niveau: string; soort: string } {
+  const w = FREELANCER_DICTS[locale].detail.weer;
+  return { niveau: w.niveaus[niveau] ?? niveau, soort: w.soorten[soort] ?? soort };
 }
 
 export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
@@ -215,6 +224,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     afspraakAfgezegdBody: (n, w) => `${n} heeft de afspraak van ${w} afgezegd.`,
     lijnTitle: (s, v) => (s === "voicemail" ? `Voicemail van ${v}` : s === "sms" ? `Sms van ${v}` : `Terugbelverzoek van ${v}`),
     lijnBody: "Bekijk het bij je werknummer.",
+    weerTitle: (n, s) => `⚠️ Code ${n} voor ${s}`,
+    weerBody: (t, b, w) => `Tijdens ${t} bij ${b} (${w}) geldt een waarschuwing van het KNMI. Houd rekening met vertraging onderweg.`,
   },
   en: {
     hours: "hours",
@@ -312,6 +323,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     afspraakAfgezegdBody: (n, w) => `${n} cancelled the event on ${w}.`,
     lijnTitle: (s, v) => (s === "voicemail" ? `Voicemail from ${v}` : s === "sms" ? `Text from ${v}` : `Call-back request from ${v}`),
     lijnBody: "See it at your work number.",
+    weerTitle: (n, s) => `⚠️ Code ${n} for ${s}`,
+    weerBody: (t, b, w) => `A KNMI weather warning applies during ${t} at ${b} (${w}). Allow for delays on the way.`,
   },
   pl: {
     hours: "godz.",
@@ -409,6 +422,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     afspraakAfgezegdBody: (n, w) => `Wydarzenie (${w}) odwołane przez: ${n}.`,
     lijnTitle: (s, v) => (s === "voicemail" ? `Poczta głosowa od ${v}` : s === "sms" ? `SMS od ${v}` : `Prośba o oddzwonienie od ${v}`),
     lijnBody: "Zobacz przy swoim numerze służbowym.",
+    weerTitle: (n, s) => `⚠️ Kod ${n}: ${s}`,
+    weerBody: (t, b, w) => `W czasie zlecenia ${t} w ${b} (${w}) obowiązuje ostrzeżenie KNMI. Licz się z opóźnieniami w drodze.`,
   },
   ro: {
     hours: "ore",
@@ -506,6 +521,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     afspraakAfgezegdBody: (n, w) => `${n} a anulat evenimentul din ${w}.`,
     lijnTitle: (s, v) => (s === "voicemail" ? `Mesaj vocal de la ${v}` : s === "sms" ? `SMS de la ${v}` : `Cerere de apel înapoi de la ${v}`),
     lijnBody: "Vezi-l la numărul tău de serviciu.",
+    weerTitle: (n, s) => `⚠️ Cod ${n} pentru ${s}`,
+    weerBody: (t, b, w) => `În timpul jobului ${t} la ${b} (${w}) este în vigoare o avertizare KNMI. Ține cont de întârzieri pe drum.`,
   },
   uk: {
     hours: "год",
@@ -603,6 +620,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     afspraakAfgezegdBody: (n, w) => `Подію (${w}) скасовано. Організатор: ${n}.`,
     lijnTitle: (s, v) => (s === "voicemail" ? `Голосове повідомлення від ${v}` : s === "sms" ? `SMS від ${v}` : `Запит на зворотний дзвінок від ${v}`),
     lijnBody: "Переглянь біля свого робочого номера.",
+    weerTitle: (n, s) => `⚠️ ${n} код: ${s}`,
+    weerBody: (t, b, w) => `Під час роботи ${t} у ${b} (${w}) діє попередження KNMI. Врахуйте можливі затримки в дорозі.`,
   },
 };
 

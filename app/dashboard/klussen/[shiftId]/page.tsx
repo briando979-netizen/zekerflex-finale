@@ -26,7 +26,12 @@ import { voorschottenVoorWerker } from "@/lib/payouts/voorschot-zicht";
 import { gearForShift } from "@/lib/shop/klus-gear";
 import { certsRequiredForShift } from "@/lib/certificates/matching";
 import { validCertTypes, CERT_TYPES } from "@/lib/certificates/store";
-import { getFreelancerDict } from "@/lib/i18n/server";
+import { getFreelancerDict, getLocale } from "@/lib/i18n/server";
+import { beroepInTaal } from "@/lib/shifts/esco";
+import { waarschuwingVoor } from "@/lib/integrations/meteoalarm";
+import { weerwaarschuwingen } from "@/lib/integrations/meteoalarm-server";
+import { huisnummerUitAdresregel } from "@/lib/geo/bag";
+import { bagVoorAdres } from "@/lib/geo/bag-server";
 import { translateBlockReason, type FreelancerDict } from "@/lib/i18n/freelancer";
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
@@ -92,6 +97,15 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
     isFollowing(principal.userId, s.clientTenantId),
     marketStats().catch(() => null),
   ]);
+  // Het beroep in de taal van de werker (EU-lijst ESCO), en een weerwaarschuwing van het KNMI op de plek en tijd van de klus.
+  // Alleen voor een klus die nog moet komen en binnen twee dagen begint: verder vooruit geeft het KNMI geen waarschuwing.
+  const locale = await getLocale();
+  const beroep = beroepInTaal(s.title, locale);
+  const binnenkort = !shiftEnded && start.getTime() - Date.now() < 48 * 3_600_000;
+  const weer = binnenkort ? waarschuwingVoor(await weerwaarschuwingen().catch(() => []), { lat: s.branchLat, lon: s.branchLng }, start.getTime(), new Date(s.endsAt).getTime()) : null;
+  // Bij een schoonmaakklus: hoe groot het pand volgens het Kadaster is (BAG via PDOK), zodat de werker de klus kan inschatten.
+  // Alleen als het adres precies één gebouw aanwijst en het Kadaster een oppervlakte kent; anders geen regel.
+  const pand = cat.key === "schoonmaak" ? await bagVoorAdres(s.postalCode, huisnummerUitAdresregel(s.address)).catch(() => null) : null;
   // Tarief tegenover de mediaan van dit soort werk (null bij te weinig vergelijkingsmateriaal).
   const vsMarket = rateVsMarket(s.hourlyRateCents, market, cat.key);
   const catLabel = ft.cat[cat.key];
@@ -409,6 +423,11 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
         {/* de bedrijfsnaam, niet de vestiging ("Eenmalige locatie — adres"); het adres staat bij de kaart hieronder */}
         <p className="text-sm font-semibold text-brand-600">{s.company}</p>
         <h1 className="mt-1 font-display text-2xl font-bold leading-tight text-ink">{s.title}</h1>
+        {beroep && (
+          <p className="mt-1 text-sm text-neutralx-600">
+            {D.beroepEsco}: <span className="font-semibold text-ink">{beroep}</span>
+          </p>
+        )}
 
         <p className="mt-2 flex flex-wrap items-center gap-x-2 text-sm text-neutralx-500">
           <span>{dateLabel}</span>
@@ -417,6 +436,19 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
           <span className="text-hairstrong">|</span>
           <span>{s.city}</span>
         </p>
+        {weer && (
+          <div
+            role="status"
+            className={`mt-3 rounded-xl border px-3 py-2 text-xs leading-relaxed ${weer.niveau === "geel" ? "border-warn/30 bg-warn/10 text-warn" : "border-crit/30 bg-crit/10 text-crit"}`}
+          >
+            <p className="font-semibold">⚠️ {D.weer.kop(D.weer.niveaus[weer.niveau] ?? weer.niveau, D.weer.soorten[weer.soort] ?? weer.soort)}</p>
+            <p className="mt-0.5">
+              {locale === "nl" && weer.kop ? `${weer.kop} ` : ""}
+              {D.weer.tijd(fmtAt(new Date(weer.van)), fmtAt(new Date(weer.tot)))} {weer.niveau === "geel" ? "" : D.weer.advies}
+            </p>
+            <p className="mt-0.5 opacity-80">{D.weer.bron}</p>
+          </div>
+        )}
         {rest && (
           <p className="mt-3 rounded-xl border border-warn/30 bg-warn/10 px-3 py-2 text-xs leading-relaxed text-warn">
             ⏳ {D.shortRest(`${fmtAt(rest.startsAt)} – ${fmtAt(rest.endsAt)}`)}
@@ -547,6 +579,14 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
             <br />
             {s.postalCode} {s.city}
           </InfoRow>
+          {pand?.oppervlakte != null && (
+            <InfoRow icon="📐">
+              {D.pand.regel(
+                new Intl.NumberFormat("nl-NL").format(pand.oppervlakte),
+                pand.gebruiksdoelen.map((d) => D.pand.doelen[d] ?? d).join(", ") || D.pand.doelen["overige gebruiksfunctie"] || "",
+              )}
+            </InfoRow>
+          )}
           <InfoRow icon="☕">
             {s.breakMinutes > 0 ? D.breakMin(s.breakMinutes) : D.noBreak}
           </InfoRow>

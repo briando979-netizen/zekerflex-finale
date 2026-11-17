@@ -11,6 +11,8 @@ import { CompanyActions } from "@/components/admin/CompanyActions";
 import { tenantVerification } from "@/lib/company/verified";
 import { getBuitenlandBewijs } from "@/lib/company/buitenland";
 import { landNaam } from "@/lib/onboarding/buitenland";
+import { alleenWonen, bagOmschrijving } from "@/lib/geo/bag";
+import { bagVoorAdres } from "@/lib/geo/bag-server";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +51,8 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
     include: {
       branches: { select: { id: true, name: true, city: true } },
       memberships: { include: { user: { select: { id: true, fullName: true, email: true, disabledAt: true } } } },
+      // het vestigingsadres uit het Handelsregister, voor de controle bij het Kadaster hieronder
+      companyRegistration: { select: { street: true, houseNumber: true, postalCode: true, city: true } },
     },
   });
 
@@ -61,7 +65,8 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
     );
   }
 
-  const [activity, auditEntries, verification, buitenland] = await Promise.all([
+  const reg = tenant.companyRegistration;
+  const [activity, auditEntries, verification, buitenland, bag] = await Promise.all([
     companyActivity(tenant.id),
     prisma.auditLog.findMany({
       where: { OR: [{ targetType: "tenant", targetId: tenant.id }, { targetType: "user", targetId: { in: tenant.memberships.map((m) => m.userId) } }] },
@@ -71,6 +76,8 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
     }),
     tenantVerification(tenant.id),
     tenant.country !== "NL" ? getBuitenlandBewijs(tenant.id) : Promise.resolve(null),
+    // wat het Kadaster over het vestigingsadres weet (gebruik en oppervlakte); geen antwoord = geen regel
+    tenant.country === "NL" && reg ? bagVoorAdres(reg.postalCode, reg.houseNumber).catch(() => null) : Promise.resolve(null),
   ]);
 
   const hqAdmin = tenant.memberships.find((m) => m.role === "HQ_ADMIN")?.user;
@@ -125,6 +132,19 @@ export default async function BedrijfDetailPage(props: { params: Promise<{ id: s
                   ? `${landNaam(tenant.country)}${tenant.vatNumber ? `, btw ${tenant.vatNumber}` : ""}${buitenland?.registratieNummer ? `, registratienummer ${buitenland.registratieNummer}` : ""}${buitenland?.btw === "niet-bereikbaar" ? " (btw-nummer nog te controleren: VIES was niet bereikbaar)" : ""}`
                   : "Geen KVK-nummer"}, {tenant.branches.length} {tenant.branches.length === 1 ? "vestiging" : "vestigingen"}
             </p>
+            {reg?.street && (
+              <p className="mt-0.5 text-sm" style={{ color: "var(--a-mute)" }}>
+                Adres volgens de KVK: {[reg.street, reg.houseNumber].filter(Boolean).join(" ")}
+                {reg.postalCode || reg.city ? `, ${[reg.postalCode, reg.city].filter(Boolean).join(" ")}` : ""}.
+                {bag && (
+                  <>
+                    {" "}
+                    Volgens het Kadaster: {bagOmschrijving(bag)}.
+                    {alleenWonen(bag) ? " Het gebouw is alleen een woning: gewoon bij een eenmanszaak, het navragen waard bij een groter bedrijf." : ""}
+                  </>
+                )}
+              </p>
+            )}
             <div className="mt-2 flex flex-wrap gap-1.5">
               <Pill tone={blocked ? "crit" : "ok"}>{blocked ? "Geblokkeerd" : "Actief"}</Pill>
               <Pill tone={verification.verified ? "trust" : "warn"}>

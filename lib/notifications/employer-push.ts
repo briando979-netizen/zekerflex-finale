@@ -32,6 +32,18 @@ export async function pushHoursSubmitted(shiftId: string, timesheetId: string, w
   });
 }
 
+/** "⚠️ Code oranje voor wind" — een weerwaarschuwing van het KNMI tijdens een klus; eens per klus (lib/notifications/worker-push.ts). */
+export async function pushWeerWerkgever(shiftId: string, kop: string): Promise<void> {
+  const [contact, shift] = await Promise.all([resolveShiftContact(shiftId), prisma.shift.findUnique({ where: { id: shiftId }, select: { title: true, startsAt: true } })]);
+  if (!contact || !shift) return;
+  await sendUserPush([contact.userId], {
+    title: `⚠️ ${kop}`,
+    body: `Tijdens ${shift.title} (${when(shift.startsAt)}) geldt een waarschuwing van het KNMI. Je krachten krijgen ook een melding; verzet je de klus, overleg dan in de chat.`,
+    data: { type: "SHIFT", url: `/werkgever/diensten/${shiftId}`, tag: `weer-${shiftId}` },
+    ttlSeconds: 43_200,
+  });
+}
+
 export async function pushShiftTaken(shiftId: string, workerName: string, days = 1): Promise<void> {
   const [contact, shift] = await Promise.all([
     resolveShiftContact(shiftId),

@@ -10,7 +10,8 @@ import { whitepaperBySlug } from "@/lib/kennis/whitepapers";
 // polis, dan gaat de tekst terug mét de naam van de verzekeraar en het polisnummer (eigenaar-taak verzekering-werkers).
 
 const ROOT = process.cwd();
-const BELOFTE = /gratis verzekerd|automatisch verzekerd|kosteloos verzekerd|collectieve dekking|onze verzekeringspartner|verzekeringsbewijs|insurance certificate|you're insured/i;
+// 16 nov: ook "gedekt tijdens elke opdracht" (het menu) en "modelovereenkomst en verzekering" (de stadspagina's) bleven staan
+const BELOFTE = /gratis verzekerd|automatisch verzekerd|kosteloos verzekerd|collectieve dekking|onze verzekeringspartner|verzekeringsbewijs|insurance certificate|you're insured|gedekt tijdens (elke|iedere|je|jouw) (opdracht|klus|dienst)|modelovereenkomst en verzekering/i;
 // beheer (taken, de bank die uit staat) en de tests noemen het bewust
 const BUITEN = /^(lib\/admin\/|lib\/bank\/|components\/bank\/|app\/api\/admin\/bank\/|app\/api\/me\/bank\/|app\/(dashboard|werkgever)\/bank\/|lib\/social\/veilig\.ts$)/;
 

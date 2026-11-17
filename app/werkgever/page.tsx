@@ -42,6 +42,8 @@ import { redirect } from "next/navigation";
 import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
 import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
 import { kl, startMarges } from "@/lib/werkgever/start-marges";
+import { komendeSchoolvakantie } from "@/lib/integrations/schoolvakanties-server";
+import { vakantieTekst } from "@/lib/integrations/schoolvakanties-tekst";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +74,7 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
   // een nieuw bedrijf dat nog niets gebruikt: eerst de vraag waarvoor
   const nieuwBedrijf = !voorbeeldSoort && kanKiezen && !w.gekozen && !w.heeftKlussen && !w.heeftRijschool && !w.heeftHoreca && !w.heeftSite && !w.heeftWebshop;
 
-  const [kvkDone, extra, o, threads, verificatie, pendingReviews, followers, tenantKvk] = await Promise.all([
+  const [kvkDone, extra, o, threads, verificatie, pendingReviews, followers, tenantKvk, vakantie] = await Promise.all([
     isEmployerOnboarded(scope.tenantIds),
     tenantId ? getOrgProfileExtra(tenantId) : Promise.resolve({} as OrgProfileExtra),
     getEmployerOverview(principal),
@@ -82,7 +84,10 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
     followerCount(scope.tenantIds).catch(() => 0),
     // het KVK-nummer dat bij het aanmelden uit het Handelsregister werd gekozen: vult de KVK-stap vooraf in
     tenantId ? prisma.tenant.findUnique({ where: { id: tenantId }, select: { kvkNumber: true, country: true } }).catch(() => null) : Promise.resolve(null),
+    // de eerstvolgende schoolvakantie binnen zes weken (Rijksoverheid, lib/integrations/schoolvakanties-server.ts)
+    komendeSchoolvakantie().catch(() => null),
   ]);
+  const vakantieRegels = vakantie ? vakantieTekst(vakantie, ws) : null;
   const companyVerified = verificatie.verified;
   const inControle = Boolean(verificatie.inControle);
 
@@ -313,6 +318,27 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
               <>{ws.kvkNodig}</>
             )}
           </p>
+        </div>
+      )}
+      {vakantieRegels && !startModus && (
+        <div className="mb-8 rounded-2xl border border-plan/30 bg-plan-soft p-4 text-sm text-neutralx-700">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="font-semibold text-ink">{vakantieRegels.kop}</p>
+              <ul className="mt-1">
+                {vakantieRegels.regios.map((r) => (
+                  <li key={r.regio}>
+                    <span className="font-medium text-plan-ink">{r.regio}</span>: {r.periode}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2">{ws.vakantieTip}</p>
+              <p className="mt-1 text-xs text-neutralx-500">{ws.vakantieBron}</p>
+            </div>
+            <Link href="/werkgever/diensten/nieuw" className="btn-ghost flex-shrink-0 self-start">
+              {ws.vakantieKnop}
+            </Link>
+          </div>
         </div>
       )}
       {showWizard && <OnboardingOnderhoudBalk soort="werkgever" />}

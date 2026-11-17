@@ -3,8 +3,12 @@ import { logger } from "@/lib/logger";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { notifyNearbyOpenShifts } from "@/lib/notifications/geo-push";
 import { sendLocalizedPush } from "@/lib/notifications/localized-push";
-import { pushDay, type WorkerPushTexts } from "@/lib/i18n/worker-push";
-import type { Locale } from "@/lib/i18n/config";
+import { pushDay, weerNamen, type WorkerPushTexts } from "@/lib/i18n/worker-push";
+import { basisLocale, type Locale } from "@/lib/i18n/config";
+import { waarschuwingVoor } from "@/lib/integrations/meteoalarm";
+import { weerwaarschuwingen } from "@/lib/integrations/meteoalarm-server";
+import { pushWeerWerkgever } from "@/lib/notifications/employer-push";
+import { amsterdamParts } from "@/lib/time/amsterdam";
 import { ruimVerlopenReactiesOp } from "@/lib/offers/expire";
 import { ruimPushMarkeringenOp } from "@/lib/notifications/push-eenmalig";
 import { plekVoorWerker } from "@/lib/shifts/place-label";
@@ -123,6 +127,53 @@ async function reminderPushes(now: Date): Promise<number> {
   return n;
 }
 
+/**
+ * Een weerwaarschuwing van het KNMI (code oranje of rood, via MeteoAlarm) op de plek en tijd van een klus die binnen 24 uur
+ * begint of al loopt: eens per inzet en per soort/niveau aan de werker (in zijn taal), en eens per klus aan de contactpersoon
+ * van de werkgever. Code geel staat alleen op de kluspagina; die is te vaak voor een melding.
+ */
+async function weerPushes(now: Date): Promise<number> {
+  const zwaar = (await weerwaarschuwingen(now.getTime()).catch(() => [])).filter((w) => w.niveau !== "geel");
+  if (zwaar.length === 0) return 0;
+  const rows = await prisma.shiftAssignment.findMany({
+    where: { cancelledAt: null, shift: { status: { notIn: ["CANCELLED", "COMPLETED", "DRAFT"] }, startsAt: { lt: new Date(now.getTime() + 24 * H) }, endsAt: { gt: now } } },
+    select: {
+      id: true,
+      freelancer: { select: { userId: true } },
+      shift: { select: { id: true, title: true, startsAt: true, endsAt: true, branch: { select: { name: true, latitude: true, longitude: true, tenant: { select: { name: true } } } } } },
+    },
+    take: 2000,
+  });
+  // 's nachts (22–7 uur) alleen als de klus binnen vier uur begint of al loopt; de rest hoort het de ochtend erna
+  const uur = amsterdamParts(now).hour;
+  const nacht = uur >= 22 || uur < 7;
+  let n = 0;
+  for (const r of rows) {
+    if (nacht && r.shift.startsAt.getTime() - now.getTime() > 4 * H) continue;
+    const w = waarschuwingVoor(zwaar, { lat: r.shift.branch.latitude, lon: r.shift.branch.longitude }, r.shift.startsAt.getTime(), r.shift.endsAt.getTime());
+    if (!w) continue;
+    const bij = plekVoorWerker(r.shift.branch.name, r.shift.branch.tenant.name);
+    if (await claim(`weer-${w.soort}-${w.niveau}`, r.id)) {
+      await send(
+        r.freelancer.userId,
+        (t, locale) => {
+          const naam = weerNamen(basisLocale(locale), w.niveau, w.soort);
+          return { title: t.weerTitle(naam.niveau, naam.soort), body: t.weerBody(r.shift.title, bij, whenFor(locale, r.shift.startsAt)) };
+        },
+        r.shift.id,
+        `weer-${r.id}`,
+        12 * 3600,
+      );
+      n += 1;
+    }
+    if (await claim(`weer-werkgever-${w.soort}-${w.niveau}`, r.shift.id)) {
+      const naam = weerNamen("nl", w.niveau, w.soort);
+      await pushWeerWerkgever(r.shift.id, `Code ${naam.niveau} voor ${naam.soort}`).catch(() => undefined);
+    }
+  }
+  return n;
+}
+
 /** "Vul je gegevens in om te beginnen" — freelancers that aren't verified yet. */
 async function profilePushes(now: Date): Promise<number> {
   const users = await prisma.user.findMany({
@@ -153,8 +204,13 @@ async function profilePushes(now: Date): Promise<number> {
   return n;
 }
 
-export async function sweepWorkerPushes(now = new Date()): Promise<{ selected: number; reminders: number; profile: number; geo: number; verlopen: number }> {
+export async function sweepWorkerPushes(now = new Date()): Promise<{ selected: number; reminders: number; profile: number; geo: number; verlopen: number; weer: number }> {
   const [selected, reminders] = [await selectedPushes(now), await reminderPushes(now)];
+  // een storing bij MeteoAlarm of in de database mag de andere meldingen niet tegenhouden
+  const weer = await weerPushes(now).catch((err: unknown) => {
+    logger.warn("weerwaarschuwingen versturen mislukt", { error: err instanceof Error ? err.message : String(err) });
+    return 0;
+  });
   // reacties en vervangingsverzoeken die bleven openstaan terwijl de klus al begon
   const opruim = await ruimVerlopenReactiesOp(now).catch((err: unknown) => {
     logger.warn("opruimen verlopen reacties mislukt", { error: err instanceof Error ? err.message : String(err) });
@@ -167,7 +223,7 @@ export async function sweepWorkerPushes(now = new Date()): Promise<{ selected: n
   const geo = hour >= 8 && hour < 21 ? await notifyNearbyOpenShifts(now).catch(() => 0) : 0;
   // de eenmalige pushmarkeringen (volgers, job-alerts, geo) na 30 dagen weg; hooguit één keer per dag
   await ruimPushMarkeringenOp(now).catch(() => 0);
-  return { selected, reminders, profile, geo, verlopen: opruim.reacties + opruim.vervangingen };
+  return { selected, reminders, profile, geo, verlopen: opruim.reacties + opruim.vervangingen, weer };
 }
 
 /** Called from frequently-hit endpoints: runs the sweep at most once per 4 minutes. */
@@ -178,7 +234,7 @@ export async function maybeSweepWorkerPushes(): Promise<void> {
   await kvSet(key, new Date().toISOString());
   try {
     const r = await sweepWorkerPushes();
-    if (r.selected + r.reminders + r.profile + r.geo + r.verlopen > 0) logger.info("worker pushes sent", r);
+    if (r.selected + r.reminders + r.profile + r.geo + r.verlopen + r.weer > 0) logger.info("worker pushes sent", r);
   } catch (err) {
     logger.warn("worker push sweep failed", { error: (err as Error).message });
   }
