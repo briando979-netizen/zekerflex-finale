@@ -108,6 +108,8 @@ const BRON: Record<string, string> = {
   "demo-request": "demo-aanvraag",
   "offerte-inbound": "offerte-aanvraag",
   "sales-ai": "sales-AI",
+  // "Introduceer een bedrijf" (lib/introducties): wie het voorstelde staat in Beheer → Sales → Introducties
+  introductie: "introductie door een gebruiker",
 };
 
 /** Waarom deze lead past: het vacaturesignaal als dat er is, anders de bron en de reden van de score. */

@@ -31,6 +31,9 @@ export interface CreateLeadInput {
   sourceUrl?: string | undefined;
   vacancySignal?: string | undefined;
   discoveredEmail?: string | undefined;
+  /** Een score die al vaststaat (bv. een introductie door een gebruiker, lib/introducties); anders scoort de motor of een mens. */
+  score?: number | undefined;
+  scoreRationale?: string | undefined;
 }
 
 // Fases die de kanban-pijplijn mag zetten (slepen tussen kolommen).
@@ -68,6 +71,7 @@ export async function createLead(input: CreateLeadInput) {
       sourceUrl: input.sourceUrl ?? null,
       vacancySignal: input.vacancySignal ?? null,
       discoveredEmail: input.discoveredEmail ?? null,
+      ...(input.score !== undefined ? { score: input.score, scoreRationale: input.scoreRationale ?? null } : {}),
     },
   });
   await recordAudit({

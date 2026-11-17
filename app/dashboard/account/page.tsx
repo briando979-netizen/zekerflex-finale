@@ -100,6 +100,8 @@ export default async function AccountPage() {
           external: true,
         },
         { label: t.favorites, href: "/dashboard/favorieten" },
+        // "Introduceer een bedrijf" (17 nov 2026, lib/introducties); in de app zonder de beloning
+        { label: ft.introductie.menu, href: "/dashboard/introduceren" },
         { label: lt.portofoon, href: "/dashboard/portofoon" },
         { label: lt.kluis, href: "/dashboard/toegangscodes" },
         { label: lt.voertuig, href: "/dashboard/voertuig" },

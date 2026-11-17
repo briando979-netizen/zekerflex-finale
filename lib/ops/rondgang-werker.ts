@@ -40,6 +40,8 @@ export const WERKER_PAGINAS = [
   "/dashboard/vooruitblik",
   "/dashboard/verzekering",
   "/dashboard/paspoort",
+  // "Introduceer een bedrijf" (17 nov): alleen KV en database bij het laden
+  "/dashboard/introduceren",
 ] as const;
 
 export interface WerkerRondgang {

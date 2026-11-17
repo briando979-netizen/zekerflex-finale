@@ -7,6 +7,8 @@ import { NOTIFICATIONS_NL } from "@/components/app/notifications-texts";
 import { PERSONAL_INFO_NL } from "@/components/app/personal-info-texts";
 import { LOONSTROOK_NL } from "@/lib/payroll/loonstrook-teksten";
 import { MILESTONE_NL } from "@/lib/worker/milestone-teksten";
+import { INTRODUCTIE_NL } from "@/lib/introducties/teksten";
+import { INTRODUCTIE_TALEN } from "@/lib/introducties/teksten-talen";
 
 // ---------------------------------------------------------------------------
 // Freelancer app (/dashboard) dictionary — kept separate from the employer
@@ -595,6 +597,8 @@ const nl = {
     level: LEVEL_KAART_NL,
     uitnodiging: UITNODIGING_NL,
   },
+  // "Introduceer een bedrijf" (lib/introducties/teksten.ts; de andere talen in teksten-talen.ts)
+  introductie: INTRODUCTIE_NL,
   rondleiding: {
     stap: "Stap {n} van {m}",
     volgende: "Volgende",
@@ -2389,6 +2393,7 @@ const en: FreelancerDict = {
       deelTekst: "Work and earn via ZekerFlex — with your own free bank account. Sign up with my link and get a {bedrag} welcome bonus: {link}",
     },
   },
+  introductie: INTRODUCTIE_TALEN.en,
   rondleiding: {
     stap: "Step {n} of {m}",
     volgende: "Next",
@@ -4176,6 +4181,7 @@ const pl: FreelancerDict = {
       deelTekst: "Pracuj i zarabiaj przez ZekerFlex — z własnym darmowym kontem bankowym. Zarejestruj się z moim linkiem i odbierz {bedrag} bonusu powitalnego: {link}",
     },
   },
+  introductie: INTRODUCTIE_TALEN.pl,
   rondleiding: {
     stap: "Krok {n} z {m}",
     volgende: "Dalej",
@@ -5963,6 +5969,7 @@ const ro: FreelancerDict = {
       deelTekst: "Muncește și câștigă prin ZekerFlex — cu propriul cont bancar gratuit. Înscrie-te cu linkul meu și primești un bonus de bun venit de {bedrag}: {link}",
     },
   },
+  introductie: INTRODUCTIE_TALEN.ro,
   rondleiding: {
     stap: "Pasul {n} din {m}",
     volgende: "Înainte",
@@ -7750,6 +7757,7 @@ const uk: FreelancerDict = {
       deelTekst: "Працюй і заробляй через ZekerFlex — з власним безкоштовним банківським рахунком. Зареєструйся за моїм посиланням і отримай вітальний бонус {bedrag}: {link}",
     },
   },
+  introductie: INTRODUCTIE_TALEN.uk,
   rondleiding: {
     stap: "Крок {n} з {m}",
     volgende: "Далі",
