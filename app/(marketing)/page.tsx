@@ -182,6 +182,24 @@ export default function WerkHomePage() {
         </div>
       </section>
 
+      {/* ───────────────────────────────────────────────── bekijk de app */}
+      <section className="bg-paper-soft">
+        <div className="shell-4k py-8 md:py-10 lg:py-12">
+          <Reveal className="rounded-3xl border border-hair bg-white p-6 shadow-sm md:p-10">
+            <p className="eyebrow">Zie het zelf</p>
+            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">Bekijk de app van binnen</h2>
+            <p className="fluid-lead mt-4 max-w-2xl text-neutralx-600">
+              Kijk mee in een voorbeeldaccount met verzonnen gegevens. Zo zie je hoe je klussen vindt, incheckt met je
+              telefoon en betaald wordt, zonder je aan te melden.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/voorbeeld" className="btn-mint text-base">Bekijk de app</Link>
+              <Link href={WERK_AANMELDEN} className="btn-ghost text-base">Of maak gratis je profiel</Link>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       {/* ───────────────────────────────────────────────── de app */}
       <AppDownload />
 
