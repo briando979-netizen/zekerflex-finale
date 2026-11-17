@@ -6,6 +6,8 @@ import type { SeasonId, ThemeId } from "./calendar";
 // eigen foto's (dezelfde beelden als de social-mediaset van 17 nov 2026). De bestanden staan in
 // public/seizoen (640x640, licht), herkomst in public/seizoen/CREDITS.md. Puur: geen Date, geen
 // browser, zodat de test en de server hetzelfde zeggen.
+// Werker en bedrijf apart: de werker-app (/dashboard) toont alleen een werkersbeeld; is dat er niet,
+// dan geen kaart. Anders staat er reclame voor bedrijven in de app van de werker.
 // ---------------------------------------------------------------------------
 
 export interface SeizoenFoto {
@@ -16,12 +18,12 @@ export interface SeizoenFoto {
 
 interface Regel {
   alt: string;
-  /** eigen beeld voor de werker-app (/dashboard), als dat er is; anders hetzelfde beeld voor iedereen */
+  /** eigen beeld voor de werker-app (/dashboard); zonder dit beeld krijgt de werker-app geen kaart */
   werker?: { bestand: string; alt: string };
 }
 
 export const SEIZOEN_FOTOS: Readonly<Record<SeasonId, Regel>> = {
-  nieuwjaar: { alt: "Nieuw jaar: zelf bepalen wanneer je werkt?" },
+  nieuwjaar: { alt: "Nieuw jaar: januari al rond?", werker: { bestand: "nieuwjaar-werker", alt: "Nieuw jaar: zelf bepalen wanneer je werkt?" } },
   valentijn: { alt: "Valentijnsdag: restaurant vol geboekt?" },
   carnaval: { alt: "Carnaval: kroeg vol?" },
   pasen: { alt: "Pasen: paasbrunch vol geboekt?" },
@@ -34,10 +36,10 @@ export const SEIZOEN_FOTOS: Readonly<Record<SeasonId, Regel>> = {
 
 const isWerkerApp = (pathname: string) => pathname === "/dashboard" || pathname.startsWith("/dashboard/");
 
-/** Het beeld bij een feest, of null (een verjaardag heeft geen beeld). */
+/** Het beeld bij een feest, of null (een verjaardag heeft geen beeld; de werker-app zonder werkersbeeld ook niet). */
 export function seizoenFoto(theme: ThemeId, pathname: string): SeizoenFoto | null {
   if (theme === "verjaardag") return null;
   const regel = SEIZOEN_FOTOS[theme];
-  if (regel.werker && isWerkerApp(pathname)) return { src: `/seizoen/${regel.werker.bestand}.jpg`, alt: regel.werker.alt };
+  if (isWerkerApp(pathname)) return regel.werker ? { src: `/seizoen/${regel.werker.bestand}.jpg`, alt: regel.werker.alt } : null;
   return { src: `/seizoen/${theme}.jpg`, alt: regel.alt };
 }
