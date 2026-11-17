@@ -1,4 +1,5 @@
 import type { Dict } from "@/lib/i18n/dictionaries";
+import { INTRODUCTIE_TALEN } from "@/lib/introducties/teksten-talen";
 
 // English mirror of the employer/shop dictionary — same keys. Import it only
 // from server code: lib/i18n/server.ts passes it to <I18nProvider> for readers
@@ -1860,6 +1861,7 @@ export const en: Dict = {
     kop: "🤖 Approve hours automatically",
     uitleg: "After 24 hours the autopilot approves hours if the start and end times are within 15 minutes of the planning, no more hours were written than planned, the GPS check-in is correct and there are no fraud signals. Everything else stays with you. You can always turn it off again.",
   },
+  introductie: INTRODUCTIE_TALEN.en,
   greet: {
     morning: "Good morning",
     afternoon: "Good afternoon",

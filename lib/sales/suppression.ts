@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { mailAllowed } from "@/lib/mail/prefs";
+import { FREE_MAIL_DOMAINS } from "@/lib/sales/vrije-maildomeinen";
 
 // ---------------------------------------------------------------------------
 // Do-not-contact list for the sales-recruiter motor.
@@ -28,14 +29,6 @@ export interface SuppressionResult {
   reason?: SuppressionReason;
   detail?: string;
 }
-
-const FREE_MAIL_DOMAINS = new Set([
-  "gmail.com", "googlemail.com", "hotmail.com", "hotmail.nl", "outlook.com",
-  "outlook.nl", "live.nl", "live.com", "icloud.com", "me.com", "yahoo.com",
-  "yahoo.nl", "ziggo.nl", "kpnmail.nl", "planet.nl", "home.nl", "xs4all.nl",
-  "telfort.nl", "casema.nl", "chello.nl", "hetnet.nl", "upcmail.nl", "quicknet.nl",
-  "zonnet.nl", "proton.me", "protonmail.com", "gmx.com", "gmx.net",
-]);
 
 export function normaliseEmail(email: string): string {
   return email.trim().toLowerCase();
