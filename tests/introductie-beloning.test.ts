@@ -100,5 +100,38 @@ describe("waar het inhaakt op het geld", () => {
     const motor = bron("lib/sales/engine.ts");
     const due = motor.slice(motor.indexOf("async function processDueLeads("));
     expect(due).toContain("campaignId: campaign.id,");
+    // bij een bestaande lead (ook een in een campagne): de velden die de motor mailt alleen zonder campagne aanvullen
+    expect(opslag).toContain("...aanvullingVoorLead(bestaand.lead, { contactNaam, email, telefoon }),");
+    expect(opslag).not.toMatch(/\.\.\.aanvulling\(bestaand/);
+  });
+
+  it("de motor geeft de contacten van een introductie nooit aan de LLM van een automatische mail, en verrijken laat ze staan", () => {
+    const outreach = bron("lib/sales/outreach.ts");
+    expect(outreach).toContain("const enrichment = zonderIntroContacten(lead.enrichmentJson);");
+    expect(outreach).not.toContain("const enrichment = (lead.enrichmentJson ?? {}) as Record<string, unknown>;");
+    const leads = bron("lib/sales/leads.ts");
+    const verrijk = leads.slice(leads.indexOf("export async function enrichLead("), leads.indexOf("export async function scoreLead("));
+    expect(verrijk).toContain("...behoudIntroContacten(lead.enrichmentJson),");
+  });
+
+  it("koppelen: de koppeling zelf als laatste, na de claims, de lead, het auditspoor en de al betaalde factuur", () => {
+    const opslag = bron("lib/introducties/opslag.ts");
+    const koppel = opslag.slice(opslag.indexOf("export async function koppelIntroductie("), opslag.indexOf("/** Bedrijven zoeken om te koppelen"));
+    const plek = (s: string) => {
+      const i = koppel.indexOf(s);
+      expect(i, s).toBeGreaterThan(-1);
+      return i;
+    };
+    const volgorde = [
+      "await eisNieuwBedrijf(tenant, eerste.userId, introOp);",
+      "await claim<KoppelClaim>(leadClaimSleutel(lead.id)",
+      "await claim(bedrijfClaimSleutel(tenant.id)",
+      "await prisma.salesLead.update(",
+      "await recordAudit(",
+      "paidAt: { gt: introOp }",
+      "await kvSet(koppelSleutel(tenant.id), koppeling);",
+    ].map(plek);
+    expect([...volgorde].sort((a, b) => a - b)).toEqual(volgorde);
+    expect(koppel).not.toContain("kvSetIfAbsent(koppelSleutel");
   });
 });

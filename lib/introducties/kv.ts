@@ -10,8 +10,11 @@ import type { VrijePeriode } from "@/lib/introducties/periode";
 //                                     weken zonder platformkosten (de instelling van het bedrijf, gelezen bij goedkeuren).
 //   introductie-beloning:<tenantId> → IntroductieBeloning: één keer gezet (kvSetIfAbsent) zodra de eerste factuur voor
 //                                     platformkosten betaald is.
+//   introductie-lead:<leadId>       → KoppelClaim { tenantId, at }: welk bedrijf deze lead claimde (eenmalig, kvSetIfAbsent)
+//   introductie-bedrijf:<tenantId>  → { leadId }: welke lead dit bedrijf claimde. Samen: één koppeling per lead en per bedrijf,
+//                                     ook als twee beheerders tegelijk klikken. De koppeling zelf wordt als laatste geschreven.
 // "Beloning verstuurd" = de taak in Beheer → Te doen afgevinkt (owner-todos:done, lib/admin/owner-todos.ts): één bron.
-// Het e-mailadres en telefoonnummer van de contactpersoon staan hier bewust niet: alleen in de lead (SalesLead, bij een
+// Naam, e-mailadres en telefoonnummer van de contactpersoon staan hier bewust niet: alleen in de lead (SalesLead, bij een
 // bestaande lead in enrichmentJson.introductieContacten), zodat ze de regels van sales volgen (onderdrukken, verwijderen).
 // ---------------------------------------------------------------------------
 
@@ -20,7 +23,6 @@ export interface Introductie {
   at: string;
   rol: IntroductieRol;
   bedrijf: string;
-  contactNaam: string;
   /** de lead (nieuw of al bekend); null als het bedrijf al klant was */
   leadId: string | null;
   /** het bedrijf werkte al met ZekerFlex (zelfde adres of zakelijk domein) */
@@ -58,6 +60,14 @@ const LIJST = "introducties:";
 export const lijstSleutel = (userId: string): string => `introducties:${userId}`;
 export const koppelSleutel = (tenantId: string): string => `introductie-klant:${tenantId}`;
 export const beloningSleutel = (tenantId: string): string => `introductie-beloning:${tenantId}`;
+export const leadClaimSleutel = (leadId: string): string => `introductie-lead:${leadId}`;
+export const bedrijfClaimSleutel = (tenantId: string): string => `introductie-bedrijf:${tenantId}`;
+
+/** Wie een lead claimde bij het koppelen, en wanneer (de gratis weken rekenen vanaf dit moment, ook bij een herhaling). */
+export type KoppelClaim = {
+  tenantId: string;
+  at: string;
+};
 /** Dezelfde sleutel als de afgevinkte taken in lib/admin/owner-todos.ts (tests/introductie-beloning.test.ts bewaakt dat). */
 export const TODO_KLAAR_SLEUTEL = "owner-todos:done";
 

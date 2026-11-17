@@ -10,7 +10,7 @@ const m = vi.hoisted(() => ({
   principal: { userId: "usr_werker", email: "werker@zekerflex.test", fullName: "Wendy Werker" } as Record<string, unknown>,
   rate: vi.fn(async () => ({ ok: true })),
   dien: vi.fn(async () => ({ uitkomst: "nieuw", introducties: [] })),
-  mijn: vi.fn(async () => [{ id: "i1", at: "2026-11-17T09:00:00.000Z", bedrijf: "Bakkerij De Korf", contactNaam: "Piet", status: "ingediend" }]),
+  mijn: vi.fn(async () => [{ id: "i1", at: "2026-11-17T09:00:00.000Z", bedrijf: "Bakkerij De Korf", status: "ingediend" }]),
   alle: vi.fn(async () => []),
   koppel: vi.fn(async () => ({ tenantId: "t1" })),
   zoek: vi.fn(async () => [{ id: "t1", naam: "Bakkerij De Korf B.V.", sinds: "2026-11-17T09:00:00.000Z" }]),
