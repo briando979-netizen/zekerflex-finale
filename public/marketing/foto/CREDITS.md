@@ -74,3 +74,11 @@ Een foto toevoegen: bestand hier neerzetten, een regel in `fotos.ts` en een rege
 | `campagne-monteur.jpg` | team | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
 | `campagne-klembord.jpg` | team | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
 | `campagne-wasstraat.jpg` | team | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-zorg.jpg` | zorg | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-receptie.jpg` | team | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-beveiliging.jpg` | team | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-kinderopvang.jpg` | zorg | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-kas.jpg` | team | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-promotie.jpg` | jong | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-rijles.jpg` | rijschool | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-webwinkel.jpg` | retail | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |

@@ -428,7 +428,7 @@ export const AANBOD: AanbodItem[] = [
     start: aanmeldenVoor("website"),
     voorbeelden: { label: "Bekijk voorbeeldwebsites", href: "/voorbeeldsites" },
     zoekwoorden: ["website laten bouwen", "website laten maken", "website voor mijn bedrijf", "websitebouwer", "website zonder cookies"],
-    foto: { bestand: "campagne-eigenaar.jpg", alt: "Een eigenaar zit met een tablet in zijn restaurant, het team dekt de tafels" },
+    foto: { bestand: "campagne-webwinkel.jpg", alt: "Een winkeleigenaar zit met een laptop en een pakketje aan de toonbank van haar winkel" },
   },
   {
     slug: "webshop",

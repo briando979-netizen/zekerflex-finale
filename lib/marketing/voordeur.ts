@@ -23,10 +23,10 @@ export interface VoordeurTegel {
 /** Welk aanbod-onderdeel bij welk dashboard hoort, en welke foto. */
 const TEGELS: { soort: Werkruimte; titel: string; slug: string; foto: string }[] = [
   { soort: "personeel", titel: "Personeel", slug: "flexwerkers-inhuren", foto: "campagne-rooster" },
-  { soort: "website", titel: "Website", slug: "website", foto: "campagne-eigenaar" },
+  { soort: "website", titel: "Website", slug: "website", foto: "campagne-webwinkel" },
   { soort: "webshop", titel: "Webshop", slug: "webshop", foto: "campagne-vouwen" },
   { soort: "horeca", titel: "Horeca", slug: "horeca", foto: "campagne-kok" },
-  { soort: "rijschool", titel: "Rijschool", slug: "rijschool", foto: "rijschool-achter-het-stuur" },
+  { soort: "rijschool", titel: "Rijschool", slug: "rijschool", foto: "campagne-rijles" },
 ];
 
 export const startHrefVoor = (soort: Werkruimte): string => `/register?type=bedrijf&dashboard=${soort}`;

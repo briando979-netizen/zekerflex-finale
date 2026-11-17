@@ -31,3 +31,9 @@ liggende uitsnede 3:2 van de campagnefoto's in `public/marketing/foto/`). Deze s
 | campagne-auto.jpg | auto | eigen beeld | eigen |
 | campagne-productie.jpg | productie | eigen beeld | eigen |
 | campagne-algemeen.jpg | algemeen | eigen beeld | eigen |
+| campagne-zorg.jpg | zorg | eigen beeld | eigen |
+| campagne-kantoor.jpg | kantoor | eigen beeld | eigen |
+| campagne-beveiliging.jpg | beveiliging | eigen beeld | eigen |
+| campagne-kinderopvang.jpg | kinderopvang | eigen beeld | eigen |
+| campagne-agrarisch.jpg | agrarisch | eigen beeld | eigen |
+| campagne-promotie.jpg | promotie | eigen beeld | eigen |

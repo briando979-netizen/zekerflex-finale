@@ -66,3 +66,5 @@ Liggende uitsnede (4:3) van de foto met dezelfde naam in `public/marketing/foto/
 | `campagne-barista.jpg` | Eigen beeld |
 | `campagne-klembord.jpg` | Eigen beeld |
 | `campagne-ondernemer.jpg` | Eigen beeld |
+| `campagne-webwinkel.jpg` | Eigen beeld |
+| `campagne-rijles.jpg` | Eigen beeld |

@@ -16,8 +16,8 @@ const BRANCHES: Branch[] = [
   { key: "horeca", label: "Horeca", photo: "/shifts/campagne-horeca.jpg", blurb: "Bediening, bar, keuken en catering." },
   { key: "evenement", label: "Evenement", photo: "/shifts/campagne-evenement.jpg", blurb: "Festivals, beurzen, hosting en crew." },
   { key: "schoonmaak", label: "Schoonmaak", photo: "/shifts/campagne-schoonmaak.jpg", blurb: "Housekeeping, glasbewassing en oplevering." },
-  { key: "zorg", label: "Zorg", photo: "/shifts/zorg.jpg", blurb: "Ondersteuning, begeleiding en welzijn." },
-  { key: "kantoor", label: "Kantoor", photo: "/shifts/kantoor.jpg", blurb: "Receptie, administratie en klantenservice." },
+  { key: "zorg", label: "Zorg", photo: "/shifts/campagne-zorg.jpg", blurb: "Ondersteuning, begeleiding en welzijn." },
+  { key: "kantoor", label: "Kantoor", photo: "/shifts/campagne-kantoor.jpg", blurb: "Receptie, administratie en klantenservice." },
   { key: "bouw", label: "Bouw & techniek", photo: "/shifts/campagne-bouw.jpg", blurb: "Montage, installatie, grond- en sloopwerk." },
 ];
 

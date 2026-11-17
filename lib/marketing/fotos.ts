@@ -107,6 +107,14 @@ export const FOTOS: readonly Foto[] = [
   { slug: "campagne-monteur", thema: "team", eigen: true, staand: true, alt: "Een monteur draait met een ratelsleutel een bout vast op een stalen constructie", trefwoorden: ["bouw", "techniek", "monteur", "montage"] },
   { slug: "campagne-klembord", thema: "team", eigen: true, staand: true, alt: "Een medewerker met werkhandschoenen schrijft op een klembord naast een stapel steigerbuizen", trefwoorden: ["bouw", "steiger", "werkgever", "administratie"] },
   { slug: "campagne-wasstraat", thema: "team", eigen: true, staand: true, alt: "Een medewerker wast een zwarte auto met een spons in een wasstraat", trefwoorden: ["auto", "wasstraat", "autopoetser"] },
+  { slug: "campagne-zorg", thema: "zorg", eigen: true, staand: true, alt: "Een zorgmedewerker staat met een rolstoel in de gang van een woonzorgcentrum", trefwoorden: ["zorg", "verpleeg", "thuiszorg", "bewoners"] },
+  { slug: "campagne-receptie", thema: "team", eigen: true, staand: true, alt: "Een receptioniste staat met een laptop achter een houten balie in een kantoor", trefwoorden: ["kantoor", "receptie", "administratie"] },
+  { slug: "campagne-beveiliging", thema: "team", eigen: true, staand: true, alt: "Een beveiliger met een portofoon staat bij de glazen ingang van een kantoorgebouw", trefwoorden: ["beveiliging", "beveiliger", "portier"] },
+  { slug: "campagne-kinderopvang", thema: "zorg", eigen: true, staand: true, alt: "Een pedagogisch medewerker zit op haar hurken met houten blokken in een groepsruimte", trefwoorden: ["kinderopvang", "bso", "opvang", "onderwijs"] },
+  { slug: "campagne-kas", thema: "team", eigen: true, staand: true, alt: "Een medewerker draagt een krat tomaten tussen de planten in een kas", trefwoorden: ["agrarisch", "tuinbouw", "kas", "oogst"] },
+  { slug: "campagne-promotie", thema: "jong", eigen: true, staand: true, alt: "Een promotiemedewerker houdt een dienblad met proefbekertjes vast in een winkelstraat", trefwoorden: ["promotie", "promotor", "sampling"] },
+  { slug: "campagne-rijles", thema: "rijschool", eigen: true, staand: true, alt: "Een rij-instructeur leunt met de autosleutel in zijn hand tegen het portier van een witte lesauto", trefwoorden: ["rijschool", "rijles", "rijbewijs", "auto", "instructeur"] },
+  { slug: "campagne-webwinkel", thema: "retail", eigen: true, staand: true, alt: "Een winkeleigenaar zit met een laptop en een pakketje aan de toonbank van haar winkel", trefwoorden: ["website", "webshop", "winkel", "ondernemer"] },
 ];
 
 export function fotoPad(f: Pick<Foto, "slug">): string {
@@ -140,10 +148,10 @@ export function sectorFoto(sector: string, seed: string | number = 0): Foto | un
 
 /** De foto voor de kop van een vaste openbare pagina (alleen pagina's waar een foto de kop sterker maakt; gereedschap en juridische pagina's niet). */
 const PAGINA_FOTOS: Record<string, string> = {
-  contact: "campagne-deuropening",
+  contact: "campagne-receptie",
   abonnementen: "campagne-rooster",
   prijzen: "campagne-eigenaar",
-  beveiliging: "campagne-ondernemer",
+  beveiliging: "campagne-beveiliging",
   kennis: "campagne-klembord",
   klussen: "campagne-bezorger",
   "voor-bureaus": "campagne-ondernemer",
@@ -152,7 +160,7 @@ const PAGINA_FOTOS: Record<string, string> = {
   intercedenten: "campagne-eigenaar",
   rekentools: "campagne-vouwen",
   "review-check": "campagne-bediening",
-  producten: "campagne-ondernemer",
+  producten: "campagne-receptie",
   developers: "campagne-monteur",
   nieuwsbrief: "campagne-aanbellen",
   uitleg: "campagne-barista",
