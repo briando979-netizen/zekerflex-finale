@@ -132,8 +132,8 @@ export function TelefoonDemo() {
               </div>
             ) : null}
 
-            {/* de vier schermen naast elkaar: vegen of een tab kiezen */}
-            <div ref={veeg} onScroll={bijVegen} className="telefoon-veeg flex h-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain">
+            {/* de vier schermen naast elkaar: vegen of een tab kiezen. Absoluut geplaatst: anders telt de breedte van alle vier mee en wordt de pagina op een telefoon breder dan het scherm (17 nov: 834 op 390) */}
+            <div ref={veeg} onScroll={bijVegen} className="telefoon-veeg absolute inset-0 flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain">
               {/* 1. Klussen */}
               <div className="h-full w-full flex-shrink-0 snap-start">
                 <div className="relative h-[54%] w-full">
