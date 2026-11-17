@@ -54,6 +54,8 @@ export function OnboardingForm({
   laatstePoging = null,
   bsnBekend = false,
   naId = null,
+  inBehandeling = false,
+  tochOpnieuw = "Toch opnieuw scannen",
 }: {
   /** stap 1 ("Hey! Wie ben jij?"): wat er al bewaard is */
   persoon: PersoonStand;
@@ -69,6 +71,9 @@ export function OnboardingForm({
   bsnBekend?: boolean;
   /** de volgende open stap van de poort na de ID-scan (voor het eindscherm van de scan) */
   naId?: VolgendeStap | null;
+  /** de vorige scan wacht op een medewerker: dan geen nieuwe scan aanbieden, alleen een klein "toch opnieuw" (17 nov 2026) */
+  inBehandeling?: boolean;
+  tochOpnieuw?: string;
   defaultName: string;
   requireKvk?: boolean;
   /** Stripe Identity staat aan en weigert niet: dan een klein linkje onder de twee keuzes (12 nov 2026). */
@@ -93,6 +98,8 @@ export function OnboardingForm({
   // wat de werker verder instuurt, voor de controlestap aan het eind van de scan
   const [overzicht, setOverzicht] = useState<OverzichtRij[]>([]);
   const [scanOpen, setScanOpen] = useState(false);
+  // wacht de vorige scan op een mens, dan pas na een klik op "toch opnieuw" de keuzekaarten
+  const [tochScannen, setTochScannen] = useState(false);
   const naamNu = voegNaam(persoonNu.voornaam, persoonNu.achternaam) || defaultName;
   const stappen = stappenVoor({ idKlaar });
   const scanResult = useRef<Result | null>(null);
@@ -387,7 +394,7 @@ export function OnboardingForm({
               <li key={c.label} className="flex items-start gap-3 px-5 py-3">
                 <span
                   className={`mt-0.5 grid h-5 w-5 flex-shrink-0 place-items-center rounded-full text-[11px] ${
-                    c.ok ? "bg-ok text-white" : "bg-crit text-white"
+                    c.ok ? "bg-ok text-white" : result.outcome === "in_review" ? "bg-warn text-white" : "bg-crit text-white"
                   }`}
                 >
                   {c.ok ? "✓" : "!"}
@@ -403,17 +410,24 @@ export function OnboardingForm({
 
         {result.outcome !== "verified" && (
           <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                setResult(null);
-                formRef.current?.reset();
-                setAttempt((a) => a + 1);
-              }}
-              className="btn-primary"
-            >
-              {t.retry}
-            </button>
+            {/* wacht een medewerker, dan geen "opnieuw proberen": de scan hoeft niet over (17 nov 2026) */}
+            {result.outcome === "in_review" ? (
+              <button type="button" onClick={() => router.push("/dashboard")} className="btn-primary">
+                {t.toDashboard}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setResult(null);
+                  formRef.current?.reset();
+                  setAttempt((a) => a + 1);
+                }}
+                className="btn-primary"
+              >
+                {t.retry}
+              </button>
+            )}
             <a href="mailto:support@zekerflex.com" className="btn-ghost">
               {t.help}
             </a>
@@ -596,18 +610,24 @@ export function OnboardingForm({
           {/* stap 3: de ID-check */}
           <div hidden={stap !== "id"} className="space-y-5" key={attempt}>
             {laatstePoging}
-            <IdKeuzeKaarten
-              w={w.id}
-              busy={busy}
-              onStart={(r, wz) => void startScan(r, wz)}
-              stripe={
-                stripeIdentity ? (
-                  <button type="button" onClick={() => void verstuur("stripe")} disabled={busy} className="text-sm font-semibold text-brand-600 underline underline-offset-4 disabled:opacity-60">
-                    {w.id.stripeLink}
-                  </button>
-                ) : null
-              }
-            />
+            {inBehandeling && !tochScannen ? (
+              <button type="button" onClick={() => setTochScannen(true)} className="btn-ghost w-full sm:w-auto">
+                {tochOpnieuw}
+              </button>
+            ) : (
+              <IdKeuzeKaarten
+                w={w.id}
+                busy={busy}
+                onStart={(r, wz) => void startScan(r, wz)}
+                stripe={
+                  stripeIdentity ? (
+                    <button type="button" onClick={() => void verstuur("stripe")} disabled={busy} className="text-sm font-semibold text-brand-600 underline underline-offset-4 disabled:opacity-60">
+                      {w.id.stripeLink}
+                    </button>
+                  ) : null
+                }
+              />
+            )}
             <div className="border-t border-hair pt-4">
               <button type="button" onClick={() => void bewaarVoorLater()} disabled={busy} className="btn-ghost w-full sm:w-auto">
                 {busy ? t.later.busy : t.later.button}
