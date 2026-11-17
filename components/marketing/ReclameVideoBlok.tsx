@@ -40,7 +40,6 @@ export function ReclameVideoBlok({ soort }: { soort: keyof typeof VIDEOS }) {
               aria-label={v.omschrijving}
             />
           </div>
-          <figcaption className="mt-3 text-xs text-neutralx-500">Eigen beelden, gemaakt met AI: de personen in beeld bestaan niet. Zonder geluid.</figcaption>
         </figure>
         <div>
           <p className="eyebrow">In {v.seconden} seconden</p>

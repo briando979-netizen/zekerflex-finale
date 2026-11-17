@@ -41,7 +41,6 @@ export function PaginaVideoBlok({ id }: { id: string }) {
             {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
             <video controls preload="none" poster={posterPad(v)} className="aspect-video w-full bg-ink" src={videoPad(v)} />
           </div>
-          <figcaption className="mt-3 text-xs text-neutralx-500">Eigen beelden, gemaakt met AI: de personen in beeld bestaan niet en praten niet zelf. De stem is onze eigen.</figcaption>
         </figure>
       </div>
     </Section>
