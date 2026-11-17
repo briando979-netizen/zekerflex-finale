@@ -1,7 +1,8 @@
 import type { SalesCampaign } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
-import { osmZoekBedrijven } from "@/lib/integrations/osm-plaatsen";
+import { osmBedrijvenVanSoorten, osmZoekBedrijven, type OsmPlaats } from "@/lib/integrations/osm-plaatsen";
+import { STRAAL_M, middelpuntVanStad, tagsVoorSector } from "@/lib/sales/discovery/osm-tags";
 import { createLead } from "@/lib/sales/leads";
 import { CITIES, REGIO_STEDEN } from "@/lib/seo-cities";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
@@ -16,6 +17,13 @@ import { amsterdamDayKey } from "@/lib/time/amsterdam";
 // gaat daarom op naam + plaats, en het KVK-nummer vult de buitendienst (of de
 // verrijking) later aan. Een lead zonder KVK-nummer is prima: die wordt toch
 // pas een klant nadat iemand hem spreekt.
+//
+// 17 nov 2026: eerst Overpass op kenmerken (shop=*, amenity=restaurant, …) rond
+// het middelpunt van de plaats (lib/sales/discovery/osm-tags.ts); Nominatim op
+// vrije tekst vond bij "schoonmaak Veendam" bijna niets (ronde 08:00: 0 ontdekt).
+// Geeft Overpass niets of faalt hij, dan Nominatim als terugval: de ronde valt
+// nooit stil. Hooguit VRAGEN_PER_RONDE vragen per bron per ronde, in de wachtrij
+// met pauze van lib/integrations/osm-plaatsen.ts.
 // ---------------------------------------------------------------------------
 
 const STANDAARD_SECTOREN = ["horeca", "logistiek", "retail", "schoonmaak", "evenementen", "zorg"];
@@ -29,6 +37,8 @@ export const STANDAARD_STEDEN: readonly string[] = [
 
 /** Eén ronde blijft klein: OpenStreetMap wil hooguit één aanvraag per seconde (de wachtrij in lib/integrations/osm-plaatsen.ts bewaakt dat). */
 const VRAGEN_PER_RONDE = 4;
+/** Zoveel bedrijven per Overpass-vraag (ontdubbelen op naam + plaats haalt er de bekende uit). */
+const PER_VRAAG = 20;
 /** De Amsterdamse dag waarop het venster bij de eerste vraag staat (15 nov 2026: Groningen). */
 const BEGINDAG = Date.UTC(2026, 10, 15) / 86_400_000;
 
@@ -43,18 +53,50 @@ function amsterdamDag(nu: Date): number {
  * elke dag 0 uit. Nu schuift het venster elke dag vier vragen op, zonder opgeslagen staat, en na de laatste begint hij
  * weer vooraan. Per stad alle sectoren, zodat de steden met voorrang ook het eerst langskomen.
  */
-export function osmVragen(sectoren: readonly string[], steden: readonly string[], nu: Date): string[] {
-  const vragen: string[] = [];
+export function osmVraagDelen(sectoren: readonly string[], steden: readonly string[], nu: Date): OsmVraag[] {
+  const vragen: OsmVraag[] = [];
   for (const c of steden.length ? steden : [""]) {
     for (const s of sectoren) {
       const q = [s, c].filter(Boolean).join(" ").trim();
-      if (q.length >= 3 && !vragen.includes(q)) vragen.push(q);
+      if (q.length >= 3 && !vragen.some((v) => v.q === q)) vragen.push({ sector: s, stad: c, q });
     }
   }
   if (vragen.length <= VRAGEN_PER_RONDE) return vragen;
   const stap = (amsterdamDag(nu) - BEGINDAG) * VRAGEN_PER_RONDE;
   const begin = ((stap % vragen.length) + vragen.length) % vragen.length;
-  return Array.from({ length: VRAGEN_PER_RONDE }, (_, i) => vragen[(begin + i) % vragen.length] ?? "");
+  return Array.from({ length: VRAGEN_PER_RONDE }, (_, i) => vragen[(begin + i) % vragen.length]).filter((v): v is OsmVraag => v !== undefined);
+}
+
+/** Eén zoekvraag van de ronde: de sector en de plaats apart (Overpass) en als tekst (Nominatim, log). */
+export interface OsmVraag {
+  sector: string;
+  stad: string;
+  q: string;
+}
+
+export function osmVragen(sectoren: readonly string[], steden: readonly string[], nu: Date): string[] {
+  return osmVraagDelen(sectoren, steden, nu).map((v) => v.q);
+}
+
+/**
+ * De treffers voor één vraag: Overpass op kenmerken rond het middelpunt van de plaats, en als dat niets geeft (onbekende
+ * sector of plaats, storing, leeg) Nominatim op de tekst. Faalt een bron, dan telt dat als "niets" en gaat de ronde door.
+ */
+async function treffersVoor(v: OsmVraag): Promise<{ treffers: OsmPlaats[]; bron: "overpass" | "nominatim" }> {
+  const tags = tagsVoorSector(v.sector);
+  const midden = middelpuntVanStad(v.stad);
+  if (tags.length && midden) {
+    const uit = await osmBedrijvenVanSoorten({ ...midden, radiusM: STRAAL_M, soorten: tags, aantal: PER_VRAAG }).catch((err: unknown) => {
+      logger.warn("osm overpass mislukt", { q: v.q, error: (err as Error).message });
+      return [];
+    });
+    if (Array.isArray(uit) && uit.length) return { treffers: uit, bron: "overpass" };
+  }
+  const uit = await osmZoekBedrijven(v.q, { aantal: 10 }).catch((err: unknown) => {
+    logger.warn("osm discovery mislukt", { q: v.q, error: (err as Error).message });
+    return [];
+  });
+  return { treffers: Array.isArray(uit) ? uit : [], bron: "nominatim" };
 }
 
 export interface OsmDiscoveryResult {
@@ -62,6 +104,9 @@ export interface OsmDiscoveryResult {
   seen: number;
   queries: string[];
   skipped: number;
+  /** vragen die Overpass (op kenmerken) beantwoordde, en vragen die op Nominatim (tekst) terugvielen */
+  overpass: number;
+  nominatim: number;
 }
 
 export async function discoverViaOsm(
@@ -69,19 +114,17 @@ export async function discoverViaOsm(
   limitPerRun = 12,
   nu: Date = new Date(),
 ): Promise<OsmDiscoveryResult> {
-  const result: OsmDiscoveryResult = { created: 0, seen: 0, queries: [], skipped: 0 };
+  const result: OsmDiscoveryResult = { created: 0, seen: 0, queries: [], skipped: 0, overpass: 0, nominatim: 0 };
 
   const sectoren = campaign.targetSectors.length ? campaign.targetSectors : STANDAARD_SECTOREN;
   const steden = campaign.targetCities.length ? campaign.targetCities : STANDAARD_STEDEN;
-  const ronde = osmVragen(sectoren, steden, nu);
-  result.queries = ronde;
+  const ronde = osmVraagDelen(sectoren, steden, nu);
+  result.queries = ronde.map((v) => v.q);
 
-  for (const q of ronde) {
+  for (const v of ronde) {
     if (result.created >= limitPerRun) break;
-    const treffers = await osmZoekBedrijven(q, { aantal: 10 }).catch((err: unknown) => {
-      logger.warn("osm discovery mislukt", { q, error: (err as Error).message });
-      return [];
-    });
+    const { treffers, bron } = await treffersVoor(v);
+    result[bron] += 1;
     for (const t of treffers) {
       if (result.created >= limitPerRun) break;
       result.seen += 1;
@@ -101,10 +144,11 @@ export async function discoverViaOsm(
         result.skipped += 1;
         continue;
       }
+      // Overpass geeft niet altijd een plaats bij het bedrijf: dan de plaats waar we rond zochten
       await createLead({
         companyName: t.naam,
-        city: t.plaats ?? undefined,
-        sector: q.split(" ")[0] ?? "",
+        city: t.plaats ?? (v.stad || undefined),
+        sector: v.sector,
         source: "openstreetmap",
         createdById: null,
         campaignId: campaign.id,
