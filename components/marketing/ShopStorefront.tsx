@@ -6,6 +6,7 @@ import { useT } from "@/components/i18n/I18nProvider";
 import { fmt, type Dict } from "@/lib/i18n/dictionaries";
 import { ShopProductCard } from "@/components/marketing/ShopProductCard";
 import { bySize, filterKeuzes, filterSleutel, type ShopCardProduct, type ShopCategory } from "@/components/marketing/shop-product";
+import { SHOP_CATEGORIEEN, categorieNaam, type ShopCategorie } from "@/lib/shop/categorieen";
 import type { VoorWaarde } from "@/lib/shop/categoriemenu";
 import Link from "next/link";
 import { bedoeldeJe, zoekScore } from "@/lib/shop/zoeksuggesties";
@@ -23,7 +24,7 @@ type Gender = "Alle" | "Heren" | "Vrouwen" | "Kinderen";
 const GENDER_VALUE: Record<Exclude<Gender, "Alle">, string> = { Heren: "heren", Vrouwen: "vrouwen", Kinderen: "kinderen" };
 const GENDERS: Gender[] = ["Alle", "Heren", "Vrouwen", "Kinderen"];
 const genderUitVoor = (v: VoorWaarde | null): Gender => (v === "heren" ? "Heren" : v === "vrouwen" ? "Vrouwen" : v === "kinderen" ? "Kinderen" : "Alle");
-const TABS: Category[] = ["Alles", "Werk & PBM", "Kleding", "Werkdag", "Cadeaus"];
+const TABS: Category[] = ["Alles", ...SHOP_CATEGORIEEN];
 
 type PriceBucket = "Alle" | "onder15" | "15-30" | "vanaf30";
 const inPriceBucket = (price: number, bucket: PriceBucket): boolean => {
@@ -359,7 +360,14 @@ function useLabels(t: Dict): Labels {
   return useMemo(
     () => ({
       // dezelfde namen als het menu ("Cadeaus" heet daar "Voor teams")
-      tab: { Alles: t.shop.allCategories, "Werk & PBM": t.shop.navPbm, Kleding: t.shop.navKleding, Werkdag: t.shop.navWerkdag, Cadeaus: t.shop.navTeams },
+      tab: {
+        Alles: t.shop.allCategories,
+        ...(Object.fromEntries(SHOP_CATEGORIEEN.map((c) => [c, categorieNaam(c, t.shop.navKleding !== "Kleding")])) as Record<ShopCategorie, string>),
+        "Werk & PBM": t.shop.navPbm,
+        Kleding: t.shop.navKleding,
+        Werkdag: t.shop.navWerkdag,
+        Cadeaus: t.shop.navTeams,
+      },
       price: { Alle: t.shop.allPrices, onder15: t.shop.under15, "15-30": t.shop.between1530, vanaf30: t.shop.from30 },
       sort: { relevantie: t.shop.sortRelevance, "prijs-op": t.shop.sortPriceAsc, "prijs-af": t.shop.sortPriceDesc, naam: t.shop.sortName },
     }),

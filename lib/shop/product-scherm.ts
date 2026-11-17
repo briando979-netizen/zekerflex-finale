@@ -1,4 +1,5 @@
 import { euroNaarCenten, voorraadNaarGetal } from "@/lib/shop/product-formulier";
+import { SHOP_CATEGORIEEN } from "@/lib/shop/categorieen";
 
 // ---------------------------------------------------------------------------
 // Beheer → Webshop: één scherm om een product te plaatsen of te wijzigen (15 nov 2026, eigenaar: "het is moeilijk een product
@@ -14,7 +15,7 @@ export const MAX_EXTRA_FOTOS = MAX_FOTOS - 1;
 /** Zoveel maat-kleurcombinaties in één keer. */
 export const MAX_VARIANTEN = 200;
 
-export const CATEGORIEEN = ["Werk & PBM", "Kleding", "Werkdag", "Cadeaus"] as const;
+export const CATEGORIEEN = SHOP_CATEGORIEEN;
 export type Categorie = (typeof CATEGORIEEN)[number];
 
 /** Snelkeuzes voor maten; je kunt er altijd zelf een bijtypen. */

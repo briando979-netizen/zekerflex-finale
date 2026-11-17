@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Empty, Notice, PageHead, Panel, Pill } from "@/components/admin/kit";
 import { euro } from "@/lib/admin/format";
 import { prijsUitInkoop, tariefVoor, type InkoopRegel, type MargeBeleid } from "@/lib/shop/winkel-ai-core";
+import { SHOP_CATEGORIEEN } from "@/lib/shop/categorieen";
+import { Leverancier, Marges } from "@/components/admin/WinkelLeverancier";
 
 // Admin → Winkel-AI: een idee wordt een volledig productconcept (UIT tot jij
 // het goedkeurt), de AI stelt inkoop voor uit voorraad en verkoop (er wordt
@@ -13,7 +15,7 @@ import { prijsUitInkoop, tariefVoor, type InkoopRegel, type MargeBeleid } from "
 type Concept = { name: string; category: string; gender: string | null; collection: string | null; badge: string | null; description: string; bullets: string[]; sizes: string[]; colors: string[]; soort: string | null };
 type Prijs = { prijsCents: number; exclCents: number; margeEchtPct: number };
 type Trend = { naam: string; waarom: string; doelgroep: string; soort: string | null; seizoen: string | null };
-type Tab = "nieuw" | "inkoop" | "trends";
+type Tab = "nieuw" | "leverancier" | "marges" | "inkoop" | "trends";
 
 async function post<T>(url: string, body: unknown, methode = "POST"): Promise<T> {
   const res = await fetch(url, { method: methode, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -29,13 +31,15 @@ export function WinkelAI() {
     <>
       <PageHead title="Winkel-AI" subtitle="Maak producten uit een idee, laat de AI inkoop voorstellen en trends zoeken. Alles is een voorstel: niets wordt besteld, betaald of zonder jouw akkoord verkocht." />
       <div role="tablist" className="mb-4 flex gap-2">
-        {([["nieuw", "Nieuw product"], ["inkoop", "Inkoop"], ["trends", "Trends"]] as const).map(([id, naam]) => (
+        {([["nieuw", "Nieuw product"], ["leverancier", "Leverancier"], ["marges", "Marges"], ["inkoop", "Inkoop"], ["trends", "Trends"]] as const).map(([id, naam]) => (
           <button key={id} role="tab" type="button" aria-selected={tab === id} onClick={() => setTab(id)} className={`a-btn ${tab === id ? "a-btn-primary" : ""}`}>
             {naam}
           </button>
         ))}
       </div>
       {tab === "nieuw" && <NieuwProduct />}
+      {tab === "leverancier" && <Leverancier />}
+      {tab === "marges" && <Marges />}
       {tab === "inkoop" && <Inkoop />}
       {tab === "trends" && <Trends onIdee={() => setTab("nieuw")} />}
     </>
@@ -202,7 +206,7 @@ function NieuwProduct() {
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="a-label">Categorie
                 <select className="a-input" value={c.category} onChange={(e) => setC({ ...c, category: e.target.value })}>
-                  {["Werk & PBM", "Kleding", "Werkdag", "Cadeaus"].map((x) => <option key={x}>{x}</option>)}
+                  {SHOP_CATEGORIEEN.map((x) => <option key={x}>{x}</option>)}
                 </select>
               </label>
               <label className="a-label">Voor
