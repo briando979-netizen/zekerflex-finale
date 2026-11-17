@@ -203,6 +203,8 @@ export const INBOX_NL = {
   contactOpgeslagen: "Opgeslagen bij je contacten.",
   contactOpslaanMislukt: "Opslaan lukte niet.",
   gesprekStartenMislukt: "Dit gesprek kon niet starten.",
+  /** het eerste bericht als de werker vanaf een klus "Bericht de opdrachtgever" kiest (?klus=) */
+  klusVraag: "Hallo, ik heb een vraag over deze klus.",
   gesprekNietInLijst: "Dit gesprek staat niet in je lijst (vergrendeld of verwijderd).",
   onjuistePincode: "Onjuiste pincode.",
 };

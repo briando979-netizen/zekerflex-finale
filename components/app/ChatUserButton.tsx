@@ -1,6 +1,13 @@
 "use client";
 
-/** Opens the chat dock and starts/continues a 1-on-1 thread with a user. */
+import { usePathname, useRouter } from "next/navigation";
+import { berichtenAdres } from "@/lib/chat/berichten-adres";
+
+/**
+ * "Bericht" bij een kandidaat of gebruiker: naar de chatpagina van deze omgeving, die het gesprek meteen opent (?met=).
+ * Vroeger stuurde de knop een signaal naar het chatvenster in de hoek; dat venster staat uit (hideDock), dus er gebeurde
+ * niets zichtbaars en er ging stil een "Hallo!" naar de ander (17 nov 2026, eigenaar: "ik kan niet op berichten klikken").
+ */
 export function ChatUserButton({
   toUserId,
   label = "Bericht",
@@ -14,16 +21,10 @@ export function ChatUserButton({
   subject?: string;
   className?: string;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
   return (
-    <button
-      type="button"
-      onClick={() =>
-        window.dispatchEvent(
-          new CustomEvent("zf:chat", { detail: { toUserId, contextKey, subject } }),
-        )
-      }
-      className={className}
-    >
+    <button type="button" onClick={() => router.push(berichtenAdres(pathname, { met: toUserId, context: contextKey, onderwerp: subject }))} className={className}>
       {label}
     </button>
   );

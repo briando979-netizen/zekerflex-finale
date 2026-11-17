@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { env } from "@/lib/env";
 import { INSPECT_PARAM, mintInspectLink } from "@/lib/auth/inspect";
 import { clientIp } from "@/lib/http/request";
 import { enforceRateLimit } from "@/lib/rate-limit";
@@ -9,16 +10,17 @@ export const dynamic = "force-dynamic";
 
 // Openbare, alleen-lezen deel-link: opent het werkgever-voorbeeldaccount. Mint een verse inspect-token voor het vaste
 // demo-account en stuurt door naar /werkgever; de middleware zet er een alleen-lezen sessie van (schrijven = 403).
+// achter Caddy is request.url de interne host (0.0.0.0:3000); doorsturen gaat daarom naar APP_BASE_URL (17 nov 2026)
 export async function GET(request: Request): Promise<NextResponse> {
   try {
     await enforceRateLimit({ name: "voorbeeld-werkgever", identifier: clientIp(request), limit: 30, windowSeconds: 600, failOpen: true, message: "Even wachten." });
   } catch {
-    return NextResponse.redirect(new URL("/voorbeeld", request.url));
+    return NextResponse.redirect(new URL("/voorbeeld", env.APP_BASE_URL));
   }
   const { werkgever } = await demoInspectTargets();
-  if (!werkgever) return NextResponse.redirect(new URL("/voorbeeld", request.url));
+  if (!werkgever) return NextResponse.redirect(new URL("/voorbeeld", env.APP_BASE_URL));
   const { token } = await mintInspectLink(werkgever, 1);
-  const url = new URL("/werkgever", request.url);
+  const url = new URL("/werkgever", env.APP_BASE_URL);
   url.searchParams.set(INSPECT_PARAM, token);
   return NextResponse.redirect(url);
 }
