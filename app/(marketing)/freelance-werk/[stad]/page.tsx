@@ -119,7 +119,7 @@ export default async function FreelanceWerkStadPage({ params }: { params: Promis
       </Section>
       <CtaBand
         title={`Begin vandaag met werken in ${c.name}`}
-        body="Gratis account, binnen een paar minuten geverifieerd. Reageer op klussen en kies zelf je uitbetaling."
+        body="Gratis account, binnen een paar minuten geverifieerd. Reageer op klussen die bij je passen."
         primaryHref="/register?type=freelancer"
         primaryLabel="Gratis account maken"
         secondaryHref="/klussen"

@@ -47,3 +47,27 @@ Een foto toevoegen: bestand hier neerzetten, een regel in `fotos.ts` en een rege
 | `zorg-patient.jpg` | zorg | Pexels #18459702 — https://www.pexels.com/photo/18459702/ |
 | `rijschool-achter-het-stuur.jpg` | rijschool | Pexels #6816982 — https://www.pexels.com/photo/6816982/ |
 | `schoonmaak-uniform.jpg` | schoonmaak | Pexels #9462636 — https://www.pexels.com/photo/9462636/ |
+| `campagne-barista.jpg` | horeca | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-tap.jpg` | horeca | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-kok.jpg` | horeca | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-bediening.jpg` | horeca | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-scanner.jpg` | logistiek | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-steekkar.jpg` | logistiek | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-inpakken.jpg` | logistiek | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-bestelbus.jpg` | bezorgen | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-kledingrek.jpg` | retail | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-vouwen.jpg` | retail | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-schap.jpg` | retail | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-festival-crew.jpg` | jong | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-podium.jpg` | jong | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-crew-pauze.jpg` | team | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-ramen.jpg` | schoonmaak | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-hotelbed.jpg` | schoonmaak | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-ondernemer.jpg` | team | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-rooster.jpg` | team | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-eigenaar.jpg` | team | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-bouw.jpg` | team | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-deuropening.jpg` | jong | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-bezorger.jpg` | bezorgen | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-aanbellen.jpg` | bezorgen | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |
+| `campagne-autowassen.jpg` | team | Eigen beeld: gemaakt met Gemini uit alleen een tekstopdracht (17 nov 2026), geen fotobank, de persoon bestaat niet |

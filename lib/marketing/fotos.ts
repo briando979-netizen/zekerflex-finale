@@ -15,8 +15,10 @@ export interface Foto {
   thema: FotoThema;
   /** wat er te zien is, voor schermlezers (gewoon Nederlands) */
   alt: string;
-  /** Pexels-nummer, voor de CREDITS */
-  pexels: number;
+  /** Pexels-nummer, voor de CREDITS; ontbreekt bij een eigen beeld */
+  pexels?: number;
+  /** een eigen campagnebeeld (17 nov 2026, gemaakt met Gemini uit alleen tekst): geen fotobank, de persoon bestaat niet */
+  eigen?: true;
   /** de foto is staand (4:5) */
   staand?: boolean;
   /** woorden in een bericht waarbij de foto past */
@@ -77,6 +79,31 @@ export const FOTOS: readonly Foto[] = [
   { slug: "schoonmaak-uniform", thema: "schoonmaak", pexels: 9462636, staand: true, alt: "Twee schoonmaaksters in uniform lachen in de camera met een stofzuiger en een dweil", trefwoorden: ["schoonmaak", "schoonmaker", "kantoor", "huishouden"] },
   { slug: "zorg-bewoners", thema: "zorg", pexels: 18429308, alt: "Een zorgmedewerker buigt vriendelijk naar bewoners aan tafel", trefwoorden: ["zorg", "verpleeg", "bewoners"] },
   { slug: "zorg-patient", thema: "zorg", pexels: 18459702, alt: "Een zorgmedewerker praat met een patiënt in een lichte kamer", trefwoorden: ["zorg", "thuiszorg", "patiënt", "verpleeg"] },
+  // Eigen campagnebeelden in één stijl (17 nov 2026): deze staan vooraan op de sector- en overzichtspagina's
+  { slug: "campagne-barista", thema: "horeca", eigen: true, staand: true, alt: "Een barista schenkt melk in een cappuccino achter de koffiebar", trefwoorden: ["horeca", "barista", "koffie"] },
+  { slug: "campagne-tap", thema: "horeca", eigen: true, staand: true, alt: "Een barman tapt een biertje achter een houten bar", trefwoorden: ["horeca", "bar", "tap", "bediening"] },
+  { slug: "campagne-kok", thema: "horeca", eigen: true, staand: true, alt: "Een kok met een gestreept schort leunt op de werkbank in een open keuken", trefwoorden: ["horeca", "kok", "keuken"] },
+  { slug: "campagne-bediening", thema: "horeca", eigen: true, staand: true, alt: "Een medewerker leunt op de bar terwijl collega's met borden langslopen", trefwoorden: ["horeca", "bediening", "restaurant"] },
+  { slug: "campagne-scanner", thema: "logistiek", eigen: true, staand: true, alt: "Een magazijnmedewerker scant een doos tussen hoge stellingen", trefwoorden: ["magazijn", "logistiek", "orderpicker", "scanner"] },
+  { slug: "campagne-steekkar", thema: "logistiek", eigen: true, staand: true, alt: "Een medewerker duwt een steekkar met dozen door een magazijn", trefwoorden: ["magazijn", "logistiek", "dozen"] },
+  { slug: "campagne-inpakken", thema: "logistiek", eigen: true, staand: true, alt: "Een medewerker plakt een kartonnen doos dicht met tape", trefwoorden: ["magazijn", "inpakken", "logistiek"] },
+  { slug: "campagne-bestelbus", thema: "bezorgen", eigen: true, staand: true, alt: "Een bezorger zit in de open laadruimte van een bestelbus tussen de dozen", trefwoorden: ["bezorg", "bus", "chauffeur", "pakket"] },
+  { slug: "campagne-kledingrek", thema: "retail", eigen: true, staand: true, alt: "Een winkelmedewerker hangt kleding aan een rek", trefwoorden: ["retail", "winkel", "kleding"] },
+  { slug: "campagne-vouwen", thema: "retail", eigen: true, staand: true, alt: "Een winkelmedewerker vouwt shirts op de toonbank", trefwoorden: ["retail", "winkel", "toonbank"] },
+  { slug: "campagne-schap", thema: "retail", eigen: true, staand: true, alt: "Een medewerker vult een schap met flessen", trefwoorden: ["retail", "supermarkt", "vakkenvuller", "schap"] },
+  { slug: "campagne-festival-crew", thema: "jong", eigen: true, staand: true, alt: "Een crewlid staat met de armen over elkaar voor een festivalpodium", trefwoorden: ["evenement", "festival", "crew"] },
+  { slug: "campagne-podium", thema: "jong", eigen: true, staand: true, alt: "Een crewlid in een regenjack staat voor een podium in opbouw", trefwoorden: ["evenement", "festival", "opbouw"] },
+  { slug: "campagne-crew-pauze", thema: "team", eigen: true, staand: true, alt: "Twee crewleden zitten op de rand van een podium tijdens een pauze", trefwoorden: ["evenement", "team", "crew", "pauze"] },
+  { slug: "campagne-ramen", thema: "schoonmaak", eigen: true, staand: true, alt: "Een schoonmaker maakt een glazen wand schoon met een trekker", trefwoorden: ["schoonmaak", "glazenwasser", "kantoor"] },
+  { slug: "campagne-hotelbed", thema: "schoonmaak", eigen: true, staand: true, alt: "Een medewerker maakt een hotelbed op met wit beddengoed", trefwoorden: ["schoonmaak", "hotel", "housekeeping"] },
+  { slug: "campagne-ondernemer", thema: "team", eigen: true, staand: true, alt: "Een ondernemer in een donker pak zit op een trap tussen kantoorgebouwen", trefwoorden: ["werkgever", "ondernemer", "bedrijf"] },
+  { slug: "campagne-rooster", thema: "team", eigen: true, staand: true, alt: "Een eigenaar bekijkt een rooster op een tablet terwijl zijn team de zaak klaarmaakt", trefwoorden: ["werkgever", "rooster", "planning", "personeel"] },
+  { slug: "campagne-eigenaar", thema: "team", eigen: true, staand: true, alt: "Een eigenaar zit met een tablet in zijn restaurant, het team dekt de tafels", trefwoorden: ["werkgever", "restaurant", "personeel"] },
+  { slug: "campagne-bouw", thema: "team", eigen: true, staand: true, alt: "Een medewerker met een witte helm onder de arm staat op een bouwplaats", trefwoorden: ["bouw", "techniek", "werkgever"] },
+  { slug: "campagne-deuropening", thema: "jong", eigen: true, staand: true, alt: "Een medewerker met een dienblad onder de arm staat in de deuropening van een café", trefwoorden: ["horeca", "bijbaan", "student", "flexwerker"] },
+  { slug: "campagne-bezorger", thema: "bezorgen", eigen: true, staand: true, alt: "Een bezorger met een grote rugzak zit op de stoeprand met zijn telefoon", trefwoorden: ["bezorg", "maaltijd", "app", "telefoon"] },
+  { slug: "campagne-aanbellen", thema: "bezorgen", eigen: true, staand: true, alt: "Een bezorger belt aan bij een voordeur met een papieren tas in de hand", trefwoorden: ["bezorg", "pakket", "fiets"] },
+  { slug: "campagne-autowassen", thema: "team", eigen: true, staand: true, alt: "Een medewerker met een pet wast een zwarte auto met een spons vol schuim", trefwoorden: ["auto", "wasstraat", "autopoetser"] },
 ];
 
 export function fotoPad(f: Pick<Foto, "slug">): string {
@@ -89,14 +116,14 @@ export function fotosVan(thema: FotoThema): Foto[] {
 
 /** Welke foto's bij welke sector horen (sleutels uit lib/seo-sectors.ts). */
 const SECTOR_FOTOS: Record<string, readonly string[]> = {
-  horeca: ["horeca-serveerster-lacht", "horeca-gasten-bediening", "horeca-barista-team", "horeca-keuken-plezier", "horeca-terras-bediening", "horeca-keuken-team", "horeca-barista-laptop"],
-  logistiek: ["logistiek-magazijn-klembord", "logistiek-magazijn-doos", "logistiek-magazijn-dozen"],
-  retail: ["retail-winkelhulp", "retail-kassa", "retail-toonbank"],
-  evenementen: ["jong-vieren", "jong-kleurrook", "team-juichen"],
-  schoonmaak: ["schoonmaak-uniform"],
+  horeca: ["campagne-tap", "campagne-barista", "campagne-kok", "campagne-bediening", "horeca-serveerster-lacht", "horeca-gasten-bediening", "horeca-barista-team", "horeca-keuken-plezier", "horeca-terras-bediening", "horeca-keuken-team", "horeca-barista-laptop"],
+  logistiek: ["campagne-scanner", "campagne-steekkar", "campagne-inpakken", "logistiek-magazijn-klembord", "logistiek-magazijn-doos", "logistiek-magazijn-dozen"],
+  retail: ["campagne-kledingrek", "campagne-vouwen", "campagne-schap", "retail-winkelhulp", "retail-kassa", "retail-toonbank"],
+  evenementen: ["campagne-festival-crew", "campagne-podium", "campagne-crew-pauze", "jong-vieren", "jong-kleurrook", "team-juichen"],
+  schoonmaak: ["campagne-ramen", "campagne-hotelbed", "schoonmaak-uniform"],
   // de overzichtspagina's: bedrijven die personeel zoeken, en werkers die klussen zoeken
-  algemeen: ["team-highfive-raam", "horeca-gasten-bediening", "logistiek-magazijn-doos", "retail-winkelhulp", "team-highfive-tafel", "horeca-barista-team", "team-highfive-geel"],
-  freelance: ["jong-vrienden-zon", "app-telefoon-lacht", "jong-vrienden-park", "app-telefoon-oranje", "jong-vrienden-buiten", "app-telefoon-warm"],
+  algemeen: ["campagne-ondernemer", "campagne-rooster", "campagne-eigenaar", "campagne-bouw", "team-highfive-raam", "horeca-gasten-bediening", "logistiek-magazijn-doos", "retail-winkelhulp", "team-highfive-tafel", "horeca-barista-team", "team-highfive-geel"],
+  freelance: ["campagne-deuropening", "campagne-bezorger", "campagne-aanbellen", "campagne-autowassen", "jong-vrienden-zon", "app-telefoon-lacht", "jong-vrienden-park", "app-telefoon-oranje", "jong-vrienden-buiten", "app-telefoon-warm"],
 };
 
 /** Een foto voor een sectorpagina; de seed (bijv. de stad) kiest er één uit, zodat stadspagina's niet allemaal dezelfde tonen. */
@@ -115,7 +142,7 @@ const PAGINA_FOTOS: Record<string, string> = {
   prijzen: "jong-vrienden-buiten",
   beveiliging: "team-highfive-callcenter",
   kennis: "horeca-barista-laptop",
-  klussen: "bezorg-fietstas",
+  klussen: "campagne-bezorger",
   "voor-bureaus": "team-highfive-raam",
   "sales-partner": "team-handen",
   demo: "team-highfive-geel",

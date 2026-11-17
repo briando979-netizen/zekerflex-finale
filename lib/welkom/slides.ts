@@ -1,7 +1,7 @@
 // Pure hulpjes voor de mobiele welkomstflow (/welkom): geen React, geen server-imports,
 // zodat server (start-pagina) en client (carrousel) ze delen en vitest ze kan testen.
 
-// Beelden: public/welkom/slide-1..3.webp, verkleinde Pexels-foto's uit public/marketing (Pexels License);
+// Beelden: public/welkom/slide-1..3.webp, eigen campagnebeelden (17 nov 2026, gemaakt met Gemini uit alleen tekst);
 // herkomst per bestand in public/welkom/CREDITS.md.
 export const AANTAL_SLIDES = 3;
 

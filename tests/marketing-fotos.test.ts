@@ -10,7 +10,10 @@ const credits = readFileSync(join(MAP, "CREDITS.md"), "utf8");
 describe("fotobibliotheek voor marketing", () => {
   it("heeft geen dubbele bestandsnamen of Pexels-nummers", () => {
     expect(new Set(FOTOS.map((f) => f.slug)).size).toBe(FOTOS.length);
-    expect(new Set(FOTOS.map((f) => f.pexels)).size).toBe(FOTOS.length);
+    const nummers = FOTOS.filter((f) => !f.eigen).map((f) => f.pexels);
+    expect(new Set(nummers).size).toBe(nummers.length);
+    // een foto komt van Pexels (met nummer) of is een eigen campagnebeeld, nooit allebei of geen van beide
+    for (const f of FOTOS) expect(Boolean(f.eigen) !== (typeof f.pexels === "number"), f.slug).toBe(true);
   });
 
   it("elke foto bestaat, is een JPEG, past op Instagram (4:5 tot 1,91:1) en staat met bron in CREDITS.md", async () => {
@@ -25,7 +28,8 @@ describe("fotobibliotheek voor marketing", () => {
       expect(verhouding, f.slug).toBeLessThanOrEqual(1.91);
       if (f.staand) expect(verhouding, f.slug).toBeCloseTo(0.8, 2);
       expect(credits, `${f.slug} ontbreekt in CREDITS.md`).toContain(`\`${f.slug}.jpg\``);
-      expect(credits, `${f.slug}: nummer ontbreekt in CREDITS.md`).toContain(`Pexels #${f.pexels}`);
+      if (f.eigen) expect(credits, `${f.slug}: herkomst ontbreekt in CREDITS.md`).toMatch(new RegExp(`\\\`${f.slug}\\.jpg\\\` \\| [a-z]+ \\| Eigen beeld`));
+      else expect(credits, `${f.slug}: nummer ontbreekt in CREDITS.md`).toContain(`Pexels #${f.pexels}`);
     }
   });
 

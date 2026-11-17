@@ -40,7 +40,7 @@ export const SITE = {
   locale: "nl_NL",
   description:
     "Het Nederlandse platform waar werknemers, flexwerkers en werkgevers elkaar vinden. Slim gematcht op reistijd en vakmatch, met flexibele uitbetaling en Wet DBA-risicosignalering.",
-  shortDescription: "Slim gematcht, zelf je uitbetaling kiezen, met Wet DBA-risicosignalering.",
+  shortDescription: "Flexwerk en klussen bij jou in de buurt. Gratis aanmelden, met of zonder KVK.",
   keywords: [
     // wat we zijn
     "freelance werk",
