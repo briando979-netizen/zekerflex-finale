@@ -650,6 +650,7 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                           {w.verklaard ? "Verklaring aangevinkt" : "Verklaring niet aangevinkt"}
                           {w.idBewijs ? ", bewijs: EU/EER/CH-paspoort of -ID-kaart uit de ID-controle" : ""}
                           {w.via === "verklaring" ? ": dat vinkje is het bewijs, er is geen document gevraagd" : ""}
+                          {w.via === "bestaand" ? ": niet nodig, deze werker was al geverifieerd vóór 18 nov 2026" : ""}
                           {w.document?.geldigTot ? `, document geldig tot ${w.document.geldigTot.split("-").reverse().join("-")}` : ""}
                           {w.document?.note ? `, reden afwijzing: ${w.document.note}` : ""}
                         </p>

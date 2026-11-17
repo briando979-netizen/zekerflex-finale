@@ -209,6 +209,8 @@ export interface AuthDict {
       voorwaarden: string[];
       verklaringKnop: string;
       verklaard: string;
+      /** een werker die al geverifieerd was vóór 18 nov 2026: niets aan te vinken */
+      alGeverifieerd: string;
       bewijsUitleg: string;
       bewijsEu: string;
       geldigTot: string;
@@ -612,6 +614,8 @@ const nl: AuthDict = {
       voorwaarden: ["je de nationaliteit hebt van een land uit de EU, de EER of Zwitserland, of een geldige verblijfsvergunning waarmee je in {land} mag werken;", "je identiteitsbewijs en je gegevens echt zijn en van jou;", "je het meteen meldt als je recht om te werken verandert of stopt;", "ZekerFlex je om een document mag vragen, en je account mag stoppen als deze verklaring niet klopt."],
       verklaringKnop: "Opslaan",
       verklaard: "Je hebt de verklaring aangevinkt.",
+
+      alGeverifieerd: "Je identiteit is al gecontroleerd. Je hoeft hier niets te doen.",
       bewijsUitleg: "Upload een document waaruit blijkt dat je in {land} mag werken: een paspoort of ID-kaart (geen rijbewijs), een verblijfsdocument of een werkvergunning. Een medewerker kijkt het na.",
       bewijsEu: "Je paspoort of ID-kaart uit de EU, de EER of Zwitserland is je bewijs: daarmee mag je hier vrij werken. Je hoeft niets te uploaden.",
       geldigTot: "Geldig tot",
@@ -1019,6 +1023,8 @@ const en: AuthDict = {
       voorwaarden: ["you have the nationality of a country in the EU, the EEA or Switzerland, or a valid residence permit that allows you to work in {land};", "your identity document and your details are genuine and yours;", "you will report it immediately if your right to work changes or ends;", "ZekerFlex may ask you for a document, and may close your account if this declaration is not true."],
       verklaringKnop: "Save",
       verklaard: "You have ticked the declaration.",
+
+      alGeverifieerd: "Your identity has already been checked. You don't need to do anything here.",
       bewijsUitleg: "Upload a document showing that you may work in {land}: a passport or ID card (not a driving licence), a residence document or a work permit. A staff member will check it.",
       bewijsEu: "Your passport or ID card from the EU, the EEA or Switzerland is your proof: it lets you work here freely. You don't need to upload anything.",
       geldigTot: "Valid until",
@@ -1426,6 +1432,8 @@ const pl: AuthDict = {
       voorwaarden: ["masz obywatelstwo kraju UE, EOG lub Szwajcarii albo ważne zezwolenie na pobyt, które pozwala Ci pracować w kraju: {land};", "Twój dokument tożsamości i Twoje dane są prawdziwe i należą do Ciebie;", "natychmiast zgłosisz, jeśli Twoje prawo do pracy się zmieni lub wygaśnie;", "ZekerFlex może poprosić Cię o dokument i może zamknąć Twoje konto, jeśli to oświadczenie jest nieprawdziwe."],
       verklaringKnop: "Zapisz",
       verklaard: "Oświadczenie zostało zaznaczone.",
+
+      alGeverifieerd: "Twoja tożsamość została już sprawdzona. Nie musisz tu nic robić.",
       bewijsUitleg: "Prześlij dokument potwierdzający, że możesz pracować w kraju: {land}: paszport lub dowód osobisty (nie prawo jazdy), dokument pobytowy lub zezwolenie na pracę. Pracownik go sprawdzi.",
       bewijsEu: "Twój paszport lub dowód osobisty z UE, EOG lub Szwajcarii jest dowodem: dzięki niemu możesz tu swobodnie pracować. Nie musisz niczego przesyłać.",
       geldigTot: "Ważny do",
@@ -1833,6 +1841,8 @@ const ro: AuthDict = {
       voorwaarden: ["ai cetățenia unei țări din UE, SEE sau a Elveției, ori un permis de ședere valabil care îți permite să lucrezi în {land};", "actul tău de identitate și datele tale sunt reale și îți aparțin;", "vei anunța imediat dacă dreptul tău de a lucra se schimbă sau încetează;", "ZekerFlex îți poate cere un document și îți poate închide contul dacă această declarație nu este adevărată."],
       verklaringKnop: "Salvează",
       verklaard: "Ai bifat declarația.",
+
+      alGeverifieerd: "Identitatea ta a fost deja verificată. Nu trebuie să faci nimic aici.",
       bewijsUitleg: "Încarcă un document care arată că ai voie să lucrezi în {land}: un pașaport sau o carte de identitate (nu permis de conducere), un document de ședere sau un permis de muncă. Un angajat îl va verifica.",
       bewijsEu: "Pașaportul sau cartea ta de identitate din UE, SEE sau Elveția este dovada: cu el poți lucra liber aici. Nu trebuie să încarci nimic.",
       geldigTot: "Valabil până la",
@@ -2240,6 +2250,8 @@ const uk: AuthDict = {
       voorwaarden: ["ви маєте громадянство країни ЄС, ЄЕЗ або Швейцарії чи дійсний дозвіл на проживання, який дозволяє вам працювати в країні: {land};", "ваш документ, що посвідчує особу, і ваші дані справжні та належать вам;", "ви негайно повідомите, якщо ваше право працювати зміниться або припиниться;", "ZekerFlex може попросити у вас документ і може закрити ваш обліковий запис, якщо ця заява неправдива."],
       verklaringKnop: "Зберегти",
       verklaard: "Ви позначили декларацію.",
+
+      alGeverifieerd: "Вашу особу вже перевірено. Тут нічого робити не потрібно.",
       bewijsUitleg: "Завантажте документ, який підтверджує, що ви маєте право працювати в країні: {land}: паспорт або ID-картку (не водійське посвідчення), документ про проживання або дозвіл на роботу. Співробітник його перевірить.",
       bewijsEu: "Ваш паспорт або ID-картка з ЄС, ЄЕЗ або Швейцарії — це ваш доказ: з ним ви можете вільно тут працювати. Нічого завантажувати не потрібно.",
       geldigTot: "Дійсний до",

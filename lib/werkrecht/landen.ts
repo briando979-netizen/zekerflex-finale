@@ -22,6 +22,19 @@
 /** Versie van de verklaring; een nieuwe tekst = een nieuwe versie (opnieuw aanvinken). */
 export const VERKLARING_VERSIE = "2026-11-17";
 
+/** Ook de vorige tekst blijft geldig: wie al aanvinkte, hoeft dat niet opnieuw te doen (17 nov, eigenaar). */
+const GELDIGE_VERKLARINGEN = new Set([VERKLARING_VERSIE, "2026-11-09"]);
+
+export function verklaringGeldig(versie: string | null | undefined): boolean {
+  return typeof versie === "string" && GELDIGE_VERKLARINGEN.has(versie);
+}
+
+/**
+ * Wie vóór dit moment al een goedgekeurde ID-controle had, is een bestaande geverifieerde werker: die hoeft binnen
+ * de EU/EER/CH niets aan te vinken (17 nov, eigenaar). Nieuwe werkers vinken de verklaring aan.
+ */
+export const BESTAAND_TOT = new Date("2026-11-18T00:00:00+01:00");
+
 /** EU-27, EER (IJsland, Liechtenstein, Noorwegen) en Zwitserland, ISO 3166-1 alpha-2. */
 export const VRIJ_VERKEER = new Set([
   "AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "HU", "IE",
@@ -73,7 +86,7 @@ export interface WerkrechtRij {
 export interface WerkrechtUitslag {
   stand: WerkrechtStand;
   /** waarmee het recht bewezen is (alleen bij "ok") */
-  via: "id" | "document" | "verklaring" | null;
+  via: "id" | "document" | "verklaring" | "bestaand" | null;
 }
 
 /**
@@ -82,13 +95,17 @@ export interface WerkrechtUitslag {
  * `idInBehandeling` = zo'n controle is ingestuurd en wacht op een medewerker: dan is het
  * bewijs er al ("wacht"), en hoeft een Nederlander zijn paspoort niet nog eens te uploaden.
  */
-export function werkrechtUitslag(land: string, rij: WerkrechtRij | null, idVrij: boolean, nu: Date, idInBehandeling = false): WerkrechtUitslag {
+export function werkrechtUitslag(land: string, rij: WerkrechtRij | null, idVrij: boolean, nu: Date, idInBehandeling = false, bestaand = false): WerkrechtUitslag {
   // Een paspoort of ID-kaart uit de EU/EER/CH uit de eigen ID-controle is genoeg: vrij werken in die
   // landen, dus geen verklaring en geen extra document (10 nov, eigenaar: "met een Nederlands
   // document of ID-kaart hoef je geen recht om te werken").
   if (VRIJ_VERKEER.has(land) && idVrij) return { stand: "ok", via: "id" };
   if (VRIJ_VERKEER.has(land) && idInBehandeling) return { stand: "wacht", via: null };
-  if (!rij?.declaredAt || rij.declaration !== VERKLARING_VERSIE) return { stand: "verklaring-nodig", via: null };
+  // een document dat een medewerker afwees houdt altijd tegen, ook bij een bestaande werker
+  if (rij?.uploadId && rij.status === "REJECTED") return { stand: "afgewezen", via: null };
+  // al geverifieerd vóór 18 nov 2026: niets aanvinken binnen de EU/EER/CH
+  if (VRIJ_VERKEER.has(land) && bestaand) return { stand: "ok", via: "bestaand" };
+  if (!rij?.declaredAt || !verklaringGeldig(rij.declaration)) return { stand: "verklaring-nodig", via: null };
   if (rij.uploadId && rij.status === "APPROVED") {
     if (rij.validUntil && rij.validUntil.getTime() < nu.getTime()) {
       // een verlopen document; binnen de EU/EER/CH blijft het recht via de ID-controle of de verklaring

@@ -6,10 +6,12 @@ import { amsterdamDayKey, amsterdamToUtc } from "@/lib/time/amsterdam";
 import { alertOwnerLater } from "@/lib/ops/alert";
 import { featureEnabled } from "@/lib/flags";
 import {
+  BESTAAND_TOT,
   VERKLARING_VERSIE,
   VRIJ_VERKEER,
   geldigTotDag,
   landNaam,
+  verklaringGeldig,
   werkrechtReden,
   werkrechtUitslag,
   type WerkrechtStand,
@@ -26,7 +28,7 @@ export interface WerkrechtLand {
   id: string | null;
   land: string;
   stand: WerkrechtStand;
-  via: "id" | "document" | "verklaring" | null;
+  via: "id" | "document" | "verklaring" | "bestaand" | null;
   verklaard: boolean;
   /** een EU/EER/CH-document uit de ID-controle is hier het bewijs: niets te uploaden */
   idBewijs: boolean;
@@ -65,6 +67,29 @@ export async function idStand(userId: string, nu = new Date()): Promise<{ vrij: 
   return { vrij: checks.some((c) => c.status === "VERIFIED"), inBehandeling: checks.some((c) => c.status === "PENDING") };
 }
 
+/**
+ * Was deze werker al geverifieerd vóór 18 nov 2026 (BESTAAND_TOT)? Dan hoeft hij binnen de EU/EER/CH niets aan te
+ * vinken. Een storing telt als nee: dan vinkt hij gewoon aan.
+ */
+export async function alGeverifieerd(userId: string): Promise<boolean> {
+  try {
+    const u = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        kycStatus: true,
+        identityChecks: {
+          where: { status: "VERIFIED", OR: [{ verifiedAt: { lt: BESTAAND_TOT } }, { verifiedAt: null, createdAt: { lt: BESTAAND_TOT } }] },
+          select: { id: true },
+          take: 1,
+        },
+      },
+    });
+    return u?.kycStatus === "VERIFIED" && (u.identityChecks?.length ?? 0) > 0;
+  } catch {
+    return false;
+  }
+}
+
 type Rij = Awaited<ReturnType<typeof rijen>>[number];
 
 function rijen(userId: string) {
@@ -75,14 +100,14 @@ function rijen(userId: string) {
   });
 }
 
-function naarLand(land: string, rij: Rij | null, id: { vrij: boolean; inBehandeling: boolean }, nu: Date): WerkrechtLand {
-  const u = werkrechtUitslag(land, rij, id.vrij, nu, id.inBehandeling);
+function naarLand(land: string, rij: Rij | null, id: { vrij: boolean; inBehandeling: boolean }, nu: Date, bestaand = false): WerkrechtLand {
+  const u = werkrechtUitslag(land, rij, id.vrij, nu, id.inBehandeling, bestaand);
   return {
     id: rij?.id ?? null,
     land,
     stand: u.stand,
     via: u.via,
-    verklaard: Boolean(rij?.declaredAt && rij.declaration === VERKLARING_VERSIE),
+    verklaard: Boolean(rij?.declaredAt && verklaringGeldig(rij.declaration)),
     // ook terwijl de ID-controle nog bij een medewerker ligt: dan is dat paspoort het bewijs
     idBewijs: (id.vrij || id.inBehandeling) && VRIJ_VERKEER.has(land),
     document:
@@ -101,9 +126,9 @@ function naarLand(land: string, rij: Rij | null, id: { vrij: boolean; inBehandel
 
 /** Alle landen van een werker; Nederland staat er altijd bij, als eerste. */
 export async function werkrechtOverzicht(userId: string, nu = new Date()): Promise<WerkrechtLand[]> {
-  const [lijst, id] = await Promise.all([rijen(userId), idStand(userId, nu)]);
+  const [lijst, id, bestaand] = await Promise.all([rijen(userId), idStand(userId, nu), alGeverifieerd(userId)]);
   const nl = lijst.find((r) => r.country === "NL") ?? null;
-  return [naarLand("NL", nl, id, nu), ...lijst.filter((r) => r.country !== "NL").map((r) => naarLand(r.country, r, id, nu))];
+  return [naarLand("NL", nl, id, nu, bestaand), ...lijst.filter((r) => r.country !== "NL").map((r) => naarLand(r.country, r, id, nu, bestaand))];
 }
 
 /** De controle vóór een (betaalde) dienst in een land. */
@@ -115,11 +140,12 @@ export async function werkrechtEisAan(): Promise<boolean> {
 export async function werkrechtVoorWerk(userId: string, land = "NL", nu = new Date()): Promise<{ ok: boolean; reden: string | null }> {
   // vlag `werkrecht-eis` (standaard uit sinds 10 nov, eigenaar): zonder die vlag wordt niets gevraagd of geblokkeerd
   if (!(await werkrechtEisAan())) return { ok: true, reden: null };
-  const [rij, vrij] = await Promise.all([
+  const [rij, vrij, bestaand] = await Promise.all([
     prisma.workRight.findUnique({ where: { userId_country: { userId, country: land } }, include: { upload: { select: { filename: true } } } }),
     idStand(userId, nu),
+    alGeverifieerd(userId),
   ]);
-  const { stand } = werkrechtUitslag(land, rij, vrij.vrij, nu, vrij.inBehandeling);
+  const { stand } = werkrechtUitslag(land, rij, vrij.vrij, nu, vrij.inBehandeling, bestaand);
   const reden = werkrechtReden(stand, landNaam(land, "nl"));
   return { ok: reden === null, reden };
 }
@@ -171,7 +197,7 @@ export async function bewijsOpslaan(
     where: { userId_country: { userId, country: land } },
     select: { id: true, uploadId: true, declaredAt: true, declaration: true },
   });
-  if (!rij?.declaredAt || rij.declaration !== VERKLARING_VERSIE) throw AppError.validation("Vink eerst de verklaring aan.");
+  if (!rij?.declaredAt || !verklaringGeldig(rij.declaration)) throw AppError.validation("Vink eerst de verklaring aan.");
   const dag = geldigTotDag(input.geldigTot);
   if (!dag) throw AppError.validation("Vul in tot wanneer je document geldig is.");
   const tot = `${dag.jaar}-${String(dag.maand).padStart(2, "0")}-${String(dag.dag).padStart(2, "0")}`;

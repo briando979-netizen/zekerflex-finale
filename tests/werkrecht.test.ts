@@ -49,6 +49,13 @@ describe("werkrechtUitslag", () => {
     expect(werkrechtUitslag("NL", rij({ uploadId: "u1", status: "REJECTED", validUntil: MORGEN }), false, NU).stand).toBe("afgewezen");
   });
 
+  it("een bestaande geverifieerde werker hoeft niets aan te vinken, en een oude verklaring blijft geldig (17 nov)", () => {
+    expect(werkrechtUitslag("NL", null, false, NU, false, true)).toEqual({ stand: "ok", via: "bestaand" });
+    expect(werkrechtUitslag("NL", rij({ uploadId: "u1", status: "REJECTED", validUntil: MORGEN }), false, NU, false, true).stand).toBe("afgewezen");
+    expect(werkrechtUitslag("GB", null, false, NU, false, true).stand).toBe("verklaring-nodig");
+    expect(werkrechtUitslag("NL", rij({ declaration: "2026-11-09" }), false, NU)).toEqual({ stand: "ok", via: "verklaring" });
+  });
+
   it("buiten de EU: pas na goedkeuring van een document door een medewerker", () => {
     expect(werkrechtUitslag("GB", rij(), false, NU).stand).toBe("bewijs-nodig");
     expect(werkrechtUitslag("GB", rij({ uploadId: "u1", status: "UPLOADED", validUntil: MORGEN }), false, NU).stand).toBe("wacht");

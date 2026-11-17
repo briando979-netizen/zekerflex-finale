@@ -94,6 +94,8 @@ function LandKaart({ l, t, locale, onLanden }: { l: Land; t: T; locale: string; 
 
   const bewijsNodig = l.verklaard && !l.idBewijs && l.stand !== "ok" && l.stand !== "wacht";
   const ok = l.stand === "ok";
+  // al geverifieerd vóór 18 nov 2026 (lib/werkrecht/landen.ts): in orde zonder vinkje
+  const alKlaar = ok && !l.verklaard && !l.idBewijs;
 
   return (
     <div className={`rounded-xl border p-3 sm:p-4 ${ok ? "border-ok/40 bg-ok/5" : "border-hairstrong"}`}>
@@ -102,7 +104,9 @@ function LandKaart({ l, t, locale, onLanden }: { l: Land; t: T; locale: string; 
         <span className={`flex-shrink-0 text-xs font-medium ${TOON[l.stand]}`}>{t.stand[l.stand]}</span>
       </div>
 
-      {l.idBewijs ? null : !l.verklaard ? (
+      {l.idBewijs ? null : alKlaar ? (
+        <p className="mt-2 text-sm text-neutralx-600">{t.alGeverifieerd}</p>
+      ) : !l.verklaard ? (
         <div className="mt-3">
           <label htmlFor={vinkId} className="flex items-start gap-2.5 text-sm leading-relaxed text-neutralx-600">
             <input id={vinkId} type="checkbox" checked={vink} onChange={(e) => setVink(e.target.checked)} className="mt-1 h-4 w-4 flex-shrink-0" />
