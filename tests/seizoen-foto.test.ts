@@ -27,12 +27,20 @@ describe("seizoensfoto's", () => {
     }
   });
 
-  it("de werker-app krijgt de werkersversie, de rest het gewone beeld", () => {
+  it("de werker-app krijgt alleen een werkersversie (nooit een bedrijvenpost), de rest het gewone beeld", () => {
     expect(seizoenFoto("kerst", "/dashboard/klussen")?.src).toBe("/seizoen/kerst-werker.jpg");
     expect(seizoenFoto("kerst", "/dashboard")?.src).toBe("/seizoen/kerst-werker.jpg");
+    expect(seizoenFoto("nieuwjaar", "/dashboard")?.src).toBe("/seizoen/nieuwjaar-werker.jpg");
     expect(seizoenFoto("kerst", "/werkgever")?.src).toBe("/seizoen/kerst.jpg");
     expect(seizoenFoto("kerst", "/")?.src).toBe("/seizoen/kerst.jpg");
-    expect(seizoenFoto("sinterklaas", "/dashboard")?.src).toBe("/seizoen/sinterklaas.jpg");
+    expect(seizoenFoto("nieuwjaar", "/")?.src).toBe("/seizoen/nieuwjaar.jpg");
+    // geen werkersbeeld: dan geen kaart in de werker-app (werker en bedrijf apart)
+    for (const feest of ["sinterklaas", "carnaval", "valentijn", "pasen", "koningsdag", "halloween", "oudjaar"] as const) {
+      expect(seizoenFoto(feest, "/dashboard"), feest).toBeNull();
+      expect(seizoenFoto(feest, "/dashboard/profiel"), feest).toBeNull();
+    }
+    // /dashboards-achtige paden buiten de werker-app tellen niet als werker-app
+    expect(seizoenFoto("sinterklaas", "/dashboardje")?.src).toBe("/seizoen/sinterklaas.jpg");
     for (const regel of Object.values(SEIZOEN_FOTOS)) {
       if (regel.werker) expect(existsSync(join(MAP, `${regel.werker.bestand}.jpg`))).toBe(true);
     }

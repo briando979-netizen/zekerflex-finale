@@ -7,7 +7,8 @@ social-mediaset "seizoenen en momenten", gemaakt in de vaste reclamestijl uit de
 
 | Bestand | Kop op het beeld |
 | --- | --- |
-| nieuwjaar.jpg | Nieuw jaar: zelf bepalen wanneer je werkt? |
+| nieuwjaar.jpg | Nieuw jaar: januari al rond? |
+| nieuwjaar-werker.jpg | Nieuw jaar: zelf bepalen wanneer je werkt? (werker-app) |
 | valentijn.jpg | Valentijnsdag: restaurant vol geboekt? |
 | carnaval.jpg | Carnaval: alaaf, kroeg vol? |
 | pasen.jpg | Pasen: paasbrunch vol geboekt? |
