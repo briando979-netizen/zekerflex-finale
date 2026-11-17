@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { requirePrincipal } from "@/lib/auth";
 import { toErrorBody } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
+import { leesEigenTest } from "@/lib/admin/eigen-test";
+import { isEigenTestAccount } from "@/lib/admin/eigen-test-kern";
 import { userDirectory } from "@/lib/messaging/contacts";
 import { getUserAvatars } from "@/lib/profile/store";
 import { listThreadsForUser } from "@/lib/messaging/store";
@@ -21,6 +23,9 @@ export async function GET(request: Request): Promise<NextResponse> {
     const roles = me.grants.map((g) => g.role);
     const isEmployer = roles.some((r) => ["HQ_ADMIN", "LOCAL_MANAGER", "DISPUTE_MANAGER"].includes(r));
     const isAdmin = roles.includes("PLATFORM_ADMIN");
+    // Een demo-/eigen-testaccount (o.a. de alleen-lezen voorbeeld-deel-link, die HQ_ADMIN is)
+    // mag de echte freelancerlijst niet zien: beperk tot de demo-freelancers en eigen gesprekken.
+    const demoAccount = isEigenTestAccount(await leesEigenTest(), { userId: me.userId, tenantIds: me.memberships.map((m) => m.tenantId) });
 
     const allowed = new Set<string>();
 
@@ -45,7 +50,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       users.forEach((u) => allowed.add(u.id));
     } else if (isEmployer) {
       const freelancers = await prisma.user.findMany({
-        where: { ...nameWhere, freelancerProfile: { isNot: null }, disabledAt: null },
+        where: { ...nameWhere, freelancerProfile: demoAccount ? { id: { startsWith: "demo_fp_" } } : { isNot: null }, disabledAt: null },
         select: { id: true },
         take: 25,
       });
