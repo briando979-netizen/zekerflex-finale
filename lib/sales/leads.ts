@@ -7,6 +7,7 @@ import { announce } from "@/lib/voice/announce";
 import { chatJson } from "@/lib/ai/client";
 import { isKvkBaseEnabled, lookupCompany } from "@/lib/integrations/kvkbase";
 import { LEAD_SCORE_SYSTEM } from "@/lib/sales/prompts";
+import { behoudIntroContacten } from "@/lib/introducties/lead";
 
 // ---------------------------------------------------------------------------
 // Sales lead pipeline. Leads are created, optionally enriched from the
@@ -186,11 +187,13 @@ export async function enrichLead(id: string, actorUserId: string | null) {
         profile.activities.find((a) => a.isMain)?.description ?? lead.sector,
       status: lead.status === "NEW" ? "ENRICHED" : lead.status,
       enrichmentJson: {
+        // de contacten van een introductie (lib/introducties/lead.ts) blijven staan; de rest vervangt de KVK
+        ...behoudIntroContacten(lead.enrichmentJson),
         legalForm: profile.legalForm,
         sbiCodes: profile.sbiCodes,
         employeeCount: profile.employeeCount,
         isActive: profile.isActive,
-      } as Prisma.InputJsonValue,
+      } as unknown as Prisma.InputJsonValue,
     },
   });
   await recordAudit({

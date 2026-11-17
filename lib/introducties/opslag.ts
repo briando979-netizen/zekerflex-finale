@@ -2,13 +2,15 @@ import { randomBytes } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
-import { kvSetIfAbsent } from "@/lib/storage/kv";
+import { kvGet, kvSet, kvSetIfAbsent, kvVerwijderAlsVeld } from "@/lib/storage/kv";
 import { createLead } from "@/lib/sales/leads";
 import { voegNotitieToe } from "@/lib/sales/bellijst";
 import { zakelijkDomein } from "@/lib/sales/vrije-maildomeinen";
 import {
   alleLijsten,
+  bedrijfClaimSleutel,
   koppelSleutel,
+  leadClaimSleutel,
   leesKoppeling,
   leesLijst,
   leesPerBedrijf,
@@ -16,13 +18,14 @@ import {
   schrijfLijst,
   type Introductie,
   type IntroductieKoppeling,
+  type KoppelClaim,
 } from "@/lib/introducties/kv";
 import { markeerBeloning } from "@/lib/introducties/beloning";
 import {
   BEDRIJFSBEHEERDER,
   INTRO_SCORE,
   INTRO_SCORE_REDEN,
-  aanvulling,
+  aanvullingVoorLead,
   dubbelVoorwaarden,
   introContactVan,
   introNotitie,
@@ -47,7 +50,8 @@ import {
 // "Introduceer een bedrijf" op de server (regels en uitleg: lib/introducties/regels.ts, opslag: lib/introducties/kv.ts).
 // Indienen maakt een lead met bron "introductie" en zonder campagne: de sales-motor mailt alleen leads van een campagne
 // (lib/sales/engine.ts), dus niemand krijgt vanzelf iets. Kennen we het bedrijf al (lead of klant), dan komt er geen
-// tweede lead: de introductie wordt alleen vastgelegd (en een bestaande lead krijgt lege velden aangevuld).
+// tweede lead: de introductie wordt alleen vastgelegd. Een bestaande lead zonder campagne krijgt lege velden aangevuld; een
+// lead in een campagne nooit (de motor mailt die velden): daar staat het contact alleen in de verrijking.
 // ---------------------------------------------------------------------------
 
 const nieuwId = () => randomBytes(8).toString("base64url").replace(/[-_]/g, "x").slice(0, 10);
@@ -70,7 +74,7 @@ async function zoekBestaand(email: string | null, telefoon: string | null) {
       ? await prisma.salesLead.findFirst({
           where: { OR: v.lead },
           orderBy: { createdAt: "asc" },
-          select: { id: true, companyName: true, contactName: true, contactEmail: true, contactPhone: true, notes: true, enrichmentJson: true },
+          select: { id: true, companyName: true, campaignId: true, contactName: true, contactEmail: true, contactPhone: true, notes: true, enrichmentJson: true },
         })
       : null;
   return { tenantId: null, lead };
@@ -102,9 +106,11 @@ export async function dienIntroductieIn(
     await prisma.salesLead.update({
       where: { id: bestaand.lead.id },
       data: {
-        ...aanvulling(bestaand.lead, { contactNaam, email, telefoon }),
+        // lege velden aanvullen, maar nooit bij een lead in een campagne: die velden mailt de motor vanzelf
+        ...aanvullingVoorLead(bestaand.lead, { contactNaam, email, telefoon }),
         notes: voegNotitieToe(bestaand.lead.notes, introNotitie(rol, nu)),
-        // het contact van deze introductie bij de lead (niet in de lijst van wie het voorstelde, lib/introducties/kv.ts)
+        // het contact van deze introductie bij de lead (niet in de lijst van wie het voorstelde, lib/introducties/kv.ts);
+        // de motor leest dit niet (zonderIntroContacten in lib/sales/outreach.ts)
         enrichmentJson: metIntroContact(bestaand.lead.enrichmentJson, { introId, at: nu.toISOString(), contactNaam, email, telefoon }),
       },
     });
@@ -130,7 +136,6 @@ export async function dienIntroductieIn(
     at: nu.toISOString(),
     rol,
     bedrijf,
-    contactNaam,
     leadId,
     alKlantTenantId: bestaand.tenantId,
     bestondAl: Boolean(bestaand.lead),
@@ -158,7 +163,7 @@ async function feitenVoor(introducties: readonly Introductie[]) {
   const leads = leadIds.length
     ? await prisma.salesLead.findMany({
         where: { id: { in: leadIds } },
-        select: { id: true, status: true, lastContactedAt: true, suppressed: true, invitedTenantId: true, contactEmail: true, contactPhone: true, enrichmentJson: true },
+        select: { id: true, status: true, lastContactedAt: true, suppressed: true, invitedTenantId: true, contactName: true, contactEmail: true, contactPhone: true, enrichmentJson: true },
       })
     : [];
   const perLead = new Map(leads.map((l) => [l.id, l]));
@@ -192,7 +197,7 @@ export async function mijnIntroducties(userId: string): Promise<IntroductieRegel
   const lijst = await leesLijst(userId);
   if (lijst.length === 0) return [];
   const { feiten } = await feitenVoor(lijst);
-  return lijst.map((i) => ({ id: i.id, at: i.at, bedrijf: i.bedrijf, contactNaam: i.contactNaam, status: feiten(i).status }));
+  return lijst.map((i) => ({ id: i.id, at: i.at, bedrijf: i.bedrijf, status: feiten(i).status }));
 }
 
 /** Alle introducties voor Beheer → Sales → Introducties, nieuwste eerst. */
@@ -227,7 +232,7 @@ export async function alleIntroducties(): Promise<AdminIntroRegel[]> {
         at: i.at,
         rol: i.rol,
         bedrijf: i.bedrijf,
-        contactNaam: i.contactNaam,
+        contactNaam: contact.contactNaam,
         email: contact.email,
         telefoon: contact.telefoon,
         door: { userId, naam: wie.get(userId)?.fullName ?? "verwijderd account", email: wie.get(userId)?.email ?? null },
@@ -260,31 +265,77 @@ export async function alleIntroducties(): Promise<AdminIntroRegel[]> {
     .sort((a, b) => b.at.localeCompare(a.at));
 }
 
+const datumNl = (d: Date) => d.toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "long", year: "numeric" });
+
+/**
+ * Alleen een bedrijf dat via deze introductie klant werd, telt: niet een bedrijf dat er vóór de introductie al was, dat
+ * vóór de introductie al platformkosten betaalde, of waar wie het voorstelde zelf bij hoort. Anders gaan de gratis weken
+ * en de € 50 naar een bestaande klant of een eigen bedrijf. 422 met een melding voor de beheerder.
+ */
+async function eisNieuwBedrijf(tenant: { id: string; name: string; createdAt: Date }, referrerId: string, introOp: Date): Promise<void> {
+  if (tenant.createdAt.getTime() < introOp.getTime()) {
+    throw AppError.validation(`${tenant.name} stond al op ZekerFlex vóór de introductie (${datumNl(introOp)}). Koppelen kan alleen met een bedrijf dat zich daarna aanmeldde.`);
+  }
+  const lid = await prisma.membership.findFirst({ where: { userId: referrerId, tenantId: tenant.id }, select: { id: true } });
+  if (lid) throw AppError.validation(`Wie dit bedrijf voorstelde, hoort zelf bij ${tenant.name}. Een eigen bedrijf voorstellen telt niet: koppelen kan niet.`);
+  const eerder = await prisma.invoice.findFirst({
+    where: { recipientTenantId: tenant.id, type: "PLATFORM_FEE", status: "PAID", OR: [{ issuedAt: { lt: introOp } }, { paidAt: { lt: introOp } }] },
+    select: { id: true },
+  });
+  if (eerder) throw AppError.validation(`${tenant.name} betaalde al platformkosten vóór de introductie (${datumNl(introOp)}). Koppelen kan niet.`);
+}
+
+/**
+ * Claim één sleutel (kvSetIfAbsent, uniek in de database). Staat er al een claim met dezelfde waarde (een herhaling), dan
+ * mag het verder; een andere waarde = 409. Geeft terug of de claim nu nieuw is en wat er staat.
+ */
+async function claim<T extends Record<string, string>>(sleutel: string, waarde: T, veld: keyof T & string, melding: string): Promise<{ nieuw: boolean; waarde: T }> {
+  if (await kvSetIfAbsent(sleutel, waarde)) return { nieuw: true, waarde };
+  const er = await kvGet<T>(sleutel);
+  if (!er || er[veld] !== waarde[veld]) throw AppError.conflict(melding);
+  return { nieuw: false, waarde: er };
+}
+
 /**
  * "Gekoppeld aan bedrijf" (Beheer → Sales, alleen PLATFORM_ADMIN): het voorgestelde bedrijf heeft zich aangemeld als
  * deze organisatie. Vanaf vandaag twee weken geen platformkosten; de eerste introductie voor de lead krijgt de beloning.
- * De lead gaat naar "Gewonnen". Eén koppeling per bedrijf en per lead; nog een keer klikken verandert niets.
+ * De lead gaat naar "Gewonnen".
+ * Volgorde: eerst de lead en het bedrijf claimen (één koppeling per lead en per bedrijf, ook bij twee beheerders tegelijk),
+ * dan de lead, het auditspoor en een al betaalde factuur, en als laatste de koppeling zelf (pas dan gelden de gratis weken
+ * bij goedkeuren). Valt het halverwege om, dan maakt nog een keer klikken met hetzelfde bedrijf het af.
  */
 export async function koppelIntroductie(input: { leadId: string; tenantId: string; actorUserId: string }, nu: Date = new Date()): Promise<IntroductieKoppeling> {
-  const lead = await prisma.salesLead.findUnique({ where: { id: input.leadId }, select: { id: true, notes: true, invitedTenantId: true } });
+  const lead = await prisma.salesLead.findUnique({ where: { id: input.leadId }, select: { id: true, notes: true, status: true, invitedTenantId: true } });
   if (!lead) throw AppError.notFound("Lead niet gevonden.");
-  const tenant = await prisma.tenant.findUnique({ where: { id: input.tenantId }, select: { id: true, name: true, type: true } });
+  const tenant = await prisma.tenant.findUnique({ where: { id: input.tenantId }, select: { id: true, name: true, type: true, createdAt: true } });
   if (!tenant || tenant.type === "PLATFORM") throw AppError.notFound("Bedrijf niet gevonden.");
 
   const bijLead = (await alleLijsten()).flatMap(({ userId, lijst }) => lijst.filter((i) => i.leadId === lead.id && !i.alKlantTenantId).map((i) => ({ ...i, userId })));
   const eerste = eersteIntroductie(bijLead);
   if (!eerste) throw AppError.validation("Bij deze lead hoort geen introductie.");
 
+  // al helemaal klaar (de koppeling komt als laatste): niets meer te doen
   const bestaand = await leesKoppeling(tenant.id);
   if (bestaand) {
     if (bestaand.leadId === lead.id) return bestaand;
     throw AppError.conflict(`${tenant.name} is al gekoppeld aan een andere introductie.`);
   }
-  if (lead.invitedTenantId && lead.invitedTenantId !== tenant.id && (await leesKoppeling(lead.invitedTenantId))) {
-    throw AppError.conflict("Deze lead is al aan een ander bedrijf gekoppeld.");
+
+  const introOp = new Date(eerste.at);
+  await eisNieuwBedrijf(tenant, eerste.userId, introOp);
+
+  const leadClaim = await claim<KoppelClaim>(leadClaimSleutel(lead.id), { tenantId: tenant.id, at: nu.toISOString() }, "tenantId", "Deze lead is al aan een ander bedrijf gekoppeld.");
+  try {
+    await claim(bedrijfClaimSleutel(tenant.id), { leadId: lead.id }, "leadId", `${tenant.name} is al gekoppeld aan een andere introductie.`);
+  } catch (err) {
+    // het bedrijf hoort al bij een andere lead: de claim op deze lead weer vrijgeven (alleen als hij net van ons was)
+    if (leadClaim.nieuw) await kvVerwijderAlsVeld(leadClaimSleutel(lead.id), "tenantId", tenant.id).catch(() => false);
+    throw err;
   }
 
-  const periode = vrijePeriode(nu);
+  // bij een herhaling: het moment van de eerste poging, zodat de gratis weken niet verschuiven
+  const gekoppeldOp = new Date(leadClaim.waarde.at);
+  const periode = vrijePeriode(gekoppeldOp);
   const koppeling: IntroductieKoppeling = {
     ...periode,
     tenantId: tenant.id,
@@ -292,16 +343,15 @@ export async function koppelIntroductie(input: { leadId: string; tenantId: strin
     introId: eerste.id,
     userId: eerste.userId,
     bedrijf: eerste.bedrijf,
-    gekoppeldOp: nu.toISOString(),
+    gekoppeldOp: gekoppeldOp.toISOString(),
     door: input.actorUserId,
   };
-  if (!(await kvSetIfAbsent(koppelSleutel(tenant.id), koppeling))) {
-    throw AppError.conflict(`${tenant.name} is intussen al gekoppeld. Ververs de pagina.`);
+  if (!(lead.status === "WON" && lead.invitedTenantId === tenant.id)) {
+    await prisma.salesLead.update({
+      where: { id: lead.id },
+      data: { status: "WON", invitedTenantId: tenant.id, nextActionAt: null, notes: voegNotitieToe(lead.notes, koppelNotitie(tenant.name, laatsteGratisDag(periode), gekoppeldOp)) },
+    });
   }
-  await prisma.salesLead.update({
-    where: { id: lead.id },
-    data: { status: "WON", invitedTenantId: tenant.id, nextActionAt: null, notes: voegNotitieToe(lead.notes, koppelNotitie(tenant.name, laatsteGratisDag(periode), nu)) },
-  });
   await recordAudit({
     category: "SALES",
     action: "sales.introductie.gekoppeld",
@@ -310,16 +360,20 @@ export async function koppelIntroductie(input: { leadId: string; tenantId: strin
     summary: `Introductie ${eerste.bedrijf} gekoppeld aan ${tenant.name}: geen platformkosten van ${periode.gratisVanaf} tot en met ${laatsteGratisDag(periode)}`,
     targetType: "tenant",
     targetId: tenant.id,
-    metadata: { leadId: lead.id, introId: eerste.id, gratisVanaf: periode.gratisVanaf, gratisTot: periode.gratisTot },
+    metadata: { leadId: lead.id, introId: eerste.id, gratisVanaf: periode.gratisVanaf, gratisTot: periode.gratisTot, herhaling: !leadClaim.nieuw },
   });
 
-  // betaalde het bedrijf vóór het koppelen al een factuur voor platformkosten, dan is de beloning nu al verschuldigd
+  // betaalde het bedrijf na de introductie en vóór het koppelen al een factuur voor platformkosten, dan is de beloning nu al
+  // verschuldigd (eenmalig, markeerBeloning). Een factuur van vóór de introductie telt nooit (en weigerde het koppelen al).
   const betaald = await prisma.invoice.findFirst({
-    where: { recipientTenantId: tenant.id, type: "PLATFORM_FEE", status: "PAID", totalCents: { gt: 0 } },
+    where: { recipientTenantId: tenant.id, type: "PLATFORM_FEE", status: "PAID", totalCents: { gt: 0 }, paidAt: { gt: introOp } },
     orderBy: { paidAt: "asc" },
     select: { id: true, number: true, type: true, totalCents: true, recipientTenantId: true, paidAt: true },
   });
-  if (betaald) await markeerBeloning(koppeling, betaald, betaald.paidAt ?? nu);
+  if (betaald) await markeerBeloning(koppeling, betaald, betaald.paidAt ?? gekoppeldOp);
+
+  // als laatste: de koppeling zelf. Wij hebben de claims op lead en bedrijf, dus niemand anders schrijft deze sleutel.
+  await kvSet(koppelSleutel(tenant.id), koppeling);
   return koppeling;
 }
 
