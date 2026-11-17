@@ -195,6 +195,9 @@ export interface AuthDict {
       in_review: string;
       rejected: string;
       expired: string;
+      /** de eigen controle wacht op een medewerker: niets opnieuw doen (17 nov 2026) */
+      wachtMens: string;
+      tochOpnieuw: string;
     };
     /** Recht om te werken per land (lib/werkrecht); {land}, {reden}, {datum} vult de client in */
     werkrecht: {
@@ -595,6 +598,8 @@ const nl: AuthDict = {
       in_review: "In behandeling",
       rejected: "Afgewezen",
       expired: "Verlopen",
+      wachtMens: "Een medewerker van ZekerFlex bekijkt je foto's, meestal binnen een werkdag. Je hoeft niets opnieuw te doen; je krijgt bericht.",
+      tochOpnieuw: "Toch opnieuw scannen",
     },
     werkrecht: {
       title: "Recht om te werken",
@@ -998,6 +1003,8 @@ const en: AuthDict = {
       in_review: "Under review",
       rejected: "Rejected",
       expired: "Expired",
+      wachtMens: "A ZekerFlex employee is reviewing your photos, usually within one working day. You don't need to do anything again; we'll let you know.",
+      tochOpnieuw: "Scan again anyway",
     },
     werkrecht: {
       title: "Right to work",
@@ -1401,6 +1408,8 @@ const pl: AuthDict = {
       in_review: "W trakcie sprawdzania",
       rejected: "Odrzucono",
       expired: "Wygasło",
+      wachtMens: "Pracownik ZekerFlex sprawdza Twoje zdjęcia, zwykle w ciągu jednego dnia roboczego. Nie musisz nic robić ponownie; dostaniesz wiadomość.",
+      tochOpnieuw: "Mimo to zeskanuj ponownie",
     },
     werkrecht: {
       title: "Prawo do pracy",
@@ -1804,6 +1813,8 @@ const ro: AuthDict = {
       in_review: "În analiză",
       rejected: "Respins",
       expired: "Expirat",
+      wachtMens: "Un angajat ZekerFlex îți verifică fotografiile, de obicei într-o zi lucrătoare. Nu trebuie să refaci nimic; vei primi un mesaj.",
+      tochOpnieuw: "Scanează totuși din nou",
     },
     werkrecht: {
       title: "Dreptul de a munci",
@@ -2207,6 +2218,8 @@ const uk: AuthDict = {
       in_review: "На перевірці",
       rejected: "Відхилено",
       expired: "Термін минув",
+      wachtMens: "Співробітник ZekerFlex перевіряє ваші фото, зазвичай протягом одного робочого дня. Нічого не потрібно робити повторно; ми вам повідомимо.",
+      tochOpnieuw: "Усе ж сканувати ще раз",
     },
     werkrecht: {
       title: "Право на роботу",
