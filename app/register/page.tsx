@@ -48,7 +48,7 @@ export default async function RegisterPage(
 
   return (
     <AuthShell
-      image="/marketing/auth-login.jpg"
+      image="/marketing/auth-login-2.jpg"
       locale={locale}
       mobile={{
         ...WELKOM_DICTS[locale].registerHero,

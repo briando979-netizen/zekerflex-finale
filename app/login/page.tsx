@@ -49,7 +49,7 @@ export default async function LoginPage(
 
   return (
     <AuthShell
-      image="/marketing/auth-login.jpg"
+      image="/marketing/auth-login-2.jpg"
       locale={locale}
       mobile={{ ...WELKOM_DICTS[locale].loginHero, back: WELKOM_DICTS[locale].back, backHref: (await inAndroidApp()) ? "/welkom" : "/" }}
       title={t.title}
