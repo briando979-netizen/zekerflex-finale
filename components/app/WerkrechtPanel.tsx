@@ -8,7 +8,8 @@ import { WERK_LANDEN, landNaam, type WerkrechtStand } from "@/lib/werkrecht/land
 
 // ---------------------------------------------------------------------------
 // Recht om te werken per land (Verificatie): per land een verklaring om aan te
-// vinken en het bewijs (upload), Nederland altijd. Vóór een betaalde dienst
+// vinken, met de voorwaarden eronder; binnen de EU/EER/CH is dat genoeg (17 nov
+// 2026), daarbuiten ook een bewijs (upload). Nederland altijd. Vóór een betaalde dienst
 // controleert de server hetzelfde (lib/fiscal/eligibility.ts → lib/werkrecht).
 // ---------------------------------------------------------------------------
 
@@ -105,8 +106,16 @@ function LandKaart({ l, t, locale, onLanden }: { l: Land; t: T; locale: string; 
         <div className="mt-3">
           <label htmlFor={vinkId} className="flex items-start gap-2.5 text-sm leading-relaxed text-neutralx-600">
             <input id={vinkId} type="checkbox" checked={vink} onChange={(e) => setVink(e.target.checked)} className="mt-1 h-4 w-4 flex-shrink-0" />
-            <span>{t.verklaring.replace("{land}", naam)}</span>
+            <span className="font-medium text-ink">{t.verklaring.replace("{land}", naam)}</span>
           </label>
+          <div className="mt-2 pl-[1.625rem] text-xs leading-relaxed text-neutralx-500">
+            <p>{t.voorwaardenKop}</p>
+            <ul className="mt-1 list-disc space-y-1 pl-4">
+              {t.voorwaarden.map((v) => (
+                <li key={v}>{v.replace("{land}", naam)}</li>
+              ))}
+            </ul>
+          </div>
           <button type="button" disabled={!vink || bezig} onClick={() => void verklaar()} className="btn-primary mt-3 w-full disabled:opacity-50 sm:w-auto">
             {t.verklaringKnop}
           </button>

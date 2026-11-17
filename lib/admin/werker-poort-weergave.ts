@@ -59,7 +59,7 @@ export function klusStappen(k: KlusFeiten): PoortStap[] {
     });
   }
   rijen.push({ key: "iban", label: "Rekeningnummer (IBAN)", ok: k.iban, uitleg: "Het rekeningnummer invullen (Verificatie, Bankrekening).", eersteKlus: true });
-  if (k.werkrechtOpen) rijen.push({ key: "werkrecht", label: "Recht om te werken", ok: false, uitleg: "De verklaring aanvinken en laten zien waarmee (vlag werkrecht-eis staat aan).", eersteKlus: true });
+  if (k.werkrechtOpen) rijen.push({ key: "werkrecht", label: "Recht om te werken", ok: false, uitleg: "De verklaring aanvinken (vlag werkrecht-eis staat aan).", eersteKlus: true });
   rijen.push({ key: "idGoedgekeurd", label: "ID goedgekeurd", ok: k.idGoedgekeurd, uitleg: "Het ingestuurde ID moet nog worden nagekeken.", eersteKlus: true });
   return rijen;
 }

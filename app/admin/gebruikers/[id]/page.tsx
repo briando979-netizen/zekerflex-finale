@@ -593,7 +593,7 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
             </Panel>
           )}
 
-          <Panel flush title="Documenten">
+          <Panel flush title="Documenten" subtitle="De bestanden die deze gebruiker zelf heeft geüpload. Het identiteitsbewijs keur je goed bij Identiteitscontroles; hier staat alleen het bestand.">
             {docs.length === 0 ? (
               <Empty title="Nog niets geüpload" body="Deze gebruiker heeft nog geen document geüpload." />
             ) : (
@@ -601,6 +601,9 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                 {docs.map((d) => {
                   const fileUrl = `/api/admin/gebruikers/${user.id}/documents/${d.id}`;
                   const isImage = d.mimeType.startsWith("image/");
+                  // het ID-bestand zelf wordt nooit apart beoordeeld: de uitkomst van de ID-controle telt
+                  const status: DocStatus =
+                    d.kind === "id" && d.status === "uploaded" ? (user.kycStatus === "VERIFIED" ? "approved" : user.kycStatus === "REJECTED" ? "rejected" : "uploaded") : d.status;
                   return (
                     <li key={d.id} className="flex items-center gap-3 px-4 py-3 text-[0.8125rem] sm:px-5" style={{ borderTop: "1px solid var(--a-border)" }}>
                       <a href={fileUrl} target="_blank" rel="noreferrer" className="flex-shrink-0">
@@ -622,7 +625,7 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                         <a href={fileUrl} target="_blank" rel="noreferrer" className="text-xs font-medium hover:underline" style={{ color: "var(--a-accent-ink)" }}>Volledig bekijken →</a>
                       </div>
                       <div className="flex flex-shrink-0 flex-col items-end gap-2">
-                        <Pill tone={DOC_STATUS_TONE[d.status]}>{DOC_STATUS_LABEL[d.status]}</Pill>
+                        <Pill tone={DOC_STATUS_TONE[status]}>{DOC_STATUS_LABEL[status]}</Pill>
                         {(d.kind === "bank" || d.note === "kor-bevestiging") && d.status === "uploaded" && <ComplianceDocActions userId={user.id} docId={d.id} />}
                         {d.kind === "id" && <span className="text-xs" style={{ color: "var(--a-mute)" }}>via Identiteitscontroles</span>}
                       </div>
@@ -646,6 +649,7 @@ export default async function GebruikerDetailPage(props: { params: Promise<{ id:
                         <p className="text-xs" style={{ color: "var(--a-mute)" }}>
                           {w.verklaard ? "Verklaring aangevinkt" : "Verklaring niet aangevinkt"}
                           {w.idBewijs ? ", bewijs: EU/EER/CH-paspoort of -ID-kaart uit de ID-controle" : ""}
+                          {w.via === "verklaring" ? ": dat vinkje is het bewijs, er is geen document gevraagd" : ""}
                           {w.document?.geldigTot ? `, document geldig tot ${w.document.geldigTot.split("-").reverse().join("-")}` : ""}
                           {w.document?.note ? `, reden afwijzing: ${w.document.note}` : ""}
                         </p>

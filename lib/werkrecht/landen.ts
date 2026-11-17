@@ -13,10 +13,14 @@
 //     rijbewijs aanmeldde) en kijkt een medewerker het na. Pas na goedkeuren
 //     telt het (Wet arbeid vreemdelingen: controle vóór het werk begint).
 // Buiten de EU/EER/CH is altijd een document nodig, ook met een EU-paspoort.
+//
+// 17 nov 2026 (eigenaar): binnen de EU/EER/CH is de aangevinkte verklaring zelf genoeg, zonder document. De werker
+// verklaart dat hij de nationaliteit of een verblijfsvergunning heeft waarmee hij mag werken; ZekerFlex mag alsnog
+// om een document vragen. Een document dat een medewerker afwees blijft tegenhouden.
 // ---------------------------------------------------------------------------
 
 /** Versie van de verklaring; een nieuwe tekst = een nieuwe versie (opnieuw aanvinken). */
-export const VERKLARING_VERSIE = "2026-11-09";
+export const VERKLARING_VERSIE = "2026-11-17";
 
 /** EU-27, EER (IJsland, Liechtenstein, Noorwegen) en Zwitserland, ISO 3166-1 alpha-2. */
 export const VRIJ_VERKEER = new Set([
@@ -69,7 +73,7 @@ export interface WerkrechtRij {
 export interface WerkrechtUitslag {
   stand: WerkrechtStand;
   /** waarmee het recht bewezen is (alleen bij "ok") */
-  via: "id" | "document" | null;
+  via: "id" | "document" | "verklaring" | null;
 }
 
 /**
@@ -87,15 +91,17 @@ export function werkrechtUitslag(land: string, rij: WerkrechtRij | null, idVrij:
   if (!rij?.declaredAt || rij.declaration !== VERKLARING_VERSIE) return { stand: "verklaring-nodig", via: null };
   if (rij.uploadId && rij.status === "APPROVED") {
     if (rij.validUntil && rij.validUntil.getTime() < nu.getTime()) {
-      // een verlopen document; met een EU-document uit de ID-controle blijft het recht wel
-      return idVrij && VRIJ_VERKEER.has(land) ? { stand: "ok", via: "id" } : { stand: "verlopen", via: null };
+      // een verlopen document; binnen de EU/EER/CH blijft het recht via de ID-controle of de verklaring
+      return VRIJ_VERKEER.has(land) ? { stand: "ok", via: idVrij ? "id" : "verklaring" } : { stand: "verlopen", via: null };
     }
     return { stand: "ok", via: "document" };
   }
   if (idVrij && VRIJ_VERKEER.has(land)) return { stand: "ok", via: "id" };
   if (idInBehandeling && VRIJ_VERKEER.has(land)) return { stand: "wacht", via: null };
-  if (rij.uploadId && rij.status === "UPLOADED") return { stand: "wacht", via: null };
   if (rij.uploadId && rij.status === "REJECTED") return { stand: "afgewezen", via: null };
+  // binnen de EU/EER/CH is de aangevinkte verklaring genoeg (17 nov, eigenaar): geen document nodig
+  if (VRIJ_VERKEER.has(land)) return { stand: "ok", via: "verklaring" };
+  if (rij.uploadId && rij.status === "UPLOADED") return { stand: "wacht", via: null };
   return { stand: "bewijs-nodig", via: null };
 }
 

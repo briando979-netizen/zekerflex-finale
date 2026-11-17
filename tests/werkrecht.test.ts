@@ -42,16 +42,24 @@ describe("werkrechtUitslag", () => {
     expect(werkrechtUitslag("US", rij(), true, NU).stand).toBe("bewijs-nodig");
   });
 
-  it("zonder EU-document (rijbewijs, buiten de EU): pas na goedkeuring door een medewerker", () => {
-    expect(werkrechtUitslag("NL", rij(), false, NU).stand).toBe("bewijs-nodig");
-    expect(werkrechtUitslag("NL", rij({ uploadId: "u1", status: "UPLOADED", validUntil: MORGEN }), false, NU).stand).toBe("wacht");
+  it("binnen de EU/EER/CH is de aangevinkte verklaring genoeg, zonder document (17 nov); een afgewezen document houdt wel tegen", () => {
+    expect(werkrechtUitslag("NL", rij(), false, NU)).toEqual({ stand: "ok", via: "verklaring" });
+    expect(werkrechtUitslag("DE", rij(), false, NU)).toEqual({ stand: "ok", via: "verklaring" });
+    expect(werkrechtUitslag("NL", rij({ uploadId: "u1", status: "UPLOADED", validUntil: MORGEN }), false, NU)).toEqual({ stand: "ok", via: "verklaring" });
     expect(werkrechtUitslag("NL", rij({ uploadId: "u1", status: "REJECTED", validUntil: MORGEN }), false, NU).stand).toBe("afgewezen");
+  });
+
+  it("buiten de EU: pas na goedkeuring van een document door een medewerker", () => {
+    expect(werkrechtUitslag("GB", rij(), false, NU).stand).toBe("bewijs-nodig");
+    expect(werkrechtUitslag("GB", rij({ uploadId: "u1", status: "UPLOADED", validUntil: MORGEN }), false, NU).stand).toBe("wacht");
+    expect(werkrechtUitslag("GB", rij({ uploadId: "u1", status: "REJECTED", validUntil: MORGEN }), false, NU).stand).toBe("afgewezen");
     expect(werkrechtUitslag("NL", rij({ uploadId: "u1", status: "APPROVED", validUntil: MORGEN }), false, NU)).toEqual({ stand: "ok", via: "document" });
   });
 
-  it("een verlopen document telt niet meer, behalve met een EU-document binnen de EU", () => {
+  it("een verlopen document telt niet meer; binnen de EU blijft het recht via de verklaring of de ID-controle", () => {
     const verlopen = rij({ uploadId: "u1", status: "APPROVED", validUntil: GISTEREN });
-    expect(werkrechtUitslag("NL", verlopen, false, NU).stand).toBe("verlopen");
+    expect(werkrechtUitslag("NL", verlopen, false, NU)).toEqual({ stand: "ok", via: "verklaring" });
+    expect(werkrechtUitslag("GB", verlopen, false, NU).stand).toBe("verlopen");
     expect(werkrechtUitslag("GB", verlopen, true, NU).stand).toBe("verlopen");
     expect(werkrechtUitslag("NL", verlopen, true, NU)).toEqual({ stand: "ok", via: "id" });
   });

@@ -120,7 +120,7 @@ export const HERINNERING_NL: HerinneringTeksten = {
     identiteit: "bevestig je identiteit met een ID-scan",
     foto: "zet een profielfoto",
     iban: "vul je rekeningnummer (IBAN) in",
-    werkrecht: "vink aan dat je in Nederland mag werken en laat zien waarmee",
+    werkrecht: "vink aan dat je in Nederland mag werken",
   },
 };
 
@@ -145,7 +145,7 @@ const HERINNERING_EN: HerinneringTeksten = {
     identiteit: "confirm your identity with an ID scan",
     foto: "add a profile photo",
     iban: "enter your bank account (IBAN)",
-    werkrecht: "confirm that you may work in the Netherlands and show how",
+    werkrecht: "confirm that you may work in the Netherlands",
   },
 };
 
@@ -170,7 +170,7 @@ const HERINNERING_PL: HerinneringTeksten = {
     identiteit: "potwierdź tożsamość skanem dokumentu",
     foto: "dodaj zdjęcie profilowe",
     iban: "wpisz swój numer konta (IBAN)",
-    werkrecht: "potwierdź, że możesz pracować w Holandii, i pokaż na jakiej podstawie",
+    werkrecht: "potwierdź, że możesz pracować w Holandii",
   },
 };
 
@@ -195,7 +195,7 @@ const HERINNERING_RO: HerinneringTeksten = {
     identiteit: "confirmă-ți identitatea cu o scanare a actului",
     foto: "adaugă o fotografie de profil",
     iban: "introdu contul tău bancar (IBAN)",
-    werkrecht: "confirmă că ai dreptul să lucrezi în Țările de Jos și arată pe ce bază",
+    werkrecht: "confirmă că ai dreptul să lucrezi în Țările de Jos",
   },
 };
 
@@ -220,7 +220,7 @@ const HERINNERING_UK: HerinneringTeksten = {
     identiteit: "підтвердь особу скануванням документа",
     foto: "додай фото профілю",
     iban: "введи свій банківський рахунок (IBAN)",
-    werkrecht: "підтвердь, що маєш право працювати в Нідерландах, і покажи на якій підставі",
+    werkrecht: "підтвердь, що маєш право працювати в Нідерландах",
   },
 };
 

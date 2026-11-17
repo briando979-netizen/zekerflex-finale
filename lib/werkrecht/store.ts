@@ -26,7 +26,7 @@ export interface WerkrechtLand {
   id: string | null;
   land: string;
   stand: WerkrechtStand;
-  via: "id" | "document" | null;
+  via: "id" | "document" | "verklaring" | null;
   verklaard: boolean;
   /** een EU/EER/CH-document uit de ID-controle is hier het bewijs: niets te uploaden */
   idBewijs: boolean;
@@ -125,7 +125,7 @@ export async function werkrechtVoorWerk(userId: string, land = "NL", nu = new Da
 }
 
 const KANDIDAAT_ZONDER_WERKRECHT =
-  "Deze kandidaat heeft het recht om in Nederland te werken nog niet aangetoond (verklaring en document bij Verificatie).";
+  "Deze kandidaat heeft het recht om in Nederland te werken nog niet bevestigd (de verklaring bij Verificatie).";
 
 /**
  * De poort op elke plek waar iemand op een dienst komt (reageren en aannemen lopen via

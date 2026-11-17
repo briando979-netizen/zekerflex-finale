@@ -204,6 +204,9 @@ export interface AuthDict {
       title: string;
       intro: string;
       verklaring: string;
+      /** de voorwaarden onder het vinkje (17 nov 2026): een kop en de punten; {land} vult de client in */
+      voorwaardenKop: string;
+      voorwaarden: string[];
       verklaringKnop: string;
       verklaard: string;
       bewijsUitleg: string;
@@ -603,8 +606,10 @@ const nl: AuthDict = {
     },
     werkrecht: {
       title: "Recht om te werken",
-      intro: "Voor elk land waar je via ZekerFlex werkt, vink je een verklaring aan en laat je zien dat je daar mag werken. Dat is verplicht: zonder kun je geen betaalde diensten aannemen.",
-      verklaring: "Ik verklaar dat ik in {land} mag werken, dat de gegevens en documenten die ik geef echt zijn en van mij, en dat ik het meteen meld als mijn recht om daar te werken verandert of stopt.",
+      intro: "Vink aan dat je in Nederland mag werken. Een document uploaden hoeft niet. Dit is verplicht: zonder kun je geen betaalde diensten aannemen. Voor een land buiten de EU vragen we wel een document.",
+      verklaring: "Ik verklaar dat ik in {land} mag werken.",
+      voorwaardenKop: "Door dit aan te vinken verklaar je dat:",
+      voorwaarden: ["je de nationaliteit hebt van een land uit de EU, de EER of Zwitserland, of een geldige verblijfsvergunning waarmee je in {land} mag werken;", "je identiteitsbewijs en je gegevens echt zijn en van jou;", "je het meteen meldt als je recht om te werken verandert of stopt;", "ZekerFlex je om een document mag vragen, en je account mag stoppen als deze verklaring niet klopt."],
       verklaringKnop: "Opslaan",
       verklaard: "Je hebt de verklaring aangevinkt.",
       bewijsUitleg: "Upload een document waaruit blijkt dat je in {land} mag werken: een paspoort of ID-kaart (geen rijbewijs), een verblijfsdocument of een werkvergunning. Een medewerker kijkt het na.",
@@ -1008,8 +1013,10 @@ const en: AuthDict = {
     },
     werkrecht: {
       title: "Right to work",
-      intro: "For every country where you work through ZekerFlex, you tick a declaration and show that you are allowed to work there. This is required: without it you can't accept paid shifts.",
-      verklaring: "I declare that I am allowed to work in {land}, that the details and documents I provide are genuine and mine, and that I will report it immediately if my right to work there changes or ends.",
+      intro: "Tick that you are allowed to work in the Netherlands. You don't need to upload a document. This is required: without it you can't accept paid shifts. For a country outside the EU we do ask for a document.",
+      verklaring: "I declare that I am allowed to work in {land}.",
+      voorwaardenKop: "By ticking this you declare that:",
+      voorwaarden: ["you have the nationality of a country in the EU, the EEA or Switzerland, or a valid residence permit that allows you to work in {land};", "your identity document and your details are genuine and yours;", "you will report it immediately if your right to work changes or ends;", "ZekerFlex may ask you for a document, and may close your account if this declaration is not true."],
       verklaringKnop: "Save",
       verklaard: "You have ticked the declaration.",
       bewijsUitleg: "Upload a document showing that you may work in {land}: a passport or ID card (not a driving licence), a residence document or a work permit. A staff member will check it.",
@@ -1413,8 +1420,10 @@ const pl: AuthDict = {
     },
     werkrecht: {
       title: "Prawo do pracy",
-      intro: "Dla każdego kraju, w którym pracujesz przez ZekerFlex, zaznaczasz oświadczenie i pokazujesz, że możesz tam pracować. To obowiązkowe: bez tego nie możesz przyjmować płatnych zleceń.",
-      verklaring: "Oświadczam, że mogę pracować w kraju: {land}, że podane przeze mnie dane i dokumenty są prawdziwe i należą do mnie oraz że natychmiast zgłoszę, jeśli moje prawo do pracy tam się zmieni lub wygaśnie.",
+      intro: "Zaznacz, że możesz pracować w Holandii. Nie musisz przesyłać dokumentu. To obowiązkowe: bez tego nie możesz przyjmować płatnych zleceń. W przypadku kraju spoza UE prosimy o dokument.",
+      verklaring: "Oświadczam, że mogę pracować w kraju: {land}.",
+      voorwaardenKop: "Zaznaczając to pole, oświadczasz, że:",
+      voorwaarden: ["masz obywatelstwo kraju UE, EOG lub Szwajcarii albo ważne zezwolenie na pobyt, które pozwala Ci pracować w kraju: {land};", "Twój dokument tożsamości i Twoje dane są prawdziwe i należą do Ciebie;", "natychmiast zgłosisz, jeśli Twoje prawo do pracy się zmieni lub wygaśnie;", "ZekerFlex może poprosić Cię o dokument i może zamknąć Twoje konto, jeśli to oświadczenie jest nieprawdziwe."],
       verklaringKnop: "Zapisz",
       verklaard: "Oświadczenie zostało zaznaczone.",
       bewijsUitleg: "Prześlij dokument potwierdzający, że możesz pracować w kraju: {land}: paszport lub dowód osobisty (nie prawo jazdy), dokument pobytowy lub zezwolenie na pracę. Pracownik go sprawdzi.",
@@ -1818,8 +1827,10 @@ const ro: AuthDict = {
     },
     werkrecht: {
       title: "Dreptul de a munci",
-      intro: "Pentru fiecare țară în care lucrezi prin ZekerFlex, bifezi o declarație și arăți că ai voie să lucrezi acolo. Este obligatoriu: fără aceasta nu poți accepta ture plătite.",
-      verklaring: "Declar că am dreptul să lucrez în {land}, că datele și documentele pe care le furnizez sunt reale și îmi aparțin și că voi anunța imediat dacă dreptul meu de a lucra acolo se schimbă sau încetează.",
+      intro: "Bifează că ai voie să lucrezi în Țările de Jos. Nu trebuie să încarci un document. Este obligatoriu: fără aceasta nu poți accepta ture plătite. Pentru o țară din afara UE cerem un document.",
+      verklaring: "Declar că am dreptul să lucrez în {land}.",
+      voorwaardenKop: "Bifând această căsuță declari că:",
+      voorwaarden: ["ai cetățenia unei țări din UE, SEE sau a Elveției, ori un permis de ședere valabil care îți permite să lucrezi în {land};", "actul tău de identitate și datele tale sunt reale și îți aparțin;", "vei anunța imediat dacă dreptul tău de a lucra se schimbă sau încetează;", "ZekerFlex îți poate cere un document și îți poate închide contul dacă această declarație nu este adevărată."],
       verklaringKnop: "Salvează",
       verklaard: "Ai bifat declarația.",
       bewijsUitleg: "Încarcă un document care arată că ai voie să lucrezi în {land}: un pașaport sau o carte de identitate (nu permis de conducere), un document de ședere sau un permis de muncă. Un angajat îl va verifica.",
@@ -2223,8 +2234,10 @@ const uk: AuthDict = {
     },
     werkrecht: {
       title: "Право на роботу",
-      intro: "Для кожної країни, де ви працюєте через ZekerFlex, ви позначаєте декларацію й показуєте, що маєте право там працювати. Це обов’язково: без цього ви не можете приймати оплачувані зміни.",
-      verklaring: "Я заявляю, що маю право працювати в країні: {land}, що надані мною дані й документи справжні та належать мені, і що я негайно повідомлю, якщо моє право працювати там зміниться або припиниться.",
+      intro: "Позначте, що ви маєте право працювати в Нідерландах. Завантажувати документ не потрібно. Це обов’язково: без цього ви не можете приймати оплачувані зміни. Для країни поза ЄС ми просимо документ.",
+      verklaring: "Я заявляю, що маю право працювати в країні: {land}.",
+      voorwaardenKop: "Позначаючи це, ви заявляєте, що:",
+      voorwaarden: ["ви маєте громадянство країни ЄС, ЄЕЗ або Швейцарії чи дійсний дозвіл на проживання, який дозволяє вам працювати в країні: {land};", "ваш документ, що посвідчує особу, і ваші дані справжні та належать вам;", "ви негайно повідомите, якщо ваше право працювати зміниться або припиниться;", "ZekerFlex може попросити у вас документ і може закрити ваш обліковий запис, якщо ця заява неправдива."],
       verklaringKnop: "Зберегти",
       verklaard: "Ви позначили декларацію.",
       bewijsUitleg: "Завантажте документ, який підтверджує, що ви маєте право працювати в країні: {land}: паспорт або ID-картку (не водійське посвідчення), документ про проживання або дозвіл на роботу. Співробітник його перевірить.",
