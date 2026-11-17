@@ -74,6 +74,7 @@ const SOURCE_LABEL: Record<string, string> = {
   careers: "Vacaturepagina",
   import: "Import",
   "field-visit": "Bedrijfsbezoek",
+  introductie: "Introductie",
 };
 
 function fmtDate(iso: string | null): string {
@@ -310,6 +311,12 @@ export function SalesDashboard({ initialLeads, initialFilter }: { initialLeads: 
                               <a href={l.sourceUrl} target="_blank" rel="noreferrer" className="underline">bron</a>
                             </>
                           )}
+                        </p>
+                      )}
+                      {l.source === "introductie" && (
+                        <p className="rounded-lg px-3 py-2 text-xs" style={{ background: "var(--a-elev)", color: "var(--a-dim)" }}>
+                          <span className="font-semibold">Introductie:</span> voorgesteld door een gebruiker; de contactpersoon weet dat we contact opnemen. Wie het was en
+                          &quot;Gekoppeld aan bedrijf&quot; staan in het tabblad Introducties hierboven.
                         </p>
                       )}
                       {typeof l.sequenceStep === "number" && l.sequenceStep > 0 && (
