@@ -1,3 +1,4 @@
+import { kolomVan } from "@/lib/horeca/bord";
 import { randomBytes } from "crypto";
 import type { HorecaBestelling, HorecaBestellingStatus, HorecaZaak, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -96,6 +97,17 @@ export async function bestellingenVan(zaakId: string) {
     include: { tafel: { select: { naam: true } } },
   });
   return lijst.map((b) => ({ ...b, regels: leesRegels(b.regels), tafelNaam: b.tafel?.naam ?? null }));
+}
+
+/** Hoeveel bestellingen op de zaak wachten: de kolom Nieuw van het bord (lib/horeca/bord.ts). Voor het tellertje in het menu. */
+export async function aantalNieuw(zaakId: string): Promise<number> {
+  const lijst = await prisma.horecaBestelling.findMany({
+    where: { zaakId, status: { in: ["NIEUW", "IN_BEREIDING", "KLAAR"] } },
+    select: { soort: true, status: true, createdAt: true, gewenstOp: true, bevestigdOp: true, onderwegOp: true, afgeleverdOp: true },
+    take: 300,
+  });
+  const iso = (d: Date | null) => (d ? d.toISOString() : null);
+  return lijst.filter((b) => kolomVan({ soort: b.soort, status: b.status, createdAt: b.createdAt.toISOString(), gewenstOp: iso(b.gewenstOp), bevestigdOp: iso(b.bevestigdOp), onderwegOp: iso(b.onderwegOp), afgeleverdOp: iso(b.afgeleverdOp) }) === "nieuw").length;
 }
 
 /**

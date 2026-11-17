@@ -13,6 +13,8 @@ export interface NavItem {
   icon: ReactNode;
   /** optional grouping heading */
   section?: string;
+  /** een tellertje achter het label (bv. nieuwe bestellingen in het horecadashboard) */
+  badge?: ReactNode;
 }
 
 export function AppShell({

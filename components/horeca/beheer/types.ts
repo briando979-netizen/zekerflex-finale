@@ -48,7 +48,7 @@ export interface BeheerData {
   tafels: Tafel[];
   maand: { totaalCent: number; losCent: number; bundel: boolean };
   reserveren: ReserveerInstellingen;
-  kassa: { btwNummer: string; voettekst: string };
+  kassa: { btwNummer: string; voettekst: string; grootboek: Record<string, string> };
   /** afhalen en bezorgen; ligging = het adres van de zaak is gevonden (de straal rekent vanaf daar) */
   bezorgen: BezorgInstellingen & { ligging: boolean; plek: { lat: number; lng: number } | null };
 }

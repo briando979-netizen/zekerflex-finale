@@ -108,6 +108,8 @@ export const beheerActieSchema = z.discriminatedUnion("actie", [
   z.object({ actie: z.literal("reservering-status"), id, status: z.enum(["BEVESTIGD", "AANGEKOMEN", "NIET_GEKOMEN", "GEANNULEERD"]) }),
   z.object({ actie: z.literal("reservering-tafel"), id, tafelId: id.nullable() }),
   z.object({ actie: z.literal("kassa-instellingen"), btwNummer: tekst(30), voettekst: tekst(300) }),
+  // de grootboeknummers voor het journaal; lib/horeca/journaal.ts leesGrootboek keurt elk nummer
+  z.object({ actie: z.literal("kassa-grootboek"), grootboek: z.record(z.string().max(20), z.string().max(12)) }),
   z.object({ actie: z.literal("kas-tellen"), datum: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Kies een datum."), geteldCent: centen(10_000_000) }),
   z.object({
     actie: z.literal("reserveer-instellingen"),

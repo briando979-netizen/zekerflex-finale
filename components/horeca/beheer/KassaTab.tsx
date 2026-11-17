@@ -6,6 +6,7 @@ import { bedragVeld, centVan, foutVan, stuur } from "@/components/rijschool/api"
 import { Melding, Veld } from "@/components/rijschool/ui";
 import { euro } from "@/lib/horeca/weergave";
 import { methodeLabel, type ZRapport } from "@/lib/horeca/kassa";
+import { GROOTBOEK_VELDEN } from "@/lib/horeca/journaal";
 import { plusDagen } from "@/lib/horeca/reserveren";
 import { amsterdamClock, amsterdamDayKey } from "@/lib/time/amsterdam";
 import { BonVenster } from "@/components/horeca/live/Bon";
@@ -43,6 +44,7 @@ export function KassaTab({ data, doe }: { data: BeheerData; doe: Doe }) {
   const [van, setVan] = useState(plusDagen(vandaag, -30));
   const [tot, setTot] = useState(vandaag);
   const [inst, setInst] = useState({ btwNummer: data.kassa.btwNummer, voettekst: data.kassa.voettekst });
+  const [grootboek, setGrootboek] = useState<Record<string, string>>(data.kassa.grootboek);
 
   const laad = useCallback(async () => {
     try {
@@ -72,6 +74,11 @@ export function KassaTab({ data, doe }: { data: BeheerData; doe: Doe }) {
   async function bewaarInst(e: FormEvent) {
     e.preventDefault();
     await doe({ actie: "kassa-instellingen", ...inst }, "De bon-gegevens zijn bewaard.");
+  }
+
+  async function bewaarGrootboek(e: FormEvent) {
+    e.preventDefault();
+    await doe({ actie: "kassa-grootboek", grootboek }, t.grootboekOk);
   }
 
   const r = a?.rapport;
@@ -244,7 +251,37 @@ export function KassaTab({ data, doe }: { data: BeheerData; doe: Doe }) {
                 </a>
               </div>
               <p className="text-sm text-neutralx-600">{t.uitleg}</p>
+              <div className="border-t border-hair pt-3">
+                <a className="btn-primary" href={`${API}?alleen=kassa-journaal&van=${van}&tot=${tot}`}>
+                  {t.journaalKnop}
+                </a>
+                <p className="mt-2 text-sm text-neutralx-600">{t.journaalUitleg}</p>
+              </div>
             </section>
+
+            <form className="card space-y-3 p-5" onSubmit={bewaarGrootboek} aria-labelledby="grootboek-kop">
+              <h3 id="grootboek-kop" className="font-display text-base font-bold text-ink">
+                {t.grootboekKop}
+              </h3>
+              <p className="text-sm text-neutralx-600">{t.grootboekUitleg}</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {GROOTBOEK_VELDEN.map(([k]) => (
+                  <Veld key={k} label={t.rekeningen[k]}>
+                    <input
+                      className="field-input"
+                      inputMode="numeric"
+                      maxLength={12}
+                      pattern="[A-Za-z0-9.]{1,12}"
+                      value={grootboek[k] ?? ""}
+                      onChange={(e) => setGrootboek((g) => ({ ...g, [k]: e.target.value }))}
+                    />
+                  </Veld>
+                ))}
+              </div>
+              <button type="submit" className="btn-primary">
+                {t.grootboekBewaar}
+              </button>
+            </form>
           </div>
 
           <section className="card p-5" aria-labelledby="bonnen-kop">

@@ -234,6 +234,7 @@ export function EmployerShell({
                       {n.icon}
                     </span>
                     {!collapsed && n.label}
+                    {n.badge ? <span className={collapsed ? "absolute right-0.5 top-0.5" : "ml-auto"}>{n.badge}</span> : null}
                   </Link>
                 );
               })}

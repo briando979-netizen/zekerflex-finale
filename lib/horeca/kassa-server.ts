@@ -1,3 +1,4 @@
+import { journaalCsv, leesGrootboek, type Grootboek } from "@/lib/horeca/journaal";
 import type { HorecaBetaling, HorecaZaak } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
@@ -8,7 +9,7 @@ import { amsterdamDayKey, amsterdamToUtc } from "@/lib/time/amsterdam";
 import { leesRegels } from "@/lib/horeca/bestellen";
 import { hoofdTarief } from "@/lib/horeca/bezorgen";
 import { plusDagen } from "@/lib/horeca/reserveren";
-import { alles, betaalRegels, dagstaatCsv, deelRegels, kortingRegels, MAX_KORTING_PROCENT, rekeningVan, totaalVan, zRapport, type BonRegel, type KassaBetaling, type Methode, type Selectie } from "@/lib/horeca/kassa";
+import { alles, betaalRegels, dagstaatCsv, deelRegels, kortingRegels, MAX_KORTING_PROCENT, rekeningVan, totaalVan, zRapport, type BonRegel, type DagstaatDag, type KassaBetaling, type Methode, type Selectie } from "@/lib/horeca/kassa";
 
 // ---------------------------------------------------------------------------
 // De kassa op de server. Afrekenen gebeurt onder een rijslot op de bestellingen
@@ -27,15 +28,22 @@ export interface Deel {
 
 export interface KassaInstellingen {
   voettekst: string;
+  /** de grootboeknummers voor het journaal (lib/horeca/journaal.ts) */
+  grootboek: Grootboek;
 }
 
 export function leesKassa(json: unknown): KassaInstellingen {
-  const k = (json ?? {}) as { voettekst?: unknown };
-  return { voettekst: typeof k.voettekst === "string" ? k.voettekst.slice(0, 300) : "Bedankt en tot ziens!" };
+  const k = (json ?? {}) as { voettekst?: unknown; grootboek?: unknown };
+  return { voettekst: typeof k.voettekst === "string" ? k.voettekst.slice(0, 300) : "Bedankt en tot ziens!", grootboek: leesGrootboek(k.grootboek) };
 }
 
 export const bewaarKassa = (zaak: HorecaZaak, k: { btwNummer: string; voettekst: string }) =>
-  prisma.horecaZaak.update({ where: { id: zaak.id }, data: { btwNummer: k.btwNummer, kassa: { voettekst: k.voettekst } } });
+  // de grootboeknummers blijven staan: die bewaart het eigen formulier (bewaarGrootboek)
+  prisma.horecaZaak.update({ where: { id: zaak.id }, data: { btwNummer: k.btwNummer, kassa: { voettekst: k.voettekst, grootboek: leesKassa(zaak.kassa).grootboek } } });
+
+/** De grootboeknummers voor het journaal; een leeg of vreemd nummer wordt het standaardnummer. */
+export const bewaarGrootboek = (zaak: HorecaZaak, grootboek: unknown) =>
+  prisma.horecaZaak.update({ where: { id: zaak.id }, data: { kassa: { voettekst: leesKassa(zaak.kassa).voettekst, grootboek: leesGrootboek(grootboek) } } });
 
 /**
  * Afrekenen: de hele rekening of een selectie (per gerecht), van een tafel of
@@ -204,7 +212,12 @@ export async function kassaCsv(zaak: HorecaZaak, van: string, tot: string): Prom
  * De dagstaat van een periode (hoogstens 93 dagen) als CSV: per dag omzet en btw per tarief, fooi, ontvangsten per
  * betaalwijze en het kasverschil (lib/horeca/kassa.ts dagstaatCsv). Eén query voor de hele periode.
  */
-export async function dagstaatCsvVan(zaak: HorecaZaak, van: string, tot: string): Promise<string> {
+export const dagstaatCsvVan = async (zaak: HorecaZaak, van: string, tot: string): Promise<string> => dagstaatCsv(await dagstaatDagen(zaak, van, tot));
+
+/** Het journaal van een periode (hoogstens 93 dagen) als CSV, met de grootboeknummers van de zaak (lib/horeca/journaal.ts). */
+export const journaalCsvVan = async (zaak: HorecaZaak, van: string, tot: string): Promise<string> => journaalCsv(await dagstaatDagen(zaak, van, tot), leesKassa(zaak.kassa).grootboek);
+
+async function dagstaatDagen(zaak: HorecaZaak, van: string, tot: string): Promise<DagstaatDag[]> {
   const dagen: string[] = [];
   for (let datum = van; datum <= tot && dagen.length < 93; datum = plusDagen(datum, 1)) dagen.push(datum);
   const laatste = dagen[dagen.length - 1] ?? van;
@@ -219,5 +232,5 @@ export async function dagstaatCsvVan(zaak: HorecaZaak, van: string, tot: string)
     per.set(dag, [...(per.get(dag) ?? []), { bedragCent: b.bedragCent, fooiCent: b.fooiCent, methode: b.methode, regels: Array.isArray(b.regels) ? (b.regels as unknown as BonRegel[]) : [] }]);
   }
   const tellingen = await Promise.all(dagen.map((d) => kvGet<{ geteldCent: number }>(kKas(zaak.id, d)).catch(() => null)));
-  return dagstaatCsv(dagen.map((datum, i) => ({ datum, betalingen: per.get(datum) ?? [], geteldCent: tellingen[i]?.geteldCent ?? null })));
+  return dagen.map((datum, i) => ({ datum, betalingen: per.get(datum) ?? [], geteldCent: tellingen[i]?.geteldCent ?? null }));
 }

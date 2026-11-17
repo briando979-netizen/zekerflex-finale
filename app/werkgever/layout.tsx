@@ -1,3 +1,4 @@
+import { HorecaMenuTeller } from "@/components/horeca/MenuTeller";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { getPrincipal, hasRole } from "@/lib/auth";
@@ -169,6 +170,8 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
       // een tabblad van het rijschool- of horecabeheer als eigen onderdeel (lib/rijschool/tabs.ts, lib/horeca/tabs.ts)
       ...(tab ? { href: `${onderdelen[sleutel].href}?tab=${tab.id}`, label: tab.label, icon: TAB_ICOON[tab.id] ?? onderdelen[sleutel].icon } : {}),
       ...(sectie ? { section: sectieNaam(sectie) } : {}),
+      // hoeveel bestellingen op de zaak wachten; alleen voor wie het horecabeheer mag openen (anders geeft de teller een reeks 403's)
+      ...(sleutel === "horeca" && tab?.id === "bestellingen" && beheerder ? { badge: <HorecaMenuTeller tekst={locale === "en" ? "new orders" : "nieuwe bestellingen"} /> } : {}),
     }));
 
   return (

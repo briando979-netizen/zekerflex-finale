@@ -31,7 +31,7 @@ import {
 } from "@/lib/horeca/store";
 import { heeftModule, maandbedrag, MODULES, type ModuleSleutel } from "@/lib/horeca/modules";
 import { zaakWeergave } from "@/lib/horeca/weergave";
-import { bestellingenVan, bewaarTafel, plaatsBestelling, tafelsVan, tafelVrij, verplaatsFase, vernieuwCode, verwijderTafel, zetBestelStatus } from "@/lib/horeca/bestellingen";
+import { aantalNieuw, bestellingenVan, bewaarTafel, plaatsBestelling, tafelsVan, tafelVrij, verplaatsFase, vernieuwCode, verwijderTafel, zetBestelStatus } from "@/lib/horeca/bestellingen";
 import { bewaarReserveerInstellingen, maakReservering, reserveringenOp, zetReserveringStatus, zetReserveringTafel } from "@/lib/horeca/reserveringen";
 import { isDatum, leesInstellingen } from "@/lib/horeca/reserveren";
 import { cijfersVan } from "@/lib/horeca/cijfers-server";
@@ -39,7 +39,7 @@ import { dashboardVan } from "@/lib/horeca/live";
 import { apparatenVan, bewaarApparaat, koppelcodeVoor, ontkoppel } from "@/lib/horeca/apparaten";
 import { handelAf } from "@/lib/horeca/oproepen";
 import { STAPPEN } from "@/lib/horeca/fasen";
-import { afrekenen, bewaarKassa, dagafsluiting, dagstaatCsvVan, kassaCsv, leesKassa, telKas } from "@/lib/horeca/kassa-server";
+import { afrekenen, bewaarGrootboek, bewaarKassa, dagafsluiting, dagstaatCsvVan, journaalCsvVan, kassaCsv, leesKassa, telKas } from "@/lib/horeca/kassa-server";
 import { koppelStripe, stripeDashboard, stripeStand } from "@/lib/horeca/betalen";
 import type { HorecaZaak } from "@prisma/client";
 
@@ -88,6 +88,8 @@ export async function GET(request: Request): Promise<NextResponse> {
       return NextResponse.json({ aan: false, voorstel: { ...aanzetVoorstel(d), soort } });
     }
     const q = new URL(request.url).searchParams;
+    // ?alleen=teller → hoeveel bestellingen op de zaak wachten (het tellertje in het menu, components/horeca/MenuTeller.tsx)
+    if (q.get("alleen") === "teller") return NextResponse.json({ nieuw: heeftModule(zaak, "bestellen") ? await aantalNieuw(zaak.id) : 0 });
     // ?alleen=live → het live-dashboard (zaal, cijfers van vandaag, oproepen, takenlijsten, schermen)
     if (q.get("alleen") === "live") return NextResponse.json(await dashboardVan(zaak));
     // ?alleen=stripe → is het Stripe-account van de zaak gekoppeld en klaar voor iDEAL aan tafel (lib/horeca/betalen.ts)
@@ -99,7 +101,8 @@ export async function GET(request: Request): Promise<NextResponse> {
     }
     // ?alleen=kassa&datum= → dagafsluiting (Z-rapport, bonnen, kastelling); ?alleen=kassa-csv&van=&tot= → alle bonnen als CSV;
     // ?alleen=kassa-dagstaat&van=&tot= → de dagstaat (memoriaal per dag) als CSV, beide voor de boekhouder
-    if (q.get("alleen") === "kassa" || q.get("alleen") === "kassa-csv" || q.get("alleen") === "kassa-dagstaat") {
+    // ?alleen=kassa-journaal&van=&tot= → de kassa als journaalposten met grootboeknummers, voor een boekhoudprogramma (lib/horeca/journaal.ts)
+    if (q.get("alleen") === "kassa" || q.get("alleen") === "kassa-csv" || q.get("alleen") === "kassa-dagstaat" || q.get("alleen") === "kassa-journaal") {
       eisModule(zaak, "kassa");
       if (q.get("alleen") === "kassa") {
         const datum = q.get("datum") ?? "";
@@ -109,9 +112,10 @@ export async function GET(request: Request): Promise<NextResponse> {
       const van = q.get("van") ?? "";
       const tot = q.get("tot") ?? "";
       if (!isDatum(van) || !isDatum(tot) || van > tot) throw AppError.validation("Kies een periode.");
-      const dagstaat = q.get("alleen") === "kassa-dagstaat";
-      return new NextResponse(dagstaat ? await dagstaatCsvVan(zaak, van, tot) : await kassaCsv(zaak, van, tot), {
-        headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="${dagstaat ? "dagstaat" : "kassa"}-${zaak.slug}-${van}-${tot}.csv"` },
+      const soort = q.get("alleen") === "kassa-dagstaat" ? "dagstaat" : q.get("alleen") === "kassa-journaal" ? "journaal" : "kassa";
+      const csv = soort === "dagstaat" ? await dagstaatCsvVan(zaak, van, tot) : soort === "journaal" ? await journaalCsvVan(zaak, van, tot) : await kassaCsv(zaak, van, tot);
+      return new NextResponse(csv, {
+        headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": `attachment; filename="${soort}-${zaak.slug}-${van}-${tot}.csv"` },
       });
     }
     // ?alleen=archief&van=&tot=&soort=&bron=&betaald=&geannuleerd=&bezorger=&q= → het archief met omzet en btw;
@@ -343,6 +347,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       }
       case "kassa-instellingen":
         nu = await bewaarKassa(zaak, { btwNummer: a.btwNummer, voettekst: a.voettekst });
+        break;
+      case "kassa-grootboek":
+        eisModule(zaak, "kassa");
+        nu = await bewaarGrootboek(zaak, a.grootboek);
         break;
       case "kas-tellen":
         eisModule(zaak, "kassa");

@@ -2014,6 +2014,25 @@ export const nl = {
   horecaDagstaat: {
     knop: "Download dagstaat",
     uitleg: "De dagstaat geeft per dag de omzet en btw per tarief, de fooi, wat er per betaalwijze binnenkwam (met fooi) en het kasverschil. Hij sluit per dag, zodat je boekhouder hem als memoriaalboeking kan inlezen.",
+    journaalKnop: "Download voor je boekhoudprogramma",
+    journaalUitleg: "Dezelfde periode als journaalposten: per dag één boeking met grootboeknummers, die altijd sluit. Je leest het bestand in als memoriaal in Exact, Twinfield, e-Boekhouden, SnelStart of Moneybird, of je stuurt het naar je boekhouder.",
+    grootboekKop: "Grootboeknummers",
+    grootboekUitleg: "Op deze rekeningen komt de kassa in je boekhouding. De nummers hieronder zijn een gangbare indeling; vraag je boekhouder welke nummers jullie gebruiken en pas ze één keer aan.",
+    grootboekBewaar: "Bewaar de grootboeknummers",
+    grootboekOk: "De grootboeknummers zijn bewaard.",
+    rekeningen: {
+      kas: "Kas (contant)",
+      pin: "Pin onderweg",
+      ideal: "iDEAL onderweg",
+      online: "Online aan tafel onderweg",
+      overig: "Overige ontvangsten",
+      omzet21: "Omzet 21%",
+      omzet9: "Omzet 9%",
+      omzet0: "Omzet 0%",
+      btw21: "Af te dragen btw 21%",
+      btw9: "Af te dragen btw 9%",
+      fooi: "Fooien",
+    },
   },
 };
 
