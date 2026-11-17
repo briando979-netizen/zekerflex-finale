@@ -44,6 +44,8 @@ const DOMAIN_GUESS_PER_TICK = 10;
 const DOMAIN_GUESS_RETRY_DAYS = 14;
 /** Contactgegevens zoeken: zoveel leads per run (de herkansing staat in contact-scrape.ts, CONTACT_RETRY_DAYS). */
 const CONTACT_PER_TICK = 12;
+/** Leads zonder campagne (website-check, offerte, rekentool, locatie): kleinere ronde per tick, één keer per tick. */
+const CONTACT_PER_TICK_LOS = 6;
 
 /**
  * Mirrors the tick's own summary into the Jarvis event log under agent
@@ -339,14 +341,17 @@ async function resolveLeadDomains(campaign: SalesCampaign, errors: string[]): Pr
  * bedrijfswebsite af te zoeken. KVKBase-leads komen als kale stubs binnen; dit
  * maakt ze pas écht bereikbaar (bellen/mailen). Begrensd per tick.
  */
-async function enrichContacts(campaign: SalesCampaign, errors: string[]): Promise<number> {
+async function enrichContacts(campaignId: string | null, errors: string[], aantal = CONTACT_PER_TICK): Promise<number> {
   let done = 0;
   // zonder telefoon óf zonder adres, en per lead een poging met herkansing (contactBeurt): eerst pakte dit elke run de 6
   // oudste zonder telefoon, en 37 stubs zonder website kwamen zo nooit verder; leads mét website kwamen nooit aan de beurt
   // en een lead met telefoon werd nooit op een adres doorzocht (14 nov 2026)
+  // campaignId null = de leads zonder campagne (17 nov 2026: 19 kandidaten uit website-check, offerte, rekentool en
+  // locatie kwamen hier nooit, want de ronde liep alleen per campagne); die krijgen alleen contactvelden en
+  // enrichmentJson, nooit een campagne of een mail: processDueLeads loopt per campagne
   const kandidaten = await prisma.salesLead.findMany({
     where: {
-      campaignId: campaign.id,
+      campaignId,
       status: { notIn: ["WON", "LOST", "DISQUALIFIED", "BOUNCED", "UNSUBSCRIBED"] },
       OR: [{ contactPhone: null }, { contactEmail: null, discoveredEmail: null }],
     },
@@ -354,7 +359,7 @@ async function enrichContacts(campaign: SalesCampaign, errors: string[]): Promis
     orderBy: { createdAt: "asc" },
   });
   const uitkomsten: Record<string, number> = {};
-  for (const id of contactBeurt(kandidaten, new Date(), CONTACT_PER_TICK)) {
+  for (const id of contactBeurt(kandidaten, new Date(), aantal)) {
     const r = await safe(
       `contact:${id}`,
       () => enrichLeadContact(id),
@@ -364,7 +369,7 @@ async function enrichContacts(campaign: SalesCampaign, errors: string[]): Promis
     uitkomsten[r.uitkomst] = (uitkomsten[r.uitkomst] ?? 0) + 1;
     if (r.updated) done += 1;
   }
-  logger.info("contact scrape ronde", { kandidaten: kandidaten.length, bijgewerkt: done, ...uitkomsten });
+  logger.info("contact scrape ronde", { campagne: campaignId !== null, kandidaten: kandidaten.length, bijgewerkt: done, ...uitkomsten });
   return done;
 }
 
@@ -549,11 +554,17 @@ export async function runSalesEngineTick(opts: SalesTickOptions = {}): Promise<S
         0,
         base.errors,
       );
-      await safe("contact-scrape", () => enrichContacts(campaign, base.errors), 0, base.errors);
+      await safe("contact-scrape", () => enrichContacts(campaign.id, base.errors), 0, base.errors);
       const dd = await processDueLeads(campaign, base.errors);
       base.drafted += dd.drafted;
       base.sent += dd.sent;
       base.skippedSends += dd.skippedSends;
+    }
+
+    // de leads zonder campagne: alleen contactgegevens aanvullen (bellijst, Sales), nooit een campagne of een mail;
+    // niet bij een tick voor één campagne
+    if (!opts.campaignId) {
+      await safe("contact-scrape-los", () => enrichContacts(null, base.errors, CONTACT_PER_TICK_LOS), 0, base.errors);
     }
 
     const summary = `${campaigns.length} campagne(s): ${base.discovered} ontdekt, ${base.enriched} verrijkt, ${base.scored} gescoord, ${base.drafted} concept, ${base.sent} verzonden, ${base.skippedSends} overgeslagen`;

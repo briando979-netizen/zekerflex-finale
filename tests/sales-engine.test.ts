@@ -194,6 +194,25 @@ describe("sales engine tick", () => {
     expect(args.take).toBeUndefined();
   });
 
+  it("leads zonder campagne krijgen ook een contactronde, los van elke campagne en zonder mail", async () => {
+    campaignFindMany.mockResolvedValue([]);
+    leadFindMany.mockResolvedValue([]);
+    await runSalesEngineTick({ force: true });
+    const los = leadFindMany.mock.calls.find((call: unknown[]) => (call[0] as { where?: { campaignId?: unknown } })?.where?.campaignId === null);
+    expect(los).toBeTruthy();
+    const args = los![0] as { where: Record<string, unknown>; select: Record<string, unknown> };
+    expect(args.where.OR).toEqual([{ contactPhone: null }, { contactEmail: null, discoveredEmail: null }]);
+    expect(args.select).toEqual(expect.objectContaining({ enrichmentJson: true, sourceUrl: true, createdAt: true }));
+    expect(draftOutreach).not.toHaveBeenCalled();
+    expect(sendOutreachMail).not.toHaveBeenCalled();
+
+    // een tick voor één campagne laat de losse leads met rust
+    leadFindMany.mockClear();
+    wireCampaign("REVIEW");
+    await runSalesEngineTick({ campaignId: "c1", force: true });
+    expect(leadFindMany.mock.calls.some((call: unknown[]) => (call[0] as { where?: { campaignId?: unknown } })?.where?.campaignId === null)).toBe(false);
+  });
+
   it("AUTOPILOT does not send while SALES_AUTOPILOT_ENABLED is off", async () => {
     // tests/setup.ts leaves SALES_AUTOPILOT_ENABLED unset -> false
     wireCampaign("AUTOPILOT");
