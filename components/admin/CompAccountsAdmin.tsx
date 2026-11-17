@@ -18,6 +18,13 @@ interface Entry {
   by: string;
 }
 
+interface DemoInfo {
+  status: { werkgever: boolean; werker: boolean };
+  werkgeverEmail: string;
+  werkerEmail: string;
+  wachtwoord: string | null;
+}
+
 const day = (iso: string) => new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Amsterdam" });
 
 export function CompAccountsAdmin() {
@@ -26,11 +33,16 @@ export function CompAccountsAdmin() {
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: Tone; text: string } | null>(null);
+  const [demo, setDemo] = useState<DemoInfo | null>(null);
 
   const load = useCallback(async () => {
-    const r = await fetch("/api/admin/comp", { cache: "no-store" }).catch(() => null);
+    const [r, rd] = await Promise.all([
+      fetch("/api/admin/comp", { cache: "no-store" }).catch(() => null),
+      fetch("/api/admin/demo", { cache: "no-store" }).catch(() => null),
+    ]);
     if (!r?.ok) return setMessage({ tone: "crit", text: "Kon de lijst niet laden." });
     setRows((await r.json()).accounts);
+    if (rd?.ok) setDemo(await rd.json());
   }, []);
   useEffect(() => {
     void load();
@@ -51,6 +63,21 @@ export function CompAccountsAdmin() {
     }
   }
 
+  async function runDemo(action: "seed" | "clear" | "nieuw-wachtwoord") {
+    if (action === "clear" && !window.confirm("Het demo-voorbeeldaccount en alle voorbeelddata wissen?")) return;
+    if (action === "nieuw-wachtwoord" && !window.confirm("Een nieuw wachtwoord maken? Het oude werkt daarna niet meer.")) return;
+    setBusy(true);
+    const r = await fetch("/api/admin/demo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) }).catch(() => null);
+    const d = r ? await r.json().catch(() => ({})) : {};
+    setBusy(false);
+    if (!r?.ok) return setMessage({ tone: "crit", text: d?.error?.message ?? "Dat lukte niet." });
+    setDemo((prev) => (prev ? { ...prev, status: d.status, wachtwoord: d.wachtwoord ?? prev.wachtwoord } : prev));
+    const tekst = action === "seed" ? "Het demo-voorbeeldaccount staat klaar." : action === "clear" ? "Het demo-voorbeeldaccount is gewist." : "Er staat een nieuw demo-wachtwoord klaar.";
+    setMessage({ tone: "ok", text: tekst });
+  }
+
+  const demoKlaar = Boolean(demo?.status.werkgever && demo?.status.werker);
+
   return (
     <div className="space-y-4">
       <PageHead title="Kosteloze accounts" subtitle="Accounts die elke betaalde functie voor € 0 gebruiken, bijvoorbeeld je eigen testaccount of een relatie. Dit geeft geen beheerdersrechten." />
@@ -58,6 +85,36 @@ export function CompAccountsAdmin() {
         Gratis voor zo&apos;n account: Website-beheer, websites publiceren, het hoogste API-pakket, telefonie en de bemiddelingsfee van € 3,50 per uur (die factuur wordt € 0 en staat meteen op betaald). Producten uit de webshop blijven gewoon betaald: dat zijn spullen, geen functies.
       </Notice>
       {message && <Notice tone={message.tone} role={message.tone === "crit" ? "alert" : "status"}>{message.text}</Notice>}
+      <Panel title="Demo-voorbeeldaccount" subtitle="Eén voorbeeld-werkgever en -werker met verzonnen gegevens, om prospects te laten zien hoe een account eruitziet. Staat kosteloos, dus factureert nooit iets.">
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="button" disabled={busy} onClick={() => void runDemo("seed")} className="a-button disabled:opacity-50">
+            {demoKlaar ? "Demo bijwerken" : "Demo opzetten"}
+          </button>
+          {demoKlaar && (
+            <button type="button" disabled={busy} onClick={() => void runDemo("nieuw-wachtwoord")} className="a-button text-xs">
+              Nieuw wachtwoord
+            </button>
+          )}
+          {demo && (demo.status.werkgever || demo.status.werker) && (
+            <button type="button" disabled={busy} onClick={() => void runDemo("clear")} className="a-button text-xs">
+              Demo wissen
+            </button>
+          )}
+        </div>
+        {demoKlaar && demo && (
+          <div className="mt-3 space-y-1.5 text-[0.8125rem]" style={{ color: "var(--a-dim)" }}>
+            <p>
+              Deel-link om te laten zien (alleen-lezen, niet kapot te maken):{" "}
+              <a className="font-medium underline" href="/voorbeeld" target="_blank" rel="noreferrer">/voorbeeld</a>
+            </p>
+            <p>
+              Zelf klikken en typen? Log in op{" "}
+              <a className="underline" href="/login" target="_blank" rel="noreferrer">/login</a>. Werkgever <code>{demo.werkgeverEmail}</code>, werker <code>{demo.werkerEmail}</code>, wachtwoord{" "}
+              {demo.wachtwoord ? <code>{demo.wachtwoord}</code> : <span>(klik eerst op &quot;Demo opzetten&quot;)</span>}.
+            </p>
+          </div>
+        )}
+      </Panel>
       <Panel title="Account kosteloos maken" subtitle="Het account en de bedrijven waar het beheerder van is.">
         <div className="flex flex-wrap items-end gap-3">
           <label className="a-label min-w-[16rem] flex-1">
