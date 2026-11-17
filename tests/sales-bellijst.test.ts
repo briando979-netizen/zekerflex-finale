@@ -62,6 +62,7 @@ import {
   waaromPast,
 } from "@/lib/sales/bellijst";
 import { belLijst, legBelUitkomstVast } from "@/lib/sales/bellijst-server";
+import { WARME_BRONNEN, isWarmeBron } from "@/lib/sales/warme-bronnen";
 import { PRIJS_ZIN } from "@/lib/sales/prompts";
 
 const NU = new Date("2026-11-14T13:00:00+01:00"); // zaterdag
@@ -110,6 +111,38 @@ describe("wie op de bellijst staat", () => {
     expect(opBelLijst(lead(), null, NU, true)).toBe(false);
   });
 
+  it("een bedrijf dat zelf bij ons kwam (warme bron) hoort erop zonder score, met dezelfde uitsluitingen", () => {
+    for (const source of WARME_BRONNEN) {
+      expect(isWarmeBron(source)).toBe(true);
+      expect(opBelLijst(lead({ source, score: null }), null, NU)).toBe(true);
+    }
+    expect(isWarmeBron("openstreetmap")).toBe(false);
+    expect(isWarmeBron(null)).toBe(false);
+    expect(opBelLijst(lead({ source: "scan-website", score: 10 }), null, NU)).toBe(true);
+    // maar nooit zonder telefoon, onderdrukt, af, op de niet-bellen-lijst of vóór een afgesproken terugbelmoment
+    expect(opBelLijst(lead({ source: "scan-website", score: null, contactPhone: null }), null, NU)).toBe(false);
+    expect(opBelLijst(lead({ source: "scan-website", score: null, suppressed: true }), null, NU)).toBe(false);
+    expect(opBelLijst(lead({ source: "introductie", score: null, status: "LOST" }), null, NU)).toBe(false);
+    expect(opBelLijst(lead({ source: "introductie", score: null }), null, NU, true)).toBe(false);
+    expect(opBelLijst(lead({ source: "introductie", score: null }), { pogingen: 1, terugbellenOp: "2026-11-16T09:00:00Z" }, NU)).toBe(false);
+  });
+
+  it("warme leads staan bovenaan, na een afgesproken terugbelmoment; ook een warme 'geen gehoor' gaat vóór een koude nieuwe", () => {
+    const oud = new Date("2026-11-01T09:00:00Z");
+    const nieuw = new Date("2026-11-12T09:00:00Z");
+    const geenGehoor = { pogingen: 1, laatste: { at: "2026-11-13T09:00:00Z", uitkomst: "geen-gehoor" as const } };
+    const rangen = [
+      belRang(oud, null), // 0 koud, nooit gebeld
+      belRang(nieuw, null, true), // 1 warm, nooit gebeld, nieuwer
+      belRang(oud, null, true), // 2 warm, nooit gebeld, ouder
+      belRang(nieuw, geenGehoor, true), // 3 warm, geen gehoor
+      belRang(oud, { pogingen: 1, terugbellenOp: "2026-11-14T09:00:00Z" }), // 4 afgesproken
+      belRang(oud, geenGehoor), // 5 koud, geen gehoor
+    ];
+    const volgorde = [...rangen].sort(vergelijkBelRang).map((r) => rangen.indexOf(r));
+    expect(volgorde).toEqual([4, 2, 1, 3, 0, 5]);
+  });
+
   it("na 'terugbellen' pas weer op het afgesproken moment", () => {
     expect(opBelLijst(lead(), { pogingen: 1, terugbellenOp: "2026-11-16T09:00:00Z" }, NU)).toBe(false);
     expect(opBelLijst(lead(), { pogingen: 1, terugbellenOp: "2026-11-14T11:00:00Z" }, NU)).toBe(true);
@@ -149,6 +182,7 @@ describe("hulpjes", () => {
     expect(waaromPast({ vacancySignal: "Zoekt bediening voor de kerst", source: "careers", scoreRationale: null })).toBe("Vacature: Zoekt bediening voor de kerst");
     expect(waaromPast({ vacancySignal: null, source: "openstreetmap", scoreRationale: "Horeca met piekdrukte." })).toBe("Bron: OpenStreetMap · Horeca met piekdrukte.");
     expect(waaromPast({ vacancySignal: null, source: "constructor", scoreRationale: null })).toBe("Bron: constructor");
+    expect(waaromPast({ vacancySignal: null, source: "scan-website", scoreRationale: null })).toBe("Bron: vroeg een website-check aan");
   });
 
   it("de notitie krijgt tijd en uitkomst, en de notities groeien niet onbeperkt", () => {
@@ -180,8 +214,20 @@ describe("de server", () => {
     const regels = await belLijst(NU);
     expect(regels.map((r) => r.id)).toEqual(["a", "c"]);
     expect(regels[0]?.telHref).toBe("tel:+31501234567");
+    expect(regels[0]?.warm).toBe(false);
+    expect(regels[0]?.bron).toBe("OpenStreetMap");
     expect(regels[1]?.laatste?.label).toBe("Geen gehoor");
     expect(regels[1]?.pogingen).toBe(1);
+  });
+
+  it("de lijst: een warme lead zonder score staat bovenaan, met label en bron in woorden", async () => {
+    h.leads = [
+      lead({ id: "koud", createdAt: new Date("2026-11-01T09:00:00Z") }),
+      lead({ id: "warm", createdAt: new Date("2026-11-12T09:00:00Z"), source: "offerte-inbound", score: null, scoreRationale: null }),
+    ];
+    const regels = await belLijst(NU);
+    expect(regels.map((r) => r.id)).toEqual(["warm", "koud"]);
+    expect(regels[0]).toMatchObject({ warm: true, bron: "offerte-aanvraag", score: null });
   });
 
   it("geen interesse: verloren, onderdrukt, geen mail meer (ook het adres) en het nummer op de niet-bellen-lijst", async () => {

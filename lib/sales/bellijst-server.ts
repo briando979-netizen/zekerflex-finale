@@ -14,6 +14,7 @@ import {
   belLabel,
   belNotitie,
   belRang,
+  bronInWoorden,
   opBelLijst,
   stempelNotitie,
   telHref,
@@ -25,6 +26,7 @@ import {
   type BelStand,
   type BelUitkomst,
 } from "@/lib/sales/bellijst";
+import { WARME_BRONNEN, isWarmeBron } from "@/lib/sales/warme-bronnen";
 
 // ---------------------------------------------------------------------------
 // De bellijst op de server (zie lib/sales/bellijst.ts): de leads ophalen, de belstand en de niet-bellen-lijst erbij,
@@ -36,7 +38,13 @@ const belSleutel = (leadId: string) => `sales-bel:${leadId}`;
 
 export async function belLijst(nu = new Date(), limiet = 100): Promise<BelRegel[]> {
   const rows = await prisma.salesLead.findMany({
-    where: { suppressed: false, contactPhone: { not: null }, score: { gte: BEL_MIN_SCORE }, status: { notIn: [...BEL_KLAAR] as SalesLeadStatus[] } },
+    where: {
+      suppressed: false,
+      contactPhone: { not: null },
+      status: { notIn: [...BEL_KLAAR] as SalesLeadStatus[] },
+      // een warme bron (het bedrijf kwam zelf) telt ook zonder score
+      OR: [{ score: { gte: BEL_MIN_SCORE } }, { source: { in: [...WARME_BRONNEN] } }],
+    },
     orderBy: { createdAt: "asc" },
     take: 500,
     select: {
@@ -63,7 +71,7 @@ export async function belLijst(nu = new Date(), limiet = 100): Promise<BelRegel[
   return rows
     .map((r) => ({ r, stand: standen.get(belSleutel(r.id)) ?? null }))
     .filter(({ r, stand }) => opBelLijst(r, stand, nu, nietBellen.has(optoutKey(r.contactPhone ?? ""))))
-    .sort((a, b) => vergelijkBelRang(belRang(a.r.createdAt, a.stand), belRang(b.r.createdAt, b.stand)))
+    .sort((a, b) => vergelijkBelRang(belRang(a.r.createdAt, a.stand, isWarmeBron(a.r.source)), belRang(b.r.createdAt, b.stand, isWarmeBron(b.r.source))))
     .slice(0, limiet)
     .map(({ r, stand }) => ({
       id: r.id,
@@ -80,6 +88,8 @@ export async function belLijst(nu = new Date(), limiet = 100): Promise<BelRegel[
       laatste: stand?.laatste ? { ...stand.laatste, label: belLabel(stand.laatste.uitkomst) } : null,
       terugbellenOp: stand?.terugbellenOp ?? null,
       createdAt: r.createdAt.toISOString(),
+      warm: isWarmeBron(r.source),
+      bron: bronInWoorden(r.source),
     }));
 }
 

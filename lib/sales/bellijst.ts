@@ -1,11 +1,14 @@
 import { amsterdamParts, amsterdamToUtc } from "@/lib/time/amsterdam";
 import { PRIJS_ZIN } from "@/lib/sales/prompts";
+import { isWarmeBron } from "@/lib/sales/warme-bronnen";
 
 // ---------------------------------------------------------------------------
 // De bellijst in Beheer → Sales (14 nov 2026, taak van 9d). Gemeten: van de 35 OpenStreetMap-leads heeft er 0 een
 // e-mailadres maar 6 een telefoon, en 27 scoren 55 of hoger; de motor mailt ze dus nooit. De eigenaar belt ze zelf:
 // hier staat wie op de lijst komt, in welke volgorde, wat hij kan zeggen, en wat een uitkomst betekent. Wij bellen
 // niemand zelf. Puur (geen prisma of kv): de server en de tests gebruiken hetzelfde.
+// 17 nov 2026: een bedrijf dat zelf bij ons kwam (lib/sales/warme-bronnen.ts) heeft meestal geen campagne en geen score;
+// dat hoort juist bovenaan, ook zonder score, met het label "Kwam zelf bij ons".
 // ---------------------------------------------------------------------------
 
 export const BEL_MIN_SCORE = 55;
@@ -47,6 +50,10 @@ export interface BelRegel {
   laatste: { at: string; uitkomst: BelUitkomst; label: string } | null;
   terugbellenOp: string | null;
   createdAt: string;
+  /** het bedrijf kwam zelf bij ons (warme bron): bovenaan, ook zonder score */
+  warm: boolean;
+  /** de bron in gewone woorden */
+  bron: string;
 }
 
 export interface BelLeadFeiten {
@@ -54,27 +61,34 @@ export interface BelLeadFeiten {
   score: number | null;
   contactPhone: string | null;
   suppressed: boolean;
+  source: string;
 }
 
 export function heeftTelefoon(phone: string | null | undefined): boolean {
   return (phone ?? "").replace(/\D/g, "").length >= 9;
 }
 
-/** Hoort deze lead nu op de bellijst? Een telefoon, score ≥ 55, nog geen reactie, niet onderdrukt en niet op de niet-bellen-lijst. */
+/**
+ * Hoort deze lead nu op de bellijst? Een telefoon, nog geen reactie, niet onderdrukt en niet op de niet-bellen-lijst, en
+ * óf een score ≥ 55, óf een warme bron (het bedrijf kwam zelf bij ons; dan telt de score niet).
+ */
 export function opBelLijst(l: BelLeadFeiten, stand: BelStand | null, nu: Date, nietBellen = false): boolean {
   if (nietBellen || l.suppressed || (BEL_KLAAR as readonly string[]).includes(l.status)) return false;
-  if (!heeftTelefoon(l.contactPhone) || (l.score ?? 0) < BEL_MIN_SCORE) return false;
+  if (!heeftTelefoon(l.contactPhone)) return false;
+  if (!isWarmeBron(l.source) && (l.score ?? 0) < BEL_MIN_SCORE) return false;
   return !(stand?.terugbellenOp && Date.parse(stand.terugbellenOp) > nu.getTime());
 }
 
 /**
- * De volgorde: eerst een afgesproken terugbelmoment dat nu is (vroegste eerst), dan wie nog nooit gebeld is (oudste lead
- * eerst), dan "geen gehoor" (het langst geleden eerst).
+ * De volgorde: eerst een afgesproken terugbelmoment dat nu is (vroegste eerst), dan de warme leads (nooit gebeld, oudste
+ * eerst; dan geen gehoor), dan de rest: wie nog nooit gebeld is (oudste lead eerst), dan "geen gehoor" (het langst
+ * geleden eerst).
  */
-export function belRang(createdAt: Date, stand: BelStand | null): [number, number] {
+export function belRang(createdAt: Date, stand: BelStand | null, warm = false): [number, number] {
   if (stand?.terugbellenOp) return [0, Date.parse(stand.terugbellenOp)];
-  if (!stand?.laatste) return [1, createdAt.getTime()];
-  return [2, Date.parse(stand.laatste.at)];
+  const koud = warm ? 0 : 2;
+  if (!stand?.laatste) return [1 + koud, createdAt.getTime()];
+  return [2 + koud, Date.parse(stand.laatste.at)];
 }
 export const vergelijkBelRang = (a: [number, number], b: [number, number]): number => a[0] - b[0] || a[1] - b[1];
 
@@ -110,14 +124,28 @@ const BRON: Record<string, string> = {
   "sales-ai": "sales-AI",
   // "Introduceer een bedrijf" (lib/introducties): wie het voorstelde staat in Beheer → Sales → Introducties
   introductie: "introductie door een gebruiker",
+  // bedrijven die zelf iets aanvroegen (lib/sales/warme-bronnen.ts)
+  "scan-website": "vroeg een website-check aan",
+  "scan-reviews": "vroeg een review-scan aan",
+  rekentool: "gebruikte een rekentool",
+  "ai-beller": "belde ons (AI-beller)",
+  "ai-belafspraak": "maakte een belafspraak",
+  "locatie-portofoon": "aanvraag portofoons",
+  "locatie-printen": "aanvraag printen",
+  "locatie-toegang": "aanvraag toegang",
+  "locatie-kluis": "aanvraag kluis",
 };
+
+/** De bron in gewone woorden; een onbekende bron blijft zoals hij is. */
+export function bronInWoorden(source: string): string {
+  return Object.hasOwn(BRON, source) ? (BRON[source] ?? source) : source;
+}
 
 /** Waarom deze lead past: het vacaturesignaal als dat er is, anders de bron en de reden van de score. */
 export function waaromPast(l: { vacancySignal: string | null; source: string; scoreRationale: string | null }): string {
   const signaal = l.vacancySignal?.trim();
   if (signaal) return `Vacature: ${signaal}`.slice(0, 220);
-  const bron = Object.hasOwn(BRON, l.source) ? BRON[l.source] : l.source;
-  return [`Bron: ${bron}`, l.scoreRationale?.trim()].filter(Boolean).join(" · ").slice(0, 260);
+  return [`Bron: ${bronInWoorden(l.source)}`, l.scoreRationale?.trim()].filter(Boolean).join(" · ").slice(0, 260);
 }
 
 const twee = (n: number) => String(n).padStart(2, "0");
