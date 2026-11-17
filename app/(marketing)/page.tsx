@@ -100,8 +100,6 @@ export default function WerkHomePage() {
         </div>
       </section>
 
-      <PaginaVideoBlok id="home" />
-
       {/* ───────────────────────────────────────────────── schuivende strook: de soorten werk (alleen CSS; staat stil bij "minder beweging") */}
       <nav aria-label="Soorten werk" className="overflow-hidden border-y border-white/10 bg-[#0C0E12] py-3">
         <ul className="marquee gap-3 pr-3">
@@ -120,6 +118,8 @@ export default function WerkHomePage() {
           )}
         </ul>
       </nav>
+
+      <PaginaVideoBlok id="home" />
 
       {/* ───────────────────────────────────────────────── branches (met het minimumuurloon) */}
       <BranchShowcase minRateCents={env.MIN_SHIFT_RATE_CENTS} />
