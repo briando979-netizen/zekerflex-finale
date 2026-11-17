@@ -39,7 +39,7 @@ describe("outreach-prompts: alleen wat nu echt kan", () => {
     }
   });
 
-  it("de vervolgmail-prompt (na een telefoontje) draagt dezelfde eerlijkheidsregels en noemt alleen de bankoverschrijving", () => {
+  it("de vervolgmail-prompt (na een telefoontje) draagt dezelfde eerlijkheidsregels en noemt geen manier van betalen", () => {
     expect(NA_GESPREK_SYSTEM).toContain(EERLIJK_REGELS);
     expect(NA_GESPREK_SYSTEM).toContain("geen manier van betalen");
     expect(NA_GESPREK_SYSTEM).toContain("telefoongesprek");

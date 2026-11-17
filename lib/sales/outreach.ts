@@ -141,7 +141,7 @@ export async function draftOutreach(
 /**
  * Hand-written fallback voor de vervolgmail ná een telefoontje (interesse of terugbellen),
  * gebruikt als het model onbereikbaar is of niets bruikbaars teruggeeft. Belooft niets wat
- * nu niet kan en noemt voor betalen alleen de bankoverschrijving.
+ * nu niet kan en noemt geen manier van betalen (die staat nog niet open).
  */
 export function templateNaGesprek(
   lead: { companyName: string; contactName: string | null },

@@ -19,7 +19,7 @@ export const ZEKERFLEX_PITCH = `ZekerFlex (handelsnaam van Zekerflex, Inc.) is e
 Kernpunten (alleen dit is waar; noem niets anders):
 - Slimme matching op reistijd, betrouwbaarheid en vaardigheden; reacties hangen af van de beschikbaarheid van passende krachten.
 - Afspraken per relatie en Wet DBA-risicosignalering; de feitelijke werkwijze blijft bepalend en er is geen garantie over de arbeidsrelatie.
-- Uren goedkeuren en facturen lopen via het platform (self-billing); de werkgever betaalt per bankoverschrijving.
+- Uren goedkeuren en facturen lopen via het platform (self-billing). Noem geen manier van betalen: betalen staat nog niet open.
 - Meerdere vestigingen onder één account.
 - ${PRIJS_ZIN}
 Niet beloven (bestaat nu niet): een bankrekening of tegoed bij ZekerFlex, een voorschot, snelle of directe uitbetaling, online betalen met kaart, een verzekering. Geen cijfers over aantallen werkers, klanten, reviews of resultaten: die zijn er niet.`;

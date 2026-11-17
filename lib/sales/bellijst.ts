@@ -148,7 +148,7 @@ export function belScript(): string[] {
     "Goedendag, u spreekt met [uw naam] van ZekerFlex. Spreek ik met iemand die over personeel gaat?",
     "Ik bel kort omdat [waarom hij past, zie hieronder bij de lead]. Heeft u twee minuten?",
     "ZekerFlex is een Nederlands platform voor flexwerk. U zet een dienst uit en zzp'ers en uitzendkrachten uit de buurt kunnen reageren. Hoeveel reacties u krijgt, hangt af van wie er beschikbaar is.",
-    "De uren keurt u goed in ZekerFlex; de factuur volgt vanzelf en u betaalt per bankoverschrijving.",
+    "De uren keurt u goed in ZekerFlex; de factuur volgt daarna vanzelf.",
     `Kosten: ${PRIJS_ZIN}`,
     "Mag ik u een korte uitleg mailen, of zal ik op een ander moment terugbellen? Wilt u liever niet meer gebeld worden, dan noteer ik dat meteen.",
   ];
