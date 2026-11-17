@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { euro } from "@/lib/horeca/weergave";
 import { centVan } from "@/components/rijschool/api";
-import { fooiOpties, kortingRegels, rekeningVan, totaalVan, verdeelGelijk, wisselgeld, type Methode, type RekeningRegel } from "@/lib/horeca/kassa";
+import { fooiOpties, kortingRegels, rekeningVan, rondtAf, totaalVan, verdeelGelijk, wisselgeld, type Methode, type RekeningRegel } from "@/lib/horeca/kassa";
 import type { BonData, SchermBestelling, SchermData } from "@/components/horeca/live/types";
 import { BonVenster } from "@/components/horeca/live/Bon";
 import { KeuzeVenster } from "@/components/horeca/live/KeuzeVenster";
@@ -150,8 +150,8 @@ function Rekening({ keuze, bestellingen, doe, klaar }: { keuze: Extract<Keuze, {
   // korting kan bij één betaling, niet bij gelijk verdelen (lib/horeca/kassa-server.ts)
   const kortingHier = splits === "gelijk" ? 0 : korting;
   const kortingCent = -totaalVan(kortingRegels(deze, kortingHier));
-  // een hele bezorgbestelling: de bezorgkosten komen op dezelfde bon (zoals de server ze rekent)
-  const bezorgCent = keuze.soort === "bestelling" && !selectie ? (eigen.find((b) => b.id === keuze.id)?.bezorgkostenCent ?? 0) : 0;
+  // een bezorgbestelling die nu helemaal betaald wordt (alles, of per gerecht het laatste deel): de bezorgkosten komen op deze bon (zoals de server ze rekent)
+  const bezorgCent = keuze.soort === "bestelling" && (!selectie || rondtAf(rekening, selectie, keuze.id)) ? (eigen.find((b) => b.id === keuze.id)?.bezorgkostenCent ?? 0) : 0;
   const te = totaalVan(deze) - kortingCent + bezorgCent;
   const delen = verdeelGelijk(totaal + bezorgCent, personen);
   const nogOpen = eigen.some((b) => b.status === "NIEUW" || b.status === "IN_BEREIDING");

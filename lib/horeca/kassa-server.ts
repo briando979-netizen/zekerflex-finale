@@ -9,7 +9,7 @@ import { amsterdamDayKey, amsterdamToUtc } from "@/lib/time/amsterdam";
 import { leesRegels } from "@/lib/horeca/bestellen";
 import { hoofdTarief } from "@/lib/horeca/bezorgen";
 import { plusDagen } from "@/lib/horeca/reserveren";
-import { alles, betaalRegels, dagstaatCsv, deelRegels, kortingRegels, MAX_KORTING_PROCENT, rekeningVan, totaalVan, zRapport, type BonRegel, type DagstaatDag, type KassaBetaling, type Methode, type Selectie } from "@/lib/horeca/kassa";
+import { alles, betaalRegels, dagstaatCsv, deelRegels, kortingRegels, MAX_KORTING_PROCENT, rekeningVan, rondtAf, totaalVan, zRapport, type BonRegel, type DagstaatDag, type KassaBetaling, type Methode, type Selectie } from "@/lib/horeca/kassa";
 
 // ---------------------------------------------------------------------------
 // De kassa op de server. Afrekenen gebeurt onder een rijslot op de bestellingen
@@ -80,8 +80,10 @@ export async function afrekenen(
     });
     // korting op de gerechten (niet op de bezorgkosten): min-regels per btw-tarief
     const kortingRegelsHier = kortingRegels(bonRegels, korting);
-    // een hele bezorgbestelling: de bezorgkosten op dezelfde bon, met het tarief van het grootste deel (ze volgen de maaltijd)
-    const bezorging = a.bestellingId && !a.selectie ? lijst.find((b) => b.id === a.bestellingId && b.soort === "bezorgen" && b.bezorgkostenCent > 0) : undefined;
+    // een bezorgbestelling die nu helemaal betaald wordt (alles, of per gerecht het laatste deel): de bezorgkosten op deze bon,
+    // met het tarief van het grootste deel (ze volgen de maaltijd). Zo komen ze er precies één keer op.
+    const rondAf = a.bestellingId ? !a.selectie || rondtAf(rekening, selectie, a.bestellingId) : false;
+    const bezorging = rondAf ? lijst.find((b) => b.id === a.bestellingId && b.soort === "bezorgen" && b.bezorgkostenCent > 0) : undefined;
     const tarief = hoofdTarief(bonRegels);
     bonRegels.push(...kortingRegelsHier);
     if (bezorging) bonRegels.push({ naam: "Bezorgkosten", prijsCent: bezorging.bezorgkostenCent, aantal: 1, btw: tarief });

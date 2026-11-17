@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { dagstaatCsv, dagstaatRij, ontvangstVan, type BonRegel, type KassaBetaling } from "@/lib/horeca/kassa";
+import { dagstaatCsv, dagstaatRij, ontvangstVan, rondtAf, type BonRegel, type KassaBetaling } from "@/lib/horeca/kassa";
 
 // De dagstaat voor de boekhouder (15 nov 2026): per dag omzet en btw per tarief, fooi, ontvangsten per betaalwijze
 // en het kasverschil, zo dat hij per dag sluit (memoriaalboeking). Plus de rekening in de kassa: korting bij één
@@ -85,8 +85,23 @@ describe("rekening in de kassa", () => {
 
   it("de bezorgkosten staan op het scherm wanneer de server ze op de bon zet", () => {
     expect(lees("lib/horeca/live.ts")).toContain('bezorgkostenCent: b.soort === "bezorgen" ? b.bezorgkostenCent : 0');
-    expect(kassa).toContain('keuze.soort === "bestelling" && !selectie');
+    expect(kassa).toContain('keuze.soort === "bestelling" && (!selectie || rondtAf(rekening, selectie, keuze.id))');
     expect(kassa).toContain("verdeelGelijk(totaal + bezorgCent, personen)");
-    expect(lees("lib/horeca/kassa-server.ts")).toContain("a.bestellingId && !a.selectie");
+    expect(lees("lib/horeca/kassa-server.ts")).toContain("a.bestellingId ? !a.selectie || rondtAf(rekening, selectie, a.bestellingId) : false");
+  });
+
+  it("per gerecht afrekenen: de bezorgkosten horen op de betaling die de bestelling afrondt", () => {
+    const rekening = [
+      { bestellingId: "b1", index: 0, nummer: 7, naam: "Pizza", prijsCent: 1200, aantal: 2, btw: 9 as const },
+      { bestellingId: "b1", index: 2, nummer: 7, naam: "Cola", prijsCent: 300, aantal: 1, btw: 9 as const },
+    ];
+    // een deel: nog niet
+    expect(rondtAf(rekening, [{ bestellingId: "b1", index: 0, aantal: 2 }], "b1")).toBe(false);
+    expect(rondtAf(rekening, [{ bestellingId: "b1", index: 0, aantal: 1 }, { bestellingId: "b1", index: 2, aantal: 1 }], "b1")).toBe(false);
+    // alles wat nog open staat: ja
+    expect(rondtAf(rekening, [{ bestellingId: "b1", index: 0, aantal: 2 }, { bestellingId: "b1", index: 2, aantal: 1 }], "b1")).toBe(true);
+    // een andere bestelling of een lege rekening: nee
+    expect(rondtAf(rekening, [{ bestellingId: "b2", index: 0, aantal: 2 }, { bestellingId: "b2", index: 2, aantal: 1 }], "b1")).toBe(false);
+    expect(rondtAf([], [], "b1")).toBe(false);
   });
 });

@@ -189,6 +189,15 @@ export function betaalRegels(regels: readonly BestelRegel[], selectie: readonly 
   return { regels: uit, helemaal: uit.every((r) => open(r) === 0) };
 }
 
+/**
+ * Rondt deze selectie de bestelling af: staat er daarna niets meer van open? Dan horen de bezorgkosten op deze bon
+ * (één keer, op de laatste betaling). Server en kassascherm gebruiken dezelfde regel.
+ */
+export function rondtAf(rekening: readonly RekeningRegel[], selectie: readonly Selectie[], bestellingId: string): boolean {
+  const open = rekening.filter((r) => r.bestellingId === bestellingId);
+  return open.length > 0 && open.every((r) => selectie.some((s) => s.bestellingId === bestellingId && s.index === r.index && s.aantal >= r.aantal));
+}
+
 /** De hele rekening als selectie (alles afrekenen). */
 export const alles = (rekening: readonly RekeningRegel[]): Selectie[] => rekening.map((r) => ({ bestellingId: r.bestellingId, index: r.index, aantal: r.aantal }));
 
