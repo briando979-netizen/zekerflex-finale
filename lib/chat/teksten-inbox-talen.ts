@@ -196,6 +196,7 @@ export const INBOX_EN: InboxTeksten = {
   contactOpgeslagen: "Saved to your contacts.",
   contactOpslaanMislukt: "Saving failed.",
   gesprekStartenMislukt: "This conversation could not be started.",
+  klusVraag: "Hello, I have a question about this job.",
   gesprekNietInLijst: "This conversation is not in your list (locked or deleted).",
   onjuistePincode: "Incorrect PIN.",
 };
@@ -395,6 +396,7 @@ export const INBOX_PL: InboxTeksten = {
   contactOpgeslagen: "Zapisano w kontaktach.",
   contactOpslaanMislukt: "Nie udało się zapisać.",
   gesprekStartenMislukt: "Nie udało się rozpocząć tej rozmowy.",
+  klusVraag: "Dzień dobry, mam pytanie dotyczące tego zlecenia.",
   gesprekNietInLijst: "Tej rozmowy nie ma na Twojej liście (zablokowana lub usunięta).",
   onjuistePincode: "Nieprawidłowy kod PIN.",
 };
@@ -594,6 +596,7 @@ export const INBOX_RO: InboxTeksten = {
   contactOpgeslagen: "Salvat în contactele tale.",
   contactOpslaanMislukt: "Salvarea nu a reușit.",
   gesprekStartenMislukt: "Această conversație nu a putut fi începută.",
+  klusVraag: "Bună ziua, am o întrebare despre această sarcină.",
   gesprekNietInLijst: "Această conversație nu este în lista ta (blocată sau ștearsă).",
   onjuistePincode: "Cod PIN incorect.",
 };
@@ -793,6 +796,7 @@ export const INBOX_UK: InboxTeksten = {
   contactOpgeslagen: "Збережено в контактах.",
   contactOpslaanMislukt: "Не вдалося зберегти.",
   gesprekStartenMislukt: "Не вдалося почати цю розмову.",
+  klusVraag: "Вітаю, у мене є запитання щодо цієї роботи.",
   gesprekNietInLijst: "Цієї розмови немає у твоєму списку (заблокована або видалена).",
   onjuistePincode: "Неправильний PIN-код.",
 };

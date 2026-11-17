@@ -1,6 +1,9 @@
 "use client";
 
-/** Opens the chat dock and starts (or resumes) a thread with the shift's contact. */
+import { usePathname, useRouter } from "next/navigation";
+import { berichtenAdres } from "@/lib/chat/berichten-adres";
+
+/** De werker bericht de opdrachtgever van een klus: naar de chatpagina, die het gesprek opent (?klus=). */
 export function MessageEmployerButton({
   shiftId,
   label = "Bericht de opdrachtgever",
@@ -10,18 +13,16 @@ export function MessageEmployerButton({
   label?: string;
   className?: string;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
   return (
-    <button
-      type="button"
-      onClick={() => window.dispatchEvent(new CustomEvent("zf:chat", { detail: { shiftId } }))}
-      className={className}
-    >
+    <button type="button" onClick={() => router.push(berichtenAdres(pathname, { klus: shiftId }))} className={className}>
       {label}
     </button>
   );
 }
 
-/** Opens the chat dock on the ZekerFlex Support thread. */
+/** Het gesprek met ZekerFlex Support, op de chatpagina (?support=1, zoals het hulpcentrum). */
 export function SupportChatButton({
   label = "Chat met ZekerFlex Support",
   className = "btn-ghost text-sm",
@@ -29,12 +30,10 @@ export function SupportChatButton({
   label?: string;
   className?: string;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
   return (
-    <button
-      type="button"
-      onClick={() => window.dispatchEvent(new CustomEvent("zf:chat", { detail: { support: true } }))}
-      className={className}
-    >
+    <button type="button" onClick={() => router.push(berichtenAdres(pathname, { support: true }))} className={className}>
       {label}
     </button>
   );

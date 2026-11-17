@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import type { RecentThread } from "@/lib/messaging/recent";
 
 const initials = (n: string) =>
@@ -17,8 +18,9 @@ function timeAgo(iso: string | null): string {
 }
 
 export function RecentMessagesPanel({ threads, allHref }: { threads: RecentThread[]; allHref: string }) {
-  const open = (t: RecentThread) =>
-    window.dispatchEvent(new CustomEvent("zf:chat", { detail: { threadId: t.id } }));
+  const router = useRouter();
+  // naar de chatpagina met dat gesprek open (?thread=); het chatvenster in de hoek staat uit (17 nov 2026)
+  const open = (t: RecentThread) => router.push(`${allHref}?thread=${encodeURIComponent(t.id)}`);
 
   return (
     <ul className="divide-y divide-hair">

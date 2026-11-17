@@ -923,7 +923,7 @@ function InboxPageInner({
     }
   };
 
-  const startThreadWith = async (userId: string): Promise<string | null> => {
+  const startThreadWith = async (userId: string, extra?: { contextKey?: string | undefined; subject?: string | undefined }): Promise<string | null> => {
     setPicker(null);
     // already talking: open that chat (this used to post another 👋 every time)
     const existing = threads.find((t) => t.kind === "direct" && t.participants.includes(userId));
@@ -937,7 +937,7 @@ function InboxPageInner({
     const r = await fetch("/api/inbox", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ toUserId: userId, text: "👋" }),
+      body: JSON.stringify({ toUserId: userId, text: "👋", ...(extra?.contextKey ? { contextKey: extra.contextKey } : {}), ...(extra?.subject ? { subject: extra.subject } : {}) }),
     });
     if (r.ok) {
       const d = await r.json();
@@ -984,19 +984,44 @@ function InboxPageInner({
 
   // ?support=1 komt uit het hulpcentrum van de werker-app (components/app/HulpCentrum.tsx):
   // meteen het gesprek met Support, één keer, en daarna uit de adresbalk (herladen opent het niet opnieuw)
-  const supportUitAdres = useRef(false);
-  const startSupportRef = useRef(startSupport);
+  // Ook ?met=<gebruiker> (de knop "Bericht" bij een kandidaat of in het beheer, met ?context= en ?onderwerp=) en ?klus=<klus>
+  // (de werker bericht de opdrachtgever): lib/chat/berichten-adres.ts. Die knoppen stuurden vroeger een signaal naar het
+  // chatvenster in de hoek, maar dat staat uit (hideDock): er gebeurde niets zichtbaars (17 nov 2026).
+  const startKlusThread = async (shiftId: string) => {
+    setTab("chats");
+    const r = await fetch("/api/inbox", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shiftId, text: ib.klusVraag }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      say(d?.error?.message ?? ib.gesprekStartenMislukt, true);
+      return;
+    }
+    await loadThreads();
+    openThread(d.threadId);
+  };
+  const uitAdresKlaar = useRef(false);
+  const uitAdresRef = useRef<(q: URLSearchParams) => void>(() => undefined);
   useEffect(() => {
-    startSupportRef.current = startSupport;
+    uitAdresRef.current = (q) => {
+      const met = q.get("met");
+      const klus = q.get("klus");
+      if (q.get("support") === "1") void startSupport();
+      else if (met) void startThreadWith(met, { contextKey: q.get("context") ?? undefined, subject: q.get("onderwerp") ?? undefined });
+      else if (klus) void startKlusThread(klus);
+    };
   });
   useEffect(() => {
-    if (!me || supportUitAdres.current) return;
+    if (!me || uitAdresKlaar.current) return;
     const adres = new URL(window.location.href);
-    if (adres.searchParams.get("support") !== "1") return;
-    supportUitAdres.current = true;
-    adres.searchParams.delete("support");
+    const q = new URLSearchParams(adres.search);
+    if (!["support", "met", "klus"].some((k) => q.has(k))) return;
+    uitAdresKlaar.current = true;
+    for (const k of ["support", "met", "klus", "context", "onderwerp"]) adres.searchParams.delete(k);
     window.history.replaceState(window.history.state, "", `${adres.pathname}${adres.search}`);
-    void startSupportRef.current();
+    uitAdresRef.current(q);
   }, [me]);
 
   // The layout's ChatDock owns calls (ringing, the call screen); this only asks it to dial.
