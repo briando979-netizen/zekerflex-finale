@@ -22,6 +22,7 @@ vi.mock("@/lib/redis", () => ({
 const fetchMock = vi.fn();
 vi.mock("@/lib/website-check/fetch", () => ({ fetchPage: (url: string) => fetchMock(url) }));
 import { crawlCareersSource } from "@/lib/sales/discovery/careers";
+import { readFileSync } from "node:fs";
 import type { SalesDiscoverySource } from "@prisma/client";
 
 function html(body: string, title = "Acme Personeel") {
@@ -84,6 +85,19 @@ const PAGES: Record<string, ReturnType<typeof res>> = {
     ),
   ),
   "https://acme.test/vacatures/kok": res(200, "text/html", html(`<h2>Kok medewerker gezocht</h2>`)),
+  // een site met een foutenmelder in de kop: de DSN-sleutel ziet eruit als een adres en staat vóór het echte adres
+  "https://logistiek.test/robots.txt": res(404, "text/plain", ""),
+  "https://logistiek.test/sitemap.xml": res(404, "text/plain", ""),
+  "https://logistiek.test/werken-bij": res(
+    200,
+    "text/html",
+    html(
+      `<script>Sentry.init({dsn:"https://0123456789abcdef0123456789abcdef@o1308802.ingest.sentry.io/4504"})</script>
+       <h2>Chauffeur CE gezocht</h2>
+       <p>Vragen? <a href="mailto:webmaster@wixpress.com">site</a> of personeel@logistiek.test</p>`,
+      "Logistiek Acme",
+    ),
+  ),
   "https://acme.test/vacatures/geheim": res(200, "text/html", html(`<h2>Geheime magazijn functie</h2>`)),
 };
 
@@ -160,6 +174,19 @@ describe("careers crawler", () => {
     expect(fetched).toContain("https://werkenbij.acme.test/");
     expect(fetched.some((u) => u.includes("werkenbij.ander.test"))).toBe(false);
     expect(String(r.vacancySignal)).toMatch(/chauffeur/i);
+  });
+
+  it("de sleutel van een foutenmelder of het adres van de webbouwer is nooit het adres van het bedrijf", async () => {
+    const r = await crawlCareersSource({ ...source, url: "https://logistiek.test/werken-bij" } as SalesDiscoverySource);
+    expect(r.emailFound).toBe("personeel@logistiek.test");
+    expect(String(r.vacancySignal)).toMatch(/chauffeur/i);
+  });
+
+  it("het applog krijgt nooit het gevonden adres voluit, alleen ja/nee en het domein", () => {
+    const bron = readFileSync("lib/sales/discovery/careers.ts", "utf8");
+    const regel = bron.split("\n").find((l) => l.includes('"careers crawl run"')) ?? "";
+    expect(regel).not.toContain("...result");
+    expect(regel).toContain("adres: Boolean(emailFound)");
   });
 
   it("ignores non-HTML responses without crashing", async () => {

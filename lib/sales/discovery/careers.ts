@@ -6,6 +6,7 @@ import { logger } from "@/lib/logger";
 import { redis } from "@/lib/redis";
 import { createLead } from "@/lib/sales/leads";
 import { isDienstAdres, isVacatureSprong } from "@/lib/sales/discovery/vacature-sprong";
+import { isRommelAdres } from "@/lib/sales/discovery/rommel-adres";
 import { loadRobots, robotsAllows, type Robots } from "@/lib/sales/discovery/robots";
 
 // ---------------------------------------------------------------------------
@@ -42,7 +43,6 @@ const PREFERRED_LOCAL_PARTS = [
   "hr", "recruitment", "recruiting", "werving", "personeel", "personeelszaken",
   "vacature", "vacatures", "jobs", "career", "careers", "solliciteren", "sollicitatie",
 ];
-const JUNK_EMAIL = /\.(png|jpe?g|gif|svg|webp|css|js)$|@(sentry|wixpress|example|domain|email|test)\./i;
 
 export interface CareersCrawlResult {
   created: number;
@@ -137,7 +137,7 @@ function extractEmails(html: string, siteDomain: string | null): string[] {
   for (const m of html.matchAll(/\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b/gi)) {
     found.add((m[0] ?? "").toLowerCase());
   }
-  const clean = [...found].filter((e) => e.includes("@") && !JUNK_EMAIL.test(e));
+  const clean = [...found].filter((e) => !isRommelAdres(e));
   // Rank: preferred local-part on the site's own domain > any on-domain > preferred elsewhere > other.
   const rank = (e: string): number => {
     const [local, dom] = e.split("@");
@@ -284,7 +284,8 @@ export async function crawlCareersSource(
     }
   }
 
-  const email = [...new Set(emails)].filter((e) => !JUNK_EMAIL.test(e) && !isDienstAdres(e))[0] ?? null;
+  // nooit een dienst (Sentry-sleutel, webbouwer, vacaturesysteem): 17 nov 2026 kwam …@o…ingest.sentry.io als adres binnen
+  const email = [...new Set(emails)].filter((e) => !isRommelAdres(e) && !isDienstAdres(e))[0] ?? null;
   const uniqueTitles = [...new Set(titles)].slice(0, 5);
   const vacancySignal = uniqueTitles.length
     ? `Open vacatures gezien: ${uniqueTitles.join("; ")}`
@@ -329,6 +330,8 @@ export async function crawlCareersSource(
   }
 
   await redis.set(cacheKey, JSON.stringify(result), "EX", RESULT_TTL_S).catch(() => undefined);
-  logger.info("careers crawl run", { url: source.url, ...result });
+  // het adres zelf hoort niet in het applog: alleen of er een is en van welk domein
+  const { emailFound, ...rest } = result;
+  logger.info("careers crawl run", { url: source.url, ...rest, adres: Boolean(emailFound), adresDomein: emailFound?.split("@")[1] ?? null });
   return result;
 }
