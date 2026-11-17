@@ -42,8 +42,8 @@ export const PATCH = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (
 
   if (action === "gebeld") {
     if (!parsed.uitkomst) throw AppError.validation("Kies wat het telefoontje opleverde.");
-    const { lead } = await legBelUitkomstVast(id, parsed.uitkomst, principal.userId, parsed.notitie);
-    return NextResponse.json({ lead });
+    const { lead, conceptId } = await legBelUitkomstVast(id, parsed.uitkomst, principal.userId, parsed.notitie);
+    return NextResponse.json({ lead, conceptKlaar: Boolean(conceptId) });
   }
 
   if (action === "enrich") {

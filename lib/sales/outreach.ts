@@ -4,10 +4,12 @@ import { recordAudit } from "@/lib/audit";
 import { chatJson } from "@/lib/ai/client";
 import { logger } from "@/lib/logger";
 import {
+  NA_GESPREK_SYSTEM,
   OUTREACH_STEP_SYSTEM,
   OUTREACH_SYSTEM,
   ZEKERFLEX_PITCH,
 } from "@/lib/sales/prompts";
+import type { BelUitkomst } from "@/lib/sales/bellijst";
 
 // ---------------------------------------------------------------------------
 // LLM-drafted outreach. A draft is generated on demand. In REVIEW mode a human
@@ -130,6 +132,96 @@ export async function draftOutreach(
     actorUserId,
     actorLabel: actorUserId ? "user" : "sales-ai",
     summary: `Concept-outreach (stap ${step + 1}) gegenereerd voor ${lead.companyName}`,
+    targetType: "salesOutreach",
+    targetId: outreach.id,
+  });
+  return outreach;
+}
+
+/**
+ * Hand-written fallback voor de vervolgmail ná een telefoontje (interesse of terugbellen),
+ * gebruikt als het model onbereikbaar is of niets bruikbaars teruggeeft. Belooft niets wat
+ * nu niet kan en noemt voor betalen alleen de bankoverschrijving.
+ */
+export function templateNaGesprek(
+  lead: { companyName: string; contactName: string | null },
+  uitkomst: BelUitkomst,
+): DraftShape {
+  const hi = lead.contactName ? `Beste ${lead.contactName.split(" ")[0]},` : `Beste team van ${lead.companyName},`;
+  const sign = "\n\nMet vriendelijke groet,\nTeam ZekerFlex\nzekerflex.com";
+  if (uitkomst === "terugbellen") {
+    return {
+      subject: `Ik bel je terug over ZekerFlex`,
+      body: `${hi}\n\nFijn dat ik je net even sprak. Zoals afgesproken bel ik je op een beter moment terug. Heb je er alvast vragen over, mail ze gerust, dan beantwoord ik ze meteen.\n\nKort ter herinnering: met ZekerFlex plaats je een dienst en kunnen passende zzp'ers en uitzendkrachten uit de buurt reageren. Je betaalt alleen voor gewerkte uren.${sign}`,
+    };
+  }
+  return {
+    subject: `Fijn dat we elkaar spraken, ZekerFlex voor ${lead.companyName}`,
+    body: `${hi}\n\nFijn dat we elkaar net aan de telefoon spraken en dat ZekerFlex je aansprak. Kort ter herinnering: je plaatst een dienst en passende zzp'ers en uitzendkrachten uit de buurt kunnen reageren. Uren keur je goed in ZekerFlex en de factuur volgt vanzelf; je betaalt alleen voor gewerkte uren.\n\nZal ik een gratis proefaccount voor je klaarzetten, dan kun je je eerste dienst plaatsen?${sign}`,
+  };
+}
+
+/**
+ * Vervolgmail ná een telefoontje uit de bellijst (uitkomst "interesse" of "terugbellen"):
+ * één kort concept (REVIEW) via het eigen/gratis model, met het sjabloon als terugval. Verandert
+ * de status van de lead niet (dat doet de bel-uitkomst zelf) en maakt geen tweede concept als er al
+ * een open concept klaarstaat. Geeft het concept terug, of null als er al een klaarstond.
+ */
+export async function draftNaGesprek(
+  leadId: string,
+  actorUserId: string | null,
+  uitkomst: Extract<BelUitkomst, "interesse" | "terugbellen">,
+) {
+  const lead = await prisma.salesLead.findUnique({ where: { id: leadId } });
+  if (!lead) throw AppError.notFound("Lead niet gevonden.");
+
+  const open = await prisma.salesOutreach.findFirst({
+    where: { leadId, status: { in: ["DRAFT", "SCHEDULED", "APPROVED"] } },
+    select: { id: true },
+  });
+  if (open) return null;
+
+  let model = "self-hosted-llm";
+  const draft = await chatJson<DraftShape>({
+    messages: [
+      { role: "system", content: `${NA_GESPREK_SYSTEM}\n\nContext over ZekerFlex:\n${ZEKERFLEX_PITCH}` },
+      {
+        role: "user",
+        content: JSON.stringify({
+          companyName: lead.companyName,
+          contactName: lead.contactName,
+          city: lead.city,
+          sector: lead.sector,
+          uitkomst,
+        }),
+      },
+    ],
+    temperature: 0.4,
+    maxTokens: 400,
+    purpose: "sales-outreach",
+    retry: false,
+  }).catch((err) => {
+    logger.warn("na-gesprek draft fell back to template", { leadId, error: (err as Error).message });
+    model = "template";
+    return templateNaGesprek(lead, uitkomst);
+  });
+
+  let subject = String(draft.subject ?? "").trim().slice(0, 200);
+  let body = String(draft.body ?? "").trim().slice(0, 4000);
+  if (!subject || !body) {
+    ({ subject, body } = templateNaGesprek(lead, uitkomst));
+    model = "template";
+  }
+
+  const outreach = await prisma.salesOutreach.create({
+    data: { leadId, subject, body, stepIndex: 0, status: "DRAFT", generatedByModel: model },
+  });
+  await recordAudit({
+    category: "SALES",
+    action: "sales.outreach.drafted",
+    actorUserId,
+    actorLabel: actorUserId ? "user" : "sales-ai",
+    summary: `Vervolgmail na telefoon (${uitkomst}) gegenereerd voor ${lead.companyName}`,
     targetType: "salesOutreach",
     targetId: outreach.id,
   });

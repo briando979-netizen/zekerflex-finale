@@ -120,11 +120,16 @@ export function waaromPast(l: { vacancySignal: string | null; source: string; sc
 
 const twee = (n: number) => String(n).padStart(2, "0");
 
+/** Een notitieregel met tijdstempel in Amsterdamse tijd: "[14-11 13:05] <tekst>". */
+export function stempelNotitie(nu: Date, tekst: string): string {
+  const p = amsterdamParts(nu);
+  return `[${twee(p.day)}-${twee(p.month)} ${twee(p.hour)}:${twee(p.minute)}] ${tekst}`;
+}
+
 /** De regel die bij de notities van de lead komt: "[14-11 13:05] Gebeld: geen gehoor. <notitie>". */
 export function belNotitie(uitkomst: BelUitkomst, nu: Date, notitie?: string | undefined): string {
-  const p = amsterdamParts(nu);
   const extra = notitie?.trim() ? ` ${notitie.trim().slice(0, 300)}` : "";
-  return `[${twee(p.day)}-${twee(p.month)} ${twee(p.hour)}:${twee(p.minute)}] Gebeld: ${belLabel(uitkomst).toLowerCase()}.${extra}`;
+  return stempelNotitie(nu, `Gebeld: ${belLabel(uitkomst).toLowerCase()}.${extra}`);
 }
 
 /** Voeg een regel toe aan de notities; de oudste regels vallen weg boven 4000 tekens. */

@@ -62,12 +62,13 @@ export function BelLijst() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "gebeld", uitkomst, ...(notitie.trim() ? { notitie: notitie.trim() } : {}) }),
       });
-      const data = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+      const data = (await res.json().catch(() => null)) as { conceptKlaar?: boolean; error?: { message?: string } } | null;
       if (!res.ok) {
         setFout(data?.error?.message ?? "De uitkomst opslaan lukte niet.");
         return;
       }
-      setMelding(`${r.companyName}: "${belLabel(uitkomst)}" opgeslagen.`);
+      const concept = data?.conceptKlaar ? " Een vervolgmail staat als concept klaar in Pijplijn." : "";
+      setMelding(`${r.companyName}: "${belLabel(uitkomst)}" opgeslagen.${concept}`);
       setOpen(null);
       setNotitie("");
       await laad();

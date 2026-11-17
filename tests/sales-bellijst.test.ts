@@ -10,6 +10,7 @@ const h = vi.hoisted(() => ({
   suppressed: [] as string[],
   optouts: [] as string[],
   geannuleerd: [] as string[],
+  draftCalls: [] as { leadId: string; uitkomst: string }[],
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -35,6 +36,12 @@ vi.mock("@/lib/sales/suppression", () => ({
   normaliseEmail: (e: string) => e.trim().toLowerCase(),
 }));
 vi.mock("@/lib/sales/reply", () => ({ cancelOpenOutreach: async (id: string) => void h.geannuleerd.push(id) }));
+vi.mock("@/lib/sales/outreach", () => ({
+  draftNaGesprek: async (leadId: string, _actor: unknown, uitkomst: string) => {
+    h.draftCalls.push({ leadId, uitkomst });
+    return { id: "o1" };
+  },
+}));
 vi.mock("@/lib/telephony/consent", () => ({
   optoutKey: (n: string) => `tel:optout:${n.replace(/[^\d+]/g, "").replace(/^0/, "+31")}`,
   recordOptOut: async (n: string) => void h.optouts.push(n),
@@ -47,6 +54,7 @@ import {
   belRang,
   belScript,
   opBelLijst,
+  stempelNotitie,
   telHref,
   vergelijkBelRang,
   voegNotitieToe,
@@ -84,6 +92,7 @@ beforeEach(() => {
   h.suppressed.length = 0;
   h.optouts.length = 0;
   h.geannuleerd.length = 0;
+  h.draftCalls.length = 0;
 });
 
 describe("wie op de bellijst staat", () => {
@@ -147,6 +156,7 @@ describe("hulpjes", () => {
     expect(voegNotitieToe("oud", "nieuw")).toBe("oud\nnieuw");
     expect(voegNotitieToe(null, "nieuw")).toBe("nieuw");
     expect(voegNotitieToe("x".repeat(5000), "nieuw").length).toBe(4000);
+    expect(stempelNotitie(NU, "Vervolgmail als concept klaargezet.")).toBe("[14-11 13:00] Vervolgmail als concept klaargezet.");
   });
 
   it("het belscript noemt de prijs uit de staffel en belooft niets wat er niet is", () => {
@@ -203,6 +213,20 @@ describe("de server", () => {
     // een nieuwe uitkomst haalt het oude terugbelmoment weg
     expect(h.kv.get("sales-bel:l1")).toEqual({ pogingen: 2, laatste: { at: NU.toISOString(), uitkomst: "geen-gehoor" } });
     expect(h.geannuleerd).toEqual([]);
+  });
+
+  it("interesse en terugbellen zetten een vervolgmail-concept klaar; geen gehoor en geen interesse niet", async () => {
+    h.leads = [lead()];
+    const a = await legBelUitkomstVast("l1", "interesse", "admin1", undefined, NU);
+    expect(a.conceptId).toBe("o1");
+    expect(String(h.updates[0]?.data.notes)).toContain("Vervolgmail als concept klaargezet.");
+    await legBelUitkomstVast("l1", "terugbellen", "admin1", undefined, NU);
+    await legBelUitkomstVast("l1", "geen-gehoor", "admin1", undefined, NU);
+    await legBelUitkomstVast("l1", "geen-interesse", "admin1", undefined, NU);
+    expect(h.draftCalls).toEqual([
+      { leadId: "l1", uitkomst: "interesse" },
+      { leadId: "l1", uitkomst: "terugbellen" },
+    ]);
   });
 
   it("een onbekende lead: niet gevonden", async () => {

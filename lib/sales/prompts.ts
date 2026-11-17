@@ -70,3 +70,13 @@ vraag terug. Niet pusherig. Onderwerp begint met "Re: ".${STEP_RULES}`,
 houdt de deur open, en geeft één laatste eenvoudige manier om te reageren. Vriendelijk,
 niet verwijtend. Onderwerp begint met "Re: ".${STEP_RULES}`,
 ];
+
+/** System prompt voor een vervolgmail ná een telefoontje uit de bellijst (uitkomst "interesse" of "terugbellen"). */
+export const NA_GESPREK_SYSTEM = `Je schrijft een korte vervolgmail namens ZekerFlex, direct na een telefoongesprek met dit bedrijf.
+- Verwijs kort naar het telefoongesprek van zojuist (bijvoorbeeld "fijn dat we elkaar net spraken").
+- Bij uitkomst "interesse": bedank voor de interesse, vat de kern in één zin samen en stel één concrete vervolgstap voor (een korte uitleg of een gratis proefaccount om een eerste dienst te plaatsen).
+- Bij uitkomst "terugbellen": hou het heel kort, bevestig dat je op een afgesproken moment terugbelt en dat ze gerust alvast vragen mogen mailen.
+- Noem geen manier van betalen (die is er nu nog niet); beschrijf hooguit dat de werkgever alleen per gewerkt uur betaalt. Max 90 woorden in de body, geen emoji, geen uitroeptekens, geen overdreven verkooptaal.
+- Spreek het bedrijf aan met "je" (één aanspreekvorm). Onderteken met "Met vriendelijke groet,\\nTeam ZekerFlex".
+- Body is platte tekst met "\\n" als regeleinde. Geef JSON: {"subject": string, "body": string}.
+${EERLIJK_REGELS}`;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EERLIJK_REGELS, OUTREACH_STEP_SYSTEM, OUTREACH_SYSTEM, PRIJS_ZIN, ZEKERFLEX_PITCH } from "@/lib/sales/prompts";
+import { EERLIJK_REGELS, NA_GESPREK_SYSTEM, OUTREACH_STEP_SYSTEM, OUTREACH_SYSTEM, PRIJS_ZIN, ZEKERFLEX_PITCH } from "@/lib/sales/prompts";
 import { BASE_FEE_PER_HOUR_CENTS, VOLUME_TIERS, tierRateCents } from "@/lib/pricing/tiers";
 
 // De outreach-prompts beloven alleen wat nu echt kan (14 nov 2026): geen bank, voorschot of snelle uitbetaling, geen online
@@ -37,5 +37,12 @@ describe("outreach-prompts: alleen wat nu echt kan", () => {
       expect(stap).toContain("Salesteam ZekerFlex");
       expect(stap).toContain("Zekerflex, Inc. als afzender");
     }
+  });
+
+  it("de vervolgmail-prompt (na een telefoontje) draagt dezelfde eerlijkheidsregels en noemt alleen de bankoverschrijving", () => {
+    expect(NA_GESPREK_SYSTEM).toContain(EERLIJK_REGELS);
+    expect(NA_GESPREK_SYSTEM).toContain("geen manier van betalen");
+    expect(NA_GESPREK_SYSTEM).toContain("telefoongesprek");
+    expect(NA_GESPREK_SYSTEM).toContain('aan met "je"');
   });
 });

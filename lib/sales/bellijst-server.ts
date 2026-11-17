@@ -5,7 +5,9 @@ import { recordAudit } from "@/lib/audit";
 import { kvGet, kvGetMany, kvSet } from "@/lib/storage/kv";
 import { addSuppression, normaliseEmail } from "@/lib/sales/suppression";
 import { cancelOpenOutreach } from "@/lib/sales/reply";
+import { draftNaGesprek } from "@/lib/sales/outreach";
 import { optoutKey, recordOptOut } from "@/lib/telephony/consent";
+import { logger } from "@/lib/logger";
 import {
   BEL_KLAAR,
   BEL_MIN_SCORE,
@@ -13,6 +15,7 @@ import {
   belNotitie,
   belRang,
   opBelLijst,
+  stempelNotitie,
   telHref,
   vergelijkBelRang,
   voegNotitieToe,
@@ -104,15 +107,30 @@ export async function legBelUitkomstVast(leadId: string, uitkomst: BelUitkomst, 
     if (email) await addSuppression(normaliseEmail(email), "manual", actorUserId);
     if (lead.contactPhone) await recordOptOut(lead.contactPhone, "geen interesse (gebeld vanuit de bellijst)").catch(() => undefined);
   }
+
+  // Na een positief telefoontje zet de copilot één kort vervolgmail-concept klaar (REVIEW; de eigenaar verstuurt zelf,
+  // met één klik, vanuit de pijplijn). Faalt dit, dan blijft de uitkomst gewoon opgeslagen.
+  let conceptId: string | null = null;
+  if (uitkomst === "interesse" || uitkomst === "terugbellen") {
+    try {
+      const concept = await draftNaGesprek(leadId, actorUserId, uitkomst);
+      conceptId = concept?.id ?? null;
+    } catch (err) {
+      logger.warn("na-gesprek vervolgmail kon niet worden klaargezet", { leadId, uitkomst, error: (err as Error).message });
+    }
+  }
+
   const eind =
     uitkomst === "interesse"
       ? { status: "REPLIED" as const, repliedAt: nu, nextActionAt: null }
       : uitkomst === "geen-interesse"
         ? { status: "LOST" as const, suppressed: true, suppressedReason: "geen interesse (telefonisch)", nextActionAt: null }
         : {};
+  let notes = voegNotitieToe(lead.notes, belNotitie(uitkomst, nu, notitie));
+  if (conceptId) notes = voegNotitieToe(notes, stempelNotitie(nu, "Vervolgmail als concept klaargezet."));
   const updated = await prisma.salesLead.update({
     where: { id: leadId },
-    data: { notes: voegNotitieToe(lead.notes, belNotitie(uitkomst, nu, notitie)), lastContactedAt: nu, ...eind },
+    data: { notes, lastContactedAt: nu, ...eind },
   });
   await recordAudit({
     category: "SALES",
@@ -124,5 +142,5 @@ export async function legBelUitkomstVast(leadId: string, uitkomst: BelUitkomst, 
     targetId: leadId,
     metadata: { uitkomst, pogingen: stand.pogingen },
   });
-  return { lead: updated, stand };
+  return { lead: updated, stand, conceptId };
 }
