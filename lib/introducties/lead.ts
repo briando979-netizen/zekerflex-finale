@@ -81,7 +81,7 @@ function contactenVan(enrichment: unknown): IntroContact[] {
 export function metIntroContact(enrichment: unknown, contact: IntroContact): Prisma.InputJsonValue {
   const basis = enrichment && typeof enrichment === "object" && !Array.isArray(enrichment) ? (enrichment as Record<string, unknown>) : {};
   const contacten = [contact, ...contactenVan(enrichment).filter((c) => c.introId !== contact.introId)].slice(0, MAX_CONTACTEN);
-  return { ...basis, introductieContacten: contacten } as Prisma.InputJsonValue;
+  return { ...basis, introductieContacten: contacten } as unknown as Prisma.InputJsonValue;
 }
 
 /** Het e-mailadres en nummer van één introductie: uit de verrijking, anders de velden van de lead (een lead die de introductie zelf maakte). */
