@@ -220,6 +220,8 @@ export interface AuthDict {
       vervang: string;
       reden: string;
       documentGeldig: string;
+      /** het vinkje waarmee de landkeuze opengaat (17 nov 2026) */
+      anderLandVraag: string;
       anderLand: string;
       kiesLand: string;
       toevoegen: string;
@@ -625,6 +627,7 @@ const nl: AuthDict = {
       vervang: "Ander document uploaden",
       reden: "Reden: {reden}",
       documentGeldig: "Document geldig tot {datum}",
+      anderLandVraag: "Ik heb geen Nederlandse nationaliteit, of ik werk ook in een ander land",
       anderLand: "Ook in een ander land werken?",
       kiesLand: "Kies een land",
       toevoegen: "Toevoegen",
@@ -1034,6 +1037,7 @@ const en: AuthDict = {
       vervang: "Upload a different document",
       reden: "Reason: {reden}",
       documentGeldig: "Document valid until {datum}",
+      anderLandVraag: "I don't have Dutch nationality, or I also work in another country",
       anderLand: "Also working in another country?",
       kiesLand: "Choose a country",
       toevoegen: "Add",
@@ -1443,6 +1447,7 @@ const pl: AuthDict = {
       vervang: "Prześlij inny dokument",
       reden: "Powód: {reden}",
       documentGeldig: "Dokument ważny do {datum}",
+      anderLandVraag: "Nie mam obywatelstwa holenderskiego albo pracuję też w innym kraju",
       anderLand: "Pracujesz też w innym kraju?",
       kiesLand: "Wybierz kraj",
       toevoegen: "Dodaj",
@@ -1852,6 +1857,7 @@ const ro: AuthDict = {
       vervang: "Încarcă alt document",
       reden: "Motiv: {reden}",
       documentGeldig: "Document valabil până la {datum}",
+      anderLandVraag: "Nu am cetățenie olandeză sau lucrez și în altă țară",
       anderLand: "Lucrezi și în altă țară?",
       kiesLand: "Alege o țară",
       toevoegen: "Adaugă",
@@ -2261,6 +2267,7 @@ const uk: AuthDict = {
       vervang: "Завантажити інший документ",
       reden: "Причина: {reden}",
       documentGeldig: "Документ дійсний до {datum}",
+      anderLandVraag: "Я не маю громадянства Нідерландів або працюю також в іншій країні",
       anderLand: "Працюєте також в іншій країні?",
       kiesLand: "Виберіть країну",
       toevoegen: "Додати",

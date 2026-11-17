@@ -176,6 +176,9 @@ export function WerkrechtPanel() {
   const { locale } = useI18n();
   const t = AUTH_DICTS[locale].page.werkrecht;
   const kiesId = useId();
+  const vraagId = useId();
+  // de landkeuze staat dicht tot iemand aangeeft dat hij die nodig heeft
+  const [meer, setMeer] = useState(false);
   const [landen, setLanden] = useState<Land[] | null>(null);
   const [nieuw, setNieuw] = useState("");
   const [fout, setFout] = useState<string | null>(null);
@@ -222,7 +225,13 @@ export function WerkrechtPanel() {
         </div>
       )}
       {landen && (
-        <div className="mt-5">
+        <label htmlFor={vraagId} className="mt-5 flex items-start gap-2.5 text-sm leading-relaxed text-neutralx-600">
+          <input id={vraagId} type="checkbox" checked={meer} onChange={(e) => setMeer(e.target.checked)} className="mt-1 h-4 w-4 flex-shrink-0" />
+          <span>{t.anderLandVraag}</span>
+        </label>
+      )}
+      {landen && meer && (
+        <div className="mt-4">
           <label htmlFor={kiesId} className="text-sm font-semibold text-ink">
             {t.anderLand}
           </label>
