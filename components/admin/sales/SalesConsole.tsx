@@ -7,13 +7,16 @@ import { CampaignsTab, type CampaignDto } from "@/components/admin/sales/Campaig
 import { EngineTab, type EngineSnapshot } from "@/components/admin/sales/EngineTab";
 import { SuppressionTab, type SuppressionEntry } from "@/components/admin/sales/SuppressionTab";
 import { BelLijst } from "@/components/admin/sales/BelLijst";
+import { IntroductiesTab } from "@/components/admin/sales/IntroductiesTab";
 
-type Tab = "pijplijn" | "leads" | "bellen" | "campagnes" | "motor" | "onderdrukking";
+type Tab = "pijplijn" | "leads" | "bellen" | "introducties" | "campagnes" | "motor" | "onderdrukking";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "pijplijn", label: "Bord" },
   { id: "leads", label: "Lijst" },
   { id: "bellen", label: "Bellen" },
+  // "Introduceer een bedrijf" (lib/introducties): wie welk bedrijf voorstelde, koppelen en het bol-tegoed
+  { id: "introducties", label: "Introducties" },
   { id: "campagnes", label: "Campagnes" },
   { id: "motor", label: "Motor" },
   { id: "onderdrukking", label: "Niet benaderen" },
@@ -62,6 +65,7 @@ export function SalesConsole({
       {tab === "pijplijn" && <PipelineBoard initialLeads={initialLeads} />}
       {tab === "leads" && <SalesDashboard initialLeads={initialLeads} {...(initialFilter ? { initialFilter } : {})} />}
       {tab === "bellen" && <BelLijst />}
+      {tab === "introducties" && <IntroductiesTab />}
       {tab === "campagnes" && <CampaignsTab initialCampaigns={initialCampaigns} />}
       {tab === "motor" && <EngineTab initial={initialEngine} />}
       {tab === "onderdrukking" && <SuppressionTab initial={initialSuppression} />}

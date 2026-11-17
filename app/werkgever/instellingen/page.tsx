@@ -68,6 +68,8 @@ export default async function InstellingenPage() {
   // 15 nov 2026: dezelfde onderdelen als de werkersapp (gegevens downloaden, privacy, feedback), en verwijderen in de app
   const account: Card[] = [
     { title: s.cAccountT, sub: s.cAccountS, href: "/werkgever/account", icon: <IUser /> },
+    // "Introduceer een bedrijf" (17 nov 2026, lib/introducties): een ander bedrijf aan ZekerFlex voorstellen
+    { title: d.introductie.menu, sub: d.introductie.kaartSub, href: "/werkgever/introduceren", icon: <IUsers /> },
     { title: s.cExportT, sub: s.cExportS, href: "/api/me/gegevens/export", icon: <IDoc />, gewoon: true },
     { title: s.cPrivacyT, sub: s.cPrivacyS, href: "/privacy", icon: <IKey /> },
     { title: s.cFeedbackT, sub: s.cFeedbackS, href: "mailto:info@zekerflex.com?subject=Feedback%20ZekerFlex%20zakelijk", icon: <IMail />, gewoon: true },

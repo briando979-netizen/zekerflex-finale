@@ -105,6 +105,9 @@ export const ERASABLE_KV_PREFIXES = [
   "push-profile:",
   // welk ZekerFlex-mailadres bij de gebruiker hoort (lib/mail/zf-accounts.ts)
   "zfmail:user:",
+  // de bedrijven die iemand voorstelde via "Introduceer een bedrijf" (lib/introducties/kv.ts, introducties:<userId>); de lead
+  // zelf is een sales-lead en volgt de regels van sales (onderdrukken, verwijderen)
+  "introducties:",
 ] as const;
 
 /**

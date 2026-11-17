@@ -39,6 +39,8 @@ import { aiTraderTodo } from "@/lib/admin/todo-ai-trader";
 import { pasdienstTodo } from "@/lib/admin/todo-pasdienst";
 import { dmarcNlTodo, dmarcStappenTodo, leesDmarcRecord, type DmarcStand } from "@/lib/admin/todo-dmarc";
 import { scanOpvolgTodo } from "@/lib/admin/todo-scans";
+import { introductieTodos } from "@/lib/admin/todo-introductie";
+import { verschuldigdeBeloningen } from "@/lib/introducties/beloning";
 import { CONCEPT_WACHT_DAGEN, wachtendeConcepten, wachtendeScans, wachtendeVoorstellen } from "@/lib/admin/verkoop-wacht";
 import { pasdienstInfo } from "@/lib/shop/pasdienst";
 import { alpacaSleutelInfo } from "@/lib/trader/alpaca";
@@ -326,6 +328,9 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   const dmarcNl = hoofddomeinVan(base) === "zekerflex.com" ? dmarcNlTodo(await leesDmarc("zekerflex.nl"), await heeftDkim("zekerflex.nl")) : null;
   // gratis scans die op opvolging wachten (14 nov): stonden alleen in de dagmail aan sales@ (lib/admin/todo-scans.ts)
   const scanOpvolg = scanOpvolgTodo(await wachtendeScans());
+  // het bol-tegoed van "Introduceer een bedrijf" (17 nov, lib/introducties/beloning.ts): één taak per verschuldigde beloning;
+  // afvinken = verstuurd. Een leesfout geeft geen taak (de beloning blijft staan en komt bij de volgende keer terug)
+  const introductieBeloningen = introductieTodos(await verschuldigdeBeloningen().catch(() => []), manual);
   // Auto-uitrol: geweigerd, migratie wacht of main loopt >30 min achter (lib/bouwer/auto-uitrol-regels.ts); een leesfout geeft geen taak
   const autoUitrol = autoUitrolTodos(await leesAutoStand().then(async (s) => autoUitrolMeldingen(s, liveVersie()?.sha ?? null, Date.now(), await featureEnabled("auto-uitrol").catch(() => false)), () => undefined));
   const werkrechtEis = werkrechtEisTodo(await featureEnabled("werkrecht-eis").catch(() => undefined));
@@ -361,6 +366,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
     ...(dmarcStappen ? [dmarcStappen] : []),
     ...(dmarcNl ? [dmarcNl] : []),
     ...(scanOpvolg ? [scanOpvolg] : []),
+    ...introductieBeloningen,
     {
       id: "llm",
       group: "AI",

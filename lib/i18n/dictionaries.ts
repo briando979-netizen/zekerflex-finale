@@ -1,3 +1,5 @@
+import { INTRODUCTIE_NL } from "@/lib/introducties/teksten";
+
 // ---------------------------------------------------------------------------
 // Employer-workspace translations. Values are plain strings (so the dictionary
 // can cross the server → client boundary); use {tokens} + fmt() for variables.
@@ -1878,6 +1880,8 @@ export const nl = {
     kop: "🤖 Uren automatisch goedkeuren",
     uitleg: "Na 24 uur keurt de autopilot uren goed als begin- en eindtijd binnen 15 minuten van de planning liggen, er niet meer uren zijn geschreven dan gepland, de GPS-check-in klopt en er geen fraudesignalen zijn. Al het andere blijft voor jou. Je kunt het altijd weer uitzetten.",
   },
+  // "Introduceer een bedrijf" (lib/introducties/teksten.ts): dezelfde teksten als in de werkersapp
+  introductie: INTRODUCTIE_NL,
   greet: {
     morning: "Goedemorgen",
     afternoon: "Goedemiddag",

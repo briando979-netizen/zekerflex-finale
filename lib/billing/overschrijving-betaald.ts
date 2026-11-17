@@ -3,6 +3,7 @@ import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { settleClawbacks } from "@/lib/billing/clawback";
+import { beloonIntroductieNaBetaling } from "@/lib/introducties/beloning";
 import { bedragKlopt, bedragMelding, handmatigMelding, kanHandmatigBetaald } from "@/lib/billing/overschrijving-betaald-kern";
 
 // De handeling bij "het geld staat op de rekening" (regels en uitleg: overschrijving-betaald-kern.ts).
@@ -17,7 +18,7 @@ export interface TeBetalenFactuur {
 async function zoek(nummer: string) {
   const factuur = await prisma.invoice.findFirst({
     where: { number: nummer.trim() },
-    select: { id: true, number: true, type: true, status: true, totalCents: true, recipientTenant: { select: { name: true } } },
+    select: { id: true, number: true, type: true, status: true, totalCents: true, recipientTenantId: true, recipientTenant: { select: { name: true } } },
   });
   if (!factuur) throw AppError.notFound("Er is geen factuur met dit nummer.");
   const mag = kanHandmatigBetaald(factuur);
@@ -46,6 +47,8 @@ export async function meldBetaaldPerOverschrijving(nummer: string, ontvangenCent
   const gezet = await prisma.invoice.updateMany({ where: { id: factuur.id, status: "ISSUED" }, data: { status: "PAID", paidAt: nu } });
   if (gezet.count !== 1) throw AppError.conflict(`Factuur ${factuur.number} is intussen al verwerkt. Ververs de pagina.`);
   await settleClawbacks(factuur.id).catch((err) => logger.error("settling clawback failed", { invoiceId: factuur.id, error: (err as Error).message }));
+  // de eerste betaalde factuur voor platformkosten van een voorgesteld bedrijf: bol-tegoed verschuldigd (eenmalig, gooit nooit)
+  await beloonIntroductieNaBetaling(factuur, nu);
   await recordAudit({
     category: "BILLING",
     action: "invoice.paid",
