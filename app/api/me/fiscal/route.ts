@@ -6,6 +6,7 @@ import { checkVies } from "@/lib/integrations/vies";
 import { isValidIban } from "@/lib/billing/sepa";
 import { flagIbanChanged } from "@/lib/compliance/documents";
 import { bevestigIbanWijziging } from "@/lib/fiscal/iban-bevestiging";
+import { BEDRIJFSNAAM_MAX, korSindsGeldig, schoonBedrijfsnaam } from "@/lib/fiscal/formulier";
 import {
   getFiscal,
   setFiscal,
@@ -39,7 +40,11 @@ const schema = z.object({
   vatNumber: z.string().trim().max(20).optional(),
   vatRequested: z.boolean().optional(),
   kvkNumber: z.string().trim().max(20).optional(),
+  /** Zakelijke gegevens (17 nov 2026): de handelsnaam, opgeschoond; leeg = bewust leeggemaakt (null) */
+  bedrijfsnaam: z.string().max(1000).transform(schoonBedrijfsnaam).pipe(z.string().max(BEDRIJFSNAAM_MAX)).optional(),
   korApplies: z.boolean().optional(),
+  /** Sinds wanneer de KOR geldt (YYYY-MM-DD, niet in de toekomst); leeg = niet ingevuld */
+  korSinds: z.string().trim().max(10).optional(),
   bsn: z.string().trim().max(14).optional(),
   /** "Ja, klopt" op het BSN dat van het ID is gelezen (lib/kyc/bsn-uit-document.ts) */
   bsnVoorstelOk: z.literal(true).optional(),
@@ -74,6 +79,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
       ...(input.korApplies !== undefined ? { korApplies: input.korApplies } : {}),
       ...(input.loonheffingskorting !== undefined ? { loonheffingskorting: input.loonheffingskorting } : {}),
       ...(input.kvkNumber ? { kvkNumber: input.kvkNumber.replace(/\D/g, "") } : {}),
+      ...(input.bedrijfsnaam !== undefined ? { bedrijfsnaam: input.bedrijfsnaam || null } : {}),
       ...(input.invoiceMode ? { invoiceMode: input.invoiceMode } : {}),
       ...(input.iban
         ? (() => {
@@ -82,6 +88,16 @@ export async function PUT(request: Request): Promise<NextResponse> {
           })()
         : {}),
     };
+
+    // KOR sinds: een echte dag, niet in de toekomst (Nederlandse datum; de server draait in UTC). Geldt de KOR niet (meer),
+    // dan hoort er ook geen begindatum bij.
+    if (input.korSinds !== undefined) {
+      if (input.korSinds && !korSindsGeldig(input.korSinds)) {
+        throw AppError.validation("De datum bij KOR sinds klopt niet. Kies een datum die niet in de toekomst ligt.").metSleutel("fiscal.korSinds");
+      }
+      patch.korSinds = input.korSinds || null;
+    }
+    if (!korApplies && (before.korSinds || patch.korSinds)) patch.korSinds = null;
 
     // Btw-nummer: VIES, de officiële en gratis dienst van de EU, voor elk EU-land (zelfde als de onboarding,
     // lib/onboarding/verify.ts). Tot 13 nov ging dit via KVKBase, en viel die weg (limiet, storing), dan werd het nummer

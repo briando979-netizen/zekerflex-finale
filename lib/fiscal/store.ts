@@ -32,9 +32,17 @@ export interface FiscalProfile {
 
   // KVK (optional for flexwerker)
   kvkNumber: string | null;
+  /**
+   * De bedrijfsnaam (handelsnaam) van een zzp'er of flexwerker, zoals hij hem zelf invult (17 nov 2026, scherm Zakelijke
+   * gegevens). Ontbreekt de sleutel, dan is er nooit iets ingevuld en vult het scherm de naam uit het KVK-uittreksel voor;
+   * null is bewust leeggemaakt (dan vullen we niets meer voor).
+   */
+  bedrijfsnaam?: string | null;
 
   // Kleineondernemersregeling
   korApplies: boolean;
+  /** Sinds wanneer de KOR geldt (YYYY-MM-DD, Nederlandse datum), opgegeven bij "ik gebruik de KOR al"; null zonder KOR */
+  korSinds?: string | null;
   /** KOR aangevraagd via de KOR-hulp (lib/fiscal/kor.ts); korApplies gaat pas aan na de bevestiging */
   korAanvraag?: KorAanvraag | null;
 
