@@ -100,6 +100,7 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/recruiter", label: "AI-recruiter" },
       { href: "/admin/social", label: "Sociale media" },
       { href: "/admin/ads", label: "Advertenties" },
+      { href: "/admin/campagnes", label: "Campagnepagina's" },
       { href: "/admin/nieuwsbrief", label: "Nieuwsbrief" },
       { href: "/admin/analytics", label: "Verkeer" },
     ],

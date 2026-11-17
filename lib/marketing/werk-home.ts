@@ -22,9 +22,19 @@ export const WERK_HERO = {
   knop2: "Bekijk klussen",
   punten: ["Gratis voor werkers", "Klaar in een paar minuten", "In vijf talen"],
   /** een staande foto: op de telefoon bovenaan, op een groter scherm als strook rechts (12 nov 2026, eigenaar: "een blonde dame, student ofzo") */
-  foto: "/werk/hero-barista.jpg",
-  fotoAlt: "Een lachende jonge barista met een koffiekan achter de bar",
+  foto: "/werk/campagne-kop.jpg",
+  fotoAlt: "Een medewerker met een dienblad onder de arm in de deuropening van een café",
 } as const;
+
+/** De schuivende strook onder de kop: de soorten werk, elk naar de pagina met dat werk (17 nov 2026). */
+export const WERK_STROOK: { naam: string; href: string }[] = [
+  { naam: "Horeca", href: "/horeca-vacatures" },
+  { naam: "Magazijn", href: "/logistiek-vacatures" },
+  { naam: "Winkel", href: "/retail-vacatures" },
+  { naam: "Evenementen", href: "/evenementen-vacatures" },
+  { naam: "Schoonmaak", href: "/schoonmaak-vacatures" },
+  { naam: "Bezorgen", href: "/klussen" },
+];
 
 export interface WerkGroep {
   titel: string;
@@ -35,10 +45,10 @@ export interface WerkGroep {
 
 /** Voor wie: zo herkent een bezoeker zichzelf. */
 export const WERK_GROEPEN: WerkGroep[] = [
-  { titel: "Naast je studie", tekst: "Werk een avond of een weekend. Je tentamens plan je er gewoon omheen.", foto: "/werk/student.jpg", alt: "Een jonge vrouw achter de toonbank van een bakkerij" },
-  { titel: "Als zzp'er", tekst: "Opdrachten zonder acquisitie, en je hoeft zelf geen facturen te sturen.", foto: "/werk/logistiek.jpg", alt: "Een lachende man in een magazijn" },
-  { titel: "Zonder KVK", tekst: "Werk via ons uitzendbureau, met elke week een echte loonstrook.", foto: "/werk/magazijn.jpg", alt: "Een magazijnmedewerker met dozen" },
-  { titel: "Iets extra's", tekst: "Een paar uur per week erbij, op de momenten dat het jou uitkomt.", foto: "/werk/bijverdienen.jpg", alt: "Een serveerster met een drankje in een restaurant" },
+  { titel: "Naast je studie", tekst: "Werk een avond of een weekend. Je tentamens plan je er gewoon omheen.", foto: "/werk/campagne-studie.jpg", alt: "Een barista schenkt melk in een cappuccino" },
+  { titel: "Als zzp'er", tekst: "Opdrachten zonder acquisitie, en je hoeft zelf geen facturen te sturen.", foto: "/werk/campagne-zzp.jpg", alt: "Een magazijnmedewerker scant een doos" },
+  { titel: "Zonder KVK", tekst: "Werk via ons uitzendbureau, met elke week een echte loonstrook.", foto: "/werk/campagne-uitzend.jpg", alt: "Een medewerker duwt een steekkar met dozen" },
+  { titel: "Iets extra's", tekst: "Een paar uur per week erbij, op de momenten dat het jou uitkomt.", foto: "/werk/campagne-extra.jpg", alt: "Een barman tapt een biertje achter de bar" },
 ];
 
 export const WERK_STAPPEN = [

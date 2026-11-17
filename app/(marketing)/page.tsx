@@ -19,6 +19,7 @@ import {
   WERK_HERO,
   WERK_SLOT,
   WERK_STAPPEN,
+  WERK_STROOK,
   WERK_VOORDELEN,
   werkFaqJsonLd,
   type WerkIcoon,
@@ -101,6 +102,53 @@ export default function WerkHomePage() {
 
       <PaginaVideoBlok id="home" />
 
+      {/* ───────────────────────────────────────────────── schuivende strook: de soorten werk (alleen CSS; staat stil bij "minder beweging") */}
+      <nav aria-label="Soorten werk" className="overflow-hidden border-y border-white/10 bg-[#0C0E12] py-3">
+        <ul className="marquee gap-3 pr-3">
+          {[0, 1, 2, 3].map((ronde) =>
+            WERK_STROOK.map((s) => (
+              <li key={`${ronde}-${s.naam}`} aria-hidden={ronde > 0 ? true : undefined}>
+                <Link
+                  href={s.href}
+                  tabIndex={ronde > 0 ? -1 : undefined}
+                  className="inline-block whitespace-nowrap rounded-full border border-white/15 px-4 py-1.5 font-display text-sm font-semibold text-white/85 transition hover:border-brand-mint hover:text-brand-mint"
+                >
+                  {s.naam}
+                </Link>
+              </li>
+            )),
+          )}
+        </ul>
+      </nav>
+
+      {/* ───────────────────────────────────────────────── branches (met het minimumuurloon) */}
+      <BranchShowcase minRateCents={env.MIN_SHIFT_RATE_CENTS} />
+
+      {/* ───────────────────────────────────────────────── zo werkt het */}
+      <section id="hoe-het-werkt" className="relative isolate scroll-mt-24 overflow-hidden hero-ink text-white">
+        <div className="aurora" aria-hidden />
+        <div className="shell-4k relative py-8 md:py-10 lg:py-12">
+          <Reveal>
+            <p className="eyebrow text-brand-mint">Zo werkt het</p>
+            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">In drie stappen aan het werk</h2>
+          </Reveal>
+          <ol className="mt-6 grid gap-3 md:grid-cols-3 md:gap-4">
+            {WERK_STAPPEN.map((s, i) => (
+              <Reveal key={s.titel} as="li" delay={i * 100} className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur md:p-5">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-mint font-display text-base font-bold text-ink">{i + 1}</span>
+                <h3 className="mt-3 font-display text-lg font-semibold">{s.titel}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-white/70">{s.tekst}</p>
+              </Reveal>
+            ))}
+          </ol>
+          <Reveal delay={200} className="mt-6">
+            <Link href={WERK_AANMELDEN} className="btn-mint text-base">
+              {WERK_HERO.knop}
+            </Link>
+          </Reveal>
+        </div>
+      </section>
+
       {/* ───────────────────────────────────────────────── voor wie */}
       <section className="bg-paper">
         <div className="shell-4k py-8 md:py-10 lg:py-12">
@@ -123,29 +171,6 @@ export default function WerkHomePage() {
           </ul>
         </div>
       </section>
-
-      {/* ───────────────────────────────────────────────── zo werkt het */}
-      <section id="hoe-het-werkt" className="relative isolate scroll-mt-24 overflow-hidden hero-ink text-white">
-        <div className="aurora" aria-hidden />
-        <div className="shell-4k relative py-8 md:py-10 lg:py-12">
-          <Reveal>
-            <p className="eyebrow text-brand-mint">Zo werkt het</p>
-            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">In drie stappen aan het werk</h2>
-          </Reveal>
-          <ol className="mt-6 grid gap-3 md:grid-cols-3 md:gap-4">
-            {WERK_STAPPEN.map((s, i) => (
-              <Reveal key={s.titel} as="li" delay={i * 100} className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur md:p-5">
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-mint font-display text-base font-bold text-ink">{i + 1}</span>
-                <h3 className="mt-3 font-display text-lg font-semibold">{s.titel}</h3>
-                <p className="mt-1 text-sm leading-relaxed text-white/70">{s.tekst}</p>
-              </Reveal>
-            ))}
-          </ol>
-        </div>
-      </section>
-
-      {/* ───────────────────────────────────────────────── branches (met het minimumuurloon) */}
-      <BranchShowcase minRateCents={env.MIN_SHIFT_RATE_CENTS} />
 
       {/* ───────────────────────────────────────────────── waarom */}
       <section className="bg-paper">
