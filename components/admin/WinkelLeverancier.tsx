@@ -111,7 +111,7 @@ export function Leverancier() {
             {!stand.ingesteld && (
               <ol className="list-decimal space-y-1 pl-5 text-sm" style={{ color: "var(--a-text)" }}>
                 <li>Maak een gratis account op cjdropshipping.com (op naam van het bedrijf).</li>
-                <li>Ga naar My CJ → Authorization → API en klik op "Generate" (of "Request"). Je krijgt een lange sleutel.</li>
+                <li>Ga naar My CJ → Authorization → API en klik op &quot;Generate&quot; (of &quot;Request&quot;). Je krijgt een lange sleutel.</li>
                 <li>Plak die sleutel hieronder en klik op Opslaan. We proberen hem meteen; een foute sleutel wordt niet bewaard.</li>
               </ol>
             )}
@@ -154,7 +154,7 @@ export function Leverancier() {
                 <label className="a-label">Magazijn (landcode)<input className="a-input" value={land} onChange={(e) => setLand(e.target.value.toUpperCase())} placeholder="DE = Europa, leeg = overal" maxLength={2} /></label>
                 <label className="a-label">Marge % (leeg = beleid Winkel-AI)<input className="a-input" inputMode="numeric" value={margeTekst} onChange={(e) => setMargeTekst(e.target.value)} placeholder="55" /></label>
                 <div className="flex items-end"><button type="submit" className="a-btn" disabled={bezig !== ""}>Instellingen opslaan</button></div>
-                <p className="text-xs sm:col-span-4" style={{ color: "var(--a-mute)" }}>De verkoopprijs = (inkoop in euro's + verzendkosten) met de marge erbovenop en de btw erbij, afgerond op x,95. Producten uit het Europese magazijn (DE) komen sneller en zonder invoerkosten.</p>
+                <p className="text-xs sm:col-span-4" style={{ color: "var(--a-mute)" }}>De verkoopprijs = (inkoop in euro&apos;s + verzendkosten) met de marge erbovenop en de btw erbij, afgerond op x,95. Producten uit het Europese magazijn (DE) komen sneller en zonder invoerkosten.</p>
               </form>
             </details>
           </div>
@@ -233,7 +233,7 @@ export function Leverancier() {
                   <>
                     <Pill tone={u.actief ? "ok" : "warn"}>{u.bestaand ? "stond er al" : u.actief ? "aan" : "uit"}</Pill>
                     <a className="font-semibold underline" style={{ color: "var(--a-text)" }} href={`/shop/${u.slug}`} target="_blank" rel="noreferrer">{u.naam}</a>
-                    <span style={{ color: "var(--a-mute)" }}>{euro(u.prijsCents)} (inkoop {euro(u.inkoopCents)}) · {u.varianten} varianten · {u.fotos} foto's{u.vertaald ? "" : " · nog Engels"}</span>
+                    <span style={{ color: "var(--a-mute)" }}>{euro(u.prijsCents)} (inkoop {euro(u.inkoopCents)}) · {u.varianten} varianten · {u.fotos} foto&apos;s{u.vertaald ? "" : " · nog Engels"}</span>
                     {u.melding && <span style={{ color: "var(--a-mute)" }}>· {u.melding}</span>}
                   </>
                 )}

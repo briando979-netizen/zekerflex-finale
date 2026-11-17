@@ -282,7 +282,7 @@ export const GRATIS_DIENSTEN: GratisDienst[] = [
     nu: "De gratis API van CJ Dropshipping met een account op naam van het bedrijf: 50.000 punten per dag (zoeken 50, een product 10), één aanvraag per seconde (lib/shop/cj)",
     eigen: "Er is niets dat geld kost: alleen een gratis account en een sleutel. Valt CJ weg, dan blijven de overgenomen producten gewoon staan (foto's en tekst zijn van ons); alleen nieuw overnemen en voorraad verversen wachten dan.",
     status: "gratis",
-    hosts: ["developers.cjdropshipping.com"],
+    hosts: ["developers.cjdropshipping.com", "cjdropshipping.com"],
   },
   {
     id: "wisselkoersen",
