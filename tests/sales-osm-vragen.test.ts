@@ -9,7 +9,11 @@ vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: 
 const findFirst = vi.fn();
 vi.mock("@/lib/prisma", () => ({ prisma: { salesLead: { findFirst: (...a: unknown[]) => findFirst(...a) } } }));
 const zoek = vi.fn();
-vi.mock("@/lib/integrations/osm-plaatsen", () => ({ osmZoekBedrijven: (...a: unknown[]) => zoek(...a) }));
+const buurt = vi.fn();
+vi.mock("@/lib/integrations/osm-plaatsen", () => ({
+  osmZoekBedrijven: (...a: unknown[]) => zoek(...a),
+  osmBedrijvenVanSoorten: (...a: unknown[]) => buurt(...a),
+}));
 const createLead = vi.fn();
 vi.mock("@/lib/sales/leads", () => ({ createLead: (...a: unknown[]) => createLead(...a) }));
 
@@ -66,6 +70,7 @@ describe("discoverViaOsm", () => {
   const campagne = { id: "camp1", targetSectors: [], targetCities: [] } as unknown as SalesCampaign;
 
   beforeEach(() => {
+    buurt.mockReset().mockResolvedValue([]);
     findFirst.mockReset().mockResolvedValue(null);
     createLead.mockReset().mockResolvedValue({ id: "lead" });
     zoek.mockReset().mockImplementation(async (q: string) => [{ naam: `Zaak ${q}`, plaats: stadVan(q) || null, website: null, telefoon: null }]);
@@ -85,5 +90,31 @@ describe("discoverViaOsm", () => {
     expect(eerste.created + tweede.created).toBe(8);
     // de sector van een lead is het eerste woord van de vraag, de stad die van de treffer
     expect(createLead).toHaveBeenCalledWith(expect.objectContaining({ sector: "horeca", city: "Groningen", source: "openstreetmap" }));
+    // Overpass gaf niets: elke vraag viel terug op Nominatim
+    expect(eerste.overpass).toBe(0);
+    expect(eerste.nominatim).toBe(4);
+  });
+
+  it("zoekt eerst op kenmerken rond het middelpunt van de plaats (Overpass); Nominatim alleen als dat niets geeft of faalt", async () => {
+    const plek = (naam: string, plaats: string | null) => ({ id: `osmplaats-node-${naam}`, naam, adres: "", plaats, locatie: null, website: null, telefoon: null, soort: "restaurant", soortSleutel: "amenity", openingstijden: null, kaartUrl: "" });
+    // dag 0: horeca, logistiek, retail, schoonmaak in Groningen. Overpass: horeca 2 treffers (één zonder plaats), logistiek
+    // niets, retail een storing, schoonmaak 1 treffer
+    buurt
+      .mockResolvedValueOnce([plek("Eetcafé Test", "Groningen"), plek("Hotel Test", null)])
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new Error("overpass 504"))
+      .mockResolvedValueOnce([plek("Schoonmaak Test", "Groningen")]);
+    const r = await discoverViaOsm(campagne, 12, dag(0));
+    expect(r.overpass).toBe(2);
+    expect(r.nominatim).toBe(2);
+    expect(zoek.mock.calls.map((c) => c[0])).toEqual(["logistiek Groningen", "retail Groningen"]);
+    // de Overpass-vraag: rond het middelpunt van Groningen, met de kenmerken van horeca
+    const eerste = buurt.mock.calls[0]?.[0] as { lat: number; lng: number; radiusM: number; soorten: { sleutel: string }[] };
+    expect(eerste.lat).toBeCloseTo(53.2194, 3);
+    expect(eerste.radiusM).toBe(5000);
+    expect(eerste.soorten.map((s) => s.sleutel)).toEqual(["amenity", "tourism"]);
+    // een treffer zonder plaats krijgt de plaats waar we zochten
+    expect(createLead).toHaveBeenCalledWith(expect.objectContaining({ companyName: "Hotel Test", city: "Groningen", sector: "horeca" }));
+    expect(createLead).toHaveBeenCalledWith(expect.objectContaining({ companyName: "Schoonmaak Test", sector: "schoonmaak" }));
   });
 });
