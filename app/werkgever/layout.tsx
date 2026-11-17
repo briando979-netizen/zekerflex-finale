@@ -9,6 +9,7 @@ import { getTheme } from "@/lib/theme/server";
 import { inAndroidApp, inIosApp } from "@/lib/app-mode-server";
 import { IosAppProvider } from "@/components/app/useInIosApp";
 import { ViewAsBanner } from "@/components/admin/ViewAsBanner";
+import { DemoBanner } from "@/components/app/DemoBanner";
 import { OpbouwfaseBalk } from "@/components/app/OpbouwfaseBalk";
 import { EmployerShell } from "@/components/app/EmployerShell";
 import { getUserAvatars } from "@/lib/profile/store";
@@ -173,6 +174,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     <IosAppProvider ios={ios}>
     <I18nProvider locale={locale} t={clientDict(locale)}>
       <ViewAsBanner role="employer" />
+      <DemoBanner href="/register?type=bedrijf" knop="Maak een bedrijfsaccount" />
       <EmployerShell
         nav={nav}
         locale={locale}

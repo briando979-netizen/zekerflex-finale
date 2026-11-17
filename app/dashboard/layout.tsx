@@ -21,6 +21,7 @@ import { runAfter } from "@/lib/run-after";
 import { AppOpenPing } from "@/components/app/AppOpenPing";
 import { BewaardeTikken } from "@/components/app/BewaardeTikken";
 import { ViewAsBanner } from "@/components/admin/ViewAsBanner";
+import { DemoBanner } from "@/components/app/DemoBanner";
 import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
 import { hulpTeksten } from "@/lib/hulp/teksten";
@@ -56,6 +57,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
     <IosAppProvider ios={await inIosApp()}>
     <I18nProvider locale={locale} t={clientDict(locale)}>
       <ViewAsBanner role="freelancer" />
+      <DemoBanner href="/register?type=freelancer" knop="Maak gratis je profiel" />
       {/* foutmeldingen van de server in de taal van de werker (lib/i18n/fouten.ts); Nederlands geeft niets mee */}
       <FoutVertaler texts={foutenVoor(locale)} />
       <FreelancerShell
