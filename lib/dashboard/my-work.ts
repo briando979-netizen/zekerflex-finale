@@ -7,6 +7,7 @@ import { computeTravel, type MarketplaceShift } from "@/lib/dashboard/marketplac
 import { amsterdamParts } from "@/lib/time/amsterdam";
 import { overlapsAny } from "@/lib/shifts/worker-overlap";
 import { REACTIE_MARGE_MS, reactieVervalt } from "@/lib/offers/verval";
+import { reserveReactieIds } from "@/lib/reservebank/store";
 import { isTestklus } from "@/lib/shifts/testklus";
 import { isEigenTestKlus, type EigenTest } from "@/lib/admin/eigen-test-kern";
 import { leesEigenTest } from "@/lib/admin/eigen-test";
@@ -260,6 +261,12 @@ export async function getMyWork(userId: string): Promise<MyWork> {
     ? await prisma.shift.findMany({ where: { id: { in: offerShiftIds } }, select: SHIFT_SELECT })
     : [];
   const offerShiftById = new Map(offerShifts.map((s) => [s.id, s]));
+  // open reacties die het bedrijf op de reservebank zette (lib/reservebank): "Reserve: je bent nog niet ingepland"
+  const reserveIds = await reserveReactieIds(
+    offers,
+    offerShifts.map((s) => ({ id: s.id, tenantId: s.branch.tenant.id, startsAt: s.startsAt, status: s.status })),
+    now,
+  );
   for (const o of offers) {
     if (o.status === "withdrawn" || assignedShiftIds.has(o.shiftId)) continue;
     const row = offerShiftById.get(o.shiftId);
@@ -269,7 +276,8 @@ export async function getMyWork(userId: string): Promise<MyWork> {
     // Een reactie waar niet op gekozen werd terwijl de klus al begon (of geannuleerd is)
     // telt als niet uitgekozen, ook vóór de opruimronde (lib/offers/expire.ts) hem omzet.
     const status = o.status === "pending" && reactieVervalt(row, now) ? "expired" : o.status;
-    shift.myOffer = { proposedRateCents: o.proposedRateCents, status };
+    const reserve = status === "pending" && reserveIds.has(o.id);
+    shift.myOffer = { proposedRateCents: o.proposedRateCents, status, ...(reserve ? { reserve: true as const } : {}) };
     const rejectedKind: MyWorkItem["rejectedKind"] =
       status === "expired" ? "expired" : status === "declined" ? (o.proposedRateCents !== o.listedRateCents ? "counter" : "notChosen") : null;
     const item: MyWorkItem = {
@@ -288,7 +296,7 @@ export async function getMyWork(userId: string): Promise<MyWork> {
       clientTenantId: null,
       clientName: null,
       offerRateCents: o.proposedRateCents,
-      offerStatusLabel: OFFER_LABEL[status] ?? status,
+      offerStatusLabel: reserve ? "Reserve, nog niet ingepland" : (OFFER_LABEL[status] ?? status),
       rejectedKind,
       cancelledByEmployer: false,
     };

@@ -801,10 +801,18 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
                 <p className="num font-display text-lg font-bold text-ink">{moneyExact(s.hourlyRateCents)}</p>
                 <p className="text-[11px] text-neutralx-400">{ft.card.earn(money(s.grossCents))}</p>
               </div>
-              <span className={s.myOffer.status === "expired" || s.myOffer.status === "declined" ? "pill-neutral" : "pill-warn"}>
-                {D.responseSent} ·{" "}
-                {ft.card.offer[s.myOffer.status === "accepted" || s.myOffer.status === "declined" || s.myOffer.status === "expired" ? s.myOffer.status : "pending"]}
-              </span>
+              {s.myOffer.reserve ? (
+                // op de reservebank van het bedrijf (lib/reservebank): neutraal, nog niet ingepland
+                <div className="max-w-[15rem] text-right">
+                  <span className="pill-neutral">{ft.card.reserveStatus}</span>
+                  <p className="mt-1 text-[11px] text-neutralx-500">{ft.card.reserveUitleg}</p>
+                </div>
+              ) : (
+                <span className={s.myOffer.status === "expired" || s.myOffer.status === "declined" ? "pill-neutral" : "pill-warn"}>
+                  {D.responseSent} ·{" "}
+                  {ft.card.offer[s.myOffer.status === "accepted" || s.myOffer.status === "declined" || s.myOffer.status === "expired" ? s.myOffer.status : "pending"]}
+                </span>
+              )}
             </div>
           ) : s.isReplacement && upcoming ? (
             <div className="flex items-center justify-between gap-3">

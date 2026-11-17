@@ -15,6 +15,7 @@ import { runMatchingForShift } from "@/lib/matching/engine";
 import { notifyStandby } from "@/lib/matching/standby";
 import { sendUserPush } from "@/lib/notifications/push";
 import { runAfter } from "@/lib/run-after";
+import { meldReservesVrijePlek } from "@/lib/reservebank/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -115,16 +116,22 @@ export async function POST(request: Request, props: { params: Promise<{ assignme
     runAfter(() => runMatchingForShift(assignment.shift.id));
     // Within 24 hours: workers on standby hear it straight away (lib/matching/standby).
     runAfter(() => notifyStandby(assignment.shift.id));
-    if (contact) {
-      runAfter(() =>
-        sendUserPush([contact.userId], {
-          title: `Afgezegd: ${assignment.shift.title}`,
-          body: `${principal.fullName} komt niet op ${when}. ZekerFlex zoekt direct een vervanger.`,
-          data: { type: "SHIFT", url: `/werkgever/diensten/${assignment.shift.id}`, tag: `afgezegd-${assignment.id}` },
-          ttlSeconds: 43_200,
-        }),
-      );
-    }
+    // Reservebank (lib/reservebank): de reserves van deze klus horen één keer dat er plek is, en het bedrijf hoort
+    // dat het meteen uit zijn reserves kan kiezen (op de klus staat dan "Iemand zegde af — kies uit je reservebank").
+    runAfter(async () => {
+      const { reserves } = await meldReservesVrijePlek(assignment.shift.id, assignment.id).catch(() => ({ reserves: 0 }));
+      if (!contact) return;
+      await sendUserPush([contact.userId], {
+        title: `Afgezegd: ${assignment.shift.title}`,
+        body:
+          `${principal.fullName} komt niet op ${when}. ` +
+          (reserves > 0
+            ? `Je hebt ${reserves} ${reserves === 1 ? "reserve" : "reserves"} op de reservebank: kies er een op de klus.`
+            : "ZekerFlex zoekt direct een vervanger."),
+        data: { type: "SHIFT", url: `/werkgever/diensten/${assignment.shift.id}`, tag: `afgezegd-${assignment.id}` },
+        ttlSeconds: 43_200,
+      });
+    });
 
     if (late) {
       const hours = Math.max(

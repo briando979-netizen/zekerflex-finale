@@ -495,7 +495,10 @@ const nl = {
     nietNu: "Niet nu",
   },
   card: {
-    offer: { pending: "in afwachting", accepted: "geaccepteerd", declined: "afgewezen", withdrawn: "ingetrokken", expired: "niet uitgekozen" } as Record<string, string>,
+    offer: { pending: "in afwachting", accepted: "geaccepteerd", declined: "afgewezen", withdrawn: "ingetrokken", expired: "niet uitgekozen", reserve: "reserve" } as Record<string, string>,
+    // de reactie staat op de reservebank van het bedrijf (lib/reservebank): nog niet ingepland, wel achter de hand
+    reserveStatus: "Reserve: je bent nog niet ingepland",
+    reserveUitleg: "Valt er iemand uit, dan kan het bedrijf je meteen inplannen.",
     specialForYou: "Speciaal voor jou",
     extraInfo: "Extra informatie",
     viaAgency: "Via uitzendbureau",
@@ -2236,7 +2239,9 @@ const en: FreelancerDict = {
     nietNu: "Not now",
   },
   card: {
-    offer: { pending: "pending", accepted: "accepted", declined: "declined", withdrawn: "withdrawn", expired: "not selected" },
+    offer: { pending: "pending", accepted: "accepted", declined: "declined", withdrawn: "withdrawn", expired: "not selected", reserve: "reserve" },
+    reserveStatus: "Reserve: you are not scheduled yet",
+    reserveUitleg: "If someone drops out, the company can schedule you right away.",
     specialForYou: "Picked for you",
     extraInfo: "Extra information",
     viaAgency: "Via staffing agency",
@@ -4021,7 +4026,9 @@ const pl: FreelancerDict = {
     nietNu: "Nie teraz",
   },
   card: {
-    offer: { pending: "oczekuje", accepted: "zaakceptowano", declined: "odrzucono", withdrawn: "wycofano", expired: "nie wybrano" },
+    offer: { pending: "oczekuje", accepted: "zaakceptowano", declined: "odrzucono", withdrawn: "wycofano", expired: "nie wybrano", reserve: "rezerwa" },
+    reserveStatus: "Rezerwa: nie masz jeszcze przydziału",
+    reserveUitleg: "Jeśli ktoś zrezygnuje, firma może od razu Cię zaplanować.",
     specialForYou: "Specjalnie dla ciebie",
     extraInfo: "Dodatkowe informacje",
     viaAgency: "Przez agencję pracy",
@@ -5806,7 +5813,9 @@ const ro: FreelancerDict = {
     nietNu: "Nu acum",
   },
   card: {
-    offer: { pending: "în așteptare", accepted: "acceptat", declined: "respins", withdrawn: "retras", expired: "nu ai fost ales(ă)" },
+    offer: { pending: "în așteptare", accepted: "acceptat", declined: "respins", withdrawn: "retras", expired: "nu ai fost ales(ă)", reserve: "rezervă" },
+    reserveStatus: "Rezervă: încă nu ești programat(ă)",
+    reserveUitleg: "Dacă cineva renunță, firma te poate programa imediat.",
     specialForYou: "Special pentru tine",
     extraInfo: "Informații suplimentare",
     viaAgency: "Prin agenție de muncă",
@@ -7591,7 +7600,9 @@ const uk: FreelancerDict = {
     nietNu: "Не зараз",
   },
   card: {
-    offer: { pending: "очікує", accepted: "прийнято", declined: "відхилено", withdrawn: "відкликано", expired: "не обрано" },
+    offer: { pending: "очікує", accepted: "прийнято", declined: "відхилено", withdrawn: "відкликано", expired: "не обрано", reserve: "резерв" },
+    reserveStatus: "Резерв: вас ще не заплановано",
+    reserveUitleg: "Якщо хтось відмовиться, компанія може одразу вас запланувати.",
     specialForYou: "Спеціально для вас",
     extraInfo: "Додаткова інформація",
     viaAgency: "Через кадрове агентство",
