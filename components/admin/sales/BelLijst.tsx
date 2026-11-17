@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { APanel, APill, AButton } from "@/components/admin/ui";
 import { BEL_UITKOMSTEN, belLabel, type BelRegel, type BelUitkomst } from "@/lib/sales/bellijst";
+import { WARM_LABEL } from "@/lib/sales/warme-bronnen";
 
 // Het tabblad "Bellen" in Beheer → Sales (14 nov 2026): leads met een telefoonnummer en een score van 55 of hoger, zonder
-// reactie, oudste eerst. De eigenaar belt zelf via de tel:-link en legt met "Gebeld" vast wat het opleverde
+// reactie, oudste eerst. Bedrijven die zelf bij ons kwamen staan bovenaan, ook zonder score (17 nov 2026). De eigenaar belt zelf via de tel:-link en legt met "Gebeld" vast wat het opleverde
 // (lib/sales/bellijst.ts). Na elke uitkomst komt de lijst opnieuw van de server, want een lead kan eraf gaan.
 
 interface Lijst {
@@ -84,7 +85,7 @@ export function BelLijst() {
     <div className="space-y-4">
       <APanel
         title="Bellen"
-        subtitle={`Leads met een telefoonnummer en een score van ${minScore} of hoger, nog zonder reactie, oudste eerst. ZekerFlex belt niemand zelf: jij belt en legt vast wat het opleverde.`}
+        subtitle={`Bovenaan de bedrijven die zelf bij ons kwamen (website-check, offerte, rekentool, introductie), daarna leads met een score van ${minScore} of hoger. Allemaal met een telefoonnummer en nog zonder reactie, oudste eerst. ZekerFlex belt niemand zelf: jij belt en legt vast wat het opleverde.`}
       >
         <details>
           <summary className="cursor-pointer text-sm font-semibold" style={{ color: "var(--a-text)" }}>
@@ -121,7 +122,7 @@ export function BelLijst() {
           </p>
         ) : lijst.regels.length === 0 ? (
           <p className="p-8 text-center text-sm" style={{ color: "var(--a-mute)" }}>
-            Niemand om te bellen: geen lead met een telefoonnummer en een score van {minScore} of hoger zonder reactie.
+            Niemand om te bellen: geen lead met een telefoonnummer die zelf bij ons kwam of een score van {minScore} of hoger heeft, zonder reactie.
           </p>
         ) : (
           <ul className="divide-y" style={{ borderColor: "var(--a-border)" }}>
@@ -136,13 +137,14 @@ export function BelLijst() {
                       {[r.city, r.sector].filter(Boolean).join(" · ") || "Plaats en sector onbekend"}
                     </p>
                     <p className="mt-1 text-[0.8125rem]" style={{ color: "var(--a-dim)" }}>
-                      {r.waarom}
+                      {r.warm ? `${WARM_LABEL}: ${r.bron}.` : r.waarom}
                     </p>
                     <p className="mt-1 text-xs" style={{ color: "var(--a-mute)" }}>
                       {stand(r)}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
+                    {r.warm ? <APill tone="warn">{WARM_LABEL}</APill> : null}
                     {typeof r.score === "number" ? <APill tone="ok">{`Score ${r.score}`}</APill> : null}
                     {r.telHref ? (
                       <a href={r.telHref} className="rounded-lg px-3 py-1.5 text-sm font-semibold" style={{ background: "var(--a-elev)", color: "var(--a-text)" }}>
