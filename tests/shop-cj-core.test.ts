@@ -48,6 +48,8 @@ describe("categorie en doelgroep", () => {
   it.each([
     ["Bluetooth Speakers", "Mini speaker", "Elektronica"],
     ["Toys & Hobbies", "Puzzle for kids", "Speelgoed"],
+    ["Kids & Baby", "Kids hoodie", "Kleding"],
+    ["Kids & Baby", "Baby shoes", "Tassen & schoenen"],
     ["Women's Clothing", "Summer dress", "Kleding"],
     ["Bags & Shoes", "Leather backpack", "Tassen & schoenen"],
     ["Jewelry", "Necklace", "Sieraden & horloges"],
