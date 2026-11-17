@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { fireConfetti } from "@/components/ui/confetti";
 import { themeInfo, type ThemeId } from "@/lib/seasons/calendar";
+import { seizoenFoto } from "@/lib/seasons/foto";
 
 // ---------------------------------------------------------------------------
 // The festive layer for a Dutch holiday or a birthday (lib/seasons). Only
@@ -10,6 +11,9 @@ import { themeInfo, type ThemeId } from "@/lib/seasons/calendar";
 // button to hide it all for today), fixed so nothing on the page shifts, still
 // with prefers-reduced-motion, gone when printing. Corner pieces only on wider
 // screens, so they never sit on a phone's bottom bar.
+// Boven de groet staat op wijde schermen de seizoensfoto (lib/seasons/foto.ts): de post
+// van dat feest in onze eigen reclamestijl. Ook die is alleen versiering (geen link, geen
+// pointer events) en vouwt met de groet mee dicht; "Verbergen" haalt hem ook weg.
 // ---------------------------------------------------------------------------
 
 const CSS = `
@@ -24,6 +28,9 @@ const CSS = `
 .zfs-pill.dk button{background:rgba(255,255,255,.12)}
 .zfs-pill button:focus-visible,.zfs-badge:focus-visible{outline:2px solid #4FE0A0;outline-offset:2px}
 .zfs-pill.zfs-badge{width:38px;height:38px;padding:0;justify-content:center;font-size:18px;cursor:pointer}
+.zfs-kaart{display:none;position:fixed;z-index:56;left:16px;bottom:calc(68px + env(safe-area-inset-bottom));width:224px;border-radius:18px;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.28);pointer-events:none}
+.zfs-kaart img{display:block;width:100%;height:auto}
+@media (min-width:768px){.zfs-kaart{display:block}}
 .zfs-num{font-variant-numeric:tabular-nums}
 .zfs-wide{display:none}
 @media (min-width:768px){.zfs-wide{display:inline}}
@@ -39,7 +46,7 @@ const CSS = `
 @keyframes zfs-wobble{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
 @keyframes zfs-up{from{transform:translate3d(0,0,0)}to{transform:translate3d(var(--dx,0px),-130vh,0)}}
 @keyframes zfs-twinkle{0%,100%{opacity:.25;transform:scale(.8)}50%{opacity:1;transform:scale(1.1)}}
-@media print{.zfs,.zfs-pill{display:none!important}}
+@media print{.zfs,.zfs-pill,.zfs-kaart{display:none!important}}
 `;
 
 const dayStamp = () => {
@@ -229,6 +236,8 @@ export function SeasonalDecor({ theme, countdownTo, naam }: { theme: ThemeId; co
     }
   });
   const [dark] = useState(() => Boolean(document.querySelector('[data-theme="dark"]')));
+  // de werker-app krijgt waar die bestaat de werkersversie van het beeld
+  const [foto] = useState(() => seizoenFoto(theme, window.location.pathname));
   // previewing 31 December on another day: count down to the next 1 January
   const [target] = useState(() => (theme === "oudjaar" ? (countdownTo ?? new Date(new Date().getFullYear() + 1, 0, 1).toISOString()) : null));
   const left = useCountdown(target);
@@ -341,6 +350,12 @@ export function SeasonalDecor({ theme, countdownTo, naam }: { theme: ThemeId; co
           </div>
         )}
       </div>
+      {open && foto && (
+        <div className="zfs-kaart" aria-hidden="true">
+          {/* eslint-disable-next-line @next/next/no-img-element -- vast, licht bestand uit public/seizoen; geen optimalisatie nodig */}
+          <img src={foto.src} alt="" width={640} height={640} loading="lazy" decoding="async" />
+        </div>
+      )}
       {open ? (
         <div className={`zfs-pill ${theme === "verjaardag" ? "r" : "l"}${dark ? " dk" : ""}`}>
           <span aria-hidden="true">{midnight ? "🎆" : info.emoji}</span>
