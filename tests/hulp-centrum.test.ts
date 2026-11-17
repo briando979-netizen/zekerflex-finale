@@ -137,6 +137,6 @@ describe("talen in de browser", () => {
   it("het vraagteken staat in de kopbalk en de chat opent Support vanuit het hulpcentrum", () => {
     expect(readFileSync(path.join(ROOT, "components/app/FreelancerShell.tsx"), "utf8")).toMatch(/<HulpCentrum\b/);
     expect(readFileSync(path.join(ROOT, "app/dashboard/layout.tsx"), "utf8")).toMatch(/hulp=\{hulpTeksten\(locale\)\}/);
-    expect(readFileSync(path.join(ROOT, "components/chat/InboxPage.tsx"), "utf8")).toMatch(/searchParams\.get\("support"\) !== "1"/);
+    expect(readFileSync(path.join(ROOT, "components/chat/InboxPage.tsx"), "utf8")).toMatch(/q\.get\("support"\) === "1"\) void startSupport\(\)/);
   });
 });
