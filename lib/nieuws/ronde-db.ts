@@ -37,12 +37,15 @@ export function nieuwsOpdracht(invoer: { bronNaam: string; titel: string; tekst:
     `Regels:\n` +
     `- Gebruik ALLEEN feiten uit de brontekst. Verzin niets en reken niets zelf uit. Elk getal dat je noemt staat letterlijk zo in de brontekst.\n` +
     `- Schrijf in je eigen woorden; neem geen hele zinnen over.\n` +
+    `- Neem tijd en omvang precies over: staat er "het vierde kwartaal van 2026" of "bijna 77 procent", schrijf dan niet "2026" of "77 procent".\n` +
+    `- Schrijf alleen "het sterkst", "de meeste", "het hoogst" en zulke vergelijkingen als de brontekst die zelf maakt, en over hetzelfde onderwerp.\n` +
+    `- Elke alinea heeft 2 tot 4 zinnen die op elkaar aansluiten. Geen losse zinnen onder elkaar.\n` +
     `- Geef geen juridisch of fiscaal advies en doe geen voorspellingen.\n` +
     `- Zet geen links of webadressen in de tekst; de bron komt er apart onder.\n` +
     wet +
-    `- Het laatste blok heet "Wat betekent dit voor jou?" en zegt in 2 tot 3 zinnen, voorzichtig, wat een flexwerker of een bedrijf dat inhuurt hieraan heeft. Staat dat niet in de bron, zeg dan alleen waarom het goed is om dit te weten.\n\n` +
+    `- VERPLICHT: het laatste blok heeft als kop precies "Wat betekent dit voor jou?" en zegt in 2 tot 3 zinnen, voorzichtig, wat een flexwerker of een bedrijf dat inhuurt hieraan heeft. Staat dat niet in de bron, zeg dan alleen waarom het goed is om dit te weten.\n\n` +
     `Antwoord UITSLUITEND met JSON: {"titel": string (hooguit 90 tekens, geen clickbait), "samenvatting": string (1 tot 2 zinnen), ` +
-    `"blokken": [{"kop": string, "alineas": string[]}] (3 blokken, samen 150 tot 300 woorden)}.`;
+    `"blokken": [{"kop": string, "alineas": string[]}] (precies 3 blokken, samen minstens 150 en hooguit 300 woorden; een bericht onder de 120 woorden wordt weggegooid)}.`;
   const user = `Rubriek: ${invoer.rubriek}\nBron: ${invoer.bronNaam}\nTitel van de bron: ${invoer.titel}\n\nBrontekst:\n${invoer.tekst}`;
   return { system, user };
 }

@@ -208,6 +208,15 @@ export function beoordeelBericht(b: Pick<NieuwsBericht, "titel" | "samenvatting"
   if (woorden < 90) return { goed: false, reden: `het bericht is te kort (${woorden} woorden)` };
   if (woorden > 520) return { goed: false, reden: `het bericht is te lang (${woorden} woorden)` };
   for (const v of VERBODEN) if (v.re.test(tekst)) return { goed: false, reden: v.reden };
+  // het slot zegt wat de lezer eraan heeft; ontbreekt het, dan is het een kale samenvatting en geen bericht van ons
+  if (!b.blokken.some((x) => /betekent/i.test(x.kop ?? ""))) return { goed: false, reden: 'het blok "Wat betekent dit voor jou?" ontbreekt' };
+  // "het sterkst", "de meeste": zo'n vergelijking mag alleen als de bron hem ook maakt (18 nov: het eerste bericht
+  // noemde een sector "het sterkst gegroeid" terwijl de bron dat over een andere zei)
+  const bronKlein = bronTekst.toLowerCase();
+  for (const m of tekst.toLowerCase().matchAll(/\b(sterkste?|meeste|grootste|kleinste|hoogste|laagste|snelste?|zwakste?|minste|record\w*)\b/g)) {
+    const woord = (m[1] ?? "").replace(/e$/, "");
+    if (!bronKlein.includes(woord)) return { goed: false, reden: `maakt een vergelijking ("${m[1]}") die niet in de bron staat` };
+  }
   const vreemd = getallenBuitenBron(tekst, bronTekst, nu);
   if (vreemd.length) return { goed: false, reden: `noemt een getal dat niet in de bron staat: ${vreemd.slice(0, 4).join(", ")}` };
   return { goed: true, reden: null };

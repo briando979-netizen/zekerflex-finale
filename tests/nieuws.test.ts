@@ -87,6 +87,13 @@ describe("de harde controle", () => {
     const metLink = { ...GOED, samenvatting: "Lees meer op www.voorbeeld.example over dit onderwerp." };
     expect(beoordeelBericht(metLink, BRONTEKST, NU).goed).toBe(false);
     expect(beoordeelBericht({ ...GOED, blokken: [{ alineas: ["Te kort."] }] }, BRONTEKST, NU).reden).toContain("te kort");
+    // zonder het slot "Wat betekent dit voor jou?" is het geen bericht van ons
+    const zonderSlot = { ...GOED, blokken: GOED.blokken.map((x) => ({ ...x, kop: x.kop.replace("Wat betekent dit voor jou?", "Tot slot") })) };
+    expect(beoordeelBericht(zonderSlot, BRONTEKST, NU).reden).toContain("Wat betekent dit voor jou?");
+    // een vergelijking die de bron niet maakt
+    const metSterkst = { ...GOED, samenvatting: "In oktober waren 412 duizend mensen werkloos. De horeca groeide het sterkst." };
+    expect(beoordeelBericht(metSterkst, BRONTEKST, NU).reden).toContain("sterkst");
+    expect(beoordeelBericht(metSterkst, `${BRONTEKST} De horeca groeide het sterkst.`, NU).goed).toBe(true);
   });
 
   it("leest het antwoord van het model soepel", () => {
