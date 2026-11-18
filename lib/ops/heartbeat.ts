@@ -74,6 +74,7 @@ export const WATCHED_CRONS: WatchedCron[] = [
   // elke 2 minuten: de wachtrij "Alles overnemen" van CJ (lib/shop/cj/wachtrij.ts); zonder wachtrij telt de ronde ook als geslaagd
   { job: "cj-wachtrij", label: "Webshop: wachtrij Alles overnemen (CJ)", maxAgeHours: 1 },
   { job: "cj-bijwerken", label: "Webshop: CJ-producten bijwerken (categorie, voorraad, tekst)", maxAgeHours: 1 },
+  { job: "cj-fotos-verhuizen", label: "Webshop: CJ-foto's naar schijf (alleen met de vlag aan)", maxAgeHours: 2 },
   // elk half uur: bestellingen bij CJ Dropshipping volgen tot de track & trace (lib/shop/cj/bestelling.ts)
   { job: "cj-volgen", label: "Webshop: bestellingen bij CJ volgen", maxAgeHours: 2 },
   // elke 10 min: AI-opdrachten van de video-editor op de achtergrond (lib/video/wachtrij.ts)

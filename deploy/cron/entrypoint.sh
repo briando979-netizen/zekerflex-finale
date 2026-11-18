@@ -56,6 +56,8 @@ cat > /etc/crontabs/root <<EOF
 # ±30 s op ons eigen model), dat was 10 uur voor één pas; elke 4 min is ±5 uur. Niet vaker zolang het model krap in zijn
 # geheugen zit (zie mem_limit van ollama in docker-compose.vps.yml): elke prompt is een kans op een OOM-kill.
 1-59/4 * * * * wget -q -O /dev/null -T 115 "$H" "$APP/api/internal/shop/cj-bijwerken"
+# CJ-foto's van de database naar schijf (lib/shop/cj/fotos-verhuizen.ts): elke 5 minuten een ronde van 200 s, alleen zolang de vlag aan staat
+3-58/5 * * * * wget -q -O /dev/null -T 280 "$H" "$APP/api/internal/shop/cj-fotos-verhuizen"
 # elk half uur: open bestellingen bij CJ navragen; met een track & trace gaat de webshopbestelling op verzonden en krijgt de klant de mail (lib/shop/cj/bestelling.ts)
 12,42 * * * * wget -q -O /dev/null -T 150 "$H" "$APP/api/internal/shop/cj-volgen"
 30 6 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/markten/tick"
