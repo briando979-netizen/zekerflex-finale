@@ -57,6 +57,21 @@ export async function bewaarInstelling(nieuw: { aan: boolean; telefoon: string; 
 
 type Kanaal = "whatsapp" | "push";
 
+// De push-modules één keer inladen en de belofte delen (net als bij alertOwner blijft het dynamisch, zodat prisma niet statisch meekomt).
+// Bij gelijktijdige gebeurtenissen gaf een eigen import() per aanroep in de testomgeving op de server (vitest 5.0.0, Node 24.22) alleen de
+// eerste aanroep de nagemaakte module: 44 van 45 gingen naar de echte database en vielen om (18 nov, officiële controle).
+type PushModules = { platformAdminIds: () => Promise<string[]>; sendUserPush: typeof import("@/lib/notifications/push").sendUserPush };
+let pushModulesBelofte: Promise<PushModules> | null = null;
+function pushModules(): Promise<PushModules> {
+  pushModulesBelofte ??= Promise.all([import("@/lib/messaging/contacts"), import("@/lib/notifications/push")])
+    .then(([c, p]) => ({ platformAdminIds: c.platformAdminIds, sendUserPush: p.sendUserPush }))
+    .catch((err: unknown) => {
+      pushModulesBelofte = null; // een mislukte inlading mag de volgende poging niet blokkeren
+      throw err;
+    });
+  return pushModulesBelofte;
+}
+
 /** Stuurt één bericht naar de eigenaar. Geeft het kanaal terug waarmee het lukte, of null als niets het bereikte. */
 export async function stuurNaarEigenaar(tekst: string, url: string | null, tag: string, instelling: MelderInstelling): Promise<Kanaal | null> {
   if (instelling.whatsapp && instelling.telefoon) {
@@ -71,7 +86,7 @@ export async function stuurNaarEigenaar(tekst: string, url: string | null, tag: 
     }
   }
   try {
-    const [{ platformAdminIds }, { sendUserPush }] = await Promise.all([import("@/lib/messaging/contacts"), import("@/lib/notifications/push")]);
+    const { platformAdminIds, sendUserPush } = await pushModules();
     const [eerste = "ZekerFlex", ...rest] = tekst.split("\n");
     const bereikt = await sendUserPush(await platformAdminIds(), {
       title: eerste.slice(0, 80),
