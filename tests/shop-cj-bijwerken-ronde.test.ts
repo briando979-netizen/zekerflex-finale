@@ -34,14 +34,14 @@ describe("Bijwerken-ronde via de cron", () => {
     const r1 = await rondeBijwerken({ now: t1 });
     expect(r1).toMatchObject({ status: "gedaan", vanaf: 0, bekeken: 30, volgende: 30 });
     expect(bijwerkenVanCj).toHaveBeenCalledWith({ actorUserId: null, actorLabel: "system:cj", vanaf: 0, budgetMs: RONDE_BUDGET_MS });
-    expect(await leesBijwerkStand()).toEqual({ vanaf: 30, laatsteRondeOp: t1.toISOString(), laatsteVolledigOp: null, rondes: 1 });
+    expect(await leesBijwerkStand()).toEqual({ vanaf: 30, laatsteRondeOp: t1.toISOString(), laatsteVolledigOp: null, rondes: 1, totaal: 475 });
 
     const t2 = new Date("2026-11-18T17:15:00Z");
     bijwerkenVanCj.mockResolvedValueOnce(uitkomst({ bekeken: 445, volgende: null }));
     const r2 = await rondeBijwerken({ now: t2 });
     expect(r2).toMatchObject({ status: "gedaan", vanaf: 30, volgende: null });
     expect(bijwerkenVanCj.mock.calls[1]?.[0]).toMatchObject({ vanaf: 30 });
-    expect(await leesBijwerkStand()).toEqual({ vanaf: 0, laatsteRondeOp: t2.toISOString(), laatsteVolledigOp: t2.toISOString(), rondes: 2 });
+    expect(await leesBijwerkStand()).toEqual({ vanaf: 0, laatsteRondeOp: t2.toISOString(), laatsteVolledigOp: t2.toISOString(), rondes: 2, totaal: 475 });
     // het slot is weer vrij
     expect(kv.has("shop:cj:bijwerken:slot")).toBe(false);
   });
