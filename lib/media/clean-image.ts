@@ -49,7 +49,7 @@ export async function cleanImage(input: Buffer, maxPx = IMAGE_MAX_PX): Promise<C
 }
 
 /** Fetch a photo from someone's web address and clean it, so it can be served from our own origin. */
-export async function importRemoteImage(url: string): Promise<CleanImage & { sourceUrl: string }> {
+export async function importRemoteImage(url: string, opts: { maxPx?: number } = {}): Promise<CleanImage & { sourceUrl: string }> {
   let res: Awaited<ReturnType<typeof fetchResource>>;
   try {
     res = await fetchResource(url.trim(), { maxBytes: IMAGE_MAX_INPUT_BYTES, timeoutMs: 15_000 });
@@ -64,5 +64,5 @@ export async function importRemoteImage(url: string): Promise<CleanImage & { sou
     throw AppError.validation("Op dit adres staat een webpagina, geen foto. Klik met de rechtermuisknop op de foto en kies 'Afbeeldingsadres kopiëren'.");
   }
   if (type === "image/svg+xml") throw AppError.validation("SVG-bestanden nemen we niet over; gebruik een JPG, PNG of WebP.");
-  return { ...(await cleanImage(res.data)), sourceUrl: res.finalUrl };
+  return { ...(await cleanImage(res.data, opts.maxPx ?? IMAGE_MAX_PX)), sourceUrl: res.finalUrl };
 }

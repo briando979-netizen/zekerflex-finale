@@ -68,6 +68,14 @@ export async function storeUpload(input: {
   bytes: Buffer;
   uploadedById?: string | null;
   jarvisTurnId?: string | null;
+  /**
+   * Op schijf (UPLOADS_DIR, het opslagvolume) ook als de standaard "db" is: voor bestanden die altijd opnieuw te halen zijn
+   * (CJ-productfoto's, 18 nov 2026: 2.862 foto's = 721 MB in Postgres, de nachtelijke dump van 202 naar ±900 MB).
+   * Niet op een serverless host (daar is geen schijf) en niet bij s3 (daar hoort alles in de bucket).
+   */
+  opSchijf?: boolean;
+  /** eigen map onder UPLOADS_DIR voor zulke bestanden (bv. "cj"), zodat een back-up die map kan overslaan */
+  map?: string;
 }): Promise<StoredUpload> {
   if (input.bytes.length === 0) throw AppError.validation("Leeg bestand");
   if (input.bytes.length > env.UPLOAD_MAX_BYTES) {
@@ -79,8 +87,9 @@ export async function storeUpload(input: {
   const sha256 = createHash("sha256").update(input.bytes).digest("hex");
   const filename = safeName(input.filename);
   const day = new Date().toISOString().slice(0, 10);
-  const backend = storageBackend();
-  const storageKey = `${backend === "db" ? DB_PREFIX : ""}${day}/${randomUUID()}-${filename}`;
+  const backend: Backend = input.opSchijf && storageBackend() === "db" && !serverless() ? "local" : storageBackend();
+  const map = backend === "local" && input.map && /^[a-z0-9-]{1,32}$/.test(input.map) ? `${input.map}/` : "";
+  const storageKey = `${backend === "db" ? DB_PREFIX : ""}${map}${day}/${randomUUID()}-${filename}`;
   try {
     if (backend === "db") {
       await dbPut(storageKey, input.bytes);
@@ -92,7 +101,7 @@ export async function storeUpload(input: {
       });
     } else {
       const abs = join(uploadsRoot(), storageKey);
-      await mkdir(join(uploadsRoot(), day), { recursive: true });
+      await mkdir(join(uploadsRoot(), `${map}${day}`), { recursive: true });
       await writeFile(abs, input.bytes, { flag: "wx" });
     }
   } catch (err) {
@@ -178,6 +187,45 @@ export async function readUpload(
     filename: row.filename,
     mimeType: row.mimeType,
   };
+}
+
+export interface VerhuisUploadUitkomst {
+  status: "verhuisd" | "stond-al" | "niet-gevonden";
+  bytesVoor: number;
+  bytesNa: number;
+}
+
+/**
+ * Eén upload van de database (UploadBlob) naar schijf (UPLOADS_DIR), met dezelfde id en dus dezelfde url. Desgewenst met
+ * nieuwe bytes (verkleind). Volgorde: bestand schrijven (wx) → terugLezen en sha256 vergelijken → de Upload-rij bijwerken
+ * (storageKey, sizeBytes, sha256) → pas dan de UploadBlob-rij weg. Faalt iets vóór de rij-update, dan gaat het bestand weer
+ * weg en blijft alles zoals het was. Een upload die al op schijf staat blijft ongemoeid ("stond-al").
+ */
+export async function verhuisUploadNaarSchijf(id: string, opts: { bytes?: Buffer; map?: string } = {}): Promise<VerhuisUploadUitkomst> {
+  const row = await prisma.upload.findUnique({ where: { id } });
+  if (!row) return { status: "niet-gevonden", bytesVoor: 0, bytesNa: 0 };
+  if (backendOfKey(row.storageKey) !== "db") return { status: "stond-al", bytesVoor: row.sizeBytes, bytesNa: row.sizeBytes };
+  if (serverless() || env.STORAGE_BACKEND === "s3") throw AppError.precondition("Verhuizen naar schijf kan alleen op een server met een eigen schijf.");
+  const oud = await dbGet(row.storageKey);
+  if (!oud) throw AppError.notFound("Bestand ontbreekt in de database");
+  const bytes = opts.bytes && opts.bytes.length > 0 ? opts.bytes : oud;
+  const day = row.createdAt.toISOString().slice(0, 10);
+  const map = opts.map && /^[a-z0-9-]{1,32}$/.test(opts.map) ? `${opts.map}/` : "";
+  const nieuweSleutel = `${map}${day}/${randomUUID()}-${safeName(row.filename)}`;
+  const abs = join(uploadsRoot(), nieuweSleutel);
+  await mkdir(join(uploadsRoot(), `${map}${day}`), { recursive: true });
+  await writeFile(abs, bytes, { flag: "wx" });
+  const sha = createHash("sha256").update(bytes).digest("hex");
+  try {
+    const terug = await readFile(abs);
+    if (terug.length !== bytes.length || createHash("sha256").update(terug).digest("hex") !== sha) throw new Error("het bestand op schijf is niet gelijk aan wat we schreven");
+    await prisma.upload.update({ where: { id }, data: { storageKey: nieuweSleutel, sizeBytes: bytes.length, sha256: sha } });
+  } catch (err) {
+    await rm(abs, { force: true }).catch(() => undefined);
+    throw err;
+  }
+  await dbDelete(row.storageKey).catch((err) => logger.warn("upload verhuisd, maar de oude databaserij bleef staan", { id, error: (err as Error).message }));
+  return { status: "verhuisd", bytesVoor: row.sizeBytes, bytesNa: bytes.length };
 }
 
 /**
