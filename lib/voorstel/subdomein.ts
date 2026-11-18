@@ -59,3 +59,16 @@ export function voorstelPad(naam: string | null, pad: string): string | null {
   if (/\.[a-z0-9]{2,5}$/i.test(pad)) return pad;
   return pad === "/" ? basis : `${basis}${pad}`;
 }
+
+/**
+ * Waar de cookiemelding naar "het volledige cookiebeleid" linkt. Op een voorstel-subdomein (smileyapp.zekerflex.com,
+ * schwarzwald.zekerflex.com) bestaat /cookiebeleid niet (voorstelPad laat alleen het voorstel door, 18 nov 2026: 404),
+ * dus daar wijst de link naar de hoofdsite. Elders blijft het de gewone, relatieve link. Niets anders gaat open.
+ */
+export function cookiebeleidLink(hostname: string | null | undefined): string {
+  const host = (hostname ?? "").trim().toLowerCase();
+  const m = /^([a-z0-9-]+)\.zekerflex\.com$/.exec(host);
+  const naam = m?.[1];
+  if (naam && Object.hasOwn(VOORSTELLEN, naam)) return "https://zekerflex.com/cookiebeleid";
+  return "/cookiebeleid";
+}

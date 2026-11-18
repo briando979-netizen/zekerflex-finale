@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cookieStringIsApp } from "@/lib/app-mode";
+import { cookiebeleidLink } from "@/lib/voorstel/subdomein";
 
 const COOKIE_NAME = "zf_cookie_consent";
 
@@ -50,6 +51,12 @@ export function CookieConsent() {
   const [locale, setLocale] = useState<CopyLocale>("nl");
   const c = COPY[locale];
   const pad = usePathname();
+  // op een voorstel-subdomein wijst de link naar de hoofdsite (daar bestaat /cookiebeleid niet); eerst na het laden,
+  // zodat de server en de browser hetzelfde beginnen
+  const [beleidHref, setBeleidHref] = useState("/cookiebeleid");
+  useEffect(() => {
+    setBeleidHref(cookiebeleidLink(window.location.hostname));
+  }, []);
 
   useEffect(() => {
     setLocale(readLocale());
@@ -110,9 +117,15 @@ export function CookieConsent() {
       <div role="region" aria-label={c.label} className="pointer-events-auto mx-auto max-w-2xl rounded-2xl border border-hair bg-white p-5 shadow-lift">
         <p className="text-sm leading-relaxed text-ink">
           {c.body}{" "}
-          <Link href="/cookiebeleid" className="font-semibold underline">
-            {c.policy}
-          </Link>
+          {beleidHref.startsWith("http") ? (
+            <a href={beleidHref} className="font-semibold underline">
+              {c.policy}
+            </a>
+          ) : (
+            <Link href={beleidHref} className="font-semibold underline">
+              {c.policy}
+            </Link>
+          )}
           .
         </p>
 
