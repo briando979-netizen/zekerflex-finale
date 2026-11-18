@@ -46,10 +46,18 @@ export const OSM_TAGS_PER_SECTOR: Readonly<Record<string, readonly OsmTag[]>> = 
     { sleutel: "craft", soorten: ["metal_construction", "welder"] },
     { sleutel: "industrial" },
   ],
+  // partners in plaats van klanten (18 nov 2026, lib/sales/partner-soorten.ts): wie de uitzendkant, de producten of de administratie kan overnemen
+  uitzendbureau: [{ sleutel: "office", soorten: ["employment_agency"] }],
+  verzekeraar: [{ sleutel: "office", soorten: ["insurance"] }],
+  accountant: [{ sleutel: "office", soorten: ["accountant", "tax_advisor"] }],
 };
 
 /** Woorden in een sectornaam van een campagne ("haven en logistiek", "productie en techniek") → onze sector. */
 const SECTOR_WOORDEN: readonly (readonly [RegExp, string])[] = [
+  // de partners eerst: "zorgverzekeraar" is een verzekeraar en geen zorgbedrijf
+  [/verzeker|assurantie|volmacht|tussenpersoon/, "verzekeraar"],
+  [/uitzend|detachering|arbeidsbemiddeling|werving/, "uitzendbureau"],
+  [/accountant|administratiekantor|boekhoud|belastingadvi/, "accountant"],
   [/horeca|hotel|restaurant|caf[eé]/, "horeca"],
   [/retail|winkel|detailhandel/, "retail"],
   [/schoonmaak|cleaning/, "schoonmaak"],
