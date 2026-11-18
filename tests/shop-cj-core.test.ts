@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CLAIM_MAX_MS, categorieKeuze, categorieVanCj, doelgroepVanCj, fotosVan, goedkoopsteVerzending, kleurEnMaat, leesCjProduct, leesCjTreffer, leesClaim, onzeSku, tekstUitHtml, usdCentsVan, voorraadVan } from "@/lib/shop/cj/cj-core";
+import { CLAIM_MAX_MS, categorieKeuze, categorieVanCj, doelgroepVanCj, fotosVan, goedkoopsteVerzending, kleurEnMaat, leesCjProduct, leesCjTreffer, leesClaim, leesVoorraadPerVariant, lijktDuits, onzeSku, tekstUitHtml, usdCentsVan, voorraadVan } from "@/lib/shop/cj/cj-core";
 
 // CJ Dropshipping lezen (18 nov 2026): dollars → centen, "Black-XL" → kleur en maat,
 // foto's, voorraad, onze categorie en doelgroep. Alles puur, zonder netwerk.
@@ -100,6 +100,21 @@ describe("categorie en doelgroep", () => {
     ["Christmas", "Christmas tree ornaments set", "Feest & seizoen"],
     ["Video Games", "Wireless gamepad for PC", "Gaming & hobby"],
     ["Kids & Baby", "Baby stroller lightweight", "Baby & kind"],
+    // uit de eerste 68 overgenomen producten (18 nov 03:00): dierenspeelgoed, gaming-stoelen, meubels, servetringen
+    ["Pet Toys", "Cat Toy With 3 Replacement Feather Tufts", "Huisdieren"],
+    ["Toys", "Blue Dog Toy Ball", "Huisdieren"],
+    ["Toys", "Football for dogs", "Huisdieren"],
+    ["Furniture", "Ergonomic gaming chair PU leather", "Gaming & hobby"],
+    ["Furniture", "TV cabinet white grey", "Wonen & keuken"],
+    ["Furniture", "Loft bed 140x200 with LED light", "Wonen & keuken"],
+    ["Home Decor", "Napkin rings rose shape set of 6", "Wonen & keuken"],
+    ["Consumer Electronics", "Wireless lavalier microphone", "Elektronica"],
+    ["Christmas", "Christmas wooden house model kit", "Gaming & hobby"],
+    ["Racing", "Steering wheel stand adjustable foldable", "Gaming & hobby"],
+    ["Tools", "Electric hot glue gun", "Tuin & klussen"],
+    ["Sports", "Professional dartboard", "Sport & buiten"],
+    ["Toys", "Kids play shop box", "Speelgoed"],
+    ["Toys & Hobbies", "Plush bear", "Speelgoed"],
   ])("%s / %s → %s", (cat, naam, verwacht) => {
     expect(categorieVanCj(cat, naam)).toBe(verwacht);
   });
@@ -208,5 +223,32 @@ describe("verzendkosten van CJ (freightCalculate)", () => {
     expect(goedkoopsteVerzending([])).toBeNull();
     expect(goedkoopsteVerzending({ list: [] })).toBeNull();
     expect(goedkoopsteVerzending([{ logisticName: "x", logisticPrice: -1 }])).toBeNull();
+  });
+});
+
+describe("voorraad per variant (getInventoryByPid) en Duits herkennen", () => {
+  it("telt per variant alle magazijnen op, of alleen het gekozen land", () => {
+    const d = {
+      inventories: [{ countryCode: "CN", totalInventoryNum: 100 }],
+      variantInventories: [
+        { vid: "V1", inventory: [{ countryCode: "DE", totalInventory: 5 }, { countryCode: "CN", totalInventory: 100 }] },
+        { vid: "V2", inventory: [] },
+        null,
+        { inventory: [{ countryCode: "CN", totalInventory: 9 }] },
+      ],
+    };
+    expect([...leesVoorraadPerVariant(d).entries()]).toEqual([["V1", 105], ["V2", 0]]);
+    expect(leesVoorraadPerVariant(d, "DE").get("V1")).toBe(5);
+    expect(leesVoorraadPerVariant(null).size).toBe(0);
+    expect(leesVoorraadPerVariant({ variantInventories: "x" }).size).toBe(0);
+  });
+
+  it("herkent een half Duitse vertaling, en laat gewoon Nederlands met rust", () => {
+    expect(lijktDuits("Goldaufkleber 16 Stücke")).toBe(true);
+    expect(lijktDuits("Sprühcabine Weiß")).toBe(true);
+    expect(lijktDuits("Hoesje für iPhone")).toBe(true);
+    expect(lijktDuits("Gaming stoel ergonomisch")).toBe(false);
+    expect(lijktDuits("Set van 2 muurstickers met die leuke controller")).toBe(false);
+    expect(lijktDuits("Kerst houten huismodel bouwset")).toBe(false);
   });
 });

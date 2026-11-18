@@ -4,6 +4,7 @@ import { AppError } from "@/lib/errors";
 import { withAdminAccess } from "@/lib/auth/handlers";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { cjZoek } from "@/lib/shop/cj/cj-client";
+import { naarEngelsZoekwoord } from "@/lib/shop/cj/zoekwoord";
 import { leesCjInstellingen } from "@/lib/shop/cj/importeer";
 import { leesBeleidOpgeslagen } from "@/lib/shop/winkel-ai";
 import { prijsUitInkoop, tariefVoor } from "@/lib/shop/winkel-ai-core";
@@ -28,12 +29,14 @@ export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princi
   if (!parsed.success) throw AppError.validation("Typ een zoekwoord (hooguit 80 tekens).");
   const [instel, beleid, koersen] = await Promise.all([leesCjInstellingen(), leesBeleidOpgeslagen(), ecbKoersen().catch(() => null)]);
   const land = parsed.data.land !== undefined ? parsed.data.land : instel.land;
-  const r = await cjZoek({ q: parsed.data.q, pagina: parsed.data.pagina, land: land || undefined });
+  // de catalogus is Engels; "speelgoed" wordt "toys" (lib/shop/cj/zoekwoord.ts), Engels blijft Engels
+  const zoek = naarEngelsZoekwoord(parsed.data.q);
+  const r = await cjZoek({ q: zoek.q, pagina: parsed.data.pagina, land: land || undefined });
   const marge = instel.margePct ?? beleid.margePct;
   const producten = r.treffers.map((t) => {
     const inkoopCents = koersen ? naarEuroCents(t.inkoopUsdCents, "USD", koersen) : null;
     const prijs = inkoopCents !== null ? prijsUitInkoop(inkoopCents + instel.verzendCents, marge, tariefVoor(t.naamEn)) : null;
     return { ...t, inkoopCents, prijsCents: prijs?.prijsCents ?? null };
   });
-  return NextResponse.json({ producten, totaal: r.totaal, pagina: r.pagina, land, margePct: marge, verzendCents: instel.verzendCents, koersDatum: koersen ? koersDatumTekst(koersen.datum) : null });
+  return NextResponse.json({ producten, totaal: r.totaal, pagina: r.pagina, gezochtOp: zoek.q, vertaald: zoek.vertaald, land, margePct: marge, verzendCents: instel.verzendCents, koersDatum: koersen ? koersDatumTekst(koersen.datum) : null });
 });
