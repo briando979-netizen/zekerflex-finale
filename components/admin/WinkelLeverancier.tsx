@@ -12,7 +12,7 @@ import { SHOP_CATEGORIEEN } from "@/lib/shop/categorieen";
 type Stand = { ingesteld: boolean; bewijsGeldigTot: string | null; laatsteOk: string | null; laatsteFout: string | null; laatsteFoutOp: string | null; instellingen: { verzendCents: number; land: string; margePct: number | null } };
 type Treffer = { pid: string; naamEn: string; foto: string | null; inkoopUsdCents: number; inkoopCents: number | null; prijsCents: number | null; categorie: string; categorieCj: string; gevoerd: number };
 type Zoek = { producten: Treffer[]; totaal: number; pagina: number; land: string; margePct: number; verzendCents: number; koersDatum: string | null };
-type Uitkomst = { pid: string } & ({ fout: string } | { bestaand: boolean; id: string; slug: string; naam: string; prijsCents: number; inkoopCents: number; varianten: number; fotos: number; vertaald: boolean; actief: boolean; melding: string | null });
+type Uitkomst = { pid: string } & ({ fout: string } | { bestaand: boolean; id: string; slug: string; naam: string; prijsCents: number; inkoopCents: number; varianten: number; fotos: number; vertaald: boolean; actief: boolean; verzendCents?: number; verzendEcht?: boolean; melding: string | null });
 
 async function vraag<T>(url: string, body?: unknown, methode = body === undefined ? "GET" : "POST"): Promise<T> {
   const res = await fetch(url, { method: methode, headers: { "Content-Type": "application/json" }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
@@ -181,7 +181,7 @@ export function Leverancier() {
         {zoek && zoek.producten.length > 0 && (
           <div className="mt-4 space-y-3">
             <div className="flex flex-wrap items-center gap-3 text-sm" style={{ color: "var(--a-mute)" }}>
-              <span>{zoek.totaal} gevonden{zoek.land ? `, met voorraad in ${zoek.land}` : ""} · marge {zoek.margePct} % · verzending {euro(zoek.verzendCents)} per stuk{zoek.koersDatum ? ` · dollarkoers ${zoek.koersDatum}` : ""}</span>
+              <span>{zoek.totaal} gevonden{zoek.land ? `, met voorraad in ${zoek.land}` : ""} · marge {zoek.margePct} % · verzending geschat {euro(zoek.verzendCents)} per stuk (bij overnemen vraagt ZekerFlex het echte tarief naar NL op bij CJ){zoek.koersDatum ? ` · dollarkoers ${zoek.koersDatum}` : ""}</span>
               <label className="flex items-center gap-2" style={{ color: "var(--a-text)" }}><input type="checkbox" checked={meteenAan} onChange={(e) => setMeteenAan(e.target.checked)} /> Meteen aan in de winkel</label>
               <label className="flex items-center gap-2" style={{ color: "var(--a-text)" }}>
                 Categorie
@@ -202,8 +202,8 @@ export function Leverancier() {
                     <input type="checkbox" className="mt-1" checked={gekozen.has(p.pid)} onChange={() => wissel(p.pid)} aria-label={`Kies ${p.naamEn}`} />
                     <div className="min-w-0 flex-1">
                       <div className="aspect-square w-full overflow-hidden rounded-lg" style={{ background: "var(--a-soft, #eee)" }}>
-                        {/* eslint-disable-next-line @next/next/no-img-element -- foto van de leverancier, alleen in dit beheerscherm; bij overnemen komt hij in onze eigen opslag */}
-                        {p.foto && <img src={p.foto} alt="" className="h-full w-full object-cover" loading="lazy" />}
+                        {/* eslint-disable-next-line @next/next/no-img-element -- voorbeeldfoto van de leverancier via onze eigen route (de CSP van Beheer staat alleen eigen foto's toe); bij overnemen komt hij in onze opslag */}
+                        {p.foto && <img src={`/api/admin/shop-ai/cj/foto?u=${encodeURIComponent(p.foto)}`} alt="" className="h-full w-full object-cover" loading="lazy" />}
                       </div>
                       <p className="mt-2 line-clamp-2 text-sm font-semibold" style={{ color: "var(--a-text)" }}>{p.naamEn}</p>
                       <p className="text-xs" style={{ color: "var(--a-mute)" }}>{p.categorie}{p.categorieCj ? ` · CJ: ${p.categorieCj}` : ""}{p.gevoerd ? ` · ${p.gevoerd}× gevoerd` : ""}</p>
@@ -236,7 +236,7 @@ export function Leverancier() {
                   <>
                     <Pill tone={u.actief ? "ok" : "warn"}>{u.bestaand ? "stond er al" : u.actief ? "aan" : "uit"}</Pill>
                     <a className="font-semibold underline" style={{ color: "var(--a-text)" }} href={`/shop/${u.slug}`} target="_blank" rel="noreferrer">{u.naam}</a>
-                    <span style={{ color: "var(--a-mute)" }}>{euro(u.prijsCents)} (inkoop {euro(u.inkoopCents)}) · {u.varianten} varianten · {u.fotos} foto&apos;s{u.vertaald ? "" : " · nog Engels"}</span>
+                    <span style={{ color: "var(--a-mute)" }}>{euro(u.prijsCents)} (inkoop {euro(u.inkoopCents)}) · {u.varianten} varianten · {u.fotos} foto&apos;s{typeof u.verzendCents === "number" && !u.bestaand ? ` · verzending ${euro(u.verzendCents)}${u.verzendEcht ? " (tarief CJ)" : " (geschat)"}` : ""}{u.vertaald ? "" : " · nog Engels"}</span>
                     {u.melding && <span style={{ color: "var(--a-mute)" }}>· {u.melding}</span>}
                   </>
                 )}

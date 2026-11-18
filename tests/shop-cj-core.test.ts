@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categorieKeuze, categorieVanCj, doelgroepVanCj, fotosVan, kleurEnMaat, leesCjProduct, leesCjTreffer, onzeSku, tekstUitHtml, usdCentsVan, voorraadVan } from "@/lib/shop/cj/cj-core";
+import { CLAIM_MAX_MS, categorieKeuze, categorieVanCj, doelgroepVanCj, fotosVan, goedkoopsteVerzending, kleurEnMaat, leesCjProduct, leesCjTreffer, leesClaim, onzeSku, tekstUitHtml, usdCentsVan, voorraadVan } from "@/lib/shop/cj/cj-core";
 
 // CJ Dropshipping lezen (18 nov 2026): dollars → centen, "Black-XL" → kleur en maat,
 // foto's, voorraad, onze categorie en doelgroep. Alles puur, zonder netwerk.
@@ -65,6 +65,27 @@ describe("categorie en doelgroep", () => {
   it("een slim horloge is elektronica, een gewoon horloge een sieraad", () => {
     expect(categorieVanCj("Watches", "Smart watch with heart rate")).toBe("Elektronica");
     expect(categorieVanCj("Watches", "Quartz watch")).toBe("Sieraden & horloges");
+  });
+
+  // 18 nov: de eerste echte zoekopdracht ("kids toys") zette een zitzak onder tassen en speelgoed onder cadeaus
+  it.each([
+    ["Furniture", "Lazy Sofa Durable Comfort Lounger High-Back Bean Bag Chair", "Wonen & keuken"],
+    ["Furniture", "Children's Bed House Bed With Chimney", "Wonen & keuken"],
+    ["Furniture", "90x200cm Sofa Bed With Trundle Bed", "Wonen & keuken"],
+    ["Furniture", "Kids Bouncy Castle, Inflatable Bouncer With Blower", "Speelgoed"],
+    ["Furniture", "Kids Electric Car 12V Kids Car With Remote Control", "Speelgoed"],
+    ["Event & Party Supplies", "2025 Advent Calendar: Cars, Toys For Boys Age 3-8", "Speelgoed"],
+    ["Event & Party Supplies", "Building Block Train Track Set - 32-Piece City Train", "Speelgoed"],
+    ["Event & Party Supplies", "Solar System Craft Kit With Wooden Pieces", "Speelgoed"],
+    ["Event & Party Supplies", "2M 20 Owls Decor Fall String Lights Kids' Room", "Wonen & keuken"],
+    ["Event & Party Supplies", "30-Piece Unicorn Hanging Swirls", "Cadeaus"],
+    ["Stationeries", "168 Color Dual Tip Art Markers Drawing Set", "Werkdag"],
+    ["Lipstick", "Makeup Sets Kids Gift Box", "Beauty & verzorging"],
+    ["Women's Clothing", "Lightweight jacket", "Kleding"],
+    ["Lighting", "LED ring light for selfies", "Wonen & keuken"],
+    ["Men's Clothing", "Baggy jeans", "Kleding"],
+  ])("%s / %s → %s", (cat, naam, verwacht) => {
+    expect(categorieVanCj(cat, naam)).toBe(verwacht);
   });
 
   it("leest voor wie het is", () => {
@@ -134,5 +155,42 @@ describe("een heel product", () => {
     expect(leesCjTreffer({ id: "P3", nameEn: "Cable", sku: "S3", bigImage: "https://img/c.jpg", sellPrice: 1 })?.sku).toBe("S3");
     expect(leesCjTreffer({ pid: "P4", productNameEn: "Geen prijs" })).toBeNull();
     expect(onzeSku("CJ123-BK/XL")).toBe("cj-cj123-bk-xl");
+  });
+});
+
+describe("het slot op een pid (shop:cj:pid)", () => {
+  const nu = Date.parse("2026-11-18T03:00:00Z");
+
+  it("leest vrij, product, bezig en verlopen", () => {
+    expect(leesClaim(null, nu)).toEqual({ soort: "vrij" });
+    expect(leesClaim(undefined, nu)).toEqual({ soort: "vrij" });
+    expect(leesClaim("prod_123", nu)).toEqual({ soort: "product", id: "prod_123" });
+    expect(leesClaim({ bezig: "2026-11-18T02:55:00Z" }, nu)).toEqual({ soort: "bezig", sinds: "2026-11-18T02:55:00Z", verlopen: false });
+    expect(leesClaim({ bezig: "2026-11-18T02:40:00Z" }, nu)).toEqual({ soort: "bezig", sinds: "2026-11-18T02:40:00Z", verlopen: true });
+    expect(leesClaim({ bezig: "onzin" }, nu).soort).toBe("bezig");
+    expect((leesClaim({ bezig: "onzin" }, nu) as { verlopen: boolean }).verlopen).toBe(true);
+  });
+
+  it("het oude losse woord 'bezig' (een import die door een herstart afbrak) is altijd verlopen", () => {
+    expect(leesClaim("bezig", nu)).toEqual({ soort: "bezig", sinds: null, verlopen: true });
+    expect(CLAIM_MAX_MS).toBe(15 * 60_000);
+  });
+});
+
+describe("verzendkosten van CJ (freightCalculate)", () => {
+  it("kiest de goedkoopste dienst en leest tekst- en getalprijzen", () => {
+    const d = [
+      { logisticName: "CJPacket Sensitive", logisticPrice: "7.35", logisticAging: "8-15" },
+      { logisticName: "PostNL Packet", logisticPrice: 5.1, logisticAging: "6-12" },
+      { logisticName: "Kapot", logisticPrice: "n.v.t." },
+      null,
+    ];
+    expect(goedkoopsteVerzending(d)).toEqual({ usdCents: 510, dienst: "PostNL Packet", dagen: "6-12" });
+  });
+
+  it("zonder bruikbare dienst null (dan rekent de import met de schatting)", () => {
+    expect(goedkoopsteVerzending([])).toBeNull();
+    expect(goedkoopsteVerzending({ list: [] })).toBeNull();
+    expect(goedkoopsteVerzending([{ logisticName: "x", logisticPrice: -1 }])).toBeNull();
   });
 });

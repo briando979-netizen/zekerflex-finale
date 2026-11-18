@@ -134,28 +134,75 @@ export function voorraadVan(inventories: unknown, land?: string): number {
   return Math.round(som);
 }
 
+// De volgorde is de voorrang: de eerste regel die ergens in "CJ-categorie + naam" past, wint. Zo gaat
+// "Toys For Boys" onder "Event & Party Supplies" naar Speelgoed (niet naar Cadeaus om dat "party"),
+// en een "Bean Bag Chair" onder "Furniture" naar Wonen & keuken (niet naar Tassen om dat "bag").
+// Cadeaus is de laatste regel én de uitkomst als niets past.
 const REGELS: [RegExp, ShopCategorie][] = [
   [/\b(safety|work ?wear|workwear|ppe|protective|hi-?vis|helmet|work glove)/i, "Werk & PBM"],
-  [/\b(toy|toys|plush|puzzle|doll|building blocks?|lego|rc car)/i, "Speelgoed"],
-  [/\b(jewel|necklace|bracelet|earring|pendant|ring|watch(?!.*smart)|watches)/i, "Sieraden & horloges"],
+  [/\b(toy|toys|plush|puzzle|doll|building blocks?|lego|rc car|bouncy|inflatable (castle|pool|slide)|ride-?on|kids?'? (electric )?car|train track|craft kit|play ?set|board game|slime|stuffed animal|jigsaw)/i, "Speelgoed"],
+  [/\b(jewel|necklace|bracelet|earring|pendant|rings?\b(?! light)|watch(?!.*smart)|watches)/i, "Sieraden & horloges"],
   [/\b(electronic|bluetooth|speaker|headphone|earphone|earbud|charger|charging|cable|usb|power bank|camera|smart ?watch|smart home|phone|tablet|keyboard|mouse|gadget|led strip|drone|projector|tracker)/i, "Elektronica"],
-  [/\b(bag|bags|backpack|handbag|wallet|purse|shoe|shoes|sneaker|boot|boots|sandal|slipper|luggage)/i, "Tassen & schoenen"],
+  [/\b(furniture|sofa|couch|bean ?bag|chairs?\b|stools?\b|beds?\b|daybed|mattress|tables?\b|desks?\b|shel(f|ves)\b|cabinet|wardrobe|curtain|rugs?\b|carpet|pillow|cushion|blanket|home|kitchen|decor|garden|storage|lamp|lights?\b|lighting|bedding|towel|pets?\b|cleaning|organizer|cups?\b|mug|bottle)/i, "Wonen & keuken"],
+  [/\b(bags?\b|backpack|handbag|wallet|purse|shoe|shoes|sneaker|boots?\b|sandal|slipper|luggage)/i, "Tassen & schoenen"],
   [/\b(beauty|make ?up|skin ?care|hair|nail|massage|cosmetic|perfume|shaver|trimmer|brush)/i, "Beauty & verzorging"],
-  [/\b(sport|fitness|yoga|gym|outdoor|camping|hiking|cycling|bike|fishing|swim|running|ball)/i, "Sport & buiten"],
-  [/\b(home|kitchen|decor|garden|storage|lamp|light|lighting|bedding|towel|pet|cleaning|organizer|cup|mug|bottle)/i, "Wonen & keuken"],
-  [/\b(cloth|clothing|dress|shirt|t-shirt|hoodie|jacket|pants|trousers|sweater|apparel|coat|socks|jeans|skirt|lingerie|underwear|swimwear|hat|cap|scarf|gloves)/i, "Kleding"],
+  [/\b(sport|fitness|yoga|gym|outdoor|camping|hiking|cycling|bike|fishing|swim|running|balls?\b)/i, "Sport & buiten"],
+  [/\b(cloth|clothing|dress|shirt|t-shirt|hoodie|jacket|pants|trousers|sweater|apparel|coat|socks|jeans|skirt|lingerie|underwear|swimwear|hats?\b|caps?\b|scarf|gloves)/i, "Kleding"],
+  [/\b(stationer(y|ies)|office|notebooks?\b|pens?\b|markers?\b|pencils?\b|planner)/i, "Werkdag"],
   [/\b(gift|gifts|present|novelty|party)/i, "Cadeaus"],
 ];
 
-/** Onze categorie uit de CJ-categorie en de naam; de categorie weegt het zwaarst. */
+/** Onze categorie uit de CJ-categorie en de naam samen; de volgorde van REGELS is de voorrang. */
 export function categorieVanCj(categorieCj: unknown, naamEn: unknown): ShopCategorie {
+  const bron = `${tekst(categorieCj)} ${tekst(naamEn)}`.trim();
+  if (!bron) return "Cadeaus";
   // een slim horloge is elektronica, ook als CJ hem onder "Watches" zet
-  if (/smart ?watch/i.test(`${tekst(categorieCj)} ${tekst(naamEn)}`)) return "Elektronica";
-  for (const bron of [tekst(categorieCj), tekst(naamEn)]) {
-    if (!bron) continue;
-    for (const [re, cat] of REGELS) if (re.test(bron)) return cat;
-  }
+  if (/smart ?watch/i.test(bron)) return "Elektronica";
+  for (const [re, cat] of REGELS) if (re.test(bron)) return cat;
   return "Cadeaus";
+}
+
+/** Zo lang mag een overname "bezig" zijn; daarna mag een volgende klik het slot overnemen (bv. na een herstart midden in een import). */
+export const CLAIM_MAX_MS = 15 * 60_000;
+
+export type ClaimStand = { soort: "vrij" } | { soort: "product"; id: string } | { soort: "bezig"; sinds: string | null; verlopen: boolean };
+
+/**
+ * Wat staat er in KV shop:cj:pid:<pid>? Een product-id (al overgenomen), een slot `{ bezig: <tijd> }` (nog bezig,
+ * of verlopen als het ouder is dan CLAIM_MAX_MS), het oude losse woord "bezig" (van vóór 18 nov: altijd verlopen) of niets.
+ */
+export function leesClaim(waarde: unknown, now = Date.now()): ClaimStand {
+  if (waarde === null || waarde === undefined || waarde === "") return { soort: "vrij" };
+  if (typeof waarde === "string") return waarde === "bezig" ? { soort: "bezig", sinds: null, verlopen: true } : { soort: "product", id: waarde };
+  if (typeof waarde === "object" && typeof (waarde as { bezig?: unknown }).bezig === "string") {
+    const sinds = (waarde as { bezig: string }).bezig;
+    const t = Date.parse(sinds);
+    return { soort: "bezig", sinds, verlopen: !Number.isFinite(t) || now - t > CLAIM_MAX_MS };
+  }
+  return { soort: "bezig", sinds: null, verlopen: true };
+}
+
+export interface CjVerzending {
+  usdCents: number;
+  dienst: string;
+  /** levertijd zoals CJ hem noemt, bv. "6-12" (dagen); leeg als onbekend */
+  dagen: string;
+}
+
+/** De goedkoopste dienst uit het antwoord van logistic/freightCalculate (logisticPrice in dollars). */
+export function goedkoopsteVerzending(data: unknown): CjVerzending | null {
+  if (!Array.isArray(data)) return null;
+  let beste: CjVerzending | null = null;
+  for (const r of data) {
+    if (!r || typeof r !== "object") continue;
+    const o = r as Record<string, unknown>;
+    const prijs = getal(o.logisticPrice);
+    if (prijs === null || prijs < 0) continue;
+    const usdCents = Math.round(prijs * 100);
+    if (beste && beste.usdCents <= usdCents) continue;
+    beste = { usdCents, dienst: tekst(o.logisticName).slice(0, 80), dagen: tekst(o.logisticAging).slice(0, 20) };
+  }
+  return beste;
 }
 
 /** Voor wie, uit de CJ-categorie ("Women's Clothing", "Men's Shoes", "Kids & Baby"). */
