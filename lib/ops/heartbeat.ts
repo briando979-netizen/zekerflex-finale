@@ -66,6 +66,9 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "schijfreeks", label: "Schijfreeks: elk uur de schijfstand bewaren", maxAgeHours: 3 },
   // elk uur op :50 (/api/internal/melder/samenvatting): het uurbericht voor de eigenaar (lib/ops/melder.ts); alarm na 3 uur stilte
   { job: "melder-samenvatting", label: "Melder: uursamenvatting naar de eigenaar", maxAgeHours: 3 },
+  // elke avond 20:00 UTC en elke ochtend 07:30 UTC (/api/internal/melder/rapport): het dagrapport en "dit wacht op jou"; alarm na 30 uur stilte
+  { job: "melder-dagrapport", label: "Melder: dagrapport naar de eigenaar", maxAgeHours: 30 },
+  { job: "melder-wacht", label: "Melder: 'dit wacht op jou' naar de eigenaar", maxAgeHours: 30 },
   { job: "auto-uitrol", label: "Auto-uitrol: main controleren en live zetten", maxAgeHours: 0.5 },
   // elke 10 min: de nieuwste main alvast controleren vóór het live zetten (lib/bouwer/controles.ts)
   { job: "controles-tick", label: "Controle van main (TypeScript, eslint, tests)", maxAgeHours: 2 },
