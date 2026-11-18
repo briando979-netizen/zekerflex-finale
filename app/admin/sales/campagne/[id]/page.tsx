@@ -2,13 +2,16 @@ import Link from "next/link";
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
-import { count, dateTimeNl } from "@/lib/admin/format";
+import { count, dateNl, dateTimeNl } from "@/lib/admin/format";
 import { Empty, KpiStrip, PageHead, Panel, Pill, type Tone } from "@/components/admin/kit";
 import { CampagneMailFormulier } from "@/components/admin/sales/CampagneMailFormulier";
 import { CampagneConcepten, type ConceptDto } from "@/components/admin/sales/CampagneConcepten";
 import { CAMPAGNE_TEKST_MODEL } from "@/lib/sales/campagne-tekst";
 import { leesCampagneTekst } from "@/lib/sales/campagne-tekst-opslag";
 import { GRATIS_DAGEN } from "@/lib/introducties/regels";
+import { binnenVrijePeriode, laatsteGratisDag } from "@/lib/introducties/periode";
+import { PARTNERDEAL_DAGEN, lijstPartnerdeal } from "@/lib/billing/partnerdeal-vrij";
+import { PartnerdealGratis, type GratisRij } from "@/components/admin/sales/PartnerdealGratis";
 import { BASE_FEE_PER_HOUR_CENTS } from "@/lib/pricing/tiers";
 
 export const dynamic = "force-dynamic";
@@ -86,6 +89,14 @@ export default async function CampagneRuimtePage(props: { params: Promise<{ id: 
   const automatisch = campaign.mode === "AUTOPILOT" && env.SALES_AUTOPILOT_ENABLED && Boolean(campaign.autopilotConfirmedAt);
   const fee = (BASE_FEE_PER_HOUR_CENTS / 100).toFixed(2).replace(".", ",");
   const belooftMaand = tekst ? /maand/i.test(`${tekst.onderwerp} ${tekst.tekst}`) : false;
+  // de bedrijven met de gratis maand; de dag is een Amsterdamse dag ("JJJJ-MM-DD"), 12:00 UTC valt altijd op die dag
+  const nu = new Date();
+  const gratisRijen: GratisRij[] = (await lijstPartnerdeal()).map((d) => ({
+    tenantId: d.tenantId,
+    bedrijf: d.bedrijf,
+    tot: `t/m ${dateNl(`${laatsteGratisDag(d)}T12:00:00Z`)}`,
+    loopt: binnenVrijePeriode(d, nu),
+  }));
 
   return (
     <div className="space-y-4">
@@ -141,18 +152,19 @@ export default async function CampagneRuimtePage(props: { params: Promise<{ id: 
           <ol className="list-decimal space-y-1.5 pl-5">
             <li>Het bedrijf maakt een account aan (de knop in de mail) of antwoordt op de mail.</li>
             <li>
-              Is het bedrijf door een werker of een ander bedrijf voorgesteld, dan koppel je het in <Link href="/admin/sales?weergave=introducties" className="underline">Beheer → Sales → Introducties</Link> aan zijn account. Vanaf die dag rekent het platform <strong>{GRATIS_DAGEN} dagen</strong> geen platformkosten. Dat aantal staat vast in het systeem; je kunt het niet per bedrijf kiezen.
+              Vul hieronder het e-mailadres in waarmee het bedrijf zich heeft aangemeld en druk op de knop. Vanaf vandaag rekent het platform <strong>{PARTNERDEAL_DAGEN} dagen</strong> geen platformkosten. Dat stopt vanzelf; je hoeft niets terug te zetten. Een bedrijf krijgt de gratis maand één keer.
             </li>
-            <li>
-              Komt het bedrijf uit deze campagne (dus niet voorgesteld door iemand), dan werkt die koppeling niet: het systeem zegt dan &quot;Bij deze lead hoort geen introductie&quot;. Je kunt het account dan kosteloos zetten in <Link href="/admin/kosteloos" className="underline">Beheer → Kosteloze accounts</Link>. Dat blijft gratis tot je het zelf weer uitzet, dus zet een herinnering in je agenda.
-            </li>
+            <li>Zet het bedrijf daarna als partner op de site. Dat doe je nu nog met de hand; vraag het bedrijf eerst of zijn naam genoemd mag worden.</li>
           </ol>
-          <p className="rounded-lg px-4 py-2.5" style={{ background: "var(--a-warn-soft)", color: "var(--a-text)", boxShadow: "inset 3px 0 0 var(--a-warn)" }}>
-            Let op: de automatische gratis periode is nu {GRATIS_DAGEN} dagen, geen 30.{" "}
-            {belooftMaand
-              ? "Jouw mail belooft een maand. Die belofte maak je alleen waar als je het account zelf een maand kosteloos zet en het daarna weer uitzet."
-              : "Beloof in de mail dus geen maand, tenzij je het account zelf een maand kosteloos zet."}
+          <p>
+            Is een bedrijf door een werker of een ander bedrijf voorgesteld, dan gebruik je <Link href="/admin/sales?weergave=introducties" className="underline">Beheer → Sales → Introducties</Link>: dat geeft {GRATIS_DAGEN} dagen. De twee tellen niet bij elkaar op.
           </p>
+          {belooftMaand ? null : (
+            <p className="rounded-lg px-4 py-2.5" style={{ background: "var(--a-warn-soft)", color: "var(--a-text)", boxShadow: "inset 3px 0 0 var(--a-warn)" }}>
+              Je mail noemt geen maand. Het platform geeft {PARTNERDEAL_DAGEN} dagen; zeg dat erbij als je het aanbod noemt.
+            </p>
+          )}
+          <PartnerdealGratis rijen={gratisRijen} dagen={PARTNERDEAL_DAGEN} />
         </div>
       </Panel>
     </div>

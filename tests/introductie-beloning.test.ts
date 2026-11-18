@@ -68,7 +68,7 @@ describe("waar het inhaakt op het geld", () => {
   it("goedkeuren: alleen de platformkosten van een gekoppeld bedrijf in de gratis weken, met de reden; de rest blijft gelijk", () => {
     const s = bron("lib/timesheets/approve.ts");
     expect(s).toContain("const introductieVrij = !freeFee && (await introductieZonderFee(ts.branch.tenantId, ts.scheduledStart));");
-    expect(s).toContain("platformFeePerHourCents: freeFee || introductieVrij ? 0 : feePerHourFor(monthHours),");
+    expect(s).toContain("platformFeePerHourCents: freeFee || introductieVrij || partnerdealVrij ? 0 : feePerHourFor(monthHours),");
     expect(s).toContain("...(introductieVrij ? { platformFeeReden: INTRODUCTIE_FEE_REDEN } : {}),");
     // de € 0-factuur wordt meteen op betaald gezet en krijgt geen mail, net als bij een kosteloos bedrijf
     expect(s).toContain("{ paid: billing.platformFeeInvoice.totalCents === 0 },");
