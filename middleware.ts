@@ -354,8 +354,26 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     }
   }
 
+  // Een demo/voorbeeld-sessie (read-only inspect) die naar /login of /register navigeert,
+  // wil de demo verlaten. Haal de demo-cookie hier al weg: anders stuurt de pagina de
+  // "ingelogde" demo-bezoeker meteen door (hij ziet het formulier nooit) en zou het
+  // versturen daarna op de alleen-lezen 423 vastlopen. Alleen op een GET, en alleen als er
+  // echt een sessiecookie is (een uitgelogde bezoeker hoeft niet ontcijferd te worden).
+  let demoNaarAuth = false;
+  if (READ_METHODS.has(req.method) && (p === "/login" || p === "/register")) {
+    const token = sessionToken(req);
+    if (token) demoNaarAuth = (await decodeSession(token))?.inspect === true;
+  }
+  if (demoNaarAuth) {
+    req.cookies.delete(SESSION_COOKIE);
+    req.headers.delete("authorization");
+  }
+
   const res = await handle(req);
   const pathname = req.nextUrl.pathname;
+  if (demoNaarAuth) {
+    res.cookies.set(SESSION_COOKIE, "", { path: "/", maxAge: 0, httpOnly: true, sameSite: "lax", secure: !IS_DEV });
+  }
   if (inspectSession) {
     res.cookies.set(SESSION_COOKIE, inspectSession, {
       path: "/",

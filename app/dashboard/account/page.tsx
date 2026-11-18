@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requirePrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { UitloggenFormulier } from "@/components/app/UitloggenFormulier";
+import { inDemoSessie, VOORBEELD_UITGANG } from "@/lib/auth/demo-sessie";
 import { getUserCard, workerMissWhere } from "@/lib/profile/card";
 import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
@@ -35,6 +36,8 @@ export default async function AccountPage() {
     where: { userId: principal.userId },
     select: { id: true },
   });
+  // in een voorbeeld (demo) wordt de uitlogknop een gewone uitgang-link (lib/auth/demo-sessie.ts)
+  const demo = await inDemoSessie();
 
   const since = new Date();
   since.setMonth(since.getMonth() - 6);
@@ -269,7 +272,10 @@ export default async function AccountPage() {
           <AccountLanguageRow />
         </div>
 
-        <UitloggenFormulier className="overflow-hidden rounded-2xl border border-hair bg-white shadow-card">
+        <UitloggenFormulier
+          className="overflow-hidden rounded-2xl border border-hair bg-white shadow-card"
+          {...(demo ? { demoUitgang: VOORBEELD_UITGANG } : {})}
+        >
           <button
             type="submit"
             className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left text-sm font-semibold text-crit hover:bg-crit/5"

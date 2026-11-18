@@ -6,5 +6,7 @@
 export const DEMO_BANNER_TEKST =
   "Dit is een voorbeeld van ZekerFlex. Kijk gerust rond, er wordt niets opgeslagen.";
 
+export const DEMO_BANNER_SLUITEN = "Sluit voorbeeld";
+
 export const DEMO_BANNER_WERKER = { href: "/register?type=freelancer", knop: "Maak gratis je profiel" } as const;
 export const DEMO_BANNER_WERKGEVER = { href: "/register?type=bedrijf", knop: "Maak een bedrijfsaccount" } as const;

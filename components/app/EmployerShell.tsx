@@ -56,6 +56,7 @@ export function EmployerShell({
   hulp,
   handleidingen = null,
   settingsHref = "/werkgever/instellingen",
+  demoUitgang,
   children,
 }: {
   /** de dashboards van het bedrijf (lib/werkgever/werkruimte.ts): de wisselaar bovenaan de zijbalk */
@@ -76,6 +77,9 @@ export function EmployerShell({
   /** adres van de handleidingen (Outline); null = niet ingesteld */
   handleidingen?: string | null;
   settingsHref?: string;
+  /** In een voorbeeld (demo) wordt de uitlogknop een gewone link hiernaartoe: een GET verlaat
+   *  de demo, terwijl uitloggen (een POST) in de alleen-lezen demo op 423 vastloopt. */
+  demoUitgang?: string;
   children: ReactNode;
 }) {
   const t = useT();
@@ -277,7 +281,7 @@ export function EmployerShell({
             </span>
             {!collapsed && t.shell.settings}
           </Link>
-          <form action={logoutAction}>
+          <form {...(demoUitgang ? { action: demoUitgang, method: "get" as const } : { action: logoutAction })}>
             <button
               title={collapsed ? t.shell.logout : undefined}
               className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-neutralx-500 transition hover:bg-white hover:text-crit ${
@@ -409,7 +413,7 @@ export function EmployerShell({
                   <Link href="/" className="block rounded-lg px-3 py-2 text-sm text-ink hover:bg-paper-soft">
                     {t.common.naarWebsite}
                   </Link>
-                  <form action={logoutAction}>
+                  <form {...(demoUitgang ? { action: demoUitgang, method: "get" as const } : { action: logoutAction })}>
                     <button className="block w-full rounded-lg px-3 py-2 text-left text-sm text-crit hover:bg-crit/5">
                       {t.shell.logout}
                     </button>

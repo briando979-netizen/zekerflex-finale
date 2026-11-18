@@ -12,6 +12,7 @@ import { IosAppProvider } from "@/components/app/useInIosApp";
 import { ViewAsBanner } from "@/components/admin/ViewAsBanner";
 import { DemoBanner } from "@/components/app/DemoBanner";
 import { DEMO_BANNER_WERKGEVER } from "@/components/app/demo-banner-texts";
+import { inDemoSessie, VOORBEELD_UITGANG } from "@/lib/auth/demo-sessie";
 import { OpbouwfaseBalk } from "@/components/app/OpbouwfaseBalk";
 import { EmployerShell } from "@/components/app/EmployerShell";
 import { getUserAvatars } from "@/lib/profile/store";
@@ -98,6 +99,8 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     heeftAfspraken(tenantId),
   ]);
   const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
+  // in een voorbeeld (demo) wordt de uitlogknop een gewone uitgang-link (lib/auth/demo-sessie.ts)
+  const demo = await inDemoSessie();
 
   // elk onderdeel één keer; de werkruimte kiest welke en in welke volgorde
   const onderdelen: Record<MenuSleutel, Omit<NavItem, "section">> = {
@@ -193,6 +196,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
         hulp={hulpTekstenWerkgever(locale)}
         handleidingen={kennisbankIngesteld() ? `${outlinePubliekeUrl()}/` : null}
         dashboards={{ actief: werkruimte.soort, dashboards: werkruimte.dashboards, kanToevoegen: beheerder }}
+        {...(demo ? { demoUitgang: VOORBEELD_UITGANG } : {})}
       >
         <OpbouwfaseBalk soort="werkgever" />
         {children}

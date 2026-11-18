@@ -2,7 +2,8 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { decodeSession, SESSION_COOKIE } from "@/lib/auth/session";
 import { VIEW_AS_COOKIE } from "@/lib/auth/inspect";
-import { DEMO_BANNER_TEKST } from "./demo-banner-texts";
+import { VOORBEELD_UITGANG } from "@/lib/auth/demo-sessie";
+import { DEMO_BANNER_TEKST, DEMO_BANNER_SLUITEN } from "./demo-banner-texts";
 
 /**
  * Server: een balk bovenaan het dashboard als iemand via /voorbeeld in een
@@ -26,6 +27,12 @@ export async function DemoBanner({ href, knop }: { href: string; knop: string })
         className="rounded-full bg-brand-mint px-3 py-1 text-xs font-bold text-ink transition hover:brightness-105"
       >
         {knop}
+      </Link>
+      <Link
+        href={VOORBEELD_UITGANG}
+        className="text-xs font-semibold text-white/90 underline underline-offset-2 hover:text-white"
+      >
+        {DEMO_BANNER_SLUITEN}
       </Link>
     </div>
   );

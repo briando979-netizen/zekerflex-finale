@@ -3,6 +3,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { naarStudioAccount } from "@/lib/studio/account-server";
 import { prisma } from "@/lib/prisma";
 import { logoutAction } from "@/lib/auth/actions";
+import { inDemoSessie, VOORBEELD_UITGANG } from "@/lib/auth/demo-sessie";
 import { PageHeader, Panel } from "@/components/app/ui";
 import { PersonalInfoForm } from "@/components/app/PersonalInfoForm";
 import { updateEmployerPersonalInfoAction } from "@/app/werkgever/account/actions";
@@ -32,6 +33,8 @@ export default async function WerkgeverAccountPage() {
   ]);
   const t = d.persoonlijkAccount;
   const en = locale === "en";
+  // in een voorbeeld (demo) wordt de uitlogknop een gewone uitgang-link (lib/auth/demo-sessie.ts)
+  const demo = await inDemoSessie();
 
   return (
     <>
@@ -82,7 +85,10 @@ export default async function WerkgeverAccountPage() {
         </Panel>
       </div>
 
-      <form action={logoutAction} className="mt-6 overflow-hidden rounded-2xl border border-hair bg-white shadow-card">
+      <form
+        {...(demo ? { action: VOORBEELD_UITGANG, method: "get" as const } : { action: logoutAction })}
+        className="mt-6 overflow-hidden rounded-2xl border border-hair bg-white shadow-card"
+      >
         <button
           type="submit"
           className="flex w-full items-center justify-between gap-3 px-5 py-3.5 text-left text-sm font-semibold text-crit hover:bg-crit/5"
