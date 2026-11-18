@@ -73,7 +73,7 @@ export function adresRegels(adres: string, plaats: string): string[] {
   return [...regels, ...(tweede ? [tweede] : [])];
 }
 
-/** "0634825780" → "06 34 82 57 80"; een vast nummer → "050 123 4567". Anders zoals ingevoerd. */
+/** "0612345678" → "06 12 34 56 78"; een vast nummer → "050 123 4567". Anders zoals ingevoerd. */
 export function telefoonWeergave(telefoon: string): string {
   const c = telefoon.replace(/[^\d+]/g, "").replace(/^\+31/, "0").replace(/^0031/, "0");
   if (/^06\d{8}$/.test(c)) return `06 ${c.slice(2).replace(/(\d{2})(?=\d)/g, "$1 ")}`;
@@ -81,7 +81,7 @@ export function telefoonWeergave(telefoon: string): string {
   return telefoon.trim();
 }
 
-/** Voor een tel:-link: "0634825780" → "+31634825780". */
+/** Voor een tel:-link: "0612345678" → "+31612345678". */
 export function telefoonLink(telefoon: string): string {
   const c = telefoon.replace(/[^\d+]/g, "");
   if (/^0[1-9]\d{8}$/.test(c)) return `+31${c.slice(1)}`;
