@@ -85,7 +85,7 @@ export function volgendeStap(w: CjWachtrij): "pagina" | "product" | "klaar" | "w
 /** Een pagina van de zoekuitslag is binnen: pids erbij (zonder dubbele), en weten of er nog een pagina is. */
 export function metPagina(w: CjWachtrij, pids: string[], now = new Date()): CjWachtrij {
   const bekend = new Set(w.buffer);
-  const nieuw = pids.filter((p) => p && !bekend.has(p));
+  const nieuw = [...new Set(pids)].filter((p) => p && !bekend.has(p));
   const paginaKlaar = pids.length < WACHTRIJ_PER_PAGINA || w.paginaVolgende * WACHTRIJ_PER_PAGINA >= w.totaal;
   return { ...w, buffer: [...w.buffer, ...nieuw], paginaVolgende: w.paginaVolgende + 1, paginaKlaar, bijgewerktOp: now.toISOString(), laatsteFout: null };
 }
