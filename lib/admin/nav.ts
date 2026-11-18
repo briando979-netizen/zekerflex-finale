@@ -150,6 +150,7 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/zekerflex-ai", label: "ZekerFlex AI" },
       { href: "/admin/zekerflex-ai/mijn-ai", label: "Mijn AI" },
       { href: "/admin/zekerflex-ai/medewerkers", label: "AI-medewerkers" },
+      { href: "/admin/automatisch", label: "Automatisch gedaan" },
       { href: "/admin/gratis", label: "Alles gratis" },
       { href: "/admin/ai-trader", label: "AI-trader" },
       { href: "/admin/specialisten", label: "Specialisten" },
