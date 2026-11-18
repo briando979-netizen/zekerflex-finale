@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Empty, Notice, Panel, Pill } from "@/components/admin/kit";
 import { euro } from "@/lib/admin/format";
 import { SHOP_CATEGORIEEN } from "@/lib/shop/categorieen";
+import { CjWachtrij } from "@/components/admin/WinkelCjWachtrij";
 
 // Beheer → Winkel-AI → Leverancier en Marges (18 nov 2026). Leverancier: de CJ-sleutel, zoeken in de
 // catalogus (elektronica, speelgoed, cadeaus, kleding met kleuren en maten) en producten overnemen met
@@ -36,6 +37,7 @@ export function Leverancier() {
   const [categorie, setCategorie] = useState("");
   const [uitkomsten, setUitkomsten] = useState<Uitkomst[]>([]);
   const [verzendTekst, setVerzendTekst] = useState("");
+  const [wachtrijTik, setWachtrijTik] = useState(0);
   const [bijwerk, setBijwerk] = useState<{ bekeken: number; categorie: number; voorraad: number; vertaald: number; fouten: number; totaal: number; klaar: boolean } | null>(null);
   const [land, setLand] = useState("");
   const [margeTekst, setMargeTekst] = useState("");
@@ -198,7 +200,24 @@ export function Leverancier() {
               <button type="button" className="a-btn" disabled={bezig !== "" || gekozen.size === 0} onClick={() => void overnemen([...gekozen])}>
                 {bezig === "import" ? "Overnemen…" : `Gekozen overnemen (${gekozen.size})`}
               </button>
-              <button type="button" className="a-btn" disabled={bezig !== ""} onClick={() => void overnemen(zoek.producten.map((p) => p.pid))}>Alle {zoek.producten.length} overnemen</button>
+              <button type="button" className="a-btn" disabled={bezig !== ""} onClick={() => void overnemen(zoek.producten.map((p) => p.pid))}>Deze {zoek.producten.length} overnemen</button>
+              {zoek.totaal > zoek.producten.length && (
+                <button
+                  type="button"
+                  className="a-btn"
+                  disabled={bezig !== ""}
+                  onClick={() => {
+                    if (!window.confirm(`Alle ${zoek.totaal} treffers overnemen? Dat gaat op de achtergrond, een paar per twee minuten (ongeveer ${Math.max(1, Math.round((zoek.totaal * 30) / 3600))} uur). Je kunt pauzeren of stoppen.`)) return;
+                    void doe("import", async () => {
+                      await vraag("/api/admin/shop-ai/cj/wachtrij", { actie: "start", q, categorie: categorie || null, actief: meteenAan });
+                      setBericht(`Wachtrij gestart voor ${zoek.totaal} producten. De voortgang staat hieronder.`);
+                      setWachtrijTik((t) => t + 1);
+                    });
+                  }}
+                >
+                  Alles overnemen ({zoek.totaal})
+                </button>
+              )}
             </div>
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {zoek.producten.map((p) => (
@@ -229,6 +248,8 @@ export function Leverancier() {
         )}
         {zoek && zoek.producten.length === 0 && <div className="mt-4"><Empty title="Niets gevonden" body="Probeer een ander Engels zoekwoord." /></div>}
       </Panel>
+
+      <CjWachtrij tik={wachtrijTik} />
 
       {uitkomsten.length > 0 && (
         <Panel title="Overgenomen" subtitle="Elke regel is een product in Beheer → Webshop. Tekst in het Engels? Dan lukte vertalen niet; pas hem daar aan.">

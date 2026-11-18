@@ -76,6 +76,8 @@ export interface CjKoppeling {
   /** de automatische categorie bij de laatste ronde; wijkt de categorie in de winkel daarvan af, dan koos de beheerder zelf en blijft die staan */
   categorieAuto?: ShopCategorie;
   bijgewerktOp?: string;
+  /** de wachtrij wilde dit product aan, maar de tekst was nog Engels: de Bijwerken-ronde zet het aan zodra de vertaling lukt */
+  activerenNaVertaling?: boolean;
 }
 
 export async function leesCjKoppeling(productId: string): Promise<CjKoppeling | null> {
@@ -174,7 +176,15 @@ const KLEDINGACHTIG = new Set<ShopCategorie>(["Kleding", "Tassen & schoenen", "S
  * Het product overnemen. `actief`: meteen in de winkel zetten, maar alleen als de hoofdfoto gelukt is
  * (een product zonder foto gaat nooit aan). Een pid die al eerder is overgenomen, komt niet nog een keer.
  */
-export async function importeerCjProduct(pid: string, opties: { actorUserId: string | null; actief: boolean; categorie?: string | undefined }): Promise<ImportUitkomst> {
+export interface ImportOpties {
+  actorUserId: string | null;
+  actief: boolean;
+  categorie?: string | undefined;
+  /** alleen aan met Nederlandse tekst (de wachtrij): zonder vertaling blijft het uit en wacht het op Bijwerken */
+  alleenVertaaldAan?: boolean | undefined;
+}
+
+export async function importeerCjProduct(pid: string, opties: ImportOpties): Promise<ImportUitkomst> {
   const sleutel = `${K_PID}${pid}`;
   const stand = leesClaim(await kvGet<unknown>(sleutel).catch(() => null));
   if (stand.soort === "product") {
@@ -203,7 +213,7 @@ export async function importeerCjProduct(pid: string, opties: { actorUserId: str
   }
 }
 
-async function overnemen(pid: string, opties: { actorUserId: string | null; actief: boolean; categorie?: string | undefined }): Promise<ImportUitkomst> {
+async function overnemen(pid: string, opties: ImportOpties): Promise<ImportUitkomst> {
   const p: CjProduct = await cjProduct(pid);
   const verzending = await verzendingVanCj(p);
   const prijs = await prijsVoorCj(p.inkoopUsdCents, p.naamEn, verzending?.usdCents);
@@ -258,7 +268,10 @@ async function overnemen(pid: string, opties: { actorUserId: string | null; acti
   }
   const hoofd = uploads[0] ?? null;
   const model = KLEDINGACHTIG.has(categorie) ? (uploads[1] ?? null) : null;
-  const actief = opties.actief && hoofd !== null && aantalVarianten > 0;
+  const kanAan = hoofd !== null && aantalVarianten > 0;
+  // in de wachtrij gaat een product zonder Nederlandse tekst niet aan; het wacht op de Bijwerken-ronde (activerenNaVertaling)
+  const actief = opties.actief && kanAan && (!opties.alleenVertaaldAan || tekst.vertaald);
+  const activerenNaVertaling = opties.actief && kanAan && !actief;
   await prisma.shopProduct.update({
     where: { id: product.id },
     data: {
@@ -281,6 +294,7 @@ async function overnemen(pid: string, opties: { actorUserId: string | null; acti
     geimporteerdOp: new Date().toISOString(),
     vertaald: tekst.vertaald,
     categorieAuto: p.categorie,
+    ...(activerenNaVertaling ? { activerenNaVertaling: true } : {}),
   };
   await kvSet(`${K_PRODUCT}${product.id}`, koppeling);
   await kvSet(`${K_PID}${pid}`, product.id);
@@ -300,7 +314,7 @@ async function overnemen(pid: string, opties: { actorUserId: string | null; acti
   let melding: string | null = null;
   if (!hoofd) melding = "De foto's van de leverancier waren niet over te nemen; het product staat uit tot er een foto is.";
   else if (aantalVarianten === 0) melding = "Geen enkele variant kon worden aangemaakt (de sku's bestonden al); het product staat uit.";
-  else if (!tekst.vertaald) melding = "De tekst kon niet worden vertaald en staat nog in het Engels; pas hem aan in Beheer → Webshop.";
+  else if (!tekst.vertaald) melding = activerenNaVertaling ? "De tekst kon nog niet worden vertaald (het model was weg); het product staat uit en gaat aan zodra de knop Bijwerken hem vertaalt." : "De tekst kon niet worden vertaald en staat nog in het Engels; pas hem aan in Beheer → Webshop.";
   else if (!verzending) melding = "CJ gaf geen verzendtarief naar Nederland; de prijs rekent met de schatting uit de instellingen.";
   return { bestaand: false, id: product.id, slug, naam: tekst.naam, prijsCents: prijs.prijsCents, inkoopCents: prijs.inkoopCents, varianten: aantalVarianten, fotos: uploads.length, vertaald: tekst.vertaald, actief, verzendCents: prijs.verzendCents, verzendEcht: verzending !== null, melding };
 }
@@ -450,8 +464,10 @@ async function bijwerkEen(id: string): Promise<{ categorie: boolean; voorraad: b
       ...(categorie ? { category: auto } : {}),
       ...(totaal !== product.stock ? { stock: totaal } : {}),
       ...(tekst ? { name: tekst.naam, description: tekst.omschrijving } : {}),
+      // de wachtrij wilde dit product aan en wachtte alleen op de vertaling
+      ...(tekst && k.activerenNaVertaling ? { active: true } : {}),
     },
   });
-  await kvSet(`${K_PRODUCT}${id}`, { ...k, categorieAuto: auto, ...(tekst ? { vertaald: true } : {}), bijgewerktOp: new Date().toISOString() } satisfies CjKoppeling);
+  await kvSet(`${K_PRODUCT}${id}`, { ...k, categorieAuto: auto, ...(tekst ? { vertaald: true, activerenNaVertaling: false } : {}), bijgewerktOp: new Date().toISOString() } satisfies CjKoppeling);
   return { categorie, voorraad: voorraad || totaal !== product.stock, vertaald: tekst !== null };
 }
