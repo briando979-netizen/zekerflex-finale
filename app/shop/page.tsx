@@ -160,6 +160,14 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
 
   return (
     <>
+      {/* Sinds de kop weg is (18 nov) had /shop geen h1 meer (de koppen begonnen bij h2: slecht voor SEO en schermlezers). Een
+          onzichtbare h1; `relative` eromheen, zodat de sr-only-tekst nooit buiten het scherm uitsteekt (AGENTS.md). Bij zoeken of
+          filteren (browsing) zet ShopStorefront zelf de titel als h1. */}
+      {!browsing && (
+        <div className="relative">
+          <h1 className="sr-only">{korteTitel}</h1>
+        </div>
+      )}
       {!browsing && achtergrond && <PaginaAchtergrond pagina="shop" />}
       {zichtbaar.map((id) => (
         <Fragment key={id}>{onderdelen[id]}</Fragment>
