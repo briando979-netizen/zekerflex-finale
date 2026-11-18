@@ -104,7 +104,9 @@ for i in 1 2 3; do
     # crowdsec: de aanvalsbescherming (deploy/crowdsec) gaat mee in elke uitrol; de
     # firewall-bouncer op de host haalt de blokkades bij hem op en hoeft niet mee
     # forgejo: de eigen Git-server (spiegel van GitHub, deploy/forgejo)
-    sudo $C up -d app backup coturn freeradius headscale vpn-uitgang metabase outline crowdsec whisper forgejo
+    # ollama hoort erbij: alleen zo maakt een nieuwe mem_limit of omgeving de container opnieuw aan (18 nov: 5632m → 6656m);
+    # was hij voor het bouwen gestopt, dan start hij hier weer (de trap `ollama_terug` doet dan niets meer)
+    sudo $C up -d app backup coturn freeradius headscale vpn-uitgang metabase outline crowdsec whisper forgejo ollama
     # de WhatsApp-brug (deploy/whatsapp-brug, eigen compose-bestand): alleen als hij is ingericht (sleutel in
     # .env.production); bouwen is gecacht en een mislukte build laat de oude draaien
     if sudo grep -q '^WHATSAPP_BRUG_TOKEN=' .env.production 2>/dev/null; then

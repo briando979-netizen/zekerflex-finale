@@ -207,8 +207,13 @@ services:
     # beide modellen ruimer binnen de grens passen. Warm houden: /api/internal/ai/warm.
     # Gemeten 13 nov (17, productie-instellingen): de gemma-runner piekt op ±4,2 GiB,
     # met granite erbij ±4,9 GiB; met 4g viel hij elke ochtend rond 06:00 UTC om (OOM-kill).
-    # 5632m geeft ±750 MiB ruimte; vps-update.sh stopt Ollama nog steeds bij < 6 GB vrij.
-    mem_limit: 5632m
+    # 5632m gaf ±750 MiB ruimte; vps-update.sh stopt Ollama nog steeds bij < 6 GB vrij.
+    # Gemeten 18 nov (d7): met 5632m zat de container in rust op 99,7% van de grens (memory.current 5,89 van
+    # 5,91 GB: runner gemma 4,66 GB + granite 0,68 GB + ollama), elke prompt van 300-900 tokens liet de anon van de
+    # runner naar ±5,55 GB groeien en de kernel schoot hem die dag 8× af (14-16 UTC, tijdens de CJ-vertalingen en
+    # de autopilot van 15:00). 6656m geeft ±1 GB lucht boven die piek. Meten na de uitrol: dmesg, memory.peak,
+    # MemAvailable op de host (16 GB, 6,1 GB available, swap 3 van 4 GB in gebruik).
+    mem_limit: 6656m
     oom_score_adj: 500
     environment:
       OLLAMA_FLASH_ATTENTION: "1"
