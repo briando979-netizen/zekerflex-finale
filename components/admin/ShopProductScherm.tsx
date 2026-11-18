@@ -140,6 +140,8 @@ export function ShopProductScherm({
   const [naam, setNaam] = useState(product?.name ?? "");
   const [omschrijving, setOmschrijving] = useState(product?.description ?? "");
   const [prijsTekst, setPrijsTekst] = useState(product ? centenNaarEuro(product.priceCents) : "");
+  // de prijs zoals hij nu op de server staat; een aanbieding starten of stoppen verandert hem (ShopAanbieding meldt dat)
+  const [basisPrijsCents, setBasisPrijsCents] = useState<number | null>(product ? product.priceCents : null);
   const [inkoopTekst, setInkoopTekst] = useState(product?.costCents != null ? centenNaarEuro(product.costCents) : "");
   const [categorie, setCategorie] = useState<Categorie>((CATEGORIEEN as readonly string[]).includes(product?.category ?? "") ? (product!.category as Categorie) : "Kleding");
   const [doelgroep, setDoelgroep] = useState(product?.gender ?? "");
@@ -256,7 +258,8 @@ export function ShopProductScherm({
       category: categorie,
       gender: doelgroep ? doelgroep : null,
       collection: collectie.trim() || null,
-      priceCents: prijs ?? 0,
+      // bij een bestaand product alleen als de prijs echt gewijzigd is: anders bewaart een tekstwijziging na een aanbieding de actieprijs
+      ...(product && prijs === basisPrijsCents ? {} : { priceCents: prijs ?? 0 }),
       costCents: inkoopTekst.trim() && inkoop !== null ? inkoop : null,
       stock: totaal,
       imageUrl: verdeeld.imageUrl,
@@ -441,7 +444,15 @@ export function ShopProductScherm({
             </label>
           </div>
           {/* een aanbieding kan pas bij een product dat al bestaat (er is dan een prijs om mee te vergelijken) */}
-          {product && <ShopAanbieding productId={product.id} />}
+          {product && (
+            <ShopAanbieding
+              productId={product.id}
+              onGewijzigd={(prijsCents) => {
+                setBasisPrijsCents(prijsCents);
+                setPrijsTekst(centenNaarEuro(prijsCents));
+              }}
+            />
+          )}
           <label className="a-label block">
             <span className="flex flex-wrap items-center justify-between gap-2">
               <span>Omschrijving</span>

@@ -99,11 +99,15 @@ describe("banners", () => {
     expect(new Set(fotos).size).toBe(fotos.length);
   });
 
-  it("geen kortingsbelofte: de shop heeft geen van-prijs, dus geen deal, percentage of aftelklok in de banners", () => {
+  it("geen verzonnen korting: zonder echte aanbiedingen (lib/shop/aanbieding.ts) geen deal, percentage of aftelklok in de banners", () => {
     const blok = lees("components/marketing/ShopEtalage.tsx");
     expect(blok).not.toMatch(/line-through|adviesprijs|dagdeal|korting|black friday/i);
     const teksten = [...shopBanners(catalogus, sint), ...shopBanners(catalogus, new Date("2026-12-10T12:00:00+01:00"))].map((b) => `${b.kop.nl} ${b.kop.en} ${b.accent.nl} ${b.accent.en}`).join(" ");
     expect(teksten).not.toMatch(/korting|deal|sale|%|black friday/i);
+    // met echte aanbiedingen (minstens drie) komt de banner er wel, zonder percentage of aftelklok
+    const metDeals = shopBanners(catalogus.map((x, i) => ({ ...x, deal: i < 3 })), new Date("2026-11-27T12:00:00+01:00"));
+    expect(metDeals[0]?.sleutel).toBe("black-friday");
+    expect(`${metDeals[0]?.accent.nl} ${metDeals[0]?.accent.en}`).not.toMatch(/%|\d/);
     // de rij veegt op de telefoon zonder dat de pagina breder wordt
     expect(blok).toMatch(/<ul className="relative -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto/);
   });

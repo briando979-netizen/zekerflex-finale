@@ -1996,6 +1996,8 @@ model ShopProductVariant {
 // Elke prijs die een product (variantId null) of een variant met een eigen prijs heeft gehad. Gevuld door de database zelf
 // (triggers in migratie 20261118060000_shop_aanbieding), zodat geen enkele weg die een prijs wijzigt hem overslaat. Hieruit
 // komt de "van"-prijs van een aanbieding: de laagste prijs van de laatste 30 dagen.
+// Let op: de triggers hangen aan de kolom priceCents (UPDATE OF). Het type van priceCents op ShopProduct of
+// ShopProductVariant wijzigen kan daardoor niet zonder eerst de triggers weg te halen en daarna terug te zetten.
 model ShopPriceLog {
   id         String      @id @default(cuid())
   productId  String

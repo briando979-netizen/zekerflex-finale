@@ -6,6 +6,9 @@
 -- "ShopProductVariant"; DROP FUNCTION shop_prijs_log_product(); DROP FUNCTION shop_prijs_log_variant();
 -- DROP TABLE "ShopPriceLog"; en de vijf deal-kolommen weghalen.
 
+-- niet lang wachten op een slot terwijl de winkel draait: liever falen en opnieuw proberen
+SET lock_timeout = '5s';
+
 ALTER TABLE "ShopProduct" ADD COLUMN "dealVanCents" INTEGER,
 ADD COLUMN "dealNormaalCents" INTEGER,
 ADD COLUMN "dealEindigt" TIMESTAMP(3);
@@ -30,8 +33,9 @@ CREATE INDEX "ShopProduct_dealEindigt_idx" ON "ShopProduct"("dealEindigt");
 ALTER TABLE "ShopPriceLog" ADD CONSTRAINT "ShopPriceLog_productId_fkey" FOREIGN KEY ("productId") REFERENCES "ShopProduct"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- de beginstand: de prijs van nu. Een product dat sinds het aanmaken nooit is gewijzigd, heeft die prijs zeker al sinds
--- het aanmaken: daar begint zijn historie dan ook. Van elk ander product weten we de prijs pas zeker vanaf vandaag; daar
--- kan dus pas over 30 dagen een aanbieding op (lib/shop/aanbieding.ts, historieDekt).
+-- het aanmaken: daar begint zijn historie dan ook. Van elk ander product weten we de prijs pas zeker vanaf vandaag.
+-- Een aanbieding kan pas als de historie 30 dagen dekt (lib/shop/aanbieding.ts, historieDekt). Een variant met een eigen
+-- prijs begint altijd vandaag.
 INSERT INTO "ShopPriceLog" ("id", "productId", "variantId", "priceCents", "at")
 SELECT gen_random_uuid()::text, p."id", NULL, p."priceCents",
        CASE WHEN p."updatedAt" <= p."createdAt" + INTERVAL '1 minute' THEN p."createdAt" ELSE CURRENT_TIMESTAMP END
@@ -44,13 +48,8 @@ CREATE FUNCTION shop_prijs_log_product() RETURNS TRIGGER
 LANGUAGE plpgsql AS $$
 BEGIN
   IF TG_OP = 'INSERT' OR NEW."priceCents" IS DISTINCT FROM OLD."priceCents" THEN
-    BEGIN
-      INSERT INTO "ShopPriceLog" ("id", "productId", "variantId", "priceCents", "at")
-      VALUES (gen_random_uuid()::text, NEW."id", NULL, NEW."priceCents", CURRENT_TIMESTAMP);
-    EXCEPTION WHEN OTHERS THEN
-      -- de prijswijziging zelf gaat altijd door; alleen de historie mist dan een regel
-      RAISE WARNING 'shop prijslog mislukt: %', SQLERRM;
-    END;
+    INSERT INTO "ShopPriceLog" ("id", "productId", "variantId", "priceCents", "at")
+    VALUES (gen_random_uuid()::text, NEW."id", NULL, NEW."priceCents", CURRENT_TIMESTAMP);
   END IF;
   RETURN NEW;
 END;
@@ -64,13 +63,8 @@ CREATE FUNCTION shop_prijs_log_variant() RETURNS TRIGGER
 LANGUAGE plpgsql AS $$
 BEGIN
   IF NEW."priceCents" IS NOT NULL AND (TG_OP = 'INSERT' OR NEW."priceCents" IS DISTINCT FROM OLD."priceCents") THEN
-    BEGIN
-      INSERT INTO "ShopPriceLog" ("id", "productId", "variantId", "priceCents", "at")
-      VALUES (gen_random_uuid()::text, NEW."productId", NEW."id", NEW."priceCents", CURRENT_TIMESTAMP);
-    EXCEPTION WHEN OTHERS THEN
-      -- de prijswijziging zelf gaat altijd door; alleen de historie mist dan een regel
-      RAISE WARNING 'shop prijslog mislukt: %', SQLERRM;
-    END;
+    INSERT INTO "ShopPriceLog" ("id", "productId", "variantId", "priceCents", "at")
+    VALUES (gen_random_uuid()::text, NEW."productId", NEW."id", NEW."priceCents", CURRENT_TIMESTAMP);
   END IF;
   RETURN NEW;
 END;

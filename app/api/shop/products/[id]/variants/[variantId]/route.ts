@@ -1,3 +1,4 @@
+import { AppError } from "@/lib/errors";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -26,6 +27,11 @@ export const PATCH = withAdminAccess<{ id: string; variantId: string }>(
   async (request, { params, principal }) => {
     await ownedVariant(params.id, params.variantId);
     const d = patchSchema.parse(await request.json());
+    // tijdens een aanbieding staat de gewone prijs apart; een andere prijs zou bij het stoppen weer overschreven worden
+    if (d.priceCents !== undefined) {
+      const nu = await prisma.shopProductVariant.findUnique({ where: { id: params.variantId }, select: { priceCents: true, product: { select: { dealNormaalCents: true } } } });
+      if (nu && nu.product.dealNormaalCents !== null && nu.priceCents !== d.priceCents) throw AppError.validation("Op dit product loopt een aanbieding. Stop die eerst; daarna kun je de prijs wijzigen.");
+    }
     const variant = await prisma.shopProductVariant.update({
       where: { id: params.variantId },
       data: {

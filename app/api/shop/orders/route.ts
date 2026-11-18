@@ -1,3 +1,5 @@
+import { geldendePrijsCents } from "@/lib/shop/aanbieding";
+import { herstelVerlopenAanbiedingen } from "@/lib/shop/aanbieding-server";
 import { emailHash } from "@/lib/auth/email-hash";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -78,9 +80,12 @@ export async function POST(request: Request): Promise<NextResponse> {
     const perOverschrijving = (await huidigeShopBetaalwijze()) === "overschrijving";
     if (!perOverschrijving) await eisBetalenAan();
 
+    // verlopen aanbiedingen eerst terug naar de gewone prijs; lukt dat niet, dan rekent geldendePrijsCents alsnog de gewone prijs
+    const nu = new Date();
+    await herstelVerlopenAanbiedingen(nu, true);
     const variants = await prisma.shopProductVariant.findMany({
       where: { id: { in: d.items.map((i) => i.variantId) }, product: { active: true } },
-      include: { product: { select: { id: true, name: true, priceCents: true, imageUrl: true, sellerTenantId: true } } },
+      include: { product: { select: { id: true, name: true, priceCents: true, dealNormaalCents: true, dealEindigt: true, imageUrl: true, sellerTenantId: true } } },
     });
     const byId = new Map(variants.map((v) => [v.id, v]));
 
@@ -110,7 +115,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         variantId: v.id,
         productId: v.product.id,
         name: label ? `${v.product.name} — ${label}` : v.product.name,
-        priceCents: v.priceCents ?? v.product.priceCents,
+        priceCents: geldendePrijsCents(v.product, nu, v),
         qty: i.qty,
         imageUrl: v.product.imageUrl,
         size: v.size,

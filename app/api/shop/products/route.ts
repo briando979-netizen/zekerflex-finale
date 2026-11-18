@@ -1,3 +1,4 @@
+import { herstelVerlopenAanbiedingen } from "@/lib/shop/aanbieding-server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { lijst } from "@/lib/http/zod-lijst";
@@ -49,6 +50,8 @@ export async function GET(request: Request): Promise<NextResponse> {
       if (!principal) throw AppError.unauthenticated();
       requireRole(principal, "PLATFORM_ADMIN");
     }
+    // de winkelwagen en de zoekbalk lezen hier de prijzen: verlopen aanbiedingen eerst terug (hooguit één keer per minuut)
+    await herstelVerlopenAanbiedingen();
     const products = await prisma.shopProduct.findMany({
       ...(isAdmin ? {} : { where: { active: true } }),
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],

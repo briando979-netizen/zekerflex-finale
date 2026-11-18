@@ -35,15 +35,14 @@ export function laagsteIn30Dagen(log: readonly PrijsMoment[], nu: Date): number 
 }
 
 /**
- * Dekt de prijshistorie het hele venster? De historie begint bij de eerste regel in ShopPriceLog. Het venster is 30
- * dagen, of korter als het product nog geen 30 dagen bestaat (dan telt de laagste prijs sinds het in de winkel kwam).
- * Dekt hij het niet, dan is `vanaf` de dag waarop het wel kan. Zo staat er nooit een "van"-prijs die we niet zeker weten.
+ * Dekt de prijshistorie het hele venster van 30 dagen? De historie begint bij de eerste regel in ShopPriceLog. Altijd
+ * de volle 30 dagen, ook voor een nieuw product: anders kan iets dat net in de winkel staat meteen in de aanbieding met
+ * een "van"-prijs die niemand ooit betaalde (of na weggooien en opnieuw aanmaken). Dekt hij het niet, dan is `vanaf`
+ * de dag waarop het wel kan.
  */
-export function historieDekt(eersteLog: Date | null, aangemaakt: Date, nu: Date): { dekt: boolean; vanaf: Date | null } {
+export function historieDekt(eersteLog: Date | null, nu: Date): { dekt: boolean; vanaf: Date | null } {
   if (!eersteLog) return { dekt: false, vanaf: null };
-  // een minuut speling: de regel van een nieuw product komt een fractie na het aanmaken
-  const start = Math.max(nu.getTime() - DEAL_VENSTER_DAGEN * DAG, aangemaakt.getTime() + 60_000);
-  if (eersteLog.getTime() <= start) return { dekt: true, vanaf: null };
+  if (eersteLog.getTime() <= nu.getTime() - DEAL_VENSTER_DAGEN * DAG) return { dekt: true, vanaf: null };
   return { dekt: false, vanaf: new Date(eersteLog.getTime() + DEAL_VENSTER_DAGEN * DAG) };
 }
 
@@ -59,6 +58,22 @@ export function dealActief(p: DealVelden, nu: Date): boolean {
   if (!p.dealEindigt) return false;
   const eind = p.dealEindigt instanceof Date ? p.dealEindigt.getTime() : Date.parse(p.dealEindigt);
   return Number.isFinite(eind) && nu.getTime() < eind;
+}
+
+/**
+ * De prijs die nu geldt. Is de einddatum voorbij maar staat de actieprijs er nog (het terugzetten loopt een minuut
+ * achter of mislukte), dan geldt de gewone prijs: na de einddatum betaalt niemand meer de actieprijs.
+ * `eigenCents`/`eigenNormaalCents`: de eigen prijs van een variant (null = de prijs van het product).
+ */
+export function geldendePrijsCents(
+  p: { priceCents: number; dealNormaalCents?: number | null; dealEindigt?: Date | string | null },
+  nu: Date,
+  variant?: { priceCents: number | null; dealNormaalCents?: number | null } | null,
+): number {
+  const eind = p.dealEindigt instanceof Date ? p.dealEindigt.getTime() : p.dealEindigt ? Date.parse(p.dealEindigt) : NaN;
+  const verlopen = typeof p.dealNormaalCents === "number" && Number.isFinite(eind) && eind <= nu.getTime();
+  if (variant && variant.priceCents !== null) return verlopen && typeof variant.dealNormaalCents === "number" ? variant.dealNormaalCents : variant.priceCents;
+  return verlopen ? (p.dealNormaalCents as number) : p.priceCents;
 }
 
 /** De korting in hele procenten, naar beneden afgerond (nooit meer beloven dan het is). */
@@ -86,7 +101,7 @@ export function controleerDeal(a: { nieuwCents: number; laagste: number | null; 
 
 export const DEAL_FOUT_TEKST: Record<DealFout, string> = {
   "geen-historie": "Van dit product is nog geen prijs bekend. Bewaar het product eerst.",
-  "historie-te-kort": "We houden de prijs van dit product nog geen 30 dagen bij. Daarom kan er nu nog geen aanbieding op.",
+  "historie-te-kort": "Dit product staat nog geen 30 dagen met een bekende prijs in de winkel. Daarom kan er nu nog geen aanbieding op.",
   "niet-lager": "De aanbiedingsprijs moet lager zijn dan de laagste prijs van de afgelopen 30 dagen.",
   "te-klein": "De korting is te klein: minstens 1 procent en 5 cent.",
   "eind-voorbij": "Kies een einddatum in de toekomst.",

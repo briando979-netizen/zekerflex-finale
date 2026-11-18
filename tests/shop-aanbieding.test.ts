@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { DEAL_MAX_DAGEN, blackFridayWeek, controleerDeal, dealActief, historieDekt, kortingProcent, laagsteIn30Dagen, variantActiePrijs } from "@/lib/shop/aanbieding";
+import { DEAL_MAX_DAGEN, blackFridayWeek, controleerDeal, dealActief, geldendePrijsCents, historieDekt, kortingProcent, laagsteIn30Dagen, variantActiePrijs } from "@/lib/shop/aanbieding";
 import { shopBanners } from "@/lib/shop/banners";
 import { toShopProduct } from "@/components/marketing/shop-product";
 import type { EtalageProduct } from "@/lib/shop/etalage";
@@ -43,17 +43,15 @@ describe("de laagste prijs van de laatste 30 dagen", () => {
 });
 
 describe("genoeg historie", () => {
-  it("de historie moet het hele venster dekken: 30 dagen, of sinds het product bestaat", () => {
-    // we houden de prijs pas 3 dagen bij van een product dat al maanden bestaat: nog niet, wel over 27 dagen
-    const kort = historieDekt(dag(-3), dag(-200), nu);
+  it("de historie moet de volle 30 dagen dekken, ook voor een nieuw product", () => {
+    // we houden de prijs pas 3 dagen bij: nog niet, wel over 27 dagen
+    const kort = historieDekt(dag(-3), nu);
     expect(kort.dekt).toBe(false);
     expect(kort.vanaf?.getTime()).toBe(dag(27).getTime());
-    // 31 dagen historie: goed
-    expect(historieDekt(dag(-31), dag(-200), nu)).toEqual({ dekt: true, vanaf: null });
-    // een nieuw product van 5 dagen oud, met historie vanaf het aanmaken: goed (laagste prijs sinds het in de winkel kwam)
-    expect(historieDekt(dag(-5), dag(-5), nu).dekt).toBe(true);
-    // geen historie
-    expect(historieDekt(null, dag(-5), nu)).toEqual({ dekt: false, vanaf: null });
+    expect(historieDekt(dag(-31), nu)).toEqual({ dekt: true, vanaf: null });
+    // een product van 5 dagen oud kan niet meteen in de aanbieding met een prijs die niemand betaalde
+    expect(historieDekt(dag(-5), nu).dekt).toBe(false);
+    expect(historieDekt(null, nu)).toEqual({ dekt: false, vanaf: null });
   });
 
   it("zonder volledige historie geen aanbieding, hoe laag de prijs ook is", () => {
@@ -61,8 +59,9 @@ describe("genoeg historie", () => {
     expect(lees("lib/shop/aanbieding-server.ts")).toContain("historieVolledig: historie.dekt");
     // de database vult de beginstand zo dat alleen een nooit gewijzigd product historie sinds het aanmaken heeft
     expect(lees("prisma/migrations/20261118060000_shop_aanbieding/migration.sql")).toContain('CASE WHEN p."updatedAt" <= p."createdAt" + INTERVAL \'1 minute\' THEN p."createdAt" ELSE CURRENT_TIMESTAMP END');
-    // en een logfout houdt een prijswijziging nooit tegen
-    expect(lees("prisma/migrations/20261118060000_shop_aanbieding/migration.sql").match(/EXCEPTION WHEN OTHERS THEN/g)).toHaveLength(2);
+    // geen vangnet in de triggers: een fout in de historie moet zichtbaar zijn, niet stil verdwijnen
+    expect(lees("prisma/migrations/20261118060000_shop_aanbieding/migration.sql")).not.toContain("EXCEPTION");
+    expect(lees("prisma/migrations/20261118060000_shop_aanbieding/migration.sql")).toContain("SET lock_timeout = '5s';");
   });
 });
 
@@ -76,6 +75,22 @@ describe("regels voor een aanbieding", () => {
     expect(controleerDeal({ ...goed, eindigt: dag(-1) })).toBe("eind-voorbij");
     expect(controleerDeal({ ...goed, eindigt: dag(DEAL_MAX_DAGEN + 1) })).toBe("eind-te-ver");
     expect(controleerDeal({ ...goed, nieuwCents: 0 })).toBe("prijs-ongeldig");
+  });
+
+  it("na de einddatum geldt de gewone prijs, ook als de actieprijs er nog staat", () => {
+    const loopt = { priceCents: 3200, dealNormaalCents: 4000, dealEindigt: dag(1) };
+    const voorbij = { priceCents: 3200, dealNormaalCents: 4000, dealEindigt: dag(-1) };
+    expect(geldendePrijsCents(loopt, nu)).toBe(3200);
+    expect(geldendePrijsCents(voorbij, nu)).toBe(4000);
+    expect(geldendePrijsCents({ priceCents: 4000 }, nu)).toBe(4000);
+    // een variant met een eigen prijs volgt zijn eigen gewone prijs; zonder eigen prijs die van het product
+    expect(geldendePrijsCents(voorbij, nu, { priceCents: 3600, dealNormaalCents: 4500 })).toBe(4500);
+    expect(geldendePrijsCents(loopt, nu, { priceCents: 3600, dealNormaalCents: 4500 })).toBe(3600);
+    expect(geldendePrijsCents(voorbij, nu, { priceCents: null })).toBe(4000);
+    // afrekenen en de AI-kassa gebruiken dit
+    expect(lees("app/api/shop/orders/route.ts")).toContain("priceCents: geldendePrijsCents(v.product, nu, v),");
+    expect(lees("app/api/shop/orders/route.ts")).toContain("await herstelVerlopenAanbiedingen(nu, true);");
+    expect(lees("lib/shop/agent-handel-server.ts")).toContain("await herstelVerlopenAanbiedingen(new Date(), true);");
   });
 
   it("het percentage wordt naar beneden afgerond", () => {
@@ -155,6 +170,19 @@ describe("in beheer en op de server", () => {
     expect(server).toContain("const fout = controleerDeal({ nieuwCents: a.nieuwCents, laagste, eindigt: a.eindigt, nu, historieVolledig: historie.dekt });");
     expect(server).toContain("data: { priceCents: a.nieuwCents, dealVanCents: laagste, dealNormaalCents: product.priceCents, dealEindigt: a.eindigt }");
     expect(server).toContain("data: { priceCents: normaal, dealVanCents: null, dealNormaalCents: null, dealEindigt: null }");
+  });
+
+  it("geen aanbieding op een product van een verkoper, een variant alleen doorgestreept met eigen dekking, en prijzen op slot", () => {
+    const server = lees("lib/shop/aanbieding-server.ts");
+    expect(server).toContain("if (product.sellerTenantId !== null) throw AppError.validation(");
+    expect(server).toContain("if (!(await historieVan(product.id, nu, v.id)).dekt) continue;");
+    expect(server).toContain("variantVan.set(v.id, Math.min(l, laagste, v.priceCents));");
+    expect(server).toContain("priceCents: { lt: prisma.shopProduct.fields.dealVanCents }");
+    expect(lees("app/api/shop/products/[id]/variants/[variantId]/route.ts")).toContain("nu.product.dealNormaalCents !== null && nu.priceCents !== d.priceCents");
+    // het productscherm bewaart de prijs alleen als hij gewijzigd is, en neemt de prijs van de server over na starten of stoppen
+    const scherm = lees("components/admin/ShopProductScherm.tsx");
+    expect(scherm).toContain("...(product && prijs === basisPrijsCents ? {} : { priceCents: prijs ?? 0 }),");
+    expect(scherm).toContain("setBasisPrijsCents(prijsCents);");
   });
 
   it("de database houdt elke prijswijziging zelf bij, en wie de prijs wijzigt tijdens een aanbieding moet eerst stoppen", () => {

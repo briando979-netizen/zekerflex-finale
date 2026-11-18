@@ -16,16 +16,18 @@ export const dynamic = "force-dynamic";
 const euro = (c: number) => `€ ${(c / 100).toFixed(2).replace(".", ",")}`;
 
 async function stand(productId: string) {
-  const p = await prisma.shopProduct.findUnique({ where: { id: productId }, select: { id: true, name: true, priceCents: true, createdAt: true, dealVanCents: true, dealNormaalCents: true, dealEindigt: true } });
+  const p = await prisma.shopProduct.findUnique({ where: { id: productId }, select: { id: true, name: true, priceCents: true, sellerTenantId: true, dealVanCents: true, dealNormaalCents: true, dealEindigt: true } });
   if (!p) return null;
   const nu = new Date();
-  const historie = await historieVan(p, nu);
+  const historie = await historieVan(p.id, nu);
   return {
     productId: p.id,
     prijsCents: p.priceCents,
     laagste30Cents: p.dealNormaalCents === null ? await laagstePrijs30Dagen(p.id, nu) : p.dealVanCents,
     /** dekt de prijshistorie het hele venster? Zo niet: de dag waarop een aanbieding wel kan (of null: nog geen prijs bekend) */
     historieVolledig: historie.dekt,
+    /** een product van een verkoper op de marktplaats: daar kan geen aanbieding op */
+    vanVerkoper: p.sellerTenantId !== null,
     kanVanaf: historie.vanaf?.toISOString() ?? null,
     loopt: p.dealNormaalCents !== null,
     zichtbaar: dealActief(p, nu),

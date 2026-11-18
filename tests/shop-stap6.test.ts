@@ -115,7 +115,7 @@ describe("de pagina", () => {
     expect(etalage).toContain('useState<PriceBucket>(initialPrijs ?? "Alle")');
   });
 
-  it("geen verzonnen deals: geen doorgestreepte prijzen, adviesprijzen of aftellende aanbiedingen in de blokken", () => {
+  it("geen verzonnen deals in de blokken van de voorpagina: een doorgestreepte prijs komt alleen uit de prijshistorie (ShopPrijs, lib/shop/aanbieding.ts)", () => {
     // zonder de uitleg in het commentaar (die zegt juist dat er geen deals zijn)
     const blokken = (lees("components/marketing/ShopEtalage.tsx") + lees("lib/shop/etalage.ts"))
       .split("\n")

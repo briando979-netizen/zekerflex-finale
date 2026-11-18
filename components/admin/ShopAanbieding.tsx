@@ -12,6 +12,7 @@ interface Stand {
   prijsCents: number;
   laagste30Cents: number | null;
   historieVolledig: boolean;
+  vanVerkoper: boolean;
   kanVanaf: string | null;
   loopt: boolean;
   zichtbaar: boolean;
@@ -29,7 +30,8 @@ const naarCenten = (s: string): number | null => {
 const dagNl = (iso: string) => new Date(iso).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
 const datumNl = (iso: string) => new Date(iso).toLocaleString("nl-NL", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" });
 
-export function ShopAanbieding({ productId, onGewijzigd }: { productId: string; onGewijzigd?: () => void }) {
+/** `onGewijzigd`: na starten of stoppen, met de prijs die nu op de server staat (het productscherm neemt die over). */
+export function ShopAanbieding({ productId, onGewijzigd }: { productId: string; onGewijzigd?: (prijsCents: number) => void }) {
   const [stand, setStand] = useState<Stand | null>(null);
   const [prijs, setPrijs] = useState("");
   const [totEnMet, setTotEnMet] = useState("");
@@ -68,7 +70,7 @@ export function ShopAanbieding({ productId, onGewijzigd }: { productId: string; 
       setStand(d.aanbieding);
       setOk(methode === "POST" ? "De aanbieding staat aan." : "De aanbieding is gestopt; de gewone prijs staat er weer.");
       setPrijs("");
-      onGewijzigd?.();
+      onGewijzigd?.(d.aanbieding.prijsCents);
     } catch {
       setFout("Geen verbinding. Probeer het opnieuw.");
     } finally {
@@ -97,9 +99,11 @@ export function ShopAanbieding({ productId, onGewijzigd }: { productId: string; 
             {bezig ? "Bezig…" : "Aanbieding stoppen"}
           </button>
         </div>
+      ) : stand.vanVerkoper ? (
+        <p className="text-sm text-neutralx-600">Dit product is van een verkoper op de marktplaats. Een aanbieding kan alleen op eigen producten.</p>
       ) : !stand.historieVolledig ? (
         <p className="text-sm text-neutralx-600">
-          Op dit product kan nu nog geen aanbieding. Wie een korting toont, moet de laagste prijs van de afgelopen 30 dagen erbij zetten, en van dit product houden we de prijs nog niet lang genoeg bij.
+          Op dit product kan nu nog geen aanbieding. Wie een korting toont, moet de laagste prijs van de afgelopen 30 dagen erbij zetten. Dat kan pas als het product 30 dagen met een bekende prijs in de winkel staat.
           {stand.kanVanaf ? <strong> Het kan vanaf {dagNl(stand.kanVanaf)}.</strong> : " Bewaar het product eerst."}
         </p>
       ) : (
