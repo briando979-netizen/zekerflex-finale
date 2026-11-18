@@ -7,56 +7,13 @@ import { Paspop } from "@/components/marketing/paskamer/Paspop";
 import { STANDAARD_LICHAAM, pasvormVoor, type Look } from "@/lib/shop/paskamer";
 import type { Gedragen } from "@/lib/shop/paspop-figuur";
 
-// De startpagina van de shop voor gewone klanten (5 nov 2026): een warme kop
-// met een grote foto (13 nov: de teamfoto van de eigenaar), grote categorietegels en "Shop de look" met paspoppen.
+// De startpagina van de shop voor gewone klanten (5 nov 2026): grote categorietegels en "Shop de look" met
+// paspoppen. De kop met titel en foto is op 18 nov weggehaald op verzoek van de eigenaar.
 // Servercomponenten; alleen de prijs (particulier/zakelijk) is een klein
 // clientonderdeel.
 
 const WRAP = "mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8";
 const H2 = "font-display text-[24px] font-extrabold tracking-tight text-ink sm:text-[30px]";
-
-/** De foto van de kop als de beheerder er geen koos (Beheer → Webshop → Foto's en video's). Eigen foto van de eigenaar. */
-export const SHOP_KOP_FOTO = { src: "/shop/kop-team.jpg", alt: "Vier mensen in ZekerFlex-kleding lachen samen voor een bakstenen muur met het ZF-logo" } as const;
-
-export function ShopThuisHero({ t, foto = SHOP_KOP_FOTO }: { t: Dict; foto?: { src: string; alt: string } }) {
-  const h = t.shopThuis;
-  return (
-    <section aria-labelledby="shop-kop" className="overflow-hidden bg-[#f4efe6]">
-      <div className={`${WRAP} grid items-center gap-8 py-8 sm:py-12 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-12 lg:py-12`}>
-        <div>
-          <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-brand-600">{h.heroEyebrow}</p>
-          <h1 id="shop-kop" className="mt-3 font-display text-[2.4rem] font-extrabold leading-[1.02] tracking-tight text-ink sm:text-6xl">
-            {h.heroTitel}
-          </h1>
-          <p className="mt-4 max-w-lg text-[16px] leading-relaxed text-neutralx-700 sm:text-[17px]">{h.heroSub}</p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link href="#collectie" className="inline-flex h-12 items-center rounded-full bg-ink px-7 text-[15px] font-bold text-white transition hover:bg-ink/85">
-              {h.heroKnop}
-            </Link>
-            <PaskamerLink href="/shop/paskamer" className="inline-flex h-12 items-center gap-2 rounded-full border border-ink/20 bg-white px-6 text-[15px] font-bold text-ink transition hover:border-ink/40">
-              {h.heroPaskamer}
-              <span className="rounded-full bg-brand-mint px-1.5 py-px text-[10px] font-bold uppercase tracking-wide">{t.paskamer.nieuw}</span>
-            </PaskamerLink>
-          </div>
-          <ul className="mt-7 flex flex-wrap gap-x-5 gap-y-2 text-[13px] font-semibold text-neutralx-700">
-            {[t.shop.uspNextDay, t.shop.freeShipping, t.shop.uspReturns].map((u) => (
-              <li key={u} className="flex items-center gap-1.5">
-                <Vink /> {u}
-              </li>
-            ))}
-          </ul>
-        </div>
-        {/* de foto van de kop: rechts in een afgerond kader, op de telefoon onder de tekst. Een vaste verhouding, dus niets verspringt. */}
-        <div className="relative mx-auto w-full max-w-[560px] lg:ml-auto lg:mr-0">
-          <span aria-hidden className="absolute -bottom-3 -right-3 hidden h-2/3 w-2/3 rounded-[1.75rem] bg-brand-mint/40 sm:block" />
-          <div className="relative aspect-[4/3] overflow-hidden rounded-[1.75rem] bg-ink shadow-e2 ring-1 ring-ink/10 lg:aspect-square">
-            <Image src={foto.src} alt={foto.alt} fill priority sizes="(min-width: 1024px) 560px, 100vw" className="object-cover object-[50%_18%]" />
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 export type GroteTegel = { cat: string; label: string; sub: string; image: string | null; count: number };
 
@@ -151,13 +108,5 @@ export function ShopLooks({ t, looks }: { t: Dict; looks: LookKaart[] }) {
         </ul>
       </div>
     </section>
-  );
-}
-
-function Vink() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-ok" aria-hidden>
-      <path d="m5 12.5 4.5 4.5L19 7.5" />
-    </svg>
   );
 }

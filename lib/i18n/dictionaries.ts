@@ -1331,11 +1331,6 @@ export const nl = {
 
   // de shop-startpagina voor gewone klanten (5 nov 2026)
   shopThuis: {
-    heroEyebrow: "ZekerFlex Shop",
-    heroTitel: "Kleding en werkkleding die met je meewerkt",
-    heroSub: "Van veiligheidsschoenen tot een warme fleece: alles voor je werkdag en daarna. Pas het eerst aan op je eigen paspop.",
-    heroKnop: "Shop de collectie",
-    heroPaskamer: "Probeer de paskamer",
     categorieTitel: "Waar ben je naar op zoek?",
     kledingSub: "Hoodies, overhemden, fleece en broeken",
     pbmSub: "Veiligheidsschoenen, handschoenen en zichtbaarheid",

@@ -10,8 +10,8 @@ import { voorUitAdres } from "@/lib/shop/categoriemenu";
 import { ShopFeatured } from "@/components/marketing/ShopProductCard";
 import { OnlangsBekeken } from "@/components/marketing/OnlangsBekeken";
 import { toShopProduct, type ShopCategory } from "@/components/marketing/shop-product";
-import { ShopMoreCategories, ShopNewsletter, ShopPaskamerPromo, ShopService } from "@/components/marketing/ShopSections";
-import { ShopCategorieGroot, ShopLooks, ShopThuisHero, type GroteTegel, type LookKaart } from "@/components/marketing/ShopThuis";
+import { ShopMoreCategories, ShopNewsletter, ShopService } from "@/components/marketing/ShopSections";
+import { ShopCategorieGroot, ShopLooks, type GroteTegel, type LookKaart } from "@/components/marketing/ShopThuis";
 import { LOOKS } from "@/lib/shop/paskamer";
 import { PaginaAchtergrond } from "@/components/shop/PaginaAchtergrond";
 import { achtergrondVoor } from "@/lib/ontwerp/achtergrond";
@@ -141,22 +141,20 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
     looks: <ShopLooks t={dict} looks={looks} />,
     populair: featured.length === 5 ? <ShopFeatured title={t.popular} products={featured} /> : null,
     onlangs: <OnlangsBekeken producten={products} />,
-    paskamer: <ShopPaskamerPromo pk={dict.paskamer} />,
     assortiment: <ShopStorefront initialCat={initialCat} initialQuery={initialQuery} initialVoor={initialVoor} initialPrijs={initialPrijs} initialCollectie={initialCollectie} products={products} pageTitle={browsing} />,
     meer: <ShopMoreCategories t={t} />,
     service: <ShopService t={t} />,
     nieuwsbrief: <ShopNewsletter t={t} />,
   };
   const zichtbaar = zichtbareShopSecties(await getShopIndeling(), browsing);
-  // De foto die de beheerder voor de webshop koos staat in de kop zelf (rechts, in het kader), niet meer als losse strook erboven:
-  // anders staat dezelfde foto er twee keer. Een video blijft de strook; zonder keuze toont de kop de vaste teamfoto.
+  // 18 nov: de kop (titel, tekst en de foto van een persoon) is weg op verzoek van de eigenaar; de pagina begint met de
+  // onderdelen uit de indeling. Een foto of video die de beheerder voor de webshop koos (Beheer → Webshop → Foto's en
+  // video's) staat als strook bovenaan, zoals vóór 13 nov.
   const achtergrond = browsing ? null : await achtergrondVoor("shop");
-  const kopFoto = achtergrond?.soort === "foto" ? { src: achtergrond.src, alt: achtergrond.alt } : null;
 
   return (
     <>
-      {!browsing && achtergrond?.soort === "video" && <PaginaAchtergrond pagina="shop" />}
-      {!browsing && <ShopThuisHero t={dict} {...(kopFoto ? { foto: kopFoto } : {})} />}
+      {!browsing && achtergrond && <PaginaAchtergrond pagina="shop" />}
       {zichtbaar.map((id) => (
         <Fragment key={id}>{onderdelen[id]}</Fragment>
       ))}
