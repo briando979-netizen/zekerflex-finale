@@ -36,7 +36,7 @@ describe("de gids Personeel krijgen (bedrijven)", () => {
     expect(VRAGEN_BEDRIJF[0]?.a.startsWith("Nee.")).toBe(true);
     for (const a of AANBOD_BEDRIJF.filter((x) => x.prijsCents > 0)) {
       expect(a.hoe.toLowerCase()).toContain("op aanvraag");
-      expect(prijsTekstBedrijf(a).bedrag).toBe(PRIJZEN_BEDRIJF_GOEDGEKEURD ? expect.stringContaining("€") : "prijs op aanvraag");
+      expect(prijsTekstBedrijf(a).bedrag).toEqual(PRIJZEN_BEDRIJF_GOEDGEKEURD ? expect.stringContaining("€") : "prijs op aanvraag");
     }
     expect(AANBOD_BEDRIJF.filter((x) => x.prijsCents === 0)).toHaveLength(2);
   });

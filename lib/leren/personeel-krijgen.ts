@@ -120,6 +120,6 @@ export const VRAGEN_BEDRIJF: readonly { q: string; a: string }[] = [
   },
 ];
 
-/** Een prijs op de site is een belofte; tot het akkoord van de eigenaar toont de pagina "prijs op aanvraag". */
-export const PRIJZEN_BEDRIJF_GOEDGEKEURD = false;
+/** Een prijs op de site is een belofte; zonder akkoord van de eigenaar toont de pagina "prijs op aanvraag". */
+export const PRIJZEN_BEDRIJF_GOEDGEKEURD = true; // "ja prima go" van de eigenaar, 18 nov 2026
 export const prijsTekstBedrijf = (a: Pick<Aanbod, "prijsCents" | "per">) => prijsTekst(a, PRIJZEN_BEDRIJF_GOEDGEKEURD);
