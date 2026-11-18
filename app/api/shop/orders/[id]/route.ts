@@ -1,4 +1,4 @@
-import { NextResponse, after } from "next/server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/lib/audit";
@@ -7,7 +7,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
 import { jsonError } from "@/lib/http/errors";
 import { stuurVerzondenMail } from "@/lib/shop/verzonden-mail";
-import { cjNaBetaling } from "@/lib/shop/cj/bestelling";
+import { cjNaBetalingLater } from "@/lib/shop/cj/bestelling";
 import { wachtOpOverschrijving } from "@/lib/shop/overschrijving-kenmerk";
 import { decrementVariantStock, notifyShopOrderPaid, type ShopOrderLine } from "@/lib/shop/bestelling-betaald";
 import { meldVerkopersBetaald } from "@/lib/shop/verkoper";
@@ -68,7 +68,7 @@ export const PATCH = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (
     // producten van verkopers op de marktplaats: zij versturen zelf (lib/shop/verkoper.ts)
     await meldVerkopersBetaald(order);
     // producten van CJ: naar de leverancier, als de eigenaar dat aanzette (lib/shop/cj/bestelling.ts)
-    after(() => cjNaBetaling(order.id));
+    cjNaBetalingLater(order.id);
   }
 
   // Just shipped with a tracking number on file — let the customer know

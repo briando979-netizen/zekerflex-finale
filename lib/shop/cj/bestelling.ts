@@ -14,6 +14,7 @@
 // een webhook en een klik, of twee tabbladen, nooit twee keer bij CJ bestellen of betalen.
 // ---------------------------------------------------------------------------
 
+import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
@@ -321,6 +322,18 @@ export async function cjNaBetaling(orderId: string): Promise<void> {
     logger.warn("cj: automatisch bestellen mislukt", { orderId, error: m.slice(0, 160) });
     await recordAudit({ category: "ADMIN", action: "shop.order.cj-mislukt", actorLabel: "system:cj", summary: `Automatisch bestellen bij CJ mislukt voor ${orderId}: ${m.slice(0, 160)}`, targetType: "shop-order", targetId: orderId }).catch(() => undefined);
     await meldBeheer("Bestellen bij CJ mislukt", [`Webshopbestelling ${orderId}`, m.slice(0, 200), "Plaats hem met de hand in Beheer → Winkel-AI → Leverancier."], orderId);
+  }
+}
+
+/**
+ * Hetzelfde, maar ná het antwoord (de Stripe-webhook mag niet wachten op 5-7 CJ-aanvragen van 1/s, anders stuurt Stripe
+ * opnieuw). Buiten een webaanvraag (tests, scripts) bestaat after() niet: dan gewoon op de achtergrond.
+ */
+export function cjNaBetalingLater(orderId: string): void {
+  try {
+    after(() => cjNaBetaling(orderId));
+  } catch {
+    void cjNaBetaling(orderId);
   }
 }
 

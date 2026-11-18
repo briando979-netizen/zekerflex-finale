@@ -30,7 +30,7 @@ import { domeinFactuurBetaald } from "@/lib/domeinen/verlengen";
 import { beloonIntroductieNaBetaling } from "@/lib/introducties/beloning";
 import { meldVerkopersBetaald } from "@/lib/shop/verkoper";
 import { decrementVariantStock, notifyShopOrderPaid, type ShopOrderLine } from "@/lib/shop/bestelling-betaald";
-import { cjNaBetaling } from "@/lib/shop/cj/bestelling";
+import { cjNaBetalingLater } from "@/lib/shop/cj/bestelling";
 import { maakAgentBestelling } from "@/lib/shop/agent-handel-server";
 import { syncBankLogin } from "@/lib/kyc/bank-login";
 import { webhookTekst, WEBHOOK_MAX } from "@/lib/http/webhook-lezen";
@@ -372,7 +372,7 @@ async function processStripeEvent(event: Stripe.Event, log: ReturnType<typeof lo
         // producten van verkopers op de marktplaats: zij versturen zelf (lib/shop/verkoper.ts)
         await meldVerkopersBetaald(updated);
         // producten van CJ: naar de leverancier, als de eigenaar dat aanzette (lib/shop/cj/bestelling.ts)
-        after(() => cjNaBetaling(updated.id));
+        cjNaBetalingLater(updated.id);
       }
       return NextResponse.json({ ok: true });
     }
@@ -419,7 +419,7 @@ async function processStripeEvent(event: Stripe.Event, log: ReturnType<typeof lo
             await decrementVariantStock(order.id, (order.itemsJson as ShopOrderLine[] | null) ?? []);
             await notifyShopOrderPaid(order);
             await meldVerkopersBetaald(order);
-            after(() => cjNaBetaling(order.id));
+            cjNaBetalingLater(order.id);
           }
           return NextResponse.json({ ok: true, matched: true });
         }
