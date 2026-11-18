@@ -80,7 +80,7 @@ services:
     # Geen `ports:` — alles loopt via Caddy.
 
   caddy:
-    image: caddy:2.11.7-alpine
+    image: caddy:2.11.9-alpine
     restart: unless-stopped
     # Alleen wat de Caddyfile leest, niet heel .env.production: anders maakt elke
     # nieuwe sleutel daarin (van welke functie ook) Caddy bij de volgende uitrol
