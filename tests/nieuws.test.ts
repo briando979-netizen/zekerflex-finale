@@ -167,6 +167,24 @@ describe("een ronde", () => {
     expect(gezien.has("{A}")).toBe(true);
   });
 
+  it("vraagt één keer om een langere versie als het model te kort schrijft", async () => {
+    const kort = { ...GOED, blokken: [{ kop: "Wat betekent dit voor jou?", alineas: ["In oktober waren 412 duizend mensen werkloos, dat is goed om te weten."] }] };
+    const schrijf = vi.fn(async (invoer: { teKort?: number }): Promise<unknown> => (invoer.teKort ? GOED : kort));
+    const { d, bewaard } = proef({ schrijf });
+    await loopNieuwsNa(d, NU);
+    expect(schrijf).toHaveBeenCalledTimes(2);
+    expect(schrijf.mock.calls[1]?.[0].teKort).toBeGreaterThan(10);
+    expect(bewaard).toHaveLength(1);
+    expect(bewaard[0]?.blokken).toHaveLength(3);
+    // blijft het te kort, dan wordt het afgekeurd en niet geplaatst
+    const altijdKort = vi.fn(async (): Promise<unknown> => kort);
+    const twee = proef({ schrijf: altijdKort, vanzelf: async () => true });
+    const s = await loopNieuwsNa(twee.d, NU);
+    expect(altijdKort).toHaveBeenCalledTimes(2);
+    expect(twee.bewaard).toHaveLength(0);
+    expect(s.afgekeurd[0]?.reden).toContain("te kort");
+  });
+
   it("probeert het later opnieuw als het model of de bron het niet doet", async () => {
     const { d, bewaard, gezien } = proef({
       schrijf: async () => {

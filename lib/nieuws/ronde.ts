@@ -1,4 +1,4 @@
-import { beoordeelBericht, consultatieGegevens, leesAntwoord, maakSlug, rubriekVoor, uniekeSlug, wetPast, type FeedItem, type NieuwsBericht, type Rubriek } from "@/lib/nieuws/regels";
+import { aantalWoorden, beoordeelBericht, consultatieGegevens, leesAntwoord, maakSlug, rubriekVoor, uniekeSlug, wetPast, type FeedItem, type NieuwsBericht, type Rubriek } from "@/lib/nieuws/regels";
 import type { NieuwsBron } from "@/lib/nieuws/bronnen";
 import type { NieuwsStand } from "@/lib/nieuws/store";
 
@@ -21,6 +21,8 @@ export const MAX_LEEFTIJD_DAGEN = 4;
 export const MAX_LEEFTIJD_CONSULTATIE_DAGEN = 21;
 /** hooguit zoveel bronpagina's per bron per ronde ophalen (een consultatie zonder datum in de feed kost een pagina om te wegen) */
 export const MAX_PAGINAS_PER_BRON = 6;
+/** onder dit aantal woorden vragen we het model één keer om een langere versie (de harde ondergrens in regels.ts is 90) */
+export const KORT_WOORDEN = 120;
 const DAG = 86_400_000;
 
 export interface NieuwsAfhankelijkheden {
@@ -28,7 +30,8 @@ export interface NieuwsAfhankelijkheden {
   bronnen: NieuwsBron[];
   haalFeed: (bron: NieuwsBron) => Promise<FeedItem[]>;
   haalPagina: (url: string, bron: NieuwsBron) => Promise<string>;
-  schrijf: (invoer: { bron: NieuwsBron; item: FeedItem; tekst: string; rubriek: Rubriek }) => Promise<unknown>;
+  /** `teKort`: het aantal woorden van de vorige, te korte poging (dan is dit de herkansing) */
+  schrijf: (invoer: { bron: NieuwsBron; item: FeedItem; tekst: string; rubriek: Rubriek; teKort?: number }) => Promise<unknown>;
   isGezien: (id: string) => Promise<boolean>;
   zetGezien: (id: string, nu: Date) => Promise<void>;
   slugs: () => Promise<string[]>;
@@ -86,7 +89,12 @@ export async function loopNieuwsNa(d: NieuwsAfhankelijkheden, nu = new Date()): 
           bronDatum = c.start;
         }
         gemaakt++;
-        const gelezen = leesAntwoord(await d.schrijf({ bron, item, tekst, rubriek }));
+        let gelezen = leesAntwoord(await d.schrijf({ bron, item, tekst, rubriek }));
+        // een klein model schrijft vaak veel te kort (18 nov: 41 en 61 woorden): één herkansing met dat erbij gezegd
+        if (gelezen && aantalWoorden(gelezen) < KORT_WOORDEN) {
+          const opnieuw = leesAntwoord(await d.schrijf({ bron, item, tekst, rubriek, teKort: aantalWoorden(gelezen) }));
+          if (opnieuw && aantalWoorden(opnieuw) > aantalWoorden(gelezen)) gelezen = opnieuw;
+        }
         if (!gelezen) throw new Error("het model gaf geen bruikbaar bericht");
         stand.geschreven++;
         // de titel van de bron telt mee als brontekst: een getal uit de kop mag terugkomen

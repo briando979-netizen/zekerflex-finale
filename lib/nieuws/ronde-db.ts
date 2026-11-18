@@ -56,7 +56,7 @@ export function echteNieuwsAfhankelijkheden(): NieuwsAfhankelijkheden {
     bronnen: NIEUWS_BRONNEN,
     haalFeed: async (bron) => leesRss(await haal(bron.feed, 1_500_000), bron.soort === "consultatie"),
     haalPagina: async (url, bron) => (bron.soort === "consultatie" ? consultatieTekst(await haal(url, 3_000_000)) : paginaTekst(await haal(url, 3_000_000))),
-    schrijf: async ({ bron, item, tekst, rubriek }) => {
+    schrijf: async ({ bron, item, tekst, rubriek, teKort }) => {
       const probleem = llmConfigProblem();
       if (probleem) throw new Error(`het AI-model is niet ingesteld (${probleem})`);
       const { system, user } = nieuwsOpdracht({ bronNaam: bron.naam, titel: item.titel, tekst, rubriek: RUBRIEK_NAAM[rubriek], wet: bron.soort === "consultatie" });
@@ -67,7 +67,12 @@ export function echteNieuwsAfhankelijkheden(): NieuwsAfhankelijkheden {
         timeoutMs: 180_000,
         messages: [
           { role: "system", content: system },
-          { role: "user", content: user },
+          {
+            role: "user",
+            content: teKort
+              ? `${user}\n\nLET OP: je vorige versie had maar ${teKort} woorden en is weggegooid. Schrijf nu elk van de 3 blokken uit in 2 alinea's van 3 zinnen. Samen minstens 170 woorden. Gebruik meer feiten uit de brontekst, verzin niets.`
+              : user,
+          },
         ],
       });
     },
