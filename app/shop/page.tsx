@@ -21,6 +21,7 @@ import { ShopAlles, ShopCadeauhulp, ShopOntdek, ShopRegelen, ShopThemas } from "
 import { SHOP_CATEGORIEEN, categorieNaam } from "@/lib/shop/categorieen";
 import { shopBanners } from "@/lib/shop/banners";
 import { levertijdenVoor } from "@/lib/shop/levertijd-server";
+import { paginaUitAdres } from "@/lib/shop/paginering";
 
 // <title> kort en zonder het sjabloon " · ZekerFlex" erachter (dan stond het merk er twee keer); delen houdt de lange
 const title = "ZekerFlex Shop — kleding, werkkleding en PBM, eerst passen in de paskamer";
@@ -39,8 +40,12 @@ export const dynamic = "force-dynamic";
 const CATS = ["Alles", ...SHOP_CATEGORIEEN] as const;
 type Cat = (typeof CATS)[number];
 
-export default async function ShopPage(props: { searchParams: Promise<{ cat?: string; q?: string; voor?: string; prijs?: string; collectie?: string; deals?: string }> }) {
+export default async function ShopPage(props: { searchParams: Promise<{ cat?: string; q?: string; voor?: string; prijs?: string; collectie?: string; deals?: string; pagina?: string }> }) {
   const searchParams = await props.searchParams;
+  // paginering (18 nov): de server toont 48 kaarten per pagina; ?pagina=N is een echte link voor Google (lib/shop/paginering.ts)
+  const initialPagina = paginaUitAdres(searchParams.pagina);
+  const tekst = (v: unknown) => (typeof v === "string" ? v.slice(0, 80) : null);
+  const adresParams = { cat: tekst(searchParams.cat), q: tekst(searchParams.q), voor: tekst(searchParams.voor), prijs: tekst(searchParams.prijs), collectie: tekst(searchParams.collectie), deals: tekst(searchParams.deals) };
   const initialCat: Cat = CATS.includes(searchParams.cat as Cat) ? (searchParams.cat as Cat) : "Alles";
   const initialVoor = voorUitAdres(searchParams.voor);
   const initialQuery = typeof searchParams.q === "string" ? searchParams.q.trim().slice(0, 60) : "";
@@ -145,7 +150,7 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
     looks: <ShopLooks t={dict} looks={looks} />,
     populair: featured.length === 5 ? <ShopFeatured title={t.popular} products={featured} /> : null,
     onlangs: <OnlangsBekeken producten={products} />,
-    assortiment: <ShopStorefront initialCat={initialCat} initialQuery={initialQuery} initialVoor={initialVoor} initialPrijs={initialPrijs} initialCollectie={initialCollectie} initialDeals={initialDeals} products={products} pageTitle={browsing} />,
+    assortiment: <ShopStorefront initialCat={initialCat} initialQuery={initialQuery} initialVoor={initialVoor} initialPrijs={initialPrijs} initialCollectie={initialCollectie} initialDeals={initialDeals} initialPagina={initialPagina} adresParams={adresParams} products={products} pageTitle={browsing} />,
     meer: <ShopMoreCategories t={t} />,
     service: <ShopService t={t} />,
     nieuwsbrief: <ShopNewsletter t={t} />,
