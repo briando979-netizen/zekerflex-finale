@@ -900,6 +900,7 @@ export const nl = {
     yourOrders: "Je bestellingen",
     noOrdersYet: "Je hebt nog niets besteld in de ZekerFlex Shop.",
     toPlatform: "Naar het ZekerFlex-platform",
+    sellVia: "Verkopen via ZekerFlex",
     logout: "Uitloggen",
     guestIntro: "Je bestelt in deze shop als gast — geen account nodig. Log in om je bestelgeschiedenis hier te zien.",
     findOrder: "Bestelling opzoeken",

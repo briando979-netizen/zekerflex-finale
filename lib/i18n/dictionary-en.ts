@@ -886,6 +886,7 @@ export const en: Dict = {
     yourOrders: "Your orders",
     noOrdersYet: "You haven't ordered anything from the ZekerFlex Shop yet.",
     toPlatform: "To the ZekerFlex platform",
+    sellVia: "Sell via ZekerFlex",
     logout: "Log out",
     guestIntro: "You're checking out as a guest in this shop — no account needed. Log in to see your order history here.",
     findOrder: "Find an order",
