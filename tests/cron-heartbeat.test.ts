@@ -52,6 +52,25 @@ describe("cron heartbeat watchdog", () => {
     expect(res.stale).toEqual(["ai-watchdog"]);
   });
 
+  it("een nieuwe taak (sinds) die nog nooit liep, telt de eerste 48 uur niet als stale, daarna wel (18 nov: melder-wacht)", async () => {
+    const nieuw = WATCHED_CRONS.find((c) => c.job === "melder-wacht");
+    expect(nieuw?.sinds).toBe("2026-11-18T22:00:00Z");
+    const alleBehalveDeze = (nu: number) => {
+      for (const c of WATCHED_CRONS) kv[`cron-heartbeat:${c.job}`] = { at: new Date(nu - 0.2 * 3_600_000).toISOString(), ok: true };
+      delete kv["cron-heartbeat:melder-wacht"];
+      kv["cron-heartbeat:first-seen"] = { at: new Date(nu - 1000 * 3_600_000).toISOString() };
+    };
+    const ochtend = Date.parse("2026-11-19T07:00:00Z"); // de watchdog, voor de eerste keer van melder-wacht (07:30)
+    alleBehalveDeze(ochtend);
+    expect((await checkCronHeartbeats(ochtend)).stale).toEqual([]);
+    expect(alertOwner).not.toHaveBeenCalled();
+    const later = Date.parse("2026-11-21T00:00:00Z"); // meer dan 48 uur na de uitrol en nog nooit gelopen: dat is wel stuk
+    alleBehalveDeze(later);
+    expect((await checkCronHeartbeats(later)).stale).toEqual(["melder-wacht"]);
+    // een taak zonder 'sinds' blijft werken zoals vroeger
+    expect(WATCHED_CRONS.find((c) => c.job === "matching-tick")?.sinds).toBeUndefined();
+  });
+
   it("bewaakt de dagelijkse taken die eerst geen hartslagbewaking hadden", () => {
     for (const job of ["markten-scan", "winkel-agent", "invoice-reminders", "domein-verlengen", "onboarding-reminders"]) {
       expect(WATCHED_CRONS.find((c) => c.job === job)?.maxAgeHours, job).toBe(26);

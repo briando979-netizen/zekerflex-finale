@@ -21,6 +21,12 @@ export interface WatchedCron {
   label: string;
   /** stale after this many hours without a successful run */
   maxAgeHours: number;
+  /**
+   * Sinds wanneer de taak bestaat (ISO-tijd, de uitrol waarmee hij kwam). Een taak die nog nooit liep en jonger is dan 48 uur telt niet als
+   * stale: anders geeft de watchdog (elke ochtend 07:00 UTC) een valse "draait niet" voor een taak die zijn eerste tijdstip nog moet krijgen
+   * (18 nov 2026: melder-wacht en melder-dagrapport). Zet dit bij elke nieuwe taak; bij een oude taak laat je het weg.
+   */
+  sinds?: string;
 }
 
 // Only the jobs actually scheduled in deploy/cron/entrypoint.sh (the cron container on the VPS).
@@ -67,10 +73,10 @@ export const WATCHED_CRONS: WatchedCron[] = [
   // elk uur (/api/internal/backup/check?alleen=schijf): de schijfreeks van 14 dagen (lib/ops/schijfreeks-meting.ts); alarm na 3 uur stilte
   { job: "schijfreeks", label: "Schijfreeks: elk uur de schijfstand bewaren", maxAgeHours: 3 },
   // elk uur op :50 (/api/internal/melder/samenvatting): het uurbericht voor de eigenaar (lib/ops/melder.ts); alarm na 3 uur stilte
-  { job: "melder-samenvatting", label: "Melder: uursamenvatting naar de eigenaar", maxAgeHours: 3 },
+  { job: "melder-samenvatting", label: "Melder: uursamenvatting naar de eigenaar", maxAgeHours: 3, sinds: "2026-11-18T22:00:00Z" },
   // elke avond 20:00 UTC en elke ochtend 07:30 UTC (/api/internal/melder/rapport): het dagrapport en "dit wacht op jou"; alarm na 30 uur stilte
-  { job: "melder-dagrapport", label: "Melder: dagrapport naar de eigenaar", maxAgeHours: 30 },
-  { job: "melder-wacht", label: "Melder: 'dit wacht op jou' naar de eigenaar", maxAgeHours: 30 },
+  { job: "melder-dagrapport", label: "Melder: dagrapport naar de eigenaar", maxAgeHours: 30, sinds: "2026-11-18T22:00:00Z" },
+  { job: "melder-wacht", label: "Melder: 'dit wacht op jou' naar de eigenaar", maxAgeHours: 30, sinds: "2026-11-18T22:00:00Z" },
   { job: "auto-uitrol", label: "Auto-uitrol: main controleren en live zetten", maxAgeHours: 0.5 },
   // elke 10 min: de nieuwste main alvast controleren vóór het live zetten (lib/bouwer/controles.ts)
   { job: "controles-tick", label: "Controle van main (TypeScript, eslint, tests)", maxAgeHours: 2 },
@@ -192,7 +198,9 @@ export async function cronHeartbeats(now = Date.now()): Promise<CronHealth[]> {
     WATCHED_CRONS.map(async (c) => {
       const beat = await kvGet<Beat>(beatKey(c.job)).catch(() => null);
       const lastMs = beat ? new Date(beat.at).getTime() : null;
-      const stale = lastMs !== null ? now - lastMs > c.maxAgeHours * 3_600_000 : deploymentOldEnough;
+      const intro = c.sinds ? Date.parse(c.sinds) : Number.NaN;
+      const nieuweTaak = Number.isFinite(intro) && now - intro <= GRACE_MS;
+      const stale = lastMs !== null ? now - lastMs > c.maxAgeHours * 3_600_000 : deploymentOldEnough && !nieuweTaak;
       const sinds = beat && !beat.ok ? (beat.since ?? beat.at) : null;
       const failing = sinds !== null && !stale && now - new Date(sinds).getTime() > FAILING_AFTER_MS;
       return { job: c.job, label: c.label, lastRunAt: beat?.at ?? null, lastRunOk: beat?.ok ?? null, stale, failing, failingSince: sinds, maxAgeHours: c.maxAgeHours };
