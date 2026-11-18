@@ -125,7 +125,7 @@ export async function rondeWachtrij(o: { budgetMs?: number; max?: number } = {})
       const pid = w.buffer[0];
       if (!pid) break;
       try {
-        const u = await importeerCjProduct(pid, { actorUserId: null, actief: w.actief, categorie: w.categorie ?? undefined, alleenVertaaldAan: true });
+        const u = await importeerCjProduct(pid, { actorUserId: null, actief: w.actief, categorie: w.categorie ?? undefined });
         w = await bewaar(metProduct(w, pid, u.bestaand ? "bestaand" : u.vertaald ? "gedaan" : "nogTeVertalen"));
       } catch (e) {
         const m = e instanceof AppError ? e.message : (e as Error).message;

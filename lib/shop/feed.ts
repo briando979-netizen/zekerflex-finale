@@ -10,7 +10,9 @@
 import { beeldLink, redenOverslaan, schoneTekst, type CatalogusProduct, type CatalogusVariant } from "@/lib/shop/agent-handel";
 import { GRATIS_VERZENDING_VANAF_CENT, VERZENDKOSTEN_CENT } from "@/lib/shop/verzending";
 
-const xml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+// eslint-disable-next-line no-control-regex -- stuurtekens zijn in XML 1.0 verboden; één zo'n teken maakt de hele feed ongeldig
+const STUURTEKENS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g;
+const xml = (s: string) => s.replace(STUURTEKENS, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 const prijs = (cent: number) => `${(cent / 100).toFixed(2)} EUR`;
 
 const GESLACHT: Record<string, "male" | "female" | "unisex"> = { heren: "male", vrouwen: "female", unisex: "unisex", kinderen: "unisex" };

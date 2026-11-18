@@ -196,8 +196,6 @@ export interface ImportOpties {
   actorUserId: string | null;
   actief: boolean;
   categorie?: string | undefined;
-  /** alleen aan met Nederlandse tekst (de wachtrij): zonder vertaling blijft het uit en wacht het op Bijwerken */
-  alleenVertaaldAan?: boolean | undefined;
 }
 
 export async function importeerCjProduct(pid: string, opties: ImportOpties): Promise<ImportUitkomst> {
@@ -285,8 +283,9 @@ async function overnemen(pid: string, opties: ImportOpties): Promise<ImportUitko
   const hoofd = uploads[0] ?? null;
   const model = KLEDINGACHTIG.has(categorie) ? (uploads[1] ?? null) : null;
   const kanAan = hoofd !== null && aantalVarianten > 0;
-  // in de wachtrij gaat een product zonder Nederlandse tekst niet aan; het wacht op de Bijwerken-ronde (activerenNaVertaling)
-  const actief = opties.actief && kanAan && (!opties.alleenVertaaldAan || tekst.vertaald);
+  // zonder Nederlandse tekst (het model was weg) gaat een product nooit aan, ook niet via het gewone importpad (18 nov:
+  // 97 Engelse producten stonden live); het wacht op de Bijwerken-ronde, die het na de vertaling aanzet (activerenNaVertaling)
+  const actief = opties.actief && kanAan && tekst.vertaald;
   const activerenNaVertaling = opties.actief && kanAan && !actief;
   await prisma.shopProduct.update({
     where: { id: product.id },

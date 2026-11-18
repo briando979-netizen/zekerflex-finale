@@ -6,10 +6,12 @@
 //      grens per bestelling en nooit zonder dat de eigenaar dat aanzette (autoBetalen) of klikte;
 //   3. volgen (cron, elk half uur): getOrderDetail → zodra er een track & trace is, gaat de
 //      webshopbestelling op "verzonden" en krijgt de klant de mail met de volglink.
-// De proefstand (sandbox, standaard aan) laat CJ alles simuleren zonder geld of pakket.
+// De proefstand (sandbox, standaard aan) laat CJ alles simuleren zonder geld of pakket; een proef
+// raakt de echte webshopbestelling nooit aan en mag later alsnog echt geplaatst worden.
 // Wat we onthouden staat in KV shop:cj:bestelling:<orderId>: alleen ids, bedragen en status,
 // geen adres (dat staat al bij de bestelling zelf). Elke stap schrijft een auditregel en meldt
-// de beheerder per mail en push.
+// de beheerder per mail en push. Plaatsen en betalen hebben een slot (claimIdempotency), zodat
+// een webhook en een klik, of twee tabbladen, nooit twee keer bij CJ bestellen of betalen.
 // ---------------------------------------------------------------------------
 
 import { prisma } from "@/lib/prisma";
@@ -19,26 +21,35 @@ import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
 import { mailShell, sendMail } from "@/lib/mail";
 import { sendUserPush } from "@/lib/notifications/push";
+import { claimIdempotency, releaseIdempotency } from "@/lib/redis";
 import { kvGet, kvGetMany, kvListValues, kvSet } from "@/lib/storage/kv";
 import { ecbKoersen } from "@/lib/integrations/wisselkoers-server";
 import { naarEuroCents } from "@/lib/integrations/wisselkoers";
 import { cjGet, cjPatch, cjPost } from "@/lib/shop/cj/cj-client";
 import { goedkoopsteVerzending } from "@/lib/shop/cj/cj-core";
 import { CJ_SKU_VOORVOEGSEL, leesCjInstellingen, type CjInstellingen, type CjKoppeling } from "@/lib/shop/cj/importeer";
-import { cjOrderBody, cjStatusTekst, isCjEind, leesCjOrder, magBetalen, type CjBestelRegel } from "@/lib/shop/cj/bestelling-core";
+import { cjOrderBody, cjOrderNumber, cjStatusTekst, isCjEind, leesCjOrder, magBetalen, type CjBestelRegel } from "@/lib/shop/cj/bestelling-core";
 import { stuurVerzondenMail } from "@/lib/shop/verzonden-mail";
 import type { ShopOrderLine } from "@/lib/shop/bestelling-betaald";
 
 const K_BESTELLING = "shop:cj:bestelling:";
 /** webshopstatussen waarbij de klant betaald heeft */
 const BETAALD = new Set(["RECEIVED", "CONFIRMED", "SHIPPED"]);
+/** een plaatsing die zo lang "bezig" is zonder CJ-nummer is vastgelopen (time-out); dan mag een nieuwe poging */
+const BEZIG_MAX_MS = 4 * 60_000;
+const SLOT_SECONDEN = 300;
 
 export interface CjBestelStand {
   orderId: string;
   cjOrderId: string | null;
   orderNumber: string;
+  /** CJ-status, of "bezig" zolang createOrderV2 nog loopt */
   status: string;
   sandbox: boolean;
+  /** zoveelste poging tot plaatsen (elke poging een eigen orderNumber, zodat CJ nooit ORDER_CODE_EXIST geeft) */
+  poging: number;
+  /** het CJ-nummer van een eerdere proefbestelling, als deze stand de echte is */
+  proefCjOrderId: string | null;
   betaald: boolean;
   betaaldOp: string | null;
   bedragUsdCents: number | null;
@@ -51,7 +62,7 @@ export interface CjBestelStand {
   aangemaaktOp: string;
   bijgewerktOp: string;
   laatsteFout: string | null;
-  /** de klant heeft de mail "onderweg" met de track & trace gehad */
+  /** de klant heeft de mail "onderweg" met de track & trace gehad (of, bij een proef: de beheerder is gemeld) */
   klantGemeld: boolean;
 }
 
@@ -151,103 +162,159 @@ export interface Actor {
   actorLabel: string;
 }
 
+/** Eén slot per bestelling per stap: de tweede die tegelijk komt (webhook én klik, twee tabbladen) krijgt een nette fout. */
+async function metSlot<T>(sleutel: string, werk: () => Promise<T>): Promise<T> {
+  const mijn = await claimIdempotency(sleutel, SLOT_SECONDEN).catch(() => true);
+  if (!mijn) throw AppError.conflict("Deze stap loopt op dit moment al voor deze bestelling. Wacht even en ververs.");
+  try {
+    return await werk();
+  } finally {
+    await releaseIdempotency(sleutel).catch(() => undefined);
+  }
+}
+
 /** Stap 1: de bestelling bij CJ aanmaken (idempotent: een tweede keer geeft dezelfde stand). `betalen` = meteen door naar stap 2. */
 export async function plaatsCjBestelling(orderId: string, o: Actor & { betalen: boolean }): Promise<CjBestelStand> {
-  const eerder = await leesCjBestelStand(orderId);
-  if (eerder?.cjOrderId) return o.betalen && !eerder.betaald ? betaalCjBestelling(orderId, o) : eerder;
+  return metSlot(`cj-plaats:${orderId}`, async () => {
+    const instel = await leesCjInstellingen();
+    const eerder = await leesCjBestelStand(orderId);
+    if (eerder?.cjOrderId) {
+      // een proefbestelling telt niet als echte: staat de proefstand inmiddels uit, dan mag hij alsnog echt geplaatst worden
+      const proefVoorbij = eerder.sandbox && !instel.sandbox;
+      if (!proefVoorbij) return o.betalen && !eerder.betaald ? betaalCjBestelling(orderId, o) : eerder;
+    } else if (eerder?.status === "bezig" && Date.now() - Date.parse(eerder.bijgewerktOp) < BEZIG_MAX_MS) {
+      throw AppError.conflict("Deze bestelling wordt op dit moment al bij CJ geplaatst (of de vorige poging is nog geen 4 minuten oud).");
+    }
 
-  const order = await prisma.shopOrder.findUnique({ where: { id: orderId } });
-  if (!order) throw AppError.validation("Deze bestelling bestaat niet.");
-  if (!BETAALD.has(order.status)) throw AppError.precondition("Deze bestelling is nog niet betaald; pas daarna gaat hij naar CJ.");
-  const { regels } = await cjRegelsVoor(order.itemsJson);
-  if (!regels.length) throw AppError.precondition("In deze bestelling zit geen product van CJ.");
+    const order = await prisma.shopOrder.findUnique({ where: { id: orderId } });
+    if (!order) throw AppError.validation("Deze bestelling bestaat niet.");
+    if (!BETAALD.has(order.status)) throw AppError.precondition("Deze bestelling is nog niet betaald; pas daarna gaat hij naar CJ.");
+    const { regels } = await cjRegelsVoor(order.itemsJson);
+    if (!regels.length) throw AppError.precondition("In deze bestelling zit geen product van CJ.");
 
-  const instel = await leesCjInstellingen();
-  const dienst = await verzenddienst(regels, instel);
-  if (!dienst) throw AppError.upstream("CJ kent voor deze producten geen verzenddienst naar Nederland.");
+    const dienst = await verzenddienst(regels, instel);
+    if (!dienst) throw AppError.upstream("CJ kent voor deze producten geen verzenddienst naar Nederland.");
 
-  const d = await cjPost<unknown>("shopping/order/createOrderV2", cjOrderBody(order, regels, { van: dienst.van, logistiek: dienst.dienst, sandbox: instel.sandbox }));
-  const info = leesCjOrder(d);
-  if (!info?.cjOrderId) throw AppError.upstream("CJ gaf geen bestelnummer terug.");
+    // elke poging een eigen nummer: een time-out nadat CJ de order toch maakte geeft dan geen ORDER_CODE_EXIST bij de volgende
+    const poging = (eerder?.poging ?? 0) + 1;
+    const orderNumber = cjOrderNumber(orderId, { sandbox: instel.sandbox, poging });
+    const now = new Date().toISOString();
+    const bezig: CjBestelStand = {
+      orderId,
+      cjOrderId: null,
+      orderNumber,
+      status: "bezig",
+      sandbox: instel.sandbox,
+      poging,
+      proefCjOrderId: eerder?.sandbox ? eerder.cjOrderId : (eerder?.proefCjOrderId ?? null),
+      betaald: false,
+      betaaldOp: null,
+      bedragUsdCents: null,
+      verzendUsdCents: null,
+      bedragEurCents: null,
+      logistiek: dienst.dienst,
+      trackNumber: null,
+      vervoerder: null,
+      regels: regels.map((r) => ({ naam: r.naam, aantal: r.quantity, vid: r.vid })),
+      aangemaaktOp: now,
+      bijgewerktOp: now,
+      laatsteFout: null,
+      klantGemeld: false,
+    };
+    await bewaar(bezig);
 
-  const stand = await bewaar({
-    orderId,
-    cjOrderId: info.cjOrderId,
-    orderNumber: info.orderNumber,
-    status: info.status || "CREATED",
-    sandbox: instel.sandbox,
-    betaald: false,
-    betaaldOp: null,
-    bedragUsdCents: info.bedragUsdCents,
-    verzendUsdCents: info.verzendUsdCents,
-    bedragEurCents: await eurVan(info.bedragUsdCents),
-    logistiek: info.logistiek ?? dienst.dienst,
-    trackNumber: null,
-    vervoerder: null,
-    regels: regels.map((r) => ({ naam: r.naam, aantal: r.quantity, vid: r.vid })),
-    aangemaaktOp: new Date().toISOString(),
-    bijgewerktOp: new Date().toISOString(),
-    laatsteFout: null,
-    klantGemeld: false,
+    let info;
+    try {
+      info = leesCjOrder(await cjPost<unknown>("shopping/order/createOrderV2", cjOrderBody(order, regels, { orderNumber, van: dienst.van, logistiek: dienst.dienst, sandbox: instel.sandbox })));
+    } catch (e) {
+      await bewaar({ ...bezig, laatsteFout: (e as Error).message.slice(0, 160) });
+      throw e;
+    }
+    if (!info?.cjOrderId) {
+      await bewaar({ ...bezig, laatsteFout: "CJ gaf geen bestelnummer terug." });
+      throw AppError.upstream("CJ gaf geen bestelnummer terug.");
+    }
+
+    const stand = await bewaar({
+      ...bezig,
+      cjOrderId: info.cjOrderId,
+      orderNumber: info.orderNumber || orderNumber,
+      status: info.status || "CREATED",
+      bedragUsdCents: info.bedragUsdCents,
+      verzendUsdCents: info.verzendUsdCents,
+      bedragEurCents: await eurVan(info.bedragUsdCents),
+      logistiek: info.logistiek ?? dienst.dienst,
+    });
+    await recordAudit({
+      category: "ADMIN",
+      action: "shop.order.cj-geplaatst",
+      actorUserId: o.actorUserId,
+      actorLabel: o.actorLabel,
+      summary: `Shopbestelling ${orderId} bij CJ geplaatst (${stand.cjOrderId}, ${geld(stand.bedragUsdCents, "$")}${stand.sandbox ? ", proef" : ""}, poging ${poging})`,
+      targetType: "shop-order",
+      targetId: orderId,
+      metadata: { cjOrderId: stand.cjOrderId, orderNumber: stand.orderNumber, bedragUsdCents: stand.bedragUsdCents, bedragEurCents: stand.bedragEurCents, sandbox: stand.sandbox, logistiek: stand.logistiek, regels: stand.regels.length, poging },
+    });
+    await meldBeheer(stand.sandbox ? "Proefbestelling bij CJ geplaatst" : "Bestelling bij CJ geplaatst", [
+      `Webshopbestelling ${orderId}`,
+      ...stand.regels.map((r) => `${r.aantal}× ${r.naam}`),
+      `Leverancier: CJ Dropshipping, magazijn ${dienst.van}, verzending ${stand.logistiek ?? "?"}${dienst.dagen ? ` (${dienst.dagen} dagen)` : ""}`,
+      `Inkoop ${geld(stand.bedragUsdCents, "$")} ≈ ${geld(stand.bedragEurCents)}; CJ-nummer ${stand.cjOrderId}`,
+      o.betalen ? "Betalen volgt." : "Nog niet betaald: klik in Beheer op Betalen uit saldo.",
+    ], orderId);
+
+    return o.betalen ? betaalCjBestelling(orderId, o) : stand;
   });
-  await recordAudit({
-    category: "ADMIN",
-    action: "shop.order.cj-geplaatst",
-    actorUserId: o.actorUserId,
-    actorLabel: o.actorLabel,
-    summary: `Shopbestelling ${orderId} bij CJ geplaatst (${stand.cjOrderId}, ${geld(stand.bedragUsdCents, "$")}${stand.sandbox ? ", proef" : ""})`,
-    targetType: "shop-order",
-    targetId: orderId,
-    metadata: { cjOrderId: stand.cjOrderId, bedragUsdCents: stand.bedragUsdCents, bedragEurCents: stand.bedragEurCents, sandbox: stand.sandbox, logistiek: stand.logistiek, regels: stand.regels.length },
-  });
-  await meldBeheer(stand.sandbox ? "Proefbestelling bij CJ geplaatst" : "Bestelling bij CJ geplaatst", [
-    `Webshopbestelling ${orderId}`,
-    ...stand.regels.map((r) => `${r.aantal}× ${r.naam}`),
-    `Leverancier: CJ Dropshipping, magazijn ${dienst.van}, verzending ${stand.logistiek ?? "?"}${dienst.dagen ? ` (${dienst.dagen} dagen)` : ""}`,
-    `Inkoop ${geld(stand.bedragUsdCents, "$")} ≈ ${geld(stand.bedragEurCents)}; CJ-nummer ${stand.cjOrderId}`,
-    stand.betaald ? "Betaald uit het saldo." : o.betalen ? "Betalen volgt." : "Nog niet betaald: klik in Beheer op Betalen uit saldo.",
-  ], orderId);
-
-  return o.betalen ? betaalCjBestelling(orderId, o) : stand;
 }
 
-/** Stap 2: confirmOrder + payBalance, alleen onder de grens per bestelling en met genoeg saldo. */
+/** Stap 2: confirmOrder + payBalance, alleen onder de grens per bestelling en met genoeg saldo; het bedrag wordt vlak ervoor opnieuw bij CJ gelezen. */
 export async function betaalCjBestelling(orderId: string, o: Actor): Promise<CjBestelStand> {
-  const stand = await leesCjBestelStand(orderId);
-  if (!stand?.cjOrderId) throw AppError.precondition("Deze bestelling staat nog niet bij CJ.");
-  if (stand.betaald) return stand;
-  const instel = await leesCjInstellingen();
-  const saldo = await cjSaldoUsdCents();
-  const bedragEurCents = stand.bedragEurCents ?? (await eurVan(stand.bedragUsdCents));
-  const check = magBetalen({ bedragEurCents, maxBetaalCents: instel.maxBetaalCents, saldoUsdCents: saldo, bedragUsdCents: stand.bedragUsdCents });
-  if (!check.ok) {
-    await bewaar({ ...stand, bedragEurCents, laatsteFout: check.reden });
-    await recordAudit({ category: "ADMIN", action: "shop.order.cj-betaling-geweigerd", actorUserId: o.actorUserId, actorLabel: o.actorLabel, summary: `Betalen bij CJ geweigerd voor ${orderId}: ${check.reden}`, targetType: "shop-order", targetId: orderId, metadata: { bedragEurCents, maxBetaalCents: instel.maxBetaalCents, saldoUsdCents: saldo } });
-    throw AppError.precondition(check.reden ?? "Betalen kan nu niet.");
-  }
-  // bevestigen mag al gebeurd zijn; de betaling zelf is de echte stap
-  await cjPatch<unknown>("shopping/order/confirmOrder", { orderId: stand.cjOrderId }).catch((e) => logger.info("cj: confirmOrder", { melding: (e as Error).message.slice(0, 120) }));
-  await cjPost<unknown>("shopping/pay/payBalance", { orderId: stand.cjOrderId });
-  const na = await bewaar({ ...stand, bedragEurCents, betaald: true, betaaldOp: new Date().toISOString(), status: "UNSHIPPED", laatsteFout: null });
-  await recordAudit({
-    category: "ADMIN",
-    action: "shop.order.cj-betaald",
-    actorUserId: o.actorUserId,
-    actorLabel: o.actorLabel,
-    summary: `Shopbestelling ${orderId} bij CJ betaald uit het saldo: ${geld(na.bedragUsdCents, "$")} ≈ ${geld(na.bedragEurCents)}${na.sandbox ? " (proef)" : ""}`,
-    targetType: "shop-order",
-    targetId: orderId,
-    metadata: { cjOrderId: na.cjOrderId, bedragUsdCents: na.bedragUsdCents, bedragEurCents: na.bedragEurCents, saldoVoorUsdCents: saldo, sandbox: na.sandbox },
+  return metSlot(`cj-betaal:${orderId}`, async () => {
+    const stand = await leesCjBestelStand(orderId);
+    if (!stand?.cjOrderId) throw AppError.precondition("Deze bestelling staat nog niet bij CJ.");
+    if (stand.betaald) return stand;
+    const instel = await leesCjInstellingen();
+    if (stand.sandbox !== instel.sandbox) throw AppError.precondition(stand.sandbox ? "Dit is een proefbestelling en de proefstand staat uit: plaats de bestelling eerst echt." : "De proefstand staat aan, maar dit is een echte bestelling: zet de proefstand uit of wacht.");
+
+    // het actuele bedrag bij CJ (kan na het aanmaken veranderd zijn), daarna pas de grens en het saldo
+    const actueel = leesCjOrder(await cjGet<unknown>("shopping/order/getOrderDetail", { orderId: stand.cjOrderId }).catch(() => null));
+    const bedragUsdCents = actueel?.bedragUsdCents ?? stand.bedragUsdCents;
+    const bedragEurCents = await eurVan(bedragUsdCents);
+    const saldo = await cjSaldoUsdCents();
+    const check = magBetalen({ bedragEurCents, maxBetaalCents: instel.maxBetaalCents, saldoUsdCents: saldo, bedragUsdCents });
+    if (!check.ok) {
+      await bewaar({ ...stand, bedragUsdCents, bedragEurCents, laatsteFout: check.reden });
+      await recordAudit({ category: "ADMIN", action: "shop.order.cj-betaling-geweigerd", actorUserId: o.actorUserId, actorLabel: o.actorLabel, summary: `Betalen bij CJ geweigerd voor ${orderId}: ${check.reden}`, targetType: "shop-order", targetId: orderId, metadata: { bedragUsdCents, bedragEurCents, maxBetaalCents: instel.maxBetaalCents, saldoUsdCents: saldo } });
+      throw AppError.precondition(check.reden ?? "Betalen kan nu niet.");
+    }
+    // bevestigen mag al gebeurd zijn; de betaling zelf is de echte stap
+    await cjPatch<unknown>("shopping/order/confirmOrder", { orderId: stand.cjOrderId }).catch((e) => logger.info("cj: confirmOrder", { melding: (e as Error).message.slice(0, 120) }));
+    await cjPost<unknown>("shopping/pay/payBalance", { orderId: stand.cjOrderId });
+    const na = await bewaar({ ...stand, bedragUsdCents, bedragEurCents, betaald: true, betaaldOp: new Date().toISOString(), status: "UNSHIPPED", laatsteFout: null });
+    await recordAudit({
+      category: "ADMIN",
+      action: "shop.order.cj-betaald",
+      actorUserId: o.actorUserId,
+      actorLabel: o.actorLabel,
+      summary: `Shopbestelling ${orderId} bij CJ betaald uit het saldo: ${geld(na.bedragUsdCents, "$")} ≈ ${geld(na.bedragEurCents)}${na.sandbox ? " (proef)" : ""}`,
+      targetType: "shop-order",
+      targetId: orderId,
+      metadata: { cjOrderId: na.cjOrderId, bedragUsdCents: na.bedragUsdCents, bedragEurCents: na.bedragEurCents, saldoVoorUsdCents: saldo, maxBetaalCents: instel.maxBetaalCents, sandbox: na.sandbox },
+    });
+    await meldBeheer(na.sandbox ? "Proefbestelling bij CJ betaald (gesimuleerd)" : "Bestelling bij CJ betaald uit het saldo", [`Webshopbestelling ${orderId}`, `Bedrag ${geld(na.bedragUsdCents, "$")} ≈ ${geld(na.bedragEurCents)}`, `Saldo vooraf ${geld(saldo, "$")}`, `CJ-nummer ${na.cjOrderId}`], orderId);
+    return na;
   });
-  await meldBeheer(na.sandbox ? "Proefbestelling bij CJ betaald (gesimuleerd)" : "Bestelling bij CJ betaald uit het saldo", [`Webshopbestelling ${orderId}`, `Bedrag ${geld(na.bedragUsdCents, "$")} ≈ ${geld(na.bedragEurCents)}`, `Saldo vooraf ${geld(saldo, "$")}`, `CJ-nummer ${na.cjOrderId}`], orderId);
-  return na;
 }
 
-/** Na een betaling in de webshop (Stripe, overschrijving, AI-assistent): alleen als de eigenaar dat aanzette; gooit nooit. */
+/** Na een betaling in de webshop (Stripe, overschrijving, AI-assistent): alleen als de eigenaar dat aanzette én er CJ-producten in zitten; gooit nooit. */
 export async function cjNaBetaling(orderId: string): Promise<void> {
   try {
     const instel = await leesCjInstellingen();
     if (!instel.autoBestellen) return;
+    const order = await prisma.shopOrder.findUnique({ where: { id: orderId }, select: { itemsJson: true } });
+    if (!order) return;
+    const { regels } = await cjRegelsVoor(order.itemsJson);
+    if (!regels.length) return;
     await plaatsCjBestelling(orderId, { actorUserId: null, actorLabel: "system:cj", betalen: instel.autoBetalen });
   } catch (e) {
     const m = e instanceof Error ? e.message : "onbekend";
@@ -264,7 +331,11 @@ export interface VolgUitkomst {
   fouten: number;
 }
 
-/** Stap 3 (cron): open bestellingen bij CJ navragen; met een track & trace gaat de webshopbestelling op verzonden en krijgt de klant de mail. */
+/**
+ * Stap 3 (cron): open bestellingen bij CJ navragen. Met een track & trace gaat de webshopbestelling op verzonden en krijgt
+ * de klant de mail, maar alleen als hij nog op betaald/bevestigd stond (een geannuleerde of al met de hand verzonden
+ * bestelling blijft met rust) en nooit bij een proef (die raakt de echte bestelling niet aan).
+ */
 export async function volgCjBestellingen(): Promise<VolgUitkomst> {
   const uit: VolgUitkomst = { bekeken: 0, bijgewerkt: 0, verzonden: 0, fouten: 0 };
   for (const stand of await alleCjBestelStanden()) {
@@ -284,16 +355,26 @@ export async function volgCjBestellingen(): Promise<VolgUitkomst> {
         laatsteFout: null,
       };
       if (nieuw.trackNumber && !nieuw.klantGemeld) {
-        const order = await prisma.shopOrder.update({
-          where: { id: stand.orderId },
-          data: { status: "SHIPPED", carrier: (nieuw.vervoerder ?? nieuw.logistiek ?? "CJ").slice(0, 40), trackingNumber: nieuw.trackNumber.slice(0, 80) },
-          select: { id: true, email: true, firstName: true, carrier: true, trackingNumber: true },
-        });
-        if (!nieuw.sandbox) await stuurVerzondenMail(order);
-        await recordAudit({ category: "ADMIN", action: "shop.order.cj-verzonden", actorLabel: "system:cj", summary: `Shopbestelling ${stand.orderId} door CJ verzonden (${order.carrier}, ${order.trackingNumber})`, targetType: "shop-order", targetId: stand.orderId });
-        await meldBeheer(nieuw.sandbox ? "Proefbestelling bij CJ: verzonden (gesimuleerd)" : "Bestelling door CJ verzonden", [`Webshopbestelling ${stand.orderId}`, `Vervoerder ${order.carrier}, track & trace ${order.trackingNumber}`, nieuw.sandbox ? "Proef: de klant kreeg geen mail." : "De klant heeft de mail met de volglink gekregen."], stand.orderId);
+        const vervoerder = (nieuw.vervoerder ?? nieuw.logistiek ?? "CJ").slice(0, 40);
+        if (nieuw.sandbox) {
+          await meldBeheer("Proefbestelling bij CJ: verzonden (gesimuleerd)", [`Webshopbestelling ${stand.orderId}`, `Vervoerder ${vervoerder}, track & trace ${nieuw.trackNumber}`, "Proef: de echte bestelling en de klant zijn niet aangeraakt."], stand.orderId);
+        } else {
+          const r = await prisma.shopOrder.updateMany({
+            where: { id: stand.orderId, status: { in: ["RECEIVED", "CONFIRMED"] } },
+            data: { status: "SHIPPED", carrier: vervoerder, trackingNumber: nieuw.trackNumber.slice(0, 80) },
+          });
+          if (r.count > 0) {
+            const order = await prisma.shopOrder.findUnique({ where: { id: stand.orderId }, select: { id: true, email: true, firstName: true, carrier: true, trackingNumber: true } });
+            if (order) await stuurVerzondenMail(order);
+            await recordAudit({ category: "ADMIN", action: "shop.order.cj-verzonden", actorLabel: "system:cj", summary: `Shopbestelling ${stand.orderId} door CJ verzonden (${vervoerder}, ${nieuw.trackNumber})`, targetType: "shop-order", targetId: stand.orderId });
+            await meldBeheer("Bestelling door CJ verzonden", [`Webshopbestelling ${stand.orderId}`, `Vervoerder ${vervoerder}, track & trace ${nieuw.trackNumber}`, "De klant heeft de mail met de volglink gekregen."], stand.orderId);
+            uit.verzonden++;
+          } else {
+            // al met de hand verzonden, geannuleerd of terugbetaald: alleen vastleggen, geen mail
+            await recordAudit({ category: "ADMIN", action: "shop.order.cj-verzonden", actorLabel: "system:cj", summary: `CJ meldt verzending van ${stand.orderId} (${vervoerder}, ${nieuw.trackNumber}); de bestelling stond niet meer op betaald, dus geen mail`, targetType: "shop-order", targetId: stand.orderId });
+          }
+        }
         nieuw.klantGemeld = true;
-        uit.verzonden++;
       }
       if (JSON.stringify(nieuw) !== JSON.stringify(stand)) {
         await bewaar(nieuw);
@@ -317,16 +398,21 @@ export interface CjKandidaat {
   andereRegels: number;
   stand: CjBestelStand | null;
   statusTekst: string | null;
+  /** de stand is een proef terwijl de proefstand uit staat: de bestelling mag alsnog echt geplaatst worden */
+  echtPlaatsenKan: boolean;
 }
 
 /** Voor Beheer: recente betaalde bestellingen met CJ-producten en wat er bij CJ mee gebeurd is. */
 export async function cjKandidaten(max = 30): Promise<CjKandidaat[]> {
-  const orders = await prisma.shopOrder.findMany({
-    where: { status: { in: ["RECEIVED", "CONFIRMED", "SHIPPED"] } },
-    orderBy: { createdAt: "desc" },
-    take: max,
-    select: { id: true, createdAt: true, status: true, firstName: true, lastName: true, totalCents: true, itemsJson: true },
-  });
+  const [orders, instel] = await Promise.all([
+    prisma.shopOrder.findMany({
+      where: { status: { in: ["RECEIVED", "CONFIRMED", "SHIPPED"] } },
+      orderBy: { createdAt: "desc" },
+      take: max,
+      select: { id: true, createdAt: true, status: true, firstName: true, lastName: true, totalCents: true, itemsJson: true },
+    }),
+    leesCjInstellingen(),
+  ]);
   const uit: CjKandidaat[] = [];
   for (const o of orders) {
     const { regels, andere } = await cjRegelsVoor(o.itemsJson);
@@ -341,7 +427,8 @@ export async function cjKandidaten(max = 30): Promise<CjKandidaat[]> {
       cjRegels: regels.reduce((s, r) => s + r.quantity, 0),
       andereRegels: andere,
       stand,
-      statusTekst: stand ? cjStatusTekst(stand.status) : null,
+      statusTekst: stand ? (stand.status === "bezig" ? "wordt geplaatst…" : cjStatusTekst(stand.status)) : null,
+      echtPlaatsenKan: Boolean(stand?.cjOrderId && stand.sandbox && !instel.sandbox),
     });
   }
   return uit;

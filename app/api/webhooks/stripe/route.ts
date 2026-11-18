@@ -372,7 +372,7 @@ async function processStripeEvent(event: Stripe.Event, log: ReturnType<typeof lo
         // producten van verkopers op de marktplaats: zij versturen zelf (lib/shop/verkoper.ts)
         await meldVerkopersBetaald(updated);
         // producten van CJ: naar de leverancier, als de eigenaar dat aanzette (lib/shop/cj/bestelling.ts)
-        await cjNaBetaling(updated.id);
+        after(() => cjNaBetaling(updated.id));
       }
       return NextResponse.json({ ok: true });
     }
@@ -419,7 +419,7 @@ async function processStripeEvent(event: Stripe.Event, log: ReturnType<typeof lo
             await decrementVariantStock(order.id, (order.itemsJson as ShopOrderLine[] | null) ?? []);
             await notifyShopOrderPaid(order);
             await meldVerkopersBetaald(order);
-            await cjNaBetaling(order.id);
+            after(() => cjNaBetaling(order.id));
           }
           return NextResponse.json({ ok: true, matched: true });
         }

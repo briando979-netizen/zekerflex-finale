@@ -12,8 +12,9 @@ type Instellingen = { verzendCents: number; land: string; margePct: number | nul
 type Stand = {
   orderId: string; cjOrderId: string | null; status: string; sandbox: boolean; betaald: boolean; bedragUsdCents: number | null; bedragEurCents: number | null;
   logistiek: string | null; trackNumber: string | null; vervoerder: string | null; laatsteFout: string | null; regels: { naam: string; aantal: number }[];
+  bijgewerktOp: string;
 };
-type Kandidaat = { orderId: string; createdAt: string; status: string; naam: string; totalCents: number; cjRegels: number; andereRegels: number; stand: Stand | null; statusTekst: string | null };
+type Kandidaat = { orderId: string; createdAt: string; status: string; naam: string; totalCents: number; cjRegels: number; andereRegels: number; stand: Stand | null; statusTekst: string | null; echtPlaatsenKan: boolean };
 type Overzicht = { saldoUsdCents: number | null; instellingen: Instellingen; bestellingen: Kandidaat[] };
 
 async function vraag<T>(url: string, body?: unknown, methode = body === undefined ? "GET" : "POST"): Promise<T> {
@@ -145,8 +146,12 @@ export function CjBestellingen() {
                           <td className="py-2 pr-3">{s ? <>{dollar(s.bedragUsdCents)}{s.bedragEurCents !== null ? <span className="block text-xs" style={{ color: "var(--a-mute)" }}>≈ {euro(s.bedragEurCents)}</span> : null}</> : "–"}</td>
                           <td className="py-2 pr-3">{s?.trackNumber ? <>{s.trackNumber}<span className="block text-xs" style={{ color: "var(--a-mute)" }}>{s.vervoerder ?? s.logistiek}</span></> : "–"}</td>
                           <td className="py-2">
-                            {!s && <button type="button" className="a-btn" disabled={bezig !== ""} onClick={() => void doe(b.orderId, async () => { await vraag("/api/admin/shop-ai/cj/bestellingen", { actie: "plaatsen", orderId: b.orderId }); setBericht("Geplaatst bij CJ. Betaal daarna uit het saldo."); })}>{bezig === b.orderId ? "Bezig…" : "Plaatsen bij CJ"}</button>}
-                            {s && !s.betaald && <button type="button" className="a-btn a-btn-primary" disabled={bezig !== ""} onClick={() => { if (window.confirm(`Betalen bij CJ: ${dollar(s.bedragUsdCents)} uit het saldo${s.sandbox ? " (proef, gesimuleerd)" : ""}?`)) void doe(b.orderId, async () => { await vraag("/api/admin/shop-ai/cj/bestellingen", { actie: "betalen", orderId: b.orderId }); setBericht("Betaald uit het saldo. CJ pakt nu in; de track & trace komt vanzelf."); }); }}>{bezig === b.orderId ? "Bezig…" : "Betalen uit saldo"}</button>}
+                            {(!s || b.echtPlaatsenKan || (!s.cjOrderId && Date.now() - Date.parse(s.bijgewerktOp) > 240_000)) && (
+                              <button type="button" className="a-btn" disabled={bezig !== ""} onClick={() => void doe(b.orderId, async () => { await vraag("/api/admin/shop-ai/cj/bestellingen", { actie: "plaatsen", orderId: b.orderId }); setBericht("Geplaatst bij CJ. Betaal daarna uit het saldo."); })}>
+                                {bezig === b.orderId ? "Bezig…" : b.echtPlaatsenKan ? "Echt plaatsen bij CJ" : s ? "Opnieuw plaatsen" : "Plaatsen bij CJ"}
+                              </button>
+                            )}
+                            {s?.cjOrderId && !s.betaald && !b.echtPlaatsenKan && <button type="button" className="a-btn a-btn-primary" disabled={bezig !== ""} onClick={() => { if (window.confirm(`Betalen bij CJ: ${dollar(s.bedragUsdCents)} uit het saldo${s.sandbox ? " (proef, gesimuleerd)" : ""}?`)) void doe(b.orderId, async () => { await vraag("/api/admin/shop-ai/cj/bestellingen", { actie: "betalen", orderId: b.orderId }); setBericht("Betaald uit het saldo. CJ pakt nu in; de track & trace komt vanzelf."); }); }}>{bezig === b.orderId ? "Bezig…" : "Betalen uit saldo"}</button>}
                           </td>
                         </tr>
                       );

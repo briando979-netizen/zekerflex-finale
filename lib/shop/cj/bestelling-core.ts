@@ -58,17 +58,22 @@ export interface BestelAdres {
   city: string;
 }
 
-/** Ons bestelnummer bij CJ: herkenbaar en uniek per webshopbestelling. */
-export const cjOrderNumber = (orderId: string) => `ZF-${orderId}`;
+/**
+ * Ons bestelnummer bij CJ: herkenbaar, en uniek per poging. Een proef heet anders dan de echte bestelling, en elke
+ * poging krijgt een volgnummer: een time-out nadat CJ de order toch aanmaakte geeft bij de volgende poging dan geen
+ * ORDER_CODE_EXIST (de hangende CJ-order blijft onbetaald en vervalt daar vanzelf).
+ */
+export const cjOrderNumber = (orderId: string, o: { sandbox: boolean; poging: number }) => `ZF-${o.sandbox ? "PROEF-" : ""}${orderId}-${Math.max(1, Math.round(o.poging))}`;
 
 /**
  * De body voor createOrderV2. payType 3 = alleen aanmaken (betalen is een aparte, bewuste stap);
  * isSandbox 1 = proefbestelling zonder geld (CJ simuleert de betaling en verstuurt niets).
+ * Het e-mailadres van de klant gaat niet mee: CJ heeft het niet nodig (wij mailen de klant zelf).
  */
-export function cjOrderBody(order: BestelAdres, regels: CjBestelRegel[], o: { van: string; logistiek: string; sandbox: boolean }): Record<string, unknown> {
+export function cjOrderBody(order: BestelAdres, regels: CjBestelRegel[], o: { orderNumber: string; van: string; logistiek: string; sandbox: boolean }): Record<string, unknown> {
   const postcode = order.postalCode.replace(/\s+/g, "").toUpperCase().replace(/^(\d{4})([A-Z]{2})$/, "$1 $2");
   return {
-    orderNumber: cjOrderNumber(order.id),
+    orderNumber: o.orderNumber,
     shippingCountryCode: "NL",
     shippingCountry: "Netherlands",
     shippingProvince: provincieVanPostcode(order.postalCode),
@@ -76,7 +81,6 @@ export function cjOrderBody(order: BestelAdres, regels: CjBestelRegel[], o: { va
     shippingAddress: order.address.trim(),
     shippingZip: postcode,
     shippingCustomerName: `${order.firstName} ${order.lastName}`.trim(),
-    email: order.email.trim(),
     remark: "ZekerFlex Shop",
     fromCountryCode: o.van.toUpperCase(),
     logisticName: o.logistiek,

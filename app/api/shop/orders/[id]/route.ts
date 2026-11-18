@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { recordAudit } from "@/lib/audit";
@@ -68,7 +68,7 @@ export const PATCH = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (
     // producten van verkopers op de marktplaats: zij versturen zelf (lib/shop/verkoper.ts)
     await meldVerkopersBetaald(order);
     // producten van CJ: naar de leverancier, als de eigenaar dat aanzette (lib/shop/cj/bestelling.ts)
-    await cjNaBetaling(order.id);
+    after(() => cjNaBetaling(order.id));
   }
 
   // Just shipped with a tracking number on file — let the customer know

@@ -38,13 +38,32 @@ const instellingenSchema = z.object({
   verzendCents: z.number().int().min(0).max(5000).optional(),
   land: z.string().trim().max(2).optional(),
   margePct: z.number().min(5).max(90).nullable().optional(),
+  // de bestelstroom (lib/shop/cj/bestelling.ts): proefstand, vanzelf plaatsen, vanzelf betalen, grens per bestelling
+  sandbox: z.boolean().optional(),
+  autoBestellen: z.boolean().optional(),
+  autoBetalen: z.boolean().optional(),
+  maxBetaalCents: z.number().int().min(0).max(200_000).optional(),
 });
+const GEVOELIG = ["sandbox", "autoBestellen", "autoBetalen", "maxBetaalCents"] as const;
 
-// PATCH: instellingen
-export const PATCH = withAdminAccess(["PLATFORM_ADMIN"], async (request) => {
+// PATCH: instellingen (een deel mag). Alles wat geld raakt of de proefstand, komt in het logboek.
+export const PATCH = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
   const parsed = instellingenSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) throw AppError.validation("Controleer de instellingen: verzendkosten in centen (0 tot 5000), land als twee letters, marge 5 tot 90.");
+  if (!parsed.success) throw AppError.validation("Controleer de instellingen: verzendkosten in centen (0 tot 5000), land als twee letters, marge 5 tot 90, grens in centen (0 tot 200000).");
   const huidig = await leesCjInstellingen();
   const instellingen = await zetCjInstellingen({ ...huidig, ...parsed.data });
+  const gewijzigd = GEVOELIG.filter((k) => huidig[k] !== instellingen[k]);
+  if (gewijzigd.length) {
+    await recordAudit({
+      category: "ADMIN",
+      action: "shop.cj.instellingen",
+      actorUserId: principal.userId,
+      actorLabel: "user",
+      summary: `CJ-bestelstroom: ${gewijzigd.map((k) => `${k} ${String(huidig[k])} → ${String(instellingen[k])}`).join(", ")}`,
+      targetType: "shop",
+      targetId: "cj",
+      metadata: { voor: Object.fromEntries(gewijzigd.map((k) => [k, huidig[k]])), na: Object.fromEntries(gewijzigd.map((k) => [k, instellingen[k]])) },
+    });
+  }
   return NextResponse.json({ instellingen });
 });

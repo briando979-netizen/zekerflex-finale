@@ -27,10 +27,10 @@ describe("provincie uit de postcode (voor het etiket)", () => {
 const ORDER = { id: "ord_1", firstName: "Jan", lastName: "Jansen", email: "jan@example.test", address: "Dorpsstraat 1", postalCode: "9711aa", city: "Groningen" };
 
 describe("de body voor createOrderV2", () => {
-  it("alleen aanmaken (payType 3), netjes adres, provincie, en de proefstand", () => {
-    const b = cjOrderBody(ORDER, [{ vid: "V1", quantity: 2, naam: "Oordopjes", sku: "cj-x-1" }], { van: "de", logistiek: "PostNL Packet", sandbox: true });
+  it("alleen aanmaken (payType 3), netjes adres, provincie, en de proefstand; geen e-mailadres naar CJ", () => {
+    const b = cjOrderBody(ORDER, [{ vid: "V1", quantity: 2, naam: "Oordopjes", sku: "cj-x-1" }], { orderNumber: "ZF-PROEF-ord_1-1", van: "de", logistiek: "PostNL Packet", sandbox: true });
     expect(b).toMatchObject({
-      orderNumber: "ZF-ord_1",
+      orderNumber: "ZF-PROEF-ord_1-1",
       shippingCountryCode: "NL",
       shippingCountry: "Netherlands",
       shippingProvince: "Groningen",
@@ -38,15 +38,21 @@ describe("de body voor createOrderV2", () => {
       shippingAddress: "Dorpsstraat 1",
       shippingZip: "9711 AA",
       shippingCustomerName: "Jan Jansen",
-      email: "jan@example.test",
       fromCountryCode: "DE",
       logisticName: "PostNL Packet",
       payType: 3,
       isSandbox: 1,
       products: [{ vid: "V1", quantity: 2, storeProductName: "Oordopjes", storeSku: "cj-x-1" }],
     });
-    expect(cjOrderBody(ORDER, [], { van: "CN", logistiek: "x", sandbox: false }).isSandbox).toBe(0);
-    expect(cjOrderNumber("abc")).toBe("ZF-abc");
+    expect(b).not.toHaveProperty("email");
+    expect(cjOrderBody(ORDER, [], { orderNumber: "ZF-ord_1-1", van: "CN", logistiek: "x", sandbox: false }).isSandbox).toBe(0);
+  });
+
+  it("het bestelnummer is per poging uniek en een proef heet anders dan de echte", () => {
+    expect(cjOrderNumber("abc", { sandbox: false, poging: 1 })).toBe("ZF-abc-1");
+    expect(cjOrderNumber("abc", { sandbox: false, poging: 2 })).toBe("ZF-abc-2");
+    expect(cjOrderNumber("abc", { sandbox: true, poging: 1 })).toBe("ZF-PROEF-abc-1");
+    expect(cjOrderNumber("abc", { sandbox: true, poging: 0 })).toBe("ZF-PROEF-abc-1");
   });
 });
 

@@ -64,4 +64,12 @@ describe("productfeed", () => {
     expect(xml).toContain("<lastBuildDate>Wed, 18 Nov 2026 10:00:00 GMT</lastBuildDate>");
     expect(xml.trim().endsWith("</channel></rss>")).toBe(true);
   });
+
+  it("haalt stuurtekens weg die XML niet mag bevatten (één zo'n teken maakt de hele feed ongeldig)", () => {
+    const { xml } = bouwProductFeed([product({ name: "Kabel\u0000 met\u001F bel\u0007", description: "Net\u000Bjes\u000C." })], basis);
+    expect(xml).toContain("<g:title>Kabel met bel – Zwart</g:title>");
+    expect(xml).toContain("<g:description>Netjes.</g:description>");
+    // eslint-disable-next-line no-control-regex
+    expect(xml).not.toMatch(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/);
+  });
 });
