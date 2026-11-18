@@ -1,5 +1,6 @@
 import { envelopDatum } from "@/lib/mail/bounce";
 import { INFO_MAPPEN, antwoordOnderwerp, antwoordTekst, deelIn, heeftBijlageKop, isTerugkaatser, kort, maskeerAdres, type InfoSoort } from "@/lib/mail/info-indeling";
+import { bedrijfsConcept } from "@/lib/mail/info-antwoorden";
 
 // ---------------------------------------------------------------------------
 // De info-ronde (elke 5 minuten, deploy/cron/entrypoint.sh): de postbus info@ naloopt en indeelt
@@ -102,6 +103,12 @@ export interface InfoAfhankelijkheden {
   stuur(antwoord: InfoAntwoord): Promise<boolean>;
   /** melding aan de eigenaar over een mail van een bedrijf */
   meld(afzender: string, onderwerp: string, uid: number): Promise<boolean>;
+  /** een concept-antwoord klaarzetten op jouw goedkeuring (Beheer, AI-teams); nooit iets versturen. Zonder deze functie: geen concept. */
+  bewaarConcept?(antwoord: InfoAntwoord, uid: number): Promise<boolean>;
+  /** is dit adres een lead die een verkoopmail kreeg? Geeft het id van de lead, of null. Zonder deze functie: niet herkend. */
+  herkenReactie?(adres: string): Promise<string | null>;
+  /** zet de lead op "gereageerd" en stopt de verkoopreeks (markLeadReplied) */
+  markeerReactie?(leadId: string): Promise<boolean>;
   vorigeStand(): Promise<InfoStand | null>;
   bewaar(stand: InfoStand): Promise<void>;
   ruimOp(nu: number): Promise<void>;
@@ -223,17 +230,52 @@ async function ronde(d: InfoAfhankelijkheden, nu: Date): Promise<InfoStand> {
         continue;
       }
 
+      // een reactie op een verkoopmail (18 nov): het adres is een lead die een mail kreeg. Dan stopt de verkoopreeks en krijgt de
+      // eigenaar een melding; nooit een automatisch antwoord. Alleen als de afhankelijkheden dit kunnen (anders gedraagt alles zich als vroeger).
+      const afzender = (e.fromAddress ?? "").trim().toLowerCase();
+      if (d.herkenReactie && ADRES.test(afzender)) {
+        const leadId = await d.herkenReactie(afzender).catch(() => null);
+        if (leadId) {
+          if (!aan) {
+            schrijf("bedrijf", "zou de lead op 'gereageerd' zetten en jou melden (reactie op een verkoopmail)");
+          } else {
+            const gezet = (await d.markeerReactie?.(leadId).catch(() => false)) === true;
+            const gemeld = await d.meld(kort(e.fromName, 60) || maskeerAdres(e.fromAddress), kort(e.subject, 90), e.uid).catch(() => false);
+            if (gemeld) gedaan.gemeld += 1;
+            schrijf("bedrijf", gezet ? "reactie op een verkoopmail: de lead staat op 'gereageerd' en de verkoopreeks is gestopt" : "blijft staan: de lead bijwerken lukte niet");
+          }
+          await klaar("bedrijf");
+          continue;
+        }
+      }
+
       // een mens: nu pas de tekst ophalen
       const tekst = await d.tekst(e.uid).catch(() => null);
       indeling = deelIn({ ...basis, tekst });
 
       if (indeling.soort === "bedrijf") {
+        // een concept-antwoord uit het antwoordenpakket (lib/mail/info-antwoorden.ts), alleen als dat kan en het adres klopt; het
+        // gaat pas uit als de eigenaar het uitvoert
+        const concept = d.bewaarConcept ? bedrijfsConcept(e.subject, tekst) : null;
+        const conceptAdres = (e.replyToAddress ?? e.fromAddress ?? "").trim().toLowerCase();
+        const kanConcept = concept !== null && ADRES.test(conceptAdres);
         if (!aan) {
-          schrijf("bedrijf", "zou een melding aan jou sturen (geen automatisch antwoord)");
+          schrijf("bedrijf", kanConcept ? "zou een melding aan jou sturen en een concept-antwoord klaarzetten (niets wordt vanzelf verstuurd)" : "zou een melding aan jou sturen (geen automatisch antwoord)");
         } else {
           const ok = await d.meld(kort(e.fromName, 60) || maskeerAdres(e.fromAddress), kort(e.subject, 90), e.uid).catch(() => false);
           if (ok) gedaan.gemeld += 1;
-          schrijf("bedrijf", ok ? "melding aan jou gestuurd (geen automatisch antwoord)" : "blijft staan (melding al gestuurd of mislukt)");
+          let conceptOk = false;
+          if (kanConcept && concept && d.bewaarConcept) {
+            conceptOk = await d.bewaarConcept({ aan: conceptAdres, onderwerp: concept.onderwerp, tekst: concept.tekst, inReplyTo: e.messageId }, e.uid).catch(() => false);
+          }
+          schrijf(
+            "bedrijf",
+            conceptOk
+              ? "melding aan jou gestuurd en een concept-antwoord klaargezet (Beheer, AI-teams); niets is vanzelf verstuurd"
+              : ok
+                ? "melding aan jou gestuurd (geen automatisch antwoord)"
+                : "blijft staan (melding al gestuurd of mislukt)",
+          );
         }
         await klaar("bedrijf");
         continue;
