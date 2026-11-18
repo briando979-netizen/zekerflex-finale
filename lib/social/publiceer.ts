@@ -67,15 +67,24 @@ export async function verwerkBerichten(nu: Date = new Date()): Promise<{ verwerk
   let handmatig = 0;
   let mislukt = 0;
   for (const p of teDoen) {
+    const nuGepost: string[] = [];
     for (const kanaal of p.kanalen) {
       if ((p.uitslag[kanaal]?.status ?? "wacht") !== "wacht") continue;
       const u = await plaatsOpKanaal(p, kanaal, nu);
       p.uitslag[kanaal] = u;
-      if (u.status === "gepost") gepost += 1;
-      else if (u.status === "handmatig") handmatig += 1;
+      if (u.status === "gepost") {
+        gepost += 1;
+        nuGepost.push(kanaal);
+      } else if (u.status === "handmatig") handmatig += 1;
       else if (u.status === "mislukt") mislukt += 1;
     }
     await savePost(p);
+    // de eigenaar melden (lib/ops/melder.ts): een bericht dat nu echt live is gegaan, met de kanalen
+    if (nuGepost.length > 0) {
+      void import("@/lib/ops/melder")
+        .then(({ meldGebeurtenis }) => meldGebeurtenis({ soort: "marketing", titel: "Een social-bericht is geplaatst", detail: `Op ${nuGepost.join(", ")}`, url: "/admin/social" }))
+        .catch(() => undefined);
+    }
     const kort = p.tekst.length > 70 ? `${p.tekst.slice(0, 70)}…` : p.tekst;
     if (p.kanalen.some((k) => p.uitslag[k]?.status === "handmatig")) await pushBeheerders("Bericht klaar om te plaatsen", kort, `social-${p.id}-hand`);
     if (p.kanalen.some((k) => p.uitslag[k]?.status === "mislukt")) await pushBeheerders("Een bericht is niet geplaatst", kort, `social-${p.id}-fout`);

@@ -93,12 +93,27 @@ export async function recordAudit(input: AuditInput): Promise<void> {
         data: { hash, prevHash },
       });
     });
+    // De melder voor de eigenaar (lib/ops/melder.ts): pas na de commit, los ingeladen en niet afgewacht. Een storing of een
+    // trage push raakt de hashketen en de aanroeper nooit.
+    meldVanuitAudit(input.action, input.metadata);
   } catch (err) {
     logger.error("audit write failed", {
       action: input.action,
       error: (err as Error).message,
     });
   }
+}
+
+/** Meldt een bekende audit-actie aan de eigenaar (lib/ops/gebeurtenis.ts, AUDIT). Fire-and-forget; gooit nooit. */
+function meldVanuitAudit(action: string, metadata: unknown): void {
+  void import("@/lib/ops/gebeurtenis")
+    .then(async ({ auditNaarGebeurtenis }) => {
+      const g = auditNaarGebeurtenis(action, metadata);
+      if (!g) return;
+      const { meldGebeurtenis } = await import("@/lib/ops/melder");
+      await meldGebeurtenis(g);
+    })
+    .catch(() => undefined);
 }
 
 /**
