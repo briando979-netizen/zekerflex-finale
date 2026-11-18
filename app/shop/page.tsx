@@ -13,8 +13,6 @@ import { toShopProduct, type ShopCategory } from "@/components/marketing/shop-pr
 import { ShopMoreCategories, ShopNewsletter, ShopService } from "@/components/marketing/ShopSections";
 import { ShopCategorieGroot, ShopLooks, type GroteTegel, type LookKaart } from "@/components/marketing/ShopThuis";
 import { LOOKS } from "@/lib/shop/paskamer";
-import { PaginaAchtergrond } from "@/components/shop/PaginaAchtergrond";
-import { achtergrondVoor } from "@/lib/ontwerp/achtergrond";
 import { Fragment, type ReactNode } from "react";
 import { zichtbareShopSecties, type ShopSectieId } from "@/lib/ontwerp/shop-indeling";
 import { getShopIndeling } from "@/lib/ontwerp/shop-indeling-store";
@@ -153,10 +151,9 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
     nieuwsbrief: <ShopNewsletter t={t} />,
   };
   const zichtbaar = zichtbareShopSecties(await getShopIndeling(), browsing);
-  // 18 nov: de kop (titel, tekst en de foto van een persoon) is weg op verzoek van de eigenaar; de pagina begint met de
-  // onderdelen uit de indeling. Een foto of video die de beheerder voor de webshop koos (Beheer → Webshop → Foto's en
-  // video's) staat als strook bovenaan, zoals vóór 13 nov.
-  const achtergrond = browsing ? null : await achtergrondVoor("shop");
+  // 18 nov: de kop (titel, tekst en de foto van een persoon) is weg op verzoek van de eigenaar, en later die dag ook de
+  // achtergrondstrook (Beheer → Webshop → Foto's en video's, "shop"): daar stond dezelfde persoon nog in. De pagina begint
+  // met de onderdelen uit de indeling. De instelling blijft bestaan voor de voorpagina ("home").
 
   return (
     <>
@@ -168,7 +165,6 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
           <h1 className="sr-only">{korteTitel}</h1>
         </div>
       )}
-      {!browsing && achtergrond && <PaginaAchtergrond pagina="shop" />}
       {zichtbaar.map((id) => (
         <Fragment key={id}>{onderdelen[id]}</Fragment>
       ))}

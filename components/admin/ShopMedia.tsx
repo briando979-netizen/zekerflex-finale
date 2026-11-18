@@ -196,9 +196,8 @@ export function ShopMedia({ onProductenAangemaakt }: { onProductenAangemaakt: ()
       {media !== null ? (
         <div className="space-y-3 border-t pt-4" style={{ borderColor: "var(--a-border)" }}>
           <h3 className="text-sm font-semibold" style={{ color: "var(--a-text)" }}>Achtergrond bovenaan de pagina</h3>
-          <p className="text-xs" style={{ color: "var(--a-mute)" }}>Een foto of video als strook boven de kop van de pagina. Webshop en Homepage bewaar je los van elkaar: een knop verandert alleen die ene pagina. Bij &quot;Geen&quot; blijft de pagina precies zoals hij nu is. Video speelt zonder geluid en staat stil bij &quot;minder beweging&quot;.</p>
+          <p className="text-xs" style={{ color: "var(--a-mute)" }}>Een foto of video als strook boven de kop van de voorpagina. Bij &quot;Geen&quot; blijft de pagina precies zoals hij nu is. De webshop (/shop) heeft sinds 18 november geen strook meer: die begint meteen met de banners. Video speelt zonder geluid en staat stil bij &quot;minder beweging&quot;.</p>
           <div className="grid gap-3 md:grid-cols-2">
-            <PaginaKeuze pagina="shop" titel="Webshop (/shop)" keuze={instelling.shop} media={lijst} onBewaard={(k) => setInstelling((cur) => ({ ...cur, shop: k }))} />
             <PaginaKeuze pagina="home" titel="Homepage" keuze={instelling.home} media={lijst} onBewaard={(k) => setInstelling((cur) => ({ ...cur, home: k }))} />
           </div>
           <p className="text-xs" style={{ color: "var(--a-mute)" }}>{lijst.length} bestand(en) in de bibliotheek.</p>
