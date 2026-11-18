@@ -308,6 +308,7 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/klussen","file":"app/(marketing)/klussen/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/klussen/[id]","file":"app/(marketing)/klussen/[id]/page.tsx","area":"Marketing","dynamic":true},
   {"route":"/leren/klussen-krijgen","file":"app/(marketing)/leren/klussen-krijgen/page.tsx","area":"Marketing","dynamic":false},
+  {"route":"/leren/personeel-krijgen","file":"app/(marketing)/leren/personeel-krijgen/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/logistiek-personeel-inhuren","file":"app/(marketing)/logistiek-personeel-inhuren/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/logistiek-personeel-inhuren/[stad]","file":"app/(marketing)/logistiek-personeel-inhuren/[stad]/page.tsx","area":"Marketing","dynamic":true},
   {"route":"/logistiek-vacatures","file":"app/(marketing)/logistiek-vacatures/page.tsx","area":"Marketing","dynamic":false},
