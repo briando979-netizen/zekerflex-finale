@@ -64,14 +64,24 @@ export function voegPuntToe(reeks: unknown, punt: SchijfPunt): SchijfPunt[] {
   return [...basis, punt].filter((p) => p.t >= grens).sort((a, b) => a.t - b.t).slice(-REEKS_MAX_PUNTEN);
 }
 
-/** De punten sinds de laatste opruiming: de reeks vanaf het punt na de laatste grote daling. */
+/**
+ * Een opruiming (knik) telt alleen als het punt meer dan KNIK_PERCENT onder de bodem van de voorgaande 24 uur ligt. Een piek van een uitrol
+ * die weer zakt, komt terug op de bodem en niet eronder. 18 nov 2026, gemeten: bij vijf of zes uitrollen per dag viel elke zakking van
+ * 4 tot 13 GB onder de oude regel (alleen het vorige punt) voor een opruiming, de trend begon steeds opnieuw en had nooit zes uur aan
+ * gegevens: de trendmelding kon daardoor niet afgaan, ook niet bij een snelle echte groei.
+ */
+export const KNIK_VENSTER_MS = 24 * 3_600_000;
+
+/** De punten sinds de laatste opruiming: de reeks vanaf het punt na de laatste echte daling van de bodem. */
 export function trendReeks(reeks: SchijfPunt[]): SchijfPunt[] {
   const r = [...reeks].sort((a, b) => a.t - b.t);
   let begin = 0;
   for (let i = 1; i < r.length; i += 1) {
-    const vorig = r[i - 1] as SchijfPunt;
     const nu = r[i] as SchijfPunt;
-    if (vorig.gebruikt - nu.gebruikt > (KNIK_PERCENT / 100) * nu.totaal) begin = i;
+    // begin bij het vorige punt: ook na een gat in de metingen (langer dan het venster) telt een daling dan als vroeger
+    let bodem = (r[i - 1] as SchijfPunt).gebruikt;
+    for (let j = i - 1; j >= 0 && nu.t - (r[j] as SchijfPunt).t < KNIK_VENSTER_MS; j -= 1) bodem = Math.min(bodem, (r[j] as SchijfPunt).gebruikt);
+    if (bodem - nu.gebruikt > (KNIK_PERCENT / 100) * nu.totaal) begin = i;
   }
   return r.slice(begin);
 }
