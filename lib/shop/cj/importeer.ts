@@ -71,6 +71,8 @@ export interface CjKoppeling {
   verzendCents: number;
   verzendBron?: "cj" | "schatting";
   verzendDienst?: string;
+  /** levertijd zoals CJ hem noemt, bv. "6-12" (dagen); voor de kaart en de productpagina (lib/shop/levertijd.ts) */
+  verzendDagen?: string;
   geimporteerdOp: string;
   vertaald: boolean;
   /** de automatische categorie bij de laatste ronde; wijkt de categorie in de winkel daarvan af, dan koos de beheerder zelf en blijft die staan */
@@ -291,6 +293,7 @@ async function overnemen(pid: string, opties: ImportOpties): Promise<ImportUitko
     verzendCents: prijs.verzendCents,
     verzendBron: verzending ? "cj" : "schatting",
     ...(verzending?.dienst ? { verzendDienst: verzending.dienst } : {}),
+    ...(verzending?.dagen ? { verzendDagen: verzending.dagen } : {}),
     geimporteerdOp: new Date().toISOString(),
     vertaald: tekst.vertaald,
     categorieAuto: p.categorie,
@@ -425,6 +428,8 @@ async function bijwerkEen(id: string): Promise<{ categorie: boolean; voorraad: b
   const product = await prisma.shopProduct.findUnique({ where: { id }, select: { id: true, name: true, category: true, stock: true, variants: { select: { id: true, sku: true, stock: true } } } });
   if (!k || !product) return geen;
   const p = await cjProduct(k.pid);
+  // levertijd: de termijn van CJ naar Nederland, één keer ophalen; staat daarna in de koppeling
+  const verzending = k.verzendDagen ? null : await verzendingVanCj(p);
 
   // categorie: de automatische indeling met de nieuwste regels; koos de beheerder zelf iets anders sinds de vorige ronde, dan blijft dat
   const auto = categorieVanCj(p.categorieCj, p.naamEn);
@@ -468,6 +473,6 @@ async function bijwerkEen(id: string): Promise<{ categorie: boolean; voorraad: b
       ...(tekst && k.activerenNaVertaling ? { active: true } : {}),
     },
   });
-  await kvSet(`${K_PRODUCT}${id}`, { ...k, categorieAuto: auto, ...(tekst ? { vertaald: true, activerenNaVertaling: false } : {}), bijgewerktOp: new Date().toISOString() } satisfies CjKoppeling);
+  await kvSet(`${K_PRODUCT}${id}`, { ...k, categorieAuto: auto, ...(tekst ? { vertaald: true, activerenNaVertaling: false } : {}), ...(verzending?.dagen ? { verzendDagen: verzending.dagen, verzendDienst: verzending.dienst } : {}), bijgewerktOp: new Date().toISOString() } satisfies CjKoppeling);
   return { categorie, voorraad: voorraad || totaal !== product.stock, vertaald: tekst !== null };
 }

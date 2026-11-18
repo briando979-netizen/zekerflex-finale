@@ -22,6 +22,7 @@ import { cadeauKeuzes, catalogusOverzicht, collectieUitAdres, ontdekTegels, prij
 import { ShopAlles, ShopCadeauhulp, ShopOntdek, ShopRegelen, ShopThemas } from "@/components/marketing/ShopEtalage";
 import { SHOP_CATEGORIEEN, categorieNaam } from "@/lib/shop/categorieen";
 import { shopBanners } from "@/lib/shop/banners";
+import { levertijdenVoor } from "@/lib/shop/levertijd-server";
 
 // <title> kort en zonder het sjabloon " · ZekerFlex" erachter (dan stond het merk er twee keer); delen houdt de lange
 const title = "ZekerFlex Shop — kleding, werkkleding en PBM, eerst passen in de paskamer";
@@ -52,7 +53,9 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
     .catch(() => []);
   // sterren op de kaartjes: alleen goedgekeurde beoordelingen van echte kopers (lib/shop/beoordeling.ts)
   const scores = await beoordelingPerProduct(rows.map((r) => r.id)).catch(() => new Map<string, { gemiddelde: number; aantal: number }>());
-  const products = rows.map((r) => toShopProduct({ ...(r as unknown as Record<string, unknown>), beoordeling: scores.get(r.id) ?? null }));
+  // levertijd per leveranciersproduct (CJ): uit de koppeling, anders de ruime standaard van het magazijn
+  const levertijden = await levertijdenVoor(rows.map((r) => r.id)).catch(() => new Map<string, string>());
+  const products = rows.map((r) => toShopProduct({ ...(r as unknown as Record<string, unknown>), beoordeling: scores.get(r.id) ?? null, levertijd: levertijden.get(r.id) ?? null }));
   // eigen teksten uit de Site-ontwerper (tabblad Teksten, groep Webshop); alleen in het Nederlands, anders de vertaling
   const dict = metShopTeksten(await getDict(), await getContentMap(contentKeys("shop.")).catch(() => ({})), await getLocale());
   const t = dict.shop;

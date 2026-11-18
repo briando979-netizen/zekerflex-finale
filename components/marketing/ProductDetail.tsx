@@ -23,6 +23,7 @@ import { useShopBetaalwijze } from "@/components/marketing/ShopBetaalwijze";
 import { FotoViewer } from "@/components/marketing/FotoViewer";
 import { VoorraadMelding } from "@/components/marketing/VoorraadMelding";
 import { bezorgZin } from "@/lib/shop/bezorgmoment";
+import { levertijdVoorLeverancier, type Herkomst } from "@/lib/shop/levertijd";
 import { useBezorgmoment } from "@/components/marketing/useBezorgmoment";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { VERKOPER_VERZENDT_BINNEN_WERKDAGEN } from "@/lib/shop/verkoper-core";
@@ -61,6 +62,10 @@ export type PdpProduct = {
   gender?: string | null;
   /** per kleur de foto in die kleur (lib/shop/kleurfoto.ts); klik je een kleur, dan verschijnt die foto */
   kleurFotos?: Record<string, string>;
+  /** eigen voorraad, verkoper of leverancier (CJ): bepaalt de bezorgtekst (lib/shop/levertijd.ts) */
+  herkomst?: Herkomst;
+  /** levertijd van een leveranciersproduct in dagen, bv. "6-12" */
+  levertijd?: string | null;
 };
 
 const money = (cents: number) => `€ ${(cents / 100).toFixed(2).replace(".", ",")}`;
@@ -81,6 +86,8 @@ const asCard = (p: PdpProduct): ShopCardProduct => ({
   altImageUrl: p.modelPhotoUrl && p.modelPhotoUrl !== p.imageUrl ? p.modelPhotoUrl : null,
   variants: p.variants,
   seller: p.seller ?? null,
+  herkomst: p.herkomst ?? "eigen",
+  levertijd: p.levertijd ?? null,
 });
 
 export function ProductDetail({
@@ -112,6 +119,9 @@ export function ProductDetail({
   const betaalNoot = betaalwijze === "overschrijving" ? t.shop.bankPaymentNote : betaalwijze === "dicht" ? t.shop.paymentClosedNote : t.shop.securePaymentNote;
   // 16 nov 2026: kan bestellen nu niet, dan ook geen "bestel binnen … morgen in huis" en geen actieve knop voor de winkelwagen
   const bestellenDicht = betaalwijze === "dicht";
+  // een product van de leverancier (CJ) heeft een levertijd in dagen in plaats van "morgen in huis" (18 nov 2026)
+  const vanLeverancier = product.herkomst === "leverancier";
+  const levertijd = product.levertijd ?? levertijdVoorLeverancier(null);
   // het bezorgmoment telt af (zoals bol.com), met werkdagen en feestdagen; pas in de browser uitgerekend (hydratie)
   const bezorg = useBezorgmoment(30_000);
   const { locale } = useI18n();
@@ -332,7 +342,10 @@ export function ProductDetail({
           {variant && variantStock > 0 && product.seller && !bestellenDicht && (
             <p className="mt-1 text-[13px] font-semibold text-neutralx-600">{fmt(t.shop.bezorgVerkoper, { seller: product.seller, n: VERKOPER_VERZENDT_BINNEN_WERKDAGEN })}</p>
           )}
-          {bezorg && variant && variantStock > 0 && !product.seller && !bestellenDicht && (
+          {variant && variantStock > 0 && vanLeverancier && !bestellenDicht && (
+            <p className="mt-1 text-[13px] font-semibold text-neutralx-600">{fmt(t.shop.bezorgLeverancier, { dagen: levertijd })}</p>
+          )}
+          {bezorg && variant && variantStock > 0 && !product.seller && !vanLeverancier && !bestellenDicht && (
             <p className="mt-1 text-[13px] font-semibold text-ok">
               {bezorgZin(bezorg, { aftellen: t.shop.bezorgAftellen, nu: t.shop.bezorgNu, morgen: t.shop.bezorgMorgen, uurEnMin: t.shop.uurEnMin, uren: t.shop.uren, minuten: t.shop.minuten }, locale)}
             </p>
@@ -385,7 +398,7 @@ export function ProductDetail({
           <div className="mt-5 border-t border-hair pt-4">
             <p className="text-[14px] font-bold text-ink">{fmt(t.shop.buyBoxSeller, { seller: product.seller ?? SELLER })}</p>
             <ul className="mt-2.5 space-y-2 text-[13px] text-neutralx-600">
-              {(product.seller ? [t.shop.uspSellerShips, t.shop.freeShipping, t.shop.uspReturns, t.shop.uspPaySafe] : [t.shop.uspNextDay, t.shop.freeShipping, t.shop.uspReturns, t.shop.uspInvoice]).map((line) => (
+              {(product.seller ? [t.shop.uspSellerShips, t.shop.freeShipping, t.shop.uspReturns, t.shop.uspPaySafe] : [vanLeverancier ? fmt(t.shop.uspLevertijd, { dagen: levertijd }) : t.shop.uspNextDay, t.shop.freeShipping, t.shop.uspReturns, t.shop.uspInvoice]).map((line) => (
                 <li key={line} className="flex gap-2">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className="mt-px shrink-0 text-ok" aria-hidden>
                     <path d="m5 12.5 4.5 4.5L19 7.5" />
@@ -493,7 +506,7 @@ export function ProductDetail({
               {t.shop.shippingReturns}
             </h2>
             <ul className="mt-4 space-y-2.5 text-[15px] leading-relaxed text-neutralx-700">
-              {(product.seller ? [fmt(t.shop.sellerShipsNote, { seller: product.seller }), t.shop.uspReturns, betaalNoot] : [...(bestellenDicht ? [] : [t.shop.announcement]), t.shop.uspReturns, t.shop.uspInvoice, betaalNoot]).map((line) => (
+              {(product.seller ? [fmt(t.shop.sellerShipsNote, { seller: product.seller }), t.shop.uspReturns, betaalNoot] : [...(bestellenDicht ? [] : [vanLeverancier ? fmt(t.shop.uspLevertijd, { dagen: levertijd }) : t.shop.announcement]), t.shop.uspReturns, t.shop.uspInvoice, betaalNoot]).map((line) => (
                 <li key={line} className="flex gap-3">
                   <span aria-hidden className="mt-[0.6rem] h-1.5 w-1.5 shrink-0 rounded-full bg-brand-500" />
                   <span>{line}</span>

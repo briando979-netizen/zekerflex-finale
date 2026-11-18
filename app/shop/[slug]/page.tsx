@@ -9,6 +9,8 @@ import { getModel3D, model3dUrl } from "@/lib/shop/model3d";
 import { kleurFotos } from "@/lib/shop/kleurfoto";
 import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 import { zichtbareBeoordelingen } from "@/lib/shop/beoordeling-server";
+import { herkomstVan } from "@/lib/shop/levertijd";
+import { levertijdenVoor } from "@/lib/shop/levertijd-server";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +21,10 @@ function toDto(p: {
   collection?: string | null;
   gender?: string | null;
   seller?: { name: string } | null;
-  variants?: { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number }[];
+  variants?: { id: string; sku?: string; size: string | null; color: string | null; priceCents: number | null; stock: number }[];
   bundleOf?: { itemProduct: { id: string; name: string; imageUrl: string | null; priceCents: number } }[];
+  /** levertijd in dagen voor een leveranciersproduct (lib/shop/levertijd-server.ts) */
+  levertijd?: string | null;
 }): PdpProduct {
   return {
     id: p.id, slug: p.slug, name: p.name, description: p.description, category: p.category,
@@ -31,6 +35,8 @@ function toDto(p: {
     ...(p.bundleOf ? { bundleItems: p.bundleOf.map((b) => b.itemProduct) } : {}),
     seller: p.seller?.name ?? null,
     gender: p.gender ?? null,
+    herkomst: herkomstVan({ seller: p.seller?.name ?? null, variants: p.variants ?? [] }),
+    levertijd: p.levertijd ?? null,
   };
 }
 
@@ -74,6 +80,7 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
   const related = [...together, ...fill];
   const model3d = await getModel3D(product.id);
   const beoordelingen = await zichtbareBeoordelingen(product.id).catch(() => null);
+  const levertijden = await levertijdenVoor([product.id, ...related.map((p) => p.id)]);
 
   return (
     <>
@@ -97,8 +104,8 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
         }}
       />
       <ProductDetail
-        product={{ ...toDto(product), model3dUrl: model3d ? model3dUrl(product.id) : null, kleurFotos: kleurFotos(product) }}
-        related={related.map(toDto)}
+        product={{ ...toDto({ ...product, levertijd: levertijden.get(product.id) ?? null }), model3dUrl: model3d ? model3dUrl(product.id) : null, kleurFotos: kleurFotos(product) }}
+        related={related.map((p) => toDto({ ...p, levertijd: levertijden.get(p.id) ?? null }))}
         boughtTogether={together.length > 0}
         beoordelingen={beoordelingen}
       />

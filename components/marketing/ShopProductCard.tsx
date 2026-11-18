@@ -18,6 +18,7 @@ import { ShopPrijs } from "@/components/marketing/ShopPrijs";
 import { useBezorgmoment } from "@/components/marketing/useBezorgmoment";
 import { useShopBetaalwijze } from "@/components/marketing/ShopBetaalwijze";
 import { bezorgdagNaam } from "@/lib/shop/bezorgmoment";
+import { levertijdVoorLeverancier } from "@/lib/shop/levertijd";
 import { useI18n } from "@/components/i18n/I18nProvider";
 import { Sterren } from "@/components/marketing/Sterren";
 import { cijferTekst } from "@/lib/shop/beoordeling";
@@ -148,7 +149,7 @@ export function ShopProductCard({
       </div>
 
       <p className={`mt-2 text-[12px] font-semibold ${stock.kind === "uit" ? "text-crit" : "text-ok"}`}>
-        {stock.kind === "uit" ? t.shop.soldOut : stock.kind === "weinig" ? (dag && !p.seller ? fmt(t.shop.lowStockDag, { n: stock.n, dag: bezorgdagNaam(dag, t.shop.bezorgMorgen, locale) }) : fmt(t.shop.lowStock, { n: stock.n })) : p.seller ? t.shop.deliveryBySeller : dag ? fmt(t.shop.opVoorraadDag, { dag: bezorgdagNaam(dag, t.shop.bezorgMorgen, locale) }) : t.shop.opVoorraad}
+        {stock.kind === "uit" ? t.shop.soldOut : p.herkomst === "leverancier" ? (stock.kind === "weinig" ? fmt(t.shop.lowStockLevertijd, { n: stock.n, dagen: p.levertijd ?? levertijdVoorLeverancier(null) }) : fmt(t.shop.opVoorraadLevertijd, { dagen: p.levertijd ?? levertijdVoorLeverancier(null) })) : stock.kind === "weinig" ? (dag && !p.seller ? fmt(t.shop.lowStockDag, { n: stock.n, dag: bezorgdagNaam(dag, t.shop.bezorgMorgen, locale) }) : fmt(t.shop.lowStock, { n: stock.n })) : p.seller ? t.shop.deliveryBySeller : dag ? fmt(t.shop.opVoorraadDag, { dag: bezorgdagNaam(dag, t.shop.bezorgMorgen, locale) }) : t.shop.opVoorraad}
       </p>
       <p className="mt-0.5 truncate text-[12px] text-neutralx-500">{fmt(t.shop.soldBy, { seller: p.seller ?? SELLER })}</p>
 

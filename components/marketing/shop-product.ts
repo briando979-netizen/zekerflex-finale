@@ -3,6 +3,7 @@
 // nodig heeft naar de browser gaat.
 
 import type { ShopCategorie } from "@/lib/shop/categorieen";
+import { herkomstVan, type Herkomst } from "@/lib/shop/levertijd";
 
 /** Eén lijst voor de hele shop: lib/shop/categorieen.ts. */
 export type ShopCategory = ShopCategorie;
@@ -26,6 +27,10 @@ export type ShopCardProduct = {
   seller?: string | null;
   /** gemiddelde van de goedgekeurde beoordelingen (lib/shop/beoordeling.ts); ontbreekt zonder beoordelingen */
   beoordeling?: { gemiddelde: number; aantal: number } | null;
+  /** eigen voorraad, verkoper of leverancier (CJ): bepaalt de bezorgtekst (lib/shop/levertijd.ts) */
+  herkomst?: Herkomst;
+  /** levertijd van een leveranciersproduct in dagen, bv. "6-12" (lib/shop/levertijd-server.ts) */
+  levertijd?: string | null;
 };
 
 const oneSize = (id: string, stock = 10): ShopVariant[] => [{ id: `${id}-default`, size: null, color: null, priceCents: null, stock }];
@@ -65,6 +70,8 @@ export function toShopProduct(it: Record<string, unknown>): ShopCardProduct {
         : oneSize(String(it.id), Number(it.stock ?? 0)),
     seller: sellerName(it.seller),
     beoordeling: beoordelingUit(it.beoordeling),
+    herkomst: herkomstVan({ seller: sellerName(it.seller), variants: Array.isArray(it.variants) ? (it.variants as { sku?: unknown }[]).map((v) => ({ sku: typeof v.sku === "string" ? v.sku : null })) : [] }),
+    levertijd: typeof it.levertijd === "string" && it.levertijd ? it.levertijd : null,
   };
 }
 
