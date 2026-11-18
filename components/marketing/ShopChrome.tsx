@@ -364,7 +364,7 @@ function ShopOmlijsting({ children, betaalwijze, catAantallen }: { children: Rea
           </div>
           <FooterCol title={t.shop.help} links={[{ label: t.shop.faq, href: "/kennis/faq" }, { label: t.shop.contact, href: "/contact" }, { label: t.shop.orderStatus, href: "/shop/account" }]} />
           <FooterCol title={t.shop.ordering} links={[{ label: t.shop.businessQuote, href: "/contact" }, { label: t.shop.terms, href: "/voorwaarden" }, { label: t.shop.myAccount, href: "/shop/account" }]} />
-          <FooterCol title="ZekerFlex" links={[{ label: "Over ZekerFlex", href: "/over-ons" }, { label: "Werken bij", href: "/over-ons#werken-bij" }, { label: "Uitleg in het kort", href: "/uitleg" }, { label: t.shop.toPlatform, href: "/dashboard" }]} />
+          <FooterCol title="ZekerFlex" links={[{ label: "Over ZekerFlex", href: "/over-ons" }, { label: "Werken bij", href: "/over-ons#werken-bij" }, { label: "Uitleg in het kort", href: "/uitleg" }, { label: t.shop.sellVia, href: "/verkopen" }, { label: t.shop.toPlatform, href: "/dashboard" }]} />
           <div>
             {betaalwijze !== "dicht" && <p className="text-[13px] font-bold">{t.shop.payWith}</p>}
             <div className="mt-3 flex flex-wrap gap-1.5">
@@ -448,6 +448,9 @@ function ShopOmlijsting({ children, betaalwijze, catAantallen }: { children: Rea
               </Link>
               <Link href="/kennis/faq" onClick={() => setMenu(false)} className="block py-2 text-ink hover:underline">
                 {t.shop.customerService}
+              </Link>
+              <Link href="/verkopen" onClick={() => setMenu(false)} className="block py-2 text-ink hover:underline">
+                {t.shop.sellVia}
               </Link>
             </div>
             <div className="mt-2 border-t border-hair px-5 py-4">{languageSelect("w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-[14px]")}</div>

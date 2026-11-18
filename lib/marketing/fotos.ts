@@ -158,6 +158,7 @@ const PAGINA_FOTOS: Record<string, string> = {
   "sales-partner": "campagne-crew-pauze",
   demo: "campagne-rooster",
   intercedenten: "campagne-eigenaar",
+  verkopen: "campagne-inpakken",
   rekentools: "campagne-vouwen",
   "review-check": "campagne-bediening",
   producten: "campagne-receptie",
