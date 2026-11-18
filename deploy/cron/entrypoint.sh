@@ -90,6 +90,8 @@ cat > /etc/crontabs/root <<EOF
 40 * * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/bi/setup"
 # elk uur op :35: terugkaatsers (bounces) in de postbus nalezen (lib/mail/bounce-ronde.ts); doet alleen tellen zolang de vlag mail-bounce-verwerken uit staat
 35 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/mail/bounces"
+# elke 5 minuten: de postbus info@ indelen (lib/mail/info-ronde.ts); doet alleen opschrijven zolang de vlag info-mail-afhandelen uit staat
+*/5 * * * * wget -q -O /dev/null -T 100 "$H" "$APP/api/internal/mail/info"
 # elk uur: bronnen van buiten ophalen die aan de beurt zijn (pompprijzen, minimumloon, cao, KVK, schermcontrole)
 20 * * * * wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/bronnen/tick"
 # elke 10 min: AI-opdrachten van de video-editor op de achtergrond afwerken (antwoordt meteen)

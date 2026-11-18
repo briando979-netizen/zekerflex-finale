@@ -1,6 +1,7 @@
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { PageHead } from "@/components/admin/kit";
 import { Mailbox } from "@/components/admin/Mailbox";
+import { InfoMailPanel } from "@/components/admin/InfoMailPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -9,5 +10,9 @@ export default async function MailPage() {
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
     return <PageHead title="Geen toegang" subtitle="De mailbox is alleen voor platformbeheerders." />;
   }
-  return <Mailbox />;
+  return (
+    <Mailbox>
+      <InfoMailPanel />
+    </Mailbox>
+  );
 }

@@ -111,6 +111,15 @@ FLAG_REGISTRY.push({
   default: false,
 });
 
+// De postbus info@ naloopt en indeelt (lib/mail/info-ronde.ts, 18 nov): eerst een proefstand die alleen opschrijft wat hij zou doen.
+FLAG_REGISTRY.push({
+  key: "info-mail-afhandelen",
+  label: "Postbus info@ automatisch afhandelen",
+  description:
+    "Aan (echt) = elke 5 minuten: automatische mails gaan naar de map Automatisch, terugkaatsers naar de map Terugkaatsers, iemand die werk zoekt krijgt één eerste antwoord met de aanmeldlink (hooguit één per adres per 30 dagen, hooguit 20 per uur) en bij een mail van een bedrijf krijg je een melding. Er wordt nooit iets verwijderd en mails ouder dan 3 dagen blijven met rust. Uit (standaard, proef) = hij deelt alleen in en schrijft op wat hij zou doen; er wordt niets verplaatst en niets verstuurd. Kijk in Beheer, Mail.",
+  default: false,
+});
+
 // Boekhouding: de bank automatisch ophalen (lib/boekhouding/bank/koppeling); aan pas na de eenmalige toestemming bij de bank.
 FLAG_REGISTRY.push({
   key: "boekhouding-bankkoppeling",

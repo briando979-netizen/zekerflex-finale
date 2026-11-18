@@ -56,6 +56,10 @@ export interface MailInput {
   listUnsubscribe?: string;
   /** bijlagen (bijv. de UBL-XML van een e-factuur); niet in de eigen postbus bewaard */
   attachments?: MailAttachment[];
+  /** Message-ID (zonder < >) van de mail waarop dit een antwoord is: zet In-Reply-To en References */
+  inReplyTo?: string;
+  /** een automatisch antwoord (RFC 3834): zet Auto-Submitted, zodat een ander systeem er niet weer op antwoordt */
+  autoAntwoord?: boolean;
 }
 
 export interface MailAttachment {
@@ -144,6 +148,8 @@ function buildRaw(input: MailInput, from: string, messageId: string): string {
   const rel = `zfr_${randomUUID().replace(/-/g, "")}`;
   const replyTo = (input.replyTo && input.replyTo.trim()) || env.MAIL_REPLY_TO;
   const unsub = input.listUnsubscribe?.trim();
+  // alleen een nette Message-ID mag een kopregel in: zichtbare tekens, geen < > en geen regeleinde
+  const antwoordOp = input.inReplyTo && /^[\x21-\x7e]{3,250}$/.test(input.inReplyTo) && !/[<>]/.test(input.inReplyTo) ? input.inReplyTo : null;
   // Bijlagen: het gewone bericht (hieronder gebouwd) wordt het eerste deel van
   // een multipart/mixed, elke bijlage een deel erna.
   const bijlagen = input.attachments ?? [];
@@ -192,6 +198,8 @@ function buildRaw(input: MailInput, from: string, messageId: string): string {
     `Subject: ${encodeHeaderWord(input.subject)}`,
     `Date: ${date}`,
     `Message-ID: <${messageId}>`,
+    ...(antwoordOp ? [`In-Reply-To: <${antwoordOp}>`, `References: <${antwoordOp}>`] : []),
+    ...(input.autoAntwoord ? [`Auto-Submitted: auto-replied`, `X-Auto-Response-Suppress: All`] : []),
     `MIME-Version: 1.0`,
     `X-ZekerFlex-Kind: ${input.kind ?? "generic"}`,
   ];
