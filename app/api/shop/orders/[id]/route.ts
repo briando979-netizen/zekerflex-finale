@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { env } from "@/lib/env";
-import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
-import { sendMail, mailShell, mailButton } from "@/lib/mail";
 import { withAdminAccess } from "@/lib/auth/handlers";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/http/request";
-import { bonToken } from "@/lib/shop/bon-token";
 import { jsonError } from "@/lib/http/errors";
+import { stuurVerzondenMail } from "@/lib/shop/verzonden-mail";
+import { cjNaBetaling } from "@/lib/shop/cj/bestelling";
 import { wachtOpOverschrijving } from "@/lib/shop/overschrijving-kenmerk";
 import { decrementVariantStock, notifyShopOrderPaid, type ShopOrderLine } from "@/lib/shop/bestelling-betaald";
 import { meldVerkopersBetaald } from "@/lib/shop/verkoper";
@@ -69,26 +67,14 @@ export const PATCH = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (
     await notifyShopOrderPaid(order);
     // producten van verkopers op de marktplaats: zij versturen zelf (lib/shop/verkoper.ts)
     await meldVerkopersBetaald(order);
+    // producten van CJ: naar de leverancier, als de eigenaar dat aanzette (lib/shop/cj/bestelling.ts)
+    await cjNaBetaling(order.id);
   }
 
   // Just shipped with a tracking number on file — let the customer know
   // where to follow it live, rather than leaving them to guess.
   if (before?.status !== "SHIPPED" && order.status === "SHIPPED" && order.trackingNumber) {
-    const trackUrl = `${env.APP_BASE_URL.replace(/\/+$/, "")}/shop/bestelling/${order.id}?t=${bonToken(order.id)}`;
-    await sendMail({
-      to: order.email,
-      from: env.MAIL_FROM,
-      kind: "shop-order-bevestiging",
-      subject: "Je bestelling is onderweg",
-      text: `Hoi ${order.firstName},\n\nJe bestelling is verzonden${order.carrier ? ` via ${order.carrier}` : ""}${order.trackingNumber ? ` (track & trace: ${order.trackingNumber})` : ""}.\n\nVolg 'm live: ${trackUrl}\n\nBinnen? Op dezelfde pagina kun je je aankoop beoordelen; daar help je andere kopers mee.\n\nBestelreferentie: ${order.id}`,
-      html: mailShell(
-        "Je bestelling is onderweg",
-        `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${order.firstName}, je bestelling is verzonden${order.carrier ? ` via ${order.carrier}` : ""}.</p>
-         <p style="margin:0 0 20px">${mailButton(trackUrl, "Volg je bestelling live")}</p>
-         <p style="margin:0 0 12px;font-size:14px;line-height:1.6;color:#3C4A42">Binnen? Op dezelfde pagina kun je je aankoop beoordelen; daar help je andere kopers mee.</p>
-         <p style="margin:12px 0 0;font-size:12px;color:#667469">Referentie: ${order.id}</p>`,
-      ),
-    }).catch((e) => logger.warn("shop order shipped mail failed", { error: (e as Error).message }));
+    await stuurVerzondenMail(order);
   }
 
   return NextResponse.json({ order });

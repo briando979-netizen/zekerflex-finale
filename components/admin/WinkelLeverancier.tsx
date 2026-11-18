@@ -5,6 +5,7 @@ import { Empty, Notice, Panel, Pill } from "@/components/admin/kit";
 import { euro } from "@/lib/admin/format";
 import { SHOP_CATEGORIEEN } from "@/lib/shop/categorieen";
 import { CjWachtrij } from "@/components/admin/WinkelCjWachtrij";
+import { CjBestellingen } from "@/components/admin/WinkelCjBestellingen";
 
 // Beheer → Winkel-AI → Leverancier en Marges (18 nov 2026). Leverancier: de CJ-sleutel, zoeken in de
 // catalogus (elektronica, speelgoed, cadeaus, kleding met kleuren en maten) en producten overnemen met
@@ -305,6 +306,8 @@ export function Leverancier() {
           {bijwerk && !bijwerk.klaar && <span className="text-sm" style={{ color: "var(--a-mute)" }}>{bijwerk.bekeken} van {bijwerk.totaal} bekeken… (een paar seconden per product)</span>}
         </div>
       </Panel>
+
+      <CjBestellingen />
 
       <Panel title="Oude assortiment vervangen" subtitle="Zet alles uit wat niet van CJ komt (en niet van een verkoper is). Niets wordt gewist: met Terugzetten gaan precies die producten weer aan, of per stuk in Beheer → Webshop.">
         <div className="flex flex-wrap gap-2">

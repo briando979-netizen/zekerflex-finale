@@ -153,6 +153,11 @@ export async function cjGet<T>(pad: string, params: Record<string, string | numb
   return cjAanvraag<T>(pad, `${BASIS}${pad}${q.size ? `?${q}` : ""}`, {});
 }
 
+/** PATCH op de CJ-API (JSON-body), bv. shopping/order/confirmOrder. */
+export async function cjPatch<T>(pad: string, body: unknown): Promise<T> {
+  return cjAanvraag<T>(pad, `${BASIS}${pad}`, { method: "PATCH", body: JSON.stringify(body), headers: { "content-type": "application/json" } });
+}
+
 /** POST op de CJ-API (JSON-body), verder als cjGet. */
 export async function cjPost<T>(pad: string, body: unknown): Promise<T> {
   return cjAanvraag<T>(pad, `${BASIS}${pad}`, { method: "POST", body: JSON.stringify(body), headers: { "content-type": "application/json" } });

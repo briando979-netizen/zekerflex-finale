@@ -158,8 +158,8 @@ async function werkUitslagBij(stand: FeedStand | undefined): Promise<FeedStand |
   };
 }
 
-/** De producten zoals de productlijst ze nodig heeft. */
-async function laadProducten(): Promise<CatalogusProduct[]> {
+/** De producten zoals de productlijst (en de productfeed, lib/shop/feed.ts) ze nodig heeft. */
+export async function laadProducten(): Promise<CatalogusProduct[]> {
   // een assistent die koopt, betaalt na de einddatum van een aanbieding weer de gewone prijs (lib/shop/aanbieding-server.ts)
   await herstelVerlopenAanbiedingen(new Date(), true);
   const rijen = await prisma.shopProduct.findMany({

@@ -41,21 +41,35 @@ export interface CjInstellingen {
   land: string;
   /** eigen marge voor leveranciersproducten; null = het beleid van de Winkel-AI */
   margePct: number | null;
+  /** proefstand: bestellingen bij CJ als sandbox (CJ simuleert: geen geld, geen pakket) tot de eigenaar hem bewust uitzet */
+  sandbox: boolean;
+  /** na een betaalde webshopbestelling vanzelf bij CJ plaatsen (alleen aanmaken) */
+  autoBestellen: boolean;
+  /** ... en vanzelf uit het CJ-saldo betalen, nooit boven maxBetaalCents */
+  autoBetalen: boolean;
+  /** grens per bestelling voor betalen uit het saldo, in eurocenten */
+  maxBetaalCents: number;
 }
-export const STANDAARD_INSTELLINGEN: CjInstellingen = { verzendCents: 450, land: "DE", margePct: null };
+export const STANDAARD_INSTELLINGEN: CjInstellingen = { verzendCents: 450, land: "DE", margePct: null, sandbox: true, autoBestellen: false, autoBetalen: false, maxBetaalCents: 15_000 };
 
 export function leesInstellingen(v: unknown): CjInstellingen {
   const o = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
   const verzend = typeof o.verzendCents === "number" && Number.isFinite(o.verzendCents) ? Math.min(5000, Math.max(0, Math.round(o.verzendCents))) : STANDAARD_INSTELLINGEN.verzendCents;
   const land = typeof o.land === "string" && /^[A-Za-z]{2}$/.test(o.land.trim()) ? o.land.trim().toUpperCase() : typeof o.land === "string" && o.land.trim() === "" ? "" : STANDAARD_INSTELLINGEN.land;
   const marge = typeof o.margePct === "number" && Number.isFinite(o.margePct) ? Math.min(90, Math.max(5, Math.round(o.margePct))) : null;
-  return { verzendCents: verzend, land, margePct: marge };
+  const vink = (v: unknown, std: boolean) => (typeof v === "boolean" ? v : std);
+  const maxBetaal = typeof o.maxBetaalCents === "number" && Number.isFinite(o.maxBetaalCents) ? Math.min(200_000, Math.max(0, Math.round(o.maxBetaalCents))) : STANDAARD_INSTELLINGEN.maxBetaalCents;
+  const autoBestellen = vink(o.autoBestellen, STANDAARD_INSTELLINGEN.autoBestellen);
+  // vanzelf betalen kan alleen als er ook vanzelf besteld wordt
+  return { verzendCents: verzend, land, margePct: marge, sandbox: vink(o.sandbox, STANDAARD_INSTELLINGEN.sandbox), autoBestellen, autoBetalen: autoBestellen && vink(o.autoBetalen, STANDAARD_INSTELLINGEN.autoBetalen), maxBetaalCents: maxBetaal };
 }
 export async function leesCjInstellingen(): Promise<CjInstellingen> {
   return leesInstellingen(await kvGet<unknown>(K_INSTEL).catch(() => null));
 }
 export async function zetCjInstellingen(v: unknown): Promise<CjInstellingen> {
-  const i = leesInstellingen(v);
+  // een deel mag: wat niet meekomt, blijft zoals het was
+  const huidig = await leesCjInstellingen();
+  const i = leesInstellingen({ ...huidig, ...(v && typeof v === "object" ? (v as Record<string, unknown>) : {}) });
   await kvSet(K_INSTEL, i);
   return i;
 }
