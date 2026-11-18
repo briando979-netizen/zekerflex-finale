@@ -218,6 +218,10 @@ services:
     environment:
       OLLAMA_FLASH_ATTENTION: "1"
       OLLAMA_KV_CACHE_TYPE: q8_0
+      # Geen prompt-cache in RAM (18 nov): de llama-server bewaart anders de prompts van eerdere taken tot 8 GiB
+      # (vaste grens, ollama/ollama#18072) en groeide na de verhoging naar 6656m alsnog door tot 6,6 GB anon
+      # (kills 19:28 en 19:50). llama.cpp leest deze variabele zelf; 0 = uit (ollama/ollama#19201).
+      LLAMA_ARG_CACHE_RAM: "0"
     volumes:
       - ollama-models:/root/.ollama
     healthcheck:
