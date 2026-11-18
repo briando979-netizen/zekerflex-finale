@@ -65,6 +65,20 @@ export default function WerkHomePage() {
             sizes="(min-width: 768px) 40vw, 100vw"
             className="object-cover object-[50%_18%] md:object-[50%_28%]"
           />
+          {/* dezelfde foto, bewegend: ligt er precies overheen (zelfde uitsnede). De foto blijft het eerste beeld; laadt of speelt de
+              video niet, dan zie je gewoon de foto. Zonder geluid, zonder knoppen, niet voor schermlezers (de foto heeft de tekst). */}
+          <video
+            aria-hidden
+            tabIndex={-1}
+            autoPlay
+            muted
+            loop
+            playsInline
+            disablePictureInPicture
+            preload="metadata"
+            src={WERK_HERO.video}
+            className="kop-clip absolute inset-0 h-full w-full object-cover object-[50%_18%] md:object-[50%_28%]"
+          />
           <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#0C0E12] via-[#0C0E12]/30 via-40% to-transparent md:bg-gradient-to-r md:via-[#0C0E12]/40 md:via-25% md:to-50%" />
         </div>
         <div className="shell-4k relative pb-8 pt-[15rem] md:py-14 lg:py-16">

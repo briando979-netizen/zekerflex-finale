@@ -11,6 +11,7 @@ Toegevoegd op 11 november 2026, zonder metadata, voor `app/(marketing)/page.tsx`
 | magazijn.jpg | magazijnmedewerker met dozen | Pexels 8069548 | Pexels License |
 | bijverdienen.jpg | serveerster met een drankje | Pexels 3800514 | Pexels License |
 | campagne-kop.jpg | medewerker met een dienblad in de deuropening van een café (staand; 17 nov 2026, in plaats van hero-barista.jpg) | Eigen beeld, gemaakt met Gemini uit alleen tekst | eigen beeld, de persoon bestaat niet |
+| campagne-kop.mp4 | campagne-kop.jpg, bewegend (10 s heen en terug, zonder geluid; 18 nov 2026) | Eigen beeld, gemaakt uit campagne-kop.jpg met LTX-2.3 | eigen beeld, de persoon bestaat niet |
 | campagne-studie.jpg | barista schenkt melk in een cappuccino | Eigen beeld (Gemini) | eigen beeld |
 | campagne-zzp.jpg | magazijnmedewerker scant een doos | Eigen beeld (Gemini) | eigen beeld |
 | campagne-uitzend.jpg | medewerker met een steekkar vol dozen | Eigen beeld (Gemini) | eigen beeld |

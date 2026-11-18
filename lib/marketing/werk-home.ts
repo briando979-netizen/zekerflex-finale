@@ -23,6 +23,8 @@ export const WERK_HERO = {
   punten: ["Gratis voor werkers", "Klaar in een paar minuten", "In vijf talen"],
   /** een staande foto: op de telefoon bovenaan, op een groter scherm als strook rechts (12 nov 2026, eigenaar: "een blonde dame, student ofzo") */
   foto: "/werk/campagne-kop.jpg",
+  /** dezelfde foto, bewegend (18 nov 2026, eigenaar: "die persoon moet levend worden"): 10 s heen en terug, zonder geluid; ligt over de foto */
+  video: "/werk/campagne-kop.mp4",
   fotoAlt: "Een medewerker met een dienblad onder de arm in de deuropening van een café",
 } as const;
 

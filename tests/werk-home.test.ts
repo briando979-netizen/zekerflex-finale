@@ -39,6 +39,20 @@ describe("homepagina voor werkzoekenden", () => {
     expect(existsSync(join(process.cwd(), "public", "werk", "CREDITS.md"))).toBe(true);
   });
 
+  it("laat de foto in de kop bewegen zonder de foto te vervangen", () => {
+    expect(existsSync(join(process.cwd(), "public", WERK_HERO.video))).toBe(true);
+    expect(readFileSync(join(process.cwd(), "public", "werk", "CREDITS.md"), "utf8")).toContain("campagne-kop.mp4");
+    const pagina = readFileSync(join(process.cwd(), "app", "(marketing)", "page.tsx"), "utf8");
+    // de foto blijft het eerste beeld (priority); de video ligt erover, zonder geluid en zonder knoppen
+    expect(pagina).toContain("src={WERK_HERO.foto}");
+    const video = pagina.slice(pagina.indexOf("<video"), pagina.indexOf("/>", pagina.indexOf("<video")));
+    for (const eis of ["muted", "playsInline", "autoPlay", "loop", "aria-hidden", "kop-clip"]) expect(video, eis).toContain(eis);
+    expect(video).not.toContain("controls");
+    // bij "minder beweging" alleen de foto
+    const css = readFileSync(join(process.cwd(), "app", "globals.css"), "utf8");
+    expect(css).toMatch(/prefers-reduced-motion: reduce\) \{ \.kop-clip \{ display: none; \} \}/);
+  });
+
   it("geeft de vragen ook als FAQPage aan zoekmachines", () => {
     const ld = werkFaqJsonLd() as { "@type": string; mainEntity: { name: string }[] };
     expect(ld["@type"]).toBe("FAQPage");

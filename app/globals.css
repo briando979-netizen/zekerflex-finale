@@ -316,6 +316,13 @@ body {
 .marquee:hover { animation-play-state: paused; }
 @media (prefers-reduced-motion: reduce) { .marquee { animation: none; } }
 
+/* De bewegende foto in de kop van de voorpagina: ligt over de foto heen. Speelt hij niet (iPhone in de spaarstand), dan geen
+   afspeelknop over het gezicht; bij "minder beweging" alleen de foto. */
+.kop-clip { pointer-events: none; }
+.kop-clip::-webkit-media-controls,
+.kop-clip::-webkit-media-controls-start-playback-button { display: none !important; -webkit-appearance: none; }
+@media (prefers-reduced-motion: reduce) { .kop-clip { display: none; } }
+
 /* Seamless section blends */
 .blend-ink-paper {
   background: linear-gradient(180deg, #0C0E12 0%, #10201b 45%, #F4F5F1 100%);
