@@ -154,7 +154,7 @@ export const euro = (cents: number): string => (cents === 0 ? "gratis" : `€ ${
  * belofte: tot zijn akkoord toont de pagina "prijs op aanvraag" zonder bedrag. Zet dit op true zodra hij de bedragen
  * (of andere) heeft goedgekeurd; de bedragen zelf staan hierboven op één plek.
  */
-export const PRIJZEN_GOEDGEKEURD = false;
+export const PRIJZEN_GOEDGEKEURD = true; // "ja" van de eigenaar, 18 nov 2026
 
 /** Wat de pagina bij een aanbod als prijs toont. */
 export function prijsTekst(a: Pick<Aanbod, "prijsCents" | "per">, goedgekeurd = PRIJZEN_GOEDGEKEURD): { bedrag: string; toelichting: string | null } {

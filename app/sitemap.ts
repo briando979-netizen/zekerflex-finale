@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { RUBRIEK_SLUGS, VERKOPEN_PAD, VERKOPEN_START_PAD, rubriekPad } from "@/lib/shop/partnerplatform";
 import { LEREN_PAD } from "@/lib/leren/klussen-krijgen";
+import { LEREN_BEDRIJF_PAD } from "@/lib/leren/personeel-krijgen";
 import { SITE } from "@/lib/seo";
 import { prisma } from "@/lib/prisma";
 import { GUIDES, POSTS } from "@/lib/kennis/content";
@@ -111,6 +112,7 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     entry(VERKOPEN_PAD, 0.7, "monthly"),
     // de gids "Zo krijg je klussen via een platform" (lib/leren/klussen-krijgen.ts), 18 nov 2026
     entry(LEREN_PAD, 0.7, "monthly"),
+    entry(LEREN_BEDRIJF_PAD, 0.7, "monthly"),
     entry(VERKOPEN_START_PAD, 0.7, "monthly"),
     ...RUBRIEK_SLUGS.map((s) => entry(rubriekPad(s), 0.5, "monthly")),
 

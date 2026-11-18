@@ -36,11 +36,11 @@ describe("de gids Klussen krijgen", () => {
     expect(AANBOD.filter((x) => x.prijsCents === 0)).toHaveLength(2);
   });
 
-  it("toont tot het akkoord van de eigenaar geen bedrag, alleen 'prijs op aanvraag' (een prijs op de site is een belofte)", () => {
-    expect(PRIJZEN_GOEDGEKEURD).toBe(false);
+  it("toont een bedrag alleen na het akkoord van de eigenaar (een prijs op de site is een belofte); dat akkoord is er sinds 18 nov", () => {
+    expect(PRIJZEN_GOEDGEKEURD).toBe(true);
     const betaald = AANBOD.find((a) => a.prijsCents > 0)!;
-    expect(prijsTekst(betaald)).toEqual({ bedrag: "prijs op aanvraag", toelichting: null });
-    expect(prijsTekst(betaald, true)).toEqual({ bedrag: euro(betaald.prijsCents), toelichting: betaald.per });
+    expect(prijsTekst(betaald, false)).toEqual({ bedrag: "prijs op aanvraag", toelichting: null });
+    expect(prijsTekst(betaald)).toEqual({ bedrag: euro(betaald.prijsCents), toelichting: betaald.per });
     expect(prijsTekst({ prijsCents: 0, per: "gratis" })).toEqual({ bedrag: "gratis", toelichting: null });
     expect(lees("app/(marketing)/leren/klussen-krijgen/page.tsx")).toContain("prijsTekst(a)");
   });

@@ -166,6 +166,7 @@ const PAGINA_FOTOS: Record<string, string> = {
   nieuwsbrief: "campagne-aanbellen",
   uitleg: "campagne-barista",
   leren: "campagne-bezorger",
+  "leren-bedrijven": "campagne-eigenaar",
   "producten-flexcompliance-api": "campagne-klembord",
   "producten-recruitflex-ai": "campagne-festival-crew",
   "producten-sovereignops": "campagne-scanner",
