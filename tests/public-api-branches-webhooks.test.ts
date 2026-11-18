@@ -55,6 +55,7 @@ describe("DELETE /webhooks/{id} — tenantscheiding", () => {
     h.deleteMany.mockResolvedValue({ count: 1 });
     const res = await deleteWebhook(req("DELETE"), { params: Promise.resolve({ id: "wh_1" }) });
     expect(res.status).toBe(200);
+    expect(h.requireApiKey).toHaveBeenCalledWith(expect.any(Request), "webhooks:manage");
     expect(await res.json()).toEqual({ data: { id: "wh_1", deleted: true } });
     expect(h.recordAudit).toHaveBeenCalledTimes(1);
     expect(h.recordAudit.mock.calls[0]?.[0]).toMatchObject({ action: "api.webhook.deleted", targetId: "wh_1" });
@@ -81,6 +82,7 @@ describe("GET /webhooks — geen geheim, eigen tenant", () => {
     h.findManyWebhooks.mockResolvedValue([{ id: "wh_1", url: "https://x.test/hook", eventTypes: ["shift.matched"], active: true, createdAt: new Date("2026-11-01T00:00:00Z") }]);
     const res = await getWebhooks(req());
     expect(res.status).toBe(200);
+    expect(h.requireApiKey).toHaveBeenCalledWith(expect.any(Request), "webhooks:manage");
     const arg = h.findManyWebhooks.mock.calls[0]?.[0];
     expect(arg?.where).toEqual({ tenantId: "tenant-a" });
     expect(Object.keys(arg?.select ?? {})).not.toContain("secretCiphertext");
@@ -101,7 +103,8 @@ describe("GET /branches — eigen tenant", () => {
     h.findManyBranches.mockResolvedValue([{ id: "br_1", name: "Centrum", city: "Groningen", postalCode: "9711AA" }]);
     const res = await getBranches(req());
     expect(res.status).toBe(200);
-    expect(h.findManyBranches.mock.calls[0]?.[0]?.where).toEqual({ tenantId: "tenant-a" });
+    expect(h.requireApiKey).toHaveBeenCalledWith(expect.any(Request), "shifts:read");
+    expect(h.findManyBranches.mock.calls[0]?.[0]?.where).toEqual({ tenantId: "tenant-a", kind: "PERMANENT" });
   });
 
   it("een platformsleutel zonder organisatie geeft 412", async () => {

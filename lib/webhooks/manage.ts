@@ -31,6 +31,8 @@ export function assertSafeWebhookUrl(raw: string): string {
   }
   if (u.protocol !== "https:") throw AppError.validation("Webhook-URL moet met https:// beginnen");
   if (PRIVATE_HOST.test(u.hostname)) throw AppError.validation("Deze URL wijst naar een intern adres en is niet toegestaan");
+  // Een naam zonder punt (app, postgres, ollama) is een interne Docker-service, geen publiek domein; een IPv6-literal bevat een ":".
+  if (!u.hostname.includes(".") && !u.hostname.includes(":")) throw AppError.validation("Deze URL wijst naar een interne naam en is niet toegestaan");
   if (u.username || u.password) throw AppError.validation("Zet geen inloggegevens in de URL");
   return u.toString();
 }

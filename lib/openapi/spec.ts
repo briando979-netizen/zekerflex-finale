@@ -428,7 +428,15 @@ export function openApiSpec(): Record<string, unknown> {
         CreateWebhookResponse: {
           type: "object",
           properties: {
-            data: { $ref: "#/components/schemas/WebhookSubscription" },
+            data: {
+              type: "object",
+              properties: {
+                id: { type: "string" },
+                url: { type: "string" },
+                eventTypes: { type: "array", items: { type: "string" } },
+                createdAt: { type: "string", format: "date-time" },
+              },
+            },
             secret: { type: "string", description: "The webhook signing secret — shown once, never retrievable again." },
           },
         },

@@ -30,7 +30,7 @@ export async function dispatchWebhook(eventType: WebhookEventType, tenantId: str
     let lastError = "";
     for (let attempt = 1; attempt <= 5; attempt += 1) {
       try {
-        const response = await fetch(subscription.url, { method: "POST", headers: { "content-type": "application/json", "user-agent": "ZekerFlex-Webhooks/1.0", "x-zekerflex-event": eventType, "x-zekerflex-timestamp": timestamp, "x-zekerflex-signature": `v1=${signature(decryptWebhookSecret(subscription.secretCiphertext), timestamp, body)}` }, body, signal: AbortSignal.timeout(8000) });
+        const response = await fetch(subscription.url, { method: "POST", headers: { "content-type": "application/json", "user-agent": "ZekerFlex-Webhooks/1.0", "x-zekerflex-event": eventType, "x-zekerflex-timestamp": timestamp, "x-zekerflex-signature": `v1=${signature(decryptWebhookSecret(subscription.secretCiphertext), timestamp, body)}` }, body, redirect: "manual", signal: AbortSignal.timeout(8000) });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         await prisma.webhookDelivery.update({ where: { id: delivery.id }, data: { attempts: attempt, statusCode: response.status, deliveredAt: new Date(), nextAttemptAt: null } });
         break;

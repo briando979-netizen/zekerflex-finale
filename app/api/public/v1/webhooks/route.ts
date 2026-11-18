@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { toErrorBody } from "@/lib/errors";
 import { requireApiKey } from "@/lib/api-keys/gateway";
 import { rateLimitHeaders } from "@/lib/http/rate-limit-headers";
-import { encryptWebhookSecret } from "@/lib/webhooks/crypto";
+import { createWebhook } from "@/lib/webhooks/manage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,8 +48,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       );
     }
     const input = schema.parse(await request.json());
-    const secret = `whsec_${randomBytes(24).toString("base64url")}`;
-    const subscription = await prisma.webhookSubscription.create({ data: { tenantId: key.tenantId, url: input.url, eventTypes: input.eventTypes, secretCiphertext: encryptWebhookSecret(secret) }, select: { id: true, url: true, eventTypes: true, createdAt: true } });
+    // createWebhook doet de veilige URL-controle (https, geen intern adres, geen naam zonder punt) en de grens van 20 (lib/webhooks/manage.ts).
+    const { id, secret } = await createWebhook(key.tenantId, input.url, input.eventTypes);
+    const subscription = await prisma.webhookSubscription.findUnique({ where: { id }, select: { id: true, url: true, eventTypes: true, createdAt: true } });
     return NextResponse.json({ data: subscription, secret }, { status: 201, headers: rateLimitHeaders(rate) });
   } catch (err) {
     const { status, body, headers } = toErrorBody(err);

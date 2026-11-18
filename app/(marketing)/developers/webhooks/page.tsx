@@ -103,24 +103,30 @@ x-zekerflex-signature: v1=<hex>`}</CodeBlock>
 function geldig(secret, headers, ruweBody) {
   const timestamp = headers["x-zekerflex-timestamp"];
   const ontvangen = headers["x-zekerflex-signature"]; // "v1=<hex>"
+  if (!timestamp || !ontvangen) return false;
+  if (Math.abs(Date.now() / 1000 - Number(timestamp)) > 300) return false; // tegen replay
   const verwacht =
     "v1=" + crypto.createHmac("sha256", secret).update(timestamp + "." + ruweBody).digest("hex");
   const a = Buffer.from(ontvangen);
   const b = Buffer.from(verwacht);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
-}`}</CodeBlock>
-        <CodeBlock label="Python">{`import hmac, hashlib
+}
+// Tip: onthoud het veld "id" uit de body en sla een id over dat je al zag (dubbele melding).`}</CodeBlock>
+        <CodeBlock label="Python">{`import hmac, hashlib, time
 
-def geldig(secret, headers, ruwe_body):
-    timestamp = headers["x-zekerflex-timestamp"]
-    ontvangen = headers["x-zekerflex-signature"]  # "v1=<hex>"
-    verwacht = "v1=" + hmac.new(
-        secret.encode(), f"{timestamp}.{ruwe_body}".encode(), hashlib.sha256
-    ).hexdigest()
-    return hmac.compare_digest(ontvangen, verwacht)`}</CodeBlock>
+def geldig(secret, headers, ruwe_body):  # ruwe_body is bytes
+    timestamp = headers.get("x-zekerflex-timestamp")
+    ontvangen = headers.get("x-zekerflex-signature")  # "v1=<hex>"
+    if not timestamp or not ontvangen:
+        return False
+    if abs(time.time() - int(timestamp)) > 300:  # tegen replay
+        return False
+    msg = timestamp.encode() + b"." + ruwe_body
+    verwacht = "v1=" + hmac.new(secret.encode(), msg, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(ontvangen, verwacht)
+# Tip: onthoud body["id"] en sla een id over dat je al zag (dubbele melding).`}</CodeBlock>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-neutralx-600">
-          Tip tegen replay: weiger een melding waarvan de <code className="font-mono">x-zekerflex-timestamp</code> meer dan een paar
-          minuten oud is. Je kunt vanuit{" "}
+          De controle hierboven weigert ook een melding die ouder is dan vijf minuten (tegen replay). Je kunt vanuit{" "}
           <Link href="/werkgever/integraties" className="font-semibold text-brand-700 hover:underline">Werkgever → Koppelingen</Link>{" "}
           een test-ping sturen om je controle uit te proberen, en een mislukte melding opnieuw laten sturen.
         </p>

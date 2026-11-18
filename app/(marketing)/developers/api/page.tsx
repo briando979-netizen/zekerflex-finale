@@ -396,7 +396,7 @@ curl ${BASE}/shifts \\
     "eventTypes": ["shift.matched", "timesheet.approved"]
   }'`}</Code>
                 <p className="mt-3 text-sm text-neutralx-600">
-                  Antwoord <code className="font-mono">201</code>: <code className="font-mono">data</code> (id, url, eventTypes, active, createdAt) en{" "}
+                  Antwoord <code className="font-mono">201</code>: <code className="font-mono">data</code> (id, url, eventTypes, createdAt) en{" "}
                   <code className="font-mono">secret</code> (het geheim, eenmalig).
                 </p>
               </Endpoint>
@@ -497,8 +497,8 @@ curl ${BASE}/shifts \\
                   titel="Veelvoorkomende statussen"
                   rijen={[
                     { naam: "401", type: "UNAUTHENTICATED", uitleg: "Sleutel ontbreekt of is ongeldig." },
-                    { naam: "403", type: "FORBIDDEN", uitleg: "De sleutel mist het vereiste recht (scope)." },
-                    { naam: "412", type: "PRECONDITION", uitleg: "De sleutel hangt niet aan een organisatie, of de vestiging is niet van jou." },
+                    { naam: "403", type: "FORBIDDEN", uitleg: "De sleutel mist het vereiste recht (scope), of de vestiging is niet van jouw organisatie." },
+                    { naam: "412", type: "PRECONDITION", uitleg: "De sleutel hangt niet aan een organisatie." },
                     { naam: "422", type: "VALIDATION", uitleg: "De invoer klopt niet (bijv. eindtijd vóór begintijd)." },
                     { naam: "429", type: "RATE_LIMITED", uitleg: "Te veel verzoeken — zie Limieten." },
                   ]}
