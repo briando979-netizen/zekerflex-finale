@@ -93,8 +93,10 @@ describe("het menu Alle categorieën", () => {
 
   it("het menu haalt de catalogus op als het opengaat, en de etalage volgt ?voor=", () => {
     const chrome = lees("components/marketing/ShopChrome.tsx");
-    expect(chrome).toContain("const needCatalog = count > 0 || drawer || zoekt || menu;");
-    expect(chrome).toContain("menuGroep(catalog, n.cat)");
+    expect(chrome).toContain("const needCatalog = count > 0 || drawer || zoekt || menu || vergelijk.count > 0;");
+    expect(chrome).toContain("<ShopVergelijkBalk ids={vergelijk.ids}");
+    expect(chrome).toContain("<ShopCategorieMenu");
+    expect(lees("components/marketing/ShopCategorieMenu.tsx")).toContain("const groep = menuGroep(catalog, cat);");
     expect(chrome).toContain("fmt(t.shop.vergelijken, { n: vergelijk.count })");
     const etalage = lees("components/marketing/ShopStorefront.tsx");
     expect(etalage).toContain("useState<Gender>(genderUitVoor(initialVoor))");

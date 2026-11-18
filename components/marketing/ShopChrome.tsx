@@ -1,7 +1,7 @@
 "use client";
 
 import { PaskamerLink } from "@/components/marketing/PaskamerLink";
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -20,7 +20,8 @@ import { ShopBetaalwijzeProvider } from "@/components/marketing/ShopBetaalwijze"
 import { bedoeldeJe, categorieTreffers, zoekSuggesties } from "@/lib/shop/zoeksuggesties";
 import { useShopVergelijk } from "@/components/marketing/useShopVergelijk";
 import { vergelijkPad } from "@/lib/shop/vergelijk";
-import { categoriePad, menuGroep } from "@/lib/shop/categoriemenu";
+import { ShopCategorieMenu, menuCatLabel } from "@/components/marketing/ShopCategorieMenu";
+import { ShopVergelijkBalk } from "@/components/marketing/ShopVergelijkBalk";
 
 // Gedeelde shop-omlijsting, opgebouwd als een marktplaats: een servicebalk, de
 // merkbalk met een grote zoekbalk (blijft staan tijdens scrollen), de
@@ -49,11 +50,24 @@ const CATS = SHOP_CATEGORIEEN;
 
 /** De omlijsting met de keuze particulier/zakelijk (uit het cookie, gelezen in app/shop/layout.tsx). */
 /** `betaalwijze` (app/shop/layout.tsx): online via Stripe, per overschrijving, of nu even niet; de shop belooft alleen wat echt kan. */
-export function ShopChrome({ children, modus = "particulier", betaalwijze = "online" }: { children: ReactNode; modus?: ShopModus; betaalwijze?: ShopBetaalwijze }) {
+/** `catAantallen`: het aantal actieve producten per categorie (app/shop/layout.tsx); de balk en het menu tonen alleen categorieën waar iets in zit. */
+export function ShopChrome({
+  children,
+  modus = "particulier",
+  betaalwijze = "online",
+  catAantallen = {},
+}: {
+  children: ReactNode;
+  modus?: ShopModus;
+  betaalwijze?: ShopBetaalwijze;
+  catAantallen?: Readonly<Record<string, number>>;
+}) {
   return (
     <ShopModusProvider modus={modus}>
       <ShopBetaalwijzeProvider waarde={betaalwijze}>
-        <ShopOmlijsting betaalwijze={betaalwijze}>{children}</ShopOmlijsting>
+        <ShopOmlijsting betaalwijze={betaalwijze} catAantallen={catAantallen}>
+          {children}
+        </ShopOmlijsting>
       </ShopBetaalwijzeProvider>
     </ShopModusProvider>
   );
@@ -61,10 +75,20 @@ export function ShopChrome({ children, modus = "particulier", betaalwijze = "onl
 
 type NavItem = { label: string; href: string; /** de categorie achter de link (voor het menu met aantallen) */ cat?: string };
 
-/** Het menu onder de zoekbalk: particulier per soort artikel, zakelijk per manier van bestellen. */
-function navVoor(modus: ShopModus, t: Dict): NavItem[] {
+/**
+ * Het menu onder de zoekbalk: particulier per soort artikel, zakelijk per manier van bestellen. Met de telling van de
+ * server (`aantallen`) alleen categorieën waar iets in zit: particulier de vijf grootste, in de volgorde van het menu.
+ * Zonder telling (database even weg) de vier vaste.
+ */
+function navVoor(modus: ShopModus, t: Dict, aantallen: Readonly<Record<string, number>>): NavItem[] {
   const cat = (c: string) => `/shop?cat=${encodeURIComponent(c)}#collectie`;
-  return modus === "zakelijk"
+  const bekend = Object.keys(aantallen).length > 0;
+  const heeft = (c: string) => !bekend || (Object.hasOwn(aantallen, c) && (aantallen[c] ?? 0) > 0);
+  if (modus !== "zakelijk" && bekend) {
+    const top = [...SHOP_CATEGORIEEN].filter(heeft).sort((a, b) => (aantallen[b] ?? 0) - (aantallen[a] ?? 0)).slice(0, 5);
+    return SHOP_CATEGORIEEN.filter((c) => top.includes(c)).map((c) => ({ label: menuCatLabel(c, t), href: cat(c), cat: c }));
+  }
+  const lijst: NavItem[] = modus === "zakelijk"
     ? [
         { label: t.shop.navPbm, href: cat("Werk & PBM"), cat: "Werk & PBM" },
         { label: t.shopZakelijk.navBedrijfskleding, href: cat("Kleding"), cat: "Kleding" },
@@ -78,16 +102,24 @@ function navVoor(modus: ShopModus, t: Dict): NavItem[] {
         { label: t.shop.navWerkdag, href: cat("Werkdag"), cat: "Werkdag" },
         { label: t.shopZakelijk.navCadeaus, href: cat("Cadeaus"), cat: "Cadeaus" },
       ];
+  return lijst.filter((n) => !n.cat || heeft(n.cat));
 }
 
-function ShopOmlijsting({ children, betaalwijze }: { children: ReactNode; betaalwijze: ShopBetaalwijze }) {
+function ShopOmlijsting({ children, betaalwijze, catAantallen }: { children: ReactNode; betaalwijze: ShopBetaalwijze; catAantallen: Readonly<Record<string, number>> }) {
   const { locale, t } = useI18n();
   const { modus } = useShopModus();
-  const NAV = navVoor(modus, t);
-  // het menu "Alle categorieën": álle categorieën uit lib/shop/categorieen.ts (de balk houdt de vier bekendste),
-  // plus de zakelijke ingangen zonder categorie (pakketten, team, offerte)
-  const ALLE: NavItem[] = [...SHOP_CATEGORIEEN.map((c) => ({ label: catLabel(c, t), href: categoriePad(c), cat: c as string })), ...NAV.filter((n) => !n.cat)];
+  const NAV = navVoor(modus, t, catAantallen);
+  // het grote categoriemenu (components/marketing/ShopCategorieMenu.tsx): op een breed scherm een paneel dat onder de
+  // categoriebalk begint, op de telefoon een lade. `menuTop` = de onderkant van de balk op het moment van openen.
   const [menu, setMenu] = useState(false);
+  const [menuTop, setMenuTop] = useState(160);
+  const balkRef = useRef<HTMLElement>(null);
+  const openMenu = () => {
+    const onder = balkRef.current?.getBoundingClientRect().bottom;
+    // is de balk uit beeld gescrold, dan onder de merkbalk die blijft staan
+    setMenuTop(Math.max(typeof onder === "number" ? Math.round(onder) : 160, 72));
+    setMenu(true);
+  };
   const [drawer, setDrawer] = useState(false);
   const [checkout, setCheckout] = useState(false);
   const [placing, setPlacing] = useState(false);
@@ -104,8 +136,8 @@ function ShopOmlijsting({ children, betaalwijze }: { children: ReactNode; betaal
   // opengaat of iemand de zoekbalk aanklikt (eerder op elke pagina, ook bij leeg).
   const [zoekt, setZoekt] = useState(false);
   // het menu toont per categorie het aantal en Heren/Dames/Kinderen (lib/shop/categoriemenu.ts), dus ook dan ophalen
-  const needCatalog = count > 0 || drawer || zoekt || menu;
   const vergelijk = useShopVergelijk();
+  const needCatalog = count > 0 || drawer || zoekt || menu || vergelijk.count > 0;
   useEffect(() => {
     if (!needCatalog || catalog.length > 0) return;
     fetch("/api/shop/products", { cache: "no-store" })
@@ -237,7 +269,7 @@ function ShopOmlijsting({ children, betaalwijze }: { children: ReactNode; betaal
       {/* merkbalk met zoeken: blijft staan tijdens scrollen */}
       <header className="sticky top-0 z-40 bg-brand-700 text-white shadow-e1">
         <div className={`${WRAP} flex h-14 items-center gap-2 sm:gap-4 lg:h-[72px] lg:gap-6`}>
-          <button type="button" onClick={() => setMenu(true)} aria-label={t.shop.menu} className="-ml-1.5 grid h-10 w-10 shrink-0 place-items-center rounded-lg hover:bg-white/10 lg:hidden">
+          <button type="button" onClick={openMenu} aria-label={t.shop.menu} className="-ml-1.5 grid h-10 w-10 shrink-0 place-items-center rounded-lg hover:bg-white/10 lg:hidden">
             <IconMenu />
           </button>
           <Link href="/shop" className="flex shrink-0 items-center gap-2" aria-label="ZekerFlex Shop">
@@ -277,11 +309,12 @@ function ShopOmlijsting({ children, betaalwijze }: { children: ReactNode; betaal
       </header>
 
       {/* categoriebalk */}
-      <nav aria-label={t.shop.allCategories} className="border-b border-hair bg-white">
+      <nav ref={balkRef} aria-label={t.shop.allCategories} className="border-b border-hair bg-white">
         <div className={`${WRAP} flex h-12 items-center gap-1 overflow-x-auto [scrollbar-width:none]`}>
-          <button type="button" onClick={() => setMenu(true)} className="hidden h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-[14px] font-bold text-ink hover:bg-paper-soft lg:inline-flex">
+          <button type="button" onClick={openMenu} aria-haspopup="dialog" aria-expanded={menu} className="hidden h-9 shrink-0 items-center gap-2 rounded-lg bg-ink px-3.5 text-[14px] font-bold text-white hover:bg-ink/90 lg:inline-flex">
             <IconMenu />
             {t.shop.allCategories}
+            <span aria-hidden className="text-[11px]">▾</span>
           </button>
           <span aria-hidden className="mx-1 hidden h-5 w-px bg-hair lg:block" />
           {NAV.map((n) => (
@@ -293,7 +326,10 @@ function ShopOmlijsting({ children, betaalwijze }: { children: ReactNode; betaal
             {t.paskamer.navLabel}
             <span className="rounded-full bg-brand-mint px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-ink">{t.paskamer.nieuw}</span>
           </PaskamerLink>
-          <Link href={modus === "zakelijk" ? "/shop" : "/shop/zakelijk"} className="ml-auto hidden h-9 shrink-0 items-center rounded-lg px-3 text-[14px] font-semibold text-brand-600 hover:bg-brand-50 lg:inline-flex">
+          <Link href="/shop/account" className="ml-auto hidden h-9 shrink-0 items-center rounded-lg px-3 text-[14px] font-semibold text-ink hover:bg-paper-soft xl:inline-flex">
+            {t.shop.orderStatus}
+          </Link>
+          <Link href={modus === "zakelijk" ? "/shop" : "/shop/zakelijk"} className="ml-auto hidden h-9 shrink-0 items-center rounded-lg px-3 text-[14px] font-semibold text-brand-600 hover:bg-brand-50 lg:inline-flex xl:ml-0">
             {modus === "zakelijk" ? t.shopZakelijk.naarParticulier : t.shopZakelijk.naarZakelijk} →
           </Link>
           {vergelijk.count > 0 && (
@@ -370,78 +406,54 @@ function ShopOmlijsting({ children, betaalwijze }: { children: ReactNode; betaal
         </div>
       </footer>
 
-      {/* alle categorieën (telefoon: het menu) */}
-      {menu && (
-        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={t.shop.allCategories}>
-          <button type="button" aria-label={t.shop.close} onClick={() => setMenu(false)} className="absolute inset-0 bg-black/45" />
-          <aside className="absolute inset-y-0 left-0 flex w-[86%] max-w-sm flex-col bg-white">
-            <div className="flex h-14 items-center justify-between bg-brand-700 px-4 text-white">
-              <span className="text-[16px] font-bold">{t.shop.allCategories}</span>
-              <button type="button" onClick={() => setMenu(false)} aria-label={t.shop.close} className="grid h-10 w-10 place-items-center rounded-lg text-xl hover:bg-white/10">
-                ×
-              </button>
-            </div>
-            <nav aria-label={t.shop.allCategories} className="flex-1 overflow-y-auto py-2">
-              <Link href="/shop#collectie" onClick={() => setMenu(false)} className="flex items-center justify-between border-b border-hair px-5 py-3.5 text-[15px] font-semibold text-ink hover:bg-paper-soft">
-                {t.shop.allCategories} <span aria-hidden>›</span>
-              </Link>
-              <div className="border-b border-hair px-5 py-3">
-                <ModusKeuze t={t} licht onGekozen={() => setMenu(false)} />
-              </div>
-              {ALLE.map((n) => {
-                // zoals bol.com: het aantal producten en meteen Heren, Dames of Kinderen, uit de echte catalogus
-                const groep = n.cat && catalog.length ? menuGroep(catalog, n.cat) : null;
-                return (
-                  <div key={n.href} className="border-b border-hair">
-                    <Link href={n.href} onClick={() => setMenu(false)} className="flex items-center justify-between px-5 py-3.5 text-[15px] font-semibold text-ink hover:bg-paper-soft">
-                      <span>
-                        {n.label}
-                        {groep && groep.aantal > 0 && <span className="ml-1.5 text-[13px] font-normal text-neutralx-500">({groep.aantal})</span>}
-                      </span>
-                      <span aria-hidden>›</span>
-                    </Link>
-                    {groep && n.cat && groep.voor.length > 0 && (
-                      <ul className="-mt-1.5 flex flex-wrap gap-2 px-5 pb-3">
-                        {groep.voor.map((v) => (
-                          <li key={v.waarde}>
-                            <Link
-                              href={categoriePad(n.cat as string, v.waarde)}
-                              onClick={() => setMenu(false)}
-                              className="inline-flex h-8 items-center rounded-full border border-hair px-3 text-[13px] font-semibold text-ink hover:bg-paper-soft"
-                            >
-                              {v.waarde === "heren" ? t.shop.doelHeren : v.waarde === "vrouwen" ? t.shop.doelVrouwen : t.shop.doelKinderen}
-                              <span className="ml-1 font-normal text-neutralx-500">({v.aantal})</span>
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                );
-              })}
-              <PaskamerLink href="/shop/paskamer" onClick={() => setMenu(false)} className="flex items-center justify-between border-b border-hair px-5 py-3.5 text-[15px] font-semibold text-ink hover:bg-paper-soft">
-                <span className="inline-flex items-center gap-2">
-                  {t.paskamer.navLabel}
-                  <span className="rounded-full bg-brand-mint px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-ink">{t.paskamer.nieuw}</span>
-                </span>
-                <span aria-hidden>›</span>
-              </PaskamerLink>
-              <div className="mt-3 space-y-1 px-5 py-2 text-[14px]">
-                <Link href="/shop/account" onClick={() => setMenu(false)} className="block py-2 text-ink hover:underline">
-                  {t.shop.account}
-                </Link>
-                <Link href={modus === "zakelijk" ? "/shop" : "/shop/zakelijk"} onClick={() => setMenu(false)} className="block py-2 text-ink hover:underline">
-                  {modus === "zakelijk" ? t.shopZakelijk.naarParticulier : t.shopZakelijk.naarZakelijk}
-                </Link>
-                <Link href="/kennis/faq" onClick={() => setMenu(false)} className="block py-2 text-ink hover:underline">
-                  {t.shop.customerService}
-                </Link>
-              </div>
-            </nav>
-            <div className="border-t border-hair px-5 py-4">{languageSelect("w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-[14px]")}</div>
-          </aside>
-        </div>
+      {/* wat je hebt aangevinkt om te vergelijken, met de knop naar de vergelijking */}
+      {!drawer && !menu && !checkout && (
+        <ShopVergelijkBalk ids={vergelijk.ids} catalog={catalog} t={t} onWeg={(id) => vergelijk.zet(vergelijk.ids.filter((x) => x !== id))} onWissen={() => vergelijk.zet([])} />
       )}
+
+      {/* alle categorieën: paneel (breed scherm) of lade (telefoon) */}
+      <ShopCategorieMenu
+        open={menu}
+        onClose={() => setMenu(false)}
+        top={menuTop}
+        catalog={catalog}
+        aantallen={catAantallen}
+        t={t}
+        extra={NAV.filter((n) => !n.cat)}
+        kop={
+          <>
+            <Link href="/shop#collectie" onClick={() => setMenu(false)} className="flex items-center justify-between border-b border-hair px-5 py-3.5 text-[15px] font-semibold text-ink hover:bg-paper-soft">
+              {t.shop.allCategories} <span aria-hidden>›</span>
+            </Link>
+            <div className="border-b border-hair px-5 py-3">
+              <ModusKeuze t={t} licht onGekozen={() => setMenu(false)} />
+            </div>
+          </>
+        }
+        voet={
+          <>
+            <PaskamerLink href="/shop/paskamer" onClick={() => setMenu(false)} className="flex items-center justify-between border-b border-hair px-5 py-3.5 text-[15px] font-semibold text-ink hover:bg-paper-soft">
+              <span className="inline-flex items-center gap-2">
+                {t.paskamer.navLabel}
+                <span className="rounded-full bg-brand-mint px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-ink">{t.paskamer.nieuw}</span>
+              </span>
+              <span aria-hidden>›</span>
+            </PaskamerLink>
+            <div className="mt-3 space-y-1 px-5 py-2 text-[14px]">
+              <Link href="/shop/account" onClick={() => setMenu(false)} className="block py-2 text-ink hover:underline">
+                {t.shop.account}
+              </Link>
+              <Link href={modus === "zakelijk" ? "/shop" : "/shop/zakelijk"} onClick={() => setMenu(false)} className="block py-2 text-ink hover:underline">
+                {modus === "zakelijk" ? t.shopZakelijk.naarParticulier : t.shopZakelijk.naarZakelijk}
+              </Link>
+              <Link href="/kennis/faq" onClick={() => setMenu(false)} className="block py-2 text-ink hover:underline">
+                {t.shop.customerService}
+              </Link>
+            </div>
+            <div className="mt-2 border-t border-hair px-5 py-4">{languageSelect("w-full rounded-lg border border-hairstrong bg-white px-3 py-2 text-[14px]")}</div>
+          </>
+        }
+      />
 
       {/* winkelwagen-lade */}
       {drawer && (

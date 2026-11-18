@@ -8,6 +8,7 @@ import { nl } from "@/lib/i18n/dictionaries";
 import { contentKeys, getContentMap } from "@/lib/content/store";
 import { metShopTeksten } from "@/lib/ontwerp/shop-teksten";
 import { huidigeShopBetaalwijze } from "@/lib/shop/overschrijving-server";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -25,9 +26,16 @@ export default async function ShopLayout({ children }: { children: ReactNode }) 
   const eigen = locale === "nl" ? metShopTeksten(nl, await getContentMap(contentKeys("shop.")).catch(() => ({})), "nl") : nl;
   // hoe er nu betaald wordt (Stripe dicht sinds 11 nov): de checkout en de voettekst beloven alleen wat echt kan
   const betaalwijze = await huidigeShopBetaalwijze();
+  // per categorie het aantal actieve producten: de balk en het categoriemenu tonen alleen waar iets in zit.
+  // Database even weg: een lege telling, dan toont de shop de vaste categorieën.
+  const telling = await prisma.shopProduct.groupBy({ by: ["category"], where: { active: true }, _count: { _all: true } }).catch(() => []);
+  const catAantallen: Record<string, number> = {};
+  for (const r of telling) catAantallen[r.category] = r._count._all;
   return (
     <I18nProvider locale={locale} t={eigen !== nl ? eigen : clientDict(locale)}>
-      <ShopChrome modus={modus} betaalwijze={betaalwijze}>{children}</ShopChrome>
+      <ShopChrome modus={modus} betaalwijze={betaalwijze} catAantallen={catAantallen}>
+        {children}
+      </ShopChrome>
     </I18nProvider>
   );
 }

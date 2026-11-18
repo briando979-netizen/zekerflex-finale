@@ -4,6 +4,7 @@ import { fmt, type Dict } from "@/lib/i18n/dictionaries";
 import { categorieNaam } from "@/lib/shop/categorieen";
 import type { CadeauSleutel, OntdekTegel, OverzichtKolom, Seizoen, Thema } from "@/lib/shop/etalage";
 import type { VoorWaarde } from "@/lib/shop/categoriemenu";
+import type { ShopBanner } from "@/lib/shop/banners";
 
 // De voorpagina van de shop zoals bol.com (stap 6, lib/shop/etalage.ts): Uitgelicht (seizoenskaart + tegels), thema's,
 // cadeauhulp, "Ontdek alles bij ZekerFlex" en Snel regelen. Alles uit de echte catalogus; zonder producten geen blok.
@@ -26,8 +27,79 @@ function tegelLabel(g: OntdekTegel, t: Dict): string {
   return catLabel(g.cat ?? "", t);
 }
 
-/** Uitgelicht: links een grote kaart (seizoen, of klaar voor je werkdag), rechts de tegels. */
-export function ShopOntdek({ t, seizoen, tegels }: { t: Dict; seizoen: Seizoen | null; tegels: OntdekTegel[] }) {
+/**
+ * De banners (lib/shop/banners.ts): donker met een grote kop en een regel in mint, zoals onze advertenties, met foto's van
+ * onze eigen producten. De eerste is groot. Op de telefoon veeg je erdoor; de rij staat in een `relative` vak met
+ * `overflow-x-auto`, zodat de pagina niet breder wordt dan het scherm.
+ */
+export function ShopBanners({ t, banners }: { t: Dict; banners: ShopBanner[] }) {
+  const engels = t.shop.navKleding !== "Kleding";
+  return (
+    <ul className="relative -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0 lg:grid lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)_minmax(0,1fr)] lg:gap-4 lg:overflow-visible lg:pb-0">
+      {banners.map((b, i) => {
+        const groot = i === 0;
+        return (
+          <li key={b.sleutel} className={`shrink-0 snap-start lg:w-auto ${banners.length === 1 ? "w-full lg:col-span-3" : "w-[86%] sm:w-[60%]"}`}>
+            <Link href={b.href} className="group relative isolate flex h-full min-h-[300px] flex-col overflow-hidden rounded-2xl bg-[#0C0E12] p-5 text-white sm:p-7 lg:min-h-[340px]">
+              <span aria-hidden className="absolute -right-16 -top-20 -z-10 h-64 w-64 rounded-full bg-brand-mint/15 blur-2xl" />
+              <span className="text-[12px] font-bold uppercase tracking-[0.14em] text-brand-mint">ZekerFlex shop</span>
+              <span className={`mt-3 block font-display font-extrabold leading-[1.02] tracking-tight ${groot ? "text-[34px] sm:text-[44px] lg:text-[52px]" : "text-[30px] sm:text-[34px]"}`}>
+                {engels ? b.kop.en : b.kop.nl}
+                <span className="block text-brand-mint">{engels ? b.accent.en : b.accent.nl}</span>
+              </span>
+              <span className={`mt-auto flex items-end gap-2 pt-6 ${groot ? "lg:gap-3" : ""}`}>
+                {b.fotos.slice(0, groot ? 3 : 2).map((f, k) => (
+                  <span
+                    key={f}
+                    className={`relative block aspect-square flex-1 overflow-hidden rounded-xl bg-white ring-1 ring-white/10 transition duration-500 group-hover:-translate-y-1 ${k % 2 === 1 ? "-translate-y-3" : ""} ${groot ? "max-w-[190px]" : "max-w-[130px]"}`}
+                  >
+                    <Image src={f} alt="" fill sizes={groot ? "(min-width: 1024px) 14vw, 28vw" : "(min-width: 1024px) 9vw, 28vw"} className="object-cover" />
+                  </span>
+                ))}
+                <span className="ml-auto flex shrink-0 flex-col items-end gap-2 pl-2">
+                  <span className="text-[12px] text-white/70">{artikelen(b.aantal, t)}</span>
+                  <span className="inline-flex h-10 items-center rounded-lg bg-brand-mint px-4 text-[14px] font-bold text-ink transition group-hover:brightness-95">{t.shop.etalageBekijk} →</span>
+                </span>
+              </span>
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/**
+ * Uitgelicht. Met banners: de banners bovenaan en de tegels eronder over de hele breedte. Zonder banners (te weinig
+ * producten met foto): links een grote kaart (seizoen, of klaar voor je werkdag), rechts de tegels.
+ */
+export function ShopOntdek({ t, seizoen, tegels, banners = [] }: { t: Dict; seizoen: Seizoen | null; tegels: OntdekTegel[]; banners?: ShopBanner[] }) {
+  if (banners.length > 0) {
+    return (
+      <section aria-labelledby="shop-ontdek" className="bg-white">
+        <div className={`${WRAP} py-6 lg:py-8`}>
+          <h2 id="shop-ontdek" className="sr-only">
+            {t.shop.uitgelicht}
+          </h2>
+          <ShopBanners t={t} banners={banners} />
+          {tegels.length >= 4 && (
+            <ul className="mt-4 grid grid-cols-4 gap-2 sm:gap-3 lg:grid-cols-8">
+              {tegels.map((g) => (
+                <li key={g.sleutel}>
+                  <Link href={g.href} className="group block rounded-xl border border-hair bg-white p-1.5 transition hover:border-hairstrong hover:shadow-e1 sm:p-2">
+                    <span className="relative block aspect-square overflow-hidden rounded-lg bg-paper-soft">
+                      <Image src={g.foto} alt="" fill sizes="(min-width: 1024px) 11vw, 25vw" className="object-cover transition duration-500 group-hover:scale-[1.04]" />
+                    </span>
+                    <span className="mt-1.5 line-clamp-2 block text-center text-[11px] font-semibold leading-tight text-ink sm:text-[13px]">{tegelLabel(g, t)}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+    );
+  }
   if (tegels.length < 4) return null;
   const titel = seizoen === "sint" ? t.shop.etalageSint : seizoen === "kerst" ? t.shop.etalageKerst : t.shop.etalageWerkTitel;
   const sub = seizoen ? t.shop.etalageSeizoenSub : t.shop.etalageWerkSub;

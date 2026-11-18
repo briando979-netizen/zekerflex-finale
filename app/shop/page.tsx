@@ -21,6 +21,7 @@ import { getShopIndeling } from "@/lib/ontwerp/shop-indeling-store";
 import { cadeauKeuzes, catalogusOverzicht, collectieUitAdres, ontdekTegels, prijsUitAdres, seizoenVan, themaKaarten, type EtalageProduct } from "@/lib/shop/etalage";
 import { ShopAlles, ShopCadeauhulp, ShopOntdek, ShopRegelen, ShopThemas } from "@/components/marketing/ShopEtalage";
 import { SHOP_CATEGORIEEN, categorieNaam } from "@/lib/shop/categorieen";
+import { shopBanners } from "@/lib/shop/banners";
 
 // <title> kort en zonder het sjabloon " · ZekerFlex" erachter (dan stond het merk er twee keer); delen houdt de lange
 const title = "ZekerFlex Shop — kleding, werkkleding en PBM, eerst passen in de paskamer";
@@ -132,7 +133,7 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
   // de onderdelen onder de kop: volgorde en zichtbaarheid komen uit de Site-ontwerper (tabblad Webshop, lib/ontwerp/shop-indeling.ts);
   // zonder eigen indeling is dit precies de oude volgorde. Wie zoekt of een categorie kiest, ziet alleen het assortiment en wat eronder hoort.
   const onderdelen: Record<ShopSectieId, ReactNode> = {
-    ontdek: <ShopOntdek t={dict} seizoen={seizoen} tegels={ontdekTegels(etalage)} />,
+    ontdek: <ShopOntdek t={dict} seizoen={seizoen} tegels={ontdekTegels(etalage)} banners={shopBanners(etalage, nu)} />,
     categorieen: <ShopCategorieGroot t={dict} tegels={tegels} />,
     themas: <ShopThemas t={dict} themas={themaKaarten(etalage, nu)} seizoen={seizoen} />,
     cadeauhulp: <ShopCadeauhulp t={dict} keuzes={cadeauKeuzes(etalage)} />,
