@@ -84,6 +84,9 @@ function ShopOmlijsting({ children, betaalwijze }: { children: ReactNode; betaal
   const { locale, t } = useI18n();
   const { modus } = useShopModus();
   const NAV = navVoor(modus, t);
+  // het menu "Alle categorieën": álle categorieën uit lib/shop/categorieen.ts (de balk houdt de vier bekendste),
+  // plus de zakelijke ingangen zonder categorie (pakketten, team, offerte)
+  const ALLE: NavItem[] = [...SHOP_CATEGORIEEN.map((c) => ({ label: catLabel(c, t), href: categoriePad(c), cat: c as string })), ...NAV.filter((n) => !n.cat)];
   const [menu, setMenu] = useState(false);
   const [drawer, setDrawer] = useState(false);
   const [checkout, setCheckout] = useState(false);
@@ -385,7 +388,7 @@ function ShopOmlijsting({ children, betaalwijze }: { children: ReactNode; betaal
               <div className="border-b border-hair px-5 py-3">
                 <ModusKeuze t={t} licht onGekozen={() => setMenu(false)} />
               </div>
-              {NAV.map((n) => {
+              {ALLE.map((n) => {
                 // zoals bol.com: het aantal producten en meteen Heren, Dames of Kinderen, uit de echte catalogus
                 const groep = n.cat && catalog.length ? menuGroep(catalog, n.cat) : null;
                 return (

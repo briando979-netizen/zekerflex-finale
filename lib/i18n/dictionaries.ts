@@ -1341,6 +1341,7 @@ export const nl = {
     pbmSub: "Veiligheidsschoenen, handschoenen en zichtbaarheid",
     werkdagSub: "Tassen, flessen en handige spullen",
     cadeausSub: "Voor een collega of jezelf",
+    andersSub: "Bekijk het hele aanbod",
     looksTitel: "Shop de look",
     looksSub: "Complete combinaties op een paspop. Pas ze aan op je eigen maten.",
     lookBekijk: "Pas aan",
