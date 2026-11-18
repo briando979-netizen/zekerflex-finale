@@ -41,6 +41,10 @@ const SEO: Record<string, { title: string; description: string }> = {
     title: "Verzekeringen voor freelancers: wat heb je nodig?",
     description: "Welke verzekeringen heb je als freelancer nodig? Aansprakelijkheid, arbeidsongeschiktheid en meer, helder uitgelegd.",
   },
+  "tarieven-overzicht": {
+    title: "Tarievenoverzicht flexwerk: uurtarief per functie",
+    description: "Het richttarief per functie en branche, met de platformkosten per gewerkt uur erbij. Gratis te downloaden als pdf.",
+  },
 };
 
 export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {

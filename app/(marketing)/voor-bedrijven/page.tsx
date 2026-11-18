@@ -177,6 +177,12 @@ export default async function VoorBedrijvenPage() {
                 Stel je klus samen zonder account
               </Link>
             </p>
+            <p className="mt-2 text-sm text-white/70">
+              Wat kost een functie per uur?{" "}
+              <Link href="/tarieven-overzicht" className="font-semibold text-brand-mint underline">
+                Bekijk tarieven
+              </Link>
+            </p>
             <HeroChecks items={["Diensten plaatsen wanneer het jou uitkomt", "Inzicht en controle per dienst", "Snel, makkelijk, flexibel"]} />
           </div>
           <Photo name="employerHero" fallback={<SceneApprove />} className="mx-auto w-full max-w-sm shadow-lift" />

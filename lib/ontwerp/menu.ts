@@ -45,6 +45,7 @@ export const STANDAARD_KOLOMMEN: VoettekstKolom[] = [
       { href: "/voor-bureaus", label: "Voor bureaus (white-label)" },
       { href: "/sales-partner", label: "Word sales-partner (commissie)" },
       { href: "/prijzen", label: "Prijzen" },
+      { href: "/tarieven-overzicht", label: "Tarievenoverzicht" },
       { href: "/shop", label: "ZekerFlex shop" },
       { href: "/verkopen", label: "Verkopen via ZekerFlex" },
       { href: "/website-check", label: "Gratis website-check" },

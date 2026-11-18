@@ -78,6 +78,7 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     ]),
     ...(await publicOpenShifts({ take: 500 }).catch(() => [])).map((s) => entry(`/klussen/${s.id}`, 0.6, "daily", s.createdAt)),
     entry("/prijzen", 0.8, "monthly"),
+    entry("/tarieven-overzicht", 0.7, "monthly"),
     entry("/abonnementen", 0.7, "monthly"),
 
     // Het hele aanbod (lib/marketing/aanbod.ts) + de producten zonder eigen pagina elders

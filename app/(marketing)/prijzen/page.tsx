@@ -109,6 +109,12 @@ export default async function PrijzenPage() {
           urengoedkeuring, 2% bij indiening binnen 3 werkdagen, of direct).
         </p>
         <PlatformFeeEstimate />
+        <div className="mt-6 flex flex-col items-center gap-2 text-center">
+          <Link href="/tarieven-overzicht" className="btn-ghost">
+            Bekijk tarieven
+          </Link>
+          <p className="text-sm text-neutralx-500">Het richttarief per functie en branche, ook als pdf.</p>
+        </div>
         <p className="mt-5 text-center text-sm text-neutralx-600">
           Benieuwd wat je bespaart ten opzichte van een uitzendbureau?{" "}
           <Link href="/rekentools/kosten-uitzendkracht-berekenen" className="font-semibold text-brand-600 underline">

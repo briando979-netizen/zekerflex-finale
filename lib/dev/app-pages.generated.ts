@@ -341,6 +341,7 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/schoonmaak-vacatures","file":"app/(marketing)/schoonmaak-vacatures/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/schoonmaak-vacatures/[stad]","file":"app/(marketing)/schoonmaak-vacatures/[stad]/page.tsx","area":"Marketing","dynamic":true},
   {"route":"/status","file":"app/(marketing)/status/page.tsx","area":"Marketing","dynamic":false},
+  {"route":"/tarieven-overzicht","file":"app/(marketing)/tarieven-overzicht/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/toegankelijkheid","file":"app/(marketing)/toegankelijkheid/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/uitleg","file":"app/(marketing)/uitleg/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/uitnodiging/bedrijf","file":"app/(marketing)/uitnodiging/bedrijf/page.tsx","area":"Marketing","dynamic":false},

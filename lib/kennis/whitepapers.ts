@@ -8,6 +8,8 @@
 // (€3,50/uur werkgeversfee, uitbetaalkeuze 4% / 2% / 0%).
 // ---------------------------------------------------------------------------
 
+import { tarievenWhitepaper } from "@/lib/kennis/tarieven-overzicht";
+
 export type Block =
   | { t: "p"; text: string }
   | { t: "h3"; text: string }
@@ -657,6 +659,9 @@ export const WHITEPAPERS: Whitepaper[] = [
       },
     ],
   },
+
+  // Het tarievenoverzicht (/tarieven-overzicht): opgebouwd uit de catalogus en de staffel, niet overgetypt.
+  tarievenWhitepaper(),
 ];
 
 export function whitepaperBySlug(slug: string): Whitepaper | undefined {
