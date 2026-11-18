@@ -1,4 +1,4 @@
-import { beoordeelBericht, leesAntwoord, maakSlug, rubriekVoor, uniekeSlug, type FeedItem, type NieuwsBericht, type Rubriek } from "@/lib/nieuws/regels";
+import { beoordeelBericht, consultatieGegevens, leesAntwoord, maakSlug, rubriekVoor, uniekeSlug, wetPast, type FeedItem, type NieuwsBericht, type Rubriek } from "@/lib/nieuws/regels";
 import type { NieuwsBron } from "@/lib/nieuws/bronnen";
 import type { NieuwsStand } from "@/lib/nieuws/store";
 
@@ -13,17 +13,21 @@ import type { NieuwsStand } from "@/lib/nieuws/store";
 
 export const NIEUWS_VLAG = "nieuws-vanzelf-plaatsen";
 export const NIEUWS_JOB = "nieuws";
-/** hooguit zoveel nieuwe berichten per ronde: het eigen model is traag en een dag heeft meer rondes */
+/** hooguit zoveel nieuwe berichten per ronde: het eigen model is traag en een dag heeft meer rondes. Eerlijk verdeeld over de bronnen. */
 export const MAX_PER_RONDE = 2;
 /** ouder nieuws is geen nieuws meer */
 export const MAX_LEEFTIJD_DAGEN = 4;
+/** een wetsvoorstel ligt weken ter consultatie: tot zo lang na de start is het nog een bericht waard */
+export const MAX_LEEFTIJD_CONSULTATIE_DAGEN = 21;
+/** hooguit zoveel bronpagina's per bron per ronde ophalen (een consultatie zonder datum in de feed kost een pagina om te wegen) */
+export const MAX_PAGINAS_PER_BRON = 6;
 const DAG = 86_400_000;
 
 export interface NieuwsAfhankelijkheden {
   vanzelf: () => Promise<boolean>;
   bronnen: NieuwsBron[];
   haalFeed: (bron: NieuwsBron) => Promise<FeedItem[]>;
-  haalPagina: (url: string) => Promise<string>;
+  haalPagina: (url: string, bron: NieuwsBron) => Promise<string>;
   schrijf: (invoer: { bron: NieuwsBron; item: FeedItem; tekst: string; rubriek: Rubriek }) => Promise<unknown>;
   isGezien: (id: string) => Promise<boolean>;
   zetGezien: (id: string, nu: Date) => Promise<void>;
@@ -38,9 +42,10 @@ export async function loopNieuwsNa(d: NieuwsAfhankelijkheden, nu = new Date()): 
   const stand: NieuwsStand = { at: nu.toISOString(), vanzelf, bekeken: 0, paste: 0, geschreven: 0, geplaatst: 0, afgekeurd: [] };
   const fouten: string[] = [];
   const slugs = new Set(await d.slugs().catch(() => []));
-  let gemaakt = 0;
+  const perBron = Math.max(1, Math.ceil(MAX_PER_RONDE / Math.max(1, d.bronnen.length)));
 
   for (const bron of d.bronnen) {
+    const wet = bron.soort === "consultatie";
     let items: FeedItem[];
     try {
       items = await d.haalFeed(bron);
@@ -48,24 +53,39 @@ export async function loopNieuwsNa(d: NieuwsAfhankelijkheden, nu = new Date()): 
       fouten.push(`${bron.naam}: ${(e as Error).message}`);
       continue;
     }
-    const vers = items
-      .filter((i) => i.url.startsWith(bron.alleenPad) && nu.getTime() - Date.parse(i.datum) < MAX_LEEFTIJD_DAGEN * DAG)
-      .sort((a, b) => b.datum.localeCompare(a.datum));
+    // een consultatie heeft geen datum in de feed (de volgorde van de feed is nieuwste eerst); die weegt de pagina straks
+    const vers = wet
+      ? items.filter((i) => i.url.startsWith(bron.alleenPad))
+      : items.filter((i) => i.url.startsWith(bron.alleenPad) && nu.getTime() - Date.parse(i.datum) < MAX_LEEFTIJD_DAGEN * DAG).sort((a, b) => b.datum.localeCompare(a.datum));
+    let gemaakt = 0;
+    let paginas = 0;
     for (const item of vers) {
       if (await d.isGezien(item.id)) continue;
       stand.bekeken++;
-      const rubriek = rubriekVoor(item.titel, item.omschrijving);
+      const rubriek: Rubriek | null = wet ? (wetPast(item.titel) ? "regels" : null) : rubriekVoor(item.titel, item.omschrijving);
       if (!rubriek) {
         await d.zetGezien(item.id, nu);
         continue;
       }
       stand.paste++;
       // de rest wacht op de volgende ronde: niet gemarkeerd, dus het komt vanzelf terug
-      if (gemaakt >= MAX_PER_RONDE) continue;
-      gemaakt++;
+      if (gemaakt >= perBron || paginas >= MAX_PAGINAS_PER_BRON) continue;
+      paginas++;
       try {
-        const tekst = await d.haalPagina(item.url);
-        if (tekst.length < 300) throw new Error("de bronpagina heeft te weinig tekst");
+        const tekst = await d.haalPagina(item.url, bron);
+        if (!wet && tekst.length < 300) throw new Error("de bronpagina heeft te weinig tekst");
+        let bronDatum = item.datum;
+        if (wet) {
+          const c = consultatieGegevens(tekst);
+          // gesloten, te oud of zonder datum: geen bericht (en niet nog eens ophalen)
+          if (!c || !c.actief || tekst.length < 400 || nu.getTime() - Date.parse(c.start) > MAX_LEEFTIJD_CONSULTATIE_DAGEN * DAG) {
+            await d.zetGezien(item.id, nu);
+            stand.paste--;
+            continue;
+          }
+          bronDatum = c.start;
+        }
+        gemaakt++;
         const gelezen = leesAntwoord(await d.schrijf({ bron, item, tekst, rubriek }));
         if (!gelezen) throw new Error("het model gaf geen bruikbaar bericht");
         stand.geschreven++;
@@ -85,7 +105,7 @@ export async function loopNieuwsNa(d: NieuwsAfhankelijkheden, nu = new Date()): 
           gemaakt: nu.toISOString(),
           status: vanzelf ? "geplaatst" : "concept",
           ...(vanzelf ? { geplaatst: nu.toISOString(), door: "vanzelf" } : {}),
-          bron: { naam: bron.naam, titel: item.titel, url: item.url, datum: item.datum },
+          bron: { naam: bron.naam, titel: item.titel.slice(0, 200), url: item.url, datum: bronDatum },
         });
         if (vanzelf) stand.geplaatst++;
         await d.zetGezien(item.id, nu);

@@ -3,7 +3,7 @@ import { featureEnabled } from "@/lib/flags";
 import { fetchPage } from "@/lib/website-check/fetch";
 import { SITE } from "@/lib/seo";
 import { NIEUWS_BRONNEN } from "@/lib/nieuws/bronnen";
-import { leesRss, paginaTekst, RUBRIEK_NAAM } from "@/lib/nieuws/regels";
+import { consultatieTekst, leesRss, paginaTekst, RUBRIEK_NAAM } from "@/lib/nieuws/regels";
 import { NIEUWS_VLAG, type NieuwsAfhankelijkheden } from "@/lib/nieuws/ronde";
 import { alleBerichten, bewaarBericht, bewaarNieuwsStand, isGezien, ruimNieuwsOp, zetGezien } from "@/lib/nieuws/store";
 
@@ -17,7 +17,11 @@ async function haal(url: string, maxBytes: number): Promise<string> {
 }
 
 /** De opdracht aan het model. De stijl is die van de site: gewoon Nederlands, je/jij, kort, zonder reclame. */
-export function nieuwsOpdracht(invoer: { bronNaam: string; titel: string; tekst: string; rubriek: string }): { system: string; user: string } {
+export function nieuwsOpdracht(invoer: { bronNaam: string; titel: string; tekst: string; rubriek: string; wet?: boolean }): { system: string; user: string } {
+  const wet = invoer.wet
+    ? `- Dit is een VOORSTEL dat de overheid openbaar voorlegt (een internetconsultatie). Het is nog geen wet. Schrijf dus "het voorstel", "de overheid wil" en "als dit doorgaat", nooit dat het al geldt. Noem tot wanneer mensen kunnen reageren als dat in de brontekst staat. Geef de titel van het voorstel weer in gewone woorden.\n` +
+      `- Is de brontekst kort, schrijf dan ook kort (minimaal 100 woorden) en vul niets aan uit eigen kennis.\n`
+    : "";
   const system =
     `Je schrijft korte nieuwsberichten voor de nieuwsroom van ${SITE.name}, een Nederlands platform voor flexwerk. ` +
     `De lezers zijn flexwerkers, zzp'ers, uitzendkrachten en bedrijven die personeel inhuren.\n\n` +
@@ -27,6 +31,7 @@ export function nieuwsOpdracht(invoer: { bronNaam: string; titel: string; tekst:
     `- Schrijf in je eigen woorden; neem geen hele zinnen over.\n` +
     `- Geef geen juridisch of fiscaal advies en doe geen voorspellingen.\n` +
     `- Zet geen links of webadressen in de tekst; de bron komt er apart onder.\n` +
+    wet +
     `- Het laatste blok heet "Wat betekent dit voor jou?" en zegt in 2 tot 3 zinnen, voorzichtig, wat een flexwerker of een bedrijf dat inhuurt hieraan heeft. Staat dat niet in de bron, zeg dan alleen waarom het goed is om dit te weten.\n\n` +
     `Antwoord UITSLUITEND met JSON: {"titel": string (hooguit 90 tekens, geen clickbait), "samenvatting": string (1 tot 2 zinnen), ` +
     `"blokken": [{"kop": string, "alineas": string[]}] (3 blokken, samen 150 tot 300 woorden)}.`;
@@ -38,12 +43,12 @@ export function echteNieuwsAfhankelijkheden(): NieuwsAfhankelijkheden {
   return {
     vanzelf: () => featureEnabled(NIEUWS_VLAG),
     bronnen: NIEUWS_BRONNEN,
-    haalFeed: async (bron) => leesRss(await haal(bron.feed, 1_500_000)),
-    haalPagina: async (url) => paginaTekst(await haal(url, 3_000_000)),
+    haalFeed: async (bron) => leesRss(await haal(bron.feed, 1_500_000), bron.soort === "consultatie"),
+    haalPagina: async (url, bron) => (bron.soort === "consultatie" ? consultatieTekst(await haal(url, 3_000_000)) : paginaTekst(await haal(url, 3_000_000))),
     schrijf: async ({ bron, item, tekst, rubriek }) => {
       const probleem = llmConfigProblem();
       if (probleem) throw new Error(`het AI-model is niet ingesteld (${probleem})`);
-      const { system, user } = nieuwsOpdracht({ bronNaam: bron.naam, titel: item.titel, tekst, rubriek: RUBRIEK_NAAM[rubriek] });
+      const { system, user } = nieuwsOpdracht({ bronNaam: bron.naam, titel: item.titel, tekst, rubriek: RUBRIEK_NAAM[rubriek], wet: bron.soort === "consultatie" });
       return chatJson<unknown>({
         purpose: "nieuws-bericht",
         temperature: 0.3,

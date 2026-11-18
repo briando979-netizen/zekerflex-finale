@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 vi.mock("@/lib/prisma", () => ({ prisma: {} }));
 
+import { consultatieGegevens, consultatieTekst, wetPast } from "@/lib/nieuws/regels";
 import { beoordeelBericht, getallenBuitenBron, leesAntwoord, leesRss, maakSlug, paginaTekst, rubriekVoor, type FeedItem, type NieuwsBericht } from "@/lib/nieuws/regels";
 import { NIEUWS_BRONNEN } from "@/lib/nieuws/bronnen";
 import { loopNieuwsNa, MAX_PER_RONDE, type NieuwsAfhankelijkheden } from "@/lib/nieuws/ronde";
@@ -101,6 +102,9 @@ describe("de harde controle", () => {
   });
 });
 
+const CBS = NIEUWS_BRONNEN.find((b) => b.id === "cbs")!;
+const WET = NIEUWS_BRONNEN.find((b) => b.id === "consultatie")!;
+
 function proef(over: Partial<NieuwsAfhankelijkheden> = {}) {
   const bewaard: NieuwsBericht[] = [];
   const gezien = new Set<string>();
@@ -108,7 +112,7 @@ function proef(over: Partial<NieuwsAfhankelijkheden> = {}) {
   const schrijf = vi.fn(async (): Promise<unknown> => GOED);
   const d: NieuwsAfhankelijkheden = {
     vanzelf: async () => false,
-    bronnen: NIEUWS_BRONNEN,
+    bronnen: [CBS],
     haalFeed: async (): Promise<FeedItem[]> => leesRss(FEED),
     haalPagina: async () => BRONTEKST,
     schrijf,
@@ -191,7 +195,82 @@ describe("een ronde", () => {
   });
 });
 
+describe("wetsvoorstellen ter consultatie", () => {
+  const PAGINA = (start: string, status: string, lijf: string) =>
+    `<html><body><div>Menu van Overheid.nl</div><h1>Titel</h1><h2>In het kort</h2><p>${lijf}</p><h2>Consultatiegegevens</h2><table><tr><th>Startdatum consultatie</th><td>${start}</td></tr><tr><th>Einddatum consultatie</th><td>11-12-2026</td></tr><tr><th>Status</th><td>${status}</td></tr></table><h2>Voor wie belangrijk</h2><p>Voor werkgevers die mensen uitlenen.</p><h2>Relevante documenten</h2><p>Besluit PDF</p></body></html>`;
+  const LIJF = "Vanaf 1 januari 2028 mogen bedrijven alleen nog werknemers uitlenen als zij daarvoor een toelating hebben. ".repeat(5);
+  const WETFEED = `<rss><channel>
+<item><guid isPermaLink="false">Toelating</guid><link>https://www.internetconsultatie.nl/toelating</link><title>Wijziging van de Wet allocatie arbeidskrachten door intermediairs</title></item>
+<item><guid isPermaLink="false">Kenteken</guid><link>https://www.internetconsultatie.nl/kenteken</link><title>Wijziging van het Kentekenreglement</title></item>
+<item><guid isPermaLink="false">Oud</guid><link>https://www.internetconsultatie.nl/oud</link><title>Wijziging Wet minimumloon</title></item>
+</channel></rss>`;
+  const WETBERICHT = {
+    titel: "Voorstel: uitlenen van personeel alleen nog met een toelating",
+    samenvatting: "De overheid wil dat bedrijven vanaf 1 januari 2028 alleen nog mensen uitlenen als zij een toelating hebben.",
+    blokken: [
+      { kop: "Wat staat er in het voorstel?", alineas: ["De overheid legt een voorstel voor waarin staat dat bedrijven vanaf 1 januari 2028 alleen nog werknemers mogen uitlenen als zij daarvoor een toelating hebben. Het is nog geen wet: iedereen kan er nu op reageren, en daarna beslist de politiek of het doorgaat."] },
+      { kop: "Voor wie is dit belangrijk?", alineas: ["Het voorstel raakt werkgevers die mensen uitlenen aan andere bedrijven. Zij moeten straks kunnen laten zien dat zij zijn toegelaten. Voor bedrijven die personeel inlenen is het goed om te weten met wie zij zaken doen."] },
+      { kop: "Wat betekent dit voor jou?", alineas: ["Werk je als uitzendkracht of huur je mensen in, dan verandert er op dit moment nog niets. Als dit doorgaat, is het verstandig om te letten op de toelating van het bureau waarmee je werkt. Reageren op het voorstel kan tot 11 december 2026."] },
+    ],
+  };
+
+  it("kiest alleen voorstellen over werk, loon, zzp en ondernemen", () => {
+    expect(wetPast("Wijziging van de Wet allocatie arbeidskrachten door intermediairs")).toBe(true);
+    expect(wetPast("Wijziging van de Wet op de omzetbelasting 1968 in verband met elektronische facturatie")).toBe(true);
+    expect(wetPast("Wijziging Besluit arbeidsvoorwaarden gedetacheerde werknemers in de EU")).toBe(true);
+    expect(wetPast("Wijziging van het Kentekenreglement")).toBe(false);
+    expect(wetPast("Wijziging Kieswet: Landelijke invoering nieuw stembiljet")).toBe(false);
+  });
+
+  it("leest een feed zonder datum en haalt start, einde en status van de pagina", () => {
+    expect(leesRss(WETFEED)).toHaveLength(0);
+    expect(leesRss(WETFEED, true).map((i) => [i.id, i.datum])).toEqual([["Toelating", ""], ["Kenteken", ""], ["Oud", ""]]);
+    const tekst = consultatieTekst(PAGINA("16-11-2026", "Actief", LIJF));
+    expect(tekst.startsWith("Startdatum consultatie 16-11-2026\nEinddatum consultatie 11-12-2026\nStatus Actief\nIn het kort")).toBe(true);
+    expect(tekst).not.toContain("Menu van Overheid.nl");
+    expect(tekst).not.toContain("Besluit PDF");
+    expect(tekst).toContain("Voor werkgevers die mensen uitlenen.");
+    expect(consultatieGegevens(tekst)).toEqual({ start: "2026-11-16T11:00:00.000Z", actief: true });
+    expect(consultatieGegevens("geen gegevens")).toBeNull();
+  });
+
+  it("schrijft over een lopend voorstel in de rubriek Wet en regels, en slaat een gesloten of oud voorstel over", async () => {
+    const paginas: Record<string, string> = {
+      "https://www.internetconsultatie.nl/toelating": consultatieTekst(PAGINA("16-11-2026", "Actief", LIJF)),
+      "https://www.internetconsultatie.nl/oud": consultatieTekst(PAGINA("01-09-2026", "Actief", LIJF)),
+    };
+    const schrijf = vi.fn(async (): Promise<unknown> => WETBERICHT);
+    const { d, bewaard, gezien } = proef({ bronnen: [WET], haalFeed: async () => leesRss(WETFEED, true), haalPagina: async (url) => paginas[url] ?? "", schrijf });
+    const s = await loopNieuwsNa(d, NU);
+    expect(schrijf).toHaveBeenCalledTimes(1);
+    expect(bewaard).toHaveLength(1);
+    expect(bewaard[0]).toMatchObject({ rubriek: "regels", status: "concept", bron: { naam: WET.naam, url: "https://www.internetconsultatie.nl/toelating", datum: "2026-11-16T11:00:00.000Z" } });
+    // het oude voorstel en het kenteken zijn afgehandeld en komen niet terug
+    expect([...gezien].sort()).toEqual(["Kenteken", "Oud", "Toelating"]);
+    expect(s).toMatchObject({ bekeken: 3, paste: 1, geschreven: 1 });
+  });
+
+  it("verdeelt de berichten van een ronde over de bronnen", async () => {
+    const veel: FeedItem[] = Array.from({ length: 4 }, (_, i) => ({ id: `w${i}`, titel: `Werkloosheid stijgt in regio ${i}`, url: `https://www.cbs.nl/nl-nl/nieuws/2026/47/w${i}`, datum: "2026-11-18T05:30:00.000Z", omschrijving: "" }));
+    const { d, bewaard } = proef({
+      bronnen: [CBS, WET],
+      haalFeed: async (bron) => (bron.id === "cbs" ? veel : leesRss(WETFEED, true)),
+      haalPagina: async (_url, bron) => (bron.id === "cbs" ? BRONTEKST : consultatieTekst(PAGINA("16-11-2026", "Actief", LIJF))),
+      schrijf: async ({ bron }) => (bron.id === "cbs" ? GOED : WETBERICHT),
+    });
+    await loopNieuwsNa(d, NU);
+    expect(bewaard.map((b) => b.bron.naam).sort()).toEqual([CBS.naam, WET.naam].sort());
+  });
+});
+
 describe("de lijst en de aansluitingen", () => {
+  it("zet onze eigen uitleg over wetten in de rubriek Wet en regels", () => {
+    const regels = nieuwsKaarten([]).filter((k) => k.rubriek === "regels").map((k) => k.href);
+    expect(regels).toEqual(expect.arrayContaining(["/kennis/wet-dba-uitgelegd", "/kennis/stipp-pensioen", "/kennis/abu-fasensysteem", "/kennis/blog/handhaving-wet-dba-2026"]));
+    // een blog over iets anders blijft bij Van ZekerFlex
+    expect(nieuwsKaarten([]).find((k) => k.href === "/kennis/blog/dezelfde-dag-uitbetaald")?.rubriek).toBe("zekerflex");
+  });
+
   it("toont alleen geplaatste berichten, samen met onze eigen blogs", () => {
     const basis: NieuwsBericht = { slug: "a", ...GOED, rubriek: "arbeidsmarkt", gemaakt: NU.toISOString(), geplaatst: NU.toISOString(), status: "geplaatst", bron: { naam: "CBS", titel: "t", url: "https://www.cbs.nl/nl-nl/nieuws/x", datum: NU.toISOString() } };
     const kaarten = nieuwsKaarten([basis, { ...basis, slug: "b", status: "concept" }, { ...basis, slug: "c", status: "verborgen" }]);

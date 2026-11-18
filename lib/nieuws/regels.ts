@@ -67,18 +67,64 @@ const veld = (blok: string, naam: string): string => {
   return m ? ontcijfer(m[1] ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : "";
 };
 
-/** De items uit een RSS 2.0-feed. Een item zonder titel, link of geldige datum slaan we over. */
-export function leesRss(xml: string): FeedItem[] {
+/**
+ * De items uit een RSS 2.0-feed. Een item zonder titel, link of geldige datum slaan we over. Met `zonderDatum` mag de
+ * datum ontbreken (de feed van de internetconsultaties heeft er geen): `datum` is dan leeg en komt later van de pagina.
+ */
+export function leesRss(xml: string, zonderDatum = false): FeedItem[] {
   const uit: FeedItem[] = [];
   for (const m of xml.matchAll(/<item[\s>]([\s\S]*?)<\/item>/gi)) {
     const blok = m[1] ?? "";
     const titel = veld(blok, "title");
     const url = veld(blok, "link");
     const tijd = Date.parse(veld(blok, "pubDate"));
-    if (!titel || !/^https:\/\//.test(url) || Number.isNaN(tijd)) continue;
-    uit.push({ id: veld(blok, "guid") || url, titel, url, datum: new Date(tijd).toISOString(), omschrijving: veld(blok, "description") });
+    if (!titel || !/^https:\/\//.test(url) || (Number.isNaN(tijd) && !zonderDatum)) continue;
+    uit.push({ id: veld(blok, "guid") || url, titel, url, datum: Number.isNaN(tijd) ? "" : new Date(tijd).toISOString(), omschrijving: veld(blok, "description") });
   }
   return uit;
+}
+
+// --- wetsvoorstellen ter consultatie --------------------------------------------------------------
+
+/** Wetsvoorstellen en besluiten waar onze lezers mee te maken krijgen: werk, inhuren, loon, zzp en ondernemen. */
+const WET_PAST =
+  /\b(arbeid\w*|werknemer\w*|werkgever\w*|uitzend\w*|terbeschikkingstelling|intermediairs?|detacher\w*|gedetacheerd\w*|zzp|zelfstandige\w*|schijnzelfstandig\w*|minimumloon|loon\b|lonen\b|loonbelasting\w*|loonheffing\w*|cao\b|pensioen\w*|ziektewet|verlof\w*|ontslag\w*|werkloosheid\w*|arbeidsmigrant\w*|omzetbelasting|btw\b|facturatie|factur\w*|ondernemers?\b|handelsregister|kleineondernemers\w*|flex\w*|oproep\w*|platformwerk\w*|arbeidsomstandigheden\w*)/i;
+
+/** Past dit wetsvoorstel bij ons? */
+export const wetPast = (titel: string) => WET_PAST.test(titel);
+
+export interface Consultatie {
+  /** ISO-tijdstip van de start (12:00 Nederlandse wintertijd: alleen de dag telt) */
+  start: string;
+  actief: boolean;
+}
+
+/**
+ * De leesbare tekst van een consultatiepagina: eerst de gegevens (start, einde, status), dan het stuk van "In het kort"
+ * tot de lijst met documenten. De pagina heeft geen <main>; zonder dit knippen zou het menu van Overheid.nl meekomen.
+ */
+export function consultatieTekst(html: string, max = 6000): string {
+  const plat = ontcijfer(html.replace(/<(script|style|noscript|svg)[\s>][\s\S]*?<\/\1>/gi, " ").replace(/<\/(p|h[1-6]|li|div|section|tr|td|th|dt|dd|br)>/gi, "\n").replace(/<[^>]+>/g, " "))
+    .replace(/[ \t]+/g, " ")
+    .replace(/\s*\n\s*/g, "\n")
+    .trim();
+  const gegeven = (naam: string) => new RegExp(`${naam}\\s*(\\d{2}-\\d{2}-\\d{4}|[A-Za-z]+)`, "i").exec(plat)?.[1] ?? "";
+  const kop = [`Startdatum consultatie ${gegeven("Startdatum consultatie")}`, `Einddatum consultatie ${gegeven("Einddatum consultatie")}`, `Status ${gegeven("Status")}`];
+  const begin = plat.indexOf("In het kort");
+  const na = begin >= 0 ? plat.slice(begin) : plat;
+  // de gegevens staan al in de kop; het blok op de pagina zelf en alles vanaf de documenten hoort niet bij de leestekst
+  const eind = [na.indexOf("\nRelevante documenten"), na.indexOf("\nPublicatie reacties")].filter((i) => i > 0).sort((a, b) => a - b)[0];
+  const lijf = (eind ? na.slice(0, eind) : na).replace(/\nReageren op deze consultatie\b/g, "").replace(/\nConsultatiegegevens\n[\s\S]*?(?=\nVoor wie belangrijk|\nWat verandert er|$)/, "");
+  return `${kop.join("\n")}\n${lijf.trim()}`.slice(0, max);
+}
+
+/** De startdatum en de status van een consultatiepagina, uit de leesbare tekst. Null als die er niet in staan. */
+export function consultatieGegevens(tekst: string): Consultatie | null {
+  const m = /Startdatum consultatie\s*(\d{2})-(\d{2})-(\d{4})/i.exec(tekst);
+  if (!m) return null;
+  const start = `${m[3]}-${m[2]}-${m[1]}T12:00:00+01:00`;
+  if (Number.isNaN(Date.parse(start))) return null;
+  return { start: new Date(start).toISOString(), actief: /Status\s*Actief/i.test(tekst) };
 }
 
 // --- past dit bericht bij ons? --------------------------------------------------------------------

@@ -392,7 +392,7 @@ export const GRATIS_DIENSTEN: GratisDienst[] = [
     nu: "CBS StatLine, de nieuwsfeed van cbs.nl, de zoekdienst van repository.overheid.nl en rijksoverheid.nl: openbaar en gratis",
     eigen: "Het zijn openbare bronnen zonder kosten; een eigen bron is niet nodig.",
     status: "gratis",
-    hosts: ["opendata.cbs.nl", "www.cbs.nl", "repository.overheid.nl", "www.rijksoverheid.nl"],
+    hosts: ["opendata.cbs.nl", "www.cbs.nl", "www.internetconsultatie.nl", "repository.overheid.nl", "www.rijksoverheid.nl"],
   },
   {
     id: "id-leverancier",
