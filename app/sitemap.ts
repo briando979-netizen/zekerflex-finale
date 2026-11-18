@@ -131,6 +131,8 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/beveiliging", 0.5, "monthly"),
     entry("/contact", 0.5, "yearly"),
     entry("/developers", 0.6, "monthly"),
+    entry("/developers/api", 0.6, "monthly"),
+    entry("/developers/wijzigingen", 0.4, "monthly"),
 
     // Knowledge hub — the long-tail keyword surface
     entry("/kennis", 0.7, "weekly"),

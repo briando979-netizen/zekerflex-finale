@@ -275,6 +275,8 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/deal/[id]","file":"app/(marketing)/deal/[id]/page.tsx","area":"Marketing","dynamic":true},
   {"route":"/demo","file":"app/(marketing)/demo/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/developers","file":"app/(marketing)/developers/page.tsx","area":"Marketing","dynamic":false},
+  {"route":"/developers/api","file":"app/(marketing)/developers/api/page.tsx","area":"Marketing","dynamic":false},
+  {"route":"/developers/wijzigingen","file":"app/(marketing)/developers/wijzigingen/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/domeinnaam","file":"app/(marketing)/domeinnaam/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/dsa","file":"app/(marketing)/dsa/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/evenementen-personeel-inhuren","file":"app/(marketing)/evenementen-personeel-inhuren/page.tsx","area":"Marketing","dynamic":false},

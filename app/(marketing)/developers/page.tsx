@@ -40,10 +40,39 @@ export default function DevelopersPage() {
             Een REST-API voor diensten, urenbriefjes en webhooks, plus een GraphQL-endpoint (vooral lezen). Beide werken op
             dezelfde gegevens als het dashboard; er is geen aparte testomgeving.
           </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Link href="/developers/api" className="btn-mint">
+              Bekijk de API-naslag
+            </Link>
+            <Link href="/werkgever/integraties" className="btn-ghost-invert">
+              Maak een sleutel
+            </Link>
+          </div>
           </div>
           <FotoKolom foto={paginaFoto("developers")} />
         </div>
       </div>
+
+      <Section tone="paper">
+        <SectionHead eyebrow="Snel starten" title="In drie stappen" />
+        <ol className="mt-8 grid gap-4 md:grid-cols-3">
+          {[
+            { n: "1", t: "Maak een sleutel", d: "Ingelogde werkgevers maken hun API-sleutel zelf aan (gratis) op /werkgever/integraties. Je krijgt hem één keer te zien." },
+            { n: "2", t: "Doe een verzoek", d: "Stuur je sleutel mee als Bearer-token of x-api-key naar het basis-adres, bijvoorbeeld GET /shifts." },
+            { n: "3", t: "Koppel de rest", d: "Maak diensten aan, lees uren en facturen, of registreer een webhook. Alles staat in de API-naslag." },
+          ].map((s) => (
+            <li key={s.n} className="card p-5">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-ink text-sm font-bold text-white">{s.n}</span>
+              <p className="mt-3 font-display text-base font-bold text-ink">{s.t}</p>
+              <p className="mt-1.5 text-sm leading-relaxed text-neutralx-600">{s.d}</p>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-6 text-sm text-neutralx-600">
+          De volledige naslag per endpoint staat op{" "}
+          <Link href="/developers/api" className="font-semibold text-brand-700 hover:underline">/developers/api</Link>.
+        </p>
+      </Section>
 
       <Section tone="paper">
         <SectionHead eyebrow="Naslag" title="OpenAPI-specificatie" />
