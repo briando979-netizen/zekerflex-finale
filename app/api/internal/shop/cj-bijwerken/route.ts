@@ -8,8 +8,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
-// Cron (elke 10 minuten): één ronde "Categorie, voorraad en tekst bijwerken" over de CJ-producten
-// (lib/shop/cj/bijwerken-ronde.ts), verder vanaf de cursor, binnen 90 s. Zonder CJ-producten doet hij niets en telt hij
+// Cron (elke 4 minuten): één ronde "Categorie, voorraad en tekst bijwerken" over de CJ-producten
+// (lib/shop/cj/bijwerken-ronde.ts), verder vanaf de cursor, binnen 75 s. Zonder CJ-producten doet hij niets en telt hij
 // toch als geslaagd (hartslag).
 async function handle(request: Request): Promise<NextResponse> {
   const gate = checkInternalToken(request);
