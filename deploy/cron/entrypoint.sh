@@ -77,6 +77,9 @@ cat > /etc/crontabs/root <<EOF
 15 * * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/backup/check?alleen=schijf"
 # elk uur op :50: het uurbericht voor de eigenaar met alles wat automatisch is gedaan (lib/ops/melder.ts); alleen tussen 07:00 en 23:00 Amsterdam
 50 * * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/melder/samenvatting"
+# elke avond 20:00 UTC het dagrapport en elke ochtend 07:30 UTC "dit wacht op jou" naar de telefoon van de eigenaar (lib/ops/dagrapport.ts)
+0 20 * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/melder/rapport?soort=dag"
+30 7 * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/melder/rapport?soort=wacht"
 # elke 10 min: het geheugen van de server meten en de eigenaar waarschuwen voor het te laat is (lib/ops/geheugen.ts)
 */10 * * * * wget -q -O /dev/null -T 30 "$H" "$APP/api/internal/backup/check?alleen=geheugen"
 */5 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/website/uptime"
