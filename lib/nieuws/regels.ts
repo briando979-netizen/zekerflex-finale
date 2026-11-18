@@ -200,6 +200,10 @@ export interface Oordeel {
   reden: string | null;
 }
 
+/** Het aantal woorden van titel, samenvatting, koppen en alinea's samen. */
+export const aantalWoorden = (b: Pick<NieuwsBericht, "titel" | "samenvatting" | "blokken">) =>
+  [b.titel, b.samenvatting, ...b.blokken.flatMap((x) => [x.kop ?? "", ...x.alineas])].join("\n").split(/\s+/).filter(Boolean).length;
+
 /** Mag dit bericht geplaatst worden? Controleert lengte, verboden beloftes en of elk getal in de bron staat. */
 export function beoordeelBericht(b: Pick<NieuwsBericht, "titel" | "samenvatting" | "blokken">, bronTekst: string, nu = new Date()): Oordeel {
   const tekst = [b.titel, b.samenvatting, ...b.blokken.flatMap((x) => [x.kop ?? "", ...x.alineas])].join("\n");
