@@ -6,7 +6,7 @@ import { StapNummer } from "@/components/marketing/Verkopen";
 import { paginaFoto } from "@/lib/marketing/fotos";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
-import { AANBOD, FOUTEN, LEREN_AANMELD_PAD, LEREN_CONTACT_PAD, LEREN_OPEN_KLUSSEN_PAD, LEREN_PAD, STAPPEN, VRAGEN, euro } from "@/lib/leren/klussen-krijgen";
+import { AANBOD, FOUTEN, LEREN_AANMELD_PAD, LEREN_CONTACT_PAD, LEREN_OPEN_KLUSSEN_PAD, LEREN_PAD, PRIJZEN_GOEDGEKEURD, STAPPEN, VRAGEN, prijsTekst } from "@/lib/leren/klussen-krijgen";
 
 const title = "Zo krijg je klussen via een platform: zeven stappen die werken";
 const description =
@@ -94,7 +94,11 @@ export default function KlussenKrijgenPage() {
       </Section>
 
       <Section tone="soft" id="aanbod">
-        <SectionHead eyebrow="Hulp erbij" title="Gratis waar het kan, op aanvraag waar het meer is" intro="De gids en de profielcheck kosten niets. Een workshop, begeleiding of training plannen we zodra er een groep is; de prijzen zijn richtprijzen inclusief btw." />
+        <SectionHead
+          eyebrow="Hulp erbij"
+          title="Gratis waar het kan, op aanvraag waar het meer is"
+          intro={PRIJZEN_GOEDGEKEURD ? "De gids en de profielcheck kosten niets. Een workshop, begeleiding of training plannen we zodra er een groep is; de prijzen zijn richtprijzen inclusief btw." : "De gids en de profielcheck kosten niets. Een workshop, begeleiding of training plannen we zodra er een groep is; je krijgt vooraf een prijs per persoon of per groep."}
+        />
         <div className="mt-8 overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
@@ -113,8 +117,8 @@ export default function KlussenKrijgenPage() {
                   <td className="py-4 pr-4 text-neutralx-600">{a.voorWie}</td>
                   <td className="py-4 pr-4 text-neutralx-600">{a.wat}</td>
                   <td className="py-4 pr-4 whitespace-nowrap font-semibold text-ink">
-                    {euro(a.prijsCents)}
-                    {a.per !== "gratis" && <span className="block text-xs font-normal text-neutralx-500">{a.per}</span>}
+                    {prijsTekst(a).bedrag}
+                    {prijsTekst(a).toelichting && <span className="block text-xs font-normal text-neutralx-500">{prijsTekst(a).toelichting}</span>}
                   </td>
                   <td className="py-4 text-neutralx-600">{a.hoe}</td>
                 </tr>

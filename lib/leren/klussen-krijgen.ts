@@ -139,7 +139,7 @@ export const VRAGEN: readonly { q: string; a: string }[] = [
   },
   {
     q: "Wat kost het?",
-    a: "De gids en de profielcheck zijn gratis. Een workshop, begeleiding of training heeft een richtprijs; die staat hierboven en we plannen pas als er een groep is.",
+    a: "De gids en de profielcheck zijn gratis. Voor een workshop, begeleiding of training krijg je vooraf een prijs per persoon of per groep, en we plannen pas als er een groep is.",
   },
   {
     q: "Hoe snel kan ik beginnen?",
@@ -148,3 +148,17 @@ export const VRAGEN: readonly { q: string; a: string }[] = [
 ];
 
 export const euro = (cents: number): string => (cents === 0 ? "gratis" : `€ ${(cents / 100).toFixed(2).replace(".", ",").replace(",00", "")}`);
+
+/**
+ * De bedragen in AANBOD zijn een voorstel (18 nov 2026) en nog niet door de eigenaar gekozen. Een prijs op de site is een
+ * belofte: tot zijn akkoord toont de pagina "prijs op aanvraag" zonder bedrag. Zet dit op true zodra hij de bedragen
+ * (of andere) heeft goedgekeurd; de bedragen zelf staan hierboven op één plek.
+ */
+export const PRIJZEN_GOEDGEKEURD = false;
+
+/** Wat de pagina bij een aanbod als prijs toont. */
+export function prijsTekst(a: Pick<Aanbod, "prijsCents" | "per">, goedgekeurd = PRIJZEN_GOEDGEKEURD): { bedrag: string; toelichting: string | null } {
+  if (a.prijsCents === 0) return { bedrag: "gratis", toelichting: null };
+  if (!goedgekeurd) return { bedrag: "prijs op aanvraag", toelichting: null };
+  return { bedrag: euro(a.prijsCents), toelichting: a.per };
+}
