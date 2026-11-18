@@ -37,10 +37,11 @@ describe("de standaard: de oude onderdelen in de oude volgorde, met de blokken v
     expect(zichtbareShopSecties(null, true)).toEqual(["assortiment", "meer", "service", "regelen", "nieuwsbrief"]);
   });
 
-  it("de pagina toont de onderdelen in de volgorde van de indeling; een gekozen achtergrond blijft bovenaan, de kop is weg (18 nov)", () => {
+  it("de pagina toont de onderdelen in de volgorde van de indeling; de kop en de achtergrondstrook zijn weg (18 nov)", () => {
     const src = bron("app/shop/page.tsx");
     expect(src).toContain("zichtbareShopSecties(await getShopIndeling(), browsing)");
-    expect(src.indexOf('<PaginaAchtergrond pagina="shop" />')).toBeLessThan(src.indexOf("zichtbaar.map("));
+    // 18 nov, later op de dag: ook de achtergrondstrook weg (daar stond dezelfde persoon nog in); de instelling blijft voor "home"
+    expect(src).not.toContain("PaginaAchtergrond");
     expect(src).not.toContain("ShopThuisHero");
     expect(src).not.toContain("ShopPaskamerPromo");
     for (const s of SHOP_SECTIES) expect(src, s.id).toContain(`    ${s.id}: `);
