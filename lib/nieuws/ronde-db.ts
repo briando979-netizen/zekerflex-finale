@@ -10,10 +10,18 @@ import { alleBerichten, bewaarBericht, bewaarNieuwsStand, isGezien, ruimNieuwsOp
 // De echte afhankelijkheden van de nieuwsronde (lib/nieuws/ronde.ts): de feeds en bronpagina's via de beveiligde
 // fetcher (alleen openbare adressen, begrensd in tijd en grootte), het schrijven via het taalmodel, de opslag in KV.
 
+// Een bron geeft soms één keer een 5xx (18 nov 18:40 UTC: het CBS antwoordde met 500, een minuut later gewoon 200): dan
+// nog twee keer proberen met een korte pauze, anders valt een hele ronde weg en is de volgende pas uren later.
 async function haal(url: string, maxBytes: number): Promise<string> {
-  const p = await fetchPage(url, { timeoutMs: 25_000, maxBytes });
-  if (p.status >= 400) throw new Error(`${new URL(url).host} antwoordde met status ${p.status}`);
-  return p.body;
+  let status = 0;
+  for (let poging = 0; poging < 3; poging++) {
+    if (poging > 0) await new Promise((r) => setTimeout(r, 4000 * poging));
+    const p = await fetchPage(url, { timeoutMs: 25_000, maxBytes });
+    if (p.status < 400) return p.body;
+    status = p.status;
+    if (p.status < 500) break;
+  }
+  throw new Error(`${new URL(url).host} antwoordde met status ${status}`);
 }
 
 /** De opdracht aan het model. De stijl is die van de site: gewoon Nederlands, je/jij, kort, zonder reclame. */
