@@ -53,6 +53,15 @@ describe("homepagina voor werkzoekenden", () => {
     expect(css).toMatch(/prefers-reduced-motion: reduce\) \{ \.kop-clip \{ display: none; \} \}/);
   });
 
+  it("laat de uitlegvideo vanzelf beginnen: stil, pas in beeld, en nooit bij minder beweging", () => {
+    const blok = readFileSync(join(process.cwd(), "components", "marketing", "PaginaVideoBlok.tsx"), "utf8");
+    expect(blok).toContain("<ZelfSpelendeVideo");
+    const video = readFileSync(join(process.cwd(), "components", "marketing", "ZelfSpelendeVideo.tsx"), "utf8");
+    for (const eis of ['"use client"', "IntersectionObserver", "prefers-reduced-motion: reduce", "v.muted = true", 'preload="none"', "playsInline", "controls", "Geluid aan"]) expect(video, eis).toContain(eis);
+    // useEffect geeft alleen een opruimfunctie terug, nooit de Promise van play()
+    expect(video).toContain("void v.play()");
+  });
+
   it("geeft de vragen ook als FAQPage aan zoekmachines", () => {
     const ld = werkFaqJsonLd() as { "@type": string; mainEntity: { name: string }[] };
     expect(ld["@type"]).toBe("FAQPage");

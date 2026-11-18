@@ -1,10 +1,11 @@
 import { Section } from "@/components/marketing/primitives";
 import { ldJson } from "@/lib/seo/json-ld";
 import { SITE } from "@/lib/seo";
+import { ZelfSpelendeVideo } from "@/components/marketing/ZelfSpelendeVideo";
 import { duurTekst, paginaVideo, posterPad, videoPad } from "@/lib/marketing/paginavideos";
 
-// Een korte uitlegvideo midden op een openbare pagina (lib/marketing/paginavideos.ts). Servercomponent, geen scripts: de video
-// laadt pas bij het afspelen (preload="none"). Eronder staat eerlijk wat je ziet en hoort, en de uitleg als tekst.
+// Een korte uitlegvideo midden op een openbare pagina (lib/marketing/paginavideos.ts). De video laadt pas als hij in beeld komt en
+// begint dan vanzelf, zonder geluid (components/marketing/ZelfSpelendeVideo.tsx). Ernaast staat de uitleg als tekst.
 export function PaginaVideoBlok({ id }: { id: string }) {
   const v = paginaVideo(id);
   if (!v) return null;
@@ -38,8 +39,7 @@ export function PaginaVideoBlok({ id }: { id: string }) {
         </div>
         <figure>
           <div className="overflow-hidden rounded-2xl border border-hair bg-ink shadow-xl">
-            {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-            <video controls preload="none" poster={posterPad(v)} className="aspect-video w-full bg-ink" src={videoPad(v)} />
+            <ZelfSpelendeVideo src={videoPad(v)} poster={posterPad(v)} className="aspect-video w-full bg-ink" />
           </div>
         </figure>
       </div>
