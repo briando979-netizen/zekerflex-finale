@@ -16,6 +16,7 @@ import { useShopModus } from "@/components/marketing/ShopModus";
 import { specFor } from "@/lib/shop/product-specs";
 import { PaskamerTip } from "@/components/marketing/paskamer/PaskamerTip";
 import { OnlangsBekeken } from "@/components/marketing/OnlangsBekeken";
+import { SamenGekochtBundel, type SamenItem } from "@/components/marketing/SamenGekochtBundel";
 import { useOnlangsBekeken } from "@/components/marketing/useOnlangsBekeken";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
@@ -147,6 +148,15 @@ export function ProductDetail({
   const variantStock = variant?.stock ?? product.stock;
   const canBuy = Boolean(variant) && variantStock > 0 && !bestellenDicht;
   const buyLabel = bestellenDicht ? t.shop.orderClosedShort : !variant ? t.shop.chooseOptionShort : variantStock <= 0 ? t.shop.soldOut : t.shop.addToCart;
+  // bol.com-koopset: aanbevolen artikelen met één variant die je in één klik mee kunt nemen (hooguit twee); maat/kleur-artikelen horen hier niet bij
+  const samenBron = useMemo(() => related.filter((r) => r.variants.length === 1 && (r.variants[0]?.stock ?? 0) > 0).slice(0, 2), [related]);
+  const samenCompanions = useMemo<SamenItem[]>(
+    () => samenBron.map((r) => ({ variantId: r.variants[0]!.id, slug: r.slug, name: r.name, imageUrl: r.imageUrl, priceCents: r.variants[0]!.priceCents ?? r.priceCents })),
+    [samenBron],
+  );
+  const toonBundel = samenCompanions.length > 0 && !bestellenDicht;
+  // de koopset-artikelen niet nog een keer in het raster eronder
+  const gridItems = toonBundel ? related.filter((r) => !samenBron.includes(r)) : related;
   const { modus } = useShopModus();
   const fav = wishlist.has(product.id);
   // onthouden voor "Onlangs bekeken" (alleen in deze browser)
@@ -576,13 +586,21 @@ export function ProductDetail({
         </section>
       )}
 
-      {related.length > 0 && (
+      {toonBundel && (
+        <SamenGekochtBundel
+          titel={boughtTogether ? t.shop.boughtTogether : t.shop.samenCompleet}
+          hoofd={{ name: product.name, slug: product.slug, imageUrl: gallery[0] ?? product.imageUrl, variantId: variant?.id ?? null, priceCents: variantPriceCents }}
+          companions={samenCompanions}
+        />
+      )}
+
+      {gridItems.length > 0 && (
         <section aria-labelledby="pdp-meer" className="mt-12 border-t border-hair pt-10">
           <h2 id="pdp-meer" className={H2}>
-            {boughtTogether ? t.shop.boughtTogether : t.shop.alsoViewed}
+            {toonBundel ? t.shop.alsoViewed : boughtTogether ? t.shop.boughtTogether : t.shop.alsoViewed}
           </h2>
           <ul className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
-            {related.map((r) => (
+            {gridItems.map((r) => (
               <li key={r.id}>
                 <ShopProductCard p={asCard(r)} sizes="(min-width: 768px) 25vw, 50vw" />
               </li>

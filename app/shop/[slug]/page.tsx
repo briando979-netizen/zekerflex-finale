@@ -76,13 +76,13 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
   // "Vaak samen gekocht" from real orders first, topped up from the same category.
   const togetherIds = await boughtTogether(product.id, 4).catch(() => [] as string[]);
   const together = togetherIds.length
-    ? (await prisma.shopProduct.findMany({ where: { id: { in: togetherIds }, active: true }, include: { seller: { select: { name: true } } } })).sort((a, b) => togetherIds.indexOf(a.id) - togetherIds.indexOf(b.id))
+    ? (await prisma.shopProduct.findMany({ where: { id: { in: togetherIds }, active: true }, include: { seller: { select: { name: true } }, variants: { orderBy: { createdAt: "asc" } } } })).sort((a, b) => togetherIds.indexOf(a.id) - togetherIds.indexOf(b.id))
     : [];
   const fill = await prisma.shopProduct.findMany({
     where: { active: true, category: product.category, id: { notIn: [product.id, ...together.map((p) => p.id)] } },
     orderBy: { sortOrder: "asc" },
     take: Math.max(0, 4 - together.length),
-    include: { seller: { select: { name: true } } },
+    include: { seller: { select: { name: true } }, variants: { orderBy: { createdAt: "asc" } } },
   });
   const related = [...together, ...fill];
   const model3d = await getModel3D(product.id);
