@@ -64,7 +64,8 @@ export async function stuurDagrapport(nu: Date = new Date()): Promise<RapportUit
     const instelling = await leesInstelling();
     const start = amsterdamStartOfDay(nu).getTime();
     const telling: Partial<Record<GebeurtenisSoort, number>> = {};
-    for (const g of await leesGebeurtenissen(1000)) {
+    // tot 5000 rijen: op een drukke dag staan er honderden mails in het logboek
+    for (const g of await leesGebeurtenissen(5000)) {
       if (Date.parse(g.at) >= start && g.soort !== "bestelling") telling[g.soort] = (telling[g.soort] ?? 0) + 1;
     }
     const orders = await prisma.shopOrder
