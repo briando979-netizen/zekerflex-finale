@@ -20,7 +20,7 @@ import { zichtbareShopSecties, type ShopSectieId } from "@/lib/ontwerp/shop-inde
 import { getShopIndeling } from "@/lib/ontwerp/shop-indeling-store";
 import { cadeauKeuzes, catalogusOverzicht, collectieUitAdres, ontdekTegels, prijsUitAdres, seizoenVan, themaKaarten, type EtalageProduct } from "@/lib/shop/etalage";
 import { ShopAlles, ShopCadeauhulp, ShopOntdek, ShopRegelen, ShopThemas } from "@/components/marketing/ShopEtalage";
-import { SHOP_CATEGORIEEN } from "@/lib/shop/categorieen";
+import { SHOP_CATEGORIEEN, categorieNaam } from "@/lib/shop/categorieen";
 
 // <title> kort en zonder het sjabloon " · ZekerFlex" erachter (dan stond het merk er twee keer); delen houdt de lange
 const title = "ZekerFlex Shop — kleding, werkkleding en PBM, eerst passen in de paskamer";
@@ -69,13 +69,22 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
     .filter((p) => (p.imageUrl && !gezien.has(p.imageUrl) ? (gezien.add(p.imageUrl), true) : false))
     .slice(0, 4);
 
-  // grote categorietegels, elk met een eigen foto
-  const tegelDefs: { cat: ShopCategory; label: string; sub: string; voorkeur: string[] }[] = [
-    { cat: "Kleding", label: t.navKleding, sub: h.kledingSub, voorkeur: ["fleece-vest-met-rits", "business-overhemd-heren", "everyday-hoodie"] },
-    { cat: "Werk & PBM", label: t.navPbm, sub: h.pbmSub, voorkeur: ["veiligheidsschoenen-s3", "werkhandschoenen-grip"] },
-    { cat: "Werkdag", label: t.navWerkdag, sub: h.werkdagSub, voorkeur: ["workday-tote", "shift-bottle"] },
-    { cat: "Cadeaus", label: dict.shopZakelijk.navCadeaus, sub: h.cadeausSub, voorkeur: ["welcome-work-kit", "shift-socks-2-pack"] },
-  ];
+  // grote categorietegels, elk met een eigen foto: elke categorie die producten heeft (lib/shop/categorieen.ts, 18 nov:
+  // 19 categorieën); de vier oorspronkelijke houden hun eigen tekst en voorkeursfoto, de rest krijgt de algemene regel
+  const eigenLabel: Partial<Record<ShopCategory, string>> = { Kleding: t.navKleding, "Werk & PBM": t.navPbm, Werkdag: t.navWerkdag, Cadeaus: dict.shopZakelijk.navCadeaus };
+  const eigenSub: Partial<Record<ShopCategory, string>> = { Kleding: h.kledingSub, "Werk & PBM": h.pbmSub, Werkdag: h.werkdagSub, Cadeaus: h.cadeausSub };
+  const eigenVoorkeur: Partial<Record<ShopCategory, string[]>> = {
+    Kleding: ["fleece-vest-met-rits", "business-overhemd-heren", "everyday-hoodie"],
+    "Werk & PBM": ["veiligheidsschoenen-s3", "werkhandschoenen-grip"],
+    Werkdag: ["workday-tote", "shift-bottle"],
+    Cadeaus: ["welcome-work-kit", "shift-socks-2-pack"],
+  };
+  const tegelDefs: { cat: ShopCategory; label: string; sub: string; voorkeur: string[] }[] = SHOP_CATEGORIEEN.map((cat) => ({
+    cat,
+    label: eigenLabel[cat] ?? categorieNaam(cat, t.navKleding !== "Kleding"),
+    sub: eigenSub[cat] ?? h.andersSub,
+    voorkeur: eigenVoorkeur[cat] ?? [],
+  }));
   const tegelFoto = new Set<string>(uitgelicht.map((p) => p.imageUrl ?? ""));
   const tegels: GroteTegel[] = tegelDefs
     .map((d) => {
