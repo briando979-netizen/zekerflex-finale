@@ -28,12 +28,27 @@ import { gebruikEigenVers, type KeuzeDienst } from "@/lib/gratis/keuzes";
 
 const NOMINATIM_ZOEK = "https://nominatim.openstreetmap.org/search";
 const NOMINATIM_OPVRAGEN = "https://nominatim.openstreetmap.org/lookup";
-const OVERPASS = "https://overpass-api.de/api/interpreter";
+/**
+ * Overpass-servers, in deze volgorde. De hoofdserver overpass-api.de antwoordt sinds begin november 2026 geregeld met
+ * "502 at capacity" of helemaal niet (18 nov: de ronde van 08:00 kreeg één 502 en drie time-outs, en viel vier keer terug
+ * op Nominatim). Geeft een server 429/502/503/504 of een time-out, dan proberen we de volgende en laten we die server
+ * OVERPASS_STORING_MS met rust. Allemaal openbaar en gratis; een eigen Overpass-server met alleen Nederland is de echte
+ * oplossing als dit zo blijft.
+ */
+export const OVERPASS_SERVERS: readonly string[] = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+];
 
 /** Zo stellen we ons voor bij OSM: de naam van de applicatie en een adres waar uitleg staat. */
 export const OSM_USER_AGENT = "ZekerFlexBot/1.0 (+https://zekerflex.com/bot)";
 const UA = OSM_USER_AGENT;
 const TIMEOUT_MS = 12_000;
+/** Overpass krijgt zelf [timeout:20] mee; wie eerder ophangt, gooit een antwoord weg dat nog onderweg was. */
+const OVERPASS_TIMEOUT_MS = 25_000;
+/** Zolang laten we een Overpass-server met rust na "at capacity" (429/502/503/504) of een time-out. */
+export const OVERPASS_STORING_MS = 10 * 60_000;
 const CACHE_MS = 60 * 60_000;
 const CACHE_MAX = 500;
 
@@ -71,9 +86,12 @@ export interface OsmPlaats {
 interface Staat {
   rij: Map<string, Promise<void>>;
   cache: Map<string, { tot: number; waarde: unknown }>;
+  /** per Overpass-server: tot wanneer we hem met rust laten */
+  storing: Map<string, number>;
 }
 const g = globalThis as unknown as { __zfOsmPlaatsen?: Staat };
-const staat: Staat = (g.__zfOsmPlaatsen ??= { rij: new Map(), cache: new Map() });
+const staat: Staat = (g.__zfOsmPlaatsen ??= { rij: new Map(), cache: new Map(), storing: new Map() });
+staat.storing ??= new Map(); // een oudere bundel in hetzelfde proces kende dit veld nog niet
 
 /**
  * Vriendelijke snelheidsrem: per bron begint hooguit één aanvraag per `pauzeMs`.
@@ -117,6 +135,23 @@ function naarCache(sleutel: string, waarde: unknown): void {
 export function osmVergeetAlles(): void {
   staat.cache.clear();
   staat.rij.clear();
+  staat.storing.clear();
+}
+
+/** Staat deze server nog in de storingsstand? Een verlopen stand ruimen we meteen op. */
+function inStoring(url: string): boolean {
+  const tot = staat.storing.get(url);
+  if (tot === undefined) return false;
+  if (tot <= Date.now()) {
+    staat.storing.delete(url);
+    return false;
+  }
+  return true;
+}
+
+/** De Overpass-servers die we nu zouden proberen (voor het beheerscherm en de test). */
+export function overpassBeschikbaar(): string[] {
+  return OVERPASS_SERVERS.filter((url) => !inStoring(url));
 }
 
 // --- welke bron gebruiken we? -----------------------------------------------------
@@ -317,31 +352,58 @@ function uitOverpass(e: Json): OsmPlaats | null {
 
 // --- de aanvragen zelf ------------------------------------------------------------
 
-async function vraagJson(bron: "nominatim" | "overpass", url: string, pauzeMs: number, body?: string): Promise<unknown | null> {
-  return inDeRij(bron, pauzeMs, async () => {
-    try {
-      const res = await fetch(url, {
-        method: body === undefined ? "GET" : "POST",
-        headers: {
-          "user-agent": UA,
-          accept: "application/json",
-          "accept-language": "nl",
-          ...(body === undefined ? {} : { "content-type": "application/x-www-form-urlencoded" }),
-        },
-        ...(body === undefined ? {} : { body }),
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-      });
-      if (!res.ok) {
-        // alleen de bron en de status in het log; nooit de hele zoekopdracht
-        logger.warn("osm gaf geen bruikbaar antwoord", { bron, status: res.status });
-        return null;
-      }
-      return (await res.json()) as unknown;
-    } catch (err) {
-      logger.warn("osm niet bereikbaar", { bron, fout: (err as Error).message.slice(0, 120) });
-      return null;
+/** Statussen waarbij een andere server wél kan helpen: overbelast of (even) weg. Een 400 is onze eigen vraag. */
+const STORING_STATUS = new Set([429, 502, 503, 504]);
+
+type Antwoord = { ok: true; data: unknown } | { ok: false; storing: boolean };
+
+/** Eén aanvraag, zonder wachtrij. `storing` zegt of een andere server het nog kan proberen. */
+async function haalJson(bron: "nominatim" | "overpass", url: string, timeoutMs: number, body?: string): Promise<Antwoord> {
+  try {
+    const res = await fetch(url, {
+      method: body === undefined ? "GET" : "POST",
+      headers: {
+        "user-agent": UA,
+        accept: "application/json",
+        "accept-language": "nl",
+        ...(body === undefined ? {} : { "content-type": "application/x-www-form-urlencoded" }),
+      },
+      ...(body === undefined ? {} : { body }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!res.ok) {
+      // alleen de bron, de host en de status in het log; nooit de hele zoekopdracht
+      logger.warn("osm gaf geen bruikbaar antwoord", { bron, host: new URL(url).host, status: res.status });
+      return { ok: false, storing: STORING_STATUS.has(res.status) };
     }
-  });
+    return { ok: true, data: (await res.json()) as unknown };
+  } catch (err) {
+    logger.warn("osm niet bereikbaar", { bron, host: new URL(url).host, fout: (err as Error).message.slice(0, 120) });
+    return { ok: false, storing: true };
+  }
+}
+
+async function vraagJson(bron: "nominatim", url: string, pauzeMs: number): Promise<unknown | null> {
+  const a = await inDeRij(bron, pauzeMs, () => haalJson(bron, url, TIMEOUT_MS));
+  return a.ok ? a.data : null;
+}
+
+/**
+ * Eén Overpass-opdracht, langs de servers die niet in de storingsstand staan. Overbelast of weg → die server tien
+ * minuten met rust en door naar de volgende; staan ze allemaal in de storingsstand, dan meteen null, zonder netwerk
+ * (de salesronde valt dan direct terug op Nominatim in plaats van vier keer 25 s te wachten).
+ */
+async function vraagOverpass(opdracht: string): Promise<unknown | null> {
+  const body = `data=${encodeURIComponent(opdracht)}`;
+  for (const url of OVERPASS_SERVERS) {
+    if (inStoring(url)) continue;
+    const a = await inDeRij("overpass", OVERPASS_PAUZE_MS, () => haalJson("overpass", url, OVERPASS_TIMEOUT_MS, body));
+    if (a.ok) return a.data;
+    if (!a.storing) return null; // de vraag zelf deugt niet; een andere server geeft hetzelfde antwoord
+    staat.storing.set(url, Date.now() + OVERPASS_STORING_MS);
+    logger.warn("overpass-server even met rust gelaten", { host: new URL(url).host, minuten: OVERPASS_STORING_MS / 60_000 });
+  }
+  return null;
 }
 
 function bewaar(lijst: OsmPlaats[]): OsmPlaats[] {
@@ -469,7 +531,7 @@ async function overpassRond(vraag: { lat: number; lng: number; radiusM?: number;
   const cacheSleutel = `buurt:${opdracht}`;
   const bewaard = uitCache<OsmPlaats[]>(cacheSleutel);
   if (bewaard) return bewaard;
-  const data = await vraagJson("overpass", OVERPASS, OVERPASS_PAUZE_MS, `data=${encodeURIComponent(opdracht)}`);
+  const data = await vraagOverpass(opdracht);
   if (data === null) return [];
   const elementen = obj(data).elements;
   const lijst = (Array.isArray(elementen) ? elementen : []).map((e) => uitOverpass(obj(e))).filter((p): p is OsmPlaats => p !== null);
@@ -508,7 +570,7 @@ export async function osmPlekBijPunt(vraag: OsmPlekVraag): Promise<OsmPlaats | n
   const bewaard = uitCache<{ plek: OsmPlaats | null }>(sleutel);
   if (bewaard) return bewaard.plek;
   const opdracht = `[out:json][timeout:15];nwr["name"="${naam}"](around:75,${lat.toFixed(6)},${lng.toFixed(6)});out center tags 5;`;
-  const data = await vraagJson("overpass", OVERPASS, OVERPASS_PAUZE_MS, `data=${encodeURIComponent(opdracht)}`);
+  const data = await vraagOverpass(opdracht);
   if (data === null) return null; // storing: niets bewaren, de volgende klik probeert het opnieuw
   const elementen = obj(data).elements;
   const lijst = (Array.isArray(elementen) ? elementen : []).map((e) => uitOverpass(obj(e))).filter((p): p is OsmPlaats => p !== null && p.locatie !== null);

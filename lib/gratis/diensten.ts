@@ -118,7 +118,7 @@ export const GRATIS_DIENSTEN: GratisDienst[] = [
   },
   {
     id: "bedrijven",
-    hosts: ["places.googleapis.com", "overpass-api.de", "nominatim.openstreetmap.org"],
+    hosts: ["places.googleapis.com", "overpass-api.de", "overpass.kumi.systems", "overpass.private.coffee", "nominatim.openstreetmap.org"],
     naam: "Bedrijven opzoeken",
     waarvoor: "De review-scan en het vinden van bedrijven voor de buitendienst",
     nu: "Buitendienst: onze eigen OpenStreetMap-bron, zowel voor het vinden van bedrijven als voor telefoon en website. Review-scan: nog Google, want alleen daar staan de sterren.",
