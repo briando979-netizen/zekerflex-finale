@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { SHOP_PER_PAGINA, paginaAdres, paginaVenster } from "@/lib/shop/paginering";
 import { useShopWishlist } from "@/components/marketing/useShopWishlist";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt, type Dict } from "@/lib/i18n/dictionaries";
@@ -43,9 +45,15 @@ export function ShopStorefront({
   initialPrijs = null,
   initialCollectie = null,
   initialDeals = false,
+  initialPagina = 1,
+  adresParams = {},
   products,
   pageTitle = false,
 }: {
+  /** ?pagina=N: de pagina van het assortiment die de server al toont (lib/shop/paginering.ts) */
+  initialPagina?: number;
+  /** de filters uit het adres, voor de echte links naar de volgende en vorige pagina */
+  adresParams?: Readonly<Record<string, string | null | undefined>>;
   initialCat?: Category;
   initialQuery?: string;
   /** ?voor=heren|vrouwen|kinderen uit het menu "Alle categorieën" (lib/shop/categoriemenu.ts) */
@@ -75,6 +83,12 @@ export function ShopStorefront({
   const [collectie, setCollectie] = useState<string | null>(initialCollectie);
   const [sort, setSort] = useState<SortOrder>("relevantie");
   const [panel, setPanel] = useState(false);
+  // paginering: de server toont pagina `initialPagina`; "Toon meer" laadt in de browser SHOP_PER_PAGINA extra kaarten;
+  // een andere filterkeuze begint weer bij pagina 1 (niet bij de eerste weergave: die volgt het adres)
+  const [pagina, setPagina] = useState(initialPagina);
+  const [extra, setExtra] = useState(0);
+  const eersteWeergave = useRef(true);
+  const pathname = usePathname() || "/shop";
   const wishlist = useShopWishlist();
   const closeRef = useRef<HTMLButtonElement | null>(null);
 
@@ -161,6 +175,17 @@ export function ShopStorefront({
     else sorted.sort((a, b) => a.name.localeCompare(b.name, "nl"));
     return sorted;
   }, [facetScope, sizeFilter, colorFilter, priceBucket, sort]);
+
+  useEffect(() => {
+    if (eersteWeergave.current) {
+      eersteWeergave.current = false;
+      return;
+    }
+    setPagina(1);
+    setExtra(0);
+  }, [category, gender, query, onlyWishlist, onlyStock, onlyDeals, sizeFilter, colorFilter, priceBucket, collectie, sort]);
+  const venster = paginaVenster(shown.length, pagina, extra);
+  const getoond = shown.slice(venster.van, venster.tot);
 
   const chips: { key: string; label: string; clear: () => void }[] = [
     ...(query ? [{ key: "q", label: `“${query}”`, clear: () => setQuery("") }] : []),
@@ -325,13 +350,43 @@ export function ShopStorefront({
               )}
             </div>
           ) : (
-            <ul className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4">
-              {shown.map((p) => (
-                <li key={p.id}>
-                  <ShopProductCard p={p} titleLevel={pageTitle ? "h2" : "h3"} />
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4">
+                {getoond.map((p) => (
+                  <li key={p.id}>
+                    <ShopProductCard p={p} titleLevel={pageTitle ? "h2" : "h3"} />
+                  </li>
+                ))}
+              </ul>
+              {(venster.tot < shown.length || venster.pagina > 1) && (
+                <nav aria-label={t.shop.paginering} className="mt-6 flex flex-col items-center gap-3">
+                  {venster.tot < shown.length && (
+                    <a
+                      href={paginaAdres(pathname, adresParams, venster.pagina + 1)}
+                      rel="next"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setExtra((x) => x + SHOP_PER_PAGINA);
+                      }}
+                      className="inline-flex h-11 items-center rounded-xl border border-hairstrong bg-white px-5 text-[14px] font-semibold text-ink hover:border-ink"
+                    >
+                      {fmt(t.shop.toonMeer, { n: venster.tot, m: shown.length })}
+                    </a>
+                  )}
+                  <p className="text-[12px] text-neutralx-500">
+                    {fmt(t.shop.paginaVan, { p: venster.pagina, m: venster.totaalPaginas })}
+                    {venster.pagina > 1 && (
+                      <>
+                        {" · "}
+                        <a href={paginaAdres(pathname, adresParams, venster.pagina - 1)} rel="prev" className="font-semibold text-brand-600 underline underline-offset-2">
+                          {t.shop.vorigePagina}
+                        </a>
+                      </>
+                    )}
+                  </p>
+                </nav>
+              )}
+            </>
           )}
         </div>
       </div>
