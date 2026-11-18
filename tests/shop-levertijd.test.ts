@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { herkomstVan, levertijdBereik, levertijdDagen, levertijdVoorLeverancier } from "@/lib/shop/levertijd";
+import { herkomstVan, langsteLevertijd, levertijdBereik, levertijdDagen, levertijdVoorLeverancier } from "@/lib/shop/levertijd";
 import { nl } from "@/lib/i18n/dictionaries";
 import { en } from "@/lib/i18n/dictionary-en";
 
@@ -52,5 +52,15 @@ describe("de beloftes van de winkel kloppen voor de hele winkel", () => {
     expect(nl.shop.lowStockLevertijd).toContain("{dagen}");
     expect(nl.shop.bezorgLeverancier).toContain("{dagen}");
     expect(en.shop.uspLevertijd).toContain("{dagen}");
+  });
+});
+
+describe("levertijd van een hele bestelling (betaalbevestiging)", () => {
+  it("de ruimste termijn telt; zonder termijnen null; rommel wordt overgeslagen", () => {
+    expect(langsteLevertijd(["3-7", "7-15", "6-12"])).toBe("7-15");
+    expect(langsteLevertijd(["7", "3-7"])).toBe("3-7");
+    expect(langsteLevertijd(["6 - 12 days", "10"])).toBe("6 - 12 days");
+    expect(langsteLevertijd([])).toBeNull();
+    expect(langsteLevertijd(["onbekend"])).toBeNull();
   });
 });
