@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { PageHead, Pill } from "@/components/admin/kit";
 import { MailToolsBar } from "@/components/mail/MailToolsBar";
 import { mailStatusLabel } from "@/lib/mail/bounce";
@@ -76,7 +76,7 @@ type Selection = { tab: Tab; id: string } | { tab: "compose" } | null;
 
 const money = (n: number) => n.toLocaleString("nl-NL");
 
-export function Mailbox() {
+export function Mailbox({ children }: { children?: ReactNode } = {}) {
   const [tab, setTab] = useState<Tab>("inbox");
   const [query, setQuery] = useState("");
   const [selection, setSelection] = useState<Selection>(null);
@@ -272,6 +272,8 @@ export function Mailbox() {
         subtitle={`${t?.admin ? `Echt postvak in van ${t.admin}` : "Inkomende en uitgaande e-mail van ZekerFlex"}${inbox?.host ? ` (${inbox.host})` : ""}`}
         meta={<Pill tone={!sent ? "neutral" : smtpOk ? "ok" : "warn"}>{!sent ? "Status laden" : smtpOk ? "Mailserver actief" : "Geen mailserver ingesteld"}</Pill>}
       />
+      {/* het paneel van de info-ronde (servercomponent, meegegeven door app/admin/mail/page.tsx) */}
+      {children}
 
       {sent && !smtpOk && (
         <div className="card space-y-2 p-4 text-sm text-neutralx-700">

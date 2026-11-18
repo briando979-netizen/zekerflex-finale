@@ -6,6 +6,7 @@ import { deleteUpload } from "@/lib/storage/local";
 import { erasableNow, RETENTION_RULES } from "@/lib/privacy/retention";
 import { erasableKvWhere } from "@/lib/privacy/user-kv";
 import { bounceSleutel, zachtSleutel } from "@/lib/mail/bounce-opslag";
+import { infoAntwoordSleutel } from "@/lib/mail/info-opslag";
 import { wisChatlogVan } from "@/lib/learn/store";
 import { wisPersoonUitLocatie } from "@/lib/locatie/avg";
 import { wisBankrekeningVan } from "@/lib/privacy/bank-wissen";
@@ -229,6 +230,8 @@ export async function anonymizeUser(
     if (fobHashes.length) await tx.keyValueStore.deleteMany({ where: { key: { in: fobHashes.map((h) => `nfc-fob:${h}`) } } });
     // terugkaatsers van het oude adres (lib/mail/bounce-opslag.ts): de sleutel is een hash van het adres, dus via het adres zelf
     await tx.keyValueStore.deleteMany({ where: { key: { in: [bounceSleutel(oldEmail), zachtSleutel(oldEmail)] } } });
+    // en het merk "kreeg al het eerste antwoord van info@" (lib/mail/info-opslag.ts), ook op een hash van het adres
+    await tx.keyValueStore.deleteMany({ where: { key: infoAntwoordSleutel(oldEmail) } });
     // en de onderdrukkingsrij van de sales-pijplijn op dat adres (klare tekst), als die er is
     await tx.salesSuppression.deleteMany({ where: { email: oldEmail.trim().toLowerCase() } });
 
