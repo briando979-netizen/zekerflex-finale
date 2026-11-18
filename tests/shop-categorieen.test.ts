@@ -27,7 +27,7 @@ describe("shopcategorieën", () => {
     expect(WINKEL_CATEGORIEEN).toBe(SHOP_CATEGORIEEN);
     expect(NIEUW).toBe(SHOP_CATEGORIEEN);
     expect(SCHERM).toBe(SHOP_CATEGORIEEN);
-    expect(SHOP_CATEGORIEEN.length).toBeGreaterThanOrEqual(11);
+    expect(SHOP_CATEGORIEEN.length).toBeGreaterThanOrEqual(19);
     expect(new Set(SHOP_CATEGORIEEN).size).toBe(SHOP_CATEGORIEEN.length);
     for (const c of SHOP_CATEGORIEEN) expect(CATEGORIE_EN[c].length, c).toBeGreaterThan(2);
   });
@@ -52,5 +52,19 @@ describe("shopcategorieën", () => {
     expect(categorieVan("Sieraden & horloges")).toBe("Sieraden & horloges");
     expect(categorieVan("drinkfles")).toBe("Werkdag");
     expect(categorieVan("pbm")).toBe("Werk & PBM");
+    // de acht van later op 18 nov
+    expect(categorieVan("telefoonhoesje")).toBe("Telefoon & accessoires");
+    expect(categorieVan("hondenriem")).toBe("Huisdieren");
+    expect(categorieVan("fietslamp")).toBe("Auto & fiets");
+    expect(categorieVan("kerstversiering")).toBe("Feest & seizoen");
+    expect(categorieVan("gaming muis")).toBe("Gaming & hobby");
+    expect(categorieVan("kinderwagen")).toBe("Baby & kind");
+    expect(categorieVan("boormachine")).toBe("Tuin & klussen");
+    expect(categorieVan("massagekussen")).toBe("Gezondheid");
+    // en wat niet mag verschuiven
+    expect(categorieVan("werkkleding")).toBe("Werk & PBM");
+    expect(categorieVan("armband")).toBe("Sieraden & horloges");
+    expect(categorieVan("rugzak")).toBe("Tassen & schoenen");
+    expect(categorieVan("automatisch")).toBe("Kleding");
   });
 });
