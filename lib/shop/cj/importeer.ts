@@ -11,7 +11,6 @@ import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
-import { chatJson } from "@/lib/ai/client";
 import { kvDelete, kvGet, kvSet, kvSetIfAbsent, kvVervangAlsVeld, kvVerwijderAlsVeld } from "@/lib/storage/kv";
 import { importRemoteImage } from "@/lib/media/clean-image";
 import { storeUpload } from "@/lib/storage/local";
@@ -22,6 +21,7 @@ import { leesBeleidOpgeslagen } from "@/lib/shop/winkel-ai";
 import { prijsUitInkoop, slugVan, tariefVoor } from "@/lib/shop/winkel-ai-core";
 import { cjProduct, cjVerzendkosten, cjVoorraadPerVariant } from "@/lib/shop/cj/cj-client";
 import { categorieKeuze, categorieVanCj, leesClaim, lijktDuits, onzeSku, type CjProduct, type CjVerzending } from "@/lib/shop/cj/cj-core";
+import { vertaalVermelding } from "@/lib/shop/cj/vertalen";
 import type { ShopCategorie } from "@/lib/shop/categorieen";
 
 const K_INSTEL = "shop:cj:instellingen";
@@ -105,34 +105,6 @@ export async function leesCjKoppeling(productId: string): Promise<CjKoppeling | 
 export async function cjProductIds(): Promise<string[]> {
   const l = await kvGet<string[]>(K_LIJST).catch(() => null);
   return Array.isArray(l) ? l.filter((x) => typeof x === "string") : [];
-}
-
-const VERTAAL = `Je vertaalt een productvermelding van een leverancier naar gewoon, vlot Nederlands voor een webshop. De bron is Engels, soms Duits of gebrekkig Engels; het resultaat is altijd Nederlands, nooit Duits en nooit Engels. Geen Engels, geen opsmuk, geen beloftes over levertijd, voorraad, keurmerken, certificaten of kwaliteit ("premium", "topkwaliteit"). Verzin niets wat er niet staat. De naam: kort en duidelijk (maximaal 70 tekens, geen hoofdletters-schreeuw, geen merknaam die er niet staat). De omschrijving: 2 tot 4 zinnen, maximaal 450 tekens, wat het is en waarvoor het handig is.
-Antwoord uitsluitend met JSON: {"naam":"…","omschrijving":"…"}.`;
-
-/** Naam en omschrijving in het Nederlands; lukt het niet, dan de Engelse tekst (en `vertaald: false`). */
-export async function vertaalVermelding(naamEn: string, omschrijvingEn: string, poging = 1): Promise<{ naam: string; omschrijving: string; vertaald: boolean }> {
-  const terugval = { naam: naamEn.slice(0, 120), omschrijving: (omschrijvingEn || naamEn).slice(0, 600), vertaald: false };
-  try {
-    const r = await chatJson<{ naam?: unknown; omschrijving?: unknown }>({
-      purpose: "shop-product",
-      temperature: 0.2,
-      maxTokens: 500,
-      messages: [
-        { role: "system", content: VERTAAL },
-        { role: "user", content: `Naam: ${naamEn.slice(0, 200)}\nOmschrijving: ${(omschrijvingEn || "(geen)").slice(0, 1200)}` },
-      ],
-    });
-    const naam = typeof r.naam === "string" ? r.naam.trim().slice(0, 120) : "";
-    const omschrijving = typeof r.omschrijving === "string" ? r.omschrijving.trim().slice(0, 600) : "";
-    if (naam.length < 2 || omschrijving.length < 10) return terugval;
-    // een Duitse bron komt soms half Duits terug ("Goldaufkleber 16 Stücke"): één keer opnieuw, anders de brontekst
-    if (lijktDuits(`${naam} ${omschrijving}`)) return poging < 2 ? vertaalVermelding(naamEn, omschrijvingEn, poging + 1) : terugval;
-    return { naam, omschrijving, vertaald: true };
-  } catch (e) {
-    logger.warn("cj: vertalen mislukt, Engelse tekst blijft staan", { error: (e as Error).message.slice(0, 120) });
-    return terugval;
-  }
 }
 
 export interface ImportUitkomst {
