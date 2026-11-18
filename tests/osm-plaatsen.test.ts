@@ -8,6 +8,9 @@ vi.mock("@/lib/env", () => ({ env: { GOOGLE_MAPS_API_KEY: undefined } }));
 import {
   NOMINATIM_PAUZE_MS,
   OVERPASS_PAUZE_MS,
+  OVERPASS_SERVERS,
+  OVERPASS_STORING_MS,
+  overpassBeschikbaar,
   inDeRij,
   isOsmPlaatsId,
   leesOsmPlaatsId,
@@ -36,8 +39,8 @@ const BAKKER = {
   extratags: { website: "www.bakkerijjansen.nl", phone: "+31 30 123 4567; 06-12345678", opening_hours: "Mo-Fr 08:00-17:00; Sa 08:00-16:00; Su off" },
 };
 
-function antwoord(body: unknown, ok = true): Response {
-  return { ok, status: ok ? 200 : 503, json: async () => body } as unknown as Response;
+function antwoord(body: unknown, ok = true, status = ok ? 200 : 503): Response {
+  return { ok, status, json: async () => body } as unknown as Response;
 }
 
 let haal: ReturnType<typeof vi.fn>;
@@ -102,7 +105,7 @@ describe("bedrijven opzoeken bij OpenStreetMap", () => {
   });
 
   it("bewaart een storing niet: de volgende poging vraagt het opnieuw", async () => {
-    haal.mockResolvedValueOnce(antwoord({}, false));
+    haal.mockResolvedValueOnce(antwoord({}, false, 500));
     expect(await osmZoekBedrijven("Bakkerij Jansen Utrecht")).toEqual([]);
     expect(await osmZoekBedrijven("Bakkerij Jansen Utrecht")).toHaveLength(1);
     expect(haal).toHaveBeenCalledTimes(2);
@@ -151,6 +154,53 @@ describe("bedrijven in de buurt via Overpass", () => {
     expect(await osmBedrijvenInBuurt({ lat: 52, lng: 5, soort: { sleutel: "amenity", soort: 'cafe"];out meta;//' } })).toEqual([]);
     expect(haal).not.toHaveBeenCalled();
   });
+
+  // 18 nov 2026: overpass-api.de zei "502 at capacity" en liep daarna in time-outs; de ronde van 08:00 viel vier keer
+  // terug op Nominatim. Bij overbelasting gaan we naar de volgende server en laten we de eerste tien minuten met rust.
+  it("gaat bij 'at capacity' (502) naar de volgende server en laat de eerste tien minuten met rust", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-11-18T08:00:00Z"));
+      haal.mockResolvedValueOnce(antwoord("# 502 Gateway Timeout", false, 502)).mockResolvedValueOnce(antwoord({ elements: [ELEMENT] }));
+      const lijst = await osmBedrijvenInBuurt({ lat: 53.1067, lng: 6.8792, soort: { sleutel: "shop", soort: "bakery" } });
+      expect(lijst.map((p) => p.naam)).toEqual(["Bakker de Vries"]);
+      expect(haal).toHaveBeenCalledTimes(2);
+      expect(haal.mock.calls[0]?.[0]).toBe(OVERPASS_SERVERS[0]);
+      expect(haal.mock.calls[1]?.[0]).toBe(OVERPASS_SERVERS[1]);
+      expect(overpassBeschikbaar()).toEqual(OVERPASS_SERVERS.slice(1));
+
+      // de volgende vraag slaat de eerste server over
+      haal.mockResolvedValueOnce(antwoord({ elements: [] }));
+      await osmBedrijvenInBuurt({ lat: 53.2194, lng: 6.5665, soort: { sleutel: "shop", soort: "bakery" } });
+      expect(haal).toHaveBeenCalledTimes(3);
+      expect(haal.mock.calls[2]?.[0]).toBe(OVERPASS_SERVERS[1]);
+
+      // na tien minuten mag hij weer
+      vi.setSystemTime(new Date(Date.now() + OVERPASS_STORING_MS + 1));
+      expect(overpassBeschikbaar()).toEqual([...OVERPASS_SERVERS]);
+    } finally {
+      vi.useRealTimers();
+    }
+  }, 20_000);
+
+  it("een time-out telt ook als storing; staan alle servers in de storingsstand, dan geen netwerk en meteen leeg", async () => {
+    haal.mockRejectedValueOnce(new DOMException("The operation was aborted due to timeout", "TimeoutError"));
+    haal.mockResolvedValueOnce(antwoord("", false, 504));
+    haal.mockResolvedValueOnce(antwoord("", false, 429));
+    expect(await osmBedrijvenInBuurt({ lat: 53.1067, lng: 6.8792, soort: { sleutel: "shop", soort: "bakery" } })).toEqual([]);
+    expect(haal).toHaveBeenCalledTimes(OVERPASS_SERVERS.length);
+    expect(overpassBeschikbaar()).toEqual([]);
+    // de salesronde valt nu direct terug op Nominatim in plaats van op elke vraag 25 s te wachten
+    expect(await osmBedrijvenInBuurt({ lat: 53.2194, lng: 6.5665, soort: { sleutel: "shop", soort: "bakery" } })).toEqual([]);
+    expect(haal).toHaveBeenCalledTimes(OVERPASS_SERVERS.length);
+  }, 20_000);
+
+  it("een 400 is onze eigen vraag: geen tweede server, en de eerste blijft gewoon beschikbaar", async () => {
+    haal.mockResolvedValueOnce(antwoord("", false, 400));
+    expect(await osmBedrijvenInBuurt({ lat: 53.1067, lng: 6.8792, soort: { sleutel: "shop", soort: "bakery" } })).toEqual([]);
+    expect(haal).toHaveBeenCalledTimes(1);
+    expect(overpassBeschikbaar()).toEqual([...OVERPASS_SERVERS]);
+  });
 });
 
 describe("het bedrijf op een kaartpunt (osmPlekBijPunt)", () => {
@@ -190,7 +240,7 @@ describe("het bedrijf op een kaartpunt (osmPlekBijPunt)", () => {
     expect(await osmPlekBijPunt({ lat: 52.3, lng: 4.9, naam: "Leeg Café" })).toBeNull();
     expect(await osmPlekBijPunt({ lat: 52.3, lng: 4.9, naam: "Leeg Café" })).toBeNull();
     expect(haal).toHaveBeenCalledTimes(1);
-    haal.mockResolvedValueOnce(antwoord({}, false));
+    haal.mockResolvedValueOnce(antwoord({}, false, 500));
     expect(await osmPlekBijPunt({ lat: 52.4, lng: 4.8, naam: "Storing Café" })).toBeNull();
     haal.mockResolvedValueOnce(antwoord({ elements: [{ ...dichtbij, lat: 52.4, lon: 4.8, tags: { name: "Storing Café" } }] }));
     expect((await osmPlekBijPunt({ lat: 52.4, lng: 4.8, naam: "Storing Café" }))?.naam).toBe("Storing Café");
