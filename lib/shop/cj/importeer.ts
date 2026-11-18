@@ -87,6 +87,8 @@ export interface CjKoppeling {
   verzendDienst?: string;
   /** levertijd zoals CJ hem noemt, bv. "6-12" (dagen); voor de kaart en de productpagina (lib/shop/levertijd.ts) */
   verzendDagen?: string;
+  /** wanneer de Bijwerken-ronde de levertijd voor het laatst bij CJ vroeg zonder antwoord (freightCalculate gaf een lege lijst): pas na een week opnieuw */
+  verzendGeprobeerdOp?: string;
   geimporteerdOp: string;
   vertaald: boolean;
   /** de automatische categorie bij de laatste ronde; wijkt de categorie in de winkel daarvan af, dan koos de beheerder zelf en blijft die staan */
@@ -401,11 +403,12 @@ async function alleCjProductIds(): Promise<string[]> {
  * voorraad per variant, en een tekst die nog Engels of Duits is opnieuw vertalen. Stopt binnen `budgetMs`; `volgende`
  * zegt waar de volgende aanroep verdergaat.
  */
-export async function bijwerkenVanCj(opties: { actorUserId: string | null; vanaf?: number; budgetMs?: number }): Promise<BijwerkUitkomst> {
+export async function bijwerkenVanCj(opties: { actorUserId: string | null; actorLabel?: string; vanaf?: number; budgetMs?: number }): Promise<BijwerkUitkomst> {
   const start = Date.now();
   const budget = opties.budgetMs ?? 200_000;
   const ids = await alleCjProductIds();
   const uit: BijwerkUitkomst = { bekeken: 0, categorie: 0, voorraad: 0, vertaald: 0, fouten: 0, volgende: null, totaal: ids.length };
+  if (!ids.length) return uit; // niets te doen (en geen auditregel elke tien minuten vanuit de cron)
   let i = Math.max(0, opties.vanaf ?? 0);
   for (; i < ids.length; i++) {
     if (Date.now() - start > budget) break;
@@ -427,7 +430,7 @@ export async function bijwerkenVanCj(opties: { actorUserId: string | null; vanaf
     category: "ADMIN",
     action: "shop.product.cj-bijwerken",
     actorUserId: opties.actorUserId,
-    actorLabel: "user",
+    actorLabel: opties.actorLabel ?? "user",
     summary: `CJ-producten bijgewerkt: ${uit.bekeken} bekeken, ${uit.categorie} van categorie, ${uit.voorraad} voorraad, ${uit.vertaald} vertaald, ${uit.fouten} mislukt`,
     targetType: "shop-product",
     targetId: "cj",
@@ -441,8 +444,10 @@ async function bijwerkEen(id: string): Promise<{ categorie: boolean; voorraad: b
   const product = await prisma.shopProduct.findUnique({ where: { id }, select: { id: true, name: true, category: true, stock: true, variants: { select: { id: true, sku: true, stock: true } } } });
   if (!k || !product) return geen;
   const p = await cjProduct(k.pid);
-  // levertijd: de termijn van CJ naar Nederland, één keer ophalen; staat daarna in de koppeling
-  const verzending = k.verzendDagen ? null : await verzendingVanCj(p);
+  // levertijd: de termijn van CJ naar Nederland, één keer ophalen; staat daarna in de koppeling. Geeft CJ niets (18 nov:
+  // freightCalculate gaf voor DE en CN een lege lijst), dan pas na een week opnieuw, niet elke ronde twee aanvragen
+  const levertijdVragen = !k.verzendDagen && (!k.verzendGeprobeerdOp || Date.now() - Date.parse(k.verzendGeprobeerdOp) > 7 * 86_400_000);
+  const verzending = levertijdVragen ? await verzendingVanCj(p) : null;
 
   // categorie: de automatische indeling met de nieuwste regels; koos de beheerder zelf iets anders sinds de vorige ronde, dan blijft dat
   const auto = categorieVanCj(p.categorieCj, p.naamEn);
@@ -486,6 +491,13 @@ async function bijwerkEen(id: string): Promise<{ categorie: boolean; voorraad: b
       ...(tekst && k.activerenNaVertaling ? { active: true } : {}),
     },
   });
-  await kvSet(`${K_PRODUCT}${id}`, { ...k, categorieAuto: auto, ...(tekst ? { vertaald: true, activerenNaVertaling: false } : {}), ...(verzending?.dagen ? { verzendDagen: verzending.dagen, verzendDienst: verzending.dienst } : {}), bijgewerktOp: new Date().toISOString() } satisfies CjKoppeling);
+  await kvSet(`${K_PRODUCT}${id}`, {
+    ...k,
+    categorieAuto: auto,
+    ...(tekst ? { vertaald: true, activerenNaVertaling: false } : {}),
+    ...(verzending?.dagen ? { verzendDagen: verzending.dagen, verzendDienst: verzending.dienst } : {}),
+    ...(levertijdVragen && !verzending?.dagen ? { verzendGeprobeerdOp: new Date().toISOString() } : {}),
+    bijgewerktOp: new Date().toISOString(),
+  } satisfies CjKoppeling);
   return { categorie, voorraad: voorraad || totaal !== product.stock, vertaald: tekst !== null };
 }
