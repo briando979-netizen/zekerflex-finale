@@ -345,7 +345,7 @@ export function ProductDetail({
           {variant && variantStock > 0 && vanLeverancier && !bestellenDicht && (
             <p className="mt-1 text-[13px] font-semibold text-neutralx-600">{fmt(t.shop.bezorgLeverancier, { dagen: levertijd })}</p>
           )}
-          {bezorg && variant && variantStock > 0 && !product.seller && !vanLeverancier && !bestellenDicht && (
+          {bezorg && variant && variantStock > 0 && !product.seller && !bestellenDicht && !vanLeverancier && (
             <p className="mt-1 text-[13px] font-semibold text-ok">
               {bezorgZin(bezorg, { aftellen: t.shop.bezorgAftellen, nu: t.shop.bezorgNu, morgen: t.shop.bezorgMorgen, uurEnMin: t.shop.uurEnMin, uren: t.shop.uren, minuten: t.shop.minuten }, locale)}
             </p>
