@@ -9,6 +9,12 @@ import { INFO_MAIL_VLAG, MAX_NIEUW_PER_RONDE, type InfoAfhankelijkheden } from "
 // De echte afhankelijkheden van de info-ronde (lib/mail/info-ronde.ts): de vlag, de postbus via IMAP (één sessie per
 // ronde), het eerste antwoord via sendMail, de melding aan de eigenaar en de stand in KV.
 
+/** Het adres van de postbus zelf (info@), als afzender van een antwoord: zo komt een antwoord daarop weer daar binnen. undefined als er geen eigen postbus is. */
+export function infoVan(): string | undefined {
+  const cfg = imapConfig();
+  return cfg && /@([a-z0-9-]+\.)*zekerflex\.(com|nl)$/i.test(cfg.user) ? cfg.user : undefined;
+}
+
 export function echteInfoAfhankelijkheden(): InfoAfhankelijkheden {
   let sessie: Promise<ImapWerkSessie> | null = null;
   const cfg = imapConfig();
@@ -51,7 +57,7 @@ export function echteInfoAfhankelijkheden(): InfoAfhankelijkheden {
     telAntwoord: (nu) => telAntwoord(nu),
     stuur: async (a) => {
       // het antwoord komt van de postbus zelf (info@), zodat een antwoord daarop weer daar binnenkomt
-      const van = cfg && /@([a-z0-9-]+\.)*zekerflex\.(com|nl)$/i.test(cfg.user) ? cfg.user : undefined;
+      const van = infoVan();
       const uit = await sendMail({
         to: a.aan,
         subject: a.onderwerp,
@@ -72,6 +78,36 @@ export function echteInfoAfhankelijkheden(): InfoAfhankelijkheden {
         url: "/admin/mail",
       });
       return uitslag === "sent";
+    },
+    // een concept-antwoord op jouw goedkeuring (Beheer, AI-teams): er gaat niets uit voor jij op Uitvoeren klikt
+    bewaarConcept: async (a) => {
+      const { propose } = await import("@/lib/ai-teams");
+      await propose({
+        team: "klantenservice",
+        title: "Een bedrijf mailde naar info@: conceptantwoord klaar",
+        detail:
+          `Aan: ${a.aan}\nOnderwerp: ${a.onderwerp}\n\n${a.tekst}\n\n` +
+          "Het antwoord gaat vanaf info@ pas uit als je op Uitvoeren klikt. Pas je er iets aan aan, stuur het dan liever zelf vanuit de postbus.",
+        action: { type: "info-antwoord", aan: a.aan, onderwerp: a.onderwerp, tekst: a.tekst, inReplyTo: a.inReplyTo },
+      });
+      return true;
+    },
+    // een lead die een verkoopmail kreeg en nu terugmailt: niet langer onbeantwoord laten (lib/sales/reply.ts, markLeadReplied)
+    herkenReactie: async (adres) => {
+      const { prisma } = await import("@/lib/prisma");
+      const lead = await prisma.salesLead.findFirst({
+        where: {
+          status: { in: ["QUEUED", "DRAFTED", "APPROVED", "SENT"] },
+          OR: [{ contactEmail: { equals: adres, mode: "insensitive" } }, { discoveredEmail: { equals: adres, mode: "insensitive" } }],
+        },
+        select: { id: true },
+      });
+      return lead?.id ?? null;
+    },
+    markeerReactie: async (leadId) => {
+      const { markLeadReplied } = await import("@/lib/sales/reply");
+      await markLeadReplied(leadId, null);
+      return true;
     },
     vorigeStand: () => leesInfoStand(),
     bewaar: (stand) => bewaarInfoStand(stand),

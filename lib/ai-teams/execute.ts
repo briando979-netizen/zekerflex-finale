@@ -35,6 +35,23 @@ export async function executeProposal(action: ProposalAction, by = "ai-team"): P
     await appendMessage(action.conversationId, { role: "agent", content: action.tekst, by: "ZekerFlex" });
     return "antwoord in de websitechat geplaatst";
   }
+  if (action.type === "info-antwoord") {
+    // de Aanvragen-beantwoorder: het concept-antwoord aan een bedrijf, pas na Uitvoeren, vanaf de postbus zelf (info@)
+    const aan = action.aan.trim().toLowerCase();
+    if (!/^[^\s@<>()",;:\\[\]]+@[^\s@<>()",;:\\[\]]+\.[^\s@<>()",;:\\[\]]+$/.test(aan)) return "geen geldig adres; niets verstuurd";
+    if (/@([a-z0-9-]+\.)*zekerflex\.(com|nl)$/i.test(aan)) return "dit is een eigen adres; niets verstuurd";
+    const { infoVan } = await import("@/lib/mail/info-ronde-db");
+    const van = infoVan();
+    const uit = await sendMail({
+      to: aan,
+      subject: action.onderwerp.slice(0, 200),
+      text: action.tekst,
+      kind: "info-antwoord",
+      ...(van ? { from: van, replyTo: van } : {}),
+      ...(action.inReplyTo ? { inReplyTo: action.inReplyTo } : {}),
+    });
+    return uit.delivered ? "antwoord verstuurd vanaf info@" : "versturen mislukt; het antwoord staat in de uitgaande post";
+  }
   if (action.type === "welkom-opvolging") {
     // de Welkomstcoach: alleen als het bedrijf nog steeds geen klus heeft
     const klussen = await prisma.shift.count({ where: { branch: { tenantId: action.tenantId } } });

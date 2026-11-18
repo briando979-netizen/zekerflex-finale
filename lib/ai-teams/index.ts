@@ -37,7 +37,10 @@ export type ProposalAction =
   | { type: "investment"; title: string; budgetCents: number; firstStep: string }
   // AI-medewerkers (15 nov 2026, lib/ai-teams/medewerkers.ts): de Welkomstcoach en de Servicedesk
   | { type: "welkom-opvolging"; tenantId: string }
-  | { type: "webchat-antwoord"; conversationId: string; tekst: string };
+  | { type: "webchat-antwoord"; conversationId: string; tekst: string }
+  // Aanvragen-beantwoorder (18 nov 2026, lib/mail/info-antwoorden.ts): het concept-antwoord op een mail van een bedrijf aan info@;
+  // gaat pas uit na Uitvoeren, vanaf de postbus zelf
+  | { type: "info-antwoord"; aan: string; onderwerp: string; tekst: string; inReplyTo: string | null };
 
 export interface Proposal {
   id: string;
@@ -84,7 +87,8 @@ async function log(team: string, text: string, kind: FeedItem["kind"] = "done") 
   await kvAppend<FeedItem>("ai-teams-feed", { id: feedId(), team, at: new Date().toISOString(), text: text.slice(0, 600), kind }, 500);
 }
 
-async function propose(p: Omit<Proposal, "id" | "at" | "status">) {
+/** Zet een voorstel klaar op jouw goedkeuring (ook voor plekken buiten de dagelijkse ronde, zoals de info-ronde). Eén open voorstel per doel. */
+export async function propose(p: Omit<Proposal, "id" | "at" | "status">) {
   const list = (await kvGet<Proposal[]>("ai-teams-proposals")) ?? [];
   // One open proposal per action target.
   const sig = JSON.stringify(p.action);

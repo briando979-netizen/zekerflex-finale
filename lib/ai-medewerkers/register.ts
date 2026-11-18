@@ -45,6 +45,16 @@ export const AI_MEDEWERKERS: AiMedewerker[] = [
     nieuw: true,
   },
   {
+    id: "aanvragen-beantwoorder",
+    naam: "Aanvragen-beantwoorder",
+    wat: "Leest de postbus info@ mee. Een bedrijf dat naar kosten, zzp of uitzend, verzekering, annuleren of ziekte vraagt, krijgt een conceptantwoord uit het antwoordenpakket. Een lead die op een verkoopmail terugmailt, wordt herkend en de verkoopreeks stopt.",
+    wanneer: "Elke 5 minuten, met de info-ronde (alleen als 'info-mail-afhandelen' aan staat; anders alleen opschrijven)",
+    naarBuiten: "na-goedkeuring",
+    buiten: "Het antwoord aan het bedrijf gaat vanaf info@ pas uit als jij het uitvoert. Bedrijfsmails krijgen nooit automatisch een antwoord.",
+    pagina: "/admin/ai-teams",
+    nieuw: true,
+  },
+  {
     id: "ai-teams",
     naam: "AI-teams",
     wat: "Vijftien teams die groei, storingen, planning, prijzen, kwaliteit, klantenservice en veiligheid bekijken en voorstellen klaarzetten.",
