@@ -16,7 +16,9 @@ type Treffer = { pid: string; naamEn: string; foto: string | null; inkoopUsdCent
 type FotoTelling = { droog: true; aantal: number; bytes: number; steekproef: { n: number; bytesVoor: number; bytesNa: number }; schattingBytesNa: number };
 type FotoRonde = { droog: false; gedaan: number; mislukt: number; rest: number; bytesVoor: number; bytesNa: number };
 const mb = (b: number) => (b / 1_048_576).toFixed(b >= 10_485_760 ? 0 : 1);
-type BijwerkAntwoord = { bekeken: number; categorie: number; voorraad: number; vertaald: number; fouten: number; volgende: number | null; totaal: number };
+type BijwerkStand = { vanaf: number; laatsteRondeOp: string | null; laatsteVolledigOp: string | null; rondes: number; totaal: number };
+type BijwerkAntwoord = { status: "gedaan" | "bezet"; bekeken: number; categorie: number; voorraad: number; vertaald: number; fouten: number; volgende: number | null; totaal: number; stand: BijwerkStand };
+const klok = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" }) : "nog niet");
 type Zoek = { producten: Treffer[]; totaal: number; pagina: number; gezochtOp?: string; vertaald?: boolean; land: string; margePct: number; verzendCents: number; koersDatum: string | null };
 type Uitkomst = { pid: string } & ({ fout: string } | { bestaand: boolean; id: string; slug: string; naam: string; prijsCents: number; inkoopCents: number; varianten: number; fotos: number; vertaald: boolean; actief: boolean; verzendCents?: number; verzendEcht?: boolean; melding: string | null });
 
@@ -44,7 +46,7 @@ export function Leverancier() {
   const [wachtrijTik, setWachtrijTik] = useState(0);
   const [fotos, setFotos] = useState<FotoTelling | null>(null);
   const [fotoRonde, setFotoRonde] = useState<FotoRonde | null>(null);
-  const [bijwerk, setBijwerk] = useState<{ bekeken: number; categorie: number; voorraad: number; vertaald: number; fouten: number; totaal: number; klaar: boolean } | null>(null);
+  const [bijwerkStand, setBijwerkStand] = useState<BijwerkStand | null>(null);
   const [land, setLand] = useState("");
   const [margeTekst, setMargeTekst] = useState("");
   const [oudBewaard, setOudBewaard] = useState(0);
@@ -58,6 +60,8 @@ export function Leverancier() {
       setMargeTekst(s.instellingen.margePct === null ? "" : String(s.instellingen.margePct));
       const o = await vraag<{ bewaard: number }>("/api/admin/shop-ai/cj/oud-uit");
       setOudBewaard(o.bewaard);
+      const b = await vraag<{ stand: BijwerkStand }>("/api/admin/shop-ai/cj/bijwerken");
+      setBijwerkStand(b.stand);
     } catch (e) {
       setFout((e as Error).message);
     }
@@ -286,29 +290,25 @@ export function Leverancier() {
             disabled={bezig !== ""}
             onClick={() =>
               void doe("bijwerk", async () => {
-                let vanaf: number | null = 0;
-                const som = { bekeken: 0, categorie: 0, voorraad: 0, vertaald: 0, fouten: 0, totaal: 0, klaar: false };
-                while (vanaf !== null) {
-                  // expliciet getypeerd: anders ziet TypeScript een kring (vanaf ← r.volgende ← vraag(…, { vanaf }))
-                  const r: BijwerkAntwoord = await vraag<BijwerkAntwoord>("/api/admin/shop-ai/cj/bijwerken", { vanaf: vanaf as number });
-                  som.bekeken += r.bekeken;
-                  som.categorie += r.categorie;
-                  som.voorraad += r.voorraad;
-                  som.vertaald += r.vertaald;
-                  som.fouten += r.fouten;
-                  som.totaal = r.totaal;
-                  vanaf = r.volgende;
-                  setBijwerk({ ...som });
+                // één ronde van hooguit een minuut, via hetzelfde slot als de automatische ronde (nooit twee tegelijk);
+                // 18 nov: de knop liep in de browser uren door en samen met de cron kreeg CJ te veel aanvragen
+                const r = await vraag<BijwerkAntwoord>("/api/admin/shop-ai/cj/bijwerken", { budgetMs: 60_000 });
+                setBijwerkStand(r.stand);
+                if (r.status === "bezet") {
+                  setBericht("Er loopt op dit moment al een automatische ronde; die gaat gewoon door. Over een paar minuten komt de volgende.");
+                  return;
                 }
-                som.klaar = true;
-                setBijwerk({ ...som });
-                setBericht(`Bijgewerkt: ${som.bekeken} van ${som.totaal} producten bekeken, ${som.categorie} van categorie gewisseld, ${som.voorraad} met nieuwe voorraad, ${som.vertaald} opnieuw vertaald${som.fouten ? `, ${som.fouten} mislukt` : ""}.`);
+                setBericht(`Eén ronde gedaan: ${r.bekeken} producten bekeken, ${r.categorie} van categorie gewisseld, ${r.voorraad} met nieuwe voorraad, ${r.vertaald} opnieuw vertaald${r.fouten ? `, ${r.fouten} mislukt` : ""}. De rest gaat vanzelf, elke vier minuten.`);
               })
             }
           >
-            {bezig === "bijwerk" ? "Bezig…" : "Categorie, voorraad en tekst bijwerken"}
+            {bezig === "bijwerk" ? "Eén ronde bezig (hooguit een minuut)…" : "Nu één ronde extra doen"}
           </button>
-          {bijwerk && !bijwerk.klaar && <span className="text-sm" style={{ color: "var(--a-mute)" }}>{bijwerk.bekeken} van {bijwerk.totaal} bekeken… (een paar seconden per product)</span>}
+          {bijwerkStand && (
+            <span className="text-sm" style={{ color: "var(--a-mute)" }}>
+              Automatisch: {bijwerkStand.totaal > 0 ? `${Math.min(bijwerkStand.vanaf, bijwerkStand.totaal)} van ${bijwerkStand.totaal} in deze pas` : "nog geen ronde gedaan"}, {bijwerkStand.rondes} rondes, laatste om {klok(bijwerkStand.laatsteRondeOp)}, laatste volledige pas {klok(bijwerkStand.laatsteVolledigOp)}.
+            </span>
+          )}
         </div>
       </Panel>
 
