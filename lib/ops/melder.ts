@@ -1,9 +1,12 @@
 import { randomBytes } from "node:crypto";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { fixedWindow } from "@/lib/rate-limit";
 import { kvDeleteStale, kvGet, kvListEntries, kvSet } from "@/lib/storage/kv";
 import {
   BEWAAR_DAGEN,
+  DIRECT_PER_UUR,
+  DIRECT_WERKERS_PER_UUR,
   GEBEURTENIS_VOORVOEGSEL,
   binnenMeldtijd,
   gebeurtenisSleutel,
@@ -28,7 +31,7 @@ export const K_MELDER = "ops:melder";
 export interface MelderInstelling {
   /** meldingen naar de telefoon aan of uit; het logboek blijft gewoon bijhouden */
   aan: boolean;
-  /** cijfers met landcode (31634825780), niet in de code maar hier ingesteld */
+  /** cijfers met landcode (31612345678), niet in de code maar hier ingesteld */
   telefoon: string | null;
   /** ook via de WhatsApp-brug sturen (alleen zinvol als die gekoppeld is) */
   whatsapp: boolean;
@@ -82,10 +85,32 @@ export async function stuurNaarEigenaar(tekst: string, url: string | null, tag: 
   }
 }
 
-/** Alle gebeurtenissen in het logboek, nieuwste eerst. */
+/** Het moment tot waar het uurbericht alles al heeft gemeld (ISO). Een rij wordt na het schrijven nooit meer aangepast. */
+export const K_SAMENGEVAT = "ops:melder:samengevat";
+
+/**
+ * Alle gebeurtenissen in het logboek, nieuwste eerst. Een rij wordt één keer geschreven en nooit meer aangepast (zo blijft de
+ * volgorde op tijd en verdringt een uurbericht geen directe rijen); wat het uurbericht al heeft gemeld, volgt uit K_SAMENGEVAT.
+ */
 export async function leesGebeurtenissen(limit = 500): Promise<Gebeurtenis[]> {
-  const rijen = await kvListEntries<Gebeurtenis>(GEBEURTENIS_VOORVOEGSEL, limit).catch(() => []);
-  return rijen.map((r) => r.value).sort((a, b) => b.at.localeCompare(a.at));
+  const [rijen, markering] = await Promise.all([
+    kvListEntries<Gebeurtenis>(GEBEURTENIS_VOORVOEGSEL, limit).catch(() => []),
+    kvGet<{ tot?: string }>(K_SAMENGEVAT).catch(() => null),
+  ]);
+  const tot = typeof markering?.tot === "string" ? markering.tot : null;
+  return rijen
+    .map((r) => (tot !== null && r.value.gemeld === "wacht" && r.value.at <= tot ? ({ ...r.value, gemeld: "samenvatting" } satisfies Gebeurtenis) : r.value))
+    .sort((a, b) => b.at.localeCompare(a.at));
+}
+
+/**
+ * Is er nog ruimte voor een direct bericht? Atomaire tellers per uur in Redis (fixedWindow), dus ook bij gelijktijdige gebeurtenissen
+ * en los van het logboek: hoogstens DIRECT_WERKERS_PER_UUR nieuwe werkers en DIRECT_PER_UUR berichten in totaal. Bij een storing in
+ * Redis geen direct bericht (het komt dan in het uurbericht).
+ */
+async function ruimteVoorDirect(soort: Gebeurtenis["soort"]): Promise<boolean> {
+  if (soort === "werker-aangemeld" && !(await fixedWindow("melder:werker", DIRECT_WERKERS_PER_UUR, 3600, { failOpen: false })).ok) return false;
+  return (await fixedWindow("melder:direct", DIRECT_PER_UUR, 3600, { failOpen: false })).ok;
 }
 
 /**
@@ -95,14 +120,11 @@ export async function leesGebeurtenissen(limit = 500): Promise<Gebeurtenis[]> {
 export async function meldGebeurtenis(n: NieuweGebeurtenis, now: Date = new Date()): Promise<Gebeurtenis | null> {
   try {
     const g = maakGebeurtenis(n, now, randomBytes(4).toString("hex"));
-    if (g.belang === "direct" && binnenMeldtijd(now)) {
+    if (magDirect(g, now)) {
       const instelling = await leesInstelling();
-      if (instelling.aan) {
-        const recent = await leesGebeurtenissen(500);
-        if (magDirect(g, recent, now)) {
-          const kanaal = await stuurNaarEigenaar(telefoonTekst(g), g.url, `gebeurtenis-${g.id}`, instelling);
-          if (kanaal) g.gemeld = "direct";
-        }
+      if (instelling.aan && (await ruimteVoorDirect(g.soort).catch(() => false))) {
+        const kanaal = await stuurNaarEigenaar(telefoonTekst(g), g.url, `gebeurtenis-${g.id}`, instelling);
+        if (kanaal) g.gemeld = "direct";
       }
     }
     await kvSet(gebeurtenisSleutel(g), g);
@@ -134,13 +156,13 @@ export async function stuurSamenvatting(now: Date = new Date()): Promise<Samenva
   if (!binnenMeldtijd(now)) return { aantal: 0, gemeld: false, reden: "buiten de meldtijd" };
   const instelling = await leesInstelling();
   if (!instelling.aan) return { aantal: 0, gemeld: false, reden: "meldingen staan uit" };
-  const wacht = (await leesGebeurtenissen(1000)).filter((g) => g.gemeld === "wacht").sort((a, b) => a.at.localeCompare(b.at));
+  const wacht = (await leesGebeurtenissen(5000)).filter((g) => g.gemeld === "wacht").sort((a, b) => a.at.localeCompare(b.at));
   const tekst = samenvattingTekst(wacht, env.APP_BASE_URL);
-  if (!tekst) return { aantal: 0, gemeld: false, reden: "niets te melden" };
+  const laatste = wacht[wacht.length - 1];
+  if (!tekst || !laatste) return { aantal: 0, gemeld: false, reden: "niets te melden" };
   const kanaal = await stuurNaarEigenaar(tekst, "/admin/automatisch", `samenvatting-${now.getTime()}`, instelling);
   if (!kanaal) return { aantal: wacht.length, gemeld: false, reden: "geen kanaal bereikte de eigenaar" };
-  for (let i = 0; i < wacht.length; i += 50) {
-    await Promise.all(wacht.slice(i, i + 50).map((g) => kvSet(gebeurtenisSleutel(g), { ...g, gemeld: "samenvatting" } satisfies Gebeurtenis)));
-  }
+  // één markering in plaats van elke rij opnieuw te schrijven: de rijen blijven in de volgorde van hun tijd en er gaat er geen verloren
+  await kvSet(K_SAMENGEVAT, { tot: laatste.at });
   return { aantal: wacht.length, gemeld: true, reden: null };
 }

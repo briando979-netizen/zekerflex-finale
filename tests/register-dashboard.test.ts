@@ -63,7 +63,8 @@ describe("registerAccount: het gekozen dashboard", () => {
   it("bewaart het gekozen dashboard bij het nieuwe bedrijf", async () => {
     await registerAccount(registerSchema.parse({ ...bedrijf, dashboard: "webshop" }));
     expect(m.voegDashboardToe).toHaveBeenCalledWith("t1", "webshop");
-    expect(m.recordAudit).toHaveBeenCalledWith(expect.objectContaining({ metadata: { type: "bedrijf", dashboard: "webshop" } }));
+    // het adres is een testadres (.test): de melder voor de eigenaar slaat zo'n aanmelding over (metadata.test)
+    expect(m.recordAudit).toHaveBeenCalledWith(expect.objectContaining({ metadata: { type: "bedrijf", dashboard: "webshop", test: true } }));
   });
 
   it("zonder keuze is het dashboard personeel", async () => {
@@ -84,7 +85,7 @@ describe("registerAccount: het gekozen dashboard", () => {
   it("een werker krijgt geen dashboard, ook niet als er een meekomt", async () => {
     await registerAccount(registerSchema.parse({ ...bedrijf, type: "freelancer", dashboard: "horeca" }));
     expect(m.voegDashboardToe).not.toHaveBeenCalled();
-    expect(m.recordAudit).toHaveBeenCalledWith(expect.objectContaining({ metadata: { type: "freelancer" } }));
+    expect(m.recordAudit).toHaveBeenCalledWith(expect.objectContaining({ metadata: { type: "freelancer", test: true } }));
   });
 });
 

@@ -105,16 +105,13 @@ async function recipientsFor(thread: ChatThread, msg: ChatMessage): Promise<stri
 
 export async function notifyNewMessage(thread: ChatThread, msg: ChatMessage): Promise<void> {
   if (msg.kind === "call" || msg.kind === "system" || msg.auto) return;
-  // de eigenaar melden (lib/ops/melder.ts): alleen dat er een bericht was, nooit wie of wat. Een gebruiker die de support
-  // schrijft wacht op antwoord, dus die gaat direct; de rest in het uurbericht. Los ingeladen en niet afgewacht.
+  // de eigenaar melden (lib/ops/melder.ts): alleen dat er een bericht was, nooit wie of wat, en alleen in het uurbericht: een gebruiker
+  // die de support schrijft krijgt al een eigen push naar de beheerders (hieronder), dus direct melden zou dubbel zijn. Los
+  // ingeladen en niet afgewacht.
   const naarSupport = thread.kind === "support" && thread.participants.includes(msg.from);
   void import("@/lib/ops/melder")
     .then(({ meldGebeurtenis }) =>
-      meldGebeurtenis(
-        naarSupport
-          ? { soort: "chat", titel: "Een gebruiker schreef de supportchat", url: "/admin/berichten" }
-          : { soort: "chat", titel: "Een chatbericht verstuurd", belang: "samenvatting", url: "/admin/berichten" },
-      ),
+      meldGebeurtenis({ soort: "chat", titel: naarSupport ? "Een gebruiker schreef de supportchat" : "Een chatbericht verstuurd", belang: "samenvatting", url: "/admin/berichten" }),
     )
     .catch(() => undefined);
   try {

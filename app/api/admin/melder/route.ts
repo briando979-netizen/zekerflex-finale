@@ -3,6 +3,7 @@ import { z } from "zod";
 import { withAdminAccess } from "@/lib/auth/handlers";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { bewaarInstelling, leesGebeurtenissen, leesInstelling, stuurNaarEigenaar } from "@/lib/ops/melder";
 
 export const runtime = "nodejs";
@@ -20,6 +21,7 @@ const wijziging = z.object({ aan: z.boolean(), telefoon: z.string().max(30), wha
 const test = z.object({ actie: z.literal("test") });
 
 export const PATCH = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
+  await enforceRateLimit({ name: "melder-instelling", identifier: principal.userId, limit: 10, windowSeconds: 3600, failOpen: false });
   const parsed = wijziging.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) throw AppError.validation("Controleer de instellingen.");
   let instelling;
@@ -39,7 +41,9 @@ export const PATCH = withAdminAccess(["PLATFORM_ADMIN"], async (request, { princ
 });
 
 // Eén testbericht naar de eigenaar zelf, op verzoek van de eigenaar: zo ziet hij of het kanaal werkt.
-export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request) => {
+// Hoogstens 5 per uur: zo kan dit niet gebruikt worden om een nummer te overspoelen.
+export const POST = withAdminAccess(["PLATFORM_ADMIN"], async (request, { principal }) => {
+  await enforceRateLimit({ name: "melder-test", identifier: principal.userId, limit: 5, windowSeconds: 3600, failOpen: false });
   if (!test.safeParse(await request.json().catch(() => ({}))).success) throw AppError.validation("Onbekende actie.");
   const instelling = await leesInstelling();
   const kanaal = await stuurNaarEigenaar("✅ ZekerFlex: dit is een testbericht van de melder.", "/admin/automatisch", `test-${Date.now()}`, instelling);
