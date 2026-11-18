@@ -246,7 +246,8 @@ export function ProductDetail({
             )}
           </div>
           {gallery.length > 1 && (
-            <div className="mt-3 flex gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
+              {/* flex-wrap: vijf of meer miniaturen (CJ-producten) maakten de pagina op een telefoon 18 px te breed (18 nov 2026) */}
               {gallery.map((src, i) => (
                 <button
                   key={src}

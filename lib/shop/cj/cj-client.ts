@@ -179,7 +179,10 @@ async function cjAanvraag<T>(pad: string, adres: string, init: { method?: string
       await noteer({ laatsteFout: "te veel aanvragen of de dagpunten zijn op", laatsteFoutOp: new Date().toISOString() });
       throw AppError.upstream("CJ: te veel aanvragen of de punten van vandaag zijn op. Probeer het over een minuut opnieuw.");
     }
-    if (!res.ok || d.result !== true || d.code !== 200 || d.data === undefined) {
+    // Geslaagd = HTTP ok, code 200 en data aanwezig. Het veld `result` ontbreekt bij product/stock/getInventoryByPid
+    // (18 nov 2026: 89 keer "cj: voorraad niet opgehaald" met een lege melding, terwijl de voorraad er wél in stond);
+    // alleen een uitdrukkelijk `result: false` telt dus als fout.
+    if (!res.ok || d.result === false || d.code !== 200 || d.data === undefined) {
       const m = typeof d.message === "string" ? d.message.slice(0, 160) : `HTTP ${res.status}`;
       await noteer({ laatsteFout: m, laatsteFoutOp: new Date().toISOString() });
       logger.warn("cj: aanvraag mislukt", { pad, status: res.status, melding: m });
