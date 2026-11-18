@@ -13,8 +13,17 @@ describe("openApiSpec", () => {
     expect(spec.components.securitySchemes.apiKey).toBeDefined();
   });
 
-  it("documents only the endpoints that actually exist (shifts, timesheets/approved, webhooks)", () => {
-    expect(Object.keys(spec.paths).sort()).toEqual(["/shifts", "/timesheets/approved", "/webhooks"]);
+  it("documents exactly the endpoints that actually exist", () => {
+    expect(Object.keys(spec.paths).sort()).toEqual([
+      "/brain",
+      "/branches",
+      "/invoices",
+      "/shifts",
+      "/shifts/{id}",
+      "/timesheets/approved",
+      "/webhooks",
+      "/webhooks/{id}",
+    ]);
   });
 
   it("gives every operation a unique operationId and a description", () => {
@@ -30,9 +39,9 @@ describe("openApiSpec", () => {
     }
   });
 
-  it("does not document the unwired invoices:read or users:read scopes as if they had endpoints", () => {
+  it("does not document the unwired users:read scope as if it had an endpoint", () => {
+    // invoices:read is now wired (GET /invoices), so it is documented; users:read still has no endpoint.
     const raw = JSON.stringify(spec);
-    expect(raw).not.toContain("invoices:read");
     expect(raw).not.toContain("users:read");
   });
 });

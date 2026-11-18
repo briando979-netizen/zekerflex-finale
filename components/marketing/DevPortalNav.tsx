@@ -8,7 +8,11 @@ import { usePathname } from "next/navigation";
 // donkere pil; usePathname bepaalt welke dat is.
 const TABS = [
   { href: "/developers", label: "Overzicht" },
+  { href: "/developers/authenticatie", label: "Authenticatie" },
   { href: "/developers/api", label: "API-naslag" },
+  { href: "/developers/webhooks", label: "Webhooks" },
+  { href: "/developers/afspraken", label: "Afspraken" },
+  { href: "/developers/voorbeelden", label: "Voorbeelden" },
   { href: "/developers/wijzigingen", label: "Wijzigingen" },
 ] as const;
 

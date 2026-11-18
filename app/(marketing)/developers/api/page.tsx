@@ -29,7 +29,7 @@ function Code({ children }: { children: string }) {
   );
 }
 
-function Method({ m }: { m: "GET" | "POST" }) {
+function Method({ m }: { m: "GET" | "POST" | "DELETE" }) {
   return (
     <span className="inline-block flex-shrink-0 rounded-md bg-ink px-2 py-0.5 font-mono text-[11px] font-bold tracking-wide text-white">
       {m}
@@ -93,7 +93,7 @@ function Endpoint({
   children,
 }: {
   id: string;
-  method: "GET" | "POST";
+  method: "GET" | "POST" | "DELETE";
   path: string;
   scope: string;
   intro: string;
@@ -157,16 +157,25 @@ export default function ApiReferencePage() {
             <nav aria-label="Endpoints">
               <NavGroep titel="Aan de slag" items={[{ id: "aan-de-slag", label: "Verzoeken en sleutel" }]} />
               <NavGroep
-                titel="Diensten"
+                titel="Diensten en vestigingen"
                 items={[
                   { id: "shifts-list", label: "Open diensten lezen" },
                   { id: "shifts-create", label: "Dienst aanmaken" },
                   { id: "shifts-get", label: "Eén dienst" },
+                  { id: "branches", label: "Vestigingen lezen" },
                 ]}
               />
               <NavGroep titel="Uren" items={[{ id: "timesheets", label: "Goedgekeurde uren" }]} />
               <NavGroep titel="Facturen" items={[{ id: "invoices", label: "Facturen lezen" }]} />
-              <NavGroep titel="Webhooks" items={[{ id: "webhooks", label: "Melding registreren" }]} />
+              <NavGroep
+                titel="Webhooks"
+                items={[
+                  { id: "webhooks", label: "Melding registreren" },
+                  { id: "webhooks-list", label: "Abonnementen lezen" },
+                  { id: "webhooks-delete", label: "Abonnement verwijderen" },
+                ]}
+              />
+              <NavGroep titel="AI" items={[{ id: "brain", label: "Het brein vragen" }]} />
               <NavGroep titel="Overig" items={[{ id: "agenda", label: "Agendafeed (iCal)" }, { id: "fouten", label: "Foutformaat" }, { id: "limieten", label: "Limieten" }]} />
             </nav>
           </aside>
@@ -283,6 +292,27 @@ curl ${BASE}/shifts \\
                 />
               </Endpoint>
 
+              {/* GET /branches */}
+              <Endpoint
+                id="branches"
+                method="GET"
+                path="/branches"
+                scope="shifts:read"
+                intro="De vestigingen van je organisatie, zodat je het branchId kunt opzoeken dat POST /shifts nodig heeft. De sleutel moet aan een organisatie hangen (anders 412)."
+              >
+                <Code>{`curl ${BASE}/branches \\
+  -H "Authorization: Bearer zf_live_..."`}</Code>
+                <Veldtabel
+                  titel="Elke vestiging in data[]"
+                  rijen={[
+                    { naam: "id", type: "string", uitleg: "Het branchId voor POST /shifts." },
+                    { naam: "name", type: "string", uitleg: "Naam van de vestiging." },
+                    { naam: "city", type: "string", uitleg: "Plaats." },
+                    { naam: "postalCode", type: "string", uitleg: "Postcode." },
+                  ]}
+                />
+              </Endpoint>
+
               {/* GET /timesheets/approved */}
               <Endpoint
                 id="timesheets"
@@ -366,9 +396,77 @@ curl ${BASE}/shifts \\
     "eventTypes": ["shift.matched", "timesheet.approved"]
   }'`}</Code>
                 <p className="mt-3 text-sm text-neutralx-600">
-                  Antwoord <code className="font-mono">201</code>: <code className="font-mono">data</code> (id, url, eventTypes, createdAt) en{" "}
+                  Antwoord <code className="font-mono">201</code>: <code className="font-mono">data</code> (id, url, eventTypes, active, createdAt) en{" "}
                   <code className="font-mono">secret</code> (het geheim, eenmalig).
                 </p>
+              </Endpoint>
+
+              {/* GET /webhooks */}
+              <Endpoint
+                id="webhooks-list"
+                method="GET"
+                path="/webhooks"
+                scope="webhooks:manage"
+                intro="Je webhook-abonnementen. Het ondertekeningsgeheim komt hier nooit terug — dat kreeg je alleen bij het aanmaken."
+              >
+                <Code>{`curl ${BASE}/webhooks \\
+  -H "Authorization: Bearer zf_live_..."`}</Code>
+                <Veldtabel
+                  titel="Elk abonnement in data[]"
+                  rijen={[
+                    { naam: "id", type: "string", uitleg: "Het kenmerk (voor DELETE)." },
+                    { naam: "url", type: "string", uitleg: "De URL die de meldingen ontvangt." },
+                    { naam: "eventTypes", type: "string[]", uitleg: "Waarop dit abonnement luistert." },
+                    { naam: "active", type: "boolean", uitleg: "Of het abonnement actief is." },
+                    { naam: "createdAt", type: "date-time", uitleg: "Wanneer het is aangemaakt." },
+                  ]}
+                />
+              </Endpoint>
+
+              {/* DELETE /webhooks/{id} */}
+              <Endpoint
+                id="webhooks-delete"
+                method="DELETE"
+                path="/webhooks/{id}"
+                scope="webhooks:manage"
+                intro="Verwijder een eigen webhook-abonnement. Een id van een andere organisatie geeft 404 (je ziet nooit dat het bestaat)."
+              >
+                <Code>{`curl -X DELETE ${BASE}/webhooks/WEBHOOK_ID \\
+  -H "Authorization: Bearer zf_live_..."`}</Code>
+                <p className="mt-3 text-sm text-neutralx-600">
+                  Antwoord <code className="font-mono">200</code>: <code className="font-mono">{`{ "data": { "id": "...", "deleted": true } }`}</code>. Onbekend of niet van jou: <code className="font-mono">404</code>.
+                </p>
+              </Endpoint>
+
+              {/* POST /brain */}
+              <Endpoint
+                id="brain"
+                method="POST"
+                path="/brain"
+                scope="brain:ask"
+                intro="Stel het ZekerFlex-brein een vraag namens je organisatie (hetzelfde brein als in de app: kennis plus alleen-lezen gegevens, zonder geheugen tussen vragen). Gemaakt voor n8n, Make, Zapier of je eigen code."
+              >
+                <Veldtabel
+                  titel="Verzoek (JSON) — * is verplicht"
+                  rijen={[
+                    { naam: "question", type: "string", verplicht: true, uitleg: "De vraag, 1 tot 1500 tekens." },
+                    { naam: "context", type: "string of object", uitleg: "Extra context (bijv. een webhook-payload). Wordt als gegevens behandeld, nooit als opdracht." },
+                  ]}
+                />
+                <Code>{`curl -X POST ${BASE}/brain \\
+  -H "Authorization: Bearer zf_live_..." \\
+  -H "Content-Type: application/json" \\
+  -d '{ "question": "Hoeveel open diensten heb ik deze week?" }'`}</Code>
+                <Veldtabel
+                  titel="Antwoord"
+                  rijen={[
+                    { naam: "answer", type: "string", uitleg: "Het antwoord van het brein." },
+                    { naam: "mode", type: "string", uitleg: "Hoe het antwoord tot stand kwam." },
+                    { naam: "tools", type: "string[]", uitleg: "Welke gegevensbronnen het brein raadpleegde." },
+                    { naam: "sources", type: "array", uitleg: "De gebruikte kennisbronnen." },
+                    { naam: "links", type: "array", uitleg: "Verwijzingen (label + url)." },
+                  ]}
+                />
               </Endpoint>
 
               {/* iCal */}
