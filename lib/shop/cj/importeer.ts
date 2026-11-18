@@ -20,8 +20,8 @@ import { naarEuroCents } from "@/lib/integrations/wisselkoers";
 import { bewaarLinkBron } from "@/lib/shop/link-product-server";
 import { leesBeleidOpgeslagen } from "@/lib/shop/winkel-ai";
 import { prijsUitInkoop, slugVan, tariefVoor } from "@/lib/shop/winkel-ai-core";
-import { cjProduct, cjVerzendkosten } from "@/lib/shop/cj/cj-client";
-import { categorieKeuze, leesClaim, onzeSku, type CjProduct, type CjVerzending } from "@/lib/shop/cj/cj-core";
+import { cjProduct, cjVerzendkosten, cjVoorraadPerVariant } from "@/lib/shop/cj/cj-client";
+import { categorieKeuze, categorieVanCj, leesClaim, lijktDuits, onzeSku, type CjProduct, type CjVerzending } from "@/lib/shop/cj/cj-core";
 import type { ShopCategorie } from "@/lib/shop/categorieen";
 
 const K_INSTEL = "shop:cj:instellingen";
@@ -73,6 +73,9 @@ export interface CjKoppeling {
   verzendDienst?: string;
   geimporteerdOp: string;
   vertaald: boolean;
+  /** de automatische categorie bij de laatste ronde; wijkt de categorie in de winkel daarvan af, dan koos de beheerder zelf en blijft die staan */
+  categorieAuto?: ShopCategorie;
+  bijgewerktOp?: string;
 }
 
 export async function leesCjKoppeling(productId: string): Promise<CjKoppeling | null> {
@@ -84,11 +87,11 @@ export async function cjProductIds(): Promise<string[]> {
   return Array.isArray(l) ? l.filter((x) => typeof x === "string") : [];
 }
 
-const VERTAAL = `Je vertaalt een productvermelding van een leverancier naar gewoon, vlot Nederlands voor een webshop. Geen Engels, geen opsmuk, geen beloftes over levertijd, voorraad, keurmerken, certificaten of kwaliteit ("premium", "topkwaliteit"). Verzin niets wat er niet staat. De naam: kort en duidelijk (maximaal 70 tekens, geen hoofdletters-schreeuw, geen merknaam die er niet staat). De omschrijving: 2 tot 4 zinnen, maximaal 450 tekens, wat het is en waarvoor het handig is.
+const VERTAAL = `Je vertaalt een productvermelding van een leverancier naar gewoon, vlot Nederlands voor een webshop. De bron is Engels, soms Duits of gebrekkig Engels; het resultaat is altijd Nederlands, nooit Duits en nooit Engels. Geen Engels, geen opsmuk, geen beloftes over levertijd, voorraad, keurmerken, certificaten of kwaliteit ("premium", "topkwaliteit"). Verzin niets wat er niet staat. De naam: kort en duidelijk (maximaal 70 tekens, geen hoofdletters-schreeuw, geen merknaam die er niet staat). De omschrijving: 2 tot 4 zinnen, maximaal 450 tekens, wat het is en waarvoor het handig is.
 Antwoord uitsluitend met JSON: {"naam":"…","omschrijving":"…"}.`;
 
 /** Naam en omschrijving in het Nederlands; lukt het niet, dan de Engelse tekst (en `vertaald: false`). */
-export async function vertaalVermelding(naamEn: string, omschrijvingEn: string): Promise<{ naam: string; omschrijving: string; vertaald: boolean }> {
+export async function vertaalVermelding(naamEn: string, omschrijvingEn: string, poging = 1): Promise<{ naam: string; omschrijving: string; vertaald: boolean }> {
   const terugval = { naam: naamEn.slice(0, 120), omschrijving: (omschrijvingEn || naamEn).slice(0, 600), vertaald: false };
   try {
     const r = await chatJson<{ naam?: unknown; omschrijving?: unknown }>({
@@ -103,6 +106,8 @@ export async function vertaalVermelding(naamEn: string, omschrijvingEn: string):
     const naam = typeof r.naam === "string" ? r.naam.trim().slice(0, 120) : "";
     const omschrijving = typeof r.omschrijving === "string" ? r.omschrijving.trim().slice(0, 600) : "";
     if (naam.length < 2 || omschrijving.length < 10) return terugval;
+    // een Duitse bron komt soms half Duits terug ("Goldaufkleber 16 Stücke"): één keer opnieuw, anders de brontekst
+    if (lijktDuits(`${naam} ${omschrijving}`)) return poging < 2 ? vertaalVermelding(naamEn, omschrijvingEn, poging + 1) : terugval;
     return { naam, omschrijving, vertaald: true };
   } catch (e) {
     logger.warn("cj: vertalen mislukt, Engelse tekst blijft staan", { error: (e as Error).message.slice(0, 120) });
@@ -208,6 +213,11 @@ async function overnemen(pid: string, opties: { actorUserId: string | null; acti
   let slug = slugVan(tekst.naam) || `cj-${pid.toLowerCase()}`;
   for (let i = 2; await prisma.shopProduct.findUnique({ where: { slug }, select: { id: true } }); i++) slug = `${slugVan(tekst.naam) || "product"}-${i}`;
 
+  // voorraad: product/query geeft die lang niet altijd mee; dan de voorraadlijst per product (anders staat alles "uitverkocht")
+  if (p.varianten.length && p.varianten.every((v) => v.voorraad === 0)) {
+    const perVid = await cjVoorraadPerVariant(p.pid);
+    for (const v of p.varianten) v.voorraad = perVid.get(v.vid) ?? 0;
+  }
   const varianten = p.varianten.length
     ? p.varianten
     : [{ vid: p.pid, sku: p.sku, naam: p.naamEn, maat: null, kleur: null, foto: null, inkoopUsdCents: p.inkoopUsdCents, voorraad: 0 }];
@@ -270,6 +280,7 @@ async function overnemen(pid: string, opties: { actorUserId: string | null; acti
     ...(verzending?.dienst ? { verzendDienst: verzending.dienst } : {}),
     geimporteerdOp: new Date().toISOString(),
     vertaald: tekst.vertaald,
+    categorieAuto: p.categorie,
   };
   await kvSet(`${K_PRODUCT}${product.id}`, koppeling);
   await kvSet(`${K_PID}${pid}`, product.id);
@@ -334,4 +345,113 @@ export async function oudAssortimentTerug(actorUserId: string | null): Promise<n
   await kvDelete(K_OUD_UIT);
   await recordAudit({ category: "ADMIN", action: "shop.product.oud-terug", actorUserId, actorLabel: "user", summary: `Oude assortiment teruggezet: ${r.count} producten`, targetType: "shop", targetId: "cj" });
   return r.count;
+}
+
+export interface BijwerkUitkomst {
+  bekeken: number;
+  categorie: number;
+  voorraad: number;
+  vertaald: number;
+  fouten: number;
+  /** waar de volgende ronde verdergaat; null = alles gehad */
+  volgende: number | null;
+  totaal: number;
+}
+
+/** Alle CJ-producten in de winkel: de lijst in KV, plus alles met een cj-sku dat daar niet in staat. */
+async function alleCjProductIds(): Promise<string[]> {
+  const lijst = await cjProductIds();
+  const extra = await prisma.shopProductVariant.findMany({ where: { sku: { startsWith: CJ_SKU_VOORVOEGSEL } }, select: { productId: true }, distinct: ["productId"] });
+  return [...new Set([...lijst, ...extra.map((v) => v.productId)])];
+}
+
+/**
+ * Een ronde langs alle CJ-producten (18 nov: 68 producten, veel in de verkeerde categorie door een vaste keuze bij
+ * "Alle overnemen", bijna alles zonder voorraad, een deel half Duits). Per product: categorie volgens de nieuwste regels,
+ * voorraad per variant, en een tekst die nog Engels of Duits is opnieuw vertalen. Stopt binnen `budgetMs`; `volgende`
+ * zegt waar de volgende aanroep verdergaat.
+ */
+export async function bijwerkenVanCj(opties: { actorUserId: string | null; vanaf?: number; budgetMs?: number }): Promise<BijwerkUitkomst> {
+  const start = Date.now();
+  const budget = opties.budgetMs ?? 200_000;
+  const ids = await alleCjProductIds();
+  const uit: BijwerkUitkomst = { bekeken: 0, categorie: 0, voorraad: 0, vertaald: 0, fouten: 0, volgende: null, totaal: ids.length };
+  let i = Math.max(0, opties.vanaf ?? 0);
+  for (; i < ids.length; i++) {
+    if (Date.now() - start > budget) break;
+    const id = ids[i];
+    if (!id) continue;
+    try {
+      const n = await bijwerkEen(id);
+      uit.bekeken++;
+      if (n.categorie) uit.categorie++;
+      if (n.voorraad) uit.voorraad++;
+      if (n.vertaald) uit.vertaald++;
+    } catch (e) {
+      uit.fouten++;
+      logger.warn("cj: bijwerken mislukt", { error: (e as Error).message.slice(0, 120) });
+    }
+  }
+  uit.volgende = i < ids.length ? i : null;
+  await recordAudit({
+    category: "ADMIN",
+    action: "shop.product.cj-bijwerken",
+    actorUserId: opties.actorUserId,
+    actorLabel: "user",
+    summary: `CJ-producten bijgewerkt: ${uit.bekeken} bekeken, ${uit.categorie} van categorie, ${uit.voorraad} voorraad, ${uit.vertaald} vertaald, ${uit.fouten} mislukt`,
+    targetType: "shop-product",
+    targetId: "cj",
+  });
+  return uit;
+}
+
+async function bijwerkEen(id: string): Promise<{ categorie: boolean; voorraad: boolean; vertaald: boolean }> {
+  const geen = { categorie: false, voorraad: false, vertaald: false };
+  const k = await leesCjKoppeling(id);
+  const product = await prisma.shopProduct.findUnique({ where: { id }, select: { id: true, name: true, category: true, stock: true, variants: { select: { id: true, sku: true, stock: true } } } });
+  if (!k || !product) return geen;
+  const p = await cjProduct(k.pid);
+
+  // categorie: de automatische indeling met de nieuwste regels; koos de beheerder zelf iets anders sinds de vorige ronde, dan blijft dat
+  const auto = categorieVanCj(p.categorieCj, p.naamEn);
+  const handmatig = k.categorieAuto !== undefined && k.categorieAuto !== product.category;
+  const categorie = !handmatig && auto !== product.category;
+
+  // voorraad per variant; staat alles op 0 in product/query, dan de voorraadlijst per product
+  let perVid = new Map(p.varianten.map((v) => [v.vid, v.voorraad]));
+  if (!perVid.size || [...perVid.values()].every((n) => n === 0)) perVid = await cjVoorraadPerVariant(k.pid);
+  const perSku = new Map<string, number>();
+  for (const [sku, v] of Object.entries(k.varianten)) perSku.set(sku, perVid.get(v.vid) ?? 0);
+  let voorraad = false;
+  let totaal = 0;
+  for (const v of product.variants) {
+    const n = perSku.get(v.sku);
+    if (n === undefined) {
+      totaal += v.stock;
+      continue;
+    }
+    totaal += n;
+    if (n !== v.stock) {
+      await prisma.shopProductVariant.update({ where: { id: v.id }, data: { stock: n } });
+      voorraad = true;
+    }
+  }
+
+  // tekst: nog Engels (vertalen mislukte toen, bv. tijdens een uitrol) of half Duits → nog een keer
+  let tekst: { naam: string; omschrijving: string } | null = null;
+  if (!k.vertaald || lijktDuits(product.name)) {
+    const t = await vertaalVermelding(p.naamEn, p.omschrijvingEn);
+    if (t.vertaald) tekst = t;
+  }
+
+  await prisma.shopProduct.update({
+    where: { id },
+    data: {
+      ...(categorie ? { category: auto } : {}),
+      ...(totaal !== product.stock ? { stock: totaal } : {}),
+      ...(tekst ? { name: tekst.naam, description: tekst.omschrijving } : {}),
+    },
+  });
+  await kvSet(`${K_PRODUCT}${id}`, { ...k, categorieAuto: auto, ...(tekst ? { vertaald: true } : {}), bijgewerktOp: new Date().toISOString() } satisfies CjKoppeling);
+  return { categorie, voorraad: voorraad || totaal !== product.stock, vertaald: tekst !== null };
 }

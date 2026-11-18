@@ -140,20 +140,24 @@ export function voorraadVan(inventories: unknown, land?: string): number {
 // Cadeaus is de laatste regel én de uitkomst als niets past.
 const REGELS: [RegExp, ShopCategorie][] = [
   [/\b(safety|work ?wear|workwear|ppe|protective|hi-?vis|helmet|work glove)/i, "Werk & PBM"],
+  // huisdieren vóór speelgoed: "cat toy" en "dog ball" zijn voor het dier
+  [/\b(pets?\b|dog (toy|toys|bed|leash|collar|bowl|food|harness)|cat (toy|toys|tree|bed|litter|scratch\w*)|for (dogs?|cats?)\b|puppy|kitten|leash|aquarium|hamster|bird cage|litter box)/i, "Huisdieren"],
+  // gaming en hobby vóór auto (een racestuur is geen auto-onderdeel) en vóór elektronica (een gaming-stoel is geen elektronica)
+  [/\b(gaming|gamer|gamepad|game (controller|table)|console|playstation|xbox|nintendo|wheel stand|racing wheel|sim racing|foosball|air hockey|billiard|pool table|model kit|diamond painting|knitting|crochet|embroidery|3d pen|paint by numbers|airbrush|spray booth|hobby)/i, "Gaming & hobby"],
   [/\b(car (accessor|mount|holder|seat|wash|vacuum|sticker|charger|organizer|cover|phone)|automotive|dash ?cam|bicycle|bike|cycling|e-?bike|scooter|motorcycle|tires?\b|tyres?\b|windshield|steering wheel)/i, "Auto & fiets"],
   [/\b(phone (case|cover|holder|stand|mount|grip|strap|charger|cable)|iphone|galaxy s|screen protector|tempered glass|airpods? case|earbuds? case|selfie stick|popsocket|magsafe)/i, "Telefoon & accessoires"],
-  [/\b(toy|toys|plush|puzzle|doll|building blocks?|lego|rc car|bouncy|inflatable (castle|pool|slide)|ride-?on|kids?'? (electric )?car|train track|craft kit|play ?set|board game|slime|stuffed animal|jigsaw)/i, "Speelgoed"],
+  [/\b(toy|toys|plush|puzzle|doll|building blocks?|lego|rc car|bouncy|inflatable (castle|pool|slide)|ride-?on|kids?'? (electric )?car|train track|craft kit|play ?(set|shop|kitchen|tent|house|mat)|board game|slime|stuffed animal|jigsaw|exploration (set|kit)|explorer kit)/i, "Speelgoed"],
   [/\b(baby|babies|infant|newborn|toddler|stroller|diaper|nappy|pacifier|crib|bibs?\b|teether|nursery)/i, "Baby & kind"],
-  [/\b(pets?\b|dogs?\b|cats?\b|puppy|kitten|leash|aquarium|hamster|bird cage|litter box)/i, "Huisdieren"],
+  // "napkin rings" en "ring light" zijn geen sieraden
+  [/\b(napkin rings?|curtain rings?|key ?rings?|ring (light|holder|binder))/i, "Wonen & keuken"],
   [/\b(jewel|necklace|bracelet|earring|pendant|rings?\b(?! light)|watch(?!.*smart)|watches)/i, "Sieraden & horloges"],
-  [/\b(electronic|bluetooth|speaker|headphone|earphone|earbud|charger|charging|cable|usb|power bank|camera|smart ?watch|smart home|phone|tablet|keyboard|mouse|gadget|led strip|drone|projector|tracker)/i, "Elektronica"],
-  [/\b(gaming|gamer|gamepad|game controller|console|playstation|xbox|nintendo|model kit|diamond painting|knitting|crochet|embroidery|3d pen|paint by numbers|hobby)/i, "Gaming & hobby"],
-  [/\b(garden (hose|tools?|lights?|planter|decor)|gardening|lawn|planter|hose|tools?\b|drill|screwdriver|wrench|pliers|tape measure|ladder|diy|hardware|workbench|soldering)/i, "Tuin & klussen"],
+  [/\b(electronic|bluetooth|speaker|headphone|earphone|earbud|charger|charging|cable|usb|power bank|camera|smart ?watch|smart home|phone|tablet|keyboard|mouse|gadget|led strip|drone|projector|tracker|microphone|router|webcam)/i, "Elektronica"],
+  [/\b(garden (hose|tools?|lights?|planter|decor)|gardening|lawn|planter|hose|tools?\b|drill|screwdriver|wrench|pliers|tape measure|ladder|diy|hardware|workbench|soldering|glue gun)/i, "Tuin & klussen"],
   [/\b(massager|massage gun|thermometer|first aid|blood pressure|oximeter|posture|orthopedic|knee (brace|pad|support)|back (brace|support)|heating pad|ear ?plugs|sleep mask|pill (box|organizer)|hot water bottle|compression socks)/i, "Gezondheid"],
-  [/\b(furniture|sofa|couch|bean ?bag|chairs?\b|stools?\b|beds?\b|daybed|mattress|tables?\b|desks?\b|shel(f|ves)\b|cabinet|wardrobe|curtain|rugs?\b|carpet|pillow|cushion|blanket|home|kitchen|decor|storage|lamp|lights?\b|lighting|bedding|towel|cleaning|organizer|cups?\b|mug|bottle)/i, "Wonen & keuken"],
+  [/\b(furniture|sofa|couch|lounger|bean ?bag|chairs?\b|stools?\b|beds?\b|daybed|mattress|tables?\b|desks?\b|shel(f|ves)\b|cabinet|wardrobe|tv (stand|unit)|lowboard|sideboard|bookcase|bookshelf|curtain|rugs?\b|carpet|pillow|cushion|blanket|home|kitchen|decor|storage|lamp|lights?\b|lighting|bedding|towel|cleaning|organizer|cups?\b|mug|bottle)/i, "Wonen & keuken"],
   [/\b(bags?\b|backpack|handbag|wallet|purse|shoe|shoes|sneaker|boots?\b|sandal|slipper|luggage)/i, "Tassen & schoenen"],
   [/\b(beauty|make ?up|skin ?care|hair|nail|cosmetic|perfume|shaver|trimmer|brush)/i, "Beauty & verzorging"],
-  [/\b(sport|fitness|yoga|gym|outdoor|camping|hiking|fishing|swim|running|balls?\b)/i, "Sport & buiten"],
+  [/\b(sport|fitness|yoga|gym|outdoor|camping|hiking|fishing|swim|running|balls?\b|darts?\b|dartboard)/i, "Sport & buiten"],
   [/\b(cloth|clothing|dress|shirt|t-shirt|hoodie|jacket|pants|trousers|sweater|apparel|coat|socks|jeans|skirt|lingerie|underwear|swimwear|hats?\b|caps?\b|scarf|gloves)/i, "Kleding"],
   [/\b(stationer(y|ies)|office|notebooks?\b|pens?\b|markers?\b|pencils?\b|planner)/i, "Werkdag"],
   [/\b(christmas|xmas|halloween|easter|party|balloons?\b|birthday|wedding|sinterklaas|new year|valentine|garland|confetti|costume|advent|thanksgiving|carnival)/i, "Feest & seizoen"],
@@ -211,6 +215,32 @@ export function goedkoopsteVerzending(data: unknown): CjVerzending | null {
     beste = { usdCents, dienst: tekst(o.logisticName).slice(0, 80), dagen: tekst(o.logisticAging).slice(0, 20) };
   }
   return beste;
+}
+
+/**
+ * Voorraad per variant-id uit product/stock/getInventoryByPid: data.variantInventories[] met vid en inventory[]
+ * (countryCode, totalInventory). product/query geeft de voorraad lang niet altijd mee; dit wel.
+ */
+export function leesVoorraadPerVariant(data: unknown, land?: string): Map<string, number> {
+  const uit = new Map<string, number>();
+  const lijst = data && typeof data === "object" ? (data as { variantInventories?: unknown }).variantInventories : null;
+  if (!Array.isArray(lijst)) return uit;
+  for (const r of lijst) {
+    if (!r || typeof r !== "object") continue;
+    const o = r as Record<string, unknown>;
+    const vid = tekst(o.vid);
+    if (!vid) continue;
+    uit.set(vid, voorraadVan(o.inventory ?? o.inventories, land));
+  }
+  return uit;
+}
+
+// woorden die in het Nederlands niet voorkomen; "die", "den" en "der" bewust niet (gewoon Nederlands)
+const DUITS = /(und|mit|für|aus|ein|eine|einen|nicht|oder|auch|Stück|Stücke|Weiß|Schwarz|Grün|Größe|verstellbar|klappbar)|[ßäöü]/i;
+
+/** Lijkt deze tekst Duits? Het model laat een Duitse bron soms half staan ("Goldaufkleber 16 Stücke"); dan telt de vertaling niet. */
+export function lijktDuits(t: string): boolean {
+  return DUITS.test(t);
 }
 
 /** Voor wie, uit de CJ-categorie ("Women's Clothing", "Men's Shoes", "Kids & Baby"). */

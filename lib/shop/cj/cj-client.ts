@@ -10,7 +10,7 @@
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
-import { goedkoopsteVerzending, leesCjProduct, leesCjTreffer, type CjProduct, type CjVerzending, type CjZoekTreffer } from "@/lib/shop/cj/cj-core";
+import { goedkoopsteVerzending, leesCjProduct, leesCjTreffer, leesVoorraadPerVariant, type CjProduct, type CjVerzending, type CjZoekTreffer } from "@/lib/shop/cj/cj-core";
 
 export const CJ_HOST = "developers.cjdropshipping.com";
 const BASIS = `https://${CJ_HOST}/api2.0/v1/`;
@@ -236,6 +236,20 @@ export async function cjVerzendkosten(vid: string, van: string, naar = "NL"): Pr
   } catch (e) {
     logger.warn("cj: verzendkosten niet opgehaald, schatting gebruikt", { van, naar, error: (e as Error).message.slice(0, 120) });
     return null;
+  }
+}
+
+/**
+ * Voorraad per variant-id voor een heel product (product/stock/getInventoryByPid): product/query geeft de
+ * voorraad lang niet altijd mee, en zonder voorraad is een product in de winkel "uitverkocht". Leeg bij een fout.
+ */
+export async function cjVoorraadPerVariant(pid: string, land?: string): Promise<Map<string, number>> {
+  try {
+    const d = await cjGet<unknown>("product/stock/getInventoryByPid", { pid });
+    return leesVoorraadPerVariant(d, land);
+  } catch (e) {
+    logger.warn("cj: voorraad niet opgehaald", { error: (e as Error).message.slice(0, 120) });
+    return new Map();
   }
 }
 

@@ -11,7 +11,7 @@ import { SHOP_CATEGORIEEN } from "@/lib/shop/categorieen";
 
 type Stand = { ingesteld: boolean; bewijsGeldigTot: string | null; laatsteOk: string | null; laatsteFout: string | null; laatsteFoutOp: string | null; instellingen: { verzendCents: number; land: string; margePct: number | null } };
 type Treffer = { pid: string; naamEn: string; foto: string | null; inkoopUsdCents: number; inkoopCents: number | null; prijsCents: number | null; categorie: string; categorieCj: string; gevoerd: number };
-type Zoek = { producten: Treffer[]; totaal: number; pagina: number; land: string; margePct: number; verzendCents: number; koersDatum: string | null };
+type Zoek = { producten: Treffer[]; totaal: number; pagina: number; gezochtOp?: string; vertaald?: boolean; land: string; margePct: number; verzendCents: number; koersDatum: string | null };
 type Uitkomst = { pid: string } & ({ fout: string } | { bestaand: boolean; id: string; slug: string; naam: string; prijsCents: number; inkoopCents: number; varianten: number; fotos: number; vertaald: boolean; actief: boolean; verzendCents?: number; verzendEcht?: boolean; melding: string | null });
 
 async function vraag<T>(url: string, body?: unknown, methode = body === undefined ? "GET" : "POST"): Promise<T> {
@@ -27,7 +27,7 @@ export function Leverancier() {
   const [sleutel, setSleutel] = useState("");
   const [fout, setFout] = useState<string | null>(null);
   const [bericht, setBericht] = useState<string | null>(null);
-  const [bezig, setBezig] = useState<"" | "sleutel" | "zoek" | "import" | "oud" | "instel">("");
+  const [bezig, setBezig] = useState<"" | "sleutel" | "zoek" | "import" | "oud" | "instel" | "bijwerk">("");
   const [q, setQ] = useState("");
   const [zoek, setZoek] = useState<Zoek | null>(null);
   const [gekozen, setGekozen] = useState<Set<string>>(new Set());
@@ -35,6 +35,7 @@ export function Leverancier() {
   const [categorie, setCategorie] = useState("");
   const [uitkomsten, setUitkomsten] = useState<Uitkomst[]>([]);
   const [verzendTekst, setVerzendTekst] = useState("");
+  const [bijwerk, setBijwerk] = useState<{ bekeken: number; categorie: number; voorraad: number; vertaald: number; fouten: number; totaal: number; klaar: boolean } | null>(null);
   const [land, setLand] = useState("");
   const [margeTekst, setMargeTekst] = useState("");
   const [oudBewaard, setOudBewaard] = useState(0);
@@ -88,6 +89,8 @@ export function Leverancier() {
       const goed = alle.filter((u) => !("fout" in u)).length;
       setBericht(`${goed} van ${pids.length} overgenomen${meteenAan ? ", en aan in de winkel als de foto gelukt is" : " (staan uit tot je ze aanzet)"}.`);
       setGekozen(new Set());
+      // de vaste categoriekeuze geldt voor één overname; anders komt de volgende zoekopdracht ook in die categorie
+      setCategorie("");
     });
 
   const wissel = (pid: string) =>
@@ -167,7 +170,7 @@ export function Leverancier() {
       {fout && <Notice tone="crit">{fout}</Notice>}
       {bericht && <Notice tone="ok">{bericht}</Notice>}
 
-      <Panel title="Zoeken in de catalogus van CJ" subtitle="Zoek in het Engels (zo staat de catalogus erin): earbuds, led strip, plush toy, hoodie, backpack, yoga mat…">
+      <Panel title="Zoeken in de catalogus van CJ" subtitle="Typ gewoon Nederlands (speelgoed, oordopjes, tuinslang, hondenriem) of Engels; ZekerFlex zet het om voor de Engelse catalogus van CJ.">
         <form
           className="flex flex-col gap-2 sm:flex-row"
           onSubmit={(e) => {
@@ -175,13 +178,13 @@ export function Leverancier() {
             void zoeken(1);
           }}
         >
-          <input className="a-input flex-1" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Zoekwoord in het Engels" aria-label="Zoekwoord" />
+          <input className="a-input flex-1" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Zoekwoord, Nederlands of Engels (bv. speelgoed, oordopjes, tuinslang)" aria-label="Zoekwoord" />
           <button type="submit" className="a-btn a-btn-primary" disabled={bezig !== "" || !stand?.ingesteld}>{bezig === "zoek" ? "Zoeken…" : "Zoeken"}</button>
         </form>
         {zoek && zoek.producten.length > 0 && (
           <div className="mt-4 space-y-3">
             <div className="flex flex-wrap items-center gap-3 text-sm" style={{ color: "var(--a-mute)" }}>
-              <span>{zoek.totaal} gevonden{zoek.land ? `, met voorraad in ${zoek.land}` : ""} · marge {zoek.margePct} % · verzending geschat {euro(zoek.verzendCents)} per stuk (bij overnemen vraagt ZekerFlex het echte tarief naar NL op bij CJ){zoek.koersDatum ? ` · dollarkoers ${zoek.koersDatum}` : ""}</span>
+              <span>{zoek.totaal} gevonden{zoek.vertaald && zoek.gezochtOp ? ` (bij CJ gezocht op "${zoek.gezochtOp}")` : ""}{zoek.land ? `, met voorraad in ${zoek.land}` : ""} · marge {zoek.margePct} % · verzending geschat {euro(zoek.verzendCents)} per stuk (bij overnemen vraagt ZekerFlex het echte tarief naar NL op bij CJ){zoek.koersDatum ? ` · dollarkoers ${zoek.koersDatum}` : ""}</span>
               <label className="flex items-center gap-2" style={{ color: "var(--a-text)" }}><input type="checkbox" checked={meteenAan} onChange={(e) => setMeteenAan(e.target.checked)} /> Meteen aan in de winkel</label>
               <label className="flex items-center gap-2" style={{ color: "var(--a-text)" }}>
                 Categorie
@@ -189,6 +192,7 @@ export function Leverancier() {
                   <option value="">automatisch</option>
                   {SHOP_CATEGORIEEN.map((c) => <option key={c}>{c}</option>)}
                 </select>
+                {categorie && <span className="text-xs" style={{ color: "var(--a-mute)" }}>geldt voor álles wat je nu overneemt</span>}
               </label>
               <button type="button" className="a-btn" disabled={bezig !== "" || gekozen.size === 0} onClick={() => void overnemen([...gekozen])}>
                 {bezig === "import" ? "Overnemen…" : `Gekozen overnemen (${gekozen.size})`}
@@ -245,6 +249,39 @@ export function Leverancier() {
           </ul>
         </Panel>
       )}
+
+      <Panel title="Bijwerken vanuit CJ" subtitle="Loopt alle overgenomen producten langs: de categorie volgens de nieuwste regels, de echte voorraad per variant, en een tekst die nog Engels of half Duits is wordt opnieuw vertaald. Een categorie die je zelf koos ná een eerdere ronde blijft staan.">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className="a-btn a-btn-primary"
+            disabled={bezig !== ""}
+            onClick={() =>
+              void doe("bijwerk", async () => {
+                let vanaf: number | null = 0;
+                const som = { bekeken: 0, categorie: 0, voorraad: 0, vertaald: 0, fouten: 0, totaal: 0, klaar: false };
+                while (vanaf !== null) {
+                  const r = await vraag<{ bekeken: number; categorie: number; voorraad: number; vertaald: number; fouten: number; volgende: number | null; totaal: number }>("/api/admin/shop-ai/cj/bijwerken", { vanaf });
+                  som.bekeken += r.bekeken;
+                  som.categorie += r.categorie;
+                  som.voorraad += r.voorraad;
+                  som.vertaald += r.vertaald;
+                  som.fouten += r.fouten;
+                  som.totaal = r.totaal;
+                  vanaf = r.volgende;
+                  setBijwerk({ ...som });
+                }
+                som.klaar = true;
+                setBijwerk({ ...som });
+                setBericht(`Bijgewerkt: ${som.bekeken} van ${som.totaal} producten bekeken, ${som.categorie} van categorie gewisseld, ${som.voorraad} met nieuwe voorraad, ${som.vertaald} opnieuw vertaald${som.fouten ? `, ${som.fouten} mislukt` : ""}.`);
+              })
+            }
+          >
+            {bezig === "bijwerk" ? "Bezig…" : "Categorie, voorraad en tekst bijwerken"}
+          </button>
+          {bijwerk && !bijwerk.klaar && <span className="text-sm" style={{ color: "var(--a-mute)" }}>{bijwerk.bekeken} van {bijwerk.totaal} bekeken… (een paar seconden per product)</span>}
+        </div>
+      </Panel>
 
       <Panel title="Oude assortiment vervangen" subtitle="Zet alles uit wat niet van CJ komt (en niet van een verkoper is). Niets wordt gewist: met Terugzetten gaan precies die producten weer aan, of per stuk in Beheer → Webshop.">
         <div className="flex flex-wrap gap-2">
