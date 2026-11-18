@@ -18,8 +18,9 @@ vi.mock("@/lib/storage/kv", () => ({
 import { getShopIndeling, resetShopIndeling, setShopIndeling } from "@/lib/ontwerp/shop-indeling-store";
 
 const bron = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8").split("\r\n").join("\n");
-const OUD = ["categorieen", "looks", "populair", "onlangs", "paskamer", "assortiment", "meer", "service", "nieuwsbrief"];
-const STANDAARD = ["ontdek", "categorieen", "themas", "looks", "populair", "cadeauhulp", "onlangs", "paskamer", "assortiment", "alles", "meer", "service", "regelen", "nieuwsbrief"];
+// 18 nov: het paskamer-promoblok is van /shop gehaald (de pagina /shop/paskamer bestaat nog)
+const OUD = ["categorieen", "looks", "populair", "onlangs", "assortiment", "meer", "service", "nieuwsbrief"];
+const STANDAARD = ["ontdek", "categorieen", "themas", "looks", "populair", "cadeauhulp", "onlangs", "assortiment", "alles", "meer", "service", "regelen", "nieuwsbrief"];
 
 beforeEach(() => kv.clear());
 
@@ -36,11 +37,12 @@ describe("de standaard: de oude onderdelen in de oude volgorde, met de blokken v
     expect(zichtbareShopSecties(null, true)).toEqual(["assortiment", "meer", "service", "regelen", "nieuwsbrief"]);
   });
 
-  it("de pagina toont de onderdelen in de volgorde van de indeling; de kop en de achtergrond blijven bovenaan", () => {
+  it("de pagina toont de onderdelen in de volgorde van de indeling; een gekozen achtergrond blijft bovenaan, de kop is weg (18 nov)", () => {
     const src = bron("app/shop/page.tsx");
     expect(src).toContain("zichtbareShopSecties(await getShopIndeling(), browsing)");
-    expect(src.indexOf("<ShopThuisHero")).toBeLessThan(src.indexOf("zichtbaar.map("));
-    expect(src.indexOf('<PaginaAchtergrond pagina="shop" />')).toBeLessThan(src.indexOf("<ShopThuisHero"));
+    expect(src.indexOf('<PaginaAchtergrond pagina="shop" />')).toBeLessThan(src.indexOf("zichtbaar.map("));
+    expect(src).not.toContain("ShopThuisHero");
+    expect(src).not.toContain("ShopPaskamerPromo");
     for (const s of SHOP_SECTIES) expect(src, s.id).toContain(`    ${s.id}: `);
     // "Populair" staat er alleen met vijf producten, zoals voorheen
     expect(src).toContain("populair: featured.length === 5 ?");
@@ -49,11 +51,12 @@ describe("de standaard: de oude onderdelen in de oude volgorde, met de blokken v
 
 describe("een eigen indeling", () => {
   it("verslepen en verbergen", () => {
-    const i = normalizeShopIndeling({ volgorde: ["assortiment", "paskamer", ...OUD], verborgen: ["looks", "nieuwsbrief"] });
-    expect(i.volgorde.slice(0, 2)).toEqual(["assortiment", "paskamer"]);
+    const i = normalizeShopIndeling({ volgorde: ["assortiment", "populair", "paskamer", ...OUD], verborgen: ["looks", "nieuwsbrief"] });
+    // "paskamer" bestaat niet meer en valt weg, zoals elk onbekend onderdeel
+    expect(i.volgorde.slice(0, 2)).toEqual(["assortiment", "populair"]);
     expect(i.volgorde).toHaveLength(STANDAARD.length);
     // een bewaarde indeling van vóór stap 6: de nieuwe onderdelen komen achteraan
-    expect(zichtbareShopSecties(i, false)).toEqual(["assortiment", "paskamer", "categorieen", "populair", "onlangs", "meer", "service", "ontdek", "themas", "cadeauhulp", "alles", "regelen"]);
+    expect(zichtbareShopSecties(i, false)).toEqual(["assortiment", "populair", "categorieen", "onlangs", "meer", "service", "ontdek", "themas", "cadeauhulp", "alles", "regelen"]);
     expect(zichtbareShopSecties(i, true)).toEqual(["assortiment", "meer", "service", "regelen"]);
     expect(isStandaardShopIndeling(i)).toBe(false);
   });

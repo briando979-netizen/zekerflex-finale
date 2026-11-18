@@ -1217,9 +1217,7 @@ export const nl = {
     pdpGeenProfiel: "Welke maat past mij?",
     pdpUitleg: "Zie het aan op je eigen paspop, met je eigen gezicht.",
     promoTitel: "Nieuw: de paskamer",
-    promoTekst: "Zet je eigen gezicht op de paspop, trek kleding aan en zie welke maat past. Zonder account, en je foto blijft bij jou.",
     promoKnop: "Naar de paskamer",
-    promoPunten: ["Jouw gezicht op de paspop", "Maatadvies op jouw lengte en gewicht", "Hele look in één keer in je winkelwagen"],
   },
 
   // particulier/zakelijk en de zakelijke webshop (/shop/zakelijk, 5 nov 2026)

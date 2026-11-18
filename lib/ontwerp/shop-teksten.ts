@@ -20,17 +20,11 @@ export interface ShopTekstVeld {
   plek: { deel: Deel; sleutel: string };
 }
 
-const KOP = "Webshop — kop";
 const ONDERDELEN = "Webshop — onderdelen";
 const OVERIG = "Webshop — alle overige teksten";
 
 /** De teksten die je het vaakst wilt aanpassen, met een eigen naam; de rest volgt vanzelf uit het woordenboek (overigeVelden). */
 export const SHOP_TEKST_VELDEN: ShopTekstVeld[] = [
-  { key: "shop.heroEyebrow", group: KOP, label: "Bovenregel", plek: { deel: "shopThuis", sleutel: "heroEyebrow" } },
-  { key: "shop.heroTitel", group: KOP, label: "Titel", plek: { deel: "shopThuis", sleutel: "heroTitel" } },
-  { key: "shop.heroSub", group: KOP, label: "Introtekst", multiline: true, plek: { deel: "shopThuis", sleutel: "heroSub" } },
-  { key: "shop.heroKnop", group: KOP, label: "Knop 1 (naar de collectie)", plek: { deel: "shopThuis", sleutel: "heroKnop" } },
-  { key: "shop.heroPaskamer", group: KOP, label: "Knop 2 (naar de paskamer)", plek: { deel: "shopThuis", sleutel: "heroPaskamer" } },
   { key: "shop.categorieTitel", group: ONDERDELEN, label: "Categorietegels: titel", plek: { deel: "shopThuis", sleutel: "categorieTitel" } },
   { key: "shop.kledingSub", group: ONDERDELEN, label: "Tegel Kleding: regel eronder", plek: { deel: "shopThuis", sleutel: "kledingSub" } },
   { key: "shop.pbmSub", group: ONDERDELEN, label: "Tegel Werk & PBM: regel eronder", plek: { deel: "shopThuis", sleutel: "pbmSub" } },

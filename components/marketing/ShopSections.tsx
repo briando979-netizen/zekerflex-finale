@@ -1,8 +1,6 @@
-import { PaskamerLink } from "@/components/marketing/PaskamerLink";
 import Link from "next/link";
 import type { Dict } from "@/lib/i18n/dictionaries";
 import { NewsletterSignup } from "@/components/marketing/NewsletterSignup";
-import { Paspop } from "@/components/marketing/paskamer/Paspop";
 
 // De vaste delen van de shop-homepage, opgebouwd als een marktplaats.
 // Serveronderdelen: geen JavaScript in de browser. Het interactieve assortiment

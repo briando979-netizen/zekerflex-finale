@@ -19,7 +19,7 @@ describe("het register", () => {
     const sleutels = contentKeys("shop.");
     expect(sleutels).toEqual(alleShopVelden(nl).map((v) => v.key));
     expect(sleutels.slice(0, SHOP_TEKST_VELDEN.length)).toEqual(SHOP_TEKST_VELDEN.map((v) => v.key));
-    expect(SHOP_TEKST_VELDEN).toHaveLength(18);
+    expect(SHOP_TEKST_VELDEN).toHaveLength(13);
     const teksten = [...Object.values(nl.shop), ...Object.values(nl.shopThuis)].filter((v) => typeof v === "string" && v.trim());
     expect(sleutels.length).toBe(teksten.length);
     expect(sleutels.length).toBeGreaterThan(150);
@@ -28,7 +28,7 @@ describe("het register", () => {
 
   it("de standaard is de Nederlandse woordenboektekst", () => {
     const perSleutel = new Map(CONTENT_REGISTRY.map((c) => [c.key, c]));
-    expect(perSleutel.get("shop.heroTitel")?.default).toBe(nl.shopThuis.heroTitel);
+    expect(perSleutel.get("shop.categorieTitel")?.default).toBe(nl.shopThuis.categorieTitel);
     expect(perSleutel.get("shop.popular")?.default).toBe(nl.shop.popular);
     expect(perSleutel.get("shop.t.onlangsTitel")?.default).toBe(nl.shopThuis.onlangsTitel);
     expect(perSleutel.get("shop.x.navKleding")?.default).toBe(nl.shop.navKleding);
@@ -47,13 +47,13 @@ describe("het register", () => {
 
 describe("eigen teksten toepassen", () => {
   it("een eigen tekst vervangt de Nederlandse, ook een tekst zonder eigen naam, en het oorspronkelijke woordenboek blijft heel", () => {
-    const d = metShopTeksten(nl, { "shop.heroTitel": "Werkkleding met ons logo", "shop.popular": "Meest verkocht", "shop.t.onlangsTitel": "Laatst gezien", "shop.x.navKleding": "Mode" }, "nl");
-    expect(d.shopThuis.heroTitel).toBe("Werkkleding met ons logo");
+    const d = metShopTeksten(nl, { "shop.categorieTitel": "Werkkleding met ons logo", "shop.popular": "Meest verkocht", "shop.t.onlangsTitel": "Laatst gezien", "shop.x.navKleding": "Mode" }, "nl");
+    expect(d.shopThuis.categorieTitel).toBe("Werkkleding met ons logo");
     expect(d.shop.popular).toBe("Meest verkocht");
     expect(d.shopThuis.onlangsTitel).toBe("Laatst gezien");
     expect(d.shop.navKleding).toBe("Mode");
-    expect(d.shopThuis.heroSub).toBe(nl.shopThuis.heroSub);
-    expect(nl.shopThuis.heroTitel).toBe("Kleding en werkkleding die met je meewerkt");
+    expect(d.shopThuis.looksSub).toBe(nl.shopThuis.looksSub);
+    expect(nl.shopThuis.categorieTitel).toBe("Waar ben je naar op zoek?");
     expect(d.nav).toBe(nl.nav);
   });
 

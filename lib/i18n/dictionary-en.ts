@@ -1200,9 +1200,7 @@ export const en: Dict = {
     pdpGeenProfiel: "Which size fits me?",
     pdpUitleg: "See it on your own mannequin, with your own face.",
     promoTitel: "New: the fitting room",
-    promoTekst: "Put your own face on the mannequin, try clothes on and see which size fits. No account needed, and your photo stays with you.",
     promoKnop: "Go to the fitting room",
-    promoPunten: ["Your face on the mannequin", "Size advice for your height and weight", "Whole look to your cart in one go"],
   },
 
   shopZakelijk: {
@@ -1312,11 +1310,6 @@ export const en: Dict = {
   },
 
   shopThuis: {
-    heroEyebrow: "ZekerFlex Shop",
-    heroTitel: "Clothing and workwear that works with you",
-    heroSub: "From safety shoes to a warm fleece: everything for your workday and after. Try it on your own mannequin first.",
-    heroKnop: "Shop the collection",
-    heroPaskamer: "Try the fitting room",
     categorieTitel: "What are you looking for?",
     kledingSub: "Hoodies, shirts, fleece and trousers",
     pbmSub: "Safety shoes, gloves and high visibility",
