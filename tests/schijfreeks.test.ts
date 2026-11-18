@@ -10,6 +10,7 @@ import {
   groeiPerDag,
   maakPunt,
   ondergrens,
+  trendReeks,
   voegPuntToe,
   type SchijfPunt,
 } from "@/lib/ops/schijfreeks";
@@ -161,6 +162,39 @@ describe("schijfreeks: de zaagtand van de buildcache", () => {
     // vanaf de piek zou 85% over een paar uur zijn; vanaf de bodem (±60 GB) is het ver weg
     expect(dagenTot(r, 85)!).toBeGreaterThan(30);
     expect(beoordeelSchijf(r).melding).toBeNull();
+  });
+
+  it("meerdere uitrollen per dag breken de trend niet: elke zakking van de piek is geen opruiming (18 nov)", () => {
+    // 1,8 GB per dag op de bodem; elke twaalf uur een uitrolpiek van 12 GB die het uur erna weer zakt (zakking > KNIK_PERCENT)
+    const pieken = [10, 22, 34, 46, 58, 70, 82];
+    const r = zaagtand(96, 60, 12, pieken, 1.8);
+    for (const i of pieken) expect((r[i]!.gebruikt - r[i + 1]!.gebruikt) / (100 * GB) * 100).toBeGreaterThan(KNIK_PERCENT);
+    expect(trendReeks(r)).toHaveLength(r.length); // geen enkele knik
+    expect(groeiPerDag(r)! / GB).toBeGreaterThan(1.5);
+    expect(groeiPerDag(r)! / GB).toBeLessThan(2.1);
+  });
+
+  it("een snelle groei van de bodem tussen de uitrollen geeft de trendmelding", () => {
+    // bodem 66 GB, daarna 3 GB per dag (zoals dagelijks 1,8 GB aan back-ups plus de rest), met uitrolpieken erbovenop
+    // de laatste uitrol is net afgelopen (piek op uur 68, zakking op uur 69): de oude regel begon de trend daar opnieuw
+    const r = zaagtand(72, 66, 10, [20, 21, 44, 45, 68], 3);
+    const b = beoordeelSchijf(r);
+    expect(b.dagenTot85!).toBeLessThan(7);
+    expect(b.melding?.toon).toBe("warn");
+  });
+
+  it("een echte opruiming van de bodem is nog steeds een knik", () => {
+    const voor = zaagtand(48, 70, 10, [20, 21], 1);
+    const na = reeks(30, 45, 0.5, T0 + 48 * UUR); // de bodem zakt van ±72 naar 45 GB
+    const r = [...voor, ...na];
+    expect(trendReeks(r)).toHaveLength(30);
+    expect(groeiPerDag(r)! / GB).toBeCloseTo(0.5, 1);
+  });
+
+  it("na een gat in de metingen (langer dan 24 uur) telt een daling nog steeds als knik", () => {
+    const voor = reeks(10, 70, 0);
+    const na = reeks(10, 50, 0, T0 + 10 * UUR + 2 * DAG);
+    expect(trendReeks([...voor, ...na])).toHaveLength(10);
   });
 
   it("de ondergrens bewaart een schone rechte reeks precies, en begint pas na een vol venster", () => {
