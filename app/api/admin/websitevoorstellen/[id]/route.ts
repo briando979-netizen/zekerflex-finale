@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { withAdminAccess } from "@/lib/auth/handlers";
-import { measureNewSite, transferWebsiteProposal, updateWebsiteProposal } from "@/lib/sales/website-proposal";
+import { measureNewSite, transferWebsiteProposal, updateWebsiteProposal, verstuurWebsitevoorstelMail } from "@/lib/sales/website-proposal";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 // Platform admins only; sales people use /api/sales/websitevoorstellen/<id>.
 
 const schema = z.object({
-  action: z.enum(["verstuurd", "afgewezen", "ingetrokken", "verlengen", "plek-vrijgeven", "overzetten", "meten"]),
+  action: z.enum(["verstuurd", "afgewezen", "ingetrokken", "verlengen", "plek-vrijgeven", "overzetten", "meten", "mailen"]),
   email: z.string().trim().max(200).optional(),
 });
 
@@ -32,6 +32,11 @@ export const PATCH = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (
     const measured = await measureNewSite(params.id);
     if (!measured) throw AppError.validation("Meten lukte nu niet. Probeer het over een paar minuten opnieuw.");
     return NextResponse.json({ proposal: measured });
+  }
+  if (action === "mailen") {
+    return NextResponse.json({
+      proposal: await verstuurWebsitevoorstelMail(params.id, { userId: principal.userId, name: principal.fullName || principal.email, email: principal.email }, email),
+    });
   }
   return NextResponse.json({ proposal: await updateWebsiteProposal(params.id, action, by) });
 });

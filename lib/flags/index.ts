@@ -129,6 +129,15 @@ FLAG_REGISTRY.push({
   default: false,
 });
 
+// De automatische websitepijplijn (lib/sales/website-pijplijn.ts, 18 nov): zet vanzelf voorstellen klaar, verstuurt nooit zelf naar een bedrijf.
+FLAG_REGISTRY.push({
+  key: "sales-website-pijplijn",
+  label: "Sales: websitevoorstellen vanzelf klaarzetten",
+  description:
+    "Aan = elke dag (08:30 UTC) zoekt ZekerFlex een paar gevonden bedrijven met een eigen website, scant hun site en zet er een websitevoorstel voor klaar (een rapport 'wat kan beter + wat wij bouwen' plus een nieuwe luxe voorbeeldsite), hooguit drie per dag. Je krijgt er één samenvatting van per mail en melding. Er gaat NOOIT vanzelf iets naar een bedrijf: jij opent het voorstel in Beheer, Websitevoorstellen en verstuurt het met één klik ('Verstuur naar het bedrijf'). Uit (standaard) = er gebeurt niets.",
+  default: false,
+});
+
 // Boekhouding: de bank automatisch ophalen (lib/boekhouding/bank/koppeling); aan pas na de eenmalige toestemming bij de bank.
 FLAG_REGISTRY.push({
   key: "boekhouding-bankkoppeling",

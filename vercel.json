@@ -23,6 +23,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/internal/sales/website-pijplijn",
+      "schedule": "30 8 * * *"
+    },
+    {
       "path": "/api/internal/ai/watchdog",
       "schedule": "0 7 * * *"
     },

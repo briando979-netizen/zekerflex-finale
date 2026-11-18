@@ -54,8 +54,9 @@ export function WebsiteProposalsAdmin({ origin, me }: { origin: string; me: stri
     await load();
   }
 
-  async function act(p: WebsiteProposal, action: ProposalAction | "meten") {
+  async function act(p: WebsiteProposal, action: ProposalAction | "meten" | "mailen") {
     if (action === "ingetrokken" && !window.confirm(`Het voorstel voor ${p.bedrijf} intrekken? De nieuwe website gaat offline en het webadres komt weer vrij.`)) return;
+    if (action === "mailen" && !window.confirm(`Het websitevoorstel nu per e-mail naar ${p.bedrijf} sturen? Hij gaat naar het bekende e-mailadres van dit bedrijf.`)) return;
     setBusy(p.id);
     if (action === "meten") setMeasuring(p.id);
     const r = await fetch(`/api/admin/websitevoorstellen/${p.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) }).catch(() => null);
@@ -207,8 +208,11 @@ export function WebsiteProposalsAdmin({ origin, me }: { origin: string; me: stri
                       <a href={`/websitevoorstel/${p.id}`} target="_blank" rel="noopener" className="a-button text-xs">Voorstelpagina</a>
                       <button type="button" onClick={() => void copy(link, "Link")} className="a-button text-xs">Kopieer link</button>
                       <button type="button" onClick={() => void copy(mailText(p, data.offer, origin, me), "Mailtekst")} className="a-button text-xs">Kopieer mailtekst</button>
+                      {(p.status === "concept" || p.status === "verstuurd" || p.status === "bekeken") && (
+                        <button type="button" disabled={busy === p.id} onClick={() => void act(p, "mailen")} className="a-button a-button-primary text-xs disabled:opacity-50">Verstuur naar het bedrijf</button>
+                      )}
                       {p.status === "concept" && (
-                        <button type="button" disabled={busy === p.id} onClick={() => void act(p, "verstuurd")} className="a-button text-xs">Ik heb hem verstuurd</button>
+                        <button type="button" disabled={busy === p.id} onClick={() => void act(p, "verstuurd")} className="a-button text-xs">Ik heb hem zelf verstuurd</button>
                       )}
                       <button type="button" disabled={busy === p.id} onClick={() => void act(p, "meten")} className="a-button text-xs">{measuring === p.id ? "Bezig met meten…" : "Meet nieuwe site"}</button>
                       <button type="button" disabled={busy === p.id} onClick={() => void act(p, "verlengen")} className="a-button text-xs">Verleng {data.offer.pricing.geldigDagen} dagen</button>

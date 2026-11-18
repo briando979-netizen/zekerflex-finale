@@ -34,6 +34,10 @@ cat > /etc/crontabs/root <<EOF
 0 8 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/sales/tick"
 0 8,12,16 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/sales/offers-sweep"
 0 7 * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/scans/dagoverzicht"
+# dagelijks 08:30 UTC: automatische websitepijplijn (lib/sales/website-pijplijn.ts). Zoekt open leads met een site, maakt er hooguit een
+# paar websitevoorstellen (concept + nieuwe site) voor en stuurt de eigenaar een samenvatting. Verstuurt nooit zelf naar een bedrijf.
+# Doet niets zolang de vlag sales-website-pijplijn uit staat (dan telt hij alleen en meldt hij "gelukt"). Zwaar (hele site lezen + bouwen), dus ruim de tijd.
+30 8 * * * wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/sales/website-pijplijn"
 # elke 15 min: verzegelde chipgegevens (MRZ-sleutel, chipsessies, uitslagen) echt wissen als ze te oud zijn (lib/kyc/chip/sessie.ts)
 */15 * * * * wget -q -O /dev/null -T 60 "$H" "$APP/api/internal/kyc/chip-opruimen"
 # elke minuut: geplande chatberichten versturen die aan de beurt zijn ("later versturen", lib/messaging/gepland.ts)

@@ -36,6 +36,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   // elke nacht na de RAG-herindexering: momentopname van de Kennisgraaf voor de groeireeks (lib/rag/graph.ts)
   { job: "kennisgraaf-snapshot", label: "Kennisgraaf: momentopname (groei)", maxAgeHours: 26 },
   { job: "sales-motor", label: "Sales-motor", maxAgeHours: 26 },
+  // dagelijks 08:30 UTC: de automatische websitepijplijn (lib/sales/website-pijplijn.ts); met de vlag uit telt een run ook als geslaagd
+  { job: "sales-pijplijn", label: "Sales: websitevoorstellen vanzelf klaarzetten", maxAgeHours: 26 },
   { job: "ai-watchdog", label: "AI-watchdog", maxAgeHours: 26 },
   { job: "abu-phase-sweep", label: "ABU-fasen", maxAgeHours: 26 },
   { job: "claim-collections-sweep", label: "Incasso & herinneringen", maxAgeHours: 26 },

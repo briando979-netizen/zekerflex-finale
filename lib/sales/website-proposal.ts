@@ -7,7 +7,8 @@ import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { alertOwner } from "@/lib/ops/alert";
-import { sendMail } from "@/lib/mail";
+import { sendMail, mailShell, mailButton } from "@/lib/mail";
+import { isBounceOpschorting } from "@/lib/mail/bounce";
 import { sendUserPush } from "@/lib/notifications/push";
 import { kvDelete, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
 import { amsterdamClock, amsterdamDayKey } from "@/lib/time/amsterdam";
@@ -141,6 +142,8 @@ const PRICING_KEY = "wvoorstel-prijzen";
 
 export const isProposalId = (id: string) => /^[a-f0-9]{24}$/.test(id);
 const isReservedTestEmail = (email: string) => /\.(test|example|invalid|localhost)$/i.test(email.trim());
+const escHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const OPEN: ProposalStatus[] = ["concept", "verstuurd", "bekeken", "akkoord"];
 
 export function isExpired(p: Pick<WebsiteProposal, "expiresAt">, now = Date.now()): boolean {
@@ -481,6 +484,81 @@ export async function updateWebsiteProposal(id: string, action: ProposalAction, 
     next = await save(p, `Introductieplek ${p.akkoord.plek} vrijgegeven`, by.name, { akkoord: { ...p.akkoord, plek: null } });
   }
   await recordAudit({ category: "SALES", action: `website-proposal.${action}`, actorUserId: by.userId, summary: `Websitevoorstel ${p.bedrijf}: ${next.history[0]?.what ?? action}`, targetType: "website-proposal", targetId: id });
+  return next;
+}
+
+/**
+ * Verstuur het voorstel met één klik naar het bedrijf (Admin → Websitevoorstellen,
+ * knop "Verstuur naar het bedrijf"). Een mens drukt op de knop; ZekerFlex mailt
+ * nooit vanzelf. De mail is een zakelijke introductie ("sales-outreach", met
+ * afmeldlink), gaat nooit naar een testadres en zet het voorstel daarna op
+ * verstuurd. Zonder bekend e-mailadres faalt hij netjes zodat de mens 'Kopieer
+ * mailtekst' kan gebruiken.
+ */
+export async function verstuurWebsitevoorstelMail(
+  id: string,
+  by: { userId: string; name: string; email?: string | undefined },
+  emailOverride?: string | undefined,
+): Promise<WebsiteProposal> {
+  const p = await getWebsiteProposal(id);
+  if (!p) throw AppError.notFound("Dit voorstel bestaat niet.");
+  if (!OPEN.includes(p.status)) throw AppError.validation("Dit voorstel kan niet meer verstuurd worden.");
+  if (isExpired(p)) throw AppError.validation("Dit voorstel is verlopen. Verleng het eerst.");
+
+  let email = emailOverride?.trim().toLowerCase() ?? "";
+  if (!email && p.leadId) {
+    const lead = await prisma.salesLead.findUnique({ where: { id: p.leadId }, select: { contactEmail: true, discoveredEmail: true } }).catch(() => null);
+    email = (lead?.contactEmail || lead?.discoveredEmail || "").trim().toLowerCase();
+  }
+  if (!EMAIL_RE.test(email) || email.length > 200) {
+    throw AppError.validation("Van dit bedrijf is geen geldig e-mailadres bekend. Vul het adres in, of gebruik 'Kopieer mailtekst' en verstuur het zelf.");
+  }
+  if (isReservedTestEmail(email)) throw AppError.validation("Dit is een testadres; daar sturen we geen voorstel naartoe.");
+
+  const base = env.APP_BASE_URL.replace(/\/+$/, "");
+  const link = `${base}/websitevoorstel/${p.id}`;
+  const geldig = new Date(p.expiresAt).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });
+  const intro = `Ik heb de website van ${p.bedrijf} (${p.host}) bekeken en er alvast een nieuwe voor gemaakt: sneller, veiliger, beter te vinden in Google en met een luxe uitstraling. Je huidige site scoort ${p.check.score} van de 100 in onze website-check${p.nieuw ? `, de nieuwe ${p.nieuw.score}` : ""}.`;
+  const slot = `Je nieuwe website en alle verbeteringen staan hier klaar, alleen voor jou. Het voorstel is geldig tot ${geldig}.`;
+  const res = await sendMail({
+    to: email,
+    from: env.MAIL_SALES_FROM,
+    replyTo: by.email || env.MAIL_SALES_FROM,
+    kind: "sales-outreach",
+    subject: `Een nieuwe website voor ${p.bedrijf}`,
+    text: `Hallo,\n\n${intro}\n\n${slot}\n${link}\n\nHeb je vragen, antwoord gerust op deze mail.\n\nMet vriendelijke groet,\n${by.name}\nZekerFlex`,
+    html: mailShell(
+      `Een nieuwe website voor ${escHtml(p.bedrijf)}`,
+      `<p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#3C4A42">Hallo,</p>
+       <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#3C4A42">${escHtml(intro)}</p>
+       <p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#3C4A42">${escHtml(slot)}</p>
+       <p style="margin:0 0 14px">${mailButton(link, "Bekijk je nieuwe website")}</p>
+       <p style="margin:0;font-size:14px;color:#3C4A42">Met vriendelijke groet,<br>${escHtml(by.name)}<br>ZekerFlex</p>`,
+    ),
+  });
+  if (res.suppressed) {
+    throw AppError.validation(
+      isBounceOpschorting(res.suppressed)
+        ? "Mail naar dit adres kwam eerder terug: het adres bestaat niet. We hebben niets verstuurd; zoek een ander adres van dit bedrijf."
+        : "Dit adres heeft zich afgemeld voor zakelijke introducties; we hebben niets verstuurd.",
+    );
+  }
+  if (res.error) throw AppError.upstream(`Versturen lukte niet: ${res.error}`);
+
+  if (p.leadId) {
+    const lead = await prisma.salesLead.findUnique({ where: { id: p.leadId }, select: { notes: true, contactEmail: true } }).catch(() => null);
+    if (lead) {
+      const dag = new Date().toLocaleDateString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "short" });
+      await prisma.salesLead
+        .update({
+          where: { id: p.leadId },
+          data: { notes: `[${dag}] Websitevoorstel gemaild naar ${email} door ${by.name}.\n${lead.notes ?? ""}`.slice(0, 2000), lastContactedAt: new Date(), ...(lead.contactEmail ? {} : { contactEmail: email }) },
+        })
+        .catch(() => undefined);
+    }
+  }
+  const next = await save(p, `Gemaild naar ${email}`, by.name, { sentAt: p.sentAt ?? new Date().toISOString(), status: p.status === "concept" ? "verstuurd" : p.status });
+  await recordAudit({ category: "SALES", action: "website-proposal.gemaild", actorUserId: by.userId, summary: `Websitevoorstel ${p.bedrijf} gemaild naar ${email}`, targetType: "website-proposal", targetId: id });
   return next;
 }
 
