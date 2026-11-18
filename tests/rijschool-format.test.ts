@@ -11,15 +11,15 @@ describe("adres en telefoon op de rijschoolsite", () => {
   });
 
   it("maakt telefoonnummers leesbaar", () => {
-    expect(telefoonWeergave("0634825780")).toBe("06 34 82 57 80");
-    expect(telefoonWeergave("+31 6 34825780")).toBe("06 34 82 57 80");
+    expect(telefoonWeergave("0612345678")).toBe("06 12 34 56 78");
+    expect(telefoonWeergave("+31 6 12345678")).toBe("06 12 34 56 78");
     expect(telefoonWeergave("0501234567")).toBe("050 123 4567");
     expect(telefoonWeergave("+44 20 7946 0958")).toBe("+44 20 7946 0958");
   });
 
   it("maakt een internationale belink", () => {
-    expect(telefoonLink("06 34 82 57 80")).toBe("+31634825780");
-    expect(telefoonLink("+31634825780")).toBe("+31634825780");
-    expect(telefoonLink("0031634825780")).toBe("+31634825780");
+    expect(telefoonLink("06 12 34 56 78")).toBe("+31612345678");
+    expect(telefoonLink("+31612345678")).toBe("+31612345678");
+    expect(telefoonLink("0031612345678")).toBe("+31612345678");
   });
 });
