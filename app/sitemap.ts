@@ -3,6 +3,7 @@ import { RUBRIEK_SLUGS, VERKOPEN_PAD, VERKOPEN_START_PAD, rubriekPad } from "@/l
 import { SITE } from "@/lib/seo";
 import { prisma } from "@/lib/prisma";
 import { GUIDES, POSTS } from "@/lib/kennis/content";
+import { geplaatsteBerichten } from "@/lib/nieuws/store";
 import { WHITEPAPERS } from "@/lib/kennis/whitepapers";
 import { CITIES } from "@/lib/seo-cities";
 import { SECTORS } from "@/lib/seo-sectors";
@@ -86,6 +87,9 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
       const beelden = aanbodBeelden(a).map((b) => `${SITE.url}${b.pad}`);
       return { ...entry(`/aanbod/${a.slug}`, 0.7, "monthly"), ...(beelden.length ? { images: beelden } : {}) };
     }),
+    // De nieuwsroom: de lijst en elk geplaatst bericht (lib/nieuws)
+    entry("/nieuws", 0.7, "daily"),
+    ...(await geplaatsteBerichten()).map((b) => entry(`/nieuws/${b.slug}`, 0.5, "monthly", b.geplaatst ?? b.gemaakt)),
     // Eigen pagina's uit de Site-ontwerper (/p/<slug>): alleen live en niet op "niet in Google"
     ...(await paginaLijst().catch(() => []))
       .filter((p) => p.live && !p.live.noindex)

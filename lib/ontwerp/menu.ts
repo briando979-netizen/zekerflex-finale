@@ -63,6 +63,7 @@ export const STANDAARD_KOLOMMEN: VoettekstKolom[] = [
       { href: "/kennis/werkgevers", label: "Helpcentrum werkgevers" },
       { href: "/kennis/whitepapers", label: "Whitepapers" },
       { href: "/rekentools", label: "Gratis rekentools" },
+      { href: "/nieuws", label: "Nieuwsroom" },
       { href: "/kennis/blog", label: "Blog" },
       { href: "/kennis/faq", label: "Veelgestelde vragen" },
     ],

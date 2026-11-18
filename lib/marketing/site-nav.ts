@@ -45,7 +45,8 @@ const KENNIS_ITEMS: MenuItem[] = [
   { title: "Wet DBA voor bedrijven", desc: "Schijnzelfstandigheid, gezag en handhaving — helder uitgelegd.", href: "/kennis/wet-dba" },
   { title: "Whitepapers", desc: "Belasting, administratie en verzekering — als pdf om te bewaren.", href: "/kennis/whitepapers" },
   { title: "Rekentools", desc: "Uurtarief, kosten van een flexkracht en de Wet DBA-check — gratis.", href: "/rekentools" },
-  { title: "Blogs", desc: "Nieuws en achtergrond over flexibel werk en het platform.", href: "/kennis/blog" },
+  { title: "Nieuwsroom", desc: "Het laatste nieuws over werk, regels en ondernemen, kort uitgelegd.", href: "/nieuws" },
+  { title: "Blogs", desc: "Achtergrond over flexibel werk en het platform.", href: "/kennis/blog" },
   { title: "FAQ", desc: "Kort antwoord op de vragen die we het vaakst krijgen.", href: "/kennis/faq" },
 ];
 

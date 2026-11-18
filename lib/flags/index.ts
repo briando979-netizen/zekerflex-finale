@@ -111,6 +111,15 @@ FLAG_REGISTRY.push({
   default: false,
 });
 
+// De nieuwsroom (lib/nieuws/ronde.ts, 18 nov): berichten wachten standaard als concept op een mens.
+FLAG_REGISTRY.push({
+  key: "nieuws-vanzelf-plaatsen",
+  label: "Nieuwsroom: berichten vanzelf plaatsen",
+  description:
+    "Aan = een nieuwsbericht dat de site zelf schreef en dat door de controle kwam (elk getal staat in de bron) gaat meteen op /nieuws. Uit (standaard) = het bericht wacht als concept in Beheer, Nieuwsroom tot je op Plaatsen drukt. Een afgekeurd bericht wordt nooit geplaatst. Wisselen kan ook in Beheer, Nieuwsroom.",
+  default: false,
+});
+
 // De postbus info@ naloopt en indeelt (lib/mail/info-ronde.ts, 18 nov): eerst een proefstand die alleen opschrijft wat hij zou doen.
 FLAG_REGISTRY.push({
   key: "info-mail-afhandelen",

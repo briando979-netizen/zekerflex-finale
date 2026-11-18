@@ -124,6 +124,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "mail-bounces", label: "Terugkaatsers in de postbus nalezen", maxAgeHours: 3 },
   // elke 5 minuten (/api/internal/mail/info): de postbus info@ indelen; met de vlag uit schrijft hij alleen op wat hij zou doen
   { job: "info-mail", label: "Postbus info@ naloopt en indeelt", maxAgeHours: 1 },
+  // vier keer per dag (/api/internal/nieuws): de nieuwsroom bijwerken uit openbare bronnen (lib/nieuws/ronde.ts)
+  { job: "nieuws", label: "Nieuwsroom bijwerken", maxAgeHours: 14 },
   // dagelijks 03:20 UTC (/api/internal/klussen/verlopen): klussen na afloop naar Afgerond; met de vlag uit telt hij alleen (ook een geslaagde run)
   { job: "klussen-verlopen", label: "Klussen na afloop afronden", maxAgeHours: 26 },
   // ai-warm (elke 4 min) staat er bewust NIET in: de route schrijft alleen een hartslag als "alles gratis"

@@ -94,6 +94,8 @@ cat > /etc/crontabs/root <<EOF
 35 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/mail/bounces"
 # elke 5 minuten: de postbus info@ indelen (lib/mail/info-ronde.ts); doet alleen opschrijven zolang de vlag info-mail-afhandelen uit staat
 */5 * * * * wget -q -O /dev/null -T 100 "$H" "$APP/api/internal/mail/info"
+# vier keer per dag (06:40, 10:40, 14:40, 18:40 UTC): de nieuwsroom bijwerken (lib/nieuws/ronde.ts); hooguit twee berichten per ronde, niet op :00 (dan is het eigen model bezet)
+40 6,10,14,18 * * * wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/nieuws"
 # elk uur: bronnen van buiten ophalen die aan de beurt zijn (pompprijzen, minimumloon, cao, KVK, schermcontrole)
 20 * * * * wget -q -O /dev/null -T 600 "$H" "$APP/api/internal/bronnen/tick"
 # elke 10 min: AI-opdrachten van de video-editor op de achtergrond afwerken (antwoordt meteen)

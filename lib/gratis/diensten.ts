@@ -388,11 +388,11 @@ export const GRATIS_DIENSTEN: GratisDienst[] = [
   {
     id: "open-data",
     naam: "Open overheidsgegevens",
-    waarvoor: "Brandstofprijzen en wet- en regelgeving voor de kennisbank en de rekentools",
-    nu: "CBS StatLine, de zoekdienst van repository.overheid.nl en rijksoverheid.nl: openbaar en gratis",
+    waarvoor: "Brandstofprijzen en wet- en regelgeving voor de kennisbank en de rekentools, en het nieuws van het CBS voor de nieuwsroom",
+    nu: "CBS StatLine, de nieuwsfeed van cbs.nl, de zoekdienst van repository.overheid.nl en rijksoverheid.nl: openbaar en gratis",
     eigen: "Het zijn openbare bronnen zonder kosten; een eigen bron is niet nodig.",
     status: "gratis",
-    hosts: ["opendata.cbs.nl", "repository.overheid.nl", "www.rijksoverheid.nl"],
+    hosts: ["opendata.cbs.nl", "www.cbs.nl", "repository.overheid.nl", "www.rijksoverheid.nl"],
   },
   {
     id: "id-leverancier",
