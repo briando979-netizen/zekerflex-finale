@@ -5,8 +5,9 @@ import net from "node:net";
 // Minimal read-only IMAP client — zero dependencies, same spirit as the
 // from-scratch SMTP client in lib/mail/smtp.ts. Just enough IMAP4rev1 to list
 // recent messages (UID/FLAGS/ENVELOPE) and fetch one message's text body, for
-// the admin "Postvak in" view. Not a general-purpose IMAP library: no IDLE,
-// no write operations beyond marking \Seen, no folder management.
+// the admin "Postvak in" view. Not a general-purpose IMAP library: no IDLE.
+// Schrijven doet alleen openWerkSessie (onderaan): een mail naar een map verplaatsen en op gelezen/beantwoord zetten.
+// Er wordt nooit iets verwijderd.
 // ---------------------------------------------------------------------------
 
 export interface ImapConfig {
@@ -34,6 +35,8 @@ export interface ImapEnvelope {
   /** RFC 5322 Message-ID without angle brackets, for In-Reply-To on answers */
   messageId: string | null;
   seen: boolean;
+  /** \Answered: er is al op geantwoord (alleen aanwezig als dat zo is) */
+  answered?: boolean;
 }
 
 class ImapError extends Error {}
@@ -299,6 +302,7 @@ function envelopesUitFetch(fetchLines: string[]): ImapEnvelope[] {
     const uidMatch = /UID (\d+)/i.exec(l);
     const flagsList = parseParenListAfter(l, "FLAGS ") ?? [];
     const seen = flagsList.some((f) => typeof f === "string" && f.toUpperCase() === "\\SEEN");
+    const answered = flagsList.some((f) => typeof f === "string" && f.toUpperCase() === "\\ANSWERED");
     const envList = parseParenListAfter(l, "ENVELOPE ");
     // ENVELOPE: date, subject, from, sender, reply-to, to, cc, bcc, in-reply-to, message-id
     const env = (envList ?? []) as unknown[];
@@ -317,6 +321,7 @@ function envelopesUitFetch(fetchLines: string[]): ImapEnvelope[] {
       replyToAddress: replyTo && replyTo !== fromAddress ? replyTo : null,
       messageId,
       seen,
+      ...(answered ? { answered: true } : {}),
     });
   }
   return out;
@@ -547,6 +552,119 @@ export async function openLeesSessie(cfg: ImapConfig, maxBerichten = 25): Promis
     async inhoud(uid) {
       const body = await ruwBuffer(uid);
       return body ? inhoudUitRuw(body) : null;
+    },
+    async sluit() {
+      if (!open) return;
+      open = false;
+      try {
+        await command(sock, bs, "LOGOUT", 5000);
+      } catch {
+        /* de verbinding was al weg: niets aan de hand */
+      } finally {
+        sock.destroy();
+      }
+    },
+  };
+}
+
+/**
+ * Het voorvoegsel en scheidingsteken van de eigen mappen uit het antwoord op NAMESPACE, bijv.
+ * `* NAMESPACE (("INBOX." ".")) NIL NIL` → { voorvoegsel: "INBOX.", scheiding: "." }. Zonder (bruikbaar) antwoord: geen voorvoegsel.
+ */
+export function eigenNaamruimte(regels: string[]): { voorvoegsel: string; scheiding: string } {
+  for (const l of regels) {
+    const m = /^\* NAMESPACE \(\("((?:[^"\\]|\\.)*)" (?:"((?:[^"\\]|\\.)*)"|NIL)\)/i.exec(l);
+    if (m) return { voorvoegsel: (m[1] ?? "").replace(/\\(.)/g, "$1"), scheiding: (m[2] ?? "/").replace(/\\(.)/g, "$1") };
+  }
+  return { voorvoegsel: "", scheiding: "/" };
+}
+
+/** Een mapnaam die we zelf aanmaken: alleen letters, cijfers, spatie, streepje (geen scheidingstekens of jokers). */
+export function veiligeMapNaam(naam: string): string | null {
+  const n = naam.trim();
+  return /^[A-Za-z0-9][A-Za-z0-9 _-]{0,40}$/.test(n) ? n : null;
+}
+
+/**
+ * Eén sessie op INBOX voor de info-ronde (lib/mail/info-ronde.ts): lezen zoals openLeesSessie (BODY.PEEK, niets op
+ * gelezen), en daarnaast een mail naar een eigen map verplaatsen (UID MOVE, RFC 6851) of op gelezen en beantwoord
+ * zetten. Kan de server geen MOVE, dan verplaatst hij niets: we doen geen COPY met wissen, er wordt nooit iets
+ * verwijderd. Sluit altijd met sluit() (in een finally).
+ */
+export interface ImapWerkSessie {
+  lijst(limit: number): Promise<ImapEnvelope[]>;
+  /** alleen de kopregels; null als het bericht er niet (meer) is of de grens bereikt is */
+  kop(uid: number): Promise<string | null>;
+  /** de tekst van het bericht; null als het er niet (meer) is of de grens bereikt is */
+  tekst(uid: number): Promise<string | null>;
+  /** verplaatst naar een eigen map (maakt hem aan als hij ontbreekt); false als dat niet kan of niet lukt */
+  verplaats(uid: number, map: string): Promise<boolean>;
+  markeerBeantwoord(uid: number): Promise<void>;
+  sluit(): Promise<void>;
+}
+
+export async function openWerkSessie(cfg: ImapConfig, maxBerichten = 25): Promise<ImapWerkSessie> {
+  const timeoutMs = (cfg.timeout ?? 20) * 1000;
+  const { sock, bs } = await connect(cfg);
+  let exists = 0;
+  let kanVerplaatsen = false;
+  let ruimte = { voorvoegsel: "", scheiding: "/" };
+  try {
+    await command(sock, bs, `LOGIN ${quote(cfg.user)} ${quote(cfg.pass)}`, timeoutMs);
+    const kan = (await command(sock, bs, "CAPABILITY", timeoutMs)).join(" ").toUpperCase();
+    kanVerplaatsen = /\bMOVE\b/.test(kan);
+    if (/\bNAMESPACE\b/.test(kan)) ruimte = eigenNaamruimte(await command(sock, bs, "NAMESPACE", timeoutMs).catch(() => []));
+    for (const l of await command(sock, bs, "SELECT INBOX", timeoutMs)) {
+      const m = /^\* (\d+) EXISTS/i.exec(l);
+      if (m) exists = Number(m[1]);
+    }
+  } catch (err) {
+    sock.destroy();
+    throw err;
+  }
+  let open = true;
+  let opgehaald = 0;
+  const gemaakt = new Set<string>();
+  const magOphalen = (uid: number) => open && opgehaald < maxBerichten * 2 && Number.isInteger(uid) && uid > 0;
+  return {
+    async lijst(limit) {
+      if (!open || exists === 0) return [];
+      const start = Math.max(1, exists - limit + 1);
+      const fetchLines = await command(sock, bs, `FETCH ${start}:${exists} (UID FLAGS ENVELOPE)`, timeoutMs);
+      return envelopesUitFetch(fetchLines).sort((a, b) => b.uid - a.uid);
+    },
+    async kop(uid) {
+      if (!magOphalen(uid)) return null;
+      opgehaald += 1;
+      const body = bodyUitFetch(await command(sock, bs, `UID FETCH ${uid} (BODY.PEEK[HEADER])`, timeoutMs), "HEADER");
+      return body ? body.toString("utf8") : null;
+    },
+    async tekst(uid) {
+      if (!magOphalen(uid)) return null;
+      opgehaald += 1;
+      const body = bodyUitFetch(await command(sock, bs, `UID FETCH ${uid} (BODY.PEEK[])`, timeoutMs), "");
+      return body ? inhoudUitRuw(body).text : null;
+    },
+    async verplaats(uid, map) {
+      const naam = veiligeMapNaam(map);
+      if (!open || !kanVerplaatsen || !naam || !Number.isInteger(uid) || uid <= 0) return false;
+      const doel = `${ruimte.voorvoegsel}${naam}`;
+      if (!gemaakt.has(doel)) {
+        // bestaat de map al, dan zegt de server NO: dat is goed. Abonneren zodat hij in elk mailprogramma te zien is.
+        await command(sock, bs, `CREATE ${quote(doel)}`, timeoutMs).catch(() => undefined);
+        await command(sock, bs, `SUBSCRIBE ${quote(doel)}`, timeoutMs).catch(() => undefined);
+        gemaakt.add(doel);
+      }
+      try {
+        await command(sock, bs, `UID MOVE ${uid} ${quote(doel)}`, timeoutMs);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    async markeerBeantwoord(uid) {
+      if (!open || !Number.isInteger(uid) || uid <= 0) return;
+      await command(sock, bs, `UID STORE ${uid} +FLAGS (\\Seen \\Answered)`, timeoutMs).catch(() => undefined);
     },
     async sluit() {
       if (!open) return;

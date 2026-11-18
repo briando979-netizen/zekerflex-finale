@@ -169,6 +169,9 @@ const REPLIABLE_KINDS = new Set([
   // bedrijf, een antwoord op de feedbackmail naar de klant die de feedback gaf.
   "google-review-verzoek",
   "review-feedback",
+  // het eerste antwoord op een mail aan info@ van iemand die werk zoekt (lib/mail/info-ronde.ts): een antwoord
+  // daarop komt weer in info@ en wordt door een mens gelezen
+  "info-antwoord",
 ]);
 
 export function isAutomatedKind(kind?: string): boolean {
