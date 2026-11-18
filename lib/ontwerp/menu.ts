@@ -39,6 +39,7 @@ export const STANDAARD_KOLOMMEN: VoettekstKolom[] = [
       { href: "/freelance-werk", label: "Freelance werk per stad" },
       { href: "/personeel-inhuren", label: "Personeel inhuren" },
       { href: "/voor-freelancers", label: "Voor freelancers" },
+      { href: "/leren/klussen-krijgen", label: "Leren: zo krijg je klussen" },
       { href: "/uitzendbureau", label: "Werken via uitzendbureau" },
       { href: "/voor-bedrijven", label: "Voor bedrijven" },
       { href: "/producten", label: "Producten & losse modules" },
