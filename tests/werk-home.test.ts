@@ -45,9 +45,13 @@ describe("homepagina voor werkzoekenden", () => {
     const pagina = readFileSync(join(process.cwd(), "app", "(marketing)", "page.tsx"), "utf8");
     // de foto blijft het eerste beeld (priority); de video ligt erover, zonder geluid en zonder knoppen
     expect(pagina).toContain("src={WERK_HERO.foto}");
-    const video = pagina.slice(pagina.indexOf("<video"), pagina.indexOf("/>", pagina.indexOf("<video")));
-    for (const eis of ["muted", "playsInline", "autoPlay", "loop", "aria-hidden", "kop-clip"]) expect(video, eis).toContain(eis);
-    expect(video).not.toContain("controls");
+    expect(pagina).toContain("<KopClip src={WERK_HERO.video}");
+    const clip = readFileSync(join(process.cwd(), "components", "marketing", "KopClip.tsx"), "utf8");
+    const video = clip.slice(clip.indexOf("<video"), clip.indexOf("/>", clip.indexOf("<video")));
+    for (const eis of ["muted", "playsInline", "loop", "aria-hidden", "kop-clip", "opacity-0"]) expect(video, eis).toContain(eis);
+    // geen autoplay-attribuut en geen knoppen: een iPhone in de spaarstand zet anders een afspeelknop over het gezicht
+    expect(video).not.toMatch(/autoPlay|controls/);
+    expect(clip).toContain("prefers-reduced-motion: reduce");
     // bij "minder beweging" alleen de foto
     const css = readFileSync(join(process.cwd(), "app", "globals.css"), "utf8");
     expect(css).toMatch(/prefers-reduced-motion: reduce\) \{ \.kop-clip \{ display: none; \} \}/);

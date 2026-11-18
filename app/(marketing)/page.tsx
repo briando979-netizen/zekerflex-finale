@@ -11,6 +11,7 @@ import { BranchShowcase } from "@/components/marketing/BranchShowcase";
 import { AppDownload } from "@/components/marketing/AppDownload";
 import { PaginaAchtergrond } from "@/components/shop/PaginaAchtergrond";
 import { PaginaVideoBlok } from "@/components/marketing/PaginaVideoBlok";
+import { KopClip } from "@/components/marketing/KopClip";
 import { VoorWieKaarten } from "@/components/marketing/VoorWieKaarten";
 import {
   BEDRIJVEN_HOME,
@@ -67,18 +68,7 @@ export default function WerkHomePage() {
           />
           {/* dezelfde foto, bewegend: ligt er precies overheen (zelfde uitsnede). De foto blijft het eerste beeld; laadt of speelt de
               video niet, dan zie je gewoon de foto. Zonder geluid, zonder knoppen, niet voor schermlezers (de foto heeft de tekst). */}
-          <video
-            aria-hidden
-            tabIndex={-1}
-            autoPlay
-            muted
-            loop
-            playsInline
-            disablePictureInPicture
-            preload="metadata"
-            src={WERK_HERO.video}
-            className="kop-clip absolute inset-0 h-full w-full object-cover object-[50%_18%] md:object-[50%_28%]"
-          />
+          <KopClip src={WERK_HERO.video} className="absolute inset-0 h-full w-full object-cover object-[50%_18%] md:object-[50%_28%]" />
           <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#0C0E12] via-[#0C0E12]/30 via-40% to-transparent md:bg-gradient-to-r md:via-[#0C0E12]/40 md:via-25% md:to-50%" />
         </div>
         <div className="shell-4k relative pb-8 pt-[15rem] md:py-14 lg:py-16">
