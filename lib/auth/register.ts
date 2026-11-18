@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
+import { isReservedTestAddress } from "@/lib/mail/test-adres";
 import { setFiscal } from "@/lib/fiscal/store";
 import { landSoort, normaliseerLand } from "@/lib/onboarding/buitenland";
 import { WERKRUIMTES } from "@/lib/werkgever/werkruimte";
@@ -128,7 +129,8 @@ export async function registerAccount(input: RegisterInput): Promise<RegisteredA
     summary: `Nieuw ${input.type}-account aangemaakt: ${email}`,
     targetType: "user",
     targetId: userId,
-    metadata: { type: input.type, ...(dashboard ? { dashboard } : {}) },
+    // test: een testadres (.test, voorbeeldaccount, livetests); de melder voor de eigenaar slaat die over (lib/ops/gebeurtenis.ts)
+    metadata: { type: input.type, ...(dashboard ? { dashboard } : {}), ...(isReservedTestAddress(email) ? { test: true } : {}) },
   });
 
   // Save the chosen worker form before registration returns so onboarding can read it.

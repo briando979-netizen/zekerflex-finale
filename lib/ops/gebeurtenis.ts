@@ -69,7 +69,6 @@ export const DIRECT_WERKERS_PER_UUR = 10;
 /** Direct alleen overdag (Amsterdam, van 07:00 tot 23:00); 's nachts gaat alles in de eerste samenvatting van de ochtend. */
 export const MELD_VANAF_UUR = 7;
 export const MELD_TOT_UUR = 23;
-const UUR_MS = 3_600_000;
 
 export const gebeurtenisSleutel = (g: Pick<Gebeurtenis, "at" | "id">): string => `gebeurtenis:${g.at}-${g.id}`;
 export const GEBEURTENIS_VOORVOEGSEL = "gebeurtenis:";
@@ -113,14 +112,13 @@ export function binnenMeldtijd(now: Date): boolean {
   return uur >= MELD_VANAF_UUR && uur < MELD_TOT_UUR;
 }
 
-/** Mag deze gebeurtenis nu direct naar de telefoon? `recent` zijn de gebeurtenissen die het afgelopen uur al direct zijn gemeld. */
-export function magDirect(g: Pick<Gebeurtenis, "soort" | "belang">, recent: Pick<Gebeurtenis, "soort" | "at" | "gemeld">[], now: Date): boolean {
-  if (g.belang !== "direct" || !binnenMeldtijd(now)) return false;
-  const sinds = now.getTime() - UUR_MS;
-  const direct = recent.filter((r) => r.gemeld === "direct" && Date.parse(r.at) > sinds);
-  if (direct.length >= DIRECT_PER_UUR) return false;
-  if (g.soort === "werker-aangemeld" && direct.filter((r) => r.soort === "werker-aangemeld").length >= DIRECT_WERKERS_PER_UUR) return false;
-  return true;
+/**
+ * Komt deze gebeurtenis in aanmerking voor een direct bericht: belangrijk genoeg en overdag. De grenzen per uur (DIRECT_PER_UUR en
+ * DIRECT_WERKERS_PER_UUR) staan in lib/ops/melder.ts als atomaire tellers in Redis (fixedWindow), niet hier: tellen in het logboek
+ * ging mis (de 500 nieuwste rijen, eerst kijken en dan doen).
+ */
+export function magDirect(g: Pick<Gebeurtenis, "belang">, now: Date): boolean {
+  return g.belang === "direct" && binnenMeldtijd(now);
 }
 
 export const telefoonTekst = (g: Pick<Gebeurtenis, "soort" | "titel">): string => `${SOORTEN[g.soort].icoon} ${g.titel}`;
@@ -151,8 +149,8 @@ export function samenvattingTekst(lijst: Pick<Gebeurtenis, "soort" | "titel">[],
 }
 
 /**
- * Een telefoonnummer zoals de eigenaar het typt (06 34 82 57 80, +31 6 34825780, 0031634825780) naar cijfers met landcode
- * (31634825780), of null als het geen nummer lijkt. Alleen Nederlandse nummers zonder landcode krijgen 31 erbij.
+ * Een telefoonnummer zoals de eigenaar het typt (06 12 34 56 78, +31 6 12345678, 0031612345678) naar cijfers met landcode
+ * (31612345678), of null als het geen nummer lijkt. Alleen Nederlandse nummers zonder landcode krijgen 31 erbij.
  */
 export function normaliseerNummer(invoer: string): string | null {
   let n = invoer.replace(/[\s().-]/g, "");
@@ -165,7 +163,7 @@ export function normaliseerNummer(invoer: string): string | null {
 
 export const whatsappJid = (nummer: string): string => `${nummer}@s.whatsapp.net`;
 
-/** Telefoonnummer voor in het scherm: +31 6 3482 5780. */
+/** Telefoonnummer voor in het scherm: +31 6 1234 5678. */
 export function toonNummer(nummer: string | null): string {
   if (!nummer) return "niet ingesteld";
   return nummer.startsWith("31") && nummer.length === 11 ? `+31 ${nummer.slice(2, 3)} ${nummer.slice(3, 7)} ${nummer.slice(7)}` : `+${nummer}`;
@@ -221,9 +219,13 @@ const AUDIT: Record<string, (metadata: unknown) => Gemaakt> = {
   "sales.engine.resumed": () => ({ soort: "marketing", titel: "De verkoopmotor draait weer", url: "/admin/sales" }),
 };
 
-/** De gebeurtenis bij een audit-actie, of null als die niet gemeld wordt. */
+/**
+ * De gebeurtenis bij een audit-actie, of null als die niet gemeld wordt. Een actie met `metadata.test === true` (een testaccount
+ * met een .test-adres, zoals het voorbeeldaccount en de livetests) wordt nooit gemeld.
+ */
 export function auditNaarGebeurtenis(action: string, metadata: unknown): Gemaakt {
   if (!Object.hasOwn(AUDIT, action)) return null;
+  if (metadata && typeof metadata === "object" && (metadata as Record<string, unknown>).test === true) return null;
   return (AUDIT[action] as (m: unknown) => Gemaakt)(metadata);
 }
 

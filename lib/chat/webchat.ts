@@ -55,14 +55,15 @@ export async function appendMessage(id: string, msg: Omit<WebchatMessage, "at">,
 
 /**
  * De eigenaar melden (lib/ops/melder.ts): alleen dat er iets gebeurde en op welke pagina, nooit de vraag zelf (die kan een naam of
- * nummer bevatten; de inhoud staat bij Websitechat). Het eerste bericht van een gesprek gaat direct, de rest in het uurbericht.
+ * nummer bevatten; de inhoud staat bij Websitechat). Alles gaat in het uurbericht: de websitechat is publiek en kan veel berichten
+ * geven, dus een direct bericht per gesprek zou de telefoon kunnen overspoelen.
  */
 function meldBericht(role: WebchatMessage["role"], eerste: boolean, page: string | undefined): void {
   const pagina = page ? page.split(/[?#]/)[0]?.slice(0, 80) : undefined;
   const nieuw =
     role === "user"
       ? eerste
-        ? { titel: "Een bezoeker begon een gesprek met de assistent", belang: "direct" as const }
+        ? { titel: "Een bezoeker begon een gesprek met de assistent", belang: "samenvatting" as const }
         : { titel: "Een bezoeker stelde een vraag aan de assistent", belang: "samenvatting" as const }
       : role === "assistant"
         ? { titel: "De assistent antwoordde een bezoeker", belang: "samenvatting" as const }
