@@ -27,6 +27,8 @@ export interface BijwerkStand {
   /** wanneer voor het laatst álle producten gehad zijn */
   laatsteVolledigOp: string | null;
   rondes: number;
+  /** zoveel CJ-producten telde de laatste ronde (voor "x van y" in het beheerscherm) */
+  totaal: number;
 }
 
 export type RondeBijwerkenUitkomst = BijwerkUitkomst & { status: "gedaan" | "bezet"; vanaf: number };
@@ -40,6 +42,7 @@ export async function leesBijwerkStand(): Promise<BijwerkStand> {
     laatsteRondeOp: s?.laatsteRondeOp ?? null,
     laatsteVolledigOp: s?.laatsteVolledigOp ?? null,
     rondes: typeof s?.rondes === "number" ? s.rondes : 0,
+    totaal: typeof s?.totaal === "number" ? s.totaal : 0,
   };
 }
 
@@ -63,6 +66,7 @@ export async function rondeBijwerken(o: { budgetMs?: number; now?: Date } = {}):
       laatsteRondeOp: now.toISOString(),
       laatsteVolledigOp: klaar && uit.totaal > 0 ? now.toISOString() : stand.laatsteVolledigOp,
       rondes: stand.rondes + 1,
+      totaal: uit.totaal,
     } satisfies BijwerkStand);
     return { ...uit, status: "gedaan", vanaf: stand.vanaf };
   } finally {
