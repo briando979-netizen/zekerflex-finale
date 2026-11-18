@@ -10,7 +10,7 @@
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { kvDelete, kvGet, kvSet } from "@/lib/storage/kv";
-import { leesCjProduct, leesCjTreffer, type CjProduct, type CjZoekTreffer } from "@/lib/shop/cj/cj-core";
+import { goedkoopsteVerzending, leesCjProduct, leesCjTreffer, type CjProduct, type CjVerzending, type CjZoekTreffer } from "@/lib/shop/cj/cj-core";
 
 export const CJ_HOST = "developers.cjdropshipping.com";
 const BASIS = `https://${CJ_HOST}/api2.0/v1/`;
@@ -148,12 +148,25 @@ export async function cjToken(): Promise<string> {
 
 /** GET op de CJ-API, met toegangsbewijs, om de beurt en met een nette fout. Geeft `data` terug. */
 export async function cjGet<T>(pad: string, params: Record<string, string | number | undefined>): Promise<T> {
-  const token = await cjToken();
   const q = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== "") q.set(k, String(v));
-  const adres = `${BASIS}${pad}${q.size ? `?${q}` : ""}`;
+  return cjAanvraag<T>(pad, `${BASIS}${pad}${q.size ? `?${q}` : ""}`, {});
+}
+
+/** POST op de CJ-API (JSON-body), verder als cjGet. */
+export async function cjPost<T>(pad: string, body: unknown): Promise<T> {
+  return cjAanvraag<T>(pad, `${BASIS}${pad}`, { method: "POST", body: JSON.stringify(body), headers: { "content-type": "application/json" } });
+}
+
+async function cjAanvraag<T>(pad: string, adres: string, init: { method?: string; body?: string; headers?: Record<string, string> }): Promise<T> {
+  const token = await cjToken();
   return omDeBeurt(async () => {
-    const res = await fetch(adres, { headers: { "CJ-Access-Token": token }, signal: AbortSignal.timeout(TIJDLIMIET_MS) }).catch((e: unknown) => {
+    const res = await fetch(adres, {
+      ...(init.method ? { method: init.method } : {}),
+      ...(init.body !== undefined ? { body: init.body } : {}),
+      headers: { ...(init.headers ?? {}), "CJ-Access-Token": token },
+      signal: AbortSignal.timeout(TIJDLIMIET_MS),
+    }).catch((e: unknown) => {
       throw AppError.upstream(`CJ is niet bereikbaar (${e instanceof Error ? e.name : "fout"}).`);
     });
     const d = (await res.json().catch(() => ({}))) as CjAntwoord<T>;
@@ -205,6 +218,25 @@ export async function cjProduct(pid: string): Promise<CjProduct> {
   const p = leesCjProduct(d);
   if (!p) throw AppError.upstream("CJ gaf voor dit product geen bruikbare naam, foto of prijs terug.");
   return p;
+}
+
+/**
+ * Wat kost het om één stuk van deze variant naar `naar` te sturen (logistic/freightCalculate)? De goedkoopste
+ * dienst telt. Null als CJ geen dienst kent of de aanvraag faalt: de aanroeper rekent dan met de schatting
+ * uit de instellingen. Vanuit `van` (het magazijn: "DE" voor Europa, anders "CN").
+ */
+export async function cjVerzendkosten(vid: string, van: string, naar = "NL"): Promise<CjVerzending | null> {
+  try {
+    const d = await cjPost<unknown>("logistic/freightCalculate", {
+      startCountryCode: van.toUpperCase(),
+      endCountryCode: naar.toUpperCase(),
+      products: [{ quantity: 1, vid }],
+    });
+    return goedkoopsteVerzending(d);
+  } catch (e) {
+    logger.warn("cj: verzendkosten niet opgehaald, schatting gebruikt", { van, naar, error: (e as Error).message.slice(0, 120) });
+    return null;
+  }
 }
 
 /** Voor het beheerscherm: staat er een sleutel, is het bewijs geldig, wanneer ging het voor het laatst goed of mis. */

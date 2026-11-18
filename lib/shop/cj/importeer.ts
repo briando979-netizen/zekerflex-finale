@@ -12,7 +12,7 @@ import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { chatJson } from "@/lib/ai/client";
-import { kvDelete, kvGet, kvSet, kvSetIfAbsent } from "@/lib/storage/kv";
+import { kvDelete, kvGet, kvSet, kvSetIfAbsent, kvVervangAlsVeld, kvVerwijderAlsVeld } from "@/lib/storage/kv";
 import { importRemoteImage } from "@/lib/media/clean-image";
 import { storeUpload } from "@/lib/storage/local";
 import { ecbKoersen } from "@/lib/integrations/wisselkoers-server";
@@ -20,8 +20,8 @@ import { naarEuroCents } from "@/lib/integrations/wisselkoers";
 import { bewaarLinkBron } from "@/lib/shop/link-product-server";
 import { leesBeleidOpgeslagen } from "@/lib/shop/winkel-ai";
 import { prijsUitInkoop, slugVan, tariefVoor } from "@/lib/shop/winkel-ai-core";
-import { cjProduct } from "@/lib/shop/cj/cj-client";
-import { categorieKeuze, onzeSku, type CjProduct } from "@/lib/shop/cj/cj-core";
+import { cjProduct, cjVerzendkosten } from "@/lib/shop/cj/cj-client";
+import { categorieKeuze, leesClaim, onzeSku, type CjProduct, type CjVerzending } from "@/lib/shop/cj/cj-core";
 import type { ShopCategorie } from "@/lib/shop/categorieen";
 
 const K_INSTEL = "shop:cj:instellingen";
@@ -67,7 +67,10 @@ export interface CjKoppeling {
   varianten: Record<string, { vid: string; sku: string; usdCents: number }>;
   inkoopUsdCents: number;
   koersDatum: string;
+  /** verzendkosten per stuk die in de prijs zitten: het echte tarief van CJ naar NL, of de schatting uit de instellingen */
   verzendCents: number;
+  verzendBron?: "cj" | "schatting";
+  verzendDienst?: string;
   geimporteerdOp: string;
   vertaald: boolean;
 }
@@ -118,6 +121,9 @@ export interface ImportUitkomst {
   fotos: number;
   vertaald: boolean;
   actief: boolean;
+  /** verzendkosten per stuk die in de prijs zitten, en of dat het echte tarief van CJ is */
+  verzendCents: number;
+  verzendEcht: boolean;
   melding: string | null;
 }
 
@@ -134,14 +140,27 @@ async function haalFoto(adres: string, naam: string, actorUserId: string | null)
 }
 
 /** Verkoopprijs en inkoop in euro's voor een CJ-product (ook voor het zoekscherm, zodat de eigenaar de prijs vooraf ziet). */
-export async function prijsVoorCj(inkoopUsdCents: number, naam: string): Promise<{ inkoopCents: number; prijsCents: number; margePct: number; verzendCents: number; koersDatum: string }> {
+export async function prijsVoorCj(inkoopUsdCents: number, naam: string, verzendUsdCents?: number): Promise<{ inkoopCents: number; prijsCents: number; margePct: number; verzendCents: number; koersDatum: string }> {
   const koersen = await ecbKoersen().catch(() => null);
   const inkoop = koersen ? naarEuroCents(inkoopUsdCents, "USD", koersen) : null;
   if (inkoop === null || !koersen) throw AppError.upstream("Er is nu geen dollarkoers (ECB) beschikbaar; probeer het straks opnieuw.");
   const [instel, beleid] = await Promise.all([leesCjInstellingen(), leesBeleidOpgeslagen()]);
   const marge = instel.margePct ?? beleid.margePct;
-  const p = prijsUitInkoop(inkoop + instel.verzendCents, marge, tariefVoor(naam));
-  return { inkoopCents: inkoop, prijsCents: p.prijsCents, margePct: marge, verzendCents: instel.verzendCents, koersDatum: koersen.datum };
+  // het echte tarief van CJ (dollars) als we dat hebben, anders de schatting uit de instellingen
+  const verzend = (verzendUsdCents !== undefined ? naarEuroCents(verzendUsdCents, "USD", koersen) : null) ?? instel.verzendCents;
+  const p = prijsUitInkoop(inkoop + verzend, marge, tariefVoor(naam));
+  return { inkoopCents: inkoop, prijsCents: p.prijsCents, margePct: marge, verzendCents: verzend, koersDatum: koersen.datum };
+}
+
+/** Echte verzendkosten van CJ naar Nederland voor één stuk: eerst vanuit het ingestelde magazijn, anders vanuit China. */
+async function verzendingVanCj(p: CjProduct): Promise<CjVerzending | null> {
+  const vid = p.varianten[0]?.vid ?? p.pid;
+  const instel = await leesCjInstellingen();
+  for (const van of new Set([instel.land || "CN", "CN"])) {
+    const v = await cjVerzendkosten(vid, van, "NL");
+    if (v) return v;
+  }
+  return null;
 }
 
 const KLEDINGACHTIG = new Set<ShopCategorie>(["Kleding", "Tassen & schoenen", "Sport & buiten", "Werk & PBM"]);
@@ -151,25 +170,38 @@ const KLEDINGACHTIG = new Set<ShopCategorie>(["Kleding", "Tassen & schoenen", "S
  * (een product zonder foto gaat nooit aan). Een pid die al eerder is overgenomen, komt niet nog een keer.
  */
 export async function importeerCjProduct(pid: string, opties: { actorUserId: string | null; actief: boolean; categorie?: string | undefined }): Promise<ImportUitkomst> {
-  const eerder = await kvGet<string>(`${K_PID}${pid}`).catch(() => null);
-  if (eerder) {
-    const b = await prisma.shopProduct.findUnique({ where: { id: eerder }, select: { id: true, slug: true, name: true, priceCents: true, costCents: true, active: true, _count: { select: { variants: true } } } });
-    if (b) return { bestaand: true, id: b.id, slug: b.slug, naam: b.name, prijsCents: b.priceCents, inkoopCents: b.costCents ?? 0, varianten: b._count.variants, fotos: 0, vertaald: true, actief: b.active, melding: "Stond al in de winkel." };
+  const sleutel = `${K_PID}${pid}`;
+  const stand = leesClaim(await kvGet<unknown>(sleutel).catch(() => null));
+  if (stand.soort === "product") {
+    const b = await prisma.shopProduct.findUnique({ where: { id: stand.id }, select: { id: true, slug: true, name: true, priceCents: true, costCents: true, active: true, _count: { select: { variants: true } } } });
+    if (b) return { bestaand: true, id: b.id, slug: b.slug, naam: b.name, prijsCents: b.priceCents, inkoopCents: b.costCents ?? 0, varianten: b._count.variants, fotos: 0, vertaald: true, actief: b.active, verzendCents: 0, verzendEcht: false, melding: "Stond al in de winkel." };
   }
-  // de pid claimen vóór het aanmaken: twee klikken tegelijk geven anders twee producten
-  const geclaimd = await kvSetIfAbsent(`${K_PID}${pid}`, "bezig");
+  if (stand.soort === "bezig" && !stand.verlopen) throw AppError.conflict("Dit product wordt op dit moment al overgenomen. Wacht even en kijk bij Beheer → Webshop.");
+  // de pid claimen vóór het aanmaken: twee klikken tegelijk geven anders twee producten. Een slot met een tijd erin:
+  // breekt de app midden in een import af (uitrol, herstart), dan mag een volgende klik het na CLAIM_MAX_MS overnemen.
+  const claim = { bezig: new Date().toISOString() };
+  let geclaimd: boolean;
+  if (stand.soort === "vrij") geclaimd = await kvSetIfAbsent(sleutel, claim);
+  else if (stand.soort === "bezig" && stand.sinds) geclaimd = await kvVervangAlsVeld(sleutel, "bezig", stand.sinds, claim);
+  else {
+    // het oude losse woord "bezig" of een product dat niet meer bestaat: weg ermee en opnieuw claimen
+    await kvDelete(sleutel).catch(() => undefined);
+    geclaimd = await kvSetIfAbsent(sleutel, claim);
+  }
   if (!geclaimd) throw AppError.conflict("Dit product wordt al overgenomen of staat er al.");
   try {
     return await overnemen(pid, opties);
   } catch (e) {
-    await kvDelete(`${K_PID}${pid}`).catch(() => undefined);
+    // alleen ons eigen slot weghalen (niet dat van een klik die het intussen overnam)
+    await kvVerwijderAlsVeld(sleutel, "bezig", claim.bezig).catch(() => undefined);
     throw e;
   }
 }
 
 async function overnemen(pid: string, opties: { actorUserId: string | null; actief: boolean; categorie?: string | undefined }): Promise<ImportUitkomst> {
   const p: CjProduct = await cjProduct(pid);
-  const prijs = await prijsVoorCj(p.inkoopUsdCents, p.naamEn);
+  const verzending = await verzendingVanCj(p);
+  const prijs = await prijsVoorCj(p.inkoopUsdCents, p.naamEn, verzending?.usdCents);
   const tekst = await vertaalVermelding(p.naamEn, p.omschrijvingEn);
   const categorie = categorieKeuze(opties.categorie, p.categorie);
 
@@ -234,6 +266,8 @@ async function overnemen(pid: string, opties: { actorUserId: string | null; acti
     inkoopUsdCents: p.inkoopUsdCents,
     koersDatum: prijs.koersDatum,
     verzendCents: prijs.verzendCents,
+    verzendBron: verzending ? "cj" : "schatting",
+    ...(verzending?.dienst ? { verzendDienst: verzending.dienst } : {}),
     geimporteerdOp: new Date().toISOString(),
     vertaald: tekst.vertaald,
   };
@@ -256,7 +290,8 @@ async function overnemen(pid: string, opties: { actorUserId: string | null; acti
   if (!hoofd) melding = "De foto's van de leverancier waren niet over te nemen; het product staat uit tot er een foto is.";
   else if (aantalVarianten === 0) melding = "Geen enkele variant kon worden aangemaakt (de sku's bestonden al); het product staat uit.";
   else if (!tekst.vertaald) melding = "De tekst kon niet worden vertaald en staat nog in het Engels; pas hem aan in Beheer → Webshop.";
-  return { bestaand: false, id: product.id, slug, naam: tekst.naam, prijsCents: prijs.prijsCents, inkoopCents: prijs.inkoopCents, varianten: aantalVarianten, fotos: uploads.length, vertaald: tekst.vertaald, actief, melding };
+  else if (!verzending) melding = "CJ gaf geen verzendtarief naar Nederland; de prijs rekent met de schatting uit de instellingen.";
+  return { bestaand: false, id: product.id, slug, naam: tekst.naam, prijsCents: prijs.prijsCents, inkoopCents: prijs.inkoopCents, varianten: aantalVarianten, fotos: uploads.length, vertaald: tekst.vertaald, actief, verzendCents: prijs.verzendCents, verzendEcht: verzending !== null, melding };
 }
 
 interface OudUit {
