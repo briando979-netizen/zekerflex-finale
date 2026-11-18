@@ -16,7 +16,6 @@ import {
   toonNummer,
   whatsappJid,
   zonderContactgegevens,
-  type Gebeurtenis,
 } from "@/lib/ops/gebeurtenis";
 
 // Tijden met een zone: in november is Amsterdam UTC+1.
@@ -25,7 +24,7 @@ const lees = (p: string) => readFileSync(path.join(process.cwd(), p), "utf8").sp
 
 describe("melder: contactgegevens weghalen", () => {
   it("haalt e-mailadressen, telefoonnummers en de rest van een link weg", () => {
-    expect(zonderContactgegevens("Mail jan@voorbeeld.nl of bel 06 12 34 56 78 of +31 6 3482 5780")).toBe("Mail [e-mail] of bel [nummer] of [nummer]");
+    expect(zonderContactgegevens("Mail jan@voorbeeld.nl of bel 06 12 34 56 78 of +31 6 1234 5678")).toBe("Mail [e-mail] of bel [nummer] of [nummer]");
     expect(zonderContactgegevens("Kijk op https://zekerflex.com/t/abc123?token=geheim en klaar")).toBe("Kijk op zekerflex.com en klaar");
   });
 
@@ -37,8 +36,8 @@ describe("melder: contactgegevens weghalen", () => {
   });
 
   it("een gebeurtenis bewaart nooit een e-mailadres, ook niet in het detail", () => {
-    const g = maakGebeurtenis({ soort: "overig", titel: "Mail aan jan@voorbeeld.nl", detail: "bel 0612345678", url: "https://evil.example/x" }, OCHTEND, "ab12");
-    expect(JSON.stringify(g)).not.toMatch(/@voorbeeld|0612345678/);
+    const g = maakGebeurtenis({ soort: "overig", titel: "Mail aan jan@voorbeeld.nl", detail: "bel 0687654321", url: "https://evil.example/x" }, OCHTEND, "ab12");
+    expect(JSON.stringify(g)).not.toMatch(/@voorbeeld|0687654321/);
     expect(g.url).toBeNull(); // alleen een eigen pad
     expect(g.gemeld).toBe("wacht");
     expect(g.belang).toBe("direct");
@@ -47,8 +46,8 @@ describe("melder: contactgegevens weghalen", () => {
 
 describe("melder: telefoonnummer", () => {
   it("maakt van alle schrijfwijzen dezelfde cijfers met landcode", () => {
-    for (const n of ["0634825780", "06 34 82 57 80", "06-34825780", "+31 6 34825780", "0031634825780", "+31(0)634825780".replace("(0)", "")]) {
-      expect(normaliseerNummer(n)).toBe("31634825780");
+    for (const n of ["0612345678", "06 12 34 56 78", "06-12345678", "+31 6 12345678", "0031612345678", "+31(0)612345678".replace("(0)", "")]) {
+      expect(normaliseerNummer(n)).toBe("31612345678");
     }
   });
 
@@ -57,8 +56,8 @@ describe("melder: telefoonnummer", () => {
   });
 
   it("geeft de WhatsApp-code en een leesbaar nummer", () => {
-    expect(whatsappJid("31634825780")).toBe("31634825780@s.whatsapp.net");
-    expect(toonNummer("31634825780")).toBe("+31 6 3482 5780");
+    expect(whatsappJid("31612345678")).toBe("31612345678@s.whatsapp.net");
+    expect(toonNummer("31612345678")).toBe("+31 6 1234 5678");
     expect(toonNummer(null)).toBe("niet ingesteld");
   });
 });
@@ -73,33 +72,20 @@ describe("melder: wanneer direct", () => {
     expect(binnenMeldtijd(new Date("2026-07-01T23:30:00Z"))).toBe(false);
   });
 
-  const direct = (soort: Gebeurtenis["soort"], minutenGeleden: number): Pick<Gebeurtenis, "soort" | "at" | "gemeld"> => ({
-    soort,
-    at: new Date(OCHTEND.getTime() - minutenGeleden * 60_000).toISOString(),
-    gemeld: "direct",
+  it("een samenvatting-gebeurtenis gaat nooit direct, en 's nachts ook niet", () => {
+    expect(magDirect({ belang: "samenvatting" }, OCHTEND)).toBe(false);
+    expect(magDirect({ belang: "direct" }, OCHTEND)).toBe(true);
+    expect(magDirect({ belang: "direct" }, new Date("2026-11-18T03:00:00+01:00"))).toBe(false);
   });
 
-  it("een samenvatting-gebeurtenis gaat nooit direct", () => {
-    expect(magDirect({ soort: "mail", belang: "samenvatting" }, [], OCHTEND)).toBe(false);
-    expect(magDirect({ soort: "bestelling", belang: "direct" }, [], OCHTEND)).toBe(true);
-    expect(magDirect({ soort: "bestelling", belang: "direct" }, [], new Date("2026-11-18T03:00:00+01:00"))).toBe(false);
-  });
-
-  it("hoogstens 30 directe berichten per uur, ouder dan een uur telt niet mee", () => {
-    const recent = Array.from({ length: DIRECT_PER_UUR }, () => direct("bestelling", 10));
-    expect(magDirect({ soort: "klus", belang: "direct" }, recent, OCHTEND)).toBe(false);
-    expect(magDirect({ soort: "klus", belang: "direct" }, [...recent.slice(1), direct("bestelling", 90)], OCHTEND)).toBe(true);
-    // wat al naar de samenvatting ging, telt niet als direct
-    expect(magDirect({ soort: "klus", belang: "direct" }, recent.map((r) => ({ ...r, gemeld: "samenvatting" as const })), OCHTEND)).toBe(true);
-  });
-
-  it("hoogstens 10 nieuwe werkers per uur direct", () => {
-    const recent = Array.from({ length: DIRECT_WERKERS_PER_UUR }, () => direct("werker-aangemeld", 5));
-    expect(magDirect({ soort: "werker-aangemeld", belang: "direct" }, recent, OCHTEND)).toBe(false);
-    expect(magDirect({ soort: "bedrijf-aangemeld", belang: "direct" }, recent, OCHTEND)).toBe(true);
+  it("de grenzen per uur staan vast; het tellen zelf doet lib/ops/melder.ts met atomaire tellers (tests/melder.test.ts)", () => {
+    expect(DIRECT_PER_UUR).toBe(30);
+    expect(DIRECT_WERKERS_PER_UUR).toBe(10);
+    const bron = lees("lib/ops/melder.ts");
+    expect(bron).toContain('fixedWindow("melder:direct", DIRECT_PER_UUR, 3600, { failOpen: false })');
+    expect(bron).toContain('fixedWindow("melder:werker", DIRECT_WERKERS_PER_UUR, 3600, { failOpen: false })');
   });
 });
-
 describe("melder: teksten", () => {
   it("de telefoontekst is icoon plus titel", () => {
     expect(telefoonTekst({ soort: "bestelling", titel: "Nieuwe webshopbestelling" })).toBe("🛒 Nieuwe webshopbestelling");
@@ -141,6 +127,15 @@ describe("melder: vertaling van audit-acties", () => {
     expect(auditNaarGebeurtenis("shift.created", {})?.soort).toBe("klus");
     expect(auditNaarGebeurtenis("sales.outreach.sent", {})).toMatchObject({ soort: "marketing", belang: "samenvatting" });
     expect(auditNaarGebeurtenis("sales.lead.replied", {})?.belang).toBeUndefined(); // een reactie is direct
+  });
+
+  it("een testaccount (metadata.test) wordt nooit gemeld, en de aanmelding zet die vlag voor testadressen", () => {
+    expect(auditNaarGebeurtenis("auth.register", { type: "freelancer", test: true })).toBeNull();
+    expect(auditNaarGebeurtenis("auth.register", { type: "bedrijf", test: true })).toBeNull();
+    expect(auditNaarGebeurtenis("auth.register", { type: "freelancer", test: false })?.soort).toBe("werker-aangemeld");
+    const bron = lees("lib/auth/register.ts");
+    expect(bron).toContain('from "@/lib/mail/test-adres"');
+    expect(bron).toMatch(/isReservedTestAddress\(email\) \? \{ test: true \} : \{\}/);
   });
 
   it("onbekende acties en namen uit het prototype worden niet gemeld", () => {
