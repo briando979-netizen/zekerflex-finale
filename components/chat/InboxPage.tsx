@@ -94,6 +94,8 @@ interface InboxPageProps {
   zakelijk?: boolean;
   /** de naam van het bedrijf, bovenaan de chatlijst in de zakelijke weergave */
   bedrijfsnaam?: string;
+  /** In een voorbeeld (read-only demo): de tekst onder de chat; typen/versturen/reageren slaat niets op (anders loopt het op de 423 vast). Leeg = gewone chat. */
+  demoNotice?: string;
 }
 
 // De teksten komen uit een context: de inhoud draait daarom binnen de provider.
@@ -113,6 +115,7 @@ function InboxPageInner({
   desktopHeight = "md:h-[calc(100vh-15rem)]",
   zakelijk = false,
   bedrijfsnaam = "",
+  demoNotice,
 }: Omit<InboxPageProps, "texts">) {
   const chat = useChatTeksten();
   const ib = chat.inbox;
@@ -636,6 +639,8 @@ function InboxPageInner({
   };
   const send = async (msg: OutgoingMessage) => {
     if (!active) return;
+    // voorbeeld (read-only demo): niet versturen, alleen zeggen dat het een demo is
+    if (demoNotice) return say(demoNotice, true);
     if (msg.editId) return saveEdit(msg.editId, msg.text);
     const threadId = active;
     const tmpId = "tmp" + Date.now();
@@ -753,6 +758,8 @@ function InboxPageInner({
 
   const react = async (msg: Msg, emoji: string) => {
     if (!active || !me) return;
+    // voorbeeld (read-only demo): een reactie slaat niets op
+    if (demoNotice) return say(demoNotice, true);
     setMessages((prev) => prev.map((m) => (m.id === msg.id ? toggleReaction(m, me.userId, emoji) : m)));
     try {
       const r = await fetch(`/api/inbox/${active}/react`, {
@@ -771,6 +778,8 @@ function InboxPageInner({
 
   const del = async (msg: Msg) => {
     if (!active) return;
+    // voorbeeld (read-only demo): niets verwijderen
+    if (demoNotice) return say(demoNotice, true);
     setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, deleted: true } : m)));
     const r = await fetch(`/api/inbox/${active}/delete`, {
       method: "POST",
@@ -1757,6 +1766,10 @@ function InboxPageInner({
               onVoorIedereen={() => void verwijderGekozenVoorIedereen()}
               onStop={() => setSelectie(null)}
             />
+          ) : demoNotice ? (
+          <div className="border-t border-hair bg-paper-soft px-4 py-3 text-center text-sm text-neutralx-500" role="note">
+            {demoNotice}
+          </div>
           ) : (
           <>
           <GeplandBalk gepland={gepland} onAnnuleer={(id) => void annuleerGepland(id)} />

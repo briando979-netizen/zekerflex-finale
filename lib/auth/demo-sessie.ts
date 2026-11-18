@@ -9,6 +9,9 @@ import { VIEW_AS_COOKIE } from "@/lib/auth/inspect";
  */
 export const VOORBEELD_UITGANG = "/voorbeeld/sluiten";
 
+/** Korte uitleg onder de chat in een demo: typen/versturen/reageren slaat niets op. */
+export const DEMO_CHAT_NOTITIE = "Dit is een voorbeeld, berichten worden hier niet verstuurd.";
+
 /**
  * True wanneer de huidige bezoeker in een ZekerFlex-voorbeeld (read-only demo via
  * lib/auth/inspect.ts) het echte dashboard bekijkt — en niet de admin-"Bekijk als"
