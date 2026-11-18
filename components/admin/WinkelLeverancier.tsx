@@ -11,6 +11,7 @@ import { SHOP_CATEGORIEEN } from "@/lib/shop/categorieen";
 
 type Stand = { ingesteld: boolean; bewijsGeldigTot: string | null; laatsteOk: string | null; laatsteFout: string | null; laatsteFoutOp: string | null; instellingen: { verzendCents: number; land: string; margePct: number | null } };
 type Treffer = { pid: string; naamEn: string; foto: string | null; inkoopUsdCents: number; inkoopCents: number | null; prijsCents: number | null; categorie: string; categorieCj: string; gevoerd: number };
+type BijwerkAntwoord = { bekeken: number; categorie: number; voorraad: number; vertaald: number; fouten: number; volgende: number | null; totaal: number };
 type Zoek = { producten: Treffer[]; totaal: number; pagina: number; gezochtOp?: string; vertaald?: boolean; land: string; margePct: number; verzendCents: number; koersDatum: string | null };
 type Uitkomst = { pid: string } & ({ fout: string } | { bestaand: boolean; id: string; slug: string; naam: string; prijsCents: number; inkoopCents: number; varianten: number; fotos: number; vertaald: boolean; actief: boolean; verzendCents?: number; verzendEcht?: boolean; melding: string | null });
 
@@ -261,7 +262,8 @@ export function Leverancier() {
                 let vanaf: number | null = 0;
                 const som = { bekeken: 0, categorie: 0, voorraad: 0, vertaald: 0, fouten: 0, totaal: 0, klaar: false };
                 while (vanaf !== null) {
-                  const r = await vraag<{ bekeken: number; categorie: number; voorraad: number; vertaald: number; fouten: number; volgende: number | null; totaal: number }>("/api/admin/shop-ai/cj/bijwerken", { vanaf });
+                  // expliciet getypeerd: anders ziet TypeScript een kring (vanaf ← r.volgende ← vraag(…, { vanaf }))
+                  const r: BijwerkAntwoord = await vraag<BijwerkAntwoord>("/api/admin/shop-ai/cj/bijwerken", { vanaf: vanaf as number });
                   som.bekeken += r.bekeken;
                   som.categorie += r.categorie;
                   som.voorraad += r.voorraad;
