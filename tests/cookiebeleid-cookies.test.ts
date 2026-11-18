@@ -87,7 +87,7 @@ const VERWACHT: Record<string, Verwacht> = {
 // Elke plek in de code die een cookie zet (of wist), met het aantal keer. Klantsites (lib/sites) staan op hun eigen domein.
 const ZETTERS: Record<string, number> = {
   "lib/auth/nextauth.ts": 4,
-  "middleware.ts": 6,
+  "middleware.ts": 7,
   "app/api/admin/view-as/route.ts": 1,
   "app/api/analytics/taal-vraag/route.ts": 1,
   "app/api/auth/passkey/route.ts": 1,
@@ -96,6 +96,7 @@ const ZETTERS: Record<string, number> = {
   "app/api/werkgever/dashboard/wissel/route.ts": 1,
   "app/api/werkgever/werkruimte/route.ts": 1,
   "app/r/[code]/route.ts": 1,
+  "app/voorbeeld/sluiten/route.ts": 1,
   "components/i18n/I18nProvider.tsx": 1,
   "components/marketing/AankondigingsBalk.tsx": 1,
   "components/marketing/CookieConsent.tsx": 1,
