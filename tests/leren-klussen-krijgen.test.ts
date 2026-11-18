@@ -5,7 +5,7 @@ import { APP_PAGES } from "@/lib/dev/app-pages.generated";
 import { paginaFoto } from "@/lib/marketing/fotos";
 import { STANDAARD_KOLOMMEN } from "@/lib/ontwerp/menu";
 import { openbareRoutes } from "@/lib/ops/rondgang";
-import { AANBOD, FOUTEN, LEREN_PAD, STAPPEN, VRAGEN, euro } from "@/lib/leren/klussen-krijgen";
+import { AANBOD, FOUTEN, LEREN_PAD, PRIJZEN_GOEDGEKEURD, STAPPEN, VRAGEN, euro, prijsTekst } from "@/lib/leren/klussen-krijgen";
 
 // De gids "Zo krijg je klussen via een platform" (/leren/klussen-krijgen, 18 nov 2026). Hij staat in de sitemap, de
 // rondgang en het menu, belooft geen werk en geen datum ("binnenkort"), en de prijzen komen uit één bestand.
@@ -34,6 +34,15 @@ describe("de gids Klussen krijgen", () => {
     expect(VRAGEN[0]?.a.startsWith("Nee.")).toBe(true);
     for (const a of AANBOD.filter((x) => x.prijsCents > 0)) expect(a.hoe.toLowerCase()).toContain("op aanvraag");
     expect(AANBOD.filter((x) => x.prijsCents === 0)).toHaveLength(2);
+  });
+
+  it("toont tot het akkoord van de eigenaar geen bedrag, alleen 'prijs op aanvraag' (een prijs op de site is een belofte)", () => {
+    expect(PRIJZEN_GOEDGEKEURD).toBe(false);
+    const betaald = AANBOD.find((a) => a.prijsCents > 0)!;
+    expect(prijsTekst(betaald)).toEqual({ bedrag: "prijs op aanvraag", toelichting: null });
+    expect(prijsTekst(betaald, true)).toEqual({ bedrag: euro(betaald.prijsCents), toelichting: betaald.per });
+    expect(prijsTekst({ prijsCents: 0, per: "gratis" })).toEqual({ bedrag: "gratis", toelichting: null });
+    expect(lees("app/(marketing)/leren/klussen-krijgen/page.tsx")).toContain("prijsTekst(a)");
   });
 
   it("schrijft prijzen in euro's zoals de rest van de site", () => {
