@@ -37,7 +37,7 @@ const opzoeken = vi.fn();
 vi.mock("@/lib/sales/discovery/places-lookup", () => ({ lookupCompanyContact: (...a: unknown[]) => opzoeken(...a) }));
 vi.mock("@/lib/sales/discovery/domain-guess", () => ({ guessAndVerifyDomain: async () => null }));
 
-import { CONTACT_RETRY_DAYS, contactBeurt, enrichLeadContact, kiesAdres, zelfdeDomein } from "@/lib/sales/discovery/contact-scrape";
+import { CONTACT_RETRY_DAYS, MAX_VERZOEKEN, contactBeurt, enrichLeadContact, kiesAdres, ontcijferAdressen, zelfdeDomein } from "@/lib/sales/discovery/contact-scrape";
 
 const NU = new Date("2026-11-15T08:00:00+01:00");
 const robotsVrij = (origin: string) => {
@@ -211,5 +211,85 @@ describe("contact-scrape: wie is aan de beurt", () => {
     }
     expect(beurten).toContain("osm");
     expect(new Set(beurten).size).toBe(38);
+  });
+});
+
+// 18 nov 2026: meer adressen vinden zonder iets te raden. Extra pagina's alleen als de gewone niets gaven (hooguit tien
+// verzoeken per site, robots.txt meegeteld), een verstopt adres leesbaar maken, en een mailto naar een gratis maildienst op
+// de eigen site telt als er geen adres op het eigen domein staat.
+describe("contact-scrape: meer adressen vinden", () => {
+  it("ontcijfert &#64;, &#x40;, [at], (at), [punt] en [dot] vóór het zoeken", () => {
+    expect(ontcijferAdressen("info&#64;acme.test")).toBe("info@acme.test");
+    expect(ontcijferAdressen("info&#x40;acme&#46;test")).toBe("info@acme.test");
+    expect(ontcijferAdressen("info [at] acme [punt] test")).toBe("info@acme.test");
+    expect(ontcijferAdressen("info (at) acme [dot] test")).toBe("info@acme.test");
+    expect(kiesAdres(["<p>Mail: personeel&#64;acme.test</p>"], ["acme.test"])).toBe("personeel@acme.test");
+    expect(kiesAdres(["<p>Mail: info [at] acme [punt] test</p>"], ["acme.test"])).toBe("info@acme.test");
+    expect(kiesAdres(['<a href="mailto:info%40acme.test">mail</a>'], ["acme.test"])).toBe("info@acme.test");
+    // een ontcijferd adres op een vreemd domein telt nog steeds niet
+    expect(kiesAdres(["<p>info [at] webbouwer [punt] test</p>"], ["acme.test"])).toBeNull();
+  });
+
+  it("een mailto naar een gratis maildienst op de eigen site telt, maar alleen als er geen adres op het eigen domein staat", () => {
+    const gratis = '<a href="mailto:Bakkerij.Acme@gmail.com?subject=Vraag">Mail ons</a>';
+    expect(kiesAdres([gratis], ["acme.test"])).toBe("bakkerij.acme@gmail.com");
+    expect(kiesAdres([gratis, '<a href="mailto:info@acme.test">mail</a>'], ["acme.test"])).toBe("info@acme.test");
+    // los in de tekst (geen mailto) telt een gratis adres niet, en een systeemadres nooit
+    expect(kiesAdres(["<p>Vragen? bakkerij.acme@gmail.com</p>"], ["acme.test"])).toBeNull();
+    expect(kiesAdres(['<a href="mailto:noreply@gmail.com">x</a>'], ["acme.test"])).toBeNull();
+    // een vreemd zakelijk domein in een mailto (de webbouwer) telt niet
+    expect(kiesAdres(['<a href="mailto:info@webbouwer.test">x</a>'], ["acme.test"])).toBeNull();
+  });
+
+  it("de extra pagina's (colofon, impressum, over, neem-contact-op, privacy) alleen als de gewone geen adres gaven", async () => {
+    robotsVrij("https://acme.test");
+    PAGINAS["https://acme.test/"] = { body: html("geen-adres") };
+    PAGINAS["https://acme.test/colofon"] = { body: "<p>Colofon: info [at] acme [punt] test</p>" };
+    const r = await enrichLeadContact("l1", NU);
+    expect(r.email).toBe("info@acme.test");
+    expect(r.uitkomst).toBe("adres");
+    expect(opgehaald).toContain("https://acme.test/colofon");
+
+    // staat het adres al op de gewone pagina's, dan blijven de extra pagina's met rust
+    opgehaald.length = 0;
+    PAGINAS["https://acme.test/"] = { body: html("eigen-adressen") };
+    await enrichLeadContact("l1", NU);
+    for (const pad of ["/colofon", "/impressum", "/over", "/neem-contact-op", "/privacy"]) expect(opgehaald).not.toContain(`https://acme.test${pad}`);
+  });
+
+  it("nooit meer dan tien verzoeken per site, robots.txt meegeteld", async () => {
+    expect(MAX_VERZOEKEN).toBe(10);
+    robotsVrij("https://acme.test");
+    PAGINAS["https://acme.test/"] = { body: html("geen-adres") };
+    const r = await enrichLeadContact("l1", NU);
+    expect(r.uitkomst).toBe("geen-adres");
+    expect(opgehaald.filter((u) => u.startsWith("https://acme.test/"))).toHaveLength(10);
+    expect(opgehaald[0]).toBe("https://acme.test/robots.txt");
+    // zeven gewone pagina's en dan nog twee extra: de derde extra past er niet meer bij
+    expect(opgehaald).toContain("https://acme.test/impressum");
+    expect(opgehaald).not.toContain("https://acme.test/over");
+  });
+
+  it("een site die geen enkele pagina geeft, krijgt de extra pagina's niet", async () => {
+    robotsVrij("https://acme.test");
+    const r = await enrichLeadContact("l1", NU);
+    expect(r.uitkomst).toBe("onbereikbaar");
+    expect(opgehaald).not.toContain("https://acme.test/colofon");
+  });
+
+  it("het adres dat het bedrijf zelf op de kaart zette (OpenStreetMap) vult aan als de site er geen geeft", async () => {
+    zetLead({ sourceUrl: null });
+    opzoeken.mockResolvedValue({ phone: "0501234567", website: null, matchedName: "Bakkerij Acme", email: "Bakkerij.Acme@gmail.com", bron: "osm" });
+    const r = await enrichLeadContact("l1", NU);
+    expect(r.email).toBe("bakkerij.acme@gmail.com");
+    expect(r.uitkomst).toBe("adres");
+    expect(data().contactEmail).toBe("bakkerij.acme@gmail.com");
+
+    // een systeemadres van de kaart nemen we niet over
+    update.mockClear();
+    opzoeken.mockResolvedValue({ phone: null, website: null, matchedName: "Bakkerij Acme", email: "privacy@acme.test", bron: "osm" });
+    const r2 = await enrichLeadContact("l1", NU);
+    expect(r2.email).toBeNull();
+    expect(data()).not.toHaveProperty("contactEmail");
   });
 });

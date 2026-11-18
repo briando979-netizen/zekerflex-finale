@@ -4,7 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import { guessAndVerifyDomain } from "@/lib/sales/discovery/domain-guess";
 import { lookupCompanyContact } from "@/lib/sales/discovery/places-lookup";
-import { isRommelAdres } from "@/lib/sales/discovery/rommel-adres";
+import { bruikbaarVoorKennismaking } from "@/lib/sales/discovery/rommel-adres";
+import { FREE_MAIL_DOMAINS } from "@/lib/sales/vrije-maildomeinen";
 import { loadRobots, robotsAllows } from "@/lib/sales/discovery/robots";
 
 function safeOrigin(url: string): string | null {
@@ -41,8 +42,10 @@ const UA = "ZekerFlexBot/1.0 (+https://zekerflex.com/bot; zakelijke kennismaking
 const TIMEOUT_MS = 10_000;
 const MAX_BYTES = 1_200_000;
 const CONTACT_PATHS = ["/", "/contact", "/contact/", "/contact-us", "/over-ons", "/nl/contact", "/contactgegevens"];
-/** Geen adressen voor een kennismaking: systeem- en klachtenadressen. */
-const GEEN_KENNISMAKING = /^(no-?reply|do-?not-?reply|mailer-daemon|postmaster|abuse|privacy)$/i;
+/** Alleen als de paden hierboven geen adres gaven (18 nov 2026): daar staat het adres vaak wél. */
+const EXTRA_PATHS = ["/colofon", "/impressum", "/over", "/neem-contact-op", "/privacy"];
+/** Hooguit zoveel verzoeken per site in één poging, robots.txt meegeteld. */
+export const MAX_VERZOEKEN = 10;
 /** Bij meerdere eigen adressen: eerst personeel, dan het algemene adres; anders het eerste dat er staat. */
 const VOORKEUR: readonly (readonly string[])[] = [
   ["personeel", "personeelszaken", "hr", "recruitment", "werving", "vacatures", "jobs"],
@@ -104,23 +107,47 @@ export function zelfdeDomein(adresDomein: string, siteHost: string): boolean {
   return s.endsWith(`.${a}`) && !PLATFORMS.includes(a);
 }
 
-/** Het adres om mee kennis te maken, uit de pagina's van één site; null als er geen staat op het eigen domein. */
+/**
+ * Maakt een verstopt adres weer leesbaar vóór het zoeken: "&#64;" en "&#x40;" (de @ als HTML-teken), "info [at] acme.nl",
+ * "info (at) acme [punt] nl". Verandert verder niets; of het adres meetelt, bepaalt kiesAdres (eigen domein, geen rommel).
+ */
+export function ontcijferAdressen(html: string): string {
+  return html
+    .replace(/&#0*64;|&#x0*40;|&commat;/gi, "@")
+    .replace(/&#0*46;|&#x0*2e;|&period;/gi, ".")
+    // begrensde witruimte: een pagina met lange rijen spaties mag het zoeken niet traag maken
+    .replace(/[ \t]{0,3}(?:\[\s{0,3}at\s{0,3}\]|\(\s{0,3}at\s{0,3}\))[ \t]{0,3}/gi, "@")
+    .replace(/[ \t]{0,3}(?:\[\s{0,3}(?:punt|dot)\s{0,3}\]|\(\s{0,3}(?:punt|dot)\s{0,3}\))[ \t]{0,3}/gi, ".");
+}
+
+/**
+ * Het adres om mee kennis te maken, uit de pagina's van één site. Eerst een adres op het eigen domein. Staat dat er niet,
+ * dan een adres bij een gratis maildienst (gmail, ziggo, …) waar de site zelf met een mailto-link naar wijst: veel kleine
+ * bedrijven hebben geen adres op hun eigen domein. Los in de tekst telt zo'n adres niet. Anders null.
+ */
 export function kiesAdres(paginas: readonly string[], eigenHosts: readonly string[]): string | null {
   const gevonden: string[] = [];
-  for (const html of paginas) {
-    for (const m of html.matchAll(/mailto:([^"'?>\s]+)/gi)) gevonden.push((m[1] ?? "").toLowerCase());
+  const mailtos: string[] = [];
+  for (const ruw of paginas) {
+    const html = ontcijferAdressen(ruw);
+    for (const m of html.matchAll(/mailto:([^"'?>\s]+)/gi)) {
+      const adres = (m[1] ?? "").replace(/%40/g, "@").toLowerCase();
+      gevonden.push(adres);
+      mailtos.push(adres);
+    }
     for (const m of html.matchAll(/\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b/gi)) gevonden.push((m[0] ?? "").toLowerCase());
   }
-  const eigen = [...new Set(gevonden)].filter((e) => {
+  const bruikbaar = (e: string): boolean => {
     const [lokaal = "", domein = ""] = e.split("@");
-    if (!lokaal || !domein || isRommelAdres(e) || GEEN_KENNISMAKING.test(lokaal)) return false;
-    return eigenHosts.some((h) => zelfdeDomein(domein, h));
-  });
+    return Boolean(lokaal && domein) && bruikbaarVoorKennismaking(e);
+  };
+  const eigen = [...new Set(gevonden)].filter((e) => bruikbaar(e) && eigenHosts.some((h) => zelfdeDomein(e.split("@")[1] ?? "", h)));
   for (const groep of VOORKEUR) {
     const raak = eigen.find((e) => groep.includes(e.split("@")[0] ?? ""));
     if (raak) return raak;
   }
-  return eigen[0] ?? null;
+  if (eigen[0]) return eigen[0];
+  return [...new Set(mailtos)].find((e) => bruikbaar(e) && FREE_MAIL_DOMAINS.has(e.split("@")[1] ?? "")) ?? null;
 }
 
 export type ContactUitkomst = "adres" | "geen-adres" | "robots" | "onbereikbaar" | "geen-site";
@@ -167,37 +194,49 @@ async function zoekOpSite(start: string, zoekTelefoon: boolean): Promise<SiteUit
   let phone: string | null = null;
   let opgehaald = 0;
   let verboden = 0;
-  for (const pad of CONTACT_PATHS) {
-    if (!robotsAllows(robots, pad)) {
-      verboden += 1;
-      continue;
-    }
-    if (opgehaald > 0 && robots.crawlDelayMs) await sleep(robots.crawlDelayMs);
-    opgehaald += 1;
-    const pagina = await fetchPage(origin + pad);
-    if (!pagina) continue;
-    const doel = safeOrigin(pagina.finalUrl);
-    if (doel && doel !== origin) {
-      // een contactpagina die naar een ander domein stuurt (een formulierdienst, een platform) telt niet mee
-      if (pad !== "/") continue;
-      // de homepage stuurt door (https, www, een nieuwe naam, een hoofdsite): dat domein telt als eigen, met zijn eigen
-      // robots.txt, en de contactpagina's zoeken we daar
-      const doelRobots = await loadRobots(doel);
-      if (!robotsAllows(doelRobots, new URL(pagina.finalUrl).pathname)) {
+  // robots.txt hierboven telt mee; samen met de pagina's nooit meer dan MAX_VERZOEKEN per site
+  let verzoeken = 1;
+  /** Eén rij paden aflopen; geeft true terug zodra er een personeelsadres staat (dan hoeft de rest niet meer). */
+  const loop = async (paden: readonly string[]): Promise<boolean> => {
+    for (const pad of paden) {
+      if (verzoeken >= MAX_VERZOEKEN) return false;
+      if (!robotsAllows(robots, pad)) {
         verboden += 1;
         continue;
       }
-      const host = safeHost(doel);
-      if (host) eigenHosts.add(host);
-      origin = doel;
-      robots = doelRobots;
+      if (opgehaald > 0 && robots.crawlDelayMs) await sleep(robots.crawlDelayMs);
+      opgehaald += 1;
+      verzoeken += 1;
+      const pagina = await fetchPage(origin + pad);
+      if (!pagina) continue;
+      const doel = safeOrigin(pagina.finalUrl);
+      if (doel && doel !== origin) {
+        // een contactpagina die naar een ander domein stuurt (een formulierdienst, een platform) telt niet mee
+        if (pad !== "/") continue;
+        // de homepage stuurt door (https, www, een nieuwe naam, een hoofdsite): dat domein telt als eigen, met zijn eigen
+        // robots.txt, en de contactpagina's zoeken we daar
+        verzoeken += 1;
+        const doelRobots = await loadRobots(doel);
+        if (!robotsAllows(doelRobots, new URL(pagina.finalUrl).pathname)) {
+          verboden += 1;
+          continue;
+        }
+        const host = safeHost(doel);
+        if (host) eigenHosts.add(host);
+        origin = doel;
+        robots = doelRobots;
+      }
+      paginas.push(pagina.html);
+      if (zoekTelefoon) phone = phone ?? extractPhone(pagina.html);
+      // een personeelsadres is het beste wat er staat: dan hoeft de rest niet meer
+      const adres = kiesAdres(paginas, [...eigenHosts]);
+      if (adres && (VOORKEUR[0] ?? []).includes(adres.split("@")[0] ?? "") && (phone || !zoekTelefoon)) return true;
     }
-    paginas.push(pagina.html);
-    if (zoekTelefoon) phone = phone ?? extractPhone(pagina.html);
-    // een personeelsadres is het beste wat er staat: dan hoeft de rest niet meer
-    const adres = kiesAdres(paginas, [...eigenHosts]);
-    if (adres && (VOORKEUR[0] ?? []).includes(adres.split("@")[0] ?? "") && (phone || !zoekTelefoon)) break;
-  }
+    return false;
+  };
+  const klaar = await loop(CONTACT_PATHS);
+  // de site gaf pagina's maar geen adres: nog een paar plekken waar het vaak staat (colofon, impressum, privacyverklaring)
+  if (!klaar && paginas.length > 0 && !kiesAdres(paginas, [...eigenHosts])) await loop(EXTRA_PATHS);
   const email = kiesAdres(paginas, [...eigenHosts]);
   // niets gelezen: verbood robots.txt het (ook dat van het doeldomein), dan "robots"; anders gaf de site geen pagina
   const uitkomst: ContactUitkomst = !paginas.length ? (verboden > 0 ? "robots" : "onbereikbaar") : email ? "adres" : "geen-adres";
@@ -227,10 +266,13 @@ export async function enrichLeadContact(leadId: string, nu: Date = new Date()): 
   // 1. Bedrijf opzoeken: echt telefoonnummer + website (beste bron). Google als
   //    zijn sleutel er is, anders onze eigen OpenStreetMap-bron — die is gratis,
   //    dus dit staat nooit meer uit. Niet nodig als we beide al hebben.
+  // het adres dat het bedrijf zelf op de kaart zette (OpenStreetMap): alleen als de site er geen geeft
+  let kaartAdres: string | null = null;
   if (!phone || !origin) {
     const p = await lookupCompanyContact(lead.companyName, lead.city).catch(() => null);
     if (p?.phone && !phone) phone = p.phone;
     if (p?.website && !origin) origin = safeOrigin(p.website);
+    if (p?.email && bruikbaarVoorKennismaking(p.email)) kaartAdres = p.email.trim().toLowerCase();
   }
 
   // 2. Nog geen website? Raad het domein.
@@ -242,8 +284,8 @@ export async function enrichLeadContact(leadId: string, nu: Date = new Date()): 
   // 3. Website afzoeken op ontbrekende telefoon + e-mail.
   const site = origin ? await zoekOpSite(origin, !phone) : null;
   phone = phone ?? site?.phone ?? null;
-  const email = site?.email ?? null;
-  const uitkomst: ContactUitkomst = site?.uitkomst ?? "geen-site";
+  const email = site?.email ?? kaartAdres;
+  const uitkomst: ContactUitkomst = email ? "adres" : (site?.uitkomst ?? "geen-site");
 
   const enrichment =
     lead.enrichmentJson && typeof lead.enrichmentJson === "object" && !Array.isArray(lead.enrichmentJson) ? lead.enrichmentJson : {};

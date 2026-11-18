@@ -72,6 +72,24 @@ describe("bedrijven opzoeken bij OpenStreetMap", () => {
     expect(lijst[0]?.locatie).toEqual({ lat: 52.0907123, lng: 5.1214456 });
   });
 
+  it("leest het mailadres dat het bedrijf zelf op de kaart zette (email of contact:email); anders null", async () => {
+    expect((await osmZoekBedrijven("Bakkerij Jansen Utrecht"))[0]?.email).toBeNull();
+    osmVergeetAlles();
+    haal.mockResolvedValueOnce(antwoord([{ ...BAKKER, extratags: { ...BAKKER.extratags, email: "Info@BakkerijJansen.nl; bestel@bakkerijjansen.nl" } }]));
+    expect((await osmZoekBedrijven("Bakkerij Jansen Utrecht"))[0]?.email).toBe("info@bakkerijjansen.nl");
+    osmVergeetAlles();
+    haal.mockResolvedValueOnce(antwoord([{ ...BAKKER, extratags: { "contact:email": "mailto:winkel@bakkerijjansen.nl" } }]));
+    expect((await osmZoekBedrijven("Bakkerij Jansen Utrecht"))[0]?.email).toBe("winkel@bakkerijjansen.nl");
+    osmVergeetAlles();
+    haal.mockResolvedValueOnce(antwoord([{ ...BAKKER, extratags: { email: "bel ons even" } }]));
+    expect((await osmZoekBedrijven("Bakkerij Jansen Utrecht"))[0]?.email).toBeNull();
+    // Overpass: de tags staan direct op het element
+    osmVergeetAlles();
+    haal.mockResolvedValueOnce(antwoord({ elements: [{ type: "node", id: 5, lat: 52, lon: 5, tags: { name: "Cafe Vijf", amenity: "cafe", "contact:email": "hallo@cafevijf.nl" } }] }));
+    const buurt = await osmBedrijvenInBuurt({ lat: 52, lng: 5, soort: { sleutel: "amenity", soort: "cafe" } });
+    expect(buurt[0]?.email).toBe("hallo@cafevijf.nl");
+  });
+
   it("vraagt Nederland, Nederlands en een nette User-Agent, zonder e-mailadres van de eigenaar", async () => {
     await osmZoekBedrijven("Bakkerij Jansen Utrecht");
     const url = new URL(String(haal.mock.calls[0]?.[0]));

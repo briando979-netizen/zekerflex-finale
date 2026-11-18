@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { osmBedrijvenVanSoorten, osmZoekBedrijven, type OsmPlaats } from "@/lib/integrations/osm-plaatsen";
 import { STRAAL_M, middelpuntVanStad, tagsVoorSector } from "@/lib/sales/discovery/osm-tags";
 import { createLead } from "@/lib/sales/leads";
+import { bruikbaarVoorKennismaking } from "@/lib/sales/discovery/rommel-adres";
 import { CITIES, REGIO_STEDEN } from "@/lib/seo-cities";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 
@@ -144,6 +145,10 @@ export async function discoverViaOsm(
         result.skipped += 1;
         continue;
       }
+      // Het mailadres dat het bedrijf zelf op de kaart zette (18 nov 2026): dan heeft de lead meteen een adres. Dezelfde
+      // regels als de contact-scrape (geen rommel, geen no-reply/privacy/abuse); een gratis maildienst mag hier wel,
+      // want het bedrijf maakte dit adres zelf openbaar.
+      const email = t.email && bruikbaarVoorKennismaking(t.email) ? t.email : null;
       // Overpass geeft niet altijd een plaats bij het bedrijf: dan de plaats waar we rond zochten
       await createLead({
         companyName: t.naam,
@@ -154,6 +159,7 @@ export async function discoverViaOsm(
         campaignId: campaign.id,
         ...(t.website ? { sourceUrl: t.website } : {}),
         ...(t.telefoon ? { contactPhone: t.telefoon } : {}),
+        ...(email ? { contactEmail: email, discoveredEmail: email } : {}),
       });
       result.created += 1;
     }

@@ -118,3 +118,37 @@ describe("discoverViaOsm", () => {
     expect(createLead).toHaveBeenCalledWith(expect.objectContaining({ companyName: "Schoonmaak Test", sector: "schoonmaak" }));
   });
 });
+
+// 18 nov 2026: het mailadres dat het bedrijf zelf op de kaart zette (tag email of contact:email) gaat mee naar de lead.
+describe("discoverViaOsm: het mailadres van de kaart", () => {
+  const campagne = { id: "camp1", targetSectors: ["horeca"], targetCities: ["Groningen"] } as unknown as SalesCampaign;
+  const plek = (naam: string, email: string | null) => ({ naam, plaats: "Groningen", website: null, telefoon: null, email });
+
+  beforeEach(() => {
+    findFirst.mockReset().mockResolvedValue(null);
+    createLead.mockReset().mockResolvedValue({ id: "lead" });
+    zoek.mockReset().mockResolvedValue([]);
+  });
+
+  it("een bruikbaar adres komt meteen op de lead, ook bij een gratis maildienst", async () => {
+    buurt.mockReset().mockResolvedValue([plek("Eetcafe Een", "info@eetcafe-een.nl"), plek("Eetcafe Twee", "eetcafe.twee@gmail.com"), plek("Eetcafe Drie", null)]);
+    await discoverViaOsm(campagne, 12, new Date("2026-11-18T09:00:00+01:00"));
+    const leads = createLead.mock.calls.map((c) => c[0] as Record<string, unknown>);
+    expect(leads[0]).toMatchObject({ companyName: "Eetcafe Een", contactEmail: "info@eetcafe-een.nl", discoveredEmail: "info@eetcafe-een.nl" });
+    expect(leads[1]).toMatchObject({ companyName: "Eetcafe Twee", contactEmail: "eetcafe.twee@gmail.com" });
+    expect(leads[2]).not.toHaveProperty("contactEmail");
+    expect(leads[2]).not.toHaveProperty("discoveredEmail");
+  });
+
+  it("geen no-reply, privacy, abuse of rommel (voorbeeldadres, sleutel van een foutenmelder)", async () => {
+    buurt.mockReset().mockResolvedValue([
+      plek("Zaak A", "noreply@zaak-a.nl"),
+      plek("Zaak B", "privacy@zaak-b.nl"),
+      plek("Zaak C", "abuse@zaak-c.nl"),
+      plek("Zaak D", "jan@example.com"),
+    ]);
+    await discoverViaOsm(campagne, 12, new Date("2026-11-18T09:00:00+01:00"));
+    expect(createLead).toHaveBeenCalledTimes(4);
+    for (const c of createLead.mock.calls) expect(c[0]).not.toHaveProperty("contactEmail");
+  });
+});

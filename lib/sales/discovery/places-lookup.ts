@@ -25,6 +25,8 @@ export interface PlacesContact {
   phone: string | null;
   website: string | null;
   matchedName: string | null;
+  /** het mailadres dat het bedrijf zelf op de kaart zette (alleen onze eigen bron kent dit) */
+  email?: string | null;
   /** waar dit antwoord vandaan komt */
   bron: BedrijvenBron;
 }
@@ -52,7 +54,7 @@ async function viaOsmContact(name: string, city?: string | null): Promise<Places
   const match = lijst.find((p) => p.telefoon !== null || p.website !== null) ?? lijst[0];
   if (!match) return null;
   logger.info("bedrijf opgezocht bij onze eigen bron", { hasPhone: Boolean(match.telefoon), hasWebsite: Boolean(match.website) });
-  return { phone: kaalNummer(match.telefoon), website: match.website, matchedName: match.naam, bron: "osm" };
+  return { phone: kaalNummer(match.telefoon), website: match.website, matchedName: match.naam, email: match.email ?? null, bron: "osm" };
 }
 
 async function viaGoogleContact(name: string, city?: string | null): Promise<PlacesContact | null> {

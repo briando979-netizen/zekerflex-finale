@@ -31,6 +31,16 @@ const BESTAND = /\.(png|jpe?g|gif|svg|webp|css|js)$/i;
 /** De publieke sleutel van een Sentry-DSN: 32 hextekens vóór de @. */
 const SENTRY_SLEUTEL = /^[0-9a-f]{32}$/i;
 
+/** Geen adressen voor een kennismaking: systeem- en klachtenadressen. */
+const GEEN_KENNISMAKING = /^(no-?reply|do-?not-?reply|mailer-daemon|postmaster|abuse|privacy)$/i;
+
+/** Mag dit adres een zakelijke kennismaking krijgen: geen rommel en geen systeem-, klachten- of privacyadres. */
+export function bruikbaarVoorKennismaking(email: string): boolean {
+  const e = email.trim().toLowerCase();
+  if (isRommelAdres(e)) return false;
+  return !GEEN_KENNISMAKING.test(e.slice(0, e.indexOf("@")));
+}
+
 /** Is dit adres rommel: geen adres van het bedrijf zelf, maar van een dienst, een voorbeeld of een bestand? */
 export function isRommelAdres(email: string): boolean {
   const e = email.trim().toLowerCase();

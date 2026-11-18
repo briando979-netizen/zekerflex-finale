@@ -71,6 +71,8 @@ export interface OsmPlaats {
   locatie: { lat: number; lng: number } | null;
   website: string | null;
   telefoon: string | null;
+  /** het mailadres dat het bedrijf zelf op de kaart zette (tag email of contact:email); ontbreekt of null als het er niet staat */
+  email?: string | null;
   /** het soort zoals OSM het noemt, bv. "restaurant" of "hairdresser" */
   soort: string | null;
   /** de tag waaronder dat soort staat, bv. "amenity", "shop" of "craft" */
@@ -222,6 +224,13 @@ function telefoonVan(ruw: string | null): string | null {
   return n.startsWith("+") || n.startsWith("0") ? n : null;
 }
 
+/** Het eerste mailadres uit een OSM-tag ("info@bakker.nl; bestel@bakker.nl"), in kleine letters; null als het geen adres is. */
+function emailVan(ruw: string | null): string | null {
+  if (!ruw) return null;
+  const e = (ruw.split(/[;,\s]+/).find(Boolean) ?? "").replace(/^mailto:/i, "").toLowerCase();
+  return e.length <= 254 && /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(e) ? e : null;
+}
+
 /** "Oudegracht 1, 3511 AA Utrecht" uit de losse adresdelen. */
 function adresRegel(delen: { straat: string | null; nummer: string | null; postcode: string | null; plaats: string | null }): string {
   const links = [delen.straat, delen.nummer].filter(Boolean).join(" ");
@@ -314,6 +323,7 @@ function uitNominatim(r: Json): OsmPlaats | null {
     locatie: lat !== null && lng !== null ? { lat, lng } : null,
     website: webAdres(str(extra.website) ?? str(extra["contact:website"]) ?? str(extra.url)),
     telefoon: telefoonVan(str(extra.phone) ?? str(extra["contact:phone"]) ?? str(extra["contact:mobile"])),
+    email: emailVan(str(extra.email) ?? str(extra["contact:email"])),
     soort: str(r.type),
     soortSleutel: str(r.category) ?? str(r.class),
     openingstijden: str(extra.opening_hours),
@@ -343,6 +353,7 @@ function uitOverpass(e: Json): OsmPlaats | null {
     locatie: lat !== null && lng !== null ? { lat, lng } : null,
     website: webAdres(str(t.website) ?? str(t["contact:website"])),
     telefoon: telefoonVan(str(t.phone) ?? str(t["contact:phone"])),
+    email: emailVan(str(t.email) ?? str(t["contact:email"])),
     soort: sleutel ? str(t[sleutel]) : null,
     soortSleutel: sleutel,
     openingstijden: str(t.opening_hours),
