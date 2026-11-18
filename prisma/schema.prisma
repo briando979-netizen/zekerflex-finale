@@ -1946,6 +1946,12 @@ model ShopProduct {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  // Aanbieding (18 nov 2026, lib/shop/aanbieding.ts). Tijdens een aanbieding is priceCents de actieprijs.
+  dealVanCents     Int? // de "van"-prijs: de laagste prijs van de 30 dagen vóór de aanbieding (uit ShopPriceLog, niet in te typen)
+  dealNormaalCents Int? // de prijs die terugkomt als de aanbieding stopt; null = er loopt geen aanbieding
+  dealEindigt      DateTime?
+  priceLog         ShopPriceLog[]
+
   variants   ShopProductVariant[]
   bundleOf   ShopBundleItem[]     @relation("BundleProduct")
   includedIn ShopBundleItem[]     @relation("ItemProduct")
@@ -1962,6 +1968,7 @@ model ShopProduct {
   @@index([category, active])
   @@index([gender, collection])
   @@index([sellerTenantId, sellerStatus])
+  @@index([dealEindigt])
 }
 
 // One stock-tracked purchasable unit of a product (a specific size/color
@@ -1975,12 +1982,29 @@ model ShopProductVariant {
   size       String?
   color      String?
   priceCents Int? // null = inherit ShopProduct.priceCents
+  // alleen bij een variant met een eigen prijs, tijdens een aanbieding (lib/shop/aanbieding-server.ts)
+  dealVanCents     Int?
+  dealNormaalCents Int?
   stock      Int         @default(0)
   sku        String      @unique
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 
   @@index([productId])
+}
+
+// Elke prijs die een product (variantId null) of een variant met een eigen prijs heeft gehad. Gevuld door de database zelf
+// (triggers in migratie 20261118060000_shop_aanbieding), zodat geen enkele weg die een prijs wijzigt hem overslaat. Hieruit
+// komt de "van"-prijs van een aanbieding: de laagste prijs van de laatste 30 dagen.
+model ShopPriceLog {
+  id         String      @id @default(cuid())
+  productId  String
+  product    ShopProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantId  String?
+  priceCents Int
+  at         DateTime    @default(now())
+
+  @@index([productId, variantId, at])
 }
 
 // A bundle ShopProduct (isBundle: true) lists the real products it contains,

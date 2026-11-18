@@ -9,6 +9,7 @@ import { contentKeys, getContentMap } from "@/lib/content/store";
 import { metShopTeksten } from "@/lib/ontwerp/shop-teksten";
 import { huidigeShopBetaalwijze } from "@/lib/shop/overschrijving-server";
 import { prisma } from "@/lib/prisma";
+import { aantalAanbiedingen, herstelVerlopenAanbiedingen } from "@/lib/shop/aanbieding-server";
 
 export const dynamic = "force-dynamic";
 
@@ -29,11 +30,14 @@ export default async function ShopLayout({ children }: { children: ReactNode }) 
   // per categorie het aantal actieve producten: de balk en het categoriemenu tonen alleen waar iets in zit.
   // Database even weg: een lege telling, dan toont de shop de vaste categorieën.
   const telling = await prisma.shopProduct.groupBy({ by: ["category"], where: { active: true }, _count: { _all: true } }).catch(() => []);
+  // verlopen aanbiedingen terug naar de gewone prijs (hooguit één keer per minuut), en hoeveel er nu lopen
+  await herstelVerlopenAanbiedingen();
+  const dealAantal = await aantalAanbiedingen();
   const catAantallen: Record<string, number> = {};
   for (const r of telling) catAantallen[r.category] = r._count._all;
   return (
     <I18nProvider locale={locale} t={eigen !== nl ? eigen : clientDict(locale)}>
-      <ShopChrome modus={modus} betaalwijze={betaalwijze} catAantallen={catAantallen}>
+      <ShopChrome modus={modus} betaalwijze={betaalwijze} catAantallen={catAantallen} dealAantal={dealAantal}>
         {children}
       </ShopChrome>
     </I18nProvider>

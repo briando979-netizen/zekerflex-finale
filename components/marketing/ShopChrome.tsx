@@ -56,16 +56,19 @@ export function ShopChrome({
   modus = "particulier",
   betaalwijze = "online",
   catAantallen = {},
+  dealAantal = 0,
 }: {
   children: ReactNode;
   modus?: ShopModus;
   betaalwijze?: ShopBetaalwijze;
   catAantallen?: Readonly<Record<string, number>>;
+  /** hoeveel producten nu in de aanbieding zijn; alleen dan staat de link Aanbiedingen in de balk */
+  dealAantal?: number;
 }) {
   return (
     <ShopModusProvider modus={modus}>
       <ShopBetaalwijzeProvider waarde={betaalwijze}>
-        <ShopOmlijsting betaalwijze={betaalwijze} catAantallen={catAantallen}>
+        <ShopOmlijsting betaalwijze={betaalwijze} catAantallen={catAantallen} dealAantal={dealAantal}>
           {children}
         </ShopOmlijsting>
       </ShopBetaalwijzeProvider>
@@ -105,7 +108,7 @@ function navVoor(modus: ShopModus, t: Dict, aantallen: Readonly<Record<string, n
   return lijst.filter((n) => !n.cat || heeft(n.cat));
 }
 
-function ShopOmlijsting({ children, betaalwijze, catAantallen }: { children: ReactNode; betaalwijze: ShopBetaalwijze; catAantallen: Readonly<Record<string, number>> }) {
+function ShopOmlijsting({ children, betaalwijze, catAantallen, dealAantal }: { children: ReactNode; betaalwijze: ShopBetaalwijze; catAantallen: Readonly<Record<string, number>>; dealAantal: number }) {
   const { locale, t } = useI18n();
   const { modus } = useShopModus();
   const NAV = navVoor(modus, t, catAantallen);
@@ -317,6 +320,12 @@ function ShopOmlijsting({ children, betaalwijze, catAantallen }: { children: Rea
             <span aria-hidden className="text-[11px]">▾</span>
           </button>
           <span aria-hidden className="mx-1 hidden h-5 w-px bg-hair lg:block" />
+          {dealAantal > 0 && (
+            <Link href="/shop?deals=1#collectie" className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[14px] font-bold text-crit transition hover:bg-paper-soft">
+              {t.shop.aanbiedingen}
+              <span className="rounded-full bg-crit px-1.5 py-px text-[11px] font-bold leading-tight text-white">{dealAantal}</span>
+            </Link>
+          )}
           {NAV.map((n) => (
             <Link key={n.href} href={n.href} className="inline-flex h-9 shrink-0 items-center rounded-lg px-3 text-[14px] font-semibold text-ink transition hover:bg-paper-soft">
               {n.label}

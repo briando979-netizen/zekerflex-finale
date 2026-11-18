@@ -4,16 +4,19 @@
 
 import type { ShopCategorie } from "@/lib/shop/categorieen";
 import { herkomstVan, type Herkomst } from "@/lib/shop/levertijd";
+import { dealActief } from "@/lib/shop/aanbieding";
 
 /** Eén lijst voor de hele shop: lib/shop/categorieen.ts. */
 export type ShopCategory = ShopCategorie;
-export type ShopVariant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number };
+export type ShopVariant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number; /** de "van"-prijs van een variant met een eigen prijs, tijdens een aanbieding */ vanCents?: number | null };
 export type ShopCardProduct = {
   id: string;
   slug?: string | undefined;
   name: string;
   description: string;
   price: number;
+  /** de "van"-prijs in euro's als er nu een aanbieding loopt (lib/shop/aanbieding.ts), anders null */
+  van?: number | null;
   category: ShopCategory;
   gender?: string | null;
   /** collectie (bijv. Winter 2026), voor ?collectie= en de voorpagina (lib/shop/etalage.ts) */
@@ -43,8 +46,10 @@ export function sellerName(seller: unknown): string | null {
 }
 
 /** Databaserij (of API-item) → etalageproduct. */
-export function toShopProduct(it: Record<string, unknown>): ShopCardProduct {
+export function toShopProduct(it: Record<string, unknown>, nu: Date = new Date()): ShopCardProduct {
   const imageUrl = typeof it.imageUrl === "string" ? it.imageUrl : null;
+  const eindigt = it.dealEindigt instanceof Date || typeof it.dealEindigt === "string" ? it.dealEindigt : null;
+  const actie = dealActief({ priceCents: Number(it.priceCents), dealVanCents: typeof it.dealVanCents === "number" ? it.dealVanCents : null, dealEindigt: eindigt }, nu);
   const alt = typeof it.modelPhotoUrl === "string" && it.modelPhotoUrl !== imageUrl ? it.modelPhotoUrl : null;
   return {
     id: String(it.id),
@@ -52,6 +57,7 @@ export function toShopProduct(it: Record<string, unknown>): ShopCardProduct {
     name: String(it.name),
     description: String(it.description ?? ""),
     price: Number(it.priceCents) / 100,
+    van: actie ? Number(it.dealVanCents) / 100 : null,
     category: (it.category as ShopCategory) ?? "Werkdag",
     gender: typeof it.gender === "string" ? it.gender : null,
     collection: typeof it.collection === "string" && it.collection ? it.collection : null,
@@ -65,6 +71,7 @@ export function toShopProduct(it: Record<string, unknown>): ShopCardProduct {
             size: typeof v.size === "string" ? v.size : null,
             color: typeof v.color === "string" ? v.color : null,
             priceCents: typeof v.priceCents === "number" ? v.priceCents : null,
+            vanCents: actie && typeof v.priceCents === "number" && typeof v.dealVanCents === "number" && v.dealVanCents > v.priceCents ? v.dealVanCents : null,
             stock: Number(v.stock ?? 0),
           }))
         : oneSize(String(it.id), Number(it.stock ?? 0)),

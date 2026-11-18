@@ -20,7 +20,7 @@ export function OnlangsBekeken({ producten, behalve, ingebed = false }: { produc
     if (producten || opgehaald || zichtbaar.length === 0) return;
     fetch("/api/shop/products")
       .then((r) => (r.ok ? r.json() : { products: [] }))
-      .then((d: { products?: Record<string, unknown>[] }) => setOpgehaald((d.products ?? []).map(toShopProduct)))
+      .then((d: { products?: Record<string, unknown>[] }) => setOpgehaald((d.products ?? []).map((p) => toShopProduct(p))))
       .catch(() => setOpgehaald([]));
   }, [producten, opgehaald, zichtbaar.length]);
 

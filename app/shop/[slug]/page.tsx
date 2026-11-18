@@ -1,3 +1,4 @@
+import { dealActief } from "@/lib/shop/aanbieding";
 import type { Metadata } from "next";
 import { ldJson } from "@/lib/seo/json-ld";
 import { notFound } from "next/navigation";
@@ -18,20 +19,26 @@ function toDto(p: {
   id: string; slug: string; name: string; description: string; category: string;
   priceCents: number; stock: number; imageUrl: string | null; modelPhotoUrl: string | null; badge: string | null;
   fotos?: string[];
+  dealVanCents?: number | null;
+  dealEindigt?: Date | null;
   collection?: string | null;
   gender?: string | null;
   seller?: { name: string } | null;
-  variants?: { id: string; sku?: string; size: string | null; color: string | null; priceCents: number | null; stock: number }[];
+  variants?: { id: string; sku?: string; size: string | null; color: string | null; priceCents: number | null; stock: number; dealVanCents?: number | null }[];
   bundleOf?: { itemProduct: { id: string; name: string; imageUrl: string | null; priceCents: number } }[];
   /** levertijd in dagen voor een leveranciersproduct (lib/shop/levertijd-server.ts) */
   levertijd?: string | null;
 }): PdpProduct {
+  // loopt er nu een aanbieding? Alleen dan gaat de "van"-prijs mee naar de pagina (lib/shop/aanbieding.ts)
+  const actie = dealActief({ priceCents: p.priceCents, dealVanCents: p.dealVanCents ?? null, dealEindigt: p.dealEindigt ?? null }, new Date());
   return {
     id: p.id, slug: p.slug, name: p.name, description: p.description, category: p.category,
-    priceCents: p.priceCents, stock: p.stock, imageUrl: p.imageUrl, modelPhotoUrl: p.modelPhotoUrl, badge: p.badge,
+    priceCents: p.priceCents, vanCents: actie ? (p.dealVanCents ?? null) : null, stock: p.stock, imageUrl: p.imageUrl, modelPhotoUrl: p.modelPhotoUrl, badge: p.badge,
     fotos: p.fotos ?? [],
     collection: p.collection ?? null,
-    variants: p.variants ?? [{ id: p.id, size: null, color: null, priceCents: null, stock: p.stock }],
+    variants: p.variants
+      ? p.variants.map((x) => ({ id: x.id, size: x.size, color: x.color, priceCents: x.priceCents, stock: x.stock, vanCents: actie && x.priceCents !== null && typeof x.dealVanCents === "number" && x.dealVanCents > x.priceCents ? x.dealVanCents : null }))
+      : [{ id: p.id, size: null, color: null, priceCents: null, stock: p.stock }],
     ...(p.bundleOf ? { bundleItems: p.bundleOf.map((b) => b.itemProduct) } : {}),
     seller: p.seller?.name ?? null,
     gender: p.gender ?? null,

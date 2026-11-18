@@ -1,5 +1,6 @@
 "use client";
 
+import { ShopAanbieding } from "@/components/admin/ShopAanbieding";
 import { useEffect, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
 import { centenNaarEuro, euroNaarCenten, slugUitNaam, uniekeSlug } from "@/lib/shop/product-formulier";
 import {
@@ -439,6 +440,8 @@ export function ShopProductScherm({
               <input className="a-input" value={prijsTekst} onChange={(e) => setPrijsTekst(e.target.value)} inputMode="decimal" placeholder="39,95" />
             </label>
           </div>
+          {/* een aanbieding kan pas bij een product dat al bestaat (er is dan een prijs om mee te vergelijken) */}
+          {product && <ShopAanbieding productId={product.id} />}
           <label className="a-label block">
             <span className="flex flex-wrap items-center justify-between gap-2">
               <span>Omschrijving</span>

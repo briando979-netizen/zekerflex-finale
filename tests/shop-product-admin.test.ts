@@ -15,7 +15,8 @@ const productUpdate = vi.fn();
 const variantCreate = vi.fn();
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    shopProduct: { create: (...a: unknown[]) => productCreate(...a), update: (...a: unknown[]) => productUpdate(...a), findMany: vi.fn() },
+    // findUnique: de PATCH-route kijkt of er een aanbieding loopt voordat hij een andere prijs bewaart (hier: geen)
+    shopProduct: { create: (...a: unknown[]) => productCreate(...a), update: (...a: unknown[]) => productUpdate(...a), findMany: vi.fn(), findUnique: vi.fn().mockResolvedValue(null) },
     shopProductVariant: { create: (...a: unknown[]) => variantCreate(...a) },
   },
 }));

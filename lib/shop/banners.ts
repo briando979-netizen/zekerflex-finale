@@ -2,14 +2,17 @@ import { CATEGORIE_EN, isShopCategorie } from "@/lib/shop/categorieen";
 import { categoriePad } from "@/lib/shop/categoriemenu";
 import { seizoenVan, type EtalageProduct, type Seizoen } from "@/lib/shop/etalage";
 import { typischEerst } from "@/lib/shop/subgroepen";
+import { blackFridayWeek } from "@/lib/shop/aanbieding";
+import { amsterdamDayKey } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
 // De banners boven aan de shop (18 nov 2026, eigenaar: banners zoals een grote webwinkel, ook voor Sinterklaas). In onze
-// reclamestijl (donker, grote kop, mint) en met foto's van onze eigen producten. Eerlijk: de shop kent geen "van"-prijs
-// en geen prijshistorie, dus er is geen banner met een korting, deal of aftelklok (Black Friday, topdeals): een
-// kortingsbelofte mag alleen met de laagste prijs van de laatste 30 dagen erbij. Wel: een seizoensbanner in de weken
-// van Sinterklaas en kerst, en banners voor de grootste categorieën. Een banner zonder genoeg producten met foto
-// verschijnt niet. Puur bestand; het blok staat in components/marketing/ShopEtalage.tsx.
+// reclamestijl (donker, grote kop, mint) en met foto's van onze eigen producten. Eerlijk: een banner voor aanbiedingen
+// (in de week van Black Friday onder die naam) staat er alleen als er minstens drie echte aanbiedingen lopen
+// (lib/shop/aanbieding.ts: de "van"-prijs is de laagste prijs van de laatste 30 dagen, uit de prijshistorie). Geen
+// aftelklok en geen percentage op de banner zelf. Verder: een seizoensbanner in de weken van Sinterklaas en kerst, en
+// banners voor de grootste categorieën. Een banner zonder genoeg producten met foto verschijnt niet. Puur bestand;
+// het blok staat in components/marketing/ShopEtalage.tsx.
 // ---------------------------------------------------------------------------
 
 export interface Tekst {
@@ -19,7 +22,7 @@ export interface Tekst {
 
 export interface ShopBanner {
   sleutel: string;
-  soort: "seizoen" | "categorie";
+  soort: "aanbieding" | "seizoen" | "categorie";
   /** de grote kop: een witte regel en een regel in mint */
   kop: Tekst;
   accent: Tekst;
@@ -67,6 +70,23 @@ export function shopBanners(producten: readonly EtalageProduct[], nu: Date, max 
   };
   const uit: ShopBanner[] = [];
   const bezet = new Set<string>();
+
+  // echte aanbiedingen: pas vanaf drie producten met foto, in de week van Black Friday onder die naam
+  const deals = producten.filter((p) => p.deal);
+  const dealFotos = fotos(deals);
+  if (dealFotos.length >= MIN_FOTOS) {
+    for (const x of dealFotos) gebruikt.add(x);
+    const bf = blackFridayWeek(amsterdamDayKey(nu));
+    uit.push({
+      sleutel: bf ? "black-friday" : "aanbiedingen",
+      soort: "aanbieding",
+      kop: bf ? tk("Black Friday", "Black Friday") : tk("Aanbiedingen", "Offers"),
+      accent: tk("Nu tijdelijk lager geprijsd.", "Lower prices for a limited time."),
+      fotos: dealFotos,
+      aantal: deals.length,
+      href: "/shop?deals=1#collectie",
+    });
+  }
 
   const seizoen = seizoenVan(nu);
   if (seizoen) {

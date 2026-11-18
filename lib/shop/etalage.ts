@@ -19,6 +19,8 @@ export interface EtalageProduct {
   imageUrl?: string | null;
   price: number;
   opVoorraad: boolean;
+  /** loopt er nu een aanbieding op dit product? */
+  deal?: boolean;
 }
 
 export const PRIJSKLASSEN = ["onder15", "15-30", "vanaf30"] as const;

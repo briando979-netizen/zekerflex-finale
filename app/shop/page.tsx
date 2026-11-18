@@ -41,7 +41,7 @@ export const dynamic = "force-dynamic";
 const CATS = ["Alles", ...SHOP_CATEGORIEEN] as const;
 type Cat = (typeof CATS)[number];
 
-export default async function ShopPage(props: { searchParams: Promise<{ cat?: string; q?: string; voor?: string; prijs?: string; collectie?: string }> }) {
+export default async function ShopPage(props: { searchParams: Promise<{ cat?: string; q?: string; voor?: string; prijs?: string; collectie?: string; deals?: string }> }) {
   const searchParams = await props.searchParams;
   const initialCat: Cat = CATS.includes(searchParams.cat as Cat) ? (searchParams.cat as Cat) : "Alles";
   const initialVoor = voorUitAdres(searchParams.voor);
@@ -117,7 +117,8 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
   // ?prijs= en ?collectie= komen van de thema's en de cadeauhulp (lib/shop/etalage.ts)
   const initialPrijs = prijsUitAdres(searchParams.prijs);
   const initialCollectie = collectieUitAdres(searchParams.collectie, rows.map((r) => r.collection));
-  const browsing = initialQuery !== "" || initialCat !== "Alles" || initialVoor !== null || initialPrijs !== null || initialCollectie !== null;
+  const initialDeals = searchParams.deals === "1";
+  const browsing = initialQuery !== "" || initialCat !== "Alles" || initialVoor !== null || initialPrijs !== null || initialCollectie !== null || initialDeals;
   // de voorpagina zoals bol.com: Uitgelicht, thema's, cadeauhulp, Ontdek alles en Snel regelen, uit de echte catalogus
   const nu = new Date();
   const etalage: EtalageProduct[] = products.map((p) => ({
@@ -130,6 +131,7 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
     imageUrl: p.imageUrl ?? null,
     price: p.price,
     opVoorraad: p.variants.some((v) => v.stock > 0),
+    deal: typeof p.van === "number",
   }));
   const seizoen = seizoenVan(nu);
 
@@ -145,7 +147,7 @@ export default async function ShopPage(props: { searchParams: Promise<{ cat?: st
     looks: <ShopLooks t={dict} looks={looks} />,
     populair: featured.length === 5 ? <ShopFeatured title={t.popular} products={featured} /> : null,
     onlangs: <OnlangsBekeken producten={products} />,
-    assortiment: <ShopStorefront initialCat={initialCat} initialQuery={initialQuery} initialVoor={initialVoor} initialPrijs={initialPrijs} initialCollectie={initialCollectie} products={products} pageTitle={browsing} />,
+    assortiment: <ShopStorefront initialCat={initialCat} initialQuery={initialQuery} initialVoor={initialVoor} initialPrijs={initialPrijs} initialCollectie={initialCollectie} initialDeals={initialDeals} products={products} pageTitle={browsing} />,
     meer: <ShopMoreCategories t={t} />,
     service: <ShopService t={t} />,
     nieuwsbrief: <ShopNewsletter t={t} />,

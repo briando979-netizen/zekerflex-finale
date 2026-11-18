@@ -35,7 +35,7 @@ import { Sterren } from "@/components/marketing/Sterren";
 // beeld is. Computer: foto's links, titel en koopblok rechts (het koopblok blijft
 // staan tijdens scrollen). Daaronder beschrijving, specificaties en verzending.
 
-export type PdpVariant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number };
+export type PdpVariant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number; /** de "van"-prijs van deze variant als er nu een aanbieding loopt */ vanCents?: number | null };
 export type PdpBundleItem = { id: string; name: string; imageUrl: string | null; priceCents: number };
 export type PdpProduct = {
   id: string;
@@ -44,6 +44,8 @@ export type PdpProduct = {
   description: string;
   category: string;
   priceCents: number;
+  /** de "van"-prijs als er nu een aanbieding loopt (de server bepaalt dat), anders null */
+  vanCents?: number | null;
   stock: number;
   imageUrl: string | null;
   modelPhotoUrl: string | null;
@@ -80,6 +82,7 @@ const asCard = (p: PdpProduct): ShopCardProduct => ({
   name: p.name,
   description: p.description,
   price: p.priceCents / 100,
+  van: typeof p.vanCents === "number" ? p.vanCents / 100 : null,
   category: p.category as ShopCategory,
   label: p.badge,
   imageUrl: p.imageUrl,
@@ -139,6 +142,8 @@ export function ProductDetail({
     ? product.variants.find((v) => (sizes.length === 0 || v.size === selSize) && (colors.length === 0 || v.color === selColor))
     : product.variants[0];
   const variantPriceCents = variant?.priceCents ?? product.priceCents;
+  // een variant met een eigen prijs heeft zijn eigen "van"-prijs; anders die van het product
+  const variantVanCents = typeof variant?.priceCents === "number" ? (variant.vanCents ?? null) : (product.vanCents ?? null);
   const variantStock = variant?.stock ?? product.stock;
   const canBuy = Boolean(variant) && variantStock > 0 && !bestellenDicht;
   const buyLabel = bestellenDicht ? t.shop.orderClosedShort : !variant ? t.shop.chooseOptionShort : variantStock <= 0 ? t.shop.soldOut : t.shop.addToCart;
@@ -263,7 +268,7 @@ export function ProductDetail({
 
         {/* koopblok */}
         <section aria-label={t.shop.addToCart} className="self-start rounded-xl border border-hair bg-white p-5 shadow-e1 sm:p-6 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-2">
-          <ShopPrijs centen={variantPriceCents} product={product} groot />
+          <ShopPrijs centen={variantPriceCents} product={product} groot vanCenten={variantVanCents} />
           <p className="mt-1.5 text-[13px] text-neutralx-500">{modus === "zakelijk" ? t.shopZakelijk.pdpBtwRegel : t.shop.inclVat}</p>
 
           {sizes.length > 0 && (

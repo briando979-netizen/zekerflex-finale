@@ -42,6 +42,7 @@ export function ShopStorefront({
   initialVoor = null,
   initialPrijs = null,
   initialCollectie = null,
+  initialDeals = false,
   products,
   pageTitle = false,
 }: {
@@ -53,6 +54,8 @@ export function ShopStorefront({
   initialPrijs?: Prijsklasse | null;
   /** ?collectie=… (een bestaande collectie, bijv. Winter 2026) */
   initialCollectie?: string | null;
+  /** ?deals=1: alleen wat nu in de aanbieding is (de link Aanbiedingen en de banner) */
+  initialDeals?: boolean;
   /** zonder banner (zoeken, een categorie) is de kop van het assortiment de paginatitel (h1) */
   pageTitle?: boolean;
   /** Actieve producten van de server, zodat de eerste HTML (en Google) de echte catalogus toont. */
@@ -65,6 +68,7 @@ export function ShopStorefront({
   const [query, setQuery] = useState(initialQuery);
   const [onlyWishlist, setOnlyWishlist] = useState(false);
   const [onlyStock, setOnlyStock] = useState(false);
+  const [onlyDeals, setOnlyDeals] = useState(initialDeals);
   const [sizeFilter, setSizeFilter] = useState("Alle");
   const [colorFilter, setColorFilter] = useState("Alle");
   const [priceBucket, setPriceBucket] = useState<PriceBucket>(initialPrijs ?? "Alle");
@@ -90,6 +94,9 @@ export function ShopStorefront({
   useEffect(() => {
     void setCollectie(initialCollectie);
   }, [initialCollectie]);
+  useEffect(() => {
+    void setOnlyDeals(initialDeals);
+  }, [initialDeals]);
 
   useEffect(() => {
     if (!panel) return;
@@ -108,11 +115,12 @@ export function ShopStorefront({
       (p) =>
         (!onlyWishlist || wishlist.has(p.id)) &&
         (!onlyStock || inStock(p)) &&
+        (!onlyDeals || typeof p.van === "number") &&
         (!collectie || p.collection === collectie) &&
         (!q || (kort ? p.name.toLowerCase().includes(q.toLowerCase()) : zoekScore(p, q) > 0)),
     );
     return q && !kort ? [...lijst].sort((a, b) => zoekScore(b, q) - zoekScore(a, q)) : lijst;
-  }, [products, query, onlyWishlist, onlyStock, wishlist, collectie]);
+  }, [products, query, onlyWishlist, onlyStock, onlyDeals, wishlist, collectie]);
   // niets gevonden: een verbeterde zoekvraag ("Bedoelde je …?") en een paar producten om verder te kijken
   const voorstel = useMemo(() => (query.trim() && baseScope.length === 0 ? bedoeldeJe(products, query) : null), [products, query, baseScope.length]);
   const tips = useMemo(() => products.filter((p) => p.imageUrl && inStock(p)).slice(0, 4), [products]);
@@ -163,6 +171,7 @@ export function ShopStorefront({
     ...(colorFilter !== "Alle" ? [{ key: "c", label: colorFilter, clear: () => setColorFilter("Alle") }] : []),
     ...(priceBucket !== "Alle" ? [{ key: "p", label: labels.price[priceBucket], clear: () => setPriceBucket("Alle") }] : []),
     ...(onlyStock ? [{ key: "v", label: t.shop.inStockOnly, clear: () => setOnlyStock(false) }] : []),
+    ...(onlyDeals ? [{ key: "d", label: t.shop.aanbiedingen, clear: () => setOnlyDeals(false) }] : []),
     ...(onlyWishlist ? [{ key: "f", label: t.shop.onlyFavorites, clear: () => setOnlyWishlist(false) }] : []),
   ];
   const clearAll = () => {
@@ -175,6 +184,7 @@ export function ShopStorefront({
     setSort("relevantie");
     setOnlyWishlist(false);
     setOnlyStock(false);
+    setOnlyDeals(false);
   };
 
   const panelProps: FilterPanelProps = {

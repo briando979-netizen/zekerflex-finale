@@ -145,7 +145,7 @@ export function ShopProductCard({
       {jouwMaat && <p className="mt-1 text-[12px] font-semibold text-brand-700">{fmt(t.paskamer.jouwMaat, { maat: jouwMaat })}</p>}
 
       <div className="mt-2">
-        <ShopPrijs centen={Math.round(p.price * 100)} product={p} />
+        <ShopPrijs centen={Math.round(p.price * 100)} product={p} vanCenten={typeof p.van === "number" ? Math.round(p.van * 100) : null} />
       </div>
 
       <p className={`mt-2 text-[12px] font-semibold ${stock.kind === "uit" ? "text-crit" : "text-ok"}`}>

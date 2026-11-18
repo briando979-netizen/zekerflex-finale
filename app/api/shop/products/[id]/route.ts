@@ -7,6 +7,7 @@ import { withAdminAccess } from "@/lib/auth/handlers";
 import { shopImageRef } from "@/lib/shop/schema";
 import { MAX_EXTRA_FOTOS } from "@/lib/shop/product-scherm";
 import { SHOP_CATEGORIEEN } from "@/lib/shop/categorieen";
+import { AppError } from "@/lib/errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,6 +35,11 @@ const patchSchema = z.object({
 
 export const PATCH = withAdminAccess<{ id: string }>(["PLATFORM_ADMIN"], async (request, { params, principal }) => {
   const data = patchSchema.parse(await request.json()) as import("@prisma/client").Prisma.ShopProductUpdateInput;
+  // tijdens een aanbieding is de prijs de actieprijs; de gewone prijs staat apart. Wie de prijs wil wijzigen, stopt eerst de aanbieding.
+  if (typeof data.priceCents === "number") {
+    const nu = await prisma.shopProduct.findUnique({ where: { id: params.id }, select: { priceCents: true, dealNormaalCents: true } });
+    if (nu && nu.dealNormaalCents !== null && nu.priceCents !== data.priceCents) throw AppError.validation("Op dit product loopt een aanbieding. Stop die eerst; daarna kun je de prijs wijzigen.");
+  }
   const product = await prisma.shopProduct.update({ where: { id: params.id }, data });
   await recordAudit({ category: "ADMIN", action: "shop.product.updated", actorUserId: principal.userId, actorLabel: "user", summary: `Shopproduct gewijzigd: ${product.name}`, targetType: "shop-product", targetId: product.id });
   return NextResponse.json({ product });
