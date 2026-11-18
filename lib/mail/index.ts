@@ -416,6 +416,16 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
 
   // alleen het domein van de ontvanger in het log (12 nov, 86): het adres zelf hoort niet in de docker-logs
   logger.info("mail sent", { to: ontvangerVoorLog(input.to), kind: rec.kind, delivered, transport, ...(suppressed ? { suppressed } : {}) });
+  // de melder voor de eigenaar (lib/ops/melder.ts): elke uitgaande mail komt in het logboek en het uurbericht. Los ingeladen en niet
+  // afgewacht; zonder onderwerp en zonder adres (alleen het soort en het domein). De meldingen van de eigenaar zelf (ops-alert) en
+  // mail naar testadressen slaan we over.
+  if (rec.kind !== "ops-alert" && !isReservedTestAddress(input.to)) {
+    void import("@/lib/ops/melder")
+      .then(({ meldGebeurtenis }) =>
+        meldGebeurtenis({ soort: "mail", belang: "samenvatting", titel: `E-mail verstuurd: ${rec.kind}${delivered ? "" : " (niet afgeleverd)"}`, detail: `Naar ${ontvangerVoorLog(input.to)}`, url: "/admin/mail" }),
+      )
+      .catch(() => undefined);
+  }
   return { id, delivered, transport, ...(error ? { error } : {}), ...(suppressed ? { suppressed } : {}) };
 }
 

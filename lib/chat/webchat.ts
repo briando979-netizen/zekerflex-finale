@@ -49,7 +49,27 @@ export async function appendMessage(id: string, msg: Omit<WebchatMessage, "at">,
     status: msg.role === "user" && cur.status === "closed" ? "open" : cur.status,
   };
   await kvSet(key(id), next);
+  meldBericht(msg.role, cur.messages.length === 0, next.page);
   return next;
+}
+
+/**
+ * De eigenaar melden (lib/ops/melder.ts): alleen dat er iets gebeurde en op welke pagina, nooit de vraag zelf (die kan een naam of
+ * nummer bevatten; de inhoud staat bij Websitechat). Het eerste bericht van een gesprek gaat direct, de rest in het uurbericht.
+ */
+function meldBericht(role: WebchatMessage["role"], eerste: boolean, page: string | undefined): void {
+  const pagina = page ? page.split(/[?#]/)[0]?.slice(0, 80) : undefined;
+  const nieuw =
+    role === "user"
+      ? eerste
+        ? { titel: "Een bezoeker begon een gesprek met de assistent", belang: "direct" as const }
+        : { titel: "Een bezoeker stelde een vraag aan de assistent", belang: "samenvatting" as const }
+      : role === "assistant"
+        ? { titel: "De assistent antwoordde een bezoeker", belang: "samenvatting" as const }
+        : { titel: "Een medewerker antwoordde in de websitechat", belang: "samenvatting" as const };
+  void import("@/lib/ops/melder")
+    .then(({ meldGebeurtenis }) => meldGebeurtenis({ soort: "assistent", ...nieuw, ...(pagina ? { detail: `Pagina ${pagina}` } : {}), url: "/admin/webchat" }))
+    .catch(() => undefined);
 }
 
 export async function setStatus(id: string, status: WebchatStatus): Promise<WebchatConversation | null> {

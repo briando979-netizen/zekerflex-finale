@@ -32,6 +32,13 @@ export async function saveDemoRequest(input: Omit<DemoRequest, "id" | "at">): Pr
   const at = new Date().toISOString();
   const rec: DemoRequest = { id, at, ...input };
   await kvSet(key(id), rec);
+  // de eigenaar melden (lib/ops/melder.ts): los ingeladen en niet afgewacht, zonder naam, bedrijf of e-mail (die staan bij Sales);
+  // aanvragen met een testadres slaan we over
+  void Promise.all([import("@/lib/mail/test-adres"), import("@/lib/ops/melder")])
+    .then(([{ isReservedTestAddress }, { meldGebeurtenis }]) =>
+      isReservedTestAddress(rec.email) ? undefined : meldGebeurtenis({ soort: "demo", titel: rec.kind === "call" ? "Belafspraak ingepland" : "Demo ingepland", detail: `Op ${rec.date} om ${rec.time}`, url: "/admin/sales" }),
+    )
+    .catch(() => undefined);
   return rec;
 }
 
