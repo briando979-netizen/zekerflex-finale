@@ -140,16 +140,24 @@ export function voorraadVan(inventories: unknown, land?: string): number {
 // Cadeaus is de laatste regel én de uitkomst als niets past.
 const REGELS: [RegExp, ShopCategorie][] = [
   [/\b(safety|work ?wear|workwear|ppe|protective|hi-?vis|helmet|work glove)/i, "Werk & PBM"],
+  [/\b(car (accessor|mount|holder|seat|wash|vacuum|sticker|charger|organizer|cover|phone)|automotive|dash ?cam|bicycle|bike|cycling|e-?bike|scooter|motorcycle|tires?\b|tyres?\b|windshield|steering wheel)/i, "Auto & fiets"],
+  [/\b(phone (case|cover|holder|stand|mount|grip|strap|charger|cable)|iphone|galaxy s|screen protector|tempered glass|airpods? case|earbuds? case|selfie stick|popsocket|magsafe)/i, "Telefoon & accessoires"],
   [/\b(toy|toys|plush|puzzle|doll|building blocks?|lego|rc car|bouncy|inflatable (castle|pool|slide)|ride-?on|kids?'? (electric )?car|train track|craft kit|play ?set|board game|slime|stuffed animal|jigsaw)/i, "Speelgoed"],
+  [/\b(baby|babies|infant|newborn|toddler|stroller|diaper|nappy|pacifier|crib|bibs?\b|teether|nursery)/i, "Baby & kind"],
+  [/\b(pets?\b|dogs?\b|cats?\b|puppy|kitten|leash|aquarium|hamster|bird cage|litter box)/i, "Huisdieren"],
   [/\b(jewel|necklace|bracelet|earring|pendant|rings?\b(?! light)|watch(?!.*smart)|watches)/i, "Sieraden & horloges"],
   [/\b(electronic|bluetooth|speaker|headphone|earphone|earbud|charger|charging|cable|usb|power bank|camera|smart ?watch|smart home|phone|tablet|keyboard|mouse|gadget|led strip|drone|projector|tracker)/i, "Elektronica"],
-  [/\b(furniture|sofa|couch|bean ?bag|chairs?\b|stools?\b|beds?\b|daybed|mattress|tables?\b|desks?\b|shel(f|ves)\b|cabinet|wardrobe|curtain|rugs?\b|carpet|pillow|cushion|blanket|home|kitchen|decor|garden|storage|lamp|lights?\b|lighting|bedding|towel|pets?\b|cleaning|organizer|cups?\b|mug|bottle)/i, "Wonen & keuken"],
+  [/\b(gaming|gamer|gamepad|game controller|console|playstation|xbox|nintendo|model kit|diamond painting|knitting|crochet|embroidery|3d pen|paint by numbers|hobby)/i, "Gaming & hobby"],
+  [/\b(garden (hose|tools?|lights?|planter|decor)|gardening|lawn|planter|hose|tools?\b|drill|screwdriver|wrench|pliers|tape measure|ladder|diy|hardware|workbench|soldering)/i, "Tuin & klussen"],
+  [/\b(massager|massage gun|thermometer|first aid|blood pressure|oximeter|posture|orthopedic|knee (brace|pad|support)|back (brace|support)|heating pad|ear ?plugs|sleep mask|pill (box|organizer)|hot water bottle|compression socks)/i, "Gezondheid"],
+  [/\b(furniture|sofa|couch|bean ?bag|chairs?\b|stools?\b|beds?\b|daybed|mattress|tables?\b|desks?\b|shel(f|ves)\b|cabinet|wardrobe|curtain|rugs?\b|carpet|pillow|cushion|blanket|home|kitchen|decor|storage|lamp|lights?\b|lighting|bedding|towel|cleaning|organizer|cups?\b|mug|bottle)/i, "Wonen & keuken"],
   [/\b(bags?\b|backpack|handbag|wallet|purse|shoe|shoes|sneaker|boots?\b|sandal|slipper|luggage)/i, "Tassen & schoenen"],
-  [/\b(beauty|make ?up|skin ?care|hair|nail|massage|cosmetic|perfume|shaver|trimmer|brush)/i, "Beauty & verzorging"],
-  [/\b(sport|fitness|yoga|gym|outdoor|camping|hiking|cycling|bike|fishing|swim|running|balls?\b)/i, "Sport & buiten"],
+  [/\b(beauty|make ?up|skin ?care|hair|nail|cosmetic|perfume|shaver|trimmer|brush)/i, "Beauty & verzorging"],
+  [/\b(sport|fitness|yoga|gym|outdoor|camping|hiking|fishing|swim|running|balls?\b)/i, "Sport & buiten"],
   [/\b(cloth|clothing|dress|shirt|t-shirt|hoodie|jacket|pants|trousers|sweater|apparel|coat|socks|jeans|skirt|lingerie|underwear|swimwear|hats?\b|caps?\b|scarf|gloves)/i, "Kleding"],
   [/\b(stationer(y|ies)|office|notebooks?\b|pens?\b|markers?\b|pencils?\b|planner)/i, "Werkdag"],
-  [/\b(gift|gifts|present|novelty|party)/i, "Cadeaus"],
+  [/\b(christmas|xmas|halloween|easter|party|balloons?\b|birthday|wedding|sinterklaas|new year|valentine|garland|confetti|costume|advent|thanksgiving|carnival)/i, "Feest & seizoen"],
+  [/\b(gift|gifts|present|novelty)/i, "Cadeaus"],
 ];
 
 /** Onze categorie uit de CJ-categorie en de naam samen; de volgorde van REGELS is de voorrang. */
