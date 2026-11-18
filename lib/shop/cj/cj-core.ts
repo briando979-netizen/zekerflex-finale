@@ -177,6 +177,16 @@ export function categorieVanCj(categorieCj: unknown, naamEn: unknown): ShopCateg
 /** Zo lang mag een overname "bezig" zijn; daarna mag een volgende klik het slot overnemen (bv. na een herstart midden in een import). */
 export const CLAIM_MAX_MS = 15 * 60_000;
 
+/** Foto's van CJ: hooguit zoveel per product en zo groot (18 nov 2026: 6 × tot 2400 px = 258 kB gemiddeld, 721 MB per dag). */
+export const CJ_MAX_FOTOS = 5;
+export const CJ_FOTO_MAX_PX = 1200;
+
+/** De upload-id uit een eigen media-url ("/api/shop/media/<id>", ook met host of querystring); null voor een vreemde url. */
+export function uploadIdUitMediaUrl(url: string): string | null {
+  const m = /\/api\/shop\/media\/([A-Za-z0-9_-]{8,64})(?:[/?#]|$)/.exec(url);
+  return m?.[1] ?? null;
+}
+
 export type ClaimStand = { soort: "vrij" } | { soort: "product"; id: string } | { soort: "bezig"; sinds: string | null; verlopen: boolean };
 
 /**

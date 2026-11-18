@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CLAIM_MAX_MS, categorieKeuze, categorieVanCj, doelgroepVanCj, fotosVan, goedkoopsteVerzending, kleurEnMaat, leesCjProduct, leesCjTreffer, leesClaim, leesVoorraadPerVariant, lijktDuits, onzeSku, tekstUitHtml, usdCentsVan, voorraadVan } from "@/lib/shop/cj/cj-core";
+import { CJ_FOTO_MAX_PX, CJ_MAX_FOTOS, CLAIM_MAX_MS, categorieKeuze, categorieVanCj, doelgroepVanCj, fotosVan, goedkoopsteVerzending, kleurEnMaat, leesCjProduct, leesCjTreffer, leesClaim, leesVoorraadPerVariant, lijktDuits, onzeSku, tekstUitHtml, uploadIdUitMediaUrl, usdCentsVan, voorraadVan } from "@/lib/shop/cj/cj-core";
 
 // CJ Dropshipping lezen (18 nov 2026): dollars → centen, "Black-XL" → kleur en maat,
 // foto's, voorraad, onze categorie en doelgroep. Alles puur, zonder netwerk.
@@ -250,5 +250,19 @@ describe("voorraad per variant (getInventoryByPid) en Duits herkennen", () => {
     expect(lijktDuits("Gaming stoel ergonomisch")).toBe(false);
     expect(lijktDuits("Set van 2 muurstickers met die leuke controller")).toBe(false);
     expect(lijktDuits("Kerst houten huismodel bouwset")).toBe(false);
+  });
+});
+
+describe("foto's van CJ: grenzen en de eigen media-url", () => {
+  it("hooguit 5 foto's van 1200 px (18 nov 2026: 6 × 2400 px was 721 MB op één dag)", () => {
+    expect(CJ_MAX_FOTOS).toBe(5);
+    expect(CJ_FOTO_MAX_PX).toBe(1200);
+  });
+  it("leest de upload-id uit /api/shop/media/<id>, ook met host of querystring; een vreemde url geeft null", () => {
+    expect(uploadIdUitMediaUrl("/api/shop/media/cmwlitcra00039maap46p3dp6")).toBe("cmwlitcra00039maap46p3dp6");
+    expect(uploadIdUitMediaUrl("https://zekerflex.com/api/shop/media/cmwlitcra00039maap46p3dp6?v=2")).toBe("cmwlitcra00039maap46p3dp6");
+    expect(uploadIdUitMediaUrl("https://cdn.cj.example/foto.jpg")).toBeNull();
+    expect(uploadIdUitMediaUrl("/api/shop/media/")).toBeNull();
+    expect(uploadIdUitMediaUrl("/api/shop/media/../x")).toBeNull();
   });
 });

@@ -20,7 +20,7 @@ import { bewaarLinkBron } from "@/lib/shop/link-product-server";
 import { leesBeleidOpgeslagen } from "@/lib/shop/winkel-ai";
 import { prijsUitInkoop, slugVan, tariefVoor } from "@/lib/shop/winkel-ai-core";
 import { cjProduct, cjVerzendkosten, cjVoorraadPerVariant } from "@/lib/shop/cj/cj-client";
-import { categorieKeuze, categorieVanCj, leesClaim, lijktDuits, onzeSku, type CjProduct, type CjVerzending } from "@/lib/shop/cj/cj-core";
+import { CJ_FOTO_MAX_PX, CJ_MAX_FOTOS, categorieKeuze, categorieVanCj, leesClaim, lijktDuits, onzeSku, type CjProduct, type CjVerzending } from "@/lib/shop/cj/cj-core";
 import { vertaalVermelding } from "@/lib/shop/cj/vertalen";
 import type { ShopCategorie } from "@/lib/shop/categorieen";
 
@@ -32,7 +32,7 @@ const K_OUD_UIT = "shop:cj:oud-uit";
 /** onze variant-sku's van CJ beginnen hiermee (cj-core.ts onzeSku): zo herken je een CJ-product ook zonder KV */
 export const CJ_SKU_VOORVOEGSEL = "cj-";
 /** zoveel foto's per product (hoofdfoto + extra) */
-const MAX_FOTOS = 6;
+const MAX_FOTOS = CJ_MAX_FOTOS;
 
 export interface CjInstellingen {
   /** verzendkosten per stuk die in de verkoopprijs worden meegerekend (CJ rekent ze per bestelling aan ons) */
@@ -127,8 +127,9 @@ export interface ImportUitkomst {
 /** Eén foto van de leverancier naar onze opslag; null als het niet lukt (de rest gaat door). */
 async function haalFoto(adres: string, naam: string, actorUserId: string | null): Promise<{ id: string; url: string } | null> {
   try {
-    const foto = await importRemoteImage(adres);
-    const up = await storeUpload({ filename: `${naam}.webp`, mimeType: foto.mime, bytes: foto.bytes, uploadedById: actorUserId });
+    // kleiner en op schijf (niet in Postgres): een CJ-foto is altijd opnieuw te halen (lib/shop/cj/fotos-verhuizen.ts)
+    const foto = await importRemoteImage(adres, { maxPx: CJ_FOTO_MAX_PX });
+    const up = await storeUpload({ filename: `${naam}.webp`, mimeType: foto.mime, bytes: foto.bytes, uploadedById: actorUserId, opSchijf: true, map: "cj" });
     return { id: up.id, url: `/api/shop/media/${up.id}` };
   } catch (e) {
     logger.warn("cj: foto overnemen mislukt", { error: (e as Error).message.slice(0, 120) });

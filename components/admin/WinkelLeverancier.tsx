@@ -13,6 +13,9 @@ import { CjBestellingen } from "@/components/admin/WinkelCjBestellingen";
 
 type Stand = { ingesteld: boolean; bewijsGeldigTot: string | null; laatsteOk: string | null; laatsteFout: string | null; laatsteFoutOp: string | null; instellingen: { verzendCents: number; land: string; margePct: number | null } };
 type Treffer = { pid: string; naamEn: string; foto: string | null; inkoopUsdCents: number; inkoopCents: number | null; prijsCents: number | null; categorie: string; categorieCj: string; gevoerd: number };
+type FotoTelling = { droog: true; aantal: number; bytes: number; steekproef: { n: number; bytesVoor: number; bytesNa: number }; schattingBytesNa: number };
+type FotoRonde = { droog: false; gedaan: number; mislukt: number; rest: number; bytesVoor: number; bytesNa: number };
+const mb = (b: number) => (b / 1_048_576).toFixed(b >= 10_485_760 ? 0 : 1);
 type BijwerkAntwoord = { bekeken: number; categorie: number; voorraad: number; vertaald: number; fouten: number; volgende: number | null; totaal: number };
 type Zoek = { producten: Treffer[]; totaal: number; pagina: number; gezochtOp?: string; vertaald?: boolean; land: string; margePct: number; verzendCents: number; koersDatum: string | null };
 type Uitkomst = { pid: string } & ({ fout: string } | { bestaand: boolean; id: string; slug: string; naam: string; prijsCents: number; inkoopCents: number; varianten: number; fotos: number; vertaald: boolean; actief: boolean; verzendCents?: number; verzendEcht?: boolean; melding: string | null });
@@ -30,7 +33,7 @@ export function Leverancier() {
   const [sleutel, setSleutel] = useState("");
   const [fout, setFout] = useState<string | null>(null);
   const [bericht, setBericht] = useState<string | null>(null);
-  const [bezig, setBezig] = useState<"" | "sleutel" | "zoek" | "import" | "oud" | "instel" | "bijwerk">("");
+  const [bezig, setBezig] = useState<"" | "sleutel" | "zoek" | "import" | "oud" | "instel" | "bijwerk" | "fotos-tel" | "fotos-verhuis">("");
   const [q, setQ] = useState("");
   const [zoek, setZoek] = useState<Zoek | null>(null);
   const [gekozen, setGekozen] = useState<Set<string>>(new Set());
@@ -39,6 +42,8 @@ export function Leverancier() {
   const [uitkomsten, setUitkomsten] = useState<Uitkomst[]>([]);
   const [verzendTekst, setVerzendTekst] = useState("");
   const [wachtrijTik, setWachtrijTik] = useState(0);
+  const [fotos, setFotos] = useState<FotoTelling | null>(null);
+  const [fotoRonde, setFotoRonde] = useState<FotoRonde | null>(null);
   const [bijwerk, setBijwerk] = useState<{ bekeken: number; categorie: number; voorraad: number; vertaald: number; fouten: number; totaal: number; klaar: boolean } | null>(null);
   const [land, setLand] = useState("");
   const [margeTekst, setMargeTekst] = useState("");
@@ -304,6 +309,49 @@ export function Leverancier() {
             {bezig === "bijwerk" ? "Bezig…" : "Categorie, voorraad en tekst bijwerken"}
           </button>
           {bijwerk && !bijwerk.klaar && <span className="text-sm" style={{ color: "var(--a-mute)" }}>{bijwerk.bekeken} van {bijwerk.totaal} bekeken… (een paar seconden per product)</span>}
+        </div>
+      </Panel>
+
+      <Panel title="Foto's naar schijf" subtitle="Foto's van CJ-producten stonden tot 18 november in de database (721 MB op één dag; de nachtelijke back-up werd er vier keer zo groot van). Nieuwe foto's gaan nu meteen naar de schijf, kleiner (1200 px, hooguit 5 per product). Dit verhuist de oude: zelfde foto's, zelfde adressen, niets in de winkel verandert. Eerst tellen, dan verhuizen; dat gebeurt nooit vanzelf.">
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="button" className="a-btn" disabled={bezig !== ""} onClick={() => void doe("fotos-tel", async () => { setFotos(await vraag<FotoTelling>("/api/admin/shop-ai/cj/fotos-verhuizen")); })}>
+            {bezig === "fotos-tel" ? "Tellen…" : "Tellen (verandert niets)"}
+          </button>
+          {fotos && fotos.droog && (
+            <span className="text-sm" style={{ color: "var(--a-mute)" }}>
+              {fotos.aantal} foto&apos;s in de database, {mb(fotos.bytes)} MB; na verkleining naar schatting {mb(fotos.schattingBytesNa)} MB (steekproef van {fotos.steekproef.n}).
+            </span>
+          )}
+          {fotos && fotos.droog && fotos.aantal > 0 && (
+            <button
+              type="button"
+              className="a-btn a-btn-primary"
+              disabled={bezig !== ""}
+              onClick={() => {
+                if (!window.confirm(`${fotos.aantal} foto's van de database naar de schijf verhuizen? Dit duurt een paar minuten per paar honderd foto's en is niet terug te draaien, maar de foto's en hun adressen blijven gelijk.`)) return;
+                void doe("fotos-verhuis", async () => {
+                  const som: FotoRonde = { droog: false, gedaan: 0, mislukt: 0, rest: fotos.aantal, bytesVoor: 0, bytesNa: 0 };
+                  let rondes = 0;
+                  while (som.rest > 0 && rondes < 40) {
+                    rondes++;
+                    const r: FotoRonde = await vraag<FotoRonde>("/api/admin/shop-ai/cj/fotos-verhuizen", { budgetMs: 200_000 });
+                    som.gedaan += r.gedaan;
+                    som.mislukt += r.mislukt;
+                    som.bytesVoor += r.bytesVoor;
+                    som.bytesNa += r.bytesNa;
+                    som.rest = r.rest;
+                    setFotoRonde({ ...som });
+                    if (r.gedaan === 0 && r.mislukt > 0) break; // alles wat over is mislukt: niet eindeloos door
+                  }
+                  setFotos(null);
+                  setBericht(`Foto's verhuisd: ${som.gedaan} (${mb(som.bytesVoor)} → ${mb(som.bytesNa)} MB)${som.mislukt ? `, ${som.mislukt} mislukt` : ""}${som.rest ? `, ${som.rest} nog in de database` : ""}.`);
+                });
+              }}
+            >
+              {bezig === "fotos-verhuis" ? "Bezig…" : "Verhuizen naar schijf"}
+            </button>
+          )}
+          {fotoRonde && bezig === "fotos-verhuis" && <span className="text-sm" style={{ color: "var(--a-mute)" }}>{fotoRonde.gedaan} verhuisd, {fotoRonde.rest} te gaan…</span>}
         </div>
       </Panel>
 
