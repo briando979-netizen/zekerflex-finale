@@ -1322,6 +1322,7 @@ export const en: Dict = {
     pbmSub: "Safety shoes, gloves and high visibility",
     werkdagSub: "Bags, bottles and handy things",
     cadeausSub: "For a colleague or yourself",
+    andersSub: "See the whole range",
     looksTitel: "Shop the look",
     looksSub: "Complete outfits on a mannequin. Adjust them to your own measurements.",
     lookBekijk: "Adjust",
