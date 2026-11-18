@@ -6,7 +6,8 @@ import { redis, acquireLock } from "@/lib/redis";
 import { announce } from "@/lib/voice/announce";
 import { recordAudit } from "@/lib/audit";
 import { enrichLead, scoreLead } from "@/lib/sales/leads";
-import { draftOutreach, approveOutreach } from "@/lib/sales/outreach";
+import { draftOutreach, approveOutreach, OPEN_CONCEPT } from "@/lib/sales/outreach";
+import { leesCampagneTekst } from "@/lib/sales/campagne-tekst-opslag";
 import { sendOutreachMail } from "@/lib/sales/send";
 import { isSuppressed, domainOf } from "@/lib/sales/suppression";
 import {
@@ -404,6 +405,9 @@ async function processDueLeads(
   }
   if (headroom <= 0 && autopilot) return { drafted, sent, skippedSends };
 
+  // De vaste tekst van de campagne (lib/sales/campagne-tekst.ts): één keer per campagne per tick gelezen, niet per lead.
+  const vast = await leesCampagneTekst(campaign.id);
+
   const maxDelay = Math.max(...campaign.stepDelaysDays, 0);
   const due = await prisma.salesLead.findMany({
     where: {
@@ -417,9 +421,13 @@ async function processDueLeads(
       // Only ever reach out once a lead has real data behind it — a
       // confirmed vacancy signal from the careers-crawl and an actual
       // e-mail — never just a bare KVKBase stub (name + KVK number).
-      vacancySignal: { not: null },
+      // Alleen een campagne met een vaste aanbodmail waarbij de eigenaar "ook zonder vacature" aanvinkte, mag zonder signaal.
+      ...(vast?.zonderVacature ? {} : { vacancySignal: { not: null } }),
       AND: [
         { OR: [{ contactEmail: { not: null } }, { discoveredEmail: { not: null } }] },
+        // Staat er al een concept klaar (wacht op een mens of op verzending), dan komt er geen tweede naast (18 nov 2026:
+        // in REVIEW maakte elke tick een nieuw vervolgconcept zolang nextActionAt verstreken was).
+        { outreach: { none: { status: { in: [...OPEN_CONCEPT] } } } },
         {
           OR: [
             { sequenceStep: 0, outreach: { none: { status: { notIn: ["DISCARDED"] } } } },
@@ -433,6 +441,15 @@ async function processDueLeads(
   });
 
   for (const lead of due) {
+    // Een vaste aanbodmail is één mail: wie hem al kreeg, loopt af zoals na de laatste stap (geen vervolgconcept, en
+    // niet elke tick opnieuw aan de beurt). Het verlopen naar LOST hieronder doet daarna de rest.
+    if (vast && lead.sequenceStep >= 1) {
+      await prisma.salesLead
+        .update({ where: { id: lead.id }, data: { sequenceStep: campaign.stepDelaysDays.length, nextActionAt: null } })
+        .catch(() => undefined);
+      continue;
+    }
+
     const email = leadEmail(lead);
     if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
       skippedSends += 1;
@@ -469,7 +486,7 @@ async function processDueLeads(
 
     const outreach = await safe(
       `draft:${lead.id}`,
-      () => draftOutreach(lead.id, null, lead.sequenceStep),
+      () => draftOutreach(lead.id, null, lead.sequenceStep, { campagneTekst: vast }),
       null,
       errors,
     );

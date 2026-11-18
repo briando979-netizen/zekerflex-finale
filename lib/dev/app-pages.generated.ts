@@ -181,6 +181,7 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/admin/prestaties","file":"app/admin/prestaties/page.tsx","area":"Admin","dynamic":false},
   {"route":"/admin/recruiter","file":"app/admin/recruiter/page.tsx","area":"Admin","dynamic":false},
   {"route":"/admin/sales","file":"app/admin/sales/page.tsx","area":"Admin","dynamic":false},
+  {"route":"/admin/sales/campagne/[id]","file":"app/admin/sales/campagne/[id]/page.tsx","area":"Admin","dynamic":true},
   {"route":"/admin/scans","file":"app/admin/scans/page.tsx","area":"Admin","dynamic":false},
   {"route":"/admin/shop","file":"app/admin/shop/page.tsx","area":"Admin","dynamic":false},
   {"route":"/admin/shop-ai","file":"app/admin/shop-ai/page.tsx","area":"Admin","dynamic":false},

@@ -130,6 +130,8 @@ const KIND_TO_CATEGORY: Record<string, string> = {
   "abu-fase-overgang": "essential",
   "annuleringsclaim-factuur": "essential",
   "admin-bericht": "essential",
+  // de voorbeeldmail van een campagne aan de beheerder zelf (Beheer → Sales → campagne): geen outreach, telt nergens mee
+  "sales-test": "essential",
   generic: "essential",
 };
 
@@ -161,6 +163,8 @@ const REPLIABLE_KINDS = new Set([
   "uren-correctie-voorstel",
   // Sales outreach: a human on the sales side reads and answers replies.
   "sales-outreach",
+  // De voorbeeldmail van een campagne: moet eruitzien als de echte, dus zonder de regel "automatisch bericht".
+  "sales-test",
   // Admin-composed ad-hoc mail — replyTo is the sending admin's own address.
   "admin-bericht",
   // Mail namens een rijschool aan haar leerlingen: antwoorden gaan naar de rijschool (lib/rijschool/mail.ts).

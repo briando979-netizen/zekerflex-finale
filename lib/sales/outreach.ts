@@ -1,3 +1,4 @@
+import type { SalesLead } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { recordAudit } from "@/lib/audit";
@@ -11,6 +12,8 @@ import {
 } from "@/lib/sales/prompts";
 import type { BelUitkomst } from "@/lib/sales/bellijst";
 import { zonderIntroContacten } from "@/lib/introducties/lead";
+import { CAMPAGNE_TEKST_MODEL, invullingVoor, maakCampagneMail, type CampagneTekst } from "@/lib/sales/campagne-tekst";
+import { leesCampagneTekst } from "@/lib/sales/campagne-tekst-opslag";
 
 // ---------------------------------------------------------------------------
 // LLM-drafted outreach. A draft is generated on demand. In REVIEW mode a human
@@ -23,6 +26,9 @@ interface DraftShape {
   subject: string;
   body: string;
 }
+
+/** Een concept dat nog op een mens of op de verzending wacht: daar komt geen tweede naast (de motor en de knop delen dit). */
+export const OPEN_CONCEPT = ["DRAFT", "SCHEDULED", "APPROVED"] as const;
 
 /**
  * Hand-written fallback per sequence step, personalised with what we know.
@@ -66,12 +72,31 @@ export async function draftOutreach(
   leadId: string,
   actorUserId: string | null,
   stepIndex = 0,
+  /** de motor las de vaste tekst van de campagne al (één keer per tick) en geeft hem mee; null = de campagne heeft er geen */
+  opties: { campagneTekst?: CampagneTekst | null } = {},
 ) {
   const lead = await prisma.salesLead.findUnique({ where: { id: leadId } });
   if (!lead) throw AppError.notFound("Lead niet gevonden.");
 
+  // Nooit een tweede open concept voor dezelfde lead (18 nov 2026): in REVIEW maakte elke tick een nieuw vervolgconcept
+  // zolang het vorige nog op een mens wachtte. Staat er al een klaar, dan is dát het concept (ook voor de knop in de pijplijn).
+  const open = await prisma.salesOutreach.findFirst({
+    where: { leadId, status: { in: [...OPEN_CONCEPT] } },
+    orderBy: { createdAt: "desc" },
+  });
+  if (open) return open;
+
   const step = Math.max(0, Math.min(OUTREACH_STEP_SYSTEM.length - 1, stepIndex));
   const system = OUTREACH_STEP_SYSTEM[step] ?? OUTREACH_SYSTEM;
+
+  // Een campagne met een vaste tekst (lib/sales/campagne-tekst.ts): geen model, de tekst van de eigenaar met de naam van
+  // het bedrijf erin. Het is één aanbodmail: een herinnering of afscheidsmail komt er niet achteraan.
+  const vast =
+    opties.campagneTekst !== undefined ? opties.campagneTekst : lead.campaignId ? await leesCampagneTekst(lead.campaignId) : null;
+  if (vast) {
+    if (step >= 1) throw AppError.precondition("Deze campagne heeft één vaste mail; er komt geen vervolgmail.");
+    return bewaarConcept(lead, actorUserId, step, maakCampagneMail(vast, invullingVoor(lead)), CAMPAGNE_TEKST_MODEL);
+  }
 
   // zonder de contacten van een introductie (lib/introducties/lead.ts): een voorgestelde persoon komt nooit in een automatische mail
   const enrichment = zonderIntroContacten(lead.enrichmentJson);
@@ -109,19 +134,30 @@ export async function draftOutreach(
     model = "template";
   }
 
+  return bewaarConcept(lead, actorUserId, step, { subject, body }, model);
+}
+
+/** Het concept vastleggen: de rij, de status van de lead en het auditspoor (voor het model, het sjabloon en de vaste tekst hetzelfde). */
+async function bewaarConcept(
+  lead: Pick<SalesLead, "id" | "companyName" | "status">,
+  actorUserId: string | null,
+  step: number,
+  mail: DraftShape,
+  model: string,
+) {
   const [outreach] = await prisma.$transaction([
     prisma.salesOutreach.create({
       data: {
-        leadId,
-        subject,
-        body,
+        leadId: lead.id,
+        subject: mail.subject,
+        body: mail.body,
         stepIndex: step,
         status: "DRAFT",
         generatedByModel: model,
       },
     }),
     prisma.salesLead.update({
-      where: { id: leadId },
+      where: { id: lead.id },
       data: {
         status: ["SENT", "REPLIED", "WON"].includes(lead.status) ? lead.status : "DRAFTED",
       },
@@ -178,7 +214,7 @@ export async function draftNaGesprek(
   if (!lead) throw AppError.notFound("Lead niet gevonden.");
 
   const open = await prisma.salesOutreach.findFirst({
-    where: { leadId, status: { in: ["DRAFT", "SCHEDULED", "APPROVED"] } },
+    where: { leadId, status: { in: [...OPEN_CONCEPT] } },
     select: { id: true },
   });
   if (open) return null;

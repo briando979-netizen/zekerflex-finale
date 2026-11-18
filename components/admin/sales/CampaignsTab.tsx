@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import Link from "next/link";
 import { APanel, AButton, APill } from "@/components/admin/ui";
 import { MAX_BRONNEN_PLAKKEN, type PlakStatus, type PlakUitslag } from "@/lib/sales/bronnen-plakken";
 
@@ -185,6 +186,14 @@ export function CampaignsTab({ initialCampaigns }: { initialCampaigns: CampaignD
                   hint={c.mode === "REVIEW" && !c.autopilotEnabledGlobally ? "SALES_AUTOPILOT_ENABLED staat uit" : undefined}
                 />
                 <Btn label="Nu draaien" primary onClick={() => runNow(c.id)} busy={busy === `${c.id}:run`} />
+                {/* de eigen ruimte van de campagne: de vaste mail, een voorbeeld naar jezelf en de concepten die wachten */}
+                <Link
+                  href={`/admin/sales/campagne/${c.id}`}
+                  className="rounded-lg px-3 py-1.5 text-xs font-semibold transition"
+                  style={{ background: "var(--a-panel)", color: "var(--a-dim)", border: "1px solid var(--a-border)" }}
+                >
+                  Open de ruimte
+                </Link>
               </div>
 
               <SourcesEditor campaign={c} onChange={reload} />

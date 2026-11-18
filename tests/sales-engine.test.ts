@@ -57,7 +57,12 @@ const approveOutreach = vi.fn().mockResolvedValue({});
 vi.mock("@/lib/sales/outreach", () => ({
   draftOutreach: (...a: unknown[]) => draftOutreach(...a),
   approveOutreach: (...a: unknown[]) => approveOutreach(...a),
+  OPEN_CONCEPT: ["DRAFT", "SCHEDULED", "APPROVED"],
 }));
+
+// de vaste tekst van de campagne (lib/sales/campagne-tekst.ts): standaard geen, per test te zetten
+const leesCampagneTekst = vi.fn().mockResolvedValue(null);
+vi.mock("@/lib/sales/campagne-tekst-opslag", () => ({ leesCampagneTekst: (...a: unknown[]) => leesCampagneTekst(...a) }));
 
 const sendOutreachMail = vi.fn().mockResolvedValue({ status: "sent", outreachId: "o1" });
 vi.mock("@/lib/sales/send", () => ({ sendOutreachMail: (...a: unknown[]) => sendOutreachMail(...a) }));
@@ -132,7 +137,10 @@ function wireCampaign(mode: "REVIEW" | "AUTOPILOT") {
   });
 }
 
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  vi.clearAllMocks();
+  leesCampagneTekst.mockResolvedValue(null);
+});
 
 describe("sales engine tick", () => {
   it("does nothing when the engine is disabled and not forced", async () => {
@@ -145,7 +153,7 @@ describe("sales engine tick", () => {
   it("REVIEW mode drafts but never sends", async () => {
     wireCampaign("REVIEW");
     const r = await runSalesEngineTick({ campaignId: "c1", force: true });
-    expect(draftOutreach).toHaveBeenCalledWith("l1", null, 0);
+    expect(draftOutreach).toHaveBeenCalledWith("l1", null, 0, { campagneTekst: null });
     expect(sendOutreachMail).not.toHaveBeenCalled();
     expect(r.drafted).toBe(1);
     expect(r.sent).toBe(0);
@@ -272,5 +280,64 @@ describe("sales engine tick", () => {
     await runSalesEngineTick({ campaignId: "c1", force: true });
 
     expect(discoverySourceCreate).not.toHaveBeenCalled();
+  });
+});
+
+// 18 nov 2026: de vaste tekst per campagne (lib/sales/campagne-tekst.ts) en geen tweede open concept per lead.
+describe("sales engine: vaste campagnetekst en open concepten", () => {
+  const vast = { onderwerp: "Aanbod voor {bedrijf}", tekst: "Beste {aanhef}", zonderVacature: true, bijgewerkt: "2026-11-18T10:00:00.000Z", door: "beheer@zekerflex.test" };
+  const dueWhere = () => {
+    const call = leadFindMany.mock.calls.find((c: unknown[]) => {
+      const args = c[0] as { where?: { score?: unknown } };
+      return typeof args?.where?.score === "object" && args.where.score !== null && "gte" in (args.where.score as object);
+    });
+    return (call![0] as { where: Record<string, unknown> }).where;
+  };
+
+  it("een lead met een concept dat nog wacht (DRAFT, APPROVED, SCHEDULED) is niet aan de beurt", async () => {
+    wireCampaign("REVIEW");
+    await runSalesEngineTick({ campaignId: "c1", force: true });
+    expect(dueWhere().AND).toEqual(
+      expect.arrayContaining([{ outreach: { none: { status: { in: ["DRAFT", "SCHEDULED", "APPROVED"] } } } }]),
+    );
+  });
+
+  it("leest de campagnetekst één keer per campagne en geeft hem mee aan het concept", async () => {
+    leesCampagneTekst.mockResolvedValue(vast);
+    wireCampaign("REVIEW");
+    await runSalesEngineTick({ campaignId: "c1", force: true });
+    expect(leesCampagneTekst).toHaveBeenCalledTimes(1);
+    expect(leesCampagneTekst).toHaveBeenCalledWith("c1");
+    expect(draftOutreach).toHaveBeenCalledWith("l1", null, 0, { campagneTekst: vast });
+  });
+
+  it("met 'ook zonder vacature' vervalt de eis van een vacaturesignaal; het mailadres blijft verplicht", async () => {
+    leesCampagneTekst.mockResolvedValue(vast);
+    wireCampaign("REVIEW");
+    await runSalesEngineTick({ campaignId: "c1", force: true });
+    const where = dueWhere();
+    expect("vacancySignal" in where).toBe(false);
+    expect(where.AND).toEqual(expect.arrayContaining([{ OR: [{ contactEmail: { not: null } }, { discoveredEmail: { not: null } }] }]));
+  });
+
+  it("een vaste tekst zonder dat vinkje houdt de eis van een vacaturesignaal", async () => {
+    leesCampagneTekst.mockResolvedValue({ ...vast, zonderVacature: false });
+    wireCampaign("REVIEW");
+    await runSalesEngineTick({ campaignId: "c1", force: true });
+    expect(dueWhere().vacancySignal).toEqual({ not: null });
+  });
+
+  it("een vaste aanbodmail is één mail: wie hem al kreeg, loopt af en krijgt geen vervolgconcept", async () => {
+    leesCampagneTekst.mockResolvedValue(vast);
+    campaignFindMany.mockResolvedValue([{ ...campaign, mode: "REVIEW", autopilotConfirmedAt: null }]);
+    leadFindMany.mockImplementation((args: { where?: { score?: unknown; sourceUrl?: unknown } }) => {
+      const where = args?.where ?? {};
+      if (where.score === null || where.sourceUrl === null) return Promise.resolve([]);
+      return Promise.resolve([{ ...dueLead, sequenceStep: 1, status: "SENT" }]);
+    });
+    const r = await runSalesEngineTick({ campaignId: "c1", force: true });
+    expect(draftOutreach).not.toHaveBeenCalled();
+    expect(r.drafted).toBe(0);
+    expect(leadUpdate).toHaveBeenCalledWith({ where: { id: "l1" }, data: { sequenceStep: campaign.stepDelaysDays.length, nextActionAt: null } });
   });
 });
