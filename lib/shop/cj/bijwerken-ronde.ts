@@ -4,7 +4,7 @@ import { bijwerkenVanCj, type BijwerkUitkomst } from "@/lib/shop/cj/importeer";
 // ---------------------------------------------------------------------------
 // De Bijwerken-ronde vanzelf (18 nov 2026). De knop "Categorie, voorraad en tekst bijwerken" in Beheer → Winkel-AI →
 // Leverancier bleef na de uitrol van de voorraad-fix uren ongebruikt, terwijl 100+ producten met Engelse tekst in de
-// winkel stonden en de voorraad op 0. Daarom loopt dezelfde functie (bijwerkenVanCj) nu ook via de cron: elke tien
+// winkel stonden en de voorraad op 0. Daarom loopt dezelfde functie (bijwerkenVanCj) nu ook via de cron: elke twee
 // minuten één ronde binnen het tijdsbudget, met een cursor in KV zodat de volgende ronde verdergaat waar deze stopte,
 // en van voren af aan zodra alles gehad is. Een slot voorkomt dat twee rondes tegelijk lopen (zelfde patroon als de
 // wachtrij, lib/shop/cj/wachtrij.ts). De knop blijft bestaan voor wie niet wil wachten.
@@ -14,8 +14,11 @@ const K_STAND = "shop:cj:bijwerken:stand";
 const K_SLOT = "shop:cj:bijwerken:slot";
 /** een slot ouder dan dit is van een ronde die nooit netjes eindigde (herstart, time-out) en telt niet meer */
 const SLOT_MAX_MS = 4 * 60_000;
-/** binnen de maxDuration van de route (120 s) en de wget-grens van de cron (115 s), met ruimte voor het laatste product */
-export const RONDE_BUDGET_MS = 90_000;
+/**
+ * Binnen de maxDuration van de route (120 s) en de wget-grens van de cron (115 s), met ruimte voor het laatste product: een
+ * product met vertaling kost ±30 s op ons eigen model (18 nov: de eerste ronde van 90 s duurde 130 s).
+ */
+export const RONDE_BUDGET_MS = 75_000;
 
 export interface BijwerkStand {
   /** waar de volgende ronde begint (index in de lijst van CJ-producten) */

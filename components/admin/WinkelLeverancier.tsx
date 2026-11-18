@@ -273,7 +273,7 @@ export function Leverancier() {
         </Panel>
       )}
 
-      <Panel title="Bijwerken vanuit CJ" subtitle="Loopt alle overgenomen producten langs: de categorie volgens de nieuwste regels, de echte voorraad per variant, en een tekst die nog Engels of half Duits is wordt opnieuw vertaald. Een categorie die je zelf koos ná een eerdere ronde blijft staan. Dit gebeurt ook vanzelf: elke tien minuten een ronde van anderhalve minuut op de achtergrond, dus klikken is alleen nodig als je niet wilt wachten.">
+      <Panel title="Bijwerken vanuit CJ" subtitle="Loopt alle overgenomen producten langs: de categorie volgens de nieuwste regels, de echte voorraad per variant, en een tekst die nog Engels of half Duits is wordt opnieuw vertaald. Een categorie die je zelf koos ná een eerdere ronde blijft staan. Dit gebeurt ook vanzelf: elke twee minuten een ronde van ruim een minuut op de achtergrond (een hele pas duurt een paar uur), dus klikken is alleen nodig als je niet wilt wachten.">
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
