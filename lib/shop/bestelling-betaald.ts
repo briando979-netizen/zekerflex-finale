@@ -6,6 +6,7 @@ import { bonToken } from "@/lib/shop/bon-token";
 import { isReservedTestAddress, mailButton, mailShell, sendMail } from "@/lib/mail";
 import { zakelijkeRegels } from "@/lib/shop/zakelijk";
 import type { ShopOverschrijving } from "@/lib/shop/overschrijving-kenmerk";
+import { levertijdVoorBestelling } from "@/lib/shop/levertijd-server";
 
 // ---------------------------------------------------------------------------
 // Wat er gebeurt als een shopbestelling betaald is: voorraad eraf en de mails (aan de shop en aan de klant). Eén plek voor de
@@ -116,15 +117,21 @@ export async function notifyShopOrderPaid(order: BetaaldeBestelling): Promise<vo
     ),
   }).catch((e) => logger.warn("shop order notify failed", { error: (e as Error).message }));
 
+  // eerlijk over de levertijd (18 nov 2026): een product van de leverancier komt uit Duitsland of China, niet "morgen";
+  // de klant hoort dat hier, en dat de track & trace per mail volgt zodra het pakket onderweg is (lib/shop/verzonden-mail.ts)
+  const levertijd = await levertijdVoorBestelling((order.itemsJson as ShopOrderLine[] | null) ?? []);
+  const vervolg = levertijd
+    ? `We geven 'm door aan ons magazijn; de verwachte levertijd is ${levertijd} dagen. Zodra het pakket onderweg is, krijg je een mail met track & trace.`
+    : "We gaan 'm inpakken.";
   await sendMail({
     to: order.email,
     from: env.MAIL_FROM,
     kind: "shop-order-bevestiging",
     subject: "Je betaling is gelukt — bestelling bij de ZekerFlex-shop",
-    text: `Hoi ${order.firstName},\n\nBedankt voor je bestelling, je betaling is gelukt. We gaan 'm inpakken.\n\n${lineRows}\n\nTotaal: ${money(order.totalCents)}${zakText}\n\nBestelreferentie: ${order.id}\nFactuur (PDF): ${pdfUrl}`,
+    text: `Hoi ${order.firstName},\n\nBedankt voor je bestelling, je betaling is gelukt. ${vervolg}\n\n${lineRows}\n\nTotaal: ${money(order.totalCents)}${zakText}\n\nBestelreferentie: ${order.id}\nFactuur (PDF): ${pdfUrl}`,
     html: mailShell(
       "Betaling gelukt",
-      `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${order.firstName}, bedankt voor je bestelling — je betaling is gelukt. We gaan 'm inpakken.</p>
+      `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#3C4A42">Hoi ${order.firstName}, bedankt voor je bestelling — je betaling is gelukt. ${vervolg}</p>
        <table style="width:100%;font-size:14px;color:#3C4A42">${lineRowsHtml}</table>
        <p style="margin:10px 0 0;font-size:14px;color:#3C4A42">Totaal: <strong>${money(order.totalCents)}</strong></p>
        ${zakHtml ? `<div style="margin-top:12px">${zakHtml}</div>` : ""}

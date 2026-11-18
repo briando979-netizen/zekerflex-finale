@@ -44,3 +44,19 @@ export function levertijdBereik(dagen: readonly [number, number]): string {
 export function levertijdVoorLeverancier(aging: string | null | undefined, magazijn?: string | null): string {
   return levertijdBereik(levertijdDagen(aging, magazijn));
 }
+
+/**
+ * De termijn voor een hele bestelling: de ruimste van de regels ("3-7" en "7-15" → "7-15"), want het pakket is er pas als
+ * het laatste product er is. Null zonder termijnen (geen leveranciersproduct in de bestelling).
+ */
+export function langsteLevertijd(termijnen: readonly string[]): string | null {
+  let beste: { tekst: string; tot: number; van: number } | null = null;
+  for (const t of termijnen) {
+    const m = /^\s*(\d+)(?:\s*[-~]\s*(\d+))?/.exec(t);
+    if (!m) continue;
+    const van = Number(m[1]);
+    const tot = Number(m[2] ?? m[1]);
+    if (!beste || tot > beste.tot || (tot === beste.tot && van < beste.van)) beste = { tekst: t.trim(), tot, van }; // gelijk eind: het bereik ("3-7") boven het losse getal ("7")
+  }
+  return beste?.tekst ?? null;
+}
