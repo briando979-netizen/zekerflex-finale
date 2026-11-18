@@ -70,7 +70,7 @@ describe("links naar de paskamer laden de pagina volledig", () => {
   const BESTANDEN = [
     "components/marketing/ShopChrome.tsx",
     "components/marketing/ShopProductCard.tsx",
-    "components/marketing/ShopSections.tsx",
+    // ShopSections.tsx linkt sinds 18 nov niet meer naar de paskamer (het promoblok is van /shop gehaald)
     "components/marketing/ShopThuis.tsx",
     "components/marketing/paskamer/PaskamerTip.tsx",
     "components/marketing/zakelijk/ZakelijkSecties.tsx",
