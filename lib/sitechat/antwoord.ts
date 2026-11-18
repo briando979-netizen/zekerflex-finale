@@ -20,6 +20,8 @@ export interface Kennis {
   fragmenten: readonly Fragment[];
   /** "bel 0548 51 85 05" — waar de gast terechtkan als de assistent het niet weet */
   contact: string;
+  /** false: er leest geen team mee (bijv. een ontwerpvoorstel), dus geen verwijzing naar de knop "Medewerker" */
+  medewerker?: boolean;
 }
 
 export interface ChatVerzoek {
@@ -89,13 +91,13 @@ export async function chatAntwoord(v: ChatVerzoek, kennis: () => Promise<Kennis>
   // vervolgvragen ("en op zondag?") krijgen de vorige vraag als context mee
   const vorige = v.berichten.filter((b) => b.rol === "gast").slice(-2, -1)[0]?.tekst ?? "";
   const fragmenten = kiesFragmenten(`${vraag} ${vorige}`, k.fragmenten);
-  const terugval = antwoordZonderModel(vraag, k.fragmenten, k.contact);
+  const terugval = antwoordZonderModel(vraag, k.fragmenten, k.contact, k.medewerker !== false);
 
   await ensureAiNode().catch(() => undefined);
   if (llmConfigProblem()) return stroom(terugval, terugval, bewaar);
 
   try {
-    const site = { bedrijf: k.bedrijf, omschrijving: k.omschrijving, ...(k.regels ? { regels: k.regels } : {}) };
+    const site = { bedrijf: k.bedrijf, omschrijving: k.omschrijving, ...(k.regels ? { regels: k.regels } : {}), ...(k.medewerker === false ? { medewerker: false } : {}) };
     // het eigen model (alles gratis) leest maar 2048 tokens: zoveel fragmenten en berichten als passen
     const p = gratisAan() ? sitechatBinnenBudget(site, fragmenten, v.berichten.slice(-10)) : { systeem: bouwSysteem(site, fragmenten), historie: v.berichten.slice(-10) };
     const gen = chatStream({
@@ -142,12 +144,12 @@ export async function chatAntwoordTekst(
   const historie = gesprek.berichten.filter((b) => b.rol === "gast" || b.rol === "ai").slice(-10);
   const vorige = historie.filter((b) => b.rol === "gast").slice(-2, -1)[0]?.tekst ?? "";
   const fragmenten = kiesFragmenten(`${vraag} ${vorige}`, k.fragmenten);
-  const terugval = antwoordZonderModel(vraag, k.fragmenten, k.contact);
+  const terugval = antwoordZonderModel(vraag, k.fragmenten, k.contact, k.medewerker !== false);
 
   await ensureAiNode().catch(() => undefined);
   if (llmConfigProblem()) return bewaar(terugval);
   try {
-    const site = { bedrijf: k.bedrijf, omschrijving: k.omschrijving, ...(k.regels ? { regels: k.regels } : {}) };
+    const site = { bedrijf: k.bedrijf, omschrijving: k.omschrijving, ...(k.regels ? { regels: k.regels } : {}), ...(k.medewerker === false ? { medewerker: false } : {}) };
     const p = gratisAan() ? sitechatBinnenBudget(site, fragmenten, historie) : { systeem: bouwSysteem(site, fragmenten), historie };
     const r = await chat({
       purpose: "public-chat",

@@ -12,6 +12,8 @@ export const VOORSTEL_HEADER = "x-zf-voorstel";
 /** Naam in de kop -> basispad van het voorstel in de app. */
 export const VOORSTELLEN: Record<string, string> = {
   schwarzwald: "/voorstel/schwarzwald",
+  // smileyapp.zekerflex.com: website en app (PWA) voor SmileyApp
+  smileyapp: "/voorstel/smileyapp",
 };
 
 /**

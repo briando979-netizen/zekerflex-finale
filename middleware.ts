@@ -6,6 +6,7 @@ import { TE_GROOT_ANTWOORD, teGroot } from "@/lib/http/openbare-grens";
 import { buildContentSecurityPolicy, generateNonce, siteHostCsp } from "@/lib/security/csp";
 import { SITE_HOST_HEADER, siteHostFrom } from "@/lib/sites/host-header";
 import { VOORSTEL_HEADER, voorstelPad } from "@/lib/voorstel/subdomein";
+import { voorstelServiceWorker } from "@/lib/voorstel/service-worker";
 import { BEWIJS_PAD, rijschoolPad, robotsVoor } from "@/lib/rijschool/domein-pad";
 import { prefersMarkdown } from "@/lib/http/accept";
 import { markdownFor } from "@/lib/agent-content/markdown-pages";
@@ -257,12 +258,15 @@ function rijschoolSite(req: NextRequest, host: string, r: RijschoolHost): NextRe
 }
 
 // ---------------------------------------------------------------------------
-// Een ontwerpvoorstel op een eigen subdomein (schwarzwald.zekerflex.com).
-// Caddy zet x-zf-voorstel alleen in dat blok en haalt hem elders weg. Kale
-// paden worden het voorstel (/ → /voorstel/schwarzwald), de rest van ZekerFlex
-// geeft 404 (lib/voorstel/subdomein.ts). Pagina's krijgen dezelfde CSP-nonce
-// als overal; de API van het voorstel controleert toegang zelf.
+// Een ontwerpvoorstel op een eigen subdomein (schwarzwald.zekerflex.com,
+// smileyapp.zekerflex.com). Caddy zet x-zf-voorstel alleen in dat blok en haalt
+// hem elders weg. Kale paden worden het voorstel (/ → /voorstel/<naam>), de rest
+// van ZekerFlex geeft 404 (lib/voorstel/subdomein.ts). Pagina's krijgen dezelfde
+// CSP-nonce als overal; de API van het voorstel controleert toegang zelf. Een
+// voorstel hoort niet in zoekmachines: elk antwoord krijgt X-Robots-Tag noindex.
 // ---------------------------------------------------------------------------
+const VOORSTEL_ROBOTS = "noindex, nofollow";
+
 function voorstelSite(req: NextRequest, naam: string): NextResponse {
   const pad = req.nextUrl.pathname;
   if (pad === "/robots.txt") {
@@ -271,16 +275,16 @@ function voorstelSite(req: NextRequest, naam: string): NextResponse {
   // De ZekerFlex-bezoekersstatistiek draait in de root-layout mee; bezoekers van
   // het voorstel horen daar niet in. Stil aannemen in plaats van een 404.
   if (pad.startsWith("/api/analytics/")) return new NextResponse(null, { status: 204 });
-  // De root-layout registreert ook de ZekerFlex-service-worker. Hier een lege die
-  // zichzelf meteen uitschakelt: geen ZekerFlex-cache op het voorstel, geen 404.
+  // De root-layout registreert ook de ZekerFlex-service-worker. Hier de eigen van
+  // het voorstel: een lege die zichzelf uitschakelt, of die van de SmileyApp-app
+  // (lib/voorstel/service-worker.ts). Geen ZekerFlex-cache op het voorstel, geen 404.
   if (pad === "/sw.js") {
-    return new NextResponse(
-      "self.addEventListener('install',()=>self.skipWaiting());self.addEventListener('activate',()=>self.registration.unregister());",
-      { headers: { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "no-store" } },
-    );
+    return new NextResponse(voorstelServiceWorker(naam), {
+      headers: { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": VOORSTEL_ROBOTS },
+    });
   }
   const doel = voorstelPad(naam, pad);
-  if (doel === null) return new NextResponse("Niet gevonden", { status: 404 });
+  if (doel === null) return new NextResponse("Niet gevonden", { status: 404, headers: { "X-Robots-Tag": VOORSTEL_ROBOTS } });
   if (doel.startsWith("/_next/")) return NextResponse.next();
   const nonce = generateNonce();
   const ctx: RequestContext = { cid: correlationId(req), nonce, csp: buildContentSecurityPolicy({ dev: IS_DEV, nonce, pathname: doel }) };
@@ -289,10 +293,11 @@ function voorstelSite(req: NextRequest, naam: string): NextResponse {
   headers.set("x-pathname", doel);
   headers.set(NONCE_HEADER, ctx.nonce);
   headers.set(CSP_HEADER, ctx.csp);
-  if (doel === pad) return decorate(NextResponse.next({ request: { headers } }), ctx);
   const url = req.nextUrl.clone();
   url.pathname = doel;
-  return decorate(NextResponse.rewrite(url, { request: { headers } }), ctx);
+  const res = decorate(doel === pad ? NextResponse.next({ request: { headers } }) : NextResponse.rewrite(url, { request: { headers } }), ctx);
+  res.headers.set("X-Robots-Tag", VOORSTEL_ROBOTS);
+  return res;
 }
 
 export async function middleware(req: NextRequest): Promise<NextResponse> {

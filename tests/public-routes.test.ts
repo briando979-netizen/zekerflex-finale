@@ -96,6 +96,8 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/agent/horeca/de-zaak/reserveringen", // book a table (rate-limited, same capacity check as the own site)
     "/api/agent/horeca/reserveringen/token", // view or cancel with the signed cancel link
     "/api/checklist/abcdefghijklmnopqrstuvwxyz012345", // personeel zonder account vult een checklist in; de sleutel in het adres is het bewijs
+    "/api/voorstel/smileyapp/chat", // websitechat van het SmileyApp-voorstel (IP-begrensd, alleen van de eigen site)
+    "/api/voorstel/smileyapp/chat/abcdefghijklmnop12345678", // de widget haalt de status van het eigen gesprek op
   ];
   it.each(cases)("%s is public", (path) => {
     expect(isPublicApiRoute(path)).toBe(true);

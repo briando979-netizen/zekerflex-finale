@@ -68,6 +68,8 @@ export function SiteChat({
   actieLabel,
   renderActie,
   wilActie,
+  medewerker = true,
+  knopTekst = "Chat",
 }: {
   api: string;
   /** voorvoegsel voor localStorage, uniek per site */
@@ -82,6 +84,10 @@ export function SiteChat({
   renderActie?: (hulp: ChatHulp) => ReactNode;
   /** herkent een vraag waarbij de actie (bijv. reserveren) handig is */
   wilActie?: (tekst: string) => boolean;
+  /** false: er leest geen team mee (bijv. een ontwerpvoorstel), dus geen knop "Medewerker" */
+  medewerker?: boolean;
+  /** tekst op de ronde knop rechtsonder (standaard "Chat") */
+  knopTekst?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [id, setId] = useState("");
@@ -305,7 +311,7 @@ export function SiteChat({
                   {actieLabel}
                 </button>
               )}
-              {status !== "mens" && (
+              {medewerker && status !== "mens" && (
                 <button type="button" onClick={() => void vraagMedewerker()} disabled={bezig || status === "wacht"} className="rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ring-black/15 hover:bg-[#F3EEE6] disabled:opacity-60">
                   {status === "wacht" ? "Medewerker gevraagd" : "Medewerker"}
                 </button>
@@ -331,7 +337,11 @@ export function SiteChat({
                 </svg>
               </button>
             </form>
-            <p className="mt-2 text-[11px] leading-snug text-[#4A524D]">Je chat met een AI-assistent; een medewerker kan meelezen en het gesprek overnemen. Deel geen betaalgegevens.</p>
+            <p className="mt-2 text-[11px] leading-snug text-[#4A524D]">
+              {medewerker
+                ? "Je chat met een AI-assistent; een medewerker kan meelezen en het gesprek overnemen. Deel geen betaalgegevens."
+                : `Je chat met een AI-assistent; er leest geen medewerker mee. Twijfel je over een antwoord, ${contact}. Deel geen betaalgegevens.`}
+            </p>
           </div>
         </div>
       )}
@@ -340,13 +350,14 @@ export function SiteChat({
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        aria-label={open ? "Chat sluiten" : nieuw ? `Chat openen, ${nieuw} nieuw bericht van een medewerker` : "Chat openen"}
+        // een eigen knoptekst is ook de naam voor schermlezers (zichtbare tekst = naam)
+        aria-label={open ? "Chat sluiten" : nieuw ? `Chat openen, ${nieuw} nieuw bericht van een medewerker` : knopTekst === "Chat" ? "Chat openen" : knopTekst}
         className={`fixed bottom-5 right-5 z-[60] flex h-14 items-center gap-2 rounded-full pl-4 pr-5 font-bold shadow-[0_14px_40px_-12px_rgba(10,18,14,0.6)] transition-transform hover:-translate-y-0.5 ${stijl.knop}`}
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M4 5h16v11H8l-4 4V5z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
         </svg>
-        <span className="text-sm">{open ? "Sluiten" : "Chat"}</span>
+        <span className="text-sm">{open ? "Sluiten" : knopTekst}</span>
         {nieuw > 0 && !open && <span aria-hidden="true" className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-[#B91C1C] px-1 text-[11px] text-white">{nieuw}</span>}
       </button>
     </>

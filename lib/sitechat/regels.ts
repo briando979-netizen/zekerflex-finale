@@ -144,7 +144,7 @@ export function kiesFragmenten(vraag: string, fragmenten: readonly Fragment[], m
  * berichten die nog passen (hoogstens een kwart van het budget). Niets wordt afgekapt: wat niet past, gaat er heel uit.
  */
 export function sitechatBinnenBudget<B extends { tekst: string }>(
-  o: { bedrijf: string; omschrijving: string; regels?: readonly string[] },
+  o: { bedrijf: string; omschrijving: string; regels?: readonly string[]; medewerker?: boolean | undefined },
   fragmenten: readonly Fragment[],
   historie: readonly B[],
   budget: number = GRATIS_PROMPT_BUDGET,
@@ -166,14 +166,17 @@ export function sitechatBinnenBudget<B extends { tekst: string }>(
   return { systeem: bouwSysteem(o, gekozen), historie: gesprek };
 }
 
-export function bouwSysteem(o: { bedrijf: string; omschrijving: string; regels?: readonly string[] }, fragmenten: readonly Fragment[]): string {
+/** Site zonder team dat meeleest (bijv. een ontwerpvoorstel): `medewerker: false`, dan geen knop en geen belofte daarover. */
+export function bouwSysteem(o: { bedrijf: string; omschrijving: string; regels?: readonly string[]; medewerker?: boolean | undefined }, fragmenten: readonly Fragment[]): string {
   return [
     `Je bent de chatassistent op de website van ${o.bedrijf}. ${o.omschrijving}`,
     "",
     "Regels:",
     "- Antwoord in de taal van de bezoeker (meestal Nederlands), vriendelijk en kort: hooguit vier zinnen.",
     "- Gebruik alleen de gegevens hieronder. Verzin geen prijzen, tijden, acties, kortingen of beloftes.",
-    '- Weet je iets niet zeker, zeg dat eerlijk en bied aan dat een medewerker meekijkt via de knop "Medewerker".',
+    o.medewerker === false
+      ? "- Weet je iets niet zeker, zeg dat eerlijk en verwijs naar het contact in de gegevens. Er leest geen medewerker mee in deze chat."
+      : '- Weet je iets niet zeker, zeg dat eerlijk en bied aan dat een medewerker meekijkt via de knop "Medewerker".',
     "- Vraag nooit om betaalgegevens, wachtwoorden of een burgerservicenummer.",
     ...(o.regels ?? []).map((r) => `- ${r}`),
     "",
@@ -183,11 +186,13 @@ export function bouwSysteem(o: { bedrijf: string; omschrijving: string; regels?:
 }
 
 /** Antwoord zonder taalmodel (of als het model niet reageert): het best passende fragment, of een eerlijke doorverwijzing. */
-export function antwoordZonderModel(vraag: string, fragmenten: readonly Fragment[], contact: string): string {
+export function antwoordZonderModel(vraag: string, fragmenten: readonly Fragment[], contact: string, medewerker = true): string {
   const beste = kiesFragmenten(vraag, fragmenten.filter((f) => !f.altijd), 1)[0];
   if (beste) {
     const tekst = beste.tekst.length > 420 ? `${beste.tekst.slice(0, 400).replace(/\s+\S*$/, "")} …` : beste.tekst;
-    return `${beste.titel}: ${tekst}\n\nWil je meer weten? Klik op "Medewerker", of ${contact}.`;
+    return `${beste.titel}: ${tekst}\n\nWil je meer weten? ${medewerker ? `Klik op "Medewerker", of ${contact}` : contact.charAt(0).toUpperCase() + contact.slice(1)}.`;
   }
-  return `Daar weet ik niet direct het antwoord op. Klik op "Medewerker", dan kijkt een collega mee, of ${contact}.`;
+  return medewerker
+    ? `Daar weet ik niet direct het antwoord op. Klik op "Medewerker", dan kijkt een collega mee, of ${contact}.`
+    : `Daar weet ik niet direct het antwoord op. Wil je het zeker weten, ${contact}.`;
 }

@@ -150,7 +150,11 @@ export function buildContentSecurityPolicy({ dev, nonce, pathname }: CspOptions)
   // frame-ancestors 'self' below keeps clickjacking protection intact.
   // het ingebedde BI-dashboard (Rapportages) staat op een eigen host
   const bi = BI_ORIGIN ? ` ${BI_ORIGIN}` : "";
-  const frameSrc = studio ? "frame-src 'self' blob: https:" : `frame-src 'self' https://js.stripe.com https://www.youtube-nocookie.com${bi}`;
+  // Het SmileyApp-voorstel (/voorstel/smileyapp, ook op smileyapp.zekerflex.com) toont hun eigen Vimeo-filmpje
+  // pas na een klik, zonder tracking (components/voorstel/smileyapp/VimeoVideo.tsx). Voor de hele omgeving van
+  // dat voorstel, niet per pagina (de CSP hoort bij het eerste document); overal elders blijft Vimeo dicht.
+  const vimeo = pathname === "/voorstel/smileyapp" || pathname?.startsWith("/voorstel/smileyapp/") ? " https://player.vimeo.com" : "";
+  const frameSrc = studio ? "frame-src 'self' blob: https:" : `frame-src 'self' https://js.stripe.com https://www.youtube-nocookie.com${bi}${vimeo}`;
   // The sandbox shows arbitrary author markup; let pasted snippets load images
   // from anywhere. It stays isolated by the iframe `sandbox` attribute.
   const imgSrc = sandboxFrame ? "img-src * data: blob:" : "img-src 'self' data: blob:";

@@ -130,6 +130,22 @@ schwarzwald.zekerflex.com {
 	}
 }
 
+# Ontwerpvoorstel (website en app) voor SmileyApp, net als Schwarzwald hierboven:
+# een vaste naam, Caddy haalt het certificaat zelf (DNS: A/AAAA naar deze VPS).
+# De middleware toont hier alleen /voorstel/smileyapp (lib/voorstel/subdomein.ts).
+smileyapp.zekerflex.com {
+	encode zstd gzip
+	import toegangslog
+	import bodylimiet
+	reverse_proxy app:3000 {
+		header_up -X-ZF-Site-Host
+		header_up X-ZF-Voorstel smileyapp
+		# uitrol: opnieuw verbinden in plaats van een 502 (zie het eerste blok)
+		lb_try_duration 15s
+		lb_try_interval 250ms
+	}
+}
+
 # Live voorbeeld van de Bouwer (Admin → ZekerFlex AI → Bouwer): next dev op de
 # werkkopie, met alleen demogegevens. De bouwer-container laat alleen bezoekers
 # met een getekende link uit Admin binnen (deploy/bouwer/werker/voorbeeld.mjs).

@@ -138,6 +138,12 @@ const nextConfig = {
         headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }],
       },
       {
+        // Het SmileyApp-voorstel hoort niet in zoekmachines, ook niet via zekerflex.com/voorstel/smileyapp
+        // (op smileyapp.zekerflex.com zet de middleware deze kop op elk antwoord, voorstelSite()).
+        source: "/voorstel/smileyapp/:pad*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
         // Foto's van de eigen site (paginacheck 15 nov): ook die kwamen met max-age=0, dus elk bezoek vroeg ze opnieuw
         // op (bv. /shifts/logistiek.jpg, 221 kB, op / en /bedrijven). Alleen bestanden met een beeld-extensie, nooit een
         // pagina zoals /shop/<product>. Geen hash in de naam: een dag bewaren, op de achtergrond verversen.

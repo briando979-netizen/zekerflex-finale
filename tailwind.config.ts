@@ -62,6 +62,9 @@ const config: Config = {
         // Ontwerpvoorstel Het Schwarzwald (/voorstel/schwarzwald): bosnacht, hun oranje en een zonnig accent.
         // rust = hun oranje donker genoeg voor kleine tekst op licht (WCAG AA, ≥ 4,8:1 op crème/zand/wit).
         schw: { night: "#0A120E", forest: "#11221A", moss: "#1C3A2B", orange: "#FF5F1F", rust: "#B83A0A", flame: "#FF8A3D", sun: "#FFD23F", cream: "#FFF6EA", sand: "#F4E9DA", mute: "#5C6B62" },
+        // Ontwerpvoorstel SmileyApp (/voorstel/smileyapp): groen en geel uit hun logo (gemeten), met een donkergroen
+        // voor tekst en vlakken. green is te licht voor tekst op wit: gebruik leaf (≥ 6:1) of ink; op green alleen ink.
+        smiley: { green: "#5ABA8E", leaf: "#1E6B4A", ink: "#0E2A20", deep: "#123A2C", sun: "#FDD11A", cream: "#FFFBEA", mint: "#E7F6EE", coral: "#F0705F", mute: "#4B5E55" },
         risk: {
           low: "#15803D",
           medium: "#B45309",
