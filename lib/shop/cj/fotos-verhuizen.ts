@@ -3,6 +3,7 @@ import { logger } from "@/lib/logger";
 import { recordAudit } from "@/lib/audit";
 import { cleanImage } from "@/lib/media/clean-image";
 import { readUpload, verhuisUploadNaarSchijf } from "@/lib/storage/local";
+import { kvDelete, kvGet, kvSet, kvSetIfAbsent, kvVerwijderAlsVeld } from "@/lib/storage/kv";
 import { CJ_FOTO_MAX_PX, uploadIdUitMediaUrl } from "@/lib/shop/cj/cj-core";
 
 // ---------------------------------------------------------------------------
@@ -141,4 +142,90 @@ export async function verhuisCjFotos(o: { actorUserId: string | null; budgetMs?:
     });
   }
   return uit;
+}
+
+// --- op de achtergrond (18 nov, avond): de klik in Beheer kwam er niet; de eigenaar gaf toestemming om het voor hem te doen.
+// Een vlag in KV zet de verhuizing aan; de cron (elke 5 minuten) doet een ronde zolang de vlag aan staat en zet hem uit
+// zodra alles verhuisd is of er alleen nog mislukkingen over zijn. De knop in Beheer zet dezelfde vlag.
+
+const K_AAN = "shop:cj:fotos-verhuizen:aan";
+const K_SLOT = "shop:cj:fotos-verhuizen:slot";
+/** een slot ouder dan dit is van een ronde die nooit netjes eindigde */
+const SLOT_MAX_MS = 6 * 60_000;
+
+export interface VerhuisStand {
+  aan: boolean;
+  sinds: string | null;
+  laatsteRondeOp: string | null;
+  rondes: number;
+  gedaan: number;
+  mislukt: number;
+  bytesVoor: number;
+  bytesNa: number;
+  /** wat er na de laatste ronde nog in de database stond; null = nog geen ronde gedaan */
+  rest: number | null;
+}
+
+const LEGE_STAND: VerhuisStand = { aan: false, sinds: null, laatsteRondeOp: null, rondes: 0, gedaan: 0, mislukt: 0, bytesVoor: 0, bytesNa: 0, rest: null };
+
+export async function leesVerhuisStand(): Promise<VerhuisStand> {
+  const s = await kvGet<Partial<VerhuisStand>>(K_AAN).catch(() => null);
+  return { ...LEGE_STAND, ...(s ?? {}), aan: s?.aan === true };
+}
+
+/** Aanzetten begint met schone tellers; uitzetten laat de tellers staan (voor het scherm). */
+export async function zetVerhuisStand(aan: boolean, now = new Date()): Promise<VerhuisStand> {
+  const huidig = await leesVerhuisStand();
+  const nieuw: VerhuisStand = aan ? { ...LEGE_STAND, aan: true, sinds: now.toISOString() } : { ...huidig, aan: false };
+  await kvSet(K_AAN, nieuw);
+  return nieuw;
+}
+
+export type RondeAchtergrond = { status: "uit" | "bezet" | "gedaan" | "klaar" | "vast"; stand: VerhuisStand };
+
+/** Eén ronde vanuit de cron: alleen als de vlag aan staat, nooit twee tegelijk; klaar = vlag uit. */
+export async function rondeVerhuizenAchtergrond(o: { budgetMs?: number; now?: Date } = {}): Promise<RondeAchtergrond> {
+  const now = o.now ?? new Date();
+  const stand = await leesVerhuisStand();
+  if (!stand.aan) return { status: "uit", stand };
+
+  const slot = { bezig: now.toISOString() };
+  const oud = await kvGet<{ bezig?: string }>(K_SLOT).catch(() => null);
+  if (oud?.bezig && now.getTime() - Date.parse(oud.bezig) < SLOT_MAX_MS) return { status: "bezet", stand };
+  if (oud) await kvDelete(K_SLOT).catch(() => undefined);
+  if (!(await kvSetIfAbsent(K_SLOT, slot))) return { status: "bezet", stand };
+
+  try {
+    const uit = await verhuisCjFotos({ actorUserId: null, budgetMs: o.budgetMs ?? 200_000 });
+    const klaar = uit.rest === 0 && uit.mislukt === 0;
+    const vast = uit.gedaan === 0 && uit.mislukt > 0; // alles wat over is mislukt: niet eindeloos door
+    const nieuw: VerhuisStand = {
+      ...stand,
+      aan: !(klaar || vast),
+      laatsteRondeOp: now.toISOString(),
+      rondes: stand.rondes + 1,
+      gedaan: stand.gedaan + uit.gedaan,
+      mislukt: stand.mislukt + uit.mislukt,
+      bytesVoor: stand.bytesVoor + uit.bytesVoor,
+      bytesNa: stand.bytesNa + uit.bytesNa,
+      rest: uit.rest,
+    };
+    await kvSet(K_AAN, nieuw);
+    if (klaar || vast) {
+      await recordAudit({
+        category: "ADMIN",
+        action: klaar ? "shop.cj.fotos-verhuizing-klaar" : "shop.cj.fotos-verhuizing-vast",
+        actorUserId: null,
+        actorLabel: "system:cj",
+        summary: klaar
+          ? `CJ-foto's naar schijf klaar: ${nieuw.gedaan} verhuisd in ${nieuw.rondes} rondes (${Math.round(nieuw.bytesVoor / 1_048_576)} → ${Math.round(nieuw.bytesNa / 1_048_576)} MB)`
+          : `CJ-foto's naar schijf gestopt: ${nieuw.gedaan} verhuisd, ${uit.rest} blijven mislukken (${nieuw.mislukt} fouten); zie het log`,
+        targetType: "shop",
+        targetId: "cj-fotos",
+      });
+    }
+    return { status: klaar ? "klaar" : vast ? "vast" : "gedaan", stand: nieuw };
+  } finally {
+    await kvVerwijderAlsVeld(K_SLOT, "bezig", slot.bezig).catch(() => undefined);
+  }
 }

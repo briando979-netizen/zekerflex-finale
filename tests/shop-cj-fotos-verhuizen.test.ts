@@ -14,11 +14,24 @@ const verhuis = vi.fn();
 vi.mock("@/lib/storage/local", () => ({ readUpload: (...a: unknown[]) => readUpload(...a), verhuisUploadNaarSchijf: (...a: unknown[]) => verhuis(...a) }));
 const cleanImage = vi.fn();
 vi.mock("@/lib/media/clean-image", () => ({ cleanImage: (...a: unknown[]) => cleanImage(...a) }));
+const kv = new Map<string, unknown>();
+vi.mock("@/lib/storage/kv", () => ({
+  kvGet: vi.fn(async (k: string) => kv.get(k) ?? null),
+  kvSet: vi.fn(async (k: string, v: unknown) => void kv.set(k, v)),
+  kvSetIfAbsent: vi.fn(async (k: string, v: unknown) => (kv.has(k) ? false : (kv.set(k, v), true))),
+  kvDelete: vi.fn(async (k: string) => void kv.delete(k)),
+  kvVerwijderAlsVeld: vi.fn(async (k: string, veld: string, waarde: string) => {
+    const cur = kv.get(k) as Record<string, unknown> | undefined;
+    if (cur && cur[veld] === waarde) kv.delete(k);
+    return true;
+  }),
+}));
 
-import { cjFotoUploadIds, cjFotosTeVerhuizen, telCjFotos, verhuisCjFotos } from "@/lib/shop/cj/fotos-verhuizen";
+import { cjFotoUploadIds, cjFotosTeVerhuizen, leesVerhuisStand, rondeVerhuizenAchtergrond, telCjFotos, verhuisCjFotos, zetVerhuisStand } from "@/lib/shop/cj/fotos-verhuizen";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  kv.clear();
   producten.mockResolvedValue([
     { imageUploadId: "upl-0001-aaaa", fotos: ["/api/shop/media/upl-0002-bbbb", "https://cdn.cj.example/los.jpg", "/api/shop/media/upl-0003-cccc"] },
     { imageUploadId: "upl-0002-bbbb", fotos: [] }, // dezelfde foto twee keer: één keer tellen
@@ -74,5 +87,30 @@ describe("CJ-foto's verhuizen", () => {
     expect(r).toMatchObject({ gedaan: 0, mislukt: 0, rest: 3 });
     expect(verhuis).not.toHaveBeenCalled();
     expect(audit).not.toHaveBeenCalled();
+  });
+
+  it("op de achtergrond: zonder vlag niets; met vlag een ronde, en klaar zet de vlag uit met een auditregel", async () => {
+    expect((await rondeVerhuizenAchtergrond({ now: new Date("2026-11-18T21:03:00Z") })).status).toBe("uit");
+    expect(verhuis).not.toHaveBeenCalled();
+    await zetVerhuisStand(true, new Date("2026-11-18T21:00:00Z"));
+    const r = await rondeVerhuizenAchtergrond({ now: new Date("2026-11-18T21:03:00Z") });
+    expect(r.status).toBe("klaar");
+    expect(r.stand).toMatchObject({ aan: false, rondes: 1, gedaan: 3, mislukt: 0, rest: 0, bytesVoor: 900_000, bytesNa: 240_000, sinds: "2026-11-18T21:00:00.000Z" });
+    expect(await leesVerhuisStand()).toMatchObject({ aan: false, gedaan: 3 });
+    expect(audit).toHaveBeenCalledTimes(2); // de ronde zelf + "klaar"
+    expect((audit.mock.calls[1]?.[0] as unknown as { action: string }).action).toBe("shop.cj.fotos-verhuizing-klaar");
+    expect(kv.has("shop:cj:fotos-verhuizen:slot")).toBe(false);
+  });
+
+  it("op de achtergrond: een vers slot houdt een tweede ronde tegen; blijft alles mislukken, dan stopt hij (vlag uit, audit 'vast')", async () => {
+    await zetVerhuisStand(true);
+    kv.set("shop:cj:fotos-verhuizen:slot", { bezig: "2026-11-18T21:02:00Z" });
+    expect((await rondeVerhuizenAchtergrond({ now: new Date("2026-11-18T21:03:00Z") })).status).toBe("bezet");
+    kv.delete("shop:cj:fotos-verhuizen:slot");
+    verhuis.mockImplementation(async () => { throw new Error("schijf vol"); });
+    const r = await rondeVerhuizenAchtergrond({ now: new Date("2026-11-18T21:08:00Z") });
+    expect(r.status).toBe("vast");
+    expect(r.stand).toMatchObject({ aan: false, mislukt: 3, gedaan: 0 });
+    expect((audit.mock.calls.at(-1)?.[0] as unknown as { action: string }).action).toBe("shop.cj.fotos-verhuizing-vast");
   });
 });

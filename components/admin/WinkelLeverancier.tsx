@@ -13,8 +13,8 @@ import { CjBestellingen } from "@/components/admin/WinkelCjBestellingen";
 
 type Stand = { ingesteld: boolean; bewijsGeldigTot: string | null; laatsteOk: string | null; laatsteFout: string | null; laatsteFoutOp: string | null; instellingen: { verzendCents: number; land: string; margePct: number | null } };
 type Treffer = { pid: string; naamEn: string; foto: string | null; inkoopUsdCents: number; inkoopCents: number | null; prijsCents: number | null; categorie: string; categorieCj: string; gevoerd: number };
-type FotoTelling = { droog: true; aantal: number; bytes: number; steekproef: { n: number; bytesVoor: number; bytesNa: number }; schattingBytesNa: number };
-type FotoRonde = { droog: false; gedaan: number; mislukt: number; rest: number; bytesVoor: number; bytesNa: number };
+type FotoAchtergrond = { aan: boolean; sinds: string | null; laatsteRondeOp: string | null; rondes: number; gedaan: number; mislukt: number; bytesVoor: number; bytesNa: number; rest: number | null };
+type FotoTelling = { droog: true; aantal: number; bytes: number; steekproef: { n: number; bytesVoor: number; bytesNa: number }; schattingBytesNa: number; achtergrond: FotoAchtergrond };
 const mb = (b: number) => (b / 1_048_576).toFixed(b >= 10_485_760 ? 0 : 1);
 type BijwerkStand = { vanaf: number; laatsteRondeOp: string | null; laatsteVolledigOp: string | null; rondes: number; totaal: number };
 type BijwerkAntwoord = { status: "gedaan" | "bezet"; bekeken: number; categorie: number; voorraad: number; vertaald: number; fouten: number; volgende: number | null; totaal: number; stand: BijwerkStand };
@@ -45,7 +45,6 @@ export function Leverancier() {
   const [verzendTekst, setVerzendTekst] = useState("");
   const [wachtrijTik, setWachtrijTik] = useState(0);
   const [fotos, setFotos] = useState<FotoTelling | null>(null);
-  const [fotoRonde, setFotoRonde] = useState<FotoRonde | null>(null);
   const [bijwerkStand, setBijwerkStand] = useState<BijwerkStand | null>(null);
   const [land, setLand] = useState("");
   const [margeTekst, setMargeTekst] = useState("");
@@ -322,36 +321,33 @@ export function Leverancier() {
               {fotos.aantal} foto&apos;s in de database, {mb(fotos.bytes)} MB; na verkleining naar schatting {mb(fotos.schattingBytesNa)} MB (steekproef van {fotos.steekproef.n}).
             </span>
           )}
-          {fotos && fotos.droog && fotos.aantal > 0 && (
+          {fotos && fotos.droog && fotos.aantal > 0 && !fotos.achtergrond.aan && (
             <button
               type="button"
               className="a-btn a-btn-primary"
               disabled={bezig !== ""}
               onClick={() => {
-                if (!window.confirm(`${fotos.aantal} foto's van de database naar de schijf verhuizen? Dit duurt een paar minuten per paar honderd foto's en is niet terug te draaien, maar de foto's en hun adressen blijven gelijk.`)) return;
+                if (!window.confirm(`${fotos.aantal} foto's van de database naar de schijf verhuizen? Dit loopt op de achtergrond (elke vijf minuten een ronde) en is niet terug te draaien, maar de foto's en hun adressen blijven gelijk.`)) return;
                 void doe("fotos-verhuis", async () => {
-                  const som: FotoRonde = { droog: false, gedaan: 0, mislukt: 0, rest: fotos.aantal, bytesVoor: 0, bytesNa: 0 };
-                  let rondes = 0;
-                  while (som.rest > 0 && rondes < 40) {
-                    rondes++;
-                    const r: FotoRonde = await vraag<FotoRonde>("/api/admin/shop-ai/cj/fotos-verhuizen", { budgetMs: 200_000 });
-                    som.gedaan += r.gedaan;
-                    som.mislukt += r.mislukt;
-                    som.bytesVoor += r.bytesVoor;
-                    som.bytesNa += r.bytesNa;
-                    som.rest = r.rest;
-                    setFotoRonde({ ...som });
-                    if (r.gedaan === 0 && r.mislukt > 0) break; // alles wat over is mislukt: niet eindeloos door
-                  }
-                  setFotos(null);
-                  setBericht(`Foto's verhuisd: ${som.gedaan} (${mb(som.bytesVoor)} → ${mb(som.bytesNa)} MB)${som.mislukt ? `, ${som.mislukt} mislukt` : ""}${som.rest ? `, ${som.rest} nog in de database` : ""}.`);
+                  const r = await vraag<{ status: string; stand: FotoAchtergrond }>("/api/admin/shop-ai/cj/fotos-verhuizen", { achtergrond: true });
+                  setFotos({ ...fotos, achtergrond: r.stand });
+                  setBericht("De verhuizing loopt nu op de achtergrond: elke vijf minuten een ronde. Je kunt dit scherm sluiten; klik later op Tellen om de stand te zien.");
                 });
               }}
             >
-              {bezig === "fotos-verhuis" ? "Bezig…" : "Verhuizen naar schijf"}
+              {bezig === "fotos-verhuis" ? "Bezig…" : "Verhuizen naar schijf (op de achtergrond)"}
             </button>
           )}
-          {fotoRonde && bezig === "fotos-verhuis" && <span className="text-sm" style={{ color: "var(--a-mute)" }}>{fotoRonde.gedaan} verhuisd, {fotoRonde.rest} te gaan…</span>}
+          {fotos && fotos.achtergrond.aan && (
+            <span className="text-sm" style={{ color: "var(--a-mute)" }}>
+              Verhuizing loopt op de achtergrond sinds {klok(fotos.achtergrond.sinds)}: {fotos.achtergrond.gedaan} verhuisd in {fotos.achtergrond.rondes} rondes{fotos.achtergrond.rest !== null ? `, ${fotos.achtergrond.rest} te gaan` : ""}, laatste ronde {klok(fotos.achtergrond.laatsteRondeOp)}.
+            </span>
+          )}
+          {fotos && !fotos.achtergrond.aan && fotos.achtergrond.rondes > 0 && (
+            <span className="text-sm" style={{ color: "var(--a-mute)" }}>
+              Laatste verhuizing: {fotos.achtergrond.gedaan} verhuisd ({mb(fotos.achtergrond.bytesVoor)} → {mb(fotos.achtergrond.bytesNa)} MB){fotos.achtergrond.mislukt ? `, ${fotos.achtergrond.mislukt} mislukt` : ""}.
+            </span>
+          )}
         </div>
       </Panel>
 
