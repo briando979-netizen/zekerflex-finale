@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 // Waar de Bouwer de code ophaalt (deploy/bouwer/werker/werkkopie.mjs): GitHub en onze
 // eigen Git-server, elk met een eigen leestoken via een credential helper. Het token
@@ -19,10 +19,13 @@ describe("Bouwer: leestokens voor GitHub en Forgejo", () => {
     w = (await import(/* @vite-ignore */ pad)) as Werkkopie;
   });
 
-  afterEach(() => {
+  // ook vóór elke test leeg: in de Bouwer-container staat BOUWER_FORGEJO_TOKEN echt ingesteld (18 nov: de test faalde daar)
+  const leegmaken = () => {
     delete process.env.BOUWER_GITHUB_LEES_TOKEN;
     delete process.env.BOUWER_FORGEJO_TOKEN;
-  });
+  };
+  beforeEach(leegmaken);
+  afterEach(leegmaken);
 
   it("zonder token anoniem, zoals bij een openbare repo", () => {
     expect(w.bronOpties("github")).toEqual([]);
