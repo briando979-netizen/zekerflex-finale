@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { uitloggenNaarInloggen } from "@/lib/auth/actions";
 import { redirect } from "next/navigation";
 import { getPrincipal } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -64,9 +65,12 @@ export default async function VerifieerEmailPage(
       title={t.title}
       subtitle={fill(t.subtitle, { email: user?.email ?? "" })}
       footer={
-        <Link href="/login" className="font-semibold text-brand-600 hover:underline">
-          {t.backToLogin}
-        </Link>
+        // eerst uitloggen: als ingelogde kom je via /login direct weer hier terecht (lib/auth/actions.ts)
+        <form action={uitloggenNaarInloggen}>
+          <button type="submit" className="font-semibold text-brand-600 hover:underline">
+            {t.backToLogin}
+          </button>
+        </form>
       }
     >
       {kaatstTerug && (
