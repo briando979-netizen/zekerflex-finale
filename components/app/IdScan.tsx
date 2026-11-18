@@ -16,6 +16,8 @@ import { EuIntro, EuToestemming, NlIntro, TipsSheet } from "@/components/app/Sca
 import { maakTrackCtx } from "@/lib/analytics/label-privacy";
 import { heeftAchterkant } from "@/lib/kyc/document-zijden";
 import { BEWEGING, bewegingVoldoet, draaiAanwijzing, type LiveMeting } from "@/lib/kyc/gezicht/beweging";
+import { DRAAI_LEEG, draaiStand, fotoMag, telStabiel, type DraaiStand } from "@/lib/kyc/gezicht/draai-meter";
+import { HoofdDraai } from "@/components/app/HoofdDraai";
 import {
   DOC_LIVE,
   SELFIE_LIVE,
@@ -403,6 +405,13 @@ function Camera({
   // de camera gaat uit zolang het tabblad verborgen is, en weer aan als je terugkomt
   const [zichtbaar, setZichtbaar] = useState(true);
   const [aanwijzing, setAanwijzing] = useState<{ a: SelfieAanwijzing; voortgang: number } | null>(null);
+  // de hoofddraai-meter bij de tweede selfie (lib/kyc/gezicht/draai-meter.ts): wijzer, "tot hier", en "gelukt" na de foto
+  const [draai, setDraai] = useState<DraaiStand>(DRAAI_LEEG);
+  const [draaiGelukt, setDraaiGelukt] = useState(false);
+  const [minderBeweging, setMinderBeweging] = useState(false);
+  useEffect(() => {
+    setMinderBeweging(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }, []);
   const [liveUit, setLiveUit] = useState(false);
   // het document: de aanwijzing van nu, en of de server nog meet (weg = alleen de aanwijzingen van de browser)
   const [docHint, setDocHint] = useState<DocAanwijzing | null>(null);
@@ -533,6 +542,8 @@ function Camera({
     // de eerste selfie: goede, stille beelden achter elkaar (lib/kyc/camera-live.ts, telSelfie)
     let teller = 0;
     let vorige: LiveMeting | null = null;
+    // de tweede selfie: zoveel beelden achter elkaar goed gedraaid voordat de foto vanzelf gaat (draai-meter.ts)
+    let stabiel = 0;
     void (async () => {
       while (!weg) {
         const begin = Date.now();
@@ -577,16 +588,21 @@ function Camera({
             } else if (referentie) {
               const d = draaiAanwijzing(referentie, r.meting);
               setAanwijzing({ a: d.aanwijzing, voortgang: d.voortgang });
-              if (d.aanwijzing === "goed" && !zelfRef.current) {
+              setDraai(draaiStand(referentie, r.meting));
+              stabiel = telStabiel(stabiel, d.aanwijzing === "goed");
+              if (fotoMag(stabiel) && !zelfRef.current) {
                 // de foto op volle grootte, nog een keer gemeten met de regels van de server; haalt hij die niet, dan meten we door
                 const foto = await fotoVanVideo(v, `${vorm}-auto`);
                 if (weg) return;
                 const na = foto ? await meetGezicht(foto) : null;
                 if (weg) return;
                 if (foto && na?.status === "ok" && bewegingVoldoet(referentie, na.meting)) {
+                  setDraaiGelukt(true);
+                  setAanwijzing({ a: "gelukt", voortgang: 1 });
                   opFoto.current(foto);
                   return;
                 }
+                stabiel = 0;
               }
             }
           }
@@ -712,9 +728,11 @@ function Camera({
                   ? l.draai
                   : a === "te-ver"
                     ? l.teVer
-                    : live === "draai"
-                      ? l.goedDraai
-                      : l.goedRecht;
+                    : a === "gelukt"
+                      ? l.gelukt
+                      : live === "draai"
+                        ? l.goedDraai
+                        : l.goedRecht;
 
   const DOC_TEKST: Record<DocAanwijzing, string> = {
     licht: x.docLicht,
@@ -778,12 +796,16 @@ function Camera({
             </p>
           </div>
         )}
+        {/* de tweede selfie: het voorbeeldhoofd met de pijl en de meter met de wijzer, ook wie zelf op de knop drukt */}
+        {stand === "aan" && live === "draai" && !toonOmdraai && !(eu && uitleg) && !kiesOpen && aftel === null && (
+          <HoofdDraai stand={draai} gelukt={draaiGelukt} stil={minderBeweging} teksten={{ uitleg: l.draaiUitleg, totHier: l.draaiTotHier, gelukt: l.gelukt }} />
+        )}
         {stand === "aan" && live && !liveUit && aanwijzing && !(eu && uitleg) && !kiesOpen && (
           <div className="pointer-events-none absolute inset-x-4 bottom-4">
-            <p role="status" aria-live="polite" className={`rounded-full px-4 py-2 text-center text-sm font-semibold text-white ${aanwijzing.a === "goed" || aanwijzing.a === "stil" ? "bg-ok" : "bg-black/70"}`}>
+            <p role="status" aria-live="polite" className={`rounded-full px-4 py-2 text-center text-sm font-semibold text-white ${aanwijzing.a === "goed" || aanwijzing.a === "stil" || aanwijzing.a === "gelukt" ? "bg-ok" : "bg-black/70"}`}>
               {liveTekst(aanwijzing.a)}
             </p>
-            {(live === "draai" || aanwijzing.voortgang > 0) && (
+            {live !== "draai" && aanwijzing.voortgang > 0 && (
               <div aria-hidden className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/30">
                 <div className="h-full rounded-full bg-ok transition-[width] duration-300" style={{ width: `${Math.round(aanwijzing.voortgang * 100)}%` }} />
               </div>

@@ -341,6 +341,10 @@ export interface AuthDict {
         draai: string;
         goedDraai: string;
         teVer: string;
+        /** de hoofddraai-meter (components/app/HoofdDraai.tsx): uitleg, de markering en het bericht als de foto vanzelf is gemaakt */
+        draaiUitleg: string;
+        draaiTotHier: string;
+        gelukt: string;
         /** zonder live meten: de foto na een korte aftelling, zodat je niet naar de knop hoeft te kijken */
         aftelKnop: string;
         /** {n} = de seconden die nog over zijn */
@@ -758,6 +762,9 @@ const nl: AuthDict = {
         draai: "Draai je hoofd langzaam een klein stukje opzij",
         goedDraai: "Goed zo, even stilhouden",
         teVer: "Iets minder ver draaien",
+        draaiUitleg: "Draai je hoofd rustig opzij tot de wijzer de groene streep haalt; de foto gaat dan vanzelf",
+        draaiTotHier: "tot hier",
+        gelukt: "Gelukt",
         aftelKnop: "Start, dan draai ik mijn hoofd",
         aftellen: "Draai je hoofd een klein stukje opzij … {n}",
         nietRecht: "Op deze selfie kijk je niet recht in de camera. Maak hem opnieuw en kijk recht vooruit.",
@@ -1168,6 +1175,9 @@ const en: AuthDict = {
         draai: "Slowly turn your head a little to the side",
         goedDraai: "Good, hold still",
         teVer: "Turn a little less far",
+        draaiUitleg: "Turn your head slowly to the side until the needle reaches the green mark; the photo is taken automatically",
+        draaiTotHier: "to here",
+        gelukt: "Done",
         aftelKnop: "Start, then I turn my head",
         aftellen: "Turn your head a little to the side … {n}",
         nietRecht: "On this selfie you are not looking straight into the camera. Take it again and look straight ahead.",
@@ -1578,6 +1588,9 @@ const pl: AuthDict = {
         draai: "Powoli obróć głowę trochę w bok",
         goedDraai: "Dobrze, nie ruszaj się",
         teVer: "Obróć głowę trochę mniej",
+        draaiUitleg: "Powoli obróć głowę w bok, aż wskazówka dojdzie do zielonej kreski; zdjęcie zrobi się samo",
+        draaiTotHier: "dotąd",
+        gelukt: "Udało się",
         aftelKnop: "Start, potem obracam głowę",
         aftellen: "Obróć głowę trochę w bok … {n}",
         nietRecht: "Na tym selfie nie patrzysz prosto w aparat. Zrób je ponownie i patrz prosto przed siebie.",
@@ -1988,6 +2001,9 @@ const ro: AuthDict = {
         draai: "Întoarce încet capul puțin într-o parte",
         goedDraai: "Bine, stai nemișcat",
         teVer: "Întoarce capul ceva mai puțin",
+        draaiUitleg: "Întoarce încet capul într-o parte până când acul ajunge la linia verde; fotografia se face automat",
+        draaiTotHier: "până aici",
+        gelukt: "Reușit",
         aftelKnop: "Start, apoi întorc capul",
         aftellen: "Întoarce capul puțin într-o parte … {n}",
         nietRecht: "Pe acest selfie nu privești drept în cameră. Fă-l din nou și privește drept înainte.",
@@ -2398,6 +2414,9 @@ const uk: AuthDict = {
         draai: "Повільно поверніть голову трохи вбік",
         goedDraai: "Добре, не рухайтеся",
         teVer: "Поверніть голову трохи менше",
+        draaiUitleg: "Повільно поверніть голову вбік, поки стрілка не дійде до зеленої позначки; фото зробиться автоматично",
+        draaiTotHier: "до сюди",
+        gelukt: "Готово",
         aftelKnop: "Старт, потім я поверну голову",
         aftellen: "Поверніть голову трохи вбік … {n}",
         nietRecht: "На цьому селфі ви не дивитеся прямо в камеру. Зробіть його ще раз і дивіться прямо.",

@@ -231,7 +231,7 @@ export function kanVanzelf(kant: DocKantMeting): boolean {
 
 // ---- selfie -----------------------------------------------------------------
 
-export type SelfieAanwijzing = LiveAanwijzing | "verder" | "stil";
+export type SelfieAanwijzing = LiveAanwijzing | "verder" | "stil" | "gelukt";
 
 /** De eerste selfie: de bestaande aanwijzingen, plus "verder weg" als het gezicht te groot in beeld staat. */
 export function selfieAanwijzing(m: LiveMeting | null): SelfieAanwijzing {

@@ -27,7 +27,8 @@ describe("ID-scan: automatisch of zelf, zonder bestandskeuze", () => {
     expect(scan).toContain("const vanzelfAan = !zelf && kanVanzelfHier;");
     // de drie plekken waar de camera vanzelf afdrukt (selfie, gedraaide selfie, document)
     expect(scan).toContain("if (teller >= SELFIE_LIVE.goedeBeelden && !zelfRef.current) {");
-    expect(scan).toContain('if (d.aanwijzing === "goed" && !zelfRef.current) {');
+    // de gedraaide selfie: pas na twee goede beelden achter elkaar (lib/kyc/gezicht/draai-meter.ts, 18 nov)
+    expect(scan).toContain("if (fotoMag(stabiel) && !zelfRef.current) {");
     expect(scan).toContain('if (a === "goed" && groot && !zelfRef.current) {');
   });
 
