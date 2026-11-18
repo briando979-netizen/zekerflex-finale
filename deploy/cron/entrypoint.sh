@@ -51,6 +51,8 @@ cat > /etc/crontabs/root <<EOF
 7,22,37,52 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/shop/voorraadmelding"
 # elke 2 minuten: één ronde van de wachtrij "Alles overnemen" van CJ, hooguit vier producten (lib/shop/cj/wachtrij.ts)
 */2 * * * * wget -q -O /dev/null -T 115 "$H" "$APP/api/internal/shop/cj-wachtrij"
+# CJ-producten bijwerken (categorie, voorraad, tekst): elke 10 minuten één ronde van 90 s, verder vanaf de cursor (lib/shop/cj/bijwerken-ronde.ts)
+5-55/10 * * * * wget -q -O /dev/null -T 115 "$H" "$APP/api/internal/shop/cj-bijwerken"
 # elk half uur: open bestellingen bij CJ navragen; met een track & trace gaat de webshopbestelling op verzonden en krijgt de klant de mail (lib/shop/cj/bestelling.ts)
 12,42 * * * * wget -q -O /dev/null -T 150 "$H" "$APP/api/internal/shop/cj-volgen"
 30 6 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/markten/tick"
