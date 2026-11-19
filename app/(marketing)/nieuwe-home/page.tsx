@@ -7,29 +7,36 @@ import { FaqList } from "@/components/marketing/primitives";
 import { AppDownload } from "@/components/marketing/AppDownload";
 import { PaginaVideoBlok } from "@/components/marketing/PaginaVideoBlok";
 import { HomeZoekBalk } from "@/components/marketing/HomeZoekBalk";
-import { HOME_FAQ, HOME_TEGELS, HOME_WERELDEN, homeFaqJsonLd, type HomeIcoon } from "@/lib/marketing/home-breed";
+import { HOME_DEUREN, HOME_FAQ, homeFaqJsonLd, type DeurIcoon } from "@/lib/marketing/home-breed";
 import { VOORBEELDEN } from "@/lib/website/aanvraag-opties";
+import { APPS } from "@/lib/marketing/apps";
 
 // ---------------------------------------------------------------------------
-// VOORBEELD (19 nov 2026): de nieuwe, brede voorpagina — "wat ZekerFlex voor je
-// doet / wat wij bouwen / wat jij kunt doen". Een frisse, conversationele
-// instap (HomeZoekBalk) en een verzorgd overzicht van alles: flexwerk/uitzenden,
-// websites, webshops, apps, branchesoftware en AI. De oude flexwerker-voorpagina
-// staat nu op /flexwerk; deze pagina linkt er prominent naartoe.
+// VOORBEELD (19 nov 2026): de nieuwe voorpagina — één merk, één dak. Boven de
+// vouw één dekkende zin, een échte antwoordende chat-gids en vier grote deuren
+// (werk, personeel, online, branche). Daaronder het bewijs (echte sites die we
+// bouwden) en, apart, een klein blok eigen apps.
 //
 // Dit is bewust een voorbeeldroute (de echte voorpagina blijft /). Daarom
-// noindex: zo vraagt de eigenaar hem eerst op /nieuwe-home voordat de
-// hoofdsessie hem omwisselt. Teksten: lib/marketing/home-breed.ts.
+// noindex: de eigenaar bekijkt hem eerst op /nieuwe-home; de hoofdsessie punt
+// hem daarna om. Teksten en routering: lib/marketing/home-breed.ts.
 // ---------------------------------------------------------------------------
 
 export const metadata: Metadata = {
-  title: "Wat kan ZekerFlex voor je doen? | ZekerFlex",
+  title: "Alles voor je bedrijf, onder één dak | ZekerFlex",
   description:
-    "Mensen vinden of inhuren, een website of webshop laten bouwen, een app of branchesoftware: ZekerFlex doet het onder één dak. Typ wat je zoekt en we wijzen je de weg.",
+    "Personeel, je website en je klanten, software voor je branche en je geldzaken — ZekerFlex doet het onder één dak. Stel je vraag en de gids wijst je de weg.",
   robots: { index: false, follow: true },
 };
 
 export const revalidate = 60;
+
+// De twee echte sites die we zelf bouwden en die nu live staan (het bewijs).
+const BEWIJS = VOORBEELDEN.filter((v) => v.id === "smileyapp" || v.id === "schwarzwald");
+// Het aparte "even iets anders"-blok: de eigen apps, met hun eigen adres.
+const IETS_ANDERS = ["flikflak", "talkaro", "webshop"]
+  .map((s) => APPS.find((a) => a.sleutel === s))
+  .filter((a): a is (typeof APPS)[number] => Boolean(a));
 
 export default function NieuweHomePage() {
   return (
@@ -40,176 +47,109 @@ export default function NieuweHomePage() {
         dangerouslySetInnerHTML={{ __html: ldJson(homeFaqJsonLd()) }}
       />
 
-      {/* ───────────────────────────────────────────────── hero: de conversationele instap */}
+      {/* ───────────────────────────────────────────────── hero: dekkende zin + antwoordende gids + vier deuren */}
       <section className="relative isolate overflow-hidden hero-ink text-white">
         <div className="aurora" aria-hidden />
-        <div className="shell-4k relative py-14 text-center md:py-20 lg:py-24">
+        {/* een zachte, gerichte gloed achter de zoekbalk — diepte, geen kermis (staat vanzelf stil, puur CSS) */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-[34%] -z-10 h-[30rem] w-[42rem] max-w-[90vw] -translate-x-1/2 rounded-full bg-brand-mint/10 blur-[130px]"
+        />
+        <div className="shell-4k relative py-12 text-center md:py-16 lg:py-20">
           <Reveal className="mx-auto max-w-3xl">
             <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1.5 text-xs font-semibold text-white/80 backdrop-blur">
               <span className="live-dot" aria-hidden /> Eén platform, alles onder één dak
             </p>
-            <h1 className="fluid-hero mx-auto mt-5 max-w-3xl text-balance font-display font-bold">
-              Wat kan ZekerFlex{" "}
-              <span className="bg-gradient-to-r from-brand-mint to-[#8FF0C4] bg-clip-text text-transparent">voor je doen?</span>
+            <h1 className="fluid-hero mx-auto mt-6 max-w-3xl text-balance font-display font-bold tracking-tight">
+              Alles voor je bedrijf,{" "}
+              <span className="bg-gradient-to-r from-brand-mint to-[#8FF0C4] bg-clip-text text-transparent">onder één dak</span>
             </h1>
-            <p className="fluid-lead mx-auto mt-4 max-w-2xl text-white/75">
-              Mensen vinden of inhuren, een website of webshop laten bouwen, een app of software voor jouw zaak. Typ wat je
-              zoekt, of kies een knop — we brengen je meteen op de juiste plek.
+            <p className="fluid-lead mx-auto mt-5 max-w-2xl text-pretty text-white/75">
+              Personeel, je website en je klanten, software voor je branche en je geldzaken. Stel je vraag — de gids
+              antwoordt en brengt je meteen op de juiste plek.
             </p>
           </Reveal>
 
-          {/* de zoekbalk zelf is client (navigeert op wat je typt) */}
+          {/* de zoekbalk is een echte, antwoordende gids (client; praat met de openbare chat /api/chat) */}
           <HomeZoekBalk />
-        </div>
 
-        {/* schuivende strook met wat we doen (alleen CSS; staat stil bij "minder beweging") */}
-        <div className="relative border-t border-white/10 py-3">
-          <ul className="marquee gap-3 pr-3" aria-hidden>
-            {[0, 1, 2, 3].map((ronde) =>
-              CAPACITEITEN.map((c) => (
-                <li key={`${ronde}-${c}`}>
-                  <span className="inline-block whitespace-nowrap rounded-full border border-white/12 px-4 py-1.5 font-display text-sm font-semibold text-white/70">
-                    {c}
+          {/* de vier grote deuren: het hoofdelement, boven de vouw, ook op mobiel */}
+          <ul className="mx-auto mt-10 grid max-w-4xl grid-cols-2 gap-3 text-left lg:grid-cols-4 lg:gap-4">
+            {HOME_DEUREN.map((d, i) => (
+              <Reveal as="li" key={d.href} delay={i * 70} className="h-full">
+                <Link
+                  href={d.href}
+                  data-track={d.track}
+                  aria-label={d.titel}
+                  className={`group flex h-full flex-col rounded-2xl border bg-white/[0.05] p-4 backdrop-blur transition duration-300 hover:-translate-y-0.5 hover:bg-white/[0.09] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-mint md:p-5 ${
+                    d.nadruk ? "border-brand-mint/40 ring-1 ring-brand-mint/30 hover:border-brand-mint/70" : "border-white/12 hover:border-brand-mint/50"
+                  }`}
+                >
+                  <span className={`grid h-11 w-11 place-items-center rounded-xl text-brand-mint transition-colors ${d.nadruk ? "bg-brand-mint/25" : "bg-brand-mint/15 group-hover:bg-brand-mint/25"}`}>
+                    <DeurIcoonTeken naam={d.icoon} />
                   </span>
-                </li>
-              )),
-            )}
-          </ul>
-        </div>
-      </section>
-
-      {/* ───────────────────────────────────────────────── wat wij voor je doen */}
-      <section className="bg-paper">
-        <div className="shell-4k py-10 md:py-12 lg:py-16">
-          <Reveal className="max-w-2xl">
-            <p className="eyebrow">Wat wij kunnen</p>
-            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">Alles wat je nodig hebt om te werken en te groeien</h2>
-            <p className="fluid-lead mt-4 text-neutralx-600">
-              Van personeel tot je hele online aanwezigheid. Je zet aan wat je nodig hebt en laat de rest uit.
-            </p>
-          </Reveal>
-
-          <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {HOME_TEGELS.map((t, i) => (
-              <Reveal
-                key={t.titel}
-                as="li"
-                delay={i * 70}
-                className="group surface surface-hover relative flex flex-col p-5 md:p-6"
-              >
-                <span className="grid h-11 w-11 place-items-center rounded-xl bg-brand-50 text-brand-700">
-                  <Icoon naam={t.icoon} />
-                </span>
-                <h3 className="mt-4 font-display text-lg font-semibold text-ink">
-                  <Link href={t.href} className="after:absolute after:inset-0 after:content-[''] focus:outline-none">
-                    {t.titel}
-                  </Link>
-                </h3>
-                <p className="mt-1.5 flex-1 text-sm leading-relaxed text-neutralx-600">{t.tekst}</p>
-                <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-600">
-                  Bekijk
-                  <span aria-hidden className="transition-transform group-hover:translate-x-0.5">→</span>
-                </span>
-                {t.sub ? (
-                  <Link
-                    href={t.sub.href}
-                    className="relative z-10 mt-3 inline-flex w-fit items-center gap-1 border-t border-hair pt-3 text-xs font-semibold text-neutralx-500 transition hover:text-brand-600"
-                  >
-                    {t.sub.label} →
-                  </Link>
-                ) : null}
+                  <span className="mt-3 block font-display text-base font-semibold leading-tight text-white md:text-lg">{d.titel}</span>
+                  <p className="mt-1 flex-1 text-sm leading-snug text-white/65">{d.tekst}</p>
+                  <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand-mint">
+                    Open
+                    <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                  </span>
+                </Link>
               </Reveal>
             ))}
           </ul>
         </div>
       </section>
 
-      {/* ───────────────────────────────────────────────── wat wij bouwen (echte sites en apps) */}
-      <section className="bg-paper-soft">
-        <div className="shell-4k py-10 md:py-12 lg:py-16">
+      {/* ───────────────────────────────────────────────── bewijs: dit maakten we al (echte sites) */}
+      <section className="bg-paper">
+        <div className="shell-4k py-12 md:py-14 lg:py-20">
           <Reveal className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-2xl">
-              <p className="eyebrow">Wat wij bouwen</p>
-              <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">Dit maakten we al</h2>
+              <p className="eyebrow">Dit maakten we</p>
+              <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">Echte sites die wij bouwden</h2>
               <p className="fluid-lead mt-4 text-neutralx-600">
-                Echte websites en apps die we zelf bouwden en die nu live staan. Jouw project kan hier ook tussen staan.
+                Geen voorbeeldplaatjes: dit staat nu live, op een eigen domein. Zo kan jouw site er ook uitzien.
               </p>
             </div>
-            <Link href="/website-maken#voorbeelden" className="btn-primary flex-shrink-0">
-              Bekijk de voorbeelden
+            <Link href="/website-maken" className="btn-primary flex-shrink-0">
+              Ook zo&apos;n site?
             </Link>
           </Reveal>
 
-          <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {VOORBEELDEN.map((v, i) => (
+          <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:gap-6">
+            {BEWIJS.map((v, i) => (
               <Reveal
                 key={v.id}
                 as="li"
-                delay={i * 70}
-                className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-hair bg-white shadow-e1 transition-all duration-300 hover:-translate-y-1 hover:shadow-e3"
+                delay={i * 90}
+                className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-hair bg-white shadow-e1 transition-all duration-300 hover:-translate-y-1 hover:shadow-e3"
               >
                 <div className="relative aspect-[16/10] overflow-hidden bg-ink">
                   <Image
                     src={v.foto}
                     alt={`Een scherm van ${v.naam}, door ZekerFlex gebouwd`}
                     fill
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    sizes="(max-width: 640px) 100vw, 50vw"
                     className="object-cover object-top transition-transform duration-500 group-hover:scale-105"
                   />
                 </div>
-                <div className="flex flex-1 flex-col p-4">
+                <div className="flex flex-1 flex-col p-5 md:p-6">
                   <p className="eyebrow text-brand-500">{v.soort}</p>
-                  <h3 className="mt-1.5 font-display text-lg font-semibold text-ink">
-                    <Link href="/website-maken#voorbeelden" className="after:absolute after:inset-0 after:content-[''] focus:outline-none">
+                  <h3 className="mt-1.5 font-display text-xl font-semibold text-ink">
+                    <a href={v.href} target="_blank" rel="noopener noreferrer" className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none">
                       {v.naam}
-                    </Link>
+                    </a>
                   </h3>
                   <p className="mt-1 flex-1 text-sm leading-relaxed text-neutralx-600">{v.tekst}</p>
+                  <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-600">
+                    Bekijk de site
+                    <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                  </span>
                 </div>
               </Reveal>
             ))}
           </ul>
-        </div>
-      </section>
-
-      {/* ───────────────────────────────────────────────── twee werelden */}
-      <section className="bg-paper">
-        <div className="shell-4k py-10 md:py-12 lg:py-16">
-          <Reveal className="max-w-2xl">
-            <p className="eyebrow">Voor wie</p>
-            <h2 className="fluid-h2 mt-3 text-balance font-display font-bold">Of je nu werk zoekt of mensen</h2>
-          </Reveal>
-
-          <div className="mt-8 grid gap-4 md:grid-cols-2 md:gap-6">
-            {HOME_WERELDEN.map((w, i) => (
-              <Reveal
-                key={w.kant}
-                delay={i * 90}
-                className="group flex flex-col overflow-hidden rounded-3xl border border-hair bg-ink text-white shadow-e2"
-              >
-                <div className="relative aspect-[16/9] overflow-hidden sm:aspect-[2/1]">
-                  <Image
-                    src={w.foto}
-                    alt={w.alt}
-                    fill
-                    sizes="(min-width: 768px) 50vw, 100vw"
-                    className="object-cover object-[50%_25%] transition-transform duration-700 group-hover:scale-105"
-                  />
-                  <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#0C0E12] via-transparent to-transparent" />
-                </div>
-                <div className="flex flex-1 flex-col p-6 md:p-8">
-                  <p className="eyebrow text-brand-mint">{w.eyebrow}</p>
-                  <h3 className="mt-2 font-display text-2xl font-bold">{w.titel}</h3>
-                  <p className="mt-2 flex-1 text-sm leading-relaxed text-white/80">{w.tekst}</p>
-                  <div className="mt-5">
-                    <Link href={w.href} className="btn-mint text-base">
-                      {w.knop}
-                    </Link>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -221,7 +161,7 @@ export default function NieuweHomePage() {
 
       {/* ───────────────────────────────────────────────── vragen */}
       <section className="bg-paper">
-        <div className="shell-4k grid gap-6 py-10 md:py-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-12 lg:py-16">
+        <div className="shell-4k grid gap-6 py-12 md:py-14 lg:grid-cols-[0.8fr_1.2fr] lg:gap-12 lg:py-20">
           <Reveal>
             <p className="eyebrow">Veelgestelde vragen</p>
             <h2 className="fluid-h2 mt-3 font-display font-bold">Goed om te weten</h2>
@@ -232,21 +172,66 @@ export default function NieuweHomePage() {
         </div>
       </section>
 
+      {/* ───────────────────────────────────────────────── even iets anders: de eigen apps (apart van het zakelijke verhaal) */}
+      <section className="bg-paper-soft">
+        <div className="shell-4k py-10 md:py-12">
+          <Reveal className="max-w-2xl">
+            <p className="eyebrow">Even iets anders</p>
+            <h2 className="fluid-h2 mt-3 font-display font-bold">Onze eigen apps</h2>
+            <p className="fluid-lead mt-3 text-neutralx-600">
+              Los van het zakelijke verhaal hierboven: drie eigen apps met hun eigen naam en adres.
+            </p>
+          </Reveal>
+
+          <ul className="mt-7 grid gap-4 sm:grid-cols-3">
+            {IETS_ANDERS.map((a, i) => (
+              <Reveal
+                key={a.sleutel}
+                as="li"
+                delay={i * 70}
+                className="group relative flex flex-col rounded-2xl border border-hair bg-white p-5 shadow-e1 transition-all duration-300 hover:-translate-y-1 hover:shadow-e2"
+              >
+                <span aria-hidden className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-ink to-[#2A2E37] text-2xl shadow-e1">
+                  {a.icoon}
+                </span>
+                <h3 className="mt-3 font-display text-lg font-semibold text-ink">
+                  {a.extern ? (
+                    <a href={a.href} target="_blank" rel="noopener noreferrer" className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none">
+                      {a.naam}
+                    </a>
+                  ) : (
+                    <Link href={a.href} className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none">
+                      {a.naam}
+                    </Link>
+                  )}
+                </h3>
+                <p className="mt-1 flex-1 text-sm leading-relaxed text-neutralx-600">{a.tekst}</p>
+                <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-brand-600">
+                  {a.knop}
+                  <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
+                </span>
+                <span className="mt-2 text-[0.7rem] font-medium uppercase tracking-[0.14em] text-neutralx-400">van ZekerFlex</span>
+              </Reveal>
+            ))}
+          </ul>
+        </div>
+      </section>
+
       {/* ───────────────────────────────────────────────── afsluiter */}
       <section className="relative isolate overflow-hidden hero-ink text-white">
         <div className="aurora" aria-hidden />
-        <div className="shell-4k relative py-10 md:py-12 lg:py-16">
+        <div className="shell-4k relative py-12 md:py-14 lg:py-20">
           <Reveal className="flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
             <div className="max-w-2xl">
               <h2 className="fluid-h2 text-balance font-display font-bold">Waar wil je mee beginnen?</h2>
               <p className="fluid-lead mt-3 text-white/70">
-                Kies je kant, of bekijk eerst het hele aanbod. Rondkijken kan vaak zonder account.
+                Kies je deur, of bekijk eerst het hele aanbod. Rondkijken kan vaak zonder account.
               </p>
             </div>
             <div className="flex flex-shrink-0 flex-wrap gap-3">
-              <Link href="/flexwerk" className="btn-mint text-base">Ik zoek werk</Link>
-              <Link href="/voor-bedrijven" className="btn-ghost-invert text-base">Ik zoek personeel</Link>
-              <Link href="/aanbod" className="btn-ghost-invert text-base">Het hele aanbod</Link>
+              <Link href="/flexwerk" data-track="home-slot-werk" className="btn-mint text-base">Ik zoek werk</Link>
+              <Link href="/voor-bedrijven" data-track="home-slot-personeel" className="btn-ghost-invert text-base">Ik zoek personeel</Link>
+              <Link href="/aanbod" data-track="home-slot-aanbod" className="btn-ghost-invert text-base">Het hele aanbod</Link>
             </div>
           </Reveal>
         </div>
@@ -255,56 +240,36 @@ export default function NieuweHomePage() {
   );
 }
 
-/** De woorden in de schuivende strook onder de hero (decoratief). */
-const CAPACITEITEN = [
-  "Flexwerk",
-  "Uitzenden",
-  "Websites",
-  "Webshops",
-  "Apps & spelletjes",
-  "Horecasoftware",
-  "Rijschoolsoftware",
-  "AI-beller",
-  "Facturen uit je uren",
-  "Logo & advertentie",
-  "Domeinnaam",
-] as const;
-
-function Icoon({ naam }: { naam: HomeIcoon }) {
+/** De lijn-iconen van de vier deuren, in de huisstijl (24×24, lijn 1.8, ronde uiteinden). */
+function DeurIcoonTeken({ naam }: { naam: DeurIcoon }) {
   const lijn = { stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, fill: "none" as const };
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
-      {naam === "mensen" ? (
+      {naam === "werk" ? (
+        // een koffer/toolbox: werk zoeken
+        <>
+          <rect x="3" y="7.5" width="18" height="12" rx="2" {...lijn} />
+          <path d="M8.5 7.5V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v1.5M3 12.5h18" {...lijn} />
+        </>
+      ) : naam === "personeel" ? (
+        // twee mensen: personeel inhuren
         <>
           <circle cx="9" cy="8" r="3.2" {...lijn} />
           <path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 5.2a3 3 0 0 1 0 5.6M17 19a5.5 5.5 0 0 0-2.3-4.5" {...lijn} />
         </>
-      ) : naam === "web" ? (
+      ) : naam === "online" ? (
+        // een wereldbol: online
         <>
-          <rect x="3" y="4.5" width="18" height="15" rx="2" {...lijn} />
-          <path d="M3 8.5h18M6 6.4h.01M8.2 6.4h.01" {...lijn} />
+          <circle cx="12" cy="12" r="8.5" {...lijn} />
+          <path d="M3.5 12h17M12 3.5c2.5 2.3 2.5 14.7 0 17M12 3.5c-2.5 2.3-2.5 14.7 0 17" {...lijn} />
         </>
-      ) : naam === "winkel" ? (
-        <>
-          <path d="M4 7h16l-1 4.2A2 2 0 0 1 17 13H7a2 2 0 0 1-2-1.8L4 7Z" {...lijn} />
-          <path d="M4 7 5 4h14l1 3M8.5 17.5h.01M15.5 17.5h.01M7 13l.6 4.5h8.8L17 13" {...lijn} />
-        </>
-      ) : naam === "app" ? (
-        <>
-          <rect x="7" y="2.5" width="10" height="19" rx="2.4" {...lijn} />
-          <path d="M11 18.5h2" {...lijn} />
-        </>
-      ) : naam === "branche" ? (
+      ) : (
+        // een raster: branchesoftware
         <>
           <rect x="3.5" y="3.5" width="7" height="7" rx="1.4" {...lijn} />
           <rect x="13.5" y="3.5" width="7" height="7" rx="1.4" {...lijn} />
           <rect x="3.5" y="13.5" width="7" height="7" rx="1.4" {...lijn} />
           <rect x="13.5" y="13.5" width="7" height="7" rx="1.4" {...lijn} />
-        </>
-      ) : (
-        <>
-          <path d="M12 3l1.9 4.2L18 9l-4.1 1.8L12 15l-1.9-4.2L6 9l4.1-1.8L12 3Z" {...lijn} />
-          <path d="M18.5 15l.7 1.6 1.8.7-1.8.7-.7 1.6-.7-1.6-1.8-.7 1.8-.7.7-1.6Z" {...lijn} />
         </>
       )}
     </svg>

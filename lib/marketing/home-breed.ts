@@ -14,47 +14,106 @@
 export type HomeIcoon = "mensen" | "web" | "winkel" | "app" | "branche" | "ai";
 
 /**
- * De conversationele instap: wat iemand typt → waar hij heen gaat. De eerste
- * regel die past wint, dus de meest specifieke bovenaan. Zonder match gaat hij
- * naar het hele aanbod.
+ * De conversationele instap: wat iemand typt → waar hij heen gaat, met het label
+ * van de knop die we eronder tonen. De eerste regel die past wint, dus de meest
+ * specifieke bovenaan. Zonder match gaat hij naar het hele aanbod.
+ *
+ * De zoekbalk is een échte, antwoordende assistent (hij praat met /api/chat).
+ * Deze trefwoord-routering is de snelle, altijd-werkende laag eronder: hij kiest
+ * meteen de juiste doorklik-knop en vangt het op als de AI even niet antwoordt.
  */
 export interface ZoekIntentie {
   woorden: string[];
   href: string;
+  /** het label op de doorklik-knop onder het antwoord ("Werk zoeken", …) */
+  knop: string;
 }
 
 export const ZOEK_INTENTIES: ZoekIntentie[] = [
-  { woorden: ["personeel", "inhuren", "medewerker", "uitzendkracht", "uitzend", "invaller", "spoed", "rooster", "flexkracht", "mensen nodig", "ober", "kok", "magazijnmedewerker"], href: "/voor-bedrijven" },
-  { woorden: ["werk", "baan", "klus", "bijbaan", "bijverdienen", "zzp", "freelance", "flexwerk", "solliciteer", "vacature", "dienst", "verdienen"], href: "/flexwerk" },
-  { woorden: ["webshop", "webwinkel", "online verkopen", "verkopen online", "producten verkopen"], href: "/aanbod/webshop" },
-  { woorden: ["website", "site", "webpagina", "homepage", "internetpagina", "landingspagina"], href: "/website-maken" },
-  { woorden: ["spel", "spelletje", "game", "talkaro", "flikflak"], href: "/apps-en-spelletjes" },
-  { woorden: ["app"], href: "/website-maken" },
-  { woorden: ["horeca", "restaurant", "cafe", "café", "kassa", "reserveren", "menukaart", "bestellen"], href: "/aanbod/horeca" },
-  { woorden: ["rijschool", "rijles", "instructeur", "leerling"], href: "/rijschool-software" },
-  { woorden: ["logo"], href: "/logo-maker" },
-  { woorden: ["advertentie", "reclame", "flyer", "poster", "adverteren"], href: "/advertentie-op-maat" },
-  { woorden: ["domein", "domeinnaam", ".nl", ".com"], href: "/domeinnaam" },
-  { woorden: ["bellen", "telefoon", "telefoonnummer", "beller", "opnemen"], href: "/aanbod/telefonie" },
-  { woorden: ["factuur", "facturen", "factureren", "boekhoud", "administratie", "e-factuur"], href: "/aanbod#geld" },
-  { woorden: ["review", "google", "recensie", "beoordeling"], href: "/review-check" },
-  { woorden: ["kleding", "werkkleding", "schoenen", "shop"], href: "/shop" },
+  { woorden: ["personeel", "inhuren", "medewerker", "uitzendkracht", "uitzend", "invaller", "spoed", "rooster", "flexkracht", "mensen nodig", "ober", "kok", "magazijnmedewerker"], href: "/voor-bedrijven", knop: "Personeel inhuren" },
+  { woorden: ["werk", "baan", "klus", "bijbaan", "bijverdienen", "zzp", "freelance", "flexwerk", "solliciteer", "vacature", "dienst", "verdienen"], href: "/flexwerk", knop: "Werk zoeken" },
+  { woorden: ["webshop", "webwinkel", "online verkopen", "verkopen online", "producten verkopen"], href: "/aanbod/webshop", knop: "Webshop openen" },
+  { woorden: ["website", "site", "webpagina", "homepage", "internetpagina", "landingspagina"], href: "/website-maken", knop: "Website laten maken" },
+  { woorden: ["spel", "spelletje", "game", "talkaro", "flikflak"], href: "/apps-en-spelletjes", knop: "Apps & spelletjes" },
+  { woorden: ["app"], href: "/website-maken", knop: "App laten bouwen" },
+  { woorden: ["horeca", "restaurant", "cafe", "café", "kassa", "reserveren", "menukaart", "bestellen"], href: "/aanbod/horeca", knop: "Horeca-software" },
+  { woorden: ["rijschool", "rijles", "instructeur", "leerling"], href: "/rijschool-software", knop: "Rijschool-software" },
+  { woorden: ["logo"], href: "/logo-maker", knop: "Logo maken" },
+  { woorden: ["advertentie", "reclame", "flyer", "poster", "adverteren"], href: "/advertentie-op-maat", knop: "Advertentie maken" },
+  { woorden: ["domein", "domeinnaam", ".nl", ".com"], href: "/domeinnaam", knop: "Domeinnaam zoeken" },
+  { woorden: ["bellen", "telefoon", "telefoonnummer", "beller", "opnemen"], href: "/aanbod/telefonie", knop: "De AI-beller" },
+  { woorden: ["factuur", "facturen", "factureren", "boekhoud", "administratie", "e-factuur"], href: "/aanbod#geld", knop: "Facturen & administratie" },
+  { woorden: ["review", "google", "recensie", "beoordeling"], href: "/review-check", knop: "Review-check" },
+  { woorden: ["kleding", "werkkleding", "schoenen", "shop"], href: "/shop", knop: "Naar de shop" },
 ];
 
 /** De placeholder in de zoekbalk (wisselt niet van tekst, zodat schermlezers hem kennen). */
-export const ZOEK_PLACEHOLDER = "Typ wat je zoekt… bv. 'ik zoek werk' of 'bouw mijn website'";
+export const ZOEK_PLACEHOLDER = "Stel je vraag… bv. 'ik zoek werk in de horeca' of 'wat kost personeel inhuren?'";
+
+/**
+ * Voorbeeldvragen die de balk zichzelf laat 'typen' zolang hij nog leeg is (het
+ * levende moment in de hero). Elke regel beantwoordt de assistent echt, dus het
+ * laat meteen zien dat je gewoon een vraag mag stellen. Staat stil bij
+ * 'prefers-reduced-motion'.
+ */
+export const ZOEK_VOORBEELDEN = [
+  "ik zoek werk in de horeca",
+  "wat kost personeel inhuren?",
+  "ik wil een webshop openen",
+  "bouw een website voor mijn zaak",
+  "maak een logo voor mijn bedrijf",
+  "hoe snel word ik uitbetaald?",
+] as const;
+
+/** De plek + het knoplabel waar wat iemand typt het beste past. */
+export interface Wegwijzer {
+  href: string;
+  knop: string;
+}
 
 /** Zonder match: het hele aanbod. */
 export const ZOEK_STANDAARD = "/aanbod";
+export const WEGWIJZER_STANDAARD: Wegwijzer = { href: ZOEK_STANDAARD, knop: "Bekijk het hele aanbod" };
 
-/** De juiste bestemming voor wat iemand typt. */
-export function kiesBestemming(tekst: string): string {
+/** De juiste bestemming + knoplabel voor wat iemand typt (de snelle, zekere laag). */
+export function kiesWegwijzer(tekst: string): Wegwijzer {
   const t = tekst.toLowerCase();
   for (const intentie of ZOEK_INTENTIES) {
-    if (intentie.woorden.some((w) => t.includes(w))) return intentie.href;
+    if (intentie.woorden.some((w) => t.includes(w))) return { href: intentie.href, knop: intentie.knop };
   }
-  return ZOEK_STANDAARD;
+  return WEGWIJZER_STANDAARD;
 }
+
+/** Alleen de bestemming (voor wie geen knoplabel nodig heeft). */
+export function kiesBestemming(tekst: string): string {
+  return kiesWegwijzer(tekst).href;
+}
+
+/**
+ * De vier grote deuren boven de vouw — het hoofdelement van de voorpagina
+ * (besluit eigenaar, 19 nov 2026). Eén merk, één voorpagina: flexwerk is hier
+ * een hoofddeur, niet verstopt. De werk-deur krijgt nadruk (de meeste bezoekers
+ * zoeken werk). `track` is de code voor de klik-meting (data-track, opgepikt door
+ * components/analytics/AnalyticsBeacon.tsx — geen extra code nodig).
+ */
+export type DeurIcoon = "werk" | "personeel" | "online" | "branche";
+
+export interface HomeDeur {
+  icoon: DeurIcoon;
+  titel: string;
+  tekst: string;
+  href: string;
+  track: string;
+  /** visueel wat prominenter (de werk-deur: de meeste bezoekers) */
+  nadruk?: boolean;
+}
+
+export const HOME_DEUREN: HomeDeur[] = [
+  { icoon: "werk", titel: "Ik zoek werk", tekst: "Kies klussen bij jou in de buurt. Gratis, in vijf talen.", href: "/flexwerk", track: "home-deur-werk", nadruk: true },
+  { icoon: "personeel", titel: "Ik zoek personeel", tekst: "Plaats een dienst en krijg meteen passende mensen.", href: "/voor-bedrijven", track: "home-deur-personeel" },
+  { icoon: "online", titel: "Ik wil online", tekst: "Website, webshop, logo of domein — wij bouwen het.", href: "/online", track: "home-deur-online" },
+  { icoon: "branche", titel: "Software voor mijn branche", tekst: "Horeca, rijschool en inchecken — kant-en-klaar.", href: "/aanbod#branche", track: "home-deur-branche" },
+];
 
 /** De snelkeuzeknoppen onder de zoekbalk: wat mensen het vaakst komen doen. */
 export const ZOEK_CHIPS: { label: string; href: string }[] = [
