@@ -1,18 +1,25 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BASE, BLOG, blogBericht, datumTekst } from "@/lib/voorstel/smileyapp";
+import { BASE, datumTekst } from "@/lib/voorstel/smileyapp";
+import { zichtbareBerichten } from "@/lib/voorstel/smileyapp-blog";
+import { BlogBeeld } from "@/components/voorstel/smileyapp/BlogBeeld";
+
+// dynamisch: naast de vier berichten van smileyapp.nl ook de berichten die het team in het beheer publiceert
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const b = blogBericht((await params).slug);
+  const { slug } = await params;
+  const b = (await zichtbareBerichten()).find((x) => x.slug === slug);
   return b ? { title: b.titel, description: b.samenvatting } : {};
 }
 
 export default async function SmileyappBlogBericht({ params }: { params: Promise<{ slug: string }> }) {
-  const b = blogBericht((await params).slug);
+  const { slug } = await params;
+  const alle = await zichtbareBerichten();
+  const b = alle.find((x) => x.slug === slug);
   if (!b) notFound();
-  const andere = BLOG.filter((x) => x.slug !== b.slug).slice(0, 3);
+  const andere = alle.filter((x) => x.slug !== b.slug).slice(0, 3);
   return (
     <>
       <article>
@@ -26,7 +33,7 @@ export default async function SmileyappBlogBericht({ params }: { params: Promise
           </div>
         </header>
         <div className="mx-auto -mt-2 max-w-[960px] px-4 sm:px-8">
-          <Image src={b.beeld} alt="" width={b.breed} height={b.hoog} priority sizes="(min-width: 960px) 900px, 100vw" className="aspect-[16/7] w-full rounded-[2rem] object-cover shadow-[0_30px_80px_-40px_rgba(14,42,32,0.6)]" />
+          <BlogBeeld beeld={b.beeld} priority sizes="(min-width: 960px) 900px, 100vw" className="aspect-[16/7] w-full rounded-[2rem] shadow-[0_30px_80px_-40px_rgba(14,42,32,0.6)]" />
         </div>
         <div className="mx-auto max-w-[720px] px-4 py-14 text-lg leading-relaxed text-smiley-ink sm:px-8">
           {b.inhoud.map((x, i) =>
@@ -41,7 +48,7 @@ export default async function SmileyappBlogBericht({ params }: { params: Promise
                 ))}
               </ol>
             ) : (
-              <p key={i} className="mt-5">
+              <p key={i} className="mt-5 whitespace-pre-line break-words">
                 {x.tekst}
               </p>
             ),
@@ -66,7 +73,7 @@ export default async function SmileyappBlogBericht({ params }: { params: Promise
             {andere.map((a) => (
               <li key={a.slug}>
                 <Link href={`${BASE}/blog/${a.slug}`} className="sm-til group block h-full overflow-hidden rounded-[2rem] bg-smiley-cream ring-1 ring-smiley-ink/5">
-                  <Image src={a.beeld} alt="" width={a.breed} height={a.hoog} sizes="(min-width: 768px) 380px, 100vw" className="aspect-[16/9] w-full object-cover" />
+                  <BlogBeeld beeld={a.beeld} sizes="(min-width: 768px) 380px, 100vw" className="aspect-[16/9] w-full" />
                   <p className="p-5 font-display text-lg font-bold leading-tight">{a.titel}</p>
                 </Link>
               </li>
