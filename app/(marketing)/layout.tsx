@@ -11,13 +11,16 @@ import { AankondigingsBalk } from "@/components/marketing/AankondigingsBalk";
 import { BALK_COOKIE, LEGE_BALK, balkActief, balkId } from "@/lib/ontwerp/balk";
 import { getBalk } from "@/lib/ontwerp/balk-store";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
 export default async function MarketingLayout({ children }: { children: ReactNode }) {
-  // voettekst, hoofdmenu en aankondigingsbalk uit de Site-ontwerper; bij een storing gewoon de standaard (balk uit)
-  const [{ voettekst }, hoofdmenu, balk] = await Promise.all([
+  // voettekst, hoofdmenu en aankondigingsbalk uit de Site-ontwerper; bij een storing gewoon de standaard (balk uit).
+  // alleenFlexwerk: de vlag `publiek-alleen-flexwerk` (per request gelezen) — aan = de niet-flexwerk-onderdelen uit menu en voettekst.
+  const [{ voettekst }, hoofdmenu, balk, alleenFlexwerk] = await Promise.all([
     getVoettekst().catch(() => ({ voettekst: STANDAARD_VOETTEKST })),
     getHoofdmenu().catch(() => null),
     getBalk().catch(() => LEGE_BALK),
+    alleenFlexwerkAan().catch(() => false),
   ]);
   // de balk: alleen aan, binnen zijn datums (Nederlandse dag) en niet door deze bezoeker weggeklikt
   const balkCode = balkId(balk);
@@ -33,9 +36,9 @@ export default async function MarketingLayout({ children }: { children: ReactNod
       </a>
       <ScrollProgress />
       {toonBalk ? <AankondigingsBalk balk={balk} id={balkCode} /> : null}
-      <SiteHeader hoofdmenu={hoofdmenu} />
+      <SiteHeader hoofdmenu={hoofdmenu} alleenFlexwerk={alleenFlexwerk} />
       <main id="main" tabIndex={-1} className="flex-1 outline-none">{children}</main>
-      <SiteFooter voettekst={voettekst} />
+      <SiteFooter voettekst={voettekst} alleenFlexwerk={alleenFlexwerk} />
       <ChatWidgetLazy />
       <VisitorNudge />
     </div>

@@ -6,13 +6,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { MobileMenu } from "@/components/marketing/MobileMenu";
 import {
-  AANBOD_KOLOMMEN,
   ALLES_ONLINE,
   VOORBEELDSITES,
   eigenLinks,
   isExternal,
   startHref,
+  zichtbareAanbodKolommen,
+  zichtbareNav,
   type Audience,
+  type MegaKolom,
   type MenuItem,
   type MenuVariant,
 } from "@/lib/marketing/site-nav";
@@ -21,9 +23,14 @@ import { bouwNav, type Hoofdmenu } from "@/lib/ontwerp/hoofdmenu";
 const STORE_KEY = "zf-audience";
 const MOBIEL_MENU_ID = "mobiel-menu";
 
-/** hoofdmenu: de eigen versie uit de Site-ontwerper (tabblad Menu); zonder = het standaardmenu (lib/marketing/site-nav.ts) */
-export function SiteHeader({ hoofdmenu = null }: { hoofdmenu?: Hoofdmenu | null }) {
-  const NAV = bouwNav(hoofdmenu);
+/**
+ * hoofdmenu: de eigen versie uit de Site-ontwerper (tabblad Menu); zonder = het standaardmenu (lib/marketing/site-nav.ts).
+ * alleenFlexwerk: vlag `publiek-alleen-flexwerk` (de layout leest hem per request) — aan = de niet-flexwerk-knoppen (shop, apps)
+ * en de pijlers online/branche vallen weg.
+ */
+export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofdmenu?: Hoofdmenu | null; alleenFlexwerk?: boolean }) {
+  const NAV = zichtbareNav(bouwNav(hoofdmenu), alleenFlexwerk);
+  const aanbodKolommen = zichtbareAanbodKolommen(alleenFlexwerk);
   const pathname = usePathname() || "/";
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -194,10 +201,10 @@ export function SiteHeader({ hoofdmenu = null }: { hoofdmenu?: Hoofdmenu | null 
                     onMouseEnter={() => showMenu(n.key)}
                     onMouseLeave={scheduleClose}
                     className={`absolute left-0 top-[calc(100%+10px)] z-50 animate-slide-up-fade rounded-2xl border border-white/10 bg-[#0C0E12] p-2 shadow-[0_30px_60px_-20px_rgba(0,0,0,0.85)] ${
-                      n.mega ? "w-[min(60rem,calc(100vw-18rem))]" : "w-[30rem]"
+                      n.mega ? (aanbodKolommen.length <= 2 ? "w-[min(34rem,calc(100vw-2rem))]" : "w-[min(60rem,calc(100vw-18rem))]") : "w-[30rem]"
                     }`}
                   >
-                    {n.mega ? <AanbodUitklap extra={eigenLinks(n, audience)} /> : <GewoneUitklap variant={variant} />}
+                    {n.mega ? <AanbodUitklap kolommen={aanbodKolommen} extra={eigenLinks(n, audience)} /> : <GewoneUitklap variant={variant} />}
                   </div>
                 )}
               </div>
@@ -270,7 +277,7 @@ export function SiteHeader({ hoofdmenu = null }: { hoofdmenu?: Hoofdmenu | null 
         </div>
       </div>
 
-      {open && <MobileMenu id={MOBIEL_MENU_ID} nav={NAV} audience={audience} onAudience={pick} onClose={sluitMobiel} />}
+      {open && <MobileMenu id={MOBIEL_MENU_ID} nav={NAV} audience={audience} alleenFlexwerk={alleenFlexwerk} onAudience={pick} onClose={sluitMobiel} />}
     </header>
   );
 }
@@ -321,14 +328,14 @@ function GewoneUitklap({ variant }: { variant: MenuVariant }) {
 
 // "Aanbod": per pijler direct de producten, zodat je in één klik op de juiste
 // pagina bent (eerst was het pijler → overzicht → product).
-function AanbodUitklap({ extra }: { extra: MenuItem[] }) {
+function AanbodUitklap({ kolommen, extra }: { kolommen: MegaKolom[]; extra: MenuItem[] }) {
   return (
     <>
       <p className="px-3 pb-1 pt-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-mint">
         Alles onder één dak
       </p>
-      <div className="grid grid-cols-4 gap-1">
-        {AANBOD_KOLOMMEN.map((k) => (
+      <div className={`grid gap-1 ${kolommen.length <= 2 ? "grid-cols-2" : "grid-cols-4"}`}>
+        {kolommen.map((k) => (
           <div key={k.sleutel} className="min-w-0 rounded-xl p-3">
             <Link href={k.href} className="block text-sm font-bold text-white hover:text-brand-mint">
               {k.naam}

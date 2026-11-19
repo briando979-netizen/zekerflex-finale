@@ -6,11 +6,19 @@ import { CookieSettingsButton } from "@/components/marketing/CookieSettingsButto
 import { STANDAARD_VOETTEKST, type Voettekst } from "@/lib/ontwerp/menu";
 import { BEDRIJF } from "@/lib/marketing/bedrijfsgegevens";
 import { SITE } from "@/lib/seo";
+import { isNietFlexwerkPad } from "@/lib/marketing/flexwerk-only";
 
 // De kolommen en de zin onder het logo zijn te bewerken in Admin → Site-ontwerper → Menu
 // (lib/ontwerp/menu.ts); zonder eigen versie is het de standaard daar.
-export function SiteFooter({ voettekst = STANDAARD_VOETTEKST }: { voettekst?: Voettekst }) {
+// alleenFlexwerk: vlag `publiek-alleen-flexwerk` (de layout leest hem per request) — aan = de niet-flexwerk-links (shop,
+// website maken, rijschool-/horecasoftware, producten, verkopen, developers, …) vallen uit de voettekst.
+export function SiteFooter({ voettekst = STANDAARD_VOETTEKST, alleenFlexwerk = false }: { voettekst?: Voettekst; alleenFlexwerk?: boolean }) {
   const year = new Date().getFullYear();
+  const kolommen = alleenFlexwerk
+    ? voettekst.kolommen
+        .map((col) => ({ ...col, links: col.links.filter((l) => !isNietFlexwerkPad(l.href)) }))
+        .filter((col) => col.links.length > 0)
+    : voettekst.kolommen;
   return (
     <footer className="hero-ink text-white">
       <div className="border-b border-white/10">
@@ -28,7 +36,7 @@ export function SiteFooter({ voettekst = STANDAARD_VOETTEKST }: { voettekst?: Vo
       </div>
 
       <h2 className="sr-only">Snel naar</h2>
-      <div className={`shell grid gap-10 py-12 md:gap-12 md:py-16 ${voettekst.kolommen.length === 3 ? "md:grid-cols-[1.4fr_repeat(3,1fr)]" : voettekst.kolommen.length === 4 ? "md:grid-cols-[1.4fr_repeat(4,1fr)]" : voettekst.kolommen.length === 2 ? "md:grid-cols-[1.4fr_repeat(2,1fr)]" : "md:grid-cols-[1.4fr_1fr]"}`}>
+      <div className={`shell grid gap-10 py-12 md:gap-12 md:py-16 ${kolommen.length === 3 ? "md:grid-cols-[1.4fr_repeat(3,1fr)]" : kolommen.length === 4 ? "md:grid-cols-[1.4fr_repeat(4,1fr)]" : kolommen.length === 2 ? "md:grid-cols-[1.4fr_repeat(2,1fr)]" : "md:grid-cols-[1.4fr_1fr]"}`}>
         <div>
           <div className="flex items-center gap-2.5">
             <LogoGlyph size={30} tone="light" />
@@ -43,7 +51,7 @@ export function SiteFooter({ voettekst = STANDAARD_VOETTEKST }: { voettekst?: Vo
           <SocialLinks className="mt-6" />
         </div>
 
-        {voettekst.kolommen.map((col, i) => (
+        {kolommen.map((col, i) => (
           <div key={`${col.titel}-${i}`}>
             {col.titel ? (
               <h3 className="font-mono text-xs uppercase tracking-[0.16em] text-white/60">

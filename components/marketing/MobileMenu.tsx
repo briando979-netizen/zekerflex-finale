@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  AANBOD_KOLOMMEN,
   DOELGROEP_PAGINA,
   SNELLE_ACTIES,
   ALLES_ONLINE,
@@ -11,6 +10,7 @@ import {
   eigenLinks,
   isExternal,
   startHref,
+  zichtbareAanbodKolommen,
   type Audience,
   type MenuItem,
   type NavEntry,
@@ -27,15 +27,19 @@ export function MobileMenu({
   id,
   nav,
   audience,
+  alleenFlexwerk = false,
   onAudience,
   onClose,
 }: {
   id: string;
   nav: NavEntry[];
   audience: Audience;
+  /** vlag `publiek-alleen-flexwerk`: aan = alleen de flexwerk-pijlers in de Aanbod-uitklap */
+  alleenFlexwerk?: boolean;
   onAudience: (a: Audience) => void;
   onClose: () => void;
 }) {
+  const aanbodKolommen = zichtbareAanbodKolommen(alleenFlexwerk);
   // eigen keuze in het menu; de URL bepaalt alleen de beginstand
   const [doel, setDoel] = useState<Audience>(audience);
   const [sectie, setSectie] = useState<string | null>(null);
@@ -166,7 +170,7 @@ export function MobileMenu({
                     <div id={lijstId} className="pb-4">
                       {n.mega ? (
                         <div className="space-y-4">
-                          {AANBOD_KOLOMMEN.map((k) => (
+                          {aanbodKolommen.map((k) => (
                             <div key={k.sleutel}>
                               <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-mint">{k.naam}</p>
                               <ul className="mt-1.5">

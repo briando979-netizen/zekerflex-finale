@@ -1,5 +1,6 @@
 import { AANBOD, aanbodHref, PIJLERS, type PijlerSleutel } from "@/lib/marketing/aanbod";
 import { APPS } from "@/lib/marketing/apps";
+import { NIET_FLEXWERK_NAV_KEYS, zichtbarePijlers } from "@/lib/marketing/flexwerk-only";
 
 // ---------------------------------------------------------------------------
 // Het hoofdmenu (bovenbalk) van de eigen site: de standaard. Puur en browser-
@@ -265,6 +266,24 @@ export const DOELGROEP_PAGINA: Record<Audience, { label: string; href: string }>
   werknemers: { label: "Alles voor werknemers", href: "/voor-freelancers" },
   bedrijven: { label: "Alles voor bedrijven", href: "/voor-bedrijven" },
 };
+
+/**
+ * Met de vlag `publiek-alleen-flexwerk` aan vallen de niet-flexwerk-knoppen
+ * (shop, apps) weg uit de bovenbalk en het mobiele menu. Zonder de vlag (de
+ * standaard) blijft het menu precies zoals het was.
+ */
+export function zichtbareNav(nav: NavEntry[], alleenFlexwerk: boolean): NavEntry[] {
+  return alleenFlexwerk ? nav.filter((n) => !NIET_FLEXWERK_NAV_KEYS.includes(n.key)) : nav;
+}
+
+/**
+ * De aanbod-kolommen voor de brede uitklap: met de vlag aan alleen de
+ * flexwerk-pijlers (personeel, geld); de pijlers "online" en "branche" vallen
+ * weg (en daarmee ook de losse links VOORBEELDSITES/ALLES_ONLINE onder "online").
+ */
+export function zichtbareAanbodKolommen(alleenFlexwerk: boolean): MegaKolom[] {
+  return zichtbarePijlers(AANBOD_KOLOMMEN, alleenFlexwerk);
+}
 
 /** Start-knop: werknemers naar een account, bedrijven naar de organisatie-aanmelding. */
 export const startHref = (a: Audience): string => (a === "bedrijven" ? CTA_BV.href : CTA_WN.href);
