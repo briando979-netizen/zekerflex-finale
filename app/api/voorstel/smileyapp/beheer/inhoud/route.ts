@@ -165,12 +165,16 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (d.actie === "respons-bewaren" || d.actie === "respons-wissen") {
       if (ik.rol !== "beheerder") throw AppError.alleenBeheerder("Alleen een beheerder kan de rekenhulp op de site instellen.");
       if (d.actie === "respons-wissen") return NextResponse.json(await wisRespons());
+      // de site zegt dat het team van Smileyapp dit cijfer invulde: via ZekerFlex binnen (platformbeheerder) mag je het dus alleen weghalen
+      if (ik.via !== "smileyapp") throw AppError.validation("Dit cijfer vult iemand van SmileyApp zelf in, met een eigen SmileyApp-account. Je bent nu via ZekerFlex ingelogd.");
       return NextResponse.json(await bewaarRespons({ percentage: d.percentage, bron: d.bron }));
     }
 
     // de vergelijking met papier staat openbaar op de site: alleen een beheerder voegt rijen toe, verwijdert of verbergt ze
     if (d.actie === "vergelijk-toevoegen" || d.actie === "vergelijk-verwijderen" || d.actie === "vergelijk-verbergen") {
       if (ik.rol !== "beheerder") throw AppError.alleenBeheerder("Alleen een beheerder kan de vergelijking wijzigen.");
+      // een eigen rij staat op de site als woorden van Smileyapp: alleen iemand van SmileyApp zelf voegt hem toe
+      if (d.actie === "vergelijk-toevoegen" && ik.via !== "smileyapp") throw AppError.validation("Een eigen rij voegt iemand van SmileyApp zelf toe, met een eigen SmileyApp-account. Je bent nu via ZekerFlex ingelogd.");
       if (d.actie === "vergelijk-toevoegen") return NextResponse.json(await wijzigVergelijk({ soort: "toevoegen", kenmerk: d.kenmerk, smileyapp: d.smileyapp, papier: d.papier }));
       if (d.actie === "vergelijk-verwijderen") return NextResponse.json(await wijzigVergelijk({ soort: "verwijderen", id: d.id }));
       return NextResponse.json(await wijzigVergelijk({ soort: "verbergen", id: d.id, verborgen: d.verborgen }));

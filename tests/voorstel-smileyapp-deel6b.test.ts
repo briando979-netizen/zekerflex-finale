@@ -579,6 +579,13 @@ describe("D. de nieuwe beheeracties: herkomst, limiet, sessie en rol", () => {
 
   it("als beheerder: de rekenhulp instellen en leeg maken, en rijen toevoegen, verbergen en verwijderen", async () => {
     h.principal = { userId: "u1", fullName: "Eigenaar ZekerFlex", rollen: ["PLATFORM_ADMIN"] };
+    // via ZekerFlex binnen: het cijfer en een eigen rij staan op de site als woorden van Smileyapp, dus die zet alleen iemand van SmileyApp zelf
+    expect((await stuur({ actie: "respons-bewaren", percentage: "40", bron: BRON })).json.error?.message).toContain("via ZekerFlex ingelogd");
+    expect((await stuur({ actie: "vergelijk-toevoegen", kenmerk: "Eigen", smileyapp: "Tekst van het team", papier: "Papier van het team" })).json.error?.message).toContain("via ZekerFlex ingelogd");
+    expect(h.kv.size).toBe(0);
+    // vanaf hier: een beheerder met een eigen SmileyApp-account
+    const accounts = await import("@/lib/voorstel/smileyapp-accounts");
+    const sessie = vi.spyOn(accounts, "eisToegang").mockResolvedValue({ naam: "Martijn", email: "martijn@smileyapp.test", rol: "beheerder", via: "smileyapp", id: "martijn@smileyapp.test" });
     expect("respons" in (await haal("instellingen")).json).toBe(false);
     expect((await stuur({ actie: "respons-bewaren", percentage: "40", bron: "kort" })).json.error?.details?.veld).toBe("bron");
     expect((await stuur({ actie: "respons-bewaren", percentage: "140", bron: BRON })).json.error?.details?.veld).toBe("percentage");
@@ -606,6 +613,7 @@ describe("D. de nieuwe beheeracties: herkomst, limiet, sessie en rol", () => {
     await stuur({ actie: "vergelijk-verbergen", id: "rapport", verborgen: false });
     expect((await stuur({ actie: "vergelijk-verwijderen", id: eigen?.id })).json).toMatchObject({ aangepast: false });
     expect(h.kv.has("voorstel-smileyapp:vergelijken")).toBe(false);
+    sessie.mockRestore();
   });
 
   it("in de route: poort (herkomst en limiet) → sessie → body → limiet per persoon → rol → pas dan bewaren", () => {
@@ -718,5 +726,17 @@ describe("E. bronbewakers deel 6b", () => {
     expect(klasse).toContain("break-words");
     expect(klasse).toContain("[hyphens:auto] md:[hyphens:manual]");
     for (const p of NIEUW_PAGINA.filter((x) => /\/(en|de)\//.test(x))) expect(lees(p), p).toContain("<h1 className={DEMO_KOP_KLASSE}>");
+  });
+});
+// Nalezing 19 nov: een eigen vraag uit de adresbalk mag niet op een half teken
+// eindigen (server en browser tonen dan iets anders) en geen richtingstekens houden.
+describe("de eigen vraag uit de adresbalk", () => {
+  it("knipt op hele tekens en haalt opmaaktekens weg", async () => {
+    const { schoonEigen: schoon } = await import("@/lib/voorstel/smileyapp-samensteller");
+    const lang = schoon(`${"a".repeat(119)}\u{1F600}\u{1F600}`);
+    expect([...lang]).toHaveLength(120);
+    expect(lang.endsWith("\u{1F600}")).toBe(true);
+    expect(lang).not.toMatch(/[\uD800-\uDBFF]$/);
+    expect(schoon("Hoe was\u202E het \u200Bvandaag?")).toBe("Hoe was het vandaag?");
   });
 });

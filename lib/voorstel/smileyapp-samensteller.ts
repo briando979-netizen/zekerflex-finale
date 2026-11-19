@@ -59,13 +59,13 @@ export const LEGE_KEUZE: Keuze = { ids: [], eigen: "" };
 /** De eigen vraag als één regel platte tekst van hooguit 120 tekens. */
 export function schoonEigen(ruw: unknown): string {
   if (typeof ruw !== "string") return "";
-  return ruw
+  const schoon = ruw
     .slice(0, 2000)
-    .replace(/\p{Cc}+/gu, " ")
+    .replace(/[\p{Cc}\p{Cf}]+/gu, " ")
     .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, EIGEN_MAX)
     .trim();
+  // op hele tekens knippen: een emoji is twee code-eenheden, en een half teken geeft op de server iets anders dan in de browser
+  return [...schoon].slice(0, EIGEN_MAX).join("").trim();
 }
 
 /** Een keuze van buiten (adresbalk) opgeschoond: alleen bestaande vragen, elk één keer, hooguit vijf, en de eigen vraag begrensd. */

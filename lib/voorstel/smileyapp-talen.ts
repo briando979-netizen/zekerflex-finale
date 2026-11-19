@@ -436,7 +436,7 @@ const BRANCHES_DE: Record<string, BrancheTekst> = {
     naam: "Gastronomie",
     kop: "Gastfreundschaft in der Gastronomie messen",
     intro: [
-      "Ein Gast, der am Tisch sagt, dass alles in Ordnung war, erzählt nicht immer, was er wirklich dachte. Mit einem kurzen Fragebogen auf dem eigenen Smartphone gibt ein Gast seine Meinung im Moment selbst ab.",
+      "Ein Gast, der am Tisch sagt, dass alles in Ordnung war, erzählt nicht immer, was er wirklich dachte. Mit einem kurzen Fragebogen auf dem eigenen Smartphone gibt ein Gast seine Meinung direkt vor Ort ab.",
       "Sie stellen einen QR-Code auf den Tisch, drucken ihn auf die Rechnung oder platzieren ihn am Ausgang. Der Gast scannt, wischt den Smiley und ist im Nu fertig.",
     ],
     momenten: ["Am Tisch, nach dem Hauptgang", "Beim Bezahlen", "Am Ausgang oder an der Garderobe", "Nach dem Abholen oder Liefern, mit einem QR-Code auf der Verpackung"],
@@ -562,7 +562,7 @@ const SAMENSTEL_EN: SamenstelTeksten = {
   eigenLabel: "Your own question",
   eigenUitleg: "At most {max} characters; now {n}.",
   eigenSoort: "Own question",
-  telefoonKop: "This is what your questionnaire looks like",
+  telefoonKop: "This is what your questionnaire could look like",
   telefoonUitleg: "An example: what you choose or type here stays in your own browser; nothing is stored or sent.",
   leeg: "Choose a question and you will see it here.",
   stap: "Question {n} of {totaal}",
@@ -602,7 +602,7 @@ const SAMENSTEL_DE: SamenstelTeksten = {
   eigenLabel: "Ihre eigene Frage",
   eigenUitleg: "Höchstens {max} Zeichen; jetzt {n}.",
   eigenSoort: "Eigene Frage",
-  telefoonKop: "So sieht Ihr Fragebogen aus",
+  telefoonKop: "So kann Ihr Fragebogen aussehen",
   telefoonUitleg: "Ein Beispiel: Was Sie hier wählen oder eingeben, bleibt in Ihrem eigenen Browser, es wird nichts gespeichert oder gesendet.",
   leeg: "Wählen Sie eine Frage, dann sehen Sie sie hier.",
   stap: "Frage {n} von {totaal}",
@@ -669,7 +669,7 @@ const VERGELIJK_EN: VergelijkTeksten = {
   boven: "Compare",
   kop: "Smileyapp or a paper survey?",
   intro: "What is the difference in everyday use? Below you can see them side by side.",
-  uitleg: "The Smileyapp column contains sentences from smileyapp.nl. The paper column only describes how a paper form works.",
+  uitleg: "The Smileyapp column contains sentences from smileyapp.nl or from the Smileyapp team itself. The paper column only describes how a paper form works.",
   kolomKenmerk: "Topic",
   kolomSmileyapp: "Smileyapp",
   kolomPapier: "Paper survey",
@@ -708,7 +708,7 @@ const VERGELIJK_DE: VergelijkTeksten = {
   boven: "Vergleichen",
   kop: "Smileyapp oder eine Umfrage auf Papier?",
   intro: "Was ist der Unterschied im täglichen Gebrauch? Unten sehen Sie beide nebeneinander.",
-  uitleg: "In der Spalte Smileyapp stehen Sätze von smileyapp.nl. Die Spalte Papier beschreibt nur, wie ein Papierformular funktioniert.",
+  uitleg: "In der Spalte Smileyapp stehen Sätze von smileyapp.nl oder vom Team von Smileyapp selbst. Die Spalte Papier beschreibt nur, wie ein Papierformular funktioniert.",
   kolomKenmerk: "Thema",
   kolomSmileyapp: "Smileyapp",
   kolomPapier: "Umfrage auf Papier",
@@ -731,7 +731,7 @@ const VERGELIJK_DE: VergelijkTeksten = {
     vraagsoorten: {
       kenmerk: "Arten von Fragen",
       smileyapp:
-        "Es gibt viele Möglichkeiten, Ihren Fragebogen zu gestalten. Sie können zum Beispiel wählen aus Bewertungsfragen von 1 bis 10, offenen Fragen, Ja/Nein-Fragen oder ein leeres Textfeld hinzufügen, um nach Feedback und Angaben zu fragen.",
+        "Es gibt viele Möglichkeiten, Ihren Fragebogen zu gestalten. Sie können zum Beispiel aus Bewertungsfragen von 1 bis 10, offenen Fragen und Ja/Nein-Fragen wählen oder ein leeres Textfeld hinzufügen, um nach Feedback und Angaben zu fragen.",
       papier: "Sie bestimmen selbst, welche Fragen auf dem Formular stehen.",
     },
     delen: {
@@ -788,7 +788,7 @@ const EN = {
     /** met {kop}: de kop van de branchepagina */
     brancheTitel: "{kop} · Smileyapp (design proposal)",
     klantenTitel: "Customer stories · Smileyapp (design proposal)",
-    klantenOmschrijving: "Two customers tell in their own words what they use Smileyapp for. Design proposal by ZekerFlex; the official website is smileyapp.nl.",
+    klantenOmschrijving: "Two customers explain in their own words what they use Smileyapp for. Design proposal by ZekerFlex; the official website is smileyapp.nl.",
     contactTitel: "Contact · Smileyapp (design proposal)",
     contactOmschrijving: "The contact details of Smileyapp. Design proposal by ZekerFlex; the official website is smileyapp.nl.",
     partnerTitel: "Become a partner · Smileyapp (design proposal)",
@@ -962,7 +962,7 @@ const EN = {
   branches: BRANCHES_EN,
   klantenPagina: {
     boven: "Customer stories",
-    sub: "Two customers tell in their own words what they use Smileyapp for.",
+    sub: "Two customers explain in their own words what they use Smileyapp for.",
     /** onder een quote die in het Nederlands blijft staan */
     origineel: "Original in Dutch",
     eerst: "How it used to be done",
