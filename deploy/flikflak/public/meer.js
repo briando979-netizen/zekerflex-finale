@@ -30,7 +30,7 @@ function fotoSetup(slide) {
   let i = 0, timer = null;
   const go = n => { i = (n + dots.length) % dots.length; strip.scrollTo({ left: i * strip.clientWidth, behavior: 'smooth' }); dots.forEach((d, j) => d.classList.toggle('on', j === i)); };
   strip.addEventListener('scroll', () => { const n = Math.round(strip.scrollLeft / strip.clientWidth); if (n !== i) { i = n; dots.forEach((d, j) => d.classList.toggle('on', j === i)); } });
-  slide._fotoStart = () => { clearInterval(timer); timer = setInterval(() => go(i + 1), 2800); };
+  slide._fotoStart = () => { clearInterval(timer); if (S.settings?.reducedMotion) return; timer = setInterval(() => go(i + 1), 2800); };
   slide._fotoStop = () => clearInterval(timer);
   strip.addEventListener('pointerdown', () => clearInterval(timer));
   strip.addEventListener('pointerup', () => slide._fotoStart());
@@ -88,13 +88,15 @@ async function fotoStep(files, { tag, stop } = {}) {
     <textarea maxlength="2200" placeholder="Beschrijf je post… gebruik #hashtags en @vermeldingen" style="margin:12px 16px;width:calc(100% - 32px)">${tag ? '#' + esc(tag) + ' ' : ''}</textarea>
     <div class="muziek-wrap" style="padding:0 16px"></div>
     <div class="opt">${ic('link')}<label>ZekerFlex-koppeling</label><button class="btn small grey kies-produkt">Kiezen</button></div>
+    <div class="opt"><span style="font-size:20px">📊</span><label>Peiling</label><button class="btn small grey kies-poll">Toevoegen</button></div>
     <div class="opt">${ic('lock')}<label>Wie kan dit bekijken</label><select name="privacy"><option value="public">Iedereen</option><option value="friends">Vrienden</option><option value="private">Alleen ik</option></select></div>
     <div class="opt">${ic('comment')}<label>Reacties toestaan</label><label class="switch-t"><input type="checkbox" name="allowComments" checked><span></span></label></div>
     <div class="opt">${ic('timer')}<label>Inplannen</label><input type="datetime-local" name="publishAt" min="${planMin()}"></div>
     <div class="progress" hidden><div></div></div>
     <div class="post-bar"><button class="btn grey again">Terug</button><button class="btn grey concept" title="Opslaan als concept">📝</button><button class="btn post">Plaatsen</button></div></div>`);
   view.append(ed);
-  let muziek = null, produkt = null, alsConcept = false;
+  let muziek = null, produkt = null, alsConcept = false, poll = null;
+  $('.kies-poll', ed).onclick = () => pollSheet(p => { poll = p; $('.kies-poll', ed).textContent = p ? '📊 ' + p.vraag.slice(0, 16) : 'Toevoegen'; }, poll);
   $('.concept', ed).onclick = () => { alsConcept = true; $('.post', ed).click(); };
   const mp = muziekPicker(m => { muziek = m; }); $('.muziek-wrap', ed).append(mp);
   $('.back', ed).onclick = $('.again', ed).onclick = () => render();
@@ -112,6 +114,7 @@ async function fotoStep(files, { tag, stop } = {}) {
     if (produkt) fd.append('produkt', JSON.stringify(produkt));
     const plan = planMs($('[name=publishAt]', ed).value); if (plan) fd.append('publishAt', plan);
     if (alsConcept) fd.append('draft', 'true');
+    if (poll) fd.append('poll', JSON.stringify(poll));
     $('.progress', ed).hidden = false;
     try { await api('POST', '/api/videos', fd); toast(alsConcept ? 'Bewaard als concept 📝' : plan ? 'Ingepland! ⏰' : 'Je fotopost staat erop! 🎉'); location.hash = '#/@' + S.me.username; }
     catch (e) { btn.disabled = false; btn.textContent = 'Plaatsen'; toast(e.message || 'Plaatsen mislukt'); }
@@ -303,6 +306,67 @@ async function statsPage() {
     <div class="sec-title">Je video's <small>op weergaven</small></div></div>`));
   if (!r.videos.length) page.append(h('<div class="grid-empty">Plaats een video om cijfers te zien.</div>'));
   r.videos.forEach(v => page.append(h(`<a class="row" href="#/v/${v.id}">${v.thumb ? `<img class="thumb" src="${v.thumb}">` : '<span class="tag-ic">▶</span>'}<div class="grow"><div class="t1">${esc(v.caption || '(geen tekst)')}</div><div class="t2">${fmt(v.views)} weergaven · ${fmt(v.likes)} likes · ${fmt(v.comments)} reacties · ${fmt(v.shares)}× gedeeld</div></div></a>`)));
+}
+
+// ================= peilingen =================
+function pollSheet(cb, huidig) {
+  const s = sheet(`<div class="auth"><h3 style="font-size:17px">Peiling op je video</h3><p>Een vraag en 2 tot 4 antwoorden. Kijkers stemmen met één tik en zien dan de percentages.</p>
+    <input name="vraag" placeholder="Vraag (bv. Welke outfit?)" maxlength="100" value="${esc(huidig?.vraag || '')}">
+    ${[0, 1, 2, 3].map(i => `<input name="o${i}" placeholder="Antwoord ${i + 1}${i > 1 ? ' (optioneel)' : ''}" maxlength="40" value="${esc(huidig?.opties?.[i] || '')}">`).join('')}
+    <div class="err"></div><button class="btn block" data-ok>Toevoegen</button>${huidig ? '<button class="btn grey block" data-weg>Peiling weghalen</button>' : ''}</div>`);
+  $('[data-ok]', s).onclick = () => {
+    const vraag = $('[name=vraag]', s).value.trim(), opties = [0, 1, 2, 3].map(i => $(`[name=o${i}]`, s).value.trim()).filter(Boolean);
+    if (!vraag) return ($('.err', s).textContent = 'Stel een vraag');
+    if (opties.length < 2) return ($('.err', s).textContent = 'Minstens twee antwoorden');
+    cb({ vraag, opties }); s.close();
+  };
+  $('[data-weg]', s)?.addEventListener('click', () => { cb(null); s.close(); });
+}
+function pollBlok(v) {
+  const p = v.poll, klaar = p.mijn >= 0;
+  return `<div class="poll ${klaar ? 'klaar' : ''}"><b>📊 ${esc(p.vraag)}</b>${p.opties.map((o, i) => `<button data-i="${i}" class="${p.mijn === i ? 'mijn' : ''}"><i style="width:${klaar ? o.pct : 0}%"></i><span>${esc(o.tekst)}</span><em>${klaar ? o.pct + '%' : ''}</em></button>`).join('')}<small>${p.totaal} stem${p.totaal === 1 ? '' : 'men'}</small></div>`;
+}
+function pollSetup(slide, v) {
+  $$('.poll button', slide).forEach(b => b.onclick = async e => {
+    e.stopPropagation(); if (!need()) return;
+    const r = await api('POST', `/api/videos/${v.id}/poll`, { i: +b.dataset.i });
+    v.poll = r.poll; $('.poll', slide).outerHTML = pollBlok(v); pollSetup(slide, v);
+  });
+}
+function antwoordChip(v) { return `<div class="antwoord-chip">📹 Antwoord aan <b>@${esc(v.antwoordOp.username)}</b>: “${esc(v.antwoordOp.text.slice(0, 60))}”</div>`; }
+function serieChip(v) { return `<a class="serie-chip" href="#/serie/${v.serie.id}">📺 ${esc(v.serie.naam)} · deel ${v.serie.index}/${v.serie.totaal}</a>`; }
+
+// ================= series (afspeellijsten van de maker) =================
+function serieSheet(eigenVideos, huidig, klaar) {
+  const gekozen = new Set(huidig?.videoIds || []);
+  const s = sheet(`<div class="sh-head">${huidig ? 'Serie bewerken' : 'Nieuwe serie'}<button class="x" data-close>${ic('close')}</button></div>
+    <div class="sh-body" style="padding:0 16px 12px"><input name="naam" placeholder="Naam van de serie (bv. Keukentips)" maxlength="50" value="${esc(huidig?.naam || '')}" style="margin:10px 0">
+    <div class="sec-title" style="padding:6px 0">Kies video's <small>in deze volgorde</small></div><div class="serie-kies">${eigenVideos.map(v => `<label><input type="checkbox" value="${v.id}" ${gekozen.has(v.id) ? 'checked' : ''}><img src="${v.thumb || ''}"></label>`).join('') || '<div class="grid-empty">Plaats eerst een video</div>'}</div></div>
+    <div class="sh-foot"><button class="btn block" data-ok>${huidig ? 'Opslaan' : 'Serie maken'}</button>${huidig ? '<button class="btn grey block" data-weg style="margin-top:8px">Serie verwijderen</button>' : ''}</div>`, { tall: true });
+  $('[data-ok]', s).onclick = async () => {
+    const naam = $('[name=naam]', s).value.trim(), videoIds = $$('input[type=checkbox]:checked', s).map(i => i.value);
+    if (!naam) return toast('Geef de serie een naam');
+    try { if (huidig) await api('PATCH', '/api/series/' + huidig.id, { naam, videoIds }); else await api('POST', '/api/series', { naam, videoIds }); s.close(); klaar(); } catch (e) { toast(e.message); }
+  };
+  $('[data-weg]', s)?.addEventListener('click', async () => { if (await confirmSheet('Serie verwijderen? De video\'s blijven staan.')) { await api('DELETE', '/api/series/' + huidig.id); s.close(); klaar(); } });
+}
+async function seriesTab(container, u, eigenVideos) {
+  container.innerHTML = '<div class="spinner"></div>';
+  const r = await api('GET', '/api/series/van/' + encodeURIComponent(u.username));
+  container.innerHTML = '';
+  if (u.isMe) { const nieuw = h('<div class="row" style="justify-content:center"><button class="btn small grey">+ Nieuwe serie</button></div>'); $('button', nieuw).onclick = () => serieSheet(eigenVideos, null, () => seriesTab(container, u, eigenVideos)); container.append(nieuw); }
+  if (!r.series.length) return container.append(h(`<div class="grid-empty">${u.isMe ? 'Zet video\'s die bij elkaar horen in een serie; kijkers zien dan "deel 1/3".' : 'Nog geen series'}</div>`));
+  const g = h('<div class="map-grid"></div>');
+  r.series.forEach(s => g.append(h(`<a class="map-card" href="#/serie/${s.id}">${s.thumb ? `<img src="${s.thumb}">` : '<div class="map-leeg">📺</div>'}<b>${esc(s.naam)}</b><small>${s.count} video${s.count === 1 ? '' : "'s"}</small></a>`)));
+  container.append(g);
+}
+async function seriePage(id) {
+  const r = await api('GET', '/api/series/' + id);
+  const mijn = S.me && r.serie.by === S.me.username;
+  const page = h(`<div class="page"><div class="head">${backBtn()}<h2>📺 ${esc(r.serie.naam)}</h2>${mijn ? `<button class="ic bew">${ic('edit')}</button>` : '<span class="ic"></span>'}</div><p style="padding:6px 16px;color:var(--muted)">door <a href="#/@${esc(r.serie.by)}">@${esc(r.serie.by)}</a> · ${r.videos.length} delen</p></div>`);
+  page.append(grid(r.videos, r.serie.naam, 'Nog geen video\'s in deze serie'));
+  if (mijn) $('.bew', page).onclick = async () => { const p = await api('GET', '/api/users/' + S.me.username); serieSheet(p.videos, { id, naam: r.serie.naam, videoIds: r.videos.map(v => v.id) }, () => render()); };
+  view.append(page);
 }
 
 // ================= kijkgeschiedenis =================

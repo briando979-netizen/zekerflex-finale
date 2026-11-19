@@ -8,7 +8,13 @@ function applyTheme(t) {
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', licht ? '#ffffff' : '#000000');
   try { localStorage.setItem('ff_theme', t); } catch {}
 }
-matchMedia('(prefers-color-scheme: light)').addEventListener?.('change', () => { if ((S.settings?.theme || localStorage.getItem('ff_theme') || 'system') === 'system') applyTheme('system'); });
+matchMedia('(prefers-color-scheme: light)').addEventListener?.('change', () => { if ((S.settings?.theme || localStorage.getItem('ff_theme') || 'dark') === 'system') applyTheme('system'); });
+
+// ================= toegankelijkheid =================
+function applyA11y(s) {
+  document.documentElement.dataset.text = s?.textSize === 'groot' ? 'groot' : 'normaal';
+  document.documentElement.dataset.motion = s?.reducedMotion ? 'minder' : 'normaal';
+}
 
 // ================= pauze-herinnering =================
 function startBreakReminder(min) {
@@ -75,8 +81,14 @@ async function settingsPage() {
     <div class="opt">${ic('inbox')}<label>Wie mag je een bericht sturen</label>${keuze('whoMessages', [['all', 'Iedereen'], ['friends', 'Vrienden'], ['none', 'Niemand']], s.whoMessages)}</div>
     <div class="opt">${ic('download')}<label>Anderen mogen mijn video's opslaan</label>${schakel('allowDownload', s.allowDownload)}</div>
     <div class="opt opt-kolom">${ic('flag')}<label>Geblokkeerde woorden in reacties<small>Komma's ertussen. Reacties met zo'n woord worden geweigerd.</small></label><textarea name="commentFilter" rows="2" placeholder="bv. spam, link in bio">${esc(s.commentFilter.join(', '))}</textarea></div>
+    <div class="sec-title">Account</div>
+    <div class="opt"><span style="font-size:20px">🏢</span><label>Soort account<small>Een bedrijfsaccount krijgt een 🏢-label, een website-link en een "Werk bij ons"-knop</small></label>${keuze('accountType', [['persoon', 'Persoon'], ['bedrijf', 'Bedrijf']], s.accountType)}</div>
+    <div class="opt opt-kolom">${ic('link')}<label>Website<small>Alleen https-links</small></label><input type="url" name="website" placeholder="https://jouwbedrijf.nl" value="${esc(s.website)}"></div>
+    <div class="opt opt-kolom"><span style="font-size:20px">💼</span><label>"Werk bij ons"-link<small>Bijvoorbeeld je klussen of vacatures op zekerflex.com</small></label><input type="url" name="werkLink" placeholder="https://zekerflex.com/…" value="${esc(s.werkLink)}"></div>
     <div class="sec-title">Weergave</div>
-    <div class="opt">${ic('magic')}<label>Thema</label>${keuze('theme', [['system', 'Zoals je telefoon'], ['dark', 'Donker'], ['light', 'Licht']], s.theme)}</div>
+    <div class="opt">${ic('magic')}<label>Thema</label>${keuze('theme', [['dark', 'Donker'], ['light', 'Licht'], ['system', 'Zoals je telefoon']], s.theme)}</div>
+    <div class="opt"><span style="font-size:20px">🔠</span><label>Tekstgrootte</label>${keuze('textSize', [['normaal', 'Normaal'], ['groot', 'Groot']], s.textSize)}</div>
+    <div class="opt"><span style="font-size:20px">🌀</span><label>Minder beweging<small>Geen animaties, foto's schuiven niet vanzelf</small></label>${schakel('reducedMotion', s.reducedMotion)}</div>
     <div class="sec-title">Welzijn</div>
     <div class="opt">${ic('timer')}<label>Pauze-herinnering</label>${keuze('breakReminder', [[0, 'Uit'], [15, 'Elke 15 min'], [30, 'Elke 30 min'], [60, 'Elk uur']], s.breakReminder)}</div>
     <div class="sec-title">Je gegevens</div>
@@ -88,12 +100,14 @@ async function settingsPage() {
     try { const r2 = await api('PATCH', '/api/settings', patch); S.settings = r2.settings; toast('Opgeslagen'); }
     catch (e) { $('.err', page).textContent = e.message; }
   };
-  $$('input[type=checkbox]', page).forEach(i => i.onchange = () => stuur({ [i.name]: i.checked }));
-  $$('select', page).forEach(i => i.onchange = () => {
+  $$('input[type=checkbox]', page).forEach(i => i.onchange = async () => { await stuur({ [i.name]: i.checked }); if (i.name === 'reducedMotion') applyA11y(S.settings); });
+  $$('input[type=url]', page).forEach(i => i.onblur = async () => { await stuur({ [i.name]: i.value.trim() }); i.value = S.settings?.[i.name] || ''; if (i.value === '' && i.defaultValue === '' ) return; if (!i.value) toast('Alleen een https-link wordt bewaard'); });
+  $$('select', page).forEach(i => i.onchange = async () => {
     const v = i.name === 'breakReminder' ? +i.value : i.value;
-    stuur({ [i.name]: v });
+    await stuur({ [i.name]: v });
     if (i.name === 'theme') applyTheme(i.value);
     if (i.name === 'breakReminder') startBreakReminder(+i.value);
+    if (i.name === 'textSize') applyA11y(S.settings);
   });
   $('[name=commentFilter]', page).onblur = e => stuur({ commentFilter: e.target.value.split(/[,\n]/).map(x => x.trim()).filter(Boolean) });
   $('.export', page).onclick = async () => {

@@ -431,3 +431,34 @@ html[data-theme="light"] #tabbar a { color: #555; } html[data-theme="light"] #ta
 html[data-theme="light"] .slide, html[data-theme="light"] .feed, html[data-theme="light"] .lv, html[data-theme="light"] .cam, html[data-theme="light"] .topbar { color: #fff; }
 html[data-theme="light"] .foto-pv, html[data-theme="light"] .ed-pv { background: #000; }
 html[data-theme="light"] .stats b, html[data-theme="light"] .profile-top .handle, html[data-theme="light"] .big-head h1, html[data-theme="light"] .lv-list { color: #111; }
+
+/* ===== ronde D: spraakberichten, reacties op berichten, peilingen, antwoord-/serie-chips, bedrijf, toegankelijkheid ===== */
+.chat-in .mic { font-size: 22px; padding: 0 6px; }
+.chat-in .mic.on { animation: knip 1s infinite; }
+@keyframes knip { 50% { opacity: .4; } }
+.spraak { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.spraak audio { height: 32px; max-width: 200px; }
+.spraak small { color: var(--muted); font-size: 11px; }
+.mreact { display: flex; gap: 4px; margin-top: 4px; }
+.mreact:empty { display: none; }
+.mreact span { background: rgba(0,0,0,.35); border-radius: 10px; padding: 1px 7px; font-size: 13px; }
+.poll { margin: 6px 0; padding: 10px 12px; border-radius: 12px; background: rgba(0,0,0,.45); backdrop-filter: blur(6px); max-width: 86%; display: flex; flex-direction: column; gap: 6px; }
+.poll b { font-size: 14px; }
+.poll button { position: relative; overflow: hidden; display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,.14); color: #fff; font-size: 14px; text-align: left; }
+.poll button i { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255,255,255,.25); transition: width .4s; }
+.poll button span, .poll button em { position: relative; font-style: normal; }
+.poll button.mijn { outline: 2px solid var(--accent); }
+.poll small { color: #ddd; font-size: 11px; }
+.antwoord-chip, .serie-chip { display: inline-block; margin: 4px 0; padding: 6px 10px; border-radius: 10px; background: rgba(255,255,255,.14); backdrop-filter: blur(6px); font-size: 13px; max-width: 86%; }
+.serie-chip { color: #fff; }
+.bedrijf-tag { font-size: 12px; background: var(--panel2); border-radius: 10px; padding: 2px 8px; vertical-align: middle; }
+.plinks { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; margin: 6px 0; font-size: 14px; }
+.plinks a:not(.btn) { color: var(--accent); }
+.serie-kies { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.serie-kies label { position: relative; display: block; aspect-ratio: 3/4; border-radius: 6px; overflow: hidden; background: #222; }
+.serie-kies img { width: 100%; height: 100%; object-fit: cover; opacity: .55; }
+.serie-kies input { position: absolute; top: 4px; left: 4px; z-index: 1; width: 18px; height: 18px; }
+.serie-kies input:checked + img { opacity: 1; outline: 3px solid var(--accent); outline-offset: -3px; }
+.vant-link { color: var(--accent); font-size: 12px; margin-left: 8px; }
+html[data-text="groot"] body { zoom: 1.12; }
+html[data-motion="minder"] *, html[data-motion="minder"] *::before, html[data-motion="minder"] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }

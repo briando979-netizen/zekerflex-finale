@@ -56,3 +56,11 @@ De repo-kopie hier is de versie die live draait; houd beide gelijk.
 - **Prestaties** (badges) op het profiel, berekend uit wat iemand echt deed.
 - **AVG**: eigen gegevens downloaden (`/api/export`, zonder IP's) en account zelf verwijderen (`DELETE /api/account`).
 - Licht thema alleen om de video heen; feed, LIVE en camera blijven donker.
+
+## Functies (ronde D, 19 nov)
+- **Chat**: spraakberichten (🎤, MediaRecorder → `audio` in het bericht) en emoji-reacties op berichten (dubbeltik op de ballon; live via ws `message:react`).
+- **Peilingen** op een video of fotopost (vraag + 2-4 antwoorden, één stem per persoon, percentages na het stemmen).
+- **Video-antwoord op een reactie** (alleen de maker): `#/upload?antwoord=<reactie-id>`; sticker op de video en link bij de reactie.
+- **Series** (afspeellijsten van eigen video's) met tab Series op het profiel en "deel 2/5"-chip op de video; `#/serie/<id>`.
+- **Bedrijfsaccount**: 🏢-label, website-link en "Werk bij ons"-knop (alleen https-links; bedoeld voor klussen/vacatures op ZekerFlex).
+- **Toegankelijkheid**: grotere tekst, minder beweging (geen animaties, foto's schuiven niet vanzelf). Standaardthema is donker.

@@ -129,13 +129,13 @@ async function api(method, url, body) {
 const need = () => { if (!S.me) { askLogin(); return false; } return true; };
 
 async function loadMe() {
-  applyTheme(localStorage.getItem('ff_theme') || 'system');
+  applyTheme(localStorage.getItem('ff_theme') || 'dark');
   if (!S.token) { S.me = null; connectWs(); return; }
   const r = await api('GET', '/api/me').catch(() => ({}));
   S.me = r.user || null;
   if (!S.me) { S.token = null; localStorage.removeItem('ff_token'); }
   S.settings = r.settings || null; S.followRequests = r.followRequests || 0;
-  if (S.settings) { applyTheme(S.settings.theme); startBreakReminder(S.settings.breakReminder); }
+  if (S.settings) { applyTheme(S.settings.theme); startBreakReminder(S.settings.breakReminder); applyA11y(S.settings); }
   setUnread(r.unread || 0);
   connectWs();
 }
@@ -161,8 +161,9 @@ function connectWs() {
     if (m.type === 'message') {
       const other = m.message.from === S.me?.id ? m.message.to : m.message.from;
       if (S.chatWith && S.chatWith.id === other) document.dispatchEvent(new CustomEvent('ff:msg', { detail: m.message }));
-      else if (m.message.from !== S.me?.id) { setUnread(S.unread + 1); toast(`💬 @${m.from.username}: ${m.message.text || 'stuurde een video'}`); }
+      else if (m.message.from !== S.me?.id) { setUnread(S.unread + 1); toast(`💬 @${m.from.username}: ${m.message.text || (m.message.audio ? 'stuurde een spraakbericht' : 'stuurde een video')}`); }
     }
+    if (m.type === 'message:react') document.dispatchEvent(new CustomEvent('ff:msgreact', { detail: m.message }));
     if (m.type === 'typing' && S.chatWith?.username === m.from) document.dispatchEvent(new CustomEvent('ff:typing'));
   };
   ws.onclose = () => { if (S.ws === ws) { S.ws = null; setTimeout(connectWs, 2000); } };
@@ -279,6 +280,7 @@ async function render() {
     if (p === '/geschiedenis') return await historyPage();
     if (p === '/instellingen') return await settingsPage();
     if (p === '/verzoeken') return await followRequestsPage();
+    if ((m = p.match(/^\/serie\/(.+)$/))) return await seriePage(m[1]);
     location.hash = '#/';
   } catch (e) {
     view.innerHTML = `<div class="empty"><h3>Oeps</h3><div>${esc(e.message)}</div><a class="btn" href="#/">Naar home</a></div>`;
@@ -423,6 +425,7 @@ function mountFeed(holder, videos, start) {
         <div><a class="uname" href="#/@${esc(a.username)}">${esc(a.name || a.username)} ${check(a)}</a> <span class="date">· ${ago(v.created)}</span>${v.privacy !== 'public' ? ` <span class="date">· ${v.privacy === 'friends' ? '👥 Vrienden' : '🔒 Privé'}</span>` : ''}</div>
         ${v.caption ? `<div class="cap">${rich(v.caption)}</div>` : '<div style="height:8px"></div>'}
         ${v.produkt ? produktKaart(v.produkt) : ''}
+        ${v.antwoordOp ? antwoordChip(v) : ''}${v.serie ? serieChip(v) : ''}${v.poll ? pollBlok(v) : ''}
         <a class="music" href="#/sound/${v.sound.id}">${ic('music')}<div class="ticker"><span>${esc(v.sound.name)} &nbsp;·&nbsp; ${esc(v.sound.name)} &nbsp;·&nbsp;</span></div></a>
       </div>
       <input type="range" class="seek" min="0" max="1000" value="0" ${v.fotos?.length ? 'hidden' : ''}>
@@ -430,6 +433,7 @@ function mountFeed(holder, videos, start) {
     slide._v = v;
     const [main, other] = $$('video', slide);
     if (!main) fotoSetup(slide);
+    if (v.poll) pollSetup(slide, v);
     if (other) {
       // duet: origineel rechts, loopt gelijk met de opname
       main.addEventListener('timeupdate', () => { if (Math.abs(other.currentTime - main.currentTime) > 0.35 && main.currentTime < (other.duration || 1e9)) other.currentTime = main.currentTime; });
@@ -549,7 +553,7 @@ function mountFeed(holder, videos, start) {
         <div class="body">
           <div class="who">${esc(c.user.name || c.user.username)} ${check(c.user)} ${c.byCreator ? '<em>· Maker</em>' : ''}${c.pinned ? '<em>· 📌 Vastgepind</em>' : ''}</div>
           <div class="txt rich">${rich(c.text)}</div>
-          <div class="meta"><span>${ago(c.created)}</span>${v.allowComments ? '<button class="rp">Beantwoorden</button>' : ''}${c.canPin && !isReply ? `<button class="pinc">${c.pinned ? 'Losmaken' : 'Vastpinnen'}</button>` : ''}${c.canDelete ? '<button class="del">Verwijderen</button>' : ''}
+          <div class="meta"><span>${ago(c.created)}</span>${v.allowComments ? '<button class="rp">Beantwoorden</button>' : ''}${c.canPin && !isReply ? `<button class="pinc">${c.pinned ? 'Losmaken' : 'Vastpinnen'}</button>` : ''}${c.canPin && !c.videoAntwoord ? '<button class="vant">📹 Video-antwoord</button>' : ''}${c.videoAntwoord ? `<a class="vant-link" href="#/v/${c.videoAntwoord}">📹 Bekijk video-antwoord</a>` : ''}${c.canDelete ? '<button class="del">Verwijderen</button>' : ''}
           ${c.likedByCreator && !c.byCreator ? `<span class="creator-like">${ic('heart')} door maker</span>` : ''}</div>
         </div>
         <button class="clike ${c.liked ? 'on' : ''}">${ic(c.liked ? 'heart' : 'heartO')}<span>${c.likes || ''}</span></button>
@@ -566,6 +570,7 @@ function mountFeed(holder, videos, start) {
       });
       $('.del', el) && ($('.del', el).onclick = async () => { if (await confirmSheet('Reactie verwijderen?')) { await api('DELETE', '/api/comments/' + c.id); load(); } });
       $('.pinc', el) && ($('.pinc', el).onclick = async () => { const r = await api('POST', `/api/comments/${c.id}/pin`); toast(r.pinned ? 'Vastgepind bovenaan' : 'Losgemaakt'); load(); });
+      $('.vant', el) && ($('.vant', el).onclick = () => { location.hash = '#/upload?antwoord=' + c.id; });
       return el;
     }
     if (v.allowComments) {
@@ -769,7 +774,8 @@ async function profilePage(username) {
     <div class="head">${me ? '<span class="ic"></span>' : backBtn()}<h2>${esc(u.name || u.username)}</h2><button class="ic menu">${ic(me ? 'menu' : 'more')}</button></div>
     <div class="profile-top">
       ${u.liveId ? `<a href="#/live/${u.liveId}" class="is-live big"><img class="big-av" src="${avatar(u)}"><span class="live-tag">LIVE</span></a>` : `<img class="big-av" src="${avatar(u)}">`}
-      <div class="handle">@${esc(u.username)} ${check(u)}</div>
+      <div class="handle">@${esc(u.username)} ${check(u)} ${u.bedrijf ? '<span class="bedrijf-tag">🏢 Bedrijf</span>' : ''}</div>
+      ${u.website || u.werkLink ? `<div class="plinks">${u.website ? `<a href="${esc(u.website)}" target="_blank" rel="noopener">🔗 ${esc(u.website.replace(/^https:\/\/(www\.)?/, '').slice(0, 32))}</a>` : ''}${u.werkLink ? `<a class="btn small" href="${esc(u.werkLink)}" target="_blank" rel="noopener">💼 Werk bij ons</a>` : ''}</div>` : ''}
       <div class="stats">
         <a href="#/@${esc(u.username)}/following"><b>${fmt(u.following)}</b>Volgend</a>
         <a href="#/@${esc(u.username)}/followers"><b class="fcount">${fmt(u.followers)}</b>Volgers</a>
@@ -784,6 +790,7 @@ async function profilePage(username) {
       <button data-t="videos" class="active">${ic('grid')}</button>
       ${me ? `<button data-t="favorites">${ic('bookmark')}</button><button data-t="maps" style="font-size:13px">Mappen</button><button data-t="pending" style="font-size:13px">Concepten</button>` : ''}
       <button data-t="reposts" title="Reposts">♻</button>
+      <button data-t="series" style="font-size:13px">Series</button>
       <button data-t="liked">${ic('heartO')}</button>
     </div>
     <div class="tabc"></div>`}`;
@@ -847,6 +854,7 @@ async function profilePage(username) {
     if (t === 'reposts') tabc.append(grid(r.reposts || [], 'Reposts', 'Nog niets gerepost. Repost een video via Delen → ♻.'));
     if (t === 'maps') collectionsTab(tabc);
     if (t === 'pending') pendingTab(tabc, r.pending || []);
+    if (t === 'series') seriesTab(tabc, u, r.videos);
   };
   $$('.segs button', page).forEach(b => b.onclick = () => show(b.dataset.t));
   if (!u.locked) show('videos');
@@ -1025,7 +1033,7 @@ async function inboxPage() {
     const r = await api('GET', '/api/conversations');
     ib.innerHTML = r.conversations.length ? '' : '<div class="grid-empty">Nog geen berichten.<br>Stuur iemand een bericht via zijn profiel of met het potlood-icoon.</div>';
     for (const c of r.conversations) {
-      const last = c.last.video ? (c.last.from === S.me.id ? 'Je hebt een video gedeeld' : 'Deelde een video') : c.last.text;
+      const last = c.last.audio ? '🎤 Spraakbericht' : c.last.video ? (c.last.from === S.me.id ? 'Je hebt een video gedeeld' : 'Deelde een video') : c.last.text;
       ib.append(h(`<a class="row" href="#/chat/${esc(c.user.username)}"><img class="av" src="${avatar(c.user)}"><div class="grow"><div class="t1">${esc(c.user.name || c.user.username)}</div><div class="t2" style="${c.unread ? 'color:#fff;font-weight:600' : ''}">${esc(last)} · ${ago(c.last.created)}</div></div>${c.unread ? `<span class="badge" style="position:static">${c.unread}</span>` : ''}</a>`));
     }
   }
@@ -1044,17 +1052,46 @@ async function chatPage(username) {
   api('GET', '/api/me').then(m => setUnread(m.unread)).catch(() => {});
   const page = h(`<div class="chat"><div class="head">${backBtn()}<a href="#/@${esc(u.username)}" style="display:flex;align-items:center;gap:8px;flex:1;justify-content:center"><img class="av" style="width:30px;height:30px;border:0" src="${avatar(u)}"><b>${esc(u.name || u.username)}</b></a><span class="ic"></span></div>
     <div class="msgs"></div><div class="typing"></div>
-    <div class="chat-in"><input placeholder="Bericht sturen..." maxlength="1000"><button class="btn small">${ic('send')}</button></div></div>`);
+    <div class="chat-in"><input placeholder="Bericht sturen..." maxlength="1000"><button class="mic" title="Spraakbericht">🎤</button><button class="btn small">${ic('send')}</button></div></div>`);
   view.append(page);
   const box = $('.msgs', page);
   let lastTs = 0;
+  // emoji-reacties onder een bericht (dubbeltik op de ballon om er een te kiezen)
+  const reactHtml = m => { const t = {}; Object.values(m.reacties || {}).forEach(e => t[e] = (t[e] || 0) + 1); return Object.entries(t).map(([e, n]) => `<span>${e}${n > 1 ? ' ' + n : ''}</span>`).join(''); };
+  const reactPicker = m => {
+    const s = sheet(`<div class="sh-head">Reageer<button class="x" data-close>${ic('close')}</button></div><div class="emoji-bar" style="padding:14px;justify-content:center">${['❤️', '😂', '👍', '😮', '😢', '🔥'].map(e => `<button data-e="${e}" style="font-size:28px">${e}</button>`).join('')}</div>`);
+    $$('[data-e]', s).forEach(b => b.onclick = async () => { await api('POST', `/api/messages/${m.id}/react`, { emoji: b.dataset.e }); s.close(); });
+  };
   const add = m => {
     if (m.created - lastTs > 10 * 60e3) box.append(h(`<div class="msg-time">${new Date(m.created).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>`));
     lastTs = m.created;
     const mine = m.from === S.me.id;
-    const el = h(`<div class="msg ${mine ? 'me' : ''}">${mine ? '' : `<img class="av" src="${avatar(u)}">`}<div class="bubble">${m.video ? `<a class="vcard" href="#/v/${m.video.id}">${m.video.thumb ? `<img src="${m.video.thumb}">` : '<img>'}</a>` : ''}${esc(m.text)}</div></div>`);
+    const el = h(`<div class="msg ${mine ? 'me' : ''}" data-id="${m.id}">${mine ? '' : `<img class="av" src="${avatar(u)}">`}<div class="bubble">${m.video ? `<a class="vcard" href="#/v/${m.video.id}">${m.video.thumb ? `<img src="${m.video.thumb}">` : '<img>'}</a>` : ''}${m.audio ? `<div class="spraak">🎤 <audio controls preload="none" src="${m.audio}"></audio>${m.duur ? `<small>${m.duur}s</small>` : ''}</div>` : ''}${esc(m.text)}<div class="mreact">${reactHtml(m)}</div></div></div>`);
+    $('.bubble', el).addEventListener('dblclick', () => reactPicker(m));
     box.append(el); box.scrollTop = box.scrollHeight;
   };
+  const onReact = e => { const el = $(`.msg[data-id="${e.detail.id}"] .mreact`, box); if (el) el.innerHTML = reactHtml(e.detail); };
+  document.addEventListener('ff:msgreact', onReact); onCleanup(() => document.removeEventListener('ff:msgreact', onReact));
+  // spraakbericht: tik op de microfoon, praat, tik nog eens om te versturen
+  const mic = $('.mic', page); let rec = null, chunks = [], t0 = 0;
+  mic.onclick = async () => {
+    if (rec) { rec.stop(); return; }
+    try {
+      const st = await navigator.mediaDevices.getUserMedia({ audio: true });
+      rec = new MediaRecorder(st); chunks = []; t0 = Date.now();
+      rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+      rec.onstop = async () => {
+        st.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' }), duur = Math.round((Date.now() - t0) / 1000);
+        rec = null; mic.classList.remove('on'); mic.textContent = '🎤';
+        if (duur < 1) return toast('Te kort — houd iets langer vast');
+        const fd = new FormData(); fd.append('audio', blob, 'spraak.webm'); fd.append('duur', duur);
+        try { await api('POST', '/api/messages/' + encodeURIComponent(u.username), fd); } catch (e) { toast(e.message); }
+      };
+      rec.start(); mic.classList.add('on'); mic.textContent = '⏹'; toast('Opnemen… tik nog eens om te versturen');
+    } catch { toast('Microfoon niet beschikbaar'); }
+  };
+  onCleanup(() => { try { rec?.stop(); } catch {} });
   if (!r.messages.length) box.append(h(`<div class="grid-empty"><img class="big-av" style="width:80px;height:80px;border-radius:50%" src="${avatar(u)}"><br><b>${esc(u.name)}</b><br>@${esc(u.username)}<br><br>Zeg hallo! 👋</div>`));
   r.messages.forEach(add);
   const input = $('input', page);
@@ -1063,7 +1100,7 @@ async function chatPage(username) {
     input.value = '';
     try { await api('POST', '/api/messages/' + encodeURIComponent(u.username), { text }); } catch (e) { toast(e.message); }
   };
-  $('.chat-in button', page).onclick = send;
+  $('.chat-in .btn', page).onclick = send;
   let lastTyping = 0;
   input.onkeydown = e => {
     if (e.key === 'Enter') return send();
@@ -1083,6 +1120,7 @@ async function uploadPage() {
   const soundId = route.params.get('sound');
   const duetId = route.params.get('duet');
   const tag = route.params.get('tag');
+  const antwoord = route.params.get('antwoord'); // video-antwoord op een reactie (alleen de maker)
   let soundInfo = null, duetVideo = null;
   if (soundId) soundInfo = await api('GET', '/api/sound/' + soundId).catch(() => null);
   if (duetId) duetVideo = (await api('GET', '/api/videos/' + duetId).catch(() => ({}))).video;
@@ -1226,12 +1264,15 @@ async function uploadPage() {
       <div class="opt">${ic('comment')}<label>Reacties toestaan</label><label class="switch-t"><input type="checkbox" name="allowComments" checked><span></span></label></div>
       <div class="opt">${ic('duet')}<label>Duet toestaan</label><label class="switch-t"><input type="checkbox" name="allowDuet" checked><span></span></label></div>
       <div class="opt">${ic('link')}<label>ZekerFlex-koppeling</label><button class="btn small grey kies-produkt">Kiezen</button></div>
+      <div class="opt"><span style="font-size:20px">📊</span><label>Peiling</label><button class="btn small grey kies-poll">Toevoegen</button></div>
+      ${antwoord ? '<div class="opt"><span style="font-size:20px">📹</span><label>Video-antwoord op een reactie<small>De reactie komt als sticker op je video</small></label></div>' : ''}
       <div class="opt">${ic('timer')}<label>Inplannen</label><input type="datetime-local" name="publishAt" min="${planMin()}"></div>
       <div class="progress" hidden><div></div></div>
       <div class="post-bar"><button class="btn grey again">Opnieuw</button><button class="btn grey bewerk">✂ Bewerken</button><button class="btn grey concept" title="Opslaan als concept">📝</button><button class="btn post">Plaatsen</button></div></div>`);
     view.append(ed);
     const ta = $('textarea', ed), pv = $('.pv video', ed);
-    let produkt = null, alsConcept = false;
+    let produkt = null, alsConcept = false, poll = null;
+    $('.kies-poll', ed).onclick = () => pollSheet(p => { poll = p; $('.kies-poll', ed).textContent = p ? '📊 ' + p.vraag.slice(0, 16) : 'Toevoegen'; }, poll);
     $('.concept', ed).onclick = () => { alsConcept = true; $('.post', ed).click(); };
     $('.kies-produkt', ed).onclick = () => pickProduktSheet(p => { produkt = p; $('.kies-produkt', ed).textContent = p ? p.titel.slice(0, 18) : 'Kiezen'; }, produkt);
     // bewerken: knippen, snelheid, tekst en muziek; het resultaat vervangt het bestand dat geplaatst wordt
@@ -1250,6 +1291,8 @@ async function uploadPage() {
       if (produkt) fd.append('produkt', JSON.stringify(produkt));
       const plan = planMs($('[name=publishAt]', ed).value); if (plan) fd.append('publishAt', plan);
       if (alsConcept) fd.append('draft', 'true');
+      if (poll) fd.append('poll', JSON.stringify(poll));
+      if (antwoord) fd.append('antwoordOp', antwoord);
       fd.append('caption', ta.value);
       fd.append('filter', filter);
       fd.append('privacy', $('[name=privacy]', ed).value);

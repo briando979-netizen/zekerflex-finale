@@ -31,7 +31,8 @@ const MUZIEK = [
 ];
 const DAG = () => new Date().toISOString().slice(0, 10);
 // Instellingen per gebruiker (privacy, wie mag reageren/berichten, reactiefilter, thema, pauze-herinnering).
-const defaultSettings = () => ({ privateAccount: false, whoComments: 'all', whoMessages: 'all', commentFilter: [], allowDownload: true, theme: 'system', breakReminder: 0 });
+const defaultSettings = () => ({ privateAccount: false, whoComments: 'all', whoMessages: 'all', commentFilter: [], allowDownload: true, theme: 'dark', breakReminder: 0, accountType: 'persoon', website: '', werkLink: '', textSize: 'normaal', reducedMotion: false });
+const veiligeUrl = s => { const u = String(s || '').trim().slice(0, 300); return /^https:\/\/[^\s<>"']+$/i.test(u) ? u : ''; };
 const settingsOf = u => (u.settings = { ...defaultSettings(), ...(u.settings || {}) });
 let db = fs.existsSync(DATA) ? { ...empty(), ...JSON.parse(fs.readFileSync(DATA, 'utf8')) } : empty();
 let saveTimer = null;
@@ -60,6 +61,7 @@ function publicUser(u, viewer) {
     isMe: viewer ? viewer.id === u.id : false,
     liveId: [...lives.values()].find(l => l.hostId === u.id)?.id || null,
     private: !!(u.settings && u.settings.privateAccount),
+    bedrijf: u.settings?.accountType === 'bedrijf', website: u.settings?.website || '', werkLink: u.settings?.werkLink || '',
     requested: viewer ? (u.followRequests || []).includes(viewer.id) : false,
     locked: !!(u.settings && u.settings.privateAccount) && (!viewer || (viewer.id !== u.id && !viewer.following.includes(u.id))),
   };
@@ -99,8 +101,22 @@ function publicVideo(v, viewer) {
     reposts: (v.reposts || []).length, reposted: viewer ? (v.reposts || []).includes(viewer.id) : false,
     allowDownload: author?.settings?.allowDownload !== false,
     duetOf: duetInfo(v.duetOf),
+    poll: pollInfo(v, viewer), antwoordOp: v.antwoordOp || null, serie: serieInfo(v),
     author: publicUser(author, viewer),
   };
+}
+// peiling op een video: vraag + 2-4 opties; één stem per persoon (mag wisselen); percentages na het stemmen
+function pollInfo(v, viewer) {
+  if (!v.poll) return null;
+  const totaal = v.poll.opties.reduce((s, o) => s + o.stemmen.length, 0);
+  const mijn = viewer ? v.poll.opties.findIndex(o => o.stemmen.includes(viewer.id)) : -1;
+  return { vraag: v.poll.vraag, totaal, mijn, opties: v.poll.opties.map(o => ({ tekst: o.tekst, stemmen: o.stemmen.length, pct: totaal ? Math.round(o.stemmen.length / totaal * 100) : 0 })) };
+}
+// serie (afspeellijst van de maker) waar deze video in zit
+function serieInfo(v) {
+  const owner = userById(v.userId);
+  const s = (owner?.series || []).find(x => x.videoIds.includes(v.id));
+  return s ? { id: s.id, naam: s.naam, index: s.videoIds.indexOf(v.id) + 1, totaal: s.videoIds.length } : null;
 }
 
 function duetInfo(did) {
@@ -200,6 +216,11 @@ app.patch('/api/settings', auth, (req, res) => {
   if (typeof b.allowDownload === 'boolean') s.allowDownload = b.allowDownload;
   if (['dark', 'light', 'system'].includes(b.theme)) s.theme = b.theme;
   if (Number.isFinite(+b.breakReminder)) s.breakReminder = Math.max(0, Math.min(180, Math.round(+b.breakReminder)));
+  if (['persoon', 'bedrijf'].includes(b.accountType)) s.accountType = b.accountType;
+  if (b.website !== undefined) s.website = veiligeUrl(b.website);
+  if (b.werkLink !== undefined) s.werkLink = veiligeUrl(b.werkLink);
+  if (['normaal', 'groot'].includes(b.textSize)) s.textSize = b.textSize;
+  if (typeof b.reducedMotion === 'boolean') s.reducedMotion = b.reducedMotion;
   save();
   res.json({ settings: s });
 });
@@ -323,6 +344,7 @@ app.post('/api/videos', auth, upload.fields([{ name: 'video', maxCount: 1 }, { n
     publishAt: +req.body.publishAt > now() ? Math.min(+req.body.publishAt, now() + 30 * 864e5) : null,
     // concept: bewaard, alleen voor de maker zichtbaar, later met één tik te plaatsen
     draft: req.body.draft === 'true',
+    poll: parsePoll(req.body.poll), antwoordOp: parseAntwoord(req.body.antwoordOp, req.user),
     likes: [], favs: [], shares: 0, views: 0, dag: {}, created: now(), ip: clientIp(req),
   };
   if (v.draft) v.publishAt = null;
@@ -332,6 +354,59 @@ app.post('/api/videos', auth, upload.fields([{ name: 'video', maxCount: 1 }, { n
   if (v.published) meldPlaatsing(v);
   res.json({ video: publicVideo(v, req.user) });
 });
+
+function parsePoll(raw) {
+  try {
+    const p = raw && JSON.parse(raw); if (!p) return null;
+    const opties = (Array.isArray(p.opties) ? p.opties : []).map(t => String(t || '').trim().slice(0, 40)).filter(Boolean).slice(0, 4);
+    const vraag = String(p.vraag || '').trim().slice(0, 100);
+    return vraag && opties.length >= 2 ? { vraag, opties: opties.map(tekst => ({ tekst, stemmen: [] })) } : null;
+  } catch { return null; }
+}
+// video-antwoord op een reactie: alleen de maker van de video waar de reactie onder staat
+function parseAntwoord(commentId, me) {
+  const c = commentId && db.comments.find(x => x.id === commentId);
+  const v = c && db.videos.find(x => x.id === c.videoId);
+  if (!c || !v || v.userId !== me.id) return null;
+  return { commentId: c.id, text: c.text, username: userById(c.userId)?.username || '?' };
+}
+app.post('/api/videos/:id/poll', auth, (req, res) => {
+  const v = db.videos.find(x => x.id === req.params.id);
+  if (!v || !v.poll || !canSee(v, req.user)) return res.status(404).json({ error: 'Geen peiling' });
+  const i = +req.body?.i;
+  if (!(i >= 0 && i < v.poll.opties.length)) return res.status(400).end();
+  for (const o of v.poll.opties) o.stemmen = o.stemmen.filter(x => x !== req.user.id);
+  v.poll.opties[i].stemmen.push(req.user.id);
+  save();
+  res.json({ poll: pollInfo(v, req.user) });
+});
+
+// series: afspeellijsten van eigen video's (volgorde telt)
+const pubSerie = (s, u, viewer) => { const vids = s.videoIds.map(id => db.videos.find(v => v.id === id)).filter(v => v && canSee(v, viewer)); return { id: s.id, naam: s.naam, count: vids.length, thumb: vids[0]?.thumb ? '/uploads/' + vids[0].thumb : null, by: u.username }; };
+app.get('/api/series/van/:username', (req, res) => {
+  const u = userByName(req.params.username); if (!u) return res.status(404).end();
+  res.json({ series: (u.series || []).map(s => pubSerie(s, u, req.user)) });
+});
+app.get('/api/series/:id', (req, res) => {
+  const u = db.users.find(x => (x.series || []).some(s => s.id === req.params.id)); const s = u && u.series.find(x => x.id === req.params.id);
+  if (!s) return res.status(404).json({ error: 'Serie niet gevonden' });
+  res.json({ serie: pubSerie(s, u, req.user), videos: s.videoIds.map(id => db.videos.find(v => v.id === id)).filter(v => v && canSee(v, req.user)).map(v => publicVideo(v, req.user)) });
+});
+app.post('/api/series', auth, (req, res) => {
+  const naam = String(req.body?.naam || '').trim().slice(0, 50); if (!naam) return res.status(400).json({ error: 'Geef de serie een naam' });
+  const me = req.user; me.series = me.series || [];
+  const videoIds = (Array.isArray(req.body?.videoIds) ? req.body.videoIds : []).filter(id => db.videos.some(v => v.id === id && v.userId === me.id));
+  for (const s of me.series) s.videoIds = s.videoIds.filter(id => !videoIds.includes(id)); // een video zit in maximaal één serie
+  const s = { id: id(), naam, videoIds, created: now() }; me.series.push(s); save();
+  res.json({ serie: pubSerie(s, me, me) });
+});
+app.patch('/api/series/:id', auth, (req, res) => {
+  const me = req.user; const s = (me.series || []).find(x => x.id === req.params.id); if (!s) return res.status(404).end();
+  if (req.body?.naam) s.naam = String(req.body.naam).trim().slice(0, 50);
+  if (Array.isArray(req.body?.videoIds)) { s.videoIds = req.body.videoIds.filter(id => db.videos.some(v => v.id === id && v.userId === me.id)); for (const o of me.series) if (o !== s) o.videoIds = o.videoIds.filter(id => !s.videoIds.includes(id)); }
+  save(); res.json({ serie: pubSerie(s, me, me) });
+});
+app.delete('/api/series/:id', auth, (req, res) => { req.user.series = (req.user.series || []).filter(x => x.id !== req.params.id); save(); res.json({ ok: true }); });
 
 // concept plaatsen (of een geplande post nu al plaatsen)
 app.post('/api/videos/:id/publish', auth, (req, res) => {
@@ -455,6 +530,7 @@ function publicComment(c, viewer) {
     likedByCreator: v ? c.likes.includes(v.userId) : false,
     canDelete: viewer ? viewer.id === c.userId || (v && v.userId === viewer.id) : false,
     canPin: !!(viewer && v && v.userId === viewer.id), pinned: !!c.pinned,
+    videoAntwoord: db.videos.find(x => x.antwoordOp?.commentId === c.id && canSee(x, viewer))?.id || null,
     user: publicUser(userById(c.userId), viewer),
   };
 }
@@ -656,8 +732,8 @@ app.post('/api/notifications/read', auth, (req, res) => {
 });
 
 // ----- berichten -----
-function sendMessage(from, to, text, videoId = null) {
-  const m = { id: id(), from: from.id, to: to.id, text, videoId, created: now(), read: false };
+function sendMessage(from, to, text, videoId = null, extra = {}) {
+  const m = { id: id(), from: from.id, to: to.id, text, videoId, created: now(), read: false, ...extra };
   db.messages.push(m);
   save();
   const pm = publicMessage(m);
@@ -667,8 +743,20 @@ function sendMessage(from, to, text, videoId = null) {
 }
 function publicMessage(m) {
   const v = m.videoId && db.videos.find(x => x.id === m.videoId);
-  return { ...m, video: v ? { id: v.id, thumb: v.thumb ? '/uploads/' + v.thumb : null, caption: v.caption } : null };
+  return { ...m, audio: m.audio ? '/uploads/' + m.audio : null, reacties: m.reacties || {}, video: v ? { id: v.id, thumb: v.thumb ? '/uploads/' + v.thumb : null, caption: v.caption } : null };
 }
+// emoji-reactie op een bericht (één per persoon, nog een keer dezelfde = weg)
+app.post('/api/messages/:id/react', auth, (req, res) => {
+  const m = db.messages.find(x => x.id === req.params.id);
+  if (!m || (m.from !== req.user.id && m.to !== req.user.id)) return res.status(404).end();
+  const emoji = String(req.body?.emoji || '').slice(0, 4);
+  m.reacties = m.reacties || {};
+  if (!emoji || m.reacties[req.user.id] === emoji) delete m.reacties[req.user.id]; else m.reacties[req.user.id] = emoji;
+  save();
+  const pm = publicMessage(m);
+  push(m.to, { type: 'message:react', message: pm }); push(m.from, { type: 'message:react', message: pm });
+  res.json({ message: pm });
+});
 app.get('/api/conversations', auth, (req, res) => {
   const me = req.user.id;
   const convos = {};
@@ -691,7 +779,7 @@ app.get('/api/messages/:username', auth, (req, res) => {
   save();
   res.json({ user: publicUser(other, req.user), messages: list.map(publicMessage) });
 });
-app.post('/api/messages/:username', auth, (req, res) => {
+app.post('/api/messages/:username', auth, upload.single('audio'), (req, res) => {
   const other = userByName(req.params.username);
   if (!other) return res.status(404).end();
   if (other.blocked?.includes(req.user.id)) return res.status(403).json({ error: 'Je kunt deze persoon geen berichten sturen' });
@@ -699,8 +787,10 @@ app.post('/api/messages/:username', auth, (req, res) => {
   if (os.whoMessages === 'none') return res.status(403).json({ error: 'Deze persoon ontvangt geen berichten' });
   if (os.whoMessages === 'friends' && !isFriend(other, req.user)) return res.status(403).json({ error: 'Alleen vrienden kunnen deze persoon een bericht sturen' });
   const text = String(req.body?.text || '').trim().slice(0, 1000);
-  if (!text && !req.body?.videoId) return res.status(400).end();
-  res.json({ message: sendMessage(req.user, other, text, req.body?.videoId || null) });
+  // spraakbericht: audio-bestand (multipart) met de lengte in seconden
+  const audio = req.file && req.file.mimetype.startsWith('audio/') || req.file?.mimetype.includes('webm') ? req.file.filename : null;
+  if (!text && !req.body?.videoId && !audio) return res.status(400).end();
+  res.json({ message: sendMessage(req.user, other, text, req.body?.videoId || null, audio ? { audio, duur: Math.min(600, Math.max(0, Math.round(+req.body.duur || 0))) } : {}) });
 });
 
 // ----- LIVE -----
