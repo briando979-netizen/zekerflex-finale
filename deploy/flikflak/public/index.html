@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#000000">
+  <title>FlikFlak</title>
+  <link rel="icon" href="/logo.svg">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <div id="app">
+    <main id="view"></main>
+    <nav id="tabbar">
+      <a href="#/" data-tab="home"><i data-icon="home"></i><span>Home</span></a>
+      <a href="#/friends" data-tab="friends"><i data-icon="friends"></i><span>Vrienden</span></a>
+      <a href="#/upload" data-tab="upload" class="plus"><b>+</b></a>
+      <a href="#/inbox" data-tab="inbox"><i data-icon="inbox"></i><span>Inbox</span><em class="badge" hidden></em></a>
+      <a href="#/me" data-tab="me"><i data-icon="user"></i><span>Profiel</span></a>
+    </nav>
+  </div>
+  <div id="sheets"></div>
+  <div id="toast"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

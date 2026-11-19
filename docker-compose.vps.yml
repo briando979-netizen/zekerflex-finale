@@ -92,6 +92,7 @@ services:
       METABASE_HOST: ${METABASE_HOST:-bi.37-97-226-24.sslip.io}
       OUTLINE_HOST: ${OUTLINE_HOST:-kennis.37-97-226-24.sslip.io}
       FORGEJO_HOST: ${FORGEJO_HOST:-git.37-97-226-24.sslip.io}
+      FLIKFLAK_HOST: ${FLIKFLAK_HOST:-flikflak.37-97-226-24.sslip.io}
     ports:
       - "80:80"
       - "443:443"
@@ -106,8 +107,8 @@ services:
       - caddy-logs:/var/log/caddy
     depends_on:
       app: { condition: service_started }
-    # git: de eigen Git-server (Forgejo) zit alleen op dat netwerk
-    networks: [internal, bouwer-toegang, git]
+    # git: de eigen Git-server (Forgejo) zit alleen op dat netwerk; flikflak-net: FlikFlak idem
+    networks: [internal, bouwer-toegang, git, flikflak-net]
 
   postgres:
     image: postgres:18.6-bookworm
@@ -690,6 +691,29 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
+  # FlikFlak: de korte-video app van de eigenaar (deploy/flikflak), gehost op
+  # flikflak.zekerflex.com. Eigen kleine container met alleen express+multer+ws en
+  # een eigen geïsoleerd netwerk: géén toegang tot de echte database of Redis. Het
+  # heeft zijn eigen opslag op het volume flikflak-data (/data: de video's en db.json,
+  # zodat ze een uitrol overleven). Alleen Caddy praat ermee. De beheerpagina /beheer
+  # is dicht zonder FF_ADMIN_TOKEN (door env-aanvullen.sh aangemaakt). Moderatie en
+  # het bewaren van IP's staan open in de huisregels die iemand bij het aanmelden ziet.
+  flikflak:
+    build:
+      context: deploy/flikflak
+    image: zekerflex-flikflak:latest
+    restart: unless-stopped
+    init: true
+    environment:
+      FF_ADMIN_TOKEN: ${FF_ADMIN_TOKEN:-}
+    volumes:
+      - flikflak-data:/data
+    mem_limit: 384m
+    networks: [flikflak-net]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
 networks:
   internal:
     driver: bridge
@@ -708,6 +732,9 @@ networks:
   # NIET op internal: door de AI gewijzigde code (voorbeeld, tests) en de terminal
   # kunnen zo niet bij de echte database of Redis (die heeft geen wachtwoord).
   bouwer-toegang:
+    driver: bridge
+  # alleen FlikFlak en Caddy: FlikFlak komt zo nooit bij de echte database of Redis
+  flikflak-net:
     driver: bridge
   # Forgejo (eigen Git-server) en Caddy; met internet voor de spiegel, zonder Postgres/Redis
   git:
@@ -737,3 +764,4 @@ volumes:
   headscale-data:
   vpn-uitgang:
   android-bouwer-gradle:
+  flikflak-data:

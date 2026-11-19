@@ -215,6 +215,23 @@ vpn.zekerflex.com {
 	}
 }
 
+# FlikFlak (deploy/flikflak): de korte-video app op een eigen subdomein. Standaard een
+# sslip.io-naam; met een A-record kan FLIKFLAK_HOST flikflak.zekerflex.com worden. De
+# WebSocket (/ws, voor LIVE en chat) gaat automatisch mee via reverse_proxy. Video-
+# uploads tot 320 MB toestaan. FlikFlak draait op een eigen netwerk en kan niet bij
+# de app-database. Met het toegangslog, zodat CrowdSec ook deze inlogpagina bewaakt.
+{$FLIKFLAK_HOST:flikflak.37-97-226-24.sslip.io} {
+	import toegangslog
+	encode zstd gzip
+	request_body {
+		max_size 320MB
+	}
+	reverse_proxy flikflak:3001 {
+		header_up -X-ZF-Site-Host
+		header_up -X-ZF-Voorstel
+	}
+}
+
 # Websites van klanten op hun eigen domein. Alles op zo'n domein gaat naar die
 # website en nooit naar de app zelf: met deze kop stuurt de middleware het
 # verzoek naar /site-domein/<domein>/… (middleware.ts, customerSite).

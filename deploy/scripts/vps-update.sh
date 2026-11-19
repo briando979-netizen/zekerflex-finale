@@ -114,6 +114,8 @@ for i in 1 2 3; do
     fi
     # de browser-werker (deploy/scraper): eigen image, gecacht; een mislukte build laat de oude draaien
     sudo $C build -q scraper > /dev/null 2>&1 && sudo $C up -d scraper || echo "scraper: image bouwen mislukt, de oude blijft (of hij staat nog uit)"
+    # FlikFlak (deploy/flikflak): eigen klein image, gecacht; een mislukte build laat de oude draaien
+    sudo $C build -q flikflak > /dev/null 2>&1 && sudo $C up -d flikflak || echo "flikflak: image bouwen mislukt, de oude blijft"
     # de routeplanner (deploy/route): pas als zijn tegels gebouwd zijn (haal-route.sh); zonder
     # tegels zou hij blijven herstarten. Mislukt het, dan rekent de app de reistijd zelf uit.
     if [ -s route-data/actief/valhalla_tiles.tar ]; then
