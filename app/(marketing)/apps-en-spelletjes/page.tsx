@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default function AppsEnSpelletjesPagina() {
   return (
     <main>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(breadcrumbJsonLd([{ name: "Home", path: "/" }, { name: "Apps & spelletjes", path: "/apps-en-spelletjes" }])) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson(breadcrumbJsonLd([["Home", "/"], ["Apps & spelletjes", "/apps-en-spelletjes"]])) }} />
 
       <div className="hero-ink text-white">
         <div className="shell py-14 md:py-20">
