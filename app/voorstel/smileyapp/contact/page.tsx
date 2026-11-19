@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { CONTACT, CONTACT_PAGINA, KLANTLOGIN, beeld, looptijdTekst, pakket, prijsTekst } from "@/lib/voorstel/smileyapp";
+import { smileyappPakketten } from "@/lib/voorstel/smileyapp-pakketten";
 import { GeslotenFormulier } from "@/components/voorstel/smileyapp/GeslotenFormulier";
 import { Gezicht } from "@/components/voorstel/smileyapp/Gezicht";
 
@@ -9,7 +10,8 @@ export const metadata: Metadata = { title: "Contact" };
 export default async function SmileyappContact({ searchParams }: { searchParams: Promise<{ pakket?: string | string[] }> }) {
   const q = (await searchParams).pakket;
   // ?pakket=iso vanaf een prijskaart: dat pakket staat vooraan (en in het onderwerp van de mail)
-  const gekozen = pakket(Array.isArray(q) ? q[0] : q);
+  // de pakketten zoals de site ze nu toont (met de wijzigingen uit het beheer), dus dezelfde prijs als op de kaart
+  const gekozen = pakket(Array.isArray(q) ? q[0] : q, await smileyappPakketten());
   return (
     <>
       <section className="relative overflow-hidden bg-smiley-ink text-white">

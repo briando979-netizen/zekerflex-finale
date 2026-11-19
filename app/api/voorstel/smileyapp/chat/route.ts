@@ -13,6 +13,7 @@ import { zelfdeHerkomst } from "@/lib/voorstel/herkomst";
 import { CONTACT } from "@/lib/voorstel/smileyapp";
 import { heeftTeam } from "@/lib/voorstel/smileyapp-accounts";
 import { SMILEYAPP_KANAAL, smileyappKennis } from "@/lib/voorstel/smileyapp-chat";
+import { smileyappPakketten } from "@/lib/voorstel/smileyapp-pakketten";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,7 +50,7 @@ async function handlePOST(request: Request): Promise<Response> {
     const medewerker = await heeftTeam();
 
     if ("berichten" in d) {
-      return await chatAntwoord({ kanaal: SMILEYAPP_KANAAL, id: d.id, berichten: d.berichten, pagina: d.pagina, ip: clientIp(request) }, async () => smileyappKennis({ medewerker }));
+      return await chatAntwoord({ kanaal: SMILEYAPP_KANAAL, id: d.id, berichten: d.berichten, pagina: d.pagina, ip: clientIp(request) }, async () => smileyappKennis({ medewerker, pakketten: await smileyappPakketten() }));
     }
     // actie "mens": alleen als er echt iemand kan meelezen
     if (!medewerker) throw AppError.validation(`Er leest nu geen medewerker mee. Mail je vraag naar ${CONTACT.email}.`);

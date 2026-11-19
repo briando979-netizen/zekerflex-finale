@@ -14,6 +14,7 @@ import {
   VIDEO,
   pakketRegel,
   veelgesteld,
+  type Pakket,
 } from "@/lib/voorstel/smileyapp";
 
 // ---------------------------------------------------------------------------
@@ -35,8 +36,13 @@ const tekst = (b: (typeof BLOG)[number]) =>
 
 const kort = (s: string, max = 1400) => (s.length > max ? `${s.slice(0, max)} …` : s);
 
-export function smileyappKennis(o: { medewerker?: boolean } = {}): Kennis {
+/**
+ * `pakketten`: de pakketten zoals de site ze nu toont (met de wijzigingen uit het beheer,
+ * lib/voorstel/smileyapp-pakketten.ts), zodat de chat dezelfde prijzen noemt als de prijskaarten. Zonder: de standaard.
+ */
+export function smileyappKennis(o: { medewerker?: boolean; pakketten?: readonly Pakket[] } = {}): Kennis {
   const medewerker = o.medewerker === true;
+  const lijst = o.pakketten ?? PAKKETTEN;
   const vast: Fragment[] = [
     {
       titel: "Contact",
@@ -45,12 +51,12 @@ export function smileyappKennis(o: { medewerker?: boolean } = {}): Kennis {
     },
     {
       titel: "Pakketten en prijzen",
-      tekst: `${PAKKETTEN.map(pakketRegel).join(".\n")}.`,
+      tekst: `${lijst.map(pakketRegel).join(".\n")}.`,
       altijd: true,
     },
   ];
 
-  const pakketten: Fragment[] = PAKKETTEN.map((p) => ({
+  const pakketten: Fragment[] = lijst.map((p) => ({
     titel: `Pakket: ${p.naam}`,
     tekst: [pakketRegel(p), p.onderdelen.length ? `Inbegrepen: ${p.onderdelen.join(", ")}.` : "", ...(p.uitleg ?? [])].filter(Boolean).join(" "),
   }));
@@ -69,7 +75,7 @@ export function smileyappKennis(o: { medewerker?: boolean } = {}): Kennis {
   ];
 
   const blog: Fragment[] = BLOG.map((b) => ({ titel: `Blog: ${b.titel}`, tekst: kort(tekst(b)) }));
-  const vragen: Fragment[] = veelgesteld().map((v) => ({ titel: `Vraag: ${v.vraag}`, tekst: v.antwoord }));
+  const vragen: Fragment[] = veelgesteld(lijst).map((v) => ({ titel: `Vraag: ${v.vraag}`, tekst: v.antwoord }));
 
   return {
     bedrijf: CONTACT.naam,

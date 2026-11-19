@@ -45,14 +45,28 @@ export const HERO = {
   appVraag: "Weet jij hoe tevreden jouw gasten of klanten zijn?",
 } as const;
 
-export const MENU = [
+export interface MenuItem {
+  label: string;
+  href: string;
+  /**
+   * In de kop pas vanaf een breed scherm (xl). Op 1024 px is de kop met logo, zes links, Klantlogin en de demoknop
+   * al vol; daaronder staat de link in het uitklapmenu, en altijd in de footer.
+   */
+  breed?: boolean;
+}
+
+export const MENU: readonly MenuItem[] = [
   { label: "Zo werkt het", href: `${BASE}#zo-werkt-het` },
   { label: "Pakketten", href: `${BASE}#pakketten` },
   { label: "Klanten", href: `${BASE}#klanten` },
+  { label: "Branches", href: `${BASE}/branches`, breed: true },
   { label: "Blog", href: `${BASE}/blog` },
   { label: "Partner worden", href: `${BASE}/partner-worden` },
   { label: "Contact", href: `${BASE}/contact` },
-] as const;
+];
+
+/** Alleen in de footer (de kop zou te vol worden): de pagina's die via een sectie van de voorpagina bereikbaar zijn. */
+export const MENU_FOOTER: readonly MenuItem[] = [{ label: "Klantverhalen", href: `${BASE}/klanten` }];
 
 // ---- pakketten (de enige plek met prijzen) ---------------------------------
 
@@ -138,8 +152,9 @@ export const looptijdTekst = (p: Pick<Pakket, "minimaalMaanden">) => (p.minimaal
 export const pakketRegel = (p: Pakket) =>
   p.prijs === null ? `${p.naam}: prijs op aanvraag` : `${p.naam}: ${euro(p.prijs)} maandelijks, ${looptijdTekst(p).toLowerCase()}`;
 
-export function pakket(id: string | undefined | null): Pakket | undefined {
-  return PAKKETTEN.find((p) => p.id === id);
+/** Het pakket bij een id uit de adresbalk. `uit`: de pakketten zoals de site ze nu toont (met de wijzigingen uit het beheer). */
+export function pakket(id: string | undefined | null, uit: readonly Pakket[] = PAKKETTEN): Pakket | undefined {
+  return uit.find((p) => p.id === id);
 }
 
 // ---- de rest van de voorpagina ---------------------------------------------
@@ -429,17 +444,24 @@ export interface Vraag {
   antwoord: string;
 }
 
-export function veelgesteld(): Vraag[] {
-  const metPrijs = PAKKETTEN.filter((p) => p.prijs !== null);
+/**
+ * `pakketten`: de pakketten zoals de site ze nu toont (lib/voorstel/smileyapp-pakketten.ts), zodat de antwoorden
+ * over prijs en looptijd altijd gelijk zijn aan de prijskaarten. Zonder: de standaard.
+ */
+const AANTAL_WOORD: Record<number, string> = { 1: "één", 2: "twee", 3: "drie", 4: "vier", 5: "vijf" };
+
+export function veelgesteld(pakketten: readonly Pakket[] = PAKKETTEN): Vraag[] {
+  const metLooptijd = pakketten.filter((p) => p.minimaalMaanden !== null);
+  const zonderPrijs = pakketten.filter((p) => p.prijs === null);
   return [
     { vraag: "Hoe werkt Smileyapp?", antwoord: `${JOIN.tekst[1]} ${JOIN.tekst[3]}` },
     {
       vraag: "Wat kost Smileyapp?",
-      antwoord: `Er zijn vier pakketten. ${PAKKETTEN.map(pakketRegel).join(". ")}.`,
+      antwoord: `Er zijn ${AANTAL_WOORD[pakketten.length] ?? pakketten.length} pakketten. ${pakketten.map(pakketRegel).join(". ")}.`,
     },
     {
       vraag: "Hoe lang loopt een pakket minimaal?",
-      antwoord: `${metPrijs.map((p) => `${p.naam}: ${looptijdTekst(p).toLowerCase()}`).join(". ")}. Het Maatwerk Pakket stel je zelf samen, zodat je exact krijgt wat je nodig hebt.`,
+      antwoord: `${[...metLooptijd.map((p) => `${p.naam}: ${looptijdTekst(p).toLowerCase()}`), ""].join(". ")}${zonderPrijs.some((p) => p.id === "maatwerk") ? "Het Maatwerk Pakket stel je zelf samen, zodat je exact krijgt wat je nodig hebt." : ""}`.trim(),
     },
     { vraag: "Welke soorten vragen kan ik stellen?", antwoord: `Je kunt bijvoorbeeld kiezen uit ${VRAAGSOORTEN.slice(0, -1).join(", ")} of ${VRAAGSOORTEN[VRAAGSOORTEN.length - 1] ?? ""}.` },
     { vraag: "Voor welke branches is Smileyapp geschikt?", antwoord: "Smileyapp is inzetbaar voor alle branches. Het animatiefilmpje op deze pagina laat zien hoe het in de horeca kan werken." },
