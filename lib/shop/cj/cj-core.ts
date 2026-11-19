@@ -138,10 +138,17 @@ export function voorraadVan(inventories: unknown, land?: string): number {
 // "Toys For Boys" onder "Event & Party Supplies" naar Speelgoed (niet naar Cadeaus om dat "party"),
 // en een "Bean Bag Chair" onder "Furniture" naar Wonen & keuken (niet naar Tassen om dat "bag").
 // Cadeaus is de laatste regel én de uitkomst als niets past.
+// 19 nov: de CJ-categorie ("Home, Furniture & DIY", "Consumer Electronics") won te vaak van een duidelijke naam: 609 van
+// de 923 producten stonden onder Wonen & keuken (kostuums, sokken, zeep, een zipline), en bedden en salontafels onder
+// Elektronica ("with LED", "USB"), Werk & PBM ("safety glass") of Tuin & klussen ("ladder"). Daarom eerst de huisdieren,
+// dan meubels (een meubelnaam is altijd een meubel), en na baby de duidelijke woorden voor feest, kleding, beauty en sport.
 const REGELS: [RegExp, ShopCategorie][] = [
-  [/\b(safety|work ?wear|workwear|ppe|protective|hi-?vis|helmet|work glove)/i, "Werk & PBM"],
   // huisdieren vóór speelgoed: "cat toy" en "dog ball" zijn voor het dier
   [/\b(pets?\b|dog (toy|toys|bed|leash|collar|bowl|food|harness)|cat (toy|toys|tree|bed|litter|scratch\w*)|for (dogs?|cats?)\b|puppy|kitten|leash|aquarium|hamster|bird cage|litter box)/i, "Huisdieren"],
+  // een gereedschapskast is gereedschap, geen meubel
+  [/\b(tool (cabinet|chest|box|trolley|cart)|workbench)/i, "Tuin & klussen"],
+  [/\b(bed ?frames?|loft bed|bunk bed|platform bed|day ?bed|sofa|couch|loveseat|sectional|coffee table|dining (table|chairs?|set)|side table|end table|console table|tv (stand|cabinet|unit)|cabinet|wardrobe|sideboard|credenza|bookcase|bookshelf|dresser|nightstand|bedside table|bar stools?|armchair|chaise)\b/i, "Wonen & keuken"],
+  [/\b(safety|work ?wear|workwear|ppe|protective|hi-?vis|helmet|work glove)/i, "Werk & PBM"],
   // gaming en hobby vóór auto (een racestuur is geen auto-onderdeel) en vóór elektronica (een gaming-stoel is geen elektronica)
   [/\b(gaming|gamer|gamepad|game (controller|table)|console|playstation|xbox|nintendo|wheel stand|racing wheel|sim racing|foosball|air hockey|billiard|pool table|model kit|diamond painting|knitting|crochet|embroidery|3d pen|paint by numbers|airbrush|spray booth|hobby)/i, "Gaming & hobby"],
   [/\b(car (accessor|mount|holder|seat|wash|vacuum|sticker|charger|organizer|cover|phone)|automotive|dash ?cam|bicycle|bike|cycling|e-?bike|scooter|motorcycle|tires?\b|tyres?\b|windshield|steering wheel)/i, "Auto & fiets"],
@@ -150,6 +157,10 @@ const REGELS: [RegExp, ShopCategorie][] = [
   [/\b(baby|babies|infant|newborn|toddler|stroller|diaper|nappy|pacifier|crib|bibs?\b|teether|nursery)/i, "Baby & kind"],
   // "napkin rings" en "ring light" zijn geen sieraden
   [/\b(napkin rings?|curtain rings?|key ?rings?|ring (light|holder|binder))/i, "Wonen & keuken"],
+  [/\b(costumes?|cosplay|halloween|christmas|xmas|napkins|garlands?|balloons?|birthday|wedding|graduation|guest book|confetti|witch|vampire|pirate|wigs?\b)/i, "Feest & seizoen"],
+  [/\b(socks|dress(es)?|t-?shirts?|hoodies?|jeans|trousers|sweaters?|leggings|skirts?|blouses?|jumpsuits?|overalls?|tank tops?)\b/i, "Kleding"],
+  [/\b(mascara|eyeliner|lipstick|shampoo|conditioner|soap|face (scrub|mask|cream|serum)|beard (dye|oil)|nail polish|perfume)\b/i, "Beauty & verzorging"],
+  [/\b(trampoline|zip ?line|rebounder|table tennis|ping pong|skateboard)\b/i, "Sport & buiten"],
   [/\b(jewel|necklace|bracelet|earring|pendant|rings?\b(?! light)|watch(?!.*smart)|watches)/i, "Sieraden & horloges"],
   [/\b(electronic|bluetooth|speaker|headphone|earphone|earbud|charger|charging|cable|usb|power bank|camera|smart ?watch|smart home|phone|tablet|keyboard|mouse|gadget|led strip|drone|projector|tracker|microphone|router|webcam)/i, "Elektronica"],
   [/\b(garden (hose|tools?|lights?|planter|decor)|gardening|lawn|planter|hose|tools?\b|drill|screwdriver|wrench|pliers|tape measure|ladder|diy|hardware|workbench|soldering|glue gun)/i, "Tuin & klussen"],

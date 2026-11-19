@@ -115,6 +115,19 @@ describe("categorie en doelgroep", () => {
     ["Sports", "Professional dartboard", "Sport & buiten"],
     ["Toys", "Kids play shop box", "Speelgoed"],
     ["Toys & Hobbies", "Plush bear", "Speelgoed"],
+    // 19 nov: de CJ-categorie won van een duidelijke naam (609 van 923 onder Wonen & keuken, bedden onder Elektronica)
+    ["Home Decor", "Halloween Witch Costume Set 2 Pieces", "Feest & seizoen"],
+    ["Home, Furniture & DIY", "Pirate costume set with eye patch and cape", "Feest & seizoen"],
+    ["Home & Garden", "Do Not Disturb Socks 2 Pairs", "Kleding"],
+    ["Consumer Electronics", "Coffee Table With LED Light And Drawers", "Wonen & keuken"],
+    ["Consumer Electronics", "Bed frame 140x200 with USB and LED", "Wonen & keuken"],
+    ["Tools", "Metal Loft Bed 90x200 With Ladder", "Wonen & keuken"],
+    ["Safety", "Two-tier safety glass coffee table", "Wonen & keuken"],
+    ["Phone Accessories", "Dining table set with 4 chairs", "Wonen & keuken"],
+    ["Home & Garden", "Zipline kit for backyard", "Sport & buiten"],
+    ["Home Improvement", "Black soap hair care series", "Beauty & verzorging"],
+    ["Furniture", "Metal tool cabinet with 4 drawers", "Tuin & klussen"],
+    ["Pet Supplies", "Pet sofa for small dogs", "Huisdieren"],
   ])("%s / %s → %s", (cat, naam, verwacht) => {
     expect(categorieVanCj(cat, naam)).toBe(verwacht);
   });
