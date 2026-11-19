@@ -12,6 +12,10 @@ export interface WachtGroep {
   urgent: boolean;
   /** wacht er iets al langer dan 24 uur */
   oud: boolean;
+  /** komt altijd in de ochtendlijst, ook als het nog vers en niet dringend is (een werker wacht op antwoord van een mens) */
+  altijd?: boolean;
+  /** waar de eigenaar het in Beheer ziet, bijvoorbeeld /admin/gebruikers; zonder namen of id's */
+  link?: string;
 }
 
 export const euro = (cents: number): string => `€ ${(cents / 100).toLocaleString("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -23,13 +27,15 @@ export function ouderDan(atIso: string, nu: Date, uren: number): boolean {
 }
 
 /** Zet losse items (met soort, ernst en tijd) om in groepen per soort, de dringendste eerst. */
-export function groepeerWacht(items: { soort: string; urgent: boolean; at: string }[], nu: Date): WachtGroep[] {
+export function groepeerWacht(items: { soort: string; urgent: boolean; at: string; altijd?: boolean; link?: string }[], nu: Date): WachtGroep[] {
   const per = new Map<string, WachtGroep>();
   for (const i of items) {
     const g = per.get(i.soort) ?? { soort: i.soort, aantal: 0, urgent: false, oud: false };
     g.aantal += 1;
     g.urgent ||= i.urgent;
     g.oud ||= ouderDan(i.at, nu, 24);
+    if (i.altijd) g.altijd = true;
+    if (i.link && !g.link) g.link = i.link;
     per.set(i.soort, g);
   }
   return [...per.values()].sort((a, b) => Number(b.urgent) - Number(a.urgent) || Number(b.oud) - Number(a.oud) || b.aantal - a.aantal || a.soort.localeCompare(b.soort));
@@ -79,10 +85,14 @@ export function dagrapportTekst(inv: DagrapportInvoer): string {
  * om niets.
  */
 export function wachtOpJouTekst(wacht: WachtGroep[], basisUrl: string): string | null {
-  const belangrijk = wacht.filter((g) => g.urgent || g.oud);
+  const belangrijk = wacht.filter((g) => g.urgent || g.oud || g.altijd);
   if (belangrijk.length === 0) return null;
+  const basis = basisUrl.replace(/\/+$/, "");
   const regels = [`⏳ ZekerFlex: dit wacht op jou (${wacht.reduce((s, g) => s + g.aantal, 0)} in totaal)`];
-  for (const g of belangrijk.slice(0, 6)) regels.push(regel(g));
-  regels.push(`Te doen: ${basisUrl.replace(/\/+$/, "")}/admin/te-doen`);
+  const getoond = belangrijk.slice(0, 6);
+  for (const g of getoond) regels.push(regel(g));
+  // een direct adres bij wat een mens moet beoordelen (zoals een ID-controle), zonder namen of id's
+  for (const g of getoond) if (g.link) regels.push(`${g.soort}: ${basis}${g.link}`);
+  regels.push(`Te doen: ${basis}/admin/te-doen`);
   return regels.join("\n");
 }
