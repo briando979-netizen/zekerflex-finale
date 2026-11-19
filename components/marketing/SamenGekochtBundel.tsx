@@ -7,19 +7,30 @@ import { useShopCart } from "@/components/marketing/useShopCart";
 import { CART_OPEN_EVENT } from "@/components/marketing/ShopChrome";
 import { IconCart } from "@/components/marketing/ShopProductCard";
 import { ProductPlaceholder } from "@/components/marketing/ProductPlaceholder";
+import { bySize } from "@/components/marketing/shop-product";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
 
 // "Vaak samen gekocht" als koopset (zoals bol.com): de foto's met + ertussen, een
 // totaalprijs en één knop om de aangevinkte artikelen samen in de winkelwagen te
-// leggen. Alleen artikelen met één variant staan erbij (die kun je in één klik
-// toevoegen); een artikel met maten/kleuren kies je op zijn eigen pagina. Het
+// leggen. Een artikel met maten/kleuren krijgt in de set een compacte keuze, met
+// de eerste beschikbare maat al voorgekozen, zodat "toevoegen" meteen werkt. Het
 // hoofdartikel (deze pagina) staat vast aangevinkt met zijn gekozen maat.
 
-export type SamenItem = { variantId: string; slug: string; name: string; imageUrl: string | null; priceCents: number };
+export type SamenVariant = { id: string; size: string | null; color: string | null; priceCents: number | null; stock: number };
+export type SamenItem = { slug: string; name: string; imageUrl: string | null; basePriceCents: number; variants: SamenVariant[] };
 
 const money = (cents: number) => `€ ${(cents / 100).toFixed(2).replace(".", ",")}`;
 const H2 = "font-display text-[20px] font-bold tracking-tight text-ink sm:text-[22px]";
+
+/** De variant die hoort bij de gekozen maat/kleur (of de enige variant als er geen keuze is). */
+function kiesVariant(variants: SamenVariant[], size: string | null, color: string | null): SamenVariant | undefined {
+  const heeftMaat = variants.some((v) => v.size);
+  const heeftKleur = variants.some((v) => v.color);
+  return variants.find((v) => (!heeftMaat || v.size === size) && (!heeftKleur || v.color === color));
+}
+
+type Sel = { checked: boolean; size: string | null; color: string | null };
 
 export function SamenGekochtBundel({
   titel,
@@ -33,33 +44,45 @@ export function SamenGekochtBundel({
 }) {
   const t = useT();
   const { add, count } = useShopCart();
-  const [gekozen, setGekozen] = useState<Set<string>>(() => new Set(companions.map((c) => c.variantId)));
   const [added, setAdded] = useState(false);
+  const [sel, setSel] = useState<Record<string, Sel>>(() =>
+    Object.fromEntries(
+      companions.map((c) => {
+        const eerste = c.variants.find((v) => v.stock > 0) ?? c.variants[0];
+        return [c.slug, { checked: true, size: eerste?.size ?? null, color: eerste?.color ?? null }];
+      }),
+    ),
+  );
 
-  const gekozenItems = companions.filter((c) => gekozen.has(c.variantId));
-  const aantal = (hoofd.variantId ? 1 : 0) + gekozenItems.length;
-  const totaal = (hoofd.variantId ? hoofd.priceCents : 0) + gekozenItems.reduce((s, c) => s + c.priceCents, 0);
+  const regels = companions.map((c) => {
+    const s = sel[c.slug] ?? { checked: true, size: null, color: null };
+    const variant = kiesVariant(c.variants, s.size, s.color);
+    const beschikbaar = Boolean(variant) && (variant?.stock ?? 0) > 0;
+    const prijs = variant?.priceCents ?? c.basePriceCents;
+    const sizes = [...new Set(c.variants.map((v) => v.size).filter((x): x is string => Boolean(x)))].sort(bySize);
+    const colors = [...new Set(c.variants.map((v) => v.color).filter((x): x is string => Boolean(x)))];
+    return { c, s, variant, beschikbaar, prijs, sizes, colors };
+  });
+
+  const gekozen = regels.filter((r) => r.s.checked && r.beschikbaar && r.variant);
+  const aantal = (hoofd.variantId ? 1 : 0) + gekozen.length;
+  const totaal = (hoofd.variantId ? hoofd.priceCents : 0) + gekozen.reduce((sum, r) => sum + r.prijs, 0);
   const canAdd = Boolean(hoofd.variantId) && aantal > 0;
 
   const thumbs = useMemo(
-    () => [{ key: "hoofd", slug: hoofd.slug, name: hoofd.name, imageUrl: hoofd.imageUrl, aan: true }, ...companions.map((c) => ({ key: c.variantId, slug: c.slug, name: c.name, imageUrl: c.imageUrl, aan: gekozen.has(c.variantId) }))],
-    [hoofd, companions, gekozen],
+    () => [{ key: "hoofd", slug: hoofd.slug, name: hoofd.name, imageUrl: hoofd.imageUrl, aan: true }, ...regels.map((r) => ({ key: r.c.slug, slug: r.c.slug, name: r.c.name, imageUrl: r.c.imageUrl, aan: r.s.checked && r.beschikbaar }))],
+    [hoofd, regels],
   );
 
-  function toggle(variantId: string) {
+  function patch(slug: string, p: Partial<Sel>) {
     setAdded(false);
-    setGekozen((prev) => {
-      const next = new Set(prev);
-      if (next.has(variantId)) next.delete(variantId);
-      else next.add(variantId);
-      return next;
-    });
+    setSel((prev) => ({ ...prev, [slug]: { ...(prev[slug] ?? { checked: true, size: null, color: null }), ...p } }));
   }
 
   function voegToe() {
     if (!canAdd) return;
     if (hoofd.variantId) add(hoofd.variantId);
-    for (const c of gekozenItems) add(c.variantId);
+    for (const r of gekozen) if (r.variant) add(r.variant.id);
     setAdded(true);
     window.dispatchEvent(new Event(CART_OPEN_EVENT));
   }
@@ -69,9 +92,9 @@ export function SamenGekochtBundel({
       <h2 id="samen-kop" className={H2}>
         {titel}
       </h2>
-      <div className="mt-5 rounded-xl border border-hair p-5 lg:flex lg:items-center lg:gap-8">
+      <div className="mt-5 rounded-xl border border-hair p-5 lg:flex lg:items-start lg:gap-8">
         {/* foto's met + ertussen en = totaal */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 lg:pt-1">
           {thumbs.map((it, i) => (
             <Fragment key={it.key}>
               {i > 0 && (
@@ -94,9 +117,9 @@ export function SamenGekochtBundel({
           <span className="text-[20px] font-extrabold text-ink">{money(totaal)}</span>
         </div>
 
-        {/* lijst met vinkjes + knop */}
+        {/* lijst met vinkjes, maatkeuze en knop */}
         <div className="mt-5 lg:mt-0 lg:flex-1">
-          <ul className="space-y-2">
+          <ul className="space-y-2.5">
             <li className="flex items-center gap-2.5 text-[14px]">
               <input type="checkbox" checked disabled aria-label={`${t.shop.samenDitArtikel}: ${hoofd.name}`} className="h-4 w-4 shrink-0 accent-[#0b3d2e]" />
               <span className="min-w-0 flex-1 truncate">
@@ -104,15 +127,47 @@ export function SamenGekochtBundel({
               </span>
               <span className="shrink-0 font-semibold text-ink">{money(hoofd.priceCents)}</span>
             </li>
-            {companions.map((c) => (
-              <li key={c.variantId} className="flex items-center gap-2.5 text-[14px]">
-                <input id={`samen-${c.variantId}`} type="checkbox" checked={gekozen.has(c.variantId)} onChange={() => toggle(c.variantId)} className="h-4 w-4 shrink-0 accent-[#0b3d2e]" />
-                <label htmlFor={`samen-${c.variantId}`} className="min-w-0 flex-1 cursor-pointer truncate text-neutralx-700">
-                  <Link href={`/shop/${c.slug}`} className="hover:underline">
-                    {c.name}
+            {regels.map((r) => (
+              <li key={r.c.slug} className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[14px]">
+                <input id={`samen-${r.c.slug}`} type="checkbox" checked={r.s.checked} onChange={() => patch(r.c.slug, { checked: !r.s.checked })} disabled={!r.beschikbaar} className="h-4 w-4 shrink-0 accent-[#0b3d2e]" />
+                <label htmlFor={`samen-${r.c.slug}`} className="min-w-0 flex-1 cursor-pointer truncate text-neutralx-700">
+                  <Link href={`/shop/${r.c.slug}`} className="hover:underline">
+                    {r.c.name}
                   </Link>
                 </label>
-                <span className="shrink-0 font-semibold text-ink">{money(c.priceCents)}</span>
+                {r.sizes.length > 1 && (
+                  <label className="shrink-0">
+                    <span className="sr-only">{fmt(t.shop.samenMaatVoor, { naam: r.c.name })}</span>
+                    <select
+                      value={r.s.size ?? ""}
+                      onChange={(e) => patch(r.c.slug, { size: e.target.value || null })}
+                      className="h-8 rounded-lg border border-hairstrong bg-white px-2 text-[13px] font-semibold text-ink"
+                    >
+                      {r.sizes.map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                {r.colors.length > 1 && (
+                  <label className="shrink-0">
+                    <span className="sr-only">{fmt(t.shop.samenKleurVoor, { naam: r.c.name })}</span>
+                    <select
+                      value={r.s.color ?? ""}
+                      onChange={(e) => patch(r.c.slug, { color: e.target.value || null })}
+                      className="h-8 rounded-lg border border-hairstrong bg-white px-2 text-[13px] font-semibold text-ink"
+                    >
+                      {r.colors.map((k) => (
+                        <option key={k} value={k}>
+                          {k}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <span className={`shrink-0 font-semibold ${r.beschikbaar ? "text-ink" : "text-neutralx-400 line-through"}`}>{money(r.prijs)}</span>
               </li>
             ))}
           </ul>

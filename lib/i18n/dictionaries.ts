@@ -922,6 +922,8 @@ export const nl = {
     samenTotaal: "Totaal",
     samenKnop: "Geselecteerde toevoegen",
     samenKiesMaat: "Kies eerst hierboven een maat.",
+    samenMaatVoor: "Maat voor {naam}",
+    samenKleurVoor: "Kleur voor {naam}",
     photoOf: "Foto {n} van {total}",
     heroTitle: "Alles voor een veilige werkdag",
     heroSub: "Veiligheidsschoenen, handschoenen en zichtbaarheid — gecertificeerd en op voorraad.",

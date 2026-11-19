@@ -148,10 +148,10 @@ export function ProductDetail({
   const variantStock = variant?.stock ?? product.stock;
   const canBuy = Boolean(variant) && variantStock > 0 && !bestellenDicht;
   const buyLabel = bestellenDicht ? t.shop.orderClosedShort : !variant ? t.shop.chooseOptionShort : variantStock <= 0 ? t.shop.soldOut : t.shop.addToCart;
-  // bol.com-koopset: aanbevolen artikelen met één variant die je in één klik mee kunt nemen (hooguit twee); maat/kleur-artikelen horen hier niet bij
-  const samenBron = useMemo(() => related.filter((r) => r.variants.length === 1 && (r.variants[0]?.stock ?? 0) > 0).slice(0, 2), [related]);
+  // bol.com-koopset: aanbevolen artikelen op voorraad (hooguit twee); een artikel met maten/kleuren krijgt in de set een eigen keuze
+  const samenBron = useMemo(() => related.filter((r) => r.variants.some((v) => v.stock > 0)).slice(0, 2), [related]);
   const samenCompanions = useMemo<SamenItem[]>(
-    () => samenBron.map((r) => ({ variantId: r.variants[0]!.id, slug: r.slug, name: r.name, imageUrl: r.imageUrl, priceCents: r.variants[0]!.priceCents ?? r.priceCents })),
+    () => samenBron.map((r) => ({ slug: r.slug, name: r.name, imageUrl: r.imageUrl, basePriceCents: r.priceCents, variants: r.variants.map((v) => ({ id: v.id, size: v.size, color: v.color, priceCents: v.priceCents, stock: v.stock })) })),
     [samenBron],
   );
   const toonBundel = samenCompanions.length > 0 && !bestellenDicht;

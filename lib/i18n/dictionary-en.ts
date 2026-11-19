@@ -908,6 +908,8 @@ export const en: Dict = {
     samenTotaal: "Total",
     samenKnop: "Add selected",
     samenKiesMaat: "Pick a size above first.",
+    samenMaatVoor: "Size for {naam}",
+    samenKleurVoor: "Colour for {naam}",
     photoOf: "Photo {n} of {total}",
     heroTitle: "Everything for a safe working day",
     heroSub: "Safety shoes, gloves and high-visibility gear — certified and in stock.",
