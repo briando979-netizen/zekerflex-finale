@@ -3,7 +3,7 @@ import { join } from "node:path";
 import type { ReactElement } from "react";
 import { ImageResponse } from "next/og";
 import { leesLetterMaten, maakMeter, type LetterMaten, type Meter } from "@/lib/advertentie/letter-maat";
-import { LETTER, ontwerpBoom, type OntwerpGegevens } from "@/lib/advertentie/ontwerp";
+import { ADVERTENTIE_WATERMERK_LETTER, LETTER, advertentieTinten, ontwerpBoom, watermerkLos, type OntwerpGegevens, type WatermerkTinten } from "@/lib/advertentie/ontwerp";
 import { renderRij } from "@/lib/advertentie/render-rij";
 import { tekensUitTekst } from "@/lib/logo/tekens/trefwoorden";
 import { FORMATEN, kleurHex, type Advertentie, type BeeldBesluit, type OntwerpNr } from "@/lib/advertentie/regels";
@@ -115,8 +115,29 @@ export async function maakPng(boom: ReactElement, breedte: number, hoogte: numbe
   return renderRij(() => new ImageResponse(boom, { width: breedte, height: hoogte, fonts }).arrayBuffer());
 }
 
+/**
+ * De watermerklaag als plaatje (data-URI), één keer gemaakt per maat en tint en daarna uit het geheugen. Het watermerk
+ * bestaat uit honderden stukjes tekst; die bij elk beeld opnieuw zetten kostte een seconde per logo en drie per
+ * advertentie. Als plaatje over het ontwerp kost het bijna niets. Op globalThis: Next bundelt routes apart.
+ */
+const lagen = ((globalThis as typeof globalThis & { __zfWatermerkLagen?: Map<string, Promise<string>> }).__zfWatermerkLagen ??= new Map());
+export function watermerkLaag(basisB: number, basisH: number, breedte: number, letter: number, tinten: WatermerkTinten): Promise<string> {
+  const sleutel = `${basisB}x${basisH}@${breedte}:${letter}:${tinten.snij}:${tinten.inkt}`;
+  let laag = lagen.get(sleutel);
+  if (!laag) {
+    laag = maakPng(watermerkLos(basisB, basisH, breedte, letter, tinten), breedte, Math.round((breedte * basisH) / basisB)).then((png) => `data:image/png;base64,${Buffer.from(png).toString("base64")}`);
+    lagen.set(sleutel, laag);
+    laag.catch(() => lagen.delete(sleutel));
+    // hooguit een paar honderd combinaties van maat en tint; de oudste eruit als het er toch meer worden
+    if (lagen.size > 300) lagen.delete(lagen.keys().next().value ?? sleutel);
+  }
+  return laag;
+}
+
 /** De PNG van één ontwerp, precies zoals het besluit (lib/advertentie/regels.ts beeldBesluit) zegt. */
 export async function maakBeeld(gegevens: OntwerpGegevens, ontwerp: OntwerpNr, besluit: BeeldBesluit, hoeklabel = false): Promise<ArrayBuffer> {
   const hoogte = Math.round((besluit.breedte * FORMATEN[besluit.formaat].hoogte) / FORMATEN[besluit.formaat].breedte);
-  return maakPng(ontwerpBoom(ontwerp, gegevens, besluit.formaat, besluit.breedte, besluit.watermerk, hoeklabel), besluit.breedte, hoogte);
+  const f = FORMATEN[besluit.formaat];
+  const laag = besluit.watermerk ? await watermerkLaag(f.breedte, f.hoogte, besluit.breedte, ADVERTENTIE_WATERMERK_LETTER, advertentieTinten(ontwerp, gegevens)) : undefined;
+  return maakPng(ontwerpBoom(ontwerp, gegevens, besluit.formaat, besluit.breedte, besluit.watermerk, hoeklabel, laag), besluit.breedte, hoogte);
 }

@@ -29,7 +29,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ sleu
       geheugen.set(k, beeld);
       beeld.catch(() => geheugen.delete(k));
     }
-    return new Response((await beeld).slice(0), { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" } });
+    return new Response((await beeld).slice(0), { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=604800, stale-while-revalidate=2592000" } });
   } catch (err) {
     return beeldFout(err);
   }

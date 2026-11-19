@@ -7,6 +7,8 @@
 // de gedeelde rij staat op globalThis, omdat Next elke route apart bundelt.
 // ---------------------------------------------------------------------------
 
+import { availableParallelism } from "node:os";
+
 export class RijVol extends Error {
   constructor() {
     super("Het is even druk met het maken van beelden.");
@@ -48,6 +50,10 @@ export function maakRij(max = 2, wachtMs = 8000): Rij {
   };
 }
 
-const g = globalThis as typeof globalThis & { __zfRenderRij?: Rij };
-/** De ene rij voor alle beelden van de advertenties en de logo maker: twee tegelijk, hooguit acht seconden wachten. */
-export const renderRij: Rij = (taak) => (g.__zfRenderRij ??= maakRij(2, 8000))(taak);
+/** Hoeveel renders tegelijk: één kern vrijlaten voor de rest van de site, minstens twee, hooguit vier. */
+export const gelijktijdig = (kernen: number): number => Math.max(2, Math.min(4, Math.floor(kernen) - 1));
+export const WACHT_MS = 30_000;
+
+const g = globalThis as typeof globalThis & { __zfRenderRij2?: Rij };
+/** De ene rij voor alle beelden van de advertenties en de logo maker; wie langer dan een halve minuut wacht, krijgt RijVol. */
+export const renderRij: Rij = (taak) => (g.__zfRenderRij2 ??= maakRij(gelijktijdig(availableParallelism()), WACHT_MS))(taak);

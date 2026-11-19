@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { LogoMockups } from "@/components/marketing/studio/Mockups";
+import { VoorbeeldBeeld } from "@/components/marketing/studio/VoorbeeldBeeld";
 import { BEWAAR_DAGEN } from "@/lib/advertentie/regels";
 import { THEMAS, VARIANTEN, VARIANT_IDS, type Logo, type LogoNr, type ThemaId, type VariantId } from "@/lib/logo/regels";
 
@@ -13,7 +14,6 @@ import { THEMAS, VARIANTEN, VARIANT_IDS, type Logo, type LogoNr, type ThemaId, t
 // watermerk. Slepen, het contextmenu en selecteren staan uit, maar dat is alleen gemak: de echte bescherming is dat de
 // schone versie hier niet bestaat. Elk vak heeft een vaste verhouding, zodat er tijdens het laden niets verspringt.
 
-const geenMenu = (e: React.MouseEvent) => e.preventDefault();
 const VLAK: Record<ThemaId, string> = { donker: "#0B0B0C", licht: "#FFFFFF", kleur: "#FFFFFF" };
 /** De ondergrond waarop een variant na vrijgave getoond wordt: wit logo op donker, de rest op licht. */
 const ONDERGROND: Record<VariantId, string> = { "kleur-wit": "#FFFFFF", kleur: "#F3F1EA", wit: "#17211C", zwart: "#F3F1EA", icoon: "#F3F1EA" };
@@ -96,18 +96,12 @@ export function LogoResultaat({ id, naam: bedrijf, kleur, status: beginStatus, g
                   <button type="button" onClick={() => !vrijgegeven && setLogo(l.nr)} aria-pressed={aan} disabled={vrijgegeven} className="group relative block w-full focus-visible:outline-none">
                     <span className="relative block aspect-[4/3] w-full">
                       <span className="absolute inset-0 animate-pulse motion-reduce:animate-none" style={{ background: thema === "donker" ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)" }} aria-hidden />
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        key={thema}
+                      <VoorbeeldBeeld
                         src={beeld(l.nr)}
                         alt={`Voorbeeld van logo ${l.nr} (${l.naam}) voor ${bedrijf}, met watermerk`}
                         width={400}
                         height={300}
-                        draggable={false}
-                        onContextMenu={geenMenu}
-                        onDragStart={geenMenu}
                         className="absolute inset-0 h-full w-full select-none object-cover transition duration-300 motion-reduce:transition-none motion-safe:group-hover:scale-[1.03]"
-                        style={{ WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" }}
                       />
                     </span>
                     <span className={`pointer-events-none absolute inset-0 border-2 transition motion-reduce:transition-none ${aan ? "border-brand-mint" : "border-transparent group-focus-visible:border-white/70"}`} aria-hidden />

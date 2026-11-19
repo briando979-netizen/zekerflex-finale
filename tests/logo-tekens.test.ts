@@ -58,8 +58,8 @@ describe("de tekens (lib/logo/tekens)", () => {
   });
 
   it("zonder treffer volgt het teken de soort bedrijf en dan de sfeer; een kledingmerk krijgt het teken van zijn sfeer", () => {
-    expect(kiesTekens({ naam: "Xqz", branche: "bouw", sfeer: "strak" })).toEqual({ tekens: ["hammer", "buildings", "hard-hat"], eigen: false });
-    expect(kiesTekens({ naam: "Xqz", branche: "kleding", sfeer: "gothic" })).toEqual({ tekens: ["crown", "sword", "skull"], eigen: false });
+    expect(kiesTekens({ naam: "Xqz", branche: "bouw", sfeer: "strak" })).toEqual({ tekens: ["hammer", "buildings", "hard-hat"], eigen: false, eigenAantal: 0 });
+    expect(kiesTekens({ naam: "Xqz", branche: "kleding", sfeer: "gothic" })).toEqual({ tekens: ["crown", "sword", "skull"], eigen: false, eigenAantal: 0 });
     expect(kiesTekens({ naam: "Xqz", branche: "anders", sfeer: "luxe" }).tekens[0]).toBe("sparkle");
     const fiets = kiesTekens({ naam: "Fietsenmaker Van Dijk", branche: "techniek", sfeer: "strak" });
     expect(fiets.eigen).toBe(true);
@@ -154,6 +154,21 @@ describe("negen logo's per aanvraag", () => {
     expect(merkwoord("Jansen & Zonen Installatietechniek")).toBe("JZI");
     expect(merkwoord("Arbeidsongeschiktheidsverzekering")).toBe("A");
     expect(VOLUIT_TOT).toBe(24);
+  });
+
+  it("vaste vormen staan alleen in de sferen waar ze thuishoren, niet bij een ambachtsbedrijf", () => {
+    const mag: Record<string, string[]> = { berg: ["outdoor"], berg2: ["outdoor"], bol: ["techno", "streetwear"], vleugels: ["sport", "gothic"] };
+    for (const s of SFEREN) for (const [vorm, sferen] of Object.entries(mag)) if (!sferen.includes(s.id)) expect(SFEER_SJABLONEN[s.id], `${vorm} in ${s.id}`).not.toContain(vorm);
+    // een schildersbedrijf (sfeer stoer, soort bouw): geen bergtop, en het tweede teken is niet de hamer van de bouw
+    const schilder = { naam: "Schildersbedrijf Kwast", branche: "bouw", sfeer: "stoer" } as const;
+    expect(sjablonenVan(schilder).some((id) => id === "berg" || id === "berg2")).toBe(false);
+    expect(kiesTekens(schilder)).toMatchObject({ tekens: ["paint-roller", "hammer", "buildings"], eigen: true, eigenAantal: 1 });
+    const naast = JSON.stringify(logoBoom2((sjablonenVan(schilder).indexOf("bliksem") + 1) as LogoNr, { ...schilder, kleur: "blauw" }, { soort: "thema", thema: "donker" }, 300, false, schatMeter).boom);
+    const pad = (naam: string) => (JSON.parse(readFileSync(join(ROOT, "lib", "logo", "tekens", "phosphor-fill.json"), "utf8")) as Record<string, { d: string }>)[naam]!.d.slice(0, 40);
+    expect(naast).toContain(pad("paint-roller"));
+    expect(naast).not.toContain(pad("hammer"));
+    // twee tekens uit de eigen woorden: dan mag het tweede wel
+    expect(kiesTekens({ naam: "Bakkerij Koffiehuis", branche: "anders", sfeer: "strak" }).eigenAantal).toBe(2);
   });
 
   it("hooguit drie van de negen logo's zijn een monogram", () => {

@@ -1,7 +1,6 @@
 import { AppError } from "@/lib/errors";
 import { beeldFout } from "@/lib/advertentie/beeld-antwoord";
-import { letterMeter, maakPng } from "@/lib/advertentie/beeld";
-import { logoBoom2 } from "@/lib/logo/ontwerp2";
+import { maakLogoPng } from "@/lib/logo/beeld";
 import { isThemaId } from "@/lib/logo/regels";
 import { logoVoorbeeldVan } from "@/lib/logo/voorbeelden";
 
@@ -24,14 +23,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ sleu
     const k = `${voorbeeld.sleutel}:${thema}`;
     let beeld = geheugen.get(k);
     if (!beeld) {
-      beeld = (async () => {
-        const { boom, breedte, hoogte } = logoBoom2(voorbeeld.logo, voorbeeld.invoer, { soort: "thema", thema }, 640, false, await letterMeter(), true);
-        return maakPng(boom, breedte, hoogte);
-      })();
+      beeld = maakLogoPng(voorbeeld.logo, voorbeeld.invoer, { soort: "thema", thema }, 640, false, true);
       geheugen.set(k, beeld);
       beeld.catch(() => geheugen.delete(k));
     }
-    return new Response((await beeld).slice(0), { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" } });
+    return new Response((await beeld).slice(0), { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=604800, stale-while-revalidate=2592000" } });
   } catch (err) {
     return beeldFout(err);
   }

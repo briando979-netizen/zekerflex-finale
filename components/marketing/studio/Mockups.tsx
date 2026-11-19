@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { VoorbeeldBeeld } from "@/components/marketing/studio/VoorbeeldBeeld";
 
 // "Zo ziet het eruit op …": schetsen van echte dingen (visitekaartjes, een website, een shirt, een kladblok, een telefoon,
 // een poster) om een logo of advertentie heen. Alles eigen CSS- en SVG-vormen, geen foto's. De beelden die erin staan zijn
@@ -10,13 +11,11 @@ import type { ReactNode } from "react";
 // zodat niets de pagina breder maakt.
 
 const DONKER = "#0B0B0C";
-const geenMenu = (e: { preventDefault: () => void }) => e.preventDefault();
 
+// Niet lui laden: in een veegbare rij of een gedraaid kaartje laadt een lui beeld soms nooit. Het zijn dezelfde adressen
+// als het raster erboven, dus de browser heeft ze meestal al.
 function Beeld({ src, className = "", stijl }: { src: string; className?: string; stijl?: React.CSSProperties }) {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt="" aria-hidden draggable={false} onContextMenu={geenMenu} onDragStart={geenMenu} loading="lazy" className={`pointer-events-none block select-none ${className}`} style={{ WebkitUserSelect: "none", userSelect: "none", ...stijl }} />
-  );
+  return <VoorbeeldBeeld src={src} alt="" stil className={`pointer-events-none block select-none ${className}`} {...(stijl ? { style: stijl } : {})} />;
 }
 
 function Kaart({ titel, children, donker = false }: { titel: string; children: ReactNode; donker?: boolean }) {

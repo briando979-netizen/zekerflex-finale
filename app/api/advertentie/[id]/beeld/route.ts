@@ -53,7 +53,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       headers: {
         "Content-Type": "image/png",
         // niet vrijgegeven: nergens bewaren; vrijgegeven: alleen in de eigen browser, kort
-        "Cache-Control": besluit.watermerk || beheerder ? "private, no-store" : "private, max-age=300",
+        // het watermerkbeeld mag de eigen browser tien minuten bewaren (herladen kost dan niets); de schone versie van een
+        // beheerder nooit ("private, no-store"), de vrijgegeven versie kort
+        "Cache-Control": besluit.watermerk ? "private, max-age=600" : beheerder ? "private, no-store" : "private, max-age=300",
         "X-Robots-Tag": "noindex, noimageindex",
         ...(download ? { "Content-Disposition": `attachment; filename="advertentie-ontwerp-${ontwerp}-${besluit.formaat}.png"` } : {}),
       },

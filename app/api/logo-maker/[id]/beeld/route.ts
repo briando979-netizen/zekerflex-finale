@@ -3,12 +3,13 @@ import { AppError } from "@/lib/errors";
 import { clientIp } from "@/lib/http/request";
 import { logger } from "@/lib/logger";
 import { enforceRateLimit } from "@/lib/rate-limit";
-import { letterMeter, maakPng } from "@/lib/advertentie/beeld";
+import { maakPng } from "@/lib/advertentie/beeld";
 import { beeldFout, telRender } from "@/lib/advertentie/beeld-antwoord";
 import { watermerkBeeld } from "@/lib/advertentie/beeld-geheugen";
 import { BEHEER_KLEIN, isAdvertentieId } from "@/lib/advertentie/regels";
 import { logoBoom } from "@/lib/logo/ontwerp";
-import { logoBoom2, type Ondergrond } from "@/lib/logo/ontwerp2";
+import { maakLogoPng } from "@/lib/logo/beeld";
+import type { Ondergrond } from "@/lib/logo/ontwerp2";
 import { isLogoNr, isThemaId, isVariantId, logoAantal, logoBesluit } from "@/lib/logo/regels";
 import { haalLogo } from "@/lib/logo/store";
 
@@ -49,8 +50,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         return maakPng(oud.boom, breedte, oud.hoogte);
       }
       const ondergrond: Ondergrond = besluit.thema ? { soort: "thema", thema: besluit.thema } : { soort: "variant", variant: besluit.variant };
-      const nieuw = logoBoom2(nr, logo.invoer, ondergrond, breedte, besluit.watermerk, await letterMeter());
-      return maakPng(nieuw.boom, breedte, nieuw.hoogte);
+      return maakLogoPng(nr, logo.invoer, ondergrond, breedte, besluit.watermerk);
     };
     let png: ArrayBuffer;
     if (besluit.watermerk) {
@@ -67,7 +67,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return new Response(png, {
       headers: {
         "Content-Type": "image/png",
-        "Cache-Control": besluit.watermerk || beheerder ? "private, no-store" : "private, max-age=300",
+        // het watermerkbeeld mag de eigen browser tien minuten bewaren (herladen kost dan niets); de schone versie van een
+        // beheerder nooit ("private, no-store"), de vrijgegeven versie kort
+        "Cache-Control": besluit.watermerk ? "private, max-age=600" : beheerder ? "private, no-store" : "private, max-age=300",
         "X-Robots-Tag": "noindex, noimageindex",
         ...(download ? { "Content-Disposition": `attachment; filename="logo-${besluit.variant}.png"` } : {}),
       },

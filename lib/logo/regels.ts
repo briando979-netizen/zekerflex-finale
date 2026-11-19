@@ -79,18 +79,20 @@ export const SJABLONEN = {
 } as const;
 export type SjabloonId = keyof typeof SJABLONEN;
 
+// Vaste vormen horen alleen waar ze thuishoren: bergtoppen bij outdoor, de bol bij techno en streetwear, vleugels bij
+// sport en gothic. Een ambachtsbedrijf (strak, speels, klassiek, stoer) krijgt ze niet.
 // Hooguit drie van de negen zijn een monogram (strepen, kroon, vleugels, lauwer, cirkel): de rest toont de naam of een teken.
 export const SFEER_SJABLONEN: Record<SfeerId, readonly SjabloonId[]> = {
   streetwear: ["baan", "strepen", "bol", "ster", "chevron", "stapel", "zegel", "schild", "bliksem"],
-  sport: ["strepen", "bliksem", "chevron", "baan", "vleugels", "schild", "stapel", "berg2", "zegel"],
+  sport: ["strepen", "bliksem", "chevron", "baan", "vleugels", "schild", "stapel", "ster", "zegel"],
   luxe: ["cirkel", "breed", "lauwer", "kroon", "zegel", "schild", "ster", "stapel", "baan"],
   gothic: ["kroon", "breed", "zegel", "schild", "lauwer", "stapel", "ster", "vleugels", "baan"],
   techno: ["bol", "baan", "breed", "chevron", "strepen", "ster", "zegel", "bliksem", "schild"],
   outdoor: ["berg", "berg2", "zegel", "schild", "chevron", "breed", "ster", "stapel", "lauwer"],
   strak: ["breed", "cirkel", "chevron", "schild", "zegel", "baan", "ster", "stapel", "strepen"],
-  speels: ["baan", "ster", "stapel", "zegel", "bol", "schild", "bliksem", "lauwer", "breed"],
+  speels: ["baan", "ster", "stapel", "zegel", "cirkel", "schild", "bliksem", "lauwer", "breed"],
   klassiek: ["lauwer", "breed", "kroon", "zegel", "schild", "cirkel", "ster", "stapel", "baan"],
-  stoer: ["schild", "strepen", "bliksem", "chevron", "berg", "vleugels", "zegel", "stapel", "breed"],
+  stoer: ["schild", "strepen", "bliksem", "chevron", "ster", "baan", "zegel", "stapel", "breed"],
 };
 
 /** Hoe het voorbeeld getoond wordt: wit op donker, zwart op wit, of in de gekozen kleur op wit. */

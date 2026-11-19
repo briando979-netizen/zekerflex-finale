@@ -293,11 +293,13 @@ export interface TekenKeuze {
   tekens: string[];
   /** kwam het eerste teken uit de woorden van het bedrijf zelf (en niet uit de standaard)? */
   eigen: boolean;
+  /** hoeveel van de drie uit de eigen woorden komen; de rest is de standaard van de soort bedrijf of de sfeer */
+  eigenAantal: number;
 }
 
 /** De tekens voor een aanvraag: eerst wat bij de eigen woorden past, dan de soort bedrijf, dan de sfeer. */
 export function kiesTekens(invoer: { naam: string; slogan?: string | undefined; brancheTekst?: string | undefined; branche: string; sfeer: string }): TekenKeuze {
   const eigen = tekensUitTekst(invoer.naam, invoer.slogan, invoer.brancheTekst);
   const alle = [...eigen, ...(BRANCHE_TEKENS[invoer.branche] ?? []), ...(SFEER_TEKENS[invoer.sfeer] ?? []), "star-four", "sparkle", "hexagon"];
-  return { tekens: [...new Set(alle)].slice(0, 3), eigen: eigen.length > 0 };
+  return { tekens: [...new Set(alle)].slice(0, 3), eigen: eigen.length > 0, eigenAantal: Math.min(3, eigen.length) };
 }

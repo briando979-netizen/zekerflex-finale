@@ -1,6 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
 import type { Meter } from "@/lib/advertentie/letter-maat";
-import { LETTER, vak, watermerk, type Maat, type Stijl } from "@/lib/advertentie/ontwerp";
+import { LETTER, vak, watermerkOver, type Maat, type Stijl, type WatermerkTinten } from "@/lib/advertentie/ontwerp";
 import { kleurHex } from "@/lib/advertentie/regels";
 import { contrast, tekstOp } from "@/lib/rijschool/kleuren";
 import { sjablonenVan } from "@/lib/logo/sjablonen";
@@ -81,6 +81,8 @@ interface Ctx {
   tekens: string[];
   /** het eerste teken past bij de woorden van het bedrijf zelf */
   eigen: boolean;
+  /** hoeveel van de tekens uit de woorden van het bedrijf zelf komen (de rest is de standaard van het vak of de sfeer) */
+  eigenAantal: number;
 }
 
 const hoofd = (t: string) => t.toLocaleUpperCase("nl-NL");
@@ -308,7 +310,8 @@ function tNaast(c: Ctx): ReactElement {
     c,
     vak(
       { alignItems: "center", gap: c.p(36) },
-      (c.eigen ? teken(c.tekens[1] ?? c.tekens[0] ?? "", c.p(hoogte), c.inkt) : null) ?? bliksem(c.p(hoogte * 1.1), c.inkt),
+      // het tweede teken alleen als dat ook uit de woorden van het bedrijf zelf komt; anders hetzelfde teken als elders
+      (c.eigen ? teken((c.eigenAantal > 1 ? c.tekens[1] : undefined) ?? c.tekens[0] ?? "", c.p(hoogte), c.inkt) : null) ?? bliksem(c.p(hoogte * 1.1), c.inkt),
       vak({ flexDirection: "column", alignItems: "flex-start" }, m.el, onderregel(c, Math.max(460, m.b), 32, { marginTop: c.p(22), paddingLeft: 0 })),
     ),
   );
@@ -401,7 +404,16 @@ export type Ondergrond = { soort: "thema"; thema: ThemaId } | { soort: "variant"
  * in kleur op wit) en na vrijgave de variant. Zonder achtergrond blijft alles buiten het logo leeg (PNG met alfakanaal).
  * `hoeklabel` zet een klein "voorbeeld" in de hoek (voor de verzonnen merken op de landingspagina's).
  */
-export function logoBoom2(nr: LogoNr, invoer: LogoInvoer, ondergrond: Ondergrond, breedteUit: number, metWatermerk: boolean, meet: Meter, hoeklabel = false): { boom: ReactElement; breedte: number; hoogte: number } {
+export const LOGO_WATERMERK_LETTER = 54;
+export const LOGO_VLAK = { breedte: W, hoogte: H } as const;
+
+/** De tinten van het watermerk bij een voorbeeld: de ondergrond (snijdt door het logo) en de inkt van het logo (fluistert). */
+export function logoTinten(invoer: LogoInvoer, thema: ThemaId): WatermerkTinten {
+  if (thema === "donker") return { snij: DONKER, inkt: "#FFFFFF" };
+  return { snij: "#FFFFFF", inkt: thema === "licht" ? "#111111" : kleurHex(invoer.kleur) };
+}
+
+export function logoBoom2(nr: LogoNr, invoer: LogoInvoer, ondergrond: Ondergrond, breedteUit: number, metWatermerk: boolean, meet: Meter, hoeklabel = false, laag?: string): { boom: ReactElement; breedte: number; hoogte: number } {
   const kleur = kleurHex(invoer.kleur);
   const vierkant = ondergrond.soort === "variant" && ondergrond.variant === "icoon";
   const basisB = vierkant ? ICOON : W;
@@ -424,7 +436,7 @@ export function logoBoom2(nr: LogoNr, invoer: LogoInvoer, ondergrond: Ondergrond
   const l = TYPE[invoer.sfeer];
   const merk = merkwoord(invoer.naam);
   const keuze = kiesTekens(invoer);
-  const c: Ctx = { i: invoer, p, inkt, vlak: achtergrond, tegen, meet, l, sub: ONDER[MET_SCHREEF.includes(invoer.sfeer) ? "schreef" : "recht"], merk, letters: initialen(invoer.naam), onder: merk === invoer.naam ? (invoer.slogan ?? "") : invoer.naam, tekens: keuze.tekens, eigen: keuze.eigen };
+  const c: Ctx = { i: invoer, p, inkt, vlak: achtergrond, tegen, meet, l, sub: ONDER[MET_SCHREEF.includes(invoer.sfeer) ? "schreef" : "recht"], merk, letters: initialen(invoer.naam), onder: merk === invoer.naam ? (invoer.slogan ?? "") : invoer.naam, tekens: keuze.tekens, eigen: keuze.eigen, eigenAantal: keuze.eigenAantal };
   const sjabloon = sjablonenVan(invoer)[nr - 1] ?? "breed";
   let beeld: ReactElement;
   if (vierkant) {
@@ -439,6 +451,6 @@ export function logoBoom2(nr: LogoNr, invoer: LogoInvoer, ondergrond: Ondergrond
   const label = hoeklabel
     ? vak({ position: "absolute", left: p(26), top: p(26), padding: `${p(8)}px ${p(18)}px`, borderRadius: p(40), border: `${Math.max(1, p(2))}px solid ${inkt}`, color: inkt, opacity: 0.6, fontFamily: LETTER.tekst, fontWeight: 600, fontSize: p(26), letterSpacing: p(3) }, "VOORBEELD")
     : null;
-  const boom = vak({ position: "relative", width: p(basisB), height: p(basisH), ...(achtergrond ? { background: achtergrond } : {}) }, beeld, label, metWatermerk ? watermerk(basisB, basisH, p, 62) : null);
+  const boom = vak({ position: "relative", width: p(basisB), height: p(basisH), ...(achtergrond ? { background: achtergrond } : {}) }, beeld, label, metWatermerk ? watermerkOver(basisB, basisH, p, LOGO_WATERMERK_LETTER, { snij: achtergrond ?? "#FFFFFF", inkt }, laag) : null);
   return { boom, breedte: breedteUit, hoogte: Math.round((breedteUit * basisH) / basisB) };
 }

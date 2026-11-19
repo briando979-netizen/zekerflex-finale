@@ -4,10 +4,11 @@ import { describe, expect, it } from "vitest";
 import { readdirSync } from "node:fs";
 import { afterEach, vi } from "vitest";
 import { BASISLETTERS, SIERLETTERS, gegevensVan, letterMeter, maakBeeld, maakPng } from "@/lib/advertentie/beeld";
-import { logoBoom2 } from "@/lib/logo/ontwerp2";
+import { logoBoom2, logoTinten } from "@/lib/logo/ontwerp2";
 import { SFEREN } from "@/lib/logo/regels";
 import { GEHEUGEN_MAX, GEHEUGEN_MS, geheugenGrootte, leegGeheugen, watermerkBeeld } from "@/lib/advertentie/beeld-geheugen";
-import { lettergrootte, ontwerpBoom } from "@/lib/advertentie/ontwerp";
+import { WACHT_MS, gelijktijdig } from "@/lib/advertentie/render-rij";
+import { FLUISTER_DEKKING, SNIJ_DEKKING, advertentieTinten, lettergrootte, ontwerpBoom } from "@/lib/advertentie/ontwerp";
 import { logoBoom } from "@/lib/logo/ontwerp";
 import { valideerLogoInvoer } from "@/lib/logo/regels";
 import {
@@ -456,11 +457,60 @@ describe("geen lettertype van buiten", () => {
     }
   }, 240_000);
 
-  it("het watermerk staat er in twee tinten, wit en donker", () => {
-    const boom = JSON.stringify(ontwerpBoom(1, VOORBEELDEN[0]!.gegevens, "vierkant", 600, true));
-    expect(boom).toContain("rgba(255,255,255,0.62)");
-    expect(boom).toContain("rgba(10,18,14,0.42)");
+  it("het watermerk heeft twee lagen: een stevige in de achtergrondtint en een lichte in de inkttint", () => {
+    const g = VOORBEELDEN[0]!.gegevens;
+    for (const nr of [1, 2, 3, 4, 5, 6] as const) {
+      const tinten = advertentieTinten(nr, g);
+      expect(tinten.snij).not.toBe(tinten.inkt);
+      const lagen = JSON.stringify(ontwerpBoom(nr, g, "vierkant", 600, true));
+      // de snijlaag: de achtergrond, bijna dekkend; de fluisterlaag: de inkt, heel licht
+      expect(lagen, String(nr)).toContain(`"color":"${tinten.snij}","opacity":${SNIJ_DEKKING}`);
+      expect(lagen, String(nr)).toContain(`"color":"${tinten.inkt}","opacity":${FLUISTER_DEKKING}`);
+    }
+    expect(SNIJ_DEKKING).toBeGreaterThanOrEqual(0.9);
+    expect(FLUISTER_DEKKING).toBeGreaterThanOrEqual(0.08);
+    expect(FLUISTER_DEKKING).toBeLessThanOrEqual(0.16);
+    // met een kant-en-klare laag ligt het watermerk als één plaatje over het ontwerp (snel), zonder losse tekst
+    const metLaag = JSON.stringify(ontwerpBoom(1, g, "vierkant", 600, true, false, "data:image/png;base64,AAAA"));
+    expect(metLaag).toContain('"type":"img"');
+    expect(metLaag).not.toContain("VOORBEELD");
+    // bij het logo: de ondergrond snijdt, de inkt fluistert, op elke ondergrond
+    expect(logoTinten({ naam: "X", branche: "anders", kleur: "rood", sfeer: "strak" }, "donker")).toEqual({ snij: "#0B0B0C", inkt: "#FFFFFF" });
+    expect(logoTinten({ naam: "X", branche: "anders", kleur: "rood", sfeer: "strak" }, "licht")).toEqual({ snij: "#FFFFFF", inkt: "#111111" });
+    expect(logoTinten({ naam: "X", branche: "anders", kleur: "rood", sfeer: "strak" }, "kleur")).toEqual({ snij: "#FFFFFF", inkt: "#B3261E" });
+    const boom = JSON.stringify(ontwerpBoom(1, g, "vierkant", 600, true));
     expect(boom.split("VOORBEELD").length).toBeGreaterThan(60);
     expect(JSON.stringify(ontwerpBoom(1, VOORBEELDEN[0]!.gegevens, "vierkant", 600, false))).not.toContain("VOORBEELD");
+  });
+});
+describe("snel en zonder kapotte beelden", () => {
+  it("het aantal renders tegelijk volgt het aantal kernen: één vrij, minstens twee, hooguit vier", () => {
+    expect([1, 2, 3, 4, 5, 8, 16].map(gelijktijdig)).toEqual([2, 2, 2, 3, 4, 4, 4]);
+    expect(WACHT_MS).toBe(30_000);
+  });
+
+  it("het watermerkbeeld mag tien minuten in de browser blijven, de schone versie van een beheerder nooit", () => {
+    for (const pad of [["app", "api", "advertentie", "[id]", "beeld", "route.ts"], ["app", "api", "logo-maker", "[id]", "beeld", "route.ts"]]) {
+      const route = readFileSync(join(ROOT, ...pad), "utf8");
+      expect(route, pad.join("/")).toContain('besluit.watermerk ? "private, max-age=600" : beheerder ? "private, no-store" : "private, max-age=300"');
+    }
+  });
+
+  it("de schermen proberen een mislukt beeld opnieuw en tonen daarna een tegel met een knop", () => {
+    const beeld = readFileSync(join(ROOT, "components", "marketing", "studio", "VoorbeeldBeeld.tsx"), "utf8");
+    expect(beeld).toContain("onError={fout}");
+    expect(beeld).toContain("Voorbeeld laden lukt even niet.");
+    expect(beeld).toContain("Probeer opnieuw");
+    expect(beeld).toContain("_p=${poging}");
+    for (const p of [["components", "marketing", "logo", "LogoResultaat.tsx"], ["components", "marketing", "advertentie", "AdvertentieResultaat.tsx"], ["components", "marketing", "studio", "Mockups.tsx"]]) {
+      const bron = readFileSync(join(ROOT, ...p), "utf8");
+      expect(bron, p.join("/")).toContain("<VoorbeeldBeeld");
+      // de schetsen laden niet lui: in een veegbare rij of een gedraaid kaartje laadt een lui beeld soms nooit
+      if (p[2] === "studio") expect(bron, p.join("/")).not.toContain('loading="lazy"');
+    }
+    // de extra poging in het adres komt niet in de sleutel van het geheugen: die bestaat alleen uit id, nummer en ondergrond
+    expect(readFileSync(join(ROOT, "app", "api", "logo-maker", "[id]", "beeld", "route.ts"), "utf8")).not.toContain('searchParams.get("_p")');
+    // de schets van het vierkante beeld vraagt hetzelfde adres op als het raster
+    expect(readFileSync(join(ROOT, "components", "marketing", "advertentie", "AdvertentieResultaat.tsx"), "utf8")).toContain("<AdMockups vierkant={beeld(id, ontwerp ?? 1)}");
   });
 });

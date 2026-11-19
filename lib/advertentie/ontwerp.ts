@@ -48,27 +48,50 @@ export function lettergrootte(tekst: string, breedte: number, treden: readonly (
 
 const perFormaat = <T,>(f: FormaatId, v: { vierkant: T; verhaal: T; liggend: T }): T => v[f];
 
+/** De twee tinten van het watermerk: de achtergrond van het ontwerp (snijdt door de inkt) en de inkt (fluistert over de achtergrond). */
+export interface WatermerkTinten {
+  snij: string;
+  inkt: string;
+}
+export const SNIJ_DEKKING = 0.94;
+export const FLUISTER_DEKKING = 0.1;
+
 /**
- * Het watermerk: schuine, herhaalde tekst over het hele beeld, dicht op elkaar. Elke rij staat er twee keer, wit en donker,
- * een paar beeldpunten verschoven: zo is hij op wit, op donker en op kleur overal zichtbaar, en haal je hem niet weg door
- * één tint weg te filteren. `letter` is de lettergrootte in beeldpunten van het volle formaat.
+ * Het watermerk: schuine, herhaalde tekst over het hele beeld, in twee lagen met elk een eigen taak.
+ * (a) De snijlaag, in de tint van de ACHTERGROND en bijna dekkend: op de achtergrond zie je hem niet, maar hij snijdt
+ *     dwars door de letters en vormen van het ontwerp. Het ontwerp is daardoor niet schoon uit te knippen.
+ * (b) De fluisterlaag, in de tint van de INKT en heel licht, op de rijen ertussen: net genoeg om te zien dat het een
+ *     voorbeeld is, zonder het beeld grijs te maken.
+ * `letter` is de lettergrootte in beeldpunten van het volle formaat; de rijen staan zo dicht dat elk woord van het ontwerp
+ * door een snijrij geraakt wordt.
  */
-export function watermerk(W: number, H: number, p: Maat, letter = 34): ReactElement {
+export function watermerk(W: number, H: number, p: Maat, letter = 34, tinten: WatermerkTinten = { snij: "#0B0B0C", inkt: "#FFFFFF" }): ReactElement {
   const zijde = Math.max(W, H) * 1.7;
-  const stap = letter * 1.7;
+  const stap = letter * 2.3;
   const regel = Array.from({ length: Math.ceil(zijde / (letter * 17)) + 2 }, () => WATERMERK_TEKST).join("    ");
   const rijen = Math.ceil(zijde / stap);
-  const tekst = (kleur: string, schuif: number): ReactElement =>
-    vak({ position: "absolute", left: p(schuif), top: p(schuif), whiteSpace: "nowrap", fontFamily: LETTER.tekst, fontWeight: 600, fontSize: p(letter), letterSpacing: p(letter * 0.05), lineHeight: 1, color: kleur }, regel);
+  const tekst = (kleur: string, dekking: number, top: number): ReactElement =>
+    vak({ position: "absolute", left: 0, top: p(top), whiteSpace: "nowrap", fontFamily: LETTER.tekst, fontWeight: 600, fontSize: p(letter), letterSpacing: p(letter * 0.05), lineHeight: 1, color: kleur, opacity: dekking }, regel);
   return vak(
     { position: "absolute", left: 0, top: 0, width: p(W), height: p(H), overflow: "hidden" },
     vak(
       { position: "absolute", left: p((W - zijde) / 2), top: p((H - zijde) / 2), width: p(zijde), height: p(zijde), flexDirection: "column", justifyContent: "center", transform: "rotate(-24deg)" },
-      ...Array.from({ length: rijen }, (_, i) =>
-        vak({ position: "relative", flexShrink: 0, height: p(stap), marginLeft: p(i % 2 ? -letter * 5 : 0) }, tekst("rgba(10,18,14,0.42)", letter * 0.07), tekst("rgba(255,255,255,0.62)", 0)),
-      ),
+      ...Array.from({ length: rijen }, (_, i) => vak({ position: "relative", flexShrink: 0, height: p(stap), marginLeft: p(i % 2 ? -letter * 5 : 0) }, tekst(tinten.snij, SNIJ_DEKKING, 0), tekst(tinten.inkt, FLUISTER_DEKKING, stap / 2))),
     ),
   );
+}
+
+/** Alleen de watermerklaag, op een doorzichtig vlak: de server rendert die één keer per maat en tint en legt hem daarna als plaatje over elk ontwerp (lib/advertentie/beeld.ts). */
+export function watermerkLos(W: number, H: number, breedte: number, letter: number, tinten: WatermerkTinten): ReactElement {
+  const schaal = breedte / W;
+  const p: Maat = (n) => Math.round(n * schaal * 100) / 100;
+  return vak({ position: "relative", width: p(W), height: p(H) }, watermerk(W, H, p, letter, tinten));
+}
+
+/** Het watermerk over een ontwerp: het kant-en-klare plaatje als dat er is, anders de tekstlagen zelf. */
+export function watermerkOver(W: number, H: number, p: Maat, letter: number, tinten: WatermerkTinten, laag?: string): ReactElement {
+  if (!laag) return watermerk(W, H, p, letter, tinten);
+  return createElement("img", { src: laag, width: p(W), height: p(H), style: { position: "absolute", left: 0, top: 0, width: p(W), height: p(H) } });
 }
 // --- 1. Strak: donker en rustig ---------------------------------------------
 
@@ -423,7 +446,25 @@ const ONTWERP = { 1: strak, 2: licht, 3: groot, 4: poster, 5: diagonaal, 6: reda
  * Eén ontwerp als boom voor satori. `breedte` is de breedte van het beeld dat eruit komt; de hoogte volgt uit het formaat.
  * Met `metWatermerk` ligt de schuine tekst over het hele beeld (ingebakken in de PNG, niet te verwijderen in de browser).
  */
-export function ontwerpBoom(nr: OntwerpNr, g: OntwerpGegevens, formaat: FormaatId, breedte: number, metWatermerk: boolean, hoeklabel = false): ReactElement {
+/** De tinten van het watermerk per ontwerp: de achtergrond waar de tekst op staat, en de kleur van die tekst. */
+export function advertentieTinten(nr: OntwerpNr, g: OntwerpGegevens): WatermerkTinten {
+  const k = knop(g.kleur);
+  switch (nr) {
+    case 1:
+      return { snij: meng(g.kleur, NACHT, 0.3), inkt: "#FFFFFF" };
+    case 2:
+      return { snij: "#FFFFFF", inkt: "#17211C" };
+    case 4:
+      return { snij: "#0B0B0C", inkt: "#FFFFFF" };
+    case 6:
+      return { snij: "#FFFFFF", inkt: "#141414" };
+    default:
+      return { snij: k.achtergrond, inkt: k.tekst };
+  }
+}
+export const ADVERTENTIE_WATERMERK_LETTER = 34;
+
+export function ontwerpBoom(nr: OntwerpNr, g: OntwerpGegevens, formaat: FormaatId, breedte: number, metWatermerk: boolean, hoeklabel = false, laag?: string): ReactElement {
   const { breedte: W, hoogte: H } = FORMATEN[formaat];
   const schaal = breedte / W;
   const p: Maat = (n) => Math.round(n * schaal * 100) / 100;
@@ -433,5 +474,5 @@ export function ontwerpBoom(nr: OntwerpNr, g: OntwerpGegevens, formaat: FormaatI
   const label = hoeklabel
     ? vak({ position: "absolute", right: p(20), bottom: p(20), padding: `${p(8)}px ${p(20)}px`, borderRadius: p(40), background: "rgba(10,18,14,0.82)", color: "#FFFFFF", fontFamily: LETTER.tekst, fontWeight: 600, fontSize: p(26), letterSpacing: p(3) }, "VOORBEELD")
     : null;
-  return vak({ position: "relative", width: p(W), height: p(H) }, beeld, label, metWatermerk ? watermerk(W, H, p) : null);
+  return vak({ position: "relative", width: p(W), height: p(H) }, beeld, label, metWatermerk ? watermerkOver(W, H, p, ADVERTENTIE_WATERMERK_LETTER, advertentieTinten(nr, g), laag) : null);
 }

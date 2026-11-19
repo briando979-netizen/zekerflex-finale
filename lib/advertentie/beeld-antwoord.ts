@@ -8,7 +8,7 @@ import { RijVol } from "@/lib/advertentie/render-rij";
 /** Een fout van een beeldroute als antwoord: een volle renderwachtrij is een 503 met Retry-After, de rest gaat via jsonError. */
 export function beeldFout(err: unknown): NextResponse {
   if (err instanceof RijVol) {
-    return NextResponse.json({ error: { code: "RENDER_DRUK", message: "Het is even druk. Probeer het over een paar seconden opnieuw." } }, { status: 503, headers: { "Retry-After": "5" } });
+    return NextResponse.json({ error: { code: "RENDER_DRUK", message: "Het is even druk. Probeer het over een paar seconden opnieuw." } }, { status: 503, headers: { "Retry-After": "10" } });
   }
   return jsonError(err);
 }

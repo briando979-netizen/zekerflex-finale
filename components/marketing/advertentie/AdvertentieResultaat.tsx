@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AdMockups } from "@/components/marketing/studio/Mockups";
+import { VoorbeeldBeeld } from "@/components/marketing/studio/VoorbeeldBeeld";
 import { BEWAAR_DAGEN, FORMATEN, FORMAAT_IDS, GRENS, ONTWERPEN, PAKKETTEN, PAKKET_NAAM, PAKKET_UITLEG, prijsTekst, type AdTekst, type OntwerpNr, type Pakket, type Prijzen, type Status } from "@/lib/advertentie/regels";
 
 // De eigen pagina van een advertentie op maat. De beelden komen van de server (GET /api/advertentie/<id>/beeld); zolang
@@ -10,7 +11,6 @@ import { BEWAAR_DAGEN, FORMATEN, FORMAAT_IDS, GRENS, ONTWERPEN, PAKKETTEN, PAKKE
 // selecteren staan uit, maar dat is alleen gemak: de echte bescherming is dat de schone versie hier niet bestaat.
 
 const beeld = (id: string, ontwerp: number, extra = "") => `/api/advertentie/${id}/beeld?ontwerp=${ontwerp}${extra}`;
-const geenMenu = (e: React.MouseEvent) => e.preventDefault();
 
 type Veld = "ontwerp" | "pakket" | "naam" | "email";
 
@@ -142,18 +142,9 @@ export function AdvertentieResultaat({
                 return (
                   <li key={o.nr} className={`relative overflow-hidden rounded-3xl border-2 bg-white transition motion-reduce:transition-none ${gekozen ? "border-brand-mint" : "border-white/10"}`}>
                     <span className="absolute inset-x-0 top-0 block aspect-square animate-pulse bg-neutralx-200 motion-reduce:animate-none" aria-hidden />
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={beeld(id, o.nr)}
-                      alt={`Voorbeeld van ontwerp ${o.nr} (${o.naam}) met watermerk: ${tekst.kop}`}
-                      width={600}
-                      height={600}
-                      draggable={false}
-                      onContextMenu={geenMenu}
-                      onDragStart={geenMenu}
-                      className="pointer-events-auto relative block aspect-square h-auto w-full select-none"
-                      style={{ WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" }}
-                    />
+                    <span className="relative block aspect-square w-full">
+                      <VoorbeeldBeeld src={beeld(id, o.nr)} alt={`Voorbeeld van ontwerp ${o.nr} (${o.naam}) met watermerk: ${tekst.kop}`} width={600} height={600} className="absolute inset-0 block h-full w-full select-none" />
+                    </span>
                     <div className="relative flex items-center justify-between gap-3 bg-white p-4">
                       <div className="min-w-0">
                         <p className="font-display text-base font-bold text-ink">
@@ -204,7 +195,7 @@ export function AdvertentieResultaat({
             </h2>
             <p className="mt-2 max-w-2xl text-neutralx-600">Schetsen met het ontwerp dat je hierboven kiest, in de drie formaten die je krijgt. Het watermerk verdwijnt zodra de advertentie van jou is.</p>
             <div className="mt-8">
-              <AdMockups vierkant={beeld(id, ontwerp ?? 1, "&formaat=vierkant")} verhaal={beeld(id, ontwerp ?? 1, "&formaat=verhaal")} liggend={beeld(id, ontwerp ?? 1, "&formaat=liggend")} naam={bedrijf} />
+              <AdMockups vierkant={beeld(id, ontwerp ?? 1)} verhaal={beeld(id, ontwerp ?? 1, "&formaat=verhaal")} liggend={beeld(id, ontwerp ?? 1, "&formaat=liggend")} naam={bedrijf} />
             </div>
           </div>
         </section>
