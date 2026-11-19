@@ -20,7 +20,7 @@ import { bewaarLinkBron } from "@/lib/shop/link-product-server";
 import { leesBeleidOpgeslagen } from "@/lib/shop/winkel-ai";
 import { prijsUitInkoop, slugVan, tariefVoor } from "@/lib/shop/winkel-ai-core";
 import { cjProduct, cjVerzendkosten, cjVoorraadPerVariant } from "@/lib/shop/cj/cj-client";
-import { CJ_FOTO_MAX_PX, CJ_MAX_FOTOS, categorieKeuze, categorieVanCj, leesClaim, lijktDuits, onzeSku, type CjProduct, type CjVerzending } from "@/lib/shop/cj/cj-core";
+import { CJ_FOTO_MAX_PX, CJ_MAX_FOTOS, categorieKeuze, categorieVanCj, herbruikbareWees, leesClaim, lijktDuits, onzeSku, type CjProduct, type CjVerzending } from "@/lib/shop/cj/cj-core";
 import { vertaalVermelding } from "@/lib/shop/cj/vertalen";
 import type { ShopCategorie } from "@/lib/shop/categorieen";
 
@@ -226,23 +226,26 @@ async function overnemen(pid: string, opties: ImportOpties): Promise<ImportUitko
     .filter((v) => v.sku.length > 3 && !gezien.has(v.sku) && gezien.add(v.sku));
   const voorraad = rijen.reduce((s, v) => s + v.stock, 0);
 
-  const product = await prisma.shopProduct.create({
-    data: {
-      name: tekst.naam,
-      slug,
-      description: tekst.omschrijving,
-      category: categorie,
-      gender: p.doelgroep,
-      collection: null,
-      badge: null,
-      isBundle: false,
-      priceCents: prijs.prijsCents,
-      costCents: prijs.inkoopCents,
-      stock: voorraad,
-      active: false,
-      sortOrder: 0,
-    },
-  });
+  // een halve import van een vorige keer (zie herbruikbareWees in cj-core.ts) wordt aangevuld in plaats van een tweede
+  // product zonder varianten te maken; hij houdt zijn eigen slug (van dezelfde naam)
+  const wees = await weesVoorSkus(rijen.map((v) => v.sku));
+  if (wees) slug = wees.slug;
+  const gegevens = {
+    name: tekst.naam,
+    slug,
+    description: tekst.omschrijving,
+    category: categorie,
+    gender: p.doelgroep,
+    collection: null,
+    badge: null,
+    isBundle: false,
+    priceCents: prijs.prijsCents,
+    costCents: prijs.inkoopCents,
+    stock: voorraad,
+    active: false,
+    sortOrder: 0,
+  };
+  const product = wees ? await prisma.shopProduct.update({ where: { id: wees.id }, data: gegevens }) : await prisma.shopProduct.create({ data: gegevens });
   if (rijen.length) {
     await prisma.shopProductVariant.createMany({ data: rijen.map((v) => ({ productId: product.id, size: v.size, color: v.color, priceCents: null, stock: v.stock, sku: v.sku })), skipDuplicates: true });
   }
@@ -297,7 +300,7 @@ async function overnemen(pid: string, opties: ImportOpties): Promise<ImportUitko
     action: "shop.product.cj-import",
     actorUserId: opties.actorUserId,
     actorLabel: "user",
-    summary: `CJ-product overgenomen: ${tekst.naam} (${rijen.length} varianten, ${uploads.length} foto's, ${actief ? "aan" : "uit"})`,
+    summary: `CJ-product overgenomen: ${tekst.naam} (${rijen.length} varianten, ${uploads.length} foto's, ${actief ? "aan" : "uit"}${wees ? ", halve import van eerder aangevuld" : ""})`,
     targetType: "shop-product",
     targetId: product.id,
   });
@@ -308,6 +311,27 @@ async function overnemen(pid: string, opties: ImportOpties): Promise<ImportUitko
   else if (!tekst.vertaald) melding = activerenNaVertaling ? "De tekst kon nog niet worden vertaald (het model was weg); het product staat uit en gaat aan zodra de knop Bijwerken hem vertaalt." : "De tekst kon niet worden vertaald en staat nog in het Engels; pas hem aan in Beheer → Webshop.";
   else if (!verzending) melding = "CJ gaf geen verzendtarief naar Nederland; de prijs rekent met de schatting uit de instellingen.";
   return { bestaand: false, id: product.id, slug, naam: tekst.naam, prijsCents: prijs.prijsCents, inkoopCents: prijs.inkoopCents, varianten: aantalVarianten, fotos: uploads.length, vertaald: tekst.vertaald, actief, verzendCents: prijs.verzendCents, verzendEcht: verzending !== null, melding };
+}
+
+/**
+ * Het product dat de sku's van deze import al heeft, als dat een halve import van eerder is (herbruikbareWees); anders
+ * null. "Nooit verkocht" = geen bestelling met dit product of een van zijn varianten in de regels, en geen beoordeling.
+ */
+async function weesVoorSkus(skus: string[]): Promise<{ id: string; slug: string } | null> {
+  if (!skus.length) return null;
+  const varianten = await prisma.shopProductVariant.findMany({ where: { sku: { in: skus } }, select: { id: true, product: { select: { id: true, slug: true, active: true } } } });
+  if (!varianten.length) return null;
+  const eerste = varianten[0]?.product;
+  if (!eerste || varianten.some((v) => v.product.id !== eerste.id)) return null;
+  const ids = [eerste.id, ...varianten.map((v) => v.id)];
+  const [k, lijst, beoordelingen, besteld] = await Promise.all([
+    leesCjKoppeling(eerste.id),
+    cjProductIds(),
+    prisma.shopReview.count({ where: { productId: eerste.id } }),
+    prisma.$queryRaw<{ n: number }[]>`SELECT count(*)::int AS n FROM "ShopOrder" WHERE "itemsJson"::text LIKE ANY(${ids.map((id) => `%${id}%`)})`,
+  ]);
+  const w = herbruikbareWees([{ id: eerste.id, slug: eerste.slug, active: eerste.active, heeftKoppeling: k !== null, inLijst: lijst.includes(eerste.id), verkocht: beoordelingen > 0 || (besteld[0]?.n ?? 0) > 0 }]);
+  return w ? { id: w.id, slug: w.slug } : null;
 }
 
 interface OudUit {

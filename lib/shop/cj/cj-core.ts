@@ -334,3 +334,29 @@ export function categorieKeuze(gekozen: unknown, automatisch: ShopCategorie): Sh
 
 /** Een unieke sku voor onze variantentabel: "cj-<variantSku>"; CJ-sku's zijn al wereldwijd uniek. */
 export const onzeSku = (variantSku: string): string => `cj-${variantSku.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}`;
+
+/** Een product dat al een van de sku's van een nieuwe import heeft: kandidaat om te hergebruiken (zie herbruikbareWees). */
+export interface WeesKandidaat {
+  id: string;
+  slug: string;
+  active: boolean;
+  heeftKoppeling: boolean;
+  inLijst: boolean;
+  verkocht: boolean;
+}
+
+/**
+ * Een halve import hergebruiken (19 nov 2026). Breekt de app af tussen shopProduct.create en de koppeling (herstart,
+ * crash), dan blijft een "wees" achter: een inactief product met de sku's, zonder foto, zonder koppeling in KV en zonder
+ * pid-sleutel. De volgende import van hetzelfde CJ-product maakte dan een tweede product met 0 varianten (de sku's
+ * bestonden al) dat nooit aan kon. Nu wordt die wees aangevuld en gekoppeld, maar alleen als álle gevonden sku's bij
+ * precies één product horen en dat product inactief is, geen koppeling heeft, niet in de CJ-lijst staat en nooit
+ * verkocht is. In elk ander geval (een echt, actief product met die sku; twee producten) blijft alles zoals het was.
+ */
+export function herbruikbareWees(kandidaten: readonly WeesKandidaat[]): WeesKandidaat | null {
+  const uniek = [...new Map(kandidaten.map((k) => [k.id, k])).values()];
+  const w = uniek[0];
+  if (!w || uniek.length !== 1) return null;
+  if (w.active || w.heeftKoppeling || w.inLijst || w.verkocht) return null;
+  return w;
+}

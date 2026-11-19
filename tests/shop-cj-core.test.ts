@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CJ_FOTO_MAX_PX, CJ_MAX_FOTOS, CLAIM_MAX_MS, categorieKeuze, categorieVanCj, doelgroepVanCj, fotosVan, goedkoopsteVerzending, kleurEnMaat, leesCjProduct, leesCjTreffer, leesClaim, leesVoorraadPerVariant, lijktDuits, onzeSku, tekstUitHtml, uploadIdUitMediaUrl, usdCentsVan, voorraadVan } from "@/lib/shop/cj/cj-core";
+import { CJ_FOTO_MAX_PX, CJ_MAX_FOTOS, CLAIM_MAX_MS, categorieKeuze, categorieVanCj, doelgroepVanCj, fotosVan, goedkoopsteVerzending, herbruikbareWees, kleurEnMaat, leesCjProduct, leesCjTreffer, leesClaim, leesVoorraadPerVariant, lijktDuits, onzeSku, tekstUitHtml, uploadIdUitMediaUrl, usdCentsVan, voorraadVan, type WeesKandidaat } from "@/lib/shop/cj/cj-core";
 
 // CJ Dropshipping lezen (18 nov 2026): dollars → centen, "Black-XL" → kleur en maat,
 // foto's, voorraad, onze categorie en doelgroep. Alles puur, zonder netwerk.
@@ -264,5 +264,26 @@ describe("foto's van CJ: grenzen en de eigen media-url", () => {
     expect(uploadIdUitMediaUrl("https://cdn.cj.example/foto.jpg")).toBeNull();
     expect(uploadIdUitMediaUrl("/api/shop/media/")).toBeNull();
     expect(uploadIdUitMediaUrl("/api/shop/media/../x")).toBeNull();
+  });
+});
+
+describe("een halve import (wees) hergebruiken", () => {
+  // 19 nov 2026: twee producten zonder foto, koppeling of pid-sleutel, van een import die afbrak na shopProduct.create.
+  const wees: WeesKandidaat = { id: "p1", slug: "gouden-stickers", active: false, heeftKoppeling: false, inLijst: false, verkocht: false };
+
+  it("een inactief product met dezelfde sku, zonder koppeling, niet in de lijst en nooit verkocht wordt hergebruikt", () => {
+    expect(herbruikbareWees([wees])).toEqual(wees);
+    // meerdere varianten van hetzelfde product tellen als één kandidaat
+    expect(herbruikbareWees([wees, { ...wees }])).toEqual(wees);
+  });
+
+  it("alles wat op een echt product lijkt blijft met rust", () => {
+    expect(herbruikbareWees([])).toBeNull();
+    expect(herbruikbareWees([{ ...wees, active: true }])).toBeNull();
+    expect(herbruikbareWees([{ ...wees, heeftKoppeling: true }])).toBeNull();
+    expect(herbruikbareWees([{ ...wees, inLijst: true }])).toBeNull();
+    expect(herbruikbareWees([{ ...wees, verkocht: true }])).toBeNull();
+    // de sku's horen bij twee verschillende producten: niet raden, niets hergebruiken
+    expect(herbruikbareWees([wees, { ...wees, id: "p2" }])).toBeNull();
   });
 });
