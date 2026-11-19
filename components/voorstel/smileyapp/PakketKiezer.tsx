@@ -2,19 +2,34 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { BASE, looptijdTekst, prijsTekst, type Pakket } from "@/lib/voorstel/smileyapp";
+import { BASE, type Pakket } from "@/lib/voorstel/smileyapp";
 import { buitenDeKiezer, kiesPakket, kiezerVragen, type Antwoorden, type Keuze, type VraagSleutel } from "@/lib/voorstel/smileyapp-kiezer";
+import { euroTaal } from "@/lib/voorstel/smileyapp-taal";
+import { KIEZER_NL, vul, type KiezerTeksten } from "@/lib/voorstel/smileyapp-teksten";
 import { Gezicht } from "@/components/voorstel/smileyapp/Gezicht";
 
 // "Welk pakket past bij mij?": drie vragen, één pakket. De keuzes en de
 // uitkomst volgen uit de onderdelen van de pakketten die de pagina meegeeft
-// (lib/voorstel/smileyapp-kiezer.ts); de prijs komt via prijsTekst() uit
-// diezelfde gegevens. Er wordt niets bewaard of verstuurd.
+// (lib/voorstel/smileyapp-kiezer.ts); de prijs is het bedrag uit diezelfde
+// gegevens, opgemaakt met euroTaal(). Er wordt niets bewaard of verstuurd.
+// `teksten` en `basis`: op /en en /de geeft de pagina de vertaalde teksten en
+// het basispad van die taal mee; zonder is alles Nederlands zoals het was.
 
 type Gekozen = Partial<Record<VraagSleutel, number>>;
 
-export function PakketKiezer({ pakketten, compact = false }: { pakketten: readonly Pakket[]; compact?: boolean }) {
-  const vragen = kiezerVragen(pakketten);
+export function PakketKiezer({
+  pakketten,
+  compact = false,
+  teksten: t = KIEZER_NL,
+  basis = BASE,
+}: {
+  pakketten: readonly Pakket[];
+  compact?: boolean;
+  teksten?: KiezerTeksten;
+  /** het basispad van de taal: de knoppen leiden naar de demo-aanvraag en de pakketten in die taal */
+  basis?: string;
+}) {
+  const vragen = kiezerVragen(pakketten, t);
   // per vraag de plek van de gekozen keuze
   const [gekozen, setGekozen] = useState<Gekozen>({});
 
@@ -24,10 +39,15 @@ export function PakketKiezer({ pakketten, compact = false }: { pakketten: readon
   };
   const a = { vragenlijsten: nodig("vragenlijsten"), beoordelingen: nodig("beoordelingen"), gebruikers: nodig("gebruikers") };
   const compleet = a.vragenlijsten !== undefined && a.beoordelingen !== undefined && a.gebruikers !== undefined;
-  const advies = compleet ? kiesPakket(a as Antwoorden, pakketten) : null;
+  const advies = compleet ? kiesPakket(a as Antwoorden, pakketten, t) : null;
   const beantwoord = Object.keys(gekozen).length;
   const anders = buitenDeKiezer(pakketten);
   const bron = pakketten.find((p) => p.id === advies?.pakket.id);
+  // het bedrag komt uit het pakket zelf; alleen de schrijfwijze volgt de taal
+  const prijs = !advies ? "" : advies.pakket.prijs === null ? t.opAanvraag : euroTaal(advies.pakket.prijs, t.taal);
+  const looptijd = !advies || advies.pakket.minimaalMaanden === null ? "" : vul(t.looptijd, { n: advies.pakket.minimaalMaanden });
+  const andersNamen = anders.map((p) => vul(t.pakketNaam, { naam: p.naam })).join(t.en);
+  const teGaan = 3 - beantwoord;
 
   return (
     <section aria-labelledby="sm-kiezer-kop" className={`rounded-[2rem] bg-smiley-mint ${compact ? "p-6" : "p-6 sm:p-10"}`}>
@@ -35,9 +55,9 @@ export function PakketKiezer({ pakketten, compact = false }: { pakketten: readon
         <Gezicht score={9} kleur="#1E6B4A" knipoog className="sm-wiebel hidden h-14 w-14 shrink-0 sm:block" />
         <div>
           <h2 id="sm-kiezer-kop" className={`font-display font-bold leading-tight ${compact ? "text-2xl" : "text-3xl sm:text-4xl"}`}>
-            Welk pakket past bij mij?
+            {t.kop}
           </h2>
-          <p className="mt-2 max-w-2xl leading-relaxed text-smiley-mute">Drie vragen. De uitkomst volgt uit wat er in de pakketten zit.</p>
+          <p className="mt-2 max-w-2xl leading-relaxed text-smiley-mute">{t.intro}</p>
         </div>
       </div>
 
@@ -69,36 +89,34 @@ export function PakketKiezer({ pakketten, compact = false }: { pakketten: readon
       <div role="status" className="mt-5">
         {advies && bron ? (
           <div className="rounded-3xl bg-smiley-ink p-6 text-white sm:p-8">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-smiley-sun">Past bij jou</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-smiley-sun">{t.pastBijJou}</p>
             <div className="mt-2 flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
               <p className="font-display text-3xl font-bold">{advies.pakket.naam}</p>
               <p className="font-display text-2xl font-bold text-smiley-sun">
-                {prijsTekst(advies.pakket)}
-                {advies.pakket.prijs !== null && <span className="ml-2 font-sans text-sm font-semibold text-white/75">maandelijks</span>}
+                {prijs}
+                {advies.pakket.prijs !== null && <span className="ml-2 font-sans text-sm font-semibold text-white/75">{t.maandelijks}</span>}
               </p>
             </div>
-            {looptijdTekst(advies.pakket) && <p className="mt-1 text-sm font-semibold text-white/75">{looptijdTekst(advies.pakket)}</p>}
+            {looptijd && <p className="mt-1 text-sm font-semibold text-white/75">{looptijd}</p>}
             <p className="mt-4 max-w-2xl leading-relaxed text-white/90">{advies.reden}</p>
             {a.beoordelingen !== "meer" && !advies.maatwerk && (
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/70">Over welke periode het aantal beoordelingen geldt, staat niet bij het pakket. Vraag het na in de demo.</p>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/70">{t.periode}</p>
             )}
             {anders.length > 0 && (
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/70">
-                {anders.map((p) => `Het ${p.naam}`).join(" en ")} {anders.length === 1 ? "werkt" : "werken"} anders en {anders.length === 1 ? "volgt" : "volgen"} niet uit deze drie vragen: bekijk {anders.length === 1 ? "het" : "ze"} bij alle pakketten.
-              </p>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/70">{vul(anders.length === 1 ? t.andersEen : t.andersMeer, { namen: andersNamen })}</p>
             )}
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link href={`${BASE}/demo?pakket=${advies.pakket.id}`} className="rounded-full bg-smiley-sun px-6 py-3.5 font-bold text-smiley-ink transition-transform hover:-translate-y-0.5">
-                Demo van dit pakket
+              <Link href={`${basis}/demo?pakket=${advies.pakket.id}`} className="rounded-full bg-smiley-sun px-6 py-3.5 font-bold text-smiley-ink transition-transform hover:-translate-y-0.5">
+                {t.demoKnop}
               </Link>
-              <Link href={`${BASE}#pakketten`} className="rounded-full px-6 py-3.5 font-bold text-white ring-1 ring-white/30 hover:bg-white/10">
-                Bekijk alle pakketten
+              <Link href={`${basis}#pakketten`} className="rounded-full px-6 py-3.5 font-bold text-white ring-1 ring-white/30 hover:bg-white/10">
+                {t.alleKnop}
               </Link>
             </div>
           </div>
         ) : (
           <p className="rounded-3xl bg-white/70 p-4 text-sm font-semibold text-smiley-mute">
-            {beantwoord === 0 ? "Beantwoord de drie vragen, dan zie je hier welk pakket past." : `Nog ${3 - beantwoord} ${3 - beantwoord === 1 ? "vraag" : "vragen"} te gaan.`}
+            {beantwoord === 0 ? t.leeg : teGaan === 1 ? t.nogEen : vul(t.nogMeer, { n: teGaan })}
           </p>
         )}
       </div>

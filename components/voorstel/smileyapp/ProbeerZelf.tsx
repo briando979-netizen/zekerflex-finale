@@ -2,6 +2,7 @@
 
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { gezichtKleur, mondPad } from "@/lib/voorstel/smileyapp-gezicht";
+import { PROBEER_NL, vul, type ProbeerTeksten } from "@/lib/voorstel/smileyapp-teksten";
 
 // "Probeer het zelf" op de voorpagina: een voorbeeldvraag, de smiley swipen,
 // en daarna een klein voorbeeld-dashboard waarin je eigen antwoord tussen
@@ -10,6 +11,8 @@ import { gezichtKleur, mondPad } from "@/lib/voorstel/smileyapp-gezicht";
 // zo; ze zeggen niets over echte klanten. Bedienen kan door te slepen, met de
 // pijltjestoetsen (de smiley is een schuifregelaar) of met de rij knoppen. De
 // beweging van de staafjes staat uit bij "minder beweging" (motion-safe).
+// De teksten komen als gewone tekst van de pagina (`teksten`); zonder die prop
+// is alles Nederlands (lib/voorstel/smileyapp-teksten.ts).
 
 const CIJFERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 /** Voorbeeld: hoe vaak elk cijfer in dit verzonnen dashboard gegeven is (van 1 tot en met 10). */
@@ -17,7 +20,7 @@ const VOORBEELD = [1, 0, 1, 2, 3, 5, 9, 14, 11, 6] as const;
 
 const binnen = (n: number) => Math.min(10, Math.max(1, Math.round(n)));
 
-export function ProbeerZelf({ vraag }: { vraag: string }) {
+export function ProbeerZelf({ vraag, teksten: t = PROBEER_NL }: { vraag: string; teksten?: ProbeerTeksten }) {
   const [score, setScore] = useState(7);
   const [verstuurd, setVerstuurd] = useState(false);
   const sleep = useRef<{ x: number; start: number } | null>(null);
@@ -48,12 +51,14 @@ export function ProbeerZelf({ vraag }: { vraag: string }) {
   const hoogste = Math.max(...aantallen, 1);
   const totaal = aantallen.reduce((a, b) => a + b, 0);
   const gemiddelde = aantallen.reduce((som, n, i) => som + n * (i + 1), 0) / totaal;
+  // het cijfer in de zin krijgt een kleur: de zin valt in een stuk ervoor en een stuk erna
+  const [voorScore = "", naScore = ""] = vul(t.jouwAntwoord, { gemiddelde: gemiddelde.toFixed(1).replace(".", t.decimaal), totaal }).split("{score}");
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       {/* de vraag */}
       <div className="rounded-[2rem] bg-white p-6 shadow-[0_30px_80px_-45px_rgba(14,42,32,0.5)] ring-1 ring-smiley-ink/10 sm:p-8">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-smiley-leaf">Voorbeeldvraag</p>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-smiley-leaf">{t.voorbeeldvraag}</p>
         <p id="sm-probeer-vraag" className="mt-2 font-display text-2xl font-bold leading-tight">
           {vraag}
         </p>
@@ -64,7 +69,7 @@ export function ProbeerZelf({ vraag }: { vraag: string }) {
           aria-valuemin={1}
           aria-valuemax={10}
           aria-valuenow={score}
-          aria-valuetext={`${score} van 10`}
+          aria-valuetext={vul(t.waarde, { score })}
           onKeyDown={toets}
           onPointerDown={begin}
           onPointerMove={beweeg}
@@ -82,9 +87,9 @@ export function ProbeerZelf({ vraag }: { vraag: string }) {
             {score}
           </span>
         </div>
-        <p className="mt-2 text-center text-sm text-smiley-mute">Sleep de smiley naar links of rechts, gebruik de pijltjestoetsen of kies een cijfer.</p>
+        <p className="mt-2 text-center text-sm text-smiley-mute">{t.sleepUitleg}</p>
         {/* de knoppenrij: hetzelfde antwoord zonder slepen */}
-        <div role="group" aria-label="Kies een cijfer van 1 tot 10" className="mt-4 grid grid-cols-5 gap-2 sm:grid-cols-10">
+        <div role="group" aria-label={t.kiesCijfer} className="mt-4 grid grid-cols-5 gap-2 sm:grid-cols-10">
           {CIJFERS.map((n) => (
             <button
               key={n}
@@ -99,34 +104,36 @@ export function ProbeerZelf({ vraag }: { vraag: string }) {
         </div>
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <button type="button" onClick={() => setVerstuurd(true)} className="rounded-full bg-smiley-green px-7 py-3.5 font-bold text-smiley-ink transition-transform hover:-translate-y-0.5">
-            {verstuurd ? "Antwoord aanpassen" : "Geef dit antwoord"}
+            {verstuurd ? t.pasAan : t.geefAntwoord}
           </button>
           {verstuurd && (
             <button type="button" onClick={() => setVerstuurd(false)} className="rounded-full px-5 py-3 text-sm font-bold text-smiley-ink ring-1 ring-smiley-ink/20 hover:bg-smiley-mint">
-              Opnieuw
+              {t.opnieuw}
             </button>
           )}
         </div>
-        <p className="mt-4 text-xs leading-relaxed text-smiley-mute">Een voorbeeld: je antwoord blijft in je eigen browser, er wordt niets bewaard of verstuurd.</p>
+        <p className="mt-4 text-xs leading-relaxed text-smiley-mute">{t.privacy}</p>
       </div>
 
       {/* het voorbeeld-dashboard */}
       <div className="rounded-[2rem] bg-smiley-ink p-6 text-white sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="font-display text-xl font-bold">Zo ziet het er in je dashboard uit</p>
-          <span className="rounded-full bg-smiley-sun px-3 py-1 text-xs font-bold uppercase tracking-wider text-smiley-ink">Voorbeeld</span>
+          <p className="font-display text-xl font-bold">{t.dashboardKop}</p>
+          <span className="rounded-full bg-smiley-sun px-3 py-1 text-xs font-bold uppercase tracking-wider text-smiley-ink">{t.voorbeeld}</span>
         </div>
-        <p className="mt-2 text-sm leading-relaxed text-white/75">De staafjes zijn voorbeeldcijfers, geen echte resultaten. Jouw antwoord komt erbij zodra je het geeft.</p>
+        <p className="mt-2 text-sm leading-relaxed text-white/75">{t.staafjes}</p>
         <div role="status" className="mt-5 min-h-[3.5rem]">
           {verstuurd ? (
             <p className="rounded-2xl bg-white/10 p-3 text-sm font-semibold">
-              Jouw antwoord, een <span className="text-smiley-sun">{score}</span>, staat erbij. Gemiddelde in dit voorbeeld: {gemiddelde.toFixed(1).replace(".", ",")} uit {totaal} antwoorden.
+              {voorScore}
+              <span className="text-smiley-sun">{score}</span>
+              {naScore}
             </p>
           ) : (
-            <p className="rounded-2xl bg-white/5 p-3 text-sm text-white/75">Geef links je antwoord en kijk wat er gebeurt.</p>
+            <p className="rounded-2xl bg-white/5 p-3 text-sm text-white/75">{t.geefLinks}</p>
           )}
         </div>
-        <ol aria-label="Voorbeeld: aantal antwoorden per cijfer" className="mt-5 grid h-44 grid-cols-10 items-end gap-1.5 sm:gap-2.5">
+        <ol aria-label={t.lijstNaam} className="mt-5 grid h-44 grid-cols-10 items-end gap-1.5 sm:gap-2.5">
           {aantallen.map((n, i) => {
             const mijn = verstuurd && i + 1 === score;
             return (
@@ -141,8 +148,8 @@ export function ProbeerZelf({ vraag }: { vraag: string }) {
                   />
                 </span>
                 <span className="sr-only">
-                  Cijfer {i + 1}: {n} {n === 1 ? "antwoord" : "antwoorden"}
-                  {mijn ? ", waaronder dat van jou" : ""}
+                  {vul(n === 1 ? t.staafEen : t.staafMeer, { cijfer: i + 1, n })}
+                  {mijn ? t.staafVanJou : ""}
                 </span>
               </li>
             );
@@ -155,7 +162,7 @@ export function ProbeerZelf({ vraag }: { vraag: string }) {
             </span>
           ))}
         </div>
-        {verstuurd && <p className="mt-4 text-sm font-semibold text-smiley-sun">Het gele staafje is jouw antwoord.</p>}
+        {verstuurd && <p className="mt-4 text-sm font-semibold text-smiley-sun">{t.geleStaaf}</p>}
       </div>
     </div>
   );

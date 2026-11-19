@@ -35,6 +35,8 @@ const schema = z.object({
   bericht: z.string().max(4000).optional(),
   /** waar de bezoeker vandaan kwam (?bron= op de QR-code); een bron die niet klopt valt weg */
   bron: z.string().max(60).optional(),
+  /** de taal van het formulier (/demo, /en/demo of /de/demo); iets anders wordt geweigerd */
+  taal: z.enum(["nl", "en", "de"]).optional(),
   toestemming: z.boolean(),
   /** lokveld: een mens ziet het niet en laat het leeg */
   lokveld: z.string().max(200).optional(),

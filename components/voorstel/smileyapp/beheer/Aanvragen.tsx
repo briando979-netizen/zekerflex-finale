@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { STATUSSEN, STATUS_LABEL, telLink, voorkeurTekst, type Aanvraag, type Soort, type Status } from "@/lib/voorstel/smileyapp-aanvraag-regels";
+import { TAAL_NAAM } from "@/lib/voorstel/smileyapp-taal";
 import { BEHEER_API, KAART, KNOP, KNOP_LICHT, KNOP_ROOD, LABEL, Melding, Pil, VELD, foutTekst, moment, vraag } from "@/components/voorstel/smileyapp/beheer/api";
 
 // Demo-aanvragen of partner-aanmeldingen in het beheer: filter op status, per
@@ -79,6 +80,13 @@ function AanvraagKaart({ a, pakketNamen, bijgewerkt, verwijderd }: { a: Aanvraag
           <div>
             <dt className="font-semibold text-smiley-mute">Bron</dt>
             <dd className="font-semibold">{a.bron}</dd>
+          </div>
+        )}
+        {/* alleen als het formulier niet Nederlands was: dan weet het team in welke taal het moet bellen of mailen */}
+        {a.taal && a.taal !== "nl" && (
+          <div>
+            <dt className="font-semibold text-smiley-mute">Taal</dt>
+            <dd className="font-semibold">{TAAL_NAAM[a.taal]}</dd>
           </div>
         )}
         {a.interesses && a.interesses.length > 0 && (

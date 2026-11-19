@@ -90,6 +90,8 @@ import { herstelMail } from "@/lib/voorstel/smileyapp-mail";
 import { alsInvoer, leesBedrag, leesOverschrijvingen, metOverschrijvingen, valideerPakket, type PakketInvoer } from "@/lib/voorstel/smileyapp-pakket-regels";
 import { bewaarPakket, herstelPakketten, pakkettenVoorBeheer, smileyappPakketten } from "@/lib/voorstel/smileyapp-pakketten";
 import { DEMO_ADRES, demoQr, demoQrAdres, demoQrSvg, qrBestandsnaam } from "@/lib/voorstel/smileyapp-qr";
+import { euroTaal } from "@/lib/voorstel/smileyapp-taal";
+import { KIEZER_NL, PROBEER_NL } from "@/lib/voorstel/smileyapp-teksten";
 import { AppError } from "@/lib/errors";
 
 const ROOT = process.cwd();
@@ -343,12 +345,19 @@ describe("pakketkiezer", () => {
     expect(advies.reden).toContain("niet af te leiden");
   });
 
-  it("het onderdeel toont de prijs via prijsTekst en staat op de voorpagina en de demopagina", () => {
+  // 19 nov 2026 (deel 3, de site in het Engels en het Duits): de kiezer krijgt zijn teksten en het basispad van de taal
+  // als prop, met de Nederlandse standaard in lib/voorstel/smileyapp-teksten.ts. Was: "{prijsTekst(advies.pakket)}",
+  // "href={`${BASE}/demo?pakket=${advies.pakket.id}`}" en de twee knopteksten letterlijk in het onderdeel. De eis is
+  // dezelfde gebleven: het bedrag komt uit het pakket zelf (nu via euroTaal, dat voor Nederlands euro() is), en de
+  // knoppen leiden naar de demo-aanvraag en de pakketten.
+  it("het onderdeel toont de prijs uit het pakket zelf en staat op de voorpagina en de demopagina", () => {
     const k = lees("components/voorstel/smileyapp/PakketKiezer.tsx");
-    expect(k).toContain("{prijsTekst(advies.pakket)}");
-    expect(k).toContain("href={`${BASE}/demo?pakket=${advies.pakket.id}`}");
-    expect(k).toContain("Demo van dit pakket");
-    expect(k).toContain("Bekijk alle pakketten");
+    expect(k).toContain("advies.pakket.prijs === null ? t.opAanvraag : euroTaal(advies.pakket.prijs, t.taal)");
+    expect(k).toContain("teksten: t = KIEZER_NL,");
+    expect(k).toContain("basis = BASE,");
+    expect(k).toContain("href={`${basis}/demo?pakket=${advies.pakket.id}`}");
+    for (const p of PAKKETTEN) if (p.prijs !== null) expect(euroTaal(p.prijs, "nl")).toBe(euro(p.prijs));
+    expect([KIEZER_NL.opAanvraag, KIEZER_NL.demoKnop, KIEZER_NL.alleKnop, KIEZER_NL.taal]).toEqual([prijsTekst({ prijs: null }), "Demo van dit pakket", "Bekijk alle pakketten", "nl"]);
     expect(lees("app/voorstel/smileyapp/page.tsx")).toContain("<PakketKiezer pakketten={pakketten} />");
     expect(lees("app/voorstel/smileyapp/demo/page.tsx")).toContain("<PakketKiezer pakketten={pakketten} compact />");
   });
@@ -848,8 +857,12 @@ describe("bronbewakers deel 2", () => {
     expect(s).not.toMatch(/fetch\(|localStorage|sessionStorage|document\.cookie/);
     expect(s).toContain('role="slider"');
     expect(s).toContain("ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1");
-    expect(s).toContain('aria-label="Kies een cijfer van 1 tot 10"');
-    expect(s).toContain("De staafjes zijn voorbeeldcijfers, geen echte resultaten.");
+    // 19 nov 2026 (deel 3, talen): de teksten zijn een prop met de Nederlandse standaard uit smileyapp-teksten.ts.
+    // Was: de twee zinnen letterlijk in het onderdeel (aria-label="Kies een cijfer van 1 tot 10" en de staafjes-zin).
+    expect(s).toContain("aria-label={t.kiesCijfer}");
+    expect(s).toContain("teksten: t = PROBEER_NL");
+    expect(PROBEER_NL.kiesCijfer).toBe("Kies een cijfer van 1 tot 10");
+    expect(PROBEER_NL.staafjes).toContain("De staafjes zijn voorbeeldcijfers, geen echte resultaten.");
     // beweging alleen als de bezoeker dat niet heeft uitgezet
     expect(s.match(/transition-\[height/g)).toHaveLength(1);
     expect(s).toContain("motion-safe:transition-[height,background-color]");

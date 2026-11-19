@@ -1,6 +1,7 @@
 import { amsterdamParts } from "@/lib/time/amsterdam";
 import { INTERESSES, pakket, type PakketId } from "@/lib/voorstel/smileyapp";
 import { geldigEmail } from "@/lib/voorstel/smileyapp-account-regels";
+import { isTaal, type Taal } from "@/lib/voorstel/smileyapp-taal";
 
 // ---------------------------------------------------------------------------
 // Demo-aanvragen en partner-aanmeldingen van het SmileyApp-voorstel (19 nov
@@ -38,6 +39,8 @@ export interface Aanvraag {
   bericht?: string;
   /** waar de aanvraag vandaan kwam (?bron=beurs op de QR-code): een kort woord, alleen voor het team */
   bron?: string;
+  /** de taal van het formulier (nl, en of de): in die taal wil iemand geholpen worden. Ontbreekt bij aanvragen van vóór de vertaling. */
+  taal?: Taal;
   status: Status;
   notitie?: string;
   behandeldDoor?: string;
@@ -58,6 +61,7 @@ export interface AanvraagInvoer {
   tijd?: string | undefined;
   bericht?: string | undefined;
   bron?: string | undefined;
+  taal?: string | undefined;
   toestemming: boolean;
 }
 
@@ -138,10 +142,12 @@ export function valideerAanvraag(i: AanvraagInvoer, nu: Date): Controle {
   if (telefoon && !TELEFOON.test(telefoon)) return fout("telefoon", "Dit telefoonnummer klopt niet. Gebruik alleen cijfers, spaties en eventueel een plus.");
   if (bericht.length > BERICHT_MAX) return fout("bericht", `Je bericht is te lang (maximaal ${BERICHT_MAX} tekens).`);
   if (i.toestemming !== true) return fout("toestemming", "Vink aan dat SmileyApp contact met je mag opnemen over deze aanvraag.");
+  // de taal van het formulier: alleen nl, en of de. Een formulier zonder taal (een oude pagina) blijft geldig.
+  if (i.taal !== undefined && !isTaal(i.taal)) return fout("taal", "Onbekende taal.");
 
   // een bron die niet klopt (een verminkte link) houdt de aanvraag niet tegen: hij valt gewoon weg
   const bron = leesBron(i.bron);
-  const basis: NieuweAanvraag = { soort: i.soort, naam, bedrijf, email, ...(telefoon ? { telefoon } : {}), ...(bericht ? { bericht } : {}), ...(bron ? { bron } : {}) };
+  const basis: NieuweAanvraag = { soort: i.soort, naam, bedrijf, email, ...(telefoon ? { telefoon } : {}), ...(bericht ? { bericht } : {}), ...(bron ? { bron } : {}), ...(i.taal ? { taal: i.taal } : {}) };
 
   if (i.soort === "partner") {
     const gekozen = [...new Set(i.interesses ?? [])];
