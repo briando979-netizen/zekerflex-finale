@@ -8,13 +8,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const h = vi.hoisted(() => ({
   createWebsiteProposal: vi.fn(),
   findMany: vi.fn(),
+  userFindFirst: vi.fn(),
   anyPlatformAdmin: vi.fn(),
   alertOwner: vi.fn(),
 }));
 
 vi.mock("@/lib/env", () => ({ env: { APP_BASE_URL: "https://zekerflex.test" } }));
 vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
-vi.mock("@/lib/prisma", () => ({ prisma: { salesLead: { findMany: h.findMany } } }));
+vi.mock("@/lib/prisma", () => ({ prisma: { salesLead: { findMany: h.findMany }, user: { findFirst: h.userFindFirst } } }));
 vi.mock("@/lib/sales/website-proposal", () => ({ createWebsiteProposal: h.createWebsiteProposal }));
 vi.mock("@/lib/messaging/contacts", () => ({ anyPlatformAdmin: h.anyPlatformAdmin }));
 vi.mock("@/lib/ops/alert", () => ({ alertOwner: h.alertOwner }));
@@ -25,6 +26,8 @@ vi.mock("@/lib/time/amsterdam", () => ({ amsterdamDayKey: () => "2026-11-18" }))
 
 import { AppError } from "@/lib/errors";
 import { runWebsitePijplijn, stuurPijplijnDagoverzicht, PIJPLIJN_CAP, type PijplijnResult } from "@/lib/sales/website-pijplijn";
+import { heeftHandgemaaktVoorstel, HANDGEMAAKTE_VOORSTEL_DOMEINEN } from "@/lib/sales/handgemaakte-voorstellen";
+import { VOORSTELLEN } from "@/lib/voorstel/subdomein";
 
 interface LeadRow {
   id: string;
@@ -52,8 +55,10 @@ const proposalOf = (id: string, score = 40) => ({
 beforeEach(() => {
   h.createWebsiteProposal.mockReset();
   h.findMany.mockReset();
+  h.userFindFirst.mockReset();
   h.anyPlatformAdmin.mockReset();
   h.alertOwner.mockReset();
+  h.userFindFirst.mockResolvedValue(null);
   h.anyPlatformAdmin.mockResolvedValue("admin1");
   h.createWebsiteProposal.mockImplementation((input: { leadId?: string }) => Promise.resolve(proposalOf(input.leadId ?? "x")));
 });
@@ -107,6 +112,46 @@ describe("runWebsitePijplijn", () => {
     expect(h.findMany).not.toHaveBeenCalled();
     expect(h.createWebsiteProposal).not.toHaveBeenCalled();
     expect(r.gemaakt).toHaveLength(0);
+  });
+});
+
+describe("uitsluiten (handgemaakt voorstel / bestaande klant)", () => {
+  it("slaat een bedrijf met een handgemaakt voorstel over (smileyapp.nl = partner Martijn)", async () => {
+    h.findMany.mockResolvedValue([lead("smiley", { sourceUrl: "https://smileyapp.nl" }), lead("a")]);
+    const r = await runWebsitePijplijn();
+    expect(r.gemaakt.map((i) => i.leadId)).toEqual(["a"]);
+    expect(r.overgeslagen).toBe(1);
+    expect(h.createWebsiteProposal).not.toHaveBeenCalledWith({ leadId: "smiley" }, expect.anything());
+  });
+
+  it("slaat ook een subdomein van een handgemaakt-voorstel-domein over (www.hetschwarzwald.nl)", async () => {
+    h.findMany.mockResolvedValue([lead("sw", { sourceUrl: "https://www.hetschwarzwald.nl" })]);
+    const r = await runWebsitePijplijn();
+    expect(r.gemaakt).toHaveLength(0);
+    expect(r.overgeslagen).toBe(1);
+    expect(h.createWebsiteProposal).not.toHaveBeenCalled();
+  });
+
+  it("slaat een bestaande klant over (actief account op het bedrijfsdomein)", async () => {
+    h.findMany.mockResolvedValue([lead("klant", { sourceUrl: "https://klantco.nl" })]);
+    h.userFindFirst.mockResolvedValue({ id: "u1" });
+    const r = await runWebsitePijplijn();
+    expect(r.gemaakt).toHaveLength(0);
+    expect(r.overgeslagen).toBe(1);
+    expect(h.createWebsiteProposal).not.toHaveBeenCalled();
+    expect(h.userFindFirst).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ email: { endsWith: "@klantco.nl" } }) }));
+  });
+
+  it("heeftHandgemaaktVoorstel herkent de domeinen", () => {
+    expect(heeftHandgemaaktVoorstel("smileyapp.nl")).toBe(true);
+    expect(heeftHandgemaaktVoorstel("www.smileyapp.nl")).toBe(true);
+    expect(heeftHandgemaaktVoorstel("hetschwarzwald.nl")).toBe(true);
+    expect(heeftHandgemaaktVoorstel("ikenzorg.nl")).toBe(false);
+  });
+
+  it("elke VOORSTELLEN-sleutel heeft een bedrijfsdomein (anders wordt een nieuw voorstel niet uitgesloten)", () => {
+    expect(HANDGEMAAKTE_VOORSTEL_DOMEINEN.length).toBe(Object.keys(VOORSTELLEN).length);
+    expect(HANDGEMAAKTE_VOORSTEL_DOMEINEN.every((d) => typeof d === "string" && d.includes("."))).toBe(true);
   });
 });
 

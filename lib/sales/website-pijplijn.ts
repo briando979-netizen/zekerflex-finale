@@ -7,6 +7,8 @@ import { anyPlatformAdmin } from "@/lib/messaging/contacts";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { leadWebsiteUrl } from "@/lib/sales/website-score-shared";
 import { createWebsiteProposal } from "@/lib/sales/website-proposal";
+import { heeftHandgemaaktVoorstel } from "@/lib/sales/handgemaakte-voorstellen";
+import { FREE_MAIL_DOMAINS } from "@/lib/sales/vrije-maildomeinen";
 
 // ---------------------------------------------------------------------------
 // Automatische websitepijplijn (18 nov 2026).
@@ -34,6 +36,16 @@ const MAX_BEKEKEN = 120;
 
 const CLOSED = ["WON", "LOST", "DISQUALIFIED", "BOUNCED", "UNSUBSCRIBED"] as const;
 const isTestHost = (host: string) => host === "localhost" || /\.(test|example|invalid|localhost)$/i.test(host);
+
+/** Hoort dit webadres al bij een ZekerFlex-klant (een actief account op het bedrijfsdomein)? Dan geen koud voorstel. */
+async function domeinIsKlant(host: string): Promise<boolean> {
+  const domein = host.trim().toLowerCase().replace(/^www\./, "");
+  if (!domein.includes(".") || FREE_MAIL_DOMAINS.has(domein)) return false;
+  const klant = await prisma.user
+    .findFirst({ where: { email: { endsWith: `@${domein}` }, disabledAt: null }, select: { id: true } })
+    .catch(() => null);
+  return Boolean(klant);
+}
 
 export interface PijplijnItem {
   leadId: string;
@@ -89,6 +101,16 @@ export async function runWebsitePijplijn(opts: { limit?: number } = {}): Promise
       continue;
     }
     if (isTestHost(host) || /(^|\.)zekerflex\.(com|nl)$/i.test(host)) {
+      result.overgeslagen += 1;
+      continue;
+    }
+    // Voor dit bedrijf loopt al een handgemaakt voorstel (bv. een partner als Smileyapp/Martijn): nooit een tweede, automatisch voorstel ernaast.
+    if (heeftHandgemaaktVoorstel(host)) {
+      result.overgeslagen += 1;
+      continue;
+    }
+    // Al klant (een actief account op het bedrijfsdomein): geen koud websitevoorstel.
+    if (await domeinIsKlant(host)) {
       result.overgeslagen += 1;
       continue;
     }
