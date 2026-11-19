@@ -64,3 +64,9 @@ De repo-kopie hier is de versie die live draait; houd beide gelijk.
 - **Series** (afspeellijsten van eigen video's) met tab Series op het profiel en "deel 2/5"-chip op de video; `#/serie/<id>`.
 - **Bedrijfsaccount**: 🏢-label, website-link en "Werk bij ons"-knop (alleen https-links; bedoeld voor klussen/vacatures op ZekerFlex).
 - **Toegankelijkheid**: grotere tekst, minder beweging (geen animaties, foto's schuiven niet vanzelf). Standaardthema is donker.
+
+## Functies (ronde E, 19 nov)
+- **Meldingen per soort** aan/uit (Instellingen → Meldingen); de server slaat een uitgezette soort over.
+- **Account & veiligheid**: wachtwoord wijzigen (andere sessies gaan eruit), overal uitloggen, geblokkeerde accounts beheren (`#/geblokkeerd`).
+- **Gesprekken** dempen (geen pop-up/teller) of bij jezelf verwijderen (de ander houdt zijn kopie).
+- **Vrienden uitnodigen**: link `/?ref=<gebruikersnaam>`; wie zich zo aanmeldt, staat als "uitgenodigd door"; prestatie 🤝 bij 3.

@@ -31,9 +31,11 @@ const MUZIEK = [
 ];
 const DAG = () => new Date().toISOString().slice(0, 10);
 // Instellingen per gebruiker (privacy, wie mag reageren/berichten, reactiefilter, thema, pauze-herinnering).
-const defaultSettings = () => ({ privateAccount: false, whoComments: 'all', whoMessages: 'all', commentFilter: [], allowDownload: true, theme: 'dark', breakReminder: 0, accountType: 'persoon', website: '', werkLink: '', textSize: 'normaal', reducedMotion: false });
+const defaultSettings = () => ({ privateAccount: false, whoComments: 'all', whoMessages: 'all', commentFilter: [], allowDownload: true, theme: 'dark', breakReminder: 0, accountType: 'persoon', website: '', werkLink: '', textSize: 'normaal', reducedMotion: false, notif: { like: true, comment: true, follow: true, mention: true, post: true, live: true, repost: true } });
+// welke meldingsoort hoort bij welk schakelaartje in de instellingen
+const NOTIF_SOORT = { like: 'like', commentlike: 'like', comment: 'comment', reply: 'comment', follow: 'follow', followRequest: 'follow', followAccepted: 'follow', mention: 'mention', post: 'post', live: 'live', repost: 'repost', invite: 'follow' };
 const veiligeUrl = s => { const u = String(s || '').trim().slice(0, 300); return /^https:\/\/[^\s<>"']+$/i.test(u) ? u : ''; };
-const settingsOf = u => (u.settings = { ...defaultSettings(), ...(u.settings || {}) });
+const settingsOf = u => (u.settings = { ...defaultSettings(), ...(u.settings || {}), notif: { ...defaultSettings().notif, ...(u.settings?.notif || {}) } });
 let db = fs.existsSync(DATA) ? { ...empty(), ...JSON.parse(fs.readFileSync(DATA, 'utf8')) } : empty();
 let saveTimer = null;
 function save() {
@@ -62,6 +64,7 @@ function publicUser(u, viewer) {
     liveId: [...lives.values()].find(l => l.hostId === u.id)?.id || null,
     private: !!(u.settings && u.settings.privateAccount),
     bedrijf: u.settings?.accountType === 'bedrijf', website: u.settings?.website || '', werkLink: u.settings?.werkLink || '',
+    uitgenodigdDoor: u.uitgenodigdDoor ? userById(u.uitgenodigdDoor)?.username || null : null,
     requested: viewer ? (u.followRequests || []).includes(viewer.id) : false,
     locked: !!(u.settings && u.settings.privateAccount) && (!viewer || (viewer.id !== u.id && !viewer.following.includes(u.id))),
   };
@@ -126,6 +129,9 @@ function duetInfo(did) {
 
 function notify(userId, fromId, type, extra = {}) {
   if (userId === fromId) return;
+  const ontvanger = userById(userId);
+  if (!ontvanger) return;
+  if (settingsOf(ontvanger).notif[NOTIF_SOORT[type] || type] === false) return; // deze soort uitgezet in Instellingen → Meldingen
   const n = { id: id(), userId, fromId, type, created: now(), read: false, ...extra };
   db.notifications.push(n);
   save();
@@ -174,7 +180,11 @@ app.post('/api/register', (req, res) => {
   const { salt, hash } = hashPass(password);
   const ip = clientIp(req);
   const u = { id: id(), username, name: String(name || username).slice(0, 30), bio: '', avatar: null, salt, hash, following: [], blocked: [], created: now(), ip, lastIp: ip, lastSeen: now() };
+  // uitgenodigd via een link (?ref=gebruikersnaam): de uitnodiger krijgt een melding en telt mee voor de prestatie
+  const ref = req.body.ref && userByName(String(req.body.ref).replace(/^@/, ''));
+  if (ref) { u.uitgenodigdDoor = ref.id; }
   db.users.push(u);
+  if (ref) notify(ref.id, u.id, 'invite');
   const token = crypto.randomBytes(24).toString('hex');
   db.sessions[token] = u.id;
   save();
@@ -197,11 +207,43 @@ app.post('/api/logout', (req, res) => {
   save();
   res.json({ ok: true });
 });
+// wachtwoord wijzigen: oude controleren, nieuwe zetten, alle andere sessies eruit
+app.post('/api/account/wachtwoord', auth, (req, res) => {
+  const { oud, nieuw } = req.body || {};
+  if (hashPass(String(oud || ''), req.user.salt).hash !== req.user.hash) return res.status(400).json({ error: 'Het huidige wachtwoord klopt niet' });
+  if (!nieuw || String(nieuw).length < 6) return res.status(400).json({ error: 'Nieuw wachtwoord: minstens 6 tekens' });
+  Object.assign(req.user, hashPass(String(nieuw)));
+  for (const t of Object.keys(db.sessions)) if (db.sessions[t] === req.user.id && t !== req.token) delete db.sessions[t];
+  save();
+  res.json({ ok: true });
+});
+// overal uitloggen behalve hier
+app.post('/api/account/uitloggen-overal', auth, (req, res) => {
+  let n = 0;
+  for (const t of Object.keys(db.sessions)) if (db.sessions[t] === req.user.id && t !== req.token) { delete db.sessions[t]; n++; }
+  save();
+  res.json({ ok: true, sessies: n });
+});
+app.get('/api/blocked', auth, (req, res) => res.json({ users: (req.user.blocked || []).map(userById).filter(Boolean).map(x => publicUser(x, req.user)) }));
+// gesprek dempen (geen pop-up/teller) of voor jezelf verwijderen
+app.post('/api/conversations/:username/dempen', auth, (req, res) => {
+  const other = userByName(req.params.username); if (!other) return res.status(404).end();
+  req.user.muted = req.user.muted || [];
+  const on = toggle(req.user.muted, other.id); save();
+  res.json({ muted: on });
+});
+app.delete('/api/conversations/:username', auth, (req, res) => {
+  const other = userByName(req.params.username); if (!other) return res.status(404).end();
+  for (const m of db.messages) if ((m.from === req.user.id && m.to === other.id) || (m.from === other.id && m.to === req.user.id)) { m.hidden = m.hidden || []; if (!m.hidden.includes(req.user.id)) m.hidden.push(req.user.id); }
+  save(); res.json({ ok: true });
+});
+const zichtbaarBericht = (m, uid) => !(m.hidden || []).includes(uid);
 
 app.get('/api/me', (req, res) => {
   if (!req.user) return res.json({ user: null });
+  const muted = req.user.muted || [];
   const unread = db.notifications.filter(n => n.userId === req.user.id && !n.read).length
-    + db.messages.filter(m => m.to === req.user.id && !m.read).length;
+    + db.messages.filter(m => m.to === req.user.id && !m.read && !muted.includes(m.from) && zichtbaarBericht(m, req.user.id)).length;
   res.json({ user: publicUser(req.user, req.user), unread, settings: settingsOf(req.user), followRequests: (req.user.followRequests || []).length });
 });
 
@@ -221,6 +263,7 @@ app.patch('/api/settings', auth, (req, res) => {
   if (b.werkLink !== undefined) s.werkLink = veiligeUrl(b.werkLink);
   if (['normaal', 'groot'].includes(b.textSize)) s.textSize = b.textSize;
   if (typeof b.reducedMotion === 'boolean') s.reducedMotion = b.reducedMotion;
+  if (b.notif && typeof b.notif === 'object') for (const k of Object.keys(defaultSettings().notif)) if (typeof b.notif[k] === 'boolean') s.notif[k] = b.notif[k];
   save();
   res.json({ settings: s });
 });
@@ -266,6 +309,7 @@ function achievements(u) {
     ['geliefd', '❤️', '100 likes', likes >= 100], ['viraal', '🔥', '10.000 weergaven', views >= 10000],
     ['populair', '⭐', '100 volgers', followers >= 100], ['sociaal', '💬', '10 reacties geplaatst', reacties >= 10],
     ['live', '📡', 'Ging LIVE', !!u.wentLive], ['vroeg', '🌱', 'Vroege FlikFlakker', u.created < Date.UTC(2027, 0, 1)],
+    ['ambassadeur', '🤝', '3 vrienden uitgenodigd', db.users.filter(x => x.uitgenodigdDoor === u.id).length >= 3],
   ].map(([id, icon, title, earned]) => ({ id, icon, title, earned }));
 }
 
@@ -737,7 +781,7 @@ function sendMessage(from, to, text, videoId = null, extra = {}) {
   db.messages.push(m);
   save();
   const pm = publicMessage(m);
-  push(to.id, { type: 'message', message: pm, from: publicUser(from, to) });
+  push(to.id, { type: 'message', message: pm, from: publicUser(from, to), muted: (to.muted || []).includes(from.id) });
   push(from.id, { type: 'message', message: pm, from: publicUser(from, from) });
   return pm;
 }
@@ -758,15 +802,15 @@ app.post('/api/messages/:id/react', auth, (req, res) => {
   res.json({ message: pm });
 });
 app.get('/api/conversations', auth, (req, res) => {
-  const me = req.user.id;
+  const me = req.user.id, muted = req.user.muted || [];
   const convos = {};
-  for (const m of db.messages.filter(m => m.from === me || m.to === me)) {
+  for (const m of db.messages.filter(m => (m.from === me || m.to === me) && zichtbaarBericht(m, me))) {
     const other = m.from === me ? m.to : m.from;
     if (!convos[other] || convos[other].last.created < m.created) convos[other] = { ...(convos[other] || { unread: 0 }), last: publicMessage(m) };
     if (m.to === me && !m.read) convos[other].unread = (convos[other].unread || 0) + 1;
   }
   res.json({
-    conversations: Object.entries(convos).map(([uid, c]) => ({ user: publicUser(userById(uid), req.user), ...c }))
+    conversations: Object.entries(convos).map(([uid, c]) => ({ user: publicUser(userById(uid), req.user), ...c, muted: muted.includes(uid) }))
       .filter(c => c.user).sort((a, b) => b.last.created - a.last.created),
   });
 });
@@ -774,10 +818,10 @@ app.get('/api/messages/:username', auth, (req, res) => {
   const other = userByName(req.params.username);
   if (!other) return res.status(404).end();
   const me = req.user.id;
-  const list = db.messages.filter(m => (m.from === me && m.to === other.id) || (m.from === other.id && m.to === me));
+  const list = db.messages.filter(m => ((m.from === me && m.to === other.id) || (m.from === other.id && m.to === me)) && zichtbaarBericht(m, me));
   list.forEach(m => { if (m.to === me) m.read = true; });
   save();
-  res.json({ user: publicUser(other, req.user), messages: list.map(publicMessage) });
+  res.json({ user: publicUser(other, req.user), messages: list.map(publicMessage), muted: (req.user.muted || []).includes(other.id) });
 });
 app.post('/api/messages/:username', auth, upload.single('audio'), (req, res) => {
   const other = userByName(req.params.username);

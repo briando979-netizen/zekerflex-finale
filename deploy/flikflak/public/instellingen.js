@@ -1,6 +1,37 @@
 // FlikFlak — ronde C (19 nov 2026): instellingen, privé account met volgverzoeken, thema (donker/licht),
 // pauze-herinnering, prestaties, concepten. Gebruikt de helpers uit app.js (global scope).
 
+// ================= uitnodigingslink (?ref=gebruikersnaam) =================
+(() => { try { const ref = new URLSearchParams(location.search).get('ref'); if (ref) { localStorage.setItem('ff_ref', ref.replace(/^@/, '').slice(0, 24)); history.replaceState(null, '', location.pathname + location.hash); } } catch {} })();
+function inviteLink() { return location.origin + '/?ref=' + encodeURIComponent(S.me.username); }
+async function deelUitnodiging() {
+  const l = inviteLink(), tekst = `Kom ook op FlikFlak! Korte video's, chat en LIVE. Meld je aan via mijn link: ${l}`;
+  if (navigator.share) { try { await navigator.share({ title: 'FlikFlak', text: tekst, url: l }); return; } catch {} }
+  try { await navigator.clipboard.writeText(l); toast('Uitnodigingslink gekopieerd'); } catch { prompt('Je uitnodigingslink:', l); }
+}
+
+// ================= geblokkeerde accounts =================
+async function blockedPage() {
+  if (!need()) return (location.hash = '#/');
+  const page = h(`<div class="page"><div class="head">${backBtn()}<h2>Geblokkeerd</h2><span class="ic"></span></div><div class="lst"><div class="spinner"></div></div></div>`);
+  view.append(page);
+  const r = await api('GET', '/api/blocked');
+  const lst = $('.lst', page); lst.innerHTML = r.users.length ? '' : '<div class="grid-empty">Je hebt niemand geblokkeerd.</div>';
+  r.users.forEach(u => {
+    const row = h(`<div class="row"><img class="av" src="${avatar(u)}"><div class="grow"><div class="t1">${esc(u.name || u.username)}</div><div class="t2">@${esc(u.username)}</div></div><button class="btn small grey">Deblokkeren</button></div>`);
+    $('button', row).onclick = async () => { await api('POST', `/api/users/${u.id}/block`); row.remove(); toast(`@${u.username} gedeblokkeerd`); if (!$('.row', lst)) lst.innerHTML = '<div class="grid-empty">Je hebt niemand geblokkeerd.</div>'; };
+    lst.append(row);
+  });
+}
+function wachtwoordSheet() {
+  const s = sheet(`<div class="auth"><h3 style="font-size:17px">Wachtwoord wijzigen</h3><input name="oud" type="password" placeholder="Huidig wachtwoord" autocomplete="current-password"><input name="nieuw" type="password" placeholder="Nieuw wachtwoord (min. 6 tekens)" autocomplete="new-password"><input name="nieuw2" type="password" placeholder="Nieuw wachtwoord nog een keer"><div class="err"></div><button class="btn block" data-ok>Opslaan</button></div>`);
+  $('[data-ok]', s).onclick = async () => {
+    const oud = $('[name=oud]', s).value, nieuw = $('[name=nieuw]', s).value;
+    if (nieuw !== $('[name=nieuw2]', s).value) return ($('.err', s).textContent = 'De nieuwe wachtwoorden zijn niet gelijk');
+    try { await api('POST', '/api/account/wachtwoord', { oud, nieuw }); s.close(); toast('Wachtwoord gewijzigd; andere apparaten zijn uitgelogd'); } catch (e) { $('.err', s).textContent = e.message; }
+  };
+}
+
 // ================= thema =================
 function applyTheme(t) {
   const licht = t === 'light' || (t === 'system' && matchMedia('(prefers-color-scheme: light)').matches);
@@ -91,6 +122,13 @@ async function settingsPage() {
     <div class="opt"><span style="font-size:20px">🌀</span><label>Minder beweging<small>Geen animaties, foto's schuiven niet vanzelf</small></label>${schakel('reducedMotion', s.reducedMotion)}</div>
     <div class="sec-title">Welzijn</div>
     <div class="opt">${ic('timer')}<label>Pauze-herinnering</label>${keuze('breakReminder', [[0, 'Uit'], [15, 'Elke 15 min'], [30, 'Elke 30 min'], [60, 'Elk uur']], s.breakReminder)}</div>
+    <div class="sec-title">Meldingen</div>
+    ${[['like', 'Likes'], ['comment', 'Reacties en antwoorden'], ['mention', 'Vermeldingen'], ['follow', 'Nieuwe volgers en verzoeken'], ['repost', 'Reposts'], ['post', "Nieuwe video's van wie je volgt"], ['live', 'Iemand gaat LIVE']].map(([k, l]) => `<div class="opt">${ic('inbox')}<label>${l}</label>${schakel('notif.' + k, s.notif[k] !== false)}</div>`).join('')}
+    <div class="sec-title">Account &amp; veiligheid</div>
+    <button class="opt ww" style="width:100%;text-align:left">${ic('lock')}<label>Wachtwoord wijzigen</label></button>
+    <button class="opt overal" style="width:100%;text-align:left">${ic('back')}<label>Overal uitloggen<small>Behalve op dit apparaat</small></label></button>
+    <a class="opt" href="#/geblokkeerd">${ic('nope')}<label>Geblokkeerde accounts</label><span style="color:var(--muted)">›</span></a>
+    <button class="opt uitnodig" style="width:100%;text-align:left">${ic('addUser')}<label>Vrienden uitnodigen<small>Deel je link; wie zich zo aanmeldt, staat als "uitgenodigd door jou"</small></label></button>
     <div class="sec-title">Je gegevens</div>
     <button class="opt export" style="width:100%;text-align:left">${ic('download')}<label>Download mijn gegevens<small>Alles wat FlikFlak van jou bewaart, als bestand</small></label></button>
     <button class="opt regels" style="width:100%;text-align:left">${ic('flag')}<label>Huisregels &amp; privacy</label></button>
@@ -100,7 +138,13 @@ async function settingsPage() {
     try { const r2 = await api('PATCH', '/api/settings', patch); S.settings = r2.settings; toast('Opgeslagen'); }
     catch (e) { $('.err', page).textContent = e.message; }
   };
-  $$('input[type=checkbox]', page).forEach(i => i.onchange = async () => { await stuur({ [i.name]: i.checked }); if (i.name === 'reducedMotion') applyA11y(S.settings); });
+  $$('input[type=checkbox]', page).forEach(i => i.onchange = async () => {
+    if (i.name.startsWith('notif.')) return stuur({ notif: { [i.name.slice(6)]: i.checked } });
+    await stuur({ [i.name]: i.checked }); if (i.name === 'reducedMotion') applyA11y(S.settings);
+  });
+  $('.ww', page).onclick = wachtwoordSheet;
+  $('.overal', page).onclick = async () => { if (await confirmSheet('Op alle andere apparaten uitloggen?', 'Uitloggen')) { const r2 = await api('POST', '/api/account/uitloggen-overal'); toast(`${r2.sessies} andere sessie${r2.sessies === 1 ? '' : 's'} uitgelogd`); } };
+  $('.uitnodig', page).onclick = deelUitnodiging;
   $$('input[type=url]', page).forEach(i => i.onblur = async () => { await stuur({ [i.name]: i.value.trim() }); i.value = S.settings?.[i.name] || ''; if (i.value === '' && i.defaultValue === '' ) return; if (!i.value) toast('Alleen een https-link wordt bewaard'); });
   $$('select', page).forEach(i => i.onchange = async () => {
     const v = i.name === 'breakReminder' ? +i.value : i.value;

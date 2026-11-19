@@ -161,7 +161,7 @@ function connectWs() {
     if (m.type === 'message') {
       const other = m.message.from === S.me?.id ? m.message.to : m.message.from;
       if (S.chatWith && S.chatWith.id === other) document.dispatchEvent(new CustomEvent('ff:msg', { detail: m.message }));
-      else if (m.message.from !== S.me?.id) { setUnread(S.unread + 1); toast(`💬 @${m.from.username}: ${m.message.text || (m.message.audio ? 'stuurde een spraakbericht' : 'stuurde een video')}`); }
+      else if (m.message.from !== S.me?.id && !m.muted) { setUnread(S.unread + 1); toast(`💬 @${m.from.username}: ${m.message.text || (m.message.audio ? 'stuurde een spraakbericht' : 'stuurde een video')}`); }
     }
     if (m.type === 'message:react') document.dispatchEvent(new CustomEvent('ff:msgreact', { detail: m.message }));
     if (m.type === 'typing' && S.chatWith?.username === m.from) document.dispatchEvent(new CustomEvent('ff:typing'));
@@ -224,8 +224,10 @@ function askLogin(mode = 'login') {
   $('[data-regels]', s)?.addEventListener('click', huisregels);
   const go = async () => {
     const body = Object.fromEntries($$('input', s).map(i => [i.name, i.value]));
+    if (mode === 'register') { const ref = localStorage.getItem('ff_ref'); if (ref) body.ref = ref; }
     try {
       const r = await api('POST', mode === 'login' ? '/api/login' : '/api/register', body);
+      if (mode === 'register') localStorage.removeItem('ff_ref');
       S.token = r.token; localStorage.setItem('ff_token', r.token); S.me = r.user;
       s.close(); reconnectWs(); await loadMe();
       toast(mode === 'login' ? `Welkom terug, ${r.user.name}!` : 'Account gemaakt! 🎉');
@@ -281,6 +283,7 @@ async function render() {
     if (p === '/instellingen') return await settingsPage();
     if (p === '/verzoeken') return await followRequestsPage();
     if ((m = p.match(/^\/serie\/(.+)$/))) return await seriePage(m[1]);
+    if (p === '/geblokkeerd') return await blockedPage();
     location.hash = '#/';
   } catch (e) {
     view.innerHTML = `<div class="empty"><h3>Oeps</h3><div>${esc(e.message)}</div><a class="btn" href="#/">Naar home</a></div>`;
@@ -776,6 +779,7 @@ async function profilePage(username) {
       ${u.liveId ? `<a href="#/live/${u.liveId}" class="is-live big"><img class="big-av" src="${avatar(u)}"><span class="live-tag">LIVE</span></a>` : `<img class="big-av" src="${avatar(u)}">`}
       <div class="handle">@${esc(u.username)} ${check(u)} ${u.bedrijf ? '<span class="bedrijf-tag">🏢 Bedrijf</span>' : ''}</div>
       ${u.website || u.werkLink ? `<div class="plinks">${u.website ? `<a href="${esc(u.website)}" target="_blank" rel="noopener">🔗 ${esc(u.website.replace(/^https:\/\/(www\.)?/, '').slice(0, 32))}</a>` : ''}${u.werkLink ? `<a class="btn small" href="${esc(u.werkLink)}" target="_blank" rel="noopener">💼 Werk bij ons</a>` : ''}</div>` : ''}
+      ${u.uitgenodigdDoor ? `<div style="text-align:center;font-size:12px;color:var(--muted)">Uitgenodigd door <a href="#/@${esc(u.uitgenodigdDoor)}" style="color:var(--accent)">@${esc(u.uitgenodigdDoor)}</a></div>` : ''}
       <div class="stats">
         <a href="#/@${esc(u.username)}/following"><b>${fmt(u.following)}</b>Volgend</a>
         <a href="#/@${esc(u.username)}/followers"><b class="fcount">${fmt(u.followers)}</b>Volgers</a>
@@ -996,7 +1000,7 @@ async function soundPage(id) {
 
 // ================= INBOX =================
 function notifText(n) {
-  return { followRequest: 'wil je volgen.', followAccepted: 'heeft je volgverzoek goedgekeurd.', repost: 'heeft je video gerepost.', like: 'vindt je video leuk.', comment: `reageerde: ${n.text}`, reply: `beantwoordde je reactie: ${n.text}`, follow: 'volgt je nu.', mention: n.text ? `noemde je in een reactie: ${n.text}` : 'noemde je in een video.', commentlike: `vindt je reactie leuk: ${n.text}`, post: 'heeft een nieuwe video geplaatst.', live: `is LIVE: ${n.text || ''}` }[n.type] || '';
+  return { followRequest: 'wil je volgen.', followAccepted: 'heeft je volgverzoek goedgekeurd.', repost: 'heeft je video gerepost.', invite: 'heeft zich aangemeld via jouw uitnodigingslink. 🤝', like: 'vindt je video leuk.', comment: `reageerde: ${n.text}`, reply: `beantwoordde je reactie: ${n.text}`, follow: 'volgt je nu.', mention: n.text ? `noemde je in een reactie: ${n.text}` : 'noemde je in een video.', commentlike: `vindt je reactie leuk: ${n.text}`, post: 'heeft een nieuwe video geplaatst.', live: `is LIVE: ${n.text || ''}` }[n.type] || '';
 }
 async function inboxPage() {
   if (!need()) return (location.hash = '#/');
@@ -1034,7 +1038,7 @@ async function inboxPage() {
     ib.innerHTML = r.conversations.length ? '' : '<div class="grid-empty">Nog geen berichten.<br>Stuur iemand een bericht via zijn profiel of met het potlood-icoon.</div>';
     for (const c of r.conversations) {
       const last = c.last.audio ? '🎤 Spraakbericht' : c.last.video ? (c.last.from === S.me.id ? 'Je hebt een video gedeeld' : 'Deelde een video') : c.last.text;
-      ib.append(h(`<a class="row" href="#/chat/${esc(c.user.username)}"><img class="av" src="${avatar(c.user)}"><div class="grow"><div class="t1">${esc(c.user.name || c.user.username)}</div><div class="t2" style="${c.unread ? 'color:#fff;font-weight:600' : ''}">${esc(last)} · ${ago(c.last.created)}</div></div>${c.unread ? `<span class="badge" style="position:static">${c.unread}</span>` : ''}</a>`));
+      ib.append(h(`<a class="row" href="#/chat/${esc(c.user.username)}"><img class="av" src="${avatar(c.user)}"><div class="grow"><div class="t1">${esc(c.user.name || c.user.username)}${c.muted ? ' 🔕' : ''}</div><div class="t2" style="${c.unread ? 'color:#fff;font-weight:600' : ''}">${esc(last)} · ${ago(c.last.created)}</div></div>${c.unread ? `<span class="badge" style="position:static">${c.unread}</span>` : ''}</a>`));
     }
   }
   const show = t => { tab = t; $$('[data-t]', page).forEach(b => b.classList.toggle('active', b.dataset.t === t)); t === 'act' ? showAct() : showMsg(); };
@@ -1050,7 +1054,7 @@ async function chatPage(username) {
   const r = await api('GET', '/api/messages/' + encodeURIComponent(username));
   const u = r.user; S.chatWith = u;
   api('GET', '/api/me').then(m => setUnread(m.unread)).catch(() => {});
-  const page = h(`<div class="chat"><div class="head">${backBtn()}<a href="#/@${esc(u.username)}" style="display:flex;align-items:center;gap:8px;flex:1;justify-content:center"><img class="av" style="width:30px;height:30px;border:0" src="${avatar(u)}"><b>${esc(u.name || u.username)}</b></a><span class="ic"></span></div>
+  const page = h(`<div class="chat"><div class="head">${backBtn()}<a href="#/@${esc(u.username)}" style="display:flex;align-items:center;gap:8px;flex:1;justify-content:center"><img class="av" style="width:30px;height:30px;border:0" src="${avatar(u)}"><b>${esc(u.name || u.username)}</b></a><button class="ic cmenu">${ic('more')}</button></div>
     <div class="msgs"></div><div class="typing"></div>
     <div class="chat-in"><input placeholder="Bericht sturen..." maxlength="1000"><button class="mic" title="Spraakbericht">🎤</button><button class="btn small">${ic('send')}</button></div></div>`);
   view.append(page);
@@ -1092,6 +1096,20 @@ async function chatPage(username) {
     } catch { toast('Microfoon niet beschikbaar'); }
   };
   onCleanup(() => { try { rec?.stop(); } catch {} });
+  // gespreksmenu: dempen, verwijderen (alleen bij jou), profiel
+  let muted = !!r.muted;
+  $('.cmenu', page).onclick = () => {
+    const s = sheet(`<div class="sh-body" style="padding:8px 0">
+      <button class="row" style="width:100%" data-a="mute">🔕<span class="grow" style="text-align:left">${muted ? 'Dempen opheffen' : 'Gesprek dempen'}</span></button>
+      <button class="row" style="width:100%" data-a="del">${ic('trash')}<span class="grow" style="text-align:left">Gesprek verwijderen (bij jou)</span></button>
+      <a class="row" href="#/@${esc(u.username)}">${ic('user')}<span class="grow">Profiel bekijken</span></a>
+      <button class="row" style="width:100%;justify-content:center;color:var(--muted)" data-close>Annuleren</button></div>`);
+    $$('[data-a]', s).forEach(b => b.onclick = async () => {
+      s.close();
+      if (b.dataset.a === 'mute') { const r2 = await api('POST', `/api/conversations/${encodeURIComponent(u.username)}/dempen`); muted = r2.muted; toast(muted ? 'Gedempt: geen pop-ups meer van dit gesprek' : 'Dempen opgeheven'); }
+      if (b.dataset.a === 'del') { if (await confirmSheet('Gesprek bij jou verwijderen? De ander houdt zijn kopie.')) { await api('DELETE', '/api/conversations/' + encodeURIComponent(u.username)); location.hash = '#/inbox'; } }
+    });
+  };
   if (!r.messages.length) box.append(h(`<div class="grid-empty"><img class="big-av" style="width:80px;height:80px;border-radius:50%" src="${avatar(u)}"><br><b>${esc(u.name)}</b><br>@${esc(u.username)}<br><br>Zeg hallo! 👋</div>`));
   r.messages.forEach(add);
   const input = $('input', page);
