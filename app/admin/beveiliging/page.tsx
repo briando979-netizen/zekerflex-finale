@@ -6,6 +6,8 @@ import { AdminTwoFactorOverview } from "@/components/admin/AdminTwoFactorOvervie
 import { AanvalsbeschermingPanel } from "@/components/admin/AanvalsbeschermingPanel";
 import { twoFactorStatus } from "@/lib/auth/two-factor";
 import { count, percentOf } from "@/lib/admin/format";
+import { SecurityIntelligencePanel } from "@/components/admin/SecurityIntelligencePanel";
+import { beveiligingsBeeld } from "@/lib/security/intelligence";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +51,9 @@ export default async function BeveiligingPage() {
   const on = people.filter((p) => p.twoFactor).length;
   const admins = people.filter((p) => p.roles.includes("PLATFORM_ADMIN"));
   const adminsOn = admins.filter((p) => p.twoFactor).length;
+  const now = new Date();
+  // één bron die stuk is, mag de pagina niet omgooien
+  const beeld = await beveiligingsBeeld(now).catch(() => null);
 
   return (
     <div className="space-y-4">
@@ -64,6 +69,7 @@ export default async function BeveiligingPage() {
         {own}
         <AdminTwoFactorOverview people={people} selfId={principal.userId} />
       </div>
+      {beeld && <SecurityIntelligencePanel beeld={beeld} now={now} />}
       <AanvalsbeschermingPanel />
     </div>
   );

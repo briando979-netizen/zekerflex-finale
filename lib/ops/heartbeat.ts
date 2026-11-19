@@ -45,6 +45,8 @@ export const WATCHED_CRONS: WatchedCron[] = [
   // dagelijks 08:30 UTC: de automatische websitepijplijn (lib/sales/website-pijplijn.ts); met de vlag uit telt een run ook als geslaagd
   { job: "sales-pijplijn", label: "Sales: websitevoorstellen vanzelf klaarzetten", maxAgeHours: 26 },
   { job: "ai-watchdog", label: "AI-watchdog", maxAgeHours: 26 },
+  // dagelijks 04:40 UTC (/api/internal/beveiliging/keten): de hashketen van het auditlogboek narekenen (lib/security/intelligence.ts)
+  { job: "beveiliging-keten", label: "Beveiliging: auditlogboek narekenen", maxAgeHours: 26, sinds: "2026-11-19T18:00:00Z" },
   { job: "abu-phase-sweep", label: "ABU-fasen", maxAgeHours: 26 },
   { job: "claim-collections-sweep", label: "Incasso & herinneringen", maxAgeHours: 26 },
   { job: "agenda-mail-sweep", label: "Agenda-mail", maxAgeHours: 26 },

@@ -79,10 +79,25 @@
 	}
 }
 
+# Interne adressen zijn er voor de eigen cron-container, die rechtstreeks met
+# app:3000 praat en dus nooit door Caddy komt. Van buiten bestaan ze niet: zo
+# hangt hun bescherming niet meer alleen aan één gedeeld token (19 nov 2026).
+# Uitzondering: de AI-node op de pc van de eigenaar meldt zich van buiten aan
+# (/api/internal/ai-node/register, met een eigen sleutel). Een 404 en geen 403:
+# een reeks 403's ziet CrowdSec als inbraakpoging.
+(interndicht) {
+	@intern {
+		path /api/internal/* /api/metrics /api/metrics/*
+		not path /api/internal/ai-node/*
+	}
+	respond @intern 404
+}
+
 {$SITE_ADDRESS::80} {
 	encode zstd gzip
 	import toegangslog
 	import bodylimiet
+	import interndicht
 	# HSTS alleen hier (eigen domeinen), niet op klantdomeinen: dat is hún domein
 	header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
 
@@ -121,6 +136,7 @@ schwarzwald.zekerflex.com {
 	encode zstd gzip
 	import toegangslog
 	import bodylimiet
+	import interndicht
 	reverse_proxy app:3000 {
 		header_up -X-ZF-Site-Host
 		header_up X-ZF-Voorstel schwarzwald
@@ -137,6 +153,7 @@ smileyapp.zekerflex.com {
 	encode zstd gzip
 	import toegangslog
 	import bodylimiet
+	import interndicht
 	reverse_proxy app:3000 {
 		header_up -X-ZF-Site-Host
 		header_up X-ZF-Voorstel smileyapp
@@ -257,6 +274,7 @@ https:// {
 	encode zstd gzip
 	import toegangslog
 	import bodylimiet
+	import interndicht
 	reverse_proxy app:3000 {
 		header_up X-ZF-Site-Host {host}
 		header_up -X-ZF-Voorstel

@@ -13,6 +13,7 @@
 import http from "node:http";
 import { isIP } from "node:net";
 import { promises as dns } from "node:dns";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { chromium } from "playwright";
 
 const POORT = Number(process.env.PORT || 4300);
@@ -21,6 +22,14 @@ const MAX_TEGELIJK = 2;
 const MAX_MS = 45_000;
 if (!TOKEN) {
   console.error("[scraper] SCRAPER_TOKEN ontbreekt: de dienst doet niets");
+}
+
+/** Vergelijkt het token in constante tijd (via een hash, zodat ook de lengte niets verraadt), net als de andere eigen diensten. */
+function tokenKlopt(gekregen) {
+  if (!TOKEN || typeof gekregen !== "string") return false;
+  const a = createHash("sha256").update(gekregen).digest();
+  const b = createHash("sha256").update(TOKEN).digest();
+  return timingSafeEqual(a, b);
 }
 
 let browser = null;
@@ -124,7 +133,7 @@ const server = http.createServer(async (req, res) => {
   };
   try {
     if (req.method === "GET" && req.url === "/gezond") return antwoord(200, { ok: true, bezig });
-    if (!TOKEN || req.headers["x-scraper-token"] !== TOKEN) return antwoord(401, { fout: "geen toegang" });
+    if (!tokenKlopt(req.headers["x-scraper-token"])) return antwoord(401, { fout: "geen toegang" });
     if (req.method !== "POST") return antwoord(405, { fout: "alleen POST" });
     const body = await lees(req);
     const url = await controleerUrl(String(body.url || ""));

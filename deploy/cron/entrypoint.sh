@@ -22,6 +22,8 @@ cat > /etc/crontabs/root <<EOF
 5 * * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/testwerker/reset"
 # Nachtelijke rondgang langs elke openbare pagina; wat kapot is komt in het foutenlogboek (lib/ops/rondgang.ts).
 20 4 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/rondgang"
+# Elke nacht de hashketen van het auditlogboek narekenen; een breuk is een melding aan de eigenaar (lib/security/intelligence.ts).
+40 4 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/beveiliging/keten"
 0 4 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/active-hours/recompute"
 0 6 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/orchestration/tick"
 # RAG twee keer per dag (de route zegt "elke ~12 uur"): valt één run weg door een uitrol, dan blijft de hartslag (26 u) toch vers
