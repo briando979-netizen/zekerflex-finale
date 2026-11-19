@@ -5,7 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import "./smiley.css";
 import { BASE, CONTACT, KLANTLOGIN, MENU, OFFICIELE_SITE, PRIVACY, SLOGAN, VOORSTEL_BAND, VOORWAARDEN, beeld } from "@/lib/voorstel/smileyapp";
+import { heeftTeam } from "@/lib/voorstel/smileyapp-accounts";
 import { VOORSTEL_HEADER } from "@/lib/voorstel/subdomein";
+import { AlleenOpSite } from "@/components/voorstel/AlleenOpSite";
 import { KortAdres } from "@/components/voorstel/KortAdres";
 import { SmileyMenu } from "@/components/voorstel/smileyapp/SmileyMenu";
 import { SmileyChat } from "@/components/voorstel/smileyapp/SmileyChat";
@@ -16,7 +18,9 @@ import { Gezicht } from "@/components/voorstel/smileyapp/Gezicht";
 // ZekerFlex-marketinglayout. Tot Martijn akkoord geeft: niet in zoekmachines
 // (noindex hier en X-Robots-Tag in middleware/next.config), op elke pagina de
 // voorstelband, geen bedrijfsgegevens voor zoekmachines (JSON-LD), het formulier
-// dicht en niets van derden behalve hun eigen Vimeo-filmpje na een klik.
+// op de contactpagina dicht en niets van derden behalve hun eigen Vimeo-filmpje
+// na een klik. Het beheer (/beheer, 19 nov 2026) heeft een eigen opmaak: daar
+// valt de omlijsting van de site (band, kop, footer en chat) weg via AlleenOpSite.
 const OMSCHRIJVING = "Ontwerpvoorstel van ZekerFlex voor een nieuwe website en app van Smileyapp: klanttevredenheid meten met een smiley die je swipet.";
 
 export const metadata: Metadata = {
@@ -41,12 +45,16 @@ export default async function SmileyappLayout({ children }: { children: ReactNod
   // op het eigen subdomein (Caddy zet de kop) korte adressen in de adresbalk
   const subdomein = (await headers()).get(VOORSTEL_HEADER) !== null;
   const [voorBand, naBand = ""] = VOORSTEL_BAND.split("smileyapp.nl");
+  // kan iemand van SmileyApp in het beheer inloggen? Dan leest er een team mee in de chat
+  const team = await heeftTeam();
   return (
     <div className="min-h-screen overflow-x-clip bg-smiley-cream font-sans text-smiley-ink">
       <a href="#inhoud" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[80] focus:rounded-full focus:bg-smiley-sun focus:px-4 focus:py-2 focus:font-bold">
         Naar de inhoud
       </a>
       {subdomein && <KortAdres basis={BASE} />}
+      {/* de omlijsting van de site; in het beheer valt hij weg (de band blijft hier in de layout staan) */}
+      <AlleenOpSite basis={BASE}>
       <div aria-hidden="true" className="sm-voortgang fixed inset-x-0 top-0 z-[70] h-1 bg-gradient-to-r from-smiley-green via-smiley-sun to-smiley-green" />
       <p className="bg-smiley-sun px-4 py-2 text-center text-xs font-semibold text-smiley-ink sm:text-sm">
         {voorBand}
@@ -75,16 +83,21 @@ export default async function SmileyappLayout({ children }: { children: ReactNod
             <a href={KLANTLOGIN} className="hidden rounded-full px-4 py-2.5 text-sm font-bold text-smiley-ink ring-1 ring-smiley-ink/20 hover:bg-smiley-mint sm:inline-flex">
               Klantlogin
             </a>
-            <Link href={`${BASE}/contact`} className="hidden rounded-full bg-smiley-ink px-5 py-2.5 text-sm font-bold text-white transition-transform hover:-translate-y-0.5 sm:inline-flex">
-              Neem contact op
+            {/* op de telefoon kort ("Demo"), zodat logo, knop en menu ook op 320 px naast elkaar passen; Contact staat in het menu */}
+            <Link href={`${BASE}/demo`} aria-label="Vraag een demo aan" className="inline-flex rounded-full bg-smiley-ink px-4 py-2.5 text-sm font-bold text-white transition-transform hover:-translate-y-0.5 sm:px-5">
+              <span className="sm:hidden">Demo</span>
+              <span className="hidden sm:inline xl:hidden">Demo aanvragen</span>
+              <span className="hidden xl:inline">Vraag een demo aan</span>
             </Link>
             <SmileyMenu />
           </div>
         </div>
       </header>
+      </AlleenOpSite>
 
       <main id="inhoud">{children}</main>
 
+      <AlleenOpSite basis={BASE}>
       <footer className="relative overflow-hidden bg-smiley-ink text-white">
         <Gezicht score={10} kleur="#5ABA8E" accent="#FDD11A" className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 opacity-10" />
         <div className="relative mx-auto grid max-w-[1200px] gap-10 px-4 py-16 sm:grid-cols-2 sm:px-8 lg:grid-cols-[1.4fr_1fr_1fr]">
@@ -124,6 +137,11 @@ export default async function SmileyappLayout({ children }: { children: ReactNod
             <p className={FOOTERKOP}>Meer</p>
             <ul className="mt-4 space-y-2.5 text-sm">
               <li>
+                <Link href={`${BASE}/demo`} className={FOOTERLINK}>
+                  Vraag een demo aan
+                </Link>
+              </li>
+              <li>
                 <a href={KLANTLOGIN} className={FOOTERLINK}>
                   Klantlogin
                 </a>
@@ -153,7 +171,8 @@ export default async function SmileyappLayout({ children }: { children: ReactNod
           </div>
         </div>
       </footer>
-      <SmileyChat />
+      <SmileyChat team={team} />
+      </AlleenOpSite>
     </div>
   );
 }

@@ -85,6 +85,9 @@ export default function SmileyappHome() {
               >
                 Kies een pakket
               </Link>
+              <Link href={`${BASE}/demo`} className="rounded-full bg-white px-7 py-4 font-bold text-smiley-ink transition-transform hover:-translate-y-0.5">
+                Vraag een demo aan
+              </Link>
               <Link href="#video" className="inline-flex items-center gap-2.5 rounded-full border border-white/25 px-6 py-4 font-semibold text-white transition-colors hover:bg-white/10">
                 <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
                   <path d="M3 1.5v11l9-5.5z" fill="currentColor" />
@@ -394,9 +397,14 @@ export default function SmileyappHome() {
               Wil jij ook op een eenvoudige, snelle en leuke manier de tevredenheid meten? Neem dan snel contact op!
             </p>
           </div>
-          <Link href={`${BASE}/contact`} className="shrink-0 rounded-full bg-smiley-ink px-8 py-4 font-bold text-white transition-transform hover:-translate-y-0.5">
-            Contact opnemen
-          </Link>
+          <div className="flex shrink-0 flex-wrap gap-3">
+            <Link href={`${BASE}/demo`} className="rounded-full bg-smiley-ink px-8 py-4 font-bold text-white transition-transform hover:-translate-y-0.5">
+              Vraag een demo aan
+            </Link>
+            <Link href={`${BASE}/contact`} className="rounded-full px-8 py-4 font-bold text-smiley-ink ring-2 ring-smiley-ink transition-transform hover:-translate-y-0.5">
+              Contact opnemen
+            </Link>
+          </div>
         </div>
       </section>
     </>

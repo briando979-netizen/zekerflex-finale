@@ -73,6 +73,12 @@ export function PakketKaart({ p }: { p: Pakket }) {
         >
           Contact opnemen<span className="sr-only"> over het {p.naam}</span>
         </Link>
+        <Link
+          href={`${BASE}/demo?pakket=${p.id}`}
+          className={`mt-3 block rounded-full px-6 py-3 text-center text-sm font-bold underline-offset-4 hover:underline ${donker ? "text-smiley-sun" : "text-smiley-leaf"}`}
+        >
+          Demo van dit pakket<span className="sr-only"> ({p.naam})</span>
+        </Link>
       </div>
     </article>
   );

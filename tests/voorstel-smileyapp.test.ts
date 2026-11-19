@@ -82,11 +82,30 @@ describe("SmileyApp-voorstel: band en noindex", () => {
     }
   });
 
-  it("het formulier staat dicht: geen <form>, alles in een uitgeschakelde fieldset", () => {
+  // Tot 19 nov 2026 stond hier: nergens een <form> in SmileyApp-code. Die dag vroeg de eigenaar om een werkende
+  // demo-aanvraag en een beheer voor Martijn en zijn medewerkers. Daarom mag een <form> nu in precies deze bestanden en
+  // nergens anders: het demo- en partnerformulier (één onderdeel) en de schermen van het beheer. Een aanvraag gaat
+  // alleen naar het eigen beheer (KV voorstel-smileyapp:); er gaat geen mail met gegevens naar derden. Het
+  // contactformulier blijft dicht: GeslotenFormulier houdt zijn uitgeschakelde fieldset, zonder <form>.
+  const MET_FORMULIER = [
+    "components/voorstel/smileyapp/AanvraagFormulier.tsx",
+    "components/voorstel/smileyapp/beheer/Gesprekken.tsx",
+    "components/voorstel/smileyapp/beheer/Inloggen.tsx",
+    "components/voorstel/smileyapp/beheer/SmileyBeheer.tsx",
+    "components/voorstel/smileyapp/beheer/Team.tsx",
+  ];
+
+  it("het contactformulier staat dicht; een <form> staat alleen in de afgesproken bestanden", () => {
     const f = lees("components/voorstel/smileyapp/GeslotenFormulier.tsx");
     expect(f).not.toMatch(/<form[\s>]/);
     expect(f).toContain("<fieldset disabled");
-    for (const p of CODE) expect(lees(p), p).not.toMatch(/<form[\s>]/);
+    expect(lees("app/voorstel/smileyapp/contact/page.tsx")).toContain("<GeslotenFormulier ");
+    const metForm = CODE.filter((p) => /<form[\s>]/.test(lees(p)));
+    expect(metForm.sort()).toEqual(MET_FORMULIER);
+    // de openbare formulieren sturen alleen naar de eigen aanvraagroute, nooit naar een adres van buiten
+    const formulier = lees("components/voorstel/smileyapp/AanvraagFormulier.tsx");
+    expect(formulier).toContain('fetch("/api/voorstel/smileyapp/aanvraag"');
+    expect(formulier).not.toMatch(/action=|https?:\/\//);
   });
 });
 
@@ -202,9 +221,12 @@ describe("SmileyApp-voorstel: subdomein, CSP en app", () => {
 });
 
 describe("SmileyApp-voorstel: de AI-assistent", () => {
-  it("weet alleen wat op hun site staat en belooft geen medewerker", () => {
+  // 19 nov 2026: de chat belooft alleen een medewerker als iemand van SmileyApp echt in het beheer kan inloggen
+  // (heeftTeam: een account met wachtwoord dat niet geblokkeerd is). Zonder team blijft alles zoals het was.
+  it("zonder team: weet alleen wat op hun site staat en belooft geen medewerker", () => {
     const k = smileyappKennis();
     expect(k.medewerker).toBe(false);
+    expect(smileyappKennis({ medewerker: false }).medewerker).toBe(false);
     expect(k.contact).toBe("mail naar info@smileyapp.nl");
     const systeem = bouwSysteem({ bedrijf: k.bedrijf, omschrijving: k.omschrijving, regels: k.regels ?? [], medewerker: false }, k.fragmenten);
     expect(systeem).not.toContain('knop "Medewerker"');
@@ -213,6 +235,26 @@ describe("SmileyApp-voorstel: de AI-assistent", () => {
     expect(antwoordZonderModel("parkeren", k.fragmenten, k.contact, false)).not.toContain("Medewerker");
     // de standaard blijft zoals hij was
     expect(bouwSysteem({ bedrijf: "X", omschrijving: "Y" }, [])).toContain('knop "Medewerker"');
+  });
+
+  it("met team: de knop Medewerker verschijnt, en alleen dan", () => {
+    const k = smileyappKennis({ medewerker: true });
+    expect(k.medewerker).toBe(true);
+    // dezelfde kennis, alleen de belofte verschilt
+    expect(k.fragmenten).toEqual(smileyappKennis().fragmenten);
+    // lib/sitechat/antwoord.ts geeft medewerker alleen door als het false is; true is de standaard van bouwSysteem
+    expect(bouwSysteem({ bedrijf: k.bedrijf, omschrijving: k.omschrijving, regels: k.regels ?? [] }, k.fragmenten)).toContain('knop "Medewerker"');
+    // de route en de layout vragen het aan dezelfde bron, en de actie "mens" wordt zonder team geweigerd vóór er iets bewaard is
+    const r = lees("app/api/voorstel/smileyapp/chat/route.ts");
+    expect(r).toContain("const medewerker = await heeftTeam();");
+    expect(r).toContain("smileyappKennis({ medewerker })");
+    expect(r.indexOf("if (!medewerker) throw")).toBeGreaterThan(0);
+    expect(r.indexOf("if (!medewerker) throw")).toBeLessThan(r.indexOf("await voegBerichtToe("));
+    const layout = lees("app/voorstel/smileyapp/layout.tsx");
+    expect(layout).toContain("const team = await heeftTeam();");
+    expect(layout).toContain("<SmileyChat team={team} />");
+    expect(lees("components/voorstel/smileyapp/SmileyChat.tsx")).toContain("medewerker={team}");
+    expect(lees("lib/voorstel/smileyapp-accounts.ts")).toMatch(/heeftTeam[\s\S]{0,200}some\(\(a\) => !!a\.wachtwoord && !a\.geblokkeerd\)/);
   });
 
   it("de blog staat er helemaal in, en een onbekend bericht bestaat niet", () => {

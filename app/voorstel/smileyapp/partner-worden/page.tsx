@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { PARTNER } from "@/lib/voorstel/smileyapp";
-import { GeslotenFormulier } from "@/components/voorstel/smileyapp/GeslotenFormulier";
+import { CONTACT, INTERESSES, PARTNER } from "@/lib/voorstel/smileyapp";
+import { heeftTeam } from "@/lib/voorstel/smileyapp-accounts";
+import { AanvraagFormulier } from "@/components/voorstel/smileyapp/AanvraagFormulier";
 import { Vinkje } from "@/components/voorstel/smileyapp/Blokken";
 
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Partner worden" };
 
-export default function SmileyappPartner() {
+// Het formulier werkt sinds 19 nov 2026: een aanmelding komt als soort "partner" in het beheer van SmileyApp.
+export default async function SmileyappPartner() {
+  const team = await heeftTeam();
   return (
     <>
       <section className="relative overflow-hidden bg-smiley-ink text-white">
@@ -47,7 +51,7 @@ export default function SmileyappPartner() {
             ))}
           </ul>
         </div>
-        <GeslotenFormulier id="partner" kop="Neem contact op om partner te worden" gekozen="Partnerprogramma" onderwerp="Partner worden van Smileyapp" />
+        <AanvraagFormulier soort="partner" kop="Neem contact op om partner te worden" mail={CONTACT.email} teamActief={team} interesses={INTERESSES} />
       </section>
     </>
   );

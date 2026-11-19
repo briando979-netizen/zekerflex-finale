@@ -81,6 +81,7 @@ const VERWACHT: Record<string, Verwacht> = {
   zf_view_as: { bron: "lib/auth/inspect.ts", looptijd: () => constante("lib/auth/inspect.ts", "INSPECT_SESSION_SECONDS") },
   schw_sessie: { bron: "lib/voorstel/schwarzwald-accounts.ts", looptijd: () => constante("lib/voorstel/schwarzwald-accounts.ts", "SESSIE_DAGEN") * DAG },
   schw_google: { bron: "lib/voorstel/google.ts", looptijd: () => uit("app/api/voorstel/schwarzwald/google/route.ts", new RegExp(`maxAge: ${SOM},`)) },
+  smiley_sessie: { bron: "lib/voorstel/smileyapp-accounts.ts", looptijd: () => constante("lib/voorstel/smileyapp-accounts.ts", "SESSIE_DAGEN") * DAG },
   zf_ref: { bron: "lib/rewards/referral.ts", looptijd: () => uit("app/r/[code]/route.ts", new RegExp(`maxAge: ${SOM},`)) },
 };
 
@@ -106,6 +107,7 @@ const ZETTERS: Record<string, number> = {
   "lib/horeca/apparaten.ts": 1,
   "lib/rijschool/accounts.ts": 1,
   "lib/voorstel/schwarzwald-accounts.ts": 1,
+  "lib/voorstel/smileyapp-accounts.ts": 1,
 };
 // req.cookies.set (alleen het verzoek, niet de browser) telt niet mee
 const ZET_PATRONEN = [/\b(?!req\.)\w+\.cookies\.set\(/g, /cookies\(\)\)?\.set\(/g, /document\.cookie\s*=(?!=)/g, /["']set-cookie["']/gi, /cookieStore\.set\(/g, /terugPostCookie\("/g];

@@ -20,7 +20,10 @@ import {
 // Wat de AI-assistent op het SmileyApp-voorstel weet: alleen de teksten van
 // smileyapp.nl, uit lib/voorstel/smileyapp.ts (dezelfde bron als de pagina's,
 // dus ook dezelfde prijzen). Per vraag kiest lib/sitechat de passende stukken.
-// Er leest geen team mee: de assistent verwijst naar info@smileyapp.nl.
+// Zolang niemand van SmileyApp in het beheer kan inloggen, leest er geen team
+// mee en verwijst de assistent naar info@smileyapp.nl. Is er wel een team
+// (lib/voorstel/smileyapp-accounts.ts, heeftTeam), dan geeft de route
+// medewerker: true mee en kan een bezoeker om een medewerker vragen.
 // ---------------------------------------------------------------------------
 
 export const SMILEYAPP_KANAAL = "smileyapp";
@@ -32,7 +35,8 @@ const tekst = (b: (typeof BLOG)[number]) =>
 
 const kort = (s: string, max = 1400) => (s.length > max ? `${s.slice(0, max)} …` : s);
 
-export function smileyappKennis(): Kennis {
+export function smileyappKennis(o: { medewerker?: boolean } = {}): Kennis {
+  const medewerker = o.medewerker === true;
   const vast: Fragment[] = [
     {
       titel: "Contact",
@@ -79,6 +83,6 @@ export function smileyappKennis(): Kennis {
     ],
     fragmenten: [...vast, ...pakketten, ...product, ...vragen, ...blog],
     contact: `mail naar ${CONTACT.email}`,
-    medewerker: false,
+    medewerker,
   };
 }

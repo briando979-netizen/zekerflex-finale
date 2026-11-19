@@ -56,6 +56,9 @@ export function SmileyMenu() {
             ))}
           </ul>
           <div className="mt-4 grid grid-cols-2 gap-2">
+            <Link href={`${BASE}/demo`} onClick={() => setOpen(false)} className="col-span-2 rounded-full bg-smiley-ink px-4 py-3.5 text-center font-bold text-white">
+              Vraag een demo aan
+            </Link>
             <a href={KLANTLOGIN} className="rounded-full px-4 py-3 text-center text-sm font-bold text-smiley-ink ring-1 ring-smiley-ink/20">
               Klantlogin
             </a>
