@@ -10,14 +10,17 @@ import { smileyappCijfers } from "@/lib/voorstel/smileyapp-cijfers";
 import { isPakketId } from "@/lib/voorstel/smileyapp-pakket-regels";
 import { bewaarPakket, herstelPakketten, pakkettenVoorBeheer } from "@/lib/voorstel/smileyapp-pakketten";
 import { smileyPoort } from "@/lib/voorstel/smileyapp-poort";
+import { alleReviews, bewaarReview, verwijderReview } from "@/lib/voorstel/smileyapp-reviews";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // De inhoud van de SmileyApp-site die het team zelf beheert, en de cijfers.
-// GET ?deel=cijfers|blog|pakketten → de bezoekcijfers van 30 dagen, de eigen
-//                                    blogberichten (ook concepten), of de pakketten
+// GET ?deel=cijfers|blog|pakketten|reviews → de bezoekcijfers van 30 dagen, de eigen
+//                                    blogberichten (ook concepten), de pakketten, of
+//                                    de reviews (ook de verborgen)
 // POST {actie}                     → blog-bewaren | blog-verwijderen |
+//                                    review-bewaren | review-verwijderen |
 //                                    pakket-bewaren | pakket-standaard
 // Voor iedereen van het team (beheerder én medewerker) en een ZekerFlex-
 // platformbeheerder. Elke methode: eigen site → limiet per IP → sessie. Niet
@@ -33,6 +36,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     if (deel === "cijfers") return NextResponse.json({ cijfers: await smileyappCijfers(30) }, geenCache);
     if (deel === "blog") return NextResponse.json({ berichten: await eigenBerichten() }, geenCache);
     if (deel === "pakketten") return NextResponse.json(await pakkettenVoorBeheer(), geenCache);
+    if (deel === "reviews") return NextResponse.json({ reviews: await alleReviews() }, geenCache);
     throw AppError.validation("Onbekend onderdeel.");
   } catch (err) {
     return jsonError(err);
@@ -52,6 +56,20 @@ const schema = z.discriminatedUnion("actie", [
     status: z.string().max(20),
   }),
   z.object({ actie: z.literal("blog-verwijderen"), id: ID }),
+  // ruime grenzen voor de vorm; de echte regels (lengtes, https, datum) staan in smileyapp-review-regels.ts
+  z.object({
+    actie: z.literal("review-bewaren"),
+    id: ID.optional(),
+    naam: z.string().max(200),
+    organisatie: z.string().max(200),
+    sterren: z.number(),
+    tekst: z.string().max(2000),
+    bron: z.string().max(20),
+    bronLink: z.string().max(600),
+    datum: z.string().max(10),
+    zichtbaar: z.boolean(),
+  }),
+  z.object({ actie: z.literal("review-verwijderen"), id: ID }),
   z.object({ actie: z.literal("pakket-bewaren"), pakket: PAKKET, prijs: z.string().max(20), looptijd: z.string().max(10), label: z.string().max(100), onderdelen: z.string().max(4000) }),
   z.object({ actie: z.literal("pakket-standaard"), pakket: PAKKET.optional() }),
 ]);
@@ -73,6 +91,16 @@ export async function POST(request: Request): Promise<NextResponse> {
     if (d.actie === "blog-verwijderen") {
       await verwijderBericht(d.id);
       return NextResponse.json({ ok: true });
+    }
+    // reviews: voor het hele team, net als de blog. Het scherm krijgt de hele lijst van de server terug.
+    if (d.actie === "review-bewaren") {
+      const { actie: _actie, id, ...invoer } = d;
+      await bewaarReview(id, invoer, ik.naam);
+      return NextResponse.json({ reviews: await alleReviews() });
+    }
+    if (d.actie === "review-verwijderen") {
+      await verwijderReview(d.id);
+      return NextResponse.json({ reviews: await alleReviews() });
     }
     // prijzen en pakketten raken wat de site, de veelgestelde vragen en de chat aan klanten vertellen: alleen een beheerder
     if (ik.rol !== "beheerder") throw AppError.alleenBeheerder("Alleen een beheerder kan pakketten en prijzen wijzigen.");

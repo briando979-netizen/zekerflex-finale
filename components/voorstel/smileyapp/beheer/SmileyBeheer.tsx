@@ -14,6 +14,7 @@ import { Gesprekken } from "@/components/voorstel/smileyapp/beheer/Gesprekken";
 import { Overzicht, type TabSleutel } from "@/components/voorstel/smileyapp/beheer/Overzicht";
 import { PakkettenBeheer } from "@/components/voorstel/smileyapp/beheer/PakkettenBeheer";
 import { QrCode } from "@/components/voorstel/smileyapp/beheer/QrCode";
+import { ReviewsBeheer } from "@/components/voorstel/smileyapp/beheer/ReviewsBeheer";
 import { Team } from "@/components/voorstel/smileyapp/beheer/Team";
 
 // Het beheer van SmileyApp als eigen scherm (zonder de omlijsting van de site,
@@ -29,6 +30,7 @@ const TABS: readonly (readonly [TabSleutel, string])[] = [
   ["gesprekken", "Gesprekken"],
   ["cijfers", "Cijfers"],
   ["blog", "Blog"],
+  ["reviews", "Reviews"],
   ["pakketten", "Pakketten"],
   ["qr", "QR-code"],
   ["team", "Team"],
@@ -117,7 +119,7 @@ export function SmileyBeheer({ wie, via, vandaag, pakketNamen }: { wie: string; 
 
   const aanvragen = data?.aanvragen ?? [];
   const nieuw = (soort: Aanvraag["soort"]) => aanvragen.filter((a) => a.soort === soort && a.status === "nieuw").length;
-  const teller: Record<TabSleutel, number> = { overzicht: 0, demo: nieuw("demo"), partners: nieuw("partner"), gesprekken: data?.tellers.chatWacht ?? 0, cijfers: 0, blog: 0, pakketten: 0, qr: 0, team: 0 };
+  const teller: Record<TabSleutel, number> = { overzicht: 0, demo: nieuw("demo"), partners: nieuw("partner"), gesprekken: data?.tellers.chatWacht ?? 0, cijfers: 0, blog: 0, reviews: 0, pakketten: 0, qr: 0, team: 0 };
   const titel = TABS.find(([k]) => k === tab)?.[1] ?? "";
   // smal (px-3) op de telefoon: logo, "Website" en "Uitloggen" passen dan ook op 320 px naast elkaar
   const LICHT = "rounded-full px-3 py-2 text-sm font-semibold text-white ring-1 ring-white/25 hover:bg-white/10 sm:px-4";
@@ -196,6 +198,7 @@ export function SmileyBeheer({ wie, via, vandaag, pakketNamen }: { wie: string; 
           {tab === "gesprekken" && <Gesprekken bijgewerkt={herlaad} />}
           {tab === "cijfers" && <Cijfers />}
           {tab === "blog" && <BlogBeheer vandaag={vandaag} />}
+          {tab === "reviews" && <ReviewsBeheer vandaag={vandaag} />}
           {tab === "pakketten" && <PakkettenBeheer />}
           {tab === "qr" && <QrCode />}
           {tab === "team" && <Team bijgewerkt={herlaad} />}

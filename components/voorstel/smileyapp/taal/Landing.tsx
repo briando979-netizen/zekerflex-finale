@@ -8,6 +8,7 @@ import { Kopje, Vinkje } from "@/components/voorstel/smileyapp/Blokken";
 import { Gezicht } from "@/components/voorstel/smileyapp/Gezicht";
 import { PakketKiezer } from "@/components/voorstel/smileyapp/PakketKiezer";
 import { ProbeerZelf } from "@/components/voorstel/smileyapp/ProbeerZelf";
+import { ReviewBlok } from "@/components/voorstel/smileyapp/ReviewBlok";
 
 // De voorpagina van het SmileyApp-voorstel in het Engels (/en) en het Duits
 // (/de), in verkorte vorm: hero, zo werkt het, probeer het zelf, pakketten met
@@ -241,6 +242,9 @@ export function LandingTaal({ taal, pakketten }: { taal: Vertaling; pakketten: r
           </div>
         </div>
       </section>
+
+      {/* Reviews die het team zelf invoerde, met vertaalde kop en voetregel; zonder zichtbare review staat hier niets */}
+      <ReviewBlok taal={taal} />
 
       {/* Klanten */}
       <section id="klanten" aria-labelledby="klanten-kop" className="scroll-mt-24 py-20 lg:py-28">

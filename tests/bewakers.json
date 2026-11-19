@@ -55,6 +55,7 @@
     "tests/voorstel-indoor-regels.test.ts",
     "tests/voorstel-smileyapp-beheer.test.ts",
     "tests/voorstel-smileyapp-deel2.test.ts",
+    "tests/voorstel-smileyapp-reviews.test.ts",
     "tests/voorstel-smileyapp-talen.test.ts",
     "tests/voorstel-smileyapp.test.ts",
     "tests/voorstel-sollicitatie-regels.test.ts",

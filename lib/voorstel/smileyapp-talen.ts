@@ -1,4 +1,5 @@
 import type { Pakket, Vraag } from "@/lib/voorstel/smileyapp";
+import type { ReviewTeksten } from "@/lib/voorstel/smileyapp-review-regels";
 import { KADER, TALEN, VERTALINGEN, euroTaal, isTaal, type KaderTeksten, type Taal, type Vertaling } from "@/lib/voorstel/smileyapp-taal";
 import { vul, type FormulierTeksten, type KiezerTeksten, type ProbeerTeksten } from "@/lib/voorstel/smileyapp-teksten";
 
@@ -19,6 +20,36 @@ import { vul, type FormulierTeksten, type KiezerTeksten, type ProbeerTeksten } f
 
 export { TALEN, VERTALINGEN, isTaal };
 export type { Taal, Vertaling };
+
+/**
+ * Het blok met reviews die het team zelf invoert (deel 4): de kop, de toegankelijke tekst bij de sterren en de voetregel.
+ * De tekst van een review zelf blijft in de taal waarin hij is ingevoerd. Nederlands: REVIEWS_NL in smileyapp-review-regels.ts.
+ */
+const REVIEWS_EN: ReviewTeksten = {
+  boven: "Reviews",
+  kop: "What customers say",
+  samenvatting: "{gemiddelde} out of 5 stars from {aantal} reviews",
+  samenvattingEen: "{gemiddelde} out of 5 stars from 1 review",
+  sterren: "{n} out of 5 stars",
+  bron: "Source: {bron}",
+  bronLink: "Read the review at the source ({bron})",
+  nieuwVenster: "(opens in a new tab)",
+  voet: "Reviews copied by Smileyapp itself from the source mentioned.",
+  bronnen: { Google: "Google", Trustpilot: "Trustpilot", "E-mail": "email", Anders: "other source" },
+};
+
+const REVIEWS_DE: ReviewTeksten = {
+  boven: "Bewertungen",
+  kop: "Was Kunden sagen",
+  samenvatting: "{gemiddelde} von 5 Sternen aus {aantal} Bewertungen",
+  samenvattingEen: "{gemiddelde} von 5 Sternen aus 1 Bewertung",
+  sterren: "{n} von 5 Sternen",
+  bron: "Quelle: {bron}",
+  bronLink: "Die Bewertung bei der Quelle lesen ({bron})",
+  nieuwVenster: "(öffnet einen neuen Tab)",
+  voet: "Bewertungen von Smileyapp selbst aus der genannten Quelle übernommen.",
+  bronnen: { Google: "Google", Trustpilot: "Trustpilot", "E-mail": "E-Mail", Anders: "andere Quelle" },
+};
 
 /** De standaard-onderdelen van de pakketten (lib/voorstel/smileyapp.ts, PAKKETTEN) in het Engels. */
 const ONDERDELEN_EN = {
@@ -362,6 +393,7 @@ const EN = {
       ],
     ],
   },
+  reviews: REVIEWS_EN,
   faq: {
     boven: "Questions",
     kop: "Frequently asked questions",
@@ -504,6 +536,7 @@ const DE: TaalTeksten = {
       ],
     ],
   },
+  reviews: REVIEWS_DE,
   faq: {
     boven: "Fragen",
     kop: "Häufig gestellte Fragen",

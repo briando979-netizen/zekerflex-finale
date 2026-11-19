@@ -26,6 +26,7 @@ import { smileyappPakketten } from "@/lib/voorstel/smileyapp-pakketten";
 import { BlogBeeld } from "@/components/voorstel/smileyapp/BlogBeeld";
 import { PakketKiezer } from "@/components/voorstel/smileyapp/PakketKiezer";
 import { ProbeerZelf } from "@/components/voorstel/smileyapp/ProbeerZelf";
+import { ReviewBlok } from "@/components/voorstel/smileyapp/ReviewBlok";
 import { SwipeSmiley } from "@/components/voorstel/smileyapp/SwipeSmiley";
 import { VimeoVideo } from "@/components/voorstel/smileyapp/VimeoVideo";
 import { Gezicht } from "@/components/voorstel/smileyapp/Gezicht";
@@ -316,6 +317,9 @@ export default async function SmileyappHome() {
           </div>
         </div>
       </section>
+
+      {/* Reviews die het team zelf invoerde; zonder zichtbare review staat hier niets */}
+      <ReviewBlok />
 
       {/* Klanten */}
       <section id="klanten" aria-labelledby="klanten-kop" className="scroll-mt-24 py-20 lg:py-28">

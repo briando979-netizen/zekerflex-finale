@@ -5,7 +5,10 @@ import { BASE, KLANTEN } from "@/lib/voorstel/smileyapp";
 import { VERHALEN } from "@/lib/voorstel/smileyapp-klanten";
 import { Vinkje } from "@/components/voorstel/smileyapp/Blokken";
 import { Gezicht } from "@/components/voorstel/smileyapp/Gezicht";
+import { ReviewBlok } from "@/components/voorstel/smileyapp/ReviewBlok";
 
+// dynamisch: het blok met reviews volgt wat het team in het beheer invoert (anders bevriest de build de pagina zonder gegevens)
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Klantverhalen" };
 
 // Klantverhalen (19 nov 2026): de twee quotes van smileyapp.nl, uitgewerkt met
@@ -24,6 +27,9 @@ export default function SmileyappKlanten() {
           <p className="mt-5 max-w-2xl text-xl font-semibold leading-relaxed text-smiley-green">Twee klanten vertellen in hun eigen woorden waar ze Smileyapp voor gebruiken.</p>
         </div>
       </section>
+
+      {/* Reviews die het team zelf invoerde; zonder zichtbare review staat hier niets */}
+      <ReviewBlok />
 
       <div className="mx-auto max-w-[1200px] space-y-10 px-4 py-16 sm:px-8 lg:py-20">
         {VERHALEN.map((v, i) => (
