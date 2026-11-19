@@ -231,3 +231,35 @@ describe("SmileyApp-voorstel: de AI-assistent", () => {
     expect(r.indexOf("await enforceRateLimit")).toBeLessThan(r.indexOf("await jsonBegrensd"));
   });
 });
+
+describe("SmileyApp-voorstel: koppen breken op een breed scherm niet midden in een woord", () => {
+  // 19 nov 2026 (71): op 1440 stond "Klanttevreden-heid", "sim-pelste", "een-voudig" in de koppen. Oorzaak: [hyphens:auto]
+  // op elke breedte, en de hero-kop liep op lg tot 4,4rem (70,4 px) terwijl de kolom 589 px is en het woord 618 px: dat
+  // past nooit, dus brak de browser het af. Op de telefoon blijft het afbreken aan (daar is het nodig op 320 px).
+  const KOPPEN = [
+    ["app/voorstel/smileyapp/page.tsx", "<h1 "],
+    ["components/voorstel/smileyapp/Blokken.tsx", "<h2 "],
+    ["app/voorstel/smileyapp/blog/[slug]/page.tsx", "<h1 "],
+  ] as const;
+
+  it("elke grote kop houdt afbreken op de telefoon en zet het vanaf md uit", () => {
+    for (const [bestand, tag] of KOPPEN) {
+      const regel = lees(bestand).split("\n").find((r) => r.includes(tag) && r.includes("font-display"));
+      expect(regel, bestand).toBeDefined();
+      expect(regel, bestand).toContain("[hyphens:auto] md:[hyphens:manual]");
+    }
+  });
+
+  it("de hero-kop is op lg ten hoogste 4rem, zodat het langste woord in de kolom past", () => {
+    const regel = lees("app/voorstel/smileyapp/page.tsx").split("\n").find((r) => r.includes("<h1 ")) ?? "";
+    expect(regel).toContain("lg:text-[clamp(3rem,5.3vw,4rem)]");
+    // 4rem = 64 px: "Klanttevredenheid" is dan 560 px (gemeten) in een kolom van 589 px; bij 4,4rem was het 618 px.
+    expect(64 * (618 / 70.4)).toBeLessThan(589);
+  });
+
+  it("Schwarzwald is niet geraakt", () => {
+    for (const f of readdirSync(path.join(ROOT, "app/voorstel/schwarzwald")).filter((f) => f.endsWith(".tsx"))) {
+      expect(lees("app/voorstel/schwarzwald/" + f)).not.toContain("md:[hyphens:manual]");
+    }
+  });
+});

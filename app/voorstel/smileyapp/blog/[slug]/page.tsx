@@ -22,7 +22,7 @@ export default async function SmileyappBlogBericht({ params }: { params: Promise
               ← Blog
             </Link>
             <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-white/70">{datumTekst(b.datum)}</p>
-            <h1 className="mt-3 font-display text-[clamp(2rem,5.5vw,3.6rem)] font-bold leading-[1.04] tracking-[-0.02em] [hyphens:auto]">{b.titel}</h1>
+            <h1 className="mt-3 font-display text-[clamp(2rem,5.5vw,3.6rem)] font-bold leading-[1.04] tracking-[-0.02em] [hyphens:auto] md:[hyphens:manual]">{b.titel}</h1>
           </div>
         </header>
         <div className="mx-auto -mt-2 max-w-[960px] px-4 sm:px-8">

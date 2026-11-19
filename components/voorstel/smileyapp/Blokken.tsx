@@ -9,7 +9,7 @@ export function Kopje({ boven, kop, licht = false, id, children }: { boven?: str
   return (
     <div className="sm-onthul max-w-3xl">
       {boven && <p className={`text-xs font-bold uppercase tracking-[0.2em] ${licht ? "text-smiley-sun" : "text-smiley-leaf"}`}>{boven}</p>}
-      <h2 id={id} className={`mt-3 font-display text-[clamp(2rem,5vw,3.4rem)] font-bold leading-[1.02] tracking-[-0.02em] [hyphens:auto] ${licht ? "text-white" : "text-smiley-ink"}`}>
+      <h2 id={id} className={`mt-3 font-display text-[clamp(2rem,5vw,3.4rem)] font-bold leading-[1.02] tracking-[-0.02em] [hyphens:auto] md:[hyphens:manual] ${licht ? "text-white" : "text-smiley-ink"}`}>
         {kop}
       </h2>
       {children}

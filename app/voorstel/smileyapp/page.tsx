@@ -74,7 +74,7 @@ export default function SmileyappHome() {
               <Gezicht score={10} kleur="#5ABA8E" accent="#FDD11A" className="h-5 w-5" />
               {SLOGAN}
             </p>
-            <h1 className="mt-6 font-display text-[clamp(2.1rem,6.4vw,4.4rem)] font-bold leading-[1.02] tracking-[-0.02em] [hyphens:auto]">
+            <h1 className="mt-6 font-display text-[clamp(2.1rem,6.4vw,4.4rem)] font-bold leading-[1.02] tracking-[-0.02em] [hyphens:auto] md:[hyphens:manual] lg:text-[clamp(3rem,5.3vw,4rem)]">
               <Kop />
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/80">{HERO.vraag}</p>
