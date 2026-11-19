@@ -245,8 +245,12 @@ export function leesVoorraadPerVariant(data: unknown, land?: string): Map<string
   return uit;
 }
 
-// woorden die in het Nederlands niet voorkomen; "die", "den" en "der" bewust niet (gewoon Nederlands)
-const DUITS = /(und|mit|für|aus|ein|eine|einen|nicht|oder|auch|Stück|Stücke|Weiß|Schwarz|Grün|Größe|verstellbar|klappbar)|[ßäöü]/i;
+// woorden die in het Nederlands niet voorkomen; "die", "den" en "der" bewust niet (gewoon Nederlands). Alleen als heel
+// woord, want zonder grenzen telt "modern" als "oder", "kleine" als "ein" en "niveaus" als "aus" (19 nov 2026: 76 van 847
+// vertaalde namen). In de code stond een echt backspace-teken (\x08) waar \b bedoeld was (een bash-heredoc maakte er een
+// stuurteken van), zodat de woorden nooit matchten en alleen ß/ä/ö/ü telden. Woorden met ß/ä/ö/ü (für, Stück, Weiß,
+// Grün, Größe) vangt de tekenklasse al. Geen lookbehind (Safari vóór 16.4).
+const DUITS = /(?:^|[^a-z])(?:und|mit|aus|ein|eine|einen|nicht|oder|auch|schwarz|verstellbar|klappbar)(?![a-z])|[ßäöü]/i;
 
 /** Lijkt deze tekst Duits? Het model laat een Duitse bron soms half staan ("Goldaufkleber 16 Stücke"); dan telt de vertaling niet. */
 export function lijktDuits(t: string): boolean {

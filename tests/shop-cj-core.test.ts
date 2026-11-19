@@ -251,6 +251,17 @@ describe("voorraad per variant (getInventoryByPid) en Duits herkennen", () => {
     expect(lijktDuits("Set van 2 muurstickers met die leuke controller")).toBe(false);
     expect(lijktDuits("Kerst houten huismodel bouwset")).toBe(false);
   });
+  it("kijkt naar hele woorden: modern, kleine, niveaus en bundel zijn Nederlands (19 nov 2026: 76 namen vals als Duits)", () => {
+    expect(lijktDuits("Moderne bureaulamp")).toBe(false);
+    expect(lijktDuits("Kleine treinbaan met 3 niveaus")).toBe(false);
+    expect(lijktDuits("Bundel van 4 reinigingshandschoenen, eindelijk schoon")).toBe(false);
+    expect(lijktDuits("Lampe mit Fernbedienung")).toBe(true);
+    expect(lijktDuits("Set aus Holz")).toBe(true);
+    expect(lijktDuits("Modern und praktisch")).toBe(true);
+    expect(lijktDuits("Schwarz, verstellbar")).toBe(true);
+    expect(lijktDuits("Glitzersteine für Kinder")).toBe(true);
+  });
+
 });
 
 describe("foto's van CJ: grenzen en de eigen media-url", () => {
