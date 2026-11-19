@@ -1,11 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { BUDGET, FUNCTIES, KLEUREN, LOGO, VIDEO, VOORBEELDEN, aanvraagTekst } from "@/lib/website/aanvraag-opties";
+import { BUDGET, FUNCTIES, KLEUREN, LOGO, VIDEO, VOORBEELDEN, VOORBEELD_CATEGORIEEN, aanvraagTekst } from "@/lib/website/aanvraag-opties";
 
 // /website-maken (opnieuw ingericht op 19 nov 2026, eigenaar): een aanvraag met wensen in plaats van een galerij. Als
-// voorbeeld staan er alleen de twee sites en de app (FlikFlak, deploy/flikflak) die we echt hebben gemaakt; de oude
-// voorbeeldsites en webshopvoorbeelden niet meer.
+// voorbeeld staan de sites en apps/spelletjes die we echt hebben gemaakt (SmileyApp, Schwarzwald, FlikFlak, Talkaroo),
+// gegroepeerd per categorie; de oude voorbeeldsites en webshopvoorbeelden niet meer.
 
 const bron = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8").split("\r\n").join("\n");
 const pagina = bron("app/(marketing)/website-maken/page.tsx");
@@ -13,16 +13,17 @@ const formulier = bron("components/marketing/WebsiteAanvraagFormulier.tsx");
 const route = bron("app/api/website-aanvraag/route.ts");
 
 describe("de voorbeelden", () => {
-  it("zijn alleen de twee sites en de app die we echt hebben gemaakt, met een foto die bestaat", () => {
-    expect(VOORBEELDEN.map((v) => v.id)).toEqual(["smileyapp", "schwarzwald", "flikflak"]);
+  it("zijn de sites en apps die we echt hebben gemaakt, elk in een bestaande categorie en met een foto die bestaat", () => {
+    expect(VOORBEELDEN.map((v) => v.id)).toEqual(["smileyapp", "schwarzwald", "flikflak", "talkaro"]);
     for (const v of VOORBEELDEN) {
       expect(existsSync(path.join(process.cwd(), "public", v.foto)), v.foto).toBe(true);
-      expect(v.href).toMatch(/^https:\/\/(smileyapp|schwarzwald|flikflak)\.zekerflex\.com$/);
+      expect(v.href).toMatch(/^https:\/\/(smileyapp|schwarzwald|flikflak|talkaro)\.zekerflex\.com$/);
+      expect(VOORBEELD_CATEGORIEEN, v.categorie).toContain(v.categorie);
     }
   });
 
-  it("de pagina toont geen galerij met ontwerpen en geen oude voorbeeldsites meer", () => {
-    expect(pagina).toContain("VOORBEELDEN.map(");
+  it("de pagina toont de voorbeelden per categorie, geen galerij met ontwerpen en geen oude voorbeeldsites meer", () => {
+    expect(pagina).toContain("VOORBEELD_CATEGORIEEN.map(");
     expect(pagina).not.toMatch(/galerijVoor|OntwerpGalerij|\/voorbeeldsites/);
   });
 

@@ -24,7 +24,7 @@ const BASISLIJN: Record<string, string> = {
   ]),
   ...groep("voorbeeldnaam in een tekst of formulier (jouwdomein, jouwbedrijf), geen aanroep", [
     "code.jouwdomein.nl", "term.jouwdomein.nl", "jouwbedrijf.nl", "schwarzwald.stackbase.nl", "smileyapp.zekerflex.com", "schwarzwald.zekerflex.com",
-    "flikflak.zekerflex.com",
+    "flikflak.zekerflex.com", "talkaro.zekerflex.com",
   ]),
   ...groep("standaard of naamruimte (XML, SVG, JSON-LD, sitemap), geen aanroep", [
     "schema.org", "www.w3.org", "www.sitemaps.org", "graphml.graphdrawing.org", "www.topografix.com", "www.auditfiles.nl",
