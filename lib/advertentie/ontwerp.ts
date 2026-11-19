@@ -25,13 +25,13 @@ export interface OntwerpGegevens {
 }
 
 /** De namen waaronder lib/advertentie/beeld.ts de lettertypes aanmeldt. */
-export const LETTER = { kop: "Bricolage", tekst: "Instrument Sans", serif: "Instrument Serif" } as const;
+export const LETTER = { kop: "Bricolage", tekst: "Instrument Sans", serif: "Instrument Serif", smal: "Anton" } as const;
 
-type Stijl = CSSProperties;
-type Maat = (n: number) => number;
+export type Stijl = CSSProperties;
+export type Maat = (n: number) => number;
 
 /** Een vak; satori wil bij elk vak met meer dan één kind een expliciete flex. */
-const vak = (stijl: Stijl, ...kinderen: ReactNode[]): ReactElement => createElement("div", { style: { display: "flex", ...stijl } }, ...kinderen);
+export const vak = (stijl: Stijl, ...kinderen: ReactNode[]): ReactElement => createElement("div", { style: { display: "flex", ...stijl } }, ...kinderen);
 
 /**
  * De lettergrootte bij een tekst: korter = groter. `treden` is [hooguit zoveel tekens, grootte], oplopend. Het langste
@@ -46,7 +46,7 @@ export function lettergrootte(tekst: string, breedte: number, treden: readonly (
 const perFormaat = <T,>(f: FormaatId, v: { vierkant: T; verhaal: T; liggend: T }): T => v[f];
 
 /** Schuine, herhaalde tekst over het hele beeld: om en om licht en donker, zodat hij op elke achtergrond zichtbaar is. */
-function watermerk(W: number, H: number, p: Maat): ReactElement {
+export function watermerk(W: number, H: number, p: Maat): ReactElement {
   const zijde = Math.max(W, H) * 1.7;
   const regel = Array.from({ length: 8 }, () => WATERMERK_TEKST).join("      ");
   const rijen = Math.ceil(zijde / 96);

@@ -81,6 +81,10 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/advertentie/0123456789abcdef0123456789abcdef/beeld", // het voorbeeld met watermerk (het id is de sleutel)
     "/api/advertentie/0123456789abcdef0123456789abcdef/aanvraag", // "Deze wil ik"
     "/api/advertentie/voorbeeld/bakker", // voorbeeldadvertentie op de landingspagina
+    "/api/logo-maker", // logo maker: maken zonder account
+    "/api/logo-maker/0123456789abcdef0123456789abcdef/beeld", // het voorbeeld met watermerk (het id is de sleutel)
+    "/api/logo-maker/0123456789abcdef0123456789abcdef/aanvraag", // "Deze wil ik"
+    "/api/logo-maker/voorbeeld/bakkerij", // voorbeeldlogo op de landingspagina
     "/api/deal/0123456789abcdef", // tailored offer after a free scan (unguessable id)
     "/api/domeinen/zoek", // is a domain name still free (public RDAP)
     "/api/domeinen/aanvraag", // request a domain / transfer

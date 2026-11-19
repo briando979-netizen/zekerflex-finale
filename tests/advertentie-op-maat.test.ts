@@ -185,7 +185,7 @@ describe("de tekst", () => {
 
 describe("de prijs: één bron", () => {
   it("de standaard is € 29 voor één ontwerp en € 49 voor alle drie, exclusief btw", () => {
-    expect(STANDAARD_PRIJZEN).toEqual({ een: "\u{20AC} 29", alle: "\u{20AC} 49" });
+    expect(STANDAARD_PRIJZEN).toEqual({ een: "\u{20AC} 29", alle: "\u{20AC} 49", logo: "\u{20AC} 49" });
     expect(prijsTekst(STANDAARD_PRIJZEN, "een")).toBe("\u{20AC} 29 excl. btw");
     expect(vanafTekst()).toBe("Vanaf \u{20AC} 29");
   });
@@ -193,7 +193,7 @@ describe("de prijs: één bron", () => {
   it("Beheer overschrijft per veld; leeg of onbruikbaar = de standaard", () => {
     expect(geldendePrijzen(null)).toEqual(STANDAARD_PRIJZEN);
     expect(geldendePrijzen({ een: "", alle: "  " })).toEqual(STANDAARD_PRIJZEN);
-    expect(geldendePrijzen({ een: "\u{20AC} 35", alle: 12 })).toEqual({ een: "\u{20AC} 35", alle: STANDAARD_PRIJZEN.alle });
+    expect(geldendePrijzen({ een: "\u{20AC} 35", alle: 12, logo: "\u{20AC} 59" })).toEqual({ een: "\u{20AC} 35", alle: STANDAARD_PRIJZEN.alle, logo: "\u{20AC} 59" });
     expect(geldendePrijzen({ een: "<b>\u{20AC} 39</b>" }).een).toBe("\u{20AC} 39");
   });
 

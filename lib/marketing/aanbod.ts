@@ -8,7 +8,7 @@
 // keuze van de eigenaar wacht, staat op "binnenkort".
 
 import type { Werkruimte } from "@/lib/werkgever/werkruimte";
-import { vanafTekst } from "@/lib/advertentie/regels";
+import { BTW_TEKST, STANDAARD_PRIJZEN, vanafTekst } from "@/lib/advertentie/regels";
 
 /** Echte schermen van de horecasoftware (voorbeeldzaak "Restaurant De Proef", 15 nov 2026); maten in beeldpunten van het bestand. */
 const HORECA_INKIJK: InkijkScherm[] = [
@@ -495,6 +495,21 @@ export const AANBOD: AanbodItem[] = [
     status: "beschikbaar",
     pagina: "/advertentie-op-maat",
     start: { label: "Maak mijn advertentie", href: "/advertentie-op-maat" },
+  },
+  {
+    slug: "logo-maker",
+    pijler: "online",
+    naam: "Logo maker",
+    kort: "Vul je bedrijfsnaam in en zie meteen zes logo's in jouw kleur en sfeer.",
+    tekst:
+      "Je vult je bedrijfsnaam in en kiest een kleur en een sfeer. Je ziet direct zes logo's, gemaakt uit je naam met vaste ontwerpregels. Het voorbeeld kost niets; je betaalt pas als je er een wilt hebben.",
+    punten: ["Zes logo's met jouw naam", "Eerst het voorbeeld, dan pas betalen", "In kleur, wit, zwart en als icoon", "Geen account nodig"],
+    voorWie: "Starters en bedrijven zonder logo",
+    // dezelfde bron als de pagina zelf (lib/advertentie/regels.ts)
+    prijs: `${STANDAARD_PRIJZEN.logo} ${BTW_TEKST}, je ziet eerst het voorbeeld`,
+    status: "beschikbaar",
+    pagina: "/logo-maker",
+    start: { label: "Maak mijn logo", href: "/logo-maker" },
   },
   {
     slug: "review-check",

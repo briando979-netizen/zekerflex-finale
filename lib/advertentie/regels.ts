@@ -322,10 +322,11 @@ export const PAKKETTEN = ["een", "alle"] as const;
 export type Pakket = (typeof PAKKETTEN)[number];
 export const isPakket = (v: unknown): v is Pakket => v === "een" || v === "alle";
 
-export type Prijzen = Record<Pakket, string>;
+/** De prijs per pakket van de advertentie op maat, en van de logo maker (lib/logo). */
+export type Prijzen = Record<Pakket | "logo", string>;
 
 /** De vaste prijzen (door de eigenaar bepaald, 19 nov 2026), exclusief btw. Beheer kan ze overschrijven; leeg = deze. */
-export const STANDAARD_PRIJZEN: Prijzen = { een: "€ 29", alle: "€ 49" };
+export const STANDAARD_PRIJZEN: Prijzen = { een: "€ 29", alle: "€ 49", logo: "€ 49" };
 export const BTW_TEKST = "excl. btw";
 
 export const PAKKET_NAAM: Record<Pakket, string> = { een: "Eén ontwerp", alle: "Alle drie de ontwerpen" };
@@ -341,10 +342,11 @@ export const schonePrijs = (v: unknown): string => schoonTekst(v, PRIJS_MAX);
 export function geldendePrijzen(ingesteld: unknown): Prijzen {
   const een = schonePrijs(veld(ingesteld, "een"));
   const alle = schonePrijs(veld(ingesteld, "alle"));
-  return { een: een || STANDAARD_PRIJZEN.een, alle: alle || STANDAARD_PRIJZEN.alle };
+  const logo = schonePrijs(veld(ingesteld, "logo"));
+  return { een: een || STANDAARD_PRIJZEN.een, alle: alle || STANDAARD_PRIJZEN.alle, logo: logo || STANDAARD_PRIJZEN.logo };
 }
 
 /** "€ 29 excl. btw" */
-export const prijsTekst = (prijzen: Prijzen, pakket: Pakket): string => `${prijzen[pakket]} ${BTW_TEKST}`;
+export const prijsTekst = (prijzen: Prijzen, pakket: Pakket | "logo"): string => `${prijzen[pakket]} ${BTW_TEKST}`;
 /** Voor het aanbod en de kop: "Vanaf € 29" */
 export const vanafTekst = (prijzen: Prijzen = STANDAARD_PRIJZEN): string => `Vanaf ${prijzen.een}`;

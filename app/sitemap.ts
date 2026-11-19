@@ -122,6 +122,7 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/demo", 0.6, "monthly"),
     entry("/website-check", 0.7, "monthly"),
     entry("/advertentie-op-maat", 0.7, "monthly"),
+    entry("/logo-maker", 0.7, "monthly"),
     entry("/voorbeeldsites", 0.6, "monthly"),
     entry("/website-maken", 0.8, "monthly"),
     entry("/rijschool-software", 0.8, "monthly"),

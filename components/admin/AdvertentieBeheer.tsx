@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Empty, Panel, Pill, type Tone } from "@/components/admin/kit";
+import { LOGOS, SFEREN, BRANCHES, logoVrij, type Logo } from "@/lib/logo/regels";
 import { BTW_TEKST, KLEUREN, ONTWERPEN, PAKKET_NAAM, PRIJS_MAX, ontwerpVrij, prijsTekst, type Advertentie, type Prijzen, type Status } from "@/lib/advertentie/regels";
 
 // Beheer van advertenties op maat: de lijst met de invoer, de keuze en de contactgegevens, de schone voorvertoning
@@ -18,8 +19,12 @@ const tijd = (iso: string) => new Date(iso).toLocaleString("nl-NL", { timeZone: 
 const ontwerpNaam = (nr: number) => ONTWERPEN.find((o) => o.nr === nr)?.naam ?? String(nr);
 const mute = { color: "var(--a-mute)" };
 
-export function AdvertentieBeheer({ begin, beginPrijzen, beginIngesteld, standaard }: { begin: Advertentie[]; beginPrijzen: Prijzen; beginIngesteld: { een: string; alle: string }; standaard: Prijzen }) {
+const logoNaam = (nr: number) => LOGOS.find((l) => l.nr === nr)?.naam ?? String(nr);
+
+export function AdvertentieBeheer({ begin, beginLogos, beginPrijzen, beginIngesteld, standaard }: { begin: Advertentie[]; beginLogos: Logo[]; beginPrijzen: Prijzen; beginIngesteld: { een: string; alle: string; logo: string }; standaard: Prijzen }) {
   const [lijst, setLijst] = useState(begin);
+  const [logos, setLogos] = useState(beginLogos);
+  const [logoPrijs, setLogoPrijs] = useState(beginIngesteld.logo);
   const [prijzen, setPrijzen] = useState(beginPrijzen);
   const [een, setEen] = useState(beginIngesteld.een);
   const [alle, setAlle] = useState(beginIngesteld.alle);
@@ -62,15 +67,33 @@ export function AdvertentieBeheer({ begin, beginPrijzen, beginIngesteld, standaa
     setMelding({ ok: true, tekst: "Verwijderd." });
   }
 
+  async function geefLogoVrij(logo: Logo) {
+    if (!window.confirm(`Het logo van ${logo.invoer.naam} vrijgeven? Doe dit pas na betaling. De klant krijgt een mail met de link naar de schone bestanden.`)) return;
+    const data = await stuur("PATCH", { actie: "vrijgeven", soort: "logo", id: logo.id }, logo.id);
+    const nieuw = data?.logo as Logo | undefined;
+    if (!nieuw) return;
+    setLogos((l) => l.map((x) => (x.id === nieuw.id ? nieuw : x)));
+    setMelding(data?.gemaild ? { ok: true, tekst: "Vrijgegeven. De klant heeft de mail met de link gekregen." } : { ok: false, tekst: "Vrijgegeven, maar de mail is niet verstuurd. Stuur de klant zelf de link naar zijn pagina." });
+  }
+
+  async function verwijderLogo(logo: Logo) {
+    if (!window.confirm(`De logo's van ${logo.invoer.naam} definitief verwijderen?`)) return;
+    const data = await stuur("DELETE", { soort: "logo", id: logo.id }, logo.id);
+    if (!data) return;
+    setLogos((l) => l.filter((x) => x.id !== logo.id));
+    setMelding({ ok: true, tekst: "Verwijderd." });
+  }
+
   async function bewaarPrijs(e: React.FormEvent) {
     e.preventDefault();
-    const data = await stuur("PATCH", { actie: "prijs", een, alle }, "prijs");
+    const data = await stuur("PATCH", { actie: "prijs", een, alle, logo: logoPrijs }, "prijs");
     const nieuw = data?.prijzen as Prijzen | undefined;
-    const ingesteld = data?.ingesteld as { een: string; alle: string } | undefined;
+    const ingesteld = data?.ingesteld as { een: string; alle: string; logo: string } | undefined;
     if (!nieuw || !ingesteld) return;
     setPrijzen(nieuw);
     setEen(ingesteld.een);
     setAlle(ingesteld.alle);
+    setLogoPrijs(ingesteld.logo);
     setMelding({ ok: true, tekst: "De prijzen zijn bewaard en staan zo op de site." });
   }
 
@@ -96,11 +119,17 @@ export function AdvertentieBeheer({ begin, beginPrijzen, beginIngesteld, standaa
             </label>
             <input id="adv-prijs-alle" className="a-input mt-1 w-40" value={alle} onChange={(e) => setAlle(e.target.value)} maxLength={PRIJS_MAX} placeholder={standaard.alle} />
           </div>
+          <div>
+            <label htmlFor="adv-prijs-logo" className="block text-xs font-medium" style={mute}>
+              Eén logo (standaard {standaard.logo})
+            </label>
+            <input id="adv-prijs-logo" className="a-input mt-1 w-40" value={logoPrijs} onChange={(e) => setLogoPrijs(e.target.value)} maxLength={PRIJS_MAX} placeholder={standaard.logo} />
+          </div>
           <button type="submit" disabled={bezig !== null} className="a-btn a-btn-primary disabled:opacity-50">
             Bewaren
           </button>
           <p className="w-full text-xs" style={mute}>
-            Nu op de site: {prijsTekst(prijzen, "een")} voor één ontwerp, {prijsTekst(prijzen, "alle")} voor alle drie.
+            Nu op de site: {prijsTekst(prijzen, "een")} voor één ontwerp, {prijsTekst(prijzen, "alle")} voor alle drie, {prijsTekst(prijzen, "logo")} voor een logo.
           </p>
         </form>
       </Panel>
@@ -176,6 +205,85 @@ export function AdvertentieBeheer({ begin, beginPrijzen, beginIngesteld, standaa
                         </a>
                       ))}
                       <button type="button" onClick={() => void verwijder(ad)} disabled={bezig !== null} className="a-btn a-btn-ghost ml-auto disabled:opacity-50" style={{ color: "var(--a-crit)" }}>
+                        Verwijderen
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Panel>
+
+      <Panel title="Logo's" subtitle="Van de logo maker (/logo-maker). Nieuwste eerst. De beelden hier zijn zonder watermerk; alleen jij ziet ze zo.">
+        {logos.length === 0 ? (
+          <Empty title="Nog geen logo's" body="Zodra iemand op /logo-maker logo's laat maken, staat hij hier." />
+        ) : (
+          <ul className="space-y-4">
+            {logos.map((logo) => {
+              const s = STATUS[logo.status];
+              const a = logo.aanvraag;
+              const toon = a ? a.logo : 3;
+              const src = `/api/logo-maker/${logo.id}/beeld?logo=${toon}&variant=kleur-wit&beheer=1`;
+              return (
+                <li key={logo.id} className="relative flex flex-col gap-4 rounded-xl border p-4 md:flex-row" style={{ borderColor: "var(--a-border)" }}>
+                  <a href={src} target="_blank" rel="noopener" className="block flex-shrink-0 self-start">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={src} alt={`Logo ${toon} van ${logo.invoer.naam}, zonder watermerk`} width={224} height={168} loading="lazy" className="h-[10.5rem] w-56 rounded-lg border" style={{ borderColor: "var(--a-border)" }} />
+                  </a>
+                  <div className="min-w-0 flex-1 text-sm" style={{ color: "var(--a-text)" }}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <strong className="break-words">{logo.invoer.naam}</strong>
+                      <Pill tone={s.tone}>{s.label}</Pill>
+                      <span className="text-xs" style={mute}>
+                        {tijd(logo.aangemaakt)}
+                      </span>
+                    </div>
+                    <dl className="mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-[7.5rem_1fr]">
+                      {logo.invoer.slogan ? (
+                        <>
+                          <dt style={mute}>Slogan</dt>
+                          <dd className="break-words">{logo.invoer.slogan}</dd>
+                        </>
+                      ) : null}
+                      <dt style={mute}>Soort bedrijf</dt>
+                      <dd className="break-words">{[BRANCHES.find((b) => b.id === logo.invoer.branche)?.naam, logo.invoer.brancheTekst].filter(Boolean).join(": ")}</dd>
+                      <dt style={mute}>Kleur, sfeer</dt>
+                      <dd>
+                        {KLEUREN.find((k) => k.id === logo.invoer.kleur)?.naam ?? logo.invoer.kleur} · {SFEREN.find((x) => x.id === logo.invoer.sfeer)?.naam ?? logo.invoer.sfeer}
+                      </dd>
+                      <dt style={mute}>Keuze</dt>
+                      <dd className="break-words">{a ? `logo ${a.logo} (${logoNaam(a.logo)}), ${prijsTekst(prijzen, "logo")}` : "nog niet aangevraagd"}</dd>
+                      {a ? (
+                        <>
+                          <dt style={mute}>Klant</dt>
+                          <dd className="break-words">
+                            {a.naam} ·{" "}
+                            <a href={`mailto:${a.email}`} className="underline underline-offset-2">
+                              {a.email}
+                            </a>
+                            {a.telefoon ? ` · ${a.telefoon}` : ""} · {tijd(a.op)}
+                          </dd>
+                        </>
+                      ) : null}
+                    </dl>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {logo.status === "aangevraagd" && (
+                        <button type="button" onClick={() => void geefLogoVrij(logo)} disabled={bezig !== null} className="a-btn a-btn-primary disabled:opacity-50">
+                          Vrijgeven (na betaling)
+                        </button>
+                      )}
+                      <a href={`/logo-maker/${logo.id}`} target="_blank" rel="noopener" className="a-btn a-btn-ghost">
+                        Pagina van de klant
+                      </a>
+                      {LOGOS.map((l) => (
+                        <a key={l.nr} href={`/api/logo-maker/${logo.id}/beeld?logo=${l.nr}&variant=kleur-wit&beheer=1`} target="_blank" rel="noopener" className="text-xs underline underline-offset-2" style={mute}>
+                          {l.nr}. {l.naam}
+                          {logoVrij(logo, l.nr) ? " (vrij)" : ""}
+                        </a>
+                      ))}
+                      <button type="button" onClick={() => void verwijderLogo(logo)} disabled={bezig !== null} className="a-btn a-btn-ghost ml-auto disabled:opacity-50" style={{ color: "var(--a-crit)" }}>
                         Verwijderen
                       </button>
                     </div>

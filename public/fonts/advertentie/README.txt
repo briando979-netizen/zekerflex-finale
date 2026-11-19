@@ -1,4 +1,5 @@
-Lettertypes voor de beelden van "Advertentie op maat" (lib/advertentie/beeld.ts).
+Lettertypes voor de beelden van "Advertentie op maat" en de logo maker
+(lib/advertentie/beeld.ts).
 
 De site zelf gebruikt de woff2-bestanden een map hoger. De beelden worden op de
 server gemaakt met next/og (satori), en die leest geen woff2. Daarom staan dezelfde
@@ -21,6 +22,11 @@ Ongewijzigde bestanden uit de officiele repo's van de makers, opgehaald op
   commit 65c0ef225f386a3c7e87570a4aa9cc0262c2fd81
   Copyright 2022 The Instrument Serif Project Authors
 
-Alle drie staan onder de SIL Open Font License, versie 1.1. De volledige tekst
-staat in OFL.txt in deze map (de tekst is voor alle drie gelijk, op de regel met
+- Anton-Regular.ttf (alleen de logo maker, sfeer "stoer"; geen deel van de huisstijl)
+  Anton, github.com/google/fonts (ofl/anton),
+  commit e0a8124cf36bb7c32ca68e5d46d6acdbc3df866a
+  Copyright 2020 The Anton Project Authors (github.com/googlefonts/AntonFont)
+
+Alle vier staan onder de SIL Open Font License, versie 1.1. De volledige tekst
+staat in OFL.txt in deze map (de tekst is voor alle vier gelijk, op de regel met
 het auteursrecht na; die staat hierboven per lettertype).

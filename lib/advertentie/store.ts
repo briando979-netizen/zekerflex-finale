@@ -49,13 +49,13 @@ export async function leesPrijzen(): Promise<Prijzen> {
 }
 
 /** Wat de eigenaar zelf invulde (leeg = de standaard geldt). */
-export async function leesIngesteldePrijzen(): Promise<{ een: string; alle: string }> {
-  const v = await kvGet<{ een?: unknown; alle?: unknown }>(K_PRIJS).catch(() => null);
-  return { een: schonePrijs(v?.een), alle: schonePrijs(v?.alle) };
+export async function leesIngesteldePrijzen(): Promise<{ een: string; alle: string; logo: string }> {
+  const v = await kvGet<{ een?: unknown; alle?: unknown; logo?: unknown }>(K_PRIJS).catch(() => null);
+  return { een: schonePrijs(v?.een), alle: schonePrijs(v?.alle), logo: schonePrijs(v?.logo) };
 }
 
-export async function bewaarPrijzen(nieuw: { een: unknown; alle: unknown }): Promise<Prijzen> {
-  const ingesteld = { een: schonePrijs(nieuw.een), alle: schonePrijs(nieuw.alle) };
+export async function bewaarPrijzen(nieuw: { een: unknown; alle: unknown; logo: unknown }): Promise<Prijzen> {
+  const ingesteld = { een: schonePrijs(nieuw.een), alle: schonePrijs(nieuw.alle), logo: schonePrijs(nieuw.logo) };
   await kvSet(K_PRIJS, ingesteld);
   return geldendePrijzen(ingesteld);
 }

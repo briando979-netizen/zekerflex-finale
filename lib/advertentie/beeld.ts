@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import type { ReactElement } from "react";
 import { ImageResponse } from "next/og";
 import { LETTER, ontwerpBoom, type OntwerpGegevens } from "@/lib/advertentie/ontwerp";
 import { FORMATEN, kleurHex, type Advertentie, type BeeldBesluit, type OntwerpNr } from "@/lib/advertentie/regels";
@@ -25,6 +26,7 @@ const LIJST: (Omit<Lettertype, "data"> & { bestand: string })[] = [
   { name: LETTER.tekst, bestand: "InstrumentSans-SemiBold.ttf", weight: 600, style: "normal" },
   { name: LETTER.serif, bestand: "InstrumentSerif-Regular.ttf", weight: 400, style: "normal" },
   { name: LETTER.serif, bestand: "InstrumentSerif-Italic.ttf", weight: 400, style: "italic" },
+  { name: LETTER.smal, bestand: "Anton-Regular.ttf", weight: 400, style: "normal" },
 ];
 
 const g = globalThis as typeof globalThis & { __zfAdvertentieLetters?: Promise<Lettertype[]> };
@@ -51,10 +53,14 @@ export function gegevensVan(ad: Pick<Advertentie, "invoer" | "tekst">): OntwerpG
   };
 }
 
+/** Een boom van satori als PNG, met de lettertypes van de huisstijl (ook voor de logo maker, lib/logo). */
+export async function maakPng(boom: ReactElement, breedte: number, hoogte: number): Promise<ArrayBuffer> {
+  const fonts = await lettertypes();
+  return new ImageResponse(boom, { width: breedte, height: hoogte, fonts }).arrayBuffer();
+}
+
 /** De PNG van één ontwerp, precies zoals het besluit (lib/advertentie/regels.ts beeldBesluit) zegt. */
 export async function maakBeeld(gegevens: OntwerpGegevens, ontwerp: OntwerpNr, besluit: BeeldBesluit): Promise<ArrayBuffer> {
-  const fonts = await lettertypes();
   const hoogte = Math.round((besluit.breedte * FORMATEN[besluit.formaat].hoogte) / FORMATEN[besluit.formaat].breedte);
-  const beeld = new ImageResponse(ontwerpBoom(ontwerp, gegevens, besluit.formaat, besluit.breedte, besluit.watermerk), { width: besluit.breedte, height: hoogte, fonts });
-  return beeld.arrayBuffer();
+  return maakPng(ontwerpBoom(ontwerp, gegevens, besluit.formaat, besluit.breedte, besluit.watermerk), besluit.breedte, hoogte);
 }
