@@ -1,63 +1,41 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
-import { galerijVoor } from "@/lib/sites/ontwerpen-server";
-import { WEBSITE_PLANS } from "@/lib/website/manage";
-import { accountStand } from "@/lib/billing/stripe-betalen";
-import { OntwerpGalerij, type GalerijKaart } from "@/components/marketing/OntwerpGalerij";
-import { PaginaVideoBlok } from "@/components/marketing/PaginaVideoBlok";
+import { VOORBEELDEN } from "@/lib/website/aanvraag-opties";
+import { WebsiteAanvraagFormulier } from "@/components/marketing/WebsiteAanvraagFormulier";
 
 export const metadata: Metadata = {
-  title: "Maak zelf je website of webshop",
-  description:
-    "Kies een ontwerp, pas het aan door te slepen en te typen en zet je website of webshop online. Gratis te bouwen, met bestellingen en een kassa.",
+  title: "Wij maken jouw website of app",
+  description: "Vertel wat je wilt: kleuren, stijl, pagina's en wat de site moet kunnen. Binnen een dag krijg je een voorbeeld in drie versies.",
   ...canonical("/website-maken"),
 };
 
-export const dynamic = "force-dynamic";
+// /website-maken (opnieuw ingericht op 19 nov 2026, eigenaar): geen galerij met ontwerpen meer, maar een aanvraag. De klant
+// kiest en vult zijn wensen in (kleur, stijl, video, logo, pagina's, functies, budget), de aanvraag komt als lead in
+// Beheer → Sales en de eigenaar stuurt binnen een dag een voorbeeld in drie versies. Als voorbeeld staan er alleen de twee
+// sites die we echt hebben gemaakt (lib/website/aanvraag-opties.ts): geen oude voorbeeldsites en geen webshopvoorbeeld.
+// Geen verzonnen aantallen of klanten, en geen prijzen op de pagina zelf.
 
-// /website-maken (13 nov 2026, eigenaar: "bied dit aan voor de klant, zoals de grote websitebouwers"): de ingang voor een
-// bedrijf dat zelf een website of webshop wil maken in de Studio. Alles op deze pagina bestaat: de ontwerpen komen uit
-// lib/sites/ontwerpen.ts, de prijs uit lib/website/manage.ts (bouwen en bekijken is gratis, online zetten vraagt een
-// abonnement: lib/sites/access.ts). Een abonnement nemen kan alleen als het betaalaccount open staat (lib/billing/
-// stripe-betalen.ts, dezelfde stand als de Webshop-console). Staat het dicht of is het niet gemeten, dan noemt de pagina geen
-// prijs en belooft hij niet dat je nu online kunt: alleen wat nu echt kan, staat op de site. Geen verzonnen aantallen of klanten.
-
-const BEGIN = "/register?type=bedrijf";
+const ZELF = "/register?type=bedrijf";
 
 const STAPPEN = [
-  { titel: "Kies een ontwerp of vertel je idee", tekst: "Begin met een ontwerp voor jouw branche, of typ in een zin wat je wilt maken. Wij zetten de eerste pagina's voor je klaar." },
-  { titel: "Maak het van jou", tekst: "Verander teksten en foto's, sleep blokken naar een andere plek en kies je kleuren. Je ziet meteen hoe het wordt." },
-];
-// de derde stap hangt af van of online zetten nu kan
-const STAP_ONLINE = { titel: "Zet hem online", tekst: "Tevreden? Zet je site online op je eigen adres. Tot dat moment kost het niets." };
-// zolang online betalen dicht staat (Stripe dicht, nog geen IBAN voor overschrijving) zet een mens hem online: geen "binnenkort"
-// (eigenaar 16 nov), wel wat er nu echt gebeurt
-const STAP_AANVRAGEN = { titel: "Zet hem online met ons", tekst: "Bouw je site af en bekijk hem zoals een bezoeker hem ziet. Is hij klaar, laat het ons weten: dan zetten we hem samen met je online." };
-
-const KRIJGT = [
-  { titel: "Een webshop die af is", tekst: "Producten met foto's, maten en kleuren, voorraad, een winkelmand en bestellen." },
-  { titel: "Bestellingen en klanten", tekst: "Elke bestelling op een rij, met wie wat kocht. Kortingscodes en verzendkosten stel je zelf in." },
-  { titel: "Een kassa voor in de winkel", tekst: "Reken ook aan de toonbank af; de voorraad loopt mee met je webshop." },
-  { titel: "Reserveren en contact", tekst: "Een contactformulier op elke site, en online reserveren voor wie tafels of afspraken heeft." },
-  { titel: "Je eigen domeinnaam", tekst: "Zoek en koppel je eigen adres. Het beveiligde slotje regelen wij." },
-  { titel: "Zonder cookies of reclame", tekst: "Je site laadt snel en volgt je bezoekers niet. Alles staat bij ons op één plek." },
+  { titel: "Vertel wat je wilt", tekst: "Kies je kleuren, je stijl, de pagina's en wat de site moet kunnen. Aanvullen in je eigen woorden kan ook." },
+  { titel: "Binnen een dag drie versies", tekst: "Wij maken een voorbeeld van jouw site in drie versies en sturen ze naar je mail. Je ziet het met je eigen naam en kleuren." },
+  { titel: "Kies en wij maken hem af", tekst: "Kies de versie die het beste past en zeg wat anders moet. Daarna maken wij hem af en zetten we hem samen met je online." },
 ];
 
-const euro = (cents: number) => `€ ${(cents / 100).toFixed(0)}`;
+const KAN = [
+  { titel: "Reserveren en afspraken", tekst: "Een agenda waarin je klanten zelf een dag en tijd kiezen." },
+  { titel: "Een chat die antwoordt", tekst: "Een AI-assistent die vragen beantwoordt met de informatie van jouw site." },
+  { titel: "Je eigen beheer", tekst: "Inloggen op een dashboard om aanvragen te zien en teksten en prijzen aan te passen." },
+  { titel: "Ook als app", tekst: "Je site op het beginscherm van een telefoon, zoals een app." },
+  { titel: "Meerdere talen", tekst: "Dezelfde site in het Nederlands, Engels of Duits." },
+  { titel: "Video en beweging", tekst: "Met video's en kleine animaties die je site levendig maken." },
+];
 
-export default async function WebsiteMakenPage() {
-  const [sites, shops] = await Promise.all([galerijVoor("website").catch(() => []), galerijVoor("webshop").catch(() => [])]);
-  const kaarten: GalerijKaart[] = [
-    ...sites.map((k) => ({ id: k.id, soort: "website" as const, naam: k.naam, omschrijving: k.omschrijving, categorie: k.categorie, foto: k.foto, voorbeeld: k.voorbeeld })),
-    ...shops.map((k) => ({ id: k.id, soort: "webshop" as const, naam: k.naam, omschrijving: k.omschrijving, categorie: k.categorie, foto: k.foto, voorbeeld: k.voorbeeld })),
-  ];
-  const vanaf = euro(WEBSITE_PLANS.basis.priceCentsPerMonth);
-  // alleen bij een gemeten, open betaalaccount; onbekend of een storing telt als dicht
-  const kanOnline = (await accountStand().catch(() => null))?.betalen === true;
-  const stappen = [...STAPPEN, kanOnline ? STAP_ONLINE : STAP_AANVRAGEN];
-
+export default function WebsiteMakenPage() {
   return (
     <>
       <script
@@ -67,39 +45,45 @@ export default async function WebsiteMakenPage() {
       />
       <div className="hero-ink text-white">
         <div className="shell py-16 text-center md:py-24">
-          <p className="eyebrow text-brand-mint">Websites en webshops van ZekerFlex</p>
-          <h1 className="mx-auto mt-4 max-w-3xl text-balance font-display text-4xl font-bold leading-[1.08] md:text-6xl">Maak zelf je website of webshop</h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-white/70">Kies een ontwerp, pas het aan en zet het online. Je hoeft niets van techniek te weten.</p>
+          <p className="eyebrow text-brand-mint">Websites en apps van ZekerFlex</p>
+          <h1 className="mx-auto mt-4 max-w-3xl text-balance font-display text-4xl font-bold leading-[1.08] md:text-6xl">Wij maken jouw website of app</h1>
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-white/70">Vertel wat je wilt. Binnen een dag krijg je een voorbeeld in drie versies, met je eigen naam en kleuren.</p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link href={BEGIN} className="btn-mint px-6 py-3">
-              Begin gratis
-            </Link>
-            <a href="#ontwerpen" className="btn-ghost-invert px-6 py-3">
-              Bekijk de ontwerpen
+            <a href="#aanvraag" className="btn-mint px-6 py-3">
+              Vertel je wensen
+            </a>
+            <a href="#voorbeelden" className="btn-ghost-invert px-6 py-3">
+              Bekijk wat we maakten
             </a>
           </div>
-          <p className="mt-5 text-sm text-white/60">{kanOnline ? `Bouwen en bekijken is gratis. Je betaalt pas als je hem online zet, vanaf ${vanaf} per maand.` : "Bouwen en bekijken is gratis. Is je site klaar, dan zetten we hem samen met je online."}</p>
+          <p className="mt-5 text-sm text-white/60">Je zit nergens aan vast. Je krijgt eerst een voorbeeld te zien.</p>
         </div>
       </div>
 
-      <PaginaVideoBlok id="website-maken" />
-
-      <section className="bg-paper" aria-labelledby="ontwerpen">
+      <section className="bg-paper" aria-labelledby="voorbeelden">
         <div className="shell py-14 md:py-20">
-          <h2 id="ontwerpen" className="font-display text-3xl font-bold text-ink md:text-4xl">
-            Ontwerpen
+          <h2 id="voorbeelden" className="scroll-mt-24 font-display text-3xl font-bold text-ink md:text-4xl">
+            Dit hebben we gemaakt
           </h2>
-          <p className="mt-2 max-w-2xl text-neutralx-600">Kies een ontwerp en maak het van jou. Elk ontwerp is een complete site, met pagina&apos;s en teksten die je zo aanpast.</p>
-          <div className="mt-8">
-            <OntwerpGalerij kaarten={kaarten} begin={BEGIN} />
-          </div>
-          <p className="mt-8 text-sm text-neutralx-600">
-            Liever eerst rondklikken?{" "}
-            <Link href="/voorbeeldsites" className="font-semibold text-brand-700 underline underline-offset-2">
-              Bekijk de complete voorbeeldwebsites per branche
-            </Link>
-            .
-          </p>
+          <p className="mt-2 max-w-2xl text-neutralx-600">Twee sites die we zelf hebben gebouwd. Klik erop en loop er doorheen: alles wat je ziet, werkt.</p>
+          <ul className="mt-8 grid gap-6 md:grid-cols-2">
+            {VOORBEELDEN.map((v) => (
+              <li key={v.id} className="surface relative overflow-hidden">
+                <div className="relative aspect-[8/5] bg-paper-soft">
+                  <Image src={v.foto} alt={`De website van ${v.naam}`} fill sizes="(min-width: 768px) 46vw, 92vw" className="object-cover object-top" />
+                </div>
+                <div className="p-6">
+                  <p className="text-sm font-semibold text-brand-700">{v.soort}</p>
+                  <h3 className="mt-1 font-display text-2xl font-bold text-ink">{v.naam}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{v.tekst}</p>
+                  <a href={v.href} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex font-semibold text-brand-700 underline underline-offset-2">
+                    Bekijk {v.naam}
+                    <span className="sr-only"> (opent in een nieuw tabblad)</span>
+                  </a>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
@@ -109,7 +93,7 @@ export default async function WebsiteMakenPage() {
             Zo werkt het
           </h2>
           <ol className="mt-8 grid gap-5 md:grid-cols-3">
-            {stappen.map((s, i) => (
+            {STAPPEN.map((s, i) => (
               <li key={s.titel} className="surface p-6">
                 <p className="font-display text-3xl font-bold text-brand-700" aria-hidden>
                   {i + 1}
@@ -122,13 +106,25 @@ export default async function WebsiteMakenPage() {
         </div>
       </section>
 
-      <section className="bg-paper" aria-labelledby="wat-je-krijgt">
+      <section className="bg-paper" aria-labelledby="aanvraag-kop">
         <div className="shell py-14 md:py-20">
-          <h2 id="wat-je-krijgt" className="font-display text-3xl font-bold text-ink md:text-4xl">
-            Wat je erbij krijgt
+          <h2 id="aanvraag-kop" className="font-display text-3xl font-bold text-ink md:text-4xl">
+            Vertel je wensen
+          </h2>
+          <p className="mt-2 max-w-2xl text-neutralx-600">Kies wat bij je past en vul aan wat je mist. Hoe meer je vertelt, hoe beter het voorbeeld klopt.</p>
+          <div id="aanvraag" className="mt-8 max-w-4xl scroll-mt-24">
+            <WebsiteAanvraagFormulier />
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white" aria-labelledby="wat-kan">
+        <div className="shell py-14 md:py-20">
+          <h2 id="wat-kan" className="font-display text-3xl font-bold text-ink md:text-4xl">
+            Wat je site kan
           </h2>
           <ul className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {KRIJGT.map((k) => (
+            {KAN.map((k) => (
               <li key={k.titel} className="surface p-6">
                 <h3 className="font-display text-lg font-bold text-ink">{k.titel}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{k.tekst}</p>
@@ -141,29 +137,19 @@ export default async function WebsiteMakenPage() {
       <section className="hero-ink text-white" aria-labelledby="begin">
         <div className="shell py-14 text-center md:py-20">
           <h2 id="begin" className="font-display text-3xl font-bold md:text-4xl">
-            {kanOnline ? "Begin vandaag, betaal pas als hij online gaat" : "Begin vandaag met bouwen"}
+            Morgen jouw voorbeeld in drie versies
           </h2>
-          {kanOnline ? (
-            <p className="mx-auto mt-4 max-w-2xl text-white/70">
-              Maak een account voor je bedrijf en bouw je site in de Studio. Online zetten kan vanaf {vanaf} per maand.{" "}
-              <Link href="/abonnementen" className="underline underline-offset-2">
-                Bekijk de abonnementen
-              </Link>
-              .
-            </p>
-          ) : (
-            <p className="mx-auto mt-4 max-w-2xl text-white/70">
-              Maak een account voor je bedrijf en bouw je site in de Studio. Bouwen en bekijken is gratis. Is je site klaar,{" "}
-              <Link href="/contact" className="underline underline-offset-2">
-                laat het ons weten
-              </Link>
-              : dan zetten we hem samen met je online.
-            </p>
-          )}
-          <p className="mt-8">
-            <Link href={BEGIN} className="btn-mint px-6 py-3">
-              Begin gratis
+          <p className="mx-auto mt-4 max-w-2xl text-white/70">
+            Vul je wensen in, dan gaan wij aan de slag. Liever zelf bouwen?{" "}
+            <Link href={ZELF} className="underline underline-offset-2">
+              Maak een account en bouw je site in de Studio
             </Link>
+            .
+          </p>
+          <p className="mt-8">
+            <a href="#aanvraag" className="btn-mint px-6 py-3">
+              Vertel je wensen
+            </a>
           </p>
         </div>
       </section>

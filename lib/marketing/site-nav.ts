@@ -209,8 +209,8 @@ export const AANBOD_KOLOMMEN: MegaKolom[] = PIJLERS.map((p) => ({
   })),
 }));
 
-/** Extra ingang onder "Online & klanten": complete voorbeeldwebsites per branche. */
-export const VOORBEELDSITES = { label: "Voorbeeldwebsites per branche", href: "/voorbeeldsites" };
+/** Extra ingang onder "Online & klanten": de sites die we echt hebben gemaakt (19 nov 2026: de oude voorbeeldsites per branche tonen we niet meer). */
+export const VOORBEELDSITES = { label: "Websites die we maakten", href: "/website-maken#voorbeelden" };
 
 /**
  * Snelle acties bovenaan het mobiele menu: wat iemand het vaakst komt doen,

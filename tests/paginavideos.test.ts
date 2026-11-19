@@ -36,7 +36,7 @@ describe("paginavideo's", () => {
       ["app/(marketing)/uitzendbureau/page.tsx", "uitzendbureau"],
       ["app/(marketing)/prijzen/page.tsx", "prijzen"],
       ["app/(marketing)/rijschool-software/page.tsx", "rijschool-software"],
-      ["app/(marketing)/website-maken/page.tsx", "website-maken"],
+      // /website-maken toont zijn video niet meer (19 nov 2026): de pagina is een aanvraag geworden, de video legt nog het zelf bouwen uit
       ["components/marketing/SectorLanding.tsx", "horeca"],
     ];
     for (const [bestand, id] of paginas) {

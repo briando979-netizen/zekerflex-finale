@@ -23,7 +23,7 @@ const BASISLIJN: Record<string, string> = {
     "crowdsec:8080", "whatsapp-brug:3900", "ollama:11434", "git.37-97-226-24.sslip.io",
   ]),
   ...groep("voorbeeldnaam in een tekst of formulier (jouwdomein, jouwbedrijf), geen aanroep", [
-    "code.jouwdomein.nl", "term.jouwdomein.nl", "jouwbedrijf.nl", "schwarzwald.stackbase.nl",
+    "code.jouwdomein.nl", "term.jouwdomein.nl", "jouwbedrijf.nl", "schwarzwald.stackbase.nl", "smileyapp.zekerflex.com", "schwarzwald.zekerflex.com",
   ]),
   ...groep("standaard of naamruimte (XML, SVG, JSON-LD, sitemap), geen aanroep", [
     "schema.org", "www.w3.org", "www.sitemaps.org", "graphml.graphdrawing.org", "www.topografix.com", "www.auditfiles.nl",

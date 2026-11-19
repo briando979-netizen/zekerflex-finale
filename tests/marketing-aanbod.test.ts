@@ -28,8 +28,8 @@ describe("aanbod (lib/marketing/aanbod.ts)", () => {
       expect(paginaBestaat(a.start.href), `${a.naam} start → ${a.start.href}`).toBe(true);
       if (a.voorbeelden) expect(paginaBestaat(a.voorbeelden.href), `${a.naam} voorbeelden → ${a.voorbeelden.href}`).toBe(true);
     }
-    // website en webshop: eerst rondkijken op de voorbeeldsites
-    for (const slug of ["website", "webshop"]) expect(aanbodVan(slug)?.voorbeelden?.href, slug).toBe("/voorbeeldsites");
+    // website en webshop: naar de sites die we echt maakten en het wensenformulier (19 nov 2026: geen oude voorbeeldsites meer)
+    for (const slug of ["website", "webshop"]) expect(aanbodVan(slug)?.voorbeelden?.href, slug).toMatch(/^\/website-maken#(voorbeelden|aanvraag)$/);
     for (const w of WERK_ZOEKEN) expect(paginaBestaat(w.href), w.href).toBe(true);
   });
 

@@ -211,8 +211,8 @@ function NieuweSiteBlok({ result, site, onSite }: { result: WebsiteCheckResult; 
               schwarzwald.zekerflex.com
             </a>
             . Of bekijk eerst{" "}
-            <Link href="/voorbeeldsites" className="font-semibold text-brand-700 underline underline-offset-2">
-              een voorbeeld voor jouw branche
+            <Link href="/website-maken#voorbeelden" className="font-semibold text-brand-700 underline underline-offset-2">
+              wat we voor anderen maakten
             </Link>
             .
           </p>
@@ -620,8 +620,8 @@ export function WebsiteCheck({ initial, plans, initialDealId = null }: { initial
             </ul>
             <p className="mt-6 text-sm text-neutralx-600">
               Benieuwd hoe zo&apos;n site eruitziet?{" "}
-              <Link href="/voorbeeldsites" className="font-semibold text-brand-700 underline underline-offset-2">
-                Bekijk de voorbeeldsites per branche
+              <Link href="/website-maken#voorbeelden" className="font-semibold text-brand-700 underline underline-offset-2">
+                Bekijk de sites die we maakten
               </Link>
               .
             </p>

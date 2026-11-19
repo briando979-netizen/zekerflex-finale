@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { BRANCHE_VOORBEELDEN } from "@/lib/sites/branche-voorbeelden";
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
   title: "Voorbeeldwebsites per branche",
   description:
     "Complete voorbeeldwebsites voor horeca, bouw, schoonmaak, zorg, kappers en meer, plus voorbeeldwebshops. Met online reserveren, winkelmand en offertes.",
-  ...canonical("/voorbeeldsites"),
+  ...canonical("/website-maken"),
 };
 
 // De voorbeeldsites per branche (lib/sites/branche-voorbeelden.ts) en Bakkerij Jansen
@@ -30,7 +31,12 @@ const KAARTEN = [
   { slug: DEMO_SLUG, label: "Winkel met webshop", naam: "Bakkerij Jansen", tekst: "Bakkerij met een webshop: zoeken en filteren, producten met foto en prijs, maten en smaken, een winkelmand, en bestellen om af te halen of te laten bezorgen.", foto: "/shifts/retail.jpg" },
 ];
 
+const DOORSTUREN: boolean = true;
+
 export default function VoorbeeldsitesPage() {
+  // 19 nov 2026 (eigenaar): de oude voorbeeldsites per branche tonen we niet meer; als voorbeeld gelden alleen de sites die
+  // we echt hebben gemaakt, op /website-maken. De pagina blijft bestaan voor oude links en stuurt door.
+  if (DOORSTUREN) redirect("/website-maken#voorbeelden");
   return (
     <>
       <script
