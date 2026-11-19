@@ -55,6 +55,9 @@ describe("alles voor je bedrijf online (/online)", () => {
     expect(pagina).toContain('canonical("/online")');
     expect(bron("app/sitemap.ts")).toContain('entry("/online"');
     expect(bron("lib/marketing/site-nav.ts")).toContain('href: "/online"');
+    // de brede Aanbod-uitklap tekent AANBOD_KOLOMMEN, niet de menu-items: de link moet dus echt in de kolom staan (desktop én mobiel)
+    expect(bron("components/marketing/SiteHeader.tsx")).toContain("ALLES_ONLINE.href");
+    expect(bron("components/marketing/MobileMenu.tsx")).toContain("ALLES_ONLINE.href");
     expect(bron("lib/dev/app-pages.generated.ts")).toContain('"route":"/online"');
   });
 });

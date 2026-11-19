@@ -6,6 +6,7 @@ import {
   AANBOD_KOLOMMEN,
   DOELGROEP_PAGINA,
   SNELLE_ACTIES,
+  ALLES_ONLINE,
   VOORBEELDSITES,
   eigenLinks,
   isExternal,
@@ -180,11 +181,18 @@ export function MobileMenu({
                                   </li>
                                 ))}
                                 {k.sleutel === "online" && (
-                                  <li>
-                                    <Link href={VOORBEELDSITES.href} className="block rounded-lg py-1.5 text-sm text-white/80 hover:text-white">
-                                      {VOORBEELDSITES.label}
-                                    </Link>
-                                  </li>
+                                  <>
+                                    <li>
+                                      <Link href={VOORBEELDSITES.href} className="block rounded-lg py-1.5 text-sm text-white/80 hover:text-white">
+                                        {VOORBEELDSITES.label}
+                                      </Link>
+                                    </li>
+                                    <li>
+                                      <Link href={ALLES_ONLINE.href} className="block rounded-lg py-1.5 text-sm font-semibold text-brand-mint hover:text-white">
+                                        {ALLES_ONLINE.label}
+                                      </Link>
+                                    </li>
+                                  </>
                                 )}
                               </ul>
                             </div>

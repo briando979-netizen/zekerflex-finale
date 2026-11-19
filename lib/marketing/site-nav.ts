@@ -231,6 +231,8 @@ export const AANBOD_KOLOMMEN: MegaKolom[] = PIJLERS.map((p) => ({
 
 /** Extra ingang onder "Online & klanten": de sites die we echt hebben gemaakt (19 nov 2026: de oude voorbeeldsites per branche tonen we niet meer). */
 export const VOORBEELDSITES = { label: "Websites die we maakten", href: "/website-maken#voorbeelden" };
+/** Onder dezelfde kolom: alle losse online tools op één pagina (/online, lib/marketing/online-tools.ts). De brede uitklap tekent AANBOD_KOLOMMEN, niet AANBOD_MENU.items, dus de link staat hier. */
+export const ALLES_ONLINE = { label: "Alles voor je bedrijf online", href: "/online" };
 
 /**
  * Snelle acties bovenaan het mobiele menu: wat iemand het vaakst komt doen,

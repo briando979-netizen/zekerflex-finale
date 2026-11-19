@@ -7,6 +7,7 @@ import { LogoGlyph } from "@/components/brand/Logo";
 import { MobileMenu } from "@/components/marketing/MobileMenu";
 import {
   AANBOD_KOLOMMEN,
+  ALLES_ONLINE,
   VOORBEELDSITES,
   eigenLinks,
   isExternal,
@@ -348,11 +349,18 @@ function AanbodUitklap({ extra }: { extra: MenuItem[] }) {
                 </li>
               ))}
               {k.sleutel === "online" && (
-                <li>
-                  <Link href={VOORBEELDSITES.href} className="block rounded-lg py-1 text-[13px] text-white/80 transition-colors hover:text-white">
-                    {VOORBEELDSITES.label}
-                  </Link>
-                </li>
+                <>
+                  <li>
+                    <Link href={VOORBEELDSITES.href} className="block rounded-lg py-1 text-[13px] text-white/80 transition-colors hover:text-white">
+                      {VOORBEELDSITES.label}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href={ALLES_ONLINE.href} className="block rounded-lg py-1 text-[13px] font-semibold text-brand-mint transition-colors hover:text-white">
+                      {ALLES_ONLINE.label}
+                    </Link>
+                  </li>
+                </>
               )}
             </ul>
           </div>
