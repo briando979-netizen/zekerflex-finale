@@ -430,3 +430,4 @@ html[data-theme="light"] #tabbar { background: #fff; border-top: 1px solid var(-
 html[data-theme="light"] #tabbar a { color: #555; } html[data-theme="light"] #tabbar a.active { color: #111; }
 html[data-theme="light"] .slide, html[data-theme="light"] .feed, html[data-theme="light"] .lv, html[data-theme="light"] .cam, html[data-theme="light"] .topbar { color: #fff; }
 html[data-theme="light"] .foto-pv, html[data-theme="light"] .ed-pv { background: #000; }
+html[data-theme="light"] .stats b, html[data-theme="light"] .profile-top .handle, html[data-theme="light"] .big-head h1, html[data-theme="light"] .lv-list { color: #111; }
