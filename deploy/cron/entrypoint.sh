@@ -122,6 +122,9 @@ cat > /etc/crontabs/root <<EOF
 */10 * * * * wget -q -O /dev/null -T 90 "$H" "$APP/api/internal/boekhouding/bonnen-mail"
 # elke nacht 02:40 UTC: facturen boeken, bank koppelen (alleen wat zeker is), btw-concept bijwerken en deadlinemeldingen; doet niets zolang de vlag boekhouding-nachtronde uit staat (lib/boekhouding/nachtronde.ts)
 40 2 * * * wget -q -O /dev/null -T 300 "$H" "$APP/api/internal/boekhouding/nachtronde"
+# elke ochtend 05:00, 06:00 en 07:00 UTC: de wekelijkse mail aan de beheerders van het SmileyApp-voorstel (lib/voorstel/smileyapp-weekmail.ts).
+# De route verstuurt alleen op maandag vanaf 07:00 Nederlandse tijd (zomer 05:00 UTC, winter 06:00 UTC) en per week een keer; elke andere ronde doet niets.
+0 5,6,7 * * * wget -q -O /dev/null -T 120 "$H" "$APP/api/internal/smileyapp/weekmail"
 EOF
 
 echo "[zf-cron] crontab geïnstalleerd; crond start (UTC). Doel: $APP"

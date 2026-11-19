@@ -8,16 +8,55 @@ import { isTaal, type Taal } from "@/lib/voorstel/smileyapp-taal";
 // 2026): wat een aanvraag mag bevatten, welk moment iemand kan kiezen voor een
 // belafspraak en hoe lang een aanvraag blijft staan. Puur (geen kv of zod), dus
 // los te testen en ook bruikbaar in het formulier en het beheer. Het moment is
-// een voorkeur, geen bevestigde afspraak: er wordt niets in een agenda gezet.
+// een voorkeur, geen bevestigde afspraak. Een vaste afspraak ontstaat alleen als
+// de aanvrager een open tijd uit de agenda kiest (deel 6a,
+// lib/voorstel/smileyapp-agenda-regels.ts); die staat dan in `afspraak`.
 // ---------------------------------------------------------------------------
 
 export type Soort = "demo" | "partner";
 export const SOORTEN = ["demo", "partner"] as const;
 
-export const STATUSSEN = ["nieuw", "gebeld", "afspraak", "klant", "afgevallen"] as const;
+// De opvolglijst (deel 6a): van nieuw naar klant of afgevallen. "afspraak" heet op het scherm "Demo gepland"; de
+// sleutel bleef, zodat aanvragen van vóór deel 6a hun status houden. Het team mag elke status kiezen (ook terug).
+export const STATUSSEN = ["nieuw", "gebeld", "afspraak", "gehad", "klant", "afgevallen"] as const;
 export type Status = (typeof STATUSSEN)[number];
-export const STATUS_LABEL: Record<Status, string> = { nieuw: "Nieuw", gebeld: "Gebeld", afspraak: "Afspraak gemaakt", klant: "Klant geworden", afgevallen: "Afgevallen" };
+export const STATUS_LABEL: Record<Status, string> = { nieuw: "Nieuw", gebeld: "Gebeld", afspraak: "Demo gepland", gehad: "Demo gehad", klant: "Klant", afgevallen: "Afgevallen" };
 export const isStatus = (s: unknown): s is Status => typeof s === "string" && (STATUSSEN as readonly string[]).includes(s);
+
+/** Een aanvraag waarbij een tijd uit de agenda is geboekt, begint op "Demo gepland". */
+export const STATUS_NA_BOEKEN: Status = "afspraak";
+
+/**
+ * Het team annuleert de geboekte tijd. Stond de aanvraag op "Demo gepland", dan gaat hij terug naar "Nieuw": er
+ * moet weer iemand contact opnemen. Een status die het team daarna zelf koos (gehad, klant, afgevallen) blijft.
+ */
+export const statusNaAnnuleren = (status: Status): Status => (status === "afspraak" ? "nieuw" : status);
+
+// ---- notities van het team ---------------------------------------------------
+
+export const NOTITIE_TEKST_MAX = 1000;
+export const NOTITIES_MAX = 30;
+
+export interface Notitie {
+  id: string;
+  tekst: string;
+  /** de naam van het teamlid dat de notitie schreef */
+  door: string;
+  op: string;
+}
+
+export const isNotitieId = (id: unknown): id is string => typeof id === "string" && /^[a-f0-9]{12}$/.test(id);
+
+export type NotitieUitkomst = { ok: true; waarde: Notitie[] } | { ok: false; fout: string };
+
+/** Voegt een notitie toe achteraan (de oudste eerst). Leeg, te lang of al dertig notities: een fout, niets veranderd. */
+export function metNotitie(bestaand: readonly Notitie[], n: { id: string; tekst: string; door: string; op: string }): NotitieUitkomst {
+  const tekst = n.tekst.replace(/\r\n?/g, "\n").trim();
+  if (!tekst) return { ok: false, fout: "Typ eerst een notitie." };
+  if (tekst.length > NOTITIE_TEKST_MAX) return { ok: false, fout: `Een notitie is hooguit ${NOTITIE_TEKST_MAX} tekens.` };
+  if (bestaand.length >= NOTITIES_MAX) return { ok: false, fout: `Er staan al ${NOTITIES_MAX} notities bij deze aanvraag. Verwijder eerst een oude notitie.` };
+  return { ok: true, waarde: [...bestaand, { id: n.id, tekst, door: n.door, op: n.op }] };
+}
 
 export interface Voorkeur {
   /** JJJJ-MM-DD, een Nederlandse kalenderdag */
@@ -25,6 +64,14 @@ export interface Voorkeur {
   /** HH:MM, Nederlandse tijd */
   tijd: string;
 }
+
+export interface Afspraak {
+  tijd: string;
+  start: string;
+}
+
+/** Het id van een tijd in de agenda: het begin in UTC als JJJJMMDDUUMM (lib/voorstel/smileyapp-agenda-regels.ts). */
+export const isTijdId = (id: unknown): id is string => typeof id === "string" && /^\d{12}$/.test(id);
 
 export interface Aanvraag {
   id: string;
@@ -42,7 +89,12 @@ export interface Aanvraag {
   /** de taal van het formulier (nl, en of de): in die taal wil iemand geholpen worden. Ontbreekt bij aanvragen van vóór de vertaling. */
   taal?: Taal;
   status: Status;
+  /** de ene notitie van vóór deel 6a; nieuwe notities staan in `notities` */
   notitie?: string;
+  /** notities van het team, de oudste eerst (hooguit NOTITIES_MAX) */
+  notities?: Notitie[];
+  /** de tijd uit de agenda die de aanvrager koos: `tijd` is het id van die tijd, `start` het begin (UTC) */
+  afspraak?: Afspraak;
   behandeldDoor?: string;
   aangemaakt: string;
   gewijzigd: string;
@@ -59,6 +111,8 @@ export interface AanvraagInvoer {
   interesses?: readonly string[] | undefined;
   dag?: string | undefined;
   tijd?: string | undefined;
+  /** demo: de tijd uit de agenda die iemand koos; dan vervalt het voorkeursmoment */
+  tijdId?: string | undefined;
   bericht?: string | undefined;
   bron?: string | undefined;
   taal?: string | undefined;
@@ -126,7 +180,11 @@ const TELEFOON = /^\+?[0-9][0-9 ()\-.]{5,24}$/;
 /** "tel:+31612345678": alleen cijfers en een plus, voor de bel-link in het beheer. */
 export const telLink = (telefoon: string) => `tel:${telefoon.replace(/[^\d+]/g, "")}`;
 
-export type Controle = { ok: true; waarde: NieuweAanvraag } | { ok: false; veld: string; fout: string };
+/** `tijdId`: de gekozen tijd uit de agenda; de route boekt die (of weigert als een ander net eerder was). */
+export type Controle = { ok: true; waarde: NieuweAanvraag; tijdId?: string } | { ok: false; veld: string; fout: string };
+
+/** De melding als de gekozen tijd niet (meer) vrij is; ook het antwoord van de route als een ander net eerder was. */
+export const TIJD_BEZET = "Deze tijd is niet meer vrij. Kies een andere tijd uit de lijst.";
 
 export function valideerAanvraag(i: AanvraagInvoer, nu: Date): Controle {
   const fout = (veld: string, tekst: string): Controle => ({ ok: false, veld, fout: tekst });
@@ -157,6 +215,13 @@ export function valideerAanvraag(i: AanvraagInvoer, nu: Date): Controle {
 
   const p = i.pakket ? pakket(i.pakket) : undefined;
   if (i.pakket && !p) return fout("pakket", "Kies een pakket uit de lijst.");
+  // een tijd uit de agenda gaat voor het voorkeursmoment: de afspraak staat dan vast, dus dag en tijd tellen niet meer
+  const tijdId = (i.tijdId ?? "").trim();
+  if (tijdId) {
+    if (!isTijdId(tijdId)) return fout("tijdId", TIJD_BEZET);
+    if (!telefoon) return fout("telefoon", "Vul je telefoonnummer in, dan kunnen we je bereiken als er iets verandert.");
+    return { ok: true, waarde: { ...basis, ...(p ? { pakket: p.id } : {}) }, tijdId };
+  }
   const dag = (i.dag ?? "").trim();
   const tijd = (i.tijd ?? "").trim();
   if (!dag && !tijd) return { ok: true, waarde: { ...basis, ...(p ? { pakket: p.id } : {}) } };

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { beeld } from "@/lib/voorstel/smileyapp";
 import { heeftTeam } from "@/lib/voorstel/smileyapp-accounts";
+import { afsprakenVoorSite } from "@/lib/voorstel/smileyapp-agenda";
 import { smileyappPakketten } from "@/lib/voorstel/smileyapp-pakketten";
 import { TEKSTEN } from "@/lib/voorstel/smileyapp-talen";
 import { DemoHero, DemoTaal, type DemoZoek } from "@/components/voorstel/smileyapp/taal/Demo";
@@ -25,13 +26,14 @@ export const metadata: Metadata = {
 };
 
 export default async function SmileyappDemoEnglish({ searchParams }: { searchParams: Promise<DemoZoek> }) {
-  const [zoek, team, pakketten] = await Promise.all([searchParams, heeftTeam(), smileyappPakketten()]);
+  // de open tijden uit de agenda van het team, in deze taal en in Nederlandse tijd; leeg: alleen het voorkeursmoment
+  const [zoek, team, pakketten, afspraken] = await Promise.all([searchParams, heeftTeam(), smileyappPakketten(), afsprakenVoorSite(TAAL)]);
   return (
     <div lang="en">
       <DemoHero taal={TAAL}>
         <h1 className={DEMO_KOP_KLASSE}>{t.demo.kop}</h1>
       </DemoHero>
-      <DemoTaal taal={TAAL} pakketten={pakketten} team={team} zoek={zoek} nu={new Date()} />
+      <DemoTaal taal={TAAL} pakketten={pakketten} team={team} zoek={zoek} nu={new Date()} afspraken={afspraken} />
     </div>
   );
 }

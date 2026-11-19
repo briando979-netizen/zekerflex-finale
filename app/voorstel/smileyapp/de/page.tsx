@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { beeld } from "@/lib/voorstel/smileyapp";
 import { smileyappPakketten } from "@/lib/voorstel/smileyapp-pakketten";
 import { TEKSTEN } from "@/lib/voorstel/smileyapp-talen";
+import { vragenStaat } from "@/lib/voorstel/smileyapp-vragen";
 import { HeroKop, KOP_KLASSE, LandingHero, LandingTaal } from "@/components/voorstel/smileyapp/taal/Landing";
 
 // De voorpagina van het SmileyApp-voorstel in het Duits (/de), in verkorte
@@ -26,6 +27,8 @@ export const metadata: Metadata = {
 
 export default async function SmileyappDeutsch() {
   const pakketten = await smileyappPakketten();
+  // wat het team bij de veelgestelde vragen koos (volgorde, verbergen); bij een storing geldt de standaard
+  const vragenKeuze = await vragenStaat().catch(() => null);
   return (
     <div lang="de">
       <LandingHero taal={TAAL}>
@@ -33,7 +36,7 @@ export default async function SmileyappDeutsch() {
           <HeroKop taal={TAAL} />
         </h1>
       </LandingHero>
-      <LandingTaal taal={TAAL} pakketten={pakketten} />
+      <LandingTaal taal={TAAL} pakketten={pakketten} vragenKeuze={vragenKeuze} />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { BASE, CONTACT, FUNCTIES, HERO, KLANTLOGIN, PAKKETTEN, STAPPEN, pakket }
 import { TIJDEN, dagTekst, voorkeurDagen } from "@/lib/voorstel/smileyapp-aanvraag-regels";
 import { leesBron } from "@/lib/voorstel/smileyapp-aanvraag-regels";
 import { heeftTeam } from "@/lib/voorstel/smileyapp-accounts";
+import { afsprakenVoorSite } from "@/lib/voorstel/smileyapp-agenda";
 import { smileyappPakketten } from "@/lib/voorstel/smileyapp-pakketten";
 import { AanvraagFormulier } from "@/components/voorstel/smileyapp/AanvraagFormulier";
 import { Vinkje } from "@/components/voorstel/smileyapp/Blokken";
@@ -23,7 +24,8 @@ export default async function SmileyappDemo({ searchParams }: { searchParams: Pr
   const sp = await searchParams;
   const q = sp.pakket;
   const bron = leesBron(Array.isArray(sp.bron) ? sp.bron[0] : sp.bron);
-  const [team, pakketten] = await Promise.all([heeftTeam(), smileyappPakketten()]);
+  // de open tijden uit de agenda van het team (deel 6a); staat er niets open, dan blijft het bij het voorkeursmoment
+  const [team, pakketten, afspraken] = await Promise.all([heeftTeam(), smileyappPakketten(), afsprakenVoorSite("nl")]);
   const gekozen = pakket(Array.isArray(q) ? q[0] : q, pakketten);
   // de dagen in Nederlandse tijd, op de server berekend: server en browser tonen dezelfde lijst
   const dagen = voorkeurDagen(new Date()).map((d) => ({ waarde: d, label: dagTekst(d) }));
@@ -96,6 +98,7 @@ export default async function SmileyappDemo({ searchParams }: { searchParams: Pr
           gekozenPakket={gekozen?.id ?? ""}
           dagen={dagen}
           tijden={TIJDEN}
+          afspraken={afspraken}
         />
         </div>
       </section>

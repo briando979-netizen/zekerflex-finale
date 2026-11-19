@@ -1,7 +1,17 @@
 import { randomBytes } from "crypto";
 import { AppError } from "@/lib/errors";
 import { kvDelete, kvGet, kvListEntries, kvSet } from "@/lib/storage/kv";
-import { NOTITIE_MAX, aanvraagVerlopen, isAanvraagId, type Aanvraag, type NieuweAanvraag, type Status } from "@/lib/voorstel/smileyapp-aanvraag-regels";
+import {
+  NOTITIE_MAX,
+  STATUS_NA_BOEKEN,
+  aanvraagVerlopen,
+  isAanvraagId,
+  isNotitieId,
+  metNotitie,
+  type Aanvraag,
+  type NieuweAanvraag,
+  type Status,
+} from "@/lib/voorstel/smileyapp-aanvraag-regels";
 
 // ---------------------------------------------------------------------------
 // Opslag van demo-aanvragen en partner-aanmeldingen van het SmileyApp-voorstel.
@@ -13,10 +23,13 @@ import { NOTITIE_MAX, aanvraagVerlopen, isAanvraagId, type Aanvraag, type Nieuwe
 const PREFIX = "voorstel-smileyapp:aanvraag:";
 const sleutel = (id: string) => `${PREFIX}${id}`;
 
-export async function maakAanvraag(nieuw: NieuweAanvraag, nu = new Date()): Promise<Aanvraag> {
-  const id = randomBytes(8).toString("hex");
+/** Een nieuw id, vooraf te maken: zo kan een tijd uit de agenda op dit id geboekt worden vóór de aanvraag bestaat. */
+export const nieuwAanvraagId = () => randomBytes(8).toString("hex");
+
+/** Een aanvraag met een geboekte tijd (`afspraak`) begint op "Demo gepland", anders op "Nieuw". */
+export async function maakAanvraag(nieuw: NieuweAanvraag, nu = new Date(), id = nieuwAanvraagId()): Promise<Aanvraag> {
   const moment = nu.toISOString();
-  const aanvraag: Aanvraag = { ...nieuw, id, status: "nieuw", aangemaakt: moment, gewijzigd: moment };
+  const aanvraag: Aanvraag = { ...nieuw, id, status: nieuw.afspraak ? STATUS_NA_BOEKEN : "nieuw", aangemaakt: moment, gewijzigd: moment };
   await kvSet(sleutel(id), aanvraag);
   return aanvraag;
 }
@@ -48,7 +61,41 @@ export async function wijzigAanvraag(id: string, w: { status?: Status | undefine
   return bij;
 }
 
-export async function verwijderAanvraag(id: string): Promise<void> {
-  await haal(id);
+/** Een notitie erbij, met de naam van wie hem schreef en het moment. De regels staan in metNotitie. */
+export async function voegNotitieToe(id: string, tekst: string, door: string, nu = new Date()): Promise<Aanvraag> {
+  const a = await haal(id);
+  const uitkomst = metNotitie(a.notities ?? [], { id: randomBytes(6).toString("hex"), tekst, door, op: nu.toISOString() });
+  if (!uitkomst.ok) throw AppError.validation(uitkomst.fout, { veld: "notitie" });
+  const bij: Aanvraag = { ...a, notities: uitkomst.waarde, behandeldDoor: door, gewijzigd: nu.toISOString() };
+  await kvSet(sleutel(id), bij);
+  return bij;
+}
+
+export async function verwijderNotitie(id: string, notitieId: string, door: string, nu = new Date()): Promise<Aanvraag> {
+  const a = await haal(id);
+  const { notities = [], ...rest } = a;
+  if (!isNotitieId(notitieId) || !notities.some((n) => n.id === notitieId)) throw AppError.notFound("Deze notitie bestaat niet (meer).");
+  const over = notities.filter((n) => n.id !== notitieId);
+  const bij: Aanvraag = { ...rest, ...(over.length ? { notities: over } : {}), behandeldDoor: door, gewijzigd: nu.toISOString() };
+  await kvSet(sleutel(id), bij);
+  return bij;
+}
+
+/**
+ * Past een aanvraag aan met `maak` (voor de agenda: de afspraak eraf bij annuleren). Bestaat de aanvraag niet
+ * meer, dan is dat null en gebeurt er niets: de agenda mag daar niet op stuklopen.
+ */
+export async function bewerkAanvraag(id: string, maak: (a: Aanvraag) => Aanvraag, door: string, nu = new Date()): Promise<Aanvraag | null> {
+  const a = isAanvraagId(id) ? await kvGet<Aanvraag>(sleutel(id)) : null;
+  if (!a) return null;
+  const bij: Aanvraag = { ...maak(a), id: a.id, aangemaakt: a.aangemaakt, behandeldDoor: door, gewijzigd: nu.toISOString() };
+  await kvSet(sleutel(id), bij);
+  return bij;
+}
+
+/** Verwijdert de aanvraag en geeft hem terug: wie een tijd had geboekt, krijgt die tijd in de route weer vrij. */
+export async function verwijderAanvraag(id: string): Promise<Aanvraag> {
+  const a = await haal(id);
   await kvDelete(sleutel(id));
+  return a;
 }

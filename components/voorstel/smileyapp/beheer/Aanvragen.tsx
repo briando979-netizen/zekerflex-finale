@@ -1,32 +1,46 @@
 "use client";
 
 import { useState } from "react";
-import { STATUSSEN, STATUS_LABEL, telLink, voorkeurTekst, type Aanvraag, type Soort, type Status } from "@/lib/voorstel/smileyapp-aanvraag-regels";
+import { NOTITIES_MAX, NOTITIE_TEKST_MAX, STATUSSEN, STATUS_LABEL, telLink, voorkeurTekst, type Aanvraag, type Soort, type Status } from "@/lib/voorstel/smileyapp-aanvraag-regels";
+import { DEMO_MINUTEN, afspraakTekst } from "@/lib/voorstel/smileyapp-agenda-regels";
 import { TAAL_NAAM } from "@/lib/voorstel/smileyapp-taal";
 import { BEHEER_API, KAART, KNOP, KNOP_LICHT, KNOP_ROOD, LABEL, Melding, Pil, VELD, foutTekst, moment, vraag } from "@/components/voorstel/smileyapp/beheer/api";
 
-// Demo-aanvragen of partner-aanmeldingen in het beheer: filter op status, per
-// aanvraag bellen of mailen, de status bijhouden, een notitie maken en
-// verwijderen. Na elke wijziging neemt de lijst de versie van de server over.
+// Demo-aanvragen of partner-aanmeldingen in het beheer, als opvolglijst: bovenaan
+// de teller per status (tegelijk het filter), per aanvraag bellen of mailen, de
+// status bijhouden, notities van het team (wie en wanneer) en verwijderen. Na
+// elke wijziging neemt de lijst de versie van de server over.
 
+// Eén kleur = één betekenis: geel wacht op jou, lichtgroen is opgepakt, blauw is gepland, groen is gedaan,
+// donker is binnen (klant) en grijs is afgesloten zonder vervolg.
 export const STATUS_KLEUR: Record<Status, string> = {
   nieuw: "bg-smiley-sun text-smiley-ink",
   gebeld: "bg-smiley-mint text-smiley-leaf",
-  afspraak: "bg-smiley-green text-smiley-ink",
+  afspraak: "bg-sky-100 text-sky-900",
+  gehad: "bg-smiley-green text-smiley-ink",
   klant: "bg-smiley-ink text-white",
   afgevallen: "bg-smiley-ink/10 text-smiley-mute",
+};
+/** Het bolletje in de teller: dezelfde kleur als het label van de status. */
+const STATUS_BOL: Record<Status, string> = {
+  nieuw: "bg-smiley-sun",
+  gebeld: "bg-smiley-leaf",
+  afspraak: "bg-sky-600",
+  gehad: "bg-smiley-green",
+  klant: "bg-smiley-ink",
+  afgevallen: "bg-smiley-ink/30",
 };
 
 type Filter = Status | "alle";
 
 function AanvraagKaart({ a, pakketNamen, bijgewerkt, verwijderd }: { a: Aanvraag; pakketNamen: Record<string, string>; bijgewerkt: (a: Aanvraag) => void; verwijderd: (id: string) => void }) {
-  const [notitie, setNotitie] = useState(a.notitie ?? "");
+  const [notitie, setNotitie] = useState("");
   const [bezig, setBezig] = useState(false);
   const [zeker, setZeker] = useState(false);
   const [fout, setFout] = useState("");
   const [ok, setOk] = useState("");
 
-  async function wijzig(w: { status?: Status; notitie?: string }, klaar: string) {
+  async function wijzig(w: { status?: Status; notitie?: string; nieuweNotitie?: string; wisNotitie?: string }, klaar: string): Promise<boolean> {
     setBezig(true);
     setFout("");
     setOk("");
@@ -34,10 +48,11 @@ function AanvraagKaart({ a, pakketNamen, bijgewerkt, verwijderd }: { a: Aanvraag
       // de server kan meer veranderen dan wij sturen (wie, wanneer): zijn versie overnemen
       const { aanvraag } = await vraag<{ aanvraag: Aanvraag }>(BEHEER_API, { method: "PATCH", body: { id: a.id, ...w } });
       bijgewerkt(aanvraag);
-      setNotitie(aanvraag.notitie ?? "");
       setOk(klaar);
+      return true;
     } catch (e) {
       setFout(foutTekst(e, "Opslaan lukte niet."));
+      return false;
     } finally {
       setBezig(false);
     }
@@ -56,6 +71,9 @@ function AanvraagKaart({ a, pakketNamen, bijgewerkt, verwijderd }: { a: Aanvraag
   }
 
   const pakket = a.pakket ? (pakketNamen[a.pakket] ?? a.pakket) : "";
+  // de nieuwste notitie bovenaan
+  const notities = [...(a.notities ?? [])].reverse();
+  const vol = notities.length >= NOTITIES_MAX;
   return (
     <li className={KAART}>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -68,6 +86,12 @@ function AanvraagKaart({ a, pakketNamen, bijgewerkt, verwijderd }: { a: Aanvraag
           <span className="text-xs text-smiley-mute">binnen op {moment(a.aangemaakt)}</span>
         </div>
       </div>
+
+      {a.afspraak && (
+        <p className="mt-4 rounded-2xl bg-sky-100 p-4 text-sm font-semibold leading-relaxed text-sky-900">
+          Demo gepland op {afspraakTekst(a.afspraak.start)} ({DEMO_MINUTEN} minuten, Nederlandse tijd). Annuleren kan bij Agenda.
+        </p>
+      )}
 
       <dl className="mt-4 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
         {pakket && (
@@ -136,14 +160,26 @@ function AanvraagKaart({ a, pakketNamen, bijgewerkt, verwijderd }: { a: Aanvraag
             ))}
           </select>
         </div>
-        <div>
+        <div className="min-w-0">
           <label htmlFor={`notitie-${a.id}`} className={LABEL}>
-            Notitie (alleen voor het team)
+            Nieuwe notitie <span className="font-normal text-smiley-mute">(alleen voor het team)</span>
           </label>
-          <textarea id={`notitie-${a.id}`} rows={2} maxLength={2000} value={notitie} onChange={(e) => setNotitie(e.target.value)} className={`mt-1.5 ${VELD}`} />
+          <textarea id={`notitie-${a.id}`} rows={2} maxLength={NOTITIE_TEKST_MAX} value={notitie} disabled={vol} onChange={(e) => setNotitie(e.target.value)} aria-describedby={`notitie-uitleg-${a.id}`} className={`mt-1.5 ${VELD}`} />
+          <p id={`notitie-uitleg-${a.id}`} className="mt-1.5 text-sm text-smiley-mute">
+            {vol ? `Er staan al ${NOTITIES_MAX} notities. Verwijder eerst een oude notitie.` : `Hooguit ${NOTITIE_TEKST_MAX} tekens; nu ${notitie.trim().length}. Je naam en het moment komen erbij.`}
+          </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <button type="button" disabled={bezig || notitie.trim() === (a.notitie ?? "")} onClick={() => void wijzig({ notitie }, "Notitie opgeslagen.")} className={KNOP_LICHT}>
-              Notitie opslaan
+            <button
+              type="button"
+              disabled={bezig || vol || notitie.trim() === ""}
+              onClick={() =>
+                void wijzig({ nieuweNotitie: notitie }, "Notitie toegevoegd.").then((gelukt) => {
+                  if (gelukt) setNotitie("");
+                })
+              }
+              className={KNOP_LICHT}
+            >
+              Notitie toevoegen
             </button>
             {zeker ? (
               <>
@@ -163,6 +199,36 @@ function AanvraagKaart({ a, pakketNamen, bijgewerkt, verwijderd }: { a: Aanvraag
           </div>
         </div>
       </div>
+
+      {(notities.length > 0 || a.notitie) && (
+        <ul aria-label={`Notities bij ${a.naam}`} className="mt-4 space-y-2">
+          {notities.map((n) => (
+            <li key={n.id} className="rounded-2xl bg-smiley-cream p-4 text-sm">
+              <p className="whitespace-pre-line break-words leading-relaxed text-smiley-ink">{n.tekst}</p>
+              <p className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-smiley-mute">
+                <span>
+                  {n.door}, {moment(n.op)}
+                </span>
+                <button type="button" disabled={bezig} onClick={() => void wijzig({ wisNotitie: n.id }, "Notitie verwijderd.")} className="relative font-semibold text-[#8E2A1E] underline underline-offset-2 disabled:opacity-50">
+                  Verwijder<span className="sr-only"> de notitie van {n.door}</span>
+                </button>
+              </p>
+            </li>
+          ))}
+          {/* de ene notitie van vóór de notitielijst: nog te lezen en weg te halen */}
+          {a.notitie && (
+            <li className="rounded-2xl bg-smiley-cream p-4 text-sm">
+              <p className="whitespace-pre-line break-words leading-relaxed text-smiley-ink">{a.notitie}</p>
+              <p className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-smiley-mute">
+                <span>Eerdere notitie</span>
+                <button type="button" disabled={bezig} onClick={() => void wijzig({ notitie: "" }, "Notitie verwijderd.")} className="relative font-semibold text-[#8E2A1E] underline underline-offset-2 disabled:opacity-50">
+                  Verwijder<span className="sr-only"> de eerdere notitie</span>
+                </button>
+              </p>
+            </li>
+          )}
+        </ul>
+      )}
       <div className="mt-3 empty:hidden">
         <Melding fout={fout} ok={ok} />
       </div>
@@ -188,22 +254,27 @@ export function Aanvragen({
   const zichtbaar = filter === "alle" ? eigen : eigen.filter((a) => a.status === filter);
   const aantal = (s: Status) => eigen.filter((a) => a.status === s).length;
   const wat = soort === "demo" ? "demo-aanvragen" : "partner-aanmeldingen";
+  const TEGEL = "flex min-w-0 items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold transition-colors";
 
   return (
     <div className="space-y-4">
       <p className="max-w-2xl text-sm leading-relaxed text-smiley-mute">
         {soort === "demo"
-          ? "Wie op de website een demo aanvraagt, staat hier. Het gekozen moment is een voorkeur van de aanvrager, geen vaste afspraak."
+          ? "Wie op de website een demo aanvraagt, staat hier. Een voorkeursmoment is een wens van de aanvrager; een tijd uit de agenda is een vaste afspraak."
           : "Wie zich op de website aanmeldt als partner, staat hier."}{" "}
         Een aanvraag verdwijnt vanzelf twaalf maanden na de laatste wijziging.
       </p>
-      <div role="group" aria-label="Filter op status" className="flex flex-wrap gap-2">
-        <button type="button" aria-pressed={filter === "alle"} onClick={() => setFilter("alle")} className={`rounded-full px-4 py-2 text-sm font-semibold ${filter === "alle" ? "bg-smiley-ink text-white" : "bg-white ring-1 ring-smiley-ink/15"}`}>
-          Alle ({eigen.length})
+      {/* de teller per status, tegelijk het filter; op de telefoon twee naast elkaar, zonder zijwaarts vegen */}
+      <div role="group" aria-label="Aantal per status, tik om te filteren" className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+        <button type="button" aria-pressed={filter === "alle"} onClick={() => setFilter("alle")} className={`${TEGEL} ${filter === "alle" ? "bg-smiley-ink text-white" : "bg-white text-smiley-ink ring-1 ring-smiley-ink/15"}`}>
+          <span className="font-display text-xl font-bold leading-none">{eigen.length}</span>
+          <span className="min-w-0 break-words">Alle</span>
         </button>
         {STATUSSEN.map((s) => (
-          <button key={s} type="button" aria-pressed={filter === s} onClick={() => setFilter(s)} className={`rounded-full px-4 py-2 text-sm font-semibold ${filter === s ? "bg-smiley-ink text-white" : "bg-white ring-1 ring-smiley-ink/15"}`}>
-            {STATUS_LABEL[s]} ({aantal(s)})
+          <button key={s} type="button" aria-pressed={filter === s} onClick={() => setFilter(s)} className={`${TEGEL} ${filter === s ? "bg-smiley-ink text-white" : "bg-white text-smiley-ink ring-1 ring-smiley-ink/15"}`}>
+            <span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_BOL[s]} ${filter === s ? "ring-2 ring-white" : ""}`} />
+            <span className="font-display text-xl font-bold leading-none">{aantal(s)}</span>
+            <span className="min-w-0 break-words">{STATUS_LABEL[s]}</span>
           </button>
         ))}
       </div>

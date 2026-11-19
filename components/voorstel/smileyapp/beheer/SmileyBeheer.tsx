@@ -8,6 +8,7 @@ import { BASE, beeld } from "@/lib/voorstel/smileyapp";
 import type { Aanvraag } from "@/lib/voorstel/smileyapp-aanvraag-regels";
 import { API, ApiFout, BEHEER_API, Melding, foutTekst, vraag } from "@/components/voorstel/smileyapp/beheer/api";
 import { Aanvragen } from "@/components/voorstel/smileyapp/beheer/Aanvragen";
+import { Agenda } from "@/components/voorstel/smileyapp/beheer/Agenda";
 import { BlogBeheer } from "@/components/voorstel/smileyapp/beheer/BlogBeheer";
 import { Cijfers } from "@/components/voorstel/smileyapp/beheer/Cijfers";
 import { Gesprekken } from "@/components/voorstel/smileyapp/beheer/Gesprekken";
@@ -16,6 +17,8 @@ import { PakkettenBeheer } from "@/components/voorstel/smileyapp/beheer/Pakkette
 import { QrCode } from "@/components/voorstel/smileyapp/beheer/QrCode";
 import { ReviewsBeheer } from "@/components/voorstel/smileyapp/beheer/ReviewsBeheer";
 import { Team } from "@/components/voorstel/smileyapp/beheer/Team";
+import { VragenBeheer } from "@/components/voorstel/smileyapp/beheer/VragenBeheer";
+import { Weekmail } from "@/components/voorstel/smileyapp/beheer/Weekmail";
 
 // Het beheer van SmileyApp als eigen scherm (zonder de omlijsting van de site,
 // zie AlleenOpSite in de layout): donkere zijbalk met het logo en de
@@ -27,10 +30,12 @@ const TABS: readonly (readonly [TabSleutel, string])[] = [
   ["overzicht", "Overzicht"],
   ["demo", "Demo-aanvragen"],
   ["partners", "Partners"],
+  ["agenda", "Agenda"],
   ["gesprekken", "Gesprekken"],
   ["cijfers", "Cijfers"],
   ["blog", "Blog"],
   ["reviews", "Reviews"],
+  ["vragen", "Vragen"],
   ["pakketten", "Pakketten"],
   ["qr", "QR-code"],
   ["team", "Team"],
@@ -119,7 +124,7 @@ export function SmileyBeheer({ wie, via, vandaag, pakketNamen }: { wie: string; 
 
   const aanvragen = data?.aanvragen ?? [];
   const nieuw = (soort: Aanvraag["soort"]) => aanvragen.filter((a) => a.soort === soort && a.status === "nieuw").length;
-  const teller: Record<TabSleutel, number> = { overzicht: 0, demo: nieuw("demo"), partners: nieuw("partner"), gesprekken: data?.tellers.chatWacht ?? 0, cijfers: 0, blog: 0, reviews: 0, pakketten: 0, qr: 0, team: 0 };
+  const teller: Record<TabSleutel, number> = { overzicht: 0, demo: nieuw("demo"), partners: nieuw("partner"), agenda: 0, gesprekken: data?.tellers.chatWacht ?? 0, cijfers: 0, blog: 0, reviews: 0, vragen: 0, pakketten: 0, qr: 0, team: 0 };
   const titel = TABS.find(([k]) => k === tab)?.[1] ?? "";
   // smal (px-3) op de telefoon: logo, "Website" en "Uitloggen" passen dan ook op 320 px naast elkaar
   const LICHT = "rounded-full px-3 py-2 text-sm font-semibold text-white ring-1 ring-white/25 hover:bg-white/10 sm:px-4";
@@ -193,12 +198,15 @@ export function SmileyBeheer({ wie, via, vandaag, pakketNamen }: { wie: string; 
           <Melding fout={fout} />
           {data === null && !fout && <p className="text-sm text-smiley-mute">Laden…</p>}
           {tab === "overzicht" && data && <Overzicht aanvragen={aanvragen} chatWacht={data.tellers.chatWacht} team={data.tellers.team} vandaag={vandaag} naar={naar} />}
+          {tab === "overzicht" && data && <Weekmail rol={data.ik.rol} via={data.ik.via} email={data.ik.email} />}
           {tab === "demo" && data && <Aanvragen key="demo" soort="demo" lijst={aanvragen} pakketNamen={pakketNamen} bijgewerkt={bijgewerkt} verwijderd={verwijderd} />}
           {tab === "partners" && data && <Aanvragen key="partner" soort="partner" lijst={aanvragen} pakketNamen={pakketNamen} bijgewerkt={bijgewerkt} verwijderd={verwijderd} />}
+          {tab === "agenda" && <Agenda vandaag={vandaag} bijgewerkt={herlaad} />}
           {tab === "gesprekken" && <Gesprekken bijgewerkt={herlaad} />}
           {tab === "cijfers" && <Cijfers />}
           {tab === "blog" && <BlogBeheer vandaag={vandaag} />}
           {tab === "reviews" && <ReviewsBeheer vandaag={vandaag} />}
+          {tab === "vragen" && data && <VragenBeheer rol={data.ik.rol} />}
           {tab === "pakketten" && <PakkettenBeheer />}
           {tab === "qr" && <QrCode />}
           {tab === "team" && <Team bijgewerkt={herlaad} />}

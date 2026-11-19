@@ -7,10 +7,13 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { eisToegang } from "@/lib/voorstel/smileyapp-accounts";
 import { bewaarBericht, eigenBerichten, verwijderBericht } from "@/lib/voorstel/smileyapp-blog";
 import { smileyappCijfers } from "@/lib/voorstel/smileyapp-cijfers";
+import { bewaarPosterZin, smileyappInstellingen, zetWeekmail } from "@/lib/voorstel/smileyapp-instellingen";
 import { isPakketId } from "@/lib/voorstel/smileyapp-pakket-regels";
 import { bewaarPakket, herstelPakketten, pakkettenVoorBeheer } from "@/lib/voorstel/smileyapp-pakketten";
-import { smileyPoort } from "@/lib/voorstel/smileyapp-poort";
+import { beheerVan, smileyPoort } from "@/lib/voorstel/smileyapp-poort";
 import { alleReviews, bewaarReview, verwijderReview } from "@/lib/voorstel/smileyapp-reviews";
+import { vragenVoorBeheer, wijzigVragen } from "@/lib/voorstel/smileyapp-vragen";
+import { stuurVoorbeeld } from "@/lib/voorstel/smileyapp-weekmail";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +25,11 @@ export const dynamic = "force-dynamic";
 // POST {actie}                     → blog-bewaren | blog-verwijderen |
 //                                    review-bewaren | review-verwijderen |
 //                                    pakket-bewaren | pakket-standaard
+// Deel 6a: ?deel=vragen (de veelgestelde vragen) en ?deel=instellingen (de wekelijkse
+// mail aan of uit, de zin op de poster), met de acties vraag-bewaren | vraag-verbergen |
+// vraag-verplaatsen | vraag-verwijderen | vraag-standaard | weekmail-zetten |
+// weekmail-voorbeeld | poster-bewaren. De vragen en de wekelijkse mail wijzigt alleen een
+// beheerder (een medewerker leest mee); de zin op de poster mag het hele team aanpassen.
 // Voor iedereen van het team (beheerder én medewerker) en een ZekerFlex-
 // platformbeheerder. Elke methode: eigen site → limiet per IP → sessie. Niet
 // ingelogd = 401. De regels staan in lib/voorstel/smileyapp-blog-regels.ts en
@@ -37,6 +45,8 @@ export async function GET(request: Request): Promise<NextResponse> {
     if (deel === "blog") return NextResponse.json({ berichten: await eigenBerichten() }, geenCache);
     if (deel === "pakketten") return NextResponse.json(await pakkettenVoorBeheer(), geenCache);
     if (deel === "reviews") return NextResponse.json({ reviews: await alleReviews() }, geenCache);
+    if (deel === "vragen") return NextResponse.json(await vragenVoorBeheer(), geenCache);
+    if (deel === "instellingen") return NextResponse.json(await smileyappInstellingen(), geenCache);
     throw AppError.validation("Onbekend onderdeel.");
   } catch (err) {
     return jsonError(err);
@@ -45,6 +55,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 
 const ID = z.string().regex(/^[a-f0-9]{16}$/);
 const PAKKET = z.string().max(20);
+const VRAAG_ID = z.string().max(70);
 const schema = z.discriminatedUnion("actie", [
   z.object({
     actie: z.literal("blog-bewaren"),
@@ -72,6 +83,15 @@ const schema = z.discriminatedUnion("actie", [
   z.object({ actie: z.literal("review-verwijderen"), id: ID }),
   z.object({ actie: z.literal("pakket-bewaren"), pakket: PAKKET, prijs: z.string().max(20), looptijd: z.string().max(10), label: z.string().max(100), onderdelen: z.string().max(4000) }),
   z.object({ actie: z.literal("pakket-standaard"), pakket: PAKKET.optional() }),
+  // de veelgestelde vragen: ruime grenzen voor de vorm, de echte regels staan in smileyapp-vraag-regels.ts
+  z.object({ actie: z.literal("vraag-bewaren"), id: VRAAG_ID.optional(), vraag: z.string().max(1000), antwoord: z.string().max(6000) }),
+  z.object({ actie: z.literal("vraag-verbergen"), id: VRAAG_ID, verborgen: z.boolean() }),
+  z.object({ actie: z.literal("vraag-verplaatsen"), id: VRAAG_ID, richting: z.enum(["op", "neer"]) }),
+  z.object({ actie: z.literal("vraag-verwijderen"), id: VRAAG_ID }),
+  z.object({ actie: z.literal("vraag-standaard"), id: VRAAG_ID.optional() }),
+  z.object({ actie: z.literal("weekmail-zetten"), aan: z.boolean() }),
+  z.object({ actie: z.literal("weekmail-voorbeeld") }),
+  z.object({ actie: z.literal("poster-bewaren"), zin: z.string().max(400) }),
 ]);
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -102,6 +122,32 @@ export async function POST(request: Request): Promise<NextResponse> {
       await verwijderReview(d.id);
       return NextResponse.json({ reviews: await alleReviews() });
     }
+    // de zin op de poster: voor het hele team
+    if (d.actie === "poster-bewaren") return NextResponse.json(await bewaarPosterZin(d.zin));
+
+    // de veelgestelde vragen raken wat de site en de chat aan klanten vertellen: alleen een beheerder
+    if (d.actie === "vraag-bewaren" || d.actie === "vraag-verbergen" || d.actie === "vraag-verplaatsen" || d.actie === "vraag-verwijderen" || d.actie === "vraag-standaard") {
+      if (ik.rol !== "beheerder") throw AppError.alleenBeheerder("Alleen een beheerder kan de veelgestelde vragen wijzigen.");
+      if (d.actie === "vraag-bewaren") return NextResponse.json(await wijzigVragen({ soort: "bewaren", id: d.id, vraag: d.vraag, antwoord: d.antwoord }));
+      if (d.actie === "vraag-verbergen") return NextResponse.json(await wijzigVragen({ soort: "verbergen", id: d.id, verborgen: d.verborgen }));
+      if (d.actie === "vraag-verplaatsen") return NextResponse.json(await wijzigVragen({ soort: "verplaatsen", id: d.id, richting: d.richting }));
+      if (d.actie === "vraag-verwijderen") return NextResponse.json(await wijzigVragen({ soort: "verwijderen", id: d.id }));
+      return NextResponse.json(await wijzigVragen({ soort: "standaard", id: d.id }));
+    }
+
+    // de wekelijkse mail: alleen een beheerder zet hem aan of uit, en een voorbeeld gaat alleen naar het eigen adres
+    if (d.actie === "weekmail-zetten") {
+      if (ik.rol !== "beheerder") throw AppError.alleenBeheerder("Alleen een beheerder kan de wekelijkse mail aan- of uitzetten.");
+      return NextResponse.json(await zetWeekmail(d.aan));
+    }
+    if (d.actie === "weekmail-voorbeeld") {
+      if (ik.rol !== "beheerder") throw AppError.alleenBeheerder("Alleen een beheerder krijgt de wekelijkse mail.");
+      // via ZekerFlex binnen (platformbeheerder): er is geen SmileyApp-adres om naar te sturen
+      if (ik.via !== "smileyapp" || !ik.email) throw AppError.validation("Een voorbeeld gaat naar het adres van je SmileyApp-account. Je bent nu via ZekerFlex ingelogd.");
+      await enforceRateLimit({ name: "smileyapp-weekmail-voorbeeld", identifier: ik.id, limit: 3, windowSeconds: 3600, message: "Je hebt dit uur al drie voorbeelden gevraagd. Probeer het later opnieuw." });
+      return NextResponse.json({ verstuurd: await stuurVoorbeeld(ik.email, beheerVan(request)) });
+    }
+
     // prijzen en pakketten raken wat de site, de veelgestelde vragen en de chat aan klanten vertellen: alleen een beheerder
     if (ik.rol !== "beheerder") throw AppError.alleenBeheerder("Alleen een beheerder kan pakketten en prijzen wijzigen.");
     if (d.pakket !== undefined && !isPakketId(d.pakket)) throw AppError.validation("Dit pakket bestaat niet.");

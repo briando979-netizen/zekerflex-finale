@@ -43,9 +43,11 @@ interface Props {
   /** ?pakket=<id> van een prijskaart en ?bron=<woord> van de QR-code */
   zoek: DemoZoek;
   nu: Date;
+  /** de open tijden uit de agenda, al in de taal van de pagina (afsprakenVoorSite) */
+  afspraken?: readonly { waarde: string; label: string }[];
 }
 
-export function DemoTaal({ taal, pakketten, team, zoek, nu }: Props) {
+export function DemoTaal({ taal, pakketten, team, zoek, nu, afspraken = [] }: Props) {
   const t = TEKSTEN[taal];
   const b = taalBasis(taal);
   const q = zoek.pakket;
@@ -114,6 +116,7 @@ export function DemoTaal({ taal, pakketten, team, zoek, nu }: Props) {
           gekozenPakket={gekozen?.id ?? ""}
           dagen={dagen}
           tijden={TIJDEN}
+          afspraken={afspraken}
           teksten={t.formulier}
         />
       </div>

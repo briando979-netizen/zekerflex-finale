@@ -613,6 +613,8 @@ describe("bronbewakers", () => {
     expect(ROUTES.sort()).toEqual([
       "app/api/voorstel/smileyapp/aanvraag/route.ts",
       "app/api/voorstel/smileyapp/account/route.ts",
+      // deel 6a (19 nov 2026): de agenda voor demo-afspraken
+      "app/api/voorstel/smileyapp/beheer/agenda/route.ts",
       "app/api/voorstel/smileyapp/beheer/chat/route.ts",
       // deel 2 (19 nov 2026): blog, pakketten en cijfers (inhoud), de QR-code als bestand (qr) en de paginateller (tel)
       "app/api/voorstel/smileyapp/beheer/inhoud/route.ts",
@@ -655,7 +657,8 @@ describe("bronbewakers", () => {
 
   it("elke handler van het beheer: poort → sessie of PLATFORM_ADMIN → pas dan de body; wijzigen in het team alleen als beheerder", () => {
     // deel 2: vijf routes (was 3). De QR-route geeft alleen een bestand terug en heeft dus één handler (was: minstens 2).
-    expect(BEHEER_ROUTES).toHaveLength(5);
+    // deel 6a: zes routes (was 5): de agenda voor demo-afspraken kwam erbij (tests/voorstel-smileyapp-deel6a.test.ts).
+    expect(BEHEER_ROUTES).toHaveLength(6);
     for (const r of BEHEER_ROUTES) {
       const lijst = handlers(lees(r));
       expect(lijst.length, r).toBeGreaterThanOrEqual(r.endsWith("/qr/route.ts") ? 1 : 2);

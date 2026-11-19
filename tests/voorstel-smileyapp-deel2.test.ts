@@ -607,7 +607,10 @@ describe("pakketten aanpassen in het beheer", () => {
     const demo = lees("app/voorstel/smileyapp/demo/page.tsx");
     expect(demo).toContain('export const dynamic = "force-dynamic";');
     expect(demo).toContain("pakket(Array.isArray(q) ? q[0] : q, pakketten)");
-    expect(lees("app/api/voorstel/smileyapp/chat/route.ts")).toContain("smileyappKennis({ medewerker, pakketten: await smileyappPakketten() })");
+    // deel 6a (19 nov 2026): de chat krijgt naast de pakketten ook de veelgestelde vragen van het team (smileyappVragen).
+    // Was: "smileyappKennis({ medewerker, pakketten: await smileyappPakketten() })".
+    expect(lees("app/api/voorstel/smileyapp/chat/route.ts")).toContain("const pakketten = await smileyappPakketten();");
+    expect(lees("app/api/voorstel/smileyapp/chat/route.ts")).toContain("smileyappKennis({ medewerker, pakketten, vragen: await smileyappVragen(veelgesteld(pakketten)) })");
     expect(lees("lib/voorstel/smileyapp-pakketten.ts")).toContain('const SLEUTEL = "voorstel-smileyapp:pakketten";');
   });
 });

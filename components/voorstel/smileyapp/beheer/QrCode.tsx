@@ -1,20 +1,31 @@
 "use client";
 
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import Image from "next/image";
 import { SLOGAN, beeld } from "@/lib/voorstel/smileyapp";
 import { BRON_MAX, leesBron } from "@/lib/voorstel/smileyapp-aanvraag-regels";
 import { demoQr } from "@/lib/voorstel/smileyapp-qr";
 import { BEHEER_API, KAART, KNOP, KNOP_LICHT, LABEL, VELD } from "@/components/voorstel/smileyapp/beheer/api";
+import { Poster } from "@/components/voorstel/smileyapp/beheer/Poster";
 
 // "QR-code" in het beheer: een QR-code naar de demo-aanvraag, voor op een
 // beursstand, flyer of visitekaartje. Te downloaden als SVG (drukwerk) en PNG,
 // en als kaart op A5 te printen. Met een bron (bijvoorbeeld "beurs") staat bij
 // elke aanvraag via die code waar hij vandaan kwam. De code wordt hier in de
 // browser getekend; de bestanden komen van de server (alleen voor het team).
+// Deel 6a: daaronder een poster op A4 of A5 met een eigen zin (Poster.tsx). Er
+// komt altijd maar één van de twee op het papier: de knop waarop je drukt
+// bepaalt welke (`druk`), de andere doet bij het printen niet mee.
 
 export function QrCode() {
   const [invoer, setInvoer] = useState("");
+  const [druk, setDruk] = useState<"kaart" | "poster">("kaart");
+  /** Eerst kiezen wat er geprint wordt en dat meteen in de pagina zetten, dan pas het printvenster. */
+  const print = (wat: "kaart" | "poster") => {
+    flushSync(() => setDruk(wat));
+    window.print();
+  };
   const bron = leesBron(invoer);
   const bronFout = invoer.trim() !== "" && !bron;
   const { adres, pad, zijde } = demoQr(bron);
@@ -78,13 +89,13 @@ export function QrCode() {
             <h3 id="sm-kaart-kop" className="font-display text-xl font-bold text-smiley-ink">
               Kaart op A5
             </h3>
-            <button type="button" onClick={() => window.print()} className={KNOP}>
+            <button type="button" onClick={() => print("kaart")} className={KNOP}>
               Print de kaart
             </button>
           </div>
           <p className="mt-1 text-sm text-smiley-mute sm-niet-printen">Kies in het printvenster papier A5 en zet &ldquo;achtergronden&rdquo; aan, dan komen de kleuren mee.</p>
           {/* de kaart zelf: op het scherm een voorbeeld, bij het printen het enige wat op het papier komt (smiley.css) */}
-          <div className="sm-print-kaart mx-auto mt-5 flex aspect-[148/210] w-full max-w-[340px] flex-col items-center justify-between overflow-hidden rounded-3xl bg-smiley-ink p-6 text-center text-white">
+          <div className={`${druk === "kaart" ? "sm-print-kaart" : "sm-niet-printen"} mx-auto mt-5 flex aspect-[148/210] w-full max-w-[340px] flex-col items-center justify-between overflow-hidden rounded-3xl bg-smiley-ink p-6 text-center text-white`}>
             <Image src={beeld("logo.webp")} alt="Smileyapp" width={500} height={260} className="h-auto w-[46%]" />
             <div>
               <p className="font-display text-[1.7rem] font-bold leading-[1.05]">
@@ -100,6 +111,8 @@ export function QrCode() {
           </div>
         </section>
       </div>
+
+      <Poster adres={adres} pad={pad} zijde={zijde} drukAf={druk === "poster"} print={() => print("poster")} />
     </div>
   );
 }

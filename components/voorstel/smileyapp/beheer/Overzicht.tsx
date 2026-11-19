@@ -1,12 +1,13 @@
 "use client";
 
 import { voorkeurTekst, type Aanvraag } from "@/lib/voorstel/smileyapp-aanvraag-regels";
+import { dagEnTijd } from "@/lib/voorstel/smileyapp-agenda-regels";
 import { KAART } from "@/components/voorstel/smileyapp/beheer/api";
 
 // Het overzicht van het beheer: vier tegels met aantallen en daaronder "Te
 // doen": alleen wat nu aandacht vraagt, elk met een knop naar het tabblad.
 
-export type TabSleutel = "overzicht" | "demo" | "partners" | "gesprekken" | "cijfers" | "blog" | "reviews" | "pakketten" | "qr" | "team";
+export type TabSleutel = "overzicht" | "demo" | "partners" | "agenda" | "gesprekken" | "cijfers" | "blog" | "reviews" | "vragen" | "pakketten" | "qr" | "team";
 
 interface Punt {
   sleutel: string;
@@ -41,7 +42,13 @@ export function Overzicht({
     { label: "Teamleden", aantal: team, tab: "team", let: false },
   ];
 
+  // demo's die vandaag in de agenda staan (Nederlandse dag en tijd), de vroegste eerst
+  const demosVandaag = aanvragen
+    .filter((a) => a.afspraak && dagEnTijd(a.afspraak.start).dag === vandaag && a.status === "afspraak")
+    .sort((a, b) => ((a.afspraak?.start ?? "") < (b.afspraak?.start ?? "") ? -1 : 1));
+
   const punten: Punt[] = [
+    ...demosVandaag.map((a) => ({ sleutel: `demo-${a.id}`, tekst: `Vandaag demo om ${a.afspraak ? dagEnTijd(a.afspraak.start).tijd : ""} uur: ${a.naam} van ${a.bedrijf}.`, tab: "agenda" as const, knop: "Naar de agenda" })),
     ...bellen.map((a) => ({ sleutel: `bel-${a.id}`, tekst: `Vandaag bellen: ${a.naam} van ${a.bedrijf}${a.voorkeur ? ` (${voorkeurTekst(a.voorkeur)})` : ""}.`, tab: "demo" as const, knop: "Naar de aanvraag" })),
     ...(demo > 0 ? [{ sleutel: "demo", tekst: demo === 1 ? "Er is 1 nieuwe demo-aanvraag. Bel of mail en zet de status daarna om." : `Er zijn ${demo} nieuwe demo-aanvragen. Bel of mail en zet de status daarna om.`, tab: "demo" as const, knop: "Demo-aanvragen" }] : []),
     ...(partners > 0 ? [{ sleutel: "partners", tekst: partners === 1 ? "Er is 1 nieuwe partner-aanmelding." : `Er zijn ${partners} nieuwe partner-aanmeldingen.`, tab: "partners" as const, knop: "Partners" }] : []),

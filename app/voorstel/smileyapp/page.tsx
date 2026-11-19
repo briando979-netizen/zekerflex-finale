@@ -23,6 +23,7 @@ import {
 import { zichtbareBerichten } from "@/lib/voorstel/smileyapp-blog";
 import { BRANCHE_LIJST, brancheLink } from "@/lib/voorstel/smileyapp-branches";
 import { smileyappPakketten } from "@/lib/voorstel/smileyapp-pakketten";
+import { smileyappVragen } from "@/lib/voorstel/smileyapp-vragen";
 import { BlogBeeld } from "@/components/voorstel/smileyapp/BlogBeeld";
 import { PakketKiezer } from "@/components/voorstel/smileyapp/PakketKiezer";
 import { ProbeerZelf } from "@/components/voorstel/smileyapp/ProbeerZelf";
@@ -72,6 +73,8 @@ export default async function SmileyappHome() {
   // één bron voor de prijskaarten, de pakketkiezer en de veelgestelde vragen: ze kunnen nooit iets anders zeggen
   const [pakketten, berichten] = await Promise.all([smileyappPakketten(), zichtbareBerichten()]);
   const vragen = veelgesteld(pakketten);
+  // wat het team in het beheer aanpaste (volgorde, verbergen, eigen vragen) eroverheen; zonder wijzigingen exact de lijst hierboven
+  const zichtbareVragen = await smileyappVragen(vragen);
   return (
     <>
       {/* Hero */}
@@ -404,7 +407,7 @@ export default async function SmileyappHome() {
             </p>
           </Kopje>
           <div className="sm-onthul divide-y divide-smiley-ink/10 rounded-[2rem] bg-white px-6 ring-1 ring-smiley-ink/10 sm:px-8">
-            {vragen.map((v) => (
+            {zichtbareVragen.map((v) => (
               <details key={v.vraag} className="group py-5">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-lg font-bold [&::-webkit-details-marker]:hidden">
                   {v.vraag}

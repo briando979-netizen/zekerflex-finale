@@ -249,7 +249,10 @@ describe("SmileyApp-voorstel: de AI-assistent", () => {
     expect(r).toContain("const medewerker = await heeftTeam();");
     // 19 nov 2026 (deel 2): de chat krijgt ook de pakketten zoals de site ze nu toont (het team kan prijzen aanpassen in
     // het beheer), zodat site, veelgestelde vragen en chat nooit iets anders zeggen. Was: "smileyappKennis({ medewerker })".
-    expect(r).toContain("smileyappKennis({ medewerker, pakketten: await smileyappPakketten() })");
+    // 19 nov 2026 (deel 6a): en de veelgestelde vragen zoals het team ze in het beheer zette, uit dezelfde bron als de site
+    // (smileyappVragen). Was: "smileyappKennis({ medewerker, pakketten: await smileyappPakketten() })".
+    expect(r).toContain("const pakketten = await smileyappPakketten();");
+    expect(r).toContain("smileyappKennis({ medewerker, pakketten, vragen: await smileyappVragen(veelgesteld(pakketten)) })");
     expect(r.indexOf("if (!medewerker) throw")).toBeGreaterThan(0);
     expect(r.indexOf("if (!medewerker) throw")).toBeLessThan(r.indexOf("await voegBerichtToe("));
     const layout = lees("app/voorstel/smileyapp/layout.tsx");

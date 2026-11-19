@@ -14,6 +14,10 @@ import { Gezicht } from "@/components/voorstel/smileyapp/Gezicht";
 // (lib/voorstel/smileyapp-teksten.ts); /en/demo en /de/demo geven hun vertaling
 // mee. De taal van het formulier gaat mee met de aanvraag, zodat het team in
 // het beheer ziet in welke taal iemand geholpen wil worden.
+// Deel 6a: heeft het team tijden opengezet in de agenda (`afspraken`), dan kiest
+// de aanvrager er hier een: de afspraak staat dan meteen vast. Kiest hij er geen,
+// of staat er niets open, dan is er het voorkeursmoment, precies zoals voorheen.
+// Was een ander net eerder, dan komt de lijst van nu van de server terug.
 
 const VELD =
   "mt-1.5 w-full rounded-2xl border-0 bg-smiley-cream px-4 py-3 text-base text-smiley-ink ring-1 ring-smiley-ink/15 focus:outline-none focus:ring-2 focus:ring-smiley-leaf aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-smiley-coral";
@@ -37,6 +41,8 @@ interface Props {
   /** demo: de dagen en tijden voor een belmoment */
   dagen?: readonly Keuze[];
   tijden?: readonly string[];
+  /** demo: de open tijden uit de agenda (id en tekst in Nederlandse tijd); leeg: alleen het voorkeursmoment */
+  afspraken?: readonly Keuze[];
   /** partner: waar iemand interesse in heeft */
   interesses?: readonly string[];
   /** demo: waar de bezoeker vandaan kwam (?bron= op de QR-code), al gecontroleerd door de pagina */
@@ -45,7 +51,7 @@ interface Props {
   teksten?: FormulierTeksten;
 }
 
-export function AanvraagFormulier({ soort, kop, mail, teamActief, pakketten = [], gekozenPakket = "", dagen = [], tijden = [], interesses = [], bron, teksten: t = FORMULIER_NL }: Props) {
+export function AanvraagFormulier({ soort, kop, mail, teamActief, pakketten = [], gekozenPakket = "", dagen = [], tijden = [], afspraken = [], interesses = [], bron, teksten: t = FORMULIER_NL }: Props) {
   const id = `sm-${soort}`;
   const [naam, setNaam] = useState("");
   const [bedrijf, setBedrijf] = useState("");
@@ -55,6 +61,11 @@ export function AanvraagFormulier({ soort, kop, mail, teamActief, pakketten = []
   const [gekozen, setGekozen] = useState<string[]>([]);
   const [dag, setDag] = useState("");
   const [tijd, setTijd] = useState("");
+  /** de open tijden: eerst die van de pagina, na "net bezet" de lijst van de server */
+  const [open, setOpen] = useState<readonly Keuze[]>(afspraken);
+  const [tijdId, setTijdId] = useState("");
+  /** de tekst van de geboekte tijd, voor de bevestiging */
+  const [geboekt, setGeboekt] = useState("");
   const [bericht, setBericht] = useState("");
   const [toestemming, setToestemming] = useState(false);
   const [lokveld, setLokveld] = useState("");
@@ -88,17 +99,24 @@ export function AanvraagFormulier({ soort, kop, mail, teamActief, pakketten = []
           toestemming,
           lokveld,
           taal: t.taal,
-          ...(soort === "demo" ? { pakket, dag, tijd, ...(bron ? { bron } : {}) } : { interesses: gekozen }),
+          // een gekozen tijd uit de agenda gaat voor het voorkeursmoment
+          ...(soort === "demo" ? { pakket, ...(tijdId ? { tijdId } : { dag, tijd }), ...(bron ? { bron } : {}) } : { interesses: gekozen }),
         }),
       });
-      const d = (await r.json().catch(() => ({}))) as { error?: { message?: string; details?: { veld?: string } } };
+      const d = (await r.json().catch(() => ({}))) as { error?: { message?: string; details?: { veld?: string } }; afspraken?: Keuze[] };
       if (!r.ok) {
+        // een ander was net eerder: de lijst van nu overnemen en opnieuw laten kiezen
+        if (Array.isArray(d.afspraken)) {
+          setOpen(d.afspraken);
+          setTijdId("");
+        }
         const veld = d.error?.details?.veld ?? "";
         // de server antwoordt in het Nederlands; een vertaald formulier toont zijn eigen tekst bij het veld
         const vertaald = Object.hasOwn(t.fouten, veld) ? (t.fouten[veld] ?? t.foutVersturen) : r.status === 429 ? t.foutTeVaak : t.foutVersturen;
         setFout({ veld, tekst: t.taal === "nl" ? (d.error?.message ?? t.foutVersturen) : vertaald });
         return;
       }
+      setGeboekt(open.find((a) => a.waarde === tijdId)?.label ?? "");
       setKlaar(true);
     } catch {
       setFout({ veld: "", tekst: t.foutVerbinding });
@@ -117,7 +135,7 @@ export function AanvraagFormulier({ soort, kop, mail, teamActief, pakketten = []
             {soort === "demo" ? t.bedanktDemo : t.bedanktPartner}
           </h2>
           <p className="mx-auto mt-3 max-w-md leading-relaxed text-smiley-mute">
-            {moment ? vul(t.belMoment, { moment }) : t.contactOp}
+            {geboekt ? vul(t.bedanktAfspraak, { moment: geboekt }) : moment ? vul(t.belMoment, { moment }) : t.contactOp}
           </p>
           <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-smiley-mute">
             {t.kloptNiet}{" "}
@@ -187,6 +205,29 @@ export function AanvraagFormulier({ soort, kop, mail, teamActief, pakketten = []
                 ))}
               </select>
             </div>
+            {open.length > 0 && (
+              <div className="sm:col-span-2">
+                <label htmlFor={`${id}-afspraak`} className={LABEL}>
+                  {t.afspraak}
+                </label>
+                <select id={`${id}-afspraak`} value={tijdId} onChange={(e) => setTijdId(e.target.value)} aria-describedby={`${id}-afspraak-uitleg${fout?.veld === "tijdId" ? ` ${id}-fout` : ""}`} {...(fout?.veld === "tijdId" ? { "aria-invalid": true as const } : {})} className={VELD}>
+                  <option value="">{t.afspraakGeen}</option>
+                  {open.map((a) => (
+                    <option key={a.waarde} value={a.waarde}>
+                      {a.label}
+                    </option>
+                  ))}
+                </select>
+                <p id={`${id}-afspraak-uitleg`} className="mt-1.5 text-sm leading-relaxed text-smiley-mute">
+                  {t.afspraakUitleg}
+                </p>
+              </div>
+            )}
+          </>
+        )}
+        {/* het voorkeursmoment: zonder gekozen tijd uit de agenda precies zoals het was */}
+        {soort === "demo" && !tijdId && (
+          <>
             <div>
               <label htmlFor={`${id}-dag`} className={LABEL}>
                 {t.dag}

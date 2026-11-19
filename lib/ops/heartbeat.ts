@@ -142,6 +142,9 @@ export const WATCHED_CRONS: WatchedCron[] = [
   { job: "nieuws", label: "Nieuwsroom bijwerken", maxAgeHours: 14 },
   // dagelijks 03:20 UTC (/api/internal/klussen/verlopen): klussen na afloop naar Afgerond; met de vlag uit telt hij alleen (ook een geslaagde run)
   { job: "klussen-verlopen", label: "Klussen na afloop afronden", maxAgeHours: 26 },
+  // elke ochtend 05:00, 06:00 en 07:00 UTC (/api/internal/smileyapp/weekmail): de wekelijkse mail aan de beheerders van het SmileyApp-voorstel;
+  // verstuurt alleen op maandag vanaf 07:00 Nederlandse tijd, elke andere ronde doet niets en telt als gelukt (lib/voorstel/smileyapp-weekmail.ts)
+  { job: "smileyapp-weekmail", label: "SmileyApp: wekelijkse mail aan de beheerders", maxAgeHours: 26, sinds: "2026-11-19T12:00:00Z" },
   // ai-warm (elke 4 min) staat er bewust NIET in: de route schrijft alleen een hartslag als "alles gratis"
   // aan staat; bij uit komt er geen, en bewaken zou dan vals alarm geven. Tijdens een uitrol schrijft hij
   // wel "gelukt" (uitrolHoudtModelStil), dus een uitrolvenster zou het probleem niet zijn.

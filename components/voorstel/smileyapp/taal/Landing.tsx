@@ -1,9 +1,10 @@
 import type { CSSProperties, ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { CONTACT, KLANTEN, QUOTES, STAPPEN, type Pakket } from "@/lib/voorstel/smileyapp";
+import { CONTACT, KLANTEN, QUOTES, STAPPEN, veelgesteld, type Pakket } from "@/lib/voorstel/smileyapp";
 import { taalBasis, type Vertaling } from "@/lib/voorstel/smileyapp-taal";
 import { TEKSTEN, looptijdTaal, prijsTaal, veelgesteldTaal, vertaal } from "@/lib/voorstel/smileyapp-talen";
+import { vertaaldeVragen, type VragenStaat } from "@/lib/voorstel/smileyapp-vraag-regels";
 import { Kopje, Vinkje } from "@/components/voorstel/smileyapp/Blokken";
 import { Gezicht } from "@/components/voorstel/smileyapp/Gezicht";
 import { PakketKiezer } from "@/components/voorstel/smileyapp/PakketKiezer";
@@ -164,11 +165,16 @@ function PakketKaartTaal({ p, taal }: { p: Pakket; taal: Vertaling }) {
   );
 }
 
-/** Alles onder de hero. `pakketten`: zoals de site ze nu toont (smileyappPakketten). */
-export function LandingTaal({ taal, pakketten }: { taal: Vertaling; pakketten: readonly Pakket[] }) {
+/**
+ * Alles onder de hero. `pakketten`: zoals de site ze nu toont (smileyappPakketten).
+ * `vragenKeuze`: wat het team bij de veelgestelde vragen koos (lib/voorstel/smileyapp-vragen.ts). De vertaalde pagina
+ * volgt de volgorde en het verbergen; een vraag met een eigen Nederlandse tekst heeft geen vertaling en staat er niet.
+ */
+export function LandingTaal({ taal, pakketten, vragenKeuze = null }: { taal: Vertaling; pakketten: readonly Pakket[]; vragenKeuze?: VragenStaat | null }) {
   const t = TEKSTEN[taal];
   const b = taalBasis(taal);
   const vragen = veelgesteldTaal(pakketten, taal);
+  const zichtbareVragen = vertaaldeVragen(vragen, veelgesteld(pakketten), vragenKeuze);
   return (
     <>
       {/* Zo werkt het */}
@@ -292,32 +298,34 @@ export function LandingTaal({ taal, pakketten }: { taal: Vertaling; pakketten: r
       </section>
 
       {/* Veelgestelde vragen */}
-      <section id="vragen" aria-labelledby="faq-kop" className="scroll-mt-24 bg-white py-20 lg:py-28">
-        <div className="mx-auto grid max-w-[1200px] gap-12 px-4 sm:px-8 lg:grid-cols-[1fr_1.5fr]">
-          <Kopje boven={t.faq.boven} kop={t.faq.kop} id="faq-kop">
-            <p className="mt-5 leading-relaxed text-smiley-mute">
-              {t.faq.intro}{" "}
-              <a href={`mailto:${CONTACT.email}`} className="font-semibold text-smiley-leaf underline underline-offset-2">
-                {CONTACT.email}
-              </a>
-              .
-            </p>
-          </Kopje>
-          <div className="sm-onthul divide-y divide-smiley-ink/10 rounded-[2rem] bg-smiley-cream px-6 ring-1 ring-smiley-ink/10 sm:px-8">
-            {vragen.map((v) => (
-              <details key={v.vraag} className="group py-5">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-lg font-bold [&::-webkit-details-marker]:hidden">
-                  {v.vraag}
-                  <span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-smiley-mint text-smiley-leaf transition-transform group-open:rotate-45">
-                    +
-                  </span>
-                </summary>
-                <p className="mt-3 leading-relaxed text-smiley-mute">{v.antwoord}</p>
-              </details>
-            ))}
+      {zichtbareVragen.length > 0 && (
+        <section id="vragen" aria-labelledby="faq-kop" className="scroll-mt-24 bg-white py-20 lg:py-28">
+          <div className="mx-auto grid max-w-[1200px] gap-12 px-4 sm:px-8 lg:grid-cols-[1fr_1.5fr]">
+            <Kopje boven={t.faq.boven} kop={t.faq.kop} id="faq-kop">
+              <p className="mt-5 leading-relaxed text-smiley-mute">
+                {t.faq.intro}{" "}
+                <a href={`mailto:${CONTACT.email}`} className="font-semibold text-smiley-leaf underline underline-offset-2">
+                  {CONTACT.email}
+                </a>
+                .
+              </p>
+            </Kopje>
+            <div className="sm-onthul divide-y divide-smiley-ink/10 rounded-[2rem] bg-smiley-cream px-6 ring-1 ring-smiley-ink/10 sm:px-8">
+              {zichtbareVragen.map((v) => (
+                <details key={v.vraag} className="group py-5">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-lg font-bold [&::-webkit-details-marker]:hidden">
+                    {v.vraag}
+                    <span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-smiley-mint text-smiley-leaf transition-transform group-open:rotate-45">
+                      +
+                    </span>
+                  </summary>
+                  <p className="mt-3 leading-relaxed text-smiley-mute">{v.antwoord}</p>
+                </details>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Afsluiter */}
       <section className="bg-smiley-sun">

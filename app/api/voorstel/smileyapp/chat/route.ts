@@ -10,10 +10,11 @@ import { withUsage } from "@/lib/ops/usage";
 import { chatAntwoord } from "@/lib/sitechat/antwoord";
 import { haalGesprek, voegBerichtToe, zetStatus } from "@/lib/sitechat/gesprek";
 import { zelfdeHerkomst } from "@/lib/voorstel/herkomst";
-import { CONTACT } from "@/lib/voorstel/smileyapp";
+import { CONTACT, veelgesteld } from "@/lib/voorstel/smileyapp";
 import { heeftTeam } from "@/lib/voorstel/smileyapp-accounts";
 import { SMILEYAPP_KANAAL, smileyappKennis } from "@/lib/voorstel/smileyapp-chat";
 import { smileyappPakketten } from "@/lib/voorstel/smileyapp-pakketten";
+import { smileyappVragen } from "@/lib/voorstel/smileyapp-vragen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,7 +51,11 @@ async function handlePOST(request: Request): Promise<Response> {
     const medewerker = await heeftTeam();
 
     if ("berichten" in d) {
-      return await chatAntwoord({ kanaal: SMILEYAPP_KANAAL, id: d.id, berichten: d.berichten, pagina: d.pagina, ip: clientIp(request) }, async () => smileyappKennis({ medewerker, pakketten: await smileyappPakketten() }));
+      // de pakketten en de veelgestelde vragen zoals de site ze nu toont (met de wijzigingen uit het beheer): de chat zegt nooit iets anders
+      return await chatAntwoord({ kanaal: SMILEYAPP_KANAAL, id: d.id, berichten: d.berichten, pagina: d.pagina, ip: clientIp(request) }, async () => {
+        const pakketten = await smileyappPakketten();
+        return smileyappKennis({ medewerker, pakketten, vragen: await smileyappVragen(veelgesteld(pakketten)) });
+      });
     }
     // actie "mens": alleen als er echt iemand kan meelezen
     if (!medewerker) throw AppError.validation(`Er leest nu geen medewerker mee. Mail je vraag naar ${CONTACT.email}.`);

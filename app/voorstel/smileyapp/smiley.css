@@ -131,3 +131,40 @@
 html[data-sm-menu="open"] .sm-chat {
   display: none;
 }
+
+/*
+ * De poster met de QR-code in het beheer (tab "QR-code", deel 6a): A4 of A5,
+ * staand. Net als bij de kaart komt bij het printen alleen de poster op het
+ * papier, paginavullend en in kleur. Het formaat volgt de keuze in het beheer
+ * (de klasse op de poster); de maten zijn in millimeters en punten, dus op
+ * papier altijd even groot.
+ */
+@page smposter-a4 { size: A4 portrait; margin: 0; }
+@page smposter-a5 { size: A5 portrait; margin: 0; }
+@media print {
+  body:has(.sm-print-poster) * { visibility: hidden; }
+  body:has(.sm-print-poster) .sm-print-poster,
+  body:has(.sm-print-poster) .sm-print-poster * { visibility: visible; }
+  body:has(.sm-print-poster-a4) { page: smposter-a4; }
+  body:has(.sm-print-poster-a5) { page: smposter-a5; }
+  .sm-print-poster {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    margin: 0;
+    border-radius: 0;
+    aspect-ratio: auto;
+    box-shadow: none;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .sm-print-poster-a4 { page: smposter-a4; }
+  .sm-print-poster-a5 { page: smposter-a5; }
+  .sm-print-poster .sm-poster-kop { padding: 14mm; }
+  .sm-print-poster .sm-poster-zin { padding: 0 16mm; font-size: 40pt; }
+  .sm-print-poster-a5 .sm-poster-zin { padding: 0 12mm; font-size: 28pt; }
+  .sm-print-poster .sm-poster-adres { padding: 0 12mm 12mm; font-size: 13pt; }
+  .sm-print-poster-a5 .sm-poster-adres { font-size: 10pt; }
+}

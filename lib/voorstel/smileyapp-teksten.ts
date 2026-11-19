@@ -29,6 +29,11 @@ export interface FormulierTeksten {
   /** een tijd in de keuzelijst, met {tijd} */
   tijdOptie: string;
   momentUitleg: string;
+  /** de keuzelijst met open tijden uit de agenda (alleen als het team tijden heeft opengezet) */
+  afspraak: string;
+  /** de eerste keuze in die lijst: geen tijd kiezen, dan volgt het voorkeursmoment */
+  afspraakGeen: string;
+  afspraakUitleg: string;
   interesses: string;
   berichtDemo: string;
   berichtPartner: string;
@@ -55,6 +60,8 @@ export interface FormulierTeksten {
   moment: string;
   /** met {moment} */
   belMoment: string;
+  /** na het kiezen van een tijd uit de agenda, met {moment} */
+  bedanktAfspraak: string;
   contactOp: string;
   /** het e-mailadres en een punt volgen */
   kloptNiet: string;
@@ -74,6 +81,9 @@ export const FORMULIER_NL: FormulierTeksten = {
   geenVoorkeur: "Geen voorkeur",
   tijdOptie: "{tijd} uur",
   momentUitleg: "We bellen je op of rond dit moment (werkdagen tussen 09:00 en 17:00 uur). Het is je voorkeur, geen vaste afspraak.",
+  afspraak: "Kies een tijd voor je demo",
+  afspraakGeen: "Geen van deze tijden past",
+  afspraakUitleg: "Deze tijden heeft SmileyApp vrijgemaakt voor een demo van 30 minuten (Nederlandse tijd). Kies je er een, dan staat de afspraak meteen vast en krijg je een bevestiging per mail.",
   interesses: "Ik ben geïnteresseerd in",
   berichtDemo: "Wat wil je graag zien of weten?",
   berichtPartner: "Vertel kort iets over je bedrijf of event",
@@ -93,6 +103,7 @@ export const FORMULIER_NL: FormulierTeksten = {
   bedanktPartner: "Bedankt, je aanmelding is binnen",
   moment: "{dag} om {tijd} uur",
   belMoment: "We bellen je op of rond {moment}. Dat moment is je voorkeur, nog geen vaste afspraak.",
+  bedanktAfspraak: "Je demo staat gepland op {moment} (Nederlandse tijd). Je krijgt een bevestiging per mail, met de afspraak voor je agenda.",
   contactOp: "We nemen contact met je op via je e-mailadres of telefoonnummer.",
   kloptNiet: "Klopt er iets niet of wil je iets toevoegen? Mail naar",
 };

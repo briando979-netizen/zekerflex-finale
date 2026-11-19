@@ -15,6 +15,7 @@ import {
   pakketRegel,
   veelgesteld,
   type Pakket,
+  type Vraag,
 } from "@/lib/voorstel/smileyapp";
 
 // ---------------------------------------------------------------------------
@@ -39,8 +40,10 @@ const kort = (s: string, max = 1400) => (s.length > max ? `${s.slice(0, max)} â€
 /**
  * `pakketten`: de pakketten zoals de site ze nu toont (met de wijzigingen uit het beheer,
  * lib/voorstel/smileyapp-pakketten.ts), zodat de chat dezelfde prijzen noemt als de prijskaarten. Zonder: de standaard.
+ * `vragen`: de veelgestelde vragen zoals de site ze nu toont (smileyappVragen in lib/voorstel/smileyapp-vragen.ts, met
+ * de wijzigingen van het team), zodat de chat hetzelfde antwoordt als de site. Zonder: de standaard bij deze pakketten.
  */
-export function smileyappKennis(o: { medewerker?: boolean; pakketten?: readonly Pakket[] } = {}): Kennis {
+export function smileyappKennis(o: { medewerker?: boolean; pakketten?: readonly Pakket[]; vragen?: readonly Vraag[] } = {}): Kennis {
   const medewerker = o.medewerker === true;
   const lijst = o.pakketten ?? PAKKETTEN;
   const vast: Fragment[] = [
@@ -75,7 +78,7 @@ export function smileyappKennis(o: { medewerker?: boolean; pakketten?: readonly 
   ];
 
   const blog: Fragment[] = BLOG.map((b) => ({ titel: `Blog: ${b.titel}`, tekst: kort(tekst(b)) }));
-  const vragen: Fragment[] = veelgesteld(lijst).map((v) => ({ titel: `Vraag: ${v.vraag}`, tekst: v.antwoord }));
+  const vragen: Fragment[] = (o.vragen ?? veelgesteld(lijst)).map((v) => ({ titel: `Vraag: ${v.vraag}`, tekst: v.antwoord }));
 
   return {
     bedrijf: CONTACT.naam,
