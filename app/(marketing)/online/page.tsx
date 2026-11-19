@@ -71,13 +71,14 @@ function ToolKaart({ t, donker = false }: { t: OnlineTool; donker?: boolean }) {
 function GroteKaart({ t }: { t: OnlineTool }) {
   return (
     <li className="surface surface-hover flex flex-col overflow-hidden">
-      <div className="relative aspect-[16/9] bg-ink">
+      {/* lichte ondergrond terwijl een foto laadt (een zwart vlak oogt kapot); de logokaart is bewust donker, zoals de logo maker zelf */}
+      <div className={`relative aspect-[16/9] ${t.sleutel === "logo-maker" ? "bg-[#0B0B0C]" : "bg-paper-soft"}`}>
         {t.sleutel === "logo-maker" ? (
           <ul className="grid h-full grid-cols-3 gap-px bg-white/10" aria-label="Voorbeelden van logo's uit de logo maker, voor verzonnen merken">
             {LOGO_VOORBEELDEN.slice(0, 3).map((v) => (
-              <li key={v.sleutel} className="relative overflow-hidden bg-[#0B0B0C]">
+              <li key={v.sleutel} className="relative flex items-center justify-center overflow-hidden bg-[#0B0B0C] p-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={logoVoorbeeld(v.sleutel)} alt={`Voorbeeldlogo voor het verzonnen merk ${v.invoer.naam}`} width={640} height={480} loading="lazy" className="block h-full w-full object-cover" />
+                <img src={logoVoorbeeld(v.sleutel)} alt={`Voorbeeldlogo voor het verzonnen merk ${v.invoer.naam}`} width={640} height={480} loading="lazy" className="block max-h-full w-full object-contain" />
               </li>
             ))}
           </ul>

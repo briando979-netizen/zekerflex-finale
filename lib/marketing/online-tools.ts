@@ -35,10 +35,10 @@ export interface OnlineGroep {
   tools: OnlineTool[];
 }
 
-const uitAanbod = (slug: string, extra: Partial<OnlineTool> = {}): OnlineTool[] => {
+const uitAanbod = (slug: string, extra: Partial<OnlineTool> = {}, opties: { zonderPrijs?: boolean } = {}): OnlineTool[] => {
   const a: AanbodItem | undefined = AANBOD.find((x) => x.slug === slug && x.status === "beschikbaar");
   if (!a) return [];
-  const prijs = a.prijs ? prijsTekst(a) : undefined;
+  const prijs = a.prijs && !opties.zonderPrijs ? prijsTekst(a) : undefined;
   return [{ sleutel: a.slug, naam: a.naam, kort: a.kort, href: aanbodHref(a), knop: a.start.label, ...(prijs ? { prijs } : {}), ...extra }];
 };
 
@@ -80,7 +80,8 @@ export const ONLINE_GROEPEN: OnlineGroep[] = [
     kop: "Je eigen naam online",
     intro: "Zoeken, registreren, verhuizen en beheren, en mail op je eigen domein. Bij een website of webshop van ons is het eerste jaar .nl, .com, .eu of .be inbegrepen.",
     tools: [
-      ...uitAanbod("domeinnaam", { naam: "Domeinnaam registreren", href: "/domeinnaam#zoek", knop: "Zoek je domeinnaam", kort: "Zoek of je naam vrij is: .nl, .com, .eu, .be en meer. Registreren voor een eerlijke prijs per jaar." }),
+      // zonder de "vanaf"-prijs uit het aanbod: het blok ernaast toont de echte prijzen per extensie, twee bedragen naast elkaar verwarren
+      ...uitAanbod("domeinnaam", { naam: "Domeinnaam registreren", href: "/domeinnaam#zoek", knop: "Zoek je domeinnaam", kort: "Zoek of je naam vrij is: .nl, .com, .eu, .be en meer. Registreren voor een eerlijke prijs per jaar." }, { zonderPrijs: true }),
       {
         sleutel: "domein-verhuizen",
         naam: "Domein verhuizen",
@@ -133,7 +134,7 @@ export const ONLINE_GROEPEN: OnlineGroep[] = [
         kort: "Een eigen app voor flexwerkers, bedrijven, horeca, rijscholen, webshops en websites. Installeren kan direct, zonder store.",
         href: "/apps",
         knop: "Bekijk de apps",
-        beeld: { src: "/marketing/foto/app-telefoon-lacht.jpg", alt: "Iemand lacht naar de ZekerFlex-app op haar telefoon" },
+        beeld: { src: "/marketing/foto/app-telefoon-oranje.jpg", alt: "Een jonge vrouw lacht naar de ZekerFlex-app op haar telefoon" },
       },
       {
         sleutel: "apps-en-spelletjes",
