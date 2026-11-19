@@ -12,6 +12,8 @@ import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 import { zichtbareBeoordelingen } from "@/lib/shop/beoordeling-server";
 import { herkomstVan } from "@/lib/shop/levertijd";
 import { levertijdenVoor } from "@/lib/shop/levertijd-server";
+import { productZicht } from "@/lib/shop/niet-leverbaar";
+import { ProductNietLeverbaar } from "@/components/marketing/ProductNietLeverbaar";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +52,10 @@ function toDto(p: {
 export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const params = await props.params;
   const p = await prisma.shopProduct.findUnique({ where: { slug: params.slug } });
-  if (!p) return { title: { absolute: "Product niet gevonden — ZekerFlex Shop" } };
+  const zicht = productZicht(p);
+  if (!p || zicht === "verborgen") return { title: { absolute: "Product niet gevonden — ZekerFlex Shop" }, robots: { index: false } };
+  // oude link naar een product dat uit staat: wel een nette pagina, niet in Google
+  if (zicht === "niet-leverbaar") return { title: { absolute: seoTitel(`${p.name} (niet meer leverbaar)`, "ZekerFlex Shop") }, robots: { index: false, follow: true } };
   const title = `${p.name} — ZekerFlex Shop`;
   const description = p.description.slice(0, 160);
   return {
@@ -71,7 +76,20 @@ export default async function ProductPage(props: { params: Promise<{ slug: strin
       seller: { select: { name: true } },
     },
   });
-  if (!product || !product.active) notFound();
+  const zicht = productZicht(product);
+  if (!product || zicht === "verborgen") notFound();
+  if (zicht === "niet-leverbaar") {
+    // een eigen product dat uit staat (oude link): zeggen dat het weg is en vergelijkbare producten tonen (lib/shop/niet-leverbaar.ts)
+    const vergelijkbaar = await prisma.shopProduct
+      .findMany({
+        where: { active: true, category: product.category },
+        orderBy: { sortOrder: "asc" },
+        take: 8,
+        select: { slug: true, name: true, category: true, priceCents: true, imageUrl: true },
+      })
+      .catch(() => []);
+    return <ProductNietLeverbaar product={{ slug: product.slug, name: product.name, category: product.category, imageUrl: product.imageUrl }} vergelijkbaar={vergelijkbaar} />;
+  }
 
   // "Vaak samen gekocht" from real orders first, topped up from the same category.
   const togetherIds = await boughtTogether(product.id, 4).catch(() => [] as string[]);
