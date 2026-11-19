@@ -32,3 +32,14 @@ behandelen. Dat staat open in de app, niet verborgen.
 ## Lokaal draaien
 `cd` naar de lokale FlikFlak-map en `node server.js` → http://localhost:3001.
 De repo-kopie hier is de versie die live draait; houd beide gelijk.
+
+## Functies (ronde A, 19 nov)
+- **Fotoposts**: 1-10 foto's als carrousel met muziek uit de eigen bibliotheek (`public/muziek`, zelf gemaakt, rechtenvrij).
+- **Videobewerker** vóór het plaatsen: knippen, snelheid, tekst op de video, muziek eronder — in de browser (canvas + MediaRecorder).
+- **Mappen** (collecties): video's bewaren in eigen mappen, alleen voor jezelf. Profiel → Mappen; Delen → "In een map".
+- **Challenges**: hashtag + titel + einddatum, ranglijst op likes. Ontdekken → Challenges, `#/challenges`, `#/challenge/<tag>`.
+- **Statistieken** voor makers (`#/stats`): totalen, weergaven per dag (14 dagen), per video.
+- **Kijkgeschiedenis** (`#/geschiedenis`) en **"Niet geïnteresseerd"** (telt echt mee in de feed).
+- **ZekerFlex-koppeling**: een product uit de shop of een klus aan je post koppelen (alleen een zekerflex.com-link, kaartje onder de video).
+- **Deel-link met voorbeeld** (`/s/<id>`): titel + foto in WhatsApp/social, stuurt door naar de app.
+- **Installeerbaar als app** (PWA): manifest + service worker (`sw.js`, alleen de schil; api/uploads altijd vers).

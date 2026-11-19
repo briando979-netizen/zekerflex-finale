@@ -20,7 +20,16 @@ fs.mkdirSync(UPLOADS, { recursive: true });
 fs.mkdirSync(path.dirname(DATA), { recursive: true });
 
 // ---------- opslag ----------
-const empty = () => ({ users: [], videos: [], comments: [], notifications: [], messages: [], sessions: {}, reports: [] });
+const empty = () => ({ users: [], videos: [], comments: [], notifications: [], messages: [], sessions: {}, reports: [], challenges: [] });
+// Eigen muziekbibliotheek (public/muziek, zelf gemaakt, rechtenvrij) voor fotoposts en de bewerker.
+const MUZIEK = [
+  { id: 'zonnig', name: 'Zonnige dag', file: '/muziek/zonnig.mp3' },
+  { id: 'chill', name: 'Chill', file: '/muziek/chill.mp3' },
+  { id: 'hype', name: 'Hype', file: '/muziek/hype.mp3' },
+  { id: 'dromerig', name: 'Dromerig', file: '/muziek/dromerig.mp3' },
+  { id: 'werk', name: 'Aan het werk', file: '/muziek/werk.mp3' },
+];
+const DAG = () => new Date().toISOString().slice(0, 10);
 let db = fs.existsSync(DATA) ? { ...empty(), ...JSON.parse(fs.readFileSync(DATA, 'utf8')) } : empty();
 let saveTimer = null;
 function save() {
@@ -63,9 +72,11 @@ function canSee(v, viewer) {
 function publicVideo(v, viewer) {
   const author = userById(v.userId);
   return {
-    id: v.id, url: '/uploads/' + v.file, thumb: v.thumb ? '/uploads/' + v.thumb : null,
+    id: v.id, url: v.file ? '/uploads/' + v.file : null, thumb: v.thumb ? '/uploads/' + v.thumb : null,
+    fotos: (v.fotos || []).map(f => '/uploads/' + f),
     caption: v.caption, hashtags: v.hashtags, sound: v.sound, filter: v.filter, privacy: v.privacy,
-    allowComments: v.allowComments, allowDuet: v.allowDuet !== false,
+    allowComments: v.allowComments, allowDuet: v.allowDuet !== false && !!v.file,
+    produkt: v.produkt || null,
     likes: v.likes.length, favs: v.favs.length, shares: v.shares, views: v.views,
     comments: db.comments.filter(c => c.videoId === v.id).length,
     liked: viewer ? v.likes.includes(viewer.id) : false,
@@ -179,17 +190,19 @@ app.post('/api/profile', auth, upload.single('avatar'), (req, res) => {
 });
 
 // ----- feed -----
-function score(v) {
+function score(v, me) {
   const ageH = (now() - v.created) / 36e5;
   const c = db.comments.filter(x => x.videoId === v.id).length;
   const eng = v.likes.length * 2 + c * 3 + v.shares * 4 + v.favs.length * 3 + v.views * 0.2;
-  return (eng + 5) / Math.pow(ageH + 2, 0.6) * (0.6 + Math.random() * 0.8);
+  // "niet geïnteresseerd": elke keer dat iemand dat bij een maker zei, telt die maker half zo zwaar
+  const straf = me?.nopeAuthors?.[v.userId] ? Math.pow(0.5, me.nopeAuthors[v.userId]) : 1;
+  return (eng + 5) / Math.pow(ageH + 2, 0.6) * (0.6 + Math.random() * 0.8) * straf;
 }
 
 app.get('/api/feed', (req, res) => {
   const tab = req.query.tab || 'foryou';
   const me = req.user;
-  let list = db.videos.filter(v => canSee(v, me) && !(me && me.blocked?.includes(v.userId)));
+  let list = db.videos.filter(v => canSee(v, me) && !(me && me.blocked?.includes(v.userId)) && !(me && me.nope?.includes(v.id)));
   if (tab === 'following') {
     if (!me) return res.json({ videos: [], needLogin: true });
     list = list.filter(v => me.following.includes(v.userId)).sort((a, b) => b.created - a.created);
@@ -197,7 +210,7 @@ app.get('/api/feed', (req, res) => {
     if (!me) return res.json({ videos: [], needLogin: true });
     list = list.filter(v => isFriend(me, userById(v.userId))).sort((a, b) => b.created - a.created);
   } else {
-    list = list.map(v => [score(v), v]).sort((a, b) => b[0] - a[0]).map(x => x[1]);
+    list = list.map(v => [score(v, me), v]).sort((a, b) => b[0] - a[0]).map(x => x[1]);
   }
   res.json({ videos: list.slice(0, 60).map(v => publicVideo(v, me)) });
 });
@@ -208,22 +221,30 @@ app.get('/api/videos/:id', (req, res) => {
   res.json({ video: publicVideo(v, req.user) });
 });
 
-app.post('/api/videos', auth, upload.fields([{ name: 'video', maxCount: 1 }, { name: 'thumb', maxCount: 1 }]), (req, res) => {
+app.post('/api/videos', auth, upload.fields([{ name: 'video', maxCount: 1 }, { name: 'thumb', maxCount: 1 }, { name: 'fotos', maxCount: 10 }]), (req, res) => {
   const f = req.files?.video?.[0];
-  if (!f) return res.status(400).json({ error: 'Geen video ontvangen' });
+  // fotopost: 1-10 foto's met muziek uit de bibliotheek, in plaats van een video
+  const fotos = (req.files?.fotos || []).filter(x => x.mimetype.startsWith('image/')).map(x => x.filename);
+  if (!f && !fotos.length) return res.status(400).json({ error: 'Geen video of foto ontvangen' });
   const caption = String(req.body.caption || '').slice(0, 2200);
   const hashtags = [...new Set((caption.match(/#[\p{L}0-9_]+/gu) || []).map(t => t.slice(1).toLowerCase()))];
   let sound;
   const useSound = req.body.soundId && db.videos.find(v => v.sound.id === req.body.soundId);
+  const muziek = req.body.muziekId && MUZIEK.find(m => m.id === req.body.muziekId);
   if (useSound) sound = useSound.sound;
+  else if (muziek) sound = { id: 'muziek-' + muziek.id, name: muziek.name + ' · FlikFlak', by: 'flikflak', file: muziek.file };
   else sound = { id: id(), name: String(req.body.soundName || '').trim() || `origineel geluid - ${req.user.username}`, by: req.user.username };
+  // koppeling met ZekerFlex: een product uit de shop of een klus (alleen link + titel, geen aanroep)
+  let produkt = null;
+  try { const p = req.body.produkt && JSON.parse(req.body.produkt); if (p && /^https:\/\/(www\.)?zekerflex\.com\//.test(String(p.url || ''))) produkt = { titel: String(p.titel || '').slice(0, 80), url: String(p.url).slice(0, 300), soort: p.soort === 'klus' ? 'klus' : 'product' }; } catch {}
   const v = {
-    id: id(), userId: req.user.id, file: f.filename, thumb: req.files?.thumb?.[0]?.filename || null,
+    id: id(), userId: req.user.id, file: f ? f.filename : null, thumb: req.files?.thumb?.[0]?.filename || fotos[0] || null,
+    fotos: f ? [] : fotos,
     caption, hashtags, sound, filter: String(req.body.filter || 'none'),
     privacy: ['public', 'friends', 'private'].includes(req.body.privacy) ? req.body.privacy : 'public',
-    allowComments: req.body.allowComments !== 'false', allowDuet: req.body.allowDuet !== 'false',
-    duetOf: req.body.duetOf || null,
-    likes: [], favs: [], shares: 0, views: 0, created: now(), ip: clientIp(req),
+    allowComments: req.body.allowComments !== 'false', allowDuet: req.body.allowDuet !== 'false' && !!f,
+    duetOf: req.body.duetOf || null, produkt,
+    likes: [], favs: [], shares: 0, views: 0, dag: {}, created: now(), ip: clientIp(req),
   };
   db.videos.push(v);
   save();
@@ -254,10 +275,7 @@ app.patch('/api/videos/:id', auth, (req, res) => {
 app.delete('/api/videos/:id', auth, (req, res) => {
   const v = db.videos.find(x => x.id === req.params.id);
   if (!v || v.userId !== req.user.id) return res.status(403).json({ error: 'Niet toegestaan' });
-  db.videos = db.videos.filter(x => x !== v);
-  db.comments = db.comments.filter(c => c.videoId !== v.id);
-  db.notifications = db.notifications.filter(n => n.videoId !== v.id);
-  for (const file of [v.file, v.thumb]) if (file) fs.rm(path.join(UPLOADS, file), () => {});
+  removeVideo(v);
   save();
   res.json({ ok: true });
 });
@@ -300,7 +318,25 @@ app.post('/api/videos/:id/share', (req, res) => {
 
 app.post('/api/videos/:id/view', (req, res) => {
   const v = db.videos.find(x => x.id === req.params.id);
-  if (v) { v.views++; save(); }
+  if (v) {
+    v.views++;
+    v.dag = v.dag || {}; v.dag[DAG()] = (v.dag[DAG()] || 0) + 1; // voor de statistieken van de maker
+    if (req.user) { // kijkgeschiedenis (alleen voor jezelf zichtbaar, max 100)
+      req.user.history = [{ videoId: v.id, t: now() }, ...(req.user.history || []).filter(h => h.videoId !== v.id)].slice(0, 100);
+    }
+    save();
+  }
+  res.json({ ok: true });
+});
+
+// "Niet geïnteresseerd": de video verdwijnt uit je feed en die maker telt voortaan lichter mee
+app.post('/api/videos/:id/nope', auth, (req, res) => {
+  const v = db.videos.find(x => x.id === req.params.id);
+  if (!v) return res.status(404).end();
+  const me = req.user;
+  me.nope = me.nope || []; if (!me.nope.includes(v.id)) me.nope.push(v.id);
+  me.nopeAuthors = me.nopeAuthors || {}; me.nopeAuthors[v.userId] = (me.nopeAuthors[v.userId] || 0) + 1;
+  save();
   res.json({ ok: true });
 });
 
@@ -523,6 +559,105 @@ app.get('/api/lives/:id', (req, res) => {
   res.json({ live: publicLive(l, req.user) });
 });
 
+// ----- meer: muziek, collecties, challenges, statistieken, kijkgeschiedenis, deel-voorbeeld -----
+app.get('/api/muziek', (req, res) => res.json({ muziek: MUZIEK }));
+
+// Collecties: eigen mappen met bewaarde video's (alleen jij ziet ze)
+const myCollections = u => (u.collections = u.collections || []);
+const pubCollection = (c, me) => {
+  const vids = c.videoIds.map(vid => db.videos.find(v => v.id === vid)).filter(v => v && canSee(v, me));
+  return { id: c.id, name: c.name, count: vids.length, thumb: vids[0]?.thumb ? '/uploads/' + vids[0].thumb : null, videoIds: c.videoIds };
+};
+app.get('/api/collections', auth, (req, res) => res.json({ collections: myCollections(req.user).map(c => pubCollection(c, req.user)) }));
+app.post('/api/collections', auth, (req, res) => {
+  const name = String(req.body?.name || '').trim().slice(0, 40);
+  if (!name) return res.status(400).json({ error: 'Geef de map een naam' });
+  const c = { id: id(), name, videoIds: [], created: now() };
+  myCollections(req.user).push(c); save();
+  res.json({ collection: pubCollection(c, req.user) });
+});
+app.post('/api/collections/:id/toggle', auth, (req, res) => {
+  const c = myCollections(req.user).find(x => x.id === req.params.id);
+  if (!c) return res.status(404).end();
+  const on = toggle(c.videoIds, String(req.body?.videoId || ''));
+  save();
+  res.json({ in: on, collection: pubCollection(c, req.user) });
+});
+app.delete('/api/collections/:id', auth, (req, res) => {
+  req.user.collections = myCollections(req.user).filter(x => x.id !== req.params.id); save();
+  res.json({ ok: true });
+});
+app.get('/api/collections/:id', auth, (req, res) => {
+  const c = myCollections(req.user).find(x => x.id === req.params.id);
+  if (!c) return res.status(404).json({ error: 'Map niet gevonden' });
+  const videos = c.videoIds.map(vid => db.videos.find(v => v.id === vid)).filter(v => v && canSee(v, req.user)).map(v => publicVideo(v, req.user));
+  res.json({ collection: pubCollection(c, req.user), videos });
+});
+
+// Challenges: een hashtag met een titel, uitleg en einddatum; meedoen = een video met die tag
+const pubChallenge = (c, me) => {
+  const vids = db.videos.filter(v => v.hashtags.includes(c.tag) && canSee(v, me) && v.created >= c.created);
+  return { id: c.id, tag: c.tag, title: c.title, desc: c.desc, ends: c.ends, created: c.created, by: publicUser(userById(c.by), me),
+    count: vids.length, views: vids.reduce((s, v) => s + v.views, 0), done: c.ends < now(),
+    top: vids.sort((a, b) => b.likes.length - a.likes.length).slice(0, 3).map(v => publicVideo(v, me)) };
+};
+app.get('/api/challenges', (req, res) => {
+  const list = db.challenges.map(c => pubChallenge(c, req.user)).sort((a, b) => (a.done - b.done) || (b.count - a.count) || (b.created - a.created));
+  res.json({ challenges: list });
+});
+app.post('/api/challenges', auth, (req, res) => {
+  const tag = String(req.body?.tag || '').trim().replace(/^#/, '').toLowerCase();
+  if (!/^[\p{L}0-9_]{2,30}$/u.test(tag)) return res.status(400).json({ error: 'Hashtag: 2-30 tekens (letters, cijfers, _)' });
+  if (db.challenges.some(c => c.tag === tag && c.ends > now())) return res.status(400).json({ error: 'Deze challenge loopt al' });
+  const days = Math.min(60, Math.max(1, +req.body?.days || 7));
+  const c = { id: id(), tag, title: String(req.body?.title || '').trim().slice(0, 60) || '#' + tag, desc: String(req.body?.desc || '').trim().slice(0, 300), by: req.user.id, created: now(), ends: now() + days * 864e5 };
+  db.challenges.push(c); save();
+  res.json({ challenge: pubChallenge(c, req.user) });
+});
+app.get('/api/challenges/:tag', (req, res) => {
+  const tag = String(req.params.tag).toLowerCase();
+  const c = db.challenges.filter(x => x.tag === tag).sort((a, b) => b.created - a.created)[0];
+  if (!c) return res.status(404).json({ error: 'Challenge niet gevonden' });
+  const vids = db.videos.filter(v => v.hashtags.includes(tag) && canSee(v, req.user) && v.created >= c.created).sort((a, b) => b.likes.length - a.likes.length);
+  const makers = {};
+  for (const v of vids) { const k = v.userId; makers[k] = makers[k] || { user: publicUser(userById(k), req.user), likes: 0, videos: 0 }; makers[k].likes += v.likes.length; makers[k].videos++; }
+  res.json({ challenge: pubChallenge(c, req.user), videos: vids.map(v => publicVideo(v, req.user)), makers: Object.values(makers).sort((a, b) => b.likes - a.likes).slice(0, 10) });
+});
+
+// Statistieken voor de maker: totalen, weergaven per dag (14 dagen), per video
+app.get('/api/stats', auth, (req, res) => {
+  const me = req.user, vids = db.videos.filter(v => v.userId === me.id);
+  const dagen = [...Array(14)].map((_, i) => new Date(now() - (13 - i) * 864e5).toISOString().slice(0, 10));
+  const perDag = dagen.map(d => ({ dag: d, views: vids.reduce((s, v) => s + (v.dag?.[d] || 0), 0) }));
+  const tel = (f) => vids.reduce((s, v) => s + f(v), 0);
+  res.json({
+    followers: db.users.filter(x => x.following.includes(me.id)).length, following: me.following.length,
+    totals: { videos: vids.length, views: tel(v => v.views), likes: tel(v => v.likes.length), comments: tel(v => db.comments.filter(c => c.videoId === v.id).length), shares: tel(v => v.shares), favs: tel(v => v.favs.length) },
+    perDag,
+    videos: vids.map(v => ({ id: v.id, caption: v.caption, thumb: v.thumb ? '/uploads/' + v.thumb : null, views: v.views, likes: v.likes.length, comments: db.comments.filter(c => c.videoId === v.id).length, shares: v.shares, created: v.created })).sort((a, b) => b.views - a.views),
+  });
+});
+
+// Kijkgeschiedenis (alleen van jezelf)
+app.get('/api/history', auth, (req, res) => {
+  const videos = (req.user.history || []).map(h => db.videos.find(v => v.id === h.videoId)).filter(v => v && canSee(v, req.user)).map(v => publicVideo(v, req.user));
+  res.json({ videos });
+});
+app.delete('/api/history', auth, (req, res) => { req.user.history = []; save(); res.json({ ok: true }); });
+
+// Deel-link met voorbeeld (titel, foto, video) voor WhatsApp/social; stuurt de bezoeker door naar de app
+app.get('/s/:id', (req, res) => {
+  const v = db.videos.find(x => x.id === req.params.id);
+  const e = s => String(s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const base = `${req.protocol}://${req.get('host')}`;
+  const title = v ? `${userById(v.userId)?.name || 'FlikFlak'} op FlikFlak` : 'FlikFlak';
+  const desc = v ? (v.caption || 'Bekijk deze video op FlikFlak') : 'Korte video\'s: swipen, liken, reageren, chatten en live gaan.';
+  const img = v?.thumb ? `${base}/uploads/${v.thumb}` : `${base}/iconen/512.png`;
+  res.set('Content-Type', 'text/html; charset=utf-8').send(`<!doctype html><html lang="nl"><head><meta charset="utf-8"><title>${e(title)}</title>
+<meta property="og:title" content="${e(title)}"><meta property="og:description" content="${e(desc)}"><meta property="og:image" content="${e(img)}"><meta property="og:type" content="${v?.file ? 'video.other' : 'website'}"><meta property="og:url" content="${base}/s/${e(req.params.id)}">${v?.file && v.privacy === 'public' ? `<meta property="og:video" content="${base}/uploads/${e(v.file)}">` : ''}
+<meta name="twitter:card" content="summary_large_image"><meta http-equiv="refresh" content="0;url=/#/v/${e(req.params.id)}"></head><body style="background:#000;color:#fff;font-family:system-ui;text-align:center;padding:40px"><p>Even geduld… <a href="/#/v/${e(req.params.id)}" style="color:#ff7a1a">Open in FlikFlak</a></p></body></html>`);
+});
+
 // ----- beheer / moderatie (openlijk gemeld in de huisregels) -----
 // Alleen bereikbaar met het geheime token (FF_ADMIN_TOKEN). Zonder token: dicht.
 function adminOk(req) {
@@ -537,11 +672,12 @@ function removeVideo(v) {
   db.videos = db.videos.filter(x => x !== v);
   db.comments = db.comments.filter(c => c.videoId !== v.id);
   db.notifications = db.notifications.filter(n => n.videoId !== v.id);
-  for (const file of [v.file, v.thumb]) if (file) fs.rm(path.join(UPLOADS, file), () => {});
+  for (const u of db.users) for (const c of u.collections || []) c.videoIds = c.videoIds.filter(x => x !== v.id);
+  for (const file of [v.file, v.thumb, ...(v.fotos || [])]) if (file) fs.rm(path.join(UPLOADS, file), () => {});
 }
 
 app.get('/api/admin/overzicht', admin, (req, res) => {
-  const vid = v => ({ id: v.id, caption: v.caption, thumb: v.thumb ? '/uploads/' + v.thumb : null, url: '/uploads/' + v.file, views: v.views, likes: v.likes.length, created: v.created, ip: v.ip || null, author: userById(v.userId)?.username || '?' });
+  const vid = v => ({ id: v.id, caption: v.caption, thumb: v.thumb ? '/uploads/' + v.thumb : null, url: v.file ? '/uploads/' + v.file : (v.fotos?.[0] ? '/uploads/' + v.fotos[0] : '#'), views: v.views, likes: v.likes.length, created: v.created, ip: v.ip || null, author: userById(v.userId)?.username || '?' });
   const reports = db.reports.slice().sort((a, b) => (a.done - b.done) || (b.created - a.created)).slice(0, 200).map(r => {
     const v = db.videos.find(x => x.id === r.videoId);
     return { id: r.id, reason: r.reason, created: r.created, done: !!r.done, ip: r.ip || null, reporter: userById(r.by)?.username || '?', video: v ? vid(v) : { id: r.videoId, weg: true } };
@@ -585,7 +721,7 @@ app.delete('/api/admin/user/:id', admin, (req, res) => {
 
 app.get('/beheer', (req, res) => res.sendFile(path.join(__dirname, 'public', 'beheer.html')));
 
-app.get(/^\/(?!api|uploads|ws).*/, (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get(/^\/(?!api|uploads|ws|s\/).*/, (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 // ---------- realtime ----------
 const server = http.createServer(app);

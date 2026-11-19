@@ -95,7 +95,7 @@ const S = {
 // ---- geluid: standaard AAN. Blokkeert de browser dat, dan gaat het aan bij je eerste tik/toets ----
 const muteLabel = () => (S.muted || S.needGesture) ? `${ic('volOff')}<span>${S.needGesture && !S.muted ? 'Tik voor geluid' : 'Geluid aan'}</span>` : ic('volOn');
 function applySound() {
-  $$('video.snd').forEach(v => { v.muted = S.muted || S.needGesture; });
+  $$('video.snd, audio.snd').forEach(v => { v.muted = S.muted || S.needGesture; });
   $$('.mute-btn').forEach(b => b.innerHTML = muteLabel());
 }
 function setMuted(m) { S.muted = m; localStorage.setItem('ff_muted', m ? '1' : '0'); applySound(); }
@@ -269,6 +269,11 @@ async function render() {
     if ((m = p.match(/^\/tag\/(.+)$/))) return await tagPage(m[1]);
     if ((m = p.match(/^\/sound\/(.+)$/))) return await soundPage(m[1]);
     if ((m = p.match(/^\/v\/(.+)$/))) return await singlePage(m[1]);
+    if (p === '/challenges') return await challengesPage();
+    if ((m = p.match(/^\/challenge\/(.+)$/))) return await challengePage(m[1]);
+    if ((m = p.match(/^\/map\/(.+)$/))) return await collectionPage(m[1]);
+    if (p === '/stats') return await statsPage();
+    if (p === '/geschiedenis') return await historyPage();
     location.hash = '#/';
   } catch (e) {
     view.innerHTML = `<div class="empty"><h3>Oeps</h3><div>${esc(e.message)}</div><a class="btn" href="#/">Naar home</a></div>`;
@@ -345,7 +350,7 @@ function mountFeed(holder, videos, start) {
 
   function load(slide) {
     if (!slide) return;
-    $$('video', slide).forEach(v => { if (!v.src && v.dataset.src) { v.src = v.dataset.src; v.preload = 'auto'; } });
+    $$('video, audio.snd', slide).forEach(v => { if (!v.src && v.dataset.src) { v.src = v.dataset.src; v.preload = 'auto'; } });
   }
   function activate(slide) {
     if (current === slide) return;
@@ -353,15 +358,19 @@ function mountFeed(holder, videos, start) {
     current = slide;
     load(slide); load(slide.nextElementSibling); load(slide.nextElementSibling?.nextElementSibling);
     const [main, other] = $$('video', slide);
-    main.currentTime = 0; if (other) other.currentTime = 0;
-    main.playbackRate = S.speed; if (other) other.playbackRate = S.speed;
-    main.loop = !S.autoscroll;
-    $('.speed-tag', slide).hidden = S.speed === 1; $('.speed-tag', slide).textContent = S.speed + 'x';
+    if (main) {
+      main.currentTime = 0; if (other) other.currentTime = 0;
+      main.playbackRate = S.speed; if (other) other.playbackRate = S.speed;
+      main.loop = !S.autoscroll;
+    }
+    $('.speed-tag', slide).hidden = S.speed === 1 || !main; $('.speed-tag', slide).textContent = S.speed + 'x';
     play(slide);
+    slide._fotoStart?.();
     slide._viewTimer = setTimeout(() => api('POST', `/api/videos/${slide.dataset.id}/view`).catch(() => {}), 1500);
   }
   function deactivate(slide) {
-    $$('video', slide).forEach(v => v.pause());
+    $$('video, audio.snd', slide).forEach(v => v.pause());
+    slide._fotoStop?.();
     clearTimeout(slide._viewTimer);
     slide.classList.remove('clear');
     if (current === slide) current = null;
@@ -369,24 +378,26 @@ function mountFeed(holder, videos, start) {
   function play(slide) {
     slide.classList.remove('paused');
     $('.big-play', slide).hidden = true;
-    $$('video', slide).forEach(v => {
+    $$('video, audio.snd', slide).forEach(v => {
       playWithSound(v);
     });
+    slide._fotoStart?.();
   }
   function pause(slide) {
     slide.classList.add('paused');
     $('.big-play', slide).hidden = false;
-    $$('video', slide).forEach(v => v.pause());
+    $$('video, audio.snd', slide).forEach(v => v.pause());
+    slide._fotoStop?.();
   }
 
   function makeSlide(v) {
     const a = v.author;
     const duet = v.duetOf;
-    const slide = h(`<section class="slide" data-id="${v.id}">
-      <div class="stage ${duet ? 'duet' : ''}">
+    const slide = h(`<section class="slide ${v.fotos?.length ? 'is-foto' : ''}" data-id="${v.id}">
+      ${v.fotos?.length ? fotoStage(v) : `<div class="stage ${duet ? 'duet' : ''}">
         <video class="snd" data-src="${v.url}" playsinline muted preload="none" poster="${v.thumb || ''}" style="filter:${filterCss(v.filter)}"></video>
         ${duet ? `<video class="snd" data-src="${duet.url}" playsinline muted preload="none" style="filter:${filterCss(duet.filter)}"></video>` : ''}
-      </div>
+      </div>`}
       <div class="shade"></div>
       <div class="tap"></div>
       <div class="big-play" hidden>${ic('play')}</div>
@@ -406,22 +417,26 @@ function mountFeed(holder, videos, start) {
         ${duet ? `<div class="duet-tag">Duet met <a href="#/@${esc(duet.author.username)}">@${esc(duet.author.username)}</a></div>` : ''}
         <div><a class="uname" href="#/@${esc(a.username)}">${esc(a.name || a.username)} ${check(a)}</a> <span class="date">· ${ago(v.created)}</span>${v.privacy !== 'public' ? ` <span class="date">· ${v.privacy === 'friends' ? '👥 Vrienden' : '🔒 Privé'}</span>` : ''}</div>
         ${v.caption ? `<div class="cap">${rich(v.caption)}</div>` : '<div style="height:8px"></div>'}
+        ${v.produkt ? produktKaart(v.produkt) : ''}
         <a class="music" href="#/sound/${v.sound.id}">${ic('music')}<div class="ticker"><span>${esc(v.sound.name)} &nbsp;·&nbsp; ${esc(v.sound.name)} &nbsp;·&nbsp;</span></div></a>
       </div>
-      <input type="range" class="seek" min="0" max="1000" value="0">
+      <input type="range" class="seek" min="0" max="1000" value="0" ${v.fotos?.length ? 'hidden' : ''}>
     </section>`);
     slide._v = v;
     const [main, other] = $$('video', slide);
+    if (!main) fotoSetup(slide);
     if (other) {
       // duet: origineel rechts, loopt gelijk met de opname
       main.addEventListener('timeupdate', () => { if (Math.abs(other.currentTime - main.currentTime) > 0.35 && main.currentTime < (other.duration || 1e9)) other.currentTime = main.currentTime; });
       main.addEventListener('seeked', () => { other.currentTime = main.currentTime; });
     }
     const seek = $('.seek', slide);
-    main.addEventListener('timeupdate', () => { if (main.duration && isFinite(main.duration) && !seek._drag) seek.value = main.currentTime / main.duration * 1000; });
-    seek.addEventListener('input', () => { seek._drag = true; if (main.duration && isFinite(main.duration)) main.currentTime = seek.value / 1000 * main.duration; });
-    seek.addEventListener('change', () => { seek._drag = false; });
-    main.addEventListener('ended', () => { if (S.autoscroll && slide === current) next(); });
+    if (main) {
+      main.addEventListener('timeupdate', () => { if (main.duration && isFinite(main.duration) && !seek._drag) seek.value = main.currentTime / main.duration * 1000; });
+      seek.addEventListener('input', () => { seek._drag = true; if (main.duration && isFinite(main.duration)) main.currentTime = seek.value / 1000 * main.duration; });
+      seek.addEventListener('change', () => { seek._drag = false; });
+      main.addEventListener('ended', () => { if (S.autoscroll && slide === current) next(); });
+    }
 
     // tikken: 1x pauze, 2x like, lang drukken = opties
     const tap = $('.tap', slide);
@@ -587,10 +602,12 @@ function mountFeed(holder, videos, start) {
           <button class="it" data-a="clear"><span class="circ">${ic('clear')}</span>Scherm leegmaken</button>
           ${own ? `
           <button class="it" data-a="privacy"><span class="circ">${ic('lock')}</span>Privacy</button>
+          <button class="it" data-a="map"><span class="circ">${ic('bookmark')}</span>In een map</button>
           <button class="it" data-a="pin"><span class="circ">${ic('pin')}</span>${v.pinned ? 'Losmaken' : 'Vastpinnen'}</button>
           <button class="it" data-a="comments"><span class="circ">${ic('comment')}</span>Reacties ${v.allowComments ? 'uit' : 'aan'}</button>
           <button class="it" data-a="caption"><span class="circ">${ic('edit')}</span>Tekst wijzigen</button>
           <button class="it" data-a="delete"><span class="circ" style="color:#ff4d6d">${ic('trash')}</span>Verwijderen</button>` : `
+          <button class="it" data-a="map"><span class="circ">${ic('bookmark')}</span>In een map</button>
           <button class="it" data-a="nope"><span class="circ">${ic('nope')}</span>Niet geïnteresseerd</button>
           <button class="it" data-a="report"><span class="circ">${ic('flag')}</span>Melden</button>`}
         </div>
@@ -613,7 +630,7 @@ function mountFeed(holder, videos, start) {
         });
       });
     }
-    const link = location.origin + '/#/v/' + v.id;
+    const link = location.origin + '/s/' + v.id; // deel-link met voorbeeld (titel + foto) in WhatsApp en social
     const countShare = async () => { const r = await api('POST', `/api/videos/${v.id}/share`); v.shares = r.shares; $('.sh span', slide).textContent = fmt(v.shares); };
     $$('[data-speed]', s).forEach(b => b.onclick = () => {
       S.speed = +b.dataset.speed;
@@ -626,7 +643,9 @@ function mountFeed(holder, videos, start) {
       s.close();
       if (a === 'copy') { try { await navigator.clipboard.writeText(link); } catch { prompt('Kopieer deze link:', link); } countShare(); toast('Link gekopieerd'); }
       if (a === 'native') { try { await navigator.share({ title: 'FlikFlak', text: v.caption, url: link }); countShare(); } catch {} }
+      if (a === 'map') { if (need()) saveToCollectionSheet(v); }
       if (a === 'download') {
+        if (!v.url) return toast('Alleen bij video\'s');
         toast('Downloaden…');
         const blob = await (await fetch(v.url)).blob();
         const aEl = document.createElement('a'); aEl.href = URL.createObjectURL(blob);
@@ -643,6 +662,7 @@ function mountFeed(holder, videos, start) {
       }
       if (a === 'clear') { slide.classList.add('clear'); toast('Tik om de knoppen terug te zien'); }
       if (a === 'nope') {
+        if (S.me) api('POST', `/api/videos/${v.id}/nope`).catch(() => {});
         toast('We laten je minder van dit soort video\'s zien');
         next(); setTimeout(() => { io.unobserve(slide); slide.remove(); }, 500);
       }
@@ -750,7 +770,7 @@ async function profilePage(username) {
     </div>
     <div class="segs" style="top:52px">
       <button data-t="videos" class="active">${ic('grid')}</button>
-      ${me ? `<button data-t="favorites">${ic('bookmark')}</button>` : ''}
+      ${me ? `<button data-t="favorites">${ic('bookmark')}</button><button data-t="maps" style="font-size:13px">Mappen</button>` : ''}
       <button data-t="liked">${ic('heartO')}</button>
     </div>
     <div class="tabc"></div>`;
@@ -778,7 +798,10 @@ async function profilePage(username) {
   }
   $('.menu', page).onclick = () => {
     const s = sheet(`<div class="sh-body" style="padding:8px 0">
-      ${me ? `<a class="row" href="#/edit">${ic('edit')}<span class="grow">Profiel bewerken</span></a>` : ''}
+      ${me ? `<a class="row" href="#/edit">${ic('edit')}<span class="grow">Profiel bewerken</span></a>
+      <a class="row" href="#/stats">${ic('speed')}<span class="grow">Statistieken</span></a>
+      <a class="row" href="#/geschiedenis">${ic('play')}<span class="grow">Kijkgeschiedenis</span></a>
+      <button class="row" style="width:100%" data-a="install">${ic('download')}<span class="grow" style="text-align:left">FlikFlak installeren als app</span></button>` : ''}
       <button class="row" style="width:100%" data-a="link">${ic('link')}<span class="grow" style="text-align:left">Profiellink kopiëren</span></button>
       ${me ? `<button class="row" style="width:100%" data-a="logout">${ic('back')}<span class="grow" style="text-align:left">Uitloggen</span></button>`
         : `<button class="row" style="width:100%" data-a="block">${ic('nope')}<span class="grow" style="text-align:left">Blokkeren</span></button>`}
@@ -786,6 +809,7 @@ async function profilePage(username) {
     $$('[data-a]', s).forEach(b => b.onclick = async () => {
       s.close();
       if (b.dataset.a === 'link') { try { await navigator.clipboard.writeText(location.origin + '/#/@' + u.username); toast('Gekopieerd'); } catch {} }
+      if (b.dataset.a === 'install') installApp();
       if (b.dataset.a === 'logout') {
         await api('POST', '/api/logout'); S.token = null; S.me = null; localStorage.removeItem('ff_token');
         reconnectWs(); setUnread(0); toast('Uitgelogd'); location.hash = '#/';
@@ -800,6 +824,7 @@ async function profilePage(username) {
     if (t === 'videos') tabc.append(grid(r.videos, '@' + u.username, me ? 'Deel je eerste video!<br><br><a class="btn" href="#/upload">Uploaden</a>' : 'Nog geen video\'s', { pins: true }));
     if (t === 'favorites') tabc.append(grid(r.favorites || [], 'Favorieten', 'Bewaar video\'s met het bladwijzer-icoon.<br>Alleen jij ziet ze.'));
     if (t === 'liked') tabc.append(grid(r.liked, 'Geliked', 'Nog geen gelikete video\'s', { likes: true }));
+    if (t === 'maps') collectionsTab(tabc);
   };
   $$('.segs button', page).forEach(b => b.onclick = () => show(b.dataset.t));
   show('videos');
@@ -873,6 +898,9 @@ async function discoverPage() {
     page.append(h(`<div class="sec-title">Recent gezocht <button style="color:var(--muted);font-weight:400;font-size:13px" onclick="localStorage.removeItem('ff_hist');this.parentNode.nextSibling.remove();this.parentNode.remove()">Wissen</button></div>`));
     page.append(h(`<div class="chips">${hist.map(x => `<a class="chip" href="#/search/${encodeURIComponent(x)}">${esc(x)}</a>`).join('')}</div>`));
   }
+  const ch = await api('GET', '/api/challenges').catch(() => ({ challenges: [] }));
+  page.append(h(`<div class="sec-title">Challenges <a href="#/challenges" style="color:var(--muted);font-weight:400;font-size:13px">Alles ›</a></div>`));
+  page.append(challengeStrip(ch.challenges.filter(c => !c.done).slice(0, 6)));
   if (r.users.length) {
     page.append(h('<div class="sec-title">Voorgestelde accounts</div>'));
     r.users.slice(0, 5).forEach(u => page.append(userRow(u)));
@@ -1052,6 +1080,7 @@ async function uploadPage() {
       <div class="cam-ctrl">
         <label class="gal" ${duetVideo ? 'style="visibility:hidden"' : ''}><span class="box">${ic('grid')}</span>Uploaden<input type="file" accept="video/*" hidden></label>
         <button class="rec"></button>
+        <label class="gal fotos-gal" ${duetVideo || soundInfo ? 'style="visibility:hidden"' : ''}><span class="box">📷</span>Foto's<input type="file" accept="image/*" multiple hidden></label>
         <button class="done-btn" style="visibility:hidden"><span class="box">✓</span>Klaar</button>
       </div>
     </div>
@@ -1101,6 +1130,7 @@ async function uploadPage() {
     maxDur = +b.dataset.d; $$('[data-d]', page).forEach(x => x.classList.toggle('active', x === b));
   });
   $('.gal input', page).onchange = e => e.target.files[0] && editStep(e.target.files[0]);
+  $('.fotos-gal input', page).onchange = e => e.target.files.length && fotoStep([...e.target.files], { tag, stop: () => stream?.getTracks().forEach(t => t.stop()) });
 
   const recBtn = $('.rec', page), doneBtn = $('.done-btn', page);
   const countdown = n => new Promise(res => {
@@ -1173,10 +1203,15 @@ async function uploadPage() {
       <div class="opt">${ic('lock')}<label>Wie kan dit bekijken</label><select name="privacy"><option value="public">Iedereen</option><option value="friends">Vrienden</option><option value="private">Alleen ik</option></select></div>
       <div class="opt">${ic('comment')}<label>Reacties toestaan</label><label class="switch-t"><input type="checkbox" name="allowComments" checked><span></span></label></div>
       <div class="opt">${ic('duet')}<label>Duet toestaan</label><label class="switch-t"><input type="checkbox" name="allowDuet" checked><span></span></label></div>
+      <div class="opt">${ic('link')}<label>ZekerFlex-koppeling</label><button class="btn small grey kies-produkt">Kiezen</button></div>
       <div class="progress" hidden><div></div></div>
-      <div class="post-bar"><button class="btn grey again">Opnieuw</button><button class="btn post">Plaatsen</button></div></div>`);
+      <div class="post-bar"><button class="btn grey again">Opnieuw</button><button class="btn grey bewerk">✂ Bewerken</button><button class="btn post">Plaatsen</button></div></div>`);
     view.append(ed);
     const ta = $('textarea', ed), pv = $('.pv video', ed);
+    let produkt = null;
+    $('.kies-produkt', ed).onclick = () => pickProduktSheet(p => { produkt = p; $('.kies-produkt', ed).textContent = p ? p.titel.slice(0, 18) : 'Kiezen'; }, produkt);
+    // bewerken: knippen, snelheid, tekst en muziek; het resultaat vervangt het bestand dat geplaatst wordt
+    $('.bewerk', ed).onclick = async () => { const nb = await openEditor(file, filter); if (nb) { file = nb; pv.src = URL.createObjectURL(nb); toast('Bewerking toegepast'); } };
     $$('[data-ins]', ed).forEach(b => b.onclick = () => { ta.value += (ta.value && !ta.value.endsWith(' ') ? ' ' : '') + b.dataset.ins; ta.focus(); });
     $$('[data-f]', ed).forEach(b => b.onclick = () => { filter = b.dataset.f; pv.style.filter = filterCss(filter); $$('[data-f]', ed).forEach(x => x.classList.toggle('active', x === b)); });
     const redo = () => render();
@@ -1186,8 +1221,9 @@ async function uploadPage() {
       const fd = new FormData();
       const ext = (file.type || '').includes('mp4') ? '.mp4' : (file.name?.match(/\.\w+$/)?.[0] || '.webm');
       fd.append('video', file, 'video' + ext);
-      const thumb = await makeThumb(url, filter);
+      const thumb = await makeThumb(pv.src, filter);
       if (thumb) fd.append('thumb', thumb, 'thumb.jpg');
+      if (produkt) fd.append('produkt', JSON.stringify(produkt));
       fd.append('caption', ta.value);
       fd.append('filter', filter);
       fd.append('privacy', $('[name=privacy]', ed).value);
@@ -1478,3 +1514,4 @@ async function watchLivePage(id) {
 
 // ================= start =================
 loadMe().then(render);
+registerPwa();
