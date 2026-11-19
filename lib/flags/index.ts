@@ -45,6 +45,17 @@ export const FLAG_REGISTRY: FlagDef[] = [
   { key: "google-verificatiemail", label: "Verificatiemail ook bij aanmelden met Google of Apple", description: "Aan = een nieuw account dat via Google of Apple wordt gemaakt krijgt dezelfde bevestigingsmail (link + code) als een gewone aanmelding en moet het adres eerst bevestigen. Uit = zo’n account geldt meteen als bevestigd en krijgt een welkomstmail. Een verborgen adres van Apple (@privaterelay.appleid.com) geldt altijd meteen als bevestigd. Bestaande accounts veranderen niet.", default: true },
 ];
 
+// Publiek = alleen flexwerk (lib/marketing/flexwerk-only.ts): verbergt de niet-flexwerk-onderdelen (webshop, apps & spelletjes,
+// website/webshop maken, logo, advertentie, starters, domein, checks, branche-software, de online-tools en /developers) uit
+// menu, voorpagina, voettekst, sitemap en Google. De pagina's blijven bestaan en zijn via een directe link bereikbaar.
+FLAG_REGISTRY.push({
+  key: "publiek-alleen-flexwerk",
+  label: "Publiek: alleen flexwerk tonen",
+  description:
+    "Aan = de openbare site toont alleen flexwerk/uitzend/zzp/freelance: de webshop, apps & spelletjes, website- en webshop-maken, logo, advertentie op maat, starters, domeinnamen, de gratis checks, de branche-software (horeca, rijschool), de online-tools (/online) en het ontwikkelaarsportaal (/developers) verdwijnen uit het menu, de voorpagina, de voettekst, de sitemap en Google (noindex). De pagina's blijven bestaan en zijn via een directe link bereikbaar; FlikFlak en Talkaro houden hun eigen adres. Uit (standaard) = alles blijft zichtbaar zoals nu.",
+  default: false,
+});
+
 // Boekhouding: bonnetjes per mail (lib/boekhouding/bonnen/mail-taak.ts); staat bewust apart omdat hij pas aan mag na een echte testmail.
 FLAG_REGISTRY.push({
   key: "boekhouding-bonnen-mail",
