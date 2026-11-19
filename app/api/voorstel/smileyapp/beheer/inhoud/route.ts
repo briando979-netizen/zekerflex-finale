@@ -74,6 +74,8 @@ export async function POST(request: Request): Promise<NextResponse> {
       await verwijderBericht(d.id);
       return NextResponse.json({ ok: true });
     }
+    // prijzen en pakketten raken wat de site, de veelgestelde vragen en de chat aan klanten vertellen: alleen een beheerder
+    if (ik.rol !== "beheerder") throw AppError.alleenBeheerder("Alleen een beheerder kan pakketten en prijzen wijzigen.");
     if (d.pakket !== undefined && !isPakketId(d.pakket)) throw AppError.validation("Dit pakket bestaat niet.");
     if (d.actie === "pakket-bewaren") {
       if (!isPakketId(d.pakket)) throw AppError.validation("Dit pakket bestaat niet.");
