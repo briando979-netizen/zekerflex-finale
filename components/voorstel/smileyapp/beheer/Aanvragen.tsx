@@ -75,6 +75,12 @@ function AanvraagKaart({ a, pakketNamen, bijgewerkt, verwijderd }: { a: Aanvraag
             <dd className="font-semibold">{pakket}</dd>
           </div>
         )}
+        {a.bron && (
+          <div>
+            <dt className="font-semibold text-smiley-mute">Bron</dt>
+            <dd className="font-semibold">{a.bron}</dd>
+          </div>
+        )}
         {a.interesses && a.interesses.length > 0 && (
           <div>
             <dt className="font-semibold text-smiley-mute">Interesse in</dt>

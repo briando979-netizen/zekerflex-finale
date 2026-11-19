@@ -8,6 +8,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { valideerAanvraag } from "@/lib/voorstel/smileyapp-aanvraag-regels";
 import { maakAanvraag } from "@/lib/voorstel/smileyapp-aanvragen";
 import { beheerderAdressen } from "@/lib/voorstel/smileyapp-accounts";
+import { telDemoAanvraag } from "@/lib/voorstel/smileyapp-cijfers";
 import { stuurMelding } from "@/lib/voorstel/smileyapp-mail";
 import { beheerVan, smileyPoort } from "@/lib/voorstel/smileyapp-poort";
 
@@ -32,6 +33,8 @@ const schema = z.object({
   dag: z.string().max(10).optional(),
   tijd: z.string().max(5).optional(),
   bericht: z.string().max(4000).optional(),
+  /** waar de bezoeker vandaan kwam (?bron= op de QR-code); een bron die niet klopt valt weg */
+  bron: z.string().max(60).optional(),
   toestemming: z.boolean(),
   /** lokveld: een mens ziet het niet en laat het leeg */
   lokveld: z.string().max(200).optional(),
@@ -52,6 +55,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     await enforceRateLimit({ name: "smileyapp-aanvraag", identifier: ip, limit: 5, windowSeconds: 600, message: "Je hebt net al een paar aanvragen gestuurd. Probeer het over tien minuten opnieuw." });
 
     const aanvraag = await maakAanvraag(controle.waarde);
+    // de teller voor "Cijfers" in het beheer (alleen een aantal per dag); mag mislukken
+    if (aanvraag.soort === "demo") void telDemoAanvraag().catch(() => undefined);
     // de melding mag mislukken: de aanvraag staat al in het beheer
     const beheer = beheerVan(request);
     void beheerderAdressen()

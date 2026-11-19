@@ -34,9 +34,11 @@ interface Props {
   tijden?: readonly string[];
   /** partner: waar iemand interesse in heeft */
   interesses?: readonly string[];
+  /** demo: waar de bezoeker vandaan kwam (?bron= op de QR-code), al gecontroleerd door de pagina */
+  bron?: string;
 }
 
-export function AanvraagFormulier({ soort, kop, mail, teamActief, pakketten = [], gekozenPakket = "", dagen = [], tijden = [], interesses = [] }: Props) {
+export function AanvraagFormulier({ soort, kop, mail, teamActief, pakketten = [], gekozenPakket = "", dagen = [], tijden = [], interesses = [], bron }: Props) {
   const id = `sm-${soort}`;
   const [naam, setNaam] = useState("");
   const [bedrijf, setBedrijf] = useState("");
@@ -78,7 +80,7 @@ export function AanvraagFormulier({ soort, kop, mail, teamActief, pakketten = []
           bericht,
           toestemming,
           lokveld,
-          ...(soort === "demo" ? { pakket, dag, tijd } : { interesses: gekozen }),
+          ...(soort === "demo" ? { pakket, dag, tijd, ...(bron ? { bron } : {}) } : { interesses: gekozen }),
         }),
       });
       const d = (await r.json().catch(() => ({}))) as { error?: { message?: string; details?: { veld?: string } } };

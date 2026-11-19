@@ -36,6 +36,8 @@ export interface Aanvraag {
   interesses?: string[];
   voorkeur?: Voorkeur;
   bericht?: string;
+  /** waar de aanvraag vandaan kwam (?bron=beurs op de QR-code): een kort woord, alleen voor het team */
+  bron?: string;
   status: Status;
   notitie?: string;
   behandeldDoor?: string;
@@ -55,6 +57,7 @@ export interface AanvraagInvoer {
   dag?: string | undefined;
   tijd?: string | undefined;
   bericht?: string | undefined;
+  bron?: string | undefined;
   toestemming: boolean;
 }
 
@@ -105,6 +108,15 @@ export const voorkeurTekst = (v: Voorkeur) => `${dagTekst(v.dag)} om ${v.tijd} u
 
 export const BERICHT_MAX = 2000;
 export const NOTITIE_MAX = 2000;
+export const BRON_MAX = 30;
+
+/** Een bron is een kort woord: alleen letters, cijfers en streepjes, hooguit 30 tekens. Anders: geen bron. */
+export function leesBron(ruw: unknown): string | undefined {
+  if (typeof ruw !== "string") return undefined;
+  const b = ruw.trim().toLowerCase();
+  return b.length <= BRON_MAX && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(b) ? b : undefined;
+}
+
 const TELEFOON = /^\+?[0-9][0-9 ()\-.]{5,24}$/;
 
 /** "tel:+31612345678": alleen cijfers en een plus, voor de bel-link in het beheer. */
@@ -127,7 +139,9 @@ export function valideerAanvraag(i: AanvraagInvoer, nu: Date): Controle {
   if (bericht.length > BERICHT_MAX) return fout("bericht", `Je bericht is te lang (maximaal ${BERICHT_MAX} tekens).`);
   if (i.toestemming !== true) return fout("toestemming", "Vink aan dat SmileyApp contact met je mag opnemen over deze aanvraag.");
 
-  const basis: NieuweAanvraag = { soort: i.soort, naam, bedrijf, email, ...(telefoon ? { telefoon } : {}), ...(bericht ? { bericht } : {}) };
+  // een bron die niet klopt (een verminkte link) houdt de aanvraag niet tegen: hij valt gewoon weg
+  const bron = leesBron(i.bron);
+  const basis: NieuweAanvraag = { soort: i.soort, naam, bedrijf, email, ...(telefoon ? { telefoon } : {}), ...(bericht ? { bericht } : {}), ...(bron ? { bron } : {}) };
 
   if (i.soort === "partner") {
     const gekozen = [...new Set(i.interesses ?? [])];

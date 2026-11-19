@@ -95,3 +95,32 @@
     }
   }
 }
+
+/*
+ * De A5-kaart met de QR-code in het beheer (tab "QR-code"): bij het printen
+ * komt alleen de kaart op het papier, paginavullend en in kleur. Geldt alleen
+ * op een pagina waar zo'n kaart staat (:has), dus nergens anders.
+ */
+@page smkaart { size: A5 portrait; margin: 0; }
+@media print {
+  body:has(.sm-print-kaart) * { visibility: hidden; }
+  body:has(.sm-print-kaart) .sm-print-kaart,
+  body:has(.sm-print-kaart) .sm-print-kaart * { visibility: visible; }
+  .sm-niet-printen { display: none; }
+  .sm-print-kaart {
+    page: smkaart;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    margin: 0;
+    padding: 14mm;
+    border-radius: 0;
+    aspect-ratio: auto;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .sm-print-kaart .font-display { font-size: 2.9rem; }
+  .sm-print-kaart p { font-size: 1.15rem; }
+}
