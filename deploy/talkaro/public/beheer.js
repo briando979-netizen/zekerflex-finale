@@ -19,6 +19,18 @@
   }
   async function actie(body) { try { fout(''); await vraag('actie', body); await laad(); } catch (e) { fout('Dat is niet gelukt. Ververs de pagina en probeer het opnieuw.'); } }
 
+  let pauzeDicht = false;
+  function toonPauze(dicht) {
+    pauzeDicht = dicht === true;
+    $('pauze-stand').className = 'statuschip' + (pauzeDicht ? ' dicht' : '');
+    $('pauze-stand').textContent = pauzeDicht ? 'De site staat op pauze (dicht)' : 'De site is open';
+    const knop = $('pauze-knop');
+    knop.hidden = false;
+    knop.textContent = pauzeDicht ? 'Site weer openzetten' : 'Site op pauze zetten';
+    knop.className = 'knop' + (pauzeDicht ? ' hoofd' : ' gevaar');
+  }
+  $('pauze-knop').addEventListener('click', () => actie({ actie: 'pauze', aan: !pauzeDicht }));
+
   async function laad() {
     let d;
     try { d = await vraag('overzicht'); }
@@ -31,6 +43,7 @@
     }
     try { sessionStorage.setItem('tk_beheer', geheim); } catch (e) { /* */ }
     $('inlog').hidden = true; $('inhoud').hidden = false; $('inlog-fout').hidden = true;
+    toonPauze(d.pauze);
     const cijfer = (n, tekst) => h('div', { class: 'cijfer' }, h('b', {}, n), h('span', {}, tekst));
     $('cijfers').replaceChildren(cijfer(d.online, 'nu online'), cijfer(d.gesprekkenNu, 'gesprekken nu'), cijfer(d.zoekend, 'zoeken nu'), cijfer(d.vandaag.gesprekken || 0, 'gesprekken vandaag'),
       cijfer(d.vandaag.meldingen || 0, 'meldingen vandaag'), cijfer(d.openMeldingen, 'meldingen open'), cijfer(d.blokkades.length, 'nu geblokkeerd'));

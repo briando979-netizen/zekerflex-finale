@@ -50,6 +50,7 @@
         </button>
       </div>
       <p class="leeftijd"><b>Alleen voor 18 jaar en ouder.</b> Je bevestigt dat zelf; wij controleren je leeftijd niet.</p>
+      <p class="of-vriend"><button type="button" class="knop vriend" id="btn-vriend">Of nodig een vriend uit voor een privégesprek</button></p>
     </section>
 
     <section class="drie" aria-label="Goed om te weten">
@@ -93,6 +94,11 @@
             <video id="remote" autoplay playsinline></video>
             <span class="vlabel">Vreemde</span>
             <div class="vwacht" id="vspin"><span class="lader" aria-hidden="true"></span><span id="vtekst">Zoeken…</span></div>
+            <div class="vwaarschuw" id="vwaarschuw" role="alert" hidden>
+              <svg viewBox="0 0 24 24" width="40" height="40" aria-hidden="true"><path d="M12 3l9 16H3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.1" fill="currentColor"/></svg>
+              <b>Mogelijk ongepast beeld</b>
+              <span>Het gesprek is automatisch gestopt.</span>
+            </div>
           </div>
           <div class="vbox ik">
             <video id="local" autoplay playsinline muted></video>
@@ -169,6 +175,24 @@
     </div>
   </dialog>
 
+  <dialog id="vriend" aria-labelledby="vriend-kop">
+    <div class="venster">
+      <h2 id="vriend-kop">Nodig een vriend uit</h2>
+      <p class="uitleg" id="vriend-uitleg">Deel deze link met één iemand. Wie de link opent, komt rechtstreeks bij jou terecht in een privégesprek, buiten de willekeurige wachtrij om.</p>
+      <div class="deelrij" id="vriend-deel">
+        <label class="sr" for="vriend-link">Deelbare link</label>
+        <input type="text" id="vriend-link" readonly aria-describedby="vriend-uitleg" />
+        <button type="button" class="knop" id="vriend-kopieer">Kopieer</button>
+      </div>
+      <p class="uitleg">De uitnodiging blijft ongeveer 10 minuten geldig terwijl je wacht. Deel hem alleen met iemand die je vertrouwt.</p>
+      <div class="knoppen">
+        <button type="button" class="knop" id="vriend-annuleer">Annuleren</button>
+        <button type="button" class="knop" id="vriend-tekst">Wachten met tekst</button>
+        <button type="button" class="knop hoofd" id="vriend-video">Wachten met video</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog id="vraag" aria-labelledby="vraag-kop">
     <div class="venster smal">
       <h2 id="vraag-kop">Weet je het zeker?</h2>
@@ -178,5 +202,7 @@
 
   <script src="/app.js"></script>
   <script src="/games.js"></script>
+  <!-- De automatische bloot-controle: een module (laadt tfjs + het model pas zodra er een videogesprek begint). -->
+  <script type="module" src="/bloot.js"></script>
 </body>
 </html>
