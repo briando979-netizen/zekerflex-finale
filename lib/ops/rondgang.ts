@@ -9,6 +9,8 @@ import { draaiWerkgeverRondgang, type WerkgeverRondgang } from "@/lib/ops/rondga
 import { CITIES, REGIO_STEDEN } from "@/lib/seo-cities";
 import { SECTORS } from "@/lib/seo-sectors";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
+import { isNietFlexwerkPad } from "@/lib/marketing/flexwerk-only";
+import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
 export { beoordeel, type RondgangProbleem };
 
@@ -80,18 +82,23 @@ export function stadSteekproef(dag: number, steden: readonly string[] = CITIES.m
   return uit;
 }
 
-export function openbareRoutes(paginas: readonly { route: string; dynamic: boolean }[] = APP_PAGES): string[] {
+export function openbareRoutes(
+  paginas: readonly { route: string; dynamic: boolean }[] = APP_PAGES,
+  // vlag `publiek-alleen-flexwerk`: dan vallen de verborgen niet-flexwerk-pagina's ook buiten de rondgang (anders melden ze vals kapot)
+  alleenFlexwerk = false,
+): string[] {
   return paginas
     .filter((p) => !p.dynamic)
     .map((p) => p.route)
     .filter((r) => !PRIVE.some((p) => r === p || r.startsWith(p.endsWith("/") ? p : `${p}/`)))
     .filter((r) => !OVERSLAAN.has(r))
+    .filter((r) => !alleenFlexwerk || !isNietFlexwerkPad(r))
     .sort();
 }
 
 /** Alle openbare adressen van deze nacht: de vaste pagina's, de vaste extra adressen en de steekproef van stadspagina's. */
-export function rondgangRoutes(nu: Date = new Date()): string[] {
-  return [...openbareRoutes(), ...EXTRA_ADRESSEN, ...stadSteekproef(dagNummer(nu))];
+export function rondgangRoutes(nu: Date = new Date(), alleenFlexwerk = false): string[] {
+  return [...openbareRoutes(APP_PAGES, alleenFlexwerk), ...EXTRA_ADRESSEN, ...stadSteekproef(dagNummer(nu))];
 }
 
 async function haal(url: string): Promise<{ status: number | null; body: string; contentType: string }> {
@@ -111,7 +118,8 @@ async function haal(url: string): Promise<{ status: number | null; body: string;
 /** Haalt elke openbare vaste pagina op (3 tegelijk) en meldt wat kapot is. */
 export async function draaiRondgang(basis = env.APP_BASE_URL, gelijktijdig = 3): Promise<RondgangUitslag> {
   const t0 = Date.now();
-  const routes = rondgangRoutes();
+  const alleenFlexwerk = await alleenFlexwerkAan().catch(() => false);
+  const routes = rondgangRoutes(new Date(), alleenFlexwerk);
   const base = basis.replace(/\/+$/, "");
   const problemen: RondgangProbleem[] = [];
   let i = 0;

@@ -15,6 +15,8 @@ import { eigenPaginas } from "@/lib/marketing/aanbod";
 import { aanbodBeelden } from "@/lib/marketing/aanbod-beeld";
 import { paginaLijst } from "@/lib/ontwerp/paginas-store";
 import { rijschoolPadenVoorSitemap } from "@/lib/rijschool/vindbaar";
+import { isNietFlexwerkPad } from "@/lib/marketing/flexwerk-only";
+import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
 type Freq = "never" | "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly";
 
@@ -56,7 +58,7 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     priority,
   });
 
-  return [
+  const regels: MetadataRoute.Sitemap = [
     // Pillars
     entry("/", 1, "weekly"),
     entry("/bedrijven", 0.9, "weekly"),
@@ -185,4 +187,11 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     // Websites van rijscholen op zekerflex.com (met een actief eigen domein: daar een eigen sitemap)
     ...(await rijschoolPadenVoorSitemap().catch(() => [])).map((p) => entry(p.pad, 0.5, "weekly", p.bijgewerkt)),
   ];
+
+  // Vlag `publiek-alleen-flexwerk`: de niet-flexwerk-pagina's (shop, apps, online-tools, website/webshop maken,
+  // branche-software, developers, …) vallen uit de sitemap. Ze blijven bestaan en bereikbaar via een directe link.
+  if (await alleenFlexwerkAan().catch(() => false)) {
+    return regels.filter((r) => !isNietFlexwerkPad(r.url.slice(SITE.url.length)));
+  }
+  return regels;
 }
