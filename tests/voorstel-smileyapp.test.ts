@@ -247,7 +247,9 @@ describe("SmileyApp-voorstel: de AI-assistent", () => {
     // de route en de layout vragen het aan dezelfde bron, en de actie "mens" wordt zonder team geweigerd vóór er iets bewaard is
     const r = lees("app/api/voorstel/smileyapp/chat/route.ts");
     expect(r).toContain("const medewerker = await heeftTeam();");
-    expect(r).toContain("smileyappKennis({ medewerker })");
+    // 19 nov 2026 (deel 2): de chat krijgt ook de pakketten zoals de site ze nu toont (het team kan prijzen aanpassen in
+    // het beheer), zodat site, veelgestelde vragen en chat nooit iets anders zeggen. Was: "smileyappKennis({ medewerker })".
+    expect(r).toContain("smileyappKennis({ medewerker, pakketten: await smileyappPakketten() })");
     expect(r.indexOf("if (!medewerker) throw")).toBeGreaterThan(0);
     expect(r.indexOf("if (!medewerker) throw")).toBeLessThan(r.indexOf("await voegBerichtToe("));
     const layout = lees("app/voorstel/smileyapp/layout.tsx");

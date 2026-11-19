@@ -8,8 +8,12 @@ import { BASE, beeld } from "@/lib/voorstel/smileyapp";
 import type { Aanvraag } from "@/lib/voorstel/smileyapp-aanvraag-regels";
 import { API, ApiFout, BEHEER_API, Melding, foutTekst, vraag } from "@/components/voorstel/smileyapp/beheer/api";
 import { Aanvragen } from "@/components/voorstel/smileyapp/beheer/Aanvragen";
+import { BlogBeheer } from "@/components/voorstel/smileyapp/beheer/BlogBeheer";
+import { Cijfers } from "@/components/voorstel/smileyapp/beheer/Cijfers";
 import { Gesprekken } from "@/components/voorstel/smileyapp/beheer/Gesprekken";
 import { Overzicht, type TabSleutel } from "@/components/voorstel/smileyapp/beheer/Overzicht";
+import { PakkettenBeheer } from "@/components/voorstel/smileyapp/beheer/PakkettenBeheer";
+import { QrCode } from "@/components/voorstel/smileyapp/beheer/QrCode";
 import { Team } from "@/components/voorstel/smileyapp/beheer/Team";
 
 // Het beheer van SmileyApp als eigen scherm (zonder de omlijsting van de site,
@@ -23,6 +27,10 @@ const TABS: readonly (readonly [TabSleutel, string])[] = [
   ["demo", "Demo-aanvragen"],
   ["partners", "Partners"],
   ["gesprekken", "Gesprekken"],
+  ["cijfers", "Cijfers"],
+  ["blog", "Blog"],
+  ["pakketten", "Pakketten"],
+  ["qr", "QR-code"],
   ["team", "Team"],
 ];
 const isTab = (h: string): h is TabSleutel => TABS.some(([k]) => k === h);
@@ -109,7 +117,7 @@ export function SmileyBeheer({ wie, via, vandaag, pakketNamen }: { wie: string; 
 
   const aanvragen = data?.aanvragen ?? [];
   const nieuw = (soort: Aanvraag["soort"]) => aanvragen.filter((a) => a.soort === soort && a.status === "nieuw").length;
-  const teller: Record<TabSleutel, number> = { overzicht: 0, demo: nieuw("demo"), partners: nieuw("partner"), gesprekken: data?.tellers.chatWacht ?? 0, team: 0 };
+  const teller: Record<TabSleutel, number> = { overzicht: 0, demo: nieuw("demo"), partners: nieuw("partner"), gesprekken: data?.tellers.chatWacht ?? 0, cijfers: 0, blog: 0, pakketten: 0, qr: 0, team: 0 };
   const titel = TABS.find(([k]) => k === tab)?.[1] ?? "";
   // smal (px-3) op de telefoon: logo, "Website" en "Uitloggen" passen dan ook op 320 px naast elkaar
   const LICHT = "rounded-full px-3 py-2 text-sm font-semibold text-white ring-1 ring-white/25 hover:bg-white/10 sm:px-4";
@@ -117,7 +125,7 @@ export function SmileyBeheer({ wie, via, vandaag, pakketNamen }: { wie: string; 
 
   return (
     <div className="min-h-screen bg-smiley-cream lg:grid lg:grid-cols-[264px_1fr]">
-      <aside className="bg-smiley-ink text-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:overflow-y-auto">
+      <aside className="sm-niet-printen bg-smiley-ink text-white lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:overflow-y-auto">
         <div className="flex items-center justify-between gap-3 px-4 py-3 lg:block lg:px-6 lg:pb-4 lg:pt-7">
           <Link href={BASE} aria-label="Naar de website van Smileyapp" className="flex items-center gap-3">
             <Image src={beeld("logo.webp")} alt="" width={500} height={260} priority className="h-10 w-auto lg:h-16" />
@@ -186,6 +194,10 @@ export function SmileyBeheer({ wie, via, vandaag, pakketNamen }: { wie: string; 
           {tab === "demo" && data && <Aanvragen key="demo" soort="demo" lijst={aanvragen} pakketNamen={pakketNamen} bijgewerkt={bijgewerkt} verwijderd={verwijderd} />}
           {tab === "partners" && data && <Aanvragen key="partner" soort="partner" lijst={aanvragen} pakketNamen={pakketNamen} bijgewerkt={bijgewerkt} verwijderd={verwijderd} />}
           {tab === "gesprekken" && <Gesprekken bijgewerkt={herlaad} />}
+          {tab === "cijfers" && <Cijfers />}
+          {tab === "blog" && <BlogBeheer vandaag={vandaag} />}
+          {tab === "pakketten" && <PakkettenBeheer />}
+          {tab === "qr" && <QrCode />}
           {tab === "team" && <Team bijgewerkt={herlaad} />}
         </div>
       </div>

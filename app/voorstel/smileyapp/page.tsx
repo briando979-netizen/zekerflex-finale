@@ -4,14 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   BASE,
-  BLOG,
   CONTACT,
   FUNCTIES,
   HERO,
   JOIN,
   KERNWOORDEN,
   KLANTEN,
-  PAKKETTEN,
   PAKKETTEN_KOP,
   QUOTES,
   SLOGAN,
@@ -22,11 +20,19 @@ import {
   datumTekst,
   veelgesteld,
 } from "@/lib/voorstel/smileyapp";
+import { zichtbareBerichten } from "@/lib/voorstel/smileyapp-blog";
+import { BRANCHE_LIJST, brancheLink } from "@/lib/voorstel/smileyapp-branches";
+import { smileyappPakketten } from "@/lib/voorstel/smileyapp-pakketten";
+import { BlogBeeld } from "@/components/voorstel/smileyapp/BlogBeeld";
+import { PakketKiezer } from "@/components/voorstel/smileyapp/PakketKiezer";
+import { ProbeerZelf } from "@/components/voorstel/smileyapp/ProbeerZelf";
 import { SwipeSmiley } from "@/components/voorstel/smileyapp/SwipeSmiley";
 import { VimeoVideo } from "@/components/voorstel/smileyapp/VimeoVideo";
 import { Gezicht } from "@/components/voorstel/smileyapp/Gezicht";
 import { Kopje, PakketKaart, Vinkje } from "@/components/voorstel/smileyapp/Blokken";
 
+// dynamisch: de pakketten (prijs, looptijd, onderdelen) en de blog volgen wat het team in het beheer aanpast
+export const dynamic = "force-dynamic";
 // absolute: anders plakt de layout er "· Smileyapp (ontwerpvoorstel)" achter
 export const metadata: Metadata = { title: { absolute: "Smileyapp · klanttevredenheid meten (ontwerpvoorstel)" } };
 
@@ -58,8 +64,13 @@ function Kop() {
   );
 }
 
-export default function SmileyappHome() {
-  const vragen = veelgesteld();
+/** De vraag in "Probeer het zelf": een voorbeeld van ZekerFlex, geen vraag van een echte klant. */
+const VOORBEELDVRAAG = "Hoe tevreden ben je over je bezoek van vandaag?";
+
+export default async function SmileyappHome() {
+  // één bron voor de prijskaarten, de pakketkiezer en de veelgestelde vragen: ze kunnen nooit iets anders zeggen
+  const [pakketten, berichten] = await Promise.all([smileyappPakketten(), zichtbareBerichten()]);
+  const vragen = veelgesteld(pakketten);
   return (
     <>
       {/* Hero */}
@@ -192,6 +203,18 @@ export default function SmileyappHome() {
         </div>
       </section>
 
+      {/* Probeer het zelf */}
+      <section id="probeer" aria-labelledby="probeer-kop" className="scroll-mt-24 py-20 lg:py-28">
+        <div className="mx-auto max-w-[1200px] px-4 sm:px-8">
+          <Kopje boven="Probeer het zelf" kop="Swipe, en zie wat er daarna gebeurt" id="probeer-kop">
+            <p className="mt-5 max-w-2xl text-lg leading-relaxed text-smiley-mute">{STAPPEN[1]?.tekst} Hieronder zie je hoe dat gaat, met een voorbeeldvraag en voorbeeldcijfers.</p>
+          </Kopje>
+          <div className="sm-onthul mt-12">
+            <ProbeerZelf vraag={VOORBEELDVRAAG} />
+          </div>
+        </div>
+      </section>
+
       {/* Video */}
       <section id="video" aria-labelledby="video-kop" className="relative scroll-mt-24 overflow-hidden bg-smiley-ink py-20 text-white lg:py-28">
         <div aria-hidden="true" className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-smiley-green/20 blur-3xl" />
@@ -213,11 +236,14 @@ export default function SmileyappHome() {
         <div className="mx-auto max-w-[1200px] px-4 sm:px-8">
           <Kopje boven="Pakketten" kop={PAKKETTEN_KOP} id="pakketten-kop" />
           <div className="mt-14 grid gap-x-5 gap-y-10 md:grid-cols-2 xl:grid-cols-4">
-            {PAKKETTEN.map((p) => (
+            {pakketten.map((p) => (
               <div key={p.id} className="sm-onthul">
                 <PakketKaart p={p} />
               </div>
             ))}
+          </div>
+          <div className="sm-onthul mt-16">
+            <PakketKiezer pakketten={pakketten} />
           </div>
         </div>
       </section>
@@ -250,6 +276,28 @@ export default function SmileyappHome() {
         </div>
       </section>
 
+      {/* Branches */}
+      <section aria-labelledby="branches-kop" className="py-20 lg:py-28">
+        <div className="mx-auto max-w-[1200px] px-4 sm:px-8">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <Kopje boven="Branches" kop={VIDEO.bovenkop} id="branches-kop" />
+            <Link href={`${BASE}/branches`} className="sm-onthul rounded-full px-5 py-3 font-bold text-smiley-ink ring-1 ring-smiley-ink/20 hover:bg-smiley-mint">
+              Alle branches
+            </Link>
+          </div>
+          <ul className="sm-onthul mt-10 grid grid-cols-2 gap-3 md:grid-cols-5">
+            {BRANCHE_LIJST.map((b) => (
+              <li key={b.slug}>
+                <Link href={brancheLink(b.slug)} className="sm-til flex h-full flex-col items-start gap-3 rounded-3xl bg-white p-5 ring-1 ring-smiley-ink/10 hover:ring-smiley-green">
+                  <Gezicht score={b.smiley} kleur="#5ABA8E" accent="#FDD11A" className="h-10 w-10" />
+                  <span className="break-words font-display text-lg font-bold leading-tight">{b.naam}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
       {/* Kernwoorden */}
       <section aria-labelledby="kern-kop" className="bg-white py-20 lg:py-28">
         <div className="mx-auto max-w-[1200px] px-4 sm:px-8">
@@ -272,7 +320,12 @@ export default function SmileyappHome() {
       {/* Klanten */}
       <section id="klanten" aria-labelledby="klanten-kop" className="scroll-mt-24 py-20 lg:py-28">
         <div className="mx-auto max-w-[1200px] px-4 sm:px-8">
-          <Kopje boven="Ervaringen" kop="Wat onze klanten zeggen" id="klanten-kop" />
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <Kopje boven="Ervaringen" kop="Wat onze klanten zeggen" id="klanten-kop" />
+            <Link href={`${BASE}/klanten`} className="sm-onthul rounded-full px-5 py-3 font-bold text-smiley-ink ring-1 ring-smiley-ink/20 hover:bg-smiley-mint">
+              Lees de verhalen
+            </Link>
+          </div>
           <div className="mt-12 grid gap-6 lg:grid-cols-2">
             {QUOTES.map((q) => (
               <figure key={q.naam} className="sm-onthul relative rounded-[2rem] bg-white p-7 shadow-[0_30px_70px_-45px_rgba(14,42,32,0.5)] ring-1 ring-smiley-ink/10 sm:p-9">
@@ -372,10 +425,10 @@ export default function SmileyappHome() {
             </Link>
           </div>
           <ul className="mt-12 grid gap-6 md:grid-cols-3">
-            {BLOG.slice(0, 3).map((b) => (
+            {berichten.slice(0, 3).map((b) => (
               <li key={b.slug} className="sm-onthul">
                 <Link href={`${BASE}/blog/${b.slug}`} className="sm-til group block h-full overflow-hidden rounded-[2rem] bg-smiley-cream ring-1 ring-smiley-ink/5">
-                  <Image src={b.beeld} alt="" width={b.breed} height={b.hoog} sizes="(min-width: 768px) 380px, 100vw" className="aspect-[16/9] w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <BlogBeeld beeld={b.beeld} sizes="(min-width: 768px) 380px, 100vw" className="aspect-[16/9] w-full transition-transform duration-500 group-hover:scale-105" />
                   <div className="p-6">
                     <p className="text-xs font-bold uppercase tracking-wider text-smiley-leaf">{datumTekst(b.datum)}</p>
                     <h3 className="mt-2 font-display text-xl font-bold leading-tight">{b.titel}</h3>

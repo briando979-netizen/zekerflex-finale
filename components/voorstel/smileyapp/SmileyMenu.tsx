@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BASE, KLANTLOGIN, MENU } from "@/lib/voorstel/smileyapp";
+import { BASE, KLANTLOGIN, MENU, MENU_FOOTER } from "@/lib/voorstel/smileyapp";
 
 // Het menu op de telefoon (onder lg): een knop die het menu onder de kop
 // uitklapt. Sluit na een keuze, bij een andere pagina en met Escape.
@@ -46,7 +46,7 @@ export function SmileyMenu() {
       {open && (
         <nav id="sm-menu" aria-label="Menu" className="absolute inset-x-0 top-full border-b border-smiley-ink/10 bg-white px-4 pb-6 pt-2 shadow-[0_30px_60px_-30px_rgba(14,42,32,0.45)]">
           <ul className="divide-y divide-smiley-ink/10">
-            {MENU.map((m) => (
+            {[...MENU, ...MENU_FOOTER].map((m) => (
               <li key={m.href}>
                 <Link href={m.href} onClick={() => setOpen(false)} className="flex items-center justify-between py-3.5 font-display text-lg font-bold text-smiley-ink">
                   {m.label}

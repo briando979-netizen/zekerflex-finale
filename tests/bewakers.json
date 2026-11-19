@@ -54,6 +54,7 @@
     "tests/verzekering-eerlijk.test.ts",
     "tests/voorstel-indoor-regels.test.ts",
     "tests/voorstel-smileyapp-beheer.test.ts",
+    "tests/voorstel-smileyapp-deel2.test.ts",
     "tests/voorstel-smileyapp.test.ts",
     "tests/voorstel-sollicitatie-regels.test.ts",
     "tests/werker-taal-bewaker.test.ts",

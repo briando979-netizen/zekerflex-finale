@@ -4,13 +4,14 @@ import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import "./smiley.css";
-import { BASE, CONTACT, KLANTLOGIN, MENU, OFFICIELE_SITE, PRIVACY, SLOGAN, VOORSTEL_BAND, VOORWAARDEN, beeld } from "@/lib/voorstel/smileyapp";
+import { BASE, CONTACT, KLANTLOGIN, MENU, MENU_FOOTER, OFFICIELE_SITE, PRIVACY, SLOGAN, VOORSTEL_BAND, VOORWAARDEN, beeld } from "@/lib/voorstel/smileyapp";
 import { heeftTeam } from "@/lib/voorstel/smileyapp-accounts";
 import { VOORSTEL_HEADER } from "@/lib/voorstel/subdomein";
 import { AlleenOpSite } from "@/components/voorstel/AlleenOpSite";
 import { KortAdres } from "@/components/voorstel/KortAdres";
 import { SmileyMenu } from "@/components/voorstel/smileyapp/SmileyMenu";
 import { SmileyChat } from "@/components/voorstel/smileyapp/SmileyChat";
+import { SmileyTeller } from "@/components/voorstel/smileyapp/SmileyTeller";
 import { Gezicht } from "@/components/voorstel/smileyapp/Gezicht";
 
 // Ontwerpvoorstel: een nieuwe website én app (PWA) voor SmileyApp, gebouwd op
@@ -53,6 +54,8 @@ export default async function SmileyappLayout({ children }: { children: ReactNod
         Naar de inhoud
       </a>
       {subdomein && <KortAdres basis={BASE} />}
+      {/* telt paginaweergaven voor "Cijfers" in het beheer: zonder cookie, en niet in het beheer zelf */}
+      <SmileyTeller />
       {/* de omlijsting van de site; in het beheer valt hij weg (de band blijft hier in de layout staan) */}
       <AlleenOpSite basis={BASE}>
       <div aria-hidden="true" className="sm-voortgang fixed inset-x-0 top-0 z-[70] h-1 bg-gradient-to-r from-smiley-green via-smiley-sun to-smiley-green" />
@@ -71,7 +74,8 @@ export default async function SmileyappLayout({ children }: { children: ReactNod
           <nav aria-label="Hoofdmenu" className="hidden lg:block">
             <ul className="flex items-center gap-1">
               {MENU.map((m) => (
-                <li key={m.href}>
+                // een link met breed: true past pas vanaf xl in de kop (op 1024 px is hij vol); hij staat ook in het uitklapmenu en de footer
+                <li key={m.href} className={m.breed ? "hidden xl:block" : undefined}>
                   <Link href={m.href} className="rounded-full px-3.5 py-2 text-sm font-semibold text-smiley-ink transition-colors hover:bg-smiley-mint">
                     {m.label}
                   </Link>
@@ -124,7 +128,7 @@ export default async function SmileyappLayout({ children }: { children: ReactNod
           <nav aria-label="Smileyapp">
             <p className={FOOTERKOP}>Smileyapp</p>
             <ul className="mt-4 space-y-2.5 text-sm">
-              {MENU.map((m) => (
+              {[...MENU, ...MENU_FOOTER].map((m) => (
                 <li key={m.href}>
                   <Link href={m.href} className={FOOTERLINK}>
                     {m.label}

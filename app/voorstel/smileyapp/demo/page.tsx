@@ -2,10 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BASE, CONTACT, FUNCTIES, HERO, KLANTLOGIN, PAKKETTEN, STAPPEN, pakket } from "@/lib/voorstel/smileyapp";
 import { TIJDEN, dagTekst, voorkeurDagen } from "@/lib/voorstel/smileyapp-aanvraag-regels";
+import { leesBron } from "@/lib/voorstel/smileyapp-aanvraag-regels";
 import { heeftTeam } from "@/lib/voorstel/smileyapp-accounts";
+import { smileyappPakketten } from "@/lib/voorstel/smileyapp-pakketten";
 import { AanvraagFormulier } from "@/components/voorstel/smileyapp/AanvraagFormulier";
 import { Vinkje } from "@/components/voorstel/smileyapp/Blokken";
 import { Gezicht } from "@/components/voorstel/smileyapp/Gezicht";
+import { PakketKiezer } from "@/components/voorstel/smileyapp/PakketKiezer";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Vraag een demo aan" };
@@ -13,11 +16,15 @@ export const metadata: Metadata = { title: "Vraag een demo aan" };
 // Demo aanvragen (19 nov 2026): links wat Smileyapp doet (alleen teksten van
 // hun eigen site, uit lib/voorstel/smileyapp.ts), rechts het formulier. De
 // aanvraag komt in het beheer van SmileyApp; het gekozen moment is een voorkeur.
-// ?pakket=<id> vanaf een prijskaart kiest dat pakket alvast.
-export default async function SmileyappDemo({ searchParams }: { searchParams: Promise<{ pakket?: string | string[] }> }) {
-  const q = (await searchParams).pakket;
-  const gekozen = pakket(Array.isArray(q) ? q[0] : q);
-  const team = await heeftTeam();
+// ?pakket=<id> vanaf een prijskaart kiest dat pakket alvast. ?bron=<woord> (van de
+// QR-code uit het beheer) gaat mee met de aanvraag, zodat het team ziet waar hij
+// vandaan kwam. Boven het formulier staat de pakketkiezer als hulpje.
+export default async function SmileyappDemo({ searchParams }: { searchParams: Promise<{ pakket?: string | string[]; bron?: string | string[] }> }) {
+  const sp = await searchParams;
+  const q = sp.pakket;
+  const bron = leesBron(Array.isArray(sp.bron) ? sp.bron[0] : sp.bron);
+  const [team, pakketten] = await Promise.all([heeftTeam(), smileyappPakketten()]);
+  const gekozen = pakket(Array.isArray(q) ? q[0] : q, pakketten);
   // de dagen in Nederlandse tijd, op de server berekend: server en browser tonen dezelfde lijst
   const dagen = voorkeurDagen(new Date()).map((d) => ({ waarde: d, label: dagTekst(d) }));
   return (
@@ -76,8 +83,12 @@ export default async function SmileyappDemo({ searchParams }: { searchParams: Pr
             .
           </p>
         </div>
+        <div className="space-y-6">
+        <PakketKiezer pakketten={pakketten} compact />
         <AanvraagFormulier
+          key={gekozen?.id ?? "geen"}
           soort="demo"
+          {...(bron ? { bron } : {})}
           kop="Plan je demo"
           mail={CONTACT.email}
           teamActief={team}
@@ -86,6 +97,7 @@ export default async function SmileyappDemo({ searchParams }: { searchParams: Pr
           dagen={dagen}
           tijden={TIJDEN}
         />
+        </div>
       </section>
     </>
   );

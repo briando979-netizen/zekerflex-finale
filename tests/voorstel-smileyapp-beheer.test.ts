@@ -49,6 +49,8 @@ vi.mock("@/lib/mail", () => ({
     return { id: "t", delivered: h.afgeleverd, transport: "mailbox" };
   },
 }));
+// 19 nov 2026 (deel 2): de aanvraagroute telt een demo-aanvraag voor "Cijfers" (Redis). Hier niet: geen verbinding in een test.
+vi.mock("@/lib/voorstel/smileyapp-cijfers", () => ({ telDemoAanvraag: async () => undefined, telWeergave: async () => undefined }));
 vi.mock("@/lib/rate-limit", () => ({ enforceRateLimit: async () => ({ ok: true }), fixedWindow: async () => ({ ok: true }) }));
 
 import { AppError } from "@/lib/errors";
@@ -612,10 +614,14 @@ describe("bronbewakers", () => {
       "app/api/voorstel/smileyapp/aanvraag/route.ts",
       "app/api/voorstel/smileyapp/account/route.ts",
       "app/api/voorstel/smileyapp/beheer/chat/route.ts",
+      // deel 2 (19 nov 2026): blog, pakketten en cijfers (inhoud), de QR-code als bestand (qr) en de paginateller (tel)
+      "app/api/voorstel/smileyapp/beheer/inhoud/route.ts",
+      "app/api/voorstel/smileyapp/beheer/qr/route.ts",
       "app/api/voorstel/smileyapp/beheer/route.ts",
       "app/api/voorstel/smileyapp/beheer/team/route.ts",
       "app/api/voorstel/smileyapp/chat/[id]/route.ts",
       "app/api/voorstel/smileyapp/chat/route.ts",
+      "app/api/voorstel/smileyapp/tel/route.ts",
     ]);
   });
 
@@ -648,10 +654,11 @@ describe("bronbewakers", () => {
   });
 
   it("elke handler van het beheer: poort → sessie of PLATFORM_ADMIN → pas dan de body; wijzigen in het team alleen als beheerder", () => {
-    expect(BEHEER_ROUTES).toHaveLength(3);
+    // deel 2: vijf routes (was 3). De QR-route geeft alleen een bestand terug en heeft dus één handler (was: minstens 2).
+    expect(BEHEER_ROUTES).toHaveLength(5);
     for (const r of BEHEER_ROUTES) {
       const lijst = handlers(lees(r));
-      expect(lijst.length, r).toBeGreaterThanOrEqual(2);
+      expect(lijst.length, r).toBeGreaterThanOrEqual(r.endsWith("/qr/route.ts") ? 1 : 2);
       for (const hnd of lijst) {
         const naam = hnd.slice(0, hnd.indexOf("("));
         const poort = hnd.indexOf("await smileyPoort(request");
