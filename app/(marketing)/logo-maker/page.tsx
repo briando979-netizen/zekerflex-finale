@@ -120,7 +120,7 @@ export default async function LogoMakerPage() {
               <li key={v.sleutel} className="relative overflow-hidden rounded-3xl border border-hair bg-white shadow-card">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={`/api/logo-maker/voorbeeld/${v.sleutel}`} alt={`Voorbeeld van een logo voor ${v.invoer.naam} (${LOGOS.find((l) => l.nr === v.logo)?.naam.toLowerCase()})`} width={720} height={540} loading="lazy" className="block aspect-[4/3] h-auto w-full" />
-                <span className="absolute left-4 top-4 rounded-full bg-ink/85 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">Voorbeeld</span>
+                <p className="border-t border-hair px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-neutralx-500">Voorbeeld, verzonnen bedrijf</p>
               </li>
             ))}
           </ul>
