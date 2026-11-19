@@ -27,7 +27,11 @@ interface Letter {
   factor: number;
 }
 
-const TYPE: Record<SfeerId, Letter> = {
+/** De eerste versie kende vier sferen; een aanvraag van toen heeft er altijd een van (lib/logo/ontwerp2.ts doet de rest). */
+type OudeSfeer = "strak" | "speels" | "klassiek" | "stoer";
+const oud = (s: SfeerId): OudeSfeer => (s === "speels" || s === "klassiek" || s === "stoer" ? s : "strak");
+
+const TYPE: Record<OudeSfeer, Letter> = {
   strak: { font: LETTER.tekst, gewicht: 600, hoofdletters: false, spatie: -0.02, factor: 0.52 },
   speels: { font: LETTER.kop, gewicht: 800, hoofdletters: false, spatie: -0.025, factor: 0.56 },
   klassiek: { font: LETTER.serif, gewicht: 400, hoofdletters: true, spatie: 0.07, factor: 0.6 },
@@ -96,10 +100,10 @@ function slogan(c: Ctx, breedte: number, max = 40, extra: Stijl = {}): ReactElem
 function monogram(c: Ctx, zijde: number): ReactElement {
   const letters = initialen(c.i.naam);
   const rand = Math.max(2, c.p(zijde * 0.055));
-  const straal: Record<SfeerId, string> = { strak: `${c.p(zijde * 0.24)}px`, speels: `${c.p(zijde)}px`, klassiek: `${c.p(zijde)}px`, stoer: `${c.p(zijde * 0.14)}px ${c.p(zijde * 0.14)}px ${c.p(zijde * 0.5)}px ${c.p(zijde * 0.5)}px` };
+  const straal: Record<OudeSfeer, string> = { strak: `${c.p(zijde * 0.24)}px`, speels: `${c.p(zijde)}px`, klassiek: `${c.p(zijde)}px`, stoer: `${c.p(zijde * 0.14)}px ${c.p(zijde * 0.14)}px ${c.p(zijde * 0.5)}px ${c.p(zijde * 0.5)}px` };
   const letterMaat = zijde * (letters.length > 1 ? (c.i.sfeer === "stoer" ? 0.5 : 0.42) : c.i.sfeer === "stoer" ? 0.62 : 0.56);
   const tekst = vak({ fontFamily: c.l.font, fontWeight: c.l.gewicht, fontSize: c.p(letterMaat), letterSpacing: c.p(letterMaat * (c.i.sfeer === "klassiek" ? 0.04 : -0.02)), lineHeight: 1, color: c.k.vol ? c.k.opVorm : c.k.hoofd, marginTop: c.p(c.i.sfeer === "stoer" ? -zijde * 0.06 : 0) }, letters);
-  const basis: Stijl = { width: c.p(zijde), height: c.p(zijde), borderRadius: straal[c.i.sfeer], alignItems: "center", justifyContent: "center", flexShrink: 0, position: "relative" };
+  const basis: Stijl = { width: c.p(zijde), height: c.p(zijde), borderRadius: straal[oud(c.i.sfeer)], alignItems: "center", justifyContent: "center", flexShrink: 0, position: "relative" };
   const vlak = c.k.vol ? { background: c.k.hoofd } : { border: `${rand}px solid ${c.k.hoofd}` };
   const kinderen: ReactNode[] = [];
   if (c.i.sfeer === "klassiek") kinderen.push(vak({ position: "absolute", left: c.p(zijde * 0.07), top: c.p(zijde * 0.07), width: c.p(zijde * 0.86), height: c.p(zijde * 0.86), borderRadius: c.p(zijde), border: `${Math.max(1, c.p(zijde * 0.012))}px solid ${c.k.vol ? c.k.opVorm : c.k.hoofd}`, opacity: 0.7 }));
@@ -312,8 +316,8 @@ export function logoBoom(nr: LogoNr, invoer: LogoInvoer, variant: VariantId, bre
   const schaal = breedte / basisB;
   const p: Maat = (n) => Math.round(n * schaal * 100) / 100;
   const kleur = kleurHex(invoer.kleur);
-  const c: Ctx = { i: invoer, l: TYPE[invoer.sfeer], k: palet(variant, kleur), p };
-  const beeld = vierkant ? icoon(c, nr, kleur) : LOGO[nr](c);
+  const c: Ctx = { i: invoer, l: TYPE[oud(invoer.sfeer)], k: palet(variant, kleur), p };
+  const beeld = vierkant ? icoon(c, nr, kleur) : (LOGO[nr as 1 | 2 | 3 | 4 | 5 | 6] ?? woordmerk)(c);
   const achtergrond = VARIANTEN[variant].doorzichtig || vierkant ? {} : { background: "#FFFFFF" };
   const boom = vak({ position: "relative", width: p(basisB), height: p(basisH), ...achtergrond }, beeld, metWatermerk ? watermerk(basisB, basisH, p, 62) : null);
   return { boom, breedte, hoogte: Math.round((breedte * basisH) / basisB) };

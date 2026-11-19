@@ -32,7 +32,7 @@ export const STARTERS_ONDERDELEN: StartersOnderdeel[] = [
   {
     slug: "logo-maker",
     naam: "Een logo",
-    eerst: "Je vult je bedrijfsnaam in en ziet meteen zes logo's in jouw kleur en sfeer.",
+    eerst: "Je vult je bedrijfsnaam in en ziet meteen negen logo's in jouw kleur en sfeer.",
     betaal: "Pas als je er een wilt hebben. Dan krijg je het zonder watermerk, in vijf bestanden.",
     knop: "Maak mijn logo",
   },
@@ -62,7 +62,7 @@ export const STARTERS_ONDERDELEN: StartersOnderdeel[] = [
   {
     slug: "advertentie-op-maat",
     naam: "Een advertentie",
-    eerst: "Je vult in wat je aanbiedt en ziet meteen je advertentie in drie ontwerpen.",
+    eerst: "Je vult in wat je aanbiedt en ziet meteen je advertentie in zes ontwerpen.",
     betaal: "Pas als je hem wilt hebben. Dan krijg je hem zonder watermerk, in drie formaten.",
     knop: "Maak mijn advertentie",
   },

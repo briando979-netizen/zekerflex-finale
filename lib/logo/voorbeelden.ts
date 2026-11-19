@@ -1,7 +1,7 @@
 import type { LogoInvoer, LogoNr } from "@/lib/logo/regels";
 
-// De voorbeeldlogo's op /logo-maker: VERZONNEN bedrijven, alleen om te laten zien wat de logo maker maakt. Op de pagina
-// staat bij elk het label "voorbeeld". Puur bestand.
+// De voorbeeldlogo's op /logo-maker en /starters: VERZONNEN merken, alleen om te laten zien wat de logo maker maakt. Op
+// de pagina staat erbij dat het voorbeelden zijn. Negen stuks, voor het raster van drie bij drie. Puur bestand.
 
 export interface LogoVoorbeeld {
   sleutel: string;
@@ -10,12 +10,15 @@ export interface LogoVoorbeeld {
 }
 
 export const LOGO_VOORBEELDEN: LogoVoorbeeld[] = [
-  { sleutel: "bakkerij", logo: 3, invoer: { naam: "Bakkerij De Korenbloem", slogan: "Vers uit eigen oven", branche: "bakker", kleur: "oranje", sfeer: "strak" } },
-  { sleutel: "kapsalon", logo: 2, invoer: { naam: "Noor's Kapsalon", branche: "beauty", kleur: "paars", sfeer: "speels" } },
-  { sleutel: "cafe", logo: 6, invoer: { naam: "Café Zoë", slogan: "Koffie en taart", branche: "horeca", kleur: "rood", sfeer: "klassiek" } },
-  { sleutel: "transport", logo: 4, invoer: { naam: "Van Dijk Transport", slogan: "Altijd onderweg", branche: "transport", kleur: "blauw", sfeer: "stoer" } },
-  { sleutel: "schoonmaak", logo: 5, invoer: { naam: "Fris Schoonmaak", branche: "schoonmaak", kleur: "groen", sfeer: "strak" } },
-  { sleutel: "advies", logo: 1, invoer: { naam: "Meijer Advies", slogan: "Helder en eerlijk", branche: "advies", kleur: "antraciet", sfeer: "klassiek" } },
+  { sleutel: "nova", logo: 1, invoer: { naam: "NOVA", branche: "kleding", kleur: "paars", sfeer: "streetwear" } },
+  { sleutel: "noordkaap", logo: 1, invoer: { naam: "Noordkaap", slogan: "Outdoor gear", branche: "kleding", kleur: "groen", sfeer: "outdoor" } },
+  { sleutel: "vitesse", logo: 1, invoer: { naam: "Velo Zuid", branche: "anders", kleur: "rood", sfeer: "sport" } },
+  { sleutel: "kings", logo: 1, invoer: { naam: "Koningsbrug", branche: "kleding", kleur: "antraciet", sfeer: "gothic" } },
+  { sleutel: "orbit", logo: 1, invoer: { naam: "Atlas", slogan: "Space wear", branche: "kleding", kleur: "blauw", sfeer: "techno" } },
+  { sleutel: "maison", logo: 1, invoer: { naam: "Maison Noor", branche: "kleding", kleur: "antraciet", sfeer: "luxe" } },
+  { sleutel: "bakkerij", logo: 8, invoer: { naam: "De Korenbloem", slogan: "Bakkerij", branche: "bakker", kleur: "oranje", sfeer: "klassiek" } },
+  { sleutel: "fiets", logo: 9, invoer: { naam: "Van Dijk", slogan: "Fietsenmaker", branche: "techniek", kleur: "groen", sfeer: "stoer" } },
+  { sleutel: "wolf", logo: 8, invoer: { naam: "Urban Wolf", branche: "kleding", kleur: "rood", sfeer: "streetwear" } },
 ];
 
 export const logoVoorbeeldVan = (sleutel: string): LogoVoorbeeld | undefined => LOGO_VOORBEELDEN.find((v) => v.sleutel === sleutel);

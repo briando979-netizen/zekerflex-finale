@@ -13,8 +13,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/advertentie/<id>/beeld?ontwerp=1|2|3&formaat=vierkant|verhaal|liggend: één ontwerp als PNG.
-// Wat eruit komt bepaalt alleen beeldBesluit (lib/advertentie/regels.ts): niet vrijgegeven = altijd klein, vierkant en met
-// ingebakken watermerk, wat er ook gevraagd wordt. De schone versie bestaat pas na vrijgave (alleen de gekozen
+// Wat eruit komt bepaalt alleen beeldBesluit (lib/advertentie/regels.ts): niet vrijgegeven = altijd klein en met ingebakken
+// watermerk, in het gevraagde formaat (voor de schetsen op de pagina). De schone versie bestaat pas na vrijgave (alleen de gekozen
 // ontwerpen), of voor een platformbeheerder met ?beheer=1 (de controle in Beheer; met &klein=1 een kleine maat voor de
 // lijst). Alleen de watermerkversie komt in het gedeelde geheugen (lib/advertentie/beeld-geheugen.ts); een schoon beeld
 // wordt na de controle hier elke keer zelf gemaakt. Het id is de sleutel en komt nooit in een log. Onbekend id = 404,
@@ -26,7 +26,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const ontwerp = Number(url.searchParams.get("ontwerp") ?? "1");
     const formaat = url.searchParams.get("formaat") ?? "vierkant";
     if (!isAdvertentieId(id) || !isOntwerpNr(ontwerp) || !isFormaatId(formaat)) throw AppError.notFound("Dit beeld bestaat niet.");
-    await enforceRateLimit({ name: "advertentie-beeld", identifier: clientIp(request), limit: 240, windowSeconds: 600, message: "Te veel aanvragen. Probeer het over een paar minuten opnieuw." });
+    await enforceRateLimit({ name: "advertentie-beeld", identifier: clientIp(request), limit: 600, windowSeconds: 600, message: "Te veel aanvragen. Probeer het over een paar minuten opnieuw." });
     const ad = await haalAdvertentie(id);
     if (!ad) throw AppError.notFound("Deze advertentie bestaat niet (meer).");
 
@@ -39,7 +39,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const download = !besluit.watermerk && url.searchParams.get("download") === "1";
     let png: ArrayBuffer;
     if (besluit.watermerk) {
-      png = await watermerkBeeld(`advertentie:${id}:${ontwerp}`, () => maakBeeld(gegevensVan(ad), ontwerp, besluit));
+      png = await watermerkBeeld(`advertentie:${id}:${ontwerp}:${besluit.formaat}`, () => maakBeeld(gegevensVan(ad), ontwerp, besluit));
     } else {
       const klein = beheerder && !download && url.searchParams.get("klein") === "1";
       png = await maakBeeld(gegevensVan(ad), ontwerp, klein ? { ...besluit, breedte: BEHEER_KLEIN, hoogte: Math.round((BEHEER_KLEIN * besluit.hoogte) / besluit.breedte) } : besluit);

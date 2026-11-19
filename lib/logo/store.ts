@@ -2,7 +2,7 @@ import { AppError } from "@/lib/errors";
 import { LOGO_VOORVOEGSEL, maakOpslag, nieuwId } from "@/lib/advertentie/opslag";
 import { keuzeGewijzigd } from "@/lib/advertentie/regels";
 import type { VrijgaveUitkomst } from "@/lib/advertentie/store";
-import type { Logo, LogoAanvraag, LogoInvoer } from "@/lib/logo/regels";
+import { logoAantal, type Logo, type LogoAanvraag, type LogoInvoer } from "@/lib/logo/regels";
 
 // Logo's van de logo maker in KV (logo-maker:item:<id>), met dezelfde opslag als de advertentie op maat
 // (lib/advertentie/opslag.ts): id van 128 bit, vervalt 60 dagen na de laatste wijziging.
@@ -11,7 +11,7 @@ const opslag = maakOpslag<Logo>(LOGO_VOORVOEGSEL);
 
 export async function maakLogo(invoer: LogoInvoer, nu = new Date()): Promise<Logo> {
   const moment = nu.toISOString();
-  return opslag.bewaar({ id: nieuwId(), aangemaakt: moment, gewijzigd: moment, invoer, status: "gemaakt" });
+  return opslag.bewaar({ id: nieuwId(), aangemaakt: moment, gewijzigd: moment, invoer, versie: 2, status: "gemaakt" });
 }
 
 export const haalLogo = opslag.haal;
@@ -26,6 +26,8 @@ async function eis(id: string, nu: Date): Promise<Logo> {
 export async function vraagLogoAan(id: string, aanvraag: Omit<LogoAanvraag, "op">, nu = new Date()): Promise<Logo> {
   const logo = await eis(id, nu);
   if (logo.status === "vrijgegeven") throw AppError.conflict("Dit logo is al vrijgegeven.");
+  // een aanvraag van vóór versie 2 heeft zes logo's, een nieuwe negen
+  if (aanvraag.logo > logoAantal(logo)) throw AppError.validation("Kies een van de logo's op je pagina.", { veld: "logo" });
   const moment = nu.toISOString();
   return opslag.bewaar({ ...logo, status: "aangevraagd", aanvraag: { ...aanvraag, op: moment }, gewijzigd: moment });
 }

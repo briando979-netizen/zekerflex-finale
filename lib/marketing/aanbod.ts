@@ -485,10 +485,10 @@ export const AANBOD: AanbodItem[] = [
     slug: "advertentie-op-maat",
     pijler: "online",
     naam: "Advertentie op maat",
-    kort: "Vul een paar dingen in en zie meteen je eigen advertentie, in drie ontwerpen.",
+    kort: "Vul een paar dingen in en zie meteen je eigen advertentie, in zes ontwerpen.",
     tekst:
-      "Je vertelt wat je bedrijf aanbiedt en kiest een kleur. Je ziet direct drie ontwerpen van je advertentie. Het voorbeeld kost niets; je betaalt pas als je hem wilt hebben.",
-    punten: ["Drie ontwerpen in jouw kleur", "Eerst het voorbeeld, dan pas betalen", "Vierkant, verhaal en liggend formaat", "Geen account nodig"],
+      "Je vertelt wat je bedrijf aanbiedt en kiest een kleur. Je ziet direct zes ontwerpen van je advertentie. Het voorbeeld kost niets; je betaalt pas als je hem wilt hebben.",
+    punten: ["Zes ontwerpen in jouw kleur", "Eerst het voorbeeld, dan pas betalen", "Vierkant, verhaal en liggend formaat", "Geen account nodig"],
     voorWie: "Bedrijven die zelf willen adverteren",
     // dezelfde bron als de pagina zelf (lib/advertentie/regels.ts)
     prijs: `${vanafTekst()} ${BTW_TEKST}, je ziet eerst het voorbeeld`,
@@ -500,10 +500,10 @@ export const AANBOD: AanbodItem[] = [
     slug: "logo-maker",
     pijler: "online",
     naam: "Logo maker",
-    kort: "Vul je bedrijfsnaam in en zie meteen zes logo's in jouw kleur en sfeer.",
+    kort: "Vul je bedrijfsnaam in en zie meteen negen logo's in jouw kleur en sfeer.",
     tekst:
-      "Je vult je bedrijfsnaam in en kiest een kleur en een sfeer. Je ziet direct zes logo's, gemaakt uit je naam met vaste ontwerpregels. Het voorbeeld kost niets; je betaalt pas als je er een wilt hebben.",
-    punten: ["Zes logo's met jouw naam", "Eerst het voorbeeld, dan pas betalen", "In kleur, wit, zwart en als icoon", "Geen account nodig"],
+      "Je vult je bedrijfsnaam in en kiest een kleur en een sfeer. Je ziet direct negen logo's, gemaakt uit je naam met vaste ontwerpregels. Het voorbeeld kost niets; je betaalt pas als je er een wilt hebben.",
+    punten: ["Negen logo's met jouw naam", "Eerst het voorbeeld, dan pas betalen", "In kleur, wit, zwart en als icoon", "Geen account nodig"],
     voorWie: "Starters en bedrijven zonder logo",
     // dezelfde bron als de pagina zelf (lib/advertentie/regels.ts)
     prijs: `${STANDAARD_PRIJZEN.logo} ${BTW_TEKST}, je ziet eerst het voorbeeld`,

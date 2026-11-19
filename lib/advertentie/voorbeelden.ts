@@ -31,6 +31,24 @@ export const VOORBEELDEN: Voorbeeld[] = [
     soort: "een kapsalon",
     gegevens: { bedrijf: "Kapsalon Noor", kop: "Nu ook open op zondag", onderregel: "Knippen, kleuren en föhnen voor dames en heren.", knop: "Boek je afspraak", plaats: "Voorbeeldstad", contact: "kapsalonnoor.example", kleur: "#5B3A9B" },
   },
+  {
+    sleutel: "sportschool",
+    ontwerp: 4,
+    soort: "een sportschool",
+    gegevens: { bedrijf: "Sportschool Noord", kop: "Train op jouw manier", onderregel: "Kracht, conditie en groepslessen onder één dak.", knop: "Kom kijken", plaats: "Voorbeeldstad", contact: "sportschoolnoord.example", kleur: "#B3261E", teken: "barbell" },
+  },
+  {
+    sleutel: "bloemist",
+    ontwerp: 5,
+    soort: "een bloemist",
+    gegevens: { bedrijf: "Bloemen van Lot", kop: "Verse boeketten, elke dag", onderregel: "Bloemen en planten voor thuis en om te geven.", knop: "Kies je boeket", plaats: "Voorbeeldstad", contact: "bloemenvanlot.example", kleur: "#1D4E89", teken: "flower-tulip" },
+  },
+  {
+    sleutel: "boekhandel",
+    ontwerp: 6,
+    soort: "een boekhandel",
+    gegevens: { bedrijf: "Boekhandel Pagina", kop: "Een goed boek begint hier", onderregel: "Romans, kinderboeken en cadeaus, met persoonlijk advies.", knop: "Loop binnen", plaats: "Voorbeeldstad", contact: "boekhandelpagina.example", kleur: "#0E5C4A" },
+  },
 ];
 
 export const voorbeeldVan = (sleutel: string): Voorbeeld | undefined => VOORBEELDEN.find((v) => v.sleutel === sleutel);

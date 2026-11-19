@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AdvertentieFormulier } from "@/components/marketing/advertentie/AdvertentieFormulier";
+import { AdMockups } from "@/components/marketing/studio/Mockups";
 import { FaqList } from "@/components/marketing/primitives";
 import { BEWAAR_DAGEN, BTW_TEKST, FORMATEN, PAKKETTEN, PAKKET_NAAM, PAKKET_UITLEG, prijsTekst, vanafTekst } from "@/lib/advertentie/regels";
 import { leesPrijzen } from "@/lib/advertentie/store";
@@ -7,7 +8,7 @@ import { VOORBEELDEN } from "@/lib/advertentie/voorbeelden";
 import { breadcrumbJsonLd, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 
-const DESCRIPTION = "Vul een paar dingen in over je bedrijf en zie meteen je eigen advertentie in drie ontwerpen. Je betaalt niets voor het voorbeeld, pas als je hem wilt hebben.";
+const DESCRIPTION = "Vul een paar dingen in over je bedrijf en zie meteen je eigen advertentie in zes ontwerpen. Je betaalt niets voor het voorbeeld, pas als je hem wilt hebben.";
 
 export const metadata: Metadata = {
   title: "Advertentie op maat laten maken",
@@ -20,7 +21,7 @@ export const dynamic = "force-dynamic";
 
 const STAPPEN = [
   { titel: "Vul in wat je aanbiedt", tekst: "Je bedrijfsnaam, wat je doet en een kleur. Een actie of boodschap mag erbij. Meer hebben we niet nodig." },
-  { titel: "Bekijk je voorbeeld", tekst: "Je ziet direct drie ontwerpen van je eigen advertentie. Niet goed? Maak hem gewoon opnieuw." },
+  { titel: "Bekijk je voorbeeld", tekst: "Je ziet direct zes ontwerpen van je eigen advertentie. Niet goed? Maak hem gewoon opnieuw." },
   { titel: "Betaal pas als je hem wilt", tekst: "Kies je ontwerp en laat je gegevens achter. Na betaling krijg je hem zonder watermerk, in drie formaten." },
 ];
 
@@ -31,7 +32,7 @@ export default async function AdvertentieOpMaatPage() {
   const faq = [
     {
       q: "Wat kost een advertentie op maat?",
-      a: `Het voorbeeld bekijken kost niets. Wil je hem hebben, dan betaal je ${prijsTekst(prijzen, "een")} voor één ontwerp of ${prijsTekst(prijzen, "alle")} voor alle drie de ontwerpen. Elk ontwerp krijg je in drie formaten.`,
+      a: `Het voorbeeld bekijken kost niets. Wil je hem hebben, dan betaal je ${prijsTekst(prijzen, "een")} voor één ontwerp of ${prijsTekst(prijzen, "alle")} voor alle zes de ontwerpen. Elk ontwerp krijg je in drie formaten.`,
     },
     {
       q: "Moet ik een account maken of mijn e-mailadres geven?",
@@ -83,17 +84,17 @@ export default async function AdvertentieOpMaatPage() {
         dangerouslySetInnerHTML={{ __html: ldJson([dienst, breadcrumbJsonLd([["Home", "/"], ["Aanbod", "/aanbod"], ["Advertentie op maat", "/advertentie-op-maat"]])]) }}
       />
 
-      <section className="hero-ink text-white">
+      <section className="bg-[#0B0B0C] text-white">
         <div className="shell grid gap-10 py-12 md:py-20 lg:grid-cols-[1.05fr_minmax(0,30rem)] lg:items-center lg:gap-16">
           <div className="max-w-2xl">
             <p className="eyebrow text-brand-mint">Advertentie op maat</p>
-            <h1 className="mt-4 text-balance font-display text-4xl font-bold leading-[1.06] md:text-[3.4rem]">Jouw advertentie op maat gemaakt.</h1>
+            <h1 className="mt-4 text-balance font-display text-5xl font-bold leading-[1.02] md:text-7xl">Jouw advertentie op maat gemaakt.</h1>
             <p className="mt-6 text-xl font-medium leading-snug text-white md:text-2xl">Betaal niks, zie eerst het voorbeeld.</p>
             <p className="mt-3 text-lg leading-relaxed text-white/70">
-              Vul een paar dingen in over je bedrijf en je ziet meteen je eigen advertentie, in drie ontwerpen. Wil je hem hebben: {vanafTekst(prijzen).toLowerCase()} {BTW_TEKST}.
+              Vul een paar dingen in over je bedrijf en je ziet meteen je eigen advertentie, in zes ontwerpen. Wil je hem hebben: {vanafTekst(prijzen).toLowerCase()} {BTW_TEKST}.
             </p>
             <ul className="mt-8 space-y-2.5 text-base text-white/80">
-              {["Geen account en geen e-mailadres nodig", "Drie ontwerpen in jouw kleur", "Klaar voor sociale media, je website en je nieuwsbrief"].map((x) => (
+              {["Geen account en geen e-mailadres nodig", "Zes ontwerpen in jouw kleur", "Klaar voor sociale media, je website en je nieuwsbrief"].map((x) => (
                 <li key={x} className="flex items-start gap-3">
                   <span className="mt-2 h-2 w-2 flex-shrink-0 rounded-full bg-brand-mint" aria-hidden />
                   {x}
@@ -133,7 +134,7 @@ export default async function AdvertentieOpMaatPage() {
           <h2 id="adv-voorbeelden-kop" className="mt-3 max-w-2xl text-balance font-display text-3xl font-bold leading-tight text-ink md:text-4xl">
             Zo kan die van jou eruitzien
           </h2>
-          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-neutralx-600">Drie ontwerpen: strak en donker, licht en speels, of met grote letters. Deze bedrijven zijn verzonnen, alleen om het te laten zien.</p>
+          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-neutralx-600">Zes ontwerpen, van strak en rustig tot een donkere poster met een schuine kop. Deze bedrijven zijn verzonnen, alleen om het te laten zien.</p>
           <ul className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {VOORBEELDEN.map((v) => (
               <li key={v.sleutel} className="relative overflow-hidden rounded-3xl border border-hair bg-white shadow-card">
@@ -146,7 +147,20 @@ export default async function AdvertentieOpMaatPage() {
         </div>
       </section>
 
-      <section className="border-t border-hair bg-paper" aria-labelledby="adv-prijs-kop">
+      <section className="border-t border-hair bg-paper" aria-labelledby="adv-mockup-kop">
+        <div className="shell py-14 md:py-20">
+          <p className="eyebrow">Zo ziet het eruit</p>
+          <h2 id="adv-mockup-kop" className="mt-3 max-w-2xl text-balance font-display text-3xl font-bold leading-tight text-ink md:text-4xl">
+            Op een telefoon, als verhaal en liggend
+          </h2>
+          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-neutralx-600">Je krijgt elk ontwerp in drie formaten. Op je eigen pagina zie je deze schetsen met jouw advertentie erin; hier staat een verzonnen sportschool als voorbeeld.</p>
+          <div className="mt-10">
+            <AdMockups vierkant="/api/advertentie/voorbeeld/sportschool" verhaal="/api/advertentie/voorbeeld/sportschool?formaat=verhaal" liggend="/api/advertentie/voorbeeld/sportschool?formaat=liggend" naam="Sportschool Noord" label="Voorbeeld: een advertentie op een telefoon, als verhaal en liggend" />
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-hair bg-paper-soft" aria-labelledby="adv-prijs-kop">
         <div className="shell py-14 md:py-20">
           <p className="eyebrow">Wat het kost</p>
           <h2 id="adv-prijs-kop" className="mt-3 max-w-2xl text-balance font-display text-3xl font-bold leading-tight text-ink md:text-4xl">

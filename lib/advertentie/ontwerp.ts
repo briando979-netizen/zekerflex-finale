@@ -1,6 +1,7 @@
 import { createElement, type CSSProperties, type ReactElement, type ReactNode } from "react";
 import { CREME, NACHT, knop, leesbaarOpDonker, leesbaarOpLicht, meng, tekstOp } from "@/lib/rijschool/kleuren";
 import { FORMATEN, WATERMERK_TEKST, type FormaatId, type OntwerpNr } from "@/lib/advertentie/regels";
+import { teken } from "@/lib/logo/tekens";
 
 // ---------------------------------------------------------------------------
 // De drie ontwerpen van een advertentie op maat, als boom voor satori (next/og).
@@ -22,10 +23,12 @@ export interface OntwerpGegevens {
   contact?: string | undefined;
   /** de gekozen kleur als #RRGGBB */
   kleur: string;
+  /** een teken dat bij het bedrijf past (lib/logo/tekens), als grote vorm op de achtergrond van ontwerp 4 en 5 */
+  teken?: string | undefined;
 }
 
 /** De namen waaronder lib/advertentie/beeld.ts de lettertypes aanmeldt. */
-export const LETTER = { kop: "Bricolage", tekst: "Instrument Sans", serif: "Instrument Serif", smal: "Anton" } as const;
+export const LETTER = { kop: "Bricolage", tekst: "Instrument Sans", serif: "Instrument Serif", smal: "Anton", sport: "Kanit", techno: "Russo One", gotisch: "Pirata One", luxe: "Marcellus" } as const;
 
 export type Stijl = CSSProperties;
 export type Maat = (n: number) => number;
@@ -272,7 +275,151 @@ function groot(g: OntwerpGegevens, f: FormaatId, p: Maat): ReactElement {
   );
 }
 
-const ONTWERP = { 1: strak, 2: licht, 3: groot } as const;
+// --- 4. Poster: donker, met een enorme schuine kop ---------------------------
+
+function poster(g: OntwerpGegevens, f: FormaatId, p: Maat): ReactElement {
+  const { breedte: W, hoogte: H } = FORMATEN[f];
+  const zwart = "#0B0B0C";
+  const accent = leesbaarOpDonker(g.kleur, zwart);
+  const rand = perFormaat(f, { vierkant: 76, verhaal: 84, liggend: 54 });
+  const klein = perFormaat(f, { vierkant: 1, verhaal: 1.14, liggend: 0.72 });
+  const kop = g.kop.toLocaleUpperCase("nl-NL");
+  const kopBreedte = (f === "liggend" ? W * 0.72 : W) - rand * 2;
+  const kopMaat = lettergrootte(
+    kop,
+    kopBreedte,
+    perFormaat(f, {
+      vierkant: [[8, 250], [14, 190], [24, 150], [38, 122], [52, 102], [999, 88]],
+      verhaal: [[8, 280], [14, 220], [24, 178], [38, 146], [52, 124], [999, 108]],
+      liggend: [[8, 150], [14, 118], [24, 94], [38, 78], [52, 66], [999, 56]],
+    } as const),
+    0.6,
+  );
+  const vorm = perFormaat(f, { vierkant: 760, verhaal: 980, liggend: 560 });
+  return vak(
+    { position: "relative", width: p(W), height: p(H), background: zwart, color: "#FFFFFF", fontFamily: LETTER.tekst, overflow: "hidden" },
+    // de grote vorm op de achtergrond: het teken van het bedrijf, of anders de eerste letter
+    vak(
+      { position: "absolute", right: p(-vorm * 0.2), bottom: p(-vorm * 0.16), opacity: 0.9 },
+      (g.teken ? teken(g.teken, p(vorm), g.kleur) : null) ?? vak({ fontFamily: LETTER.sport, fontWeight: 900, fontStyle: "italic", fontSize: p(vorm * 1.1), lineHeight: 0.8, color: g.kleur }, g.bedrijf.slice(0, 1).toLocaleUpperCase("nl-NL")),
+    ),
+    vak({ position: "absolute", left: 0, top: 0, width: p(W), height: p(H), background: "linear-gradient(110deg, rgba(11,11,12,0.96) 0%, rgba(11,11,12,0.82) 46%, rgba(11,11,12,0.2) 100%)" }),
+    vak(
+      { position: "relative", flexDirection: "column", justifyContent: "space-between", width: p(W), height: p(H), padding: p(rand) },
+      vak(
+        { alignItems: "center", gap: p(18 * klein) },
+        vak({ width: p(14 * klein), height: p(34 * klein), background: accent, transform: "skewX(-14deg)", flexShrink: 0 }),
+        vak({ fontWeight: 600, fontSize: p(lettergrootte(g.bedrijf, W * 0.7, [[22, 30], [36, 26], [999, 22]], 0.84) * klein), letterSpacing: p(4 * klein), textTransform: "uppercase", lineHeight: 1.2, maxWidth: p(W * 0.74), wordBreak: "break-word" }, g.bedrijf),
+      ),
+      vak(
+        { flexDirection: "column", maxWidth: p(kopBreedte) },
+        vak({ fontFamily: LETTER.sport, fontWeight: 900, fontStyle: "italic", fontSize: p(kopMaat), lineHeight: 0.96, letterSpacing: p(-kopMaat * 0.01), wordBreak: "break-word" }, kop),
+        vak({ width: p(kopMaat * 1.6), height: p(Math.max(8, kopMaat * 0.07)), background: accent, marginTop: p(kopMaat * 0.22), transform: "skewX(-14deg)" }),
+        vak({ marginTop: p(26 * klein), fontSize: p(lettergrootte(g.onderregel, kopBreedte, [[60, 36], [100, 32], [999, 29]], 0.5) * klein), lineHeight: 1.36, color: "rgba(255,255,255,0.8)", maxWidth: p(kopBreedte * 0.9), wordBreak: "break-word" }, g.onderregel),
+      ),
+      vak(
+        { alignItems: "center", gap: p(26 * klein), flexWrap: "wrap" },
+        vak({ flexShrink: 0, padding: `${p(20 * klein)}px ${p(40 * klein)}px`, background: accent, color: tekstOp(accent), fontFamily: LETTER.sport, fontWeight: 900, fontStyle: "italic", fontSize: p(34 * klein), textTransform: "uppercase", transform: "skewX(-8deg)" }, g.knop),
+        ...[g.contact, g.plaats].filter(Boolean).map((regel, i) => vak({ fontSize: p((i === 0 ? 28 : 24) * klein), fontWeight: i === 0 ? 600 : 400, color: i === 0 ? "#FFFFFF" : "rgba(255,255,255,0.7)", maxWidth: p(W * 0.5), wordBreak: "break-word" }, regel)),
+      ),
+    ),
+  );
+}
+
+// --- 5. Diagonaal: twee kleurvlakken schuin tegen elkaar ----------------------
+
+function diagonaal(g: OntwerpGegevens, f: FormaatId, p: Maat): ReactElement {
+  const { breedte: W, hoogte: H } = FORMATEN[f];
+  const k = knop(g.kleur);
+  const donker = meng(g.kleur, NACHT, 0.24);
+  const rand = perFormaat(f, { vierkant: 76, verhaal: 84, liggend: 54 });
+  const klein = perFormaat(f, { vierkant: 1, verhaal: 1.14, liggend: 0.72 });
+  const kopBreedte = (f === "liggend" ? W * 0.62 : W * 0.86) - rand;
+  const kopMaat = lettergrootte(
+    g.kop,
+    kopBreedte,
+    perFormaat(f, {
+      vierkant: [[10, 170], [20, 132], [34, 106], [50, 90], [999, 78]],
+      verhaal: [[10, 190], [20, 152], [34, 124], [50, 106], [999, 92]],
+      liggend: [[10, 104], [20, 84], [34, 68], [50, 58], [999, 50]],
+    } as const),
+    0.56,
+  );
+  const lang = Math.max(W, H) * 2;
+  return vak(
+    { position: "relative", width: p(W), height: p(H), background: k.achtergrond, color: k.tekst, fontFamily: LETTER.tekst, overflow: "hidden" },
+    // het donkere vlak: een groot gedraaid vlak dat rechtsonder de hoek vult
+    vak({ position: "absolute", left: p(W * (f === "liggend" ? 0.56 : 0.2)), top: p(H * (f === "liggend" ? -0.4 : 0.62)), width: p(lang), height: p(lang), background: donker, transform: `rotate(${f === "liggend" ? 16 : -14}deg)`, transformOrigin: "0 0" }),
+    vak({ position: "absolute", left: p(W * (f === "liggend" ? 0.535 : 0.2)), top: p(H * (f === "liggend" ? -0.4 : 0.595)), width: p(lang), height: p(Math.max(8, 14 * klein)), background: "#FFFFFF", opacity: 0.9, transform: `rotate(${f === "liggend" ? 106 : -14}deg)`, transformOrigin: "0 0" }),
+    g.teken ? vak({ position: "absolute", right: p(rand * 0.9), bottom: p(rand * 0.9), opacity: 0.16 }, teken(g.teken, p(perFormaat(f, { vierkant: 300, verhaal: 420, liggend: 260 })), "#FFFFFF")) : null,
+    vak(
+      { position: "relative", flexDirection: "column", justifyContent: "space-between", width: p(W), height: p(H), padding: p(rand) },
+      vak(
+        { flexDirection: "column", maxWidth: p(kopBreedte) },
+        vak({ fontWeight: 600, fontSize: p(lettergrootte(g.bedrijf, W * 0.6, [[22, 30], [36, 26], [999, 22]], 0.84) * klein), letterSpacing: p(3 * klein), textTransform: "uppercase", lineHeight: 1.2, opacity: 0.92, wordBreak: "break-word" }, g.bedrijf),
+        vak({ fontFamily: LETTER.kop, fontWeight: 800, fontSize: p(kopMaat), lineHeight: 0.98, letterSpacing: p(-kopMaat * 0.02), marginTop: p(30 * klein), wordBreak: "break-word" }, g.kop),
+        vak({ marginTop: p(24 * klein), fontSize: p(lettergrootte(g.onderregel, kopBreedte, [[60, 36], [100, 32], [999, 29]], 0.5) * klein), lineHeight: 1.36, opacity: 0.9, wordBreak: "break-word" }, g.onderregel),
+      ),
+      vak(
+        { flexDirection: "column", alignItems: f === "liggend" ? "flex-end" : "flex-start", color: "#FFFFFF", gap: p(14 * klein) },
+        vak({ padding: `${p(20 * klein)}px ${p(40 * klein)}px`, borderRadius: p(14 * klein), background: "#FFFFFF", color: leesbaarOpLicht(g.kleur, "#FFFFFF"), fontFamily: LETTER.kop, fontWeight: 700, fontSize: p(36 * klein) }, g.knop),
+        ...[g.contact, g.plaats].filter(Boolean).map((regel, i) => vak({ fontSize: p((i === 0 ? 28 : 24) * klein), fontWeight: i === 0 ? 600 : 400, opacity: i === 0 ? 1 : 0.78, maxWidth: p(W * 0.6), textAlign: f === "liggend" ? "right" : "left", wordBreak: "break-word" }, regel)),
+      ),
+    ),
+  );
+}
+
+// --- 6. Redactie: schreef, veel wit en één ronde sticker ----------------------
+
+function redactie(g: OntwerpGegevens, f: FormaatId, p: Maat): ReactElement {
+  const { breedte: W, hoogte: H } = FORMATEN[f];
+  const inkt = "#141414";
+  const k = knop(g.kleur);
+  const rand = perFormaat(f, { vierkant: 84, verhaal: 92, liggend: 60 });
+  const klein = perFormaat(f, { vierkant: 1, verhaal: 1.14, liggend: 0.72 });
+  const kopBreedte = (f === "liggend" ? W * 0.68 : W) - rand * 2;
+  const kopMaat = lettergrootte(
+    g.kop,
+    kopBreedte,
+    perFormaat(f, {
+      vierkant: [[10, 200], [20, 152], [34, 124], [50, 104], [999, 88]],
+      verhaal: [[10, 220], [20, 172], [34, 142], [50, 120], [999, 104]],
+      liggend: [[10, 124], [20, 98], [34, 80], [50, 66], [999, 56]],
+    } as const),
+    0.46,
+  );
+  const sticker = perFormaat(f, { vierkant: 230, verhaal: 270, liggend: 170 });
+  const lijn = (extra: Stijl = {}) => vak({ width: p(W - rand * 2), flexShrink: 0, height: Math.max(1, p(3)), background: inkt, ...extra });
+  return vak(
+    { position: "relative", width: p(W), height: p(H), background: "#FFFFFF", color: inkt, fontFamily: LETTER.tekst, overflow: "hidden" },
+    vak(
+      { position: "relative", flexDirection: "column", justifyContent: "space-between", width: p(W), height: p(H), padding: p(rand) },
+      vak(
+        { flexDirection: "column", gap: p(18 * klein) },
+        vak(
+          { alignItems: "flex-end", justifyContent: "space-between", gap: p(20) },
+          vak({ fontFamily: LETTER.luxe, fontSize: p(lettergrootte(g.bedrijf, W * 0.6, [[22, 32], [36, 27], [999, 23]], 0.84) * klein), letterSpacing: p(5 * klein), textTransform: "uppercase", lineHeight: 1.2, maxWidth: p(W * 0.62), wordBreak: "break-word" }, g.bedrijf),
+          g.plaats ? vak({ fontFamily: LETTER.serif, fontStyle: "italic", fontSize: p(30 * klein), color: "#555555", textAlign: "right", maxWidth: p(W * 0.3) }, g.plaats) : null,
+        ),
+        lijn(),
+      ),
+      vak(
+        { flexDirection: "column", maxWidth: p(kopBreedte) },
+        vak({ fontFamily: LETTER.serif, fontSize: p(kopMaat), lineHeight: 0.98, letterSpacing: p(-kopMaat * 0.015), wordBreak: "break-word" }, g.kop),
+        vak({ marginTop: p(28 * klein), fontSize: p(lettergrootte(g.onderregel, kopBreedte, [[60, 36], [100, 32], [999, 29]], 0.5) * klein), lineHeight: 1.4, color: "#444444", maxWidth: p(kopBreedte * 0.86), wordBreak: "break-word" }, g.onderregel),
+      ),
+      vak({ flexDirection: "column", gap: p(18 * klein) }, lijn({ height: Math.max(1, p(1.5)) }), vak({ alignItems: "center", justifyContent: "space-between", gap: p(20) }, vak({ fontWeight: 600, fontSize: p(28 * klein), maxWidth: p(W * 0.56), wordBreak: "break-word" }, g.contact ?? g.bedrijf), vak({ width: p(sticker * 0.5), height: p(4) }))),
+    ),
+    // de sticker: de knoptekst in een rond vlak in de kleur, een beetje gedraaid
+    vak(
+      { position: "absolute", right: p(rand * 0.8), bottom: p(rand * (f === "liggend" ? 0.9 : 1.5)), width: p(sticker), height: p(sticker), borderRadius: p(sticker), background: k.achtergrond, color: k.tekst, alignItems: "center", justifyContent: "center", transform: "rotate(-10deg)", boxShadow: `0 ${p(10)}px ${p(30)}px rgba(0,0,0,0.18)` },
+      vak({ position: "absolute", left: p(sticker * 0.06), top: p(sticker * 0.06), width: p(sticker * 0.88), height: p(sticker * 0.88), borderRadius: p(sticker), border: `${Math.max(1, p(2.5))}px dashed ${k.tekst}`, opacity: 0.7 }),
+      vak({ fontFamily: LETTER.kop, fontWeight: 800, fontSize: p(lettergrootte(g.knop, sticker * 0.72, [[8, 44], [14, 36], [999, 30]], 0.58) * (f === "liggend" ? 0.78 : f === "verhaal" ? 1.14 : 1)), lineHeight: 1.05, textAlign: "center", maxWidth: p(sticker * 0.74), wordBreak: "break-word" }, g.knop),
+    ),
+  );
+}
+
+const ONTWERP = { 1: strak, 2: licht, 3: groot, 4: poster, 5: diagonaal, 6: redactie } as const;
 
 /**
  * Eén ontwerp als boom voor satori. `breedte` is de breedte van het beeld dat eruit komt; de hoogte volgt uit het formaat.

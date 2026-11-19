@@ -9,6 +9,12 @@ import { isKleurId, schoonTekst, STANDAARD_KLEUR, type KleurId, type Uitkomst } 
 // ---------------------------------------------------------------------------
 
 export const SFEREN = [
+  { id: "streetwear", naam: "Streetwear", uitleg: "Schuin, zwaar, met ster en baan" },
+  { id: "sport", naam: "Sport", uitleg: "Snel en krachtig" },
+  { id: "luxe", naam: "Luxe", uitleg: "Fijn en elegant" },
+  { id: "gothic", naam: "Gothic", uitleg: "Gotische letter, kroon" },
+  { id: "techno", naam: "Techno", uitleg: "Breed, ruimte en bol" },
+  { id: "outdoor", naam: "Outdoor", uitleg: "Bergen en buitenlucht" },
   { id: "strak", naam: "Strak", uitleg: "Rustig en modern" },
   { id: "speels", naam: "Speels", uitleg: "Rond en vrolijk" },
   { id: "klassiek", naam: "Klassiek", uitleg: "Sierlijk, met schreef" },
@@ -19,6 +25,7 @@ export const isSfeerId = (v: unknown): v is SfeerId => typeof v === "string" && 
 
 /** De soort bedrijf bepaalt het beeldmerk van logo 5. */
 export const BRANCHES = [
+  { id: "kleding", naam: "Kleding en mode" },
   { id: "bouw", naam: "Bouw en klussen" },
   { id: "horeca", naam: "Horeca" },
   { id: "bakker", naam: "Bakker en eten" },
@@ -42,8 +49,57 @@ export const LOGOS = [
   { nr: 5, naam: "Beeldmerk", uitleg: "Een teken bij je naam" },
   { nr: 6, naam: "Zegel", uitleg: "Rond, als een stempel" },
 ] as const;
-export type LogoNr = 1 | 2 | 3 | 4 | 5 | 6;
-export const isLogoNr = (v: unknown): v is LogoNr => typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 6;
+/** De eerste versie had zes logo's per aanvraag (LOGOS hierboven); sinds versie 2 zijn het er negen, per sfeer een eigen set. */
+export type LogoNr = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+export const LOGO_AANTAL = 9;
+export const isLogoNr = (v: unknown, aantal: number = LOGO_AANTAL): v is LogoNr => typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= aantal;
+/** Hoeveel logo's deze aanvraag heeft: een rij van vóór versie 2 houdt zijn zes, en ziet er altijd uit zoals toen. */
+export const logoAantal = (logo: { versie?: number | undefined }): number => (logo.versie === 2 ? LOGO_AANTAL : 6);
+
+/** De sjablonen van versie 2 (lib/logo/ontwerp2.ts). Elke sfeer kiest er negen uit, in een eigen volgorde. */
+export const SJABLONEN = {
+  baan: { naam: "Baan", uitleg: "Je naam in een baan met ster" },
+  strepen: { naam: "Vaart", uitleg: "Monogram met snelheidsstrepen" },
+  berg: { naam: "Bergtop", uitleg: "Toppen boven je naam" },
+  berg2: { naam: "Twee toppen", uitleg: "Bergen in lijn" },
+  bol: { naam: "Wereld", uitleg: "Je naam dwars door een bol" },
+  chevron: { naam: "Punt", uitleg: "Een scherp teken" },
+  ster: { naam: "Ster", uitleg: "Ster boven je naam" },
+  kroon: { naam: "Kroon", uitleg: "Letter met kroon" },
+  zegel: { naam: "Zegel", uitleg: "Rond, met een band" },
+  schild: { naam: "Schild", uitleg: "Je letters in een schild" },
+  vleugels: { naam: "Vleugels", uitleg: "Letters met vleugels" },
+  breed: { naam: "Woordmerk", uitleg: "Je naam tussen lijnen" },
+  lauwer: { naam: "Krans", uitleg: "Letters in een lauwerkrans" },
+  bliksem: { naam: "Naast elkaar", uitleg: "Teken naast je naam" },
+  stapel: { naam: "Gestapeld", uitleg: "Je naam in twee regels" },
+  cirkel: { naam: "Monogram", uitleg: "Letters in een fijne cirkel" },
+  teken: { naam: "Beeldmerk", uitleg: "Een teken bij je naam" },
+  embleem: { naam: "Embleem", uitleg: "Je teken uitgespaard in een vlak" },
+} as const;
+export type SjabloonId = keyof typeof SJABLONEN;
+
+export const SFEER_SJABLONEN: Record<SfeerId, readonly SjabloonId[]> = {
+  streetwear: ["baan", "strepen", "bol", "ster", "chevron", "stapel", "zegel", "schild", "bliksem"],
+  sport: ["strepen", "bliksem", "chevron", "baan", "vleugels", "schild", "stapel", "berg2", "zegel"],
+  luxe: ["cirkel", "lauwer", "breed", "kroon", "zegel", "schild", "ster", "vleugels", "stapel"],
+  gothic: ["kroon", "vleugels", "zegel", "schild", "lauwer", "breed", "ster", "cirkel", "stapel"],
+  techno: ["bol", "baan", "breed", "chevron", "strepen", "ster", "zegel", "bliksem", "schild"],
+  outdoor: ["berg", "berg2", "zegel", "schild", "chevron", "breed", "ster", "stapel", "lauwer"],
+  strak: ["breed", "cirkel", "chevron", "schild", "zegel", "baan", "ster", "stapel", "strepen"],
+  speels: ["baan", "ster", "stapel", "zegel", "bol", "schild", "bliksem", "lauwer", "breed"],
+  klassiek: ["lauwer", "cirkel", "kroon", "zegel", "schild", "breed", "vleugels", "ster", "stapel"],
+  stoer: ["schild", "strepen", "bliksem", "chevron", "berg", "vleugels", "zegel", "stapel", "breed"],
+};
+
+/** Hoe het voorbeeld getoond wordt: wit op donker, zwart op wit, of in de gekozen kleur op wit. */
+export const THEMAS = [
+  { id: "donker", naam: "Donker" },
+  { id: "licht", naam: "Licht" },
+  { id: "kleur", naam: "In jouw kleur" },
+] as const;
+export type ThemaId = (typeof THEMAS)[number]["id"];
+export const isThemaId = (v: unknown): v is ThemaId => v === "donker" || v === "licht" || v === "kleur";
 
 /** Wat de klant na vrijgave krijgt. `doorzichtig` = zonder achtergrond (PNG met alfakanaal). */
 export const VARIANTEN = {
@@ -58,7 +114,7 @@ export const VARIANT_IDS = Object.keys(VARIANTEN) as VariantId[];
 export const isVariantId = (v: unknown): v is VariantId => typeof v === "string" && Object.hasOwn(VARIANTEN, v);
 
 /** Het voorbeeld vóór vrijgave: klein, in kleur op wit, met watermerk. */
-export const VOORBEELD = { breedte: 360, hoogte: 270 } as const;
+export const VOORBEELD = { breedte: 400, hoogte: 300 } as const;
 
 export const LOGO_GRENS = { naam: 40, slogan: 60, brancheTekst: 40 } as const;
 
@@ -85,6 +141,8 @@ export interface Logo {
   aangemaakt: string;
   gewijzigd: string;
   invoer: LogoInvoer;
+  /** 2 = negen logo's uit lib/logo/ontwerp2.ts; ontbreekt = de zes van de eerste versie (lib/logo/ontwerp.ts) */
+  versie?: 2;
   status: "gemaakt" | "aangevraagd" | "vrijgegeven";
   aanvraag?: LogoAanvraag;
   vrijgegevenOp?: string;
@@ -123,7 +181,7 @@ export function valideerLogoAanvraag(ruw: unknown): Uitkomst<Omit<LogoAanvraag, 
   const emailRuw = veld(ruw, "email");
   const email = typeof emailRuw === "string" ? emailRuw.trim().slice(0, 200) : "";
   const telefoon = schoonTekst(veld(ruw, "telefoon"), 30).replace(/[^0-9+() -]/g, "").trim();
-  if (!isLogoNr(logo)) return { ok: false, fout: "Kies eerst een van de zes logo's.", veld: "logo" };
+  if (!isLogoNr(logo)) return { ok: false, fout: "Kies eerst een van de logo's.", veld: "logo" };
   if (naam.length < 2) return { ok: false, fout: "Vul je naam in.", veld: "naam" };
   if (!EMAIL.test(email)) return { ok: false, fout: "Vul een geldig e-mailadres in.", veld: "email" };
   return { ok: true, waarde: { logo, naam, email, ...(telefoon ? { telefoon } : {}) } };
@@ -172,6 +230,8 @@ export function logoVrij(logo: Pick<Logo, "status" | "aanvraag">, nr: LogoNr): b
 
 export interface LogoBesluit {
   watermerk: boolean;
+  /** alleen bij een voorbeeld van versie 2: op welke ondergrond (donker, licht of in kleur) */
+  thema: ThemaId | null;
   variant: VariantId;
   breedte: number;
   hoogte: number;
@@ -182,10 +242,11 @@ export interface LogoBesluit {
  * wit en met ingebakken watermerk, wat er ook gevraagd wordt. De grote, schone varianten bestaan alleen voor het gekozen
  * logo na vrijgave, of voor een platformbeheerder (de controle in Beheer).
  */
-export function logoBesluit(v: { logo: Pick<Logo, "status" | "aanvraag">; nr: LogoNr; beheerder: boolean; variant: VariantId }): LogoBesluit {
+export function logoBesluit(v: { logo: Pick<Logo, "status" | "aanvraag"> & { versie?: number | undefined }; nr: LogoNr; beheerder: boolean; variant: VariantId; thema?: ThemaId | undefined }): LogoBesluit {
   if (v.beheerder || logoVrij(v.logo, v.nr)) {
     const maat = VARIANTEN[v.variant];
-    return { watermerk: false, variant: v.variant, breedte: maat.breedte, hoogte: maat.hoogte };
+    return { watermerk: false, thema: null, variant: v.variant, breedte: maat.breedte, hoogte: maat.hoogte };
   }
-  return { watermerk: true, variant: "kleur-wit", breedte: VOORBEELD.breedte, hoogte: VOORBEELD.hoogte };
+  // het voorbeeld: bij versie 2 op de gevraagde ondergrond (dat is alleen een andere kleur van hetzelfde watermerkbeeld)
+  return { watermerk: true, thema: v.logo.versie === 2 ? (v.thema ?? "donker") : null, variant: "kleur-wit", breedte: VOORBEELD.breedte, hoogte: VOORBEELD.hoogte };
 }

@@ -6,7 +6,7 @@ import { KLEUREN, STANDAARD_KLEUR, type KleurId } from "@/lib/advertentie/regels
 import { BRANCHES, LOGO_GRENS, SFEREN, type BrancheId, type SfeerId } from "@/lib/logo/regels";
 
 // Het formulier op /logo-maker: naam, slogan, soort bedrijf, kleur en sfeer. Geen account en geen e-mailadres.
-// POST /api/logo-maker geeft het id terug; daarna gaat de bezoeker naar zijn pagina met zes logo's.
+// POST /api/logo-maker geeft het id terug; daarna gaat de bezoeker naar zijn pagina met negen logo's.
 
 export function LogoFormulier() {
   const router = useRouter();
@@ -49,7 +49,7 @@ export function LogoFormulier() {
       <h2 id="logo-form-kop" className="font-display text-xl font-bold text-ink">
         Maak je logo
       </h2>
-      <p className="mt-1 text-sm text-neutralx-600">Vul je naam in en kies een sfeer. Je ziet meteen zes logo&apos;s.</p>
+      <p className="mt-1 text-sm text-neutralx-600">Vul je naam in en kies een sfeer. Je ziet meteen negen logo&apos;s.</p>
 
       <div className="mt-5 space-y-4">
         <div>

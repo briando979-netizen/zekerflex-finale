@@ -4,7 +4,7 @@ import { isReservedTestAddress, mailButton, mailShell, sendMail } from "@/lib/ma
 import { meldGebeurtenis } from "@/lib/ops/melder";
 import { CONTACTS } from "@/lib/seo";
 import { BEWAAR_DAGEN, ONTWERPEN, PAKKET_NAAM, prijsTekst, type Advertentie, type Prijzen } from "@/lib/advertentie/regels";
-import { LOGOS, type Logo } from "@/lib/logo/regels";
+import type { Logo } from "@/lib/logo/regels";
 
 // De berichten rond een advertentie op maat en een logo van de logo maker. Aan de eigenaar: een regel in de melder
 // (lib/ops/melder.ts, zonder naam of adres) en een mail aan sales met de gegevens. Een melding naar een intern adres
@@ -15,7 +15,7 @@ const BEHEER = "/admin/advertentie-op-maat";
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const basis = () => env.APP_BASE_URL.replace(/\/+$/, "");
 const ontwerpNaam = (nr: number) => ONTWERPEN.find((o) => o.nr === nr)?.naam ?? String(nr);
-const logoNaam = (nr: number) => LOGOS.find((l) => l.nr === nr)?.naam ?? String(nr);
+
 
 interface Klant {
   naam: string;
@@ -78,7 +78,7 @@ export async function meldAanvraag(ad: Advertentie, prijzen: Prijzen): Promise<v
 export async function stuurVrijgave(ad: Advertentie): Promise<boolean> {
   const a = ad.aanvraag;
   if (!a) return false;
-  const wat = a.pakket === "alle" ? "alle drie de ontwerpen" : `het ontwerp "${ontwerpNaam(a.ontwerp)}"`;
+  const wat = a.pakket === "alle" ? "alle ontwerpen" : `het ontwerp "${ontwerpNaam(a.ontwerp)}"`;
   return lever({
     soort: "advertentie",
     onderwerp: `Je advertentie van ${ad.invoer.bedrijf} staat klaar`,
@@ -93,7 +93,7 @@ export async function stuurVrijgave(ad: Advertentie): Promise<boolean> {
 export async function meldLogoAanvraag(logo: Logo, prijzen: Prijzen): Promise<void> {
   const a = logo.aanvraag;
   if (!a) return;
-  await meld({ wat: "Logo", soort: "logo", bedrijf: logo.invoer.naam, klant: a, keuze: `logo ${a.logo} (${logoNaam(a.logo)}), ${prijsTekst(prijzen, "logo")}` });
+  await meld({ wat: "Logo", soort: "logo", bedrijf: logo.invoer.naam, klant: a, keuze: `logo ${a.logo}, ${prijsTekst(prijzen, "logo")}` });
 }
 
 export async function stuurLogoVrijgave(logo: Logo): Promise<boolean> {

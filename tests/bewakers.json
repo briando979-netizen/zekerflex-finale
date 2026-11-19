@@ -29,6 +29,7 @@
     "tests/id-redenen.test.ts",
     "tests/juridisch-canonical.test.ts",
     "tests/kv-avg-bewaker.test.ts",
+    "tests/logo-tekens.test.ts",
     "tests/kvk-tegoed.test.ts",
     "tests/log-geheimen.test.ts",
     "tests/mail-log-domein.test.ts",

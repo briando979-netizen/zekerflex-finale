@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { GRENS, KLEUREN, STANDAARD_KLEUR, type KleurId } from "@/lib/advertentie/regels";
 
 // Het formulier op /advertentie-op-maat: een paar velden, geen account en geen e-mailadres. POST /api/advertentie geeft
-// het id terug; daarna gaat de bezoeker naar zijn eigen pagina met de drie ontwerpen.
+// het id terug; daarna gaat de bezoeker naar zijn eigen pagina met de zes ontwerpen.
 
-const STAPPEN = ["Je gegevens lezen", "De tekst schrijven", "Drie ontwerpen opmaken"];
+const STAPPEN = ["Je gegevens lezen", "De tekst schrijven", "Zes ontwerpen opmaken"];
 
 type Veld = "bedrijf" | "aanbod";
 
@@ -62,7 +62,7 @@ export function AdvertentieFormulier() {
       <h2 id="adv-form-kop" className="font-display text-xl font-bold text-ink">
         Maak je advertentie
       </h2>
-      <p className="mt-1 text-sm text-neutralx-600">Vul in wat je weet. Je ziet meteen drie ontwerpen.</p>
+      <p className="mt-1 text-sm text-neutralx-600">Vul in wat je weet. Je ziet meteen zes ontwerpen.</p>
 
       <div className="mt-5 space-y-4">
         <div>

@@ -43,9 +43,12 @@ export const ONTWERPEN = [
   { nr: 1, naam: "Strak", uitleg: "Donker en rustig" },
   { nr: 2, naam: "Licht", uitleg: "Licht en speels" },
   { nr: 3, naam: "Groot", uitleg: "Grote letters" },
+  { nr: 4, naam: "Poster", uitleg: "Donker, schuine kop" },
+  { nr: 5, naam: "Diagonaal", uitleg: "Twee kleurvlakken" },
+  { nr: 6, naam: "Redactie", uitleg: "Schreef en veel wit" },
 ] as const;
-export type OntwerpNr = 1 | 2 | 3;
-export const isOntwerpNr = (v: unknown): v is OntwerpNr => v === 1 || v === 2 || v === 3;
+export type OntwerpNr = 1 | 2 | 3 | 4 | 5 | 6;
+export const isOntwerpNr = (v: unknown): v is OntwerpNr => typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= ONTWERPEN.length;
 
 export const FORMATEN = {
   vierkant: { breedte: 1080, hoogte: 1080, naam: "Vierkant", maat: "1080 × 1080" },
@@ -207,8 +210,8 @@ export function valideerAanvraag(ruw: unknown): Uitkomst<Omit<Aanvraag, "op">> {
   const email = typeof emailRuw === "string" ? emailRuw.trim().slice(0, GRENS.email) : "";
   const telefoon = schoonTekst(veld(ruw, "telefoon"), GRENS.telefoon).replace(/[^0-9+() -]/g, "").trim();
   const pakket = veld(ruw, "pakket");
-  if (!isOntwerpNr(ontwerp)) return { ok: false, fout: "Kies eerst een van de drie ontwerpen.", veld: "ontwerp" };
-  if (pakket !== "een" && pakket !== "alle") return { ok: false, fout: "Kies of je dit ene ontwerp wilt of alle drie.", veld: "pakket" };
+  if (!isOntwerpNr(ontwerp)) return { ok: false, fout: "Kies eerst een van de ontwerpen.", veld: "ontwerp" };
+  if (pakket !== "een" && pakket !== "alle") return { ok: false, fout: "Kies of je dit ene ontwerp wilt of alle ontwerpen.", veld: "pakket" };
   if (naam.length < 2) return { ok: false, fout: "Vul je naam in.", veld: "naam" };
   if (!EMAIL.test(email)) return { ok: false, fout: "Vul een geldig e-mailadres in.", veld: "email" };
   return { ok: true, waarde: { ontwerp, pakket, naam, email, ...(telefoon ? { telefoon } : {}) } };
@@ -345,7 +348,11 @@ export function beeldBesluit(v: { ad: Pick<Advertentie, "status" | "aanvraag">; 
     const f = FORMATEN[v.formaat];
     return { watermerk: false, formaat: v.formaat, breedte: f.breedte, hoogte: f.hoogte };
   }
-  return { watermerk: true, formaat: "vierkant", breedte: VOORBEELD_ZIJDE, hoogte: VOORBEELD_ZIJDE };
+  // het voorbeeld: klein en met watermerk, in het gevraagde formaat (zo ziet de klant ook het verhaal en de liggende
+  // versie, in een telefoon of als poster); de langste zijde is nooit groter dan het voorbeeld
+  const f = FORMATEN[v.formaat];
+  const schaal = VOORBEELD_ZIJDE / Math.max(f.breedte, f.hoogte);
+  return { watermerk: true, formaat: v.formaat, breedte: Math.round(f.breedte * schaal), hoogte: Math.round(f.hoogte * schaal) };
 }
 
 // ---------------------------------------------------------------------------
@@ -363,10 +370,10 @@ export type Prijzen = Record<Pakket | "logo", string>;
 export const STANDAARD_PRIJZEN: Prijzen = { een: "€ 29", alle: "€ 49", logo: "€ 49" };
 export const BTW_TEKST = "excl. btw";
 
-export const PAKKET_NAAM: Record<Pakket, string> = { een: "Eén ontwerp", alle: "Alle drie de ontwerpen" };
+export const PAKKET_NAAM: Record<Pakket, string> = { een: "Eén ontwerp", alle: "Alle ontwerpen" };
 export const PAKKET_UITLEG: Record<Pakket, string> = {
   een: "Het ontwerp dat je kiest, zonder watermerk, in drie formaten.",
-  alle: "Alle drie de ontwerpen, zonder watermerk, elk in drie formaten.",
+  alle: "Alle zes de ontwerpen, zonder watermerk, elk in drie formaten.",
 };
 
 export const PRIJS_MAX = 12;

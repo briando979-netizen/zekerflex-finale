@@ -27,6 +27,27 @@ Ongewijzigde bestanden uit de officiele repo's van de makers, opgehaald op
   commit e0a8124cf36bb7c32ca68e5d46d6acdbc3df866a
   Copyright 2020 The Anton Project Authors (github.com/googlefonts/AntonFont)
 
-Alle vier staan onder de SIL Open Font License, versie 1.1. De volledige tekst
-staat in OFL.txt in deze map (de tekst is voor alle vier gelijk, op de regel met
+- Kanit-BlackItalic.ttf (zware schuine letter voor streetwear, sport en de poster-advertentie)
+  Kanit, github.com/google/fonts (ofl/kanit),
+  commit 674cdcf5e290b4d29f7b017ad1643e536d1bc372
+  Copyright 2020 The Kanit Project Authors (github.com/cadsondemak/kanit)
+- RussoOne-Regular.ttf (brede letter voor de sfeer techno)
+  Russo One, github.com/google/fonts (ofl/russoone),
+  commit 8ccda7bf739842777d42661d1b384b926194e24b
+  Copyright (c) 2011-2012, Jovanny Lemonad (jovanny.ru), with Reserved Font Name "Russo"
+- PirataOne-Regular.ttf (gotische letter voor de sfeer gothic)
+  Pirata One, github.com/google/fonts (ofl/pirataone),
+  commit 90abd17b4f97671435798b6147b698aa9087612f
+  Copyright (c) 2012, Rodrigo Fuenzalida, Nicolas Massi, with Reserved Font Name "Pirata"
+- Marcellus-Regular.ttf (fijne schreefletter voor de sfeer luxe en de wijd gespatieerde regels)
+  Marcellus, github.com/google/fonts (ofl/marcellus),
+  commit 90abd17b4f97671435798b6147b698aa9087612f
+  Copyright (c) 2012, Brian J. Bonislawsky DBA Astigmatic (AOETI), with Reserved Font Names "Marcellus"
+
+De laatste vier zijn sierletters met een kleinere tekenset. Mist er een teken (een
+zeldzaam accent), dan tekent de server dat ene teken met een van de eerste zeven
+letters; er wordt nooit een lettertype van buiten opgehaald.
+
+Alle elf staan onder de SIL Open Font License, versie 1.1. De volledige tekst
+staat in OFL.txt in deze map (de tekst is voor alle elf gelijk, op de regel met
 het auteursrecht na; die staat hierboven per lettertype).

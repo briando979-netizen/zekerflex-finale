@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Empty, Panel, Pill, type Tone } from "@/components/admin/kit";
-import { BRANCHES, LOGOS, SFEREN, logoVrij, type Logo } from "@/lib/logo/regels";
+import { BRANCHES, SFEREN, logoAantal, logoVrij, type Logo, type LogoNr } from "@/lib/logo/regels";
 import { BTW_TEKST, KEUZE_GEWIJZIGD, KLEUREN, ONTWERPEN, PAKKET_NAAM, PRIJS_MAX, ontwerpVrij, prijsTekst, type Advertentie, type Prijzen, type Status } from "@/lib/advertentie/regels";
 
 // Beheer van advertenties op maat en logo's: de lijst met de invoer, de keuze en de contactgegevens, een kleine schone
@@ -19,7 +19,6 @@ const STATUS: Record<Status, { label: string; tone: Tone }> = {
 
 const tijd = (iso: string) => new Date(iso).toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const ontwerpNaam = (nr: number) => ONTWERPEN.find((o) => o.nr === nr)?.naam ?? String(nr);
-const logoNaam = (nr: number) => LOGOS.find((l) => l.nr === nr)?.naam ?? String(nr);
 const mute = { color: "var(--a-mute)" };
 const rand = { borderColor: "var(--a-border)" };
 
@@ -104,7 +103,7 @@ export function AdvertentieBeheer({ begin, beginLogos, beginPrijzen, beginIngest
   const verborgen = lijst.length + logos.length - advertenties.length - logoRijen.length;
   const prijsVelden = [
     { id: "adv-prijs-een", label: "Eén ontwerp", waarde: een, zet: setEen, standaard: standaard.een },
-    { id: "adv-prijs-alle", label: "Alle drie", waarde: alle, zet: setAlle, standaard: standaard.alle },
+    { id: "adv-prijs-alle", label: "Alle ontwerpen", waarde: alle, zet: setAlle, standaard: standaard.alle },
     { id: "adv-prijs-logo", label: "Eén logo", waarde: logoPrijs, zet: setLogoPrijs, standaard: standaard.logo },
   ];
 
@@ -130,7 +129,7 @@ export function AdvertentieBeheer({ begin, beginLogos, beginPrijzen, beginIngest
             Bewaren
           </button>
           <p className="w-full text-xs" style={mute}>
-            Nu geldt: {prijsTekst(prijzen, "een")} voor één ontwerp, {prijsTekst(prijzen, "alle")} voor alle drie, {prijsTekst(prijzen, "logo")} voor een logo. Dat staat zo op /advertentie-op-maat, /logo-maker en /starters, op de pagina van de klant
+            Nu geldt: {prijsTekst(prijzen, "een")} voor één ontwerp, {prijsTekst(prijzen, "alle")} voor alle ontwerpen, {prijsTekst(prijzen, "logo")} voor een logo. Dat staat zo op /advertentie-op-maat, /logo-maker en /starters, op de pagina van de klant
             en in de mails. De kaarten op /aanbod en in het menu tonen altijd de standaardprijs; die volgen dit veld niet.
           </p>
         </form>
@@ -234,7 +233,7 @@ export function AdvertentieBeheer({ begin, beginLogos, beginPrijzen, beginIngest
               const s = STATUS[logo.status];
               const a = logo.aanvraag;
               const nr = a ? a.logo : 3;
-              const keuze = a ? `logo ${a.logo} (${logoNaam(a.logo)}) voor ${prijsTekst(prijzen, "logo")}` : "";
+              const keuze = a ? `logo ${a.logo} voor ${prijsTekst(prijzen, "logo")}` : "";
               const beeld = (l: number, klein: boolean) => `/api/logo-maker/${logo.id}/beeld?logo=${l}&variant=kleur-wit&beheer=1${klein ? "&klein=1" : ""}`;
               return (
                 <li key={logo.id} className="relative flex flex-col gap-4 rounded-xl border p-4 md:flex-row" style={rand}>
@@ -287,10 +286,10 @@ export function AdvertentieBeheer({ begin, beginLogos, beginPrijzen, beginIngest
                       <a href={`/logo-maker/${logo.id}`} target="_blank" rel="noopener" className="a-btn a-btn-ghost">
                         Pagina van de klant
                       </a>
-                      {LOGOS.map((l) => (
-                        <a key={l.nr} href={beeld(l.nr, false)} target="_blank" rel="noopener" className="text-xs underline underline-offset-2" style={mute}>
-                          {l.nr}. {l.naam}
-                          {logoVrij(logo, l.nr) ? " (vrij)" : ""}
+                      {Array.from({ length: logoAantal(logo) }, (_, n) => (n + 1) as LogoNr).map((l) => (
+                        <a key={l} href={beeld(l, false)} target="_blank" rel="noopener" className="text-xs underline underline-offset-2" style={mute}>
+                          Logo {l}
+                          {logoVrij(logo, l) ? " (vrij)" : ""}
                         </a>
                       ))}
                       <button type="button" onClick={() => void verwijder("logo", logo.id, logo.invoer.naam)} disabled={bezig !== null} className="a-btn a-btn-ghost ml-auto disabled:opacity-50" style={{ color: "var(--a-crit)" }}>

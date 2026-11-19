@@ -3,7 +3,9 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { readdirSync } from "node:fs";
 import { afterEach, vi } from "vitest";
-import { gegevensVan, maakBeeld, maakPng } from "@/lib/advertentie/beeld";
+import { BASISLETTERS, SIERLETTERS, gegevensVan, letterMeter, maakBeeld, maakPng } from "@/lib/advertentie/beeld";
+import { logoBoom2 } from "@/lib/logo/ontwerp2";
+import { SFEREN } from "@/lib/logo/regels";
 import { GEHEUGEN_MAX, GEHEUGEN_MS, geheugenGrootte, leegGeheugen, watermerkBeeld } from "@/lib/advertentie/beeld-geheugen";
 import { lettergrootte, ontwerpBoom } from "@/lib/advertentie/ontwerp";
 import { logoBoom } from "@/lib/logo/ontwerp";
@@ -49,12 +51,15 @@ const keuze = (ontwerp: 1 | 2 | 3, pakket: "een" | "alle") => ({ ontwerp, pakket
 
 describe("het beeld: watermerk ja of nee, en welke maat", () => {
   const klein = { watermerk: true, formaat: "vierkant", breedte: VOORBEELD_ZIJDE, hoogte: VOORBEELD_ZIJDE };
+  const kleinIn = { vierkant: klein, verhaal: { watermerk: true, formaat: "verhaal", breedte: 338, hoogte: 600 }, liggend: { watermerk: true, formaat: "liggend", breedte: 600, hoogte: 314 } };
 
-  it("niet vrijgegeven: altijd klein, vierkant en met watermerk, wat er ook gevraagd wordt", () => {
+  it("niet vrijgegeven: altijd klein en met watermerk, in elk formaat en voor elk ontwerp", () => {
     for (const status of ["gemaakt", "aangevraagd"] as const) {
       for (const formaat of ["vierkant", "verhaal", "liggend"] as const) {
-        for (const ontwerp of [1, 2, 3] as const) {
-          expect(beeldBesluit({ ad: ad(status, status === "aangevraagd" ? keuze(ontwerp, "alle") : undefined), ontwerp, beheerder: false, formaat })).toEqual(klein);
+        for (const ontwerp of [1, 2, 3, 4, 5, 6] as const) {
+          const b = beeldBesluit({ ad: ad(status, status === "aangevraagd" ? keuze(ontwerp > 3 ? 1 : (ontwerp as 1 | 2 | 3), "alle") : undefined), ontwerp, beheerder: false, formaat });
+          expect(b).toEqual(kleinIn[formaat]);
+          expect(Math.max(b.breedte, b.hoogte)).toBeLessThanOrEqual(VOORBEELD_ZIJDE);
         }
       }
     }
@@ -64,14 +69,15 @@ describe("het beeld: watermerk ja of nee, en welke maat", () => {
     const vrij = ad("vrijgegeven", keuze(2, "een"));
     expect(beeldBesluit({ ad: vrij, ontwerp: 2, beheerder: false, formaat: "verhaal" })).toEqual({ watermerk: false, formaat: "verhaal", breedte: 1080, hoogte: 1920 });
     expect(beeldBesluit({ ad: vrij, ontwerp: 2, beheerder: false, formaat: "liggend" })).toEqual({ watermerk: false, formaat: "liggend", breedte: 1200, hoogte: 628 });
-    expect(beeldBesluit({ ad: vrij, ontwerp: 1, beheerder: false, formaat: "verhaal" })).toEqual(klein);
+    expect(beeldBesluit({ ad: vrij, ontwerp: 1, beheerder: false, formaat: "verhaal" })).toEqual(kleinIn.verhaal);
+    expect(beeldBesluit({ ad: vrij, ontwerp: 5, beheerder: false, formaat: "liggend" })).toEqual(kleinIn.liggend);
     expect(beeldBesluit({ ad: vrij, ontwerp: 3, beheerder: false, formaat: "vierkant" })).toEqual(klein);
     expect([1, 2, 3].filter((n) => ontwerpVrij(vrij, n as 1 | 2 | 3))).toEqual([2]);
   });
 
   it("vrijgegeven met alle drie: elk ontwerp is schoon", () => {
     const vrij = ad("vrijgegeven", keuze(1, "alle"));
-    for (const ontwerp of [1, 2, 3] as const) expect(beeldBesluit({ ad: vrij, ontwerp, beheerder: false, formaat: "vierkant" })).toEqual({ watermerk: false, formaat: "vierkant", breedte: 1080, hoogte: 1080 });
+    for (const ontwerp of [1, 2, 3, 4, 5, 6] as const) expect(beeldBesluit({ ad: vrij, ontwerp, beheerder: false, formaat: "vierkant" })).toEqual({ watermerk: false, formaat: "vierkant", breedte: 1080, hoogte: 1080 });
   });
 
   it("een status 'vrijgegeven' zonder aanvraag geeft niets vrij", () => {
@@ -117,7 +123,8 @@ describe("invoer schoonmaken", () => {
   it("valideert de aanvraag: ontwerp, pakket, naam en e-mail", () => {
     const basis = { ontwerp: 2, pakket: "alle", naam: "Jan Jansen", email: "jan@voorbeeld.test", telefoon: "06-1234 5678 <x>" };
     expect(valideerAanvraag(basis)).toEqual({ ok: true, waarde: { ontwerp: 2, pakket: "alle", naam: "Jan Jansen", email: "jan@voorbeeld.test", telefoon: "06-1234 5678" } });
-    expect(valideerAanvraag({ ...basis, ontwerp: 4 })).toMatchObject({ ok: false, veld: "ontwerp" });
+    expect(valideerAanvraag({ ...basis, ontwerp: 6 })).toMatchObject({ ok: true });
+    for (const fout of [0, 7, 2.5, "x"]) expect(valideerAanvraag({ ...basis, ontwerp: fout }), String(fout)).toMatchObject({ ok: false, veld: "ontwerp" });
     expect(valideerAanvraag({ ...basis, pakket: "gratis" })).toMatchObject({ ok: false, veld: "pakket" });
     expect(valideerAanvraag({ ...basis, naam: "" })).toMatchObject({ ok: false, veld: "naam" });
     expect(valideerAanvraag({ ...basis, email: "jan@" })).toMatchObject({ ok: false, veld: "email" });
@@ -237,7 +244,7 @@ describe("de ontwerpen en de voorbeelden", () => {
   });
 
   it("de voorbeelden op de landingspagina zijn verzonnen, zonder prijs of claim, en passen binnen de grenzen", () => {
-    expect(VOORBEELDEN.map((v) => v.ontwerp).sort()).toEqual([1, 2, 3]);
+    expect(VOORBEELDEN.map((v) => v.ontwerp).sort()).toEqual([1, 2, 3, 4, 5, 6]);
     for (const v of VOORBEELDEN) {
       const g = v.gegevens;
       expect(`${g.kop} ${g.onderregel} ${g.knop}`).not.toMatch(/\u{20AC}|%|korting|gratis|beste/iu);
@@ -399,8 +406,13 @@ describe("geen lettertype van buiten", () => {
   const map = join(ROOT, "public", "fonts", "advertentie");
 
   it("elk teken dat de invoerreiniging doorlaat, zit in alle lettertypes van de beelden", () => {
-    const bestanden = readdirSync(map).filter((f) => f.endsWith(".ttf"));
-    expect(bestanden.length).toBe(7);
+    // de zeven basisletters dekken elk teken dat de reiniging doorlaat; een sierletter die een teken mist, leent het daar
+    expect(readdirSync(map).filter((f) => f.endsWith(".ttf")).sort()).toEqual([...BASISLETTERS, ...SIERLETTERS].sort());
+    const bestanden = [...BASISLETTERS];
+    for (const sier of SIERLETTERS) {
+      const set = dekking(readFileSync(join(map, sier)));
+      for (const teken of "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789&.,-'!?") expect(set.has(teken.codePointAt(0) ?? 0), `${sier} ${teken}`).toBe(true);
+    }
     const sets = bestanden.map((f) => dekking(readFileSync(join(map, f))));
     const toegestaan: number[] = [];
     for (let c = 0; c <= 0x2fff; c++) if (IN_LETTERTYPE.test(String.fromCodePoint(c))) toegestaan.push(c);
@@ -419,7 +431,7 @@ describe("geen lettertype van buiten", () => {
       expect(invoerSchoon.ok && invoerSchoon.waarde.bedrijf).toBe("Café Zoë Łódź Ñandú");
       if (!invoerSchoon.ok) return;
       const ad = { invoer: invoerSchoon.waarde, tekst: sjabloonTekst(invoerSchoon.waarde) };
-      for (const nr of [1, 2, 3] as const) {
+      for (const nr of [1, 2, 3, 4, 5, 6] as const) {
         const png = await maakBeeld(gegevensVan(ad), nr, { watermerk: true, formaat: "vierkant", breedte: 200, hoogte: 200 });
         expect(Buffer.from(png).subarray(1, 4).toString("ascii")).toBe("PNG");
       }
@@ -430,11 +442,19 @@ describe("geen lettertype van buiten", () => {
         const { boom, breedte, hoogte } = logoBoom(6, { ...logo.waarde, sfeer }, "kleur-wit", 180, true);
         await maakPng(boom, breedte, hoogte);
       }
+      // versie 2: elke sfeer (met de sierletters) en elk van de negen logo's, met accenten in de naam
+      const meet = await letterMeter();
+      for (const s of SFEREN) {
+        for (const nr of [1, 4, 8, 9] as const) {
+          const v2 = logoBoom2(nr, { naam: "Zoë Łukasz", slogan: "Crème de la crème", branche: "kleding", kleur: "rood", sfeer: s.id }, { soort: "thema", thema: "donker" }, 160, true, meet);
+          await maakPng(v2.boom, v2.breedte, v2.hoogte);
+        }
+      }
       expect(haal).not.toHaveBeenCalled();
     } finally {
       haal.mockRestore();
     }
-  }, 120_000);
+  }, 240_000);
 
   it("het watermerk staat er in twee tinten, wit en donker", () => {
     const boom = JSON.stringify(ontwerpBoom(1, VOORBEELDEN[0]!.gegevens, "vierkant", 600, true));

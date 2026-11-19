@@ -12,7 +12,7 @@ import { AANBOD } from "@/lib/marketing/aanbod";
 
 const ROOT = join(__dirname, "..");
 const logo = (status: Logo["status"], gekozen?: LogoNr): Pick<Logo, "status" | "aanvraag"> => ({ status, ...(gekozen ? { aanvraag: { logo: gekozen, naam: "Test", email: "test@voorbeeld.test", op: "2026-11-19T10:00:00.000Z" } } : {}) });
-const klein = { watermerk: true, variant: "kleur-wit", breedte: VOORBEELD.breedte, hoogte: VOORBEELD.hoogte };
+const klein = { watermerk: true, thema: null, variant: "kleur-wit", breedte: VOORBEELD.breedte, hoogte: VOORBEELD.hoogte };
 
 describe("het logo: watermerk ja of nee, welke variant en welke maat", () => {
   it("niet vrijgegeven: altijd klein, in kleur op wit en met watermerk, wat er ook gevraagd wordt", () => {
@@ -25,20 +25,20 @@ describe("het logo: watermerk ja of nee, welke variant en welke maat", () => {
 
   it("vrijgegeven: alleen het gekozen logo is schoon, in elke variant op volle maat", () => {
     const vrij = logo("vrijgegeven", 4);
-    expect(logoBesluit({ logo: vrij, nr: 4, beheerder: false, variant: "wit" })).toEqual({ watermerk: false, variant: "wit", breedte: 2400, hoogte: 1800 });
-    expect(logoBesluit({ logo: vrij, nr: 4, beheerder: false, variant: "icoon" })).toEqual({ watermerk: false, variant: "icoon", breedte: 1024, hoogte: 1024 });
+    expect(logoBesluit({ logo: vrij, nr: 4, beheerder: false, variant: "wit" })).toEqual({ watermerk: false, thema: null, variant: "wit", breedte: 2400, hoogte: 1800 });
+    expect(logoBesluit({ logo: vrij, nr: 4, beheerder: false, variant: "icoon" })).toEqual({ watermerk: false, thema: null, variant: "icoon", breedte: 1024, hoogte: 1024 });
     for (const nr of [1, 2, 3, 5, 6] as LogoNr[]) expect(logoBesluit({ logo: vrij, nr, beheerder: false, variant: "kleur" })).toEqual(klein);
     expect(LOGOS.filter((l) => logoVrij(vrij, l.nr)).map((l) => l.nr)).toEqual([4]);
     expect(logoVrij(logo("vrijgegeven"), 1)).toBe(false);
   });
 
   it("alleen een beheerder ziet de schone versie eerder", () => {
-    expect(logoBesluit({ logo: logo("gemaakt"), nr: 2, beheerder: true, variant: "zwart" })).toEqual({ watermerk: false, variant: "zwart", breedte: 2400, hoogte: 1800 });
+    expect(logoBesluit({ logo: logo("gemaakt"), nr: 2, beheerder: true, variant: "zwart" })).toEqual({ watermerk: false, thema: null, variant: "zwart", breedte: 2400, hoogte: 1800 });
   });
 
   it("de beeldroute beslist alleen via logoBesluit en bewaart een voorbeeld nergens", () => {
     const route = readFileSync(join(ROOT, "app", "api", "logo-maker", "[id]", "beeld", "route.ts"), "utf8");
-    expect(route).toContain("logoBesluit({ logo, nr, beheerder, variant })");
+    expect(route).toContain("logoBesluit({ logo, nr, beheerder, variant, thema:");
     expect(route).toContain("private, no-store");
     expect(route).toContain('hasRole(principal, "PLATFORM_ADMIN")');
     expect(route).not.toMatch(/logger\.\w+\([^)]*(request\.url|\bid\b)/);
@@ -70,7 +70,8 @@ describe("de invoer", () => {
 
   it("valideert de aanvraag", () => {
     expect(valideerLogoAanvraag({ logo: 6, naam: "Jan Jansen", email: "jan@voorbeeld.test" })).toEqual({ ok: true, waarde: { logo: 6, naam: "Jan Jansen", email: "jan@voorbeeld.test" } });
-    expect(valideerLogoAanvraag({ logo: 7, naam: "Jan", email: "jan@voorbeeld.test" })).toMatchObject({ ok: false, veld: "logo" });
+    expect(valideerLogoAanvraag({ logo: 9, naam: "Jan", email: "jan@voorbeeld.test" })).toMatchObject({ ok: true });
+    expect(valideerLogoAanvraag({ logo: 10, naam: "Jan", email: "jan@voorbeeld.test" })).toMatchObject({ ok: false, veld: "logo" });
     expect(valideerLogoAanvraag({ logo: 1.5, naam: "Jan", email: "jan@voorbeeld.test" })).toMatchObject({ ok: false, veld: "logo" });
     expect(valideerLogoAanvraag({ logo: 1, naam: "Jan", email: "geen" })).toMatchObject({ ok: false, veld: "email" });
   });
@@ -136,7 +137,8 @@ describe("prijs, aanbod, voorbeelden en lettertypes", () => {
   });
 
   it("de voorbeelden zijn zes verschillende soorten logo en gebruiken bestaande keuzes", () => {
-    expect(LOGO_VOORBEELDEN.map((v) => v.logo).sort()).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(LOGO_VOORBEELDEN.length).toBe(9);
+    expect(new Set(LOGO_VOORBEELDEN.map((v) => v.sleutel)).size).toBe(9);
     for (const v of LOGO_VOORBEELDEN) {
       expect(valideerLogoInvoer(v.invoer)).toEqual({ ok: true, waarde: v.invoer });
       expect(BRANCHES.some((b) => b.id === v.invoer.branche)).toBe(true);

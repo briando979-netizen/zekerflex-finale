@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { AdMockups } from "@/components/marketing/studio/Mockups";
 import { BEWAAR_DAGEN, FORMATEN, FORMAAT_IDS, GRENS, ONTWERPEN, PAKKETTEN, PAKKET_NAAM, PAKKET_UITLEG, prijsTekst, type AdTekst, type OntwerpNr, type Pakket, type Prijzen, type Status } from "@/lib/advertentie/regels";
 
 // De eigen pagina van een advertentie op maat. De beelden komen van de server (GET /api/advertentie/<id>/beeld); zolang
@@ -46,12 +47,11 @@ export function AdvertentieResultaat({
   function kies(nr: OntwerpNr) {
     setOntwerp(nr);
     setFout(null);
-    document.getElementById("adv-wil-ik")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   async function verstuur(e: React.FormEvent) {
     e.preventDefault();
-    if (!ontwerp) return setFout({ tekst: "Kies eerst een van de drie ontwerpen.", veld: "ontwerp" });
+    if (!ontwerp) return setFout({ tekst: "Kies eerst een van de ontwerpen.", veld: "ontwerp" });
     if (naam.trim().length < 2) return setFout({ tekst: "Vul je naam in.", veld: "naam" });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) return setFout({ tekst: "Vul een geldig e-mailadres in.", veld: "email" });
     setBezig(true);
@@ -79,14 +79,14 @@ export function AdvertentieResultaat({
 
   return (
     <>
-      <section className="hero-ink text-white">
-        <div className="shell py-10 md:py-14">
+      <section className="bg-[#0B0B0C] text-white">
+        <div className="shell pb-2 pt-10 md:pt-14">
           <p className="eyebrow text-brand-mint">Advertentie op maat</p>
-          <h1 className="mt-3 max-w-3xl text-balance break-words font-display text-3xl font-bold leading-tight md:text-[2.6rem]">{vrijgegeven ? `Je advertentie voor ${bedrijf} staat klaar` : `Je advertentie voor ${bedrijf}`}</h1>
+          <h1 className="mt-3 max-w-3xl text-balance break-words font-display text-4xl font-bold leading-[1.05] md:text-6xl">{vrijgegeven ? `Je advertentie voor ${bedrijf} staat klaar` : `Je advertentie voor ${bedrijf}`}</h1>
           <p className="mt-4 max-w-2xl text-lg leading-relaxed text-white/70">
             {vrijgegeven
               ? "Bedankt voor je betaling. Hieronder download je de bestanden zonder watermerk."
-              : "Dit zijn je drie ontwerpen, als voorbeeld met watermerk. Je betaalt pas als je hem wilt hebben."}
+              : `Dit zijn je ${ONTWERPEN.length} ontwerpen, als voorbeeld met watermerk. Je betaalt pas als je hem wilt hebben.`}
           </p>
         </div>
       </section>
@@ -130,17 +130,18 @@ export function AdvertentieResultaat({
       )}
 
       {nogMetWatermerk.length > 0 && (
-        <section className="bg-paper" aria-labelledby="adv-ontwerpen-kop">
-          <div className="shell py-10 md:py-14">
-            <h2 id="adv-ontwerpen-kop" className="font-display text-2xl font-bold text-ink md:text-3xl">
+        <section className="bg-[#0B0B0C] text-white" aria-labelledby="adv-ontwerpen-kop">
+          <div className="shell pb-12 pt-8 md:pb-16">
+            <h2 id="adv-ontwerpen-kop" className="font-display text-2xl font-bold text-white md:text-3xl">
               {vrijgegeven ? "De andere ontwerpen" : "Kies het ontwerp dat bij je past"}
             </h2>
-            {vrijgegeven && <p className="mt-2 max-w-2xl text-neutralx-600">Deze ontwerpen zitten niet in je keuze en houden hun watermerk. Wil je ze er toch bij? Mail ons dan even.</p>}
+            {vrijgegeven && <p className="mt-2 max-w-2xl text-white/65">Deze ontwerpen zitten niet in je keuze en houden hun watermerk. Wil je ze er toch bij? Mail ons dan even.</p>}
             <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {nogMetWatermerk.map((o) => {
                 const gekozen = ontwerp === o.nr && !vrijgegeven;
                 return (
-                  <li key={o.nr} className={`relative overflow-hidden rounded-3xl border-2 bg-white shadow-card transition ${gekozen ? "border-brand-600" : "border-hair"}`}>
+                  <li key={o.nr} className={`relative overflow-hidden rounded-3xl border-2 bg-white transition motion-reduce:transition-none ${gekozen ? "border-brand-mint" : "border-white/10"}`}>
+                    <span className="absolute inset-x-0 top-0 block aspect-square animate-pulse bg-neutralx-200 motion-reduce:animate-none" aria-hidden />
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={beeld(id, o.nr)}
@@ -150,10 +151,10 @@ export function AdvertentieResultaat({
                       draggable={false}
                       onContextMenu={geenMenu}
                       onDragStart={geenMenu}
-                      className="pointer-events-auto block aspect-square h-auto w-full select-none"
+                      className="pointer-events-auto relative block aspect-square h-auto w-full select-none"
                       style={{ WebkitUserSelect: "none", userSelect: "none", WebkitTouchCallout: "none" }}
                     />
-                    <div className="flex items-center justify-between gap-3 p-4">
+                    <div className="relative flex items-center justify-between gap-3 bg-white p-4">
                       <div className="min-w-0">
                         <p className="font-display text-base font-bold text-ink">
                           Ontwerp {o.nr}: {o.naam}
@@ -171,7 +172,7 @@ export function AdvertentieResultaat({
               })}
             </ul>
 
-            <div className="mt-8 max-w-3xl rounded-2xl border border-hair bg-white p-5">
+            <div className="mt-8 max-w-3xl rounded-2xl border border-white/10 bg-white p-5">
               <h3 className="text-sm font-semibold text-ink">De tekst in je advertentie</h3>
               <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[7rem_1fr]">
                 <dt className="text-neutralx-500">Kop</dt>
@@ -189,6 +190,21 @@ export function AdvertentieResultaat({
                   </Link>
                 </p>
               )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {!vrijgegeven && (
+        <section className="border-b border-hair bg-paper" aria-labelledby="adv-mockup-kop">
+          <div className="shell py-10 md:py-14">
+            <p className="eyebrow">Zo ziet het eruit</p>
+            <h2 id="adv-mockup-kop" className="mt-3 font-display text-2xl font-bold text-ink md:text-3xl">
+              Op een telefoon, als verhaal en liggend
+            </h2>
+            <p className="mt-2 max-w-2xl text-neutralx-600">Schetsen met het ontwerp dat je hierboven kiest, in de drie formaten die je krijgt. Het watermerk verdwijnt zodra de advertentie van jou is.</p>
+            <div className="mt-8">
+              <AdMockups vierkant={beeld(id, ontwerp ?? 1, "&formaat=vierkant")} verhaal={beeld(id, ontwerp ?? 1, "&formaat=verhaal")} liggend={beeld(id, ontwerp ?? 1, "&formaat=liggend")} naam={bedrijf} />
             </div>
           </div>
         </section>
@@ -214,9 +230,9 @@ export function AdvertentieResultaat({
               <form onSubmit={verstuur} noValidate className="mt-6 rounded-3xl border border-hair bg-white p-5 shadow-card sm:p-7">
                 <fieldset>
                   <legend className="field-label">Welk ontwerp?</legend>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                  <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {ONTWERPEN.map((o) => (
-                      <label key={o.nr} className={`flex cursor-pointer items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-sm font-medium text-ink ${ontwerp === o.nr ? "border-brand-600 bg-brand-50" : "border-hair"}`}>
+                      <label key={o.nr} className={`relative flex cursor-pointer items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-sm font-medium text-ink ${ontwerp === o.nr ? "border-brand-600 bg-brand-50" : "border-hair"}`}>
                         <input type="radio" name="adv-ontwerp" value={o.nr} checked={ontwerp === o.nr} onChange={() => setOntwerp(o.nr)} className="h-4 w-4 accent-brand-600" />
                         {o.nr}. {o.naam}
                       </label>
@@ -231,7 +247,7 @@ export function AdvertentieResultaat({
                         <input type="radio" name="adv-pakket" value={p} checked={pakket === p} onChange={() => setPakket(p)} className="mt-1 h-4 w-4 accent-brand-600" />
                         <span className="min-w-0">
                           <span className="block text-sm font-semibold text-ink">
-                            {p === "een" ? "Alleen dit ontwerp" : PAKKET_NAAM[p]}: {prijsTekst(prijzen, p)}
+                            {p === "een" ? "Alleen dit ontwerp" : `${PAKKET_NAAM[p]} (alle ${ONTWERPEN.length})`}: {prijsTekst(prijzen, p)}
                           </span>
                           <span className="block text-sm text-neutralx-600">{PAKKET_UITLEG[p]}</span>
                         </span>

@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { StartersFormulier } from "@/components/marketing/starters/StartersFormulier";
+import { LogoMockups } from "@/components/marketing/studio/Mockups";
 import { FaqList } from "@/components/marketing/primitives";
+import { kleurHex } from "@/lib/advertentie/regels";
+import { LOGO_VOORBEELDEN } from "@/lib/logo/voorbeelden";
 import { BTW_TEKST, prijsTekst as advertentiePrijs, vanafTekst } from "@/lib/advertentie/regels";
 import { leesPrijzen } from "@/lib/advertentie/store";
 import { AANBOD, aanbodHref, prijsTekst } from "@/lib/marketing/aanbod";
@@ -44,6 +47,7 @@ export default async function StartersPage() {
     return [{ ...o, prijs, href: o.href ?? aanbodHref(item), meer: aanbodHref(item) }];
   });
   const heeft = (slug: string) => onderdelen.some((o) => o.slug === slug);
+  const mockup = LOGO_VOORBEELDEN[1] ?? LOGO_VOORBEELDEN[0]!;
   const rekentools = AANBOD.some((a) => a.slug === "rekentools" && a.status === "beschikbaar");
 
   const faq = [
@@ -57,7 +61,7 @@ export default async function StartersPage() {
     },
     {
       q: "Wat kost het?",
-      a: `Dat hangt af van wat je neemt. ${heeft("logo-maker") ? `Een logo kost ${advertentiePrijs(prijzen, "logo")}. ` : ""}${heeft("advertentie-op-maat") ? `Een advertentie kost ${advertentiePrijs(prijzen, "een")} voor één ontwerp of ${advertentiePrijs(prijzen, "alle")} voor alle drie. ` : ""}Bij het logo, de advertentie en de domeinnaam staat de prijs op deze pagina. Voor een website, een webshop en zakelijke e-mail krijg je eerst een prijs van ons; je zit nergens aan vast voordat je ja zegt. Er is geen pakket dat je in één keer moet afnemen.`,
+      a: `Dat hangt af van wat je neemt. ${heeft("logo-maker") ? `Een logo kost ${advertentiePrijs(prijzen, "logo")}. ` : ""}${heeft("advertentie-op-maat") ? `Een advertentie kost ${advertentiePrijs(prijzen, "een")} voor één ontwerp of ${advertentiePrijs(prijzen, "alle")} voor alle zes. ` : ""}Bij het logo, de advertentie en de domeinnaam staat de prijs op deze pagina. Voor een website, een webshop en zakelijke e-mail krijg je eerst een prijs van ons; je zit nergens aan vast voordat je ja zegt. Er is geen pakket dat je in één keer moet afnemen.`,
     },
     {
       q: "Moet ik alles tegelijk doen?",
@@ -87,8 +91,8 @@ export default async function StartersPage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: ldJson([pagina, breadcrumbJsonLd([["Home", "/"], ["Aanbod", "/aanbod"], ["Voor starters", "/starters"]])]) }} />
 
-      <section className="hero-ink text-white">
-        <div className="shell py-14 md:py-24">
+      <section className="bg-[#0B0B0C] text-white">
+        <div className="shell grid gap-10 py-14 md:py-24 lg:grid-cols-[1.1fr_minmax(0,28rem)] lg:items-center lg:gap-16">
           <div className="max-w-3xl">
             <p className="eyebrow text-brand-mint">Voor starters</p>
             <h1 className="mt-4 text-balance font-display text-5xl font-bold leading-[1.03] md:text-7xl">Van idee tot merk.</h1>
@@ -102,6 +106,17 @@ export default async function StartersPage() {
                 Bekijk wat er kan
               </a>
             </div>
+          </div>
+          <div>
+            <ul className="grid grid-cols-3 overflow-hidden rounded-2xl border border-white/10" style={{ background: "rgba(255,255,255,0.1)", gap: 1 }} aria-label="Voorbeelden van logo's voor verzonnen merken">
+              {LOGO_VOORBEELDEN.slice(0, 6).map((v) => (
+                <li key={v.sleutel} className="relative overflow-hidden bg-[#0B0B0C]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/api/logo-maker/voorbeeld/${v.sleutel}?thema=donker`} alt={`Voorbeeld van een logo voor het verzonnen merk ${v.invoer.naam}`} width={640} height={480} loading="lazy" className="block aspect-[4/3] h-auto w-full" />
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-sm text-white/50">Voorbeelden uit de logo maker. Deze merken zijn verzonnen.</p>
           </div>
         </div>
       </section>
@@ -181,7 +196,20 @@ export default async function StartersPage() {
         </div>
       </section>
 
-      <section id="aanvraag" className="scroll-mt-24 border-t border-hair bg-paper" aria-labelledby="st-aanvraag-kop">
+      <section className="border-t border-hair bg-paper" aria-labelledby="st-mockup-kop">
+        <div className="shell py-14 md:py-20">
+          <p className="eyebrow">Zo ziet het eruit</p>
+          <h2 id="st-mockup-kop" className="mt-3 max-w-2xl text-balance font-display text-3xl font-bold leading-tight text-ink md:text-4xl">
+            Van logo naar kaartje, website en shirt
+          </h2>
+          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-neutralx-600">Bij de logo maker zie je jouw logo meteen in deze schetsen. Hier staat een verzonnen merk als voorbeeld.</p>
+          <div className="mt-10">
+            <LogoMockups donker={`/api/logo-maker/voorbeeld/${mockup.sleutel}?thema=donker`} licht={`/api/logo-maker/voorbeeld/${mockup.sleutel}?thema=licht`} kleur={`/api/logo-maker/voorbeeld/${mockup.sleutel}?thema=kleur`} accent={kleurHex(mockup.invoer.kleur)} label="Voorbeeld: een logo op een kaartje, een website en een shirt" />
+          </div>
+        </div>
+      </section>
+
+      <section id="aanvraag" className="scroll-mt-24 border-t border-hair bg-paper-soft" aria-labelledby="st-aanvraag-kop">
         <div className="shell grid gap-10 py-14 md:py-20 lg:grid-cols-[1fr_minmax(0,34rem)] lg:gap-16">
           <div className="max-w-xl">
             <p className="eyebrow">Hulp nodig?</p>
