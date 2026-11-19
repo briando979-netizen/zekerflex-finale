@@ -80,3 +80,9 @@ De repo-kopie hier is de versie die live draait; houd beide gelijk.
 - **/beheer**: accounts **verifiëren** (blauw vinkje) en **schorsen** (7 dagen: niet inloggen, video's tijdelijk onzichtbaar), video's **uitlichten** (⭐ label + 3× hoger in "Voor jou"), **aankondiging** naar alle accounts (als FlikFlak in Inbox → Activiteit), **dashboard** met per dag nieuwe accounts, posts en weergaven, plus actief-7d/groepen/LIVE in de kpi's.
 - **Hashtags volgen**: knop op de tagpagina; video's met die tag komen in je Volgend-feed.
 - **Foto bij een reactie** (📷 in het reactievak).
+
+## Functies (ronde H, 19 nov) — veiligheid en ontdekken
+- **Melden** van reacties en accounts (naast video's); alles in /beheer → Meldingen met de passende actie (reactie weg, schorsen, account weg).
+- **Woordenlijst van het beheer** (/beheer → Woordenlijst): platformbreed geweigerd in reacties én bijschriften (los van de persoonlijke woordfilter).
+- **16 jaar of ouder** verplicht vinkje bij het aanmelden (server controleert).
+- **Reacties sorteren** (populair / nieuwste), **zoeken** vindt ook challenges en series, **interesses kiezen** na het aanmelden (volgt hashtags → Volgend-feed).

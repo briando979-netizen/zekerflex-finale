@@ -225,13 +225,13 @@ function askLogin(mode = 'login') {
     <input name="password" type="password" placeholder="Wachtwoord" autocomplete="${mode === 'login' ? 'current-password' : 'new-password'}">
     <div class="err"></div>
     <button class="btn block" data-go>${mode === 'login' ? 'Inloggen' : 'Registreren'}</button>
-    ${mode === 'register' ? '<p class="fineprint">Door een account te maken ga je akkoord met de <button data-regels class="linkbtn">huisregels &amp; privacy</button>. FlikFlak bewaart je gebruikersnaam, wat je plaatst en je IP-adres om de app te laten werken en misbruik tegen te gaan.</p>' : ''}
+    ${mode === 'register' ? '<label class="fineprint" style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" name="leeftijd" value="true" style="width:auto"> Ik ben 16 jaar of ouder</label><p class="fineprint">Door een account te maken ga je akkoord met de <button data-regels class="linkbtn">huisregels &amp; privacy</button>. FlikFlak bewaart je gebruikersnaam, wat je plaatst en je IP-adres om de app te laten werken en misbruik tegen te gaan.</p>' : ''}
     <div class="switch">${mode === 'login' ? 'Heb je nog geen account? <button data-sw>Registreren</button>' : 'Heb je al een account? <button data-sw>Inloggen</button>'}</div>
   </div>`);
   $('[data-regels]', s)?.addEventListener('click', huisregels);
   const go = async () => {
-    const body = Object.fromEntries($$('input', s).map(i => [i.name, i.value]));
-    if (mode === 'register') { const ref = localStorage.getItem('ff_ref'); if (ref) body.ref = ref; }
+    const body = Object.fromEntries($$('input', s).filter(i => i.type !== 'checkbox').map(i => [i.name, i.value]));
+    if (mode === 'register') { const ref = localStorage.getItem('ff_ref'); if (ref) body.ref = ref; body.leeftijd = $('[name=leeftijd]', s)?.checked ? 'true' : 'false'; }
     try {
       const r = await api('POST', mode === 'login' ? '/api/login' : '/api/register', body);
       if (mode === 'register') localStorage.removeItem('ff_ref');
@@ -239,6 +239,7 @@ function askLogin(mode = 'login') {
       s.close(); reconnectWs(); await loadMe();
       toast(mode === 'login' ? `Welkom terug, ${r.user.name}!` : 'Account gemaakt! 🎉');
       render();
+      if (mode === 'register') setTimeout(interessesSheet, 600);
     } catch (e) { $('.err', s).textContent = e.message; }
   };
   $('[data-go]', s).onclick = go;
@@ -532,7 +533,8 @@ function mountFeed(holder, videos, start) {
   // ---- reacties ----
   async function openComments(slide) {
     const v = slide._v;
-    const s = sheet(`<div class="sh-head"><span class="cnt">${fmt(v.comments)} reacties</span><button class="x" data-close>${ic('close')}</button></div>
+    let sort = 'top';
+    const s = sheet(`<div class="sh-head"><span class="cnt">${fmt(v.comments)} reacties</span><button class="sorteer" title="Sorteren">Populair ▾</button><button class="x" data-close>${ic('close')}</button></div>
       <div class="sh-body"><div class="spinner"></div></div>
       <div class="sh-foot">${v.allowComments ? `
         <div class="reply-to" hidden><span></span><button>${ic('close')}</button></div>
@@ -544,7 +546,7 @@ function mountFeed(holder, videos, start) {
     let parentId = null;
     const input = $('.cinput input', s);
     async function load() {
-      const r = await api('GET', `/api/videos/${v.id}/comments`);
+      const r = await api('GET', `/api/videos/${v.id}/comments?sort=${sort === 'nieuw' ? 'nieuw' : 'top'}`);
       v.comments = r.comments.length;
       $('.cnt', s).textContent = fmt(v.comments) + ' reacties';
       $('.cm span', slide).textContent = fmt(v.comments);
@@ -569,7 +571,7 @@ function mountFeed(holder, videos, start) {
         <div class="body">
           <div class="who">${esc(c.user.name || c.user.username)} ${check(c.user)} ${c.byCreator ? '<em>· Maker</em>' : ''}${c.pinned ? '<em>· 📌 Vastgepind</em>' : ''}</div>
           ${c.foto ? `<a href="${esc(c.foto)}" target="_blank"><img class="cfoto" src="${esc(c.foto)}" alt=""></a>` : ''}<div class="txt rich">${rich(c.text)}</div>
-          <div class="meta"><span>${ago(c.created)}</span>${v.allowComments ? '<button class="rp">Beantwoorden</button>' : ''}${c.canPin && !isReply ? `<button class="pinc">${c.pinned ? 'Losmaken' : 'Vastpinnen'}</button>` : ''}${c.canPin && !c.videoAntwoord ? '<button class="vant">📹 Video-antwoord</button>' : ''}${c.videoAntwoord ? `<a class="vant-link" href="#/v/${c.videoAntwoord}">📹 Bekijk video-antwoord</a>` : ''}${c.canDelete ? '<button class="del">Verwijderen</button>' : ''}
+          <div class="meta"><span>${ago(c.created)}</span>${v.allowComments ? '<button class="rp">Beantwoorden</button>' : ''}${c.canPin && !isReply ? `<button class="pinc">${c.pinned ? 'Losmaken' : 'Vastpinnen'}</button>` : ''}${c.canPin && !c.videoAntwoord ? '<button class="vant">📹 Video-antwoord</button>' : ''}${c.videoAntwoord ? `<a class="vant-link" href="#/v/${c.videoAntwoord}">📹 Bekijk video-antwoord</a>` : ''}${c.canDelete ? '<button class="del">Verwijderen</button>' : ''}${!c.user.isMe ? '<button class="meld">Melden</button>' : ''}
           ${c.likedByCreator && !c.byCreator ? `<span class="creator-like">${ic('heart')} door maker</span>` : ''}</div>
         </div>
         <button class="clike ${c.liked ? 'on' : ''}">${ic(c.liked ? 'heart' : 'heartO')}<span>${c.likes || ''}</span></button>
@@ -587,8 +589,10 @@ function mountFeed(holder, videos, start) {
       $('.del', el) && ($('.del', el).onclick = async () => { if (await confirmSheet('Reactie verwijderen?')) { await api('DELETE', '/api/comments/' + c.id); load(); } });
       $('.pinc', el) && ($('.pinc', el).onclick = async () => { const r = await api('POST', `/api/comments/${c.id}/pin`); toast(r.pinned ? 'Vastgepind bovenaan' : 'Losgemaakt'); load(); });
       $('.vant', el) && ($('.vant', el).onclick = () => { location.hash = '#/upload?antwoord=' + c.id; });
+      $('.meld', el) && ($('.meld', el).onclick = () => meldSheet('reactie', c.id));
       return el;
     }
+    $('.sorteer', s).onclick = () => { sort = sort === 'top' ? 'nieuw' : 'top'; $('.sorteer', s).textContent = (sort === 'top' ? 'Populair' : 'Nieuwste') + ' ▾'; load(); };
     if (v.allowComments) {
       $('.reply-to button', s).onclick = () => { parentId = null; $('.reply-to', s).hidden = true; };
       $$('.emoji-bar button', s).forEach(b => b.onclick = () => { input.value += b.textContent; input.focus(); });
@@ -853,7 +857,8 @@ async function profilePage(username) {
       <button class="row" style="width:100%" data-a="install">${ic('download')}<span class="grow" style="text-align:left">FlikFlak installeren als app</span></button>` : ''}
       <button class="row" style="width:100%" data-a="link">${ic('link')}<span class="grow" style="text-align:left">Profiellink kopiëren</span></button>
       ${me ? `<button class="row" style="width:100%" data-a="logout">${ic('back')}<span class="grow" style="text-align:left">Uitloggen</span></button>`
-        : `<button class="row" style="width:100%" data-a="block">${ic('nope')}<span class="grow" style="text-align:left">Blokkeren</span></button>`}
+        : `<button class="row" style="width:100%" data-a="block">${ic('nope')}<span class="grow" style="text-align:left">Blokkeren</span></button>
+      <button class="row" style="width:100%" data-a="meld">${ic('flag')}<span class="grow" style="text-align:left">Account melden</span></button>`}
       <button class="row" style="width:100%;justify-content:center;color:var(--muted)" data-close>Annuleren</button></div>`);
     $$('[data-a]', s).forEach(b => b.onclick = async () => {
       s.close();
@@ -864,6 +869,7 @@ async function profilePage(username) {
         reconnectWs(); setUnread(0); toast('Uitgelogd'); location.hash = '#/';
       }
       if (b.dataset.a === 'block') { if (!need()) return; const r2 = await api('POST', `/api/users/${u.id}/block`); toast(r2.blocked ? `@${u.username} geblokkeerd` : 'Deblokkeerd'); }
+      if (b.dataset.a === 'meld') { if (need()) meldSheet('account', u.id); }
     });
   };
   const tabc = $('.tabc', page);
@@ -982,6 +988,8 @@ async function searchPage(q) {
     const none = () => res.append(h('<div class="grid-empty">Geen resultaten gevonden</div>'));
     if (i === 0) {
       r.users.slice(0, 3).forEach(u => res.append(userRow(u)));
+      (r.challenges || []).slice(0, 3).forEach(c => res.append(h(`<a class="row" href="#/challenge/${encodeURIComponent(c.tag)}"><span class="tag-ic">🏁</span><div class="grow"><div class="t1">#${esc(c.tag)} · ${esc(c.title)}</div><div class="t2">Challenge · ${c.count} video's${c.done ? ' · afgelopen' : ''}</div></div></a>`)));
+      (r.series || []).slice(0, 3).forEach(s => res.append(h(`<a class="row" href="#/serie/${s.id}">${s.thumb ? `<img class="thumb" src="${s.thumb}">` : '<span class="tag-ic">📺</span>'}<div class="grow"><div class="t1">${esc(s.naam)}</div><div class="t2">Serie van @${esc(s.by)} · ${s.count} delen</div></div></a>`)));
       if (r.hashtags[0]) res.append(h(`<a class="row" href="#/tag/${encodeURIComponent(r.hashtags[0].tag)}"><span class="tag-ic">#</span><div class="grow"><div class="t1">${esc(r.hashtags[0].tag)}</div><div class="t2">${r.hashtags[0].count} video's</div></div></a>`));
       if (r.videos.length) res.append(grid(r.videos, q));
       if (!r.users.length && !r.videos.length && !r.hashtags.length) none();

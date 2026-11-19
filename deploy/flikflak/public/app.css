@@ -492,3 +492,5 @@ html[data-motion="minder"] *, html[data-motion="minder"] *::before, html[data-mo
 .cfoto-knop { font-size: 20px; cursor: pointer; padding: 0 4px; opacity: .7; }
 .cfoto-knop.on { opacity: 1; filter: drop-shadow(0 0 4px var(--accent)); }
 .row.systeem { background: rgba(255,122,26,.08); }
+.sheet .sh-head .sorteer { position: absolute; left: 14px; font-size: 12px; color: var(--muted); font-weight: 600; }
+.comment .meta .meld { color: var(--muted); }

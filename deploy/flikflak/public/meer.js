@@ -479,6 +479,23 @@ async function groepPage(id) {
   input.focus();
 }
 
+// ================= melden (reactie of account) =================
+function meldSheet(soort, doelId) {
+  const rs = sheet(`<div class="sh-head">${soort === 'account' ? 'Account melden' : 'Reactie melden'}<button class="x" data-close>${ic('close')}</button></div><div class="sh-body">${['Intimidatie of pesten', 'Haatdragend', 'Spam of oplichting', 'Naakt of seksueel', 'Nep-account of imitatie', 'Valse informatie', 'Iets anders'].map(r => `<button class="row" style="width:100%;text-align:left" data-r="${r}"><span class="grow">${r}</span>›</button>`).join('')}</div>`);
+  $$('[data-r]', rs).forEach(x => x.onclick = async () => { if (!need()) return; await api('POST', soort === 'account' ? `/api/users/${doelId}/report` : `/api/comments/${doelId}/report`, { reason: x.dataset.r }); rs.close(); toast('Bedankt voor je melding — we kijken ernaar'); });
+}
+
+// ================= interesses kiezen (na het aanmelden) =================
+async function interessesSheet() {
+  const t = await api('GET', '/api/trending').catch(() => ({ hashtags: [] }));
+  const tags = t.hashtags.map(x => x.tag).slice(0, 12);
+  if (!tags.length) return;
+  const s = sheet(`<div class="auth"><h3 style="font-size:20px">Waar hou je van?</h3><p>Kies een paar onderwerpen; die komen in je Volgend-feed. Je kunt dit later per hashtag aanpassen.</p><div class="chips" style="flex-wrap:wrap;padding:0;justify-content:center">${tags.map(x => `<button class="chip" data-tag="${esc(x)}">#${esc(x)}</button>`).join('')}</div><button class="btn block" data-ok>Klaar</button><button class="btn grey block" data-close>Overslaan</button></div>`);
+  const gekozen = new Set();
+  $$('[data-tag]', s).forEach(b => b.onclick = () => { const t2 = b.dataset.tag; gekozen.has(t2) ? gekozen.delete(t2) : gekozen.add(t2); b.classList.toggle('active', gekozen.has(t2)); });
+  $('[data-ok]', s).onclick = async () => { for (const t2 of gekozen) await api('POST', `/api/tag/${encodeURIComponent(t2)}/volgen`).catch(() => {}); s.close(); if (gekozen.size) toast(`Je volgt nu ${gekozen.size} onderwerp${gekozen.size === 1 ? '' : 'en'}`); };
+}
+
 // ================= kijkgeschiedenis =================
 async function historyPage() {
   if (!need()) return (location.hash = '#/');

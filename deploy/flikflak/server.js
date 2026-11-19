@@ -20,7 +20,9 @@ fs.mkdirSync(UPLOADS, { recursive: true });
 fs.mkdirSync(path.dirname(DATA), { recursive: true });
 
 // ---------- opslag ----------
-const empty = () => ({ users: [], videos: [], comments: [], notifications: [], messages: [], sessions: {}, reports: [], challenges: [], groups: [] });
+const empty = () => ({ users: [], videos: [], comments: [], notifications: [], messages: [], sessions: {}, reports: [], challenges: [], groups: [], blokwoorden: [] });
+// platformbrede woordenlijst van het beheer: reacties en bijschriften met zo'n woord worden geweigerd
+const geblokkeerdWoord = tekst => { const laag = String(tekst || '').toLowerCase(); return (db.blokwoorden || []).find(w => w && laag.includes(w)) || null; };
 // Eigen muziekbibliotheek (public/muziek, zelf gemaakt, rechtenvrij) voor fotoposts en de bewerker.
 const MUZIEK = [
   { id: 'zonnig', name: 'Zonnige dag', file: '/muziek/zonnig.mp3' },
@@ -187,6 +189,7 @@ app.post('/api/register', (req, res) => {
   if (!/^[a-zA-Z0-9_.]{3,24}$/.test(username)) return res.status(400).json({ error: 'Gebruikersnaam: 3-24 tekens (letters, cijfers, _ en .)' });
   if (!password || password.length < 4) return res.status(400).json({ error: 'Wachtwoord moet minstens 4 tekens zijn' });
   if (userByName(username)) return res.status(400).json({ error: 'Deze gebruikersnaam is al bezet' });
+  if (String(req.body.leeftijd) !== 'true') return res.status(400).json({ error: 'Je moet 16 jaar of ouder zijn om FlikFlak te gebruiken' });
   const { salt, hash } = hashPass(password);
   const ip = clientIp(req);
   const u = { id: id(), username, name: String(name || username).slice(0, 30), bio: '', avatar: null, salt, hash, following: [], blocked: [], created: now(), ip, lastIp: ip, lastSeen: now() };
@@ -383,6 +386,7 @@ app.post('/api/videos', auth, upload.fields([{ name: 'video', maxCount: 1 }, { n
   const fotos = (req.files?.fotos || []).filter(x => x.mimetype.startsWith('image/')).map(x => x.filename);
   if (!f && !fotos.length) return res.status(400).json({ error: 'Geen video of foto ontvangen' });
   const caption = String(req.body.caption || '').slice(0, 2200);
+  if (geblokkeerdWoord(caption)) { for (const x of [f, ...(req.files?.fotos || []), ...(req.files?.thumb || [])]) if (x) fs.rm(x.path, () => {}); return res.status(400).json({ error: 'Je bijschrift bevat een woord dat niet is toegestaan op FlikFlak' }); }
   const hashtags = [...new Set((caption.match(/#[\p{L}0-9_]+/gu) || []).map(t => t.slice(1).toLowerCase()))];
   let sound;
   const useSound = req.body.soundId && db.videos.find(v => v.sound.id === req.body.soundId);
@@ -655,9 +659,20 @@ app.post('/api/videos/:id/nope', auth, (req, res) => {
 });
 
 app.post('/api/videos/:id/report', auth, (req, res) => {
-  db.reports.push({ id: id(), videoId: req.params.id, by: req.user.id, reason: String(req.body?.reason || '').slice(0, 300), created: now(), ip: clientIp(req), done: false });
+  db.reports.push({ id: id(), soort: 'video', videoId: req.params.id, doelId: req.params.id, by: req.user.id, reason: String(req.body?.reason || '').slice(0, 300), created: now(), ip: clientIp(req), done: false });
   save();
   res.json({ ok: true });
+});
+// ook reacties en accounts kun je melden; alles komt in /beheer → Meldingen
+app.post('/api/comments/:id/report', auth, (req, res) => {
+  const c = db.comments.find(x => x.id === req.params.id); if (!c) return res.status(404).end();
+  db.reports.push({ id: id(), soort: 'reactie', doelId: c.id, videoId: c.videoId, by: req.user.id, reason: String(req.body?.reason || '').slice(0, 300), created: now(), ip: clientIp(req), done: false });
+  save(); res.json({ ok: true });
+});
+app.post('/api/users/:id/report', auth, (req, res) => {
+  const u = userById(req.params.id); if (!u) return res.status(404).end();
+  db.reports.push({ id: id(), soort: 'account', doelId: u.id, by: req.user.id, reason: String(req.body?.reason || '').slice(0, 300), created: now(), ip: clientIp(req), done: false });
+  save(); res.json({ ok: true });
 });
 
 // ----- reacties -----
@@ -675,8 +690,9 @@ function publicComment(c, viewer) {
   };
 }
 app.get('/api/videos/:id/comments', (req, res) => {
+  const nieuw = req.query.sort === 'nieuw'; // sorteren: populair (standaard) of nieuwste eerst
   const list = db.comments.filter(c => c.videoId === req.params.id)
-    .sort((a, b) => (!!b.pinned - !!a.pinned) || (b.likes.length - a.likes.length) || (b.created - a.created));
+    .sort((a, b) => (!!b.pinned - !!a.pinned) || (nieuw ? 0 : (b.likes.length - a.likes.length)) || (b.created - a.created));
   res.json({ comments: list.map(c => publicComment(c, req.user)) });
 });
 app.post('/api/videos/:id/comments', auth, upload.single('foto'), (req, res) => {
@@ -686,6 +702,7 @@ app.post('/api/videos/:id/comments', auth, upload.single('foto'), (req, res) => 
   const text = String(req.body?.text || '').trim().slice(0, 150);
   const foto = req.file && req.file.mimetype.startsWith('image/') ? req.file.filename : null; // reactie met een foto
   if (!text && !foto) return res.status(400).json({ error: 'Leeg bericht' });
+  if (geblokkeerdWoord(text)) return res.status(400).json({ error: 'Je reactie bevat een woord dat niet is toegestaan op FlikFlak' });
   // instellingen van de maker: wie mag reageren, en welke woorden hij blokkeert
   const owner = userById(v.userId), os = owner ? settingsOf(owner) : defaultSettings();
   if (owner && owner.id !== req.user.id) {
@@ -840,11 +857,14 @@ app.get('/api/search', (req, res) => {
     sounds[v.sound.id] = sounds[v.sound.id] || { ...v.sound, count: 0, thumb: v.thumb ? '/uploads/' + v.thumb : null };
     sounds[v.sound.id].count++;
   }
+  // ook challenges en series doorzoeken
+  const challenges = db.challenges.filter(c => c.tag.includes(q) || c.title.toLowerCase().includes(q)).slice(0, 10).map(c => pubChallenge(c, req.user));
+  const series = []; for (const u of db.users) for (const s of u.series || []) if (s.naam.toLowerCase().includes(q)) series.push(pubSerie(s, u, req.user));
   res.json({
     users,
     videos: vids.slice(0, 60).map(v => publicVideo(v, req.user)),
     hashtags: Object.entries(tagCount).map(([tag, count]) => ({ tag, count })).sort((a, b) => b.count - a.count),
-    sounds: Object.values(sounds),
+    sounds: Object.values(sounds), challenges, series: series.slice(0, 10),
   });
 });
 
@@ -1075,8 +1095,14 @@ function removeVideo(v) {
 app.get('/api/admin/overzicht', admin, (req, res) => {
   const vid = v => ({ id: v.id, caption: v.caption, thumb: v.thumb ? '/uploads/' + v.thumb : null, url: v.file ? '/uploads/' + v.file : (v.fotos?.[0] ? '/uploads/' + v.fotos[0] : '#'), views: v.views, likes: v.likes.length, created: v.created, ip: v.ip || null, author: userById(v.userId)?.username || '?' });
   const reports = db.reports.slice().sort((a, b) => (a.done - b.done) || (b.created - a.created)).slice(0, 200).map(r => {
+    const soort = r.soort || 'video';
     const v = db.videos.find(x => x.id === r.videoId);
-    return { id: r.id, reason: r.reason, created: r.created, done: !!r.done, ip: r.ip || null, reporter: userById(r.by)?.username || '?', video: v ? vid(v) : { id: r.videoId, weg: true } };
+    const c = soort === 'reactie' ? db.comments.find(x => x.id === r.doelId) : null;
+    const u = soort === 'account' ? userById(r.doelId) : null;
+    return { id: r.id, soort, reason: r.reason, created: r.created, done: !!r.done, ip: r.ip || null, reporter: userById(r.by)?.username || '?',
+      video: v ? vid(v) : (soort === 'video' ? { id: r.videoId, weg: true } : null),
+      reactie: soort === 'reactie' ? (c ? { id: c.id, text: c.text, author: userById(c.userId)?.username || '?', foto: c.foto ? '/uploads/' + c.foto : null } : { id: r.doelId, weg: true }) : null,
+      account: soort === 'account' ? (u ? { id: u.id, username: u.username, name: u.name } : { id: r.doelId, weg: true }) : null };
   });
   const users = db.users.slice().sort((a, b) => b.created - a.created).slice(0, 100).map(u => ({
     id: u.id, username: u.username, name: u.name, created: u.created, ip: u.ip || null, lastIp: u.lastIp || null, lastSeen: u.lastSeen || null,
@@ -1092,8 +1118,13 @@ app.get('/api/admin/overzicht', admin, (req, res) => {
       reportsOpen: db.reports.filter(r => !r.done).length, views: db.videos.reduce((s, v) => s + v.views, 0),
       actief7d: db.users.filter(u => (u.lastSeen || 0) > now() - 7 * 864e5).length, groepen: db.groups.length, lives: lives.size,
     },
-    reports, users, videos, perDag,
+    reports, users, videos, perDag, blokwoorden: db.blokwoorden || [],
   });
+});
+app.delete('/api/admin/comment/:id', admin, (req, res) => { db.comments = db.comments.filter(x => x.id !== req.params.id && x.parentId !== req.params.id); save(); res.json({ ok: true }); });
+app.post('/api/admin/blokwoorden', admin, (req, res) => {
+  db.blokwoorden = [...new Set((Array.isArray(req.body?.woorden) ? req.body.woorden : []).map(w => String(w).trim().toLowerCase().slice(0, 40)).filter(Boolean))].slice(0, 200);
+  save(); res.json({ blokwoorden: db.blokwoorden });
 });
 
 // beheer: verifiëren (blauw vinkje), schorsen, uitlichten, aankondiging naar iedereen
