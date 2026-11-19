@@ -6,6 +6,8 @@ import { AANBOD, aanbodHref, PIJLERS, prijsTekst, WERK_ZOEKEN } from "@/lib/mark
 import { breadcrumbJsonLd, canonical, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
+import { pijlerIsFlexwerk, zichtbarePijlers } from "@/lib/marketing/flexwerk-only";
+import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
 const TITLE = "Het aanbod van ZekerFlex: personeel, website, branchesoftware en administratie";
 const DESCRIPTION =
@@ -19,12 +21,16 @@ export const metadata: Metadata = {
 };
 
 // Overzicht van al het aanbod, per pijler. Alles komt uit lib/marketing/aanbod.ts.
-export default function AanbodPagina() {
+// /aanbod blijft een flexwerk-pagina; met de vlag `publiek-alleen-flexwerk` aan toont hij alleen de flexwerk-pijlers.
+export default async function AanbodPagina() {
+  const alleenFlexwerk = await alleenFlexwerkAan().catch(() => false);
+  const pijlers = zichtbarePijlers(PIJLERS, alleenFlexwerk);
+  const aanbod = alleenFlexwerk ? AANBOD.filter((a) => pijlerIsFlexwerk(a.pijler)) : AANBOD;
   const lijst = {
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: "Aanbod van ZekerFlex",
-    itemListElement: AANBOD.map((a, i) => ({ "@type": "ListItem", position: i + 1, name: a.naam, url: `${SITE.url}${aanbodHref(a)}` })),
+    itemListElement: aanbod.map((a, i) => ({ "@type": "ListItem", position: i + 1, name: a.naam, url: `${SITE.url}${aanbodHref(a)}` })),
   };
   return (
     <>
@@ -39,7 +45,7 @@ export default function AanbodPagina() {
             account voor alles.
           </p>
           <nav aria-label="Pijlers" className="mt-8 flex flex-wrap gap-2">
-            {PIJLERS.map((p) => (
+            {pijlers.map((p) => (
               <a key={p.sleutel} href={`#${p.sleutel}`} className="rounded-full border border-white/20 px-4 py-2 text-sm font-semibold text-white/85 hover:bg-white/10">
                 {p.naam}
               </a>
@@ -51,7 +57,7 @@ export default function AanbodPagina() {
         </div>
       </div>
 
-      {PIJLERS.map((p, i) => {
+      {pijlers.map((p, i) => {
         const items = AANBOD.filter((a) => a.pijler === p.sleutel);
         return (
           <section key={p.sleutel} id={p.sleutel} aria-labelledby={`${p.sleutel}-titel`} className={`scroll-mt-24 ${i % 2 ? "bg-paper-soft" : "bg-paper"}`}>

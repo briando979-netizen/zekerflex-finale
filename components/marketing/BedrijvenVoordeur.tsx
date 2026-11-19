@@ -5,8 +5,9 @@ import { voordeurTegels } from "@/lib/marketing/voordeur";
 // "Wat wil je doen?": de voordeur voor bedrijven bovenaan /bedrijven (masterplan Fase 1). Vijf tegels, één
 // per product; "Start" maakt het bedrijf met het juiste dashboard aan (/register?type=bedrijf&dashboard=…).
 // Servercomponent, geen JavaScript in de browser. Compact: de foto's klein, alles in één blik.
-export function BedrijvenVoordeur() {
-  const tegels = voordeurTegels();
+// alleenFlexwerk: vlag `publiek-alleen-flexwerk` — dan alleen de personeel-tegel.
+export function BedrijvenVoordeur({ alleenFlexwerk = false }: { alleenFlexwerk?: boolean }) {
+  const tegels = voordeurTegels(alleenFlexwerk);
   return (
     <section id="start" aria-labelledby="voordeur-titel" className="relative scroll-mt-24 bg-paper">
       <div className="shell-4k py-8 md:py-10">

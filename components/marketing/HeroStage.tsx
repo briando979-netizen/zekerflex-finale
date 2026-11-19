@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, type ReactNode } from "react";
+import { isNietFlexwerkPad } from "@/lib/marketing/flexwerk-only";
 
 /**
  * De kop van /bedrijven (sinds 14 nov alleen voor bedrijven: geen knop "Ik zoek werk" meer).
@@ -29,10 +30,14 @@ const HERO_DEFAULTS: HeroContent = {
 export function HeroStage({
   photo,
   content,
+  alleenFlexwerk = false,
 }: {
   photo: ReactNode;
   content?: Partial<Record<keyof HeroContent, string | undefined>>;
+  /** vlag `publiek-alleen-flexwerk`: aan = de niet-flexwerk-snelkoppelingen (Website-check, Shop) vallen weg */
+  alleenFlexwerk?: boolean;
 }) {
+  const snel = alleenFlexwerk ? SNEL.filter((s) => !isNietFlexwerkPad(s.href)) : SNEL;
   // Overschrijf alleen met echte waarden; leeg of ontbrekend valt terug op de default.
   const c = { ...HERO_DEFAULTS };
   if (content) {
@@ -90,7 +95,7 @@ export function HeroStage({
           {/* snelle acties: in één tik naar wat de meeste bezoekers komen doen */}
           <nav aria-label="Direct naar" className="mt-5 flex flex-wrap items-center gap-2 text-sm">
             <span className="mr-1 text-white/55">Direct naar</span>
-            {SNEL.map((s) => (
+            {snel.map((s) => (
               <Link
                 key={s.href}
                 href={s.href}

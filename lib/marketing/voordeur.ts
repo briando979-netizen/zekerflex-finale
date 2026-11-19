@@ -6,6 +6,7 @@
 // ---------------------------------------------------------------------------
 import { aanbodHref, AANBOD } from "@/lib/marketing/aanbod";
 import { FOTOS, fotoPad } from "@/lib/marketing/fotos";
+import { NIET_FLEXWERK_SOORTEN } from "@/lib/marketing/flexwerk-only";
 import type { Werkruimte } from "@/lib/werkgever/werkruimte";
 
 export interface VoordeurTegel {
@@ -31,9 +32,11 @@ const TEGELS: { soort: Werkruimte; titel: string; slug: string; foto: string }[]
 
 export const startHrefVoor = (soort: Werkruimte): string => `/register?type=bedrijf&dashboard=${soort}`;
 
-export function voordeurTegels(): VoordeurTegel[] {
+// alleenFlexwerk: vlag `publiek-alleen-flexwerk` — dan alleen de flexwerk-tegel (personeel); de product-dashboards vallen weg.
+export function voordeurTegels(alleenFlexwerk = false): VoordeurTegel[] {
   const uit: VoordeurTegel[] = [];
   for (const t of TEGELS) {
+    if (alleenFlexwerk && NIET_FLEXWERK_SOORTEN.includes(t.soort)) continue;
     const item = AANBOD.find((a) => a.slug === t.slug);
     const foto = FOTOS.find((f) => f.slug === t.foto);
     if (!item || !foto) continue;

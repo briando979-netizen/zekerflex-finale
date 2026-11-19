@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { AANBOD, aanbodHref, PIJLERS, WERK_ZOEKEN } from "@/lib/marketing/aanbod";
+import { zichtbarePijlers } from "@/lib/marketing/flexwerk-only";
 
 // "Waar ben je naar op zoek?" — vier pijlers plus een eigen ingang voor wie
 // werk zoekt. Leest uit lib/marketing/aanbod.ts, dus een nieuw product staat
 // hier vanzelf bij. Servercomponent: geen JavaScript in de browser.
-export function AanbodKiezer({ id = "aanbod", titel = "Waar ben je naar op zoek?" }: { id?: string; titel?: string }) {
+// alleenFlexwerk: vlag `publiek-alleen-flexwerk` (de pagina leest hem) — aan = alleen de flexwerk-pijlers.
+export function AanbodKiezer({ id = "aanbod", titel = "Waar ben je naar op zoek?", alleenFlexwerk = false }: { id?: string; titel?: string; alleenFlexwerk?: boolean }) {
+  const pijlers = zichtbarePijlers(PIJLERS, alleenFlexwerk);
   return (
     <section id={id} aria-labelledby={`${id}-titel`} className="relative scroll-mt-24 bg-paper">
       <div className="shell-4k py-8 md:py-10">
@@ -20,7 +23,7 @@ export function AanbodKiezer({ id = "aanbod", titel = "Waar ben je naar op zoek?
         </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {PIJLERS.map((p) => {
+          {pijlers.map((p) => {
             const items = AANBOD.filter((a) => a.pijler === p.sleutel);
             return (
               <div key={p.sleutel} className="flex min-w-0 flex-col rounded-2xl border border-hair bg-white p-5 shadow-[0_1px_2px_rgba(10,18,14,0.04)]">

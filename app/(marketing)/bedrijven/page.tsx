@@ -21,6 +21,7 @@ import { env } from "@/lib/env";
 import { serviceJsonLd, SITE } from "@/lib/seo";
 import { seoMetadata } from "@/lib/ontwerp/seo-store";
 import { getContentValues, lijstRegels } from "@/lib/content/store";
+import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
 // De homepagina voor bedrijven (11 nov 2026): dit was de homepagina van zekerflex.com. Op verzoek van de
 // eigenaar ziet wie zekerflex.com opent de pagina voor werkzoekenden (app/(marketing)/page.tsx); deze staat
@@ -35,7 +36,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function BedrijvenHomePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const [v, { indeling, isConcept }] = await Promise.all([getContentValues(), homeIndeling(searchParams)]);
+  const [v, { indeling, isConcept }, alleenFlexwerk] = await Promise.all([
+    getContentValues(),
+    homeIndeling(searchParams),
+    alleenFlexwerkAan().catch(() => false),
+  ]);
   const t = (k: string) => v[k] ?? "";
   // de blokken onder de kop, in de volgorde uit de Site-ontwerper (tabblad Homepage); zonder eigen indeling de standaard
   const zichtbaar = zichtbareSecties(indeling);
@@ -57,6 +62,7 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
       />
       {/* ───────────────────────────────────────────────────────────── HERO */}
       <HeroStage
+        alleenFlexwerk={alleenFlexwerk}
         content={{
           eyebrow: t("hero.eyebrow"),
           titleLine1: t("hero.titleLine1"),
@@ -100,10 +106,10 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
 
       ),
       // voordeur: wat wil je doen?
-      voordeur: <BedrijvenVoordeur />,
+      voordeur: <BedrijvenVoordeur alleenFlexwerk={alleenFlexwerk} />,
       // aanbod: waar ben je naar op zoek?
       aanbod: (
-      <AanbodKiezer />
+      <AanbodKiezer alleenFlexwerk={alleenFlexwerk} />
 
       ),
       branches: (
