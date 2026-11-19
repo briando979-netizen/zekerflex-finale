@@ -364,3 +364,25 @@ export function herbruikbareWees(kandidaten: readonly WeesKandidaat[]): WeesKand
   if (w.active || w.heeftKoppeling || w.inLijst || w.verkocht) return null;
   return w;
 }
+
+/** Zoveel producten uit de vertaalachterstand pakt één Bijwerken-ronde vóór het gewone werk (±11 s per vertaling op gemma3:4b). */
+export const ACHTERSTAND_PER_RONDE = 6;
+/** Dit deel van het rondebudget mag de achterstand kosten; de rest is voor de gewone ronde (categorie, voorraad). */
+export const ACHTERSTAND_BUDGET_DEEL = 0.6;
+
+/**
+ * Welke producten een ronde eerst doet (19 nov 2026). De ronde liep de lijst op volgorde af met een cursor; de nog
+ * onvertaalde producten (geïmporteerd toen het model weg was) staan achteraan bij elkaar, dus de meeste rondes kwamen er
+ * niet langs: in de nacht van 18 op 19 nov ±1 vertaling per 25 minuten, 68 producten in het Engels en 63 daarvan uit.
+ * Nu eerst hooguit `max` onvertaalde producten die ook echt in de lijst staan, in de aangeleverde volgorde (langst niet
+ * geprobeerd eerst); daarna gaat de cursor gewoon verder.
+ */
+export function achterstandEerst(ids: readonly string[], onvertaald: readonly string[], max = ACHTERSTAND_PER_RONDE): string[] {
+  const inLijst = new Set(ids);
+  const uit: string[] = [];
+  for (const id of onvertaald) {
+    if (uit.length >= max) break;
+    if (inLijst.has(id) && !uit.includes(id)) uit.push(id);
+  }
+  return uit;
+}

@@ -20,7 +20,7 @@ vi.mock("@/lib/shop/cj/importeer", () => ({ bijwerkenVanCj: (...a: unknown[]) =>
 
 import { leesBijwerkStand, rondeBijwerken, RONDE_BUDGET_MS } from "@/lib/shop/cj/bijwerken-ronde";
 
-const uitkomst = (over: Partial<{ bekeken: number; volgende: number | null; totaal: number }>) => ({ bekeken: 30, categorie: 2, voorraad: 20, vertaald: 5, fouten: 0, volgende: 30, totaal: 475, ...over });
+const uitkomst = (over: Partial<{ bekeken: number; volgende: number | null; totaal: number }>) => ({ bekeken: 30, categorie: 2, voorraad: 20, vertaald: 5, fouten: 0, achterstand: 0, volgende: 30, totaal: 475, ...over });
 
 beforeEach(() => {
   kv.clear();

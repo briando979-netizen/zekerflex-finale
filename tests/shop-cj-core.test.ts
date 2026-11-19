@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CJ_FOTO_MAX_PX, CJ_MAX_FOTOS, CLAIM_MAX_MS, categorieKeuze, categorieVanCj, doelgroepVanCj, fotosVan, goedkoopsteVerzending, herbruikbareWees, kleurEnMaat, leesCjProduct, leesCjTreffer, leesClaim, leesVoorraadPerVariant, lijktDuits, onzeSku, tekstUitHtml, uploadIdUitMediaUrl, usdCentsVan, voorraadVan, type WeesKandidaat } from "@/lib/shop/cj/cj-core";
+import { ACHTERSTAND_PER_RONDE, CJ_FOTO_MAX_PX, CJ_MAX_FOTOS, CLAIM_MAX_MS, achterstandEerst, categorieKeuze, categorieVanCj, doelgroepVanCj, fotosVan, goedkoopsteVerzending, herbruikbareWees, kleurEnMaat, leesCjProduct, leesCjTreffer, leesClaim, leesVoorraadPerVariant, lijktDuits, onzeSku, tekstUitHtml, uploadIdUitMediaUrl, usdCentsVan, voorraadVan, type WeesKandidaat } from "@/lib/shop/cj/cj-core";
 
 // CJ Dropshipping lezen (18 nov 2026): dollars → centen, "Black-XL" → kleur en maat,
 // foto's, voorraad, onze categorie en doelgroep. Alles puur, zonder netwerk.
@@ -296,5 +296,17 @@ describe("een halve import (wees) hergebruiken", () => {
     expect(herbruikbareWees([{ ...wees, verkocht: true }])).toBeNull();
     // de sku's horen bij twee verschillende producten: niet raden, niets hergebruiken
     expect(herbruikbareWees([wees, { ...wees, id: "p2" }])).toBeNull();
+  });
+});
+
+describe("de vertaalachterstand gaat vóór in een Bijwerken-ronde", () => {
+  // 19 nov 2026: de onvertaalde producten stonden achteraan in de lijst, dus de ronde kwam er zelden langs
+  it("neemt hooguit ACHTERSTAND_PER_RONDE onvertaalde producten die in de lijst staan, in volgorde en zonder dubbele", () => {
+    const ids = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
+    expect(achterstandEerst(ids, ["c", "x", "a", "c"])).toEqual(["c", "a"]);
+    expect(achterstandEerst(ids, ids)).toHaveLength(ACHTERSTAND_PER_RONDE);
+    expect(achterstandEerst(ids, ids, 2)).toEqual(["a", "b"]);
+    expect(achterstandEerst(ids, [])).toEqual([]);
+    expect(achterstandEerst([], ["a"])).toEqual([]);
   });
 });

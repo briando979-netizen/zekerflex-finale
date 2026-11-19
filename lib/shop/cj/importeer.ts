@@ -20,8 +20,8 @@ import { bewaarLinkBron } from "@/lib/shop/link-product-server";
 import { leesBeleidOpgeslagen } from "@/lib/shop/winkel-ai";
 import { prijsUitInkoop, slugVan, tariefVoor } from "@/lib/shop/winkel-ai-core";
 import { cjProduct, cjVerzendkosten, cjVoorraadPerVariant } from "@/lib/shop/cj/cj-client";
-import { CJ_FOTO_MAX_PX, CJ_MAX_FOTOS, categorieKeuze, categorieVanCj, herbruikbareWees, leesClaim, lijktDuits, onzeSku, type CjProduct, type CjVerzending } from "@/lib/shop/cj/cj-core";
-import { vertaalVermelding } from "@/lib/shop/cj/vertalen";
+import { ACHTERSTAND_BUDGET_DEEL, ACHTERSTAND_PER_RONDE, CJ_FOTO_MAX_PX, CJ_MAX_FOTOS, achterstandEerst, categorieKeuze, categorieVanCj, herbruikbareWees, leesClaim, lijktDuits, onzeSku, type CjProduct, type CjVerzending } from "@/lib/shop/cj/cj-core";
+import { vertaalStoringActief, vertaalVermelding } from "@/lib/shop/cj/vertalen";
 import type { ShopCategorie } from "@/lib/shop/categorieen";
 
 const K_INSTEL = "shop:cj:instellingen";
@@ -382,9 +382,21 @@ export interface BijwerkUitkomst {
   voorraad: number;
   vertaald: number;
   fouten: number;
+  /** producten uit de vertaalachterstand die deze ronde vóór het gewone werk zijn gedaan (achterstandEerst) */
+  achterstand: number;
   /** waar de volgende ronde verdergaat; null = alles gehad */
   volgende: number | null;
   totaal: number;
+}
+
+/** De product-id's waarvan de koppeling nog `vertaald: false` zegt, langst niet bijgewerkt eerst. */
+async function onvertaaldeProductIds(limit: number): Promise<string[]> {
+  const rijen = await prisma.$queryRaw<{ key: string }[]>`
+    SELECT key FROM "KeyValueStore"
+    WHERE key LIKE ${`${K_PRODUCT}%`} AND value->>'vertaald' = 'false'
+    ORDER BY "updatedAt" ASC
+    LIMIT ${limit}`;
+  return rijen.map((r) => r.key.slice(K_PRODUCT.length)).filter(Boolean);
 }
 
 /** Alle CJ-producten in de winkel: de lijst in KV, plus alles met een cj-sku dat daar niet in staat. */
@@ -404,13 +416,9 @@ export async function bijwerkenVanCj(opties: { actorUserId: string | null; actor
   const start = Date.now();
   const budget = opties.budgetMs ?? 200_000;
   const ids = await alleCjProductIds();
-  const uit: BijwerkUitkomst = { bekeken: 0, categorie: 0, voorraad: 0, vertaald: 0, fouten: 0, volgende: null, totaal: ids.length };
+  const uit: BijwerkUitkomst = { bekeken: 0, categorie: 0, voorraad: 0, vertaald: 0, fouten: 0, achterstand: 0, volgende: null, totaal: ids.length };
   if (!ids.length) return uit; // niets te doen (en geen auditregel elke tien minuten vanuit de cron)
-  let i = Math.max(0, opties.vanaf ?? 0);
-  for (; i < ids.length; i++) {
-    if (Date.now() - start > budget) break;
-    const id = ids[i];
-    if (!id) continue;
+  const doe = async (id: string) => {
     try {
       const n = await bijwerkEen(id);
       uit.bekeken++;
@@ -421,6 +429,21 @@ export async function bijwerkenVanCj(opties: { actorUserId: string | null; actor
       uit.fouten++;
       logger.warn("cj: bijwerken mislukt", { error: (e as Error).message.slice(0, 120) });
     }
+  };
+  // eerst de vertaalachterstand (achterstandEerst in cj-core.ts), binnen een deel van het budget; staat het vertalen
+  // stil na een storing, dan heeft dat geen zin en gaat de gewone ronde meteen door
+  const achterstand = vertaalStoringActief() ? [] : achterstandEerst(ids, await onvertaaldeProductIds(ACHTERSTAND_PER_RONDE * 2).catch(() => []));
+  for (const id of achterstand) {
+    if (Date.now() - start > budget * ACHTERSTAND_BUDGET_DEEL || vertaalStoringActief()) break;
+    await doe(id);
+    uit.achterstand++;
+  }
+  let i = Math.max(0, opties.vanaf ?? 0);
+  for (; i < ids.length; i++) {
+    if (Date.now() - start > budget) break;
+    const id = ids[i];
+    if (!id) continue;
+    await doe(id);
   }
   uit.volgende = i < ids.length ? i : null;
   await recordAudit({
@@ -428,7 +451,7 @@ export async function bijwerkenVanCj(opties: { actorUserId: string | null; actor
     action: "shop.product.cj-bijwerken",
     actorUserId: opties.actorUserId,
     actorLabel: opties.actorLabel ?? "user",
-    summary: `CJ-producten bijgewerkt: ${uit.bekeken} bekeken, ${uit.categorie} van categorie, ${uit.voorraad} voorraad, ${uit.vertaald} vertaald, ${uit.fouten} mislukt`,
+    summary: `CJ-producten bijgewerkt: ${uit.bekeken} bekeken, ${uit.categorie} van categorie, ${uit.voorraad} voorraad, ${uit.vertaald} vertaald, ${uit.fouten} mislukt${uit.achterstand ? `, ${uit.achterstand} uit de vertaalachterstand eerst` : ""}`,
     targetType: "shop-product",
     targetId: "cj",
   });
