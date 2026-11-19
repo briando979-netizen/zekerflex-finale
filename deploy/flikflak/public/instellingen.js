@@ -95,12 +95,63 @@ async function followRequestsPage() {
   laad();
 }
 
+// ================= meldingen op het apparaat (web push) =================
+// De browser maakt een abonnement (een geheim adres bij Google/Apple/Mozilla) en wij
+// bewaren dat bij je account; de server stuurt er alleen korte meldingen heen als je
+// niet in de app zit. Uitzetten kan hier of in je browser; dan vergeten we het adres.
+const pushKan = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+async function pushAbonnement() {
+  if (!pushKan()) return null;
+  // `ready` wacht tot de service worker actief is; dat mag de instellingenpagina nooit ophouden (max. 1,5 s)
+  const reg = await Promise.race([navigator.serviceWorker.ready, new Promise(r => setTimeout(() => r(null), 1500))]);
+  return reg ? reg.pushManager.getSubscription() : null;
+}
+function b64ToBytes(s) {
+  const b = atob((s + '='.repeat((4 - s.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(b, c => c.charCodeAt(0));
+}
+async function pushAan() {
+  if (!pushKan()) { toast(/iphone|ipad/i.test(navigator.userAgent) ? 'Zet FlikFlak eerst op je beginscherm (Delen → Zet op beginscherm)' : 'Je browser kan geen meldingen tonen'); return false; }
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') { toast('Meldingen staan uit in je browser'); return false; }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const { sleutel } = await api('GET', '/api/push/sleutel');
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(sleutel) });
+    await api('POST', '/api/push/abonneer', { subscription: sub.toJSON() });
+    toast('Meldingen op dit apparaat staan aan 🔔');
+    return true;
+  } catch (e) { toast('Aanzetten lukte niet: ' + (e.message || e)); return false; }
+}
+async function pushUit() {
+  try {
+    const sub = await pushAbonnement();
+    if (sub) { await api('DELETE', '/api/push/abonneer', { endpoint: sub.endpoint }).catch(() => {}); await sub.unsubscribe(); }
+    toast('Meldingen op dit apparaat staan uit');
+    return true;
+  } catch { return false; }
+}
+
+// ================= QR-code delen =================
+// Een QR-code van een eigen pagina (profiel, video, uitnodiging): de server tekent hem, zonder derde partij.
+function qrSheet(pad, titel, link) {
+  const s = sheet(`<div class="sh-head">${esc(titel)}<button class="x" data-close>${ic('close')}</button></div>
+    <div class="sh-body" style="text-align:center;padding:8px 16px 20px">
+      <div style="display:inline-block;background:#fff;padding:12px;border-radius:16px"><img src="/api/qr?pad=${encodeURIComponent(pad)}" alt="QR-code" width="220" height="220" style="display:block"></div>
+      <div style="margin-top:10px;font-size:13px;color:var(--muted);word-break:break-all">${esc(link)}</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:14px"><button class="btn grey kopieer">Link kopiëren</button><a class="btn grey" href="/api/qr?pad=${encodeURIComponent(pad)}" download="flikflak-qr.svg">QR opslaan</a></div>
+    </div>`);
+  $('.kopieer', s).onclick = async () => { try { await navigator.clipboard.writeText(link); toast('Link gekopieerd'); } catch { prompt('Kopieer deze link:', link); } };
+  return s;
+}
+
 // ================= instellingen =================
 async function settingsPage() {
   if (!need()) return (location.hash = '#/');
   const page = h(`<div class="page"><div class="head">${backBtn()}<h2>Instellingen</h2><span class="ic"></span></div><div class="spinner"></div></div>`);
   view.append(page);
   const r = await api('GET', '/api/settings'); const s = r.settings;
+  const pushAanOpDitApparaat = !!(await pushAbonnement().catch(() => null));
   $('.spinner', page).remove();
   const keuze = (naam, opties, waarde) => `<select name="${naam}">${opties.map(([k, l]) => `<option value="${k}" ${k === waarde ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
   const schakel = (naam, aan) => `<label class="switch-t"><input type="checkbox" name="${naam}" ${aan ? 'checked' : ''}><span></span></label>`;
@@ -123,6 +174,7 @@ async function settingsPage() {
     <div class="sec-title">Welzijn</div>
     <div class="opt">${ic('timer')}<label>Pauze-herinnering</label>${keuze('breakReminder', [[0, 'Uit'], [15, 'Elke 15 min'], [30, 'Elke 30 min'], [60, 'Elk uur']], s.breakReminder)}</div>
     <div class="sec-title">Meldingen</div>
+    <div class="opt">${ic('inbox')}<label>Meldingen op dit apparaat<small>Ook als FlikFlak dicht is: likes, reacties, volgers, berichten en LIVE</small></label>${schakel('pushDevice', pushAanOpDitApparaat)}</div>
     ${[['like', 'Likes'], ['comment', 'Reacties en antwoorden'], ['mention', 'Vermeldingen'], ['follow', 'Nieuwe volgers en verzoeken'], ['repost', 'Reposts'], ['post', "Nieuwe video's van wie je volgt"], ['live', 'Iemand gaat LIVE']].map(([k, l]) => `<div class="opt">${ic('inbox')}<label>${l}</label>${schakel('notif.' + k, s.notif[k] !== false)}</div>`).join('')}
     <div class="sec-title">Account &amp; veiligheid</div>
     <button class="opt ww" style="width:100%;text-align:left">${ic('lock')}<label>Wachtwoord wijzigen</label></button>
@@ -139,6 +191,7 @@ async function settingsPage() {
     catch (e) { $('.err', page).textContent = e.message; }
   };
   $$('input[type=checkbox]', page).forEach(i => i.onchange = async () => {
+    if (i.name === 'pushDevice') { const ok = i.checked ? await pushAan() : !(await pushUit()); i.checked = i.checked ? ok : false; return; }
     if (i.name.startsWith('notif.')) return stuur({ notif: { [i.name.slice(6)]: i.checked } });
     await stuur({ [i.name]: i.checked }); if (i.name === 'reducedMotion') applyA11y(S.settings);
   });

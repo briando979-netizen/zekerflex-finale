@@ -626,6 +626,7 @@ function mountFeed(holder, videos, start) {
         <div class="share-sep"></div>
         <div class="share-row">
           <button class="it" data-a="copy"><span class="circ" style="background:#3b82f6">${ic('link')}</span>Link kopiëren</button>
+          <button class="it" data-a="qr"><span class="circ" style="background:#fff;color:#000;font-weight:800;font-size:11px">QR</span>QR-code</button>
           ${navigator.share ? `<button class="it" data-a="native"><span class="circ" style="background:#10b981">${ic('share')}</span>Meer…</button>` : ''}
           <button class="it" data-a="download"><span class="circ">${ic('download')}</span>Opslaan</button>
           ${own ? '' : `<button class="it" data-a="repost"><span class="circ" ${v.reposted ? 'style="background:#fff;color:#000"' : ''}>♻</span>${v.reposted ? 'Repost weg' : 'Reposten'}</button>`}
@@ -679,6 +680,7 @@ function mountFeed(holder, videos, start) {
       const a = b.dataset.a;
       s.close();
       if (a === 'copy') { try { await navigator.clipboard.writeText(link); } catch { prompt('Kopieer deze link:', link); } countShare(); toast('Link gekopieerd'); }
+      if (a === 'qr') { qrSheet('/s/' + v.id, 'Scan en kijk', link); countShare(); }
       if (a === 'native') { try { await navigator.share({ title: 'FlikFlak', text: v.caption, url: link }); countShare(); } catch {} }
       if (a === 'map') { if (need()) saveToCollectionSheet(v); }
       if (a === 'repost') { if (!need()) return; const r = await api('POST', `/api/videos/${v.id}/repost`); v.reposted = r.reposted; v.reposts = r.reposts; toast(r.reposted ? 'Gerepost naar je profiel ♻' : 'Repost weggehaald'); }
@@ -825,7 +827,7 @@ async function profilePage(username) {
   if (me) {
     btns.append(h('<a class="btn grey" href="#/edit">Profiel bewerken</a>'));
     const sh = h('<button class="btn grey">Profiel delen</button>');
-    sh.onclick = async () => { const l = location.origin + '/#/@' + u.username; try { await navigator.clipboard.writeText(l); toast('Profiellink gekopieerd'); } catch { prompt('Link:', l); } };
+    sh.onclick = () => qrSheet('/#/@' + u.username, 'Scan mijn profiel', location.origin + '/#/@' + u.username);
     btns.append(sh);
   } else {
     const drawBtns = () => {
@@ -1045,9 +1047,13 @@ async function inboxPage() {
     const s = sheet(`<div class="sh-head">Nieuw bericht<button class="x" data-close>${ic('close')}</button></div><div class="sh-body">${r.users.length ? '' : '<div class="grid-empty">Volg iemand om een bericht te sturen</div>'}</div>`, { tall: true });
     r.users.forEach(u => $('.sh-body', s).append(h(`<a class="row" href="#/chat/${esc(u.username)}"><img class="av" src="${avatar(u)}"><div class="grow"><div class="t1">${esc(u.name)}</div><div class="t2">@${esc(u.username)}</div></div></a>`)));
   };
+  // één keer vragen of meldingen ook buiten de app mogen (alleen als de browser het kan en er nog niets gekozen is)
+  const pushHint = typeof pushKan === 'function' && pushKan() && Notification.permission !== 'denied' && !localStorage.getItem('ff_push_hint') && !(await pushAbonnement().catch(() => null));
   async function showAct() {
-    ib.innerHTML = `<div class="chips">${[['all', 'Alle activiteit'], ['like', 'Likes'], ['comment', 'Reacties'], ['mention', 'Vermeldingen'], ['follow', 'Volgers'], ['post', 'Nieuwe video\'s']].map(([k, l]) => `<button class="chip ${filter === k ? 'active' : ''}" data-f="${k}">${l}</button>`).join('')}</div><div class="nl"><div class="spinner"></div></div>`;
+    ib.innerHTML = `${pushHint ? `<div class="row push-hint" style="align-items:center"><span style="font-size:22px">🔔</span><div class="grow"><div class="t1">Meldingen ook als de app dicht is?</div><div class="t2">Likes, reacties, berichten en LIVE op je telefoon</div></div><button class="btn small push-ja">Aanzetten</button><button class="ic push-nee" title="Niet nu">${ic('close')}</button></div>` : ''}<div class="chips">${[['all', 'Alle activiteit'], ['like', 'Likes'], ['comment', 'Reacties'], ['mention', 'Vermeldingen'], ['follow', 'Volgers'], ['post', 'Nieuwe video\'s']].map(([k, l]) => `<button class="chip ${filter === k ? 'active' : ''}" data-f="${k}">${l}</button>`).join('')}</div><div class="nl"><div class="spinner"></div></div>`;
     $$('[data-f]', ib).forEach(b => b.onclick = () => { filter = b.dataset.f; showAct(); });
+    const hint = $('.push-hint', ib);
+    if (hint) { $('.push-ja', hint).onclick = async () => { localStorage.setItem('ff_push_hint', '1'); if (await pushAan()) hint.remove(); }; $('.push-nee', hint).onclick = () => { localStorage.setItem('ff_push_hint', '1'); hint.remove(); }; }
     const r = await api('GET', '/api/notifications');
     api('POST', '/api/notifications/read').then(() => api('GET', '/api/me')).then(m => setUnread(m.unread)).catch(() => {});
     const list = r.notifications.filter(n => filter === 'all' || n.type === filter || (filter === 'like' && n.type === 'commentlike') || (filter === 'comment' && n.type === 'reply'));

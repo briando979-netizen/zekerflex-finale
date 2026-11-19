@@ -6,6 +6,8 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
+const webpush = require('web-push');
+const QRCode = require('qrcode');
 
 const PORT = process.env.PORT || 3001;
 // Opslag staat op een vast volume (FF_STORAGE, bv. /data in de container), zodat
@@ -134,6 +136,32 @@ function duetInfo(did) {
   return o ? { id: o.id, url: '/uploads/' + o.file, filter: o.filter, author: { username: userById(o.userId)?.username } } : null;
 }
 
+// ---------- meldingen op het apparaat (web push) ----------
+// De VAPID-sleutels (het "adres" waarmee de browser ons vertrouwt) maken we één keer
+// en bewaren we op het volume, zodat abonnementen een uitrol overleven. Geen
+// omgevingsvariabele nodig. Een abonnement is per apparaat (max. 5 per account) en
+// wordt weggehaald zodra de browser 404/410 teruggeeft (app verwijderd, toestemming ingetrokken).
+const VAPID_BESTAND = path.join(ROOT, 'data', 'vapid.json');
+const VAPID = fs.existsSync(VAPID_BESTAND) ? JSON.parse(fs.readFileSync(VAPID_BESTAND, 'utf8')) : (() => { const k = webpush.generateVAPIDKeys(); fs.writeFileSync(VAPID_BESTAND, JSON.stringify(k)); return k; })();
+webpush.setVapidDetails('https://flikflak.zekerflex.com', VAPID.publicKey, VAPID.privateKey);
+const inApp = userId => (sockets.get(userId)?.size || 0) > 0; // zit iemand nu in de app (open verbinding)? dan geen push nodig
+function webPush(user, payload) {
+  if (!user || !(user.pushSubs || []).length) return;
+  const body = JSON.stringify(payload);
+  for (const s of user.pushSubs) {
+    webpush.sendNotification(s, body, { TTL: 3600 }).catch(err => {
+      if (err && (err.statusCode === 404 || err.statusCode === 410)) { user.pushSubs = (user.pushSubs || []).filter(x => x.endpoint !== s.endpoint); save(); }
+    });
+  }
+}
+// de tekst van een melding, zoals app.js hem ook toont (korte vorm voor op het vergrendelscherm)
+function notifTekst(n, van) {
+  const naam = van?.name || van?.username || 'Iemand';
+  const t = { followRequest: 'wil je volgen', followAccepted: 'heeft je volgverzoek goedgekeurd', repost: 'heeft je video gerepost', invite: 'heeft zich aangemeld via jouw link', like: 'vindt je video leuk', comment: `reageerde: ${n.text || ''}`, reply: `beantwoordde je reactie: ${n.text || ''}`, follow: 'volgt je nu', mention: n.text ? `noemde je in een reactie: ${n.text}` : 'noemde je in een video', commentlike: `vindt je reactie leuk`, post: 'heeft een nieuwe video geplaatst', live: `is LIVE${n.text ? ': ' + n.text : ''}`, systeem: n.text || '' }[n.type] || '';
+  return n.type === 'systeem' ? { title: 'FlikFlak', body: t } : { title: naam, body: t };
+}
+const notifUrl = n => n.type === 'live' && n.liveId ? '/#/live/' + n.liveId : n.videoId ? '/#/v/' + n.videoId : n.type === 'systeem' ? '/#/inbox' : '/#/@' + (userById(n.fromId)?.username || '');
+
 function notify(userId, fromId, type, extra = {}) {
   if (userId === fromId) return;
   const ontvanger = userById(userId);
@@ -143,6 +171,7 @@ function notify(userId, fromId, type, extra = {}) {
   db.notifications.push(n);
   save();
   push(userId, { type: 'notification', notification: publicNotif(n, userById(userId)) });
+  if (!inApp(userId)) webPush(ontvanger, { ...notifTekst(n, userById(fromId)), url: notifUrl(n), tag: 'ff-' + type, icon: userById(fromId)?.avatar || '/iconen/192.png' });
 }
 function publicNotif(n, viewer) {
   const v = n.videoId && db.videos.find(x => x.id === n.videoId);
@@ -295,6 +324,7 @@ app.get('/api/export', auth, (req, res) => {
     comments: db.comments.filter(c => c.userId === me.id).map(c => ({ text: c.text, created: c.created })),
     messages: db.messages.filter(m => m.from === me.id).map(m => ({ to: userById(m.to)?.username, text: m.text, created: m.created })),
     collections: (me.collections || []).map(c => ({ name: c.name, videos: c.videoIds.length })),
+    meldingenOpApparaten: (me.pushSubs || []).map(s => ({ dienst: new URL(s.endpoint).host, sinds: s.since })), // het adres zelf is een geheim van je browser
   });
 });
 
@@ -907,8 +937,39 @@ function sendMessage(from, to, text, videoId = null, extra = {}) {
   const pm = publicMessage(m);
   push(to.id, { type: 'message', message: pm, from: publicUser(from, to), muted: (to.muted || []).includes(from.id) });
   push(from.id, { type: 'message', message: pm, from: publicUser(from, from) });
+  // niet in de app en niet gedempt: een melding op het apparaat, met de tekst (of "video"/"spraakbericht")
+  if (!inApp(to.id) && !(to.muted || []).includes(from.id)) webPush(to, { title: from.name || from.username, body: text || (extra.audio ? '🎤 Spraakbericht' : '🎬 Video'), url: '/#/chat/' + from.username, tag: 'ff-chat-' + from.id, icon: from.avatar || '/iconen/192.png' });
   return pm;
 }
+
+// ----- meldingen op het apparaat: aan- en afmelden -----
+app.get('/api/push/sleutel', (req, res) => res.json({ sleutel: VAPID.publicKey }));
+app.post('/api/push/abonneer', auth, (req, res) => {
+  const s = req.body?.subscription;
+  if (!s || typeof s.endpoint !== 'string' || !/^https:\/\//.test(s.endpoint) || s.endpoint.length > 1000 || !s.keys || typeof s.keys.p256dh !== 'string' || typeof s.keys.auth !== 'string') return res.status(400).json({ error: 'Geen geldig abonnement' });
+  const subs = (req.user.pushSubs || []).filter(x => x.endpoint !== s.endpoint);
+  subs.push({ endpoint: s.endpoint, keys: { p256dh: s.keys.p256dh, auth: s.keys.auth }, since: now() });
+  req.user.pushSubs = subs.slice(-5); // max. 5 apparaten, de oudste valt af
+  save();
+  res.json({ ok: true, apparaten: req.user.pushSubs.length });
+});
+app.delete('/api/push/abonneer', auth, (req, res) => {
+  const endpoint = String(req.body?.endpoint || '');
+  req.user.pushSubs = (req.user.pushSubs || []).filter(x => x.endpoint !== endpoint);
+  save();
+  res.json({ ok: true, apparaten: req.user.pushSubs.length });
+});
+
+// ----- QR-code van een eigen pagina (profiel, video, uitnodiging) als SVG -----
+app.get('/api/qr', async (req, res) => {
+  const pad = String(req.query.pad || '/');
+  if (!pad.startsWith('/') || pad.startsWith('//') || pad.length > 300 || /[\s<>"']/.test(pad)) return res.status(400).json({ error: 'Alleen een pad op FlikFlak' });
+  const url = `${req.protocol}://${req.get('host')}${pad}`;
+  try {
+    const svg = await QRCode.toString(url, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#000000', light: '#ffffff' } });
+    res.set('Content-Type', 'image/svg+xml').set('Cache-Control', 'public, max-age=86400').send(svg);
+  } catch { res.status(500).json({ error: 'QR mislukt' }); }
+});
 function publicMessage(m) {
   const v = m.videoId && db.videos.find(x => x.id === m.videoId);
   return { ...m, audio: m.audio ? '/uploads/' + m.audio : null, reacties: m.reacties || {}, video: v ? { id: v.id, thumb: v.thumb ? '/uploads/' + v.thumb : null, caption: v.caption } : null };
