@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ErrorGroup } from "@/lib/ops/error-journal";
 import { count, dateTimeNl, timeAgoNl } from "@/lib/admin/format";
+import { aantalLaatste24u } from "@/lib/ops/fouten-uren";
 import { Empty, Notice, Panel, Pill } from "@/components/admin/kit";
 import { DataTable, type TableColumn, type TableRow } from "@/components/admin/kit-client";
 import { BouwerFixKnop } from "@/components/admin/bouwer/BouwerFixKnop";
@@ -15,7 +16,7 @@ const DAY = 86_400_000;
 const COLUMNS: TableColumn[] = [
   { key: "melding", label: "Melding", sortable: false },
   { key: "soort", label: "Soort", sortable: false },
-  { key: "aantal", label: "Aantal", align: "right" },
+  { key: "aantal", label: "In 24 u", align: "right" },
   { key: "laatst", label: "Laatst" },
   { key: "eerst", label: "Eerst", hideOnMobile: true },
   { key: "actie", label: "", sortable: false },
@@ -72,7 +73,14 @@ export function ErrorJournalPanel() {
         </div>
       ),
       soort: <Pill tone={g.level === "error" ? "crit" : "warn"}>{g.level === "error" ? "Fout" : "Waarschuwing"}</Pill>,
-      aantal: count(g.count),
+      aantal: (
+        <div className="whitespace-nowrap text-right leading-tight">
+          <span className="font-semibold" style={{ color: "var(--a-text)" }}>{count(aantalLaatste24u(g.uren, now))}×</span>
+          <span className="mt-0.5 block text-[11px]" style={{ color: "var(--a-mute)" }}>
+            totaal {count(g.count)}× sinds {dateTimeNl(g.firstAt)}
+          </span>
+        </div>
+      ),
       laatst: <span className="whitespace-nowrap" title={dateTimeNl(g.lastAt)}>{timeAgoNl(g.lastAt, now)}</span>,
       eerst: <span className="whitespace-nowrap">{dateTimeNl(g.firstAt)}</span>,
       actie: (
@@ -84,10 +92,10 @@ export function ErrorJournalPanel() {
         </span>
       ),
     },
-    sort: { aantal: g.count, laatst: g.lastAt, eerst: g.firstAt },
+    sort: { aantal: aantalLaatste24u(g.uren, now), laatst: g.lastAt, eerst: g.firstAt },
     search: [g.message, g.reason ?? "", g.route ?? ""].join(" "),
     filters: { soort: g.level },
-    csv: { melding: [g.message, g.reason, g.route].filter(Boolean).join(" | "), soort: g.level === "error" ? "Fout" : "Waarschuwing", aantal: g.count, laatst: g.lastAt, eerst: g.firstAt },
+    csv: { melding: [g.message, g.reason, g.route].filter(Boolean).join(" | "), soort: g.level === "error" ? "Fout" : "Waarschuwing", aantal: aantalLaatste24u(g.uren, now), laatst: g.lastAt, eerst: g.firstAt },
   }));
 
   return (

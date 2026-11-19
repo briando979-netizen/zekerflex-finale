@@ -5,6 +5,7 @@ import { logger, setLogSink } from "@/lib/logger";
 import { alertOwnerLater } from "@/lib/ops/alert";
 import { stuurNaarGlitchtip } from "@/lib/ops/glitchtip";
 import { kvDelete, kvGet, kvListValues, kvSet } from "@/lib/storage/kv";
+import { samenvoegUren, snoeiUren, uurSleutel } from "@/lib/ops/fouten-uren";
 
 // ---------------------------------------------------------------------------
 // Foutenlogboek. De app logt naar de console van de container, en die is bij
@@ -38,6 +39,8 @@ export interface ErrorGroup {
   firstAt: string;
   lastAt: string;
   samples: JournalSample[];
+  /** aantal per UTC-uur ("YYYY-MM-DDTHH"), hooguit de laatste 48 uur; afwezig bij groepen van vóór 19 nov 2026 */
+  uren?: Record<string, number>;
 }
 
 const PREFIX = "fout:";
@@ -164,23 +167,28 @@ export function journal(level: JournalLevel, message: string, context: Record<st
   const id = groupId(level, message, route, reason);
   const iso = at.toISOString();
   const sample = { at: iso, detail: detailOf(context) };
+  const uur = uurSleutel(at);
   const cur = pending.get(id);
   if (cur) {
     cur.count += 1;
     cur.lastAt = iso;
     cur.samples = [...cur.samples, sample].slice(-KEEP_SAMPLES);
+    cur.uren = { ...(cur.uren ?? {}), [uur]: (cur.uren?.[uur] ?? 0) + 1 };
     return;
   }
   if (pending.size >= MAX_PENDING) {
     state.dropped += 1;
     return;
   }
-  pending.set(id, { id, level, message: scrub(message).slice(0, 300), reason, route, count: 1, firstAt: iso, lastAt: iso, samples: [sample] });
+  pending.set(id, { id, level, message: scrub(message).slice(0, 300), reason, route, count: 1, firstAt: iso, lastAt: iso, samples: [sample], uren: { [uur]: 1 } });
 }
 
 function merge(old: ErrorGroup | null, add: ErrorGroup): ErrorGroup {
-  if (!old) return add;
-  return { ...old, count: old.count + add.count, lastAt: add.lastAt > old.lastAt ? add.lastAt : old.lastAt, samples: [...old.samples, ...add.samples].slice(-KEEP_SAMPLES) };
+  const lastAt = !old ? add.lastAt : add.lastAt > old.lastAt ? add.lastAt : old.lastAt;
+  // uurbakjes samenvoegen en tot de laatste 48 uur snoeien, zodat ze niet eindeloos groeien
+  const uren = snoeiUren(samenvoegUren(old?.uren, add.uren), Date.parse(lastAt));
+  if (!old) return { ...add, uren };
+  return { ...old, count: old.count + add.count, lastAt, samples: [...old.samples, ...add.samples].slice(-KEEP_SAMPLES), uren };
 }
 
 // --- de eigenaar laten weten dat er iets nieuws misgaat --------------------------
