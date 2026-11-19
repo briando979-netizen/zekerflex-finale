@@ -2,7 +2,7 @@
 // Advertentie op maat (/advertentie-op-maat): de regels, puur (geen kv, prisma,
 // zod of mail), zodat het formulier in de browser en de tests ze ook gebruiken.
 //
-// Een bedrijf vult een paar dingen in en ziet meteen drie ontwerpen van zijn
+// Een bedrijf vult een paar dingen in en ziet meteen zes ontwerpen van zijn
 // eigen advertentie. Het voorbeeld is klein en heeft een ingebakken watermerk;
 // de schone, grote versie bestaat pas na vrijgave door de eigenaar (na betaling).
 // Die beslissing staat hier op één plek: beeldBesluit().
@@ -59,7 +59,7 @@ export type FormaatId = keyof typeof FORMATEN;
 export const FORMAAT_IDS = Object.keys(FORMATEN) as FormaatId[];
 export const isFormaatId = (v: unknown): v is FormaatId => typeof v === "string" && Object.hasOwn(FORMATEN, v);
 
-/** Het voorbeeld vóór vrijgave: alleen vierkant en klein. */
+/** Het voorbeeld vóór vrijgave: klein, de langste zijde hooguit zoveel beeldpunten. */
 export const VOORBEELD_ZIJDE = 600;
 /** De kleine schone maat voor de lijst in Beheer (alleen voor een platformbeheerder). */
 export const BEHEER_KLEIN = 360;
@@ -85,7 +85,7 @@ export type Status = "gemaakt" | "aangevraagd" | "vrijgegeven";
 export interface Aanvraag {
   /** het ontwerp dat de klant aanklikte */
   ontwerp: OntwerpNr;
-  /** alleen dat ene ontwerp, of alle drie */
+  /** alleen dat ene ontwerp, of alle ontwerpen */
   pakket: "een" | "alle";
   naam: string;
   email: string;
@@ -324,7 +324,7 @@ export function leesModelTekst(antwoord: unknown, i: Invoer): { tekst: AdTekst; 
 // Het beeld: watermerk ja of nee, en welke maat
 // ---------------------------------------------------------------------------
 
-/** Is dit ontwerp van deze advertentie vrijgegeven? Bij "één ontwerp" alleen het gekozen ontwerp, bij "alle drie" allemaal. */
+/** Is dit ontwerp van deze advertentie vrijgegeven? Bij "één ontwerp" alleen het gekozen ontwerp, bij "alle ontwerpen" allemaal. */
 export function ontwerpVrij(ad: Pick<Advertentie, "status" | "aanvraag">, ontwerp: OntwerpNr): boolean {
   if (ad.status !== "vrijgegeven" || !ad.aanvraag) return false;
   return ad.aanvraag.pakket === "alle" || ad.aanvraag.ontwerp === ontwerp;
@@ -338,7 +338,7 @@ export interface BeeldBesluit {
 }
 
 /**
- * De enige plek die bepaalt wat de beeldroute teruggeeft. Niet vrijgegeven = altijd het watermerk, altijd vierkant en
+ * De enige plek die bepaalt wat de beeldroute teruggeeft. Niet vrijgegeven = altijd het watermerk en altijd
  * klein, wat er ook gevraagd wordt: een browser kan een schermafbeelding niet tegenhouden, dus de schone versie mag de
  * browser vóór vrijgave nooit bereiken. Na vrijgave zijn alleen de gekozen ontwerpen schoon (ontwerpVrij). Alleen een
  * platformbeheerder ziet de schone versie eerder (voor de controle in Beheer).

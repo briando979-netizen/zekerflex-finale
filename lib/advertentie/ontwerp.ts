@@ -4,7 +4,7 @@ import { FORMATEN, WATERMERK_TEKST, type FormaatId, type OntwerpNr } from "@/lib
 import { teken } from "@/lib/logo/tekens";
 
 // ---------------------------------------------------------------------------
-// De drie ontwerpen van een advertentie op maat, als boom voor satori (next/og).
+// De zes ontwerpen van een advertentie op maat, als boom voor satori (next/og).
 // Alleen vormen, kleurvlakken en typografie: geen foto's (licenties) en geen
 // tekens buiten de lettertypes (lib/advertentie/regels.ts maakt de tekst schoon).
 // Puur: de beeldroute, de voorbeelden op de landingspagina en het proefscript
@@ -28,7 +28,7 @@ export interface OntwerpGegevens {
 }
 
 /** De namen waaronder lib/advertentie/beeld.ts de lettertypes aanmeldt. */
-export const LETTER = { kop: "Bricolage", tekst: "Instrument Sans", serif: "Instrument Serif", smal: "Anton", sport: "Kanit", techno: "Russo One", gotisch: "Pirata One", luxe: "Marcellus" } as const;
+export const LETTER = { kop: "Bricolage", tekst: "Instrument Sans", serif: "Instrument Serif", smal: "Anton", sport: "Kanit", techno: "Russo One", gotisch: "Pirata One", luxe: "Marcellus", luxeKop: "DM Serif Display" } as const;
 
 export type Stijl = CSSProperties;
 export type Maat = (n: number) => number;
@@ -423,11 +423,15 @@ const ONTWERP = { 1: strak, 2: licht, 3: groot, 4: poster, 5: diagonaal, 6: reda
  * Eén ontwerp als boom voor satori. `breedte` is de breedte van het beeld dat eruit komt; de hoogte volgt uit het formaat.
  * Met `metWatermerk` ligt de schuine tekst over het hele beeld (ingebakken in de PNG, niet te verwijderen in de browser).
  */
-export function ontwerpBoom(nr: OntwerpNr, g: OntwerpGegevens, formaat: FormaatId, breedte: number, metWatermerk: boolean): ReactElement {
+export function ontwerpBoom(nr: OntwerpNr, g: OntwerpGegevens, formaat: FormaatId, breedte: number, metWatermerk: boolean, hoeklabel = false): ReactElement {
   const { breedte: W, hoogte: H } = FORMATEN[formaat];
   const schaal = breedte / W;
   const p: Maat = (n) => Math.round(n * schaal * 100) / 100;
   const beeld = ONTWERP[nr](g, formaat, p);
-  if (!metWatermerk) return beeld;
-  return vak({ position: "relative", width: p(W), height: p(H) }, beeld, watermerk(W, H, p));
+  if (!metWatermerk && !hoeklabel) return beeld;
+  // het hoeklabel: voor de verzonnen bedrijven op de landingspagina, zodat een naamgenoot er niets aan heeft
+  const label = hoeklabel
+    ? vak({ position: "absolute", right: p(20), bottom: p(20), padding: `${p(8)}px ${p(20)}px`, borderRadius: p(40), background: "rgba(10,18,14,0.82)", color: "#FFFFFF", fontFamily: LETTER.tekst, fontWeight: 600, fontSize: p(26), letterSpacing: p(3) }, "VOORBEELD")
+    : null;
+  return vak({ position: "relative", width: p(W), height: p(H) }, beeld, label, metWatermerk ? watermerk(W, H, p) : null);
 }

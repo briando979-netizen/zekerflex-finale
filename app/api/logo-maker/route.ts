@@ -12,7 +12,7 @@ import { maakLogo } from "@/lib/logo/store";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// POST /api/logo-maker: het formulier op /logo-maker. Geeft het id terug van de pagina met zes logo's (openbaar, zonder
+// POST /api/logo-maker: het formulier op /logo-maker. Geeft het id terug van de pagina met negen logo's (openbaar, zonder
 // account of e-mailadres). Begrensde body → invoer schoonmaken (lib/logo/regels.ts) → hooguit 8 per dag per IP (429,
 // nooit 403; bij een storing in Redis gaat het verzoek door) → bewaren. Het id komt nergens in een log.
 export async function POST(request: Request): Promise<NextResponse> {

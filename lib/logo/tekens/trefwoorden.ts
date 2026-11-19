@@ -3,219 +3,197 @@
 // gangbaar Engels) uit de bedrijfsnaam, de slogan en "wat voor bedrijf" naar de
 // namen van tekens in lib/logo/tekens/phosphor-fill.json, met een standaard per
 // soort bedrijf en per sfeer. Puur: alleen namen, geen tekengegevens (die blijven
-// op de server). tests/logo-tekens.test.ts controleert dat elke naam bestaat.
+// op de server). tests/logo-tekens.test.ts controleert dat elke naam bestaat en
+// bewaakt een lijst gemeten missers.
 //
-// Een woord telt als het met de stam begint (zie `past`): zo vindt "fietsenmaker"
-// de fiets en "schildersbedrijf" de verfroller.
+// Liever GEEN teken uit de naam (dan volgt de soort bedrijf of de sfeer) dan een
+// fout teken. Daarom telt een stam standaard alleen als HEEL woord: "recht" past
+// niet bij "Utrecht", "haar" niet bij "Haarlem", "vers" niet bij "Versteeg". Wat
+// ruimer mag, staat er uitdrukkelijk bij:
+//   "fiets*"  het woord BEGINT met de stam (fietsenmaker, fietsshop)
+//   "*bouw"   het woord EINDIGT op de stam (woningbouw)
+//   "bloem+"  het hele woord, ook met een gewone uitgang (-en, -s, -e, -n, -je, -jes, -er, -ers)
+// Plaatsnamen en het deel van een achternaam na "van", "den", "der", "ter" of
+// "ten" tellen nooit mee ("Van den Berg Bouw" is geen bergsportwinkel).
 // ---------------------------------------------------------------------------
 
 export const TREFWOORDEN: readonly (readonly [teken: string, ...stammen: string[]])[] = [
-  ["bicycle", "fiets", "bike", "cycl", "wieler", "rijwiel"],
-  ["motorcycle", "motor", "moto", "biker"],
-  ["scooter", "scooter", "brommer"],
-  ["car-profile", "auto", "car", "garage", "occasion", "apk", "rijschool", "rijles"],
-  ["steering-wheel", "stuur", "chauffeur", "rijden", "drive"],
-  ["tire", "wiel", "tyre", "tire"],
-  ["truck", "transport", "vracht", "truck", "logistiek", "koerier", "verhuis", "bezorg"],
-  ["van", "bestelbus", "busje", "bus"],
-  ["taxi", "taxi"],
-  ["airplane-tilt", "vlieg", "reis", "travel", "fly", "vakantie", "air"],
-  ["sailboat", "zeil", "sail", "jacht", "boot", "boat", "haven", "watersport"],
-  ["anchor", "anker", "anchor", "marine", "maritiem", "scheep"],
-  ["rocket-launch", "raket", "rocket", "launch", "space", "ruimte"],
-  ["planet", "planeet", "planet", "orbit", "galaxy", "cosmos", "kosmos"],
-  ["globe-hemisphere-west", "wereld", "world", "globe", "global", "inter"],
-  ["compass-rose", "kompas", "compass", "noord", "north", "koers"],
-  ["map-pin", "locatie", "plek", "regio", "lokaal", "local"],
-  ["mountains", "berg", "mount", "alp", "peak", "summit", "top", "kaap", "rots", "rock"],
-  ["tent", "tent", "camp", "outdoor", "buiten"],
-  ["campfire", "kampvuur", "bbq", "barbecue", "grill"],
-  ["tree-evergreen", "bos", "woud", "forest", "den", "spar", "pine"],
-  ["tree", "boom", "tree", "hout", "wood", "timmer"],
-  ["tree-palm", "palm", "strand", "beach", "tropic", "tropisch"],
-  ["leaf", "blad", "leaf", "groen", "green", "eco", "bio", "natuur", "nature", "vegan"],
-  ["plant", "plant", "tuin", "garden", "hovenier", "kweker", "kwekerij"],
-  ["flower-tulip", "tulp", "bloem", "flower", "bloemist", "florist", "boeket"],
-  ["flower-lotus", "lotus", "yoga", "zen", "spa", "wellness", "massage", "mindful"],
-  ["sun", "zon", "sun", "zomer", "summer", "solar"],
-  ["moon-stars", "maan", "moon", "nacht", "night", "luna", "slaap"],
-  ["star-four", "ster", "star", "nova", "stella", "astro"],
-  ["sparkle", "glans", "shine", "sparkle", "glow", "poets", "schoon", "clean"],
-  ["lightning", "bliksem", "flits", "flash", "bolt", "thunder", "donder", "volt", "energie", "energy", "power", "elektr", "electr"],
-  ["fire", "vuur", "fire", "vlam", "flame", "heet", "hot", "blaze", "haard", "kachel"],
-  ["drop", "water", "druppel", "drop", "aqua", "loodgiet", "plumb"],
-  ["waves", "golven", "wave", "zee", "sea", "ocean", "oceaan", "surf", "kust"],
-  ["snowflake", "sneeuw", "snow", "ijs", "ice", "winter", "koel", "cool", "frost", "airco", "klimaat"],
-  ["wind", "wind", "lucht", "breeze", "storm"],
-  ["crown", "kroon", "crown", "king", "koning", "queen", "royal", "royale", "konink", "prins", "prince", "majest", "imperial", "regal"],
-  ["diamond", "diamant", "diamond", "juwel", "jewel", "sieraad", "goud", "gold", "luxe", "luxury", "brill"],
-  ["sword", "zwaard", "sword", "ridder", "knight", "warrior", "strijd"],
-  ["shield-star", "schild$", "shield", "guard", "bewak", "beveilig", "security", "secure", "veilig", "safe"],
-  ["skull", "skull", "schedel", "dood", "death", "rebel", "pirate", "piraat"],
-  ["ghost", "ghost", "spook", "geest"],
-  ["alien", "alien", "ufo"],
-  ["robot", "robot", "bot", "ai"],
-  ["butterfly", "vlinder", "butterfly"],
-  ["bird", "vogel", "bird", "adelaar", "eagle", "valk", "falcon", "arend", "duif", "zwaluw", "phoenix", "feniks", "raaf", "raven"],
-  ["feather", "veer", "feather", "pluim"],
-  ["paw-print", "poot", "paw", "dier", "animal", "wolf", "leeuw", "lion", "tijger", "tiger", "bear", "vos", "fox", "panter", "panther"],
-  ["dog", "hond", "dog", "puppy", "trimsalon", "uitlaat"],
-  ["cat", "kat", "poes", "cat", "kitten"],
-  ["horse", "paard", "horse", "ruiter", "manege", "stal", "pony"],
-  ["rabbit", "konijn", "rabbit", "haas", "bunny"],
-  ["cow", "koe", "cow", "melk", "zuivel", "boer", "farm"],
-  ["fish", "vis", "fish", "zalm", "haring", "sushi", "hengel"],
-  ["bread", "brood", "bread", "bakker", "bakery", "bake"],
-  ["cake", "taart", "cake", "gebak", "patisserie", "banket"],
-  ["cookie", "koek", "cookie", "biscuit"],
-  ["grains", "graan", "koren", "tarwe", "grain", "meel", "molen"],
-  ["coffee", "koffie", "coffee", "cafe", "café", "espresso", "barista", "lunch"],
-  ["tea-bag", "thee", "tea"],
-  ["pizza", "pizza", "pizzeria", "italia"],
-  ["hamburger", "burger", "snack", "friet", "cafetaria", "fastfood"],
-  ["fork-knife", "restaurant", "eet", "food", "keuken", "kitchen", "diner", "bistro", "brasserie", "catering", "horeca", "maaltijd"],
-  ["chef-hat", "kok", "chef", "cook"],
-  ["cooking-pot", "pan", "soep", "stoof", "pot"],
-  ["bowl-food", "bowl", "poke", "salade", "noodle", "wok", "ramen"],
-  ["ice-cream", "ijsje", "ijssalon", "gelato", "icecream"],
-  ["wine", "wijn", "wine", "vino", "sommelier"],
-  ["beer-stein", "bier", "beer", "brouw", "brew", "pub", "kroeg", "taproom"],
-  ["martini", "cocktail", "bar", "lounge", "club"],
-  ["carrot", "groente", "wortel", "veggie", "vers", "fresh", "markt"],
-  ["cherries", "fruit", "kers", "berry", "bes"],
-  ["egg", "ei", "egg", "kip", "chicken"],
-  ["scissors", "kapper", "kapsalon", "barber", "knip", "hair", "haar", "coiffeur", "kleermaker", "tailor"],
-  ["hair-dryer", "fohn", "föhn", "salon", "beauty", "styling"],
-  ["hand-heart", "zorg", "care", "hulp", "help", "thuiszorg", "verzorg", "mantel"],
-  ["heartbeat", "hart", "heart", "cardio", "gezond", "health", "vitaal", "vital"],
-  ["stethoscope", "arts", "dokter", "doctor", "huisarts", "praktijk", "medisch", "medical", "kliniek", "clinic"],
-  ["tooth", "tand", "tooth", "dental", "mondzorg"],
-  ["eye", "oog", "eye", "optiek", "optic", "vision", "visie", "lens"],
-  ["eyeglasses", "bril", "glasses"],
-  ["brain", "brein", "brain", "mind", "psych", "coach", "denk", "think", "smart", "slim"],
-  ["baby", "baby", "kind", "kids", "kinder", "opvang", "peuter"],
-  ["t-shirt", "shirt", "kleding", "cloth", "wear", "apparel", "mode", "fashion", "textiel", "merch"],
-  ["hoodie", "hoodie", "street", "urban", "sweater"],
-  ["sneaker-move", "sneaker", "schoen", "shoe", "kicks", "run"],
-  ["dress", "jurk", "dress", "bruid", "bridal", "boutique"],
-  ["coat-hanger", "hanger", "garderobe", "stomerij", "wasserij"],
-  ["baseball-cap", "pet", "cap", "hat"],
-  ["handbag", "tas", "bag", "leder", "leather"],
-  ["shopping-bag", "winkel", "shop", "store", "boetiek", "retail"],
-  ["storefront", "markt", "kiosk", "supermarkt", "buurtwinkel"],
-  ["tag", "prijs", "outlet", "deal", "sale"],
-  ["gift", "cadeau", "gift", "kado", "present"],
-  ["watch", "horloge", "watch", "klok", "time", "tijd"],
-  ["key", "sleutel", "key", "slot", "makelaar", "vastgoed", "estate", "woning"],
-  ["house-line", "huis", "home", "house", "wonen", "woon", "thuis", "dak", "roof"],
-  ["buildings", "bouw", "build", "aannem", "construct", "project", "vastgoed", "kantoor", "office"],
-  ["hard-hat", "helm", "veiligheid", "uitvoer"],
-  ["crane", "kraan", "crane", "hijs"],
-  ["wall", "muur", "metsel", "steen", "tegel", "stuc", "brick", "voeg"],
-  ["hammer", "hamer", "hammer", "klus", "timmerman", "handyman", "repar", "renov", "verbouw"],
-  ["wrench", "monteur", "wrench", "onderhoud", "service", "techniek", "technisch", "install", "fietsenmaker"],
-  ["screwdriver", "schroef", "montage", "assembl"],
-  ["toolbox", "gereedschap", "tool"],
-  ["paint-roller", "schilder", "verf", "paint", "kleur", "color", "colour", "behang"],
-  ["paint-brush", "kwast", "kunst", "art", "creat", "design", "ontwerp"],
-  ["palette", "palet", "palette", "teken", "illustr"],
-  ["pen-nib", "pen", "schrijf", "write", "copy", "tekst", "redactie", "kalligraf"],
-  ["ladder", "ladder", "glazenwas", "ramen", "window"],
-  ["broom", "bezem", "veeg", "schoonmaak", "cleaning", "huishoud"],
-  ["spray-bottle", "spray", "reinig", "desinfect", "polish"],
-  ["washing-machine", "was", "laundry", "wasmachine"],
-  ["shower", "douche", "badkamer", "bath", "sanitair"],
-  ["pipe", "leiding", "riool", "afvoer", "pipe"],
-  ["plug", "stekker", "plug", "stroom", "elektricien"],
-  ["lightbulb", "lamp", "licht", "idee", "idea", "led", "verlichting"],
-  ["solar-panel", "zonnepaneel", "solar", "duurzaam", "sustain"],
-  ["recycle", "recycl", "herbruik", "circulair", "afval", "kringloop", "tweedehands", "vintage"],
-  ["shovel", "schep", "graaf", "grond", "bestrat"],
-  ["axe", "bijl", "axe", "hak", "kloof", "lumber"],
-  ["tractor", "tractor", "trekker", "agrar", "landbouw", "loonbedrijf"],
-  ["barn", "schuur", "barn", "boerderij", "hoeve"],
-  ["factory", "fabriek", "factory", "industr", "productie", "machine"],
-  ["package", "pakket", "pakje", "package", "doos", "box", "verzend", "shipping", "webshop", "magazijn"],
-  ["gas-pump", "tank", "brandstof", "fuel", "pomp"],
-  ["engine", "engine", "tuning", "performance", "racing", "race"],
-  ["flag-checkered", "finish", "kart", "circuit", "speed", "snel", "fast"],
-  ["camera", "foto", "photo", "camera", "fotograaf", "shoot", "beeld"],
-  ["aperture", "lens", "studio", "focus", "media"],
-  ["video-camera", "video", "film", "movie", "cinema", "vlog", "productions"],
-  ["music-notes", "muziek", "music", "sound", "klank", "beat", "dj", "band", "koor", "audio"],
-  ["guitar", "gitaar", "guitar", "rock"],
-  ["piano-keys", "piano", "toets"],
-  ["microphone-stage", "zang", "sing", "podcast", "mic", "stem", "voice", "radio", "comedy"],
-  ["headphones", "koptelefoon", "headphone", "luister"],
-  ["vinyl-record", "vinyl", "plaat", "record", "platen"],
-  ["soccer-ball", "voetbal", "soccer", "football", "fc", "elftal"],
-  ["basketball", "basket", "hoops"],
-  ["tennis-ball", "tennis", "padel"],
-  ["volleyball", "volley"],
-  ["golf", "golf"],
-  ["barbell", "fitness", "gym", "sport", "kracht", "strength", "train", "crossfit", "fit", "workout", "athlet"],
-  ["person-simple-run", "hardloop", "running", "atletiek", "loop", "marathon"],
-  ["person-simple-swim", "zwem", "swim", "duik"],
-  ["person-simple-ski", "ski", "wintersport"],
-  ["person-simple-hike", "wandel", "hike", "hiking", "trek", "trail"],
-  ["person-simple-tai-chi", "pilates", "tai", "dans", "dance", "ballet"],
-  ["boxing-glove", "boks", "box", "fight", "vecht", "mma", "kick"],
-  ["hand-fist", "vuist", "fist", "strong", "sterk", "kracht"],
-  ["trophy", "beker", "trophy", "winnaar", "winner", "champ", "kampioen", "victory", "winst"],
-  ["medal", "medaille", "medal", "award", "prijs"],
-  ["target", "doel", "target", "goal", "raak", "mik", "focus"],
-  ["game-controller", "game", "gaming", "esport", "play", "speel"],
-  ["dice-five", "dobbel", "dice", "spel", "bordspel"],
-  ["puzzle-piece", "puzzel", "puzzle", "oploss", "solution"],
-  ["code", "code", "software", "dev", "program", "web", "app", "digital", "digitaal", "tech", "ict"],
-  ["cpu", "chip", "cpu", "hardware", "computer", "pc"],
-  ["wifi-high", "wifi", "netwerk", "network", "internet", "online", "connect"],
-  ["database", "data", "cloud", "hosting", "server"],
-  ["device-mobile", "telefoon", "phone", "mobiel", "mobile", "gsm", "smartphone"],
-  ["atom", "atoom", "atom", "science", "wetenschap", "lab", "nucle"],
-  ["flask", "chemie", "chem", "labo", "onderzoek", "research", "formule"],
-  ["dna", "dna", "gen", "biotech"],
-  ["magnet", "magneet", "magnet", "aantrek"],
-  ["book-open", "boek", "book", "lees", "read", "biblio", "uitgever", "verhaal", "story"],
-  ["graduation-cap", "school", "opleiding", "cursus", "academy", "academie", "les", "bijles", "onderwijs", "educat", "leren", "learn", "training"],
+  ["bicycle", "fiets*", "bike+", "bikes", "cycling", "wieler*", "rijwiel*"],
+  ["motorcycle", "motor+", "motoren", "motorfiets*", "moto", "biker+"],
+  ["scooter", "scooter+", "brommer+"],
+  ["car-profile", "auto+", "auto's", "autobedrijf", "autogarage", "autoservice", "autoschade", "autohandel", "car", "cars", "garage*", "garagebedrijf", "occasion+", "apk", "rijschool", "rijles*"],
+  ["steering-wheel", "chauffeur+", "chauffeurs*", "rijden", "drive", "driver+"],
+  ["tire", "banden*", "wiel+", "tyre+", "tire+", "velgen"],
+  ["truck", "transport*", "vracht*", "truck+", "trucking", "logistiek", "logistics", "koerier+", "koeriers*", "verhuis*", "verhuizer+", "verhuizingen"],
+  ["van", "bestelbus+", "busje+"],
+  ["taxi", "taxi+", "taxi's", "taxibedrijf", "taxicentrale"],
+  ["airplane-tilt", "vliegen", "vliegtuig+", "reizen", "reisbureau", "travel", "vakantie+", "airlines", "aviation"],
+  ["sailboat", "zeilen", "zeilboot", "zeilschool", "sailing", "jacht+", "jachthaven", "watersport*"],
+  ["anchor", "anker+", "anchor+", "marine", "maritiem", "scheepvaart", "scheeps*"],
+  ["rocket-launch", "raket+", "rocket+", "launch", "space", "spacewear", "ruimtevaart"],
+  ["planet", "planeet", "planet+", "orbit", "galaxy", "cosmos", "kosmos"],
+  ["globe-hemisphere-west", "wereld", "wereldwijd", "world", "worldwide", "globe", "global", "international", "internationaal"],
+  ["compass-rose", "kompas", "compass", "noord*", "north", "koers"],
+  ["mountains", "berg+", "bergen", "bergsport*", "bergtop", "mountain+", "alpen", "alpine", "peak+", "summit", "kaap", "rots+", "rocks"],
+  ["tent", "tent+", "camping+", "kamperen", "outdoor"],
+  ["campfire", "kampvuur", "bbq", "barbecue+", "grill", "grillroom"],
+  ["tree-evergreen", "bos", "bossen", "woud", "forest", "dennen*", "spar", "pine"],
+  ["tree", "boom", "bomen", "boomverzorging", "tree+", "hout", "houtbewerking", "houthandel", "wood", "woodworks", "timmer*"],
+  ["tree-palm", "palm+", "strand", "strandtent", "beach", "tropical", "tropisch"],
+  ["leaf", "blad", "leaf", "green", "eco", "bio", "biologisch", "natuur", "natuurlijk", "nature", "vegan"],
+  ["plant", "plant+", "tuin+", "tuinen", "tuin*", "garden+", "hovenier+", "hoveniers*", "kweker+", "kwekerij"],
+  ["flower-tulip", "tulp+", "bloem+", "bloemen*", "bloemist+", "bloemisterij", "*bloem", "flower+", "florist", "boeket+"],
+  ["flower-lotus", "lotus", "yoga", "yogastudio", "zen", "spa", "wellness", "massage+", "massagepraktijk", "mindfulness"],
+  ["sun", "zon", "zonne*", "sun", "sunny", "zomer", "summer"],
+  ["moon-stars", "maan", "moon", "nacht", "night", "luna"],
+  ["star-four", "ster+", "sterren", "star+", "nova", "stella", "astro"],
+  ["sparkle", "glans", "shine", "sparkle", "glow", "poets*", "schoon", "clean", "cleaning"],
+  ["lightning", "bliksem", "flits", "flash", "bolt", "thunder", "donder", "volt", "energie", "energy", "power", "elektra", "elektro*", "electric"],
+  ["fire", "vuur", "fire", "vlam+", "flame+", "blaze", "haard+", "haarden", "kachel+"],
+  ["drop", "water", "druppel+", "drop+", "aqua", "loodgieter+", "loodgieters*", "plumber+", "plumbing"],
+  ["waves", "golven", "wave+", "zee", "sea", "ocean", "oceaan", "surf", "surfschool", "kust"],
+  ["snowflake", "sneeuw", "snow", "ijs", "ice", "winter", "frost", "airco+", "airco's", "koeltechniek", "klimaattechniek"],
+  ["person-simple-ski", "ski", "skischool", "wintersport*"],
+  ["crown", "kroon", "crown+", "king+", "koning+", "konings*", "queen+", "royal", "royale", "koninklijk+", "prins", "prince", "majestic", "imperial", "regal"],
+  ["diamond", "diamant+", "diamond+", "juwelier+", "juweliers*", "jewel+", "jewelry", "sieraden", "goud", "gold", "luxury"],
+  ["sword", "zwaard", "sword+", "ridder+", "knight+", "warrior+"],
+  ["shield-star", "schild", "shield", "guard", "bewaking", "beveiliging*", "security", "secure"],
+  ["skull", "skull+", "schedel", "rebel+", "pirate+", "piraat"],
+  ["ghost", "ghost+", "spook"],
+  ["alien", "alien+", "ufo"],
+  ["robot", "robot+", "robotics"],
+  ["butterfly", "vlinder+", "butterfly"],
+  ["bird", "vogel+", "bird+", "adelaar", "eagle+", "valk", "falcon+", "arend", "zwaluw", "phoenix", "feniks", "raaf", "raven"],
+  ["feather", "veer", "veren", "feather+", "pluim"],
+  ["paw-print", "poot", "paw+", "dieren*", "animal+", "wolf", "wolves", "leeuw", "lion+", "tijger", "tiger+", "bear+", "vos", "fox", "panter", "panther+"],
+  ["dog", "hond+", "honden*", "dog+", "puppy", "trimsalon", "hondenuitlaat*"],
+  ["cat", "kat", "katten*", "poes", "cat", "cats", "kitten+"],
+  ["horse", "paard+", "paarden*", "horse+", "ruiter+", "ruitersport*", "manege", "pony"],
+  ["cow", "koe", "koeien", "melkvee*", "zuivel", "boerderij", "farm"],
+  ["fish", "vis", "vishandel", "viswinkel", "visboer", "fish", "sushi", "hengelsport*"],
+  ["bread", "brood", "bread", "bakker+", "bakkerij+", "bakkers*", "*bakker", "*bakkerij", "bakery"],
+  ["cake", "taart+", "taarten*", "cake+", "gebak", "patisserie", "banket"],
+  ["grains", "graan", "koren", "koren*", "tarwe", "meel", "molen"],
+  ["coffee", "koffie", "koffie*", "coffee", "cafe", "café", "espresso", "espressobar", "barista", "lunchroom"],
+  ["tea-bag", "thee", "theehuis", "tea"],
+  ["pizza", "pizza+", "pizza's", "pizzeria"],
+  ["hamburger", "burger+", "snackbar", "friet", "frietzaak", "cafetaria", "fastfood"],
+  ["fork-knife", "restaurant+", "eetcafé", "eetcafe", "food", "keuken+", "kitchen", "diner", "bistro", "brasserie", "catering", "horeca"],
+  ["chef-hat", "kok", "koks", "chef", "chefs"],
+  ["bowl-food", "poke", "pokebowl", "salade+", "saladebar", "noodle+", "wok"],
+  ["ice-cream", "ijsje+", "ijssalon", "gelato"],
+  ["wine", "wijn+", "wijnen", "wijnhandel", "wijnbar", "wine+", "vino", "sommelier"],
+  ["beer-stein", "bier+", "bieren", "brouwerij", "brewery", "brewing", "pub", "kroeg", "taproom"],
+  ["martini", "cocktail+", "cocktailbar", "lounge"],
+  ["carrot", "groente+", "groenten", "groenteboer", "groentewinkel"],
+  ["cherries", "fruit", "fruithandel"],
+  ["scissors", "kapper+", "kappers*", "kapsalon+", "kapsalons", "barber+", "barbershop", "barbier+", "barbiers*", "hairstylist", "haarstudio", "haarsalon", "coiffeur", "kleermaker+", "kleermakerij", "tailor+"],
+  ["hair-dryer", "schoonheidssalon", "beautysalon", "beauty", "styling"],
+  ["hand-heart", "zorg", "thuiszorg", "zorggroep", "zorgbureau", "mantelzorg", "care", "verzorging"],
+  ["heartbeat", "hart", "heart", "cardio", "gezondheid", "health", "vitaal", "vitality"],
+  ["stethoscope", "arts", "artsen", "dokter+", "doctor+", "huisarts*", "huisartsen*", "medisch", "medical", "kliniek", "clinic"],
+  ["tooth", "tandarts*", "tandartsen*", "tandtechniek", "dental", "mondzorg"],
+  ["eye", "oog", "ogen", "eye+", "optiek", "optician", "opticien", "vision"],
+  ["eyeglasses", "bril", "brillen", "brillen*", "glasses"],
+  ["brain", "brein", "brain+", "mind", "psycholoog", "psychologie", "coach+", "coaching", "coaches"],
+  ["baby", "baby", "baby's", "kinderopvang", "kinderdagverblijf", "peuterspeelzaal", "kids"],
+  ["t-shirt", "shirt+", "kleding", "kledingwinkel", "clothing", "apparel", "fashion", "textiel", "merch"],
+  ["hoodie", "hoodie+", "streetwear", "urban", "sweater+"],
+  ["sneaker-move", "sneaker+", "schoen+", "schoenen*", "shoe+", "kicks"],
+  ["dress", "jurk+", "jurken", "dress+", "bruidsmode", "bridal", "boutique"],
+  ["coat-hanger", "stomerij", "wasserij", "garderobe"],
+  ["baseball-cap", "pet", "petten", "cap", "caps"],
+  ["handbag", "tas", "tassen", "tassen*", "bag+", "lederwaren", "leather"],
+  ["shopping-bag", "winkel+", "shop", "shops", "store", "boetiek", "retail", "webshop", "webwinkel"],
+  ["storefront", "markt", "kiosk", "supermarkt", "buurtwinkel", "buurtsuper"],
+  ["gift", "cadeau+", "cadeaus", "cadeauwinkel", "gift+", "kado", "kadoshop"],
+  ["watch", "horloge+", "horloges", "watch", "watches", "klokken*", "uurwerk*"],
+  ["key", "sleutel+", "sleutels", "sleutelservice", "slotenmaker+", "makelaar+", "makelaars*", "makelaardij", "vastgoed"],
+  ["house-line", "huis", "huizen", "home", "house", "wonen", "woning+", "woningen", "dak", "daken", "dakdekker+", "dakdekkers*", "dakwerken", "roofing"],
+  ["hammer", "hamer", "hammer", "klus", "klussen", "klus*", "timmerman", "timmerbedrijf", "handyman", "renovatie+", "verbouwing+", "verbouw"],
+  ["buildings", "bouw", "bouw*", "*bouw", "aannemer+", "aannemers*", "construction", "kantoor", "kantoor*", "office+"],
+  ["hard-hat", "bouwplaats", "uitvoering", "veiligheidskunde"],
+  ["crane", "kraan", "kraanverhuur", "crane+", "hijswerk*"],
+  ["wall", "metselaar+", "metselwerk*", "tegelzetter+", "tegelwerk*", "stukadoor+", "stukadoors*", "voegbedrijf"],
+  ["wrench", "monteur+", "monteurs", "onderhoud", "onderhouds*", "service", "techniek", "technisch", "installatie*", "installateur+"],
+  ["toolbox", "gereedschap", "tools"],
+  ["paint-roller", "schilder+", "schilders*", "verf", "verfwinkel", "painting", "painter+", "behanger+"],
+  ["paint-brush", "kunst", "kunstenaar", "art", "creatief", "creative", "design", "designer+", "ontwerp", "ontwerper+", "ontwerpstudio"],
+  ["pen-nib", "tekstschrijver", "copywriter", "copywriting", "tekstbureau", "redactie", "kalligrafie"],
+  ["ladder", "glazenwasser+", "glazenwassers*", "glazenwasserij"],
+  ["broom", "schoonmaak", "schoonmaak*", "huishoudelijk", "huishoudhulp"],
+  ["washing-machine", "wasserette", "laundry", "witgoed"],
+  ["shower", "badkamer+", "badkamers*", "sanitair"],
+  ["pipe", "riool", "riolering", "rioolservice", "ontstopping", "ontstoppings*"],
+  ["plug", "elektricien+", "elektriciens*"],
+  ["lightbulb", "lamp+", "lampen", "lampen*", "verlichting", "idee", "idea+", "ideeën"],
+  ["solar-panel", "zonnepanelen", "zonnepaneel", "solar", "duurzaam", "sustainable"],
+  ["recycle", "recycling", "kringloop", "kringloopwinkel", "tweedehands", "vintage", "circulair"],
+  ["shovel", "grondwerk*", "grondverzet", "bestrating*", "stratenmaker+"],
+  ["tractor", "tractor+", "trekker+", "agrarisch", "landbouw", "loonbedrijf", "loonwerk"],
+  ["factory", "fabriek", "factory", "industrie", "industrial", "machinebouw"],
+  ["package", "pakket+", "pakketten", "pakketdienst", "verzending", "shipping", "magazijn"],
+  ["engine", "tuning", "performance", "racing", "motorsport"],
+  ["flag-checkered", "karting", "kartbaan", "circuit", "speed"],
+  ["camera", "foto", "foto's", "fotograaf", "fotografie", "fotostudio", "photo", "photography", "camera"],
+  ["aperture", "studio", "media", "mediabureau"],
+  ["video-camera", "video", "video*", "film", "films", "filmproductie", "cinema", "vlog"],
+  ["music-notes", "muziek", "muziek*", "music", "sound", "beats", "dj", "koor", "audio"],
+  ["guitar", "gitaar", "gitaarles", "guitar+"],
+  ["piano-keys", "piano", "pianoles", "pianostemmer"],
+  ["microphone-stage", "zang", "zangles", "zanger+", "podcast+", "radio", "comedy"],
+  ["soccer-ball", "voetbal", "voetbal*", "soccer", "football", "fc"],
+  ["basketball", "basketbal", "basketball", "hoops"],
+  ["tennis-ball", "tennis", "tennis*", "padel"],
+  ["volleyball", "volleybal", "volleyball"],
+  ["golf", "golf", "golfbaan", "golfclub"],
+  ["barbell", "fitness", "gym", "sport", "sports", "sportschool", "sportcentrum", "krachttraining", "crossfit", "workout", "bootcamp", "trainer+", "personal", "athletics"],
+  ["person-simple-run", "hardlopen", "hardloop*", "running", "atletiek", "marathon"],
+  ["person-simple-swim", "zwemmen", "zwembad", "zwemschool", "swim", "swimming", "duikschool"],
+  ["person-simple-hike", "wandelen", "wandel*", "hike", "hiking", "trail", "trails"],
+  ["person-simple-tai-chi", "pilates", "dans", "dansschool", "dansstudio", "dance", "ballet"],
+  ["boxing-glove", "boksen", "boksschool", "boxing", "kickboksen", "mma", "vechtsport*"],
+  ["trophy", "trofee", "trophy", "winnaar+", "winner+", "champion+", "kampioen+", "victory"],
+  ["target", "doel", "target", "goal+", "focus"],
+  ["game-controller", "game", "games", "gaming", "esports", "gamestore"],
+  ["puzzle-piece", "puzzel+", "puzzle+"],
+  ["code", "code", "software", "developer+", "development", "webdesign", "webdevelopment", "app", "apps", "digital", "digitaal", "tech", "ict"],
+  ["cpu", "chip+", "hardware", "computer+", "computers*", "pc"],
+  ["wifi-high", "wifi", "netwerk+", "netwerken", "network+", "internet", "online"],
+  ["database", "data", "cloud", "hosting", "server+"],
+  ["device-mobile", "telefoon+", "telefoons", "telefoonwinkel", "phone+", "mobiel", "mobile", "gsm", "smartphone+"],
+  ["atom", "atoom", "atom", "science", "wetenschap", "lab"],
+  ["flask", "chemie", "laboratorium", "research"],
+  ["book-open", "boek+", "boeken", "boeken*", "boekhandel", "book+", "bibliotheek", "uitgeverij", "verhaal", "stories"],
+  ["graduation-cap", "school", "opleiding+", "opleidingen", "opleidings*", "cursus", "cursussen", "academy", "academie", "bijles", "onderwijs", "education", "training", "trainingen"],
   ["pencil", "potlood", "pencil", "schets", "sketch"],
-  ["briefcase", "zaken", "business", "advies", "consult", "kantoor", "partners", "bureau", "management"],
-  ["handshake", "samen", "partner", "deal", "bemiddel", "makelaardij", "uitzend", "werving", "recruit", "hr"],
-  ["chart-line-up", "groei", "growth", "marketing", "sales", "omzet", "beleg", "invest", "strateg"],
-  ["calculator", "boekhoud", "administr", "account", "belasting", "tax", "fiscal", "calcul"],
-  ["coins", "geld", "money", "finan", "munt", "coin", "kapitaal", "capital"],
-  ["scales", "recht", "advocaat", "law", "legal", "jurid", "notaris", "balans"],
-  ["megaphone", "reclame", "promo", "campagne", "communicat", "pr", "ads"],
-  ["newspaper", "nieuws", "news", "krant", "blad", "magazine", "pers"],
-  ["envelope", "post", "mail", "brief"],
-  ["users-three", "team", "groep", "group", "community", "club", "vereniging", "collectief", "collective"],
-  ["bed", "bed", "slaap", "sleep", "hotel", "b&b", "logeer", "matras"],
-  ["couch", "meubel", "furniture", "interieur", "interior", "wonen", "sofa"],
-  ["armchair", "stoel", "fauteuil", "zit", "lounge"],
-  ["door", "deur", "door", "kozijn", "entree"],
-  ["lighthouse", "vuurtoren", "lighthouse", "baken", "gids", "guide"],
-  ["castle-turret", "kasteel", "castle", "burcht", "toren", "tower", "fort"],
-  ["bridge", "brug", "bridge", "verbind"],
-  ["balloon", "ballon", "feest", "party", "event", "verjaardag"],
-  ["confetti", "confetti", "viering", "celebr", "bruiloft", "wedding"],
-  ["champagne", "champagne", "bubbels", "proost"],
-  ["ticket", "ticket", "kaartje", "theater", "show", "festival", "concert"],
-  ["mask-happy", "masker", "toneel", "drama", "carnaval"],
-  ["magic-wand", "magie", "magic", "tover", "wonder", "goochel"],
-  ["infinity", "oneindig", "infinity", "infinite", "forever", "eeuwig", "limit"],
-  ["peace", "vrede", "peace", "hippie"],
-  ["yin-yang", "balans", "balance", "harmon", "yin"],
-  ["hands-praying", "geloof", "faith", "bid", "pray", "kerk", "church", "hoop", "hope", "zegen", "bless"],
-  ["fingerprint", "identiteit", "identity", "uniek", "unique", "id"],
-  ["detective", "detective", "recherche", "speur", "onderzoeksbureau"],
-  ["siren", "alarm", "nood", "emergency", "112"],
-  ["needle", "naald", "naai", "sew", "borduur", "tattoo", "ink"],
-  ["yarn", "wol", "brei", "knit", "haak", "garen", "yarn"],
-  ["sunglasses", "zonnebril", "shades", "cool"],
-  ["hourglass", "zandloper", "geduld", "vintage", "antiek"],
-  ["cactus", "cactus", "woestijn", "desert", "mexic"],
-  ["acorn", "eikel", "eik", "oak", "noot"],
-  ["bug", "kever", "insect", "ongedierte", "plaag", "pest"],
+  ["briefcase", "zakelijk", "business", "advies", "advies*", "adviseur+", "consult", "consultancy", "consulting", "partners", "management"],
+  ["handshake", "bemiddeling", "uitzendbureau", "werving", "recruitment", "hr"],
+  ["chart-line-up", "groei", "growth", "marketing", "sales", "beleggen", "invest", "investments", "strategie"],
+  ["calculator", "boekhouder+", "boekhouding", "boekhoudkantoor", "administratie+", "administratiekantoor", "accountant+", "accountancy", "belasting", "belastingadvies", "tax"],
+  ["coins", "geld", "money", "finance", "financieel", "financiën", "kapitaal", "capital"],
+  ["scales", "recht", "advocaat", "advocaten", "advocaten*", "law", "legal", "juridisch", "jurist+", "notaris", "notarissen"],
+  ["megaphone", "reclame", "reclame*", "promotie", "campagne+", "communicatie"],
+  ["newspaper", "nieuws", "news", "krant", "magazine"],
+  ["users-three", "team", "community", "vereniging", "collectief", "collective"],
+  ["bed", "bed", "bedden", "beddenwinkel", "hotel", "hostel", "matras", "matrassen"],
+  ["couch", "meubel+", "meubels", "meubelen", "meubel*", "furniture", "interieur", "interieur*", "interior+", "sofa"],
+  ["door", "deur+", "deuren", "deuren*", "kozijn+", "kozijnen", "kozijnen*"],
+  ["lighthouse", "vuurtoren", "lighthouse", "baken"],
+  ["castle-turret", "kasteel", "castle", "burcht", "toren", "tower"],
+  ["bridge", "brug", "bridge"],
+  ["balloon", "ballon+", "ballonnen", "feest", "feesten", "feestwinkel", "party", "event", "events", "evenementen", "evenementen*"],
+  ["confetti", "confetti", "bruiloft+", "bruiloften", "wedding+"],
+  ["ticket", "ticket+", "theater", "festival+", "concert+"],
+  ["magic-wand", "magie", "magic", "goochelaar", "wonder"],
+  ["infinity", "oneindig", "infinity", "infinite", "forever", "limit", "limitless"],
+  ["yin-yang", "balans", "balance", "harmonie", "harmony"],
+  ["hands-praying", "geloof", "faith", "kerk", "church", "hoop", "hope", "blessed"],
+  ["fingerprint", "identiteit", "identity", "uniek", "unique"],
+  ["needle", "naaiatelier", "naaien", "borduren", "borduurstudio", "tattoo", "tattoos", "tattooshop", "ink"],
+  ["yarn", "wol", "wolwinkel", "breien", "haken", "garen"],
+  ["sunglasses", "zonnebril", "zonnebrillen", "shades"],
+  ["cactus", "cactus", "woestijn", "desert"],
 ];
 
 /** Het standaardteken per soort bedrijf (lib/logo/regels.ts BRANCHES). */
@@ -239,7 +217,7 @@ export const BRANCHE_TEKENS: Record<string, readonly string[]> = {
 export const SFEER_TEKENS: Record<string, readonly string[]> = {
   streetwear: ["lightning", "crown", "star-four"],
   sport: ["lightning", "trophy", "flag-checkered"],
-  luxe: ["diamond", "crown", "feather"],
+  luxe: ["sparkle", "crown", "feather"],
   gothic: ["crown", "sword", "skull"],
   techno: ["planet", "rocket-launch", "atom"],
   outdoor: ["mountains", "tree-evergreen", "compass-rose"],
@@ -249,34 +227,66 @@ export const SFEER_TEKENS: Record<string, readonly string[]> = {
   stoer: ["shield-star", "hand-fist", "fire"],
 };
 
+/** Woorden die nooit een teken opleveren: grote plaatsen en streken (ook als bijvoeglijk naamwoord) en veelvoorkomende naamdelen. */
+const STOP = new Set(
+  (
+    "amsterdam amsterdamse rotterdam rotterdamse utrecht utrechtse haag haagse eindhoven eindhovense groningen groningse groninger tilburg tilburgse almere breda nijmegen nijmeegse " +
+    "enschede apeldoorn haarlem haarlemse arnhem arnhemse zaanstad zaandam amersfoort haarlemmermeer hertogenbosch bosch zoetermeer zwolle zwolse maastricht leiden leidse dordrecht ede " +
+    "leeuwarden emmen venlo delft deventer helmond helmondse oss hilversum heerlen sittard geleen roosendaal purmerend schiedam spijkenisse alkmaar vlaardingen almelo hoorn gouda assen " +
+    "bergen bergschenhoek barendrecht papendrecht sliedrecht zwijndrecht mijdrecht woerden veenendaal zeist nieuwegein kampen hardenberg hoogeveen drachten heerenveen sneek harderwijk " +
+    "middelburg vlissingen goes terneuzen roermond weert veghel uden waalwijk oosterhout doetinchem zutphen tiel culemborg wageningen winterswijk hengelo oldenzaal borne rijssen " +
+    "zuidbroek hoogezand sappemeer veendam winschoten stadskanaal delfzijl appingedam haren " +
+    "gelderland gelderse brabant brabantse limburg limburgse friesland friese drenthe drentse overijssel overijsselse zeeland zeeuwse holland hollandse twente twentse veluwe betuwe achterhoek " +
+    "nederland nederlandse dutch benelux belgie belgië belgische " +
+    "jansen janssen jong vries berg bakker visser smit meijer boer mulder bos vos peters hendriks dekker brouwer koning koster vermeulen versteeg verhoeven verbeek " +
+    "van den der ter ten de het een en"
+  ).split(/\s+/),
+);
+/** Na deze woorden komt het deel van een achternaam: "van den Berg", "ter Horst". */
+const NAAMVOOR = new Set(["van", "den", "der", "ter", "ten", "vd", "v/d"]);
+
+const UITGANGEN = ["", "en", "s", "e", "n", "je", "jes", "er", "ers", "'s"];
+
 const woordenVan = (tekst: string): string[] =>
   tekst
     .toLowerCase()
-    .split(/[^a-z0-9\u{E0}-\u{17F}&]+/u)
+    .split(/[^a-z0-9\u{E0}-\u{17F}'/]+/u)
+    .map((w) => w.replace(/^'+|'+$/g, ""))
     .filter(Boolean);
 
-/**
- * Past dit woord bij deze stam? Een stam van hooguit drie letters (of met een $ erachter) moet het hele woord zijn, zodat
- * "ei" niet bij "eigen" past en "schild" niet bij "schilder". Een langere stam past aan het begin van het woord, en vanaf
- * vijf letters ook ergens erin ("thuiszorg", "autogarage").
- */
-function past(woord: string, stam: string): boolean {
+/** Past dit woord bij deze stam? Zie de uitleg bovenaan: heel woord, tenzij de stam een *, + of $ draagt. */
+export function past(woord: string, stam: string): boolean {
+  if (stam.startsWith("*")) return woord.length > stam.length - 1 && woord.endsWith(stam.slice(1));
+  if (stam.endsWith("*")) return woord.startsWith(stam.slice(0, -1));
+  if (stam.endsWith("+")) return UITGANGEN.some((u) => woord === stam.slice(0, -1) + u);
   if (stam.endsWith("$")) return woord === stam.slice(0, -1);
-  if (stam.length <= 3) return woord === stam;
-  return woord.startsWith(stam) || (stam.length >= 5 && woord.includes(stam));
+  return woord === stam;
 }
 
-/** De tekens die bij de woorden van het bedrijf zelf passen (naam, slogan, "wat voor bedrijf"), beste eerst, zonder dubbele. */
+/**
+ * De tekens die bij de woorden van het bedrijf zelf passen (naam, slogan, "wat voor bedrijf"), in de volgorde van de
+ * woorden, zonder dubbele. Plaatsnamen en het deel van een achternaam na "van", "den", "der", "ter" of "ten" doen niet mee.
+ */
 export function tekensUitTekst(...teksten: (string | undefined)[]): string[] {
-  const woorden = teksten.flatMap((t) => (t ? woordenVan(t) : []));
   const uit: string[] = [];
-  for (const woord of woorden) {
-    for (const [teken, ...stammen] of TREFWOORDEN) {
-      if (!uit.includes(teken) && stammen.some((s) => past(woord, s))) uit.push(teken);
-    }
+  for (const tekst of teksten) {
+    if (!tekst) continue;
+    const woorden = woordenVan(tekst);
+    woorden.forEach((woord, i) => {
+      const vorige = woorden[i - 1];
+      // "van den Berg": Berg is hier een naam, geen berg; "Bakker" in de stoplijst telt alleen als naam ná zo'n voorvoegsel
+      const naamdeel = vorige !== undefined && NAAMVOOR.has(vorige);
+      if (naamdeel || (STOP.has(woord) && !ALTIJD.has(woord))) return;
+      for (const [teken, ...stammen] of TREFWOORDEN) {
+        if (!uit.includes(teken) && stammen.some((s) => past(woord, s))) uit.push(teken);
+      }
+    });
   }
   return uit;
 }
+
+/** Woorden die ook een achternaam zijn, maar los in een bedrijfsnaam gewoon het vak betekenen ("Bakker Jan", "De Boer"). */
+const ALTIJD = new Set(["bakker"]);
 
 export interface TekenKeuze {
   /** drie tekens, beste eerst */

@@ -1,10 +1,10 @@
 import { getPrincipal, hasRole } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
-import { jsonError } from "@/lib/http/errors";
 import { clientIp } from "@/lib/http/request";
 import { logger } from "@/lib/logger";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { letterMeter, maakPng } from "@/lib/advertentie/beeld";
+import { beeldFout, telRender } from "@/lib/advertentie/beeld-antwoord";
 import { watermerkBeeld } from "@/lib/advertentie/beeld-geheugen";
 import { BEHEER_KLEIN, isAdvertentieId } from "@/lib/advertentie/regels";
 import { logoBoom } from "@/lib/logo/ontwerp";
@@ -26,12 +26,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   try {
     const { id } = await params;
     const url = new URL(request.url);
+    const ip = clientIp(request);
     const nr = Number(url.searchParams.get("logo") ?? "1");
     const variant = url.searchParams.get("variant") ?? "kleur-wit";
     const themaRuw = url.searchParams.get("thema");
     if (!isAdvertentieId(id) || !isLogoNr(nr) || !isVariantId(variant)) throw AppError.notFound("Dit beeld bestaat niet.");
     // een pagina laadt negen voorbeelden, drie ondergronden en een rij mockups
-    await enforceRateLimit({ name: "logo-beeld", identifier: clientIp(request), limit: 900, windowSeconds: 600, message: "Te veel aanvragen. Probeer het over een paar minuten opnieuw." });
+    await enforceRateLimit({ name: "logo-beeld", identifier: ip, limit: 900, windowSeconds: 600, message: "Te veel aanvragen. Probeer het over een paar minuten opnieuw." });
     const logo = await haalLogo(id);
     if (!logo || nr > logoAantal(logo)) throw AppError.notFound("Dit logo bestaat niet (meer).");
 
@@ -53,7 +54,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     };
     let png: ArrayBuffer;
     if (besluit.watermerk) {
-      png = await watermerkBeeld(`logo:${id}:${nr}:${besluit.thema ?? "v1"}`, () => maak(besluit.breedte));
+      png = await watermerkBeeld(`logo:${id}:${nr}:${besluit.thema ?? "v1"}`, async () => {
+        // alleen een nieuw beeld telt: wat uit het geheugen komt, kost niets
+        await telRender("logo", ip);
+        return maak(besluit.breedte);
+      });
     } else {
       // op de pagina een scherm-maat, in de lijst van Beheer een kleine; alleen een download is op volle grootte
       const klein = beheerder && url.searchParams.get("klein") === "1";
@@ -68,7 +73,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       },
     });
   } catch (err) {
-    const res = jsonError(err);
+    const res = beeldFout(err);
     if (res.status >= 500) logger.error("logo maker: beeld mislukt", { error: (err as Error).message });
     return res;
   }

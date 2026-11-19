@@ -7,17 +7,19 @@ import { sjablonenVan } from "@/lib/logo/sjablonen";
 import { embleem, teken } from "@/lib/logo/tekens";
 import { kiesTekens } from "@/lib/logo/tekens/trefwoorden";
 import { VARIANTEN, initialen, tweeRegels, type LogoInvoer, type LogoNr, type SfeerId, type SjabloonId, type ThemaId, type VariantId } from "@/lib/logo/regels";
-import { baan, bergen, bliksem, bol, chevron, cirkel, kroon, lauwer, schild, ster, strepen, veeg, vleugel, zegelring } from "@/lib/logo/vormen";
+import { baan, bergen, bliksem, bol, chevron, cirkel, kroon, lauwer, schild, ster, strepen, veeg, vleugel } from "@/lib/logo/vormen";
 
 // ---------------------------------------------------------------------------
 // De logo's van versie 2: negen per aanvraag, per sfeer een eigen set (streetwear,
 // sport, luxe, gothic, techno, outdoor en de vier van eerst). Eén kleur, zoals een
-// merk op een shirt: zware schuine letters, een baan om het woord, sterren,
+// merk op een shirt: zware schuine letters, een baan achter het woord, sterren,
 // bergtoppen, een bol, een kroon, en de naam klein en wijd gespatieerd eronder.
-// Alles uit eigen vormen (lib/logo/vormen.ts) en vrije lettertypes; geen
-// AI-beelden, geen foto's, geen ontwerpen van anderen. Een lange naam wordt in het
-// beeldmerk een afkorting, met de volledige naam eronder. De breedte van het woord
-// komt uit het lettertype zelf (Meter), zodat een baan of lijn precies past.
+// De vormen zijn zelf getekend (lib/logo/vormen.ts); de tekens komen uit een open
+// icoonbibliotheek die in de repo staat (lib/logo/tekens, Phosphor Icons, MIT) en
+// de lettertypes zijn vrij (OFL). Geen AI-beelden en geen foto's. Een lange naam
+// wordt in het beeldmerk een afkorting, met de volledige naam eronder; een naam
+// van gemiddelde lengte staat in twee regels. De breedte van het woord komt uit
+// het lettertype zelf (Meter), zodat een baan of band precies past.
 // Puur; maten in beeldpunten van een vlak van 1200 × 900 (het icoon: 1000 × 1000).
 // ---------------------------------------------------------------------------
 
@@ -41,7 +43,7 @@ interface Letter {
 const TYPE: Record<SfeerId, Letter> = {
   streetwear: { font: LETTER.sport, gewicht: 900, schuin: true, hoofd: true, spatie: -0.01 },
   sport: { font: LETTER.sport, gewicht: 900, schuin: true, hoofd: true, spatie: 0 },
-  luxe: { font: LETTER.luxe, gewicht: 400, schuin: false, hoofd: true, spatie: 0.1 },
+  luxe: { font: LETTER.luxeKop, gewicht: 400, schuin: false, hoofd: true, spatie: 0.06 },
   gothic: { font: LETTER.gotisch, gewicht: 400, schuin: false, hoofd: false, spatie: 0.01 },
   techno: { font: LETTER.techno, gewicht: 400, schuin: false, hoofd: true, spatie: 0.05, scheef: -9 },
   outdoor: { font: LETTER.smal, gewicht: 400, schuin: false, hoofd: true, spatie: 0.04 },
@@ -62,10 +64,14 @@ interface Ctx {
   i: LogoInvoer;
   p: Maat;
   inkt: string;
+  /** de kleur van het vlak erachter; null = geen achtergrond (doorzichtig bestand) */
+  vlak: string | null;
+  /** tekst op een vlak in de inktkleur (de band): de achtergrond, of bij een doorzichtig bestand een kleur die erop leesbaar is */
+  tegen: string;
   meet: Meter;
   l: Letter;
   sub: Letter;
-  /** het woord in het beeldmerk: de naam als die kort is, anders een afkorting */
+  /** het woord in het beeldmerk: de naam als die kort genoeg is, anders een afkorting */
   merk: string;
   /** één of twee letters voor een monogram */
   letters: string;
@@ -116,6 +122,22 @@ function onderregel(c: Ctx, max = 760, grootst = 40, extra: Stijl = {}, tekstOnd
 }
 const naamOnder = (c: Ctx, max = 760, grootst = 40, extra: Stijl = {}) => onderregel(c, max, grootst, extra, c.i.naam);
 
+/**
+ * Het merkwoord als blok: op één regel als het kort is, in twee regels (zo gelijk mogelijk) bij een naam van gemiddelde
+ * lengte met meer dan één woord. Geeft het blok en zijn maten terug.
+ */
+function merkblok(c: Ctx, max: number, grootst: number, uitlijn: "center" | "flex-start" = "center"): { el: ReactElement; b: number; h: number; maat: number } {
+  const t = inLetter(c.merk, c.l);
+  const regels = aantal(c.merk) > 12 ? tweeRegels(t) : [t];
+  if (regels.length === 1) {
+    const maat = passend(c, t, c.l, max, grootst);
+    return { el: tekst(c, t, maat, c.l), b: breedte(c, t, maat, c.l), h: maat, maat };
+  }
+  const maat = Math.min(...regels.map((r) => passend(c, r, c.l, max * 0.82, grootst * 0.86)));
+  const b = Math.max(...regels.map((r) => breedte(c, r, maat, c.l)));
+  return { el: vak({ flexDirection: "column", alignItems: uitlijn }, ...regels.map((r, n) => tekst(c, r, maat, c.l, { marginTop: c.p(n ? maat * 0.06 : 0) }))), b, h: maat * 2.06, maat };
+}
+
 /** Alles in het midden van het vlak; de maten hieronder zijn ruim binnen de rand gekozen en worden hier een kwart groter gezet. */
 const kolom = (c: Ctx, ...kinderen: ReactNode[]) => vak({ flexDirection: "column", alignItems: "center", justifyContent: "center", width: c.p(W), height: c.p(H), transform: "scale(1.22)" }, ...kinderen);
 const laag = (c: Ctx, b: number, h: number, ...kinderen: ReactNode[]) => vak({ position: "relative", width: c.p(b), height: c.p(h), flexShrink: 0 }, ...kinderen);
@@ -123,17 +145,24 @@ const op = (c: Ctx, x: number, y: number, kind: ReactNode, extra: Stijl = {}) =>
 
 // --- de sjablonen -----------------------------------------------------------
 
-/** Het woord in een baan met een ster. */
+/**
+ * Het woord met een baan en een ster. De baan loopt ACHTER het woord langs: het woord staat er nog eens onder in de kleur
+ * van de achtergrond met een dikke rand, zodat de ring de letters nergens raakt. Bij een doorzichtig bestand is er geen
+ * achtergrondkleur; dan ligt de ring ruim om het woord heen.
+ */
 function tBaan(c: Ctx): ReactElement {
   const t = inLetter(c.merk, c.l);
-  const maat = passend(c, t, c.l, 640, 250);
+  const maat = passend(c, t, c.l, 600, 240);
   const w = breedte(c, t, maat, c.l);
-  // de baan ruim om het woord: bij een lang woord hoger, zodat hij de letters niet raakt
-  const ry = Math.max(maat * 0.78, w * 0.2);
-  const ring = baan(c.p(w / 2 + Math.max(maat * 0.5, 70)), c.p(ry), c.inkt, -9, c.p(Math.max(12, maat * 0.1)), c.p(2.5));
-  const B = w + Math.max(maat * 1.3, 180);
-  const Hh = ry * 2 + 60;
-  const s = Math.max(70, maat * 0.42);
+  const uitsparing = c.vlak !== null;
+  // plat en schuin, zoals een planeetbaan; zonder uitsparing hoger, zodat hij vrij blijft van de letters
+  const rx = w / 2 + (uitsparing ? maat * 0.34 : Math.max(maat * 0.6, 90));
+  const ry = uitsparing ? Math.max(maat * 0.62, w * 0.17) : Math.max(maat * 0.86, w * 0.24);
+  const ring = baan(c.p(rx), c.p(ry), c.inkt, uitsparing ? -13 : -9, c.p(Math.max(11, maat * 0.085)), c.p(2.5));
+  const B = 2 * rx + 90;
+  const Hh = Math.max(2 * ry + maat * 0.7, maat * 1.5);
+  const s = Math.max(66, maat * 0.4);
+  const rand = Math.max(8, maat * 0.14);
   return kolom(
     c,
     laag(
@@ -141,8 +170,9 @@ function tBaan(c: Ctx): ReactElement {
       B,
       Hh,
       vak({ position: "absolute", left: c.p(B / 2) - ring.breedte / 2, top: c.p(Hh / 2) - ring.hoogte / 2 }, ring.el),
+      uitsparing ? op(c, (B - w) / 2, Hh / 2 - maat * 0.52, tekst(c, t, maat, c.l, { color: c.vlak ?? c.inkt, WebkitTextStroke: `${c.p(rand)}px ${c.vlak ?? c.inkt}` })) : null,
       op(c, (B - w) / 2, Hh / 2 - maat * 0.52, tekst(c, t, maat, c.l)),
-      op(c, B - s * 1.35, -s * 0.1, ster(c.p(s), c.inkt)),
+      op(c, B - s * 1.25, Hh / 2 - ry - s * 0.45, ster(c.p(s), c.inkt)),
     ),
     onderregel(c, 700, 40, { marginTop: c.p(26) }),
   );
@@ -164,11 +194,9 @@ function tStrepen(c: Ctx): ReactElement {
 
 /** Bergtoppen boven het woord. */
 function tBerg(c: Ctx, variant: 1 | 2 | 3): ReactElement {
-  const t = inLetter(c.merk, c.l);
-  const maat = passend(c, t, c.l, 700, 150);
-  const w = breedte(c, t, maat, c.l);
-  const b = Math.max(360, Math.min(520, w * 0.8));
-  return kolom(c, bergen(c.p(b), c.inkt, variant), tekst(c, t, maat, c.l, { marginTop: c.p(maat * 0.16) }), c.onder ? onderregel(c, 700, 36, { marginTop: c.p(24) }) : vak({ marginTop: c.p(22) }, ster(c.p(56), c.inkt)));
+  const m = merkblok(c, 700, 150);
+  const b = Math.max(340, Math.min(520, m.b * 0.8));
+  return kolom(c, bergen(c.p(b), c.inkt, variant), vak({ marginTop: c.p(m.maat * 0.16) }, m.el), c.onder ? onderregel(c, 700, 36, { marginTop: c.p(24) }) : vak({ marginTop: c.p(22) }, ster(c.p(56), c.inkt)));
 }
 
 /** Het woord dwars door een wereldbol. */
@@ -177,9 +205,10 @@ function tBol(c: Ctx): ReactElement {
   const maat = passend(c, t, c.l, 700, 150);
   const w = breedte(c, t, maat, c.l);
   const d = Math.max(340, Math.min(470, w * 0.74));
+  const B = Math.max(w, d) + 120;
   return kolom(
     c,
-    laag(c, Math.max(w, d) + 120, d * 0.8 + maat * 1.02, op(c, (Math.max(w, d) + 120 - d) / 2, 0, bol(c.p(d), c.inkt, "boven", 2.2)), op(c, (Math.max(w, d) + 120 - w) / 2, d * 0.4, tekst(c, t, maat, c.l)), op(c, (Math.max(w, d) + 120 - d) / 2, d * 0.4 + maat * 1.02, bol(c.p(d), c.inkt, "onder", 2.2)), op(c, (Math.max(w, d) + 120 + d) / 2 + 4, d * 0.02, ster(c.p(64), c.inkt))),
+    laag(c, B, d * 0.8 + maat * 1.02, op(c, (B - d) / 2, 0, bol(c.p(d), c.inkt, "boven", 2.2)), op(c, (B - w) / 2, d * 0.4, tekst(c, t, maat, c.l)), op(c, (B - d) / 2, d * 0.4 + maat * 1.02, bol(c.p(d), c.inkt, "onder", 2.2)), op(c, (B + d) / 2 + 4, d * 0.02, ster(c.p(64), c.inkt))),
     onderregel(c, 700, 36, { marginTop: c.p(30) }),
   );
 }
@@ -191,9 +220,8 @@ function tChevron(c: Ctx): ReactElement {
 
 /** Een grote ster met een kleine erbij, boven het woord. */
 function tSter(c: Ctx): ReactElement {
-  const t = inLetter(c.merk, c.l);
-  const maat = passend(c, t, c.l, 680, 150);
-  return kolom(c, laag(c, 300, 230, op(c, 30, 10, ster(c.p(220), c.inkt)), op(c, 222, 0, ster(c.p(74), c.inkt))), tekst(c, t, maat, c.l, { marginTop: c.p(26) }), onderregel(c, 700, 36, { marginTop: c.p(24) }));
+  const m = merkblok(c, 680, 150);
+  return kolom(c, laag(c, 300, 230, op(c, 30, 10, ster(c.p(220), c.inkt)), op(c, 222, 0, ster(c.p(74), c.inkt))), vak({ marginTop: c.p(26) }, m.el), onderregel(c, 700, 36, { marginTop: c.p(24) }));
 }
 
 /** Eén letter met een kroon. */
@@ -203,39 +231,45 @@ function tKroon(c: Ctx): ReactElement {
   return kolom(c, kroon(c.p(150), c.inkt), tekst(c, t, maat, { ...c.l, spatie: 0 }, { marginTop: c.p(c.l.font === LETTER.gotisch ? -8 : 2) }), naamOnder(c, 720, 40, { marginTop: c.p(34) }));
 }
 
-/** Een rond zegel met het woord op een rechte band. */
-function tZegel(c: Ctx): ReactElement {
-  const d = 580;
+/**
+ * Een rond embleem: het teken van het bedrijf groot in een ring, met de naam op een rechte band eroverheen. De band is een
+ * vol vlak in de inktkleur; de naam staat erin in de kleur van de achtergrond.
+ */
+function tBand(c: Ctx): ReactElement {
+  const d = 470;
   const t = inLetter(c.merk, c.l);
-  const maat = passend(c, t, c.l, d * 0.86, 96);
-  const klein = c.onder && aantal(c.onder) <= 16 ? hoofd(c.onder) : "";
-  const kleinMaat = klein ? passend(c, klein, c.sub, d * 0.5, 26) : 0;
-  const kleinB = klein ? breedte(c, klein, kleinMaat, c.sub) : 0;
+  const maat = passend(c, t, c.l, 620, 92);
   const w = breedte(c, t, maat, c.l);
+  const bandB = Math.max(d * 1.12, w + maat * 1.1);
+  const bandH = maat * 1.5;
+  const B = Math.max(bandB, d);
+  const bandY = d * 0.6;
+  const lijn = 12;
   return kolom(
     c,
     laag(
       c,
+      B,
       d,
-      d,
-      op(c, 0, 0, zegelring(c.p(d), c.inkt)),
-      op(c, d / 2 - 45, d * 0.15, vak({ width: c.p(90), height: c.p(90), alignItems: "center", justifyContent: "center" }, (c.eigen ? teken(c.tekens[0] ?? "", c.p(84), c.inkt) : null) ?? ster(c.p(76), c.inkt))),
-      op(c, (d - w) / 2, d / 2 - maat * 0.52, tekst(c, t, maat, c.l)),
-      klein
-        ? op(c, (d - kleinB) / 2, d * 0.72, tekst(c, klein, kleinMaat, c.sub))
-        : op(c, d / 2 - 38, d * 0.72, vak({ alignItems: "center", gap: c.p(14) }, ...[0, 1, 2].map((n) => vak({ width: c.p(n === 1 ? 16 : 10), height: c.p(n === 1 ? 16 : 10), borderRadius: c.p(20), background: c.inkt })))),
+      op(c, (B - d) / 2, 0, vak({ width: c.p(d), height: c.p(d), borderRadius: c.p(d), border: `${Math.max(2, c.p(lijn))}px solid ${c.inkt}` })),
+      op(c, (B - d) / 2 + 26, 26, vak({ width: c.p(d - 52), height: c.p(d - 52), borderRadius: c.p(d), border: `${Math.max(1, c.p(3))}px solid ${c.inkt}`, opacity: 0.55 })),
+      op(c, (B - d) / 2, d * 0.1, vak({ width: c.p(d), height: c.p(d * 0.46), alignItems: "center", justifyContent: "center" }, teken(c.tekens[0] ?? "", c.p(d * 0.4), c.inkt) ?? ster(c.p(d * 0.36), c.inkt))),
+      op(c, (B - bandB) / 2, bandY, vak({ width: c.p(bandB), height: c.p(bandH), background: c.inkt, alignItems: "center", justifyContent: "center", transform: "skewX(-6deg)" })),
+      op(c, (B - w) / 2, bandY + bandH / 2 - maat * 0.52, tekst(c, t, maat, c.l, { color: c.tegen })),
+      op(c, B / 2 - 38, d * 0.86, vak({ alignItems: "center", gap: c.p(14) }, ...[0, 1, 2].map((n) => vak({ width: c.p(n === 1 ? 16 : 10), height: c.p(n === 1 ? 16 : 10), borderRadius: c.p(20), background: c.inkt })))),
     ),
-    klein ? null : onderregel(c, 760, 34, { marginTop: c.p(26) }),
+    onderregel(c, 760, 34, { marginTop: c.p(26) }),
   );
 }
 
-/** De letters in een schild. */
+/** Het teken van het bedrijf in een schild, met de naam eronder. */
 function tSchild(c: Ctx): ReactElement {
-  const t = hoofd(c.letters);
-  const b = 300;
-  const maat = passend(c, t, c.l, b * 0.56, 190);
-  const w = breedte(c, t, maat, c.l);
-  return kolom(c, laag(c, b, b * 1.2, op(c, 0, 0, schild(c.p(b), c.inkt, 5)), op(c, (b - w) / 2, b * 0.57 - maat * 0.52, tekst(c, t, maat, c.l))), naamOnder(c, 760, 40, { marginTop: c.p(34) }));
+  const b = 320;
+  return kolom(
+    c,
+    laag(c, b, b * 1.2, op(c, 0, 0, schild(c.p(b), c.inkt, 5)), op(c, 0, b * 0.14, vak({ width: c.p(b), height: c.p(b * 0.78), alignItems: "center", justifyContent: "center" }, teken(c.tekens[0] ?? "", c.p(b * 0.48), c.inkt) ?? ster(c.p(b * 0.44), c.inkt)))),
+    naamOnder(c, 760, 42, { marginTop: c.p(34) }),
+  );
 }
 
 /** De letters tussen twee vleugels. */
@@ -251,11 +285,10 @@ function tVleugels(c: Ctx): ReactElement {
 
 /** Het woord tussen twee lijnen, met een ster in de bovenste. */
 function tBreed(c: Ctx): ReactElement {
-  const t = inLetter(c.merk, c.l);
-  const maat = passend(c, t, c.l, 820, 160);
-  const w = Math.max(360, breedte(c, t, maat, c.l));
+  const m = merkblok(c, 820, 160);
+  const w = Math.max(360, m.b);
   const lijn = (b: number) => vak({ width: c.p(b), height: Math.max(1, c.p(5)), background: c.inkt, flexShrink: 0 });
-  return kolom(c, vak({ alignItems: "center", gap: c.p(20) }, lijn((w - 100) / 2), ster(c.p(60), c.inkt), lijn((w - 100) / 2)), tekst(c, t, maat, c.l, { marginTop: c.p(maat * 0.2), marginBottom: c.p(maat * 0.2) }), lijn(w), onderregel(c, w, 36, { marginTop: c.p(30) }));
+  return kolom(c, vak({ alignItems: "center", gap: c.p(20) }, lijn((w - 100) / 2), ster(c.p(60), c.inkt), lijn((w - 100) / 2)), vak({ marginTop: c.p(m.maat * 0.2), marginBottom: c.p(m.maat * 0.2) }, m.el), lijn(w), onderregel(c, w, 36, { marginTop: c.p(30) }));
 }
 
 /** De letters in een lauwerkrans. */
@@ -267,19 +300,23 @@ function tLauwer(c: Ctx): ReactElement {
   return kolom(c, laag(c, d, d, op(c, 0, 0, lauwer(c.p(d), c.inkt)), op(c, (d - w) / 2, d * 0.5 - maat * 0.52, tekst(c, t, maat, { ...c.l, scheef: 0 }))), naamOnder(c, 760, 40, { marginTop: c.p(10) }));
 }
 
-/** Een bliksemschicht naast het woord. */
-function tBliksem(c: Ctx): ReactElement {
-  const t = inLetter(c.merk, c.l);
-  const maat = passend(c, t, c.l, 620, 170);
+/** Een teken (of een bliksemschicht) naast het woord. */
+function tNaast(c: Ctx): ReactElement {
+  const m = merkblok(c, 600, 170, "flex-start");
+  const hoogte = Math.max(200, Math.min(300, m.h * 1.3));
   return kolom(
     c,
-    vak({ alignItems: "center", gap: c.p(34) }, (c.eigen ? teken(c.tekens[1] ?? c.tekens[0] ?? "", c.p(Math.max(190, maat * 1.35)), c.inkt) : null) ?? bliksem(c.p(Math.max(210, maat * 1.5)), c.inkt), vak({ flexDirection: "column", alignItems: "flex-start" }, tekst(c, t, maat, c.l), onderregel(c, Math.max(460, breedte(c, t, maat, c.l)), 32, { marginTop: c.p(22), paddingLeft: 0 }))),
+    vak(
+      { alignItems: "center", gap: c.p(36) },
+      (c.eigen ? teken(c.tekens[1] ?? c.tekens[0] ?? "", c.p(hoogte), c.inkt) : null) ?? bliksem(c.p(hoogte * 1.1), c.inkt),
+      vak({ flexDirection: "column", alignItems: "flex-start" }, m.el, onderregel(c, Math.max(460, m.b), 32, { marginTop: c.p(22), paddingLeft: 0 })),
+    ),
   );
 }
 
 /** De naam in twee regels, met een veeg eronder. */
 function tStapel(c: Ctx): ReactElement {
-  const bron = aantal(c.i.naam) <= 24 ? c.i.naam : c.merk;
+  const bron = aantal(c.i.naam) <= 26 ? c.i.naam : c.merk;
   const regels = tweeRegels(bron).map((r) => inLetter(r, c.l));
   const b = 600;
   const maten = regels.map((r) => passend(c, r, c.l, b, regels.length > 1 ? 190 : 230));
@@ -306,11 +343,10 @@ function tCirkel(c: Ctx): ReactElement {
   );
 }
 
-/** Het teken bij de soort bedrijf, boven het woord. */
+/** Het teken van het bedrijf boven het woord. */
 function tTeken(c: Ctx): ReactElement {
-  const t = inLetter(c.merk, c.l);
-  const maat = passend(c, t, c.l, 720, 130);
-  return kolom(c, teken(c.tekens[0] ?? "", c.p(270), c.inkt) ?? ster(c.p(220), c.inkt), tekst(c, t, maat, c.l, { marginTop: c.p(40) }), onderregel(c, 700, 34, { marginTop: c.p(24) }));
+  const m = merkblok(c, 720, 130);
+  return kolom(c, teken(c.tekens[0] ?? "", c.p(m.h > 150 ? 220 : 270), c.inkt) ?? ster(c.p(220), c.inkt), vak({ marginTop: c.p(40) }, m.el), onderregel(c, 700, 34, { marginTop: c.p(24) }));
 }
 
 /** Het teken uitgespaard in een rond vlak, met een ster en de naam eronder. */
@@ -328,23 +364,28 @@ const SJABLOON: Record<SjabloonId, (c: Ctx) => ReactElement> = {
   chevron: tChevron,
   ster: tSter,
   kroon: tKroon,
-  zegel: tZegel,
+  zegel: tBand,
   schild: tSchild,
   vleugels: tVleugels,
   breed: tBreed,
   lauwer: tLauwer,
-  bliksem: tBliksem,
+  bliksem: tNaast,
   stapel: tStapel,
   cirkel: tCirkel,
   teken: tTeken,
   embleem: tEmbleem,
 };
 
-const KLEIN = new Set(["de", "het", "een", "van", "der", "den", "en", "in", "op", "voor", "bij", "te", "ter", "'t", "&", "+", "-"]);
+/** Sjablonen waarin het teken van het bedrijf de hoofdrol speelt: daar toont ook het vierkante icoon het teken. */
+const MET_TEKEN: readonly SjabloonId[] = ["teken", "embleem", "zegel", "schild"];
 
-/** Het woord in het beeldmerk: een korte naam helemaal, een lange als afkorting van hooguit drie letters. */
+const KLEIN = new Set(["de", "het", "een", "van", "der", "den", "en", "in", "op", "voor", "bij", "te", "ter", "'t", "&", "+", "-"]);
+/** Tot deze lengte staat de naam voluit in het beeldmerk (boven de twaalf tekens in twee regels); daarboven een afkorting. */
+export const VOLUIT_TOT = 24;
+
+/** Het woord in het beeldmerk: de naam voluit als die kort genoeg is, anders een afkorting van hooguit drie letters. */
 export function merkwoord(naam: string): string {
-  if (aantal(naam) <= 12) return naam;
+  if (aantal(naam) <= VOLUIT_TOT) return naam;
   const woorden = naam.split(/\s+/).filter((w) => w && !KLEIN.has(w.toLowerCase()));
   const letters = woorden.map((w) => [...w].find((ch) => /[\p{L}\p{N}]/u.test(ch)) ?? "").filter(Boolean);
   return letters.length >= 2 ? hoofd(letters.slice(0, 3).join("")) : hoofd(initialen(naam));
@@ -358,8 +399,9 @@ export type Ondergrond = { soort: "thema"; thema: ThemaId } | { soort: "variant"
 /**
  * Eén logo van versie 2 als boom voor satori. `ondergrond` is bij een voorbeeld het thema (wit op donker, zwart op wit of
  * in kleur op wit) en na vrijgave de variant. Zonder achtergrond blijft alles buiten het logo leeg (PNG met alfakanaal).
+ * `hoeklabel` zet een klein "voorbeeld" in de hoek (voor de verzonnen merken op de landingspagina's).
  */
-export function logoBoom2(nr: LogoNr, invoer: LogoInvoer, ondergrond: Ondergrond, breedteUit: number, metWatermerk: boolean, meet: Meter): { boom: ReactElement; breedte: number; hoogte: number } {
+export function logoBoom2(nr: LogoNr, invoer: LogoInvoer, ondergrond: Ondergrond, breedteUit: number, metWatermerk: boolean, meet: Meter, hoeklabel = false): { boom: ReactElement; breedte: number; hoogte: number } {
   const kleur = kleurHex(invoer.kleur);
   const vierkant = ondergrond.soort === "variant" && ondergrond.variant === "icoon";
   const basisB = vierkant ? ICOON : W;
@@ -377,19 +419,26 @@ export function logoBoom2(nr: LogoNr, invoer: LogoInvoer, ondergrond: Ondergrond
     if (ondergrond.variant === "zwart") inkt = "#111111";
     if (VARIANTEN[ondergrond.variant].doorzichtig) achtergrond = null;
   }
+  // tekst op een vlak in de inktkleur: de achtergrond; zonder achtergrond de tegenkleur van de inkt
+  const tegen = achtergrond ?? (inkt === "#FFFFFF" ? "#111111" : inkt === "#111111" ? "#FFFFFF" : opKleur(inkt));
   const l = TYPE[invoer.sfeer];
   const merk = merkwoord(invoer.naam);
   const keuze = kiesTekens(invoer);
-  const c: Ctx = { i: invoer, p, inkt, meet, l, sub: ONDER[MET_SCHREEF.includes(invoer.sfeer) ? "schreef" : "recht"], merk, letters: initialen(invoer.naam), onder: merk === invoer.naam ? (invoer.slogan ?? "") : invoer.naam, tekens: keuze.tekens, eigen: keuze.eigen };
+  const c: Ctx = { i: invoer, p, inkt, vlak: achtergrond, tegen, meet, l, sub: ONDER[MET_SCHREEF.includes(invoer.sfeer) ? "schreef" : "recht"], merk, letters: initialen(invoer.naam), onder: merk === invoer.naam ? (invoer.slogan ?? "") : invoer.naam, tekens: keuze.tekens, eigen: keuze.eigen };
+  const sjabloon = sjablonenVan(invoer)[nr - 1] ?? "breed";
   let beeld: ReactElement;
   if (vierkant) {
+    // het icoon: bij een logo met een teken dat teken, anders de letters
     const t = hoofd(c.letters);
     const maat = passend(c, t, l, 620, aantal(t) > 1 ? 470 : 600);
-    beeld = vak({ width: p(ICOON), height: p(ICOON), alignItems: "center", justifyContent: "center" }, tekst(c, t, maat, { ...l, spatie: 0 }));
+    const inhoud = (MET_TEKEN.includes(sjabloon) ? teken(c.tekens[0] ?? "", p(560), inkt) : null) ?? tekst(c, t, maat, { ...l, spatie: 0 });
+    beeld = vak({ width: p(ICOON), height: p(ICOON), alignItems: "center", justifyContent: "center" }, inhoud);
   } else {
-    const sjabloon = sjablonenVan(invoer)[nr - 1] ?? "breed";
     beeld = SJABLOON[sjabloon](c);
   }
-  const boom = vak({ position: "relative", width: p(basisB), height: p(basisH), ...(achtergrond ? { background: achtergrond } : {}) }, beeld, metWatermerk ? watermerk(basisB, basisH, p, 62) : null);
+  const label = hoeklabel
+    ? vak({ position: "absolute", left: p(26), top: p(26), padding: `${p(8)}px ${p(18)}px`, borderRadius: p(40), border: `${Math.max(1, p(2))}px solid ${inkt}`, color: inkt, opacity: 0.6, fontFamily: LETTER.tekst, fontWeight: 600, fontSize: p(26), letterSpacing: p(3) }, "VOORBEELD")
+    : null;
+  const boom = vak({ position: "relative", width: p(basisB), height: p(basisH), ...(achtergrond ? { background: achtergrond } : {}) }, beeld, label, metWatermerk ? watermerk(basisB, basisH, p, 62) : null);
   return { boom, breedte: breedteUit, hoogte: Math.round((breedteUit * basisH) / basisB) };
 }

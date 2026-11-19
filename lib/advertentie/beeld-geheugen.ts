@@ -2,7 +2,7 @@
 // Een klein geheugen voor de WATERMERK-beelden van de advertentie op maat en de
 // logo maker: de pagina van een bezoeker laadt er drie of zes tegelijk en elk
 // beeld kost rekentijd, dus herladen hoeft niet opnieuw te renderen. Hooguit 200
-// beelden, elk hooguit tien minuten; het langst ongebruikte valt eraf.
+// beelden (400), elk hooguit tien minuten; het langst ongebruikte valt eraf.
 //
 // Alleen de versie met watermerk komt hierin. Schone beelden (na vrijgave of voor
 // een beheerder) worden nooit gedeeld: die maakt de route elke keer zelf, na zijn
@@ -11,7 +11,7 @@
 // Op globalThis, omdat Next elke route apart bundelt. Puur (geen kv, geen prisma).
 // ---------------------------------------------------------------------------
 
-export const GEHEUGEN_MAX = 200;
+export const GEHEUGEN_MAX = 400;
 export const GEHEUGEN_MS = 600_000;
 
 interface Vak {

@@ -5,7 +5,8 @@ import { contrast, meng, tekstOp } from "@/lib/rijschool/kleuren";
 import { VARIANTEN, initialen, tweeRegels, type BrancheId, type LogoInvoer, type LogoNr, type SfeerId, type VariantId } from "@/lib/logo/regels";
 
 // ---------------------------------------------------------------------------
-// De zes logo's van de logo maker, als boom voor satori (next/og). Alles komt uit
+// De zes logo's van de EERSTE versie van de logo maker (aanvragen van vóór versie 2 zien er altijd zo uit; nieuwe
+// aanvragen gebruiken lib/logo/ontwerp2.ts), als boom voor satori (next/og). Alles komt uit
 // de naam met vaste ontwerpregels: typografie en eenvoudige vormen (vakken, cirkels,
 // balken). Geen AI-beelden, geen foto's en geen tekens of plaatjes van derden.
 // Puur; de beeldroute, de voorbeelden op de landingspagina en het proefscript

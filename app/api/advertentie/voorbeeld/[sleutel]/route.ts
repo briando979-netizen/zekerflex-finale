@@ -1,5 +1,5 @@
 import { AppError } from "@/lib/errors";
-import { jsonError } from "@/lib/http/errors";
+import { beeldFout } from "@/lib/advertentie/beeld-antwoord";
 import { maakBeeld } from "@/lib/advertentie/beeld";
 import { FORMATEN, VOORBEELD_ZIJDE, isFormaatId } from "@/lib/advertentie/regels";
 import { voorbeeldVan } from "@/lib/advertentie/voorbeelden";
@@ -25,12 +25,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ sleu
     if (!beeld) {
       const f = FORMATEN[formaat];
       const schaal = VOORBEELD_ZIJDE / Math.max(f.breedte, f.hoogte);
-      beeld = maakBeeld(voorbeeld.gegevens, voorbeeld.ontwerp, { watermerk: false, formaat, breedte: Math.round(f.breedte * schaal), hoogte: Math.round(f.hoogte * schaal) });
+      beeld = maakBeeld(voorbeeld.gegevens, voorbeeld.ontwerp, { watermerk: false, formaat, breedte: Math.round(f.breedte * schaal), hoogte: Math.round(f.hoogte * schaal) }, true);
       geheugen.set(k, beeld);
       beeld.catch(() => geheugen.delete(k));
     }
     return new Response((await beeld).slice(0), { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" } });
   } catch (err) {
-    return jsonError(err);
+    return beeldFout(err);
   }
 }

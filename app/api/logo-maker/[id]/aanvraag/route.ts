@@ -15,7 +15,7 @@ import { vraagLogoAan } from "@/lib/logo/store";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// POST /api/logo-maker/<id>/aanvraag: "Deze wil ik". De bezoeker kiest één van de zes logo's en laat naam en e-mail
+// POST /api/logo-maker/<id>/aanvraag: "Deze wil ik". De bezoeker kiest één van de logo's op zijn pagina en laat naam en e-mail
 // achter; de eigenaar krijgt een melding (overgeslagen bij een testadres). Betalen loopt buiten de pagina om, daarna
 // geeft de eigenaar vrij in Beheer. Grens per IP en per e-mailadres (429). Het id komt nergens in een log.
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }): Promise<NextResponse> {

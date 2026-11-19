@@ -4,7 +4,7 @@ import { AdvertentieResultaat } from "@/components/marketing/advertentie/Adverte
 import { ONTWERPEN, isAdvertentieId, ontwerpVrij } from "@/lib/advertentie/regels";
 import { haalAdvertentie, leesPrijzen } from "@/lib/advertentie/store";
 
-// De eigen pagina van één advertentie op maat: drie ontwerpen als voorbeeld (klein, met watermerk, van de beeldroute),
+// De eigen pagina van één advertentie op maat: zes ontwerpen als voorbeeld (klein, met watermerk, van de beeldroute),
 // "Deze wil ik", en na vrijgave de schone bestanden om te downloaden. Het id in het adres is de sleutel: niet in de
 // sitemap, niet in zoekmachines, niet in de nachtelijke rondgang (dynamische route).
 export const dynamic = "force-dynamic";

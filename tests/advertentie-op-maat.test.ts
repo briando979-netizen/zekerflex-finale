@@ -75,7 +75,7 @@ describe("het beeld: watermerk ja of nee, en welke maat", () => {
     expect([1, 2, 3].filter((n) => ontwerpVrij(vrij, n as 1 | 2 | 3))).toEqual([2]);
   });
 
-  it("vrijgegeven met alle drie: elk ontwerp is schoon", () => {
+  it("vrijgegeven met alle ontwerpen: elk ontwerp is schoon", () => {
     const vrij = ad("vrijgegeven", keuze(1, "alle"));
     for (const ontwerp of [1, 2, 3, 4, 5, 6] as const) expect(beeldBesluit({ ad: vrij, ontwerp, beheerder: false, formaat: "vierkant" })).toEqual({ watermerk: false, formaat: "vierkant", breedte: 1080, hoogte: 1080 });
   });
@@ -202,7 +202,7 @@ describe("de tekst", () => {
 });
 
 describe("de prijs: één bron", () => {
-  it("de standaard is € 29 voor één ontwerp en € 49 voor alle drie, exclusief btw", () => {
+  it("de standaard is € 29 voor één ontwerp en € 49 voor alle ontwerpen, exclusief btw", () => {
     expect(STANDAARD_PRIJZEN).toEqual({ een: "\u{20AC} 29", alle: "\u{20AC} 49", logo: "\u{20AC} 49" });
     expect(prijsTekst(STANDAARD_PRIJZEN, "een")).toBe("\u{20AC} 29 excl. btw");
     expect(vanafTekst()).toBe("Vanaf \u{20AC} 29");

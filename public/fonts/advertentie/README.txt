@@ -38,16 +38,20 @@ Ongewijzigde bestanden uit de officiele repo's van de makers, opgehaald op
 - PirataOne-Regular.ttf (gotische letter voor de sfeer gothic)
   Pirata One, github.com/google/fonts (ofl/pirataone),
   commit 90abd17b4f97671435798b6147b698aa9087612f
-  Copyright (c) 2012, Rodrigo Fuenzalida, Nicolas Massi, with Reserved Font Name "Pirata"
+  Copyright (c) 2012, Rodrigo Fuenzalida, Nicolas Massi (www.taip.com.ar / abc.taip.com.ar), with Reserved Font Name 'Pirata'
 - Marcellus-Regular.ttf (fijne schreefletter voor de sfeer luxe en de wijd gespatieerde regels)
   Marcellus, github.com/google/fonts (ofl/marcellus),
   commit 90abd17b4f97671435798b6147b698aa9087612f
-  Copyright (c) 2012, Brian J. Bonislawsky DBA Astigmatic (AOETI), with Reserved Font Names "Marcellus"
+  Copyright (c) 2012, Brian J. Bonislawsky DBA Astigmatic (AOETI) (astigma@astigmatic.com), with Reserved Font Names "Marcellus"
+- DMSerifDisplay-Regular.ttf (schreefletter met veel contrast, voor het hoofdwoord van de sfeer luxe)
+  DM Serif Display, github.com/google/fonts (ofl/dmserifdisplay),
+  commit 5bdc59521ab95d387c82a1543277fddab4aa7a8b
+  Copyright 2014-2018 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries. Copyright 2019 Google LLC.
 
-De laatste vier zijn sierletters met een kleinere tekenset. Mist er een teken (een
+De laatste vijf zijn sierletters met een kleinere tekenset. Mist er een teken (een
 zeldzaam accent), dan tekent de server dat ene teken met een van de eerste zeven
 letters; er wordt nooit een lettertype van buiten opgehaald.
 
-Alle elf staan onder de SIL Open Font License, versie 1.1. De volledige tekst
-staat in OFL.txt in deze map (de tekst is voor alle elf gelijk, op de regel met
+Alle twaalf staan onder de SIL Open Font License, versie 1.1. De volledige tekst
+staat in OFL.txt in deze map (de tekst is voor alle twaalf gelijk, op de regel met
 het auteursrecht na; die staat hierboven per lettertype).

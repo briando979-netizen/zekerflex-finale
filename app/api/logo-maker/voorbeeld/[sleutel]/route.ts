@@ -1,5 +1,5 @@
 import { AppError } from "@/lib/errors";
-import { jsonError } from "@/lib/http/errors";
+import { beeldFout } from "@/lib/advertentie/beeld-antwoord";
 import { letterMeter, maakPng } from "@/lib/advertentie/beeld";
 import { logoBoom2 } from "@/lib/logo/ontwerp2";
 import { isThemaId } from "@/lib/logo/regels";
@@ -25,7 +25,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ sleu
     let beeld = geheugen.get(k);
     if (!beeld) {
       beeld = (async () => {
-        const { boom, breedte, hoogte } = logoBoom2(voorbeeld.logo, voorbeeld.invoer, { soort: "thema", thema }, 640, false, await letterMeter());
+        const { boom, breedte, hoogte } = logoBoom2(voorbeeld.logo, voorbeeld.invoer, { soort: "thema", thema }, 640, false, await letterMeter(), true);
         return maakPng(boom, breedte, hoogte);
       })();
       geheugen.set(k, beeld);
@@ -33,6 +33,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ sleu
     }
     return new Response((await beeld).slice(0), { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=86400" } });
   } catch (err) {
-    return jsonError(err);
+    return beeldFout(err);
   }
 }

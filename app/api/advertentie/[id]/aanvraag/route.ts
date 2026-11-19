@@ -13,7 +13,7 @@ import { leesPrijzen, vraagAan } from "@/lib/advertentie/store";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// POST /api/advertentie/<id>/aanvraag: "Deze wil ik". De bezoeker kiest één ontwerp of alle drie en laat naam en e-mail
+// POST /api/advertentie/<id>/aanvraag: "Deze wil ik". De bezoeker kiest één ontwerp of alle ontwerpen en laat naam en e-mail
 // achter; de status wordt "aangevraagd" en de eigenaar krijgt een melding (overgeslagen bij een testadres). Betalen
 // loopt buiten de pagina om: de eigenaar stuurt een betaalverzoek en geeft daarna vrij in Beheer. Grens per IP en per
 // e-mailadres (429). Het id is de sleutel en komt nergens in een log.

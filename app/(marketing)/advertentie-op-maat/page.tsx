@@ -155,7 +155,7 @@ export default async function AdvertentieOpMaatPage() {
           </h2>
           <p className="mt-4 max-w-2xl text-lg leading-relaxed text-neutralx-600">Je krijgt elk ontwerp in drie formaten. Op je eigen pagina zie je deze schetsen met jouw advertentie erin; hier staat een verzonnen sportschool als voorbeeld.</p>
           <div className="mt-10">
-            <AdMockups vierkant="/api/advertentie/voorbeeld/sportschool" verhaal="/api/advertentie/voorbeeld/sportschool?formaat=verhaal" liggend="/api/advertentie/voorbeeld/sportschool?formaat=liggend" naam="Sportschool Noord" label="Voorbeeld: een advertentie op een telefoon, als verhaal en liggend" />
+            <AdMockups vierkant="/api/advertentie/voorbeeld/sportschool" verhaal="/api/advertentie/voorbeeld/sportschool?formaat=verhaal" liggend="/api/advertentie/voorbeeld/sportschool?formaat=liggend" naam="Sportschool Staalhart" label="Voorbeeld: een advertentie op een telefoon, als verhaal en liggend" />
           </div>
         </div>
       </section>

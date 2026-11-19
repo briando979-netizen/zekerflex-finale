@@ -78,9 +78,9 @@ export function LogoResultaat({ id, naam: bedrijf, kleur, status: beginStatus, g
               </p>
             </div>
             {themas && (
-              <div role="radiogroup" aria-label="Ondergrond van de voorbeelden" className="flex flex-shrink-0 rounded-full border border-white/15 bg-white/[0.06] p-1">
+              <div role="group" aria-label="Ondergrond van de voorbeelden" className="flex flex-shrink-0 rounded-full border border-white/15 bg-white/[0.06] p-1">
                 {THEMAS.map((t) => (
-                  <button key={t.id} type="button" role="radio" aria-checked={thema === t.id} onClick={() => setThema(t.id)} className={`rounded-full px-4 py-2 text-sm font-semibold transition motion-reduce:transition-none ${thema === t.id ? "bg-white text-ink" : "text-white/70 hover:text-white"}`}>
+                  <button key={t.id} type="button" aria-pressed={thema === t.id} onClick={() => setThema(t.id)} className={`rounded-full px-4 py-2 text-sm font-semibold transition motion-reduce:transition-none ${thema === t.id ? "bg-white text-ink" : "text-white/70 hover:text-white"}`}>
                     {t.naam}
                   </button>
                 ))}
@@ -166,7 +166,7 @@ export function LogoResultaat({ id, naam: bedrijf, kleur, status: beginStatus, g
         </section>
       )}
 
-      {!vrijgegeven && (
+      {!vrijgegeven && themas && (
         <section className="border-b border-hair bg-paper" aria-labelledby="logo-mockup-kop">
           <div className="shell py-10 md:py-14">
             <p className="eyebrow">Zo ziet het eruit</p>

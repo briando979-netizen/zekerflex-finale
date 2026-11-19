@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 import { ImageResponse } from "next/og";
 import { leesLetterMaten, maakMeter, type LetterMaten, type Meter } from "@/lib/advertentie/letter-maat";
 import { LETTER, ontwerpBoom, type OntwerpGegevens } from "@/lib/advertentie/ontwerp";
+import { renderRij } from "@/lib/advertentie/render-rij";
 import { tekensUitTekst } from "@/lib/logo/tekens/trefwoorden";
 import { FORMATEN, kleurHex, type Advertentie, type BeeldBesluit, type OntwerpNr } from "@/lib/advertentie/regels";
 
@@ -13,7 +14,7 @@ import { FORMATEN, kleurHex, type Advertentie, type BeeldBesluit, type OntwerpNr
 // README daar). Die map gaat met `COPY /app/public` de Docker-image in en wordt
 // hier één keer per proces gelezen (globalThis: Next bundelt routes apart).
 // De eerste zeven zijn de basisletters (huisstijl + Anton) en dekken elk teken dat
-// de invoerreiniging doorlaat. De vier daarna zijn sierletters voor logo's en
+// de invoerreiniging doorlaat. De vijf daarna zijn sierletters voor logo's en
 // advertenties; mist zo'n letter een teken (een zeldzaam accent), dan tekent
 // satori het met een basisletter, nooit met een lettertype van buiten.
 // ---------------------------------------------------------------------------
@@ -34,7 +35,7 @@ export const BASISLETTERS = [
   "InstrumentSerif-Italic.ttf",
   "Anton-Regular.ttf",
 ] as const;
-export const SIERLETTERS = ["Kanit-BlackItalic.ttf", "RussoOne-Regular.ttf", "PirataOne-Regular.ttf", "Marcellus-Regular.ttf"] as const;
+export const SIERLETTERS = ["Kanit-BlackItalic.ttf", "RussoOne-Regular.ttf", "PirataOne-Regular.ttf", "Marcellus-Regular.ttf", "DMSerifDisplay-Regular.ttf"] as const;
 
 const LIJST: (Omit<Lettertype, "data"> & { bestand: string })[] = [
   { name: LETTER.kop, bestand: "BricolageGrotesque96pt-Bold.ttf", weight: 700, style: "normal" },
@@ -48,6 +49,7 @@ const LIJST: (Omit<Lettertype, "data"> & { bestand: string })[] = [
   { name: LETTER.techno, bestand: "RussoOne-Regular.ttf", weight: 400, style: "normal" },
   { name: LETTER.gotisch, bestand: "PirataOne-Regular.ttf", weight: 400, style: "normal" },
   { name: LETTER.luxe, bestand: "Marcellus-Regular.ttf", weight: 400, style: "normal" },
+  { name: LETTER.luxeKop, bestand: "DMSerifDisplay-Regular.ttf", weight: 400, style: "normal" },
 ];
 
 /** Welke stijl van een familie de meter gebruikt (de zwaarste rechte; de logo's en koppen gebruiken die). */
@@ -60,6 +62,7 @@ const METER_BESTAND: Record<string, string> = {
   [LETTER.techno]: "RussoOne-Regular.ttf",
   [LETTER.gotisch]: "PirataOne-Regular.ttf",
   [LETTER.luxe]: "Marcellus-Regular.ttf",
+  [LETTER.luxeKop]: "DMSerifDisplay-Regular.ttf",
 };
 
 interface Geladen {
@@ -100,18 +103,20 @@ export function gegevensVan(ad: Pick<Advertentie, "invoer" | "tekst">): OntwerpG
     plaats: ad.invoer.plaats,
     contact: ad.invoer.contact,
     kleur: kleurHex(ad.invoer.kleur),
-    teken: tekensUitTekst(ad.invoer.bedrijf, ad.invoer.aanbod)[0],
+    // alleen de bedrijfsnaam: in een vrije zin staan te veel woorden die toevallig op iets lijken
+    teken: tekensUitTekst(ad.invoer.bedrijf)[0],
   };
 }
 
 /** Een boom van satori als PNG, met de lettertypes hierboven (ook voor de logo maker, lib/logo). */
 export async function maakPng(boom: ReactElement, breedte: number, hoogte: number): Promise<ArrayBuffer> {
   const fonts = await lettertypes();
-  return new ImageResponse(boom, { width: breedte, height: hoogte, fonts }).arrayBuffer();
+  // hooguit twee renders tegelijk voor de hele app (lib/advertentie/render-rij.ts); wie te lang wacht krijgt RijVol
+  return renderRij(() => new ImageResponse(boom, { width: breedte, height: hoogte, fonts }).arrayBuffer());
 }
 
 /** De PNG van één ontwerp, precies zoals het besluit (lib/advertentie/regels.ts beeldBesluit) zegt. */
-export async function maakBeeld(gegevens: OntwerpGegevens, ontwerp: OntwerpNr, besluit: BeeldBesluit): Promise<ArrayBuffer> {
+export async function maakBeeld(gegevens: OntwerpGegevens, ontwerp: OntwerpNr, besluit: BeeldBesluit, hoeklabel = false): Promise<ArrayBuffer> {
   const hoogte = Math.round((besluit.breedte * FORMATEN[besluit.formaat].hoogte) / FORMATEN[besluit.formaat].breedte);
-  return maakPng(ontwerpBoom(ontwerp, gegevens, besluit.formaat, besluit.breedte, besluit.watermerk), besluit.breedte, hoogte);
+  return maakPng(ontwerpBoom(ontwerp, gegevens, besluit.formaat, besluit.breedte, besluit.watermerk, hoeklabel), besluit.breedte, hoogte);
 }

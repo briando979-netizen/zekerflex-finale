@@ -5,7 +5,7 @@ import { isKleurId, schoonTekst, STANDAARD_KLEUR, type KleurId, type Uitkomst } 
 // maat (lib/advertentie/regels.ts): eerst een klein voorbeeld met ingebakken
 // watermerk, de schone bestanden pas na vrijgave door de eigenaar (na betaling).
 // De logo's komen uit de naam met vaste ontwerpregels (lib/logo/ontwerp.ts):
-// typografie en eenvoudige vormen, geen AI-beelden en geen plaatjes van derden.
+// lettertypes, eigen vormen en tekens uit een open icoonbibliotheek in de repo; geen AI-beelden en geen foto's.
 // ---------------------------------------------------------------------------
 
 export const SFEREN = [
@@ -66,8 +66,8 @@ export const SJABLONEN = {
   chevron: { naam: "Punt", uitleg: "Een scherp teken" },
   ster: { naam: "Ster", uitleg: "Ster boven je naam" },
   kroon: { naam: "Kroon", uitleg: "Letter met kroon" },
-  zegel: { naam: "Zegel", uitleg: "Rond, met een band" },
-  schild: { naam: "Schild", uitleg: "Je letters in een schild" },
+  zegel: { naam: "Band", uitleg: "Je teken in een ring, je naam op een band" },
+  schild: { naam: "Schild", uitleg: "Je teken in een schild" },
   vleugels: { naam: "Vleugels", uitleg: "Letters met vleugels" },
   breed: { naam: "Woordmerk", uitleg: "Je naam tussen lijnen" },
   lauwer: { naam: "Krans", uitleg: "Letters in een lauwerkrans" },
@@ -79,16 +79,17 @@ export const SJABLONEN = {
 } as const;
 export type SjabloonId = keyof typeof SJABLONEN;
 
+// Hooguit drie van de negen zijn een monogram (strepen, kroon, vleugels, lauwer, cirkel): de rest toont de naam of een teken.
 export const SFEER_SJABLONEN: Record<SfeerId, readonly SjabloonId[]> = {
   streetwear: ["baan", "strepen", "bol", "ster", "chevron", "stapel", "zegel", "schild", "bliksem"],
   sport: ["strepen", "bliksem", "chevron", "baan", "vleugels", "schild", "stapel", "berg2", "zegel"],
-  luxe: ["cirkel", "lauwer", "breed", "kroon", "zegel", "schild", "ster", "vleugels", "stapel"],
-  gothic: ["kroon", "vleugels", "zegel", "schild", "lauwer", "breed", "ster", "cirkel", "stapel"],
+  luxe: ["cirkel", "breed", "lauwer", "kroon", "zegel", "schild", "ster", "stapel", "baan"],
+  gothic: ["kroon", "breed", "zegel", "schild", "lauwer", "stapel", "ster", "vleugels", "baan"],
   techno: ["bol", "baan", "breed", "chevron", "strepen", "ster", "zegel", "bliksem", "schild"],
   outdoor: ["berg", "berg2", "zegel", "schild", "chevron", "breed", "ster", "stapel", "lauwer"],
   strak: ["breed", "cirkel", "chevron", "schild", "zegel", "baan", "ster", "stapel", "strepen"],
   speels: ["baan", "ster", "stapel", "zegel", "bol", "schild", "bliksem", "lauwer", "breed"],
-  klassiek: ["lauwer", "cirkel", "kroon", "zegel", "schild", "breed", "vleugels", "ster", "stapel"],
+  klassiek: ["lauwer", "breed", "kroon", "zegel", "schild", "cirkel", "ster", "stapel", "baan"],
   stoer: ["schild", "strepen", "bliksem", "chevron", "berg", "vleugels", "zegel", "stapel", "breed"],
 };
 
