@@ -717,7 +717,7 @@ function cell(v, list, title, opts = {}) {
   const c = h(`<div class="cell">
     ${v.thumb ? `<img src="${v.thumb}" loading="lazy" style="filter:${filterCss(v.filter)}">` : `<video src="${v.url}#t=0.5" preload="metadata" muted playsinline style="filter:${filterCss(v.filter)}"></video>`}
     ${opts.pins && v.pinned ? '<span class="pin">Vastgepind</span>' : ''}
-    ${v.privacy === 'private' ? '<span class="lock">🔒</span>' : v.privacy === 'friends' ? '<span class="lock">👥</span>' : ''}
+    ${v.scheduled ? '<span class="lock" title="Ingepland">⏰</span>' : v.privacy === 'private' ? '<span class="lock">🔒</span>' : v.privacy === 'friends' ? '<span class="lock">👥</span>' : ''}
     <span class="views">${ic(opts.likes ? 'heartO' : 'play')}${fmt(opts.likes ? v.likes : v.views)}</span>
   </div>`);
   c.onclick = () => openList(list, v.id, title);
@@ -1204,6 +1204,7 @@ async function uploadPage() {
       <div class="opt">${ic('comment')}<label>Reacties toestaan</label><label class="switch-t"><input type="checkbox" name="allowComments" checked><span></span></label></div>
       <div class="opt">${ic('duet')}<label>Duet toestaan</label><label class="switch-t"><input type="checkbox" name="allowDuet" checked><span></span></label></div>
       <div class="opt">${ic('link')}<label>ZekerFlex-koppeling</label><button class="btn small grey kies-produkt">Kiezen</button></div>
+      <div class="opt">${ic('timer')}<label>Inplannen</label><input type="datetime-local" name="publishAt" min="${planMin()}"></div>
       <div class="progress" hidden><div></div></div>
       <div class="post-bar"><button class="btn grey again">Opnieuw</button><button class="btn grey bewerk">✂ Bewerken</button><button class="btn post">Plaatsen</button></div></div>`);
     view.append(ed);
@@ -1224,6 +1225,7 @@ async function uploadPage() {
       const thumb = await makeThumb(pv.src, filter);
       if (thumb) fd.append('thumb', thumb, 'thumb.jpg');
       if (produkt) fd.append('produkt', JSON.stringify(produkt));
+      const plan = planMs($('[name=publishAt]', ed).value); if (plan) fd.append('publishAt', plan);
       fd.append('caption', ta.value);
       fd.append('filter', filter);
       fd.append('privacy', $('[name=privacy]', ed).value);
@@ -1238,7 +1240,7 @@ async function uploadPage() {
       xhr.setRequestHeader('x-token', S.token);
       xhr.upload.onprogress = e => { if (e.lengthComputable) $('.progress div', ed).style.width = (e.loaded / e.total * 100) + '%'; };
       xhr.onload = () => {
-        if (xhr.status === 200) { toast('Je video is geplaatst! 🎉'); location.hash = '#/@' + S.me.username; }
+        if (xhr.status === 200) { toast(plan ? 'Ingepland! ⏰ Je ziet hem alvast op je profiel.' : 'Je video is geplaatst! 🎉'); location.hash = '#/@' + S.me.username; }
         else { btn.disabled = false; btn.textContent = 'Plaatsen'; toast(JSON.parse(xhr.responseText || '{}').error || 'Uploaden mislukt'); }
       };
       xhr.onerror = () => { btn.disabled = false; btn.textContent = 'Plaatsen'; toast('Uploaden mislukt'); };
@@ -1312,11 +1314,13 @@ function liveRoom(live, isHost) {
       <button class="ic lv-x">${ic('close')}</button>
     </div>
     <div class="lv-title">${esc(live.title)}</div>
+    <div class="lv-pin" hidden>📌 <span></span></div>
     <div class="lv-gift" hidden></div>
     <div class="lv-chat"></div>
     <div class="lv-bottom">
       <input class="lv-in" placeholder="${S.me ? 'Zeg iets…' : 'Log in om te chatten'}" maxlength="150">
       ${isHost ? `
+        <button class="lv-btn" data-a="pin" title="Bericht vastpinnen">📌</button>
         <button class="lv-btn" data-a="flip" title="Camera draaien">${ic('flip')}</button>
         <button class="lv-btn" data-a="mic" title="Microfoon">🎙️</button>
         <button class="lv-btn end" data-a="end">Stop</button>` : `
@@ -1327,8 +1331,10 @@ function liveRoom(live, isHost) {
     <div class="lv-center" hidden></div>
   </div>`);
   const chat = $('.lv-chat', room);
-  room.addChat = (who, text, cls = '') => {
+  room.addChat = (who, text, cls = '', conn = null) => {
     const el = h(`<div class="lv-msg ${cls}">${who ? `<img src="${avatar(who)}"><b>${esc(who.name || who.username)}</b> ` : ''}<span>${esc(text)}</span></div>`);
+    // de maker kan op een bericht van een kijker tikken om die kijker te verwijderen
+    if (isHost && conn && !cls) el.onclick = async () => { if (await confirmSheet(`${who.name || who.username} uit je LIVE verwijderen?`, 'Verwijderen')) wsSend({ type: 'live:kick', conn }); };
     chat.append(el);
     while (chat.children.length > 30) chat.firstChild.remove();
     chat.scrollTop = chat.scrollHeight;
@@ -1361,8 +1367,10 @@ function liveRoom(live, isHost) {
   // gebeurtenissen van de server
   const onLive = e => {
     const m = e.detail;
-    if (m.type === 'live:chat') room.addChat(m.user, m.text, m.host ? 'host' : '');
+    if (m.type === 'live:chat') room.addChat(m.user, m.text, m.host ? 'host' : '', m.conn);
     if (m.type === 'live:system') room.addChat(null, m.text, 'sys');
+    if (m.type === 'live:pin') { const p = $('.lv-pin', room); p.hidden = !m.text; $('span', p).textContent = m.text; }
+    if (m.type === 'live:kicked') { room.stopTimer(); room.center('<h2>Je bent uit deze LIVE verwijderd</h2><a class="btn grey" href="#/live">Andere LIVE\'s</a>'); $('.lv-bottom', room).hidden = true; }
     if (m.type === 'live:count') $('.lv-count', room).textContent = fmt(m.viewers);
     if (m.type === 'live:likes') { $('.lv-likes', room).textContent = fmt(m.likes); if (m.conn !== S.conn) for (let i = 0; i < Math.min(m.n, 6); i++) setTimeout(room.heart, i * 120); }
     if (m.type === 'live:gift') room.gift(m.user, m.emoji, m.gift);
@@ -1447,6 +1455,11 @@ async function goLivePage() {
     document.addEventListener('ff:live', onLive);
     onCleanup(() => document.removeEventListener('ff:live', onLive));
     $('[data-a="end"]', room).onclick = async () => { if (await confirmSheet('LIVE beëindigen?', 'Beëindigen')) wsSend({ type: 'live:end' }); };
+    $('[data-a="pin"]', room).onclick = () => {
+      const s = sheet(`<div class="auth"><h3 style="font-size:17px">Bericht vastpinnen</h3><p>Blijft bovenaan staan voor iedereen die kijkt.</p><input maxlength="150" placeholder="Bijv. Vraag maar raak in de chat!" value="${esc($('.lv-pin span', room).textContent)}"><button class="btn block" data-ok>Vastpinnen</button><button class="btn grey block" data-los>Losmaken</button></div>`);
+      $('[data-ok]', s).onclick = () => { wsSend({ type: 'live:pin', text: $('input', s).value }); s.close(); };
+      $('[data-los]', s).onclick = () => { wsSend({ type: 'live:pin', text: '' }); s.close(); };
+    };
     $('[data-a="mic"]', room).onclick = e => {
       const a = stream.getAudioTracks()[0]; if (!a) return;
       a.enabled = !a.enabled; e.currentTarget.textContent = a.enabled ? '🎙️' : '🔇'; toast(a.enabled ? 'Microfoon aan' : 'Microfoon uit');

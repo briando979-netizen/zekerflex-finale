@@ -61,7 +61,10 @@ function publicUser(u, viewer) {
 const lives = new Map(); // liveId -> { id, hostId, hostConn, title, started, viewers: Set<connId>, likes, peak }
 const isFriend = (a, b) => a && b && a.following.includes(b.id) && b.following.includes(a.id);
 
+// een ingeplande post is tot het moment van plaatsen alleen voor de maker zichtbaar
+const zichtbaarNu = v => !v.publishAt || v.publishAt <= now();
 function canSee(v, viewer) {
+  if (!zichtbaarNu(v) && (!viewer || viewer.id !== v.userId)) return false;
   if (v.privacy === 'public') return true;
   if (!viewer) return false;
   if (viewer.id === v.userId) return true;
@@ -82,6 +85,7 @@ function publicVideo(v, viewer) {
     liked: viewer ? v.likes.includes(viewer.id) : false,
     faved: viewer ? v.favs.includes(viewer.id) : false,
     pinned: !!v.pinned, created: v.created,
+    scheduled: !zichtbaarNu(v), publishAt: v.publishAt || null,
     duetOf: duetInfo(v.duetOf),
     author: publicUser(author, viewer),
   };
@@ -244,18 +248,29 @@ app.post('/api/videos', auth, upload.fields([{ name: 'video', maxCount: 1 }, { n
     privacy: ['public', 'friends', 'private'].includes(req.body.privacy) ? req.body.privacy : 'public',
     allowComments: req.body.allowComments !== 'false', allowDuet: req.body.allowDuet !== 'false' && !!f,
     duetOf: req.body.duetOf || null, produkt,
+    // inplannen: tot 30 dagen vooruit; tot dan alleen zichtbaar voor de maker
+    publishAt: +req.body.publishAt > now() ? Math.min(+req.body.publishAt, now() + 30 * 864e5) : null,
     likes: [], favs: [], shares: 0, views: 0, dag: {}, created: now(), ip: clientIp(req),
   };
+  v.published = !v.publishAt;
   db.videos.push(v);
   save();
-  // meldingen voor @vermeldingen en volgers
-  for (const m of new Set((caption.match(/@([a-zA-Z0-9_.]+)/g) || []).map(x => x.slice(1)))) {
-    const mu = userByName(m);
-    if (mu) notify(mu.id, req.user.id, 'mention', { videoId: v.id });
-  }
-  if (v.privacy === 'public') for (const u of db.users.filter(x => x.following.includes(req.user.id))) notify(u.id, req.user.id, 'post', { videoId: v.id });
+  if (v.published) meldPlaatsing(v);
   res.json({ video: publicVideo(v, req.user) });
 });
+// meldingen voor @vermeldingen en volgers (bij een geplande post pas op het moment van plaatsen)
+function meldPlaatsing(v) {
+  for (const m of new Set((v.caption.match(/@([a-zA-Z0-9_.]+)/g) || []).map(x => x.slice(1)))) {
+    const mu = userByName(m);
+    if (mu) notify(mu.id, v.userId, 'mention', { videoId: v.id });
+  }
+  if (v.privacy === 'public') for (const u of db.users.filter(x => x.following.includes(v.userId))) notify(u.id, v.userId, 'post', { videoId: v.id });
+}
+setInterval(() => {
+  let n = 0;
+  for (const v of db.videos) if (!v.published && zichtbaarNu(v)) { v.published = true; v.created = now(); meldPlaatsing(v); n++; }
+  if (n) save();
+}, 30_000);
 
 app.patch('/api/videos/:id', auth, (req, res) => {
   const v = db.videos.find(x => x.id === req.params.id);
@@ -444,7 +459,7 @@ app.post('/api/users/:id/block', auth, (req, res) => {
 // ----- ontdekken -----
 app.get('/api/trending', (req, res) => {
   const tags = {};
-  for (const v of db.videos.filter(v => v.privacy === 'public'))
+  for (const v of db.videos.filter(v => v.privacy === 'public' && zichtbaarNu(v)))
     for (const t of v.hashtags) {
       tags[t] = tags[t] || { tag: t, count: 0, views: 0, videos: [] };
       tags[t].count++; tags[t].views += v.views;
@@ -462,9 +477,9 @@ app.get('/api/search', (req, res) => {
   const users = db.users.filter(u => u.username.toLowerCase().includes(q) || u.name.toLowerCase().includes(q)).slice(0, 30).map(u => publicUser(u, req.user));
   const vids = db.videos.filter(v => canSee(v, req.user) && (v.caption.toLowerCase().includes(q) || v.sound.name.toLowerCase().includes(q) || userById(v.userId)?.username.toLowerCase().includes(q)));
   const tagCount = {};
-  for (const v of db.videos.filter(v => v.privacy === 'public')) for (const t of v.hashtags) if (t.includes(q)) tagCount[t] = (tagCount[t] || 0) + 1;
+  for (const v of db.videos.filter(v => v.privacy === 'public' && zichtbaarNu(v))) for (const t of v.hashtags) if (t.includes(q)) tagCount[t] = (tagCount[t] || 0) + 1;
   const sounds = {};
-  for (const v of db.videos.filter(v => v.privacy === 'public' && v.sound.name.toLowerCase().includes(q))) {
+  for (const v of db.videos.filter(v => v.privacy === 'public' && zichtbaarNu(v) && v.sound.name.toLowerCase().includes(q))) {
     sounds[v.sound.id] = sounds[v.sound.id] || { ...v.sound, count: 0, thumb: v.thumb ? '/uploads/' + v.thumb : null };
     sounds[v.sound.id].count++;
   }
@@ -771,7 +786,7 @@ wss.on('connection', (ws, req) => {
 
     if (m.type === 'live:start' && me) {
       for (const l of [...lives.values()]) if (l.hostId === uid) endLive(l);
-      const l = { id: id(), hostId: uid, hostConn: ws.connId, title: String(m.title || '').trim().slice(0, 60) || `${me.name} is LIVE`, started: now(), viewers: new Set(), likes: 0, peak: 0 };
+      const l = { id: id(), hostId: uid, hostConn: ws.connId, title: String(m.title || '').trim().slice(0, 60) || `${me.name} is LIVE`, started: now(), viewers: new Set(), likes: 0, peak: 0, pinned: '', banned: new Set() };
       lives.set(l.id, l);
       ws.hostingLive = l.id;
       send(ws, { type: 'live:started', live: publicLive(l, me) });
@@ -783,9 +798,11 @@ wss.on('connection', (ws, req) => {
       if (!l) return send(ws, { type: 'live:ended', missing: true });
       if (ws.liveId) leaveLive(ws);
       if (l.hostId === uid) return;
+      if (l.banned.has(uid || ws.connId)) return send(ws, { type: 'live:kicked' }); // door de maker verwijderd: niet opnieuw binnen
       ws.liveId = l.id; l.viewers.add(ws.connId);
       l.peak = Math.max(l.peak, l.viewers.size);
       send(ws, { type: 'live:joined', live: publicLive(l, me), hostConn: l.hostConn });
+      if (l.pinned) send(ws, { type: 'live:pin', text: l.pinned });
       send(conns.get(l.hostConn), { type: 'live:viewer', conn: ws.connId });
       liveCast(l, { type: 'live:count', viewers: l.viewers.size });
       liveCast(l, { type: 'live:system', text: `${me ? me.name || me.username : 'Een gast'} is erbij gekomen 👋` });
@@ -799,7 +816,17 @@ wss.on('connection', (ws, req) => {
     if (!l) return;
     if (m.type === 'live:chat' && me) {
       const text = String(m.text || '').trim().slice(0, 150);
-      if (text) liveCast(l, { type: 'live:chat', user: miniUser(me), host: uid === l.hostId, text });
+      if (text) liveCast(l, { type: 'live:chat', user: miniUser(me), host: uid === l.hostId, text, conn: ws.connId });
+    }
+    // alleen de maker: een bericht vastpinnen (leeg = losmaken) en een kijker verwijderen
+    if (m.type === 'live:pin' && uid === l.hostId) { l.pinned = String(m.text || '').trim().slice(0, 150); liveCast(l, { type: 'live:pin', text: l.pinned }); }
+    if (m.type === 'live:kick' && uid === l.hostId) {
+      const target = conns.get(m.conn);
+      if (target && l.viewers.has(target.connId)) {
+        l.banned.add(target.uid || target.connId);
+        send(target, { type: 'live:kicked' }); leaveLive(target);
+        liveCast(l, { type: 'live:system', text: 'De maker heeft een kijker verwijderd' });
+      }
     }
     if (m.type === 'live:like') {
       l.likes += Math.min(50, Math.max(1, m.n | 0));

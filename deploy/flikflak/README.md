@@ -43,3 +43,7 @@ De repo-kopie hier is de versie die live draait; houd beide gelijk.
 - **ZekerFlex-koppeling**: een product uit de shop of een klus aan je post koppelen (alleen een zekerflex.com-link, kaartje onder de video).
 - **Deel-link met voorbeeld** (`/s/<id>`): titel + foto in WhatsApp/social, stuurt door naar de app.
 - **Installeerbaar als app** (PWA): manifest + service worker (`sw.js`, alleen de schil; api/uploads altijd vers).
+
+## Functies (ronde B, 19 nov)
+- **LIVE**: de maker pint een bericht vast (📌, voor alle kijkers) en kan een kijker verwijderen (tik op zijn bericht); die komt niet opnieuw binnen.
+- **Inplannen**: een video of fotopost tot 30 dagen vooruit plaatsen; tot dan alleen zichtbaar voor de maker (⏰ op het profiel), volgers krijgen de melding op het moment zelf (`setInterval` in server.js, elke 30 s).

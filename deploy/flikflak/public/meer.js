@@ -13,6 +13,11 @@ async function installApp() {
   else toast(/iphone|ipad/i.test(navigator.userAgent) ? 'Safari: Delen → "Zet op beginscherm"' : 'Menu van je browser → "App installeren"');
 }
 
+// ================= inplannen =================
+// datetime-local geeft lokale tijd zonder zone; we sturen het tijdstip als getal (ms), dan klopt het op elke server
+const planMin = () => { const d = new Date(Date.now() + 5 * 60e3); d.setSeconds(0, 0); return new Date(d.getTime() - d.getTimezoneOffset() * 60e3).toISOString().slice(0, 16); };
+const planMs = v => { if (!v) return 0; const t = new Date(v).getTime(); return t > Date.now() + 60e3 ? t : 0; };
+
 // ================= fotoposts =================
 function fotoStage(v) {
   return `<div class="stage fotos"><div class="foto-strip">${v.fotos.map(f => `<img src="${f}" alt="" draggable="false">`).join('')}</div>
@@ -85,6 +90,7 @@ async function fotoStep(files, { tag, stop } = {}) {
     <div class="opt">${ic('link')}<label>ZekerFlex-koppeling</label><button class="btn small grey kies-produkt">Kiezen</button></div>
     <div class="opt">${ic('lock')}<label>Wie kan dit bekijken</label><select name="privacy"><option value="public">Iedereen</option><option value="friends">Vrienden</option><option value="private">Alleen ik</option></select></div>
     <div class="opt">${ic('comment')}<label>Reacties toestaan</label><label class="switch-t"><input type="checkbox" name="allowComments" checked><span></span></label></div>
+    <div class="opt">${ic('timer')}<label>Inplannen</label><input type="datetime-local" name="publishAt" min="${planMin()}"></div>
     <div class="progress" hidden><div></div></div>
     <div class="post-bar"><button class="btn grey again">Terug</button><button class="btn post">Plaatsen</button></div></div>`);
   view.append(ed);
@@ -103,8 +109,9 @@ async function fotoStep(files, { tag, stop } = {}) {
     fd.append('allowDuet', 'false');
     if (muziek) fd.append('muziekId', muziek.id);
     if (produkt) fd.append('produkt', JSON.stringify(produkt));
+    const plan = planMs($('[name=publishAt]', ed).value); if (plan) fd.append('publishAt', plan);
     $('.progress', ed).hidden = false;
-    try { await api('POST', '/api/videos', fd); toast('Je fotopost staat erop! 🎉'); location.hash = '#/@' + S.me.username; }
+    try { await api('POST', '/api/videos', fd); toast(plan ? 'Ingepland! ⏰' : 'Je fotopost staat erop! 🎉'); location.hash = '#/@' + S.me.username; }
     catch (e) { btn.disabled = false; btn.textContent = 'Plaatsen'; toast(e.message || 'Plaatsen mislukt'); }
   };
 }
