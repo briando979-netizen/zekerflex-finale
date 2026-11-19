@@ -3,7 +3,7 @@ import { fixedWindow } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import { inspectPrompt } from "@/lib/security/prompt-guard";
 import { voegBerichtToe } from "@/lib/sitechat/gesprek";
-import { aiMagAntwoorden, antwoordZonderModel, bouwSysteem, kiesFragmenten, sitechatBinnenBudget, type Fragment } from "@/lib/sitechat/regels";
+import { SITECHAT_SNEL_BUDGET, aiMagAntwoorden, antwoordZonderModel, bouwSysteem, kiesFragmenten, sitechatBinnenBudget, type Fragment } from "@/lib/sitechat/regels";
 import { gratisAan } from "@/lib/ai/gratis";
 
 // ---------------------------------------------------------------------------
@@ -98,8 +98,8 @@ export async function chatAntwoord(v: ChatVerzoek, kennis: () => Promise<Kennis>
 
   try {
     const site = { bedrijf: k.bedrijf, omschrijving: k.omschrijving, ...(k.regels ? { regels: k.regels } : {}), ...(k.medewerker === false ? { medewerker: false } : {}) };
-    // het eigen model (alles gratis) leest maar 2048 tokens: zoveel fragmenten en berichten als passen
-    const p = gratisAan() ? sitechatBinnenBudget(site, fragmenten, v.berichten.slice(-10)) : { systeem: bouwSysteem(site, fragmenten), historie: v.berichten.slice(-10) };
+    // het eigen model (alles gratis) leest op de CPU: hoe korter de vraag, hoe eerder het eerste woord (SITECHAT_SNEL_BUDGET)
+    const p = gratisAan() ? sitechatBinnenBudget(site, fragmenten, v.berichten.slice(-10), SITECHAT_SNEL_BUDGET) : { systeem: bouwSysteem(site, fragmenten), historie: v.berichten.slice(-10) };
     const gen = chatStream({
       purpose: "public-chat",
       model: fastModel(),
@@ -150,7 +150,7 @@ export async function chatAntwoordTekst(
   if (llmConfigProblem()) return bewaar(terugval);
   try {
     const site = { bedrijf: k.bedrijf, omschrijving: k.omschrijving, ...(k.regels ? { regels: k.regels } : {}), ...(k.medewerker === false ? { medewerker: false } : {}) };
-    const p = gratisAan() ? sitechatBinnenBudget(site, fragmenten, historie) : { systeem: bouwSysteem(site, fragmenten), historie };
+    const p = gratisAan() ? sitechatBinnenBudget(site, fragmenten, historie, SITECHAT_SNEL_BUDGET) : { systeem: bouwSysteem(site, fragmenten), historie };
     const r = await chat({
       purpose: "public-chat",
       model: fastModel(),

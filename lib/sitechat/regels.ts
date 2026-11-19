@@ -143,6 +143,14 @@ export function kiesFragmenten(vraag: string, fragmenten: readonly Fragment[], m
  * fragmenten als passen (in de volgorde van kiesFragmenten, beste eerst; vaste fragmenten voorop) en de nieuwste
  * berichten die nog passen (hoogstens een kwart van het budget). Niets wordt afgekapt: wat niet past, gaat er heel uit.
  */
+/**
+ * Het budget voor de chat op een site, kleiner dan wat het eigen model aankan. Gemeten 19 nov 2026 op prod (gemma3:4b
+ * op de CPU, vier vragen): 14 tot 28 s tot het eerste woord bij een systeemdeel van 1030 tot 1260 tokens, daarna 2 tot
+ * 10 s voor het antwoord zelf. De wachttijd is dus het lezen van de vraag, en die loopt gelijk op met het aantal tokens.
+ * Met dit budget blijven de vaste regels (±360 tokens) en de 3 tot 5 best passende fragmenten over.
+ */
+export const SITECHAT_SNEL_BUDGET = 820;
+
 export function sitechatBinnenBudget<B extends { tekst: string }>(
   o: { bedrijf: string; omschrijving: string; regels?: readonly string[]; medewerker?: boolean | undefined },
   fragmenten: readonly Fragment[],

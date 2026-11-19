@@ -87,8 +87,9 @@ describe("sitechat bij alles gratis", () => {
 
   it("zonder alles gratis: zoals voorheen, alle fragmenten en de laatste 10 berichten", () => {
     const bron = readFileSync(path.join(process.cwd(), "lib/sitechat/antwoord.ts"), "utf8");
-    expect(bron).toMatch(/gratisAan\(\) \? sitechatBinnenBudget\(site, fragmenten, v\.berichten\.slice\(-10\)\) : \{ systeem: bouwSysteem\(site, fragmenten\), historie: v\.berichten\.slice\(-10\) \}/);
-    expect(bron).toMatch(/gratisAan\(\) \? sitechatBinnenBudget\(site, fragmenten, historie\) : \{ systeem: bouwSysteem\(site, fragmenten\), historie \}/);
+    // bij alles gratis het kleinere budget van de sitechat (19 nov: het eerste woord kwam pas na 14 tot 28 s)
+    expect(bron).toMatch(/gratisAan\(\) \? sitechatBinnenBudget\(site, fragmenten, v\.berichten\.slice\(-10\), SITECHAT_SNEL_BUDGET\) : \{ systeem: bouwSysteem\(site, fragmenten\), historie: v\.berichten\.slice\(-10\) \}/);
+    expect(bron).toMatch(/gratisAan\(\) \? sitechatBinnenBudget\(site, fragmenten, historie, SITECHAT_SNEL_BUDGET\) : \{ systeem: bouwSysteem\(site, fragmenten\), historie \}/);
     expect(bouwSysteem(site, fragmenten)).toContain("## Fragment 4");
   });
 });

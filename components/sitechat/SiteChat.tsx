@@ -285,7 +285,7 @@ export function SiteChat({
                 <div key={i} className="max-w-[85%]">
                   <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[#4A524D]">{r.rol === "medewerker" ? (r.door ?? "Medewerker") : "Assistent"}</p>
                   <p className={`whitespace-pre-line rounded-2xl rounded-tl-md px-4 py-2.5 text-sm leading-relaxed ${r.rol === "medewerker" ? "bg-[#E7F0EA] ring-1 ring-[#1F5F3F]/20" : "bg-[#F3EEE6]"}`}>
-                    {r.tekst || <span className="inline-block animate-pulse">…</span>}
+                    {r.tekst || <span className="inline-block animate-pulse">Ik zoek het even voor je op…</span>}
                   </p>
                 </div>
               ),
