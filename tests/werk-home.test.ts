@@ -6,8 +6,8 @@ import { SEO_STANDAARD } from "@/lib/ontwerp/seo";
 import { APP_PAGES } from "@/lib/dev/app-pages.generated";
 import { openbareRoutes } from "@/lib/ops/rondgang";
 
-// De voorpagina voor werkzoekenden (verhuisd naar /flexwerk op 19 nov 2026): de brede voorpagina
-// staat nu op /, de werkers-home op /flexwerk en de bedrijven-home ongewijzigd op /bedrijven.
+// De homepagina voor werkzoekenden (11 nov 2026): zekerflex.com is voor de werker,
+// de vorige homepagina staat ongewijzigd op /bedrijven.
 
 const alleTekst = () =>
   JSON.stringify([WERK_HERO, WERK_GROEPEN, WERK_STAPPEN, WERK_VOORDELEN, WERK_FAQ, WERK_SLOT]);
@@ -19,23 +19,17 @@ describe("homepagina voor werkzoekenden", () => {
     expect(WERK_AANMELDEN).toBe("/register?type=freelancer");
   });
 
-  it("heeft een knop naar de homepagina voor bedrijven, en de flexwerk- en bedrijvenpagina bestaan", () => {
+  it("heeft een knop naar de homepagina voor bedrijven, en die pagina bestaat", () => {
     expect(BEDRIJVEN_HOME).toBe("/bedrijven");
     expect(WERK_HERO.wissel.knop).toBe("Ik zoek personeel");
     expect(existsSync(join(process.cwd(), "app", "(marketing)", "bedrijven", "page.tsx"))).toBe(true);
-    expect(existsSync(join(process.cwd(), "app", "(marketing)", "flexwerk", "page.tsx"))).toBe(true);
     expect(APP_PAGES.some((p) => p.route === "/bedrijven" && !p.dynamic)).toBe(true);
-    expect(APP_PAGES.some((p) => p.route === "/flexwerk" && !p.dynamic)).toBe(true);
-    // de nachtelijke rondgang controleert de brede home, de flexwerk-home en de bedrijven-home
-    expect(openbareRoutes()).toEqual(expect.arrayContaining(["/", "/flexwerk", "/bedrijven"]));
+    // de nachtelijke rondgang controleert beide
+    expect(openbareRoutes()).toEqual(expect.arrayContaining(["/", "/bedrijven"]));
   });
 
   it("heeft eigen titels voor Google, en elke foto bestaat met de herkomst erbij", () => {
-    // de brede voorpagina op /: het nieuwe "onder één dak"-verhaal, zonder bedrijfsprijs
-    expect(SEO_STANDAARD["/"].titel).toContain("onder één dak");
     expect(SEO_STANDAARD["/"].omschrijving).not.toContain("3,50");
-    // de werkerstekst is verhuisd naar /flexwerk en noemt geen bedrijfsprijs
-    expect(SEO_STANDAARD["/flexwerk"].omschrijving).not.toContain("3,50");
     expect(SEO_STANDAARD["/bedrijven"].omschrijving).toContain("€ 3,50");
     for (const g of WERK_GROEPEN) expect(existsSync(join(process.cwd(), "public", g.foto)), g.foto).toBe(true);
     expect(existsSync(join(process.cwd(), "public", WERK_HERO.foto))).toBe(true);
@@ -48,7 +42,7 @@ describe("homepagina voor werkzoekenden", () => {
   it("laat de foto in de kop bewegen zonder de foto te vervangen", () => {
     expect(existsSync(join(process.cwd(), "public", WERK_HERO.video))).toBe(true);
     expect(readFileSync(join(process.cwd(), "public", "werk", "CREDITS.md"), "utf8")).toContain("campagne-kop.mp4");
-    const pagina = readFileSync(join(process.cwd(), "app", "(marketing)", "flexwerk", "page.tsx"), "utf8");
+    const pagina = readFileSync(join(process.cwd(), "app", "(marketing)", "page.tsx"), "utf8");
     // de foto blijft het eerste beeld (priority); de video ligt erover, zonder geluid en zonder knoppen
     expect(pagina).toContain("src={WERK_HERO.foto}");
     expect(pagina).toContain("<KopClip src={WERK_HERO.video}");

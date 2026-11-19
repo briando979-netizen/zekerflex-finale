@@ -16,14 +16,7 @@ export const SEO_ACHTERVOEGSEL = " · ZekerFlex";
 
 export const SEO_STANDAARD = {
   "/": {
-    naam: "Homepage (alles onder één dak)",
-    titel: "Alles voor je bedrijf, onder één dak | ZekerFlex",
-    omschrijving:
-      "Personeel, je website en je klanten, software voor je branche en je geldzaken — ZekerFlex doet het onder één dak. Stel je vraag, de gids wijst je de weg.",
-    absoluut: true,
-  },
-  "/flexwerk": {
-    naam: "Flexwerk (werkzoekenden)",
+    naam: "Homepage (werkzoekenden)",
     titel: "ZekerFlex — freelance werk & klussen in heel Nederland",
     omschrijving:
       "Vind flexwerk en klussen bij jou in de buurt. Je ziet vooraf wat je verdient en krijgt je geld op je eigen rekening. Ook zonder KVK, en gratis.",

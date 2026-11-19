@@ -145,7 +145,7 @@ export function HomeZoekBalk() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ page: "/", messages: geschiedenis }),
+        body: JSON.stringify({ page: "/nieuwe-home", messages: geschiedenis }),
       });
       if (!res.ok || !res.body) {
         toonFout();

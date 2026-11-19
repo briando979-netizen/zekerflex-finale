@@ -84,11 +84,11 @@ export function SiteHeader({ hoofdmenu = null }: { hoofdmenu?: Hoofdmenu | null 
   const toggleMenu = (key: string) => setMenu((m) => (m === key ? null : key));
 
   // URL wins; otherwise the last explicit choice; default werknemers.
-  // Sinds 19 nov 2026 is / de brede voorpagina (beide doelgroepen); de werkers-home staat op /flexwerk en de bedrijven-home op /bedrijven.
+  // Since 11 Nov 2026 the home (/) is the workers' page and /bedrijven the companies' one.
   const audience: Audience =
     pathname.startsWith("/voor-bedrijven") || pathname === "/bedrijven"
       ? "bedrijven"
-      : pathname.startsWith("/voor-freelancers") || pathname === "/flexwerk"
+      : pathname.startsWith("/voor-freelancers") || pathname === "/"
         ? "werknemers"
         : stored ?? "werknemers";
 
@@ -208,7 +208,7 @@ export function SiteHeader({ hoofdmenu = null }: { hoofdmenu?: Hoofdmenu | null 
         {/* audience toggle */}
         <div className="ml-auto hidden items-center rounded-full border border-white/15 bg-white/[0.06] p-1 min-[1600px]:flex">
           <Link
-            href="/flexwerk"
+            href="/"
             onClick={() => pick("werknemers")}
             className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
               audience === "werknemers" ? "bg-white/[0.12] text-white" : "text-white/65 hover:text-white/80"
