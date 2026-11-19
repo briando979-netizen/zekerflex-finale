@@ -6,6 +6,7 @@ import Link from "next/link";
 import "./smiley.css";
 import { BASE, CONTACT, KLANTLOGIN, MENU, MENU_FOOTER, OFFICIELE_SITE, PRIVACY, SLOGAN, VOORSTEL_BAND, VOORWAARDEN, beeld } from "@/lib/voorstel/smileyapp";
 import { heeftTeam } from "@/lib/voorstel/smileyapp-accounts";
+import { VERTALINGEN } from "@/lib/voorstel/smileyapp-taal";
 import { VOORSTEL_HEADER } from "@/lib/voorstel/subdomein";
 import { AlleenOpSite } from "@/components/voorstel/AlleenOpSite";
 import { KortAdres } from "@/components/voorstel/KortAdres";
@@ -13,6 +14,9 @@ import { SmileyMenu } from "@/components/voorstel/smileyapp/SmileyMenu";
 import { SmileyChat } from "@/components/voorstel/smileyapp/SmileyChat";
 import { SmileyTeller } from "@/components/voorstel/smileyapp/SmileyTeller";
 import { Gezicht } from "@/components/voorstel/smileyapp/Gezicht";
+import { OpTaal, TaalTekst } from "@/components/voorstel/smileyapp/OpTaal";
+import { TaalKiezer } from "@/components/voorstel/smileyapp/TaalKiezer";
+import { BandTaal, KopTaal, VoetTaal } from "@/components/voorstel/smileyapp/taal/Kader";
 
 // Ontwerpvoorstel: een nieuwe website én app (PWA) voor SmileyApp, gebouwd op
 // ZekerFlex (smileyapp.zekerflex.com). Eigen omlijsting, los van de
@@ -22,6 +26,13 @@ import { Gezicht } from "@/components/voorstel/smileyapp/Gezicht";
 // op de contactpagina dicht en niets van derden behalve hun eigen Vimeo-filmpje
 // na een klik. Het beheer (/beheer, 19 nov 2026) heeft een eigen opmaak: daar
 // valt de omlijsting van de site (band, kop, footer en chat) weg via AlleenOpSite.
+// Talen (19 nov 2026): /en en /de zijn de voorpagina en de demo-aanvraag in het
+// Engels en het Duits. De layout wordt bij een klik binnen de site niet opnieuw
+// opgebouwd, dus de taal van de omlijsting volgt het pad in de browser: OpTaal
+// toont de Nederlandse kop en footer hieronder, of de vertaalde uit
+// components/voorstel/smileyapp/taal/Kader.tsx. De Nederlandse voorstelband
+// blijft op elke pagina staan; op /en en /de staat de vertaling eronder.
+// <html lang> blijft "nl" (root-layout): de vertaalde blokken dragen zelf lang.
 const OMSCHRIJVING = "Ontwerpvoorstel van ZekerFlex voor een nieuwe website en app van Smileyapp: klanttevredenheid meten met een smiley die je swipet.";
 
 export const metadata: Metadata = {
@@ -51,7 +62,7 @@ export default async function SmileyappLayout({ children }: { children: ReactNod
   return (
     <div className="min-h-screen overflow-x-clip bg-smiley-cream font-sans text-smiley-ink">
       <a href="#inhoud" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[80] focus:rounded-full focus:bg-smiley-sun focus:px-4 focus:py-2 focus:font-bold">
-        Naar de inhoud
+        <TaalTekst nl="Naar de inhoud" en="Skip to content" de="Zum Inhalt springen" />
       </a>
       {subdomein && <KortAdres basis={BASE} />}
       {/* telt paginaweergaven voor "Cijfers" in het beheer: zonder cookie, en niet in het beheer zelf */}
@@ -59,13 +70,30 @@ export default async function SmileyappLayout({ children }: { children: ReactNod
       {/* de omlijsting van de site; in het beheer valt hij weg (de band blijft hier in de layout staan) */}
       <AlleenOpSite basis={BASE}>
       <div aria-hidden="true" className="sm-voortgang fixed inset-x-0 top-0 z-[70] h-1 bg-gradient-to-r from-smiley-green via-smiley-sun to-smiley-green" />
-      <p className="bg-smiley-sun px-4 py-2 text-center text-xs font-semibold text-smiley-ink sm:text-sm">
+      {/* relative: de taalkiezer staat vanaf lg rechts in de band; de tekst houdt daar aan beide kanten ruimte vrij (lg:px-40) */}
+      <div className="relative bg-smiley-sun">
+      <p className="px-4 py-2 text-center text-xs font-semibold text-smiley-ink sm:text-sm lg:px-40">
         {voorBand}
         <a href={OFFICIELE_SITE} className="underline underline-offset-2">
           smileyapp.nl
         </a>
         {naBand}
       </p>
+      {VERTALINGEN.map((taal) => (
+        <OpTaal key={taal} taal={taal}>
+          <BandTaal taal={taal} />
+        </OpTaal>
+      ))}
+      <div className="absolute right-4 top-1/2 hidden -translate-y-1/2 sm:right-8 lg:block">
+        <TaalKiezer variant="band" />
+      </div>
+      </div>
+      {VERTALINGEN.map((taal) => (
+        <OpTaal key={taal} taal={taal}>
+          <KopTaal taal={taal} />
+        </OpTaal>
+      ))}
+      <OpTaal taal="nl">
       <header className="sticky top-0 z-50 border-b border-smiley-ink/10 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between gap-4 px-4 sm:h-20 sm:px-8">
           <Link href={BASE} className="sm-wiebel shrink-0" aria-label="Smileyapp, naar de voorpagina">
@@ -97,11 +125,18 @@ export default async function SmileyappLayout({ children }: { children: ReactNod
           </div>
         </div>
       </header>
+      </OpTaal>
       </AlleenOpSite>
 
       <main id="inhoud">{children}</main>
 
       <AlleenOpSite basis={BASE}>
+      {VERTALINGEN.map((taal) => (
+        <OpTaal key={taal} taal={taal}>
+          <VoetTaal taal={taal} />
+        </OpTaal>
+      ))}
+      <OpTaal taal="nl">
       <footer className="relative overflow-hidden bg-smiley-ink text-white">
         <Gezicht score={10} kleur="#5ABA8E" accent="#FDD11A" className="pointer-events-none absolute -bottom-24 -right-24 h-80 w-80 opacity-10" />
         <div className="relative mx-auto grid max-w-[1200px] gap-10 px-4 py-16 sm:grid-cols-2 sm:px-8 lg:grid-cols-[1.4fr_1fr_1fr]">
@@ -124,6 +159,10 @@ export default async function SmileyappLayout({ children }: { children: ReactNod
               </a>
               .
             </p>
+            {/* links in de footer, niet rechtsonder: daar zweeft de chatknop */}
+            <div className="mt-6">
+              <TaalKiezer variant="footer" />
+            </div>
           </div>
           <nav aria-label="Smileyapp">
             <p className={FOOTERKOP}>Smileyapp</p>
@@ -175,6 +214,7 @@ export default async function SmileyappLayout({ children }: { children: ReactNod
           </div>
         </div>
       </footer>
+      </OpTaal>
       <SmileyChat team={team} />
       </AlleenOpSite>
     </div>

@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BASE, KLANTLOGIN, MENU, MENU_FOOTER } from "@/lib/voorstel/smileyapp";
+import { TaalKiezer } from "@/components/voorstel/smileyapp/TaalKiezer";
 
 // Het menu op de telefoon (onder lg): een knop die het menu onder de kop
-// uitklapt. Sluit na een keuze, bij een andere pagina en met Escape.
+// uitklapt. Sluit na een keuze, bij een andere pagina en met Escape. Onderaan
+// staat de taalkiezer (NL · EN · DE); op /en en /de neemt SmileyMenuTaal het over.
 
 export function SmileyMenu() {
   const [open, setOpen] = useState(false);
@@ -65,6 +67,9 @@ export function SmileyMenu() {
             <Link href={`${BASE}/contact`} onClick={() => setOpen(false)} className="rounded-full bg-smiley-green px-4 py-3 text-center text-sm font-bold text-smiley-ink">
               Contact opnemen
             </Link>
+          </div>
+          <div className="mt-5 flex justify-center">
+            <TaalKiezer variant="menu" />
           </div>
         </nav>
       )}

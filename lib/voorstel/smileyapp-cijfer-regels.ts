@@ -21,10 +21,17 @@ const VASTE_PAGINAS: Record<string, string> = {
   "/blog": "Blog",
   "/branches": "Branches",
   "/klanten": "Klantverhalen",
+  // de vertalingen (19 nov 2026): de voorpagina en de demo-aanvraag in het Engels en het Duits
+  "/en": "Voorpagina (Engels)",
+  "/en/demo": "Demo aanvragen (Engels)",
+  "/de": "Voorpagina (Duits)",
+  "/de/demo": "Demo aanvragen (Duits)",
 };
 /** Eén teller voor alle eigen blogberichten samen: hun adressen staan niet vast. */
 export const EIGEN_BLOG = "/blog/*";
 export const DEMO_PAD = "/demo";
+/** De demo-aanvraag in alle talen: samen de noemer van het percentage, want de teller van aanvragen kent geen taal. */
+export const DEMO_PADEN: readonly string[] = [DEMO_PAD, "/en/demo", "/de/demo"];
 
 /**
  * Het pad waaronder een weergave telt, of null als hij niet telt. Accepteert het lange pad
@@ -81,7 +88,7 @@ export interface Cijfers {
   aanvragen: number;
   /** de vijf meest bekeken pagina's */
   paginas: { pad: string; naam: string; weergaven: number }[];
-  /** weergaven van de demopagina (de noemer van het percentage) */
+  /** weergaven van de demopagina, in alle talen samen (de noemer van het percentage) */
   demoWeergaven: number;
   /** demo-aanvragen per 100 bezoeken aan de demopagina; null als die pagina niet bezocht is */
   percentage: number | null;
@@ -107,7 +114,7 @@ export function somCijfers(dagen: readonly string[], hashes: readonly (Record<st
     }
     return { dag, weergaven: n("v"), aanvragen: n("a") };
   });
-  const demoWeergaven = paginas.get(DEMO_PAD) ?? 0;
+  const demoWeergaven = DEMO_PADEN.reduce((som, pad) => som + (paginas.get(pad) ?? 0), 0);
   return {
     dagen: perDag,
     weergaven,
