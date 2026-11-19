@@ -512,6 +512,20 @@ export const AANBOD: AanbodItem[] = [
     start: { label: "Maak mijn logo", href: "/logo-maker" },
   },
   {
+    slug: "starters",
+    pijler: "online",
+    naam: "Voor starters: van idee tot merk",
+    kort: "Logo, domeinnaam, website en je eerste advertentie. Eerst zien, dan pas betalen.",
+    tekst:
+      "Begin je een bedrijf? Je regelt hier je logo, je domeinnaam, je website en je eerste advertentie. Je ziet steeds eerst het voorbeeld en betaalt alleen voor wat je afneemt.",
+    punten: ["Logo en advertentie: eerst het voorbeeld", "Domeinnaam: gratis zoeken of hij vrij is", "Website en webshop: eerst voorbeelden bekijken", "Geen pakket dat je in één keer moet afnemen"],
+    voorWie: "Starters en mensen met een idee",
+    prijs: "Je betaalt alleen voor wat je afneemt",
+    status: "beschikbaar",
+    pagina: "/starters",
+    start: { label: "Bekijk wat er kan", href: "/starters" },
+  },
+  {
     slug: "review-check",
     pijler: "online",
     naam: "Gratis review-check",
