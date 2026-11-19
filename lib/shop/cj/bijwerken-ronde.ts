@@ -33,7 +33,7 @@ export interface BijwerkStand {
 
 export type RondeBijwerkenUitkomst = BijwerkUitkomst & { status: "gedaan" | "bezet"; vanaf: number };
 
-const LEEG: BijwerkUitkomst = { bekeken: 0, categorie: 0, voorraad: 0, vertaald: 0, fouten: 0, volgende: null, totaal: 0 };
+const LEEG: BijwerkUitkomst = { bekeken: 0, categorie: 0, voorraad: 0, vertaald: 0, fouten: 0, achterstand: 0, volgende: null, totaal: 0 };
 
 export async function leesBijwerkStand(): Promise<BijwerkStand> {
   const s = await kvGet<Partial<BijwerkStand>>(K_STAND).catch(() => null);
