@@ -193,7 +193,8 @@ export interface ReviewTeksten {
 
 export const REVIEWS_NL: ReviewTeksten = {
   boven: "Reviews",
-  kop: "Wat klanten zeggen",
+  // niet "Wat klanten zeggen": op /klanten staat dit blok direct onder de h1 "Wat onze klanten zeggen"
+  kop: "Zo beoordelen klanten Smileyapp",
   samenvatting: "{gemiddelde} van 5 sterren uit {aantal} reviews",
   samenvattingEen: "{gemiddelde} van 5 sterren uit 1 review",
   sterren: "{n} van 5 sterren",

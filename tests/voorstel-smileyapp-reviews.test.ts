@@ -214,7 +214,7 @@ describe("wat de site toont", () => {
     expect(sterrenTekst(4)).toBe("4 van 5 sterren");
     expect(bronTekst("E-mail")).toBe("Bron: e-mail");
     expect(bronLinkTekst("Google")).toBe("Bekijk de review bij de bron (Google)");
-    expect(REVIEWS_NL.kop).toBe("Wat klanten zeggen");
+    expect(REVIEWS_NL.kop).toBe("Zo beoordelen klanten Smileyapp");
     expect(REVIEWS_NL.voet).toBe("Reviews door Smileyapp zelf overgenomen uit de genoemde bron.");
     expect([reviewDatum("2026-11-03"), reviewDatum("2026-11-03", "en"), reviewDatum("2026-11-03", "de"), reviewDatum("geen")]).toEqual(["3 november 2026", "3 November 2026", "3. November 2026", ""]);
     expect([sterrenBreedte(5), sterrenBreedte(4.6), sterrenBreedte(0), sterrenBreedte(9)]).toEqual([100, 92, 0, 100]);

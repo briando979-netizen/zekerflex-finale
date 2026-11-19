@@ -4,7 +4,7 @@ import { reviewsVoorSite } from "@/lib/voorstel/smileyapp-reviews";
 import { TEKSTEN } from "@/lib/voorstel/smileyapp-talen";
 import { Kopje } from "@/components/voorstel/smileyapp/Blokken";
 
-// "Wat klanten zeggen": de reviews die het SmileyApp-team zelf in het beheer
+// "Zo beoordelen klanten Smileyapp": de reviews die het SmileyApp-team zelf in het beheer
 // heeft overgenomen, met het gemiddelde en hooguit zes kaarten. Server-onderdeel
 // dat zijn eigen gegevens haalt, zodat de pagina's er alleen een regel voor
 // nodig hebben. Zonder zichtbare review geeft het niets terug: geen kop, geen
