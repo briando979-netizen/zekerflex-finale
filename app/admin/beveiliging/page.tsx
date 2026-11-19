@@ -8,6 +8,9 @@ import { twoFactorStatus } from "@/lib/auth/two-factor";
 import { count, percentOf } from "@/lib/admin/format";
 import { SecurityIntelligencePanel } from "@/components/admin/SecurityIntelligencePanel";
 import { beveiligingsBeeld } from "@/lib/security/intelligence";
+import { RecoveryShieldPanel } from "@/components/admin/RecoveryShieldPanel";
+import { readBackupReport } from "@/lib/ops/backup";
+import { herstelStand } from "@/lib/ops/herstel-regels";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +57,9 @@ export default async function BeveiligingPage() {
   const now = new Date();
   // één bron die stuk is, mag de pagina niet omgooien
   const beeld = await beveiligingsBeeld(now).catch(() => null);
+  const herstel = await readBackupReport()
+    .then(herstelStand)
+    .catch(() => null);
 
   return (
     <div className="space-y-4">
@@ -70,6 +76,7 @@ export default async function BeveiligingPage() {
         <AdminTwoFactorOverview people={people} selfId={principal.userId} />
       </div>
       {beeld && <SecurityIntelligencePanel beeld={beeld} now={now} />}
+      {herstel && <RecoveryShieldPanel stand={herstel} />}
       <AanvalsbeschermingPanel />
     </div>
   );
