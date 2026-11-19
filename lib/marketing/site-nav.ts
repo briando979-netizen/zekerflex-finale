@@ -59,6 +59,8 @@ const AANBOD_MENU: MenuVariant = {
   cta: { label: "Het hele aanbod", href: "/aanbod" },
   items: [
     ...PIJLERS.map((p) => ({ title: p.naam, desc: p.kort, href: `/aanbod#${p.sleutel}` })),
+    // alle losse online tools (website, webshop, logo, domein, mail, checks) op één pagina (lib/marketing/online-tools.ts)
+    { title: "Alles voor je bedrijf online", desc: "Website, webshop, logo, domein, mail en gratis checks op één pagina.", href: "/online" },
     { title: "Ik zoek werk", desc: "Als flexwerker, uitzendkracht of zzp'er. Meedoen is gratis.", href: "/voor-freelancers" },
   ],
 };
