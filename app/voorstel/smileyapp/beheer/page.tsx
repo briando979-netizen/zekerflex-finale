@@ -49,8 +49,11 @@ export default async function SmileyappBeheerPage({ searchParams }: { searchPara
   }
 
   return (
-    <div className="grid min-h-screen place-items-center bg-smiley-ink px-4 py-12">
-      <div className="w-full max-w-md">
+    <div className="relative grid min-h-screen place-items-center bg-smiley-ink px-4 py-12 [min-height:100dvh]">
+      {/* het hele scherm donker, ook als de pagina langer is dan deze kaart (19 nov 2026: op 390 × 844 was het onder de
+          kaart crème). De vaste laag ligt achter de kaart en vult het venster, wat er verder ook onder de pagina hangt. */}
+      <div aria-hidden="true" className="pointer-events-none fixed inset-0 bg-smiley-ink" />
+      <div className="relative w-full max-w-md">
         <Link href={BASE} aria-label="Naar de website van Smileyapp" className="mx-auto block w-fit">
           <Image src={beeld("logo.webp")} alt="" width={500} height={260} priority className="h-20 w-auto" />
         </Link>
