@@ -402,3 +402,31 @@ body.fullscreen #tabbar { display: none; }
 .lv-pin span { flex: 1; }
 .lv-msg:not(.sys):not(.host) { cursor: pointer; }
 .opt input[type=datetime-local] { width: auto; max-width: 60%; background: var(--panel2); color: #fff; border: 0; border-radius: 6px; padding: 6px 8px; color-scheme: dark; }
+
+/* ===== ronde C: prestaties, concepten, instellingen, licht thema ===== */
+.prestaties { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; padding: 8px 16px 0; }
+.prestatie { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; width: 64px; opacity: .3; filter: grayscale(1); }
+.prestatie.on { opacity: 1; filter: none; }
+.prestatie i { font-style: normal; font-size: 22px; line-height: 1; }
+.prestatie small { font-size: 9px; color: var(--muted); text-align: center; line-height: 1.1; }
+.opt label small { display: block; color: var(--muted); font-size: 12px; font-weight: 400; margin-top: 2px; }
+.opt.opt-kolom { flex-direction: column; align-items: stretch; gap: 8px; }
+.opt.opt-kolom textarea { width: 100%; }
+.opt select { background: var(--panel2); color: var(--text); border: 0; border-radius: 6px; padding: 6px 8px; }
+.badge-n { color: var(--accent); font-weight: 700; }
+a.opt { color: inherit; }
+.post-bar .concept { flex: 0 0 auto; padding: 10px 12px; }
+/* licht thema: alleen de schermen om de video heen; de feed, LIVE en de camera blijven donker */
+html[data-theme="light"] { --bg: #fff; --panel: #f4f4f6; --panel2: #e9e9ee; --line: #dcdce2; --text: #111; --muted: #6b6b76; }
+html[data-theme="light"] body { background: var(--bg); color: var(--text); }
+html[data-theme="light"] .head, html[data-theme="light"] .segs { border-color: var(--line); }
+html[data-theme="light"] .head h2, html[data-theme="light"] .segs button.active { color: #111; border-color: #111; }
+html[data-theme="light"] .btn.grey { background: #e6e6ea; color: #111; }
+html[data-theme="light"] .empty h3 { color: #111; }
+html[data-theme="light"] .sheet, html[data-theme="light"] .kpi, html[data-theme="light"] .ch-card, html[data-theme="light"] .map-leeg { background: #f4f4f6; color: #111; }
+html[data-theme="light"] input, html[data-theme="light"] textarea, html[data-theme="light"] select { background: #fff; color: #111; border: 1px solid var(--line); }
+html[data-theme="light"] .row .t1, html[data-theme="light"] .auth h3, html[data-theme="light"] .sec-title { color: #111; }
+html[data-theme="light"] #tabbar { background: #fff; border-top: 1px solid var(--line); }
+html[data-theme="light"] #tabbar a { color: #555; } html[data-theme="light"] #tabbar a.active { color: #111; }
+html[data-theme="light"] .slide, html[data-theme="light"] .feed, html[data-theme="light"] .lv, html[data-theme="light"] .cam, html[data-theme="light"] .topbar { color: #fff; }
+html[data-theme="light"] .foto-pv, html[data-theme="light"] .ed-pv { background: #000; }

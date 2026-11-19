@@ -1,6 +1,6 @@
 // FlikFlak service worker: de app-schil offline beschikbaar, de rest (api, uploads) altijd vers van het net.
-const VERSIE = 'ff-v2';
-const SCHIL = ['/', '/index.html', '/app.css', '/app.js', '/meer.js', '/logo.svg', '/manifest.webmanifest'];
+const VERSIE = 'ff-v3';
+const SCHIL = ['/', '/index.html', '/app.css', '/app.js', '/meer.js', '/instellingen.js', '/logo.svg', '/manifest.webmanifest'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSIE).then(c => c.addAll(SCHIL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSIE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {

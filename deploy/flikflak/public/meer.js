@@ -92,9 +92,10 @@ async function fotoStep(files, { tag, stop } = {}) {
     <div class="opt">${ic('comment')}<label>Reacties toestaan</label><label class="switch-t"><input type="checkbox" name="allowComments" checked><span></span></label></div>
     <div class="opt">${ic('timer')}<label>Inplannen</label><input type="datetime-local" name="publishAt" min="${planMin()}"></div>
     <div class="progress" hidden><div></div></div>
-    <div class="post-bar"><button class="btn grey again">Terug</button><button class="btn post">Plaatsen</button></div></div>`);
+    <div class="post-bar"><button class="btn grey again">Terug</button><button class="btn grey concept" title="Opslaan als concept">📝</button><button class="btn post">Plaatsen</button></div></div>`);
   view.append(ed);
-  let muziek = null, produkt = null;
+  let muziek = null, produkt = null, alsConcept = false;
+  $('.concept', ed).onclick = () => { alsConcept = true; $('.post', ed).click(); };
   const mp = muziekPicker(m => { muziek = m; }); $('.muziek-wrap', ed).append(mp);
   $('.back', ed).onclick = $('.again', ed).onclick = () => render();
   $('.kies-produkt', ed).onclick = () => pickProduktSheet(p => { produkt = p; $('.kies-produkt', ed).textContent = p ? p.titel.slice(0, 18) : 'Kiezen'; }, produkt);
@@ -110,8 +111,9 @@ async function fotoStep(files, { tag, stop } = {}) {
     if (muziek) fd.append('muziekId', muziek.id);
     if (produkt) fd.append('produkt', JSON.stringify(produkt));
     const plan = planMs($('[name=publishAt]', ed).value); if (plan) fd.append('publishAt', plan);
+    if (alsConcept) fd.append('draft', 'true');
     $('.progress', ed).hidden = false;
-    try { await api('POST', '/api/videos', fd); toast(plan ? 'Ingepland! ⏰' : 'Je fotopost staat erop! 🎉'); location.hash = '#/@' + S.me.username; }
+    try { await api('POST', '/api/videos', fd); toast(alsConcept ? 'Bewaard als concept 📝' : plan ? 'Ingepland! ⏰' : 'Je fotopost staat erop! 🎉'); location.hash = '#/@' + S.me.username; }
     catch (e) { btn.disabled = false; btn.textContent = 'Plaatsen'; toast(e.message || 'Plaatsen mislukt'); }
   };
 }

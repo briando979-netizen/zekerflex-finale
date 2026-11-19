@@ -30,6 +30,9 @@ const MUZIEK = [
   { id: 'werk', name: 'Aan het werk', file: '/muziek/werk.mp3' },
 ];
 const DAG = () => new Date().toISOString().slice(0, 10);
+// Instellingen per gebruiker (privacy, wie mag reageren/berichten, reactiefilter, thema, pauze-herinnering).
+const defaultSettings = () => ({ privateAccount: false, whoComments: 'all', whoMessages: 'all', commentFilter: [], allowDownload: true, theme: 'system', breakReminder: 0 });
+const settingsOf = u => (u.settings = { ...defaultSettings(), ...(u.settings || {}) });
 let db = fs.existsSync(DATA) ? { ...empty(), ...JSON.parse(fs.readFileSync(DATA, 'utf8')) } : empty();
 let saveTimer = null;
 function save() {
@@ -56,6 +59,9 @@ function publicUser(u, viewer) {
     followsYou: viewer ? u.following.includes(viewer.id) : false,
     isMe: viewer ? viewer.id === u.id : false,
     liveId: [...lives.values()].find(l => l.hostId === u.id)?.id || null,
+    private: !!(u.settings && u.settings.privateAccount),
+    requested: viewer ? (u.followRequests || []).includes(viewer.id) : false,
+    locked: !!(u.settings && u.settings.privateAccount) && (!viewer || (viewer.id !== u.id && !viewer.following.includes(u.id))),
   };
 }
 const lives = new Map(); // liveId -> { id, hostId, hostConn, title, started, viewers: Set<connId>, likes, peak }
@@ -65,6 +71,10 @@ const isFriend = (a, b) => a && b && a.following.includes(b.id) && b.following.i
 const zichtbaarNu = v => !v.publishAt || v.publishAt <= now();
 function canSee(v, viewer) {
   if (!zichtbaarNu(v) && (!viewer || viewer.id !== v.userId)) return false;
+  if (v.draft && (!viewer || viewer.id !== v.userId)) return false;
+  // privé account: alleen de maker zelf en zijn volgers zien de video's
+  const owner = userById(v.userId);
+  if (owner?.settings?.privateAccount && (!viewer || (viewer.id !== owner.id && !viewer.following.includes(owner.id)))) return false;
   if (v.privacy === 'public') return true;
   if (!viewer) return false;
   if (viewer.id === v.userId) return true;
@@ -85,7 +95,9 @@ function publicVideo(v, viewer) {
     liked: viewer ? v.likes.includes(viewer.id) : false,
     faved: viewer ? v.favs.includes(viewer.id) : false,
     pinned: !!v.pinned, created: v.created,
-    scheduled: !zichtbaarNu(v), publishAt: v.publishAt || null,
+    scheduled: !zichtbaarNu(v), publishAt: v.publishAt || null, draft: !!v.draft,
+    reposts: (v.reposts || []).length, reposted: viewer ? (v.reposts || []).includes(viewer.id) : false,
+    allowDownload: author?.settings?.allowDownload !== false,
     duetOf: duetInfo(v.duetOf),
     author: publicUser(author, viewer),
   };
@@ -174,8 +186,67 @@ app.get('/api/me', (req, res) => {
   if (!req.user) return res.json({ user: null });
   const unread = db.notifications.filter(n => n.userId === req.user.id && !n.read).length
     + db.messages.filter(m => m.to === req.user.id && !m.read).length;
-  res.json({ user: publicUser(req.user, req.user), unread });
+  res.json({ user: publicUser(req.user, req.user), unread, settings: settingsOf(req.user), followRequests: (req.user.followRequests || []).length });
 });
+
+// instellingen: lezen en bijwerken (alleen de eigen)
+app.get('/api/settings', auth, (req, res) => res.json({ settings: settingsOf(req.user) }));
+app.patch('/api/settings', auth, (req, res) => {
+  const s = settingsOf(req.user), b = req.body || {};
+  if (typeof b.privateAccount === 'boolean') s.privateAccount = b.privateAccount;
+  if (['all', 'friends', 'none'].includes(b.whoComments)) s.whoComments = b.whoComments;
+  if (['all', 'friends', 'none'].includes(b.whoMessages)) s.whoMessages = b.whoMessages;
+  if (Array.isArray(b.commentFilter)) s.commentFilter = [...new Set(b.commentFilter.map(w => String(w).trim().toLowerCase().slice(0, 30)).filter(Boolean))].slice(0, 50);
+  if (typeof b.allowDownload === 'boolean') s.allowDownload = b.allowDownload;
+  if (['dark', 'light', 'system'].includes(b.theme)) s.theme = b.theme;
+  if (Number.isFinite(+b.breakReminder)) s.breakReminder = Math.max(0, Math.min(180, Math.round(+b.breakReminder)));
+  save();
+  res.json({ settings: s });
+});
+
+// AVG: je eigen gegevens downloaden (zonder IP's en zonder gegevens van anderen)
+app.get('/api/export', auth, (req, res) => {
+  const me = req.user;
+  res.set('Content-Disposition', 'attachment; filename="flikflak-' + me.username + '.json"').json({
+    account: { username: me.username, name: me.name, bio: me.bio, created: me.created, verified: !!me.verified },
+    settings: settingsOf(me),
+    following: me.following.map(x => userById(x)?.username).filter(Boolean),
+    followers: db.users.filter(x => x.following.includes(me.id)).map(x => x.username),
+    videos: db.videos.filter(v => v.userId === me.id).map(v => ({ caption: v.caption, created: v.created, privacy: v.privacy, views: v.views, likes: v.likes.length, sound: v.sound?.name })),
+    comments: db.comments.filter(c => c.userId === me.id).map(c => ({ text: c.text, created: c.created })),
+    messages: db.messages.filter(m => m.from === me.id).map(m => ({ to: userById(m.to)?.username, text: m.text, created: m.created })),
+    collections: (me.collections || []).map(c => ({ name: c.name, videos: c.videoIds.length })),
+  });
+});
+
+// AVG: account zelf verwijderen (video's, reacties, sessies en volgrelaties gaan mee)
+app.delete('/api/account', auth, (req, res) => {
+  const me = req.user;
+  for (const v of db.videos.filter(v => v.userId === me.id)) removeVideo(v);
+  for (const v of db.videos) { v.likes = v.likes.filter(x => x !== me.id); v.favs = v.favs.filter(x => x !== me.id); if (v.reposts) v.reposts = v.reposts.filter(x => x !== me.id); }
+  db.users = db.users.filter(x => x.id !== me.id);
+  db.comments = db.comments.filter(c => c.userId !== me.id);
+  db.messages = db.messages.filter(m => m.from !== me.id && m.to !== me.id);
+  db.notifications = db.notifications.filter(n => n.userId !== me.id && n.fromId !== me.id);
+  for (const u of db.users) { u.following = u.following.filter(x => x !== me.id); if (u.followRequests) u.followRequests = u.followRequests.filter(x => x !== me.id); }
+  for (const t of Object.keys(db.sessions)) if (db.sessions[t] === me.id) delete db.sessions[t];
+  save();
+  res.json({ ok: true });
+});
+
+// prestaties (badges) op het profiel, berekend uit wat iemand echt deed
+function achievements(u) {
+  const vids = db.videos.filter(v => v.userId === u.id && !v.draft);
+  const likes = vids.reduce((s, v) => s + v.likes.length, 0), views = vids.reduce((s, v) => s + v.views, 0);
+  const followers = db.users.filter(x => x.following.includes(u.id)).length;
+  const reacties = db.comments.filter(c => c.userId === u.id).length;
+  return [
+    ['start', '🎬', 'Eerste video', vids.length >= 1], ['maker', '🎥', "10 video's", vids.length >= 10],
+    ['geliefd', '❤️', '100 likes', likes >= 100], ['viraal', '🔥', '10.000 weergaven', views >= 10000],
+    ['populair', '⭐', '100 volgers', followers >= 100], ['sociaal', '💬', '10 reacties geplaatst', reacties >= 10],
+    ['live', '📡', 'Ging LIVE', !!u.wentLive], ['vroeg', '🌱', 'Vroege FlikFlakker', u.created < Date.UTC(2027, 0, 1)],
+  ].map(([id, icon, title, earned]) => ({ id, icon, title, earned }));
+}
 
 app.post('/api/profile', auth, upload.single('avatar'), (req, res) => {
   const u = req.user;
@@ -250,12 +321,25 @@ app.post('/api/videos', auth, upload.fields([{ name: 'video', maxCount: 1 }, { n
     duetOf: req.body.duetOf || null, produkt,
     // inplannen: tot 30 dagen vooruit; tot dan alleen zichtbaar voor de maker
     publishAt: +req.body.publishAt > now() ? Math.min(+req.body.publishAt, now() + 30 * 864e5) : null,
+    // concept: bewaard, alleen voor de maker zichtbaar, later met één tik te plaatsen
+    draft: req.body.draft === 'true',
     likes: [], favs: [], shares: 0, views: 0, dag: {}, created: now(), ip: clientIp(req),
   };
-  v.published = !v.publishAt;
+  if (v.draft) v.publishAt = null;
+  v.published = !v.publishAt && !v.draft;
   db.videos.push(v);
   save();
   if (v.published) meldPlaatsing(v);
+  res.json({ video: publicVideo(v, req.user) });
+});
+
+// concept plaatsen (of een geplande post nu al plaatsen)
+app.post('/api/videos/:id/publish', auth, (req, res) => {
+  const v = db.videos.find(x => x.id === req.params.id);
+  if (!v || v.userId !== req.user.id) return res.status(403).json({ error: 'Niet toegestaan' });
+  if (v.published) return res.json({ video: publicVideo(v, req.user) });
+  v.draft = false; v.publishAt = null; v.published = true; v.created = now();
+  save(); meldPlaatsing(v);
   res.json({ video: publicVideo(v, req.user) });
 });
 // meldingen voor @vermeldingen en volgers (bij een geplande post pas op het moment van plaatsen)
@@ -370,12 +454,13 @@ function publicComment(c, viewer) {
     byCreator: v && v.userId === c.userId,
     likedByCreator: v ? c.likes.includes(v.userId) : false,
     canDelete: viewer ? viewer.id === c.userId || (v && v.userId === viewer.id) : false,
+    canPin: !!(viewer && v && v.userId === viewer.id), pinned: !!c.pinned,
     user: publicUser(userById(c.userId), viewer),
   };
 }
 app.get('/api/videos/:id/comments', (req, res) => {
   const list = db.comments.filter(c => c.videoId === req.params.id)
-    .sort((a, b) => (b.likes.length - a.likes.length) || (b.created - a.created));
+    .sort((a, b) => (!!b.pinned - !!a.pinned) || (b.likes.length - a.likes.length) || (b.created - a.created));
   res.json({ comments: list.map(c => publicComment(c, req.user)) });
 });
 app.post('/api/videos/:id/comments', auth, (req, res) => {
@@ -384,6 +469,14 @@ app.post('/api/videos/:id/comments', auth, (req, res) => {
   if (!v.allowComments) return res.status(400).json({ error: 'Reacties staan uit voor deze video' });
   const text = String(req.body?.text || '').trim().slice(0, 150);
   if (!text) return res.status(400).json({ error: 'Leeg bericht' });
+  // instellingen van de maker: wie mag reageren, en welke woorden hij blokkeert
+  const owner = userById(v.userId), os = owner ? settingsOf(owner) : defaultSettings();
+  if (owner && owner.id !== req.user.id) {
+    if (os.whoComments === 'none') return res.status(403).json({ error: 'De maker staat geen reacties toe' });
+    if (os.whoComments === 'friends' && !isFriend(owner, req.user)) return res.status(403).json({ error: 'Alleen vrienden van de maker kunnen reageren' });
+    const laag = text.toLowerCase();
+    if (os.commentFilter.some(w => w && laag.includes(w))) return res.status(400).json({ error: 'Je reactie bevat een woord dat de maker heeft geblokkeerd' });
+  }
   const c = { id: id(), videoId: v.id, userId: req.user.id, text, parentId: req.body.parentId || null, likes: [], created: now() };
   db.comments.push(c);
   if (c.parentId) {
@@ -406,6 +499,17 @@ app.post('/api/comments/:id/like', auth, (req, res) => {
   save();
   res.json({ liked: on, likes: c.likes.length });
 });
+// de maker pint één reactie vast (bovenaan); nog een keer = losmaken
+app.post('/api/comments/:id/pin', auth, (req, res) => {
+  const c = db.comments.find(x => x.id === req.params.id);
+  const v = c && db.videos.find(x => x.id === c.videoId);
+  if (!c || !v || v.userId !== req.user.id) return res.status(403).json({ error: 'Alleen de maker kan vastpinnen' });
+  const on = !c.pinned;
+  for (const x of db.comments) if (x.videoId === v.id) x.pinned = false;
+  c.pinned = on;
+  save();
+  res.json({ pinned: on });
+});
 app.delete('/api/comments/:id', auth, (req, res) => {
   const c = db.comments.find(x => x.id === req.params.id);
   const v = c && db.videos.find(x => x.id === c.videoId);
@@ -420,13 +524,16 @@ app.get('/api/users/:username', (req, res) => {
   const u = userByName(req.params.username);
   if (!u) return res.status(404).json({ error: 'Gebruiker niet gevonden' });
   const me = req.user;
-  const vids = db.videos.filter(v => v.userId === u.id && canSee(v, me))
+  const vids = db.videos.filter(v => v.userId === u.id && canSee(v, me) && !v.draft && zichtbaarNu(v))
     .sort((a, b) => (b.pinned - a.pinned) || (b.created - a.created));
-  const out = { user: publicUser(u, me), videos: vids.map(v => publicVideo(v, me)) };
+  const out = { user: publicUser(u, me), videos: vids.map(v => publicVideo(v, me)), achievements: achievements(u) };
   const liked = db.videos.filter(v => v.likes.includes(u.id) && canSee(v, me)).sort((a, b) => b.created - a.created);
   out.liked = liked.map(v => publicVideo(v, me));
+  out.reposts = db.videos.filter(v => (v.reposts || []).includes(u.id) && canSee(v, me)).sort((a, b) => b.created - a.created).map(v => publicVideo(v, me));
   if (me && me.id === u.id) {
     out.favorites = db.videos.filter(v => v.favs.includes(u.id) && canSee(v, me)).map(v => publicVideo(v, me));
+    // concepten en geplande posts: alleen voor jezelf
+    out.pending = db.videos.filter(v => v.userId === u.id && (v.draft || !zichtbaarNu(v))).sort((a, b) => b.created - a.created).map(v => publicVideo(v, me));
   }
   res.json(out);
 });
@@ -441,10 +548,43 @@ app.get('/api/users/:username/:list(followers|following)', (req, res) => {
 app.post('/api/users/:id/follow', auth, (req, res) => {
   const u = userById(req.params.id);
   if (!u || u.id === req.user.id) return res.status(400).end();
-  const on = toggle(req.user.following, u.id);
-  if (on) notify(u.id, req.user.id, 'follow');
+  const me = req.user;
+  // privé account: eerst een volgverzoek; de ander keurt het goed (of nog een tik = verzoek intrekken)
+  if (!me.following.includes(u.id) && settingsOf(u).privateAccount) {
+    u.followRequests = u.followRequests || [];
+    if (u.followRequests.includes(me.id)) u.followRequests = u.followRequests.filter(x => x !== me.id);
+    else { u.followRequests.push(me.id); notify(u.id, me.id, 'followRequest'); }
+    save();
+    return res.json({ user: publicUser(u, me) });
+  }
+  const on = toggle(me.following, u.id);
+  if (on) notify(u.id, me.id, 'follow');
   save();
-  res.json({ user: publicUser(u, req.user) });
+  res.json({ user: publicUser(u, me) });
+});
+
+// volgverzoeken (privé account): bekijken, goedkeuren of weigeren
+app.get('/api/follow-requests', auth, (req, res) => {
+  res.json({ users: (req.user.followRequests || []).map(userById).filter(Boolean).map(x => publicUser(x, req.user)) });
+});
+app.post('/api/follow-requests/:id', auth, (req, res) => {
+  const me = req.user;
+  me.followRequests = (me.followRequests || []).filter(x => x !== req.params.id);
+  const other = userById(req.params.id);
+  if (req.body?.approve && other) { if (!other.following.includes(me.id)) other.following.push(me.id); notify(other.id, me.id, 'followAccepted'); }
+  save();
+  res.json({ ok: true, open: me.followRequests.length });
+});
+
+// reposten: de video komt ook op jouw profiel (tab Reposts)
+app.post('/api/videos/:id/repost', auth, (req, res) => {
+  const v = db.videos.find(x => x.id === req.params.id);
+  if (!v || !canSee(v, req.user)) return res.status(404).end();
+  v.reposts = v.reposts || [];
+  const on = toggle(v.reposts, req.user.id);
+  if (on) notify(v.userId, req.user.id, 'repost', { videoId: v.id });
+  save();
+  res.json({ reposted: on, reposts: v.reposts.length });
 });
 
 app.post('/api/users/:id/block', auth, (req, res) => {
@@ -555,6 +695,9 @@ app.post('/api/messages/:username', auth, (req, res) => {
   const other = userByName(req.params.username);
   if (!other) return res.status(404).end();
   if (other.blocked?.includes(req.user.id)) return res.status(403).json({ error: 'Je kunt deze persoon geen berichten sturen' });
+  const os = settingsOf(other);
+  if (os.whoMessages === 'none') return res.status(403).json({ error: 'Deze persoon ontvangt geen berichten' });
+  if (os.whoMessages === 'friends' && !isFriend(other, req.user)) return res.status(403).json({ error: 'Alleen vrienden kunnen deze persoon een bericht sturen' });
   const text = String(req.body?.text || '').trim().slice(0, 1000);
   if (!text && !req.body?.videoId) return res.status(400).end();
   res.json({ message: sendMessage(req.user, other, text, req.body?.videoId || null) });
@@ -789,6 +932,7 @@ wss.on('connection', (ws, req) => {
       const l = { id: id(), hostId: uid, hostConn: ws.connId, title: String(m.title || '').trim().slice(0, 60) || `${me.name} is LIVE`, started: now(), viewers: new Set(), likes: 0, peak: 0, pinned: '', banned: new Set() };
       lives.set(l.id, l);
       ws.hostingLive = l.id;
+      me.wentLive = true; // voor de prestatie "Ging LIVE"
       send(ws, { type: 'live:started', live: publicLive(l, me) });
       for (const f of db.users.filter(x => x.following.includes(uid))) notify(f.id, uid, 'live', { liveId: l.id, text: l.title });
     }

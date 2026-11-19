@@ -129,10 +129,13 @@ async function api(method, url, body) {
 const need = () => { if (!S.me) { askLogin(); return false; } return true; };
 
 async function loadMe() {
+  applyTheme(localStorage.getItem('ff_theme') || 'system');
   if (!S.token) { S.me = null; connectWs(); return; }
   const r = await api('GET', '/api/me').catch(() => ({}));
   S.me = r.user || null;
   if (!S.me) { S.token = null; localStorage.removeItem('ff_token'); }
+  S.settings = r.settings || null; S.followRequests = r.followRequests || 0;
+  if (S.settings) { applyTheme(S.settings.theme); startBreakReminder(S.settings.breakReminder); }
   setUnread(r.unread || 0);
   connectWs();
 }
@@ -274,6 +277,8 @@ async function render() {
     if ((m = p.match(/^\/map\/(.+)$/))) return await collectionPage(m[1]);
     if (p === '/stats') return await statsPage();
     if (p === '/geschiedenis') return await historyPage();
+    if (p === '/instellingen') return await settingsPage();
+    if (p === '/verzoeken') return await followRequestsPage();
     location.hash = '#/';
   } catch (e) {
     view.innerHTML = `<div class="empty"><h3>Oeps</h3><div>${esc(e.message)}</div><a class="btn" href="#/">Naar home</a></div>`;
@@ -542,9 +547,9 @@ function mountFeed(holder, videos, start) {
       const el = h(`<div class="comment ${isReply ? 'reply' : ''}">
         <a href="#/@${esc(c.user.username)}"><img class="av" src="${avatar(c.user)}"></a>
         <div class="body">
-          <div class="who">${esc(c.user.name || c.user.username)} ${check(c.user)} ${c.byCreator ? '<em>· Maker</em>' : ''}</div>
+          <div class="who">${esc(c.user.name || c.user.username)} ${check(c.user)} ${c.byCreator ? '<em>· Maker</em>' : ''}${c.pinned ? '<em>· 📌 Vastgepind</em>' : ''}</div>
           <div class="txt rich">${rich(c.text)}</div>
-          <div class="meta"><span>${ago(c.created)}</span>${v.allowComments ? '<button class="rp">Beantwoorden</button>' : ''}${c.canDelete ? '<button class="del">Verwijderen</button>' : ''}
+          <div class="meta"><span>${ago(c.created)}</span>${v.allowComments ? '<button class="rp">Beantwoorden</button>' : ''}${c.canPin && !isReply ? `<button class="pinc">${c.pinned ? 'Losmaken' : 'Vastpinnen'}</button>` : ''}${c.canDelete ? '<button class="del">Verwijderen</button>' : ''}
           ${c.likedByCreator && !c.byCreator ? `<span class="creator-like">${ic('heart')} door maker</span>` : ''}</div>
         </div>
         <button class="clike ${c.liked ? 'on' : ''}">${ic(c.liked ? 'heart' : 'heartO')}<span>${c.likes || ''}</span></button>
@@ -560,6 +565,7 @@ function mountFeed(holder, videos, start) {
         input.value = isReply ? `@${c.user.username} ` : ''; input.focus();
       });
       $('.del', el) && ($('.del', el).onclick = async () => { if (await confirmSheet('Reactie verwijderen?')) { await api('DELETE', '/api/comments/' + c.id); load(); } });
+      $('.pinc', el) && ($('.pinc', el).onclick = async () => { const r = await api('POST', `/api/comments/${c.id}/pin`); toast(r.pinned ? 'Vastgepind bovenaan' : 'Losgemaakt'); load(); });
       return el;
     }
     if (v.allowComments) {
@@ -592,6 +598,7 @@ function mountFeed(holder, videos, start) {
           <button class="it" data-a="copy"><span class="circ" style="background:#3b82f6">${ic('link')}</span>Link kopiëren</button>
           ${navigator.share ? `<button class="it" data-a="native"><span class="circ" style="background:#10b981">${ic('share')}</span>Meer…</button>` : ''}
           <button class="it" data-a="download"><span class="circ">${ic('download')}</span>Opslaan</button>
+          ${own ? '' : `<button class="it" data-a="repost"><span class="circ" ${v.reposted ? 'style="background:#fff;color:#000"' : ''}>♻</span>${v.reposted ? 'Repost weg' : 'Reposten'}</button>`}
           ${v.allowDuet && !v.duetOf ? `<button class="it" data-a="duet"><span class="circ">${ic('duet')}</span>Duet</button>` : ''}
           <button class="it" data-a="sound"><span class="circ">${ic('music')}</span>Gebruik geluid</button>
           <button class="it" data-a="fav"><span class="circ">${ic('bookmark')}</span>${v.faved ? 'Uit favorieten' : 'Favoriet'}</button>
@@ -644,8 +651,10 @@ function mountFeed(holder, videos, start) {
       if (a === 'copy') { try { await navigator.clipboard.writeText(link); } catch { prompt('Kopieer deze link:', link); } countShare(); toast('Link gekopieerd'); }
       if (a === 'native') { try { await navigator.share({ title: 'FlikFlak', text: v.caption, url: link }); countShare(); } catch {} }
       if (a === 'map') { if (need()) saveToCollectionSheet(v); }
+      if (a === 'repost') { if (!need()) return; const r = await api('POST', `/api/videos/${v.id}/repost`); v.reposted = r.reposted; v.reposts = r.reposts; toast(r.reposted ? 'Gerepost naar je profiel ♻' : 'Repost weggehaald'); }
       if (a === 'download') {
         if (!v.url) return toast('Alleen bij video\'s');
+        if (!v.allowDownload && !own) return toast('De maker staat opslaan niet toe');
         toast('Downloaden…');
         const blob = await (await fetch(v.url)).blob();
         const aEl = document.createElement('a'); aEl.href = URL.createObjectURL(blob);
@@ -732,13 +741,14 @@ function grid(list, title, empty = 'Nog geen video\'s', opts) {
 function followBtn(u, small = true) {
   if (u.isMe) return h('<span></span>');
   const b = h(`<button class="btn ${small ? 'small' : ''} ${u.isFollowing ? 'grey' : ''}"></button>`);
-  const label = () => b.textContent = u.isFollowing ? (u.followsYou ? 'Vrienden' : 'Volgend') : (u.followsYou ? 'Terugvolgen' : 'Volgen');
-  label();
+  const label = () => b.textContent = u.isFollowing ? (u.followsYou ? 'Vrienden' : 'Volgend') : u.requested ? 'Aangevraagd' : (u.followsYou ? 'Terugvolgen' : 'Volgen');
+  label(); b.classList.toggle('grey', u.isFollowing || u.requested);
   b.onclick = async e => {
     e.preventDefault(); e.stopPropagation();
     if (!need()) return;
     const r = await api('POST', `/api/users/${u.id}/follow`);
-    Object.assign(u, r.user); b.classList.toggle('grey', u.isFollowing); label();
+    Object.assign(u, r.user); b.classList.toggle('grey', u.isFollowing || u.requested); label();
+    if (u.requested) toast('Volgverzoek verstuurd');
   };
   return b;
 }
@@ -767,13 +777,17 @@ async function profilePage(username) {
       </div>
       <div class="pbtns"></div>
       ${u.bio ? `<div class="bio rich">${rich(u.bio)}</div>` : me ? '<a class="bio" href="#/edit" style="color:var(--muted)">+ Bio toevoegen</a>' : ''}
+      <div class="prestaties-wrap"></div>
     </div>
+    ${u.locked ? `<div class="grid-empty">${ic('lock')}<br>Dit account is privé.<br>Volg @${esc(u.username)} om de video's te zien.</div>` : `
     <div class="segs" style="top:52px">
       <button data-t="videos" class="active">${ic('grid')}</button>
-      ${me ? `<button data-t="favorites">${ic('bookmark')}</button><button data-t="maps" style="font-size:13px">Mappen</button>` : ''}
+      ${me ? `<button data-t="favorites">${ic('bookmark')}</button><button data-t="maps" style="font-size:13px">Mappen</button><button data-t="pending" style="font-size:13px">Concepten</button>` : ''}
+      <button data-t="reposts" title="Reposts">♻</button>
       <button data-t="liked">${ic('heartO')}</button>
     </div>
-    <div class="tabc"></div>`;
+    <div class="tabc"></div>`}`;
+  $('.prestaties-wrap', page).append(achievementsBlock(r.achievements));
   const btns = $('.pbtns', page);
   if (me) {
     btns.append(h('<a class="btn grey" href="#/edit">Profiel bewerken</a>'));
@@ -788,9 +802,13 @@ async function profilePage(username) {
         const unf = h(`<button class="btn grey" title="Ontvolgen">${ic('addUser')} ✓</button>`);
         unf.onclick = async () => { const r2 = await api('POST', `/api/users/${u.id}/follow`); Object.assign(u, r2.user); $('.fcount', page).textContent = fmt(u.followers); drawBtns(); };
         btns.append(unf);
+      } else if (u.requested) {
+        const f = h('<button class="btn grey">Aangevraagd ✓</button>');
+        f.onclick = async () => { const r2 = await api('POST', `/api/users/${u.id}/follow`); Object.assign(u, r2.user); toast('Verzoek ingetrokken'); drawBtns(); };
+        btns.append(f);
       } else {
         const f = h(`<button class="btn">${u.followsYou ? 'Terugvolgen' : 'Volgen'}</button>`);
-        f.onclick = async () => { if (!need()) return; const r2 = await api('POST', `/api/users/${u.id}/follow`); Object.assign(u, r2.user); $('.fcount', page).textContent = fmt(u.followers); drawBtns(); };
+        f.onclick = async () => { if (!need()) return; const r2 = await api('POST', `/api/users/${u.id}/follow`); Object.assign(u, r2.user); $('.fcount', page).textContent = fmt(u.followers); if (u.requested) toast('Volgverzoek verstuurd'); if (u.isFollowing && u.locked === false) render(); else drawBtns(); };
         btns.append(f, h(`<a class="btn grey" href="#/chat/${esc(u.username)}" onclick="if(!S.me){askLogin();return false}">Bericht</a>`));
       }
     };
@@ -801,6 +819,8 @@ async function profilePage(username) {
       ${me ? `<a class="row" href="#/edit">${ic('edit')}<span class="grow">Profiel bewerken</span></a>
       <a class="row" href="#/stats">${ic('speed')}<span class="grow">Statistieken</span></a>
       <a class="row" href="#/geschiedenis">${ic('play')}<span class="grow">Kijkgeschiedenis</span></a>
+      <a class="row" href="#/instellingen">${ic('menu')}<span class="grow">Instellingen</span></a>
+      <a class="row" href="#/verzoeken">${ic('addUser')}<span class="grow">Volgverzoeken</span>${S.followRequests ? `<span class="badge" style="position:static">${S.followRequests}</span>` : ''}</a>
       <button class="row" style="width:100%" data-a="install">${ic('download')}<span class="grow" style="text-align:left">FlikFlak installeren als app</span></button>` : ''}
       <button class="row" style="width:100%" data-a="link">${ic('link')}<span class="grow" style="text-align:left">Profiellink kopiëren</span></button>
       ${me ? `<button class="row" style="width:100%" data-a="logout">${ic('back')}<span class="grow" style="text-align:left">Uitloggen</span></button>`
@@ -824,10 +844,12 @@ async function profilePage(username) {
     if (t === 'videos') tabc.append(grid(r.videos, '@' + u.username, me ? 'Deel je eerste video!<br><br><a class="btn" href="#/upload">Uploaden</a>' : 'Nog geen video\'s', { pins: true }));
     if (t === 'favorites') tabc.append(grid(r.favorites || [], 'Favorieten', 'Bewaar video\'s met het bladwijzer-icoon.<br>Alleen jij ziet ze.'));
     if (t === 'liked') tabc.append(grid(r.liked, 'Geliked', 'Nog geen gelikete video\'s', { likes: true }));
+    if (t === 'reposts') tabc.append(grid(r.reposts || [], 'Reposts', 'Nog niets gerepost. Repost een video via Delen → ♻.'));
     if (t === 'maps') collectionsTab(tabc);
+    if (t === 'pending') pendingTab(tabc, r.pending || []);
   };
   $$('.segs button', page).forEach(b => b.onclick = () => show(b.dataset.t));
-  show('videos');
+  if (!u.locked) show('videos');
 }
 
 async function followListPage(username, which) {
@@ -966,7 +988,7 @@ async function soundPage(id) {
 
 // ================= INBOX =================
 function notifText(n) {
-  return { like: 'vindt je video leuk.', comment: `reageerde: ${n.text}`, reply: `beantwoordde je reactie: ${n.text}`, follow: 'volgt je nu.', mention: n.text ? `noemde je in een reactie: ${n.text}` : 'noemde je in een video.', commentlike: `vindt je reactie leuk: ${n.text}`, post: 'heeft een nieuwe video geplaatst.', live: `is LIVE: ${n.text || ''}` }[n.type] || '';
+  return { followRequest: 'wil je volgen.', followAccepted: 'heeft je volgverzoek goedgekeurd.', repost: 'heeft je video gerepost.', like: 'vindt je video leuk.', comment: `reageerde: ${n.text}`, reply: `beantwoordde je reactie: ${n.text}`, follow: 'volgt je nu.', mention: n.text ? `noemde je in een reactie: ${n.text}` : 'noemde je in een video.', commentlike: `vindt je reactie leuk: ${n.text}`, post: 'heeft een nieuwe video geplaatst.', live: `is LIVE: ${n.text || ''}` }[n.type] || '';
 }
 async function inboxPage() {
   if (!need()) return (location.hash = '#/');
@@ -1206,10 +1228,11 @@ async function uploadPage() {
       <div class="opt">${ic('link')}<label>ZekerFlex-koppeling</label><button class="btn small grey kies-produkt">Kiezen</button></div>
       <div class="opt">${ic('timer')}<label>Inplannen</label><input type="datetime-local" name="publishAt" min="${planMin()}"></div>
       <div class="progress" hidden><div></div></div>
-      <div class="post-bar"><button class="btn grey again">Opnieuw</button><button class="btn grey bewerk">✂ Bewerken</button><button class="btn post">Plaatsen</button></div></div>`);
+      <div class="post-bar"><button class="btn grey again">Opnieuw</button><button class="btn grey bewerk">✂ Bewerken</button><button class="btn grey concept" title="Opslaan als concept">📝</button><button class="btn post">Plaatsen</button></div></div>`);
     view.append(ed);
     const ta = $('textarea', ed), pv = $('.pv video', ed);
-    let produkt = null;
+    let produkt = null, alsConcept = false;
+    $('.concept', ed).onclick = () => { alsConcept = true; $('.post', ed).click(); };
     $('.kies-produkt', ed).onclick = () => pickProduktSheet(p => { produkt = p; $('.kies-produkt', ed).textContent = p ? p.titel.slice(0, 18) : 'Kiezen'; }, produkt);
     // bewerken: knippen, snelheid, tekst en muziek; het resultaat vervangt het bestand dat geplaatst wordt
     $('.bewerk', ed).onclick = async () => { const nb = await openEditor(file, filter); if (nb) { file = nb; pv.src = URL.createObjectURL(nb); toast('Bewerking toegepast'); } };
@@ -1226,6 +1249,7 @@ async function uploadPage() {
       if (thumb) fd.append('thumb', thumb, 'thumb.jpg');
       if (produkt) fd.append('produkt', JSON.stringify(produkt));
       const plan = planMs($('[name=publishAt]', ed).value); if (plan) fd.append('publishAt', plan);
+      if (alsConcept) fd.append('draft', 'true');
       fd.append('caption', ta.value);
       fd.append('filter', filter);
       fd.append('privacy', $('[name=privacy]', ed).value);
@@ -1240,7 +1264,7 @@ async function uploadPage() {
       xhr.setRequestHeader('x-token', S.token);
       xhr.upload.onprogress = e => { if (e.lengthComputable) $('.progress div', ed).style.width = (e.loaded / e.total * 100) + '%'; };
       xhr.onload = () => {
-        if (xhr.status === 200) { toast(plan ? 'Ingepland! ⏰ Je ziet hem alvast op je profiel.' : 'Je video is geplaatst! 🎉'); location.hash = '#/@' + S.me.username; }
+        if (xhr.status === 200) { toast(alsConcept ? 'Bewaard als concept 📝 (Profiel → Concepten)' : plan ? 'Ingepland! ⏰ Je ziet hem alvast op je profiel.' : 'Je video is geplaatst! 🎉'); location.hash = '#/@' + S.me.username; }
         else { btn.disabled = false; btn.textContent = 'Plaatsen'; toast(JSON.parse(xhr.responseText || '{}').error || 'Uploaden mislukt'); }
       };
       xhr.onerror = () => { btn.disabled = false; btn.textContent = 'Plaatsen'; toast('Uploaden mislukt'); };

@@ -47,3 +47,12 @@ De repo-kopie hier is de versie die live draait; houd beide gelijk.
 ## Functies (ronde B, 19 nov)
 - **LIVE**: de maker pint een bericht vast (📌, voor alle kijkers) en kan een kijker verwijderen (tik op zijn bericht); die komt niet opnieuw binnen.
 - **Inplannen**: een video of fotopost tot 30 dagen vooruit plaatsen; tot dan alleen zichtbaar voor de maker (⏰ op het profiel), volgers krijgen de melding op het moment zelf (`setInterval` in server.js, elke 30 s).
+
+## Functies (ronde C, 19 nov)
+- **Instellingen** (`#/instellingen`): privé account, wie mag reageren / berichten sturen (iedereen, vrienden, niemand), geblokkeerde woorden in reacties, opslaan toestaan, thema (zoals je telefoon / donker / licht), pauze-herinnering.
+- **Privé account** met volgverzoeken (`#/verzoeken`): alleen goedgekeurde volgers zien de video's; het profiel staat op slot voor anderen.
+- **Reposten** (Delen → ♻) met een tab Reposts op het profiel; **reactie vastpinnen** door de maker.
+- **Concepten** (📝 bij het plaatsen) en geplande posts in de tab Concepten, met "Nu plaatsen".
+- **Prestaties** (badges) op het profiel, berekend uit wat iemand echt deed.
+- **AVG**: eigen gegevens downloaden (`/api/export`, zonder IP's) en account zelf verwijderen (`DELETE /api/account`).
+- Licht thema alleen om de video heen; feed, LIVE en camera blijven donker.
