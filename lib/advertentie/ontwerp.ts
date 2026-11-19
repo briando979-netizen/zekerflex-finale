@@ -389,26 +389,24 @@ function redactie(g: OntwerpGegevens, f: FormaatId, p: Maat): ReactElement {
     0.46,
   );
   const sticker = perFormaat(f, { vierkant: 230, verhaal: 270, liggend: 170 });
-  const lijn = (extra: Stijl = {}) => vak({ width: p(W - rand * 2), flexShrink: 0, height: Math.max(1, p(3)), background: inkt, ...extra });
   return vak(
     { position: "relative", width: p(W), height: p(H), background: "#FFFFFF", color: inkt, fontFamily: LETTER.tekst, overflow: "hidden" },
     vak(
       { position: "relative", flexDirection: "column", justifyContent: "space-between", width: p(W), height: p(H), padding: p(rand) },
       vak(
-        { flexDirection: "column", gap: p(18 * klein) },
+        { flexDirection: "column" },
         vak(
-          { alignItems: "flex-end", justifyContent: "space-between", gap: p(20) },
+          { alignItems: "flex-end", justifyContent: "space-between", gap: p(20), paddingBottom: p(18 * klein), borderBottom: `${Math.max(1, p(3))}px solid ${inkt}` },
           vak({ fontFamily: LETTER.luxe, fontSize: p(lettergrootte(g.bedrijf, W * 0.6, [[22, 32], [36, 27], [999, 23]], 0.84) * klein), letterSpacing: p(5 * klein), textTransform: "uppercase", lineHeight: 1.2, maxWidth: p(W * 0.62), wordBreak: "break-word" }, g.bedrijf),
           g.plaats ? vak({ fontFamily: LETTER.serif, fontStyle: "italic", fontSize: p(30 * klein), color: "#555555", textAlign: "right", maxWidth: p(W * 0.3) }, g.plaats) : null,
         ),
-        lijn(),
       ),
       vak(
         { flexDirection: "column", maxWidth: p(kopBreedte) },
         vak({ fontFamily: LETTER.serif, fontSize: p(kopMaat), lineHeight: 0.98, letterSpacing: p(-kopMaat * 0.015), wordBreak: "break-word" }, g.kop),
         vak({ marginTop: p(28 * klein), fontSize: p(lettergrootte(g.onderregel, kopBreedte, [[60, 36], [100, 32], [999, 29]], 0.5) * klein), lineHeight: 1.4, color: "#444444", maxWidth: p(kopBreedte * 0.86), wordBreak: "break-word" }, g.onderregel),
       ),
-      vak({ flexDirection: "column", gap: p(18 * klein) }, lijn({ height: Math.max(1, p(1.5)) }), vak({ alignItems: "center", justifyContent: "space-between", gap: p(20) }, vak({ fontWeight: 600, fontSize: p(28 * klein), maxWidth: p(W * 0.56), wordBreak: "break-word" }, g.contact ?? g.bedrijf), vak({ width: p(sticker * 0.5), height: p(4) }))),
+      vak({ width: p(W - rand * 2), paddingTop: p(18 * klein), borderTop: `${Math.max(2, Math.round(p(3)))}px solid ${inkt}` }, vak({ fontWeight: 600, fontSize: p(28 * klein), maxWidth: p(W * 0.56), wordBreak: "break-word" }, g.contact ?? g.bedrijf)),
     ),
     // de sticker: de knoptekst in een rond vlak in de kleur, een beetje gedraaid
     vak(

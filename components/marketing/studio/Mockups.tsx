@@ -81,10 +81,10 @@ export function LogoMockups({ donker, licht, kleur, accent, label = "Zo ziet je 
         </div>
       </Kaart>
 
-      <Kaart titel="Op een shirt" donker>
+      <Kaart titel="Op een shirt">
         <div className="relative h-[92%] w-[70%]">
           <svg viewBox="0 0 200 190" className="absolute inset-0 h-full w-full" aria-hidden>
-            <path d="M66 8 C78 22 122 22 134 8 L176 26 L198 70 L168 86 L156 68 L156 184 L44 184 L44 68 L32 86 L2 70 L24 26 Z" fill={DONKER} stroke="#2B2C2F" strokeWidth="2" />
+            <path d="M66 8 C78 22 122 22 134 8 L176 26 L198 70 L168 86 L156 68 L156 184 L44 184 L44 68 L32 86 L2 70 L24 26 Z" fill={DONKER} />
             <path d="M66 8 C78 26 122 26 134 8" fill="none" stroke="#2B2C2F" strokeWidth="5" />
           </svg>
           <Beeld src={donker} className="absolute left-[30%] top-[30%] w-[40%]" stijl={{ aspectRatio: "4 / 3", objectFit: "cover" }} />
@@ -113,7 +113,7 @@ export function LogoMockups({ donker, licht, kleur, accent, label = "Zo ziet je 
       <Kaart titel="Als profielfoto" donker>
         <div className="flex h-[88%] w-[40%] flex-col items-center rounded-[1.4rem] border-[3px] border-[#3A3B3F] bg-white px-[8%] pt-[14%]">
           <div className="aspect-square w-[64%] overflow-hidden rounded-full ring-2 ring-black/10" style={{ background: DONKER }}>
-            <Beeld src={donker} className="h-full w-full scale-[1.5] object-cover" />
+            <Beeld src={donker} className="h-full w-full scale-[1.3] object-contain" />
           </div>
           <span className="mt-3 block h-2 w-[56%] rounded-full bg-black/70" />
           <span className="mt-1.5 block h-1.5 w-[40%] rounded-full bg-black/20" />

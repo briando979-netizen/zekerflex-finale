@@ -4,7 +4,7 @@ import { LogoMockups } from "@/components/marketing/studio/Mockups";
 import { FaqList } from "@/components/marketing/primitives";
 import { BEWAAR_DAGEN, BTW_TEKST, kleurHex, prijsTekst } from "@/lib/advertentie/regels";
 import { leesPrijzen } from "@/lib/advertentie/store";
-import { LOGO_AANTAL, SFEREN, VARIANTEN } from "@/lib/logo/regels";
+import { SFEREN, VARIANTEN } from "@/lib/logo/regels";
 import { LOGO_VOORBEELDEN } from "@/lib/logo/voorbeelden";
 import { breadcrumbJsonLd, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
@@ -78,7 +78,7 @@ export default async function LogoMakerPage() {
             <h1 className="mt-4 text-balance font-display text-5xl font-bold leading-[1.02] md:text-7xl">Maak je logo.</h1>
             <p className="mt-6 text-xl font-medium leading-snug text-white md:text-2xl">Betaal niks, zie eerst het voorbeeld.</p>
             <p className="mt-3 text-lg leading-relaxed text-white/65">
-              Vul je bedrijfsnaam in, kies een kleur en een sfeer, en je ziet meteen {LOGO_AANTAL} logo&apos;s. Wil je het hebben: {prijs}.
+              Vul je bedrijfsnaam in, kies een kleur en een sfeer, en je ziet meteen negen logo&apos;s. Wil je het hebben: {prijs}.
             </p>
             <ul className="mt-8 flex flex-wrap gap-2">
               {SFEREN.map((s) => (

@@ -273,7 +273,7 @@ function tBliksem(c: Ctx): ReactElement {
   const maat = passend(c, t, c.l, 620, 170);
   return kolom(
     c,
-    vak({ alignItems: "center", gap: c.p(34) }, (c.eigen ? teken(c.tekens[0] ?? "", c.p(Math.max(190, maat * 1.35)), c.inkt) : null) ?? bliksem(c.p(Math.max(210, maat * 1.5)), c.inkt), vak({ flexDirection: "column", alignItems: "flex-start" }, tekst(c, t, maat, c.l), onderregel(c, Math.max(460, breedte(c, t, maat, c.l)), 32, { marginTop: c.p(22), paddingLeft: 0 }))),
+    vak({ alignItems: "center", gap: c.p(34) }, (c.eigen ? teken(c.tekens[1] ?? c.tekens[0] ?? "", c.p(Math.max(190, maat * 1.35)), c.inkt) : null) ?? bliksem(c.p(Math.max(210, maat * 1.5)), c.inkt), vak({ flexDirection: "column", alignItems: "flex-start" }, tekst(c, t, maat, c.l), onderregel(c, Math.max(460, breedte(c, t, maat, c.l)), 32, { marginTop: c.p(22), paddingLeft: 0 }))),
   );
 }
 
@@ -310,9 +310,7 @@ function tCirkel(c: Ctx): ReactElement {
 function tTeken(c: Ctx): ReactElement {
   const t = inLetter(c.merk, c.l);
   const maat = passend(c, t, c.l, 720, 130);
-  // het beste teken dat nog niet in het embleem of naast het woord staat
-  const naam = c.eigen ? (c.tekens[1] ?? c.tekens[0] ?? "") : (c.tekens[0] ?? "");
-  return kolom(c, teken(naam, c.p(270), c.inkt) ?? ster(c.p(220), c.inkt), tekst(c, t, maat, c.l, { marginTop: c.p(40) }), onderregel(c, 700, 34, { marginTop: c.p(24) }));
+  return kolom(c, teken(c.tekens[0] ?? "", c.p(270), c.inkt) ?? ster(c.p(220), c.inkt), tekst(c, t, maat, c.l, { marginTop: c.p(40) }), onderregel(c, 700, 34, { marginTop: c.p(24) }));
 }
 
 /** Het teken uitgespaard in een rond vlak, met een ster en de naam eronder. */
