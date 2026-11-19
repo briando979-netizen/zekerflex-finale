@@ -20,6 +20,9 @@
   let mode = 'text', state = 'idle'; // idle | searching | chatting | ended
   let stopStap = 0;                  // 0 = Stop, 1 = Zeker?, 2 = Volgende
   let interests = [];
+  let priveCode = null;              // gezet tijdens een privégesprek met een vriend (via een deelbare code)
+  // Bloot-controle (helemaal op dit toestel): monitors + vlaggen zodat we niet blijven herhalen.
+  let blootVreemde = null, blootEigen = null, blootGemeld = false, eigenGewaarschuwd = false, blootUitGemeld = false;
   let typTimer = null, typVerstuurd = false, rustigTimer = null, laatsteTempoMelding = 0;
   let akkoord = false; try { akkoord = sessionStorage.getItem('tk_akkoord') === '1'; } catch (e) { /* */ }
   const transcript = [];
@@ -31,8 +34,8 @@
     ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
     ws.onopen = () => {
       wachtMs = 1000; balk('');
-      // Viel de verbinding weg tijdens het zoeken, dan zoeken we gewoon verder.
-      if (verbondenGeweest && state === 'searching') stuur({ t: 'find', mode, interests: $('use-interests').checked ? interests : [], akkoord: true });
+      // Viel de verbinding weg tijdens het zoeken, dan zoeken we gewoon verder (ook in een privégesprek, met dezelfde code).
+      if (verbondenGeweest && state === 'searching') stuur(zoekBoodschap());
       verbondenGeweest = true;
     };
     ws.onmessage = (e) => { let m; try { m = JSON.parse(e.data); } catch (x) { return; } if (m && typeof m === 'object') onMsg(m); };
@@ -55,6 +58,8 @@
       case 'g': if (window.TKGames) window.TKGames.onMsg(m); break;
       case 'reported': onReported(m); break;
       case 'banned': geblokkeerd(m.minutes); break;
+      case 'pauze': onPauze(m.aan === true); break;
+      case 'prive-verlopen': onPriveVerlopen(); break;
       case 'fout':
         if (m.code === 'akkoord') { akkoord = false; goHome(); }
         else if (m.code === 'tempo' && Date.now() - laatsteTempoMelding > 4000) { laatsteTempoMelding = Date.now(); sys('Rustig aan: je gaat te snel. Wacht even.'); }
@@ -122,7 +127,8 @@
     $('home').hidden = aan; $('chat').hidden = !aan;
     document.body.classList.toggle('in-gesprek', aan);
   }
-  async function start(m) {
+  async function start(m, code = null) {
+    priveCode = code;
     voegTagToe();
     mode = m; toonChat(true);
     $('chat').classList.toggle('alleen-tekst', mode === 'text');
@@ -133,31 +139,56 @@
     }
     zoek();
   }
+  // De find-boodschap: met een privécode gaat het buiten de willekeurige rij om (en zonder onderwerpen).
+  function zoekBoodschap() {
+    const b = { t: 'find', mode, akkoord: true };
+    if (priveCode) b.code = priveCode; else b.interests = $('use-interests').checked ? interests : [];
+    return b;
+  }
   function zoek() {
     if (window.TKGames) window.TKGames.reset();
     sluitPeer();
     $('log').replaceChildren(); transcript.length = 0;
     state = 'searching'; zetStop(0); zetInvoer(false); $('btn-report').disabled = true;
-    wachtBeeld('Zoeken…'); status('Zoeken…');
-    sys('We zoeken iemand om mee te praten…');
+    blootGemeld = false; eigenGewaarschuwd = false; wisBlootWaarschuwing();
     clearTimeout(rustigTimer);
-    rustigTimer = setTimeout(() => { if (state === 'searching') sys('Het is rustig op dit moment. We blijven zoeken; je hoeft niets te doen.'); }, 15000);
-    if (!stuur({ t: 'find', mode, interests: $('use-interests').checked ? interests : [], akkoord: true })) sys('Er is nog geen verbinding met de server. Zodra die er is, zoeken we verder.');
+    if (priveCode) {
+      wachtBeeld('Wachten op je vriend…'); status('Wachten op je vriend…');
+      sys('We wachten tot je vriend de link opent. Deel de link als je dat nog niet deed.');
+      rustigTimer = setTimeout(() => { if (state === 'searching') sys('Je vriend is er nog niet. De uitnodiging blijft ongeveer tien minuten geldig.'); }, 20000);
+    } else {
+      wachtBeeld('Zoeken…'); status('Zoeken…');
+      sys('We zoeken iemand om mee te praten…');
+      rustigTimer = setTimeout(() => { if (state === 'searching') sys('Het is rustig op dit moment. We blijven zoeken; je hoeft niets te doen.'); }, 15000);
+    }
+    if (!stuur(zoekBoodschap())) sys('Er is nog geen verbinding met de server. Zodra die er is, zoeken we verder.');
   }
   function onMatched(m) {
     if (state !== 'searching') return;
     clearTimeout(rustigTimer);
+    // Een privégesprek wordt video alleen als allebei video koos; stel de modus zo nodig bij (camera uit bij tekst).
+    if (m.mode === 'text' || m.mode === 'video') zetModus(m.mode);
     $('log').replaceChildren();
     state = 'chatting'; zetStop(0); zetInvoer(true); $('btn-report').disabled = false;
+    blootGemeld = false; eigenGewaarschuwd = false; wisBlootWaarschuwing();
     status('In gesprek');
-    sys('Je praat nu met een willekeurige vreemde. Zeg eens hallo!', 'welkom');
+    if (m.prive) sys('Je bent nu verbonden met je vriend. Zeg eens hallo!', 'welkom');
+    else sys('Je praat nu met een willekeurige vreemde. Zeg eens hallo!', 'welkom');
     if (Array.isArray(m.common) && m.common.length) sys(`Jullie kozen allebei: ${m.common.join(', ')}.`, 'gedeeld');
     if (matchMedia('(pointer: fine)').matches) $('msg').focus();
-    if (mode === 'video') { wachtBeeld('Verbinden…'); startPeer(m.initiator === true); }
+    if (mode === 'video') { wachtBeeld('Verbinden…'); startPeer(m.initiator === true); startBlootControle(); }
+  }
+  // De modus halverwege bijstellen (alleen bij een privégesprek dat op tekst uitkomt).
+  function zetModus(nieuw) {
+    if (nieuw === mode) return;
+    mode = nieuw;
+    $('chat').classList.toggle('alleen-tekst', mode === 'text');
+    if (mode === 'text') { sluitPeer(); stopCamera(); $('btn-wissel').hidden = true; }
   }
   function endChat(metVolgende) {
     if (window.TKGames) window.TKGames.reset();
     clearTimeout(rustigTimer);
+    priveCode = null; // een privégesprek is eenmalig; "Volgende" is daarna weer een willekeurig gesprek
     state = 'ended'; zetInvoer(false); zetTypt(false); zetStop(2); sluitPeer();
     wachtBeeld(''); status('Gestopt');
     if (metVolgende) {
@@ -178,6 +209,7 @@
     if (state === 'chatting' || state === 'searching') stuur({ t: 'stop' });
     clearTimeout(rustigTimer);
     if (window.TKGames) window.TKGames.reset();
+    priveCode = null;
     state = 'idle'; sluitPeer(); stopCamera();
     toonChat(false);
   }
@@ -297,6 +329,8 @@
       return false;
     }
     camAan = micAan = true; toonLokaal(); knopStand();
+    // Vast beginnen met het laden van de bloot-controle, zodat het model klaar is tegen de tijd dat er beeld is.
+    if (window.TKBloot) window.TKBloot.laad();
     // Pas na toestemming weten we hoeveel camera's er zijn.
     try { const lijst = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput'); $('btn-wissel').hidden = lijst.length < 2; } catch (e) { $('btn-wissel').hidden = true; }
     return true;
@@ -411,13 +445,106 @@
   }
   function sluitPeer() {
     clearTimeout(hapertTimer); vroegeSignalen = [];
+    stopBlootControle();
     if (pc) { const oud = pc; pc = null; oud.ontrack = oud.onicecandidate = oud.oniceconnectionstatechange = null; oud.close(); }
     $('remote').srcObject = null;
   }
   // Verlaat je de pagina, dan gaat de camera uit.
   addEventListener('pagehide', () => { stopCamera(); });
 
+  // ------------------------------------------------------------ bloot-controle (alles op dit toestel, niets wordt verstuurd)
+  async function startBlootControle() {
+    if (!window.TKBloot || mode !== 'video') return;
+    const uitslag = await window.TKBloot.laad();
+    if (state !== 'chatting' || mode !== 'video') return;
+    if (uitslag !== 'klaar') {
+      // Fail-open: werkt het model niet (oud toestel, WebGL uit), dan gaat de videochat gewoon door, met een nette melding (één keer).
+      if (!blootUitGemeld) { blootUitGemeld = true; sys('De automatische controle op ongepast beeld kon op dit toestel niet starten. Het gesprek gaat gewoon door; let zelf op en gebruik Melden als het nodig is.'); }
+      return;
+    }
+    stopBlootControle();
+    blootVreemde = window.TKBloot.volg($('remote'), { onBloot: () => blootGevonden() });
+    // Ook de eigen camera: alleen jou waarschuwen, nooit verbreken.
+    blootEigen = window.TKBloot.volg($('local'), { eigen: true, onBloot: () => {
+      if (eigenGewaarschuwd || state !== 'chatting') return; eigenGewaarschuwd = true;
+      sys('Let op: je eigen camera laat mogelijk naakt zien. Anderen kunnen je hierom melden en blokkeren.', 'fout');
+    } });
+  }
+  function stopBlootControle() { if (blootVreemde) blootVreemde.stop(); if (blootEigen) blootEigen.stop(); blootVreemde = blootEigen = null; }
+  function wisBlootWaarschuwing() { $('videos').classList.remove('verdacht'); $('vwaarschuw').hidden = true; }
+  function blootGevonden() {
+    if (blootGemeld || state !== 'chatting') return; blootGemeld = true;
+    stopBlootControle();
+    $('videos').classList.add('verdacht'); $('vwaarschuw').hidden = false; // beeld meteen onscherp maken
+    stuur({ t: 'stop' });
+    sys('Mogelijk ongepast beeld. Het gesprek is automatisch gestopt. Wil je het melden?', 'fout');
+    endChat(true);
+    $('btn-report').disabled = false; // melden blijft kunnen
+  }
+
+  // ------------------------------------------------------------ pauze en verlopen uitnodiging
+  function onPauze(aan) {
+    if (!aan) { if (state === 'idle' || state === 'ended') balk(''); return; }
+    balk('Talkaroo is even dicht. Probeer het later nog eens.');
+    if (state === 'chatting' || state === 'searching') {
+      clearTimeout(rustigTimer); sluitPeer();
+      sys('Talkaroo is even dicht. De beheerder heeft de site op pauze gezet. Dit gesprek is gestopt; probeer het later opnieuw.', 'fout');
+      state = 'ended'; zetInvoer(false); zetTypt(false); zetStop(2); status('Even dicht'); wachtBeeld('');
+      $('btn-stop').disabled = true; $('btn-report').disabled = true;
+    }
+  }
+  function onPriveVerlopen() {
+    if (state !== 'searching') return;
+    priveCode = null;
+    sys('Je vriend is niet gekomen en de uitnodiging is verlopen. Maak een nieuwe uitnodiging of start een gewoon gesprek.', 'fout');
+    endChat(true);
+  }
+
+  // ------------------------------------------------------------ nodig een vriend uit (privégesprek via een deelbare link)
+  // Een onraadbare code: 14 tekens uit een alfabet zonder makkelijk te verwarren letters/cijfers.
+  function maakCode() {
+    const alf = 'abcdefghijkmnpqrstuvwxyz23456789';
+    const b = new Uint8Array(14); crypto.getRandomValues(b);
+    return Array.from(b, (x) => alf[x % alf.length]).join('');
+  }
+  function leesCodeUitHash() {
+    const m = (location.hash || '').match(/^#r=([a-z0-9]{8,24})$/i);
+    return m ? m[1].toLowerCase() : null;
+  }
+  let vriendModus = 'maak', vriendCode = null;
+  function openVriend(soort) {
+    vriendModus = soort;
+    const d = $('vriend');
+    if (soort === 'maak') {
+      vriendCode = maakCode();
+      $('vriend-kop').textContent = 'Nodig een vriend uit';
+      $('vriend-uitleg').textContent = 'Deel deze link met één iemand. Wie de link opent, komt rechtstreeks bij jou terecht in een privégesprek, buiten de willekeurige wachtrij om.';
+      $('vriend-deel').hidden = false;
+      $('vriend-link').value = `${location.origin}/#r=${vriendCode}`;
+      $('vriend-tekst').textContent = 'Wachten met tekst'; $('vriend-video').textContent = 'Wachten met video';
+    } else {
+      $('vriend-kop').textContent = 'Je bent uitgenodigd';
+      $('vriend-uitleg').textContent = 'Een vriend heeft je uitgenodigd voor een privégesprek. Kies hoe je meedoet.';
+      $('vriend-deel').hidden = true;
+      $('vriend-tekst').textContent = 'Doe mee met tekst'; $('vriend-video').textContent = 'Doe mee met video';
+    }
+    d.showModal();
+  }
+  $('btn-vriend').addEventListener('click', () => metAkkoord(() => openVriend('maak')));
+  $('vriend-annuleer').addEventListener('click', () => sluit($('vriend')));
+  $('vriend-kopieer').addEventListener('click', async () => {
+    const inp = $('vriend-link');
+    try { await navigator.clipboard.writeText(inp.value); $('vriend-kopieer').textContent = 'Gekopieerd'; setTimeout(() => { $('vriend-kopieer').textContent = 'Kopieer'; }, 2000); }
+    catch (e) { inp.focus(); inp.select(); try { document.execCommand('copy'); $('vriend-kopieer').textContent = 'Gekopieerd'; } catch (x) { /* dan maar met de hand kopiëren */ } }
+  });
+  const startVriend = (m) => { const code = vriendCode; sluit($('vriend')); start(m, code); };
+  $('vriend-tekst').addEventListener('click', () => startVriend('text'));
+  $('vriend-video').addEventListener('click', () => startVriend('video'));
+
   window.TK = { stuur, sys, h, vraag, inGesprek: () => state === 'chatting', voegToe: (el) => { $('log').append(el); naarBeneden(); } };
   tekenTags();
+  // Kwam je via een uitnodigingslink (#r=...), open dan meteen het meedoen-venster (na akkoord op 18+ en de regels).
+  const inkomend = leesCodeUitHash();
+  if (inkomend) { vriendCode = inkomend; try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* */ } setTimeout(() => metAkkoord(() => openVriend('join')), 300); }
   connect();
 })();

@@ -39,6 +39,7 @@ export function leesConfig(env = process.env, extra = {}) {
     wachtZonderInteresseMs: 5000,   // zo lang zoeken we eerst naar iemand met dezelfde interesse
     nietOpnieuwMs: 10 * 60 * 1000,  // zo lang word je niet opnieuw aan dezelfde gekoppeld
     meldenNaAfloopMs: 3 * 60 * 1000, // zo lang kun je iemand nog melden nadat het gesprek stopte
+    priveWachtMs: 10 * 60 * 1000,    // zo lang blijft een uitnodiging voor een privégesprek geldig terwijl je wacht
     stil: false,
     ...extra,
   };

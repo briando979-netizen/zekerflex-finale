@@ -32,12 +32,13 @@ export function maakApp(cfg) {
   const users = new Map();              // ws -> gebruiker
   const perAdres = new Map();           // sleutel -> aantal open verbindingen
   const rijen = { text: [], video: [] };
+  const priveKamers = new Map();        // code -> de gebruiker die op zijn vriend wacht (alleen in het geheugen)
   const tempo = new Tempo(nu), tempoIp = new Tempo(nu);
   const staat = { zout, moderatie, tempoIp, beheerSlot: new Map(), nu, log, stopt: false, cijfers, schop };
   let volgendId = 1, gesprekkenNu = 0, laatsteTelling = -1;
 
   const stuur = (ws, obj) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); };
-  function cijfers() { return { online: users.size, zoekend: rijen.text.length + rijen.video.length, gesprekkenNu }; }
+  function cijfers() { return { online: users.size, zoekend: rijen.text.length + rijen.video.length + priveKamers.size, gesprekkenNu }; }
   function uitRij(u) { for (const rij of Object.values(rijen)) { const i = rij.indexOf(u); if (i >= 0) rij.splice(i, 1); } }
 
   function verbreekPaar(u, reden = 'left') {
@@ -71,8 +72,48 @@ export function maakApp(cfg) {
   // Iedereen van dit adres eruit: gesprek stoppen, uit de rij, en vertellen hoe lang het duurt.
   function schop(sleutel) {
     const b = moderatie.blokkade(sleutel); if (!b) return;
-    for (const u of users.values()) if (u.sleutel === sleutel) { verbreekPaar(u, 'left'); uitRij(u); stuur(u.ws, { t: 'banned', minutes: Math.ceil((b.tot - nu()) / 60000) }); }
+    for (const u of users.values()) if (u.sleutel === sleutel) { verbreekPaar(u, 'left'); uitRij(u); verwijderUitPrive(u); stuur(u.ws, { t: 'banned', minutes: Math.ceil((b.tot - nu()) / 60000) }); }
   }
+
+  // ---------------------------------------------------------------- privégesprek (Nodig een vriend uit)
+  // Twee mensen met dezelfde code worden rechtstreeks aan elkaar gekoppeld, buiten de willekeurige wachtrij om.
+  function verwijderUitPrive(u) { if (u.code && priveKamers.get(u.code) === u) priveKamers.delete(u.code); }
+  function koppelPrive(u, o) {
+    uitRij(u); uitRij(o);
+    const modus = u.mode === 'video' && o.mode === 'video' ? 'video' : 'text'; // video alleen als allebei video koos
+    u.partner = o; o.partner = u; u.vorige = null; o.vorige = null;
+    u.pair = o.pair = { users: [u, o], game: null, gameId: null, invite: null, log: [], modus };
+    const t = nu(); u.recent.set(o.id, t); o.recent.set(u.id, t);
+    gesprekkenNu++; moderatie.tel('gesprekken');
+    stuur(u.ws, { t: 'matched', common: [], initiator: true, mode: modus, prive: true });
+    stuur(o.ws, { t: 'matched', common: [], initiator: false, mode: modus, prive: true });
+  }
+  function zoekPrive(u) {
+    const w = priveKamers.get(u.code);
+    const kan = w && w !== u && w.id !== u.id && users.has(w.ws) && !w.partner
+      && !moderatie.magNietSamen(u.sleutel, w.sleutel) && !moderatie.blokkade(w.sleutel);
+    if (kan) { priveKamers.delete(u.code); koppelPrive(u, w); return; }
+    // Wacht op de vriend. Een eventuele oude wachtende met dezelfde code wordt afgelost (en krijgt een nette melding).
+    if (w && w !== u && users.has(w.ws)) { w.code = null; stuur(w.ws, { t: 'prive-verlopen' }); }
+    priveKamers.set(u.code, u); u.priveSinds = nu();
+    stuur(u.ws, { t: 'searching', prive: true });
+  }
+
+  // ---------------------------------------------------------------- pauze (noodknop vanuit beheer)
+  let pauze = !!(opslag.lees('pauze', { aan: false }) || {}).aan; // overleeft een herstart
+  function pauzeAan() { return pauze; }
+  function zetPauze(aan) {
+    pauze = !!aan;
+    opslag.schrijf('pauze', () => ({ aan: pauze, sinds: nu() }));
+    if (pauze) {
+      // Alles stilleggen: lopende gesprekken netjes afsluiten, iedereen uit de rij en uit de privékamers.
+      for (const u of users.values()) { verbreekPaar(u, 'left'); uitRij(u); verwijderUitPrive(u); stuur(u.ws, { t: 'pauze', aan: true }); }
+      priveKamers.clear();
+    } else {
+      for (const ws of users.keys()) stuur(ws, { t: 'pauze', aan: false });
+    }
+  }
+  staat.pauzeAan = pauzeAan; staat.zetPauze = zetPauze;
 
   // ---------------------------------------------------------------- spelletjes
   function stuurSpel(paar) {
@@ -125,9 +166,14 @@ export function maakApp(cfg) {
         const blok = moderatie.blokkade(u.sleutel);
         if (blok) return stuur(u.ws, { t: 'banned', minutes: Math.ceil((blok.tot - nu()) / 60000) });
         if (!m.akkoord) return stuur(u.ws, { t: 'fout', code: 'akkoord' });
+        // Staat de site op pauze, dan koppelen we niemand meer; de bezoeker krijgt een nette melding.
+        if (pauze) { verbreekPaar(u, 'left'); uitRij(u); verwijderUitPrive(u); return stuur(u.ws, { t: 'pauze', aan: true }); }
         if (!tempoIp.neem('find:' + u.sleutel, cfg.tempoIp.find)) return stuur(u.ws, { t: 'fout', code: 'tempo' });
-        verbreekPaar(u, 'left'); uitRij(u);
+        verbreekPaar(u, 'left'); uitRij(u); verwijderUitPrive(u);
         u.mode = m.mode; u.interests = m.interests; u.since = nu();
+        // Met een code: een privégesprek met je vriend, buiten de willekeurige rij om.
+        if (m.code) { u.code = m.code; return zoekPrive(u); }
+        u.code = null;
         rijen[u.mode].push(u);
         stuur(u.ws, { t: 'searching' });
         probeerKoppelen(u);
@@ -142,7 +188,7 @@ export function maakApp(cfg) {
       }
       case 'typing': if (u.partner) stuur(u.partner.ws, { t: 'typing', on: m.on }); return;
       case 'signal': if (u.partner && u.pair.modus === 'video') stuur(u.partner.ws, { t: 'signal', data: m.data }); return;
-      case 'stop': verbreekPaar(u, 'left'); uitRij(u); return;
+      case 'stop': verbreekPaar(u, 'left'); uitRij(u); verwijderUitPrive(u); return;
       case 'g': return spel(u, m);
       case 'report': {
         const doel = u.partner ? { sleutel: u.partner.sleutel, log: u.pair.log, stoel: u.pair.users.indexOf(u), modus: u.pair.modus } : u.vorige && u.vorige.tot > nu() ? u.vorige : null;
@@ -180,7 +226,7 @@ export function maakApp(cfg) {
   });
 
   function verbonden(ws, sleutel) {
-    const u = { id: volgendId++, ws, sleutel, mode: null, interests: [], partner: null, pair: null, since: 0, recent: new Map(), vorige: null, fouten: 0, laatsteFout: 0, leeft: true };
+    const u = { id: volgendId++, ws, sleutel, mode: null, interests: [], partner: null, pair: null, since: 0, recent: new Map(), vorige: null, fouten: 0, laatsteFout: 0, leeft: true, code: null, priveSinds: 0 };
     users.set(ws, u); perAdres.set(sleutel, (perAdres.get(sleutel) || 0) + 1);
     stuur(ws, { t: 'count', n: users.size });
     const blok = moderatie.blokkade(sleutel);
@@ -188,7 +234,7 @@ export function maakApp(cfg) {
     ws.on('pong', () => { u.leeft = true; });
     ws.on('message', (ruw, binair) => { if (binair) return; try { boodschap(u, ruw.toString('utf8')); } catch (e) { log('fout-boodschap', { fout: e.message }); } });
     ws.on('close', () => {
-      verbreekPaar(u, 'left'); uitRij(u); users.delete(ws);
+      verbreekPaar(u, 'left'); uitRij(u); verwijderUitPrive(u); users.delete(ws);
       const n = (perAdres.get(sleutel) || 1) - 1; if (n > 0) perAdres.set(sleutel, n); else perAdres.delete(sleutel);
     });
     ws.on('error', () => {});
@@ -201,6 +247,8 @@ export function maakApp(cfg) {
     // Verbindingen die niet meer antwoorden opruimen.
     setInterval(() => { for (const [ws, u] of users) { if (!u.leeft) { ws.terminate(); continue; } u.leeft = false; try { ws.ping(); } catch (e) { /* al dicht */ } } }, 30000),
     setInterval(() => { tempo.ruimOp(10 * 60 * 1000); tempoIp.ruimOp(); moderatie.ruimOp(); for (const [k, t] of staat.beheerSlot) if (t < nu()) staat.beheerSlot.delete(k); }, 10 * 60 * 1000),
+    // Wie te lang op zijn vriend wacht, lossen we op: de uitnodiging is verlopen.
+    setInterval(() => { const t = nu(); for (const [code, u] of priveKamers) if (t - (u.priveSinds || 0) > cfg.priveWachtMs) { priveKamers.delete(code); u.code = null; stuur(u.ws, { t: 'prive-verlopen' }); } }, 30 * 1000),
   ];
   timers.forEach((t) => t.unref());
 

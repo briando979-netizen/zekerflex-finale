@@ -298,6 +298,28 @@ dialog::backdrop { background: rgba(8, 10, 14, .62); }
 .merkje { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 8px; background: var(--vlak2); }
 .merkje.rood { background: var(--gevaar-zacht); color: var(--gevaar); }
 
+/* ---------- nodig een vriend uit ---------- */
+.of-vriend { margin-top: 16px; text-align: center; }
+.knop.vriend { background: var(--paars-zacht); color: var(--paars); border-color: transparent; font-size: 15px; }
+.knop.vriend:hover:not(:disabled) { filter: brightness(1.03); }
+.deelrij { display: flex; gap: 8px; margin: 10px 0 2px; }
+.deelrij input { flex: 1; min-width: 0; height: 44px; border: 1.5px solid var(--rand); border-radius: 12px; background: var(--bg); padding: 0 12px; font-size: 14px; }
+.deelrij .knop { flex: none; }
+
+/* ---------- bloot-waarschuwing (video) ---------- */
+/* Bij een vermoeden van ongepast beeld maken we beide videostromen meteen onscherp. */
+.videos.verdacht video { filter: blur(26px); }
+.vwaarschuw { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; gap: 6px; align-items: center; justify-content: center; text-align: center; padding: 16px;
+  color: #fff; background: rgba(120, 18, 26, .82); }
+.vwaarschuw b { font-size: 18px; }
+.vwaarschuw span { font-size: 14px; max-width: 26ch; }
+
+/* ---------- beheer: noodknop ---------- */
+.noodknop { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.statuschip { display: inline-flex; align-items: center; gap: 7px; font-weight: 700; border-radius: 999px; padding: 6px 12px; background: var(--groen-zacht); color: var(--accent); }
+.statuschip::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.statuschip.dicht { background: var(--gevaar-zacht); color: var(--gevaar); }
+
 /* ---------- breed scherm ---------- */
 @media (min-width: 700px) {
   .kop { padding: 14px 24px; }

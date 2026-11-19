@@ -4,6 +4,10 @@
 export const schoonInteresses = (lijst) => [...new Set((Array.isArray(lijst) ? lijst : [])
   .filter((s) => typeof s === 'string').map((s) => s.toLowerCase().replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 30)).filter(Boolean))].slice(0, 10);
 
+// Een code voor een privégesprek (uit "Nodig een vriend uit"). De browser maakt hem onraadbaar; dit controleert de vorm.
+// 8 tot 24 tekens, alleen kleine letters en cijfers. Zo kan de code nooit een pad, een stuurteken of iets groots zijn.
+export const geldigeCode = (code) => typeof code === 'string' && /^[a-z0-9]{8,24}$/.test(code);
+
 // Mogen deze twee aan elkaar gekoppeld worden?
 export function magSamen(u, o, nu, { nietOpnieuwMs = 600000, magNietSamen = () => false } = {}) {
   if (o === u || o.id === u.id) return false;

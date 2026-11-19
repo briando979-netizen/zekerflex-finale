@@ -6,7 +6,7 @@ import { clientIp, ipSleutel, geheimKlopt } from './net.js';
 import { iceServers } from './turn.js';
 import { REDENEN } from './moderatie.js';
 
-const SOORTEN = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.json': 'application/json; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.webmanifest': 'application/manifest+json' };
+const SOORTEN = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.json': 'application/json; charset=utf-8', '.txt': 'text/plain; charset=utf-8', '.webmanifest': 'application/manifest+json', '.bin': 'application/octet-stream', '.wasm': 'application/wasm' };
 const PAGINAS = { '/': 'index.html', '/regels': 'regels.html', '/privacy': 'privacy.html', '/melden': 'melden.html' };
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -26,12 +26,17 @@ export function vulPagina(html, cfg) {
     .replaceAll('{{NAAM}}', esc(cfg.naam));
 }
 
-export function beveiligingsKoppen(req, cfg) {
+export function beveiligingsKoppen(req, cfg, evalToegestaan = false) {
   const host = cfg.siteHost || (/^[a-z0-9.:[\]-]+$/i.test(req.headers.host || '') ? req.headers.host : '');
   // 'self' dekt in oudere Safari de WebSocket niet; daarom staat het eigen adres er voluit bij.
   const ws = host ? ` ws://${host} wss://${host}` : '';
+  // 'unsafe-eval' staat ALLEEN op de hoofdpagina (de chat/video), en alleen omdat TensorFlow.js — het model van de
+  // automatische bloot-herkenning — intern new Function() gebruikt, ook met de WebGL-backend. De app voert zelf nooit
+  // tekst als code uit: berichten van vreemden worden altijd als gewone tekst getoond (createTextNode), nooit als HTML.
+  // De tekstpagina's, /beheer en alle API-antwoorden houden de strengere CSP zonder eval.
+  const script = evalToegestaan ? "script-src 'self' 'unsafe-eval'" : "script-src 'self'";
   return {
-    'Content-Security-Policy': `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'${ws}; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`,
+    'Content-Security-Policy': `default-src 'self'; ${script}; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'${ws}; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`,
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'no-referrer',
     'Permissions-Policy': 'camera=(self), microphone=(self), geolocation=(), display-capture=(), payment=(), usb=(), bluetooth=(), browsing-topics=()',
@@ -44,24 +49,31 @@ export function beveiligingsKoppen(req, cfg) {
 export function maakHttp(cfg, staat) {
   // Alleen bestanden die bij het starten in public/ staan worden ooit uitgeleverd: een pad van buiten wijst nooit het bestandssysteem in.
   const bestanden = new Set(fs.readdirSync(cfg.publiekMap).filter((n) => fs.statSync(path.join(cfg.publiekMap, n)).isFile()));
-  const klaar = (req, res, status, koppen, inhoud) => {
-    res.writeHead(status, { ...beveiligingsKoppen(req, cfg), ...koppen });
+  // Eén witte-lijst-submap: public/vendor/ (de zelfgehoste tfjs + het bloot-herkenningsmodel). Weer alleen de losse
+  // bestanden die daar bij het starten in staan; een pad met "/", "\" of ".." komt er nooit doorheen.
+  const vendorMap = path.join(cfg.publiekMap, 'vendor');
+  let vendorBestanden = new Set();
+  try { vendorBestanden = new Set(fs.readdirSync(vendorMap).filter((n) => fs.statSync(path.join(vendorMap, n)).isFile())); } catch (e) { /* geen vendor-map: dan is er niets te serveren */ }
+  const klaar = (req, res, status, koppen, inhoud, evalToegestaan = false) => {
+    res.writeHead(status, { ...beveiligingsKoppen(req, cfg, evalToegestaan), ...koppen });
     res.end(req.method === 'HEAD' ? undefined : inhoud);
   };
   const json = (req, res, status, data) => klaar(req, res, status, { 'Content-Type': SOORTEN['.json'], 'Cache-Control': 'no-store' }, JSON.stringify(data));
   const nietGevonden = (req, res) => klaar(req, res, 404, { 'Content-Type': SOORTEN['.html'], 'Cache-Control': 'no-store' },
     vulPagina('<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Niet gevonden – {{NAAM}}</title><link rel="stylesheet" href="/style.css"><script src="/thema.js"></script></head><body class="tekstpagina"><main class="blad"><h1>Deze pagina bestaat niet</h1><p><a href="/">Terug naar {{NAAM}}</a></p></main></body></html>', cfg));
 
-  function stuurBestand(req, res, naam, alsPagina) {
-    if (!bestanden.has(naam)) return nietGevonden(req, res);
-    fs.readFile(path.join(cfg.publiekMap, naam), (fout, data) => {
+  function stuurBestand(req, res, naam, alsPagina, map = cfg.publiekMap, witteLijst = bestanden) {
+    if (!witteLijst.has(naam)) return nietGevonden(req, res);
+    fs.readFile(path.join(map, naam), (fout, data) => {
       if (fout) return nietGevonden(req, res);
       const inhoud = alsPagina ? Buffer.from(vulPagina(data.toString('utf8'), cfg)) : data;
       const etag = '"' + crypto.createHash('sha1').update(inhoud).digest('base64url').slice(0, 20) + '"';
       // Altijd even navragen (ETag): na een nieuwe versie krijgt niemand een oud script bij een nieuwe pagina.
       const koppen = { 'Content-Type': SOORTEN[path.extname(naam)] || 'application/octet-stream', 'Cache-Control': 'no-cache', ETag: etag };
-      if (req.headers['if-none-match'] === etag) return klaar(req, res, 304, koppen);
-      klaar(req, res, 200, koppen, inhoud);
+      // Alleen de hoofdpagina (index.html) mag 'unsafe-eval' hebben, voor TensorFlow.js van de bloot-herkenning.
+      const evalOk = alsPagina && naam === 'index.html';
+      if (req.headers['if-none-match'] === etag) return klaar(req, res, 304, koppen, undefined, evalOk);
+      klaar(req, res, 200, koppen, inhoud, evalOk);
     });
   }
 
@@ -87,7 +99,7 @@ export function maakHttp(cfg, staat) {
       if (!staat.tempoIp.neem('beheer:' + sleutel, cfg.tempoIp.beheerFout)) { staat.beheerSlot.set(sleutel, staat.nu() + 15 * 60 * 1000); staat.log('beheer-slot', { adres: sleutel }); }
       return nietGevonden(req, res);
     }
-    if (pad === '/beheer/api/overzicht' && req.method === 'GET') return json(req, res, 200, { ...staat.cijfers(), ...staat.moderatie.overzicht(), redenen: REDENEN, naam: cfg.naam });
+    if (pad === '/beheer/api/overzicht' && req.method === 'GET') return json(req, res, 200, { ...staat.cijfers(), ...staat.moderatie.overzicht(), redenen: REDENEN, naam: cfg.naam, pauze: staat.pauzeAan() });
     if (pad === '/beheer/api/actie' && req.method === 'POST') {
       if (!String(req.headers['content-type'] || '').startsWith('application/json')) return json(req, res, 400, { fout: 'vorm' });
       const b = await leesJson(req);
@@ -100,6 +112,8 @@ export function maakHttp(cfg, staat) {
       }
       if (b.actie === 'deblokkeer' && sleutelOk) { const ok = staat.moderatie.deblokkeer(b.sleutel); staat.log('beheer-deblokkeer', { adres: b.sleutel }); return json(req, res, 200, { ok }); }
       if (b.actie === 'status' && typeof b.id === 'string') return json(req, res, 200, { ok: staat.moderatie.zetStatus(b.id, b.status) });
+      // Noodknop: de hele site op pauze (of weer aan). Geen nieuwe koppelingen; lopende gesprekken worden netjes afgesloten.
+      if (b.actie === 'pauze' && typeof b.aan === 'boolean') { staat.zetPauze(b.aan); staat.log(b.aan ? 'beheer-pauze-aan' : 'beheer-pauze-uit'); return json(req, res, 200, { ok: true, pauze: staat.pauzeAan() }); }
       return json(req, res, 400, { fout: 'onbekend' });
     }
     return nietGevonden(req, res);
@@ -118,6 +132,12 @@ export function maakHttp(cfg, staat) {
       return json(req, res, 200, iceServers(cfg));
     }
     if (Object.hasOwn(PAGINAS, pad)) return stuurBestand(req, res, PAGINAS[pad], true);
+    // De vendor-submap: alleen losse bestanden die er bij het starten in staan, zonder padtraversal.
+    if (pad.startsWith('/vendor/')) {
+      const vnaam = pad.slice('/vendor/'.length);
+      if (!vnaam || vnaam.includes('/') || vnaam.includes('\\') || vnaam.includes('..')) return nietGevonden(req, res);
+      return stuurBestand(req, res, vnaam, false, vendorMap, vendorBestanden);
+    }
     const naam = pad.slice(1);
     // Losse .html-bestanden gaan alleen via hun nette adres; zo is /beheer.html geen achterdeur.
     if (!naam || naam.includes('/') || naam.includes('\\') || naam.endsWith('.html')) return nietGevonden(req, res);
