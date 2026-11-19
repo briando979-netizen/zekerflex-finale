@@ -29,7 +29,8 @@ vi.mock("@/lib/prisma", () => ({
 vi.mock("@/lib/audit", () => ({ recordAudit: vi.fn() }));
 vi.mock("@/lib/metrics", () => ({ recordLoginFailure: vi.fn() }));
 vi.mock("@/lib/auth/login-throttle", () => ({ MAX_FAILURES: 5, checkLoginAllowed: vi.fn(), registerLoginFailure: vi.fn(), clearLoginFailures: vi.fn() }));
-vi.mock("@/lib/auth/two-factor", () => ({ hasTwoFactor: vi.fn(), verifySecondFactor: vi.fn(), openLoginChallenge: vi.fn() }));
+vi.mock("@/lib/auth/two-factor", () => ({ hasTwoFactor: vi.fn(), verifySecondFactor: vi.fn(), openLoginChallenge: vi.fn(), challengeIsOauth: vi.fn() }));
+vi.mock("@/lib/auth/oauth-tweestap", () => ({ zetOauthUitdaging: vi.fn() }));
 
 const authorizePasskey = vi.fn();
 vi.mock("@/lib/auth/passkey/inloggen", () => ({ authorizePasskey: (...a: unknown[]) => authorizePasskey(...a) }));

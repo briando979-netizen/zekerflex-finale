@@ -7,6 +7,7 @@ import { getPrincipal } from "@/lib/auth";
 import { doorsturenAlsIngelogd } from "@/lib/auth/al-ingelogd";
 import { recordServerEvent } from "@/lib/analytics/track";
 import { appleConfig } from "@/lib/auth/apple";
+import { leesOauthUitdaging } from "@/lib/auth/oauth-tweestap";
 import { opPasskeyHost, passkeyBron } from "@/lib/auth/passkey/omgeving";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { AuthShell } from "@/components/auth/AuthShell";
@@ -26,7 +27,7 @@ function safePath(raw: string | undefined): string {
 
 export default async function LoginPage(
   props: {
-    searchParams: Promise<{ callbackUrl?: string; error?: string; reset?: string }>;
+    searchParams: Promise<{ callbackUrl?: string; error?: string; reset?: string; stap?: string }>;
   }
 ) {
   const searchParams = await props.searchParams;
@@ -46,6 +47,9 @@ export default async function LoginPage(
   const passkeyEnabled = bron !== null && opPasskeyHost(await headers(), bron);
   const locale = await getLocale();
   const t = AUTH_DICTS[locale].login;
+  // terug van Google of Apple met tweestapsverificatie aan: meteen de codestap (lib/auth/oauth-tweestap.ts)
+  const codeStap = searchParams.stap === "code" ? await leesOauthUitdaging() : null;
+  const fout = searchParams.error ?? (searchParams.stap === "code" && !codeStap ? "TweeStap" : undefined);
 
   return (
     <AuthShell
@@ -69,7 +73,8 @@ export default async function LoginPage(
         googleEnabled={googleEnabled}
         appleEnabled={appleEnabled}
         passkeyEnabled={passkeyEnabled}
-        {...(searchParams.error ? { errorCode: searchParams.error } : {})}
+        {...(fout ? { errorCode: fout } : {})}
+        {...(codeStap ? { codeStap } : {})}
         {...(searchParams.reset ? { justReset: true } : {})}
       />
     </AuthShell>

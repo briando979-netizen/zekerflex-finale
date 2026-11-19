@@ -85,11 +85,15 @@ vi.mock("@/lib/auth/login-throttle", () => ({
 const hasTwoFactor = vi.fn();
 const verifySecondFactor = vi.fn();
 const openLoginChallenge = vi.fn();
+const challengeIsOauth = vi.fn();
 vi.mock("@/lib/auth/two-factor", () => ({
   hasTwoFactor: (...a: unknown[]) => hasTwoFactor(...a),
   verifySecondFactor: (...a: unknown[]) => verifySecondFactor(...a),
   openLoginChallenge: (...a: unknown[]) => openLoginChallenge(...a),
+  challengeIsOauth: (...a: unknown[]) => challengeIsOauth(...a),
 }));
+const zetOauthUitdaging = vi.fn();
+vi.mock("@/lib/auth/oauth-tweestap", () => ({ zetOauthUitdaging: (...a: unknown[]) => zetOauthUitdaging(...a) }));
 
 import { authOptions } from "@/lib/auth/nextauth";
 import { decodeSession, encodeSession } from "@/lib/auth/session";
@@ -110,6 +114,7 @@ beforeEach(() => {
   sendVerificationEmail.mockResolvedValue({ sent: true, delivered: true, transport: "mailbox" });
   sendWelcomeToUser.mockResolvedValue(undefined);
   hasTwoFactor.mockResolvedValue(false);
+  challengeIsOauth.mockReturnValue(false);
   checkLoginAllowed.mockResolvedValue({ allowed: true });
   registerLoginFailure.mockResolvedValue({ failures: 1, locked: false });
   membershipFindMany.mockResolvedValue([
@@ -151,6 +156,22 @@ describe("two-step login", () => {
     openLoginChallenge.mockReturnValue(null);
     expect(await authorize({ challenge, otp: "123456" })).toBeNull();
     expect(userFindFirst).not.toHaveBeenCalled();
+  });
+
+  it("na Google/Apple: een account zonder wachtwoord logt in met de uitdaging en de code", async () => {
+    openLoginChallenge.mockReturnValue("jan@example.nl");
+    challengeIsOauth.mockReturnValue(true);
+    userFindFirst.mockResolvedValue({ ...user, passwordHash: null });
+    verifySecondFactor.mockResolvedValue({ ok: true });
+    expect(await authorize({ challenge, otp: "123456" })).toMatchObject({ id: "usr_1" });
+    expect(bcryptCompare).not.toHaveBeenCalled();
+  });
+
+  it("een uitdaging na een wachtwoord werkt niet voor een account zonder wachtwoord", async () => {
+    openLoginChallenge.mockReturnValue("jan@example.nl");
+    userFindFirst.mockResolvedValue({ ...user, passwordHash: null });
+    expect(await authorize({ challenge, otp: "123456" })).toBeNull();
+    expect(verifySecondFactor).not.toHaveBeenCalled();
   });
 
   it("a locked-out account can't use the second step either", async () => {
@@ -301,6 +322,20 @@ describe("callbacks.signIn — Google gate", () => {
     expect(userCreate).not.toHaveBeenCalled();
     expect(sendVerificationEmail).not.toHaveBeenCalled();
     expect(sendWelcomeToUser).not.toHaveBeenCalled();
+  });
+
+  it("Google-login op een account met tweestapsverificatie: geen sessie, eerst de code", async () => {
+    userFindFirst.mockResolvedValue({ id: "usr_1", fullName: "Jan", email: "jan@example.nl" });
+    hasTwoFactor.mockResolvedValue(true);
+    const res = await signIn()({
+      account: { provider: "google" } as any,
+      profile: { email: "jan@example.nl", email_verified: true, name: "Jan" } as any,
+      user: {} as any,
+    } as any);
+    expect(res).toBe("/login?stap=code");
+    expect(zetOauthUitdaging).toHaveBeenCalledWith("jan@example.nl");
+    expect(userUpdate).not.toHaveBeenCalled();
+    expect(recordAudit).not.toHaveBeenCalledWith(expect.objectContaining({ action: "auth.login.succeeded" }));
   });
 
   describe("eerste Google-login met een onbekend adres", () => {

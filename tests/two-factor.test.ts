@@ -14,6 +14,7 @@ import {
   confirmTwoFactorSetup,
   disableTwoFactor,
   hasTwoFactor,
+  challengeIsOauth,
   mintLoginChallenge,
   openLoginChallenge,
   regenerateRecoveryCodes,
@@ -105,5 +106,15 @@ describe("two-step verification per user", () => {
     expect(openLoginChallenge(c, t + 11 * 60_000)).toBeNull();
     expect(openLoginChallenge(c.slice(0, -4) + "AAAA", t)).toBeNull();
     expect(openLoginChallenge("v1.nope.nope.nope", t)).toBeNull();
+  });
+
+  it("een uitdaging na Google/Apple is als zodanig herkenbaar; die na een wachtwoord niet", () => {
+    const t = Date.now();
+    const oauth = mintLoginChallenge("liam@freelancer.nl", t, "oauth");
+    expect(openLoginChallenge(oauth, t)).toBe("liam@freelancer.nl");
+    expect(challengeIsOauth(oauth, t)).toBe(true);
+    expect(challengeIsOauth(oauth, t + 11 * 60_000)).toBe(false); // verlopen
+    expect(challengeIsOauth(mintLoginChallenge("liam@freelancer.nl", t), t)).toBe(false);
+    expect(challengeIsOauth("v1.nope.nope.nope", t)).toBe(false);
   });
 });

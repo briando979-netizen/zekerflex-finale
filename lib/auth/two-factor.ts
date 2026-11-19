@@ -113,15 +113,27 @@ export async function adminResetTwoFactor(targetUserId: string, adminUserId: str
 const CHALLENGE = "2fa-login-challenge";
 const CHALLENGE_TTL_MS = 10 * 60_000;
 
-export function mintLoginChallenge(email: string, now = Date.now()): string {
-  return sealSecret(JSON.stringify({ email: email.toLowerCase(), exp: now + CHALLENGE_TTL_MS }), CHALLENGE);
+/** Wat de eerste stap bewees: het wachtwoord, of een geslaagde aanmelding bij Google/Apple (lib/auth/oauth-tweestap.ts). */
+export type ChallengeVia = "wachtwoord" | "oauth";
+
+export function mintLoginChallenge(email: string, now = Date.now(), via: ChallengeVia = "wachtwoord"): string {
+  return sealSecret(JSON.stringify({ email: email.toLowerCase(), exp: now + CHALLENGE_TTL_MS, ...(via === "oauth" ? { via } : {}) }), CHALLENGE);
 }
 
-export function openLoginChallenge(token: string, now = Date.now()): string | null {
+function openChallenge(token: string, now: number): { email: string; via: ChallengeVia } | null {
   try {
-    const { email, exp } = JSON.parse(openSecret(token, CHALLENGE)) as { email: string; exp: number };
-    return typeof email === "string" && exp > now ? email : null;
+    const { email, exp, via } = JSON.parse(openSecret(token, CHALLENGE)) as { email: string; exp: number; via?: string };
+    return typeof email === "string" && exp > now ? { email, via: via === "oauth" ? "oauth" : "wachtwoord" } : null;
   } catch {
     return null;
   }
+}
+
+export function openLoginChallenge(token: string, now = Date.now()): string | null {
+  return openChallenge(token, now)?.email ?? null;
+}
+
+/** De eerste stap was Google of Apple: het account hoeft dan geen wachtwoord te hebben. */
+export function challengeIsOauth(token: string, now = Date.now()): boolean {
+  return openChallenge(token, now)?.via === "oauth";
 }

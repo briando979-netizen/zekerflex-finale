@@ -12,7 +12,8 @@ import { sessieNogGeldig } from "@/lib/auth/sessie-intrekken";
 import { featureEnabled } from "@/lib/flags";
 import { recordAudit } from "@/lib/audit";
 import { recordLoginFailure } from "@/lib/metrics";
-import { hasTwoFactor, openLoginChallenge, verifySecondFactor } from "@/lib/auth/two-factor";
+import { challengeIsOauth, hasTwoFactor, openLoginChallenge, verifySecondFactor } from "@/lib/auth/two-factor";
+import { zetOauthUitdaging } from "@/lib/auth/oauth-tweestap";
 import {
   checkLoginAllowed,
   clearLoginFailures,
@@ -256,6 +257,8 @@ export const authOptions: NextAuthConfig = {
         const twoStep = "challenge" in parsed.data ? parsed.data : null;
         const challengeEmail = twoStep ? openLoginChallenge(twoStep.challenge) : null;
         if (twoStep && !challengeEmail) return null; // expired or forged challenge
+        // de eerste stap was Google of Apple (lib/auth/oauth-tweestap.ts): zo'n account heeft vaak geen wachtwoord
+        const viaAanbieder = twoStep ? challengeIsOauth(twoStep.challenge) : false;
 
         const email = (challengeEmail ?? ("email" in parsed.data ? parsed.data.email : "")).toLowerCase().trim();
 
@@ -297,7 +300,7 @@ export const authOptions: NextAuthConfig = {
         const user = await prisma.user.findFirst({
           where: { email, disabledAt: null },
         });
-        if (!user?.passwordHash) {
+        if (!user || (!user.passwordHash && !viaAanbieder)) {
           await registerFailure(user?.id ?? null);
           return null;
         }
@@ -310,7 +313,7 @@ export const authOptions: NextAuthConfig = {
             throw new SecondFactorInvalid();
           }
         } else {
-          const ok = await bcrypt.compare("password" in parsed.data ? parsed.data.password : "", user.passwordHash);
+          const ok = await bcrypt.compare("password" in parsed.data ? parsed.data.password : "", user.passwordHash ?? "");
           if (!ok) {
             await registerFailure(user.id);
             return null;
@@ -416,6 +419,12 @@ export const authOptions: NextAuthConfig = {
           dbAccount = await resolveDbAccount(email);
           provisioned = true;
           if (!dbAccount) return "/login?error=Configuration";
+        }
+        // Tweestapsverificatie geldt ook na Google of Apple: nog geen sessie, eerst de code
+        // (lib/auth/oauth-tweestap.ts). Het inloggen wordt pas vastgelegd na de tweede stap.
+        if (!provisioned && (await hasTwoFactor(dbAccount.id))) {
+          await zetOauthUitdaging(dbAccount.email);
+          return "/login?stap=code";
         }
         await prisma.user.update({
           where: { id: dbAccount.id },

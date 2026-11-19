@@ -18,6 +18,7 @@ const ERROR_COPY: Record<string, string> = {
   Configuration: "Inloggen via Google of Apple lukte niet. Probeer het opnieuw of log in met je e-mailadres.",
   AppleLogin: "Apple gaf geen bevestigd e-mailadres door. Probeer het opnieuw of log in met je e-mailadres.",
   Verification: "De verificatielink is verlopen of al gebruikt.",
+  TweeStap: "Je inlogpoging is verlopen. Log opnieuw in.",
 };
 
 function SubmitButton({ label, busy }: { label: string; busy: string }) {
@@ -53,6 +54,7 @@ export function LoginForm({
   passkeyEnabled = false,
   errorCode,
   justReset,
+  codeStap,
 }: {
   locale?: Locale;
   callbackUrl: string;
@@ -63,8 +65,10 @@ export function LoginForm({
   passkeyEnabled?: boolean;
   errorCode?: string;
   justReset?: boolean;
+  /** terug van Google of Apple met tweestapsverificatie aan: het formulier begint bij de code (lib/auth/oauth-tweestap.ts) */
+  codeStap?: { challenge: string; email: string };
 }) {
-  const [state, formAction] = useFormState(loginAction, initial);
+  const [state, formAction] = useFormState(loginAction, codeStap ? { error: null, needsCode: true, challenge: codeStap.challenge, email: codeStap.email, remember: false } : initial);
   const [showPw, setShowPw] = useState(false);
   const [remember, setRemember] = useState(true);
   const t = AUTH_DICTS[locale].login;
