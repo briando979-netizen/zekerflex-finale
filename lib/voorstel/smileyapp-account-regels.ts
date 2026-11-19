@@ -63,6 +63,12 @@ export function uitnodigingVerlopen(tot: string, nu: Date): boolean {
   return !Number.isFinite(t) || t <= nu.getTime();
 }
 
+/** Wachtwoord vergeten: de link uit de mail werkt een uur en één keer (verlopen: uitnodigingVerlopen). */
+export const HERSTEL_MINUTEN = 60;
+export const herstelTot = (nu: Date) => new Date(nu.getTime() + HERSTEL_MINUTEN * 60_000).toISOString();
+/** Wat het scherm altijd zegt na "wachtwoord vergeten", ook bij een onbekend of geblokkeerd adres. */
+export const HERSTEL_ANTWOORD = "Als dit adres bij ons bekend is, staat er zo een mail in je postvak.";
+
 /** Alleen een beheerder nodigt uit, wijzigt rollen, blokkeert en verwijdert; een medewerker kijkt mee. */
 export const magTeamBeheren = (rol: Rol) => rol === "beheerder";
 

@@ -5,7 +5,12 @@ import { API, KNOP, LABEL, Melding, VELD, foutTekst, vraag } from "@/components/
 
 // De kaart vóór het beheer: inloggen met e-mailadres en wachtwoord, of (met de
 // link uit de uitnodigingsmail) een wachtwoord kiezen. Er is geen registratie:
-// je komt alleen binnen met een uitnodiging van een beheerder.
+// je komt alleen binnen met een uitnodiging van een beheerder. Wachtwoord
+// vergeten: je vult je adres in en krijgt (als het bekend is) een mail met een
+// link; het scherm zegt altijd hetzelfde, dus het verraadt niets over een adres.
+
+/** De vaste zin als de server geen eigen melding meestuurt (gelijk aan HERSTEL_ANTWOORD op de server). */
+const VERGETEN_KLAAR = "Als dit adres bij ons bekend is, staat er zo een mail in je postvak.";
 
 /** Na inloggen of een wachtwoord kiezen: het beheer laden, zonder het token in de adresbalk. */
 function naarBeheer() {
@@ -17,6 +22,23 @@ export function Inlogkaart() {
   const [wachtwoord, setWachtwoord] = useState("");
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState("");
+  const [vergeten, setVergeten] = useState(false);
+  const [klaar, setKlaar] = useState("");
+
+  async function vraagLink(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (bezig) return;
+    setBezig(true);
+    setFout("");
+    try {
+      const d = await vraag<{ melding?: string }>(`${API}/account`, { method: "POST", body: { actie: "vergeten", email } });
+      setKlaar(d.melding ?? VERGETEN_KLAAR);
+    } catch (err) {
+      setFout(foutTekst(err, "Dat lukte niet. Probeer het opnieuw."));
+    } finally {
+      setBezig(false);
+    }
+  }
 
   async function login(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -30,6 +52,35 @@ export function Inlogkaart() {
       setFout(foutTekst(err, "Inloggen lukte niet."));
       setBezig(false);
     }
+  }
+
+  if (vergeten) {
+    return (
+      <form onSubmit={(e) => void vraagLink(e)} className="mt-6 space-y-4 text-left">
+        <p className="text-sm leading-relaxed text-smiley-mute">Vul je e-mailadres in. Je krijgt een mail met een link om een nieuw wachtwoord te kiezen. De link werkt een uur.</p>
+        <div>
+          <label htmlFor="sm-vergeten-email" className={LABEL}>
+            E-mailadres
+          </label>
+          <input id="sm-vergeten-email" type="email" autoComplete="username" required maxLength={200} value={email} onChange={(e) => setEmail(e.target.value)} className={`mt-1.5 ${VELD}`} />
+        </div>
+        <Melding fout={fout} ok={klaar} />
+        <button type="submit" disabled={bezig} className={`w-full py-3.5 ${KNOP}`}>
+          {bezig ? "Bezig…" : klaar ? "Stuur de mail opnieuw" : "Stuur mij een link"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setVergeten(false);
+            setFout("");
+            setKlaar("");
+          }}
+          className="mx-auto block text-sm font-semibold text-smiley-leaf underline underline-offset-4"
+        >
+          Terug naar inloggen
+        </button>
+      </form>
+    );
   }
 
   return (
@@ -50,12 +101,23 @@ export function Inlogkaart() {
       <button type="submit" disabled={bezig} className={`w-full py-3.5 ${KNOP}`}>
         {bezig ? "Bezig…" : "Inloggen"}
       </button>
+      <button
+        type="button"
+        onClick={() => {
+          setVergeten(true);
+          setFout("");
+        }}
+        className="mx-auto block text-sm font-semibold text-smiley-leaf underline underline-offset-4"
+      >
+        Wachtwoord vergeten?
+      </button>
       <p className="text-center text-sm leading-relaxed text-smiley-mute">Nog geen account? Je komt alleen binnen met een uitnodiging van een beheerder van SmileyApp.</p>
     </form>
   );
 }
 
-export function WachtwoordKiezen({ token, email, minimaal }: { token: string; email: string; minimaal: number }) {
+/** `herstel`: de link komt uit "wachtwoord vergeten" in plaats van uit een uitnodiging. */
+export function WachtwoordKiezen({ token, email, minimaal, herstel = false }: { token: string; email: string; minimaal: number; herstel?: boolean }) {
   const [wachtwoord, setWachtwoord] = useState("");
   const [herhaal, setHerhaal] = useState("");
   const [bezig, setBezig] = useState(false);
@@ -69,7 +131,8 @@ export function WachtwoordKiezen({ token, email, minimaal }: { token: string; em
     setBezig(true);
     setFout("");
     try {
-      await vraag(`${API}/account`, { method: "POST", body: { actie: "aannemen", token, wachtwoord } });
+      if (herstel) await vraag(`${API}/account`, { method: "POST", body: { actie: "nieuw-wachtwoord", token, wachtwoord } });
+      else await vraag(`${API}/account`, { method: "POST", body: { actie: "aannemen", token, wachtwoord } });
       naarBeheer();
     } catch (err) {
       setFout(foutTekst(err, "Opslaan lukte niet."));

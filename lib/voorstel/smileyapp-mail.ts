@@ -1,10 +1,10 @@
 import { sendMail, type MailInput } from "@/lib/mail";
-import { UITNODIGING_DAGEN } from "@/lib/voorstel/smileyapp-account-regels";
+import { HERSTEL_MINUTEN, UITNODIGING_DAGEN } from "@/lib/voorstel/smileyapp-account-regels";
 
 // ---------------------------------------------------------------------------
 // Mails van het SmileyApp-beheer (19 nov 2026): de uitnodiging om een
-// wachtwoord te kiezen, en een korte melding aan de beheerders bij een nieuwe
-// demo-aanvraag of partner-aanmelding. In de kleuren van SmileyApp, zonder
+// wachtwoord te kiezen, de link bij "wachtwoord vergeten", en een korte melding
+// aan de beheerders bij een nieuwe demo-aanvraag of partner-aanmelding. In de kleuren van SmileyApp, zonder
 // plaatjes of iets van buiten. Beide soorten staan niet in
 // lib/mail/categories.ts en gelden dus als noodzakelijk en automatisch: er komt
 // vanzelf een regel onder dat het een automatisch bericht van ZekerFlex is.
@@ -67,6 +67,31 @@ ${alinea(esc(slot))}
 /** Verstuurt de uitnodiging; true als de mail is afgeleverd. sendMail gooit nooit. */
 export async function stuurUitnodiging(o: { naam: string; email: string; door: string; link: string }): Promise<boolean> {
   return (await sendMail(uitnodigingMail(o))).delivered;
+}
+
+/** Wachtwoord vergeten: `link` is het adres van het beheer met ?herstel=<token>. */
+export function herstelMail(o: { naam: string; email: string; link: string }): MailInput {
+  const naam = regel(o.naam);
+  const tekst = "Er is een nieuw wachtwoord aangevraagd voor het beheer van de SmileyApp-website.";
+  const slot = `De link werkt ${HERSTEL_MINUTEN} minuten en één keer. Heb je dit niet aangevraagd, dan kun je deze mail weggooien: je wachtwoord blijft zoals het is.`;
+  return {
+    to: o.email,
+    subject: "Kies een nieuw wachtwoord voor het beheer van SmileyApp",
+    text: `Hallo ${naam},\n\n${tekst} Kies een nieuw wachtwoord via deze link:\n${o.link}\n\n${slot}`,
+    html: omlijsting(
+      "Nieuw wachtwoord kiezen",
+      `${alinea(`Hallo ${esc(naam)}, ${esc(tekst)} Klik op de knop om een nieuw wachtwoord te kiezen.`)}
+${knop(o.link, "Kies een nieuw wachtwoord")}
+${alinea(esc(slot))}
+<p style="margin:0;font-size:12px;line-height:1.5;color:${GRIJS}">Werkt de knop niet? Kopieer deze link:<br><span style="word-break:break-all">${esc(o.link)}</span></p>`,
+    ),
+    kind: "smileyapp-wachtwoord",
+  };
+}
+
+/** Verstuurt de herstellink; true als de mail is afgeleverd. sendMail gooit nooit. */
+export async function stuurHerstel(o: { naam: string; email: string; link: string }): Promise<boolean> {
+  return (await sendMail(herstelMail(o))).delivered;
 }
 
 const SOORT_TEKST = { demo: "demo-aanvraag", partner: "partner-aanmelding" } as const;

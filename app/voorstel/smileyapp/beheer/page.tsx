@@ -5,7 +5,7 @@ import Link from "next/link";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { BASE, PAKKETTEN, beeld } from "@/lib/voorstel/smileyapp";
 import { WACHTWOORD_MIN, isUitnodigingToken } from "@/lib/voorstel/smileyapp-account-regels";
-import { bekijkUitnodiging, toegang } from "@/lib/voorstel/smileyapp-accounts";
+import { bekijkHerstel, bekijkUitnodiging, toegang } from "@/lib/voorstel/smileyapp-accounts";
 import { VOORSTEL_HEADER } from "@/lib/voorstel/subdomein";
 import { Inlogkaart, WachtwoordKiezen } from "@/components/voorstel/smileyapp/beheer/Inloggen";
 import { SmileyBeheer } from "@/components/voorstel/smileyapp/beheer/SmileyBeheer";
@@ -18,19 +18,28 @@ export const metadata: Metadata = { title: "Beheer", referrer: "no-referrer" };
 // AlleenOpSite in de layout). Toegang: een SmileyApp-account (Martijn en wie hij
 // uitnodigt), of een ZekerFlex-platformbeheerder (het vangnet op zekerflex.com:
 // die nodigt Martijn als eerste beheerder uit). Zonder sessie staat hier de
-// inlogkaart, of met ?uitnodiging=<token> de kaart om een wachtwoord te kiezen.
+// inlogkaart, of met ?uitnodiging=<token> de kaart om een wachtwoord te kiezen,
+// of met ?herstel=<token> (wachtwoord vergeten) de kaart voor een nieuw wachtwoord.
 // Het token wordt hier op de server gecontroleerd en komt in geen enkele log.
-export default async function SmileyappBeheerPage({ searchParams }: { searchParams: Promise<{ uitnodiging?: string | string[] }> }) {
-  const q = (await searchParams).uitnodiging;
-  const token = Array.isArray(q) ? q[0] : q;
-  const [wie, kop, uitnodiging] = await Promise.all([toegang(), headers(), isUitnodigingToken(token) ? bekijkUitnodiging(token) : null]);
+export default async function SmileyappBeheerPage({ searchParams }: { searchParams: Promise<{ uitnodiging?: string | string[]; herstel?: string | string[] }> }) {
+  const sp = await searchParams;
+  const eerste = (q: string | string[] | undefined) => (Array.isArray(q) ? q[0] : q);
+  const token = eerste(sp.uitnodiging);
+  const herstelToken = eerste(sp.herstel);
+  const [wie, kop, uitnodiging, herstel] = await Promise.all([
+    toegang(),
+    headers(),
+    isUitnodigingToken(token) ? bekijkUitnodiging(token) : null,
+    isUitnodigingToken(herstelToken) ? bekijkHerstel(herstelToken) : null,
+  ]);
   const subdomein = kop.get(VOORSTEL_HEADER) !== null;
   const linkKapot = token !== undefined && !uitnodiging;
+  const herstelKapot = herstelToken !== undefined && !herstel;
 
   // één kop voor de hele pagina (de schermen eronder beginnen bij h2); een geldige uitnodiging gaat voor een bestaande sessie
   const kopje = <h1 className="sr-only">Beheer van Smileyapp</h1>;
 
-  if (wie && !uitnodiging) {
+  if (wie && !uitnodiging && !herstel) {
     return (
       <>
         {kopje}
@@ -55,10 +64,22 @@ export default async function SmileyappBeheerPage({ searchParams }: { searchPara
               </p>
               <WachtwoordKiezen token={token} email={uitnodiging.email} minimaal={WACHTWOORD_MIN} />
             </>
+          ) : herstel && isUitnodigingToken(herstelToken) ? (
+            <>
+              <h2 className="font-display text-2xl font-bold text-smiley-ink">Kies een nieuw wachtwoord</h2>
+              <p className="mt-2 leading-relaxed text-smiley-mute">
+                Hallo {herstel.naam}. Kies een nieuw wachtwoord voor <strong className="break-all text-smiley-ink">{herstel.email}</strong>. Daarna ben je op andere apparaten uitgelogd.
+              </p>
+              <WachtwoordKiezen token={herstelToken} email={herstel.email} minimaal={WACHTWOORD_MIN} herstel />
+            </>
           ) : (
             <>
               <h2 className="font-display text-2xl font-bold text-smiley-ink">Inloggen in het beheer</h2>
-              {linkKapot ? (
+              {herstelKapot ? (
+                <p role="alert" className="mt-4 rounded-2xl bg-smiley-sun/40 p-4 text-sm font-semibold leading-relaxed text-smiley-ink">
+                  Deze link werkt niet meer: hij is een uur geldig en je kunt hem één keer gebruiken. Vraag hieronder een nieuwe aan via &ldquo;Wachtwoord vergeten?&rdquo;.
+                </p>
+              ) : linkKapot ? (
                 <p role="alert" className="mt-4 rounded-2xl bg-smiley-sun/40 p-4 text-sm font-semibold leading-relaxed text-smiley-ink">
                   Deze link werkt niet meer, vraag een nieuwe uitnodiging. Heb je al een wachtwoord gekozen, dan kun je hieronder inloggen.
                 </p>

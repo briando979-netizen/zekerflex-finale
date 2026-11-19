@@ -9,6 +9,7 @@ import {
   accountStatus,
   geldigEmail,
   geldigeNaam,
+  herstelTot,
   isUitnodigingToken,
   normEmail,
   teamActieFout,
@@ -20,7 +21,7 @@ import {
   type TeamActie,
   type TeamLid,
 } from "@/lib/voorstel/smileyapp-account-regels";
-import { stuurUitnodiging } from "@/lib/voorstel/smileyapp-mail";
+import { stuurHerstel, stuurUitnodiging } from "@/lib/voorstel/smileyapp-mail";
 
 // ---------------------------------------------------------------------------
 // Het team van het SmileyApp-beheer (19 nov 2026): Martijn en de medewerkers
@@ -46,6 +47,10 @@ export interface Account {
   wachtwoord?: string;
   /** sha256 van het token uit de mail, en tot wanneer het geldt */
   uitnodiging?: { hash: string; tot: string };
+  /** wachtwoord vergeten: sha256 van het token uit de mail, een uur geldig en één keer te gebruiken */
+  herstel?: { hash: string; tot: string };
+  /** gaat omhoog bij elk nieuw wachtwoord via "wachtwoord vergeten"; zit in het sessietoken, dus oude sessies vervallen */
+  sessieVersie?: number;
   uitgenodigdDoor?: string;
   aangemaakt: string;
   laatstIngelogd?: string;
@@ -111,13 +116,17 @@ async function klopt(wachtwoord: string, opgeslagen: string | undefined): Promis
   return timingSafeEqual(h, verwacht);
 }
 
-/** Het sessietoken: e-mail, het moment waarop het account is gemaakt (een nieuw account op hetzelfde adres erft geen oude sessie) en de vervaldatum. */
-export function tekenSessie(a: Pick<Account, "email" | "aangemaakt">, nu = Date.now()): string {
-  const inhoud = Buffer.from(JSON.stringify({ e: a.email, a: a.aangemaakt, x: nu + SESSIE_DAGEN * 86_400_000 })).toString("base64url");
+/**
+ * Het sessietoken: e-mail, het moment waarop het account is gemaakt (een nieuw account op hetzelfde adres erft geen
+ * oude sessie), de vervaldatum en, zodra er ooit een nieuw wachtwoord is gekozen via "wachtwoord vergeten", de
+ * sessieversie van dat moment (een sessie van vóór het nieuwe wachtwoord geldt dan niet meer).
+ */
+export function tekenSessie(a: Pick<Account, "email" | "aangemaakt"> & { sessieVersie?: number | undefined }, nu = Date.now()): string {
+  const inhoud = Buffer.from(JSON.stringify({ e: a.email, a: a.aangemaakt, x: nu + SESSIE_DAGEN * 86_400_000, ...(a.sessieVersie ? { v: a.sessieVersie } : {}) })).toString("base64url");
   return `${inhoud}.${createHmac("sha256", geheim()).update(inhoud).digest("base64url")}`;
 }
 
-export function leesSessie(token: string | undefined, nu = Date.now()): { email: string; aangemaakt: string } | null {
+export function leesSessie(token: string | undefined, nu = Date.now()): { email: string; aangemaakt: string; versie?: number } | null {
   if (!token) return null;
   const [inhoud, handtekening] = token.split(".");
   if (!inhoud || !handtekening) return null;
@@ -125,8 +134,9 @@ export function leesSessie(token: string | undefined, nu = Date.now()): { email:
   const gekregen = Buffer.from(handtekening, "base64url");
   if (gekregen.length !== verwacht.length || !timingSafeEqual(gekregen, verwacht)) return null;
   try {
-    const { e, a, x } = JSON.parse(Buffer.from(inhoud, "base64url").toString()) as { e?: unknown; a?: unknown; x?: unknown };
-    return typeof e === "string" && typeof a === "string" && typeof x === "number" && x > nu ? { email: e, aangemaakt: a } : null;
+    const { e, a, x, v } = JSON.parse(Buffer.from(inhoud, "base64url").toString()) as { e?: unknown; a?: unknown; x?: unknown; v?: unknown };
+    if (typeof e !== "string" || typeof a !== "string" || typeof x !== "number" || x <= nu) return null;
+    return { email: e, aangemaakt: a, ...(typeof v === "number" && v > 0 ? { versie: v } : {}) };
   } catch {
     return null;
   }
@@ -144,8 +154,8 @@ export async function huidigAccount(): Promise<PubliekAccount | null> {
   const sessie = leesSessie((await cookies()).get(SESSIE_COOKIE)?.value);
   if (!sessie) return null;
   const a = await kvGet<Account>(sleutel(sessie.email)).catch(() => null);
-  // geblokkeerd, verwijderd (of opnieuw aangemaakt) of nog zonder wachtwoord: geen sessie
-  return a && !a.geblokkeerd && a.wachtwoord && a.aangemaakt === sessie.aangemaakt ? publiek(a) : null;
+  // geblokkeerd, verwijderd (of opnieuw aangemaakt), nog zonder wachtwoord, of een sessie van vóór een nieuw wachtwoord: geen sessie
+  return a && !a.geblokkeerd && a.wachtwoord && a.aangemaakt === sessie.aangemaakt && (a.sessieVersie ?? 0) === (sessie.versie ?? 0) ? publiek(a) : null;
 }
 
 /** Wie mag in het beheer: een SmileyApp-account, of een ZekerFlex-platformbeheerder (telt als beheerder). */
@@ -243,6 +253,54 @@ export async function neemUitnodigingAan(o: { token: string; wachtwoord: string 
   if (!a) throw AppError.validation("Deze link werkt niet meer. Vraag een nieuwe uitnodiging.");
   const { uitnodiging: _weg, ...rest } = a;
   const bij: Account = { ...rest, wachtwoord: await hashWachtwoord(o.wachtwoord), laatstIngelogd: nu.toISOString() };
+  await kvSet(sleutel(a.email), bij);
+  await zetSessie(bij);
+  return publiek(bij);
+}
+
+// --- wachtwoord vergeten ---------------------------------------------------------
+
+/**
+ * Maakt een herstellink en stuurt de mail, alleen voor een account dat kan inloggen (wachtwoord gekozen, niet
+ * geblokkeerd). Een nieuwe aanvraag maakt de vorige link ongeldig (er is maar één hash). Geeft terug wat er
+ * gebeurde; het openbare scherm laat dat nooit zien (dat zegt altijd hetzelfde), het beheer wel.
+ */
+export async function vraagHerstel(emailRuw: string, beheer: string, nu = new Date()): Promise<"verstuurd" | "niet-afgeleverd" | "geen"> {
+  if (!geldigEmail(emailRuw)) return "geen";
+  const a = await kvGet<Account>(sleutel(emailRuw));
+  if (!a || !a.wachtwoord || a.geblokkeerd) return "geen";
+  const token = randomBytes(32).toString("base64url");
+  await kvSet(sleutel(a.email), { ...a, herstel: { hash: hashToken(token), tot: herstelTot(nu) } } satisfies Account);
+  return (await stuurHerstel({ naam: a.naam, email: a.email, link: `${beheer}?herstel=${encodeURIComponent(token)}` })) ? "verstuurd" : "niet-afgeleverd";
+}
+
+/** Het account dat bij deze herstellink hoort, als hij nog geldt. Vergelijkt de hash in constante tijd. */
+async function accountBijHerstel(token: string, nu: Date): Promise<Account | null> {
+  if (!isUitnodigingToken(token)) return null;
+  const gekregen = Buffer.from(hashToken(token), "hex");
+  let gevonden: Account | null = null;
+  for (const a of await alle()) {
+    if (!a.herstel || !a.wachtwoord || a.geblokkeerd) continue;
+    const verwacht = Buffer.from(a.herstel.hash, "hex");
+    if (verwacht.length === gekregen.length && timingSafeEqual(verwacht, gekregen) && !uitnodigingVerlopen(a.herstel.tot, nu)) gevonden = a;
+  }
+  return gevonden;
+}
+
+/** Voor de kaart "Kies een nieuw wachtwoord": naam en adres, of null als de link niet (meer) werkt. */
+export async function bekijkHerstel(token: string, nu = new Date()): Promise<{ naam: string; email: string } | null> {
+  const a = await accountBijHerstel(token, nu).catch(() => null);
+  return a ? { naam: a.naam, email: a.email } : null;
+}
+
+/** Een nieuw wachtwoord kiezen met de link uit de mail: de link vervalt, alle oude sessies ook, en je bent ingelogd. */
+export async function kiesNieuwWachtwoord(o: { token: string; wachtwoord: string }, nu = new Date()): Promise<PubliekAccount> {
+  const fout = wachtwoordFout(o.wachtwoord);
+  if (fout) throw AppError.validation(fout);
+  const a = await accountBijHerstel(o.token, nu);
+  if (!a) throw AppError.validation("Deze link werkt niet meer. Vraag een nieuwe aan via 'Wachtwoord vergeten?'.");
+  const { herstel: _weg, ...rest } = a;
+  const bij: Account = { ...rest, wachtwoord: await hashWachtwoord(o.wachtwoord), sessieVersie: (a.sessieVersie ?? 0) + 1, laatstIngelogd: nu.toISOString() };
   await kvSet(sleutel(a.email), bij);
   await zetSessie(bij);
   return publiek(bij);

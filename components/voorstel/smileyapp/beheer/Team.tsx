@@ -77,6 +77,11 @@ function LidRij({ lid, ik, magBeheren, doe }: { lid: Lid; ik: boolean; magBehere
               Opnieuw uitnodigen
             </button>
           )}
+          {lid.status === "actief" && (
+            <button type="button" disabled={bezig} onClick={() => void stuur({ actie: "herstel", email: lid.email }, `Mail verstuurd naar ${lid.email}. De link werkt een uur.`)} className={KNOP_LICHT}>
+              Stuur een link voor een nieuw wachtwoord
+            </button>
+          )}
           <button type="button" disabled={bezig} onClick={() => void stuur({ actie: "blokkeren", email: lid.email, geblokkeerd: lid.status !== "geblokkeerd" }, lid.status === "geblokkeerd" ? "Account gedeblokkeerd." : "Account geblokkeerd.")} className={KNOP_LICHT}>
             {lid.status === "geblokkeerd" ? "Deblokkeren" : "Blokkeren"}
           </button>
@@ -130,7 +135,7 @@ export function Team({ bijgewerkt }: { bijgewerkt: () => void }) {
         const d = await vraag<{ verstuurd?: boolean }>(URL_TEAM, { method: "POST", body });
         await laad();
         bijgewerkt();
-        if (d.verstuurd === false) setFout("De uitnodiging is aangemaakt, maar de mail kon niet worden afgeleverd. Controleer het e-mailadres en nodig opnieuw uit.");
+        if (d.verstuurd === false) setFout(body.actie === "herstel" ? "De mail kon niet worden afgeleverd. Controleer het e-mailadres en probeer het opnieuw." : "De uitnodiging is aangemaakt, maar de mail kon niet worden afgeleverd. Controleer het e-mailadres en nodig opnieuw uit.");
         else setOk(klaar);
         return true;
       } catch (e) {
