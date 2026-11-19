@@ -40,6 +40,15 @@ describe("de onderdelen op /starters", () => {
     for (const woord of ["zekerflex bank", "bankrekening", "betaalpas", "financiering", "lening", "krediet", "geld terug garantie", "gegarandeerd", "binnen 24 uur", "binnen een dag"]) expect(tekst, woord).not.toContain(woord);
     // inschrijving, boekhouding en verzekering komen alleen voor in het antwoord dat zegt dat wij dat NIET doen
     expect(pagina).toContain("Nee. Wij helpen met hoe je bedrijf eruitziet en gevonden wordt.");
+    // eerlijk over de prijs: alleen bij logo, advertentie en domeinnaam staat hij op de pagina
+    expect(pagina).not.toContain("De prijs weet je vooraf");
+    expect(pagina).not.toContain("Bij elk onderdeel op deze pagina staat de prijs erbij");
+    expect(pagina).not.toContain("Pas als het goed is, betaal je");
+    expect(pagina).toContain("Bij het logo, de advertentie en de domeinnaam staat de prijs op deze pagina.");
+    expect(pagina).toContain("de naam zelf betaal je bij het bestellen");
+    expect(pagina).toContain("Je betaalt alleen voor resultaat.");
+    expect(regels).toContain("Bij het bestellen van de naam.");
+    expect(regels.match(/Je krijgt eerst een prijs\./g)?.length).toBe(3);
     expect(pagina.match(/boekhouding/g)?.length).toBe(2);
     // de gratis rekentools bestaan
     for (const m of pagina.matchAll(/href: "(\/rekentools\/[a-z-]+)"/g)) expect(paginaBestaat(m[1]!), m[1]).toBe(true);

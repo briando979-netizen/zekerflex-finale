@@ -8,7 +8,7 @@ import { LOGO_VOORBEELDEN } from "@/lib/logo/voorbeelden";
 import { breadcrumbJsonLd, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 
-const DESCRIPTION = "Vul je bedrijfsnaam in, kies een kleur en een sfeer en zie meteen zes logo's. Je betaalt niets voor het voorbeeld, pas als je hem wilt hebben.";
+const DESCRIPTION = "Vul je bedrijfsnaam in, kies een kleur en een sfeer en zie meteen zes logo's. Je betaalt niets voor het voorbeeld, pas als je het wilt hebben.";
 
 export const metadata: Metadata = {
   title: "Logo maker: maak je eigen logo",
@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
 const STAPPEN = [
   { titel: "Vul je naam in", tekst: "Je bedrijfsnaam, een kleur en een sfeer: strak, speels, klassiek of stoer. Een slogan mag erbij." },
   { titel: "Bekijk zes logo's", tekst: "Van woordmerk tot zegel, allemaal met jouw naam. Andere kleur of sfeer proberen? Maak ze gewoon opnieuw." },
-  { titel: "Betaal pas als je hem wilt", tekst: "Kies je logo en laat je gegevens achter. Na betaling krijg je het zonder watermerk, in vijf bestanden." },
+  { titel: "Betaal pas als je het wilt", tekst: "Kies je logo en laat je gegevens achter. Na betaling krijg je het zonder watermerk, in vijf bestanden." },
 ];
 
 export default async function LogoMakerPage() {
@@ -71,7 +71,7 @@ export default async function LogoMakerPage() {
             <h1 className="mt-4 text-balance font-display text-4xl font-bold leading-[1.06] md:text-[3.4rem]">Maak je logo.</h1>
             <p className="mt-6 text-xl font-medium leading-snug text-white md:text-2xl">Betaal niks, zie eerst het voorbeeld.</p>
             <p className="mt-3 text-lg leading-relaxed text-white/70">
-              Vul je bedrijfsnaam in, kies een kleur en een sfeer, en je ziet meteen zes logo&apos;s. Wil je hem hebben: {prijs}.
+              Vul je bedrijfsnaam in, kies een kleur en een sfeer, en je ziet meteen zes logo&apos;s. Wil je het hebben: {prijs}.
             </p>
             <ul className="mt-8 space-y-2.5 text-base text-white/80">
               {["Geen account en geen e-mailadres nodig", "Zes logo's met jouw naam, in jouw kleur", "Ook in wit, in zwart en als vierkant icoon"].map((x) => (
@@ -131,7 +131,7 @@ export default async function LogoMakerPage() {
         <div className="shell py-14 md:py-20">
           <p className="eyebrow">Wat het kost</p>
           <h2 id="logo-prijs-kop" className="mt-3 max-w-2xl text-balance font-display text-3xl font-bold leading-tight text-ink md:text-4xl">
-            Het voorbeeld is gratis. Je betaalt alleen als je hem wilt.
+            Het voorbeeld is gratis. Je betaalt alleen als je het wilt.
           </h2>
           <div className="card mt-10 max-w-2xl p-6 md:p-7">
             <h3 className="font-display text-xl font-bold text-ink">Eén logo, vijf bestanden</h3>

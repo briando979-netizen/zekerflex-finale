@@ -116,8 +116,8 @@ export function LogoResultaat({ id, naam: bedrijf, status: beginStatus, gekozen,
                   <img
                     src={beeld(id, l.nr)}
                     alt={`Voorbeeld van logo ${l.nr} (${l.naam}) voor ${bedrijf}, met watermerk`}
-                    width={480}
-                    height={360}
+                    width={360}
+                    height={270}
                     draggable={false}
                     onContextMenu={geenMenu}
                     onDragStart={geenMenu}
@@ -160,7 +160,7 @@ export function LogoResultaat({ id, naam: bedrijf, status: beginStatus, gekozen,
                 Deze wil ik
               </h2>
               <p className="mt-2 text-neutralx-600">
-                Eén logo kost {prijs}. Je betaalt pas als je hem wilt hebben. Na je betaling krijg je het zonder watermerk, als PNG in hoge resolutie: {VARIANT_IDS.map((v) => VARIANTEN[v].naam.toLowerCase()).join(", ")}.
+                Eén logo kost {prijs}. Je betaalt pas als je het wilt hebben. Na je betaling krijg je het zonder watermerk, als PNG in hoge resolutie: {VARIANT_IDS.map((v) => VARIANTEN[v].naam.toLowerCase()).join(", ")}.
               </p>
               {(verstuurd || status === "aangevraagd") && (
                 <p role="status" className="mt-5 rounded-2xl border border-brand-200 bg-brand-50 px-5 py-4 text-[0.975rem] leading-relaxed text-ink">

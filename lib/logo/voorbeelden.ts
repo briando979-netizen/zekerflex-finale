@@ -10,7 +10,7 @@ export interface LogoVoorbeeld {
 }
 
 export const LOGO_VOORBEELDEN: LogoVoorbeeld[] = [
-  { sleutel: "bakkerij", logo: 3, invoer: { naam: "Bakkerij De Korenbloem", slogan: "Vers uit eigen oven", branche: "winkel", kleur: "oranje", sfeer: "strak" } },
+  { sleutel: "bakkerij", logo: 3, invoer: { naam: "Bakkerij De Korenbloem", slogan: "Vers uit eigen oven", branche: "bakker", kleur: "oranje", sfeer: "strak" } },
   { sleutel: "kapsalon", logo: 2, invoer: { naam: "Noor's Kapsalon", branche: "beauty", kleur: "paars", sfeer: "speels" } },
   { sleutel: "cafe", logo: 6, invoer: { naam: "Café Zoë", slogan: "Koffie en taart", branche: "horeca", kleur: "rood", sfeer: "klassiek" } },
   { sleutel: "transport", logo: 4, invoer: { naam: "Van Dijk Transport", slogan: "Altijd onderweg", branche: "transport", kleur: "blauw", sfeer: "stoer" } },

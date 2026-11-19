@@ -120,6 +120,21 @@ describe("prijs, aanbod, voorbeelden en lettertypes", () => {
     expect(Object.keys(VARIANTEN)).toEqual(["kleur-wit", "kleur", "wit", "zwart", "icoon"]);
   });
 
+  it("het logo is overal 'het', niet 'hem'", () => {
+    for (const pad of [["app", "(marketing)", "logo-maker", "page.tsx"], ["components", "marketing", "logo", "LogoResultaat.tsx"], ["components", "marketing", "logo", "LogoFormulier.tsx"]]) expect(readFileSync(join(ROOT, ...pad), "utf8"), pad.join("/")).not.toMatch(/\bhem\b/);
+    expect(readFileSync(join(ROOT, "app", "(marketing)", "logo-maker", "page.tsx"), "utf8")).toContain("Wil je het hebben: {prijs}.");
+  });
+
+  it("zorg is een hart en geen kruis, de winkel een pui zonder stip, en er is een teken voor de bakker", () => {
+    const bron = readFileSync(join(ROOT, "lib", "logo", "ontwerp.ts"), "utf8");
+    expect(bron).toContain('case "bakker":');
+    expect(bron).not.toContain("een kruis in een zachte cirkel");
+    expect(BRANCHES.map((b) => b.id)).toContain("bakker");
+    // het teken van de zorg heeft geen vlak in de tweede toon: het blijft zichtbaar in wit en in het icoon
+    const hart = JSON.stringify(logoBoom(5, { naam: "Thuiszorg", branche: "zorg", kleur: "rood", sfeer: "strak" }, "icoon", 200, false).boom);
+    expect(hart).not.toContain('"opacity":0.6');
+  });
+
   it("de voorbeelden zijn zes verschillende soorten logo en gebruiken bestaande keuzes", () => {
     expect(LOGO_VOORBEELDEN.map((v) => v.logo).sort()).toEqual([1, 2, 3, 4, 5, 6]);
     for (const v of LOGO_VOORBEELDEN) {

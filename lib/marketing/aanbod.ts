@@ -491,7 +491,7 @@ export const AANBOD: AanbodItem[] = [
     punten: ["Drie ontwerpen in jouw kleur", "Eerst het voorbeeld, dan pas betalen", "Vierkant, verhaal en liggend formaat", "Geen account nodig"],
     voorWie: "Bedrijven die zelf willen adverteren",
     // dezelfde bron als de pagina zelf (lib/advertentie/regels.ts)
-    prijs: `${vanafTekst()}, je ziet eerst het voorbeeld`,
+    prijs: `${vanafTekst()} ${BTW_TEKST}, je ziet eerst het voorbeeld`,
     status: "beschikbaar",
     pagina: "/advertentie-op-maat",
     start: { label: "Maak mijn advertentie", href: "/advertentie-op-maat" },

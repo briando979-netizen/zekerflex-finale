@@ -58,6 +58,8 @@ export const isFormaatId = (v: unknown): v is FormaatId => typeof v === "string"
 
 /** Het voorbeeld vóór vrijgave: alleen vierkant en klein. */
 export const VOORBEELD_ZIJDE = 600;
+/** De kleine schone maat voor de lijst in Beheer (alleen voor een platformbeheerder). */
+export const BEHEER_KLEIN = 360;
 export const WATERMERK_TEKST = "VOORBEELD · zekerflex.com";
 
 export interface Invoer {
@@ -111,10 +113,28 @@ export function verlopen(gewijzigd: string, nu: Date): boolean {
   const t = Date.parse(gewijzigd);
   return !Number.isFinite(t) || nu.getTime() - t > BEWAAR_DAGEN * 86_400_000;
 }
+/** Alles wat vóór dit moment voor het laatst gewijzigd is, is verlopen (voor de dagelijkse opruiming, lib/privacy/sweep.ts). */
+export const verloopGrens = (nu: Date): Date => new Date(nu.getTime() - BEWAAR_DAGEN * 86_400_000);
+
+/**
+ * Vrijgeven hoort bij de aanvraag die de beheerder zag. Heeft de klant intussen opnieuw "Deze wil ik" ingestuurd (ander
+ * ontwerp, ander pakket), dan is het tijdstip van de aanvraag anders en gaat het vrijgeven niet door.
+ */
+export const KEUZE_GEWIJZIGD = { code: "KEUZE_GEWIJZIGD", tekst: "De klant heeft zijn keuze gewijzigd. Bekijk de aanvraag opnieuw." } as const;
+export const keuzeGewijzigd = (aanvraag: { op: string } | undefined, gezienOp: string): boolean => !aanvraag || aanvraag.op !== gezienOp;
 
 // ---------------------------------------------------------------------------
 // Invoer schoonmaken
 // ---------------------------------------------------------------------------
+
+/**
+ * De tekens die in ALLE lettertypes van de beelden zitten (public/fonts/advertentie; uit de cmap van de zeven TTF's
+ * gelezen, tests/advertentie-op-maat.test.ts controleert dat). Al het andere gaat eruit: een teken dat ontbreekt geeft een
+ * leeg blokje, en next/og zou er anders zelf een lettertype voor bij Google gaan ophalen.
+ */
+export const IN_LETTERTYPE =
+  /[\u{20}-\u{7E}\u{A1}-\u{A3}\u{A5}\u{A7}-\u{AB}\u{AE}-\u{B0}\u{B4}\u{B6}-\u{B8}\u{BA}\u{BB}\u{BF}-\u{107}\u{10A}-\u{113}\u{116}-\u{11B}\u{11E}-\u{123}\u{126}\u{127}\u{12A}\u{12B}\u{12E}-\u{133}\u{136}\u{137}\u{139}-\u{13E}\u{141}-\u{148}\u{14A}-\u{14D}\u{150}-\u{15B}\u{15E}-\u{161}\u{164}\u{165}\u{16A}-\u{17E}\u{20AC}]/u;
+const NIET_IN_LETTERTYPE = new RegExp(IN_LETTERTYPE.source.replace("[", "[^"), "gu");
 
 /**
  * Maakt van wat dan ook één nette regel tekst: geen HTML, geen stuurtekens of onzichtbare tekens, alleen letters en
@@ -133,7 +153,9 @@ export function schoonTekst(v: unknown, max: number): string {
     .replace(/[\u{2010}-\u{2015}\u{2212}]/gu, "-")
     .replace(/\u{2026}/gu, "...")
     .replace(/\u{2022}/gu, "\u{B7}")
-    .replace(/[^\u{20}-\u{7E}\u{A1}-\u{17F}\u{20AC}]/gu, "")
+    .replace(/\u{B1}/gu, "+/-")
+    .replace(/\u{BD}/gu, "1/2")
+    .replace(NIET_IN_LETTERTYPE, "")
     .replace(/\s+/g, " ")
     .trim();
   return s.slice(0, max).trim();
@@ -220,26 +242,38 @@ export function sjabloonTekst(i: Invoer): AdTekst {
 /** Woorden die een belofte of claim zijn: alleen toegestaan als het bedrijf ze zelf invulde. */
 const CLAIM_WOORDEN = [
   "beste", "actie", "acties", "jaar", "jaren", "nummer", "sinds", "altijd", "nooit", "euro", "iedereen", "vandaag", "morgen", "erkend", "erkende",
-  "review", "reviews", "klanten", "sterren", "ervaring", "procent", "direct", "meteen",
+  "review", "reviews", "klanten", "sterren", "ervaring", "procent", "direct", "meteen", "helft", "halve", "half", "dubbel", "dubbele", "tweede", "derde",
+  "dagelijks", "specialist", "specialisten", "expert", "experts", "vakman", "vakmensen", "uniek", "unieke", "enige", "origineel", "originele", "officieel", "officiële",
 ];
-/** Het begin van een woord volstaat ("kortingen", "goedkoopste", "gegarandeerd"). */
+/** Het begin van een woord volstaat ("kortingen", "goedkoopste", "gegarandeerd", "kosteloze"). */
 const CLAIM_STAMMEN = [
-  "korting", "gratis", "goedkoop", "voordel", "aanbieding", "garan", "gegarandeerd", "keurmerk", "gecertific", "grootste", "snelste", "laagste",
-  "bekroond", "winnaar", "award", "bezorg", "lever",
+  "korting", "gratis", "kostelo", "goedkoop", "voordel", "aanbieding", "garan", "gegarandeerd", "keurmerk", "gecertific", "grootste", "snelste", "laagste",
+  "bekroond", "winnaar", "award", "bezorg", "lever", "specialis",
 ];
+/** Een telwoord vlak voor "halen", "betalen", "gratis" of "voor" is een aanbieding ("twee halen, één betalen", "drie voor twee"). */
+const TELWOORD = "(?:een|één|twee|drie|vier|vijf|zes|zeven|acht|negen|tien)";
+const AANBIEDING = new RegExp(`(?:^|[^a-z\\u{E0}-\\u{17F}])${TELWOORD}\\s+(?:halen|betalen|gratis|kado|cadeau|voor\\s+${TELWOORD})(?![a-z\\u{E0}-\\u{17F}])`, "u");
+
+const getallen = (tekst: string): Set<string> => new Set(tekst.match(/\d+/g) ?? []);
 
 /**
- * Staat er in de tekst iets wat het bedrijf niet zelf invulde? Elk cijfer, %, € en elk claimwoord moet letterlijk in de
- * invoer voorkomen. Liever een keer te streng (dan komt het sjabloon) dan een verzonnen korting in iemands advertentie.
+ * Staat er in de tekst iets wat het bedrijf niet zelf invulde? Elk getal (als heel getal: "5" staat niet in "2015"),
+ * %, € en elk claimwoord moet in de invoer van het bedrijf voorkomen. De contactregel telt daarbij niet mee: een
+ * telefoonnummer bevat bijna elk cijfer en een webadres bijna elk woord. Liever een keer te streng (dan komt het
+ * sjabloon) dan een verzonnen korting in iemands advertentie.
  */
 export function verzint(tekst: string, i: Invoer): boolean {
-  const bron = [i.bedrijf, i.aanbod, i.plaats ?? "", i.boodschap ?? "", i.contact ?? ""].join(" ").toLowerCase();
+  const bron = [i.bedrijf, i.aanbod, i.plaats ?? "", i.boodschap ?? ""].join(" ").toLowerCase();
   const t = tekst.toLowerCase();
-  for (const getal of t.match(/\d+/g) ?? []) if (!bron.includes(getal)) return true;
+  const eigen = getallen(bron);
+  for (const getal of getallen(t)) if (!eigen.has(getal)) return true;
   for (const teken of ["%", "€", "*"]) if (t.includes(teken) && !bron.includes(teken)) return true;
+  const aanbieding = AANBIEDING.exec(t)?.[0].replace(/^[^a-z\u{E0}-\u{17F}]+/u, "");
+  if (aanbieding && !bron.includes(aanbieding)) return true;
   const woorden = t.split(/[^a-z\u{E0}-\u{17F}]+/u).filter(Boolean);
-  if (CLAIM_WOORDEN.some((w) => woorden.includes(w) && !bron.includes(w))) return true;
-  return CLAIM_STAMMEN.some((s) => woorden.some((w) => w.startsWith(s)) && !bron.includes(s));
+  const eigenWoorden = new Set(bron.split(/[^a-z\u{E0}-\u{17F}]+/u).filter(Boolean));
+  if (CLAIM_WOORDEN.some((w) => woorden.includes(w) && !eigenWoorden.has(w))) return true;
+  return CLAIM_STAMMEN.some((s) => woorden.some((w) => w.startsWith(s)) && ![...eigenWoorden].some((w) => w.startsWith(s)));
 }
 
 /** Tekst die geen tekst is, toch leesbaar maken (een model geeft soms een object of een lijst waar tekst hoort). */
@@ -335,15 +369,30 @@ export const PAKKET_UITLEG: Record<Pakket, string> = {
   alle: "Alle drie de ontwerpen, zonder watermerk, elk in drie formaten.",
 };
 
-export const PRIJS_MAX = 20;
-export const schonePrijs = (v: unknown): string => schoonTekst(v, PRIJS_MAX);
+export const PRIJS_MAX = 12;
+export const PRIJS_FOUT = "Vul alleen een bedrag in, bijvoorbeeld 29 of 29,50. Laat het veld leeg voor de standaardprijs.";
 
-/** De prijzen die gelden: wat de eigenaar in Beheer invulde, en anders de standaard. */
+/**
+ * Een prijs uit Beheer: alleen een bedrag ("29", "29,50", "€ 29"), altijd opgeslagen als "€ 29" of "€ 29,50". Leeg = ""
+ * (de standaard geldt). Iets anders (tekst, "gratis", "vanaf") = null: de route weigert het met een 422.
+ */
+export function normaliseerPrijs(v: unknown): string | null {
+  if (v === undefined || v === null) return "";
+  if (typeof v !== "string") return null;
+  const t = v.trim();
+  if (t === "") return "";
+  const m = /^(?:€\s*)?(\d{1,5})(?:[.,](\d{1,2}))?$/.exec(t.slice(0, PRIJS_MAX));
+  if (!m || t.length > PRIJS_MAX) return null;
+  const euro = String(Number(m[1]));
+  const cent = m[2] === undefined ? "" : m[2].padEnd(2, "0");
+  if (euro === "0" && (cent === "" || cent === "00")) return null;
+  return cent === "" || cent === "00" ? `€ ${euro}` : `€ ${euro},${cent}`;
+}
+
+/** De prijzen die gelden: wat de eigenaar in Beheer invulde, en anders de standaard (ook als er iets onbruikbaars staat). */
 export function geldendePrijzen(ingesteld: unknown): Prijzen {
-  const een = schonePrijs(veld(ingesteld, "een"));
-  const alle = schonePrijs(veld(ingesteld, "alle"));
-  const logo = schonePrijs(veld(ingesteld, "logo"));
-  return { een: een || STANDAARD_PRIJZEN.een, alle: alle || STANDAARD_PRIJZEN.alle, logo: logo || STANDAARD_PRIJZEN.logo };
+  const kies = (naam: Pakket | "logo") => normaliseerPrijs(veld(ingesteld, naam)) || STANDAARD_PRIJZEN[naam];
+  return { een: kies("een"), alle: kies("alle"), logo: kies("logo") };
 }
 
 /** "€ 29 excl. btw" */

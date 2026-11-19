@@ -21,6 +21,7 @@ export const isSfeerId = (v: unknown): v is SfeerId => typeof v === "string" && 
 export const BRANCHES = [
   { id: "bouw", naam: "Bouw en klussen" },
   { id: "horeca", naam: "Horeca" },
+  { id: "bakker", naam: "Bakker en eten" },
   { id: "zorg", naam: "Zorg en welzijn" },
   { id: "schoonmaak", naam: "Schoonmaak" },
   { id: "transport", naam: "Transport en logistiek" },
@@ -57,7 +58,7 @@ export const VARIANT_IDS = Object.keys(VARIANTEN) as VariantId[];
 export const isVariantId = (v: unknown): v is VariantId => typeof v === "string" && Object.hasOwn(VARIANTEN, v);
 
 /** Het voorbeeld vóór vrijgave: klein, in kleur op wit, met watermerk. */
-export const VOORBEELD = { breedte: 480, hoogte: 360 } as const;
+export const VOORBEELD = { breedte: 360, hoogte: 270 } as const;
 
 export const LOGO_GRENS = { naam: 40, slogan: 60, brancheTekst: 40 } as const;
 

@@ -31,7 +31,7 @@ async function meld(v: { wat: string; soort: string; bedrijf: string; keuze: str
     to: CONTACTS.sales,
     replyTo: k.email,
     kind: `${v.soort}-aanvraag`,
-    subject: `${v.wat}: ${v.bedrijf} wil hem hebben`,
+    subject: `${v.wat}: aanvraag van ${v.bedrijf}`,
     text: `${v.bedrijf} vroeg aan: ${v.wat.toLowerCase()}.\n\nKeuze: ${v.keuze}\nNaam: ${k.naam}\nE-mail: ${k.email}\n${k.telefoon ? `Telefoon: ${k.telefoon}\n` : ""}\nStuur een betaalverzoek en klik daarna op Vrijgeven: ${basis()}${BEHEER}`,
     html: mailShell(
       `${v.wat}: aanvraag`,

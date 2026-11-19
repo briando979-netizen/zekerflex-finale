@@ -45,44 +45,28 @@ export function lettergrootte(tekst: string, breedte: number, treden: readonly (
 
 const perFormaat = <T,>(f: FormaatId, v: { vierkant: T; verhaal: T; liggend: T }): T => v[f];
 
-/** Schuine, herhaalde tekst over het hele beeld: om en om licht en donker, zodat hij op elke achtergrond zichtbaar is. */
-export function watermerk(W: number, H: number, p: Maat): ReactElement {
+/**
+ * Het watermerk: schuine, herhaalde tekst over het hele beeld, dicht op elkaar. Elke rij staat er twee keer, wit en donker,
+ * een paar beeldpunten verschoven: zo is hij op wit, op donker en op kleur overal zichtbaar, en haal je hem niet weg door
+ * één tint weg te filteren. `letter` is de lettergrootte in beeldpunten van het volle formaat.
+ */
+export function watermerk(W: number, H: number, p: Maat, letter = 34): ReactElement {
   const zijde = Math.max(W, H) * 1.7;
-  const regel = Array.from({ length: 8 }, () => WATERMERK_TEKST).join("      ");
-  const rijen = Math.ceil(zijde / 96);
+  const stap = letter * 1.7;
+  const regel = Array.from({ length: Math.ceil(zijde / (letter * 17)) + 2 }, () => WATERMERK_TEKST).join("    ");
+  const rijen = Math.ceil(zijde / stap);
+  const tekst = (kleur: string, schuif: number): ReactElement =>
+    vak({ position: "absolute", left: p(schuif), top: p(schuif), whiteSpace: "nowrap", fontFamily: LETTER.tekst, fontWeight: 600, fontSize: p(letter), letterSpacing: p(letter * 0.05), lineHeight: 1, color: kleur }, regel);
   return vak(
     { position: "absolute", left: 0, top: 0, width: p(W), height: p(H), overflow: "hidden" },
     vak(
-      {
-        position: "absolute",
-        left: p((W - zijde) / 2),
-        top: p((H - zijde) / 2),
-        width: p(zijde),
-        height: p(zijde),
-        flexDirection: "column",
-        justifyContent: "center",
-        transform: "rotate(-24deg)",
-      },
+      { position: "absolute", left: p((W - zijde) / 2), top: p((H - zijde) / 2), width: p(zijde), height: p(zijde), flexDirection: "column", justifyContent: "center", transform: "rotate(-24deg)" },
       ...Array.from({ length: rijen }, (_, i) =>
-        vak(
-          {
-            height: p(96),
-            alignItems: "center",
-            whiteSpace: "nowrap",
-            marginLeft: p(i % 2 ? -240 : 0),
-            fontFamily: LETTER.tekst,
-            fontWeight: 600,
-            fontSize: p(38),
-            letterSpacing: p(2),
-            color: i % 2 ? "rgba(255,255,255,0.42)" : "rgba(10,18,14,0.30)",
-          },
-          regel,
-        ),
+        vak({ position: "relative", flexShrink: 0, height: p(stap), marginLeft: p(i % 2 ? -letter * 5 : 0) }, tekst("rgba(10,18,14,0.42)", letter * 0.07), tekst("rgba(255,255,255,0.62)", 0)),
       ),
     ),
   );
 }
-
 // --- 1. Strak: donker en rustig ---------------------------------------------
 
 function strak(g: OntwerpGegevens, f: FormaatId, p: Maat): ReactElement {

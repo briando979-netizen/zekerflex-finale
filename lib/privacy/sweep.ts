@@ -10,6 +10,7 @@ import { ruimChatlogOp } from "@/lib/learn/store";
 import { ruimWeesrekeningenOp } from "@/lib/privacy/bank-wissen";
 import { ruimBsnVoorstellenOp } from "@/lib/fiscal/bsn-voorstel";
 import { ruimBezoekstatistiekOp } from "@/lib/privacy/bezoekstatistiek";
+import { ruimVerlopenOp } from "@/lib/advertentie/opslag";
 
 // ---------------------------------------------------------------------------
 // Retention sweep.
@@ -185,6 +186,15 @@ export async function runRetentionSweep(
     logger.warn("retention sweep: bsn-voorstellen niet opgeruimd", { soort: err instanceof Error ? err.name : "onbekend" });
     return 0;
   });
+
+  // Advertenties op maat en logo's van de logo maker (lib/advertentie/opslag.ts): 60 dagen na de laatste wijziging echt weg,
+  // met de naam en het e-mailadres van de aanvrager erin. Ook rijen die niemand meer opvraagt.
+  cleared.advertentie_logo = dryRun
+    ? 0
+    : await ruimVerlopenOp(now).catch((err) => {
+        logger.warn("retention sweep: advertenties en logo's niet opgeruimd", { soort: err instanceof Error ? err.name : "onbekend" });
+        return 0;
+      });
 
   const result: SweepResult = {
     ranAt: now.toISOString(),

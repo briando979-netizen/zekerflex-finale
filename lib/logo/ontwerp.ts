@@ -136,8 +136,23 @@ function beeldmerk(c: Ctx, m: number, branche: BrancheId): ReactElement {
       // een bord van boven, met een stip
       return doos(op(0, 0, 1, 1, { borderRadius: p(m), border: `${Math.max(2, p(m * 0.1))}px solid ${a}` }), op(0.26, 0.26, 0.48, 0.48, { ...b, borderRadius: p(m) }), op(0.6, 0.18, 0.2, 0.2, { background: a, borderRadius: p(m) }));
     case "zorg":
-      // een kruis in een zachte cirkel
-      return doos(op(0, 0, 1, 1, { ...b, borderRadius: p(m) }), op(0.4, 0.18, 0.2, 0.64, { background: a, borderRadius: p(m * 0.08) }), op(0.18, 0.4, 0.64, 0.2, { background: a, borderRadius: p(m * 0.08) }));
+      // een hart (bewust geen kruis: dat lijkt op het beschermde teken van het Rode Kruis); zonder vlak erachter, zodat het
+      // ook in wit en in het icoon goed zichtbaar is
+      return doos(
+        op(0.25, 0.3, 0.5, 0.5, { background: a, borderRadius: p(m * 0.04), transform: "rotate(45deg)" }),
+        op(0.073, 0.123, 0.5, 0.5, { background: a, borderRadius: p(m) }),
+        op(0.427, 0.123, 0.5, 0.5, { background: a, borderRadius: p(m) }),
+      );
+    case "bakker":
+      // een korenaar: een steel met korrels links en rechts
+      return doos(
+        op(0.47, 0.34, 0.06, 0.64, { ...b, borderRadius: p(m) }),
+        op(0.42, 0, 0.16, 0.28, { background: a, borderRadius: p(m) }),
+        ...[0, 1, 2].flatMap((k) => [
+          op(0.24, 0.2 + k * 0.2, 0.16, 0.28, { background: a, borderRadius: p(m), transform: "rotate(-38deg)" }),
+          op(0.6, 0.2 + k * 0.2, 0.16, 0.28, { background: a, borderRadius: p(m), transform: "rotate(38deg)" }),
+        ]),
+      );
     case "schoonmaak":
       // een druppel met een glinstering
       return doos(
@@ -152,8 +167,14 @@ function beeldmerk(c: Ctx, m: number, branche: BrancheId): ReactElement {
       return doos(punt(-0.08, { opacity: c.k.vol ? 0.45 : c.k.tweedeDekking }), punt(0.3, {}));
     }
     case "winkel":
-      // een tas met een hengsel
-      return doos(op(0.27, 0.02, 0.46, 0.46, { borderRadius: p(m), border: `${Math.max(2, p(m * 0.08))}px solid ${a}` }), op(0.08, 0.3, 0.84, 0.66, { background: a, borderRadius: p(m * 0.1) }), op(0.38, 0.5, 0.24, 0.24, { ...b, borderRadius: p(m), ...(c.k.vol ? {} : { background: "transparent" }) }));
+      // een winkelpui: een luifel met schulpen, daaronder de gevel met een etalage en een deur
+      return doos(
+        op(0.02, 0.06, 0.96, 0.2, { background: a, borderRadius: `${p(m * 0.07)}px ${p(m * 0.07)}px 0px 0px` }),
+        ...[0, 1, 2, 3].map((k) => op(0.02 + k * 0.24, 0.26, 0.24, 0.13, { ...(k % 2 ? b : { background: a }), borderRadius: `0px 0px ${p(m)}px ${p(m)}px` })),
+        op(0.1, 0.39, 0.8, 0.57, { borderLeft: `${Math.max(2, p(m * 0.07))}px solid ${a}`, borderRight: `${Math.max(2, p(m * 0.07))}px solid ${a}`, borderBottom: `${Math.max(2, p(m * 0.07))}px solid ${a}` }),
+        op(0.24, 0.54, 0.24, 0.22, { ...b, borderRadius: p(m * 0.03) }),
+        op(0.58, 0.54, 0.18, 0.42, { background: a, borderRadius: `${p(m * 0.03)}px ${p(m * 0.03)}px 0px 0px` }),
+      );
     case "beauty":
       // drie bladen die elkaar overlappen
       return doos(op(0.02, 0.3, 0.6, 0.6, { background: a, borderRadius: p(m), opacity: 0.85 }), op(0.38, 0.3, 0.6, 0.6, { ...b, borderRadius: p(m), opacity: c.k.vol ? 0.9 : c.k.tweedeDekking }), op(0.2, 0.02, 0.6, 0.6, { background: a, borderRadius: p(m), opacity: 0.55 }));
@@ -294,6 +315,6 @@ export function logoBoom(nr: LogoNr, invoer: LogoInvoer, variant: VariantId, bre
   const c: Ctx = { i: invoer, l: TYPE[invoer.sfeer], k: palet(variant, kleur), p };
   const beeld = vierkant ? icoon(c, nr, kleur) : LOGO[nr](c);
   const achtergrond = VARIANTEN[variant].doorzichtig || vierkant ? {} : { background: "#FFFFFF" };
-  const boom = vak({ position: "relative", width: p(basisB), height: p(basisH), ...achtergrond }, beeld, metWatermerk ? watermerk(basisB, basisH, p) : null);
+  const boom = vak({ position: "relative", width: p(basisB), height: p(basisH), ...achtergrond }, beeld, metWatermerk ? watermerk(basisB, basisH, p, 62) : null);
   return { boom, breedte, hoogte: Math.round((breedte * basisH) / basisB) };
 }

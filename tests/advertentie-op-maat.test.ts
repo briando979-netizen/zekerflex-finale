@@ -1,7 +1,13 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { lettergrootte } from "@/lib/advertentie/ontwerp";
+import { readdirSync } from "node:fs";
+import { afterEach, vi } from "vitest";
+import { gegevensVan, maakBeeld, maakPng } from "@/lib/advertentie/beeld";
+import { GEHEUGEN_MAX, GEHEUGEN_MS, geheugenGrootte, leegGeheugen, watermerkBeeld } from "@/lib/advertentie/beeld-geheugen";
+import { lettergrootte, ontwerpBoom } from "@/lib/advertentie/ontwerp";
+import { logoBoom } from "@/lib/logo/ontwerp";
+import { valideerLogoInvoer } from "@/lib/logo/regels";
 import {
   BEWAAR_DAGEN,
   FORMATEN,
@@ -9,7 +15,12 @@ import {
   STANDAARD_PRIJZEN,
   VOORBEELD_ZIJDE,
   beeldBesluit,
+  IN_LETTERTYPE,
+  KEUZE_GEWIJZIGD,
   geldendePrijzen,
+  keuzeGewijzigd,
+  normaliseerPrijs,
+  verloopGrens,
   isAdvertentieId,
   kortAf,
   leesModelTekst,
@@ -194,11 +205,20 @@ describe("de prijs: één bron", () => {
     expect(geldendePrijzen(null)).toEqual(STANDAARD_PRIJZEN);
     expect(geldendePrijzen({ een: "", alle: "  " })).toEqual(STANDAARD_PRIJZEN);
     expect(geldendePrijzen({ een: "\u{20AC} 35", alle: 12, logo: "\u{20AC} 59" })).toEqual({ een: "\u{20AC} 35", alle: STANDAARD_PRIJZEN.alle, logo: "\u{20AC} 59" });
-    expect(geldendePrijzen({ een: "<b>\u{20AC} 39</b>" }).een).toBe("\u{20AC} 39");
+    // iets anders dan een bedrag telt niet: dan geldt de standaard
+    expect(geldendePrijzen({ een: "<b>\u{20AC} 39</b>", alle: "gratis", logo: "vanaf 10" })).toEqual(STANDAARD_PRIJZEN);
+  });
+
+  it("een prijs uit Beheer is alleen een bedrag en wordt genormaliseerd opgeslagen", () => {
+    for (const [in_, uit] of [["29", "\u{20AC} 29"], [" \u{20AC}29 ", "\u{20AC} 29"], ["\u{20AC} 29", "\u{20AC} 29"], ["29,5", "\u{20AC} 29,50"], ["29.50", "\u{20AC} 29,50"], ["029", "\u{20AC} 29"], ["29,00", "\u{20AC} 29"], ["", ""], ["   ", ""]] as const) expect(normaliseerPrijs(in_), in_).toBe(uit);
+    expect(normaliseerPrijs(undefined)).toBe("");
+    for (const fout of ["gratis", "vanaf 29", "29 euro", "\u{20AC} 29 excl. btw", "-5", "0", "0,00", "29,999", "1e3", "<b>29</b>", "123456", 29, {}]) expect(normaliseerPrijs(fout), String(fout)).toBeNull();
+    const route = readFileSync(join(ROOT, "lib", "advertentie", "store.ts"), "utf8");
+    expect(route).toContain("AppError.validation(PRIJS_FOUT");
   });
 
   it("het aanbod noemt dezelfde prijs en de pagina's verzinnen geen eigen bedrag", () => {
-    expect(AANBOD.find((a) => a.slug === "advertentie-op-maat")).toMatchObject({ pijler: "online", pagina: "/advertentie-op-maat", status: "beschikbaar", prijs: "Vanaf \u{20AC} 29, je ziet eerst het voorbeeld" });
+    expect(AANBOD.find((a) => a.slug === "advertentie-op-maat")).toMatchObject({ pijler: "online", pagina: "/advertentie-op-maat", status: "beschikbaar", prijs: "Vanaf \u{20AC} 29 excl. btw, je ziet eerst het voorbeeld" });
     for (const pad of [["app", "(marketing)", "advertentie-op-maat", "page.tsx"], ["components", "marketing", "advertentie", "AdvertentieResultaat.tsx"], ["components", "marketing", "advertentie", "AdvertentieFormulier.tsx"], ["lib", "advertentie", "melding.ts"]]) {
       const bron = readFileSync(join(ROOT, ...pad), "utf8").replace(/\/\/.*$/gm, "");
       expect(bron, pad.join("/")).not.toMatch(/\u{20AC}\s?\d/u);
@@ -238,5 +258,189 @@ describe("de ontwerpen en de voorbeelden", () => {
     for (const b of bestanden) expect(leesmij, b).toContain(b);
     expect(leesmij).toContain("SIL Open Font License");
     expect(Object.keys(FORMATEN)).toEqual(["vierkant", "verhaal", "liggend"]);
+  });
+});
+
+describe("verzonnen getallen en aanbiedingen", () => {
+  it("vergelijkt hele getallen: een 5 staat niet in 2015", () => {
+    const sinds: Invoer = { ...invoer, aanbod: "Fietsenmaker sinds 2015 in Zuidbroek" };
+    expect(verzint("Al sinds 2015 je fietsenmaker", sinds)).toBe(false);
+    expect(verzint("5 redenen om langs te komen", sinds)).toBe(true);
+    expect(verzint("Open sinds 201", sinds)).toBe(true);
+    expect(verzint("Nu 20 15 keer beter", sinds)).toBe(true);
+  });
+
+  it("de contactregel is geen bron: een telefoonnummer laat geen cijfers of woorden door", () => {
+    const metNummer: Invoer = { bedrijf: "Bakker Jan", aanbod: "Vers brood en gebak", contact: "06 21 12 34 56", kleur: "oranje" };
+    expect(verzint("2 halen, 1 betalen", metNummer)).toBe(true);
+    expect(verzint("Bel 06 21 12 34 56", metNummer)).toBe(true);
+    const metSite: Invoer = { ...metNummer, contact: "www.gratis-korting.example" };
+    expect(verzint("Gratis proeven", metSite)).toBe(true);
+    expect(verzint("Nu met korting", metSite)).toBe(true);
+  });
+
+  it("herkent aanbiedingen in woorden en losse claims", () => {
+    const i: Invoer = { bedrijf: "Bakker Jan", aanbod: "Vers brood en gebak", kleur: "oranje" };
+    for (const tekst of ["Twee halen, één betalen", "Tweede gratis", "Drie voor twee", "Voor de halve prijs", "De helft goedkoper", "Kosteloos advies", "Gratis koffie erbij", "De specialist in brood", "Nummer 1 van de stad", "De beste bakker", "Het goedkoopste brood", "Dagelijks geopend", "24/7 open", "Dé specialisten in gebak"]) expect(verzint(tekst, i), tekst).toBe(true);
+    for (const tekst of ["Vers brood, elke ochtend", "Gebak voor elk feest", "Een brood voor thuis", "Kom proeven"]) expect(verzint(tekst, i), tekst).toBe(false);
+    // wat het bedrijf zelf invulde, mag
+    const eigen: Invoer = { ...i, boodschap: "Tweede brood gratis, dagelijks geopend" };
+    expect(verzint("Tweede brood gratis", eigen)).toBe(false);
+    expect(verzint("Dagelijks geopend", eigen)).toBe(false);
+    expect(verzint("Derde brood gratis", eigen)).toBe(true);
+  });
+});
+
+describe("keuze wisselen na het betaalverzoek en de opruiming", () => {
+  it("vrijgeven geldt alleen voor de aanvraag die de beheerder zag", () => {
+    const gezien = "2026-11-19T10:00:00.000Z";
+    expect(keuzeGewijzigd({ op: gezien }, gezien)).toBe(false);
+    expect(keuzeGewijzigd({ op: "2026-11-19T10:05:00.000Z" }, gezien)).toBe(true);
+    expect(keuzeGewijzigd(undefined, gezien)).toBe(true);
+    expect(KEUZE_GEWIJZIGD).toEqual({ code: "KEUZE_GEWIJZIGD", tekst: "De klant heeft zijn keuze gewijzigd. Bekijk de aanvraag opnieuw." });
+    const route = readFileSync(join(ROOT, "app", "api", "admin", "advertentie-op-maat", "route.ts"), "utf8");
+    expect(route).toContain("gezienOp");
+    expect(route).toContain("{ status: 409 }");
+    const store = readFileSync(join(ROOT, "lib", "advertentie", "store.ts"), "utf8");
+    expect(store).toContain("if (keuzeGewijzigd(ad.aanvraag, gezienOp)) return { ok: false, rij: ad };");
+    expect(readFileSync(join(ROOT, "lib", "logo", "store.ts"), "utf8")).toContain("if (keuzeGewijzigd(logo.aanvraag, gezienOp)) return { ok: false, rij: logo };");
+    const scherm = readFileSync(join(ROOT, "components", "admin", "AdvertentieBeheer.tsx"), "utf8");
+    expect(scherm).toContain("gezienOp: a.op");
+    expect(scherm).toContain("KEUZE_GEWIJZIGD.code");
+  });
+
+  it("de grens van de dagelijkse opruiming is dezelfde als die van 'verlopen'", () => {
+    const nu = new Date("2026-11-19T12:00:00+01:00");
+    const grens = verloopGrens(nu);
+    expect(grens.toISOString()).toBe("2026-09-20T11:00:00.000Z");
+    expect(verlopen(new Date(grens.getTime() - 1).toISOString(), nu)).toBe(true);
+    expect(verlopen(new Date(grens.getTime() + 1).toISOString(), nu)).toBe(false);
+    const opslag = readFileSync(join(ROOT, "lib", "advertentie", "opslag.ts"), "utf8");
+    expect(opslag).toContain("[ADVERTENTIE_VOORVOEGSEL, LOGO_VOORVOEGSEL].map((v) => kvDeleteStale(v, grens))");
+    expect(readFileSync(join(ROOT, "lib", "privacy", "sweep.ts"), "utf8")).toContain("ruimVerlopenOp(now)");
+  });
+});
+
+describe("het geheugen voor watermerkbeelden", () => {
+  afterEach(() => leegGeheugen());
+  const beeld = (n: number) => () => Promise.resolve(new Uint8Array([n]).buffer as ArrayBuffer);
+
+  it("maakt een beeld één keer en geeft daarna een kopie uit het geheugen", async () => {
+    let gemaakt = 0;
+    const maak = () => {
+      gemaakt++;
+      return beeld(7)();
+    };
+    const a = await watermerkBeeld("advertentie:x:1", maak, 1000);
+    const b = await watermerkBeeld("advertentie:x:1", maak, 2000);
+    expect(gemaakt).toBe(1);
+    expect(new Uint8Array(b)[0]).toBe(7);
+    expect(a).not.toBe(b);
+    // na tien minuten opnieuw
+    await watermerkBeeld("advertentie:x:1", maak, 1000 + GEHEUGEN_MS + 1);
+    expect(gemaakt).toBe(2);
+  });
+
+  it("houdt hooguit het maximum vast en gooit het langst ongebruikte weg; een mislukte poging blijft niet staan", async () => {
+    for (let i = 0; i < GEHEUGEN_MAX; i++) await watermerkBeeld(`k${i}`, beeld(i), 1000);
+    await watermerkBeeld("k0", beeld(0), 1500); // k0 is weer vers
+    await watermerkBeeld("nieuw", beeld(9), 2000);
+    expect(geheugenGrootte()).toBe(GEHEUGEN_MAX);
+    let opnieuw = 0;
+    await watermerkBeeld("k0", () => (opnieuw++, beeld(0)()), 2500);
+    await watermerkBeeld("k1", () => (opnieuw++, beeld(1)()), 2500);
+    expect(opnieuw).toBe(1); // k1 viel eraf, k0 niet
+    await expect(watermerkBeeld("stuk", () => Promise.reject(new Error("x")), 3000)).rejects.toThrow("x");
+    let daarna = 0;
+    await watermerkBeeld("stuk", () => (daarna++, beeld(1)()), 3001);
+    expect(daarna).toBe(1);
+  });
+
+  it("alleen de watermerkversie gaat het geheugen in", () => {
+    for (const pad of [["app", "api", "advertentie", "[id]", "beeld", "route.ts"], ["app", "api", "logo-maker", "[id]", "beeld", "route.ts"]]) {
+      const route = readFileSync(join(ROOT, ...pad), "utf8");
+      expect(route.match(/watermerkBeeld\(/g)?.length, pad.join("/")).toBe(1);
+      expect(route, pad.join("/")).toMatch(/if \(besluit\.watermerk\) \{\s+png = await watermerkBeeld\(/);
+    }
+  });
+});
+
+describe("geen lettertype van buiten", () => {
+  /** De tekens in de cmap van een TTF (format 4 en 12). */
+  function dekking(buf: Buffer): Set<number> {
+    const set = new Set<number>();
+    let cmap = 0;
+    for (let i = 0; i < buf.readUInt16BE(4); i++) if (buf.toString("ascii", 12 + i * 16, 16 + i * 16) === "cmap") cmap = buf.readUInt32BE(12 + i * 16 + 8);
+    for (let i = 0; i < buf.readUInt16BE(cmap + 2); i++) {
+      const off = cmap + buf.readUInt32BE(cmap + 4 + i * 8 + 4);
+      const fmt = buf.readUInt16BE(off);
+      if (fmt === 4) {
+        const seg = buf.readUInt16BE(off + 6) / 2;
+        const eind = off + 14;
+        const start = eind + seg * 2 + 2;
+        const delta = start + seg * 2;
+        const bereik = delta + seg * 2;
+        for (let s = 0; s < seg; s++) {
+          const e = buf.readUInt16BE(eind + s * 2);
+          const b = buf.readUInt16BE(start + s * 2);
+          const d = buf.readInt16BE(delta + s * 2);
+          const r = buf.readUInt16BE(bereik + s * 2);
+          for (let c = b; c <= e && c !== 0xffff; c++) {
+            const v = r === 0 ? c + d : buf.readUInt16BE(bereik + s * 2 + r + (c - b) * 2);
+            if ((r === 0 ? v & 0xffff : v) !== 0) set.add(c);
+          }
+        }
+      } else if (fmt === 12) {
+        for (let g = 0; g < buf.readUInt32BE(off + 12); g++) for (let c = buf.readUInt32BE(off + 16 + g * 12); c <= buf.readUInt32BE(off + 20 + g * 12); c++) set.add(c);
+      }
+    }
+    return set;
+  }
+  const map = join(ROOT, "public", "fonts", "advertentie");
+
+  it("elk teken dat de invoerreiniging doorlaat, zit in alle lettertypes van de beelden", () => {
+    const bestanden = readdirSync(map).filter((f) => f.endsWith(".ttf"));
+    expect(bestanden.length).toBe(7);
+    const sets = bestanden.map((f) => dekking(readFileSync(join(map, f))));
+    const toegestaan: number[] = [];
+    for (let c = 0; c <= 0x2fff; c++) if (IN_LETTERTYPE.test(String.fromCodePoint(c))) toegestaan.push(c);
+    expect(toegestaan.length).toBeGreaterThan(250);
+    for (const [i, set] of sets.entries()) expect(toegestaan.filter((c) => !set.has(c)).map((c) => c.toString(16)), bestanden[i]).toEqual([]);
+    // en schoonTekst laat niets anders door
+    const alles = Array.from({ length: 0x3000 }, (_, c) => String.fromCodePoint(c)).join("") + "\u{4E2D}\u{1F600}";
+    for (const teken of schoonTekst(alles, 99_999)) expect(IN_LETTERTYPE.test(teken), teken.codePointAt(0)?.toString(16)).toBe(true);
+  });
+
+  it("een naam vol accenten, een Chinees teken en een emoji: het renderen haalt niets van buiten", async () => {
+    const haal = vi.spyOn(globalThis, "fetch").mockImplementation(() => Promise.reject(new Error("geen netwerk in deze test")));
+    try {
+      const ruw = { bedrijf: "Café Zoë \u{4E2D}\u{6587} \u{1F600} Łódź Ñandú", aanbod: "Crème brûlée, één \u{1F370} en çay \u{2014} «vers» \u{BD} prijs \u{B1} \u{3A9}", plaats: "Škofja Loka", boodschap: "Żółć & Ångström \u{1F525}", contact: "www.café-zoë.example", kleur: "rood" };
+      const invoerSchoon = valideerInvoer(ruw);
+      expect(invoerSchoon.ok && invoerSchoon.waarde.bedrijf).toBe("Café Zoë Łódź Ñandú");
+      if (!invoerSchoon.ok) return;
+      const ad = { invoer: invoerSchoon.waarde, tekst: sjabloonTekst(invoerSchoon.waarde) };
+      for (const nr of [1, 2, 3] as const) {
+        const png = await maakBeeld(gegevensVan(ad), nr, { watermerk: true, formaat: "vierkant", breedte: 200, hoogte: 200 });
+        expect(Buffer.from(png).subarray(1, 4).toString("ascii")).toBe("PNG");
+      }
+      const logo = valideerLogoInvoer({ naam: "Zoë & Łukasz \u{4E2D} \u{1F600}", slogan: "Crème de la crème \u{2728}", branche: "bakker", kleur: "paars", sfeer: "stoer" });
+      expect(logo.ok && logo.waarde.naam).toBe("Zoë & Łukasz");
+      if (!logo.ok) return;
+      for (const sfeer of ["strak", "speels", "klassiek", "stoer"] as const) {
+        const { boom, breedte, hoogte } = logoBoom(6, { ...logo.waarde, sfeer }, "kleur-wit", 180, true);
+        await maakPng(boom, breedte, hoogte);
+      }
+      expect(haal).not.toHaveBeenCalled();
+    } finally {
+      haal.mockRestore();
+    }
+  }, 120_000);
+
+  it("het watermerk staat er in twee tinten, wit en donker", () => {
+    const boom = JSON.stringify(ontwerpBoom(1, VOORBEELDEN[0]!.gegevens, "vierkant", 600, true));
+    expect(boom).toContain("rgba(255,255,255,0.62)");
+    expect(boom).toContain("rgba(10,18,14,0.42)");
+    expect(boom.split("VOORBEELD").length).toBeGreaterThan(60);
+    expect(JSON.stringify(ontwerpBoom(1, VOORBEELDEN[0]!.gegevens, "vierkant", 600, false))).not.toContain("VOORBEELD");
   });
 });

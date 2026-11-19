@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
-import { kvDelete, kvGet, kvListEntries, kvSet } from "@/lib/storage/kv";
-import { isAdvertentieId, verlopen } from "@/lib/advertentie/regels";
+import { kvDelete, kvDeleteStale, kvGet, kvListEntries, kvSet } from "@/lib/storage/kv";
+import { isAdvertentieId, verloopGrens, verlopen } from "@/lib/advertentie/regels";
 
 // ---------------------------------------------------------------------------
 // Opslag voor "eerst het voorbeeld, dan pas betalen" (advertentie op maat en de
@@ -15,6 +15,20 @@ export interface Rij {
   id: string;
   aangemaakt: string;
   gewijzigd: string;
+}
+
+export const ADVERTENTIE_VOORVOEGSEL = "advertentie:item:";
+export const LOGO_VOORVOEGSEL = "logo-maker:item:";
+
+/**
+ * De dagelijkse opruiming (lib/privacy/sweep.ts, cron 03:40 UTC): wist ELKE rij van beide soorten die langer dan 60 dagen
+ * niet is gewijzigd, ook rijen die niemand meer opvraagt en die buiten de lijst van Beheer vallen. Elke bewaring werkt de
+ * rij bij, dus het tijdstip van de rij in KV is het tijdstip van de laatste wijziging. Geeft het aantal gewiste rijen.
+ */
+export async function ruimVerlopenOp(nu = new Date()): Promise<number> {
+  const grens = verloopGrens(nu);
+  const aantallen = await Promise.all([ADVERTENTIE_VOORVOEGSEL, LOGO_VOORVOEGSEL].map((v) => kvDeleteStale(v, grens)));
+  return aantallen.reduce((a, b) => a + b, 0);
 }
 
 /** Een nieuw id: 128 bit uit crypto, 32 hex-tekens. */
@@ -38,9 +52,9 @@ export function maakOpslag<T extends Rij>(voorvoegsel: string) {
       }
       return rij;
     },
-    /** Alles, nieuwste eerst; verlopen rijen worden gewist. */
-    async alle(nu = new Date()): Promise<T[]> {
-      const rijen = await kvListEntries<T>(voorvoegsel, 5000);
+    /** De nieuwste rijen (hooguit `max`), nieuwste eerst; verlopen rijen worden gewist. De rest ruimt de dagelijkse opruiming op. */
+    async alle(nu = new Date(), max = 2000): Promise<T[]> {
+      const rijen = await kvListEntries<T>(voorvoegsel, max);
       const oud = rijen.filter((r) => verlopen(r.value.gewijzigd, nu));
       await Promise.all(oud.map((r) => kvDelete(r.key).catch(() => undefined)));
       return rijen

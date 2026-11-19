@@ -22,9 +22,9 @@ export const dynamic = "force-dynamic";
 
 const ROUTE = [
   { titel: "Vertel wat je wilt", tekst: "Je bedrijfsnaam of je idee, en wat je nodig hebt. Meer niet." },
-  { titel: "Je ziet een voorbeeld", tekst: "Je logo en je advertentie zie je meteen. Voor een website klik je eerst rond in complete voorbeelden." },
-  { titel: "Jij beslist", tekst: "Bevalt het? Dan kies je wat je wilt hebben. Bevalt het niet, dan kost het je niets." },
-  { titel: "Pas dan betaal je", tekst: "Alleen voor wat je afneemt. De prijs weet je vooraf." },
+  { titel: "Je ziet een voorbeeld", tekst: "Je logo en je advertentie zie je meteen, van je eigen bedrijf. Voor een website of webshop klik je eerst rond in voorbeelden." },
+  { titel: "Jij beslist", tekst: "Bevalt je logo of je advertentie? Dan kies je wat je wilt hebben. Bevalt het niet, dan kost het je niets." },
+  { titel: "Pas dan betaal je", tekst: "Je logo en je advertentie pas als je ze wilt hebben. Voor een website of webshop krijg je eerst een prijs; je zit nergens aan vast voordat je ja zegt." },
   { titel: "Je staat live", tekst: "Met een eigen naam, een eigen gezicht en een plek waar klanten je vinden." },
 ];
 
@@ -49,7 +49,7 @@ export default async function StartersPage() {
   const faq = [
     {
       q: "Wat betekent 'alleen betalen voor resultaat' precies?",
-      a: "Dat je eerst ziet wat je krijgt en pas daarna beslist. Je logo en je advertentie maak je zelf en bekijk je gratis; je betaalt pas als je ze wilt hebben. Of je domeinnaam vrij is, zoek je gratis op; je betaalt pas als je hem aanvraagt. Voor een website of webshop bekijk je eerst complete voorbeelden.",
+      a: "Bij je logo en je advertentie zie je eerst je eigen voorbeeld; je betaalt pas als je het wilt hebben. Bij een website of webshop bekijk je eerst voorbeelden en krijg je vooraf een prijs; je zit nergens aan vast voordat je ja zegt. Een domeinnaam werkt anders: of de naam vrij is zoek je gratis op, maar de naam zelf betaal je bij het bestellen.",
     },
     {
       q: "En wat betekent het niet?",
@@ -57,7 +57,7 @@ export default async function StartersPage() {
     },
     {
       q: "Wat kost het?",
-      a: `Dat hangt af van wat je neemt. ${heeft("logo-maker") ? `Een logo kost ${advertentiePrijs(prijzen, "logo")}. ` : ""}${heeft("advertentie-op-maat") ? `Een advertentie kost ${advertentiePrijs(prijzen, "een")} voor één ontwerp of ${advertentiePrijs(prijzen, "alle")} voor alle drie. ` : ""}Bij elk onderdeel op deze pagina staat de prijs erbij. Er is geen pakket dat je in één keer moet afnemen.`,
+      a: `Dat hangt af van wat je neemt. ${heeft("logo-maker") ? `Een logo kost ${advertentiePrijs(prijzen, "logo")}. ` : ""}${heeft("advertentie-op-maat") ? `Een advertentie kost ${advertentiePrijs(prijzen, "een")} voor één ontwerp of ${advertentiePrijs(prijzen, "alle")} voor alle drie. ` : ""}Bij het logo, de advertentie en de domeinnaam staat de prijs op deze pagina. Voor een website, een webshop en zakelijke e-mail krijg je eerst een prijs van ons; je zit nergens aan vast voordat je ja zegt. Er is geen pakket dat je in één keer moet afnemen.`,
     },
     {
       q: "Moet ik alles tegelijk doen?",
@@ -93,7 +93,7 @@ export default async function StartersPage() {
             <p className="eyebrow text-brand-mint">Voor starters</p>
             <h1 className="mt-4 text-balance font-display text-5xl font-bold leading-[1.03] md:text-7xl">Van idee tot merk.</h1>
             <p className="mt-6 text-xl font-medium leading-snug text-white md:text-2xl">Wij helpen starters van aanvraag tot product. Je betaalt alleen voor resultaat.</p>
-            <p className="mt-4 max-w-2xl text-lg leading-relaxed text-white/70">Een naam, een logo, een website en je eerste advertentie. Je ziet eerst wat je krijgt. Pas als het goed is, betaal je.</p>
+            <p className="mt-4 max-w-2xl text-lg leading-relaxed text-white/70">Een naam, een logo, een website en je eerste advertentie. Je logo en je advertentie zie je eerst zelf, van je eigen bedrijf. Voor een website krijg je eerst voorbeelden en een prijs. Daarna beslis jij.</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <a href="#aanvraag" className="btn-mint px-6 py-3 text-base">
                 Vertel wat je wilt starten
@@ -132,7 +132,7 @@ export default async function StartersPage() {
           <h2 id="st-onderdelen-kop" className="mt-3 max-w-2xl text-balance font-display text-3xl font-bold leading-tight text-ink md:text-4xl">
             Alles voor je eerste indruk
           </h2>
-          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-neutralx-600">Neem wat je nodig hebt. Bij elk onderdeel staat wat je eerst gratis ziet en wanneer je pas betaalt.</p>
+          <p className="mt-4 max-w-2xl text-lg leading-relaxed text-neutralx-600">Neem wat je nodig hebt. Bij elk onderdeel staat wat je eerst ziet en wanneer je betaalt.</p>
           <ul className="mt-10 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {onderdelen.map((o) => (
               <li key={o.slug} className="card flex flex-col p-6">

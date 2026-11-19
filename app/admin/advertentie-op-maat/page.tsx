@@ -7,6 +7,8 @@ import { alleLogos } from "@/lib/logo/store";
 
 export const dynamic = "force-dynamic";
 
+const LIJST_MAX = 300;
+
 // Admin → Sales & groei → Advertenties op maat: wat bezoekers op /advertentie-op-maat en /logo-maker lieten maken, wie hem wil hebben,
 // en de knop Vrijgeven (na betaling). Betalen loopt buiten de pagina om: stuur een betaalverzoek, klik daarna Vrijgeven.
 export default async function AdvertentieOpMaatBeheerPage() {
@@ -14,7 +16,9 @@ export default async function AdvertentieOpMaatBeheerPage() {
   if (!principal || !hasRole(principal, "PLATFORM_ADMIN")) {
     return <PageHead title="Geen toegang" subtitle="Advertenties op maat zijn alleen beschikbaar voor platformbeheerders." />;
   }
-  const [advertenties, logos, prijzen, ingesteld] = await Promise.all([alleAdvertenties(), alleLogos(), leesPrijzen(), leesIngesteldePrijzen()]);
+  // de lijst is begrensd: de nieuwste per soort; ouder dan 60 dagen wist de dagelijkse opruiming
+  const nu = new Date();
+  const [advertenties, logos, prijzen, ingesteld] = await Promise.all([alleAdvertenties(nu, LIJST_MAX), alleLogos(nu, LIJST_MAX), leesPrijzen(), leesIngesteldePrijzen()]);
   const alles = [...advertenties, ...logos];
   const aangevraagd = alles.filter((a) => a.status === "aangevraagd").length;
   const vrijgegeven = alles.filter((a) => a.status === "vrijgegeven").length;

@@ -16,6 +16,8 @@ export interface StartersOnderdeel {
   /** naam op de pagina en in het formulier */
   naam: string;
   /** wat je eerst ziet, zonder te betalen */
+  // wanneer je betaalt: bij het logo en de advertentie pas na je eigen voorbeeld; bij de domeinnaam bij het bestellen;
+  // voor website, webshop en zakelijke e-mail staat de prijs niet vast (aanbod: "Op aanvraag"), je krijgt hem eerst
   eerst: string;
   /** wanneer je betaalt */
   betaal: string;
@@ -38,14 +40,14 @@ export const STARTERS_ONDERDELEN: StartersOnderdeel[] = [
     slug: "domeinnaam",
     naam: "Een domeinnaam",
     eerst: "Je zoekt gratis of jouw naam nog vrij is.",
-    betaal: "Pas als je de naam aanvraagt.",
+    betaal: "Bij het bestellen van de naam. Zoeken kost niets.",
     knop: "Zoek mijn domeinnaam",
   },
   {
     slug: "website",
     naam: "Een website",
-    eerst: "Je klikt rond in complete voorbeeldwebsites voor jouw branche.",
-    betaal: "Pas als je er zelf een neemt. Je kiest een ontwerp en past teksten en foto's zelf aan.",
+    eerst: "Je klikt rond in complete voorbeeldwebsites voor jouw branche. Bij je eigen site kies je een ontwerp en pas je teksten en foto's zelf aan.",
+    betaal: "Je krijgt eerst een prijs. Je zit nergens aan vast voordat je ja zegt.",
     knop: "Bekijk voorbeeldwebsites",
     href: "/voorbeeldsites",
   },
@@ -53,7 +55,7 @@ export const STARTERS_ONDERDELEN: StartersOnderdeel[] = [
     slug: "webshop",
     naam: "Een webshop",
     eerst: "Je klikt rond in complete voorbeeldwebshops.",
-    betaal: "Pas als je er zelf een opent.",
+    betaal: "Je krijgt eerst een prijs. Je zit nergens aan vast voordat je ja zegt.",
     knop: "Bekijk voorbeeldwebshops",
     href: "/voorbeeldsites#webshops",
   },
@@ -68,7 +70,7 @@ export const STARTERS_ONDERDELEN: StartersOnderdeel[] = [
     slug: "zakelijke-mail",
     naam: "Zakelijke e-mail",
     eerst: "Een adres op je eigen domein, zoals info@jouwzaak.nl. Dat kan op een domeinnaam die je via ZekerFlex neemt.",
-    betaal: "Hoort bij je domeinnaam; je regelt het in je account.",
+    betaal: "Je krijgt eerst een prijs. Het hoort bij je domeinnaam en je regelt het in je account.",
     knop: "Lees meer over zakelijke e-mail",
   },
 ];

@@ -124,7 +124,7 @@ export function LogoFormulier() {
       <button type="submit" disabled={bezig} className="btn-primary mt-5 w-full justify-center px-6 py-3 text-base disabled:opacity-60">
         {bezig ? "Bezig…" : "Laat mijn logo's zien"}
       </button>
-      <p className="mt-3 text-center text-xs text-neutralx-500">Geen account, geen e-mailadres nodig. Je betaalt pas als je hem wilt hebben.</p>
+      <p className="mt-3 text-center text-xs text-neutralx-500">Geen account, geen e-mailadres nodig. Je betaalt pas als je het wilt hebben.</p>
     </form>
   );
 }
