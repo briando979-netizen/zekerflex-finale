@@ -1,7 +1,10 @@
 import type { Pakket, Vraag } from "@/lib/voorstel/smileyapp";
 import type { ReviewTeksten } from "@/lib/voorstel/smileyapp-review-regels";
 import { KADER, TALEN, VERTALINGEN, euroTaal, isTaal, type KaderTeksten, type Taal, type Vertaling } from "@/lib/voorstel/smileyapp-taal";
-import { vul, type FormulierTeksten, type KiezerTeksten, type ProbeerTeksten } from "@/lib/voorstel/smileyapp-teksten";
+import { BRANCHE_LIJST } from "@/lib/voorstel/smileyapp-branches";
+import { SOORT_SLEUTEL, type KeuzeVraag } from "@/lib/voorstel/smileyapp-samensteller";
+import type { Rij } from "@/lib/voorstel/smileyapp-vergelijk-regels";
+import { vul, type FormulierTeksten, type GeslotenTeksten, type KiezerTeksten, type ProbeerTeksten, type RekenTeksten, type SamenstelTeksten, type VergelijkTeksten } from "@/lib/voorstel/smileyapp-teksten";
 
 // ---------------------------------------------------------------------------
 // Het SmileyApp-voorstel in het Engels (/en) en het Duits (/de), 19 nov 2026:
@@ -333,6 +336,446 @@ const KIEZER_DE: KiezerTeksten = {
   onderdelen: ONDERDELEN_DE,
 };
 
+// ---- deel 6b: de rest van de site in het Engels en het Duits -------------------
+
+/** De tekst van één branchepagina (lib/voorstel/smileyapp-branches.ts): dezelfde vorm, vertaald. De vragen blijven voorbeelden. */
+export interface BrancheTekst {
+  naam: string;
+  kop: string;
+  intro: string[];
+  momenten: string[];
+  /** in de volgorde van de Nederlandse voorbeeldvragen; de soort van elke vraag komt uit de Nederlandse gegevens */
+  vragen: string[];
+}
+
+const BRANCHES_EN: Record<string, BrancheTekst> = {
+  horeca: {
+    naam: "Hospitality",
+    kop: "Measure hospitality in restaurants, cafés and hotels",
+    intro: [
+      "A guest who says at the table that everything was fine does not always tell you what they really thought. With a short questionnaire on their own phone, a guest gives their opinion in the moment itself.",
+      "You put a QR code on the table, on the bill or at the exit. The guest scans it, swipes the smiley and is done in no time.",
+    ],
+    momenten: ["At the table, after the main course", "When paying the bill", "At the exit or the cloakroom", "After takeaway or delivery, with a QR code on the packaging"],
+    vragen: [
+      "How satisfied are you with your visit today?",
+      "What did you think of the food and drinks?",
+      "How welcoming did you find our service?",
+      "Would you recommend us to friends or family?",
+      "What can we do better next time?",
+    ],
+  },
+  onderwijs: {
+    naam: "Education",
+    kop: "Let students and participants give their rating",
+    intro: [
+      "An evaluation after a course, a minor or an activity yields more when students fill it in straight away and without any fuss. Swiping a smiley takes a few seconds.",
+      "You hang the QR code in the classroom or put it on the last slide. That way the whole group can take part, not just those who stay behind afterwards.",
+    ],
+    momenten: ["At the end of a lesson, course or minor", "After an internship fair or open day", "After a workshop, training session or company visit", "After an information session"],
+    vragen: [
+      "How did you experience this course?",
+      "How clear was the explanation?",
+      "Did the content match what you expected?",
+      "What should we definitely keep as it is?",
+      "Is there anything else you would like to tell us, or would you like us to contact you? Leave it here.",
+    ],
+  },
+  zorg: {
+    naam: "Healthcare",
+    kop: "Collect the experiences of clients and visitors",
+    intro: [
+      "Someone who has just seen a practitioner or been at the desk still remembers exactly how it went. A short questionnaire in the waiting room or at the exit asks about it at that moment.",
+      "Keep the questions general and do not ask for medical details: it is about the experience, not the medical file.",
+    ],
+    momenten: ["In the waiting room, after the appointment", "At the desk or the exit", "After a course of treatment", "After a home visit, with a QR code on a card"],
+    vragen: [
+      "How satisfied are you with your appointment today?",
+      "How friendly was your welcome?",
+      "Was the explanation you received clear?",
+      "Were you seen on time?",
+      "What would have made your visit more pleasant?",
+    ],
+  },
+  winkel: {
+    naam: "Shops and retail",
+    kop: "Know what customers think of your shop",
+    intro: [
+      "A customer who walks out of the shop rarely tells you why they did or did not buy something. With a QR code at the checkout or on the receipt, you ask while they still remember.",
+      "You can also include the QR code in the parcel of an online order.",
+    ],
+    momenten: ["At the checkout, after paying", "On the receipt or the bag", "At the fitting room or the service desk", "In the parcel of an online order"],
+    vragen: [
+      "How satisfied are you with your visit to our shop?",
+      "How well were you helped by our staff?",
+      "Did you find what you were looking for?",
+      "What did you miss in our range?",
+      "Would you like a reply from us? Then leave your details here.",
+    ],
+  },
+  evenementen: {
+    naam: "Events",
+    kop: "Feedback from visitors, while your event is still on",
+    intro: [
+      "After an event everyone has gone home again and a survey by email often no longer gets through. With a QR code on the grounds, on a screen or on the wristband, you ask while visitors are still there.",
+      "For a (multi-day) event or several locations there is the Maatwerk Pakket (the custom package), which you put together yourself.",
+    ],
+    momenten: ["At the exit", "After a performance, session or speaker", "At the bar or the food court", "At the end of each day of a multi-day event"],
+    vragen: [
+      "How satisfied are you with the event?",
+      "What did you think of the programme?",
+      "How did you find the organisation on the grounds?",
+      "Will you come again next time?",
+      "What must not be missing next year?",
+    ],
+  },
+};
+
+const BRANCHES_DE: Record<string, BrancheTekst> = {
+  horeca: {
+    naam: "Gastronomie",
+    kop: "Gastfreundschaft in der Gastronomie messen",
+    intro: [
+      "Ein Gast, der am Tisch sagt, dass alles in Ordnung war, erzählt nicht immer, was er wirklich dachte. Mit einem kurzen Fragebogen auf dem eigenen Smartphone gibt ein Gast seine Meinung im Moment selbst ab.",
+      "Sie stellen einen QR-Code auf den Tisch, drucken ihn auf die Rechnung oder platzieren ihn am Ausgang. Der Gast scannt, wischt den Smiley und ist im Nu fertig.",
+    ],
+    momenten: ["Am Tisch, nach dem Hauptgang", "Beim Bezahlen", "Am Ausgang oder an der Garderobe", "Nach dem Abholen oder Liefern, mit einem QR-Code auf der Verpackung"],
+    vragen: [
+      "Wie zufrieden sind Sie mit Ihrem heutigen Besuch?",
+      "Wie fanden Sie Essen und Getränke?",
+      "Wie gastfreundlich fanden Sie unseren Service?",
+      "Würden Sie uns Freunden oder Familie empfehlen?",
+      "Was können wir beim nächsten Mal besser machen?",
+    ],
+  },
+  onderwijs: {
+    naam: "Bildung",
+    kop: "Studierende und Teilnehmende bewerten lassen",
+    intro: [
+      "Eine Evaluation nach einem Fach, einem Minor oder einer Aktivität bringt mehr, wenn Studierende sie sofort und ohne Aufwand ausfüllen. Einen Smiley zu wischen dauert ein paar Sekunden.",
+      "Sie hängen den QR-Code im Raum auf oder setzen ihn auf die letzte Folie. So kann die ganze Gruppe mitmachen, nicht nur, wer danach noch bleibt.",
+    ],
+    momenten: [
+      "Am Ende einer Unterrichtsstunde, eines Fachs oder eines Minors",
+      "Nach einer Praktikumsmesse oder einem Tag der offenen Tür",
+      "Nach einem Workshop, einem Training oder einem Betriebsbesuch",
+      "Nach einer Informationsveranstaltung",
+    ],
+    vragen: [
+      "Wie haben Sie dieses Fach erlebt?",
+      "Wie verständlich war die Erklärung?",
+      "Entsprach der Inhalt Ihren Erwartungen?",
+      "Was sollten wir unbedingt so beibehalten?",
+      "Möchten Sie uns noch etwas mitteilen oder sollen wir Sie kontaktieren? Schreiben Sie es hier.",
+    ],
+  },
+  zorg: {
+    naam: "Gesundheitswesen",
+    kop: "Erfahrungen von Klienten und Besuchern einholen",
+    intro: [
+      "Wer gerade in einer Behandlung oder am Empfang war, weiß noch genau, wie es war. Ein kurzer Fragebogen im Wartezimmer oder am Ausgang fragt in diesem Moment danach.",
+      "Halten Sie die Fragen allgemein und fragen Sie nicht nach medizinischen Daten: Es geht um die Erfahrung, nicht um die Akte.",
+    ],
+    momenten: ["Im Wartezimmer, nach dem Termin", "Am Empfang oder am Ausgang", "Nach einer Behandlungsreihe", "Nach einem Hausbesuch, mit einem QR-Code auf einer Karte"],
+    vragen: [
+      "Wie zufrieden sind Sie mit Ihrem heutigen Termin?",
+      "Wie freundlich wurden Sie empfangen?",
+      "War die Erklärung, die Sie erhalten haben, verständlich?",
+      "Kamen Sie pünktlich an die Reihe?",
+      "Was hätte Ihren Besuch angenehmer gemacht?",
+    ],
+  },
+  winkel: {
+    naam: "Geschäft und Einzelhandel",
+    kop: "Wissen, was Kunden von Ihrem Geschäft halten",
+    intro: [
+      "Ein Kunde, der das Geschäft verlässt, erzählt selten, warum er etwas gekauft hat oder nicht. Mit einem QR-Code an der Kasse oder auf dem Kassenbon fragen Sie in dem Moment, in dem er es noch weiß.",
+      "Den QR-Code können Sie auch dem Paket einer Online-Bestellung beilegen.",
+    ],
+    momenten: ["An der Kasse, nach dem Bezahlen", "Auf dem Kassenbon oder der Tüte", "An der Umkleidekabine oder am Serviceschalter", "Im Paket einer Online-Bestellung"],
+    vragen: [
+      "Wie zufrieden sind Sie mit Ihrem Besuch in unserem Geschäft?",
+      "Wie gut wurden Sie von unseren Mitarbeitenden beraten?",
+      "Haben Sie gefunden, was Sie gesucht haben?",
+      "Was haben Sie in unserem Sortiment vermisst?",
+      "Möchten Sie eine Antwort von uns? Dann hinterlassen Sie hier Ihre Angaben.",
+    ],
+  },
+  evenementen: {
+    naam: "Veranstaltungen",
+    kop: "Feedback von Besuchern, noch während Ihrer Veranstaltung",
+    intro: [
+      "Nach einer Veranstaltung sind alle wieder zu Hause und eine Umfrage per E-Mail kommt oft nicht mehr an. Mit einem QR-Code auf dem Gelände, auf einem Bildschirm oder auf dem Armband fragen Sie, solange die Besucher noch da sind.",
+      "Für eine (mehrtägige) Veranstaltung oder mehrere Standorte gibt es das Maatwerk Pakket (das Paket nach Maß), das Sie selbst zusammenstellen.",
+    ],
+    momenten: ["Am Ausgang", "Nach einem Auftritt, einer Session oder einem Vortrag", "An der Bar oder im Gastrobereich", "Am Ende jedes Tages bei einer mehrtägigen Veranstaltung"],
+    vragen: [
+      "Wie zufrieden sind Sie mit der Veranstaltung?",
+      "Wie fanden Sie das Programm?",
+      "Wie fanden Sie die Organisation auf dem Gelände?",
+      "Kommen Sie beim nächsten Mal wieder?",
+      "Was darf im nächsten Jahr nicht fehlen?",
+    ],
+  },
+};
+
+/** De uitwerking van een klantverhaal (lib/voorstel/smileyapp-klanten.ts), per id. De quote zelf blijft Nederlands. */
+export interface VerhaalTekst {
+  gebruik: string;
+  eerst?: string;
+  meten: string[];
+}
+
+const VERHALEN_EN: Record<string, VerhaalTekst> = {
+  hanzehogeschool: {
+    gebruik: "Hanzehogeschool has students rate their minor and courses with Smileyapp.",
+    eerst: "Every student was asked to fill in an evaluation form in Word.",
+    meten: ["How the students experienced the minor", "How the students experienced the various courses"],
+  },
+  "alfa-college": {
+    gebruik: "Alfa College uses Smileyapp at, among other things, internship fairs and external activities that it organises with the business community.",
+    meten: ["Internship fairs", "Training sessions and workshops", "Practical assignments", "Company visits", "Information sessions"],
+  },
+};
+
+const VERHALEN_DE: Record<string, VerhaalTekst> = {
+  hanzehogeschool: {
+    gebruik: "Die Hanzehogeschool lässt Studierende mit Smileyapp ihren Minor und ihre Fächer bewerten.",
+    eerst: "Alle Studierenden wurden gebeten, ein Evaluationsformular in Word auszufüllen.",
+    meten: ["Wie die Studierenden den Minor erlebt haben", "Wie die Studierenden die verschiedenen Fächer erlebt haben"],
+  },
+  "alfa-college": {
+    gebruik: "Das Alfa College setzt Smileyapp unter anderem bei Praktikumsmessen und bei externen Aktivitäten ein, die es gemeinsam mit der Wirtschaft organisiert.",
+    meten: ["Praktikumsmessen", "Trainings und Workshops", "Praxisaufträge", "Betriebsbesuche", "Informationsveranstaltungen"],
+  },
+};
+
+const SAMENSTEL_EN: SamenstelTeksten = {
+  boven: "Build it yourself",
+  kop: "Build your own questionnaire",
+  intro: "Choose up to {max} sample questions and, if you like, add one question of your own. You can see straight away what it looks like on a phone.",
+  kiesKop: "Choose your questions",
+  voorbeeld: "Example",
+  voorbeeldUitleg: "All questions in this list are examples by ZekerFlex, not questions from a Smileyapp customer. In your own dashboard you can change everything.",
+  gekozen: "{n} of {max} chosen",
+  vol: "You have chosen {max}. Remove one first to choose another.",
+  eigenLabel: "Your own question",
+  eigenUitleg: "At most {max} characters; now {n}.",
+  eigenSoort: "Own question",
+  telefoonKop: "This is what your questionnaire looks like",
+  telefoonUitleg: "An example: what you choose or type here stays in your own browser; nothing is stored or sent.",
+  leeg: "Choose a question and you will see it here.",
+  stap: "Question {n} of {totaal}",
+  vorige: "Previous",
+  volgende: "Next",
+  klaar: "Done",
+  bedankt: "Thank you!",
+  opnieuw: "Once more",
+  ja: "Yes",
+  nee: "No",
+  antwoord: "Type your answer here",
+  score: "{score} out of 10",
+  kiesCijfer: "Pick a number from 1 to 10",
+  demoKnop: "Request a demo with this questionnaire",
+  demoUitleg: "Your selection goes along to the demo form and appears there in the message field. You can still change it there.",
+  eerstKiezen: "First choose a question or type your own question.",
+  berichtKop: "My questionnaire (put together on the website):",
+  berichtEigen: "Own question: {vraag}",
+  demoKaart: "With your questionnaire",
+  demoKaartUitleg: "Your questions are in the message field of the form. You can still change them there.",
+  blokBoven: "Build it yourself",
+  blokKop: "Which questions would you ask?",
+  blokTekst: "Choose a few sample questions, add a question of your own and see what it looks like on a phone.",
+  blokKnop: "Build your questionnaire",
+  soorten: { rating: "1-10 rating", open: "Open question", janee: "Yes/no", tekstveld: "Empty text field" },
+};
+
+const SAMENSTEL_DE: SamenstelTeksten = {
+  boven: "Selbst zusammenstellen",
+  kop: "Stellen Sie Ihren eigenen Fragebogen zusammen",
+  intro: "Wählen Sie höchstens {max} Beispielfragen und fügen Sie, wenn Sie möchten, eine eigene Frage hinzu. Sie sehen sofort, wie es auf einem Smartphone aussieht.",
+  kiesKop: "Wählen Sie Ihre Fragen",
+  voorbeeld: "Beispiel",
+  voorbeeldUitleg: "Alle Fragen in dieser Liste sind Beispiele von ZekerFlex, keine Fragen eines Kunden von Smileyapp. In Ihrem eigenen Dashboard passen Sie alles an.",
+  gekozen: "{n} von {max} gewählt",
+  vol: "Sie haben {max} gewählt. Entfernen Sie zuerst eine Frage, um eine andere zu wählen.",
+  eigenLabel: "Ihre eigene Frage",
+  eigenUitleg: "Höchstens {max} Zeichen; jetzt {n}.",
+  eigenSoort: "Eigene Frage",
+  telefoonKop: "So sieht Ihr Fragebogen aus",
+  telefoonUitleg: "Ein Beispiel: Was Sie hier wählen oder eingeben, bleibt in Ihrem eigenen Browser, es wird nichts gespeichert oder gesendet.",
+  leeg: "Wählen Sie eine Frage, dann sehen Sie sie hier.",
+  stap: "Frage {n} von {totaal}",
+  vorige: "Zurück",
+  volgende: "Weiter",
+  klaar: "Fertig",
+  bedankt: "Vielen Dank!",
+  opnieuw: "Noch einmal",
+  ja: "Ja",
+  nee: "Nein",
+  antwoord: "Geben Sie hier Ihre Antwort ein",
+  score: "{score} von 10",
+  kiesCijfer: "Wählen Sie eine Zahl von 1 bis 10",
+  demoKnop: "Demo mit diesem Fragebogen anfragen",
+  demoUitleg: "Ihre Auswahl wird in das Demo-Formular übernommen und steht dort im Nachrichtenfeld. Sie können sie dort noch ändern.",
+  eerstKiezen: "Wählen Sie zuerst eine Frage oder geben Sie Ihre eigene Frage ein.",
+  berichtKop: "Mein Fragebogen (auf der Website zusammengestellt):",
+  berichtEigen: "Eigene Frage: {vraag}",
+  demoKaart: "Mit Ihrem Fragebogen",
+  demoKaartUitleg: "Ihre Fragen stehen im Nachrichtenfeld des Formulars. Sie können sie dort noch ändern.",
+  blokBoven: "Selbst zusammenstellen",
+  blokKop: "Welche Fragen würden Sie stellen?",
+  blokTekst: "Wählen Sie ein paar Beispielfragen, fügen Sie eine eigene Frage hinzu und sehen Sie, wie es auf einem Smartphone aussieht.",
+  blokKnop: "Fragebogen zusammenstellen",
+  soorten: { rating: "Bewertung 1-10", open: "Offene Frage", janee: "Ja/Nein", tekstveld: "Leeres Textfeld" },
+};
+
+/** De rekenhulp. Hier staat nergens een percentage: {p} is wat het team zelf in het beheer invulde. */
+const REKEN_EN: RekenTeksten = {
+  boven: "Calculator",
+  kop: "How many responses can you expect?",
+  label: "How many customers or guests do you have per month?",
+  uitleg: "A whole number from 1 to {max}.",
+  fout: "Enter a whole number from 1 to {max}.",
+  leeg: "Enter a number and you will see the estimate here.",
+  uitkomst: "About {n} responses per month",
+  uitkomstEen: "About 1 response per month",
+  gerekend: "Calculated with a response rate of {p}%, entered by the Smileyapp team.",
+  bron: "Where this figure comes from:",
+  schatting: "An estimate, not a promise.",
+  duizendtal: ",",
+};
+
+const REKEN_DE: RekenTeksten = {
+  boven: "Rechenhilfe",
+  kop: "Wie viele Antworten können Sie erwarten?",
+  label: "Wie viele Kunden oder Gäste haben Sie pro Monat?",
+  uitleg: "Eine ganze Zahl von 1 bis {max}.",
+  fout: "Geben Sie eine ganze Zahl von 1 bis {max} ein.",
+  leeg: "Geben Sie eine Zahl ein, dann sehen Sie hier die Schätzung.",
+  uitkomst: "Ungefähr {n} Antworten pro Monat",
+  uitkomstEen: "Ungefähr 1 Antwort pro Monat",
+  gerekend: "Berechnet mit einer Rücklaufquote von {p} %, eingetragen vom Team von Smileyapp.",
+  bron: "Woher diese Zahl stammt:",
+  schatting: "Eine Schätzung, kein Versprechen.",
+  duizendtal: ".",
+};
+
+/**
+ * De vergelijking met papier. `rijen`: de vertaling van elke standaardrij (lib/voorstel/smileyapp-vergelijk-regels.ts,
+ * STANDAARD_RIJEN) per id. De kolom Smileyapp is de vertaling van de Nederlandse bronzin, niets erbij.
+ */
+const VERGELIJK_EN: VergelijkTeksten = {
+  boven: "Compare",
+  kop: "Smileyapp or a paper survey?",
+  intro: "What is the difference in everyday use? Below you can see them side by side.",
+  uitleg: "The Smileyapp column contains sentences from smileyapp.nl. The paper column only describes how a paper form works.",
+  kolomKenmerk: "Topic",
+  kolomSmileyapp: "Smileyapp",
+  kolomPapier: "Paper survey",
+  tabelNaam: "Smileyapp and a paper survey side by side",
+  slot: "Curious how it works for your organisation?",
+  demoKnop: "Request a demo",
+  pakkettenKnop: "View the packages",
+  bijPakketten: "Do you work with paper forms at the moment?",
+  link: "Smileyapp or a paper survey?",
+  rijen: {
+    invullen: {
+      kenmerk: "Filling in",
+      smileyapp: "People scan the QR code of your questionnaire and indicate how satisfied they are by swiping the smiley.",
+      papier: "People fill in the form with a pen.",
+    },
+    resultaten: { kenmerk: "Viewing results", smileyapp: "The results are displayed clearly in a dashboard.", papier: "You count the answers by hand." },
+    maken: { kenmerk: "Creating a questionnaire", smileyapp: "Easily create questionnaires yourself", papier: "You have to print the forms and collect them." },
+    rapport: { kenmerk: "Report", smileyapp: "Easily export the NPS scores and average scores in a report", papier: "You make a report yourself from the answers you counted." },
+    huisstijl: { kenmerk: "House style", smileyapp: "In your own house style", papier: "You design the form yourself." },
+    vraagsoorten: {
+      kenmerk: "Kinds of questions",
+      smileyapp:
+        "There are many ways to set up your questionnaire. For example, you can choose from 1-10 rating questions, open questions, yes/no questions or add an empty text field to ask for feedback and details.",
+      papier: "You decide yourself which questions are on the form.",
+    },
+    delen: {
+      kenmerk: "Showing the results",
+      smileyapp: "You can place the rating widget on any website and show your customers or guests how satisfied others are.",
+      papier: "You share the results yourself.",
+    },
+    anoniem: { kenmerk: "Anonymous", smileyapp: "There is also room for (anonymous) feedback on personalised questions.", papier: "A form without a name is anonymous too." },
+  },
+};
+
+const VERGELIJK_DE: VergelijkTeksten = {
+  boven: "Vergleichen",
+  kop: "Smileyapp oder eine Umfrage auf Papier?",
+  intro: "Was ist der Unterschied im täglichen Gebrauch? Unten sehen Sie beide nebeneinander.",
+  uitleg: "In der Spalte Smileyapp stehen Sätze von smileyapp.nl. Die Spalte Papier beschreibt nur, wie ein Papierformular funktioniert.",
+  kolomKenmerk: "Thema",
+  kolomSmileyapp: "Smileyapp",
+  kolomPapier: "Umfrage auf Papier",
+  tabelNaam: "Smileyapp und eine Umfrage auf Papier nebeneinander",
+  slot: "Neugierig, wie es für Ihre Organisation funktioniert?",
+  demoKnop: "Demo anfragen",
+  pakkettenKnop: "Pakete ansehen",
+  bijPakketten: "Arbeiten Sie derzeit mit Papierformularen?",
+  link: "Smileyapp oder eine Umfrage auf Papier?",
+  rijen: {
+    invullen: {
+      kenmerk: "Ausfüllen",
+      smileyapp: "Die Menschen scannen den QR-Code Ihres Fragebogens und geben an, wie zufrieden sie sind, indem sie den Smiley wischen.",
+      papier: "Die Menschen füllen das Formular mit einem Stift aus.",
+    },
+    resultaten: { kenmerk: "Ergebnisse ansehen", smileyapp: "Die Ergebnisse werden übersichtlich in einem Dashboard dargestellt.", papier: "Sie zählen die Antworten von Hand." },
+    maken: { kenmerk: "Fragebogen erstellen", smileyapp: "Fragebögen einfach selbst erstellen", papier: "Sie müssen die Formulare drucken und einsammeln." },
+    rapport: { kenmerk: "Bericht", smileyapp: "NPS-Werte und Durchschnittswerte einfach in einem Bericht exportieren", papier: "Einen Bericht erstellen Sie selbst aus den gezählten Antworten." },
+    huisstijl: { kenmerk: "Corporate Design", smileyapp: "Im eigenen Corporate Design", papier: "Das Formular gestalten Sie selbst." },
+    vraagsoorten: {
+      kenmerk: "Arten von Fragen",
+      smileyapp:
+        "Es gibt viele Möglichkeiten, Ihren Fragebogen zu gestalten. Sie können zum Beispiel wählen aus Bewertungsfragen von 1 bis 10, offenen Fragen, Ja/Nein-Fragen oder ein leeres Textfeld hinzufügen, um nach Feedback und Angaben zu fragen.",
+      papier: "Sie bestimmen selbst, welche Fragen auf dem Formular stehen.",
+    },
+    delen: {
+      kenmerk: "Ergebnisse zeigen",
+      smileyapp: "Das Rating-Widget können Sie auf jeder beliebigen Website platzieren und so Ihren Kunden oder Gästen zeigen, wie zufrieden andere sind.",
+      papier: "Die Ergebnisse teilen Sie selbst.",
+    },
+    anoniem: { kenmerk: "Anonym", smileyapp: "Außerdem gibt es Raum für (anonymes) Feedback zu personalisierten Fragen.", papier: "Ein Formular ohne Namen ist ebenfalls anonym." },
+  },
+};
+
+/** Het contactformulier, dat in dit voorstel dicht staat. De namen van de pakketten blijven zoals ze zijn. */
+const GESLOTEN_EN: GeslotenTeksten = {
+  dicht: "This form is closed as long as this is a design proposal: nothing is sent or stored. Email your question to",
+  legenda: "Contact form (closed in this proposal)",
+  voornaam: "First name",
+  achternaam: "Last name",
+  email: "Email address",
+  telefoon: "Phone number",
+  bedrijf: "Company name",
+  interesse: "I am interested in",
+  keuze: "Make a choice",
+  vraag: "Your question or comment",
+  verstuur: "Send (closed)",
+  mail: "Email {email}",
+  interesses: { Partnerprogramma: "Partner programme", Anders: "Other" },
+};
+
+const GESLOTEN_DE: GeslotenTeksten = {
+  dicht: "Dieses Formular ist geschlossen, solange dies ein Designvorschlag ist: Es wird nichts gesendet oder gespeichert. Senden Sie Ihre Frage per E-Mail an",
+  legenda: "Kontaktformular (in diesem Vorschlag geschlossen)",
+  voornaam: "Vorname",
+  achternaam: "Nachname",
+  email: "E-Mail-Adresse",
+  telefoon: "Telefonnummer",
+  bedrijf: "Firmenname",
+  interesse: "Ich interessiere mich für",
+  keuze: "Bitte wählen",
+  vraag: "Ihre Frage oder Anmerkung",
+  verstuur: "Senden (geschlossen)",
+  mail: "E-Mail an {email}",
+  interesses: { Partnerprogramma: "Partnerprogramm", Anders: "Sonstiges" },
+};
+
 const EN = {
   kader: KADER.en as KaderTeksten,
   meta: {
@@ -340,6 +783,20 @@ const EN = {
     omschrijving: "Design proposal by ZekerFlex for a new website and app for Smileyapp: measure customer satisfaction with a smiley you swipe.",
     demoTitel: "Request a demo · Smileyapp (design proposal)",
     demoOmschrijving: "Request a demo of Smileyapp. Design proposal by ZekerFlex; the official website is smileyapp.nl.",
+    branchesTitel: "Sectors · Smileyapp (design proposal)",
+    branchesOmschrijving: "Five examples of where you can measure with Smileyapp and what you can ask. Design proposal by ZekerFlex; the official website is smileyapp.nl.",
+    /** met {kop}: de kop van de branchepagina */
+    brancheTitel: "{kop} · Smileyapp (design proposal)",
+    klantenTitel: "Customer stories · Smileyapp (design proposal)",
+    klantenOmschrijving: "Two customers tell in their own words what they use Smileyapp for. Design proposal by ZekerFlex; the official website is smileyapp.nl.",
+    contactTitel: "Contact · Smileyapp (design proposal)",
+    contactOmschrijving: "The contact details of Smileyapp. Design proposal by ZekerFlex; the official website is smileyapp.nl.",
+    partnerTitel: "Become a partner · Smileyapp (design proposal)",
+    partnerOmschrijving: "Become a partner of Smileyapp. Design proposal by ZekerFlex; the official website is smileyapp.nl.",
+    samenstellenTitel: "Build your own questionnaire · Smileyapp (design proposal)",
+    samenstellenOmschrijving: "Choose sample questions and see what your questionnaire looks like on a phone. Design proposal by ZekerFlex; the official website is smileyapp.nl.",
+    vergelijkenTitel: "Smileyapp or a paper survey? · Smileyapp (design proposal)",
+    vergelijkenOmschrijving: "Smileyapp and a paper survey side by side. Design proposal by ZekerFlex; the official website is smileyapp.nl.",
   },
   hero: {
     slogan: "For real reviews",
@@ -387,7 +844,7 @@ const EN = {
     boven: "Experiences",
     kop: "What our customers say",
     vertaald: "Translated from Dutch",
-    verhalen: "Read the stories (in Dutch)",
+    verhalen: "Read the stories",
     case: "Case",
     /** achter de naam van de klant, voor schermlezers */
     nieuwVenster: "(opens in a new window)",
@@ -476,6 +933,77 @@ const EN = {
     /** met {weekdag}, {dag} en {maand} */
     dag: "{weekdag} {dag} {maand}",
   },
+  // ---- deel 6b: de rest van de site ----
+  /** de omlijsting van het overzicht en van één branchepagina */
+  branchePagina: {
+    boven: "Sectors",
+    kop: "Smileyapp can be used in all sectors",
+    sub: "Five examples of where you can measure and what you can ask.",
+    bekijk: "View the example",
+    /** voor schermlezers achter "View the example", met {naam} */
+    bekijkVoor: "for {naam}",
+    nietErbij: "Is your sector not listed?",
+    nietErbijTekst: "Smileyapp can be used in all sectors. Request a demo and we will look together at what suits you.",
+    demo: "Request a demo",
+    alle: "All sectors",
+    waar: "Where do you measure?",
+    voorbeeldLabel: "Example, in your own dashboard you can change everything",
+    /** met {naam} */
+    voorbeeldKop: "Sample questionnaire: {naam}",
+    voorbeeldUitleg: "Five questions as a starting point. It is an example by ZekerFlex, not a questionnaire from a Smileyapp customer.",
+    samenstellen: "Build your own questionnaire",
+    video: "The animated video on the Dutch home page shows how Smileyapp could work in hospitality.",
+    /** met {duur} */
+    videoLink: "Watch the video ({duur}, in Dutch)",
+    ervaring: "What customers in education say",
+    benieuwd: "Curious what this looks like for your organisation?",
+    andere: "Other sectors",
+  },
+  branches: BRANCHES_EN,
+  klantenPagina: {
+    boven: "Customer stories",
+    sub: "Two customers tell in their own words what they use Smileyapp for.",
+    /** onder een quote die in het Nederlands blijft staan */
+    origineel: "Original in Dutch",
+    eerst: "How it used to be done",
+    meten: "What they measure",
+    klantenKop: "Smileyapp customers",
+    slot: "Want to know what your customers, guests or students think too?",
+    onderwijs: "Smileyapp in education",
+    verhalen: VERHALEN_EN,
+  },
+  contact: {
+    boven: "Contact",
+    kop: "We love customer feedback",
+    sub: "And questions and comments too",
+    koos: "You chose",
+    gegevens: "Contact details",
+    widgetAlt: "The Smileyapp rating widget: an average score with three smileys",
+    formulierKop: "Get in touch below!",
+    /** het onderwerp van de mail; met {naam} als iemand van een prijskaart komt */
+    onderwerp: "Question via the website",
+    onderwerpPakket: "Interest in the {naam}",
+  },
+  gesloten: GESLOTEN_EN,
+  partner: {
+    boven: "Become a partner?",
+    kop: "Together we create even more satisfaction",
+    sub: "Get in touch to become a partner. Become a Smileyapp partner now!",
+    kort: ["High commission", "Customer satisfaction and hospitality", "Improve your company or event"],
+    beeldAlt: "Two fists bumping: working together",
+    uitlegKop: "Become a Smileyapp partner now!",
+    uitleg: [
+      "Partners are incredibly important, and the aim of the Smileyapp Partner Programme is to take each other's product to a higher level.",
+      "Together with our partners we create more satisfaction, more hospitable organisations, higher customer satisfaction and more revenue!",
+      "Do you have a company or do you organise an event where you can use Smileyapp? Then become a partner and we share the revenue! How does it work?",
+      "You sell Smileyapp to your customers, visitors or guests and receive part of the revenue!",
+    ],
+    voordelen: ["High commission", "Get feedback on your event", "Your customers gain insight into their points for improvement", "Your event gets better every time"],
+    formulierKop: "Get in touch to become a partner",
+  },
+  samenstel: SAMENSTEL_EN,
+  reken: REKEN_EN,
+  vergelijk: VERGELIJK_EN,
 };
 
 /** Alle teksten van één vertaling. Het type volgt uit het Engels; het Duits moet er precies aan voldoen. */
@@ -488,6 +1016,19 @@ const DE: TaalTeksten = {
     omschrijving: "Designvorschlag von ZekerFlex für eine neue Website und App von Smileyapp: Kundenzufriedenheit messen mit einem Smiley, den man wischt.",
     demoTitel: "Demo anfragen · Smileyapp (Designvorschlag)",
     demoOmschrijving: "Fragen Sie eine Demo von Smileyapp an. Designvorschlag von ZekerFlex; die offizielle Website ist smileyapp.nl.",
+    branchesTitel: "Branchen · Smileyapp (Designvorschlag)",
+    branchesOmschrijving: "Fünf Beispiele dafür, wo Sie mit Smileyapp messen und was Sie fragen können. Designvorschlag von ZekerFlex; die offizielle Website ist smileyapp.nl.",
+    brancheTitel: "{kop} · Smileyapp (Designvorschlag)",
+    klantenTitel: "Kundenstimmen · Smileyapp (Designvorschlag)",
+    klantenOmschrijving: "Zwei Kunden erzählen in ihren eigenen Worten, wofür sie Smileyapp nutzen. Designvorschlag von ZekerFlex; die offizielle Website ist smileyapp.nl.",
+    contactTitel: "Kontakt · Smileyapp (Designvorschlag)",
+    contactOmschrijving: "Die Kontaktdaten von Smileyapp. Designvorschlag von ZekerFlex; die offizielle Website ist smileyapp.nl.",
+    partnerTitel: "Partner werden · Smileyapp (Designvorschlag)",
+    partnerOmschrijving: "Werden Sie Partner von Smileyapp. Designvorschlag von ZekerFlex; die offizielle Website ist smileyapp.nl.",
+    samenstellenTitel: "Eigenen Fragebogen zusammenstellen · Smileyapp (Designvorschlag)",
+    samenstellenOmschrijving: "Wählen Sie Beispielfragen und sehen Sie, wie Ihr Fragebogen auf einem Smartphone aussieht. Designvorschlag von ZekerFlex; die offizielle Website ist smileyapp.nl.",
+    vergelijkenTitel: "Smileyapp oder eine Umfrage auf Papier? · Smileyapp (Designvorschlag)",
+    vergelijkenOmschrijving: "Smileyapp und eine Umfrage auf Papier nebeneinander. Designvorschlag von ZekerFlex; die offizielle Website ist smileyapp.nl.",
   },
   hero: {
     slogan: "Für echte Bewertungen",
@@ -532,7 +1073,7 @@ const DE: TaalTeksten = {
     boven: "Erfahrungen",
     kop: "Was unsere Kunden sagen",
     vertaald: "Aus dem Niederländischen übersetzt",
-    verhalen: "Die Geschichten lesen (auf Niederländisch)",
+    verhalen: "Die Geschichten lesen",
     case: "Case",
     nieuwVenster: "(öffnet ein neues Fenster)",
     quotes: [
@@ -613,6 +1154,70 @@ const DE: TaalTeksten = {
     maanden: ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
     dag: "{weekdag}, {dag}. {maand}",
   },
+  branchePagina: {
+    boven: "Branchen",
+    kop: "Smileyapp ist für alle Branchen einsetzbar",
+    sub: "Fünf Beispiele dafür, wo Sie messen und was Sie fragen können.",
+    bekijk: "Beispiel ansehen",
+    bekijkVoor: "für {naam}",
+    nietErbij: "Ist Ihre Branche nicht dabei?",
+    nietErbijTekst: "Smileyapp ist für alle Branchen einsetzbar. Fragen Sie eine Demo an, dann schauen wir gemeinsam, was passt.",
+    demo: "Demo anfragen",
+    alle: "Alle Branchen",
+    waar: "Wo messen Sie?",
+    voorbeeldLabel: "Beispiel, in Ihrem eigenen Dashboard passen Sie alles an",
+    voorbeeldKop: "Beispielfragebogen: {naam}",
+    voorbeeldUitleg: "Fünf Fragen als Ausgangspunkt. Es ist ein Beispiel von ZekerFlex, kein Fragebogen eines Kunden von Smileyapp.",
+    samenstellen: "Eigenen Fragebogen zusammenstellen",
+    video: "Der Animationsfilm auf der niederländischen Startseite zeigt, wie Smileyapp in der Gastronomie funktionieren könnte.",
+    videoLink: "Video ansehen ({duur}, auf Niederländisch)",
+    ervaring: "Was Kunden aus dem Bildungsbereich sagen",
+    benieuwd: "Neugierig, wie das für Ihre Organisation aussieht?",
+    andere: "Andere Branchen",
+  },
+  branches: BRANCHES_DE,
+  klantenPagina: {
+    boven: "Kundenstimmen",
+    sub: "Zwei Kunden erzählen in ihren eigenen Worten, wofür sie Smileyapp nutzen.",
+    origineel: "Original auf Niederländisch",
+    eerst: "Wie es früher lief",
+    meten: "Was sie messen",
+    klantenKop: "Kunden von Smileyapp",
+    slot: "Möchten auch Sie wissen, was Ihre Kunden, Gäste oder Studierenden denken?",
+    onderwijs: "Smileyapp im Bildungsbereich",
+    verhalen: VERHALEN_DE,
+  },
+  contact: {
+    boven: "Kontakt",
+    kop: "Wir lieben Kundenfeedback",
+    sub: "Und auch Fragen und Anmerkungen",
+    koos: "Ihre Wahl",
+    gegevens: "Kontaktdaten",
+    widgetAlt: "Das Rating-Widget von Smileyapp: ein Durchschnittswert mit drei Smileys",
+    formulierKop: "Nehmen Sie unten Kontakt auf!",
+    onderwerp: "Frage über die Website",
+    onderwerpPakket: "Interesse am {naam}",
+  },
+  gesloten: GESLOTEN_DE,
+  partner: {
+    boven: "Partner werden?",
+    kop: "Gemeinsam schaffen wir noch mehr Zufriedenheit",
+    sub: "Nehmen Sie Kontakt auf, um Partner zu werden. Werden Sie jetzt Partner von Smileyapp!",
+    kort: ["Hohe Provision", "Kundenzufriedenheit und Gastfreundschaft", "Verbessern Sie Ihr Unternehmen oder Ihre Veranstaltung"],
+    beeldAlt: "Zwei Fäuste, die sich berühren: Zusammenarbeit",
+    uitlegKop: "Werden Sie jetzt Partner von Smileyapp!",
+    uitleg: [
+      "Partner sind unglaublich wichtig, und das Ziel des Smileyapp-Partnerprogramms ist es, das Produkt des jeweils anderen auf ein höheres Niveau zu heben.",
+      "Gemeinsam mit unseren Partnern schaffen wir mehr Zufriedenheit, gastfreundlichere Organisationen, eine höhere Kundenzufriedenheit und mehr Umsatz!",
+      "Haben Sie ein Unternehmen oder organisieren Sie eine Veranstaltung, bei der Sie Smileyapp einsetzen können? Dann werden Sie Partner und wir teilen den Erlös! Wie funktioniert es?",
+      "Sie verkaufen Smileyapp an Ihre Kunden, Besucher oder Gäste und erhalten einen Teil des Erlöses!",
+    ],
+    voordelen: ["Hohe Provision", "Erhalten Sie Feedback zu Ihrer Veranstaltung", "Ihre Kunden erhalten Einblick in ihre Verbesserungspunkte", "Ihre Veranstaltung wird jedes Mal besser"],
+    formulierKop: "Nehmen Sie Kontakt auf, um Partner zu werden",
+  },
+  samenstel: SAMENSTEL_DE,
+  reken: REKEN_DE,
+  vergelijk: VERGELIJK_DE,
 };
 
 export const TEKSTEN: Record<Vertaling, TaalTeksten> = { en: EN, de: DE };
@@ -675,4 +1280,37 @@ export function veelgesteldTaal(pakketten: readonly Pakket[], taal: Vertaling): 
     { vraag: f.partner, antwoord: f.partnerAntwoord },
     { vraag: f.login, antwoord: f.loginAntwoord },
   ].filter((v) => v.antwoord.trim() !== "");
+}
+
+// ---- deel 6b: hulpjes voor de vertaalde pagina's -------------------------------
+
+/** De tekst van een branche in de taal; een onbekende slug (ook "constructor") bestaat niet. */
+export function brancheTaal(slug: string, taal: Vertaling): BrancheTekst | undefined {
+  const tabel = TEKSTEN[taal].branches;
+  return Object.hasOwn(tabel, slug) ? tabel[slug] : undefined;
+}
+
+/**
+ * De voorbeeldvragen van de samensteller in de taal: dezelfde id's en soorten als KEUZEVRAGEN
+ * (lib/voorstel/smileyapp-samensteller.ts), met de vertaalde tekst en de vertaalde naam van de branche.
+ */
+export function keuzevragenTaal(taal: Vertaling): KeuzeVraag[] {
+  return BRANCHE_LIJST.flatMap((b) => {
+    const t = brancheTaal(b.slug, taal);
+    return b.vragen.map((v, i) => ({ id: `${b.slug}-${i + 1}`, branche: b.slug, groep: t?.naam ?? b.naam, soort: SOORT_SLEUTEL[v.soort], tekst: t?.vragen[i] ?? v.tekst }));
+  });
+}
+
+export interface RijTaal extends Rij {
+  /** false: een eigen rij van het team, die in de ingevoerde taal (Nederlands) blijft */
+  vertaald: boolean;
+}
+
+/** De rijen van de vergelijking in de taal: een standaardrij vertaald, een eigen rij van het team zoals hij is ingevoerd. */
+export function vergelijkRijenTaal(rijen: readonly Rij[], taal: Vertaling): RijTaal[] {
+  const tabel = TEKSTEN[taal].vergelijk.rijen;
+  return rijen.map((r) => {
+    const v = !r.eigen && Object.hasOwn(tabel, r.id) ? tabel[r.id] : undefined;
+    return v ? { ...r, ...v, vertaald: true } : { ...r, vertaald: false };
+  });
 }

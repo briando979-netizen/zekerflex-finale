@@ -7,11 +7,12 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 import { eisToegang } from "@/lib/voorstel/smileyapp-accounts";
 import { bewaarBericht, eigenBerichten, verwijderBericht } from "@/lib/voorstel/smileyapp-blog";
 import { smileyappCijfers } from "@/lib/voorstel/smileyapp-cijfers";
-import { bewaarPosterZin, smileyappInstellingen, zetWeekmail } from "@/lib/voorstel/smileyapp-instellingen";
+import { bewaarPosterZin, bewaarRespons, smileyappInstellingen, wisRespons, zetWeekmail } from "@/lib/voorstel/smileyapp-instellingen";
 import { isPakketId } from "@/lib/voorstel/smileyapp-pakket-regels";
 import { bewaarPakket, herstelPakketten, pakkettenVoorBeheer } from "@/lib/voorstel/smileyapp-pakketten";
 import { beheerVan, smileyPoort } from "@/lib/voorstel/smileyapp-poort";
 import { alleReviews, bewaarReview, verwijderReview } from "@/lib/voorstel/smileyapp-reviews";
+import { vergelijkVoorBeheer, wijzigVergelijk } from "@/lib/voorstel/smileyapp-vergelijken";
 import { vragenVoorBeheer, wijzigVragen } from "@/lib/voorstel/smileyapp-vragen";
 import { stuurVoorbeeld } from "@/lib/voorstel/smileyapp-weekmail";
 
@@ -30,6 +31,10 @@ export const dynamic = "force-dynamic";
 // vraag-verplaatsen | vraag-verwijderen | vraag-standaard | weekmail-zetten |
 // weekmail-voorbeeld | poster-bewaren. De vragen en de wekelijkse mail wijzigt alleen een
 // beheerder (een medewerker leest mee); de zin op de poster mag het hele team aanpassen.
+// Deel 6b: ?deel=vergelijken (de rijen van "Smileyapp of een papieren enquête?") met de
+// acties vergelijk-toevoegen | vergelijk-verwijderen | vergelijk-verbergen, en de rekenhulp
+// op de site met respons-bewaren | respons-wissen (het percentage en de bronzin staan bij
+// ?deel=instellingen). Allebei raken ze wat de site aan klanten vertelt: alleen een beheerder.
 // Voor iedereen van het team (beheerder én medewerker) en een ZekerFlex-
 // platformbeheerder. Elke methode: eigen site → limiet per IP → sessie. Niet
 // ingelogd = 401. De regels staan in lib/voorstel/smileyapp-blog-regels.ts en
@@ -47,6 +52,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     if (deel === "reviews") return NextResponse.json({ reviews: await alleReviews() }, geenCache);
     if (deel === "vragen") return NextResponse.json(await vragenVoorBeheer(), geenCache);
     if (deel === "instellingen") return NextResponse.json(await smileyappInstellingen(), geenCache);
+    if (deel === "vergelijken") return NextResponse.json(await vergelijkVoorBeheer(), geenCache);
     throw AppError.validation("Onbekend onderdeel.");
   } catch (err) {
     return jsonError(err);
@@ -56,6 +62,7 @@ export async function GET(request: Request): Promise<NextResponse> {
 const ID = z.string().regex(/^[a-f0-9]{16}$/);
 const PAKKET = z.string().max(20);
 const VRAAG_ID = z.string().max(70);
+const RIJ_ID = z.string().max(40);
 const schema = z.discriminatedUnion("actie", [
   z.object({
     actie: z.literal("blog-bewaren"),
@@ -92,6 +99,12 @@ const schema = z.discriminatedUnion("actie", [
   z.object({ actie: z.literal("weekmail-zetten"), aan: z.boolean() }),
   z.object({ actie: z.literal("weekmail-voorbeeld") }),
   z.object({ actie: z.literal("poster-bewaren"), zin: z.string().max(400) }),
+  // deel 6b: ruime grenzen voor de vorm; de echte regels staan in smileyapp-rekenhulp-regels.ts en smileyapp-vergelijk-regels.ts
+  z.object({ actie: z.literal("respons-bewaren"), percentage: z.string().max(10), bron: z.string().max(600) }),
+  z.object({ actie: z.literal("respons-wissen") }),
+  z.object({ actie: z.literal("vergelijk-toevoegen"), kenmerk: z.string().max(600), smileyapp: z.string().max(600), papier: z.string().max(600) }),
+  z.object({ actie: z.literal("vergelijk-verwijderen"), id: RIJ_ID }),
+  z.object({ actie: z.literal("vergelijk-verbergen"), id: RIJ_ID, verborgen: z.boolean() }),
 ]);
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -146,6 +159,21 @@ export async function POST(request: Request): Promise<NextResponse> {
       if (ik.via !== "smileyapp" || !ik.email) throw AppError.validation("Een voorbeeld gaat naar het adres van je SmileyApp-account. Je bent nu via ZekerFlex ingelogd.");
       await enforceRateLimit({ name: "smileyapp-weekmail-voorbeeld", identifier: ik.id, limit: 3, windowSeconds: 3600, message: "Je hebt dit uur al drie voorbeelden gevraagd. Probeer het later opnieuw." });
       return NextResponse.json({ verstuurd: await stuurVoorbeeld(ik.email, beheerVan(request)) });
+    }
+
+    // de rekenhulp op de site: het percentage is een bewering aan klanten, dus alleen een beheerder vult het in of haalt het weg
+    if (d.actie === "respons-bewaren" || d.actie === "respons-wissen") {
+      if (ik.rol !== "beheerder") throw AppError.alleenBeheerder("Alleen een beheerder kan de rekenhulp op de site instellen.");
+      if (d.actie === "respons-wissen") return NextResponse.json(await wisRespons());
+      return NextResponse.json(await bewaarRespons({ percentage: d.percentage, bron: d.bron }));
+    }
+
+    // de vergelijking met papier staat openbaar op de site: alleen een beheerder voegt rijen toe, verwijdert of verbergt ze
+    if (d.actie === "vergelijk-toevoegen" || d.actie === "vergelijk-verwijderen" || d.actie === "vergelijk-verbergen") {
+      if (ik.rol !== "beheerder") throw AppError.alleenBeheerder("Alleen een beheerder kan de vergelijking wijzigen.");
+      if (d.actie === "vergelijk-toevoegen") return NextResponse.json(await wijzigVergelijk({ soort: "toevoegen", kenmerk: d.kenmerk, smileyapp: d.smileyapp, papier: d.papier }));
+      if (d.actie === "vergelijk-verwijderen") return NextResponse.json(await wijzigVergelijk({ soort: "verwijderen", id: d.id }));
+      return NextResponse.json(await wijzigVergelijk({ soort: "verbergen", id: d.id, verborgen: d.verborgen }));
     }
 
     // prijzen en pakketten raken wat de site, de veelgestelde vragen en de chat aan klanten vertellen: alleen een beheerder

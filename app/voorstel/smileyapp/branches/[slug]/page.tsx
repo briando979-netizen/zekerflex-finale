@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BASE, STAPPEN, VIDEO } from "@/lib/voorstel/smileyapp";
 import { BRANCHE_LIJST, SOORT_LABEL, VOORBEELD_LABEL, branche, brancheLink, quotesVoor, type Vraagsoort } from "@/lib/voorstel/smileyapp-branches";
+import { brancheKeuze, keuzeNaarZoek } from "@/lib/voorstel/smileyapp-samensteller";
 import { Vinkje } from "@/components/voorstel/smileyapp/Blokken";
 import { Gezicht } from "@/components/voorstel/smileyapp/Gezicht";
 
@@ -118,6 +119,10 @@ export default async function SmileyappBranche({ params }: { params: Promise<{ s
               </li>
             ))}
           </ol>
+          {/* deel 6b: met deze vijf vragen verder in de samensteller */}
+          <Link href={`${BASE}/samenstellen?${keuzeNaarZoek({ ids: brancheKeuze(b.slug), eigen: "" })}`} className="mt-8 inline-flex rounded-full px-6 py-3 font-bold text-smiley-ink ring-1 ring-smiley-ink/20 hover:bg-smiley-mint">
+            Stel je eigen vragenlijst samen
+          </Link>
         </div>
       </section>
 

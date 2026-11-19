@@ -6,6 +6,8 @@ import { leesBron } from "@/lib/voorstel/smileyapp-aanvraag-regels";
 import { heeftTeam } from "@/lib/voorstel/smileyapp-accounts";
 import { afsprakenVoorSite } from "@/lib/voorstel/smileyapp-agenda";
 import { smileyappPakketten } from "@/lib/voorstel/smileyapp-pakketten";
+import { KEUZEVRAGEN, keuzeAlsTekst, keuzeUitZoek } from "@/lib/voorstel/smileyapp-samensteller";
+import { SAMENSTEL_NL } from "@/lib/voorstel/smileyapp-teksten";
 import { AanvraagFormulier } from "@/components/voorstel/smileyapp/AanvraagFormulier";
 import { Vinkje } from "@/components/voorstel/smileyapp/Blokken";
 import { Gezicht } from "@/components/voorstel/smileyapp/Gezicht";
@@ -20,13 +22,17 @@ export const metadata: Metadata = { title: "Vraag een demo aan" };
 // ?pakket=<id> vanaf een prijskaart kiest dat pakket alvast. ?bron=<woord> (van de
 // QR-code uit het beheer) gaat mee met de aanvraag, zodat het team ziet waar hij
 // vandaan kwam. Boven het formulier staat de pakketkiezer als hulpje.
-export default async function SmileyappDemo({ searchParams }: { searchParams: Promise<{ pakket?: string | string[]; bron?: string | string[] }> }) {
+// Deel 6b: ?vragen=<id's>&eigen=<tekst> van /samenstellen zet de gekozen vragenlijst
+// als leesbare tekst in het berichtveld (alleen bestaande voorbeeldvragen en een
+// opgeschoonde eigen vraag); de bezoeker kan die tekst nog aanpassen.
+export default async function SmileyappDemo({ searchParams }: { searchParams: Promise<{ pakket?: string | string[]; bron?: string | string[]; vragen?: string | string[]; eigen?: string | string[] }> }) {
   const sp = await searchParams;
   const q = sp.pakket;
   const bron = leesBron(Array.isArray(sp.bron) ? sp.bron[0] : sp.bron);
   // de open tijden uit de agenda van het team (deel 6a); staat er niets open, dan blijft het bij het voorkeursmoment
   const [team, pakketten, afspraken] = await Promise.all([heeftTeam(), smileyappPakketten(), afsprakenVoorSite("nl")]);
   const gekozen = pakket(Array.isArray(q) ? q[0] : q, pakketten);
+  const vragenlijst = keuzeAlsTekst(keuzeUitZoek(sp), KEUZEVRAGEN, SAMENSTEL_NL);
   // de dagen in Nederlandse tijd, op de server berekend: server en browser tonen dezelfde lijst
   const dagen = voorkeurDagen(new Date()).map((d) => ({ waarde: d, label: dagTekst(d) }));
   return (
@@ -46,6 +52,12 @@ export default async function SmileyappDemo({ searchParams }: { searchParams: Pr
             <div className="rounded-[2rem] bg-smiley-sun p-6">
               <p className="text-xs font-bold uppercase tracking-[0.2em]">Demo van</p>
               <p className="mt-2 font-display text-2xl font-bold">{gekozen.naam}</p>
+            </div>
+          )}
+          {vragenlijst && (
+            <div className="rounded-[2rem] bg-smiley-mint p-6">
+              <p className="font-display text-xl font-bold">{SAMENSTEL_NL.demoKaart}</p>
+              <p className="mt-2 leading-relaxed text-smiley-mute">{SAMENSTEL_NL.demoKaartUitleg}</p>
             </div>
           )}
           <div>
@@ -91,6 +103,7 @@ export default async function SmileyappDemo({ searchParams }: { searchParams: Pr
           key={gekozen?.id ?? "geen"}
           soort="demo"
           {...(bron ? { bron } : {})}
+          {...(vragenlijst ? { beginBericht: vragenlijst } : {})}
           kop="Plan je demo"
           mail={CONTACT.email}
           teamActief={team}

@@ -27,7 +27,8 @@ import { BandTaal, KopTaal, VoetTaal } from "@/components/voorstel/smileyapp/taa
 // na een klik. Het beheer (/beheer, 19 nov 2026) heeft een eigen opmaak: daar
 // valt de omlijsting van de site (band, kop, footer en chat) weg via AlleenOpSite.
 // Talen (19 nov 2026): /en en /de zijn de voorpagina en de demo-aanvraag in het
-// Engels en het Duits. De layout wordt bij een klik binnen de site niet opnieuw
+// Engels en het Duits; sinds deel 6b ook de branches, de klantverhalen, contact,
+// partner worden, samenstellen en vergelijken (de blog blijft Nederlands). De layout wordt bij een klik binnen de site niet opnieuw
 // opgebouwd, dus de taal van de omlijsting volgt het pad in de browser: OpTaal
 // toont de Nederlandse kop en footer hieronder, of de vertaalde uit
 // components/voorstel/smileyapp/taal/Kader.tsx. De Nederlandse voorstelband
@@ -182,6 +183,17 @@ export default async function SmileyappLayout({ children }: { children: ReactNod
               <li>
                 <Link href={`${BASE}/demo`} className={FOOTERLINK}>
                   Vraag een demo aan
+                </Link>
+              </li>
+              {/* deel 6b: de vragenlijst zelf samenstellen en de vergelijking met papier */}
+              <li>
+                <Link href={`${BASE}/samenstellen`} className={FOOTERLINK}>
+                  Stel je vragenlijst samen
+                </Link>
+              </li>
+              <li>
+                <Link href={`${BASE}/vergelijken`} className={FOOTERLINK}>
+                  Smileyapp of een papieren enquête?
                 </Link>
               </li>
               <li>

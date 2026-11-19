@@ -7,7 +7,7 @@ import { KAART } from "@/components/voorstel/smileyapp/beheer/api";
 // Het overzicht van het beheer: vier tegels met aantallen en daaronder "Te
 // doen": alleen wat nu aandacht vraagt, elk met een knop naar het tabblad.
 
-export type TabSleutel = "overzicht" | "demo" | "partners" | "agenda" | "gesprekken" | "cijfers" | "blog" | "reviews" | "vragen" | "pakketten" | "qr" | "team";
+export type TabSleutel = "overzicht" | "demo" | "partners" | "agenda" | "gesprekken" | "cijfers" | "blog" | "reviews" | "vragen" | "vergelijken" | "pakketten" | "qr" | "team";
 
 interface Punt {
   sleutel: string;

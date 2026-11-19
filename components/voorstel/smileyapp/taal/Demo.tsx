@@ -2,8 +2,9 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { CONTACT, KLANTLOGIN, PAKKETTEN, pakket, type Pakket } from "@/lib/voorstel/smileyapp";
 import { TIJDEN, leesBron, voorkeurDagen } from "@/lib/voorstel/smileyapp-aanvraag-regels";
+import { keuzeAlsTekst, keuzeUitZoek } from "@/lib/voorstel/smileyapp-samensteller";
 import { taalBasis, type Vertaling } from "@/lib/voorstel/smileyapp-taal";
-import { TEKSTEN, dagTaal } from "@/lib/voorstel/smileyapp-talen";
+import { TEKSTEN, dagTaal, keuzevragenTaal } from "@/lib/voorstel/smileyapp-talen";
 import { AanvraagFormulier } from "@/components/voorstel/smileyapp/AanvraagFormulier";
 import { Vinkje } from "@/components/voorstel/smileyapp/Blokken";
 import { Gezicht } from "@/components/voorstel/smileyapp/Gezicht";
@@ -16,7 +17,8 @@ import { PakketKiezer } from "@/components/voorstel/smileyapp/PakketKiezer";
 // een team is; hier staat de rest. Het formulier stuurt de taal mee, zodat het
 // team in het beheer ziet in welke taal iemand geholpen wil worden.
 
-export type DemoZoek = { pakket?: string | string[]; bron?: string | string[] };
+/** ?vragen en ?eigen (deel 6b): de vragenlijst uit de samensteller, die als tekst in het berichtveld komt. */
+export type DemoZoek = { pakket?: string | string[]; bron?: string | string[]; vragen?: string | string[]; eigen?: string | string[] };
 
 /** De donkere strook bovenaan; `children` is de kop (h1) die de pagina zelf levert. */
 export function DemoHero({ taal, children }: { taal: Vertaling; children: ReactNode }) {
@@ -53,6 +55,8 @@ export function DemoTaal({ taal, pakketten, team, zoek, nu, afspraken = [] }: Pr
   const q = zoek.pakket;
   const bron = leesBron(Array.isArray(zoek.bron) ? zoek.bron[0] : zoek.bron);
   const gekozen = pakket(Array.isArray(q) ? q[0] : q, pakketten);
+  // de vragenlijst uit de samensteller, in de taal van de pagina; alleen bestaande voorbeeldvragen en een opgeschoonde eigen vraag
+  const vragenlijst = keuzeAlsTekst(keuzeUitZoek(zoek), keuzevragenTaal(taal), t.samenstel);
   // de dagen in Nederlandse tijd, op de server berekend: server en browser tonen dezelfde lijst
   const dagen = voorkeurDagen(nu).map((d) => ({ waarde: d, label: dagTaal(d, taal) }));
   return (
@@ -64,6 +68,12 @@ export function DemoTaal({ taal, pakketten, team, zoek, nu, afspraken = [] }: Pr
             <p lang="nl" className="mt-2 font-display text-2xl font-bold">
               {gekozen.naam}
             </p>
+          </div>
+        )}
+        {vragenlijst && (
+          <div className="rounded-[2rem] bg-smiley-mint p-6">
+            <p className="font-display text-xl font-bold">{t.samenstel.demoKaart}</p>
+            <p className="mt-2 leading-relaxed text-smiley-mute">{t.samenstel.demoKaartUitleg}</p>
           </div>
         )}
         <div>
@@ -109,6 +119,7 @@ export function DemoTaal({ taal, pakketten, team, zoek, nu, afspraken = [] }: Pr
           key={gekozen?.id ?? "geen"}
           soort="demo"
           {...(bron ? { bron } : {})}
+          {...(vragenlijst ? { beginBericht: vragenlijst } : {})}
           kop={t.demo.formulierKop}
           mail={CONTACT.email}
           teamActief={team}

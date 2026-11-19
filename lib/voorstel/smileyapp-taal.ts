@@ -1,4 +1,5 @@
 import { BASE, euro } from "@/lib/voorstel/smileyapp";
+import { BRANCHES } from "@/lib/voorstel/smileyapp-branches";
 import { kortPad } from "@/lib/voorstel/subdomein";
 
 // ---------------------------------------------------------------------------
@@ -43,15 +44,27 @@ export interface TaalLink {
   actief: boolean;
 }
 
+/** De pagina's die in alle drie de talen bestaan (deel 6b), als pad achter het basispad van de taal. */
+export const VERTAALDE_PADEN: readonly string[] = ["/demo", "/branches", "/klanten", "/contact", "/partner-worden", "/samenstellen", "/vergelijken"];
+
+/** Bestaat dit pad (zonder de taal ervoor) in alle talen? Dan het pad zelf, anders leeg: de voorpagina. */
+function vertaaldPad(rest: string): string {
+  if (VERTAALDE_PADEN.includes(rest)) return rest;
+  // een branchepagina bestaat in elke taal, maar alleen voor een branche uit de vaste lijst
+  const slug = /^\/branches\/([a-z]{1,40})$/.exec(rest)?.[1];
+  return slug && Object.hasOwn(BRANCHES, slug) ? rest : "";
+}
+
 /**
- * Waar de taalkiezer op dit pad naartoe linkt. De demo-aanvraag bestaat in alle drie de talen, dus daar blijf je op de
- * demo-aanvraag. Elke andere pagina bestaat alleen in het Nederlands: daar leiden EN en DE naar de voorpagina in die taal.
+ * Waar de taalkiezer op dit pad naartoe linkt. Een pagina die in alle drie de talen bestaat (de demo-aanvraag, de
+ * branches, de klantverhalen, contact, partner worden, samenstellen en vergelijken) houdt je op dezelfde pagina. Elke
+ * andere pagina (de blog) bestaat alleen in het Nederlands: daar leiden EN en DE naar de voorpagina in die taal.
  */
 export function taalLinks(pad: string | null | undefined): TaalLink[] {
   const nu = taalVanPad(pad);
   const kort = kortPad(pad ?? "", BASE).replace(/\/+$/, "") || "/";
   const rest = nu === "nl" ? kort : kort.slice(nu.length + 1) || "/";
-  const sub = rest === "/demo" ? "/demo" : "";
+  const sub = vertaaldPad(rest);
   return TALEN.map((taal) => ({ taal, href: `${taalBasis(taal)}${sub}`, actief: taal === nu }));
 }
 
@@ -71,7 +84,8 @@ export interface KaderTeksten {
   band: string;
   logo: string;
   hoofdmenu: string;
-  menu: { hoe: string; probeer: string; pakketten: string; klanten: string; vragen: string };
+  /** de secties van de vertaalde voorpagina (hoe … vragen) en de vertaalde pagina's (branches … contact) */
+  menu: { hoe: string; probeer: string; pakketten: string; klanten: string; vragen: string; branches: string; verhalen: string; samenstellen: string; vergelijken: string; partner: string; contact: string };
   klantlogin: string;
   demoKort: string;
   demo: string;
@@ -87,7 +101,8 @@ export interface KaderTeksten {
     privacy: string;
     voorwaarden: string;
     officieel: string;
-    nederlands: string;
+    /** de blog bestaat alleen in het Nederlands, en zo heet de link ook */
+    blog: string;
     ontwerp: string;
   };
   chat: { titel: string; begroeting: string; knop: string };
@@ -99,7 +114,19 @@ export const KADER: Record<Vertaling, KaderTeksten> = {
     band: "Design proposal by ZekerFlex for SmileyApp. The official website is smileyapp.nl.",
     logo: "Smileyapp, to the home page",
     hoofdmenu: "Main menu",
-    menu: { hoe: "How it works", probeer: "Try it yourself", pakketten: "Packages", klanten: "Customers", vragen: "FAQ" },
+    menu: {
+      hoe: "How it works",
+      probeer: "Try it yourself",
+      pakketten: "Packages",
+      klanten: "Customers",
+      vragen: "FAQ",
+      branches: "Sectors",
+      verhalen: "Customer stories",
+      samenstellen: "Build your questionnaire",
+      vergelijken: "Smileyapp or paper?",
+      partner: "Become a partner",
+      contact: "Contact",
+    },
     klantlogin: "Customer login",
     demoKort: "Demo",
     demo: "Request a demo",
@@ -115,7 +142,7 @@ export const KADER: Record<Vertaling, KaderTeksten> = {
       privacy: "Privacy statement (in Dutch)",
       voorwaarden: "Disclaimer & general terms and conditions (in Dutch)",
       officieel: "The official website: smileyapp.nl",
-      nederlands: "More pages in Dutch",
+      blog: "Blog (in Dutch)",
       ontwerp: "Design and technology: ZekerFlex. Texts, images, logo and video from smileyapp.nl, for this proposal only.",
     },
     chat: {
@@ -130,7 +157,19 @@ export const KADER: Record<Vertaling, KaderTeksten> = {
     band: "Designvorschlag von ZekerFlex für SmileyApp. Die offizielle Website ist smileyapp.nl.",
     logo: "Smileyapp, zur Startseite",
     hoofdmenu: "Hauptmenü",
-    menu: { hoe: "So funktioniert es", probeer: "Selbst ausprobieren", pakketten: "Pakete", klanten: "Kunden", vragen: "Fragen" },
+    menu: {
+      hoe: "So funktioniert es",
+      probeer: "Selbst ausprobieren",
+      pakketten: "Pakete",
+      klanten: "Kunden",
+      vragen: "Fragen",
+      branches: "Branchen",
+      verhalen: "Kundenstimmen",
+      samenstellen: "Fragebogen zusammenstellen",
+      vergelijken: "Smileyapp oder Papier?",
+      partner: "Partner werden",
+      contact: "Kontakt",
+    },
     klantlogin: "Kundenlogin",
     demoKort: "Demo",
     demo: "Demo anfragen",
@@ -146,7 +185,7 @@ export const KADER: Record<Vertaling, KaderTeksten> = {
       privacy: "Datenschutzerklärung (auf Niederländisch)",
       voorwaarden: "Disclaimer & Allgemeine Geschäftsbedingungen (auf Niederländisch)",
       officieel: "Die offizielle Website: smileyapp.nl",
-      nederlands: "Weitere Seiten auf Niederländisch",
+      blog: "Blog (auf Niederländisch)",
       ontwerp: "Design und Technik: ZekerFlex. Texte, Bilder, Logo und Video von smileyapp.nl, nur für diesen Vorschlag.",
     },
     chat: {

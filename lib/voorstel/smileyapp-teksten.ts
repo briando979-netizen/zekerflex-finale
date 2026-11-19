@@ -242,3 +242,204 @@ export const KIEZER_NL: KiezerTeksten = {
   redenCombinatie: "Deze combinatie past niet in één van de pakketten met vaste aantallen ({namen}). Het {maatwerk} stel je zelf samen, zodat je krijgt wat je nodig hebt.",
   onderdelen: {},
 };
+
+// ---- deel 6b: vragenlijst samenstellen, rekenhulp, vergelijken en het dichte contactformulier ----
+
+export interface SamenstelTeksten {
+  boven: string;
+  kop: string;
+  /** met {max} */
+  intro: string;
+  kiesKop: string;
+  voorbeeld: string;
+  voorbeeldUitleg: string;
+  /** met {n} en {max} */
+  gekozen: string;
+  /** met {max} */
+  vol: string;
+  eigenLabel: string;
+  /** met {max} en {n} */
+  eigenUitleg: string;
+  /** het etiket van de eigen vraag in het voorbeeld */
+  eigenSoort: string;
+  telefoonKop: string;
+  telefoonUitleg: string;
+  leeg: string;
+  /** met {n} en {totaal} */
+  stap: string;
+  vorige: string;
+  volgende: string;
+  klaar: string;
+  bedankt: string;
+  opnieuw: string;
+  ja: string;
+  nee: string;
+  antwoord: string;
+  /** voor schermlezers, met {score} */
+  score: string;
+  kiesCijfer: string;
+  demoKnop: string;
+  demoUitleg: string;
+  eerstKiezen: string;
+  /** de eerste regel van de keuze in het berichtveld van de demo-aanvraag */
+  berichtKop: string;
+  /** met {vraag} */
+  berichtEigen: string;
+  /** op de demo-aanvraag, als iemand met een vragenlijst binnenkomt */
+  demoKaart: string;
+  demoKaartUitleg: string;
+  /** het blok op de voorpagina */
+  blokBoven: string;
+  blokKop: string;
+  blokTekst: string;
+  blokKnop: string;
+  /** het etiket per soort vraag (lib/voorstel/smileyapp-samensteller.ts, SoortSleutel) */
+  soorten: { rating: string; open: string; janee: string; tekstveld: string };
+}
+
+export const SAMENSTEL_NL: SamenstelTeksten = {
+  boven: "Zelf samenstellen",
+  kop: "Stel je eigen vragenlijst samen",
+  intro: "Kies hooguit {max} voorbeeldvragen en typ er als je wilt één eigen vraag bij. Je ziet meteen hoe het eruitziet op een telefoon.",
+  kiesKop: "Kies je vragen",
+  voorbeeld: "Voorbeeld",
+  voorbeeldUitleg: "Alle vragen in deze lijst zijn voorbeelden van ZekerFlex, geen vragen van een klant van Smileyapp. In je eigen dashboard pas je alles aan.",
+  gekozen: "{n} van {max} gekozen",
+  vol: "Je hebt er {max} gekozen. Haal er eerst een weg om een andere te kiezen.",
+  eigenLabel: "Je eigen vraag",
+  eigenUitleg: "Hooguit {max} tekens; nu {n}.",
+  eigenSoort: "Eigen vraag",
+  telefoonKop: "Zo ziet je vragenlijst eruit",
+  telefoonUitleg: "Een voorbeeld: wat je hier kiest of typt blijft in je eigen browser, er wordt niets bewaard of verstuurd.",
+  leeg: "Kies een vraag, dan zie je hem hier.",
+  stap: "Vraag {n} van {totaal}",
+  vorige: "Vorige",
+  volgende: "Volgende",
+  klaar: "Klaar",
+  bedankt: "Bedankt!",
+  opnieuw: "Nog een keer",
+  ja: "Ja",
+  nee: "Nee",
+  antwoord: "Typ hier je antwoord",
+  score: "{score} van 10",
+  kiesCijfer: "Kies een cijfer van 1 tot 10",
+  demoKnop: "Vraag een demo aan met deze vragenlijst",
+  demoUitleg: "Je keuze gaat mee naar het demo-formulier en staat daar in het berichtveld. Je kunt hem daar nog aanpassen.",
+  eerstKiezen: "Kies eerst een vraag of typ je eigen vraag.",
+  berichtKop: "Mijn vragenlijst (samengesteld op de website):",
+  berichtEigen: "Eigen vraag: {vraag}",
+  demoKaart: "Met jouw vragenlijst",
+  demoKaartUitleg: "Je vragen staan in het berichtveld van het formulier. Je kunt ze daar nog aanpassen.",
+  blokBoven: "Zelf samenstellen",
+  blokKop: "Welke vragen zou jij stellen?",
+  blokTekst: "Kies een paar voorbeeldvragen, typ er een eigen vraag bij en bekijk hoe het eruitziet op een telefoon.",
+  blokKnop: "Stel je vragenlijst samen",
+  soorten: { rating: "1-10 rating", open: "Open vraag", janee: "Ja/nee", tekstveld: "Leeg tekstveld" },
+};
+
+export interface RekenTeksten {
+  boven: string;
+  kop: string;
+  label: string;
+  /** met {max} */
+  uitleg: string;
+  /** met {max} */
+  fout: string;
+  leeg: string;
+  /** met {n} */
+  uitkomst: string;
+  uitkomstEen: string;
+  /** met {p}: het percentage dat het team zelf invulde */
+  gerekend: string;
+  /** de bronzin van het team volgt */
+  bron: string;
+  schatting: string;
+  /** het teken tussen duizendtallen */
+  duizendtal: string;
+}
+
+export const REKEN_NL: RekenTeksten = {
+  boven: "Rekenhulp",
+  kop: "Hoeveel reacties mag je verwachten?",
+  label: "Hoeveel klanten of gasten heb je per maand?",
+  uitleg: "Een heel getal van 1 tot {max}.",
+  fout: "Vul een heel getal in van 1 tot {max}.",
+  leeg: "Vul een aantal in, dan zie je hier de schatting.",
+  uitkomst: "Ongeveer {n} reacties per maand",
+  uitkomstEen: "Ongeveer 1 reactie per maand",
+  gerekend: "Gerekend met een responspercentage van {p}%, ingevuld door het team van Smileyapp.",
+  bron: "Waar dit cijfer vandaan komt:",
+  schatting: "Een schatting, geen belofte.",
+  duizendtal: ".",
+};
+
+export interface VergelijkTeksten {
+  boven: string;
+  kop: string;
+  intro: string;
+  uitleg: string;
+  kolomKenmerk: string;
+  kolomSmileyapp: string;
+  kolomPapier: string;
+  tabelNaam: string;
+  slot: string;
+  demoKnop: string;
+  pakkettenKnop: string;
+  /** de zin en de link bij de pakketten en in de footer */
+  bijPakketten: string;
+  link: string;
+  /** de standaardrijen in deze taal, per id; een rij die hier niet in staat (een eigen rij van het team) blijft zoals hij is */
+  rijen: Readonly<Record<string, { kenmerk: string; smileyapp: string; papier: string }>>;
+}
+
+export const VERGELIJK_NL: VergelijkTeksten = {
+  boven: "Vergelijken",
+  kop: "Smileyapp of een papieren enquête?",
+  intro: "Wat is het verschil in het dagelijks gebruik? Hieronder staan ze naast elkaar.",
+  uitleg: "In de kolom Smileyapp staan zinnen van smileyapp.nl. De kolom papier beschrijft alleen hoe een papieren formulier werkt.",
+  kolomKenmerk: "Onderdeel",
+  kolomSmileyapp: "Smileyapp",
+  kolomPapier: "Papieren enquête",
+  tabelNaam: "Smileyapp en een papieren enquête naast elkaar",
+  slot: "Benieuwd hoe het voor jouw organisatie werkt?",
+  demoKnop: "Vraag een demo aan",
+  pakkettenKnop: "Bekijk de pakketten",
+  bijPakketten: "Werk je nu met papieren formulieren?",
+  link: "Smileyapp of een papieren enquête?",
+  rijen: {},
+};
+
+export interface GeslotenTeksten {
+  /** het e-mailadres en een punt volgen */
+  dicht: string;
+  legenda: string;
+  voornaam: string;
+  achternaam: string;
+  email: string;
+  telefoon: string;
+  bedrijf: string;
+  interesse: string;
+  keuze: string;
+  vraag: string;
+  verstuur: string;
+  /** met {email} */
+  mail: string;
+  /** de keuzes in deze taal; een keuze die hier niet in staat (de naam van een pakket) blijft zoals hij is */
+  interesses: Readonly<Record<string, string>>;
+}
+
+export const GESLOTEN_NL: GeslotenTeksten = {
+  dicht: "Dit formulier staat dicht zolang dit een ontwerpvoorstel is: er wordt niets verstuurd of bewaard. Mail je vraag naar",
+  legenda: "Contactformulier (staat dicht in dit voorstel)",
+  voornaam: "Voornaam",
+  achternaam: "Achternaam",
+  email: "E-mailadres",
+  telefoon: "Telefoonnummer",
+  bedrijf: "Bedrijfsnaam",
+  interesse: "Ik ben geïnteresseerd in",
+  keuze: "Maak een keuze",
+  vraag: "Jouw vraag of opmerking",
+  verstuur: "Versturen (staat dicht)",
+  mail: "Mail {email}",
+  interesses: {},
+};

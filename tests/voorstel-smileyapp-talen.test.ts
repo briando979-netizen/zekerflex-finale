@@ -1,14 +1,16 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { BASE, PAKKETTEN, QUOTES, STAPPEN, VRAAGSOORTEN, euro, veelgesteld } from "@/lib/voorstel/smileyapp";
+import { BASE, INTERESSES, PAKKETTEN, PARTNER, QUOTES, STAPPEN, VRAAGSOORTEN, euro, veelgesteld } from "@/lib/voorstel/smileyapp";
 import { valideerAanvraag } from "@/lib/voorstel/smileyapp-aanvraag-regels";
 import { DEMO_PADEN, paginaNaam, somCijfers, telPad } from "@/lib/voorstel/smileyapp-cijfer-regels";
 import { kiesPakket, kiezerVragen } from "@/lib/voorstel/smileyapp-kiezer";
+import { VERHALEN } from "@/lib/voorstel/smileyapp-klanten";
 import { metOverschrijvingen } from "@/lib/voorstel/smileyapp-pakket-regels";
-import { KADER, TAAL_NAAM, TALEN, VERTALINGEN, euroTaal, isTaal, taalBasis, taalLinks, taalVanPad } from "@/lib/voorstel/smileyapp-taal";
-import { TEKSTEN, dagTaal, looptijdTaal, prijsTaal, veelgesteldTaal, vertaal } from "@/lib/voorstel/smileyapp-talen";
-import { FORMULIER_NL, KIEZER_NL, PROBEER_NL, vul } from "@/lib/voorstel/smileyapp-teksten";
+import { BRANCHES } from "@/lib/voorstel/smileyapp-branches";
+import { KADER, TAAL_NAAM, TALEN, VERTAALDE_PADEN, VERTALINGEN, euroTaal, isTaal, taalBasis, taalLinks, taalVanPad } from "@/lib/voorstel/smileyapp-taal";
+import { TEKSTEN, brancheTaal, dagTaal, looptijdTaal, prijsTaal, veelgesteldTaal, vertaal } from "@/lib/voorstel/smileyapp-talen";
+import { FORMULIER_NL, GESLOTEN_NL, KIEZER_NL, PROBEER_NL, REKEN_NL, SAMENSTEL_NL, VERGELIJK_NL, vul } from "@/lib/voorstel/smileyapp-teksten";
 
 // ---------------------------------------------------------------------------
 // Het SmileyApp-voorstel in het Engels (/en) en het Duits (/de), 19 nov 2026.
@@ -68,8 +70,14 @@ describe("de teksten: Engels en Duits zijn compleet en gelijk van vorm", () => {
   });
 
   it("de Nederlandse standaard van formulier, probeer het zelf en kiezer heeft dezelfde sleutels als de vertalingen", () => {
-    const sleutels = (o: object) => [...bladeren(o).keys()].filter((k) => !k.startsWith("fouten.") && !k.startsWith("onderdelen.")).sort();
+    // deel 6b: ook de samensteller, de rekenhulp, de vergelijking en het dichte contactformulier hebben een Nederlandse
+    // standaard met dezelfde sleutels; "rijen." en "interesses." zijn (zoals "onderdelen.") tabellen die in het Nederlands leeg zijn
+    const sleutels = (o: object) => [...bladeren(o).keys()].filter((k) => !k.startsWith("fouten.") && !k.startsWith("onderdelen.") && !k.startsWith("rijen.") && !k.startsWith("interesses.")).sort();
     for (const t of VERTALINGEN) {
+      expect(sleutels(TEKSTEN[t].samenstel), t).toEqual(sleutels(SAMENSTEL_NL));
+      expect(sleutels(TEKSTEN[t].reken), t).toEqual(sleutels(REKEN_NL));
+      expect(sleutels(TEKSTEN[t].vergelijk), t).toEqual(sleutels(VERGELIJK_NL));
+      expect(sleutels(TEKSTEN[t].gesloten), t).toEqual(sleutels(GESLOTEN_NL));
       expect(sleutels(TEKSTEN[t].formulier), t).toEqual(sleutels(FORMULIER_NL));
       expect(sleutels(TEKSTEN[t].probeer), t).toEqual(sleutels(PROBEER_NL));
       expect(sleutels(TEKSTEN[t].kiezer), t).toEqual(sleutels(KIEZER_NL));
@@ -211,13 +219,14 @@ describe("pakketten: de gegevens blijven Nederlands, de standaard heeft een vert
 });
 
 describe("de vertaalde pagina's", () => {
-  it("er zijn er vier: de voorpagina en de demo-aanvraag, in het Engels en het Duits", () => {
-    expect(VERTAALDE_PAGINAS).toEqual([
-      "app/voorstel/smileyapp/en/demo/page.tsx",
-      "app/voorstel/smileyapp/en/page.tsx",
-      "app/voorstel/smileyapp/de/demo/page.tsx",
-      "app/voorstel/smileyapp/de/page.tsx",
-    ]);
+  // Deel 6b (19 nov 2026): de rest van de site kwam erbij in het Engels en het Duits: branches (overzicht en één branche),
+  // klantverhalen, contact, partner worden, samenstellen en vergelijken. Was: vier pagina's (de voorpagina en de
+  // demo-aanvraag per taal). De blog blijft Nederlands.
+  it("er zijn er negen per taal: de voorpagina, de demo-aanvraag en de zeven pagina's van deel 6b", () => {
+    const perTaal = ["branches/[slug]/page.tsx", "branches/page.tsx", "contact/page.tsx", "demo/page.tsx", "klanten/page.tsx", "page.tsx", "partner-worden/page.tsx", "samenstellen/page.tsx", "vergelijken/page.tsx"];
+    expect(VERTAALDE_PAGINAS).toEqual(VERTALINGEN.flatMap((t) => perTaal.map((p) => `app/voorstel/smileyapp/${t}/${p}`)));
+    // en geen vertaalde blog: die pagina's zouden Nederlandse tekst onder een andere taal tonen
+    expect(VERTAALDE_PAGINAS.filter((p) => p.includes("/blog/"))).toEqual([]);
     const generated = lees("lib/dev/app-pages.generated.ts");
     for (const p of VERTAALDE_PAGINAS) expect(generated, p).toContain(`"file":"${p}"`);
   });
@@ -229,7 +238,10 @@ describe("de vertaalde pagina's", () => {
       expect(s.match(/<h1[\s>]/g) ?? [], p).toHaveLength(1);
       expect(s, p).toContain(`<div lang="${taal}">`);
       expect(s, p).toContain(`const TAAL = "${taal}";`);
-      expect(s, p).toMatch(/await (?:Promise\.all\(\[[^\]]*)?smileyappPakketten\(\)/);
+      // deel 6b: alleen de pagina's die een pakket of een prijs tonen (voorpagina, demo-aanvraag en contact) halen de
+      // pakketten op; was: elke vertaalde pagina, toen dat alleen de voorpagina en de demo-aanvraag waren
+      if (/\/(?:en|de)\/(?:page|demo\/page|contact\/page)\.tsx$/.test(p)) expect(s, p).toMatch(/await (?:Promise\.all\(\[[^\]]*)?smileyappPakketten\(\)/);
+      else expect(s, p).not.toContain("smileyappPakketten");
       expect(s, p).toContain('export const dynamic = "force-dynamic";');
       expect(s, p).toContain("title: { absolute: t.meta.");
       expect(s, p).toContain("description: t.meta.");
@@ -291,6 +303,98 @@ describe("de vertaalde pagina's", () => {
   });
 });
 
+// Deel 6b (19 nov 2026): de branches, de klantverhalen, contact, partner worden, samenstellen en vergelijken in het
+// Engels en het Duits. Een vertaling zegt niets wat de Nederlandse tekst niet zegt: evenveel alinea's, momenten en
+// vragen, dezelfde namen, en geen cijfer of bedrag erbij.
+describe("deel 6b: de rest van de site in het Engels en het Duits", () => {
+  it("elke branche heeft een vertaling met evenveel alinea's, momenten en voorbeeldvragen, zonder cijfers in de inleiding", () => {
+    for (const t of VERTALINGEN) {
+      expect(Object.keys(TEKSTEN[t].branches), t).toEqual(Object.keys(BRANCHES));
+      for (const [slug, nl] of Object.entries(BRANCHES)) {
+        const v = brancheTaal(slug, t);
+        expect(v, `${t}: ${slug}`).toBeDefined();
+        expect(v?.intro, slug).toHaveLength(nl.intro.length);
+        expect(v?.momenten, slug).toHaveLength(nl.momenten.length);
+        expect(v?.vragen, slug).toHaveLength(nl.vragen.length);
+        expect(new Set(v?.vragen).size, slug).toBe(nl.vragen.length);
+        // dezelfde regel als de Nederlandse inleiding: geen cijfers, percentages of bedragen
+        expect(`${v?.kop ?? ""} ${v?.intro.join(" ") ?? ""} ${v?.momenten.join(" ") ?? ""}`, `${t}: ${slug}`).not.toMatch(/\d|%|€/);
+        // een vraag eindigt als vraag of als uitnodiging, net als het origineel
+        nl.vragen.forEach((vraag, i) => expect((v?.vragen[i] ?? "").endsWith("?"), `${t}: ${slug} ${i}`).toBe(vraag.tekst.endsWith("?")));
+      }
+      for (const x of ["constructor", "toString", "Horeca", ""]) expect(brancheTaal(x, t), x).toBeUndefined();
+      // het Maatwerk Pakket houdt zijn naam
+      expect(TEKSTEN[t].branches.evenementen?.intro.join(" ")).toContain("Maatwerk Pakket");
+    }
+    // wat een voorbeeld is, heet ook in de vertaling een voorbeeld, van ZekerFlex
+    expect(TEKSTEN.en.branchePagina.voorbeeldUitleg).toContain("an example by ZekerFlex, not a questionnaire from a Smileyapp customer");
+    expect(TEKSTEN.de.branchePagina.voorbeeldUitleg).toContain("ein Beispiel von ZekerFlex, kein Fragebogen eines Kunden von Smileyapp");
+    const paginas = lees("components/voorstel/smileyapp/taal/Paginas.tsx");
+    expect(paginas).toContain("{t.voorbeeldLabel}");
+    expect(paginas).toContain("{t.voorbeeldUitleg}");
+  });
+
+  it("de klantverhalen: de twee echte quotes blijven Nederlands, met lang en de regel dat het het origineel is", () => {
+    for (const t of VERTALINGEN) {
+      expect(Object.keys(TEKSTEN[t].klantenPagina.verhalen), t).toEqual(VERHALEN.map((v) => v.id));
+      for (const v of VERHALEN) {
+        const x = TEKSTEN[t].klantenPagina.verhalen[v.id];
+        expect(x?.meten, v.id).toHaveLength(v.meten.length);
+        expect(typeof x?.eerst, v.id).toBe(typeof v.eerst);
+        // net als het Nederlands: geen resultaten of cijfers
+        expect(`${x?.gebruik ?? ""} ${x?.eerst ?? ""} ${x?.meten.join(" ") ?? ""}`, v.id).not.toMatch(/\d|%|€/);
+      }
+    }
+    expect(TEKSTEN.en.klantenPagina.origineel).toBe("Original in Dutch");
+    expect(TEKSTEN.de.klantenPagina.origineel).toBe("Original auf Niederländisch");
+    const paginas = lees("components/voorstel/smileyapp/taal/Paginas.tsx");
+    // de quote zelf komt uit de Nederlandse gegevens (v.quote), niet uit een vertaling
+    expect(paginas).toMatch(/<blockquote lang="nl"[^>]*>\s*\{v\.quote\.map\(/);
+    expect(paginas).toContain("{t.origineel}");
+    expect(paginas).not.toContain("klanten.quotes");
+  });
+
+  it("partner worden en contact: dezelfde opbouw, het contactformulier blijft dicht en de interesses gaan in het Nederlands mee", () => {
+    for (const t of VERTALINGEN) {
+      const p = TEKSTEN[t].partner;
+      expect(p.kort, t).toHaveLength(PARTNER.kort.length);
+      expect(p.uitleg, t).toHaveLength(PARTNER.uitleg.length);
+      expect(p.voordelen, t).toHaveLength(PARTNER.voordelen.length);
+      // geen percentage of bedrag bij de commissie: dat staat ook niet op hun site
+      expect(`${p.kort.join(" ")} ${p.uitleg.join(" ")} ${p.voordelen.join(" ")}`, t).not.toMatch(/\d|%|€/);
+      // alleen de twee keuzes die geen pakketnaam zijn, hebben een vertaling
+      expect(Object.keys(TEKSTEN[t].gesloten.interesses).sort()).toEqual(INTERESSES.filter((i) => !PAKKETTEN.some((x) => x.naam === i)).sort());
+    }
+    const contact = lees("components/voorstel/smileyapp/taal/Contact.tsx");
+    expect(contact).toContain("<GeslotenFormulier ");
+    expect(contact).toContain("teksten={alles.gesloten}");
+    expect(contact).toContain("{prijsTaal(gekozen, taal)}");
+    expect(contact).toContain("interesses={INTERESSES} interesseLabels={alles.gesloten.interesses} teksten={alles.formulier}");
+    const gesloten = lees("components/voorstel/smileyapp/GeslotenFormulier.tsx");
+    expect(gesloten).toContain("teksten: t = GESLOTEN_NL");
+    expect(gesloten).toContain("<fieldset disabled");
+    // het formulier toont het etiket van de taal, maar stuurt de Nederlandse waarde die de server kent
+    const formulier = lees("components/voorstel/smileyapp/AanvraagFormulier.tsx");
+    expect(formulier).toContain("{Object.hasOwn(interesseLabels, i) ? interesseLabels[i] : i}");
+    expect(formulier).toContain("onChange={() => wissel(i)}");
+  });
+
+  it("het menu en de footer op /en en /de linken naar de vertaalde pagina's; alleen de blog blijft Nederlands", () => {
+    for (const t of VERTALINGEN) {
+      const m = KADER[t].menu;
+      for (const sleutel of ["branches", "verhalen", "samenstellen", "vergelijken", "partner", "contact"] as const) expect(m[sleutel].trim(), `${t}: ${sleutel}`).not.toBe("");
+      expect(KADER[t].footer.blog, t).toMatch(/Dutch|Niederländisch/);
+    }
+    const kader = lees("components/voorstel/smileyapp/taal/Kader.tsx");
+    expect(kader).toContain("const links = [...secties(taal), ...paginas(taal)];");
+    // het uitklapmenu op de telefoon is niet te scrollen: hooguit acht links
+    expect((kader.match(/telefoon: true/g) ?? []).length).toBeLessThanOrEqual(8);
+    // geen link meer naar een Nederlandse pagina die nu een vertaling heeft
+    expect(kader).not.toMatch(/MENU_FOOTER|\bMENU\b/);
+    expect(lees("components/voorstel/smileyapp/taal/Landing.tsx")).toContain("<Link href={`${b}/klanten`}");
+  });
+});
+
 describe("taal van een pad en de taalkiezer", () => {
   it("de taal volgt het pad, lang én kort (subdomein)", () => {
     expect(TALEN).toEqual(["nl", "en", "de"]);
@@ -319,8 +423,13 @@ describe("taal van een pad en de taalkiezer", () => {
   });
 
   it("de taalkiezer linkt alleen naar pagina's die bestaan", () => {
-    const bestaat = (href: string) => existsSync(path.join(ROOT, "app", href === BASE ? `${BASE}/page.tsx` : `${href}/page.tsx`));
-    const PADEN = [BASE, `${BASE}/demo`, `${BASE}/blog`, `${BASE}/blog/een-bericht`, `${BASE}/branches/horeca`, `${BASE}/klanten`, `${BASE}/partner-worden`, `${BASE}/contact`, `${BASE}/en`, `${BASE}/en/demo`, `${BASE}/de`, `${BASE}/de/demo`, "/", "/demo", "/en", "/de/demo/"];
+    // deel 6b: een branchepagina bestaat in elke taal als [slug]; de slug zelf moet een branche uit de vaste lijst zijn
+    const bestaat = (href: string) => {
+      const branche = /^(.*\/branches)\/([a-z]+)$/.exec(href);
+      if (branche) return Object.hasOwn(BRANCHES, branche[2] ?? "") && existsSync(path.join(ROOT, "app", `${branche[1]}/[slug]/page.tsx`));
+      return existsSync(path.join(ROOT, "app", href === BASE ? `${BASE}/page.tsx` : `${href}/page.tsx`));
+    };
+    const PADEN = [BASE, `${BASE}/demo`, `${BASE}/blog`, `${BASE}/blog/een-bericht`, `${BASE}/branches`, `${BASE}/branches/horeca`, `${BASE}/branches/bestaat-niet`, `${BASE}/klanten`, `${BASE}/partner-worden`, `${BASE}/contact`, `${BASE}/samenstellen`, `${BASE}/vergelijken`, `${BASE}/en`, `${BASE}/en/demo`, `${BASE}/en/branches/zorg`, `${BASE}/de`, `${BASE}/de/demo`, `${BASE}/de/vergelijken`, "/", "/demo", "/en", "/de/demo/", "/de/klanten", "/en/branches/constructor"];
     for (const pad of PADEN) {
       const links = taalLinks(pad);
       expect(links.map((l) => l.taal), pad).toEqual(["nl", "en", "de"]);
@@ -328,9 +437,17 @@ describe("taal van een pad en de taalkiezer", () => {
       for (const l of links) expect(bestaat(l.href), `${pad} → ${l.href}`).toBe(true);
     }
     const href = (pad: string) => taalLinks(pad).map((l) => l.href);
-    // een Nederlandse pagina zonder vertaling: EN en DE leiden naar de voorpagina in die taal
+    // een Nederlandse pagina zonder vertaling (de blog): EN en DE leiden naar de voorpagina in die taal
     expect(href(`${BASE}/blog`)).toEqual([BASE, `${BASE}/en`, `${BASE}/de`]);
-    expect(href(`${BASE}/contact`)).toEqual([BASE, `${BASE}/en`, `${BASE}/de`]);
+    expect(href(`${BASE}/blog/een-bericht`)).toEqual([BASE, `${BASE}/en`, `${BASE}/de`]);
+    // deel 6b: contact en de andere vertaalde pagina's houden je op dezelfde pagina. Was: contact → de voorpagina in die taal.
+    for (const p of VERTAALDE_PADEN) expect(href(`${BASE}${p}`), p).toEqual([`${BASE}${p}`, `${BASE}/en${p}`, `${BASE}/de${p}`]);
+    expect(VERTAALDE_PADEN).toEqual(["/demo", "/branches", "/klanten", "/contact", "/partner-worden", "/samenstellen", "/vergelijken"]);
+    expect(href("/de/contact")).toEqual([`${BASE}/contact`, `${BASE}/en/contact`, `${BASE}/de/contact`]);
+    expect(href(`${BASE}/en/branches/horeca`)).toEqual([`${BASE}/branches/horeca`, `${BASE}/en/branches/horeca`, `${BASE}/de/branches/horeca`]);
+    // een branche die niet bestaat (ook "constructor") heeft nergens een pagina: dan de voorpagina
+    expect(href(`${BASE}/branches/constructor`)).toEqual([BASE, `${BASE}/en`, `${BASE}/de`]);
+    expect(href("/en/branches/bestaat-niet")).toEqual([BASE, `${BASE}/en`, `${BASE}/de`]);
     // op /en en /de leidt NL naar de Nederlandse voorpagina
     expect(href(`${BASE}/en`)).toEqual([BASE, `${BASE}/en`, `${BASE}/de`]);
     expect(href("/de")).toEqual([BASE, `${BASE}/en`, `${BASE}/de`]);
@@ -379,7 +496,13 @@ describe("bezoekcijfers tellen de vertaalde pagina's", () => {
     }
     expect(paginaNaam("/en")).toBe("Voorpagina (Engels)");
     expect(paginaNaam("/de/demo")).toBe("Demo aanvragen (Duits)");
-    for (const pad of ["/fr", "/en/blog", "/de/contact", "/en/demo/x", "/en?x=1"]) expect(telPad(pad), pad).toBeNull();
+    // deel 6b: /de/contact telt nu mee (de pagina bestaat); was: ook "/de/contact" in deze lijst van paden die niet tellen
+    for (const pad of ["/fr", "/en/blog", "/de/blog/een-bericht", "/en/demo/x", "/en?x=1", "/en/branches/constructor", "/fr/contact"]) expect(telPad(pad), pad).toBeNull();
+    for (const pad of ["/samenstellen", "/vergelijken", "/de/contact", "/en/klanten", "/en/partner-worden", "/de/branches", "/en/samenstellen", "/de/vergelijken", "/en/branches/horeca"]) expect(telPad(pad), pad).toBe(pad);
+    expect(paginaNaam("/de/contact")).toBe("Contact (Duits)");
+    expect(paginaNaam("/en/samenstellen")).toBe("Vragenlijst samenstellen (Engels)");
+    expect(paginaNaam("/en/branches/horeca")).toBe("Branche: Horeca (Engels)");
+    expect(paginaNaam("/branches/horeca")).toBe("Branche: Horeca");
   });
 
   it("het percentage telt de demo-aanvraag in alle talen als noemer", () => {

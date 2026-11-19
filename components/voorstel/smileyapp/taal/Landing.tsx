@@ -9,6 +9,7 @@ import { Kopje, Vinkje } from "@/components/voorstel/smileyapp/Blokken";
 import { Gezicht } from "@/components/voorstel/smileyapp/Gezicht";
 import { PakketKiezer } from "@/components/voorstel/smileyapp/PakketKiezer";
 import { ProbeerZelf } from "@/components/voorstel/smileyapp/ProbeerZelf";
+import { RekenBlok } from "@/components/voorstel/smileyapp/RekenBlok";
 import { ReviewBlok } from "@/components/voorstel/smileyapp/ReviewBlok";
 
 // De voorpagina van het SmileyApp-voorstel in het Engels (/en) en het Duits
@@ -232,6 +233,21 @@ export function LandingTaal({ taal, pakketten, vragenKeuze = null }: { taal: Ver
         </div>
       </section>
 
+      {/* Zelf samenstellen (deel 6b): een knop naar de samensteller in deze taal */}
+      <section aria-labelledby="samenstel-kop" className="bg-white py-20 lg:py-24">
+        <div className="mx-auto flex max-w-[1200px] flex-col items-start gap-8 px-4 sm:px-8 lg:flex-row lg:items-end lg:justify-between">
+          <Kopje boven={t.samenstel.blokBoven} kop={t.samenstel.blokKop} id="samenstel-kop">
+            <p className="mt-5 max-w-2xl text-lg leading-relaxed text-smiley-mute">{t.samenstel.blokTekst}</p>
+          </Kopje>
+          <Link href={`${b}/samenstellen`} className="sm-onthul shrink-0 rounded-full bg-smiley-ink px-7 py-4 font-bold text-white transition-transform hover:-translate-y-0.5">
+            {t.samenstel.blokKnop}
+          </Link>
+        </div>
+      </section>
+
+      {/* Rekenhulp (deel 6b): alleen als een beheerder een responspercentage met een bron heeft ingevuld */}
+      <RekenBlok taal={taal} />
+
       {/* Pakketten */}
       <section id="pakketten" aria-labelledby="pakketten-kop" className="scroll-mt-24 bg-white py-20 lg:py-28">
         <div className="mx-auto max-w-[1200px] px-4 sm:px-8">
@@ -246,6 +262,12 @@ export function LandingTaal({ taal, pakketten, vragenKeuze = null }: { taal: Ver
           <div className="sm-onthul mt-16">
             <PakketKiezer pakketten={pakketten} teksten={t.kiezer} basis={b} />
           </div>
+          <p className="sm-onthul mt-8 text-center leading-relaxed text-smiley-mute">
+            {t.vergelijk.bijPakketten}{" "}
+            <Link href={`${b}/vergelijken`} className="font-semibold text-smiley-leaf underline underline-offset-2">
+              {t.vergelijk.link}
+            </Link>
+          </p>
         </div>
       </section>
 
@@ -257,7 +279,7 @@ export function LandingTaal({ taal, pakketten, vragenKeuze = null }: { taal: Ver
         <div className="mx-auto max-w-[1200px] px-4 sm:px-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <Kopje boven={t.klanten.boven} kop={t.klanten.kop} id="klanten-kop" />
-            <Link href={`${taalBasis("nl")}/klanten`} hrefLang="nl" className="sm-onthul rounded-full px-5 py-3 font-bold text-smiley-ink ring-1 ring-smiley-ink/20 hover:bg-smiley-mint">
+            <Link href={`${b}/klanten`} className="sm-onthul rounded-full px-5 py-3 font-bold text-smiley-ink ring-1 ring-smiley-ink/20 hover:bg-smiley-mint">
               {t.klanten.verhalen}
             </Link>
           </div>

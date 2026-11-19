@@ -23,10 +23,12 @@ import {
 import { zichtbareBerichten } from "@/lib/voorstel/smileyapp-blog";
 import { BRANCHE_LIJST, brancheLink } from "@/lib/voorstel/smileyapp-branches";
 import { smileyappPakketten } from "@/lib/voorstel/smileyapp-pakketten";
+import { SAMENSTEL_NL, VERGELIJK_NL } from "@/lib/voorstel/smileyapp-teksten";
 import { smileyappVragen } from "@/lib/voorstel/smileyapp-vragen";
 import { BlogBeeld } from "@/components/voorstel/smileyapp/BlogBeeld";
 import { PakketKiezer } from "@/components/voorstel/smileyapp/PakketKiezer";
 import { ProbeerZelf } from "@/components/voorstel/smileyapp/ProbeerZelf";
+import { RekenBlok } from "@/components/voorstel/smileyapp/RekenBlok";
 import { ReviewBlok } from "@/components/voorstel/smileyapp/ReviewBlok";
 import { SwipeSmiley } from "@/components/voorstel/smileyapp/SwipeSmiley";
 import { VimeoVideo } from "@/components/voorstel/smileyapp/VimeoVideo";
@@ -219,6 +221,21 @@ export default async function SmileyappHome() {
         </div>
       </section>
 
+      {/* Zelf samenstellen (deel 6b): een knop naar /samenstellen, waar je voorbeeldvragen kiest en ze op een telefoon ziet */}
+      <section aria-labelledby="samenstel-kop" className="bg-white py-20 lg:py-24">
+        <div className="mx-auto flex max-w-[1200px] flex-col items-start gap-8 px-4 sm:px-8 lg:flex-row lg:items-end lg:justify-between">
+          <Kopje boven={SAMENSTEL_NL.blokBoven} kop={SAMENSTEL_NL.blokKop} id="samenstel-kop">
+            <p className="mt-5 max-w-2xl text-lg leading-relaxed text-smiley-mute">{SAMENSTEL_NL.blokTekst}</p>
+          </Kopje>
+          <Link href={`${BASE}/samenstellen`} className="sm-onthul shrink-0 rounded-full bg-smiley-ink px-7 py-4 font-bold text-white transition-transform hover:-translate-y-0.5">
+            {SAMENSTEL_NL.blokKnop}
+          </Link>
+        </div>
+      </section>
+
+      {/* Rekenhulp (deel 6b): alleen als een beheerder een responspercentage met een bron heeft ingevuld; anders staat hier niets */}
+      <RekenBlok />
+
       {/* Video */}
       <section id="video" aria-labelledby="video-kop" className="relative scroll-mt-24 overflow-hidden bg-smiley-ink py-20 text-white lg:py-28">
         <div aria-hidden="true" className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-smiley-green/20 blur-3xl" />
@@ -249,6 +266,12 @@ export default async function SmileyappHome() {
           <div className="sm-onthul mt-16">
             <PakketKiezer pakketten={pakketten} />
           </div>
+          <p className="sm-onthul mt-8 text-center leading-relaxed text-smiley-mute">
+            {VERGELIJK_NL.bijPakketten}{" "}
+            <Link href={`${BASE}/vergelijken`} className="font-semibold text-smiley-leaf underline underline-offset-2">
+              {VERGELIJK_NL.link}
+            </Link>
+          </p>
         </div>
       </section>
 

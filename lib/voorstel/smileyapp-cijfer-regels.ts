@@ -26,7 +26,18 @@ const VASTE_PAGINAS: Record<string, string> = {
   "/en/demo": "Demo aanvragen (Engels)",
   "/de": "Voorpagina (Duits)",
   "/de/demo": "Demo aanvragen (Duits)",
+  // deel 6b: de vragenlijst zelf samenstellen en de vergelijking met papier
+  "/samenstellen": "Vragenlijst samenstellen",
+  "/vergelijken": "Vergelijken met papier",
 };
+/** De talen naast het Nederlands, met hun naam voor het beheer. */
+const VERTALING_NAAM: Record<string, string> = { en: "Engels", de: "Duits" };
+// deel 6b: deze pagina's bestaan ook in het Engels en het Duits (/en/contact, /de/klanten, …)
+for (const [taal, naam] of Object.entries(VERTALING_NAAM)) {
+  for (const pad of ["/contact", "/partner-worden", "/branches", "/klanten", "/samenstellen", "/vergelijken"]) {
+    VASTE_PAGINAS[`/${taal}${pad}`] = `${VASTE_PAGINAS[pad] ?? pad} (${naam})`;
+  }
+}
 /** Eén teller voor alle eigen blogberichten samen: hun adressen staan niet vast. */
 export const EIGEN_BLOG = "/blog/*";
 export const DEMO_PAD = "/demo";
@@ -46,7 +57,8 @@ export function telPad(ruw: unknown): string | null {
   if (Object.hasOwn(VASTE_PAGINAS, pad)) return pad;
   const blog = /^\/blog\/([a-z0-9-]{1,80})$/.exec(pad);
   if (blog) return BLOG.some((b) => b.slug === blog[1]) ? pad : EIGEN_BLOG;
-  const branche = /^\/branches\/([a-z0-9-]{1,40})$/.exec(pad);
+  // een branchepagina, Nederlands of (deel 6b) in het Engels of het Duits
+  const branche = /^(?:\/(?:en|de))?\/branches\/([a-z0-9-]{1,40})$/.exec(pad);
   if (branche?.[1] && Object.hasOwn(BRANCHES, branche[1])) return pad;
   return null;
 }
@@ -57,8 +69,12 @@ export function paginaNaam(pad: string): string {
   if (pad === EIGEN_BLOG) return "Blog: eigen berichten";
   const blog = BLOG.find((b) => `/blog/${b.slug}` === pad);
   if (blog) return `Blog: ${blog.titel}`;
-  const slug = pad.startsWith("/branches/") ? pad.slice("/branches/".length) : "";
-  if (slug && Object.hasOwn(BRANCHES, slug)) return `Branche: ${BRANCHES[slug]?.naam ?? slug}`;
+  const branche = /^(?:\/(en|de))?\/branches\/([a-z0-9-]{1,40})$/.exec(pad);
+  const slug = branche?.[2] ?? "";
+  if (slug && Object.hasOwn(BRANCHES, slug)) {
+    const taal = branche?.[1] ? VERTALING_NAAM[branche[1]] : undefined;
+    return `Branche: ${BRANCHES[slug]?.naam ?? slug}${taal ? ` (${taal})` : ""}`;
+  }
   return pad;
 }
 

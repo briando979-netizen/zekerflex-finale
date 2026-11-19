@@ -49,9 +49,28 @@ interface Props {
   bron?: string;
   /** de teksten van het formulier; zonder: Nederlands */
   teksten?: FormulierTeksten;
+  /** demo: wat alvast in het berichtveld staat (de vragenlijst uit /samenstellen); de bezoeker kan het nog aanpassen */
+  beginBericht?: string;
+  /** partner: de interesses in de taal van de pagina; de waarde die meegaat blijft de Nederlandse uit `interesses` */
+  interesseLabels?: Readonly<Record<string, string>>;
 }
 
-export function AanvraagFormulier({ soort, kop, mail, teamActief, pakketten = [], gekozenPakket = "", dagen = [], tijden = [], afspraken = [], interesses = [], bron, teksten: t = FORMULIER_NL }: Props) {
+export function AanvraagFormulier({
+  soort,
+  kop,
+  mail,
+  teamActief,
+  pakketten = [],
+  gekozenPakket = "",
+  dagen = [],
+  tijden = [],
+  afspraken = [],
+  interesses = [],
+  bron,
+  teksten: t = FORMULIER_NL,
+  beginBericht = "",
+  interesseLabels = {},
+}: Props) {
   const id = `sm-${soort}`;
   const [naam, setNaam] = useState("");
   const [bedrijf, setBedrijf] = useState("");
@@ -66,7 +85,7 @@ export function AanvraagFormulier({ soort, kop, mail, teamActief, pakketten = []
   const [tijdId, setTijdId] = useState("");
   /** de tekst van de geboekte tijd, voor de bevestiging */
   const [geboekt, setGeboekt] = useState("");
-  const [bericht, setBericht] = useState("");
+  const [bericht, setBericht] = useState(beginBericht);
   const [toestemming, setToestemming] = useState(false);
   const [lokveld, setLokveld] = useState("");
   const [bezig, setBezig] = useState(false);
@@ -272,7 +291,7 @@ export function AanvraagFormulier({ soort, kop, mail, teamActief, pakketten = []
                     className={`relative cursor-pointer rounded-full px-4 py-2 text-sm font-bold ring-1 transition-colors focus-within:ring-2 focus-within:ring-smiley-leaf ${aan ? "bg-smiley-ink text-white ring-smiley-ink" : "bg-smiley-cream text-smiley-ink ring-smiley-ink/15 hover:bg-smiley-mint"}`}
                   >
                     <input type="checkbox" checked={aan} onChange={() => wissel(i)} className="sr-only" />
-                    {i}
+                    {Object.hasOwn(interesseLabels, i) ? interesseLabels[i] : i}
                   </label>
                 );
               })}
@@ -285,7 +304,7 @@ export function AanvraagFormulier({ soort, kop, mail, teamActief, pakketten = []
             {soort === "demo" ? t.berichtDemo : t.berichtPartner}
             <span className="font-normal text-smiley-mute">{t.magLeeg}</span>
           </label>
-          <textarea id={`${id}-bericht`} rows={4} maxLength={2000} value={bericht} onChange={(e) => setBericht(e.target.value)} className={VELD} {...fouteVeld("bericht")} />
+          <textarea id={`${id}-bericht`} rows={beginBericht ? 8 : 4} maxLength={2000} value={bericht} onChange={(e) => setBericht(e.target.value)} className={VELD} {...fouteVeld("bericht")} />
         </div>
 
         {/* lokveld: een mens ziet het niet en laat het leeg; een robot vult het in en wordt dan stil genegeerd */}

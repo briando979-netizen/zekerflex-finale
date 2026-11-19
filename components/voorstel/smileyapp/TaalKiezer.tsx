@@ -7,8 +7,8 @@ import { TAAL_EIGEN, TAAL_WOORD, taalLinks, taalVanPad } from "@/lib/voorstel/sm
 // De taalkiezer van het SmileyApp-voorstel: NL · EN · DE. Hij staat in de band
 // boven de kop (vanaf lg; in de kop zelf is op 1024 en 1280 px geen ruimte
 // naast het menu en de knoppen), in het uitklapmenu op de telefoon en in de
-// footer. Op de demo-aanvraag blijf je op de demo-aanvraag; elke andere
-// Nederlandse pagina heeft geen vertaling, dus daar leiden EN en DE naar de
+// footer. Op een pagina die in alle talen bestaat (sinds deel 6b alles behalve
+// de blog) blijf je op dezelfde pagina; op de blog leiden EN en DE naar de
 // voorpagina in die taal (lib/voorstel/smileyapp-taal.ts, taalLinks).
 
 const STIJL = {
