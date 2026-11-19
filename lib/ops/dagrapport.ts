@@ -5,6 +5,7 @@ import { ownerTodos } from "@/lib/admin/owner-todos";
 import { proposals } from "@/lib/ai-teams";
 import { wachtendeVraag } from "@/lib/ai-teams/medewerkers";
 import { listConversations } from "@/lib/chat/webchat";
+import { isReservedTestAddress } from "@/lib/mail/test-adres";
 import { kvDelete, kvDeleteStale, kvSetIfAbsent } from "@/lib/storage/kv";
 import { amsterdamDayKey, amsterdamStartOfDay } from "@/lib/time/amsterdam";
 import { binnenMeldtijd, type GebeurtenisSoort } from "@/lib/ops/gebeurtenis";
@@ -19,16 +20,31 @@ const RAPPORT_VOORVOEGSEL = "ops:melder:rapport:";
 
 /** Alles wat op een mens wacht, per soort. Een bron die stuk is, telt gewoon niet mee. */
 export async function verzamelWacht(nu: Date = new Date()): Promise<WachtGroep[]> {
-  const [triage, voorstellen, todos, chats] = await Promise.all([
+  const [triage, voorstellen, todos, chats, idControles] = await Promise.all([
     getTriage().catch(() => []),
     proposals().catch(() => []),
     ownerTodos().catch(() => []),
     Promise.all([listConversations("open", 300), listConversations("human", 300)]).then((x) => x.flat()).catch(() => []),
+    // ID-controles die op een mens wachten (decisionStatus in_review, lib/onboarding/verify.ts): een werker heeft "meestal binnen een
+    // werkdag" beloofd gekregen. Testaccounts tellen niet mee.
+    prisma.identityVerification
+      .findMany({
+        where: { decisionStatus: { in: ["in_review", "In Review"] }, status: "PENDING", user: { kycStatus: "PENDING" } },
+        select: { userId: true, updatedAt: true, user: { select: { email: true } } },
+        orderBy: { updatedAt: "desc" },
+        take: 100,
+      })
+      .catch(() => []),
   ]);
   const vragen = chats.map((c) => wachtendeVraag(c, nu)).filter((v): v is NonNullable<typeof v> => v !== null);
+  const wachtOpMens = new Map<string, Date>();
+  for (const v of idControles) if (!isReservedTestAddress(v.user.email) && !wachtOpMens.has(v.userId)) wachtOpMens.set(v.userId, v.updatedAt);
   return groepeerWacht(
     [
-      ...triage.map((t) => ({ soort: t.kind, urgent: t.severity === "high", at: t.at })),
+      // de triage telt elke werker met kycStatus PENDING als "KYC" (ook wie nog midden in de aanmelding zit, ernst laag): wat echt op een
+      // mens wacht komt hieronder als eigen groep, met een direct adres
+      ...triage.filter((t) => t.kind !== "KYC").map((t) => ({ soort: t.kind, urgent: t.severity === "high", at: t.at })),
+      ...[...wachtOpMens.values()].map((at) => ({ soort: "ID-controle in behandeling", urgent: false, at: at.toISOString(), altijd: true, link: "/admin/gebruikers" })),
       ...voorstellen.filter((p) => p.status === "open").map((p) => ({ soort: "AI-voorstellen", urgent: false, at: p.at })),
       ...vragen.map((v) => ({ soort: "Websitevragen zonder antwoord", urgent: false, at: v.at })),
       ...todos.filter((t) => !t.done && t.eerst).map(() => ({ soort: "Taken die blokkeren (Te doen)", urgent: false, at: "" })),

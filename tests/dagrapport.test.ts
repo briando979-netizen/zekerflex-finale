@@ -13,10 +13,16 @@ const h = vi.hoisted(() => ({
   chats: vi.fn(async (): Promise<{ id: string }[]> => []),
   wacht: vi.fn((c: { id: string }): { at: string } | null => (c.id === "wacht" ? { at: "2026-11-18T09:00:00Z" } : null)),
   orders: vi.fn(async () => ({ _count: { _all: 2 }, _sum: { totalCents: 8450 } })),
+  idControles: vi.fn(async (..._a: unknown[]): Promise<{ userId: string; updatedAt: Date; user: { email: string } }[]> => []),
 }));
 
 vi.mock("@/lib/env", () => ({ env: { APP_BASE_URL: "https://zekerflex.com" } }));
-vi.mock("@/lib/prisma", () => ({ prisma: { shopOrder: { aggregate: (...a: unknown[]) => (h.orders as unknown as (...x: unknown[]) => unknown)(...a) } } }));
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    shopOrder: { aggregate: (...a: unknown[]) => (h.orders as unknown as (...x: unknown[]) => unknown)(...a) },
+    identityVerification: { findMany: (...a: unknown[]) => h.idControles(...a) },
+  },
+}));
 vi.mock("@/lib/admin/triage", () => ({ getTriage: () => h.triage() }));
 vi.mock("@/lib/admin/owner-todos", () => ({ ownerTodos: () => h.todos() }));
 vi.mock("@/lib/ai-teams", () => ({ proposals: () => h.voorstellen() }));
@@ -53,6 +59,7 @@ beforeEach(() => {
   h.voorstellen.mockImplementation(async () => []);
   h.todos.mockImplementation(async () => []);
   h.chats.mockImplementation(async () => []);
+  h.idControles.mockImplementation(async () => []);
 });
 
 describe("dagrapport: teksten", () => {
@@ -100,6 +107,13 @@ describe("dagrapport: teksten", () => {
     expect(rustig.endsWith("https://zekerflex.com/admin/automatisch")).toBe(true);
   });
 
+  it("een groep met 'altijd' komt in de ochtendlijst, met zijn adres; een groep zonder blijft stil", () => {
+    const tekst = wachtOpJouTekst([{ soort: "ID-controle in behandeling", aantal: 2, urgent: false, oud: false, altijd: true, link: "/admin/gebruikers" }], "https://zekerflex.com/");
+    expect(tekst).toContain("2× ID-controle in behandeling");
+    expect(tekst).toContain("ID-controle in behandeling: https://zekerflex.com/admin/gebruikers");
+    expect(wachtOpJouTekst([{ soort: "Uren", aantal: 2, urgent: false, oud: false, link: "/werkgever/uren" }], "https://zekerflex.com")).toBeNull();
+  });
+
   it("de ochtendlijst komt alleen bij iets dringends of iets van meer dan 24 uur", () => {
     expect(wachtOpJouTekst([], "https://zekerflex.com")).toBeNull();
     expect(wachtOpJouTekst([{ soort: "Uren", aantal: 4, urgent: false, oud: false }], "https://zekerflex.com")).toBeNull();
@@ -118,7 +132,7 @@ describe("dagrapport: teksten", () => {
 
 describe("dagrapport: verzamelen en versturen", () => {
   it("verzamelt uit de triage, de voorstellen, de websitevragen en de blokkerende taken; een kapotte bron telt niet mee", async () => {
-    h.triage.mockImplementation(async () => [{ kind: "KYC", severity: "medium", at: "2026-11-18T10:00:00Z" }]);
+    h.triage.mockImplementation(async () => [{ kind: "Uren", severity: "medium", at: "2026-11-18T10:00:00Z" }]);
     h.voorstellen.mockImplementation(async () => [
       { status: "open", at: "2026-11-18T10:00:00Z" },
       { status: "done", at: "2026-11-18T10:00:00Z" },
@@ -126,11 +140,34 @@ describe("dagrapport: verzamelen en versturen", () => {
     h.todos.mockImplementation(async () => [{ done: false, eerst: {} }, { done: true, eerst: {} }, { done: false }]);
     h.chats.mockImplementation(async () => [{ id: "wacht" }, { id: "anders" }]);
     const wacht = await verzamelWacht(new Date("2026-11-18T20:00:00Z"));
-    expect(wacht.map((g) => `${g.aantal}× ${g.soort}`).sort()).toEqual(["1× AI-voorstellen", "1× KYC", "1× Taken die blokkeren (Te doen)", "1× Websitevragen zonder antwoord"]);
+    expect(wacht.map((g) => `${g.aantal}× ${g.soort}`).sort()).toEqual(["1× AI-voorstellen", "1× Taken die blokkeren (Te doen)", "1× Uren", "1× Websitevragen zonder antwoord"]);
     h.triage.mockImplementation(async () => {
       throw new Error("db stuk");
     });
-    expect((await verzamelWacht(new Date("2026-11-18T20:00:00Z"))).some((g) => g.soort === "KYC")).toBe(false);
+    expect((await verzamelWacht(new Date("2026-11-18T20:00:00Z"))).some((g) => g.soort === "Uren")).toBe(false);
+  });
+
+  it("een ID-controle die op een mens wacht komt als eigen groep, ook als hij vers is, en testaccounts tellen niet mee (19 nov)", async () => {
+    // zelfde werker twee keer (twee pogingen) telt één keer; een testadres telt niet; de triage-groep 'KYC' (iedereen met PENDING) vervalt
+    h.triage.mockImplementation(async () => [{ kind: "KYC", severity: "low", at: "2026-11-19T00:25:00Z" }]);
+    h.idControles.mockImplementation(async () => [
+      { userId: "u1", updatedAt: new Date("2026-11-19T00:30:00Z"), user: { email: "werker@gmail.com" } },
+      { userId: "u1", updatedAt: new Date("2026-11-19T00:25:00Z"), user: { email: "werker@gmail.com" } },
+      { userId: "u2", updatedAt: new Date("2026-11-19T00:10:00Z"), user: { email: "iemand@zekerflex.test" } },
+    ]);
+    const wacht = await verzamelWacht(new Date("2026-11-19T07:30:00Z"));
+    expect(wacht).toEqual([{ soort: "ID-controle in behandeling", aantal: 1, urgent: false, oud: false, altijd: true, link: "/admin/gebruikers" }]);
+    // en de ochtendlijst gaat er om 07:30 UTC voor uit, met een direct adres naar Beheer en zonder naam of gegevens
+    expect(await stuurWachtOpJou(new Date("2026-11-19T08:30:00+01:00"))).toEqual({ gemeld: true, reden: null });
+    const tekst = String(h.stuur.mock.calls[0]?.[0]);
+    expect(tekst).toContain("1× ID-controle in behandeling");
+    expect(tekst).toContain("ID-controle in behandeling: https://zekerflex.com/admin/gebruikers");
+    expect(tekst).not.toMatch(/gmail|u1|werker@/);
+    // geen ID-controle in behandeling: dan geen ochtendbericht om niets
+    h.idControles.mockImplementation(async () => []);
+    h.stuur.mockClear();
+    expect((await stuurWachtOpJou(new Date("2026-11-20T08:30:00+01:00"))).gemeld).toBe(false);
+    expect(h.stuur).not.toHaveBeenCalled();
   });
 
   it("het dagrapport telt alleen vandaag (Amsterdam), neemt de bestellingen mee en gaat één keer per dag", async () => {
