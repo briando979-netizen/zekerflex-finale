@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import { BUDGET, FUNCTIES, KLEUREN, LOGO, VIDEO, VOORBEELDEN, aanvraagTekst } from "@/lib/website/aanvraag-opties";
 
 // /website-maken (opnieuw ingericht op 19 nov 2026, eigenaar): een aanvraag met wensen in plaats van een galerij. Als
-// voorbeeld staan er alleen de twee sites die we echt hebben gemaakt; de oude voorbeeldsites en webshopvoorbeelden niet meer.
+// voorbeeld staan er alleen de twee sites en de app (FlikFlak, deploy/flikflak) die we echt hebben gemaakt; de oude
+// voorbeeldsites en webshopvoorbeelden niet meer.
 
 const bron = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8").split("\r\n").join("\n");
 const pagina = bron("app/(marketing)/website-maken/page.tsx");
@@ -12,11 +13,11 @@ const formulier = bron("components/marketing/WebsiteAanvraagFormulier.tsx");
 const route = bron("app/api/website-aanvraag/route.ts");
 
 describe("de voorbeelden", () => {
-  it("zijn alleen de twee sites die we echt hebben gemaakt, met een foto die bestaat", () => {
-    expect(VOORBEELDEN.map((v) => v.id)).toEqual(["smileyapp", "schwarzwald"]);
+  it("zijn alleen de twee sites en de app die we echt hebben gemaakt, met een foto die bestaat", () => {
+    expect(VOORBEELDEN.map((v) => v.id)).toEqual(["smileyapp", "schwarzwald", "flikflak"]);
     for (const v of VOORBEELDEN) {
       expect(existsSync(path.join(process.cwd(), "public", v.foto)), v.foto).toBe(true);
-      expect(v.href).toMatch(/^https:\/\/(smileyapp|schwarzwald)\.zekerflex\.com$/);
+      expect(v.href).toMatch(/^https:\/\/(smileyapp|schwarzwald|flikflak)\.zekerflex\.com$/);
     }
   });
 

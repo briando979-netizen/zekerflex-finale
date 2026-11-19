@@ -23,6 +23,14 @@ export const VOORBEELDEN = [
     foto: "/marketing/voorbeelden/schwarzwald.webp",
     href: "https://schwarzwald.zekerflex.com",
   },
+  {
+    id: "flikflak",
+    naam: "FlikFlak",
+    soort: "App",
+    tekst: "Een korte-video app: swipen, liken, reageren, berichten en LIVE gaan. Maak een account en probeer het.",
+    foto: "/marketing/voorbeelden/flikflak.webp",
+    href: "https://flikflak.zekerflex.com",
+  },
 ] as const;
 
 export const SOORTEN = ["Website", "Webshop", "Website en app", "Weet ik nog niet"] as const;

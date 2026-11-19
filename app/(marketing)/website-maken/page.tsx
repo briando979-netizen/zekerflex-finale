@@ -65,12 +65,12 @@ export default function WebsiteMakenPage() {
           <h2 id="voorbeelden" className="scroll-mt-24 font-display text-3xl font-bold text-ink md:text-4xl">
             Dit hebben we gemaakt
           </h2>
-          <p className="mt-2 max-w-2xl text-neutralx-600">Twee sites die we zelf hebben gebouwd. Klik erop en loop er doorheen: alles wat je ziet, werkt.</p>
-          <ul className="mt-8 grid gap-6 md:grid-cols-2">
+          <p className="mt-2 max-w-2xl text-neutralx-600">Twee websites en een app die we zelf hebben gebouwd. Klik erop en loop er doorheen: alles wat je ziet, werkt.</p>
+          <ul className="mt-8 grid gap-6 md:grid-cols-3">
             {VOORBEELDEN.map((v) => (
               <li key={v.id} className="surface relative overflow-hidden">
                 <div className="relative aspect-[8/5] bg-paper-soft">
-                  <Image src={v.foto} alt={`De website van ${v.naam}`} fill sizes="(min-width: 768px) 46vw, 92vw" className="object-cover object-top" />
+                  <Image src={v.foto} alt={`${v.soort === "App" ? "De app" : "De website"} van ${v.naam}`} fill sizes="(min-width: 768px) 30vw, 92vw" className="object-cover object-top" />
                 </div>
                 <div className="p-6">
                   <p className="text-sm font-semibold text-brand-700">{v.soort}</p>
