@@ -20,7 +20,7 @@ fs.mkdirSync(UPLOADS, { recursive: true });
 fs.mkdirSync(path.dirname(DATA), { recursive: true });
 
 // ---------- opslag ----------
-const empty = () => ({ users: [], videos: [], comments: [], notifications: [], messages: [], sessions: {}, reports: [], challenges: [] });
+const empty = () => ({ users: [], videos: [], comments: [], notifications: [], messages: [], sessions: {}, reports: [], challenges: [], groups: [] });
 // Eigen muziekbibliotheek (public/muziek, zelf gemaakt, rechtenvrij) voor fotoposts en de bewerker.
 const MUZIEK = [
   { id: 'zonnig', name: 'Zonnige dag', file: '/muziek/zonnig.mp3' },
@@ -74,7 +74,10 @@ const isFriend = (a, b) => a && b && a.following.includes(b.id) && b.following.i
 
 // een ingeplande post is tot het moment van plaatsen alleen voor de maker zichtbaar
 const zichtbaarNu = v => !v.publishAt || v.publishAt <= now();
+// een story (24 uur) hoort niet in de gewone feed, trending, zoeken of het profielraster
+const gewonePost = v => !v.story;
 function canSee(v, viewer) {
+  if (v.story && v.expires && v.expires < now()) return false;
   if (!zichtbaarNu(v) && (!viewer || viewer.id !== v.userId)) return false;
   if (v.draft && (!viewer || viewer.id !== v.userId)) return false;
   // privé account: alleen de maker zelf en zijn volgers zien de video's
@@ -105,6 +108,7 @@ function publicVideo(v, viewer) {
     allowDownload: author?.settings?.allowDownload !== false,
     duetOf: duetInfo(v.duetOf),
     poll: pollInfo(v, viewer), antwoordOp: v.antwoordOp || null, serie: serieInfo(v),
+    story: !!v.story, expires: v.expires || null, ondertitels: v.ondertitels || [],
     author: publicUser(author, viewer),
   };
 }
@@ -243,7 +247,8 @@ app.get('/api/me', (req, res) => {
   if (!req.user) return res.json({ user: null });
   const muted = req.user.muted || [];
   const unread = db.notifications.filter(n => n.userId === req.user.id && !n.read).length
-    + db.messages.filter(m => m.to === req.user.id && !m.read && !muted.includes(m.from) && zichtbaarBericht(m, req.user.id)).length;
+    + db.messages.filter(m => m.to === req.user.id && !m.read && !muted.includes(m.from) && zichtbaarBericht(m, req.user.id)).length
+    + db.groups.filter(g => g.leden.includes(req.user.id) && !muted.includes(g.id)).reduce((s, g) => s + g.berichten.filter(b => b.created > (g.gelezen?.[req.user.id] || 0) && b.from !== req.user.id).length, 0);
   res.json({ user: publicUser(req.user, req.user), unread, settings: settingsOf(req.user), followRequests: (req.user.followRequests || []).length });
 });
 
@@ -293,6 +298,8 @@ app.delete('/api/account', auth, (req, res) => {
   db.messages = db.messages.filter(m => m.from !== me.id && m.to !== me.id);
   db.notifications = db.notifications.filter(n => n.userId !== me.id && n.fromId !== me.id);
   for (const u of db.users) { u.following = u.following.filter(x => x !== me.id); if (u.followRequests) u.followRequests = u.followRequests.filter(x => x !== me.id); }
+  for (const g of db.groups) { g.leden = g.leden.filter(x => x !== me.id); if (g.admin === me.id) g.admin = g.leden[0] || null; }
+  db.groups = db.groups.filter(g => g.leden.length);
   for (const t of Object.keys(db.sessions)) if (db.sessions[t] === me.id) delete db.sessions[t];
   save();
   res.json({ ok: true });
@@ -342,7 +349,7 @@ function score(v, me) {
 app.get('/api/feed', (req, res) => {
   const tab = req.query.tab || 'foryou';
   const me = req.user;
-  let list = db.videos.filter(v => canSee(v, me) && !(me && me.blocked?.includes(v.userId)) && !(me && me.nope?.includes(v.id)));
+  let list = db.videos.filter(v => gewonePost(v) && canSee(v, me) && !(me && me.blocked?.includes(v.userId)) && !(me && me.nope?.includes(v.id)));
   if (tab === 'following') {
     if (!me) return res.json({ videos: [], needLogin: true });
     list = list.filter(v => me.following.includes(v.userId)).sort((a, b) => b.created - a.created);
@@ -389,6 +396,9 @@ app.post('/api/videos', auth, upload.fields([{ name: 'video', maxCount: 1 }, { n
     // concept: bewaard, alleen voor de maker zichtbaar, later met één tik te plaatsen
     draft: req.body.draft === 'true',
     poll: parsePoll(req.body.poll), antwoordOp: parseAntwoord(req.body.antwoordOp, req.user),
+    // story: 24 uur zichtbaar bovenaan de feed, daarna automatisch weg
+    story: req.body.story === 'true', expires: req.body.story === 'true' ? now() + 24 * 36e5 : null,
+    ondertitels: parseOndertitels(req.body.ondertitels),
     likes: [], favs: [], shares: 0, views: 0, dag: {}, created: now(), ip: clientIp(req),
   };
   if (v.draft) v.publishAt = null;
@@ -398,6 +408,83 @@ app.post('/api/videos', auth, upload.fields([{ name: 'video', maxCount: 1 }, { n
   if (v.published) meldPlaatsing(v);
   res.json({ video: publicVideo(v, req.user) });
 });
+
+// ondertitels: regels "van-tot: tekst" (seconden), max 50
+function parseOndertitels(raw) {
+  try {
+    const l = raw && JSON.parse(raw); if (!Array.isArray(l)) return [];
+    return l.map(x => ({ s: Math.max(0, +x.s || 0), e: Math.max(0, +x.e || 0), t: String(x.t || '').trim().slice(0, 120) })).filter(x => x.t && x.e > x.s).slice(0, 50);
+  } catch { return []; }
+}
+// stories: per maker de actieve (24 u) stories, eerst van wie je volgt, dan jezelf, dan de rest
+app.get('/api/stories', (req, res) => {
+  const me = req.user, per = {};
+  for (const v of db.videos.filter(v => v.story && canSee(v, me) && !(me && me.blocked?.includes(v.userId)))) (per[v.userId] = per[v.userId] || []).push(v);
+  const lijst = Object.entries(per).map(([uid, vids]) => ({ user: publicUser(userById(uid), me), stories: vids.sort((a, b) => a.created - b.created).map(v => publicVideo(v, me)), gezien: me ? vids.every(v => (v.gezien || []).includes(me.id)) : false }));
+  const rang = x => x.user.isMe ? 0 : (me && me.following.includes(x.user.id)) ? 1 : 2;
+  res.json({ stories: lijst.sort((a, b) => rang(a) - rang(b) || (a.gezien - b.gezien)) });
+});
+app.post('/api/videos/:id/gezien', auth, (req, res) => {
+  const v = db.videos.find(x => x.id === req.params.id);
+  if (v && v.story) { v.gezien = v.gezien || []; if (!v.gezien.includes(req.user.id)) { v.gezien.push(req.user.id); v.views++; save(); } }
+  res.json({ ok: true });
+});
+// verlopen stories opruimen (elke 10 minuten)
+setInterval(() => { const weg = db.videos.filter(v => v.story && v.expires && v.expires < now()); for (const v of weg) removeVideo(v); if (weg.length) save(); }, 600e3);
+
+// ----- groepschats -----
+const pubGroep = (g, me) => {
+  const laatste = g.berichten[g.berichten.length - 1] || null, gelezen = g.gelezen?.[me.id] || 0;
+  return { id: g.id, naam: g.naam, admin: g.admin, leden: g.leden.map(userById).filter(Boolean).map(u => publicUser(u, me)), created: g.created,
+    laatste: laatste ? pubGroepBericht(laatste) : null, unread: g.berichten.filter(b => b.created > gelezen && b.from !== me.id).length };
+};
+const pubGroepBericht = b => ({ ...b, audio: b.audio ? '/uploads/' + b.audio : null, user: miniUser(userById(b.from)) });
+const mijnGroep = (req, res) => { const g = db.groups.find(x => x.id === req.params.id && x.leden.includes(req.user.id)); if (!g) res.status(404).json({ error: 'Groep niet gevonden' }); return g; };
+app.get('/api/groepen', auth, (req, res) => res.json({ groepen: db.groups.filter(g => g.leden.includes(req.user.id)).map(g => pubGroep(g, req.user)).sort((a, b) => (b.laatste?.created || b.created) - (a.laatste?.created || a.created)) }));
+app.post('/api/groepen', auth, (req, res) => {
+  const naam = String(req.body?.naam || '').trim().slice(0, 40); if (!naam) return res.status(400).json({ error: 'Geef de groep een naam' });
+  const leden = [...new Set([req.user.id, ...(Array.isArray(req.body?.leden) ? req.body.leden : []).map(n => userByName(n)?.id).filter(Boolean)])].slice(0, 20);
+  const g = { id: id(), naam, admin: req.user.id, leden, created: now(), berichten: [], gelezen: { [req.user.id]: now() } };
+  db.groups.push(g); save();
+  for (const uid of leden) if (uid !== req.user.id) push(uid, { type: 'groep:nieuw', groep: pubGroep(g, userById(uid)) });
+  res.json({ groep: pubGroep(g, req.user) });
+});
+app.get('/api/groepen/:id', auth, (req, res) => {
+  const g = mijnGroep(req, res); if (!g) return;
+  g.gelezen = g.gelezen || {}; g.gelezen[req.user.id] = now(); save();
+  res.json({ groep: pubGroep(g, req.user), berichten: g.berichten.slice(-200).map(pubGroepBericht) });
+});
+app.post('/api/groepen/:id/berichten', auth, upload.single('audio'), (req, res) => {
+  const g = mijnGroep(req, res); if (!g) return;
+  const text = String(req.body?.text || '').trim().slice(0, 1000);
+  const audio = req.file && (req.file.mimetype.startsWith('audio/') || req.file.mimetype.includes('webm')) ? req.file.filename : null;
+  if (!text && !audio) return res.status(400).end();
+  const b = { id: id(), from: req.user.id, text, audio, duur: audio ? Math.min(600, Math.max(0, Math.round(+req.body.duur || 0))) : 0, created: now() };
+  g.berichten.push(b); g.gelezen = g.gelezen || {}; g.gelezen[req.user.id] = now(); save();
+  const pb = pubGroepBericht(b);
+  for (const uid of g.leden) push(uid, { type: 'groep', groepId: g.id, naam: g.naam, message: pb, muted: (userById(uid)?.muted || []).includes(g.id) });
+  res.json({ message: pb });
+});
+app.post('/api/groepen/:id/leden', auth, (req, res) => {
+  const g = mijnGroep(req, res); if (!g) return;
+  if (g.admin !== req.user.id) return res.status(403).json({ error: 'Alleen de beheerder voegt leden toe' });
+  const u = userByName(req.body?.username); if (!u) return res.status(404).json({ error: 'Gebruiker niet gevonden' });
+  if (!g.leden.includes(u.id) && g.leden.length < 20) { g.leden.push(u.id); save(); push(u.id, { type: 'groep:nieuw', groep: pubGroep(g, u) }); }
+  res.json({ groep: pubGroep(g, req.user) });
+});
+app.delete('/api/groepen/:id/leden/:userId', auth, (req, res) => {
+  const g = mijnGroep(req, res); if (!g) return;
+  if (req.params.userId !== req.user.id && g.admin !== req.user.id) return res.status(403).end();
+  g.leden = g.leden.filter(x => x !== req.params.userId);
+  if (!g.leden.length) db.groups = db.groups.filter(x => x !== g); else if (g.admin === req.params.userId) g.admin = g.leden[0];
+  save(); res.json({ ok: true });
+});
+app.patch('/api/groepen/:id', auth, (req, res) => {
+  const g = mijnGroep(req, res); if (!g) return;
+  if (g.admin !== req.user.id) return res.status(403).end();
+  if (req.body?.naam) g.naam = String(req.body.naam).trim().slice(0, 40); save(); res.json({ groep: pubGroep(g, req.user) });
+});
+app.post('/api/groepen/:id/dempen', auth, (req, res) => { const g = mijnGroep(req, res); if (!g) return; req.user.muted = req.user.muted || []; const on = toggle(req.user.muted, g.id); save(); res.json({ muted: on }); });
 
 function parsePoll(raw) {
   try {
@@ -644,7 +731,7 @@ app.get('/api/users/:username', (req, res) => {
   const u = userByName(req.params.username);
   if (!u) return res.status(404).json({ error: 'Gebruiker niet gevonden' });
   const me = req.user;
-  const vids = db.videos.filter(v => v.userId === u.id && canSee(v, me) && !v.draft && zichtbaarNu(v))
+  const vids = db.videos.filter(v => v.userId === u.id && canSee(v, me) && !v.draft && zichtbaarNu(v) && gewonePost(v))
     .sort((a, b) => (b.pinned - a.pinned) || (b.created - a.created));
   const out = { user: publicUser(u, me), videos: vids.map(v => publicVideo(v, me)), achievements: achievements(u) };
   const liked = db.videos.filter(v => v.likes.includes(u.id) && canSee(v, me)).sort((a, b) => b.created - a.created);
@@ -719,7 +806,7 @@ app.post('/api/users/:id/block', auth, (req, res) => {
 // ----- ontdekken -----
 app.get('/api/trending', (req, res) => {
   const tags = {};
-  for (const v of db.videos.filter(v => v.privacy === 'public' && zichtbaarNu(v)))
+  for (const v of db.videos.filter(v => v.privacy === 'public' && zichtbaarNu(v) && gewonePost(v)))
     for (const t of v.hashtags) {
       tags[t] = tags[t] || { tag: t, count: 0, views: 0, videos: [] };
       tags[t].count++; tags[t].views += v.views;
@@ -735,7 +822,7 @@ app.get('/api/search', (req, res) => {
   const q = String(req.query.q || '').trim().toLowerCase().replace(/^[#@]/, '');
   if (!q) return res.json({ users: [], videos: [], hashtags: [], sounds: [] });
   const users = db.users.filter(u => u.username.toLowerCase().includes(q) || u.name.toLowerCase().includes(q)).slice(0, 30).map(u => publicUser(u, req.user));
-  const vids = db.videos.filter(v => canSee(v, req.user) && (v.caption.toLowerCase().includes(q) || v.sound.name.toLowerCase().includes(q) || userById(v.userId)?.username.toLowerCase().includes(q)));
+  const vids = db.videos.filter(v => gewonePost(v) && canSee(v, req.user) && (v.caption.toLowerCase().includes(q) || v.sound.name.toLowerCase().includes(q) || userById(v.userId)?.username.toLowerCase().includes(q)));
   const tagCount = {};
   for (const v of db.videos.filter(v => v.privacy === 'public' && zichtbaarNu(v))) for (const t of v.hashtags) if (t.includes(q)) tagCount[t] = (tagCount[t] || 0) + 1;
   const sounds = {};

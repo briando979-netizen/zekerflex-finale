@@ -369,6 +369,116 @@ async function seriePage(id) {
   view.append(page);
 }
 
+// ================= ondertitels =================
+function ondertitelSheet(pv, cb, huidig) {
+  const tekst = (huidig || []).map(l => `${l.s}-${l.e}: ${l.t}`).join('\n');
+  const s = sheet(`<div class="auth"><h3 style="font-size:17px">Ondertitels</h3><p>Eén regel per zin: <b>van-tot: tekst</b> in seconden. Bijvoorbeeld <code>0-3: Hoi allemaal!</code>${pv?.duration ? ` (video is ${Math.round(pv.duration)} s)` : ''}</p>
+    <textarea rows="7" placeholder="0-3: Hoi allemaal!\n3-6: Vandaag laat ik zien…" style="font-family:ui-monospace,monospace;font-size:14px">${esc(tekst)}</textarea>
+    <div class="err"></div><button class="btn block" data-ok>Opslaan</button>${huidig?.length ? '<button class="btn grey block" data-weg>Ondertitels weghalen</button>' : ''}</div>`);
+  $('[data-ok]', s).onclick = () => {
+    const lijnen = $('textarea', s).value.split('\n').map(r => r.trim()).filter(Boolean);
+    const uit = []; for (const r of lijnen) { const m = r.match(/^(\d+(?:[.,]\d+)?)\s*-\s*(\d+(?:[.,]\d+)?)\s*:\s*(.+)$/); if (!m) return ($('.err', s).textContent = `Regel niet begrepen: "${r.slice(0, 30)}"`); uit.push({ s: +m[1].replace(',', '.'), e: +m[2].replace(',', '.'), t: m[3].trim().slice(0, 120) }); }
+    cb(uit.slice(0, 50)); s.close();
+  };
+  $('[data-weg]', s)?.addEventListener('click', () => { cb([]); s.close(); });
+}
+function ondertitelSetup(slide, video, lijst) {
+  const ot = $('.ot', slide); if (!ot) return;
+  video.addEventListener('timeupdate', () => { const t = video.currentTime, r = lijst.find(l => t >= l.s && t < l.e); ot.hidden = !r; ot.textContent = r ? r.t : ''; });
+}
+
+// ================= stories (24 uur) =================
+async function storiesStrip(page) {
+  const r = await api('GET', '/api/stories').catch(() => ({ stories: [] }));
+  if (!r.stories.length) return;
+  const strip = h(`<div class="stories-strip">${r.stories.map(x => `<a class="story-av ${x.gezien ? 'gezien' : ''}" href="#/story/${esc(x.user.username)}"><img src="${avatar(x.user)}" alt=""><small>${x.user.isMe ? 'Jij' : esc((x.user.name || x.user.username).slice(0, 10))}</small></a>`).join('')}</div>`);
+  $('.topbar', page)?.after(strip);
+}
+async function storyPage(username) {
+  username = decodeURIComponent(username);
+  const r = await api('GET', '/api/stories'); const set = r.stories.find(x => x.user.username === username);
+  if (!set) { view.innerHTML = `<div class="empty"><h3>Geen story meer</h3><div>Stories blijven 24 uur zichtbaar.</div><a class="btn" href="#/">Naar home</a></div>`; return; }
+  let i = 0, timer = null;
+  const page = h(`<div class="story"><div class="story-bars">${set.stories.map(() => '<i><b></b></i>').join('')}</div>
+    <div class="story-top"><a href="#/@${esc(set.user.username)}"><img class="av" src="${avatar(set.user)}"></a><b>${esc(set.user.name || set.user.username)}</b><small></small><button class="ic story-x">${ic('close')}</button></div>
+    <div class="story-stage"></div><div class="story-cap"></div><div class="story-nav"><span class="prev"></span><span class="next"></span></div></div>`);
+  view.append(page);
+  const stage = $('.story-stage', page), bars = $$('.story-bars i b', page);
+  const toon = () => {
+    clearInterval(timer); const v = set.stories[i]; if (!v) return (history.length > 1 ? history.back() : (location.hash = '#/'));
+    bars.forEach((b, j) => b.style.width = j < i ? '100%' : '0');
+    $('.story-top small', page).textContent = ago(v.created); $('.story-cap', page).textContent = v.caption || '';
+    stage.innerHTML = v.url ? `<video src="${v.url}" autoplay playsinline ${S.muted ? 'muted' : ''} style="filter:${filterCss(v.filter)}"></video>` : `<img src="${v.fotos[0]}" alt="">`;
+    if (S.me) api('POST', `/api/videos/${v.id}/gezien`).catch(() => {});
+    const vid = $('video', stage), duur = vid ? null : 6000, t0 = Date.now();
+    if (vid) { vid.addEventListener('timeupdate', () => { if (vid.duration) bars[i].style.width = (vid.currentTime / vid.duration * 100) + '%'; }); vid.addEventListener('ended', () => { i++; toon(); }); vid.play().catch(() => {}); }
+    else timer = setInterval(() => { const p = (Date.now() - t0) / duur; bars[i].style.width = Math.min(100, p * 100) + '%'; if (p >= 1) { i++; toon(); } }, 50);
+  };
+  $('.next', page).onclick = () => { i++; toon(); }; $('.prev', page).onclick = () => { i = Math.max(0, i - 1); toon(); };
+  $('.story-x', page).onclick = () => (history.length > 1 ? history.back() : (location.hash = '#/'));
+  onCleanup(() => { clearInterval(timer); $('video', stage)?.pause(); });
+  toon();
+}
+
+// ================= groepschats =================
+function nieuweGroepSheet() {
+  if (!need()) return;
+  const s = sheet(`<div class="auth"><h3 style="font-size:17px">Nieuwe groep</h3><input name="naam" placeholder="Naam van de groep" maxlength="40"><p>Wie doet er mee? Kies uit wie je volgt.</p><div class="groep-kies"><div class="spinner"></div></div><div class="err"></div><button class="btn block" data-ok>Groep maken</button></div>`, { tall: true });
+  api('GET', `/api/users/${S.me.username}/following`).then(r => { const k = $('.groep-kies', s); k.innerHTML = r.users.length ? '' : '<div class="grid-empty">Volg eerst iemand</div>'; r.users.forEach(u => k.append(h(`<label class="row"><input type="checkbox" value="${esc(u.username)}"><img class="av" src="${avatar(u)}"><div class="grow"><div class="t1">${esc(u.name || u.username)}</div><div class="t2">@${esc(u.username)}</div></div></label>`))); });
+  $('[data-ok]', s).onclick = async () => {
+    const naam = $('[name=naam]', s).value.trim(), leden = $$('input:checked', s).map(i => i.value);
+    if (!naam) return ($('.err', s).textContent = 'Geef de groep een naam');
+    try { const r = await api('POST', '/api/groepen', { naam, leden }); s.close(); location.hash = '#/groep/' + r.groep.id; } catch (e) { $('.err', s).textContent = e.message; }
+  };
+}
+async function groepPage(id) {
+  if (!need()) return (location.hash = '#/');
+  const r = await api('GET', '/api/groepen/' + id); const g = r.groep; S.groepOpen = g.id;
+  api('GET', '/api/me').then(m => setUnread(m.unread)).catch(() => {});
+  const page = h(`<div class="chat"><div class="head">${backBtn()}<div style="flex:1;text-align:center"><b>👥 ${esc(g.naam)}</b><div style="font-size:12px;color:var(--muted)">${g.leden.map(u => esc(u.name || u.username)).join(', ').slice(0, 60)}</div></div><button class="ic gmenu">${ic('more')}</button></div>
+    <div class="msgs"></div><div class="typing"></div>
+    <div class="chat-in"><input placeholder="Bericht aan de groep..." maxlength="1000"><button class="mic" title="Spraakbericht">🎤</button><button class="btn small">${ic('send')}</button></div></div>`);
+  view.append(page);
+  const box = $('.msgs', page);
+  const add = m => {
+    const mine = m.from === S.me.id;
+    box.append(h(`<div class="msg ${mine ? 'me' : ''}">${mine ? '' : `<img class="av" src="${avatar(m.user)}">`}<div class="bubble">${mine ? '' : `<small class="wie">${esc(m.user?.name || '')}</small>`}${m.audio ? `<div class="spraak">🎤 <audio controls preload="none" src="${m.audio}"></audio>${m.duur ? `<small>${m.duur}s</small>` : ''}</div>` : ''}${esc(m.text)}</div></div>`));
+    box.scrollTop = box.scrollHeight;
+  };
+  if (!r.berichten.length) box.append(h('<div class="grid-empty">Zeg hallo tegen de groep! 👋</div>'));
+  r.berichten.forEach(add);
+  const input = $('input', page);
+  const send = async () => { const text = input.value.trim(); if (!text) return; input.value = ''; try { await api('POST', `/api/groepen/${g.id}/berichten`, { text }); } catch (e) { toast(e.message); } };
+  $('.chat-in .btn', page).onclick = send; input.onkeydown = e => { if (e.key === 'Enter') send(); };
+  const onG = e => { $('.grid-empty', box)?.remove(); add(e.detail.message); };
+  document.addEventListener('ff:groep', onG); onCleanup(() => { document.removeEventListener('ff:groep', onG); S.groepOpen = null; });
+  const mic = $('.mic', page); let rec = null, chunks = [], t0 = 0;
+  mic.onclick = async () => {
+    if (rec) { rec.stop(); return; }
+    try { const st = await navigator.mediaDevices.getUserMedia({ audio: true }); rec = new MediaRecorder(st); chunks = []; t0 = Date.now();
+      rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+      rec.onstop = async () => { st.getTracks().forEach(t => t.stop()); const blob = new Blob(chunks, { type: rec.mimeType || 'audio/webm' }), duur = Math.round((Date.now() - t0) / 1000); rec = null; mic.textContent = '🎤'; if (duur < 1) return toast('Te kort'); const fd = new FormData(); fd.append('audio', blob, 'spraak.webm'); fd.append('duur', duur); try { await api('POST', `/api/groepen/${g.id}/berichten`, fd); } catch (e) { toast(e.message); } };
+      rec.start(); mic.textContent = '⏹'; toast('Opnemen… tik nog eens om te versturen'); } catch { toast('Microfoon niet beschikbaar'); }
+  };
+  $('.gmenu', page).onclick = () => {
+    const admin = g.admin === S.me.id;
+    const s = sheet(`<div class="sh-body" style="padding:8px 0"><div class="sec-title" style="padding:6px 16px">Leden (${g.leden.length})</div>${g.leden.map(u => `<div class="row"><img class="av" src="${avatar(u)}"><div class="grow"><div class="t1">${esc(u.name || u.username)} ${u.id === g.admin ? '<small style="color:var(--muted)">beheerder</small>' : ''}</div></div>${admin && u.id !== S.me.id ? `<button class="btn small grey" data-weg="${u.id}">Verwijder</button>` : ''}</div>`).join('')}
+      ${admin ? `<button class="row" style="width:100%" data-a="add">${ic('addUser')}<span class="grow" style="text-align:left">Lid toevoegen</span></button><button class="row" style="width:100%" data-a="naam">${ic('edit')}<span class="grow" style="text-align:left">Naam wijzigen</span></button>` : ''}
+      <button class="row" style="width:100%" data-a="mute">🔕<span class="grow" style="text-align:left">Groep dempen / opheffen</span></button>
+      <button class="row" style="width:100%;color:#ff4d6d" data-a="leave">${ic('back')}<span class="grow" style="text-align:left">Groep verlaten</span></button>
+      <button class="row" style="width:100%;justify-content:center;color:var(--muted)" data-close>Annuleren</button></div>`, { tall: true });
+    $$('[data-weg]', s).forEach(b => b.onclick = async () => { await api('DELETE', `/api/groepen/${g.id}/leden/${b.dataset.weg}`); s.close(); render(); });
+    $$('[data-a]', s).forEach(b => b.onclick = async () => {
+      const a = b.dataset.a; s.close();
+      if (a === 'add') { const n = prompt('Gebruikersnaam van het nieuwe lid:'); if (n) { try { await api('POST', `/api/groepen/${g.id}/leden`, { username: n.replace(/^@/, '') }); render(); } catch (e) { toast(e.message); } } }
+      if (a === 'naam') { const n = prompt('Nieuwe naam:', g.naam); if (n) { await api('PATCH', '/api/groepen/' + g.id, { naam: n }); render(); } }
+      if (a === 'mute') { const r2 = await api('POST', `/api/groepen/${g.id}/dempen`); toast(r2.muted ? 'Groep gedempt' : 'Dempen opgeheven'); }
+      if (a === 'leave') { if (await confirmSheet('Groep verlaten?', 'Verlaten')) { await api('DELETE', `/api/groepen/${g.id}/leden/${S.me.id}`); location.hash = '#/inbox'; } }
+    });
+  };
+  input.focus();
+}
+
 // ================= kijkgeschiedenis =================
 async function historyPage() {
   if (!need()) return (location.hash = '#/');

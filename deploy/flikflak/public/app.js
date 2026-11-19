@@ -164,6 +164,12 @@ function connectWs() {
       else if (m.message.from !== S.me?.id && !m.muted) { setUnread(S.unread + 1); toast(`💬 @${m.from.username}: ${m.message.text || (m.message.audio ? 'stuurde een spraakbericht' : 'stuurde een video')}`); }
     }
     if (m.type === 'message:react') document.dispatchEvent(new CustomEvent('ff:msgreact', { detail: m.message }));
+    if (m.type === 'groep') {
+      if (S.groepOpen === m.groepId) document.dispatchEvent(new CustomEvent('ff:groep', { detail: m }));
+      else if (m.message.from !== S.me?.id && !m.muted) { setUnread(S.unread + 1); toast(`👥 ${m.naam} · ${m.message.user?.name || ''}: ${m.message.text || 'spraakbericht'}`); }
+      document.dispatchEvent(new CustomEvent('ff:notif', { detail: m }));
+    }
+    if (m.type === 'groep:nieuw') { toast(`👥 Je bent toegevoegd aan "${m.groep.naam}"`); document.dispatchEvent(new CustomEvent('ff:notif', { detail: m })); }
     if (m.type === 'typing' && S.chatWith?.username === m.from) document.dispatchEvent(new CustomEvent('ff:typing'));
   };
   ws.onclose = () => { if (S.ws === ws) { S.ws = null; setTimeout(connectWs, 2000); } };
@@ -253,7 +259,8 @@ async function render() {
   const p = route.path;
   const tab = p === '/' || p === '/following' ? 'home' : p === '/friends' ? 'friends' : p === '/upload' ? 'upload' : p.startsWith('/inbox') ? 'inbox' : (S.me && p === '/@' + S.me.username) || p === '/me' ? 'me' : '';
   $$('#tabbar a').forEach(a => a.classList.toggle('active', a.dataset.tab === tab));
-  document.body.classList.toggle('fullscreen', p === '/upload' || p === '/golive' || p.startsWith('/live/') || p.startsWith('/chat/'));
+  document.body.classList.toggle('fullscreen', p === '/upload' || p === '/golive' || p.startsWith('/live/') || p.startsWith('/chat/') || p.startsWith('/groep/') || p.startsWith('/story/'));
+  S.groepOpen = null;
   view.innerHTML = '';
   S.chatWith = null;
   let m;
@@ -284,6 +291,8 @@ async function render() {
     if (p === '/verzoeken') return await followRequestsPage();
     if ((m = p.match(/^\/serie\/(.+)$/))) return await seriePage(m[1]);
     if (p === '/geblokkeerd') return await blockedPage();
+    if ((m = p.match(/^\/groep\/(.+)$/))) return await groepPage(m[1]);
+    if ((m = p.match(/^\/story\/(.+)$/))) return await storyPage(m[1]);
     location.hash = '#/';
   } catch (e) {
     view.innerHTML = `<div class="empty"><h3>Oeps</h3><div>${esc(e.message)}</div><a class="btn" href="#/">Naar home</a></div>`;
@@ -325,6 +334,7 @@ async function feedPage(tab) {
   }
   holder.innerHTML = '';
   mountFeed(holder, r.videos, 0);
+  if (tab !== 'friends') storiesStrip(page);
 }
 
 async function singlePage(vid) {
@@ -412,6 +422,7 @@ function mountFeed(holder, videos, start) {
       <div class="tap"></div>
       <div class="big-play" hidden>${ic('play')}</div>
       <div class="speed-tag" hidden></div>
+      <div class="ot" hidden></div>
       <div class="rail">
         <div class="av-wrap">
           <a href="${a.liveId ? '#/live/' + a.liveId : '#/@' + esc(a.username)}" class="${a.liveId ? 'is-live' : ''}"><img src="${avatar(a)}" alt="">${a.liveId ? '<span class="live-tag">LIVE</span>' : ''}</a>
@@ -437,6 +448,7 @@ function mountFeed(holder, videos, start) {
     const [main, other] = $$('video', slide);
     if (!main) fotoSetup(slide);
     if (v.poll) pollSetup(slide, v);
+    if (main && v.ondertitels?.length) ondertitelSetup(slide, main, v.ondertitels);
     if (other) {
       // duet: origineel rechts, loopt gelijk met de opname
       main.addEventListener('timeupdate', () => { if (Math.abs(other.currentTime - main.currentTime) > 0.35 && main.currentTime < (other.duration || 1e9)) other.currentTime = main.currentTime; });
@@ -1034,8 +1046,15 @@ async function inboxPage() {
   }
   async function showMsg() {
     ib.innerHTML = '<div class="spinner"></div>';
-    const r = await api('GET', '/api/conversations');
-    ib.innerHTML = r.conversations.length ? '' : '<div class="grid-empty">Nog geen berichten.<br>Stuur iemand een bericht via zijn profiel of met het potlood-icoon.</div>';
+    const [r, gr] = await Promise.all([api('GET', '/api/conversations'), api('GET', '/api/groepen').catch(() => ({ groepen: [] }))]);
+    ib.innerHTML = r.conversations.length || gr.groepen.length ? '' : '<div class="grid-empty">Nog geen berichten.<br>Stuur iemand een bericht via zijn profiel of met het potlood-icoon.</div>';
+    const nieuwGroep = h('<div class="row" style="justify-content:center"><button class="btn small grey">👥 Nieuwe groep</button></div>');
+    $('button', nieuwGroep).onclick = () => nieuweGroepSheet();
+    ib.append(nieuwGroep);
+    for (const g of gr.groepen) {
+      const last = g.laatste ? `${g.laatste.user?.name || ''}: ${g.laatste.audio ? '🎤 Spraakbericht' : g.laatste.text}` : 'Nieuwe groep';
+      ib.append(h(`<a class="row" href="#/groep/${g.id}"><span class="av groep-av">👥</span><div class="grow"><div class="t1">${esc(g.naam)} <small style="color:var(--muted)">${g.leden.length}</small></div><div class="t2" style="${g.unread ? 'color:#fff;font-weight:600' : ''}">${esc(last)}${g.laatste ? ' · ' + ago(g.laatste.created) : ''}</div></div>${g.unread ? `<span class="badge" style="position:static">${g.unread}</span>` : ''}</a>`));
+    }
     for (const c of r.conversations) {
       const last = c.last.audio ? '🎤 Spraakbericht' : c.last.video ? (c.last.from === S.me.id ? 'Je hebt een video gedeeld' : 'Deelde een video') : c.last.text;
       ib.append(h(`<a class="row" href="#/chat/${esc(c.user.username)}"><img class="av" src="${avatar(c.user)}"><div class="grow"><div class="t1">${esc(c.user.name || c.user.username)}${c.muted ? ' 🔕' : ''}</div><div class="t2" style="${c.unread ? 'color:#fff;font-weight:600' : ''}">${esc(last)} · ${ago(c.last.created)}</div></div>${c.unread ? `<span class="badge" style="position:static">${c.unread}</span>` : ''}</a>`));
@@ -1283,14 +1302,17 @@ async function uploadPage() {
       <div class="opt">${ic('duet')}<label>Duet toestaan</label><label class="switch-t"><input type="checkbox" name="allowDuet" checked><span></span></label></div>
       <div class="opt">${ic('link')}<label>ZekerFlex-koppeling</label><button class="btn small grey kies-produkt">Kiezen</button></div>
       <div class="opt"><span style="font-size:20px">📊</span><label>Peiling</label><button class="btn small grey kies-poll">Toevoegen</button></div>
+      <div class="opt"><span style="font-size:20px">💬</span><label>Ondertitels</label><button class="btn small grey kies-ot">Toevoegen</button></div>
+      <div class="opt"><span style="font-size:20px">⏳</span><label>Als story<small>24 uur zichtbaar bovenaan de feed, niet op je profiel</small></label><label class="switch-t"><input type="checkbox" name="story"><span></span></label></div>
       ${antwoord ? '<div class="opt"><span style="font-size:20px">📹</span><label>Video-antwoord op een reactie<small>De reactie komt als sticker op je video</small></label></div>' : ''}
       <div class="opt">${ic('timer')}<label>Inplannen</label><input type="datetime-local" name="publishAt" min="${planMin()}"></div>
       <div class="progress" hidden><div></div></div>
       <div class="post-bar"><button class="btn grey again">Opnieuw</button><button class="btn grey bewerk">✂ Bewerken</button><button class="btn grey concept" title="Opslaan als concept">📝</button><button class="btn post">Plaatsen</button></div></div>`);
     view.append(ed);
     const ta = $('textarea', ed), pv = $('.pv video', ed);
-    let produkt = null, alsConcept = false, poll = null;
+    let produkt = null, alsConcept = false, poll = null, ondertitels = [];
     $('.kies-poll', ed).onclick = () => pollSheet(p => { poll = p; $('.kies-poll', ed).textContent = p ? '📊 ' + p.vraag.slice(0, 16) : 'Toevoegen'; }, poll);
+    $('.kies-ot', ed).onclick = () => ondertitelSheet(pv, l => { ondertitels = l; $('.kies-ot', ed).textContent = l.length ? `${l.length} regel${l.length === 1 ? '' : 's'}` : 'Toevoegen'; }, ondertitels);
     $('.concept', ed).onclick = () => { alsConcept = true; $('.post', ed).click(); };
     $('.kies-produkt', ed).onclick = () => pickProduktSheet(p => { produkt = p; $('.kies-produkt', ed).textContent = p ? p.titel.slice(0, 18) : 'Kiezen'; }, produkt);
     // bewerken: knippen, snelheid, tekst en muziek; het resultaat vervangt het bestand dat geplaatst wordt
@@ -1311,6 +1333,8 @@ async function uploadPage() {
       if (alsConcept) fd.append('draft', 'true');
       if (poll) fd.append('poll', JSON.stringify(poll));
       if (antwoord) fd.append('antwoordOp', antwoord);
+      if (ondertitels.length) fd.append('ondertitels', JSON.stringify(ondertitels));
+      if ($('[name=story]', ed).checked) fd.append('story', 'true');
       fd.append('caption', ta.value);
       fd.append('filter', filter);
       fd.append('privacy', $('[name=privacy]', ed).value);
@@ -1325,7 +1349,7 @@ async function uploadPage() {
       xhr.setRequestHeader('x-token', S.token);
       xhr.upload.onprogress = e => { if (e.lengthComputable) $('.progress div', ed).style.width = (e.loaded / e.total * 100) + '%'; };
       xhr.onload = () => {
-        if (xhr.status === 200) { toast(alsConcept ? 'Bewaard als concept 📝 (Profiel → Concepten)' : plan ? 'Ingepland! ⏰ Je ziet hem alvast op je profiel.' : 'Je video is geplaatst! 🎉'); location.hash = '#/@' + S.me.username; }
+        if (xhr.status === 200) { const st = $('[name=story]', ed).checked; toast(alsConcept ? 'Bewaard als concept 📝 (Profiel → Concepten)' : plan ? 'Ingepland! ⏰ Je ziet hem alvast op je profiel.' : st ? 'Je story staat 24 uur bovenaan ⏳' : 'Je video is geplaatst! 🎉'); location.hash = st ? '#/' : '#/@' + S.me.username; }
         else { btn.disabled = false; btn.textContent = 'Plaatsen'; toast(JSON.parse(xhr.responseText || '{}').error || 'Uploaden mislukt'); }
       };
       xhr.onerror = () => { btn.disabled = false; btn.textContent = 'Plaatsen'; toast('Uploaden mislukt'); };
