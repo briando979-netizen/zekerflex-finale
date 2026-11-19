@@ -1,0 +1,14 @@
+node_modules
+data
+certs
+oud
+test
+hulp
+deploy
+.git
+.env
+.env.*
+*.md
+*.log
+docker-compose*.yml
+Dockerfile

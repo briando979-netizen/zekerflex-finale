@@ -232,6 +232,21 @@ vpn.zekerflex.com {
 	}
 }
 
+# Talkaro (deploy/talkaro): de praat-met-vreemden-app op een eigen subdomein. Standaard
+# een sslip.io-naam; met een A-record kan TALKARO_HOST talkaro.zekerflex.com worden. De
+# WebSocket (/ws, voor koppelen, chat en WebRTC-signalering) gaat automatisch mee via
+# reverse_proxy. Video loopt verder rechtstreeks tussen de browsers (WebRTC), eventueel
+# via de bestaande coturn. Talkaro draait op een eigen netwerk en kan niet bij de
+# app-database. Met het toegangslog, zodat CrowdSec ook deze pagina bewaakt.
+{$TALKARO_HOST:talkaro.37-97-226-24.sslip.io} {
+	import toegangslog
+	encode zstd gzip
+	reverse_proxy talkaro:3000 {
+		header_up -X-ZF-Site-Host
+		header_up -X-ZF-Voorstel
+	}
+}
+
 # Websites van klanten op hun eigen domein. Alles op zo'n domein gaat naar die
 # website en nooit naar de app zelf: met deze kop stuurt de middleware het
 # verzoek naar /site-domein/<domein>/… (middleware.ts, customerSite).

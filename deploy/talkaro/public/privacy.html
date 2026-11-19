@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Privacy – {{NAAM}}</title>
+  <meta name="application-name" content="{{NAAM}}" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/style.css" />
+  <script src="/thema.js"></script>
+</head>
+<body class="tekstpagina">
+  <a class="spring" href="#hoofd">Naar de inhoud</a>
+  <header class="kop">
+    <a class="merk" href="/" aria-label="{{NAAM}}, naar de startpagina">{{MERK}}</a>
+    <button type="button" class="rond" id="btn-thema" aria-pressed="false" aria-label="Donkere weergave aanzetten"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" fill="currentColor"/></svg></button>
+  </header>
+  <main class="blad" id="hoofd">
+    <h1>Privacy</h1>
+    <p class="inleiding">Kort: geen account, geen cookies, geen reclame, geen meetprogramma's van anderen. Hieronder staat precies wat we wel en niet bewaren.</p>
+
+    <h2>Wat we niet bewaren</h2>
+    <ul>
+      <li><b>Video en geluid.</b> Die gaan rechtstreeks van jouw browser naar die van de ander. Lukt dat niet, dan lopen ze versleuteld via onze doorgeefserver. Wij nemen niets op en kunnen niet meekijken.</li>
+      <li><b>Je berichten.</b> Die gaan via onze server naar de ander en worden niet opgeslagen. Er is één uitzondering: zie "Bij een melding".</li>
+      <li><b>Je naam of e-mailadres.</b> Daar vragen we niet om.</li>
+      <li><b>Je onderwerpen.</b> Die gebruiken we alleen om iemand te zoeken. Ze staan in je eigen browser, niet bij ons.</li>
+    </ul>
+
+    <h2>Wat we tijdelijk in het geheugen houden</h2>
+    <ul>
+      <li>Zolang een gesprek loopt, en nog hooguit een paar minuten erna, onthoudt de server de laatste 20 berichten van dat gesprek. Dat is alleen zodat iemand ze kan meesturen bij een melding. Daarna zijn ze weg. Ze staan niet op een schijf.</li>
+      <li>Je internetadres (IP-adres) gebruiken we om misbruik te remmen: niet te veel verbindingen en niet te veel meldingen vanaf één adres. Onze software schrijft het adres zelf nergens op; hij rekent het om naar een code waar het adres niet uit terug te lezen is zonder een geheime sleutel.</li>
+    </ul>
+
+    <h2>Bij een melding</h2>
+    <p>Meldt iemand een ander, dan bewaren we 90 dagen:</p>
+    <ul>
+      <li>de reden, het tijdstip, de toelichting van de melder en of het een tekst- of videogesprek was;</li>
+      <li>de code van het internetadres van de melder en van de gemelde (niet het adres zelf);</li>
+      <li>de laatste berichten van het gesprek, <b>alleen als de melder daarvoor kiest</b>. Dat zijn berichten van allebei. Een beheerder kan ze lezen om de melding te beoordelen.</li>
+    </ul>
+    <p>Word je geblokkeerd, dan bewaren we de code van je internetadres met de einddatum, tot 30 dagen nadat de blokkade is afgelopen. Zo herkennen we een herhaling.</p>
+    <p>Gaat een melding over iets strafbaars, dan kunnen we wat we hebben aan de politie geven.</p>
+
+    <h2>Cijfers</h2>
+    <p>We tellen per dag hoeveel gesprekken en meldingen er waren. Dat zijn alleen aantallen, zonder iets over personen.</p>
+
+    <h2>Wat er in je eigen browser staat</h2>
+    <table>
+      <tr><th>Wat</th><th>Waarvoor</th></tr>
+      <tr><td>Licht of donker</td><td>Zodat de pagina eruitziet zoals jij koos.</td></tr>
+      <tr><td>Je onderwerpen</td><td>Zodat je ze niet elke keer opnieuw hoeft te typen.</td></tr>
+      <tr><td>Dat je akkoord ging</td><td>Tot je het tabblad sluit, zodat we het niet bij elk gesprek opnieuw vragen.</td></tr>
+    </table>
+    <p>Dit zijn geen cookies en ze worden niet naar ons gestuurd. Je haalt ze weg door de sitegegevens in je browser te wissen.</p>
+
+    <h2>Wat de ander van je kan zien</h2>
+    <ul>
+      <li>Alles wat je typt en laat zien. De ander kan een schermopname maken; dat kunnen wij niet tegenhouden.</li>
+      <li>Bij een videogesprek maken de twee browsers als het kan rechtstreeks contact. Iemand met technische kennis kan daarbij je internetadres achterhalen. Daaraan is ongeveer te zien in welke streek je woont, niet je huisadres.</li>
+    </ul>
+
+    <!--ALS_CONTACT-->
+    <h2>Vragen of iets laten weghalen</h2>
+    <p>Wil je weten wat er over jou bewaard is, of wil je een melding of blokkade laten nakijken of weghalen? Mail naar <a href="mailto:{{CONTACT_EMAIL}}">{{CONTACT_EMAIL}}</a>. Omdat we geen namen bewaren, hebben we het tijdstip van het gesprek nodig om iets terug te vinden. Je kunt ook een klacht indienen bij de Autoriteit Persoonsgegevens.</p>
+    <!--EINDE-->
+
+    <a class="terug" href="/">Terug naar {{NAAM}}</a> · <a class="terug" href="/regels">Regels</a> · <a class="terug" href="/melden">Misbruik melden</a>
+  </main>
+</body>
+</html>

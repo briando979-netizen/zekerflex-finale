@@ -1,0 +1,18 @@
+{
+  "name": "talkaroo",
+  "version": "2.0.0",
+  "description": "Praat met een willekeurige vreemde via tekst of video, met spelletjes.",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node --test"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "ws": "^8.22.0"
+  }
+}

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>{{NAAM}} – praat met iemand die je nog niet kent</title>
+  <meta name="description" content="{{NAAM}} koppelt je willekeurig aan één ander voor een gesprek met tekst of video. Zonder account. Alleen voor 18 jaar en ouder." />
+  <meta name="application-name" content="{{NAAM}}" />
+  <meta name="theme-color" content="#12141a" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/style.css" />
+  <script src="/thema.js"></script>
+</head>
+<body>
+  <a class="spring" href="#hoofd">Naar de inhoud</a>
+  <header class="kop">
+    <a class="merk" href="/" id="logo" aria-label="{{NAAM}}, naar de startpagina">{{MERK}}</a>
+    <div class="kop-rechts">
+      <span class="online"><span class="stip" aria-hidden="true"></span><b id="count">0</b> online</span>
+      <button type="button" class="rond" id="btn-thema" aria-pressed="false" aria-label="Donkere weergave aanzetten">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z" fill="currentColor"/></svg>
+      </button>
+    </div>
+  </header>
+  <div class="balk" id="balk" role="alert" hidden></div>
+
+  <!-- ======================= START ======================= -->
+  <main id="home" class="start">
+    <section class="held">
+      <h1 id="hoofd" tabindex="-1">Praat met iemand die je nog niet kent.</h1>
+      <p class="onder">Eén op één, met tekst of video. Geen account, geen naam. Bevalt het niet, dan ga je met één tik naar de volgende.</p>
+    </section>
+
+    <section class="kaart begin" aria-labelledby="begin-kop">
+      <h2 id="begin-kop">Begin een gesprek</h2>
+      <label class="veldlabel" for="tag-input">Waar wil je over praten? <span class="zacht">(mag leeg blijven)</span></label>
+      <div class="tags" id="tags">
+        <input id="tag-input" type="text" placeholder="bijv. muziek, voetbal, films" maxlength="30" autocomplete="off" autocapitalize="none" enterkeyhint="done" aria-describedby="tag-uitleg" />
+      </div>
+      <p class="uitleg" id="tag-uitleg">Typ een onderwerp en druk op Enter. We zoeken eerst iemand met hetzelfde onderwerp.</p>
+      <label class="vink"><input type="checkbox" id="use-interests" checked /> <span>Eerst zoeken op mijn onderwerpen</span></label>
+      <div class="keuze">
+        <button type="button" class="groot tekst" id="btn-text">
+          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-5 4V6a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          <span>Tekst</span>
+        </button>
+        <button type="button" class="groot video" id="btn-video">
+          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><rect x="3" y="6" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 10l6-3v10l-6-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          <span>Video</span>
+        </button>
+      </div>
+      <p class="leeftijd"><b>Alleen voor 18 jaar en ouder.</b> Je bevestigt dat zelf; wij controleren je leeftijd niet.</p>
+    </section>
+
+    <section class="drie" aria-label="Goed om te weten">
+      <div class="kaart klein"><h3>Je blijft onbekend</h3><p>Je ziet een vreemde, de vreemde ziet jou. Deel zelf geen naam, adres of telefoonnummer.</p></div>
+      <div class="kaart klein"><h3>Niets wordt opgenomen</h3><p>Video gaat rechtstreeks van browser naar browser. Berichten bewaren we niet, behalve als iemand ze meestuurt bij een melding.</p></div>
+      <div class="kaart klein"><h3>Melden werkt</h3><p>Iets mis? Tik op Melden. Je komt die persoon niet meer tegen, en wie over de grens gaat wordt geblokkeerd.</p></div>
+    </section>
+
+    <footer class="voet">
+      <nav aria-label="Over {{NAAM}}"><a href="/regels">Regels</a><a href="/privacy">Privacy</a><a href="/melden">Misbruik melden</a></nav>
+      <p>{{NAAM}}. Gebruik je gezonde verstand: een vreemde kan liegen over wie hij is.</p>
+    </footer>
+  </main>
+
+  <!-- ======================= GESPREK ======================= -->
+  <main id="chat" class="chat" hidden>
+    <div class="chat-kop">
+      <button type="button" class="rond" id="btn-home" aria-label="Terug naar de startpagina">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <p class="status" id="status" aria-live="polite">Zoeken…</p>
+      <div class="acties">
+        <button type="button" class="pil spel" id="btn-games">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
+          <span>Spel</span>
+        </button>
+        <button type="button" class="pil gevaar" id="btn-report" disabled>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M5 21V4m0 1h11l-2 4 2 4H5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Melden</span>
+        </button>
+        <button type="button" class="rond" id="btn-save" aria-label="Gesprek opslaan als tekstbestand">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="chat-vlak" id="vlak">
+      <section class="zijkant" id="zij" aria-label="Video en spel">
+        <div class="videos" id="videos">
+          <div class="vbox ander">
+            <video id="remote" autoplay playsinline></video>
+            <span class="vlabel">Vreemde</span>
+            <div class="vwacht" id="vspin"><span class="lader" aria-hidden="true"></span><span id="vtekst">Zoeken…</span></div>
+          </div>
+          <div class="vbox ik">
+            <video id="local" autoplay playsinline muted></video>
+            <span class="vlabel">Jij</span>
+          </div>
+          <div class="vctl">
+            <button type="button" class="rond" id="btn-mic" aria-pressed="true" aria-label="Microfoon uitzetten">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+            <button type="button" class="rond" id="btn-cam" aria-pressed="true" aria-label="Camera uitzetten">
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="3" y="6" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 10l6-3v10l-6-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+            </button>
+            <button type="button" class="rond" id="btn-wissel" aria-label="Andere camera gebruiken" hidden>
+              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9a8 8 0 0 1 14-3l2 2m0-5v5h-5M20 15a8 8 0 0 1-14 3l-2-2m0 5v-5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="game" id="game" hidden></div>
+      </section>
+
+      <section class="gesprek" aria-label="Gesprek">
+        <div class="log" id="log" role="log" aria-live="polite" tabindex="0" aria-label="Berichten"></div>
+        <p class="typing" id="typing" hidden><span class="puntjes" aria-hidden="true"><i></i><i></i><i></i></span> De vreemde typt…</p>
+        <form class="bar" id="bar" autocomplete="off">
+          <button type="button" class="stop" id="btn-stop">Stop</button>
+          <label class="sr" for="msg">Je bericht</label>
+          <textarea id="msg" rows="1" placeholder="Typ een bericht" maxlength="1000" enterkeyhint="send" disabled></textarea>
+          <button type="submit" class="stuur" id="btn-send" aria-label="Versturen" disabled>
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 12l16-8-6 16-3-6z" fill="currentColor"/></svg>
+          </button>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <!-- ======================= VENSTERS ======================= -->
+  <dialog id="terms" aria-labelledby="terms-kop">
+    <form method="dialog" class="venster">
+      <h2 id="terms-kop">Voordat je begint</h2>
+      <label class="vink"><input type="checkbox" id="c1" /> <span>Ik ben <b>18 jaar of ouder</b>.</span></label>
+      <label class="vink"><input type="checkbox" id="c2" /> <span>Ik laat geen naaktheid, geweld of haat zien, ik val niemand lastig en ik deel geen gegevens van mezelf of anderen.</span></label>
+      <label class="vink"><input type="checkbox" id="c3" /> <span>Ik weet dat een vreemde kan liegen over wie hij is, dat de ander een schermopname kan maken, en dat de ander bij een melding de laatste berichten kan meesturen.</span></label>
+      <p class="uitleg">Lees de <a href="/regels" target="_blank" rel="noopener">regels</a> en hoe we met je <a href="/privacy" target="_blank" rel="noopener">privacy</a> omgaan.</p>
+      <div class="knoppen"><button type="button" class="knop" id="terms-cancel">Annuleren</button><button type="button" class="knop hoofd" id="terms-ok" disabled>Akkoord en verder</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="meld" aria-labelledby="meld-kop">
+    <form method="dialog" class="venster" id="meld-form">
+      <h2 id="meld-kop">Deze persoon melden</h2>
+      <fieldset>
+        <legend>Wat is er aan de hand?</legend>
+        <label class="keus"><input type="radio" name="reden" value="naakt" /> <span>Naaktheid of seksueel gedrag</span></label>
+        <label class="keus"><input type="radio" name="reden" value="minderjarig" /> <span>Lijkt minderjarig</span></label>
+        <label class="keus"><input type="radio" name="reden" value="bedreiging" /> <span>Bedreiging, haat of intimidatie</span></label>
+        <label class="keus"><input type="radio" name="reden" value="spam" /> <span>Oplichting, reclame of spam</span></label>
+        <label class="keus"><input type="radio" name="reden" value="anders" /> <span>Iets anders</span></label>
+      </fieldset>
+      <label class="veldlabel" for="meld-tekst">Toelichting <span class="zacht">(mag leeg blijven)</span></label>
+      <textarea id="meld-tekst" rows="2" maxlength="300"></textarea>
+      <label class="vink kader"><input type="checkbox" id="meld-berichten" /> <span><b>Stuur de laatste berichten van dit gesprek mee</b> (hooguit 20, van jullie allebei). Alleen dan worden ze bewaard, zodat een beheerder ze kan lezen. Video wordt nooit meegestuurd.</span></label>
+      <p class="uitleg">Het gesprek stopt en je komt deze persoon niet meer tegen. Bij direct gevaar: bel 112.</p>
+      <p class="foutregel" id="meld-fout" role="alert" hidden></p>
+      <div class="knoppen"><button type="button" class="knop" id="meld-annuleer">Annuleren</button><button type="submit" class="knop gevaar" id="meld-ok">Melden</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="gmenu" aria-labelledby="gmenu-kop">
+    <div class="venster">
+      <h2 id="gmenu-kop">Kies een spel</h2>
+      <p class="uitleg">De vreemde krijgt een uitnodiging en kan ja of nee zeggen.</p>
+      <div class="spellijst" id="gmenu-list"></div>
+      <div class="knoppen"><button type="button" class="knop" id="gmenu-close">Sluiten</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="vraag" aria-labelledby="vraag-kop">
+    <div class="venster smal">
+      <h2 id="vraag-kop">Weet je het zeker?</h2>
+      <div class="knoppen"><button type="button" class="knop" id="vraag-nee">Nee</button><button type="button" class="knop hoofd" id="vraag-ja">Ja</button></div>
+    </div>
+  </dialog>
+
+  <script src="/app.js"></script>
+  <script src="/games.js"></script>
+</body>
+</html>
