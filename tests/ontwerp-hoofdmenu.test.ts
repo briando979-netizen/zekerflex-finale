@@ -22,7 +22,7 @@ describe("hoofdmenu uit de Site-ontwerper", () => {
         ...rest,
       ],
     });
-    expect(nav.map((n) => n.key)).toEqual(["prijzen", "aanbod", "shop", "over", "kennis"]);
+    expect(nav.map((n) => n.key)).toEqual(["prijzen", "aanbod", "shop", "apps", "over", "kennis"]);
     const p = nav[0];
     expect(p?.label).toBe("Tarieven");
     expect(p?.href).toBe("/prijzen");

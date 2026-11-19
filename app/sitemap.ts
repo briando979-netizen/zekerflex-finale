@@ -63,6 +63,8 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     entry("/voor-freelancers", 0.9, "monthly"),
     entry("/uitzendbureau", 0.9, "weekly"),
     entry("/voor-bedrijven", 0.9, "monthly"),
+    // de eigen apps (spelletjes, Talkaro, FlikFlak, webshop) als aparte categorie (lib/marketing/apps.ts)
+    entry("/apps-en-spelletjes", 0.7, "monthly"),
 
     // Open klussen (Google for Jobs) + per-city landing pages
     entry("/klussen", 0.9, "hourly"),

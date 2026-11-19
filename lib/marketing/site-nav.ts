@@ -1,4 +1,5 @@
 import { AANBOD, aanbodHref, PIJLERS, type PijlerSleutel } from "@/lib/marketing/aanbod";
+import { APPS } from "@/lib/marketing/apps";
 
 // ---------------------------------------------------------------------------
 // Het hoofdmenu (bovenbalk) van de eigen site: de standaard. Puur en browser-
@@ -49,6 +50,9 @@ const KENNIS_ITEMS: MenuItem[] = [
   { title: "Blogs", desc: "Achtergrond over flexibel werk en het platform.", href: "/kennis/blog" },
   { title: "FAQ", desc: "Kort antwoord op de vragen die we het vaakst krijgen.", href: "/kennis/faq" },
 ];
+
+// "Apps & spelletjes": de knoppen "Ga naar …" uit lib/marketing/apps.ts
+const APPS_MENU: MenuItem[] = APPS.map((a) => ({ title: a.knop, desc: a.tekst, href: a.href }));
 
 const AANBOD_MENU: MenuVariant = {
   eyebrow: "Alles onder één dak",
@@ -153,6 +157,20 @@ export const NAV: NavEntry[] = [
           { title: "Cadeaus voor je team", desc: "Kleine essentials met een grote glimlach.", href: "/shop#cadeaus" },
         ],
       },
+    },
+  },
+  {
+    // De eigen apps van ZekerFlex als aparte categorie, los van de voorbeelden op
+    // /website-maken (lib/marketing/apps.ts): direct "Ga naar …".
+    // (/apps zelf is de pagina met de ZekerFlex-apps per doelgroep; dit is een andere categorie)
+    key: "apps",
+    href: "/apps-en-spelletjes",
+    label: "Apps & spelletjes",
+    match: "/apps-en-spelletjes",
+    overzicht: "Alle apps en spelletjes",
+    menu: {
+      werknemers: { eyebrow: "Even iets anders", cta: { label: "Alles bekijken", href: "/apps-en-spelletjes" }, items: APPS_MENU },
+      bedrijven: { eyebrow: "Onze eigen apps", cta: { label: "Alles bekijken", href: "/apps-en-spelletjes" }, items: APPS_MENU },
     },
   },
   {

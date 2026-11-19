@@ -49,7 +49,9 @@ describe("menu van de openbare site (lib/marketing/site-nav.ts)", () => {
   it("elke interne link wijst naar een bestaande pagina", () => {
     for (const href of alleLinks()) {
       if (isExternal(href)) {
-        expect(href, href).toMatch(/^mailto:info@zekerflex\.com$|^tel:\+31/);
+        // naar buiten mag alleen mail/telefoon, of een eigen app op een eigen subdomein die echt live is
+        // (Apps & spelletjes, lib/marketing/apps.ts: talkaro en flikflak)
+        expect(href, href).toMatch(/^mailto:info@zekerflex\.com$|^tel:\+31|^https:\/\/(talkaro|flikflak)\.zekerflex\.com$/);
         continue;
       }
       expect(paginaBestaat(href), href).toBe(true);
