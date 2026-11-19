@@ -2,10 +2,12 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { AANBOD, aanbodHref } from "@/lib/marketing/aanbod";
-import { ALLE_ONLINE_TOOLS, ONLINE_FAQ, ONLINE_GROEPEN, WAAROM_HIER } from "@/lib/marketing/online-tools";
+import { MERKEN, merkVan } from "@/lib/marketing/online-merken";
+import { ALLE_ONLINE_TOOLS, ONLINE_FAQ, ONLINE_GROEPEN, VERGELIJK, WAAROM_HIER } from "@/lib/marketing/online-tools";
 
-// /online (19 nov 2026, eigenaar): alle losse online tools op één pagina. Elke knop moet naar iets echts wijzen,
-// de tekst belooft niets wat er niet is, en de pagina staat in menu, sitemap en de rondgang-lijst.
+// /online (19 nov 2026, eigenaar): alle losse online tools op één pagina, met een eigen logo per tool. Elke knop moet
+// naar iets echts wijzen, elk beeld moet bestaan, de tekst belooft niets wat er niet is, en de pagina staat in menu,
+// sitemap en de rondgang-lijst.
 
 const bron = (f: string) => readFileSync(path.join(process.cwd(), f), "utf8").split("\r\n").join("\n");
 const paginaBestaat = (href: string) => {
@@ -25,11 +27,29 @@ describe("alles voor je bedrijf online (/online)", () => {
     expect(new Set(sleutels).size).toBe(sleutels.length);
   });
 
-  it("elke knop wijst naar een bestaande pagina en elke tool uit het aanbod is beschikbaar", () => {
+  it("elke tool heeft een eigen logo (merkteken) met eigen kleuren en vorm, geen emoji", () => {
+    const kleuren = new Set<string>();
+    for (const t of ALLE_ONLINE_TOOLS) {
+      expect(Object.hasOwn(MERKEN, t.sleutel), `merk voor ${t.sleutel}`).toBe(true);
+      const m = merkVan(t.sleutel);
+      expect(m.paden.length, t.sleutel).toBeGreaterThan(0);
+      for (const d of m.paden) expect(d, `${t.sleutel}: ${d}`).toMatch(/^M[\d. ,-]/);
+      expect(m.van).toMatch(/^#[0-9A-Fa-f]{6}$/);
+      expect(m.naar).toMatch(/^#[0-9A-Fa-f]{6}$/);
+      kleuren.add(`${m.van}${m.naar}`);
+      // geen emoji in naam of tekst (de eigenaar: echte eigen logo's)
+      expect(`${t.naam}${t.kort}${t.knop}`).not.toMatch(/\p{Extended_Pictographic}/u);
+    }
+    // elk merk zijn eigen kleurverloop
+    expect(kleuren.size).toBe(ALLE_ONLINE_TOOLS.length);
+  });
+
+  it("elke knop wijst naar een bestaande pagina, elk beeld bestaat, en elke tool uit het aanbod is beschikbaar", () => {
     for (const t of ALLE_ONLINE_TOOLS) {
       expect(t.knop.length, t.sleutel).toBeGreaterThan(2);
       if (t.extern) expect(t.href).toMatch(/^https:\/\/[a-z]+\.zekerflex\.com/);
       else expect(paginaBestaat(t.href), `${t.sleutel} → ${t.href}`).toBe(true);
+      if (t.beeld) expect(existsSync(path.join(process.cwd(), "public", t.beeld.src)), `${t.sleutel}: ${t.beeld.src}`).toBe(true);
       const a = AANBOD.find((x) => x.slug === t.sleutel);
       if (a) {
         expect(a.status).toBe("beschikbaar");
@@ -40,16 +60,17 @@ describe("alles voor je bedrijf online (/online)", () => {
   });
 
   it("belooft niets wat er niet is: geen 'binnenkort', geen verzonnen cijfers of sterren", () => {
-    const tekst = JSON.stringify({ ALLE_ONLINE_TOOLS, WAAROM_HIER, ONLINE_FAQ }) + bron("app/(marketing)/online/page.tsx");
+    const tekst = JSON.stringify({ ALLE_ONLINE_TOOLS, WAAROM_HIER, ONLINE_FAQ, VERGELIJK }) + bron("app/(marketing)/online/page.tsx");
     expect(tekst).not.toMatch(/binnenkort/i);
     expect(tekst).not.toMatch(/\d[\d.]*\+? (klanten|bedrijven|websites|gebruikers)/i);
     // geen eigen "4,8 sterren" of "★★★★★" (over reviews van anderen praten mag: de review-check en Google-reviews)
     expect(tekst).not.toMatch(/\d[,.]\d ?(sterren|★)|★{2,}|\d+\+? ?(reviews|beoordelingen)\b/i);
   });
 
-  it("de pagina gebruikt de lijst en ldJson, en staat in sitemap, menu en rondgang-lijst", () => {
+  it("de pagina gebruikt de lijst, de merken en ldJson, en staat in sitemap, menu en rondgang-lijst", () => {
     const pagina = bron("app/(marketing)/online/page.tsx");
-    expect(pagina).toContain("ONLINE_GROEPEN.map(");
+    expect(pagina).toContain("ALLE_ONLINE_TOOLS.map(");
+    expect(pagina).toContain("<ToolMerk ");
     expect(pagina).toContain("ldJson(breadcrumbJsonLd(");
     expect(pagina).not.toContain("JSON.stringify");
     expect(pagina).toContain('canonical("/online")');

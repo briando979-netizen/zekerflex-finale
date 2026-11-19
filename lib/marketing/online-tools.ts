@@ -4,7 +4,9 @@
 // verhuizen of beheren en nog veel meer: alle losse tools in een nieuwe pagina").
 // De tools komen uit het aanbod (lib/marketing/aanbod.ts), zodat naam, knop en
 // prijs overal gelijk zijn; een paar ingangen (domein verhuizen/beheren, de
-// apps) zijn extra, naar bestaande pagina's. Puur bestand, browser-veilig.
+// apps) zijn extra, naar bestaande pagina's. Elke tool heeft een eigen merkteken
+// (lib/marketing/online-merken.ts) en, waar we er een hebben, een echt beeld.
+// Puur bestand, browser-veilig.
 // ---------------------------------------------------------------------------
 
 import { AANBOD, aanbodHref, prijsTekst, type AanbodItem } from "@/lib/marketing/aanbod";
@@ -17,7 +19,10 @@ export interface OnlineTool {
   knop: string;
   /** korte prijsaanduiding, alleen als die echt vastligt */
   prijs?: string;
-  icoon: string;
+  /** "Gratis" of "Eerst zien, dan betalen": het etiket op de kaart */
+  etiket?: string;
+  /** een echt beeld van het product (schermafbeelding of eigen foto), pad vanaf public/ */
+  beeld?: { src: string; alt: string };
   /** opent buiten zekerflex.com (eigen subdomein) */
   extern?: boolean;
 }
@@ -25,42 +30,63 @@ export interface OnlineTool {
 export interface OnlineGroep {
   sleutel: "maken" | "domein" | "checks" | "groeien" | "apps";
   titel: string;
+  kop: string;
   intro: string;
   tools: OnlineTool[];
 }
 
-const uitAanbod = (slug: string, icoon: string, extra: Partial<OnlineTool> = {}): OnlineTool[] => {
+const uitAanbod = (slug: string, extra: Partial<OnlineTool> = {}): OnlineTool[] => {
   const a: AanbodItem | undefined = AANBOD.find((x) => x.slug === slug && x.status === "beschikbaar");
   if (!a) return [];
   const prijs = a.prijs ? prijsTekst(a) : undefined;
-  return [{ sleutel: a.slug, naam: a.naam, kort: a.kort, href: aanbodHref(a), knop: a.start.label, icoon, ...(prijs ? { prijs } : {}), ...extra }];
+  return [{ sleutel: a.slug, naam: a.naam, kort: a.kort, href: aanbodHref(a), knop: a.start.label, ...(prijs ? { prijs } : {}), ...extra }];
 };
+
+const GRATIS = "Gratis, zonder account";
+const EERST_ZIEN = "Eerst zien, dan betalen";
 
 export const ONLINE_GROEPEN: OnlineGroep[] = [
   {
     sleutel: "maken",
     titel: "Maken",
-    intro: "Je website, webshop, logo en advertentie. Je ziet eerst het voorbeeld, dan beslis je.",
+    kop: "Je website, webshop, logo en advertentie",
+    intro: "Je ziet eerst het voorbeeld, dan beslis je. Alles op je eigen domein, zonder scripts van anderen.",
     tools: [
-      ...uitAanbod("website", "🌐", { href: "/website-maken", knop: "Vertel je wensen", kort: "Een snelle, moderne website op je eigen domein. Vertel je wensen en krijg binnen een dag een voorbeeld in drie versies." }),
-      ...uitAanbod("webshop", "🛒", { href: "/website-maken", knop: "Vertel je wensen" }),
-      ...uitAanbod("logo-maker", "✏️", { knop: "Maak mijn logo", prijs: "Eerst zien, dan betalen" }),
-      ...uitAanbod("advertentie-op-maat", "📣", { knop: "Maak mijn advertentie", prijs: "Eerst zien, dan betalen" }),
+      ...uitAanbod("website", {
+        naam: "Website laten maken",
+        href: "/website-maken",
+        knop: "Vertel je wensen",
+        kort: "Een snelle, moderne website op je eigen domein. Vertel je wensen en krijg binnen een dag een voorbeeld in drie versies.",
+        etiket: EERST_ZIEN,
+        beeld: { src: "/marketing/voorbeelden/smileyapp.webp", alt: "De website van SmileyApp, gemaakt door ZekerFlex" },
+      }),
+      ...uitAanbod("webshop", {
+        href: "/website-maken",
+        knop: "Vertel je wensen",
+        etiket: EERST_ZIEN,
+        beeld: { src: "/marketing/foto/campagne-webwinkel.jpg", alt: "Een ondernemer pakt een bestelling in voor haar webwinkel" },
+      }),
+      ...uitAanbod("logo-maker", { knop: "Maak mijn logo", etiket: EERST_ZIEN }),
+      ...uitAanbod("advertentie-op-maat", {
+        knop: "Maak mijn advertentie",
+        etiket: EERST_ZIEN,
+        beeld: { src: "/marketing/foto/campagne-promotie.jpg", alt: "Een team deelt flyers uit voor een actie" },
+      }),
     ],
   },
   {
     sleutel: "domein",
     titel: "Domein & e-mail",
-    intro: "Je eigen naam online: zoeken, registreren, verhuizen, beheren, en mail op je eigen domein.",
+    kop: "Je eigen naam online",
+    intro: "Zoeken, registreren, verhuizen en beheren, en mail op je eigen domein. Bij een website of webshop van ons is het eerste jaar .nl, .com, .eu of .be inbegrepen.",
     tools: [
-      ...uitAanbod("domeinnaam", "🔎", { naam: "Domeinnaam registreren", href: "/domeinnaam#zoek", knop: "Zoek je domeinnaam" }),
+      ...uitAanbod("domeinnaam", { naam: "Domeinnaam registreren", href: "/domeinnaam#zoek", knop: "Zoek je domeinnaam", kort: "Zoek of je naam vrij is: .nl, .com, .eu, .be en meer. Registreren voor een eerlijke prijs per jaar." }),
       {
         sleutel: "domein-verhuizen",
         naam: "Domein verhuizen",
         kort: "Heb je al een domein? Verhuis het met je verhuiscode naar ZekerFlex; je website en mail blijven gewoon werken.",
         href: "/domeinnaam#verhuizen-titel",
         knop: "Zo verhuis je",
-        icoon: "🚚",
       },
       {
         sleutel: "domein-beheren",
@@ -68,44 +94,70 @@ export const ONLINE_GROEPEN: OnlineGroep[] = [
         kort: "DNS, koppeling aan je website en verlenging regel je in je eigen werkruimte, onder Website.",
         href: "/werkgever/website",
         knop: "Naar mijn domeinen",
-        icoon: "🛠️",
       },
-      ...uitAanbod("zakelijke-mail", "✉️", { knop: "Begin met je domeinnaam" }),
+      ...uitAanbod("zakelijke-mail", { knop: "Begin met je domeinnaam" }),
     ],
   },
   {
     sleutel: "checks",
-    titel: "Gratis checks en rekentools",
-    intro: "Zonder account, in een minuut klaar.",
+    titel: "Gratis checks",
+    kop: "In een minuut weten hoe je ervoor staat",
+    intro: "Zonder account, zonder e-mailadres. De uitslag zie je meteen.",
     tools: [
-      ...uitAanbod("website-check", "⚡"),
-      ...uitAanbod("review-check", "⭐"),
-      ...uitAanbod("bedrijfscheck", "🧾"),
-      ...uitAanbod("rekentools", "🧮"),
+      ...uitAanbod("website-check", { etiket: GRATIS }),
+      ...uitAanbod("review-check", { etiket: GRATIS }),
+      ...uitAanbod("bedrijfscheck", { etiket: GRATIS }),
+      ...uitAanbod("rekentools", { etiket: GRATIS }),
     ],
   },
   {
     sleutel: "groeien",
     titel: "Gevonden en bereikbaar",
-    intro: "Meer reviews, een zakelijk nummer en een vliegende start als je net begint.",
+    kop: "Meer klanten, minder gemiste telefoontjes",
+    intro: "Meer reviews, een zakelijk nummer met een assistent die opneemt, en een vliegende start als je net begint.",
     tools: [
-      ...uitAanbod("google-reviews", "💬"),
-      ...uitAanbod("telefonie", "📞"),
-      ...uitAanbod("starters", "🌱"),
+      ...uitAanbod("google-reviews", {}),
+      ...uitAanbod("telefonie", {}),
+      ...uitAanbod("starters", { etiket: EERST_ZIEN }),
     ],
   },
   {
     sleutel: "apps",
     titel: "Apps",
-    intro: "Een eigen app voor je werk, en onze eigen apps om te proberen.",
+    kop: "Een eigen app voor je werk, en onze apps om te proberen",
+    intro: "Installeren kan direct vanuit de browser, zonder app-winkel.",
     tools: [
-      { sleutel: "apps", naam: "De apps van ZekerFlex", kort: "Een eigen app voor flexwerkers, bedrijven, horeca, rijscholen, webshops en websites. Installeren kan direct, zonder store.", href: "/apps", knop: "Bekijk de apps", icoon: "📱" },
-      { sleutel: "apps-en-spelletjes", naam: "Apps & spelletjes", kort: "Talkaro, FlikFlak en de webshop: ga er direct naartoe.", href: "/apps-en-spelletjes", knop: "Ga naar de apps", icoon: "🎮" },
+      {
+        sleutel: "apps",
+        naam: "De apps van ZekerFlex",
+        kort: "Een eigen app voor flexwerkers, bedrijven, horeca, rijscholen, webshops en websites. Installeren kan direct, zonder store.",
+        href: "/apps",
+        knop: "Bekijk de apps",
+        beeld: { src: "/marketing/foto/app-telefoon-lacht.jpg", alt: "Iemand lacht naar de ZekerFlex-app op haar telefoon" },
+      },
+      {
+        sleutel: "apps-en-spelletjes",
+        naam: "Apps & spelletjes",
+        kort: "Talkaro, FlikFlak en de webshop: ga er direct naartoe.",
+        href: "/apps-en-spelletjes",
+        knop: "Ga naar de apps",
+        beeld: { src: "/marketing/voorbeelden/flikflak.webp", alt: "FlikFlak, de korte-video-app van ZekerFlex" },
+      },
     ],
   },
 ];
 
 export const ALLE_ONLINE_TOOLS: OnlineTool[] = ONLINE_GROEPEN.flatMap((g) => g.tools);
+
+/** ZekerFlex naast een gewone websitebouwer: alleen wat nu echt zo is. */
+export const VERGELIJK: { punt: string; bouwer: string; wij: string }[] = [
+  { punt: "Betalen", bouwer: "Een abonnement vooraf, ook voordat je iets ziet", wij: "Eerst het voorbeeld, dan pas betalen" },
+  { punt: "Pakket", bouwer: "Een vast pakket met functies die je niet gebruikt", wij: "Alleen de tools die je afneemt" },
+  { punt: "Waar het draait", bouwer: "Bij een partij in het buitenland, met hun cookies", wij: "Op onze eigen servers in Nederland, zonder trackers" },
+  { punt: "Wie het maakt", bouwer: "Jij, in een sleep-en-zet-neer-bouwer", wij: "Wij, naar jouw wensen; een mens kijkt mee" },
+  { punt: "Naast je website", bouwer: "Alleen de website", wij: "Personeel, uren, facturen, telefonie en reviews in dezelfde werkruimte" },
+  { punt: "Je domein", bouwer: "Vaak op hun naam of met een opzegtermijn", wij: "Op jouw naam; wil je weg, dan neem je het mee" },
+];
 
 /** Waarom hier en niet bij een gewone websitebouwer: alleen wat nu echt zo is. */
 export const WAAROM_HIER: { titel: string; tekst: string }[] = [
