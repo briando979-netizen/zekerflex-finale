@@ -8,6 +8,7 @@
 // keuze van de eigenaar wacht, staat op "binnenkort".
 
 import type { Werkruimte } from "@/lib/werkgever/werkruimte";
+import { vanafTekst } from "@/lib/advertentie/regels";
 
 /** Echte schermen van de horecasoftware (voorbeeldzaak "Restaurant De Proef", 15 nov 2026); maten in beeldpunten van het bestand. */
 const HORECA_INKIJK: InkijkScherm[] = [
@@ -479,6 +480,21 @@ export const AANBOD: AanbodItem[] = [
     status: "beschikbaar",
     pagina: "/website-check",
     start: { label: "Check mijn website", href: "/website-check" },
+  },
+  {
+    slug: "advertentie-op-maat",
+    pijler: "online",
+    naam: "Advertentie op maat",
+    kort: "Vul een paar dingen in en zie meteen je eigen advertentie, in drie ontwerpen.",
+    tekst:
+      "Je vertelt wat je bedrijf aanbiedt en kiest een kleur. Je ziet direct drie ontwerpen van je advertentie. Het voorbeeld kost niets; je betaalt pas als je hem wilt hebben.",
+    punten: ["Drie ontwerpen in jouw kleur", "Eerst het voorbeeld, dan pas betalen", "Vierkant, verhaal en liggend formaat", "Geen account nodig"],
+    voorWie: "Bedrijven die zelf willen adverteren",
+    // dezelfde bron als de pagina zelf (lib/advertentie/regels.ts)
+    prijs: `${vanafTekst()}, je ziet eerst het voorbeeld`,
+    status: "beschikbaar",
+    pagina: "/advertentie-op-maat",
+    start: { label: "Maak mijn advertentie", href: "/advertentie-op-maat" },
   },
   {
     slug: "review-check",

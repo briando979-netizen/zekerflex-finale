@@ -89,6 +89,7 @@ export const ADMIN_HUBS: AdminHub[] = [
       { href: "/admin/werker-trechter", label: "Werkerstrechter" },
       { href: "/admin/websitevoorstellen", label: "Websitevoorstellen" },
       { href: "/admin/scans", label: "Scans & deals" },
+      { href: "/admin/advertentie-op-maat", label: "Advertenties op maat" },
       { href: "/admin/offertes", label: "Offerte-AI" },
       { href: "/admin/beller", label: "AI-beller" },
       { href: "/admin/telefonie", label: "Telefonie" },
