@@ -82,7 +82,7 @@ describe("campagnepagina's", () => {
   });
 });
 
-describe("de schuivende strook op de voorpagina", () => {
+describe("de schuivende strook op de flexwerk-pagina", () => {
   it("elke soort werk gaat naar een pagina die bestaat", () => {
     const werkerPaginas = new Set(SECTORS.map((s) => `/${s.workerSlug}`));
     for (const s of WERK_STROOK) {
@@ -93,10 +93,11 @@ describe("de schuivende strook op de voorpagina", () => {
   });
 
   it("beweegt met alleen CSS, staat stil bij 'minder beweging', en de herhaling is verborgen voor schermlezers en het toetsenbord", () => {
-    const home = lees("app/(marketing)/page.tsx");
-    expect(home).toContain('className="marquee gap-3 pr-3"');
-    expect(home).toContain("aria-hidden={ronde > 0 ? true : undefined}");
-    expect(home).toContain("tabIndex={ronde > 0 ? -1 : undefined}");
+    // de strook verhuisde met de werkers-home mee van / naar /flexwerk (19 nov 2026)
+    const flexwerk = lees("app/(marketing)/flexwerk/page.tsx");
+    expect(flexwerk).toContain('className="marquee gap-3 pr-3"');
+    expect(flexwerk).toContain("aria-hidden={ronde > 0 ? true : undefined}");
+    expect(flexwerk).toContain("tabIndex={ronde > 0 ? -1 : undefined}");
     expect(lees("app/globals.css")).toContain("@media (prefers-reduced-motion: reduce) { .marquee { animation: none; } }");
   });
 });

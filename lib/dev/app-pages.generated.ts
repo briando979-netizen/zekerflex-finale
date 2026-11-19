@@ -356,7 +356,6 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/logo-maker","file":"app/(marketing)/logo-maker/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/logo-maker/[id]","file":"app/(marketing)/logo-maker/[id]/page.tsx","area":"Marketing","dynamic":true},
   {"route":"/mail/voorkeuren","file":"app/(marketing)/mail/voorkeuren/page.tsx","area":"Marketing","dynamic":false},
-  {"route":"/nieuwe-home","file":"app/(marketing)/nieuwe-home/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/nieuws","file":"app/(marketing)/nieuws/page.tsx","area":"Marketing","dynamic":false},
   {"route":"/nieuws/[slug]","file":"app/(marketing)/nieuws/[slug]/page.tsx","area":"Marketing","dynamic":true},
   {"route":"/nieuwsbrief","file":"app/(marketing)/nieuwsbrief/page.tsx","area":"Marketing","dynamic":false},

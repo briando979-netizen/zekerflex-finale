@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ldJson } from "@/lib/seo/json-ld";
+import { SITE } from "@/lib/seo";
+import { seoMetadata } from "@/lib/ontwerp/seo-store";
 import { env } from "@/lib/env";
 import { Reveal } from "@/components/marketing/Reveal";
 import { FaqList } from "@/components/marketing/primitives";
@@ -33,11 +35,10 @@ import {
 // Teksten: lib/marketing/werk-home.ts (dezelfde bron als de huidige home).
 // ---------------------------------------------------------------------------
 
-export const metadata: Metadata = {
-  title: "Flexwerk, uitzendwerk en zzp-klussen | ZekerFlex",
-  description:
-    "Kies zelf je klussen bij jou in de buurt. Je ziet vooraf wat je verdient, je checkt in met je telefoon en je geld komt op je eigen rekening. Gratis voor werkers, in vijf talen.",
-};
+// titel en omschrijving: de standaard in lib/ontwerp/seo.ts (de oude home-tekst voor werkzoekenden), met self-canonical voor /flexwerk
+export async function generateMetadata(): Promise<Metadata> {
+  return seoMetadata("/flexwerk", { keywords: [...SITE.keywords] });
+}
 
 // De gekozen achtergrond komt uit de opslag: zonder dit zou hij bij het bouwen worden vastgelegd (toen is er geen database).
 export const revalidate = 60;

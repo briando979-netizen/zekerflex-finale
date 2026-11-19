@@ -60,6 +60,8 @@ async function bouwSitemap(): Promise<MetadataRoute.Sitemap> {
     // Pillars
     entry("/", 1, "weekly"),
     entry("/bedrijven", 0.9, "weekly"),
+    // de aparte voorpagina voor flexwerkers, zzp'ers en uitzendkrachten (verhuisd van / op 19 nov 2026)
+    entry("/flexwerk", 0.9, "weekly"),
     entry("/voor-freelancers", 0.9, "monthly"),
     entry("/uitzendbureau", 0.9, "weekly"),
     entry("/voor-bedrijven", 0.9, "monthly"),

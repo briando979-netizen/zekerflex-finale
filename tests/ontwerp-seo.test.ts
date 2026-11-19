@@ -17,11 +17,16 @@ describe("SEO van de vaste pagina's (Site-ontwerper)", () => {
 
   it("zonder eigen versie precies de metadata van vóór de ontwerper", async () => {
     // 15 nov 2026: op Google-lengte (titel ≤ 60, omschrijving ≤ 155 tekens; tests/seo-tekst.test.ts)
-    const TITLE = "ZekerFlex — freelance werk & klussen in heel Nederland";
-    // sinds 11 nov 2026 is de homepagina voor werkzoekenden; de omschrijving noemt geen bedrijfsprijs meer (die staat bij /bedrijven)
+    // sinds 19 nov 2026 is / de brede voorpagina ("alles onder één dak"); de werkerstekst is verhuisd naar /flexwerk
+    const TITLE = "Alles voor je bedrijf, onder één dak | ZekerFlex";
     const DESCRIPTION =
-      "Vind flexwerk en klussen bij jou in de buurt. Je ziet vooraf wat je verdient en krijgt je geld op je eigen rekening. Ook zonder KVK, en gratis.";
+      "Personeel, je website en je klanten, software voor je branche en je geldzaken — ZekerFlex doet het onder één dak. Stel je vraag, de gids wijst je de weg.";
     expect(await seoMetadata("/", { keywords: ["a"] })).toEqual({ title: { absolute: TITLE }, description: DESCRIPTION, keywords: ["a"], ...canonical("/", { title: TITLE, description: DESCRIPTION }) });
+    // de oude werkerstekst leeft voort op /flexwerk, met een self-canonical
+    const FLEX_TITLE = "ZekerFlex — freelance werk & klussen in heel Nederland";
+    const FLEX_DESCRIPTION =
+      "Vind flexwerk en klussen bij jou in de buurt. Je ziet vooraf wat je verdient en krijgt je geld op je eigen rekening. Ook zonder KVK, en gratis.";
+    expect(await seoMetadata("/flexwerk", { keywords: ["a"] })).toEqual({ title: { absolute: FLEX_TITLE }, description: FLEX_DESCRIPTION, keywords: ["a"], ...canonical("/flexwerk", { title: FLEX_TITLE, description: FLEX_DESCRIPTION }) });
     expect(await seoMetadata("/prijzen", { keywords: ["b"] })).toEqual({
       title: "Prijzen — € 3,50 per gewerkt uur",
       description:
