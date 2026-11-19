@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
-import { VOORBEELDEN } from "@/lib/website/aanvraag-opties";
+import { VOORBEELDEN, VOORBEELD_CATEGORIEEN } from "@/lib/website/aanvraag-opties";
 import { WebsiteAanvraagFormulier } from "@/components/marketing/WebsiteAanvraagFormulier";
 
 export const metadata: Metadata = {
@@ -65,25 +65,34 @@ export default function WebsiteMakenPage() {
           <h2 id="voorbeelden" className="scroll-mt-24 font-display text-3xl font-bold text-ink md:text-4xl">
             Dit hebben we gemaakt
           </h2>
-          <p className="mt-2 max-w-2xl text-neutralx-600">Twee websites en een app die we zelf hebben gebouwd. Klik erop en loop er doorheen: alles wat je ziet, werkt.</p>
-          <ul className="mt-8 grid gap-6 md:grid-cols-3">
-            {VOORBEELDEN.map((v) => (
-              <li key={v.id} className="surface relative overflow-hidden">
-                <div className="relative aspect-[8/5] bg-paper-soft">
-                  <Image src={v.foto} alt={`${v.soort === "App" ? "De app" : "De website"} van ${v.naam}`} fill sizes="(min-width: 768px) 30vw, 92vw" className="object-cover object-top" />
-                </div>
-                <div className="p-6">
-                  <p className="text-sm font-semibold text-brand-700">{v.soort}</p>
-                  <h3 className="mt-1 font-display text-2xl font-bold text-ink">{v.naam}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{v.tekst}</p>
-                  <a href={v.href} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex font-semibold text-brand-700 underline underline-offset-2">
-                    Bekijk {v.naam}
-                    <span className="sr-only"> (opent in een nieuw tabblad)</span>
-                  </a>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <p className="mt-2 max-w-2xl text-neutralx-600">Websites, spelletjes en apps die we zelf hebben gebouwd. Klik erop en loop er doorheen: alles wat je ziet, werkt.</p>
+          {VOORBEELD_CATEGORIEEN.map((categorie) => {
+            const items = VOORBEELDEN.filter((v) => v.categorie === categorie);
+            if (items.length === 0) return null;
+            return (
+              <div key={categorie} className="mt-10">
+                <h3 className="font-display text-xl font-bold text-ink">{categorie}</h3>
+                <ul className="mt-4 grid gap-6 md:grid-cols-3">
+                  {items.map((v) => (
+                    <li key={v.id} className="surface relative overflow-hidden">
+                      <div className="relative aspect-[8/5] bg-paper-soft">
+                        <Image src={v.foto} alt={`Een beeld van ${v.naam}`} fill sizes="(min-width: 768px) 30vw, 92vw" className="object-cover object-top" />
+                      </div>
+                      <div className="p-6">
+                        <p className="text-sm font-semibold text-brand-700">{v.soort}</p>
+                        <h4 className="mt-1 font-display text-2xl font-bold text-ink">{v.naam}</h4>
+                        <p className="mt-2 text-sm leading-relaxed text-neutralx-600">{v.tekst}</p>
+                        <a href={v.href} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex font-semibold text-brand-700 underline underline-offset-2">
+                          Bekijk {v.naam}
+                          <span className="sr-only"> (opent in een nieuw tabblad)</span>
+                        </a>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
         </div>
       </section>
 

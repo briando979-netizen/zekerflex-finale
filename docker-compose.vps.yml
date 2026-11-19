@@ -729,7 +729,7 @@ services:
     restart: unless-stopped
     init: true
     environment:
-      SITE_NAAM: Talkaroo
+      SITE_NAAM: Talkaro
       SITE_HOST: ${TALKARO_HOST:-}
       TRUST_PROXY: "1"
       BEHEER_TOKEN: ${TALKARO_ADMIN_TOKEN:-}

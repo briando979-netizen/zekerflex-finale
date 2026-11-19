@@ -6,9 +6,14 @@
 // geen zod. De twee voorbeelden zijn de sites die we echt hebben gemaakt.
 // ---------------------------------------------------------------------------
 
+// De voorbeelden staan in categorieën op /website-maken ("Dit hebben we gemaakt"), zodat een
+// bezoeker de websites en de apps/spelletjes apart ziet. Elke categorie krijgt een eigen kopje.
+export const VOORBEELD_CATEGORIEEN = ["Websites", "Spelletjes & apps"] as const;
+
 export const VOORBEELDEN = [
   {
     id: "smileyapp",
+    categorie: "Websites",
     naam: "SmileyApp",
     soort: "Website en app",
     tekst: "Strak en speels, met pakketten, video, een AI-chat die antwoordt en een eigen beheer.",
@@ -17,6 +22,7 @@ export const VOORBEELDEN = [
   },
   {
     id: "schwarzwald",
+    categorie: "Websites",
     naam: "Het Schwarzwald",
     soort: "Website met reserveren",
     tekst: "Vol beleving, met een agenda, online reserveren, accounts en een eigen beheer.",
@@ -25,11 +31,21 @@ export const VOORBEELDEN = [
   },
   {
     id: "flikflak",
+    categorie: "Spelletjes & apps",
     naam: "FlikFlak",
     soort: "App",
     tekst: "Een korte-video app: swipen, liken, reageren, berichten en LIVE gaan. Maak een account en probeer het.",
     foto: "/marketing/voorbeelden/flikflak.webp",
     href: "https://flikflak.zekerflex.com",
+  },
+  {
+    id: "talkaro",
+    categorie: "Spelletjes & apps",
+    naam: "Talkaro",
+    soort: "Spelletjes en app",
+    tekst: "Praat met een willekeurige vreemde via tekst of video, of speel samen een spel. Nu live en helemaal gratis.",
+    foto: "/marketing/voorbeelden/talkaro.webp",
+    href: "https://talkaro.zekerflex.com",
   },
 ] as const;
 
