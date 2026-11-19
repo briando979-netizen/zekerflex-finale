@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { LIVE, type LiveMeting } from "@/lib/kyc/gezicht/beweging";
-import { DOEL_HOEK, DRAAI_STABIELE_BEELDEN, METER_BOOG, METER_MAX, draaiStand, fotoMag, naaldHoek, telStabiel } from "@/lib/kyc/gezicht/draai-meter";
+import { DOEL_HOEK, DRAAI_STABIELE_BEELDEN, KNOP_MAX_AFGEWEZEN, METER_BOOG, METER_MAX, draaiStand, fotoMag, knopAccepteert, naaldHoek, telStabiel } from "@/lib/kyc/gezicht/draai-meter";
 import { AUTH_DICTS } from "@/lib/i18n/auth";
 
 // De hoofddraai-meter bij de tweede selfie (18 nov 2026): de wijzer volgt de live meting, "tot hier" staat op de doelhoek,
@@ -54,6 +54,7 @@ describe("de hoofddraai-meter", () => {
     for (const [taal, d] of Object.entries(AUTH_DICTS)) {
       expect(d.onb.scan.live.draaiUitleg.length, taal).toBeGreaterThan(20);
       expect(d.onb.scan.live.draaiTotHier.length, taal).toBeGreaterThan(2);
+      expect(d.onb.scan.live.knopOpnieuw, taal).toContain("{reden}");
       expect(d.onb.scan.live.gelukt.length, taal).toBeGreaterThan(2);
     }
     const scherm = readFileSync(path.join(process.cwd(), "components/app/IdScan.tsx"), "utf8");
@@ -64,5 +65,24 @@ describe("de hoofddraai-meter", () => {
     // bij "minder beweging" staat het voorbeeldhoofd stil op de doelhoek (IdScan geeft dat door als `stil`)
     expect(scherm).toContain('setMinderBeweging(window.matchMedia("(prefers-reduced-motion: reduce)").matches)');
     expect(meter).toContain("stil ? `rotateY(");
+  });
+});
+
+describe("de knopfoto van de tweede selfie wordt nagemeten", () => {
+  // 19 nov 2026: de eerste twee echte pogingen na de meter waren knopfoto's die tijdens het aftellen te ver doordraaiden
+  // (0,41 en 0,88 bij een doel van 0,24); de server keurde ze af als "platgedrukt" en een mens moest kijken
+  it("laat een foto die de regels haalt door, weigert er hooguit KNOP_MAX_AFGEWEZEN, en gaat zonder meting gewoon door", () => {
+    expect(knopAccepteert(true, 0)).toBe(true);
+    expect(knopAccepteert(null, 0)).toBe(true);
+    expect(knopAccepteert(false, 0)).toBe(false);
+    expect(knopAccepteert(false, KNOP_MAX_AFGEWEZEN - 1)).toBe(false);
+    expect(knopAccepteert(false, KNOP_MAX_AFGEWEZEN)).toBe(true);
+  });
+
+  it("het scherm meet de knopfoto na met bewegingVoldoet en toont de reden", () => {
+    const scherm = readFileSync(path.join(process.cwd(), "components/app/IdScan.tsx"), "utf8");
+    expect(scherm).toContain("knopAccepteert(voldoet, knopAfgewezen.current)");
+    expect(scherm).toContain('l.knopOpnieuw.replace("{reden}", liveTekst(d.aanwijzing))');
+    expect(scherm).toContain('role="alert"');
   });
 });

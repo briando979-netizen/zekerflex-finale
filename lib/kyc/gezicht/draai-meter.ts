@@ -61,3 +61,16 @@ export function telStabiel(teller: number, goed: boolean): number {
 export function fotoMag(teller: number): boolean {
   return teller >= DRAAI_STABIELE_BEELDEN;
 }
+
+/** Zo vaak mag het scherm een knopfoto van de tweede selfie weigeren; daarna gaat hij door en beslissen de server en een mens. */
+export const KNOP_MAX_AFGEWEZEN = 2;
+
+/**
+ * Mag de foto die de werker zelf met de knop maakte door? (19 nov 2026: de eerste twee echte pogingen na de meter waren
+ * knopfoto's; tijdens het aftellen draaide het hoofd door tot 0,41 en 0,88 bij een doel van 0,24, en de server keurde ze
+ * af als "platgedrukt".) `voldoet` is de uitkomst van bewegingVoldoet op de knopfoto, of null als die niet te meten was:
+ * dan door. Na KNOP_MAX_AFGEWEZEN weigeringen ook door, zodat niemand vast komt te zitten.
+ */
+export function knopAccepteert(voldoet: boolean | null, afgewezen: number): boolean {
+  return voldoet !== false || afgewezen >= KNOP_MAX_AFGEWEZEN;
+}

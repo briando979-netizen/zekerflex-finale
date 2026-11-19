@@ -16,7 +16,7 @@ import { EuIntro, EuToestemming, NlIntro, TipsSheet } from "@/components/app/Sca
 import { maakTrackCtx } from "@/lib/analytics/label-privacy";
 import { heeftAchterkant } from "@/lib/kyc/document-zijden";
 import { BEWEGING, bewegingVoldoet, draaiAanwijzing, type LiveMeting } from "@/lib/kyc/gezicht/beweging";
-import { DRAAI_LEEG, draaiStand, fotoMag, telStabiel, type DraaiStand } from "@/lib/kyc/gezicht/draai-meter";
+import { DRAAI_LEEG, draaiStand, fotoMag, knopAccepteert, telStabiel, type DraaiStand } from "@/lib/kyc/gezicht/draai-meter";
 import { HoofdDraai } from "@/components/app/HoofdDraai";
 import {
   DOC_LIVE,
@@ -408,6 +408,9 @@ function Camera({
   // de hoofddraai-meter bij de tweede selfie (lib/kyc/gezicht/draai-meter.ts): wijzer, "tot hier", en "gelukt" na de foto
   const [draai, setDraai] = useState<DraaiStand>(DRAAI_LEEG);
   const [draaiGelukt, setDraaiGelukt] = useState(false);
+  // een knopfoto van de tweede selfie die de regels niet haalt, wordt hooguit KNOP_MAX_AFGEWEZEN keer geweigerd (draai-meter.ts)
+  const [knopMelding, setKnopMelding] = useState<string | null>(null);
+  const knopAfgewezen = useRef(0);
   const [minderBeweging, setMinderBeweging] = useState(false);
   useEffect(() => {
     setMinderBeweging(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -687,14 +690,38 @@ function Camera({
     const v = video.current;
     if (!v) return;
     // de werker drukte zelf: "-knop" in de naam (lib/kyc/foto-bron.ts), voor de meting en Beheer; verder hetzelfde
-    void fotoVanVideo(v, `${vorm}-knop`).then((f) => {
-      if (f) opFoto.current(f);
+    void fotoVanVideo(v, `${vorm}-knop`).then(async (f) => {
+      if (!f) return;
+      // de tweede selfie met de knop (19 nov 2026): de eerste twee echte pogingen draaiden tijdens het aftellen door tot ver
+      // voorbij het doel (0,41 en 0,88 bij 0,24) en de server keurde ze af als "platgedrukt". Daarom wordt de knopfoto
+      // nagemeten met dezelfde regels (bewegingVoldoet) en mag de werker het opnieuw doen; zonder live meten, als de
+      // meting niet lukt of na KNOP_MAX_AFGEWEZEN keer gaat de foto gewoon door (de server en een mens beslissen)
+      if (live === "draai" && referentie && !liveUit) {
+        const na = await meetGezicht(f);
+        const meting = na.status === "ok" ? na.meting : null;
+        const voldoet = meting ? bewegingVoldoet(referentie, meting) : null;
+        if (!knopAccepteert(voldoet, knopAfgewezen.current)) {
+          knopAfgewezen.current += 1;
+          const d = draaiAanwijzing(referentie, meting);
+          setAanwijzing({ a: d.aanwijzing, voortgang: d.voortgang });
+          setDraai(draaiStand(referentie, meting));
+          setKnopMelding(l.knopOpnieuw.replace("{reden}", liveTekst(d.aanwijzing)));
+          return;
+        }
+        if (voldoet) {
+          setDraaiGelukt(true);
+          setAanwijzing({ a: "gelukt", voortgang: 1 });
+        }
+      }
+      setKnopMelding(null);
+      opFoto.current(f);
     });
   }
 
   /** De knop bij de tweede selfie: eerst drie tellen, zodat je je hoofd kunt draaien zonder naar de knop te kijken. */
   function aftellen() {
     if (aftel !== null) return;
+    setKnopMelding(null);
     let n = 3;
     setAftel(n);
     const tik = () => {
@@ -835,9 +862,16 @@ function Camera({
         {stand === "aan" && zelf && !eu && <p className="text-center text-xs leading-relaxed text-neutralx-500">{x.zelfModus}</p>}
         {stand !== "geen" && zelf && (
           live === "draai" ? (
-            <button type="button" onClick={aftellen} disabled={stand !== "aan" || aftel !== null} className="btn-primary w-full">
-              {l.aftelKnop}
-            </button>
+            <>
+              {knopMelding && (
+                <p role="alert" className="text-center text-sm font-semibold leading-relaxed text-ink-soft">
+                  {knopMelding}
+                </p>
+              )}
+              <button type="button" onClick={aftellen} disabled={stand !== "aan" || aftel !== null} className="btn-primary w-full">
+                {l.aftelKnop}
+              </button>
+            </>
           ) : rond ? (
             <button
               type="button"
