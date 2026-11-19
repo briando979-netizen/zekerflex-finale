@@ -16,7 +16,7 @@ import { EuIntro, EuToestemming, NlIntro, TipsSheet } from "@/components/app/Sca
 import { maakTrackCtx } from "@/lib/analytics/label-privacy";
 import { heeftAchterkant } from "@/lib/kyc/document-zijden";
 import { BEWEGING, bewegingVoldoet, draaiAanwijzing, type LiveMeting } from "@/lib/kyc/gezicht/beweging";
-import { DRAAI_LEEG, draaiStand, fotoMag, knopAccepteert, telStabiel, type DraaiStand } from "@/lib/kyc/gezicht/draai-meter";
+import { DRAAI_LEEG, VOORBEREID_VANAF, draaiStand, fotoMag, knopAccepteert, telStabiel, type DraaiStand } from "@/lib/kyc/gezicht/draai-meter";
 import { HoofdDraai } from "@/components/app/HoofdDraai";
 import {
   DOC_LIVE,
@@ -547,11 +547,16 @@ function Camera({
     let vorige: LiveMeting | null = null;
     // de tweede selfie: zoveel beelden achter elkaar goed gedraaid voordat de foto vanzelf gaat (draai-meter.ts)
     let stabiel = 0;
+    let vorigeDraai: DraaiStand = DRAAI_LEEG;
     void (async () => {
       while (!weg) {
         const begin = Date.now();
         const v = video.current;
         if (v?.videoWidth) {
+          // de tweede selfie: nadert het hoofd het doel, dan ligt de foto op volle grootte al klaar vóór de meting van
+          // ditzelfde beeld; zegt de server "goed", dan is dát de foto, ook als het hoofd intussen doordraait (19 nov 2026:
+          // de meting komt ±0,4 s na het beeld terug en de eerste echte pogingen schoten in die tijd voorbij het doel)
+          const vooraf = live === "draai" && referentie && !zelfRef.current && Math.abs(vorigeDraai.fractie) >= VOORBEREID_VANAF ? await fotoVanVideo(v, `${vorm}-auto`) : null;
           const r = await meetGezicht(v);
           if (weg) return;
           if (r.status === "stop") {
@@ -591,11 +596,13 @@ function Camera({
             } else if (referentie) {
               const d = draaiAanwijzing(referentie, r.meting);
               setAanwijzing({ a: d.aanwijzing, voortgang: d.voortgang });
-              setDraai(draaiStand(referentie, r.meting));
+              vorigeDraai = draaiStand(referentie, r.meting);
+              setDraai(vorigeDraai);
               stabiel = telStabiel(stabiel, d.aanwijzing === "goed");
               if (fotoMag(stabiel) && !zelfRef.current) {
-                // de foto op volle grootte, nog een keer gemeten met de regels van de server; haalt hij die niet, dan meten we door
-                const foto = await fotoVanVideo(v, `${vorm}-auto`);
+                // de foto van ditzelfde beeld (vooraf) of anders nu op volle grootte, nog een keer gemeten met de regels van de
+                // server; haalt hij die niet, dan meten we door
+                const foto = vooraf ?? (await fotoVanVideo(v, `${vorm}-auto`));
                 if (weg) return;
                 const na = foto ? await meetGezicht(foto) : null;
                 if (weg) return;
@@ -825,7 +832,12 @@ function Camera({
         )}
         {/* de tweede selfie: het voorbeeldhoofd met de pijl en de meter met de wijzer, ook wie zelf op de knop drukt */}
         {stand === "aan" && live === "draai" && !toonOmdraai && !(eu && uitleg) && !kiesOpen && aftel === null && (
-          <HoofdDraai stand={draai} gelukt={draaiGelukt} stil={minderBeweging} teksten={{ uitleg: l.draaiUitleg, totHier: l.draaiTotHier, gelukt: l.gelukt }} />
+          <HoofdDraai
+            stand={draai}
+            gelukt={draaiGelukt}
+            stil={minderBeweging}
+            teksten={{ uitleg: l.draaiUitleg, totHier: l.draaiTotHier, gelukt: l.gelukt, stopWoord: l.draaiStopWoord, stop: l.draaiStop, terug: l.draaiTerug }}
+          />
         )}
         {stand === "aan" && live && !liveUit && aanwijzing && !(eu && uitleg) && !kiesOpen && (
           <div className="pointer-events-none absolute inset-x-4 bottom-4">

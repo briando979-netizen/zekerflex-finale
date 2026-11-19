@@ -7,11 +7,21 @@
 // ---------------------------------------------------------------------------
 import { LIVE, type LiveMeting } from "@/lib/kyc/gezicht/beweging";
 
-/** Zoveel beelden achter elkaar (±2 per seconde) moet het hoofd goed staan voordat de foto vanzelf gaat. */
-export const DRAAI_STABIELE_BEELDEN = 2;
+/**
+ * Zoveel beelden achter elkaar (±2 per seconde) moet het hoofd goed staan voordat de foto vanzelf gaat. Eén (19 nov 2026):
+ * bij de eerste echte pogingen schoot het hoofd in 1 tot 3 s door het doel heen (1 tussenstand in de reeks) en kwam er in
+ * 60 beelden nooit twee keer achter elkaar "goed"; de foto wordt daarna toch nog nagemeten (bewegingVoldoet), dus één
+ * goed beeld is genoeg.
+ */
+export const DRAAI_STABIELE_BEELDEN = 1;
 
-/** De meter loopt tot 1,5 keer de doelhoek; daarboven is het hoe dan ook "te ver". */
-export const METER_MAX = 1.5;
+/** Vanaf dit deel van de doelhoek ligt de foto op volle grootte al klaar vóór de meting van datzelfde beeld (IdScan). */
+export const VOORBEREID_VANAF = 0.5;
+
+/** De boog van de meter loopt tot 1,25 keer de doelhoek: een klein groen stuk voorbij "tot hier". */
+export const METER_MAX = 1.25;
+/** De wijzer zelf komt nooit voorbij "tot hier" (19 nov 2026: een wijzer die doorliep nodigde uit om door te draaien). */
+export const NAALD_MAX = 1;
 /** De halve boog van de meter in graden: de wijzer gaat van −BOOG tot +BOOG. */
 export const METER_BOOG = 70;
 
@@ -43,10 +53,15 @@ export function draaiStand(recht: LiveMeting, m: LiveMeting | null): DraaiStand 
   return { fractie, richting, goed: gehaald && !teVer, teVer, geenGezicht: false };
 }
 
-/** De hoek van de wijzer in graden (negatief = links), begrensd op de meter. */
+/** De hoek van de wijzer in graden (negatief = links), begrensd op "tot hier" (NAALD_MAX). */
 export function naaldHoek(fractie: number): number {
-  const f = Math.max(-METER_MAX, Math.min(METER_MAX, fractie));
+  const f = Math.max(-NAALD_MAX, Math.min(NAALD_MAX, fractie));
   return Math.round((f / METER_MAX) * METER_BOOG * 10) / 10;
+}
+
+/** Toont de meter "STOP"? Zodra het doel gehaald is (goed, of te ver): niet verder draaien. */
+export function stopTonen(stand: DraaiStand): boolean {
+  return stand.goed || stand.teVer || (!stand.geenGezicht && Math.abs(stand.fractie) >= 1);
 }
 
 /** De hoek van de markering "tot hier" (één kant; de andere kant is het spiegelbeeld). */

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { DOEL_HOEK, METER_BOOG, naaldHoek, type DraaiStand } from "@/lib/kyc/gezicht/draai-meter";
+import { DOEL_HOEK, METER_BOOG, naaldHoek, stopTonen, type DraaiStand } from "@/lib/kyc/gezicht/draai-meter";
 
 // ---------------------------------------------------------------------------
 // De uitleg bij de tweede selfie (18 nov 2026): een voorbeeldhoofd dat langzaam opzij draait tot de gevraagde hoek,
@@ -14,6 +14,12 @@ export interface HoofdDraaiTeksten {
   uitleg: string;
   totHier: string;
   gelukt: string;
+  /** het woord in de badge zodra het doel gehaald is */
+  stopWoord: string;
+  /** op het doel: zo blijven */
+  stop: string;
+  /** voorbij het doel: iets terug */
+  terug: string;
 }
 
 /** Het voorbeeldhoofd: een gezicht van voren dat om zijn as draait (perspectief + rotateY), met een pijl erboven. */
@@ -104,14 +110,21 @@ function Meter({ stand, totHier }: { stand: DraaiStand; totHier: string }) {
  */
 export function HoofdDraai({ stand, gelukt, stil, teksten }: { stand: DraaiStand; gelukt: boolean; stil: boolean; teksten: HoofdDraaiTeksten }) {
   const goed = gelukt || stand.goed;
+  // doel gehaald: een duidelijke STOP (19 nov 2026: de eerste echte pogingen draaiden door tot drie keer het doel)
+  const stop = !gelukt && stopTonen(stand);
+  const tekst = gelukt ? teksten.gelukt : stand.goed ? teksten.stop : stop ? teksten.terug : teksten.uitleg;
   return (
-    <div className={`pointer-events-none absolute inset-x-3 top-3 rounded-2xl px-3 pb-2 pt-6 text-center text-white ${goed ? "bg-ok/90" : "bg-black/65"}`} data-hoofddraai={goed ? "goed" : stand.teVer ? "te-ver" : "draai"}>
+    <div
+      className={`pointer-events-none absolute inset-x-3 top-3 rounded-2xl px-3 pb-2 pt-6 text-center text-white ${goed ? "bg-ok/90" : stop ? "bg-warn/90" : "bg-black/65"}`}
+      data-hoofddraai={goed ? "goed" : stand.teVer ? "te-ver" : "draai"}
+    >
       <div className="flex items-center justify-center gap-4">
         <VoorbeeldHoofd stil={stil} hoek={32} />
         <Meter stand={stand} totHier={teksten.totHier} />
       </div>
+      {stop && <span className="mt-0.5 inline-block rounded-full bg-white px-3.5 py-0.5 text-lg font-extrabold tracking-wider text-ink">{teksten.stopWoord}</span>}
       <p role="status" aria-live="polite" className="mt-1 text-sm font-semibold leading-snug">
-        {gelukt ? teksten.gelukt : teksten.uitleg}
+        {tekst}
       </p>
     </div>
   );

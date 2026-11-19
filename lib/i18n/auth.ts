@@ -346,6 +346,10 @@ export interface AuthDict {
         /** de hoofddraai-meter (components/app/HoofdDraai.tsx): uitleg, de markering en het bericht als de foto vanzelf is gemaakt */
         draaiUitleg: string;
         draaiTotHier: string;
+        /** zodra het doel gehaald is: het woord in de badge, de regel op het doel (zo blijven) en voorbij het doel (iets terug) */
+        draaiStopWoord: string;
+        draaiStop: string;
+        draaiTerug: string;
         gelukt: string;
         /** zonder live meten: de foto na een korte aftelling, zodat je niet naar de knop hoeft te kijken */
         aftelKnop: string;
@@ -767,6 +771,9 @@ const nl: AuthDict = {
         knopOpnieuw: "De foto was nog niet goed ({reden}). Druk nog een keer op de knop en draai tot de markering.",
         draaiUitleg: "Draai je hoofd rustig opzij tot de wijzer de groene streep haalt; de foto gaat dan vanzelf",
         draaiTotHier: "tot hier",
+        draaiStopWoord: "STOP",
+        draaiStop: "Stop, zo blijven",
+        draaiTerug: "Stop, iets terug naar de streep",
         gelukt: "Gelukt",
         aftelKnop: "Start, dan draai ik mijn hoofd",
         aftellen: "Draai je hoofd een klein stukje opzij … {n}",
@@ -1181,6 +1188,9 @@ const en: AuthDict = {
         knopOpnieuw: "The photo was not right yet ({reden}). Press the button again and turn until the mark.",
         draaiUitleg: "Turn your head slowly to the side until the needle reaches the green mark; the photo is taken automatically",
         draaiTotHier: "to here",
+        draaiStopWoord: "STOP",
+        draaiStop: "Stop, hold it there",
+        draaiTerug: "Stop, come back a little to the mark",
         gelukt: "Done",
         aftelKnop: "Start, then I turn my head",
         aftellen: "Turn your head a little to the side … {n}",
@@ -1595,6 +1605,9 @@ const pl: AuthDict = {
         knopOpnieuw: "Zdjęcie nie było jeszcze dobre ({reden}). Naciśnij przycisk ponownie i obróć głowę do znacznika.",
         draaiUitleg: "Powoli obróć głowę w bok, aż wskazówka dojdzie do zielonej kreski; zdjęcie zrobi się samo",
         draaiTotHier: "dotąd",
+        draaiStopWoord: "STOP",
+        draaiStop: "Stop, tak zostań",
+        draaiTerug: "Stop, wróć trochę do kreski",
         gelukt: "Udało się",
         aftelKnop: "Start, potem obracam głowę",
         aftellen: "Obróć głowę trochę w bok … {n}",
@@ -2009,6 +2022,9 @@ const ro: AuthDict = {
         knopOpnieuw: "Fotografia nu a fost încă bună ({reden}). Apasă din nou butonul și întoarce capul până la marcaj.",
         draaiUitleg: "Întoarce încet capul într-o parte până când acul ajunge la linia verde; fotografia se face automat",
         draaiTotHier: "până aici",
+        draaiStopWoord: "STOP",
+        draaiStop: "Stop, rămâi așa",
+        draaiTerug: "Stop, revino puțin spre linie",
         gelukt: "Reușit",
         aftelKnop: "Start, apoi întorc capul",
         aftellen: "Întoarce capul puțin într-o parte … {n}",
@@ -2423,6 +2439,9 @@ const uk: AuthDict = {
         knopOpnieuw: "Фото ще не вдалося ({reden}). Натисніть кнопку ще раз і повертайте голову до позначки.",
         draaiUitleg: "Повільно поверніть голову вбік, поки стрілка не дійде до зеленої позначки; фото зробиться автоматично",
         draaiTotHier: "до сюди",
+        draaiStopWoord: "СТОП",
+        draaiStop: "Стоп, залишайтеся так",
+        draaiTerug: "Стоп, трохи назад до позначки",
         gelukt: "Готово",
         aftelKnop: "Старт, потім я поверну голову",
         aftellen: "Поверніть голову трохи вбік … {n}",
