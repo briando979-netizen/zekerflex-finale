@@ -83,7 +83,7 @@ function Meter({ stand, totHier }: { stand: DraaiStand; totHier: string }) {
   };
   const naald = punt(hoek, 44);
   return (
-    <svg aria-hidden viewBox="0 0 120 64" className="h-16 w-[120px]">
+    <svg aria-hidden viewBox="-10 0 140 64" className="h-16 w-[140px]">
       {/* de boog: wit tot de doelhoek, groen van de doelhoek tot de rand (daar is het goed) */}
       <path d={boog(-METER_BOOG, -DOEL_HOEK, 46)} stroke="#22c55e" strokeOpacity="0.7" strokeWidth="6" fill="none" strokeLinecap="round" />
       <path d={boog(-DOEL_HOEK, DOEL_HOEK, 46)} stroke="#ffffff" strokeOpacity="0.45" strokeWidth="6" fill="none" />
