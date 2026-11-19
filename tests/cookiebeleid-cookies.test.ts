@@ -59,6 +59,7 @@ const VERWACHT: Record<string, Verwacht> = {
   // de standaard van NextAuth (sessiecookie); alleen zolang wij hem niet zelf instellen
   "__Host-authjs.csrf-token": { bron: NEXTAUTH, looptijd: () => (lees(NEXTAUTH).includes("csrfToken") ? -1 : "sessie") },
   zf_passkey: { bron: "lib/auth/passkey/uitdaging.ts", looptijd: () => constante("lib/auth/passkey/uitdaging.ts", "UITDAGING_SECONDEN") },
+  zf_tweestap: { bron: "lib/auth/oauth-tweestap.ts", looptijd: () => constante("lib/auth/oauth-tweestap.ts", "GELDIG_SECONDEN") },
   zf_cookie_consent: { bron: "components/marketing/CookieConsent.tsx", looptijd: () => constante("components/marketing/CookieConsent.tsx", "oneYear") },
   zf_locale: { bron: "lib/i18n/config.ts", looptijd: () => constante("lib/i18n/config.ts", "LOCALE_MAX_AGE") },
   zf_theme: { bron: "lib/theme/config.ts", looptijd: () => constante("lib/theme/config.ts", "THEME_MAX_AGE") },
@@ -88,6 +89,7 @@ const VERWACHT: Record<string, Verwacht> = {
 // Elke plek in de code die een cookie zet (of wist), met het aantal keer. Klantsites (lib/sites) staan op hun eigen domein.
 const ZETTERS: Record<string, number> = {
   "lib/auth/nextauth.ts": 4,
+  "lib/auth/oauth-tweestap.ts": 1,
   "middleware.ts": 7,
   "app/api/admin/view-as/route.ts": 1,
   "app/api/analytics/taal-vraag/route.ts": 1,

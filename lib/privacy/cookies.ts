@@ -35,6 +35,7 @@ export const GEPLAATSTE_COOKIES: readonly GeplaatsteCookie[] = [
   { namen: ["__Secure-authjs.callback-url"], doel: "onthoudt waar je na het inloggen met Google of Apple terugkomt", looptijd: "sessie" },
   { namen: ["__Host-authjs.csrf-token"], doel: "beschermt het inloggen tegen misbruik vanaf een andere website", looptijd: "sessie" },
   { namen: ["zf_passkey"], doel: "rondt inloggen met een passkey af", looptijd: 5 * MINUUT },
+  { namen: ["zf_tweestap"], doel: "vraagt na inloggen met Google of Apple om je tweestapscode", looptijd: 10 * MINUUT },
   { namen: ["zf_cookie_consent"], doel: "onthoudt dat je de cookiemelding hebt gezien", looptijd: JAAR },
   { namen: ["zf_locale"], doel: "onthoudt je taal", looptijd: JAAR },
   { namen: ["zf_theme"], doel: "onthoudt of je de lichte of donkere weergave koos", looptijd: JAAR },

@@ -11,7 +11,7 @@ import { challengeIsOauth, mintLoginChallenge, openLoginChallenge } from "@/lib/
 // het adres: zo komt hij in geen enkel logboek.
 // ---------------------------------------------------------------------------
 
-export const OAUTH_2FA_COOKIE = "zf-2fa-oauth";
+export const OAUTH_2FA_COOKIE = "zf_tweestap";
 const GELDIG_SECONDEN = 10 * 60;
 
 /** Na een geslaagde aanmelding bij Google/Apple voor een account met tweestapsverificatie. */
