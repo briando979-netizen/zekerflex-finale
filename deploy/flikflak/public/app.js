@@ -123,6 +123,7 @@ async function api(method, url, body) {
   const r = await fetch(url, opts);
   const data = await r.json().catch(() => ({}));
   if (r.status === 401) { askLogin(); throw new Error(data.error || 'Log eerst in'); }
+  if (r.status === 403 && data.geschorst) { S.token = null; S.me = null; localStorage.removeItem('ff_token'); toast(data.error); throw new Error(data.error); }
   if (!r.ok) throw new Error(data.error || 'Er ging iets mis');
   return data;
 }
@@ -439,7 +440,7 @@ function mountFeed(holder, videos, start) {
         <div><a class="uname" href="#/@${esc(a.username)}">${esc(a.name || a.username)} ${check(a)}</a> <span class="date">· ${ago(v.created)}</span>${v.privacy !== 'public' ? ` <span class="date">· ${v.privacy === 'friends' ? '👥 Vrienden' : '🔒 Privé'}</span>` : ''}</div>
         ${v.caption ? `<div class="cap">${rich(v.caption)}</div>` : '<div style="height:8px"></div>'}
         ${v.produkt ? produktKaart(v.produkt) : ''}
-        ${v.antwoordOp ? antwoordChip(v) : ''}${v.serie ? serieChip(v) : ''}${v.poll ? pollBlok(v) : ''}
+        ${v.uitgelicht ? '<div class="serie-chip" style="color:#ffd166">⭐ Uitgelicht door FlikFlak</div>' : ''}${v.antwoordOp ? antwoordChip(v) : ''}${v.serie ? serieChip(v) : ''}${v.poll ? pollBlok(v) : ''}
         <a class="music" href="#/sound/${v.sound.id}">${ic('music')}<div class="ticker"><span>${esc(v.sound.name)} &nbsp;·&nbsp; ${esc(v.sound.name)} &nbsp;·&nbsp;</span></div></a>
       </div>
       <input type="range" class="seek" min="0" max="1000" value="0" ${v.fotos?.length ? 'hidden' : ''}>
@@ -536,7 +537,7 @@ function mountFeed(holder, videos, start) {
       <div class="sh-foot">${v.allowComments ? `
         <div class="reply-to" hidden><span></span><button>${ic('close')}</button></div>
         <div class="emoji-bar">${['😂', '😍', '🔥', '👏', '😭', '🥰', '😮', '💯'].map(e => `<button>${e}</button>`).join('')}</div>
-        <div class="cinput"><img class="av" style="width:32px;height:32px;border:0" src="${avatar(S.me)}"><input placeholder="Reactie toevoegen..." maxlength="150"><button class="send">${ic('send')}</button></div>`
+        <div class="cinput"><img class="av" style="width:32px;height:32px;border:0" src="${avatar(S.me)}"><input placeholder="Reactie toevoegen..." maxlength="150"><label class="cfoto-knop" title="Foto bij je reactie">📷<input type="file" accept="image/*" hidden></label><button class="send">${ic('send')}</button></div>`
         : '<div style="text-align:center;color:var(--muted);padding:10px">Reacties zijn uitgeschakeld</div>'}
       </div>`, { tall: true });
     const body = $('.sh-body', s);
@@ -567,7 +568,7 @@ function mountFeed(holder, videos, start) {
         <a href="#/@${esc(c.user.username)}"><img class="av" src="${avatar(c.user)}"></a>
         <div class="body">
           <div class="who">${esc(c.user.name || c.user.username)} ${check(c.user)} ${c.byCreator ? '<em>· Maker</em>' : ''}${c.pinned ? '<em>· 📌 Vastgepind</em>' : ''}</div>
-          <div class="txt rich">${rich(c.text)}</div>
+          ${c.foto ? `<a href="${esc(c.foto)}" target="_blank"><img class="cfoto" src="${esc(c.foto)}" alt=""></a>` : ''}<div class="txt rich">${rich(c.text)}</div>
           <div class="meta"><span>${ago(c.created)}</span>${v.allowComments ? '<button class="rp">Beantwoorden</button>' : ''}${c.canPin && !isReply ? `<button class="pinc">${c.pinned ? 'Losmaken' : 'Vastpinnen'}</button>` : ''}${c.canPin && !c.videoAntwoord ? '<button class="vant">📹 Video-antwoord</button>' : ''}${c.videoAntwoord ? `<a class="vant-link" href="#/v/${c.videoAntwoord}">📹 Bekijk video-antwoord</a>` : ''}${c.canDelete ? '<button class="del">Verwijderen</button>' : ''}
           ${c.likedByCreator && !c.byCreator ? `<span class="creator-like">${ic('heart')} door maker</span>` : ''}</div>
         </div>
@@ -591,11 +592,16 @@ function mountFeed(holder, videos, start) {
     if (v.allowComments) {
       $('.reply-to button', s).onclick = () => { parentId = null; $('.reply-to', s).hidden = true; };
       $$('.emoji-bar button', s).forEach(b => b.onclick = () => { input.value += b.textContent; input.focus(); });
+      const fotoIn = $('.cfoto-knop input', s); let foto = null;
+      fotoIn.onchange = () => { foto = fotoIn.files[0] || null; $('.cfoto-knop', s).classList.toggle('on', !!foto); if (foto) toast('Foto gekozen — druk op verzenden'); };
       const send = async () => {
         if (!need()) return;
-        const text = input.value.trim(); if (!text) return;
+        const text = input.value.trim(); if (!text && !foto) return;
         input.value = '';
-        try { await api('POST', `/api/videos/${v.id}/comments`, { text, parentId }); } catch (e) { return toast(e.message); }
+        try {
+          if (foto) { const fd = new FormData(); fd.append('foto', await shrinkFoto(foto, 900), 'foto.jpg'); fd.append('text', text); if (parentId) fd.append('parentId', parentId); await api('POST', `/api/videos/${v.id}/comments`, fd); foto = null; fotoIn.value = ''; $('.cfoto-knop', s).classList.remove('on'); }
+          else await api('POST', `/api/videos/${v.id}/comments`, { text, parentId });
+        } catch (e) { return toast(e.message); }
         parentId = null; $('.reply-to', s).hidden = true;
         await load();
         if (!parentId) body.scrollTop = 0;
@@ -993,6 +999,10 @@ async function tagPage(tag) {
   const r = await api('GET', '/api/tag/' + encodeURIComponent(tag));
   const page = h(`<div class="page"><div class="head">${backBtn()}<h2></h2><span class="ic"></span></div>
     <div class="big-head"><div class="ph">#</div><div><h1>#${esc(tag)}</h1><p>${fmt(r.views)} weergaven · ${r.videos.length} video's</p></div></div></div>`);
+  // hashtag volgen: nieuwe video's ermee komen in je Volgend-feed
+  const volg = h(`<div style="padding:0 16px 12px;display:flex;gap:8px;align-items:center"><button class="btn small ${r.volgend ? 'grey' : ''}">${r.volgend ? 'Volgend ✓' : '+ Volg #' + esc(tag)}</button><small style="color:var(--muted)">${r.volgers} volger${r.volgers === 1 ? '' : 's'}</small></div>`);
+  $('button', volg).onclick = async () => { if (!need()) return; const r2 = await api('POST', `/api/tag/${encodeURIComponent(tag)}/volgen`); $('button', volg).textContent = r2.volgend ? 'Volgend ✓' : '+ Volg #' + tag; $('button', volg).classList.toggle('grey', r2.volgend); toast(r2.volgend ? `Je volgt nu #${tag}` : `Je volgt #${tag} niet meer`); };
+  page.append(volg);
   page.append(grid(r.videos, '#' + tag));
   page.append(h(`<div class="float-btn"><a class="btn" href="#/upload?tag=${encodeURIComponent(tag)}">${ic('play')} Gebruik deze hashtag</a></div>`));
   view.append(page);
@@ -1036,6 +1046,7 @@ async function inboxPage() {
     const nl = $('.nl', ib); nl.innerHTML = list.length ? '' : '<div class="grid-empty">Nog geen activiteit.<br>Als mensen je video\'s liken of erop reageren, zie je dat hier.</div>';
     for (const n of list) {
       if (!n.from) continue;
+      if (n.type === 'systeem') { nl.append(h(`<div class="row systeem">${!n.read ? '<span class="dot"></span>' : ''}<img class="av" src="${avatar(n.from)}"><div class="grow"><div class="t1">📣 FlikFlak</div><div class="t2" style="white-space:normal;color:var(--text)">${esc(n.text)} <span style="color:var(--muted)">${ago(n.created)}</span></div></div></div>`)); continue; }
       const row = h(`<div class="row" style="cursor:pointer">${!n.read ? '<span class="dot"></span>' : ''}<a href="#/@${esc(n.from.username)}"><img class="av" src="${avatar(n.from)}"></a>
         <div class="grow"><div class="t1">${esc(n.from.name || n.from.username)}</div><div class="t2" style="white-space:normal">${esc(notifText(n))} <span>${ago(n.created)}</span></div></div></div>`);
       if (n.type === 'follow') row.append(followBtn(n.from));

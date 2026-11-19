@@ -54,6 +54,8 @@
         <button data-t="reports" class="on" onclick="tab('reports')">Meldingen</button>
         <button data-t="videos" onclick="tab('videos')">Video's</button>
         <button data-t="users" onclick="tab('users')">Accounts</button>
+        <button data-t="dash" onclick="tab('dash')">Dashboard</button>
+        <button data-t="aank" onclick="tab('aank')">Aankondiging</button>
       </div>
       <div id="list"></div>
     </main>
@@ -87,8 +89,8 @@
     function render() {
       const s = DATA.stats;
       $('#kpis').innerHTML = [
-        ['Accounts', s.users], ['Video’s', s.videos], ['Reacties', s.comments],
-        ['Open meldingen', s.reportsOpen], ['Weergaven', s.views],
+        ['Accounts', s.users], ['Actief (7 d)', s.actief7d ?? '–'], ['Video’s', s.videos], ['Reacties', s.comments],
+        ['Open meldingen', s.reportsOpen], ['Weergaven', s.views], ['Groepen', s.groepen ?? 0], ['Nu LIVE', s.lives ?? 0],
       ].map(([l, n]) => `<div class="kpi"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
 
       const thumb = v => v && v.thumb ? `<img src="${esc(v.thumb)}">` : `<div class="noimg"></div>`;
@@ -108,24 +110,39 @@
         }
       } else if (T === 'videos') {
         for (const v of DATA.videos) {
-          h += `<div class="row">${thumb(v)}
-            <div class="m"><div class="t">${esc(v.caption || '(geen tekst)')}</div>
+          h += `<div class="row ${v.uitgelicht ? 'open' : ''}">${thumb(v)}
+            <div class="m"><div class="t">${v.uitgelicht ? '⭐ ' : ''}${v.story ? '⏳ ' : ''}${esc(v.caption || '(geen tekst)')}</div>
             <div class="s">@${esc(v.author)} · ${v.views} weergaven · ${v.likes} likes · ${when(v.created)}</div>
             <div class="s ip">${esc(v.ip || '')}</div></div>
             <div class="actions"><a href="${esc(v.url)}" target="_blank"><button class="grey">Bekijk</button></a>
+            <button class="grey" onclick="uitlichten('${v.id}')">${v.uitgelicht ? 'Niet meer uitlichten' : '⭐ Uitlichten'}</button>
             <button class="red" onclick="delVideo('${v.id}')">Verwijder</button></div></div>`;
         }
-      } else {
+      } else if (T === 'users') {
         for (const u of DATA.users) {
-          h += `<div class="row"><div class="noimg"></div>
-            <div class="m"><div class="t">${esc(u.name)} <span class="muted">@${esc(u.username)}</span></div>
+          h += `<div class="row ${u.schorsTot ? 'open' : ''}"><div class="noimg"></div>
+            <div class="m"><div class="t">${esc(u.name)} ${u.verified ? '<span style="color:#4cc3ff">✔</span>' : ''} <span class="muted">@${esc(u.username)}</span>${u.schorsTot ? ` <span style="color:#ff9a9a">geschorst tot ${when(u.schorsTot)}</span>` : ''}</div>
             <div class="s">${u.videos} video’s · lid sinds ${when(u.created)} · laatst ${when(u.lastSeen)}</div>
             <div class="s ip">aanmeld-IP ${esc(u.ip || '?')} · laatste IP ${esc(u.lastIp || '?')}</div></div>
-            <div class="actions"><button class="red" onclick="delUser('${u.id}','${esc(u.username)}')">Account weg</button></div></div>`;
+            <div class="actions"><button class="grey" onclick="verifieer('${u.id}')">${u.verified ? 'Vinkje weg' : '✔ Verifieer'}</button>
+            ${u.schorsTot ? `<button class="grey" onclick="schors('${u.id}',0)">Schorsing opheffen</button>` : `<button class="grey" onclick="schors('${u.id}',7)">Schors 7 d</button>`}
+            <button class="red" onclick="delUser('${u.id}','${esc(u.username)}')">Account weg</button></div></div>`;
         }
+      } else if (T === 'dash') {
+        const max = k => Math.max(1, ...DATA.perDag.map(d => d[k]));
+        const bars = (k, l) => `<div class="kpi" style="margin-bottom:10px"><div class="l" style="margin-bottom:6px">${l}</div><div style="display:flex;align-items:flex-end;gap:3px;height:90px">${DATA.perDag.map(d => `<div title="${d.dag}: ${d[k]}" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px;height:100%"><i style="display:block;width:100%;min-height:2px;height:${Math.round(d[k] / max(k) * 100)}%;background:#ff7a1a;border-radius:3px 3px 0 0"></i><span style="font-size:9px;color:#9a9aad">${d.dag.slice(8)}</span></div>`).join('')}</div></div>`;
+        h = bars('accounts', 'Nieuwe accounts per dag (14 dagen)') + bars('posts', 'Nieuwe posts per dag') + bars('views', 'Weergaven per dag');
+      } else if (T === 'aank') {
+        h = `<div class="kpi"><div class="l" style="margin-bottom:8px">Stuur een aankondiging naar alle accounts (komt in hun Inbox → Activiteit, van het officiële FlikFlak-account).</div>
+          <textarea id="aankTekst" rows="3" maxlength="300" style="width:100%;padding:10px;border-radius:10px;border:1px solid #333;background:#0b0b0f;color:#eee;font-size:15px" placeholder="Bijv. Nieuw: stories en groepschats! Probeer ze vandaag."></textarea>
+          <div style="margin-top:10px;display:flex;gap:8px;align-items:center"><button onclick="aankondig()">Versturen naar iedereen</button><span class="muted" id="aankUit"></span></div></div>`;
       }
       $('#list').innerHTML = h;
     }
+    async function verifieer(id) { await api('POST', '/user/' + id + '/verifieer'); await herlaad(); }
+    async function schors(id, dagen) { if (dagen && !confirm('Dit account ' + dagen + ' dagen schorsen? De persoon kan niet inloggen en zijn video’s zijn tijdelijk onzichtbaar.')) return; await fetch('/api/admin/user/' + id + '/schors', { method: 'POST', headers: { 'x-admin': TOKEN, 'content-type': 'application/json' }, body: JSON.stringify({ dagen }) }); await herlaad(); }
+    async function uitlichten(id) { await api('POST', '/video/' + id + '/uitlichten'); await herlaad(); }
+    async function aankondig() { const t = $('#aankTekst').value.trim(); if (!t) return; if (!confirm('Naar alle accounts sturen?')) return; const r = await fetch('/api/admin/aankondiging', { method: 'POST', headers: { 'x-admin': TOKEN, 'content-type': 'application/json' }, body: JSON.stringify({ text: t }) }).then(r => r.json()); $('#aankUit').textContent = r.ok ? 'Verstuurd naar ' + r.ontvangers + ' accounts' : (r.error || 'Mislukt'); if (r.ok) $('#aankTekst').value = ''; }
     async function klaar(id) { await api('POST', '/report/' + id + '/klaar'); await herlaad(); }
     async function delVideo(id) { if (confirm('Deze video definitief verwijderen?')) { await api('DELETE', '/video/' + id); await herlaad(); } }
     async function delUser(id, name) { if (confirm('Account @' + name + ' en al zijn video’s verwijderen?')) { await api('DELETE', '/user/' + id); await herlaad(); } }

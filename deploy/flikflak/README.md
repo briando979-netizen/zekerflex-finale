@@ -75,3 +75,8 @@ De repo-kopie hier is de versie die live draait; houd beide gelijk.
 - **Stories**: 24 uur zichtbaar in een strook bovenaan de feed (eerst wie je volgt, dan jijzelf), niet op het profiel/in de feed; viewer met balkjes en "gezien"; verlopen stories worden elke 10 min opgeruimd.
 - **Groepschats** (max 20 leden): maken vanuit de inbox, berichten en spraakberichten, live via ws (`groep`), beheerder voegt toe/verwijdert, naam wijzigen, dempen, verlaten; ongelezen telt mee in de badge.
 - **Ondertitels**: regels "van-tot: tekst" bij het plaatsen; overlay die meeloopt met de video.
+
+## Functies (ronde G, 19 nov) — beheer voor de eigenaar
+- **/beheer**: accounts **verifiëren** (blauw vinkje) en **schorsen** (7 dagen: niet inloggen, video's tijdelijk onzichtbaar), video's **uitlichten** (⭐ label + 3× hoger in "Voor jou"), **aankondiging** naar alle accounts (als FlikFlak in Inbox → Activiteit), **dashboard** met per dag nieuwe accounts, posts en weergaven, plus actief-7d/groepen/LIVE in de kpi's.
+- **Hashtags volgen**: knop op de tagpagina; video's met die tag komen in je Volgend-feed.
+- **Foto bij een reactie** (📷 in het reactievak).

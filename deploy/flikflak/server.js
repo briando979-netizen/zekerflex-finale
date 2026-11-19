@@ -82,6 +82,7 @@ function canSee(v, viewer) {
   if (v.draft && (!viewer || viewer.id !== v.userId)) return false;
   // privé account: alleen de maker zelf en zijn volgers zien de video's
   const owner = userById(v.userId);
+  if (geschorst(owner) && (!viewer || viewer.id !== owner.id)) return false; // geschorste maker: video's tijdelijk onzichtbaar
   if (owner?.settings?.privateAccount && (!viewer || (viewer.id !== owner.id && !viewer.following.includes(owner.id)))) return false;
   if (v.privacy === 'public') return true;
   if (!viewer) return false;
@@ -108,7 +109,7 @@ function publicVideo(v, viewer) {
     allowDownload: author?.settings?.allowDownload !== false,
     duetOf: duetInfo(v.duetOf),
     poll: pollInfo(v, viewer), antwoordOp: v.antwoordOp || null, serie: serieInfo(v),
-    story: !!v.story, expires: v.expires || null, ondertitels: v.ondertitels || [],
+    story: !!v.story, expires: v.expires || null, ondertitels: v.ondertitels || [], uitgelicht: !!v.uitgelicht,
     author: publicUser(author, viewer),
   };
 }
@@ -143,7 +144,7 @@ function notify(userId, fromId, type, extra = {}) {
 }
 function publicNotif(n, viewer) {
   const v = n.videoId && db.videos.find(x => x.id === n.videoId);
-  return { ...n, from: publicUser(userById(n.fromId), viewer), video: v ? { id: v.id, thumb: v.thumb ? '/uploads/' + v.thumb : null } : null };
+  return { ...n, from: publicUser(userById(n.fromId), viewer) || (n.type === 'systeem' ? { username: 'flikflak', name: 'FlikFlak', avatar: '/iconen/192.png', verified: true } : null), video: v ? { id: v.id, thumb: v.thumb ? '/uploads/' + v.thumb : null } : null };
 }
 
 // ---------- app ----------
@@ -163,7 +164,12 @@ app.use((req, res, next) => {
   req.token = token;
   next();
 });
-const auth = (req, res, next) => (req.user ? next() : res.status(401).json({ error: 'Log eerst in' }));
+const geschorst = u => !!(u && u.schorsTot && u.schorsTot > now());
+const auth = (req, res, next) => {
+  if (!req.user) return res.status(401).json({ error: 'Log eerst in' });
+  if (geschorst(req.user)) return res.status(403).json({ error: `Je account is geschorst tot ${new Date(req.user.schorsTot).toLocaleDateString('nl-NL')}`, geschorst: true });
+  next();
+};
 
 const storage = multer.diskStorage({
   destination: UPLOADS,
@@ -199,6 +205,7 @@ app.post('/api/login', (req, res) => {
   const { username, password } = req.body || {};
   const u = userByName(String(username || '').replace(/^@/, ''));
   if (!u || hashPass(String(password || ''), u.salt).hash !== u.hash) return res.status(400).json({ error: 'Gebruikersnaam of wachtwoord klopt niet' });
+  if (geschorst(u)) return res.status(403).json({ error: `Dit account is geschorst tot ${new Date(u.schorsTot).toLocaleDateString('nl-NL')}` });
   const token = crypto.randomBytes(24).toString('hex');
   db.sessions[token] = u.id;
   u.lastIp = clientIp(req); u.lastSeen = now();
@@ -343,7 +350,8 @@ function score(v, me) {
   const eng = v.likes.length * 2 + c * 3 + v.shares * 4 + v.favs.length * 3 + v.views * 0.2;
   // "niet geïnteresseerd": elke keer dat iemand dat bij een maker zei, telt die maker half zo zwaar
   const straf = me?.nopeAuthors?.[v.userId] ? Math.pow(0.5, me.nopeAuthors[v.userId]) : 1;
-  return (eng + 5) / Math.pow(ageH + 2, 0.6) * (0.6 + Math.random() * 0.8) * straf;
+  const boost = v.uitgelicht ? 3 : 1; // door het beheer uitgelicht: komt hoger in "Voor jou"
+  return (eng + 5) / Math.pow(ageH + 2, 0.6) * (0.6 + Math.random() * 0.8) * straf * boost;
 }
 
 app.get('/api/feed', (req, res) => {
@@ -352,7 +360,8 @@ app.get('/api/feed', (req, res) => {
   let list = db.videos.filter(v => gewonePost(v) && canSee(v, me) && !(me && me.blocked?.includes(v.userId)) && !(me && me.nope?.includes(v.id)));
   if (tab === 'following') {
     if (!me) return res.json({ videos: [], needLogin: true });
-    list = list.filter(v => me.following.includes(v.userId)).sort((a, b) => b.created - a.created);
+    const tags = me.tags || []; // ook video's met een hashtag die je volgt
+    list = list.filter(v => me.following.includes(v.userId) || v.hashtags.some(t => tags.includes(t))).sort((a, b) => b.created - a.created);
   } else if (tab === 'friends') {
     if (!me) return res.json({ videos: [], needLogin: true });
     list = list.filter(v => isFriend(me, userById(v.userId))).sort((a, b) => b.created - a.created);
@@ -660,7 +669,7 @@ function publicComment(c, viewer) {
     byCreator: v && v.userId === c.userId,
     likedByCreator: v ? c.likes.includes(v.userId) : false,
     canDelete: viewer ? viewer.id === c.userId || (v && v.userId === viewer.id) : false,
-    canPin: !!(viewer && v && v.userId === viewer.id), pinned: !!c.pinned,
+    canPin: !!(viewer && v && v.userId === viewer.id), pinned: !!c.pinned, foto: c.foto ? '/uploads/' + c.foto : null,
     videoAntwoord: db.videos.find(x => x.antwoordOp?.commentId === c.id && canSee(x, viewer))?.id || null,
     user: publicUser(userById(c.userId), viewer),
   };
@@ -670,12 +679,13 @@ app.get('/api/videos/:id/comments', (req, res) => {
     .sort((a, b) => (!!b.pinned - !!a.pinned) || (b.likes.length - a.likes.length) || (b.created - a.created));
   res.json({ comments: list.map(c => publicComment(c, req.user)) });
 });
-app.post('/api/videos/:id/comments', auth, (req, res) => {
+app.post('/api/videos/:id/comments', auth, upload.single('foto'), (req, res) => {
   const v = db.videos.find(x => x.id === req.params.id);
   if (!v) return res.status(404).end();
   if (!v.allowComments) return res.status(400).json({ error: 'Reacties staan uit voor deze video' });
   const text = String(req.body?.text || '').trim().slice(0, 150);
-  if (!text) return res.status(400).json({ error: 'Leeg bericht' });
+  const foto = req.file && req.file.mimetype.startsWith('image/') ? req.file.filename : null; // reactie met een foto
+  if (!text && !foto) return res.status(400).json({ error: 'Leeg bericht' });
   // instellingen van de maker: wie mag reageren, en welke woorden hij blokkeert
   const owner = userById(v.userId), os = owner ? settingsOf(owner) : defaultSettings();
   if (owner && owner.id !== req.user.id) {
@@ -684,7 +694,7 @@ app.post('/api/videos/:id/comments', auth, (req, res) => {
     const laag = text.toLowerCase();
     if (os.commentFilter.some(w => w && laag.includes(w))) return res.status(400).json({ error: 'Je reactie bevat een woord dat de maker heeft geblokkeerd' });
   }
-  const c = { id: id(), videoId: v.id, userId: req.user.id, text, parentId: req.body.parentId || null, likes: [], created: now() };
+  const c = { id: id(), videoId: v.id, userId: req.user.id, text, parentId: req.body.parentId || null, likes: [], created: now(), foto };
   db.comments.push(c);
   if (c.parentId) {
     const p = db.comments.find(x => x.id === c.parentId);
@@ -840,8 +850,15 @@ app.get('/api/search', (req, res) => {
 
 app.get('/api/tag/:tag', (req, res) => {
   const t = req.params.tag.toLowerCase();
-  const vids = db.videos.filter(v => v.hashtags.includes(t) && canSee(v, req.user));
-  res.json({ tag: t, views: vids.reduce((s, v) => s + v.views, 0), videos: vids.sort((a, b) => b.likes.length - a.likes.length).map(v => publicVideo(v, req.user)) });
+  const vids = db.videos.filter(v => v.hashtags.includes(t) && gewonePost(v) && canSee(v, req.user));
+  res.json({ tag: t, views: vids.reduce((s, v) => s + v.views, 0), volgend: !!(req.user && (req.user.tags || []).includes(t)), volgers: db.users.filter(u => (u.tags || []).includes(t)).length, videos: vids.sort((a, b) => b.likes.length - a.likes.length).map(v => publicVideo(v, req.user)) });
+});
+// een hashtag volgen: nieuwe video's ermee komen in je "Volgend"-feed
+app.post('/api/tag/:tag/volgen', auth, (req, res) => {
+  const t = req.params.tag.toLowerCase().slice(0, 40);
+  req.user.tags = req.user.tags || [];
+  const on = toggle(req.user.tags, t); save();
+  res.json({ volgend: on });
 });
 
 app.get('/api/sound/:id', (req, res) => {
@@ -1063,16 +1080,37 @@ app.get('/api/admin/overzicht', admin, (req, res) => {
   });
   const users = db.users.slice().sort((a, b) => b.created - a.created).slice(0, 100).map(u => ({
     id: u.id, username: u.username, name: u.name, created: u.created, ip: u.ip || null, lastIp: u.lastIp || null, lastSeen: u.lastSeen || null,
-    videos: db.videos.filter(v => v.userId === u.id).length,
+    videos: db.videos.filter(v => v.userId === u.id).length, verified: !!u.verified, schorsTot: geschorst(u) ? u.schorsTot : null,
   }));
-  const videos = db.videos.slice().sort((a, b) => b.created - a.created).slice(0, 100).map(vid);
+  const videos = db.videos.slice().sort((a, b) => b.created - a.created).slice(0, 100).map(v => ({ ...vid(v), uitgelicht: !!v.uitgelicht, story: !!v.story }));
+  // dashboard: per dag (14 dagen) nieuwe accounts, posts en weergaven
+  const dagen = [...Array(14)].map((_, i) => new Date(now() - (13 - i) * 864e5).toISOString().slice(0, 10));
+  const perDag = dagen.map(d => ({ dag: d, accounts: db.users.filter(u => new Date(u.created).toISOString().slice(0, 10) === d).length, posts: db.videos.filter(v => new Date(v.created).toISOString().slice(0, 10) === d).length, views: db.videos.reduce((s, v) => s + (v.dag?.[d] || 0), 0) }));
   res.json({
     stats: {
       users: db.users.length, videos: db.videos.length, comments: db.comments.length,
       reportsOpen: db.reports.filter(r => !r.done).length, views: db.videos.reduce((s, v) => s + v.views, 0),
+      actief7d: db.users.filter(u => (u.lastSeen || 0) > now() - 7 * 864e5).length, groepen: db.groups.length, lives: lives.size,
     },
-    reports, users, videos,
+    reports, users, videos, perDag,
   });
+});
+
+// beheer: verifiëren (blauw vinkje), schorsen, uitlichten, aankondiging naar iedereen
+app.post('/api/admin/user/:id/verifieer', admin, (req, res) => { const u = userById(req.params.id); if (!u) return res.status(404).end(); u.verified = !u.verified; save(); res.json({ verified: u.verified }); });
+app.post('/api/admin/user/:id/schors', admin, (req, res) => {
+  const u = userById(req.params.id); if (!u) return res.status(404).end();
+  const dagen = Math.max(0, Math.min(365, +req.body?.dagen || 0));
+  u.schorsTot = dagen ? now() + dagen * 864e5 : null;
+  if (dagen) for (const t of Object.keys(db.sessions)) if (db.sessions[t] === u.id) delete db.sessions[t];
+  save(); res.json({ schorsTot: u.schorsTot });
+});
+app.post('/api/admin/video/:id/uitlichten', admin, (req, res) => { const v = db.videos.find(x => x.id === req.params.id); if (!v) return res.status(404).end(); v.uitgelicht = !v.uitgelicht; save(); res.json({ uitgelicht: v.uitgelicht }); });
+app.post('/api/admin/aankondiging', admin, (req, res) => {
+  const text = String(req.body?.text || '').trim().slice(0, 300); if (!text) return res.status(400).json({ error: 'Lege aankondiging' });
+  const van = userByName('flikflak')?.id || null; let n = 0;
+  for (const u of db.users) { const m = { id: id(), userId: u.id, fromId: van, type: 'systeem', text, created: now(), read: false }; db.notifications.push(m); push(u.id, { type: 'notification', notification: publicNotif(m, u) }); n++; }
+  save(); res.json({ ok: true, ontvangers: n });
 });
 
 app.post('/api/admin/report/:id/klaar', admin, (req, res) => {
