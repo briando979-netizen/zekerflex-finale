@@ -124,3 +124,10 @@
   .sm-print-kaart .font-display { font-size: 2.9rem; }
   .sm-print-kaart p { font-size: 1.15rem; }
 }
+
+/* Telefoonmenu open: de zwevende chatknop (en het chatvenster) gaan weg, anders
+ * liggen ze over de knoppen van het menu. SmileyMenu en SmileyMenuTaal zetten
+ * data-sm-menu op <html> zolang het menu open is. */
+html[data-sm-menu="open"] .sm-chat {
+  display: none;
+}

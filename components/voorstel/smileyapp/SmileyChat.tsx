@@ -19,7 +19,7 @@ export function SmileyChat({ team = false }: { team?: boolean }) {
   const taal = taalVanPad(usePathname());
   const vertaald = taal === "nl" ? null : KADER[taal].chat;
   return (
-    <div className="print:hidden">
+    <div className="sm-chat print:hidden">
       <SiteChat
         api="/api/voorstel/smileyapp/chat"
         opslag="smiley-chat"

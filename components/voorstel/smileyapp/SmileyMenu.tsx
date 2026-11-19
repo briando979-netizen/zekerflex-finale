@@ -24,7 +24,12 @@ export function SmileyMenu() {
       if (e.key === "Escape") setOpen(false);
     };
     window.addEventListener("keydown", esc);
-    return () => window.removeEventListener("keydown", esc);
+    // open menu: de zwevende chatknop gaat weg (smiley.css), anders ligt hij over de menuknoppen
+    document.documentElement.dataset.smMenu = "open";
+    return () => {
+      window.removeEventListener("keydown", esc);
+      delete document.documentElement.dataset.smMenu;
+    };
   }, [open]);
 
   return (
