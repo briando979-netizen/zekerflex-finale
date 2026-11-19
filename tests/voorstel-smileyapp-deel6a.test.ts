@@ -881,3 +881,29 @@ describe("bronbewakers deel 6a", () => {
     expect(beheer).toMatch(/role="tablist"[^>]*className="relative flex gap-1 overflow-x-auto/);
   });
 });
+// Nalezing 19 nov: boeken bezet een tijd en mailt een adres dat de bezoeker zelf
+// intypt en dat niet gecontroleerd is. Daarom een eigen grens en geen vrije tekst.
+describe("boeken is geen kanaal voor rommel", () => {
+  const route = readFileSync(path.join(process.cwd(), "app/api/voorstel/smileyapp/aanvraag/route.ts"), "utf8");
+
+  it("heeft een eigen grens per IP en per adres, vóór het boeken", () => {
+    const ip = route.indexOf('name: "smileyapp-boeking-ip"');
+    const adres = route.indexOf('name: "smileyapp-boeking-adres"');
+    const boeken = route.indexOf("await boekTijd(");
+    expect(ip).toBeGreaterThan(-1);
+    expect(adres).toBeGreaterThan(ip);
+    expect(boeken).toBeGreaterThan(adres);
+  });
+
+  it("zet de naam van de bezoeker niet in de bevestiging", () => {
+    for (const taal of ["nl", "en", "de"] as const) {
+      const mail = bevestigingMail({ to: "klant@voorbeeld.test", naam: "Gratis geld op rommel.example", start: "2026-12-01T09:00:00.000Z", moment: "dinsdag 1 december om 10:00", taal, tijd: "202612010900", contact: "info@voorbeeld.test", nu: new Date("2026-11-19T08:00:00+01:00") });
+      expect(`${mail.subject} ${mail.text} ${mail.html ?? ""}`).not.toContain("rommel.example");
+    }
+  });
+
+  it("probeert de weekmail opnieuw als er bij niemand iets aankwam", () => {
+    const bron = readFileSync(path.join(process.cwd(), "lib/voorstel/smileyapp-weekmail.ts"), "utf8");
+    expect(bron).toMatch(/if \(verstuurd === 0\) await kvDelete\(merk\)/);
+  });
+});

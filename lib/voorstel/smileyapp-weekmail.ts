@@ -57,7 +57,10 @@ export async function stuurWeekmail(nu = new Date(), beheer = WEEKMAIL_BEHEER): 
     // oude merken opruimen: alleen dat van deze week hoeft te blijven
     const oud = (await kvListKeys(WEEKMAIL_PREFIX, 200).catch(() => [])).filter((k) => k !== merk);
     await Promise.all(oud.map((k) => kvDelete(k).catch(() => undefined)));
-    return { verstuurd: uitslag.filter((u) => u.delivered).length };
+    const verstuurd = uitslag.filter((u) => u.delivered).length;
+    // sendMail gooit niet: kwam er bij niemand iets aan (storing bij de mailserver), dan mag de volgende ronde het opnieuw proberen
+    if (verstuurd === 0) await kvDelete(merk).catch(() => undefined);
+    return { verstuurd };
   } catch (e) {
     // tellen lukte niet: het merk weer weg, dan probeert de volgende ronde van de cron het opnieuw
     await kvDelete(merk).catch(() => undefined);

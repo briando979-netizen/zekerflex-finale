@@ -154,12 +154,12 @@ export async function stuurAfspraakMelding(o: { bedrijf: string; beheer: string;
 
 type MailTaal = "nl" | "en" | "de";
 
-/** De bevestiging aan de aanvrager, in de taal van het formulier. {naam}, {moment}, {minuten} en {mail} worden ingevuld. */
+/** De bevestiging aan de aanvrager, in de taal van het formulier. {moment}, {minuten} en {mail} worden ingevuld. Bewust zonder de naam: het adres is niet gecontroleerd, dus er gaat geen vrije tekst van de bezoeker naar toe. */
 const BEVESTIGING: Record<MailTaal, { onderwerp: string; kop: string; tekst: string; bijlage: string; kanNiet: string; titel: string }> = {
   nl: {
     onderwerp: "Je demo van Smileyapp: {moment}",
     kop: "Je demo staat gepland",
-    tekst: "Hallo {naam}, je demo van Smileyapp staat gepland op {moment} (Nederlandse tijd). De demo duurt {minuten} minuten.",
+    tekst: "Hallo, je demo van Smileyapp staat gepland op {moment} (Nederlandse tijd). De demo duurt {minuten} minuten.",
     bijlage: "In de bijlage staat de afspraak voor je agenda.",
     kanNiet: "Kun je toch niet? Mail naar {mail}.",
     titel: "Demo Smileyapp",
@@ -167,7 +167,7 @@ const BEVESTIGING: Record<MailTaal, { onderwerp: string; kop: string; tekst: str
   en: {
     onderwerp: "Your Smileyapp demo: {moment}",
     kop: "Your demo is scheduled",
-    tekst: "Hello {naam}, your Smileyapp demo is scheduled for {moment} (Dutch time). The demo takes {minuten} minutes.",
+    tekst: "Hello, your Smileyapp demo is scheduled for {moment} (Dutch time). The demo takes {minuten} minutes.",
     bijlage: "The attachment contains the appointment for your calendar.",
     kanNiet: "Can't make it after all? Email {mail}.",
     titel: "Smileyapp demo",
@@ -175,7 +175,7 @@ const BEVESTIGING: Record<MailTaal, { onderwerp: string; kop: string; tekst: str
   de: {
     onderwerp: "Ihre Smileyapp-Demo: {moment}",
     kop: "Ihre Demo ist geplant",
-    tekst: "Guten Tag {naam}, Ihre Smileyapp-Demo ist geplant für {moment} (niederländische Zeit). Die Demo dauert {minuten} Minuten.",
+    tekst: "Guten Tag, Ihre Smileyapp-Demo ist geplant für {moment} (niederländische Zeit). Die Demo dauert {minuten} Minuten.",
     bijlage: "Im Anhang finden Sie den Termin für Ihren Kalender.",
     kanNiet: "Passt es doch nicht? Schreiben Sie eine E-Mail an {mail}.",
     titel: "Smileyapp-Demo",

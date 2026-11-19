@@ -71,6 +71,10 @@ export async function POST(request: Request): Promise<NextResponse> {
     const id = nieuwAanvraagId();
     let afspraak: Afspraak | undefined;
     if (controle.tijdId) {
+      // boeken bezet een tijd en mailt een adres dat niet gecontroleerd is: een eigen, strenge grens per IP en per adres
+      const teVaak = "Je hebt vandaag al een demo ingepland. Wil je een andere tijd? Mail ons dan even.";
+      await enforceRateLimit({ name: "smileyapp-boeking-ip", identifier: ip, limit: 3, windowSeconds: 86_400, message: teVaak });
+      await enforceRateLimit({ name: "smileyapp-boeking-adres", identifier: controle.waarde.email.toLowerCase(), limit: 2, windowSeconds: 86_400, message: teVaak });
       const geboekt = await boekTijd(controle.tijdId, id, nu);
       if (!geboekt) {
         // niets bewaard en niets gemaild; het formulier krijgt de lijst van nu (alleen tijden, geen namen)
