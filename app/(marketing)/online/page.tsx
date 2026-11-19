@@ -9,14 +9,19 @@ import { ALLE_ONLINE_TOOLS, ONLINE_FAQ, ONLINE_GROEPEN, VERGELIJK, WAAROM_HIER, 
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { VOORBEELDEN } from "@/lib/website/aanvraag-opties";
+import { robotsVerborgen } from "@/lib/seo/verbergen";
 
 const DESCRIPTION = "Website maken, webshop openen, logo ontwerpen, domeinnaam registreren, verhuizen of beheren, zakelijke e-mail, gratis checks en meer. Alle online tools van ZekerFlex op één pagina, eerst zien en dan betalen.";
 
-export const metadata: Metadata = {
+const metaBasis: Metadata = {
   title: "Alles voor je bedrijf online",
   description: DESCRIPTION,
   ...canonical("/online"),
 };
+// vlag `publiek-alleen-flexwerk`: uit Google als de vlag aan is; de pagina blijft bereikbaar via een directe link
+export async function generateMetadata(): Promise<Metadata> {
+  return { ...metaBasis, ...(await robotsVerborgen("/online")) };
+}
 
 // /online (19 nov 2026, eigenaar): alle losse online tools op één pagina, als de startpagina van een websitebouwer maar
 // in onze eigen stijl en met eigen logo's per tool ("geen een heeft een mooi eigen logo, veel te basic"). Elke tool heeft

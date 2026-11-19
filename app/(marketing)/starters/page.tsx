@@ -11,14 +11,19 @@ import { AANBOD, aanbodHref, prijsTekst } from "@/lib/marketing/aanbod";
 import { STARTERS_ONDERDELEN } from "@/lib/starters/regels";
 import { breadcrumbJsonLd, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
+import { robotsVerborgen } from "@/lib/seo/verbergen";
 
 const DESCRIPTION = "Wij helpen starters van aanvraag tot product: logo, domeinnaam, website, webshop en advertentie. Je ziet eerst het voorbeeld en betaalt alleen voor resultaat.";
 
-export const metadata: Metadata = {
+const metaBasis: Metadata = {
   title: "Voor starters: van idee tot merk",
   description: DESCRIPTION,
   alternates: { canonical: "/starters" },
 };
+// vlag `publiek-alleen-flexwerk`: uit Google als de vlag aan is; de pagina blijft bereikbaar via een directe link
+export async function generateMetadata(): Promise<Metadata> {
+  return { ...metaBasis, ...(await robotsVerborgen("/starters")) };
+}
 
 // de prijzen van het logo en de advertentie komen uit Beheer (KV), dus niet tijdens de build vastleggen
 export const dynamic = "force-dynamic";

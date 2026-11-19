@@ -5,12 +5,17 @@ import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { VOORBEELDEN, VOORBEELD_CATEGORIEEN } from "@/lib/website/aanvraag-opties";
 import { WebsiteAanvraagFormulier } from "@/components/marketing/WebsiteAanvraagFormulier";
+import { robotsVerborgen } from "@/lib/seo/verbergen";
 
-export const metadata: Metadata = {
+const metaBasis: Metadata = {
   title: "Wij maken jouw website of app",
   description: "Vertel wat je wilt: kleuren, stijl, pagina's en wat de site moet kunnen. Binnen een dag krijg je een voorbeeld in drie versies.",
   ...canonical("/website-maken"),
 };
+// vlag `publiek-alleen-flexwerk`: uit Google als de vlag aan is; de pagina blijft bereikbaar via een directe link
+export async function generateMetadata(): Promise<Metadata> {
+  return { ...metaBasis, ...(await robotsVerborgen("/website-maken")) };
+}
 
 // /website-maken (opnieuw ingericht op 19 nov 2026, eigenaar): geen galerij met ontwerpen meer, maar een aanvraag. De klant
 // kiest en vult zijn wensen in (kleur, stijl, video, logo, pagina's, functies, budget), de aanvraag komt als lead in

@@ -8,17 +8,22 @@ import { getScanLog } from "@/lib/scans/store";
 import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 import { HeroMetFoto } from "@/components/marketing/HeroMetFoto";
 import { paginaFoto } from "@/lib/marketing/fotos";
+import { robotsVerborgen } from "@/lib/seo/verbergen";
 
 const TITLE = "Gratis review-check: hoe scoort je bedrijf op Google?";
 const DESCRIPTION =
   "Plak je Google-link of website en zie binnen een halve minuut je reviewscore, hoe je het doet tegenover bedrijven in de buurt, wat klanten zeggen en wat je kunt verbeteren. Met een antwoordvoorstel per review.";
 
-export const metadata: Metadata = {
+const metaBasis: Metadata = {
   title: { absolute: seoTitel(TITLE) },
   description: seoBeschrijving(DESCRIPTION),
   keywords: ["google reviews verbeteren", "review check", "google bedrijfsprofiel", "meer google reviews", "reageren op reviews", "online reputatie"],
   ...canonical("/review-check", { title: TITLE, description: DESCRIPTION }),
 };
+// vlag `publiek-alleen-flexwerk`: uit Google als de vlag aan is; de pagina blijft bereikbaar via een directe link
+export async function generateMetadata(): Promise<Metadata> {
+  return { ...metaBasis, ...(await robotsVerborgen("/review-check")) };
+}
 
 export const dynamic = "force-dynamic";
 

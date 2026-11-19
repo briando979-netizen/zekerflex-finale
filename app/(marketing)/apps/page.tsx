@@ -3,16 +3,21 @@ import Link from "next/link";
 import { Section, SectionHead } from "@/components/marketing/primitives";
 import { canonical } from "@/lib/seo";
 import { ZF_APPS } from "@/lib/apps/catalogus";
+import { robotsVerborgen } from "@/lib/seo/verbergen";
 
 // De apps van ZekerFlex per doelgroep (15 nov 2026): een overzicht met per app een eigen installeerpagina.
 const title = "De apps van ZekerFlex";
 const description = "Een eigen app voor je werk: voor flexwerkers, bedrijven, horeca, rijscholen, webshops en websites. Installeren kan direct, zonder store.";
 
-export const metadata: Metadata = {
+const metaBasis: Metadata = {
   title,
   description,
   ...canonical("/apps", { title, description }),
 };
+// vlag `publiek-alleen-flexwerk`: uit Google als de vlag aan is; de pagina blijft bereikbaar via een directe link
+export async function generateMetadata(): Promise<Metadata> {
+  return { ...metaBasis, ...(await robotsVerborgen("/apps")) };
+}
 
 export default function AppsPage() {
   const apps = ZF_APPS.filter((a) => a.beschikbaar);

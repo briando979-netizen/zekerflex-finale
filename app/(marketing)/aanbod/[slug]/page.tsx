@@ -10,6 +10,7 @@ import { AANBOD, aanbodDoorsturen, aanbodHref, aanbodVan, eigenPaginas, pijlerVa
 import { breadcrumbJsonLd, canonical, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
+import { robotsVerborgen } from "@/lib/seo/verbergen";
 import { EfactuurPagina } from "@/components/marketing/aanbod/EfactuurPagina";
 import { AanbodStandaard } from "@/components/marketing/aanbod/AanbodStandaard";
 import { standaardVragen } from "@/lib/marketing/aanbod-vragen";
@@ -39,6 +40,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       ...(beeld && beeldUrl ? { image: beeldUrl, imageSize: { width: beeld.breedte, height: beeld.hoogte }, imageAlt: beeld.alt } : {}),
     }),
     twitter: { card: "summary_large_image", title: a.naam, description: a.kort, ...(beeldUrl ? { images: [beeldUrl] } : {}) },
+    // vlag `publiek-alleen-flexwerk`: een niet-flexwerk-product (website, webshop, horeca, …) uit Google; de pagina blijft bereikbaar
+    ...(await robotsVerborgen(`/aanbod/${a.slug}`)),
   };
 }
 

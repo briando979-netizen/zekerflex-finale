@@ -5,13 +5,18 @@ import type { ReactNode } from "react";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { PaginaVideoBlok } from "@/components/marketing/PaginaVideoBlok";
+import { robotsVerborgen } from "@/lib/seo/verbergen";
 
-export const metadata: Metadata = {
+const metaBasis: Metadata = {
   title: "Rijschoolsoftware: agenda, leerlingen, tegoed en eigen app",
   description:
     "Rijschoolsoftware van ZekerFlex: lesagenda, leerlingen met tegoed, leskaart na elke les, betalen, een website met proefles-planner en een eigen app voor je leerlingen.",
   ...canonical("/rijschool-software"),
 };
+// vlag `publiek-alleen-flexwerk`: uit Google als de vlag aan is; de pagina blijft bereikbaar via een directe link
+export async function generateMetadata(): Promise<Metadata> {
+  return { ...metaBasis, ...(await robotsVerborgen("/rijschool-software")) };
+}
 
 // /rijschool-software (15 nov 2026): de openbare pagina voor rijschoolhouders, opgezet naar de betere rijschoolsoftware
 // (PlanRijles, PlanGo): een lichte kop met het product in beeld, per onderdeel een blok met een voorbeeldkaart, voor wie het is,

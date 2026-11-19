@@ -8,14 +8,19 @@ import { SFEREN, VARIANTEN } from "@/lib/logo/regels";
 import { LOGO_VOORBEELDEN } from "@/lib/logo/voorbeelden";
 import { breadcrumbJsonLd, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
+import { robotsVerborgen } from "@/lib/seo/verbergen";
 
 const DESCRIPTION = "Vul je bedrijfsnaam in, kies een kleur en een sfeer en zie meteen negen logo's. Je betaalt niets voor het voorbeeld, pas als je het wilt hebben.";
 
-export const metadata: Metadata = {
+const metaBasis: Metadata = {
   title: "Logo maker: maak je eigen logo",
   description: DESCRIPTION,
   alternates: { canonical: "/logo-maker" },
 };
+// vlag `publiek-alleen-flexwerk`: uit Google als de vlag aan is; de pagina blijft bereikbaar via een directe link
+export async function generateMetadata(): Promise<Metadata> {
+  return { ...metaBasis, ...(await robotsVerborgen("/logo-maker")) };
+}
 
 // de prijs komt uit Beheer (KV), dus niet tijdens de build vastleggen
 export const dynamic = "force-dynamic";

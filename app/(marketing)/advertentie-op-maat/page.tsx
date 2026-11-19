@@ -7,14 +7,19 @@ import { leesPrijzen } from "@/lib/advertentie/store";
 import { VOORBEELDEN } from "@/lib/advertentie/voorbeelden";
 import { breadcrumbJsonLd, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
+import { robotsVerborgen } from "@/lib/seo/verbergen";
 
 const DESCRIPTION = "Vul een paar dingen in over je bedrijf en zie meteen je eigen advertentie in zes ontwerpen. Je betaalt niets voor het voorbeeld, pas als je hem wilt hebben.";
 
-export const metadata: Metadata = {
+const metaBasis: Metadata = {
   title: "Advertentie op maat laten maken",
   description: DESCRIPTION,
   alternates: { canonical: "/advertentie-op-maat" },
 };
+// vlag `publiek-alleen-flexwerk`: uit Google als de vlag aan is; de pagina blijft bereikbaar via een directe link
+export async function generateMetadata(): Promise<Metadata> {
+  return { ...metaBasis, ...(await robotsVerborgen("/advertentie-op-maat")) };
+}
 
 // de prijs komt uit Beheer (KV), dus niet tijdens de build vastleggen
 export const dynamic = "force-dynamic";

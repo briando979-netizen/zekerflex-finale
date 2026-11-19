@@ -7,17 +7,22 @@ import { ProductLeadForm } from "@/components/marketing/ProductLeadForm";
 import { SPINOFF_PRODUCTS, FLAGSHIP, ALL_PRODUCTS, DEPLOYMENT_LABEL, type Product } from "@/lib/products";
 import { FotoKolom } from "@/components/marketing/HeroMetFoto";
 import { paginaFoto } from "@/lib/marketing/fotos";
+import { robotsVerborgen } from "@/lib/seo/verbergen";
 
 const title = "Producten — losse modules of het complete platform";
 const description =
   "Kies alleen wat je nodig hebt: RecruitFlex AI (kandidaten zoeken en koppelen), SovereignOps, de FlexCompliance API of het complete uitzendplatform.";
 
-export const metadata: Metadata = {
+const metaBasis: Metadata = {
   title,
   description,
   keywords: ["ai recruitment software", "self-hosted ai stack", "stipp api", "abu fase api", "uitzendsoftware", "white-label flexplatform"],
   ...canonical("/producten", { title, description }),
 };
+// vlag `publiek-alleen-flexwerk`: uit Google als de vlag aan is; de pagina blijft bereikbaar via een directe link
+export async function generateMetadata(): Promise<Metadata> {
+  return { ...metaBasis, ...(await robotsVerborgen("/producten")) };
+}
 
 const FAQ = [
   { q: "Moet ik het hele platform afnemen?", a: "Nee. Je kunt één losse module nemen — bijvoorbeeld alleen RecruitFlex AI naast je huidige wervingssysteem — of de koppeling voor de uitzendregels, of het pakket op je eigen server. Het complete platform is er voor wie álles onder één dak wil." },

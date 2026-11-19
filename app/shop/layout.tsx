@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
+import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import { robotsVerborgen } from "@/lib/seo/verbergen";
 import { clientDict, getLocale } from "@/lib/i18n/server";
 import { I18nProvider } from "@/components/i18n/I18nProvider";
 import { ShopChrome } from "@/components/marketing/ShopChrome";
@@ -12,6 +14,12 @@ import { prisma } from "@/lib/prisma";
 import { aantalAanbiedingen, herstelVerlopenAanbiedingen } from "@/lib/shop/aanbieding-server";
 
 export const dynamic = "force-dynamic";
+
+// Vlag `publiek-alleen-flexwerk`: de hele webshop (/shop en alle subpagina's) uit Google als de vlag aan is. De shop blijft
+// bestaan en bereikbaar via een directe link; de robots-metadata van deze layout geldt voor elke /shop-pagina.
+export async function generateMetadata(): Promise<Metadata> {
+  return robotsVerborgen("/shop");
+}
 
 // Eigen omlijsting (servicebalk, merkbalk met zoeken, categorieën, winkelwagen,
 // voettekst) voor alle /shop-pagina's, los van de reguliere marketing-layout.

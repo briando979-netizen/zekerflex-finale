@@ -17,17 +17,22 @@ import {
 import { breadcrumbJsonLd, canonical, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
+import { robotsVerborgen } from "@/lib/seo/verbergen";
 
 const TITLE = "Domeinnaam registreren of verhuizen";
 const DESCRIPTION =
   "Zoek direct of je domeinnaam nog vrij is: .nl, .com, .eu, .be en meer, voor een eerlijke prijs per jaar. Of verhuis je bestaande domein naar ZekerFlex, los of samen met je website of webshop.";
 
-export const metadata: Metadata = {
+const metaBasis: Metadata = {
   title: { absolute: seoTitel(TITLE) },
   description: seoBeschrijving(DESCRIPTION),
   keywords: ["domeinnaam registreren", "domeinnaam kopen", "domein verhuizen", "nl domein", "domeinnaam checken", "domeinnaam beschikbaar"],
   ...canonical("/domeinnaam", { title: TITLE, description: DESCRIPTION }),
 };
+// vlag `publiek-alleen-flexwerk`: uit Google als de vlag aan is; de pagina blijft bereikbaar via een directe link
+export async function generateMetadata(): Promise<Metadata> {
+  return { ...metaBasis, ...(await robotsVerborgen("/domeinnaam")) };
+}
 
 const goedkoopste = goedkoopsteEersteJaar();
 const kaarten = prijsKaarten();

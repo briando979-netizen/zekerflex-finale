@@ -3,12 +3,17 @@ import Link from "next/link";
 import { breadcrumbJsonLd, canonical } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { APPS } from "@/lib/marketing/apps";
+import { robotsVerborgen } from "@/lib/seo/verbergen";
 
-export const metadata: Metadata = {
+const metaBasis: Metadata = {
   title: "Apps & spelletjes van ZekerFlex",
   description: "Ga direct naar de eigen apps van ZekerFlex: spelletjes, Talkaro, FlikFlak en de webshop. Gratis te gebruiken.",
   ...canonical("/apps-en-spelletjes"),
 };
+// vlag `publiek-alleen-flexwerk`: uit Google als de vlag aan is; de pagina blijft bereikbaar via een directe link
+export async function generateMetadata(): Promise<Metadata> {
+  return { ...metaBasis, ...(await robotsVerborgen("/apps-en-spelletjes")) };
+}
 
 // /apps-en-spelletjes (19 nov 2026, eigenaar): een aparte categorie in het menu, los van de voorbeelden op
 // /website-maken, met grote knoppen "Ga naar …" naar de eigen apps (lib/marketing/apps.ts).

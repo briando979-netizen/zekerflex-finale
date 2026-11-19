@@ -7,15 +7,20 @@ import { euro } from "@/lib/admin/format";
 import { FaqList } from "@/components/marketing/primitives";
 import { breadcrumbJsonLd, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
+import { robotsVerborgen } from "@/lib/seo/verbergen";
 
 const DESCRIPTION =
   "Check gratis hoe snel, vindbaar in Google en veilig je website is. Binnen een halve minuut een rapport in gewone taal, met wat je kunt verbeteren.";
 
-export const metadata: Metadata = {
+const metaBasis: Metadata = {
   title: "Gratis website-check",
   description: DESCRIPTION,
   alternates: { canonical: "/website-check" },
 };
+// vlag `publiek-alleen-flexwerk`: uit Google als de vlag aan is; de pagina blijft bereikbaar via een directe link
+export async function generateMetadata(): Promise<Metadata> {
+  return { ...metaBasis, ...(await robotsVerborgen("/website-check")) };
+}
 
 export const dynamic = "force-dynamic";
 
