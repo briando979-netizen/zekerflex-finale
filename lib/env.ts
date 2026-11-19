@@ -37,6 +37,12 @@ const schema = z.object({
   // INTERNAL_CRON_TOKEN is accepted too, for a non-Vercel scheduler.
   CRON_SECRET: z.string().min(16).optional(),
   INTERNAL_CRON_TOKEN: z.string().min(16).optional(),
+
+  // Beheerwachtwoord van Talkaro (deploy/talkaro, talkaro.zekerflex.com). Staat in
+  // .env.production (gemaakt door deploy/scripts/env-aanvullen.sh). De app gebruikt
+  // het nergens zelf; het wordt alleen op /admin/talkaro getoond aan een
+  // platformbeheerder, zodat de eigenaar de meldingen van Talkaro kan bekijken.
+  TALKARO_ADMIN_TOKEN: z.string().optional(),
   // de vaste .test-werker van de nachtelijke rondgang (lib/ops/rondgang-werker.ts); het wachtwoord maakt
   // deploy/scripts/env-aanvullen.sh. Zonder wachtwoord slaat de rondgang de werkerpagina's over.
   RONDGANG_WERKER_EMAIL: z.string().email().optional(),
