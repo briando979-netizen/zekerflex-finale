@@ -76,8 +76,8 @@ const nl: HulpTeksten = {
     {
       id: "uren",
       v: "Hoe vul ik mijn uren in?",
-      a: "Na afloop van een klus staat je urenbriefje onder Uren. Vul je gewerkte uren in en dien ze in; daarna keurt de opdrachtgever ze goed. Alleen je echt gewerkte uren worden uitbetaald.",
-      link: { href: "/dashboard/uren", label: "Naar Uren" },
+      a: "Na afloop van een klus staat je urenbriefje onder Uren invullen. Vul je gewerkte uren in en dien ze in; daarna keurt de opdrachtgever ze goed. Alleen je echt gewerkte uren worden uitbetaald.",
+      link: { href: "/dashboard/uren", label: "Naar Uren invullen" },
     },
     {
       id: "betaling",
@@ -266,8 +266,8 @@ const en: HulpTeksten = {
     {
       id: "uren",
       v: "How do I fill in my hours?",
-      a: "After a job ends, your timesheet appears under Hours. Fill in the hours you worked and submit them; the employer then approves them. Only the hours you actually worked are paid.",
-      link: { href: "/dashboard/uren", label: "Go to Hours" },
+      a: "After a job ends, your timesheet appears under Fill in hours. Fill in the hours you worked and submit them; the employer then approves them. Only the hours you actually worked are paid.",
+      link: { href: "/dashboard/uren", label: "Go to Fill in hours" },
     },
     {
       id: "betaling",
@@ -456,8 +456,8 @@ const pl: HulpTeksten = {
     {
       id: "uren",
       v: "Jak wpisać godziny pracy?",
-      a: "Po zakończeniu zlecenia Twoja karta godzin pojawi się w zakładce Godziny. Wpisz przepracowane godziny i je wyślij; następnie zleceniodawca je zatwierdza. Płacimy tylko za faktycznie przepracowane godziny.",
-      link: { href: "/dashboard/uren", label: "Przejdź do Godziny" },
+      a: "Po zakończeniu zlecenia Twoja karta godzin pojawi się w zakładce Wpisz godziny. Wpisz przepracowane godziny i je wyślij; następnie zleceniodawca je zatwierdza. Płacimy tylko za faktycznie przepracowane godziny.",
+      link: { href: "/dashboard/uren", label: "Przejdź do Wpisz godziny" },
     },
     {
       id: "betaling",
@@ -646,8 +646,8 @@ const ro: HulpTeksten = {
     {
       id: "uren",
       v: "Cum completez orele lucrate?",
-      a: "După terminarea unui job, foaia de ore apare la Ore. Completează orele lucrate și trimite-le; apoi angajatorul le aprobă. Se plătesc doar orele lucrate efectiv.",
-      link: { href: "/dashboard/uren", label: "Mergi la Ore" },
+      a: "După terminarea unui job, foaia de ore apare la Completează orele. Completează orele lucrate și trimite-le; apoi angajatorul le aprobă. Se plătesc doar orele lucrate efectiv.",
+      link: { href: "/dashboard/uren", label: "Mergi la Completează orele" },
     },
     {
       id: "betaling",
@@ -836,8 +836,8 @@ const uk: HulpTeksten = {
     {
       id: "uren",
       v: "Як заповнити години?",
-      a: "Після завершення роботи ваш табель з'явиться в «Години». Вкажіть відпрацьовані години й надішліть їх; потім роботодавець їх затверджує. Оплачуються лише фактично відпрацьовані години.",
-      link: { href: "/dashboard/uren", label: "До «Години»" },
+      a: "Після завершення роботи ваш табель з'явиться в «Внести години». Вкажіть відпрацьовані години й надішліть їх; потім роботодавець їх затверджує. Оплачуються лише фактично відпрацьовані години.",
+      link: { href: "/dashboard/uren", label: "До «Внести години»" },
     },
     {
       id: "betaling",

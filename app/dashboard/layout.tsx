@@ -38,7 +38,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   if (!hasRole(principal, "FREELANCER")) redirect("/start");
   if (!principal.emailVerifiedAt) redirect("/verifieer-email");
 
-  const theme = await getTheme();
+  // zonder eigen keuze donker, zoals de app van YoungOnes (20 nov, eigenaar); de themaknop in de kopbalk blijft
+  const theme = await getTheme("dark");
   const locale = await getLocale();
   const [avatars, birthday] = await Promise.all([getUserAvatars([principal.userId]), birthdayToday(principal.userId).catch(() => false)]);
   const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));

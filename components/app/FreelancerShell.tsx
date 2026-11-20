@@ -8,7 +8,7 @@ import { PushSelfHeal } from "@/components/app/PushToggle";
 import { HulpCentrum } from "@/components/app/HulpCentrum";
 import { WerkerRondleiding } from "@/components/app/WerkerRondleiding";
 import type { HulpTeksten } from "@/lib/hulp/hulpjes";
-import { ICompass, IBriefcase, IClock, IChat, IUser, ISearch, IWallet } from "@/components/app/icons";
+import { IBriefcase, IClock, IChat, IUser, ISearch, IWallet } from "@/components/app/icons";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import type { Theme } from "@/lib/theme/config";
 import { useI18n, setLocale } from "@/components/i18n/I18nProvider";
@@ -21,11 +21,13 @@ import { schermTitelSleutel } from "@/lib/werker/schermtitel";
 // ---------------------------------------------------------------------------
 // Freelancer workspace shell — YoungOnes-style: a slim top bar and a
 // 6-item bottom navigation (full-width bar on mobile, a floating pill on
-// desktop). No left sidebar.
+// desktop). No left sidebar. Sinds 20 nov (eigenaar: "precies zoals YoungOnes, alleen de chat blijft"): standaard
+// donker met een turquoise accent (werker-regels in app/globals.css, via data-app="werker"), de kop in kapitalen,
+// Ontdekken met een vergrootglas en "Uren invullen" als naam van de urentab; de chat-tab blijft.
 // ---------------------------------------------------------------------------
 
 const TABS = [
-  { href: "/dashboard/klussen", key: "discover", icon: <ICompass /> },
+  { href: "/dashboard/klussen", key: "discover", icon: <ISearch /> },
   { href: "/dashboard/diensten", key: "myJobs", icon: <IBriefcase /> },
   { href: "/dashboard/uren", key: "hours", icon: <IClock /> },
   { href: "/dashboard/bank", key: "bank", icon: <IWallet /> },
@@ -126,11 +128,11 @@ export function FreelancerShell({
       : ft.nav[current.key];
 
   return (
-    <div data-theme={theme} className="app-scope app-bg noise flex min-h-screen flex-col bg-paper-soft">
+    <div data-theme={theme} data-app="werker" className="app-scope app-bg noise flex min-h-screen flex-col bg-paper-soft">
       {/* Top bar */}
       {!focused && (
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-hair bg-white/85 px-4 backdrop-blur-xl lg:px-8">
-          <Link href="/dashboard/klussen" className="font-display text-base font-bold tracking-tight text-ink">
+        <header className="werker-kop sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-hair bg-white/85 px-4 backdrop-blur-xl lg:px-8">
+          <Link href="/dashboard/klussen" className="font-display text-base font-extrabold uppercase tracking-tight text-ink">
             {title}
             {/* dezelfde groene streep als onder de paginakop (PageHeader in components/app/ui.tsx) */}
             <span className="mt-0.5 block h-1 w-16 rounded-full bg-gradient-to-r from-brand-500 to-brand-mint" />

@@ -19,7 +19,7 @@ import { INTRODUCTIE_TALEN } from "@/lib/introducties/teksten-talen";
 // ---------------------------------------------------------------------------
 
 const nl = {
-  nav: { discover: "Ontdekken", myJobs: "Mijn klussen", hours: "Uren", bank: "Bank", chat: "Chat", account: "Account", findJob: "Vind jouw klus", search: "Zoeken", employerWorkspace: "Werkgeversomgeving" },
+  nav: { discover: "Ontdekken", myJobs: "Mijn klussen", hours: "Uren invullen", bank: "Bank", chat: "Chat", account: "Account", findJob: "Vind jouw klus", search: "Zoeken", employerWorkspace: "Werkgeversomgeving" },
   // de titel in de balk bovenaan voor schermen buiten de balk onderaan (lib/werker/schermtitel.ts); "overig" = een scherm dat we niet kennen
   schermTitel: { verificatie: "Verificatie", profiel: "Mijn gegevens", uitbetalingen: "Uitbetalingen", verloning: "Verloning", beschikbaarheid: "Beschikbaarheid", administratie: "Administratie", hulp: "Hulp", inchecken: "Inchecken", certificaten: "Certificaten", favorieten: "Favorieten", beoordelingen: "Beoordelingen", paspoort: "Werkpaspoort", ritten: "Kilometers", fiscaal: "Werkvorm", verzekering: "Verzekering", vooruitblik: "Vooruitblik", agenda: "Agenda", wifi: "Wifi", introduceren: "Introduceren", assistent: "Assistent", overig: "ZekerFlex" },
   los: {
@@ -1664,7 +1664,7 @@ const nl = {
 export type FreelancerDict = typeof nl;
 
 const en: FreelancerDict = {
-  nav: { discover: "Discover", myJobs: "My jobs", hours: "Hours", bank: "Bank", chat: "Chat", account: "Account", findJob: "Find your job", search: "Search", employerWorkspace: "Employer workspace" },
+  nav: { discover: "Discover", myJobs: "My jobs", hours: "Fill in hours", bank: "Bank", chat: "Chat", account: "Account", findJob: "Find your job", search: "Search", employerWorkspace: "Employer workspace" },
   schermTitel: { verificatie: "Verification", profiel: "My details", uitbetalingen: "Payouts", verloning: "Payroll", beschikbaarheid: "Availability", administratie: "Administration", hulp: "Help", inchecken: "Check in", certificaten: "Certificates", favorieten: "Favourites", beoordelingen: "Reviews", paspoort: "Work passport", ritten: "Mileage", fiscaal: "Work type", verzekering: "Insurance", vooruitblik: "Outlook", agenda: "Calendar", wifi: "Wi-Fi", introduceren: "Introductions", assistent: "Assistant", overig: "ZekerFlex" },
   los: {
     uren: { titel: "Proposal to correct your hours", voorstel: "The client proposes changing your hours from {van} to {naar} hours.", onafhankelijk: "Don't agree? Then ZekerFlex will review this independently.", ja: "Yes, I agree", nee: "No, I don't agree", bezig: "Working…" },
@@ -3459,7 +3459,7 @@ const en: FreelancerDict = {
 };
 
 const pl: FreelancerDict = {
-  nav: { discover: "Odkrywaj", myJobs: "Moje zlecenia", hours: "Godziny", bank: "Bank", chat: "Czat", account: "Konto", findJob: "Znajdź pracę", search: "Szukaj", employerWorkspace: "Panel pracodawcy" },
+  nav: { discover: "Odkrywaj", myJobs: "Moje zlecenia", hours: "Wpisz godziny", bank: "Bank", chat: "Czat", account: "Konto", findJob: "Znajdź pracę", search: "Szukaj", employerWorkspace: "Panel pracodawcy" },
   schermTitel: { verificatie: "Weryfikacja", profiel: "Moje dane", uitbetalingen: "Wypłaty", verloning: "Wynagrodzenie", beschikbaarheid: "Dostępność", administratie: "Administracja", hulp: "Pomoc", inchecken: "Zameldowanie", certificaten: "Certyfikaty", favorieten: "Ulubione", beoordelingen: "Opinie", paspoort: "Paszport pracy", ritten: "Kilometry", fiscaal: "Forma pracy", verzekering: "Ubezpieczenie", vooruitblik: "Prognoza", agenda: "Kalendarz", wifi: "Wi-Fi", introduceren: "Polecenia", assistent: "Asystent", overig: "ZekerFlex" },
   los: {
     uren: { titel: "Propozycja korekty Twoich godzin", voorstel: "Zleceniodawca proponuje zmienić Twoje godziny z {van} na {naar} godz.", onafhankelijk: "Nie zgadzasz się? Wtedy ZekerFlex oceni to niezależnie.", ja: "Tak, zgadzam się", nee: "Nie, nie zgadzam się", bezig: "Chwileczkę…" },
@@ -5254,7 +5254,7 @@ const pl: FreelancerDict = {
 };
 
 const ro: FreelancerDict = {
-  nav: { discover: "Descoperă", myJobs: "Joburile mele", hours: "Ore", bank: "Bancă", chat: "Chat", account: "Cont", findJob: "Găsește-ți jobul", search: "Caută", employerWorkspace: "Spațiul angajatorului" },
+  nav: { discover: "Descoperă", myJobs: "Joburile mele", hours: "Completează orele", bank: "Bancă", chat: "Chat", account: "Cont", findJob: "Găsește-ți jobul", search: "Caută", employerWorkspace: "Spațiul angajatorului" },
   schermTitel: { verificatie: "Verificare", profiel: "Datele mele", uitbetalingen: "Plăți", verloning: "Salarizare", beschikbaarheid: "Disponibilitate", administratie: "Administrație", hulp: "Ajutor", inchecken: "Check-in", certificaten: "Certificate", favorieten: "Favorite", beoordelingen: "Recenzii", paspoort: "Pașaport de lucru", ritten: "Kilometri", fiscaal: "Forma de lucru", verzekering: "Asigurare", vooruitblik: "Previziune", agenda: "Calendar", wifi: "Wi-Fi", introduceren: "Recomandări", assistent: "Asistent", overig: "ZekerFlex" },
   los: {
     uren: { titel: "Propunere de corectare a orelor tale", voorstel: "Clientul propune modificarea orelor tale de la {van} la {naar} ore.", onafhankelijk: "Nu ești de acord? Atunci ZekerFlex evaluează independent.", ja: "Da, sunt de acord", nee: "Nu, nu sunt de acord", bezig: "Se lucrează…" },
@@ -7049,7 +7049,7 @@ const ro: FreelancerDict = {
 };
 
 const uk: FreelancerDict = {
-  nav: { discover: "Огляд", myJobs: "Мої роботи", hours: "Години", bank: "Банк", chat: "Чат", account: "Акаунт", findJob: "Знайди роботу", search: "Пошук", employerWorkspace: "Кабінет роботодавця" },
+  nav: { discover: "Огляд", myJobs: "Мої роботи", hours: "Внести години", bank: "Банк", chat: "Чат", account: "Акаунт", findJob: "Знайди роботу", search: "Пошук", employerWorkspace: "Кабінет роботодавця" },
   schermTitel: { verificatie: "Перевірка", profiel: "Мої дані", uitbetalingen: "Виплати", verloning: "Зарплата", beschikbaarheid: "Доступність", administratie: "Адміністрування", hulp: "Допомога", inchecken: "Відмітка", certificaten: "Сертифікати", favorieten: "Обране", beoordelingen: "Відгуки", paspoort: "Робочий паспорт", ritten: "Кілометри", fiscaal: "Форма роботи", verzekering: "Страхування", vooruitblik: "Прогноз", agenda: "Календар", wifi: "Wi-Fi", introduceren: "Рекомендації", assistent: "Асистент", overig: "ZekerFlex" },
   los: {
     uren: { titel: "Пропозиція щодо виправлення твоїх годин", voorstel: "Замовник пропонує змінити твої години з {van} на {naar} год.", onafhankelijk: "Не погоджуєшся? Тоді ZekerFlex розгляне це незалежно.", ja: "Так, погоджуюсь", nee: "Ні, не погоджуюсь", bezig: "Зачекай…" },
