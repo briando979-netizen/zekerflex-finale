@@ -151,11 +151,11 @@ export function FreelancerShell({
               </Link>
             )}
             <LanguageButton />
-            {/* het thema staat ook op Account (ThemeToggleRow); op een telefoon alleen daar */}
+            {/* de knop licht/donker blijft altijd in de balk (21 nov, eigenaar: "die donkere weergave-knop wou ik wel houden") */}
             <ThemeToggle
               theme={theme}
               texts={ft.accountDelen.thema}
-              className="hidden h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink sm:grid"
+              className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink"
             />
             {/* zoeken: naar het zoekveld boven de klussen (zoals het vergrootglas in de balk van YoungOnes) */}
             <Link
