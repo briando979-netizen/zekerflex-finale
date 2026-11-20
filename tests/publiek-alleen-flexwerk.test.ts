@@ -20,10 +20,13 @@ import {
   NIET_FLEXWERK_NAV_KEYS,
   NIET_FLEXWERK_PIJLERS,
   pijlerIsFlexwerk,
+  werkruimteIsFlexwerk,
   zichtbarePijlers,
 } from "@/lib/marketing/flexwerk-only";
 import { AANBOD_KOLOMMEN, NAV, zichtbareAanbodKolommen, zichtbareNav } from "@/lib/marketing/site-nav";
 import { PIJLERS } from "@/lib/marketing/aanbod";
+import { WERKRUIMTES } from "@/lib/werkgever/werkruimte";
+import { uitbreidingen } from "@/lib/abonnement/overzicht";
 import { openbareRoutes } from "@/lib/ops/rondgang";
 import { robotsVerborgen } from "@/lib/seo/verbergen";
 
@@ -147,12 +150,44 @@ describe("noindex op een verborgen pagina", () => {
     h.vlagAan = true;
     expect(await robotsVerborgen("/online")).toEqual({ robots: { index: false, follow: true } });
     expect(await robotsVerborgen("/shop")).toEqual({ robots: { index: false, follow: true } });
+    // /verkopen (webshop-verkooppartner) ook op noindex
+    expect(await robotsVerborgen("/verkopen")).toEqual({ robots: { index: false, follow: true } });
+    expect(await robotsVerborgen("/verkopen/start")).toEqual({ robots: { index: false, follow: true } });
   });
 
   it("een flexwerk-pagina blijft indexeerbaar, ook met de vlag aan", async () => {
     h.vlagAan = true;
     expect(await robotsVerborgen("/klussen")).toEqual({});
     expect(await robotsVerborgen("/aanbod")).toEqual({});
+  });
+});
+
+describe("de bedrijfskant met de vlag aan", () => {
+  it("alleen personeel is een flexwerk-werkruimte", () => {
+    expect(werkruimteIsFlexwerk("personeel")).toBe(true);
+    for (const s of ["website", "webshop", "horeca", "rijschool"]) expect(werkruimteIsFlexwerk(s), s).toBe(false);
+  });
+
+  it("de aanmelding/dashboard-keuze toont met de vlag aan alleen personeel", () => {
+    // waar RegisterForm, WerkruimteKiezer en DashboardWisselaar op filteren
+    expect(WERKRUIMTES.filter(werkruimteIsFlexwerk)).toEqual(["personeel"]);
+  });
+
+  it("een bestaand bedrijf houdt zijn open niet-flexwerk-dashboard in de wisselaar (bereikbaar, geen 404)", () => {
+    // de wisselaar/kiezer toont: flexwerk OF het open dashboard, zodat een horecazaak haar dashboard houdt
+    const actief = "horeca";
+    const getoond = WERKRUIMTES.filter((w) => werkruimteIsFlexwerk(w) || w === actief);
+    expect(getoond).toContain("horeca");
+    expect(getoond).toContain("personeel");
+    expect(getoond).not.toContain("webshop");
+  });
+
+  it("uitbreidingen: met de vlag aan alleen de flexwerk-pijlers; zonder de vlag alle", () => {
+    const alle = uitbreidingen(false).map((g) => g.pijler);
+    for (const niet of NIET_FLEXWERK_PIJLERS) expect(alle, niet).toContain(niet);
+    const flex = uitbreidingen(true).map((g) => g.pijler);
+    for (const niet of NIET_FLEXWERK_PIJLERS) expect(flex, niet).not.toContain(niet);
+    expect(flex).toContain("personeel");
   });
 });
 
