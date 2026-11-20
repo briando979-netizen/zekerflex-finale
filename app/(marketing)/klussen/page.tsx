@@ -9,6 +9,7 @@ import { publicOpenShifts } from "@/lib/public-shifts";
 import { CITIES } from "@/lib/seo-cities";
 import { breadcrumbJsonLd, canonical, SITE } from "@/lib/seo";
 import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
+import { robotsVerborgen } from "@/lib/seo/verbergen";
 
 export const revalidate = 600;
 
@@ -16,12 +17,17 @@ const TITLE = "Klussen in heel Nederland — freelance werk, flexwerk & uitzendw
 const DESCRIPTION =
   "Bekijk alle open klussen op ZekerFlex: freelance werk, flexwerk en uitzendwerk in heel Nederland. Horeca, logistiek, retail, evenementen en meer — reageer direct en kies zelf hoe snel je wordt uitbetaald.";
 
-export const metadata: Metadata = {
+const metaBasis: Metadata = {
   title: { absolute: seoTitel(TITLE) },
   description: seoBeschrijving(DESCRIPTION),
   keywords: ["klussen", "freelance werk", "flexwerk", "uitzendwerk", "klussen in de buurt", "bijbaan", "zzp opdrachten", "werk vandaag"],
   ...canonical("/klussen", { title: TITLE, description: DESCRIPTION }),
 };
+// vlag `publiek-alleen-flexwerk`: alleen de blader-/zoeklijst /klussen uit Google (exact pad). De losse klus-advertenties
+// /klussen/<id> blijven vindbaar in Google Vacatures (JobPosting) en houden hun gewone metadata.
+export async function generateMetadata(): Promise<Metadata> {
+  return { ...metaBasis, ...(await robotsVerborgen("/klussen")) };
+}
 
 export default async function KlussenPage() {
   const shifts = await publicOpenShifts({ take: 60 }).catch(() => []);

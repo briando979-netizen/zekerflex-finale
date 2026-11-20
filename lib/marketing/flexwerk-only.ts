@@ -62,17 +62,18 @@ export const NIET_FLEXWERK_PADEN: readonly string[] = [
   "/rijschool-software",
   "/verkopen",
   "/developers",
-  // de publieke klussen-surfaces: de open-klussen-lijst (en elke klus /klussen/<id>) en de klussen-kaart.
-  // De bezoeker ziet klussen pas na het aanmelden; /register en de flexwerk-home blijven.
-  "/klussen",
+  // de klussen-kaart (en de 3D-variant). De bezoeker ziet de kaart pas na het aanmelden.
   "/open-diensten",
 ];
 
 /**
- * Paden die alleen EXACT verborgen zijn, niet hun subpaden. "/aanbod" (het hele-aanbod-overzicht) valt weg, maar de losse
- * /aanbod/<slug>-productpagina's volgen hun eigen pijler (flexwerk zichtbaar, online/branche via NIET_FLEXWERK_AANBOD_PADEN).
+ * Paden die alleen EXACT verborgen zijn, niet hun subpaden:
+ * - "/aanbod": het hele-aanbod-overzicht valt weg, maar de losse /aanbod/<slug>-productpagina's volgen hun eigen pijler
+ *   (flexwerk zichtbaar, online/branche via NIET_FLEXWERK_AANBOD_PADEN).
+ * - "/klussen": de blader-/zoeklijst valt weg, maar de losse klus-advertenties /klussen/<id> BLIJVEN vindbaar in Google
+ *   Vacatures (JobPosting): ze houden hun noindex-vrije metadata en blijven in de sitemap (besluit eigenaar).
  */
-export const NIET_FLEXWERK_EXACT: readonly string[] = ["/aanbod"];
+export const NIET_FLEXWERK_EXACT: readonly string[] = ["/aanbod", "/klussen"];
 
 /** De /aanbod/<slug>-pagina's van de verborgen pijlers (website, webshop, horeca, …): die hebben geen eigen pagina elders. */
 const NIET_FLEXWERK_AANBOD_PADEN: readonly string[] = AANBOD.filter(

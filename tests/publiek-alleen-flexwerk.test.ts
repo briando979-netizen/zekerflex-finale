@@ -72,8 +72,7 @@ describe("publiek = alleen flexwerk: de bron van waarheid", () => {
       "/aanbod/website", // online-pijler, eigen /aanbod-pagina
       "/aanbod/webshop",
       "/aanbod/horeca", // branche-pijler
-      "/klussen", // de publieke open-klussen-lijst
-      "/klussen/abc123", // een losse klus
+      "/klussen", // de publieke open-klussen-blader-/zoeklijst (exact)
       "/open-diensten", // de klussen-kaart
       "/open-diensten/3d",
     ]) {
@@ -86,6 +85,7 @@ describe("publiek = alleen flexwerk: de bron van waarheid", () => {
       "/voor-freelancers",
       "/personeel-inhuren",
       "/prijzen",
+      "/klussen/abc123", // een losse klus-advertenties blijft vindbaar (Google Vacatures / JobPosting)
       "/aanbod/flexwerkers-inhuren", // personeel-pijler: de flexwerk-productpagina blijft
       "/aanbod/uitzendkrachten",
       "/rekentools", // flexwerk-rekentools blijven
@@ -175,18 +175,19 @@ describe("noindex op een verborgen pagina", () => {
     // /verkopen (webshop-verkooppartner) ook op noindex
     expect(await robotsVerborgen("/verkopen")).toEqual({ robots: { index: false, follow: true } });
     expect(await robotsVerborgen("/verkopen/start")).toEqual({ robots: { index: false, follow: true } });
-    // de aanbod-ingang, de open-klussen-lijst en de klussen-kaart ook
+    // de aanbod-ingang, de open-klussen-blader-lijst en de klussen-kaart ook
     expect(await robotsVerborgen("/aanbod")).toEqual({ robots: { index: false, follow: true } });
     expect(await robotsVerborgen("/klussen")).toEqual({ robots: { index: false, follow: true } });
-    expect(await robotsVerborgen("/klussen/abc123")).toEqual({ robots: { index: false, follow: true } });
     expect(await robotsVerborgen("/open-diensten")).toEqual({ robots: { index: false, follow: true } });
   });
 
-  it("een flexwerk-pagina blijft indexeerbaar, ook met de vlag aan", async () => {
+  it("een flexwerk-pagina blijft indexeerbaar, ook met de vlag aan (incl. de losse klus-advertenties voor Google Vacatures)", async () => {
     h.vlagAan = true;
     expect(await robotsVerborgen("/uitzendbureau")).toEqual({});
     expect(await robotsVerborgen("/aanbod/flexwerkers-inhuren")).toEqual({});
     expect(await robotsVerborgen("/prijzen")).toEqual({});
+    // de losse klus-advertentie /klussen/<id> blijft vindbaar (geen noindex), alleen de blader-lijst /klussen is verborgen
+    expect(await robotsVerborgen("/klussen/abc123")).toEqual({});
   });
 });
 
