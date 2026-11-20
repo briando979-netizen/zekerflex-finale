@@ -116,6 +116,8 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     kalender: { href: "/werkgever/kalender", label: t.nav.kalender, icon: <ICalendar /> },
     planner: { href: "/werkgever/planner", label: "Roosterplanner", icon: <ICalendar /> },
     agenda: { href: "/werkgever/agenda", label: t.nav.agenda, icon: <ICalendar /> },
+    // met de vlag publiek-alleen-flexwerk: kalender, roosterplanner en agenda als één ingang (tabbladen op de pagina)
+    planning: { href: "/werkgever/kalender", label: "Planning", icon: <ICalendar /> },
     bank: { href: "/werkgever/bank", label: t.nav.bank, icon: <IWallet /> },
     favorieten: { href: "/werkgever/favorieten", label: t.nav.favorieten, icon: <IHeart /> },
     berichten: { href: "/werkgever/berichten", label: t.nav.chat, icon: <IChat /> },

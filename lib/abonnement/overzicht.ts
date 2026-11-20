@@ -53,7 +53,10 @@ export interface PlanRegel {
   actie: PlanActie;
 }
 
-export function planRegels(huidig: HuidigAbonnement): PlanRegel[] {
+// alleenFlexwerk: vlag `publiek-alleen-flexwerk` — de SaaS-pakketten (Starter/Pro/Business/Enterprise) horen bij de brede
+// versie van ZekerFlex; bij alleen flexwerk is de prijs per gewerkt uur (lib/pricing/tiers.ts) en tonen we ze niet (20 nov, eigenaar).
+export function planRegels(huidig: HuidigAbonnement, alleenFlexwerk = false): PlanRegel[] {
+  if (alleenFlexwerk) return [];
   const nu = SAAS_PLAN_KEYS.indexOf(huidig.plan);
   return SAAS_PLAN_KEYS.map((sleutel, i) => {
     const p = SAAS_PLANS[sleutel];

@@ -60,8 +60,10 @@ export function AgendaView({
 }: {
   t: Dict;
   withShifts: boolean;
-  mailHref: string;
-  whatsappHref: string;
+  /** de bron "mail" met een koppel-link; zonder (vlag publiek-alleen-flexwerk bij bedrijven) staat de regel er niet */
+  mailHref?: string | undefined;
+  /** de bron "WhatsApp" met een importlink; zonder staat de regel er niet */
+  whatsappHref?: string | undefined;
   /** e.g. "/werkgever/diensten/" — the shift id is appended */
   shiftHrefBase?: string;
   /** In de beheeromgeving: met kerncijfers en een maandkalender. */
@@ -255,6 +257,7 @@ export function AgendaView({
         <aside aria-label={t.sources} className="card h-fit space-y-3 p-5 text-sm">
           <p className="font-semibold text-ink">{t.sources}</p>
           <ul className="space-y-2">
+            {mailHref && (
             <li className="flex items-center justify-between gap-2">
               <span className="whitespace-nowrap">{admin ? "" : "✉️ "}{t.sourceMail}</span>
               {mailConnected ? (
@@ -265,16 +268,19 @@ export function AgendaView({
                 </Link>
               )}
             </li>
+            )}
             <li className="flex items-center justify-between gap-2">
               <span className="whitespace-nowrap">{admin ? "" : "💬 "}{t.sourceChat}</span>
               <span className="text-xs text-ok">{t.sourceChatOn}</span>
             </li>
+            {whatsappHref && (
             <li className="flex items-center justify-between gap-2">
               <span className="whitespace-nowrap">{admin ? "" : "🟢 "}{t.sourceWhatsapp}</span>
               <Link href={whatsappHref} className="text-xs font-semibold text-brand-600 hover:underline">
                 {t.sourceWhatsappImport}
               </Link>
             </li>
+            )}
           </ul>
           <p className="text-xs leading-relaxed text-neutralx-500">{t.autoNote}</p>
         </aside>

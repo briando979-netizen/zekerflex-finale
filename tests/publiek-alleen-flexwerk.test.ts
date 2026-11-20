@@ -28,8 +28,9 @@ import {
 import { CONTENT_REGISTRY, lijstRegels } from "@/lib/content/store";
 import { AANBOD_KOLOMMEN, ALLES_ONLINE, NAV, SNELLE_ACTIES, VOORBEELDSITES, zichtbareAanbodKolommen, zichtbareNav } from "@/lib/marketing/site-nav";
 import { PIJLERS } from "@/lib/marketing/aanbod";
-import { WERKRUIMTES, menuVoor, type MenuOpties } from "@/lib/werkgever/werkruimte";
-import { uitbreidingen } from "@/lib/abonnement/overzicht";
+import { PLANNING_SAMEN, WERKRUIMTES, menuVoor, type MenuOpties } from "@/lib/werkgever/werkruimte";
+import { PLANNING_TABS } from "@/lib/werkgever/planning-tabs";
+import { planRegels, uitbreidingen } from "@/lib/abonnement/overzicht";
 import { openbareRoutes } from "@/lib/ops/rondgang";
 import { robotsVerborgen } from "@/lib/seo/verbergen";
 
@@ -255,31 +256,53 @@ describe("de bedrijfskant met de vlag aan", () => {
     expect(flex).toContain("personeel");
   });
 
-  it("het personeel-menu: met de vlag aan vallen telefonie, reviews en 'Jouw branche' weg, de personeelsfuncties blijven", () => {
+  it("het personeel-menu: met de vlag aan vallen telefonie, reviews, 'Jouw branche', mail, WhatsApp en wifi/vpn weg, de personeelsfuncties blijven", () => {
     const opties: MenuOpties = { heeftAfspraken: true, heeftRijschool: true, heeftHoreca: true, horecaModules: [], inApp: false, studio: true };
     // zonder vlag staan ze er gewoon in
     const uit = menuVoor("personeel", opties).map((p) => p.sleutel);
-    for (const er of ["telefonie", "reviews", "branche"]) expect(uit, er).toContain(er);
-    // met de vlag aan: de niet-flexwerk-items weg (ook branche en de website/webshop-items)
+    for (const er of ["telefonie", "reviews", "branche", "mail", "whatsapp", "netwerk", "kalender", "planner", "agenda"]) expect(uit, er).toContain(er);
+    expect(uit).not.toContain("planning");
+    // met de vlag aan: de niet-flexwerk-items weg (ook branche, de website/webshop-items, de mailbox, WhatsApp en wifi/vpn)
     const aan = menuVoor("personeel", { ...opties, alleenFlexwerk: true }).map((p) => p.sleutel);
-    for (const weg of ["telefonie", "reviews", "branche", "website", "winkel", "studio"]) expect(aan, weg).not.toContain(weg);
-    // alle personeelsfuncties, flexwerk-administratie, en wifi/vpn + op-locatie (eigen vlaggen) blijven
-    for (const blijft of ["klussen", "kalender", "planner", "uren", "inchecken", "facturen", "compliance", "overeenkomsten", "bedrijf", "rapportages", "netwerk", "locatie"]) {
+    for (const weg of ["telefonie", "reviews", "branche", "website", "winkel", "studio", "mail", "whatsapp", "netwerk"]) expect(aan, weg).not.toContain(weg);
+    // alle personeelsfuncties, flexwerk-administratie en op-locatie (eigen vlag) blijven; de assistent ook
+    for (const blijft of ["klussen", "planning", "uren", "inchecken", "facturen", "compliance", "overeenkomsten", "bedrijf", "rapportages", "locatie", "assistent", "berichten", "favorieten"]) {
       expect(aan, blijft).toContain(blijft);
     }
+  });
+
+  it("de drie agenda's worden met de vlag aan één ingang Planning, op de plek van de kalender", () => {
+    const opties: MenuOpties = { heeftAfspraken: true, heeftRijschool: false, heeftHoreca: false, horecaModules: [], inApp: false, studio: true, alleenFlexwerk: true };
+    const aan = menuVoor("personeel", opties).map((p) => p.sleutel);
+    for (const weg of ["kalender", "planner", "agenda"]) expect(aan, weg).not.toContain(weg);
+    expect(aan.filter((s) => s === "planning")).toHaveLength(1);
+    // direct na klussen, en afspraken blijft er direct achter staan
+    expect(aan.slice(aan.indexOf("klussen"), aan.indexOf("klussen") + 3)).toEqual(["klussen", "planning", "afspraken"]);
+    // de tabbladen op de pagina dekken precies die drie
+    expect(PLANNING_SAMEN).toEqual(["kalender", "planner", "agenda"]);
+    expect(PLANNING_TABS.map((t) => t.id).sort()).toEqual([...PLANNING_SAMEN].sort());
+    expect(PLANNING_TABS.map((t) => t.href)).toEqual(["/werkgever/kalender", "/werkgever/planner", "/werkgever/agenda"]);
+  });
+
+  it("de abonnementspakketten verdwijnen met de vlag aan (prijs per gewerkt uur); de uitbreidingen blijven", () => {
+    const huidig = { plan: "starter" as const, status: "actief" as const, tot: null };
+    expect(planRegels(huidig).length).toBeGreaterThan(1);
+    expect(planRegels(huidig, true)).toEqual([]);
   });
 
   it("een nieuw bedrijf zonder klus krijgt met de vlag aan een kort startmenu; na de eerste klus staat alles er weer", () => {
     const opties: MenuOpties = { heeftAfspraken: false, heeftRijschool: false, heeftHoreca: false, horecaModules: [], inApp: false, studio: true, alleenFlexwerk: true };
     const kort = menuVoor("personeel", { ...opties, nogGeenKlussen: true }).map((p) => p.sleutel);
-    expect(kort).toEqual(["start", "klussen", "kalender", "berichten", "assistent", "uren", "facturen", "bedrijf", "kennisbank", "hulp"]);
-    // wie klussen heeft, houdt alle personeelsfuncties
+    expect(kort).toEqual(["start", "klussen", "planning", "berichten", "assistent", "uren", "facturen", "bedrijf", "kennisbank", "hulp"]);
+    // wie klussen heeft, houdt alle personeelsfuncties (mail, whatsapp en wifi/vpn komen niet terug: geen flexwerk)
     const vol = menuVoor("personeel", { ...opties, nogGeenKlussen: false }).map((p) => p.sleutel);
-    for (const terug of ["planner", "agenda", "favorieten", "inchecken", "compliance", "overeenkomsten", "rapportages"]) expect(vol, terug).toContain(terug);
+    for (const terug of ["favorieten", "inchecken", "compliance", "overeenkomsten", "rapportages", "inkaart", "geblokkeerd"]) expect(vol, terug).toContain(terug);
+    for (const nooit of ["mail", "whatsapp", "netwerk", "planner", "agenda"]) expect(vol, nooit).not.toContain(nooit);
     // zonder de vlag verandert er niets, ook niet voor een nieuw bedrijf
     const zonderVlag = menuVoor("personeel", { ...opties, alleenFlexwerk: false, nogGeenKlussen: true }).map((p) => p.sleutel);
     expect(zonderVlag).toContain("planner");
     expect(zonderVlag).toContain("telefonie");
+    expect(zonderVlag).toContain("mail");
   });
 
   it("de andere dashboards worden niet gefilterd: een bestaand website-bedrijf houdt zijn menu (breek niet)", () => {

@@ -3,6 +3,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { getEmployerCalendarMonth } from "@/lib/dashboard/employer-calendar";
 import { PageHeader } from "@/components/app/ui";
 import { ColorLegend } from "@/components/app/ColorLegend";
+import { PlanningTabs } from "@/components/werkgever/PlanningTabs";
 import { getDict, getLocale } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { amsterdamParts } from "@/lib/time/amsterdam";
@@ -44,6 +45,7 @@ export default async function KalenderPage(
 
   return (
     <>
+      <PlanningTabs actief="kalender" />
       <PageHeader
         title={t.calendar.title}
         eyebrow={t.calendar.eyebrow}

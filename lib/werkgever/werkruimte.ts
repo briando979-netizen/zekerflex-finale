@@ -175,6 +175,8 @@ export type MenuSleutel =
   | "kalender"
   | "planner"
   | "agenda"
+  /** met de vlag publiek-alleen-flexwerk: kalender, agenda en roosterplanner als één ingang "Planning" (/werkgever/kalender, met tabbladen) */
+  | "planning"
   | "bank"
   | "favorieten"
   | "berichten"
@@ -250,20 +252,34 @@ const plek = (sectie?: MenuSectie) => (sleutel: MenuSleutel): MenuPlek => (secti
 // verloning, team, instellingen, abonnement, …) blijven altijd. De pagina's blijven bereikbaar via een directe link.
 // Alleen het personeel-dashboard wordt gefilterd: een bestaand website-/webshop-/rijschool-/horeca-bedrijf houdt zijn eigen
 // dashboardmenu volledig (breek dat niet; de wisselaar toont dat dashboard alleen als het open is).
-const NIET_FLEXWERK_MENU: readonly MenuSleutel[] = ["telefonie", "reviews", "branche", "studio", "winkel", "website"];
+// Sinds 20 nov (eigenaar: "haal weg wat niets met flexwerkers of uren goedkeuren te maken heeft") ook de zakelijke
+// mailbox, de WhatsApp-koppeling en Wifi/VPN (netwerkpakketten): losse diensten, geen flexwerk.
+const NIET_FLEXWERK_MENU: readonly MenuSleutel[] = ["telefonie", "reviews", "branche", "studio", "winkel", "website", "mail", "whatsapp", "netwerk"];
 
-// Een nieuw bedrijf zag 23 regels in het menu, waaronder drie agenda's (20 nov, eigenaar: korter). Wat pas zin heeft
-// als er een klus loopt, komt erbij zodra de eerste klus is geplaatst: wie klussen heeft, houdt altijd alle
-// personeelsfuncties. Tot die tijd blijft over: start, klussen, kalender, chat, assistent, uren, facturen, bedrijf en hulp.
-// De pagina's zelf blijven bereikbaar via een directe link.
-export const NA_EERSTE_KLUS: readonly MenuSleutel[] = ["planner", "agenda", "favorieten", "mail", "whatsapp", "geblokkeerd", "inchecken", "rapportages", "inkaart", "compliance", "overeenkomsten", "netwerk", "locatie"];
+// Drie agenda's naast elkaar (kalender, roosterplanner, agenda) was te veel (20 nov, eigenaar: "voeg ze samen"): met de
+// vlag aan één ingang "Planning" (/werkgever/kalender) met tabbladen naar de andere twee (components/werkgever/PlanningTabs.tsx).
+export const PLANNING_SAMEN: readonly MenuSleutel[] = ["kalender", "planner", "agenda"];
+
+// Een nieuw bedrijf zag 23 regels in het menu (20 nov, eigenaar: korter). Wat pas zin heeft als er een klus loopt, komt
+// erbij zodra de eerste klus is geplaatst: wie klussen heeft, houdt altijd alle personeelsfuncties. Tot die tijd blijft
+// over: start, klussen, planning, chat, assistent, uren, facturen, bedrijf en hulp. De pagina's blijven bereikbaar via een
+// directe link.
+export const NA_EERSTE_KLUS: readonly MenuSleutel[] = ["favorieten", "geblokkeerd", "inchecken", "rapportages", "inkaart", "compliance", "overeenkomsten", "locatie"];
 
 /** Het menu van het dashboard `soort`; met de vlag aan vallen in het personeel-dashboard de niet-flexwerk-items weg. */
 export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
   const menu = menuVoorBasis(soort, o);
   if (!o.alleenFlexwerk || soort !== "personeel") return menu;
   const weg: readonly MenuSleutel[] = o.nogGeenKlussen ? [...NIET_FLEXWERK_MENU, ...NA_EERSTE_KLUS] : NIET_FLEXWERK_MENU;
-  return menu.filter((p) => !weg.includes(p.sleutel));
+  // de eerste van de drie agenda's wordt "Planning", de andere twee vallen weg (ze zitten als tabblad onder Planning)
+  let planningGezet = false;
+  return menu.flatMap((p): MenuPlek[] => {
+    if (weg.includes(p.sleutel)) return [];
+    if (!PLANNING_SAMEN.includes(p.sleutel)) return [p];
+    if (planningGezet) return [];
+    planningGezet = true;
+    return [{ ...p, sleutel: "planning" }];
+  });
 }
 
 /** Het menu van het dashboard `soort` (de vaste opbouw, zonder de vlag). */

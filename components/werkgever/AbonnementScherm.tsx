@@ -54,6 +54,8 @@ export function AbonnementScherm({ huidig, plannen, groepen, inApp }: { huidig: 
         </div>
       )}
 
+      {/* zonder pakketten (vlag publiek-alleen-flexwerk): geen "Jouw abonnement" en geen pakketkeuze, alleen de uitbreidingen */}
+      {plannen.length > 0 && (
       <section aria-labelledby="abo-nu" className="rounded-2xl bg-white p-6 shadow-card">
         <h2 id="abo-nu" className="font-display text-lg font-bold text-ink">Jouw abonnement</h2>
         <p className="mt-2 text-sm text-ink">
@@ -67,7 +69,9 @@ export function AbonnementScherm({ huidig, plannen, groepen, inApp }: { huidig: 
         )}
         {huidig.status === "actief" && tot && huidig.plan !== "starter" && <p className="mt-1 text-sm text-neutralx-600">Lopende periode tot {tot}.</p>}
       </section>
+      )}
 
+      {plannen.length > 0 && (
       <section aria-labelledby="abo-plannen">
         <h2 id="abo-plannen" className="mb-4 font-display text-lg font-bold text-ink">Abonnementen</h2>
         {fout && <p role="alert" className="mb-3 text-sm font-semibold text-warn">{fout}</p>}
@@ -101,6 +105,7 @@ export function AbonnementScherm({ huidig, plannen, groepen, inApp }: { huidig: 
           ))}
         </div>
       </section>
+      )}
 
       <section aria-labelledby="abo-uitbreidingen">
         <h2 id="abo-uitbreidingen" className="mb-1 font-display text-lg font-bold text-ink">Uitbreidingen</h2>

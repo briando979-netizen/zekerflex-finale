@@ -1,6 +1,7 @@
 import { requirePrincipal } from "@/lib/auth";
 import { PageHeader } from "@/components/app/ui";
 import { Planner } from "@/components/werkgever/Planner";
+import { PlanningTabs } from "@/components/werkgever/PlanningTabs";
 import { planWeek, weekSleutelVan } from "@/lib/planner/week";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ export default async function PlannerPage(props: { searchParams: Promise<{ week?
 
   return (
     <>
+      <PlanningTabs actief="planner" />
       <PageHeader
         title="Roosterplanner"
         eyebrow="Personeel"

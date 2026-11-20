@@ -18,7 +18,7 @@ export default async function AbonnementPage() {
   const rij = tenantId ? await prisma.apiSubscription.findUnique({ where: { tenantId }, select: { planKey: true, status: true, currentPeriodEnd: true } }) : null;
   const huidig = huidigAbonnement(rij);
   const inApp = cookieStringIsApp((await cookies()).toString());
-  // vlag `publiek-alleen-flexwerk`: dan alleen de flexwerk-uitbreidingen (de SaaS-plannen blijven altijd)
+  // vlag `publiek-alleen-flexwerk`: dan alleen de flexwerk-uitbreidingen en geen SaaS-pakketten (prijs per gewerkt uur)
   const alleenFlexwerk = await alleenFlexwerkAan().catch(() => false);
-  return <AbonnementScherm huidig={huidig} plannen={planRegels(huidig)} groepen={uitbreidingen(alleenFlexwerk)} inApp={inApp} />;
+  return <AbonnementScherm huidig={huidig} plannen={planRegels(huidig, alleenFlexwerk)} groepen={uitbreidingen(alleenFlexwerk)} inApp={inApp} />;
 }
