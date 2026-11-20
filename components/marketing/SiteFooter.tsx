@@ -20,7 +20,8 @@ export function SiteFooter({ voettekst = STANDAARD_VOETTEKST, alleenFlexwerk = f
         .filter((col) => col.links.length > 0)
     : voettekst.kolommen;
   return (
-    <footer className="hero-ink text-white">
+    // sinds 21 nov nachtblauw met koppen in kapitalen, zoals de voettekst van de website van YoungOnes (eigenaar)
+    <footer className="bg-yo-navy text-white">
       <div className="border-b border-white/10">
         <div className="shell flex flex-col gap-6 py-12 md:flex-row md:items-center md:justify-between">
           <div className="max-w-sm">
@@ -38,9 +39,13 @@ export function SiteFooter({ voettekst = STANDAARD_VOETTEKST, alleenFlexwerk = f
       <h2 className="sr-only">Snel naar</h2>
       <div className={`shell grid gap-10 py-12 md:gap-12 md:py-16 ${kolommen.length === 3 ? "md:grid-cols-[1.4fr_repeat(3,1fr)]" : kolommen.length === 4 ? "md:grid-cols-[1.4fr_repeat(4,1fr)]" : kolommen.length === 2 ? "md:grid-cols-[1.4fr_repeat(2,1fr)]" : "md:grid-cols-[1.4fr_1fr]"}`}>
         <div>
-          <div className="flex items-center gap-2.5">
-            <LogoGlyph size={30} tone="light" />
-            <span className="font-display text-lg font-bold">ZekerFlex</span>
+          <div className="flex items-center gap-3">
+            <LogoGlyph size={40} tone="light" />
+            <span className="font-display text-3xl font-extrabold uppercase leading-none tracking-tight">
+              Zeker
+              <br />
+              Flex
+            </span>
           </div>
           {voettekst.slogan ? <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/60">{voettekst.slogan}</p> : null}
           <div className="mt-5 flex items-center gap-2 text-xs text-white/50">
@@ -54,7 +59,7 @@ export function SiteFooter({ voettekst = STANDAARD_VOETTEKST, alleenFlexwerk = f
         {kolommen.map((col, i) => (
           <div key={`${col.titel}-${i}`}>
             {col.titel ? (
-              <h3 className="font-mono text-xs uppercase tracking-[0.16em] text-white/60">
+              <h3 className="font-display text-sm font-extrabold uppercase tracking-wide text-white">
                 {col.titel}
               </h3>
             ) : null}

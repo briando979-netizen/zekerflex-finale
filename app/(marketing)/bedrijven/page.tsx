@@ -11,8 +11,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { Photo } from "@/components/marketing/Photo";
 import { SceneApprove } from "@/components/marketing/Scene";
-import { KopClip } from "@/components/marketing/KopClip";
 import { Reveal } from "@/components/marketing/Reveal";
+import { YoTabs } from "@/components/marketing/yo/YoTabs";
+import { YO_KOP, YoDrie, YoKrabbel, YoLink, YoPunten, YoSplit } from "@/components/marketing/yo/YoDelen";
+import { YO_BEDRIJF } from "@/lib/marketing/yo-home";
 import { FaqList } from "@/components/marketing/primitives";
 import { Marquee } from "@/components/marketing/Marquee";
 import { BranchShowcase } from "@/components/marketing/BranchShowcase";
@@ -64,57 +66,54 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
           __html: ldJson([faqPagina(FAQ), serviceJsonLd()]),
         }}
       />
-      {/* ───────────────────────────────────────────────────────────── HERO (premium, zoals de voorpagina: donker, links de tekst, rechts een staande foto van een vrouw met de bewegende versie eroverheen) */}
-      <section className="relative isolate overflow-hidden bg-[#0C0E12] text-white">
-        {/* telefoon: de foto als vlak bovenaan, de tekst eronder; groter scherm: de tekst links, de foto als strook rechts (dezelfde vrouw als de voorpagina) */}
-        <div className="absolute inset-x-0 top-0 -z-10 h-[22rem] md:inset-y-0 md:left-auto md:h-auto md:w-[40%]">
-          <Image
-            src="/werk/campagne-kop.jpg"
-            alt="Een lachende jonge vrouw in de deuropening van een café, klaar voor haar dienst"
-            fill
-            priority
-            sizes="(min-width: 768px) 40vw, 100vw"
-            className="object-cover object-[50%_18%] md:object-[50%_28%]"
-          />
-          {/* dezelfde foto, bewegend; laadt of speelt de video niet, dan zie je gewoon de foto. Zonder geluid, zonder knoppen, niet voor schermlezers. */}
-          <KopClip src="/werk/campagne-kop.mp4" className="absolute inset-0 h-full w-full object-cover object-[50%_18%] md:object-[50%_28%]" />
-          <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#0C0E12] via-[#0C0E12]/30 via-40% to-transparent md:bg-gradient-to-r md:via-[#0C0E12]/40 md:via-25% md:to-50%" />
+      {/* ───────────────────────────────────────────────────────────── KOP (21 nov, in de opzet van de bedrijvenpagina van YoungOnes: links een
+          nachtblauw-naar-teal vlak met de kop in kapitalen, drie vinkjes en twee knoppen; rechts onze eigen foto met de rode krabbel) */}
+      <section className="grid overflow-hidden text-white md:grid-cols-2">
+        <div className="relative bg-[linear-gradient(135deg,#000440_0%,#0E3A62_60%,#0F5566_100%)] px-6 py-12 md:px-12 lg:px-16 lg:py-20">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white/85 backdrop-blur transition hover:bg-white/15"
+          >
+            Op zoek naar werk? <span className="text-yo-teal">Ik zoek werk →</span>
+          </Link>
+          <h1 className={`${YO_KOP} mt-6 text-4xl sm:text-5xl lg:text-6xl`}>{YO_BEDRIJF.kop}</h1>
+          <p className="mt-5 max-w-lg text-base leading-relaxed text-white/85 md:text-lg">{YO_BEDRIJF.lead}</p>
+          <YoPunten punten={YO_BEDRIJF.punten} licht />
+          <div className="mt-7 flex flex-wrap gap-3">
+            <YoLink href={YO_BEDRIJF.knop.href}>{YO_BEDRIJF.knop.label}</YoLink>
+            <YoLink href={YO_BEDRIJF.knop2.href} omlijnd wit>{YO_BEDRIJF.knop2.label}</YoLink>
+          </div>
         </div>
-        <div className="shell-4k relative pb-8 pt-[15rem] md:py-14 lg:py-16">
-          <div className="max-w-xl md:max-w-sm lg:max-w-xl">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white/80 backdrop-blur transition hover:bg-white/15"
-            >
-              Op zoek naar werk? <span className="text-brand-mint">Ik zoek werk →</span>
-            </Link>
-            <p className="eyebrow mt-5 text-brand-mint">Voor bedrijven</p>
-            <h1 className="fluid-hero mt-3 text-balance font-display font-bold">
-              Personeel nodig?{" "}
-              <span className="bg-gradient-to-r from-brand-mint to-[#8FF0C4] bg-clip-text text-transparent">Zeker van je mensen.</span>
-            </h1>
-            <p className="fluid-lead mt-4 max-w-lg text-white/75">
-              Plaats je klus en ZekerFlex stelt direct passende, geverifieerde mensen voor. Inchecken, uren goedkeuren en facturen lopen in één omgeving.
-            </p>
-            <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
-              <Link href="/klus-plaatsen" className="btn-mint text-base">
-                Plaats een klus
-              </Link>
-              <Link href="#hoe-het-werkt" className="btn-ghost-invert text-base">
-                Hoe het werkt
-              </Link>
-            </div>
-            <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-white/70">
-              {["Geverifieerde mensen", "Alleen betalen voor gewerkte uren", "Direct passende kandidaten"].map((p) => (
-                <li key={p} className="flex items-center gap-2">
-                  <Vink />
-                  {p}
-                </li>
-              ))}
-            </ul>
+        <div className="relative aspect-[4/3] md:aspect-auto md:min-h-[34rem]">
+          <Image src={YO_BEDRIJF.foto} alt={YO_BEDRIJF.alt} fill priority sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
+          <div className="pointer-events-none absolute bottom-10 left-6">
+            <YoKrabbel tekst={YO_BEDRIJF.krabbel} className="text-3xl md:text-5xl" />
           </div>
         </div>
       </section>
+
+      {/* ───────────────────────────────────────────────────────────── geen gedoe, geen verrassingen, geen losse eindjes */}
+      <YoDrie items={YO_BEDRIJF.drie} />
+
+      {/* ───────────────────────────────────────────────────────────── tabbladen: één platform voor werk / zzp'ers / uitzendkrachten */}
+      <YoTabs tabs={YO_BEDRIJF.tabs.items} />
+
+      {/* ───────────────────────────────────────────────────────────── foto + nachtblauw vlak: werk kan beter */}
+      <YoSplit
+        foto={YO_BEDRIJF.split.foto}
+        alt={YO_BEDRIJF.split.alt}
+        kop={YO_BEDRIJF.split.kop}
+        intro={YO_BEDRIJF.split.intro}
+        tekst={YO_BEDRIJF.split.tekst}
+        slot={YO_BEDRIJF.split.slot}
+        licht
+        knoppen={
+          <>
+            <YoLink href={YO_BEDRIJF.split.knop.href}>{YO_BEDRIJF.split.knop.label}</YoLink>
+            <YoLink href={YO_BEDRIJF.split.knop2.href} omlijnd>{YO_BEDRIJF.split.knop2.label}</YoLink>
+          </>
+        }
+      />
 
       {toonSecties(zichtbaar, {
       // vertrouwensbalk
@@ -478,13 +477,6 @@ function faqPagina(items: { q: string; a: string }[]): Record<string, unknown> {
 }
 
 /* icons */
-function Vink() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden className="flex-shrink-0 text-brand-mint">
-      <path d="M5 12l5 5L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 function IconTarget() { return (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden><circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2" /><circle cx="12" cy="12" r="3" fill="currentColor" /></svg>); }
 function IconBolt() { return (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" fill="currentColor" /></svg>); }
 function IconShield() { return (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>); }
