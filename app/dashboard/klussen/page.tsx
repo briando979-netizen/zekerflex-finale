@@ -10,7 +10,7 @@ import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
 import { todaysShifts, completedKlussenCount } from "@/lib/dashboard/today";
 import { getFiscal } from "@/lib/fiscal/store";
 import { isBirthdayToday } from "@/lib/birthday";
-import { StatusPill } from "@/components/app/ui";
+import { PageHeader, StatusPill } from "@/components/app/ui";
 import { MarketplaceView } from "@/components/app/MarketplaceView";
 import { WilReagerenNudge } from "@/components/app/WilReagerenNudge";
 import { getFreelancerDict } from "@/lib/i18n/server";
@@ -143,17 +143,10 @@ export default async function KlussenPage(
           </div>
         )
       )}
-      <div className="mb-5 flex items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-bold uppercase leading-tight tracking-tight text-ink">
-            {t.nav.findJob}
-          </h1>
-          <span className="mt-1 block h-1 w-20 rounded-full bg-gradient-to-r from-crit to-crit/40" />
-        </div>
-        {m.newSinceLastVisit > 0 && (
-          <StatusPill tone="ok">{t.page.newCount(m.newSinceLastVisit)}</StatusPill>
-        )}
-      </div>
+      <PageHeader
+        title={t.nav.findJob}
+        action={m.newSinceLastVisit > 0 ? <StatusPill tone="ok">{t.page.newCount(m.newSinceLastVisit)}</StatusPill> : null}
+      />
 
       {alleenTest && (
         <div className="card mb-5 p-5 text-sm">

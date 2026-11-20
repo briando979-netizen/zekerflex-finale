@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { UserPrefs, JobAlert } from "@/lib/prefs/store";
 import { useToast } from "@/components/ui/Toast";
 import { useFT } from "@/components/i18n/useFT";
+import { weekKolommen } from "@/lib/prefs/weekvolgorde";
 
 const PART_KEYS = ["morning", "afternoon", "evening"] as const;
 
@@ -11,8 +12,9 @@ export function AvailabilityForm({ initial }: { initial: UserPrefs }) {
   const toast = useToast();
   const ft = useFT();
   const t = ft.avail;
-  // Korte dagnamen in de app-taal, met hoofdletter (zo=0 … za=6, zoals availability opslaat).
-  const DAYS = ft.date.wd.map((d) => d.charAt(0).toUpperCase() + d.slice(1));
+  // Korte dagnamen in de app-taal, met hoofdletter. Het rooster toont ma t/m zo; elke kolom houdt het
+  // dagnummer waaronder availability bewaart (zo=0 … za=6), zie lib/prefs/weekvolgorde.ts.
+  const DAYS = weekKolommen(ft.date.wd);
   const PARTS = PART_KEYS.map((k) => ({ k, l: t[k] }));
   const [avail, setAvail] = useState<UserPrefs["availability"]>(initial.availability ?? {});
   const [minRate, setMinRate] = useState(initial.minHourlyRateCents ? initial.minHourlyRateCents / 100 : 0);
@@ -80,42 +82,51 @@ export function AvailabilityForm({ initial }: { initial: UserPrefs }) {
       <section className="card p-6">
         <h2 className="font-display text-lg font-semibold">{t.whenTitle}</h2>
         <p className="mt-1 text-sm text-neutralx-600">{t.whenBody}</p>
-        {/* table-fixed: zeven even brede dagkolommen die ook op een telefoon (±310 px) passen. */}
+        {/* Zeven even brede dagkolommen over de hele breedte; het dagdeel staat als kopje boven zijn rij.
+            Zo is elk vakje ook op een telefoon een raakvlak van 44 bij 44: 390 − 2×16 (scherm) − 2×24 (kaart)
+            − 2 (rand) = 308 px, gedeeld door 7 = 44 px. De knop vult de hele cel; het zichtbare vakje zit er
+            met 2 px lucht in. min-w 17,5rem (7 × 40 px): op een heel smal scherm veegt de tabel, de vakjes
+            krimpen niet onder de 40. */}
         <div className="mt-5 overflow-x-auto">
-          <table className="w-full table-fixed text-center text-sm">
+          <table className="w-full min-w-[17.5rem] table-fixed text-center text-sm">
             <thead>
               <tr>
-                <th className="w-[4.5rem] sm:w-24"></th>
                 {DAYS.map((d) => (
-                  <th key={d} className="pb-2 font-medium text-neutralx-500">{d}</th>
+                  <th key={d.dag} scope="col" className="pb-1 font-medium text-neutralx-500">{d.naam}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
-              {PARTS.map((p) => (
-                <tr key={p.k}>
-                  <td className="break-words py-1 pr-2 text-right text-xs text-neutralx-500 sm:pr-3">{p.l}</td>
-                  {DAYS.map((_, day) => {
-                    const on = (avail[day] ?? []).includes(p.k as never);
+            {PARTS.map((p) => (
+              <tbody key={p.k}>
+                <tr>
+                  <th colSpan={7} scope="rowgroup" className="pb-0.5 pt-2 text-left text-xs font-medium text-neutralx-500">{p.l}</th>
+                </tr>
+                <tr>
+                  {DAYS.map((d) => {
+                    const on = (avail[d.dag] ?? []).includes(p.k as never);
                     return (
-                      <td key={day} className="p-0.5 sm:p-1">
+                      <td key={d.dag} className="p-0">
                         <button
                           type="button"
-                          onClick={() => toggle(day, p.k)}
-                          className={`h-8 w-full rounded-md border text-xs transition ${
-                            on ? "border-brand-500 bg-brand-500 text-white" : "border-hairstrong hover:bg-paper-soft"
-                          }`}
+                          onClick={() => toggle(d.dag, p.k)}
+                          className="block h-11 w-full p-0.5"
                           aria-pressed={on}
-                          aria-label={`${DAYS[day]} ${p.l}`}
+                          aria-label={`${d.naam} ${p.l}`}
                         >
-                          {on ? "✓" : ""}
+                          <span
+                            className={`flex h-full w-full items-center justify-center rounded-md border text-xs transition ${
+                              on ? "border-brand-500 bg-brand-500 text-white" : "border-hairstrong hover:bg-paper-soft"
+                            }`}
+                          >
+                            {on ? "✓" : ""}
+                          </span>
                         </button>
                       </td>
                     );
                   })}
                 </tr>
-              ))}
-            </tbody>
+              </tbody>
+            ))}
           </table>
         </div>
       </section>

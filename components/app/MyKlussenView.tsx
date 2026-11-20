@@ -110,7 +110,8 @@ export function MyKlussenView({
         })}
       </div>
 
-      {/* Filter row */}
+      {/* Filter row — alleen als er iets te filteren valt; een lege lijst krijgt een knop naar het zoeken */}
+      {items.length > 0 && (
       <div className="mb-5 flex items-center gap-2">
         <button
           type="button"
@@ -153,8 +154,9 @@ export function MyKlussenView({
           </button>
         )}
       </div>
+      )}
 
-      {panel && (
+      {items.length > 0 && panel && (
         <div className="mb-5 rounded-xl border border-hair bg-white p-3 text-sm">
           <div className="flex flex-wrap gap-2">
             <button
@@ -207,7 +209,7 @@ export function MyKlussenView({
       )}
 
       {shown.length === 0 ? (
-        <Empty tab={tab} w={w} />
+        <Empty tab={tab} w={w} zoek={items.length === 0} />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {shown.map((item) => (
@@ -399,11 +401,17 @@ function HistoryFooter({ item, onHide, w }: { item: MyWorkItem; onHide: (workKey
   }
 }
 
-function Empty({ tab, w }: { tab: TabId; w: W }) {
+// zoek: de lijst van dit tabblad is echt leeg (niet weggefilterd op dag) → een knop naar het zoeken van klussen
+function Empty({ tab, w, zoek }: { tab: TabId; w: W; zoek: boolean }) {
   const text = tab === "pending" ? w.emptyPending : tab === "active" ? w.emptyActive : w.emptyHistory;
   return (
     <div className="rounded-2xl border border-dashed border-hairstrong bg-white/60 px-5 py-12 text-center text-sm text-neutralx-500">
-      {text}
+      <p>{text}</p>
+      {zoek && (
+        <Link href="/dashboard/klussen" className="btn-primary mt-4">
+          {w.emptyCta}
+        </Link>
+      )}
     </div>
   );
 }

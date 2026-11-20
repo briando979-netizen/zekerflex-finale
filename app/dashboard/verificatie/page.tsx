@@ -31,6 +31,7 @@ import { beginStap } from "@/lib/onboarding/wie-ben-jij";
 import { nogVoorEersteKlusVan } from "@/lib/onboarding/klaar-voor-klus-server";
 import type { KlusStuk } from "@/lib/onboarding/klaar-voor-klus";
 import { featureEnabled } from "@/lib/flags";
+import { LATER_ANKERS, laterBlokTonen, stapStaatElders } from "@/lib/onboarding/later-blok";
 
 export const dynamic = "force-dynamic";
 
@@ -255,6 +256,10 @@ export default async function VerificatiePage() {
       />
     );
   }
+  // het blok "Voor je eerste klus" pas als de vijf stappen af zijn (werkerOnboardingKlaar); tot dan één regel. Wie al
+  // gewerkt heeft of iets gepland heeft (bijv. met een verlopen ID opnieuw in het formulier) houdt het blok wel: die moet
+  // bij zijn rekeningnummer en overeenkomst kunnen, ook via de links uit mail (#uitzendovereenkomst, #bankrekening)
+  const laterTonen = laterBlokTonen(poort) || o.shiftsCompleted > 0 || o.kpis.upcoming > 0;
   const initial = {
     ...(bewaard?.kvkNumber && /^\d+$/.test(bewaard.kvkNumber) ? { kvkNumber: bewaard.kvkNumber } : {}),
     ...(bewaard?.vatNumber ? { vatNumber: bewaard.vatNumber } : {}),
@@ -334,7 +339,25 @@ export default async function VerificatiePage() {
       {/* wat pas nodig is voor de eerste uitbetaling, apart onder de stappen (13 nov 2026, voorstel d4): de bank, het
           werkrecht (vlag) en, als de overeenkomst al getekend is, de uitzendgegevens (StiPP, loonheffingskorting) */}
       <section aria-labelledby="later-kop" className="mt-10 border-t border-hair pt-6">
+        {/* tijdens de vijf stappen alleen één regel dat dit daarna komt (20 nov 2026: het hele blok stond er al onder, te
+            veel tegelijk). De ankers blijven bestaan: wie via een mail of knop op #bankrekening e.d. binnenkomt, landt op
+            die regel en niet op een lege plek (lib/onboarding/later-blok.ts) */}
+        {!laterTonen && LATER_ANKERS.map((anker) => <span key={anker} id={anker} className="block scroll-mt-20" />)}
         <h2 id="later-kop" className="font-display text-base font-bold text-ink">{pt.laterTitel}</h2>
+        {!laterTonen ? (
+          <p className="mt-1 text-sm text-neutralx-500">
+            {fd.klaarVoorKlus.daarna}
+            {stapStaatElders(poort) && (
+              <>
+                {" "}
+                <Link href="/dashboard/klussen" className="inline-flex min-h-[44px] items-center font-semibold text-brand-600 underline underline-offset-2">
+                  {fd.klaarVoorKlus.daarnaKnop}
+                </Link>
+              </>
+            )}
+          </p>
+        ) : (
+        <>
         <p className="mt-1 text-sm text-neutralx-500">{pt.laterUitleg}</p>
         {/* uitzendkracht: BSN en overeenkomst vóór de eerste klus (13 nov); "Naar de overeenkomst" springt naar het blok hieronder */}
         {voorKlus.length > 0 && (
@@ -366,6 +389,8 @@ export default async function VerificatiePage() {
               <UitzendPanel />
             </div>
           </div>
+        )}
+        </>
         )}
       </section>
     </div>

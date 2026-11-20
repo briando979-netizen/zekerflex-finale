@@ -24,6 +24,7 @@ import { getFreelancerDict } from "@/lib/i18n/server";
 import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
 import { nogVoorEersteKlusVan } from "@/lib/onboarding/klaar-voor-klus-server";
 import { vulIn } from "@/lib/i18n/vul-in";
+import { naamInitialen } from "@/lib/naam/initialen";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,9 @@ export default async function ProfielPage() {
   ]);
   const name = user?.fullName ?? principal.fullName;
   const stars = Math.round(stats.reviews.average);
+  // Nog geen beoordeling en alle drie de tellers op nul: de kaart toont dan alleen foto en naam (zoals /dashboard/account).
+  const nogNietsGedaan =
+    stats.reviews.count === 0 && stats.matchedShifts === 0 && stats.notCompleted === 0 && stats.replacementsArranged === 0;
   const isUitzend = invoiceModeFor(fiscal) === "payroll";
   // af = de 5 stappen klaar en niets meer wat reageren tegenhoudt (dezelfde regels als Ontdekken)
   const [poortNu, nogVoorKlus] = await Promise.all([werkerPoortStand(principal.userId).catch(() => null), nogVoorEersteKlusVan(principal.userId).catch(() => [])]);
@@ -83,41 +87,48 @@ export default async function ProfielPage() {
               <img src={`/api/profile/${principal.userId}/avatar`} alt={name} className="h-full w-full object-cover" />
             ) : (
               <span className="flex h-full w-full items-center justify-center bg-brand-500 text-2xl font-semibold">
-                {name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("")}
+                {naamInitialen(name)}
               </span>
             )}
           </span>
           <div>
             <p className="font-display text-xl font-bold">{name}</p>
-            <div className="mt-1 flex items-center justify-center gap-2 text-sm">
-              <span className="text-amber-400">
-                {"★★★★★".slice(0, stars)}
-                <span className="text-white/25">{"★★★★★".slice(stars)}</span>
-              </span>
-              <span className="text-white/60">
-                {stats.reviews.count > 0 ? vulIn(t.beoordelingen, { n: stats.reviews.count }) : t.geenBeoordelingen}
-              </span>
-            </div>
+            {!nogNietsGedaan && (
+              <div className="mt-1 flex items-center justify-center gap-2 text-sm">
+                <span className="text-amber-400">
+                  {"★★★★★".slice(0, stars)}
+                  <span className="text-white/25">{"★★★★★".slice(stars)}</span>
+                </span>
+                <span className="text-white/60">
+                  {stats.reviews.count > 0 ? vulIn(t.beoordelingen, { n: stats.reviews.count }) : t.geenBeoordelingen}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
-        <p className="mt-5 text-center text-xs uppercase tracking-wide text-white/40">
-          {t.zesMaanden}
-        </p>
-        <div className="mt-3 grid grid-cols-3 divide-x divide-white/10 text-center">
-          <div>
-            <p className="num font-display text-2xl font-bold">{stats.matchedShifts}</p>
-            <p className="text-[11px] text-white/60">{t.gematcht}</p>
-          </div>
-          <div>
-            <p className="num font-display text-2xl font-bold">{stats.notCompleted}</p>
-            <p className="text-[11px] text-white/60">{t.nietVoltooid}</p>
-          </div>
-          <div>
-            <p className="num font-display text-2xl font-bold">{stats.replacementsArranged}</p>
-            <p className="text-[11px] text-white/60">{t.vervangingGeregeld}</p>
-          </div>
-        </div>
+        {/* vijf lege sterren en drie nullen zeggen een nieuwe werker niets: pas tonen als er iets te tellen valt */}
+        {!nogNietsGedaan && (
+          <>
+            <p className="mt-5 text-center text-xs uppercase tracking-wide text-white/40">
+              {t.zesMaanden}
+            </p>
+            <div className="mt-3 grid grid-cols-3 divide-x divide-white/10 text-center">
+              <div>
+                <p className="num font-display text-2xl font-bold">{stats.matchedShifts}</p>
+                <p className="text-[11px] text-white/60">{t.gematcht}</p>
+              </div>
+              <div>
+                <p className="num font-display text-2xl font-bold">{stats.notCompleted}</p>
+                <p className="text-[11px] text-white/60">{t.nietVoltooid}</p>
+              </div>
+              <div>
+                <p className="num font-display text-2xl font-bold">{stats.replacementsArranged}</p>
+                <p className="text-[11px] text-white/60">{t.vervangingGeregeld}</p>
+              </div>
+            </div>
+          </>
+        )}
         {stats.attendancePct != null && (
           <p className="mt-4 text-center text-xs text-white/50">
             {t.opkomst} <span className="font-semibold text-white/80">{stats.attendancePct}%</span>

@@ -16,6 +16,7 @@ import { useFT } from "@/components/i18n/useFT";
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n/config";
 import { BANK_AAN } from "@/lib/app-mode";
 import { sorteerTabs } from "@/lib/werker/tab-volgorde";
+import { schermTitelSleutel } from "@/lib/werker/schermtitel";
 
 // ---------------------------------------------------------------------------
 // Freelancer workspace shell — YoungOnes-style: a slim top bar and a
@@ -116,7 +117,13 @@ export function FreelancerShell({
   // action bar can take its place.
   const focused = /^\/dashboard\/klussen\/[^/]+$/.test(pathname);
   const current = tabs.find((t) => isActive(t.href));
-  const title = !current || current.href === "/dashboard/klussen" ? ft.nav.findJob : ft.nav[current.key];
+  // Een scherm uit de balk onderaan heeft zijn eigen naam; elk ander scherm (Verificatie, Profiel, Hulp, ...)
+  // krijgt die van lib/werker/schermtitel.ts in plaats van "Vind jouw klus".
+  const title = !current
+    ? ft.schermTitel[schermTitelSleutel(pathname)]
+    : current.href === "/dashboard/klussen"
+      ? ft.nav.findJob
+      : ft.nav[current.key];
 
   return (
     <div data-theme={theme} className="app-scope app-bg noise flex min-h-screen flex-col bg-paper-soft">
@@ -125,7 +132,8 @@ export function FreelancerShell({
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-hair bg-white/85 px-4 backdrop-blur-xl lg:px-8">
           <Link href="/dashboard/klussen" className="font-display text-base font-bold tracking-tight text-ink">
             {title}
-            <span className="mt-0.5 block h-1 w-16 rounded-full bg-gradient-to-r from-crit to-crit/40" />
+            {/* dezelfde groene streep als onder de paginakop (PageHeader in components/app/ui.tsx) */}
+            <span className="mt-0.5 block h-1 w-16 rounded-full bg-gradient-to-r from-brand-500 to-brand-mint" />
           </Link>
           <div className="ml-auto flex items-center gap-2">
             {canSwitchToEmployer && (

@@ -23,6 +23,7 @@ import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
 import { locatieTeksten } from "@/lib/locatie/teksten";
 import { hulpTeksten } from "@/lib/hulp/teksten";
 import { BANK_AAN } from "@/lib/app-mode";
+import { PageHeader } from "@/components/app/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -81,6 +82,10 @@ export default async function AccountPage() {
   ).length;
   const reviews = card?.freelancer?.reviews ?? { average: 0, count: 0, distribution: {} as never };
   const stars = Math.round(reviews.average);
+  // Nog geen beoordeling en alle drie de tellers op nul: de kaart toont dan alleen foto en naam.
+  const nogNietsGedaan = reviews.count === 0 && matched === 0 && notCompleted === 0 && replacementsArranged === 0;
+  // Een geplande (toekomstige) klus: het overzicht haalt die al op (lib/dashboard/freelancer.ts, kpis.upcoming).
+  const heeftGeplandeKlus = overview.kpis.upcoming > 0;
 
   const GROUPS: { items: Item[] }[] = [
     {
@@ -88,9 +93,7 @@ export default async function AccountPage() {
         { label: t.admin, href: "/dashboard/administratie" },
         { label: t.forecast, href: "/dashboard/vooruitblik" },
         { label: t.assistant, href: "/dashboard/assistent" },
-        // ZekerFlex OS: een eigennaam (in elke taal gelijk). external = gewone <a>: /os moet als eigen
-        // document laden, anders blijft de CSP van dit scherm gelden en openen de app-vensters niet.
-        ...(inApp ? [] : [{ label: "ZekerFlex OS", href: "/os", external: true }]),
+        // ZekerFlex OS staat hier bewust niet meer: dat is geen flexwerk (de pagina /os zelf bestaat nog).
         { label: t.availability, href: "/dashboard/beschikbaarheid" },
         { label: t.trips, href: "/dashboard/ritten" },
         { label: t.calendar, href: "/dashboard/agenda-koppeling" },
@@ -168,14 +171,23 @@ export default async function AccountPage() {
 
   return (
     <>
-      <div className="mb-5">
-        <h1 className="font-display text-2xl font-bold uppercase leading-tight tracking-tight text-ink">
-          {t.title}
-        </h1>
-        <span className="mt-1 block h-1 w-20 rounded-full bg-gradient-to-r from-crit to-crit/40" />
-      </div>
+      <PageHeader title={t.title} />
 
-      {isUitzend && (
+      {/* de oproep staat bovenaan: zonder afgerond profiel kan de werker nog niets aannemen */}
+      {!overview.profileComplete && (
+        <Link
+          href="/dashboard/verificatie"
+          className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-warn/40 bg-warn/5 px-4 py-3.5 text-sm"
+        >
+          <span className="font-semibold text-ink">{t.finishProfile}</span>
+          <span className="text-neutralx-400">›</span>
+        </Link>
+      )}
+
+      {/* ziek melden blijft alleen weg bij wie nog nooit een klus aannam: "gepland" telt alleen klussen die nog moeten
+          beginnen, dus wie tijdens een lopende klus ziek wordt, vindt de kaart via de aangenomen klussen van het laatste
+          halfjaar (beide getallen zijn hierboven al opgehaald, geen extra vraag aan de database) */}
+      {isUitzend && (heeftGeplandeKlus || matched > 0) && (
         <div className="mb-4">
           <ZiekMelden texts={ft.accountDelen.ziek} />
         </div>
@@ -195,26 +207,31 @@ export default async function AccountPage() {
         </div>
         <p className="mt-3 font-display text-xl font-bold text-ink">{card?.name ?? principal.email}</p>
 
-        {/* lege sterren: neutralx-400 haalt de 3:1 voor beeldelementen (neutralx-300 was 1,6:1) */}
-        <div className="mt-1.5 flex items-center justify-center gap-1 text-lg text-amber-500">
-          {"★★★★★".slice(0, stars)}
-          <span className="text-neutralx-400">{"★★★★★".slice(stars)}</span>
-        </div>
-        <Link
-          href="/dashboard/beoordelingen"
-          className="mt-1 inline-block text-sm font-semibold text-ink underline underline-offset-2"
-        >
-          {t.reviews(reviews.count)}
-        </Link>
+        {/* een nieuwe werker ziet geen vijf grijze sterren en drie nullen: pas tonen als er iets te tonen is */}
+        {!nogNietsGedaan && (
+          <>
+            {/* lege sterren: neutralx-400 haalt de 3:1 voor beeldelementen (neutralx-300 was 1,6:1) */}
+            <div className="mt-1.5 flex items-center justify-center gap-1 text-lg text-amber-500">
+              {"★★★★★".slice(0, stars)}
+              <span className="text-neutralx-400">{"★★★★★".slice(stars)}</span>
+            </div>
+            <Link
+              href="/dashboard/beoordelingen"
+              className="mt-1 inline-block text-sm font-semibold text-ink underline underline-offset-2"
+            >
+              {t.reviews(reviews.count)}
+            </Link>
 
-        <div className="mt-5 border-t border-hair pt-4">
-          <p className="text-sm text-neutralx-500">{t.statsTitle}</p>
-          <div className="mt-3 grid grid-cols-3 divide-x divide-hair">
-            <Stat value={matched} label={t.matched} />
-            <Stat value={notCompleted} label={t.notCompleted} />
-            <Stat value={replacementsArranged} label={t.replaced} />
-          </div>
-        </div>
+            <div className="mt-5 border-t border-hair pt-4">
+              <p className="text-sm text-neutralx-500">{t.statsTitle}</p>
+              <div className="mt-3 grid grid-cols-3 divide-x divide-hair">
+                <Stat value={matched} label={t.matched} />
+                <Stat value={notCompleted} label={t.notCompleted} />
+                <Stat value={replacementsArranged} label={t.replaced} />
+              </div>
+            </div>
+          </>
+        )}
 
         {profile && (
           <div className="mt-4 flex justify-center border-t border-hair pt-4 text-left">
@@ -222,16 +239,6 @@ export default async function AccountPage() {
           </div>
         )}
       </div>
-
-      {!overview.profileComplete && (
-        <Link
-          href="/dashboard/verificatie"
-          className="mt-4 flex items-center justify-between gap-3 rounded-2xl border border-warn/40 bg-warn/5 px-4 py-3.5 text-sm"
-        >
-          <span className="font-semibold text-ink">{t.finishProfile}</span>
-          <span className="text-neutralx-400">›</span>
-        </Link>
-      )}
 
       <div className="mt-4 space-y-4">
         {!secured && (

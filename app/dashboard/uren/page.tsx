@@ -25,7 +25,8 @@ export default async function UrenInvullenPage() {
       <PageHeader title={H.title} eyebrow={H.eyebrow} subtitle={H.subtitle} />
 
       {hours.length === 0 ? (
-        <EmptyState icon="⏱️" title={H.emptyTitle} body={H.emptyBody} />
+        // De uitleg staat al in de kop; hier alleen wat er nu is, met een knop naar het zoeken van klussen.
+        <EmptyState icon="⏱️" title={H.emptyTitle} body={H.emptyBody} cta={{ href: "/dashboard/klussen", label: ft.work.emptyCta }} />
       ) : (
         <>
           <p className="mb-4 text-sm font-semibold text-neutralx-600">{H.toFill(toFill)}</p>

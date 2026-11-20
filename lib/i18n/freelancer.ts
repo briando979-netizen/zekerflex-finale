@@ -20,6 +20,8 @@ import { INTRODUCTIE_TALEN } from "@/lib/introducties/teksten-talen";
 
 const nl = {
   nav: { discover: "Ontdekken", myJobs: "Mijn klussen", hours: "Uren", bank: "Bank", chat: "Chat", account: "Account", findJob: "Vind jouw klus", search: "Zoeken", employerWorkspace: "Werkgeversomgeving" },
+  // de titel in de balk bovenaan voor schermen buiten de balk onderaan (lib/werker/schermtitel.ts); "overig" = een scherm dat we niet kennen
+  schermTitel: { verificatie: "Verificatie", profiel: "Profiel", uitbetalingen: "Uitbetalingen", verloning: "Verloning", beschikbaarheid: "Beschikbaarheid", administratie: "Administratie", hulp: "Hulp", inchecken: "Inchecken", certificaten: "Certificaten", favorieten: "Favorieten", beoordelingen: "Beoordelingen", paspoort: "Werkpaspoort", ritten: "Kilometers", fiscaal: "Werkvorm", verzekering: "Verzekering", vooruitblik: "Vooruitblik", agenda: "Agenda", wifi: "Wifi", introduceren: "Introduceren", assistent: "Assistent", overig: "ZekerFlex" },
   los: {
     uren: { titel: "Voorstel voor correctie van je uren", voorstel: "De opdrachtgever stelt voor je uren aan te passen van {van} naar {naar} uur.", onafhankelijk: "Ga je niet akkoord? Dan beoordeelt ZekerFlex dit onafhankelijk.", ja: "Ja, akkoord", nee: "Nee, niet akkoord", bezig: "Bezig…" },
     menu: { meer: "Meer opties", verberg: "Opdrachtgever verbergen", deel: "Deze klus delen", gekopieerd: "Link gekopieerd", verborgen: "{naam} verborgen", verborgenTekst: "Je ziet geen klussen meer van deze opdrachtgever." },
@@ -238,7 +240,7 @@ const nl = {
     },
   },
   administratie: {
-    back: "Terug", titel: "Je administratie", subtitelLeeg: "Herinneringen en mijlpalen, zodat jij nergens aan hoeft te denken.", leegTitel: "Nog geen profiel", leegTekst: "Deze pagina verschijnt zodra je als professional bent geregistreerd.",
+    back: "Terug", titel: "Je administratie", subtitelLeeg: "Herinneringen en mijlpalen, zodat jij nergens aan hoeft te denken.", leegTitel: "Maak eerst je aanmelding af", leegTekst: "Je administratie staat hier zodra je aanmelding klaar is. Dat doe je in een paar stappen.", leegKnop: "Aanmelding afmaken",
     titelVol: "Je administratie, zonder gedoe", subtitel: "We houden je uren, omzet en deadlines in de gaten en sturen een melding zodra er iets moet gebeuren.",
     status: { ok: "op schema", soon: "binnenkort", action: "actie nodig", info: "info" },
     vulEerst: "Vul eerst je", werkvorm: "werkvorm & fiscale gegevens", vulIn: "in, dan kunnen we dit precies voor je bijhouden.", impact: "Wat dit voor jou betekent: ",
@@ -267,10 +269,10 @@ const nl = {
   },
   profiel: {
     stappen: { account: "Account aangemaakt", fiscaal: "Werkvorm & fiscale gegevens", contract: "Uitzendovereenkomst ondertekend", kvk: "KVK/btw gekoppeld en gevalideerd", kyc: "Identiteit geverifieerd (KYC)", thuisbasis: "Thuisbasis en rekeningnummer ingesteld" },
-    back: "Instellingen", titel: "Account", subtitel: "Je gegevens, verificatie en uitbetaalinstellingen.", beoordelingen: "{n} beoordelingen", geenBeoordelingen: "nog geen beoordelingen",
+    back: "Instellingen", titel: "Mijn gegevens", subtitel: "Je gegevens, verificatie en uitbetaalinstellingen.", beoordelingen: "{n} beoordelingen", geenBeoordelingen: "nog geen beoordelingen",
     zesMaanden: "Jouw klussen over de laatste 6 maanden", gematcht: "Gematchte klussen", nietVoltooid: "Niet voltooide klussen", vervangingGeregeld: "Vervanging geregeld", opkomst: "Opkomstpercentage laatste 6 maanden:",
     onboarding: "Onboarding", aanmeldingTitel: "Je aanmelding", aanmeldingAf: "Je aanmelding is af. Je kunt op klussen reageren.", aanmeldingNogNiet: "Je aanmelding is nog niet af. Bovenaan Ontdekken zie je precies wat er nog nodig is.", naarOntdekken: "Naar Ontdekken", verificatieAfronden: "Verificatie afronden", kvkKoppelen: "KVK koppelen & ID verifiëren",
-    persoon: "Persoonsgegevens", email: "E-mail", kyc: "Identiteit (KYC)", geverifieerd: "Geverifieerd", nietGestart: "Niet gestart", kycInBehandeling: "In behandeling", kycAfgekeurd: "Afgekeurd", kycVerlopen: "Verlopen",
+    persoon: "Persoonsgegevens", email: "E-mail", kyc: "Identiteit", geverifieerd: "Geverifieerd", nietGestart: "Nog niet gecontroleerd", kycInBehandeling: "In behandeling", kycAfgekeurd: "Afgekeurd", kycVerlopen: "Verlopen",
     werkvormVerloning: "Werkvorm & verloning", werkvorm: "Werkvorm", uitzendkrachtWerkgever: "Uitzendkracht — ZekerFlex is je werkgever", bsn: "BSN", bsnBekend: "bekend (eindigt op {nr})", nogNiet: "Nog niet ingevuld",
     lhk: "Loonheffingskorting", toegepast: "Toegepast", nietToegepast: "Niet toegepast", verloning: "Verloning", wekelijks: "Wekelijkse loonstrook via payroll", btwKvk: "Btw / KVK", nietNodig: "Niet nodig als uitzendkracht",
     loonstroken: "Loonstroken & StiPP →", bsnAanpassen: "BSN & loonheffing aanpassen →",
@@ -311,6 +313,9 @@ const nl = {
     bedrijf: { kop: "Je KVK- of btw-nummer, of de KOR", hint: "Nodig om je werk te factureren." },
     kvkWacht: { kop: "We controleren je KVK-nummer", hint: "Dat gebeurt vanzelf. Daarna kun je reageren." },
     iban: { kop: "Je rekeningnummer (IBAN)", hint: "Hierop krijg je je geld." },
+    /** op Verificatie, zolang de vijf stappen nog niet af zijn: één regel in plaats van het hele blok (lib/onboarding/later-blok.ts) */
+    daarna: "Dit komt na je aanmelding: je rekeningnummer en wat er verder nodig is om op een klus te reageren. Rond eerst je stappen af.",
+    daarnaKnop: "Naar je stappen",
   },
   start: {
     eyebrow: "Jouw start",
@@ -559,7 +564,7 @@ const nl = {
     clearAll: "Wis alle filters",
     mapHint: "Tik op een stip voor de dienst. Kleur = matchkwaliteit.",
     emptyTitle: "Geen klussen die aan je filters voldoen",
-    emptyBody: "Verruim je filters of stel een job-alert in bij Beschikbaarheid.",
+    emptyBody: "Verruim je filters of stel een melding voor nieuwe klussen in bij Beschikbaarheid.",
     replacement: "Vervanging",
     counterRunning: "Tegenbod loopt",
     waiting: "in afwachting",
@@ -575,7 +580,7 @@ const nl = {
     applyWhenDone: "Reageren op een klus kan zodra dat rond is.",
     toVerification: "Naar verificatie",
     noJobsTitle: "Momenteel geen open klussen",
-    noJobsBefore: "Stel een job-alert in bij",
+    noJobsBefore: "Stel een melding voor nieuwe klussen in bij",
     availability: "Beschikbaarheid",
     noJobsAfter: "— dan krijg je een melding zodra er een passende dienst is.",
     alleenTestTitle: "Nog geen echte klussen bij jou in de buurt",
@@ -819,7 +824,7 @@ const nl = {
     subtitle: "Vul je uren in na afloop van een klus. Ingediende uren blijven hier staan tot de opdrachtgever ze goedkeurt — daarna verhuist de klus naar Mijn klussen → Gearchiveerd.",
     toFill: (n: number) => `Nog in te vullen${n ? ` (${n})` : ""}`,
     emptyTitle: "Niets in te vullen",
-    emptyBody: "Zodra een klus is afgelopen verschijnt hier je urenbriefje. Na goedkeuring verhuist de klus naar Mijn klussen → Gearchiveerd.",
+    emptyBody: "Er staat nu geen klus open waarvan je de uren nog moet invullen.",
     job: "Klus",
     fill: "Invullen",
     hShort: "u",
@@ -895,6 +900,7 @@ const nl = {
     emptyPending: "Geen openstaande aanmeldingen of tegenbiedingen.",
     emptyActive: "Nog geen bevestigde klussen. Neem er een aan bij Ontdekken.",
     emptyHistory: "Nog geen historie.",
+    emptyCta: "Zoek klussen",
   },
   apply: {
     button: "Reageer op deze klus",
@@ -1273,17 +1279,17 @@ const nl = {
     desiredRate: "Richttarief (€/u)",
     desiredRateHint: "Diensten eronder krijgen een label.",
     maxTravel: (min: number) => `Max. reistijd: ${min} min`,
-    standby: "Standby-modus — ik spring bij voor spoeddiensten (vaak hoger betaald)",
+    standby: "Oproepbaar — ik spring bij voor spoeddiensten (vaak hoger betaald)",
     save: "Voorkeuren opslaan",
     saving: "Opslaan…",
     saved: "Voorkeuren opgeslagen",
     saveFailed: "Opslaan mislukt",
-    alertsTitle: "Job-alerts",
+    alertsTitle: "Meldingen bij nieuwe klussen",
     alertsBody: "Sla een zoekopdracht op. Zodra er een passende dienst is, verschijnt die bovenaan je klussenoverzicht met een melding.",
     alertMin: (eur: number) => `min € ${eur}/u`,
     remove: "verwijder",
-    alertRemoved: "Alert verwijderd",
-    alertAdded: "Job-alert toegevoegd",
+    alertRemoved: "Melding verwijderd",
+    alertAdded: "Melding toegevoegd",
     description: "Omschrijving",
     descPlaceholder: "Bijv. Horeca Amsterdam avond",
     minPerHour: "min €/u",
@@ -1656,6 +1662,7 @@ export type FreelancerDict = typeof nl;
 
 const en: FreelancerDict = {
   nav: { discover: "Discover", myJobs: "My jobs", hours: "Hours", bank: "Bank", chat: "Chat", account: "Account", findJob: "Find your job", search: "Search", employerWorkspace: "Employer workspace" },
+  schermTitel: { verificatie: "Verification", profiel: "Profile", uitbetalingen: "Payouts", verloning: "Payroll", beschikbaarheid: "Availability", administratie: "Administration", hulp: "Help", inchecken: "Check in", certificaten: "Certificates", favorieten: "Favourites", beoordelingen: "Reviews", paspoort: "Work passport", ritten: "Mileage", fiscaal: "Work type", verzekering: "Insurance", vooruitblik: "Outlook", agenda: "Calendar", wifi: "Wi-Fi", introduceren: "Introductions", assistent: "Assistant", overig: "ZekerFlex" },
   los: {
     uren: { titel: "Proposal to correct your hours", voorstel: "The client proposes changing your hours from {van} to {naar} hours.", onafhankelijk: "Don't agree? Then ZekerFlex will review this independently.", ja: "Yes, I agree", nee: "No, I don't agree", bezig: "Working…" },
     menu: { meer: "More options", verberg: "Hide client", deel: "Share this job", gekopieerd: "Link copied", verborgen: "{naam} hidden", verborgenTekst: "You won't see jobs from this client any more." },
@@ -1869,7 +1876,7 @@ const en: FreelancerDict = {
     },
   },
   administratie: {
-    back: "Back", titel: "Your admin", subtitelLeeg: "Reminders and milestones, so you don't have to think about anything.", leegTitel: "No profile yet", leegTekst: "This page appears once you're registered as a professional.",
+    back: "Back", titel: "Your admin", subtitelLeeg: "Reminders and milestones, so you don't have to think about anything.", leegTitel: "Finish signing up first", leegTekst: "Your admin appears here once your sign-up is complete. It only takes a few steps.", leegKnop: "Finish signing up",
     titelVol: "Your admin, without the hassle", subtitel: "We keep an eye on your hours, revenue and deadlines and send a notification as soon as something needs doing.",
     status: { ok: "on track", soon: "soon", action: "action needed", info: "info" },
     vulEerst: "First fill in your", werkvorm: "work type & tax details", vulIn: "so we can keep track of this precisely for you.", impact: "What this means for you: ",
@@ -1897,10 +1904,10 @@ const en: FreelancerDict = {
   },
   profiel: {
     stappen: { account: "Account created", fiscaal: "Work type & tax details", contract: "Temp agency contract signed", kvk: "KVK/VAT linked and validated", kyc: "Identity verified (KYC)", thuisbasis: "Home base and bank account set" },
-    back: "Settings", titel: "Account", subtitel: "Your details, verification and payout settings.", beoordelingen: "{n} reviews", geenBeoordelingen: "no reviews yet",
+    back: "Settings", titel: "My details", subtitel: "Your details, verification and payout settings.", beoordelingen: "{n} reviews", geenBeoordelingen: "no reviews yet",
     zesMaanden: "Your jobs over the last 6 months", gematcht: "Matched jobs", nietVoltooid: "Jobs not completed", vervangingGeregeld: "Replacement arranged", opkomst: "Attendance rate, last 6 months:",
     onboarding: "Onboarding", aanmeldingTitel: "Your sign-up", aanmeldingAf: "Your sign-up is done. You can apply for jobs.", aanmeldingNogNiet: "Your sign-up isn't finished yet. At the top of Discover you can see exactly what is still needed.", naarOntdekken: "Go to Discover", verificatieAfronden: "Finish verification", kvkKoppelen: "Link KVK & verify ID",
-    persoon: "Personal details", email: "Email", kyc: "Identity (KYC)", geverifieerd: "Verified", nietGestart: "Not started", kycInBehandeling: "In progress", kycAfgekeurd: "Rejected", kycVerlopen: "Expired",
+    persoon: "Personal details", email: "Email", kyc: "Identity", geverifieerd: "Verified", nietGestart: "Not checked yet", kycInBehandeling: "In progress", kycAfgekeurd: "Rejected", kycVerlopen: "Expired",
     werkvormVerloning: "Work type & payroll", werkvorm: "Work type", uitzendkrachtWerkgever: "Temp worker — ZekerFlex is your employer", bsn: "BSN", bsnBekend: "known (ends in {nr})", nogNiet: "Not filled in yet",
     lhk: "Payroll tax credit", toegepast: "Applied", nietToegepast: "Not applied", verloning: "Payroll", wekelijks: "Weekly payslip via payroll", btwKvk: "VAT / KVK", nietNodig: "Not needed as a temp worker",
     loonstroken: "Payslips & StiPP →", bsnAanpassen: "Change BSN & payroll tax →",
@@ -1982,11 +1989,11 @@ const en: FreelancerDict = {
   },
   loonstrook: {
     intl: "en-GB",
-    back: "Settings", titel: "Payroll", subPayroll: "Your weekly payslip: hours, gross pay, deductions, reserves and your ABU phase.", subFactuur: "Your weekly invoice overview: service amounts, VAT and payouts.",
+    back: "Settings", titel: "Payroll", subPayroll: "Your payslip per week: your hours, what you earn and what is taken off.", subFactuur: "Your weekly invoice overview: service amounts, VAT and payouts.",
     onvolledig: "Your work type and tax details are not complete yet.", vulAan: "Complete them", zodat: "so your payroll is correct.",
     laatsteWeek: "Last week ({week})", laatsteWeekLeeg: "Last week", weekKort: "week {week}", bruto: "Gross {jaar}", reservering: "Holiday reserve (this year)", reserveringHint: "holiday allowance + holiday hours", wekenVerloond: "Weeks paid",
     abuFase: "ABU phase", wekenOpgebouwd: "{n} weeks accrued", pensioenregeling: "Pension scheme", nogNiet: "Not yet", stipp: "StiPP {regeling}", lhk: "Payroll tax credit", toegepast: "Applied", nietToegepast: "Not applied", overzicht: "Overview per week",
-    leegTitel: "No payroll yet", leegTekst: "Once your first week with approved hours has been processed, your payslip or weekly invoice appears here — with all deductions and reserves.",
+    leegTitel: "No payroll yet", leegTekst: "Once your first week with approved hours has been processed, you'll see here, week by week, what you earned and what was taken off.",
     kinds: { uitzendkracht: "Temp worker", flexwerker: "Flex worker", zzp: "Freelancer (ZZP)" }, kindOnbekend: "Work type unknown", uur: "hours", fase: "phase {fase}", onvolledigBadge: "Details incomplete",
     headline: { netto: "net (indicative)", inclBtw: "payable (incl. VAT)", uitTeBetalen: "payable" }, weekLabel: "week {week} · {van} to {tot} {jaar}",
     regeling: { geen: "none", basis: "basic", plus: "plus" },
@@ -2057,6 +2064,8 @@ const en: FreelancerDict = {
     bedrijf: { kop: "Your KVK or VAT number, or the KOR", hint: "Needed to invoice your work." },
     kvkWacht: { kop: "We're checking your KVK number", hint: "This happens automatically. After that you can apply." },
     iban: { kop: "Your bank account (IBAN)", hint: "This is where you get paid." },
+    daarna: "This comes after your sign-up: your bank account and whatever else is needed to apply for a job. Finish your steps first.",
+    daarnaKnop: "Go to your steps",
   },
   start: {
     eyebrow: "Your start",
@@ -2611,7 +2620,7 @@ const en: FreelancerDict = {
     subtitle: "Fill in your hours after a job. After submitting, you'll find the job under My jobs.",
     toFill: (n) => `To fill in${n ? ` (${n})` : ""}`,
     emptyTitle: "Nothing to fill in",
-    emptyBody: "Your timesheet appears here once a job has ended. Submitted hours are under My jobs → Archived.",
+    emptyBody: "There is no job right now that still needs your hours.",
     job: "Job",
     fill: "Fill in",
     hShort: "h",
@@ -2687,6 +2696,7 @@ const en: FreelancerDict = {
     emptyPending: "No open applications or counter-offers.",
     emptyActive: "No confirmed jobs yet. Take one under Discover.",
     emptyHistory: "No history yet.",
+    emptyCta: "Find jobs",
   },
   apply: {
     button: "Respond to this job",
@@ -3065,7 +3075,7 @@ const en: FreelancerDict = {
     desiredRate: "Target rate (€/h)",
     desiredRateHint: "Shifts below this get a label.",
     maxTravel: (min: number) => `Max. travel time: ${min} min`,
-    standby: "Standby mode — I'll step in for urgent shifts (often paid more)",
+    standby: "On call — I'll step in for urgent shifts (often paid more)",
     save: "Save preferences",
     saving: "Saving…",
     saved: "Preferences saved",
@@ -3444,6 +3454,7 @@ const en: FreelancerDict = {
 
 const pl: FreelancerDict = {
   nav: { discover: "Odkrywaj", myJobs: "Moje zlecenia", hours: "Godziny", bank: "Bank", chat: "Czat", account: "Konto", findJob: "Znajdź pracę", search: "Szukaj", employerWorkspace: "Panel pracodawcy" },
+  schermTitel: { verificatie: "Weryfikacja", profiel: "Profil", uitbetalingen: "Wypłaty", verloning: "Wynagrodzenie", beschikbaarheid: "Dostępność", administratie: "Administracja", hulp: "Pomoc", inchecken: "Zameldowanie", certificaten: "Certyfikaty", favorieten: "Ulubione", beoordelingen: "Opinie", paspoort: "Paszport pracy", ritten: "Kilometry", fiscaal: "Forma pracy", verzekering: "Ubezpieczenie", vooruitblik: "Prognoza", agenda: "Kalendarz", wifi: "Wi-Fi", introduceren: "Polecenia", assistent: "Asystent", overig: "ZekerFlex" },
   los: {
     uren: { titel: "Propozycja korekty Twoich godzin", voorstel: "Zleceniodawca proponuje zmienić Twoje godziny z {van} na {naar} godz.", onafhankelijk: "Nie zgadzasz się? Wtedy ZekerFlex oceni to niezależnie.", ja: "Tak, zgadzam się", nee: "Nie, nie zgadzam się", bezig: "Chwileczkę…" },
     menu: { meer: "Więcej opcji", verberg: "Ukryj zleceniodawcę", deel: "Udostępnij to zlecenie", gekopieerd: "Link skopiowany", verborgen: "Ukryto: {naam}", verborgenTekst: "Nie zobaczysz już zleceń od tego zleceniodawcy." },
@@ -3657,7 +3668,7 @@ const pl: FreelancerDict = {
     },
   },
   administratie: {
-    back: "Wstecz", titel: "Twoja administracja", subtitelLeeg: "Przypomnienia i kamienie milowe, żebyś o niczym nie musiał pamiętać.", leegTitel: "Brak profilu", leegTekst: "Ta strona pojawi się, gdy zarejestrujesz się jako profesjonalista.",
+    back: "Wstecz", titel: "Twoja administracja", subtitelLeeg: "Przypomnienia i kamienie milowe, żebyś o niczym nie musiał pamiętać.", leegTitel: "Najpierw dokończ rejestrację", leegTekst: "Twoja administracja pojawi się tutaj, gdy dokończysz rejestrację. To tylko kilka kroków.", leegKnop: "Dokończ rejestrację",
     titelVol: "Twoja administracja bez kłopotu", subtitel: "Pilnujemy Twoich godzin, obrotu i terminów i wysyłamy powiadomienie, gdy trzeba coś zrobić.",
     status: { ok: "zgodnie z planem", soon: "wkrótce", action: "wymaga działania", info: "informacja" },
     vulEerst: "Najpierw uzupełnij swoje", werkvorm: "formę pracy i dane podatkowe", vulIn: "wtedy będziemy mogli to dla Ciebie dokładnie śledzić.", impact: "Co to dla Ciebie oznacza: ",
@@ -3685,10 +3696,10 @@ const pl: FreelancerDict = {
   },
   profiel: {
     stappen: { account: "Konto utworzone", fiscaal: "Forma pracy i dane podatkowe", contract: "Umowa o pracę tymczasową podpisana", kvk: "KVK/VAT połączone i zweryfikowane", kyc: "Tożsamość zweryfikowana (KYC)", thuisbasis: "Miejsce zamieszkania i numer konta ustawione" },
-    back: "Ustawienia", titel: "Konto", subtitel: "Twoje dane, weryfikacja i ustawienia wypłat.", beoordelingen: "opinie: {n}", geenBeoordelingen: "brak opinii",
+    back: "Ustawienia", titel: "Moje dane", subtitel: "Twoje dane, weryfikacja i ustawienia wypłat.", beoordelingen: "opinie: {n}", geenBeoordelingen: "brak opinii",
     zesMaanden: "Twoje zlecenia z ostatnich 6 miesięcy", gematcht: "Dopasowane zlecenia", nietVoltooid: "Niezakończone zlecenia", vervangingGeregeld: "Zorganizowane zastępstwa", opkomst: "Frekwencja w ostatnich 6 miesiącach:",
     onboarding: "Wdrożenie", aanmeldingTitel: "Twoja rejestracja", aanmeldingAf: "Rejestracja zakończona. Możesz zgłaszać się do zleceń.", aanmeldingNogNiet: "Rejestracja nie jest jeszcze zakończona. Na górze zakładki Odkrywaj zobaczysz dokładnie, czego jeszcze brakuje.", naarOntdekken: "Przejdź do Odkrywaj", verificatieAfronden: "Dokończ weryfikację", kvkKoppelen: "Połącz KVK i zweryfikuj dokument",
-    persoon: "Dane osobowe", email: "E-mail", kyc: "Tożsamość (KYC)", geverifieerd: "Zweryfikowano", nietGestart: "Nie rozpoczęto", kycInBehandeling: "W trakcie sprawdzania", kycAfgekeurd: "Odrzucono", kycVerlopen: "Wygasło",
+    persoon: "Dane osobowe", email: "E-mail", kyc: "Tożsamość", geverifieerd: "Zweryfikowano", nietGestart: "Jeszcze nie sprawdzono", kycInBehandeling: "W trakcie sprawdzania", kycAfgekeurd: "Odrzucono", kycVerlopen: "Wygasło",
     werkvormVerloning: "Forma pracy i wynagrodzenie", werkvorm: "Forma pracy", uitzendkrachtWerkgever: "Pracownik tymczasowy — ZekerFlex jest Twoim pracodawcą", bsn: "BSN", bsnBekend: "znany (kończy się na {nr})", nogNiet: "Jeszcze nie uzupełniono",
     lhk: "Ulga podatkowa (loonheffingskorting)", toegepast: "Zastosowana", nietToegepast: "Niezastosowana", verloning: "Wynagrodzenie", wekelijks: "Cotygodniowy odcinek wypłaty przez payroll", btwKvk: "VAT / KVK", nietNodig: "Niepotrzebne dla pracownika tymczasowego",
     loonstroken: "Odcinki wypłat i StiPP →", bsnAanpassen: "Zmień BSN i podatek od wynagrodzenia →",
@@ -3770,11 +3781,11 @@ const pl: FreelancerDict = {
   },
   loonstrook: {
     intl: "pl-PL",
-    back: "Ustawienia", titel: "Wynagrodzenie", subPayroll: "Twój tygodniowy odcinek wypłaty: godziny, wynagrodzenie brutto, potrącenia, rezerwy i Twoja faza ABU.", subFactuur: "Twój tygodniowy przegląd faktur: kwoty za usługi, VAT i wypłaty.",
+    back: "Ustawienia", titel: "Wynagrodzenie", subPayroll: "Twój odcinek wypłaty za każdy tydzień: Twoje godziny, ile zarabiasz i co jest potrącane.", subFactuur: "Twój tygodniowy przegląd faktur: kwoty za usługi, VAT i wypłaty.",
     onvolledig: "Twoja forma pracy i dane podatkowe nie są jeszcze kompletne.", vulAan: "Uzupełnij je", zodat: "aby wynagrodzenie się zgadzało.",
     laatsteWeek: "Ostatni tydzień ({week})", laatsteWeekLeeg: "Ostatni tydzień", weekKort: "tydzień {week}", bruto: "Brutto {jaar}", reservering: "Rezerwa urlopowa (w tym roku)", reserveringHint: "dodatek urlopowy + godziny urlopowe", wekenVerloond: "Rozliczone tygodnie",
     abuFase: "Faza ABU", wekenOpgebouwd: "zgromadzone tygodnie: {n}", pensioenregeling: "Plan emerytalny", nogNiet: "Jeszcze nie", stipp: "StiPP {regeling}", lhk: "Ulga podatkowa (loonheffingskorting)", toegepast: "Zastosowana", nietToegepast: "Niezastosowana", overzicht: "Przegląd tygodniowy",
-    leegTitel: "Brak jeszcze rozliczeń", leegTekst: "Gdy zostanie rozliczony Twój pierwszy tydzień z zatwierdzonymi godzinami, pojawi się tu odcinek wypłaty lub cotygodniowa faktura — ze wszystkimi potrąceniami i rezerwami.",
+    leegTitel: "Brak jeszcze rozliczeń", leegTekst: "Gdy zostanie rozliczony Twój pierwszy tydzień z zatwierdzonymi godzinami, zobaczysz tu tydzień po tygodniu, ile zarobiłeś i co zostało potrącone.",
     kinds: { uitzendkracht: "Pracownik tymczasowy", flexwerker: "Praca elastyczna", zzp: "Freelancer (ZZP)" }, kindOnbekend: "Forma pracy nieznana", uur: "godz.", fase: "faza {fase}", onvolledigBadge: "Dane niekompletne",
     headline: { netto: "netto (orientacyjnie)", inclBtw: "do wypłaty (z VAT)", uitTeBetalen: "do wypłaty" }, weekLabel: "tydzień {week} · {van} do {tot} {jaar}",
     regeling: { geen: "brak", basis: "podstawowy", plus: "plus" },
@@ -3845,6 +3856,8 @@ const pl: FreelancerDict = {
     bedrijf: { kop: "Twój numer KVK lub VAT albo KOR", hint: "Potrzebne do wystawiania faktur za pracę." },
     kvkWacht: { kop: "Sprawdzamy Twój numer KVK", hint: "Dzieje się to automatycznie. Potem możesz się zgłaszać." },
     iban: { kop: "Twój numer konta (IBAN)", hint: "Na to konto otrzymasz pieniądze." },
+    daarna: "To będzie po rejestracji: numer konta i wszystko, czego jeszcze potrzeba, aby zgłosić się do zlecenia. Najpierw dokończ swoje kroki.",
+    daarnaKnop: "Przejdź do kroków",
   },
   start: {
     eyebrow: "Twój start",
@@ -4399,7 +4412,7 @@ const pl: FreelancerDict = {
     subtitle: "Wpisz godziny po zakończeniu zlecenia. Po wysłaniu znajdziesz zlecenie w Moich zleceniach.",
     toFill: (n) => `Do wypełnienia${n ? ` (${n})` : ""}`,
     emptyTitle: "Nic do wypełnienia",
-    emptyBody: "Karta godzin pojawi się tutaj po zakończeniu zlecenia. Wysłane godziny są w Moich zleceniach → Archiwum.",
+    emptyBody: "Nie ma teraz zlecenia, za które trzeba jeszcze wpisać godziny.",
     job: "Zlecenie",
     fill: "Wypełnij",
     hShort: "godz.",
@@ -4475,6 +4488,7 @@ const pl: FreelancerDict = {
     emptyPending: "Brak otwartych zgłoszeń ani kontrofert.",
     emptyActive: "Brak potwierdzonych zleceń. Weź jakieś w zakładce Odkrywaj.",
     emptyHistory: "Brak historii.",
+    emptyCta: "Szukaj zleceń",
   },
   apply: {
     button: "Odpowiedz na to zlecenie",
@@ -5232,6 +5246,7 @@ const pl: FreelancerDict = {
 
 const ro: FreelancerDict = {
   nav: { discover: "Descoperă", myJobs: "Joburile mele", hours: "Ore", bank: "Bancă", chat: "Chat", account: "Cont", findJob: "Găsește-ți jobul", search: "Caută", employerWorkspace: "Spațiul angajatorului" },
+  schermTitel: { verificatie: "Verificare", profiel: "Profil", uitbetalingen: "Plăți", verloning: "Salarizare", beschikbaarheid: "Disponibilitate", administratie: "Administrație", hulp: "Ajutor", inchecken: "Check-in", certificaten: "Certificate", favorieten: "Favorite", beoordelingen: "Recenzii", paspoort: "Pașaport de lucru", ritten: "Kilometri", fiscaal: "Forma de lucru", verzekering: "Asigurare", vooruitblik: "Previziune", agenda: "Calendar", wifi: "Wi-Fi", introduceren: "Recomandări", assistent: "Asistent", overig: "ZekerFlex" },
   los: {
     uren: { titel: "Propunere de corectare a orelor tale", voorstel: "Clientul propune modificarea orelor tale de la {van} la {naar} ore.", onafhankelijk: "Nu ești de acord? Atunci ZekerFlex evaluează independent.", ja: "Da, sunt de acord", nee: "Nu, nu sunt de acord", bezig: "Se lucrează…" },
     menu: { meer: "Mai multe opțiuni", verberg: "Ascunde clientul", deel: "Distribuie acest job", gekopieerd: "Link copiat", verborgen: "{naam} ascuns", verborgenTekst: "Nu vei mai vedea joburi de la acest client." },
@@ -5445,7 +5460,7 @@ const ro: FreelancerDict = {
     },
   },
   administratie: {
-    back: "Înapoi", titel: "Administrația ta", subtitelLeeg: "Mementouri și borne, ca să nu trebuiască să te gândești la nimic.", leegTitel: "Încă fără profil", leegTekst: "Această pagină apare după ce te înregistrezi ca profesionist.",
+    back: "Înapoi", titel: "Administrația ta", subtitelLeeg: "Mementouri și borne, ca să nu trebuiască să te gândești la nimic.", leegTitel: "Termină mai întâi înscrierea", leegTekst: "Administrația ta apare aici după ce termini înscrierea. Durează doar câțiva pași.", leegKnop: "Termină înscrierea",
     titelVol: "Administrația ta, fără bătăi de cap", subtitel: "Urmărim orele, veniturile și termenele tale și îți trimitem o notificare când trebuie făcut ceva.",
     status: { ok: "conform planului", soon: "în curând", action: "acțiune necesară", info: "info" },
     vulEerst: "Completează mai întâi", werkvorm: "forma de muncă și datele fiscale", vulIn: "ca să putem ține evidența exact pentru tine.", impact: "Ce înseamnă asta pentru tine: ",
@@ -5473,10 +5488,10 @@ const ro: FreelancerDict = {
   },
   profiel: {
     stappen: { account: "Cont creat", fiscaal: "Formă de muncă și date fiscale", contract: "Contract de muncă temporară semnat", kvk: "KVK/TVA legate și validate", kyc: "Identitate verificată (KYC)", thuisbasis: "Baza de acasă și contul bancar setate" },
-    back: "Setări", titel: "Cont", subtitel: "Datele tale, verificarea și setările de plată.", beoordelingen: "{n} evaluări", geenBeoordelingen: "încă fără evaluări",
+    back: "Setări", titel: "Datele mele", subtitel: "Datele tale, verificarea și setările de plată.", beoordelingen: "{n} evaluări", geenBeoordelingen: "încă fără evaluări",
     zesMaanden: "Joburile tale din ultimele 6 luni", gematcht: "Joburi potrivite", nietVoltooid: "Joburi nefinalizate", vervangingGeregeld: "Înlocuiri aranjate", opkomst: "Rata de prezență în ultimele 6 luni:",
     onboarding: "Înscriere", aanmeldingTitel: "Înscrierea ta", aanmeldingAf: "Înscrierea ta este gata. Poți aplica la lucrări.", aanmeldingNogNiet: "Înscrierea ta nu este încă gata. În partea de sus a paginii Descoperă vezi exact ce mai lipsește.", naarOntdekken: "Mergi la Descoperă", verificatieAfronden: "Finalizează verificarea", kvkKoppelen: "Leagă KVK și verifică actul",
-    persoon: "Date personale", email: "E-mail", kyc: "Identitate (KYC)", geverifieerd: "Verificat", nietGestart: "Neînceput", kycInBehandeling: "În verificare", kycAfgekeurd: "Respins", kycVerlopen: "Expirat",
+    persoon: "Date personale", email: "E-mail", kyc: "Identitate", geverifieerd: "Verificat", nietGestart: "Încă neverificat", kycInBehandeling: "În verificare", kycAfgekeurd: "Respins", kycVerlopen: "Expirat",
     werkvormVerloning: "Formă de muncă și salarizare", werkvorm: "Formă de muncă", uitzendkrachtWerkgever: "Muncitor temporar — ZekerFlex este angajatorul tău", bsn: "BSN", bsnBekend: "cunoscut (se termină cu {nr})", nogNiet: "Încă necompletat",
     lhk: "Deducere fiscală (loonheffingskorting)", toegepast: "Aplicată", nietToegepast: "Neaplicată", verloning: "Salarizare", wekelijks: "Fluturaș săptămânal prin payroll", btwKvk: "TVA / KVK", nietNodig: "Nu e necesar ca muncitor temporar",
     loonstroken: "Fluturași și StiPP →", bsnAanpassen: "Modifică BSN și impozitul pe salariu →",
@@ -5558,11 +5573,11 @@ const ro: FreelancerDict = {
   },
   loonstrook: {
     intl: "ro-RO",
-    back: "Setări", titel: "Salarizare", subPayroll: "Fluturașul tău săptămânal: ore, salariu brut, rețineri, rezerve și faza ta ABU.", subFactuur: "Rezumatul săptămânal al facturilor tale: sume pentru servicii, TVA și plăți.",
+    back: "Setări", titel: "Salarizare", subPayroll: "Fluturașul tău pe fiecare săptămână: orele tale, cât câștigi și ce se reține.", subFactuur: "Rezumatul săptămânal al facturilor tale: sume pentru servicii, TVA și plăți.",
     onvolledig: "Forma ta de muncă și datele fiscale nu sunt încă complete.", vulAan: "Completează-le", zodat: "ca salarizarea să fie corectă.",
     laatsteWeek: "Ultima săptămână ({week})", laatsteWeekLeeg: "Ultima săptămână", weekKort: "săptămâna {week}", bruto: "Brut {jaar}", reservering: "Rezervă de vacanță (anul acesta)", reserveringHint: "indemnizație de vacanță + ore de vacanță", wekenVerloond: "Săptămâni salarizate",
     abuFase: "Faza ABU", wekenOpgebouwd: "{n} săptămâni acumulate", pensioenregeling: "Schema de pensie", nogNiet: "Încă nu", stipp: "StiPP {regeling}", lhk: "Deducere fiscală (loonheffingskorting)", toegepast: "Aplicată", nietToegepast: "Neaplicată", overzicht: "Rezumat pe săptămâni",
-    leegTitel: "Încă fără salarizare", leegTekst: "După ce prima ta săptămână cu ore aprobate este procesată, aici apare fluturașul sau factura săptămânală — cu toate reținerile și rezervele.",
+    leegTitel: "Încă fără salarizare", leegTekst: "După ce prima ta săptămână cu ore aprobate este procesată, vezi aici, săptămână cu săptămână, cât ai câștigat și ce s-a reținut.",
     kinds: { uitzendkracht: "Muncitor temporar", flexwerker: "Muncitor flexibil", zzp: "Liber profesionist (ZZP)" }, kindOnbekend: "Formă de muncă necunoscută", uur: "ore", fase: "faza {fase}", onvolledigBadge: "Date incomplete",
     headline: { netto: "net (orientativ)", inclBtw: "de plată (cu TVA)", uitTeBetalen: "de plată" }, weekLabel: "săptămâna {week} · {van} până la {tot} {jaar}",
     regeling: { geen: "niciuna", basis: "de bază", plus: "plus" },
@@ -5633,6 +5648,8 @@ const ro: FreelancerDict = {
     bedrijf: { kop: "Numărul tău KVK sau de TVA, ori KOR", hint: "Necesar pentru a-ți factura munca." },
     kvkWacht: { kop: "Îți verificăm numărul KVK", hint: "Se întâmplă automat. După aceea poți aplica." },
     iban: { kop: "Contul tău bancar (IBAN)", hint: "Aici primești banii." },
+    daarna: "Aceasta vine după înscriere: contul tău bancar și ce mai este necesar ca să aplici la o lucrare. Termină mai întâi pașii.",
+    daarnaKnop: "Mergi la pașii tăi",
   },
   start: {
     eyebrow: "Startul tău",
@@ -6187,7 +6204,7 @@ const ro: FreelancerDict = {
     subtitle: "Completează orele după terminarea unui job. După trimitere găsești jobul la Joburile mele.",
     toFill: (n) => `De completat${n ? ` (${n})` : ""}`,
     emptyTitle: "Nimic de completat",
-    emptyBody: "Foaia de pontaj apare aici după terminarea unui job. Orele trimise sunt la Joburile mele → Arhivate.",
+    emptyBody: "Acum nu ai niciun job pentru care mai trebuie să completezi orele.",
     job: "Job",
     fill: "Completează",
     hShort: "h",
@@ -6263,6 +6280,7 @@ const ro: FreelancerDict = {
     emptyPending: "Nicio aplicare sau contraofertă deschisă.",
     emptyActive: "Încă niciun job confirmat. Ia unul la Descoperă.",
     emptyHistory: "Încă nu ai istoric.",
+    emptyCta: "Caută joburi",
   },
   apply: {
     button: "Răspunde la acest job",
@@ -6641,12 +6659,12 @@ const ro: FreelancerDict = {
     desiredRate: "Tarif dorit (€/oră)",
     desiredRateHint: "Turele sub acesta primesc o etichetă.",
     maxTravel: (min: number) => `Timp maxim de deplasare: ${min} min`,
-    standby: "Mod de așteptare — preiau ture urgente (adesea mai bine plătite)",
+    standby: "Disponibil la nevoie — preiau ture urgente (adesea mai bine plătite)",
     save: "Salvează preferințele",
     saving: "Se salvează…",
     saved: "Preferințe salvate",
     saveFailed: "Salvarea nu a reușit",
-    alertsTitle: "Alerte de joburi",
+    alertsTitle: "Notificări pentru joburi noi",
     alertsBody: "Salvează o căutare. Imediat ce apare o tură potrivită, o vezi sus în joburile tale, cu o notificare.",
     alertMin: (eur: number) => `min. € ${eur}/oră`,
     remove: "șterge",
@@ -7020,6 +7038,7 @@ const ro: FreelancerDict = {
 
 const uk: FreelancerDict = {
   nav: { discover: "Огляд", myJobs: "Мої роботи", hours: "Години", bank: "Банк", chat: "Чат", account: "Акаунт", findJob: "Знайди роботу", search: "Пошук", employerWorkspace: "Кабінет роботодавця" },
+  schermTitel: { verificatie: "Перевірка", profiel: "Профіль", uitbetalingen: "Виплати", verloning: "Зарплата", beschikbaarheid: "Доступність", administratie: "Адміністрування", hulp: "Допомога", inchecken: "Відмітка", certificaten: "Сертифікати", favorieten: "Обране", beoordelingen: "Відгуки", paspoort: "Робочий паспорт", ritten: "Кілометри", fiscaal: "Форма роботи", verzekering: "Страхування", vooruitblik: "Прогноз", agenda: "Календар", wifi: "Wi-Fi", introduceren: "Рекомендації", assistent: "Асистент", overig: "ZekerFlex" },
   los: {
     uren: { titel: "Пропозиція щодо виправлення твоїх годин", voorstel: "Замовник пропонує змінити твої години з {van} на {naar} год.", onafhankelijk: "Не погоджуєшся? Тоді ZekerFlex розгляне це незалежно.", ja: "Так, погоджуюсь", nee: "Ні, не погоджуюсь", bezig: "Зачекай…" },
     menu: { meer: "Більше опцій", verberg: "Приховати замовника", deel: "Поділитися цією роботою", gekopieerd: "Посилання скопійовано", verborgen: "{naam} приховано", verborgenTekst: "Ти більше не бачитимеш робіт від цього замовника." },
@@ -7233,7 +7252,7 @@ const uk: FreelancerDict = {
     },
   },
   administratie: {
-    back: "Назад", titel: "Твоя адміністрація", subtitelLeeg: "Нагадування та віхи, щоб тобі ні про що не доводилося думати.", leegTitel: "Профілю ще немає", leegTekst: "Ця сторінка з’явиться, щойно ти зареєструєшся як фахівець.",
+    back: "Назад", titel: "Твоя адміністрація", subtitelLeeg: "Нагадування та віхи, щоб тобі ні про що не доводилося думати.", leegTitel: "Спершу заверши реєстрацію", leegTekst: "Твоя адміністрація з’явиться тут, щойно ти завершиш реєстрацію. Це лише кілька кроків.", leegKnop: "Завершити реєстрацію",
     titelVol: "Твоя адміністрація без клопоту", subtitel: "Ми стежимо за твоїми годинами, виручкою та термінами й надсилаємо сповіщення, щойно щось потрібно зробити.",
     status: { ok: "за планом", soon: "незабаром", action: "потрібна дія", info: "інфо" },
     vulEerst: "Спершу заповни свої", werkvorm: "форму роботи та податкові дані", vulIn: "тоді ми зможемо вести облік точно для тебе.", impact: "Що це означає для тебе: ",
@@ -7261,10 +7280,10 @@ const uk: FreelancerDict = {
   },
   profiel: {
     stappen: { account: "Акаунт створено", fiscaal: "Форма роботи та податкові дані", contract: "Договір тимчасової роботи підписано", kvk: "KVK/ПДВ прив’язано та підтверджено", kyc: "Особу верифіковано (KYC)", thuisbasis: "Домашню базу та рахунок налаштовано" },
-    back: "Налаштування", titel: "Акаунт", subtitel: "Твої дані, верифікація та налаштування виплат.", beoordelingen: "оцінок: {n}", geenBeoordelingen: "оцінок ще немає",
+    back: "Налаштування", titel: "Мої дані", subtitel: "Твої дані, верифікація та налаштування виплат.", beoordelingen: "оцінок: {n}", geenBeoordelingen: "оцінок ще немає",
     zesMaanden: "Твої роботи за останні 6 місяців", gematcht: "Підібрані роботи", nietVoltooid: "Незавершені роботи", vervangingGeregeld: "Організовані заміни", opkomst: "Відсоток явки за останні 6 місяців:",
     onboarding: "Реєстрація", aanmeldingTitel: "Твоя реєстрація", aanmeldingAf: "Реєстрацію завершено. Ти можеш відгукуватися на роботи.", aanmeldingNogNiet: "Реєстрацію ще не завершено. Угорі сторінки «Огляд» видно, чого саме ще бракує.", naarOntdekken: "До «Огляду»", verificatieAfronden: "Завершити верифікацію", kvkKoppelen: "Прив’язати KVK і верифікувати документ",
-    persoon: "Особисті дані", email: "Ел. пошта", kyc: "Особа (KYC)", geverifieerd: "Верифіковано", nietGestart: "Не розпочато", kycInBehandeling: "На перевірці", kycAfgekeurd: "Відхилено", kycVerlopen: "Термін минув",
+    persoon: "Особисті дані", email: "Ел. пошта", kyc: "Особа", geverifieerd: "Верифіковано", nietGestart: "Ще не перевірено", kycInBehandeling: "На перевірці", kycAfgekeurd: "Відхилено", kycVerlopen: "Термін минув",
     werkvormVerloning: "Форма роботи та оплата", werkvorm: "Форма роботи", uitzendkrachtWerkgever: "Тимчасовий працівник — ZekerFlex є твоїм роботодавцем", bsn: "BSN", bsnBekend: "відомий (закінчується на {nr})", nogNiet: "Ще не заповнено",
     lhk: "Податкова знижка (loonheffingskorting)", toegepast: "Застосовано", nietToegepast: "Не застосовано", verloning: "Оплата праці", wekelijks: "Щотижневий розрахунковий листок через payroll", btwKvk: "ПДВ / KVK", nietNodig: "Не потрібно для тимчасового працівника",
     loonstroken: "Розрахункові листки та StiPP →", bsnAanpassen: "Змінити BSN і податок із зарплати →",
@@ -7346,11 +7365,11 @@ const uk: FreelancerDict = {
   },
   loonstrook: {
     intl: "uk-UA",
-    back: "Налаштування", titel: "Оплата праці", subPayroll: "Твій щотижневий розрахунковий листок: години, брутто, утримання, резерви та твоя фаза ABU.", subFactuur: "Твій щотижневий огляд рахунків: суми за послуги, ПДВ і виплати.",
+    back: "Налаштування", titel: "Оплата праці", subPayroll: "Твій розрахунковий листок за кожен тиждень: твої години, скільки ти заробляєш і що утримується.", subFactuur: "Твій щотижневий огляд рахунків: суми за послуги, ПДВ і виплати.",
     onvolledig: "Твоя форма роботи та податкові дані ще не повні.", vulAan: "Заповни їх", zodat: "щоб оплата була правильною.",
     laatsteWeek: "Останній тиждень ({week})", laatsteWeekLeeg: "Останній тиждень", weekKort: "тиждень {week}", bruto: "Брутто {jaar}", reservering: "Відпускний резерв (цього року)", reserveringHint: "відпускні + відпускні години", wekenVerloond: "Оплачені тижні",
     abuFase: "Фаза ABU", wekenOpgebouwd: "накопичено тижнів: {n}", pensioenregeling: "Пенсійна схема", nogNiet: "Ще ні", stipp: "StiPP {regeling}", lhk: "Податкова знижка (loonheffingskorting)", toegepast: "Застосовано", nietToegepast: "Не застосовано", overzicht: "Огляд за тижнями",
-    leegTitel: "Оплати ще немає", leegTekst: "Щойно буде оброблено твій перший тиждень зі схваленими годинами, тут з’явиться розрахунковий листок або щотижневий рахунок — з усіма утриманнями та резервами.",
+    leegTitel: "Оплати ще немає", leegTekst: "Щойно буде оброблено твій перший тиждень зі схваленими годинами, ти побачиш тут тиждень за тижнем, скільки ти заробив і що було утримано.",
     kinds: { uitzendkracht: "Тимчасовий працівник", flexwerker: "Гнучкий працівник", zzp: "ФОП (ZZP)" }, kindOnbekend: "Форма роботи невідома", uur: "год", fase: "фаза {fase}", onvolledigBadge: "Дані неповні",
     headline: { netto: "нетто (орієнтовно)", inclBtw: "до виплати (з ПДВ)", uitTeBetalen: "до виплати" }, weekLabel: "тиждень {week} · {van} по {tot} {jaar}",
     regeling: { geen: "немає", basis: "базова", plus: "плюс" },
@@ -7421,6 +7440,8 @@ const uk: FreelancerDict = {
     bedrijf: { kop: "Твій номер KVK або ПДВ, або KOR", hint: "Потрібно, щоб виставляти рахунки за роботу." },
     kvkWacht: { kop: "Ми перевіряємо твій номер KVK", hint: "Це відбувається автоматично. Після цього ти зможеш відгукуватися." },
     iban: { kop: "Твій банківський рахунок (IBAN)", hint: "Сюди ти отримуватимеш гроші." },
+    daarna: "Це буде після реєстрації: банківський рахунок і все інше, що потрібно, щоб відгукнутися на роботу. Спершу заверши свої кроки.",
+    daarnaKnop: "Перейти до кроків",
   },
   start: {
     eyebrow: "Твій старт",
@@ -7975,7 +7996,7 @@ const uk: FreelancerDict = {
     subtitle: "Заповніть години після завершення роботи. Після надсилання робота буде в розділі Мої роботи.",
     toFill: (n) => `Заповнити${n ? ` (${n})` : ""}`,
     emptyTitle: "Нічого заповнювати",
-    emptyBody: "Табель з’явиться тут після завершення роботи. Надіслані години — в розділі Мої роботи → Архів.",
+    emptyBody: "Зараз немає роботи, за яку ще треба заповнити години.",
     job: "Робота",
     fill: "Заповнити",
     hShort: "год",
@@ -8051,6 +8072,7 @@ const uk: FreelancerDict = {
     emptyPending: "Немає відкритих відгуків чи зустрічних пропозицій.",
     emptyActive: "Ще немає підтверджених робіт. Візьміть роботу в розділі Огляд.",
     emptyHistory: "Історії ще немає.",
+    emptyCta: "Шукати роботу",
   },
   apply: {
     button: "Відгукнутися на роботу",

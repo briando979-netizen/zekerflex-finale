@@ -12,7 +12,7 @@ export const LOONSTROOK_NL = {
   // ---- de pagina
   back: "Instellingen",
   titel: "Verloning",
-  subPayroll: "Je wekelijkse loonstrook: uren, brutoloon, inhoudingen, reserveringen en je ABU-fase.",
+  subPayroll: "Je loonstrook per week: je uren, wat je verdient en wat eraf gaat.",
   subFactuur: "Je wekelijkse factuuroverzicht: dienstbedragen, btw en uitbetalingen.",
   onvolledig: "Je werkvorm- en fiscale gegevens zijn nog niet compleet.",
   vulAan: "Vul ze aan",
@@ -35,7 +35,7 @@ export const LOONSTROOK_NL = {
   overzicht: "Overzicht per week",
   // ---- de lijst per week
   leegTitel: "Nog geen verloning",
-  leegTekst: "Zodra je eerste week met goedgekeurde uren is verwerkt, verschijnt hier je loonstrook of wekelijkse factuur — met alle inhoudingen en reserveringen.",
+  leegTekst: "Zodra je eerste week met goedgekeurde uren is verwerkt, zie je hier per week wat je hebt verdiend en wat eraf ging.",
   kinds: { uitzendkracht: "Uitzendkracht", flexwerker: "Flexwerker", zzp: "Zzp" },
   kindOnbekend: "Werkvorm onbekend",
   uur: "uur",

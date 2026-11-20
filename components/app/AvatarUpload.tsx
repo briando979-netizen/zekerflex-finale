@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { naamInitialen } from "@/lib/naam/initialen";
 
 /** Eigen teksten (bijv. in een andere taal); zonder: de Nederlandse standaard van het profiel. */
 export interface AvatarUploadTexts {
@@ -65,7 +66,7 @@ export function AvatarUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
 
-  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
+  const initials = naamInitialen(name);
 
   const upload = async (file: File) => {
     setBusy(true);

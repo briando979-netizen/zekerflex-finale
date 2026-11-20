@@ -135,7 +135,7 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     cancelledBody: (w) => `De opdrachtgever heeft je dienst van ${w} geannuleerd. Bekijk de klus voor de vergoeding.`,
     perHour: "/u",
     standbyTitle: (t) => `⚡ Spoeddienst: ${t}`,
-    standbyBody: (d) => `${d}. Je staat op standby: wie het eerst aanneemt, heeft hem.`,
+    standbyBody: (d) => `${d}. Je bent oproepbaar: wie het eerst aanneemt, heeft hem.`,
     replacementTitle: (t) => `Jij neemt de klus over: ${t}`,
     replacementBody: (n, w, b) => `${n} heeft jou gekozen als vervanger: ${w} bij ${b}. Bevestig je komst in de app.`,
     claimApprovedTitle: "Je annuleringsclaim is goedgekeurd",

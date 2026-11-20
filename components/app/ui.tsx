@@ -10,11 +10,14 @@ export function PageHeader({
   subtitle,
   eyebrow,
   action,
+  children,
 }: {
   title: string;
   subtitle?: string;
   eyebrow?: string;
   action?: ReactNode;
+  /** een regel onder de kop die meer is dan platte tekst (bv. de weektelling bij Mijn klussen) */
+  children?: ReactNode;
 }) {
   return (
     <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
@@ -25,6 +28,7 @@ export function PageHeader({
         </h1>
         <span className="mt-2 block h-1 w-14 rounded-full bg-gradient-to-r from-brand-500 to-brand-mint" />
         {subtitle ? <p className="mt-3 text-sm text-neutralx-600">{subtitle}</p> : null}
+        {children}
       </div>
       {action ? <div className="animate-count-blur-in">{action}</div> : null}
     </div>

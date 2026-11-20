@@ -4,6 +4,7 @@ import { getFreelancerDict } from "@/lib/i18n/server";
 import { inAndroidApp } from "@/lib/app-mode-server";
 import { mijnIntroducties } from "@/lib/introducties/opslag";
 import { IntroductieFormulier } from "@/components/introductie/IntroductieFormulier";
+import { PageHeader } from "@/components/app/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -22,11 +23,7 @@ export default async function IntroducerenPage() {
           ← {ft.nav.account}
         </Link>
       </div>
-      <div className="mb-5">
-        <h1 className="font-display text-2xl font-bold uppercase leading-tight tracking-tight text-ink">{t.titel}</h1>
-        <span className="mt-1 block h-1 w-20 rounded-full bg-gradient-to-r from-crit to-crit/40" />
-        <p className="mt-2 text-sm text-neutralx-500">{t.uitleg}</p>
-      </div>
+      <PageHeader title={t.titel} subtitle={t.uitleg} />
       <IntroductieFormulier rol="werker" inApp={inApp} initieel={lijst} texts={t} />
     </>
   );

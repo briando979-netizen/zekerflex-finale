@@ -16,9 +16,10 @@ describe("ingang naar ZekerFlex OS", () => {
     expect(bron).toMatch(/<a\s[^>]*href="\/os"[^>]*target="_top"/);
   });
 
-  it("de werker-app (FreelancerShell) heeft een ingang via Account, ook als gewone link", () => {
+  it("de werker-app heeft geen ingang meer via Account: ZekerFlex OS is geen flexwerk (20 nov)", () => {
     const bron = readFileSync(join(ROOT, "app/dashboard/account/page.tsx"), "utf8");
-    expect(bron).toMatch(/href: "\/os", external: true/);
+    expect(bron).not.toMatch(/href: "\/os"/);
+    expect(bron).not.toContain('label: "ZekerFlex OS"');
   });
 
   it("het bureaublad herlaadt één keer als de browser een app-venster blokkeert", () => {

@@ -5,6 +5,7 @@ import type { LiveLocatie } from "@/lib/messaging/live-locatie";
 import type { StickerId } from "@/lib/messaging/stickers";
 import { SHARED_NL, type SharedTeksten } from "@/lib/chat/teksten-shared";
 import { vulIn } from "@/lib/i18n/vul-in";
+import { naamInitialen } from "@/lib/naam/initialen";
 import { amsterdamClock, amsterdamDayKey, amsterdamParts, amsterdamStartOfDay } from "@/lib/time/amsterdam";
 import type { MessagePoll } from "@/lib/messaging/poll";
 
@@ -151,8 +152,8 @@ export const ROLE_COLOR: Record<string, string> = {
   support: "#0C0E12",
 };
 
-export const initials = (n: string) =>
-  n.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
+// alleen letters (lib/naam/initialen.ts): "Rondgang (controle)" gaf hier "R("
+export const initials = (n: string) => naamInitialen(n);
 
 // Dutch time, like every time on the platform (the server runs in UTC; lib/time/amsterdam)
 export const fmtTime = (iso: string, tx: SharedTeksten = SHARED_NL) =>

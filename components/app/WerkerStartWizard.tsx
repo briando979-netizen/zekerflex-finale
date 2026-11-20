@@ -185,7 +185,9 @@ export function WerkerStartWizard({
           const a = actie(k);
           const laatste = i === stappen.length - 1;
           return (
-            <li key={k} className="relative flex gap-3 pb-4">
+            // een stap die nog niet aan de beurt is, is één compacte regel (nummer en titel): geen kaart en geen uitleg,
+            // anders wordt het scherm van een nieuwe werker erg lang (20 nov 2026)
+            <li key={k} className={`relative flex gap-3 ${uitgeschakeld ? "pb-2" : "pb-4"}`}>
               {!laatste && <span className={`absolute bottom-0 left-[13px] top-7 w-0.5 ${stand === "klaar" ? "bg-ok/40" : "bg-hair"}`} aria-hidden />}
               <span
                 className={`relative z-10 mt-1 grid h-7 w-7 flex-shrink-0 place-items-center rounded-full text-xs font-bold ${
@@ -196,9 +198,11 @@ export function WerkerStartWizard({
                 {stand === "klaar" ? "✓" : i + 1}
               </span>
               <div
-                className={`min-w-0 flex-1 rounded-xl border p-4 ${
-                  stand === "actief" ? "border-brand-500/40 bg-white shadow-sm" : stand === "klaar" ? "border-hair bg-white" : "border-hair bg-paper-soft"
-                }`}
+                className={
+                  uitgeschakeld
+                    ? "min-w-0 flex-1 pt-2"
+                    : `min-w-0 flex-1 rounded-xl border p-4 ${stand === "actief" ? "border-brand-500/40 bg-white shadow-sm" : "border-hair bg-white"}`
+                }
                 aria-current={stand === "actief" ? "step" : undefined}
               >
                 {/* alleen een afgeronde stap is te openen; de andere titels zijn gewone tekst (een uitgeschakelde knop leest een schermlezer als "niet beschikbaar") */}
@@ -239,8 +243,8 @@ export function WerkerStartWizard({
                     </button>
                   </p>
                 )}
-                {stand !== "klaar" && k !== "kind" && k !== "branches" && <p className={`mt-1 text-xs leading-snug ${uitgeschakeld ? "text-neutralx-400" : "text-neutralx-600"}`}>{uitleg[k]}</p>}
-                {uitgeschakeld && <p className="mt-2 text-xs text-neutralx-400">{t.eerstDit}</p>}
+                {/* de uitleg alleen bij de stap die aan de beurt is; een latere stap toont alleen zijn titel */}
+                {stand === "actief" && k !== "kind" && k !== "branches" && <p className="mt-1 text-xs leading-snug text-neutralx-600">{uitleg[k]}</p>}
                 {stand === "actief" && a && (
                   <Link href={a.href} className="mt-2 inline-flex min-h-[44px] items-center gap-1 text-sm font-semibold text-brand-600 underline underline-offset-4 hover:text-brand-700">
                     {a.tekst} <span aria-hidden>›</span>

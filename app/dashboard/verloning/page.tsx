@@ -63,24 +63,24 @@ export default async function VerloningPage() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <KpiCard
-          label={
-            latest
-              ? vulIn(t.laatsteWeek, { week: vulIn(t.weekKort, { week: parseIsoWeekId(latest.isoWeek)?.week ?? latest.isoWeek }) })
-              : t.laatsteWeekLeeg
-          }
-          value={latest ? eur(latest.computed.headlineCents) : "—"}
-          tone="brand"
-          {...(latest ? { hint: loonstrookKop(latest, t) } : {})}
-        />
-        <KpiCard label={vulIn(t.bruto, { jaar: new Date().getUTCFullYear() })} value={eur(ytdGross)} />
-        {isPayroll ? (
-          <KpiCard label={t.reservering} value={eur(holidayReserve)} hint={t.reserveringHint} />
-        ) : (
-          <KpiCard label={t.wekenVerloond} value={String(payslips.length)} />
-        )}
-      </div>
+      {/* De kaarten met bedragen pas vanaf de eerste verloonde week: een nieuwe werker ziet anders een streepje
+          en twee keer € 0,00. Tot dan staat hieronder alleen het lege vak uit PayslipList (t.leegTitel). */}
+      {latest && (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <KpiCard
+            label={vulIn(t.laatsteWeek, { week: vulIn(t.weekKort, { week: parseIsoWeekId(latest.isoWeek)?.week ?? latest.isoWeek }) })}
+            value={eur(latest.computed.headlineCents)}
+            tone="brand"
+            hint={loonstrookKop(latest, t)}
+          />
+          <KpiCard label={vulIn(t.bruto, { jaar: new Date().getUTCFullYear() })} value={eur(ytdGross)} />
+          {isPayroll ? (
+            <KpiCard label={t.reservering} value={eur(holidayReserve)} hint={t.reserveringHint} />
+          ) : (
+            <KpiCard label={t.wekenVerloond} value={String(payslips.length)} />
+          )}
+        </div>
+      )}
 
       {isPayroll && latest?.computed.breakdown.kind === "payroll" && (
         <div className="mt-4 grid gap-4 sm:grid-cols-3">

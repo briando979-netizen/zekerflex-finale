@@ -73,7 +73,8 @@ export default async function AdministratiePage() {
       <>
         <Back t={t} />
         <PageHeader title={t.titel} subtitle={t.subtitelLeeg} />
-        <EmptyState icon="📋" title={t.leegTitel} body={t.leegTekst} />
+        {/* geen doodlopend scherm: de startstappen van de aanmelding staan op /dashboard/klussen */}
+        <EmptyState icon="📋" title={t.leegTitel} body={t.leegTekst} cta={{ href: "/dashboard/klussen", label: t.leegKnop }} />
       </>
     );
   }
