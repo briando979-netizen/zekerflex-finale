@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requirePrincipal, hasRole } from "@/lib/auth";
-import { getOrgProfileExtra, klusBeeldVan } from "@/lib/profile/store";
+import { getOrgProfileExtra, klusBeeldVan, type OrgProfileExtra } from "@/lib/profile/store";
 import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { SHIFT_TEMPLATES, MIN_SHIFT_RATE_CENTS } from "@/lib/shifts/create";
@@ -53,7 +53,7 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
   const tenantId = scope.tenantIds[0];
   const [pools, extra, alleenFlexwerk, locale] = await Promise.all([
     tenantId ? listPools(tenantId) : Promise.resolve([]),
-    tenantId ? getOrgProfileExtra(tenantId).catch(() => ({})) : Promise.resolve({}),
+    tenantId ? getOrgProfileExtra(tenantId).catch((): OrgProfileExtra => ({})) : Promise.resolve<OrgProfileExtra>({}),
     // vlag `publiek-alleen-flexwerk` (20 nov): eerst de korte weg in drie stappen, het uitgebreide formulier eronder
     alleenFlexwerkAan().catch(() => false),
     getLocale(),
