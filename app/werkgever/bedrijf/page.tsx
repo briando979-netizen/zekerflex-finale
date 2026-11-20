@@ -26,7 +26,8 @@ function Stars({ n }: { n: number }) {
 }
 
 export default async function WerkgeverBedrijfPage() {
-  const c = (await getDict()).company;
+  const dict = await getDict();
+  const c = dict.company;
   const principal = await requirePrincipal();
   // dashboard website of webshop open: het account staat in de studio (lib/studio/account.ts)
   await naarStudioAccount(principal, "bedrijf");
@@ -55,6 +56,12 @@ export default async function WerkgeverBedrijfPage() {
         title={c.title}
         eyebrow={c.eyebrow}
         subtitle={fmt(c.subtitle, { org: tenant?.name ?? c.title })}
+        action={
+          // één plek voor bedrijfsgegevens: de instellingen zijn vanaf hier bereikbaar, niet meer los in de zijbalk
+          <Link href="/werkgever/instellingen" className="btn-ghost">
+            {dict.settings.title}
+          </Link>
+        }
       />
 
       <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
