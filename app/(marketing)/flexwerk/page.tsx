@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ldJson } from "@/lib/seo/json-ld";
+import { robotsVerborgen } from "@/lib/seo/verbergen";
 import { env } from "@/lib/env";
 import { Reveal } from "@/components/marketing/Reveal";
 import { FaqList } from "@/components/marketing/primitives";
@@ -33,11 +34,15 @@ import {
 // Teksten: lib/marketing/werk-home.ts (dezelfde bron als de huidige home).
 // ---------------------------------------------------------------------------
 
-export const metadata: Metadata = {
-  title: "Flexwerk, uitzendwerk en zzp-klussen | ZekerFlex",
-  description:
-    "Kies zelf je klussen bij jou in de buurt. Je ziet vooraf wat je verdient, je checkt in met je telefoon en je geld komt op je eigen rekening. Gratis voor werkers, in vijf talen.",
-};
+// vlag `publiek-alleen-flexwerk`: deze proefversie is dicht voor Google (noindex) zolang de echte voorpagina de flexwerk-home is
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: "Flexwerk, uitzendwerk en zzp-klussen | ZekerFlex",
+    description:
+      "Kies zelf je klussen bij jou in de buurt. Je ziet vooraf wat je verdient, je checkt in met je telefoon en je geld komt op je eigen rekening. Gratis voor werkers, in vijf talen.",
+    ...(await robotsVerborgen("/flexwerk")),
+  };
+}
 
 // De gekozen achtergrond komt uit de opslag: zonder dit zou hij bij het bouwen worden vastgelegd (toen is er geen database).
 export const revalidate = 60;

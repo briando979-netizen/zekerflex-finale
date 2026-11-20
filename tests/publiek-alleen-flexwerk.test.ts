@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 // Vlag `publiek-alleen-flexwerk` (lib/marketing/flexwerk-only.ts): als hij AAN staat, is de openbare site alleen flexwerk.
@@ -87,6 +88,8 @@ describe("publiek = alleen flexwerk: de bron van waarheid", () => {
       "/klussen", // de publieke open-klussen-blader-/zoeklijst (exact)
       "/open-diensten", // de klussen-kaart
       "/open-diensten/3d",
+      "/nieuwe-home", // de proefversies van het herontwerp van 19 nov: dicht (eigenaar, 20 nov)
+      "/flexwerk",
     ]) {
       expect(isNietFlexwerkPad(p), p).toBe(true);
     }
@@ -264,9 +267,9 @@ describe("de bedrijfskant met de vlag aan", () => {
     expect(uit).not.toContain("planning");
     // met de vlag aan: de niet-flexwerk-items weg (ook branche, de website/webshop-items, de mailbox, WhatsApp en wifi/vpn)
     const aan = menuVoor("personeel", { ...opties, alleenFlexwerk: true }).map((p) => p.sleutel);
-    for (const weg of ["telefonie", "reviews", "branche", "website", "winkel", "studio", "mail", "whatsapp", "netwerk"]) expect(aan, weg).not.toContain(weg);
-    // alle personeelsfuncties, flexwerk-administratie en op-locatie (eigen vlag) blijven; de assistent ook
-    for (const blijft of ["klussen", "planning", "uren", "inchecken", "facturen", "compliance", "overeenkomsten", "bedrijf", "rapportages", "locatie", "assistent", "berichten", "favorieten"]) {
+    for (const weg of ["telefonie", "reviews", "branche", "website", "winkel", "studio", "mail", "whatsapp", "netwerk", "locatie", "afspraken", "klanten"]) expect(aan, weg).not.toContain(weg);
+    // alle personeelsfuncties en de flexwerk-administratie blijven; de assistent ook
+    for (const blijft of ["klussen", "planning", "uren", "inchecken", "facturen", "compliance", "overeenkomsten", "bedrijf", "rapportages", "inkaart", "assistent", "berichten", "favorieten", "geblokkeerd"]) {
       expect(aan, blijft).toContain(blijft);
     }
   });
@@ -276,12 +279,26 @@ describe("de bedrijfskant met de vlag aan", () => {
     const aan = menuVoor("personeel", opties).map((p) => p.sleutel);
     for (const weg of ["kalender", "planner", "agenda"]) expect(aan, weg).not.toContain(weg);
     expect(aan.filter((s) => s === "planning")).toHaveLength(1);
-    // direct na klussen, en afspraken blijft er direct achter staan
-    expect(aan.slice(aan.indexOf("klussen"), aan.indexOf("klussen") + 3)).toEqual(["klussen", "planning", "afspraken"]);
+    // direct na klussen; afspraken/klantenkaart (branche) zijn weg, dus favorieten volgt
+    expect(aan.slice(aan.indexOf("klussen"), aan.indexOf("klussen") + 3)).toEqual(["klussen", "planning", "favorieten"]);
     // de tabbladen op de pagina dekken precies die drie
     expect(PLANNING_SAMEN).toEqual(["kalender", "planner", "agenda"]);
     expect(PLANNING_TABS.map((t) => t.id).sort()).toEqual([...PLANNING_SAMEN].sort());
     expect(PLANNING_TABS.map((t) => t.href)).toEqual(["/werkgever/kalender", "/werkgever/planner", "/werkgever/agenda"]);
+  });
+
+  it("de werker-app en Instellingen verbergen de losse diensten met de vlag aan (bron-controle)", () => {
+    const account = readFileSync("app/dashboard/account/page.tsx", "utf8");
+    for (const pad of ["/dashboard/telefonie", "/dashboard/wifi", "/dashboard/portofoon", "/dashboard/toegangscodes", "/dashboard/voertuig"]) {
+      expect(account, pad).toContain(`"${pad}"`);
+    }
+    expect(account).toContain("NIET_FLEXWERK_ACCOUNT.has(i.href)");
+    expect(account).toContain("alleenFlexwerkAan()");
+    const instellingen = readFileSync("app/werkgever/instellingen/page.tsx", "utf8");
+    expect(instellingen).toContain('...(alleenFlexwerk ? [] : [{ title: s.cApiT');
+    // de proefversie /flexwerk gaat met de vlag op noindex, /nieuwe-home stond al op noindex
+    expect(readFileSync("app/(marketing)/flexwerk/page.tsx", "utf8")).toContain('robotsVerborgen("/flexwerk")');
+    expect(readFileSync("app/(marketing)/nieuwe-home/page.tsx", "utf8")).toContain("robots: { index: false");
   });
 
   it("de abonnementspakketten verdwijnen met de vlag aan (prijs per gewerkt uur); de uitbreidingen blijven", () => {

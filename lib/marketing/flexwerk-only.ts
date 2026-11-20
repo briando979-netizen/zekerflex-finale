@@ -71,6 +71,10 @@ export const NIET_FLEXWERK_PADEN: readonly string[] = [
   // spoedoproep, facturen, …). De eigenaar wil "aanbod verbergen inclusief wat er is" en "de functies weg";
   // de kern-flexwerk-SEO blijft gedekt door /personeel-inhuren, /uitzendbureau en de sector-/stadpagina's.
   "/aanbod",
+  // de proefversies van het voorpagina-herontwerp van 19 nov (teruggedraaid): de brede home en de losse flexwerk-home.
+  // De eigenaar wil ze dicht (20 nov); ze linken alleen naar elkaar.
+  "/nieuwe-home",
+  "/flexwerk",
 ];
 
 /**

@@ -254,7 +254,9 @@ const plek = (sectie?: MenuSectie) => (sleutel: MenuSleutel): MenuPlek => (secti
 // dashboardmenu volledig (breek dat niet; de wisselaar toont dat dashboard alleen als het open is).
 // Sinds 20 nov (eigenaar: "haal weg wat niets met flexwerkers of uren goedkeuren te maken heeft") ook de zakelijke
 // mailbox, de WhatsApp-koppeling en Wifi/VPN (netwerkpakketten): losse diensten, geen flexwerk.
-const NIET_FLEXWERK_MENU: readonly MenuSleutel[] = ["telefonie", "reviews", "branche", "studio", "winkel", "website", "mail", "whatsapp", "netwerk"];
+// En (eigenaar, "haal dat allemaal weg"): Op locatie (portofoon, toegang op kenteken, sleutelkluis, badges) en
+// Afspraken/Klantenkaart (de agenda voor kappers en garages: branche, geen flexwerk).
+const NIET_FLEXWERK_MENU: readonly MenuSleutel[] = ["telefonie", "reviews", "branche", "studio", "winkel", "website", "mail", "whatsapp", "netwerk", "locatie", "afspraken", "klanten"];
 
 // Drie agenda's naast elkaar (kalender, roosterplanner, agenda) was te veel (20 nov, eigenaar: "voeg ze samen"): met de
 // vlag aan één ingang "Planning" (/werkgever/kalender) met tabbladen naar de andere twee (components/werkgever/PlanningTabs.tsx).
@@ -264,7 +266,7 @@ export const PLANNING_SAMEN: readonly MenuSleutel[] = ["kalender", "planner", "a
 // erbij zodra de eerste klus is geplaatst: wie klussen heeft, houdt altijd alle personeelsfuncties. Tot die tijd blijft
 // over: start, klussen, planning, chat, assistent, uren, facturen, bedrijf en hulp. De pagina's blijven bereikbaar via een
 // directe link.
-export const NA_EERSTE_KLUS: readonly MenuSleutel[] = ["favorieten", "geblokkeerd", "inchecken", "rapportages", "inkaart", "compliance", "overeenkomsten", "locatie"];
+export const NA_EERSTE_KLUS: readonly MenuSleutel[] = ["favorieten", "geblokkeerd", "inchecken", "rapportages", "inkaart", "compliance", "overeenkomsten"];
 
 /** Het menu van het dashboard `soort`; met de vlag aan vallen in het personeel-dashboard de niet-flexwerk-items weg. */
 export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {

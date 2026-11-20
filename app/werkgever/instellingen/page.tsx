@@ -6,6 +6,7 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getOrgProfileExtra } from "@/lib/profile/store";
 import { getDict } from "@/lib/i18n/server";
 import { PushToggle } from "@/components/app/PushToggle";
+import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 import {
   IUser,
   IUsers,
@@ -42,6 +43,8 @@ export default async function InstellingenPage() {
   const tenantId = scope.tenantIds[0];
   const extra = tenantId ? await getOrgProfileExtra(tenantId) : {};
   const hasCover = Boolean(extra.photoUploadId || extra.onboarding?.coverStepDone);
+  // vlag `publiek-alleen-flexwerk`: de API-koppelingen (het ontwikkelaarsportaal is verborgen) niet meer als kaart
+  const alleenFlexwerk = await alleenFlexwerkAan().catch(() => false);
 
   const bedrijf: Card[] = [
     { title: s.cProfileT, sub: s.cProfileS, href: "/werkgever/bedrijf", icon: <IUser /> },
@@ -50,7 +53,7 @@ export default async function InstellingenPage() {
     { title: s.cLocationsT, sub: s.cLocationsS, href: "/werkgever/locaties", icon: <IPin /> },
     { title: s.cCostT, sub: s.cCostS, href: "/werkgever/facturen", icon: <IHash /> },
     { title: s.cUsersT, sub: s.cUsersS, href: "/werkgever/team", icon: <IUsers /> },
-    { title: s.cApiT, sub: s.cApiS, href: "/werkgever/integraties", icon: <IKey /> },
+    ...(alleenFlexwerk ? [] : [{ title: s.cApiT, sub: s.cApiS, href: "/werkgever/integraties", icon: <IKey /> }]),
     { title: s.cDpaT, sub: s.cDpaS, href: "/werkgever/overeenkomsten", icon: <IDoc /> },
   ];
 

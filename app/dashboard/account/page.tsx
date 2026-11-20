@@ -24,8 +24,13 @@ import { locatieTeksten } from "@/lib/locatie/teksten";
 import { hulpTeksten } from "@/lib/hulp/teksten";
 import { BANK_AAN } from "@/lib/app-mode";
 import { PageHeader } from "@/components/app/ui";
+import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
 export const dynamic = "force-dynamic";
+
+// vlag `publiek-alleen-flexwerk` (20 nov 2026, eigenaar): de losse diensten die niets met flexwerk te maken hebben
+// (zakelijk nummer, wifi op locatie, portofoon, toegangscodes, kenteken) staan dan niet meer in dit menu; de pagina's blijven.
+const NIET_FLEXWERK_ACCOUNT = new Set(["/dashboard/telefonie", "/dashboard/wifi", "/dashboard/portofoon", "/dashboard/toegangscodes", "/dashboard/voertuig"]);
 
 type Item =
   | { label: string; href: string; external?: boolean }
@@ -74,6 +79,7 @@ export default async function AccountPage() {
 
   const isUitzend = invoiceModeFor(fiscal) === "payroll";
   const secured = await hasTwoFactor(principal.userId).catch(() => true);
+  const alleenFlexwerk = await alleenFlexwerkAan().catch(() => false);
   // Only a request that actually found a substitute counts as "arranged" — an
   // "open" (still pending) or "cancelled" (withdrawn, worked it yourself)
   // request never resulted in a real replacement.
@@ -87,7 +93,7 @@ export default async function AccountPage() {
   // Een geplande (toekomstige) klus: het overzicht haalt die al op (lib/dashboard/freelancer.ts, kpis.upcoming).
   const heeftGeplandeKlus = overview.kpis.upcoming > 0;
 
-  const GROUPS: { items: Item[] }[] = [
+  const GROUPS_ALLES: { items: Item[] }[] = [
     {
       items: [
         { label: t.admin, href: "/dashboard/administratie" },
@@ -168,6 +174,8 @@ export default async function AccountPage() {
       items: [{ label: t.privacy, href: "/privacy" }],
     },
   ];
+  // met de vlag aan vallen de niet-flexwerk-diensten uit het menu (de pagina's zelf blijven bereikbaar)
+  const GROUPS = alleenFlexwerk ? GROUPS_ALLES.map((g) => ({ items: g.items.filter((i) => !("href" in i) || !NIET_FLEXWERK_ACCOUNT.has(i.href)) })) : GROUPS_ALLES;
 
   return (
     <>
