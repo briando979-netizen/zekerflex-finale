@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { AppError } from "@/lib/errors";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { createShift } from "@/lib/shifts/create";
+import { annuleerUrenOf } from "@/lib/shifts/annuleertermijn";
 import { addMember, createPool, listPools } from "@/lib/pools/store";
 
 // ---------------------------------------------------------------------------
@@ -33,6 +34,7 @@ export async function repeatWithSameTeam(principal: Principal, shiftId: string, 
       breakMinutes: true,
       hourlyRateCents: true,
       positions: true,
+      annuleerUren: true,
       branch: { select: { id: true, name: true, tenantId: true, kind: true } },
       assignments: { where: { cancelledAt: null }, select: { freelancer: { select: { userId: true } } } },
     },
@@ -67,6 +69,8 @@ export async function repeatWithSameTeam(principal: Principal, shiftId: string, 
     breakMinutes: s.breakMinutes,
     hourlyRateCents: s.hourlyRateCents,
     positions: s.positions,
+    // de herhaalde klus erft de annuleringstermijn van het origineel (lib/shifts/annuleertermijn.ts)
+    annuleerUren: annuleerUrenOf(s.annuleerUren),
     ...(poolId ? { poolId } : {}),
   });
   return { shiftId: res.shiftId, invited: team.length, poolName };

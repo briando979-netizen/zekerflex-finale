@@ -35,7 +35,7 @@ export async function probeerVasteSchil(
     uitkomst = await applyToShift(offer.userId, offer.shiftId);
   } catch (err) {
     // vol, overlap, geblokkeerd, niet geverifieerd: dan blijft het een gewone reactie die het bedrijf zelf beoordeelt
-    logger.info({ shiftId: offer.shiftId, poolId: pool.id, reden: err instanceof Error ? err.message : String(err) }, "vaste schil: niet direct ingepland");
+    logger.info("vaste schil: niet direct ingepland", { shiftId: offer.shiftId, poolId: pool.id, reden: err instanceof Error ? err.message : String(err) });
     return { ingepland: false };
   }
   if (uitkomst.pendingCompanyVerification) return { ingepland: false };
