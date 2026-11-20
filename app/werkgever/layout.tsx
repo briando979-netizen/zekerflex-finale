@@ -205,6 +205,8 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
         dashboards={{ actief: werkruimte.soort, dashboards: werkruimte.dashboards, kanToevoegen: beheerder, alleenFlexwerk }}
         // "ZekerFlex OS" onderin de zijbalk: met de vlag aan alleen voor een platformbeheerder (een bedrijf dat personeel zoekt snapt het niet, 20 nov)
         toonOs={!alleenFlexwerk || hasRole(principal, "PLATFORM_ADMIN")}
+        // met de vlag aan één plek voor bedrijfsgegevens: Bedrijfsprofiel (met daar een knop Instellingen), geen losse regel onderin
+        toonInstellingen={!alleenFlexwerk}
         {...(demo ? { demoUitgang: VOORBEELD_UITGANG } : {})}
       >
         <OpbouwfaseBalk soort="werkgever" />

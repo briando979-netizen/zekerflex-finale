@@ -58,10 +58,13 @@ export function EmployerShell({
   settingsHref = "/werkgever/instellingen",
   demoUitgang,
   toonOs = true,
+  toonInstellingen = true,
   children,
 }: {
   /** de ingang "ZekerFlex OS" onderin de zijbalk; met de vlag `publiek-alleen-flexwerk` aan alleen voor een platformbeheerder (20 nov) */
   toonOs?: boolean;
+  /** de losse regel "Instellingen" onderin; met de vlag aan weg, want Bedrijfsprofiel heeft dan een knop Instellingen (één plek, 20 nov) */
+  toonInstellingen?: boolean;
   /** de dashboards van het bedrijf (lib/werkgever/werkruimte.ts): de wisselaar bovenaan de zijbalk */
   dashboards?: DashboardStand;
   nav: NavItem[];
@@ -272,6 +275,7 @@ export function EmployerShell({
             {!collapsed && "ZekerFlex OS"}
           </a>
           )}
+          {toonInstellingen && (
           <Link
             href={settingsHref}
             onClick={() => setOpen(false)}
@@ -286,6 +290,7 @@ export function EmployerShell({
             </span>
             {!collapsed && t.shell.settings}
           </Link>
+          )}
           <form {...(demoUitgang ? { action: demoUitgang, method: "get" as const } : { action: logoutAction })}>
             <button
               title={collapsed ? t.shell.logout : undefined}
