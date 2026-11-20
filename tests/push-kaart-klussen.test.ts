@@ -49,22 +49,15 @@ describe("de pagina en de knop", () => {
   const pagina = lees("app/dashboard/klussen/page.tsx");
   const knop = lees("components/app/PushToggle.tsx");
 
-  it("de pagina beslist met klussenKaarten: de pushkaart staat boven de tip (als die bovenaan mag) en boven de lijst", () => {
-    expect(pagina).toContain("klussenKaarten(");
-    expect(pagina).toContain('const tipBoven = kaarten.tip === "boven";');
-    expect(pagina).toContain("{kaarten.eersteIndruk && eersteIndruk && (");
-    const push = pagina.indexOf("{kaarten.push && <PushToggle");
-    const tipBoven = pagina.indexOf("{tipBoven && <TipBedrijfKaart />}");
-    const lijst = pagina.indexOf("<MarketplaceView");
-    const tipOnder = pagina.indexOf("{!tipBoven && (");
-    expect(push).toBeGreaterThan(-1);
-    expect(push).toBeLessThan(tipBoven);
-    expect(tipBoven).toBeLessThan(lijst);
-    expect(lijst).toBeLessThan(tipOnder);
+  it("sinds 21 nov (stijl YoungOnes) staat op Ontdekken geen pushkaart, tip of eerste-indruk-kaart meer; meldingen staan op Account", () => {
+    expect(pagina).not.toContain("<PushToggle");
+    expect(pagina).not.toContain("<TipBedrijfKaart");
+    expect(pagina).not.toContain("klussenKaarten(");
+    expect(pagina).toContain("<MarketplaceView");
+    expect(lees("app/dashboard/account/page.tsx")).toContain("<PushToggle cardTexts={ft.accountDelen.push} />");
   });
 
-  it("de bestaande banner met de meetcodes, geen nieuwe pushlogica; niet in de iPhone-app", () => {
-    expect(pagina).toContain('<PushToggle variant="banner" texts={t.pushBanner} track={{ aan: "push-kaart-aan", weg: "push-kaart-weg" }} />');
+  it("de banner zelf houdt de meetcodes en de regels, voor wie hem nog ergens toont; niet in de iPhone-app", () => {
     expect(knop).toContain("data-track={track?.aan}");
     expect(knop).toContain("data-track={track?.weg}");
     expect(knop).toContain("if (ios !== false) return null;");

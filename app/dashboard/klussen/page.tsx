@@ -4,29 +4,20 @@ import { startSchermTonen } from "@/lib/onboarding/werker-poort";
 import { WelcomeBack } from "@/components/app/WelcomeBack";
 import { TodayStrip } from "@/components/app/TodayStrip";
 import { MilestoneCelebration } from "@/components/app/MilestoneCelebration";
-import { WerkerStartWizard } from "@/components/app/WerkerStartWizard";
-import { KlaarVoorKlusKaart } from "@/components/app/KlaarVoorKlusKaart";
+import { GeldVerdienenKaart } from "@/components/app/GeldVerdienenKaart";
 import { requirePrincipal } from "@/lib/auth";
 import { getMarketplace } from "@/lib/dashboard/marketplace";
-import { getFreelancerOverview } from "@/lib/dashboard/freelancer";
 import { todaysShifts, completedKlussenCount } from "@/lib/dashboard/today";
 import { getFiscal } from "@/lib/fiscal/store";
 import { isBirthdayToday } from "@/lib/birthday";
-import { PageHeader, StatusPill } from "@/components/app/ui";
+import { StatusPill } from "@/components/app/ui";
 import { MarketplaceView } from "@/components/app/MarketplaceView";
-import { WilReagerenNudge } from "@/components/app/WilReagerenNudge";
 import { getFreelancerDict } from "@/lib/i18n/server";
 import { translateBlockReason } from "@/lib/i18n/freelancer";
 import { alleenTestklussen } from "@/lib/shifts/testklus";
-import { TipBedrijfKaart } from "@/components/app/TipBedrijfKaart";
-import { PushToggle } from "@/components/app/PushToggle";
-import { tipPlek } from "@/lib/klusconcept/via";
-import { klussenKaarten } from "@/lib/onboarding/klussen-kaarten";
 import { getBrancheKeuze } from "@/lib/worker/branche-store";
 import { standaardFilter } from "@/lib/shifts/branche-keuze";
 import { EersteIndrukMelding } from "@/components/app/EersteIndrukMelding";
-import { eersteIndrukVoor } from "@/lib/onboarding/eerste-indruk-server";
-import { inIosApp } from "@/lib/app-mode-server";
 import { werkerPoortStand } from "@/lib/onboarding/werker-poort-server";
 import { nogVoorEersteKlusVan } from "@/lib/onboarding/klaar-voor-klus-server";
 
@@ -45,11 +36,10 @@ export default async function KlussenPage(
   // de branches die de werker bij de start koos (of alle): daarop staat de lijst standaard gefilterd
   const brancheKeuze = await getBrancheKeuze(principal.userId).catch(() => null);
 
-  const [fiscal, today, completed, overview] = await Promise.all([
+  const [fiscal, today, completed] = await Promise.all([
     getFiscal(principal.userId),
     todaysShifts(principal.userId),
     completedKlussenCount(principal.userId),
-    getFreelancerOverview(principal.userId),
   ]);
   const birthday = isBirthdayToday(fiscal.birthDate);
   // De app is sinds 12 nov open (eigenaar): wie de onboarding nog niet af heeft, ziet hier de stappen bovenaan en
@@ -63,9 +53,6 @@ export default async function KlussenPage(
   // daarna: wat er nog nodig is om te reageren (ID goedgekeurd, BSN, overeenkomst, KVK/btw, rekeningnummer), als één lijst
   // met dezelfde regels als de controle bij reageren (lib/onboarding/klaar-voor-klus.ts). Eén kaart tegelijk (15 nov, eigenaar)
   const nogVoorKlus = !onboardingOpen && !m.canApply ? await nogVoorEersteKlusVan(principal.userId).catch(() => []) : [];
-  // de kaart "eerste indruk" (werkervaring, meldingen) pas als reageren kan; in de iPhone-app vraagt de app zelf om
-  // meldingen: daar telt die stap als klaar
-  const eersteIndruk = onboardingOpen || !m.canApply ? null : await eersteIndrukVoor(principal.userId, { iosApp: await inIosApp() }).catch(() => null);
   const greetLabels = {
     morning: t.greet.morning,
     afternoon: t.greet.afternoon,
@@ -76,16 +63,6 @@ export default async function KlussenPage(
   };
   // Alleen testklussen (lib/shifts/testklus.ts)? Dan zeggen we eerlijk dat er nog geen echt werk is.
   const alleenTest = alleenTestklussen(m.shifts);
-  // "Ken je een bedrijf dat mensen zoekt?": bovenaan als er geen echte klussen zijn (leeg of alleen testklussen), anders onderaan.
-  // Hooguit één aansporing bovenaan (lib/onboarding/klussen-kaarten.ts): staat alleen de stap meldingen nog open, dan komt de
-  // pushkaart in plaats van "eerste indruk", en gaat de tip naar onderen.
-  const kaarten = klussenKaarten({
-    geverifieerd: overview.onboarding.some((s) => s.id === "kyc" && s.done),
-    eersteIndruk,
-    netOpgeslagen: searchParams.eerste === "1",
-    tipPlek: tipPlek(m.shifts),
-  });
-  const tipBoven = kaarten.tip === "boven";
   // Warme, contextuele subregel bij de groet — alleen als er iets te melden is.
   const greetSub =
     m.newSinceLastVisit > 0 ? t.greet.subNew : m.shifts.length > 0 && !alleenTest ? t.greet.subDiscover : undefined;
@@ -103,7 +80,6 @@ export default async function KlussenPage(
         shifts={today}
         labels={{ todayLabel: t.greet.todayLabel, todayAt: t.greet.todayAt, todayAtPlace: t.greet.todayAtPlace }}
       />
-      <WilReagerenNudge />
       {/* na "Opslaan" in /dashboard/eerste-indruk: alleen het goede nieuws als reageren echt kan (m.canApply), anders eerlijk wat er nog mist */}
       {searchParams.eerste === "1" && (
         <EersteIndrukMelding
@@ -112,33 +88,13 @@ export default async function KlussenPage(
           tekst={m.canApply ? t.eersteIndruk.melding.klaar : `${t.eersteIndruk.melding.nogNiet}${m.blockReason ? ` ${translateBlockReason(m.blockReason, t)}` : ""}`}
         />
       )}
-      {/* de optionele stappen na de ID-controle (profielfoto, werkervaring): alleen zolang er nog een open staat; de poort zelf blijft ongemoeid */}
-      {kaarten.eersteIndruk && eersteIndruk && (
-        <Link href="/dashboard/eerste-indruk" className="card mb-5 block p-4 hover:border-brand-500/40">
-          <p className="font-display text-base font-bold text-ink">{t.eersteIndruk.card.title}</p>
-          <p className="mt-1 text-sm text-neutralx-600">{t.eersteIndruk.card.body(eersteIndruk.open)}</p>
-          <span className="mt-2 inline-block text-sm font-semibold text-brand-600">{t.eersteIndruk.card.open} ›</span>
-        </Link>
-      )}
-      {/* de pushkaart (13 nov, eigenaar: ja): dezelfde stap meldingen, meteen met de knop. Wegklikbaar (na 14 dagen terug), niet
-          in de iPhone-app, en weg zodra meldingen op dit apparaat aanstaan (components/app/PushToggle.tsx, variant banner) */}
-      {kaarten.push && <PushToggle variant="banner" texts={t.pushBanner} track={{ aan: "push-kaart-aan", weg: "push-kaart-weg" }} />}
-      {/* het recht om te werken zit niet meer in de start (10 nov); aannemen vraagt het wel (lib/werkrecht) */}
-      {/* de melding "we verbeteren de aanmelding" staat niet meer bij werkers (10 nov, eigenaar); werkgevers: flag onboarding-onderhoud */}
+      {/* Sinds 21 nov (eigenaar: "alles weg en in de stijl van YoungOnes, alleen de chat bewaren"): bovenaan één turquoise kaart,
+          de stappen zelf staan op /dashboard/start/profiel. De pushkaart, "eerste indruk" en de tip staan op Account.
+          Het recht om te werken zit niet in de start (10 nov); aannemen vraagt het wel (lib/werkrecht). */}
       {poort && onboardingOpen ? (
-        <WerkerStartWizard
-          workerKind={poort.workerKind}
-          emailVerified={Boolean(principal.emailVerifiedAt)}
-          profileComplete={poort.gegevensIngevuld && poort.identiteitIngestuurd}
-          gegevensIngevuld={poort.gegevensIngevuld}
-          identiteitIngestuurd={poort.identiteitIngestuurd}
-          werkrechtOk
-          tweestapAan={poort.tweestapAan}
-          fotoGezet={poort.fotoGezet}
-          brancheKeuze={poort.brancheKeuze}
-        />
+        <GeldVerdienenKaart kop={t.start.geldKop} tekst={t.start.geldTekst} knop={t.start.geldKnop} href="/dashboard/start/profiel" />
       ) : nogVoorKlus.length > 0 ? (
-        <KlaarVoorKlusKaart stukken={nogVoorKlus} />
+        <GeldVerdienenKaart kop={t.start.regelKop} tekst={t.start.regelTekst} knop={t.start.regelKnop} href="/dashboard/start/profiel" />
       ) : (
         // iets anders houdt reageren tegen (bijv. de KVK-controle wacht, of matching is tijdelijk beperkt): de echte reden
         !m.canApply &&
@@ -148,10 +104,11 @@ export default async function KlussenPage(
           </div>
         )
       )}
-      <PageHeader
-        title={t.nav.findJob}
-        action={m.newSinceLastVisit > 0 ? <StatusPill tone="ok">{t.page.newCount(m.newSinceLastVisit)}</StatusPill> : null}
-      />
+      {m.newSinceLastVisit > 0 && (
+        <p className="mb-4">
+          <StatusPill tone="ok">{t.page.newCount(m.newSinceLastVisit)}</StatusPill>
+        </p>
+      )}
 
       {alleenTest && (
         <div className="card mb-5 p-5 text-sm">
@@ -159,8 +116,6 @@ export default async function KlussenPage(
           <p className="mt-1 text-neutralx-600">{t.page.alleenTestBody}</p>
         </div>
       )}
-
-      {tipBoven && <TipBedrijfKaart />}
 
       {m.shifts.length === 0 ? (
         <div className="card">
@@ -184,12 +139,6 @@ export default async function KlussenPage(
           defaultMinRateCents={m.prefs.minHourlyRateCents}
           defaultMaxTravel={m.prefs.maxTravelMinutes}
         />
-      )}
-
-      {!tipBoven && (
-        <div className="mt-6">
-          <TipBedrijfKaart />
-        </div>
       )}
     </>
   );

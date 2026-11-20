@@ -274,6 +274,7 @@ export function MarketplaceView({
       {/* filter chips */}
       <div className="sticky top-14 z-10 -mx-4 mb-5 border-b border-hair bg-paper-soft/95 px-4 py-3 backdrop-blur lg:-mx-8 lg:px-8">
         <input
+          id="zoeken"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={mk.search}

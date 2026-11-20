@@ -83,15 +83,19 @@ describe("Verificatie: het eindscherm is de plek om het in te vullen", () => {
 
 describe("Klussen: één kaart tegelijk", () => {
   const klussen = lees("app/dashboard/klussen/page.tsx");
-  it("eerst de stappen, dan Klaar voor je eerste klus, anders de echte reden", () => {
-    const stappen = klussen.indexOf("<WerkerStartWizard");
-    const klaar = klussen.indexOf("<KlaarVoorKlusKaart");
+  it("eerst de kaart naar de stappen, dan de kaart naar Klaar voor je eerste klus, anders de echte reden", () => {
+    // 21 nov (eigenaar: in de stijl van YoungOnes): op Ontdekken één turquoise kaart; de stappen zelf staan op /dashboard/start/profiel
+    const stappen = klussen.indexOf("<GeldVerdienenKaart kop={t.start.geldKop}");
+    const klaar = klussen.indexOf("<GeldVerdienenKaart kop={t.start.regelKop}");
     const reden = klussen.indexOf("translateBlockReason(m.blockReason, t)} {t.page.applyWhenDone}");
     expect(stappen).toBeGreaterThan(0);
     expect(klaar).toBeGreaterThan(stappen);
     expect(reden).toBeGreaterThan(klaar);
     // geen tweede startkaart, geen OnboardingProgress, geen filter dat de echte reden verbergt
-    expect(klussen.match(/<WerkerStartWizard/g)).toHaveLength(1);
+    expect(klussen).not.toContain("<WerkerStartWizard");
+    const profiel = lees("app/dashboard/start/profiel/page.tsx");
+    expect(profiel.match(/<WerkerStartWizard/g)).toHaveLength(1);
+    expect(profiel).toContain("<KlaarVoorKlusKaart");
     expect(klussen).not.toContain("OnboardingProgress");
     expect(klussen).not.toContain("!/verificatie|geverifieerd/i.test");
     // testaccounts zien de stappen ook (alleen reageren mag voor hen altijd)

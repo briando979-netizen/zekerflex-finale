@@ -59,7 +59,8 @@ function LanguageButton() {
   const { locale } = useI18n();
   const t = useFT();
   return (
-    <label className="relative grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink" title={t.lang.label}>
+    // op een telefoon niet in de balk (die heeft alleen zoeken, hulp en de bel, zoals de app van YoungOnes); de taal staat op Account
+    <label className="relative hidden h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink sm:grid" title={t.lang.label}>
       <span aria-hidden className="text-[11px] font-bold uppercase">{locale}</span>
       <select
         aria-label={t.lang.label}
@@ -118,7 +119,7 @@ export function FreelancerShell({
   // Focused full-screen views (a single klus) hide the tab bar so a page-owned
   // action bar can take its place.
   // het startscherm van een nieuwe werker (/dashboard/start) is ook zo'n volscherm: twee stappen zonder balken
-  const focused = /^\/dashboard\/klussen\/[^/]+$/.test(pathname) || pathname === "/dashboard/start";
+  const focused = /^\/dashboard\/klussen\/[^/]+$/.test(pathname) || pathname === "/dashboard/start" || pathname === "/dashboard/start/profiel";
   const current = tabs.find((t) => isActive(t.href));
   // Een scherm uit de balk onderaan heeft zijn eigen naam; elk ander scherm (Verificatie, Profiel, Hulp, ...)
   // krijgt die van lib/werker/schermtitel.ts in plaats van "Vind jouw klus".
@@ -144,22 +145,23 @@ export function FreelancerShell({
                 href="/werkgever"
                 aria-label={ft.nav.employerWorkspace}
                 title={ft.nav.employerWorkspace}
-                className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-brand-600"
+                className="hidden h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-brand-600 sm:grid"
               >
                 <IBriefcase />
               </Link>
             )}
             <LanguageButton />
+            {/* het thema staat ook op Account (ThemeToggleRow); op een telefoon alleen daar */}
             <ThemeToggle
               theme={theme}
               texts={ft.accountDelen.thema}
-              className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink"
-            />
-            {/* op een telefoon niet: daar is Ontdekken (hetzelfde adres) de eerste tab, en het vraagteken heeft de plek nodig */}
-            <Link
-              href="/dashboard/klussen"
-              aria-label={ft.nav.search}
               className="hidden h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink sm:grid"
+            />
+            {/* zoeken: naar het zoekveld boven de klussen (zoals het vergrootglas in de balk van YoungOnes) */}
+            <Link
+              href="/dashboard/klussen#zoeken"
+              aria-label={ft.nav.search}
+              className="grid h-11 w-11 place-items-center rounded-lg border border-hairstrong text-neutralx-500 transition hover:text-ink"
             >
               <ISearch />
             </Link>
