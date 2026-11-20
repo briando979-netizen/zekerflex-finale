@@ -108,7 +108,7 @@ export default async function WerkgeverFacturenPage() {
           </Panel>
         </div>
       </details>
-      {/* een <details> gaat niet vanzelf open bij een anker: de hulplink zou op een dicht blok uitkomen */}
+      {/* een inklapblok gaat niet vanzelf open bij een anker: de hulplink zou op een dicht blok uitkomen */}
       <OpenBijAnker blokId="factuurgegevens" ankers={["factuurgegevens", "e-factuur"]} />
 
       <div className="mt-8">
