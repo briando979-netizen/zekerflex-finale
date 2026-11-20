@@ -117,7 +117,8 @@ export function FreelancerShell({
 
   // Focused full-screen views (a single klus) hide the tab bar so a page-owned
   // action bar can take its place.
-  const focused = /^\/dashboard\/klussen\/[^/]+$/.test(pathname);
+  // het startscherm van een nieuwe werker (/dashboard/start) is ook zo'n volscherm: twee stappen zonder balken
+  const focused = /^\/dashboard\/klussen\/[^/]+$/.test(pathname) || pathname === "/dashboard/start";
   const current = tabs.find((t) => isActive(t.href));
   // Een scherm uit de balk onderaan heeft zijn eigen naam; elk ander scherm (Verificatie, Profiel, Hulp, ...)
   // krijgt die van lib/werker/schermtitel.ts in plaats van "Vind jouw klus".

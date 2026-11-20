@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { startSchermTonen } from "@/lib/onboarding/werker-poort";
 import { WelcomeBack } from "@/components/app/WelcomeBack";
 import { TodayStrip } from "@/components/app/TodayStrip";
 import { MilestoneCelebration } from "@/components/app/MilestoneCelebration";
@@ -54,6 +56,9 @@ export default async function KlussenPage(
   // reageert pas daarna (lib/onboarding/werker-poort-server.ts). Een storing: geen stappen. Testaccounts zien de stappen
   // ook (15 nov); alleen het reageren laten we ze toe (onboardingKlaarVoorReageren), voor de beoordelaars van Apple en Google.
   const poort = await werkerPoortStand(principal.userId).catch(() => null);
+  // een nieuw account zonder branchekeuze begint met de twee volschermstappen (locatie, branches), zoals de app van
+  // YoungOnes (20 nov, eigenaar); daarna staan de overige stappen hier bovenaan
+  if (poort && startSchermTonen(poort, poort.aangemeldOp)) redirect("/dashboard/start");
   const onboardingOpen = poort !== null && !poort.klaar;
   // daarna: wat er nog nodig is om te reageren (ID goedgekeurd, BSN, overeenkomst, KVK/btw, rekeningnummer), als één lijst
   // met dezelfde regels als de controle bij reageren (lib/onboarding/klaar-voor-klus.ts). Eén kaart tegelijk (15 nov, eigenaar)

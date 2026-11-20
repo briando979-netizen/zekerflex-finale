@@ -17,6 +17,8 @@ export interface WerkerPoortStand extends WerkerPoortFeiten {
   klaar: boolean;
   workerKind: "zzp" | "flexwerker" | "uitzendkracht" | null;
   brancheKeuze: BrancheKeuze | null;
+  /** wanneer het account is aangemaakt (voor startSchermTonen en branchesTellen); null bij een storing */
+  aangemeldOp: Date | null;
 }
 
 export async function werkerPoortStand(userId: string): Promise<WerkerPoortStand> {
@@ -59,6 +61,7 @@ export async function werkerPoortStand(userId: string): Promise<WerkerPoortStand
     klaar: werkerOnboardingKlaar(feiten),
     workerKind: fiscal.workerKind ?? null,
     brancheKeuze,
+    aangemeldOp: user?.createdAt ?? null,
   };
 }
 

@@ -59,6 +59,17 @@ export function branchesTellen(keuzeGemaakt: boolean, aangemeldOp: Date | null |
   return keuzeGemaakt || (aangemeldOp instanceof Date && aangemeldOp.getTime() < BRANCHE_STAP_SINDS);
 }
 
+/**
+ * Sinds 21 nov 2026 begint een nieuwe werker met twee volschermstappen (/dashboard/start: waar wil je klussen doen, in
+ * welke branches), zoals de app van YoungOnes (eigenaar, 20 nov). Wie zich eerder aanmeldde, houdt de stappen bovenaan
+ * Ontdekken; wie het startscherm al afrondde (branches gekozen) komt er niet meer vanzelf.
+ */
+export const START_SCHERM_SINDS = Date.parse("2026-11-21T00:00:00+01:00");
+
+export function startSchermTonen(stand: { klaar: boolean; brancheKeuze: unknown }, aangemeldOp: Date | null | undefined): boolean {
+  return !stand.klaar && stand.brancheKeuze === null && aangemeldOp instanceof Date && aangemeldOp.getTime() >= START_SCHERM_SINDS;
+}
+
 export function werkerOnboardingKlaar(f: WerkerPoortFeiten): boolean {
   return POORT_STAPPEN.every((s) => f[s.feit]);
 }

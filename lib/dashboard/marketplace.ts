@@ -14,6 +14,7 @@ import { tenantsBlockingUser, tenantsFavoritingUser } from "@/lib/employer/relat
 import { payoutEligibility } from "@/lib/fiscal/eligibility";
 import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 import { followedTenantIds } from "@/lib/worker/follows";
+import { getZoeklocatie } from "@/lib/worker/zoeklocatie";
 import { overlapsAny } from "@/lib/shifts/worker-overlap";
 import { matchingAlert } from "@/lib/matching/job-alerts";
 import { getKlusBeelden, type KlusBeeld } from "@/lib/profile/store";
@@ -225,16 +226,20 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
             ? "Matching is tijdelijk beperkt vanwege Wet DBA-signalen."
             : null;
 
-  const home =
-    profile && Number.isFinite(profile.homeLatitude)
+  const thuis =
+    profile && Number.isFinite(profile.homeLatitude) && !(profile.homeLatitude === 0 && profile.homeLongitude === 0)
       ? { lat: profile.homeLatitude, lng: profile.homeLongitude }
       : null;
+  // nog geen thuisbasis (de postcode komt bij Je gegevens): de plaats van het startscherm "Waar wil je klussen doen?"
+  // (lib/worker/zoeklocatie.ts), zodat een nieuwe werker meteen klussen bij hem in de buurt ziet (20 nov)
+  const zoek = thuis ? null : await getZoeklocatie(userId).catch(() => null);
+  const home = thuis ?? (zoek ? { lat: zoek.lat, lng: zoek.lng } : null);
   const reg = profile?.companyRegistration;
   const homeLabel = !profile
     ? null
     : reg?.street
       ? `${reg.street}${reg.houseNumber ? ` ${reg.houseNumber}` : ""}, ${reg.city ?? ""}`.replace(/,\s*$/, "")
-      : profile.homePostalCode || null;
+      : profile.homePostalCode || zoek?.label || null;
   const skills = new Set((profile?.skills ?? []).map((s) => s.skill.name));
 
   const taken = profile

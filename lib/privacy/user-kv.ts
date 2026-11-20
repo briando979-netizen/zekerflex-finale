@@ -94,6 +94,7 @@ export const ERASABLE_KV_PREFIXES = [
   "werker-agenda-taal:",
   // de branches die een werker bij de start koos (lib/worker/branche-store.ts)
   "werker-branches:",
+  "werker-zoeklocatie:",
   // werkervaring (lib/werker/ervaring-store.ts) en de eenmalige melding "ID geverifieerd" (lib/onboarding/id-geverifieerd.ts)
   "werker-ervaring:",
   "werker-id-melding:",
