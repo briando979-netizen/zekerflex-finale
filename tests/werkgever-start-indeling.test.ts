@@ -59,7 +59,9 @@ describe("het scherm", () => {
   const src = bron("app/werkgever/page.tsx");
 
   it("toont de onderdelen via de indeling, alleen buiten de startmodus", () => {
-    expect(src).toContain("      {!startModus &&\n        zichtbaar.map((id) => (\n          <Fragment key={id}>{onderdelen[id]}</Fragment>\n        ))}");
+    // met de vlag publiek-alleen-flexwerk eerst de takenlijst, dan de onderdelen zonder cijfers/volgers (zichtbaarFlex)
+    expect(src).toContain("      {!startModus && alleenFlexwerk && teDoenBlok}\n      {!startModus &&\n        zichtbaarFlex.map((id) => (\n          <Fragment key={id}>{onderdelen[id]}</Fragment>\n        ))}");
+    expect(src).toContain('const zichtbaarFlex = alleenFlexwerk ? zichtbaar.filter((id) => id !== "cijfers" && id !== "volgers") : zichtbaar;');
     expect(src).toContain("const marge = startMarges(zichtbaar, { volgers: followers === 0, beoordelingen: pendingReviews.length === 0, berichten: threads.length === 0 });");
   });
 

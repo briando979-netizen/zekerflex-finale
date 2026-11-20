@@ -29,7 +29,7 @@ import { EmployerShiftCard } from "@/components/app/EmployerShiftCard";
 import { RecentMessagesPanel } from "@/components/app/RecentMessagesPanel";
 import { EmployerOnboardingWizard } from "@/components/app/EmployerOnboardingWizard";
 import { KlusConceptNudge } from "@/components/app/KlusConceptNudge";
-import { getDict, getLocale } from "@/lib/i18n/server";
+import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { followerCount } from "@/lib/worker/follows";
 import { inAndroidApp } from "@/lib/app-mode-server";
@@ -119,20 +119,20 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
   const zichtbaar = zichtbareSecties("werkgever-start", await getPaginaIndeling("werkgever-start"));
   const marge = startMarges(zichtbaar, { volgers: followers === 0, beoordelingen: pendingReviews.length === 0, berichten: threads.length === 0 });
   // Met de vlag `publiek-alleen-flexwerk` (20 nov, eigenaar): het startscherm als takenlijst, en alleen wat over klussen
-  // plaatsen en uren goedkeuren gaat. De cijfers en de volgersregel vallen weg; de kop-banner ook.
-  const en = (await getLocale()) === "en";
+  // plaatsen en uren goedkeuren gaat. De cijfers en de volgersregel vallen weg; de kop-banner ook. Teksten: ws.teDoen…
   const openFacturen = o.invoices.filter((i) => i.status === "ISSUED").length;
+  const rij = (n: number, een: string, meer: string, href: string) => (n > 0 ? [{ n, tekst: n === 1 ? een : meer, href }] : []);
   const teDoen: { n: number; tekst: string; href: string }[] = [
-    ...(o.kpis.toApprove > 0 ? [{ n: o.kpis.toApprove, tekst: en ? (o.kpis.toApprove === 1 ? "timesheet is waiting for your approval" : "timesheets are waiting for your approval") : o.kpis.toApprove === 1 ? "urenbriefje wacht op je goedkeuring" : "urenbriefjes wachten op je goedkeuring", href: "/werkgever/uren" }] : []),
-    ...(o.kpis.openShifts > 0 ? [{ n: o.kpis.openShifts, tekst: en ? (o.kpis.openShifts === 1 ? "open job still needs people" : "open jobs still need people") : o.kpis.openShifts === 1 ? "open klus zoekt nog mensen" : "open klussen zoeken nog mensen", href: "/werkgever/diensten" }] : []),
-    ...(pendingReviews.length > 0 ? [{ n: pendingReviews.length, tekst: en ? (pendingReviews.length === 1 ? "worker is waiting for your review" : "workers are waiting for your review") : pendingReviews.length === 1 ? "werker wacht op je beoordeling" : "werkers wachten op je beoordeling", href: `/werkgever/diensten/${pendingReviews[0]?.shiftId ?? ""}` }] : []),
-    ...(openFacturen > 0 ? [{ n: openFacturen, tekst: en ? (openFacturen === 1 ? "invoice is open" : "invoices are open") : openFacturen === 1 ? "factuur staat open" : "facturen staan open", href: "/werkgever/facturen" }] : []),
+    ...rij(o.kpis.toApprove, ws.teDoenUrenEen, ws.teDoenUrenMeer, "/werkgever/uren"),
+    ...rij(o.kpis.openShifts, ws.teDoenKlusEen, ws.teDoenKlusMeer, "/werkgever/diensten"),
+    ...rij(pendingReviews.length, ws.teDoenBeoordelingEen, ws.teDoenBeoordelingMeer, `/werkgever/diensten/${pendingReviews[0]?.shiftId ?? ""}`),
+    ...rij(openFacturen, ws.teDoenFactuurEen, ws.teDoenFactuurMeer, "/werkgever/facturen"),
   ];
   const teDoenBlok = (
     <section aria-labelledby="tedoen-kop" className="mb-8 rounded-2xl border border-hair bg-white p-5 shadow-card">
-      <h2 id="tedoen-kop" className="font-display text-lg font-bold text-ink">{en ? "To do" : "Te doen"}</h2>
+      <h2 id="tedoen-kop" className="font-display text-lg font-bold text-ink">{ws.teDoenKop}</h2>
       {teDoen.length === 0 ? (
-        <p className="mt-2 text-sm text-neutralx-600">{en ? "Nothing waiting for you. Place a job when you need people." : "Niets wacht op je. Plaats een klus als je mensen nodig hebt."}</p>
+        <p className="mt-2 text-sm text-neutralx-600">{ws.teDoenLeeg}</p>
       ) : (
         <ul className="mt-3 divide-y divide-hair">
           {teDoen.map((r) => (

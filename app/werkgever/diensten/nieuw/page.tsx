@@ -14,7 +14,8 @@ import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 export const dynamic = "force-dynamic";
 
 export default async function NieuweDienstPage() {
-  const n = (await getDict()).newShift;
+  const d = await getDict();
+  const n = d.newShift;
   const principal = await requirePrincipal();
   const scope = await resolveEmployerScope(principal);
 
@@ -80,7 +81,7 @@ export default async function NieuweDienstPage() {
           {/* meer opties (meerdere dagen, eenmalige locatie, pools, dresscode, foto): het uitgebreide formulier, dichtgeklapt */}
           <details className="mt-6">
             <summary className="cursor-pointer text-sm font-semibold text-brand-600 hover:underline">
-              {locale === "en" ? "All options (full form)" : "Alle opties (uitgebreid formulier)"}
+              {d.werkgeverStart.alleOpties}
             </summary>
             <div className="mt-4">{volledig}</div>
           </details>
