@@ -495,6 +495,7 @@ export const en: Dict = {
   },
   controls: {
     editShift: "Edit job",
+    duplicateShift: "Duplicate job",
     cancelShift: "Cancel job",
     approve: "Approve",
     approving: "Working…",

@@ -104,23 +104,34 @@ function PlaatsKnop({ tekst, bezig }: { tekst: string; bezig: string }) {
   );
 }
 
-export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "nl" }: { branches: { id: string; name: string; city: string | null }[]; sjablonen: SnelSjabloon[]; minRateCents: number; t: SnelTeksten; locale?: "nl" | "en" }) {
+/** Een bestaande klus als vertrekpunt ("Klus dupliceren", naar YoungOnes): alles behalve de datum komt mee. */
+export interface SnelVoorinvulling {
+  titel: string;
+  van: string;
+  tot: string;
+  personen: number;
+  tariefCents: number;
+  branchId: string;
+  annuleerUren: number;
+}
+
+export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "nl", voorinvulling }: { branches: { id: string; name: string; city: string | null }[]; sjablonen: SnelSjabloon[]; minRateCents: number; t: SnelTeksten; locale?: "nl" | "en"; voorinvulling?: SnelVoorinvulling }) {
   const [stap, setStap] = useState<1 | 2 | 3>(1);
-  const [annuleerUren, setAnnuleerUren] = useState(String(STANDAARD_ANNULEER_UREN));
+  const [annuleerUren, setAnnuleerUren] = useState(String(voorinvulling?.annuleerUren ?? STANDAARD_ANNULEER_UREN));
   // dezelfde uitleg als het uitgebreide formulier (woordenlijst, NL/EN)
   const n = useT().newShiftForm;
   const annuleerUitleg = n.annuleerTermijnUitleg;
   // vervullingskans en tariefadvies (lib/pricing/advice via /api/werkgever/pricing), zoals het uitgebreide formulier
   const [forecast, setForecast] = useState<{ marketRateCents: number; fillChance: number; suggestedRateCents: number; suggestedFillChance: number; sample: number } | null>(null);
-  const [titel, setTitel] = useState("");
+  const [titel, setTitel] = useState(voorinvulling?.titel ?? "");
   const [sjabloon, setSjabloon] = useState<SnelSjabloon | null>(null);
   const [datum, setDatum] = useState("");
-  const [van, setVan] = useState("09:00");
-  const [tot, setTot] = useState("17:00");
-  const [personen, setPersonen] = useState(1);
+  const [van, setVan] = useState(voorinvulling?.van ?? "09:00");
+  const [tot, setTot] = useState(voorinvulling?.tot ?? "17:00");
+  const [personen, setPersonen] = useState(voorinvulling?.personen ?? 1);
   const minEuro = Math.ceil(minRateCents / 100);
-  const [tarief, setTarief] = useState(String(minEuro));
-  const [branchId, setBranchId] = useState(branches[0]?.id ?? "");
+  const [tarief, setTarief] = useState(voorinvulling ? (Math.max(minRateCents, voorinvulling.tariefCents) / 100).toFixed(2) : String(minEuro));
+  const [branchId, setBranchId] = useState(voorinvulling?.branchId && branches.some((b) => b.id === voorinvulling.branchId) ? voorinvulling.branchId : (branches[0]?.id ?? ""));
   const [melding, setMelding] = useState<string | null>(null);
   const [state, formAction] = useFormState<NewShiftState, FormData>(createShiftAction, { error: null });
 

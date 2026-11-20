@@ -27,10 +27,12 @@ export function EmployerShiftControls({ shift }: { shift: ShiftInit }) {
   const editable = ["DRAFT", "OPEN", "MATCHING", "PARTIALLY_FILLED"].includes(shift.status);
   const cancellable = !["COMPLETED", "CANCELLED"].includes(shift.status);
 
-  if (!editable && !cancellable) return null;
-
   return (
     <div className="flex flex-wrap items-center gap-2">
+      {/* "Klus dupliceren" (naar YoungOnes): dezelfde klus opnieuw plaatsen met een nieuwe datum, ook na afloop */}
+      <Link href={`/werkgever/diensten/nieuw?kopie=${encodeURIComponent(shift.id)}`} className="btn-ghost text-sm">
+        {c.duplicateShift}
+      </Link>
       {editable && (
         // same form and preview as placing a klus (/werkgever/diensten/[id]/bewerken)
         <Link href={`/werkgever/diensten/${shift.id}/bewerken`} className="btn-ghost text-sm">

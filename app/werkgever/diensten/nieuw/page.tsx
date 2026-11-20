@@ -10,14 +10,35 @@ import { NewShiftForm } from "@/components/app/NewShiftForm";
 import { SNEL_EN, SNEL_NL, SnelPlaatsen } from "@/components/werkgever/SnelPlaatsen";
 import { getDict, getLocale } from "@/lib/i18n/server";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
+import { amsterdamClock } from "@/lib/time/amsterdam";
 
 export const dynamic = "force-dynamic";
 
-export default async function NieuweDienstPage() {
+export default async function NieuweDienstPage({ searchParams }: { searchParams: Promise<{ kopie?: string | string[] }> }) {
   const d = await getDict();
   const n = d.newShift;
   const principal = await requirePrincipal();
   const scope = await resolveEmployerScope(principal);
+  // ?kopie=<klus>: "Klus dupliceren" (naar YoungOnes) — dezelfde klus als vertrekpunt, alleen de datum is nieuw
+  const sp = await searchParams;
+  const kopieId = Array.isArray(sp.kopie) ? sp.kopie[0] : sp.kopie;
+  const kopie = kopieId
+    ? await prisma.shift.findFirst({
+        where: { AND: [{ id: kopieId }, { branch: scope.branchIds ? { id: { in: scope.branchIds } } : { tenantId: { in: scope.tenantIds } } }] },
+        select: { title: true, startsAt: true, endsAt: true, positions: true, hourlyRateCents: true, branchId: true, annuleerUren: true },
+      })
+    : null;
+  const voorinvulling = kopie
+    ? {
+        titel: kopie.title,
+        van: amsterdamClock(kopie.startsAt),
+        tot: amsterdamClock(kopie.endsAt),
+        personen: kopie.positions,
+        tariefCents: kopie.hourlyRateCents,
+        branchId: kopie.branchId,
+        annuleerUren: kopie.annuleerUren,
+      }
+    : undefined;
 
   const branches = await prisma.branch.findMany({
     where: scope.branchIds
@@ -83,6 +104,7 @@ export default async function NieuweDienstPage() {
             minRateCents={MIN_SHIFT_RATE_CENTS}
             t={locale === "en" ? SNEL_EN : SNEL_NL}
             locale={locale === "en" ? "en" : "nl"}
+            {...(voorinvulling ? { voorinvulling } : {})}
           />
           {/* meer opties (meerdere dagen, eenmalige locatie, pools, dresscode, foto): het uitgebreide formulier, dichtgeklapt */}
           <details className="mt-6">

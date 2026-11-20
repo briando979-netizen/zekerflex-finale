@@ -510,6 +510,7 @@ export const nl = {
   },
   controls: {
     editShift: "Klus aanpassen",
+    duplicateShift: "Klus dupliceren",
     cancelShift: "Klus annuleren",
     approve: "Goedkeuren",
     approving: "Bezig…",
