@@ -14,6 +14,10 @@ const postMessage = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/lib/matching/apply", () => ({ applyToShift: (...a: unknown[]) => applyToShift(...a) }));
 vi.mock("@/lib/offers/store", () => ({ setOfferStatus: (...a: unknown[]) => setOfferStatus(...a) }));
 vi.mock("@/lib/pools/store", () => ({ vasteSchilPoolVoor: (...a: unknown[]) => vasteSchilPoolVoor(...a) }));
+const klusAutoAccept = vi.fn().mockResolvedValue(false);
+const favorieten = vi.fn().mockResolvedValue({ favorites: [], blocked: [] });
+vi.mock("@/lib/shifts/auto-accept", () => ({ klusAutoAccept: (...a: unknown[]) => klusAutoAccept(...a) }));
+vi.mock("@/lib/employer/relations", () => ({ getEmployerRelations: (...a: unknown[]) => favorieten(...a) }));
 vi.mock("@/lib/audit", () => ({ recordAudit: (...a: unknown[]) => recordAudit(...a) }));
 vi.mock("@/lib/messaging/contacts", () => ({ resolveShiftContact: vi.fn().mockResolvedValue({ userId: "bedrijf1", name: "Bedrijf", branch: "Centrum", shiftTitle: "Bediening" }) }));
 vi.mock("@/lib/messaging/store", () => ({ ensureDirectThread: vi.fn().mockResolvedValue({ id: "t1" }), postMessage: (...a: unknown[]) => postMessage(...a) }));
@@ -64,6 +68,23 @@ describe("probeerVasteSchil", () => {
     expect(r.ingepland).toBe(false);
     expect(setOfferStatus).not.toHaveBeenCalled();
     expect(sendUserPush).not.toHaveBeenCalled();
+  });
+
+  it("vinkje 'Favorieten automatisch accepteren' op de klus: een favoriet staat direct ingepland, een ander niet", async () => {
+    vasteSchilPoolVoor.mockResolvedValue(null);
+    klusAutoAccept.mockResolvedValue(true);
+    favorieten.mockResolvedValue({ favorites: [{ userId: "w1" }], blocked: [] });
+    applyToShift.mockResolvedValue({ status: "ACCEPTED", shiftFilled: true });
+    expect(await probeerVasteSchil(offer, "t1")).toEqual({ ingepland: true, poolNaam: "favorieten" });
+    expect(klusAutoAccept).toHaveBeenCalledWith("s1");
+    vi.clearAllMocks();
+    vasteSchilPoolVoor.mockResolvedValue(null);
+    klusAutoAccept.mockResolvedValue(true);
+    favorieten.mockResolvedValue({ favorites: [{ userId: "iemand-anders" }], blocked: [] });
+    expect((await probeerVasteSchil(offer, "t1")).ingepland).toBe(false);
+    expect(applyToShift).not.toHaveBeenCalled();
+    klusAutoAccept.mockResolvedValue(false);
+    favorieten.mockResolvedValue({ favorites: [], blocked: [] });
   });
 
   it("bedrijf nog niet geverifieerd: niemand wordt ingepland, de reactie blijft staan", async () => {

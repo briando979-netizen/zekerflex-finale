@@ -268,6 +268,13 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
             <input type="number" inputMode="decimal" min={minEuro} step="0.5" value={tarief} onChange={(e) => setTarief(e.target.value)} className="mt-1 w-full rounded-xl border border-hair px-3 py-2 font-normal" required />
             <span className="mt-1 block text-xs font-normal text-neutralx-500">{vul(t.tariefHint, { min: minEuro })}</span>
           </label>
+          <label className="flex items-start gap-2 rounded-xl bg-paper-soft p-3 text-sm">
+            <input type="checkbox" name="autoAcceptFavorieten" value="on" className="mt-0.5 h-4 w-4 accent-brand-500" />
+            <span>
+              <span className="block font-semibold text-ink">{n.autoAcceptFav}</span>
+              <span className="block text-xs text-neutralx-500">{n.autoAcceptFavUitleg}</span>
+            </span>
+          </label>
           <label className="block text-sm font-semibold text-ink">
             {t.annuleer}
             <select value={annuleerUren} onChange={(e) => setAnnuleerUren(e.target.value)} className="mt-1 w-full rounded-xl border border-hair px-3 py-2 font-normal">

@@ -46,6 +46,7 @@ export async function createShiftAction(
     annuleerUren: formData.get("annuleerUren") || undefined,
     extraDates: extraDatesRaw ? extraDatesRaw.split(",").map((s) => s.trim()).filter(Boolean) : undefined,
     poolId: formData.get("poolId") || undefined,
+    autoAcceptFavorieten: formData.get("autoAcceptFavorieten") === "on",
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Controleer de ingevulde gegevens." };

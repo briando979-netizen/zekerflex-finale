@@ -1,6 +1,8 @@
 import { applyToShift } from "@/lib/matching/apply";
 import { setOfferStatus, type CounterOffer } from "@/lib/offers/store";
 import { vasteSchilPoolVoor } from "@/lib/pools/store";
+import { klusAutoAccept } from "@/lib/shifts/auto-accept";
+import { getEmployerRelations } from "@/lib/employer/relations";
 import { recordAudit } from "@/lib/audit";
 import { resolveShiftContact } from "@/lib/messaging/contacts";
 import { ensureDirectThread, postMessage } from "@/lib/messaging/store";
@@ -27,7 +29,12 @@ export async function probeerVasteSchil(
   tenantId: string,
 ): Promise<VasteSchilUitkomst> {
   if (offer.proposedRateCents !== offer.listedRateCents) return { ingepland: false };
-  const pool = await vasteSchilPoolVoor(tenantId, offer.userId).catch(() => null);
+  // een pool met vaste schil, of het vinkje "Favorieten automatisch accepteren" op deze klus voor een favoriet
+  let pool = await vasteSchilPoolVoor(tenantId, offer.userId).catch(() => null);
+  if (!pool && (await klusAutoAccept(offer.shiftId))) {
+    const rel = await getEmployerRelations(tenantId).catch(() => ({ favorites: [] as { userId: string }[] }));
+    if (rel.favorites.some((f) => f.userId === offer.userId)) pool = { id: "favorieten", name: "favorieten" };
+  }
   if (!pool) return { ingepland: false };
 
   let uitkomst;

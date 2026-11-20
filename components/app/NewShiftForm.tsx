@@ -502,6 +502,17 @@ export function NewShiftForm({
         </label>
         )}
 
+        {!edit && (
+          // "Favorieten automatisch accepteren" (naar YoungOnes): lib/shifts/auto-accept.ts + lib/pools/vaste-schil.ts
+          <label className="flex items-start gap-3 rounded-xl border border-hairstrong bg-paper-soft px-4 py-3">
+            <input type="checkbox" name="autoAcceptFavorieten" value="on" className="mt-0.5 h-4 w-4 accent-brand-500" />
+            <span>
+              <span className="block text-sm font-semibold text-ink">{n.autoAcceptFav}</span>
+              <span className="block text-xs text-neutralx-500">{n.autoAcceptFavUitleg}</span>
+            </span>
+          </label>
+        )}
+
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="field-label">{n.start}</span>

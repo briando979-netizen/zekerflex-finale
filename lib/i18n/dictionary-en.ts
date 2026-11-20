@@ -1811,6 +1811,8 @@ export const en: Dict = {
     plekken: "Number of places",
     annuleerTermijn: "Cancellation notice",
     annuleerTermijnUitleg: "Up to this long before the start a worker cancels for free. After that the 50 % rule applies to both sides: whoever cancels too late pays half the job.",
+    autoAcceptFav: "Accept favourites automatically",
+    autoAcceptFavUitleg: "When a favourite worker reacts at this rate, they are scheduled right away. A counter-offer is always yours to judge.",
     voorbeeldKop: "How a worker sees your job",
     voorbeeldUitleg: "What you fill in shows up here right away.",
     voorbeeldTitel: "Job title",

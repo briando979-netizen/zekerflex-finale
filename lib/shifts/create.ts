@@ -16,6 +16,7 @@ import { dedupePlaceParts } from "@/lib/shifts/place-label";
 import { amsterdamDayKey, amsterdamParts, amsterdamToUtc, parseAmsterdamLocal } from "@/lib/time/amsterdam";
 import { shiftLengthProblem } from "@/lib/shifts/shift-length";
 import { ANNULEER_TERMIJNEN, isAnnuleerTermijn, STANDAARD_ANNULEER_UREN } from "@/lib/shifts/annuleertermijn";
+import { zetKlusAutoAccept } from "@/lib/shifts/auto-accept";
 
 // The fixed klus-templates live in a pure module (lib/shifts/catalogus.ts) so the
 // browser forms can read them too; re-exported here for the existing imports.
@@ -64,6 +65,8 @@ export const createShiftSchema = z
   extraDates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).max(30).optional(),
   /** Privately invite this favorite pool instead of going straight to the open marketplace. */
   poolId: z.string().min(1).max(128).optional(),
+  /** favorieten die reageren tegen het geplaatste tarief staan meteen ingepland (lib/shifts/auto-accept.ts) */
+  autoAcceptFavorieten: z.coerce.boolean().default(false),
   })
   .refine((v) => Boolean(v.branchId) !== Boolean(v.adHocAddress), {
     message: "Kies een vestiging óf een eenmalige locatie (niet beide, niet geen van beide).",
@@ -187,6 +190,10 @@ export async function createShift(
     return rows;
   });
   const shift = created[0]!;
+
+  if (input.autoAcceptFavorieten) {
+    for (const c of created) await zetKlusAutoAccept(c.id, true).catch(() => undefined);
+  }
 
   await recordAudit({
     category: "MATCHING",

@@ -1834,6 +1834,8 @@ export const nl = {
     plekken: "Aantal plekken",
     annuleerTermijn: "Annuleringstermijn",
     annuleerTermijnUitleg: "Tot zo lang vóór aanvang zegt een kracht kosteloos af. Daarna geldt voor beide kanten de 50 %-regel: wie te laat afzegt, betaalt de helft van de klus.",
+    autoAcceptFav: "Favorieten automatisch accepteren",
+    autoAcceptFavUitleg: "Reageert een favoriete kracht tegen dit tarief, dan staat die meteen ingepland. Een tegenbod beoordeel je altijd zelf.",
     voorbeeldKop: "Zo ziet een werker jouw klus",
     voorbeeldUitleg: "Wat je invult, verschijnt hier meteen.",
     voorbeeldTitel: "Titel van de klus",
