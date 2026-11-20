@@ -217,14 +217,14 @@ export async function hoursCsv(tenantId: string, from: Date, to: Date): Promise<
       status: true,
       approvedAt: true,
       branch: { select: { name: true } },
-      assignment: { select: { shift: { select: { title: true } } } },
+      assignment: { select: { shift: { select: { title: true, kostenplaats: true } } } },
       freelancer: { select: { user: { select: { fullName: true } } } },
     },
     orderBy: { scheduledStart: "asc" },
     take: 20000,
   });
   return toCsv([
-    ["Datum", "Begin", "Eind", "Kracht", "Dienst", "Vestiging", "Uren", "Uurtarief (EUR)", "Bedrag (EUR)", "Status", "Goedgekeurd op"],
+    ["Datum", "Begin", "Eind", "Kracht", "Dienst", "Vestiging", "Kostenplaats", "Uren", "Uurtarief (EUR)", "Bedrag (EUR)", "Status", "Goedgekeurd op"],
     ...rows.map((r) => {
       const hours = (r.billableMinutes ?? 0) / 60;
       return [
@@ -234,6 +234,7 @@ export async function hoursCsv(tenantId: string, from: Date, to: Date): Promise<
         r.freelancer.user.fullName,
         r.assignment.shift.title,
         r.branch.name,
+        r.assignment.shift.kostenplaats ?? "",
         hours.toFixed(2).replace(".", ","),
         amount(r.hourlyRateCents),
         amount(Math.round(hours * (r.hourlyRateCents ?? 0))),
@@ -247,16 +248,29 @@ export async function hoursCsv(tenantId: string, from: Date, to: Date): Promise<
 export async function invoicesCsv(tenantId: string, from: Date, to: Date): Promise<string> {
   const rows = await prisma.invoice.findMany({
     where: { recipientTenantId: tenantId, issuedAt: { gte: from, lt: to } },
-    select: { number: true, type: true, status: true, issuedAt: true, paidAt: true, subtotalCents: true, vatCents: true, totalCents: true, vatRate: true },
+    select: {
+      number: true,
+      type: true,
+      status: true,
+      issuedAt: true,
+      paidAt: true,
+      subtotalCents: true,
+      vatCents: true,
+      totalCents: true,
+      vatRate: true,
+      // kostenplaats / PO van de klus waar de factuur uit voortkomt (voor de boekhouding per kostenplaats)
+      timesheet: { select: { assignment: { select: { shift: { select: { kostenplaats: true } } } } } },
+    },
     orderBy: { issuedAt: "asc" },
     take: 20000,
   });
   const TYPE: Record<string, string> = { PLATFORM_FEE: "Platformkosten", SELF_BILL_FREELANCER: "Dienst (freelancer)", CANCELLATION_PENALTY: "Annulering", UITZEND_FEE: "Uitzendkracht" };
   return toCsv([
-    ["Factuurnummer", "Soort", "Factuurdatum", "Bedrag excl. btw (EUR)", "Btw %", "Btw (EUR)", "Totaal (EUR)", "Status", "Betaald op"],
+    ["Factuurnummer", "Soort", "Kostenplaats", "Factuurdatum", "Bedrag excl. btw (EUR)", "Btw %", "Btw (EUR)", "Totaal (EUR)", "Status", "Betaald op"],
     ...rows.map((r) => [
       r.number,
       TYPE[r.type] ?? r.type,
+      r.timesheet?.assignment.shift.kostenplaats ?? "",
       nlDate(r.issuedAt),
       amount(r.subtotalCents),
       Math.round(r.vatRate * 100),

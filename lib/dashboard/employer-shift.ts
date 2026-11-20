@@ -38,6 +38,8 @@ export interface EmployerShiftView {
   annuleerUren: number;
   /** "Favorieten automatisch accepteren" staat aan op deze klus (lib/shifts/auto-accept.ts) */
   autoAcceptFavorieten: boolean;
+  /** kostenplaats / PO-nummer voor de boekhouding */
+  kostenplaats: string | null;
   status: string;
   visibility: string;
   invitedPool: { id: string; name: string } | null;
@@ -120,6 +122,7 @@ export async function getEmployerShift(
       hourlyRateCents: true,
       positions: true,
       annuleerUren: true,
+      kostenplaats: true,
       status: true,
       visibility: true,
       requiredSkill: { select: { name: true } },
@@ -232,6 +235,7 @@ export async function getEmployerShift(
     positions: shift.positions,
     annuleerUren: shift.annuleerUren,
     autoAcceptFavorieten,
+    kostenplaats: shift.kostenplaats,
     status: shift.status,
     visibility: shift.visibility,
     invitedPool: invitedPools[0] ?? null,

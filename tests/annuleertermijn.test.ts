@@ -53,6 +53,20 @@ describe("createShiftSchema: annuleerUren", () => {
     if (r.success) expect(r.data.annuleerUren).toBe(168);
   });
 
+  it("kostenplaats en favorieten-vinkje gaan mee, zonder keuze blijven ze leeg/uit", () => {
+    const r = createShiftSchema.safeParse({ ...base, kostenplaats: " PO-2026-17 ", autoAcceptFavorieten: "true" });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.kostenplaats).toBe("PO-2026-17");
+      expect(r.data.autoAcceptFavorieten).toBe(true);
+    }
+    const leeg = createShiftSchema.safeParse(base);
+    if (leeg.success) {
+      expect(leeg.data.kostenplaats).toBeUndefined();
+      expect(leeg.data.autoAcceptFavorieten).toBe(false);
+    }
+  });
+
   it("een termijn buiten de lijst wordt geweigerd", () => {
     expect(createShiftSchema.safeParse({ ...base, annuleerUren: 36 }).success).toBe(false);
     expect(createShiftSchema.safeParse({ ...base, annuleerUren: 0 }).success).toBe(false);

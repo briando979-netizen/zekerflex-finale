@@ -67,6 +67,8 @@ export const createShiftSchema = z
   poolId: z.string().min(1).max(128).optional(),
   /** favorieten die reageren tegen het geplaatste tarief staan meteen ingepland (lib/shifts/auto-accept.ts) */
   autoAcceptFavorieten: z.coerce.boolean().default(false),
+  /** kostenplaats / PO-nummer voor de boekhouding (een van OrgProfileExtra.costCentres) */
+  kostenplaats: z.string().trim().max(60).optional(),
   })
   .refine((v) => Boolean(v.branchId) !== Boolean(v.adHocAddress), {
     message: "Kies een vestiging óf een eenmalige locatie (niet beide, niet geen van beide).",
@@ -175,6 +177,7 @@ export async function createShift(
             hourlyRateCents: input.hourlyRateCents,
             positions: input.positions,
             annuleerUren: input.annuleerUren,
+            ...(input.kostenplaats ? { kostenplaats: input.kostenplaats } : {}),
             status: "OPEN",
             visibility: pool ? "POOL_ONLY" : "PUBLIC",
           },
