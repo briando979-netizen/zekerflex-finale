@@ -238,6 +238,19 @@ describe("de bedrijfskant met de vlag aan", () => {
     }
   });
 
+  it("een nieuw bedrijf zonder klus krijgt met de vlag aan een kort startmenu; na de eerste klus staat alles er weer", () => {
+    const opties: MenuOpties = { heeftAfspraken: false, heeftRijschool: false, heeftHoreca: false, horecaModules: [], inApp: false, studio: true, alleenFlexwerk: true };
+    const kort = menuVoor("personeel", { ...opties, nogGeenKlussen: true }).map((p) => p.sleutel);
+    expect(kort).toEqual(["start", "klussen", "kalender", "berichten", "assistent", "uren", "facturen", "bedrijf", "kennisbank", "hulp"]);
+    // wie klussen heeft, houdt alle personeelsfuncties
+    const vol = menuVoor("personeel", { ...opties, nogGeenKlussen: false }).map((p) => p.sleutel);
+    for (const terug of ["planner", "agenda", "favorieten", "inchecken", "compliance", "overeenkomsten", "rapportages"]) expect(vol, terug).toContain(terug);
+    // zonder de vlag verandert er niets, ook niet voor een nieuw bedrijf
+    const zonderVlag = menuVoor("personeel", { ...opties, alleenFlexwerk: false, nogGeenKlussen: true }).map((p) => p.sleutel);
+    expect(zonderVlag).toContain("planner");
+    expect(zonderVlag).toContain("telefonie");
+  });
+
   it("de andere dashboards worden niet gefilterd: een bestaand website-bedrijf houdt zijn menu (breek niet)", () => {
     const opties: MenuOpties = { heeftAfspraken: false, heeftRijschool: true, heeftHoreca: true, horecaModules: [], inApp: false, studio: true, alleenFlexwerk: true };
     const website = menuVoor("website", opties).map((p) => p.sleutel);

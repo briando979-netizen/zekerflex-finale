@@ -167,6 +167,8 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
       studio: beheerder,
       // vlag `publiek-alleen-flexwerk`: de niet-flexwerk-menu-items (telefonie, reviews) vallen weg
       alleenFlexwerk,
+      // nog geen klus geplaatst: een kort startmenu, de rest komt erbij na de eerste klus
+      nogGeenKlussen: !werkruimte.heeftKlussen,
     }),
     menuVolgorde,
   )

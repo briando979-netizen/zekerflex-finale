@@ -232,6 +232,8 @@ export interface MenuOpties {
   studio: boolean;
   /** vlag `publiek-alleen-flexwerk`: dan vallen de niet-flexwerk-menu-items (online marketing) weg; personeelsfuncties blijven */
   alleenFlexwerk?: boolean;
+  /** het bedrijf plaatste nog nooit een klus: met de vlag aan dan een kort startmenu (zie NA_EERSTE_KLUS) */
+  nogGeenKlussen?: boolean;
 }
 
 /** De personeelsfuncties, in de volgorde van het gewone menu. Alleen in het dashboard personeel. */
@@ -250,10 +252,18 @@ const plek = (sectie?: MenuSectie) => (sleutel: MenuSleutel): MenuPlek => (secti
 // dashboardmenu volledig (breek dat niet; de wisselaar toont dat dashboard alleen als het open is).
 const NIET_FLEXWERK_MENU: readonly MenuSleutel[] = ["telefonie", "reviews", "branche", "studio", "winkel", "website"];
 
+// Een nieuw bedrijf zag 23 regels in het menu, waaronder drie agenda's (20 nov, eigenaar: korter). Wat pas zin heeft
+// als er een klus loopt, komt erbij zodra de eerste klus is geplaatst: wie klussen heeft, houdt altijd alle
+// personeelsfuncties. Tot die tijd blijft over: start, klussen, kalender, chat, assistent, uren, facturen, bedrijf en hulp.
+// De pagina's zelf blijven bereikbaar via een directe link.
+export const NA_EERSTE_KLUS: readonly MenuSleutel[] = ["planner", "agenda", "favorieten", "mail", "whatsapp", "geblokkeerd", "inchecken", "rapportages", "inkaart", "compliance", "overeenkomsten", "netwerk", "locatie"];
+
 /** Het menu van het dashboard `soort`; met de vlag aan vallen in het personeel-dashboard de niet-flexwerk-items weg. */
 export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
   const menu = menuVoorBasis(soort, o);
-  return o.alleenFlexwerk && soort === "personeel" ? menu.filter((p) => !NIET_FLEXWERK_MENU.includes(p.sleutel)) : menu;
+  if (!o.alleenFlexwerk || soort !== "personeel") return menu;
+  const weg: readonly MenuSleutel[] = o.nogGeenKlussen ? [...NIET_FLEXWERK_MENU, ...NA_EERSTE_KLUS] : NIET_FLEXWERK_MENU;
+  return menu.filter((p) => !weg.includes(p.sleutel));
 }
 
 /** Het menu van het dashboard `soort` (de vaste opbouw, zonder de vlag). */

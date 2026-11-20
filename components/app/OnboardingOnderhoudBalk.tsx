@@ -4,8 +4,9 @@ import { getFreelancerDict } from "@/lib/i18n/server";
 // Werkgevers zien Nederlands (hun omgeving is niet vijftalig).
 const WERKGEVER = {
   titel: "We verbeteren de aanmelding",
-  tekst:
-    "We zijn bezig met het verbeteren van de onboarding. Daardoor kan het tijdelijk haperen en kunnen dingen niet goed gelezen worden. Wil je soepel en snel je gegevens uploaden? Wacht dan even met de onboarding: je krijgt een bericht zodra we klaar zijn. ZekerFlex is nog volop in ontwikkeling en de klussen die je ziet zijn testklussen. Begin volgend jaar gaan we online; je kunt alvast proeven hoe het er straks uitziet. Bedankt voor je begrip!",
+  // kort gehouden (20 nov): de lange tekst ("wacht even met aanmelden") joeg een nieuw bedrijf weg; over de opbouwfase
+  // gaat de blauwe balk in de layout al (OpbouwfaseBalk).
+  tekst: "Loopt er iets vast of wordt iets niet goed gelezen? Ga gerust door of probeer het later nog eens. Via het vraagteken bovenaan helpen we je verder.",
 };
 
 /**

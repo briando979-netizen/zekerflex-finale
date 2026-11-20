@@ -70,8 +70,9 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
       </>
     );
   }
-  // een nieuw bedrijf dat nog niets gebruikt: eerst de vraag waarvoor
-  const nieuwBedrijf = !voorbeeldSoort && kanKiezen && !w.gekozen && !w.heeftKlussen && !w.heeftRijschool && !w.heeftHoreca && !w.heeftSite && !w.heeftWebshop;
+  // een nieuw bedrijf dat nog niets gebruikt: eerst de vraag waarvoor. Met de vlag `publiek-alleen-flexwerk` aan is er
+  // nog maar één antwoord (personeel inhuren): dan valt de vraag weg.
+  const nieuwBedrijf = !alleenFlexwerk && !voorbeeldSoort && kanKiezen && !w.gekozen && !w.heeftKlussen && !w.heeftRijschool && !w.heeftHoreca && !w.heeftSite && !w.heeftWebshop;
 
   const [kvkDone, extra, o, threads, verificatie, pendingReviews, followers, tenantKvk] = await Promise.all([
     isEmployerOnboarded(scope.tenantIds),
