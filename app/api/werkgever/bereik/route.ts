@@ -9,8 +9,9 @@ import { haversineMeters } from "@/lib/geo/geofencing";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Zo ver reist een werker doorgaans nog voor een klus; past bij maxTravelMinutes 60 in de matching. */
-export const BEREIK_METERS = 40_000;
+/** Zo ver reist een werker doorgaans nog voor een klus; past bij maxTravelMinutes 60 in de matching.
+ *  Niet exporteren: een route-bestand mag alleen handlers exporteren, anders faalt de Next-build (20 nov). */
+const BEREIK_METERS = 40_000;
 
 // GET /api/werkgever/bereik?branchId=… — "Deze klus bereikt ±N werkers" (naar YoungOnes) vóór het plaatsen: het aantal
 // geverifieerde, niet geblokkeerde werkers dat binnen 40 km van de vestiging woont. Alleen een getal, nooit wie.
