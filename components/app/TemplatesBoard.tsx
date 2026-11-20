@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ANNULEER_TERMIJNEN, annuleerTermijnLabel, STANDAARD_ANNULEER_UREN } from "@/lib/shifts/annuleertermijn";
 
 interface Template {
   id: string;
@@ -9,6 +10,7 @@ interface Template {
   breakMinutes: number;
   description: string | null;
   dresscode: string | null;
+  annuleerUren?: number;
 }
 
 export function TemplatesBoard({ minRateCents = 1620 }: { minRateCents?: number }) {
@@ -17,6 +19,7 @@ export function TemplatesBoard({ minRateCents = 1620 }: { minRateCents?: number 
   const [label, setLabel] = useState("");
   const [rateEuro, setRateEuro] = useState((minRateCents / 100).toFixed(2));
   const [breakMin, setBreakMin] = useState("30");
+  const [annuleerUren, setAnnuleerUren] = useState(String(STANDAARD_ANNULEER_UREN));
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -50,6 +53,7 @@ export function TemplatesBoard({ minRateCents = 1620 }: { minRateCents?: number 
           label,
           hourlyRateCents: Math.round(parseFloat(rateEuro || "0") * 100),
           breakMinutes: Number(breakMin) || 0,
+          annuleerUren: Number(annuleerUren) || STANDAARD_ANNULEER_UREN,
           description: description || undefined,
         }),
       });
@@ -84,6 +88,7 @@ export function TemplatesBoard({ minRateCents = 1620 }: { minRateCents?: number 
                 <p className="text-sm font-bold text-ink">{t.label}</p>
                 <p className="mt-0.5 text-xs text-neutralx-500">
                   € {(t.hourlyRateCents / 100).toFixed(2).replace(".", ",")}/u · {t.breakMinutes}m pauze
+                  {t.annuleerUren ? ` · ${annuleerTermijnLabel(t.annuleerUren)}` : ""}
                 </p>
                 {t.description && <p className="mt-1 text-xs text-neutralx-400">{t.description}</p>}
               </div>
@@ -111,6 +116,14 @@ export function TemplatesBoard({ minRateCents = 1620 }: { minRateCents?: number 
               <label className="block">
                 <span className="field-label">Pauze (min)</span>
                 <input type="number" min={0} max={240} value={breakMin} onChange={(e) => setBreakMin(e.target.value)} className="field-input" />
+              </label>
+              <label className="block col-span-2">
+                <span className="field-label">Annuleringstermijn</span>
+                <select value={annuleerUren} onChange={(e) => setAnnuleerUren(e.target.value)} className="field-input">
+                  {ANNULEER_TERMIJNEN.map((u) => (
+                    <option key={u} value={u}>{annuleerTermijnLabel(u)}</option>
+                  ))}
+                </select>
               </label>
             </div>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Omschrijving (optioneel)" rows={2} className="field-input w-full" />

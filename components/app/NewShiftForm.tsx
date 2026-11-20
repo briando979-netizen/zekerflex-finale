@@ -27,6 +27,7 @@ interface OwnTemplate {
   breakMinutes: number;
   description: string | null;
   dresscode: string | null;
+  annuleerUren?: number;
 }
 
 function Submit({ days, blocked }: { days: number; blocked?: boolean }) {
@@ -256,6 +257,7 @@ export function NewShiftForm({
     setDresscode(t.dresscode ?? "");
     setRateEuro((t.hourlyRateCents / 100).toFixed(2));
     setBreakMin(String(t.breakMinutes));
+    if (t.annuleerUren) setAnnuleerUren(String(t.annuleerUren));
   }
 
   const hourlyRateCents = Math.round(parseFloat(rateEuro || "0") * 100);

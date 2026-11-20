@@ -6,6 +6,7 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { env } from "@/lib/env";
 import { recordAudit } from "@/lib/audit";
 import { saveTemplate, listTemplates } from "@/lib/shifts/templates";
+import { isAnnuleerTermijn } from "@/lib/shifts/annuleertermijn";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,6 +33,7 @@ const schema = z.object({
   description: z.string().trim().max(1000).optional(),
   dresscode: z.string().trim().max(500).optional(),
   defaultBranchId: z.string().min(1).max(128).optional(),
+  annuleerUren: z.coerce.number().int().refine(isAnnuleerTermijn).optional(),
 });
 
 // POST /api/werkgever/templates — any employer-side teamlid may save a
@@ -55,6 +57,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       description: parsed.data.description ?? null,
       dresscode: parsed.data.dresscode ?? null,
       defaultBranchId: parsed.data.defaultBranchId ?? null,
+      ...(parsed.data.annuleerUren !== undefined ? { annuleerUren: parsed.data.annuleerUren } : {}),
       createdById: principal.userId,
     });
 

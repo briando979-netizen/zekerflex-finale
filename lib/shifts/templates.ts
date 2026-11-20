@@ -18,6 +18,8 @@ export interface EmployerShiftTemplate {
   description: string | null;
   dresscode: string | null;
   defaultBranchId: string | null;
+  /** annuleringstermijn in uren (lib/shifts/annuleertermijn.ts); oudere templates hebben hem niet */
+  annuleerUren?: number;
   createdById: string;
   createdAt: string;
 }
