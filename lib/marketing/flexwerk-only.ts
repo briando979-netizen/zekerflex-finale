@@ -16,7 +16,7 @@
 // op de server (lib/seo/verbergen.ts), nooit vanuit dit pure bestand.
 // ---------------------------------------------------------------------------
 
-import { AANBOD, type PijlerSleutel } from "@/lib/marketing/aanbod";
+import { type PijlerSleutel } from "@/lib/marketing/aanbod";
 
 /** De runtime feature-vlag (lib/flags). Standaard UIT; de hoofdsessie zet hem na de uitrol AAN. */
 export const FLAG_ALLEEN_FLEXWERK = "publiek-alleen-flexwerk";
@@ -64,29 +64,25 @@ export const NIET_FLEXWERK_PADEN: readonly string[] = [
   "/developers",
   // de klussen-kaart (en de 3D-variant). De bezoeker ziet de kaart pas na het aanmelden.
   "/open-diensten",
+  // het hele aanbod: de overzichtspagina én elke /aanbod/<slug>-functiepagina (inchecken, roosterplanner,
+  // spoedoproep, facturen, …). De eigenaar wil "aanbod verbergen inclusief wat er is" en "de functies weg";
+  // de kern-flexwerk-SEO blijft gedekt door /personeel-inhuren, /uitzendbureau en de sector-/stadpagina's.
+  "/aanbod",
 ];
 
 /**
  * Paden die alleen EXACT verborgen zijn, niet hun subpaden:
- * - "/aanbod": het hele-aanbod-overzicht valt weg, maar de losse /aanbod/<slug>-productpagina's volgen hun eigen pijler
- *   (flexwerk zichtbaar, online/branche via NIET_FLEXWERK_AANBOD_PADEN).
  * - "/klussen": de blader-/zoeklijst valt weg, maar de losse klus-advertenties /klussen/<id> BLIJVEN vindbaar in Google
  *   Vacatures (JobPosting): ze houden hun noindex-vrije metadata en blijven in de sitemap (besluit eigenaar).
+ * (/aanbod zit in NIET_FLEXWERK_PADEN als voorvoegsel: de overzichtspagina én alle /aanbod/<slug>-functiepagina's.)
  */
-export const NIET_FLEXWERK_EXACT: readonly string[] = ["/aanbod", "/klussen"];
-
-/** De /aanbod/<slug>-pagina's van de verborgen pijlers (website, webshop, horeca, …): die hebben geen eigen pagina elders. */
-const NIET_FLEXWERK_AANBOD_PADEN: readonly string[] = AANBOD.filter(
-  (a) => NIET_FLEXWERK_PIJLERS.includes(a.pijler) && !a.pagina,
-).map((a) => `/aanbod/${a.slug}`);
+export const NIET_FLEXWERK_EXACT: readonly string[] = ["/klussen"];
 
 /** Hoort dit pad bij een niet-flexwerk-onderdeel (exact pad of een subpad ervan; of een exact-pad uit NIET_FLEXWERK_EXACT)? */
 export function isNietFlexwerkPad(pad: string): boolean {
   const schoon = (pad.split(/[?#]/)[0] ?? pad).replace(/\/+$/, "") || "/";
   if (NIET_FLEXWERK_EXACT.includes(schoon)) return true;
-  return [...NIET_FLEXWERK_PADEN, ...NIET_FLEXWERK_AANBOD_PADEN].some(
-    (basis) => schoon === basis || schoon.startsWith(`${basis}/`),
-  );
+  return NIET_FLEXWERK_PADEN.some((basis) => schoon === basis || schoon.startsWith(`${basis}/`));
 }
 
 /** Alleen de flexwerk-pijlers houden als de vlag aan is; anders de lijst ongewijzigd. */

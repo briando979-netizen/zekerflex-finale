@@ -68,10 +68,16 @@ describe("publiek = alleen flexwerk: de bron van waarheid", () => {
       "/verkopen",
       "/developers",
       "/developers/api",
-      "/aanbod", // het hele-aanbod-overzicht (exact), de menu-ingang is weg
-      "/aanbod/website", // online-pijler, eigen /aanbod-pagina
+      "/aanbod", // het hele-aanbod-overzicht; de menu-ingang is weg
+      "/aanbod/website", // elke /aanbod/<slug>-functiepagina valt nu mee (voorvoegsel)
       "/aanbod/webshop",
-      "/aanbod/horeca", // branche-pijler
+      "/aanbod/horeca",
+      "/aanbod/flexwerkers-inhuren", // ook de flexwerk-functiepagina's: "aanbod verbergen inclusief wat er is"
+      "/aanbod/uitzendkrachten",
+      "/aanbod/inchecken-op-locatie",
+      "/aanbod/roosterplanner",
+      "/aanbod/spoedoproep",
+      "/aanbod/facturen-en-betalen",
       "/klussen", // de publieke open-klussen-blader-/zoeklijst (exact)
       "/open-diensten", // de klussen-kaart
       "/open-diensten/3d",
@@ -86,8 +92,6 @@ describe("publiek = alleen flexwerk: de bron van waarheid", () => {
       "/personeel-inhuren",
       "/prijzen",
       "/klussen/abc123", // een losse klus-advertenties blijft vindbaar (Google Vacatures / JobPosting)
-      "/aanbod/flexwerkers-inhuren", // personeel-pijler: de flexwerk-productpagina blijft
-      "/aanbod/uitzendkrachten",
       "/rekentools", // flexwerk-rekentools blijven
       "/rekentools/btw-nummer-check",
       "/kennis",
@@ -175,8 +179,10 @@ describe("noindex op een verborgen pagina", () => {
     // /verkopen (webshop-verkooppartner) ook op noindex
     expect(await robotsVerborgen("/verkopen")).toEqual({ robots: { index: false, follow: true } });
     expect(await robotsVerborgen("/verkopen/start")).toEqual({ robots: { index: false, follow: true } });
-    // de aanbod-ingang, de open-klussen-blader-lijst en de klussen-kaart ook
+    // de aanbod-ingang + elke /aanbod/<slug>-functiepagina, de open-klussen-blader-lijst en de klussen-kaart ook
     expect(await robotsVerborgen("/aanbod")).toEqual({ robots: { index: false, follow: true } });
+    expect(await robotsVerborgen("/aanbod/flexwerkers-inhuren")).toEqual({ robots: { index: false, follow: true } });
+    expect(await robotsVerborgen("/aanbod/inchecken-op-locatie")).toEqual({ robots: { index: false, follow: true } });
     expect(await robotsVerborgen("/klussen")).toEqual({ robots: { index: false, follow: true } });
     expect(await robotsVerborgen("/open-diensten")).toEqual({ robots: { index: false, follow: true } });
   });
@@ -184,7 +190,6 @@ describe("noindex op een verborgen pagina", () => {
   it("een flexwerk-pagina blijft indexeerbaar, ook met de vlag aan (incl. de losse klus-advertenties voor Google Vacatures)", async () => {
     h.vlagAan = true;
     expect(await robotsVerborgen("/uitzendbureau")).toEqual({});
-    expect(await robotsVerborgen("/aanbod/flexwerkers-inhuren")).toEqual({});
     expect(await robotsVerborgen("/prijzen")).toEqual({});
     // de losse klus-advertentie /klussen/<id> blijft vindbaar (geen noindex), alleen de blader-lijst /klussen is verborgen
     expect(await robotsVerborgen("/klussen/abc123")).toEqual({});
