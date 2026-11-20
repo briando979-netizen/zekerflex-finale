@@ -9,6 +9,7 @@ import { reviewSummary } from "@/lib/reviews/store";
 import { poolsInvitedToShift } from "@/lib/pools/store";
 import { isCompTenant } from "@/lib/billing/comp";
 import { opkomstVoor, type Opkomst } from "@/lib/employer/opkomst";
+import { klusAutoAccept } from "@/lib/shifts/auto-accept";
 
 // ---------------------------------------------------------------------------
 // Everything an employer needs on a single shift: bezetting, kandidaten,
@@ -35,6 +36,8 @@ export interface EmployerShiftView {
   positions: number;
   /** annuleringstermijn in uren vóór aanvang (lib/shifts/annuleertermijn.ts) */
   annuleerUren: number;
+  /** "Favorieten automatisch accepteren" staat aan op deze klus (lib/shifts/auto-accept.ts) */
+  autoAcceptFavorieten: boolean;
   status: string;
   visibility: string;
   invitedPool: { id: string; name: string } | null;
@@ -180,7 +183,7 @@ export async function getEmployerShift(
       ...shift.matches.map((m) => m.freelancer.userId),
     ]),
   ];
-  const [avatars, offerProfiles, offerReviews, busyRows, opkomst] = await Promise.all([
+  const [avatars, offerProfiles, offerReviews, busyRows, opkomst, autoAcceptFavorieten] = await Promise.all([
     getUserAvatars(allUserIds),
     prisma.freelancerProfile.findMany({
       where: { userId: { in: offerUserIds } },
@@ -201,6 +204,8 @@ export async function getEmployerShift(
       : Promise.resolve([]),
     // opkomst, aantal klussen en annuleringen op de reactie-rij (lib/employer/opkomst.ts); valt stil terug op niets
     opkomstVoor(offerUserIds).catch(() => new Map<string, Opkomst>()),
+    // altijd achteraan toevoegen: de destructuring hierboven volgt deze volgorde
+    klusAutoAccept(shift.id).catch(() => false),
   ]);
   const busyUsers = new Set(busyRows.map((r) => r.freelancer.userId));
   const avatarUrl = (userId: string): string | null => (avatars[userId] ? `/api/profile/${userId}/avatar` : null);
@@ -226,6 +231,7 @@ export async function getEmployerShift(
     hourlyRateCents: shift.hourlyRateCents,
     positions: shift.positions,
     annuleerUren: shift.annuleerUren,
+    autoAcceptFavorieten,
     status: shift.status,
     visibility: shift.visibility,
     invitedPool: invitedPools[0] ?? null,

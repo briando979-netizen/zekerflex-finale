@@ -564,6 +564,7 @@ export const en: Dict = {
     klusGedaan: "1 job done",
     keerAfgezegd: "cancelled {n}×",
     annuleerTermijn: "Cancellation notice: free up to {label} before the start; after that whoever cancels pays half the job.",
+    autoAcceptAan: "Favourites are accepted automatically",
     busyElsewhere: "Already working elsewhere then",
     busyElsewhereHint: "You can accept once that other shift drops out.",
     message: "Message",

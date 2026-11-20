@@ -190,7 +190,10 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
           sub={pendingOffers.length ? fmt(d.kpiOffers, { n: pendingOffers.length }) : d.kpiMatching}
         />
       </div>
-      <p className="mt-2 text-xs text-neutralx-500">{fmt(d.annuleerTermijn, { label: annuleerTermijnLabel(s.annuleerUren, locale === "en" ? "en" : "nl") })}</p>
+      <p className="mt-2 text-xs text-neutralx-500">
+        {fmt(d.annuleerTermijn, { label: annuleerTermijnLabel(s.annuleerUren, locale === "en" ? "en" : "nl") })}
+        {s.autoAcceptFavorieten && <span className="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">{d.autoAcceptAan}</span>}
+      </p>
 
       {openReacties.length > 0 && (
         <div className="mt-6">

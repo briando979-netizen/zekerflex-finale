@@ -579,6 +579,7 @@ export const nl = {
     klusGedaan: "1 klus gedaan",
     keerAfgezegd: "{n}× afgezegd",
     annuleerTermijn: "Annuleringstermijn: tot {label} vóór aanvang kosteloos; daarna betaalt wie afzegt de helft van de klus.",
+    autoAcceptAan: "Favorieten worden automatisch geaccepteerd",
     busyElsewhere: "Werkt op dat moment al elders",
     busyElsewhereHint: "Accepteren kan pas als die andere dienst vervalt.",
     message: "Bericht",
