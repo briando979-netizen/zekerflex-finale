@@ -47,9 +47,13 @@ describe("klussenlijst", () => {
   });
 
   it("de knop heet overal Klus uitzetten", () => {
-    for (const tekst of [nl.shifts.placeShift, nl.favorites.placeShift, nl.calendar.placeShift, nl.start.placeShift, nl.newShift.title]) {
+    for (const tekst of [nl.shifts.placeShift, nl.favorites.placeShift, nl.calendar.placeShift, nl.start.placeShift, nl.newShift.title, nl.werkruimteStart.klusPlaatsen]) {
       expect(tekst).toBe("Klus uitzetten");
     }
+    // ook in een zin: uitzetten, niet plaatsen
+    expect(nl.werkgeverStart.plaatsDienst).toBe("Zet een klus uit →");
+    expect(nl.onboarding.firstJob1).toBe("Zet je eerste klus uit");
+    expect(nl.onboarding.placeFirst).toBe("Zet je eerste klus uit");
     for (const f of ["app/werkgever/diensten/page.tsx", "app/werkgever/diensten/nieuw/page.tsx"]) {
       expect(lees(f)).not.toMatch(/Klus plaatsen|Dienst plaatsen/);
     }
@@ -86,5 +90,15 @@ describe("groepen favorieten", () => {
     expect(beheer).not.toMatch(/dictionary-en|i18n\/server/);
     const acties = lees("app/werkgever/favorieten/pools/actions.ts");
     expect(acties).not.toMatch(/"Pool [a-z]+\."|de pool\./);
+  });
+
+  it("de fouten uit de opslag komen in de taal van de werkgever", () => {
+    expect(nl.pools.notFound).toBe("Groep niet gevonden.");
+    expect(nl.pools.nameRequired).toBe("Geef de groep een naam.");
+    expect(en.pools.notFound).toBe("Pool not found.");
+    const acties = lees("app/werkgever/favorieten/pools/actions.ts");
+    expect(acties).toContain("if (err.status === 404) return p.notFound;");
+    expect(acties).toContain("if (err.status === 422) return p.nameRequired;");
+    expect(acties).not.toContain("message: err.message }");
   });
 });

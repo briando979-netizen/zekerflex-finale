@@ -93,12 +93,9 @@ export default async function UrenGoedkeurenPage() {
       {flaggedCount > 0 && (
         <div className="mb-4 rounded-xl border border-warn/40 bg-warn/5 px-4 py-3 text-sm">
           <span className="font-semibold text-ink">
-            {flaggedCount} {flaggedCount === 1 ? "urenbriefje heeft" : "urenbriefjes hebben"} een signaal
+            {fmt(flaggedCount === 1 ? h.signalOne : h.signalMany, { n: flaggedCount })}
           </span>{" "}
-          <span className="text-neutralx-600">
-            (GPS, onmogelijke tijden, pauze of dubbele uren). Controleer voor je goedkeurt — bij een
-            ⛔ blokkeert ZekerFlex de goedkeuring en volgt handmatige controle door het platform.
-          </span>
+          <span className="text-neutralx-600">{h.signalBody}</span>
         </div>
       )}
 
@@ -123,7 +120,7 @@ export default async function UrenGoedkeurenPage() {
                   {t.extraCostsCents ? (
                     <p className="mt-1 flex items-start gap-1.5 text-xs text-neutralx-600">
                       <span aria-hidden>💰</span>
-                      Extra kosten: {moneyExact(t.extraCostsCents)} — {t.extraCostsNote}
+                      {h.extraCosts} {moneyExact(t.extraCostsCents)} — {t.extraCostsNote}
                     </p>
                   ) : null}
                   {(fraud.get(t.id) ?? [])

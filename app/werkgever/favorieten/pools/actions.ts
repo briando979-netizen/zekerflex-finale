@@ -16,6 +16,13 @@ export interface PoolActionResult {
 /** De meldingen in de taal van de werkgever; buiten een verzoek (of bij een storing) de Nederlandse standaard. */
 const teksten = async () => (await getDict().catch(() => nlDict)).pools;
 
+/** De fouten uit lib/pools/store.ts in de taal van de werkgever: 404 = de groep bestaat niet (meer), 422 = de naam is leeg. */
+function foutTekst(err: AppError, p: { notFound: string; nameRequired: string }): string {
+  if (err.status === 404) return p.notFound;
+  if (err.status === 422) return p.nameRequired;
+  return err.message;
+}
+
 async function tenantId(): Promise<string> {
   const principal = await requirePrincipal();
   requireRole(principal, "LOCAL_MANAGER", "HQ_ADMIN", "PLATFORM_ADMIN");
@@ -38,7 +45,7 @@ export async function createPoolAction(name: string): Promise<PoolActionResult> 
     await createPool(t, name);
     return done(p.created);
   } catch (err) {
-    if (err instanceof AppError) return { ok: false, message: err.message };
+    if (err instanceof AppError) return { ok: false, message: foutTekst(err, p) };
     return { ok: false, message: p.createFailed };
   }
 }
@@ -50,7 +57,7 @@ export async function renamePoolAction(poolId: string, name: string): Promise<Po
     await renamePool(t, poolId, name);
     return done(p.renamed);
   } catch (err) {
-    if (err instanceof AppError) return { ok: false, message: err.message };
+    if (err instanceof AppError) return { ok: false, message: foutTekst(err, p) };
     return { ok: false, message: p.renameFailed };
   }
 }
@@ -62,7 +69,7 @@ export async function deletePoolAction(poolId: string): Promise<PoolActionResult
     await deletePool(t, poolId);
     return done(p.deleted);
   } catch (err) {
-    if (err instanceof AppError) return { ok: false, message: err.message };
+    if (err instanceof AppError) return { ok: false, message: foutTekst(err, p) };
     return { ok: false, message: p.deleteFailed };
   }
 }
@@ -74,7 +81,7 @@ export async function addPoolMemberAction(poolId: string, freelancerUserId: stri
     await addMember(t, poolId, freelancerUserId);
     return done(p.memberAdded);
   } catch (err) {
-    if (err instanceof AppError) return { ok: false, message: err.message };
+    if (err instanceof AppError) return { ok: false, message: foutTekst(err, p) };
     return { ok: false, message: p.addFailed };
   }
 }
@@ -86,7 +93,7 @@ export async function removePoolMemberAction(poolId: string, freelancerUserId: s
     await removeMember(t, poolId, freelancerUserId);
     return done(p.memberRemoved);
   } catch (err) {
-    if (err instanceof AppError) return { ok: false, message: err.message };
+    if (err instanceof AppError) return { ok: false, message: foutTekst(err, p) };
     return { ok: false, message: p.deleteFailed };
   }
 }

@@ -105,7 +105,7 @@ export function BranchesBoard({ canManage }: { canManage: boolean }) {
                   {b.addressLine}, {b.postalCode} {b.city}
                 </p>
                 <p className="mt-1 text-[11px] text-neutralx-400">
-                  Geofence {b.geofenceRadiusMeters}m
+                  Incheckgebied {b.geofenceRadiusMeters} m
                   {b.costCenter ? ` · Kostenplaats ${b.costCenter}` : ""}
                   {" · "}
                   {b._count.shifts} diensten · {b._count.timesheets} urenbriefjes

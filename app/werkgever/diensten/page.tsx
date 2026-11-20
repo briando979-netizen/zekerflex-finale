@@ -57,7 +57,7 @@ export default async function WerkgeverDienstenPage() {
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/werkgever/reacties" className="btn-ghost">
-              Reacties{pendingReacties > 0 ? ` (${pendingReacties})` : ""}
+              {sh.reactions}{pendingReacties > 0 ? ` (${pendingReacties})` : ""}
             </Link>
             <Link href="/werkgever/diensten/nieuw" className="btn-primary">
               {sh.placeShift}

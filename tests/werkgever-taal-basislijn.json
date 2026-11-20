@@ -17,7 +17,6 @@
     "app/werkgever/klanten/page.tsx": 1,
     "app/werkgever/lidmaatschappen/page.tsx": 1,
     "app/werkgever/locaties/[id]/baken/page.tsx": 2,
-    "app/werkgever/locaties/page.tsx": 4,
     "app/werkgever/netwerk/page.tsx": 1,
     "app/werkgever/offertes/[id]/print/page.tsx": 1,
     "app/werkgever/offertes/page.tsx": 1,

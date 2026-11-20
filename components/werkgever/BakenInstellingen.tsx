@@ -48,7 +48,7 @@ export function BakenInstellingen({ branchId, canManage }: { branchId: string; c
       <label className="flex items-center justify-between gap-3 rounded-xl border border-hair bg-paper-soft/60 px-4 py-3 text-sm">
         <span>
           <span className="font-medium text-ink">Automatisch in- en uitchecken aanbieden</span>
-          <span className="mt-0.5 block text-xs text-neutralx-500">Krachten die het aanzetten, checken vanzelf in zodra ze binnen de geofence zijn en uit zodra ze vertrekken (zolang de klus-pagina open staat).</span>
+          <span className="mt-0.5 block text-xs text-neutralx-500">Krachten die het aanzetten, checken vanzelf in zodra ze binnen het incheckgebied zijn en uit zodra ze vertrekken (zolang de klus-pagina open staat).</span>
         </span>
         <input type="checkbox" checked={v.automatisch} disabled={busy || !canManage} onChange={(e) => void save({ automatisch: e.target.checked })} />
       </label>

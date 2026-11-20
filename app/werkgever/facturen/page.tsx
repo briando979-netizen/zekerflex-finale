@@ -103,7 +103,7 @@ export default async function WerkgeverFacturenPage() {
 
         {/* e-factuur (lib/efactuur): Peppol-adres, ontvangstadres en automatisch versturen */}
         <div id="e-factuur" className="mt-4 scroll-mt-24">
-          <Panel title={peppolIngesteld() ? "E-factuur (UBL / Peppol)" : "E-factuur (UBL)"}>
+          <Panel title={peppolIngesteld() ? iv.efactuurPanelPeppol : iv.efactuurPanel}>
             <EfactuurSettings />
           </Panel>
         </div>

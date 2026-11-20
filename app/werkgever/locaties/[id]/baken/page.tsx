@@ -31,7 +31,7 @@ export default async function BakenPage(props: { params: Promise<{ id: string }>
       <PageHeader
         title={`Locatiebaken: ${branch.name}`}
         eyebrow="Locaties"
-        subtitle={`${branch.addressLine}, ${branch.city} · geofence ${branch.geofenceRadiusMeters} m. Krachten checken automatisch in op de geofence, of met de QR-code of het Bluetooth-baken op de werkplek.`}
+        subtitle={`${branch.addressLine}, ${branch.city} · incheckgebied ${branch.geofenceRadiusMeters} m rond het adres. Krachten checken automatisch in als ze in dat gebied zijn, of met de QR-code of het Bluetooth-baken op de werkplek.`}
       />
       <p className="mb-4 text-sm">
         <Link href="/werkgever/locaties" className="text-brand-600 hover:underline">
