@@ -34,6 +34,7 @@ import { BedrijfRondleiding } from "@/components/app/BedrijfRondleiding";
 import { rondleidingBedrijf } from "@/lib/onboarding/rondleiding-bedrijf";
 import { outlinePubliekeUrl } from "@/lib/oidc/aanbieder";
 import { featureEnabled } from "@/lib/flags";
+import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 import { heeftAfspraken } from "@/lib/afspraken/in-menu";
 
 export const dynamic = "force-dynamic";
@@ -86,7 +87,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
 
   const scope = await resolveEmployerScope(principal);
   const tenantId = scope.tenantIds[0];
-  const [tenant, rating, avatars, birthday, werkruimte, metAfspraken] = await Promise.all([
+  const [tenant, rating, avatars, birthday, werkruimte, metAfspraken, alleenFlexwerk] = await Promise.all([
     tenantId
       ? prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } })
       : Promise.resolve(null),
@@ -97,6 +98,8 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     werkruimteVan(tenantId),
     // staat Afspraken in het menu? Alleen als het bedrijf het heeft ingericht; een storing geeft false
     heeftAfspraken(tenantId),
+    // vlag `publiek-alleen-flexwerk`: dan alleen de flexwerk-werkruimte in de dashboardwisselaar (de pagina's blijven bereikbaar)
+    alleenFlexwerkAan().catch(() => false),
   ]);
   const avatarUrl = avatarUrlFor(principal.userId, Boolean(avatars[principal.userId]));
   // in een voorbeeld (demo) wordt de uitlogknop een gewone uitgang-link (lib/auth/demo-sessie.ts)
@@ -195,7 +198,7 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
         // het vraagteken: het hulpcentrum voor bedrijven, alleen de teksten in de taal van de app gaan mee (lib/hulp/werkgever-teksten.ts)
         hulp={hulpTekstenWerkgever(locale)}
         handleidingen={kennisbankIngesteld() ? `${outlinePubliekeUrl()}/` : null}
-        dashboards={{ actief: werkruimte.soort, dashboards: werkruimte.dashboards, kanToevoegen: beheerder }}
+        dashboards={{ actief: werkruimte.soort, dashboards: werkruimte.dashboards, kanToevoegen: beheerder, alleenFlexwerk }}
         {...(demo ? { demoUitgang: VOORBEELD_UITGANG } : {})}
       >
         <OpbouwfaseBalk soort="werkgever" />

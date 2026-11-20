@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WERKRUIMTES, type Werkruimte } from "@/lib/werkgever/werkruimte";
+import { werkruimteIsFlexwerk } from "@/lib/marketing/flexwerk-only";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
 
@@ -16,6 +17,7 @@ export function WerkruimteKiezer({
   personeelVast,
   kanKiezen,
   alsVraag = false,
+  alleenFlexwerk = false,
 }: {
   huidig: Werkruimte;
   ookPersoneel: boolean;
@@ -25,6 +27,8 @@ export function WerkruimteKiezer({
   kanKiezen: boolean;
   /** nieuw bedrijf: meteen open, als eerste vraag bovenaan */
   alsVraag?: boolean;
+  /** vlag `publiek-alleen-flexwerk`: dan alleen de flexwerk-keuze (personeel); het huidige dashboard blijft kiesbaar */
+  alleenFlexwerk?: boolean;
 }) {
   const router = useRouter();
   const id = useId();
@@ -100,7 +104,8 @@ export function WerkruimteKiezer({
       <fieldset className="mt-4">
         <legend className="sr-only">{k.legend}</legend>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {WERKRUIMTES.map((w) => (
+          {/* vlag publiek-alleen-flexwerk: alleen personeel; het huidige dashboard blijft kiesbaar zodat een bestaand bedrijf het houdt */}
+          {(alleenFlexwerk ? WERKRUIMTES.filter((w) => werkruimteIsFlexwerk(w) || w === huidig) : WERKRUIMTES).map((w) => (
             <label
               key={w}
               className={`flex cursor-pointer gap-3 rounded-xl border p-3.5 transition ${

@@ -42,6 +42,7 @@ import { redirect } from "next/navigation";
 import { zichtbareSecties } from "@/lib/ontwerp/vaste-paginas";
 import { getPaginaIndeling } from "@/lib/ontwerp/vaste-paginas-store";
 import { kl, startMarges } from "@/lib/werkgever/start-marges";
+import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +54,7 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
   const tenantId = scope.tenantIds[0];
 
   // rijschool, horeca of alleen website: een eigen startscherm (components/app/werkruimte)
-  const [echt, inApp, { voorbeeld }] = await Promise.all([werkruimteVan(tenantId), inAndroidApp(), searchParams]);
+  const [echt, inApp, { voorbeeld }, alleenFlexwerk] = await Promise.all([werkruimteVan(tenantId), inAndroidApp(), searchParams, alleenFlexwerkAan().catch(() => false)]);
   // ?voorbeeld=<soort>: alleen bekijken, niets opslaan
   const voorbeeldSoort = isWerkruimte(voorbeeld) ? voorbeeld : null;
   const w = voorbeeldSoort ? { ...echt, soort: voorbeeldSoort } : echt;
@@ -296,7 +297,7 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
       {voorbeeldSoort && <VoorbeeldBalk soort={voorbeeldSoort} />}
       <WelcomeBack name={principal.fullName} labels={t.greet} {...(greetSub ? { subtitle: greetSub } : {})} />
       {!startModus && <EmployerDashboardHero />}
-      {nieuwBedrijf && <WerkruimteKiezer huidig={w.soort} ookPersoneel={w.ookPersoneel} personeelVast={false} kanKiezen alsVraag />}
+      {nieuwBedrijf && <WerkruimteKiezer huidig={w.soort} ookPersoneel={w.ookPersoneel} personeelVast={false} kanKiezen alsVraag alleenFlexwerk={alleenFlexwerk} />}
       {!startModus && <KlusConceptNudge />}
       {!companyVerified && !startModus && (
         <div className="mb-8 rounded-2xl border border-warn/40 bg-warn/10 p-4 text-sm text-neutralx-700">

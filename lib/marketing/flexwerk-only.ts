@@ -35,6 +35,11 @@ export const NIET_FLEXWERK_NAV_KEYS: readonly string[] = ["shop", "apps"];
 /** Werkruimte-soorten die niet over flexwerk gaan (de losse product-dashboards). "personeel" blijft. */
 export const NIET_FLEXWERK_SOORTEN: readonly string[] = ["website", "webshop", "horeca", "rijschool"];
 
+/** Is dit bedrijfsdashboard/werkruimte-soort flexwerk (personeel)? */
+export function werkruimteIsFlexwerk(soort: string): boolean {
+  return !NIET_FLEXWERK_SOORTEN.includes(soort);
+}
+
 /**
  * Vaste openbare pagina's die niet over flexwerk gaan. Als de vlag aan is vallen
  * ze uit menu, voorpagina, voettekst, sitemap en de nachtelijke rondgang, en

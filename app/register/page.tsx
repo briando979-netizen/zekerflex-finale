@@ -10,6 +10,7 @@ import { AUTH_DICTS } from "@/lib/i18n/auth";
 import { inAndroidApp, inIosApp } from "@/lib/app-mode-server";
 import { WELKOM_DICTS } from "@/lib/i18n/welkom";
 import { AANMELDEN_PER_DASHBOARD, dashboardUitParam } from "@/lib/auth/aanmelden-dashboard";
+import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Account aanmaken" };
@@ -45,6 +46,8 @@ export default async function RegisterPage(
   const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) && !(await inIosApp());
   const locale = await getLocale();
   const t = AUTH_DICTS[locale].register;
+  // vlag `publiek-alleen-flexwerk`: dan bij het aanmelden geen productkeuze (webshop, website, horeca, rijschool), alleen personeel
+  const alleenFlexwerk = await alleenFlexwerkAan().catch(() => false);
 
   return (
     <AuthShell
@@ -77,6 +80,7 @@ export default async function RegisterPage(
         {...(dashboard ? { defaultDashboard: dashboard } : {})}
         googleEnabled={googleEnabled}
         appleEnabled={appleEnabled}
+        alleenFlexwerk={alleenFlexwerk}
       />
     </AuthShell>
   );

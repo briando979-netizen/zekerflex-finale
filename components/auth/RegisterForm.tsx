@@ -49,6 +49,7 @@ export function RegisterForm({
   defaultDashboard,
   googleEnabled,
   appleEnabled = false,
+  alleenFlexwerk = false,
 }: {
   locale?: Locale;
   defaultType: "freelancer" | "bedrijf";
@@ -59,6 +60,8 @@ export function RegisterForm({
   googleEnabled: boolean;
   /** inloggen met Apple staat aan (lib/auth/apple.ts) */
   appleEnabled?: boolean;
+  /** vlag `publiek-alleen-flexwerk`: aan = geen productkeuze bij het aanmelden, alleen personeel/flexwerk */
+  alleenFlexwerk?: boolean;
 }) {
   const t = AUTH_DICTS[locale].register;
   const or = AUTH_DICTS[locale].shell.or;
@@ -315,7 +318,9 @@ export function RegisterForm({
         {type === "bedrijf" && <input type="hidden" name="kvkNumber" value={kvk} />}
         {type === "bedrijf" && klusConcept && <input type="hidden" name="klusConcept" value={klusConcept} />}
 
-        {type === "bedrijf" && (
+        {/* vlag publiek-alleen-flexwerk: geen productkeuze (webshop, website, horeca, rijschool), alleen personeel inhuren */}
+        {type === "bedrijf" && alleenFlexwerk && <input type="hidden" name="dashboard" value="personeel" />}
+        {type === "bedrijf" && !alleenFlexwerk && (
           <fieldset>
             <legend className="field-label">Waarvoor gebruik je ZekerFlex?</legend>
             <div className="mt-1.5 space-y-2">

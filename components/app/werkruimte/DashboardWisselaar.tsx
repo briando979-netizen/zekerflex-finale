@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { WERKRUIMTES, type Werkruimte } from "@/lib/werkgever/werkruimte";
+import { werkruimteIsFlexwerk } from "@/lib/marketing/flexwerk-only";
 import { useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
 
@@ -17,6 +18,8 @@ export interface DashboardStand {
   dashboards: Werkruimte[];
   /** de beheerder van het bedrijf: mag een dashboard toevoegen */
   kanToevoegen: boolean;
+  /** vlag `publiek-alleen-flexwerk`: dan alleen de flexwerk-werkruimte (personeel) in de wisselaar en bij het toevoegen; het open dashboard blijft bereikbaar */
+  alleenFlexwerk?: boolean;
 }
 
 export function DashboardWisselaar({
@@ -37,7 +40,12 @@ export function DashboardWisselaar({
   const [bezig, setBezig] = useState<Werkruimte | null>(null);
   const [fout, setFout] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
-  const nieuw = stand.kanToevoegen ? WERKRUIMTES.filter((w) => !stand.dashboards.includes(w)) : [];
+  // vlag `publiek-alleen-flexwerk`: alleen de flexwerk-werkruimte tonen en kunnen toevoegen; het open dashboard blijft
+  // zichtbaar (zodat een bestaand bedrijf er nog bij kan) en elke pagina blijft via een directe link bereikbaar.
+  const mag = (w: Werkruimte) => !stand.alleenFlexwerk || werkruimteIsFlexwerk(w) || w === stand.actief;
+  const getoond = stand.dashboards.filter(mag);
+  const toevoegbaar = stand.alleenFlexwerk ? WERKRUIMTES.filter(werkruimteIsFlexwerk) : WERKRUIMTES;
+  const nieuw = stand.kanToevoegen ? toevoegbaar.filter((w) => !stand.dashboards.includes(w)) : [];
 
   // buiten het menu tikken sluit het (ook op een tablet zonder hover)
   useEffect(() => {
@@ -57,7 +65,7 @@ export function DashboardWisselaar({
   }, [open]);
 
   // één dashboard en niets toe te voegen: niets te wisselen
-  if (stand.dashboards.length < 2 && nieuw.length === 0) return null;
+  if (getoond.length < 2 && nieuw.length === 0) return null;
 
   async function kies(soort: Werkruimte) {
     if (soort === stand.actief) {
@@ -116,7 +124,7 @@ export function DashboardWisselaar({
         <div className={`absolute left-0 top-full z-50 mt-1 w-72 rounded-xl border bg-white p-1.5 shadow-lift ${donker ? "border-black/10" : "border-hair"}`}>
           <p className="px-3 pb-1 pt-1.5 text-xs font-semibold text-neutralx-500">{k.jouw}</p>
           <ul>
-            {stand.dashboards.map((w) => (
+            {getoond.map((w) => (
               <li key={w}>
                 <button
                   type="button"
