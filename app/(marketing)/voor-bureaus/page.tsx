@@ -8,17 +8,22 @@ import { FotoKolom, HeroMetFoto } from "@/components/marketing/HeroMetFoto";
 import { paginaFoto } from "@/lib/marketing/fotos";
 import { canonical } from "@/lib/seo";
 import { PartnerPlans } from "@/components/marketing/PartnerPlans";
+import { robotsVerborgen } from "@/lib/seo/verbergen";
 
 const title = "Voor uitzendbureaus — plugin of white-label";
 const description =
   "Bied ZekerFlex zelf aan: één module via de API, het hele platform onder je eigen merk, of alles op je eigen servers. Met AI-recruiter en matching.";
 
-export const metadata: Metadata = {
+const metaBasis: Metadata = {
   title,
   description,
   keywords: ["uitzendsoftware white-label", "recruitment platform kopen", "ats plugin", "flexpool software", "saas uitzendbureau"],
   ...canonical("/voor-bureaus", { title, description }),
 };
+// vlag `publiek-alleen-flexwerk`: uit Google en uit de voettekst als de vlag aan is; de pagina blijft bereikbaar via een directe link
+export async function generateMetadata(): Promise<Metadata> {
+  return { ...metaBasis, ...(await robotsVerborgen("/voor-bureaus")) };
+}
 
 const FAQ = [
   { q: "Kan ik losse modules afnemen?", a: "Ja. Met het Plugin-pakket koppel je één module (bv. de AI-recruiter of de matching-engine) via onze REST-API + webhooks aan je eigen systeem, zonder de rest." },

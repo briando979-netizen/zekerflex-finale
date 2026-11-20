@@ -64,6 +64,9 @@ export const NIET_FLEXWERK_PADEN: readonly string[] = [
   "/developers",
   // de klussen-kaart (en de 3D-variant). De bezoeker ziet de kaart pas na het aanmelden.
   "/open-diensten",
+  // de partnerpagina's in de voettekst (eigenaar 20 nov: "Voor bureaus (white-label)" en "Word sales-partner (commissie)" weg)
+  "/voor-bureaus",
+  "/sales-partner",
   // het hele aanbod: de overzichtspagina én elke /aanbod/<slug>-functiepagina (inchecken, roosterplanner,
   // spoedoproep, facturen, …). De eigenaar wil "aanbod verbergen inclusief wat er is" en "de functies weg";
   // de kern-flexwerk-SEO blijft gedekt door /personeel-inhuren, /uitzendbureau en de sector-/stadpagina's.

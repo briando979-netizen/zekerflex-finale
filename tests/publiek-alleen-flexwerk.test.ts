@@ -81,6 +81,8 @@ describe("publiek = alleen flexwerk: de bron van waarheid", () => {
       "/aanbod/roosterplanner",
       "/aanbod/spoedoproep",
       "/aanbod/facturen-en-betalen",
+      "/voor-bureaus", // partnerpagina's uit de voettekst (eigenaar 20 nov)
+      "/sales-partner",
       "/klussen", // de publieke open-klussen-blader-/zoeklijst (exact)
       "/open-diensten", // de klussen-kaart
       "/open-diensten/3d",
@@ -200,6 +202,20 @@ describe("noindex op een verborgen pagina", () => {
     expect(await robotsVerborgen("/aanbod/inchecken-op-locatie")).toEqual({ robots: { index: false, follow: true } });
     expect(await robotsVerborgen("/klussen")).toEqual({ robots: { index: false, follow: true } });
     expect(await robotsVerborgen("/open-diensten")).toEqual({ robots: { index: false, follow: true } });
+    // de partnerpagina's uit de voettekst
+    expect(await robotsVerborgen("/voor-bureaus")).toEqual({ robots: { index: false, follow: true } });
+    expect(await robotsVerborgen("/sales-partner")).toEqual({ robots: { index: false, follow: true } });
+  });
+
+  it("de voettekst verliest met de vlag aan de partnerlinks (bureaus, sales-partner)", async () => {
+    const { STANDAARD_VOETTEKST } = await import("@/lib/ontwerp/menu");
+    const alle = STANDAARD_VOETTEKST.kolommen.flatMap((k) => k.links.map((l) => l.href));
+    expect(alle).toContain("/voor-bureaus");
+    expect(alle).toContain("/sales-partner");
+    const over = alle.filter((href) => !isNietFlexwerkPad(href));
+    expect(over).not.toContain("/voor-bureaus");
+    expect(over).not.toContain("/sales-partner");
+    expect(over).toContain("/prijzen");
   });
 
   it("een flexwerk-pagina blijft indexeerbaar, ook met de vlag aan (incl. de losse klus-advertenties voor Google Vacatures)", async () => {

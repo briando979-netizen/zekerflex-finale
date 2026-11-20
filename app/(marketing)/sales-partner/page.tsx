@@ -12,17 +12,22 @@ import {
   sharePerHourEur,
   monthlyFromClientEur,
 } from "@/lib/sales-partner";
+import { robotsVerborgen } from "@/lib/seo/verbergen";
 
 const title = "Word sales-partner — verdien mee op commissie";
 const description =
   "Breng als zzp'er bedrijven binnen en verdien commissie: een aanbrengbonus plus commissie over elk gewerkt uur, een jaar lang. Geen vaste uren of target.";
 
-export const metadata: Metadata = {
+const metaBasis: Metadata = {
   title,
   description,
   keywords: ["sales op commissie", "acquisitie zzp", "commissie sales baan", "partner worden", "bijverdienen sales"],
   ...canonical("/sales-partner", { title, description }),
 };
+// vlag `publiek-alleen-flexwerk`: uit Google en uit de voettekst als de vlag aan is; de pagina blijft bereikbaar via een directe link
+export async function generateMetadata(): Promise<Metadata> {
+  return { ...metaBasis, ...(await robotsVerborgen("/sales-partner")) };
+}
 
 const euro0 = (n: number) => `€ ${n.toFixed(0)}`;
 const euro2 = (n: number) => `€ ${n.toFixed(2).replace(".", ",")}`;
