@@ -8,7 +8,9 @@ import { weekKolommen } from "@/lib/prefs/weekvolgorde";
 
 const PART_KEYS = ["morning", "afternoon", "evening"] as const;
 
-export function AvailabilityForm({ initial }: { initial: UserPrefs }) {
+// toonTarief = false voor een uitzendkracht (lib/werker/eigen-tarief.ts): de velden minimum- en richttarief staan er dan niet,
+// en opslaan stuurt ze ook niet mee, zodat de bewaarde waarden blijven staan (de route laat een ontbrekende sleutel ongemoeid).
+export function AvailabilityForm({ initial, toonTarief = true }: { initial: UserPrefs; toonTarief?: boolean }) {
   const toast = useToast();
   const ft = useFT();
   const t = ft.avail;
@@ -59,8 +61,12 @@ export function AvailabilityForm({ initial }: { initial: UserPrefs }) {
     put(
       {
         availability: avail,
-        minHourlyRateCents: minRate ? Math.round(minRate * 100) : null,
-        desiredHourlyRateCents: desiredRate ? Math.round(desiredRate * 100) : null,
+        ...(toonTarief
+          ? {
+              minHourlyRateCents: minRate ? Math.round(minRate * 100) : null,
+              desiredHourlyRateCents: desiredRate ? Math.round(desiredRate * 100) : null,
+            }
+          : {}),
         maxTravelMinutes: maxTravel,
         standby,
       },
@@ -132,18 +138,22 @@ export function AvailabilityForm({ initial }: { initial: UserPrefs }) {
       </section>
 
       <section className="card p-6">
-        <h2 className="font-display text-lg font-semibold">{t.rateTitle}</h2>
+        <h2 className="font-display text-lg font-semibold">{toonTarief ? t.rateTitle : t.travelTitle}</h2>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          <label className="block">
-            <span className="field-label">{t.minRate}</span>
-            <input type="number" min={0} step={0.5} value={minRate || ""} onChange={(e) => setMinRate(Number(e.target.value))} className="field-input" />
-            <span className="mt-1 block text-xs text-neutralx-400">{t.minRateHint}</span>
-          </label>
-          <label className="block">
-            <span className="field-label">{t.desiredRate}</span>
-            <input type="number" min={0} step={0.5} value={desiredRate || ""} onChange={(e) => setDesiredRate(Number(e.target.value))} className="field-input" />
-            <span className="mt-1 block text-xs text-neutralx-400">{t.desiredRateHint}</span>
-          </label>
+          {toonTarief && (
+            <>
+              <label className="block">
+                <span className="field-label">{t.minRate}</span>
+                <input type="number" min={0} step={0.5} value={minRate || ""} onChange={(e) => setMinRate(Number(e.target.value))} className="field-input" />
+                <span className="mt-1 block text-xs text-neutralx-400">{t.minRateHint}</span>
+              </label>
+              <label className="block">
+                <span className="field-label">{t.desiredRate}</span>
+                <input type="number" min={0} step={0.5} value={desiredRate || ""} onChange={(e) => setDesiredRate(Number(e.target.value))} className="field-input" />
+                <span className="mt-1 block text-xs text-neutralx-400">{t.desiredRateHint}</span>
+              </label>
+            </>
+          )}
           <label className="block">
             <span className="field-label">{t.maxTravel(maxTravel)}</span>
             <input type="range" min={10} max={90} value={maxTravel} onChange={(e) => setMaxTravel(Number(e.target.value))} className="mt-3 w-full accent-brand-500" />

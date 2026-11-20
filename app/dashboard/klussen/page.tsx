@@ -121,10 +121,11 @@ export default async function KlussenPage(
         <div className="card">
           <div className="px-5 py-14 text-center">
             <p className="font-medium text-ink">{t.page.noJobsTitle}</p>
-            <p className="mx-auto mt-1 max-w-sm text-sm text-neutralx-500">
-              {t.page.noJobsBefore} <Link href="/dashboard/beschikbaarheid" className="text-brand-600 underline">{t.page.availability}</Link>{" "}
-              {t.page.noJobsAfter}
-            </p>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-neutralx-500">{t.page.noJobsBody}</p>
+            {/* één actie: naar de meldingen. De knop zelf staat sinds 21 nov op Account (daar kent hij zijn stand op dit apparaat) */}
+            <Link href="/dashboard/account" className="btn-primary mt-4 inline-flex">
+              {t.eersteIndruk.meldingen.knop}
+            </Link>
           </div>
         </div>
       ) : (

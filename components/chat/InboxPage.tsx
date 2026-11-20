@@ -96,6 +96,14 @@ interface InboxPageProps {
   bedrijfsnaam?: string;
   /** In een voorbeeld (read-only demo): de tekst onder de chat; typen/versturen/reageren slaat niets op (anders loopt het op de 423 vast). Leeg = gewone chat. */
   demoNotice?: string;
+  /**
+   * De werker-app heeft op de telefoon al een eigen onderbalk: daar staan de tabs van de chat (chats, updates, gesprekken,
+   * tools, instellingen) dan bovenaan de lijst in plaats van als tweede balk onderin. Vanaf md blijven ze onderaan.
+   * Zonder deze prop (opdrachtgever, beheer) verandert er niets.
+   */
+  tabsBoven?: boolean;
+  /** "Mijn status" als één smalle regel boven de gesprekken (werker-app); zonder: de gewone rij */
+  statusCompact?: boolean;
 }
 
 // De teksten komen uit een context: de inhoud draait daarom binnen de provider.
@@ -116,6 +124,8 @@ function InboxPageInner({
   zakelijk = false,
   bedrijfsnaam = "",
   demoNotice,
+  tabsBoven = false,
+  statusCompact = false,
 }: Omit<InboxPageProps, "texts">) {
   const chat = useChatTeksten();
   const ib = chat.inbox;
@@ -1074,6 +1084,44 @@ function InboxPageInner({
   const rowBtn = "flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-ink hover:bg-paper-soft";
   const sectionHead = "px-4 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wide text-neutralx-400";
 
+  // De vijf tabs van de chat. Gewoon (opdrachtgever, beheer): één balk onderaan de lijst. Met tabsBoven (werker-app, die op de
+  // telefoon zelf al een onderbalk heeft): onder md bovenaan de lijst, vanaf md onderaan zoals altijd. Er is er steeds één zichtbaar.
+  const tabBalk = (plek: "boven" | "onder") => (
+    <nav
+      aria-label={ib.navLabel}
+      className={
+        plek === "boven"
+          ? "grid flex-shrink-0 grid-cols-5 bg-white pb-1 md:hidden"
+          : `${tabsBoven ? "hidden md:grid" : "grid"} flex-shrink-0 grid-cols-5 border-t border-hair bg-white`
+      }
+    >
+      {(
+        [
+          ["chats", IconChatBubble, ib.tabChats],
+          ["updates", IconBell, ib.tabUpdates],
+          ["calls", IconPhone, ib.tabCalls],
+          ["tools", IconBriefcase, ib.tabTools],
+          ["settings", IconGear, ib.tabSettings],
+        ] as const
+      ).map(([k, Ico, label]) => {
+        const badge = k === "chats" ? threads.filter((t) => !t.archived && !t.muted && isOngelezen(t)).length : 0;
+        return (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setTab(k)}
+            aria-current={tab === k ? "page" : undefined}
+            className={`relative flex flex-col items-center gap-0.5 ${plek === "boven" ? "py-1" : "py-2"} text-[10px] font-medium ${tab === k ? "text-brand-700" : "text-neutralx-500 hover:text-ink"}`}
+          >
+            <span className={`grid h-7 w-12 place-items-center rounded-full transition-colors ${tab === k ? "bg-brand-50" : ""}`}><Ico className="h-5 w-5" /></span>
+            {label}
+            {badge > 0 && <span className="absolute right-[18%] top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#1DA851] px-1 text-[9px] font-bold text-white" aria-label={vulIn(ib.badgeOngelezenChats, { aantal: badge })}>{badge}</span>}
+          </button>
+        );
+      })}
+    </nav>
+  );
+
   return (
     // One column with a fixed height: the push banner takes what it needs and
     // the chat gets the rest — so the composer never slides under the bottom
@@ -1109,6 +1157,9 @@ function InboxPageInner({
             </button>
           </div>
         </div>
+
+        {/* werker-app op de telefoon: de tabs hier, zodat er onderin maar één balk staat (die van de app zelf) */}
+        {tabsBoven && tabBalk("boven")}
 
         {tab === "chats" && (
           <div className="flex-shrink-0 px-3 pb-2">
@@ -1174,7 +1225,7 @@ function InboxPageInner({
               {!q && view === "main" && (
                 <>
                   {/* status van je contacten, zoals in WhatsApp (lib/messaging/status.ts) */}
-                  {me && <StatusRij myUserId={me.userId} myName={me.name} avatars={avatars} onReageer={(uid) => void startThreadWith(uid)} />}
+                  {me && <StatusRij myUserId={me.userId} myName={me.name} avatars={avatars} onReageer={(uid) => void startThreadWith(uid)} compact={statusCompact} />}
                   {chatPrefs.lockedCount > 0 && (
                     <button type="button" onClick={() => setPinAsk({ mode: "unlock" })} className={rowBtn}>
                       <span className="w-10 text-center" aria-hidden>🔒</span>{ib.vergrendeldeChats} <span className="ml-auto text-xs text-neutralx-400">{chatPrefs.lockedCount}</span>
@@ -1481,33 +1532,8 @@ function InboxPageInner({
           )}
         </div>
 
-        {/* WhatsApp-style bottom bar */}
-        <nav aria-label={ib.navLabel} className="grid flex-shrink-0 grid-cols-5 border-t border-hair bg-white">
-          {(
-            [
-              ["chats", IconChatBubble, ib.tabChats],
-              ["updates", IconBell, ib.tabUpdates],
-              ["calls", IconPhone, ib.tabCalls],
-              ["tools", IconBriefcase, ib.tabTools],
-              ["settings", IconGear, ib.tabSettings],
-            ] as const
-          ).map(([k, Ico, label]) => {
-            const badge = k === "chats" ? threads.filter((t) => !t.archived && !t.muted && isOngelezen(t)).length : 0;
-            return (
-              <button
-                key={k}
-                type="button"
-                onClick={() => setTab(k)}
-                aria-current={tab === k ? "page" : undefined}
-                className={`relative flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium ${tab === k ? "text-brand-700" : "text-neutralx-500 hover:text-ink"}`}
-              >
-                <span className={`grid h-7 w-12 place-items-center rounded-full transition-colors ${tab === k ? "bg-brand-50" : ""}`}><Ico className="h-5 w-5" /></span>
-                {label}
-                {badge > 0 && <span className="absolute right-[18%] top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#1DA851] px-1 text-[9px] font-bold text-white" aria-label={vulIn(ib.badgeOngelezenChats, { aantal: badge })}>{badge}</span>}
-              </button>
-            );
-          })}
-        </nav>
+        {/* WhatsApp-style bottom bar; met tabsBoven staat hij op de telefoon bovenaan (zie tabBalk) */}
+        {tabBalk("onder")}
       </div>
 
       {/* ─── conversation ─── */}
