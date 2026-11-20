@@ -3,7 +3,8 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { kvGet, kvSet } from "@/lib/storage/kv";
 import { siteOfTenant } from "@/lib/sites/store";
-import { bepaalWerkruimte, isWerkruimte, leesKeuze, voegToe, WERKRUIMTES, type Werkruimte, type WerkruimteKeuze, type WerkruimteStand } from "@/lib/werkgever/werkruimte";
+import { alleenPersoneel, bepaalWerkruimte, isWerkruimte, leesKeuze, voegToe, WERKRUIMTES, type Werkruimte, type WerkruimteKeuze, type WerkruimteStand } from "@/lib/werkgever/werkruimte";
+import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
 // ---------------------------------------------------------------------------
 // De dashboards van een bedrijf ophalen en bewaren (lib/werkgever/werkruimte.ts).
@@ -55,7 +56,7 @@ async function gewenstDashboard(): Promise<Werkruimte | null> {
 /** Per verzoek één keer: de layout en het startscherm vragen hetzelfde. */
 export const werkruimteVan = cache(async (tenantId: string | undefined): Promise<WerkruimteContext> => {
   if (!tenantId) return GEWOON;
-  const [keuze, rijschool, horeca, site, webshop, klus, gewenst] = await Promise.all([
+  const [keuze, rijschool, horeca, site, webshop, klus, gewenst, alleenFlexwerk] = await Promise.all([
     kvGet<unknown>(sleutel(tenantId)).then(leesKeuze).catch(() => null),
     prisma.rijschool.findUnique({ where: { tenantId }, select: { id: true } }).catch(() => null),
     prisma.horecaZaak.findUnique({ where: { tenantId }, select: { modules: true } }).catch(() => null),
@@ -63,6 +64,8 @@ export const werkruimteVan = cache(async (tenantId: string | undefined): Promise
     siteOfTenant(tenantId, "webshop").catch(() => null),
     prisma.shift.findFirst({ where: { branch: { tenantId } }, select: { id: true } }).catch(() => null),
     gewenstDashboard(),
+    // vlag `publiek-alleen-flexwerk` (20 nov): elk bedrijf alleen het dashboard personeel, ook met een webshop of rijschool
+    alleenFlexwerkAan().catch(() => false),
   ]);
   const feiten = {
     keuze,
@@ -73,8 +76,9 @@ export const werkruimteVan = cache(async (tenantId: string | undefined): Promise
     heeftKlussen: Boolean(klus),
     personeelModule: horeca?.modules.includes("personeel") ?? false,
   };
+  const stand = bepaalWerkruimte(feiten, gewenst);
   return {
-    ...bepaalWerkruimte(feiten, gewenst),
+    ...(alleenFlexwerk ? alleenPersoneel(stand) : stand),
     heeftRijschool: feiten.heeftRijschool,
     heeftHoreca: feiten.heeftHoreca,
     heeftSite: feiten.heeftSite,

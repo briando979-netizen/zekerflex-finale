@@ -152,6 +152,16 @@ export function bepaalWerkruimte(f: WerkruimteFeiten, gewenst?: Werkruimte | nul
 }
 
 /**
+ * Met de vlag `publiek-alleen-flexwerk` (20 nov, eigenaar: "haal die andere dingen weg als ze er nog staan, zoals webshop
+ * beheren, rijschool en alle andere, bij werkgevers") heeft élk bedrijf alleen het dashboard personeel: ook een bedrijf
+ * dat eerder webshop, website, rijschool of horeca koos of gebruikt. De pagina's zelf blijven via een directe link
+ * bereikbaar en de keuze in de KV blijft staan: vlag uit = alles terug.
+ */
+export function alleenPersoneel(stand: WerkruimteStand): WerkruimteStand {
+  return { ...stand, soort: "personeel", ookPersoneel: true, gekozen: true, dashboards: ["personeel"] };
+}
+
+/**
  * Hoort een accountscherm van /werkgever (bedrijf, facturen, team, mail, mijn account) in de studio
  * (lib/studio/account-server.ts)? Alleen als het dashboard website of webshop open is en het bedrijf
  * geen dashboard personeel heeft. Wie klussen heeft, houdt de werkgeverspagina met de facturen van

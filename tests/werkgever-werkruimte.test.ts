@@ -5,6 +5,7 @@ import {
   PAKKET_SLEUTELS,
   PERSONEEL_SLEUTELS,
   WERKRUIMTES,
+  alleenPersoneel,
   bepaalWerkruimte,
   dashboardVanPad,
   dashboardsVan,
@@ -240,5 +241,31 @@ describe("menuVoor", () => {
       const adressen = menuVoor(soort, { ...opties, horecaModules: ["reserveren", "bestellen", "kassa", "taken"] }).map((p) => `${p.sleutel}?${p.tab?.id ?? ""}`);
       expect(new Set(adressen).size, `${soort} dubbel`).toBe(adressen.length);
     }
+  });
+});
+
+// 20 nov 2026 (eigenaar): "haal die andere dingen weg als ze er nog staan, zoals webshop beheren, rijschool en alle andere,
+// bij werkgevers". Met de vlag publiek-alleen-flexwerk heeft élk bedrijf alleen het dashboard personeel, ook wie eerder
+// webshop/website/rijschool/horeca koos of gebruikt; het menu is dan het flexwerk-menu zonder studio, winkel of website.
+describe("met de vlag alleen flexwerk: elk bedrijf alleen personeel", () => {
+  it("een webshop- of rijschoolbedrijf krijgt het dashboard personeel, zonder wisselaar", () => {
+    const webshop = bepaalWerkruimte({ ...geen, keuze: keuze("webshop", ["webshop"]), heeftWebshop: true }, "webshop");
+    expect(webshop.soort).toBe("webshop");
+    expect(alleenPersoneel(webshop)).toEqual({ soort: "personeel", ookPersoneel: true, gekozen: true, dashboards: ["personeel"] });
+    const rijschool = bepaalWerkruimte({ ...geen, heeftRijschool: true });
+    expect(alleenPersoneel(rijschool).dashboards).toEqual(["personeel"]);
+    // het account blijft op /werkgever, niet in de studio
+    expect(studioVoorAccount(alleenPersoneel(webshop))).toBeNull();
+  });
+  it("het menu bevat dan geen studio, winkel, website, rijschool of horeca", () => {
+    const menu = sleutels("personeel", { alleenFlexwerk: true });
+    for (const weg of ["studio", "winkel", "website", "rijschool", "horeca", "telefonie", "reviews", "branche"]) expect(menu, weg).not.toContain(weg);
+    expect(menu).toContain("klussen");
+    expect(menu).toContain("facturen");
+  });
+  it("de server past het toe op elk bedrijf, met de vlag als laatste in de Promise.all", () => {
+    const s = readFileSync(path.join(process.cwd(), "lib/werkgever/werkruimte-server.ts"), "utf8").replace(/\r\n/g, "\n");
+    expect(s).toContain("alleenFlexwerkAan().catch(() => false),\n  ]);");
+    expect(s).toContain("...(alleenFlexwerk ? alleenPersoneel(stand) : stand),");
   });
 });
