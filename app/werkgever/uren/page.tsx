@@ -10,6 +10,7 @@ import { ProposeCorrectionButton } from "@/components/app/ProposeCorrectionButto
 import { fraudForTimesheets } from "@/lib/fraud/timesheet";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
+import { SamenTabs } from "@/components/werkgever/SamenTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,7 @@ export default async function UrenGoedkeurenPage() {
 
   return (
     <>
+      <SamenTabs groep="uren" actief="uren" />
       <PageHeader title={h.title} subtitle={h.subtitle} />
 
       <AutoApproveToggle />

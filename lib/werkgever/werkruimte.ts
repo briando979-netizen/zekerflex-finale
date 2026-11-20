@@ -175,8 +175,12 @@ export type MenuSleutel =
   | "kalender"
   | "planner"
   | "agenda"
-  /** met de vlag publiek-alleen-flexwerk: kalender, agenda en roosterplanner als één ingang "Planning" (/werkgever/kalender, met tabbladen) */
+  /** met de vlag publiek-alleen-flexwerk: samengevoegde ingangen (lib/werkgever/samen-tabs.ts): kalender+roosterplanner+agenda,
+   *  favorieten+geblokkeerd, compliance+overeenkomsten, rapportages+bedrijf-in-kaart; uren+inchecken en chat+assistent houden hun eerste sleutel */
   | "planning"
+  | "werkers"
+  | "regels"
+  | "cijfers"
   | "bank"
   | "favorieten"
   | "berichten"
@@ -258,9 +262,20 @@ const plek = (sectie?: MenuSectie) => (sleutel: MenuSleutel): MenuPlek => (secti
 // Afspraken/Klantenkaart (de agenda voor kappers en garages: branche, geen flexwerk).
 const NIET_FLEXWERK_MENU: readonly MenuSleutel[] = ["telefonie", "reviews", "branche", "studio", "winkel", "website", "mail", "whatsapp", "netwerk", "locatie", "afspraken", "klanten"];
 
-// Drie agenda's naast elkaar (kalender, roosterplanner, agenda) was te veel (20 nov, eigenaar: "voeg ze samen"): met de
-// vlag aan één ingang "Planning" (/werkgever/kalender) met tabbladen naar de andere twee (components/werkgever/PlanningTabs.tsx).
-export const PLANNING_SAMEN: readonly MenuSleutel[] = ["kalender", "planner", "agenda"];
+// Samenvoegen (20 nov, eigenaar: "voeg samen"): met de vlag aan worden kalender+roosterplanner+agenda één "Planning",
+// uren+inchecken één "Uren", favorieten+geblokkeerd "Mijn werkers", compliance+overeenkomsten "Regels en overeenkomsten",
+// rapportages+bedrijf-in-kaart "Cijfers" en chat+assistent "Chat"; bovenaan die pagina's staan dan tabbladen
+// (lib/werkgever/samen-tabs.ts, components/werkgever/SamenTabs.tsx). De eerste van de leden bepaalt de plek in het menu.
+export const SAMENVOEGINGEN: readonly { sleutel: MenuSleutel; leden: readonly MenuSleutel[] }[] = [
+  { sleutel: "planning", leden: ["kalender", "planner", "agenda"] },
+  { sleutel: "uren", leden: ["uren", "inchecken"] },
+  { sleutel: "werkers", leden: ["favorieten", "geblokkeerd"] },
+  { sleutel: "regels", leden: ["compliance", "overeenkomsten"] },
+  { sleutel: "cijfers", leden: ["rapportages", "inkaart"] },
+  { sleutel: "berichten", leden: ["berichten", "assistent"] },
+];
+/** Voor de tests en de tabbladen: de leden van "Planning". */
+export const PLANNING_SAMEN: readonly MenuSleutel[] = SAMENVOEGINGEN[0]!.leden;
 
 // Een nieuw bedrijf zag 23 regels in het menu (20 nov, eigenaar: korter). Wat pas zin heeft als er een klus loopt, komt
 // erbij zodra de eerste klus is geplaatst: wie klussen heeft, houdt altijd alle personeelsfuncties. Tot die tijd blijft
@@ -273,14 +288,15 @@ export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
   const menu = menuVoorBasis(soort, o);
   if (!o.alleenFlexwerk || soort !== "personeel") return menu;
   const weg: readonly MenuSleutel[] = o.nogGeenKlussen ? [...NIET_FLEXWERK_MENU, ...NA_EERSTE_KLUS] : NIET_FLEXWERK_MENU;
-  // de eerste van de drie agenda's wordt "Planning", de andere twee vallen weg (ze zitten als tabblad onder Planning)
-  let planningGezet = false;
+  // samenvoegen: het eerste lid van een groep wordt de samengevoegde ingang, de andere leden vallen weg (tabbladen)
+  const gezet = new Set<MenuSleutel>();
   return menu.flatMap((p): MenuPlek[] => {
     if (weg.includes(p.sleutel)) return [];
-    if (!PLANNING_SAMEN.includes(p.sleutel)) return [p];
-    if (planningGezet) return [];
-    planningGezet = true;
-    return [{ ...p, sleutel: "planning" }];
+    const groep = SAMENVOEGINGEN.find((s) => s.leden.includes(p.sleutel));
+    if (!groep) return [p];
+    if (gezet.has(groep.sleutel)) return [];
+    gezet.add(groep.sleutel);
+    return [{ ...p, sleutel: groep.sleutel }];
   });
 }
 

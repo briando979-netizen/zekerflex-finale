@@ -6,6 +6,7 @@ import { leegBedrijf } from "@/lib/inkaart/model";
 import { leesInKaart } from "@/lib/inkaart/store";
 import { inkaartTeksten } from "@/lib/inkaart/teksten";
 import { employerTenant } from "@/lib/webhooks/employer";
+import { SamenTabs } from "@/components/werkgever/SamenTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ export default async function BedrijfInKaartPage() {
   const magWijzigen = hasRole(principal, "HQ_ADMIN", "LOCAL_MANAGER", "PLATFORM_ADMIN");
   return (
     <>
+      <SamenTabs groep="cijfers" actief="inkaart" />
       <PageHeader title={t.pagina.titel} eyebrow={t.pagina.eyebrow} subtitle={t.pagina.subtitel} />
       <InKaart start={bewaard ?? leegBedrijf("overig", new Date())} magWijzigen={magWijzigen} t={t} />
     </>

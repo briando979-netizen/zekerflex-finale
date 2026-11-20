@@ -7,6 +7,7 @@ import { PageHeader, EmptyState } from "@/components/app/ui";
 import { FreelancerRelationButton } from "@/components/app/FreelancerRelationButton";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
+import { SamenTabs } from "@/components/werkgever/SamenTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,7 @@ export default async function FavorietenPage() {
 
   return (
     <>
+      <SamenTabs groep="werkers" actief="favorieten" />
       <PageHeader
         title={f.title}
         eyebrow={f.eyebrow}

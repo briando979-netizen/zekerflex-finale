@@ -63,16 +63,17 @@ export default async function InstellingenPage() {
     { title: s.cShiftSettingsT, sub: s.cShiftSettingsS, href: "/werkgever/bedrijf", icon: <IList /> },
   ];
 
+  // met de vlag aan is er geen abonnement meer te kiezen (prijs per gewerkt uur): de kaart valt weg, de pagina blijft bereikbaar
   const facturatie: Card[] = [
     { title: s.cInvoiceT, sub: s.cInvoiceS, href: "/werkgever/facturen", icon: <IDoc /> },
-    { title: "Abonnement en uitbreidingen", sub: "Wat je nu hebt en wat je erbij kunt nemen", href: "/werkgever/abonnement", icon: <IGrid /> },
+    ...(alleenFlexwerk ? [] : [{ title: "Abonnement en uitbreidingen", sub: "Wat je nu hebt en wat je erbij kunt nemen", href: "/werkgever/abonnement", icon: <IGrid /> }]),
   ];
 
   // 15 nov 2026: dezelfde onderdelen als de werkersapp (gegevens downloaden, privacy, feedback), en verwijderen in de app
   const account: Card[] = [
     { title: s.cAccountT, sub: s.cAccountS, href: "/werkgever/account", icon: <IUser /> },
-    // "Introduceer een bedrijf" (17 nov 2026, lib/introducties): een ander bedrijf aan ZekerFlex voorstellen
-    { title: d.introductie.menu, sub: d.introductie.kaartSub, href: "/werkgever/introduceren", icon: <IUsers /> },
+    // "Introduceer een bedrijf" (17 nov 2026, lib/introducties): een ander bedrijf aan ZekerFlex voorstellen; met de vlag aan niet
+    ...(alleenFlexwerk ? [] : [{ title: d.introductie.menu, sub: d.introductie.kaartSub, href: "/werkgever/introduceren", icon: <IUsers /> }]),
     { title: s.cExportT, sub: s.cExportS, href: "/api/me/gegevens/export", icon: <IDoc />, gewoon: true },
     { title: s.cPrivacyT, sub: s.cPrivacyS, href: "/privacy", icon: <IKey /> },
     { title: s.cFeedbackT, sub: s.cFeedbackS, href: "mailto:info@zekerflex.com?subject=Feedback%20ZekerFlex%20zakelijk", icon: <IMail />, gewoon: true },

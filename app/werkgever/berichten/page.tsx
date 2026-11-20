@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/app/ui";
 import { InboxPage } from "@/components/chat/InboxPage";
 import { getDict } from "@/lib/i18n/server";
 import { inDemoSessie, DEMO_CHAT_NOTITIE } from "@/lib/auth/demo-sessie";
+import { SamenTabs } from "@/components/werkgever/SamenTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ export default async function WerkgeverBerichtenPage() {
   const bedrijf = zakelijk && tenantId ? await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } }).catch(() => null) : null;
   return (
     <>
+      <SamenTabs groep="chat" actief="berichten" />
       <div className="hidden md:block">
         <PageHeader title={m.title} eyebrow={m.eyebrow} subtitle={m.subtitle} />
       </div>

@@ -5,6 +5,7 @@ import { PageHeader, EmptyState, dateShort } from "@/components/app/ui";
 import { FreelancerRelationButton } from "@/components/app/FreelancerRelationButton";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
+import { SamenTabs } from "@/components/werkgever/SamenTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export default async function GeblokkeerdPage() {
 
   return (
     <>
+      <SamenTabs groep="werkers" actief="geblokkeerd" />
       <PageHeader title={b.title} eyebrow={b.eyebrow} subtitle={b.subtitle} />
 
       {rel.blocked.length === 0 ? (

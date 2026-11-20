@@ -7,7 +7,9 @@ import { SHIFT_TEMPLATES, MIN_SHIFT_RATE_CENTS } from "@/lib/shifts/create";
 import { listPools } from "@/lib/pools/store";
 import { PageHeader } from "@/components/app/ui";
 import { NewShiftForm } from "@/components/app/NewShiftForm";
-import { getDict } from "@/lib/i18n/server";
+import { SNEL_EN, SNEL_NL, SnelPlaatsen } from "@/components/werkgever/SnelPlaatsen";
+import { getDict, getLocale } from "@/lib/i18n/server";
+import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
 export const dynamic = "force-dynamic";
 
@@ -25,11 +27,26 @@ export default async function NieuweDienstPage() {
   });
 
   const tenantId = scope.tenantIds[0];
-  const [pools, extra] = await Promise.all([
+  const [pools, extra, alleenFlexwerk, locale] = await Promise.all([
     tenantId ? listPools(tenantId) : Promise.resolve([]),
     tenantId ? getOrgProfileExtra(tenantId).catch(() => ({})) : Promise.resolve({}),
+    // vlag `publiek-alleen-flexwerk` (20 nov): eerst de korte weg in drie stappen, het uitgebreide formulier eronder
+    alleenFlexwerkAan().catch(() => false),
+    getLocale(),
   ]);
   const beeld = tenantId ? klusBeeldVan(tenantId, extra) : { logoUrl: null, useLogo: false };
+
+  const volledig = (
+    <div className="surface p-6">
+      <NewShiftForm
+        branches={branches}
+        templates={SHIFT_TEMPLATES}
+        minRateCents={MIN_SHIFT_RATE_CENTS}
+        pools={pools.map((p) => ({ id: p.id, name: p.name, memberCount: p.members.length }))}
+        beeld={{ ...beeld, canChange: hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN") }}
+      />
+    </div>
+  );
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -52,16 +69,24 @@ export default async function NieuweDienstPage() {
             {n.toOnboarding} →
           </Link>
         </div>
-      ) : (
-        <div className="surface p-6">
-          <NewShiftForm
+      ) : alleenFlexwerk ? (
+        <>
+          <SnelPlaatsen
             branches={branches}
-            templates={SHIFT_TEMPLATES}
+            sjablonen={SHIFT_TEMPLATES.map((s) => ({ key: s.key, label: s.label, hourlyRateCents: s.hourlyRateCents, description: s.description, dresscode: s.dresscode }))}
             minRateCents={MIN_SHIFT_RATE_CENTS}
-            pools={pools.map((p) => ({ id: p.id, name: p.name, memberCount: p.members.length }))}
-            beeld={{ ...beeld, canChange: hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN") }}
+            t={locale === "en" ? SNEL_EN : SNEL_NL}
           />
-        </div>
+          {/* meer opties (meerdere dagen, eenmalige locatie, pools, dresscode, foto): het uitgebreide formulier, dichtgeklapt */}
+          <details className="mt-6">
+            <summary className="cursor-pointer text-sm font-semibold text-brand-600 hover:underline">
+              {locale === "en" ? "All options (full form)" : "Alle opties (uitgebreid formulier)"}
+            </summary>
+            <div className="mt-4">{volledig}</div>
+          </details>
+        </>
+      ) : (
+        volledig
       )}
     </div>
   );

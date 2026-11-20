@@ -5,6 +5,7 @@ import { biIngesteld, dashboardLinkVoor, leesBiStand } from "@/lib/bi/metabase";
 import { KAARTEN } from "@/lib/bi/dashboards";
 import { getTheme } from "@/lib/theme/server";
 import { getDict } from "@/lib/i18n/server";
+import { SamenTabs } from "@/components/werkgever/SamenTabs";
 
 export const metadata: Metadata = { title: "Rapportages" };
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ export default async function RapportagesPage() {
 
   return (
     <div className="space-y-5">
+      <SamenTabs groep="cijfers" actief="rapportages" />
       <header>
         <p className="eyebrow">Rapportages</p>
         <h1 className="mt-1 font-display text-2xl font-bold text-ink">Mijn bedrijf in cijfers</h1>

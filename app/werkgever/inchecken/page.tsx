@@ -2,6 +2,7 @@ import { requirePrincipal } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { PageHeader } from "@/components/app/ui";
 import { TerminalsBeheer } from "@/components/app/TerminalsBeheer";
+import { SamenTabs } from "@/components/werkgever/SamenTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ export default async function IncheckenPage() {
   const origin = new URL(env.APP_BASE_URL).origin;
   return (
     <>
+      <SamenTabs groep="uren" actief="inchecken" />
       <PageHeader
         eyebrow="Personeel"
         title="Inchecken op locatie"

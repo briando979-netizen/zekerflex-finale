@@ -29,8 +29,9 @@ import {
 import { CONTENT_REGISTRY, lijstRegels } from "@/lib/content/store";
 import { AANBOD_KOLOMMEN, ALLES_ONLINE, NAV, SNELLE_ACTIES, VOORBEELDSITES, zichtbareAanbodKolommen, zichtbareNav } from "@/lib/marketing/site-nav";
 import { PIJLERS } from "@/lib/marketing/aanbod";
-import { PLANNING_SAMEN, WERKRUIMTES, menuVoor, type MenuOpties } from "@/lib/werkgever/werkruimte";
+import { PLANNING_SAMEN, SAMENVOEGINGEN, WERKRUIMTES, menuVoor, type MenuOpties } from "@/lib/werkgever/werkruimte";
 import { PLANNING_TABS } from "@/lib/werkgever/planning-tabs";
+import { SAMEN_GROEPEN } from "@/lib/werkgever/samen-tabs";
 import { planRegels, uitbreidingen } from "@/lib/abonnement/overzicht";
 import { openbareRoutes } from "@/lib/ops/rondgang";
 import { robotsVerborgen } from "@/lib/seo/verbergen";
@@ -268,23 +269,30 @@ describe("de bedrijfskant met de vlag aan", () => {
     // met de vlag aan: de niet-flexwerk-items weg (ook branche, de website/webshop-items, de mailbox, WhatsApp en wifi/vpn)
     const aan = menuVoor("personeel", { ...opties, alleenFlexwerk: true }).map((p) => p.sleutel);
     for (const weg of ["telefonie", "reviews", "branche", "website", "winkel", "studio", "mail", "whatsapp", "netwerk", "locatie", "afspraken", "klanten"]) expect(aan, weg).not.toContain(weg);
-    // alle personeelsfuncties en de flexwerk-administratie blijven; de assistent ook
-    for (const blijft of ["klussen", "planning", "uren", "inchecken", "facturen", "compliance", "overeenkomsten", "bedrijf", "rapportages", "inkaart", "assistent", "berichten", "favorieten", "geblokkeerd"]) {
+    // de flexwerk-functies blijven, samengevoegd tot tien regels (zie de volgende test)
+    for (const blijft of ["klussen", "planning", "uren", "facturen", "regels", "bedrijf", "cijfers", "berichten", "werkers"]) {
       expect(aan, blijft).toContain(blijft);
     }
   });
 
-  it("de drie agenda's worden met de vlag aan één ingang Planning, op de plek van de kalender", () => {
+  it("samenvoegen met de vlag aan: Planning, Uren, Mijn werkers, Regels, Cijfers en Chat met tabbladen; tien regels", () => {
     const opties: MenuOpties = { heeftAfspraken: true, heeftRijschool: false, heeftHoreca: false, horecaModules: [], inApp: false, studio: true, alleenFlexwerk: true };
     const aan = menuVoor("personeel", opties).map((p) => p.sleutel);
-    for (const weg of ["kalender", "planner", "agenda"]) expect(aan, weg).not.toContain(weg);
-    expect(aan.filter((s) => s === "planning")).toHaveLength(1);
-    // direct na klussen; afspraken/klantenkaart (branche) zijn weg, dus favorieten volgt
-    expect(aan.slice(aan.indexOf("klussen"), aan.indexOf("klussen") + 3)).toEqual(["klussen", "planning", "favorieten"]);
-    // de tabbladen op de pagina dekken precies die drie
+    // de leden staan niet meer los in het menu
+    for (const weg of ["kalender", "planner", "agenda", "inchecken", "favorieten", "geblokkeerd", "compliance", "overeenkomsten", "rapportages", "inkaart", "assistent"]) expect(aan, weg).not.toContain(weg);
+    expect(aan).toEqual(["start", "klussen", "planning", "werkers", "berichten", "uren", "facturen", "cijfers", "regels", "bedrijf", "kennisbank", "hulp"]);
+    // elke samenvoeging heeft tabbladen die precies de leden dekken, met de eerste als ingang
+    for (const s of SAMENVOEGINGEN) {
+      const groep = (Object.keys(SAMEN_GROEPEN) as (keyof typeof SAMEN_GROEPEN)[]).map((g) => SAMEN_GROEPEN[g]).find((g) => g.sleutel === s.sleutel);
+      expect(groep, s.sleutel).toBeDefined();
+      expect(groep!.tabs.map((t) => t.id), s.sleutel).toEqual([...s.leden]);
+      for (const t of groep!.tabs) expect(t.href, t.id).toMatch(/^\/werkgever\//);
+    }
     expect(PLANNING_SAMEN).toEqual(["kalender", "planner", "agenda"]);
-    expect(PLANNING_TABS.map((t) => t.id).sort()).toEqual([...PLANNING_SAMEN].sort());
     expect(PLANNING_TABS.map((t) => t.href)).toEqual(["/werkgever/kalender", "/werkgever/planner", "/werkgever/agenda"]);
+    // en elke ledenpagina toont de tabbladen (bron-controle)
+    const paginas: Record<string, string> = { kalender: "app/werkgever/kalender/page.tsx", planner: "app/werkgever/planner/page.tsx", agenda: "app/werkgever/agenda/page.tsx", uren: "app/werkgever/uren/page.tsx", inchecken: "app/werkgever/inchecken/page.tsx", favorieten: "app/werkgever/favorieten/page.tsx", geblokkeerd: "app/werkgever/geblokkeerd/page.tsx", compliance: "app/werkgever/compliance/page.tsx", overeenkomsten: "app/werkgever/overeenkomsten/page.tsx", rapportages: "app/werkgever/rapportages/page.tsx", inkaart: "app/werkgever/in-kaart/page.tsx", berichten: "app/werkgever/berichten/page.tsx", assistent: "app/werkgever/assistent/page.tsx" };
+    for (const [id, pad] of Object.entries(paginas)) expect(readFileSync(pad, "utf8"), id).toMatch(/<(SamenTabs|PlanningTabs) /);
   });
 
   it("de werker-app en Instellingen verbergen de losse diensten met de vlag aan (bron-controle)", () => {
@@ -296,6 +304,18 @@ describe("de bedrijfskant met de vlag aan", () => {
     expect(account).toContain("alleenFlexwerkAan()");
     const instellingen = readFileSync("app/werkgever/instellingen/page.tsx", "utf8");
     expect(instellingen).toContain('...(alleenFlexwerk ? [] : [{ title: s.cApiT');
+    expect(instellingen).toContain('...(alleenFlexwerk ? [] : [{ title: "Abonnement en uitbreidingen"');
+    expect(instellingen).toContain("...(alleenFlexwerk ? [] : [{ title: d.introductie.menu");
+    // het startscherm als takenlijst, zonder de kop-banner en de cijfers; klus plaatsen in drie stappen
+    const start = readFileSync("app/werkgever/page.tsx", "utf8");
+    expect(start).toContain("{!startModus && alleenFlexwerk && teDoenBlok}");
+    expect(start).toContain("{!startModus && !alleenFlexwerk && <EmployerDashboardHero />}");
+    const nieuw = readFileSync("app/werkgever/diensten/nieuw/page.tsx", "utf8");
+    expect(nieuw).toContain("<SnelPlaatsen");
+    expect(nieuw).toContain("<details");
+    // één woord voor hetzelfde: "klus", niet "dienst", in de teksten van de werkgeversapp
+    const nl = readFileSync("lib/i18n/dictionaries.ts", "utf8");
+    for (const oud of ['invShift: "Dienst', 'typeShift: "Dienst', 'sourceShift: "Dienst"', 'uitzetten: "Dienst', 'statDiensten: "diensten"']) expect(nl).not.toContain(oud);
     // de proefversie /flexwerk gaat met de vlag op noindex, /nieuwe-home stond al op noindex
     expect(readFileSync("app/(marketing)/flexwerk/page.tsx", "utf8")).toContain('robotsVerborgen("/flexwerk")');
     expect(readFileSync("app/(marketing)/nieuwe-home/page.tsx", "utf8")).toContain("robots: { index: false");
@@ -310,11 +330,11 @@ describe("de bedrijfskant met de vlag aan", () => {
   it("een nieuw bedrijf zonder klus krijgt met de vlag aan een kort startmenu; na de eerste klus staat alles er weer", () => {
     const opties: MenuOpties = { heeftAfspraken: false, heeftRijschool: false, heeftHoreca: false, horecaModules: [], inApp: false, studio: true, alleenFlexwerk: true };
     const kort = menuVoor("personeel", { ...opties, nogGeenKlussen: true }).map((p) => p.sleutel);
-    expect(kort).toEqual(["start", "klussen", "planning", "berichten", "assistent", "uren", "facturen", "bedrijf", "kennisbank", "hulp"]);
-    // wie klussen heeft, houdt alle personeelsfuncties (mail, whatsapp en wifi/vpn komen niet terug: geen flexwerk)
+    expect(kort).toEqual(["start", "klussen", "planning", "berichten", "uren", "facturen", "bedrijf", "kennisbank", "hulp"]);
+    // wie klussen heeft, houdt alle personeelsfuncties, samengevoegd (mail, whatsapp en wifi/vpn komen niet terug: geen flexwerk)
     const vol = menuVoor("personeel", { ...opties, nogGeenKlussen: false }).map((p) => p.sleutel);
-    for (const terug of ["favorieten", "inchecken", "compliance", "overeenkomsten", "rapportages", "inkaart", "geblokkeerd"]) expect(vol, terug).toContain(terug);
-    for (const nooit of ["mail", "whatsapp", "netwerk", "planner", "agenda"]) expect(vol, nooit).not.toContain(nooit);
+    for (const terug of ["werkers", "regels", "cijfers"]) expect(vol, terug).toContain(terug);
+    for (const nooit of ["mail", "whatsapp", "netwerk", "planner", "agenda", "inchecken", "assistent"]) expect(vol, nooit).not.toContain(nooit);
     // zonder de vlag verandert er niets, ook niet voor een nieuw bedrijf
     const zonderVlag = menuVoor("personeel", { ...opties, alleenFlexwerk: false, nogGeenKlussen: true }).map((p) => p.sleutel);
     expect(zonderVlag).toContain("planner");

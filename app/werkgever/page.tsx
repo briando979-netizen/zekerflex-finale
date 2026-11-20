@@ -29,7 +29,7 @@ import { EmployerShiftCard } from "@/components/app/EmployerShiftCard";
 import { RecentMessagesPanel } from "@/components/app/RecentMessagesPanel";
 import { EmployerOnboardingWizard } from "@/components/app/EmployerOnboardingWizard";
 import { KlusConceptNudge } from "@/components/app/KlusConceptNudge";
-import { getDict } from "@/lib/i18n/server";
+import { getDict, getLocale } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 import { followerCount } from "@/lib/worker/follows";
 import { inAndroidApp } from "@/lib/app-mode-server";
@@ -118,6 +118,42 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
   // werkgevers-app"); zonder eigen indeling staat alles precies zoals het stond, met dezelfde tussenruimte.
   const zichtbaar = zichtbareSecties("werkgever-start", await getPaginaIndeling("werkgever-start"));
   const marge = startMarges(zichtbaar, { volgers: followers === 0, beoordelingen: pendingReviews.length === 0, berichten: threads.length === 0 });
+  // Met de vlag `publiek-alleen-flexwerk` (20 nov, eigenaar): het startscherm als takenlijst, en alleen wat over klussen
+  // plaatsen en uren goedkeuren gaat. De cijfers en de volgersregel vallen weg; de kop-banner ook.
+  const en = (await getLocale()) === "en";
+  const openFacturen = o.invoices.filter((i) => i.status === "ISSUED").length;
+  const teDoen: { n: number; tekst: string; href: string }[] = [
+    ...(o.kpis.toApprove > 0 ? [{ n: o.kpis.toApprove, tekst: en ? (o.kpis.toApprove === 1 ? "timesheet is waiting for your approval" : "timesheets are waiting for your approval") : o.kpis.toApprove === 1 ? "urenbriefje wacht op je goedkeuring" : "urenbriefjes wachten op je goedkeuring", href: "/werkgever/uren" }] : []),
+    ...(o.kpis.openShifts > 0 ? [{ n: o.kpis.openShifts, tekst: en ? (o.kpis.openShifts === 1 ? "open job still needs people" : "open jobs still need people") : o.kpis.openShifts === 1 ? "open klus zoekt nog mensen" : "open klussen zoeken nog mensen", href: "/werkgever/diensten" }] : []),
+    ...(pendingReviews.length > 0 ? [{ n: pendingReviews.length, tekst: en ? (pendingReviews.length === 1 ? "worker is waiting for your review" : "workers are waiting for your review") : pendingReviews.length === 1 ? "werker wacht op je beoordeling" : "werkers wachten op je beoordeling", href: `/werkgever/diensten/${pendingReviews[0]?.shiftId ?? ""}` }] : []),
+    ...(openFacturen > 0 ? [{ n: openFacturen, tekst: en ? (openFacturen === 1 ? "invoice is open" : "invoices are open") : openFacturen === 1 ? "factuur staat open" : "facturen staan open", href: "/werkgever/facturen" }] : []),
+  ];
+  const teDoenBlok = (
+    <section aria-labelledby="tedoen-kop" className="mb-8 rounded-2xl border border-hair bg-white p-5 shadow-card">
+      <h2 id="tedoen-kop" className="font-display text-lg font-bold text-ink">{en ? "To do" : "Te doen"}</h2>
+      {teDoen.length === 0 ? (
+        <p className="mt-2 text-sm text-neutralx-600">{en ? "Nothing waiting for you. Place a job when you need people." : "Niets wacht op je. Plaats een klus als je mensen nodig hebt."}</p>
+      ) : (
+        <ul className="mt-3 divide-y divide-hair">
+          {teDoen.map((r) => (
+            <li key={r.href + r.tekst}>
+              <Link href={r.href} className="flex items-center justify-between gap-3 py-2.5 text-sm hover:text-brand-600">
+                <span>
+                  <span className="num mr-2 inline-grid h-7 min-w-7 place-items-center rounded-full bg-warn/10 px-2 font-mono text-xs font-bold text-warn">{r.n}</span>
+                  <span className="font-medium text-ink">{r.tekst}</span>
+                </span>
+                <span aria-hidden className="text-neutralx-400">›</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Link href="/werkgever/diensten/nieuw" className="btn-primary mt-4 inline-flex">
+        {t.start.placeShift}
+      </Link>
+    </section>
+  );
+  const zichtbaarFlex = alleenFlexwerk ? zichtbaar.filter((id) => id !== "cijfers" && id !== "volgers") : zichtbaar;
   const onderdelen: Record<string, ReactNode> = {
     cijfers: (
       <div className={kl(marge.cijfers, "grid gap-4 sm:grid-cols-2 lg:grid-cols-4")}>
@@ -297,7 +333,7 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
     <>
       {voorbeeldSoort && <VoorbeeldBalk soort={voorbeeldSoort} />}
       <WelcomeBack name={principal.fullName} labels={t.greet} {...(greetSub ? { subtitle: greetSub } : {})} />
-      {!startModus && <EmployerDashboardHero />}
+      {!startModus && !alleenFlexwerk && <EmployerDashboardHero />}
       {nieuwBedrijf && <WerkruimteKiezer huidig={w.soort} ookPersoneel={w.ookPersoneel} personeelVast={false} kanKiezen alsVraag alleenFlexwerk={alleenFlexwerk} />}
       {!startModus && <KlusConceptNudge />}
       {!companyVerified && !startModus && (
@@ -374,8 +410,9 @@ export default async function WerkgeverStartPage({ searchParams }: { searchParam
       )}
 
       {/* in de startmodus is alles hieronder nog leeg (zie startModus) */}
+      {!startModus && alleenFlexwerk && teDoenBlok}
       {!startModus &&
-        zichtbaar.map((id) => (
+        zichtbaarFlex.map((id) => (
           <Fragment key={id}>{onderdelen[id]}</Fragment>
         ))}
       {/* wisselen of een dashboard toevoegen: de wisselaar bovenaan de zijbalk (components/app/werkruimte/DashboardWisselaar.tsx) */}

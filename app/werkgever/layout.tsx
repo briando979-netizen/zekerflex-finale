@@ -116,15 +116,19 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
     kalender: { href: "/werkgever/kalender", label: t.nav.kalender, icon: <ICalendar /> },
     planner: { href: "/werkgever/planner", label: "Roosterplanner", icon: <ICalendar /> },
     agenda: { href: "/werkgever/agenda", label: t.nav.agenda, icon: <ICalendar /> },
-    // met de vlag publiek-alleen-flexwerk: kalender, roosterplanner en agenda als één ingang (tabbladen op de pagina)
+    // met de vlag publiek-alleen-flexwerk: samengevoegde ingangen met tabbladen op de pagina (lib/werkgever/samen-tabs.ts)
     planning: { href: "/werkgever/kalender", label: "Planning", icon: <ICalendar /> },
+    werkers: { href: "/werkgever/favorieten", label: "Mijn werkers", icon: <IHeart /> },
+    regels: { href: "/werkgever/compliance", label: "Regels en overeenkomsten", icon: <IShield /> },
+    cijfers: { href: "/werkgever/rapportages", label: "Cijfers", icon: <IGrid /> },
     bank: { href: "/werkgever/bank", label: t.nav.bank, icon: <IWallet /> },
     favorieten: { href: "/werkgever/favorieten", label: t.nav.favorieten, icon: <IHeart /> },
     berichten: { href: "/werkgever/berichten", label: t.nav.chat, icon: <IChat /> },
     mail: { href: "/werkgever/mail", label: t.nav.mail, icon: <IMail /> },
     whatsapp: { href: "/werkgever/whatsapp", label: t.nav.whatsapp, icon: <IChat /> },
     geblokkeerd: { href: "/werkgever/geblokkeerd", label: t.nav.geblokkeerd, icon: <IBan /> },
-    uren: { href: "/werkgever/uren", label: t.nav.urenGoedkeuren, icon: <IClock /> },
+    // met de vlag aan heet het kortweg "Uren" (goedkeuren én inchecken zitten er als tabbladen onder)
+    uren: { href: "/werkgever/uren", label: alleenFlexwerk ? (locale === "en" ? "Hours" : "Uren") : t.nav.urenGoedkeuren, icon: <IClock /> },
     inchecken: { href: "/werkgever/inchecken", label: t.nav.inchecken, icon: <IPin /> },
     assistent: { href: "/werkgever/assistent", label: t.nav.assistent, icon: <IChat /> },
     facturen: { href: "/werkgever/facturen", label: t.nav.facturen, icon: <IDoc /> },

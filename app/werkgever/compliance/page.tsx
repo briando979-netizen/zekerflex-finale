@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { PageHeader, Panel, EmptyState, KpiCard, StatusPill, dateShort } from "@/components/app/ui";
 import { getDict } from "@/lib/i18n/server";
+import { SamenTabs } from "@/components/werkgever/SamenTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,7 @@ export default async function WerkgeverCompliancePage() {
   const cp = (await getDict()).compliance;
   return (
     <>
+      <SamenTabs groep="regels" actief="compliance" />
       <PageHeader title={cp.title} subtitle={cp.subtitle} />
 
       <div className="grid gap-4 sm:grid-cols-3">
