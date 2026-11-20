@@ -260,7 +260,8 @@ const plek = (sectie?: MenuSectie) => (sleutel: MenuSleutel): MenuPlek => (secti
 // mailbox, de WhatsApp-koppeling en Wifi/VPN (netwerkpakketten): losse diensten, geen flexwerk.
 // En (eigenaar, "haal dat allemaal weg"): Op locatie (portofoon, toegang op kenteken, sleutelkluis, badges) en
 // Afspraken/Klantenkaart (de agenda voor kappers en garages: branche, geen flexwerk).
-const NIET_FLEXWERK_MENU: readonly MenuSleutel[] = ["telefonie", "reviews", "branche", "studio", "winkel", "website", "mail", "whatsapp", "netwerk", "locatie", "afspraken", "klanten"];
+// En de losse ingang "Handleidingen" (Outline): het hulpcentrum (vraagteken, menu-item Hulp) linkt er al naartoe.
+const NIET_FLEXWERK_MENU: readonly MenuSleutel[] = ["telefonie", "reviews", "branche", "studio", "winkel", "website", "mail", "whatsapp", "netwerk", "locatie", "afspraken", "klanten", "kennisbank"];
 
 // Samenvoegen (20 nov, eigenaar: "voeg samen"): met de vlag aan worden kalender+roosterplanner+agenda één "Planning",
 // uren+inchecken één "Uren", favorieten+geblokkeerd "Mijn werkers", compliance+overeenkomsten "Regels en overeenkomsten",

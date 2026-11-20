@@ -280,7 +280,7 @@ describe("de bedrijfskant met de vlag aan", () => {
     const aan = menuVoor("personeel", opties).map((p) => p.sleutel);
     // de leden staan niet meer los in het menu
     for (const weg of ["kalender", "planner", "agenda", "inchecken", "favorieten", "geblokkeerd", "compliance", "overeenkomsten", "rapportages", "inkaart", "assistent"]) expect(aan, weg).not.toContain(weg);
-    expect(aan).toEqual(["start", "klussen", "planning", "werkers", "berichten", "uren", "facturen", "cijfers", "regels", "bedrijf", "kennisbank", "hulp"]);
+    expect(aan).toEqual(["start", "klussen", "planning", "werkers", "berichten", "uren", "facturen", "cijfers", "regels", "bedrijf", "hulp"]);
     // elke samenvoeging heeft tabbladen die precies de leden dekken, met de eerste als ingang
     for (const s of SAMENVOEGINGEN) {
       const groep = (Object.keys(SAMEN_GROEPEN) as (keyof typeof SAMEN_GROEPEN)[]).map((g) => SAMEN_GROEPEN[g]).find((g) => g.sleutel === s.sleutel);
@@ -330,7 +330,7 @@ describe("de bedrijfskant met de vlag aan", () => {
   it("een nieuw bedrijf zonder klus krijgt met de vlag aan een kort startmenu; na de eerste klus staat alles er weer", () => {
     const opties: MenuOpties = { heeftAfspraken: false, heeftRijschool: false, heeftHoreca: false, horecaModules: [], inApp: false, studio: true, alleenFlexwerk: true };
     const kort = menuVoor("personeel", { ...opties, nogGeenKlussen: true }).map((p) => p.sleutel);
-    expect(kort).toEqual(["start", "klussen", "planning", "berichten", "uren", "facturen", "bedrijf", "kennisbank", "hulp"]);
+    expect(kort).toEqual(["start", "klussen", "planning", "berichten", "uren", "facturen", "bedrijf", "hulp"]);
     // wie klussen heeft, houdt alle personeelsfuncties, samengevoegd (mail, whatsapp en wifi/vpn komen niet terug: geen flexwerk)
     const vol = menuVoor("personeel", { ...opties, nogGeenKlussen: false }).map((p) => p.sleutel);
     for (const terug of ["werkers", "regels", "cijfers"]) expect(vol, terug).toContain(terug);
