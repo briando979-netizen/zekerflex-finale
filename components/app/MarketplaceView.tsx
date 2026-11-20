@@ -11,6 +11,7 @@ import { useFT } from "@/components/i18n/useFT";
 import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 import { SAVED_EVENT, deviceStore, readSaved } from "@/lib/shifts/bewaard";
 import { echteKlussenEerst } from "@/lib/shifts/testklus";
+import { KLUS_TYPE_EMOJI } from "@/lib/shifts/klus-type";
 
 type Sort = "match" | "soonest" | "pay" | "near";
 
@@ -24,7 +25,7 @@ function haversineKm(a: { lat: number; lng: number }, b: { lat: number; lng: num
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 const DAYPARTS = ["morning", "afternoon", "evening"] as const;
-const TYPE_EMOJI = { freelance: ["✌️", "💰", "🧾", "🏖️", "💸"], uitzenden: ["📝", "💰", "🧾", "🏖️", "💸"] } as const;
+const TYPE_EMOJI = KLUS_TYPE_EMOJI;
 
 function KlusTypeExplainer() {
   const t = useFT();
