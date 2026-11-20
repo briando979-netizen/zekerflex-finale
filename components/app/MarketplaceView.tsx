@@ -227,7 +227,7 @@ export function MarketplaceView({
       if (branches.size && !branches.has(categoryOf.get(s.id) ?? "algemeen")) return false;
       const d = new Date(s.startsAt);
       // Favorieten: bedrijven die je volgt (❤️) of waar je al eerder werkte.
-      if (quick.has("favorites") && s.workedHereBefore <= 0 && !s.followed) return false;
+      if (quick.has("favorites") && s.workedHereBefore <= 0 && !s.followed && !s.favorietBijBedrijf) return false;
       if (quick.has("saved") && !saved.has(s.id)) return false;
       if (quick.has("replacement") && !s.isReplacement) return false;
       if (quick.has("tomorrow") && !isTomorrow(d)) return false;

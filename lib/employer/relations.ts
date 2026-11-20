@@ -87,6 +87,18 @@ export async function isBlockedByAny(tenantIds: string[], userId: string): Promi
   return false;
 }
 
+/** Of the given tenants, which ones have this freelancer as a favourite ("Je bent hier favoriet", lib/dashboard/marketplace). */
+export async function tenantsFavoritingUser(tenantIds: string[], userId: string): Promise<Set<string>> {
+  const out = new Set<string>();
+  await Promise.all(
+    [...new Set(tenantIds)].map(async (t) => {
+      const rel = await getEmployerRelations(t);
+      if (rel.favorites.some((f) => f.userId === userId)) out.add(t);
+    }),
+  );
+  return out;
+}
+
 /** Of the given tenants, which ones have this freelancer blocked. */
 export async function tenantsBlockingUser(
   tenantIds: string[],

@@ -10,7 +10,7 @@ import { listReplacementRequests } from "@/lib/replacements/store";
 import { offersForUser, myOfferForShift, type OfferStatus } from "@/lib/offers/store";
 import { reactieVervalt } from "@/lib/offers/verval";
 import { reserveReactieIds } from "@/lib/reservebank/store";
-import { tenantsBlockingUser } from "@/lib/employer/relations";
+import { tenantsBlockingUser, tenantsFavoritingUser } from "@/lib/employer/relations";
 import { payoutEligibility } from "@/lib/fiscal/eligibility";
 import { amsterdamDayKey, amsterdamParts } from "@/lib/time/amsterdam";
 import { followedTenantIds } from "@/lib/worker/follows";
@@ -71,6 +71,8 @@ export interface MarketplaceShift {
   workedHereBefore: number;
   /** the freelancer follows this employer (❤️, lib/worker/follows) */
   followed: boolean;
+  /** het bedrijf heeft deze werker als favoriet (lib/employer/relations): "Je bent hier favoriet · hoge kans" */
+  favorietBijBedrijf?: boolean;
   /** overlaps a shift the freelancer already works: taking it is refused (lib/shifts/worker-overlap) */
   busy?: boolean;
   /** label of the freelancer's own job alert this shift matches (lib/matching/job-alerts) */
@@ -358,6 +360,8 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
 
   const fastPayByTenant = await fastPayAvailableFor(visible.map((s) => s.branch.tenantId));
   const ratingByTenant = await companyRatings(visible.map((s) => s.branch.tenantId));
+  // bedrijven die deze werker als favoriet hebben: "Je bent hier favoriet · hoge kans" op de kaart (lib/employer/relations)
+  const favorietBij = await tenantsFavoritingUser([...new Set(visible.map((s) => s.branch.tenantId))], userId).catch(() => new Set<string>());
   // a missing logo never costs the list: the card falls back to the branch photo
   const beeldByTenant = await getKlusBeelden(visible.map((s) => s.branch.tenantId)).catch(() => new Map<string, KlusBeeld>());
   // klussen van een eigen-testbedrijf (van na de markering) gelden als testklus (lib/admin/eigen-test-kern.ts)
@@ -390,6 +394,7 @@ export async function getMarketplace(userId: string): Promise<MarketplaceData> {
         weekday: amsterdamParts(s.startsAt).weekday,
         workedHereBefore: priorByBranch.get(s.branchId) ?? 0,
         followed: followed.has(s.branch.tenantId),
+        ...(favorietBij.has(s.branch.tenantId) ? { favorietBijBedrijf: true } : {}),
         busy: overlapsAny(busyWindows, s),
         alert: matchingAlert(prefs.jobAlerts, {
           title: s.title,

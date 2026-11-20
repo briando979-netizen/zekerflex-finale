@@ -197,6 +197,8 @@ export function ShiftCard({
         {shift.alert && <p className="mt-1 truncate text-[11px] font-semibold text-brand-700">🔔 {shift.alert}</p>}
         {shift.busy && <p className="mt-1 text-[11px] font-semibold text-neutralx-600">⏰ {c.busy}</p>}
         {shift.followed && <p className="mt-1 text-[11px] font-medium text-neutralx-600">❤️ {t.follow.youFollow}</p>}
+        {/* het bedrijf heeft jou als favoriet (naar YoungOnes' "Je bent hier een favoriet · HOGE KANS") */}
+        {shift.favorietBijBedrijf && <p className="mt-1 text-[11px] font-semibold text-brand-700">⭐ {c.favorietHier}</p>}
         {shift.workedHereBefore > 0 && (
           <p className="mt-1 text-[11px] text-neutralx-400">{c.workedHere(shift.workedHereBefore)}</p>
         )}
