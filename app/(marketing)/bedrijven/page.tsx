@@ -7,10 +7,11 @@ import type { Blok } from "@/lib/ontwerp/paginas";
 import { mediaLijst } from "@/lib/ontwerp/media";
 import { BlokWeergave, type MediaInfo } from "@/components/marketing/ontwerp/Blokken";
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { Photo } from "@/components/marketing/Photo";
-import { SceneMatch, SceneApprove } from "@/components/marketing/Scene";
-import { HeroStage } from "@/components/marketing/HeroStage";
+import { SceneApprove } from "@/components/marketing/Scene";
+import { KopClip } from "@/components/marketing/KopClip";
 import { Reveal } from "@/components/marketing/Reveal";
 import { FaqList } from "@/components/marketing/primitives";
 import { Marquee } from "@/components/marketing/Marquee";
@@ -60,28 +61,57 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
           __html: ldJson([faqPagina(FAQ), serviceJsonLd()]),
         }}
       />
-      {/* ───────────────────────────────────────────────────────────── HERO */}
-      <HeroStage
-        alleenFlexwerk={alleenFlexwerk}
-        content={{
-          eyebrow: t("hero.eyebrow"),
-          titleLine1: t("hero.titleLine1"),
-          titleLine2: t("hero.titleLine2"),
-          lead: t("hero.lead"),
-          ctaPrimary: t("hero.ctaPrimary"),
-          ctaSecondary: t("hero.ctaSecondary"),
-        }}
-        photo={
-          <Photo
-            name="hero"
-            fallback={<SceneMatch />}
-            className="shadow-lift ring-1 ring-white/10"
+      {/* ───────────────────────────────────────────────────────────── HERO (premium, zoals de voorpagina: donker, links de tekst, rechts een staande foto van een vrouw met de bewegende versie eroverheen) */}
+      <section className="relative isolate overflow-hidden bg-[#0C0E12] text-white">
+        {/* telefoon: de foto als vlak bovenaan, de tekst eronder; groter scherm: de tekst links, de foto als strook rechts (dezelfde vrouw als de voorpagina) */}
+        <div className="absolute inset-x-0 top-0 -z-10 h-[22rem] md:inset-y-0 md:left-auto md:h-auto md:w-[40%]">
+          <Image
+            src="/werk/campagne-kop.jpg"
+            alt="Een lachende jonge vrouw in de deuropening van een café, klaar voor haar dienst"
+            fill
             priority
-            rounded="rounded-3xl"
-            sizes="(max-width: 1024px) 100vw, (max-width: 1920px) 44vw, 780px"
+            sizes="(min-width: 768px) 40vw, 100vw"
+            className="object-cover object-[50%_18%] md:object-[50%_28%]"
           />
-        }
-      />
+          {/* dezelfde foto, bewegend; laadt of speelt de video niet, dan zie je gewoon de foto. Zonder geluid, zonder knoppen, niet voor schermlezers. */}
+          <KopClip src="/werk/campagne-kop.mp4" className="absolute inset-0 h-full w-full object-cover object-[50%_18%] md:object-[50%_28%]" />
+          <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#0C0E12] via-[#0C0E12]/30 via-40% to-transparent md:bg-gradient-to-r md:via-[#0C0E12]/40 md:via-25% md:to-50%" />
+        </div>
+        <div className="shell-4k relative pb-8 pt-[15rem] md:py-14 lg:py-16">
+          <div className="max-w-xl md:max-w-sm lg:max-w-xl">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white/80 backdrop-blur transition hover:bg-white/15"
+            >
+              Op zoek naar werk? <span className="text-brand-mint">Ik zoek werk →</span>
+            </Link>
+            <p className="eyebrow mt-5 text-brand-mint">Voor bedrijven</p>
+            <h1 className="fluid-hero mt-3 text-balance font-display font-bold">
+              Personeel nodig?{" "}
+              <span className="bg-gradient-to-r from-brand-mint to-[#8FF0C4] bg-clip-text text-transparent">Zeker van je mensen.</span>
+            </h1>
+            <p className="fluid-lead mt-4 max-w-lg text-white/75">
+              Plaats je klus en ZekerFlex stelt direct passende, geverifieerde mensen voor. Inchecken, uren goedkeuren en facturen lopen in één omgeving.
+            </p>
+            <div className="mt-6 grid gap-3 sm:flex sm:flex-wrap">
+              <Link href="/klus-plaatsen" className="btn-mint text-base">
+                Plaats een klus
+              </Link>
+              <Link href="#hoe-het-werkt" className="btn-ghost-invert text-base">
+                Hoe het werkt
+              </Link>
+            </div>
+            <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-white/70">
+              {["Geverifieerde mensen", "Alleen betalen voor gewerkte uren", "Direct passende kandidaten"].map((p) => (
+                <li key={p} className="flex items-center gap-2">
+                  <Vink />
+                  {p}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
 
       {toonSecties(zichtbaar, {
       // vertrouwensbalk
@@ -439,6 +469,13 @@ function faqPagina(items: { q: string; a: string }[]): Record<string, unknown> {
 }
 
 /* icons */
+function Vink() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden className="flex-shrink-0 text-brand-mint">
+      <path d="M5 12l5 5L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 function IconTarget() { return (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden><circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="2" /><circle cx="12" cy="12" r="3" fill="currentColor" /></svg>); }
 function IconBolt() { return (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" fill="currentColor" /></svg>); }
 function IconShield() { return (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" /><path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>); }
