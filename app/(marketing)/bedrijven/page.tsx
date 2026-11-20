@@ -23,6 +23,7 @@ import { serviceJsonLd, SITE } from "@/lib/seo";
 import { seoMetadata } from "@/lib/ontwerp/seo-store";
 import { getContentValues, lijstRegels } from "@/lib/content/store";
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
+import { zichtbareBandRegels } from "@/lib/marketing/flexwerk-only";
 
 // De homepagina voor bedrijven (11 nov 2026): dit was de homepagina van zekerflex.com. Op verzoek van de
 // eigenaar ziet wie zekerflex.com opent de pagina voor werkzoekenden (app/(marketing)/page.tsx); deze staat
@@ -47,6 +48,8 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
   const zichtbaar = zichtbareSecties(indeling);
   const eigen = await eigenBlokken(indeling, zichtbaar);
   const STEPS = [1, 2, 3].map((n) => ({ n, title: t(`how.s${n}.title`), body: t(`how.s${n}.body`) }));
+  // met de vlag `publiek-alleen-flexwerk` aan: geen software-/website-regels in de band en in de vragen
+  const FAQ = faqVoor(alleenFlexwerk);
   return (
     <>
       {isConcept ? (
@@ -130,7 +133,7 @@ export default async function BedrijvenHomePage({ searchParams }: { searchParams
           )}
         </div>
         <div className="border-t border-white/5 bg-[#0A0C10]">
-          <Marquee items={lijstRegels(t("marquee.items"))} />
+          <Marquee items={zichtbareBandRegels(lijstRegels(t("marquee.items")), alleenFlexwerk)} />
         </div>
       </section>
 
@@ -450,14 +453,20 @@ const FEATURES = [
 
 // De vragen van bedrijven (14 nov: deze pagina is alleen voor bedrijven). De FAQ-gegevens voor zoekmachines
 // (faqPagina, bovenaan) volgen precies deze lijst.
-const FAQ = [
-  { q: "Wat kost personeel via ZekerFlex?", a: "Je betaalt het uurtarief van de kracht plus € 3,50 platformkosten per gewerkt uur, en alleen als er echt gewerkt is. Bij meer uren daalt de platformfee volgens een vaste staffel. Voor personeel is er geen abonnement en zijn er geen opstartkosten; software zoals de horeca- of rijschoolpakketten werkt met een abonnement." },
+const FAQ_BASIS = [
+  { q: "Wat kost personeel via ZekerFlex?", a: "Je betaalt het uurtarief van de kracht plus € 3,50 platformkosten per gewerkt uur, en alleen als er echt gewerkt is. Bij meer uren daalt de platformfee volgens een vaste staffel. Voor personeel is er geen abonnement en zijn er geen opstartkosten." },
   { q: "Hoe plaats ik een klus?", a: "Via Klus plaatsen stel je zonder account een klus samen: functie, plaats, tijden, aantal mensen en tarief. Je ziet meteen wat het kost. Bevalt het, dan zet je de klus met een gratis account online en zoekt ZekerFlex passende, geverifieerde mensen in de buurt." },
   { q: "Werk ik met zzp'ers of met uitzendkrachten?", a: "Allebei kan. Zzp'ers werken met hun eigen KVK-inschrijving, die we controleren tegen het Handelsregister. Uitzendkrachten werken via het ZekerFlex-uitzendbureau: dan is ZekerFlex hun werkgever en regelt de verloning." },
   { q: "Moet ik zelf facturen maken?", a: "Nee. Zodra je de uren hebt goedgekeurd, maakt ZekerFlex de facturen automatisch aan, met de juiste btw-behandeling." },
   { q: "Hoe ondersteunt ZekerFlex bij de Wet DBA?", a: "ZekerFlex legt afspraken vast en signaleert onder meer urenconcentratie en opeenvolgende weken. Zulke hulpmiddelen geven geen garantie over de arbeidsrelatie: de Belastingdienst kijkt ook naar hoe er in de praktijk wordt gewerkt." },
   { q: "Is mijn data veilig?", a: "Voor diensten zoals betalingen, e-mail en verificatie gebruiken we gespecialiseerde aanbieders. Gevoelige gegevens worden waar nodig versleuteld opgeslagen; belangrijke handelingen komen in een auditspoor." },
 ];
+
+/** Zonder de vlag noemt het kostenantwoord ook de software-abonnementen (horeca, rijschool); met de vlag aan alleen personeel. */
+function faqVoor(alleenFlexwerk: boolean): { q: string; a: string }[] {
+  if (alleenFlexwerk) return FAQ_BASIS;
+  return FAQ_BASIS.map((f, i) => (i === 0 ? { ...f, a: `${f.a.replace(/\.$/, "")}; software zoals de horeca- of rijschoolpakketten werkt met een abonnement.` } : f));
+}
 
 /** schema.org FAQPage met precies de vragen die op deze pagina staan. */
 function faqPagina(items: { q: string; a: string }[]): Record<string, unknown> {

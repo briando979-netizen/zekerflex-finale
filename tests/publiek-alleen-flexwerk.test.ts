@@ -17,12 +17,15 @@ vi.mock("@/lib/flags", async (importActual) => {
 import {
   FLAG_ALLEEN_FLEXWERK,
   isNietFlexwerkPad,
+  NIET_FLEXWERK_BAND,
   NIET_FLEXWERK_NAV_KEYS,
   NIET_FLEXWERK_PIJLERS,
   pijlerIsFlexwerk,
   werkruimteIsFlexwerk,
+  zichtbareBandRegels,
   zichtbarePijlers,
 } from "@/lib/marketing/flexwerk-only";
+import { CONTENT_REGISTRY, lijstRegels } from "@/lib/content/store";
 import { AANBOD_KOLOMMEN, ALLES_ONLINE, NAV, SNELLE_ACTIES, VOORBEELDSITES, zichtbareAanbodKolommen, zichtbareNav } from "@/lib/marketing/site-nav";
 import { PIJLERS } from "@/lib/marketing/aanbod";
 import { WERKRUIMTES, menuVoor, type MenuOpties } from "@/lib/werkgever/werkruimte";
@@ -139,6 +142,18 @@ describe("het hoofdmenu met de vlag aan", () => {
       expect(over.some((s) => s.href === "/klussen"), doel).toBe(false);
       expect(over.some((s) => s.href === "/open-diensten"), doel).toBe(false);
     }
+  });
+
+  it("de lopende band op /bedrijven verliest met de vlag aan de software-/website-regels, ook in een eigen versie", () => {
+    const standaard = lijstRegels(CONTENT_REGISTRY.find((c) => c.key === "marquee.items")?.default ?? "");
+    expect(standaard.length).toBe(10);
+    expect(zichtbareBandRegels(standaard, false)).toEqual(standaard);
+    const flex = zichtbareBandRegels(standaard, true);
+    expect(flex).toHaveLength(7);
+    for (const weg of NIET_FLEXWERK_BAND) expect(flex, weg).not.toContain(weg);
+    expect(flex).toContain("Gebouwd voor flexibel werk in Nederland");
+    // een eigen band van de eigenaar met een spatie te veel valt ook mee
+    expect(zichtbareBandRegels(["Snel geregeld", " Meer Google-reviews "], true)).toEqual(["Snel geregeld"]);
   });
 
   it("zichtbarePijlers filtert de pijlers op dezelfde manier", () => {

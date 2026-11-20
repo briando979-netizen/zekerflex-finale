@@ -85,6 +85,18 @@ export function isNietFlexwerkPad(pad: string): boolean {
   return NIET_FLEXWERK_PADEN.some((basis) => schoon === basis || schoon.startsWith(`${basis}/`));
 }
 
+/**
+ * Regels in de lopende band op /bedrijven (tekstregister "marquee.items") die niet over flexwerk gaan. De eigenaar
+ * bewerkt die band zelf (Admin → Huisstijl → Teksten), dus we matchen op de tekst: zo'n regel valt met de vlag aan
+ * weg, ook als hij in een eigen versie van de band staat (20 nov: "Meer Google-reviews" stond nog in beeld).
+ */
+export const NIET_FLEXWERK_BAND: readonly string[] = ["Software voor horeca en rijscholen", "Een eigen website op je domein", "Meer Google-reviews"];
+
+/** De band zonder de niet-flexwerk-regels als de vlag aan is; anders ongewijzigd. */
+export function zichtbareBandRegels(regels: readonly string[], alleenFlexwerk: boolean): string[] {
+  return alleenFlexwerk ? regels.filter((r) => !NIET_FLEXWERK_BAND.includes(r.trim())) : [...regels];
+}
+
 /** Alleen de flexwerk-pijlers houden als de vlag aan is; anders de lijst ongewijzigd. */
 export function zichtbarePijlers<T extends { sleutel: PijlerSleutel }>(pijlers: readonly T[], alleenFlexwerk: boolean): T[] {
   return alleenFlexwerk ? pijlers.filter((p) => pijlerIsFlexwerk(p.sleutel)) : [...pijlers];
