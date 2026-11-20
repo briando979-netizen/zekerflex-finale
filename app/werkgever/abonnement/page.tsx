@@ -5,6 +5,7 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { cookieStringIsApp } from "@/lib/app-mode";
 import { huidigAbonnement, planRegels, uitbreidingen } from "@/lib/abonnement/overzicht";
 import { AbonnementScherm } from "@/components/werkgever/AbonnementScherm";
+import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
 export const dynamic = "force-dynamic";
 
@@ -17,5 +18,7 @@ export default async function AbonnementPage() {
   const rij = tenantId ? await prisma.apiSubscription.findUnique({ where: { tenantId }, select: { planKey: true, status: true, currentPeriodEnd: true } }) : null;
   const huidig = huidigAbonnement(rij);
   const inApp = cookieStringIsApp((await cookies()).toString());
-  return <AbonnementScherm huidig={huidig} plannen={planRegels(huidig)} groepen={uitbreidingen()} inApp={inApp} />;
+  // vlag `publiek-alleen-flexwerk`: dan alleen de flexwerk-uitbreidingen (de SaaS-plannen blijven altijd)
+  const alleenFlexwerk = await alleenFlexwerkAan().catch(() => false);
+  return <AbonnementScherm huidig={huidig} plannen={planRegels(huidig)} groepen={uitbreidingen(alleenFlexwerk)} inApp={inApp} />;
 }

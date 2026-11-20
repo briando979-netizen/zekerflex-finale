@@ -1,5 +1,6 @@
 import { SAAS_PLANS, SAAS_PLAN_KEYS, isSaasPlanKey, type SaasPlanKey } from "@/lib/billing/saas-plans";
 import { AANBOD, PIJLERS, aanbodHref, type PijlerSleutel } from "@/lib/marketing/aanbod";
+import { zichtbarePijlers } from "@/lib/marketing/flexwerk-only";
 
 // ---------------------------------------------------------------------------
 // Scherm "Abonnement en uitbreidingen" (werkgever): wat heb je, wat kun je erbij nemen. Zuiver en
@@ -79,8 +80,10 @@ export interface UitbreidingGroep {
 /** Items die we niet tonen: alles wat via de bank loopt (staat uit). */
 const verborgen = (naam: string, slug: string) => /bank|betaalverzoek/i.test(`${naam} ${slug}`);
 
-export function uitbreidingen(): UitbreidingGroep[] {
-  return PIJLERS.map((pl) => ({
+// alleenFlexwerk: vlag `publiek-alleen-flexwerk` — dan alleen de flexwerk-pijlers (personeel, geld); online/branche vallen weg.
+// De SaaS-plannen (planRegels) blijven; dit filtert alleen de losse uitbreidingen uit het aanbod.
+export function uitbreidingen(alleenFlexwerk = false): UitbreidingGroep[] {
+  return zichtbarePijlers(PIJLERS, alleenFlexwerk).map((pl) => ({
     pijler: pl.sleutel,
     naam: pl.naam,
     items: AANBOD.filter((a) => a.pijler === pl.sleutel && !verborgen(a.naam, a.slug)).map((a) => ({
