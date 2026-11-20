@@ -1,5 +1,8 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BRANCHE_OPTIES, brancheSamenvatting, isBranche, maakBrancheKeuze, standaardFilter } from "@/lib/shifts/branche-keuze";
+import { ALLE_BRANCHES_ICOON, BRANCHE_OPTIES, brancheSamenvatting, isBranche, maakBrancheKeuze, standaardFilter } from "@/lib/shifts/branche-keuze";
+import { FREELANCER_DICTS } from "@/lib/i18n/freelancer";
 
 const m = vi.hoisted(() => ({ kv: new Map<string, unknown>(), grants: [{ role: "FREELANCER" }] as { role: string }[], loggedIn: true }));
 
@@ -110,5 +113,31 @@ describe("/api/me/branches", () => {
 
   it("valt onder het wissen van gegevens (AVG)", () => {
     expect(ERASABLE_KV_PREFIXES).toContain("werker-branches:");
+  });
+});
+
+// 20 nov 2026: het branche-scherm bij de start als bij YoungOnes: elke branche een rij met een eigen pictogram, "Alle
+// branches" bovenaan, en twee knoppen (Bekijk de klussen / Maak je profiel af) in de vijf talen van de werker-app.
+describe("branche-rijen met pictogram en de twee knoppen", () => {
+  it("elke branche heeft een eigen pictogram, en 'alle branches' ook", () => {
+    const iconen = BRANCHE_OPTIES.map((o) => o.icoon);
+    for (const i of iconen) expect(i.length).toBeGreaterThan(0);
+    expect(new Set(iconen).size).toBe(iconen.length);
+    expect(ALLE_BRANCHES_ICOON.length).toBeGreaterThan(0);
+    expect(iconen).not.toContain(ALLE_BRANCHES_ICOON);
+  });
+
+  it("de knoppen in vijf talen, en de kaart toont rijen met een tegel in plaats van losse chips", () => {
+    for (const [taal, d] of Object.entries(FREELANCER_DICTS)) {
+      expect(d.start.brancheBekijk.length, taal).toBeGreaterThan(3);
+      expect(d.start.brancheProfiel.length, taal).toBeGreaterThan(3);
+      if (taal !== "nl") expect(d.start.brancheBekijk, taal).not.toBe(FREELANCER_DICTS.nl.start.brancheBekijk);
+    }
+    const s = readFileSync(join(process.cwd(), "components/app/WerkerStartWizard.tsx"), "utf8");
+    expect(s).toContain("{ALLE_BRANCHES_ICOON}");
+    expect(s).toContain("{o.icoon}");
+    expect(s).toContain('bewaarBranches("klussen")');
+    expect(s).toContain('bewaarBranches("profiel")');
+    expect(s).not.toContain("rounded-full border px-4 py-2");
   });
 });

@@ -6,10 +6,36 @@ import { SHIFT_CATEGORIES, type ShiftCategoryKey } from "@/lib/shifts/category";
 export interface BrancheOptie {
   key: ShiftCategoryKey;
   label: string;
+  /** het pictogram (emoji) in de keuzelijst bij de start, zoals de branche-rijen in de app van YoungOnes (20 nov) */
+  icoon: string;
 }
 
+// Eén herkenbaar pictogram per branche; emoji omdat die in elke taal en in de donkere modus gewoon werken en de
+// app niets hoeft in te laden. "Alle branches" heeft zijn eigen pictogram (ALLE_BRANCHES_ICOON).
+const ICOON: Record<ShiftCategoryKey, string> = {
+  retail: "🛍️",
+  horeca: "🧑‍🍳",
+  logistiek: "📦",
+  productie: "🏭",
+  schoonmaak: "🧹",
+  evenement: "🎪",
+  promotie: "📢",
+  beveiliging: "🛡️",
+  zorg: "🩺",
+  kinderopvang: "🧸",
+  kantoor: "💻",
+  bouw: "🔧",
+  auto: "🚲",
+  agrarisch: "🌱",
+  algemeen: "💁",
+};
+
+export const ALLE_BRANCHES_ICOON = "🤩";
+
+export const brancheIcoon = (k: ShiftCategoryKey): string => ICOON[k];
+
 /** Wat je kunt kiezen, in de volgorde van de rest van de app. "Overig" hoort er niet bij: dat is geen branche. */
-export const BRANCHE_OPTIES: BrancheOptie[] = SHIFT_CATEGORIES.filter((c) => c.key !== "algemeen").map((c) => ({ key: c.key, label: c.label }));
+export const BRANCHE_OPTIES: BrancheOptie[] = SHIFT_CATEGORIES.filter((c) => c.key !== "algemeen").map((c) => ({ key: c.key, label: c.label, icoon: ICOON[c.key] }));
 
 const GELDIG = new Set<string>(BRANCHE_OPTIES.map((o) => o.key));
 

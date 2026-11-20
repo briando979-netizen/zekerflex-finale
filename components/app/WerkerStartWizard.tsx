@@ -1,17 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useFT } from "@/components/i18n/useFT";
 import { TIJDLIJN_VOLGORDE, stapVanTotaal, tijdlijnStappen, volgendeStap, type TijdlijnSleutel } from "@/lib/onboarding/laat-weten";
 import { vulIn } from "@/lib/i18n/vul-in";
-import { BRANCHE_OPTIES, brancheSamenvatting, type BrancheKeuze } from "@/lib/shifts/branche-keuze";
+import { ALLE_BRANCHES_ICOON, BRANCHE_OPTIES, brancheSamenvatting, type BrancheKeuze } from "@/lib/shifts/branche-keuze";
 
 type Kind = "zzp" | "flexwerker" | "uitzendkracht";
 type StepKey = TijdlijnSleutel;
 
 const KINDS: Kind[] = ["zzp", "flexwerker", "uitzendkracht"];
+
+// Een branche is een rij met een pictogram-tegel en de naam (zoals het branche-scherm van YoungOnes, 20 nov): gekozen = rand
+// in de merkkleur plus een vinkje, niet alleen een kleur (ook te zien zonder kleur).
+const BRANCHE_RIJ = "flex min-h-[44px] items-center gap-3 rounded-xl border p-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500";
+const BRANCHE_RIJ_AAN = "border-brand-500 bg-brand-50";
+const BRANCHE_RIJ_UIT = "border-hairstrong bg-white hover:border-brand-500";
+const BRANCHE_TEGEL = "grid h-10 w-10 flex-shrink-0 place-items-center rounded-lg bg-paper-soft text-xl leading-none";
 
 /**
  * De start van een nieuwe werker, zoals de start van een werkgever: eerst kiezen welke richting
@@ -59,6 +66,7 @@ export function WerkerStartWizard({
   const alleGekozen = gekozen.size === BRANCHE_OPTIES.length;
   const [brancheBusy, setBrancheBusy] = useState(false);
   const [brancheFout, setBrancheFout] = useState<string | null>(null);
+  const kaartRef = useRef<HTMLElement>(null);
 
   // na de ID-check staat de richting vast in de start; wijzigen kan dan onder Fiscaal (app/api/me/richting)
   const richtingVast = Boolean(identiteitIngestuurd ?? profileComplete);
@@ -81,7 +89,11 @@ export function WerkerStartWizard({
     });
   }
 
-  async function bewaarBranches() {
+  /**
+   * Twee knoppen, zoals bij YoungOnes: "Bekijk de klussen" bewaart de keuze en scrolt naar de lijst eronder (de volgende stap
+   * staat dan open bovenaan); "Maak je profiel af" bewaart en opent meteen de stap Je gegevens.
+   */
+  async function bewaarBranches(doel: "klussen" | "profiel") {
     if (brancheBusy) return;
     if (gekozen.size === 0) {
       setBrancheFout(t.brancheKies);
@@ -104,6 +116,11 @@ export function WerkerStartWizard({
       setKeuze((d as { keuze: BrancheKeuze }).keuze);
       setOpen("gegevens");
       router.refresh();
+      if (doel === "klussen" && kaartRef.current) {
+        // naar de klussen onder de kaart; de bovenkant van de lijst komt net onder de kopbalk
+        const onder = kaartRef.current.getBoundingClientRect().bottom + window.scrollY - 72;
+        window.scrollTo({ top: Math.max(0, onder), behavior: "smooth" });
+      }
     } catch {
       setBrancheFout(t.saveError);
     } finally {
@@ -158,7 +175,7 @@ export function WerkerStartWizard({
   if (gesloten) return null;
 
   return (
-    <section className="mb-6 overflow-hidden rounded-2xl border border-hair bg-white shadow-sm" aria-labelledby="werker-start-titel">
+    <section ref={kaartRef} className="mb-6 overflow-hidden rounded-2xl border border-hair bg-white shadow-sm" aria-labelledby="werker-start-titel">
       <div className="relative bg-gradient-to-br from-brand-700 via-brand-700 to-brand-500 px-5 pb-8 pt-5 text-white">
         <button
           type="button"
@@ -173,8 +190,11 @@ export function WerkerStartWizard({
         <p className="mt-1 text-sm text-white/85" role="status">
           {stap ? `${vulIn(t.stapVan, { n: stap.n, totaal: stap.totaal })}: ${label[stap.sleutel]}` : t.alleKlaar}
         </p>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/20" role="progressbar" aria-label={t.progress.replace("{done}", String(completed)).replace("{total}", String(ORDER.length))} aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-          <div className="h-full rounded-full bg-white transition-all" style={{ width: `${pct}%` }} />
+        {/* de voortgang als losse segmenten, één per stap (zoals de balk boven de start van YoungOnes, 20 nov): klaar = wit, aan de beurt = half */}
+        <div className="mt-3 flex gap-1.5" role="progressbar" aria-label={t.progress.replace("{done}", String(completed)).replace("{total}", String(ORDER.length))} aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+          {stappen.map(({ key: sk, stand: ss }) => (
+            <span key={sk} className={`h-1.5 flex-1 rounded-full transition-colors ${ss === "klaar" ? "bg-white" : ss === "actief" ? "bg-white/60" : "bg-white/20"}`} aria-hidden />
+          ))}
         </div>
       </div>
 
@@ -311,38 +331,37 @@ export function WerkerStartWizard({
                 {isOpen && k === "branches" && (
                   <div className="mt-3 space-y-3">
                     <p className="text-xs text-neutralx-500">{t.brancheHint}</p>
-                    <div className="flex flex-wrap gap-2" role="group" aria-label={t.brancheStep}>
+                    <div className="grid gap-2 sm:grid-cols-2" role="group" aria-label={t.brancheStep}>
                       <button
                         type="button"
                         aria-pressed={alleGekozen}
                         onClick={() => setGekozen(alleGekozen ? new Set() : new Set(BRANCHE_OPTIES.map((o) => o.key)))}
-                        className={`min-h-[44px] rounded-full border px-4 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
-                          alleGekozen ? "border-brand-500 bg-brand-500 text-white" : "border-hairstrong text-ink hover:border-brand-500"
-                        }`}
+                        className={`${BRANCHE_RIJ} ${alleGekozen ? BRANCHE_RIJ_AAN : BRANCHE_RIJ_UIT}`}
                       >
-                        {t.alleBranches}
+                        <span className={BRANCHE_TEGEL} aria-hidden>{ALLE_BRANCHES_ICOON}</span>
+                        <span className="flex-1 text-sm font-semibold text-ink">{t.alleBranches}</span>
+                        {alleGekozen && <span className="text-sm font-bold text-brand-600" aria-hidden>✓</span>}
                       </button>
                       {BRANCHE_OPTIES.map((o) => {
                         const aan = gekozen.has(o.key);
                         return (
-                          <button
-                            key={o.key}
-                            type="button"
-                            aria-pressed={aan}
-                            onClick={() => wissel(o.key)}
-                            className={`min-h-[44px] rounded-full border px-4 py-2 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 ${
-                              aan ? "border-brand-500 bg-brand-50 font-semibold text-ink" : "border-hairstrong text-neutralx-700 hover:border-brand-500"
-                            }`}
-                          >
-                            {ft.cat[o.key] ?? o.label}
+                          <button key={o.key} type="button" aria-pressed={aan} onClick={() => wissel(o.key)} className={`${BRANCHE_RIJ} ${aan ? BRANCHE_RIJ_AAN : BRANCHE_RIJ_UIT}`}>
+                            <span className={BRANCHE_TEGEL} aria-hidden>{o.icoon}</span>
+                            <span className={`flex-1 text-sm ${aan ? "font-semibold text-ink" : "text-neutralx-700"}`}>{ft.cat[o.key] ?? o.label}</span>
+                            {aan && <span className="text-sm font-bold text-brand-600" aria-hidden>✓</span>}
                           </button>
                         );
                       })}
                     </div>
                     {brancheFout && <p role="alert" className="rounded-lg bg-crit/10 px-3 py-2 text-sm text-crit">{brancheFout}</p>}
-                    <button type="button" onClick={() => void bewaarBranches()} disabled={brancheBusy} className="btn-primary min-h-[44px] text-sm disabled:opacity-50">
-                      {brancheBusy ? t.saving : t.pick}
-                    </button>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <button type="button" onClick={() => void bewaarBranches("klussen")} disabled={brancheBusy} className="btn-primary min-h-[44px] flex-1 text-sm disabled:opacity-50">
+                        {brancheBusy ? t.saving : t.brancheBekijk}
+                      </button>
+                      <button type="button" onClick={() => void bewaarBranches("profiel")} disabled={brancheBusy} className="btn-ghost min-h-[44px] flex-1 border border-hairstrong text-sm font-semibold disabled:opacity-50">
+                        {t.brancheProfiel}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
