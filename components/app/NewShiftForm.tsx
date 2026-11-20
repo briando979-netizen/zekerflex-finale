@@ -464,6 +464,29 @@ export function NewShiftForm({
             placeholder={n.kledingPlaceholder}
             className="field-input"
           />
+          {/* vaste keuzes (naar YoungOnes' kledingvoorschriften): één klik zet de regel in het veld, nog eens klikken haalt hem weg */}
+          <span className="mt-2 flex flex-wrap gap-1.5">
+            {n.kledingKeuzes.split("|").map((keuze) => {
+              const aan = dresscode.split(/\s*[;,\n]\s*/).some((r) => r.trim().toLowerCase() === keuze.toLowerCase());
+              return (
+                <button
+                  key={keuze}
+                  type="button"
+                  aria-pressed={aan}
+                  onClick={() =>
+                    setDresscode((d) => {
+                      const regels = d.split(/\s*[;,\n]\s*/).map((r) => r.trim()).filter(Boolean);
+                      const zonder = regels.filter((r) => r.toLowerCase() !== keuze.toLowerCase());
+                      return (aan ? zonder : [...zonder, keuze]).join(", ");
+                    })
+                  }
+                  className={`rounded-full border px-2.5 py-1 text-xs ${aan ? "border-ink bg-ink text-white" : "border-hair bg-white text-neutralx-700 hover:border-brand-300"}`}
+                >
+                  {keuze}
+                </button>
+              );
+            })}
+          </span>
         </label>
 
 

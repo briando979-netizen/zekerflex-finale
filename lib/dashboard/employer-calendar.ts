@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import type { Principal } from "@/lib/auth";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getDict } from "@/lib/i18n/server";
+import { listCounterOffers } from "@/lib/offers/store";
 import { amsterdamDayKey, amsterdamParts, amsterdamToUtc } from "@/lib/time/amsterdam";
 
 // ---------------------------------------------------------------------------
@@ -19,6 +20,8 @@ export interface CalShift {
   positions: number;
   filled: number;
   status: string;
+  /** open reacties op deze klus (naar YoungOnes' "n reacties"-chip in de kalender) */
+  reacties: number;
 }
 
 export interface CalendarMonth {
@@ -91,6 +94,15 @@ export async function getEmployerCalendarMonth(
     orderBy: { startsAt: "asc" },
   });
 
+  // open reacties per klus (een storing in de KV laat de kalender gewoon staan, zonder chips)
+  const perKlus = new Map<string, number>();
+  try {
+    const ids = new Set(rows.map((r) => r.id));
+    for (const o of await listCounterOffers(500)) if (o.status === "pending" && ids.has(o.shiftId)) perKlus.set(o.shiftId, (perKlus.get(o.shiftId) ?? 0) + 1);
+  } catch {
+    /* geen reacties te lezen */
+  }
+
   const shifts: CalShift[] = rows.map((s) => ({
     id: s.id,
     title: s.title,
@@ -100,6 +112,7 @@ export async function getEmployerCalendarMonth(
     positions: s.positions,
     filled: s._count.assignments,
     status: s.status,
+    reacties: perKlus.get(s.id) ?? 0,
   }));
 
   const prevD = new Date(Date.UTC(year, month - 1, 1));

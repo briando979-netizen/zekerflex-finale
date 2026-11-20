@@ -113,6 +113,8 @@ export interface SnelVoorinvulling {
   tariefCents: number;
   branchId: string;
   annuleerUren: number;
+  omschrijving: string;
+  dresscode: string;
 }
 
 export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "nl", voorinvulling }: { branches: { id: string; name: string; city: string | null }[]; sjablonen: SnelSjabloon[]; minRateCents: number; t: SnelTeksten; locale?: "nl" | "en"; voorinvulling?: SnelVoorinvulling }) {
@@ -208,8 +210,8 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
       <input type="hidden" name="branchId" value={branchId} />
       <input type="hidden" name="templateKey" value={sjabloon?.key ?? ""} />
       <input type="hidden" name="title" value={titel} />
-      <input type="hidden" name="description" value={sjabloon?.description ?? ""} />
-      <input type="hidden" name="dresscode" value={sjabloon?.dresscode ?? ""} />
+      <input type="hidden" name="description" value={sjabloon?.description ?? voorinvulling?.omschrijving ?? ""} />
+      <input type="hidden" name="dresscode" value={sjabloon?.dresscode ?? voorinvulling?.dresscode ?? ""} />
       <input type="hidden" name="startsAt" value={datum && van ? `${datum}T${van}` : ""} />
       <input type="hidden" name="endsAt" value={datum && tot ? `${datum}T${tot}` : ""} />
       <input type="hidden" name="breakMinutes" value="0" />

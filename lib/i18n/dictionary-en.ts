@@ -210,6 +210,7 @@ export const en: Dict = {
     legendOpen: "Open / matching",
     legendFilled: "Filled",
     legendDone: "Completed / draft",
+    reacties: "{n} reactions",
     weekdays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     months: [
       "January", "February", "March", "April", "May", "June",
@@ -1801,6 +1802,7 @@ export const en: Dict = {
     schrijfVoorMij: "✨ Write for me",
     kleding: "Dress code",
     kledingPlaceholder: "E.g. safety shoes required, no jewellery, work clothes are provided…",
+    kledingKeuzes: "Sturdy shoes|Safety shoes S3|Black trousers|Plain jumper or t-shirt|Work clothing on site|Safety vest on site|No jewellery|Long hair tied back|Smart clothing|Company clothing is provided",
     uitzendbureau: "Via the ZekerFlex temp agency",
     uitzendbureauUitleg: "Only temp workers (paid via ZekerFlex) can respond to this — freelancers and flex workers can see the job, but cannot respond to it.",
     start: "Start",

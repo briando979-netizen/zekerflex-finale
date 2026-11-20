@@ -25,7 +25,7 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
   const kopie = kopieId
     ? await prisma.shift.findFirst({
         where: { AND: [{ id: kopieId }, { branch: scope.branchIds ? { id: { in: scope.branchIds } } : { tenantId: { in: scope.tenantIds } } }] },
-        select: { title: true, startsAt: true, endsAt: true, positions: true, hourlyRateCents: true, branchId: true, annuleerUren: true },
+        select: { title: true, description: true, dresscode: true, startsAt: true, endsAt: true, positions: true, hourlyRateCents: true, branchId: true, annuleerUren: true },
       })
     : null;
   const voorinvulling = kopie
@@ -37,6 +37,8 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
         tariefCents: kopie.hourlyRateCents,
         branchId: kopie.branchId,
         annuleerUren: kopie.annuleerUren,
+        omschrijving: kopie.description ?? "",
+        dresscode: kopie.dresscode ?? "",
       }
     : undefined;
 

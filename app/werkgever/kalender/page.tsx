@@ -116,6 +116,11 @@ export default async function KalenderPage(
                     >
                       {s.startsAt.toLocaleTimeString(localeTag, { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" })}{" "}
                       <span className="sr-only sm:not-sr-only">{s.title}</span>
+                      {/* bezetting en open reacties in de cel (naar YoungOnes): "0/1 · 3 reacties" */}
+                      <span className="num ml-1 hidden text-[10px] opacity-80 sm:inline">{s.filled}/{s.positions}</span>
+                      {s.reacties > 0 && (
+                        <span className="num ml-1 hidden rounded-full bg-white/80 px-1 text-[10px] font-bold text-ink sm:inline">{fmt(t.calendar.reacties, { n: s.reacties })}</span>
+                      )}
                     </Link>
                   ))}
                   {cell.shifts.length > 3 && (
