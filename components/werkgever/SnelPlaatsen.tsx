@@ -145,6 +145,18 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
     return () => { clearTimeout(timer); ctrl.abort(); };
   }, [stap, titel, datum, van, tariefCent]);
 
+  // "Bereikt ±N werkers" (naar YoungOnes): geverifieerde werkers binnen 40 km van de vestiging (api/werkgever/bereik)
+  const [bereik, setBereik] = useState<number | null>(null);
+  useEffect(() => {
+    if (!branchId) return;
+    const ctrl = new AbortController();
+    fetch(`/api/werkgever/bereik?branchId=${encodeURIComponent(branchId)}`, { cache: "no-store", signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d && typeof d.bereik === "number") setBereik(d.bereik); })
+      .catch(() => undefined);
+    return () => ctrl.abort();
+  }, [branchId]);
+
   // het voorbeeld rechts: wat de werker straks ziet
   const vestiging = branches.find((b) => b.id === branchId) ?? branches[0];
   const datumLabel = datum
@@ -316,6 +328,9 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
           <p className="num pt-1 text-xl font-bold text-ink">{tariefCent > 0 ? `${tariefLabel}/u` : "€ –"}</p>
         </div>
       </div>
+      {bereik !== null && bereik > 0 && (
+        <p className="mt-2 text-xs font-semibold text-ink">{bereik === 1 ? n.voorbeeldBereikEen : fmt(n.voorbeeldBereik, { n: bereik })}</p>
+      )}
       <p className="mt-2 text-xs text-neutralx-400">{n.voorbeeldUitleg}</p>
     </aside>
     </div>

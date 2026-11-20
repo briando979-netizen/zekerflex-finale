@@ -11,6 +11,7 @@ import { mailPrefsView } from "@/lib/mail/prefs";
 import { MailPrefsToggles } from "@/components/marketing/MailPrefsToggles";
 import { FastPaySettings } from "@/components/werkgever/FastPaySettings";
 import { VolumeCard } from "@/components/werkgever/VolumeCard";
+import { MaxUrenInstelling } from "@/components/werkgever/MaxUrenInstelling";
 import { getDict } from "@/lib/i18n/server";
 import { fmt } from "@/lib/i18n/dictionaries";
 
@@ -115,6 +116,10 @@ export default async function WerkgeverBedrijfPage() {
       </div>
 
       <div className="mt-6 space-y-6">
+        {/* klus-instellingen (naar YoungOnes): maximum uren per werker per 12 maanden, lib/werkgever/max-uren.ts */}
+        <Panel title={c.maxUrenTitel}>
+          <MaxUrenInstelling initial={extra.maxUrenPerWerker ?? 0} />
+        </Panel>
         <VolumeCard />
         <FastPaySettings />
       </div>

@@ -13,6 +13,8 @@ import { isTestklus } from "@/lib/shifts/testklus";
 import { isEigenTestKlus } from "@/lib/admin/eigen-test-kern";
 import { leesEigenTest } from "@/lib/admin/eigen-test";
 import { isTestwerker } from "@/lib/testwerker/adres";
+import { getOrgProfileExtra } from "@/lib/profile/store";
+import { dienstUren, pastBinnenMaxUren, urenBijBedrijf } from "@/lib/werkgever/max-uren";
 
 // ---------------------------------------------------------------------------
 // Marketplace self-apply: a verified freelancer browses OPEN shifts and takes
@@ -74,6 +76,7 @@ export async function applyToShift(
       status: true,
       startsAt: true,
       endsAt: true,
+      breakMinutes: true,
       positions: true,
       viaUitzendbureau: true,
       visibility: true,
@@ -94,6 +97,14 @@ export async function applyToShift(
   }
   if (await isBlockedByAny([shift.branch.tenantId], userId)) {
     throw AppError.forbidden("Deze opdrachtgever neemt op dit moment geen aanmeldingen van je aan.").metSleutel("apply.opdrachtgeverWeigert");
+  }
+  // maximum uren per werker bij dit bedrijf (lib/werkgever/max-uren.ts): gewerkt + ingepland in 12 maanden
+  const max = (await getOrgProfileExtra(shift.branch.tenantId).catch(() => ({}) as { maxUrenPerWerker?: number })).maxUrenPerWerker;
+  if (max && max > 0) {
+    const al = await urenBijBedrijf(shift.branch.tenantId, profile.id);
+    if (!pastBinnenMaxUren(al, dienstUren({ startsAt: shift.startsAt, endsAt: shift.endsAt, breakMinutes: shift.breakMinutes }), max)) {
+      throw AppError.precondition(`Je zit aan het maximum van ${max} uur per jaar bij dit bedrijf.`).metSleutel("apply.maxUren", { max });
+    }
   }
   if (shift.visibility === "POOL_ONLY" && !(await isInvitedToPoolOnlyShift(shiftId, userId))) {
     throw AppError.forbidden("Deze dienst is nog niet open voor aanmeldingen.").metSleutel("apply.nietOpen");

@@ -25,6 +25,8 @@ export interface OrgProfileExtra {
   splitByCostCentre?: boolean;
   /** the PO numbers / cost centres selectable when placing a shift */
   costCentres?: string[];
+  /** maximum uren per werker bij dit bedrijf in 12 maanden (lib/werkgever/max-uren.ts); 0 of leeg = geen grens */
+  maxUrenPerWerker?: number;
   /** employer onboarding wizard answers + which steps are marked done */
   onboarding?: {
     role?: string;

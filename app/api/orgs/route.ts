@@ -5,6 +5,7 @@ import { AppError, toErrorBody } from "@/lib/errors";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { getOrgProfileExtra, saveOrgProfileExtra } from "@/lib/profile/store";
 import { prisma } from "@/lib/prisma";
+import { MAX_UREN_HOOGSTE } from "@/lib/werkgever/max-uren";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,6 +38,8 @@ const schema = z.object({
   billingEmail: z.string().max(200).optional(),
   splitByCostCentre: z.boolean().optional(),
   costCentres: z.array(z.string().trim().min(1).max(60)).max(50).optional(),
+  /** maximum uren per werker per 12 maanden (lib/werkgever/max-uren.ts); 0 = geen grens */
+  maxUrenPerWerker: z.number().int().min(0).max(MAX_UREN_HOOGSTE).optional(),
 });
 
 export async function PUT(request: Request): Promise<NextResponse> {
@@ -52,6 +55,7 @@ export async function PUT(request: Request): Promise<NextResponse> {
       ...(input.billingEmail !== undefined ? { billingEmail: input.billingEmail } : {}),
       ...(input.splitByCostCentre !== undefined ? { splitByCostCentre: input.splitByCostCentre } : {}),
       ...(input.costCentres !== undefined ? { costCentres: input.costCentres } : {}),
+      ...(input.maxUrenPerWerker !== undefined ? { maxUrenPerWerker: input.maxUrenPerWerker } : {}),
     });
     return NextResponse.json({ profile });
   } catch (err) {
