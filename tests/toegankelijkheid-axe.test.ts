@@ -31,9 +31,13 @@ describe("toegankelijkheid (axe)", () => {
     expect(bron).toContain('ZekerFlex{" "}<span');
   });
 
-  it("het prijslabel op de klussenkaart houdt in het donker donkere tekst op goud", () => {
-    // contrastmeting werker-app 13 nov: text-ink werd in het donker bijna wit op bg-money-bright (1,5:1)
-    expect(lees("components/app/ShiftCard.tsx")).toMatch(/bg-money-bright[^"]*text-ink/);
+  it("het prijslabel op de klussenkaart staat niet als donkere tekst op goud zonder donkere regel", () => {
+    // contrastmeting werker-app 13 nov: text-ink werd in het donker bijna wit op bg-money-bright (1,5:1). Sinds 20 nov
+    // (de kaart van YoungOnes) staat het tarief in de voet als gewone tekst, zonder gouden label op de foto; de regels in
+    // globals.css blijven voor de andere plekken met zo'n label.
+    const kaart = lees("components/app/ShiftCard.tsx");
+    expect(kaart).not.toMatch(/bg-money-bright[^"]*text-ink/);
+    expect(kaart).toMatch(/font-display text-lg font-bold text-ink">\{moneyExact\(shift\.hourlyRateCents\)\}/);
     const css = lees("app/globals.css");
     expect(css).toContain('.app-scope[data-theme="dark"] .bg-money-bright.text-ink,');
     expect(css).toContain('.app-scope[data-theme="dark"] .bg-money-bright .text-ink { color: #0C0E12 !important; }');
