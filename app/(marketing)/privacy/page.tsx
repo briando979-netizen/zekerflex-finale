@@ -70,7 +70,7 @@ export default function PrivacyPage() {
       />
       <LegalSection
         heading="Diensten verbeteren"
-        body="We analyseren geaggregeerd hoe bezoekers het platform gebruiken om onze diensten te verbeteren, op grond van ons gerechtvaardigd belang. Dit gebeurt zonder cookies en zonder externe trackers; zie het cookiebeleid. We bewaren bezoekstatistieken 13 maanden; daarna worden ze automatisch verwijderd."
+        body="We meten hoe bezoekers het platform gebruiken om onze diensten te verbeteren en storingen te vinden, op grond van ons gerechtvaardigd belang: welke pagina's worden bekeken, waarop wordt geklikt, hoe ver iemand scrolt en hoe lang een pagina in beeld is. Dit gebeurt zonder cookies en zonder externe trackers, op onze eigen servers in Nederland; zie het cookiebeleid. Ben je ingelogd, dan koppelen we dit gebruik en je inlogmomenten aan je account, zodat we problemen in jouw situatie kunnen terugvinden en misbruik kunnen herkennen; wat je typt, leggen we niet vast. Deze gegevens zitten in je gegevensexport en gaan weg als je je account verwijdert. We bewaren bezoekstatistieken 13 maanden; daarna worden ze automatisch verwijderd."
       />
       <LegalSection
         heading="Advertenties"

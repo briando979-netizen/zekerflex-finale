@@ -201,6 +201,8 @@ export const APP_PAGES: readonly AppPage[] = [
   {"route":"/admin/laptop-jarvis","file":"app/admin/laptop-jarvis/page.tsx","area":"Admin","dynamic":false},
   {"route":"/admin/mail","file":"app/admin/mail/page.tsx","area":"Admin","dynamic":false},
   {"route":"/admin/markten","file":"app/admin/markten/page.tsx","area":"Admin","dynamic":false},
+  {"route":"/admin/meetkamer","file":"app/admin/meetkamer/page.tsx","area":"Admin","dynamic":false},
+  {"route":"/admin/meetkamer/[id]","file":"app/admin/meetkamer/[id]/page.tsx","area":"Admin","dynamic":true},
   {"route":"/admin/mijn-mail","file":"app/admin/mijn-mail/page.tsx","area":"Admin","dynamic":false},
   {"route":"/admin/netwerk","file":"app/admin/netwerk/page.tsx","area":"Admin","dynamic":false},
   {"route":"/admin/nieuws","file":"app/admin/nieuws/page.tsx","area":"Admin","dynamic":false},

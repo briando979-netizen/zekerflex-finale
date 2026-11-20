@@ -102,6 +102,17 @@ export async function exportUserData(userId: string): Promise<DataExport> {
     ).map(idControleVoorExport),
   );
 
+  // Je gebruik van het platform zoals /privacy ("Diensten verbeteren") het noemt: de eigen bezoekstatistiek (pagina, soort,
+  // label, tijd) die aan je account hangt. De inlogmomenten staan al in auditTrail. Geen IP-adressen, niets van wat je typte.
+  sections.bezoekstatistiek = await safe("bezoekstatistiek", () =>
+    prisma.analyticsEvent.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 5000,
+      select: { type: true, path: true, label: true, createdAt: true },
+    }),
+  );
+
   sections.certificates = await safe("certificates", () =>
     prisma.certificate.findMany({
       where: { userId },

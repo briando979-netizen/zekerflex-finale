@@ -183,6 +183,29 @@ export function AnalyticsBeacon() {
       const ctx = leesTrackCtx(veld.closest<HTMLElement>("[data-track-ctx]")?.getAttribute("data-track-ctx"));
       enqueue({ type: "INTERACTION", path: pad, label: code!, ...(ctx ? { meta: { ctx } } : {}) });
     };
+    // Scroldiepte (20 nov 2026, Meetkamer: "wat doen ze op de voorpagina"): één keer per pagina per 25/50/75/100 %,
+    // als INTERACTION met alleen de diepte als label. Niet op beheerschermen (daar tellen alleen data-track-codes).
+    const scrolGezien = new Set<string>();
+    let scrolTimer: ReturnType<typeof setTimeout> | null = null;
+    const meetScrol = () => {
+      scrolTimer = null;
+      const pad = location.pathname;
+      if (isBeheerPad(pad)) return;
+      const doc = document.documentElement;
+      const hoogte = Math.max(1, doc.scrollHeight - window.innerHeight);
+      const diepte = Math.min(100, Math.round(((window.scrollY || doc.scrollTop) / hoogte) * 100));
+      for (const stap of [25, 50, 75, 100]) {
+        const sleutel = `${pad}|${stap}`;
+        if (diepte >= stap && !scrolGezien.has(sleutel)) {
+          scrolGezien.add(sleutel);
+          enqueue({ type: "INTERACTION", path: pad, label: `scroll:${stap}` });
+        }
+      }
+    };
+    const onScroll = () => {
+      if (scrolTimer) return;
+      scrolTimer = setTimeout(meetScrol, 400);
+    };
     const onHide = () => flush(true);
     const onVisibility = () => {
       if (document.visibilityState === "hidden") {
@@ -204,8 +227,11 @@ export function AnalyticsBeacon() {
     document.addEventListener("focusin", onFocus, { capture: true });
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pagehide", onLeave);
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       clearInterval(beat);
+      if (scrolTimer) clearTimeout(scrolTimer);
+      window.removeEventListener("scroll", onScroll);
       document.removeEventListener("click", onClick, { capture: true });
       document.removeEventListener("focusin", onFocus, { capture: true });
       document.removeEventListener("visibilitychange", onVisibility);

@@ -43,6 +43,7 @@ export const ADMIN_HUBS: AdminHub[] = [
     icon: "people",
     pages: [
       { href: "/admin/gebruikers", label: "Gebruikers" },
+      { href: "/admin/meetkamer", label: "Meetkamer" },
       { href: "/admin/onboarding", label: "Onboarding" },
       { href: "/admin/bedrijven", label: "Bedrijven" },
       { href: "/admin/tenants", label: "Klanten & white-label" },

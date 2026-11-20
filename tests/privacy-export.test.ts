@@ -39,6 +39,7 @@ vi.mock("@/lib/prisma", () => {
     deviceFingerprint: { findMany: many([{ hardwareHash: "abc", platform: "android" }]) },
     dispute: { findMany: many([]) },
     auditLog: { findMany: many([{ action: "auth.login.succeeded", summary: "ok" }]) },
+    analyticsEvent: { findMany: many([{ type: "PAGEVIEW", path: "/dashboard", label: null, createdAt: new Date() }]) },
     keyValueStore: {
       findMany: many([
         { key: "ritten:u1", value: { t1: { km: 12 } }, updatedAt: new Date() },
@@ -71,6 +72,8 @@ describe("exportUserData", () => {
     expect(s.timesheets).toHaveLength(1);
     expect(s.invoices).toHaveLength(1);
     expect(s.auditTrail).toHaveLength(1);
+    // de bezoekstatistiek van dit account (Meetkamer, 20 nov): alleen pagina, soort, label en tijd
+    expect(s.bezoekstatistiek).toEqual([expect.objectContaining({ type: "PAGEVIEW", path: "/dashboard" })]);
     expect(s.webPushSubscriptions).toHaveLength(1);
     // de lijst toestellen (passkeys) wel, de publieke sleutel en teller niet
     expect(s.passkeys).toEqual([expect.objectContaining({ name: "iPhone", backedUp: true })]);
