@@ -292,6 +292,37 @@ export function MarketplaceView({
               <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </button>
+          {/* sorteren als icoonknop naast de filters, dan Snelle filters · Dagen · Locatie: de balk van YoungOnes (20 nov) */}
+          <button
+            type="button"
+            onClick={() => setOpenChip((v) => (v === "sort" ? null : "sort"))}
+            aria-label={mk.sort}
+            title={mk.sort}
+            aria-expanded={openChip === "sort"}
+            className={`grid h-8 w-8 flex-shrink-0 place-items-center rounded-full border ${
+              sort !== (home ? "match" : "soonest") || openChip === "sort" ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hairstrong bg-white text-neutralx-600"
+            }`}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <path d="M4 7h10M4 12h7M4 17h4M17 6v12m0 0-3-3m3 3 3-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <Chip id="quick" label={mk.quick} count={quick.size} />
+          <Chip id="days" label={mk.days} count={dates.size} />
+          <button
+            type="button"
+            onClick={() => setLocOpen(true)}
+            className={`flex flex-shrink-0 items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+              loc ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hairstrong bg-white text-neutralx-600"
+            }`}
+          >
+            {mk.location}
+            {loc && <span className="rounded-full bg-brand-500 px-1.5 text-[10px] text-white">1</span>}
+            <span className="text-[9px]" aria-hidden>▾</span>
+          </button>
+          <Chip id="branch" label={mk.branches} count={branches.size} />
+          <Chip id="times" label={mk.times} count={dayparts.size} />
+          <Chip id="rate" label={mk.rate} active={minRate > 0} />
           {(savedCount > 0 || quick.has("saved")) && (
             <button
               type="button"
@@ -308,23 +339,6 @@ export function MarketplaceView({
               <span className="rounded-full bg-brand-500 px-1.5 text-[10px] text-white">{savedCount}</span>
             </button>
           )}
-          <Chip id="sort" label={mk.sort} active={sort !== (home ? "match" : "soonest")} />
-          <Chip id="quick" label={mk.quick} count={quick.size} />
-          <Chip id="times" label={mk.times} count={dayparts.size} />
-          <Chip id="rate" label={mk.rate} active={minRate > 0} />
-          <Chip id="days" label={mk.days} count={dates.size} />
-          <button
-            type="button"
-            onClick={() => setLocOpen(true)}
-            className={`flex flex-shrink-0 items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-              loc ? "border-brand-500 bg-brand-50 text-brand-700" : "border-hairstrong bg-white text-neutralx-600"
-            }`}
-          >
-            {mk.location}
-            {loc && <span className="rounded-full bg-brand-500 px-1.5 text-[10px] text-white">1</span>}
-            <span className="text-[9px]" aria-hidden>▾</span>
-          </button>
-          <Chip id="branch" label={mk.branches} count={branches.size} />
           <button
             type="button"
             onClick={() => setView((v) => (v === "map" ? "list" : "map"))}

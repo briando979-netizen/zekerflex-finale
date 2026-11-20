@@ -14,11 +14,12 @@ import { amsterdamClock, amsterdamParts } from "@/lib/time/amsterdam";
 // Presentational; `action` / `footerOverride` drive the apply control.
 // ---------------------------------------------------------------------------
 
-// Dutch wall-clock times, so the UTC server and any phone render the same text.
-function whenLabel(start: Date, end: Date, t: FreelancerDict): string {
+// Dutch wall-clock times, so the UTC server and any phone render the same text. Dag en tijden apart, zodat de kaart ze
+// met een streepje ertussen kan tonen ("Vr 20 nov. | 23:55–04:30 | Nijmegen", zoals de kaart van YoungOnes, 20 nov).
+function whenParts(start: Date, end: Date, t: FreelancerDict): [string, string] {
   const s = amsterdamParts(new Date(start));
   const day = `${t.date.wd[s.weekday]} ${s.day} ${t.date.mon[s.month - 1]}.`;
-  return `${day} · ${amsterdamClock(start)}–${amsterdamClock(end)}`;
+  return [day, `${amsterdamClock(start)}–${amsterdamClock(end)}`];
 }
 
 export function ShiftCard({
@@ -106,9 +107,6 @@ export function ShiftCard({
             {ribbon.label}
           </span>
         )}
-        <span className="num absolute bottom-3 right-3 rounded-lg bg-money-bright px-2 py-1 text-sm font-bold text-ink shadow-sm">
-          {moneyExact(shift.hourlyRateCents)}{c.perHourShort}
-        </span>
       </div>
 
       {/* body */}
@@ -131,11 +129,15 @@ export function ShiftCard({
           <p className="mt-0.5 font-display text-base font-bold leading-snug text-ink">{shift.title}</p>
         </Link>
 
-        <p className="mt-2 text-xs text-neutralx-500">
-          {whenLabel(shift.startsAt, shift.endsAt, t)}
-          {" · "}
-          {shift.city}
-          {shift.travel ? ` · ${shift.travel.distanceKm} km` : ""}
+        {/* dag | tijden | plaats, met streepjes ertussen zoals op de kaart van YoungOnes */}
+        <p className="mt-2 flex flex-wrap items-center text-xs text-neutralx-500">
+          {(() => {
+            const [dag, tijden] = whenParts(shift.startsAt, shift.endsAt, t);
+            const delen = [dag, tijden, `${shift.city}${shift.travel ? ` · ${shift.travel.distanceKm} km` : ""}`];
+            return delen.map((deel, i) => (
+              <span key={i} className={i === 0 ? "" : "border-l border-hairstrong pl-2 ml-2"}>{deel}</span>
+            ));
+          })()}
         </p>
 
         {/* extra informatie staat alleen bij de klus zelf, niet op de kaart (10 nov, eigenaar) */}
@@ -208,14 +210,15 @@ export function ShiftCard({
           </WebOnly>
         )}
 
-        <div className="mt-3 flex items-end justify-between border-t border-hair pt-3">
-          <div>
-            <p className="num font-display text-lg font-bold text-ink">{moneyExact(shift.hourlyRateCents)} {c.perHour}</p>
-            {!compact && <p className="text-[11px] text-neutralx-400">{c.earn(money(shift.grossCents))}</p>}
-          </div>
+        {/* het tarief groot rechts met "Verdien ~" eronder, de uren links (de voet van de kaart van YoungOnes) */}
+        <div className="mt-3 flex items-end justify-between gap-3 border-t border-hair pt-3">
           <span className="num rounded-lg bg-paper-soft px-2 py-1 text-xs font-semibold text-neutralx-600">
             {c.hours(shift.hours)}
           </span>
+          <div className="text-right">
+            <p className="num font-display text-lg font-bold text-ink">{moneyExact(shift.hourlyRateCents)} {c.perHour}</p>
+            {!compact && <p className="text-[11px] text-neutralx-400">{c.earn(money(shift.grossCents))}</p>}
+          </div>
         </div>
 
         {footerOverride === null ? (
