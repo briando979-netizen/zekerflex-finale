@@ -16,9 +16,14 @@ import { BUITEN_LANDEN, EU_LANDEN, landSoort } from "@/lib/onboarding/buitenland
 import { BRANCHE_OPTIES, type BrancheKeuze } from "@/lib/shifts/branche-keuze";
 import { controleerVestigingVeld, type VestigingVeld } from "@/lib/onboarding/vestiging";
 
-type StepKey = "org" | "adres" | "profiel" | "foto" | "email" | "klaar";
+// 20 nov 2026 (eigenaar: korter): de stap "omslagfoto" is weg (kan later in Bedrijfsprofiel) en van de vijf vragen over
+// de organisatie blijft alleen de branche over (die stuurt de matching; rol, frequentie, urgentie en vorig platform
+// waren marktonderzoek). De teksten en het serverveld coverStepDone blijven bestaan voor bedrijven die ze al invulden.
+type StepKey = "org" | "adres" | "profiel" | "email" | "klaar";
 
 const SELECT_KEYS = ["role", "sector", "frequency", "urgency", "prior"] as const;
+/** de vragen die nog gesteld worden */
+const VRAGEN: readonly (typeof SELECT_KEYS)[number][] = ["sector"];
 // The stored value is always the canonical Dutch option (matched on re-display).
 const CANON = nl.onboarding.selects;
 const FORM_NAME: Record<(typeof SELECT_KEYS)[number], string> = {
@@ -112,7 +117,6 @@ export function EmployerOnboardingWizard({
       else volgend.add(k);
       return volgend;
     });
-  const [coverDone, setCoverDone] = useState(Boolean(initial.coverStepDone));
   // meldingen per vestigingsveld: eerst wat de browser bij het verlaten van een veld vond, anders wat de server teruggaf
   const [vestFout, setVestFout] = useState<Partial<Record<VestigingVeld, string | null>>>({});
   const vestMelding = (k: VestigingVeld): string | null | undefined => (k in vestFout ? vestFout[k] : kvkState.fieldErrors?.[k]);
@@ -126,12 +130,11 @@ export function EmployerOnboardingWizard({
     org: orgSaved,
     adres: initial.kvkDone || kvkState.done === true,
     profiel: initial.profileStepDone,
-    foto: coverDone,
     email: initial.emailVerified,
     klaar: false,
   };
   // de KVK-stap eerst: zonder geverifieerd bedrijf kun je niemand inplannen (4 nov 2026)
-  const ORDER: StepKey[] = ["adres", "org", "profiel", "foto", "email"];
+  const ORDER: StepKey[] = ["adres", "org", "profiel", "email"];
   const firstOpen = ORDER.find((k) => !done[k]) ?? "klaar";
   const [open, setOpen] = useState<StepKey>(firstOpen);
 
@@ -144,7 +147,6 @@ export function EmployerOnboardingWizard({
     { key: "adres", label: o.stepAdres, hint: o.stepAdresHint },
     { key: "org", label: o.stepOrg },
     { key: "profiel", label: o.stepProfiel, hint: o.stepProfielHint },
-    { key: "foto", label: o.stepFoto, hint: o.stepFotoHint },
     { key: "email", label: o.stepEmail, hint: o.stepEmailHint },
   ];
   const FIRST_JOB = [o.firstJob1, o.firstJob2, o.firstJob3, o.firstJob4];
@@ -158,12 +160,11 @@ export function EmployerOnboardingWizard({
       setOpen(done.adres ? "profiel" : "adres");
     });
   }
-  function markStep(field: "profileStepDone" | "coverStepDone", nextStep: StepKey) {
+  function markStep(field: "profileStepDone", nextStep: StepKey) {
     const f = new FormData();
     f.set(field, "1");
     startTransition(async () => {
       await saveOnboardingProfileAction(f);
-      if (field === "coverStepDone") setCoverDone(true);
       setOpen(nextStep);
       router.refresh();
     });
@@ -177,7 +178,7 @@ export function EmployerOnboardingWizard({
         body: (
           <form onSubmit={saveOrg} className="space-y-4">
             <p className="text-sm text-neutralx-500">{o.orgIntro}</p>
-            {SELECT_KEYS.map((k) => {
+            {VRAGEN.map((k) => {
               const sel = o.selects[k];
               const name = FORM_NAME[k];
               return (
@@ -342,33 +343,11 @@ export function EmployerOnboardingWizard({
               </Link>
               <button
                 type="button"
-                onClick={() => markStep("profileStepDone", "foto")}
+                onClick={() => markStep("profileStepDone", "email")}
                 disabled={pending}
                 className="btn-primary text-sm disabled:opacity-60"
               >
                 {o.doneThis}
-              </button>
-            </div>
-          </div>
-        ),
-      },
-      {
-        key: "foto",
-        title: o.stepFoto,
-        body: (
-          <div className="space-y-3 text-sm text-neutralx-600">
-            <p>{o.fotoBody}</p>
-            <div className="flex flex-wrap gap-2">
-              <Link href="/werkgever/bedrijf" className="btn-ghost text-sm">
-                {o.uploadCover}
-              </Link>
-              <button
-                type="button"
-                onClick={() => markStep("coverStepDone", "email")}
-                disabled={pending}
-                className="btn-primary text-sm disabled:opacity-60"
-              >
-                {coverDone ? o.done : o.skip}
               </button>
             </div>
           </div>
@@ -402,7 +381,7 @@ export function EmployerOnboardingWizard({
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [kvkState, pending, orgSaved, coverDone, initial, o, vestFout, werkBranches],
+    [kvkState, pending, orgSaved, initial, o, vestFout, werkBranches],
   );
 
   return (
@@ -439,6 +418,8 @@ export function EmployerOnboardingWizard({
           </ol>
         </div>
 
+        {/* "Jouw eerste klus" pas als het bedrijf is geverifieerd: daarvoor leidt het alleen af van de KVK-stap (20 nov) */}
+        {initial.verified && (
         <div>
           {/* h2: het eerste kopje onder de h1 van de startpagina (axe heading-order); uiterlijk gelijk */}
           <h2 className="flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wide text-ink">
@@ -457,6 +438,7 @@ export function EmployerOnboardingWizard({
             ))}
           </ol>
         </div>
+        )}
 
         <div className="rounded-xl bg-ink p-5 text-white">
           <p className="text-sm font-semibold">{o.helpTitle}</p>

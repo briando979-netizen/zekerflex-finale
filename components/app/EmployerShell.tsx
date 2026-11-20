@@ -57,8 +57,11 @@ export function EmployerShell({
   handleidingen = null,
   settingsHref = "/werkgever/instellingen",
   demoUitgang,
+  toonOs = true,
   children,
 }: {
+  /** de ingang "ZekerFlex OS" onderin de zijbalk; met de vlag `publiek-alleen-flexwerk` aan alleen voor een platformbeheerder (20 nov) */
+  toonOs?: boolean;
   /** de dashboards van het bedrijf (lib/werkgever/werkruimte.ts): de wisselaar bovenaan de zijbalk */
   dashboards?: DashboardStand;
   nav: NavItem[];
@@ -249,7 +252,8 @@ export function EmployerShell({
         <div className="border-t border-hair p-3">
           {/* ZekerFlex OS: elk scherm als app op één bureaublad (de naam is in elke taal gelijk) */}
           {/* Een gewone link (geen <Link>): /os moet als eigen document laden, anders houdt de pagina de CSP van dit scherm (geen frame-src 'self') en blijft elk app-venster leeg. target=_top: vanuit een OS-venster zelf geen OS in de OS. */}
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- volledige paginalading nodig voor de CSP van /os */}
+          {toonOs && (
+          // eslint-disable-next-line @next/next/no-html-link-for-pages -- volledige paginalading nodig voor de CSP van /os
           <a
             href="/os"
             target="_top"
@@ -267,6 +271,7 @@ export function EmployerShell({
             </span>
             {!collapsed && "ZekerFlex OS"}
           </a>
+          )}
           <Link
             href={settingsHref}
             onClick={() => setOpen(false)}
