@@ -512,6 +512,9 @@ export const nl = {
   controls: {
     editShift: "Klus aanpassen",
     duplicateShift: "Klus dupliceren",
+    copyLink: "Link kopiëren",
+    copied: "Link gekopieerd",
+    copyFailed: "Kopiëren lukte niet",
     cancelShift: "Klus annuleren",
     approve: "Goedkeuren",
     approving: "Bezig…",

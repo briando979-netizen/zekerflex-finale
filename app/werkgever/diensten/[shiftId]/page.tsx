@@ -25,6 +25,7 @@ import { freelancerRatings } from "@/lib/reviews/ratings";
 import { explainMatch } from "@/lib/matching/explain";
 import { annuleerTermijnLabel } from "@/lib/shifts/annuleertermijn";
 import { ReactieLijst } from "@/components/werkgever/ReactieLijst";
+import { LinkKopieren } from "@/components/werkgever/LinkKopieren";
 
 export const dynamic = "force-dynamic";
 
@@ -117,20 +118,23 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
         title={d.manageTitle}
         subtitle={d.manageSubtitle}
         action={
-          <EmployerShiftControls
-            shift={{
-              id: s.id,
-              title: s.title,
-              description: s.description,
-              startsAt: s.startsAt.toISOString(),
-              endsAt: s.endsAt.toISOString(),
-              breakMinutes: s.breakMinutes,
-              hourlyRateCents: s.hourlyRateCents,
-              positions: s.positions,
-              status: s.status,
-              assignedCount: s.assigned.length,
-            }}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <LinkKopieren shiftId={s.id} />
+            <EmployerShiftControls
+              shift={{
+                id: s.id,
+                title: s.title,
+                description: s.description,
+                startsAt: s.startsAt.toISOString(),
+                endsAt: s.endsAt.toISOString(),
+                breakMinutes: s.breakMinutes,
+                hourlyRateCents: s.hourlyRateCents,
+                positions: s.positions,
+                status: s.status,
+                assignedCount: s.assigned.length,
+              }}
+            />
+          </div>
         }
       />
 
