@@ -42,6 +42,7 @@
     "tests/paskamer-csp.test.ts",
     "tests/profiel-meldingen-taal.test.ts",
     "tests/regex-safari.test.ts",
+    "tests/route-exports.test.ts",
     "tests/rondgang-lijst-actueel.test.ts",
     "tests/seizoen-foto.test.ts",
     "tests/shop-categorieen.test.ts",

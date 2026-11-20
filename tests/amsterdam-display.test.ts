@@ -21,6 +21,7 @@ const shift = (id: string, startsAt: string): CalShift => ({
   positions: 1,
   filled: 0,
   status: "OPEN",
+  reacties: 0,
 });
 
 describe("Nederlandse tijd, ongeacht de klok van de server", () => {

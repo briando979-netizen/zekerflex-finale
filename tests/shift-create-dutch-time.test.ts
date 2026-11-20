@@ -62,6 +62,7 @@ describe("createShift — Nederlandse tijd op een UTC-server", () => {
       breakMinutes: 30,
       positions: 1,
       annuleerUren: 24,
+      autoAcceptFavorieten: false,
       viaUitzendbureau: false,
     });
     const data = shiftCreate.mock.calls[0]?.[0].data as { startsAt: Date; endsAt: Date };
@@ -81,6 +82,7 @@ describe("createShift — Nederlandse tijd op een UTC-server", () => {
       breakMinutes: 30,
       positions: 1,
       annuleerUren: 24,
+      autoAcceptFavorieten: false,
       viaUitzendbureau: false,
       extraDates: ["2027-11-01", "2027-10-29"],
     });
