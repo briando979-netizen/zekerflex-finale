@@ -73,7 +73,7 @@ vi.mock("@/lib/notifications/localized-push", async () => {
   };
 });
 
-import { haalVanReservebank, meldReservesVrijePlek, reservebankSleutel, reservebankVoorPagina, reserveReactieIds, zetOpReservebank } from "@/lib/reservebank/store";
+import { haalVanReservebank, meldReservesVervanging, meldReservesVrijePlek, reservebankSleutel, reservebankVoorPagina, reserveReactieIds, zetOpReservebank } from "@/lib/reservebank/store";
 
 const START = new Date("2026-11-20T09:00:00+01:00");
 const VOOR = new Date("2026-11-19T15:00:00+01:00");
@@ -207,5 +207,19 @@ describe("seintje aan de reserves na een afzegging", () => {
 
     expect(await meldReservesVrijePlek("sh1", "a1", VOOR)).toEqual({ reserves: 2, gemeld: 1 });
     expect(h.pushes.map((p) => p.ids)).toEqual([["u2"]]);
+  });
+
+  it("een vervangingsverzoek: de reserves horen het als eersten, ook al is de plek nog bezet; één push per verzoek", async () => {
+    zetKlus({ _count: { assignments: 2 } }); // vol: de plek is nog bezet
+    await zetOpReservebank(KLUS, "o1", VOOR);
+
+    expect(await meldReservesVervanging("sh1", "r1", VOOR)).toEqual({ reserves: 1, gemeld: 1 });
+    expect(h.pushes[0]).toMatchObject({ ids: ["u1"], title: "Vervanger gezocht, jij staat als reserve", url: "/dashboard/klussen/sh1" });
+    expect(h.pushes[0]!.body).toContain("Magazijn");
+
+    // hetzelfde verzoek nog eens: geen tweede push; na de start ook niet
+    expect(await meldReservesVervanging("sh1", "r1", VOOR)).toEqual({ reserves: 1, gemeld: 0 });
+    expect(await meldReservesVervanging("sh1", "r2", NA)).toEqual({ reserves: 0, gemeld: 0 });
+    expect(h.pushes).toHaveLength(1);
   });
 });

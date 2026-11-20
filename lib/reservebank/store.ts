@@ -134,6 +134,19 @@ export async function reserveReactieIds(reacties: readonly ReactieVoorBank[], kl
  * hoeveel er een seintje kregen.
  */
 export async function meldReservesVrijePlek(shiftId: string, assignmentId: string, nu = new Date()): Promise<{ reserves: number; gemeld: number }> {
+  return meldReserves(shiftId, { soort: "vrij", kenmerk: assignmentId }, nu);
+}
+
+/**
+ * Een aangenomen kracht zoekt een vervanger (app/api/me/replacement): de reserves van die klus horen het als eersten,
+ * zoals YoungOnes' back-up lijst ("voorkeursvervangers"). De plek is nog bezet, dus geen controle op vrije plekken;
+ * één push per verzoek (de bank onthoudt "vervanging:<verzoek>"). Zelfde testklus-filter als bij een afzegging.
+ */
+export async function meldReservesVervanging(shiftId: string, requestId: string, nu = new Date()): Promise<{ reserves: number; gemeld: number }> {
+  return meldReserves(shiftId, { soort: "vervanging", kenmerk: `vervanging:${requestId}` }, nu);
+}
+
+async function meldReserves(shiftId: string, reden: { soort: "vrij" | "vervanging"; kenmerk: string }, nu: Date): Promise<{ reserves: number; gemeld: number }> {
   const geen = { reserves: 0, gemeld: 0 };
   const s = await prisma.shift.findUnique({
     where: { id: shiftId },
@@ -150,7 +163,9 @@ export async function meldReservesVrijePlek(shiftId: string, assignmentId: strin
   });
   if (!s) return geen;
   const klus: KlusVoorBank = { id: s.id, tenantId: s.branch.tenantId, startsAt: s.startsAt, status: s.status };
-  if (!reservebankOpen(klus, nu) || s._count.assignments >= s.positions) return geen;
+  if (!reservebankOpen(klus, nu)) return geen;
+  // bij een afzegging alleen als er echt een plek vrij is; bij een vervangingsverzoek is de plek nog bezet
+  if (reden.soort === "vrij" && s._count.assignments >= s.positions) return geen;
   const bank = leesReservebank(await kvGet<unknown>(reservebankSleutel(s.id)));
   if (!bankHoortBij(bank, klus) || !bank.reserves.length) return geen;
 
@@ -166,14 +181,14 @@ export async function meldReservesVrijePlek(shiftId: string, assignmentId: strin
   }
   if (!ontvangers.length) return { reserves: ids.size, gemeld: 0 };
 
-  // wie de afzegging als eerste noteert, stuurt (ook als twee rondes tegelijk lopen); daarna nooit nog eens
-  const genoteerd = await pasAan(klus, (b) => metGemeld(b, assignmentId), false).catch(() => null);
+  // wie de afzegging (of het verzoek) als eerste noteert, stuurt (ook als twee rondes tegelijk lopen); daarna nooit nog eens
+  const genoteerd = await pasAan(klus, (b) => metGemeld(b, reden.kenmerk), false).catch(() => null);
   if (!genoteerd) return { reserves: ids.size, gemeld: 0 };
 
   const tot = Math.round((s.startsAt.getTime() - nu.getTime()) / 1000);
   await sendLocalizedPush(ontvangers, (t) => ({
-    title: t.reserveVrijTitle,
-    body: t.reserveVrijBody(s.title),
+    title: reden.soort === "vrij" ? t.reserveVrijTitle : t.reserveVervangTitle,
+    body: reden.soort === "vrij" ? t.reserveVrijBody(s.title) : t.reserveVervangBody(s.title),
     data: { type: "SHIFT", url: `/dashboard/klussen/${s.id}`, tag: `reserve-${s.id}` },
     ttlSeconds: Math.max(600, Math.min(43_200, tot)),
   }));

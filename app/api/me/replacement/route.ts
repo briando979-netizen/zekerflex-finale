@@ -10,6 +10,8 @@ import {
   getReplacementRequest,
   cancelReplacementRequest,
 } from "@/lib/replacements/store";
+import { meldReservesVervanging } from "@/lib/reservebank/store";
+import { runAfter } from "@/lib/run-after";
 import { sendMail } from "@/lib/mail";
 
 export const runtime = "nodejs";
@@ -58,6 +60,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       startsAt: assignment.shift.startsAt.toISOString(),
       note: note ?? "",
     });
+
+    // de reserves van deze klus horen het als eersten (lib/reservebank, naar YoungOnes' back-up lijst)
+    runAfter(() => meldReservesVervanging(assignment.shift.id, rec.id));
 
     await sendMail({
       to: env.MAIL_ADMIN,

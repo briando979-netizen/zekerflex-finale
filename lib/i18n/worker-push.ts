@@ -54,6 +54,9 @@ export interface WorkerPushTexts {
   /** reservebank: een aangenomen kracht zegde af, de plek is vrij (lib/reservebank/store.ts) */
   reserveVrijTitle: string;
   reserveVrijBody: (title: string) => string;
+  /** een aangenomen kracht zoekt een vervanger: de reserves horen het als eersten (lib/reservebank) */
+  reserveVervangTitle: string;
+  reserveVervangBody: (title: string) => string;
   followTitle: (company: string) => string;
   followMore: (extraDays: number) => string;
   geoTitle: (hours: number) => string;
@@ -165,6 +168,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     notChosenBody: (t) => `Voor "${t}" ben je deze keer niet gekozen. Zoek een andere klus: er staan er genoeg voor je klaar.`,
     reserveVrijTitle: "Je staat op de reservebank",
     reserveVrijBody: (t) => `Er is plek vrijgekomen bij "${t}"; het bedrijf kan je nu inplannen.`,
+    reserveVervangTitle: "Vervanger gezocht, jij staat als reserve",
+    reserveVervangBody: (t) => `Iemand zoekt een vervanger voor "${t}". Jij staat op de reservebank: open de klus om hem over te nemen.`,
     followTitle: (c) => `❤️ Nieuwe dienst bij ${c}`,
     followMore: (n) => ` (+${n} ${n === 1 ? "dag" : "dagen"})`,
     geoTitle: (h) => `📍 Klus dichtbij — begint over ${h} uur`,
@@ -264,6 +269,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     notChosenBody: (t) => `You were not chosen for "${t}" this time. Find another job: there are plenty waiting for you.`,
     reserveVrijTitle: "You are on the reserve list",
     reserveVrijBody: (t) => `A spot has opened up at "${t}"; the company can schedule you now.`,
+    reserveVervangTitle: "Replacement wanted, you are on the reserve list",
+    reserveVervangBody: (t) => `Someone is looking for a replacement for "${t}". You are on the reserve list: open the job to take it over.`,
     followTitle: (c) => `❤️ New shift at ${c}`,
     followMore: (n) => ` (+${n} ${n === 1 ? "day" : "days"})`,
     geoTitle: (h) => `📍 Job nearby — starts in ${h} ${h === 1 ? "hour" : "hours"}`,
@@ -363,6 +370,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     notChosenBody: (t) => `Tym razem nie wybrano Cię do „${t}”. Znajdź inne zlecenie: czeka na Ciebie wiele innych.`,
     reserveVrijTitle: "Jesteś na liście rezerwowej",
     reserveVrijBody: (t) => `Zwolniło się miejsce przy „${t}”; firma może Cię teraz zaplanować.`,
+    reserveVervangTitle: "Szukają zastępstwa, jesteś na liście rezerwowej",
+    reserveVervangBody: (t) => `Ktoś szuka zastępstwa do „${t}”. Jesteś na liście rezerwowej: otwórz zlecenie, aby je przejąć.`,
     followTitle: (c) => `❤️ Nowa zmiana w ${c}`,
     followMore: (n) => ` (+${n} ${n === 1 ? "dzień" : "dni"})`,
     geoTitle: (h) => `📍 Zlecenie w pobliżu — zaczyna się za ${h} godz.`,
@@ -462,6 +471,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     notChosenBody: (t) => `De data aceasta nu ai fost ales(ă) pentru „${t}”. Caută alt job: te așteaptă multe altele.`,
     reserveVrijTitle: "Ești pe lista de rezervă",
     reserveVrijBody: (t) => `S-a eliberat un loc la „${t}”; firma te poate programa acum.`,
+    reserveVervangTitle: "Se caută înlocuitor, ești pe lista de rezervă",
+    reserveVervangBody: (t) => `Cineva caută un înlocuitor pentru „${t}”. Ești pe lista de rezervă: deschide jobul ca să îl preiei.`,
     followTitle: (c) => `❤️ Tură nouă la ${c}`,
     followMore: (n) => ` (+${n} ${n === 1 ? "zi" : "zile"})`,
     geoTitle: (h) => `📍 Job în apropiere — începe în ${h} ${h === 1 ? "oră" : "ore"}`,
@@ -561,6 +572,8 @@ export const WORKER_PUSH: Record<BasisLocale, WorkerPushTexts> = {
     notChosenBody: (t) => `Цього разу вас не обрали на «${t}». Знайдіть іншу роботу: на вас чекає багато інших.`,
     reserveVrijTitle: "Ви в резервному списку",
     reserveVrijBody: (t) => `Звільнилося місце на «${t}»; компанія може вас зараз запланувати.`,
+    reserveVervangTitle: "Шукають заміну, ви в резервному списку",
+    reserveVervangBody: (t) => `Хтось шукає заміну на «${t}». Ви в резервному списку: відкрийте роботу, щоб узяти її.`,
     followTitle: (c) => `❤️ Нова зміна в ${c}`,
     followMore: (n) => ` (+${n} дн.)`,
     geoTitle: (h) => `📍 Робота поруч — починається через ${h} год`,
