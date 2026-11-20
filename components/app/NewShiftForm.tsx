@@ -71,11 +71,14 @@ export function NewShiftForm({
   pools = [],
   beeld = { logoUrl: null, useLogo: false, canChange: false },
   edit,
+  kostenplaatsen = [],
 }: {
   branches: { id: string; name: string; city: string }[];
   templates: ShiftTemplate[];
   minRateCents?: number;
   pools?: { id: string; name: string; memberCount: number }[];
+  /** kostenplaatsen/PO-nummers van het bedrijf (OrgProfileExtra.costCentres); leeg = geen keuze */
+  kostenplaatsen?: string[];
   /** the organisation's logo and whether its klussen show it instead of the branch photo */
   beeld?: { logoUrl: string | null; useLogo: boolean; canChange: boolean };
   /** set: edit this klus instead of placing a new one */
@@ -617,6 +620,21 @@ export function NewShiftForm({
             </>
           )}
         </div>
+        )}
+
+        {!edit && kostenplaatsen.length > 0 && (
+          <label className="block">
+            <span className="field-label">
+              {n.kostenplaats} <span className="text-neutralx-400">{n.optioneel}</span>
+            </span>
+            <select name="kostenplaats" defaultValue="" className="field-input">
+              <option value="">{n.kostenplaatsGeen}</option>
+              {kostenplaatsen.map((k) => (
+                <option key={k} value={k}>{k}</option>
+              ))}
+            </select>
+            <span className="mt-1 block text-xs text-neutralx-400">{n.kostenplaatsUitleg}</span>
+          </label>
         )}
 
         {!edit && pools.length > 0 && (

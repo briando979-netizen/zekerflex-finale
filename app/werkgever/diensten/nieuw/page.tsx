@@ -59,6 +59,8 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
     getLocale(),
   ]);
   const beeld = tenantId ? klusBeeldVan(tenantId, extra) : { logoUrl: null, useLogo: false };
+  // kostenplaatsen/PO-nummers van het bedrijf (Facturen → factuurgegevens): keuze bij het plaatsen
+  const kostenplaatsen = (extra.costCentres ?? []).map((k) => k.trim()).filter(Boolean);
 
   const volledig = (
     <div className="surface p-6">
@@ -68,6 +70,7 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
         minRateCents={MIN_SHIFT_RATE_CENTS}
         pools={pools.map((p) => ({ id: p.id, name: p.name, memberCount: p.members.length }))}
         beeld={{ ...beeld, canChange: hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN") }}
+        kostenplaatsen={kostenplaatsen}
       />
     </div>
   );
@@ -106,6 +109,7 @@ export default async function NieuweDienstPage({ searchParams }: { searchParams:
             minRateCents={MIN_SHIFT_RATE_CENTS}
             t={locale === "en" ? SNEL_EN : SNEL_NL}
             locale={locale === "en" ? "en" : "nl"}
+            kostenplaatsen={kostenplaatsen}
             {...(voorinvulling ? { voorinvulling } : {})}
           />
           {/* meer opties (meerdere dagen, eenmalige locatie, pools, dresscode, foto): het uitgebreide formulier, dichtgeklapt */}

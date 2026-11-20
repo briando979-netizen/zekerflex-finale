@@ -197,6 +197,7 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
       <p className="mt-2 text-xs text-neutralx-500">
         {fmt(d.annuleerTermijn, { label: annuleerTermijnLabel(s.annuleerUren, locale === "en" ? "en" : "nl") })}
         {s.autoAcceptFavorieten && <span className="ml-2 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">{d.autoAcceptAan}</span>}
+        {s.kostenplaats && <span className="ml-2 rounded-full bg-paper-soft px-2 py-0.5 text-[11px] font-semibold text-neutralx-700">{fmt(d.kostenplaats, { naam: s.kostenplaats })}</span>}
       </p>
 
       {openReacties.length > 0 && (

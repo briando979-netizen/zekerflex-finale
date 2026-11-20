@@ -117,7 +117,7 @@ export interface SnelVoorinvulling {
   dresscode: string;
 }
 
-export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "nl", voorinvulling }: { branches: { id: string; name: string; city: string | null }[]; sjablonen: SnelSjabloon[]; minRateCents: number; t: SnelTeksten; locale?: "nl" | "en"; voorinvulling?: SnelVoorinvulling }) {
+export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "nl", voorinvulling, kostenplaatsen = [] }: { branches: { id: string; name: string; city: string | null }[]; sjablonen: SnelSjabloon[]; minRateCents: number; t: SnelTeksten; locale?: "nl" | "en"; voorinvulling?: SnelVoorinvulling; /** kostenplaatsen/PO-nummers van het bedrijf (OrgProfileExtra.costCentres); leeg = geen keuze */ kostenplaatsen?: string[] }) {
   const [stap, setStap] = useState<1 | 2 | 3>(1);
   const [annuleerUren, setAnnuleerUren] = useState(String(voorinvulling?.annuleerUren ?? STANDAARD_ANNULEER_UREN));
   // dezelfde uitleg als het uitgebreide formulier (woordenlijst, NL/EN)
@@ -268,6 +268,18 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
             <input type="number" inputMode="decimal" min={minEuro} step="0.5" value={tarief} onChange={(e) => setTarief(e.target.value)} className="mt-1 w-full rounded-xl border border-hair px-3 py-2 font-normal" required />
             <span className="mt-1 block text-xs font-normal text-neutralx-500">{vul(t.tariefHint, { min: minEuro })}</span>
           </label>
+          {kostenplaatsen.length > 0 && (
+            <label className="block text-sm font-semibold text-ink">
+              {n.kostenplaats}
+              <select name="kostenplaats" defaultValue="" className="mt-1 w-full rounded-xl border border-hair px-3 py-2 font-normal">
+                <option value="">{n.kostenplaatsGeen}</option>
+                {kostenplaatsen.map((k) => (
+                  <option key={k} value={k}>{k}</option>
+                ))}
+              </select>
+              <span className="mt-1 block text-xs font-normal text-neutralx-500">{n.kostenplaatsUitleg}</span>
+            </label>
+          )}
           <label className="flex items-start gap-2 rounded-xl bg-paper-soft p-3 text-sm">
             <input type="checkbox" name="autoAcceptFavorieten" value="on" className="mt-0.5 h-4 w-4 accent-brand-500" />
             <span>

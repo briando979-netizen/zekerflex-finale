@@ -644,6 +644,9 @@ model Shift {
   // Annuleringstermijn in uren vóór aanvang (24/48/72/168, lib/shifts/annuleertermijn.ts): tot dan is afzeggen
   // kosteloos, daarna geldt de 50 %-regel van lib/claims/policy.ts. Gekozen door het bedrijf bij het plaatsen.
   annuleerUren    Int      @default(24)
+  // Kostenplaats / PO-nummer van het bedrijf (uit OrgProfileExtra.costCentres), voor de boekhouding: op de klus,
+  // de facturen en in de CSV-export. Leeg = geen.
+  kostenplaats    String?
 
   status ShiftStatus @default(DRAFT)
 

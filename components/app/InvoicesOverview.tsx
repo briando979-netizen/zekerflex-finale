@@ -16,6 +16,8 @@ export type InvoiceRow = {
   typeLabel: string;
   reverseCharge: boolean;
   branch: string;
+  /** kostenplaats / PO van de klus (voor de boekhouding) */
+  kostenplaats?: string;
   subtotalCents: number;
   vatCents: number;
   totalCents: number;
@@ -165,7 +167,10 @@ export function InvoicesOverview({ invoices, t, betaalwijze = "online" }: { invo
                   {i.typeLabel}
                   {i.reverseCharge && <span className="ml-1 text-xs text-neutralx-400">{t.reverseCharge}</span>}
                 </td>
-                <td className="px-5 py-3 text-neutralx-600">{i.branch}</td>
+                <td className="px-5 py-3 text-neutralx-600">
+                  {i.branch}
+                  {i.kostenplaats && <span className="ml-1.5 rounded-full bg-paper-soft px-1.5 py-0.5 text-[11px] text-neutralx-600">{i.kostenplaats}</span>}
+                </td>
                 <td className="num px-5 py-3 text-right text-neutralx-600">{moneyExact(i.subtotalCents)}</td>
                 <td className="num px-5 py-3 text-right text-neutralx-600">{moneyExact(i.vatCents)}</td>
                 <td className="num px-5 py-3 text-right font-medium">{moneyExact(i.totalCents)}</td>
