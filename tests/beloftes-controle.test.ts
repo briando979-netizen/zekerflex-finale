@@ -34,8 +34,12 @@ describe("geen beloftes die niet kloppen", () => {
     expect(item?.naam).toBe("E-facturatie (UBL)");
   });
 
-  it("/werkgever/bedrijf toont de schakelaar voor het voorschot alleen als het voorschot echt overgemaakt kan worden", () => {
-    expect(lees("components/werkgever/FastPaySettings.tsx")).toContain("s.voorschotKan ?");
+  it("/werkgever/bedrijf toont het blok over het voorschot alleen als het voorschot echt overgemaakt kan worden", () => {
+    const scherm = lees("components/werkgever/FastPaySettings.tsx");
+    expect(scherm).toContain("s.voorschotKan ?");
+    // kan het niet, dan staat er niets (ook geen uitleg dat het niet kan)
+    expect(scherm).not.toContain("voorschotNiet");
+    expect(scherm.match(/f\.voorschotKop/g)?.length).toBe(1);
     expect(lees("app/api/werkgever/fastpay/route.ts")).toMatch(/directeSepaIngericht\(\) \|\| !\(await stripeBetalenDicht\(\)\)/);
   });
 

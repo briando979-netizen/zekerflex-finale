@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useT } from "@/components/i18n/I18nProvider";
 
-/** Werkgever → Uren: let the autopilot approve hours that exactly match the planning. */
+/** Werkgever → Uren: uren die kloppen met de planning en het inchecken na 24 uur vanzelf laten goedkeuren. */
 export function AutoApproveToggle() {
   const a = useT().autoGoedkeuren;
   const [on, setOn] = useState<boolean | null>(null);

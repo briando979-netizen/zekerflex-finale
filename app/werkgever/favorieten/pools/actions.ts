@@ -5,11 +5,16 @@ import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { createPool, renamePool, deletePool, addMember, removeMember } from "@/lib/pools/store";
+import { getDict } from "@/lib/i18n/server";
+import { nl as nlDict } from "@/lib/i18n/dictionaries";
 
 export interface PoolActionResult {
   ok: boolean;
   message: string;
 }
+
+/** De meldingen in de taal van de werkgever; buiten een verzoek (of bij een storing) de Nederlandse standaard. */
+const teksten = async () => (await getDict().catch(() => nlDict)).pools;
 
 async function tenantId(): Promise<string> {
   const principal = await requirePrincipal();
@@ -27,56 +32,61 @@ function done(message: string): PoolActionResult {
 }
 
 export async function createPoolAction(name: string): Promise<PoolActionResult> {
+  const p = await teksten();
   try {
     const t = await tenantId();
     await createPool(t, name);
-    return done("Pool aangemaakt.");
+    return done(p.created);
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };
-    return { ok: false, message: "Pool aanmaken mislukt." };
+    return { ok: false, message: p.createFailed };
   }
 }
 
 export async function renamePoolAction(poolId: string, name: string): Promise<PoolActionResult> {
+  const p = await teksten();
   try {
     const t = await tenantId();
     await renamePool(t, poolId, name);
-    return done("Pool hernoemd.");
+    return done(p.renamed);
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };
-    return { ok: false, message: "Hernoemen mislukt." };
+    return { ok: false, message: p.renameFailed };
   }
 }
 
 export async function deletePoolAction(poolId: string): Promise<PoolActionResult> {
+  const p = await teksten();
   try {
     const t = await tenantId();
     await deletePool(t, poolId);
-    return done("Pool verwijderd.");
+    return done(p.deleted);
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };
-    return { ok: false, message: "Verwijderen mislukt." };
+    return { ok: false, message: p.deleteFailed };
   }
 }
 
 export async function addPoolMemberAction(poolId: string, freelancerUserId: string): Promise<PoolActionResult> {
+  const p = await teksten();
   try {
     const t = await tenantId();
     await addMember(t, poolId, freelancerUserId);
-    return done("Toegevoegd aan de pool.");
+    return done(p.memberAdded);
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };
-    return { ok: false, message: "Toevoegen mislukt." };
+    return { ok: false, message: p.addFailed };
   }
 }
 
 export async function removePoolMemberAction(poolId: string, freelancerUserId: string): Promise<PoolActionResult> {
+  const p = await teksten();
   try {
     const t = await tenantId();
     await removeMember(t, poolId, freelancerUserId);
-    return done("Verwijderd uit de pool.");
+    return done(p.memberRemoved);
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: err.message };
-    return { ok: false, message: "Verwijderen mislukt." };
+    return { ok: false, message: p.deleteFailed };
   }
 }

@@ -6,6 +6,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { logoutAction } from "@/lib/auth/actions";
 import { LogoGlyph } from "@/components/brand/Logo";
 import { NotificationsBell } from "@/components/app/NotificationsBell";
+import { naamInitialen } from "@/lib/naam/initialen";
 
 export interface NavItem {
   href: string;
@@ -143,7 +144,7 @@ export function AppShell({
           </Link>
           <div className="flex items-center gap-3 rounded-xl bg-white px-3 py-2 shadow-e1">
             <span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-xs font-semibold text-white">
-              {initials(userName)}
+              {naamInitialen(userName)}
             </span>
             <div className="min-w-0 leading-tight">
               <p className="truncate text-sm font-medium text-ink">{userName}</p>
@@ -198,13 +199,4 @@ export function AppShell({
       </div>
     </div>
   );
-}
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? "")
-    .join("");
 }

@@ -42,7 +42,7 @@ export default async function FavorietenPage() {
         action={
           <div className="flex items-center gap-2">
             <Link href="/werkgever/favorieten/pools" className="btn-ghost">
-              Pools beheren
+              {t.pools.manage}
             </Link>
             <Link href="/werkgever/diensten/nieuw" className="btn-primary">
               {f.placeShift}

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { nl } from "@/lib/i18n/dictionaries";
 import { en } from "@/lib/i18n/dictionary-en";
@@ -34,5 +36,45 @@ describe("de Nederlandse teksten zijn gelijk aan wat er stond", () => {
     expect(nl.urenKnoppen.tochGoedkeuren).toBe("Toch goedkeuren?");
     expect(nl.autoGoedkeuren.kop).toBe("🤖 Uren automatisch goedkeuren");
     expect(nl.autoGoedkeuren.bevestig).toMatch(/^Automatisch goedkeuren aanzetten\? De AI keurt dan uren goed/);
+  });
+});
+
+describe("uitleg bij automatisch goedkeuren: kort en zonder vaktaal", () => {
+  it("twee gewone zinnen, in beide talen", () => {
+    for (const [taal, tekst] of [["nl", nl.autoGoedkeuren.uitleg], ["en", en.autoGoedkeuren.uitleg]] as const) {
+      expect(tekst, taal).not.toMatch(/autopilot|GPS|fraud/i);
+      expect(tekst.split(". ").length, taal).toBe(2);
+      expect(tekst.length, taal).toBeLessThan(180);
+      expect(tekst, taal).toContain("24");
+      expect(tekst, taal).toContain("ZekerFlex");
+    }
+    expect(nl.autoGoedkeuren.uitleg).toMatch(/planning en het inchecken/);
+    expect(nl.autoGoedkeuren.uitleg).toMatch(/altijd weer uitzetten/);
+    expect(en.autoGoedkeuren.uitleg).toMatch(/turn this off/);
+  });
+});
+
+describe("het scherm Uren goedkeuren: tellers alleen als er iets te tellen valt", () => {
+  const bron = readFileSync(join(process.cwd(), "app/werkgever/uren/page.tsx"), "utf8");
+
+  it("de vier vakken staan achter ietsTeTellen", () => {
+    expect(bron).toContain("const ietsTeTellen = timesheets.length > 0;");
+    const start = bron.indexOf("{ietsTeTellen && (");
+    expect(start).toBeGreaterThan(-1);
+    const eind = bron.indexOf("{flaggedCount > 0 && (");
+    expect(eind).toBeGreaterThan(start);
+    const blok = bron.slice(start, eind);
+    for (const sleutel of ["h.kpiOpen}", "h.kpiAmount}", "h.kpiDisputed}", "h.kpiOldest}"]) {
+      expect(blok, sleutel).toContain(sleutel);
+      // en nergens buiten het blok
+      expect(bron.split(sleutel).length, sleutel).toBe(2);
+    }
+  });
+
+  it("het lege vak en het vakje automatisch goedkeuren blijven altijd staan", () => {
+    expect(bron).toContain("<EmptyState title={h.emptyTitle} body={h.emptyBody} />");
+    const start = bron.indexOf("{ietsTeTellen && (");
+    expect(bron.indexOf("<AutoApproveToggle />")).toBeLessThan(start);
+    expect(bron.indexOf("<AutoApproveToggle />")).toBeGreaterThan(-1);
   });
 });

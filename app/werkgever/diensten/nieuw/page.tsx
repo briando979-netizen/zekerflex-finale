@@ -63,12 +63,17 @@ export default async function NieuweDienstPage() {
       />
 
       {branches.length === 0 ? (
-        // zonder vestiging kan er geen klus uit: dan meteen de weg naar de onboarding (12 nov: hier liep het dood)
+        // zonder vestiging kan er geen klus uit (12 nov: hier liep het dood). Het adres komt erbij op Locaties; dat
+        // mag alleen een beheerder (zelfde poort als POST /api/werkgever/branches), een ander leest wie hij moet vragen.
         <div className="card border-warn/30 bg-warn/5 p-5 text-sm text-neutralx-700">
           <p>{n.noBranches}</p>
-          <Link href="/werkgever" className="btn-primary mt-3 inline-flex px-4 py-2 text-sm">
-            {n.toOnboarding} →
-          </Link>
+          {hasRole(principal, "HQ_ADMIN", "PLATFORM_ADMIN") ? (
+            <Link href="/werkgever/locaties" className="btn-primary mt-3 inline-flex px-4 py-2 text-sm">
+              {n.addAddress} →
+            </Link>
+          ) : (
+            <p className="mt-2">{n.askAdmin}</p>
+          )}
         </div>
       ) : alleenFlexwerk ? (
         <>

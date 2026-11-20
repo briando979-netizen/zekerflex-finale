@@ -2,9 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import type { RecentThread } from "@/lib/messaging/recent";
-
-const initials = (n: string) =>
-  n.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
+import { naamInitialen } from "@/lib/naam/initialen";
 
 function timeAgo(iso: string | null): string {
   if (!iso) return "";
@@ -35,7 +33,7 @@ export function RecentMessagesPanel({ threads, allHref }: { threads: RecentThrea
               className="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full text-xs font-semibold text-white"
               style={{ background: t.kind === "support" ? "#0C0E12" : "#0E5C4A" }}
             >
-              {t.kind === "support" ? "ZF" : initials(t.name)}
+              {t.kind === "support" ? "ZF" : naamInitialen(t.name)}
             </span>
             <span className="min-w-0 flex-1">
               <span className="flex items-center justify-between gap-2">

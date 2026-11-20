@@ -53,7 +53,6 @@ export default async function WerkgeverDienstenPage() {
     <>
       <PageHeader
         title={sh.title}
-        eyebrow={sh.eyebrow}
         subtitle={sh.subtitle}
         action={
           <div className="flex flex-wrap items-center gap-2">

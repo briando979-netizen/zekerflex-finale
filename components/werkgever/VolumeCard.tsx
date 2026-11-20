@@ -58,15 +58,19 @@ export function VolumeCard() {
             : v.hoogste}
         </p>
       </div>
-      <ul className="grid gap-1.5 text-xs sm:grid-cols-5">
-        {d.tiers.map((t) => (
-          <li key={t.name} className={`rounded-lg border px-2 py-1.5 ${t.name === d.tier.name ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-hair text-neutralx-600"}`}>
-            <span className="block">{t.name}</span>
-            <span className="block">{fmt(v.perU, { prijs: euro(Math.round(d.baseFeePerHourCents * t.factor), loc) })}</span>
-            <span className="block text-[10px] text-neutralx-500">{fmt(v.vanaf, { uren: t.fromHours.toLocaleString(loc) })}</span>
-          </li>
-        ))}
-      </ul>
+      {/* alle treden staan standaard dicht: een bedrijf met weinig uren heeft genoeg aan zijn eigen tarief en de volgende trede */}
+      <details>
+        <summary className="cursor-pointer text-xs font-medium text-brand-600">{v.alleStaffels}</summary>
+        <ul className="mt-3 grid gap-1.5 text-xs sm:grid-cols-5">
+          {d.tiers.map((t) => (
+            <li key={t.name} className={`rounded-lg border px-2 py-1.5 ${t.name === d.tier.name ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "border-hair text-neutralx-600"}`}>
+              <span className="block">{t.name}</span>
+              <span className="block">{fmt(v.perU, { prijs: euro(Math.round(d.baseFeePerHourCents * t.factor), loc) })}</span>
+              <span className="block text-[10px] text-neutralx-500">{fmt(v.vanaf, { uren: t.fromHours.toLocaleString(loc) })}</span>
+            </li>
+          ))}
+        </ul>
+      </details>
     </div>
   );
 }

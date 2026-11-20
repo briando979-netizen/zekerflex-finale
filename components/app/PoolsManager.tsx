@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/Toast";
 import { Avatar } from "@/components/chat/Avatar";
+import { useT } from "@/components/i18n/I18nProvider";
+import { fmt } from "@/lib/i18n/dictionaries";
 import {
   createPoolAction,
   renamePoolAction,
@@ -31,6 +33,7 @@ export function PoolsManager({
   pools: Pool[];
   avatars: Record<string, string>;
 }) {
+  const p = useT().pools;
   const toast = useToast();
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -66,16 +69,16 @@ export function PoolsManager({
           value={newPoolName}
           onChange={(e) => setNewPoolName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && createPool()}
-          placeholder="Naam van nieuwe pool, bijv. Horeca team A"
+          placeholder={p.namePh}
           className="field-input flex-1"
         />
         <button type="button" onClick={createPool} disabled={pending || !newPoolName.trim()} className="btn-primary text-sm">
-          Pool aanmaken
+          {p.create}
         </button>
       </div>
 
       {pools.length === 0 ? (
-        <p className="text-sm text-neutralx-500">Nog geen pools — maak hierboven je eerste pool aan.</p>
+        <p className="text-sm text-neutralx-500">{p.none}</p>
       ) : (
         <ul className="grid gap-4 md:grid-cols-2">
           {pools.map((pool) => {
@@ -90,37 +93,37 @@ export function PoolsManager({
                       type="button"
                       disabled={pending}
                       onClick={() => {
-                        const name = window.prompt("Nieuwe naam voor deze pool:", pool.name);
+                        const name = window.prompt(p.renamePrompt, pool.name);
                         if (name && name.trim() && name.trim() !== pool.name) {
                           run(() => renamePoolAction(pool.id, name));
                         }
                       }}
                       className="text-xs text-neutralx-500 hover:text-brand-600"
                     >
-                      Hernoem
+                      {p.rename}
                     </button>
                     <button
                       type="button"
                       disabled={pending}
                       onClick={() => {
-                        if (window.confirm(`Pool "${pool.name}" verwijderen?`)) run(() => deletePoolAction(pool.id));
+                        if (window.confirm(fmt(p.deleteConfirm, { naam: pool.name }))) run(() => deletePoolAction(pool.id));
                       }}
                       className="text-xs text-crit hover:underline"
                     >
-                      Verwijder
+                      {p.remove}
                     </button>
                   </div>
                 </div>
 
                 {pool.members.length === 0 ? (
-                  <p className="mt-3 text-xs text-neutralx-400">Nog geen leden.</p>
+                  <p className="mt-3 text-xs text-neutralx-400">{p.noMembers}</p>
                 ) : (
                   <ul className="mt-3 space-y-2">
                     {pool.members.map((m) => (
                       <li key={m.userId} className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <Avatar userId={m.userId} name={nameById.get(m.userId) ?? "?"} avatars={avatars} size={28} />
-                          <span className="text-sm text-ink">{nameById.get(m.userId) ?? "Onbekend"}</span>
+                          <span className="text-sm text-ink">{nameById.get(m.userId) ?? p.unknown}</span>
                         </div>
                         <button
                           type="button"
@@ -128,7 +131,7 @@ export function PoolsManager({
                           onClick={() => run(() => removePoolMemberAction(pool.id, m.userId))}
                           className="text-xs text-neutralx-400 hover:text-crit"
                         >
-                          Verwijder
+                          {p.remove}
                         </button>
                       </li>
                     ))}
@@ -145,7 +148,7 @@ export function PoolsManager({
                       }}
                       className="field-input text-sm"
                     >
-                      <option value="">+ Voeg favoriet toe…</option>
+                      <option value="">{p.addFavorite}</option>
                       {addable.map((f) => (
                         <option key={f.userId} value={f.userId}>
                           {f.name}

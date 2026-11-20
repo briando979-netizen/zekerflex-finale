@@ -57,6 +57,8 @@ export default async function UrenGoedkeurenPage() {
   const disputed = timesheets.filter((t) => t.status === "DISPUTED").length;
   const totalHours = timesheets.reduce((sum, t) => sum + t.billableMinutes, 0) / 60;
   const oldest = timesheets[0]?.scheduledStart ?? null;
+  // de lijst bevat ingediende uren én open disputen: is hij leeg, dan valt er niets te tellen
+  const ietsTeTellen = timesheets.length > 0;
   // zonder signaal, dispuut of extra kosten: in één keer goed te keuren (vanaf twee)
   const schoon = schoneUren(timesheets, fraud);
   const schoonTotal = timesheets.filter((t) => schoon.includes(t.id)).reduce((sum, t) => sum + lineTotal(t), 0);
@@ -68,21 +70,25 @@ export default async function UrenGoedkeurenPage() {
 
       <AutoApproveToggle />
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label={h.kpiOpen} value={String(timesheets.length)} tone="brand" hint={h.kpiOpenHint} />
-        <KpiCard label={h.kpiAmount} value={money(pendingTotal)} hint={fmt(h.kpiAmountHint, { h: totalHours.toFixed(1) })} />
-        <KpiCard
-          label={h.kpiDisputed}
-          value={String(disputed)}
-          tone={disputed > 0 ? "crit" : "default"}
-          hint={disputed > 0 ? h.kpiDisputedYes : h.kpiDisputedNo}
-        />
-        <KpiCard
-          label={h.kpiOldest}
-          value={oldest ? dateTime(oldest).split(",")[0]!.trim() : "—"}
-          hint={oldest ? h.kpiOldestYes : h.kpiOldestNo}
-        />
-      </div>
+      {/* de vier tellers alleen als er iets te tellen valt (ingediende uren of een open dispuut);
+          een nieuw bedrijf ziet anders vier vakken met nullen boven "Niets te doen" */}
+      {ietsTeTellen && (
+        <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <KpiCard label={h.kpiOpen} value={String(timesheets.length)} tone="brand" hint={h.kpiOpenHint} />
+          <KpiCard label={h.kpiAmount} value={money(pendingTotal)} hint={fmt(h.kpiAmountHint, { h: totalHours.toFixed(1) })} />
+          <KpiCard
+            label={h.kpiDisputed}
+            value={String(disputed)}
+            tone={disputed > 0 ? "crit" : "default"}
+            hint={disputed > 0 ? h.kpiDisputedYes : h.kpiDisputedNo}
+          />
+          <KpiCard
+            label={h.kpiOldest}
+            value={oldest ? dateTime(oldest).split(",")[0]!.trim() : "—"}
+            hint={oldest ? h.kpiOldestYes : h.kpiOldestNo}
+          />
+        </div>
+      )}
 
       {flaggedCount > 0 && (
         <div className="mb-4 rounded-xl border border-warn/40 bg-warn/5 px-4 py-3 text-sm">

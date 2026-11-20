@@ -19,6 +19,7 @@ import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import type { Theme } from "@/lib/theme/config";
 import { DashboardWisselaar, type DashboardStand } from "@/components/app/werkruimte/DashboardWisselaar";
 import { dashboardVanPad } from "@/lib/werkgever/werkruimte";
+import { naamInitialen } from "@/lib/naam/initialen";
 
 // ---------------------------------------------------------------------------
 // Employer workspace shell — its own chrome (org name + rating in the topbar,
@@ -327,7 +328,8 @@ export function EmployerShell({
 
           <div className="flex min-w-0 items-center gap-3">
             <span className="truncate font-display text-sm font-bold text-ink">{orgName}</span>
-            {rating && (
+            {/* zonder beoordelingen geen vijf grijze sterren met "(0 …)": pas tonen vanaf de eerste */}
+            {rating && rating.count > 0 && (
               <Link
                 href="/werkgever/reviews"
                 className="hidden items-center gap-1.5 rounded-md px-1 py-0.5 hover:bg-paper-soft sm:flex"
@@ -335,12 +337,10 @@ export function EmployerShell({
               >
                 <Stars value={rating.average} />
                 <span className="text-xs text-brand-600 underline-offset-2 hover:underline">
-                  {rating.count > 0
-                    ? fmt(rating.count === 1 ? t.shell.reviewsCountOne : t.shell.reviewsCount, {
-                        avg: rating.average.toFixed(1),
-                        n: rating.count,
-                      })
-                    : t.shell.reviewsZero}
+                  {fmt(rating.count === 1 ? t.shell.reviewsCountOne : t.shell.reviewsCount, {
+                    avg: rating.average.toFixed(1),
+                    n: rating.count,
+                  })}
                 </span>
               </Link>
             )}
@@ -398,7 +398,7 @@ export function EmployerShell({
                   <img src={avatarUrl} alt="" className="h-6 w-6 rounded-full object-cover" />
                 ) : (
                   <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-[10px] font-semibold text-white">
-                    {initials(userName)}
+                    {naamInitialen(userName)}
                   </span>
                 )}
                 <span className="hidden max-w-[9rem] truncate sm:inline">{userName}</span>
@@ -444,15 +444,6 @@ export function EmployerShell({
       <RecentResponseAlert />
     </div>
   );
-}
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? "")
-    .join("");
 }
 
 function SettingsGlyph() {

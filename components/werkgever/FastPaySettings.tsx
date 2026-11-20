@@ -85,6 +85,8 @@ export function FastPaySettings() {
           </p>
         </div>
       )}
+      {/* 16 nov 2026: de schakelaar stond aan en beloofde een voorschot dat niet werd overgemaakt (geen uitbetaalroute).
+          Kan het niet, dan staat het blok er niet: wat niet kan hoeft niet op het scherm. */}
       {s.voorschotKan ? (
         <label className="flex items-start justify-between gap-3 border-t border-hair pt-4 text-sm">
           <span>
@@ -93,13 +95,7 @@ export function FastPaySettings() {
           </span>
           <input type="checkbox" checked={s.advancesForUitzend} disabled={busy} onChange={(e) => save({ advancesForUitzend: e.target.checked })} className="mt-1" />
         </label>
-      ) : (
-        // 16 nov 2026: de schakelaar stond aan en beloofde een voorschot dat niet werd overgemaakt (geen uitbetaalroute)
-        <div className="border-t border-hair pt-4 text-sm">
-          <p>{f.voorschotKop}</p>
-          <p className="text-xs text-neutralx-500">{f.voorschotNiet}</p>
-        </div>
-      )}
+      ) : null}
       {err && <p role="alert" className="text-sm text-crit">{err}</p>}
     </div>
   );

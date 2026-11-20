@@ -6,10 +6,12 @@ import { getOrgProfileExtra } from "@/lib/profile/store";
 import { PageHeader, Panel, KpiCard, money } from "@/components/app/ui";
 import { BillingPrefsForm } from "@/components/app/BillingPrefsForm";
 import { EfactuurSettings } from "@/components/werkgever/EfactuurSettings";
+import { OpenBijAnker } from "@/components/werkgever/OpenBijAnker";
 import { InvoicesOverview, type InvoiceRow } from "@/components/app/InvoicesOverview";
 import { payUrl } from "@/lib/billing/pay-link";
 import { huidigeFactuurBetaalwijze } from "@/lib/billing/overschrijving-bron";
 import { peppolIngesteld } from "@/lib/efactuur/instellingen";
+import { boekhoudingIngevuld, toonFactuurTellers } from "@/lib/werkgever/facturen-instellingen";
 import { getDict } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +46,7 @@ export default async function WerkgeverFacturenPage() {
 
   const outstanding = invoices.filter((i) => i.status === "ISSUED").reduce((s, i) => s + i.totalCents, 0);
   const paid = invoices.filter((i) => i.status === "PAID").reduce((s, i) => s + i.totalCents, 0);
+  const instellingenOpen = boekhoudingIngevuld(billing);
 
   const rows: InvoiceRow[] = invoices.map((i) => ({
     id: i.id,
@@ -72,30 +75,41 @@ export default async function WerkgeverFacturenPage() {
     <>
       <PageHeader title={iv.title} subtitle={iv.subtitle} />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <KpiCard label={iv.kpiOutstanding} value={money(outstanding)} tone={outstanding > 0 ? "warn" : "default"} />
-        <KpiCard label={iv.kpiPaid} value={money(paid)} tone="brand" />
-        <KpiCard label={iv.kpiCount} value={String(invoices.length)} />
-      </div>
+      {/* een nieuw bedrijf zag hier "€ 0", "€ 0" en "0": de telvakken komen pas bij de eerste factuur */}
+      {toonFactuurTellers(invoices.length) && (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <KpiCard label={iv.kpiOutstanding} value={money(outstanding)} tone={outstanding > 0 ? "warn" : "default"} />
+          <KpiCard label={iv.kpiPaid} value={money(paid)} tone="brand" />
+          <KpiCard label={iv.kpiCount} value={String(invoices.length)} />
+        </div>
+      )}
 
-      <div id="factuurgegevens" className="mt-8 scroll-mt-24">
-        <Panel title={iv.detailsPanel}>
-          <BillingPrefsForm
-            initial={{
-              billingEmail: billing.billingEmail ?? "",
-              splitByCostCentre: billing.splitByCostCentre ?? false,
-              costCentres: billing.costCentres ?? [],
-            }}
-          />
-        </Panel>
-      </div>
+      {/* instellingen voor de boekhouder: standaard dicht, open als het bedrijf er al iets heeft ingevuld
+          (lib/werkgever/facturen-instellingen.ts). Het anker #factuurgegevens (hulpcentrum) wijst naar dit blok. */}
+      <details id="factuurgegevens" className="card mt-8 scroll-mt-24 p-4" open={instellingenOpen}>
+        <summary className="cursor-pointer text-sm font-semibold text-ink">{iv.moreSettings}</summary>
 
-      {/* e-factuur (lib/efactuur): Peppol-adres, ontvangstadres en automatisch versturen */}
-      <div id="e-factuur" className="mt-8 scroll-mt-24">
-        <Panel title={peppolIngesteld() ? "E-factuur (UBL / Peppol)" : "E-factuur (UBL)"}>
-          <EfactuurSettings />
-        </Panel>
-      </div>
+        <div className="mt-4">
+          <Panel title={iv.detailsPanel}>
+            <BillingPrefsForm
+              initial={{
+                billingEmail: billing.billingEmail ?? "",
+                splitByCostCentre: billing.splitByCostCentre ?? false,
+                costCentres: billing.costCentres ?? [],
+              }}
+            />
+          </Panel>
+        </div>
+
+        {/* e-factuur (lib/efactuur): Peppol-adres, ontvangstadres en automatisch versturen */}
+        <div id="e-factuur" className="mt-4 scroll-mt-24">
+          <Panel title={peppolIngesteld() ? "E-factuur (UBL / Peppol)" : "E-factuur (UBL)"}>
+            <EfactuurSettings />
+          </Panel>
+        </div>
+      </details>
+      {/* een <details> gaat niet vanzelf open bij een anker: de hulplink zou op een dicht blok uitkomen */}
+      <OpenBijAnker blokId="factuurgegevens" ankers={["factuurgegevens", "e-factuur"]} />
 
       <div className="mt-8">
         <InvoicesOverview invoices={rows} t={iv} betaalwijze={betaalwijze} />
