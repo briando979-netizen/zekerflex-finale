@@ -38,7 +38,6 @@ import { UurloonInfo } from "@/components/app/UurloonInfo";
 import { uurloonOpbouw } from "@/lib/payroll/uurloon-opbouw";
 import { amsterdamWeek, findOverlappingShift, MAX_WEEK_HOURS, restViolation, weekHoursWith } from "@/lib/shifts/worker-overlap";
 import { afzegDeadline } from "@/lib/shifts/annuleertermijn";
-import { KLUS_TYPE_EMOJI } from "@/lib/shifts/klus-type";
 
 export const dynamic = "force-dynamic";
 
@@ -453,15 +452,6 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
             {vsMarket >= 5 ? ft.rate.above(vsMarket, catLabel) : vsMarket <= -5 ? ft.rate.below(-vsMarket, catLabel) : ft.rate.average(catLabel)}
           </p>
         )}
-        {/* de voorwaarden als chips met een pictogram (✌️ zzp bij de opdrachtgever · 💸 uitbetaling per klus · …), zoals op
-            de kluspagina van YoungOnes (20 nov); dezelfde teksten als het vergelijkblok op Ontdekken, in de taal van de werker */}
-        <ul className="mt-3 flex flex-wrap gap-1.5" aria-label={ft.market.typeTitle}>
-          {(agencyTerms ? ft.market.typeUitzend : ft.market.typeFreelance).map((tekst, i) => (
-            <li key={tekst} className="rounded-lg border border-hair bg-paper-soft px-2 py-1 text-xs font-medium text-neutralx-700">
-              <span aria-hidden>{(agencyTerms ? KLUS_TYPE_EMOJI.uitzenden : KLUS_TYPE_EMOJI.freelance)[i] ?? "•"}</span> {tekst}
-            </li>
-          ))}
-        </ul>
 
         {/* Fast payout — only when the client offers it (credit-checked) */}
         <div className={`mt-4 rounded-xl border px-3 py-2.5 text-xs ${s.fastPay && !inApp && !agencyTerms ? "border-brand-500/30 bg-brand-50 text-brand-700" : "border-hair bg-paper-soft text-neutralx-600"}`}>
