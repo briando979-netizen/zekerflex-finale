@@ -4,7 +4,7 @@ import { listCertificates, CERT_TYPES } from "@/lib/certificates/store";
 import { getUserAvatars } from "@/lib/profile/store";
 import { avatarUrlFor } from "@/lib/profile/card";
 import { amsterdamParts } from "@/lib/time/amsterdam";
-import { workerMissed } from "@/lib/profile/card";
+import { telOpkomst } from "@/lib/employer/opkomst-kern";
 import { gebiedVan } from "@/lib/geo/thuisland";
 
 // ---------------------------------------------------------------------------
@@ -85,28 +85,13 @@ export async function buildCandidateCard(freelancerUserId: string, now = new Dat
   ]);
 
   const active = assignments.filter((a) => !a.cancelledAt);
-  // Alleen wat de werker zelf afzegde of liet schieten telt; een annulering door
-  // een opdrachtgever of een overdracht aan een vervanger niet (workerMissed).
-  const cancellations = assignments.filter((a) => a.cancelledAt && workerMissed(a.cancelReason)).length;
   const avgRateCents = active.length
     ? Math.round(active.reduce((s, a) => s + a.shift.hourlyRateCents, 0) / active.length)
     : null;
 
-  // opkomst: verscheen vs. gemist op afgelopen diensten
-  let showed = 0;
-  let missed = 0;
-  for (const a of assignments) {
-    if (a.shift.endsAt >= now) continue;
-    if (a.cancelledAt) {
-      if (workerMissed(a.cancelReason)) missed++;
-      continue;
-    }
-    const ts = a.timesheet;
-    const cameIn = ts?.actualStart != null || ["SUBMITTED", "APPROVED", "DISPUTED", "PAID"].includes(ts?.status ?? "");
-    if (cameIn) showed++;
-    else missed++;
-  }
-  const attendancePct = showed + missed > 0 ? Math.round((showed / (showed + missed)) * 100) : null;
+  // opkomst: verscheen vs. gemist op afgelopen diensten; annuleringen alleen wat de werker zelf afzegde of liet
+  // schieten (telOpkomst, dezelfde telling als de reactie-rijen in lib/employer/opkomst.ts)
+  const { attendancePct, cancellations } = telOpkomst(assignments, now);
 
   const history: CandidateHistoryItem[] = active
     .filter((a) => a.shift.endsAt < now)

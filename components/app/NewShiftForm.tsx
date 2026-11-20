@@ -10,6 +10,7 @@ import type { ShiftTemplate } from "@/lib/shifts/create";
 import { shiftCategory } from "@/lib/shifts/category";
 import { amsterdamDayKey } from "@/lib/time/amsterdam";
 import { extraDayOptions } from "@/lib/shifts/extra-days";
+import { ANNULEER_TERMIJNEN, annuleerTermijnLabel, STANDAARD_ANNULEER_UREN } from "@/lib/shifts/annuleertermijn";
 import { AddressAutocomplete, type PickedAddress } from "@/components/app/AddressAutocomplete";
 import { FairPayMeter } from "@/components/app/FairPayMeter";
 import { CONCEPT_KEY, parseConcept, toShiftFormValues } from "@/lib/klusconcept/concept";
@@ -116,6 +117,8 @@ export function NewShiftForm({
   const [rateEuro, setRateEuro] = useState(((init?.hourlyRateCents ?? minRateCents) / 100).toFixed(2));
   const [breakMin, setBreakMin] = useState(String(init?.breakMinutes ?? 30));
   const [positions, setPositions] = useState(String(init?.positions ?? 1));
+  // annuleringstermijn (lib/shifts/annuleertermijn.ts): alleen bij plaatsen, niet bij bewerken
+  const [annuleerUren, setAnnuleerUren] = useState(String(STANDAARD_ANNULEER_UREN));
   const [startsAt, setStartsAt] = useState(init?.startsAt ?? "");
   const [endsAt, setEndsAt] = useState(init?.endsAt ?? "");
   const [extraDates, setExtraDates] = useState<string[]>([]);
@@ -493,6 +496,19 @@ export function NewShiftForm({
             <span className="field-label">{n.plekken}</span>
             <input type="number" name="positions" min={1} max={50} value={positions} onChange={(e) => setPositions(e.target.value)} className="field-input" />
           </label>
+          {!edit && (
+            <label className="block sm:col-span-2">
+              <span className="field-label">{n.annuleerTermijn}</span>
+              <select name="annuleerUren" value={annuleerUren} onChange={(e) => setAnnuleerUren(e.target.value)} className="field-input">
+                {ANNULEER_TERMIJNEN.map((u) => (
+                  <option key={u} value={u}>
+                    {annuleerTermijnLabel(u, locale === "en" ? "en" : "nl")}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-xs text-neutralx-400">{n.annuleerTermijnUitleg}</span>
+            </label>
+          )}
           <label className="block sm:col-span-2">
             <span className="field-label">{n.uurtarief}</span>
             <input

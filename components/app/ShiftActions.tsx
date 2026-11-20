@@ -44,6 +44,8 @@ export interface ShiftActionsProps {
   shiftId: string;
   shiftTitle: string;
   startsAtISO: string;
+  /** annuleringstermijn van deze klus in uren (lib/shifts/annuleertermijn.ts); zonder waarde de platformstandaard */
+  noticeHours?: number;
   confirmedAt: string | null;
   replacementRequested: boolean;
   replacementRequestId?: string | null;
@@ -58,6 +60,7 @@ export function ShiftActions({
   assignmentId,
   shiftTitle,
   startsAtISO,
+  noticeHours = NOTICE_HOURS,
   confirmedAt,
   replacementRequested,
   replacementRequestId,
@@ -81,8 +84,8 @@ export function ShiftActions({
   const started = new Date(startsAtISO).getTime() < Date.now();
   const icsHref = `/api/me/assignments/${assignmentId}/ics`;
 
-  // Annuleertermijn: tot NOTICE_HOURS vóór aanvang kun je kosteloos afzeggen.
-  const freeUntilMs = new Date(startsAtISO).getTime() - NOTICE_HOURS * 3_600_000;
+  // Annuleertermijn: tot noticeHours vóór aanvang kun je kosteloos afzeggen (per klus gekozen door het bedrijf).
+  const freeUntilMs = new Date(startsAtISO).getTime() - noticeHours * 3_600_000;
   const stillFree = Date.now() < freeUntilMs;
   const deadlineLabel = new Date(freeUntilMs).toLocaleString(ft.intl, {
     weekday: "short",
@@ -150,6 +153,7 @@ export function ShiftActions({
       assignmentId={assignmentId}
       shiftTitle={shiftTitle}
       startsAtISO={startsAtISO}
+      noticeHours={noticeHours}
       onClose={() => setCancelOpen(false)}
       onCancelled={(late) => {
         setCancelOpen(false);
@@ -318,12 +322,14 @@ function CancelShiftModal({
   assignmentId,
   shiftTitle,
   startsAtISO,
+  noticeHours,
   onClose,
   onCancelled,
 }: {
   assignmentId: string;
   shiftTitle: string;
   startsAtISO: string;
+  noticeHours: number;
   onClose: () => void;
   onCancelled: (late: boolean) => void;
 }) {
@@ -333,7 +339,7 @@ function CancelShiftModal({
   const [busy, setBusy] = useState(false);
 
   const hoursUntilStart = (new Date(startsAtISO).getTime() - Date.now()) / 3_600_000;
-  const withinNotice = hoursUntilStart >= NOTICE_HOURS;
+  const withinNotice = hoursUntilStart >= noticeHours;
 
   async function cancelShift() {
     if (reason.trim().length < 3) {
@@ -365,11 +371,11 @@ function CancelShiftModal({
 
           {withinNotice ? (
             <div className="mt-3 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-xs leading-relaxed text-neutralx-700">
-              <span className="font-semibold text-warn">{t.warn}</span> {t.earlyWarn(NOTICE_HOURS)}
+              <span className="font-semibold text-warn">{t.warn}</span> {t.earlyWarn(noticeHours)}
             </div>
           ) : (
             <div className="mt-3 rounded-lg border border-crit/30 bg-crit/5 px-3 py-2 text-xs leading-relaxed text-neutralx-700">
-              <span className="font-semibold text-crit">{t.warn}</span> {t.lateWarn(NOTICE_HOURS)}
+              <span className="font-semibold text-crit">{t.warn}</span> {t.lateWarn(noticeHours)}
             </div>
           )}
 

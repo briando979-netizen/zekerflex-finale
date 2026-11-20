@@ -11,6 +11,8 @@ import { AppError } from "@/lib/errors";
 export interface PoolWithMembers {
   id: string;
   name: string;
+  /** vaste schil: een lid dat reageert tegen het geplaatste tarief staat direct ingepland (lib/pools/vaste-schil.ts) */
+  autoAccept: boolean;
   createdAt: Date;
   members: { freelancerUserId: string; addedAt: Date }[];
 }
@@ -21,9 +23,25 @@ export async function listPools(tenantId: string): Promise<PoolWithMembers[]> {
     select: {
       id: true,
       name: true,
+      autoAccept: true,
       createdAt: true,
       members: { select: { freelancerUserId: true, addedAt: true }, orderBy: { addedAt: "asc" } },
     },
+    orderBy: { createdAt: "asc" },
+  });
+}
+
+/** Vaste schil aan of uit voor een pool. */
+export async function setPoolAutoAccept(tenantId: string, poolId: string, autoAccept: boolean): Promise<void> {
+  await assertOwnsPool(tenantId, poolId);
+  await prisma.favoritePool.update({ where: { id: poolId }, data: { autoAccept } });
+}
+
+/** De eerste pool van dit bedrijf met vaste schil waar de werker lid van is, of null. */
+export async function vasteSchilPoolVoor(tenantId: string, freelancerUserId: string): Promise<{ id: string; name: string } | null> {
+  return prisma.favoritePool.findFirst({
+    where: { tenantId, autoAccept: true, members: { some: { freelancerUserId } } },
+    select: { id: true, name: true },
     orderBy: { createdAt: "asc" },
   });
 }

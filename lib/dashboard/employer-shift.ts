@@ -8,6 +8,7 @@ import { getUserAvatars } from "@/lib/profile/store";
 import { reviewSummary } from "@/lib/reviews/store";
 import { poolsInvitedToShift } from "@/lib/pools/store";
 import { isCompTenant } from "@/lib/billing/comp";
+import { opkomstVoor, type Opkomst } from "@/lib/employer/opkomst";
 
 // ---------------------------------------------------------------------------
 // Everything an employer needs on a single shift: bezetting, kandidaten,
@@ -32,6 +33,8 @@ export interface EmployerShiftView {
   breakMinutes: number;
   hourlyRateCents: number;
   positions: number;
+  /** annuleringstermijn in uren vóór aanvang (lib/shifts/annuleertermijn.ts) */
+  annuleerUren: number;
   status: string;
   visibility: string;
   invitedPool: { id: string; name: string } | null;
@@ -82,6 +85,10 @@ export interface EmployerShiftView {
     badge: string | null;
     reviewAverage: number;
     reviewCount: number;
+    /** opkomst op afgelopen diensten (lib/employer/opkomst.ts); null zonder afgelopen diensten */
+    attendancePct: number | null;
+    shiftsCompleted: number;
+    cancellations: number;
     /** booked on another shift at that time: accepting would be refused (lib/shifts/worker-overlap) */
     busyElsewhere: boolean;
   }[];
@@ -109,6 +116,7 @@ export async function getEmployerShift(
       breakMinutes: true,
       hourlyRateCents: true,
       positions: true,
+      annuleerUren: true,
       status: true,
       visibility: true,
       requiredSkill: { select: { name: true } },
@@ -172,7 +180,7 @@ export async function getEmployerShift(
       ...shift.matches.map((m) => m.freelancer.userId),
     ]),
   ];
-  const [avatars, offerProfiles, offerReviews, busyRows] = await Promise.all([
+  const [avatars, offerProfiles, offerReviews, busyRows, opkomst] = await Promise.all([
     getUserAvatars(allUserIds),
     prisma.freelancerProfile.findMany({
       where: { userId: { in: offerUserIds } },
@@ -191,6 +199,8 @@ export async function getEmployerShift(
           select: { freelancer: { select: { userId: true } } },
         })
       : Promise.resolve([]),
+    // opkomst, aantal klussen en annuleringen op de reactie-rij (lib/employer/opkomst.ts); valt stil terug op niets
+    opkomstVoor(offerUserIds).catch(() => new Map<string, Opkomst>()),
   ]);
   const busyUsers = new Set(busyRows.map((r) => r.freelancer.userId));
   const avatarUrl = (userId: string): string | null => (avatars[userId] ? `/api/profile/${userId}/avatar` : null);
@@ -215,6 +225,7 @@ export async function getEmployerShift(
     breakMinutes: shift.breakMinutes,
     hourlyRateCents: shift.hourlyRateCents,
     positions: shift.positions,
+    annuleerUren: shift.annuleerUren,
     status: shift.status,
     visibility: shift.visibility,
     invitedPool: invitedPools[0] ?? null,
@@ -268,6 +279,9 @@ export async function getEmployerShift(
         badge: profile?.badgeLevel ?? null,
         reviewAverage: reviews?.average ?? 0,
         reviewCount: reviews?.count ?? 0,
+        attendancePct: opkomst.get(o.userId)?.attendancePct ?? null,
+        shiftsCompleted: opkomst.get(o.userId)?.shiftsCompleted ?? 0,
+        cancellations: opkomst.get(o.userId)?.cancellations ?? 0,
         busyElsewhere: busyUsers.has(o.userId),
       };
     }),

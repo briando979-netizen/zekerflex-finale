@@ -43,6 +43,7 @@ export default async function FavoritePoolsPage() {
           pools={pools.map((p) => ({
             id: p.id,
             name: p.name,
+            autoAccept: p.autoAccept,
             members: p.members.map((m) => ({ userId: m.freelancerUserId })),
           }))}
           avatars={avatars}

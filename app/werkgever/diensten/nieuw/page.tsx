@@ -82,6 +82,7 @@ export default async function NieuweDienstPage() {
             sjablonen={SHIFT_TEMPLATES.map((s) => ({ key: s.key, label: s.label, hourlyRateCents: s.hourlyRateCents, description: s.description, dresscode: s.dresscode }))}
             minRateCents={MIN_SHIFT_RATE_CENTS}
             t={locale === "en" ? SNEL_EN : SNEL_NL}
+            locale={locale === "en" ? "en" : "nl"}
           />
           {/* meer opties (meerdere dagen, eenmalige locatie, pools, dresscode, foto): het uitgebreide formulier, dichtgeklapt */}
           <details className="mt-6">

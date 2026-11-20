@@ -37,6 +37,7 @@ import { FollowEmployerButton } from "@/components/app/FollowEmployerButton";
 import { UurloonInfo } from "@/components/app/UurloonInfo";
 import { uurloonOpbouw } from "@/lib/payroll/uurloon-opbouw";
 import { amsterdamWeek, findOverlappingShift, MAX_WEEK_HOURS, restViolation, weekHoursWith } from "@/lib/shifts/worker-overlap";
+import { afzegDeadline } from "@/lib/shifts/annuleertermijn";
 
 export const dynamic = "force-dynamic";
 
@@ -129,8 +130,8 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
   // 10 nov (eigenaar): alleen bij een uitzendklus, niet bij elke klus van een uitzendkracht
   const agencyTerms = s.viaUitzendbureau;
 
-  // Cancellation deadline: 24h before the shift starts.
-  const cancelDeadline = new Date(start.getTime() - 24 * 3_600_000);
+  // Annuleringstermijn van deze klus (24/48/72/168 uur, gekozen door het bedrijf; lib/shifts/annuleertermijn.ts).
+  const cancelDeadline = afzegDeadline(start, s.annuleerUren);
   const cancelPassed = cancelDeadline.getTime() < Date.now();
   const fmtDay = (d: Date) => {
     const p = amsterdamParts(d);
@@ -374,6 +375,7 @@ export default async function ShiftDetailPage(props: { params: Promise<{ shiftId
               shiftId={s.id}
               shiftTitle={s.title}
               startsAtISO={start.toISOString()}
+              noticeHours={s.annuleerUren}
               confirmedAt={assigned.confirmedAt}
               replacementRequested={assigned.replacementRequested}
               replacementRequestId={assigned.replacementRequestId}

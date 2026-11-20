@@ -10,7 +10,8 @@ import { sendMail } from "@/lib/mail";
 import { cancelReplacementRequest, getOpenRequestForShift } from "@/lib/replacements/store";
 import { resolveShiftContact } from "@/lib/messaging/contacts";
 import { offerEmployerClaim } from "@/lib/claims/store";
-import { NOTICE_HOURS, LATE_CANCEL_RELIABILITY_PENALTY } from "@/lib/claims/policy";
+import { LATE_CANCEL_RELIABILITY_PENALTY } from "@/lib/claims/policy";
+import { annuleerUrenOf } from "@/lib/shifts/annuleertermijn";
 import { runMatchingForShift } from "@/lib/matching/engine";
 import { notifyStandby } from "@/lib/matching/standby";
 import { sendUserPush } from "@/lib/notifications/push";
@@ -22,8 +23,8 @@ export const dynamic = "force-dynamic";
 
 // POST /api/me/assignments/<assignmentId>/cancel { reason }
 // The freelancer cancels a shift they took, without a replacement. The seat is
-// freed and the shift returns to the marketplace. Cancelling less than
-// NOTICE_HOURS before the shift starts offers the employer a 50% claim option
+// freed and the shift returns to the marketplace. Cancelling less than the
+// klus's annuleringstermijn before the shift starts offers the employer a 50% claim option
 // (see lib/claims/store.ts) and dents the freelancer's reliability score.
 export async function POST(request: Request, props: { params: Promise<{ assignmentId: string }> }): Promise<NextResponse> {
   const params = await props.params;
@@ -53,6 +54,7 @@ export async function POST(request: Request, props: { params: Promise<{ assignme
             breakMinutes: true,
             hourlyRateCents: true,
             positions: true,
+            annuleerUren: true,
             status: true,
             branch: { select: { name: true, tenantId: true } },
           },
@@ -66,8 +68,10 @@ export async function POST(request: Request, props: { params: Promise<{ assignme
       throw AppError.precondition("Deze dienst is al begonnen — neem contact op met de opdrachtgever.");
     }
 
+    // de annuleringstermijn van deze klus (24/48/72/168 uur, gekozen door het bedrijf; lib/shifts/annuleertermijn.ts)
+    const noticeHours = annuleerUrenOf(assignment.shift.annuleerUren);
     const hoursUntilStart = (assignment.shift.startsAt.getTime() - Date.now()) / 3_600_000;
-    const late = hoursUntilStart < NOTICE_HOURS;
+    const late = hoursUntilStart < noticeHours;
 
     await prisma.$transaction(async (tx) => {
       await tx.shiftAssignment.update({
@@ -151,7 +155,7 @@ export async function POST(request: Request, props: { params: Promise<{ assignme
         employerTenantId: assignment.shift.branch.tenantId,
         branchName: assignment.shift.branch.name,
         shiftValueCents: seatValueCents,
-        reason: `Afgezegd binnen ${NOTICE_HOURS} uur voor aanvang. Reden: ${reason}`,
+        reason: `Afgezegd binnen ${noticeHours} uur voor aanvang. Reden: ${reason}`,
       }).catch(() => undefined);
     }
 
@@ -168,7 +172,7 @@ export async function POST(request: Request, props: { params: Promise<{ assignme
 
     revalidatePath("/dashboard/diensten");
     revalidatePath("/dashboard");
-    return NextResponse.json({ ok: true, late, noticeHours: NOTICE_HOURS });
+    return NextResponse.json({ ok: true, late, noticeHours });
   } catch (err) {
     const { status, body } = toErrorBody(err);
     return NextResponse.json(body, { status });

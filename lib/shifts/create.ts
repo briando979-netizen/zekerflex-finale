@@ -15,6 +15,7 @@ import { listPools } from "@/lib/pools/store";
 import { dedupePlaceParts } from "@/lib/shifts/place-label";
 import { amsterdamDayKey, amsterdamParts, amsterdamToUtc, parseAmsterdamLocal } from "@/lib/time/amsterdam";
 import { shiftLengthProblem } from "@/lib/shifts/shift-length";
+import { ANNULEER_TERMIJNEN, isAnnuleerTermijn, STANDAARD_ANNULEER_UREN } from "@/lib/shifts/annuleertermijn";
 
 // The fixed klus-templates live in a pure module (lib/shifts/catalogus.ts) so the
 // browser forms can read them too; re-exported here for the existing imports.
@@ -53,6 +54,12 @@ export const createShiftSchema = z
     })
     .max(20000),
   positions: z.coerce.number().int().min(1).max(50).default(1),
+  /** annuleringstermijn in uren vóór aanvang (lib/shifts/annuleertermijn.ts); zonder keuze de standaard */
+  annuleerUren: z.coerce
+    .number()
+    .int()
+    .refine(isAnnuleerTermijn, { message: `Kies een annuleringstermijn van ${ANNULEER_TERMIJNEN.join(", ")} uur.` })
+    .default(STANDAARD_ANNULEER_UREN),
   /** extra calendar dates (yyyy-mm-dd) — the same time window is repeated on each */
   extraDates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).max(30).optional(),
   /** Privately invite this favorite pool instead of going straight to the open marketplace. */
@@ -164,6 +171,7 @@ export async function createShift(
             breakMinutes: input.breakMinutes,
             hourlyRateCents: input.hourlyRateCents,
             positions: input.positions,
+            annuleerUren: input.annuleerUren,
             status: "OPEN",
             visibility: pool ? "POOL_ONLY" : "PUBLIC",
           },

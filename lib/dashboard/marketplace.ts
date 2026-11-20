@@ -449,6 +449,8 @@ export interface ShiftDetail extends MarketplaceShift {
   clientName: string;
   /** full multi-day series (all days, incl. ones you already took) */
   seriesDays: { shiftId: string; date: string; weekday: string; seatsFree: number; mine: boolean }[];
+  /** annuleringstermijn in uren vóór aanvang (lib/shifts/annuleertermijn.ts) */
+  annuleerUren: number;
 }
 
 export async function getShiftDetail(userId: string, shiftId: string): Promise<ShiftDetail | null> {
@@ -469,6 +471,7 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
       breakMinutes: true,
       hourlyRateCents: true,
       positions: true,
+      annuleerUren: true,
       branchId: true,
       createdAt: true,
       status: true,
@@ -649,5 +652,6 @@ export async function getShiftDetail(userId: string, shiftId: string): Promise<S
     clientTenantId: row.branch.tenantId,
     clientName: row.branch.tenant.name,
     seriesDays: seriesDays.length > 1 ? seriesDays : [],
+    annuleerUren: row.annuleerUren,
   };
 }

@@ -18,17 +18,19 @@ import { RepeatTeamButton } from "@/components/app/RepeatTeamButton";
 import { SpoedoproepPaneel } from "@/components/app/SpoedoproepPaneel";
 import { ReservebankKnop, ReserveInplannenKnop } from "@/components/app/ReservebankKnoppen";
 import { reservebankVoorPagina } from "@/lib/reservebank/store";
-import { getDict } from "@/lib/i18n/server";
+import { getDict, getLocale } from "@/lib/i18n/server";
 import { fmt, type Dict } from "@/lib/i18n/dictionaries";
 import { isTenantVerified } from "@/lib/company/verified";
 import { freelancerRatings } from "@/lib/reviews/ratings";
 import { explainMatch } from "@/lib/matching/explain";
+import { annuleerTermijnLabel } from "@/lib/shifts/annuleertermijn";
 
 export const dynamic = "force-dynamic";
 
 export default async function EmployerShiftPage(props: { params: Promise<{ shiftId: string }> }) {
   const params = await props.params;
   const dict = await getDict();
+  const locale = await getLocale();
   const d = dict.shiftDetail;
   const QUEUE_LABEL: Record<string, string> = {
     SCORED: d.queueScored,
@@ -187,6 +189,7 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
           sub={pendingOffers.length ? fmt(d.kpiOffers, { n: pendingOffers.length }) : d.kpiMatching}
         />
       </div>
+      <p className="mt-2 text-xs text-neutralx-500">{fmt(d.annuleerTermijn, { label: annuleerTermijnLabel(s.annuleerUren, locale === "en" ? "en" : "nl") })}</p>
 
       {openReacties.length > 0 && (
         <div className="mt-6">
@@ -201,7 +204,10 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
                         {o.proposedRateCents !== o.listedRateCents && (
                           <span className="ml-1.5 text-neutralx-400 line-through">{moneyExact(o.listedRateCents)}/u</span>
                         )}
-                        {o.reliability !== null && <span> · ✓ {Math.round(o.reliability * 100)}% opkomst</span>}
+                        {/* opkomst en ervaring zoals op de werkerkaart van Temper/YoungOnes (lib/employer/opkomst.ts) */}
+                        <span> · {o.attendancePct !== null ? `✓ ${fmt(d.opkomst, { n: o.attendancePct })}` : d.opkomstNieuw}</span>
+                        <span> · {o.shiftsCompleted === 1 ? d.klusGedaan : fmt(d.klussenGedaan, { n: o.shiftsCompleted })}</span>
+                        {o.cancellations > 0 && <span className="text-warn"> · {fmt(d.keerAfgezegd, { n: o.cancellations })}</span>}
                         {o.reviewCount > 0 ? (
                           <span> · ★ {o.reviewAverage.toFixed(1).replace(".", ",")} ({o.reviewCount})</span>
                         ) : (

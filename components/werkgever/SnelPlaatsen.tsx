@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { createShiftAction, type NewShiftState } from "@/app/werkgever/diensten/nieuw/actions";
+import { ANNULEER_TERMIJNEN, annuleerTermijnLabel, STANDAARD_ANNULEER_UREN } from "@/lib/shifts/annuleertermijn";
+import { useT } from "@/components/i18n/I18nProvider";
 
 // Klus plaatsen in drie stappen (20 nov 2026, eigenaar: "wat, wanneer, tarief; de rest standaard ingevuld"). Dezelfde
 // server-actie en dezelfde regels als het uitgebreide formulier (components/app/NewShiftForm.tsx): één vestiging, één
@@ -31,6 +33,7 @@ export interface SnelTeksten {
   personen: string;
   tarief: string;
   tariefHint: string;
+  annuleer: string;
   vestiging: string;
   terug: string;
   volgende: string;
@@ -54,6 +57,7 @@ export const SNEL_NL: SnelTeksten = {
   personen: "Aantal mensen",
   tarief: "Uurtarief voor de werker (€)",
   tariefHint: "Minimaal € {min}. Daarbovenop komt de platformvergoeding per gewerkt uur.",
+  annuleer: "Kosteloos afzeggen tot",
   vestiging: "Locatie",
   terug: "Terug",
   volgende: "Volgende",
@@ -77,6 +81,7 @@ export const SNEL_EN: SnelTeksten = {
   personen: "Number of people",
   tarief: "Hourly rate for the worker (€)",
   tariefHint: "At least € {min}. The platform fee per worked hour comes on top.",
+  annuleer: "Free cancellation until",
   vestiging: "Location",
   terug: "Back",
   volgende: "Next",
@@ -97,8 +102,11 @@ function PlaatsKnop({ tekst, bezig }: { tekst: string; bezig: string }) {
   );
 }
 
-export function SnelPlaatsen({ branches, sjablonen, minRateCents, t }: { branches: { id: string; name: string; city: string | null }[]; sjablonen: SnelSjabloon[]; minRateCents: number; t: SnelTeksten }) {
+export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "nl" }: { branches: { id: string; name: string; city: string | null }[]; sjablonen: SnelSjabloon[]; minRateCents: number; t: SnelTeksten; locale?: "nl" | "en" }) {
   const [stap, setStap] = useState<1 | 2 | 3>(1);
+  const [annuleerUren, setAnnuleerUren] = useState(String(STANDAARD_ANNULEER_UREN));
+  // dezelfde uitleg als het uitgebreide formulier (woordenlijst, NL/EN)
+  const annuleerUitleg = useT().newShiftForm.annuleerTermijnUitleg;
   const [titel, setTitel] = useState("");
   const [sjabloon, setSjabloon] = useState<SnelSjabloon | null>(null);
   const [datum, setDatum] = useState("");
@@ -154,6 +162,7 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t }: { branche
       <input type="hidden" name="breakMinutes" value="0" />
       <input type="hidden" name="hourlyRateCents" value={String(tariefCent)} />
       <input type="hidden" name="positions" value={String(personen)} />
+      <input type="hidden" name="annuleerUren" value={annuleerUren} />
 
       {stap === 1 && (
         <div className="mt-5 space-y-4">
@@ -203,6 +212,15 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t }: { branche
             {t.tarief}
             <input type="number" inputMode="decimal" min={minEuro} step="0.5" value={tarief} onChange={(e) => setTarief(e.target.value)} className="mt-1 w-full rounded-xl border border-hair px-3 py-2 font-normal" required />
             <span className="mt-1 block text-xs font-normal text-neutralx-500">{vul(t.tariefHint, { min: minEuro })}</span>
+          </label>
+          <label className="block text-sm font-semibold text-ink">
+            {t.annuleer}
+            <select value={annuleerUren} onChange={(e) => setAnnuleerUren(e.target.value)} className="mt-1 w-full rounded-xl border border-hair px-3 py-2 font-normal">
+              {ANNULEER_TERMIJNEN.map((u) => (
+                <option key={u} value={u}>{annuleerTermijnLabel(u, locale)}</option>
+              ))}
+            </select>
+            <span className="mt-1 block text-xs font-normal text-neutralx-500">{annuleerUitleg}</span>
           </label>
           {branches.length > 1 && (
             <label className="block text-sm font-semibold text-ink">

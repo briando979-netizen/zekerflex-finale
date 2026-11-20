@@ -40,6 +40,8 @@ import {
   invitedPoolMemberUserIds,
   isInvitedToPoolOnlyShift,
   poolsInvitedToShift,
+  setPoolAutoAccept,
+  vasteSchilPoolVoor,
 } from "@/lib/pools/store";
 
 afterEach(() => vi.clearAllMocks());
@@ -89,10 +91,26 @@ describe("lib/pools/store", () => {
   });
 
   it("listPools scopes to the tenant and orders members by when they were added", async () => {
-    favoritePoolFindMany.mockResolvedValue([{ id: "p1", name: "A", createdAt: new Date(), members: [] }]);
+    favoritePoolFindMany.mockResolvedValue([{ id: "p1", name: "A", autoAccept: false, createdAt: new Date(), members: [] }]);
     await listPools("t1");
     expect(favoritePoolFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { tenantId: "t1" } }),
+      expect.objectContaining({ where: { tenantId: "t1" }, select: expect.objectContaining({ autoAccept: true }) }),
+    );
+  });
+
+  it("setPoolAutoAccept (vaste schil) verifies ownership and flips the flag", async () => {
+    favoritePoolFindFirst.mockResolvedValueOnce(null);
+    await expect(setPoolAutoAccept("t1", "p1", true)).rejects.toMatchObject({ status: 404 });
+    favoritePoolFindFirst.mockResolvedValueOnce({ id: "p1" });
+    await setPoolAutoAccept("t1", "p1", true);
+    expect(favoritePoolUpdate).toHaveBeenCalledWith({ where: { id: "p1" }, data: { autoAccept: true } });
+  });
+
+  it("vasteSchilPoolVoor looks for a pool of THIS tenant with autoAccept and the worker as member", async () => {
+    favoritePoolFindFirst.mockResolvedValueOnce({ id: "p1", name: "Horeca team A" });
+    expect(await vasteSchilPoolVoor("t1", "w1")).toEqual({ id: "p1", name: "Horeca team A" });
+    expect(favoritePoolFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { tenantId: "t1", autoAccept: true, members: { some: { freelancerUserId: "w1" } } } }),
     );
   });
 

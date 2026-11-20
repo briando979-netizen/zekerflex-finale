@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requirePrincipal, requireRole } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
 import { resolveEmployerScope } from "@/lib/dashboard/employer";
-import { createPool, renamePool, deletePool, addMember, removeMember } from "@/lib/pools/store";
+import { createPool, renamePool, deletePool, addMember, removeMember, setPoolAutoAccept } from "@/lib/pools/store";
 import { getDict } from "@/lib/i18n/server";
 import { nl as nlDict } from "@/lib/i18n/dictionaries";
 
@@ -71,6 +71,19 @@ export async function deletePoolAction(poolId: string): Promise<PoolActionResult
   } catch (err) {
     if (err instanceof AppError) return { ok: false, message: foutTekst(err, p) };
     return { ok: false, message: p.deleteFailed };
+  }
+}
+
+/** Vaste schil aan of uit (lib/pools/vaste-schil.ts): leden staan direct ingepland als ze reageren tegen het geplaatste tarief. */
+export async function setPoolAutoAcceptAction(poolId: string, autoAccept: boolean): Promise<PoolActionResult> {
+  const p = await teksten();
+  try {
+    const t = await tenantId();
+    await setPoolAutoAccept(t, poolId, autoAccept);
+    return done(autoAccept ? p.vasteSchilAan : p.vasteSchilUit);
+  } catch (err) {
+    if (err instanceof AppError) return { ok: false, message: foutTekst(err, p) };
+    return { ok: false, message: p.vasteSchilMislukt };
   }
 }
 

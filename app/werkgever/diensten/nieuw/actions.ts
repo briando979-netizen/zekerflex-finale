@@ -43,6 +43,7 @@ export async function createShiftAction(
     breakMinutes: formData.get("breakMinutes") ?? 0,
     hourlyRateCents: formData.get("hourlyRateCents"),
     positions: formData.get("positions") ?? 1,
+    annuleerUren: formData.get("annuleerUren") || undefined,
     extraDates: extraDatesRaw ? extraDatesRaw.split(",").map((s) => s.trim()).filter(Boolean) : undefined,
     poolId: formData.get("poolId") || undefined,
   });

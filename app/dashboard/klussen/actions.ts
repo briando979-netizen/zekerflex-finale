@@ -7,6 +7,7 @@ import { payoutEligibility } from "@/lib/fiscal/eligibility";
 import { AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
 import { createCounterOffer } from "@/lib/offers/store";
+import { probeerVasteSchil } from "@/lib/pools/vaste-schil";
 import { findOverlappingShift, overlapMessageSelf } from "@/lib/shifts/worker-overlap";
 import { pushShiftTaken } from "@/lib/notifications/employer-push";
 import { runAfter } from "@/lib/run-after";
@@ -118,7 +119,7 @@ export async function counterOfferAction(
         startsAt: true,
         endsAt: true,
         viaUitzendbureau: true,
-        branch: { select: { name: true } },
+        branch: { select: { name: true, tenantId: true } },
       },
     });
     if (!shift) return { ok: false, message: "Deze dienst bestaat niet meer." };
@@ -140,7 +141,7 @@ export async function counterOfferAction(
       : null;
     if (overlap) return { ok: false, message: overlapMessageSelf(overlap) };
 
-    await createCounterOffer({
+    const offer = await createCounterOffer({
       userId: principal.userId,
       freelancerName: principal.fullName,
       shiftId,
@@ -150,6 +151,13 @@ export async function counterOfferAction(
       proposedRateCents,
       note: note.slice(0, 500),
     });
+
+    // vaste schil (lib/pools/vaste-schil.ts): lid van een pool met "direct inplannen" en het geplaatste tarief → meteen ingepland
+    const schil = await probeerVasteSchil(offer, shift.branch.tenantId).catch(() => ({ ingepland: false as const }));
+    if (schil.ingepland) {
+      bust();
+      return { ok: true, message: `Je staat direct ingepland op "${shift.title}": je hoort bij de vaste schil van ${shift.branch.name}. Je vindt de klus bij Mijn klussen.` };
+    }
 
     await sendMail({
       to: env.MAIL_ADMIN,

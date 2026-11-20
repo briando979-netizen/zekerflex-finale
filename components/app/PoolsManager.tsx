@@ -12,6 +12,7 @@ import {
   deletePoolAction,
   addPoolMemberAction,
   removePoolMemberAction,
+  setPoolAutoAcceptAction,
 } from "@/app/werkgever/favorieten/pools/actions";
 
 interface Favorite {
@@ -21,6 +22,8 @@ interface Favorite {
 interface Pool {
   id: string;
   name: string;
+  /** vaste schil: leden staan direct ingepland als ze reageren (lib/pools/vaste-schil.ts) */
+  autoAccept: boolean;
   members: { userId: string }[];
 }
 
@@ -114,6 +117,20 @@ export function PoolsManager({
                     </button>
                   </div>
                 </div>
+
+                <label className="mt-3 flex items-start gap-2 rounded-xl bg-paper-soft p-3 text-xs text-neutralx-700">
+                  <input
+                    type="checkbox"
+                    checked={pool.autoAccept}
+                    disabled={pending}
+                    onChange={(e) => run(() => setPoolAutoAcceptAction(pool.id, e.target.checked))}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="block font-semibold text-ink">{p.vasteSchil}</span>
+                    {p.vasteSchilUitleg}
+                  </span>
+                </label>
 
                 {pool.members.length === 0 ? (
                   <p className="mt-3 text-xs text-neutralx-400">{p.noMembers}</p>

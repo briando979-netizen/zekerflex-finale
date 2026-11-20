@@ -641,6 +641,9 @@ model Shift {
   breakMinutes    Int      @default(0)
   hourlyRateCents Int
   positions       Int      @default(1)
+  // Annuleringstermijn in uren vóór aanvang (24/48/72/168, lib/shifts/annuleertermijn.ts): tot dan is afzeggen
+  // kosteloos, daarna geldt de 50 %-regel van lib/claims/policy.ts. Gekozen door het bedrijf bij het plaatsen.
+  annuleerUren    Int      @default(24)
 
   status ShiftStatus @default(DRAFT)
 
@@ -675,6 +678,9 @@ model FavoritePool {
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name     String
+  // Vaste schil (lib/pools/vaste-schil.ts): reageert een lid tegen het geplaatste tarief, dan staat het direct
+  // ingepland zonder dat het bedrijf de reactie nog hoeft te accepteren.
+  autoAccept Boolean @default(false)
 
   members FavoritePoolMember[]
   invites ShiftPoolInvite[]
