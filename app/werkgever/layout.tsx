@@ -165,6 +165,8 @@ export default async function WerkgeverLayout({ children }: { children: ReactNod
       inApp,
       // de studio eist HQ_ADMIN of PLATFORM_ADMIN (app/studio/layout.tsx)
       studio: beheerder,
+      // vlag `publiek-alleen-flexwerk`: de niet-flexwerk-menu-items (telefonie, reviews) vallen weg
+      alleenFlexwerk,
     }),
     menuVolgorde,
   )

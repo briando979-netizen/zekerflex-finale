@@ -230,6 +230,8 @@ export interface MenuOpties {
   inApp: boolean;
   /** mag de studio openen (HQ_ADMIN of PLATFORM_ADMIN, zoals app/studio/layout.tsx eist) */
   studio: boolean;
+  /** vlag `publiek-alleen-flexwerk`: dan vallen de niet-flexwerk-menu-items (online marketing) weg; personeelsfuncties blijven */
+  alleenFlexwerk?: boolean;
 }
 
 /** De personeelsfuncties, in de volgorde van het gewone menu. Alleen in het dashboard personeel. */
@@ -240,8 +242,19 @@ export const PAKKET_SLEUTELS: readonly MenuSleutel[] = ["rijschool", "horeca", "
 
 const plek = (sectie?: MenuSectie) => (sleutel: MenuSleutel): MenuPlek => (sectie ? { sleutel, sectie } : { sleutel });
 
-/** Het menu van het dashboard `soort`. */
+// Menu-items die niet over flexwerk gaan (online marketing): met de vlag `publiek-alleen-flexwerk` aan vallen ze uit elk
+// dashboard-menu. Telefonie en Google-reviews horen bij de online-pijler, niet bij flexwerk. Personeelsfuncties (klussen,
+// uren, facturen, verloning, …) blijven altijd, en de routes blijven bereikbaar via een directe link.
+const NIET_FLEXWERK_MENU: readonly MenuSleutel[] = ["telefonie", "reviews"];
+
+/** Het menu van het dashboard `soort`; met de vlag aan zonder de niet-flexwerk-items (NIET_FLEXWERK_MENU). */
 export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
+  const menu = menuVoorBasis(soort, o);
+  return o.alleenFlexwerk ? menu.filter((p) => !NIET_FLEXWERK_MENU.includes(p.sleutel)) : menu;
+}
+
+/** Het menu van het dashboard `soort` (de vaste opbouw, zonder de vlag). */
+function menuVoorBasis(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
   // ZekerFlex Bank staat uit (lib/app-mode.ts, BANK_AAN)
   const bank: MenuSleutel[] = o.inApp || !BANK_AAN ? [] : ["bank"];
   // Afspraken en de Klantenkaart staan er alleen als het bedrijf afspraken heeft ingericht (anders is de ingang de tegel in Jouw branche)
