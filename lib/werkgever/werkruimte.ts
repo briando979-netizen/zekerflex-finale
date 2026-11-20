@@ -242,15 +242,18 @@ export const PAKKET_SLEUTELS: readonly MenuSleutel[] = ["rijschool", "horeca", "
 
 const plek = (sectie?: MenuSectie) => (sleutel: MenuSleutel): MenuPlek => (sectie ? { sleutel, sectie } : { sleutel });
 
-// Menu-items die niet over flexwerk gaan (online marketing): met de vlag `publiek-alleen-flexwerk` aan vallen ze uit elk
-// dashboard-menu. Telefonie en Google-reviews horen bij de online-pijler, niet bij flexwerk. Personeelsfuncties (klussen,
-// uren, facturen, verloning, …) blijven altijd, en de routes blijven bereikbaar via een directe link.
-const NIET_FLEXWERK_MENU: readonly MenuSleutel[] = ["telefonie", "reviews"];
+// Menu-items die niet over flexwerk gaan: met de vlag `publiek-alleen-flexwerk` aan vallen ze uit het PERSONEEL-menu (het
+// flexwerk-dashboard). Telefonie en Google-reviews (online-pijler), "Jouw branche" (/werkgever/branche + de branchetegels),
+// en "Website bouwen"/"Webshop"/"Website-beheer" (studio/winkel/website). Personeelsfuncties (klussen, uren, facturen,
+// verloning, team, instellingen, abonnement, …) blijven altijd. De pagina's blijven bereikbaar via een directe link.
+// Alleen het personeel-dashboard wordt gefilterd: een bestaand website-/webshop-/rijschool-/horeca-bedrijf houdt zijn eigen
+// dashboardmenu volledig (breek dat niet; de wisselaar toont dat dashboard alleen als het open is).
+const NIET_FLEXWERK_MENU: readonly MenuSleutel[] = ["telefonie", "reviews", "branche", "studio", "winkel", "website"];
 
-/** Het menu van het dashboard `soort`; met de vlag aan zonder de niet-flexwerk-items (NIET_FLEXWERK_MENU). */
+/** Het menu van het dashboard `soort`; met de vlag aan vallen in het personeel-dashboard de niet-flexwerk-items weg. */
 export function menuVoor(soort: Werkruimte, o: MenuOpties): MenuPlek[] {
   const menu = menuVoorBasis(soort, o);
-  return o.alleenFlexwerk ? menu.filter((p) => !NIET_FLEXWERK_MENU.includes(p.sleutel)) : menu;
+  return o.alleenFlexwerk && soort === "personeel" ? menu.filter((p) => !NIET_FLEXWERK_MENU.includes(p.sleutel)) : menu;
 }
 
 /** Het menu van het dashboard `soort` (de vaste opbouw, zonder de vlag). */

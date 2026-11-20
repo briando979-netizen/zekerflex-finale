@@ -218,18 +218,25 @@ describe("de bedrijfskant met de vlag aan", () => {
     expect(flex).toContain("personeel");
   });
 
-  it("het dashboard-menu: met de vlag aan vallen telefonie en reviews weg, de personeelsfuncties blijven", () => {
+  it("het personeel-menu: met de vlag aan vallen telefonie, reviews en 'Jouw branche' weg, de personeelsfuncties blijven", () => {
     const opties: MenuOpties = { heeftAfspraken: true, heeftRijschool: true, heeftHoreca: true, horecaModules: [], inApp: false, studio: true };
     // zonder vlag staan ze er gewoon in
     const uit = menuVoor("personeel", opties).map((p) => p.sleutel);
-    expect(uit).toContain("telefonie");
-    expect(uit).toContain("reviews");
-    // met de vlag aan: de niet-flexwerk-items weg, alle personeelsfuncties en flexwerk-administratie blijven
+    for (const er of ["telefonie", "reviews", "branche"]) expect(uit, er).toContain(er);
+    // met de vlag aan: de niet-flexwerk-items weg (ook branche en de website/webshop-items)
     const aan = menuVoor("personeel", { ...opties, alleenFlexwerk: true }).map((p) => p.sleutel);
-    for (const weg of ["telefonie", "reviews"]) expect(aan, weg).not.toContain(weg);
-    for (const blijft of ["klussen", "kalender", "planner", "uren", "inchecken", "facturen", "compliance", "overeenkomsten", "bedrijf", "rapportages"]) {
+    for (const weg of ["telefonie", "reviews", "branche", "website", "winkel", "studio"]) expect(aan, weg).not.toContain(weg);
+    // alle personeelsfuncties, flexwerk-administratie, en wifi/vpn + op-locatie (eigen vlaggen) blijven
+    for (const blijft of ["klussen", "kalender", "planner", "uren", "inchecken", "facturen", "compliance", "overeenkomsten", "bedrijf", "rapportages", "netwerk", "locatie"]) {
       expect(aan, blijft).toContain(blijft);
     }
+  });
+
+  it("de andere dashboards worden niet gefilterd: een bestaand website-bedrijf houdt zijn menu (breek niet)", () => {
+    const opties: MenuOpties = { heeftAfspraken: false, heeftRijschool: true, heeftHoreca: true, horecaModules: [], inApp: false, studio: true, alleenFlexwerk: true };
+    const website = menuVoor("website", opties).map((p) => p.sleutel);
+    expect(website).toContain("studio"); // "Website bouwen"
+    expect(website).toContain("website"); // "Website-beheer"
   });
 });
 
