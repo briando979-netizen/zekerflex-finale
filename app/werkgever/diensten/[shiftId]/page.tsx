@@ -24,6 +24,7 @@ import { isTenantVerified } from "@/lib/company/verified";
 import { freelancerRatings } from "@/lib/reviews/ratings";
 import { explainMatch } from "@/lib/matching/explain";
 import { annuleerTermijnLabel } from "@/lib/shifts/annuleertermijn";
+import { ReactieLijst } from "@/components/werkgever/ReactieLijst";
 
 export const dynamic = "force-dynamic";
 
@@ -194,49 +195,31 @@ export default async function EmployerShiftPage(props: { params: Promise<{ shift
       {openReacties.length > 0 && (
         <div className="mt-6">
           <Panel title={fmt(d.offersTitle, { n: openReacties.length })} subtitle={seatsFree === 0 && bankBewerkbaar ? d.reserveTip : d.offersSubtitle}>
-            <ul className="divide-y divide-hair">
-              {openReacties.map((o) => (
-                <li key={o.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0 flex-1">
-                    <CandidateCardButton userId={o.userId} shiftId={s.id} name={o.freelancerName} beslissing={{ offerId: o.id, regel: reactieRegel(dict.kandidaatKaart, o) }}>
-                      <Persoon url={o.avatarUrl} name={o.freelancerName}>
-                        <span className="num font-semibold text-brand-600">{moneyExact(o.proposedRateCents)}/u</span>
-                        {o.proposedRateCents !== o.listedRateCents && (
-                          <span className="ml-1.5 text-neutralx-400 line-through">{moneyExact(o.listedRateCents)}/u</span>
-                        )}
-                        {/* opkomst en ervaring zoals op de werkerkaart van Temper/YoungOnes (lib/employer/opkomst.ts) */}
-                        <span> · {o.attendancePct !== null ? `✓ ${fmt(d.opkomst, { n: o.attendancePct })}` : d.opkomstNieuw}</span>
-                        <span> · {o.shiftsCompleted === 1 ? d.klusGedaan : fmt(d.klussenGedaan, { n: o.shiftsCompleted })}</span>
-                        {o.cancellations > 0 && <span className="text-warn"> · {fmt(d.keerAfgezegd, { n: o.cancellations })}</span>}
-                        {o.reviewCount > 0 ? (
-                          <span> · ★ {o.reviewAverage.toFixed(1).replace(".", ",")} ({o.reviewCount})</span>
-                        ) : (
-                          <span> · nog geen beoordelingen</span>
-                        )}
-                      </Persoon>
-                    </CandidateCardButton>
-                    {(o.note || o.busyElsewhere) && (
-                      <div className="mt-1.5 space-y-1 pl-[3.25rem] text-xs text-neutralx-500">
-                        {o.note && <p className="break-words">&ldquo;{o.note}&rdquo;</p>}
-                        {o.busyElsewhere && (
-                          <p>
-                            <span className="font-semibold text-warn">⏰ {d.busyElsewhere}.</span> {d.busyElsewhereHint}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <Acties>
-                    <CandidateCardButton userId={o.userId} shiftId={s.id} name={o.freelancerName} beslissing={{ offerId: o.id, regel: reactieRegel(dict.kandidaatKaart, o) }} />
-                    <ChatUserButton toUserId={o.userId} contextKey={`shift:${s.id}`} subject={s.title} label={d.message} />
-                    {/* instead of declining: keep this reaction open, in reserve for a cancellation */}
-                    {bankBewerkbaar && <ReservebankKnop offerId={o.id} naam={o.freelancerName} op={false} />}
-                    {/* Afwijzen / Accepteren open the same card: you always decide while seeing who it is */}
-                    <CandidateCardButton userId={o.userId} shiftId={s.id} name={o.freelancerName} beslissing={{ offerId: o.id, regel: reactieRegel(dict.kandidaatKaart, o) }} knoppen="beslissen" />
-                  </Acties>
-                </li>
-              ))}
-            </ul>
+            {/* rijen met filters (favoriet, opkomst, klussen, beoordeling, tarief) en bij de laatste plek de reserve-stap
+                vóór het accepteren: components/werkgever/ReactieLijst.tsx */}
+            <ReactieLijst
+              shiftId={s.id}
+              shiftTitle={s.title}
+              bankBewerkbaar={bankBewerkbaar}
+              laatstePlek={seatsFree === 1 && openReacties.length > 1}
+              reacties={openReacties.map((o) => ({
+                id: o.id,
+                userId: o.userId,
+                naam: o.freelancerName,
+                avatarUrl: o.avatarUrl,
+                proposedRateCents: o.proposedRateCents,
+                listedRateCents: o.listedRateCents,
+                note: o.note,
+                busyElsewhere: o.busyElsewhere,
+                attendancePct: o.attendancePct,
+                shiftsCompleted: o.shiftsCompleted,
+                cancellations: o.cancellations,
+                reviewAverage: o.reviewAverage,
+                reviewCount: o.reviewCount,
+                favoriet: favSet.has(o.userId),
+                regel: reactieRegel(dict.kandidaatKaart, o),
+              }))}
+            />
           </Panel>
         </div>
       )}

@@ -2,7 +2,7 @@
 
 import { useId, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { respondToOfferAction } from "@/app/werkgever/diensten/[shiftId]/actions";
+import { respondToOfferAction, zetReserveAction } from "@/app/werkgever/diensten/[shiftId]/actions";
 import { useToast } from "@/components/ui/Toast";
 import { useI18n, useT } from "@/components/i18n/I18nProvider";
 import { fmt } from "@/lib/i18n/dictionaries";
@@ -56,6 +56,7 @@ export function CandidateCardButton({
   preview,
   beslissing,
   knoppen,
+  reserveKeuze = [],
 }: {
   userId: string;
   shiftId: string;
@@ -68,6 +69,8 @@ export function CandidateCardButton({
   beslissing?: { offerId: string; regel: string };
   /** "beslissen": the trigger is the pair Afwijzen / Accepteren, which opens this card first */
   knoppen?: "beslissen";
+  /** the other open reactions: with the last seat, accepting first asks which of them go on the reserve bench (max 3) */
+  reserveKeuze?: { offerId: string; naam: string }[];
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -79,6 +82,9 @@ export function CandidateCardButton({
   const [bezig, setBezig] = useState(false);
   const [fout, setFout] = useState<string | null>(null);
   const [besluit, setBesluit] = useState<{ decision: "accepted" | "declined"; message: string } | null>(null);
+  // reserves kiezen vóór het accepteren van de laatste plek (zoals YoungOnes' back-up lijst, lib/reservebank)
+  const [reserveStap, setReserveStap] = useState(false);
+  const [reserves, setReserves] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const [card, setCard] = useState<Card | null>(null);
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
@@ -100,11 +106,21 @@ export function CandidateCardButton({
   };
 
   // decide in the card itself; afterwards the page takes the server's version (assigned list, offers)
-  const beslis = async (decision: "accepted" | "declined") => {
+  const beslis = async (decision: "accepted" | "declined", metReserves: string[] | null = null) => {
     if (!beslissing || bezig) return;
+    // laatste plek en nog andere reacties: eerst vragen wie op de reservebank mag
+    if (decision === "accepted" && reserveKeuze.length > 0 && metReserves === null) {
+      setReserveStap(true);
+      return;
+    }
     setBezig(true);
     setFout(null);
+    for (const offerId of metReserves ?? []) {
+      // een reserve die niet lukt houdt het accepteren niet tegen; de pagina toont daarna de echte stand
+      await zetReserveAction(offerId, true).catch(() => undefined);
+    }
     const r = await respondToOfferAction(beslissing.offerId, decision).catch(() => ({ ok: false, message: k.mislukt }));
+    setReserveStap(false);
     setBezig(false);
     if (!r.ok) {
       setFout(r.message);
@@ -302,6 +318,38 @@ export function CandidateCardButton({
                     <button type="button" onClick={() => setOpen(false)} className="btn-ghost w-full">
                       {k.sluiten}
                     </button>
+                  </div>
+                ) : reserveStap ? (
+                  <div className="mt-3 space-y-3">
+                    <p className="font-semibold text-ink">{k.reservesKop}</p>
+                    <p className="text-xs text-neutralx-600">{fmt(k.reservesUitleg, { naam: name })}</p>
+                    <ul className="space-y-1.5">
+                      {reserveKeuze.map((r) => {
+                        const aan = reserves.includes(r.offerId);
+                        const vol = !aan && reserves.length >= 3;
+                        return (
+                          <li key={r.offerId}>
+                            <label className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${aan ? "border-brand-400 bg-brand-50" : "border-hair"} ${vol ? "opacity-50" : ""}`}>
+                              <input
+                                type="checkbox"
+                                checked={aan}
+                                disabled={vol}
+                                onChange={(e) => setReserves((v) => (e.target.checked ? [...v, r.offerId].slice(0, 3) : v.filter((id) => id !== r.offerId)))}
+                              />
+                              <span>{r.naam}</span>
+                            </label>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button type="button" onClick={() => void beslis("accepted", [])} disabled={bezig} className="btn-ghost disabled:opacity-50">
+                        {k.reservesOverslaan}
+                      </button>
+                      <button type="button" onClick={() => void beslis("accepted", reserves)} disabled={bezig || reserves.length === 0} className="btn-primary disabled:opacity-50">
+                        {bezig ? k.reservesBezig : k.reservesDoorgaan}
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <>

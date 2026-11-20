@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
+import { FairPayMeter } from "@/components/app/FairPayMeter";
+import { fmt } from "@/lib/i18n/dictionaries";
 import { createShiftAction, type NewShiftState } from "@/app/werkgever/diensten/nieuw/actions";
 import { ANNULEER_TERMIJNEN, annuleerTermijnLabel, STANDAARD_ANNULEER_UREN } from "@/lib/shifts/annuleertermijn";
 import { useT } from "@/components/i18n/I18nProvider";
@@ -106,7 +108,10 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
   const [stap, setStap] = useState<1 | 2 | 3>(1);
   const [annuleerUren, setAnnuleerUren] = useState(String(STANDAARD_ANNULEER_UREN));
   // dezelfde uitleg als het uitgebreide formulier (woordenlijst, NL/EN)
-  const annuleerUitleg = useT().newShiftForm.annuleerTermijnUitleg;
+  const n = useT().newShiftForm;
+  const annuleerUitleg = n.annuleerTermijnUitleg;
+  // vervullingskans en tariefadvies (lib/pricing/advice via /api/werkgever/pricing), zoals het uitgebreide formulier
+  const [forecast, setForecast] = useState<{ marketRateCents: number; fillChance: number; suggestedRateCents: number; suggestedFillChance: number; sample: number } | null>(null);
   const [titel, setTitel] = useState("");
   const [sjabloon, setSjabloon] = useState<SnelSjabloon | null>(null);
   const [datum, setDatum] = useState("");
@@ -122,6 +127,30 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
   const tijdOk = datum !== "" && van !== "" && tot !== "" && tot > van;
   const tariefCent = Math.round((Number(tarief.replace(",", ".")) || 0) * 100);
   const tariefOk = tariefCent >= minRateCents;
+
+  useEffect(() => {
+    if (stap !== 3 || titel.trim().length < 2 || !datum || !van || tariefCent <= 0) return;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => {
+      fetch("/api/werkgever/pricing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: titel, startsAt: `${datum}T${van}`, rateCents: tariefCent }),
+        signal: ctrl.signal,
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d && typeof d.fillChance === "number") setForecast(d); })
+        .catch(() => undefined);
+    }, 400);
+    return () => { clearTimeout(timer); ctrl.abort(); };
+  }, [stap, titel, datum, van, tariefCent]);
+
+  // het voorbeeld rechts: wat de werker straks ziet
+  const vestiging = branches.find((b) => b.id === branchId) ?? branches[0];
+  const datumLabel = datum
+    ? new Date(`${datum}T12:00:00`).toLocaleDateString(locale === "nl" ? "nl-NL" : "en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/Amsterdam" })
+    : "";
+  const tariefLabel = `€ ${locale === "nl" ? (tariefCent / 100).toFixed(2).replace(".", ",") : (tariefCent / 100).toFixed(2)}`;
 
   const kies = (s: SnelSjabloon) => {
     setSjabloon(s);
@@ -141,6 +170,7 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
 
   const stappen = [t.stap1, t.stap2, t.stap3];
   return (
+    <div className="grid gap-6 lg:grid-cols-[1fr_19rem]">
     <form action={formAction} className="surface p-6" aria-labelledby="snel-kop">
       <h2 id="snel-kop" className="font-display text-lg font-bold text-ink">{t.kop}</h2>
       <ol className="mt-3 flex gap-2" aria-label={t.kop}>
@@ -232,6 +262,22 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
               </select>
             </label>
           )}
+          {forecast && forecast.sample >= 8 && tariefCent > 0 && (
+            <>
+              <FairPayMeter
+                rateCents={tariefCent}
+                marketRateCents={forecast.marketRateCents}
+                fillChance={forecast.fillChance}
+                suggestedRateCents={forecast.suggestedRateCents}
+                suggestedFillChance={forecast.suggestedFillChance}
+                sample={forecast.sample}
+                onApplySuggested={(c) => setTarief((c / 100).toFixed(2))}
+              />
+              {forecast.fillChance < 0.5 && (
+                <p role="status" className="rounded-xl border border-warn/30 bg-warn/5 px-3 py-2 text-xs text-neutralx-700">{n.voorbeeldKansLaag}</p>
+              )}
+            </>
+          )}
           <p className="rounded-xl bg-paper-soft p-3 text-sm text-neutralx-700">
             {vul(t.samenvatting, { titel, datum, van, tot, n: personen, tarief: tarief.replace(".", ",") })}
           </p>
@@ -253,5 +299,25 @@ export function SnelPlaatsen({ branches, sjablonen, minRateCents, t, locale = "n
         {stap === 3 && (tariefOk ? <PlaatsKnop tekst={t.plaats} bezig={t.bezig} /> : <button type="button" className="btn-primary" disabled>{t.plaats}</button>)}
       </div>
     </form>
+
+    {/* live voorbeeld (naar YoungOnes' "Zo zien freelancers jouw klus"): de kaart zoals een werker hem straks ziet */}
+    <aside className="lg:sticky lg:top-24 lg:self-start" aria-live="polite">
+      <p className="text-xs font-semibold uppercase tracking-wide text-neutralx-500">{n.voorbeeldKop}</p>
+      <div className="mt-2 overflow-hidden rounded-2xl border border-hair bg-white shadow-soft">
+        <div className="relative aspect-[16/9] bg-gradient-to-br from-brand-600 to-ink">
+          <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-semibold text-ink">{vestiging?.name ?? ""}</span>
+          <p className="absolute inset-x-3 bottom-3 line-clamp-2 font-display text-lg font-bold text-white drop-shadow">{titel.trim() || n.voorbeeldTitel}</p>
+        </div>
+        <div className="space-y-1.5 p-4 text-sm text-neutralx-700">
+          <p className="flex items-center gap-2"><span aria-hidden>📅</span>{datum && van && tot ? `${datumLabel} · ${van}–${tot}` : n.voorbeeldDatum}</p>
+          <p className="flex items-center gap-2"><span aria-hidden>📍</span>{vestiging ? `${vestiging.name}${vestiging.city ? `, ${vestiging.city}` : ""}` : n.voorbeeldPlaats}</p>
+          <p className="flex items-center gap-2"><span aria-hidden>👥</span>{personen === 1 ? n.voorbeeldPersoon : fmt(n.voorbeeldPersonen, { n: personen })}</p>
+          <p className="flex items-center gap-2 text-xs text-neutralx-500"><span aria-hidden>⊘</span>{fmt(n.voorbeeldAfzeg, { label: annuleerTermijnLabel(Number(annuleerUren), locale) })}</p>
+          <p className="num pt-1 text-xl font-bold text-ink">{tariefCent > 0 ? `${tariefLabel}/u` : "€ –"}</p>
+        </div>
+      </div>
+      <p className="mt-2 text-xs text-neutralx-400">{n.voorbeeldUitleg}</p>
+    </aside>
+    </div>
   );
 }
