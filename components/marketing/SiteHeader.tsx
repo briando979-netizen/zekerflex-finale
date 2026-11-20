@@ -204,7 +204,7 @@ export function SiteHeader({ hoofdmenu = null, alleenFlexwerk = false }: { hoofd
                       n.mega ? (aanbodKolommen.length <= 2 ? "w-[min(34rem,calc(100vw-2rem))]" : "w-[min(60rem,calc(100vw-18rem))]") : "w-[30rem]"
                     }`}
                   >
-                    {n.mega ? <AanbodUitklap kolommen={aanbodKolommen} extra={eigenLinks(n, audience)} /> : <GewoneUitklap variant={variant} />}
+                    {n.mega ? <AanbodUitklap kolommen={aanbodKolommen} extra={eigenLinks(n, audience)} alleenFlexwerk={alleenFlexwerk} /> : <GewoneUitklap variant={variant} />}
                   </div>
                 )}
               </div>
@@ -328,7 +328,7 @@ function GewoneUitklap({ variant }: { variant: MenuVariant }) {
 
 // "Aanbod": per pijler direct de producten, zodat je in één klik op de juiste
 // pagina bent (eerst was het pijler → overzicht → product).
-function AanbodUitklap({ kolommen, extra }: { kolommen: MegaKolom[]; extra: MenuItem[] }) {
+function AanbodUitklap({ kolommen, extra, alleenFlexwerk = false }: { kolommen: MegaKolom[]; extra: MenuItem[]; alleenFlexwerk?: boolean }) {
   return (
     <>
       <p className="px-3 pb-1 pt-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-mint">
@@ -355,7 +355,7 @@ function AanbodUitklap({ kolommen, extra }: { kolommen: MegaKolom[]; extra: Menu
                   </Link>
                 </li>
               ))}
-              {k.sleutel === "online" && (
+              {k.sleutel === "online" && !alleenFlexwerk && (
                 <>
                   <li>
                     <Link href={VOORBEELDSITES.href} className="block rounded-lg py-1 text-[13px] text-white/80 transition-colors hover:text-white">

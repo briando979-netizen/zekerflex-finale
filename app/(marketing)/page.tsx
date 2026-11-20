@@ -26,6 +26,8 @@ import {
   werkFaqJsonLd,
   type WerkIcoon,
 } from "@/lib/marketing/werk-home";
+import { isNietFlexwerkPad } from "@/lib/marketing/flexwerk-only";
+import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
 // ---------------------------------------------------------------------------
 // De homepagina voor werkzoekenden (11 nov 2026). Wie zekerflex.com opent, ziet
@@ -43,7 +45,11 @@ export async function generateMetadata(): Promise<Metadata> {
 // De gekozen achtergrond komt uit de opslag: zonder dit zou hij bij het bouwen worden vastgelegd (toen is er geen database).
 export const revalidate = 60;
 
-export default function WerkHomePage() {
+export default async function WerkHomePage() {
+  // vlag `publiek-alleen-flexwerk`: de voorpagina blijft, maar de knop "Bekijk klussen" en de "Bezorgen"-chip (→ /klussen,
+  // nu verborgen) vallen weg; de bezoeker gaat via "Maak gratis je profiel" naar het aanmelden.
+  const alleenFlexwerk = await alleenFlexwerkAan().catch(() => false);
+  const strook = alleenFlexwerk ? WERK_STROOK.filter((s) => !isNietFlexwerkPad(s.href)) : WERK_STROOK;
   return (
     <>
       <script
@@ -89,9 +95,11 @@ export default function WerkHomePage() {
               <Link href={WERK_AANMELDEN} className="btn-mint text-base">
                 {WERK_HERO.knop}
               </Link>
-              <Link href="/klussen" className="btn-ghost-invert text-base">
-                {WERK_HERO.knop2}
-              </Link>
+              {!alleenFlexwerk && (
+                <Link href="/klussen" className="btn-ghost-invert text-base">
+                  {WERK_HERO.knop2}
+                </Link>
+              )}
             </div>
             <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-white/70">
               {WERK_HERO.punten.map((p) => (
@@ -109,7 +117,7 @@ export default function WerkHomePage() {
       <nav aria-label="Soorten werk" className="overflow-hidden border-y border-white/10 bg-[#0C0E12] py-3">
         <ul className="marquee gap-3 pr-3">
           {[0, 1, 2, 3].map((ronde) =>
-            WERK_STROOK.map((s) => (
+            strook.map((s) => (
               <li key={`${ronde}-${s.naam}`} aria-hidden={ronde > 0 ? true : undefined}>
                 <Link
                   href={s.href}

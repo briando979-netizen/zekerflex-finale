@@ -7,18 +7,22 @@ import { breadcrumbJsonLd, canonical, SITE } from "@/lib/seo";
 import { ldJson } from "@/lib/seo/json-ld";
 import { seoBeschrijving, seoTitel } from "@/lib/seo-tekst";
 import { pijlerIsFlexwerk, zichtbarePijlers } from "@/lib/marketing/flexwerk-only";
-import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
+import { alleenFlexwerkAan, robotsVerborgen } from "@/lib/seo/verbergen";
 
 const TITLE = "Het aanbod van ZekerFlex: personeel, website, branchesoftware en administratie";
 const DESCRIPTION =
   "Alles voor je bedrijf onder één dak: flexwerkers en uitzendkrachten, een eigen website en meer Google-reviews, software voor horeca en rijscholen, en facturen en rekentools. Met één account voor alles.";
 
-export const metadata: Metadata = {
+const metaBasis: Metadata = {
   title: { absolute: seoTitel(TITLE) },
   description: seoBeschrijving(DESCRIPTION),
   keywords: ["zekerflex aanbod", "software voor ondernemers", "horeca software", "rijschool software", "website laten maken", "personeel inhuren"],
   ...canonical("/aanbod", { title: TITLE, description: DESCRIPTION }),
 };
+// vlag `publiek-alleen-flexwerk`: het hele-aanbod-overzicht uit Google (het blijft bereikbaar via een directe link en toont dan alleen de flexwerk-pijlers)
+export async function generateMetadata(): Promise<Metadata> {
+  return { ...metaBasis, ...(await robotsVerborgen("/aanbod")) };
+}
 
 // Overzicht van al het aanbod, per pijler. Alles komt uit lib/marketing/aanbod.ts.
 // /aanbod blijft een flexwerk-pagina; met de vlag `publiek-alleen-flexwerk` aan toont hij alleen de flexwerk-pijlers.

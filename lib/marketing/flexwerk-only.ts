@@ -29,8 +29,8 @@ export function pijlerIsFlexwerk(sleutel: PijlerSleutel): boolean {
   return !NIET_FLEXWERK_PIJLERS.includes(sleutel);
 }
 
-/** Hoofdmenu-knoppen (lib/marketing/site-nav.ts) die niet over flexwerk gaan. */
-export const NIET_FLEXWERK_NAV_KEYS: readonly string[] = ["shop", "apps"];
+/** Hoofdmenu-knoppen (lib/marketing/site-nav.ts) die niet over flexwerk gaan. "aanbod" = de brede Aanbod-uitklap. */
+export const NIET_FLEXWERK_NAV_KEYS: readonly string[] = ["shop", "apps", "aanbod"];
 
 /** Werkruimte-soorten die niet over flexwerk gaan (de losse product-dashboards). "personeel" blijft. */
 export const NIET_FLEXWERK_SOORTEN: readonly string[] = ["website", "webshop", "horeca", "rijschool"];
@@ -62,16 +62,27 @@ export const NIET_FLEXWERK_PADEN: readonly string[] = [
   "/rijschool-software",
   "/verkopen",
   "/developers",
+  // de publieke klussen-surfaces: de open-klussen-lijst (en elke klus /klussen/<id>) en de klussen-kaart.
+  // De bezoeker ziet klussen pas na het aanmelden; /register en de flexwerk-home blijven.
+  "/klussen",
+  "/open-diensten",
 ];
+
+/**
+ * Paden die alleen EXACT verborgen zijn, niet hun subpaden. "/aanbod" (het hele-aanbod-overzicht) valt weg, maar de losse
+ * /aanbod/<slug>-productpagina's volgen hun eigen pijler (flexwerk zichtbaar, online/branche via NIET_FLEXWERK_AANBOD_PADEN).
+ */
+export const NIET_FLEXWERK_EXACT: readonly string[] = ["/aanbod"];
 
 /** De /aanbod/<slug>-pagina's van de verborgen pijlers (website, webshop, horeca, …): die hebben geen eigen pagina elders. */
 const NIET_FLEXWERK_AANBOD_PADEN: readonly string[] = AANBOD.filter(
   (a) => NIET_FLEXWERK_PIJLERS.includes(a.pijler) && !a.pagina,
 ).map((a) => `/aanbod/${a.slug}`);
 
-/** Hoort dit pad bij een niet-flexwerk-onderdeel (exact pad of een subpad ervan)? */
+/** Hoort dit pad bij een niet-flexwerk-onderdeel (exact pad of een subpad ervan; of een exact-pad uit NIET_FLEXWERK_EXACT)? */
 export function isNietFlexwerkPad(pad: string): boolean {
   const schoon = (pad.split(/[?#]/)[0] ?? pad).replace(/\/+$/, "") || "/";
+  if (NIET_FLEXWERK_EXACT.includes(schoon)) return true;
   return [...NIET_FLEXWERK_PADEN, ...NIET_FLEXWERK_AANBOD_PADEN].some(
     (basis) => schoon === basis || schoon.startsWith(`${basis}/`),
   );

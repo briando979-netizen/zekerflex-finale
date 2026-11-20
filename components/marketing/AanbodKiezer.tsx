@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AANBOD, aanbodHref, PIJLERS, WERK_ZOEKEN } from "@/lib/marketing/aanbod";
-import { zichtbarePijlers } from "@/lib/marketing/flexwerk-only";
+import { isNietFlexwerkPad, zichtbarePijlers } from "@/lib/marketing/flexwerk-only";
 
 // "Waar ben je naar op zoek?" — vier pijlers plus een eigen ingang voor wie
 // werk zoekt. Leest uit lib/marketing/aanbod.ts, dus een nieuw product staat
@@ -8,6 +8,8 @@ import { zichtbarePijlers } from "@/lib/marketing/flexwerk-only";
 // alleenFlexwerk: vlag `publiek-alleen-flexwerk` (de pagina leest hem) — aan = alleen de flexwerk-pijlers.
 export function AanbodKiezer({ id = "aanbod", titel = "Waar ben je naar op zoek?", alleenFlexwerk = false }: { id?: string; titel?: string; alleenFlexwerk?: boolean }) {
   const pijlers = zichtbarePijlers(PIJLERS, alleenFlexwerk);
+  // vlag publiek-alleen-flexwerk: in "Ik zoek werk" vallen de verborgen klussen-links (Open klussen) weg; aanmelden blijft
+  const werkZoeken = alleenFlexwerk ? WERK_ZOEKEN.filter((w) => !isNietFlexwerkPad(w.href)) : WERK_ZOEKEN;
   return (
     <section id={id} aria-labelledby={`${id}-titel`} className="relative scroll-mt-24 bg-paper">
       <div className="shell-4k py-8 md:py-10">
@@ -58,7 +60,7 @@ export function AanbodKiezer({ id = "aanbod", titel = "Waar ben je naar op zoek?
             </h3>
             <p className="mt-1 text-sm leading-snug text-white/70">Als flexwerker, uitzendkracht of zzp&apos;er. Meedoen is gratis.</p>
             <ul className="mt-4 space-y-1.5 border-t border-white/10 pt-4 text-sm">
-              {WERK_ZOEKEN.map((w) => (
+              {werkZoeken.map((w) => (
                 <li key={w.href} className="flex items-baseline gap-2">
                   <span aria-hidden className="text-brand-mint">→</span>
                   <Link href={w.href} className="font-medium text-white hover:underline">

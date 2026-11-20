@@ -16,6 +16,7 @@ import {
   type NavEntry,
   type SnelIcoon,
 } from "@/lib/marketing/site-nav";
+import { isNietFlexwerkPad } from "@/lib/marketing/flexwerk-only";
 
 // Het mobiele menu (onder 1024 px; laptops en groter krijgen de hoofdnavigatie in de kopbalk). Eerst wat je het vaakst komt doen (snelle
 // acties per doelgroep), dan de onderdelen als uitklapbare lijsten, en de knoppen
@@ -115,7 +116,8 @@ export function MobileMenu({
           </div>
 
           <ul className="mt-4 grid grid-cols-2 gap-2.5">
-            {SNELLE_ACTIES[doel].map((s) => (
+            {/* vlag publiek-alleen-flexwerk: de niet-flexwerk-snelkoppelingen (Klussen op de kaart, Open klussen, Website maken) vallen weg */}
+            {(alleenFlexwerk ? SNELLE_ACTIES[doel].filter((s) => !isNietFlexwerkPad(s.href)) : SNELLE_ACTIES[doel]).map((s) => (
               <li key={s.href} className="min-w-0">
                 <Link
                   href={s.href}
@@ -184,7 +186,7 @@ export function MobileMenu({
                                     </Link>
                                   </li>
                                 ))}
-                                {k.sleutel === "online" && (
+                                {k.sleutel === "online" && !alleenFlexwerk && (
                                   <>
                                     <li>
                                       <Link href={VOORBEELDSITES.href} className="block rounded-lg py-1.5 text-sm text-white/80 hover:text-white">
