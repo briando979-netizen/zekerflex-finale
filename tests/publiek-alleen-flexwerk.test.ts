@@ -23,9 +23,9 @@ import {
   werkruimteIsFlexwerk,
   zichtbarePijlers,
 } from "@/lib/marketing/flexwerk-only";
-import { AANBOD_KOLOMMEN, NAV, zichtbareAanbodKolommen, zichtbareNav } from "@/lib/marketing/site-nav";
+import { AANBOD_KOLOMMEN, ALLES_ONLINE, NAV, SNELLE_ACTIES, VOORBEELDSITES, zichtbareAanbodKolommen, zichtbareNav } from "@/lib/marketing/site-nav";
 import { PIJLERS } from "@/lib/marketing/aanbod";
-import { WERKRUIMTES } from "@/lib/werkgever/werkruimte";
+import { WERKRUIMTES, menuVoor, type MenuOpties } from "@/lib/werkgever/werkruimte";
 import { uitbreidingen } from "@/lib/abonnement/overzicht";
 import { openbareRoutes } from "@/lib/ops/rondgang";
 import { robotsVerborgen } from "@/lib/seo/verbergen";
@@ -68,26 +68,32 @@ describe("publiek = alleen flexwerk: de bron van waarheid", () => {
       "/verkopen",
       "/developers",
       "/developers/api",
+      "/aanbod", // het hele-aanbod-overzicht (exact), de menu-ingang is weg
       "/aanbod/website", // online-pijler, eigen /aanbod-pagina
       "/aanbod/webshop",
       "/aanbod/horeca", // branche-pijler
+      "/klussen", // de publieke open-klussen-lijst
+      "/klussen/abc123", // een losse klus
+      "/open-diensten", // de klussen-kaart
+      "/open-diensten/3d",
     ]) {
       expect(isNietFlexwerkPad(p), p).toBe(true);
     }
     for (const p of [
       "/",
-      "/klussen",
       "/uitzendbureau",
       "/voor-bedrijven",
       "/voor-freelancers",
+      "/personeel-inhuren",
       "/prijzen",
-      "/aanbod", // het hele-aanbod-overzicht blijft (flexwerk)
-      "/aanbod/flexwerkers-inhuren", // personeel-pijler
+      "/aanbod/flexwerkers-inhuren", // personeel-pijler: de flexwerk-productpagina blijft
+      "/aanbod/uitzendkrachten",
       "/rekentools", // flexwerk-rekentools blijven
       "/rekentools/btw-nummer-check",
       "/kennis",
       "/over-ons",
       "/horeca-vacatures", // flexwerk: horeca-WERK, geen software
+      "/freelance-werk", // flexwerk SEO-pagina per stad
       "/nieuws",
     ]) {
       expect(isNietFlexwerkPad(p), p).toBe(false);
@@ -103,11 +109,11 @@ describe("het hoofdmenu met de vlag aan", () => {
     expect(zichtbareNav(NAV, false)).toBe(NAV);
   });
 
-  it("met de vlag aan vallen shop en apps uit de bovenbalk", () => {
+  it("met de vlag aan vallen shop, apps en aanbod uit de bovenbalk", () => {
     const keys = zichtbareNav(NAV, true).map((n) => n.key);
     for (const weg of NIET_FLEXWERK_NAV_KEYS) expect(keys, weg).not.toContain(weg);
+    expect(keys).not.toContain("aanbod");
     // de flexwerk-knoppen blijven
-    expect(keys).toContain("aanbod");
     expect(keys).toContain("prijzen");
     expect(keys).toContain("kennis");
   });
@@ -115,6 +121,20 @@ describe("het hoofdmenu met de vlag aan", () => {
   it("de Aanbod-uitklap toont zonder vlag vier pijlers, met de vlag aan alleen personeel en geld", () => {
     expect(zichtbareAanbodKolommen(false).map((k) => k.sleutel)).toEqual(AANBOD_KOLOMMEN.map((k) => k.sleutel));
     expect(zichtbareAanbodKolommen(true).map((k) => k.sleutel)).toEqual(["personeel", "geld"]);
+  });
+
+  it("de losse Online-links (VOORBEELDSITES, ALLES_ONLINE) zijn niet-flexwerk en vallen dus weg in menu en voettekst", () => {
+    // VOORBEELDSITES → /website-maken#voorbeelden, ALLES_ONLINE → /online
+    expect(isNietFlexwerkPad(VOORBEELDSITES.href)).toBe(true);
+    expect(isNietFlexwerkPad(ALLES_ONLINE.href)).toBe(true);
+  });
+
+  it("de snelle acties in het mobiele menu laten met de vlag aan de verborgen klussen-links (lijst, kaart) weg", () => {
+    for (const doel of ["werknemers", "bedrijven"] as const) {
+      const over = SNELLE_ACTIES[doel].filter((s) => !isNietFlexwerkPad(s.href));
+      expect(over.some((s) => s.href === "/klussen"), doel).toBe(false);
+      expect(over.some((s) => s.href === "/open-diensten"), doel).toBe(false);
+    }
   });
 
   it("zichtbarePijlers filtert de pijlers op dezelfde manier", () => {
@@ -128,11 +148,13 @@ describe("de nachtelijke rondgang met de vlag aan", () => {
     const routes = openbareRoutes(undefined, false);
     expect(routes).toContain("/online");
     expect(routes).toContain("/shop");
+    expect(routes).toContain("/klussen");
+    expect(routes).toContain("/aanbod");
   });
 
   it("met de vlag aan vallen de verborgen pagina's uit de rondgang, de flexwerk-pagina's blijven", () => {
     const routes = openbareRoutes(undefined, true);
-    for (const weg of ["/online", "/shop", "/developers", "/website-maken", "/apps-en-spelletjes", "/rijschool-software"]) {
+    for (const weg of ["/online", "/shop", "/developers", "/website-maken", "/apps-en-spelletjes", "/rijschool-software", "/klussen", "/open-diensten", "/aanbod"]) {
       expect(routes, weg).not.toContain(weg);
     }
     expect(routes).toContain("/uitzendbureau");
@@ -153,12 +175,18 @@ describe("noindex op een verborgen pagina", () => {
     // /verkopen (webshop-verkooppartner) ook op noindex
     expect(await robotsVerborgen("/verkopen")).toEqual({ robots: { index: false, follow: true } });
     expect(await robotsVerborgen("/verkopen/start")).toEqual({ robots: { index: false, follow: true } });
+    // de aanbod-ingang, de open-klussen-lijst en de klussen-kaart ook
+    expect(await robotsVerborgen("/aanbod")).toEqual({ robots: { index: false, follow: true } });
+    expect(await robotsVerborgen("/klussen")).toEqual({ robots: { index: false, follow: true } });
+    expect(await robotsVerborgen("/klussen/abc123")).toEqual({ robots: { index: false, follow: true } });
+    expect(await robotsVerborgen("/open-diensten")).toEqual({ robots: { index: false, follow: true } });
   });
 
   it("een flexwerk-pagina blijft indexeerbaar, ook met de vlag aan", async () => {
     h.vlagAan = true;
-    expect(await robotsVerborgen("/klussen")).toEqual({});
-    expect(await robotsVerborgen("/aanbod")).toEqual({});
+    expect(await robotsVerborgen("/uitzendbureau")).toEqual({});
+    expect(await robotsVerborgen("/aanbod/flexwerkers-inhuren")).toEqual({});
+    expect(await robotsVerborgen("/prijzen")).toEqual({});
   });
 });
 
@@ -189,6 +217,20 @@ describe("de bedrijfskant met de vlag aan", () => {
     for (const niet of NIET_FLEXWERK_PIJLERS) expect(flex, niet).not.toContain(niet);
     expect(flex).toContain("personeel");
   });
+
+  it("het dashboard-menu: met de vlag aan vallen telefonie en reviews weg, de personeelsfuncties blijven", () => {
+    const opties: MenuOpties = { heeftAfspraken: true, heeftRijschool: true, heeftHoreca: true, horecaModules: [], inApp: false, studio: true };
+    // zonder vlag staan ze er gewoon in
+    const uit = menuVoor("personeel", opties).map((p) => p.sleutel);
+    expect(uit).toContain("telefonie");
+    expect(uit).toContain("reviews");
+    // met de vlag aan: de niet-flexwerk-items weg, alle personeelsfuncties en flexwerk-administratie blijven
+    const aan = menuVoor("personeel", { ...opties, alleenFlexwerk: true }).map((p) => p.sleutel);
+    for (const weg of ["telefonie", "reviews"]) expect(aan, weg).not.toContain(weg);
+    for (const blijft of ["klussen", "kalender", "planner", "uren", "inchecken", "facturen", "compliance", "overeenkomsten", "bedrijf", "rapportages"]) {
+      expect(aan, blijft).toContain(blijft);
+    }
+  });
 });
 
 describe("de sitemap met de vlag aan", () => {
@@ -212,9 +254,11 @@ describe("de sitemap met de vlag aan", () => {
     const urls = (await bouwSitemap()).map((r) => r.url);
     const padVan = (u: string) => u.replace(/^https?:\/\/[^/]+/, "");
     for (const u of urls) expect(isNietFlexwerkPad(padVan(u)), u).toBe(false);
-    // de flexwerk-kern blijft
+    // de flexwerk-kern blijft; /klussen en /aanbod zijn nu verborgen
     expect(urls.some((u) => padVan(u) === "/")).toBe(true);
-    expect(urls.some((u) => padVan(u) === "/klussen")).toBe(true);
+    expect(urls.some((u) => padVan(u) === "/prijzen")).toBe(true);
     expect(urls.some((u) => padVan(u) === "/uitzendbureau")).toBe(true);
+    expect(urls.some((u) => padVan(u) === "/klussen")).toBe(false);
+    expect(urls.some((u) => padVan(u) === "/aanbod")).toBe(false);
   });
 });
