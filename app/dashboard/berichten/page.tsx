@@ -25,7 +25,8 @@ export default async function BerichtenPage() {
       {/* de kop is op de telefoon verborgen; de pagina houdt een h1 voor schermlezers */}
       <h1 className="sr-only md:hidden">{rt.berichtenTitel}</h1>
       {/* de chat in de taal van de werker; opdrachtgever en beheer geven niets mee en blijven Nederlands */}
-      <InboxPage texts={CHAT_TEKSTEN[await getLocale()]} {...(demo ? { demoNotice: DEMO_CHAT_NOTITIE } : {})} />
+      {/* tabsBoven: de app heeft op de telefoon al een onderbalk, dus de tabs van de chat staan daar bovenaan; statusCompact: "Mijn status" op één regel */}
+      <InboxPage texts={CHAT_TEKSTEN[await getLocale()]} tabsBoven statusCompact {...(demo ? { demoNotice: DEMO_CHAT_NOTITIE } : {})} />
     </>
   );
 }

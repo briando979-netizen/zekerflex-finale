@@ -35,6 +35,37 @@ describe("Mijn klussen: een lege lijst", () => {
   });
 });
 
+describe("Ontdekken: geen klussen", () => {
+  const src = bron("app/dashboard/klussen/page.tsx");
+  const leeg = src.slice(src.indexOf("m.shifts.length === 0 ? ("), src.indexOf("<MarketplaceView"));
+
+  it("één actie: naar de meldingen op Account (de knop zelf staat sinds 21 nov daar)", () => {
+    expect(leeg).toContain("{t.page.noJobsTitle}");
+    expect(leeg).toContain("{t.page.noJobsBody}");
+    expect(leeg).toContain('<Link href="/dashboard/account" className="btn-primary mt-4 inline-flex">');
+    expect(leeg).toContain("{t.eersteIndruk.meldingen.knop}");
+    // precies één actie in het lege vak, en geen losse meldingenknop op deze pagina
+    expect(leeg.split("<Link").length - 1).toBe(1);
+    expect(src).not.toContain("<PushToggle");
+  });
+
+  it("eerlijke tekst in vijf talen: in opbouw, zonder aantallen of data", () => {
+    for (const t of TALEN) {
+      const p = FREELANCER_DICTS[t].page;
+      for (const tekst of [p.noJobsTitle, p.noJobsBody, p.noJobsPushOn]) {
+        expect(tekst.trim().length, t).toBeGreaterThan(0);
+        expect(tekst, t).not.toMatch(/\d/);
+      }
+    }
+    for (const t of ["en", "pl", "ro", "uk"] as const) {
+      expect(FREELANCER_DICTS[t].page.noJobsBody, t).not.toBe(FREELANCER_DICTS.nl.page.noJobsBody);
+      expect(FREELANCER_DICTS[t].page.noJobsPushOn, t).not.toBe(FREELANCER_DICTS.nl.page.noJobsPushOn);
+    }
+    expect(FREELANCER_DICTS.nl.page.noJobsBody).toContain("in opbouw");
+    expect(FREELANCER_DICTS.nl.page.noJobsBody).not.toMatch(/binnenkort|elke dag|gegarandeerd/i);
+  });
+});
+
 describe("Uren invullen: de uitleg staat er één keer", () => {
   it("het lege vak herhaalt de uitleg uit de kop niet", () => {
     for (const t of TALEN) {
