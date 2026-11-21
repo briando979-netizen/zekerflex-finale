@@ -48,10 +48,12 @@ describe("de kaarten", () => {
     expect(src).toContain("Partnerniveau");
   });
 
-  it("alleen het werker-Account geeft de vertaling mee; de bank (werkgever) niet", () => {
+  it("het werker-Account toont de kaarten niet meer (21 nov 2026, opzet YoungOnes); de bank (werkgever) geeft geen vertaling mee", () => {
+    // de level- en uitnodigingskaart stonden op /dashboard/account; in de opzet van YoungOnes is daar geen plek voor
+    // (de beloningen lopen via de bank, en die staat uit). De vertalingen blijven bestaan voor wie de kaarten elders toont.
     const acc = bron("app/dashboard/account/page.tsx");
-    expect(acc).toContain("<LevelCard texts={ft.rewards.level} />");
-    expect(acc).toContain("<ReferralCard texts={ft.rewards.uitnodiging} />");
+    expect(acc).not.toContain("<LevelCard");
+    expect(acc).not.toContain("<ReferralCard");
     expect(bron("components/bank/BankView.tsx")).not.toContain("texts=");
   });
 
