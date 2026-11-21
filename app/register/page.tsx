@@ -13,7 +13,10 @@ import { AANMELDEN_PER_DASHBOARD, dashboardUitParam } from "@/lib/auth/aanmelden
 import { alleenFlexwerkAan } from "@/lib/seo/verbergen";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Account aanmaken" };
+// Niet in Google (22 nov 2026): elke knop "Aanmelden" linkt met een eigen ?type=, en een voorstel of uitnodiging zet er ook
+// een naam, e-mailadres of bedrijf in (?name=, ?email=, ?company=). Zonder canonical telde Search Console die als dubbele
+// pagina's, en zulke adressen horen niet in een zoekmachine. De links op de pagina mag Google wel volgen.
+export const metadata: Metadata = { title: "Account aanmaken", robots: { index: false, follow: true } };
 
 export default async function RegisterPage(
   props: {
