@@ -37,13 +37,18 @@ describe("Mijn klussen: een lege lijst", () => {
 
 describe("Ontdekken: geen klussen", () => {
   const src = bron("app/dashboard/klussen/page.tsx");
-  const leeg = src.slice(src.indexOf("m.shifts.length === 0 ? ("), src.indexOf("<MarketplaceView"));
+  const view = bron("components/app/MarketplaceView.tsx");
+  // het lege vak staat sinds 21 nov in MarketplaceView zelf: zo blijft de filterbalk met het zoekveld staan (YoungOnes),
+  // en doet het vergrootglas in de balk (#zoeken) ook iets als er nog geen klussen zijn
+  const leeg = view.slice(view.indexOf("shifts.length === 0 && leeg ? ("), view.indexOf(") : filtered.length === 0 ? ("));
 
   it("één actie: naar de meldingen op Account (de knop zelf staat sinds 21 nov daar)", () => {
-    expect(leeg).toContain("{t.page.noJobsTitle}");
-    expect(leeg).toContain("{t.page.noJobsBody}");
-    expect(leeg).toContain('<Link href="/dashboard/account" className="btn-primary mt-4 inline-flex">');
-    expect(leeg).toContain("{t.eersteIndruk.meldingen.knop}");
+    expect(src).toContain('leeg={{ titel: t.page.noJobsTitle, tekst: t.page.noJobsBody, knop: t.eersteIndruk.meldingen.knop, href: "/dashboard/account" }}');
+    expect(src).not.toContain("m.shifts.length === 0 ? (");
+    expect(leeg).toContain("{leeg.titel}");
+    expect(leeg).toContain("{leeg.tekst}");
+    expect(leeg).toContain('<Link href={leeg.href} className="btn-primary mt-4 inline-flex">');
+    expect(leeg).toContain("{leeg.knop}");
     // precies één actie in het lege vak, en geen losse meldingenknop op deze pagina
     expect(leeg.split("<Link").length - 1).toBe(1);
     expect(src).not.toContain("<PushToggle");

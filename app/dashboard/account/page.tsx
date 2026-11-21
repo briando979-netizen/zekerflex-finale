@@ -79,7 +79,8 @@ export default async function AccountPage() {
           where: { freelancerId: profile.id, acceptedAt: { gte: since }, ...workerMissWhere },
         })
       : Promise.resolve(0),
-    getTheme(),
+    // dezelfde standaard als de werker-app zelf (app/dashboard/layout.tsx): zonder keuze is de app donker
+    getTheme("dark"),
   ]);
 
   const isUitzend = invoiceModeFor(fiscal) === "payroll";

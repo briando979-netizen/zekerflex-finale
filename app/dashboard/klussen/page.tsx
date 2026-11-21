@@ -126,30 +126,20 @@ export default async function KlussenPage(
         </div>
       )}
 
-      {m.shifts.length === 0 ? (
-        <div className="card">
-          <div className="px-5 py-14 text-center">
-            <p className="font-medium text-ink">{t.page.noJobsTitle}</p>
-            <p className="mx-auto mt-1 max-w-sm text-sm text-neutralx-500">{t.page.noJobsBody}</p>
-            {/* één actie: naar de meldingen. De knop zelf staat sinds 21 nov op Account (daar kent hij zijn stand op dit apparaat) */}
-            <Link href="/dashboard/account" className="btn-primary mt-4 inline-flex">
-              {t.eersteIndruk.meldingen.knop}
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <MarketplaceView
-          shifts={m.shifts}
-          home={m.home}
-          homeLabel={m.homeLabel}
-          initialQuery={initialQuery}
-          defaultBranches={standaardFilter(brancheKeuze)}
-          canApply={m.canApply}
-          blockReason={m.blockReason}
-          defaultMinRateCents={m.prefs.minHourlyRateCents}
-          defaultMaxTravel={m.prefs.maxTravelMinutes}
-        />
-      )}
+      {/* ook zonder klussen staat de filterbalk met het zoekveld er (YoungOnes; het vergrootglas in de balk springt naar #zoeken).
+          Het lege vak heeft één actie: naar de meldingen. De knop zelf staat sinds 21 nov op Account (daar kent hij zijn stand op dit apparaat). */}
+      <MarketplaceView
+        shifts={m.shifts}
+        home={m.home}
+        homeLabel={m.homeLabel}
+        initialQuery={initialQuery}
+        defaultBranches={standaardFilter(brancheKeuze)}
+        canApply={m.canApply}
+        blockReason={m.blockReason}
+        defaultMinRateCents={m.prefs.minHourlyRateCents}
+        defaultMaxTravel={m.prefs.maxTravelMinutes}
+        leeg={{ titel: t.page.noJobsTitle, tekst: t.page.noJobsBody, knop: t.eersteIndruk.meldingen.knop, href: "/dashboard/account" }}
+      />
     </>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import type { MarketplaceShift } from "@/lib/dashboard/marketplace";
 import { SHIFT_CATEGORIES, shiftCategory, type ShiftCategoryKey } from "@/lib/shifts/category";
 import { ShiftMiniMap } from "@/components/app/ShiftMiniMap";
@@ -109,9 +110,15 @@ export function MarketplaceView({
   defaultMinRateCents,
   defaultMaxTravel,
   defaultBranches = [],
+  leeg,
 }: {
   /** de branches die de werker bij de start koos: het filter staat er standaard op (en kan weg) */
   defaultBranches?: ShiftCategoryKey[];
+  /**
+   * Zonder één klus: wat er in het vak staat, met één knop. De filterbalk met het zoekveld blijft dan gewoon staan
+   * (zoals bij YoungOnes; 21 nov: het vergrootglas in de balk springt naar #zoeken en deed anders niets).
+   */
+  leeg?: { titel: string; tekst: string; knop: string; href: string };
   shifts: MarketplaceShift[];
   home: { lat: number; lng: number } | null;
   homeLabel?: string | null;
@@ -506,6 +513,16 @@ export function MarketplaceView({
             points={filtered.map((s) => ({ id: s.id, lat: s.branchLat, lng: s.branchLng, score: s.match?.score ?? 0.5, label: s.title, km: s.match?.distanceKm ?? 0 }))}
           />
           <p className="text-center text-xs text-neutralx-400">{mk.mapHint}</p>
+        </div>
+      ) : shifts.length === 0 && leeg ? (
+        <div className="card">
+          <div className="px-5 py-14 text-center">
+            <p className="font-medium text-ink">{leeg.titel}</p>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-neutralx-500">{leeg.tekst}</p>
+            <Link href={leeg.href} className="btn-primary mt-4 inline-flex">
+              {leeg.knop}
+            </Link>
+          </div>
         </div>
       ) : filtered.length === 0 ? (
         <div className="card">
