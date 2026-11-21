@@ -101,6 +101,7 @@ const ZETTERS: Record<string, number> = {
   "app/api/werkgever/dashboard/wissel/route.ts": 1,
   "app/api/werkgever/werkruimte/route.ts": 1,
   "app/r/[code]/route.ts": 1,
+  "app/uitloggen/route.ts": 1,
   "app/voorbeeld/sluiten/route.ts": 1,
   "components/app/AppVereist.tsx": 1,
   "components/i18n/I18nProvider.tsx": 1,

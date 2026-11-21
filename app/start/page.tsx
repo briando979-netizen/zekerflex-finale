@@ -33,5 +33,9 @@ export default async function StartPage(props: { searchParams: Promise<{ utm_sou
   }
   // een medewerker van een horecazaak (eigen account zonder rol, lib/horeca-personeel) gaat naar zijn eigen omgeving
   if (principal.grants.length === 0 && (await isMedewerker(principal.userId))) redirect("/personeel");
+  // geen enkele rol meer (bijv. het bedrijf van dit account is gewist): /dashboard zou hem naar /start terugsturen en de
+  // poort (die de oude rol in de sessie ziet) weer naar /dashboard, eindeloos (21 nov, de Android-app van de eigenaar).
+  // Dan netjes uitloggen met een uitleg op het inlogscherm.
+  if (principal.grants.length === 0) redirect("/uitloggen?reden=GeenRol");
   redirect("/dashboard");
 }

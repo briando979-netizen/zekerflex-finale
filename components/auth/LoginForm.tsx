@@ -19,6 +19,8 @@ const ERROR_COPY: Record<string, string> = {
   AppleLogin: "Apple gaf geen bevestigd e-mailadres door. Probeer het opnieuw of log in met je e-mailadres.",
   Verification: "De verificatielink is verlopen of al gebruikt.",
   TweeStap: "Je inlogpoging is verlopen. Log opnieuw in.",
+  // /start logde dit account uit (app/uitloggen): het hoort bij geen bedrijf en geen werkersprofiel meer
+  GeenRol: "Dit account hoort bij geen bedrijf of werkersprofiel meer. Log in met een ander account, of meld je opnieuw aan.",
 };
 
 function SubmitButton({ label, busy }: { label: string; busy: string }) {
