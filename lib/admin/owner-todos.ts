@@ -286,6 +286,9 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
   const stripeFotoSleutel = await stripeFotoSleutelInfo().catch(() => null);
   // ZekerFlex Mail-adressen van gewiste accounts (AVG) die bij TransIP nog een mailbox hebben
   const zfMailOpheffen = await import("@/lib/mail/zf-accounts").then((m) => m.teOpheffenBijTransip()).catch((): string[] => []);
+  // testers voor de Android-app die nog in de Play Console moeten (lib/app/testers.ts, formulier op /app)
+  const appTesters = await import("@/lib/app/testers").then((m) => m.testers()).catch(() => []);
+  const testersWachten = appTesters.filter((t) => !t.toegevoegd).length;
   // de eigen mailbox voor verkoopmail (lib/mail/verkoop-mailbox.ts): zonder die mailbox gaat er geen verkoopmail de deur uit
   const verkoopBox = await import("@/lib/mail/verkoop-mailbox").then((m) => m.verkoopMailboxStand()).catch(() => null);
   // weigerde Stripe Identity voor het hele account (lib/kyc/stripe-weigering.ts)? Dan staat ZekerFlex het 24 uur uit
@@ -760,6 +763,20 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       how: ["Kies het hoofddomein (bv. https://zekerflex.com). Pagina's op www sturen nu al door naar het adres zonder www.", "Wil je een ander hoofddomein, vraag het aan Claude: die zet APP_BASE_URL op de server en past de doorverwijzing aan."],
       auto: true,
       done: /^https:\/\//.test(base) && !/localhost/.test(base),
+    },
+    {
+      id: "app-testers",
+      group: "Vindbaarheid & app",
+      title: "Nieuwe testers voor de Android-app in de Play Console zetten",
+      why: "Op zekerflex.com/app kan iemand tester worden met zijn Gmail-adres. Pas als dat adres in de Play Console op de testerslijst staat, kan hij de testversie installeren.",
+      how: [
+        "Ga naar Beheer → Google Play en klik bij Testers voor de Android-app op Kopieer nieuwe adressen.",
+        "Open de Play Console → ZekerFlex → Testen → Gesloten test → Testers, en plak de adressen in de lijst. Sla op.",
+        "Klik in Beheer op Gemarkeerd als toegevoegd. Deze taak vinkt zichzelf af.",
+      ],
+      auto: true,
+      done: testersWachten === 0,
+      doneNote: testersWachten === 0 ? "geen nieuwe testers" : `${testersWachten} nieuwe tester${testersWachten === 1 ? "" : "s"} wacht${testersWachten === 1 ? "" : "en"}`,
     },
     {
       id: "verkoop-mailbox",

@@ -40,6 +40,7 @@ describe("isPublicApiRoute — allowed", () => {
     "/api/mail/afmelden",
     "/api/mail/voorkeuren",
     "/api/nieuwsbrief",
+    "/api/app/tester",
     "/api/nieuwsbrief/afmelden",
     "/api/analytics/track",
     "/api/klus-plaatsen/via", // /klus-plaatsen?via=werker: alleen een telling per maand, openbaar en IP-begrensd (valt onder het voorvoegsel /api/klus-plaatsen)

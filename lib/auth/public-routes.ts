@@ -33,6 +33,7 @@ const PUBLIC_PREFIXES = [
   "/api/mail/afmelden",
   "/api/mail/voorkeuren", // token-based, not session-based
   "/api/nieuwsbrief", // signup + its own /afmelden
+  "/api/app/tester", // tester worden voor de Android-app (21 nov 2026): alleen een e-mailadres op een lijst, eigen IP-limiet
   "/api/analytics/track", // anonymous visitor tracking, rate-limited by session id
   "/api/analytics/taal-vraag", // anonieme telling per taalcode uit Accept-Language, zonder IP of gebruiker (lib/i18n/taal-vraag.ts)
   "/api/analytics/ping", // anonymous attention signals (time on page, tab away, leave), rate-limited

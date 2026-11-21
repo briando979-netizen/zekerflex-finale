@@ -3,6 +3,7 @@ import { InstallAppButton } from "@/components/marketing/InstallAppButton";
 import { TelefoonDemo } from "@/components/marketing/TelefoonDemo";
 import { CONTACTS } from "@/lib/seo";
 import { featureEnabled } from "@/lib/flags";
+import { TesterWordenForm } from "@/components/marketing/TesterWordenForm";
 
 // The Android app (com.zekerflex.app) is in Google Play testing, not yet
 // public. The test link only works for Gmail addresses on the tester list, so
@@ -14,7 +15,7 @@ const APPSTORE_URL = "https://apps.apple.com/nl/app/zekerflex/id6832775836";
 const TESTFLIGHT_URL = "https://testflight.apple.com/join/2QKhAHn8";
 // Zoals bij Android: een tik opent de mail van de bezoeker, al ingevuld, naar info@ met "tester worden".
 const IPHONE_MAILTO = `mailto:${CONTACTS.general}?subject=${encodeURIComponent("Tester worden: zet me op de lijst (iPhone)")}&body=${encodeURIComponent("Hallo ZekerFlex, ik wil de iPhone-app testen. Zet me alsjeblieft op de testerslijst.\n\nMijn Apple-ID (het e-mailadres waarmee ik op mijn iPhone in de App Store ben ingelogd):\n\n")}`;
-const TESTER_MAILTO = `mailto:${CONTACTS.support}?subject=${encodeURIComponent("Ik wil de ZekerFlex-app testen")}&body=${encodeURIComponent("Mijn Gmail-adres (zoals in de Play Store op mijn telefoon):\n\n")}`;
+// 21 nov 2026: tester worden gaat met een formulier (components/marketing/TesterWordenForm.tsx), niet meer met een mail
 
 function PlayBadgeTest() {
   return (
@@ -130,10 +131,8 @@ function TestNotice() {
       </p>
       <ol className="mt-3 list-decimal space-y-1 pl-5 text-white/75">
         <li>
-          <a href={TESTER_MAILTO} className="font-semibold text-brand-mint underline">
-            Stuur ons je Gmail-adres
-          </a>{" "}
-          — het adres waarmee je in de Play Store bent ingelogd. We zetten je op de testerslijst.
+          Vul je Gmail-adres in: het adres waarmee je in de Play Store bent ingelogd. We zetten je op de testerslijst.
+          <TesterWordenForm />
         </li>
         <li>
           Open daarna op je Android-telefoon{" "}
