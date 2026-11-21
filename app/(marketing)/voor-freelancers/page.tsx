@@ -143,12 +143,15 @@ export default async function VoorFreelancersPage() {
         <SectionHead eyebrow={v("vf.got.eyebrow")} title={v("vf.got.title")} cms={{ eyebrow: "vf.got.eyebrow", title: "vf.got.title" }} />
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FUNCTIES.map((f) => (
-            <div key={f.titel} className="rounded-2xl border border-hair bg-white p-6 shadow-sm">
-              <span aria-hidden className="grid h-12 w-12 place-items-center rounded-xl bg-brand-50 text-2xl">
+            // op de telefoon het pictogram links van de tekst (kaarten half zo hoog), vanaf sm erboven
+            <div key={f.titel} className="flex gap-4 rounded-2xl border border-hair bg-white p-5 shadow-sm sm:block sm:p-6">
+              <span aria-hidden className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-brand-50 text-xl sm:h-12 sm:w-12 sm:text-2xl">
                 {f.icoon}
               </span>
-              <h3 className="mt-4 font-display text-lg font-semibold text-ink">{f.titel}</h3>
-              <p className="mt-1.5 text-[0.95rem] leading-relaxed text-neutralx-600">{f.tekst}</p>
+              <div>
+                <h3 className="font-display text-lg font-semibold text-ink sm:mt-4">{f.titel}</h3>
+                <p className="mt-1 text-[0.95rem] leading-relaxed text-neutralx-600 sm:mt-1.5">{f.tekst}</p>
+              </div>
             </div>
           ))}
         </div>
