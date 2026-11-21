@@ -75,7 +75,8 @@ export function VerkoopMailbox() {
       <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--a-mute)" }}>
         Verkoopmail gaat alleen via een eigen mailbox. Zo blijft de mail van de app (inlogcodes, wachtwoord vergeten) altijd werken, ook na
         een grote verkoopronde. Typ hier de mailbox waarmee verkoopmail inlogt (gratis: uitzendbureau@) en het wachtwoord dat je bij TransIP
-        zette. Als afzender blijft sales@zekerflex.com staan.
+        zette. Als afzender blijft sales@zekerflex.com staan. Zit info@ aan zijn daggrens, dan gaat ook de mail van de app (inlogcodes,
+        wachtwoord vergeten) via deze mailbox.
       </p>
       <p className="mt-2 text-xs" style={{ color: stand?.ingesteld ? "var(--a-ok, #16a34a)" : "var(--a-warn, #d97706)" }}>
         {stand === null

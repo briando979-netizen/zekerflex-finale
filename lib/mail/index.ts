@@ -301,6 +301,15 @@ async function smtpVoorCategorie(category: string, cfg: SmtpConfig): Promise<{ c
 }
 
 /**
+ * Weigert de gewone mailbox door een daggrens van TransIP ("550 Sending Prohibited (Max Rcp)", "Max RcptTo Daily limit")?
+ * Dan gaat de mail van de app via de reservemailbox (21 nov 2026, eigenaar: "schakel om naar uitzendbureau@"). Alleen bij
+ * een grens, niet bij een onbekend adres of een andere fout.
+ */
+export function isDaggrensFout(message: string | undefined): boolean {
+  return /max\s*rc(?:p|pt)|sending prohibited|daily limit|exceeding quota/i.test(message ?? "");
+}
+
+/**
  * Re-send a mail from the admin mailbox that failed over SMTP, exactly as it
  * was stored (its text already carries any footer). Updates the record.
  */
@@ -401,6 +410,7 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
   let delivered = false;
   let transport: "smtp" | "mailbox" = "mailbox";
   let error: string | undefined;
+  let vanAdres = addr;
 
   const basis = smtpConfig();
   // .test/.example/.invalid/.localhost can never be delivered (RFC 2606/6761): keep it in the local
@@ -411,6 +421,22 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
     if (cfg) {
       transport = "smtp";
       ({ delivered, error } = await deliverWithRetry(cfg, addr, input.to, raw));
+      // De mail van de app (niet de verkoopmail) en de gewone mailbox zit aan zijn daggrens: via de reservemailbox
+      // (dezelfde login als de verkoopmail, lib/mail/verkoop-mailbox.ts), met dat adres als afzender (TransIP neemt alleen
+      // de eigen mailbox of een alias ervan aan) en de Reply-To ongewijzigd.
+      if (!delivered && category !== "sales-outreach" && isDaggrensFout(error)) {
+        const reserve = await verkoopLogin().catch(() => null);
+        if (reserve && reserve.adres.toLowerCase() !== (cfg.user ?? "").toLowerCase()) {
+          const van = fromHeader(reserve.adres);
+          const opnieuw = await deliverWithRetry({ ...cfg, user: reserve.adres, pass: reserve.wachtwoord }, van.addr, input.to, buildRaw(input, van.header, messageId));
+          logger.warn("gewone mailbox aan zijn daggrens - via de reservemailbox", { kind: input.kind ?? "generic", delivered: opnieuw.delivered });
+          if (opnieuw.delivered) {
+            delivered = true;
+            error = undefined;
+            vanAdres = van.addr;
+          }
+        }
+      }
       if (!delivered) logger.warn("smtp delivery failed - mail kept in local mailbox", { domein: ontvangerDomeinen(input.to), error: zonderAdressen(error) });
     } else {
       error = fout;
@@ -421,7 +447,7 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
   const rec: SentRecord = {
     id,
     at: new Date().toISOString(),
-    from: addr,
+    from: vanAdres,
     to: [input.to],
     subject: input.subject,
     text: input.text,

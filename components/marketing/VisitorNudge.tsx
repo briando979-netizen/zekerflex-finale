@@ -142,11 +142,13 @@ export function VisitorNudge() {
     <div className="fixed bottom-5 left-4 z-[70] w-[min(22rem,calc(100vw-2rem))] animate-slide-up-fade sm:left-6" role="dialog" aria-label={c.title}>
       <div className="relative overflow-hidden rounded-2xl bg-ink p-5 text-white shadow-lift ring-1 ring-white/10">
         <div className="aurora opacity-50" aria-hidden />
+        {/* z-10: de regels hieronder zijn ook "relative" en lagen anders over het kruisje heen (21 nov 2026: op de telefoon
+            kwam een tik nooit aan); 40 px, groot genoeg voor een vinger */}
         <button
           type="button"
           onClick={() => setKind(null)}
           aria-label="Sluiten"
-          className="absolute right-3 top-3 grid h-7 w-7 place-items-center rounded-full text-white/60 hover:bg-white/10 hover:text-white"
+          className="absolute right-2 top-2 z-10 grid h-10 w-10 place-items-center rounded-full text-base text-white/70 hover:bg-white/10 hover:text-white"
         >
           ✕
         </button>

@@ -764,7 +764,7 @@ export async function ownerTodos(): Promise<OwnerTodo[]> {
       id: "verkoop-mailbox",
       group: "Beheer & veiligheid",
       title: "Een eigen mailbox voor verkoopmail instellen (gratis: uitzendbureau@zekerflex.com)",
-      why: "Op 21 nov gingen ±1000 verkoopmails via dezelfde mailbox als de app. TransIP staat ±1000 ontvangers per dag per mailbox toe en weigerde daarna alles, ook inlogcodes en 'wachtwoord vergeten'. Verkoopmail gaat nu alleen nog via een eigen mailbox; zolang die er niet is, gaat er geen verkoopmail de deur uit.",
+      why: "Op 21 nov gingen ±1000 verkoopmails via dezelfde mailbox als de app. TransIP staat ±1000 ontvangers per dag per mailbox toe en weigerde daarna alles, ook inlogcodes en 'wachtwoord vergeten'. Verkoopmail gaat nu alleen nog via een eigen mailbox; zolang die er niet is, gaat er geen verkoopmail de deur uit. Dezelfde mailbox is ook de reserve voor de mail van de app: zit info@ aan zijn daggrens, dan gaan inlogcodes via deze mailbox.",
       how: [
         "Het pakket bij TransIP (E-mail Only Core) heeft 3 mailboxen en die zijn alle 3 in gebruik: info@, uitzendbureau@ en noreply@. Een extra mailbox kost een upgrade (€ 9,99 per maand). Gratis: gebruik de mailbox uitzendbureau@zekerflex.com, die niet meer gebruikt wordt.",
         "Log in bij TransIP, ga naar E-mail → zekerflex.com en geef de mailbox uitzendbureau@zekerflex.com een nieuw, sterk wachtwoord.",

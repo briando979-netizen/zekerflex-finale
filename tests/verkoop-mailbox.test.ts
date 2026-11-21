@@ -44,7 +44,7 @@ vi.mock("@/lib/security/sealed-secret", () => ({
   openSecret: (s: string) => Buffer.from(s.replace(/^zegel:/, ""), "base64").toString(),
 }));
 
-import { sendMail } from "@/lib/mail";
+import { isDaggrensFout, sendMail } from "@/lib/mail";
 import { VERKOOP_NIET_INGESTELD, geldigVerkoopAdres, verkoopLogin, verkoopMailboxStand, wisVerkoopLogin, zetVerkoopLogin } from "@/lib/mail/verkoop-mailbox";
 
 beforeEach(() => {
@@ -112,6 +112,43 @@ describe("sendMail kiest de mailbox per soort mail", () => {
     expect(res.delivered).toBe(false);
     expect(res.error).toBeUndefined();
     expect(h.smtp).not.toHaveBeenCalled();
+  });
+});
+
+describe("de reservemailbox voor de mail van de app (eigenaar: 'schakel om naar uitzendbureau@')", () => {
+  it("herkent alleen de daggrens van TransIP", () => {
+    expect(isDaggrensFout("MAIL FROM -> 550 Sending Prohibited (Max Rcp)")).toBe(true);
+    expect(isDaggrensFout("RCPT TO -> 550 5.7.1 Max RcptTo Daily limit")).toBe(true);
+    expect(isDaggrensFout("421 4.7.0 Exceeding quota, max of 1000 messages")).toBe(true);
+    expect(isDaggrensFout("550 5.1.1 <x@y.nl> User unknown")).toBe(false);
+    expect(isDaggrensFout(undefined)).toBe(false);
+  });
+
+  it("weigert info@ door de daggrens, dan gaat de inlogcode via de reservemailbox, met dat adres als afzender", async () => {
+    await zetVerkoopLogin("uitzendbureau@zekerflex.com", "geheim-123");
+    h.smtp.mockRejectedValueOnce(new Error("MAIL FROM -> 550 Sending Prohibited (Max Rcp)")).mockResolvedValueOnce(undefined);
+    const res = await sendMail({ to: "werker@voorbeeld.nl", subject: "Je code", text: "123456", kind: "verification" });
+    expect(res.delivered).toBe(true);
+    expect(res.error).toBeUndefined();
+    expect(h.smtp).toHaveBeenCalledTimes(2);
+    expect(h.smtp.mock.calls[0]![0]).toMatchObject({ user: "info@zekerflex.com" });
+    const [cfg, envelope] = h.smtp.mock.calls[1]!;
+    expect(cfg).toMatchObject({ user: "uitzendbureau@zekerflex.com", pass: "geheim-123" });
+    expect(envelope.from).toBe("uitzendbureau@zekerflex.com");
+    expect(String(envelope.raw)).toMatch(/^From: .*uitzendbureau@zekerflex\.com/m);
+  });
+
+  it("een andere fout (onbekend adres) gaat niet naar de reserve, en zonder reserve blijft het bij de fout", async () => {
+    h.smtp.mockRejectedValue(new Error("RCPT TO -> 550 5.1.1 User unknown"));
+    await zetVerkoopLogin("uitzendbureau@zekerflex.com", "geheim-123");
+    expect((await sendMail({ to: "werker@voorbeeld.nl", subject: "x", text: "y", kind: "verification" })).delivered).toBe(false);
+    expect(h.smtp).toHaveBeenCalledTimes(1);
+    h.smtp.mockReset();
+    await wisVerkoopLogin();
+    h.smtp.mockRejectedValue(new Error("550 Sending Prohibited (Max Rcp)"));
+    const res = await sendMail({ to: "werker@voorbeeld.nl", subject: "x", text: "y", kind: "verification" });
+    expect(res.delivered).toBe(false);
+    expect(h.smtp).toHaveBeenCalledTimes(1);
   });
 });
 
