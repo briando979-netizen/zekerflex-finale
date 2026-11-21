@@ -1969,6 +1969,8 @@ export const nl = {
     reactieMet: "Reageert op je klus voor {prijs}/u.",
     tegenbod: "Tegenbod: {bod}/u (jij bood {lijst}/u).",
     elders: " Let op: op dat moment al elders ingepland, accepteren lukt dan niet.",
+    // accepteren lukt niet omdat de kracht zelf nog gegevens mist (lib/fiscal/werker-niet-klaar.ts); belooft geen bericht dat niet gaat
+    werkerNietKlaar: "Deze kracht kan deze klus nog niet aannemen: er ontbreken nog gegevens in zijn account, zoals zijn bedrijfsgegevens of rekeningnummer. Zijn reactie blijft staan; zodra hij alles heeft ingevuld, kun je hem accepteren.",
   },
   claimPaneel: {
     kop: "Annuleringsclaims",

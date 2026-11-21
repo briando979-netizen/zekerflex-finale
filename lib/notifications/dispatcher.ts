@@ -2,6 +2,7 @@ import { isTenantVerified, UNVERIFIED_ASSIGN_MESSAGE } from "@/lib/company/verif
 import {
   MatchStatus,
   ShiftStatus,
+  type Prisma,
   type TravelMode,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -392,11 +393,15 @@ export async function processMatchingFollowups(
  * Record a freelancer's response to a live offer. ACCEPT creates a seat-checked
  * assignment (+ its draft timesheet); DECLINE frees the slot and opportunistically
  * promotes the next candidate.
+ * `opts.voorAanmaken`: draait in dezelfde transactie, vlak vóór de ShiftAssignment wordt gemaakt (na de plek- en
+ * overlapcontrole). Zelf reageren op een proefklus zet hier het slot per werker en telt opnieuw
+ * (eisProefklusInSlot, lib/fiscal/eligibility.ts); een fout daar draait alles terug.
  */
 export async function recordOfferResponse(
   shiftId: string,
   freelancerId: string,
   decision: "ACCEPTED" | "DECLINED",
+  opts: { voorAanmaken?: (tx: Prisma.TransactionClient) => Promise<void> } = {},
 ): Promise<{ status: MatchStatus; shiftFilled: boolean }> {
   void recordEngagement(freelancerId, "OFFER_RESPONDED");
 
@@ -447,6 +452,7 @@ export async function recordOfferResponse(
     // Not on two shifts at once (the offer may predate another booking).
     const overlap = await findOverlappingShift(tx, freelancerId, { shiftId, startsAt: shift.startsAt, endsAt: shift.endsAt });
     if (overlap) throw AppError.conflict(overlapMessageSelf(overlap));
+    if (opts.voorAanmaken) await opts.voorAanmaken(tx);
 
     const assignment = await tx.shiftAssignment.create({
       data: { shiftId, freelancerId, source: MatchStatus.ACCEPTED },

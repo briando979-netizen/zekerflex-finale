@@ -9,6 +9,9 @@ import { resolveEmployerScope } from "@/lib/dashboard/employer";
 import { MIN_SHIFT_RATE_CENTS } from "@/lib/shifts/create";
 import { listCounterOffers, setOfferStatus } from "@/lib/offers/store";
 import { applyToShift } from "@/lib/matching/apply";
+import { isWerkerNietKlaar } from "@/lib/fiscal/werker-niet-klaar";
+import { getDict } from "@/lib/i18n/server";
+import { nl as nlDict } from "@/lib/i18n/dictionaries";
 import { ensureDirectThread, postMessage } from "@/lib/messaging/store";
 import { recordAudit } from "@/lib/audit";
 import { runMatchingForShift } from "@/lib/matching/engine";
@@ -405,6 +408,9 @@ export async function respondToOfferAction(
       try {
         await applyToShift(offer.userId, shift.id);
       } catch (e) {
+        // de kracht mist zelf nog gegevens (KVK/btw/KOR, rekeningnummer, ...): de reden is voor hem ("Vul ze in bij
+        // Verificatie"); de werkgever leest een eigen, neutrale zin in zijn taal (lib/fiscal/werker-niet-klaar.ts)
+        if (isWerkerNietKlaar(e)) return { ok: false, message: (await getDict().catch(() => nlDict)).kandidaatKaart.werkerNietKlaar };
         return {
           ok: false,
           message:

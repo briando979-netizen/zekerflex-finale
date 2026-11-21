@@ -1944,6 +1944,7 @@ export const en: Dict = {
     reactieMet: "Responds to your job for {prijs}/h.",
     tegenbod: "Counter-offer: {bod}/h (you offered {lijst}/h).",
     elders: " Note: already scheduled elsewhere at that time, so accepting will not work.",
+    werkerNietKlaar: "This worker cannot take this job yet: some details are still missing from their account, such as their business details or bank account number. Their response stays open; once they have filled everything in, you can accept them.",
   },
   claimPaneel: {
     kop: "Cancellation claims",

@@ -9,6 +9,7 @@ import { uitzendContractBlokken } from "@/lib/agreements/uitzend-tekst";
 import { PLATFORM_NAAM } from "@/lib/platform/bedrijf";
 import { overschrijvingRegels, overschrijvingVoor } from "@/lib/billing/overschrijving";
 import { platformBankgegevens, stripeBetalenDicht } from "@/lib/billing/overschrijving-bron";
+import { KOR_VERMELDING } from "@/lib/billing/self-billing";
 
 const euro = (c: number) => `EUR ${(c / 100).toFixed(2).replace(".", ",")}`;
 // Every date and time in these documents is Dutch time (the server runs in UTC).
@@ -85,7 +86,9 @@ export async function invoicePdf(invoiceId: string): Promise<{ bytes: Buffer; fi
   pdf.rule();
 
   pdf.row("Subtotaal", euro(inv.subtotalCents));
-  pdf.row(VAT_LABEL[inv.vatTreatment] ?? "Btw", euro(inv.vatCents));
+  // een werker met de KOR (lib/billing/self-billing.ts): vrijgesteld, niet "buiten reikwijdte"
+  const kor = inv.vatTreatment === "OUT_OF_SCOPE" && inv.lines.some((l) => l.description.includes(KOR_VERMELDING));
+  pdf.row(kor ? "Btw (vrijgesteld, KOR)" : (VAT_LABEL[inv.vatTreatment] ?? "Btw"), euro(inv.vatCents));
   pdf.row("Totaal", euro(inv.totalCents), { bold: true, size: 12 });
 
   pdf.gap(14);

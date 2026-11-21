@@ -6,7 +6,8 @@ import { AppError } from "@/lib/errors";
 import { haversineMeters } from "@/lib/geo/geofencing";
 import { recordOfferResponse } from "@/lib/notifications/dispatcher";
 import { isBlockedByAny } from "@/lib/employer/relations";
-import { payoutEligibility } from "@/lib/fiscal/eligibility";
+import { eisProefklusInSlot, payoutEligibility } from "@/lib/fiscal/eligibility";
+import { werkerNietKlaarFout } from "@/lib/fiscal/werker-niet-klaar";
 import { isInvitedToPoolOnlyShift } from "@/lib/pools/store";
 import { findOverlappingShift, overlapMessageSelf, overlapParams } from "@/lib/shifts/worker-overlap";
 import { isTestklus } from "@/lib/shifts/testklus";
@@ -63,10 +64,9 @@ export async function applyToShift(
   // we pas als de klus geladen is; de fout volgt daarom hieronder.
   const eligible = await payoutEligibility(userId);
   const nietKlaar = (): AppError => {
-    const fout = AppError.precondition(eligible.reason ?? "Je kunt nog geen diensten aannemen.");
-    // een eigen reden zonder sleutel (bv. het recht om te werken) blijft Nederlands; de algemene melding krijgt de sleutel
-    const sleutel = eligible.reason ? eligible.sleutel : "apply.nietKlaar";
-    return sleutel ? fout.metSleutel(sleutel) : fout;
+    // een eigen reden zonder sleutel (bv. het recht om te werken) blijft Nederlands; de algemene melding krijgt de sleutel.
+    // Gemerkt (lib/fiscal/werker-niet-klaar.ts): accepteert een werkgever de reactie, dan leest hij een eigen zin, niet deze.
+    return werkerNietKlaarFout(eligible.reason ?? "Je kunt nog geen diensten aannemen.", eligible.reason ? eligible.sleutel : "apply.nietKlaar");
   };
   if (profile.isBlacklisted) throw AppError.forbidden("Je account kan momenteel geen diensten aannemen.").metSleutel("apply.geblokkeerd");
   if (profile.matchingBlockedUntil && profile.matchingBlockedUntil.getTime() > Date.now()) {
@@ -181,5 +181,11 @@ export async function applyToShift(
     return { status: MatchStatus.VIEWED, shiftFilled: false, pendingCompanyVerification: true };
   }
 
+  // Leunt de werker op een proefklus (KVK/btw/KOR of IBAN ontbreekt nog), dan in de transactie een slot per werker en
+  // opnieuw tellen vlak vóór het aanmaken: twee acceptaties tegelijk mogen samen nooit meer dan 2 proefklussen geven.
+  // Wie alle gegevens heeft (of een klus van een uitzendpartner) gaat zonder slot, zoals altijd.
+  if (!partnerKlus && eligible.proef) {
+    return recordOfferResponse(shiftId, profile.id, "ACCEPTED", { voorAanmaken: (tx) => eisProefklusInSlot(tx, userId) });
+  }
   return recordOfferResponse(shiftId, profile.id, "ACCEPTED");
 }

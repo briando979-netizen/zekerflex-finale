@@ -14,7 +14,11 @@ import { AppError } from "@/lib/errors";
 // zonder rekeningnummer; vanaf de derde zijn die verplicht. Voor een uitzendkracht verandert niets, en uitbetalen blijft
 // wachten op de gegevens (lib/timesheets/approve.ts). De telling faalt dicht.
 
-type Rij = { shift: { title: string; createdAt: Date; branch: { tenantId: string; tenant: { name: string } } } };
+type Rij = {
+  cancelledAt: Date | null;
+  cancelReason: string | null;
+  shift: { title: string; createdAt: Date; branch: { tenantId: string; tenant: { name: string } } };
+};
 
 const h = vi.hoisted(() => ({
   fiscal: {} as Record<string, unknown>,
@@ -55,9 +59,12 @@ vi.mock("@/lib/werkrecht/store", () => ({ werkrechtVoorWerk: async () => ({ ok: 
 vi.mock("@/lib/kvk/tegoed-opslag", () => ({ kvkWachtVan: async () => h.kvkWacht }));
 vi.mock("@/lib/admin/eigen-test", () => ({ leesEigenTest: async () => ({ tenants: {}, users: {} }) }));
 
-const klus = (bedrijf = "Bakkerij Jansen", title = "Orderpicker"): Rij => ({
+const klus = (bedrijf = "Bakkerij Jansen", title = "Orderpicker", cancelReason: string | null = null): Rij => ({
+  cancelledAt: cancelReason ? new Date("2026-11-02T10:00:00+01:00") : null,
+  cancelReason,
   shift: { title, createdAt: new Date("2026-11-01T10:00:00+01:00"), branch: { tenantId: "t1", tenant: { name: bedrijf } } },
 });
+const afgezegd = (reden: string, bedrijf?: string, title?: string): Rij => klus(bedrijf, title, reden);
 
 const NIETS = { kvkValid: false, vatValid: false, payoutIban: null };
 const ALLES = { kvkValid: true, vatValid: true, payoutIban: "NL00TEST0000000000" };
@@ -100,7 +107,17 @@ describe("de telling", () => {
     const { proefklusRuimte } = await import("@/lib/fiscal/proefklussen");
     h.rijen = [klus(), klus("Test bedrijven"), klus("Bakkerij Jansen", "Bediening (testklus)")];
     expect(await proefklusRuimte("u1")).toEqual({ over: 1, aangenomen: 1 });
-    expect(h.telVraag).toMatchObject({ where: { cancelledAt: null, freelancer: { userId: "u1" } } });
+    // sinds 21 nov ook de klussen die de werker zelf afzegde of waar hij niet kwam (zie "afzeggen telt mee" hieronder):
+    // daarom niet meer alleen cancelledAt: null, maar dat óf een annulering door de werker zelf
+    expect(h.telVraag).toMatchObject({
+      where: {
+        freelancer: { userId: "u1" },
+        OR: [
+          { cancelledAt: null },
+          { cancelledAt: { not: null }, OR: [{ cancelReason: { startsWith: "Afgezegd door flexwerker" } }, { cancelReason: { startsWith: "Niet opgekomen" } }] },
+        ],
+      },
+    });
     h.rijen = [klus(), klus()];
     expect(await proefklusRuimte("u1")).toEqual({ over: 0, aangenomen: 2 });
     h.rijen = [];
@@ -111,6 +128,42 @@ describe("de telling", () => {
     const { proefklusRuimte } = await import("@/lib/fiscal/proefklussen");
     h.telFout = true;
     expect(await proefklusRuimte("u1")).toEqual({ over: 0, aangenomen: null });
+  });
+});
+
+// Punt 2 van de review (21 nov): alleen niet-geannuleerde klussen tellen liet aannemen → afzeggen → opnieuw aannemen eindeloos
+// toe. Nu telt ook wat de werker zelf afzegde of waar hij niet kwam opdagen (het begin van cancelReason, lib/profile/card.ts).
+describe("afzeggen telt mee", () => {
+  it("aannemen, afzeggen, opnieuw aannemen: na 2 keer is de ruimte op", async () => {
+    const { proefklusRuimte } = await import("@/lib/fiscal/proefklussen");
+    h.rijen = [afgezegd("Afgezegd door flexwerker: ziek")];
+    expect(await proefklusRuimte("u1")).toEqual({ over: 1, aangenomen: 1 });
+    h.rijen = [afgezegd("Afgezegd door flexwerker (buiten de opzegtermijn): auto kapot"), afgezegd("Afgezegd door flexwerker: toch niet")];
+    expect(await proefklusRuimte("u1")).toEqual({ over: 0, aangenomen: 2 });
+  });
+
+  it("niet opgekomen telt ook; samen met een gewone klus is de ruimte op", async () => {
+    const { proefklusRuimte } = await import("@/lib/fiscal/proefklussen");
+    h.rijen = [afgezegd("Niet opgekomen (no-show, automatisch gedetecteerd)"), klus()];
+    expect(await proefklusRuimte("u1")).toEqual({ over: 0, aangenomen: 2 });
+  });
+
+  it("een annulering door de opdrachtgever of een overdracht aan een vervanger telt niet", async () => {
+    const { proefklusRuimte } = await import("@/lib/fiscal/proefklussen");
+    h.rijen = [afgezegd("Geannuleerd door opdrachtgever: te weinig werk"), afgezegd("Vervangen via ZekerFlex (vrije vervanging)")];
+    expect(await proefklusRuimte("u1")).toEqual({ over: 2, aangenomen: 0 });
+  });
+
+  it("een afgezegde testklus blijft buiten de telling", async () => {
+    const { proefklusRuimte } = await import("@/lib/fiscal/proefklussen");
+    h.rijen = [afgezegd("Afgezegd door flexwerker: ziek", "Test bedrijven"), afgezegd("Niet opgekomen (no-show)", "Bakkerij Jansen", "Bediening (testklus)")];
+    expect(await proefklusRuimte("u1")).toEqual({ over: 2, aangenomen: 0 });
+  });
+
+  it("de derde poging na twee keer afzeggen: payoutEligibility zegt nee, met de reden van de proefklussen", async () => {
+    const { payoutEligibility } = await import("@/lib/fiscal/eligibility");
+    h.rijen = [afgezegd("Afgezegd door flexwerker: ziek"), afgezegd("Afgezegd door flexwerker: ziek")];
+    expect(await payoutEligibility("u1")).toMatchObject({ ok: false, sleutel: "elig.proefOp" });
   });
 });
 
@@ -259,9 +312,10 @@ describe("de teksten", () => {
     }
   });
 
-  it("de push bij uren die wachten op KVK/btw staat er in vijf talen", () => {
+  it("de push bij uren die wachten op KVK/btw/KOR staat er in vijf talen", () => {
+    // sinds 21 nov is KVK óf btw óf de KOR genoeg om uitbetaald te worden (lib/fiscal/bedrijf-ok.ts): "KVK- en btw-nummer" klopte niet meer
     expect(WORKER_PUSH.nl.payoutBedrijfBody).toBe(
-      "Je uren staan klaar. Vul je KVK- en btw-nummer in, dan kan je opdrachtgever ze goedkeuren en krijg je je geld.",
+      "Je uren staan klaar. Vul je KVK- of btw-nummer in (of de KOR), dan kan je opdrachtgever ze goedkeuren en krijg je je geld.",
     );
     for (const taal of ["en", "pl", "ro", "uk"] as const) {
       expect(WORKER_PUSH[taal].payoutBedrijfTitle, taal).not.toBe(WORKER_PUSH.nl.payoutBedrijfTitle);

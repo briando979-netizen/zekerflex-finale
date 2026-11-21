@@ -8,9 +8,11 @@
 // ---------------------------------------------------------------------------
 
 /**
- * Wat de werkgever ziet als de werker zijn KVK- en btw-nummer nog niet (geldig) heeft: de poort bij goedkeuren blijft dicht
+ * Wat de werkgever ziet als de werker geen geldig KVK- of btw-nummer en geen KOR heeft: de poort bij goedkeuren blijft dicht
  * (lib/timesheets/approve.ts, lib/billing/payout-gate.ts), maar hij leest een gewone zin in plaats van "Payout geblokkeerd".
  * De actie (app/werkgever/uren/actions.ts) herkent deze tekst en toont hem in de taal van de werkgever (urenActies.werkerBedrijf).
+ * "We hebben hem een bericht gestuurd" klopt: de werker krijgt een push én altijd een mail (notifyFreelancerBedrijfMist).
+ * Uren in één keer goedkeuren heeft geen eigen poort: elk briefje gaat door dezelfde approveTimesheet().
  */
 export const WERKER_BEDRIJF_MIST =
   "De werker moet eerst zijn bedrijfsgegevens invullen. We hebben hem een bericht gestuurd; daarna kun je de uren goedkeuren.";

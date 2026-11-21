@@ -14,6 +14,11 @@ export interface ReverseBillingInput {
   freelancerId: string;
   freelancerCountry: string; // ISO 3166-1 alpha-2
   freelancerVatValid: boolean;
+  /**
+   * De werker gebruikt de kleineondernemersregeling (lib/fiscal/bedrijf-ok.ts, korZonderBtw): een Nederlandse werker met de
+   * KOR rekent geen btw, en de factuur op zijn naam zegt waarom (KOR_VERMELDING). Zonder: de gewone btw-regels hieronder.
+   */
+  freelancerKor?: boolean;
   /** Tenant that receives (and settles) both invoices. */
   recipientTenantId: string;
   recipientCountry: string;
@@ -36,6 +41,12 @@ export interface ReverseBillingInput {
 }
 
 const round = (n: number) => Math.round(n);
+
+/**
+ * De vermelding op de factuur van een werker met de KOR (21 nov 2026): geen btw, en waarom. Staat achter de eerste regel; de
+ * pdf (lib/pdf/documents.ts) herkent er de factuur aan en zet "Btw (vrijgesteld, KOR)" in plaats van "Buiten reikwijdte btw".
+ */
+export const KOR_VERMELDING = "vrijgesteld van btw op grond van de kleineondernemersregeling (KOR)";
 
 function lineTotal(line: InvoiceLineInput): number {
   return round(line.quantityHours * line.unitPriceCents);
@@ -106,19 +117,24 @@ export function buildReverseBillingInvoices(
 ): ReverseBillingResult {
   const hours = input.billableMinutes / 60;
 
-  const servicesVat = resolveVat(
-    input.freelancerCountry,
-    input.recipientCountry,
-    // reverse charge only applies when the *recipient* can account for VAT;
-    // proxied here by the freelancer's own VIES validity in the same market.
-    input.freelancerVatValid,
-  );
+  // De KOR is een Nederlandse regeling: alleen voor een werker uit Nederland. Geen btw (in de database OUT_OF_SCOPE, er is
+  // geen aparte waarde voor "vrijgesteld"), met de vermelding op de regel.
+  const kor = Boolean(input.freelancerKor) && input.freelancerCountry === "NL";
+  const servicesVat = kor
+    ? { treatment: VatTreatment.OUT_OF_SCOPE, rate: 0 }
+    : resolveVat(
+        input.freelancerCountry,
+        input.recipientCountry,
+        // reverse charge only applies when the *recipient* can account for VAT;
+        // proxied here by the freelancer's own VIES validity in the same market.
+        input.freelancerVatValid,
+      );
 
   const serviceLines: InvoiceLineInput[] = [
     {
       description: `${input.shiftTitle} - ${input.workedOn
         .toISOString()
-        .slice(0, 10)}`,
+        .slice(0, 10)}${kor ? ` — ${KOR_VERMELDING}` : ""}`,
       quantityHours: Number(hours.toFixed(2)),
       unitPriceCents: input.hourlyRateCents,
     },

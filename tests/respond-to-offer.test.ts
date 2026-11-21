@@ -162,6 +162,34 @@ describe("respondToOfferAction", () => {
     expect(setOfferStatus).not.toHaveBeenCalled();
   });
 
+  // Punt 3 van de review van de proefklussen (21 nov 2026): bij de derde acceptatie zag de werkgever de zin voor de werker
+  // ("Je hebt je eerste 2 klussen aangenomen… Vul ze in bij Verificatie"). Nu een eigen, neutrale zin uit het woordenboek.
+  it("a worker who still misses details: the employer reads his own neutral sentence, never the worker's", async () => {
+    const { werkerNietKlaarFout } = await import("@/lib/fiscal/werker-niet-klaar");
+    const { nl } = await import("@/lib/i18n/dictionaries");
+    const { en } = await import("@/lib/i18n/dictionary-en");
+    requirePrincipal.mockResolvedValue(manager());
+    resolveEmployerScope.mockResolvedValue({ tenantIds: ["org1"], branchIds: ["branch1"] });
+    listCounterOffers.mockResolvedValue([offer]);
+    shiftFindFirst.mockResolvedValue(shift);
+    shiftUpdate.mockResolvedValue({});
+    const werkerZin =
+      "Je hebt je eerste 2 klussen aangenomen. Voor de volgende is een geldig KVK- of btw-nummer (of de KOR) en je rekeningnummer nodig. Vul ze in bij Verificatie.";
+    applyToShift.mockRejectedValue(werkerNietKlaarFout(werkerZin, "elig.proefOp"));
+
+    const result = await respondToOfferAction("offer1", "accepted");
+
+    expect(result.ok).toBe(false);
+    expect(result.message).toBe(nl.kandidaatKaart.werkerNietKlaar);
+    expect(result.message).not.toContain("Verificatie");
+    expect(result.message).not.toMatch(/\bJe hebt\b/);
+    // de reactie blijft open: zodra de kracht alles heeft ingevuld, kan de werkgever hem alsnog accepteren
+    expect(setOfferStatus).not.toHaveBeenCalled();
+    // ook in het Engels (de werkgeversapp is NL/EN), en zonder belofte van een bericht dat niet gaat
+    expect(en.kandidaatKaart.werkerNietKlaar).not.toBe(nl.kandidaatKaart.werkerNietKlaar);
+    expect(nl.kandidaatKaart.werkerNietKlaar).not.toMatch(/laten weten|bericht gestuurd/);
+  });
+
   it("declines an offer without touching the assignment path", async () => {
     requirePrincipal.mockResolvedValue(manager());
     resolveEmployerScope.mockResolvedValue({ tenantIds: ["org1"], branchIds: ["branch1"] });

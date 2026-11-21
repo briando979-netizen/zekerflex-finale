@@ -1,9 +1,12 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getFiscal, invoiceModeFor } from "@/lib/fiscal/store";
 import { activeUitzendContract } from "@/lib/agreements/uitzend-contract";
 import { werkrechtVoorWerk } from "@/lib/werkrecht/store";
 import { kvkWachtVan } from "@/lib/kvk/tegoed-opslag";
 import { proefklusRuimte } from "@/lib/fiscal/proefklussen";
+import { bedrijfOk } from "@/lib/fiscal/bedrijf-ok";
+import { werkerNietKlaarFout } from "@/lib/fiscal/werker-niet-klaar";
 import { AppError } from "@/lib/errors";
 import { ZEKERFLEX_UITZENDER } from "@/lib/uitzend/model";
 
@@ -58,17 +61,18 @@ async function fiscalEligibility(userId: string): Promise<PayoutEligibility> {
 
   if (track === "payroll") return payrollEligibility(userId, fiscal, profile?.payoutIban ?? null);
 
-  const bedrijfOk = Boolean(profile?.kvkValid || profile?.vatValid || fiscal.vatValid || fiscal.korApplies);
+  // dezelfde regel als uitbetalen (lib/fiscal/bedrijf-ok.ts, lib/timesheets/approve.ts): KVK, óf btw, óf de KOR
+  const bedrijfKlaar = bedrijfOk(profile, fiscal);
   // Het IBAN zit sinds 10 nov niet meer in de onboarding: zonder rekeningnummer kunnen we niet uitbetalen
   const ibanOk = Boolean(profile?.payoutIban || fiscal.iban);
-  if (bedrijfOk && ibanOk) return { ok: true, track, reason: null };
+  if (bedrijfKlaar && ibanOk) return { ok: true, track, reason: null };
 
   // Er ontbreekt iets. De eerste 2 klussen mogen toch (proefklussen); de telling alleen hier, dus niet voor wie alles al
   // heeft. Een storing in de telling geeft geen ruimte: dan geldt de gewone regel met de gewone melding.
   const ruimte = await proefklusRuimte(userId);
   if (ruimte.over > 0) return { ok: true, track, reason: null, proef: { over: ruimte.over } };
 
-  if (!bedrijfOk) {
+  if (!bedrijfKlaar) {
     // sinds 13 nov hoort de KVK niet meer bij de aanmelding: hier pas. Wacht de controle (tegoed bij KVKBase op of de
     // minuutlimiet; lib/kvk/herkansing.ts probeert het opnieuw), zeg dat dan eerlijk in plaats van "nog geen KVK-nummer"
     if (await kvkWachtVan("werker", userId)) {
@@ -130,4 +134,25 @@ export async function eisUitzendGegevens(userId: string): Promise<void> {
   if (uit.ok) return;
   const fout = AppError.precondition(uit.reason ?? "Je kunt nog geen diensten aannemen.");
   throw uit.sleutel ? fout.metSleutel(uit.sleutel) : fout;
+}
+
+/** Het slot per werker voor proefklussen (pg_advisory_xact_lock, net als lib/shifts/seat-lock.ts); het voorvoegsel voorkomt botsingen. */
+export function proefSlotSleutel(userId: string): string {
+  return `zf:proefklus:${userId}`;
+}
+
+/**
+ * Proefklussen tegelijk aannemen (21 nov 2026): twee acceptaties tegelijk zagen allebei "nog 1 over" en samen werden het er
+ * 3. Wie op een proefklus leunt (payoutEligibility gaf `proef`), neemt daarom in de transactie die de ShiftAssignment maakt
+ * (recordOfferResponse, lib/notifications/dispatcher.ts) een slot per werker en telt daarbinnen, vlak vóór het aanmaken,
+ * opnieuw. Het slot wacht tot de andere transactie klaar is, dus de telling ziet die klus al. Alleen het proefpad: wie alle
+ * gegevens heeft komt hier niet langs. Op: dezelfde reden en sleutel als een nieuwe poging zou geven (payoutEligibility);
+ * heeft de werker intussen alles ingevuld, dan gaat het gewoon door.
+ */
+export async function eisProefklusInSlot(tx: Prisma.TransactionClient, userId: string): Promise<void> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${proefSlotSleutel(userId)}))`;
+  if ((await proefklusRuimte(userId, tx)).over > 0) return;
+  const nu = await payoutEligibility(userId);
+  if (nu.ok && !nu.proef) return;
+  throw werkerNietKlaarFout(nu.reason ?? "Je kunt nog geen diensten aannemen.", nu.reason ? nu.sleutel : "apply.nietKlaar");
 }

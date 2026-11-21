@@ -45,6 +45,9 @@ import { getOrgProfileExtra } from "@/lib/profile/store";
 import { sendLocalizedPush } from "@/lib/notifications/localized-push";
 import { eenmaligPush } from "@/lib/notifications/push-eenmalig";
 import { WERKER_BEDRIJF_MIST } from "@/lib/timesheets/bulk-goedkeuren";
+import { bedrijfOk, btwGeldig, korZonderBtw } from "@/lib/fiscal/bedrijf-ok";
+import { urenBedrijfMistEmailT } from "@/lib/mail/werker/uren-bedrijf-mist";
+import { mailTaalVoorWerker } from "@/lib/mail/taal";
 import { efactuurNaUitgifte } from "@/lib/efactuur/bezorging";
 import { pushHoursApproved } from "@/lib/notifications/approved-push";
 import { runAfter } from "@/lib/run-after";
@@ -118,21 +121,39 @@ async function notifyFreelancerProfileIncomplete(userId: string, reason: "iban" 
 }
 
 /**
- * Hetzelfde voor een KVK- of btw-nummer dat nog niet geldig is: tot 21 nov hoorde de werker daar niets van en bleven zijn
- * uren stil liggen. Eén keer per urenbriefje (de automatische goedkeuring en de werkgever proberen het vaker); een storing
- * in de markering = gewoon sturen. Best effort, nooit blokkerend.
+ * Hetzelfde voor een werker zonder geldig KVK- of btw-nummer en zonder KOR: tot 21 nov hoorde de werker daar niets van en
+ * bleven zijn uren stil liggen. Eén keer per urenbriefje (de automatische goedkeuring en de werkgever proberen het vaker); een
+ * storing in de markering = gewoon sturen. De werkgever leest "We hebben hem een bericht gestuurd" (WERKER_BEDRIJF_MIST):
+ * daarom naast de push (alleen met meldingen aan) ook altijd een mail, in de app-taal van de werker. Push en mail staan los
+ * van elkaar: valt de een weg, dan gaat de ander toch. Best effort, nooit blokkerend.
  */
-async function notifyFreelancerBedrijfMist(userId: string, timesheetId: string): Promise<void> {
+async function notifyFreelancerBedrijfMist(
+  werker: { userId: string; email: string | null; fullName: string },
+  timesheetId: string,
+): Promise<void> {
+  const { userId } = werker;
+  const pad = "/dashboard/verificatie#gegevens-later-kop";
   try {
     if (!(await eenmaligPush("uren-bedrijf", timesheetId, userId))) return;
+  } catch {
+    /* een storing in de markering: gewoon sturen */
+  }
+  try {
     await sendLocalizedPush([userId], (t) => ({
       title: t.payoutBedrijfTitle,
       body: t.payoutBedrijfBody.slice(0, 180),
-      data: { type: "PROFILE", url: "/dashboard/verificatie#gegevens-later-kop", tag: "payout-bedrijf" },
+      data: { type: "PROFILE", url: pad, tag: "payout-bedrijf" },
       ttlSeconds: 7 * 24 * 3600,
     }));
   } catch {
-    /* best effort */
+    /* best effort: de mail gaat toch */
+  }
+  if (!werker.email) return;
+  try {
+    const mail = urenBedrijfMistEmailT(werker.fullName, `${env.APP_BASE_URL.replace(/\/+$/, "")}${pad}`, await mailTaalVoorWerker(userId));
+    await sendMail({ ...mail, to: werker.email });
+  } catch (err) {
+    logger.warn("uren-bedrijf-mist: mail mislukt", { timesheetId, error: (err as Error).message });
   }
 }
 
@@ -303,20 +324,25 @@ async function approveTimesheetInner(
       throw AppError.precondition("De platformorganisatie is niet ingesteld.");
     }
 
+    // Bedrijf ok met dezelfde regel als reageren (lib/fiscal/bedrijf-ok.ts): KVK, óf btw (profiel of fiscale gegevens), óf de
+    // KOR. Tot 21 nov eiste deze poort KVK én btw: een werker met de KOR of met alleen een EU-btw-nummer kon dan wel werken,
+    // maar nooit uitbetaald worden.
+    const btwOk = btwGeldig(ts.freelancer, fiscal);
     const payoutGate = evaluatePayoutGate({
       timesheetApproved: true,
       freelancerKvkValid: ts.freelancer.kvkValid,
-      freelancerVatValid: ts.freelancer.vatValid,
+      freelancerVatValid: btwOk,
+      freelancerKor: Boolean(fiscal.korApplies),
       disputeOpen: ts.dispute !== null && ![
         "RESOLVED_APPROVED",
         "RESOLVED_OVERRULED",
       ].includes(ts.dispute.status),
     });
     if (!payoutGate.released) {
-      // KVK/btw nog niet geldig (bijv. na een proefklus, lib/fiscal/proefklussen-kern.ts): de poort blijft dicht, maar de
-      // werker hoort het nu zelf (één keer per urenbriefje) en de werkgever leest een gewone zin.
-      if (!ts.freelancer.kvkValid || !ts.freelancer.vatValid) {
-        await notifyFreelancerBedrijfMist(ts.freelancer.userId, ts.id);
+      // Geen KVK, btw of KOR (bijv. na een proefklus, lib/fiscal/proefklussen-kern.ts): de poort blijft dicht, maar de
+      // werker hoort het nu zelf (één keer per urenbriefje, push én mail) en de werkgever leest een gewone zin.
+      if (!bedrijfOk(ts.freelancer, fiscal)) {
+        await notifyFreelancerBedrijfMist({ userId: ts.freelancer.userId, email: ts.freelancer.user.email, fullName: ts.freelancer.user.fullName }, ts.id);
         throw AppError.precondition(WERKER_BEDRIJF_MIST);
       }
       throw AppError.precondition(
@@ -350,7 +376,9 @@ async function approveTimesheetInner(
         hourlyRateCents: ts.hourlyRateCents,
         freelancerId: ts.freelancerId,
         freelancerCountry: ts.freelancer.country,
-        freelancerVatValid: ts.freelancer.vatValid,
+        freelancerVatValid: btwOk,
+        // KOR: geen btw op de factuur op naam van de werker, met de vermelding (lib/billing/self-billing.ts)
+        freelancerKor: korZonderBtw(fiscal, btwOk),
         recipientTenantId: ts.branch.tenantId,
         recipientCountry: ts.branch.tenant.country,
         platformTenantId: platformTenant.id,
