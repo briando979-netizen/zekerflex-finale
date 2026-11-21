@@ -11,7 +11,7 @@ import { PARTNER_VOORWAARDEN_PAD, TERMIJN } from "@/lib/uitzend/voorwaarden";
 
 const title = "Samenwerken met ZekerFlex: voor uitzendbureaus";
 const description =
-  "Een uitnodiging voor uitzendbureaus: zet je uitzendklussen in de ZekerFlex-app, onder je eigen naam. Werkers vragen met één knop een uitzendcontract bij je aan. Jij blijft de werkgever.";
+  "Een uitnodiging voor uitzendbureaus: zet je diensten in de ZekerFlex-app, onder je eigen naam. Werkers in de app zien jouw dienst en melden zich er meteen voor aan. Jij neemt ze aan op je eigen uitzendcontract en regelt het loon zoals je gewend bent.";
 
 export const metadata: Metadata = {
   title,
@@ -52,7 +52,7 @@ const STAPPEN = [
   { titel: "Kennismaken", tekst: "Een kort gesprek: wat voor werk je hebt, in welke regio en hoe je nu aan kandidaten komt." },
   { titel: "Je account wordt uitzendpartner", tekst: "Je maakt een gratis bedrijfsaccount aan. Na een korte controle van je inschrijving als uitlener zetten wij het op uitzendpartner." },
   { titel: "Je plaatst je eerste klus", tekst: "De klus staat in de app als uitzendklus, onder de naam van je bureau, en wordt getoond aan werkers die erbij passen." },
-  { titel: "Werkers vragen een contract aan", tekst: "Met één knop vraagt een werker een uitzendcontract bij je aan. Jij krijgt zijn gegevens per mail en neemt contact op." },
+  { titel: "Werkers melden zich aan", tekst: "Een werker ziet je dienst in de app en meldt zich aan. Jij krijgt zijn naam, e-mailadres en telefoonnummer per mail, belt hem en neemt hem aan op je eigen uitzendcontract." },
 ];
 
 const VERDELING = [
@@ -75,7 +75,7 @@ const FAQ = [
   },
   {
     q: "Welke gegevens van een werker krijg ik?",
-    a: "Als een werker op je klus een uitzendcontract aanvraagt, geeft hij toestemming om zijn naam, e-mailadres en telefoonnummer met je bureau te delen. Daarmee neem je contact op.",
+    a: "Als een werker zich voor je dienst aanmeldt, geeft hij toestemming om zijn naam, e-mailadres en telefoonnummer met je bureau te delen. Daarmee neem je contact op.",
   },
 ];
 
@@ -109,7 +109,7 @@ export default async function PartnersUitzendPage() {
             kop="h1"
             eyebrow="Uitnodiging voor uitzendbureaus"
             title="Laten we samenwerken"
-            intro="Zet je uitzendklussen in de ZekerFlex-app, onder de naam van je bureau. Werkers zien je klus en vragen met één knop een uitzendcontract bij je aan. Jij blijft de werkgever en regelt het contract en de verloning. Wij leveren de app, de werkers en het matchen."
+            intro="Zet je diensten in de ZekerFlex-app, onder de naam van je bureau. Werkers in de app zien jouw dienst en melden zich er meteen voor aan. Jij neemt ze aan op je eigen uitzendcontract en regelt het loon zoals je gewend bent. Wij leveren de app, de werkers en het matchen."
           />
           <div className="mt-10 flex flex-wrap gap-3">
             <a href="mailto:uitzendbureau@zekerflex.com?subject=Kennismaking%20uitzendpartner" className="btn-primary">

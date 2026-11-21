@@ -19,7 +19,10 @@ describe("/partners/uitzend", () => {
   });
 
   it("eerlijk: het bureau is de werkgever, de prijs komt uit de staffel, de cijfers live en met een vangnet", () => {
-    expect(bron).toContain("Jij blijft de werkgever");
+    expect(bron).toContain("Jij neemt ze aan op je eigen uitzendcontract en regelt het loon zoals je gewend bent.");
+    expect(bron).toContain("Jouw bureau. De werker tekent zijn uitzendcontract bij jou");
+    // "met één knop" snapten bureaus niet (eigenaar, 21 nov): zeg wat de werker doet, ook in de og:description
+    for (const p of ["app/(marketing)/partners/uitzend/page.tsx", "app/(marketing)/uitzendpartner/page.tsx"]) expect(lees(p), p).not.toContain("één knop");
     expect(bron).toContain("BASE_FEE_PER_HOUR_CENTS");
     expect(bron).not.toMatch(/€\s?\d/);
     expect(bron).toContain('export const dynamic = "force-dynamic"');

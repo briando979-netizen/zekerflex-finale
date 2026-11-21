@@ -10,7 +10,7 @@ import { PARTNER_VOORWAARDEN_PAD } from "@/lib/uitzend/voorwaarden";
 
 const title = "Voor uitzendbureaus: zet je uitzendklussen op ZekerFlex";
 const description =
-  "Uitzendbureau? Zet je uitzendklussen in de ZekerFlex-app onder je eigen naam. Werkers vragen met één knop een uitzendcontract bij je aan. Jij blijft de werkgever, ZekerFlex rekent een vaste vergoeding per gewerkt uur.";
+  "Uitzendbureau? Zet je diensten in de ZekerFlex-app onder je eigen naam. Werkers in de app zien jouw dienst en melden zich er meteen voor aan. Jij neemt ze aan op je eigen uitzendcontract en regelt het loon zoals je gewend bent. ZekerFlex rekent een vaste vergoeding per gewerkt uur.";
 
 export const metadata: Metadata = {
   title,
@@ -36,8 +36,8 @@ const STAPPEN = [
     tekst: "Je klussen staan in de app als uitzendklus, onder de naam van je bureau. Werkers zien meteen dat jij de werkgever bent.",
   },
   {
-    titel: "Werkers vragen een uitzendcontract aan",
-    tekst: "Met één knop vraagt een werker een uitzendcontract bij je aan. Jij krijgt zijn gegevens, regelt het contract en betaalt het loon.",
+    titel: "Werkers melden zich aan",
+    tekst: "Een werker ziet je dienst in de app en meldt zich aan. Jij krijgt zijn gegevens, neemt hem aan op je eigen uitzendcontract en betaalt het loon.",
   },
 ];
 
@@ -61,7 +61,7 @@ const FAQ = [
   },
   {
     q: "Welke gegevens van een werker krijg ik?",
-    a: "Als een werker op je klus een uitzendcontract aanvraagt, geeft hij toestemming om zijn contactgegevens met je bureau te delen. Daarmee neem je contact op over het contract en de voorwaarden.",
+    a: "Als een werker zich voor je dienst aanmeldt, geeft hij toestemming om zijn contactgegevens met je bureau te delen. Daarmee neem je contact op over het contract en de voorwaarden.",
   },
   {
     q: "Welke regels gelden er, en wat als een bureau zich er niet aan houdt?",
@@ -88,7 +88,7 @@ export default function UitzendpartnerPage() {
             kop="h1"
             eyebrow="Voor uitzendbureaus"
             title="Zet je uitzendklussen op ZekerFlex"
-            intro="Je klussen staan in de ZekerFlex-app onder de naam van je bureau. Werkers vragen met één knop een uitzendcontract bij je aan. Jij blijft de werkgever; ZekerFlex brengt de werkers."
+            intro="Je diensten staan in de ZekerFlex-app onder de naam van je bureau. Werkers in de app zien jouw dienst en melden zich er meteen voor aan. Jij neemt ze aan op je eigen uitzendcontract en regelt het loon zoals je gewend bent. ZekerFlex brengt de werkers."
           />
           <div className="mt-10 flex flex-wrap gap-3">
             <Link href="/register?type=bedrijf" className="btn-primary">
