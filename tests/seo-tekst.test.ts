@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { BESCHRIJVING_MAX, seoBeschrijving, seoTitel, TITEL_MAX } from "@/lib/seo-tekst";
 import { sectorCityMetadata, sectorHubMetadata, sectorWorkerCityMetadata, sectorWorkerHubMetadata } from "@/lib/seo-sector-meta";
-import { SECTORS } from "@/lib/seo-sectors";
+import { SECTORS, rollenKort } from "@/lib/seo-sectors";
 import { CITIES } from "@/lib/seo-cities";
 import { SEO_STANDAARD } from "@/lib/ontwerp/seo";
 
@@ -47,6 +47,23 @@ describe("de pagina's", () => {
         expect(String(sectorWorkerCityMetadata(s, c).description), `${s.workerSlug} ${c.slug}`).toContain("met of zonder KVK");
       }
     }
+  });
+
+  it("de koppen volgen de echte zoekwoorden (Search Console 22 nov 2026) en beloven niets over snelheid", () => {
+    const sector = (k: string) => SECTORS.find((s) => s.key === k)!;
+    const stad = (k: string) => CITIES.find((c) => c.slug === k)!;
+    expect(titelVan(sectorWorkerCityMetadata(sector("schoonmaak"), stad("enschede")))).toBe("Schoonmaakwerk en vacatures in Enschede | ZekerFlex");
+    expect(titelVan(sectorWorkerCityMetadata(sector("horeca"), stad("haarlem")))).toBe("Horeca vacatures in Haarlem | ZekerFlex");
+    expect(titelVan(sectorWorkerCityMetadata(sector("logistiek"), stad("eindhoven")))).toBe("Logistieke vacatures in Eindhoven | ZekerFlex");
+    expect(titelVan(sectorWorkerHubMetadata(sector("schoonmaak")))).toBe("Schoonmaakwerk: werken als schoonmaker | ZekerFlex");
+    expect(titelVan(sectorHubMetadata(sector("schoonmaak")))).toBe("Schoonmakers en schoonmaakpersoneel inhuren | ZekerFlex");
+    expect(titelVan(sectorCityMetadata(sector("horeca"), stad("groningen")))).toBe("Horeca personeel inhuren in Groningen | ZekerFlex");
+    expect(titelVan(sectorCityMetadata(sector("schoonmaak"), stad("enschede")))).toBe("Schoonmaakpersoneel inhuren in Enschede | ZekerFlex");
+    expect(rollenKort(sector("horeca"))).toBe("bediening, keuken, bar en afwas");
+    // geen "vaak nog dezelfde dag gevuld" of "binnen uren": dat kunnen we niet waarmaken zolang het aanbod klein is
+    const bronnen = ["lib/seo-sector-meta.ts", "components/marketing/SectorLanding.tsx"].map((f) => readFileSync(path.join(process.cwd(), f), "utf8"));
+    for (const b of bronnen) expect(b).not.toMatch(/dezelfde dag|binnen uren|snel uitbetaald|word snel/i);
+    for (const s of SECTORS) expect(s.werkUitleg.length, s.key).toBeGreaterThan(80);
   });
 
   it("de vaste pagina's: standaardteksten op lengte (zonder verborgen inkorting), een eigen versie wordt ingekort", () => {

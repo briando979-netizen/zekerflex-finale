@@ -1,25 +1,46 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { ldJson } from "@/lib/seo/json-ld";
 import { Section, SectionHead, CtaBand, FaqList } from "@/components/marketing/primitives";
 import { CITIES, type City } from "@/lib/seo-cities";
-import { SECTORS, type Sector } from "@/lib/seo-sectors";
+import { SECTORS, inhurenHubKop, inhurenKop, werkHubKop, werkKop, type Sector } from "@/lib/seo-sectors";
 import { sectorFoto } from "@/lib/marketing/fotos";
 import { HeroMetFoto } from "@/components/marketing/HeroMetFoto";
-import { breadcrumbJsonLd, canonical } from "@/lib/seo";
+import { breadcrumbJsonLd } from "@/lib/seo";
 import { klusUrl } from "@/lib/klusconcept/concept";
 
 // Shared template that renders a sector's hub + per-city landing pages from the
 // SECTORS config. Each page combines sector copy with the city's real local
 // context, so the set reads as unique pages, not spun duplicates.
+// 22 nov 2026: de koppen zoals mensen zoeken (lib/seo-sectors.ts: werkKop, inhurenKop), op de stadspagina's de eigen
+// tekst van die stad (lib/seo-cities.ts: local) en links naar de andere branches in dezelfde stad, en geen belofte meer
+// over hoe snel een klus gevuld is of hoe snel iemand betaald wordt.
 
 const low = (s: Sector) => s.label.toLowerCase();
 
 // ---- metadata: in lib/seo-sector-meta.ts (puur, te testen); hier doorgegeven voor de paginabestanden ----
 export { sectorCityMetadata, sectorHubMetadata, sectorWorkerCityMetadata, sectorWorkerHubMetadata } from "@/lib/seo-sector-meta";
 
+type Vraag = { q: string; a: string };
+
+const faqJsonLd = (faq: Vraag[]) => ({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+});
+
+// ZekerFlex is zelf geen uitzendbureau (lib/uitzend/model.ts: ZEKERFLEX_UITZENDER = false); wie op "uitzendbureau" zoekt,
+// krijgt hier het eerlijke antwoord (tests/uitzend-openbaar-eerlijk.test.ts).
+const UITZEND_BEDRIJF: Vraag = {
+  q: "Is ZekerFlex een uitzendbureau?",
+  a: "Nee. ZekerFlex is zelf geen uitzendbureau, maar een platform waarop je zelf zzp'ers en flexwerkers inhuurt, zonder uitzendmarge. Uren, facturen en betalingen lopen dan via het platform. Wil je liever uitzendkrachten, dan krijg je die via een aangesloten uitzendbureau: dat bureau is de werkgever en regelt het contract, de loonadministratie en het pensioen volgens zijn cao.",
+};
+const UITZEND_WERKER: Vraag = {
+  q: "Is ZekerFlex een uitzendbureau?",
+  a: "Nee. ZekerFlex is zelf geen uitzendbureau, maar een app met freelance klussen en uitzendklussen. Bij een uitzendklus teken je je contract bij het uitzendbureau van die dienst: dat bureau is je werkgever en betaalt je loon.",
+};
+
 // ---- shared faq -----------------------------------------------------------
-function cityFaq(s: Sector, c: City) {
+function cityFaq(s: Sector, c: City): Vraag[] {
   return [
     {
       q: `Hoe snel heb ik een ${s.worker} in ${c.name}?`,
@@ -37,14 +58,11 @@ function cityFaq(s: Sector, c: City) {
       q: "Wat als iemand niet bevalt of niet komt opdagen?",
       a: "Je ziet vooraf reviews en ervaring, en je kunt iemand blokkeren zodat je die nooit meer krijgt. Valt er iemand uit, dan staat je klus meteen weer open bij andere beschikbare krachten in de buurt.",
     },
-    {
-      q: "Zzp'er of uitzendkracht?",
-      a: "Zelfstandige krachten huur je via het platform; uren, facturen en betalingen lopen dan automatisch. Wil je liever uitzendkrachten, dan krijg je die via een aangesloten uitzendbureau: dat bureau is de werkgever en regelt het contract, de loonadministratie en het pensioen volgens zijn cao.",
-    },
+    UITZEND_BEDRIJF,
   ];
 }
 
-function hubFaq(s: Sector) {
+function hubFaq(s: Sector): Vraag[] {
   return [
     {
       q: `Hoe snel heb ik ${low(s)}personeel?`,
@@ -58,6 +76,7 @@ function hubFaq(s: Sector) {
       q: "Kan ik mijn vaste ploeg opbouwen?",
       a: "Ja — krachten die bevallen zet je bij favorieten of in een vaste pool en roostert je met één tik opnieuw in.",
     },
+    UITZEND_BEDRIJF,
   ];
 }
 
@@ -80,6 +99,36 @@ function ToolHint({ worker = false }: { worker?: boolean }) {
   );
 }
 
+/** Een rij ronde links (andere steden, andere branches). */
+function LinkRij({ kop, links }: { kop: string; links: { href: string; label: string }[] }) {
+  return (
+    <>
+      <h2 className="mt-14 font-display text-lg font-bold text-ink">{kop}</h2>
+      <ul className="mt-3 flex flex-wrap gap-2">
+        {links.map((l) => (
+          <li key={l.href}>
+            <Link href={l.href} className="inline-block rounded-full border border-hairstrong bg-white px-3 py-1 text-sm text-neutralx-700 hover:border-brand-500">
+              {l.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+/** De eigen tekst van de stad en wat er daar gevraagd wordt (lib/seo-cities.ts), zodat elke stadspagina iets eigens heeft. */
+function StadBlok({ kop, c }: { kop: string; c: City }) {
+  return (
+    <div className="mt-12 max-w-3xl">
+      <h2 className="font-display text-xl font-bold text-ink">{kop}</h2>
+      <p className="mt-3 leading-relaxed text-neutralx-600">
+        {c.local} In {c.name} en omgeving is er vooral vraag in {c.sectors.join(", ")}.
+      </p>
+    </div>
+  );
+}
+
 // ---- hub page -------------------------------------------------------------
 export function SectorHub({ sector: s }: { sector: Sector }) {
   const faq = hubFaq(s);
@@ -89,14 +138,7 @@ export function SectorHub({ sector: s }: { sector: Sector }) {
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
-          __html: ldJson([
-            breadcrumbJsonLd([["Home", "/"], [`${s.label} personeel inhuren`, `/${s.slug}`]]),
-            {
-              "@context": "https://schema.org",
-              "@type": "FAQPage",
-              mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-            },
-          ]),
+          __html: ldJson([breadcrumbJsonLd([["Home", "/"], [inhurenHubKop(s), `/${s.slug}`]]), faqJsonLd(faq)]),
         }}
       />
       <Section>
@@ -104,8 +146,8 @@ export function SectorHub({ sector: s }: { sector: Sector }) {
         <SectionHead
           kop="h1"
           eyebrow={`${s.label} · voor bedrijven`}
-          title={`${s.label} personeel inhuren, door heel Nederland`}
-          intro={`Uitval, no-shows of ${s.peak}? Plaats een klus en ZekerFlex vindt binnen uren betrouwbare ${s.roles} in de buurt. Je betaalt € 3,50 per gewerkt uur, zonder uitzendmarge en zonder abonnement.`}
+          title={`${inhurenHubKop(s)}, door heel Nederland`}
+          intro={`Uitval, no-shows of ${s.peak}? Plaats een klus en ZekerFlex deelt hem met geverifieerde ${s.roles} in de buurt van je locatie. Je betaalt het uurtarief van de kracht plus € 3,50 per gewerkt uur, zonder uitzendmarge en zonder abonnement.`}
         />
         <div className="mt-10 flex flex-wrap gap-3">
           <Link href={klusUrl({ sector: s.key })} className="btn-primary">
@@ -117,7 +159,7 @@ export function SectorHub({ sector: s }: { sector: Sector }) {
         </div>
         <ToolHint />
         </HeroMetFoto>
-        <h2 className="mt-14 font-display text-xl font-bold text-ink">{s.label} personeel inhuren per stad</h2>
+        <h2 className="mt-14 font-display text-xl font-bold text-ink">{inhurenKop(s)} per stad</h2>
         <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {CITIES.map((c) => (
             <li key={c.slug}>
@@ -140,7 +182,7 @@ export function SectorHub({ sector: s }: { sector: Sector }) {
         </ul>
       </Section>
       <Section tone="soft">
-        <SectionHead eyebrow="Veelgestelde vragen" title={`${s.label}personeel inhuren`} />
+        <SectionHead eyebrow="Veelgestelde vragen" title={inhurenHubKop(s)} />
         <div className="mt-8 max-w-3xl">
           <FaqList items={faq} />
         </div>
@@ -169,23 +211,19 @@ export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City 
           __html: ldJson([
             breadcrumbJsonLd([
               ["Home", "/"],
-              [`${s.label} personeel inhuren`, `/${s.slug}`],
+              [inhurenHubKop(s), `/${s.slug}`],
               [`${s.label} ${c.name}`, `/${s.slug}/${c.slug}`],
             ]),
             {
               "@context": "https://schema.org",
               "@type": "Service",
-              name: `${s.label}personeel inhuren in ${c.name}`,
+              name: `${inhurenKop(s)} in ${c.name}`,
               serviceType: s.serviceType,
               provider: { "@type": "Organization", name: "ZekerFlex" },
               areaServed: { "@type": "City", name: c.name },
               offers: { "@type": "Offer", price: "3.50", priceCurrency: "EUR", description: "Platformfee per gewerkt uur" },
             },
-            {
-              "@context": "https://schema.org",
-              "@type": "FAQPage",
-              mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-            },
+            faqJsonLd(faq),
           ]),
         }}
       />
@@ -194,8 +232,8 @@ export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City 
         <SectionHead
           kop="h1"
           eyebrow={`${s.label} ${c.name} · voor bedrijven`}
-          title={`${s.label} personeel inhuren in ${c.name}`}
-          intro={`Een gat in je rooster door uitval of ${s.peak} in ${c.name}? Met ZekerFlex plaats je een klus en vind je binnen uren betrouwbare ${s.roles} — voor € 3,50 per gewerkt uur, zonder uitzendmarge en zonder abonnement.`}
+          title={`${inhurenKop(s)} in ${c.name}`}
+          intro={`Een gat in je rooster door uitval of ${s.peak} in ${c.name}? Plaats een klus en ZekerFlex deelt hem met geverifieerde ${s.roles} binnen reisafstand. Je betaalt het uurtarief van de kracht plus € 3,50 per gewerkt uur, zonder uitzendmarge en zonder abonnement.`}
         />
         <div className="mt-10 flex flex-wrap gap-3">
           <Link href={klusUrl({ sector: s.key, city: c.name })} className="btn-primary">
@@ -209,7 +247,7 @@ export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City 
         </HeroMetFoto>
         <ul className="mt-12 grid gap-4 sm:grid-cols-3">
           {[
-            ["Snel bij uitval", `Je klus gaat eerst naar krachten die snel in ${c.name} kunnen zijn — minder no-shows, minder gedoe op de drukte.`],
+            ["Gematcht op reistijd", `Je klus gaat eerst naar krachten die snel in ${c.name} kunnen zijn — minder no-shows, minder gedoe op de drukte.`],
             ["Jij houdt de regie", "Kies zelf wie je inroostert op basis van reviews en ervaring, blokkeer wie niet bevalt, en bouw je vaste ploeg met favorieten."],
             ["Alles geregeld", "Urenregistratie met check-in, automatische facturen en een modelovereenkomst. Uitzendkrachten krijg je via een aangesloten uitzendbureau."],
           ].map(([t, b]) => (
@@ -219,22 +257,24 @@ export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City 
             </li>
           ))}
         </ul>
+        <StadBlok kop={`${s.label} in ${c.name}`} c={c} />
       </Section>
       <Section tone="soft">
-        <SectionHead eyebrow="Veelgestelde vragen" title={`${s.label}personeel in ${c.name}`} />
+        <SectionHead eyebrow="Veelgestelde vragen" title={`${inhurenKop(s)} in ${c.name}`} />
         <div className="mt-8 max-w-3xl">
           <FaqList items={faq} />
         </div>
-        <h2 className="mt-14 font-display text-lg font-bold text-ink">{s.label} personeel inhuren in andere steden</h2>
-        <ul className="mt-3 flex flex-wrap gap-2">
-          {CITIES.filter((x) => x.slug !== c.slug).map((x) => (
-            <li key={x.slug}>
-              <Link href={`/${s.slug}/${x.slug}`} className="inline-block rounded-full border border-hairstrong bg-white px-3 py-1 text-sm text-neutralx-700 hover:border-brand-500">
-                {x.name}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <LinkRij
+          kop={`Ander personeel in ${c.name}`}
+          links={[
+            ...SECTORS.filter((x) => x.slug !== s.slug).map((x) => ({ href: `/${x.slug}/${c.slug}`, label: x.label })),
+            { href: `/personeel-inhuren/${c.slug}`, label: "Alle branches" },
+          ]}
+        />
+        <LinkRij
+          kop={`${inhurenKop(s)} in andere steden`}
+          links={CITIES.filter((x) => x.slug !== c.slug).map((x) => ({ href: `/${s.slug}/${x.slug}`, label: x.name }))}
+        />
       </Section>
       <CtaBand
         title={`Vandaag nog een kracht nodig in ${c.name}?`}
@@ -252,27 +292,38 @@ export function SectorCity({ sector: s, city: c }: { sector: Sector; city: City 
 // Werker-kant: vacature-/flexwerk-pagina's om de aanbodkant organisch te vullen.
 // ===========================================================================
 
-const workerFaq = (s: Sector) => [
+const workerFaq = (s: Sector): Vraag[] => [
   {
     q: "Heb ik een KVK nodig?",
-    a: `Nee — je werkt als zelfstandige (met KVK) óf zonder KVK als uitzendkracht via een aangesloten uitzendbureau; dat bureau is dan je werkgever en regelt je contract, loon en pensioen volgens zijn cao.`,
+    a: "Nee. Met een KVK-nummer werk je als zzp'er; zonder KVK werk je als uitzendkracht via een aangesloten uitzendbureau. Dat bureau is dan je werkgever en regelt je contract, loon en pensioen volgens zijn cao.",
   },
   {
     q: "Wanneer word ik betaald?",
-    a: "Snel: afhankelijk van de opdracht direct of binnen enkele dagen na goedgekeurde uren. Je uren en uitbetaling zie je live in de app.",
+    a: "Als zzp'er kies je dat zelf: gratis wachten tot de opdrachtgever betaalt (binnen 30 dagen), of eerder tegen een kleine fee. Als uitzendkracht betaalt het uitzendbureau je loon, met een loonstrook.",
   },
   {
     q: "Kan ik zelf kiezen wanneer ik werk?",
     a: `Ja. Je ziet open ${s.label.toLowerCase()}-diensten in de buurt en pakt alleen wat jou uitkomt — avonden, weekenden of structureel.`,
   },
+  UITZEND_WERKER,
 ];
 
 function workerBenefits(s: Sector, where: string): [string, string][] {
   return [
     ["Kies je eigen diensten", `Je ziet open ${low(s)}-diensten in de buurt${where} en pakt alleen wat jou uitkomt.`],
-    ["Snel uitbetaald", "Na goedgekeurde uren volgt je geld snel — vaak direct of binnen enkele dagen. Alles live in de app."],
+    ["Vooraf weten wat je verdient", "Bij elke dienst zie je het uurtarief en de reistijd. Als zzp'er kies je zelf hoe snel je geld op je rekening staat."],
     ["Met of zonder KVK", "Werk als zzp'er, of als uitzendkracht via een aangesloten uitzendbureau — dat bureau regelt je loon, pensioen en cao."],
   ];
+}
+
+/** Wat het werk inhoudt (lib/seo-sectors.ts: werkUitleg). */
+function WerkBlok({ s }: { s: Sector }) {
+  return (
+    <div className="mt-12 max-w-3xl">
+      <h2 className="font-display text-xl font-bold text-ink">Wat doe je als {s.worker}?</h2>
+      <p className="mt-3 leading-relaxed text-neutralx-600">{s.werkUitleg}</p>
+    </div>
+  );
 }
 
 export function SectorWorkerHub({ sector: s }: { sector: Sector }) {
@@ -283,23 +334,16 @@ export function SectorWorkerHub({ sector: s }: { sector: Sector }) {
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{
-          __html: ldJson([
-            breadcrumbJsonLd([["Home", "/"], [`Werken in de ${low(s)}`, `/${s.workerSlug}`]]),
-            {
-              "@context": "https://schema.org",
-              "@type": "FAQPage",
-              mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-            },
-          ]),
+          __html: ldJson([breadcrumbJsonLd([["Home", "/"], [werkKop(s), `/${s.workerSlug}`]]), faqJsonLd(faq)]),
         }}
       />
       <Section>
         <HeroMetFoto foto={sectorFoto(s.key, 1)}>
         <SectionHead
           kop="h1"
-          eyebrow={`Werken in de ${low(s)}`}
-          title={`Flexibel werken in de ${low(s)}`}
-          intro={`Pak diensten als ${s.roles}, werk wanneer jij wil en word snel uitbetaald — met of zonder KVK. Door heel Nederland.`}
+          eyebrow={`${s.label} · voor werkers`}
+          title={werkHubKop(s)}
+          intro={`Zoek je werk als ${s.worker}? Op ZekerFlex vind je diensten voor ${s.roles}, met of zonder KVK. Je kiest zelf wanneer je werkt en ziet vooraf wat je verdient. Door heel Nederland.`}
         />
         <div className="mt-10 flex flex-wrap gap-3">
           <Link href="/register?type=freelancer" className="btn-primary">
@@ -319,7 +363,8 @@ export function SectorWorkerHub({ sector: s }: { sector: Sector }) {
             </li>
           ))}
         </ul>
-        <h2 className="mt-14 font-display text-xl font-bold text-ink">Werken in de {low(s)} per stad</h2>
+        <WerkBlok s={s} />
+        <h2 className="mt-14 font-display text-xl font-bold text-ink">{werkKop(s)} per stad</h2>
         <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {CITIES.map((c) => (
             <li key={c.slug}>
@@ -330,9 +375,10 @@ export function SectorWorkerHub({ sector: s }: { sector: Sector }) {
             </li>
           ))}
         </ul>
+        <LinkRij kop="Ander werk" links={SECTORS.filter((x) => x.slug !== s.slug).map((x) => ({ href: `/${x.workerSlug}`, label: x.label }))} />
       </Section>
       <Section tone="soft">
-        <SectionHead eyebrow="Veelgestelde vragen" title={`Werken in de ${low(s)}`} />
+        <SectionHead eyebrow="Veelgestelde vragen" title={`Werken als ${s.worker}`} />
         <div className="mt-8 max-w-3xl">
           <FaqList items={faq} />
         </div>
@@ -343,7 +389,7 @@ export function SectorWorkerHub({ sector: s }: { sector: Sector }) {
         primaryHref="/register?type=freelancer"
         primaryLabel="Gratis aanmelden"
         secondaryHref={`/${s.slug}`}
-        secondaryLabel={`Werkgever? ${s.label} personeel inhuren`}
+        secondaryLabel={`Werkgever? ${inhurenHubKop(s)}`}
       />
     </>
   );
@@ -360,14 +406,10 @@ export function SectorWorkerCity({ sector: s, city: c }: { sector: Sector; city:
           __html: ldJson([
             breadcrumbJsonLd([
               ["Home", "/"],
-              [`Werken in de ${low(s)}`, `/${s.workerSlug}`],
+              [werkKop(s), `/${s.workerSlug}`],
               [`${s.label} ${c.name}`, `/${s.workerSlug}/${c.slug}`],
             ]),
-            {
-              "@context": "https://schema.org",
-              "@type": "FAQPage",
-              mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
-            },
+            faqJsonLd(faq),
           ]),
         }}
       />
@@ -375,9 +417,9 @@ export function SectorWorkerCity({ sector: s, city: c }: { sector: Sector; city:
         <HeroMetFoto foto={sectorFoto(s.key, c.slug + "w")}>
         <SectionHead
           kop="h1"
-          eyebrow={`Werken in de ${low(s)} · ${c.name}`}
-          title={`Werken in de ${low(s)} in ${c.name}`}
-          intro={`Flexibel werken in de ${low(s)} in ${c.name}? Pak diensten als ${s.roles}, werk wanneer jij wil en word snel uitbetaald — met of zonder KVK.`}
+          eyebrow={`${s.label} ${c.name} · voor werkers`}
+          title={`${werkKop(s)} in ${c.name}`}
+          intro={`Zoek je werk als ${s.worker} in ${c.name}? Op ZekerFlex vind je diensten voor ${s.roles}, met of zonder KVK. Je kiest zelf wanneer je werkt en ziet vooraf wat je verdient.`}
         />
         <div className="mt-10 flex flex-wrap gap-3">
           <Link href="/register?type=freelancer" className="btn-primary">
@@ -397,22 +439,25 @@ export function SectorWorkerCity({ sector: s, city: c }: { sector: Sector; city:
             </li>
           ))}
         </ul>
+        <WerkBlok s={s} />
+        <StadBlok kop={`Werken in ${c.name}`} c={c} />
       </Section>
       <Section tone="soft">
-        <SectionHead eyebrow="Veelgestelde vragen" title={`Werken in de ${low(s)} in ${c.name}`} />
+        <SectionHead eyebrow="Veelgestelde vragen" title={`Werken als ${s.worker} in ${c.name}`} />
         <div className="mt-8 max-w-3xl">
           <FaqList items={faq} />
         </div>
-        <h2 className="mt-14 font-display text-lg font-bold text-ink">Werken in de {low(s)} in andere steden</h2>
-        <ul className="mt-3 flex flex-wrap gap-2">
-          {CITIES.filter((x) => x.slug !== c.slug).map((x) => (
-            <li key={x.slug}>
-              <Link href={`/${s.workerSlug}/${x.slug}`} className="inline-block rounded-full border border-hairstrong bg-white px-3 py-1 text-sm text-neutralx-700 hover:border-brand-500">
-                {x.name}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <LinkRij
+          kop={`Ander werk in ${c.name}`}
+          links={[
+            ...SECTORS.filter((x) => x.slug !== s.slug).map((x) => ({ href: `/${x.workerSlug}/${c.slug}`, label: x.label })),
+            { href: `/freelance-werk/${c.slug}`, label: `Alle klussen in ${c.name}` },
+          ]}
+        />
+        <LinkRij
+          kop={`${werkKop(s)} in andere steden`}
+          links={CITIES.filter((x) => x.slug !== c.slug).map((x) => ({ href: `/${s.workerSlug}/${x.slug}`, label: x.name }))}
+        />
       </Section>
       <CtaBand
         title={`Aan de slag in ${c.name}?`}
