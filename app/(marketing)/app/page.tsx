@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { AppDownload } from "@/components/marketing/AppDownload";
 
 export const metadata: Metadata = {
@@ -19,12 +18,7 @@ export default function AppPage() {
         </h1>
       </div>
       <AppDownload standalone />
-      {/* 15 nov 2026: een eigen app per doelgroep (lib/apps/catalogus.ts) */}
-      <div className="shell pb-10">
-        <Link href="/apps" className="inline-flex items-center gap-2 text-sm font-semibold text-brand-mint hover:underline">
-          Liever een eigen app voor je bedrijf, je horecazaak, je rijschool of je webshop? Bekijk alle apps →
-        </Link>
-      </div>
+      {/* 21 nov 2026 (eigenaar: "haal dit weg"): geen link meer naar de apps voor bedrijven, horeca, rijschool en webshop */}
     </div>
   );
 }

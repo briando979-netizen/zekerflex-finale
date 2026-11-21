@@ -70,11 +70,12 @@ describe("het manifest en het icoon", () => {
     }
   });
 
-  it("de installeerpagina gebruikt het manifest van de app zelf, en /app verwijst naar /apps", () => {
+  it("de installeerpagina gebruikt het manifest van de app zelf; /app verwijst niet meer naar /apps", () => {
     const pagina = readFileSync(path.join(ROOT, "app/(marketing)/apps/[id]/page.tsx"), "utf8");
     expect(pagina).toContain("manifest: `/apps/${a.id}/manifest.webmanifest`");
     expect(pagina).toContain("<InstallAppButton />");
-    expect(readFileSync(path.join(ROOT, "app/(marketing)/app/page.tsx"), "utf8")).toContain('href="/apps"');
+    // 21 nov 2026 (eigenaar: "haal dit weg"): de regel "Liever een eigen app voor je bedrijf … Bekijk alle apps" staat niet meer op /app
+    expect(readFileSync(path.join(ROOT, "app/(marketing)/app/page.tsx"), "utf8")).not.toContain('href="/apps"');
     expect(existsSync(path.join(ROOT, "app/(marketing)/apps/[id]/manifest.webmanifest/route.ts"))).toBe(true);
     expect(existsSync(path.join(ROOT, "app/(marketing)/apps/[id]/icoon.png/route.ts"))).toBe(true);
   });
